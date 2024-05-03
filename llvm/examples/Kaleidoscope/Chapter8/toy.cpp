@@ -1242,9 +1242,8 @@ int main() {
   auto Features = "";
 
   TargetOptions opt;
-  auto RM = std::optional<Reloc::Model>();
-  auto TheTargetMachine =
-      Target->createTargetMachine(TargetTriple, CPU, Features, opt, RM);
+  auto TheTargetMachine = Target->createTargetMachine(
+      TargetTriple, CPU, Features, opt, Reloc::PIC_);
 
   TheModule->setDataLayout(TheTargetMachine->createDataLayout());
 

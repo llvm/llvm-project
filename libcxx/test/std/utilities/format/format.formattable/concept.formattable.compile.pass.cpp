@@ -176,10 +176,12 @@ void test_P1361() {
 
   assert_is_formattable<std::chrono::hh_mm_ss<std::chrono::microseconds>, CharT>();
 
-  //assert_is_formattable<std::chrono::sys_info, CharT>();
-  //assert_is_formattable<std::chrono::local_info, CharT>();
+#  if !defined(TEST_HAS_NO_EXPERIMENTAL_TZDB)
+  assert_is_formattable<std::chrono::sys_info, CharT>();
+  assert_is_formattable<std::chrono::local_info, CharT>();
 
   //assert_is_formattable<std::chrono::zoned_time, CharT>();
+#  endif // !defined(TEST_HAS_NO_EXPERIMENTAL_TZDB)
 
 #endif // TEST_HAS_NO_LOCALIZATION
 }
@@ -254,7 +256,7 @@ void test_P2286() {
   test_P2286_vector_bool<CharT, std::vector<bool, min_allocator<bool>>>();
 }
 
-// Tests volatile quified objects are no longer formattable.
+// Tests volatile qualified objects are no longer formattable.
 template <class CharT>
 void test_LWG3631() {
   assert_is_not_formattable<volatile CharT, CharT>();

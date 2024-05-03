@@ -54,7 +54,7 @@ static void checkIntegerConstant(mlir::Value value, mlir::Type ty, int64_t v) {
   EXPECT_TRUE(mlir::isa<mlir::arith::ConstantOp>(value.getDefiningOp()));
   auto cstOp = dyn_cast<mlir::arith::ConstantOp>(value.getDefiningOp());
   EXPECT_EQ(ty, cstOp.getType());
-  auto valueAttr = cstOp.getValue().dyn_cast_or_null<IntegerAttr>();
+  auto valueAttr = mlir::dyn_cast_or_null<IntegerAttr>(cstOp.getValue());
   EXPECT_EQ(v, valueAttr.getInt());
 }
 
@@ -151,7 +151,7 @@ TEST_F(FIRBuilderTest, createRealZeroConstant) {
   auto cstOp = dyn_cast<arith::ConstantOp>(cst.getDefiningOp());
   EXPECT_EQ(realTy, cstOp.getType());
   EXPECT_EQ(
-      0u, cstOp.getValue().cast<FloatAttr>().getValue().convertToDouble());
+      0u, mlir::cast<FloatAttr>(cstOp.getValue()).getValue().convertToDouble());
 }
 
 TEST_F(FIRBuilderTest, createBool) {
@@ -164,8 +164,8 @@ TEST_F(FIRBuilderTest, createBool) {
 TEST_F(FIRBuilderTest, getVarLenSeqTy) {
   auto builder = getBuilder();
   auto ty = builder.getVarLenSeqTy(builder.getI64Type());
-  EXPECT_TRUE(ty.isa<fir::SequenceType>());
-  fir::SequenceType seqTy = ty.dyn_cast<fir::SequenceType>();
+  EXPECT_TRUE(mlir::isa<fir::SequenceType>(ty));
+  fir::SequenceType seqTy = mlir::dyn_cast<fir::SequenceType>(ty);
   EXPECT_EQ(1u, seqTy.getDimension());
   EXPECT_TRUE(fir::unwrapSequenceType(ty).isInteger(64));
 }
@@ -216,9 +216,9 @@ TEST_F(FIRBuilderTest, createGlobal2) {
   EXPECT_FALSE(global.getConstant().has_value());
   EXPECT_EQ(i32Type, global.getType());
   EXPECT_TRUE(global.getInitVal().has_value());
-  EXPECT_TRUE(global.getInitVal().value().isa<mlir::IntegerAttr>());
-  EXPECT_EQ(
-      16, global.getInitVal().value().cast<mlir::IntegerAttr>().getValue());
+  EXPECT_TRUE(mlir::isa<mlir::IntegerAttr>(global.getInitVal().value()));
+  EXPECT_EQ(16,
+      mlir::cast<mlir::IntegerAttr>(global.getInitVal().value()).getValue());
   EXPECT_TRUE(global.getLinkName().has_value());
   EXPECT_EQ(
       builder.createLinkOnceLinkage().getValue(), global.getLinkName().value());
@@ -226,17 +226,17 @@ TEST_F(FIRBuilderTest, createGlobal2) {
 
 TEST_F(FIRBuilderTest, uniqueCFIdent) {
   auto str1 = fir::factory::uniqueCGIdent("", "func1");
-  EXPECT_EQ("_QQ.66756E6331", str1);
+  EXPECT_EQ("_QQX66756E6331", str1);
   str1 = fir::factory::uniqueCGIdent("", "");
-  EXPECT_EQ("_QQ.", str1);
+  EXPECT_EQ("_QQX", str1);
   str1 = fir::factory::uniqueCGIdent("pr", "func1");
-  EXPECT_EQ("_QQpr.66756E6331", str1);
+  EXPECT_EQ("_QQprX66756E6331", str1);
   str1 = fir::factory::uniqueCGIdent(
       "", "longnamemorethan32characterneedshashing");
-  EXPECT_EQ("_QQ.c22a886b2f30ea8c064ef1178377fc31", str1);
+  EXPECT_EQ("_QQXc22a886b2f30ea8c064ef1178377fc31", str1);
   str1 = fir::factory::uniqueCGIdent(
       "pr", "longnamemorethan32characterneedshashing");
-  EXPECT_EQ("_QQpr.c22a886b2f30ea8c064ef1178377fc31", str1);
+  EXPECT_EQ("_QQprXc22a886b2f30ea8c064ef1178377fc31", str1);
 }
 
 TEST_F(FIRBuilderTest, locationToLineNo) {
@@ -271,12 +271,12 @@ TEST_F(FIRBuilderTest, locationToFilename) {
   auto stringLitOps = global.getRegion().front().getOps<fir::StringLitOp>();
   EXPECT_TRUE(llvm::hasSingleElement(stringLitOps));
   for (auto stringLit : stringLitOps) {
-    EXPECT_EQ(10, stringLit.getSize().cast<mlir::IntegerAttr>().getValue());
-    EXPECT_TRUE(stringLit.getValue().isa<StringAttr>());
+    EXPECT_EQ(
+        10, mlir::cast<mlir::IntegerAttr>(stringLit.getSize()).getValue());
+    EXPECT_TRUE(mlir::isa<StringAttr>(stringLit.getValue()));
     EXPECT_EQ(0,
         strcmp("file1.f90\0",
-            stringLit.getValue()
-                .dyn_cast<StringAttr>()
+            mlir::dyn_cast<StringAttr>(stringLit.getValue())
                 .getValue()
                 .str()
                 .c_str()));
@@ -288,9 +288,9 @@ TEST_F(FIRBuilderTest, createStringLitOp) {
   llvm::StringRef data("mystringlitdata");
   auto loc = builder.getUnknownLoc();
   auto op = builder.createStringLitOp(loc, data);
-  EXPECT_EQ(15, op.getSize().cast<mlir::IntegerAttr>().getValue());
-  EXPECT_TRUE(op.getValue().isa<StringAttr>());
-  EXPECT_EQ(data, op.getValue().dyn_cast<StringAttr>().getValue());
+  EXPECT_EQ(15, mlir::cast<mlir::IntegerAttr>(op.getSize()).getValue());
+  EXPECT_TRUE(mlir::isa<StringAttr>(op.getValue()));
+  EXPECT_EQ(data, mlir::dyn_cast<StringAttr>(op.getValue()).getValue());
 }
 
 TEST_F(FIRBuilderTest, createStringLiteral) {
@@ -318,9 +318,11 @@ TEST_F(FIRBuilderTest, createStringLiteral) {
   auto stringLitOps = global.getRegion().front().getOps<fir::StringLitOp>();
   EXPECT_TRUE(llvm::hasSingleElement(stringLitOps));
   for (auto stringLit : stringLitOps) {
-    EXPECT_EQ(16, stringLit.getSize().cast<mlir::IntegerAttr>().getValue());
-    EXPECT_TRUE(stringLit.getValue().isa<StringAttr>());
-    EXPECT_EQ(strValue, stringLit.getValue().dyn_cast<StringAttr>().getValue());
+    EXPECT_EQ(
+        16, mlir::cast<mlir::IntegerAttr>(stringLit.getSize()).getValue());
+    EXPECT_TRUE(mlir::isa<StringAttr>(stringLit.getValue()));
+    EXPECT_EQ(
+        strValue, mlir::dyn_cast<StringAttr>(stringLit.getValue()).getValue());
   }
 }
 
@@ -344,7 +346,7 @@ TEST_F(FIRBuilderTest, allocateLocal) {
 static void checkShapeOp(mlir::Value shape, mlir::Value c10, mlir::Value c100) {
   EXPECT_TRUE(mlir::isa<fir::ShapeOp>(shape.getDefiningOp()));
   fir::ShapeOp op = dyn_cast<fir::ShapeOp>(shape.getDefiningOp());
-  auto shapeTy = op.getType().dyn_cast<fir::ShapeType>();
+  auto shapeTy = mlir::dyn_cast<fir::ShapeType>(op.getType());
   EXPECT_EQ(2u, shapeTy.getRank());
   EXPECT_EQ(2u, op.getExtents().size());
   EXPECT_EQ(c10, op.getExtents()[0]);
@@ -372,7 +374,7 @@ TEST_F(FIRBuilderTest, genShapeWithExtentsAndShapeShift) {
   auto shape = builder.genShape(loc, shifts, extents);
   EXPECT_TRUE(mlir::isa<fir::ShapeShiftOp>(shape.getDefiningOp()));
   fir::ShapeShiftOp op = dyn_cast<fir::ShapeShiftOp>(shape.getDefiningOp());
-  auto shapeTy = op.getType().dyn_cast<fir::ShapeShiftType>();
+  auto shapeTy = mlir::dyn_cast<fir::ShapeShiftType>(op.getType());
   EXPECT_EQ(2u, shapeTy.getRank());
   EXPECT_EQ(2u, op.getExtents().size());
   EXPECT_EQ(2u, op.getOrigins().size());
@@ -428,7 +430,7 @@ TEST_F(FIRBuilderTest, createZeroValue) {
   auto cst =
       mlir::dyn_cast_or_null<mlir::arith::ConstantOp>(zeroInt.getDefiningOp());
   EXPECT_TRUE(cst);
-  auto intAttr = cst.getValue().dyn_cast<mlir::IntegerAttr>();
+  auto intAttr = mlir::dyn_cast<mlir::IntegerAttr>(cst.getValue());
   EXPECT_TRUE(intAttr && intAttr.getInt() == 0);
 
   mlir::Type f32Ty = mlir::FloatType::getF32(builder.getContext());
@@ -437,7 +439,7 @@ TEST_F(FIRBuilderTest, createZeroValue) {
   auto cst2 = mlir::dyn_cast_or_null<mlir::arith::ConstantOp>(
       zeroFloat.getDefiningOp());
   EXPECT_TRUE(cst2);
-  auto floatAttr = cst2.getValue().dyn_cast<mlir::FloatAttr>();
+  auto floatAttr = mlir::dyn_cast<mlir::FloatAttr>(cst2.getValue());
   EXPECT_TRUE(floatAttr && floatAttr.getValueAsDouble() == 0.);
 
   mlir::Type boolTy = mlir::IntegerType::get(builder.getContext(), 1);
@@ -446,7 +448,7 @@ TEST_F(FIRBuilderTest, createZeroValue) {
   auto cst3 = mlir::dyn_cast_or_null<mlir::arith::ConstantOp>(
       flaseBool.getDefiningOp());
   EXPECT_TRUE(cst3);
-  auto intAttr2 = cst.getValue().dyn_cast<mlir::IntegerAttr>();
+  auto intAttr2 = mlir::dyn_cast<mlir::IntegerAttr>(cst.getValue());
   EXPECT_TRUE(intAttr2 && intAttr2.getInt() == 0);
 }
 
@@ -482,7 +484,7 @@ TEST_F(FIRBuilderTest, getBaseTypeOf) {
     llvm::SmallVector<fir::ExtendedValue, 4> arrays;
     auto extent = builder.create<fir::UndefOp>(loc, builder.getIndexType());
     llvm::SmallVector<mlir::Value> extents(
-        arrayType.dyn_cast<fir::SequenceType>().getDimension(),
+        mlir::dyn_cast<fir::SequenceType>(arrayType).getDimension(),
         extent.getResult());
     arrays.emplace_back(fir::ArrayBoxValue(ptrValArray, extents));
     arrays.emplace_back(fir::BoxValue(boxValArray));

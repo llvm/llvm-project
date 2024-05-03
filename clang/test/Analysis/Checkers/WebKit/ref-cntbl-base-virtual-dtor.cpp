@@ -13,7 +13,17 @@ struct DerivedWithVirtualDtor : RefCntblBase {
   virtual ~DerivedWithVirtualDtor() {}
 };
 
+// Confirm that the checker respects [[clang::suppress]]
+struct [[clang::suppress]] SuppressedDerived : RefCntblBase { };
+struct [[clang::suppress]] SuppressedDerivedWithVirtualDtor : RefCntblBase {
+  virtual ~SuppressedDerivedWithVirtualDtor() {}
+};
 
+// FIXME: Support attributes on base specifiers? Currently clang
+// doesn't support such attributes at all, even though it knows
+// how to parse them.
+//
+// struct SuppressedBaseSpecDerived : [[clang::suppress]] RefCntblBase { };
 
 template<class T>
 struct DerivedClassTmpl : T { };

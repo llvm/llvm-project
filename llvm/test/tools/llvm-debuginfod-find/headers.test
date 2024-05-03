@@ -16,9 +16,11 @@ RUN: env DEBUGINFOD_CACHE=%t/debuginfod-cache DEBUGINFOD_HEADERS_FILE=%S/Inputs/
 RUN:   | FileCheck --check-prefix ERR -DHEADER_FILE=%S/Inputs/headers %s
 
 NO-HEADERS: Accept: */*
+NO-HEADERS-NEXT: Accept-Encoding: {{.*}}
 NO-HEADERS-NOT: {{.}}
 
 HEADERS:      Accept: */*
+HEADERS-NEXT: Accept-Encoding: {{.*}}
 HEADERS-NEXT: A: B
 HEADERS-NEXT: C: D
 HEADERS-NEXT: E: F

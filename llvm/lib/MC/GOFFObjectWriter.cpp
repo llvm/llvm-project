@@ -137,7 +137,8 @@ public:
 
   // Support for endian-specific data.
   template <typename value_type> void writebe(value_type Value) {
-    Value = support::endian::byte_swap<value_type>(Value, support::big);
+    Value =
+        support::endian::byte_swap<value_type>(Value, llvm::endianness::big);
     write(reinterpret_cast<const char *>(&Value), sizeof(value_type));
   }
 };

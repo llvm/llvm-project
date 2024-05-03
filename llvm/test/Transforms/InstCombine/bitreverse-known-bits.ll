@@ -46,9 +46,8 @@ define i1 @test3(i32 %arg) {
 
 define i8 @add_bitreverse(i8 %a) {
 ; CHECK-LABEL: @add_bitreverse(
-; CHECK-NEXT:    [[B:%.*]] = and i8 [[A:%.*]], -4
-; CHECK-NEXT:    [[REVERSE:%.*]] = call i8 @llvm.bitreverse.i8(i8 [[B]]), !range [[RNG0:![0-9]+]]
-; CHECK-NEXT:    [[C:%.*]] = or i8 [[REVERSE]], -16
+; CHECK-NEXT:    [[TMP1:%.*]] = or i8 [[A:%.*]], 15
+; CHECK-NEXT:    [[C:%.*]] = call i8 @llvm.bitreverse.i8(i8 [[TMP1]])
 ; CHECK-NEXT:    ret i8 [[C]]
 ;
   %b = and i8 %a, 252

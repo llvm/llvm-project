@@ -128,12 +128,12 @@ static void replaceIterArgsAndYieldResults(AffineForOp forOp) {
 
 /// Promotes the loop body of a forOp to its containing block if the forOp
 /// was known to have a single iteration.
-// TODO: extend this for arbitrary affine bounds.
 LogicalResult mlir::affine::promoteIfSingleIteration(AffineForOp forOp) {
   std::optional<uint64_t> tripCount = getConstantTripCount(forOp);
   if (!tripCount || *tripCount != 1)
     return failure();
 
+  // TODO: extend this for arbitrary affine bounds.
   if (forOp.getLowerBoundMap().getNumResults() != 1)
     return failure();
 
@@ -261,7 +261,7 @@ LogicalResult mlir::affine::affineForOpBodySkew(AffineForOp forOp,
   unsigned numChildOps = shifts.size();
 
   // Do a linear time (counting) sort for the shifts.
-  uint64_t maxShift = *std::max_element(shifts.begin(), shifts.end());
+  uint64_t maxShift = *llvm::max_element(shifts);
   if (maxShift >= numChildOps) {
     // Large shifts are not the typical use case.
     forOp.emitWarning("not shifting because shifts are unrealistically large");
@@ -404,6 +404,7 @@ static LogicalResult performPreTilingChecks(MutableArrayRef<AffineForOp> input,
     return failure();
   }
 
+  //  TODO: handle non hyper-rectangular spaces.
   if (failed(checkIfHyperRectangular(input)))
     return failure();
 
@@ -818,7 +819,6 @@ mlir::affine::tilePerfectlyNested(MutableArrayRef<AffineForOp> input,
 /// Tiles the specified band of perfectly nested loops creating tile-space
 /// loops and intra-tile loops, using SSA values as tiling parameters. A band
 /// is a contiguous set of loops.
-//  TODO: handle non hyper-rectangular spaces.
 LogicalResult mlir::affine::tilePerfectlyNestedParametric(
     MutableArrayRef<AffineForOp> input, ArrayRef<Value> tileSizes,
     SmallVectorImpl<AffineForOp> *tiledNest) {
@@ -1514,11 +1514,7 @@ AffineForOp mlir::affine::sinkSequentialLoops(AffineForOp forOp) {
     }
   }
 
-  // Count the number of parallel loops.
-  unsigned numParallelLoops = 0;
-  for (unsigned i = 0, e = isParallelLoop.size(); i < e; ++i)
-    if (isParallelLoop[i])
-      ++numParallelLoops;
+  unsigned numParallelLoops = llvm::count(isParallelLoop, true);
 
   // Compute permutation of loops that sinks sequential loops (and thus raises
   // parallel loops) while preserving relative order.
@@ -2069,7 +2065,7 @@ static LogicalResult generateCopy(
 
     // Set copy start location for this dimension in the lower memory space
     // memref.
-    if (auto caf = offset.dyn_cast<AffineConstantExpr>()) {
+    if (auto caf = dyn_cast<AffineConstantExpr>(offset)) {
       auto indexVal = caf.getValue();
       if (indexVal == 0) {
         memIndices.push_back(zeroIndex);
@@ -2559,10 +2555,6 @@ void mlir::affine::gatherLoops(
   }
 }
 
-// TODO: if necessary, this can be extended to also compose in any
-// affine.applys, fold to constant if all result dimensions of the map are
-// constant (canonicalizeMapAndOperands below already does this for single
-// result bound maps), and use simplifyMap to perform algebraic simplification.
 AffineForOp mlir::affine::createCanonicalizedAffineForOp(
     OpBuilder b, Location loc, ValueRange lbOperands, AffineMap lbMap,
     ValueRange ubOperands, AffineMap ubMap, int64_t step) {
@@ -2772,4 +2764,52 @@ mlir::affine::separateFullTiles(MutableArrayRef<AffineForOp> inputNest,
     *fullTileNest = std::move(fullTileLoops);
 
   return success();
+}
+
+LogicalResult affine::coalescePerfectlyNestedAffineLoops(AffineForOp op) {
+  LogicalResult result(failure());
+  SmallVector<AffineForOp> loops;
+  getPerfectlyNestedLoops(loops, op);
+  if (loops.size() <= 1)
+    return success();
+
+  // Look for a band of loops that can be coalesced, i.e. perfectly nested
+  // loops with bounds defined above some loop.
+  // 1. For each loop, find above which parent loop its operands are
+  // defined.
+  SmallVector<unsigned> operandsDefinedAbove(loops.size());
+  for (unsigned i = 0, e = loops.size(); i < e; ++i) {
+    operandsDefinedAbove[i] = i;
+    for (unsigned j = 0; j < i; ++j) {
+      if (areValuesDefinedAbove(loops[i].getOperands(), loops[j].getRegion())) {
+        operandsDefinedAbove[i] = j;
+        break;
+      }
+    }
+  }
+
+  // 2. Identify bands of loops such that the operands of all of them are
+  // defined above the first loop in the band.  Traverse the nest bottom-up
+  // so that modifications don't invalidate the inner loops.
+  for (unsigned end = loops.size(); end > 0; --end) {
+    unsigned start = 0;
+    for (; start < end - 1; ++start) {
+      auto maxPos =
+          *std::max_element(std::next(operandsDefinedAbove.begin(), start),
+                            std::next(operandsDefinedAbove.begin(), end));
+      if (maxPos > start)
+        continue;
+      assert(maxPos == start &&
+             "expected loop bounds to be known at the start of the band");
+      auto band = llvm::MutableArrayRef(loops.data() + start, end - start);
+      if (succeeded(coalesceLoops(band)))
+        result = success();
+      break;
+    }
+    // If a band was found and transformed, keep looking at the loops above
+    // the outermost transformed loop.
+    if (start != end - 1)
+      end = start + 1;
+  }
+  return result;
 }

@@ -258,3 +258,180 @@ define void @inf_loop_undef_vector(<6 x float> %arg, float %arg1, i64 %arg2) {
   store volatile i64 %i7, ptr addrspace(1) undef, align 4
   ret void
 }
+
+; GCN-LABEL: {{^}}undef_bf16:
+; GCN-NOT: v_mov_b32_e32 v{{[0-9]+}}, 0
+; GCN-NOT: s_mov_b32 s{{[0-9]+}}, 0
+; GCN: s_cbranch_vccnz
+define amdgpu_kernel void @undef_bf16(ptr addrspace(3) %ptr, i1 %cond) {
+entry:
+  br label %loop
+
+loop:
+  %phi = phi bfloat [ undef, %entry ], [ %add, %loop ]
+  %load = load volatile bfloat, ptr addrspace(3) undef
+  %bc.0 = bitcast bfloat %load to i16
+  %bc.1 = bitcast bfloat %phi to i16
+  %add.i = add i16 %bc.0, %bc.1
+  %add = bitcast i16 %add.i to bfloat
+  br i1 %cond, label %loop, label %ret
+
+ret:
+  store volatile bfloat %add, ptr addrspace(3) undef
+  ret void
+}
+
+; GCN-LABEL: {{^}}undef_v2bf16:
+; GCN-NOT: v_mov_b32_e32 v{{[0-9]+}}, 0{{$}}
+; GCN-NOT: s_mov_b32 s{{[0-9]+}}, 0{{$}}
+; GCN: s_cbranch_vccnz
+define amdgpu_kernel void @undef_v2bf16(ptr addrspace(3) %ptr, i1 %cond) {
+entry:
+  br label %loop
+
+loop:
+  %phi = phi <2 x bfloat> [ undef, %entry ], [ %add, %loop ]
+  %load = load volatile <2 x bfloat>, ptr addrspace(3) undef
+  %bc.0 = bitcast <2 x bfloat> %load to <2 x i16>
+  %bc.1 = bitcast <2 x bfloat> %phi to <2 x i16>
+  %add.i = add <2 x i16> %bc.0, %bc.1
+  %add = bitcast <2 x i16> %add.i to <2 x bfloat>
+  br i1 %cond, label %loop, label %ret
+
+ret:
+  store volatile <2 x bfloat> %add, ptr addrspace(3) undef
+  ret void
+}
+
+; GCN-LABEL: {{^}}undef_v3bf16:
+; GCN-NOT: v_mov_b32_e32 v{{[0-9]+}}, 0{{$}}
+; GCN-NOT: s_mov_b32 s{{[0-9]+}}, 0{{$}}
+; GCN: s_cbranch_vccnz
+define amdgpu_kernel void @undef_v3bf16(ptr addrspace(3) %ptr, i1 %cond) {
+entry:
+  br label %loop
+
+loop:
+  %phi = phi <3 x bfloat> [ undef, %entry ], [ %add, %loop ]
+  %load = load volatile <3 x bfloat>, ptr addrspace(3) undef
+  %bc.0 = bitcast <3 x bfloat> %load to <3 x i16>
+  %bc.1 = bitcast <3 x bfloat> %phi to <3 x i16>
+  %add.i = add <3 x i16> %bc.0, %bc.1
+  %add = bitcast <3 x i16> %add.i to <3 x bfloat>
+  br i1 %cond, label %loop, label %ret
+
+ret:
+  store volatile <3 x bfloat> %add, ptr addrspace(3) undef
+  ret void
+}
+
+; GCN-LABEL: {{^}}undef_v4bf16:
+; GCN-NOT: v_mov_b32_e32 v{{[0-9]+}}, 0{{$}}
+; GCN-NOT: s_mov_b32 s{{[0-9]+}}, 0{{$}}
+; GCN: s_cbranch_vccnz
+define amdgpu_kernel void @undef_v4bf16(ptr addrspace(3) %ptr, i1 %cond) {
+entry:
+  br label %loop
+
+loop:
+  %phi = phi <4 x bfloat> [ undef, %entry ], [ %add, %loop ]
+  %load = load volatile <4 x bfloat>, ptr addrspace(3) undef
+  %bc.0 = bitcast <4 x bfloat> %load to <4 x i16>
+  %bc.1 = bitcast <4 x bfloat> %phi to <4 x i16>
+  %add.i = add <4 x i16> %bc.0, %bc.1
+  %add = bitcast <4 x i16> %add.i to <4 x bfloat>
+  br i1 %cond, label %loop, label %ret
+
+ret:
+  store volatile <4 x bfloat> %add, ptr addrspace(3) undef
+  ret void
+}
+
+; GCN-LABEL: {{^}}undef_v6bf16:
+; GCN-NOT: v_mov_b32_e32 v{{[0-9]+}}, 0{{$}}
+; GCN-NOT: s_mov_b32 s{{[0-9]+}}, 0{{$}}
+; GCN: s_cbranch_vccnz
+define amdgpu_kernel void @undef_v6bf16(ptr addrspace(3) %ptr, i1 %cond) {
+entry:
+  br label %loop
+
+loop:
+  %phi = phi <6 x bfloat> [ undef, %entry ], [ %add, %loop ]
+  %load = load volatile <6 x bfloat>, ptr addrspace(3) undef
+  %bc.0 = bitcast <6 x bfloat> %load to <6 x i16>
+  %bc.1 = bitcast <6 x bfloat> %phi to <6 x i16>
+  %add.i = add <6 x i16> %bc.0, %bc.1
+  %add = bitcast <6 x i16> %add.i to <6 x bfloat>
+  br i1 %cond, label %loop, label %ret
+
+ret:
+  store volatile <6 x bfloat> %add, ptr addrspace(3) undef
+  ret void
+}
+
+; GCN-LABEL: {{^}}undef_v8bf16:
+; GCN-NOT: v_mov_b32_e32 v{{[0-9]+}}, 0{{$}}
+; GCN-NOT: s_mov_b32 s{{[0-9]+}}, 0{{$}}
+; GCN: s_cbranch_vccnz
+define amdgpu_kernel void @undef_v8bf16(ptr addrspace(3) %ptr, i1 %cond) {
+entry:
+  br label %loop
+
+loop:
+  %phi = phi <8 x bfloat> [ undef, %entry ], [ %add, %loop ]
+  %load = load volatile <8 x bfloat>, ptr addrspace(3) undef
+  %bc.0 = bitcast <8 x bfloat> %load to <8 x i16>
+  %bc.1 = bitcast <8 x bfloat> %phi to <8 x i16>
+  %add.i = add <8 x i16> %bc.0, %bc.1
+  %add = bitcast <8 x i16> %add.i to <8 x bfloat>
+  br i1 %cond, label %loop, label %ret
+
+ret:
+  store volatile <8 x bfloat> %add, ptr addrspace(3) undef
+  ret void
+}
+
+; GCN-LABEL: {{^}}undef_v16bf16:
+; GCN-NOT: v_mov_b32_e32 v{{[0-9]+}}, 0{{$}}
+; GCN-NOT: s_mov_b32 s{{[0-9]+}}, 0{{$}}
+; GCN: s_cbranch_vccnz
+define amdgpu_kernel void @undef_v16bf16(ptr addrspace(3) %ptr, i1 %cond) {
+entry:
+  br label %loop
+
+loop:
+  %phi = phi <16 x bfloat> [ undef, %entry ], [ %add, %loop ]
+  %load = load volatile <16 x bfloat>, ptr addrspace(3) undef
+  %bc.0 = bitcast <16 x bfloat> %load to <16 x i16>
+  %bc.1 = bitcast <16 x bfloat> %phi to <16 x i16>
+  %add.i = add <16 x i16> %bc.0, %bc.1
+  %add = bitcast <16 x i16> %add.i to <16 x bfloat>
+  br i1 %cond, label %loop, label %ret
+
+ret:
+  store volatile <16 x bfloat> %add, ptr addrspace(3) undef
+  ret void
+}
+
+; GCN-LABEL: {{^}}undef_v32bf16:
+; GCN-NOT: v_mov_b32_e32 v{{[0-9]+}}, 0{{$}}
+; GCN-NOT: s_mov_b32 s{{[0-9]+}}, 0{{$}}
+; GCN: s_cbranch_vccnz
+define amdgpu_kernel void @undef_v32bf16(ptr addrspace(3) %ptr, i1 %cond) {
+entry:
+  br label %loop
+
+loop:
+  %phi = phi <32 x bfloat> [ undef, %entry ], [ %add, %loop ]
+  %load = load volatile <32 x bfloat>, ptr addrspace(3) undef
+  %bc.0 = bitcast <32 x bfloat> %load to <32 x i16>
+  %bc.1 = bitcast <32 x bfloat> %phi to <32 x i16>
+  %add.i = add <32 x i16> %bc.0, %bc.1
+  %add = bitcast <32 x i16> %add.i to <32 x bfloat>
+  br i1 %cond, label %loop, label %ret
+
+ret:
+  store volatile <32 x bfloat> %add, ptr addrspace(3) undef
+  ret void
+}
+

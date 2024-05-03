@@ -1,18 +1,14 @@
 // RUN: %clang_cc1 -x c -verify %s
 
 // Primary fixed point types
-signed short _Accum s_short_accum;    // expected-error{{compile with '-ffixed-point' to enable fixed point types}}
-signed _Accum s_accum;                // expected-error{{compile with '-ffixed-point' to enable fixed point types}}
-signed long _Accum s_long_accum;      // expected-error{{compile with '-ffixed-point' to enable fixed point types}}
-unsigned short _Accum u_short_accum;  // expected-error{{compile with '-ffixed-point' to enable fixed point types}}
-unsigned _Accum u_accum;              // expected-error{{compile with '-ffixed-point' to enable fixed point types}}
-unsigned long _Accum u_long_accum;    // expected-error{{compile with '-ffixed-point' to enable fixed point types}}
-
-// Aliased fixed point types
-short _Accum short_accum;             // expected-error{{compile with '-ffixed-point' to enable fixed point types}}
-_Accum accum;                         // expected-error{{compile with '-ffixed-point' to enable fixed point types}}
-                                      // expected-error@-1{{type specifier missing, defaults to 'int'}}
-long _Accum long_accum;               // expected-error{{compile with '-ffixed-point' to enable fixed point types}}
+// Without `-ffixed-point`, these keywords are now treated as typedef'd types or identifiers.
+_Accum accum;    // expected-error{{unknown type name '_Accum'}}
+_Fract fract;    // expected-error{{unknown type name '_Fract'}}
+_Sat _Accum sat_accum;    // expected-error{{unknown type name '_Sat'}}
+                          // expected-error@-1{{expected ';' after top level declarator}}
+signed _Accum signed_accum;    // expected-error{{expected ';' after top level declarator}}
+signed _Fract signed_fract;    // expected-error{{expected ';' after top level declarator}}
+signed _Sat _Accum signed_sat_accum;    // expected-error{{expected ';' after top level declarator}}
 
 // Cannot use fixed point suffixes
 int accum_int = 10k;     // expected-error{{invalid suffix 'k' on integer constant}}

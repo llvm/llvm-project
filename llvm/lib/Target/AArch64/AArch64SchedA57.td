@@ -34,7 +34,7 @@ def CortexA57Model : SchedMachineModel {
   list<Predicate> UnsupportedFeatures = !listconcat(SVEUnsupported.F,
                                                     PAUnsupported.F,
                                                     SMEUnsupported.F,
-                                                    [HasMTE]);
+                                                    [HasMTE, HasCSSC]);
 }
 
 //===----------------------------------------------------------------------===//
@@ -183,165 +183,165 @@ def : InstRW<[A57Write_3cyc_1W], (instregex "^CRC32")>;
 // -----------------------------------------------------------------------------
 
 def : InstRW<[A57Write_8cyc_1L_1V],           (instregex "LD1i(8|16|32)$")>;
-def : InstRW<[A57Write_8cyc_1L_1V, WriteAdr], (instregex "LD1i(8|16|32)_POST$")>;
+def : InstRW<[WriteAdr, A57Write_8cyc_1L_1V], (instregex "LD1i(8|16|32)_POST$")>;
 def : InstRW<[A57Write_5cyc_1L],            (instregex "LD1i(64)$")>;
-def : InstRW<[A57Write_5cyc_1L, WriteAdr],  (instregex "LD1i(64)_POST$")>;
+def : InstRW<[WriteAdr, A57Write_5cyc_1L],  (instregex "LD1i(64)_POST$")>;
 
 def : InstRW<[A57Write_8cyc_1L_1V],           (instregex "LD1Rv(8b|4h|2s)$")>;
-def : InstRW<[A57Write_8cyc_1L_1V, WriteAdr], (instregex "LD1Rv(8b|4h|2s)_POST$")>;
+def : InstRW<[WriteAdr, A57Write_8cyc_1L_1V], (instregex "LD1Rv(8b|4h|2s)_POST$")>;
 def : InstRW<[A57Write_5cyc_1L],            (instregex "LD1Rv(1d)$")>;
-def : InstRW<[A57Write_5cyc_1L, WriteAdr],  (instregex "LD1Rv(1d)_POST$")>;
+def : InstRW<[WriteAdr, A57Write_5cyc_1L],  (instregex "LD1Rv(1d)_POST$")>;
 def : InstRW<[A57Write_8cyc_1L_1V],           (instregex "LD1Rv(16b|8h|4s|2d)$")>;
-def : InstRW<[A57Write_8cyc_1L_1V, WriteAdr], (instregex "LD1Rv(16b|8h|4s|2d)_POST$")>;
+def : InstRW<[WriteAdr, A57Write_8cyc_1L_1V], (instregex "LD1Rv(16b|8h|4s|2d)_POST$")>;
 
 def : InstRW<[A57Write_5cyc_1L],              (instregex "LD1Onev(8b|4h|2s|1d)$")>;
-def : InstRW<[A57Write_5cyc_1L, WriteAdr],    (instregex "LD1Onev(8b|4h|2s|1d)_POST$")>;
+def : InstRW<[WriteAdr, A57Write_5cyc_1L],    (instregex "LD1Onev(8b|4h|2s|1d)_POST$")>;
 def : InstRW<[A57Write_5cyc_1L],              (instregex "LD1Onev(16b|8h|4s|2d)$")>;
-def : InstRW<[A57Write_5cyc_1L, WriteAdr],    (instregex "LD1Onev(16b|8h|4s|2d)_POST$")>;
+def : InstRW<[WriteAdr, A57Write_5cyc_1L],    (instregex "LD1Onev(16b|8h|4s|2d)_POST$")>;
 def : InstRW<[A57Write_5cyc_1L],              (instregex "LD1Twov(8b|4h|2s|1d)$")>;
-def : InstRW<[A57Write_5cyc_1L, WriteAdr],    (instregex "LD1Twov(8b|4h|2s|1d)_POST$")>;
+def : InstRW<[WriteAdr, A57Write_5cyc_1L],    (instregex "LD1Twov(8b|4h|2s|1d)_POST$")>;
 def : InstRW<[A57Write_6cyc_2L],             (instregex "LD1Twov(16b|8h|4s|2d)$")>;
-def : InstRW<[A57Write_6cyc_2L, WriteAdr],   (instregex "LD1Twov(16b|8h|4s|2d)_POST$")>;
+def : InstRW<[WriteAdr, A57Write_6cyc_2L],   (instregex "LD1Twov(16b|8h|4s|2d)_POST$")>;
 def : InstRW<[A57Write_6cyc_2L],             (instregex "LD1Threev(8b|4h|2s|1d)$")>;
-def : InstRW<[A57Write_6cyc_2L, WriteAdr],   (instregex "LD1Threev(8b|4h|2s|1d)_POST$")>;
+def : InstRW<[WriteAdr, A57Write_6cyc_2L],   (instregex "LD1Threev(8b|4h|2s|1d)_POST$")>;
 def : InstRW<[A57Write_7cyc_3L],            (instregex "LD1Threev(16b|8h|4s|2d)$")>;
-def : InstRW<[A57Write_7cyc_3L, WriteAdr],  (instregex "LD1Threev(16b|8h|4s|2d)_POST$")>;
+def : InstRW<[WriteAdr, A57Write_7cyc_3L],  (instregex "LD1Threev(16b|8h|4s|2d)_POST$")>;
 def : InstRW<[A57Write_6cyc_2L],             (instregex "LD1Fourv(8b|4h|2s|1d)$")>;
-def : InstRW<[A57Write_6cyc_2L, WriteAdr],   (instregex "LD1Fourv(8b|4h|2s|1d)_POST$")>;
+def : InstRW<[WriteAdr, A57Write_6cyc_2L],   (instregex "LD1Fourv(8b|4h|2s|1d)_POST$")>;
 def : InstRW<[A57Write_8cyc_4L],           (instregex "LD1Fourv(16b|8h|4s|2d)$")>;
-def : InstRW<[A57Write_8cyc_4L, WriteAdr], (instregex "LD1Fourv(16b|8h|4s|2d)_POST$")>;
+def : InstRW<[WriteAdr, A57Write_8cyc_4L], (instregex "LD1Fourv(16b|8h|4s|2d)_POST$")>;
 
 def : InstRW<[A57Write_8cyc_1L_2V],           (instregex "LD2i(8|16)$")>;
-def : InstRW<[A57Write_8cyc_1L_2V, WriteAdr], (instregex "LD2i(8|16)_POST$")>;
+def : InstRW<[WriteAdr, A57Write_8cyc_1L_2V], (instregex "LD2i(8|16)_POST$")>;
 def : InstRW<[A57Write_6cyc_2L],            (instregex "LD2i(32)$")>;
-def : InstRW<[A57Write_6cyc_2L, WriteAdr],  (instregex "LD2i(32)_POST$")>;
+def : InstRW<[WriteAdr, A57Write_6cyc_2L],  (instregex "LD2i(32)_POST$")>;
 def : InstRW<[A57Write_8cyc_1L_1V],            (instregex "LD2i(64)$")>;
-def : InstRW<[A57Write_8cyc_1L_1V, WriteAdr],  (instregex "LD2i(64)_POST$")>;
+def : InstRW<[WriteAdr, A57Write_8cyc_1L_1V],  (instregex "LD2i(64)_POST$")>;
 
 def : InstRW<[A57Write_8cyc_1L_1V],            (instregex "LD2Rv(8b|4h|2s)$")>;
-def : InstRW<[A57Write_8cyc_1L_1V, WriteAdr],  (instregex "LD2Rv(8b|4h|2s)_POST$")>;
+def : InstRW<[WriteAdr, A57Write_8cyc_1L_1V],  (instregex "LD2Rv(8b|4h|2s)_POST$")>;
 def : InstRW<[A57Write_5cyc_1L],             (instregex "LD2Rv(1d)$")>;
-def : InstRW<[A57Write_5cyc_1L, WriteAdr],   (instregex "LD2Rv(1d)_POST$")>;
+def : InstRW<[WriteAdr, A57Write_5cyc_1L],   (instregex "LD2Rv(1d)_POST$")>;
 def : InstRW<[A57Write_8cyc_1L_2V],           (instregex "LD2Rv(16b|8h|4s|2d)$")>;
-def : InstRW<[A57Write_8cyc_1L_2V, WriteAdr], (instregex "LD2Rv(16b|8h|4s|2d)_POST$")>;
+def : InstRW<[WriteAdr, A57Write_8cyc_1L_2V], (instregex "LD2Rv(16b|8h|4s|2d)_POST$")>;
 
 def : InstRW<[A57Write_8cyc_1L_1V],             (instregex "LD2Twov(8b|4h|2s)$")>;
-def : InstRW<[A57Write_8cyc_1L_1V, WriteAdr],   (instregex "LD2Twov(8b|4h|2s)_POST$")>;
+def : InstRW<[WriteAdr, A57Write_8cyc_1L_1V],   (instregex "LD2Twov(8b|4h|2s)_POST$")>;
 def : InstRW<[A57Write_9cyc_2L_2V],           (instregex "LD2Twov(16b|8h|4s)$")>;
-def : InstRW<[A57Write_9cyc_2L_2V, WriteAdr], (instregex "LD2Twov(16b|8h|4s)_POST$")>;
+def : InstRW<[WriteAdr, A57Write_9cyc_2L_2V], (instregex "LD2Twov(16b|8h|4s)_POST$")>;
 def : InstRW<[A57Write_6cyc_2L],             (instregex "LD2Twov(2d)$")>;
-def : InstRW<[A57Write_6cyc_2L, WriteAdr],   (instregex "LD2Twov(2d)_POST$")>;
+def : InstRW<[WriteAdr, A57Write_6cyc_2L],   (instregex "LD2Twov(2d)_POST$")>;
 
 def : InstRW<[A57Write_9cyc_1L_3V],           (instregex "LD3i(8|16)$")>;
-def : InstRW<[A57Write_9cyc_1L_3V, WriteAdr], (instregex "LD3i(8|16)_POST$")>;
+def : InstRW<[WriteAdr, A57Write_9cyc_1L_3V], (instregex "LD3i(8|16)_POST$")>;
 def : InstRW<[A57Write_8cyc_1L_2V],            (instregex "LD3i(32)$")>;
-def : InstRW<[A57Write_8cyc_1L_2V, WriteAdr],  (instregex "LD3i(32)_POST$")>;
+def : InstRW<[WriteAdr, A57Write_8cyc_1L_2V],  (instregex "LD3i(32)_POST$")>;
 def : InstRW<[A57Write_6cyc_2L],             (instregex "LD3i(64)$")>;
-def : InstRW<[A57Write_6cyc_2L, WriteAdr],   (instregex "LD3i(64)_POST$")>;
+def : InstRW<[WriteAdr, A57Write_6cyc_2L],   (instregex "LD3i(64)_POST$")>;
 
 def : InstRW<[A57Write_8cyc_1L_2V],             (instregex "LD3Rv(8b|4h|2s)$")>;
-def : InstRW<[A57Write_8cyc_1L_2V, WriteAdr],   (instregex "LD3Rv(8b|4h|2s)_POST$")>;
+def : InstRW<[WriteAdr, A57Write_8cyc_1L_2V],   (instregex "LD3Rv(8b|4h|2s)_POST$")>;
 def : InstRW<[A57Write_6cyc_2L],              (instregex "LD3Rv(1d)$")>;
-def : InstRW<[A57Write_6cyc_2L, WriteAdr],    (instregex "LD3Rv(1d)_POST$")>;
+def : InstRW<[WriteAdr, A57Write_6cyc_2L],    (instregex "LD3Rv(1d)_POST$")>;
 def : InstRW<[A57Write_9cyc_1L_3V],            (instregex "LD3Rv(16b|8h|4s)$")>;
-def : InstRW<[A57Write_9cyc_1L_3V, WriteAdr],  (instregex "LD3Rv(16b|8h|4s)_POST$")>;
+def : InstRW<[WriteAdr, A57Write_9cyc_1L_3V],  (instregex "LD3Rv(16b|8h|4s)_POST$")>;
 def : InstRW<[A57Write_9cyc_2L_3V],           (instregex "LD3Rv(2d)$")>;
-def : InstRW<[A57Write_9cyc_2L_3V, WriteAdr], (instregex "LD3Rv(2d)_POST$")>;
+def : InstRW<[WriteAdr, A57Write_9cyc_2L_3V], (instregex "LD3Rv(2d)_POST$")>;
 
 def : InstRW<[A57Write_9cyc_2L_2V],               (instregex "LD3Threev(8b|4h|2s)$")>;
-def : InstRW<[A57Write_9cyc_2L_2V, WriteAdr],     (instregex "LD3Threev(8b|4h|2s)_POST$")>;
+def : InstRW<[WriteAdr, A57Write_9cyc_2L_2V],     (instregex "LD3Threev(8b|4h|2s)_POST$")>;
 def : InstRW<[A57Write_10cyc_3L_4V],           (instregex "LD3Threev(16b|8h|4s)$")>;
-def : InstRW<[A57Write_10cyc_3L_4V, WriteAdr], (instregex "LD3Threev(16b|8h|4s)_POST$")>;
+def : InstRW<[WriteAdr, A57Write_10cyc_3L_4V], (instregex "LD3Threev(16b|8h|4s)_POST$")>;
 def : InstRW<[A57Write_8cyc_4L],               (instregex "LD3Threev(2d)$")>;
-def : InstRW<[A57Write_8cyc_4L, WriteAdr],     (instregex "LD3Threev(2d)_POST$")>;
+def : InstRW<[WriteAdr, A57Write_8cyc_4L],     (instregex "LD3Threev(2d)_POST$")>;
 
 def : InstRW<[A57Write_9cyc_2L_3V],           (instregex "LD4i(8|16)$")>;
-def : InstRW<[A57Write_9cyc_2L_3V, WriteAdr], (instregex "LD4i(8|16)_POST$")>;
+def : InstRW<[WriteAdr, A57Write_9cyc_2L_3V], (instregex "LD4i(8|16)_POST$")>;
 def : InstRW<[A57Write_8cyc_1L_2V],             (instregex "LD4i(32)$")>;
-def : InstRW<[A57Write_8cyc_1L_2V, WriteAdr],   (instregex "LD4i(32)_POST$")>;
+def : InstRW<[WriteAdr, A57Write_8cyc_1L_2V],   (instregex "LD4i(32)_POST$")>;
 def : InstRW<[A57Write_9cyc_2L_3V],           (instregex "LD4i(64)$")>;
-def : InstRW<[A57Write_9cyc_2L_3V, WriteAdr], (instregex "LD4i(64)_POST$")>;
+def : InstRW<[WriteAdr, A57Write_9cyc_2L_3V], (instregex "LD4i(64)_POST$")>;
 
 def : InstRW<[A57Write_8cyc_1L_2V],              (instregex "LD4Rv(8b|4h|2s)$")>;
-def : InstRW<[A57Write_8cyc_1L_2V, WriteAdr],    (instregex "LD4Rv(8b|4h|2s)_POST$")>;
+def : InstRW<[WriteAdr, A57Write_8cyc_1L_2V],    (instregex "LD4Rv(8b|4h|2s)_POST$")>;
 def : InstRW<[A57Write_6cyc_2L],               (instregex "LD4Rv(1d)$")>;
-def : InstRW<[A57Write_6cyc_2L, WriteAdr],     (instregex "LD4Rv(1d)_POST$")>;
+def : InstRW<[WriteAdr, A57Write_6cyc_2L],     (instregex "LD4Rv(1d)_POST$")>;
 def : InstRW<[A57Write_9cyc_2L_3V],            (instregex "LD4Rv(16b|8h|4s)$")>;
-def : InstRW<[A57Write_9cyc_2L_3V, WriteAdr],  (instregex "LD4Rv(16b|8h|4s)_POST$")>;
+def : InstRW<[WriteAdr, A57Write_9cyc_2L_3V],  (instregex "LD4Rv(16b|8h|4s)_POST$")>;
 def : InstRW<[A57Write_9cyc_2L_4V],           (instregex "LD4Rv(2d)$")>;
-def : InstRW<[A57Write_9cyc_2L_4V, WriteAdr], (instregex "LD4Rv(2d)_POST$")>;
+def : InstRW<[WriteAdr, A57Write_9cyc_2L_4V], (instregex "LD4Rv(2d)_POST$")>;
 
 def : InstRW<[A57Write_9cyc_2L_2V],                (instregex "LD4Fourv(8b|4h|2s)$")>;
-def : InstRW<[A57Write_9cyc_2L_2V, WriteAdr],      (instregex "LD4Fourv(8b|4h|2s)_POST$")>;
+def : InstRW<[WriteAdr, A57Write_9cyc_2L_2V],      (instregex "LD4Fourv(8b|4h|2s)_POST$")>;
 def : InstRW<[A57Write_11cyc_4L_4V],           (instregex "LD4Fourv(16b|8h|4s)$")>;
-def : InstRW<[A57Write_11cyc_4L_4V, WriteAdr], (instregex "LD4Fourv(16b|8h|4s)_POST$")>;
+def : InstRW<[WriteAdr, A57Write_11cyc_4L_4V], (instregex "LD4Fourv(16b|8h|4s)_POST$")>;
 def : InstRW<[A57Write_8cyc_4L],                (instregex "LD4Fourv(2d)$")>;
-def : InstRW<[A57Write_8cyc_4L, WriteAdr],      (instregex "LD4Fourv(2d)_POST$")>;
+def : InstRW<[WriteAdr, A57Write_8cyc_4L],      (instregex "LD4Fourv(2d)_POST$")>;
 
 // Vector Store
 // -----------------------------------------------------------------------------
 
 def : InstRW<[A57Write_1cyc_1S],            (instregex "ST1i(8|16|32)$")>;
-def : InstRW<[A57Write_1cyc_1S, WriteAdr],  (instregex "ST1i(8|16|32)_POST$")>;
+def : InstRW<[WriteAdr, A57Write_1cyc_1S],  (instregex "ST1i(8|16|32)_POST$")>;
 def : InstRW<[A57Write_3cyc_1S_1V],           (instregex "ST1i(64)$")>;
-def : InstRW<[A57Write_3cyc_1S_1V, WriteAdr], (instregex "ST1i(64)_POST$")>;
+def : InstRW<[WriteAdr, A57Write_3cyc_1S_1V], (instregex "ST1i(64)_POST$")>;
 
 def : InstRW<[A57Write_1cyc_1S],                  (instregex "ST1Onev(8b|4h|2s|1d)$")>;
-def : InstRW<[A57Write_1cyc_1S, WriteAdr],        (instregex "ST1Onev(8b|4h|2s|1d)_POST$")>;
+def : InstRW<[WriteAdr, A57Write_1cyc_1S],        (instregex "ST1Onev(8b|4h|2s|1d)_POST$")>;
 def : InstRW<[A57Write_2cyc_2S],                 (instregex "ST1Onev(16b|8h|4s|2d)$")>;
-def : InstRW<[A57Write_2cyc_2S, WriteAdr],       (instregex "ST1Onev(16b|8h|4s|2d)_POST$")>;
+def : InstRW<[WriteAdr, A57Write_2cyc_2S],       (instregex "ST1Onev(16b|8h|4s|2d)_POST$")>;
 def : InstRW<[A57Write_2cyc_2S],                 (instregex "ST1Twov(8b|4h|2s|1d)$")>;
-def : InstRW<[A57Write_2cyc_2S, WriteAdr],       (instregex "ST1Twov(8b|4h|2s|1d)_POST$")>;
+def : InstRW<[WriteAdr, A57Write_2cyc_2S],       (instregex "ST1Twov(8b|4h|2s|1d)_POST$")>;
 def : InstRW<[A57Write_4cyc_4S],               (instregex "ST1Twov(16b|8h|4s|2d)$")>;
-def : InstRW<[A57Write_4cyc_4S, WriteAdr],     (instregex "ST1Twov(16b|8h|4s|2d)_POST$")>;
+def : InstRW<[WriteAdr, A57Write_4cyc_4S],     (instregex "ST1Twov(16b|8h|4s|2d)_POST$")>;
 def : InstRW<[A57Write_3cyc_3S],                (instregex "ST1Threev(8b|4h|2s|1d)$")>;
-def : InstRW<[A57Write_3cyc_3S, WriteAdr],      (instregex "ST1Threev(8b|4h|2s|1d)_POST$")>;
+def : InstRW<[WriteAdr, A57Write_3cyc_3S],      (instregex "ST1Threev(8b|4h|2s|1d)_POST$")>;
 def : InstRW<[A57Write_6cyc_6S],             (instregex "ST1Threev(16b|8h|4s|2d)$")>;
-def : InstRW<[A57Write_6cyc_6S, WriteAdr],   (instregex "ST1Threev(16b|8h|4s|2d)_POST$")>;
+def : InstRW<[WriteAdr, A57Write_6cyc_6S],   (instregex "ST1Threev(16b|8h|4s|2d)_POST$")>;
 def : InstRW<[A57Write_4cyc_4S],               (instregex "ST1Fourv(8b|4h|2s|1d)$")>;
-def : InstRW<[A57Write_4cyc_4S, WriteAdr],     (instregex "ST1Fourv(8b|4h|2s|1d)_POST$")>;
+def : InstRW<[WriteAdr, A57Write_4cyc_4S],     (instregex "ST1Fourv(8b|4h|2s|1d)_POST$")>;
 def : InstRW<[A57Write_8cyc_8S],           (instregex "ST1Fourv(16b|8h|4s|2d)$")>;
-def : InstRW<[A57Write_8cyc_8S, WriteAdr], (instregex "ST1Fourv(16b|8h|4s|2d)_POST$")>;
+def : InstRW<[WriteAdr, A57Write_8cyc_8S], (instregex "ST1Fourv(16b|8h|4s|2d)_POST$")>;
 
 def : InstRW<[A57Write_3cyc_1S_1V],           (instregex "ST2i(8|16|32)$")>;
-def : InstRW<[A57Write_3cyc_1S_1V, WriteAdr], (instregex "ST2i(8|16|32)_POST$")>;
+def : InstRW<[WriteAdr, A57Write_3cyc_1S_1V], (instregex "ST2i(8|16|32)_POST$")>;
 def : InstRW<[A57Write_2cyc_2S],           (instregex "ST2i(64)$")>;
-def : InstRW<[A57Write_2cyc_2S, WriteAdr], (instregex "ST2i(64)_POST$")>;
+def : InstRW<[WriteAdr, A57Write_2cyc_2S], (instregex "ST2i(64)_POST$")>;
 
 def : InstRW<[A57Write_3cyc_2S_1V],              (instregex "ST2Twov(8b|4h|2s)$")>;
-def : InstRW<[A57Write_3cyc_2S_1V, WriteAdr],    (instregex "ST2Twov(8b|4h|2s)_POST$")>;
+def : InstRW<[WriteAdr, A57Write_3cyc_2S_1V],    (instregex "ST2Twov(8b|4h|2s)_POST$")>;
 def : InstRW<[A57Write_4cyc_4S_2V],           (instregex "ST2Twov(16b|8h|4s)$")>;
-def : InstRW<[A57Write_4cyc_4S_2V, WriteAdr], (instregex "ST2Twov(16b|8h|4s)_POST$")>;
+def : InstRW<[WriteAdr, A57Write_4cyc_4S_2V], (instregex "ST2Twov(16b|8h|4s)_POST$")>;
 def : InstRW<[A57Write_4cyc_4S],             (instregex "ST2Twov(2d)$")>;
-def : InstRW<[A57Write_4cyc_4S, WriteAdr],   (instregex "ST2Twov(2d)_POST$")>;
+def : InstRW<[WriteAdr, A57Write_4cyc_4S],   (instregex "ST2Twov(2d)_POST$")>;
 
 def : InstRW<[A57Write_3cyc_1S_1V],            (instregex "ST3i(8|16)$")>;
-def : InstRW<[A57Write_3cyc_1S_1V, WriteAdr],  (instregex "ST3i(8|16)_POST$")>;
+def : InstRW<[WriteAdr, A57Write_3cyc_1S_1V],  (instregex "ST3i(8|16)_POST$")>;
 def : InstRW<[A57Write_3cyc_3S],           (instregex "ST3i(32)$")>;
-def : InstRW<[A57Write_3cyc_3S, WriteAdr], (instregex "ST3i(32)_POST$")>;
+def : InstRW<[WriteAdr, A57Write_3cyc_3S], (instregex "ST3i(32)_POST$")>;
 def : InstRW<[A57Write_3cyc_2S_1V],           (instregex "ST3i(64)$")>;
-def : InstRW<[A57Write_3cyc_2S_1V, WriteAdr], (instregex "ST3i(64)_POST$")>;
+def : InstRW<[WriteAdr, A57Write_3cyc_2S_1V], (instregex "ST3i(64)_POST$")>;
 
 def : InstRW<[A57Write_3cyc_3S_2V],                 (instregex "ST3Threev(8b|4h|2s)$")>;
-def : InstRW<[A57Write_3cyc_3S_2V, WriteAdr],       (instregex "ST3Threev(8b|4h|2s)_POST$")>;
+def : InstRW<[WriteAdr, A57Write_3cyc_3S_2V],       (instregex "ST3Threev(8b|4h|2s)_POST$")>;
 def : InstRW<[A57Write_6cyc_6S_4V],           (instregex "ST3Threev(16b|8h|4s)$")>;
-def : InstRW<[A57Write_6cyc_6S_4V, WriteAdr], (instregex "ST3Threev(16b|8h|4s)_POST$")>;
+def : InstRW<[WriteAdr, A57Write_6cyc_6S_4V], (instregex "ST3Threev(16b|8h|4s)_POST$")>;
 def : InstRW<[A57Write_6cyc_6S],                (instregex "ST3Threev(2d)$")>;
-def : InstRW<[A57Write_6cyc_6S, WriteAdr],      (instregex "ST3Threev(2d)_POST$")>;
+def : InstRW<[WriteAdr, A57Write_6cyc_6S],      (instregex "ST3Threev(2d)_POST$")>;
 
 def : InstRW<[A57Write_3cyc_1S_1V],             (instregex "ST4i(8|16)$")>;
-def : InstRW<[A57Write_3cyc_1S_1V, WriteAdr],   (instregex "ST4i(8|16)_POST$")>;
+def : InstRW<[WriteAdr, A57Write_3cyc_1S_1V],   (instregex "ST4i(8|16)_POST$")>;
 def : InstRW<[A57Write_4cyc_4S],           (instregex "ST4i(32)$")>;
-def : InstRW<[A57Write_4cyc_4S, WriteAdr], (instregex "ST4i(32)_POST$")>;
+def : InstRW<[WriteAdr, A57Write_4cyc_4S], (instregex "ST4i(32)_POST$")>;
 def : InstRW<[A57Write_3cyc_2S_1V],            (instregex "ST4i(64)$")>;
-def : InstRW<[A57Write_3cyc_2S_1V, WriteAdr],  (instregex "ST4i(64)_POST$")>;
+def : InstRW<[WriteAdr, A57Write_3cyc_2S_1V],  (instregex "ST4i(64)_POST$")>;
 
 def : InstRW<[A57Write_4cyc_4S_2V],                  (instregex "ST4Fourv(8b|4h|2s)$")>;
-def : InstRW<[A57Write_4cyc_4S_2V, WriteAdr],        (instregex "ST4Fourv(8b|4h|2s)_POST$")>;
+def : InstRW<[WriteAdr, A57Write_4cyc_4S_2V],        (instregex "ST4Fourv(8b|4h|2s)_POST$")>;
 def : InstRW<[A57Write_8cyc_8S_4V],           (instregex "ST4Fourv(16b|8h|4s)$")>;
-def : InstRW<[A57Write_8cyc_8S_4V, WriteAdr], (instregex "ST4Fourv(16b|8h|4s)_POST$")>;
+def : InstRW<[WriteAdr, A57Write_8cyc_8S_4V], (instregex "ST4Fourv(16b|8h|4s)_POST$")>;
 def : InstRW<[A57Write_8cyc_8S],                (instregex "ST4Fourv(2d)$")>;
-def : InstRW<[A57Write_8cyc_8S, WriteAdr],      (instregex "ST4Fourv(2d)_POST$")>;
+def : InstRW<[WriteAdr, A57Write_8cyc_8S],      (instregex "ST4Fourv(2d)_POST$")>;
 
 // Vector - Integer
 // -----------------------------------------------------------------------------
@@ -592,38 +592,38 @@ def : InstRW<[A57Write_5cyc_1L, WriteLDHi], (instrs LDNPDi)>;
 def : InstRW<[A57Write_6cyc_2L, WriteLDHi], (instrs LDNPQi)>;
 def : InstRW<[A57Write_5cyc_1L, WriteLDHi], (instrs LDNPSi)>;
 def : InstRW<[A57Write_5cyc_1L, WriteLDHi], (instrs LDPDi)>;
-def : InstRW<[A57Write_5cyc_1L, WriteLDHi, WriteAdr], (instrs LDPDpost)>;
-def : InstRW<[A57Write_5cyc_1L, WriteLDHi, WriteAdr], (instrs LDPDpre)>;
+def : InstRW<[WriteAdr, A57Write_5cyc_1L, WriteLDHi], (instrs LDPDpost)>;
+def : InstRW<[WriteAdr, A57Write_5cyc_1L, WriteLDHi], (instrs LDPDpre)>;
 def : InstRW<[A57Write_6cyc_2L, WriteLDHi], (instrs LDPQi)>;
-def : InstRW<[A57Write_6cyc_2L, WriteLDHi, WriteAdr], (instrs LDPQpost)>;
-def : InstRW<[A57Write_6cyc_2L, WriteLDHi, WriteAdr], (instrs LDPQpre)>;
+def : InstRW<[WriteAdr, A57Write_6cyc_2L, WriteLDHi], (instrs LDPQpost)>;
+def : InstRW<[WriteAdr, A57Write_6cyc_2L, WriteLDHi], (instrs LDPQpre)>;
 def : InstRW<[A57Write_5cyc_1I_2L, WriteLDHi], (instrs LDPSWi)>;
-def : InstRW<[A57Write_5cyc_1I_2L, WriteLDHi, WriteAdr], (instrs LDPSWpost)>;
-def : InstRW<[A57Write_5cyc_1I_2L, WriteLDHi, WriteAdr], (instrs LDPSWpre)>;
+def : InstRW<[WriteAdr, A57Write_5cyc_1I_2L, WriteLDHi], (instrs LDPSWpost)>;
+def : InstRW<[WriteAdr, A57Write_5cyc_1I_2L, WriteLDHi], (instrs LDPSWpre)>;
 def : InstRW<[A57Write_5cyc_1L, WriteLDHi], (instrs LDPSi)>;
-def : InstRW<[A57Write_5cyc_1L, WriteLDHi, WriteAdr], (instrs LDPSpost)>;
-def : InstRW<[A57Write_5cyc_1L, WriteLDHi, WriteAdr], (instrs LDPSpre)>;
+def : InstRW<[WriteAdr, A57Write_5cyc_1L, WriteLDHi], (instrs LDPSpost)>;
+def : InstRW<[WriteAdr, A57Write_5cyc_1L, WriteLDHi], (instrs LDPSpre)>;
 def : InstRW<[A57Write_5cyc_1L, WriteI], (instrs LDRBpost)>;
-def : InstRW<[A57Write_5cyc_1L, WriteAdr], (instrs LDRBpre)>;
+def : InstRW<[WriteAdr, A57Write_5cyc_1L], (instrs LDRBpre)>;
 def : InstRW<[A57Write_5cyc_1L, ReadAdrBase], (instrs LDRBroW)>;
 def : InstRW<[A57Write_5cyc_1L, ReadAdrBase], (instrs LDRBroX)>;
 def : InstRW<[A57Write_5cyc_1L], (instrs LDRBui)>;
 def : InstRW<[A57Write_5cyc_1L], (instrs LDRDl)>;
 def : InstRW<[A57Write_5cyc_1L, WriteI], (instrs LDRDpost)>;
-def : InstRW<[A57Write_5cyc_1L, WriteAdr], (instrs LDRDpre)>;
+def : InstRW<[WriteAdr, A57Write_5cyc_1L], (instrs LDRDpre)>;
 def : InstRW<[A57Write_5cyc_1L, ReadAdrBase], (instrs LDRDroW)>;
 def : InstRW<[A57Write_5cyc_1L, ReadAdrBase], (instrs LDRDroX)>;
 def : InstRW<[A57Write_5cyc_1L], (instrs LDRDui)>;
 def : InstRW<[A57Write_5cyc_1I_1L, ReadAdrBase], (instrs LDRHHroW)>;
 def : InstRW<[A57Write_5cyc_1I_1L, ReadAdrBase], (instrs LDRHHroX)>;
 def : InstRW<[A57Write_5cyc_1L, WriteI], (instrs LDRHpost)>;
-def : InstRW<[A57Write_5cyc_1L, WriteAdr], (instrs LDRHpre)>;
+def : InstRW<[WriteAdr, A57Write_5cyc_1L], (instrs LDRHpre)>;
 def : InstRW<[A57Write_6cyc_1I_1L, ReadAdrBase], (instrs LDRHroW)>;
 def : InstRW<[A57Write_6cyc_1I_1L, ReadAdrBase], (instrs LDRHroX)>;
 def : InstRW<[A57Write_5cyc_1L], (instrs LDRHui)>;
 def : InstRW<[A57Write_5cyc_1L], (instrs LDRQl)>;
 def : InstRW<[A57Write_5cyc_1L, WriteI], (instrs LDRQpost)>;
-def : InstRW<[A57Write_5cyc_1L, WriteAdr], (instrs LDRQpre)>;
+def : InstRW<[WriteAdr, A57Write_5cyc_1L], (instrs LDRQpre)>;
 def : InstRW<[A57Write_6cyc_1I_1L, ReadAdrBase], (instrs LDRQroW)>;
 def : InstRW<[A57Write_6cyc_1I_1L, ReadAdrBase], (instrs LDRQroX)>;
 def : InstRW<[A57Write_5cyc_1L], (instrs LDRQui)>;
@@ -633,7 +633,7 @@ def : InstRW<[A57Write_5cyc_1I_1L, ReadAdrBase], (instrs LDRSHXroW)>;
 def : InstRW<[A57Write_5cyc_1I_1L, ReadAdrBase], (instrs LDRSHXroX)>;
 def : InstRW<[A57Write_5cyc_1L], (instrs LDRSl)>;
 def : InstRW<[A57Write_5cyc_1L, WriteI], (instrs LDRSpost)>;
-def : InstRW<[A57Write_5cyc_1L, WriteAdr], (instrs LDRSpre)>;
+def : InstRW<[WriteAdr, A57Write_5cyc_1L], (instrs LDRSpre)>;
 def : InstRW<[A57Write_5cyc_1L, ReadAdrBase], (instrs LDRSroW)>;
 def : InstRW<[A57Write_5cyc_1L, ReadAdrBase], (instrs LDRSroX)>;
 def : InstRW<[A57Write_5cyc_1L], (instrs LDRSui)>;

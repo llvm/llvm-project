@@ -53,12 +53,6 @@
 #include <cstring>
 #include <system_error>
 
-#ifdef LLVM_HAVE_LIBXAR
-extern "C" {
-#include <xar/xar.h>
-}
-#endif
-
 using namespace llvm;
 using namespace llvm::object;
 using namespace llvm::objdump;
@@ -212,39 +206,6 @@ typedef std::pair<uint64_t, DiceRef> DiceTableEntry;
 typedef std::vector<DiceTableEntry> DiceTable;
 typedef DiceTable::iterator dice_table_iterator;
 
-#ifdef LLVM_HAVE_LIBXAR
-namespace {
-struct ScopedXarFile {
-  xar_t xar;
-  ScopedXarFile(const char *filename, int32_t flags) {
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-    xar = xar_open(filename, flags);
-#pragma clang diagnostic pop
-  }
-  ~ScopedXarFile() {
-    if (xar)
-      xar_close(xar);
-  }
-  ScopedXarFile(const ScopedXarFile &) = delete;
-  ScopedXarFile &operator=(const ScopedXarFile &) = delete;
-  operator xar_t() { return xar; }
-};
-
-struct ScopedXarIter {
-  xar_iter_t iter;
-  ScopedXarIter() : iter(xar_iter_new()) {}
-  ~ScopedXarIter() {
-    if (iter)
-      xar_iter_free(iter);
-  }
-  ScopedXarIter(const ScopedXarIter &) = delete;
-  ScopedXarIter &operator=(const ScopedXarIter &) = delete;
-  operator xar_iter_t() { return iter; }
-};
-} // namespace
-#endif // defined(LLVM_HAVE_LIBXAR)
-
 // This is used to search for a data in code table entry for the PC being
 // disassembled.  The j parameter has the PC in j.first.  A single data in code
 // table entry can cover many bytes for each of its Kind's.  So if the offset,
@@ -329,7 +290,7 @@ static void getSectionsAndSymbols(MachOObjectFile *MachOObj,
   const StringRef FileName = MachOObj->getFileName();
   for (const SymbolRef &Symbol : MachOObj->symbols()) {
     StringRef SymName = unwrapOrError(Symbol.getName(), FileName);
-    if (!SymName.startswith("ltmp"))
+    if (!SymName.starts_with("ltmp"))
       Symbols.push_back(Symbol);
   }
 
@@ -1521,7 +1482,7 @@ static void CreateSymbolAddressMap(MachOObjectFile *O,
         ST == SymbolRef::ST_Other) {
       uint64_t Address = cantFail(Symbol.getValue());
       StringRef SymName = unwrapOrError(Symbol.getName(), FileName);
-      if (!SymName.startswith(".objc"))
+      if (!SymName.starts_with(".objc"))
         (*AddrMap)[Address] = SymName;
     }
   }
@@ -1961,13 +1922,6 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
                              StringRef DisSegName, StringRef DisSectName);
 static void DumpProtocolSection(MachOObjectFile *O, const char *sect,
                                 uint32_t size, uint32_t addr);
-#ifdef LLVM_HAVE_LIBXAR
-static void DumpBitcodeSection(MachOObjectFile *O, const char *sect,
-                                uint32_t size, bool verbose,
-                                bool PrintXarHeader, bool PrintXarFileHeaders,
-                                std::string XarMemberName);
-#endif // defined(LLVM_HAVE_LIBXAR)
-
 static void DumpSectionContents(StringRef Filename, MachOObjectFile *O,
                                 bool verbose) {
   SymbolAddressMap AddrMap;
@@ -2037,13 +1991,6 @@ static void DumpSectionContents(StringRef Filename, MachOObjectFile *O,
             DumpProtocolSection(O, sect, sect_size, sect_addr);
             continue;
           }
-#ifdef LLVM_HAVE_LIBXAR
-          if (SegName == "__LLVM" && SectName == "__bundle") {
-            DumpBitcodeSection(O, sect, sect_size, verbose, SymbolicOperands,
-                               ArchiveHeaders, "");
-            continue;
-          }
-#endif // defined(LLVM_HAVE_LIBXAR)
           switch (section_type) {
           case MachO::S_REGULAR:
             DumpRawSectionContents(O, sect, sect_size, sect_addr);
@@ -3714,6 +3661,10 @@ struct class_ro32_t {
 #define RO_ROOT (1 << 1)
 #define RO_HAS_CXX_STRUCTORS (1 << 2)
 
+/* Values for method_list{64,32}_t->entsize */
+#define ML_HAS_RELATIVE_PTRS (1 << 31)
+#define ML_ENTSIZE_MASK 0xFFFF
+
 struct method_list64_t {
   uint32_t entsize;
   uint32_t count;
@@ -3736,6 +3687,12 @@ struct method32_t {
   uint32_t name;  /* SEL (32-bit pointer) */
   uint32_t types; /* const char * (32-bit pointer) */
   uint32_t imp;   /* IMP (32-bit pointer) */
+};
+
+struct method_relative_t {
+  int32_t name;  /* SEL (32-bit relative) */
+  int32_t types; /* const char * (32-bit relative) */
+  int32_t imp;   /* IMP (32-bit relative) */
 };
 
 struct protocol_list64_t {
@@ -4034,6 +3991,12 @@ inline void swapStruct(struct method64_t &m) {
 }
 
 inline void swapStruct(struct method32_t &m) {
+  sys::swapByteOrder(m.name);
+  sys::swapByteOrder(m.types);
+  sys::swapByteOrder(m.imp);
+}
+
+inline void swapStruct(struct method_relative_t &m) {
   sys::swapByteOrder(m.name);
   sys::swapByteOrder(m.types);
   sys::swapByteOrder(m.imp);
@@ -4493,6 +4456,88 @@ static void print_layout_map32(uint32_t p, struct DisassembleInfo *info) {
   print_layout_map(layout_map, left);
 }
 
+static void print_relative_method_list(uint32_t structSizeAndFlags,
+                                       uint32_t structCount, uint64_t p,
+                                       struct DisassembleInfo *info,
+                                       const char *indent,
+                                       uint32_t pointerBits) {
+  struct method_relative_t m;
+  const char *r, *name;
+  uint32_t offset, xoffset, left, i;
+  SectionRef S, xS;
+
+  assert(((structSizeAndFlags & ML_HAS_RELATIVE_PTRS) != 0) &&
+         "expected structSizeAndFlags to have ML_HAS_RELATIVE_PTRS flag");
+
+  outs() << indent << "\t\t   entsize "
+         << (structSizeAndFlags & ML_ENTSIZE_MASK) << " (relative) \n";
+  outs() << indent << "\t\t     count " << structCount << "\n";
+
+  for (i = 0; i < structCount; i++) {
+    r = get_pointer_64(p, offset, left, S, info);
+    memset(&m, '\0', sizeof(struct method_relative_t));
+    if (left < sizeof(struct method_relative_t)) {
+      memcpy(&m, r, left);
+      outs() << indent << "   (method_t extends past the end of the section)\n";
+    } else
+      memcpy(&m, r, sizeof(struct method_relative_t));
+    if (info->O->isLittleEndian() != sys::IsLittleEndianHost)
+      swapStruct(m);
+
+    outs() << indent << "\t\t      name " << format("0x%" PRIx32, m.name);
+    uint64_t relNameRefVA = p + offsetof(struct method_relative_t, name);
+    uint64_t absNameRefVA = relNameRefVA + m.name;
+    outs() << " (" << format("0x%" PRIx32, absNameRefVA) << ")";
+
+    // since this is a relative list, absNameRefVA is the address of the
+    // __objc_selrefs entry, so a pointer, not the actual name
+    const char *nameRefPtr =
+        get_pointer_64(absNameRefVA, xoffset, left, xS, info);
+    if (nameRefPtr) {
+      uint32_t pointerSize = pointerBits / CHAR_BIT;
+      if (left < pointerSize)
+        outs() << indent << " (nameRefPtr extends past the end of the section)";
+      else {
+        if (pointerSize == 64) {
+          uint64_t nameOff_64 = *reinterpret_cast<const uint64_t *>(nameRefPtr);
+          if (info->O->isLittleEndian() != sys::IsLittleEndianHost)
+            sys::swapByteOrder(nameOff_64);
+          name = get_pointer_64(nameOff_64, xoffset, left, xS, info);
+        } else {
+          uint32_t nameOff_32 = *reinterpret_cast<const uint32_t *>(nameRefPtr);
+          if (info->O->isLittleEndian() != sys::IsLittleEndianHost)
+            sys::swapByteOrder(nameOff_32);
+          name = get_pointer_32(nameOff_32, xoffset, left, xS, info);
+        }
+        if (name != nullptr)
+          outs() << format(" %.*s", left, name);
+      }
+    }
+    outs() << "\n";
+
+    outs() << indent << "\t\t     types " << format("0x%" PRIx32, m.types);
+    uint64_t relTypesVA = p + offsetof(struct method_relative_t, types);
+    uint64_t absTypesVA = relTypesVA + m.types;
+    outs() << " (" << format("0x%" PRIx32, absTypesVA) << ")";
+    name = get_pointer_32(absTypesVA, xoffset, left, xS, info);
+    if (name != nullptr)
+      outs() << format(" %.*s", left, name);
+    outs() << "\n";
+
+    outs() << indent << "\t\t       imp " << format("0x%" PRIx32, m.imp);
+    uint64_t relImpVA = p + offsetof(struct method_relative_t, imp);
+    uint64_t absImpVA = relImpVA + m.imp;
+    outs() << " (" << format("0x%" PRIx32, absImpVA) << ")";
+    name = GuessSymbolName(absImpVA, info->AddrMap);
+    if (name != nullptr)
+      outs() << " " << name;
+    outs() << "\n";
+
+    p += sizeof(struct method_relative_t);
+    offset += sizeof(struct method_relative_t);
+  }
+}
+
 static void print_method_list64_t(uint64_t p, struct DisassembleInfo *info,
                                   const char *indent) {
   struct method_list64_t ml;
@@ -4514,10 +4559,17 @@ static void print_method_list64_t(uint64_t p, struct DisassembleInfo *info,
     memcpy(&ml, r, sizeof(struct method_list64_t));
   if (info->O->isLittleEndian() != sys::IsLittleEndianHost)
     swapStruct(ml);
+  p += sizeof(struct method_list64_t);
+
+  if ((ml.entsize & ML_HAS_RELATIVE_PTRS) != 0) {
+    print_relative_method_list(ml.entsize, ml.count, p, info, indent,
+                               /*pointerBits=*/64);
+    return;
+  }
+
   outs() << indent << "\t\t   entsize " << ml.entsize << "\n";
   outs() << indent << "\t\t     count " << ml.count << "\n";
 
-  p += sizeof(struct method_list64_t);
   offset += sizeof(struct method_list64_t);
   for (i = 0; i < ml.count; i++) {
     r = get_pointer_64(p, offset, left, S, info);
@@ -4605,10 +4657,17 @@ static void print_method_list32_t(uint64_t p, struct DisassembleInfo *info,
     memcpy(&ml, r, sizeof(struct method_list32_t));
   if (info->O->isLittleEndian() != sys::IsLittleEndianHost)
     swapStruct(ml);
+  p += sizeof(struct method_list32_t);
+
+  if ((ml.entsize & ML_HAS_RELATIVE_PTRS) != 0) {
+    print_relative_method_list(ml.entsize, ml.count, p, info, indent,
+                               /*pointerBits=*/32);
+    return;
+  }
+
   outs() << indent << "\t\t   entsize " << ml.entsize << "\n";
   outs() << indent << "\t\t     count " << ml.count << "\n";
 
-  p += sizeof(struct method_list32_t);
   offset += sizeof(struct method_list32_t);
   for (i = 0; i < ml.count; i++) {
     r = get_pointer_32(p, offset, left, S, info);
@@ -6732,371 +6791,6 @@ static void DumpProtocolSection(MachOObjectFile *O, const char *sect,
   }
 }
 
-#ifdef LLVM_HAVE_LIBXAR
-static inline void swapStruct(struct xar_header &xar) {
-  sys::swapByteOrder(xar.magic);
-  sys::swapByteOrder(xar.size);
-  sys::swapByteOrder(xar.version);
-  sys::swapByteOrder(xar.toc_length_compressed);
-  sys::swapByteOrder(xar.toc_length_uncompressed);
-  sys::swapByteOrder(xar.cksum_alg);
-}
-
-static void PrintModeVerbose(uint32_t mode) {
-  switch(mode & S_IFMT){
-  case S_IFDIR:
-    outs() << "d";
-    break;
-  case S_IFCHR:
-    outs() << "c";
-    break;
-  case S_IFBLK:
-    outs() << "b";
-    break;
-  case S_IFREG:
-    outs() << "-";
-    break;
-  case S_IFLNK:
-    outs() << "l";
-    break;
-  case S_IFSOCK:
-    outs() << "s";
-    break;
-  default:
-    outs() << "?";
-    break;
-  }
-
-  /* owner permissions */
-  if(mode & S_IREAD)
-    outs() << "r";
-  else
-    outs() << "-";
-  if(mode & S_IWRITE)
-    outs() << "w";
-  else
-    outs() << "-";
-  if(mode & S_ISUID)
-    outs() << "s";
-  else if(mode & S_IEXEC)
-    outs() << "x";
-  else
-    outs() << "-";
-
-  /* group permissions */
-  if(mode & (S_IREAD >> 3))
-    outs() << "r";
-  else
-    outs() << "-";
-  if(mode & (S_IWRITE >> 3))
-    outs() << "w";
-  else
-    outs() << "-";
-  if(mode & S_ISGID)
-    outs() << "s";
-  else if(mode & (S_IEXEC >> 3))
-    outs() << "x";
-  else
-    outs() << "-";
-
-  /* other permissions */
-  if(mode & (S_IREAD >> 6))
-    outs() << "r";
-  else
-    outs() << "-";
-  if(mode & (S_IWRITE >> 6))
-    outs() << "w";
-  else
-    outs() << "-";
-  if(mode & S_ISVTX)
-    outs() << "t";
-  else if(mode & (S_IEXEC >> 6))
-    outs() << "x";
-  else
-    outs() << "-";
-}
-
-static void PrintXarFilesSummary(const char *XarFilename, xar_t xar) {
-  xar_file_t xf;
-  const char *key, *type, *mode, *user, *group, *size, *mtime, *name, *m;
-  char *endp;
-  uint32_t mode_value;
-
-  ScopedXarIter xi;
-  if (!xi) {
-    WithColor::error(errs(), "llvm-objdump")
-        << "can't obtain an xar iterator for xar archive " << XarFilename
-        << "\n";
-    return;
-  }
-
-  // Go through the xar's files.
-  for (xf = xar_file_first(xar, xi); xf; xf = xar_file_next(xi)) {
-    ScopedXarIter xp;
-    if(!xp){
-      WithColor::error(errs(), "llvm-objdump")
-          << "can't obtain an xar iterator for xar archive " << XarFilename
-          << "\n";
-      return;
-    }
-    type = nullptr;
-    mode = nullptr;
-    user = nullptr;
-    group = nullptr;
-    size = nullptr;
-    mtime = nullptr;
-    name = nullptr;
-    for(key = xar_prop_first(xf, xp); key; key = xar_prop_next(xp)){
-      const char *val = nullptr;
-      xar_prop_get(xf, key, &val);
-#if 0 // Useful for debugging.
-      outs() << "key: " << key << " value: " << val << "\n";
-#endif
-      if(strcmp(key, "type") == 0)
-        type = val;
-      if(strcmp(key, "mode") == 0)
-        mode = val;
-      if(strcmp(key, "user") == 0)
-        user = val;
-      if(strcmp(key, "group") == 0)
-        group = val;
-      if(strcmp(key, "data/size") == 0)
-        size = val;
-      if(strcmp(key, "mtime") == 0)
-        mtime = val;
-      if(strcmp(key, "name") == 0)
-        name = val;
-    }
-    if(mode != nullptr){
-      mode_value = strtoul(mode, &endp, 8);
-      if(*endp != '\0')
-        outs() << "(mode: \"" << mode << "\" contains non-octal chars) ";
-      if(strcmp(type, "file") == 0)
-        mode_value |= S_IFREG;
-      PrintModeVerbose(mode_value);
-      outs() << " ";
-    }
-    if(user != nullptr)
-      outs() << format("%10s/", user);
-    if(group != nullptr)
-      outs() << format("%-10s ", group);
-    if(size != nullptr)
-      outs() << format("%7s ", size);
-    if(mtime != nullptr){
-      for(m = mtime; *m != 'T' && *m != '\0'; m++)
-        outs() << *m;
-      if(*m == 'T')
-        m++;
-      outs() << " ";
-      for( ; *m != 'Z' && *m != '\0'; m++)
-        outs() << *m;
-      outs() << " ";
-    }
-    if(name != nullptr)
-      outs() << name;
-    outs() << "\n";
-  }
-}
-
-static void DumpBitcodeSection(MachOObjectFile *O, const char *sect,
-                                uint32_t size, bool verbose,
-                                bool PrintXarHeader, bool PrintXarFileHeaders,
-                                std::string XarMemberName) {
-  if(size < sizeof(struct xar_header)) {
-    outs() << "size of (__LLVM,__bundle) section too small (smaller than size "
-              "of struct xar_header)\n";
-    return;
-  }
-  struct xar_header XarHeader;
-  memcpy(&XarHeader, sect, sizeof(struct xar_header));
-  if (sys::IsLittleEndianHost)
-    swapStruct(XarHeader);
-  if (PrintXarHeader) {
-    if (!XarMemberName.empty())
-      outs() << "In xar member " << XarMemberName << ": ";
-    else
-      outs() << "For (__LLVM,__bundle) section: ";
-    outs() << "xar header\n";
-    if (XarHeader.magic == XAR_HEADER_MAGIC)
-      outs() << "                  magic XAR_HEADER_MAGIC\n";
-    else
-      outs() << "                  magic "
-             << format_hex(XarHeader.magic, 10, true)
-             << " (not XAR_HEADER_MAGIC)\n";
-    outs() << "                   size " << XarHeader.size << "\n";
-    outs() << "                version " << XarHeader.version << "\n";
-    outs() << "  toc_length_compressed " << XarHeader.toc_length_compressed
-           << "\n";
-    outs() << "toc_length_uncompressed " << XarHeader.toc_length_uncompressed
-           << "\n";
-    outs() << "              cksum_alg ";
-    switch (XarHeader.cksum_alg) {
-      case XAR_CKSUM_NONE:
-        outs() << "XAR_CKSUM_NONE\n";
-        break;
-      case XAR_CKSUM_SHA1:
-        outs() << "XAR_CKSUM_SHA1\n";
-        break;
-      case XAR_CKSUM_MD5:
-        outs() << "XAR_CKSUM_MD5\n";
-        break;
-#ifdef XAR_CKSUM_SHA256
-      case XAR_CKSUM_SHA256:
-        outs() << "XAR_CKSUM_SHA256\n";
-        break;
-#endif
-#ifdef XAR_CKSUM_SHA512
-      case XAR_CKSUM_SHA512:
-        outs() << "XAR_CKSUM_SHA512\n";
-        break;
-#endif
-      default:
-        outs() << XarHeader.cksum_alg << "\n";
-    }
-  }
-
-  SmallString<128> XarFilename;
-  int FD;
-  std::error_code XarEC =
-      sys::fs::createTemporaryFile("llvm-objdump", "xar", FD, XarFilename);
-  if (XarEC) {
-    WithColor::error(errs(), "llvm-objdump") << XarEC.message() << "\n";
-    return;
-  }
-  ToolOutputFile XarFile(XarFilename, FD);
-  raw_fd_ostream &XarOut = XarFile.os();
-  StringRef XarContents(sect, size);
-  XarOut << XarContents;
-  XarOut.close();
-  if (XarOut.has_error())
-    return;
-
-  ScopedXarFile xar(XarFilename.c_str(), READ);
-  if (!xar) {
-    WithColor::error(errs(), "llvm-objdump")
-        << "can't create temporary xar archive " << XarFilename << "\n";
-    return;
-  }
-
-  SmallString<128> TocFilename;
-  std::error_code TocEC =
-      sys::fs::createTemporaryFile("llvm-objdump", "toc", TocFilename);
-  if (TocEC) {
-    WithColor::error(errs(), "llvm-objdump") << TocEC.message() << "\n";
-    return;
-  }
-  xar_serialize(xar, TocFilename.c_str());
-
-  if (PrintXarFileHeaders) {
-    if (!XarMemberName.empty())
-      outs() << "In xar member " << XarMemberName << ": ";
-    else
-      outs() << "For (__LLVM,__bundle) section: ";
-    outs() << "xar archive files:\n";
-    PrintXarFilesSummary(XarFilename.c_str(), xar);
-  }
-
-  ErrorOr<std::unique_ptr<MemoryBuffer>> FileOrErr =
-    MemoryBuffer::getFileOrSTDIN(TocFilename.c_str());
-  if (std::error_code EC = FileOrErr.getError()) {
-    WithColor::error(errs(), "llvm-objdump") << EC.message() << "\n";
-    return;
-  }
-  std::unique_ptr<MemoryBuffer> &Buffer = FileOrErr.get();
-
-  if (!XarMemberName.empty())
-    outs() << "In xar member " << XarMemberName << ": ";
-  else
-    outs() << "For (__LLVM,__bundle) section: ";
-  outs() << "xar table of contents:\n";
-  outs() << Buffer->getBuffer() << "\n";
-
-  // TODO: Go through the xar's files.
-  ScopedXarIter xi;
-  if(!xi){
-    WithColor::error(errs(), "llvm-objdump")
-        << "can't obtain an xar iterator for xar archive "
-        << XarFilename.c_str() << "\n";
-    return;
-  }
-  for(xar_file_t xf = xar_file_first(xar, xi); xf; xf = xar_file_next(xi)){
-    const char *key;
-    const char *member_name, *member_type, *member_size_string;
-    size_t member_size;
-
-    ScopedXarIter xp;
-    if(!xp){
-      WithColor::error(errs(), "llvm-objdump")
-          << "can't obtain an xar iterator for xar archive "
-          << XarFilename.c_str() << "\n";
-      return;
-    }
-    member_name = NULL;
-    member_type = NULL;
-    member_size_string = NULL;
-    for(key = xar_prop_first(xf, xp); key; key = xar_prop_next(xp)){
-      const char *val = nullptr;
-      xar_prop_get(xf, key, &val);
-#if 0 // Useful for debugging.
-      outs() << "key: " << key << " value: " << val << "\n";
-#endif
-      if (strcmp(key, "name") == 0)
-        member_name = val;
-      if (strcmp(key, "type") == 0)
-        member_type = val;
-      if (strcmp(key, "data/size") == 0)
-        member_size_string = val;
-    }
-    /*
-     * If we find a file with a name, date/size and type properties
-     * and with the type being "file" see if that is a xar file.
-     */
-    if (member_name != NULL && member_type != NULL &&
-        strcmp(member_type, "file") == 0 &&
-        member_size_string != NULL){
-      // Extract the file into a buffer.
-      char *endptr;
-      member_size = strtoul(member_size_string, &endptr, 10);
-      if (*endptr == '\0' && member_size != 0) {
-        char *buffer;
-        if (xar_extract_tobuffersz(xar, xf, &buffer, &member_size) == 0) {
-#if 0 // Useful for debugging.
-          outs() << "xar member: " << member_name << " extracted\n";
-#endif
-          // Set the XarMemberName we want to see printed in the header.
-          std::string OldXarMemberName;
-          // If XarMemberName is already set this is nested. So
-          // save the old name and create the nested name.
-          if (!XarMemberName.empty()) {
-            OldXarMemberName = XarMemberName;
-            XarMemberName =
-                (Twine("[") + XarMemberName + "]" + member_name).str();
-          } else {
-            OldXarMemberName = "";
-            XarMemberName = member_name;
-          }
-          // See if this is could be a xar file (nested).
-          if (member_size >= sizeof(struct xar_header)) {
-#if 0 // Useful for debugging.
-            outs() << "could be a xar file: " << member_name << "\n";
-#endif
-            memcpy((char *)&XarHeader, buffer, sizeof(struct xar_header));
-            if (sys::IsLittleEndianHost)
-              swapStruct(XarHeader);
-            if (XarHeader.magic == XAR_HEADER_MAGIC)
-              DumpBitcodeSection(O, buffer, member_size, verbose,
-                                 PrintXarHeader, PrintXarFileHeaders,
-                                 XarMemberName);
-          }
-          XarMemberName = OldXarMemberName;
-          delete buffer;
-        }
-      }
-    }
-  }
-}
-#endif // defined(LLVM_HAVE_LIBXAR)
-
 static void printObjcMetaData(MachOObjectFile *O, bool verbose) {
   if (O->is64Bit())
     printObjc2_64bit_MetaData(O, verbose);
@@ -8047,16 +7741,13 @@ namespace {
 
 template <typename T>
 static uint64_t read(StringRef Contents, ptrdiff_t Offset) {
-  using llvm::support::little;
-  using llvm::support::unaligned;
-
   if (Offset + sizeof(T) > Contents.size()) {
     outs() << "warning: attempt to read past end of buffer\n";
     return T();
   }
 
-  uint64_t Val =
-      support::endian::read<T, little, unaligned>(Contents.data() + Offset);
+  uint64_t Val = support::endian::read<T, llvm::endianness::little>(
+      Contents.data() + Offset);
   return Val;
 }
 

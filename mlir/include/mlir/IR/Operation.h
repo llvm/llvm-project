@@ -475,19 +475,36 @@ public:
     return removeDiscardableAttr(StringAttr::get(getContext(), name));
   }
 
-  /// Return all of the discardable attributes on this operation.
-  ArrayRef<NamedAttribute> getDiscardableAttrs() { return attrs.getValue(); }
+  /// Return a range of all of discardable attributes on this operation. Note
+  /// that for unregistered operations that are not storing inherent attributes
+  /// as properties, all attributes are considered discardable.
+  auto getDiscardableAttrs() {
+    std::optional<RegisteredOperationName> opName = getRegisteredInfo();
+    ArrayRef<StringAttr> attributeNames =
+        opName ? getRegisteredInfo()->getAttributeNames()
+               : ArrayRef<StringAttr>();
+    return llvm::make_filter_range(
+        attrs.getValue(),
+        [this, attributeNames](const NamedAttribute attribute) {
+          return getPropertiesStorage() ||
+                 !llvm::is_contained(attributeNames, attribute.getName());
+        });
+  }
 
   /// Return all of the discardable attributes on this operation as a
   /// DictionaryAttr.
-  DictionaryAttr getDiscardableAttrDictionary() { return attrs; }
+  DictionaryAttr getDiscardableAttrDictionary() {
+    if (getPropertiesStorage())
+      return attrs;
+    return DictionaryAttr::get(getContext(),
+                               llvm::to_vector(getDiscardableAttrs()));
+  }
+
+  /// Return all attributes that are not stored as properties.
+  DictionaryAttr getRawDictionaryAttrs() { return attrs; }
 
   /// Return all of the attributes on this operation.
-  ArrayRef<NamedAttribute> getAttrs() {
-    if (!getPropertiesStorage())
-      return getDiscardableAttrs();
-    return getAttrDictionary().getValue();
-  }
+  ArrayRef<NamedAttribute> getAttrs() { return getAttrDictionary().getValue(); }
 
   /// Return all of the attributes on this operation as a DictionaryAttr.
   DictionaryAttr getAttrDictionary();
@@ -878,8 +895,7 @@ public:
   /// Returns the properties storage.
   OpaqueProperties getPropertiesStorage() {
     if (propertiesStorageSize)
-      return {
-          reinterpret_cast<void *>(getTrailingObjects<detail::OpProperties>())};
+      return getPropertiesStorageUnsafe();
     return {nullptr};
   }
   OpaqueProperties getPropertiesStorage() const {
@@ -887,6 +903,12 @@ public:
       return {reinterpret_cast<void *>(const_cast<detail::OpProperties *>(
           getTrailingObjects<detail::OpProperties>()))};
     return {nullptr};
+  }
+  /// Returns the properties storage without checking whether properties are
+  /// present.
+  OpaqueProperties getPropertiesStorageUnsafe() {
+    return {
+        reinterpret_cast<void *>(getTrailingObjects<detail::OpProperties>())};
   }
 
   /// Return the properties converted to an attribute.

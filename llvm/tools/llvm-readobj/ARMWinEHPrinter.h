@@ -129,6 +129,8 @@ class Decoder {
                             unsigned Length, bool Prologue);
   bool opcode_context(const uint8_t *Opcodes, unsigned &Offset, unsigned Length,
                       bool Prologue);
+  bool opcode_ec_context(const uint8_t *Opcodes, unsigned &Offset,
+                         unsigned Length, bool Prologue);
   bool opcode_clear_unwound_to_call(const uint8_t *Opcodes, unsigned &Offset,
                                     unsigned Length, bool Prologue);
   bool opcode_pac_sign_lr(const uint8_t *Opcodes, unsigned &Offset,

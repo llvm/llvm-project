@@ -1,13 +1,13 @@
 # RUN: llc -mtriple=aarch64--linux-gnu -run-pass=aarch64-ldst-opt %s -verify-machineinstrs -o - | FileCheck %s
 --- |
-  define void @ldr_str_aa(i32* noalias nocapture %x, i32* noalias nocapture readonly %y) {
+  define void @ldr_str_aa(ptr noalias nocapture %x, ptr noalias nocapture readonly %y) {
   entry:
-    %0 = load i32, i32* %y, align 4
-    store i32 %0, i32* %x, align 4
-    %arrayidx2 = getelementptr inbounds i32, i32* %y, i32 1
-    %1 = load i32, i32* %arrayidx2, align 4
-    %arrayidx3 = getelementptr inbounds i32, i32* %x, i32 1
-    store i32 %1, i32* %arrayidx3, align 4
+    %0 = load i32, ptr %y, align 4
+    store i32 %0, ptr %x, align 4
+    %arrayidx2 = getelementptr inbounds i32, ptr %y, i32 1
+    %1 = load i32, ptr %arrayidx2, align 4
+    %arrayidx3 = getelementptr inbounds i32, ptr %x, i32 1
+    store i32 %1, ptr %arrayidx3, align 4
     ret void
   }
 
@@ -15,7 +15,7 @@
 ---
 # CHECK-LABEL: name: ldr_str_aa
 # CHECK: $w8, $w9 = LDPWi $x1, 0
-# CHECK: STPWi $w8, $w9, $x0, 0
+# CHECK: STPWi killed $w8, killed $w9, $x0, 0
 name:            ldr_str_aa
 tracksRegLiveness: true
 body:             |

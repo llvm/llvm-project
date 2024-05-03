@@ -16,6 +16,8 @@
 #include <memory>
 #include <type_traits>
 
+#include "test_macros.h"
+
 using namespace std::ranges;
 
 static_assert(std::is_same_v<in_fun_result<int, long>, for_each_result<int, long>>);
@@ -59,4 +61,10 @@ static_assert(std::is_same_v<min_max_result<int>, minmax_element_result<int>>);
 static_assert(std::is_same_v<in_found_result<int>, next_permutation_result<int>>);
 static_assert(std::is_same_v<in_found_result<int>, prev_permutation_result<int>>);
 
+#if TEST_STD_VER >= 23
+
+static_assert(std::is_same_v<in_value_result<int, long>, fold_left_with_iter_result<int, long>>);
+
 // static_assert(std::is_same_v<out_value_result<int>, iota_result<int>>);
+
+#endif // TEST_STD_VER

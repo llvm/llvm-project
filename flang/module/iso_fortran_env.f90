@@ -6,15 +6,15 @@
 !
 !===------------------------------------------------------------------------===!
 
-! See Fortran 2018, clause 16.10.2
-! TODO: These are placeholder values so that some tests can be run.
+! See Fortran 2023, subclause 16.10.2
 
-include '../include/flang/Runtime/magic-numbers.h' ! for IOSTAT= error/end code values
+include '../include/flang/Runtime/magic-numbers.h'
 
 module iso_fortran_env
 
-  use __Fortran_builtins, only: &
+  use __fortran_builtins, only: &
     event_type => __builtin_event_type, &
+    notify_type => __builtin_notify_type, &
     lock_type => __builtin_lock_type, &
     team_type => __builtin_team_type, &
     atomic_int_kind => __builtin_atomic_int_kind, &
@@ -23,20 +23,22 @@ module iso_fortran_env
     compiler_version => __builtin_compiler_version
 
   implicit none
+  private
 
-  ! TODO: Use PACK([x],test) in place of the array constructor idiom
-  ! [(x, integer::j=1,COUNT([test]))] below once PACK() can be folded.
+  public :: event_type, notify_type, lock_type, team_type, &
+    atomic_int_kind, atomic_logical_kind, compiler_options, &
+    compiler_version
 
-  integer, parameter, private :: &
+  integer, parameter :: &
     selectedASCII = selected_char_kind('ASCII'), &
     selectedUCS_2 = selected_char_kind('UCS-2'), &
     selectedUnicode = selected_char_kind('ISO_10646')
-  integer, parameter :: character_kinds(*) = [ &
-    [(selectedASCII, integer :: j=1, count([selectedASCII >= 0]))], &
-    [(selectedUCS_2, integer :: j=1, count([selectedUCS_2 >= 0]))], &
-    [(selectedUnicode, integer :: j=1, count([selectedUnicode >= 0]))]]
+  integer, parameter, public :: character_kinds(*) = [ &
+    pack([selectedASCII], selectedASCII >= 0), &
+    pack([selectedUCS_2], selectedUCS_2 >= 0), &
+    pack([selectedUnicode], selectedUnicode >= 0)]
 
-  integer, parameter, private :: &
+  integer, parameter :: &
     selectedInt8 = selected_int_kind(2), &
     selectedInt16 = selected_int_kind(4), &
     selectedInt32 = selected_int_kind(9), &
@@ -52,7 +54,7 @@ module iso_fortran_env
                       selectedInt64 >= 0), &
     safeInt128 = merge(selectedInt128, selected_int_kind(0), &
                        selectedInt128 >= 0)
-  integer, parameter :: &
+  integer, parameter, public :: &
     int8 = merge(selectedInt8, merge(-2, -1, selectedInt8 >= 0), &
                  digits(int(0,kind=safeInt8)) == 7), &
     int16 = merge(selectedInt16, merge(-2, -1, selectedInt16 >= 0), &
@@ -64,23 +66,22 @@ module iso_fortran_env
     int128 = merge(selectedInt128, merge(-2, -1, selectedInt128 >= 0), &
                    digits(int(0,kind=safeInt128)) == 127)
 
-  integer, parameter :: integer_kinds(*) = [ &
+  integer, parameter, public :: integer_kinds(*) = [ &
     selected_int_kind(0), &
-    ((selected_int_kind(k), &
-      integer :: j=1, count([selected_int_kind(k) >= 0 .and. &
-                             selected_int_kind(k) /= &
-                               selected_int_kind(k-1)])), &
-     integer :: k=1, 39)]
+    [(pack([selected_int_kind(k)], &
+           selected_int_kind(k) >= 0 .and. &
+             selected_int_kind(k) /= selected_int_kind(k-1)), &
+      integer :: k=1, 39)]]
+
+  integer, parameter, public :: &
+    logical8 = int8, logical16 = int16, logical32 = int32, logical64 = int64
+  integer, parameter, public :: logical_kinds(*) = [ &
+    pack([logical8],  logical8 >= 0), &
+    pack([logical16], logical16 >= 0), &
+    pack([logical32], logical32 >= 0), &
+    pack([logical64], logical64 >= 0)]
 
   integer, parameter :: &
-    logical8 = int8, logical16 = int16, logical32 = int32, logical64 = int64
-  integer, parameter :: logical_kinds(*) = [ &
-    [(logical8, integer :: j=1, count([logical8 >= 0]))], &
-    [(logical16, integer :: j=1, count([logical16 >= 0]))], &
-    [(logical32, integer :: j=1, count([logical32 >= 0]))], &
-    [(logical64, integer :: j=1, count([logical64 >= 0]))]]
-
-  integer, parameter, private :: &
     selectedReal16 = selected_real_kind(3, 4), &      ! IEEE half
     selectedBfloat16 = selected_real_kind(2, 37), &   ! truncated IEEE single
     selectedReal32 = selected_real_kind(6, 37), &     ! IEEE single
@@ -102,7 +103,7 @@ module iso_fortran_env
                          selectedReal64x2 >= 0), &
     safeReal128 = merge(selectedReal128, selected_real_kind(0,0), &
                         selectedReal128 >= 0)
-  integer, parameter :: &
+  integer, parameter, public :: &
     real16 = merge(selectedReal16, merge(-2, -1, selectedReal16 >= 0), &
                    digits(real(0,kind=safeReal16)) == 11), &
     bfloat16 = merge(selectedBfloat16, merge(-2, -1, selectedBfloat16 >= 0), &
@@ -118,33 +119,41 @@ module iso_fortran_env
     real128 = merge(selectedReal128, merge(-2, -1, selectedReal128 >= 0), &
                     digits(real(0,kind=safeReal128)) == 113)
 
-  integer, parameter :: real_kinds(*) = [ &
-    [(real16, integer :: j=1, count([real16 >= 0]))], &
-    [(bfloat16, integer :: j=1, count([bfloat16 >= 0]))], &
-    [(real32, integer :: j=1, count([real32 >= 0]))], &
-    [(real64, integer :: j=1, count([real64 >= 0]))], &
-    [(real80, integer :: j=1, count([real80 >= 0]))], &
-    [(real64x2, integer :: j=1, count([real64x2 >= 0]))], &
-    [(real128, integer :: j=1, count([real128 >= 0]))]]
+  integer, parameter, public :: real_kinds(*) = [ &
+    pack([real16], real16 >= 0), &
+    pack([bfloat16], bfloat16 >= 0), &
+    pack([real32], real32 >= 0), &
+    pack([real64], real64 >= 0), &
+    pack([real80], real80 >= 0), &
+    pack([real64x2], real64x2 >= 0), &
+    pack([real128], real128 >= 0)]
 
-  integer, parameter :: current_team = -1, initial_team = -2, parent_team = -3
+  integer, parameter, public :: current_team = -1, &
+    initial_team = -2, &
+    parent_team = -3
 
-  integer, parameter :: input_unit = 5, output_unit = 6
-  integer, parameter :: error_unit = 0
-  integer, parameter :: iostat_end = FORTRAN_RUNTIME_IOSTAT_END
-  integer, parameter :: iostat_eor = FORTRAN_RUNTIME_IOSTAT_EOR
-  integer, parameter :: iostat_inquire_internal_unit = &
-                          FORTRAN_RUNTIME_IOSTAT_INQUIRE_INTERNAL_UNIT
+  integer, parameter, public :: character_storage_size = 8
+  integer, parameter, public :: file_storage_size = 8
 
-  integer, parameter :: character_storage_size = 8
-  integer, parameter :: file_storage_size = 8
-  integer, parameter :: numeric_storage_size = 32
+  intrinsic :: __builtin_numeric_storage_size
+  ! This value depends on any -fdefault-integer-N and -fdefault-real-N
+  ! compiler options that are active when the module file is read.
+  integer, parameter, public :: numeric_storage_size = &
+    __builtin_numeric_storage_size()
 
-  integer, parameter :: stat_failed_image = FORTRAN_RUNTIME_STAT_FAILED_IMAGE
-  integer, parameter :: stat_locked = FORTRAN_RUNTIME_STAT_LOCKED
-  integer, parameter :: stat_locked_other_image = FORTRAN_RUNTIME_STAT_LOCKED_OTHER_IMAGE
-  integer, parameter :: stat_stopped_image = FORTRAN_RUNTIME_STAT_STOPPED_IMAGE
-  integer, parameter :: stat_unlocked = FORTRAN_RUNTIME_STAT_UNLOCKED
-  integer, parameter :: stat_unlocked_failed_image = FORTRAN_RUNTIME_STAT_UNLOCKED_FAILED_IMAGE
+  ! From Runtime/magic-numbers.h:
+  integer, parameter, public :: &
+    output_unit = FORTRAN_DEFAULT_OUTPUT_UNIT, &
+    input_unit = FORTRAN_DEFAULT_INPUT_UNIT, &
+    error_unit = FORTRAN_ERROR_UNIT, &
+    iostat_end = FORTRAN_RUNTIME_IOSTAT_END, &
+    iostat_eor = FORTRAN_RUNTIME_IOSTAT_EOR, &
+    iostat_inquire_internal_unit = FORTRAN_RUNTIME_IOSTAT_INQUIRE_INTERNAL_UNIT, &
+    stat_failed_image = FORTRAN_RUNTIME_STAT_FAILED_IMAGE, &
+    stat_locked = FORTRAN_RUNTIME_STAT_LOCKED, &
+    stat_locked_other_image = FORTRAN_RUNTIME_STAT_LOCKED_OTHER_IMAGE, &
+    stat_stopped_image = FORTRAN_RUNTIME_STAT_STOPPED_IMAGE, &
+    stat_unlocked = FORTRAN_RUNTIME_STAT_UNLOCKED, &
+    stat_unlocked_failed_image = FORTRAN_RUNTIME_STAT_UNLOCKED_FAILED_IMAGE
 
 end module iso_fortran_env

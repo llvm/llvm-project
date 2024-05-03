@@ -892,3 +892,92 @@ class StdDequeSynthProvider:
         except:
             pass
         return False
+
+
+def VariantSummaryProvider(valobj, dict):
+    raw_obj = valobj.GetNonSyntheticValue()
+    index_obj = raw_obj.GetChildMemberWithName("_M_index")
+    data_obj = raw_obj.GetChildMemberWithName("_M_u")
+    if not (index_obj and index_obj.IsValid() and data_obj and data_obj.IsValid()):
+        return "<Can't find _M_index or _M_u>"
+
+    def get_variant_npos_value(index_byte_size):
+        if index_byte_size == 1:
+            return 0xFF
+        elif index_byte_size == 2:
+            return 0xFFFF
+        else:
+            return 0xFFFFFFFF
+
+    npos_value = get_variant_npos_value(index_obj.GetByteSize())
+    index = index_obj.GetValueAsUnsigned(0)
+    if index == npos_value:
+        return " No Value"
+
+    # Invalid index can happen when the variant is not initialized yet.
+    template_arg_count = data_obj.GetType().GetNumberOfTemplateArguments()
+    if index >= template_arg_count:
+        return " <Invalid>"
+
+    active_type = data_obj.GetType().GetTemplateArgumentType(index)
+    return f" Active Type = {active_type.GetDisplayTypeName()} "
+
+
+class VariantSynthProvider:
+    def __init__(self, valobj, dict):
+        self.raw_obj = valobj.GetNonSyntheticValue()
+        self.is_valid = False
+        self.index = None
+        self.data_obj = None
+
+    def update(self):
+        try:
+            self.index = self.raw_obj.GetChildMemberWithName(
+                "_M_index"
+            ).GetValueAsSigned(-1)
+            self.is_valid = self.index != -1
+            self.data_obj = self.raw_obj.GetChildMemberWithName("_M_u")
+        except:
+            self.is_valid = False
+        return False
+
+    def has_children(self):
+        return True
+
+    def num_children(self):
+        return 1 if self.is_valid else 0
+
+    def get_child_index(self, name):
+        return 0
+
+    def get_child_at_index(self, index):
+        if not self.is_valid:
+            return None
+        cur = 0
+        node = self.data_obj
+        while cur < self.index:
+            node = node.GetChildMemberWithName("_M_rest")
+            cur += 1
+
+        # _M_storage's type depends on variant field's type "_Type".
+        #  1. if '_Type' is literal type: _Type _M_storage.
+        #  2. otherwise, __gnu_cxx::__aligned_membuf<_Type> _M_storage.
+        #
+        # For 2. we have to cast it to underlying template _Type.
+
+        value = node.GetChildMemberWithName("_M_first").GetChildMemberWithName(
+            "_M_storage"
+        )
+        template_type = value.GetType().GetTemplateArgumentType(0)
+
+        # Literal type will return None for GetTemplateArgumentType(0)
+        if (
+            template_type
+            and "__gnu_cxx::__aligned_membuf" in value.GetType().GetDisplayTypeName()
+            and template_type.IsValid()
+        ):
+            value = value.Cast(template_type)
+
+        if value.IsValid():
+            return value.Clone("Value")
+        return None

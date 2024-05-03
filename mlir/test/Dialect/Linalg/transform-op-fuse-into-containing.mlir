@@ -1,4 +1,4 @@
-// RUN: mlir-opt --test-transform-dialect-interpreter --split-input-file %s -verify-diagnostics | FileCheck %s
+// RUN: mlir-opt --transform-interpreter --split-input-file %s -verify-diagnostics | FileCheck %s
 
 #map0 = affine_map<()[s0, s1] -> (s0 ceildiv s1)>
 #map1 = affine_map<(d0)[s0] -> (d0 * s0)>
@@ -41,14 +41,16 @@ module {
   func.func @dummy2() { return }
   func.func @dummy3() { return }
 
-  transform.sequence failures(propagate) {
-  ^bb1(%arg1: !transform.any_op):
-    %0 = transform.structured.match ops{["linalg.fill"]} in %arg1 : (!transform.any_op) -> !transform.op<"linalg.fill">
-    %1 = transform.structured.match ops{["scf.forall"]} in %arg1 : (!transform.any_op) -> !transform.op<"scf.forall">
+  module attributes {transform.with_named_sequence} {
+    transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+      %0 = transform.structured.match ops{["linalg.fill"]} in %arg1 : (!transform.any_op) -> !transform.op<"linalg.fill">
+      %1 = transform.structured.match ops{["scf.forall"]} in %arg1 : (!transform.any_op) -> !transform.op<"scf.forall">
 
-    // linalg.fill is tileable. The op is tiled and fused.
-    transform.structured.fuse_into_containing_op %0 into %1
-      : (!transform.op<"linalg.fill">, !transform.op<"scf.forall">) -> (!transform.any_op, !transform.any_op)
+      // linalg.fill is tileable. The op is tiled and fused.
+      transform.structured.fuse_into_containing_op %0 into %1
+        : (!transform.op<"linalg.fill">, !transform.op<"scf.forall">) -> (!transform.any_op, !transform.any_op)
+        transform.yield
+    }
   }
 }
 
@@ -85,14 +87,16 @@ module {
     func.return %2 : tensor<64xf32>
   }
 
-  transform.sequence failures(propagate) {
-  ^bb1(%arg1: !transform.any_op):
-    %0 = transform.structured.match ops{["tensor.empty"]} in %arg1 : (!transform.any_op) -> !transform.op<"tensor.empty">
-    %1 = transform.structured.match ops{["scf.forall"]} in %arg1 : (!transform.any_op) -> !transform.op<"scf.forall">
+  module attributes {transform.with_named_sequence} {
+    transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+      %0 = transform.structured.match ops{["tensor.empty"]} in %arg1 : (!transform.any_op) -> !transform.op<"tensor.empty">
+      %1 = transform.structured.match ops{["scf.forall"]} in %arg1 : (!transform.any_op) -> !transform.op<"scf.forall">
 
-    // tensor.empty is not tileable. The op is cloned and fused.
-    transform.structured.fuse_into_containing_op %0 into %1
-      : (!transform.op<"tensor.empty">, !transform.op<"scf.forall">) -> (!transform.any_op, !transform.any_op)
+      // tensor.empty is not tileable. The op is cloned and fused.
+      transform.structured.fuse_into_containing_op %0 into %1
+        : (!transform.op<"tensor.empty">, !transform.op<"scf.forall">) -> (!transform.any_op, !transform.any_op)
+        transform.yield
+    }
   }
 }
 
@@ -132,14 +136,16 @@ module {
     func.return %2 : tensor<?xf32>
   }
 
-  transform.sequence failures(propagate) {
-  ^bb1(%arg1: !transform.any_op):
-    %0 = transform.structured.match ops{["linalg.fill"]} in %arg1 : (!transform.any_op) -> !transform.op<"linalg.fill">
-    %1 = transform.structured.match ops{["scf.forall"]} in %arg1 : (!transform.any_op) -> !transform.op<"scf.forall">
+  module attributes {transform.with_named_sequence} {
+    transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+      %0 = transform.structured.match ops{["linalg.fill"]} in %arg1 : (!transform.any_op) -> !transform.op<"linalg.fill">
+      %1 = transform.structured.match ops{["scf.forall"]} in %arg1 : (!transform.any_op) -> !transform.op<"scf.forall">
 
-    // linalg.fill is tileable. The op is tiled and fused.
-    transform.structured.fuse_into_containing_op %0 into %1
-      : (!transform.op<"linalg.fill">, !transform.op<"scf.forall">) -> (!transform.any_op, !transform.any_op)
+      // linalg.fill is tileable. The op is tiled and fused.
+      transform.structured.fuse_into_containing_op %0 into %1
+        : (!transform.op<"linalg.fill">, !transform.op<"scf.forall">) -> (!transform.any_op, !transform.any_op)
+        transform.yield
+    }
   }
 }
 
@@ -181,14 +187,16 @@ module {
     func.return %2 : tensor<?xf32>
   }
 
-  transform.sequence failures(propagate) {
-  ^bb1(%arg1: !transform.any_op):
-    %0 = transform.structured.match ops{["linalg.fill"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    %1 = transform.structured.match ops{["scf.forall"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+  module attributes {transform.with_named_sequence} {
+    transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+      %0 = transform.structured.match ops{["linalg.fill"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+      %1 = transform.structured.match ops{["scf.forall"]} in %arg1 : (!transform.any_op) -> !transform.any_op
 
-    // linalg.fill is tileable. The op is tiled and fused.
-    transform.structured.fuse_into_containing_op %0 into %1
-      : (!transform.any_op, !transform.any_op) -> (!transform.any_op, !transform.any_op)
+      // linalg.fill is tileable. The op is tiled and fused.
+      transform.structured.fuse_into_containing_op %0 into %1
+        : (!transform.any_op, !transform.any_op) -> (!transform.any_op, !transform.any_op)
+        transform.yield
+    }
   }
 }
 
@@ -242,14 +250,16 @@ module {
     func.return %2 : tensor<?xf32>
   }
 
-  transform.sequence failures(propagate) {
-  ^bb1(%arg1: !transform.any_op):
-    %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.op<"linalg.generic">
-    %1 = transform.structured.match ops{["scf.forall"]} in %arg1 : (!transform.any_op) -> !transform.op<"scf.forall">
+  module attributes {transform.with_named_sequence} {
+    transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+      %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.op<"linalg.generic">
+      %1 = transform.structured.match ops{["scf.forall"]} in %arg1 : (!transform.any_op) -> !transform.op<"scf.forall">
 
-    // linalg.generic is tileable. The op is tiled and fused.
-    transform.structured.fuse_into_containing_op %0 into %1
-      : (!transform.op<"linalg.generic">, !transform.op<"scf.forall">) -> (!transform.any_op, !transform.any_op)
+      // linalg.generic is tileable. The op is tiled and fused.
+      transform.structured.fuse_into_containing_op %0 into %1
+        : (!transform.op<"linalg.generic">, !transform.op<"scf.forall">) -> (!transform.any_op, !transform.any_op)
+        transform.yield
+    }
   }
 }
 
@@ -276,16 +286,18 @@ module {
     return %1 : tensor<2xf32>
   }
 
-  transform.sequence failures(propagate) {
-  ^bb1(%arg1: !transform.any_op):
-    %0 = transform.structured.match ops{["linalg.fill"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    %1 = transform.structured.match ops{["scf.forall"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+  module attributes {transform.with_named_sequence} {
+    transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+      %0 = transform.structured.match ops{["linalg.fill"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+      %1 = transform.structured.match ops{["scf.forall"]} in %arg1 : (!transform.any_op) -> !transform.any_op
 
-    // Create a new handle that points to `linalg.fill` twice.
-    %2 = transform.merge_handles %0, %0 : !transform.any_op
+      // Create a new handle that points to `linalg.fill` twice.
+      %2 = transform.merge_handles %0, %0 : !transform.any_op
 
-    // It shouldn't be a problem to fuse this handle.
-    transform.structured.fuse_into_containing_op %2 into %1 : (!transform.any_op, !transform.any_op) -> (!transform.any_op, !transform.any_op)
+      // It shouldn't be a problem to fuse this handle.
+      transform.structured.fuse_into_containing_op %2 into %1 : (!transform.any_op, !transform.any_op) -> (!transform.any_op, !transform.any_op)
+      transform.yield
+    }
   }
 }
 
@@ -345,15 +357,17 @@ module {
     // CHECK: }
   }
 
-  transform.sequence failures(propagate) {
-  ^bb1(%arg1: !transform.any_op):
-    %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.op<"linalg.generic">
-    %1 = transform.structured.match ops{["scf.forall"]} in %arg1 : (!transform.any_op) -> !transform.op<"scf.forall">
+  module attributes {transform.with_named_sequence} {
+    transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+      %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.op<"linalg.generic">
+      %1 = transform.structured.match ops{["scf.forall"]} in %arg1 : (!transform.any_op) -> !transform.op<"scf.forall">
 
-    // linalg.generic is tileable. The op is tiled and fused.
-    %fused, %containing = transform.structured.fuse_into_containing_op %0 into %1
-      : (!transform.op<"linalg.generic">, !transform.op<"scf.forall">) -> (!transform.any_op, !transform.any_op)
-    test_print_remark_at_operand %containing, "new containing op" : !transform.any_op
+      // linalg.generic is tileable. The op is tiled and fused.
+      %fused, %containing = transform.structured.fuse_into_containing_op %0 into %1
+        : (!transform.op<"linalg.generic">, !transform.op<"scf.forall">) -> (!transform.any_op, !transform.any_op)
+      transform.debug.emit_remark_at %containing, "new containing op" : !transform.any_op
+      transform.yield
+    }
   }
 }
 
@@ -412,14 +426,16 @@ module {
     // CHECK: }
   }
 
-  transform.sequence failures(propagate) {
-  ^bb1(%arg1: !transform.any_op):
-    %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.op<"linalg.generic">
-    %1 = transform.structured.match ops{["scf.forall"]} in %arg1 : (!transform.any_op) -> !transform.op<"scf.forall">
+  module attributes {transform.with_named_sequence} {
+    transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+      %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.op<"linalg.generic">
+      %1 = transform.structured.match ops{["scf.forall"]} in %arg1 : (!transform.any_op) -> !transform.op<"scf.forall">
 
-    // linalg.generic is tileable. The op is tiled and fused.
-    transform.structured.fuse_into_containing_op %0 into %1
-      : (!transform.op<"linalg.generic">, !transform.op<"scf.forall">) -> (!transform.any_op, !transform.any_op)
+      // linalg.generic is tileable. The op is tiled and fused.
+      transform.structured.fuse_into_containing_op %0 into %1
+        : (!transform.op<"linalg.generic">, !transform.op<"scf.forall">) -> (!transform.any_op, !transform.any_op)
+        transform.yield
+    }
   }
 }
 
@@ -477,14 +493,16 @@ module {
     // CHECK: }
   }
 
-  transform.sequence failures(propagate) {
-  ^bb1(%arg1: !transform.any_op):
-    %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.op<"linalg.generic">
-    %1 = transform.structured.match ops{["scf.forall"]} in %arg1 : (!transform.any_op) -> !transform.op<"scf.forall">
+  module attributes {transform.with_named_sequence} {
+    transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+      %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.op<"linalg.generic">
+      %1 = transform.structured.match ops{["scf.forall"]} in %arg1 : (!transform.any_op) -> !transform.op<"scf.forall">
 
-    // linalg.generic is tileable. The op is tiled and fused.
-    transform.structured.fuse_into_containing_op %0 into %1
-      : (!transform.op<"linalg.generic">, !transform.op<"scf.forall">) -> (!transform.any_op, !transform.any_op)
+      // linalg.generic is tileable. The op is tiled and fused.
+      transform.structured.fuse_into_containing_op %0 into %1
+        : (!transform.op<"linalg.generic">, !transform.op<"scf.forall">) -> (!transform.any_op, !transform.any_op)
+        transform.yield
+    }
   }
 }
 
@@ -550,16 +568,18 @@ module {
     // CHECK: }
   }
 
-  transform.sequence failures(propagate) {
-  ^bb1(%arg1: !transform.any_op):
-    %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.op<"linalg.generic">
-    %add, %reduce = transform.split_handle %0 : (!transform.op<"linalg.generic">) -> (!transform.op<"linalg.generic">, !transform.op<"linalg.generic">)
-    %1 = transform.structured.match ops{["scf.forall"]} in %arg1 : (!transform.any_op) -> !transform.op<"scf.forall">
+  module attributes {transform.with_named_sequence} {
+    transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+      %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.op<"linalg.generic">
+      %add, %reduce = transform.split_handle %0 : (!transform.op<"linalg.generic">) -> (!transform.op<"linalg.generic">, !transform.op<"linalg.generic">)
+      %1 = transform.structured.match ops{["scf.forall"]} in %arg1 : (!transform.any_op) -> !transform.op<"scf.forall">
 
-    %fused_ops, %new_forall = transform.structured.fuse_into_containing_op %reduce into %1
-      : (!transform.op<"linalg.generic">, !transform.op<"scf.forall">) -> (!transform.any_op, !transform.op<"scf.forall">)
-    %fused_ops_2, %new_forall_2 = transform.structured.fuse_into_containing_op %add into %new_forall
-      : (!transform.op<"linalg.generic">, !transform.op<"scf.forall">) -> (!transform.any_op, !transform.op<"scf.forall">)
+      %fused_ops, %new_forall = transform.structured.fuse_into_containing_op %reduce into %1
+        : (!transform.op<"linalg.generic">, !transform.op<"scf.forall">) -> (!transform.any_op, !transform.op<"scf.forall">)
+      %fused_ops_2, %new_forall_2 = transform.structured.fuse_into_containing_op %add into %new_forall
+        : (!transform.op<"linalg.generic">, !transform.op<"scf.forall">) -> (!transform.any_op, !transform.op<"scf.forall">)
+        transform.yield
+    }
   }
 }
 
@@ -620,12 +640,14 @@ module {
     return %7 : tensor<16x128x128xf32>
   }
 
-  transform.sequence failures(propagate) {
-  ^bb1(%arg1: !transform.any_op):
-    %0 = transform.structured.match attributes{producer} in %arg1 : (!transform.any_op) -> !transform.op<"linalg.generic">
-    %1 = transform.structured.match ops{["scf.forall"]} in %arg1 : (!transform.any_op) -> !transform.op<"scf.forall">
-    transform.structured.fuse_into_containing_op %0 into %1
-      : (!transform.op<"linalg.generic">, !transform.op<"scf.forall">) -> (!transform.any_op, !transform.any_op)
+  module attributes {transform.with_named_sequence} {
+    transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+      %0 = transform.structured.match attributes{producer} in %arg1 : (!transform.any_op) -> !transform.op<"linalg.generic">
+      %1 = transform.structured.match ops{["scf.forall"]} in %arg1 : (!transform.any_op) -> !transform.op<"scf.forall">
+      transform.structured.fuse_into_containing_op %0 into %1
+        : (!transform.op<"linalg.generic">, !transform.op<"scf.forall">) -> (!transform.any_op, !transform.any_op)
+        transform.yield
+    }
   }
 }
 
@@ -645,19 +667,21 @@ func.func @copy_1d_1024xf16(%arg0: tensor<123x456xf32>, %arg1: tensor<456x789xf3
   return %2 : tensor<123x789xf32>
 }
 
-transform.sequence failures(propagate) {
-^bb1(%arg1: !transform.any_op):
-  %0 = transform.structured.match ops{["linalg.fill"]} in %arg1
-    : (!transform.any_op) -> !transform.any_op
-  %1 = transform.structured.match ops{["linalg.matmul"]} in %arg1
-    : (!transform.any_op) -> !transform.any_op
-  %tiled_op, %forall_op = transform.structured.tile_using_forall %1
-    num_threads [] tile_sizes [50, 16]
-    : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
-  // Note that we pass in %tiled_op, which isn't a container op.
-  // expected-error @+2 {{could not find next producer to fuse into container}}
-  %fused_op, %new_containing_op =
-    transform.structured.fuse_into_containing_op %0 into %tiled_op
-      : (!transform.any_op, !transform.any_op)
-        -> (!transform.any_op, !transform.any_op)
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.fill"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    %1 = transform.structured.match ops{["linalg.matmul"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    %tiled_op, %forall_op = transform.structured.tile_using_forall %1
+      num_threads [] tile_sizes [50, 16]
+      : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+    // Note that we pass in %tiled_op, which isn't a container op.
+    // expected-error @+2 {{could not find next producer to fuse into container}}
+    %fused_op, %new_containing_op =
+      transform.structured.fuse_into_containing_op %0 into %tiled_op
+        : (!transform.any_op, !transform.any_op)
+          -> (!transform.any_op, !transform.any_op)
+          transform.yield
+  }
 }

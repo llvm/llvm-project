@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -sparsification | FileCheck %s
+// RUN: mlir-opt %s --sparse-reinterpret-map -sparsification | FileCheck %s
 
 //
 // A SDDMM implementation with "spy" function and
@@ -20,15 +20,15 @@
 // CHECK-LABEL: func.func @sparse_sampled_dd(
 // CHECK-SAME:    %[[VAL_0:.*0]]: tensor<8x8xf64>,
 // CHECK-SAME:    %[[VAL_1:.*1]]: tensor<8x8xf64>,
-// CHECK-SAME:    %[[VAL_2:.*2]]: tensor<8x8xf64, #sparse_tensor.encoding<{{{.*}}}>> {
+// CHECK-SAME:    %[[VAL_2:.*2]]: tensor<8x8xf64, #sparse{{[0-9]*}}>) -> tensor<8x8xf64, #sparse{{[0-9]*}}> {
 // CHECK-DAG:     %[[VAL_3:.*]] = arith.constant 8 : index
 // CHECK-DAG:     %[[VAL_4:.*]] = arith.constant 0 : index
 // CHECK-DAG:     %[[VAL_5:.*]] = arith.constant 1 : index
 // CHECK-DAG:     %[[VAL_6:.*]] = bufferization.to_memref %[[VAL_0]] : memref<8x8xf64>
 // CHECK-DAG:     %[[VAL_7:.*]] = bufferization.to_memref %[[VAL_1]] : memref<8x8xf64>
-// CHECK-DAG:     %[[VAL_8:.*]] = sparse_tensor.positions %[[VAL_2]] {level = 1 : index} : tensor<8x8xf64, #sparse_tensor.encoding<{{{.*}}}>> to memref<?xindex>
-// CHECK-DAG:     %[[VAL_9:.*]] = sparse_tensor.coordinates %[[VAL_2]] {level = 1 : index} : tensor<8x8xf64, #sparse_tensor.encoding<{{{.*}}}>> to memref<?xindex>
-// CHECK-DAG:     %[[VAL_10:.*]] = sparse_tensor.values %[[VAL_2]] : tensor<8x8xf64, #sparse_tensor.encoding<{{{.*}}}>> to memref<?xf64>
+// CHECK-DAG:     %[[VAL_8:.*]] = sparse_tensor.positions %[[VAL_2]] {level = 1 : index} : tensor<8x8xf64, #sparse{{[0-9]*}}> to memref<?xindex>
+// CHECK-DAG:     %[[VAL_9:.*]] = sparse_tensor.coordinates %[[VAL_2]] {level = 1 : index} : tensor<8x8xf64, #sparse{{[0-9]*}}> to memref<?xindex>
+// CHECK-DAG:     %[[VAL_10:.*]] = sparse_tensor.values %[[VAL_2]] : tensor<8x8xf64, #sparse{{[0-9]*}}> to memref<?xf64>
 // CHECK:         scf.for %[[VAL_11:.*]] = %[[VAL_4]] to %[[VAL_3]] step %[[VAL_5]] {
 // CHECK:           scf.for %[[VAL_12:.*]] = %[[VAL_4]] to %[[VAL_3]] step %[[VAL_5]] {
 // CHECK:             %[[VAL_13:.*]] = memref.load %[[VAL_8]]{{\[}}%[[VAL_11]]] : memref<?xindex>
@@ -45,8 +45,8 @@
 // CHECK:             } {"Emitted from" = "linalg.generic"}
 // CHECK:           } {"Emitted from" = "linalg.generic"}
 // CHECK:         } {"Emitted from" = "linalg.generic"}
-// CHECK:         %[[VAL_23:.*]] = sparse_tensor.load %[[VAL_2]] : tensor<8x8xf64, #sparse_tensor.encoding<{{{.*}}}>>
-// CHECK:           return %[[VAL_23]] : tensor<8x8xf64, #sparse_tensor.encoding<{{{.*}}}>>
+// CHECK:         %[[VAL_23:.*]] = sparse_tensor.load %[[VAL_2]] : tensor<8x8xf64, #sparse{{[0-9]*}}>
+// CHECK:           return %[[VAL_23]] : tensor<8x8xf64, #sparse{{[0-9]*}}>
 // CHECK:       }
 func.func @sparse_sampled_dd(%argA: tensor<8x8xf64>,
                              %argB: tensor<8x8xf64>,

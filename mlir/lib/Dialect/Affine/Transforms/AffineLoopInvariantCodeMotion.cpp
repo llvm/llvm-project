@@ -48,7 +48,7 @@ using namespace mlir::affine;
 
 namespace {
 
-/// Loop invariant code motion (LICM) pass.
+/// Affine loop invariant code motion (LICM) pass.
 /// TODO: The pass is missing zero-trip tests.
 /// TODO: This code should be removed once the new LICM pass can handle its
 ///       uses.

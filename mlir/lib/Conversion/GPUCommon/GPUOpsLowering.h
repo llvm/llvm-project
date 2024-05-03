@@ -14,14 +14,37 @@
 
 namespace mlir {
 
+/// Lowering for gpu.dynamic.shared.memory to LLVM dialect. The pattern first
+/// create a 0-sized global array symbol similar as LLVM expects. It constructs
+/// a memref descriptor with these values and return it.
+struct GPUDynamicSharedMemoryOpLowering
+    : public ConvertOpToLLVMPattern<gpu::DynamicSharedMemoryOp> {
+  using ConvertOpToLLVMPattern<
+      gpu::DynamicSharedMemoryOp>::ConvertOpToLLVMPattern;
+  GPUDynamicSharedMemoryOpLowering(const LLVMTypeConverter &converter,
+                                   unsigned alignmentBit = 0)
+      : ConvertOpToLLVMPattern<gpu::DynamicSharedMemoryOp>(converter),
+        alignmentBit(alignmentBit) {}
+
+  LogicalResult
+  matchAndRewrite(gpu::DynamicSharedMemoryOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override;
+
+private:
+  // Alignment bit
+  unsigned alignmentBit;
+};
+
 struct GPUFuncOpLowering : ConvertOpToLLVMPattern<gpu::GPUFuncOp> {
-  GPUFuncOpLowering(const LLVMTypeConverter &converter,
-                    unsigned allocaAddrSpace, unsigned workgroupAddrSpace,
-                    StringAttr kernelAttributeName)
+  GPUFuncOpLowering(
+      const LLVMTypeConverter &converter, unsigned allocaAddrSpace,
+      unsigned workgroupAddrSpace, StringAttr kernelAttributeName,
+      std::optional<StringAttr> kernelBlockSizeAttributeName = std::nullopt)
       : ConvertOpToLLVMPattern<gpu::GPUFuncOp>(converter),
         allocaAddrSpace(allocaAddrSpace),
         workgroupAddrSpace(workgroupAddrSpace),
-        kernelAttributeName(kernelAttributeName) {}
+        kernelAttributeName(kernelAttributeName),
+        kernelBlockSizeAttributeName(kernelBlockSizeAttributeName) {}
 
   LogicalResult
   matchAndRewrite(gpu::GPUFuncOp gpuFuncOp, OpAdaptor adaptor,
@@ -35,6 +58,9 @@ private:
 
   /// The attribute name to use instead of `gpu.kernel`.
   StringAttr kernelAttributeName;
+
+  /// The attribute name to to set block size
+  std::optional<StringAttr> kernelBlockSizeAttributeName;
 };
 
 /// The lowering of gpu.printf to a call to HIP hostcalls

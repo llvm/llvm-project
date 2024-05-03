@@ -49,7 +49,7 @@ void f(void) {
   // CHECK: store <2 x i32> <i32 1, i32 2>, ptr %[[compoundliteral1]], align 8
   // CHECK: %[[v6:.*]] = load <2 x i32>, ptr %[[compoundliteral1]], align 8
   // CHECK: %[[vext:.*]] = shufflevector <2 x i32> %[[v6]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
-  // CHECK: %[[vecinit:.*]] = shufflevector <4 x i32> %[[vext]], <4 x i32> undef, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+  // CHECK: %[[vecinit:.*]] = shufflevector <4 x i32> %[[vext]], <4 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
   // CHECK: %[[vecinit2:.*]] = insertelement <4 x i32> %[[vecinit]], i32 3, i32 2
   // CHECK: %[[vecinit3:.*]] = insertelement <4 x i32> %[[vecinit2]], i32 4, i32 3
   // CHECK: store <4 x i32> %[[vecinit3]], ptr %[[compoundliteral]], align 16

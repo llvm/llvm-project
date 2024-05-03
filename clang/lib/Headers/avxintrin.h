@@ -50,8 +50,12 @@ typedef __bf16 __m256bh __attribute__((__vector_size__(32), __aligned__(32)));
 #endif
 
 /* Define the default attributes for the functions in this file. */
-#define __DEFAULT_FN_ATTRS __attribute__((__always_inline__, __nodebug__, __target__("avx"), __min_vector_width__(256)))
-#define __DEFAULT_FN_ATTRS128 __attribute__((__always_inline__, __nodebug__, __target__("avx"), __min_vector_width__(128)))
+#define __DEFAULT_FN_ATTRS                                                     \
+  __attribute__((__always_inline__, __nodebug__, __target__("avx,no-evex512"), \
+                 __min_vector_width__(256)))
+#define __DEFAULT_FN_ATTRS128                                                  \
+  __attribute__((__always_inline__, __nodebug__, __target__("avx,no-evex512"), \
+                 __min_vector_width__(128)))
 
 /* Arithmetic */
 /// Adds two 256-bit vectors of [4 x double].
@@ -203,6 +207,8 @@ _mm256_div_ps(__m256 __a, __m256 __b)
 /// Compares two 256-bit vectors of [4 x double] and returns the greater
 ///    of each pair of values.
 ///
+///    If either value in a comparison is NaN, returns the value from \a __b.
+///
 /// \headerfile <x86intrin.h>
 ///
 /// This intrinsic corresponds to the <c> VMAXPD </c> instruction.
@@ -221,6 +227,8 @@ _mm256_max_pd(__m256d __a, __m256d __b)
 
 /// Compares two 256-bit vectors of [8 x float] and returns the greater
 ///    of each pair of values.
+///
+///    If either value in a comparison is NaN, returns the value from \a __b.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -241,6 +249,8 @@ _mm256_max_ps(__m256 __a, __m256 __b)
 /// Compares two 256-bit vectors of [4 x double] and returns the lesser
 ///    of each pair of values.
 ///
+///    If either value in a comparison is NaN, returns the value from \a __b.
+///
 /// \headerfile <x86intrin.h>
 ///
 /// This intrinsic corresponds to the <c> VMINPD </c> instruction.
@@ -259,6 +269,8 @@ _mm256_min_pd(__m256d __a, __m256d __b)
 
 /// Compares two 256-bit vectors of [8 x float] and returns the lesser
 ///    of each pair of values.
+///
+///    If either value in a comparison is NaN, returns the value from \a __b.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -828,6 +840,7 @@ _mm256_permutevar_pd(__m256d __a, __m256i __c)
 
 /// Copies the values stored in a 128-bit vector of [4 x float] as
 ///    specified by the 128-bit integer vector operand.
+///
 /// \headerfile <x86intrin.h>
 ///
 /// This intrinsic corresponds to the <c> VPERMILPS </c> instruction.
@@ -1569,6 +1582,7 @@ _mm256_blendv_ps(__m256 __a, __m256 __b, __m256 __c)
   ((__m256d)__builtin_ia32_shufpd256((__v4df)(__m256d)(a), \
                                      (__v4df)(__m256d)(b), (int)(mask)))
 
+/* Compare */
 #define _CMP_EQ_UQ    0x08 /* Equal (unordered, non-signaling)  */
 #define _CMP_NGE_US   0x09 /* Not-greater-than-or-equal (unordered, signaling)  */
 #define _CMP_NGT_US   0x0a /* Not-greater-than (unordered, signaling)  */
@@ -1594,13 +1608,131 @@ _mm256_blendv_ps(__m256 __a, __m256 __b, __m256 __c)
 #define _CMP_GT_OQ    0x1e /* Greater-than (ordered, non-signaling)  */
 #define _CMP_TRUE_US  0x1f /* True (unordered, signaling)  */
 
+/* Below intrinsic defined in emmintrin.h can be used for AVX */
+/// Compares each of the corresponding double-precision values of two
+///    128-bit vectors of [2 x double], using the operation specified by the
+///    immediate integer operand.
+///
+///    Each comparison returns 0x0 for false, 0xFFFFFFFFFFFFFFFF for true.
+///    If either value in a comparison is NaN, comparisons that are ordered
+///    return false, and comparisons that are unordered return true.
+///
+/// \headerfile <x86intrin.h>
+///
+/// \code
+/// __m128d _mm_cmp_pd(__m128d a, __m128d b, const int c);
+/// \endcode
+///
+/// This intrinsic corresponds to the <c> VCMPPD </c> instruction.
+///
+/// \param a
+///    A 128-bit vector of [2 x double].
+/// \param b
+///    A 128-bit vector of [2 x double].
+/// \param c
+///    An immediate integer operand, with bits [4:0] specifying which comparison
+///    operation to use: \n
+///    0x00: Equal (ordered, non-signaling) \n
+///    0x01: Less-than (ordered, signaling) \n
+///    0x02: Less-than-or-equal (ordered, signaling) \n
+///    0x03: Unordered (non-signaling) \n
+///    0x04: Not-equal (unordered, non-signaling) \n
+///    0x05: Not-less-than (unordered, signaling) \n
+///    0x06: Not-less-than-or-equal (unordered, signaling) \n
+///    0x07: Ordered (non-signaling) \n
+///    0x08: Equal (unordered, non-signaling) \n
+///    0x09: Not-greater-than-or-equal (unordered, signaling) \n
+///    0x0A: Not-greater-than (unordered, signaling) \n
+///    0x0B: False (ordered, non-signaling) \n
+///    0x0C: Not-equal (ordered, non-signaling) \n
+///    0x0D: Greater-than-or-equal (ordered, signaling) \n
+///    0x0E: Greater-than (ordered, signaling) \n
+///    0x0F: True (unordered, non-signaling) \n
+///    0x10: Equal (ordered, signaling) \n
+///    0x11: Less-than (ordered, non-signaling) \n
+///    0x12: Less-than-or-equal (ordered, non-signaling) \n
+///    0x13: Unordered (signaling) \n
+///    0x14: Not-equal (unordered, signaling) \n
+///    0x15: Not-less-than (unordered, non-signaling) \n
+///    0x16: Not-less-than-or-equal (unordered, non-signaling) \n
+///    0x17: Ordered (signaling) \n
+///    0x18: Equal (unordered, signaling) \n
+///    0x19: Not-greater-than-or-equal (unordered, non-signaling) \n
+///    0x1A: Not-greater-than (unordered, non-signaling) \n
+///    0x1B: False (ordered, signaling) \n
+///    0x1C: Not-equal (ordered, signaling) \n
+///    0x1D: Greater-than-or-equal (ordered, non-signaling) \n
+///    0x1E: Greater-than (ordered, non-signaling) \n
+///    0x1F: True (unordered, signaling)
+/// \returns A 128-bit vector of [2 x double] containing the comparison results.
+/// \fn __m128d _mm_cmp_pd(__m128d a, __m128d b, const int c)
+
+/* Below intrinsic defined in xmmintrin.h can be used for AVX */
+/// Compares each of the corresponding values of two 128-bit vectors of
+///    [4 x float], using the operation specified by the immediate integer
+///    operand.
+///
+///    Each comparison returns 0x0 for false, 0xFFFFFFFF for true.
+///    If either value in a comparison is NaN, comparisons that are ordered
+///    return false, and comparisons that are unordered return true.
+///
+/// \headerfile <x86intrin.h>
+///
+/// \code
+/// __m128 _mm_cmp_ps(__m128 a, __m128 b, const int c);
+/// \endcode
+///
+/// This intrinsic corresponds to the <c> VCMPPS </c> instruction.
+///
+/// \param a
+///    A 128-bit vector of [4 x float].
+/// \param b
+///    A 128-bit vector of [4 x float].
+/// \param c
+///    An immediate integer operand, with bits [4:0] specifying which comparison
+///    operation to use: \n
+///    0x00: Equal (ordered, non-signaling) \n
+///    0x01: Less-than (ordered, signaling) \n
+///    0x02: Less-than-or-equal (ordered, signaling) \n
+///    0x03: Unordered (non-signaling) \n
+///    0x04: Not-equal (unordered, non-signaling) \n
+///    0x05: Not-less-than (unordered, signaling) \n
+///    0x06: Not-less-than-or-equal (unordered, signaling) \n
+///    0x07: Ordered (non-signaling) \n
+///    0x08: Equal (unordered, non-signaling) \n
+///    0x09: Not-greater-than-or-equal (unordered, signaling) \n
+///    0x0A: Not-greater-than (unordered, signaling) \n
+///    0x0B: False (ordered, non-signaling) \n
+///    0x0C: Not-equal (ordered, non-signaling) \n
+///    0x0D: Greater-than-or-equal (ordered, signaling) \n
+///    0x0E: Greater-than (ordered, signaling) \n
+///    0x0F: True (unordered, non-signaling) \n
+///    0x10: Equal (ordered, signaling) \n
+///    0x11: Less-than (ordered, non-signaling) \n
+///    0x12: Less-than-or-equal (ordered, non-signaling) \n
+///    0x13: Unordered (signaling) \n
+///    0x14: Not-equal (unordered, signaling) \n
+///    0x15: Not-less-than (unordered, non-signaling) \n
+///    0x16: Not-less-than-or-equal (unordered, non-signaling) \n
+///    0x17: Ordered (signaling) \n
+///    0x18: Equal (unordered, signaling) \n
+///    0x19: Not-greater-than-or-equal (unordered, non-signaling) \n
+///    0x1A: Not-greater-than (unordered, non-signaling) \n
+///    0x1B: False (ordered, signaling) \n
+///    0x1C: Not-equal (ordered, signaling) \n
+///    0x1D: Greater-than-or-equal (ordered, non-signaling) \n
+///    0x1E: Greater-than (ordered, non-signaling) \n
+///    0x1F: True (unordered, signaling)
+/// \returns A 128-bit vector of [4 x float] containing the comparison results.
+/// \fn __m128 _mm_cmp_ps(__m128 a, __m128 b, const int c)
+
 /// Compares each of the corresponding double-precision values of two
 ///    256-bit vectors of [4 x double], using the operation specified by the
 ///    immediate integer operand.
 ///
-///    Returns a [4 x double] vector consisting of four doubles corresponding to
-///    the four comparison results: zero if the comparison is false, and all 1's
-///    if the comparison is true.
+///    Each comparison returns 0x0 for false, 0xFFFFFFFFFFFFFFFF for true.
+///    If either value in a comparison is NaN, comparisons that are ordered
+///    return false, and comparisons that are unordered return true.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -1658,9 +1790,9 @@ _mm256_blendv_ps(__m256 __a, __m256 __b, __m256 __c)
 ///    [8 x float], using the operation specified by the immediate integer
 ///    operand.
 ///
-///    Returns a [8 x float] vector consisting of eight floats corresponding to
-///    the eight comparison results: zero if the comparison is false, and all
-///    1's if the comparison is true.
+///    Each comparison returns 0x0 for false, 0xFFFFFFFF for true.
+///    If either value in a comparison is NaN, comparisons that are ordered
+///    return false, and comparisons that are unordered return true.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -1713,6 +1845,124 @@ _mm256_blendv_ps(__m256 __a, __m256 __b, __m256 __c)
 #define _mm256_cmp_ps(a, b, c) \
   ((__m256)__builtin_ia32_cmpps256((__v8sf)(__m256)(a), \
                                    (__v8sf)(__m256)(b), (c)))
+
+/* Below intrinsic defined in emmintrin.h can be used for AVX */
+/// Compares each of the corresponding scalar double-precision values of
+///    two 128-bit vectors of [2 x double], using the operation specified by the
+///    immediate integer operand.
+///
+///    Each comparison returns 0x0 for false, 0xFFFFFFFFFFFFFFFF for true.
+///    If either value in a comparison is NaN, comparisons that are ordered
+///    return false, and comparisons that are unordered return true.
+///
+/// \headerfile <x86intrin.h>
+///
+/// \code
+/// __m128d _mm_cmp_sd(__m128d a, __m128d b, const int c);
+/// \endcode
+///
+/// This intrinsic corresponds to the <c> VCMPSD </c> instruction.
+///
+/// \param a
+///    A 128-bit vector of [2 x double].
+/// \param b
+///    A 128-bit vector of [2 x double].
+/// \param c
+///    An immediate integer operand, with bits [4:0] specifying which comparison
+///    operation to use: \n
+///    0x00: Equal (ordered, non-signaling) \n
+///    0x01: Less-than (ordered, signaling) \n
+///    0x02: Less-than-or-equal (ordered, signaling) \n
+///    0x03: Unordered (non-signaling) \n
+///    0x04: Not-equal (unordered, non-signaling) \n
+///    0x05: Not-less-than (unordered, signaling) \n
+///    0x06: Not-less-than-or-equal (unordered, signaling) \n
+///    0x07: Ordered (non-signaling) \n
+///    0x08: Equal (unordered, non-signaling) \n
+///    0x09: Not-greater-than-or-equal (unordered, signaling) \n
+///    0x0A: Not-greater-than (unordered, signaling) \n
+///    0x0B: False (ordered, non-signaling) \n
+///    0x0C: Not-equal (ordered, non-signaling) \n
+///    0x0D: Greater-than-or-equal (ordered, signaling) \n
+///    0x0E: Greater-than (ordered, signaling) \n
+///    0x0F: True (unordered, non-signaling) \n
+///    0x10: Equal (ordered, signaling) \n
+///    0x11: Less-than (ordered, non-signaling) \n
+///    0x12: Less-than-or-equal (ordered, non-signaling) \n
+///    0x13: Unordered (signaling) \n
+///    0x14: Not-equal (unordered, signaling) \n
+///    0x15: Not-less-than (unordered, non-signaling) \n
+///    0x16: Not-less-than-or-equal (unordered, non-signaling) \n
+///    0x17: Ordered (signaling) \n
+///    0x18: Equal (unordered, signaling) \n
+///    0x19: Not-greater-than-or-equal (unordered, non-signaling) \n
+///    0x1A: Not-greater-than (unordered, non-signaling) \n
+///    0x1B: False (ordered, signaling) \n
+///    0x1C: Not-equal (ordered, signaling) \n
+///    0x1D: Greater-than-or-equal (ordered, non-signaling) \n
+///    0x1E: Greater-than (ordered, non-signaling) \n
+///    0x1F: True (unordered, signaling)
+/// \returns A 128-bit vector of [2 x double] containing the comparison results.
+/// \fn __m128d _mm_cmp_sd(__m128d a, __m128d b, const int c)
+
+/* Below intrinsic defined in xmmintrin.h can be used for AVX */
+/// Compares each of the corresponding scalar values of two 128-bit
+///    vectors of [4 x float], using the operation specified by the immediate
+///    integer operand.
+///
+///    Each comparison returns 0x0 for false, 0xFFFFFFFF for true.
+///    If either value in a comparison is NaN, comparisons that are ordered
+///    return false, and comparisons that are unordered return true.
+///
+/// \headerfile <x86intrin.h>
+///
+/// \code
+/// __m128 _mm_cmp_ss(__m128 a, __m128 b, const int c);
+/// \endcode
+///
+/// This intrinsic corresponds to the <c> VCMPSS </c> instruction.
+///
+/// \param a
+///    A 128-bit vector of [4 x float].
+/// \param b
+///    A 128-bit vector of [4 x float].
+/// \param c
+///    An immediate integer operand, with bits [4:0] specifying which comparison
+///    operation to use: \n
+///    0x00: Equal (ordered, non-signaling) \n
+///    0x01: Less-than (ordered, signaling) \n
+///    0x02: Less-than-or-equal (ordered, signaling) \n
+///    0x03: Unordered (non-signaling) \n
+///    0x04: Not-equal (unordered, non-signaling) \n
+///    0x05: Not-less-than (unordered, signaling) \n
+///    0x06: Not-less-than-or-equal (unordered, signaling) \n
+///    0x07: Ordered (non-signaling) \n
+///    0x08: Equal (unordered, non-signaling) \n
+///    0x09: Not-greater-than-or-equal (unordered, signaling) \n
+///    0x0A: Not-greater-than (unordered, signaling) \n
+///    0x0B: False (ordered, non-signaling) \n
+///    0x0C: Not-equal (ordered, non-signaling) \n
+///    0x0D: Greater-than-or-equal (ordered, signaling) \n
+///    0x0E: Greater-than (ordered, signaling) \n
+///    0x0F: True (unordered, non-signaling) \n
+///    0x10: Equal (ordered, signaling) \n
+///    0x11: Less-than (ordered, non-signaling) \n
+///    0x12: Less-than-or-equal (ordered, non-signaling) \n
+///    0x13: Unordered (signaling) \n
+///    0x14: Not-equal (unordered, signaling) \n
+///    0x15: Not-less-than (unordered, non-signaling) \n
+///    0x16: Not-less-than-or-equal (unordered, non-signaling) \n
+///    0x17: Ordered (signaling) \n
+///    0x18: Equal (unordered, signaling) \n
+///    0x19: Not-greater-than-or-equal (unordered, non-signaling) \n
+///    0x1A: Not-greater-than (unordered, non-signaling) \n
+///    0x1B: False (ordered, signaling) \n
+///    0x1C: Not-equal (ordered, signaling) \n
+///    0x1D: Greater-than-or-equal (ordered, non-signaling) \n
+///    0x1E: Greater-than (ordered, non-signaling) \n
+///    0x1F: True (unordered, signaling)
+/// \returns A 128-bit vector of [4 x float] containing the comparison results.
+/// \fn __m128 _mm_cmp_ss(__m128 a, __m128 b, const int c)
 
 /// Takes a [8 x i32] vector and returns the vector element value
 ///    indexed by the immediate constant operand.
@@ -1962,6 +2212,10 @@ _mm256_cvtpd_ps(__m256d __a)
 
 /// Converts a vector of [8 x float] into a vector of [8 x i32].
 ///
+///    If a converted value does not fit in a 32-bit integer, raises a
+///    floating-point invalid exception. If the exception is masked, returns
+///    the most negative integer.
+///
 /// \headerfile <x86intrin.h>
 ///
 /// This intrinsic corresponds to the <c> VCVTPS2DQ </c> instruction.
@@ -1991,9 +2245,13 @@ _mm256_cvtps_pd(__m128 __a)
   return (__m256d)__builtin_convertvector((__v4sf)__a, __v4df);
 }
 
-/// Converts a 256-bit vector of [4 x double] into a 128-bit vector of [4
-///    x i32], truncating the result by rounding towards zero when it is
-///    inexact.
+/// Converts a 256-bit vector of [4 x double] into four signed truncated
+///    (rounded toward zero) 32-bit integers returned in a 128-bit vector of
+///    [4 x i32].
+///
+///    If a converted value does not fit in a 32-bit integer, raises a
+///    floating-point invalid exception. If the exception is masked, returns
+///    the most negative integer.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -2008,9 +2266,12 @@ _mm256_cvttpd_epi32(__m256d __a)
   return (__m128i)__builtin_ia32_cvttpd2dq256((__v4df) __a);
 }
 
-/// Converts a 256-bit vector of [4 x double] into a 128-bit vector of [4
-///    x i32]. When a conversion is inexact, the value returned is rounded
-///    according to the rounding control bits in the MXCSR register.
+/// Converts a 256-bit vector of [4 x double] into a 128-bit vector of
+///    [4 x i32].
+///
+///    If a converted value does not fit in a 32-bit integer, raises a
+///    floating-point invalid exception. If the exception is masked, returns
+///    the most negative integer.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -2025,8 +2286,12 @@ _mm256_cvtpd_epi32(__m256d __a)
   return (__m128i)__builtin_ia32_cvtpd2dq256((__v4df) __a);
 }
 
-/// Converts a vector of [8 x float] into a vector of [8 x i32],
-///    truncating the result by rounding towards zero when it is inexact.
+/// Converts a vector of [8 x float] into eight signed truncated (rounded
+///    toward zero) 32-bit integers returned in a vector of [8 x i32].
+///
+///    If a converted value does not fit in a 32-bit integer, raises a
+///    floating-point invalid exception. If the exception is masked, returns
+///    the most negative integer.
 ///
 /// \headerfile <x86intrin.h>
 ///

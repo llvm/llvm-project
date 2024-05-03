@@ -1,5 +1,5 @@
 ! Test EXIT with dynamically optional arguments.
-! RUN: bbc -emit-fir %s -o - | FileCheck %s
+! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s
 
 ! CHECK-LABEL: func @_QPexit_opt_dummy(
 ! CHECK-SAME:  %[[VAL_0:.*]]: !fir.ref<i32> {fir.bindc_name = "status", fir.optional}) {

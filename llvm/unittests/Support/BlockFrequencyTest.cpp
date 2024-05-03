@@ -11,6 +11,7 @@
 #include "llvm/Support/DataTypes.h"
 #include "gtest/gtest.h"
 #include <climits>
+#include <cstdint>
 
 using namespace llvm;
 
@@ -106,12 +107,12 @@ TEST(BlockFrequencyTest, Saturate) {
   Freq /= BranchProbability(1, 2);
   EXPECT_EQ(Freq.getFrequency(), UINT64_MAX);
 
-  Freq = 0x1000000000000000ULL;
+  Freq = BlockFrequency(UINT64_C(0x1000000000000000));
   Freq /= BranchProbability(10000, 170000);
   EXPECT_EQ(Freq.getFrequency(), UINT64_MAX);
 
   // Try to cheat the multiplication overflow check.
-  Freq = 0x00000001f0000001ull;
+  Freq = BlockFrequency(UINT64_C(0x00000001f0000001));
   Freq /= BranchProbability(1000, 0xf000000f);
   EXPECT_EQ(33527736066704712ULL, Freq.getFrequency());
 }

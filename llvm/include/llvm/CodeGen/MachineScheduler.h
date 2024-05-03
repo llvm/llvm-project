@@ -807,7 +807,7 @@ public:
   // constructor for empty set
   explicit ResourceSegments(){};
   bool empty() const { return _Intervals.empty(); }
-  explicit ResourceSegments(std::list<IntervalTy> Intervals)
+  explicit ResourceSegments(const std::list<IntervalTy> &Intervals)
       : _Intervals(Intervals) {
     sortAndMerge();
   }
@@ -1293,19 +1293,24 @@ class PostGenericScheduler : public GenericSchedulerBase {
 protected:
   ScheduleDAGMI *DAG = nullptr;
   SchedBoundary Top;
-  SmallVector<SUnit*, 8> BotRoots;
+  SchedBoundary Bot;
+  MachineSchedPolicy RegionPolicy;
+
+  /// Candidate last picked from Top boundary.
+  SchedCandidate TopCand;
+  /// Candidate last picked from Bot boundary.
+  SchedCandidate BotCand;
 
 public:
-  PostGenericScheduler(const MachineSchedContext *C):
-    GenericSchedulerBase(C), Top(SchedBoundary::TopQID, "TopQ") {}
+  PostGenericScheduler(const MachineSchedContext *C)
+      : GenericSchedulerBase(C), Top(SchedBoundary::TopQID, "TopQ"),
+        Bot(SchedBoundary::BotQID, "BotQ") {}
 
   ~PostGenericScheduler() override = default;
 
   void initPolicy(MachineBasicBlock::iterator Begin,
                   MachineBasicBlock::iterator End,
-                  unsigned NumRegionInstrs) override {
-    /* no configurable policy */
-  }
+                  unsigned NumRegionInstrs) override;
 
   /// PostRA scheduling does not track pressure.
   bool shouldTrackPressure() const override { return false; }
@@ -1315,6 +1320,8 @@ public:
   void registerRoots() override;
 
   SUnit *pickNode(bool &IsTopNode) override;
+
+  SUnit *pickNodeBidirectional(bool &IsTopNode);
 
   void scheduleTree(unsigned SubtreeID) override {
     llvm_unreachable("PostRA scheduler does not support subtree analysis.");
@@ -1326,17 +1333,20 @@ public:
     if (SU->isScheduled)
       return;
     Top.releaseNode(SU, SU->TopReadyCycle, false);
+    TopCand.SU = nullptr;
   }
 
-  // Only called for roots.
   void releaseBottomNode(SUnit *SU) override {
-    BotRoots.push_back(SU);
+    if (SU->isScheduled)
+      return;
+    Bot.releaseNode(SU, SU->BotReadyCycle, false);
+    BotCand.SU = nullptr;
   }
 
 protected:
   virtual bool tryCandidate(SchedCandidate &Cand, SchedCandidate &TryCand);
 
-  void pickNodeFromQueue(SchedCandidate &Cand);
+  void pickNodeFromQueue(SchedBoundary &Zone, SchedCandidate &Cand);
 };
 
 /// Create the standard converging machine scheduler. This will be used as the
@@ -1347,13 +1357,19 @@ ScheduleDAGMILive *createGenericSchedLive(MachineSchedContext *C);
 /// Create a generic scheduler with no vreg liveness or DAG mutation passes.
 ScheduleDAGMI *createGenericSchedPostRA(MachineSchedContext *C);
 
+/// If ReorderWhileClustering is set to true, no attempt will be made to
+/// reduce reordering due to store clustering.
 std::unique_ptr<ScheduleDAGMutation>
 createLoadClusterDAGMutation(const TargetInstrInfo *TII,
-                             const TargetRegisterInfo *TRI);
+                             const TargetRegisterInfo *TRI,
+                             bool ReorderWhileClustering = false);
 
+/// If ReorderWhileClustering is set to true, no attempt will be made to
+/// reduce reordering due to store clustering.
 std::unique_ptr<ScheduleDAGMutation>
 createStoreClusterDAGMutation(const TargetInstrInfo *TII,
-                              const TargetRegisterInfo *TRI);
+                              const TargetRegisterInfo *TRI,
+                              bool ReorderWhileClustering = false);
 
 std::unique_ptr<ScheduleDAGMutation>
 createCopyConstrainDAGMutation(const TargetInstrInfo *TII,

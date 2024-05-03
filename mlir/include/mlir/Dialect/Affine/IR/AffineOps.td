@@ -16,6 +16,7 @@
 include "mlir/Dialect/Arith/IR/ArithBase.td"
 include "mlir/Dialect/Affine/IR/AffineMemoryOpInterfaces.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
+include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/LoopLikeInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
@@ -23,7 +24,7 @@ def Affine_Dialect : Dialect {
   let name = "affine";
   let cppNamespace = "::mlir::affine";
   let hasConstantMaterializer = 1;
-  let dependentDialects = ["arith::ArithDialect"];
+  let dependentDialects = ["arith::ArithDialect", "ub::UBDialect"];
 }
 
 // Base class for Affine dialect ops.
@@ -63,14 +64,11 @@ def AffineApplyOp : Affine_Op<"apply", [Pure]> {
   // has a constant builder. That way we wouldn't need to explicitly specify the
   // result types here.
   let builders = [
-    OpBuilder<(ins "AffineMap":$map, "ValueRange":$mapOperands),
-    [{
-      build($_builder, $_state, $_builder.getIndexType(), map, mapOperands);
-    }]>,
     OpBuilder<(ins "ArrayRef<AffineExpr> ":$exprList,"ValueRange":$mapOperands),
     [{
       build($_builder, $_state, $_builder.getIndexType(),
-            AffineMap::inferFromExprList(exprList).front(), mapOperands);
+            AffineMap::inferFromExprList(exprList, $_builder.getContext())
+                                        .front(), mapOperands);
     }]>
   ];
 
@@ -121,7 +119,8 @@ def AffineForOp : Affine_Op<"for",
      ImplicitAffineTerminator, ConditionallySpeculatable,
      RecursiveMemoryEffects, DeclareOpInterfaceMethods<LoopLikeOpInterface,
      ["getSingleInductionVar", "getSingleLowerBound", "getSingleStep",
-      "getSingleUpperBound", "replaceWithAdditionalYields"]>,
+      "getSingleUpperBound", "getYieldedValuesMutable",
+      "replaceWithAdditionalYields"]>,
      DeclareOpInterfaceMethods<RegionBranchOpInterface,
      ["getEntrySuccessorOperands"]>]> {
   let summary = "for operation";
@@ -540,13 +539,6 @@ class AffineMinMaxOpBase<string mnemonic, list<Trait> traits = []> :
   let arguments = (ins AffineMapAttr:$map, Variadic<Index>:$operands);
   let results = (outs Index);
 
-  let builders = [
-    OpBuilder<(ins "AffineMap":$affineMap, "ValueRange":$mapOperands),
-    [{
-      build($_builder, $_state, $_builder.getIndexType(), affineMap, mapOperands);
-    }]>
-  ];
-
   let extraClassDeclaration = [{
     static StringRef getMapAttrStrName() { return "map"; }
     AffineMap getAffineMap() { return getMap(); }
@@ -750,7 +742,8 @@ def AffineParallelOp : Affine_Op<"parallel",
 }
 
 def AffinePrefetchOp : Affine_Op<"prefetch",
-  [DeclareOpInterfaceMethods<AffineMapAccessInterface>]> {
+  [DeclareOpInterfaceMethods<AffineMapAccessInterface>,
+   MemRefsNormalizable]> {
   let summary = "affine prefetch operation";
   let description = [{
     The `affine.prefetch` op prefetches data from a memref location described
@@ -1067,7 +1060,7 @@ def AffineVectorStoreOp : AffineStoreOpBase<"vector_store"> {
 //===----------------------------------------------------------------------===//
 
 def AffineDelinearizeIndexOp : Affine_Op<"delinearize_index",
-    [Pure]> {
+    [Pure, DeclareOpInterfaceMethods<InferTypeOpInterface>]> {
   let summary = "delinearize an index";
   let description = [{
     The `affine.delinearize_index` operation takes a single index value and

@@ -16,7 +16,8 @@ target triple = "hexagon"
 ; Function Attrs: nounwind
 define void @f0() local_unnamed_addr #0 {
 b0:
-  %and = and i32 sext (i8 ptrtoint (ptr getelementptr inbounds ([32768 x i8], ptr @g0, i32 0, i32 10000) to i8) to i32), -65536
+  %ext = sext i8 ptrtoint (ptr getelementptr inbounds ([32768 x i8], ptr @g0, i32 0, i32 10000) to i8) to i32
+  %and = and i32 %ext, -65536
   %ptr = inttoptr i32 %and to ptr
   store ptr %ptr, ptr getelementptr inbounds ([15 x ptr], ptr @g1, i32 0, i32 1), align 4
   store ptr %ptr, ptr getelementptr inbounds ([15 x ptr], ptr @g1, i32 0, i32 6), align 8

@@ -11,7 +11,8 @@ driver_executable("dsymutil") {
     ":Options",
     "//llvm/lib/CodeGen/AsmPrinter",
     "//llvm/lib/DWARFLinker",
-    "//llvm/lib/DWARFLinkerParallel",
+    "//llvm/lib/DWARFLinker/Classic",
+    "//llvm/lib/DWARFLinker/Parallel",
     "//llvm/lib/DebugInfo/DWARF",
     "//llvm/lib/MC",
     "//llvm/lib/Object",
@@ -28,8 +29,8 @@ driver_executable("dsymutil") {
     "DwarfLinkerForBinary.cpp",
     "MachODebugMapParser.cpp",
     "MachOUtils.cpp",
+    "RelocationMap.cpp",
     "Reproducer.cpp",
-    "SymbolMap.cpp",
     "dsymutil.cpp",
   ]
   if (host_os == "mac") {

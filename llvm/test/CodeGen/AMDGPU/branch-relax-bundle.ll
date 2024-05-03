@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -mcpu=tahiti -verify-machineinstrs -amdgpu-s-branch-bits=5 < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn -mcpu=tahiti -verify-machineinstrs -amdgpu-s-branch-bits=5 < %s | FileCheck -check-prefix=GCN %s
 
 ; Restrict maximum branch to between +15 and -16 dwords
 

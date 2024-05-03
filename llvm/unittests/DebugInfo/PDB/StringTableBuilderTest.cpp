@@ -47,12 +47,12 @@ TEST(StringTableBuilderTest, Simple) {
   EXPECT_EQ(6U, Distinct.size());
 
   std::vector<uint8_t> Buffer(Builder.calculateSerializedSize());
-  MutableBinaryByteStream OutStream(Buffer, little);
+  MutableBinaryByteStream OutStream(Buffer, llvm::endianness::little);
   BinaryStreamWriter Writer(OutStream);
   EXPECT_THAT_ERROR(Builder.commit(Writer), Succeeded());
 
   // Reads the contents back.
-  BinaryByteStream InStream(Buffer, little);
+  BinaryByteStream InStream(Buffer, llvm::endianness::little);
   BinaryStreamReader Reader(InStream);
   PDBStringTable Table;
   EXPECT_THAT_ERROR(Table.reload(Reader), Succeeded());

@@ -154,8 +154,7 @@ struct OutlinableGroup {
 /// \param SourceBB - the BasicBlock to pull Instructions from.
 /// \param TargetBB - the BasicBlock to put Instruction into.
 static void moveBBContents(BasicBlock &SourceBB, BasicBlock &TargetBB) {
-  for (Instruction &I : llvm::make_early_inc_range(SourceBB))
-    I.moveBeforePreserving(TargetBB, TargetBB.end());
+  TargetBB.splice(TargetBB.end(), &SourceBB);
 }
 
 /// A function to sort the keys of \p Map, which must be a mapping of constant
@@ -198,7 +197,7 @@ Value *OutlinableRegion::findCorrespondingValueIn(const OutlinableRegion &Other,
 BasicBlock *
 OutlinableRegion::findCorrespondingBlockIn(const OutlinableRegion &Other,
                                            BasicBlock *BB) {
-  Instruction *FirstNonPHI = BB->getFirstNonPHI();
+  Instruction *FirstNonPHI = BB->getFirstNonPHIOrDbg();
   assert(FirstNonPHI && "block is empty?");
   Value *CorrespondingVal = findCorrespondingValueIn(Other, FirstNonPHI);
   if (!CorrespondingVal)
@@ -722,6 +721,12 @@ static void moveFunctionData(Function &Old, Function &New,
     std::vector<Instruction *> DebugInsts;
 
     for (Instruction &Val : CurrBB) {
+      // Since debug-info originates from many different locations in the
+      // program, it will cause incorrect reporting from a debugger if we keep
+      // the same debug instructions. Drop non-intrinsic DbgVariableRecords
+      // here, collect intrinsics for removal later.
+      Val.dropDbgRecords();
+
       // We must handle the scoping of called functions differently than
       // other outlined instructions.
       if (!isa<CallInst>(&Val)) {
@@ -745,10 +750,7 @@ static void moveFunctionData(Function &Old, Function &New,
       // From this point we are only handling call instructions.
       CallInst *CI = cast<CallInst>(&Val);
 
-      // We add any debug statements here, to be removed after.  Since the
-      // instructions originate from many different locations in the program,
-      // it will cause incorrect reporting from a debugger if we keep the
-      // same debug instructions.
+      // Collect debug intrinsics for later removal.
       if (isa<DbgInfoIntrinsic>(CI)) {
         DebugInsts.push_back(&Val);
         continue;
@@ -1499,7 +1501,7 @@ CallInst *replaceCalledFunction(Module &M, OutlinableRegion &Region) {
                     << *AggFunc << " with new set of arguments\n");
   // Create the new call instruction and erase the old one.
   Call = CallInst::Create(AggFunc->getFunctionType(), AggFunc, NewCallArgs, "",
-                          Call);
+                          Call->getIterator());
 
   // It is possible that the call to the outlined function is either the first
   // instruction is in the new block, the last instruction, or both.  If either

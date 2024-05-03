@@ -37,7 +37,7 @@ const GCNTargetMachine &getTM(const GCNSubtarget *STI) {
 
 SIMachineFunctionInfo::SIMachineFunctionInfo(const Function &F,
                                              const GCNSubtarget *STI)
-    : AMDGPUMachineFunction(F, *STI), Mode(F), GWSResourcePSV(getTM(STI)),
+    : AMDGPUMachineFunction(F, *STI), Mode(F, *STI), GWSResourcePSV(getTM(STI)),
       UserSGPRInfo(F, *STI), WorkGroupIDX(false), WorkGroupIDY(false),
       WorkGroupIDZ(false), WorkGroupInfo(false), LDSKernelId(false),
       PrivateSegmentWaveByteOffset(false), WorkItemIDX(false),
@@ -46,6 +46,8 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const Function &F,
   const GCNSubtarget &ST = *static_cast<const GCNSubtarget *>(STI);
   FlatWorkGroupSizes = ST.getFlatWorkGroupSizes(F);
   WavesPerEU = ST.getWavesPerEU(F);
+  MaxNumWorkGroups = ST.getMaxNumWorkGroups(F);
+  assert(MaxNumWorkGroups.size() == 3);
 
   Occupancy = ST.computeOccupancy(F, getLDSSize());
   CallingConv::ID CC = F.getCallingConv();
@@ -108,7 +110,8 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const Function &F,
   }
 
   if (!AMDGPU::isGraphics(CC) ||
-      (CC == CallingConv::AMDGPU_CS && ST.hasArchitectedSGPRs())) {
+      ((CC == CallingConv::AMDGPU_CS || CC == CallingConv::AMDGPU_Gfx) &&
+       ST.hasArchitectedSGPRs())) {
     if (IsKernel || !F.hasFnAttribute("amdgpu-no-workgroup-id-x"))
       WorkGroupIDX = true;
 
@@ -276,6 +279,14 @@ void SIMachineFunctionInfo::allocateWWMSpill(MachineFunction &MF, Register VGPR,
   if (isEntryFunction() || WWMSpills.count(VGPR))
     return;
 
+  // Skip if this is a function with the amdgpu_cs_chain or
+  // amdgpu_cs_chain_preserve calling convention and this is a scratch register.
+  // We never need to allocate a spill for these because we don't even need to
+  // restore the inactive lanes for them (they're scratchier than the usual
+  // scratch registers).
+  if (isChainFunction() && SIRegisterInfo::isChainScratchRegister(VGPR))
+    return;
+
   WWMSpills.insert(std::make_pair(
       VGPR, MF.getFrameInfo().CreateSpillStackObject(Size, Alignment)));
 }
@@ -304,6 +315,33 @@ bool SIMachineFunctionInfo::isCalleeSavedReg(const MCPhysReg *CSRegs,
   return false;
 }
 
+void SIMachineFunctionInfo::shiftSpillPhysVGPRsToLowestRange(
+    MachineFunction &MF) {
+  const SIRegisterInfo *TRI = MF.getSubtarget<GCNSubtarget>().getRegisterInfo();
+  MachineRegisterInfo &MRI = MF.getRegInfo();
+  for (unsigned I = 0, E = SpillPhysVGPRs.size(); I < E; ++I) {
+    Register Reg = SpillPhysVGPRs[I];
+    Register NewReg =
+        TRI->findUnusedRegister(MRI, &AMDGPU::VGPR_32RegClass, MF);
+    if (!NewReg || NewReg >= Reg)
+      break;
+
+    MRI.replaceRegWith(Reg, NewReg);
+
+    // Update various tables with the new VGPR.
+    SpillPhysVGPRs[I] = NewReg;
+    WWMReservedRegs.remove(Reg);
+    WWMReservedRegs.insert(NewReg);
+    WWMSpills.insert(std::make_pair(NewReg, WWMSpills[Reg]));
+    WWMSpills.erase(Reg);
+
+    for (MachineBasicBlock &MBB : MF) {
+      MBB.removeLiveIn(Reg);
+      MBB.sortUniqueLiveIns();
+    }
+  }
+}
+
 bool SIMachineFunctionInfo::allocateVirtualVGPRForSGPRSpills(
     MachineFunction &MF, int FI, unsigned LaneIndex) {
   MachineRegisterInfo &MRI = MF.getRegInfo();
@@ -321,13 +359,17 @@ bool SIMachineFunctionInfo::allocateVirtualVGPRForSGPRSpills(
 }
 
 bool SIMachineFunctionInfo::allocatePhysicalVGPRForSGPRSpills(
-    MachineFunction &MF, int FI, unsigned LaneIndex) {
+    MachineFunction &MF, int FI, unsigned LaneIndex, bool IsPrologEpilog) {
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   const SIRegisterInfo *TRI = ST.getRegisterInfo();
   MachineRegisterInfo &MRI = MF.getRegInfo();
   Register LaneVGPR;
   if (!LaneIndex) {
-    LaneVGPR = TRI->findUnusedRegister(MRI, &AMDGPU::VGPR_32RegClass, MF);
+    // Find the highest available register if called before RA to ensure the
+    // lowest registers are available for allocation. The LaneVGPR, in that
+    // case, will be shifted back to the lowest range after VGPR allocation.
+    LaneVGPR = TRI->findUnusedRegister(MRI, &AMDGPU::VGPR_32RegClass, MF,
+                                       !IsPrologEpilog);
     if (LaneVGPR == AMDGPU::NoRegister) {
       // We have no VGPRs left for spilling SGPRs. Reset because we will not
       // partially spill the SGPR to VGPRs.
@@ -341,8 +383,9 @@ bool SIMachineFunctionInfo::allocatePhysicalVGPRForSGPRSpills(
       MBB.addLiveIn(LaneVGPR);
       MBB.sortUniqueLiveIns();
     }
+    SpillPhysVGPRs.push_back(LaneVGPR);
   } else {
-    LaneVGPR = WWMReservedRegs.back();
+    LaneVGPR = SpillPhysVGPRs.back();
   }
 
   SGPRSpillsToPhysicalVGPRLanes[FI].push_back(
@@ -350,12 +393,12 @@ bool SIMachineFunctionInfo::allocatePhysicalVGPRForSGPRSpills(
   return true;
 }
 
-bool SIMachineFunctionInfo::allocateSGPRSpillToVGPRLane(MachineFunction &MF,
-                                                        int FI,
-                                                        bool IsPrologEpilog) {
+bool SIMachineFunctionInfo::allocateSGPRSpillToVGPRLane(
+    MachineFunction &MF, int FI, bool SpillToPhysVGPRLane,
+    bool IsPrologEpilog) {
   std::vector<SIRegisterInfo::SpilledReg> &SpillLanes =
-      IsPrologEpilog ? SGPRSpillsToPhysicalVGPRLanes[FI]
-                     : SGPRSpillsToVirtualVGPRLanes[FI];
+      SpillToPhysVGPRLane ? SGPRSpillsToPhysicalVGPRLanes[FI]
+                          : SGPRSpillsToVirtualVGPRLanes[FI];
 
   // This has already been allocated.
   if (!SpillLanes.empty())
@@ -375,14 +418,15 @@ bool SIMachineFunctionInfo::allocateSGPRSpillToVGPRLane(MachineFunction &MF,
   assert(ST.getRegisterInfo()->spillSGPRToVGPR() &&
          "not spilling SGPRs to VGPRs");
 
-  unsigned &NumSpillLanes =
-      IsPrologEpilog ? NumPhysicalVGPRSpillLanes : NumVirtualVGPRSpillLanes;
+  unsigned &NumSpillLanes = SpillToPhysVGPRLane ? NumPhysicalVGPRSpillLanes
+                                                : NumVirtualVGPRSpillLanes;
 
   for (unsigned I = 0; I < NumLanes; ++I, ++NumSpillLanes) {
     unsigned LaneIndex = (NumSpillLanes % WaveSize);
 
-    bool Allocated = IsPrologEpilog
-                         ? allocatePhysicalVGPRForSGPRSpills(MF, FI, LaneIndex)
+    bool Allocated = SpillToPhysVGPRLane
+                         ? allocatePhysicalVGPRForSGPRSpills(MF, FI, LaneIndex,
+                                                             IsPrologEpilog)
                          : allocateVirtualVGPRForSGPRSpills(MF, FI, LaneIndex);
     if (!Allocated) {
       NumSpillLanes -= I;
@@ -511,14 +555,10 @@ int SIMachineFunctionInfo::getScavengeFI(MachineFrameInfo &MFI,
                                          const SIRegisterInfo &TRI) {
   if (ScavengeFI)
     return *ScavengeFI;
-  if (isEntryFunction()) {
-    ScavengeFI = MFI.CreateFixedObject(
-        TRI.getSpillSize(AMDGPU::SGPR_32RegClass), 0, false);
-  } else {
-    ScavengeFI = MFI.CreateStackObject(
-        TRI.getSpillSize(AMDGPU::SGPR_32RegClass),
-        TRI.getSpillAlign(AMDGPU::SGPR_32RegClass), false);
-  }
+
+  ScavengeFI =
+      MFI.CreateStackObject(TRI.getSpillSize(AMDGPU::SGPR_32RegClass),
+                            TRI.getSpillAlign(AMDGPU::SGPR_32RegClass), false);
   return *ScavengeFI;
 }
 
@@ -709,35 +749,7 @@ bool SIMachineFunctionInfo::initializeBaseYamlFields(
 }
 
 bool SIMachineFunctionInfo::mayUseAGPRs(const Function &F) const {
-  for (const BasicBlock &BB : F) {
-    for (const Instruction &I : BB) {
-      const auto *CB = dyn_cast<CallBase>(&I);
-      if (!CB)
-        continue;
-
-      if (CB->isInlineAsm()) {
-        const InlineAsm *IA = dyn_cast<InlineAsm>(CB->getCalledOperand());
-        for (const auto &CI : IA->ParseConstraints()) {
-          for (StringRef Code : CI.Codes) {
-            Code.consume_front("{");
-            if (Code.startswith("a"))
-              return true;
-          }
-        }
-        continue;
-      }
-
-      const Function *Callee =
-          dyn_cast<Function>(CB->getCalledOperand()->stripPointerCasts());
-      if (!Callee)
-        return true;
-
-      if (Callee->getIntrinsicID() == Intrinsic::not_intrinsic)
-        return true;
-    }
-  }
-
-  return false;
+  return !F.hasFnAttribute("amdgpu-no-agpr");
 }
 
 bool SIMachineFunctionInfo::usesAGPRs(const MachineFunction &MF) const {

@@ -20,7 +20,6 @@
 #include "X86MachineFunctionInfo.h"
 #include "X86RegisterInfo.h"
 #include "X86Subtarget.h"
-#include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -668,7 +667,8 @@ bool X86FastPreTileConfig::runOnMachineFunction(MachineFunction &MFunc) {
   bool HasVirtTileReg = false;
   for (unsigned I = 0, E = NumVirtRegs; I != E; ++I) {
     Register VirtReg = Register::index2VirtReg(I);
-    if (MRI->getRegClass(VirtReg)->getID() == X86::TILERegClassID) {
+    if (!MRI->reg_nodbg_empty(VirtReg) &&
+        MRI->getRegClass(VirtReg)->getID() == X86::TILERegClassID) {
       HasVirtTileReg = true;
       break;
     }

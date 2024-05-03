@@ -47,9 +47,14 @@
 // Functions to unpoison memory
 //-----------------------------------------------------------------------------
 
-#ifdef LIBC_HAVE_MEMORY_SANITIZER
+#if defined(LIBC_HAVE_MEMORY_SANITIZER)
+// Only perform MSAN unpoison in non-constexpr context.
 #include <sanitizer/msan_interface.h>
-#define MSAN_UNPOISON(addr, size) __msan_unpoison(addr, size)
+#define MSAN_UNPOISON(addr, size)                                              \
+  do {                                                                         \
+    if (!__builtin_is_constant_evaluated())                                    \
+      __msan_unpoison(addr, size);                                             \
+  } while (0)
 #else
 #define MSAN_UNPOISON(ptr, size)
 #endif

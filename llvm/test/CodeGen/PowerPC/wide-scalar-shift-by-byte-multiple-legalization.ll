@@ -160,22 +160,22 @@ define void @ashr_8bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; LE-32BIT-LABEL: ashr_8bytes:
 ; LE-32BIT:       # %bb.0:
 ; LE-32BIT-NEXT:    lwz 4, 4(4)
-; LE-32BIT-NEXT:    lwz 6, 4(3)
-; LE-32BIT-NEXT:    lwz 3, 0(3)
+; LE-32BIT-NEXT:    lwz 6, 0(3)
 ; LE-32BIT-NEXT:    slwi 4, 4, 3
-; LE-32BIT-NEXT:    subfic 7, 4, 32
-; LE-32BIT-NEXT:    srw 6, 6, 4
-; LE-32BIT-NEXT:    addi 8, 4, -32
-; LE-32BIT-NEXT:    slw 7, 3, 7
-; LE-32BIT-NEXT:    sraw 4, 3, 4
-; LE-32BIT-NEXT:    sraw 3, 3, 8
-; LE-32BIT-NEXT:    cmpwi 8, 1
-; LE-32BIT-NEXT:    or 6, 6, 7
-; LE-32BIT-NEXT:    bc 12, 0, .LBB5_1
-; LE-32BIT-NEXT:    b .LBB5_2
-; LE-32BIT-NEXT:  .LBB5_1:
-; LE-32BIT-NEXT:    addi 3, 6, 0
+; LE-32BIT-NEXT:    addi 7, 4, -32
+; LE-32BIT-NEXT:    cmpwi 7, 0
+; LE-32BIT-NEXT:    ble 0, .LBB5_2
+; LE-32BIT-NEXT:  # %bb.1:
+; LE-32BIT-NEXT:    sraw 3, 6, 7
+; LE-32BIT-NEXT:    b .LBB5_3
 ; LE-32BIT-NEXT:  .LBB5_2:
+; LE-32BIT-NEXT:    lwz 3, 4(3)
+; LE-32BIT-NEXT:    subfic 7, 4, 32
+; LE-32BIT-NEXT:    slw 7, 6, 7
+; LE-32BIT-NEXT:    srw 3, 3, 4
+; LE-32BIT-NEXT:    or 3, 3, 7
+; LE-32BIT-NEXT:  .LBB5_3:
+; LE-32BIT-NEXT:    sraw 4, 6, 4
 ; LE-32BIT-NEXT:    stw 4, 0(5)
 ; LE-32BIT-NEXT:    stw 3, 4(5)
 ; LE-32BIT-NEXT:    blr
@@ -357,24 +357,24 @@ define void @ashr_16bytes(ptr %src.ptr, ptr %byteOff.ptr, ptr %dst) nounwind {
 ; BE-LABEL: ashr_16bytes:
 ; BE:       # %bb.0:
 ; BE-NEXT:    lwz 4, 12(4)
-; BE-NEXT:    ld 6, 8(3)
-; BE-NEXT:    ld 3, 0(3)
+; BE-NEXT:    ld 6, 0(3)
 ; BE-NEXT:    slwi 4, 4, 3
-; BE-NEXT:    subfic 7, 4, 64
-; BE-NEXT:    srd 6, 6, 4
-; BE-NEXT:    addi 8, 4, -64
-; BE-NEXT:    sld 7, 3, 7
-; BE-NEXT:    cmpwi 8, 1
-; BE-NEXT:    or 6, 6, 7
-; BE-NEXT:    srad 7, 3, 8
-; BE-NEXT:    srad 3, 3, 4
-; BE-NEXT:    bc 12, 0, .LBB8_2
+; BE-NEXT:    addi 7, 4, -64
+; BE-NEXT:    cmpwi 7, 1
+; BE-NEXT:    blt 0, .LBB8_2
 ; BE-NEXT:  # %bb.1:
-; BE-NEXT:    ori 6, 7, 0
-; BE-NEXT:    b .LBB8_2
+; BE-NEXT:    srad 3, 6, 7
+; BE-NEXT:    b .LBB8_3
 ; BE-NEXT:  .LBB8_2:
-; BE-NEXT:    std 3, 0(5)
-; BE-NEXT:    std 6, 8(5)
+; BE-NEXT:    ld 3, 8(3)
+; BE-NEXT:    subfic 7, 4, 64
+; BE-NEXT:    sld 7, 6, 7
+; BE-NEXT:    srd 3, 3, 4
+; BE-NEXT:    or 3, 3, 7
+; BE-NEXT:  .LBB8_3:
+; BE-NEXT:    srad 4, 6, 4
+; BE-NEXT:    std 3, 8(5)
+; BE-NEXT:    std 4, 0(5)
 ; BE-NEXT:    blr
 ;
 ; LE-32BIT-LABEL: ashr_16bytes:

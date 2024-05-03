@@ -49,7 +49,6 @@ int pre_fg = F<int>().g<int>(); // expected-error +{{must be declared}}
 
 G::A pre_ga // expected-error +{{must be declared}}
   = G::a; // expected-error +{{must be declared}}
-// expected-note@defs.h:49 +{{here}}
 // expected-note@defs.h:50 +{{here}}
 decltype(G::h) pre_gh = G::h; // expected-error +{{must be declared}} expected-error +{{must be defined}}
 // expected-note@defs.h:51 +{{here}}

@@ -289,7 +289,7 @@ void Function::GetStartLineSourceInfo(FileSpec &source_file,
     if (line_table->FindLineEntryByAddress(GetAddressRange().GetBaseAddress(),
                                            line_entry, nullptr)) {
       line_no = line_entry.line;
-      source_file = line_entry.file;
+      source_file = line_entry.GetFile();
     }
   }
 }
@@ -311,7 +311,7 @@ void Function::GetEndLineSourceInfo(FileSpec &source_file, uint32_t &line_no) {
   LineEntry line_entry;
   if (line_table->FindLineEntryByAddress(scratch_addr, line_entry, nullptr)) {
     line_no = line_entry.line;
-    source_file = line_entry.file;
+    source_file = line_entry.GetFile();
   }
 }
 
@@ -396,6 +396,15 @@ void Function::GetDescription(Stream *s, lldb::DescriptionLevel level,
     s->AsRawOstream() << ", name = \"" << name << '"';
   if (mangled)
     s->AsRawOstream() << ", mangled = \"" << mangled << '"';
+  if (level == eDescriptionLevelVerbose) {
+    *s << ", decl_context = {";
+    auto decl_context = GetCompilerContext();
+    // Drop the function itself from the context chain.
+    if (decl_context.size())
+      decl_context.pop_back();
+    llvm::interleaveComma(decl_context, *s, [&](auto &ctx) { ctx.Dump(*s); });
+    *s << "}";
+  }
   *s << ", range = ";
   Address::DumpStyle fallback_style;
   if (level == eDescriptionLevelVerbose)
@@ -513,13 +522,17 @@ ConstString Function::GetDisplayName() const {
 }
 
 CompilerDeclContext Function::GetDeclContext() {
-  ModuleSP module_sp = CalculateSymbolContextModule();
-
-  if (module_sp) {
+  if (ModuleSP module_sp = CalculateSymbolContextModule())
     if (SymbolFile *sym_file = module_sp->GetSymbolFile())
       return sym_file->GetDeclContextForUID(GetID());
-  }
-  return CompilerDeclContext();
+  return {};
+}
+
+std::vector<CompilerContext> Function::GetCompilerContext() {
+  if (ModuleSP module_sp = CalculateSymbolContextModule())
+    if (SymbolFile *sym_file = module_sp->GetSymbolFile())
+      return sym_file->GetCompilerContextForUID(GetID());
+  return {};
 }
 
 Type *Function::GetType() {

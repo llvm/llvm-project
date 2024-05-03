@@ -6,22 +6,20 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/math_macros.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/errno/libc_errno.h"
 #include "src/math/atanf.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
-#include <math.h>
 
 #include <errno.h>
 #include <stdint.h>
 
-using FPBits = LIBC_NAMESPACE::fputil::FPBits<float>;
+using LlvmLibcAtanfTest = LIBC_NAMESPACE::testing::FPTest<float>;
 
-DECLARE_SPECIAL_CONSTANTS(float)
-
-TEST(LlvmLibcAtanfTest, SpecialNumbers) {
-  libc_errno = 0;
+TEST_F(LlvmLibcAtanfTest, SpecialNumbers) {
+  LIBC_NAMESPACE::libc_errno = 0;
 
   LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);
   EXPECT_FP_EQ_ALL_ROUNDING(aNaN, LIBC_NAMESPACE::atanf(aNaN));

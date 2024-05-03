@@ -19,7 +19,7 @@ struct fred y [] = { { { "abc" }, 1 }, [0] = { .s[0] = 'q' } };
 
 // CHECK: VarDecl 0x{{.*}} <line:16:1, col:62> col:13 y 'struct fred[1]' cinit
 // CHECK-NEXT: InitListExpr 0x{{.*}} <col:20, col:62> 'struct fred[1]'
-// CHECK-NEXT: InitListExpr 0x{{.*}} <col:46, col:60> 'struct fred':'struct fred'
+// CHECK-NEXT: InitListExpr 0x{{.*}} <col:46, col:60> 'struct fred'
 // CHECK-NEXT: InitListExpr 0x{{.*}} <col:50, col:56> 'char[6]'
 // CHECK-NEXT: array_filler
 // CHECK-NEXT: ImplicitCastExpr

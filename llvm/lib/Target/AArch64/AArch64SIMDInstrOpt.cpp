@@ -50,6 +50,7 @@
 #include "llvm/MC/MCSchedule.h"
 #include "llvm/Pass.h"
 #include <unordered_map>
+#include <map>
 
 using namespace llvm;
 

@@ -370,7 +370,68 @@ define i64 @gep_diff_with_bitcast(ptr %p, i64 %idx) {
   ret i64 %i6
 }
 
-define i1 @_gep_phi1(ptr noundef %str1) {
+define i64 @sub_scalable(ptr noundef %val1) {
+; CHECK-LABEL: @sub_scalable(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[TMP0]], 4
+; CHECK-NEXT:    ret i64 [[TMP1]]
+;
+entry:
+  %gep1 = getelementptr <vscale x 4 x i32>, ptr %val1, i64 1
+  %sub.ptr.lhs.cast.i = ptrtoint ptr %gep1 to i64
+  %sub.ptr.rhs.cast.i = ptrtoint ptr %val1 to i64
+  %sub.ptr.sub.i = sub i64 %sub.ptr.lhs.cast.i, %sub.ptr.rhs.cast.i
+  ret i64 %sub.ptr.sub.i
+}
+
+define i64 @sub_scalable2(ptr noundef %val1) {
+; CHECK-LABEL: @sub_scalable2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[TMP0]], 4
+; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[GEP2_IDX:%.*]] = shl i64 [[TMP2]], 5
+; CHECK-NEXT:    [[GEPDIFF:%.*]] = sub i64 [[TMP1]], [[GEP2_IDX]]
+; CHECK-NEXT:    ret i64 [[GEPDIFF]]
+;
+entry:
+  %gep1 = getelementptr <vscale x 4 x i32>, ptr %val1, i64 1
+  %sub.ptr.lhs.cast.i = ptrtoint ptr %gep1 to i64
+  %gep2 = getelementptr <vscale x 4 x i32>, ptr %val1, i64 2
+  %sub.ptr.rhs.cast.i = ptrtoint ptr %gep2 to i64
+  %sub.ptr.sub.i = sub i64 %sub.ptr.lhs.cast.i, %sub.ptr.rhs.cast.i
+  ret i64 %sub.ptr.sub.i
+}
+
+define i64 @nullptrtoint_scalable_c() {
+; CHECK-LABEL: @nullptrtoint_scalable_c(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[PTR_IDX:%.*]] = shl i64 [[TMP0]], 7
+; CHECK-NEXT:    ret i64 [[PTR_IDX]]
+;
+entry:
+  %ptr = getelementptr inbounds <vscale x 4 x i32>, ptr null, i64 8
+  %ret = ptrtoint ptr %ptr to i64
+  ret i64 %ret
+}
+
+define i64 @nullptrtoint_scalable_x(i64 %x) {
+; CHECK-LABEL: @nullptrtoint_scalable_x(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[TMP0]], 4
+; CHECK-NEXT:    [[PTR_IDX:%.*]] = mul nsw i64 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    ret i64 [[PTR_IDX]]
+;
+entry:
+  %ptr = getelementptr inbounds <vscale x 4 x i32>, ptr null, i64 %x
+  %ret = ptrtoint ptr %ptr to i64
+  ret i64 %ret
+}
+
+define i1 @_gep_phi1(ptr %str1) {
 ; CHECK-LABEL: @_gep_phi1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP_I:%.*]] = icmp eq ptr [[STR1:%.*]], null
@@ -386,11 +447,10 @@ define i1 @_gep_phi1(ptr noundef %str1) {
 ; CHECK-NEXT:    [[CMP3_NOT_I:%.*]] = icmp eq i8 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[CMP3_NOT_I]], label [[WHILE_END_I:%.*]], label [[WHILE_COND_I]]
 ; CHECK:       while.end.i:
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne ptr [[TEST_0_I]], [[STR1]]
 ; CHECK-NEXT:    br label [[_Z3FOOPKC_EXIT]]
 ; CHECK:       _Z3fooPKc.exit:
-; CHECK-NEXT:    [[RETVAL_0_I:%.*]] = phi i1 [ [[TMP2]], [[WHILE_END_I]] ], [ false, [[LOR_LHS_FALSE_I]] ], [ false, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    ret i1 [[RETVAL_0_I]]
+; CHECK-NEXT:    [[TOBOOL:%.*]] = phi i1 [ true, [[WHILE_END_I]] ], [ false, [[LOR_LHS_FALSE_I]] ], [ false, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    ret i1 [[TOBOOL]]
 ;
 entry:
   %cmp.i = icmp eq ptr %str1, null
@@ -420,7 +480,7 @@ _Z3fooPKc.exit:
   ret i1 %tobool
 }
 
-define i1 @_gep_phi2(ptr noundef %str1, i64 %val2) {
+define i1 @_gep_phi2(ptr %str1, i64 %val2) {
 ; CHECK-LABEL: @_gep_phi2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP_I:%.*]] = icmp eq ptr [[STR1:%.*]], null
@@ -436,12 +496,9 @@ define i1 @_gep_phi2(ptr noundef %str1, i64 %val2) {
 ; CHECK-NEXT:    [[CMP3_NOT_I:%.*]] = icmp eq i8 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[CMP3_NOT_I]], label [[WHILE_END_I:%.*]], label [[WHILE_COND_I]]
 ; CHECK:       while.end.i:
-; CHECK-NEXT:    [[SUB_PTR_LHS_CAST_I:%.*]] = ptrtoint ptr [[TEST_0_I]] to i64
-; CHECK-NEXT:    [[SUB_PTR_RHS_CAST_I:%.*]] = ptrtoint ptr [[STR1]] to i64
-; CHECK-NEXT:    [[SUB_PTR_SUB_I:%.*]] = sub i64 [[SUB_PTR_LHS_CAST_I]], [[SUB_PTR_RHS_CAST_I]]
 ; CHECK-NEXT:    br label [[_Z3FOOPKC_EXIT]]
 ; CHECK:       _Z3fooPKc.exit:
-; CHECK-NEXT:    [[RETVAL_0_I:%.*]] = phi i64 [ [[SUB_PTR_SUB_I]], [[WHILE_END_I]] ], [ 0, [[LOR_LHS_FALSE_I]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[RETVAL_0_I:%.*]] = phi i64 [ 1, [[WHILE_END_I]] ], [ 0, [[LOR_LHS_FALSE_I]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = or i64 [[RETVAL_0_I]], [[VAL2:%.*]]
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i64 [[TMP2]], 0
 ; CHECK-NEXT:    ret i1 [[TOBOOL]]

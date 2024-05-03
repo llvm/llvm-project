@@ -26,11 +26,18 @@ Non-comprehensive list of changes in this release
 ELF Improvements
 ----------------
 
-* ``--fat-lto-objects`` option is added to support LLVM FatLTO.
-  Without ``--fat-lto-objects``, LLD will link LLVM FatLTO objects using the
-  relocatable object file. (`D146778 <https://reviews.llvm.org/D146778>`_)
-* common-page-size can now be larger than the system page-size.
-  (`#57618 <https://github.com/llvm/llvm-project/issues/57618>`_)
+* ``--compress-sections <section-glib>={none,zlib,zstd}[:level]`` is added to compress
+  matched output sections without the ``SHF_ALLOC`` flag.
+  (`#84855 <https://github.com/llvm/llvm-project/pull/84855>`_)
+  (`#90567 <https://github.com/llvm/llvm-project/pull/90567>`_)
+* The default compression level for zlib is now independent of linker
+  optimization level (``Z_BEST_SPEED``).
+* ``GNU_PROPERTY_AARCH64_FEATURE_PAUTH`` notes, ``R_AARCH64_AUTH_ABS64`` and
+  ``R_AARCH64_AUTH_RELATIVE`` relocations are now supported.
+  (`#72714 <https://github.com/llvm/llvm-project/pull/72714>`_)
+* ``--debug-names`` is added to create a merged ``.debug_names`` index
+  from input ``.debug_names`` sections. Type units are not handled yet.
+  (`#86508 <https://github.com/llvm/llvm-project/pull/86508>`_)
 
 Breaking changes
 ----------------

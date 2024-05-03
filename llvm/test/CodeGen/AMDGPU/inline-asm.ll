@@ -1,5 +1,5 @@
-; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck --check-prefix=CHECK %s
-; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck  --check-prefix=CHECK %s
+; RUN: llc -mtriple=amdgcn -verify-machineinstrs < %s | FileCheck --check-prefix=CHECK %s
+; RUN: llc -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck  --check-prefix=CHECK %s
 
 ; CHECK-LABEL: {{^}}inline_asm:
 ; CHECK: s_endpgm
@@ -205,9 +205,8 @@ entry:
 
 ; FIXME: Should not have intermediate sgprs
 ; CHECK-LABEL: {{^}}i64_imm_input_phys_vgpr:
-; CHECK: s_mov_b64 s[0:1], 0x1e240
-; CHECK: v_mov_b32_e32 v0, s0
-; CHECK: v_mov_b32_e32 v1, s1
+; CHECK: v_mov_b32_e32 v0, 0x1e240
+; CHECK: v_mov_b32_e32 v1, 0
 ; CHECK: use v[0:1]
 define amdgpu_kernel void @i64_imm_input_phys_vgpr() {
 entry:

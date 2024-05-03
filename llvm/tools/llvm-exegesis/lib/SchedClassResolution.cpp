@@ -12,8 +12,6 @@
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MCA/Support.h"
 #include "llvm/Support/FormatVariadic.h"
-#include <limits>
-#include <unordered_set>
 #include <vector>
 
 namespace llvm {
@@ -69,8 +67,8 @@ getNonRedundantWriteProcRes(const MCSchedClassDesc &SCDesc,
   }
   sort(ResourceMaskAndEntries,
        [](const ResourceMaskAndEntry &A, const ResourceMaskAndEntry &B) {
-         unsigned popcntA = llvm::popcount(A.first);
-         unsigned popcntB = llvm::popcount(B.first);
+         unsigned popcntA = popcount(A.first);
+         unsigned popcntB = popcount(B.first);
          if (popcntA < popcntB)
            return true;
          if (popcntA > popcntB)
@@ -316,10 +314,10 @@ std::vector<BenchmarkMeasure> ResolvedSchedClass::getAsPoint(
       if (ProcResIdx > 0) {
         // Find the pressure on ProcResIdx `Key`.
         const auto ProcResPressureIt =
-            llvm::find_if(IdealizedProcResPressure,
-                          [ProcResIdx](const std::pair<uint16_t, float> &WPR) {
-                            return WPR.first == ProcResIdx;
-                          });
+            find_if(IdealizedProcResPressure,
+                    [ProcResIdx](const std::pair<uint16_t, float> &WPR) {
+                      return WPR.first == ProcResIdx;
+                    });
         Measure.PerInstructionValue =
             ProcResPressureIt == IdealizedProcResPressure.end()
                 ? 0.0

@@ -11,10 +11,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/IR/Matchers.h"
+#include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/PatternMatch.h"
+#include "mlir/IR/Value.h"
+#include "mlir/Support/LogicalResult.h"
 #include "toy/Dialect.h"
-#include <numeric>
 using namespace mlir;
 using namespace toy;
 

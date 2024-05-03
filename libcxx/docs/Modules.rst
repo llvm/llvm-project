@@ -38,8 +38,8 @@ What works
 ~~~~~~~~~~
 
  * Building BMIs
- * Running tests using the ``std`` module
- * Using the ``std`` module in external projects
+ * Running tests using the ``std`` and ``std.compat`` module
+ * Using the ``std``  and ``std.compat`` module in external projects
  * The following "parts disabled" configuration options are supported
 
    * ``LIBCXX_ENABLE_LOCALIZATION``
@@ -65,14 +65,10 @@ Some of the current limitations
  * Requires CMake 3.26 for C++23 support
  * Requires CMake 3.27 for C++26 support
  * Requires Ninja 1.11
- * Requires a recent Clang 17
+ * Requires Clang 17
  * The path to the compiler may not be a symlink, ``clang-scan-deps`` does
    not handle that case properly
- * Only C++23 and C++26 are tested
  * Libc++ is not tested with modules instead of headers
- * The module ``.cppm`` files are not installed
- * Clang supports modules using GNU extensions, but libc++ does not work using
-   GNU extensions.
  * Clang:
     * Including headers after importing the ``std`` module may fail. This is
       hard to solve and there is a work-around by first including all headers
@@ -107,16 +103,24 @@ Users need to be able to build their own BMI files.
    system vendors, with the goal that building the BMI files is done by
    the build system.
 
-Currently this requires a local build of libc++ with modules enabled. Since
-modules are not part of the installation yet, they are used from the build
-directory. First libc++ needs to be build with module support enabled.
+Currently there are two ways to build modules
+
+  * Use a local build of modules from the build directory. This requires
+    Clang 17 or later and CMake 3.26 or later.
+
+  * Use the installed modules. This requires Clang 18.1.2 or later and
+    a recent build of CMake. The CMake changes will be part of CMake 3.30. This
+    method requires you or your distribution to enable module installation.
+
+Using the local build
+~~~~~~~~~~~~~~~~~~~~~
 
 .. code-block:: bash
 
   $ git clone https://github.com/llvm/llvm-project.git
   $ cd llvm-project
   $ mkdir build
-  $ cmake -G Ninja -S runtimes -B build -DLIBCXX_ENABLE_STD_MODULES=ON -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi;libunwind"
+  $ cmake -G Ninja -S runtimes -B build -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi;libunwind"
   $ ninja -C build
 
 The above ``build`` directory will be referred to as ``<build>`` in the
@@ -127,14 +131,18 @@ This is a small sample program that uses the module ``std``. It consists of a
 
 .. code-block:: cpp
 
-  import std;
+  import std; // When importing std.compat it's not needed to import std.
+  import std.compat;
 
-  int main() { std::cout << "Hello modular world\n"; }
+  int main() {
+    std::cout << "Hello modular world\n";
+    ::printf("Hello compat modular world\n");
+  }
 
 .. code-block:: cmake
 
   cmake_minimum_required(VERSION 3.26.0 FATAL_ERROR)
-  project("module"
+  project("example"
     LANGUAGES CXX
   )
 
@@ -142,10 +150,8 @@ This is a small sample program that uses the module ``std``. It consists of a
   # Set language version used
   #
 
-  # At the moment only C++23 is tested.
   set(CMAKE_CXX_STANDARD 23)
   set(CMAKE_CXX_STANDARD_REQUIRED YES)
-  # Libc++ doesn't support compiler extensions for modules.
   set(CMAKE_CXX_EXTENSIONS OFF)
 
   #
@@ -153,12 +159,16 @@ This is a small sample program that uses the module ``std``. It consists of a
   #
 
   # This is required to write your own modules in your project.
-  if(CMAKE_VERSION VERSION_LESS "3.27.0")
-    set(CMAKE_EXPERIMENTAL_CXX_MODULE_CMAKE_API "2182bf5c-ef0d-489a-91da-49dbc3090d2a")
+  if(CMAKE_VERSION VERSION_LESS "3.28.0")
+    if(CMAKE_VERSION VERSION_LESS "3.27.0")
+      set(CMAKE_EXPERIMENTAL_CXX_MODULE_CMAKE_API "2182bf5c-ef0d-489a-91da-49dbc3090d2a")
+    else()
+      set(CMAKE_EXPERIMENTAL_CXX_MODULE_CMAKE_API "aa1f7df0-828a-4fcd-9afc-2dc80491aca7")
+    endif()
+    set(CMAKE_EXPERIMENTAL_CXX_MODULE_DYNDEP 1)
   else()
-    set(CMAKE_EXPERIMENTAL_CXX_MODULE_CMAKE_API "aa1f7df0-828a-4fcd-9afc-2dc80491aca7")
+    cmake_policy(VERSION 3.28)
   endif()
-  set(CMAKE_EXPERIMENTAL_CXX_MODULE_DYNDEP 1)
 
   #
   # Import the modules from libc++
@@ -169,39 +179,17 @@ This is a small sample program that uses the module ``std``. It consists of a
     std
     URL "file://${LIBCXX_BUILD}/modules/c++/v1/"
     DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+    SYSTEM
   )
-  FetchContent_GetProperties(std)
-  if(NOT std_POPULATED)
-    FetchContent_Populate(std)
-    add_subdirectory(${std_SOURCE_DIR} ${std_BINARY_DIR} EXCLUDE_FROM_ALL)
-  endif()
-
-  #
-  # Adjust project compiler flags
-  #
-
-  add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-fprebuilt-module-path=${CMAKE_BINARY_DIR}/_deps/std-build/CMakeFiles/std.dir/>)
-  add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-nostdinc++>)
-  # The include path needs to be set to be able to use macros from headers.
-  # For example from, the headers <cassert> and <version>.
-  add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-isystem>)
-  add_compile_options($<$<COMPILE_LANGUAGE:CXX>:${LIBCXX_BUILD}/include/c++/v1>)
-
-  #
-  # Adjust project linker flags
-  #
-
-  add_link_options($<$<COMPILE_LANGUAGE:CXX>:-nostdlib++>)
-  add_link_options($<$<COMPILE_LANGUAGE:CXX>:-L${LIBCXX_BUILD}/lib>)
-  add_link_options($<$<COMPILE_LANGUAGE:CXX>:-Wl,-rpath,${LIBCXX_BUILD}/lib>)
-  # Linking against std is required for CMake to get the proper dependencies
-  link_libraries(std c++)
+  FetchContent_MakeAvailable(std)
 
   #
   # Add the project
   #
 
   add_executable(main)
+  add_dependencies(main std.compat)
+  target_link_libraries(main std.compat)
   target_sources(main
     PRIVATE
       main.cpp
@@ -230,6 +218,64 @@ Building this project is done with the following steps, assuming the files
              ``error: POSIX thread support was disabled in PCH file but is currently enabled``
 
              ``error: module file _deps/std-build/CMakeFiles/std.dir/std.pcm cannot be loaded due to a configuration mismatch with the current compilation [-Wmodule-file-config-mismatch]``
+
+
+Using the installed modules
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+CMake has added experimental support for importing the Standard modules. This
+is available in the current nightly builds and will be part of the 3.30
+release. Currently CMake only supports importing the Standard modules in C++23
+and later. Enabling this for C++20 is on the TODO list of the CMake
+developers.
+
+The example uses the same ``main.cpp`` as above. It uses the following
+``CMakeLists.txt``:
+
+.. code-block:: cmake
+
+  # This requires a recent nightly build.
+  # This will be part of CMake 3.30.0.
+  cmake_minimum_required(VERSION 3.29.0 FATAL_ERROR)
+
+  # Enables the Standard module support. This needs to be done
+  # before selecting the languages.
+  set(CMAKE_EXPERIMENTAL_CXX_IMPORT_STD "0e5b6991-d74f-4b3d-a41c-cf096e0b2508")
+  set(CMAKE_CXX_MODULE_STD ON)
+
+  project("example"
+    LANGUAGES CXX
+  )
+
+  #
+  # Set language version used
+  #
+
+  set(CMAKE_CXX_STANDARD 23)
+  set(CMAKE_CXX_STANDARD_REQUIRED YES)
+  # Currently CMake requires extensions enabled when using import std.
+  # https://gitlab.kitware.com/cmake/cmake/-/issues/25916
+  # https://gitlab.kitware.com/cmake/cmake/-/issues/25539
+  set(CMAKE_CXX_EXTENSIONS ON)
+
+  add_executable(main)
+  target_sources(main
+    PRIVATE
+      main.cpp
+  )
+
+Building this project is done with the following steps, assuming the files
+``main.cpp`` and ``CMakeLists.txt`` are copied in the current directory.
+
+.. code-block:: bash
+
+  $ mkdir build
+  $ cmake -G Ninja -S . -B build -DCMAKE_CXX_COMPILER=<path-to-compiler> -DCMAKE_CXX_FLAGS=-stdlib=libc++
+  $ ninja -C build
+  $ build/main
+
+.. warning:: ``<path-to-compiler>`` should point point to the real binary and
+             not to a symlink.
 
 If you have questions about modules feel free to ask them in the ``#libcxx``
 channel on `LLVM's Discord server <https://discord.gg/jzUbyP26tQ>`__.

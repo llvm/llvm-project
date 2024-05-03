@@ -264,12 +264,12 @@ program openacc_kernels_loop_validity
     a(i) = 3.14
   end do
 
-  !$acc kernels loop device_type(1)
+  !$acc kernels loop device_type(multicore)
   do i = 1, N
     a(i) = 3.14
   end do
 
-  !$acc kernels loop device_type(1, 3)
+  !$acc kernels loop device_type(host, multicore)
   do i = 1, N
     a(i) = 3.14
   end do
@@ -288,6 +288,11 @@ program openacc_kernels_loop_validity
   !$acc kernels loop device_type(*) if(.TRUE.)
   do i = 1, N
     a(i) = 3.14
+  end do
+
+  !$acc parallel loop
+  do i = 1, N
+    if(i == 10) cycle
   end do
 
 end program openacc_kernels_loop_validity

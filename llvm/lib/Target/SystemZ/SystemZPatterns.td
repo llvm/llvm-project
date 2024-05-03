@@ -49,8 +49,8 @@ class RMWI<SDPatternOperator load, SDPatternOperator operator,
 // memory location.  IMM is the type of the second operand.
 multiclass RMWIByte<SDPatternOperator operator, AddressingMode mode,
                     Instruction insn> {
-  def : RMWI<anyextloadi8, operator, truncstorei8, mode, imm32, insn>;
-  def : RMWI<anyextloadi8, operator, truncstorei8, mode, imm64, insn>;
+  def : RMWI<z_anyextloadi8, operator, truncstorei8, mode, imm32, insn>;
+  def : RMWI<z_anyextloadi8, operator, truncstorei8, mode, imm64, insn>;
 }
 
 // Record that INSN performs insertion TYPE into a register of class CLS.
@@ -145,12 +145,11 @@ multiclass BlockLoadStore<SDPatternOperator load, ValueType vt,
 }
 
 // Record that INSN is a LOAD AND TEST that can be used to compare
-// registers in CLS against zero.  The instruction has separate R1 and R2
-// operands, but they must be the same when the instruction is used like this.
+// registers in CLS against zero.
 multiclass CompareZeroFP<Instruction insn, RegisterOperand cls> {
-  def : Pat<(z_any_fcmp cls:$reg, (fpimm0)), (insn cls:$reg, cls:$reg)>;
+  def : Pat<(z_any_fcmp cls:$reg, (fpimm0)), (insn cls:$reg)>;
   // The sign of the zero makes no difference.
-  def : Pat<(z_any_fcmp cls:$reg, (fpimmneg0)), (insn cls:$reg, cls:$reg)>;
+  def : Pat<(z_any_fcmp cls:$reg, (fpimmneg0)), (insn cls:$reg)>;
 }
 
 // Use INSN for performing binary operation OPERATION of type VT

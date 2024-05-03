@@ -205,15 +205,15 @@ Thread::ThreadEventData::GetStackFrameFromEvent(const Event *event_ptr) {
 
 // Thread class
 
-ConstString &Thread::GetStaticBroadcasterClass() {
-  static ConstString class_name("lldb.thread");
+llvm::StringRef Thread::GetStaticBroadcasterClass() {
+  static constexpr llvm::StringLiteral class_name("lldb.thread");
   return class_name;
 }
 
 Thread::Thread(Process &process, lldb::tid_t tid, bool use_invalid_index_id)
     : ThreadProperties(false), UserID(tid),
       Broadcaster(process.GetTarget().GetDebugger().GetBroadcasterManager(),
-                  Thread::GetStaticBroadcasterClass().AsCString()),
+                  Thread::GetStaticBroadcasterClass().str()),
       m_process_wp(process.shared_from_this()), m_stop_info_sp(),
       m_stop_info_stop_id(0), m_stop_info_override_stop_id(0),
       m_should_run_before_public_stop(false),
@@ -221,7 +221,7 @@ Thread::Thread(Process &process, lldb::tid_t tid, bool use_invalid_index_id)
                                       : process.GetNextThreadIndexID(tid)),
       m_reg_context_sp(), m_state(eStateUnloaded), m_state_mutex(),
       m_frame_mutex(), m_curr_frames_sp(), m_prev_frames_sp(),
-      m_resume_signal(LLDB_INVALID_SIGNAL_NUMBER),
+      m_prev_framezero_pc(), m_resume_signal(LLDB_INVALID_SIGNAL_NUMBER),
       m_resume_state(eStateRunning), m_temporary_resume_state(eStateRunning),
       m_unwinder_up(), m_destroy_called(false),
       m_override_should_notify(eLazyBoolCalculate),
@@ -250,12 +250,15 @@ void Thread::DestroyThread() {
   std::lock_guard<std::recursive_mutex> guard(m_frame_mutex);
   m_curr_frames_sp.reset();
   m_prev_frames_sp.reset();
+  m_prev_framezero_pc.reset();
 }
 
 void Thread::BroadcastSelectedFrameChange(StackID &new_frame_id) {
-  if (EventTypeHasListeners(eBroadcastBitSelectedFrameChanged))
-    BroadcastEvent(eBroadcastBitSelectedFrameChanged,
-                   new ThreadEventData(this->shared_from_this(), new_frame_id));
+  if (EventTypeHasListeners(eBroadcastBitSelectedFrameChanged)) {
+    auto data_sp =
+        std::make_shared<ThreadEventData>(shared_from_this(), new_frame_id);
+    BroadcastEvent(eBroadcastBitSelectedFrameChanged, data_sp);
+  }
 }
 
 lldb::StackFrameSP
@@ -299,10 +302,10 @@ bool Thread::SetSelectedFrameByIndexNoisily(uint32_t frame_idx,
       SymbolContext frame_sc(
           frame_sp->GetSymbolContext(eSymbolContextLineEntry));
       const Debugger &debugger = GetProcess()->GetTarget().GetDebugger();
-      if (debugger.GetUseExternalEditor() && frame_sc.line_entry.file &&
+      if (debugger.GetUseExternalEditor() && frame_sc.line_entry.GetFile() &&
           frame_sc.line_entry.line != 0) {
         if (llvm::Error e = Host::OpenFileInExternalEditor(
-                debugger.GetExternalEditor(), frame_sc.line_entry.file,
+                debugger.GetExternalEditor(), frame_sc.line_entry.GetFile(),
                 frame_sc.line_entry.line)) {
           LLDB_LOG_ERROR(GetLog(LLDBLog::Host), std::move(e),
                          "OpenFileInExternalEditor failed: {0}");
@@ -420,6 +423,12 @@ lldb::StopInfoSP Thread::GetPrivateStopInfo(bool calculate) {
       }
     }
   }
+
+  // If we were resuming the process and it was interrupted,
+  // return no stop reason.  This thread would like to resume.
+  if (m_stop_info_sp && m_stop_info_sp->WasContinueInterrupted(*this))
+    return {};
+
   return m_stop_info_sp;
 }
 
@@ -1406,16 +1415,22 @@ StackFrameListSP Thread::GetStackFrameList() {
   return m_curr_frames_sp;
 }
 
+std::optional<addr_t> Thread::GetPreviousFrameZeroPC() {
+  return m_prev_framezero_pc;
+}
+
 void Thread::ClearStackFrames() {
   std::lock_guard<std::recursive_mutex> guard(m_frame_mutex);
 
   GetUnwinder().Clear();
+  m_prev_framezero_pc.reset();
+  if (RegisterContextSP reg_ctx_sp = GetRegisterContext())
+    m_prev_framezero_pc = reg_ctx_sp->GetPC();
 
   // Only store away the old "reference" StackFrameList if we got all its
   // frames:
   // FIXME: At some point we can try to splice in the frames we have fetched
-  // into
-  // the new frame as we make it, but let's not try that now.
+  // into the new frame as we make it, but let's not try that now.
   if (m_curr_frames_sp && m_curr_frames_sp->GetAllFramesFetched())
     m_prev_frames_sp.swap(m_curr_frames_sp);
   m_curr_frames_sp.reset();
@@ -1507,9 +1522,10 @@ Status Thread::ReturnFromFrame(lldb::StackFrameSP frame_sp,
       if (copy_success) {
         thread->DiscardThreadPlans(true);
         thread->ClearStackFrames();
-        if (broadcast && EventTypeHasListeners(eBroadcastBitStackChanged))
-          BroadcastEvent(eBroadcastBitStackChanged,
-                         new ThreadEventData(this->shared_from_this()));
+        if (broadcast && EventTypeHasListeners(eBroadcastBitStackChanged)) {
+          auto data_sp = std::make_shared<ThreadEventData>(shared_from_this());
+          BroadcastEvent(eBroadcastBitStackChanged, data_sp);
+        }
       } else {
         return_error.SetErrorString("Could not reset register values.");
       }
@@ -1589,12 +1605,12 @@ Status Thread::JumpToLine(const FileSpec &file, uint32_t line,
   return Status();
 }
 
-void Thread::DumpUsingSettingsFormat(Stream &strm, uint32_t frame_idx,
-                                     bool stop_format) {
+bool Thread::DumpUsingFormat(Stream &strm, uint32_t frame_idx,
+                             const FormatEntity::Entry *format) {
   ExecutionContext exe_ctx(shared_from_this());
   Process *process = exe_ctx.GetProcessPtr();
-  if (process == nullptr)
-    return;
+  if (!process || !format)
+    return false;
 
   StackFrameSP frame_sp;
   SymbolContext frame_sc;
@@ -1606,6 +1622,14 @@ void Thread::DumpUsingSettingsFormat(Stream &strm, uint32_t frame_idx,
     }
   }
 
+  return FormatEntity::Format(*format, strm, frame_sp ? &frame_sc : nullptr,
+                              &exe_ctx, nullptr, nullptr, false, false);
+}
+
+void Thread::DumpUsingSettingsFormat(Stream &strm, uint32_t frame_idx,
+                                     bool stop_format) {
+  ExecutionContext exe_ctx(shared_from_this());
+
   const FormatEntity::Entry *thread_format;
   if (stop_format)
     thread_format = exe_ctx.GetTargetRef().GetDebugger().GetThreadStopFormat();
@@ -1614,8 +1638,7 @@ void Thread::DumpUsingSettingsFormat(Stream &strm, uint32_t frame_idx,
 
   assert(thread_format);
 
-  FormatEntity::Format(*thread_format, strm, frame_sp ? &frame_sc : nullptr,
-                       &exe_ctx, nullptr, nullptr, false, false);
+  DumpUsingFormat(strm, frame_idx, thread_format);
 }
 
 void Thread::SettingsInitialize() {}
@@ -1730,10 +1753,10 @@ size_t Thread::GetStatus(Stream &strm, uint32_t start_frame,
       if (frame_sp) {
         SymbolContext frame_sc(
             frame_sp->GetSymbolContext(eSymbolContextLineEntry));
-        if (frame_sc.line_entry.line != 0 && frame_sc.line_entry.file) {
+        if (frame_sc.line_entry.line != 0 && frame_sc.line_entry.GetFile()) {
           if (llvm::Error e = Host::OpenFileInExternalEditor(
                   target->GetDebugger().GetExternalEditor(),
-                  frame_sc.line_entry.file, frame_sc.line_entry.line)) {
+                  frame_sc.line_entry.GetFile(), frame_sc.line_entry.line)) {
             LLDB_LOG_ERROR(GetLog(LLDBLog::Host), std::move(e),
                            "OpenFileInExternalEditor failed: {0}");
           }

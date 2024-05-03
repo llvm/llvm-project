@@ -446,11 +446,9 @@ bool ScanfSpecifier::fixType(QualType QT, QualType RawQT,
 
     // If we know the target array length, we can use it as a field width.
     if (const ConstantArrayType *CAT = Ctx.getAsConstantArrayType(RawQT)) {
-      if (CAT->getSizeModifier() == ArrayType::Normal)
+      if (CAT->getSizeModifier() == ArraySizeModifier::Normal)
         FieldWidth = OptionalAmount(OptionalAmount::Constant,
-                                    CAT->getSize().getZExtValue() - 1,
-                                    "", 0, false);
-
+                                    CAT->getZExtSize() - 1, "", 0, false);
     }
     return true;
   }

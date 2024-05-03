@@ -140,7 +140,7 @@ protected:
 
   InputFile(Kind, const llvm::MachO::InterfaceFile &);
 
-  // If true, this input's arch is compatiable with target.
+  // If true, this input's arch is compatible with target.
   bool compatArch = true;
 
 private:

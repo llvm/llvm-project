@@ -24,6 +24,17 @@ subroutine test_constant_scalar_ptr_component()
 ! CHECK:  fir.address_of(@[[CST_TARGET:_QQro._QFtest_constant_scalar_ptr_componentTmyderived..*]])
 end subroutine
 
+subroutine test_comp_ref()
+  ! Test parent component value in an initial value structure constructor.
+  type t1
+    integer :: i
+  end type
+  type, extends(t1) :: t2
+    integer :: j
+  end type
+  type(t2) :: x = t2(t1=t1(1), j=2)
+end subroutine
+
 ! CHECK: fir.global internal @[[CST]] constant : !fir.type<[[DERIVED:_QFtest_constant_scalarTmyderived{i:i32,j:i32,x:!fir.array<2xf32>,c:!fir.char<1,10>}]]> {
 ! CHECK:   %[[VAL_0:.*]] = fir.undefined !fir.type<[[DERIVED]]>
 ! CHECK:   %[[VAL_1:.*]] = fir.field_index i, !fir.type<[[DERIVED]]>
@@ -68,4 +79,18 @@ end subroutine
 ! CHECK:   %[[VAL_19:.*]] = fir.rebox %[[VAL_18]] : (!fir.box<!fir.array<10xf32>>) -> !fir.box<!fir.ptr<!fir.array<?xf32>>>
 ! CHECK:   %[[VAL_20:.*]] = fir.insert_value %[[VAL_4]], %[[VAL_19]], ["y", !fir.type<[[DERIVED_2]]>] : (!fir.type<[[DERIVED_2]]>, !fir.box<!fir.ptr<!fir.array<?xf32>>>) -> !fir.type<[[DERIVED_2]]>
 ! CHECK:   fir.has_value %[[VAL_20]] : !fir.type<[[DERIVED_2]]>
+! CHECK: }
+
+! CHECK-LABEL:   fir.global internal @_QFtest_comp_refEx : !fir.type<_QFtest_comp_refTt2{t1:!fir.type<_QFtest_comp_refTt1{i:i32}>,j:i32}> {
+! CHECK:   %[[VAL_0:.*]] = fir.undefined !fir.type<_QFtest_comp_refTt2{t1:!fir.type<_QFtest_comp_refTt1{i:i32}>,j:i32}>
+! CHECK:   %[[VAL_1:.*]] = fir.field_index t1, !fir.type<_QFtest_comp_refTt2{t1:!fir.type<_QFtest_comp_refTt1{i:i32}>,j:i32}>
+! CHECK:   %[[VAL_2:.*]] = fir.undefined !fir.type<_QFtest_comp_refTt1{i:i32}>
+! CHECK:   %[[VAL_3:.*]] = fir.field_index i, !fir.type<_QFtest_comp_refTt1{i:i32}>
+! CHECK:   %[[VAL_4:.*]] = arith.constant 1 : i32
+! CHECK:   %[[VAL_5:.*]] = fir.insert_value %[[VAL_2]], %[[VAL_4]], ["i", !fir.type<_QFtest_comp_refTt1{i:i32}>] : (!fir.type<_QFtest_comp_refTt1{i:i32}>, i32) -> !fir.type<_QFtest_comp_refTt1{i:i32}>
+! CHECK:   %[[VAL_6:.*]] = fir.insert_value %[[VAL_0]], %[[VAL_5]], ["t1", !fir.type<_QFtest_comp_refTt2{t1:!fir.type<_QFtest_comp_refTt1{i:i32}>,j:i32}>] : (!fir.type<_QFtest_comp_refTt2{t1:!fir.type<_QFtest_comp_refTt1{i:i32}>,j:i32}>, !fir.type<_QFtest_comp_refTt1{i:i32}>) -> !fir.type<_QFtest_comp_refTt2{t1:!fir.type<_QFtest_comp_refTt1{i:i32}>,j:i32}>
+! CHECK:   %[[VAL_7:.*]] = fir.field_index j, !fir.type<_QFtest_comp_refTt2{t1:!fir.type<_QFtest_comp_refTt1{i:i32}>,j:i32}>
+! CHECK:   %[[VAL_8:.*]] = arith.constant 2 : i32
+! CHECK:   %[[VAL_9:.*]] = fir.insert_value %[[VAL_6]], %[[VAL_8]], ["j", !fir.type<_QFtest_comp_refTt2{t1:!fir.type<_QFtest_comp_refTt1{i:i32}>,j:i32}>] : (!fir.type<_QFtest_comp_refTt2{t1:!fir.type<_QFtest_comp_refTt1{i:i32}>,j:i32}>, i32) -> !fir.type<_QFtest_comp_refTt2{t1:!fir.type<_QFtest_comp_refTt1{i:i32}>,j:i32}>
+! CHECK:   fir.has_value %[[VAL_9]] : !fir.type<_QFtest_comp_refTt2{t1:!fir.type<_QFtest_comp_refTt1{i:i32}>,j:i32}>
 ! CHECK: }

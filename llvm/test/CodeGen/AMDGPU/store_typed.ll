@@ -1,5 +1,5 @@
-; RUN: llc -march=r600 -mcpu=redwood < %s | FileCheck --check-prefix=EG --check-prefix=FUNC %s
-; RUN: llc -march=r600 -mcpu=cayman  < %s | FileCheck --check-prefix=CM --check-prefix=FUNC %s
+; RUN: llc -mtriple=r600 -mcpu=redwood < %s | FileCheck --check-prefix=EG --check-prefix=FUNC %s
+; RUN: llc -mtriple=r600 -mcpu=cayman  < %s | FileCheck --check-prefix=CM --check-prefix=FUNC %s
 
 ; store to rat 0
 ; FUNC-LABEL: {{^}}store_typed_rat0:

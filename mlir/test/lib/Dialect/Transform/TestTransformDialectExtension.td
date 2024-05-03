@@ -17,9 +17,9 @@
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/IR/AttrTypeBase.td"
 include "mlir/IR/OpBase.td"
-include "mlir/Dialect/Transform/IR/MatchInterfaces.td"
+include "mlir/Dialect/Transform/Interfaces/MatchInterfaces.td"
 include "mlir/Dialect/Transform/IR/TransformDialect.td"
-include "mlir/Dialect/Transform/IR/TransformInterfaces.td"
+include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.td"
 include "mlir/Dialect/PDL/IR/PDLTypes.td"
 
 def TestTransformTestDialectHandleType
@@ -150,29 +150,6 @@ def TestSucceedIfOperandOfOpKind
   let assemblyFormat =
       "$operand_handle `,` $op_kind attr-dict `:` type($operand_handle)";
   let extraClassDeclaration = SingleOpMatcher.extraDeclaration;
-  let cppNamespace = "::mlir::test";
-}
-
-def TestPrintRemarkAtOperandOp
-  : Op<Transform_Dialect, "test_print_remark_at_operand",
-       [MatchOpInterface,
-        DeclareOpInterfaceMethods<TransformOpInterface>,
-        DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
-  let arguments = (ins
-    TransformHandleTypeInterface:$operand,
-    StrAttr:$message);
-  let assemblyFormat =
-    "$operand `,` $message attr-dict `:` type($operand)";
-  let cppNamespace = "::mlir::test";
-}
-
-def TestPrintRemarkAtOperandValue
-  : Op<Transform_Dialect, "test_print_remark_at_operand_value",
-       [DeclareOpInterfaceMethods<TransformOpInterface>,
-        DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
-  let arguments = (ins TransformValueHandleTypeInterface:$in,
-                       StrAttr:$message);
-  let assemblyFormat = "$in `,` $message attr-dict `:` type($in)";
   let cppNamespace = "::mlir::test";
 }
 
@@ -343,33 +320,6 @@ def TestMixedSuccessAndSilenceableOp
   }];
 }
 
-def TestPrintNumberOfAssociatedPayloadIROps
-  : Op<Transform_Dialect, "test_print_number_of_associated_payload_ir_ops",
-       [DeclareOpInterfaceMethods<TransformOpInterface>,
-        DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
-  let arguments = (ins TransformHandleTypeInterface:$handle);
-  let assemblyFormat = "$handle attr-dict `:` type($handle)";
-  let cppNamespace = "::mlir::test";
-}
-
-def TestPrintNumberOfAssociatedPayloadIRValues
-  : Op<Transform_Dialect, "test_print_number_of_associated_payload_ir_values",
-       [DeclareOpInterfaceMethods<TransformOpInterface>,
-        DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
-  let arguments = (ins TransformValueHandleTypeInterface:$value_handle);
-  let assemblyFormat = "$value_handle attr-dict `:` type($value_handle)";
-  let cppNamespace = "::mlir::test";
-}
-
-def TestPrintNumberOfAssociatedPayloadIRParams
-  : Op<Transform_Dialect, "test_print_number_of_associated_payload_ir_params",
-       [DeclareOpInterfaceMethods<TransformOpInterface>,
-        DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
-  let arguments = (ins TransformParamTypeInterface:$param);
-  let assemblyFormat = "$param attr-dict `:` type($param)";
-  let cppNamespace = "::mlir::test";
-}
-
 def TestCopyPayloadOp
   : Op<Transform_Dialect, "test_copy_payload",
        [DeclareOpInterfaceMethods<TransformOpInterface>,
@@ -387,19 +337,6 @@ def TestReportNumberOfTrackedHandlesNestedUnder
      DeclareOpInterfaceMethods<TransformOpInterface>]> {
   let arguments = (ins TransformHandleTypeInterface:$target);
   let assemblyFormat = "$target attr-dict `:` type($target)";
-  let cppNamespace = "::mlir::test";
-}
-
-def TestPrintParamOp
-  : Op<Transform_Dialect, "test_print_param",
-       [MatchOpInterface,
-        DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
-        DeclareOpInterfaceMethods<TransformOpInterface>]> {
-  let arguments = (ins TransformParamTypeInterface:$param,
-                       Optional<TransformHandleTypeInterface>:$anchor,
-                       OptionalAttr<StrAttr>:$message);
-  let assemblyFormat = "$param (`,` $message^)?  (`at` $anchor^)?"
-                       "attr-dict `:` type($param) (`,` type($anchor)^)?";
   let cppNamespace = "::mlir::test";
 }
 
@@ -565,7 +502,8 @@ def ApplyTestConversionPatternsOp
 
 def TestTypeConverterOp
   : Op<Transform_Dialect, "apply_conversion_patterns.transform.test_type_converter",
-      [DeclareOpInterfaceMethods<TypeConverterBuilderOpInterface>]> {
+      [DeclareOpInterfaceMethods<TypeConverterBuilderOpInterface,
+                                 ["getTypeConverter"]>]> {
   let arguments = (ins);
   let results = (outs);
   let assemblyFormat = "attr-dict";

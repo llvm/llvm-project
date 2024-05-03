@@ -20,13 +20,13 @@ declare i32 @memcmp(ptr, ptr, i64)
 define void @fold_memcmp_mismatch_too_big(ptr %pcmp) {
 ; BE-LABEL: @fold_memcmp_mismatch_too_big(
 ; BE-NEXT:    store i32 -1, ptr [[PCMP:%.*]], align 4
-; BE-NEXT:    [[PSTOR_CB:%.*]] = getelementptr i32, ptr [[PCMP]], i64 1
+; BE-NEXT:    [[PSTOR_CB:%.*]] = getelementptr i8, ptr [[PCMP]], i64 4
 ; BE-NEXT:    store i32 1, ptr [[PSTOR_CB]], align 4
 ; BE-NEXT:    ret void
 ;
 ; LE-LABEL: @fold_memcmp_mismatch_too_big(
 ; LE-NEXT:    store i32 -1, ptr [[PCMP:%.*]], align 4
-; LE-NEXT:    [[PSTOR_CB:%.*]] = getelementptr i32, ptr [[PCMP]], i64 1
+; LE-NEXT:    [[PSTOR_CB:%.*]] = getelementptr i8, ptr [[PCMP]], i64 4
 ; LE-NEXT:    store i32 1, ptr [[PSTOR_CB]], align 4
 ; LE-NEXT:    ret void
 ;
@@ -49,13 +49,13 @@ define void @fold_memcmp_mismatch_too_big(ptr %pcmp) {
 define void @fold_memcmp_match_too_big(ptr %pcmp) {
 ; BE-LABEL: @fold_memcmp_match_too_big(
 ; BE-NEXT:    store i32 0, ptr [[PCMP:%.*]], align 4
-; BE-NEXT:    [[PSTOR_AB_M1:%.*]] = getelementptr i32, ptr [[PCMP]], i64 1
+; BE-NEXT:    [[PSTOR_AB_M1:%.*]] = getelementptr i8, ptr [[PCMP]], i64 4
 ; BE-NEXT:    store i32 0, ptr [[PSTOR_AB_M1]], align 4
 ; BE-NEXT:    ret void
 ;
 ; LE-LABEL: @fold_memcmp_match_too_big(
 ; LE-NEXT:    store i32 0, ptr [[PCMP:%.*]], align 4
-; LE-NEXT:    [[PSTOR_AB_M1:%.*]] = getelementptr i32, ptr [[PCMP]], i64 1
+; LE-NEXT:    [[PSTOR_AB_M1:%.*]] = getelementptr i8, ptr [[PCMP]], i64 4
 ; LE-NEXT:    store i32 0, ptr [[PSTOR_AB_M1]], align 4
 ; LE-NEXT:    ret void
 ;

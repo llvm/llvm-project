@@ -21,6 +21,7 @@
 #include <charconv>
 #include <concepts>
 #include <iterator>
+#include <memory>
 #include <string>
 #include <type_traits>
 
@@ -42,8 +43,9 @@ void test(std::string expected, std::string_view fmt, color arg, std::size_t off
   std::formatter<color, char> formatter;
   static_assert(std::semiregular<decltype(formatter)>);
 
-  auto it = formatter.parse(parse_ctx);
-  assert(it == fmt.end() - offset);
+  std::same_as<typename std::string_view::iterator> auto it = formatter.parse(parse_ctx);
+  // std::to_address works around LWG3989 and MSVC STL's iterator debugging mechanism.
+  assert(std::to_address(it) == std::to_address(fmt.end()) - offset);
 
   std::string result;
   auto out = std::back_inserter(result);

@@ -36,6 +36,7 @@
 #include "lld/Common/Timer.h"
 #include "llvm/Support/Parallel.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
@@ -203,6 +204,7 @@ void lld::coff::writeMapFile(COFFLinkerContext &ctx) {
   if (ctx.config.mapFile.empty())
     return;
 
+  llvm::TimeTraceScope timeScope("Map file");
   std::error_code ec;
   raw_fd_ostream os(ctx.config.mapFile, ec, sys::fs::OF_None);
   if (ec)

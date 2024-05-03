@@ -43,7 +43,9 @@ void populateWarpExecuteOnLane0OpToScfForPattern(
 using DistributionMapFn = std::function<AffineMap(Value)>;
 
 /// Distribute transfer_write ops based on the affine map returned by
-/// `distributionMapFn`.
+/// `distributionMapFn`. Writes of size more than `maxNumElementToExtract`
+/// will not be distributed (it should be less than the warp size).
+///
 /// Example:
 /// ```
 /// %0 = vector.warp_execute_on_lane_0(%id){
@@ -59,9 +61,15 @@ using DistributionMapFn = std::function<AffineMap(Value)>;
 ///   vector.yield %v : vector<32xf32>
 /// }
 /// vector.transfer_write %v, %A[%id] : vector<1xf32>, memref<128xf32>
+///
+/// When applied at the same time as the vector propagation patterns,
+/// distribution of `vector.transfer_write` is expected to have the highest
+/// priority (pattern benefit). By making propagation of `vector.transfer_read`
+/// be the lowest priority pattern, it will be the last vector operation to
+/// distribute, meaning writes should propagate first.
 void populateDistributeTransferWriteOpPatterns(
     RewritePatternSet &patterns, const DistributionMapFn &distributionMapFn,
-    PatternBenefit benefit = 1);
+    unsigned maxNumElementsToExtract, PatternBenefit benefit = 2);
 
 /// Move scalar operations with no dependency on the warp op outside of the
 /// region.
@@ -75,10 +83,19 @@ using WarpShuffleFromIdxFn =
 /// Collect patterns to propagate warp distribution. `distributionMapFn` is used
 /// to decide how a value should be distributed when this cannot be inferred
 /// from its uses.
+///
+/// The separate control over the `vector.transfer_read` op pattern benefit
+/// is given to ensure the order of reads/writes before and after distribution
+/// is consistent. As noted above, writes are expected to have the highest
+/// priority for distribution, but are only ever distributed if adjacent to the
+/// yield. By making reads the lowest priority pattern, it will be the last
+/// vector operation to distribute, meaning writes should propagate first. This
+/// is relatively brittle when ops fail to distribute, but that is a limitation
+/// of these propagation patterns when there is a dependency not modeled by SSA.
 void populatePropagateWarpVectorDistributionPatterns(
     RewritePatternSet &pattern, const DistributionMapFn &distributionMapFn,
     const WarpShuffleFromIdxFn &warpShuffleFromIdxFn,
-    PatternBenefit benefit = 1);
+    PatternBenefit benefit = 1, PatternBenefit readBenefit = 0);
 
 /// Lambda signature to compute a reduction of a distributed value for the given
 /// reduction kind and size.

@@ -15,8 +15,24 @@
 
 namespace Fortran::runtime {
 
-int Initialize(const Descriptor &instance, const typeInfo::DerivedType &derived,
-    Terminator &terminator, bool hasStat, const Descriptor *errMsg) {
+RT_OFFLOAD_API_GROUP_BEGIN
+
+// Fill "extents" array with the extents of component "comp" from derived type
+// instance "derivedInstance".
+static RT_API_ATTRS void GetComponentExtents(SubscriptValue (&extents)[maxRank],
+    const typeInfo::Component &comp, const Descriptor &derivedInstance) {
+  const typeInfo::Value *bounds{comp.bounds()};
+  for (int dim{0}; dim < comp.rank(); ++dim) {
+    SubscriptValue lb{bounds[2 * dim].GetValue(&derivedInstance).value_or(0)};
+    SubscriptValue ub{
+        bounds[2 * dim + 1].GetValue(&derivedInstance).value_or(0)};
+    extents[dim] = ub >= lb ? ub - lb + 1 : 0;
+  }
+}
+
+RT_API_ATTRS int Initialize(const Descriptor &instance,
+    const typeInfo::DerivedType &derived, Terminator &terminator, bool hasStat,
+    const Descriptor *errMsg) {
   const Descriptor &componentDesc{derived.component()};
   std::size_t elements{instance.Elements()};
   int stat{StatOk};
@@ -74,22 +90,15 @@ int Initialize(const Descriptor &instance, const typeInfo::DerivedType &derived,
         comp.derivedType() && !comp.derivedType()->noInitializationNeeded()) {
       // Default initialization of non-pointer non-allocatable/automatic
       // data component.  Handles parent component's elements.  Recursive.
-      SubscriptValue extent[maxRank];
-      const typeInfo::Value *bounds{comp.bounds()};
-      for (int dim{0}; dim < comp.rank(); ++dim) {
-        typeInfo::TypeParameterValue lb{
-            bounds[2 * dim].GetValue(&instance).value_or(0)};
-        typeInfo::TypeParameterValue ub{
-            bounds[2 * dim + 1].GetValue(&instance).value_or(0)};
-        extent[dim] = ub >= lb ? ub - lb + 1 : 0;
-      }
+      SubscriptValue extents[maxRank];
+      GetComponentExtents(extents, comp, instance);
       StaticDescriptor<maxRank, true, 0> staticDescriptor;
       Descriptor &compDesc{staticDescriptor.descriptor()};
       const typeInfo::DerivedType &compType{*comp.derivedType()};
       for (std::size_t j{0}; j++ < elements; instance.IncrementSubscripts(at)) {
         compDesc.Establish(compType,
             instance.ElementComponent<char>(at, comp.offset()), comp.rank(),
-            extent);
+            extents);
         stat = Initialize(compDesc, compType, terminator, hasStat, errMsg);
         if (stat != StatOk) {
           break;
@@ -114,7 +123,7 @@ int Initialize(const Descriptor &instance, const typeInfo::DerivedType &derived,
   return stat;
 }
 
-static const typeInfo::SpecialBinding *FindFinal(
+static RT_API_ATTRS const typeInfo::SpecialBinding *FindFinal(
     const typeInfo::DerivedType &derived, int rank) {
   if (const auto *ranked{derived.FindSpecialBinding(
           typeInfo::SpecialBinding::RankFinal(rank))}) {
@@ -128,7 +137,7 @@ static const typeInfo::SpecialBinding *FindFinal(
   }
 }
 
-static void CallFinalSubroutine(const Descriptor &descriptor,
+static RT_API_ATTRS void CallFinalSubroutine(const Descriptor &descriptor,
     const typeInfo::DerivedType &derived, Terminator *terminator) {
   if (const auto *special{FindFinal(derived, descriptor.rank())}) {
     if (special->which() == typeInfo::SpecialBinding::Which::ElementalFinal) {
@@ -193,7 +202,7 @@ static void CallFinalSubroutine(const Descriptor &descriptor,
 }
 
 // Fortran 2018 subclause 7.5.6.2
-void Finalize(const Descriptor &descriptor,
+RT_API_ATTRS void Finalize(const Descriptor &descriptor,
     const typeInfo::DerivedType &derived, Terminator *terminator) {
   if (derived.noFinalizationNeeded() || !descriptor.IsAllocated()) {
     return;
@@ -250,14 +259,8 @@ void Finalize(const Descriptor &descriptor,
       }
     } else if (comp.genre() == typeInfo::Component::Genre::Data &&
         comp.derivedType() && !comp.derivedType()->noFinalizationNeeded()) {
-      SubscriptValue extent[maxRank];
-      const typeInfo::Value *bounds{comp.bounds()};
-      for (int dim{0}; dim < comp.rank(); ++dim) {
-        SubscriptValue lb{bounds[2 * dim].GetValue(&descriptor).value_or(0)};
-        SubscriptValue ub{
-            bounds[2 * dim + 1].GetValue(&descriptor).value_or(0)};
-        extent[dim] = ub >= lb ? ub - lb + 1 : 0;
-      }
+      SubscriptValue extents[maxRank];
+      GetComponentExtents(extents, comp, descriptor);
       StaticDescriptor<maxRank, true, 0> staticDescriptor;
       Descriptor &compDesc{staticDescriptor.descriptor()};
       const typeInfo::DerivedType &compType{*comp.derivedType()};
@@ -265,7 +268,7 @@ void Finalize(const Descriptor &descriptor,
            descriptor.IncrementSubscripts(at)) {
         compDesc.Establish(compType,
             descriptor.ElementComponent<char>(at, comp.offset()), comp.rank(),
-            extent);
+            extents);
         Finalize(compDesc, compType, terminator);
       }
     }
@@ -285,7 +288,7 @@ void Finalize(const Descriptor &descriptor,
 // elementwise finalization of non-parent components taking place
 // before parent component finalization, and with all finalization
 // preceding any deallocation.
-void Destroy(const Descriptor &descriptor, bool finalize,
+RT_API_ATTRS void Destroy(const Descriptor &descriptor, bool finalize,
     const typeInfo::DerivedType &derived, Terminator *terminator) {
   if (derived.noDestructionNeeded() || !descriptor.IsAllocated()) {
     return;
@@ -293,6 +296,8 @@ void Destroy(const Descriptor &descriptor, bool finalize,
   if (finalize && !derived.noFinalizationNeeded()) {
     Finalize(descriptor, derived, terminator);
   }
+  // Deallocate all direct and indirect allocatable and automatic components.
+  // Contrary to finalization, the order of deallocation does not matter.
   const Descriptor &componentDesc{derived.component()};
   std::size_t myComponents{componentDesc.Elements()};
   std::size_t elements{descriptor.Elements()};
@@ -301,34 +306,47 @@ void Destroy(const Descriptor &descriptor, bool finalize,
   for (std::size_t k{0}; k < myComponents; ++k) {
     const auto &comp{
         *componentDesc.ZeroBasedIndexedElement<typeInfo::Component>(k)};
+    const bool destroyComp{
+        comp.derivedType() && !comp.derivedType()->noDestructionNeeded()};
     if (comp.genre() == typeInfo::Component::Genre::Allocatable ||
         comp.genre() == typeInfo::Component::Genre::Automatic) {
       for (std::size_t j{0}; j < elements; ++j) {
         Descriptor *d{
             descriptor.ElementComponent<Descriptor>(at, comp.offset())};
+        if (destroyComp) {
+          Destroy(*d, /*finalize=*/false, *comp.derivedType(), terminator);
+        }
         d->Deallocate();
         descriptor.IncrementSubscripts(at);
+      }
+    } else if (destroyComp &&
+        comp.genre() == typeInfo::Component::Genre::Data) {
+      SubscriptValue extents[maxRank];
+      GetComponentExtents(extents, comp, descriptor);
+      StaticDescriptor<maxRank, true, 0> staticDescriptor;
+      Descriptor &compDesc{staticDescriptor.descriptor()};
+      const typeInfo::DerivedType &compType{*comp.derivedType()};
+      for (std::size_t j{0}; j++ < elements;
+           descriptor.IncrementSubscripts(at)) {
+        compDesc.Establish(compType,
+            descriptor.ElementComponent<char>(at, comp.offset()), comp.rank(),
+            extents);
+        Destroy(compDesc, /*finalize=*/false, *comp.derivedType(), terminator);
       }
     }
   }
 }
 
-bool HasDynamicComponent(const Descriptor &descriptor) {
+RT_API_ATTRS bool HasDynamicComponent(const Descriptor &descriptor) {
   if (const DescriptorAddendum * addendum{descriptor.Addendum()}) {
     if (const auto *derived = addendum->derivedType()) {
-      const Descriptor &componentDesc{derived->component()};
-      std::size_t myComponents{componentDesc.Elements()};
-      for (std::size_t k{0}; k < myComponents; ++k) {
-        const auto &comp{
-            *componentDesc.ZeroBasedIndexedElement<typeInfo::Component>(k)};
-        if (comp.genre() == typeInfo::Component::Genre::Allocatable ||
-            comp.genre() == typeInfo::Component::Genre::Automatic) {
-          return true;
-        }
-      }
+      // Destruction is needed if and only if there are direct or indirect
+      // allocatable or automatic components.
+      return !derived->noDestructionNeeded();
     }
   }
   return false;
 }
 
+RT_OFFLOAD_API_GROUP_END
 } // namespace Fortran::runtime

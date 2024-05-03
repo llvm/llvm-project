@@ -1,6 +1,7 @@
 import("//llvm/triples.gni")
 
 #import("//llvm/utils/gn/build/libs/xar/enable.gni")
+import("//llvm/utils/gn/build/libs/curl/enable.gni")
 import("//llvm/utils/gn/build/libs/xml/enable.gni")
 import("//llvm/utils/gn/build/libs/zlib/enable.gni")
 import("//llvm/utils/gn/build/write_cmake_config.gni")
@@ -60,7 +61,7 @@ write_lit_cfg("lit_api_site_cfg") {
     "LLDB_TEST_COMMON_ARGS=",
     "LLDB_TEST_USER_ARGS=",
     "LLDB_ENABLE_PYTHON=0",
-    "LLDB_HAS_LIBCXX=0",  # FIXME: support this (?)
+    "LLDB_HAS_LIBCXX=False",  # FIXME: support this (?)
     "LLDB_LIBS_DIR=",  # FIXME: for shared builds only (?)
     "LLDB_TEST_ARCH=$current_cpu",
     "LLDB_TEST_COMPILER=" + rebase_path("$root_build_dir/bin/clang"),
@@ -91,6 +92,12 @@ write_lit_cfg("lit_api_site_cfg") {
   } else {
     extra_values += [ "SHLIBDIR=" + rebase_path("$root_out_dir/lib", dir) ]
   }
+
+  if (llvm_enable_libcurl) {
+    extra_values += [ "LLVM_ENABLE_CURL=1" ]
+  } else {
+    extra_values += [ "LLVM_ENABLE_CURL=0" ]  # Must be 0.
+  }
 }
 
 write_lit_cfg("lit_shell_site_cfg") {
@@ -117,6 +124,7 @@ write_lit_cfg("lit_shell_site_cfg") {
     "LLDB_TOOLS_DIR=" + rebase_path("$root_out_dir/bin"),
     "LLDB_USE_SYSTEM_DEBUGSERVER=1",  # XXX port //lldb/tools/debugserver (?)
     "LLVM_HOST_TRIPLE=$llvm_current_triple",
+    "LLVM_USE_SANITIZER=",
   ]
 
   if (llvm_enable_zlib) {
@@ -163,12 +171,12 @@ group("test") {
     ":lit_unit_site_cfg",
     "//clang/tools/driver:symlinks",
     "//lld/tools/lld:symlinks",
+    "//lldb/tools/lldb-dap",
     "//lldb/tools/driver:lldb",
 
     # XXX lldb-instr, darwin-debug, etc
     "//lldb/tools/lldb-server",
     "//lldb/tools/lldb-test",
-    "//lldb/tools/lldb-vscode",
     "//lldb/utils/lit-cpuid",
 
     #"//lldb/unittests",

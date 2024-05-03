@@ -1,6 +1,6 @@
-; RUN: not llc -march=amdgcn -mcpu=bonaire -verify-machineinstrs < %s 2>&1 | FileCheck -check-prefix=GCN -check-prefix=SICI %s
-; RUN: not llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s 2>&1 | FileCheck -check-prefix=GCN %s
-; RUN: not llc -march=amdgcn -mcpu=tahiti -verify-machineinstrs < %s 2>&1 | FileCheck -check-prefix=GCN -check-prefix=SICI %s
+; RUN: not llc -mtriple=amdgcn -mcpu=bonaire -verify-machineinstrs < %s 2>&1 | FileCheck -check-prefix=GCN -check-prefix=SICI %s
+; RUN: not llc -mtriple=amdgcn -mcpu=tonga -verify-machineinstrs < %s 2>&1 | FileCheck -check-prefix=GCN %s
+; RUN: not llc -mtriple=amdgcn -mcpu=tahiti -verify-machineinstrs < %s 2>&1 | FileCheck -check-prefix=GCN -check-prefix=SICI %s
 
 ; GCN: error: couldn't allocate output register for constraint 's'
 ; GCN: error: couldn't allocate input reg for constraint 's'
@@ -15,14 +15,6 @@ define amdgpu_kernel void @s_input_output_i8() {
 define amdgpu_kernel void @v_input_output_i8() {
   %v = tail call i8 asm sideeffect "v_mov_b32 $0, -1", "=v"()
   tail call void asm sideeffect "; use $0", "v"(i8 %v)
-  ret void
-}
-
-; GCN: error: couldn't allocate output register for constraint 's'
-; GCN: error: couldn't allocate input reg for constraint 's'
-define amdgpu_kernel void @s_input_output_v32f16() {
-  %v = tail call <32 x half> asm sideeffect "s_mov_b32 $0, -1", "=s"()
-  tail call void asm sideeffect "; use $0", "s"(<32 x half> %v)
   ret void
 }
 

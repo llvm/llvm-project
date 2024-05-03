@@ -9,7 +9,21 @@ define dso_local void @f() personality ptr @__C_specific_handler {
 ; USE-SAME: !prof ![[FUNC_ENTRY_COUNT:[0-9]+]]
 ; USE-DAG: {{![0-9]+}} = !{i32 1, !"ProfileSummary", {{![0-9]+}}}
 ; USE-DAG: {{![0-9]+}} = !{!"DetailedSummary", {{![0-9]+}}}
-; USE-DAG: ![[FUNC_ENTRY_COUNT]] = !{!"function_entry_count", i64 5}
+; USE-DAG: ![[FUNC_ENTRY_COUNT]] = !{!"function_entry_count", i64 6}
+;
+; GEN-LABEL: @f
+;
+; GEN: catch.dispatch:
+; GEN-NOT: call void @llvm.instrprof.increment
+;
+; GEN:  _except1:
+; GEN:    call void @llvm.instrprof.increment(ptr @__profn_f, i64 {{[0-9]+}}, i32 3, i32 1)
+;
+; GEN: __except6:
+; GEN:   call void @llvm.instrprof.increment(ptr @__profn_f, i64 {{[0-9]+}}, i32 3, i32 2)
+;
+; GEN: invoke.cont3:
+; GEN:   call void @llvm.instrprof.increment(ptr @__profn_f, i64 1096621589180411894, i32 3, i32 0)
 entry:
   %__exception_code = alloca i32, align 4
   %__exception_code2 = alloca i32, align 4
@@ -27,8 +41,6 @@ __except1:
   %2 = call i32 @llvm.eh.exceptioncode(token %1)
   store i32 %2, ptr %__exception_code, align 4
   br label %__try.cont7
-;GEN:  _except1:
-;GEN:    call void @llvm.instrprof.increment(ptr @__profn_f, i64 {{[0-9]+}}, i32 2, i32 1)
 
 invoke.cont:
   br label %__try.cont
@@ -39,8 +51,6 @@ __try.cont:
 
 catch.dispatch4:
   %3 = catchswitch within none [label %__except5] unwind to caller
-; GEN: catch.dispatch4:
-; GEN-NOT: call void @llvm.instrprof.increment
 
 __except5:
   %4 = catchpad within %3 [ptr null]
@@ -56,9 +66,6 @@ __try.cont7:
 
 invoke.cont3:
   br label %__try.cont7
-;GEN: invoke.cont3:
-;GEN:  call void @llvm.instrprof.increment(ptr @__profn_f, i64 {{[0-9]+}}, i32 2, i32 0)
-
 }
 
 declare dso_local i32 @__C_specific_handler(...)

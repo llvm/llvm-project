@@ -14,26 +14,26 @@ target triple = "nvptx64"
 
 %struct.ident_t = type { i32, i32, i32, i32, ptr }
 %struct.KernelEnvironmentTy = type { %struct.ConfigurationEnvironmentTy, ptr, ptr }
-%struct.ConfigurationEnvironmentTy = type { i8, i8, i8 }
+%struct.ConfigurationEnvironmentTy = type { i8, i8, i8, i32, i32, i32, i32, i32, i32 }
 
 @0 = private unnamed_addr constant [23 x i8] c";unknown;unknown;0;0;;\00", align 1
 @1 = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 0, ptr @0 }, align 8
-@__omp_offloading_fd02_404433c2_main_l5_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 0, i8 0, i8 1 }, ptr @1, ptr null }
+@__omp_offloading_fd02_404433c2_main_l5_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 0, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @1, ptr null }
 
 
 ; Function Attrs: alwaysinline convergent norecurse nounwind
 ;.
 ; CHECK: @[[GLOB0:[0-9]+]] = private unnamed_addr constant [23 x i8] c"
 ; CHECK: @[[GLOB1:[0-9]+]] = private unnamed_addr constant [[STRUCT_IDENT_T:%.*]] { i32 0, i32 2, i32 0, i32 0, ptr @[[GLOB0]] }, align 8
-; CHECK: @[[__OMP_OFFLOADING_FD02_404433C2_MAIN_L5_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 0, i8 0, i8 3 }, ptr @[[GLOB1]], ptr null }
+; CHECK: @[[__OMP_OFFLOADING_FD02_404433C2_MAIN_L5_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 0, i8 0, i8 3, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
 ; CHECK: @[[GLOB2:[0-9]+]] = private unnamed_addr constant [[STRUCT_IDENT_T:%.*]] { i32 0, i32 2, i32 0, i32 22, ptr @[[GLOB0]] }, align 8
 ;.
-define weak void @__omp_offloading_fd02_404433c2_main_l5(ptr nonnull align 8 dereferenceable(8) %x) local_unnamed_addr #0 {
+define weak void @__omp_offloading_fd02_404433c2_main_l5(ptr %dyn, ptr nonnull align 8 dereferenceable(8) %x) local_unnamed_addr #0 {
 ; CHECK-LABEL: define {{[^@]+}}@__omp_offloading_fd02_404433c2_main_l5
-; CHECK-SAME: (ptr nonnull align 8 dereferenceable(8) [[X:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: (ptr [[DYN:%.*]], ptr nonnull align 8 dereferenceable(8) [[X:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 8
-; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr nonnull @__omp_offloading_fd02_404433c2_main_l5_kernel_environment) #[[ATTR3:[0-9]+]]
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr nonnull @__omp_offloading_fd02_404433c2_main_l5_kernel_environment, ptr [[DYN]]) #[[ATTR3:[0-9]+]]
 ; CHECK-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 ; CHECK-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[COMMON_RET:%.*]]
 ; CHECK:       common.ret:
@@ -61,7 +61,7 @@ define weak void @__omp_offloading_fd02_404433c2_main_l5(ptr nonnull align 8 der
 ;
 entry:
   %captured_vars_addrs = alloca [0 x ptr], align 8
-  %0 = call i32 @__kmpc_target_init(ptr nonnull @__omp_offloading_fd02_404433c2_main_l5_kernel_environment) #3
+  %0 = call i32 @__kmpc_target_init(ptr nonnull @__omp_offloading_fd02_404433c2_main_l5_kernel_environment, ptr %dyn) #3
   %exec_user_code = icmp eq i32 %0, -1
   br i1 %exec_user_code, label %user_code.entry, label %common.ret
 
@@ -77,7 +77,7 @@ user_code.entry:                                  ; preds = %entry
   br label %common.ret
 }
 
-declare i32 @__kmpc_target_init(ptr) local_unnamed_addr
+declare i32 @__kmpc_target_init(ptr, ptr) local_unnamed_addr
 
 ; Function Attrs: alwaysinline mustprogress nofree norecurse nosync nounwind readnone willreturn
 define internal void @__omp_outlined__(ptr noalias nocapture %.global_tid., ptr noalias nocapture %.bound_tid.) #1 {

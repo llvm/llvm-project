@@ -280,13 +280,13 @@ void Broadcaster::BroadcasterImpl::PrivateBroadcastEvent(EventSP &event_sp,
     // Make sure to do this before adding the event to the primary or it might
     // start handling the event before we're done adding all the pending
     // listeners.
+    // Also, don't redo the check for unique here, since otherwise that could
+    // be racy, and if we send the event to the primary listener then we SHOULD 
+    // send it to the secondary listeners or they will get out of sync with the
+    // primary listener.
     if (!hijacking_listener_sp) {
-      for (auto &pair : GetListeners(event_type, false)) {
-        if (unique && pair.first->PeekAtNextEventForBroadcasterWithType(
-                          &m_broadcaster, event_type))
-          continue;
+      for (auto &pair : GetListeners(event_type, false))
         event_sp->AddPendingListener(pair.first);
-      }
     }
     primary_listener_sp->AddEvent(event_sp);
   } else {
@@ -300,9 +300,8 @@ void Broadcaster::BroadcasterImpl::PrivateBroadcastEvent(EventSP &event_sp,
   }
 }
 
-void Broadcaster::BroadcasterImpl::BroadcastEvent(uint32_t event_type,
-                                                  EventData *event_data) {
-  auto event_sp = std::make_shared<Event>(event_type, event_data);
+void Broadcaster::BroadcasterImpl::BroadcastEvent(uint32_t event_type) {
+  auto event_sp = std::make_shared<Event>(event_type, /*data = */ nullptr);
   PrivateBroadcastEvent(event_sp, false);
 }
 
@@ -312,9 +311,8 @@ void Broadcaster::BroadcasterImpl::BroadcastEvent(
   PrivateBroadcastEvent(event_sp, false);
 }
 
-void Broadcaster::BroadcasterImpl::BroadcastEventIfUnique(
-    uint32_t event_type, EventData *event_data) {
-  auto event_sp = std::make_shared<Event>(event_type, event_data);
+void Broadcaster::BroadcasterImpl::BroadcastEventIfUnique(uint32_t event_type) {
+  auto event_sp = std::make_shared<Event>(event_type, /*data = */ nullptr);
   PrivateBroadcastEvent(event_sp, true);
 }
 
@@ -375,8 +373,8 @@ void Broadcaster::BroadcasterImpl::RestoreBroadcaster() {
     m_hijacking_masks.pop_back();
 }
 
-ConstString &Broadcaster::GetBroadcasterClass() const {
-  static ConstString class_name("lldb.anonymous");
+llvm::StringRef Broadcaster::GetBroadcasterClass() const {
+  static constexpr llvm::StringLiteral class_name("lldb.anonymous");
   return class_name;
 }
 

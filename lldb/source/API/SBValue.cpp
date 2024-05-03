@@ -24,6 +24,7 @@
 #include "lldb/Core/ValueObject.h"
 #include "lldb/Core/ValueObjectConstResult.h"
 #include "lldb/DataFormatters/DataVisualization.h"
+#include "lldb/DataFormatters/DumpValueObjectOptions.h"
 #include "lldb/Symbol/Block.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/Type.h"
@@ -114,7 +115,7 @@ public:
 
     Target *target = value_sp->GetTargetSP().get();
     // If this ValueObject holds an error, then it is valuable for that.
-    if (value_sp->GetError().Fail()) 
+    if (value_sp->GetError().Fail())
       return value_sp;
 
     if (!target)
@@ -908,6 +909,25 @@ uint64_t SBValue::GetValueAsUnsigned(uint64_t fail_value) {
   return fail_value;
 }
 
+lldb::addr_t SBValue::GetValueAsAddress() {
+  addr_t fail_value = LLDB_INVALID_ADDRESS;
+  ValueLocker locker;
+  lldb::ValueObjectSP value_sp(GetSP(locker));
+  if (value_sp) {
+    bool success = true;
+    uint64_t ret_val = fail_value;
+    ret_val = value_sp->GetValueAsUnsigned(fail_value, &success);
+    if (!success)
+      return fail_value;
+    ProcessSP process_sp = m_opaque_sp->GetProcessSP();
+    if (!process_sp)
+      return ret_val;
+    return process_sp->FixDataAddress(ret_val);
+  }
+
+  return fail_value;
+}
+
 bool SBValue::MightHaveChildren() {
   LLDB_INSTRUMENT_VA(this);
 
@@ -946,7 +966,7 @@ uint32_t SBValue::GetNumChildren(uint32_t max) {
   ValueLocker locker;
   lldb::ValueObjectSP value_sp(GetSP(locker));
   if (value_sp)
-    num_children = value_sp->GetNumChildren(max);
+    num_children = value_sp->GetNumChildrenIgnoringErrors(max);
 
   return num_children;
 }
@@ -1038,8 +1058,8 @@ lldb::ValueObjectSP SBValue::GetSP(ValueLocker &locker) const {
   // IsValid means that the SBValue has a value in it.  But that's not the
   // only time that ValueObjects are useful.  We also want to return the value
   // if there's an error state in it.
-  if (!m_opaque_sp || (!m_opaque_sp->IsValid() 
-      && (m_opaque_sp->GetRootSP() 
+  if (!m_opaque_sp || (!m_opaque_sp->IsValid()
+      && (m_opaque_sp->GetRootSP()
           && !m_opaque_sp->GetRootSP()->GetError().Fail()))) {
     locker.GetError().SetErrorString("No value");
     return ValueObjectSP();
@@ -1209,10 +1229,14 @@ bool SBValue::GetDescription(SBStream &description) {
 
   ValueLocker locker;
   lldb::ValueObjectSP value_sp(GetSP(locker));
-  if (value_sp)
-    value_sp->Dump(strm);
-  else
+  if (value_sp) {
+    DumpValueObjectOptions options;
+    options.SetUseDynamicType(m_opaque_sp->GetUseDynamic());
+    options.SetUseSyntheticValue(m_opaque_sp->GetUseSynthetic());
+    value_sp->Dump(strm, options);
+  } else {
     strm.PutCString("No value");
+  }
 
   return true;
 }
@@ -1504,4 +1528,15 @@ lldb::SBValue SBValue::Persist() {
     persisted_sb.SetSP(value_sp->Persist());
   }
   return persisted_sb;
+}
+
+lldb::SBValue SBValue::GetVTable() {
+  SBValue vtable_sb;
+  ValueLocker locker;
+  lldb::ValueObjectSP value_sp(GetSP(locker));
+  if (!value_sp)
+    return vtable_sb;
+
+  vtable_sb.SetSP(value_sp->GetVTable());
+  return vtable_sb;
 }

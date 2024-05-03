@@ -1,4 +1,4 @@
-! RUN: bbc -o - -emit-fir %s | FileCheck %s
+! RUN: bbc -o - -emit-fir -hlfir=false %s | FileCheck %s
 
 ! Test lowering of elemental calls with array arguments that use array
 ! elements as indices.

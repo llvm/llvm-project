@@ -23,6 +23,7 @@ volatile vec_uint vui;
 volatile vec_ulong vul;
 volatile vec_double vd;
 volatile vec_float vf;
+volatile unsigned __int128 ui128;
 
 volatile unsigned int len;
 const void * volatile cptr;
@@ -33,18 +34,18 @@ void test_core(void) {
   vul = __builtin_s390_vbperm(vuc, vuc);
   // CHECK: call <2 x i64> @llvm.s390.vbperm(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
 
-  vsc = __builtin_s390_vlrl(len, cptr);
+  vsc = __builtin_s390_vlrlr(len, cptr);
   // CHECK: call <16 x i8> @llvm.s390.vlrl(i32 %{{.*}}, ptr %{{.*}})
 
-  __builtin_s390_vstrl(vsc, len, ptr);
+  __builtin_s390_vstrlr(vsc, len, ptr);
   // CHECK: call void @llvm.s390.vstrl(<16 x i8> %{{.*}}, i32 %{{.*}}, ptr %{{.*}})
 }
 
 void test_integer(void) {
-  vuc = __builtin_s390_vmslg(vul, vul, vuc, 0);
-  // CHECK: call <16 x i8> @llvm.s390.vmslg(<2 x i64> %{{.*}}, <2 x i64> %{{.*}}, <16 x i8> %{{.*}}, i32 0)
-  vuc = __builtin_s390_vmslg(vul, vul, vuc, 15);
-  // CHECK: call <16 x i8> @llvm.s390.vmslg(<2 x i64> %{{.*}}, <2 x i64> %{{.*}}, <16 x i8> %{{.*}}, i32 15)
+  ui128 = __builtin_s390_vmslg(vul, vul, ui128, 0);
+  // CHECK: call i128 @llvm.s390.vmslg(<2 x i64> %{{.*}}, <2 x i64> %{{.*}}, i128 %{{.*}}, i32 0)
+  ui128 = __builtin_s390_vmslg(vul, vul, ui128, 15);
+  // CHECK: call i128 @llvm.s390.vmslg(<2 x i64> %{{.*}}, <2 x i64> %{{.*}}, i128 %{{.*}}, i32 15)
 }
 
 void test_float(void) {

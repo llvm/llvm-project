@@ -6,8 +6,8 @@
 
 ; ELF:      Relocations [
 ; ELF-NEXT:   Section (3) .rel.text {
-; ELF-NEXT:     0x{{[0-9a-f]*}} R_AMDGPU_ABS32 lds.external
-; ELF-NEXT:     0x{{[0-9a-f]*}} R_AMDGPU_ABS32 lds.defined
+; ELF-NEXT:     0x{{[0-9a-f]*}} R_AMDGPU_ABS32_LO lds.external
+; ELF-NEXT:     0x{{[0-9a-f]*}} R_AMDGPU_ABS32_LO lds.defined
 ; ELF-NEXT:   }
 ; ELF-NEXT: ]
 

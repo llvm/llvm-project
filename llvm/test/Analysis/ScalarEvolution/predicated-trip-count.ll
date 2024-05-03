@@ -35,7 +35,7 @@ define void @test1(i32 %N, i32 %M) {
 ; CHECK-NEXT:  Loop %bb3: Unpredictable symbolic max backedge-taken count.
 ; CHECK-NEXT:  Loop %bb3: Predicated backedge-taken count is (1 + (-1 smax %M))
 ; CHECK-NEXT:   Predicates:
-; CHECK-NEXT:    {0,+,1}<%bb3> Added Flags: <nssw>
+; CHECK-NEXT:      {0,+,1}<%bb3> Added Flags: <nssw>
 ;
 entry:
   br label %bb3
@@ -102,7 +102,7 @@ define void @test2(i32 %N, i32 %M, i16 %Start) {
 ; CHECK-NEXT:  Loop %bb3: Unpredictable symbolic max backedge-taken count.
 ; CHECK-NEXT:  Loop %bb3: Predicated backedge-taken count is (1 + (sext i16 %Start to i32) + (-1 * ((1 + (sext i16 %Start to i32))<nsw> smin %M)))
 ; CHECK-NEXT:   Predicates:
-; CHECK-NEXT:    {%Start,+,-1}<%bb3> Added Flags: <nssw>
+; CHECK-NEXT:      {%Start,+,-1}<%bb3> Added Flags: <nssw>
 ;
 entry:
   br label %bb3

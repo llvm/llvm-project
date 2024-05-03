@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/TextAPI/InterfaceFile.h"
+#include "llvm/TextAPI/RecordsSlice.h"
 #include "llvm/TextAPI/TextAPIError.h"
 #include <iomanip>
 #include <sstream>
@@ -24,17 +25,23 @@ void InterfaceFileRef::addTarget(const Target &Target) {
 
 void InterfaceFile::addAllowableClient(StringRef InstallName,
                                        const Target &Target) {
+  if (InstallName.empty())
+    return;
   auto Client = addEntry(AllowableClients, InstallName);
   Client->addTarget(Target);
 }
 
 void InterfaceFile::addReexportedLibrary(StringRef InstallName,
                                          const Target &Target) {
+  if (InstallName.empty())
+    return;
   auto Lib = addEntry(ReexportedLibraries, InstallName);
   Lib->addTarget(Target);
 }
 
 void InterfaceFile::addParentUmbrella(const Target &Target_, StringRef Parent) {
+  if (Parent.empty())
+    return;
   auto Iter = lower_bound(ParentUmbrellas, Target_,
                           [](const std::pair<Target, std::string> &LHS,
                              Target RHS) { return LHS.first < RHS; });
@@ -47,7 +54,9 @@ void InterfaceFile::addParentUmbrella(const Target &Target_, StringRef Parent) {
   ParentUmbrellas.emplace(Iter, Target_, std::string(Parent));
 }
 
-void InterfaceFile::addRPath(const Target &InputTarget, StringRef RPath) {
+void InterfaceFile::addRPath(StringRef RPath, const Target &InputTarget) {
+  if (RPath.empty())
+    return;
   using RPathEntryT = const std::pair<Target, std::string>;
   RPathEntryT Entry(InputTarget, RPath);
   auto Iter =
@@ -189,9 +198,9 @@ InterfaceFile::merge(const InterfaceFile *O) const {
       IF->addReexportedLibrary(Lib.getInstallName(), Target);
 
   for (const auto &[Target, Path] : rpaths())
-    IF->addRPath(Target, Path);
+    IF->addRPath(Path, Target);
   for (const auto &[Target, Path] : O->rpaths())
-    IF->addRPath(Target, Path);
+    IF->addRPath(Path, Target);
 
   for (const auto *Sym : symbols()) {
     IF->addSymbol(Sym->getKind(), Sym->getName(), Sym->targets(),
@@ -310,7 +319,7 @@ InterfaceFile::extract(Architecture Arch) const {
 
   for (const auto &It : rpaths())
     if (It.first.Arch == Arch)
-      IF->addRPath(It.first, It.second);
+      IF->addRPath(It.second, It.first);
 
   for (const auto &Lib : allowableClients())
     for (const auto &Target : Lib.targets())
@@ -343,6 +352,34 @@ InterfaceFile::extract(Architecture Arch) const {
   return std::move(IF);
 }
 
+void InterfaceFile::setFromBinaryAttrs(const RecordsSlice::BinaryAttrs &BA,
+                                       const Target &Targ) {
+  if (getFileType() != BA.File)
+    setFileType(BA.File);
+  if (getInstallName().empty())
+    setInstallName(BA.InstallName);
+  if (BA.AppExtensionSafe && !isApplicationExtensionSafe())
+    setApplicationExtensionSafe();
+  if (BA.TwoLevelNamespace && !isTwoLevelNamespace())
+    setTwoLevelNamespace();
+  if (BA.OSLibNotForSharedCache && !isOSLibNotForSharedCache())
+    setOSLibNotForSharedCache();
+  if (getCurrentVersion().empty())
+    setCurrentVersion(BA.CurrentVersion);
+  if (getCompatibilityVersion().empty())
+    setCompatibilityVersion(BA.CompatVersion);
+  if (getSwiftABIVersion() == 0)
+    setSwiftABIVersion(BA.SwiftABI);
+  if (getPath().empty())
+    setPath(BA.Path);
+  if (!BA.ParentUmbrella.empty())
+    addParentUmbrella(Targ, BA.ParentUmbrella);
+  for (const auto &Client : BA.AllowableClients)
+    addAllowableClient(Client, Targ);
+  for (const auto &Lib : BA.RexportedLibraries)
+    addReexportedLibrary(Lib, Targ);
+}
+
 static bool isYAMLTextStub(const FileType &Kind) {
   return (Kind >= FileType::TBD_V1) && (Kind < FileType::TBD_V5);
 }
@@ -360,6 +397,8 @@ bool InterfaceFile::operator==(const InterfaceFile &O) const {
   if (IsTwoLevelNamespace != O.IsTwoLevelNamespace)
     return false;
   if (IsAppExtensionSafe != O.IsAppExtensionSafe)
+    return false;
+  if (IsOSLibNotForSharedCache != O.IsOSLibNotForSharedCache)
     return false;
   if (HasSimSupport != O.HasSimSupport)
     return false;

@@ -55,7 +55,7 @@ public:
   template <typename T> std::enable_if_t<!std::is_pointer<T>::value, T> read() {
     assert(aligned(Ptr));
     using namespace llvm::support;
-    T Value = endian::read<T, endianness::native, 1>(Ptr);
+    T Value = endian::read<T, llvm::endianness::native>(Ptr);
     Ptr += align(sizeof(T));
     return Value;
   }

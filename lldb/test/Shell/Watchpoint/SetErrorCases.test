@@ -25,4 +25,4 @@ watchpoint set expression MyAggregateDataType
 # CHECK: error: expression did not evaluate to an address
 
 watchpoint set variable -s -128
-# CHECK: error: invalid enumeration value
+# CHECK: error: invalid --size option value

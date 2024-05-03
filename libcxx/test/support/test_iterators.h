@@ -725,11 +725,14 @@ struct common_input_iterator {
 #  endif // TEST_STD_VER >= 20
 
 // Iterator adaptor that counts the number of times the iterator has had a successor/predecessor
-// operation called. Has two recorders:
+// operation or an equality comparison operation called. Has three recorders:
 // * `stride_count`, which records the total number of calls to an op++, op--, op+=, or op-=.
 // * `stride_displacement`, which records the displacement of the calls. This means that both
 //   op++/op+= will increase the displacement counter by 1, and op--/op-= will decrease the
 //   displacement counter by 1.
+// * `equals_count`, which records the total number of calls to an op== or op!=. If compared
+//   against a sentinel object, that sentinel object must call the `record_equality_comparison`
+//   function so that the comparison is counted correctly.
 template <class It>
 class stride_counting_iterator {
 public:
@@ -753,6 +756,8 @@ public:
     constexpr difference_type stride_count() const { return stride_count_; }
 
     constexpr difference_type stride_displacement() const { return stride_displacement_; }
+
+    constexpr difference_type equals_count() const { return equals_count_; }
 
     constexpr decltype(auto) operator*() const { return *It(base_); }
 
@@ -838,10 +843,13 @@ public:
         return base(x) - base(y);
     }
 
+    constexpr void record_equality_comparison() const { ++equals_count_; }
+
     constexpr bool operator==(stride_counting_iterator const& other) const
         requires std::sentinel_for<It, It>
     {
-        return It(base_) == It(other.base_);
+      record_equality_comparison();
+      return It(base_) == It(other.base_);
     }
 
     friend constexpr bool operator<(stride_counting_iterator const& x, stride_counting_iterator const& y)
@@ -875,6 +883,7 @@ private:
     decltype(base(std::declval<It>())) base_;
     difference_type stride_count_ = 0;
     difference_type stride_displacement_ = 0;
+    mutable difference_type equals_count_ = 0;
 };
 template <class It>
 stride_counting_iterator(It) -> stride_counting_iterator<It>;
@@ -887,7 +896,14 @@ class sentinel_wrapper {
 public:
     explicit sentinel_wrapper() = default;
     constexpr explicit sentinel_wrapper(const It& it) : base_(base(it)) {}
-    constexpr bool operator==(const It& other) const { return base_ == base(other); }
+    constexpr bool operator==(const It& other) const {
+      // If supported, record statistics about the equality operator call
+      // inside `other`.
+      if constexpr (requires { other.record_equality_comparison(); }) {
+        other.record_equality_comparison();
+      }
+      return base_ == base(other);
+    }
     friend constexpr It base(const sentinel_wrapper& s) { return It(s.base_); }
 private:
     decltype(base(std::declval<It>())) base_;
@@ -1419,6 +1435,137 @@ template <std::ranges::input_range R>
 ProxyRange(R&&) -> ProxyRange<std::views::all_t<R&&>>;
 
 #endif // TEST_STD_VER > 17
+
+#if TEST_STD_VER >= 17
+
+namespace util {
+template <class Derived, class Iter>
+class iterator_wrapper {
+  Iter iter_;
+
+  using iter_traits = std::iterator_traits<Iter>;
+
+public:
+  using iterator_category = typename iter_traits::iterator_category;
+  using value_type        = typename iter_traits::value_type;
+  using difference_type   = typename iter_traits::difference_type;
+  using pointer           = typename iter_traits::pointer;
+  using reference         = typename iter_traits::reference;
+
+  constexpr iterator_wrapper() : iter_() {}
+  constexpr explicit iterator_wrapper(Iter iter) : iter_(iter) {}
+
+  decltype(*iter_) operator*() { return *iter_; }
+  decltype(*iter_) operator*() const { return *iter_; }
+
+  decltype(iter_[0]) operator[](difference_type v) const {
+    return iter_[v];
+  }
+
+  Derived& operator++() {
+    ++iter_;
+    return static_cast<Derived&>(*this);
+  }
+
+  Derived operator++(int) {
+    auto tmp = static_cast<Derived&>(*this);
+    ++(*this);
+    return tmp;
+  }
+
+  Derived& operator--() {
+    --iter_;
+    return static_cast<Derived&>(*this);
+  }
+
+  Derived operator--(int) {
+    auto tmp = static_cast<Derived&>(*this);
+    --(*this);
+    return tmp;
+  }
+
+  Derived& operator+=(difference_type i) {
+    iter_ += i;
+    return static_cast<Derived&>(*this);
+  }
+
+  Derived& operator-=(difference_type i) {
+    iter_ -= i;
+    return static_cast<Derived&>(*this);
+  }
+
+  friend decltype(iter_ - iter_) operator-(const iterator_wrapper& lhs, const iterator_wrapper& rhs) {
+    return lhs.iter_ - rhs.iter_;
+  }
+
+  friend Derived operator-(Derived iter, difference_type i) {
+    iter.iter_ -= i;
+    return iter;
+  }
+
+  friend Derived operator+(Derived iter, difference_type i) {
+    iter.iter_ += i;
+    return iter;
+  }
+
+  friend Derived operator+(difference_type i, Derived iter) { return iter + i; }
+
+  friend bool operator==(const iterator_wrapper& lhs, const iterator_wrapper& rhs) { return lhs.iter_ == rhs.iter_; }
+  friend bool operator!=(const iterator_wrapper& lhs, const iterator_wrapper& rhs) { return lhs.iter_ != rhs.iter_; }
+
+  friend bool operator>(const iterator_wrapper& lhs, const iterator_wrapper& rhs) { return lhs.iter_ > rhs.iter_; }
+  friend bool operator<(const iterator_wrapper& lhs, const iterator_wrapper& rhs) { return lhs.iter_ < rhs.iter_; }
+  friend bool operator<=(const iterator_wrapper& lhs, const iterator_wrapper& rhs) { return lhs.iter_ <= rhs.iter_; }
+  friend bool operator>=(const iterator_wrapper& lhs, const iterator_wrapper& rhs) { return lhs.iter_ >= rhs.iter_; }
+};
+
+class iterator_error : std::runtime_error {
+public:
+  iterator_error(const char* what) : std::runtime_error(what) {}
+};
+
+#ifndef TEST_HAS_NO_EXCEPTIONS
+template <class Iter>
+class throw_on_move_iterator : public iterator_wrapper<throw_on_move_iterator<Iter>, Iter> {
+  using base = iterator_wrapper<throw_on_move_iterator<Iter>, Iter>;
+
+  int moves_until_throw_ = 0;
+
+public:
+  using difference_type   = typename base::difference_type;
+  using value_type        = typename base::value_type;
+  using iterator_category = typename base::iterator_category;
+
+  throw_on_move_iterator() = default;
+  throw_on_move_iterator(Iter iter, int moves_until_throw)
+      : base(std::move(iter)), moves_until_throw_(moves_until_throw) {}
+
+  throw_on_move_iterator(const throw_on_move_iterator& other) : base(other) {}
+  throw_on_move_iterator& operator=(const throw_on_move_iterator& other) {
+    static_cast<base&>(*this) = other;
+    return *this;
+  }
+
+  throw_on_move_iterator(throw_on_move_iterator&& other)
+      : base(std::move(other)), moves_until_throw_(other.moves_until_throw_ - 1) {
+    if (moves_until_throw_ == -1)
+      throw iterator_error("throw_on_move_iterator");
+  }
+
+  throw_on_move_iterator& operator=(throw_on_move_iterator&& other) {
+    moves_until_throw_ = other.moves_until_throw_ - 1;
+    if (moves_until_throw_ == -1)
+      throw iterator_error("throw_on_move_iterator");
+    return *this;
+  }
+};
+
+template <class Iter>
+throw_on_move_iterator(Iter) -> throw_on_move_iterator<Iter>;
+#endif // TEST_HAS_NO_EXCEPTIONS
+} // namespace util
+
+#endif // TEST_STD_VER >= 17
 
 namespace types {
 template <class Ptr>

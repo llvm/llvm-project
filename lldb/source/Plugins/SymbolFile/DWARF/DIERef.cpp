@@ -14,6 +14,7 @@
 
 using namespace lldb;
 using namespace lldb_private;
+using namespace lldb_private::plugin::dwarf;
 
 void llvm::format_provider<DIERef>::format(const DIERef &ref, raw_ostream &OS,
                                            StringRef Style) {

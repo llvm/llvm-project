@@ -130,9 +130,9 @@ define void @foo12(ptr noalias readonly %from, ptr %to) {
 }
 
 ; SM20-LABEL: .visible .entry foo13(
-; SM20: ld.global.v4.u8
+; SM20: ld.global.u32
 ; SM35-LABEL: .visible .entry foo13(
-; SM35: ld.global.nc.v4.u8
+; SM35: ld.global.nc.u32
 define void @foo13(ptr noalias readonly %from, ptr %to) {
   %1 = load <4 x i8>, ptr %from
   store <4 x i8> %1, ptr %to

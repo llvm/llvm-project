@@ -10,7 +10,9 @@
 #define LLVMIR_ATTRDEFS
 
 include "mlir/Dialect/LLVMIR/LLVMDialect.td"
+include "mlir/Dialect/LLVMIR/LLVMInterfaces.td"
 include "mlir/IR/AttrTypeBase.td"
+include "mlir/IR/CommonAttrConstraints.td"
 
 // All of the attributes will extend this class.
 class LLVM_Attr<string name, string attrMnemonic,
@@ -45,6 +47,15 @@ def ComdatAttr : LLVM_Attr<"Comdat", "comdat"> {
 def LinkageAttr : LLVM_Attr<"Linkage", "linkage"> {
   let parameters = (ins "linkage::Linkage":$linkage);
   let assemblyFormat = "`<` $linkage `>`";
+}
+
+//===----------------------------------------------------------------------===//
+// FramePointerKindAttr
+//===----------------------------------------------------------------------===//
+
+def FramePointerKindAttr : LLVM_Attr<"FramePointerKind", "framePointerKind"> {
+  let parameters = (ins "framePointerKind::FramePointerKind":$framePointerKind);
+  let assemblyFormat = "`<` $framePointerKind `>`";
 }
 
 //===----------------------------------------------------------------------===//
@@ -215,9 +226,9 @@ def LoopAnnotationAttr : LLVM_Attr<"LoopAnnotation", "loop_annotation"> {
     OptionalParameter<"LoopUnswitchAttr">:$unswitch,
     OptionalParameter<"BoolAttr">:$mustProgress,
     OptionalParameter<"BoolAttr">:$isVectorized,
-    OptionalArrayRefParameter<"AccessGroupAttr">:$parallelAccesses,
     OptionalParameter<"FusedLoc">:$startLoc,
-    OptionalParameter<"FusedLoc">:$endLoc
+    OptionalParameter<"FusedLoc">:$endLoc,
+    OptionalArrayRefParameter<"AccessGroupAttr">:$parallelAccesses
   );
 
   let assemblyFormat = "`<` struct(params) `>`";
@@ -228,7 +239,7 @@ def LoopAnnotationAttr : LLVM_Attr<"LoopAnnotation", "loop_annotation"> {
 //===----------------------------------------------------------------------===//
 
 class LLVM_DIParameter<string summary, string default, string parseName,
-                       string printName = parseName>
+                       string errorCase, string printName = parseName>
     : AttrOrTypeParameter<"unsigned", "debug info " # summary> {
   let parser = [{ [&]() -> FailureOr<unsigned> {
     SMLoc tagLoc = $_parser.getCurrentLocation();
@@ -236,30 +247,62 @@ class LLVM_DIParameter<string summary, string default, string parseName,
     if ($_parser.parseKeyword(&name))
       return failure();
 
-    if (unsigned tag = llvm::dwarf::get}] # parseName # [{(name))
-      return tag;
-    return $_parser.emitError(tagLoc)
-      << "invalid debug info }] # summary # [{ name: " << name;
+    unsigned tag = llvm::dwarf::get}] # parseName # [{(name);
+    if (tag == }] # errorCase # [{)
+      return $_parser.emitError(tagLoc)
+        << "invalid debug info }] # summary # [{ name: " << name;
+    return tag;
   }() }];
   let printer = "$_printer << llvm::dwarf::" # printName # "String($_self)";
   let defaultValue = default;
 }
 
 def LLVM_DICallingConventionParameter : LLVM_DIParameter<
-  "calling convention", /*default=*/"0", "CallingConvention", "Convention"
+  "calling convention", /*default=*/"0", "CallingConvention", /*errorCase=*/"0",
+  "Convention"
 >;
 
 def LLVM_DIEncodingParameter : LLVM_DIParameter<
-  "encoding", /*default=*/"0", "AttributeEncoding"
+  "encoding", /*default=*/"0", "AttributeEncoding", /*errorCase=*/"0"
 >;
 
 def LLVM_DILanguageParameter : LLVM_DIParameter<
-  "language", /*default=*/"", "Language"
+  "language", /*default=*/"", "Language", /*errorCase=*/"0"
 >;
 
 def LLVM_DITagParameter : LLVM_DIParameter<
-  "tag", /*default=*/"", "Tag"
+  "tag", /*default=*/"", "Tag", /*errorCase=*/"llvm::dwarf::DW_TAG_invalid"
 >;
+
+def LLVM_DIOperationEncodingParameter : LLVM_DIParameter<
+  "operation encoding", /*default=*/"", "OperationEncoding", /*errorCase=*/"0"
+>;
+
+//===----------------------------------------------------------------------===//
+// DIExpressionAttr
+//===----------------------------------------------------------------------===//
+
+def LLVM_DIExpressionElemAttr : LLVM_Attr<"DIExpressionElem",
+                                          "di_expression_elem"> {
+  let parameters = (ins
+    LLVM_DIOperationEncodingParameter:$opcode,
+    OptionalArrayRefParameter<"uint64_t">:$arguments);
+  let assemblyFormat = [{
+    `` $opcode ( `(` custom<ExpressionArg>(ref($opcode), $arguments)^ `)` ) : (``)?
+  }];
+}
+
+def LLVM_DIExpressionAttr : LLVM_Attr<"DIExpression", "di_expression"> {
+  let parameters = (ins
+    OptionalArrayRefParameter<"DIExpressionElemAttr">:$operations
+  );
+  let builders = [
+    AttrBuilder<(ins)>
+  ];
+  let constBuilderCall =
+            "::mlir::LLVM::DIExpressionAttr::get($_builder.getContext(), $0)";
+  let assemblyFormat = "`<` ( `[` $operations^ `]` ) : (``)? `>`";
+}
 
 //===----------------------------------------------------------------------===//
 // DINullTypeAttr
@@ -302,12 +345,25 @@ def LLVM_DIBasicTypeAttr : LLVM_Attr<"DIBasicType", "di_basic_type",
 def LLVM_DICompileUnitAttr : LLVM_Attr<"DICompileUnit", "di_compile_unit",
                                        /*traits=*/[], "DIScopeAttr"> {
   let parameters = (ins
+    "DistinctAttr":$id,
     LLVM_DILanguageParameter:$sourceLanguage,
     "DIFileAttr":$file,
     OptionalParameter<"StringAttr">:$producer,
     "bool":$isOptimized,
-    "DIEmissionKind":$emissionKind
+    "DIEmissionKind":$emissionKind,
+    OptionalParameter<"DINameTableKind">:$nameTableKind
   );
+  let builders = [
+    AttrBuilderWithInferredContext<(ins
+      "DistinctAttr":$id, "unsigned":$sourceLanguage, "DIFileAttr":$file,
+      "StringAttr":$producer, "bool":$isOptimized,
+      "DIEmissionKind":$emissionKind,
+      CArg<"DINameTableKind", "DINameTableKind::Default">:$nameTableKind
+    ), [{
+      return $_get(id.getContext(), id, sourceLanguage, file, producer,
+                   isOptimized, emissionKind, nameTableKind);
+    }]>
+  ];
   let assemblyFormat = "`<` struct(params) `>`";
 }
 
@@ -316,9 +372,11 @@ def LLVM_DICompileUnitAttr : LLVM_Attr<"DICompileUnit", "di_compile_unit",
 //===----------------------------------------------------------------------===//
 
 def LLVM_DICompositeTypeAttr : LLVM_Attr<"DICompositeType", "di_composite_type",
-                                         /*traits=*/[], "DITypeAttr"> {
+                                         [LLVM_DIRecursiveTypeAttrInterface],
+                                         "DITypeAttr"> {
   let parameters = (ins
     LLVM_DITagParameter:$tag,
+    OptionalParameter<"DistinctAttr">:$recId,
     OptionalParameter<"StringAttr">:$name,
     OptionalParameter<"DIFileAttr">:$file,
     OptionalParameter<"uint32_t">:$line,
@@ -330,6 +388,21 @@ def LLVM_DICompositeTypeAttr : LLVM_Attr<"DICompositeType", "di_composite_type",
     OptionalArrayRefParameter<"DINodeAttr">:$elements
   );
   let assemblyFormat = "`<` struct(params) `>`";
+  let extraClassDeclaration = [{
+    /// Requirements of DIRecursiveTypeAttrInterface.
+    /// @{
+
+    /// Get whether this attr describes a recursive self reference.
+    bool isRecSelf() { return getTag() == 0; }
+
+    /// Get a copy of this type attr but with the recursive ID set to `recId`.
+    DIRecursiveTypeAttrInterface withRecId(DistinctAttr recId);
+
+    /// Build a rec-self instance using the provided `recId`.
+    static DIRecursiveTypeAttrInterface getRecSelf(DistinctAttr recId);
+
+    /// @}
+  }];
 }
 
 //===----------------------------------------------------------------------===//
@@ -344,7 +417,8 @@ def LLVM_DIDerivedTypeAttr : LLVM_Attr<"DIDerivedType", "di_derived_type",
     OptionalParameter<"DITypeAttr">:$baseType,
     OptionalParameter<"uint64_t">:$sizeInBits,
     OptionalParameter<"uint32_t">:$alignInBits,
-    OptionalParameter<"uint64_t">:$offsetInBits
+    OptionalParameter<"uint64_t">:$offsetInBits,
+    OptionalParameter<"DINodeAttr">:$extraData
   );
   let assemblyFormat = "`<` struct(params) `>`";
 }
@@ -361,6 +435,39 @@ def LLVM_DIFileAttr : LLVM_Attr<"DIFile", "di_file", /*traits=*/[], "DIScopeAttr
     }]>
   ];
   let assemblyFormat = "`<` $name `in` $directory `>`";
+}
+
+//===----------------------------------------------------------------------===//
+// DIGlobalVariableExpressionAttr
+//===----------------------------------------------------------------------===//
+
+def LLVM_DIGlobalVariableExpressionAttr
+    : LLVM_Attr<"DIGlobalVariableExpression", "di_global_variable_expression"> {
+  let parameters = (ins
+    "DIGlobalVariableAttr":$var,
+    OptionalParameter<"DIExpressionAttr">:$expr
+  );
+  let assemblyFormat = "`<` struct(params) `>`";
+  let constBuilderCall = "$0";
+}
+
+//===----------------------------------------------------------------------===//
+// DIGlobalVariableAttr
+//===----------------------------------------------------------------------===//
+
+def LLVM_DIGlobalVariable : LLVM_Attr<"DIGlobalVariable", "di_global_variable",
+                                      /*traits=*/[], "DINodeAttr"> {
+  let parameters = (ins
+    OptionalParameter<"DIScopeAttr">:$scope,
+    OptionalParameter<"StringAttr">:$name,
+    OptionalParameter<"StringAttr">:$linkageName,
+    "DIFileAttr":$file,
+    "unsigned":$line,
+    "DITypeAttr":$type,
+    OptionalParameter<"bool">:$isLocalToUnit,
+    OptionalParameter<"bool">:$isDefined,
+    OptionalParameter<"unsigned">:$alignInBits);
+  let assemblyFormat = "`<` struct(params) `>`";
 }
 
 //===----------------------------------------------------------------------===//
@@ -443,6 +550,7 @@ def LLVM_DILocalVariableAttr : LLVM_Attr<"DILocalVariable", "di_local_variable",
 def LLVM_DISubprogramAttr : LLVM_Attr<"DISubprogram", "di_subprogram",
                                       /*traits=*/[], "DIScopeAttr"> {
   let parameters = (ins
+    OptionalParameter<"DistinctAttr">:$id,
     OptionalParameter<"DICompileUnitAttr">:$compileUnit,
     "DIScopeAttr":$scope,
     OptionalParameter<"StringAttr">:$name,
@@ -450,18 +558,18 @@ def LLVM_DISubprogramAttr : LLVM_Attr<"DISubprogram", "di_subprogram",
     "DIFileAttr":$file,
     OptionalParameter<"unsigned">:$line,
     OptionalParameter<"unsigned">:$scopeLine,
-    "DISubprogramFlags":$subprogramFlags,
+    OptionalParameter<"DISubprogramFlags">:$subprogramFlags,
     OptionalParameter<"DISubroutineTypeAttr">:$type
   );
   let builders = [
     AttrBuilderWithInferredContext<(ins
-      "DICompileUnitAttr":$compileUnit, "DIScopeAttr":$scope, "StringRef":$name,
-      "StringRef":$linkageName, "DIFileAttr":$file, "unsigned":$line,
-      "unsigned":$scopeLine, "DISubprogramFlags":$subprogramFlags,
-      "DISubroutineTypeAttr":$type
+      "DistinctAttr":$id, "DICompileUnitAttr":$compileUnit,
+      "DIScopeAttr":$scope, "StringRef":$name, "StringRef":$linkageName,
+      "DIFileAttr":$file, "unsigned":$line, "unsigned":$scopeLine,
+      "DISubprogramFlags":$subprogramFlags, "DISubroutineTypeAttr":$type
     ), [{
       MLIRContext *ctx = file.getContext();
-      return $_get(ctx, compileUnit, scope, StringAttr::get(ctx, name),
+      return $_get(ctx, id, compileUnit, scope, StringAttr::get(ctx, name),
                    StringAttr::get(ctx, linkageName), file, line,
                    scopeLine, subprogramFlags, type);
     }]>
@@ -643,14 +751,14 @@ def LLVM_AliasScopeAttr : LLVM_Attr<"AliasScope", "alias_scope"> {
     #domain = #llvm.alias_scope_domain<id = distinct[1]<>, description = "Optional domain description">
     #scope1 = #llvm.alias_scope<id = distinct[2]<>, domain = #domain>
     #scope2 = #llvm.alias_scope<id = distinct[3]<>, domain = #domain, description = "Optional scope description">
-    llvm.func @foo(%ptr1 : !llvm.ptr<i32>) {
+    llvm.func @foo(%ptr1 : !llvm.ptr) {
         %c0 = llvm.mlir.constant(0 : i32) : i32
         %c4 = llvm.mlir.constant(4 : i32) : i32
-        %1 = llvm.ptrtoint %ptr1 : !llvm.ptr<i32> to i32
+        %1 = llvm.ptrtoint %ptr1 : !llvm.ptr to i32
         %2 = llvm.add %1, %c1 : i32
-        %ptr2 = llvm.inttoptr %2 : i32 to !llvm.ptr<i32>
-        llvm.store %c0, %ptr1 { alias_scopes = [#scope1], llvm.noalias = [#scope2] } : !llvm.ptr<i32>
-        llvm.store %c4, %ptr2 { alias_scopes = [#scope2], llvm.noalias = [#scope1] } : !llvm.ptr<i32>
+        %ptr2 = llvm.inttoptr %2 : i32 to !llvm.ptr
+        llvm.store %c0, %ptr1 { alias_scopes = [#scope1], llvm.noalias = [#scope2] } : i32, !llvm.ptr
+        llvm.store %c4, %ptr2 { alias_scopes = [#scope2], llvm.noalias = [#scope1] } : i32, !llvm.ptr
         llvm.return
     }
     ```
@@ -860,4 +968,68 @@ def LLVM_VScaleRangeAttr : LLVM_Attr<"VScaleRange", "vscale_range"> {
     "IntegerAttr":$maxRange);
   let assemblyFormat = "`<` struct(params) `>`";
 }
+
+//===----------------------------------------------------------------------===//
+// TargetFeaturesAttr
+//===----------------------------------------------------------------------===//
+
+def LLVM_TargetFeaturesAttr : LLVM_Attr<"TargetFeatures", "target_features">
+{
+  let summary = "LLVM target features attribute";
+
+  let description = [{
+    Represents the LLVM target features as a list that can be checked within
+    passes/rewrites.
+
+    Example:
+    ```mlir
+    #llvm.target_features<["+sme", "+sve", "+sme-f64f64"]>
+    ```
+
+    Then within a pass or rewrite the features active at an op can be queried:
+
+    ```c++
+    auto targetFeatures = LLVM::TargetFeaturesAttr::featuresAt(op);
+
+    if (!targetFeatures.contains("+sme-f64f64"))
+      return failure();
+    ```
+  }];
+
+  let parameters = (ins OptionalArrayRefParameter<"StringAttr">:$features);
+
+  let builders = [
+    TypeBuilder<(ins "::llvm::StringRef":$features)>,
+    TypeBuilder<(ins "::llvm::ArrayRef<::llvm::StringRef>":$features)>
+  ];
+
+  let extraClassDeclaration = [{
+    /// Checks if a feature is contained within the features list.
+    /// Note: Using a StringAttr allows doing pointer-comparisons.
+    bool contains(::mlir::StringAttr feature) const;
+    bool contains(::llvm::StringRef feature) const;
+
+    bool nullOrEmpty() const {
+      // Checks if this attribute is null, or the features are empty.
+      return !bool(*this) || getFeatures().empty();
+    }
+
+    /// Returns the list of features as an LLVM-compatible string.
+    std::string getFeaturesString() const;
+
+    /// Finds the target features on the parent FunctionOpInterface.
+    /// Note: This assumes the attribute name matches the return value of
+    /// `getAttributeName()`.
+    static TargetFeaturesAttr featuresAt(Operation* op);
+
+    /// Canonical name for this attribute within MLIR.
+    static constexpr StringLiteral getAttributeName() {
+      return StringLiteral("target_features");
+    }
+  }];
+
+  let assemblyFormat = "`<` `[` (`]`) : ($features^ `]`)? `>`";
+  let genVerifyDecl = 1;
+}
+
 #endif // LLVMIR_ATTRDEFS

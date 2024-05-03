@@ -54,23 +54,34 @@ class VOPD_MADKe<bits<4> opX, bits<5> opY> : Enc96 {
 // VOPD classes
 //===----------------------------------------------------------------------===//
 
+
+class GFXGenD<GFXGen Gen, list<string> DXPseudos, list<string> DYPseudos,
+              Predicate subtargetPred = Gen.AssemblerPredicate> :
+    GFXGen<Gen.AssemblerPredicate, Gen.DecoderNamespace, Gen.Suffix,
+           Gen.Subtarget> {
+  list<string> VOPDXPseudos = DXPseudos;
+  list<string> VOPDYPseudos = DYPseudos;
+  Predicate SubtargetPredicate = subtargetPred;
+}
+
 class VOPD_Base<dag outs, dag ins, string asm, VOP_Pseudo VDX, VOP_Pseudo VDY,
-                VOPD_Component XasVC, VOPD_Component YasVC>
+                VOPD_Component XasVC, VOPD_Component YasVC, GFXGenD Gen>
     : VOPAnyCommon<outs, ins, asm, []>,
       VOP<NAME>,
-      SIMCInstr<NAME, SIEncodingFamily.GFX11> {
+      SIMCInstr<NAME, Gen.Subtarget> {
   // Fields for table indexing
   Instruction Opcode = !cast<Instruction>(NAME);
   bits<5> OpX = XasVC.VOPDOp;
   bits<5> OpY = YasVC.VOPDOp;
+  bits<4> SubTgt = Gen.Subtarget;
 
   let VALU = 1;
 
-  let DecoderNamespace = "GFX11";
-  let AssemblerPredicate = isGFX11Plus;
+  let DecoderNamespace = Gen.DecoderNamespace;
+  let AssemblerPredicate = Gen.AssemblerPredicate;
   let WaveSizePredicate = isWave32;
   let isCodeGenOnly = 0;
-  let SubtargetPredicate = isGFX11Plus;
+  let SubtargetPredicate = Gen.SubtargetPredicate;
   let AsmMatchConverter  = "cvtVOPD";
   let Size = 8;
   let ReadsModeReg = !or(VDX.ReadsModeReg, VDY.ReadsModeReg);
@@ -97,16 +108,16 @@ class VOPD_Base<dag outs, dag ins, string asm, VOP_Pseudo VDX, VOP_Pseudo VDY,
 }
 
 class VOPD<dag outs, dag ins, string asm, VOP_Pseudo VDX, VOP_Pseudo VDY,
-           VOPD_Component XasVC, VOPD_Component YasVC>
-    : VOPD_Base<outs, ins, asm, VDX, VDY, XasVC, YasVC>,
+           VOPD_Component XasVC, VOPD_Component YasVC, GFXGenD Gen>
+    : VOPD_Base<outs, ins, asm, VDX, VDY, XasVC, YasVC, Gen>,
       VOPDe<XasVC.VOPDOp{3-0}, YasVC.VOPDOp> {
   let Inst{16-9} = !if (!eq(VDX.Mnemonic, "v_mov_b32"), 0x0, vsrc1X);
   let Inst{48-41} = !if (!eq(VDY.Mnemonic, "v_mov_b32"), 0x0, vsrc1Y);
 }
 
 class VOPD_MADK<dag outs, dag ins, string asm, VOP_Pseudo VDX, VOP_Pseudo VDY,
-                VOPD_Component XasVC, VOPD_Component YasVC>
-    : VOPD_Base<outs, ins, asm, VDX, VDY, XasVC, YasVC>,
+                VOPD_Component XasVC, VOPD_Component YasVC, GFXGenD Gen>
+    : VOPD_Base<outs, ins, asm, VDX, VDY, XasVC, YasVC, Gen>,
       VOPD_MADKe<XasVC.VOPDOp{3-0}, YasVC.VOPDOp> {
   let Inst{16-9} = !if (!eq(VDX.Mnemonic, "v_mov_b32"), 0x0, vsrc1X);
   let Inst{48-41} = !if (!eq(VDY.Mnemonic, "v_mov_b32"), 0x0, vsrc1Y);
@@ -115,60 +126,85 @@ class VOPD_MADK<dag outs, dag ins, string asm, VOP_Pseudo VDX, VOP_Pseudo VDY,
 }
 
 // V_DUAL_DOT2ACC_F32_BF16 is a legal instruction, but V_DOT2ACC_F32_BF16 is
-// not. Since we generate the DUAL form by converting from the normal form we
-// will never generate it.
-defvar VOPDYPseudos = [
+// not. V_DUAL_DOT2C_F32_BF16 is a legal instruction on GFX12, but
+// V_DOT2C_F32_F16_e32 is not. Since we generate the DUAL form by converting
+// from the normal form we will never generate them.
+defvar VOPDPseudosCommon = [
   "V_FMAC_F32_e32", "V_FMAAK_F32", "V_FMAMK_F32", "V_MUL_F32_e32",
   "V_ADD_F32_e32", "V_SUB_F32_e32", "V_SUBREV_F32_e32", "V_MUL_LEGACY_F32_e32",
-  "V_MOV_B32_e32", "V_CNDMASK_B32_e32", "V_MAX_F32_e32", "V_MIN_F32_e32",
-  "V_DOT2C_F32_F16_e32", "V_ADD_U32_e32", "V_LSHLREV_B32_e32", "V_AND_B32_e32"
+  "V_MOV_B32_e32", "V_CNDMASK_B32_e32", "V_MAX_F32_e32", "V_MIN_F32_e32"
 ];
-defvar VOPDXPseudos = VOPDYPseudos[0...VOPDX_Max_Index];
+defvar VOPDPseudosGFX11 = ["V_DOT2C_F32_F16_e32"];
+defvar VOPDYOnlyPseudosCommon = ["V_ADD_U32_e32", "V_LSHLREV_B32_e32",
+                                 "V_AND_B32_e32"];
+
+defvar VOPDXPseudosGFX11 = !listconcat(VOPDPseudosCommon, VOPDPseudosGFX11);
+defvar VOPDXPseudosGFX12 = VOPDPseudosCommon;
+defvar VOPDYPseudosGFX11 = !listconcat(VOPDXPseudosGFX11, VOPDYOnlyPseudosCommon);
+defvar VOPDYPseudosGFX12 = !listconcat(VOPDXPseudosGFX12, VOPDYOnlyPseudosCommon);
+
+def GFX11GenD : GFXGenD<GFX11Gen, VOPDXPseudosGFX11, VOPDYPseudosGFX11>;
+def GFX12GenD : GFXGenD<GFX12Gen, VOPDXPseudosGFX12, VOPDYPseudosGFX12>;
+
 
 def VOPDDstYOperand : RegisterOperand<VGPR_32, "printRegularOperand"> {
   let DecoderMethod = "decodeOperandVOPDDstY";
 }
 
-foreach x = VOPDXPseudos in {
-  foreach y = VOPDYPseudos in {
-    defvar xInst = !cast<VOP_Pseudo>(x);
-    defvar yInst = !cast<VOP_Pseudo>(y);
-    defvar XasVC = !cast<VOPD_Component>(x);
-    defvar YasVC = !cast<VOPD_Component>(y);
-    defvar isMADK = !or(!eq(x, "V_FMAAK_F32"), !eq(x, "V_FMAMK_F32"),
-                        !eq(y, "V_FMAAK_F32"), !eq(y, "V_FMAMK_F32"));
-    // If X or Y is MADK (have a mandatory immediate), all src operands which
-    // may contain an optional literal must use the VSrc_*_Deferred operand
-    // type. Optional literal operands in MADK VOPD components always use this
-    // operand form. If Both X and Y are MADK, the mandatory literal of X
-    // additionally must use an alternate operand format which defers to the
-    // 'real' Y literal
-    defvar isOpXMADK = !or(!eq(x, "V_FMAAK_F32"), !eq(x, "V_FMAMK_F32"));
-    defvar isOpYMADK = !or(!eq(y, "V_FMAAK_F32"), !eq(y, "V_FMAMK_F32"));
-    defvar OpName = "V_DUAL_" # !substr(x,2) # "_X_" # !substr(y,2);
-    defvar outs = (outs VGPRSrc_32:$vdstX, VOPDDstYOperand:$vdstY);
-    if !or(isOpXMADK, isOpYMADK) then {
-      if !and(isOpXMADK, isOpYMADK) then {
-        defvar X_MADK_Pfl = !cast<VOP_MADK_Base>(xInst.Pfl);
-        defvar ins = !con(xInst.Pfl.InsVOPDXDeferred, yInst.Pfl.InsVOPDY);
-        defvar asm = XasVC.VOPDName #" "# X_MADK_Pfl.AsmVOPDXDeferred #" :: "# YasVC.VOPDName #" "# yInst.Pfl.AsmVOPDY;
-        def OpName : VOPD_MADK<outs, ins, asm, xInst, yInst, XasVC, YasVC>;
-      } else {
-        defvar asm = XasVC.VOPDName #" "# xInst.Pfl.AsmVOPDX #" :: "# YasVC.VOPDName #" "# yInst.Pfl.AsmVOPDY;
-        if isOpXMADK then {
-          assert !not(isOpYMADK), "Expected only OpX as MADK";
-          defvar ins = !con(xInst.Pfl.InsVOPDX, yInst.Pfl.InsVOPDYDeferred);
-          def OpName : VOPD_MADK<outs, ins, asm, xInst, yInst, XasVC, YasVC>;
-        } else {
-          assert !not(isOpXMADK), "Expected only OpY as MADK";
+class getRenamed<string VOPDName, GFXGen Gen> {
+  string ret = !if(!eq(Gen.Subtarget, GFX12Gen.Subtarget),
+                   !if(!eq(VOPDName, "v_dual_max_f32"),
+                       "v_dual_max_num_f32",
+                       !if(!eq(VOPDName, "v_dual_min_f32"),
+                           "v_dual_min_num_f32",
+                           VOPDName)),
+                   VOPDName);
+}
+
+foreach Gen = [GFX11GenD, GFX12GenD] in {
+  foreach x = Gen.VOPDXPseudos in {
+    foreach y = Gen.VOPDYPseudos in {
+      defvar xInst = !cast<VOP_Pseudo>(x);
+      defvar yInst = !cast<VOP_Pseudo>(y);
+      defvar XasVC = !cast<VOPD_Component>(x);
+      defvar YasVC = !cast<VOPD_Component>(y);
+      defvar xAsmName = getRenamed<XasVC.VOPDName, Gen>.ret;
+      defvar yAsmName = getRenamed<YasVC.VOPDName, Gen>.ret;
+      defvar isMADK = !or(!eq(x, "V_FMAAK_F32"), !eq(x, "V_FMAMK_F32"),
+                          !eq(y, "V_FMAAK_F32"), !eq(y, "V_FMAMK_F32"));
+      // If X or Y is MADK (have a mandatory immediate), all src operands which
+      // may contain an optional literal must use the VSrc_*_Deferred operand
+      // type. Optional literal operands in MADK VOPD components always use this
+      // operand form. If Both X and Y are MADK, the mandatory literal of X
+      // additionally must use an alternate operand format which defers to the
+      // 'real' Y literal
+      defvar isOpXMADK = !or(!eq(x, "V_FMAAK_F32"), !eq(x, "V_FMAMK_F32"));
+      defvar isOpYMADK = !or(!eq(y, "V_FMAAK_F32"), !eq(y, "V_FMAMK_F32"));
+      defvar OpName = "V_DUAL_" # !substr(x,2) # "_X_" # !substr(y,2) # Gen.Suffix;
+      defvar outs = (outs VGPRSrc_32:$vdstX, VOPDDstYOperand:$vdstY);
+      if !or(isOpXMADK, isOpYMADK) then {
+        if !and(isOpXMADK, isOpYMADK) then {
+          defvar X_MADK_Pfl = !cast<VOP_MADK_Base>(xInst.Pfl);
           defvar ins = !con(xInst.Pfl.InsVOPDXDeferred, yInst.Pfl.InsVOPDY);
-          def OpName : VOPD_MADK<outs, ins, asm, xInst, yInst, XasVC, YasVC>;
+          defvar asm = xAsmName #" "# X_MADK_Pfl.AsmVOPDXDeferred #" :: "# yAsmName #" "# yInst.Pfl.AsmVOPDY;
+          def OpName : VOPD_MADK<outs, ins, asm, xInst, yInst, XasVC, YasVC, Gen>;
+        } else {
+          defvar asm = xAsmName #" "# xInst.Pfl.AsmVOPDX #" :: "# yAsmName #" "# yInst.Pfl.AsmVOPDY;
+          if isOpXMADK then {
+            assert !not(isOpYMADK), "Expected only OpX as MADK";
+            defvar ins = !con(xInst.Pfl.InsVOPDX, yInst.Pfl.InsVOPDYDeferred);
+            def OpName : VOPD_MADK<outs, ins, asm, xInst, yInst, XasVC, YasVC, Gen>;
+          } else {
+            assert !not(isOpXMADK), "Expected only OpY as MADK";
+            defvar ins = !con(xInst.Pfl.InsVOPDXDeferred, yInst.Pfl.InsVOPDY);
+            def OpName : VOPD_MADK<outs, ins, asm, xInst, yInst, XasVC, YasVC, Gen>;
+          }
         }
+      } else {
+        defvar ins = !con(xInst.Pfl.InsVOPDX, yInst.Pfl.InsVOPDY);
+        defvar asm = xAsmName #" "# xInst.Pfl.AsmVOPDX #" :: "# yAsmName #" "# yInst.Pfl.AsmVOPDY;
+        def OpName : VOPD<outs, ins, asm, xInst, yInst, XasVC, YasVC, Gen>;
       }
-    } else {
-      defvar ins = !con(xInst.Pfl.InsVOPDX, yInst.Pfl.InsVOPDY);
-      defvar asm = XasVC.VOPDName #" "# xInst.Pfl.AsmVOPDX #" :: "# YasVC.VOPDName #" "# yInst.Pfl.AsmVOPDY;
-      def OpName : VOPD<outs, ins, asm, xInst, yInst, XasVC, YasVC>;
     }
   }
 }

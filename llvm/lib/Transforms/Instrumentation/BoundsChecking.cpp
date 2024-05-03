@@ -61,15 +61,15 @@ static Value *getBoundsCheckCond(Value *Ptr, Value *InstVal,
   LLVM_DEBUG(dbgs() << "Instrument " << *Ptr << " for " << Twine(NeededSize)
                     << " bytes\n");
 
-  SizeOffsetEvalType SizeOffset = ObjSizeEval.compute(Ptr);
+  SizeOffsetValue SizeOffset = ObjSizeEval.compute(Ptr);
 
-  if (!ObjSizeEval.bothKnown(SizeOffset)) {
+  if (!SizeOffset.bothKnown()) {
     ++ChecksUnable;
     return nullptr;
   }
 
-  Value *Size   = SizeOffset.first;
-  Value *Offset = SizeOffset.second;
+  Value *Size = SizeOffset.Size;
+  Value *Offset = SizeOffset.Offset;
   ConstantInt *SizeCI = dyn_cast<ConstantInt>(Size);
 
   Type *IndexTy = DL.getIndexType(Ptr->getType());

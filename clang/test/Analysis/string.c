@@ -71,7 +71,7 @@ void clang_analyzer_eval(int);
 int scanf(const char *restrict format, ...);
 void *malloc(size_t);
 void free(void *);
-void *memcpy(void *dest, const void *src, size_t n);
+void *memcpy(void *restrict dest, const void *restrict src, size_t n);
 
 //===----------------------------------------------------------------------===
 // strlen()
@@ -95,6 +95,29 @@ void strlen_constant2(char x) {
 
   a[0] = x;
   clang_analyzer_eval(strlen(a) == 3); // expected-warning{{UNKNOWN}}
+}
+
+const char *const global_str_ptr = "abcd";
+const char global_str_arr[] = "efgh";
+const char *global_non_const_ptr1 = "ijk";
+char *global_non_const_ptr2 = "lmn";
+char global_non_const_arr[] = "op";
+
+void strlen_global_constant_ptr(void) {
+  clang_analyzer_eval(strlen(global_str_ptr) == 4); // expected-warning{{TRUE}}
+}
+
+void strlen_global_constant_arr(void) {
+  clang_analyzer_eval(strlen(global_str_arr) == 4); // expected-warning{{TRUE}}
+}
+
+void strlen_global_non_const_ptr(void) {
+  clang_analyzer_eval(strlen(global_non_const_ptr1) == 3); // expected-warning{{UNKNOWN}}
+  clang_analyzer_eval(strlen(global_non_const_ptr2) == 3); // expected-warning{{UNKNOWN}}
+}
+
+void strlen_global_non_const_arr(void) {
+  clang_analyzer_eval(strlen(global_non_const_arr) == 2); // expected-warning{{UNKNOWN}}
 }
 
 size_t strlen_null(void) {
@@ -1229,7 +1252,7 @@ int strncasecmp_null_argument(char *a, size_t n) {
 // strsep()
 //===----------------------------------------------------------------------===
 
-char *strsep(char **stringp, const char *delim);
+char *strsep(char ** restrict stringp, const char * restrict delim);
 
 void strsep_null_delim(char *s) {
   strsep(&s, NULL); // expected-warning{{Null pointer passed as 2nd argument to strsep()}}

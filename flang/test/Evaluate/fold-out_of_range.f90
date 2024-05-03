@@ -1,5 +1,5 @@
-! RUN: %python %S/test_folding.py %s %flang_fc1
-! UNSUPPORTED: target=powerpc{{.*}}, target=aarch{{.*}}, system-windows, system-solaris
+! RUN: %python %S/test_folding.py %s %flang_fc1 -pedantic
+! UNSUPPORTED: target=powerpc{{.*}}, target=aarch{{.*}}, target=arm{{.*}}, system-windows, system-solaris
 ! Tests folding of OUT_OF_RANGE().
 module m
   integer(1),  parameter :: i1v(*)  = [ -huge(1_1)  - 1_1,  huge(1_1) ]
@@ -90,35 +90,65 @@ module m
   logical, parameter :: test_r2r8   = .not. any(out_of_range(r2v,  1._8))
   logical, parameter :: test_r2r10  = .not. any(out_of_range(r2v,  1._10))
   logical, parameter :: test_r2r16  = .not. any(out_of_range(r2v,  1._16))
-  logical, parameter :: test_r3r2   =       all(out_of_range(r3v,  1._2)  .eqv. finites)
+  logical, parameter :: test_r3r2   =       all(out_of_range(r3v,  1._2) .eqv. finites)
+  !WARN: warning: invalid argument on REAL(2) to REAL(3) conversion
+  logical, parameter :: test_r3r2b  = .not. any(out_of_range(real(r2v, 3),  1._2))
   logical, parameter :: test_r3r3   = .not. any(out_of_range(r3v,  1._3))
   logical, parameter :: test_r3r4   = .not. any(out_of_range(r3v,  1._4))
   logical, parameter :: test_r3r8   = .not. any(out_of_range(r3v,  1._8))
   logical, parameter :: test_r3r10  = .not. any(out_of_range(r3v,  1._10))
   logical, parameter :: test_r3r16  = .not. any(out_of_range(r3v,  1._16))
-  logical, parameter :: test_r4r2   =       all(out_of_range(r4v,  1._2)  .eqv. finites)
-  logical, parameter :: test_r4r3   =       all(out_of_range(r4v,  1._3)  .eqv. finites)
+  logical, parameter :: test_r4r2   =       all(out_of_range(r4v,  1._2) .eqv. finites)
+  !WARN: warning: invalid argument on REAL(2) to REAL(4) conversion
+  logical, parameter :: test_r4r2b  = .not. any(out_of_range(real(r2v, 4),  1._2))
+  logical, parameter :: test_r4r3   =       all(out_of_range(r4v,  1._3) .eqv. finites)
+  !WARN: warning: invalid argument on REAL(3) to REAL(4) conversion
+  logical, parameter :: test_r4r3b  = .not. any(out_of_range(real(r3v, 4),  1._3))
   logical, parameter :: test_r4r4   = .not. any(out_of_range(r4v,  1._4))
   logical, parameter :: test_r4r8   = .not. any(out_of_range(r4v,  1._8))
   logical, parameter :: test_r4r10  = .not. any(out_of_range(r4v,  1._10))
   logical, parameter :: test_r4r16  = .not. any(out_of_range(r4v,  1._16))
-  logical, parameter :: test_r8r2   =       all(out_of_range(r8v,  1._2)  .eqv. finites)
-  logical, parameter :: test_r8r3   =       all(out_of_range(r8v,  1._3)  .eqv. finites)
-  logical, parameter :: test_r8r4   =       all(out_of_range(r8v,  1._4)  .eqv. finites)
+  logical, parameter :: test_r8r2   =       all(out_of_range(r8v,  1._2) .eqv. finites)
+  !WARN: warning: invalid argument on REAL(2) to REAL(8) conversion
+  logical, parameter :: test_r8r2b  = .not. any(out_of_range(real(r2v, 8),  1._2))
+  logical, parameter :: test_r8r3   =       all(out_of_range(r8v,  1._3) .eqv. finites)
+  !WARN: warning: invalid argument on REAL(3) to REAL(8) conversion
+  logical, parameter :: test_r8r3b  = .not. any(out_of_range(real(r3v, 8),  1._3))
+  logical, parameter :: test_r8r4   =       all(out_of_range(r8v,  1._4) .eqv. finites)
+  !WARN: warning: invalid argument on REAL(4) to REAL(8) conversion
+  logical, parameter :: test_r8r4b  = .not. any(out_of_range(real(r4v, 8),  1._4))
   logical, parameter :: test_r8r8   = .not. any(out_of_range(r8v,  1._8))
   logical, parameter :: test_r8r10  = .not. any(out_of_range(r8v,  1._10))
   logical, parameter :: test_r8r16  = .not. any(out_of_range(r8v,  1._16))
-  logical, parameter :: test_r10r2  =       all(out_of_range(r10v, 1._2)  .eqv. finites)
-  logical, parameter :: test_r10r3  =       all(out_of_range(r10v, 1._3)  .eqv. finites)
-  logical, parameter :: test_r10r4  =       all(out_of_range(r10v, 1._4)  .eqv. finites)
-  logical, parameter :: test_r10r8  =       all(out_of_range(r10v, 1._8)  .eqv. finites)
+  logical, parameter :: test_r10r2  =       all(out_of_range(r10v, 1._2) .eqv. finites)
+  !WARN: warning: invalid argument on REAL(2) to REAL(10) conversion
+  logical, parameter :: test_r10r2b = .not. any(out_of_range(real(r2v, 10),  1._2))
+  logical, parameter :: test_r10r3  =       all(out_of_range(r10v, 1._3) .eqv. finites)
+  !WARN: warning: invalid argument on REAL(3) to REAL(10) conversion
+  logical, parameter :: test_r10r3b = .not. any(out_of_range(real(r3v, 10),  1._3))
+  logical, parameter :: test_r10r4  =       all(out_of_range(r10v, 1._4) .eqv. finites)
+  !WARN: warning: invalid argument on REAL(4) to REAL(10) conversion
+  logical, parameter :: test_r10r4b = .not. any(out_of_range(real(r4v, 10),  1._4))
+  logical, parameter :: test_r10r8  =       all(out_of_range(r10v, 1._8) .eqv. finites)
+  !WARN: warning: invalid argument on REAL(8) to REAL(10) conversion
+  logical, parameter :: test_r10r8b = .not. any(out_of_range(real(r8v, 10),  1._8))
   logical, parameter :: test_r10r10 = .not. any(out_of_range(r10v, 1._10))
   logical, parameter :: test_r10r16 = .not. any(out_of_range(r10v, 1._16))
-  logical, parameter :: test_r16r2  =       all(out_of_range(r16v, 1._2)  .eqv. finites)
-  logical, parameter :: test_r16r3  =       all(out_of_range(r16v, 1._3)  .eqv. finites)
-  logical, parameter :: test_r16r4  =       all(out_of_range(r16v, 1._4)  .eqv. finites)
-  logical, parameter :: test_r16r8  =       all(out_of_range(r16v, 1._8)  .eqv. finites)
+  logical, parameter :: test_r16r2  =       all(out_of_range(r16v, 1._2) .eqv. finites)
+  !WARN: warning: invalid argument on REAL(2) to REAL(16) conversion
+  logical, parameter :: test_r16r2b = .not. any(out_of_range(real(r2v, 16), 1._2))
+  logical, parameter :: test_r16r3  =       all(out_of_range(r16v, 1._3) .eqv. finites)
+  !WARN: warning: invalid argument on REAL(3) to REAL(16) conversion
+  logical, parameter :: test_r16r3b = .not. any(out_of_range(real(r3v, 16), 1._3))
+  logical, parameter :: test_r16r4  =       all(out_of_range(r16v, 1._4) .eqv. finites)
+  !WARN: warning: invalid argument on REAL(4) to REAL(16) conversion
+  logical, parameter :: test_r16r4b = .not. any(out_of_range(real(r4v, 16), 1._4))
+  logical, parameter :: test_r16r8  =       all(out_of_range(r16v, 1._8) .eqv. finites)
+  !WARN: warning: invalid argument on REAL(8) to REAL(16) conversion
+  logical, parameter :: test_r16r8b = .not. any(out_of_range(real(r8v, 16), 1._8))
   logical, parameter :: test_r16r10 =       all(out_of_range(r16v, 1._10) .eqv. finites)
+  !WARN: warning: invalid argument on REAL(10) to REAL(16) conversion
+  logical, parameter :: test_r16r10b= .not. any(out_of_range(real(r10v, 16), 1._10))
   logical, parameter :: test_r16r16 = .not. any(out_of_range(r16v, 1._16))
 
   logical, parameter :: test_r2i1   =       all(out_of_range(r2v,  1_1))
@@ -320,4 +350,12 @@ module m
   logical, parameter :: test_r16i16ur = all(out_of_range(real(i16v, kind=16)+.5_16, 1_16, .true.)  .eqv. [.false., .true.])
   logical, parameter :: test_r16i16d  = all(out_of_range(real(i16v, kind=16)-.5_16, 1_16, .false.) .eqv. [.false., .true.])
   logical, parameter :: test_r16i16dr = all(out_of_range(real(i16v, kind=16)-.5_16, 1_16, .true.)  .eqv. [.false., .true.])
+
+ contains
+  subroutine s(x, r)
+    real(8), intent(in) :: x
+    logical, intent(in), optional :: r
+    !WARN: warning: ROUND= argument to OUT_OF_RANGE() is an optional dummy argument that must be present at execution
+    print *, out_of_range(x, 1, round=r)
+  end
 end

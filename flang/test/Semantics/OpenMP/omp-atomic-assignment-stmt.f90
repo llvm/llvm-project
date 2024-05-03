@@ -1,3 +1,5 @@
+! REQUIRES: openmp_runtime
+
 ! RUN: %python %S/../test_errors.py %s %flang_fc1 -fopenmp
 ! Semantic checks for various assignments related to atomic constructs
 
@@ -36,10 +38,9 @@ program sample
     !ERROR: k must not have ALLOCATABLE attribute
         k = x
 
-    !$omp atomic update 
-    !ERROR: Atomic update statement should be of form `k = k operator expr` OR `k = expr operator k`
+    !$omp atomic update
     !ERROR: k must not have ALLOCATABLE attribute
-        k = v + k * (v * k)
+        k = k + x * (v * x)
 
     !$omp atomic
     !ERROR: k must not have ALLOCATABLE attribute

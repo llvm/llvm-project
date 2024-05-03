@@ -180,7 +180,7 @@ Address XCoreABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
   // Increment the VAList.
   if (!ArgSize.isZero()) {
     Address APN = Builder.CreateConstInBoundsByteGEP(AP, ArgSize);
-    Builder.CreateStore(APN.getPointer(), VAListAddr);
+    Builder.CreateStore(APN.emitRawPointer(CGF), VAListAddr);
   }
 
   return Val;
@@ -543,7 +543,7 @@ static bool appendArrayType(SmallStringEnc &Enc, QualType QT,
                             const ArrayType *AT,
                             const CodeGen::CodeGenModule &CGM,
                             TypeStringCache &TSC, StringRef NoSizeEnc) {
-  if (AT->getSizeModifier() != ArrayType::Normal)
+  if (AT->getSizeModifier() != ArraySizeModifier::Normal)
     return false;
   Enc += "a(";
   if (const ConstantArrayType *CAT = dyn_cast<ConstantArrayType>(AT))

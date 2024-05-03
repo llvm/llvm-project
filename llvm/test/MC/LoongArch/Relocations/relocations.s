@@ -218,3 +218,58 @@ lu12i.w $t1, %gd_hi20(foo)
 # RELOC: R_LARCH_TLS_GD_HI20 foo 0x0
 # INSTR: lu12i.w $t1, %gd_hi20(foo)
 # FIXUP: fixup A - offset: 0, value: %gd_hi20(foo), kind: FK_NONE
+
+pcaddu18i $t1, %call36(foo)
+# RELOC: R_LARCH_CALL36 foo 0x0
+# INSTR: pcaddu18i $t1, %call36(foo)
+# FIXUP: fixup A - offset: 0, value: %call36(foo), kind: FK_NONE
+
+pcalau12i $t1, %desc_pc_hi20(foo)
+# RELOC: R_LARCH_TLS_DESC_PC_HI20 foo 0x0
+# INSTR: pcalau12i $t1, %desc_pc_hi20(foo)
+# FIXUP: fixup A - offset: 0, value: %desc_pc_hi20(foo), kind: FK_NONE
+
+addi.d $t1, $t1, %desc_pc_lo12(foo)
+# RELOC: R_LARCH_TLS_DESC_PC_LO12 foo 0x0
+# INSTR: addi.d $t1, $t1, %desc_pc_lo12(foo)
+# FIXUP: fixup A - offset: 0, value: %desc_pc_lo12(foo), kind: FK_NONE
+
+lu32i.d $t1, %desc64_pc_lo20(foo)
+# RELOC: R_LARCH_TLS_DESC64_PC_LO20 foo 0x0
+# INSTR: lu32i.d $t1, %desc64_pc_lo20(foo)
+# FIXUP: fixup A - offset: 0, value: %desc64_pc_lo20(foo), kind: FK_NONE
+
+lu52i.d $t1, $t1, %desc64_pc_hi12(foo)
+# RELOC: R_LARCH_TLS_DESC64_PC_HI12 foo 0x0
+# INSTR: lu52i.d $t1, $t1, %desc64_pc_hi12(foo)
+# FIXUP: fixup A - offset: 0, value: %desc64_pc_hi12(foo), kind: FK_NONE
+
+ld.d $ra, $t1, %desc_ld(foo)
+# RELOC: R_LARCH_TLS_DESC_LD foo 0x0
+# INSTR: ld.d $ra, $t1, %desc_ld(foo)
+# FIXUP: fixup A - offset: 0, value: %desc_ld(foo), kind: FK_NONE
+
+jirl $ra, $ra, %desc_call(foo)
+# RELOC: R_LARCH_TLS_DESC_CALL foo 0x0
+# INSTR: jirl $ra, $ra, %desc_call(foo)
+# FIXUP: fixup A - offset: 0, value: %desc_call(foo), kind: FK_NONE
+
+lu12i.w $t1, %desc_hi20(foo)
+# RELOC: R_LARCH_TLS_DESC_HI20 foo 0x0
+# INSTR: lu12i.w $t1, %desc_hi20(foo)
+# FIXUP: fixup A - offset: 0, value: %desc_hi20(foo), kind: FK_NONE
+
+ori $t1, $t1, %desc_lo12(foo)
+# RELOC: R_LARCH_TLS_DESC_LO12 foo 0x0
+# INSTR: ori $t1, $t1, %desc_lo12(foo)
+# FIXUP: fixup A - offset: 0, value: %desc_lo12(foo), kind: FK_NONE
+
+lu32i.d $t1, %desc64_lo20(foo)
+# RELOC: R_LARCH_TLS_DESC64_LO20 foo 0x0
+# INSTR: lu32i.d $t1, %desc64_lo20(foo)
+# FIXUP: fixup A - offset: 0, value: %desc64_lo20(foo), kind: FK_NONE
+
+lu52i.d $t1, $t1, %desc64_hi12(foo)
+# RELOC: R_LARCH_TLS_DESC64_HI12 foo 0x0
+# INSTR: lu52i.d $t1, $t1, %desc64_hi12(foo)
+# FIXUP: fixup A - offset: 0, value: %desc64_hi12(foo), kind: FK_NONE

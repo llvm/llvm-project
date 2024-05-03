@@ -2,7 +2,7 @@
 ! clean NULL() status. This is required by f18 runtime to do pointer
 ! association with a RHS with an undefined association status from a
 ! Fortran point of view.
-! RUN: bbc -emit-fir -I nw %s -o - | FileCheck %s
+! RUN: bbc -emit-fir -hlfir=false -I nw %s -o - | FileCheck %s
 
 module test
   type t

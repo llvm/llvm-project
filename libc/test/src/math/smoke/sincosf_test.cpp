@@ -6,22 +6,20 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/math_macros.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/errno/libc_errno.h"
 #include "src/math/sincosf.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
-#include <math.h>
 
 #include <errno.h>
 #include <stdint.h>
 
-using FPBits = LIBC_NAMESPACE::fputil::FPBits<float>;
+using LlvmLibcSinCosfTest = LIBC_NAMESPACE::testing::FPTest<float>;
 
-DECLARE_SPECIAL_CONSTANTS(float)
-
-TEST(LlvmLibcSinCosfTest, SpecialNumbers) {
-  libc_errno = 0;
+TEST_F(LlvmLibcSinCosfTest, SpecialNumbers) {
+  LIBC_NAMESPACE::libc_errno = 0;
   float sin, cos;
 
   LIBC_NAMESPACE::sincosf(aNaN, &sin, &cos);

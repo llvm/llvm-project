@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// XFAIL: suse-linux-enterprise-server-11
 // XFAIL: stdlib=apple-libc++ && target={{.+}}-apple-macosx10.{{9|10|11|12}}
 
 // <system_error>
@@ -45,12 +44,19 @@ int main(int, char**)
         errno = E2BIG; // something that message will never generate
         const std::error_category& e_cat1 = std::generic_category();
         const std::string msg = e_cat1.message(-1);
-        // Exact message format varies by platform.
-#if defined(_AIX)
-        LIBCPP_ASSERT(msg.rfind("Error -1 occurred", 0) == 0);
-#else
-        LIBCPP_ASSERT(msg.rfind("Unknown error", 0) == 0);
+        // Exact message format varies by platform.  We can't detect
+        // some of these (Musl in particular) using the preprocessor,
+        // so accept a few sensible messages.  Newlib unfortunately
+        // responds with an empty message, which we probably want to
+        // treat as a failure code otherwise, but we can detect that
+        // with the preprocessor.
+        LIBCPP_ASSERT(msg.rfind("Error -1 occurred", 0) == 0       // AIX
+                      || msg.rfind("No error information", 0) == 0 // Musl
+                      || msg.rfind("Unknown error", 0) == 0        // Glibc
+#if defined(_NEWLIB_VERSION)
+                      || msg.empty()
 #endif
+        );
         assert(errno == E2BIG);
     }
 

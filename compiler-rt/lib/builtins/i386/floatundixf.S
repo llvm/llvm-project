@@ -4,7 +4,7 @@
 
 #include "../assembly.h"
 
-// long double __floatundixf(du_int a);16
+// xf_float __floatundixf(du_int a);16
 
 #ifdef __i386__
 

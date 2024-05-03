@@ -5,7 +5,7 @@ struct B {};
 
 typedef void (type1)() noexcept(10 > 5);
 
-// CHECK:      TypedefDecl {{.*}} type1 'void () noexcept(10 > 5)':'void () noexcept(10 > 5)'
+// CHECK:      TypedefDecl {{.*}} type1 'void () noexcept(10 > 5)'
 // CHECK-NEXT: `-ParenType {{.*}}
 // CHECK-NEXT:   `-FunctionProtoType {{.*}} 'void () noexcept(10 > 5)' exceptionspec_noexcept_true cdecl
 // CHECK-NEXT:     |-NoexceptExpr: ConstantExpr {{.*}} 'bool'
@@ -14,9 +14,9 @@ typedef void (type1)() noexcept(10 > 5);
 
 typedef void (type2)() throw(A, B);
 
-// CHECK:      TypedefDecl {{.*}} type2 'void () throw(A, B)':'void () throw(A, B)'
+// CHECK:      TypedefDecl {{.*}} type2 'void () throw(A, B)'
 // CHECK-NEXT: `-ParenType {{.*}}
 // CHECK-NEXT:   `-FunctionProtoType {{.*}} 'void () throw(A, B)' exceptionspec_dynamic cdecl
-// CHECK-NEXT:     |-Exceptions: 'A':'A', 'B':'B'
+// CHECK-NEXT:     |-Exceptions: 'A', 'B'
 // CHECK-NEXT:     `-BuiltinType {{.*}} 'void'
 

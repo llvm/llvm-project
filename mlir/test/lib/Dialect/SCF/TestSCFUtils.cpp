@@ -50,9 +50,8 @@ struct TestSCFForUtilsPass
         auto newInitValues = forOp.getInitArgs();
         if (newInitValues.empty())
           return;
-        auto yieldOp = cast<scf::YieldOp>(forOp.getBody()->getTerminator());
-        SmallVector<Value> oldYieldValues(yieldOp.getResults().begin(),
-                                          yieldOp.getResults().end());
+        SmallVector<Value> oldYieldValues =
+            llvm::to_vector(forOp.getYieldedValues());
         NewYieldValuesFn fn = [&](OpBuilder &b, Location loc,
                                   ArrayRef<BlockArgument> newBBArgs) {
           SmallVector<Value> newYieldValues;
@@ -160,8 +159,8 @@ struct TestSCFPipeliningPass
     auto ifOp =
         rewriter.create<scf::IfOp>(loc, op->getResultTypes(), pred, true);
     // True branch.
-    op->moveBefore(&ifOp.getThenRegion().front(),
-                   ifOp.getThenRegion().front().begin());
+    rewriter.moveOpBefore(op, &ifOp.getThenRegion().front(),
+                          ifOp.getThenRegion().front().begin());
     rewriter.setInsertionPointAfter(op);
     if (op->getNumResults() > 0)
       rewriter.create<scf::YieldOp>(loc, op->getResults());
@@ -218,6 +217,7 @@ struct TestSCFPipeliningPass
     if (annotatePipeline)
       options.annotateFn = annotate;
     if (noEpiloguePeeling) {
+      options.supportDynamicLoops = true;
       options.peelEpilogue = false;
       options.predicateFn = predicateOp;
     }

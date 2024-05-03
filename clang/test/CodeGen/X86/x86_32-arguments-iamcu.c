@@ -58,7 +58,7 @@ st4_t retSmallStruct(st4_t r) { return r; }
 // CHECK-LABEL: define{{.*}} i64 @retPaddedStruct(i32 %r.coerce0, i32 %r.coerce1)
 st5_t retPaddedStruct(st5_t r) { return r; }
 
-// CHECK-LABEL: define{{.*}} void @retLargeStruct(ptr noalias sret(%struct.st12_t) align 4 %agg.result, i32 noundef %i1, ptr noundef byval(%struct.st12_t) align 4 %r)
+// CHECK-LABEL: define{{.*}} void @retLargeStruct(ptr dead_on_unwind noalias writable sret(%struct.st12_t) align 4 %agg.result, i32 noundef %i1, ptr noundef byval(%struct.st12_t) align 4 %r)
 st12_t retLargeStruct(int i1, st12_t r) { return r; }
 
 // CHECK-LABEL: define{{.*}} i32 @varArgs(i32 noundef %i1, ...)

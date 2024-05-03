@@ -271,9 +271,9 @@ void ObjectFileCOFF::ParseSymtab(lldb_private::Symtab &symtab) {
     const auto COFFSymRef = m_object->getCOFFSymbol(SymRef);
 
     Expected<StringRef> NameOrErr = SymRef.getName();
-    if (auto error = NameOrErr.takeError()) {
-      LLDB_LOG(log, "ObjectFileCOFF: failed to get symbol name: {0}",
-               llvm::fmt_consume(std::move(error)));
+    if (!NameOrErr) {
+      LLDB_LOG_ERROR(log, NameOrErr.takeError(),
+                     "ObjectFileCOFF: failed to get symbol name: {0}");
       continue;
     }
 

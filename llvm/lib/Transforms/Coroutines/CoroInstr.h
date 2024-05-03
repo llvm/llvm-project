@@ -78,6 +78,39 @@ public:
   }
 };
 
+/// This represents the llvm.coro.await.suspend.{void,bool,handle} instructions.
+// FIXME: add callback metadata
+// FIXME: make a proper IntrinisicInst. Currently this is not possible,
+// because llvm.coro.await.suspend.* can be invoked.
+class LLVM_LIBRARY_VISIBILITY CoroAwaitSuspendInst : public CallBase {
+  enum { AwaiterArg, FrameArg, WrapperArg };
+
+public:
+  Value *getAwaiter() const { return getArgOperand(AwaiterArg); }
+
+  Value *getFrame() const { return getArgOperand(FrameArg); }
+
+  Function *getWrapperFunction() const {
+    return cast<Function>(getArgOperand(WrapperArg));
+  }
+
+  // Methods to support type inquiry through isa, cast, and dyn_cast:
+  static bool classof(const CallBase *CB) {
+    if (const Function *CF = CB->getCalledFunction()) {
+      auto IID = CF->getIntrinsicID();
+      return IID == Intrinsic::coro_await_suspend_void ||
+             IID == Intrinsic::coro_await_suspend_bool ||
+             IID == Intrinsic::coro_await_suspend_handle;
+    }
+
+    return false;
+  }
+
+  static bool classof(const Value *V) {
+    return isa<CallBase>(V) && classof(cast<CallBase>(V));
+  }
+};
+
 /// This represents a common base class for llvm.coro.id instructions.
 class LLVM_LIBRARY_VISIBILITY AnyCoroIdInst : public IntrinsicInst {
 public:
@@ -123,8 +156,8 @@ public:
 
   void clearPromise() {
     Value *Arg = getArgOperand(PromiseArg);
-    setArgOperand(PromiseArg,
-                  ConstantPointerNull::get(Type::getInt8PtrTy(getContext())));
+    setArgOperand(PromiseArg, ConstantPointerNull::get(
+                                  PointerType::getUnqual(getContext())));
     if (isa<AllocaInst>(Arg))
       return;
     assert((isa<BitCastInst>(Arg) || isa<GetElementPtrInst>(Arg)) &&
@@ -185,9 +218,7 @@ public:
   void setCoroutineSelf() {
     assert(isa<ConstantPointerNull>(getArgOperand(CoroutineArg)) &&
            "Coroutine argument is already assigned");
-    auto *const Int8PtrTy = Type::getInt8PtrTy(getContext());
-    setArgOperand(CoroutineArg,
-                  ConstantExpr::getBitCast(getFunction(), Int8PtrTy));
+    setArgOperand(CoroutineArg, getFunction());
   }
 
   // Methods to support type inquiry through isa, cast, and dyn_cast:

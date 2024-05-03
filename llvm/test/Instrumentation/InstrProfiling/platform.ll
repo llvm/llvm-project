@@ -8,6 +8,7 @@
 ; RUN: opt < %s -mtriple=x86_64-pc-solaris -passes=instrprof -S | FileCheck %s -check-prefixes=SOLARIS,ELF
 ; RUN: opt < %s -mtriple=x86_64-pc-windows -passes=instrprof -S | FileCheck %s -check-prefix=WINDOWS
 ; RUN: opt < %s -mtriple=powerpc64-ibm-aix-xcoff -passes=instrprof -S | FileCheck %s -check-prefix=AIX
+; RUN: opt < %s -mtriple=arm-elf -passes=instrprof -S | FileCheck %s -check-prefix=BAREMETAL
 
 @__profn_foo = private constant [3 x i8] c"foo"
 ; MACHO-NOT: __profn_foo
@@ -25,7 +26,7 @@
 ; WINDOWS: @__profd_foo = private global {{.*}}, section ".lprfd$M", align 8
 ; AIX: @__profd_foo = private {{.*}}, section "__llvm_prf_data", align 8
 
-; ELF: @__llvm_prf_nm = private constant [{{.*}} x i8] c"{{.*}}", section "{{.*}}__llvm_prf_names", align 1
+; ELF: @__llvm_prf_nm = private constant [{{.*}} x i8] c"{{.*}}", section "{{.*}}__llvm_prf_names"{{.*}}, align 1
 ; WINDOWS: @__llvm_prf_nm = private constant [{{.*}} x i8] c"{{.*}}", section "{{.*}}lprfn$M", align 1
 ; AIX: @__llvm_prf_nm = private constant [{{.*}} x i8] c"{{.*}}", section "{{.*}}__llvm_prf_names", align 1
 
@@ -46,6 +47,7 @@ declare void @llvm.instrprof.increment(ptr, i64, i32, i32)
 ; PS4-NOT: define internal void @__llvm_profile_register_functions
 ; WINDOWS-NOT: define internal void @__llvm_profile_register_functions
 ; AIX-NOT: define internal void @__llvm_profile_register_functions
+; BAREMETAL-NOT: define internal void @__llvm_profile_register_functions
 
 ;; PR38340: When dynamic registration is used, we had a bug where we'd register
 ;; something that's not a __profd_* variable.
@@ -57,3 +59,4 @@ declare void @llvm.instrprof.increment(ptr, i64, i32, i32)
 ; PS4-NOT: define internal void @__llvm_profile_init
 ; WINDOWS-NOT: define internal void @__llvm_profile_init
 ; AIX-NOT: define internal void @__llvm_profile_init
+; BAREMETAL-NOT: define internal void @__llvm_profile_init

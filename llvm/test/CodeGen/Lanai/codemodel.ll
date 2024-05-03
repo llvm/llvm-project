@@ -16,7 +16,7 @@ entry:
 ; CHECK: mov hi(data), %r[[REGISTER:[0-9]+]]
 ; CHECK: or %r[[REGISTER]], lo(data), %r[[REGISTER]]
 ; CHECK: ld 0[%r[[REGISTER]]], %rv
-	%0 = load i32, i32* getelementptr ([0 x i32], [0 x i32]* @data, i64 0, i64 0), align 4		; <i32> [#uses=1]
+	%0 = load i32, ptr @data, align 4		; <i32> [#uses=1]
 	ret i32 %0
 }
 
@@ -29,11 +29,11 @@ entry:
 ; CHECK: mov hi(data), %r[[REGISTER:[0-9]+]]
 ; CHECK: or %r[[REGISTER]], lo(data), %r[[REGISTER]]
 ; CHECK: ld 40[%r[[REGISTER]]], %rv
-	%0 = load i32, i32* getelementptr ([0 x i32], [0 x i32]* @data, i32 0, i64 10), align 4		; <i32> [#uses=1]
+	%0 = load i32, ptr getelementptr ([0 x i32], ptr @data, i32 0, i64 10), align 4		; <i32> [#uses=1]
 	ret i32 %0
 }
 
-@y = local_unnamed_addr global i32* null, section ".ldata,block", align 8
+@y = local_unnamed_addr global ptr null, section ".ldata,block", align 8
 
 define i32 @foo2() nounwind readonly {
 entry:
@@ -43,7 +43,7 @@ entry:
 ; CHECK-LABEL:  foo2:
 ; CHECK: mov hi(y), %r[[REGISTER:[0-9]+]]
 ; CHECK: or %r[[REGISTER]], lo(y), %r[[REGISTER]]
-  %0 = load i32*, i32** @y, align 8
-  %1 = load i32, i32* %0, align 4
+  %0 = load ptr, ptr @y, align 8
+  %1 = load i32, ptr %0, align 4
   ret i32 %1
 }

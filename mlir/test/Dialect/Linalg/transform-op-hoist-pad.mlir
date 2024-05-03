@@ -1,4 +1,4 @@
-// RUN: mlir-opt --test-transform-dialect-interpreter -canonicalize -split-input-file --verify-diagnostics %s | FileCheck %s
+// RUN: mlir-opt --transform-interpreter -canonicalize -split-input-file --verify-diagnostics %s | FileCheck %s
 
 func.func @pad_and_hoist_rhs(
   %arg0: tensor<24x12xf32>, %arg1: tensor<12x25xf32>, %arg2: tensor<24x25xf32>)
@@ -9,29 +9,31 @@ func.func @pad_and_hoist_rhs(
   func.return %0 : tensor<24x25xf32>
 }
 
-transform.sequence failures(propagate) {
-^bb1(%arg1: !transform.any_op):
-  %matmul = transform.structured.match ops{["linalg.matmul"]} in %arg1
-    : (!transform.any_op) -> !transform.any_op
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %matmul = transform.structured.match ops{["linalg.matmul"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
 
 
-  %matmul_l1, %loops_l1 = transform.structured.tile_using_for %matmul [5] : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+    %matmul_l1, %loops_l1 = transform.structured.tile_using_for %matmul [5] : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
 
-  %matmul_padded, %0, %copy_back = transform.structured.pad %matmul_l1 {
-    padding_values=[0.0: f32, 0.0 : f32, 0.0 : f32],
-    padding_dimensions=[0, 1, 2],
-    copy_back_op = "none"
-  } : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
+    %matmul_padded, %0, %copy_back = transform.structured.pad %matmul_l1 {
+      padding_values=[0.0: f32, 0.0 : f32, 0.0 : f32],
+      padding_dimensions=[0, 1, 2],
+      copy_back_op = "none"
+    } : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
 
-  // In this case, the pad op is actually empty: we only tile the first dimension
-  // and it does not have an impact on the RHS operand.
-  // expected-error @below {{incompatible payload operation name}}
-  %pad = transform.get_producer_of_operand %matmul_padded[1]
-    : (!transform.any_op) -> !transform.op<"tensor.pad">
+    // In this case, the pad op is actually empty: we only tile the first dimension
+    // and it does not have an impact on the RHS operand.
+    // expected-error @below {{incompatible payload operation name}}
+    %pad = transform.get_producer_of_operand %matmul_padded[1]
+      : (!transform.any_op) -> !transform.op<"tensor.pad">
 
-  // We do not even reach this transform op.
-  transform.structured.hoist_pad %pad by 1 loops
-     : (!transform.op<"tensor.pad">) -> !transform.any_op
+    // We do not even reach this transform op.
+    transform.structured.hoist_pad %pad by 1 loops
+       : (!transform.op<"tensor.pad">) -> !transform.any_op
+       transform.yield
+  }
 }
 
 // -----
@@ -45,27 +47,29 @@ func.func @pad_and_hoist_init(
   func.return %0 : tensor<24x25xf32>
 }
 
-transform.sequence failures(propagate) {
-^bb1(%arg1: !transform.any_op):
-  %matmul = transform.structured.match ops{["linalg.matmul"]} in %arg1
-    : (!transform.any_op) -> !transform.any_op
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %matmul = transform.structured.match ops{["linalg.matmul"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
 
 
-  %matmul_l1, %loops_l1 = transform.structured.tile_using_for %matmul [5] : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+    %matmul_l1, %loops_l1 = transform.structured.tile_using_for %matmul [5] : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
 
-  %matmul_padded, %0, %copy_back = transform.structured.pad %matmul_l1 {
-    padding_values=[0.0: f32, 0.0 : f32, 0.0 : f32],
-    padding_dimensions=[0, 1, 2],
-    copy_back_op = "none"
-  } : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
+    %matmul_padded, %0, %copy_back = transform.structured.pad %matmul_l1 {
+      padding_values=[0.0: f32, 0.0 : f32, 0.0 : f32],
+      padding_dimensions=[0, 1, 2],
+      copy_back_op = "none"
+    } : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
 
-  %pad = transform.get_producer_of_operand %matmul_padded[2]
-    : (!transform.any_op) -> !transform.op<"tensor.pad">
+    %pad = transform.get_producer_of_operand %matmul_padded[2]
+      : (!transform.any_op) -> !transform.op<"tensor.pad">
 
-  // We do not know yet how to hoist the init.
-  // expected-error @below {{transform.structured.hoist_pad failed to apply}}
-  transform.structured.hoist_pad %pad by 1 loops
-     : (!transform.op<"tensor.pad">) -> !transform.any_op
+    // We do not know yet how to hoist the init.
+    // expected-error @below {{transform.structured.hoist_pad failed to apply}}
+    transform.structured.hoist_pad %pad by 1 loops
+       : (!transform.op<"tensor.pad">) -> !transform.any_op
+       transform.yield
+  }
 }
 
 // -----
@@ -88,25 +92,27 @@ func.func @pad_and_hoist_lhs(
   func.return %0 : tensor<24x25xf32>
 }
 
-transform.sequence failures(propagate) {
-^bb1(%arg1: !transform.any_op):
-  %matmul = transform.structured.match ops{["linalg.matmul"]} in %arg1
-    : (!transform.any_op) -> !transform.any_op
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %matmul = transform.structured.match ops{["linalg.matmul"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
 
 
-  %matmul_l1, %loops_l1 = transform.structured.tile_using_for %matmul [5] : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+    %matmul_l1, %loops_l1 = transform.structured.tile_using_for %matmul [5] : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
 
-  %matmul_padded, %0, %copy_back = transform.structured.pad %matmul_l1 {
-    padding_values=[0.0: f32, 0.0 : f32, 0.0 : f32],
-    padding_dimensions=[0, 1, 2],
-    copy_back_op = "none"
-  } : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
+    %matmul_padded, %0, %copy_back = transform.structured.pad %matmul_l1 {
+      padding_values=[0.0: f32, 0.0 : f32, 0.0 : f32],
+      padding_dimensions=[0, 1, 2],
+      copy_back_op = "none"
+    } : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
 
-  %pad = transform.get_producer_of_operand %matmul_padded[0]
-    : (!transform.any_op) -> !transform.any_op
+    %pad = transform.get_producer_of_operand %matmul_padded[0]
+      : (!transform.any_op) -> !transform.any_op
 
-  transform.structured.hoist_pad %pad by 1 loops
-     : (!transform.any_op) -> !transform.any_op
+    transform.structured.hoist_pad %pad by 1 loops
+       : (!transform.any_op) -> !transform.any_op
+       transform.yield
+  }
 }
 
 // -----
@@ -133,25 +139,27 @@ func.func @pad_and_hoist_lhs_transpose(
   func.return %0 : tensor<24x25xf32>
 }
 
-transform.sequence failures(propagate) {
-^bb1(%arg1: !transform.any_op):
-  %matmul = transform.structured.match ops{["linalg.matmul"]} in %arg1
-    : (!transform.any_op) -> !transform.any_op
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %matmul = transform.structured.match ops{["linalg.matmul"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
 
 
-  %matmul_l1, %loops_l1 = transform.structured.tile_using_for %matmul [5] : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+    %matmul_l1, %loops_l1 = transform.structured.tile_using_for %matmul [5] : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
 
-  %matmul_padded, %0, %copy_back = transform.structured.pad %matmul_l1 {
-    padding_values=[0.0: f32, 0.0 : f32, 0.0 : f32],
-    padding_dimensions=[0, 1, 2],
-    copy_back_op = "none"
-  } : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
+    %matmul_padded, %0, %copy_back = transform.structured.pad %matmul_l1 {
+      padding_values=[0.0: f32, 0.0 : f32, 0.0 : f32],
+      padding_dimensions=[0, 1, 2],
+      copy_back_op = "none"
+    } : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
 
-  %pad = transform.get_producer_of_operand %matmul_padded[0]
-    : (!transform.any_op) -> !transform.any_op
+    %pad = transform.get_producer_of_operand %matmul_padded[0]
+      : (!transform.any_op) -> !transform.any_op
 
-  transform.structured.hoist_pad %pad by 1 loops, transpose by [1, 0]
-     : (!transform.any_op) -> !transform.any_op
+    transform.structured.hoist_pad %pad by 1 loops, transpose by [1, 0]
+       : (!transform.any_op) -> !transform.any_op
+       transform.yield
+  }
 }
 
 // -----
@@ -177,23 +185,27 @@ func.func @pad_and_hoist_init(
   func.return %0 : tensor<24x25xf32>
 }
 
-transform.sequence failures(propagate) {
-^bb1(%arg1: !transform.any_op):
-  %matmul = transform.structured.match ops{["linalg.matmul"]} in %arg1
-    : (!transform.any_op) -> !transform.any_op
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %matmul = transform.structured.match ops{["linalg.matmul"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
 
 
-  %matmul_l1, %loops_l1:2 = transform.structured.tile_using_for %matmul [5, 0, 7] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
+    %matmul_l1, %loops_l1:2 = transform.structured.tile_using_for %matmul [5, 0, 7] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
 
-  %matmul_padded, %0, %copy_back = transform.structured.pad %matmul_l1 {
-    padding_values=[0.0: f32, 0.0 : f32, 0.0 : f32],
-    padding_dimensions=[0, 1, 2],
-    copy_back_op = "none"
-  } : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
+    %matmul_padded, %0, %copy_back = transform.structured.pad %matmul_l1 {
+      padding_values=[0.0: f32, 0.0 : f32, 0.0 : f32],
+      padding_dimensions=[0, 1, 2],
+      copy_back_op = "none"
+    } : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
 
-  %pad = transform.get_producer_of_operand %matmul_padded[2]
-    : (!transform.any_op) -> !transform.op<"tensor.pad">
+    %pad = transform.get_producer_of_operand %matmul_padded[2]
+      : (!transform.any_op) -> !transform.op<"tensor.pad">
 
-  transform.structured.hoist_pad %pad by 1 loops
-     : (!transform.op<"tensor.pad">) -> !transform.any_op
+    transform.apply_licm to %loops_l1#1 : !transform.any_op
+
+    transform.structured.hoist_pad %pad by 1 loops
+       : (!transform.op<"tensor.pad">) -> !transform.any_op
+       transform.yield
+  }
 }

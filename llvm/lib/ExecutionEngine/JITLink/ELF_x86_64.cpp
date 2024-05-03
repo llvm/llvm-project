@@ -16,7 +16,6 @@
 #include "llvm/ExecutionEngine/JITLink/TableManager.h"
 #include "llvm/ExecutionEngine/JITLink/x86_64.h"
 #include "llvm/Object/ELFObjectFile.h"
-#include "llvm/Support/Endian.h"
 
 #include "DefineExternalSectionStartAndEndSymbols.h"
 #include "EHFrameSupportImpl.h"
@@ -342,24 +341,6 @@ createLinkGraphFromELFObject_x86_64(MemoryBufferRef ObjectBuffer) {
                                     ELFObjFile.getELFFile(),
                                     std::move(*Features))
       .buildGraph();
-}
-
-static SectionRangeSymbolDesc
-identifyELFSectionStartAndEndSymbols(LinkGraph &G, Symbol &Sym) {
-  constexpr StringRef StartSymbolPrefix = "__start";
-  constexpr StringRef EndSymbolPrefix = "__end";
-
-  auto SymName = Sym.getName();
-  if (SymName.startswith(StartSymbolPrefix)) {
-    if (auto *Sec =
-            G.findSectionByName(SymName.drop_front(StartSymbolPrefix.size())))
-      return {*Sec, true};
-  } else if (SymName.startswith(EndSymbolPrefix)) {
-    if (auto *Sec =
-            G.findSectionByName(SymName.drop_front(EndSymbolPrefix.size())))
-      return {*Sec, false};
-  }
-  return {};
 }
 
 void link_ELF_x86_64(std::unique_ptr<LinkGraph> G,

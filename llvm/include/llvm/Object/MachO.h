@@ -789,16 +789,11 @@ public:
 
   static std::string getBuildPlatform(uint32_t platform) {
     switch (platform) {
-    case MachO::PLATFORM_MACOS: return "macos";
-    case MachO::PLATFORM_IOS: return "ios";
-    case MachO::PLATFORM_TVOS: return "tvos";
-    case MachO::PLATFORM_WATCHOS: return "watchos";
-    case MachO::PLATFORM_BRIDGEOS: return "bridgeos";
-    case MachO::PLATFORM_MACCATALYST: return "macCatalyst";
-    case MachO::PLATFORM_IOSSIMULATOR: return "iossimulator";
-    case MachO::PLATFORM_TVOSSIMULATOR: return "tvossimulator";
-    case MachO::PLATFORM_WATCHOSSIMULATOR: return "watchossimulator";
-    case MachO::PLATFORM_DRIVERKIT: return "driverkit";
+#define PLATFORM(platform, id, name, build_name, target, tapi_target,          \
+                 marketing)                                                    \
+  case MachO::PLATFORM_##platform:                                             \
+    return #name;
+#include "llvm/BinaryFormat/MachO.def"
     default:
       std::string ret;
       raw_string_ostream ss(ret);
@@ -831,7 +826,7 @@ public:
     Version = utostr(major) + "." + utostr(minor);
     if (update != 0)
       Version += "." + utostr(update);
-    return std::string(std::string(Version.str()));
+    return std::string(std::string(Version));
   }
 
   /// If the input path is a .dSYM bundle (as created by the dsymutil tool),

@@ -72,13 +72,13 @@ Error DXContainer::parseDXILHeader(StringRef Part) {
   return Error::success();
 }
 
-Error DXContainer::parseShaderFlags(StringRef Part) {
-  if (ShaderFlags)
+Error DXContainer::parseShaderFeatureFlags(StringRef Part) {
+  if (ShaderFeatureFlags)
     return parseFailed("More than one SFI0 part is present in the file");
   uint64_t FlagValue = 0;
   if (Error Err = readInteger(Part, Part.begin(), FlagValue))
     return Err;
-  ShaderFlags = FlagValue;
+  ShaderFeatureFlags = FlagValue;
   return Error::success();
 }
 
@@ -98,6 +98,31 @@ Error DXContainer::parsePSVInfo(StringRef Part) {
   PSVInfo = DirectX::PSVRuntimeInfo(Part);
   // Parsing the PSVRuntime info occurs late because we need to read data from
   // other parts first.
+  return Error::success();
+}
+
+Error DirectX::Signature::initialize(StringRef Part) {
+  dxbc::ProgramSignatureHeader SigHeader;
+  if (Error Err = readStruct(Part, Part.begin(), SigHeader))
+    return Err;
+  size_t Size = sizeof(dxbc::ProgramSignatureElement) * SigHeader.ParamCount;
+
+  if (Part.size() < Size + SigHeader.FirstParamOffset)
+    return parseFailed("Signature parameters extend beyond the part boundary");
+
+  Parameters.Data = Part.substr(SigHeader.FirstParamOffset, Size);
+
+  StringTableOffset = SigHeader.FirstParamOffset + static_cast<uint32_t>(Size);
+  StringTable = Part.substr(SigHeader.FirstParamOffset + Size);
+
+  for (const auto &Param : Parameters) {
+    if (Param.NameOffset < StringTableOffset)
+      return parseFailed("Invalid parameter name offset: name starts before "
+                         "the first name offset");
+    if (Param.NameOffset - StringTableOffset > StringTable.size())
+      return parseFailed("Invalid parameter name offset: name starts after the "
+                         "end of the part data");
+  }
   return Error::success();
 }
 
@@ -143,7 +168,7 @@ Error DXContainer::parsePartOffsets() {
         return Err;
       break;
     case dxbc::PartType::SFI0:
-      if (Error Err = parseShaderFlags(PartData))
+      if (Error Err = parseShaderFeatureFlags(PartData))
         return Err;
       break;
     case dxbc::PartType::HASH:
@@ -152,6 +177,18 @@ Error DXContainer::parsePartOffsets() {
       break;
     case dxbc::PartType::PSV0:
       if (Error Err = parsePSVInfo(PartData))
+        return Err;
+      break;
+    case dxbc::PartType::ISG1:
+      if (Error Err = InputSignature.initialize(PartData))
+        return Err;
+      break;
+    case dxbc::PartType::OSG1:
+      if (Error Err = OutputSignature.initialize(PartData))
+        return Err;
+      break;
+    case dxbc::PartType::PSG1:
+      if (Error Err = PatchConstantSignature.initialize(PartData))
         return Err;
       break;
     case dxbc::PartType::Unknown:
@@ -210,7 +247,14 @@ Error DirectX::PSVRuntimeInfo::parse(uint16_t ShaderKind) {
   const uint32_t PSVVersion = getVersion();
 
   // Detect the PSVVersion by looking at the size field.
-  if (PSVVersion == 2) {
+  if (PSVVersion == 3) {
+    v3::RuntimeInfo Info;
+    if (Error Err = readStruct(PSVInfoData, Current, Info))
+      return Err;
+    if (sys::IsBigEndianHost)
+      Info.swapBytes(ShaderStage);
+    BasicInfo = Info;
+  } else if (PSVVersion == 2) {
     v2::RuntimeInfo Info;
     if (Error Err = readStruct(PSVInfoData, Current, Info))
       return Err;
@@ -264,7 +308,7 @@ Error DirectX::PSVRuntimeInfo::parse(uint16_t ShaderKind) {
 
   // String table starts at a 4-byte offset.
   Current = reinterpret_cast<const char *>(
-      alignTo<4>(reinterpret_cast<const uintptr_t>(Current)));
+      alignTo<4>(reinterpret_cast<uintptr_t>(Current)));
 
   uint32_t StringTableSize = 0;
   if (Error Err = readInteger(Data, Current, StringTableSize))
@@ -304,7 +348,8 @@ Error DirectX::PSVRuntimeInfo::parse(uint16_t ShaderKind) {
     SigOutputElements.Stride = SigPatchOrPrimElements.Stride =
         SigInputElements.Stride;
 
-    if (Data.end() - Current < ElementCount * SigInputElements.Stride)
+    if (Data.end() - Current <
+        (ptrdiff_t)(ElementCount * SigInputElements.Stride))
       return parseFailed(
           "Signature elements extend beyond the size of the part");
 
@@ -387,6 +432,8 @@ Error DirectX::PSVRuntimeInfo::parse(uint16_t ShaderKind) {
 }
 
 uint8_t DirectX::PSVRuntimeInfo::getSigInputCount() const {
+  if (const auto *P = std::get_if<dxbc::PSV::v3::RuntimeInfo>(&BasicInfo))
+    return P->SigInputElements;
   if (const auto *P = std::get_if<dxbc::PSV::v2::RuntimeInfo>(&BasicInfo))
     return P->SigInputElements;
   if (const auto *P = std::get_if<dxbc::PSV::v1::RuntimeInfo>(&BasicInfo))
@@ -395,6 +442,8 @@ uint8_t DirectX::PSVRuntimeInfo::getSigInputCount() const {
 }
 
 uint8_t DirectX::PSVRuntimeInfo::getSigOutputCount() const {
+  if (const auto *P = std::get_if<dxbc::PSV::v3::RuntimeInfo>(&BasicInfo))
+    return P->SigOutputElements;
   if (const auto *P = std::get_if<dxbc::PSV::v2::RuntimeInfo>(&BasicInfo))
     return P->SigOutputElements;
   if (const auto *P = std::get_if<dxbc::PSV::v1::RuntimeInfo>(&BasicInfo))
@@ -403,6 +452,8 @@ uint8_t DirectX::PSVRuntimeInfo::getSigOutputCount() const {
 }
 
 uint8_t DirectX::PSVRuntimeInfo::getSigPatchOrPrimCount() const {
+  if (const auto *P = std::get_if<dxbc::PSV::v3::RuntimeInfo>(&BasicInfo))
+    return P->SigPatchOrPrimElements;
   if (const auto *P = std::get_if<dxbc::PSV::v2::RuntimeInfo>(&BasicInfo))
     return P->SigPatchOrPrimElements;
   if (const auto *P = std::get_if<dxbc::PSV::v1::RuntimeInfo>(&BasicInfo))

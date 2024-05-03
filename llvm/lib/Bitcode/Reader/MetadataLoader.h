@@ -48,8 +48,7 @@ struct MetadataLoaderCallbacks {
 class MetadataLoader {
   class MetadataLoaderImpl;
   std::unique_ptr<MetadataLoaderImpl> Pimpl;
-  Error parseMetadata(bool ModuleLevel,
-                      BasicBlock *ConstExprInsertBB = nullptr);
+  Error parseMetadata(bool ModuleLevel);
 
 public:
   ~MetadataLoader();
@@ -63,9 +62,7 @@ public:
   Error parseModuleMetadata() { return parseMetadata(true); }
 
   // Parse a function metadata block
-  Error parseFunctionMetadata(BasicBlock *ConstExprInsertBB) {
-    return parseMetadata(false, ConstExprInsertBB);
-  }
+  Error parseFunctionMetadata() { return parseMetadata(false); }
 
   /// Set the mode to strip TBAA metadata on load.
   void setStripTBAA(bool StripTBAA = true);

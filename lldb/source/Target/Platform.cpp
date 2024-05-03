@@ -989,6 +989,14 @@ uint32_t Platform::FindProcesses(const ProcessInstanceInfoMatch &match_info,
   return match_count;
 }
 
+ProcessInstanceInfoList Platform::GetAllProcesses() {
+  ProcessInstanceInfoList processes;
+  ProcessInstanceInfoMatch match;
+  assert(match.MatchAllProcesses());
+  FindProcesses(match, processes);
+  return processes;
+}
+
 Status Platform::LaunchProcess(ProcessLaunchInfo &launch_info) {
   Status error;
   Log *log = GetLog(LLDBLog::Platform);
@@ -1189,6 +1197,32 @@ Status Platform::PutFile(const FileSpec &source, const FileSpec &destination,
   if (!source_file)
     return Status(source_file.takeError());
   Status error;
+
+  bool requires_upload = true;
+  uint64_t dest_md5_low, dest_md5_high;
+  bool success = CalculateMD5(destination, dest_md5_low, dest_md5_high);
+  if (!success) {
+    LLDB_LOGF(log, "[PutFile] couldn't get md5 sum of destination");
+  } else {
+    auto local_md5 = llvm::sys::fs::md5_contents(source.GetPath());
+    if (!local_md5) {
+      LLDB_LOGF(log, "[PutFile] couldn't get md5 sum of source");
+    } else {
+      const auto [local_md5_high, local_md5_low] = local_md5->words();
+      LLDB_LOGF(log, "[PutFile] destination md5: %016" PRIx64 "%016" PRIx64,
+                dest_md5_high, dest_md5_low);
+      LLDB_LOGF(log, "[PutFile]       local md5: %016" PRIx64 "%016" PRIx64,
+                local_md5_high, local_md5_low);
+      requires_upload =
+          local_md5_high != dest_md5_high || local_md5_low != dest_md5_low;
+    }
+  }
+
+  if (!requires_upload) {
+    LLDB_LOGF(log, "[PutFile] skipping PutFile because md5sums match");
+    return error;
+  }
+
   uint32_t permissions = source_file.get()->GetPermissions(error);
   if (permissions == 0)
     permissions = lldb::eFilePermissionsFileDefault;
@@ -2006,7 +2040,7 @@ size_t Platform::GetSoftwareBreakpointTrapOpcode(Target &target,
     static const uint8_t g_arm_breakpoint_opcode[] = {0xf0, 0x01, 0xf0, 0xe7};
     static const uint8_t g_thumb_breakpoint_opcode[] = {0x01, 0xde};
 
-    lldb::BreakpointLocationSP bp_loc_sp(bp_site->GetOwnerAtIndex(0));
+    lldb::BreakpointLocationSP bp_loc_sp(bp_site->GetConstituentAtIndex(0));
     AddressClass addr_class = AddressClass::eUnknown;
 
     if (bp_loc_sp) {

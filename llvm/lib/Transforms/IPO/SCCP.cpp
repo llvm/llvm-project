@@ -22,6 +22,7 @@
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/AttributeMask.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ModRef.h"
@@ -143,9 +144,8 @@ static bool runIPSCCP(
     // Assume the function is called.
     Solver.markBlockExecutable(&F.front());
 
-    // Assume nothing about the incoming arguments.
     for (Argument &AI : F.args())
-      Solver.markOverdefined(&AI);
+      Solver.trackValueOfArgument(&AI);
   }
 
   // Determine if we can track any of the module's global variables. If so, add
@@ -235,11 +235,11 @@ static bool runIPSCCP(
     // nodes in executable blocks we found values for. The function's entry
     // block is not part of BlocksToErase, so we have to handle it separately.
     for (BasicBlock *BB : BlocksToErase) {
-      NumInstRemoved += changeToUnreachable(BB->getFirstNonPHI(),
+      NumInstRemoved += changeToUnreachable(BB->getFirstNonPHIOrDbg(),
                                             /*PreserveLCSSA=*/false, &DTU);
     }
     if (!Solver.isBlockExecutable(&F.front()))
-      NumInstRemoved += changeToUnreachable(F.front().getFirstNonPHI(),
+      NumInstRemoved += changeToUnreachable(F.front().getFirstNonPHIOrDbg(),
                                             /*PreserveLCSSA=*/false, &DTU);
 
     BasicBlock *NewUnreachableBB = nullptr;
@@ -281,32 +281,21 @@ static bool runIPSCCP(
     Function *F = I.first;
     const ValueLatticeElement &ReturnValue = I.second;
 
-    // If there is a known constant range for the return value, add !range
-    // metadata to the function's call sites.
+    // If there is a known constant range for the return value, add range
+    // attribute to the return value.
     if (ReturnValue.isConstantRange() &&
         !ReturnValue.getConstantRange().isSingleElement()) {
       // Do not add range metadata if the return value may include undef.
       if (ReturnValue.isConstantRangeIncludingUndef())
         continue;
 
+      // Do not touch existing attribute for now.
+      // TODO: We should be able to take the intersection of the existing
+      // attribute and the inferred range.
+      if (F->hasRetAttribute(Attribute::Range))
+        continue;
       auto &CR = ReturnValue.getConstantRange();
-      for (User *User : F->users()) {
-        auto *CB = dyn_cast<CallBase>(User);
-        if (!CB || CB->getCalledFunction() != F)
-          continue;
-
-        // Do not touch existing metadata for now.
-        // TODO: We should be able to take the intersection of the existing
-        // metadata and the inferred range.
-        if (CB->getMetadata(LLVMContext::MD_range))
-          continue;
-
-        LLVMContext &Context = CB->getParent()->getContext();
-        Metadata *RangeMD[] = {
-            ConstantAsMetadata::get(ConstantInt::get(Context, CR.getLower())),
-            ConstantAsMetadata::get(ConstantInt::get(Context, CR.getUpper()))};
-        CB->setMetadata(LLVMContext::MD_range, MDNode::get(Context, RangeMD));
-      }
+      F->addRangeRetAttr(CR);
       continue;
     }
     if (F->getReturnType()->isVoidTy())
@@ -371,6 +360,18 @@ static bool runIPSCCP(
       StoreInst *SI = cast<StoreInst>(GV->user_back());
       SI->eraseFromParent();
     }
+
+    // Try to create a debug constant expression for the global variable
+    // initializer value.
+    SmallVector<DIGlobalVariableExpression *, 1> GVEs;
+    GV->getDebugInfo(GVEs);
+    if (GVEs.size() == 1) {
+      DIBuilder DIB(M);
+      if (DIExpression *InitExpr = getExpressionForConstant(
+              DIB, *GV->getInitializer(), *GV->getValueType()))
+        GVEs[0]->replaceOperandWith(1, InitExpr);
+    }
+
     MadeChanges = true;
     M.eraseGlobalVariable(GV);
     ++NumGlobalConst;

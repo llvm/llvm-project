@@ -100,9 +100,7 @@ static bool findRISCVMultilibs(const Driver &D,
 BareMetal::BareMetal(const Driver &D, const llvm::Triple &Triple,
                      const ArgList &Args)
     : ToolChain(D, Triple, Args) {
-  getProgramPaths().push_back(getDriver().getInstalledDir());
-  if (getDriver().getInstalledDir() != getDriver().Dir)
-    getProgramPaths().push_back(getDriver().Dir);
+  getProgramPaths().push_back(getDriver().Dir);
 
   findMultilibs(D, Triple, Args);
   SmallString<128> SysRoot(computeSysRoot());
@@ -293,9 +291,8 @@ void BareMetal::addClangTargetOptions(const ArgList &DriverArgs,
 
 void BareMetal::AddClangCXXStdlibIncludeArgs(const ArgList &DriverArgs,
                                              ArgStringList &CC1Args) const {
-  if (DriverArgs.hasArg(options::OPT_nostdinc) ||
-      DriverArgs.hasArg(options::OPT_nostdlibinc) ||
-      DriverArgs.hasArg(options::OPT_nostdincxx))
+  if (DriverArgs.hasArg(options::OPT_nostdinc, options::OPT_nostdlibinc,
+                        options::OPT_nostdincxx))
     return;
 
   const Driver &D = getDriver();
@@ -369,11 +366,7 @@ void BareMetal::AddLinkRuntimeLib(const ArgList &Args,
   ToolChain::RuntimeLibType RLT = GetRuntimeLibType(Args);
   switch (RLT) {
   case ToolChain::RLT_CompilerRT: {
-    const std::string FileName = getCompilerRT(Args, "builtins");
-    llvm::StringRef BaseName = llvm::sys::path::filename(FileName);
-    BaseName.consume_front("lib");
-    BaseName.consume_back(".a");
-    CmdArgs.push_back(Args.MakeArgString("-l" + BaseName));
+    CmdArgs.push_back(getCompilerRTArgString(Args, "builtins"));
     return;
   }
   case ToolChain::RLT_Libgcc:
@@ -443,6 +436,9 @@ void baremetal::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   CmdArgs.push_back("-Bstatic");
 
+  if (TC.getTriple().isRISCV() && Args.hasArg(options::OPT_mno_relax))
+    CmdArgs.push_back("--no-relax");
+
   if (Triple.isARM() || Triple.isThumb()) {
     bool IsBigEndian = arm::isARMBigEndian(Triple, Args);
     if (IsBigEndian)
@@ -452,19 +448,13 @@ void baremetal::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(Arch == llvm::Triple::aarch64_be ? "-EB" : "-EL");
   }
 
-  Args.AddAllArgs(CmdArgs,
-                  {options::OPT_L, options::OPT_T_Group, options::OPT_s,
-                   options::OPT_t, options::OPT_Z_Flag, options::OPT_r});
+  Args.addAllArgs(CmdArgs, {options::OPT_L, options::OPT_T_Group,
+                            options::OPT_s, options::OPT_t, options::OPT_r});
 
   TC.AddFilePathLibArgs(Args, CmdArgs);
 
   for (const auto &LibPath : TC.getLibraryPaths())
     CmdArgs.push_back(Args.MakeArgString(llvm::Twine("-L", LibPath)));
-
-  const std::string FileName = TC.getCompilerRT(Args, "builtins");
-  llvm::SmallString<128> PathBuf{FileName};
-  llvm::sys::path::remove_filename(PathBuf);
-  CmdArgs.push_back(Args.MakeArgString("-L" + PathBuf));
 
   if (TC.ShouldLinkCXXStdlib(Args))
     TC.AddCXXStdlibLibArgs(Args, CmdArgs);
@@ -491,4 +481,30 @@ void baremetal::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   C.addCommand(std::make_unique<Command>(
       JA, *this, ResponseFileSupport::AtFileCurCP(),
       Args.MakeArgString(TC.GetLinkerPath()), CmdArgs, Inputs, Output));
+}
+
+// BareMetal toolchain allows all sanitizers where the compiler generates valid
+// code, ignoring all runtime library support issues on the assumption that
+// baremetal targets typically implement their own runtime support.
+SanitizerMask BareMetal::getSupportedSanitizers() const {
+  const bool IsX86_64 = getTriple().getArch() == llvm::Triple::x86_64;
+  const bool IsAArch64 = getTriple().getArch() == llvm::Triple::aarch64 ||
+                         getTriple().getArch() == llvm::Triple::aarch64_be;
+  const bool IsRISCV64 = getTriple().getArch() == llvm::Triple::riscv64;
+  SanitizerMask Res = ToolChain::getSupportedSanitizers();
+  Res |= SanitizerKind::Address;
+  Res |= SanitizerKind::KernelAddress;
+  Res |= SanitizerKind::PointerCompare;
+  Res |= SanitizerKind::PointerSubtract;
+  Res |= SanitizerKind::Fuzzer;
+  Res |= SanitizerKind::FuzzerNoLink;
+  Res |= SanitizerKind::Vptr;
+  Res |= SanitizerKind::SafeStack;
+  Res |= SanitizerKind::Thread;
+  Res |= SanitizerKind::Scudo;
+  if (IsX86_64 || IsAArch64 || IsRISCV64) {
+    Res |= SanitizerKind::HWAddress;
+    Res |= SanitizerKind::KernelHWAddress;
+  }
+  return Res;
 }

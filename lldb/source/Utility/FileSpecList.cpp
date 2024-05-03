@@ -37,6 +37,19 @@ bool FileSpecList::AppendIfUnique(const FileSpec &file_spec) {
   return false;
 }
 
+// FIXME: Replace this with a DenseSet at the call site. It is inefficient.
+bool SupportFileList::AppendIfUnique(const FileSpec &file_spec) {
+  collection::iterator end = m_files.end();
+  if (find_if(m_files.begin(), end,
+              [&](const std::shared_ptr<SupportFile> &support_file) {
+                return support_file->GetSpecOnly() == file_spec;
+              }) == end) {
+    Append(file_spec);
+    return true;
+  }
+  return false;
+}
+
 // Clears the file list.
 void FileSpecList::Clear() { m_files.clear(); }
 
@@ -55,22 +68,22 @@ void FileSpecList::Dump(Stream *s, const char *separator_cstr) const {
 //
 // Returns the valid index of the file that matches "file_spec" if it is found,
 // else std::numeric_limits<uint32_t>::max() is returned.
-size_t FileSpecList::FindFileIndex(size_t start_idx, const FileSpec &file_spec,
-                                   bool full) const {
-  const size_t num_files = m_files.size();
-
+static size_t FindFileIndex(size_t start_idx, const FileSpec &file_spec,
+                            bool full, size_t num_files,
+                            std::function<const FileSpec &(size_t)> get_ith) {
   // When looking for files, we will compare only the filename if the FILE_SPEC
   // argument is empty
   bool compare_filename_only = file_spec.GetDirectory().IsEmpty();
 
   for (size_t idx = start_idx; idx < num_files; ++idx) {
+    const FileSpec &ith = get_ith(idx);
     if (compare_filename_only) {
-      if (ConstString::Equals(
-              m_files[idx].GetFilename(), file_spec.GetFilename(),
-              file_spec.IsCaseSensitive() || m_files[idx].IsCaseSensitive()))
+      if (ConstString::Equals(ith.GetFilename(), file_spec.GetFilename(),
+                              file_spec.IsCaseSensitive() ||
+                                  ith.IsCaseSensitive()))
         return idx;
     } else {
-      if (FileSpec::Equal(m_files[idx], file_spec, full))
+      if (FileSpec::Equal(ith, file_spec, full))
         return idx;
     }
   }
@@ -79,8 +92,24 @@ size_t FileSpecList::FindFileIndex(size_t start_idx, const FileSpec &file_spec,
   return UINT32_MAX;
 }
 
-size_t FileSpecList::FindCompatibleIndex(size_t start_idx,
-                                         const FileSpec &file_spec) const {
+size_t FileSpecList::FindFileIndex(size_t start_idx, const FileSpec &file_spec,
+                                   bool full) const {
+  return ::FindFileIndex(
+      start_idx, file_spec, full, m_files.size(),
+      [&](size_t idx) -> const FileSpec & { return m_files[idx]; });
+}
+
+size_t SupportFileList::FindFileIndex(size_t start_idx,
+                                      const FileSpec &file_spec,
+                                      bool full) const {
+  return ::FindFileIndex(start_idx, file_spec, full, m_files.size(),
+                         [&](size_t idx) -> const FileSpec & {
+                           return m_files[idx]->GetSpecOnly();
+                         });
+}
+
+size_t SupportFileList::FindCompatibleIndex(size_t start_idx,
+                                            const FileSpec &file_spec) const {
   const size_t num_files = m_files.size();
   if (start_idx >= num_files)
     return UINT32_MAX;
@@ -92,7 +121,7 @@ size_t FileSpecList::FindCompatibleIndex(size_t start_idx,
   const bool full = !file_spec.GetDirectory().IsEmpty();
 
   for (size_t idx = start_idx; idx < num_files; ++idx) {
-    const FileSpec &curr_file = m_files[idx];
+    const FileSpec &curr_file = m_files[idx]->GetSpecOnly();
 
     // Always start by matching the filename first
     if (!curr_file.FileEquals(file_spec))
@@ -117,7 +146,7 @@ size_t FileSpecList::FindCompatibleIndex(size_t start_idx,
       auto is_suffix = [](llvm::StringRef a, llvm::StringRef b,
                           bool case_sensitive) -> bool {
         if (case_sensitive ? a.consume_back(b) : a.consume_back_insensitive(b))
-          return a.empty() || a.endswith("/");
+          return a.empty() || a.ends_with("/");
         return false;
       };
       const bool case_sensitive =
@@ -140,10 +169,18 @@ const FileSpec &FileSpecList::GetFileSpecAtIndex(size_t idx) const {
   return g_empty_file_spec;
 }
 
-const FileSpec *FileSpecList::GetFileSpecPointerAtIndex(size_t idx) const {
+const FileSpec &SupportFileList::GetFileSpecAtIndex(size_t idx) const {
   if (idx < m_files.size())
-    return &m_files[idx];
-  return nullptr;
+    return m_files[idx]->Materialize();
+  static FileSpec g_empty_file_spec;
+  return g_empty_file_spec;
+}
+
+std::shared_ptr<SupportFile>
+SupportFileList::GetSupportFileAtIndex(size_t idx) const {
+  if (idx < m_files.size())
+    return m_files[idx];
+  return {};
 }
 
 // Return the size in bytes that this object takes in memory. This returns the
@@ -162,9 +199,3 @@ size_t FileSpecList::MemorySize() const {
 
 // Return the number of files in the file spec list.
 size_t FileSpecList::GetSize() const { return m_files.size(); }
-
-size_t FileSpecList::GetFilesMatchingPartialPath(const char *path,
-                                                 bool dir_okay,
-                                                 FileSpecList &matches) {
-  return 0;
-}

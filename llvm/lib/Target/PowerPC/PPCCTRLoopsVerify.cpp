@@ -16,8 +16,6 @@
 // something that needs to be run (or even defined) for Release builds so the
 // entire file is guarded by NDEBUG.
 #ifndef NDEBUG
-#include <vector>
-
 #include "MCTargetDesc/PPCMCTargetDesc.h"
 #include "PPC.h"
 #include "llvm/ADT/SmallSet.h"

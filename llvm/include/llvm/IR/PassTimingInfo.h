@@ -55,8 +55,9 @@ class TimePassesHandler {
   /// Map of timers for pass invocations
   StringMap<TimerVector> TimingData;
 
-  /// Currently active pass timer.
-  Timer *ActivePassTimer = nullptr;
+  /// Stack of currently active pass timers. Passes can run other
+  /// passes.
+  SmallVector<Timer *, 8> PassActiveTimerStack;
   /// Stack of currently active analysis timers. Analyses can request other
   /// analyses.
   SmallVector<Timer *, 8> AnalysisActiveTimerStack;

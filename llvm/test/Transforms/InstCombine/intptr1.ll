@@ -16,8 +16,8 @@ define void @test1(ptr %a, ptr readnone %a_end, ptr %b.i64) {
 ; CHECK-NEXT:    [[I1:%.*]] = load float, ptr [[B_ADDR_02_PTR]], align 4
 ; CHECK-NEXT:    [[MUL_I:%.*]] = fmul float [[I1]], 4.200000e+01
 ; CHECK-NEXT:    store float [[MUL_I]], ptr [[A_ADDR_03]], align 4
-; CHECK-NEXT:    [[ADD]] = getelementptr inbounds float, ptr [[B_ADDR_02_PTR]], i64 1
-; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds float, ptr [[A_ADDR_03]], i64 1
+; CHECK-NEXT:    [[ADD]] = getelementptr inbounds i8, ptr [[B_ADDR_02_PTR]], i64 4
+; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds i8, ptr [[A_ADDR_03]], i64 4
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult ptr [[INCDEC_PTR]], [[A_END]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_END]]
 ; CHECK:       for.end:
@@ -68,8 +68,8 @@ define void @test1_neg(ptr %a, ptr readnone %a_end, ptr %b.i64) {
 ; CHECK-NEXT:    [[I1:%.*]] = load float, ptr [[A]], align 4
 ; CHECK-NEXT:    [[MUL_I:%.*]] = fmul float [[I1]], 4.200000e+01
 ; CHECK-NEXT:    store float [[MUL_I]], ptr [[A_ADDR_03]], align 4
-; CHECK-NEXT:    [[ADD]] = getelementptr inbounds float, ptr [[A]], i64 1
-; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds float, ptr [[A_ADDR_03]], i64 1
+; CHECK-NEXT:    [[ADD]] = getelementptr inbounds i8, ptr [[A]], i64 4
+; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds i8, ptr [[A_ADDR_03]], i64 4
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult ptr [[INCDEC_PTR]], [[A_END]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_END]]
 ; CHECK:       for.end:
@@ -122,8 +122,8 @@ define void @test2(ptr %a, ptr readnone %a_end, ptr %b.float) {
 ; CHECK-NEXT:    [[I1:%.*]] = load float, ptr [[B_ADDR_02_PTR]], align 4
 ; CHECK-NEXT:    [[MUL_I:%.*]] = fmul float [[I1]], 4.200000e+01
 ; CHECK-NEXT:    store float [[MUL_I]], ptr [[A_ADDR_03]], align 4
-; CHECK-NEXT:    [[ADD]] = getelementptr inbounds float, ptr [[B_ADDR_02_PTR]], i64 1
-; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds float, ptr [[A_ADDR_03]], i64 1
+; CHECK-NEXT:    [[ADD]] = getelementptr inbounds i8, ptr [[B_ADDR_02_PTR]], i64 4
+; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds i8, ptr [[A_ADDR_03]], i64 4
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult ptr [[INCDEC_PTR]], [[A_END]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_END]]
 ; CHECK:       for.end:
@@ -172,8 +172,8 @@ define void @test3(ptr %a, ptr readnone %a_end, ptr %b.i8p) {
 ; CHECK-NEXT:    [[I1:%.*]] = load float, ptr [[B_ADDR_02_PTR]], align 4
 ; CHECK-NEXT:    [[MUL_I:%.*]] = fmul float [[I1]], 4.200000e+01
 ; CHECK-NEXT:    store float [[MUL_I]], ptr [[A_ADDR_03]], align 4
-; CHECK-NEXT:    [[ADD]] = getelementptr inbounds float, ptr [[B_ADDR_02_PTR]], i64 1
-; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds float, ptr [[A_ADDR_03]], i64 1
+; CHECK-NEXT:    [[ADD]] = getelementptr inbounds i8, ptr [[B_ADDR_02_PTR]], i64 4
+; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds i8, ptr [[A_ADDR_03]], i64 4
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult ptr [[INCDEC_PTR]], [[A_END]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_END]]
 ; CHECK:       for.end:
@@ -221,8 +221,8 @@ define void @test4(ptr %a, ptr readnone %a_end, ptr %b.float) {
 ; CHECK-NEXT:    [[I1:%.*]] = load float, ptr [[B_ADDR_02_IN]], align 4
 ; CHECK-NEXT:    [[MUL_I:%.*]] = fmul float [[I1]], 4.200000e+01
 ; CHECK-NEXT:    store float [[MUL_I]], ptr [[A_ADDR_03]], align 4
-; CHECK-NEXT:    [[ADD]] = getelementptr inbounds float, ptr [[B_ADDR_02_IN]], i64 1
-; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds float, ptr [[A_ADDR_03]], i64 1
+; CHECK-NEXT:    [[ADD]] = getelementptr inbounds i8, ptr [[B_ADDR_02_IN]], i64 4
+; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds i8, ptr [[A_ADDR_03]], i64 4
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult ptr [[INCDEC_PTR]], [[A_END]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_END]]
 ; CHECK:       for.end:

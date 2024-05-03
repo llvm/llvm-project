@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03
+// UNSUPPORTED: c++03, c++11, c++14
 // UNSUPPORTED: availability-filesystem-missing
 
 // These tests require locale for non-char paths
@@ -21,7 +21,7 @@
 // basic_string<ECharT, Traits, Allocator>
 // generic_string(const Allocator& a = Allocator()) const;
 
-#include "filesystem_include.h"
+#include <filesystem>
 #include <cassert>
 #include <string>
 #include <type_traits>
@@ -31,7 +31,7 @@
 #include "min_allocator.h"
 #include "test_iterators.h"
 #include "test_macros.h"
-
+namespace fs = std::filesystem;
 
 MultiStringType longString = MKSTR("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ/123456789/abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ");
 

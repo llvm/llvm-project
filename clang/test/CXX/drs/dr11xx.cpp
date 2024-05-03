@@ -1,30 +1,30 @@
-// RUN: %clang_cc1 -std=c++98 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++11 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++14 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++17 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++2a %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++98 %s -verify=expected,cxx98 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++11 %s -verify=expected -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++14 %s -verify=expected -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++17 %s -verify=expected -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++2a %s -verify=expected -fexceptions -fcxx-exceptions -pedantic-errors
 
-namespace dr1111 { // dr1111: yes
+namespace cwg1111 { // cwg1111: 3.2
 namespace example1 {
-template <typename> struct set;
+template <typename> struct set; // #cwg1111-struct-set
 
 struct X {
-  template <typename T> void set(const T &value);
+  template <typename T> void set(const T &value); // #cwg1111-func-set
 };
 void foo() {
   X x;
-#pragma clang diagnostic push
-#if __cplusplus < 201103L
-#pragma clang diagnostic ignored "-Wambiguous-member-template"
-#endif
+  // FIXME: should we backport C++11 behavior?
   x.set<double>(3.2);
-#pragma clang diagnostic pop
+  // cxx98-error@-1 {{lookup of 'set' in member access expression is ambiguous; using member of 'X'}}
+  //   cxx98-note@#cwg1111-func-set {{lookup in the object type 'X' refers here}}
+  //   cxx98-note@#cwg1111-struct-set {{lookup from the current scope refers here}}
 }
 
 struct Y {};
 void bar() {
   Y y;
-  y.set<double>(3.2); // expected-error {{no member named 'set' in 'dr1111::example1::Y'}}
+  y.set<double>(3.2);
+  // expected-error@-1 {{no member named 'set' in 'cwg1111::example1::Y'}}
 }
 } // namespace example1
 
@@ -42,12 +42,14 @@ void baz() {
   a.operator A();
 }
 } // namespace example2
-} // namespace dr1111
+} // namespace cwg1111
 
-namespace dr1113 { // dr1113: partial
+namespace cwg1113 { // cwg1113: partial
   namespace named {
-    extern int a; // expected-note {{previous}}
-    static int a; // expected-error {{static declaration of 'a' follows non-static}}
+    extern int a; // #cwg1113-a
+    static int a;
+    // expected-error@-1 {{static declaration of 'a' follows non-static}}
+    //   expected-note@#cwg1113-a {{previous declaration is here}}
   }
   namespace {
     extern int a;
@@ -55,7 +57,7 @@ namespace dr1113 { // dr1113: partial
     int b = a;
   }
 
-  // FIXME: Per DR1113 and DR4, this is ill-formed due to ambiguity: the second
+  // FIXME: Per CWG1113 and CWG4, this is ill-formed due to ambiguity: the second
   // 'f' has internal linkage, and so does not have C language linkage, so is
   // not a redeclaration of the first 'f'.
   //
@@ -68,3 +70,5 @@ namespace dr1113 { // dr1113: partial
   }
   void g() { f(); }
 }
+
+// cwg1150: na

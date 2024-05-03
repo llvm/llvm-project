@@ -2,12 +2,6 @@ include(ExternalProject)
 include(CompilerRTUtils)
 include(HandleCompilerRT)
 
-# CMP0114: ExternalProject step targets fully adopt their steps.
-# New in CMake 3.19: https://cmake.org/cmake/help/latest/policy/CMP0114.html
-if(POLICY CMP0114)
-  cmake_policy(SET CMP0114 OLD)
-endif()
-
 function(set_target_output_directories target output_dir)
   # For RUNTIME_OUTPUT_DIRECTORY variable, Multi-configuration generators
   # append a per-configuration subdirectory to the specified directory.
@@ -312,6 +306,10 @@ function(add_compiler_rt_runtime name type)
       set(COMPONENT_OPTION COMPONENT ${libname})
     endif()
 
+    if(type STREQUAL "SHARED")
+      list(APPEND LIB_DEFS COMPILER_RT_SHARED_LIB)
+    endif()
+
     if(type STREQUAL "OBJECT")
       if(CMAKE_C_COMPILER_ID MATCHES Clang AND CMAKE_C_COMPILER_TARGET)
         list(APPEND extra_cflags_${libname} "--target=${CMAKE_C_COMPILER_TARGET}")
@@ -401,11 +399,14 @@ function(add_compiler_rt_runtime name type)
         if (HAD_ERROR)
           message(FATAL_ERROR "${CMAKE_LINKER} failed with status ${HAD_ERROR}")
         endif()
-        set(NEED_EXPLICIT_ADHOC_CODESIGN 1)
+        set(NEED_EXPLICIT_ADHOC_CODESIGN 0)
+        # Apple introduced a new linker by default in Xcode 15. This linker reports itself as ld
+        # rather than ld64 and does not match this version regex. That's ok since it never needs
+        # the explicit ad-hoc code signature.
         if ("${LD_V_OUTPUT}" MATCHES ".*ld64-([0-9.]+).*")
           string(REGEX REPLACE ".*ld64-([0-9.]+).*" "\\1" HOST_LINK_VERSION ${LD_V_OUTPUT})
-          if (HOST_LINK_VERSION VERSION_GREATER_EQUAL 609)
-            set(NEED_EXPLICIT_ADHOC_CODESIGN 0)
+          if (HOST_LINK_VERSION VERSION_LESS 609)
+            set(NEED_EXPLICIT_ADHOC_CODESIGN 1)
           endif()
         endif()
         if (NEED_EXPLICIT_ADHOC_CODESIGN)
@@ -621,6 +622,8 @@ macro(add_custom_libcxx name prefix)
   set_target_properties(${name}-clobber PROPERTIES FOLDER "Compiler-RT Misc")
 
   set(PASSTHROUGH_VARIABLES
+    ANDROID
+    ANDROID_NATIVE_API_LEVEL
     CMAKE_C_COMPILER_TARGET
     CMAKE_CXX_COMPILER_TARGET
     CMAKE_SHARED_LINKER_FLAGS
@@ -637,6 +640,7 @@ macro(add_custom_libcxx name prefix)
     CMAKE_STRIP
     CMAKE_READELF
     CMAKE_SYSROOT
+    CMAKE_TOOLCHAIN_FILE
     LIBCXX_HAS_MUSL_LIBC
     LIBCXX_HAS_GCC_S_LIB
     LIBCXX_HAS_PTHREAD_LIB
@@ -663,6 +667,10 @@ macro(add_custom_libcxx name prefix)
   get_property(CXX_FLAGS CACHE CMAKE_CXX_FLAGS PROPERTY VALUE)
   set(LIBCXX_CXX_FLAGS "${LIBCXX_CXX_FLAGS} ${CXX_FLAGS}")
 
+  if(CMAKE_VERBOSE_MAKEFILE)
+    set(verbose -DCMAKE_VERBOSE_MAKEFILE=ON)
+  endif()
+
   ExternalProject_Add(${name}
     DEPENDS ${name}-clobber ${LIBCXX_DEPS}
     PREFIX ${CMAKE_CURRENT_BINARY_DIR}/${name}
@@ -670,12 +678,14 @@ macro(add_custom_libcxx name prefix)
     BINARY_DIR ${prefix}
     CMAKE_ARGS ${CMAKE_PASSTHROUGH_VARIABLES}
                ${compiler_args}
+               ${verbose}
                -DCMAKE_C_FLAGS=${LIBCXX_C_FLAGS}
                -DCMAKE_CXX_FLAGS=${LIBCXX_CXX_FLAGS}
                -DCMAKE_BUILD_TYPE=Release
                -DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY
                -DLLVM_PATH=${LLVM_MAIN_SRC_DIR}
                -DLLVM_ENABLE_RUNTIMES=libcxx|libcxxabi
+               -DLIBCXXABI_USE_LLVM_UNWINDER=OFF
                -DLIBCXXABI_ENABLE_SHARED=OFF
                -DLIBCXXABI_HERMETIC_STATIC_LIBRARY=ON
                -DLIBCXXABI_INCLUDE_TESTS=OFF
@@ -755,6 +765,7 @@ function(configure_compiler_rt_lit_site_cfg input output)
   get_compiler_rt_output_dir(${COMPILER_RT_DEFAULT_TARGET_ARCH} output_dir)
 
   string(REPLACE ${CMAKE_CFG_INTDIR} ${LLVM_BUILD_MODE} COMPILER_RT_RESOLVED_TEST_COMPILER ${COMPILER_RT_TEST_COMPILER})
+  string(REPLACE ${CMAKE_CFG_INTDIR} ${LLVM_BUILD_MODE} COMPILER_RT_RESOLVED_OUTPUT_DIR ${COMPILER_RT_OUTPUT_DIR})
   string(REPLACE ${CMAKE_CFG_INTDIR} ${LLVM_BUILD_MODE} COMPILER_RT_RESOLVED_LIBRARY_OUTPUT_DIR ${output_dir})
 
   configure_lit_site_cfg(${input} ${output})

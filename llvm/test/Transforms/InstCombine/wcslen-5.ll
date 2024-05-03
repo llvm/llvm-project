@@ -42,7 +42,7 @@ define dso_local i64 @fold_wcslen_s3_pi_p1_s5(i1 zeroext %0, i64 %1) {
 ; XFAIL-CHECK-NEXT:    ret i64 [[SEL]]
 ; CHECK-LABEL: @fold_wcslen_s3_pi_p1_s5(
 ; CHECK-NEXT:    [[PS3_PI:%.*]] = getelementptr inbounds [4 x i32], ptr @ws3, i64 0, i64 [[TMP1:%.*]]
-; CHECK-NEXT:    [[PS3_PI_P1:%.*]] = getelementptr inbounds i32, ptr [[PS3_PI]], i64 1
+; CHECK-NEXT:    [[PS3_PI_P1:%.*]] = getelementptr inbounds i8, ptr [[PS3_PI]], i64 4
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[TMP0:%.*]], ptr [[PS3_PI_P1]], ptr @ws5
 ; CHECK-NEXT:    [[LEN:%.*]] = tail call i64 @wcslen(ptr nonnull [[SEL]])
 ; CHECK-NEXT:    ret i64 [[LEN]]

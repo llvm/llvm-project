@@ -444,6 +444,28 @@ else:
 define void @test9_gep_inbounds_nonzero(i1 %X, ptr %Y) {
 ; CHECK-LABEL: @test9_gep_inbounds_nonzero(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = xor i1 [[X:%.*]], true
+; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP0]])
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr [[Y:%.*]], i64 12
+; CHECK-NEXT:    [[TMP1:%.*]] = call ptr @fn_nonnull_noundef_arg(ptr [[GEP]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  br i1 %X, label %if, label %else
+
+if:
+  br label %else
+
+else:
+  %phi = phi ptr [ %Y, %entry ], [ null, %if ]
+  %gep = getelementptr inbounds i8, ptr %phi, i64 12
+  call ptr @fn_nonnull_noundef_arg(ptr %gep)
+  ret void
+}
+
+define void @test9_gep_inbounds_nonzero_null_defined(i1 %X, ptr %Y) #0 {
+; CHECK-LABEL: @test9_gep_inbounds_nonzero_null_defined(
+; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[X:%.*]], ptr null, ptr [[Y:%.*]]
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr [[SPEC_SELECT]], i64 12
 ; CHECK-NEXT:    [[TMP0:%.*]] = call ptr @fn_nonnull_noundef_arg(ptr [[GEP]])
@@ -462,9 +484,30 @@ else:
   ret void
 }
 
+define void @test9_gep_inbounds_unknown_null(i1 %X, ptr %Y, i64 %I) {
+; CHECK-LABEL: @test9_gep_inbounds_unknown_null(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = xor i1 [[X:%.*]], true
+; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP0]])
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr [[Y:%.*]], i64 [[I:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call ptr @fn_nonnull_noundef_arg(ptr [[GEP]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  br i1 %X, label %if, label %else
 
-define void @test9_gep_inbouds_unknown_null(i1 %X, ptr %Y, i64 %I) {
-; CHECK-LABEL: @test9_gep_inbouds_unknown_null(
+if:
+  br label %else
+
+else:
+  %phi = phi ptr [ %Y, %entry ], [ null, %if ]
+  %gep = getelementptr inbounds i8, ptr %phi, i64 %I
+  call ptr @fn_nonnull_noundef_arg(ptr %gep)
+  ret void
+}
+
+define void @test9_gep_inbounds_unknown_null_defined(i1 %X, ptr %Y, i64 %I) #0 {
+; CHECK-LABEL: @test9_gep_inbounds_unknown_null_defined(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[X:%.*]], ptr null, ptr [[Y:%.*]]
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr [[SPEC_SELECT]], i64 [[I:%.*]]
@@ -481,6 +524,27 @@ else:
   %phi = phi ptr [ %Y, %entry ], [ null, %if ]
   %gep = getelementptr inbounds i8, ptr %phi, i64 %I
   call ptr @fn_nonnull_noundef_arg(ptr %gep)
+  ret void
+}
+
+define void @test9_gep_inbounds_unknown_null_call_noundef(i1 %X, ptr %Y, i64 %I) {
+; CHECK-LABEL: @test9_gep_inbounds_unknown_null_call_noundef(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[X:%.*]], ptr null, ptr [[Y:%.*]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr [[SPEC_SELECT]], i64 [[I:%.*]]
+; CHECK-NEXT:    [[TMP0:%.*]] = call ptr @fn_noundef_arg(ptr [[GEP]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  br i1 %X, label %if, label %else
+
+if:
+  br label %else
+
+else:
+  %phi = phi ptr [ %Y, %entry ], [ null, %if ]
+  %gep = getelementptr inbounds i8, ptr %phi, i64 %I
+  call ptr @fn_noundef_arg(ptr %gep)
   ret void
 }
 
@@ -563,7 +627,233 @@ else:
   ret void
 }
 
+define i32 @test_assume_false(i32 %cond) {
+; CHECK-LABEL: @test_assume_false(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    switch i32 [[COND:%.*]], label [[DEFAULT:%.*]] [
+; CHECK-NEXT:      i32 0, label [[EXIT:%.*]]
+; CHECK-NEXT:      i32 1, label [[CASE1:%.*]]
+; CHECK-NEXT:      i32 2, label [[CASE2:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       case1:
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       case2:
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       default:
+; CHECK-NEXT:    unreachable
+; CHECK:       exit:
+; CHECK-NEXT:    [[RES:%.*]] = phi i32 [ 2, [[CASE1]] ], [ 3, [[CASE2]] ], [ 1, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    call void @llvm.assume(i1 true)
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+entry:
+  switch i32 %cond, label %default [
+  i32 0, label %case0
+  i32 1, label %case1
+  i32 2, label %case2
+  ]
 
+case0:
+  br label %exit
+
+case1:
+  br label %exit
+
+case2:
+  br label %exit
+
+default:
+  br label %exit
+
+exit:
+  %bool = phi i1 [ false, %default ], [ true, %case0 ], [ true, %case1 ], [ true, %case2 ]
+  %res = phi i32 [ 0, %default ], [ 1, %case0 ], [ 2, %case1 ], [ 3, %case2 ]
+  call void @llvm.assume(i1 %bool)
+  ret i32 %res
+}
+
+define i32 @test_assume_undef(i32 %cond) {
+; CHECK-LABEL: @test_assume_undef(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    switch i32 [[COND:%.*]], label [[DEFAULT:%.*]] [
+; CHECK-NEXT:      i32 0, label [[EXIT:%.*]]
+; CHECK-NEXT:      i32 1, label [[CASE1:%.*]]
+; CHECK-NEXT:      i32 2, label [[CASE2:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       case1:
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       case2:
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       default:
+; CHECK-NEXT:    unreachable
+; CHECK:       exit:
+; CHECK-NEXT:    [[RES:%.*]] = phi i32 [ 2, [[CASE1]] ], [ 3, [[CASE2]] ], [ 1, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    call void @llvm.assume(i1 true)
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+entry:
+  switch i32 %cond, label %default [
+  i32 0, label %case0
+  i32 1, label %case1
+  i32 2, label %case2
+  ]
+
+case0:
+  br label %exit
+
+case1:
+  br label %exit
+
+case2:
+  br label %exit
+
+default:
+  br label %exit
+
+exit:
+  %bool = phi i1 [ undef, %default ], [ true, %case0 ], [ true, %case1 ], [ true, %case2 ]
+  %res = phi i32 [ 0, %default ], [ 1, %case0 ], [ 2, %case1 ], [ 3, %case2 ]
+  call void @llvm.assume(i1 %bool)
+  ret i32 %res
+}
+
+define i32 @test_assume_var(i32 %cond, i1 %var) {
+; CHECK-LABEL: @test_assume_var(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    switch i32 [[COND:%.*]], label [[DEFAULT:%.*]] [
+; CHECK-NEXT:      i32 0, label [[EXIT:%.*]]
+; CHECK-NEXT:      i32 1, label [[CASE1:%.*]]
+; CHECK-NEXT:      i32 2, label [[CASE2:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       case1:
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       case2:
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       default:
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[BOOL:%.*]] = phi i1 [ [[VAR:%.*]], [[DEFAULT]] ], [ true, [[CASE1]] ], [ true, [[CASE2]] ], [ true, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[RES:%.*]] = phi i32 [ 0, [[DEFAULT]] ], [ 2, [[CASE1]] ], [ 3, [[CASE2]] ], [ 1, [[ENTRY]] ]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[BOOL]])
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+entry:
+  switch i32 %cond, label %default [
+  i32 0, label %case0
+  i32 1, label %case1
+  i32 2, label %case2
+  ]
+
+case0:
+  br label %exit
+
+case1:
+  br label %exit
+
+case2:
+  br label %exit
+
+default:
+  br label %exit
+
+exit:
+  %bool = phi i1 [ %var, %default ], [ true, %case0 ], [ true, %case1 ], [ true, %case2 ]
+  %res = phi i32 [ 0, %default ], [ 1, %case0 ], [ 2, %case1 ], [ 3, %case2 ]
+  call void @llvm.assume(i1 %bool)
+  ret i32 %res
+}
+
+define i32 @test_assume_bundle_nonnull(i32 %cond, ptr nonnull %p) {
+; CHECK-LABEL: @test_assume_bundle_nonnull(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    switch i32 [[COND:%.*]], label [[DEFAULT:%.*]] [
+; CHECK-NEXT:      i32 0, label [[EXIT:%.*]]
+; CHECK-NEXT:      i32 1, label [[CASE1:%.*]]
+; CHECK-NEXT:      i32 2, label [[CASE2:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       case1:
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       case2:
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       default:
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[PTR:%.*]] = phi ptr [ null, [[DEFAULT]] ], [ [[P:%.*]], [[CASE1]] ], [ [[P]], [[CASE2]] ], [ [[P]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[RES:%.*]] = phi i32 [ 0, [[DEFAULT]] ], [ 2, [[CASE1]] ], [ 3, [[CASE2]] ], [ 1, [[ENTRY]] ]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[PTR]]) ]
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+entry:
+  switch i32 %cond, label %default [
+  i32 0, label %case0
+  i32 1, label %case1
+  i32 2, label %case2
+  ]
+
+case0:
+  br label %exit
+
+case1:
+  br label %exit
+
+case2:
+  br label %exit
+
+default:
+  br label %exit
+
+exit:
+  %ptr = phi ptr [ null, %default ], [ %p, %case0 ], [ %p, %case1 ], [ %p, %case2 ]
+  %res = phi i32 [ 0, %default ], [ 1, %case0 ], [ 2, %case1 ], [ 3, %case2 ]
+  call void @llvm.assume(i1 true) [ "nonnull"(ptr %ptr) ]
+  ret i32 %res
+}
+
+define i32 @test_assume_bundle_align(i32 %cond, ptr nonnull %p) {
+; CHECK-LABEL: @test_assume_bundle_align(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    switch i32 [[COND:%.*]], label [[DEFAULT:%.*]] [
+; CHECK-NEXT:      i32 0, label [[EXIT:%.*]]
+; CHECK-NEXT:      i32 1, label [[CASE1:%.*]]
+; CHECK-NEXT:      i32 2, label [[CASE2:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       case1:
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       case2:
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       default:
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[PTR:%.*]] = phi ptr [ null, [[DEFAULT]] ], [ [[P:%.*]], [[CASE1]] ], [ [[P]], [[CASE2]] ], [ [[P]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[RES:%.*]] = phi i32 [ 0, [[DEFAULT]] ], [ 2, [[CASE1]] ], [ 3, [[CASE2]] ], [ 1, [[ENTRY]] ]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR]], i32 8) ]
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+entry:
+  switch i32 %cond, label %default [
+  i32 0, label %case0
+  i32 1, label %case1
+  i32 2, label %case2
+  ]
+
+case0:
+  br label %exit
+
+case1:
+  br label %exit
+
+case2:
+  br label %exit
+
+default:
+  br label %exit
+
+exit:
+  %ptr = phi ptr [ null, %default ], [ %p, %case0 ], [ %p, %case1 ], [ %p, %case2 ]
+  %res = phi i32 [ 0, %default ], [ 1, %case0 ], [ 2, %case1 ], [ 3, %case2 ]
+  call void @llvm.assume(i1 true) [ "align"(ptr %ptr, i32 8) ]
+  ret i32 %res
+}
 
 attributes #0 = { null_pointer_is_valid }
 ;.

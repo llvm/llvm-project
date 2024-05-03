@@ -180,7 +180,7 @@ Decl *Sema::ActOnProperty(Scope *S, SourceLocation AtLoc,
   unsigned Attributes = ODS.getPropertyAttributes();
   FD.D.setObjCWeakProperty((Attributes & ObjCPropertyAttribute::kind_weak) !=
                            0);
-  TypeSourceInfo *TSI = GetTypeForDeclarator(FD.D, S);
+  TypeSourceInfo *TSI = GetTypeForDeclarator(FD.D);
   QualType T = TSI->getType();
   if (!getOwnershipRule(Attributes)) {
     Attributes |= deducePropertyOwnershipFromType(*this, T);
@@ -419,7 +419,7 @@ Sema::HandlePropertyInClassExtension(Scope *S,
   ObjCCategoryDecl *CDecl = cast<ObjCCategoryDecl>(CurContext);
   // Diagnose if this property is already in continuation class.
   DeclContext *DC = CurContext;
-  IdentifierInfo *PropertyId = FD.D.getIdentifier();
+  const IdentifierInfo *PropertyId = FD.D.getIdentifier();
   ObjCInterfaceDecl *CCPrimary = CDecl->getClassInterface();
 
   // We need to look in the @interface to see if the @property was
@@ -571,7 +571,7 @@ ObjCPropertyDecl *Sema::CreatePropertyDecl(Scope *S,
                                            TypeSourceInfo *TInfo,
                                            tok::ObjCKeywordKind MethodImplKind,
                                            DeclContext *lexicalDC){
-  IdentifierInfo *PropertyId = FD.D.getIdentifier();
+  const IdentifierInfo *PropertyId = FD.D.getIdentifier();
 
   // Property defaults to 'assign' if it is readwrite, unless this is ARC
   // and the type is retainable.
@@ -638,14 +638,14 @@ ObjCPropertyDecl *Sema::CreatePropertyDecl(Scope *S,
     PDecl->setInvalidDecl();
   }
 
-  ProcessDeclAttributes(S, PDecl, FD.D);
-
   // Regardless of setter/getter attribute, we save the default getter/setter
   // selector names in anticipation of declaration of setter/getter methods.
   PDecl->setGetterName(GetterSel, GetterNameLoc);
   PDecl->setSetterName(SetterSel, SetterNameLoc);
   PDecl->setPropertyAttributesAsWritten(
                           makePropertyAttributesAsWritten(AttributesAsWritten));
+
+  ProcessDeclAttributes(S, PDecl, FD.D);
 
   if (Attributes & ObjCPropertyAttribute::kind_readonly)
     PDecl->setPropertyAttributes(ObjCPropertyAttribute::kind_readonly);
@@ -2488,8 +2488,8 @@ void Sema::ProcessPropertyDecl(ObjCPropertyDecl *property) {
         /*isPropertyAccessor=*/true, /*isSynthesizedAccessorStub=*/false,
         /*isImplicitlyDeclared=*/true, /*isDefined=*/false,
         (property->getPropertyImplementation() == ObjCPropertyDecl::Optional)
-            ? ObjCMethodDecl::Optional
-            : ObjCMethodDecl::Required);
+            ? ObjCImplementationControl::Optional
+            : ObjCImplementationControl::Required);
     CD->addDecl(GetterMethod);
 
     AddPropertyAttrs(*this, GetterMethod, property);
@@ -2508,6 +2508,8 @@ void Sema::ProcessPropertyDecl(ObjCPropertyDecl *property) {
     if (const SectionAttr *SA = property->getAttr<SectionAttr>())
       GetterMethod->addAttr(SectionAttr::CreateImplicit(
           Context, SA->getName(), Loc, SectionAttr::GNU_section));
+
+    ProcessAPINotes(GetterMethod);
 
     if (getLangOpts().ObjCAutoRefCount)
       CheckARCMethodDecl(GetterMethod);
@@ -2530,19 +2532,17 @@ void Sema::ProcessPropertyDecl(ObjCPropertyDecl *property) {
       // for this class.
       SourceLocation Loc = property->getLocation();
 
-      SetterMethod =
-        ObjCMethodDecl::Create(Context, Loc, Loc,
-                               property->getSetterName(), Context.VoidTy,
-                               nullptr, CD, !IsClassProperty,
-                               /*isVariadic=*/false,
-                               /*isPropertyAccessor=*/true,
-                               /*isSynthesizedAccessorStub=*/false,
-                               /*isImplicitlyDeclared=*/true,
-                               /*isDefined=*/false,
-                               (property->getPropertyImplementation() ==
-                                ObjCPropertyDecl::Optional) ?
-                                ObjCMethodDecl::Optional :
-                                ObjCMethodDecl::Required);
+      SetterMethod = ObjCMethodDecl::Create(
+          Context, Loc, Loc, property->getSetterName(), Context.VoidTy, nullptr,
+          CD, !IsClassProperty,
+          /*isVariadic=*/false,
+          /*isPropertyAccessor=*/true,
+          /*isSynthesizedAccessorStub=*/false,
+          /*isImplicitlyDeclared=*/true,
+          /*isDefined=*/false,
+          (property->getPropertyImplementation() == ObjCPropertyDecl::Optional)
+              ? ObjCImplementationControl::Optional
+              : ObjCImplementationControl::Required);
 
       // Remove all qualifiers from the setter's parameter type.
       QualType paramTy =
@@ -2580,6 +2580,9 @@ void Sema::ProcessPropertyDecl(ObjCPropertyDecl *property) {
       if (const SectionAttr *SA = property->getAttr<SectionAttr>())
         SetterMethod->addAttr(SectionAttr::CreateImplicit(
             Context, SA->getName(), Loc, SectionAttr::GNU_section));
+
+      ProcessAPINotes(SetterMethod);
+
       // It's possible for the user to have set a very odd custom
       // setter selector that causes it to have a method family.
       if (getLangOpts().ObjCAutoRefCount)

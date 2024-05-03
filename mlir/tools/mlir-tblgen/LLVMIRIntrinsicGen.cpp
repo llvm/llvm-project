@@ -14,7 +14,7 @@
 #include "mlir/TableGen/GenInfo.h"
 
 #include "llvm/ADT/SmallBitVector.h"
-#include "llvm/CodeGen/MachineValueType.h"
+#include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Regex.h"
@@ -98,7 +98,7 @@ public:
       return name.str();
 
     name = record.getName();
-    assert(name.startswith("int_") &&
+    assert(name.starts_with("int_") &&
            "LLVM intrinsic names are expected to start with 'int_'");
     name = name.drop_front(4);
     llvm::SmallVector<llvm::StringRef, 8> chunks;
@@ -121,7 +121,7 @@ public:
   /// Get the name of the record without the "intrinsic" prefix.
   llvm::StringRef getProperRecordName() const {
     llvm::StringRef name = record.getName();
-    assert(name.startswith("int_") &&
+    assert(name.starts_with("int_") &&
            "LLVM intrinsic names are expected to start with 'int_'");
     return name.drop_front(4);
   }

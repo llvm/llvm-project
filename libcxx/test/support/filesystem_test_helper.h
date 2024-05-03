@@ -1,7 +1,7 @@
 #ifndef FILESYSTEM_TEST_HELPER_H
 #define FILESYSTEM_TEST_HELPER_H
 
-#include "filesystem_include.h"
+#include <filesystem>
 
 #include <sys/stat.h> // for stat, mkdir, mkfifo
 #ifndef _WIN32
@@ -33,6 +33,7 @@
 # include <sys/socket.h>
 # include <sys/un.h>
 #endif
+namespace fs = std::filesystem;
 
 namespace utils {
 #ifdef _WIN32
@@ -180,13 +181,22 @@ struct scoped_test_env
         std::string cmd = "chmod -R 777 " + test_root.string();
 #endif // defined(__MVS__)
         int ret = std::system(cmd.c_str());
-#if !defined(_AIX)
+#  if !defined(_AIX) && !defined(__ANDROID__)
         // On AIX the chmod command will return non-zero when trying to set
         // the permissions on a directory that contains a bad symlink. This triggers
         // the assert, despite being able to delete everything with the following
         // `rm -r` command.
+        //
+        // Android's chmod was buggy in old OSs, but skipping this assert is
+        // sufficient to ensure that the `rm -rf` succeeds for almost all tests:
+        //  - Android L: chmod aborts after one error
+        //  - Android L and M: chmod -R tries to set permissions of a symlink
+        //    target.
+        // LIBCXX-ANDROID-FIXME: Other fixes to consider: place a toybox chmod
+        // onto old devices, re-enable this assert for devices running Android N
+        // and up, rewrite this chmod+rm in C or C++.
         assert(ret == 0);
-#endif
+#  endif
 
         cmd = "rm -rf " + test_root.string();
         ret = std::system(cmd.c_str());
@@ -310,16 +320,26 @@ struct scoped_test_env
   // allow tests to call this unguarded.
 #if !defined(__FreeBSD__) && !defined(__APPLE__) && !defined(_WIN32)
     std::string create_socket(std::string file) {
-        file = sanitize_path(std::move(file));
+      file = sanitize_path(std::move(file));
 
-        ::sockaddr_un address;
-        address.sun_family = AF_UNIX;
-        assert(file.size() <= sizeof(address.sun_path));
-        ::strncpy(address.sun_path, file.c_str(), sizeof(address.sun_path));
-        int fd = ::socket(AF_UNIX, SOCK_STREAM, 0);
-        ::bind(fd, reinterpret_cast<::sockaddr*>(&address), sizeof(address));
-        return file;
+      ::sockaddr_un address;
+      address.sun_family = AF_UNIX;
+
+// If file.size() is too big, try to create a file directly inside
+// /tmp to make sure file path is short enough.
+// Android platform warns about tmpnam, since the problem does not appear
+// on Android, let's not apply it for Android.
+#  if !defined(__ANDROID__)
+    if (file.size() > sizeof(address.sun_path)) {
+      file = std::tmpnam(nullptr);
     }
+#  endif
+    assert(file.size() <= sizeof(address.sun_path));
+    ::strncpy(address.sun_path, file.c_str(), sizeof(address.sun_path));
+    int fd = ::socket(AF_UNIX, SOCK_STREAM, 0);
+    assert(::bind(fd, reinterpret_cast<::sockaddr*>(&address), sizeof(address)) == 0);
+    return file;
+  }
 #endif
 
     fs::path test_root;

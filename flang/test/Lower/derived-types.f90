@@ -1,5 +1,5 @@
 ! Test basic parts of derived type entities lowering
-! RUN: bbc -emit-fir %s -o - | FileCheck %s
+! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s
 
 ! Note: only testing non parameterized derived type here.
 

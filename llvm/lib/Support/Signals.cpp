@@ -145,7 +145,7 @@ static bool printSymbolizedStackTrace(StringRef Argv0, void **StackTrace,
     return false;
 
   // Don't recursively invoke the llvm-symbolizer binary.
-  if (Argv0.find("llvm-symbolizer") != std::string::npos)
+  if (Argv0.contains("llvm-symbolizer"))
     return false;
 
   // FIXME: Subtract necessary number from StackTrace entries to turn return addresses
@@ -238,12 +238,12 @@ static bool printSymbolizedStackTrace(StringRef Argv0, void **StackTrace,
       if (FunctionName.empty())
         break;
       PrintLineHeader();
-      if (!FunctionName.startswith("??"))
+      if (!FunctionName.starts_with("??"))
         OS << FunctionName << ' ';
       if (CurLine == Lines.end())
         return false;
       StringRef FileLineInfo = *CurLine++;
-      if (!FileLineInfo.startswith("??"))
+      if (!FileLineInfo.starts_with("??"))
         OS << FileLineInfo;
       else
         OS << "(" << Modules[i] << '+' << format_hex(Offsets[i], 0) << ")";

@@ -935,6 +935,16 @@ lldb_private::Address ObjectFileELF::GetEntryPointAddress() {
 }
 
 Address ObjectFileELF::GetBaseAddress() {
+  if (GetType() == ObjectFile::eTypeObjectFile) {
+    for (SectionHeaderCollIter I = std::next(m_section_headers.begin());
+         I != m_section_headers.end(); ++I) {
+      const ELFSectionHeaderInfo &header = *I;
+      if (header.sh_flags & SHF_ALLOC)
+        return Address(GetSectionList()->FindSectionByID(SectionIndex(I)), 0);
+    }
+    return LLDB_INVALID_ADDRESS;
+  }
+
   for (const auto &EnumPHdr : llvm::enumerate(ProgramHeaders())) {
     const ELFProgramHeader &H = EnumPHdr.value();
     if (H.p_type != PT_LOAD)
@@ -1764,7 +1774,12 @@ class VMAddressProvider {
   VMRange GetVMRange(const ELFSectionHeader &H) {
     addr_t Address = H.sh_addr;
     addr_t Size = H.sh_flags & SHF_ALLOC ? H.sh_size : 0;
-    if (ObjectType == ObjectFile::Type::eTypeObjectFile && Segments.empty() && (H.sh_flags & SHF_ALLOC)) {
+
+    // When this is a debug file for relocatable file, the address is all zero
+    // and thus needs to use accumulate method
+    if ((ObjectType == ObjectFile::Type::eTypeObjectFile ||
+         (ObjectType == ObjectFile::Type::eTypeDebugInfo && H.sh_addr == 0)) &&
+        Segments.empty() && (H.sh_flags & SHF_ALLOC)) {
       NextVMAddress =
           llvm::alignTo(NextVMAddress, std::max<addr_t>(H.sh_addralign, 1));
       Address = NextVMAddress;
@@ -1837,6 +1852,39 @@ public:
                     std::move(Sect));
   }
 };
+}
+
+// We have to do this because ELF doesn't have section IDs, and also
+// doesn't require section names to be unique.  (We use the section index
+// for section IDs, but that isn't guaranteed to be the same in separate
+// debug images.)
+static SectionSP FindMatchingSection(const SectionList &section_list,
+                                     SectionSP section) {
+  SectionSP sect_sp;
+
+  addr_t vm_addr = section->GetFileAddress();
+  ConstString name = section->GetName();
+  offset_t byte_size = section->GetByteSize();
+  bool thread_specific = section->IsThreadSpecific();
+  uint32_t permissions = section->GetPermissions();
+  uint32_t alignment = section->GetLog2Align();
+
+  for (auto sect : section_list) {
+    if (sect->GetName() == name &&
+        sect->IsThreadSpecific() == thread_specific &&
+        sect->GetPermissions() == permissions &&
+        sect->GetByteSize() == byte_size && sect->GetFileAddress() == vm_addr &&
+        sect->GetLog2Align() == alignment) {
+      sect_sp = sect;
+      break;
+    } else {
+      sect_sp = FindMatchingSection(sect->GetChildren(), section);
+      if (sect_sp)
+        break;
+    }
+  }
+
+  return sect_sp;
 }
 
 void ObjectFileELF::CreateSections(SectionList &unified_section_list) {
@@ -2052,10 +2100,12 @@ unsigned ObjectFileELF::ParseSymbols(Symtab *symtab, user_id_t start_id,
   SectionList *module_section_list =
       module_sp ? module_sp->GetSectionList() : nullptr;
 
-  // Local cache to avoid doing a FindSectionByName for each symbol. The "const
-  // char*" key must came from a ConstString object so they can be compared by
-  // pointer
-  std::unordered_map<const char *, lldb::SectionSP> section_name_to_section;
+  // We might have debug information in a separate object, in which case
+  // we need to map the sections from that object to the sections in the
+  // main object during symbol lookup.  If we had to compare the sections
+  // for every single symbol, that would be expensive, so this map is
+  // used to accelerate the process.
+  std::unordered_map<lldb::SectionSP, lldb::SectionSP> section_map;
 
   unsigned i;
   for (i = 0; i < num_symbols; ++i) {
@@ -2260,14 +2310,14 @@ unsigned ObjectFileELF::ParseSymbols(Symtab *symtab, user_id_t start_id,
 
     if (symbol_section_sp && module_section_list &&
         module_section_list != section_list) {
-      ConstString sect_name = symbol_section_sp->GetName();
-      auto section_it = section_name_to_section.find(sect_name.GetCString());
-      if (section_it == section_name_to_section.end())
-        section_it =
-            section_name_to_section
-                .emplace(sect_name.GetCString(),
-                         module_section_list->FindSectionByName(sect_name))
-                .first;
+      auto section_it = section_map.find(symbol_section_sp);
+      if (section_it == section_map.end()) {
+        section_it = section_map
+                         .emplace(symbol_section_sp,
+                                  FindMatchingSection(*module_section_list,
+                                                      symbol_section_sp))
+                         .first;
+      }
       if (section_it->second)
         symbol_section_sp = section_it->second;
     }
@@ -2882,9 +2932,8 @@ void ObjectFileELF::ParseSymtab(Symtab &lldb_symtab) {
   if (!module_sp)
     return;
 
-  Progress progress(
-      llvm::formatv("Parsing symbol table for {0}",
-                    m_file.GetFilename().AsCString("<Unknown>")));
+  Progress progress("Parsing symbol table",
+                    m_file.GetFilename().AsCString("<Unknown>"));
   ElapsedTime elapsed(module_sp->GetSymtabParseTime());
 
   // We always want to use the main object file so we (hopefully) only have one
@@ -3454,10 +3503,28 @@ ObjectFile::Strata ObjectFileELF::CalculateStrata() {
 
   case llvm::ELF::ET_EXEC:
     // 2 - Executable file
-    // TODO: is there any way to detect that an executable is a kernel
-    // related executable by inspecting the program headers, section headers,
-    // symbols, or any other flag bits???
-    return eStrataUser;
+    {
+      SectionList *section_list = GetSectionList();
+      if (section_list) {
+        static ConstString loader_section_name(".interp");
+        SectionSP loader_section =
+            section_list->FindSectionByName(loader_section_name);
+        if (loader_section) {
+          char buffer[256];
+          size_t read_size =
+              ReadSectionData(loader_section.get(), 0, buffer, sizeof(buffer));
+
+          // We compare the content of .interp section
+          // It will contains \0 when counting read_size, so the size needs to
+          // decrease by one
+          llvm::StringRef loader_name(buffer, read_size - 1);
+          llvm::StringRef freebsd_kernel_loader_name("/red/herring");
+          if (loader_name.equals(freebsd_kernel_loader_name))
+            return eStrataKernel;
+        }
+      }
+      return eStrataUser;
+    }
 
   case llvm::ELF::ET_DYN:
     // 3 - Shared object file

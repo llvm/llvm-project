@@ -14,9 +14,9 @@ __m128d test_mm_cmp_sd(__m128d a, __m128d b) {
 }
 
 __m128 test_mm_cmp_ps(__m128 a, __m128 b) {
-  return _mm_cmp_pd(a, b, 32);  // expected-error {{argument value 32 is outside the valid range [0, 31]}}
+  return _mm_cmp_ps(a, b, 32);  // expected-error {{argument value 32 is outside the valid range [0, 31]}}
 }
 
 __m128 test_mm_cmp_ss(__m128 a, __m128 b) {
-  return _mm_cmp_sd(a, b, 32);  // expected-error {{argument value 32 is outside the valid range [0, 31]}}
+  return _mm_cmp_ss(a, b, 32);  // expected-error {{argument value 32 is outside the valid range [0, 31]}}
 }

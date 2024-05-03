@@ -67,16 +67,16 @@ public:
   }
   // Do not use this API to cause the LB of an empty dimension
   // to be anything other than 1.  Use SetBounds() instead if you can.
-  Dimension &SetLowerBound(SubscriptValue lower) {
+  RT_API_ATTRS Dimension &SetLowerBound(SubscriptValue lower) {
     raw_.lower_bound = lower;
     return *this;
   }
-  Dimension &SetUpperBound(SubscriptValue upper) {
+  RT_API_ATTRS Dimension &SetUpperBound(SubscriptValue upper) {
     auto lower{raw_.lower_bound};
     raw_.extent = upper >= lower ? upper - lower + 1 : 0;
     return *this;
   }
-  Dimension &SetExtent(SubscriptValue extent) {
+  RT_API_ATTRS Dimension &SetExtent(SubscriptValue extent) {
     raw_.extent = extent;
     return *this;
   }
@@ -99,10 +99,10 @@ class DescriptorAddendum {
 public:
   explicit RT_API_ATTRS DescriptorAddendum(
       const typeInfo::DerivedType *dt = nullptr)
-      : derivedType_{dt} {}
+      : derivedType_{dt}, len_{0} {}
   RT_API_ATTRS DescriptorAddendum &operator=(const DescriptorAddendum &);
 
-  const RT_API_ATTRS typeInfo::DerivedType *derivedType() const {
+  RT_API_ATTRS const typeInfo::DerivedType *derivedType() const {
     return derivedType_;
   }
   RT_API_ATTRS DescriptorAddendum &set_derivedType(
@@ -204,7 +204,7 @@ public:
       ISO::CFI_attribute_t attribute = CFI_attribute_other);
 
   RT_API_ATTRS ISO::CFI_cdesc_t &raw() { return raw_; }
-  const RT_API_ATTRS ISO::CFI_cdesc_t &raw() const { return raw_; }
+  RT_API_ATTRS const ISO::CFI_cdesc_t &raw() const { return raw_; }
   RT_API_ATTRS std::size_t ElementBytes() const { return raw_.elem_len; }
   RT_API_ATTRS int rank() const { return raw_.rank; }
   RT_API_ATTRS TypeCode type() const { return TypeCode{raw_.type}; }
@@ -225,7 +225,7 @@ public:
   RT_API_ATTRS Dimension &GetDimension(int dim) {
     return *reinterpret_cast<Dimension *>(&raw_.dim[dim]);
   }
-  const RT_API_ATTRS Dimension &GetDimension(int dim) const {
+  RT_API_ATTRS const Dimension &GetDimension(int dim) const {
     return *reinterpret_cast<const Dimension *>(&raw_.dim[dim]);
   }
 
@@ -345,7 +345,7 @@ public:
       return nullptr;
     }
   }
-  const RT_API_ATTRS DescriptorAddendum *Addendum() const {
+  RT_API_ATTRS const DescriptorAddendum *Addendum() const {
     if (raw_.f18Addendum != 0) {
       return reinterpret_cast<const DescriptorAddendum *>(
           &GetDimension(rank()));
@@ -375,6 +375,7 @@ public:
   // allocation.  Does not allocate automatic components or
   // perform default component initialization.
   RT_API_ATTRS int Allocate();
+  RT_API_ATTRS void SetByteStrides();
 
   // Deallocates storage; does not call FINAL subroutines or
   // deallocate allocatable/automatic components.
@@ -390,14 +391,21 @@ public:
     if (leadingDimensions > raw_.rank) {
       leadingDimensions = raw_.rank;
     }
+    bool stridesAreContiguous{true};
     for (int j{0}; j < leadingDimensions; ++j) {
       const Dimension &dim{GetDimension(j)};
-      if (bytes != dim.ByteStride()) {
-        return false;
-      }
+      stridesAreContiguous &=
+          (bytes == dim.ByteStride()) || (dim.Extent() == 1);
       bytes *= dim.Extent();
     }
-    return true;
+    // One and zero element arrays are contiguous even if the descriptor
+    // byte strides are not perfect multiples.
+    // Arrays with more than 2 elements may also be contiguous even if a
+    // byte stride in one dimension is not a perfect multiple, as long as
+    // this is the last dimension, or if the dimension has one extent and
+    // the following dimension have either one extents or contiguous byte
+    // strides.
+    return stridesAreContiguous || bytes == 0;
   }
 
   // Establishes a pointer to a section or element.
@@ -405,6 +413,8 @@ public:
       const SubscriptValue *lower = nullptr,
       const SubscriptValue *upper = nullptr,
       const SubscriptValue *stride = nullptr);
+
+  RT_API_ATTRS void ApplyMold(const Descriptor &, int rank);
 
   RT_API_ATTRS void Check() const;
 
@@ -427,16 +437,18 @@ static_assert(sizeof(Descriptor) == sizeof(ISO::CFI_cdesc_t));
 template <int MAX_RANK = maxRank, bool ADDENDUM = false, int MAX_LEN_PARMS = 0>
 class alignas(Descriptor) StaticDescriptor {
 public:
+  RT_OFFLOAD_VAR_GROUP_BEGIN
   static constexpr int maxRank{MAX_RANK};
   static constexpr int maxLengthTypeParameters{MAX_LEN_PARMS};
   static constexpr bool hasAddendum{ADDENDUM || MAX_LEN_PARMS > 0};
   static constexpr std::size_t byteSize{
       Descriptor::SizeInBytes(maxRank, hasAddendum, maxLengthTypeParameters)};
+  RT_OFFLOAD_VAR_GROUP_END
 
   RT_API_ATTRS Descriptor &descriptor() {
     return *reinterpret_cast<Descriptor *>(storage_);
   }
-  const RT_API_ATTRS Descriptor &descriptor() const {
+  RT_API_ATTRS const Descriptor &descriptor() const {
     return *reinterpret_cast<const Descriptor *>(storage_);
   }
 
@@ -444,6 +456,7 @@ public:
     assert(descriptor().rank() <= maxRank);
     assert(descriptor().SizeInBytes() <= byteSize);
     if (DescriptorAddendum * addendum{descriptor().Addendum()}) {
+      (void)addendum;
       assert(hasAddendum);
       assert(addendum->LenParameters() <= maxLengthTypeParameters);
     } else {
@@ -456,5 +469,6 @@ public:
 private:
   char storage_[byteSize]{};
 };
+
 } // namespace Fortran::runtime
 #endif // FORTRAN_RUNTIME_DESCRIPTOR_H_

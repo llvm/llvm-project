@@ -160,8 +160,6 @@ def CConvFast : LLVM_EnumAttrCase<"Fast", "fastcc", "Fast", 8>;
 def CConvCold : LLVM_EnumAttrCase<"Cold", "coldcc", "Cold", 9>;
 def CConvGHC : LLVM_EnumAttrCase<"GHC", "cc_10", "GHC", 10>;
 def CConvHiPE : LLVM_EnumAttrCase<"HiPE", "cc_11", "HiPE", 11>;
-def CConvWebKitJS : LLVM_EnumAttrCase<"WebKit_JS", "webkit_jscc",
-                                      "WebKit_JS", 12>;
 def CConvAnyReg : LLVM_EnumAttrCase<"AnyReg", "anyregcc", "AnyReg", 13>;
 def CConvPreserveMost : LLVM_EnumAttrCase<"PreserveMost", "preserve_mostcc",
                                           "PreserveMost", 14>;
@@ -254,7 +252,7 @@ def CConvEnum : LLVM_CEnumAttr<
     "CConv",
     "::llvm::CallingConv",
     "Calling Conventions",
-    [CConvC, CConvFast, CConvCold, CConvGHC, CConvHiPE, CConvWebKitJS,
+    [CConvC, CConvFast, CConvCold, CConvGHC, CConvHiPE,
      CConvAnyReg, CConvPreserveMost, CConvPreserveAll, CConvSwift,
      CConvCXXFastTLS, CConvTail, CConvCFGuard_Check, CConvSwiftTail,
      CConvX86_StdCall, CConvX86_FastCall, CConvARM_APCS,
@@ -396,6 +394,26 @@ def DIFlags : I32BitEnumAttr<
 }
 
 //===----------------------------------------------------------------------===//
+// DINameTableKind
+//===----------------------------------------------------------------------===//
+
+def LLVM_DINameTableDefault : I64EnumAttrCase<"Default", 0>;
+def LLVM_DINameTableGNU     : I64EnumAttrCase<"GNU", 1>;
+def LLVM_DINameTableNone    : I64EnumAttrCase<"None", 2>;
+def LLVM_DINameTableApple   : I64EnumAttrCase<"Apple", 3>;
+
+def LLVM_DINameTableKind : I64EnumAttr<
+    "DINameTableKind",
+    "LLVM debug name table kind", [
+      LLVM_DINameTableDefault,
+      LLVM_DINameTableGNU,
+      LLVM_DINameTableNone,
+      LLVM_DINameTableApple,
+    ]> {
+  let cppNamespace = "::mlir::LLVM";
+}
+
+//===----------------------------------------------------------------------===//
 // DISubprogramFlags
 //===----------------------------------------------------------------------===//
 
@@ -428,6 +446,29 @@ def DISubprogramFlags : I32BitEnumAttr<
     ]> {
   let cppNamespace = "::mlir::LLVM";
   let printBitEnumPrimaryGroups = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// IntegerOverflowFlags
+//===----------------------------------------------------------------------===//
+
+def IOFnone : I32BitEnumAttrCaseNone<"none">;
+def IOFnsw  : I32BitEnumAttrCaseBit<"nsw", 0>;
+def IOFnuw  : I32BitEnumAttrCaseBit<"nuw", 1>;
+
+def IntegerOverflowFlags : I32BitEnumAttr<
+    "IntegerOverflowFlags",
+    "LLVM integer overflow flags",
+    [IOFnone, IOFnsw, IOFnuw]> {
+  let separator = ", ";
+  let cppNamespace = "::mlir::LLVM";
+  let genSpecializedAttr = 0;
+  let printBitEnumPrimaryGroups = 1;
+}
+
+def LLVM_IntegerOverflowFlagsAttr :
+    EnumAttr<LLVM_Dialect, IntegerOverflowFlags, "overflow"> {
+  let assemblyFormat = "`<` $value `>`";
 }
 
 //===----------------------------------------------------------------------===//
@@ -589,7 +630,6 @@ def Linkage : DialectAttr<
           "::mlir::LLVM::LinkageAttr::get($_builder.getContext(), $0)";
 }
 
-
 //===----------------------------------------------------------------------===//
 // Comdat
 //===----------------------------------------------------------------------===//
@@ -663,6 +703,82 @@ def ModRefInfoEnum : LLVM_EnumAttr<
     "::llvm::ModRefInfo",
     "LLVM ModRefInfo",
     [ModRefInfoNoModRef, ModRefInfoRef, ModRefInfoMod, ModRefInfoModRef]> {
+  let cppNamespace = "::mlir::LLVM";
+}
+
+//===----------------------------------------------------------------------===//
+// FramePointerKind
+//===----------------------------------------------------------------------===//
+
+def FramePointerKindNone
+    : LLVM_EnumAttrCase<"None", "none", "None", 0>;
+def FramePointerKindNonLeaf
+    : LLVM_EnumAttrCase<"NonLeaf", "non-leaf", "NonLeaf", 1>;
+def FramePointerKindAll
+    : LLVM_EnumAttrCase<"All", "all", "All", 2>;
+
+def FramePointerKindEnum : LLVM_EnumAttr<
+    "FramePointerKind",
+    "::llvm::FramePointerKind",
+    "LLVM FramePointerKind",
+    [FramePointerKindNone, FramePointerKindNonLeaf, FramePointerKindAll]> {
+  let cppNamespace = "::mlir::LLVM::framePointerKind";
+}
+
+//===----------------------------------------------------------------------===//
+// RoundingMode
+//===----------------------------------------------------------------------===//
+
+// These values must match llvm::RoundingMode ones.
+// See llvm/include/llvm/ADT/FloatingPointMode.h.
+def RoundTowardZero
+    : LLVM_EnumAttrCase<"TowardZero", "towardzero", "TowardZero", 0>;
+def RoundNearestTiesToEven
+    : LLVM_EnumAttrCase<"NearestTiesToEven", "tonearest", "NearestTiesToEven", 1>;
+def RoundTowardPositive
+    : LLVM_EnumAttrCase<"TowardPositive", "upward", "TowardPositive", 2>;
+def RoundTowardNegative
+    : LLVM_EnumAttrCase<"TowardNegative", "downward", "TowardNegative", 3>;
+def RoundNearestTiesToAway
+    : LLVM_EnumAttrCase<"NearestTiesToAway", "tonearestaway", "NearestTiesToAway", 4>;
+def RoundDynamic
+    : LLVM_EnumAttrCase<"Dynamic", "dynamic", "Dynamic", 7>;
+// Needed as llvm::RoundingMode defines this.
+def RoundInvalid
+    : LLVM_EnumAttrCase<"Invalid", "invalid", "Invalid", -1>;
+
+// RoundingModeAttr should not be used in operations definitions.
+// Use ValidRoundingModeAttr instead.
+def RoundingModeAttr : LLVM_EnumAttr<
+    "RoundingMode",
+    "::llvm::RoundingMode",
+    "LLVM Rounding Mode",
+    [RoundTowardZero, RoundNearestTiesToEven, RoundTowardPositive,
+     RoundTowardNegative, RoundNearestTiesToAway, RoundDynamic, RoundInvalid]> {
+  let cppNamespace = "::mlir::LLVM";
+}
+
+def ValidRoundingModeAttr : ConfinedAttr<RoundingModeAttr, [IntMinValue<0>]>;
+
+//===----------------------------------------------------------------------===//
+// FPExceptionBehavior
+//===----------------------------------------------------------------------===//
+
+// These values must match llvm::fp::ExceptionBehavior ones.
+// See llvm/include/llvm/IR/FPEnv.h.
+def FPExceptionBehaviorIgnore
+    : LLVM_EnumAttrCase<"Ignore", "ignore", "ebIgnore", 0>;
+def FPExceptionBehaviorMayTrap
+    : LLVM_EnumAttrCase<"MayTrap", "maytrap", "ebMayTrap", 1>;
+def FPExceptionBehaviorStrict
+    : LLVM_EnumAttrCase<"Strict", "strict", "ebStrict", 2>;
+
+def FPExceptionBehaviorAttr : LLVM_EnumAttr<
+    "FPExceptionBehavior",
+    "::llvm::fp::ExceptionBehavior",
+    "LLVM Exception Behavior",
+    [FPExceptionBehaviorIgnore, FPExceptionBehaviorMayTrap,
+     FPExceptionBehaviorStrict]> {
   let cppNamespace = "::mlir::LLVM";
 }
 

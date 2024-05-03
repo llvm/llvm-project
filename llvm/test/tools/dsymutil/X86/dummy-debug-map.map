@@ -16,8 +16,8 @@ objects:
       - { sym: __Z3foov, objAddr: 0x0, binAddr: 0x20000, size: 0x10 }
   - filename: 3.o
     symbols:
-      - { sym: __Z3foov, objAddr: 0x0, binAddr: 0x30000, size: 0x10 }
-      - { sym: __ZN1S3bazIiEEvT_, objAddr: 0x0, binAddr: 0x30010, size: 0x10 }
+      - { sym: __Z3foov, objAddr: 0x0, binAddr: 0x30000, size: 0x20 }
+      - { sym: __ZN1S3bazIiEEvT_, objAddr: 0x0, binAddr: 0x30020, size: 0x10 }
   - filename: 4.o
     symbols:
       - { sym: __Z3foov, objAddr: 0x0, binAddr: 0x40000, size: 0x10 }

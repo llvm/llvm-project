@@ -93,17 +93,17 @@ entry:
 
 ; The concat_vectors operation in this test is introduced when splitting
 ; the fptrunc operation due to the split <vscale x 4 x double> input operand.
-define void @test_concat_fptrunc_v4f64_to_v4f32(<vscale x 4 x float>* %ptr) #1 {
+define void @test_concat_fptrunc_v4f64_to_v4f32(ptr %ptr) #1 {
 ; CHECK-LABEL: test_concat_fptrunc_v4f64_to_v4f32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    fmov z0.s, #1.00000000
+; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
 entry:
   %0 = shufflevector <vscale x 4 x double> insertelement (<vscale x 4 x double> poison, double 1.000000e+00, i32 0), <vscale x 4 x double> poison, <vscale x 4 x i32> zeroinitializer
   %1 = fptrunc <vscale x 4 x double> %0 to <vscale x 4 x float>
-  store <vscale x 4 x float> %1, <vscale x 4 x float>* %ptr, align 4
+  store <vscale x 4 x float> %1, ptr %ptr, align 4
   ret void
 }
 

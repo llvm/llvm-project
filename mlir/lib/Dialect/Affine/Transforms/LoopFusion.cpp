@@ -27,7 +27,6 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SetVector.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
@@ -51,12 +50,8 @@ namespace {
 /// Loop fusion pass. This pass currently supports a greedy fusion policy,
 /// which fuses loop nests with single-writer/single-reader memref dependences
 /// with the goal of improving locality.
-
 // TODO: Support fusion of source loop nests which write to multiple
 // memrefs, where each memref can have multiple users (if profitable).
-// TODO: Extend this pass to check for fusion preventing dependences,
-// and add support for more general loop fusion algorithms.
-
 struct LoopFusion : public affine::impl::AffineLoopFusionBase<LoopFusion> {
   LoopFusion() = default;
   LoopFusion(unsigned fastMemorySpace, uint64_t localBufSizeThresholdBytes,
@@ -210,7 +205,10 @@ static bool isEscapingMemref(Value memref, Block *block) {
   // (e.g., call ops, alias creating ops, etc.).
   return llvm::any_of(memref.getUsers(), [&](Operation *user) {
     // Ignore users outside of `block`.
-    if (block->getParent()->findAncestorOpInRegion(*user)->getBlock() != block)
+    Operation *ancestorOp = block->getParent()->findAncestorOpInRegion(*user);
+    if (!ancestorOp)
+      return true;
+    if (ancestorOp->getBlock() != block)
       return false;
     return !isa<AffineMapAccessInterface>(*user);
   });
@@ -228,127 +226,6 @@ static void gatherEscapingMemrefs(unsigned id, MemRefDependenceGraph *mdg,
     if (isEscapingMemref(memref, &mdg->block))
       escapingMemRefs.insert(memref);
   }
-}
-
-// Initializes the data dependence graph by walking operations in `block`.
-// Assigns each node in the graph a node id based on program order in 'f'.
-bool MemRefDependenceGraph::init() {
-  LLVM_DEBUG(llvm::dbgs() << "--- Initializing MDG ---\n");
-  // Map from a memref to the set of ids of the nodes that have ops accessing
-  // the memref.
-  DenseMap<Value, SetVector<unsigned>> memrefAccesses;
-
-  DenseMap<Operation *, unsigned> forToNodeMap;
-  for (Operation &op : block) {
-    if (dyn_cast<AffineForOp>(op)) {
-      // Create graph node 'id' to represent top-level 'forOp' and record
-      // all loads and store accesses it contains.
-      LoopNestStateCollector collector;
-      collector.collect(&op);
-      // Return false if a region holding op other than 'affine.for' and
-      // 'affine.if' was found (not currently supported).
-      if (collector.hasNonAffineRegionOp)
-        return false;
-      Node node(nextNodeId++, &op);
-      for (auto *opInst : collector.loadOpInsts) {
-        node.loads.push_back(opInst);
-        auto memref = cast<AffineReadOpInterface>(opInst).getMemRef();
-        memrefAccesses[memref].insert(node.id);
-      }
-      for (auto *opInst : collector.storeOpInsts) {
-        node.stores.push_back(opInst);
-        auto memref = cast<AffineWriteOpInterface>(opInst).getMemRef();
-        memrefAccesses[memref].insert(node.id);
-      }
-      forToNodeMap[&op] = node.id;
-      nodes.insert({node.id, node});
-    } else if (dyn_cast<AffineReadOpInterface>(op)) {
-      // Create graph node for top-level load op.
-      Node node(nextNodeId++, &op);
-      node.loads.push_back(&op);
-      auto memref = cast<AffineReadOpInterface>(op).getMemRef();
-      memrefAccesses[memref].insert(node.id);
-      nodes.insert({node.id, node});
-    } else if (dyn_cast<AffineWriteOpInterface>(op)) {
-      // Create graph node for top-level store op.
-      Node node(nextNodeId++, &op);
-      node.stores.push_back(&op);
-      auto memref = cast<AffineWriteOpInterface>(op).getMemRef();
-      memrefAccesses[memref].insert(node.id);
-      nodes.insert({node.id, node});
-    } else if (op.getNumRegions() != 0) {
-      // Return false if another region is found (not currently supported).
-      return false;
-    } else if (op.getNumResults() > 0 && !op.use_empty()) {
-      // Create graph node for top-level producer of SSA values, which
-      // could be used by loop nest nodes.
-      Node node(nextNodeId++, &op);
-      nodes.insert({node.id, node});
-    } else if (isa<CallOpInterface>(op)) {
-      // Create graph node for top-level Call Op that takes any argument of
-      // memref type. Call Op that returns one or more memref type results
-      // is already taken care of, by the previous conditions.
-      if (llvm::any_of(op.getOperandTypes(),
-                       [&](Type t) { return isa<MemRefType>(t); })) {
-        Node node(nextNodeId++, &op);
-        nodes.insert({node.id, node});
-      }
-    } else if (hasEffect<MemoryEffects::Write, MemoryEffects::Free>(&op)) {
-      // Create graph node for top-level op, which could have a memory write
-      // side effect.
-      Node node(nextNodeId++, &op);
-      nodes.insert({node.id, node});
-    }
-  }
-
-  for (auto &idAndNode : nodes) {
-    LLVM_DEBUG(llvm::dbgs() << "Create node " << idAndNode.first << " for:\n"
-                            << *(idAndNode.second.op) << "\n");
-    (void)idAndNode;
-  }
-
-  // Add dependence edges between nodes which produce SSA values and their
-  // users. Load ops can be considered as the ones producing SSA values.
-  for (auto &idAndNode : nodes) {
-    const Node &node = idAndNode.second;
-    // Stores don't define SSA values, skip them.
-    if (!node.stores.empty())
-      continue;
-    Operation *opInst = node.op;
-    for (Value value : opInst->getResults()) {
-      for (Operation *user : value.getUsers()) {
-        // Ignore users outside of the block.
-        if (block.getParent()->findAncestorOpInRegion(*user)->getBlock() !=
-            &block)
-          continue;
-        SmallVector<AffineForOp, 4> loops;
-        getAffineForIVs(*user, &loops);
-        if (loops.empty())
-          continue;
-        assert(forToNodeMap.count(loops[0]) > 0 && "missing mapping");
-        unsigned userLoopNestId = forToNodeMap[loops[0]];
-        addEdge(node.id, userLoopNestId, value);
-      }
-    }
-  }
-
-  // Walk memref access lists and add graph edges between dependent nodes.
-  for (auto &memrefAndList : memrefAccesses) {
-    unsigned n = memrefAndList.second.size();
-    for (unsigned i = 0; i < n; ++i) {
-      unsigned srcId = memrefAndList.second[i];
-      bool srcHasStore =
-          getNode(srcId)->getStoreOpCount(memrefAndList.first) > 0;
-      for (unsigned j = i + 1; j < n; ++j) {
-        unsigned dstId = memrefAndList.second[j];
-        bool dstHasStore =
-            getNode(dstId)->getStoreOpCount(memrefAndList.first) > 0;
-        if (srcHasStore || dstHasStore)
-          addEdge(srcId, dstId, memrefAndList.first);
-      }
-    }
-  }
-  return true;
 }
 
 // Sinks all sequential loops to the innermost levels (while preserving
@@ -1022,6 +899,16 @@ public:
         if (fusedLoopInsPoint == nullptr)
           continue;
 
+        // It's possible this fusion is at an inner depth (i.e., there are
+        // common surrounding affine loops for the source and destination for
+        // ops). We need to get this number because the call to canFuseLoops
+        // needs to be passed the absolute depth. The max legal depth and the
+        // depths we try below are however *relative* and as such don't include
+        // the common depth.
+        SmallVector<AffineForOp, 4> surroundingLoops;
+        getAffineForIVs(*dstAffineForOp, &surroundingLoops);
+        unsigned numSurroundingLoops = surroundingLoops.size();
+
         // Compute the innermost common loop depth for dstNode
         // producer-consumer loads/stores.
         SmallVector<Operation *, 2> dstMemrefOps;
@@ -1033,7 +920,8 @@ public:
           if (producerConsumerMemrefs.count(
                   cast<AffineWriteOpInterface>(op).getMemRef()))
             dstMemrefOps.push_back(op);
-        unsigned dstLoopDepthTest = getInnermostCommonLoopDepth(dstMemrefOps);
+        unsigned dstLoopDepthTest =
+            getInnermostCommonLoopDepth(dstMemrefOps) - numSurroundingLoops;
 
         // Check the feasibility of fusing src loop nest into dst loop nest
         // at loop depths in range [1, dstLoopDepthTest].
@@ -1042,9 +930,10 @@ public:
         depthSliceUnions.resize(dstLoopDepthTest);
         FusionStrategy strategy(FusionStrategy::ProducerConsumer);
         for (unsigned i = 1; i <= dstLoopDepthTest; ++i) {
-          FusionResult result = affine::canFuseLoops(
-              srcAffineForOp, dstAffineForOp,
-              /*dstLoopDepth=*/i, &depthSliceUnions[i - 1], strategy);
+          FusionResult result =
+              affine::canFuseLoops(srcAffineForOp, dstAffineForOp,
+                                   /*dstLoopDepth=*/i + numSurroundingLoops,
+                                   &depthSliceUnions[i - 1], strategy);
 
           if (result.value == FusionResult::Success)
             maxLegalFusionDepth = i;
@@ -1251,9 +1140,18 @@ public:
       SmallVector<Operation *, 2> dstLoadOpInsts;
       dstNode->getLoadOpsForMemref(memref, &dstLoadOpInsts);
 
+      // It's possible this fusion is at an inner depth (i.e., there are common
+      // surrounding affine loops for the source and destination for ops). We
+      // need to get this number because the call to canFuseLoops needs to be
+      // passed the absolute depth. The max legal depth and the depths we try
+      // below are however *relative* and as such don't include the common
+      // depth.
+      SmallVector<AffineForOp, 4> surroundingLoops;
+      getAffineForIVs(*dstAffineForOp, &surroundingLoops);
+      unsigned numSurroundingLoops = surroundingLoops.size();
       SmallVector<AffineForOp, 4> dstLoopIVs;
       getAffineForIVs(*dstLoadOpInsts[0], &dstLoopIVs);
-      unsigned dstLoopDepthTest = dstLoopIVs.size();
+      unsigned dstLoopDepthTest = dstLoopIVs.size() - numSurroundingLoops;
       auto sibAffineForOp = cast<AffineForOp>(sibNode->op);
 
       // Compute loop depth and slice union for fusion.
@@ -1262,13 +1160,17 @@ public:
       unsigned maxLegalFusionDepth = 0;
       FusionStrategy strategy(memref);
       for (unsigned i = 1; i <= dstLoopDepthTest; ++i) {
-        FusionResult result = affine::canFuseLoops(
-            sibAffineForOp, dstAffineForOp,
-            /*dstLoopDepth=*/i, &depthSliceUnions[i - 1], strategy);
+        FusionResult result =
+            affine::canFuseLoops(sibAffineForOp, dstAffineForOp,
+                                 /*dstLoopDepth=*/i + numSurroundingLoops,
+                                 &depthSliceUnions[i - 1], strategy);
 
         if (result.value == FusionResult::Success)
           maxLegalFusionDepth = i;
       }
+
+      LLVM_DEBUG(llvm::dbgs() << "Max legal depth for fusion: "
+                              << maxLegalFusionDepth << '\n');
 
       // Skip if fusion is not feasible at any loop depths.
       if (maxLegalFusionDepth == 0)
@@ -1364,9 +1266,15 @@ public:
         SmallVector<AffineForOp, 4> loops;
         getAffineForIVs(*user, &loops);
         // Skip 'use' if it is not within a loop nest.
-        if (loops.empty())
+        // Find the surrounding affine.for nested immediately within the
+        // block.
+        auto *it = llvm::find_if(loops, [&](AffineForOp loop) {
+          return loop->getBlock() == &mdg->block;
+        });
+        // Skip 'use' if it is not within a loop nest in `block`.
+        if (it == loops.end())
           continue;
-        Node *sibNode = mdg->getForOpNode(loops[0]);
+        Node *sibNode = mdg->getForOpNode(*it);
         assert(sibNode != nullptr);
         // Skip 'use' if it not a sibling to 'dstNode'.
         if (sibNode->id == dstNode->id)
@@ -1499,9 +1407,17 @@ void LoopFusion::runOnBlock(Block *block) {
 }
 
 void LoopFusion::runOnOperation() {
-  for (Region &region : getOperation()->getRegions())
-    for (Block &block : region.getBlocks())
-      runOnBlock(&block);
+  // Call fusion on every op that has at least two affine.for nests (in post
+  // order).
+  getOperation()->walk([&](Operation *op) {
+    for (Region &region : op->getRegions()) {
+      for (Block &block : region.getBlocks()) {
+        auto affineFors = block.getOps<AffineForOp>();
+        if (!affineFors.empty() && !llvm::hasSingleElement(affineFors))
+          runOnBlock(&block);
+      }
+    }
+  });
 }
 
 std::unique_ptr<Pass> mlir::affine::createLoopFusionPass(

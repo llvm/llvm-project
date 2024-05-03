@@ -6,6 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+// MSVC warning C4244: 'argument': conversion from '_Ty' to 'int', possible loss of data
+// ADDITIONAL_COMPILE_FLAGS(cl-style-warnings): /wd4244
+
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 
 // template<class C, input_range R, class... Args> requires (!view<C>)
@@ -557,6 +560,11 @@ constexpr void test_recursive() {
   }
 
   assert((in | std::ranges::to<C4>()) == result);
+
+  // LWG3984: ranges::to's recursion branch may be ill-formed
+  auto in_owning_view = std::views::all(std::move(in));
+  static_assert(!std::ranges::viewable_range<decltype((in_owning_view))>);
+  assert(std::ranges::to<C4>(in_owning_view) == result);
 }
 
 constexpr bool test() {

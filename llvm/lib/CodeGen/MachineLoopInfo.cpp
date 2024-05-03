@@ -88,7 +88,7 @@ MachineBasicBlock *MachineLoop::getBottomBlock() {
   return BotMBB;
 }
 
-MachineBasicBlock *MachineLoop::findLoopControlBlock() {
+MachineBasicBlock *MachineLoop::findLoopControlBlock() const {
   if (MachineBasicBlock *Latch = getLoopLatch()) {
     if (isLoopExiting(Latch))
       return Latch;
@@ -151,7 +151,72 @@ MachineLoopInfo::findLoopPreheader(MachineLoop *L, bool SpeculativePreheader,
   return Preheader;
 }
 
-bool MachineLoop::isLoopInvariant(MachineInstr &I) const {
+MDNode *MachineLoop::getLoopID() const {
+  MDNode *LoopID = nullptr;
+  if (const auto *MBB = findLoopControlBlock()) {
+    // If there is a single latch block, then the metadata
+    // node is attached to its terminating instruction.
+    const auto *BB = MBB->getBasicBlock();
+    if (!BB)
+      return nullptr;
+    if (const auto *TI = BB->getTerminator())
+      LoopID = TI->getMetadata(LLVMContext::MD_loop);
+  } else if (const auto *MBB = getHeader()) {
+    // There seem to be multiple latch blocks, so we have to
+    // visit all predecessors of the loop header and check
+    // their terminating instructions for the metadata.
+    if (const auto *Header = MBB->getBasicBlock()) {
+      // Walk over all blocks in the loop.
+      for (const auto *MBB : this->blocks()) {
+        const auto *BB = MBB->getBasicBlock();
+        if (!BB)
+          return nullptr;
+        const auto *TI = BB->getTerminator();
+        if (!TI)
+          return nullptr;
+        MDNode *MD = nullptr;
+        // Check if this terminating instruction jumps to the loop header.
+        for (const auto *Succ : successors(TI)) {
+          if (Succ == Header) {
+            // This is a jump to the header - gather the metadata from it.
+            MD = TI->getMetadata(LLVMContext::MD_loop);
+            break;
+          }
+        }
+        if (!MD)
+          return nullptr;
+        if (!LoopID)
+          LoopID = MD;
+        else if (MD != LoopID)
+          return nullptr;
+      }
+    }
+  }
+  if (LoopID &&
+      (LoopID->getNumOperands() == 0 || LoopID->getOperand(0) != LoopID))
+    LoopID = nullptr;
+  return LoopID;
+}
+
+bool MachineLoop::isLoopInvariantImplicitPhysReg(Register Reg) const {
+  MachineFunction *MF = getHeader()->getParent();
+  MachineRegisterInfo *MRI = &MF->getRegInfo();
+
+  if (MRI->isConstantPhysReg(Reg))
+    return true;
+
+  if (!MF->getSubtarget()
+           .getRegisterInfo()
+           ->shouldAnalyzePhysregInMachineLoopInfo(Reg))
+    return false;
+
+  return !llvm::any_of(
+      MRI->def_instructions(Reg),
+      [this](const MachineInstr &MI) { return this->contains(&MI); });
+}
+
+bool MachineLoop::isLoopInvariant(MachineInstr &I,
+                                  const Register ExcludeReg) const {
   MachineFunction *MF = I.getParent()->getParent();
   MachineRegisterInfo *MRI = &MF->getRegInfo();
   const TargetSubtargetInfo &ST = MF->getSubtarget();
@@ -166,6 +231,9 @@ bool MachineLoop::isLoopInvariant(MachineInstr &I) const {
     Register Reg = MO.getReg();
     if (Reg == 0) continue;
 
+    if (ExcludeReg == Reg)
+      continue;
+
     // An instruction that uses or defines a physical register can't e.g. be
     // hoisted, so mark this as not invariant.
     if (Reg.isPhysical()) {
@@ -175,7 +243,7 @@ bool MachineLoop::isLoopInvariant(MachineInstr &I) const {
         // it could get allocated to something with a def during allocation.
         // However, if the physreg is known to always be caller saved/restored
         // then this use is safe to hoist.
-        if (!MRI->isConstantPhysReg(Reg) &&
+        if (!isLoopInvariantImplicitPhysReg(Reg) &&
             !(TRI->isCallerPreservedPhysReg(Reg.asMCReg(), *I.getMF())) &&
             !TII->isIgnorableUse(MO))
           return false;

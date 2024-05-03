@@ -261,6 +261,8 @@ public:
   const SourceName &name() const { return name_; }
   const Symbol &typeSymbol() const { return typeSymbol_; }
   const Scope *scope() const { return scope_; }
+  // Return scope_ if it is set, or the typeSymbol_ scope otherwise.
+  const Scope *GetScope() const;
   void set_scope(const Scope &);
   void ReplaceScope(const Scope &);
   const RawParameters &rawParameters() const { return rawParameters_; }
@@ -304,7 +306,7 @@ public:
   }
   // For TYPE IS & CLASS IS: kind type parameters must be
   // explicit and equal, len type parameters are ignored.
-  bool Match(const DerivedTypeSpec &) const;
+  bool MatchesOrExtends(const DerivedTypeSpec &) const;
   std::string AsFortran() const;
   std::string VectorTypeAsFortran() const;
 

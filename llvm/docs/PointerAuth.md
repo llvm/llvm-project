@@ -10,6 +10,9 @@ Before the pointer is used, it needs to be authenticated, i.e., have its
 signature checked.  This prevents pointer values of unknown origin from being
 used to replace the signed pointer value.
 
+For more details, see the clang documentation page for
+[Pointer Authentication](https://clang.llvm.org/docs/PointerAuthentication.html).
+
 At the IR level, it is represented using:
 
 * a [set of intrinsics](#intrinsics) (to sign/authenticate pointers)
@@ -117,7 +120,7 @@ It returns a raw pointer value.  It does **not** check that the
 signature is valid.
 
 `key` should identify a key that is appropriate for `value`, as defined
-by the target-specific [keys](#key)).
+by the target-specific [keys](#keys)).
 
 If `value` is a raw pointer value, it is returned as-is (provided the `key`
 is appropriate for the pointer).
@@ -303,8 +306,7 @@ instructions as such:
 
 #### Assembly Representation
 
-At the assembly level,
-[Authenticated Relocations](#authenticated-global-relocation) are represented
+At the assembly level, authenticated relocations are represented
 using the `@AUTH` modifier:
 
 ```asm
@@ -328,8 +330,7 @@ For example:
 
 #### ELF Object File Representation
 
-At the object file level,
-[Authenticated Relocations](#authenticated-global-relocation) are represented
+At the object file level, authenticated relocations are represented
 using the `R_AARCH64_AUTH_ABS64` relocation kind (with value `0xE100`).
 
 The signing schema is encoded in the place of relocation to be applied

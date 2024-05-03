@@ -63,7 +63,7 @@ wasm::ValType WebAssembly::toValType(MVT Type) {
 }
 
 void WebAssembly::wasmSymbolSetType(MCSymbolWasm *Sym, const Type *GlobalVT,
-                                    const ArrayRef<MVT> &VTs) {
+                                    ArrayRef<MVT> VTs) {
   assert(!Sym->getType());
 
   // Tables are represented as Arrays in LLVM IR therefore
@@ -71,8 +71,7 @@ void WebAssembly::wasmSymbolSetType(MCSymbolWasm *Sym, const Type *GlobalVT,
   // that is a reference type.
   wasm::ValType ValTy;
   bool IsTable = false;
-  if (GlobalVT->isArrayTy() && WebAssembly::isWebAssemblyReferenceType(
-                                   GlobalVT->getArrayElementType())) {
+  if (WebAssembly::isWebAssemblyTableType(GlobalVT)) {
     IsTable = true;
     const Type *ElTy = GlobalVT->getArrayElementType();
     if (WebAssembly::isWebAssemblyExternrefType(ElTy))

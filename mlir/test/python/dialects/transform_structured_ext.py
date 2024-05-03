@@ -210,7 +210,17 @@ def testVectorizeMixed(target):
     # CHECK: transform.sequence
     # CHECK: %[[V0:.*]] = transform.structured.match
     # CHECK: transform.structured.vectorize
-    # CHECK-SAME:     vector_sizes [%[[V0]] : !transform.any_op, 4]
+    # CHECK-SAME:     vector_sizes [%[[V0]], 4]
+
+
+@run
+@create_sequence
+def testVectorizeEmpty(target):
+    structured.VectorizeOp(target, [])
+    # CHECK-LABEL: TEST: testVectorizeEmpty
+    # CHECK: transform.sequence
+    # CHECK: transform.structured.vectorize
+    # CHECK-NOT:     vector_sizes
 
 
 @run
@@ -223,7 +233,7 @@ def testVectorizeScalable(target):
     # CHECK: transform.sequence
     # CHECK-DAG: %[[V0:.*]] = transform.structured.match
     # CHECK-DAG: transform.structured.vectorize
-    # CHECK-SAME:     vector_sizes [16, [%[[V0]] : !transform.any_op], [4], [8]]
+    # CHECK-SAME:     vector_sizes [16, [%[[V0]]], [4], [8]]
 
 
 @run
@@ -439,7 +449,7 @@ def testTileToForallCompact(target):
     structured.TileUsingForallOp(matmul, num_threads=[2, 3, 4])
     # CHECK-LABEL: TEST: testTileToForallCompact
     # CHECK: = transform.structured.tile_using_forall
-    # CHECK-SAME: num_threads [2, 3, 4] tile_sizes []
+    # CHECK-SAME: num_threads [2, 3, 4]
     # CHECK-SAME: (!transform.op<"linalg.matmul">) -> (!transform.any_op, !transform.any_op)
 
 
@@ -454,7 +464,7 @@ def testTileToForallLoopsAndTileOpTypes(target):
     )
     # CHECK-LABEL: TEST: testTileToForallLoopsAndTileOpTypes
     # CHECK: = transform.structured.tile_using_forall
-    # CHECK-SAME: num_threads [2, 3, 4] tile_sizes []
+    # CHECK-SAME: num_threads [2, 3, 4]
     # CHECK-SAME: (!transform.any_op) -> (!transform.op<"scf.forall">, !transform.op<"linalg.matmul">)
 
 
@@ -464,7 +474,7 @@ def testTileToForallTileSizes(target):
     structured.TileUsingForallOp(target, tile_sizes=[2, 3, 4])
     # CHECK-LABEL: TEST: testTileToForallTileSizes
     # CHECK: = transform.structured.tile_using_forall
-    # CHECK-SAME: num_threads [] tile_sizes [2, 3, 4]
+    # CHECK-SAME: tile_sizes [2, 3, 4]
 
 
 @run

@@ -75,12 +75,7 @@ TEST_F(PPMemoryAllocationsTest, PPMacroDefinesAllocations) {
   PP.Initialize(*Target);
   PP.EnterMainSourceFile();
 
-  while (1) {
-    Token tok;
-    PP.Lex(tok);
-    if (tok.is(tok::eof))
-      break;
-  }
+  PP.LexTokensUntilEOF();
 
   size_t NumAllocated = PP.getPreprocessorAllocator().getBytesAllocated();
   float BytesPerDefine = float(NumAllocated) / float(NumMacros);

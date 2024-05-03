@@ -1008,8 +1008,10 @@ class ThreadSafetyAnalyzer {
   threadSafety::SExprBuilder SxBuilder;
 
   ThreadSafetyHandler &Handler;
-  const CXXMethodDecl *CurrentMethod = nullptr;
+  const FunctionDecl *CurrentFunction;
   LocalVariableMap LocalVarMap;
+  // Maps constructed objects to `this` placeholder prior to initialization.
+  llvm::SmallDenseMap<const Expr *, til::LiteralPtr *> ConstructedObjects;
   FactManager FactMan;
   std::vector<CFGBlockInfo> BlockInfo;
 
@@ -1243,10 +1245,10 @@ bool ThreadSafetyAnalyzer::inCurrentScope(const CapabilityExpr &CapE) {
 
   // Members are in scope from methods of the same class.
   if (const auto *P = dyn_cast<til::Project>(SExp)) {
-    if (!CurrentMethod)
+    if (!isa_and_nonnull<CXXMethodDecl>(CurrentFunction))
       return false;
     const ValueDecl *VD = P->clangDecl();
-    return VD->getDeclContext() == CurrentMethod->getDeclContext();
+    return VD->getDeclContext() == CurrentFunction->getDeclContext();
   }
 
   return false;
@@ -1541,8 +1543,8 @@ class BuildLockset : public ConstStmtVisitor<BuildLockset> {
 
   ThreadSafetyAnalyzer *Analyzer;
   FactSet FSet;
-  /// Maps constructed objects to `this` placeholder prior to initialization.
-  llvm::SmallDenseMap<const Expr *, til::LiteralPtr *> ConstructedObjects;
+  // The fact set for the function on exit.
+  const FactSet &FunctionExitFSet;
   LocalVariableMap::Context LVarCtx;
   unsigned CtxIndex;
 
@@ -1566,9 +1568,11 @@ class BuildLockset : public ConstStmtVisitor<BuildLockset> {
                         bool SkipFirstParam = false);
 
 public:
-  BuildLockset(ThreadSafetyAnalyzer *Anlzr, CFGBlockInfo &Info)
+  BuildLockset(ThreadSafetyAnalyzer *Anlzr, CFGBlockInfo &Info,
+               const FactSet &FunctionExitFSet)
       : ConstStmtVisitor<BuildLockset>(), Analyzer(Anlzr), FSet(Info.EntrySet),
-        LVarCtx(Info.EntryContext), CtxIndex(Info.EntryIndex) {}
+        FunctionExitFSet(FunctionExitFSet), LVarCtx(Info.EntryContext),
+        CtxIndex(Info.EntryIndex) {}
 
   void VisitUnaryOperator(const UnaryOperator *UO);
   void VisitBinaryOperator(const BinaryOperator *BO);
@@ -1577,6 +1581,7 @@ public:
   void VisitCXXConstructExpr(const CXXConstructExpr *Exp);
   void VisitDeclStmt(const DeclStmt *S);
   void VisitMaterializeTemporaryExpr(const MaterializeTemporaryExpr *Exp);
+  void VisitReturnStmt(const ReturnStmt *S);
 };
 
 } // namespace
@@ -1758,6 +1763,8 @@ void ThreadSafetyAnalyzer::checkPtAccess(const FactSet &FSet, const Expr *Exp,
   // Pass by reference warnings are under a different flag.
   ProtectedOperationKind PtPOK = POK_VarDereference;
   if (POK == POK_PassByRef) PtPOK = POK_PtPassByRef;
+  if (POK == POK_ReturnByRef)
+    PtPOK = POK_PtReturnByRef;
 
   const ValueDecl *D = getValueDecl(Exp);
   if (!D || !D->hasAttrs())
@@ -1801,7 +1808,7 @@ void BuildLockset::handleCall(const Expr *Exp, const NamedDecl *D,
       std::pair<til::LiteralPtr *, StringRef> Placeholder =
           Analyzer->SxBuilder.createThisPlaceholder(Exp);
       [[maybe_unused]] auto inserted =
-          ConstructedObjects.insert({Exp, Placeholder.first});
+          Analyzer->ConstructedObjects.insert({Exp, Placeholder.first});
       assert(inserted.second && "Are we visiting the same expression again?");
       if (isa<CXXConstructExpr>(Exp))
         Self = Placeholder.first;
@@ -2121,10 +2128,10 @@ void BuildLockset::VisitDeclStmt(const DeclStmt *S) {
         E = EWC->getSubExpr()->IgnoreParens();
       E = UnpackConstruction(E);
 
-      if (auto Object = ConstructedObjects.find(E);
-          Object != ConstructedObjects.end()) {
+      if (auto Object = Analyzer->ConstructedObjects.find(E);
+          Object != Analyzer->ConstructedObjects.end()) {
         Object->second->setClangDecl(VD);
-        ConstructedObjects.erase(Object);
+        Analyzer->ConstructedObjects.erase(Object);
       }
     }
   }
@@ -2133,12 +2140,31 @@ void BuildLockset::VisitDeclStmt(const DeclStmt *S) {
 void BuildLockset::VisitMaterializeTemporaryExpr(
     const MaterializeTemporaryExpr *Exp) {
   if (const ValueDecl *ExtD = Exp->getExtendingDecl()) {
-    if (auto Object =
-            ConstructedObjects.find(UnpackConstruction(Exp->getSubExpr()));
-        Object != ConstructedObjects.end()) {
+    if (auto Object = Analyzer->ConstructedObjects.find(
+            UnpackConstruction(Exp->getSubExpr()));
+        Object != Analyzer->ConstructedObjects.end()) {
       Object->second->setClangDecl(ExtD);
-      ConstructedObjects.erase(Object);
+      Analyzer->ConstructedObjects.erase(Object);
     }
+  }
+}
+
+void BuildLockset::VisitReturnStmt(const ReturnStmt *S) {
+  if (Analyzer->CurrentFunction == nullptr)
+    return;
+  const Expr *RetVal = S->getRetValue();
+  if (!RetVal)
+    return;
+
+  // If returning by reference, check that the function requires the appropriate
+  // capabilities.
+  const QualType ReturnType =
+      Analyzer->CurrentFunction->getReturnType().getCanonicalType();
+  if (ReturnType->isLValueReferenceType()) {
+    Analyzer->checkAccess(
+        FunctionExitFSet, RetVal,
+        ReturnType->getPointeeType().isConstQualified() ? AK_Read : AK_Written,
+        POK_ReturnByRef);
   }
 }
 
@@ -2251,8 +2277,7 @@ void ThreadSafetyAnalyzer::runAnalysis(AnalysisDeclContext &AC) {
 
   CFG *CFGraph = walker.getGraph();
   const NamedDecl *D = walker.getDecl();
-  const auto *CurrentFunction = dyn_cast<FunctionDecl>(D);
-  CurrentMethod = dyn_cast<CXXMethodDecl>(D);
+  CurrentFunction = dyn_cast<FunctionDecl>(D);
 
   if (D->hasAttr<NoThreadSafetyAnalysisAttr>())
     return;
@@ -2348,6 +2373,25 @@ void ThreadSafetyAnalyzer::runAnalysis(AnalysisDeclContext &AC) {
     }
   }
 
+  // Compute the expected exit set.
+  // By default, we expect all locks held on entry to be held on exit.
+  FactSet ExpectedFunctionExitSet = Initial.EntrySet;
+
+  // Adjust the expected exit set by adding or removing locks, as declared
+  // by *-LOCK_FUNCTION and UNLOCK_FUNCTION.  The intersect below will then
+  // issue the appropriate warning.
+  // FIXME: the location here is not quite right.
+  for (const auto &Lock : ExclusiveLocksAcquired)
+    ExpectedFunctionExitSet.addLock(
+        FactMan, std::make_unique<LockableFactEntry>(Lock, LK_Exclusive,
+                                                     D->getLocation()));
+  for (const auto &Lock : SharedLocksAcquired)
+    ExpectedFunctionExitSet.addLock(
+        FactMan,
+        std::make_unique<LockableFactEntry>(Lock, LK_Shared, D->getLocation()));
+  for (const auto &Lock : LocksReleased)
+    ExpectedFunctionExitSet.removeLock(FactMan, Lock);
+
   for (const auto *CurrBlock : *SortedGraph) {
     unsigned CurrBlockID = CurrBlock->getBlockID();
     CFGBlockInfo *CurrBlockInfo = &BlockInfo[CurrBlockID];
@@ -2407,7 +2451,7 @@ void ThreadSafetyAnalyzer::runAnalysis(AnalysisDeclContext &AC) {
     if (!CurrBlockInfo->Reachable)
       continue;
 
-    BuildLockset LocksetBuilder(this, *CurrBlockInfo);
+    BuildLockset LocksetBuilder(this, *CurrBlockInfo, ExpectedFunctionExitSet);
 
     // Visit all the statements in the basic block.
     for (const auto &BI : *CurrBlock) {
@@ -2443,15 +2487,15 @@ void ThreadSafetyAnalyzer::runAnalysis(AnalysisDeclContext &AC) {
 
           // Clean up constructed object even if there are no attributes to
           // keep the number of objects in limbo as small as possible.
-          if (auto Object = LocksetBuilder.ConstructedObjects.find(
+          if (auto Object = ConstructedObjects.find(
                   TD.getBindTemporaryExpr()->getSubExpr());
-              Object != LocksetBuilder.ConstructedObjects.end()) {
+              Object != ConstructedObjects.end()) {
             const auto *DD = TD.getDestructorDecl(AC.getASTContext());
             if (DD->hasAttrs())
               // TODO: the location here isn't quite correct.
               LocksetBuilder.handleCall(nullptr, DD, Object->second,
                                         TD.getBindTemporaryExpr()->getEndLoc());
-            LocksetBuilder.ConstructedObjects.erase(Object);
+            ConstructedObjects.erase(Object);
           }
           break;
         }
@@ -2483,24 +2527,8 @@ void ThreadSafetyAnalyzer::runAnalysis(AnalysisDeclContext &AC) {
   if (!Final.Reachable)
     return;
 
-  // By default, we expect all locks held on entry to be held on exit.
-  FactSet ExpectedExitSet = Initial.EntrySet;
-
-  // Adjust the expected exit set by adding or removing locks, as declared
-  // by *-LOCK_FUNCTION and UNLOCK_FUNCTION.  The intersect below will then
-  // issue the appropriate warning.
-  // FIXME: the location here is not quite right.
-  for (const auto &Lock : ExclusiveLocksAcquired)
-    ExpectedExitSet.addLock(FactMan, std::make_unique<LockableFactEntry>(
-                                         Lock, LK_Exclusive, D->getLocation()));
-  for (const auto &Lock : SharedLocksAcquired)
-    ExpectedExitSet.addLock(FactMan, std::make_unique<LockableFactEntry>(
-                                         Lock, LK_Shared, D->getLocation()));
-  for (const auto &Lock : LocksReleased)
-    ExpectedExitSet.removeLock(FactMan, Lock);
-
   // FIXME: Should we call this function for all blocks which exit the function?
-  intersectAndWarn(ExpectedExitSet, Final.ExitSet, Final.ExitLoc,
+  intersectAndWarn(ExpectedFunctionExitSet, Final.ExitSet, Final.ExitLoc,
                    LEK_LockedAtEndOfFunction, LEK_NotLockedAtEndOfFunction);
 
   Handler.leaveFunction(CurrentFunction);

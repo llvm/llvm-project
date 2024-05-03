@@ -45,6 +45,7 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/DebugCounter.h"
 
 using namespace llvm;
 
@@ -95,6 +96,13 @@ static cl::opt<bool>
                            cl::desc("enable optimization of conditional traps"),
                            cl::init(false), cl::Hidden);
 
+DEBUG_COUNTER(
+    PeepholeXToICounter, "ppc-xtoi-peephole",
+    "Controls whether PPC reg+reg to reg+imm peephole is performed on a MI");
+
+DEBUG_COUNTER(PeepholePerOpCounter, "ppc-per-op-peephole",
+              "Controls whether PPC per opcode peephole is performed on a MI");
+
 namespace {
 
 struct PPCMIPeephole : public MachineFunctionPass {
@@ -113,7 +121,7 @@ private:
   MachineDominatorTree *MDT;
   MachinePostDominatorTree *MPDT;
   MachineBlockFrequencyInfo *MBFI;
-  uint64_t EntryFreq;
+  BlockFrequency EntryFreq;
   SmallSet<Register, 16> RegsToUpdate;
 
   // Initialize class variables.
@@ -300,7 +308,7 @@ void PPCMIPeephole::UpdateTOCSaves(
     PPCFunctionInfo *FI = MF->getInfo<PPCFunctionInfo>();
 
     MachineBasicBlock *Entry = &MF->front();
-    uint64_t CurrBlockFreq = MBFI->getBlockFreq(MI->getParent()).getFrequency();
+    BlockFrequency CurrBlockFreq = MBFI->getBlockFreq(MI->getParent());
 
     // If the block in which the TOC save resides is in a block that
     // post-dominates Entry, or a block that is hotter than entry (keep in mind
@@ -469,6 +477,9 @@ bool PPCMIPeephole::simplifyCode() {
           if (MI.isDebugInstr())
             continue;
 
+          if (!DebugCounter::shouldExecute(PeepholeXToICounter))
+            continue;
+
           SmallSet<Register, 4> RRToRIRegsToUpdate;
           if (!TII->convertToImmediateForm(MI, RRToRIRegsToUpdate))
             continue;
@@ -536,6 +547,9 @@ bool PPCMIPeephole::simplifyCode() {
 
       // Ignore debug instructions.
       if (MI.isDebugInstr())
+        continue;
+
+      if (!DebugCounter::shouldExecute(PeepholePerOpCounter))
         continue;
 
       // Per-opcode peepholes.
@@ -895,8 +909,9 @@ bool PPCMIPeephole::simplifyCode() {
               LLVM_DEBUG(MI.dump());
               LLVM_DEBUG(dbgs() << "Through instruction:\n");
               LLVM_DEBUG(DefMI->dump());
-              RoundInstr->eraseFromParent();
               addRegToUpdate(ConvReg1);
+              addRegToUpdate(FRSPDefines);
+              ToErase = RoundInstr;
             }
           };
 

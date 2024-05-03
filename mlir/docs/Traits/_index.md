@@ -40,7 +40,7 @@ Operation traits may also provide a `verifyTrait` or `verifyRegionTrait` hook
 that is called when verifying the concrete operation. The difference between
 these two is that whether the verifier needs to access the regions, if so, the
 operations in the regions will be verified before the verification of this
-trait. The [verification order](DefiningDialects/Operations.md/#verification-ordering)
+trait. The [verification order](../DefiningDialects/Operations.md/#verification-ordering)
 determines when a verifier will be invoked.
 
 ```c++
@@ -155,7 +155,7 @@ class MyType : public Type::TypeBase<MyType, ..., MyTrait, MyParametricTrait<10>
 
 ### Attaching Operation Traits in ODS
 
-To use an operation trait in the [ODS](DefiningDialects/Operations.md) framework, we need to
+To use an operation trait in the [ODS](../DefiningDialects/Operations.md) framework, we need to
 provide a definition of the trait class. This can be done using the
 `NativeOpTrait` and `ParamNativeOpTrait` classes. `ParamNativeOpTrait` provides
 a mechanism in which to specify arguments to a parametric trait class with an
@@ -177,7 +177,7 @@ These can then be used in the `traits` list of an op definition:
 def OpWithInferTypeInterfaceOp : Op<...[MyTrait, MyParametricTrait<10>]> { ... }
 ```
 
-See the documentation on [operation definitions](DefiningDialects/Operations.md) for more
+See the documentation on [operation definitions](../DefiningDialects/Operations.md) for more
 details.
 
 ## Using a Trait
@@ -186,7 +186,7 @@ Traits may be used to provide additional methods, static fields, or other
 information directly on the concrete object. `Traits` internally become `Base`
 classes of the concrete operation, so all of these are directly accessible. To
 expose this information opaquely to transformations and analyses,
-[`interfaces`](Interfaces.md) may be used.
+[`interfaces`](../Interfaces.md) may be used.
 
 To query if a specific object contains a specific trait, the `hasTrait<>` method
 may be used. This takes as a template parameter the trait class, which is the
@@ -231,7 +231,7 @@ This trait is carried by region holding operations that define a new scope for
 automatic allocation. Such allocations are automatically freed when control is
 transferred back from the regions of such operations. As an example, allocations
 performed by
-[`memref.alloca`](Dialects/MemRef.md/#memrefalloca-mlirmemrefallocaop) are
+[`memref.alloca`](../Dialects/MemRef.md/#memrefalloca-memrefallocaop) are
 automatically freed when control leaves the region of its closest surrounding op
 that has the trait AutomaticAllocationScope.
 
@@ -241,7 +241,8 @@ that has the trait AutomaticAllocationScope.
 
 This trait adds the property that the operation is known to have
 [broadcast-compatible](https://docs.scipy.org/doc/numpy/user/basics.broadcasting.html)
-operands and that its result type is compatible with the inferred broadcast shape. See [The `Broadcastable` Trait](Traits/Broadcastable.md) for details.
+operands and that its result type is compatible with the inferred broadcast shape. 
+See [The `Broadcastable` Trait](Broadcastable.md) for details.
 
 ### Commutative
 
@@ -290,7 +291,7 @@ foo.region_op {
 ```
 
 This trait is an important structural property of the IR, and enables operations
-to have [passes](PassManagement.md) scheduled under them.
+to have [passes](../PassManagement) scheduled under them.
 
 ### MemRefsNormalizable
 
@@ -302,8 +303,7 @@ type where those references can be 'normalized'. In cases where an associated
 operations can be modified so that the `MemRef` has an identity layout
 specification. This can be implemented by associating the operation with its own
 index expression that can express the equivalent of the memory-layout
-specification of the MemRef type. See [the -normalize-memrefs pass].
-(https://mlir.llvm.org/docs/Passes/#-normalize-memrefs-normalize-memrefs)
+specification of the MemRef type. See [the -normalize-memrefs pass](../Passes.md/#-normalize-memrefs).
 
 ### Single Block Region
 
@@ -325,18 +325,18 @@ that the single block must terminate with `TerminatorOpType`.
 *   `OpTrait::SymbolTable` -- `SymbolTable`
 
 This trait is used for operations that define a
-[`SymbolTable`](SymbolsAndSymbolTables.md#symbol-table).
+[`SymbolTable`](../SymbolsAndSymbolTables.md/#symbol-table).
 
 ### Terminator
 
 *   `OpTrait::IsTerminator` -- `Terminator`
 
 This trait provides verification and functionality for operations that are known
-to be [terminators](LangRef.md#terminator-operations).
+to be [terminators](../LangRef.md/#control-flow-and-ssacfg-regions).
 
 *   `OpTrait::NoTerminator` -- `NoTerminator`
 
 This trait removes the requirement on regions held by an operation to have
-[terminator operations](LangRef.md#terminator-operations) at the end of a block.
+[terminator operations](../LangRef.md/#control-flow-and-ssacfg-regions) at the end of a block.
 This requires that these regions have a single block. An example of operation
 using this trait is the top-level `ModuleOp`.

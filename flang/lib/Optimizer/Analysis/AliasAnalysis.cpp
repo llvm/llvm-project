@@ -29,7 +29,7 @@ using namespace mlir;
 //===----------------------------------------------------------------------===//
 
 static bool isDummyArgument(mlir::Value v) {
-  auto blockArg{v.dyn_cast<mlir::BlockArgument>()};
+  auto blockArg{mlir::dyn_cast<mlir::BlockArgument>(v)};
   if (!blockArg)
     return false;
 
@@ -68,7 +68,7 @@ bool AliasAnalysis::Source::isPointerReference(mlir::Type ty) {
   if (!eleTy)
     return false;
 
-  return fir::isPointerType(eleTy) || eleTy.isa<fir::PointerType>();
+  return fir::isPointerType(eleTy) || mlir::isa<fir::PointerType>(eleTy);
 }
 
 bool AliasAnalysis::Source::isTargetOrPointer() const {
@@ -81,7 +81,7 @@ bool AliasAnalysis::Source::isRecordWithPointerComponent() const {
   if (!eleTy)
     return false;
   // TO DO: Look for pointer components
-  return eleTy.isa<fir::RecordType>();
+  return mlir::isa<fir::RecordType>(eleTy);
 }
 
 AliasResult AliasAnalysis::alias(Value lhs, Value rhs) {
@@ -106,7 +106,7 @@ AliasResult AliasAnalysis::alias(Value lhs, Value rhs) {
   // Though nothing is known about them, they would only alias with targets or
   // pointers
   bool directSourceToNonTargetOrPointer = false;
-  if (lhsSrc.u != rhsSrc.u) {
+  if (lhsSrc.u != rhsSrc.u || lhsSrc.kind != rhsSrc.kind) {
     if ((lhsSrc.kind == SourceKind::Direct && !rhsSrc.isTargetOrPointer()) ||
         (rhsSrc.kind == SourceKind::Direct && !lhsSrc.isTargetOrPointer()))
       directSourceToNonTargetOrPointer = true;
@@ -333,8 +333,10 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v) {
           else
             type = SourceKind::Global;
 
-          if (fir::valueHasFirAttribute(v,
-                                        fir::GlobalOp::getTargetAttrNameStr()))
+          auto globalOpName = mlir::OperationName(
+              fir::GlobalOp::getOperationName(), defOp->getContext());
+          if (fir::valueHasFirAttribute(
+                  v, fir::GlobalOp::getTargetAttrName(globalOpName)))
             attributes.set(Attribute::Target);
 
           // TODO: Take followBoxAddr into account when setting the pointer
@@ -406,7 +408,7 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v) {
         attributes.set(Attribute::Pointer);
     }
 
-  if (type == SourceKind::Global)
+  if (type == SourceKind::Global || type == SourceKind::Direct)
     return {global, type, ty, attributes, approximateSource};
 
   return {v, type, ty, attributes, approximateSource};

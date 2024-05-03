@@ -2,6 +2,7 @@
 ; RUN: llc -global-isel -mtriple=amdgcn-mesa-mesa3d -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -check-prefix=GFX6 %s
 ; RUN: llc -global-isel -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX10PLUS,GFX10 %s
 ; RUN: llc -global-isel -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX10PLUS,GFX11 %s
+; RUN: llc -global-isel -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1200 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX12 %s
 
 define amdgpu_ps <4 x float> @load_2d_v4f32_xyzw(<8 x i32> inreg %rsrc, i32 %s, i32 %t) {
 ; GFX6-LABEL: load_2d_v4f32_xyzw:
@@ -31,6 +32,20 @@ define amdgpu_ps <4 x float> @load_2d_v4f32_xyzw(<8 x i32> inreg %rsrc, i32 %s, 
 ; GFX10PLUS-NEXT:    image_load v[0:3], v[0:1], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_2D unorm
 ; GFX10PLUS-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10PLUS-NEXT:    ; return to shader part epilog
+;
+; GFX12-LABEL: load_2d_v4f32_xyzw:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_mov_b32 s0, s2
+; GFX12-NEXT:    s_mov_b32 s1, s3
+; GFX12-NEXT:    s_mov_b32 s2, s4
+; GFX12-NEXT:    s_mov_b32 s3, s5
+; GFX12-NEXT:    s_mov_b32 s4, s6
+; GFX12-NEXT:    s_mov_b32 s5, s7
+; GFX12-NEXT:    s_mov_b32 s6, s8
+; GFX12-NEXT:    s_mov_b32 s7, s9
+; GFX12-NEXT:    image_load v[0:3], [v0, v1], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_2D
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    ; return to shader part epilog
   %v = call <4 x float> @llvm.amdgcn.image.load.2d.v4f32.i32(i32 15, i32 %s, i32 %t, <8 x i32> %rsrc, i32 0, i32 0)
   ret <4 x float> %v
 }
@@ -114,6 +129,29 @@ define amdgpu_ps <4 x float> @load_2d_v4f32_xyzw_tfe(<8 x i32> inreg %rsrc, ptr 
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    global_store_b32 v7, v4, s[10:11]
 ; GFX11-NEXT:    ; return to shader part epilog
+;
+; GFX12-LABEL: load_2d_v4f32_xyzw_tfe:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    v_mov_b32_e32 v7, 0
+; GFX12-NEXT:    v_dual_mov_b32 v5, v0 :: v_dual_mov_b32 v6, v1
+; GFX12-NEXT:    s_mov_b32 s0, s2
+; GFX12-NEXT:    s_mov_b32 s1, s3
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX12-NEXT:    v_dual_mov_b32 v8, v7 :: v_dual_mov_b32 v9, v7
+; GFX12-NEXT:    v_dual_mov_b32 v10, v7 :: v_dual_mov_b32 v11, v7
+; GFX12-NEXT:    s_mov_b32 s2, s4
+; GFX12-NEXT:    s_mov_b32 s3, s5
+; GFX12-NEXT:    s_mov_b32 s4, s6
+; GFX12-NEXT:    s_mov_b32 s5, s7
+; GFX12-NEXT:    s_mov_b32 s6, s8
+; GFX12-NEXT:    s_mov_b32 s7, s9
+; GFX12-NEXT:    v_dual_mov_b32 v0, v7 :: v_dual_mov_b32 v1, v8
+; GFX12-NEXT:    v_dual_mov_b32 v2, v9 :: v_dual_mov_b32 v3, v10
+; GFX12-NEXT:    v_mov_b32_e32 v4, v11
+; GFX12-NEXT:    image_load v[0:4], [v5, v6], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_2D tfe
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    global_store_b32 v7, v4, s[10:11]
+; GFX12-NEXT:    ; return to shader part epilog
   %v = call { <4 x float>, i32 } @llvm.amdgcn.image.load.2d.sl_v4f32i32s.i32(i32 15, i32 %s, i32 %t, <8 x i32> %rsrc, i32 1, i32 0)
   %v.vec = extractvalue { <4 x float>, i32 } %v, 0
   %v.err = extractvalue { <4 x float>, i32 } %v, 1
@@ -200,6 +238,29 @@ define amdgpu_ps <4 x float> @load_2d_v4f32_xyzw_tfe_lwe(<8 x i32> inreg %rsrc, 
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    global_store_b32 v7, v4, s[10:11]
 ; GFX11-NEXT:    ; return to shader part epilog
+;
+; GFX12-LABEL: load_2d_v4f32_xyzw_tfe_lwe:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    v_mov_b32_e32 v7, 0
+; GFX12-NEXT:    v_dual_mov_b32 v5, v0 :: v_dual_mov_b32 v6, v1
+; GFX12-NEXT:    s_mov_b32 s0, s2
+; GFX12-NEXT:    s_mov_b32 s1, s3
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX12-NEXT:    v_dual_mov_b32 v8, v7 :: v_dual_mov_b32 v9, v7
+; GFX12-NEXT:    v_dual_mov_b32 v10, v7 :: v_dual_mov_b32 v11, v7
+; GFX12-NEXT:    s_mov_b32 s2, s4
+; GFX12-NEXT:    s_mov_b32 s3, s5
+; GFX12-NEXT:    s_mov_b32 s4, s6
+; GFX12-NEXT:    s_mov_b32 s5, s7
+; GFX12-NEXT:    s_mov_b32 s6, s8
+; GFX12-NEXT:    s_mov_b32 s7, s9
+; GFX12-NEXT:    v_dual_mov_b32 v0, v7 :: v_dual_mov_b32 v1, v8
+; GFX12-NEXT:    v_dual_mov_b32 v2, v9 :: v_dual_mov_b32 v3, v10
+; GFX12-NEXT:    v_mov_b32_e32 v4, v11
+; GFX12-NEXT:    image_load v[0:4], [v5, v6], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_2D tfe
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    global_store_b32 v7, v4, s[10:11]
+; GFX12-NEXT:    ; return to shader part epilog
   %v = call { <4 x float>, i32 } @llvm.amdgcn.image.load.2d.sl_v4f32i32s.i32(i32 15, i32 %s, i32 %t, <8 x i32> %rsrc, i32 3, i32 0)
   %v.vec = extractvalue { <4 x float>, i32 } %v, 0
   %v.err = extractvalue { <4 x float>, i32 } %v, 1

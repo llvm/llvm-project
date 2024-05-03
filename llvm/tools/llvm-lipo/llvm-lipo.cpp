@@ -26,7 +26,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileOutputBuffer.h"
-#include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/WithColor.h"
@@ -724,7 +723,6 @@ replaceSlices(LLVMContext &LLVMCtx,
 }
 
 int llvm_lipo_main(int argc, char **argv, const llvm::ToolContext &) {
-  InitLLVM X(argc, argv);
   llvm::InitializeAllTargetInfos();
   llvm::InitializeAllTargetMCs();
   llvm::InitializeAllAsmParsers();

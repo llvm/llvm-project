@@ -107,8 +107,7 @@ static uint64_t extractBitsForFixup(MCFixupKind Kind, uint64_t Value,
 namespace {
 class SystemZMCAsmBackend : public MCAsmBackend {
 public:
-  SystemZMCAsmBackend()
-      : MCAsmBackend(support::big) {}
+  SystemZMCAsmBackend() : MCAsmBackend(llvm::endianness::big) {}
 
   // Override MCAsmBackend
   unsigned getNumFixupKinds() const override {
@@ -117,7 +116,8 @@ public:
   std::optional<MCFixupKind> getFixupKind(StringRef Name) const override;
   const MCFixupKindInfo &getFixupKindInfo(MCFixupKind Kind) const override;
   bool shouldForceRelocation(const MCAssembler &Asm, const MCFixup &Fixup,
-                             const MCValue &Target) override;
+                             const MCValue &Target,
+                             const MCSubtargetInfo *STI) override;
   void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
                   const MCValue &Target, MutableArrayRef<char> Data,
                   uint64_t Value, bool IsResolved,
@@ -165,8 +165,9 @@ SystemZMCAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
 }
 
 bool SystemZMCAsmBackend::shouldForceRelocation(const MCAssembler &,
-						const MCFixup &Fixup,
-						const MCValue &) {
+                                                const MCFixup &Fixup,
+                                                const MCValue &,
+                                                const MCSubtargetInfo *STI) {
   return Fixup.getKind() >= FirstLiteralRelocationKind;
 }
 

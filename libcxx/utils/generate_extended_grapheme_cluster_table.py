@@ -15,7 +15,7 @@
 
 from io import StringIO
 from pathlib import Path
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Optional
 import re
 import sys
@@ -112,8 +112,10 @@ DATA_ARRAY_TEMPLATE = """
 /// this approach uses less space for the data and is about 4% faster in the
 /// following benchmark.
 /// libcxx/benchmarks/std_format_spec_string_unicode.bench.cpp
-inline constexpr uint32_t __entries[{size}] = {{
+// clang-format off
+_LIBCPP_HIDE_FROM_ABI inline constexpr uint32_t __entries[{size}] = {{
 {entries}}};
+// clang-format on
 
 /// Returns the extended grapheme cluster bondary property of a code point.
 [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr __property __get_property(const char32_t __code_point) noexcept {{
@@ -287,25 +289,16 @@ def generate_cpp_data(prop_name: str, ranges: list[PropertyRange]) -> str:
 def generate_data_tables() -> str:
     """
     Generate Unicode data for inclusion into <format> from
-    GraphemeBreakProperty.txt and emoji-data.txt.
+    - https://www.unicode.org/Public/UCD/latest/ucd/auxiliary/GraphemeBreakProperty.txt
+    - https://www.unicode.org/Public/UCD/latest/ucd/emoji/emoji-data.txt
+    - https://www.unicode.org/Public/UCD/latest/ucd/DerivedCoreProperties.txt
 
-    GraphemeBreakProperty.txt can be found at
-    https://www.unicode.org/Public/UCD/latest/ucd/auxiliary/GraphemeBreakProperty.txt
-
-    emoji-data.txt can be found at
-    https://www.unicode.org/Public/UCD/latest/ucd/emoji/emoji-data.txt
-
-    Both files are expected to be in the same directory as this script.
+    These files are expected to be stored in the same directory as this script.
     """
-    gbp_data_path = (
-        Path(__file__).absolute().parent
-        / "data"
-        / "unicode"
-        / "GraphemeBreakProperty.txt"
-    )
-    emoji_data_path = (
-        Path(__file__).absolute().parent / "data" / "unicode" / "emoji-data.txt"
-    )
+    root = Path(__file__).absolute().parent / "data" / "unicode"
+    gbp_data_path = root / "GraphemeBreakProperty.txt"
+    emoji_data_path = root / "emoji-data.txt"
+
     gbp_ranges = list()
     emoji_ranges = list()
     with gbp_data_path.open(encoding="utf-8") as f:

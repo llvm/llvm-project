@@ -54,3 +54,21 @@ consteval void test() {
     static_assert(*s == 42);
     static_assert((s << 11) == 31);
 }
+
+namespace GH68070 {
+
+constexpr auto f = [x = 3]<typename Self>(this Self&& self) {
+    return x;
+};
+
+auto g = [x = 3]<typename Self>(this Self&& self) {
+    return x;
+};
+
+int test() {
+  constexpr int a = f();
+  static_assert(a == 3);
+  return f() + g();
+}
+
+}

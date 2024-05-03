@@ -32,7 +32,7 @@ using namespace mlir;
 
 class MLIRTargetLLVM : public ::testing::Test {
 protected:
-  virtual void SetUp() {
+  void SetUp() override {
     llvm::InitializeNativeTarget();
     llvm::InitializeNativeTargetAsmPrinter();
   }
@@ -55,12 +55,12 @@ TEST_F(MLIRTargetLLVM, SKIP_WITHOUT_NATIVE(SerializeToLLVMBitcode)) {
   ASSERT_TRUE(!!module);
 
   // Serialize the module.
-  std::string targetTriple = llvm::sys::getDefaultTargetTriple();
+  std::string targetTriple = llvm::sys::getProcessTriple();
   LLVM::ModuleToObject serializer(*(module->getOperation()), targetTriple, "",
                                   "");
   std::optional<SmallVector<char, 0>> serializedModule = serializer.run();
   ASSERT_TRUE(!!serializedModule);
-  ASSERT_TRUE(serializedModule->size() > 0);
+  ASSERT_TRUE(!serializedModule->empty());
 
   // Read the serialized module.
   llvm::MemoryBufferRef buffer(

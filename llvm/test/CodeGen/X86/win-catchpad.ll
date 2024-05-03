@@ -64,13 +64,13 @@ try.cont:
 ; X86: retl
 
 ; FIXME: These should be de-duplicated.
-; X86: [[restorebb2:LBB0_[0-9]+]]: # Block address taken
-; X86-NEXT:                        # %handler2
+; X86: [[restorebb1:LBB0_[0-9]+]]: # Block address taken
+; X86-NEXT:                        # %handler1
 ; X86-NEXT: addl $12, %ebp
 ; X86: jmp [[contbb]]
 
-; X86: [[restorebb1:LBB0_[0-9]+]]: # Block address taken
-; X86-NEXT:                        # %handler1
+; X86: [[restorebb2:LBB0_[0-9]+]]: # Block address taken
+; X86-NEXT:                        # %handler2
 ; X86-NEXT: addl $12, %ebp
 ; X86: jmp [[contbb]]
 

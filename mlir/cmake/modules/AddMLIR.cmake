@@ -1,10 +1,6 @@
 include(GNUInstallDirs)
 include(LLVMDistributionSupport)
 
-# Clear out any pre-existing compile_commands file before processing. This
-# allows for generating a clean compile_commands on each configure.
-file(REMOVE ${CMAKE_BINARY_DIR}/tablegen_compile_commands.yml)
-
 function(mlir_tablegen ofn)
   tablegen(MLIR ${ARGV})
   set(TABLEGEN_OUTPUT ${TABLEGEN_OUTPUT} ${CMAKE_CURRENT_BINARY_DIR}/${ofn}
@@ -175,6 +171,22 @@ function(add_mlir_dialect dialect dialect_namespace)
   add_dependencies(mlir-headers MLIR${dialect}IncGen)
 endfunction()
 
+# Declare sharded dialect operation declarations and definitions
+function(add_sharded_ops ops_target shard_count)
+  set(LLVM_TARGET_DEFINITIONS ${ops_target}.td)
+  mlir_tablegen(${ops_target}.h.inc -gen-op-decls -op-shard-count=${shard_count})
+  mlir_tablegen(${ops_target}.cpp.inc -gen-op-defs -op-shard-count=${shard_count})
+  set(LLVM_TARGET_DEFINITIONS ${ops_target}.cpp)
+  foreach(index RANGE ${shard_count})
+    set(SHARDED_SRC ${ops_target}.${index}.cpp)
+    list(APPEND SHARDED_SRCS ${SHARDED_SRC})
+    tablegen(MLIR_SRC_SHARDER ${SHARDED_SRC} -op-shard-index=${index})
+    set(TABLEGEN_OUTPUT ${TABLEGEN_OUTPUT} ${CMAKE_CURRENT_BINARY_DIR}/${SHARDED_SRC})
+  endforeach()
+  add_public_tablegen_target(MLIR${ops_target}ShardGen)
+  set(SHARDED_SRCS ${SHARDED_SRCS} PARENT_SCOPE)
+endfunction()
+
 # Declare a dialect in the include directory
 function(add_mlir_interface interface)
   set(LLVM_TARGET_DEFINITIONS ${interface}.td)
@@ -188,7 +200,8 @@ endfunction()
 # Generate Documentation
 function(add_mlir_doc doc_filename output_file output_directory command)
   set(LLVM_TARGET_DEFINITIONS ${doc_filename}.td)
-  tablegen(MLIR ${output_file}.md ${command} ${ARGN})
+  # The MLIR docs use Hugo, so we allow Hugo specific features here.
+  tablegen(MLIR ${output_file}.md ${command} -allow-hugo-specific-features ${ARGN})
   set(GEN_DOC_FILE ${MLIR_BINARY_DIR}/docs/${output_directory}${output_file}.md)
   add_custom_command(
           OUTPUT ${GEN_DOC_FILE}

@@ -22,6 +22,7 @@
 #include "LlvmState.h"
 #include "PerfHelper.h"
 #include "SnippetGenerator.h"
+#include "ValidationEvent.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/LegacyPassManager.h"
@@ -59,6 +60,9 @@ struct PfmCountersInfo {
   const IssueCounter *IssueCounters;
   unsigned NumIssueCounters;
 
+  const std::pair<ValidationEvent, const char *> *ValidationEvents;
+  unsigned NumValidationEvents;
+
   static const PfmCountersInfo Default;
   static const PfmCountersInfo Dummy;
 };
@@ -77,8 +81,9 @@ public:
       : CpuPfmCounters(CpuPfmCounters), IsOpcodeAvailable(IsOpcodeAvailable) {}
 
   // Targets can use this to create target-specific perf counters.
-  virtual Expected<std::unique_ptr<pfm::Counter>>
+  virtual Expected<std::unique_ptr<pfm::CounterGroup>>
   createCounter(StringRef CounterName, const LLVMState &State,
+                ArrayRef<const char *> ValidationCounters,
                 const pid_t ProcessID = 0) const;
 
   // Targets can use this to add target-specific passes in assembleToStream();
@@ -197,12 +202,15 @@ public:
   }
 
   // Returns a counter usable as a loop counter.
-  virtual unsigned getLoopCounterRegister(const Triple &) const { return 0; }
+  virtual unsigned getDefaultLoopCounterRegister(const Triple &) const {
+    return 0;
+  }
 
   // Adds the code to decrement the loop counter and
   virtual void decrementLoopCounterAndJump(MachineBasicBlock &MBB,
                                            MachineBasicBlock &TargetMBB,
-                                           const MCInstrInfo &MII) const {
+                                           const MCInstrInfo &MII,
+                                           unsigned LoopRegister) const {
     llvm_unreachable("decrementLoopCounterAndBranch() requires "
                      "getLoopCounterRegister() > 0");
   }
@@ -262,6 +270,8 @@ public:
       Benchmark::ModeE Mode, const LLVMState &State,
       BenchmarkPhaseSelectorE BenchmarkPhaseSelector,
       BenchmarkRunner::ExecutionModeE ExecutionMode,
+      unsigned BenchmarkRepeatCount,
+      ArrayRef<ValidationEvent> ValidationCounters,
       Benchmark::ResultAggregationModeE ResultAggMode = Benchmark::Min) const;
 
   // Returns the ExegesisTarget for the given triple or nullptr if the target
@@ -305,11 +315,14 @@ private:
       const LLVMState &State, Benchmark::ModeE Mode,
       BenchmarkPhaseSelectorE BenchmarkPhaseSelector,
       Benchmark::ResultAggregationModeE ResultAggMode,
-      BenchmarkRunner::ExecutionModeE ExecutionMode) const;
+      BenchmarkRunner::ExecutionModeE ExecutionMode,
+      ArrayRef<ValidationEvent> ValidationCounters,
+      unsigned BenchmarkRepeatCount) const;
   std::unique_ptr<BenchmarkRunner> virtual createUopsBenchmarkRunner(
       const LLVMState &State, BenchmarkPhaseSelectorE BenchmarkPhaseSelector,
       Benchmark::ResultAggregationModeE ResultAggMode,
-      BenchmarkRunner::ExecutionModeE ExecutionMode) const;
+      BenchmarkRunner::ExecutionModeE ExecutionMode,
+      ArrayRef<ValidationEvent> ValidationCounters) const;
 
   const ExegesisTarget *Next = nullptr;
   const ArrayRef<CpuAndPfmCounters> CpuPfmCounters;

@@ -3178,13 +3178,13 @@ public:
         m_debugger.GetListener(), llvm::StringRef(), &core_file_spec, false));
 
     if (!process_sp) {
-      SetError("Unable to find process plug-in for core file!");
+      SetError("Unknown core file format!");
       return;
     }
 
     Status status = process_sp->LoadCore();
     if (status.Fail()) {
-      SetError("Can't find plug-in for core file!");
+      SetError("Unknown core file format!");
       return;
     }
   }
@@ -4519,7 +4519,7 @@ struct Row {
       calculated_children = true;
       ValueObjectSP valobj = value.GetSP();
       if (valobj) {
-        const size_t num_children = valobj->GetNumChildren();
+        const uint32_t num_children = valobj->GetNumChildrenIgnoringErrors();
         for (size_t i = 0; i < num_children; ++i) {
           children.push_back(Row(valobj->GetChildAtIndex(i), this));
         }
@@ -6894,7 +6894,8 @@ public:
           if (context_changed)
             m_selected_line = m_pc_line;
 
-          if (m_file_sp && m_file_sp->GetFileSpec() == m_sc.line_entry.file) {
+          if (m_file_sp &&
+              m_file_sp->GetFileSpec() == m_sc.line_entry.GetFile()) {
             // Same file, nothing to do, we should either have the lines or
             // not (source file missing)
             if (m_selected_line >= static_cast<size_t>(m_first_visible_line)) {
@@ -6909,8 +6910,8 @@ public:
           } else {
             // File changed, set selected line to the line with the PC
             m_selected_line = m_pc_line;
-            m_file_sp =
-                m_debugger.GetSourceManager().GetFile(m_sc.line_entry.file);
+            m_file_sp = m_debugger.GetSourceManager().GetFile(
+                m_sc.line_entry.GetFile());
             if (m_file_sp) {
               const size_t num_lines = m_file_sp->GetNumLines();
               m_line_width = 1;
@@ -7000,7 +7001,7 @@ public:
             LineEntry bp_loc_line_entry;
             if (bp_loc_sp->GetAddress().CalculateSymbolContextLineEntry(
                     bp_loc_line_entry)) {
-              if (m_file_sp->GetFileSpec() == bp_loc_line_entry.file) {
+              if (m_file_sp->GetFileSpec() == bp_loc_line_entry.GetFile()) {
                 bp_lines.insert(bp_loc_line_entry.line);
               }
             }
@@ -7052,7 +7053,7 @@ public:
           m_file_sp->DisplaySourceLines(curr_line + 1, column, 0, 0,
                                         &lineStream);
           StringRef line = lineStream.GetString();
-          if (line.endswith("\n"))
+          if (line.ends_with("\n"))
             line = line.drop_back();
           bool wasWritten = window.OutputColoredStringTruncated(
               1, line, m_first_visible_column, is_pc_line);
@@ -7477,7 +7478,7 @@ public:
           LineEntry bp_loc_line_entry;
           if (bp_loc_sp->GetAddress().CalculateSymbolContextLineEntry(
                   bp_loc_line_entry)) {
-            if (m_file_sp->GetFileSpec() == bp_loc_line_entry.file &&
+            if (m_file_sp->GetFileSpec() == bp_loc_line_entry.GetFile() &&
                 m_selected_line + 1 == bp_loc_line_entry.line) {
               bool removed =
                   exe_ctx.GetTargetRef().RemoveBreakpointByID(bp_sp->GetID());

@@ -36,6 +36,7 @@
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
+#include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
@@ -242,15 +243,22 @@ bool matchREV(MachineInstr &MI, MachineRegisterInfo &MRI,
 
   unsigned NumElts = Ty.getNumElements();
 
-  // Try to produce G_REV64
-  if (isREVMask(ShuffleMask, EltSize, NumElts, 64)) {
-    MatchInfo = ShuffleVectorPseudo(AArch64::G_REV64, Dst, {Src});
-    return true;
+  // Try to produce a G_REV instruction
+  for (unsigned LaneSize : {64U, 32U, 16U}) {
+    if (isREVMask(ShuffleMask, EltSize, NumElts, LaneSize)) {
+      unsigned Opcode;
+      if (LaneSize == 64U)
+        Opcode = AArch64::G_REV64;
+      else if (LaneSize == 32U)
+        Opcode = AArch64::G_REV32;
+      else
+        Opcode = AArch64::G_REV16;
+
+      MatchInfo = ShuffleVectorPseudo(Opcode, Dst, {Src});
+      return true;
+    }
   }
 
-  // TODO: Produce G_REV32 and G_REV16 once we have proper legalization support.
-  // This should be identical to above, but with a constant 32 and constant
-  // 16.
   return false;
 }
 
@@ -466,6 +474,55 @@ void applyEXT(MachineInstr &MI, ShuffleVectorPseudo &MatchInfo) {
                           {MatchInfo.SrcOps[0], MatchInfo.SrcOps[1], Cst});
   }
   MI.eraseFromParent();
+}
+
+bool matchNonConstInsert(MachineInstr &MI, MachineRegisterInfo &MRI) {
+  assert(MI.getOpcode() == TargetOpcode::G_INSERT_VECTOR_ELT);
+
+  auto ValAndVReg =
+      getIConstantVRegValWithLookThrough(MI.getOperand(3).getReg(), MRI);
+  return !ValAndVReg;
+}
+
+void applyNonConstInsert(MachineInstr &MI, MachineRegisterInfo &MRI,
+                         MachineIRBuilder &Builder) {
+  auto &Insert = cast<GInsertVectorElement>(MI);
+  Builder.setInstrAndDebugLoc(Insert);
+
+  Register Offset = Insert.getIndexReg();
+  LLT VecTy = MRI.getType(Insert.getReg(0));
+  LLT EltTy = MRI.getType(Insert.getElementReg());
+  LLT IdxTy = MRI.getType(Insert.getIndexReg());
+
+  // Create a stack slot and store the vector into it
+  MachineFunction &MF = Builder.getMF();
+  Align Alignment(
+      std::min<uint64_t>(VecTy.getSizeInBytes().getKnownMinValue(), 16));
+  int FrameIdx = MF.getFrameInfo().CreateStackObject(VecTy.getSizeInBytes(),
+                                                     Alignment, false);
+  LLT FramePtrTy = LLT::pointer(0, 64);
+  MachinePointerInfo PtrInfo = MachinePointerInfo::getFixedStack(MF, FrameIdx);
+  auto StackTemp = Builder.buildFrameIndex(FramePtrTy, FrameIdx);
+
+  Builder.buildStore(Insert.getOperand(1), StackTemp, PtrInfo, Align(8));
+
+  // Get the pointer to the element, and be sure not to hit undefined behavior
+  // if the index is out of bounds.
+  assert(isPowerOf2_64(VecTy.getNumElements()) &&
+         "Expected a power-2 vector size");
+  auto Mask = Builder.buildConstant(IdxTy, VecTy.getNumElements() - 1);
+  Register And = Builder.buildAnd(IdxTy, Offset, Mask).getReg(0);
+  auto EltSize = Builder.buildConstant(IdxTy, EltTy.getSizeInBytes());
+  Register Mul = Builder.buildMul(IdxTy, And, EltSize).getReg(0);
+  Register EltPtr =
+      Builder.buildPtrAdd(MRI.getType(StackTemp.getReg(0)), StackTemp, Mul)
+          .getReg(0);
+
+  // Write the inserted element
+  Builder.buildStore(Insert.getElementReg(), EltPtr, PtrInfo, Align(1));
+  // Reload the whole vector.
+  Builder.buildLoad(Insert.getReg(0), StackTemp, PtrInfo, Align(8));
+  Insert.eraseFromParent();
 }
 
 /// Match a G_SHUFFLE_VECTOR with a mask which corresponds to a
@@ -769,6 +826,29 @@ void applyDupLane(MachineInstr &MI, MachineRegisterInfo &MRI,
   MI.eraseFromParent();
 }
 
+bool matchScalarizeVectorUnmerge(MachineInstr &MI, MachineRegisterInfo &MRI) {
+  auto &Unmerge = cast<GUnmerge>(MI);
+  Register Src1Reg = Unmerge.getReg(Unmerge.getNumOperands() - 1);
+  const LLT SrcTy = MRI.getType(Src1Reg);
+  if (SrcTy.getSizeInBits() != 128 && SrcTy.getSizeInBits() != 64)
+    return false;
+  return SrcTy.isVector() && !SrcTy.isScalable() &&
+         Unmerge.getNumOperands() == (unsigned)SrcTy.getNumElements() + 1;
+}
+
+void applyScalarizeVectorUnmerge(MachineInstr &MI, MachineRegisterInfo &MRI,
+                                 MachineIRBuilder &B) {
+  auto &Unmerge = cast<GUnmerge>(MI);
+  Register Src1Reg = Unmerge.getReg(Unmerge.getNumOperands() - 1);
+  const LLT SrcTy = MRI.getType(Src1Reg);
+  assert((SrcTy.isVector() && !SrcTy.isScalable()) &&
+         "Expected a fixed length vector");
+
+  for (int I = 0; I < SrcTy.getNumElements(); ++I)
+    B.buildExtractVectorElementConstant(Unmerge.getReg(I), Src1Reg, I);
+  MI.eraseFromParent();
+}
+
 bool matchBuildVectorToDup(MachineInstr &MI, MachineRegisterInfo &MRI) {
   assert(MI.getOpcode() == TargetOpcode::G_BUILD_VECTOR);
   auto Splat = getAArch64VectorSplat(MI, MRI);
@@ -994,13 +1074,17 @@ void applyLowerVectorFCMP(MachineInstr &MI, MachineRegisterInfo &MRI,
 
   bool Invert = false;
   AArch64CC::CondCode CC, CC2 = AArch64CC::AL;
-  if (Pred == CmpInst::Predicate::FCMP_ORD && IsZero) {
+  if ((Pred == CmpInst::Predicate::FCMP_ORD ||
+       Pred == CmpInst::Predicate::FCMP_UNO) &&
+      IsZero) {
     // The special case "fcmp ord %a, 0" is the canonical check that LHS isn't
     // NaN, so equivalent to a == a and doesn't need the two comparisons an
     // "ord" normally would.
+    // Similarly, "fcmp uno %a, 0" is the canonical check that LHS is NaN and is
+    // thus equivalent to a != a.
     RHS = LHS;
     IsZero = false;
-    CC = AArch64CC::EQ;
+    CC = Pred == CmpInst::Predicate::FCMP_ORD ? AArch64CC::EQ : AArch64CC::NE;
   } else
     changeVectorFCMPPredToAArch64CC(Pred, CC, CC2, Invert);
 

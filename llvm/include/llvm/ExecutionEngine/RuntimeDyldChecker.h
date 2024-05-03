@@ -9,7 +9,6 @@
 #ifndef LLVM_EXECUTIONENGINE_RUNTIMEDYLDCHECKER_H
 #define LLVM_EXECUTIONENGINE_RUNTIMEDYLDCHECKER_H
 
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/ExecutionEngine/JITSymbol.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/TargetParser/SubtargetFeature.h"
@@ -155,7 +154,7 @@ public:
   using GetSectionInfoFunction = std::function<Expected<MemoryRegionInfo>(
       StringRef FileName, StringRef SectionName)>;
   using GetStubInfoFunction = std::function<Expected<MemoryRegionInfo>(
-      StringRef StubContainer, StringRef TargetName)>;
+      StringRef StubContainer, StringRef TargetName, StringRef StubKindFilter)>;
   using GetGOTInfoFunction = std::function<Expected<MemoryRegionInfo>(
       StringRef GOTContainer, StringRef TargetName)>;
 
@@ -163,9 +162,9 @@ public:
                      GetSymbolInfoFunction GetSymbolInfo,
                      GetSectionInfoFunction GetSectionInfo,
                      GetStubInfoFunction GetStubInfo,
-                     GetGOTInfoFunction GetGOTInfo,
-                     support::endianness Endianness, Triple TT, StringRef CPU,
-                     SubtargetFeatures TF, raw_ostream &ErrStream);
+                     GetGOTInfoFunction GetGOTInfo, llvm::endianness Endianness,
+                     Triple TT, StringRef CPU, SubtargetFeatures TF,
+                     raw_ostream &ErrStream);
   ~RuntimeDyldChecker();
 
   /// Check a single expression against the attached RuntimeDyld

@@ -10,7 +10,7 @@ define i32 @test0() {
   ; CHECK: bb.0 (%ir-block.0):
   ; CHECK-NEXT:   successors: %bb.1(0x80000000), %bb.2(0x00000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   INLINEASM_BR &"", 0 /* attdialect */, 2359306 /* regdef:GR32 */, def %1, 13 /* imm */, %bb.2
+  ; CHECK-NEXT:   INLINEASM_BR &"", 0 /* attdialect */, 2686986 /* regdef:GR32_NOREX2 */, def %1, 13 /* imm */, %bb.2
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gr32 = COPY %1
   ; CHECK-NEXT:   JMP_1 %bb.1
   ; CHECK-NEXT: {{  $}}
@@ -39,7 +39,7 @@ define i32 @test1() {
   ; CHECK-NEXT:   successors: %bb.2(0x80000000), %bb.1(0x00000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[MOV32ri:%[0-9]+]]:gr32 = MOV32ri 42
-  ; CHECK-NEXT:   INLINEASM_BR &"", 0 /* attdialect */, 2359306 /* regdef:GR32 */, def %4, 13 /* imm */, %bb.1
+  ; CHECK-NEXT:   INLINEASM_BR &"", 0 /* attdialect */, 2686986 /* regdef:GR32_NOREX2 */, def %4, 13 /* imm */, %bb.1
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gr32 = COPY %4
   ; CHECK-NEXT:   JMP_1 %bb.2
   ; CHECK-NEXT: {{  $}}
@@ -72,7 +72,7 @@ define i32 @test2() {
   ; CHECK-NEXT:   successors: %bb.2(0x80000000), %bb.1(0x00000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[MOV32ri:%[0-9]+]]:gr32 = MOV32ri 42
-  ; CHECK-NEXT:   INLINEASM_BR &"", 0 /* attdialect */, 2359306 /* regdef:GR32 */, def %5, 2359306 /* regdef:GR32 */, def %6, 13 /* imm */, %bb.1
+  ; CHECK-NEXT:   INLINEASM_BR &"", 0 /* attdialect */, 2686986 /* regdef:GR32_NOREX2 */, def %5, 2686986 /* regdef:GR32_NOREX2 */, def %6, 13 /* imm */, %bb.1
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gr32 = COPY %6
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gr32 = COPY %5
   ; CHECK-NEXT:   JMP_1 %bb.2
@@ -232,7 +232,7 @@ define i64 @test6() {
   ; CHECK-NEXT:   liveins: $rdx
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:gr64 = COPY $rdx
-  ; CHECK-NEXT:   %3:gr64 = COPY [[COPY4]]
+  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:gr64 = COPY [[COPY4]]
   ; CHECK-NEXT:   JMP_1 %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.4.foo.split2 (machine-block-address-taken, inlineasm-br-indirect-target):
@@ -240,7 +240,7 @@ define i64 @test6() {
   ; CHECK-NEXT:   liveins: $rbx
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:gr64 = COPY $rbx
-  ; CHECK-NEXT:   %4:gr64 = COPY [[COPY6]]
+  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:gr64 = COPY [[COPY6]]
   ; CHECK-NEXT:   JMP_1 %bb.2
 entry:
   %0 = callbr i64 asm "", "={dx},!i"()
@@ -291,7 +291,7 @@ define i32 @test7() {
   ; CHECK-NEXT:   liveins: $edx
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:gr32 = COPY $edx
-  ; CHECK-NEXT:   %2:gr32 = COPY [[COPY3]]
+  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:gr32 = COPY [[COPY3]]
   ; CHECK-NEXT:   JMP_1 %bb.1
 entry:
   br label %retry
@@ -317,8 +317,8 @@ define i32 @test8() {
   ; CHECK: bb.0.entry:
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   INLINEASM_BR &"# $0", 0 /* attdialect */, 2359306 /* regdef:GR32 */, def %1, 13 /* imm */, %bb.1
-  ; CHECK-NEXT:   %0:gr32 = COPY %1
+  ; CHECK-NEXT:   INLINEASM_BR &"# $0", 0 /* attdialect */, 2686986 /* regdef:GR32_NOREX2 */, def %1, 13 /* imm */, %bb.1
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gr32 = COPY %1
   ; CHECK-NEXT:   JMP_1 %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1.cleanup (machine-block-address-taken, inlineasm-br-indirect-target):

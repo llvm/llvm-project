@@ -134,23 +134,9 @@ public:
 
   lldb::ScriptedProcessInterfaceUP CreateScriptedProcessInterface() override;
 
-  StructuredData::GenericSP
-  OSPlugin_CreatePluginObject(const char *class_name,
-                              lldb::ProcessSP process_sp) override;
+  lldb::ScriptedThreadInterfaceSP CreateScriptedThreadInterface() override;
 
-  StructuredData::DictionarySP
-  OSPlugin_RegisterInfo(StructuredData::ObjectSP os_plugin_object_sp) override;
-
-  StructuredData::ArraySP
-  OSPlugin_ThreadsInfo(StructuredData::ObjectSP os_plugin_object_sp) override;
-
-  StructuredData::StringSP
-  OSPlugin_RegisterContextData(StructuredData::ObjectSP os_plugin_object_sp,
-                               lldb::tid_t thread_id) override;
-
-  StructuredData::DictionarySP
-  OSPlugin_CreateThread(StructuredData::ObjectSP os_plugin_object_sp,
-                        lldb::tid_t tid, lldb::addr_t context) override;
+  lldb::OperatingSystemInterfaceSP CreateOperatingSystemInterface() override;
 
   StructuredData::ObjectSP
   LoadPluginModule(const FileSpec &file_spec,
@@ -196,6 +182,13 @@ public:
       lldb_private::CommandReturnObject &cmd_retobj, Status &error,
       const lldb_private::ExecutionContext &exe_ctx) override;
 
+    virtual bool RunScriptBasedParsedCommand(
+      StructuredData::GenericSP impl_obj_sp, Args& args,
+      ScriptedCommandSynchronicity synchronicity,
+      lldb_private::CommandReturnObject &cmd_retobj, Status &error,
+      const lldb_private::ExecutionContext &exe_ctx) override;
+
+  
   Status GenerateFunction(const char *signature, const StringList &input,
                           bool is_callback) override;
 
@@ -226,6 +219,20 @@ public:
 
   bool GetLongHelpForCommandObject(StructuredData::GenericSP cmd_obj_sp,
                                    std::string &dest) override;
+                                   
+  StructuredData::ObjectSP
+  GetOptionsForCommandObject(StructuredData::GenericSP cmd_obj_sp) override;
+
+  StructuredData::ObjectSP
+  GetArgumentsForCommandObject(StructuredData::GenericSP cmd_obj_sp) override;
+
+  bool SetOptionValueForCommandObject(StructuredData::GenericSP cmd_obj_sp,
+                                      ExecutionContext *exe_ctx,
+                                      llvm::StringRef long_option, 
+                                      llvm::StringRef value) override;
+
+  void OptionParsingStartedForCommandObject(
+      StructuredData::GenericSP cmd_obj_sp) override;
 
   bool CheckObjectExists(const char *name) override {
     if (!name || !name[0])

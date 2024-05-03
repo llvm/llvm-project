@@ -14,7 +14,6 @@
 #ifndef LLVM_DEBUGINFO_LOGICALVIEW_READERS_CODEVIEWVISITOR_H
 #define LLVM_DEBUGINFO_LOGICALVIEW_READERS_CODEVIEWVISITOR_H
 
-#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/DebugInfo/CodeView/SymbolDumpDelegate.h"
 #include "llvm/DebugInfo/CodeView/SymbolVisitorCallbacks.h"

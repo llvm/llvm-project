@@ -1,4 +1,4 @@
-; RUN: opt -march=hexagon -passes=loop-vectorize -hexagon-autohvx -debug-only=loop-vectorize -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt -mtriple=hexagon -passes=loop-vectorize -hexagon-autohvx -debug-only=loop-vectorize -disable-output < %s 2>&1 | FileCheck %s
 ; REQUIRES: asserts
 
 ; Check that TTI::getMinimumVF works. The calculated MaxVF was based on the
@@ -6,7 +6,6 @@
 ; CHECK: LV: Overriding calculated MaxVF({{[0-9]+}}) with target's minimum: 64
 
 target datalayout = "e-m:e-p:32:32:32-a:0-n16:32-i64:64:64-i32:32:32-i16:16:16-i1:8:8-f32:32:32-f64:64:64-v32:32:32-v64:64:64-v512:512:512-v1024:1024:1024-v2048:2048:2048"
-target triple = "hexagon"
 
 %s.0 = type { ptr, i32, i32, i32, i32 }
 

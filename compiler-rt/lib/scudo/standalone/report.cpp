@@ -24,11 +24,7 @@ public:
     Message.vappend(Format, Args);
     va_end(Args);
   }
-  NORETURN ~ScopedErrorReport() {
-    outputRaw(Message.data());
-    setAbortMessage(Message.data());
-    die();
-  }
+  NORETURN ~ScopedErrorReport() { reportRawError(Message.data()); }
 
 private:
   ScopedString Message;
@@ -53,6 +49,13 @@ void NORETURN reportCheckFailed(const char *File, int Line,
 void NORETURN reportError(const char *Message) {
   ScopedErrorReport Report;
   Report.append("%s\n", Message);
+}
+
+// Generic fatal error message without ScopedString.
+void NORETURN reportRawError(const char *Message) {
+  outputRaw(Message);
+  setAbortMessage(Message);
+  die();
 }
 
 void NORETURN reportInvalidFlag(const char *FlagType, const char *Value) {

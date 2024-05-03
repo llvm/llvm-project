@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -split-input-file -async-to-async-runtime -convert-async-to-llvm='use-opaque-pointers=1' | FileCheck %s
+// RUN: mlir-opt %s -split-input-file -async-to-async-runtime -convert-async-to-llvm | FileCheck %s
 
 // CHECK-LABEL: reference_counting
 func.func @reference_counting(%arg0: !async.token) {

@@ -16,7 +16,7 @@ define dso_local void @fun() {
 entry:
   %tmp = add nuw nsw i16 0, 238
   %tmp4 = sub nsw i16 %tmp, 0
-  store i64 4, ptr getelementptr inbounds (<{ i64, i8, i8, i8, i8, i8, i8 }>, ptr @g_277, i64 0, i32 0), align 8
+  store i64 4, ptr @g_277, align 8
   %tmp5 = load i64, ptr getelementptr inbounds ([7 x i64], ptr @g_1531, i64 0, i64 5), align 8
   %tmp6 = trunc i64 %tmp5 to i32
   %tmp7 = trunc i64 %tmp5 to i16

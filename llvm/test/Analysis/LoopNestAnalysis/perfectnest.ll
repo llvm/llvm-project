@@ -5,7 +5,7 @@
 ;     for(j=0; j<nx; ++j)
 ;       y[i][j] = x[i][j];
 
-define void @perf_nest_2D_1(i32** %y, i32** %x, i64 signext %nx, i64 signext %ny) {
+define void @perf_nest_2D_1(ptr %y, ptr %x, i64 signext %nx, i64 signext %ny) {
 ; CHECK-LABEL: IsPerfect=true, Depth=1, OutermostLoop: perf_nest_2D_1_loop_j, Loops: ( perf_nest_2D_1_loop_j )
 ; CHECK-LABEL: IsPerfect=true, Depth=2, OutermostLoop: perf_nest_2D_1_loop_i, Loops: ( perf_nest_2D_1_loop_i perf_nest_2D_1_loop_j )
 entry:
@@ -18,14 +18,14 @@ perf_nest_2D_1_loop_i:
 
 perf_nest_2D_1_loop_j:
   %j = phi i64 [ 0, %perf_nest_2D_1_loop_i ], [ %inc, %inc_j ]
-  %arrayidx = getelementptr inbounds i32*, i32** %x, i64 %j
-  %0 = load i32*, i32** %arrayidx, align 8
-  %arrayidx6 = getelementptr inbounds i32, i32* %0, i64 %j
-  %1 = load i32, i32* %arrayidx6, align 4
-  %arrayidx8 = getelementptr inbounds i32*, i32** %y, i64 %j
-  %2 = load i32*, i32** %arrayidx8, align 8
-  %arrayidx11 = getelementptr inbounds i32, i32* %2, i64 %i
-  store i32 %1, i32* %arrayidx11, align 4
+  %arrayidx = getelementptr inbounds ptr, ptr %x, i64 %j
+  %0 = load ptr, ptr %arrayidx, align 8
+  %arrayidx6 = getelementptr inbounds i32, ptr %0, i64 %j
+  %1 = load i32, ptr %arrayidx6, align 4
+  %arrayidx8 = getelementptr inbounds ptr, ptr %y, i64 %j
+  %2 = load ptr, ptr %arrayidx8, align 8
+  %arrayidx11 = getelementptr inbounds i32, ptr %2, i64 %i
+  store i32 %1, ptr %arrayidx11, align 4
   br label %inc_j
 
 inc_j:
@@ -46,7 +46,7 @@ perf_nest_2D_1_loop_i_end:
 ;   for (i=0; i<100; ++i)
 ;     for (j=0; j<100; ++j)
 ;       y[i][j] = x[i][j];
-define void @perf_nest_2D_2(i32** %y, i32** %x) {
+define void @perf_nest_2D_2(ptr %y, ptr %x) {
 ; CHECK-LABEL: IsPerfect=true, Depth=1, OutermostLoop: perf_nest_2D_2_loop_j, Loops: ( perf_nest_2D_2_loop_j )
 ; CHECK-LABEL: IsPerfect=true, Depth=2, OutermostLoop: perf_nest_2D_2_loop_i, Loops: ( perf_nest_2D_2_loop_i perf_nest_2D_2_loop_j )
 entry:
@@ -58,14 +58,14 @@ perf_nest_2D_2_loop_i:
 
 perf_nest_2D_2_loop_j:
   %j = phi i64 [ 0, %perf_nest_2D_2_loop_i ], [ %inc, %inc_j ]
-  %arrayidx = getelementptr inbounds i32*, i32** %x, i64 %j
-  %0 = load i32*, i32** %arrayidx, align 8
-  %arrayidx6 = getelementptr inbounds i32, i32* %0, i64 %j
-  %1 = load i32, i32* %arrayidx6, align 4
-  %arrayidx8 = getelementptr inbounds i32*, i32** %y, i64 %j
-  %2 = load i32*, i32** %arrayidx8, align 8
-  %arrayidx11 = getelementptr inbounds i32, i32* %2, i64 %i
-  store i32 %1, i32* %arrayidx11, align 4
+  %arrayidx = getelementptr inbounds ptr, ptr %x, i64 %j
+  %0 = load ptr, ptr %arrayidx, align 8
+  %arrayidx6 = getelementptr inbounds i32, ptr %0, i64 %j
+  %1 = load i32, ptr %arrayidx6, align 4
+  %arrayidx8 = getelementptr inbounds ptr, ptr %y, i64 %j
+  %2 = load ptr, ptr %arrayidx8, align 8
+  %arrayidx11 = getelementptr inbounds i32, ptr %2, i64 %i
+  store i32 %1, ptr %arrayidx11, align 4
   br label %inc_j
 
 inc_j:
@@ -85,7 +85,7 @@ perf_nest_2D_2_loop_i_end:
   ret void
 }
 
-define void @perf_nest_2D_3(i32** %y, i32** %x, i64 signext %nx, i64 signext %ny) {
+define void @perf_nest_2D_3(ptr %y, ptr %x, i64 signext %nx, i64 signext %ny) {
 ; CHECK-LABEL: IsPerfect=true, Depth=1, OutermostLoop: perf_nest_2D_3_loop_j, Loops: ( perf_nest_2D_3_loop_j )
 ; CHECK-LABEL: IsPerfect=true, Depth=2, OutermostLoop: perf_nest_2D_3_loop_i, Loops: ( perf_nest_2D_3_loop_i perf_nest_2D_3_loop_j )
 entry:
@@ -104,14 +104,14 @@ preheader.j:
 
 perf_nest_2D_3_loop_j:
   %j = phi i64 [ 0, %preheader.j ], [ %inc, %inc_j ]
-  %arrayidx = getelementptr inbounds i32*, i32** %x, i64 %j
-  %0 = load i32*, i32** %arrayidx, align 8
-  %arrayidx6 = getelementptr inbounds i32, i32* %0, i64 %j
-  %1 = load i32, i32* %arrayidx6, align 4
-  %arrayidx8 = getelementptr inbounds i32*, i32** %y, i64 %j
-  %2 = load i32*, i32** %arrayidx8, align 8
-  %arrayidx11 = getelementptr inbounds i32, i32* %2, i64 %i
-  store i32 %1, i32* %arrayidx11, align 4
+  %arrayidx = getelementptr inbounds ptr, ptr %x, i64 %j
+  %0 = load ptr, ptr %arrayidx, align 8
+  %arrayidx6 = getelementptr inbounds i32, ptr %0, i64 %j
+  %1 = load i32, ptr %arrayidx6, align 4
+  %arrayidx8 = getelementptr inbounds ptr, ptr %y, i64 %j
+  %2 = load ptr, ptr %arrayidx8, align 8
+  %arrayidx11 = getelementptr inbounds i32, ptr %2, i64 %i
+  store i32 %1, ptr %arrayidx11, align 4
   br label %inc_j
 
 inc_j:
@@ -141,7 +141,7 @@ perf_nest_2D_3_loop_i_end:
 ;          y[j][j][k] = x[i][j][k];
 ;
 
-define void @perf_nest_3D_1(i32*** %y, i32*** %x, i32 signext %nx, i32 signext %ny, i32 signext %nk) {
+define void @perf_nest_3D_1(ptr %y, ptr %x, i32 signext %nx, i32 signext %ny, i32 signext %nk) {
 ; CHECK-LABEL: IsPerfect=true, Depth=1, OutermostLoop: perf_nest_3D_1_loop_k, Loops: ( perf_nest_3D_1_loop_k )
 ; CHECK-NEXT: IsPerfect=true, Depth=2, OutermostLoop: perf_nest_3D_1_loop_j, Loops: ( perf_nest_3D_1_loop_j perf_nest_3D_1_loop_k )
 ; CHECK-NEXT: IsPerfect=true, Depth=3, OutermostLoop: perf_nest_3D_1_loop_i, Loops: ( perf_nest_3D_1_loop_i perf_nest_3D_1_loop_j perf_nest_3D_1_loop_k )
@@ -161,23 +161,23 @@ perf_nest_3D_1_loop_j:
 perf_nest_3D_1_loop_k:
   %k = phi i32 [ 0, %perf_nest_3D_1_loop_j ], [ %inck, %for.inck ]
   %idxprom = sext i32 %i to i64
-  %arrayidx = getelementptr inbounds i32**, i32*** %x, i64 %idxprom
-  %0 = load i32**, i32*** %arrayidx, align 8
+  %arrayidx = getelementptr inbounds ptr, ptr %x, i64 %idxprom
+  %0 = load ptr, ptr %arrayidx, align 8
   %idxprom7 = sext i32 %j to i64
-  %arrayidx8 = getelementptr inbounds i32*, i32** %0, i64 %idxprom7
-  %1 = load i32*, i32** %arrayidx8, align 8
+  %arrayidx8 = getelementptr inbounds ptr, ptr %0, i64 %idxprom7
+  %1 = load ptr, ptr %arrayidx8, align 8
   %idxprom9 = sext i32 %k to i64
-  %arrayidx10 = getelementptr inbounds i32, i32* %1, i64 %idxprom9
-  %2 = load i32, i32* %arrayidx10, align 4
+  %arrayidx10 = getelementptr inbounds i32, ptr %1, i64 %idxprom9
+  %2 = load i32, ptr %arrayidx10, align 4
   %idxprom11 = sext i32 %j to i64
-  %arrayidx12 = getelementptr inbounds i32**, i32*** %y, i64 %idxprom11
-  %3 = load i32**, i32*** %arrayidx12, align 8
+  %arrayidx12 = getelementptr inbounds ptr, ptr %y, i64 %idxprom11
+  %3 = load ptr, ptr %arrayidx12, align 8
   %idxprom13 = sext i32 %j to i64
-  %arrayidx14 = getelementptr inbounds i32*, i32** %3, i64 %idxprom13
-  %4 = load i32*, i32** %arrayidx14, align 8
+  %arrayidx14 = getelementptr inbounds ptr, ptr %3, i64 %idxprom13
+  %4 = load ptr, ptr %arrayidx14, align 8
   %idxprom15 = sext i32 %k to i64
-  %arrayidx16 = getelementptr inbounds i32, i32* %4, i64 %idxprom15
-  store i32 %2, i32* %arrayidx16, align 4
+  %arrayidx16 = getelementptr inbounds i32, ptr %4, i64 %idxprom15
+  store i32 %2, ptr %arrayidx16, align 4
   br label %for.inck
 
 for.inck:
@@ -206,7 +206,7 @@ perf_nest_3D_1_loop_i_end:
 ;          y[j][j][k] = x[i][j][k];
 ;
 
-define void @perf_nest_3D_2(i32*** %y, i32*** %x) {
+define void @perf_nest_3D_2(ptr %y, ptr %x) {
 ; CHECK-LABEL: IsPerfect=true, Depth=1, OutermostLoop: perf_nest_3D_2_loop_k, Loops: ( perf_nest_3D_2_loop_k )
 ; CHECK-NEXT: IsPerfect=true, Depth=2, OutermostLoop: perf_nest_3D_2_loop_j, Loops: ( perf_nest_3D_2_loop_j perf_nest_3D_2_loop_k )
 ; CHECK-NEXT: IsPerfect=true, Depth=3, OutermostLoop: perf_nest_3D_2_loop_i, Loops: ( perf_nest_3D_2_loop_i perf_nest_3D_2_loop_j perf_nest_3D_2_loop_k )
@@ -224,23 +224,23 @@ perf_nest_3D_2_loop_j:
 perf_nest_3D_2_loop_k:
   %k = phi i32 [ 0, %perf_nest_3D_2_loop_j ], [ %inck, %for.inck ]
   %idxprom = sext i32 %i to i64
-  %arrayidx = getelementptr inbounds i32**, i32*** %x, i64 %idxprom
-  %0 = load i32**, i32*** %arrayidx, align 8
+  %arrayidx = getelementptr inbounds ptr, ptr %x, i64 %idxprom
+  %0 = load ptr, ptr %arrayidx, align 8
   %idxprom7 = sext i32 %j to i64
-  %arrayidx8 = getelementptr inbounds i32*, i32** %0, i64 %idxprom7
-  %1 = load i32*, i32** %arrayidx8, align 8
+  %arrayidx8 = getelementptr inbounds ptr, ptr %0, i64 %idxprom7
+  %1 = load ptr, ptr %arrayidx8, align 8
   %idxprom9 = sext i32 %k to i64
-  %arrayidx10 = getelementptr inbounds i32, i32* %1, i64 %idxprom9
-  %2 = load i32, i32* %arrayidx10, align 4
+  %arrayidx10 = getelementptr inbounds i32, ptr %1, i64 %idxprom9
+  %2 = load i32, ptr %arrayidx10, align 4
   %idxprom11 = sext i32 %j to i64
-  %arrayidx12 = getelementptr inbounds i32**, i32*** %y, i64 %idxprom11
-  %3 = load i32**, i32*** %arrayidx12, align 8
+  %arrayidx12 = getelementptr inbounds ptr, ptr %y, i64 %idxprom11
+  %3 = load ptr, ptr %arrayidx12, align 8
   %idxprom13 = sext i32 %j to i64
-  %arrayidx14 = getelementptr inbounds i32*, i32** %3, i64 %idxprom13
-  %4 = load i32*, i32** %arrayidx14, align 8
+  %arrayidx14 = getelementptr inbounds ptr, ptr %3, i64 %idxprom13
+  %4 = load ptr, ptr %arrayidx14, align 8
   %idxprom15 = sext i32 %k to i64
-  %arrayidx16 = getelementptr inbounds i32, i32* %4, i64 %idxprom15
-  store i32 %2, i32* %arrayidx16, align 4
+  %arrayidx16 = getelementptr inbounds i32, ptr %4, i64 %idxprom15
+  store i32 %2, ptr %arrayidx16, align 4
   br label %for.inck
 
 for.inck:
@@ -329,7 +329,7 @@ for.end7:
 ;       for (int j=i; j < ny; j+=1)
 ;         y[j][i] = x[i][j] + j;
 ;     }
-define double @perf_nest_guard_branch(i32** %y, i32** %x, i32 signext %nx, i32 signext %ny) {
+define double @perf_nest_guard_branch(ptr %y, ptr %x, i32 signext %nx, i32 signext %ny) {
 ; CHECK-LABEL: IsPerfect=true, Depth=1, OutermostLoop: test6Loop2, Loops: ( test6Loop2 )
 ; CHECK-LABEL: IsPerfect=true, Depth=2, OutermostLoop: test6Loop1, Loops: ( test6Loop1 test6Loop2 )
 entry:
@@ -350,18 +350,18 @@ test6Loop2.lr.ph:                                  ; preds = %if.then
 test6Loop2:                                        ; preds = %test6Loop2.lr.ph, %for.inc
   %j.0 = phi i32 [ %i.0, %test6Loop2.lr.ph ], [ %inc, %for.inc ]
   %idxprom = sext i32 %i.0 to i64
-  %arrayidx = getelementptr inbounds i32*, i32** %x, i64 %idxprom
-  %0 = load i32*, i32** %arrayidx, align 8
+  %arrayidx = getelementptr inbounds ptr, ptr %x, i64 %idxprom
+  %0 = load ptr, ptr %arrayidx, align 8
   %idxprom5 = sext i32 %j.0 to i64
-  %arrayidx6 = getelementptr inbounds i32, i32* %0, i64 %idxprom5
-  %1 = load i32, i32* %arrayidx6, align 4
+  %arrayidx6 = getelementptr inbounds i32, ptr %0, i64 %idxprom5
+  %1 = load i32, ptr %arrayidx6, align 4
   %add = add nsw i32 %1, %j.0
   %idxprom7 = sext i32 %j.0 to i64
-  %arrayidx8 = getelementptr inbounds i32*, i32** %y, i64 %idxprom7
-  %2 = load i32*, i32** %arrayidx8, align 8
+  %arrayidx8 = getelementptr inbounds ptr, ptr %y, i64 %idxprom7
+  %2 = load ptr, ptr %arrayidx8, align 8
   %idxprom9 = sext i32 %i.0 to i64
-  %arrayidx10 = getelementptr inbounds i32, i32* %2, i64 %idxprom9
-  store i32 %add, i32* %arrayidx10, align 4
+  %arrayidx10 = getelementptr inbounds i32, ptr %2, i64 %idxprom9
+  store i32 %add, ptr %arrayidx10, align 4
   br label %for.inc
 
 for.inc:                                          ; preds = %test6Loop2
@@ -387,10 +387,10 @@ for.cond.for.end13_crit_edge:                     ; preds = %for.inc11
   br label %for.end13
 
 for.end13:                                        ; preds = %for.cond.for.end13_crit_edge, %entry
-  %arrayidx14 = getelementptr inbounds i32*, i32** %y, i64 0
-  %3 = load i32*, i32** %arrayidx14, align 8
-  %arrayidx15 = getelementptr inbounds i32, i32* %3, i64 0
-  %4 = load i32, i32* %arrayidx15, align 4
+  %arrayidx14 = getelementptr inbounds ptr, ptr %y, i64 0
+  %3 = load ptr, ptr %arrayidx14, align 8
+  %arrayidx15 = getelementptr inbounds i32, ptr %3, i64 0
+  %4 = load i32, ptr %arrayidx15, align 4
   %conv = sitofp i32 %4 to double
   ret double %conv
 }
@@ -402,7 +402,7 @@ for.end13:                                        ; preds = %for.cond.for.end13_
 ;         y[j][i] = x[i][j] + j;
 ;     }
 
-define double @test6(i32** %y, i32** %x, i32 signext %nx, i32 signext %ny) {
+define double @test6(ptr %y, ptr %x, i32 signext %nx, i32 signext %ny) {
 ; CHECK-LABEL: IsPerfect=true, Depth=1, OutermostLoop: test6Loop2, Loops: ( test6Loop2 )
 ; CHECK-LABEL: IsPerfect=true, Depth=2, OutermostLoop: test6Loop1, Loops: ( test6Loop1 test6Loop2 )
 entry:
@@ -423,18 +423,18 @@ test6Loop2.lr.ph:                                  ; preds = %if.then
 test6Loop2:                                        ; preds = %test6Loop2.lr.ph, %for.inc
   %j.0 = phi i32 [ %i.0, %test6Loop2.lr.ph ], [ %inc, %for.inc ]
   %idxprom = sext i32 %i.0 to i64
-  %arrayidx = getelementptr inbounds i32*, i32** %x, i64 %idxprom
-  %0 = load i32*, i32** %arrayidx, align 8
+  %arrayidx = getelementptr inbounds ptr, ptr %x, i64 %idxprom
+  %0 = load ptr, ptr %arrayidx, align 8
   %idxprom5 = sext i32 %j.0 to i64
-  %arrayidx6 = getelementptr inbounds i32, i32* %0, i64 %idxprom5
-  %1 = load i32, i32* %arrayidx6, align 4
+  %arrayidx6 = getelementptr inbounds i32, ptr %0, i64 %idxprom5
+  %1 = load i32, ptr %arrayidx6, align 4
   %add = add nsw i32 %1, %j.0
   %idxprom7 = sext i32 %j.0 to i64
-  %arrayidx8 = getelementptr inbounds i32*, i32** %y, i64 %idxprom7
-  %2 = load i32*, i32** %arrayidx8, align 8
+  %arrayidx8 = getelementptr inbounds ptr, ptr %y, i64 %idxprom7
+  %2 = load ptr, ptr %arrayidx8, align 8
   %idxprom9 = sext i32 %i.0 to i64
-  %arrayidx10 = getelementptr inbounds i32, i32* %2, i64 %idxprom9
-  store i32 %add, i32* %arrayidx10, align 4
+  %arrayidx10 = getelementptr inbounds i32, ptr %2, i64 %idxprom9
+  store i32 %add, ptr %arrayidx10, align 4
   br label %for.inc
 
 for.inc:                                          ; preds = %test6Loop2
@@ -460,10 +460,10 @@ for.cond.for.end13_crit_edge:                     ; preds = %for.inc11
   br label %for.end13
 
 for.end13:                                        ; preds = %for.cond.for.end13_crit_edge, %entry
-  %arrayidx14 = getelementptr inbounds i32*, i32** %y, i64 0
-  %3 = load i32*, i32** %arrayidx14, align 8
-  %arrayidx15 = getelementptr inbounds i32, i32* %3, i64 0
-  %4 = load i32, i32* %arrayidx15, align 4
+  %arrayidx14 = getelementptr inbounds ptr, ptr %y, i64 0
+  %3 = load ptr, ptr %arrayidx14, align 8
+  %arrayidx15 = getelementptr inbounds i32, ptr %3, i64 0
+  %4 = load i32, ptr %arrayidx15, align 4
   %conv = sitofp i32 %4 to double
   ret double %conv
 }

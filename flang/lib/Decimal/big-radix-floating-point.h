@@ -30,6 +30,10 @@
 #include <limits>
 #include <type_traits>
 
+// Some environments, viz. glibc 2.17, allow the macro HUGE
+// to leak out of <math.h>.
+#undef HUGE
+
 namespace Fortran::decimal {
 
 static constexpr std::uint64_t TenToThe(int power) {
@@ -64,30 +68,32 @@ private:
   static constexpr int maxDigits{3 - minLog2AnyBit / log10Radix};
 
 public:
-  explicit BigRadixFloatingPointNumber(
+  explicit RT_API_ATTRS BigRadixFloatingPointNumber(
       enum FortranRounding rounding = RoundNearest)
       : rounding_{rounding} {}
 
   // Converts a binary floating point value.
-  explicit BigRadixFloatingPointNumber(
+  explicit RT_API_ATTRS BigRadixFloatingPointNumber(
       Real, enum FortranRounding = RoundNearest);
 
-  BigRadixFloatingPointNumber &SetToZero() {
+  RT_API_ATTRS BigRadixFloatingPointNumber &SetToZero() {
     isNegative_ = false;
     digits_ = 0;
     exponent_ = 0;
     return *this;
   }
 
+  RT_API_ATTRS bool IsInteger() const { return exponent_ >= 0; }
+
   // Converts decimal floating-point to binary.
-  ConversionToBinaryResult<PREC> ConvertToBinary();
+  RT_API_ATTRS ConversionToBinaryResult<PREC> ConvertToBinary();
 
   // Parses and converts to binary.  Handles leading spaces,
   // "NaN", & optionally-signed "Inf".  Does not skip internal
   // spaces.
   // The argument is a reference to a pointer that is left
   // pointing to the first character that wasn't parsed.
-  ConversionToBinaryResult<PREC> ConvertToBinary(
+  RT_API_ATTRS ConversionToBinaryResult<PREC> ConvertToBinary(
       const char *&, const char *end = nullptr);
 
   // Formats a decimal floating-point number to a user buffer.
@@ -96,7 +102,7 @@ public:
   // after the last digit; the effective decimal exponent is
   // returned as part of the result structure so that it can be
   // formatted by the client.
-  ConversionToDecimalResult ConvertToDecimal(
+  RT_API_ATTRS ConversionToDecimalResult ConvertToDecimal(
       char *, std::size_t, enum DecimalConversionFlags, int digits) const;
 
   // Discard decimal digits not needed to distinguish this value
@@ -108,13 +114,14 @@ public:
   // This minimization necessarily assumes that the value will be
   // emitted and read back into the same (or less precise) format
   // with default rounding to the nearest value.
-  void Minimize(
+  RT_API_ATTRS void Minimize(
       BigRadixFloatingPointNumber &&less, BigRadixFloatingPointNumber &&more);
 
   template <typename STREAM> STREAM &Dump(STREAM &) const;
 
 private:
-  BigRadixFloatingPointNumber(const BigRadixFloatingPointNumber &that)
+  RT_API_ATTRS BigRadixFloatingPointNumber(
+      const BigRadixFloatingPointNumber &that)
       : digits_{that.digits_}, exponent_{that.exponent_},
         isNegative_{that.isNegative_}, rounding_{that.rounding_} {
     for (int j{0}; j < digits_; ++j) {
@@ -122,7 +129,7 @@ private:
     }
   }
 
-  bool IsZero() const {
+  RT_API_ATTRS bool IsZero() const {
     // Don't assume normalization.
     for (int j{0}; j < digits_; ++j) {
       if (digit_[j] != 0) {
@@ -136,13 +143,13 @@ private:
   // (When this happens during decimal-to-binary conversion,
   // there are more digits in the input string than can be
   // represented precisely.)
-  bool IsFull() const {
+  RT_API_ATTRS bool IsFull() const {
     return digits_ == digitLimit_ && digit_[digits_ - 1] >= radix / 10;
   }
 
   // Sets *this to an unsigned integer value.
   // Returns any remainder.
-  template <typename UINT> UINT SetTo(UINT n) {
+  template <typename UINT> RT_API_ATTRS UINT SetTo(UINT n) {
     static_assert(
         std::is_same_v<UINT, common::uint128_t> || std::is_unsigned_v<UINT>);
     SetToZero();
@@ -169,7 +176,7 @@ private:
     }
   }
 
-  int RemoveLeastOrderZeroDigits() {
+  RT_API_ATTRS int RemoveLeastOrderZeroDigits() {
     int remove{0};
     if (digits_ > 0 && digit_[0] == 0) {
       while (remove < digits_ && digit_[remove] == 0) {
@@ -193,25 +200,25 @@ private:
     return remove;
   }
 
-  void RemoveLeadingZeroDigits() {
+  RT_API_ATTRS void RemoveLeadingZeroDigits() {
     while (digits_ > 0 && digit_[digits_ - 1] == 0) {
       --digits_;
     }
   }
 
-  void Normalize() {
+  RT_API_ATTRS void Normalize() {
     RemoveLeadingZeroDigits();
     exponent_ += RemoveLeastOrderZeroDigits() * log10Radix;
   }
 
   // This limited divisibility test only works for even divisors of the radix,
   // which is fine since it's only ever used with 2 and 5.
-  template <int N> bool IsDivisibleBy() const {
+  template <int N> RT_API_ATTRS bool IsDivisibleBy() const {
     static_assert(N > 1 && radix % N == 0, "bad modulus");
     return digits_ == 0 || (digit_[0] % N) == 0;
   }
 
-  template <unsigned DIVISOR> int DivideBy() {
+  template <unsigned DIVISOR> RT_API_ATTRS int DivideBy() {
     Digit remainder{0};
     for (int j{digits_ - 1}; j >= 0; --j) {
       Digit q{digit_[j] / DIVISOR};
@@ -222,7 +229,7 @@ private:
     return remainder;
   }
 
-  void DivideByPowerOfTwo(int twoPow) { // twoPow <= log10Radix
+  RT_API_ATTRS void DivideByPowerOfTwo(int twoPow) { // twoPow <= log10Radix
     Digit remainder{0};
     auto mask{(Digit{1} << twoPow) - 1};
     auto coeff{radix >> twoPow};
@@ -234,7 +241,7 @@ private:
   }
 
   // Returns true on overflow
-  bool DivideByPowerOfTwoInPlace(int twoPow) {
+  RT_API_ATTRS bool DivideByPowerOfTwoInPlace(int twoPow) {
     if (digits_ > 0) {
       while (twoPow > 0) {
         int chunk{twoPow > log10Radix ? log10Radix : twoPow};
@@ -264,7 +271,7 @@ private:
     return false; // no overflow
   }
 
-  int AddCarry(int position = 0, int carry = 1) {
+  RT_API_ATTRS int AddCarry(int position = 0, int carry = 1) {
     for (; position < digits_; ++position) {
       Digit v{digit_[position] + carry};
       if (v < radix) {
@@ -286,13 +293,13 @@ private:
     return carry;
   }
 
-  void Decrement() {
+  RT_API_ATTRS void Decrement() {
     for (int j{0}; digit_[j]-- == 0; ++j) {
       digit_[j] = radix - 1;
     }
   }
 
-  template <int N> int MultiplyByHelper(int carry = 0) {
+  template <int N> RT_API_ATTRS int MultiplyByHelper(int carry = 0) {
     for (int j{0}; j < digits_; ++j) {
       auto v{N * digit_[j] + carry};
       carry = v / radix;
@@ -301,7 +308,7 @@ private:
     return carry;
   }
 
-  template <int N> int MultiplyBy(int carry = 0) {
+  template <int N> RT_API_ATTRS int MultiplyBy(int carry = 0) {
     if (int newCarry{MultiplyByHelper<N>(carry)}) {
       return AddCarry(digits_, newCarry);
     } else {
@@ -309,7 +316,7 @@ private:
     }
   }
 
-  template <int N> int MultiplyWithoutNormalization() {
+  template <int N> RT_API_ATTRS int MultiplyWithoutNormalization() {
     if (int carry{MultiplyByHelper<N>(0)}) {
       if (digits_ < digitLimit_) {
         digit_[digits_++] = carry;
@@ -322,9 +329,9 @@ private:
     }
   }
 
-  void LoseLeastSignificantDigit(); // with rounding
+  RT_API_ATTRS void LoseLeastSignificantDigit(); // with rounding
 
-  void PushCarry(int carry) {
+  RT_API_ATTRS void PushCarry(int carry) {
     if (digits_ == maxDigits && RemoveLeastOrderZeroDigits() == 0) {
       LoseLeastSignificantDigit();
       digit_[digits_ - 1] += carry;
@@ -336,18 +343,20 @@ private:
   // Adds another number and then divides by two.
   // Assumes same exponent and sign.
   // Returns true when the result has effectively been rounded down.
-  bool Mean(const BigRadixFloatingPointNumber &);
+  RT_API_ATTRS bool Mean(const BigRadixFloatingPointNumber &);
 
   // Parses a floating-point number; leaves the pointer reference
   // argument pointing at the next character after what was recognized.
   // The "end" argument can be left null if the caller is sure that the
   // string is properly terminated with an addressable character that
   // can't be in a valid floating-point character.
-  bool ParseNumber(const char *&, bool &inexact, const char *end);
+  RT_API_ATTRS bool ParseNumber(const char *&, bool &inexact, const char *end);
 
   using Raw = typename Real::RawType;
-  constexpr Raw SignBit() const { return Raw{isNegative_} << (Real::bits - 1); }
-  constexpr Raw Infinity() const {
+  constexpr RT_API_ATTRS Raw SignBit() const {
+    return Raw{isNegative_} << (Real::bits - 1);
+  }
+  constexpr RT_API_ATTRS Raw Infinity() const {
     Raw result{static_cast<Raw>(Real::maxExponent)};
     result <<= Real::significandBits;
     result |= SignBit();
@@ -356,7 +365,7 @@ private:
     }
     return result;
   }
-  constexpr Raw NaN(bool isQuiet = true) {
+  constexpr RT_API_ATTRS Raw NaN(bool isQuiet = true) {
     Raw result{Real::maxExponent};
     result <<= Real::significandBits;
     result |= SignBit();
@@ -368,6 +377,12 @@ private:
       result |= quiet;
     }
     return result;
+  }
+  constexpr RT_API_ATTRS Raw HUGE() const {
+    Raw result{static_cast<Raw>(Real::maxExponent)};
+    result <<= Real::significandBits;
+    result |= SignBit();
+    return result - 1; // decrement exponent, set all significand bits
   }
 
   Digit digit_[maxDigits]; // in little-endian order: digit_[0] is LSD
