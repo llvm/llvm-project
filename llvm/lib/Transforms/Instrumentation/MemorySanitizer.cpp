@@ -1237,9 +1237,11 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     // Note: The loop based formation works for fixed length vectors too,
     // however we prefer to unroll and specialize alignment below.
     if (TS.isScalable()) {
-      Value *Size = IRB.CreateTypeSize(IRB.getInt32Ty(), TS);
-      Value *RoundUp = IRB.CreateAdd(Size, IRB.getInt32(kOriginSize - 1));
-      Value *End = IRB.CreateUDiv(RoundUp, IRB.getInt32(kOriginSize));
+      Value *Size = IRB.CreateTypeSize(MS.IntptrTy, TS);
+      Value *RoundUp =
+          IRB.CreateAdd(Size, ConstantInt::get(MS.IntptrTy, kOriginSize - 1));
+      Value *End =
+          IRB.CreateUDiv(RoundUp, ConstantInt::get(MS.IntptrTy, kOriginSize));
       auto [InsertPt, Index] =
         SplitBlockAndInsertSimpleForLoop(End, &*IRB.GetInsertPoint());
       IRB.SetInsertPoint(InsertPt);
