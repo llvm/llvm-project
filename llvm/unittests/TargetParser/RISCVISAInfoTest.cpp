@@ -46,11 +46,19 @@ TEST(ParseNormalizedArchString, RejectsMalformedInputs) {
   }
 }
 
-TEST(ParseNormalizedArchString, OnlyVersion) {
+TEST(ParseNormalizedArchString, RejectsOnlyVersion) {
   for (StringRef Input : {"rv64i2p0_1p0", "rv32i2p0_1p0"}) {
     EXPECT_EQ(
         toString(RISCVISAInfo::parseNormalizedArchString(Input).takeError()),
         "missing extension name");
+  }
+}
+
+TEST(ParseNormalizedArchString, RejectsBadZ) {
+  for (StringRef Input : {"rv64i2p0_z1p0", "rv32i2p0_z2a1p0"}) {
+    EXPECT_EQ(
+        toString(RISCVISAInfo::parseNormalizedArchString(Input).takeError()),
+        "'z' must be followed by a letter");
   }
 }
 
