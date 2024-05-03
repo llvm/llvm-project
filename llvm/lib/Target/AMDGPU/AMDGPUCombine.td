@@ -115,7 +115,7 @@ def smulu64 : GICombineRule<
   (defs root:$smul, unsigned_matchinfo:$matchinfo),
   (match (wip_match_opcode G_MUL):$smul,
          [{ return matchCombine_s_mul_u64(*${smul}, ${matchinfo}); }]),
-  (apply [{ applyCombine_s_mul_u64(*${smul}, ${matchinfo}); }])>;
+  (apply [{ Helper.replaceOpcodeWith(*${smul}, ${matchinfo}); }])>;
 
 def sign_exension_in_reg_matchdata : GIDefMatchData<"std::pair<MachineInstr *, unsigned>">;
 
