@@ -53,6 +53,8 @@ C++ Specific Potentially Breaking Changes
   it's negative spelling can be used to obtain compatibility with previous
   versions of clang.
 
+- Clang now rejects pointer to member from parenthesized expression in unevaluated context such as ``decltype(&(foo::bar))``. (#GH40906).
+
 ABI Changes in This Version
 ---------------------------
 - Fixed Microsoft name mangling of implicitly defined variables used for thread
@@ -89,6 +91,25 @@ Clang Frontend Potentially Breaking Changes
   extension which is controlled via ``-pedantic`` or ``-Wc23-extensions``. Use
   of ``-Wno-gnu-binary-literal`` will no longer silence this pedantic warning,
   which may break existing uses with ``-Werror``.
+
+- The normalization of 3 element target triples where ``-none-`` is the middle
+  element has changed. For example, ``armv7m-none-eabi`` previously normalized
+  to ``armv7m-none-unknown-eabi``, with ``none`` for the vendor and ``unknown``
+  for the operating system. It now normalizes to ``armv7m-unknown-none-eabi``,
+  which has ``unknown`` vendor and ``none`` operating system.
+
+  The affected triples are primarily for bare metal Arm where it is intended
+  that ``none`` means that there is no operating system. As opposed to an unknown
+  type of operating system.
+
+  This change my cause clang to not find libraries, or libraries to be built at
+  different file system locations. This can be fixed by changing your builds to
+  use the new normalized triple. However, we recommend instead getting the
+  normalized triple from clang itself, as this will make your builds more
+  robust in case of future changes::
+
+    $ clang --target=<your target triple> -print-target-triple
+    <the normalized target triple>
 
 What's New in Clang |release|?
 ==============================
@@ -168,6 +189,9 @@ C++2c Feature Support
 - Implemented `P0609R3: Attributes for Structured Bindings <https://wg21.link/P0609R3>`_
 
 - Implemented `P2748R5 Disallow Binding a Returned Glvalue to a Temporary <https://wg21.link/P2748R5>`_.
+
+- Implemented `P2809R3: Trivial infinite loops are not Undefined Behavior <https://wg21.link/P2809R3>`_.
+
 
 Resolutions to C++ Defect Reports
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -312,6 +336,10 @@ Modified Compiler Flags
 
 - Carved out ``-Wformat`` warning about scoped enums into a subwarning and
   make it controlled by ``-Wformat-pedantic``. Fixes #GH88595.
+
+- Trivial infinite loops (i.e loops with a constant controlling expresion
+  evaluating to ``true`` and an empty body such as ``while(1);``)
+  are considered infinite, even when the ``-ffinite-loop`` flag is set.
 
 Removed Compiler Flags
 -------------------------
@@ -521,6 +549,9 @@ Bug Fixes in This Version
   The values of 0 and 1 block any unrolling of the loop. This keeps the same behavior with GCC.
   Fixes (`#88624 <https://github.com/llvm/llvm-project/issues/88624>`_).
 
+- Clang will no longer emit a duplicate -Wunused-value warning for an expression
+  `(A, B)` which evaluates to glvalue `B` that can be converted to non ODR-use. (#GH45783)
+
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -649,6 +680,7 @@ Bug Fixes to C++ Support
 - Fix a bug on template partial specialization with issue on deduction of nontype template parameter
   whose type is `decltype(auto)`. Fixes (#GH68885).
 - Clang now correctly treats the noexcept-specifier of a friend function to be a complete-class context.
+- Fix an assertion failure when parsing an invalid members of an anonymous class. (#GH85447)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^

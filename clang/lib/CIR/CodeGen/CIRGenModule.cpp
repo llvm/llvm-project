@@ -32,6 +32,4 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &context,
 CIRGenModule::~CIRGenModule() {}
 
 // Emit code for a single top level declaration.
-void CIRGenModule::buildTopLevelDecl(Decl *decl) {
-  llvm::outs() << "CIRGenModule::buildTopLevelDecl\n";
-}
+void CIRGenModule::buildTopLevelDecl(Decl *decl) {}
