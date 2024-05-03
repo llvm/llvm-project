@@ -3,8 +3,10 @@
 
 define void @f(i16 %arg, ptr %arg1) {
 ; CHECK-LABEL: f:
-; CHECK:       // %bb.0: // %bb
-; CHECK-NEXT:    strh w0, [x1]
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ubfx w8, w0, #8, #6
+; CHECK-NEXT:    strb w0, [x1]
+; CHECK-NEXT:    strb w8, [x1, #1]
 ; CHECK-NEXT:    ret
 bb:
   %i = trunc i16 %arg to i8
