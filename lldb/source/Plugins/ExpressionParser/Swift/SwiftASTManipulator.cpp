@@ -910,6 +910,9 @@ llvm::Expected<swift::Type> SwiftASTManipulator::GetSwiftTypeForVariable(
   auto swift_type_or_err = m_swift_ast_ctx.GetSwiftType(referent_type);
   if (!swift_type_or_err)
     return swift_type_or_err.takeError();
+  if (!swift_type_or_err.get())
+    return llvm::make_error<llvm::StringError>("null Swift type",
+                                               llvm::inconvertibleErrorCode());
 
   // One tricky bit here is that this var may be an argument to the
   // function whose context we are emulating, and that argument might be
