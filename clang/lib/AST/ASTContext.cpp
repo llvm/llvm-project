@@ -9598,11 +9598,6 @@ static uint64_t getSVETypeSize(ASTContext &Context, const BuiltinType *Ty) {
 
 bool ASTContext::areCompatibleSveTypes(QualType FirstType,
                                        QualType SecondType) {
-  assert(
-      ((FirstType->isSVESizelessBuiltinType() && SecondType->isVectorType()) ||
-       (FirstType->isVectorType() && SecondType->isSVESizelessBuiltinType())) &&
-      "Expected SVE builtin type and vector type!");
-
   auto IsValidCast = [this](QualType FirstType, QualType SecondType) {
     if (const auto *BT = FirstType->getAs<BuiltinType>()) {
       if (const auto *VT = SecondType->getAs<VectorType>()) {
@@ -9628,11 +9623,6 @@ bool ASTContext::areCompatibleSveTypes(QualType FirstType,
 
 bool ASTContext::areLaxCompatibleSveTypes(QualType FirstType,
                                           QualType SecondType) {
-  assert(
-      ((FirstType->isSVESizelessBuiltinType() && SecondType->isVectorType()) ||
-       (FirstType->isVectorType() && SecondType->isSVESizelessBuiltinType())) &&
-      "Expected SVE builtin type and vector type!");
-
   auto IsLaxCompatible = [this](QualType FirstType, QualType SecondType) {
     const auto *BT = FirstType->getAs<BuiltinType>();
     if (!BT)
