@@ -1163,11 +1163,11 @@ packMatmulGreedily(RewriterBase &rewriter, LinalgOp linalgOp,
                    ArrayRef<int64_t> mnkOrder);
 
 struct PackMatmulOptions {
-  /// Minor block factors for packing relayout in the 'mnkOrder'.
+  /// Minor block factors (mb, nb, kb) for packing relayout where mb, mn are
+  /// the parallel dimensions and kb is the reduction dimension.
   SmallVector<int64_t, 3> blockFactors;
 
-  /// Order of packed dimensions (mb, nb, kb) - permutation of the default
-  /// order.
+  /// Order of the packed dimensions (mb, nb, kb).
   SmallVector<int64_t, 3> mnkOrder = {0, 1, 2};
 
   SmallVector<int64_t, 3> mnkPaddedSizesNextMultipleOf;
@@ -1202,8 +1202,8 @@ using ControlPackMatmulFn =
 /// The minor blocks remain unchanged.
 /// The final result is unpacked back to the original layout.
 FailureOr<PackResult>
-packMatmulOp(RewriterBase &rewriter, linalg::LinalgOp matmulOp,
-             const ControlPackMatmulFn &controlPackMatmul);
+blockPackMatmulOp(RewriterBase &rewriter, linalg::LinalgOp matmulOp,
+                  const ControlPackMatmulFn &controlPackMatmul);
 
 /// Rewrite tensor.from_elements to linalg.generic.
 FailureOr<Operation *>
@@ -1671,9 +1671,9 @@ void populateSplitReductionPattern(
 void populateTransposeMatmulPatterns(RewritePatternSet &patterns,
                                      bool transposeLHS = true);
 
-/// Patterns to pack Linalg matmul ops.
-void populatePackMatmulPatterns(RewritePatternSet &patterns,
-                                const ControlPackMatmulFn &controlFn);
+/// Patterns to block pack Linalg matmul ops.
+void populateBlockPackMatmulPatterns(RewritePatternSet &patterns,
+                                     const ControlPackMatmulFn &controlFn);
 
 } // namespace linalg
 } // namespace mlir

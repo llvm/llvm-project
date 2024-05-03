@@ -141,7 +141,7 @@ def LinalgDetensorizePass : InterfacePass<"linalg-detensorize", "FunctionOpInter
   ];
 }
 
-def LinalgPackMatmul : Pass<"linalg-pack-matmul"> {
+def LinalgBlockPackMatmul : Pass<"linalg-block-pack-matmul"> {
   let summary = "Convert linalg matmul ops to block layout and back";
   let description = [{
     Pack a matmul operation into blocked layout with two levels of subdivision:

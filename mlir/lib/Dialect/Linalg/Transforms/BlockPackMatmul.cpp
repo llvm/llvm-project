@@ -1,4 +1,4 @@
-//===- PackMatmul.cpp - Linalg matmul packing -----------------------------===//
+//===- BlockPackMatmul.cpp - Linalg matmul block packing ------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -19,13 +19,14 @@
 #include <optional>
 
 namespace mlir {
-#define GEN_PASS_DEF_LINALGPACKMATMUL
+#define GEN_PASS_DEF_LINALGBLOCKPACKMATMUL
 #include "mlir/Dialect/Linalg/Passes.h.inc"
 } // namespace mlir
 
 using namespace mlir;
 using namespace mlir::linalg;
 
+/// Return constant range span or nullopt, otherwise.
 static std::optional<int64_t> getConstantRange(const Range &range) {
   std::optional<int64_t> stride = getConstantIntValue(range.stride);
   if (!stride || *stride != 1)
@@ -39,6 +40,7 @@ static std::optional<int64_t> getConstantRange(const Range &range) {
   return (*size - *offset);
 }
 
+/// Return true if all dimensions are fully divisible by the respective tiles.
 static bool validateFullTilesOnDims(TilingInterface tileOp,
                                     ArrayRef<OpFoldResult> tiles,
                                     ArrayRef<int64_t> dims) {
@@ -71,9 +73,10 @@ static bool validateFullTilesOnDims(TilingInterface tileOp,
   return true;
 }
 
+/// Pack a matmul operation into blocked 4D layout.
 FailureOr<PackResult>
-linalg::packMatmulOp(RewriterBase &rewriter, linalg::LinalgOp matmulOp,
-                     const ControlPackMatmulFn &controlPackMatmul) {
+linalg::blockPackMatmulOp(RewriterBase &rewriter, linalg::LinalgOp matmulOp,
+                          const ControlPackMatmulFn &controlPackMatmul) {
   if (!(isa<linalg::MatmulOp>(matmulOp) ||
         isa<linalg::BatchMatmulOp>(matmulOp) ||
         isa<linalg::MatmulTransposeAOp>(matmulOp) ||
@@ -171,15 +174,15 @@ linalg::packMatmulOp(RewriterBase &rewriter, linalg::LinalgOp matmulOp,
 
 namespace {
 template <typename OpTy>
-struct PackMatmul : public OpRewritePattern<OpTy> {
-  PackMatmul(MLIRContext *context, ControlPackMatmulFn fun,
-             PatternBenefit benefit = 1)
+struct BlockPackMatmul : public OpRewritePattern<OpTy> {
+  BlockPackMatmul(MLIRContext *context, ControlPackMatmulFn fun,
+                  PatternBenefit benefit = 1)
       : OpRewritePattern<OpTy>(context, benefit), controlFn(std::move(fun)) {}
 
   LogicalResult matchAndRewrite(OpTy matmulOp,
                                 PatternRewriter &rewriter) const override {
     FailureOr<PackResult> packedMatmul =
-        packMatmulOp(rewriter, matmulOp, controlFn);
+        blockPackMatmulOp(rewriter, matmulOp, controlFn);
     if (failed(packedMatmul))
       return failure();
     return success();
@@ -189,13 +192,10 @@ private:
   ControlPackMatmulFn controlFn;
 };
 
-// Entry point for packing matmul operations.
-// Pack MatmulOp as following:
-// [MB][NB][mb][nb] += [MB][KB][mb][kb] * [NB][KB][kb][nb]
-// Pack a BatchMatmulOp as following:
-// [B][MB][NB][mb][nb] += [B][MB][KB][mb][kb] * [B][NB][KB][kb][nb]
-struct LinalgPackMatmul : public impl::LinalgPackMatmulBase<LinalgPackMatmul> {
-  using LinalgPackMatmulBase::LinalgPackMatmulBase;
+/// Convert linalg matmul ops to block layout and back.
+struct LinalgBlockPackMatmul
+    : public impl::LinalgBlockPackMatmulBase<LinalgBlockPackMatmul> {
+  using LinalgBlockPackMatmulBase::LinalgBlockPackMatmulBase;
 
   void runOnOperation() override {
     Operation *op = getOperation();
@@ -213,19 +213,20 @@ struct LinalgPackMatmul : public impl::LinalgPackMatmulBase<LinalgPackMatmul> {
       return options;
     };
 
-    linalg::populatePackMatmulPatterns(patterns, controlFn);
+    linalg::populateBlockPackMatmulPatterns(patterns, controlFn);
     if (failed(applyPatternsAndFoldGreedily(op, std::move(patterns))))
       return signalPassFailure();
   }
 };
 } // namespace
 
-void linalg::populatePackMatmulPatterns(RewritePatternSet &patterns,
-                                        const ControlPackMatmulFn &controlFn) {
-  patterns.add<PackMatmul<linalg::MatmulOp>, PackMatmul<linalg::BatchMatmulOp>,
-               PackMatmul<linalg::MatmulTransposeAOp>,
-               PackMatmul<linalg::BatchMatmulTransposeAOp>,
-               PackMatmul<linalg::MatmulTransposeBOp>,
-               PackMatmul<linalg::BatchMatmulTransposeBOp>>(
+void linalg::populateBlockPackMatmulPatterns(
+    RewritePatternSet &patterns, const ControlPackMatmulFn &controlFn) {
+  patterns.add<BlockPackMatmul<linalg::MatmulOp>,
+               BlockPackMatmul<linalg::BatchMatmulOp>,
+               BlockPackMatmul<linalg::MatmulTransposeAOp>,
+               BlockPackMatmul<linalg::BatchMatmulTransposeAOp>,
+               BlockPackMatmul<linalg::MatmulTransposeBOp>,
+               BlockPackMatmul<linalg::BatchMatmulTransposeBOp>>(
       patterns.getContext(), controlFn);
 }
