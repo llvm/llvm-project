@@ -20,7 +20,7 @@ float _Complex C1u = C0;
 // CHECK: @C1u = {{.*}} { float, float } { float 0x3FF0000020000000, float 0x3FF0000020000000 }
 
 float FLu = 0.1F;
-// CHECK: @FLu = {{.*}} float 0x3FB9999980000000
+// CHECK: @FLu = {{.*}} float 0x3FB99999A0000000
 
 
 #pragma STDC FENV_ROUND FE_DOWNWARD
@@ -40,4 +40,4 @@ float _Complex C1d = C0;
 // CHECK: @C1d = {{.*}} { float, float } { float 1.000000e+00, float 1.000000e+00 }
 
 float FLd = 0.1F;
-// CHECK: @FLd = {{.*}} float 0x3FB99999A0000000
+// CHECK: @FLd = {{.*}} float 0x3FB9999980000000
