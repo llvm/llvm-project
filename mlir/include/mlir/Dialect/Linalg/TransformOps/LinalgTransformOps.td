@@ -1024,8 +1024,8 @@ def PadOp : Op<Transform_Dialect, "structured.pad",
                       TransformHandleTypeInterface:$copy);
 
   let assemblyFormat = [{
-    $target oilist(
-        `pad_to_multiple_of` custom<DynamicIndexList>($pad_to_multiple_of, $static_pad_to_multiple_of))
+    $target 
+    (`pad_to_multiple_of` custom<DynamicIndexList>($pad_to_multiple_of, $static_pad_to_multiple_of)^)?
     attr-dict
     `:` functional-type(operands, results)
   }];

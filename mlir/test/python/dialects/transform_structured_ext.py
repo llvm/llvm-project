@@ -316,10 +316,9 @@ def testPadOpNoArgs(target):
 def testPadOpArgs(target):
     structured.PadOp(
         target,
-        [],
+        pad_to_multiple_of=[128],
         padding_values=[FloatAttr.get_f32(42.0), StringAttr.get("0")],
         padding_dimensions=Attribute.parse("[1]"),
-        static_pad_to_multiple_of=[128],
         pack_paddings=[0],
         transpose_paddings=[[1, Attribute.parse("0")], Attribute.parse("[0, 1]")],
         copy_back_op="linalg.copy",
@@ -340,15 +339,15 @@ def testPadOpArgs(target):
 def testPadOpArgsParam(target):
     structured.PadOp(
         target,
-        [constant_param(128), Attribute.parse("2")],
-        padding_dimensions=Attribute.parse("[0, 1]"),
+        pad_to_multiple_of=[constant_param(128), Attribute.parse("2"), 10],
+        padding_dimensions=Attribute.parse("[0, 1, 2]"),
     )
     # CHECK-LABEL: TEST: testPadOpArgsParam
     # CHECK: transform.sequence
     # CHECK-DAG: %[[P:.*]] = transform.param.constant 128
     # CHECK: transform.structured.pad
-    # CHECK-DAG: pad_to_multiple_of [%[[P]], 2]
-    # CHECK-DAG: padding_dimensions = [0, 1]
+    # CHECK-DAG: pad_to_multiple_of [%[[P]], 2, 10]
+    # CHECK-DAG: padding_dimensions = [0, 1, 2]
 
 
 @run
