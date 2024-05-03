@@ -49,7 +49,7 @@ struct AliasAnalysis {
   struct Source {
     using SourceUnion = llvm::PointerUnion<mlir::SymbolRefAttr, mlir::Value>;
     using Attributes = Fortran::common::EnumSet<Attribute, Attribute_enumSize>;
-    
+
     struct SourceOrigin {
       /// Source definition of a value.
       SourceUnion u;
