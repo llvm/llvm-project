@@ -1,0 +1,147 @@
+// RUN: cir-opt %s -cir-to-mlir | FileCheck %s -check-prefix=MLIR
+// RUN: cir-opt %s -cir-to-mlir -cir-mlir-to-llvm | mlir-translate -mlir-to-llvmir | FileCheck %s -check-prefix=LLVM
+
+!s32i = !cir.int<s, 32>
+!s16i = !cir.int<s, 16>
+!u32i = !cir.int<u, 32>
+!u16i = !cir.int<u, 16>
+!u8i  = !cir.int<u, 8>
+module {
+  // MLIR-LABEL: func.func @cast_int_to_bool(%arg0: i32) -> i8
+  // LLVM-LABEL: define i8 @cast_int_to_bool(i32 %0)
+  cir.func @cast_int_to_bool(%i : !u32i) -> !cir.bool {
+    // MLIR-NEXT: %[[ZERO:.*]] = arith.constant 0 : i32
+    // MLIR-NEXT: arith.cmpi ne, %arg0, %[[ZERO]]
+    // LLVM-NEXT: icmp ne i32 %0, 0
+
+    %1 = cir.cast(int_to_bool, %i : !u32i), !cir.bool
+    cir.return %1 : !cir.bool
+  }
+  // MLIR-LABEL: func.func @cast_integral_trunc(%arg0: i32) -> i16
+  // LLVM-LABEL: define i16 @cast_integral_trunc(i32 %0)
+  cir.func @cast_integral_trunc(%i : !u32i) -> !u16i {
+    // MLIR-NEXT: arith.trunci %arg0 : i32 to i16
+    // LLVM-NEXT: trunc i32 %0 to i16
+
+    %1 = cir.cast(integral, %i : !u32i), !u16i
+    cir.return %1 : !u16i
+  }
+  // MLIR-LABEL: func.func @cast_integral_extu(%arg0: i16) -> i32
+  // LLVM-LABEL: define i32 @cast_integral_extu(i16 %0)
+  cir.func @cast_integral_extu(%i : !u16i) -> !u32i {
+    // MLIR-NEXT: arith.extui %arg0 : i16 to i32
+    // LLVM-NEXT: zext i16 %0 to i32
+
+    %1 = cir.cast(integral, %i : !u16i), !u32i
+    cir.return %1 : !u32i
+  }
+  // MLIR-LABEL: func.func @cast_integral_exts(%arg0: i16) -> i32
+  // LLVM-LABEL: define i32 @cast_integral_exts(i16 %0)
+  cir.func @cast_integral_exts(%i : !s16i) -> !s32i {
+    // MLIR-NEXT: arith.extsi %arg0 : i16 to i32
+    // LLVM-NEXT: sext i16 %0 to i32
+
+    %1 = cir.cast(integral, %i : !s16i), !s32i
+    cir.return %1 : !s32i
+  }
+  // MLIR-LABEL: func.func @cast_integral_same_size(%arg0: i32) -> i32
+  // LLVM-LABEL: define i32 @cast_integral_same_size(i32 %0)
+  cir.func @cast_integral_same_size(%i : !u32i) -> !s32i {
+    // MLIR-NEXT: %0 = arith.bitcast %arg0 : i32 to i32
+    // LLVM-NEXT: ret i32 %0
+
+    %1 = cir.cast(integral, %i : !u32i), !s32i
+    cir.return %1 : !s32i
+  }
+  // MLIR-LABEL: func.func @cast_floating_trunc(%arg0: f64) -> f32
+  // LLVM-LABEL: define float @cast_floating_trunc(double %0)
+  cir.func @cast_floating_trunc(%d : !cir.double) -> !cir.float {
+    // MLIR-NEXT: arith.truncf %arg0 : f64 to f32
+    // LLVM-NEXT: fptrunc double %0 to float
+
+    %1 = cir.cast(floating, %d : !cir.double), !cir.float
+    cir.return %1 : !cir.float
+  }
+  // MLIR-LABEL: func.func @cast_floating_extf(%arg0: f32) -> f64
+  // LLVM-LABEL: define double @cast_floating_extf(float %0)
+  cir.func @cast_floating_extf(%f : !cir.float) -> !cir.double {
+    // MLIR-NEXT: arith.extf %arg0 : f32 to f64
+    // LLVM-NEXT: fpext float %0 to double
+
+    %1 = cir.cast(floating, %f : !cir.float), !cir.double
+    cir.return %1 : !cir.double
+  }
+  // MLIR-LABEL: func.func @cast_float_to_bool(%arg0: f32) -> i8
+  // LLVM-LABEL: define i8 @cast_float_to_bool(float %0)
+  cir.func @cast_float_to_bool(%f : !cir.float) -> !cir.bool {
+    // MLIR-NEXT: %[[ZERO:.*]] = arith.constant 0.000000e+00 : f32
+    // MLIR-NEXT: arith.cmpf une, %arg0, %[[ZERO]] : f32
+    // LLVM-NEXT: fcmp une float %0, 0.000000e+00
+
+    %1 = cir.cast(float_to_bool, %f : !cir.float), !cir.bool
+    cir.return %1 : !cir.bool
+  }
+  // MLIR-LABEL: func.func @cast_bool_to_int8(%arg0: i8) -> i8
+  // LLVM-LABEL: define i8 @cast_bool_to_int8(i8 %0)
+  cir.func @cast_bool_to_int8(%b : !cir.bool) -> !u8i {
+    // MLIR-NEXT: arith.bitcast %arg0 : i8 to i8
+    // LLVM-NEXT: ret i8 %0
+
+    %1 = cir.cast(bool_to_int, %b : !cir.bool), !u8i
+    cir.return %1 : !u8i
+  }
+  // MLIR-LABEL: func.func @cast_bool_to_int(%arg0: i8) -> i32
+  // LLVM-LABEL: define i32 @cast_bool_to_int(i8 %0)
+  cir.func @cast_bool_to_int(%b : !cir.bool) -> !u32i {
+    // MLIR-NEXT: arith.extui %arg0 : i8 to i32
+    // LLVM-NEXT: zext i8 %0 to i32
+
+    %1 = cir.cast(bool_to_int, %b : !cir.bool), !u32i
+    cir.return %1 : !u32i
+  }
+  // MLIR-LABEL: func.func @cast_bool_to_float(%arg0: i8) -> f32
+  // LLVM-LABEL: define float @cast_bool_to_float(i8 %0)
+  cir.func @cast_bool_to_float(%b : !cir.bool) -> !cir.float {
+    // MLIR-NEXT: arith.uitofp %arg0 : i8 to f32
+    // LLVM-NEXT: uitofp i8 %0 to float
+
+    %1 = cir.cast(bool_to_float, %b : !cir.bool), !cir.float
+    cir.return %1 : !cir.float
+  }
+  // MLIR-LABEL: func.func @cast_signed_int_to_float(%arg0: i32) -> f32
+  // LLVM-LABEL: define float @cast_signed_int_to_float(i32 %0)
+  cir.func @cast_signed_int_to_float(%i : !s32i) -> !cir.float {
+    // MLIR-NEXT: arith.sitofp %arg0 : i32 to f32
+    // LLVM-NEXT: sitofp i32 %0 to float
+
+    %1 = cir.cast(int_to_float, %i : !s32i), !cir.float
+    cir.return %1 : !cir.float
+  }
+  // MLIR-LABEL: func.func @cast_unsigned_int_to_float(%arg0: i32) -> f32
+  // LLVM-LABEL: define float @cast_unsigned_int_to_float(i32 %0)
+  cir.func @cast_unsigned_int_to_float(%i : !u32i) -> !cir.float {
+    // MLIR-NEXT: arith.uitofp %arg0 : i32 to f32
+    // LLVM-NEXT: uitofp i32 %0 to float
+
+    %1 = cir.cast(int_to_float, %i : !u32i), !cir.float
+    cir.return %1 : !cir.float
+  }
+  // MLIR-LABEL: func.func @cast_float_to_int_signed(%arg0: f32) -> i32
+  // LLVM-LABEL: define i32 @cast_float_to_int_signed(float %0)
+  cir.func @cast_float_to_int_signed(%f : !cir.float) -> !s32i {
+    // MLIR-NEXT: arith.fptosi %arg0 : f32 to i32
+    // LLVM-NEXT: fptosi float %0 to i32
+
+    %1 = cir.cast(float_to_int, %f : !cir.float), !s32i
+    cir.return %1 : !s32i
+  }
+  // MLIR-LABEL: func.func @cast_float_to_int_unsigned(%arg0: f32) -> i32
+  // LLVM-LABEL: define i32 @cast_float_to_int_unsigned(float %0)
+  cir.func @cast_float_to_int_unsigned(%f : !cir.float) -> !u32i {
+    // MLIR-NEXT: arith.fptoui %arg0 : f32 to i32
+    // LLVM-NEXT: fptoui float %0 to i32
+
+    %1 = cir.cast(float_to_int, %f : !cir.float), !u32i
+    cir.return %1 : !u32i
+  }
+}
