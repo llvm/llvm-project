@@ -16,15 +16,15 @@ using LIBC_NAMESPACE::cpp::lock_guard;
 // 'unlock' which are required for the cpp::lock_guard class template.
 struct Mutex {
   // Flag to show whether this mutex is locked.
-  bool locked;
+  bool locked = false;
 
   // Flag to show if this mutex has been double locked.
-  bool double_locked;
+  bool double_locked = false;
 
   // Flag to show if this mutex has been double unlocked.
-  bool double_unlocked;
+  bool double_unlocked = false;
 
-  Mutex() : locked(false), double_locked(false), double_unlocked(false) {}
+  Mutex() {}
 
   void lock() {
     if (locked)
