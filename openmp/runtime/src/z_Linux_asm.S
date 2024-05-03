@@ -1198,7 +1198,7 @@ KMP_LABEL(kmp_1_exit):
 	cmovnsq	(%r11), %rdx	// p_argv[0] -> %rdx (store 3rd parm to pkfn)
 #endif // KMP_MIC
 
-	KMP_LABEL(kmp_no_args):
+KMP_LABEL(kmp_no_args):
 	call	*%rbx		// call (*pkfn)();
 	movq	$1, %rax	// move 1 into return register;
 
