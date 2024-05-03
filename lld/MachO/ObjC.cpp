@@ -422,7 +422,7 @@ private:
   mergeCategoriesIntoSingleCategory(std::vector<InfoInputCategory> &categories);
 
   void eraseISec(ConcatInputSection *isec);
-  void removeRefsToErasedIsecs(std::unordered_set<InputSection *> erasedIsecs);
+  void removeRefsToErasedIsecs(std::unordered_set<InputSection *> &erasedIsecs);
   void eraseMergedCategories();
 
   void generateCatListForNonErasedCategories(
@@ -1189,10 +1189,13 @@ void ObjcCategoryMerger::eraseMergedCategories() {
       if (!catInfo.wasMerged)
         continue;
 
+      eraseISec(catInfo.catBodyIsec);
+      // Mark the category body as having been erased
       erasedIsecs.insert(catInfo.catBodyIsec);
+
+      // Also mark the catListIsec as having been erased, it has already been erased above
       erasedIsecs.insert(catInfo.catListIsec);
 
-      eraseISec(catInfo.catBodyIsec);
       tryEraseDefinedAtIsecOffset(catInfo.catBodyIsec, catLayout.nameOffset,
                                   erasedIsecs);
       tryEraseDefinedAtIsecOffset(catInfo.catBodyIsec,
@@ -1214,14 +1217,13 @@ void ObjcCategoryMerger::eraseMergedCategories() {
 // The compiler may generate references to categories inside the addrsig
 // section. This function will erase these references.
 void ObjcCategoryMerger::removeRefsToErasedIsecs(
-    std::unordered_set<InputSection *> erasedIsecs) {
+    std::unordered_set<InputSection *> &erasedIsecs) {
   for (InputSection *isec : inputSections) {
     if (isec->getName() != section_names::addrSig)
       continue;
 
     auto removeRelocs = [&erasedIsecs](Reloc &r) {
-      ConcatInputSection *isec = nullptr;
-      isec = dyn_cast_or_null<ConcatInputSection>(
+      auto *isec = dyn_cast_or_null<ConcatInputSection>(
           r.referent.dyn_cast<InputSection *>());
       if (!isec) {
         Defined *sym =
