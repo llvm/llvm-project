@@ -42836,6 +42836,8 @@ static bool checkBitcastSrcVectorSize(SDValue Src, unsigned Size,
     [[fallthrough]];
   case ISD::SETCC:
     return Src.getOperand(0).getValueSizeInBits() == Size;
+  case ISD::FREEZE:
+    return checkBitcastSrcVectorSize(Src.getOperand(0), Size, AllowTruncate);
   case ISD::AND:
   case ISD::XOR:
   case ISD::OR:
@@ -42905,6 +42907,7 @@ static SDValue signExtendBitcastSrcVector(SelectionDAG &DAG, EVT SExtVT,
                                           SDValue Src, const SDLoc &DL) {
   switch (Src.getOpcode()) {
   case ISD::SETCC:
+  case ISD::FREEZE:
   case ISD::TRUNCATE:
   case ISD::BUILD_VECTOR:
     return DAG.getNode(ISD::SIGN_EXTEND, DL, SExtVT, Src);

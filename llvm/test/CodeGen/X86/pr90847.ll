@@ -2,7 +2,7 @@
 ; RUN: llc < %s -mtriple=x86_64-- -mattr=+avx  | FileCheck %s --check-prefixes=AVX1
 ; RUN: llc < %s -mtriple=x86_64-- -mattr=+avx2 | FileCheck %s --check-prefixes=AVX2
 
-; TODO: PR90847 - failure to peek through FREEZE(SETCC()) results in VPMOVSMSKB(TRUNC()) instead of VMOVMSKPS
+; PR90847 - failure to peek through FREEZE(SETCC()) results in VPMOVSMSKB(TRUNC()) instead of VMOVMSKPS
 
 define i32 @PR90847(<8 x float> %x) nounwind {
 ; AVX1-LABEL: PR90847:
@@ -14,14 +14,10 @@ define i32 @PR90847(<8 x float> %x) nounwind {
 ; AVX1-NEXT:    vperm2f128 {{.*#+}} ymm2 = ymm1[2,3,0,1]
 ; AVX1-NEXT:    vminps %ymm2, %ymm1, %ymm1
 ; AVX1-NEXT:    vcmpeqps %ymm0, %ymm1, %ymm0
-; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX1-NEXT:    vpackssdw %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vpacksswb %xmm0, %xmm0, %xmm0
-; AVX1-NEXT:    vpmovmskb %xmm0, %eax
-; AVX1-NEXT:    testb %al, %al
+; AVX1-NEXT:    vmovmskps %ymm0, %eax
+; AVX1-NEXT:    testl %eax, %eax
 ; AVX1-NEXT:    je .LBB0_1
 ; AVX1-NEXT:  # %bb.2: # %cond.false
-; AVX1-NEXT:    movzbl %al, %eax
 ; AVX1-NEXT:    rep bsfl %eax, %eax
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
@@ -39,14 +35,10 @@ define i32 @PR90847(<8 x float> %x) nounwind {
 ; AVX2-NEXT:    vpermpd {{.*#+}} ymm2 = ymm1[2,3,0,1]
 ; AVX2-NEXT:    vminps %ymm2, %ymm1, %ymm1
 ; AVX2-NEXT:    vcmpeqps %ymm0, %ymm1, %ymm0
-; AVX2-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX2-NEXT:    vpackssdw %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vpacksswb %xmm0, %xmm0, %xmm0
-; AVX2-NEXT:    vpmovmskb %xmm0, %eax
-; AVX2-NEXT:    testb %al, %al
+; AVX2-NEXT:    vmovmskps %ymm0, %eax
+; AVX2-NEXT:    testl %eax, %eax
 ; AVX2-NEXT:    je .LBB0_1
 ; AVX2-NEXT:  # %bb.2: # %cond.false
-; AVX2-NEXT:    movzbl %al, %eax
 ; AVX2-NEXT:    rep bsfl %eax, %eax
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
