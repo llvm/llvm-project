@@ -656,6 +656,8 @@ OpFoldResult arith::CeilDivSIOp::fold(FoldAdaptor adaptor) {
         // value and then do a normal signedCeil Division, but add 1 to bring
         // the quotient down. In essense, Ceil Division with one of the values
         // negative works like a floorDivision with negated quotient.
+        // Mathematically, -1 * (abs(a)-1/abs(b) + 1) + 1, which after factoring
+        // out -1 yields -1 * [abs(a)-1/abs(b) + 1 - 1]. This is implemented below.
         APInt posA = aGtZero ? a : zero.ssub_ov(a, overflowOrDiv0);
         APInt posB = bGtZero ? b : zero.ssub_ov(b, overflowOrDiv0);
         APInt div = signedCeilNonnegInputs(posA, posB, overflowOrDiv0);
