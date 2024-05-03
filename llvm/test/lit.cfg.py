@@ -629,3 +629,6 @@ config.environment["LLVM_CAS_MAX_MAPPING_SIZE"] = "%d" % (100 * 1024 * 1024)
 # "OBJECT_MODE" to 'any' by default on AIX OS.
 if "system-aix" in config.available_features:
     config.environment["OBJECT_MODE"] = "any"
+
+if config.has_logf128:
+    config.available_features.add("has_logf128")
