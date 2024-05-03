@@ -432,12 +432,6 @@ public:
 
       Operation *producer = opOperand.get().getDefiningOp();
 
-      // Do not fuse a sparse-in/dense-out operation, as the
-      // result is too often not sparsifiable anymore.
-      if (sparse_tensor::hasAnySparseOperand(producer) &&
-          !sparse_tensor::hasAnySparseResult(producer))
-        return failure();
-
       // Find the producer of the operand.
       FailureOr<ElementwiseOpFusionResult> fusionResult =
           fuseElementwiseOps(rewriter, &opOperand);

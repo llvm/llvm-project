@@ -81,6 +81,8 @@ Changes to the AMDGPU Backend
 
 * Implemented the ``llvm.get.fpenv`` and ``llvm.set.fpenv`` intrinsics.
 
+* Implemented :ref:`llvm.get.rounding <int_get_rounding>` and :ref:`llvm.set.rounding <int_set_rounding>`
+
 Changes to the ARM Backend
 --------------------------
 * FEAT_F32MM is no longer activated by default when using `+sve` on v8.6-A or greater. The feature is still available and can be used by adding `+f32mm` to the command line options.
@@ -119,6 +121,7 @@ Changes to the RISC-V Backend
 * Added the CSR names from the Resumable Non-Maskable Interrupts (Smrnmi) extension.
 * llvm-objdump now prints disassembled opcode bytes in groups of 2 or 4 bytes to
   match GNU objdump. The bytes within the groups are in big endian order.
+* Added smstateen extension to -march. CSR names for smstateen were already supported.
 
 Changes to the WebAssembly Backend
 ----------------------------------
@@ -169,6 +172,13 @@ Changes to the Metadata Info
 
 Changes to the Debug Info
 ---------------------------------
+
+* LLVM has switched from using debug intrinsics internally to using debug
+  records by default. This should happen transparently when using the DIBuilder
+  to construct debug variable information, but will require changes for any code
+  that interacts with debug intrinsics directly. Debug intrinsics will only be
+  supported on a best-effort basis from here onwards; for more information, see
+  the `migration docs <https://llvm.org/docs/RemoveDIsDebugInfo.html>`_.
 
 Changes to the LLVM tools
 ---------------------------------

@@ -133,7 +133,8 @@ void hlfir::DeclareOp::build(mlir::OpBuilder &builder,
   mlir::Type hlfirVariableType =
       getHLFIRVariableType(inputType, hasExplicitLbs);
   build(builder, result, {hlfirVariableType, inputType}, memref, shape,
-        typeparams, nameAttr, fortran_attrs, cuda_attr);
+        typeparams, /*dummy_scope=*/nullptr, nameAttr, fortran_attrs,
+        cuda_attr);
 }
 
 mlir::LogicalResult hlfir::DeclareOp::verify() {

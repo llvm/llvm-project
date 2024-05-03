@@ -640,6 +640,51 @@ bool SystemZInstrInfo::foldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
                                      Register Reg,
                                      MachineRegisterInfo *MRI) const {
   unsigned DefOpc = DefMI.getOpcode();
+
+  if (DefOpc == SystemZ::VGBM) {
+    int64_t ImmVal = DefMI.getOperand(1).getImm();
+    if (ImmVal != 0) // TODO: Handle other values
+      return false;
+
+    // Fold gr128 = COPY (vr128 VGBM imm)
+    //
+    // %tmp:gr64 = LGHI 0
+    // to  gr128 = REG_SEQUENCE %tmp, %tmp
+    assert(DefMI.getOperand(0).getReg() == Reg);
+
+    if (!UseMI.isCopy())
+      return false;
+
+    Register CopyDstReg = UseMI.getOperand(0).getReg();
+    if (CopyDstReg.isVirtual() &&
+        MRI->getRegClass(CopyDstReg) == &SystemZ::GR128BitRegClass &&
+        MRI->hasOneNonDBGUse(Reg)) {
+      // TODO: Handle physical registers
+      // TODO: Handle gr64 uses with subregister indexes
+      // TODO: Should this multi-use cases?
+      Register TmpReg = MRI->createVirtualRegister(&SystemZ::GR64BitRegClass);
+      MachineBasicBlock &MBB = *UseMI.getParent();
+
+      // FIXME: probably should be DefMI's DebugLoc but this matches
+      // loadImmediate's guessing
+      const DebugLoc &DL = UseMI.getDebugLoc();
+
+      loadImmediate(MBB, UseMI.getIterator(), TmpReg, ImmVal);
+
+      BuildMI(MBB, UseMI.getIterator(), DL, get(SystemZ::REG_SEQUENCE),
+              CopyDstReg)
+          .addReg(TmpReg)
+          .addImm(SystemZ::subreg_h64)
+          .addReg(TmpReg)
+          .addImm(SystemZ::subreg_l64);
+
+      UseMI.eraseFromParent();
+      return true;
+    }
+
+    return false;
+  }
+
   if (DefOpc != SystemZ::LHIMux && DefOpc != SystemZ::LHI &&
       DefOpc != SystemZ::LGHI)
     return false;
@@ -856,6 +901,22 @@ void SystemZInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     return;
   }
 
+  if (SystemZ::FP128BitRegClass.contains(DestReg) &&
+      SystemZ::GR128BitRegClass.contains(SrcReg)) {
+    MCRegister DestRegHi = RI.getSubReg(DestReg, SystemZ::subreg_h64);
+    MCRegister DestRegLo = RI.getSubReg(DestReg, SystemZ::subreg_l64);
+    MCRegister SrcRegHi = RI.getSubReg(SrcReg, SystemZ::subreg_h64);
+    MCRegister SrcRegLo = RI.getSubReg(SrcReg, SystemZ::subreg_l64);
+
+    BuildMI(MBB, MBBI, DL, get(SystemZ::LDGR), DestRegHi)
+        .addReg(SrcRegHi)
+        .addReg(DestReg, RegState::ImplicitDefine);
+
+    BuildMI(MBB, MBBI, DL, get(SystemZ::LDGR), DestRegLo)
+        .addReg(SrcRegLo, getKillRegState(KillSrc));
+    return;
+  }
+
   // Move CC value from a GR32.
   if (DestReg == SystemZ::CC) {
     unsigned Opcode =
@@ -863,6 +924,31 @@ void SystemZInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     BuildMI(MBB, MBBI, DL, get(Opcode))
       .addReg(SrcReg, getKillRegState(KillSrc))
       .addImm(3 << (SystemZ::IPM_CC - 16));
+    return;
+  }
+
+  if (SystemZ::GR128BitRegClass.contains(DestReg) &&
+      SystemZ::VR128BitRegClass.contains(SrcReg)) {
+    MCRegister DestH64 = RI.getSubReg(DestReg, SystemZ::subreg_h64);
+    MCRegister DestL64 = RI.getSubReg(DestReg, SystemZ::subreg_l64);
+
+    BuildMI(MBB, MBBI, DL, get(SystemZ::VLGVG), DestH64)
+        .addReg(SrcReg)
+        .addReg(SystemZ::NoRegister)
+        .addImm(0)
+        .addDef(DestReg, RegState::Implicit);
+    BuildMI(MBB, MBBI, DL, get(SystemZ::VLGVG), DestL64)
+        .addReg(SrcReg, getKillRegState(KillSrc))
+        .addReg(SystemZ::NoRegister)
+        .addImm(1);
+    return;
+  }
+
+  if (SystemZ::VR128BitRegClass.contains(DestReg) &&
+      SystemZ::GR128BitRegClass.contains(SrcReg)) {
+    BuildMI(MBB, MBBI, DL, get(SystemZ::VLVGP), DestReg)
+        .addReg(RI.getSubReg(SrcReg, SystemZ::subreg_h64))
+        .addReg(RI.getSubReg(SrcReg, SystemZ::subreg_l64));
     return;
   }
 
@@ -2192,6 +2278,19 @@ areMemAccessesTriviallyDisjoint(const MachineInstr &MIa,
     if (LowWidth.hasValue() &&
         LowOffset + (int)LowWidth.getValue() <= HighOffset)
       return true;
+  }
+
+  return false;
+}
+
+bool SystemZInstrInfo::getConstValDefinedInReg(const MachineInstr &MI,
+                                               const Register Reg,
+                                               int64_t &ImmVal) const {
+
+  if (MI.getOpcode() == SystemZ::VGBM && Reg == MI.getOperand(0).getReg()) {
+    ImmVal = MI.getOperand(1).getImm();
+    // TODO: Handle non-0 values
+    return ImmVal == 0;
   }
 
   return false;

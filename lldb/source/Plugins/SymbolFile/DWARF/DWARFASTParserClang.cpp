@@ -479,9 +479,9 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
         log,
         "DWARFASTParserClang::ParseTypeFromDWARF "
         "(die = {0:x16}, decl_ctx = {1:p} (die "
-        "{2:x16})) {3} name = '{4}')",
+        "{2:x16})) {3} ({4}) name = '{5}')",
         die.GetOffset(), static_cast<void *>(context), context_die.GetOffset(),
-        die.GetTagAsCString(), die.GetName());
+        DW_TAG_value_to_name(die.Tag()), die.Tag(), die.GetName());
   }
 
   Type *type_ptr = dwarf->GetDIEToType().lookup(die.GetDIE());
@@ -793,9 +793,10 @@ DWARFASTParserClang::ParseTypeModifier(const SymbolContext &sc,
           if (log)
             dwarf->GetObjectFile()->GetModule()->LogMessage(
                 log,
-                "SymbolFileDWARF::ParseType (die = {0:x16}) {1} '{2}' "
+                "SymbolFileDWARF::ParseType (die = {0:x16}) {1} ({2}) '{3}' "
                 "is Objective-C 'id' built-in type.",
-                die.GetOffset(), die.GetTagAsCString(), die.GetName());
+                die.GetOffset(), DW_TAG_value_to_name(die.Tag()), die.Tag(),
+                die.GetName());
           clang_type = m_ast.GetBasicType(eBasicTypeObjCID);
           encoding_data_type = Type::eEncodingIsUID;
           attrs.type.Clear();
@@ -804,9 +805,10 @@ DWARFASTParserClang::ParseTypeModifier(const SymbolContext &sc,
           if (log)
             dwarf->GetObjectFile()->GetModule()->LogMessage(
                 log,
-                "SymbolFileDWARF::ParseType (die = {0:x16}) {1} '{2}' "
+                "SymbolFileDWARF::ParseType (die = {0:x16}) {1} ({2}) '{3}' "
                 "is Objective-C 'Class' built-in type.",
-                die.GetOffset(), die.GetTagAsCString(), die.GetName());
+                die.GetOffset(), DW_TAG_value_to_name(die.Tag()), die.Tag(),
+                die.GetName());
           clang_type = m_ast.GetBasicType(eBasicTypeObjCClass);
           encoding_data_type = Type::eEncodingIsUID;
           attrs.type.Clear();
@@ -815,9 +817,10 @@ DWARFASTParserClang::ParseTypeModifier(const SymbolContext &sc,
           if (log)
             dwarf->GetObjectFile()->GetModule()->LogMessage(
                 log,
-                "SymbolFileDWARF::ParseType (die = {0:x16}) {1} '{2}' "
+                "SymbolFileDWARF::ParseType (die = {0:x16}) {1} ({2}) '{3}' "
                 "is Objective-C 'selector' built-in type.",
-                die.GetOffset(), die.GetTagAsCString(), die.GetName());
+                die.GetOffset(), DW_TAG_value_to_name(die.Tag()), die.Tag(),
+                die.GetName());
           clang_type = m_ast.GetBasicType(eBasicTypeObjCSel);
           encoding_data_type = Type::eEncodingIsUID;
           attrs.type.Clear();
@@ -836,10 +839,10 @@ DWARFASTParserClang::ParseTypeModifier(const SymbolContext &sc,
             if (log)
               dwarf->GetObjectFile()->GetModule()->LogMessage(
                   log,
-                  "SymbolFileDWARF::ParseType (die = {0:x16}) {1} "
-                  "'{2}' is 'objc_object*', which we overrode to "
-                  "'id'.",
-                  die.GetOffset(), die.GetTagAsCString(), die.GetName());
+                  "SymbolFileDWARF::ParseType (die = {0:x16}) {1} ({2}) '{3}' "
+                  "is 'objc_object*', which we overrode to 'id'.",
+                  die.GetOffset(), DW_TAG_value_to_name(die.Tag()), die.Tag(),
+                  die.GetName());
             clang_type = m_ast.GetBasicType(eBasicTypeObjCID);
             encoding_data_type = Type::eEncodingIsUID;
             attrs.type.Clear();
@@ -898,10 +901,10 @@ TypeSP DWARFASTParserClang::ParseEnum(const SymbolContext &sc,
       if (log) {
         dwarf->GetObjectFile()->GetModule()->LogMessage(
             log,
-            "SymbolFileDWARF({0:p}) - {1:x16}}: {2} type \"{3}\" is a "
-            "forward declaration, complete type is {4:x8}",
+            "SymbolFileDWARF({0:p}) - {1:x16}}: {2} ({3}) type \"{4}\" is a "
+            "forward declaration, complete type is {5:x8}",
             static_cast<void *>(this), die.GetOffset(),
-            DW_TAG_value_to_name(tag), attrs.name.GetCString(),
+            DW_TAG_value_to_name(tag), tag, attrs.name.GetCString(),
             type_sp->GetID());
       }
 
@@ -1716,11 +1719,10 @@ DWARFASTParserClang::FindDefinitionTypeForDIE(const DWARFDIE &die) {
       if (type_sp && log) {
         dwarf->GetObjectFile()->GetModule()->LogMessage(
             log,
-            "SymbolFileDWARF({0:p}) - {1:x16}: {2} type "
-            "\"{3}\" is an "
-            "incomplete objc type, complete type is {4:x8}",
+            "SymbolFileDWARF({0:p}) - {1:x16}: {2} ({3}) type \"{4}\" is an "
+            "incomplete objc type, complete type is {5:x8}",
             static_cast<void *>(this), die.GetOffset(),
-            DW_TAG_value_to_name(tag), attrs.name.GetCString(),
+            DW_TAG_value_to_name(tag), tag, attrs.name.GetCString(),
             type_sp->GetID());
       }
     }
@@ -1883,10 +1885,10 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
       if (log) {
         dwarf->GetObjectFile()->GetModule()->LogMessage(
             log,
-            "SymbolFileDWARF({0:p}) - {1:x16}: {2} type \"{3}\" "
+            "SymbolFileDWARF({0:p}) - {1:x16}: {2} ({3}) type \"{4}\" "
             "clang::ClassTemplateDecl failed to return a decl.",
             static_cast<void *>(this), die.GetOffset(),
-            DW_TAG_value_to_name(tag), attrs.name.GetCString());
+            DW_TAG_value_to_name(tag), tag, attrs.name.GetCString());
       }
       return TypeSP();
     }
@@ -3058,11 +3060,11 @@ void DWARFASTParserClang::ParseSingleMember(
               this_field_info.bit_offset)))) {
       ObjectFile *objfile = die.GetDWARF()->GetObjectFile();
       objfile->GetModule()->ReportWarning(
-          "{0:x16}: {1} bitfield named \"{2}\" has invalid "
-          "bit offset ({3:x8}) member will be ignored. Please file a bug "
+          "{0:x16}: {1} ({2}) bitfield named \"{3}\" has invalid "
+          "bit offset ({4:x8}) member will be ignored. Please file a bug "
           "against the "
-          "compiler and include the preprocessed output for {4}\n",
-          die.GetID(), DW_TAG_value_to_name(tag), attrs.name,
+          "compiler and include the preprocessed output for {5}\n",
+          die.GetID(), DW_TAG_value_to_name(tag), tag, attrs.name,
           this_field_info.bit_offset, GetUnitName(parent_die).c_str());
       return;
     }
