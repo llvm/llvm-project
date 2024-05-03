@@ -1591,6 +1591,9 @@ bool MemoryAlignmentPredicateMatcher::isIdentical(
 
 void MemoryAlignmentPredicateMatcher::emitPredicateOpcodes(
     MatchTable &Table, RuleMatcher &Rule) const {
+  // TODO: we could support more, just need to emit the right opcode or switch
+  // to log alignment.
+  assert(MinAlign < 256);
   Table << MatchTable::Opcode("GIM_CheckMemoryAlignment")
         << MatchTable::Comment("MI") << MatchTable::ULEB128Value(InsnVarID)
         << MatchTable::Comment("MMO") << MatchTable::ULEB128Value(MMOIdx)

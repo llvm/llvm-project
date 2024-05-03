@@ -278,7 +278,7 @@
 #define LLVM_ATTRIBUTE_RETURNS_NONNULL
 #endif
 
-/// LLVM_ATTRIBUTE_RESTRICT- Annotates a pointer to tell the compiler that
+/// LLVM_ATTRIBUTE_RESTRICT - Annotates a pointer to tell the compiler that
 /// it is not aliased in the current scope.
 #if defined(__clang__) || defined(__GNUC__) || defined(_MSC_VER)
 #define LLVM_ATTRIBUTE_RESTRICT __restrict
