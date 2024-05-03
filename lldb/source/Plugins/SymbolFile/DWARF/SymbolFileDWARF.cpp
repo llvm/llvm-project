@@ -1632,7 +1632,7 @@ bool SymbolFileDWARF::CompleteType(CompilerType &compiler_type) {
   }
 
   // Once we start resolving this type, remove it from the forward
-  // declaration map in case anyone child members or other types require this
+  // declaration map in case anyone's child members or other types require this
   // type to get resolved.
   DWARFDIE dwarf_die = GetDIE(die_it->second);
   GetForwardDeclCompilerTypeToDIE().erase(die_it);

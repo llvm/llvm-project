@@ -158,21 +158,21 @@ static bool
 IsForwardDeclaration(const lldb_private::plugin::dwarf::DWARFDIE &die,
                      const ParsedDWARFTypeAttributes &attrs,
                      LanguageType cu_language) {
-  if (attrs.byte_size && *attrs.byte_size == 0 && attrs.name &&
-      !die.HasChildren() && cu_language == eLanguageTypeObjC) {
-    // Work around an issue with clang at the moment where forward
-    // declarations for objective C classes are emitted as:
-    //  DW_TAG_structure_type [2]
-    //  DW_AT_name( "ForwardObjcClass" )
-    //  DW_AT_byte_size( 0x00 )
-    //  DW_AT_decl_file( "..." )
-    //  DW_AT_decl_line( 1 )
-    //
-    // Note that there is no DW_AT_declaration and there are no children,
-    // and the byte size is zero.
+  if (attrs.is_forward_declaration)
     return true;
-  }
-  return attrs.is_forward_declaration;
+
+  // Work around an issue with clang at the moment where forward
+  // declarations for objective C classes are emitted as:
+  //  DW_TAG_structure_type [2]
+  //  DW_AT_name( "ForwardObjcClass" )
+  //  DW_AT_byte_size( 0x00 )
+  //  DW_AT_decl_file( "..." )
+  //  DW_AT_decl_line( 1 )
+  //
+  // Note that there is no DW_AT_declaration and there are no children,
+  // and the byte size is zero.
+  return attrs.byte_size && *attrs.byte_size == 0 && attrs.name &&
+      !die.HasChildren() && cu_language == eLanguageTypeObjC;
 }
 
 TypeSP DWARFASTParserClang::ParseTypeFromClangModule(const SymbolContext &sc,
