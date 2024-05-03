@@ -183,7 +183,6 @@ class LimitDebugInfoTestCase(TestBase):
         for command, expect_items in command_expect_pairs:
             self.expect(command, substrs=expect_items)
 
-    @expectedFailureAll(setting=('plugin.typesystem.clang.experimental-redecl-completion', 'true'))
     @skipIf(bugnumber="pr46284", debug_info="gmodules")
     @skipIfWindows  # Clang emits type info even with -flimit-debug-info
     # Requires DW_CC_pass_by_* attributes from Clang 7 to correctly call
