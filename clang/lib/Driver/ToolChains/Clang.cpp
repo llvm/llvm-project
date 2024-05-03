@@ -8105,7 +8105,7 @@ static EHFlags parseClangCLEHFlags(const Driver &D, const ArgList &Args,
 
   std::vector<std::string> EHArgs =
       Args.getAllArgValues(options::OPT__SLASH_EH);
-  for (auto EHVal : EHArgs) {
+  for (const auto &EHVal : EHArgs) {
     for (size_t I = 0, E = EHVal.size(); I != E; ++I) {
       switch (EHVal[I]) {
       case 'a':
