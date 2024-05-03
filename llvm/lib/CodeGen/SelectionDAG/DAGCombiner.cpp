@@ -15460,6 +15460,7 @@ SDValue DAGCombiner::visitFREEZE(SDNode *N) {
 
   bool AllowMultipleMaybePoisonOperands = N0.getOpcode() == ISD::BUILD_VECTOR ||
                                           N0.getOpcode() == ISD::BUILD_PAIR ||
+                                          N0.getOpcode() == ISD::VECTOR_SHUFFLE ||
                                           N0.getOpcode() == ISD::CONCAT_VECTORS;
 
   // Avoid turning a BUILD_VECTOR that can be recognized as "all zeros", "all
@@ -15533,6 +15534,12 @@ SDValue DAGCombiner::visitFREEZE(SDNode *N) {
     if (Op.getOpcode() == ISD::UNDEF)
       Op = DAG.getFreeze(Op);
   }
+
+  // Special case handling for ShuffleVectorSDNode nodes.
+  if (auto *SVN = dyn_cast<ShuffleVectorSDNode>(N0))
+    return DAG.getVectorShuffle(N0.getValueType(), SDLoc(N0), Ops[0], Ops[1],
+                                SVN->getMask());
+
   // NOTE: this strips poison generating flags.
   SDValue R = DAG.getNode(N0.getOpcode(), SDLoc(N0), N0->getVTList(), Ops);
   assert(DAG.isGuaranteedNotToBeUndefOrPoison(R, /*PoisonOnly*/ false) &&
