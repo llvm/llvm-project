@@ -67,13 +67,16 @@ end program
 
 ! ALL-NEXT: Pipeline Collection : ['fir.global', 'func.func', 'omp.declare_reduction', 'omp.private']
 ! ALL-NEXT:   'fir.global' Pipeline
+! ALL-NEXT:     PolymorphicOpConversion
 ! ALL-NEXT:     CFGConversion
 ! ALL-NEXT:   'func.func' Pipeline
 ! ALL-NEXT:     PolymorphicOpConversion
 ! ALL-NEXT:     CFGConversion
 ! ALL-NEXT:   'omp.declare_reduction' Pipeline
+! ALL-NEXT:     PolymorphicOpConversion
 ! ALL-NEXT:     CFGConversion
 ! ALL-NEXT:   'omp.private' Pipeline
+! ALL-NEXT:     PolymorphicOpConversion
 ! ALL-NEXT:     CFGConversion
 ! ALL-NEXT: SCFToControlFlow
 ! ALL-NEXT: Canonicalizer
