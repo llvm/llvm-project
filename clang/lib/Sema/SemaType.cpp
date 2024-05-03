@@ -8021,8 +8021,13 @@ handleNonBlockingNonAllocatingTypeAttr(TypeProcessingState &TPState,
 
   if (PAttr.getKind() == ParsedAttr::AT_NonBlocking ||
       PAttr.getKind() == ParsedAttr::AT_NonAllocating) {
+    if (!PAttr.checkAtMostNumArgs(S, 1)) {
+      PAttr.setInvalid();
+      return true;
+    }
+
     // Parse the conditional expression, if any
-    if (PAttr.getNumArgs() > 0) {
+    if (PAttr.getNumArgs() == 1) {
       CondExpr = PAttr.getArgAsExpr(0);
       ExprResult E = S.ActOnEffectExpression(CondExpr, NewMode);
       if (E.isInvalid())
@@ -8033,6 +8038,8 @@ handleNonBlockingNonAllocatingTypeAttr(TypeProcessingState &TPState,
     }
   } else {
     // This is the `blocking` or `allocating` attribute.
+    if (S.CheckAttrNoArgs(PAttr))
+      return true;
     NewMode = FunctionEffectMode::False;
   }
 
@@ -8048,7 +8055,8 @@ handleNonBlockingNonAllocatingTypeAttr(TypeProcessingState &TPState,
   // Diagnose the newly provided attribute as incompatible with a previous one.
   auto incompatible = [&](const FunctionEffectWithCondition &PrevEC) {
     S.Diag(PAttr.getLoc(), diag::err_attributes_are_not_compatible)
-        << NewEC.description() << PrevEC.description() << false;
+        << ("'" + NewEC.description() + "'")
+        << ("'" + PrevEC.description() + "'") << false;
     // we don't necessarily have the location of the previous attribute,
     // so no note.
     PAttr.setInvalid();
