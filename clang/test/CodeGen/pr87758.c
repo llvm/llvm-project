@@ -20,22 +20,22 @@ char *rindex(const char *s, int c); // not a fp builtin
 #pragma float_control(push)
 #pragma float_control(precise, off)
 // CHECK: define dso_local float @fp_precise_off_libm_calls(
-// CHECK: %{{.*}} = call fast float @llvm.sqrt.f32(
-// CHECK: %{{.*}} = call fast float @llvm.pow.f32(
-// CHECK: %{{.*}} = call fast float @llvm.fma.f32(
-// CHECK: %{{.*}} = call ptr @rindex(
+// CHECK: call fast float @llvm.sqrt.f32(
+// CHECK: call fast float @llvm.pow.f32(
+// CHECK: call fast float @llvm.fma.f32(
+// CHECK: call ptr @rindex(
 
 // CHECK-PRECISE: define dso_local float @fp_precise_off_libm_calls(
-// CHECK-PRECISE: %{{.*}} = call fast float @sqrtf(
-// CHECK-PRECISE: %{{.*}} = call fast float @powf(
-// CHECK-PRECISE: %{{.*}} = call fast float @llvm.fma.f32(
-// CHECK-PRECISE: %{{.*}} = call ptr @rindex(
+// CHECK-PRECISE: call fast float @sqrtf(
+// CHECK-PRECISE: call fast float @powf(
+// CHECK-PRECISE: call fast float @llvm.fma.f32(
+// CHECK-PRECISE: call ptr @rindex(
 
 // CHECK-FAST: define dso_local nofpclass(nan inf) float @fp_precise_off_libm_calls(
-// CHECK-FAST: %{{.*}} = call fast float @llvm.sqrt.f32(
-// CHECK-FAST: %{{.*}} = call fast float @llvm.pow.f32(
-// CHECK-FAST: %{{.*}} = call fast float @llvm.fma.f32(
-// CHECK-FAST: %{{.*}} = call ptr @rindex(
+// CHECK-FAST: call fast float @llvm.sqrt.f32(
+// CHECK-FAST: call fast float @llvm.pow.f32(
+// CHECK-FAST: call fast float @llvm.fma.f32(
+// CHECK-FAST: call ptr @rindex(
 
 float fp_precise_off_libm_calls(float a, float b, float c, const char *d, char *e, unsigned char f) {
   a = sqrtf(a);
@@ -49,22 +49,22 @@ float fp_precise_off_libm_calls(float a, float b, float c, const char *d, char *
 #pragma float_control(push)
 #pragma float_control(precise, on)
 // CHECK: define dso_local float @fp_precise_on_libm_calls(
-// CHECK: %{{.*}} = call float @sqrtf(
-// CHECK: %{{.*}} = call float @powf(
-// CHECK: %{{.*}} = call float @llvm.fma.f32(
-// CHECK: %{{.*}} = call ptr @rindex(
+// CHECK: call float @sqrtf(
+// CHECK: call float @powf(
+// CHECK: call float @llvm.fma.f32(
+// CHECK: call ptr @rindex(
 
 // CHECK-PRECISE: define dso_local float @fp_precise_on_libm_calls(
-// CHECK-PRECISE: %{{.*}} = call float @sqrtf(
-// CHECK-PRECISE: %{{.*}} = call float @powf(
-// CHECK-PRECISE: %{{.*}} = call float @llvm.fma.f32(
-// CHECK-PRECISE: %{{.*}} = call ptr @rindex(
+// CHECK-PRECISE: call float @sqrtf(
+// CHECK-PRECISE: call float @powf(
+// CHECK-PRECISE: call float @llvm.fma.f32(
+// CHECK-PRECISE: call ptr @rindex(
 
 // CHECK-FAST: define dso_local nofpclass(nan inf) float @fp_precise_on_libm_calls(
-// CHECK-FAST: %{{.*}} = call nofpclass(nan inf) float @sqrtf(
-// CHECK-FAST: %{{.*}} = call nofpclass(nan inf) float @powf(
-// CHECK-FAST: %{{.*}} = call float @llvm.fma.f32(
-// CHECK-FAST: %{{.*}} = call ptr @rindex(
+// CHECK-FAST: call nofpclass(nan inf) float @sqrtf(
+// CHECK-FAST: call nofpclass(nan inf) float @powf(
+// CHECK-FAST: call float @llvm.fma.f32(
+// CHECK-FAST: call ptr @rindex(
 
 float fp_precise_on_libm_calls(float a, float b, float c, const char *d, char *e, unsigned char f) {
   a = sqrtf(a);
