@@ -6310,20 +6310,6 @@ ASTReader::getModuleFileLevelDecls(ModuleFile &Mod) {
                          Mod.FileSortedDecls + Mod.NumFileSortedDecls));
 }
 
-SourceRange ASTReader::ReadSkippedRange(unsigned GlobalIndex) {
-  auto I = GlobalSkippedRangeMap.find(GlobalIndex);
-  assert(I != GlobalSkippedRangeMap.end() &&
-    "Corrupted global skipped range map");
-  ModuleFile *M = I->second;
-  unsigned LocalIndex = GlobalIndex - M->BasePreprocessedSkippedRangeID;
-  assert(LocalIndex < M->NumPreprocessedSkippedRanges);
-  PPSkippedRange RawRange = M->PreprocessedSkippedRangeOffsets[LocalIndex];
-  SourceRange Range(TranslateSourceLocation(*M, RawRange.getBegin()),
-                    TranslateSourceLocation(*M, RawRange.getEnd()));
-  assert(Range.isValid());
-  return Range;
-}
-
 PreprocessedEntity *ASTReader::ReadPreprocessedEntity(unsigned Index) {
   PreprocessedEntityID PPID = Index+1;
   std::pair<ModuleFile *, unsigned> PPInfo = getModulePreprocessedEntity(Index);
