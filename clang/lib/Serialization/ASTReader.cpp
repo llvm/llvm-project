@@ -11835,6 +11835,60 @@ OpenACCClause *ASTRecordReader::readOpenACCClause() {
     return OpenACCPrivateClause::Create(getContext(), BeginLoc, LParenLoc,
                                         VarList, EndLoc);
   }
+  case OpenACCClauseKind::FirstPrivate: {
+    SourceLocation LParenLoc = readSourceLocation();
+    llvm::SmallVector<Expr *> VarList = readOpenACCVarList();
+    return OpenACCFirstPrivateClause::Create(getContext(), BeginLoc, LParenLoc,
+                                             VarList, EndLoc);
+  }
+  case OpenACCClauseKind::NoCreate: {
+    SourceLocation LParenLoc = readSourceLocation();
+    llvm::SmallVector<Expr *> VarList = readOpenACCVarList();
+    return OpenACCNoCreateClause::Create(getContext(), BeginLoc, LParenLoc,
+                                         VarList, EndLoc);
+  }
+  case OpenACCClauseKind::Present: {
+    SourceLocation LParenLoc = readSourceLocation();
+    llvm::SmallVector<Expr *> VarList = readOpenACCVarList();
+    return OpenACCPresentClause::Create(getContext(), BeginLoc, LParenLoc,
+                                        VarList, EndLoc);
+  }
+  case OpenACCClauseKind::PCopy:
+  case OpenACCClauseKind::PresentOrCopy:
+  case OpenACCClauseKind::Copy: {
+    SourceLocation LParenLoc = readSourceLocation();
+    llvm::SmallVector<Expr *> VarList = readOpenACCVarList();
+    return OpenACCCopyClause::Create(getContext(), ClauseKind, BeginLoc,
+                                     LParenLoc, VarList, EndLoc);
+  }
+  case OpenACCClauseKind::CopyIn:
+  case OpenACCClauseKind::PCopyIn:
+  case OpenACCClauseKind::PresentOrCopyIn: {
+    SourceLocation LParenLoc = readSourceLocation();
+    bool IsReadOnly = readBool();
+    llvm::SmallVector<Expr *> VarList = readOpenACCVarList();
+    return OpenACCCopyInClause::Create(getContext(), ClauseKind, BeginLoc,
+                                       LParenLoc, IsReadOnly, VarList, EndLoc);
+  }
+  case OpenACCClauseKind::CopyOut:
+  case OpenACCClauseKind::PCopyOut:
+  case OpenACCClauseKind::PresentOrCopyOut: {
+    SourceLocation LParenLoc = readSourceLocation();
+    bool IsZero = readBool();
+    llvm::SmallVector<Expr *> VarList = readOpenACCVarList();
+    return OpenACCCopyOutClause::Create(getContext(), ClauseKind, BeginLoc,
+                                        LParenLoc, IsZero, VarList, EndLoc);
+  }
+  case OpenACCClauseKind::Create:
+  case OpenACCClauseKind::PCreate:
+  case OpenACCClauseKind::PresentOrCreate: {
+    SourceLocation LParenLoc = readSourceLocation();
+    bool IsZero = readBool();
+    llvm::SmallVector<Expr *> VarList = readOpenACCVarList();
+    return OpenACCCreateClause::Create(getContext(), ClauseKind, BeginLoc,
+                                       LParenLoc, IsZero, VarList, EndLoc);
+  }
+
   case OpenACCClauseKind::Finalize:
   case OpenACCClauseKind::IfPresent:
   case OpenACCClauseKind::Seq:
@@ -11843,7 +11897,6 @@ OpenACCClause *ASTRecordReader::readOpenACCClause() {
   case OpenACCClauseKind::Worker:
   case OpenACCClauseKind::Vector:
   case OpenACCClauseKind::NoHost:
-  case OpenACCClauseKind::Copy:
   case OpenACCClauseKind::UseDevice:
   case OpenACCClauseKind::Attach:
   case OpenACCClauseKind::Delete:
@@ -11851,14 +11904,8 @@ OpenACCClause *ASTRecordReader::readOpenACCClause() {
   case OpenACCClauseKind::Device:
   case OpenACCClauseKind::DevicePtr:
   case OpenACCClauseKind::DeviceResident:
-  case OpenACCClauseKind::FirstPrivate:
   case OpenACCClauseKind::Host:
   case OpenACCClauseKind::Link:
-  case OpenACCClauseKind::NoCreate:
-  case OpenACCClauseKind::Present:
-  case OpenACCClauseKind::CopyOut:
-  case OpenACCClauseKind::CopyIn:
-  case OpenACCClauseKind::Create:
   case OpenACCClauseKind::Reduction:
   case OpenACCClauseKind::Collapse:
   case OpenACCClauseKind::Bind:
