@@ -642,6 +642,10 @@ bool SystemZInstrInfo::foldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
   unsigned DefOpc = DefMI.getOpcode();
 
   if (DefOpc == SystemZ::VGBM) {
+    int64_t ImmVal = DefMI.getOperand(1).getImm();
+    if (ImmVal !=0) // TODO: Handle other values
+      return false;
+
     // Fold gr128 = COPY (vr128 VGBM imm)
     //
     // %tmp:gr64 = LGHI 0
@@ -661,12 +665,11 @@ bool SystemZInstrInfo::foldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
       Register TmpReg = MRI->createVirtualRegister(&SystemZ::GR64BitRegClass);
       MachineBasicBlock &MBB = *UseMI.getParent();
 
-      // FIXME: probably should be DeFMI's DebugLoc but this matches
+      // FIXME: probably should be DefMI's DebugLoc but this matches
       // loadImmediate's guessing
       const DebugLoc &DL = UseMI.getDebugLoc();
 
-      loadImmediate(MBB, UseMI.getIterator(), TmpReg,
-                    DefMI.getOperand(1).getImm());
+      loadImmediate(MBB, UseMI.getIterator(), TmpReg, ImmVal);
 
       BuildMI(MBB, UseMI.getIterator(), DL, get(SystemZ::REG_SEQUENCE),
               CopyDstReg)
@@ -2286,7 +2289,8 @@ bool SystemZInstrInfo::getConstValDefinedInReg(const MachineInstr &MI,
 
   if (MI.getOpcode() == SystemZ::VGBM && Reg == MI.getOperand(0).getReg()) {
     ImmVal = MI.getOperand(1).getImm();
-    return true;
+    // TODO: Handle non-0 values
+    return ImmVal == 0;
   }
 
   return false;
