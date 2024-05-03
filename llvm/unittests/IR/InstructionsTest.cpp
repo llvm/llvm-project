@@ -31,8 +31,6 @@
 #include "gtest/gtest.h"
 #include <memory>
 
-extern llvm::cl::opt<llvm::cl::boolOrDefault> PreserveInputDbgFormat;
-
 namespace llvm {
 namespace {
 
@@ -1462,8 +1460,6 @@ TEST(InstructionsTest, GetSplat) {
 
 TEST(InstructionsTest, SkipDebug) {
   LLVMContext C;
-  cl::boolOrDefault OldDbgFormat = PreserveInputDbgFormat;
-  PreserveInputDbgFormat = cl::boolOrDefault::BOU_TRUE;
   std::unique_ptr<Module> M = parseIR(C,
                                       R"(
       declare void @llvm.dbg.value(metadata, metadata, metadata)
@@ -1499,7 +1495,6 @@ TEST(InstructionsTest, SkipDebug) {
 
   // After the terminator, there are no non-debug instructions.
   EXPECT_EQ(nullptr, Term->getNextNonDebugInstruction());
-  PreserveInputDbgFormat = OldDbgFormat;
 }
 
 TEST(InstructionsTest, PhiMightNotBeFPMathOperator) {
