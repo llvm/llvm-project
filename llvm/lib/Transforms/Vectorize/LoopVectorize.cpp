@@ -9402,8 +9402,8 @@ void VPWidenLoadEVLRecipe::execute(VPTransformState &State) {
   Value *EVL = State.get(getEVL(), VPIteration(0, 0));
   Value *Addr = State.get(getAddr(), 0, !CreateGather);
   Value *Mask = nullptr;
-  if (getMask()) {
-    Mask = State.get(getMask(), 0);
+  if (VPValue *VPMask = getMask()) {
+    Mask = State.get(VPMask, 0);
     if (isReverse())
       Mask = createReverseEVL(Builder, Mask, EVL, "vp.reverse.mask");
   } else {
@@ -9424,10 +9424,11 @@ void VPWidenLoadEVLRecipe::execute(VPTransformState &State) {
       0, Attribute::getWithAlignment(NewLI->getContext(), Alignment));
   State.addMetadata(NewLI, LI);
   Instruction *Res = NewLI;
-  if (isReverse())
+  if (isReverse()) {
     // Use cheap all-true mask for reverse rather than actual mask, it does not
     // affect the result.
     Res = createReverseEVL(Builder, Res, EVL, "vp.reverse");
+  }
   State.set(this, Res, 0);
 }
 
@@ -9486,13 +9487,14 @@ void VPWidenStoreEVLRecipe::execute(VPTransformState &State) {
   CallInst *NewSI = nullptr;
   Value *StoredVal = State.get(StoredValue, 0);
   Value *EVL = State.get(getEVL(), VPIteration(0, 0));
-  if (isReverse())
+  if (isReverse()) {
     // Use cheap all-true mask for reverse rather than actual mask, it does not
     // affect the result.
     StoredVal = createReverseEVL(Builder, StoredVal, EVL, "vp.reverse");
+  }
   Value *Mask = nullptr;
-  if (getMask()) {
-    Mask = State.get(getMask(), 0);
+  if (VPValue *VPMask = getMask()) {
+    Mask = State.get(VPMask, 0);
     if (isReverse())
       Mask = createReverseEVL(Builder, Mask, EVL, "vp.reverse.mask");
   } else {
