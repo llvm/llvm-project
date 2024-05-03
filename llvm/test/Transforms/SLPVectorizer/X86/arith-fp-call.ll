@@ -3,8 +3,8 @@
 ; RUN: opt < %s -mtriple=x86_64-unknown -passes=slp-vectorizer -S -mcpu=x86-64-v2 -mattr=+prefer-128-bit | FileCheck %s --check-prefixes=CHECK,VEC128
 ; RUN: opt < %s -mtriple=x86_64-unknown -passes=slp-vectorizer -S -mcpu=x86-64-v2 -mattr=-prefer-128-bit | FileCheck %s --check-prefixes=CHECK,VEC128
 ; RUN: opt < %s -mtriple=x86_64-unknown -passes=slp-vectorizer -S -mcpu=x86-64-v3 -mattr=+prefer-128-bit | FileCheck %s --check-prefixes=CHECK,VEC128
-; RUN: opt < %s -mtriple=x86_64-unknown -passes=slp-vectorizer -S -mcpu=x86-64-v3 -mattr=-prefer-128-bit | FileCheck %s --check-prefixes=CHECK,VEC256
-; RUN: opt < %s -mtriple=x86_64-unknown -passes=slp-vectorizer -S -mcpu=x86-64-v4 -mattr=+prefer-256-bit | FileCheck %s --check-prefixes=CHECK,VEC256
+; RUN: opt < %s -mtriple=x86_64-unknown -passes=slp-vectorizer -S -mcpu=x86-64-v3 -mattr=-prefer-128-bit | FileCheck %s --check-prefixes=CHECK,VEC256,VEC256-AVX2
+; RUN: opt < %s -mtriple=x86_64-unknown -passes=slp-vectorizer -S -mcpu=x86-64-v4 -mattr=+prefer-256-bit | FileCheck %s --check-prefixes=CHECK,VEC256,VEC256-AVX512
 ; RUN: opt < %s -mtriple=x86_64-unknown -passes=slp-vectorizer -S -mcpu=x86-64-v4 -mattr=-prefer-256-bit | FileCheck %s --check-prefixes=CHECK,VEC512
 
 @f64 = common global [16 x double] zeroinitializer, align 64
@@ -174,32 +174,35 @@ define void @rint_v8f64_v8f64() {
 }
 
 define void @lrint_v8f32_v8i32() {
-; CHECK-LABEL: @lrint_v8f32_v8i32(
-; CHECK-NEXT:    [[A0:%.*]] = load float, ptr @f32, align 8
-; CHECK-NEXT:    [[A1:%.*]] = load float, ptr getelementptr inbounds ([8 x float], ptr @f32, i32 0, i32 1), align 8
-; CHECK-NEXT:    [[A2:%.*]] = load float, ptr getelementptr inbounds ([8 x float], ptr @f32, i32 0, i32 2), align 8
-; CHECK-NEXT:    [[A3:%.*]] = load float, ptr getelementptr inbounds ([8 x float], ptr @f32, i32 0, i32 3), align 8
-; CHECK-NEXT:    [[A4:%.*]] = load float, ptr getelementptr inbounds ([8 x float], ptr @f32, i32 0, i32 4), align 8
-; CHECK-NEXT:    [[A5:%.*]] = load float, ptr getelementptr inbounds ([8 x float], ptr @f32, i32 0, i32 5), align 8
-; CHECK-NEXT:    [[A6:%.*]] = load float, ptr getelementptr inbounds ([8 x float], ptr @f32, i32 0, i32 6), align 8
-; CHECK-NEXT:    [[A7:%.*]] = load float, ptr getelementptr inbounds ([8 x float], ptr @f32, i32 0, i32 7), align 8
-; CHECK-NEXT:    [[R0:%.*]] = call i32 @llvm.lrint.i32.f32(float [[A0]])
-; CHECK-NEXT:    [[R1:%.*]] = call i32 @llvm.lrint.i32.f32(float [[A1]])
-; CHECK-NEXT:    [[R2:%.*]] = call i32 @llvm.lrint.i32.f32(float [[A2]])
-; CHECK-NEXT:    [[R3:%.*]] = call i32 @llvm.lrint.i32.f32(float [[A3]])
-; CHECK-NEXT:    [[R4:%.*]] = call i32 @llvm.lrint.i32.f32(float [[A4]])
-; CHECK-NEXT:    [[R5:%.*]] = call i32 @llvm.lrint.i32.f32(float [[A5]])
-; CHECK-NEXT:    [[R6:%.*]] = call i32 @llvm.lrint.i32.f32(float [[A6]])
-; CHECK-NEXT:    [[R7:%.*]] = call i32 @llvm.lrint.i32.f32(float [[A7]])
-; CHECK-NEXT:    store i32 [[R0]], ptr @r32, align 8
-; CHECK-NEXT:    store i32 [[R1]], ptr getelementptr inbounds ([8 x i32], ptr @r32, i32 0, i32 1), align 8
-; CHECK-NEXT:    store i32 [[R2]], ptr getelementptr inbounds ([8 x i32], ptr @r32, i32 0, i32 2), align 8
-; CHECK-NEXT:    store i32 [[R3]], ptr getelementptr inbounds ([8 x i32], ptr @r32, i32 0, i32 3), align 8
-; CHECK-NEXT:    store i32 [[R4]], ptr getelementptr inbounds ([8 x i32], ptr @r32, i32 0, i32 4), align 8
-; CHECK-NEXT:    store i32 [[R5]], ptr getelementptr inbounds ([8 x i32], ptr @r32, i32 0, i32 5), align 8
-; CHECK-NEXT:    store i32 [[R6]], ptr getelementptr inbounds ([8 x i32], ptr @r32, i32 0, i32 6), align 8
-; CHECK-NEXT:    store i32 [[R7]], ptr getelementptr inbounds ([8 x i32], ptr @r32, i32 0, i32 7), align 8
-; CHECK-NEXT:    ret void
+; SCALAR-LABEL: @lrint_v8f32_v8i32(
+; SCALAR-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr @f32, align 8
+; SCALAR-NEXT:    [[TMP2:%.*]] = call <4 x i32> @llvm.lrint.v4i32.v4f32(<4 x float> [[TMP1]])
+; SCALAR-NEXT:    store <4 x i32> [[TMP2]], ptr @r32, align 8
+; SCALAR-NEXT:    [[TMP3:%.*]] = load <4 x float>, ptr getelementptr inbounds ([8 x float], ptr @f32, i32 0, i32 4), align 8
+; SCALAR-NEXT:    [[TMP4:%.*]] = call <4 x i32> @llvm.lrint.v4i32.v4f32(<4 x float> [[TMP3]])
+; SCALAR-NEXT:    store <4 x i32> [[TMP4]], ptr getelementptr inbounds ([8 x i32], ptr @r32, i32 0, i32 4), align 8
+; SCALAR-NEXT:    ret void
+;
+; VEC128-LABEL: @lrint_v8f32_v8i32(
+; VEC128-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr @f32, align 8
+; VEC128-NEXT:    [[TMP2:%.*]] = call <4 x i32> @llvm.lrint.v4i32.v4f32(<4 x float> [[TMP1]])
+; VEC128-NEXT:    store <4 x i32> [[TMP2]], ptr @r32, align 8
+; VEC128-NEXT:    [[TMP3:%.*]] = load <4 x float>, ptr getelementptr inbounds ([8 x float], ptr @f32, i32 0, i32 4), align 8
+; VEC128-NEXT:    [[TMP4:%.*]] = call <4 x i32> @llvm.lrint.v4i32.v4f32(<4 x float> [[TMP3]])
+; VEC128-NEXT:    store <4 x i32> [[TMP4]], ptr getelementptr inbounds ([8 x i32], ptr @r32, i32 0, i32 4), align 8
+; VEC128-NEXT:    ret void
+;
+; VEC256-LABEL: @lrint_v8f32_v8i32(
+; VEC256-NEXT:    [[TMP1:%.*]] = load <8 x float>, ptr @f32, align 8
+; VEC256-NEXT:    [[TMP2:%.*]] = call <8 x i32> @llvm.lrint.v8i32.v8f32(<8 x float> [[TMP1]])
+; VEC256-NEXT:    store <8 x i32> [[TMP2]], ptr @r32, align 8
+; VEC256-NEXT:    ret void
+;
+; VEC512-LABEL: @lrint_v8f32_v8i32(
+; VEC512-NEXT:    [[TMP1:%.*]] = load <8 x float>, ptr @f32, align 8
+; VEC512-NEXT:    [[TMP2:%.*]] = call <8 x i32> @llvm.lrint.v8i32.v8f32(<8 x float> [[TMP1]])
+; VEC512-NEXT:    store <8 x i32> [[TMP2]], ptr @r32, align 8
+; VEC512-NEXT:    ret void
 ;
   %a0 = load float, ptr @f32, align 8
   %a1 = load float, ptr getelementptr inbounds ([8 x float], ptr @f32, i32 0, i32 1), align 8
@@ -229,32 +232,35 @@ define void @lrint_v8f32_v8i32() {
 }
 
 define void @lrint_v8f64_v8i32() {
-; CHECK-LABEL: @lrint_v8f64_v8i32(
-; CHECK-NEXT:    [[A0:%.*]] = load double, ptr @f64, align 8
-; CHECK-NEXT:    [[A1:%.*]] = load double, ptr getelementptr inbounds ([8 x double], ptr @f64, i32 0, i32 1), align 8
-; CHECK-NEXT:    [[A2:%.*]] = load double, ptr getelementptr inbounds ([8 x double], ptr @f64, i32 0, i32 2), align 8
-; CHECK-NEXT:    [[A3:%.*]] = load double, ptr getelementptr inbounds ([8 x double], ptr @f64, i32 0, i32 3), align 8
-; CHECK-NEXT:    [[A4:%.*]] = load double, ptr getelementptr inbounds ([8 x double], ptr @f64, i32 0, i32 4), align 8
-; CHECK-NEXT:    [[A5:%.*]] = load double, ptr getelementptr inbounds ([8 x double], ptr @f64, i32 0, i32 5), align 8
-; CHECK-NEXT:    [[A6:%.*]] = load double, ptr getelementptr inbounds ([8 x double], ptr @f64, i32 0, i32 6), align 8
-; CHECK-NEXT:    [[A7:%.*]] = load double, ptr getelementptr inbounds ([8 x double], ptr @f64, i32 0, i32 7), align 8
-; CHECK-NEXT:    [[R0:%.*]] = call i32 @llvm.lrint.i32.f64(double [[A0]])
-; CHECK-NEXT:    [[R1:%.*]] = call i32 @llvm.lrint.i32.f64(double [[A1]])
-; CHECK-NEXT:    [[R2:%.*]] = call i32 @llvm.lrint.i32.f64(double [[A2]])
-; CHECK-NEXT:    [[R3:%.*]] = call i32 @llvm.lrint.i32.f64(double [[A3]])
-; CHECK-NEXT:    [[R4:%.*]] = call i32 @llvm.lrint.i32.f64(double [[A4]])
-; CHECK-NEXT:    [[R5:%.*]] = call i32 @llvm.lrint.i32.f64(double [[A5]])
-; CHECK-NEXT:    [[R6:%.*]] = call i32 @llvm.lrint.i32.f64(double [[A6]])
-; CHECK-NEXT:    [[R7:%.*]] = call i32 @llvm.lrint.i32.f64(double [[A7]])
-; CHECK-NEXT:    store i32 [[R0]], ptr @r32, align 8
-; CHECK-NEXT:    store i32 [[R1]], ptr getelementptr inbounds ([8 x i32], ptr @r32, i32 0, i32 1), align 8
-; CHECK-NEXT:    store i32 [[R2]], ptr getelementptr inbounds ([8 x i32], ptr @r32, i32 0, i32 2), align 8
-; CHECK-NEXT:    store i32 [[R3]], ptr getelementptr inbounds ([8 x i32], ptr @r32, i32 0, i32 3), align 8
-; CHECK-NEXT:    store i32 [[R4]], ptr getelementptr inbounds ([8 x i32], ptr @r32, i32 0, i32 4), align 8
-; CHECK-NEXT:    store i32 [[R5]], ptr getelementptr inbounds ([8 x i32], ptr @r32, i32 0, i32 5), align 8
-; CHECK-NEXT:    store i32 [[R6]], ptr getelementptr inbounds ([8 x i32], ptr @r32, i32 0, i32 6), align 8
-; CHECK-NEXT:    store i32 [[R7]], ptr getelementptr inbounds ([8 x i32], ptr @r32, i32 0, i32 7), align 8
-; CHECK-NEXT:    ret void
+; SCALAR-LABEL: @lrint_v8f64_v8i32(
+; SCALAR-NEXT:    [[TMP1:%.*]] = load <4 x double>, ptr @f64, align 8
+; SCALAR-NEXT:    [[TMP2:%.*]] = call <4 x i32> @llvm.lrint.v4i32.v4f64(<4 x double> [[TMP1]])
+; SCALAR-NEXT:    store <4 x i32> [[TMP2]], ptr @r32, align 8
+; SCALAR-NEXT:    [[TMP3:%.*]] = load <4 x double>, ptr getelementptr inbounds ([8 x double], ptr @f64, i32 0, i32 4), align 8
+; SCALAR-NEXT:    [[TMP4:%.*]] = call <4 x i32> @llvm.lrint.v4i32.v4f64(<4 x double> [[TMP3]])
+; SCALAR-NEXT:    store <4 x i32> [[TMP4]], ptr getelementptr inbounds ([8 x i32], ptr @r32, i32 0, i32 4), align 8
+; SCALAR-NEXT:    ret void
+;
+; VEC128-LABEL: @lrint_v8f64_v8i32(
+; VEC128-NEXT:    [[TMP1:%.*]] = load <4 x double>, ptr @f64, align 8
+; VEC128-NEXT:    [[TMP2:%.*]] = call <4 x i32> @llvm.lrint.v4i32.v4f64(<4 x double> [[TMP1]])
+; VEC128-NEXT:    store <4 x i32> [[TMP2]], ptr @r32, align 8
+; VEC128-NEXT:    [[TMP3:%.*]] = load <4 x double>, ptr getelementptr inbounds ([8 x double], ptr @f64, i32 0, i32 4), align 8
+; VEC128-NEXT:    [[TMP4:%.*]] = call <4 x i32> @llvm.lrint.v4i32.v4f64(<4 x double> [[TMP3]])
+; VEC128-NEXT:    store <4 x i32> [[TMP4]], ptr getelementptr inbounds ([8 x i32], ptr @r32, i32 0, i32 4), align 8
+; VEC128-NEXT:    ret void
+;
+; VEC256-LABEL: @lrint_v8f64_v8i32(
+; VEC256-NEXT:    [[TMP1:%.*]] = load <8 x double>, ptr @f64, align 8
+; VEC256-NEXT:    [[TMP2:%.*]] = call <8 x i32> @llvm.lrint.v8i32.v8f64(<8 x double> [[TMP1]])
+; VEC256-NEXT:    store <8 x i32> [[TMP2]], ptr @r32, align 8
+; VEC256-NEXT:    ret void
+;
+; VEC512-LABEL: @lrint_v8f64_v8i32(
+; VEC512-NEXT:    [[TMP1:%.*]] = load <8 x double>, ptr @f64, align 8
+; VEC512-NEXT:    [[TMP2:%.*]] = call <8 x i32> @llvm.lrint.v8i32.v8f64(<8 x double> [[TMP1]])
+; VEC512-NEXT:    store <8 x i32> [[TMP2]], ptr @r32, align 8
+; VEC512-NEXT:    ret void
 ;
   %a0 = load double, ptr @f64, align 8
   %a1 = load double, ptr getelementptr inbounds ([8 x double], ptr @f64, i32 0, i32 1), align 8
@@ -284,32 +290,101 @@ define void @lrint_v8f64_v8i32() {
 }
 
 define void @llrint_v8f32_v8i64() {
-; CHECK-LABEL: @llrint_v8f32_v8i64(
-; CHECK-NEXT:    [[A0:%.*]] = load float, ptr @f32, align 8
-; CHECK-NEXT:    [[A1:%.*]] = load float, ptr getelementptr inbounds ([8 x float], ptr @f32, i32 0, i32 1), align 8
-; CHECK-NEXT:    [[A2:%.*]] = load float, ptr getelementptr inbounds ([8 x float], ptr @f32, i32 0, i32 2), align 8
-; CHECK-NEXT:    [[A3:%.*]] = load float, ptr getelementptr inbounds ([8 x float], ptr @f32, i32 0, i32 3), align 8
-; CHECK-NEXT:    [[A4:%.*]] = load float, ptr getelementptr inbounds ([8 x float], ptr @f32, i32 0, i32 4), align 8
-; CHECK-NEXT:    [[A5:%.*]] = load float, ptr getelementptr inbounds ([8 x float], ptr @f32, i32 0, i32 5), align 8
-; CHECK-NEXT:    [[A6:%.*]] = load float, ptr getelementptr inbounds ([8 x float], ptr @f32, i32 0, i32 6), align 8
-; CHECK-NEXT:    [[A7:%.*]] = load float, ptr getelementptr inbounds ([8 x float], ptr @f32, i32 0, i32 7), align 8
-; CHECK-NEXT:    [[R0:%.*]] = call i64 @llvm.llrint.i64.f32(float [[A0]])
-; CHECK-NEXT:    [[R1:%.*]] = call i64 @llvm.llrint.i64.f32(float [[A1]])
-; CHECK-NEXT:    [[R2:%.*]] = call i64 @llvm.llrint.i64.f32(float [[A2]])
-; CHECK-NEXT:    [[R3:%.*]] = call i64 @llvm.llrint.i64.f32(float [[A3]])
-; CHECK-NEXT:    [[R4:%.*]] = call i64 @llvm.llrint.i64.f32(float [[A4]])
-; CHECK-NEXT:    [[R5:%.*]] = call i64 @llvm.llrint.i64.f32(float [[A5]])
-; CHECK-NEXT:    [[R6:%.*]] = call i64 @llvm.llrint.i64.f32(float [[A6]])
-; CHECK-NEXT:    [[R7:%.*]] = call i64 @llvm.llrint.i64.f32(float [[A7]])
-; CHECK-NEXT:    store i64 [[R0]], ptr @r64, align 8
-; CHECK-NEXT:    store i64 [[R1]], ptr getelementptr inbounds ([8 x i64], ptr @r64, i32 0, i32 1), align 8
-; CHECK-NEXT:    store i64 [[R2]], ptr getelementptr inbounds ([8 x i64], ptr @r64, i32 0, i32 2), align 8
-; CHECK-NEXT:    store i64 [[R3]], ptr getelementptr inbounds ([8 x i64], ptr @r64, i32 0, i32 3), align 8
-; CHECK-NEXT:    store i64 [[R4]], ptr getelementptr inbounds ([8 x i64], ptr @r64, i32 0, i32 4), align 8
-; CHECK-NEXT:    store i64 [[R5]], ptr getelementptr inbounds ([8 x i64], ptr @r64, i32 0, i32 5), align 8
-; CHECK-NEXT:    store i64 [[R6]], ptr getelementptr inbounds ([8 x i64], ptr @r64, i32 0, i32 6), align 8
-; CHECK-NEXT:    store i64 [[R7]], ptr getelementptr inbounds ([8 x i64], ptr @r64, i32 0, i32 7), align 8
-; CHECK-NEXT:    ret void
+; SCALAR-LABEL: @llrint_v8f32_v8i64(
+; SCALAR-NEXT:    [[A0:%.*]] = load float, ptr @f32, align 8
+; SCALAR-NEXT:    [[A1:%.*]] = load float, ptr getelementptr inbounds ([8 x float], ptr @f32, i32 0, i32 1), align 8
+; SCALAR-NEXT:    [[A2:%.*]] = load float, ptr getelementptr inbounds ([8 x float], ptr @f32, i32 0, i32 2), align 8
+; SCALAR-NEXT:    [[A3:%.*]] = load float, ptr getelementptr inbounds ([8 x float], ptr @f32, i32 0, i32 3), align 8
+; SCALAR-NEXT:    [[A4:%.*]] = load float, ptr getelementptr inbounds ([8 x float], ptr @f32, i32 0, i32 4), align 8
+; SCALAR-NEXT:    [[A5:%.*]] = load float, ptr getelementptr inbounds ([8 x float], ptr @f32, i32 0, i32 5), align 8
+; SCALAR-NEXT:    [[A6:%.*]] = load float, ptr getelementptr inbounds ([8 x float], ptr @f32, i32 0, i32 6), align 8
+; SCALAR-NEXT:    [[A7:%.*]] = load float, ptr getelementptr inbounds ([8 x float], ptr @f32, i32 0, i32 7), align 8
+; SCALAR-NEXT:    [[R0:%.*]] = call i64 @llvm.llrint.i64.f32(float [[A0]])
+; SCALAR-NEXT:    [[R1:%.*]] = call i64 @llvm.llrint.i64.f32(float [[A1]])
+; SCALAR-NEXT:    [[R2:%.*]] = call i64 @llvm.llrint.i64.f32(float [[A2]])
+; SCALAR-NEXT:    [[R3:%.*]] = call i64 @llvm.llrint.i64.f32(float [[A3]])
+; SCALAR-NEXT:    [[R4:%.*]] = call i64 @llvm.llrint.i64.f32(float [[A4]])
+; SCALAR-NEXT:    [[R5:%.*]] = call i64 @llvm.llrint.i64.f32(float [[A5]])
+; SCALAR-NEXT:    [[R6:%.*]] = call i64 @llvm.llrint.i64.f32(float [[A6]])
+; SCALAR-NEXT:    [[R7:%.*]] = call i64 @llvm.llrint.i64.f32(float [[A7]])
+; SCALAR-NEXT:    store i64 [[R0]], ptr @r64, align 8
+; SCALAR-NEXT:    store i64 [[R1]], ptr getelementptr inbounds ([8 x i64], ptr @r64, i32 0, i32 1), align 8
+; SCALAR-NEXT:    store i64 [[R2]], ptr getelementptr inbounds ([8 x i64], ptr @r64, i32 0, i32 2), align 8
+; SCALAR-NEXT:    store i64 [[R3]], ptr getelementptr inbounds ([8 x i64], ptr @r64, i32 0, i32 3), align 8
+; SCALAR-NEXT:    store i64 [[R4]], ptr getelementptr inbounds ([8 x i64], ptr @r64, i32 0, i32 4), align 8
+; SCALAR-NEXT:    store i64 [[R5]], ptr getelementptr inbounds ([8 x i64], ptr @r64, i32 0, i32 5), align 8
+; SCALAR-NEXT:    store i64 [[R6]], ptr getelementptr inbounds ([8 x i64], ptr @r64, i32 0, i32 6), align 8
+; SCALAR-NEXT:    store i64 [[R7]], ptr getelementptr inbounds ([8 x i64], ptr @r64, i32 0, i32 7), align 8
+; SCALAR-NEXT:    ret void
+;
+; VEC128-LABEL: @llrint_v8f32_v8i64(
+; VEC128-NEXT:    [[A0:%.*]] = load float, ptr @f32, align 8
+; VEC128-NEXT:    [[A1:%.*]] = load float, ptr getelementptr inbounds ([8 x float], ptr @f32, i32 0, i32 1), align 8
+; VEC128-NEXT:    [[A2:%.*]] = load float, ptr getelementptr inbounds ([8 x float], ptr @f32, i32 0, i32 2), align 8
+; VEC128-NEXT:    [[A3:%.*]] = load float, ptr getelementptr inbounds ([8 x float], ptr @f32, i32 0, i32 3), align 8
+; VEC128-NEXT:    [[A4:%.*]] = load float, ptr getelementptr inbounds ([8 x float], ptr @f32, i32 0, i32 4), align 8
+; VEC128-NEXT:    [[A5:%.*]] = load float, ptr getelementptr inbounds ([8 x float], ptr @f32, i32 0, i32 5), align 8
+; VEC128-NEXT:    [[A6:%.*]] = load float, ptr getelementptr inbounds ([8 x float], ptr @f32, i32 0, i32 6), align 8
+; VEC128-NEXT:    [[A7:%.*]] = load float, ptr getelementptr inbounds ([8 x float], ptr @f32, i32 0, i32 7), align 8
+; VEC128-NEXT:    [[R0:%.*]] = call i64 @llvm.llrint.i64.f32(float [[A0]])
+; VEC128-NEXT:    [[R1:%.*]] = call i64 @llvm.llrint.i64.f32(float [[A1]])
+; VEC128-NEXT:    [[R2:%.*]] = call i64 @llvm.llrint.i64.f32(float [[A2]])
+; VEC128-NEXT:    [[R3:%.*]] = call i64 @llvm.llrint.i64.f32(float [[A3]])
+; VEC128-NEXT:    [[R4:%.*]] = call i64 @llvm.llrint.i64.f32(float [[A4]])
+; VEC128-NEXT:    [[R5:%.*]] = call i64 @llvm.llrint.i64.f32(float [[A5]])
+; VEC128-NEXT:    [[R6:%.*]] = call i64 @llvm.llrint.i64.f32(float [[A6]])
+; VEC128-NEXT:    [[R7:%.*]] = call i64 @llvm.llrint.i64.f32(float [[A7]])
+; VEC128-NEXT:    store i64 [[R0]], ptr @r64, align 8
+; VEC128-NEXT:    store i64 [[R1]], ptr getelementptr inbounds ([8 x i64], ptr @r64, i32 0, i32 1), align 8
+; VEC128-NEXT:    store i64 [[R2]], ptr getelementptr inbounds ([8 x i64], ptr @r64, i32 0, i32 2), align 8
+; VEC128-NEXT:    store i64 [[R3]], ptr getelementptr inbounds ([8 x i64], ptr @r64, i32 0, i32 3), align 8
+; VEC128-NEXT:    store i64 [[R4]], ptr getelementptr inbounds ([8 x i64], ptr @r64, i32 0, i32 4), align 8
+; VEC128-NEXT:    store i64 [[R5]], ptr getelementptr inbounds ([8 x i64], ptr @r64, i32 0, i32 5), align 8
+; VEC128-NEXT:    store i64 [[R6]], ptr getelementptr inbounds ([8 x i64], ptr @r64, i32 0, i32 6), align 8
+; VEC128-NEXT:    store i64 [[R7]], ptr getelementptr inbounds ([8 x i64], ptr @r64, i32 0, i32 7), align 8
+; VEC128-NEXT:    ret void
+;
+; VEC256-AVX2-LABEL: @llrint_v8f32_v8i64(
+; VEC256-AVX2-NEXT:    [[A0:%.*]] = load float, ptr @f32, align 8
+; VEC256-AVX2-NEXT:    [[A1:%.*]] = load float, ptr getelementptr inbounds ([8 x float], ptr @f32, i32 0, i32 1), align 8
+; VEC256-AVX2-NEXT:    [[A2:%.*]] = load float, ptr getelementptr inbounds ([8 x float], ptr @f32, i32 0, i32 2), align 8
+; VEC256-AVX2-NEXT:    [[A3:%.*]] = load float, ptr getelementptr inbounds ([8 x float], ptr @f32, i32 0, i32 3), align 8
+; VEC256-AVX2-NEXT:    [[A4:%.*]] = load float, ptr getelementptr inbounds ([8 x float], ptr @f32, i32 0, i32 4), align 8
+; VEC256-AVX2-NEXT:    [[A5:%.*]] = load float, ptr getelementptr inbounds ([8 x float], ptr @f32, i32 0, i32 5), align 8
+; VEC256-AVX2-NEXT:    [[A6:%.*]] = load float, ptr getelementptr inbounds ([8 x float], ptr @f32, i32 0, i32 6), align 8
+; VEC256-AVX2-NEXT:    [[A7:%.*]] = load float, ptr getelementptr inbounds ([8 x float], ptr @f32, i32 0, i32 7), align 8
+; VEC256-AVX2-NEXT:    [[R0:%.*]] = call i64 @llvm.llrint.i64.f32(float [[A0]])
+; VEC256-AVX2-NEXT:    [[R1:%.*]] = call i64 @llvm.llrint.i64.f32(float [[A1]])
+; VEC256-AVX2-NEXT:    [[R2:%.*]] = call i64 @llvm.llrint.i64.f32(float [[A2]])
+; VEC256-AVX2-NEXT:    [[R3:%.*]] = call i64 @llvm.llrint.i64.f32(float [[A3]])
+; VEC256-AVX2-NEXT:    [[R4:%.*]] = call i64 @llvm.llrint.i64.f32(float [[A4]])
+; VEC256-AVX2-NEXT:    [[R5:%.*]] = call i64 @llvm.llrint.i64.f32(float [[A5]])
+; VEC256-AVX2-NEXT:    [[R6:%.*]] = call i64 @llvm.llrint.i64.f32(float [[A6]])
+; VEC256-AVX2-NEXT:    [[R7:%.*]] = call i64 @llvm.llrint.i64.f32(float [[A7]])
+; VEC256-AVX2-NEXT:    store i64 [[R0]], ptr @r64, align 8
+; VEC256-AVX2-NEXT:    store i64 [[R1]], ptr getelementptr inbounds ([8 x i64], ptr @r64, i32 0, i32 1), align 8
+; VEC256-AVX2-NEXT:    store i64 [[R2]], ptr getelementptr inbounds ([8 x i64], ptr @r64, i32 0, i32 2), align 8
+; VEC256-AVX2-NEXT:    store i64 [[R3]], ptr getelementptr inbounds ([8 x i64], ptr @r64, i32 0, i32 3), align 8
+; VEC256-AVX2-NEXT:    store i64 [[R4]], ptr getelementptr inbounds ([8 x i64], ptr @r64, i32 0, i32 4), align 8
+; VEC256-AVX2-NEXT:    store i64 [[R5]], ptr getelementptr inbounds ([8 x i64], ptr @r64, i32 0, i32 5), align 8
+; VEC256-AVX2-NEXT:    store i64 [[R6]], ptr getelementptr inbounds ([8 x i64], ptr @r64, i32 0, i32 6), align 8
+; VEC256-AVX2-NEXT:    store i64 [[R7]], ptr getelementptr inbounds ([8 x i64], ptr @r64, i32 0, i32 7), align 8
+; VEC256-AVX2-NEXT:    ret void
+;
+; VEC256-AVX512-LABEL: @llrint_v8f32_v8i64(
+; VEC256-AVX512-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr @f32, align 8
+; VEC256-AVX512-NEXT:    [[TMP2:%.*]] = call <4 x i64> @llvm.llrint.v4i64.v4f32(<4 x float> [[TMP1]])
+; VEC256-AVX512-NEXT:    store <4 x i64> [[TMP2]], ptr @r64, align 8
+; VEC256-AVX512-NEXT:    [[TMP3:%.*]] = load <4 x float>, ptr getelementptr inbounds ([8 x float], ptr @f32, i32 0, i32 4), align 8
+; VEC256-AVX512-NEXT:    [[TMP4:%.*]] = call <4 x i64> @llvm.llrint.v4i64.v4f32(<4 x float> [[TMP3]])
+; VEC256-AVX512-NEXT:    store <4 x i64> [[TMP4]], ptr getelementptr inbounds ([8 x i64], ptr @r64, i32 0, i32 4), align 8
+; VEC256-AVX512-NEXT:    ret void
+;
+; VEC512-LABEL: @llrint_v8f32_v8i64(
+; VEC512-NEXT:    [[TMP1:%.*]] = load <8 x float>, ptr @f32, align 8
+; VEC512-NEXT:    [[TMP2:%.*]] = call <8 x i64> @llvm.llrint.v8i64.v8f32(<8 x float> [[TMP1]])
+; VEC512-NEXT:    store <8 x i64> [[TMP2]], ptr @r64, align 8
+; VEC512-NEXT:    ret void
 ;
   %a0 = load float, ptr @f32, align 8
   %a1 = load float, ptr getelementptr inbounds ([8 x float], ptr @f32, i32 0, i32 1), align 8
@@ -339,32 +414,101 @@ define void @llrint_v8f32_v8i64() {
 }
 
 define void @llrint_v8f64_v8i64() {
-; CHECK-LABEL: @llrint_v8f64_v8i64(
-; CHECK-NEXT:    [[A0:%.*]] = load double, ptr @f64, align 8
-; CHECK-NEXT:    [[A1:%.*]] = load double, ptr getelementptr inbounds ([8 x double], ptr @f64, i32 0, i32 1), align 8
-; CHECK-NEXT:    [[A2:%.*]] = load double, ptr getelementptr inbounds ([8 x double], ptr @f64, i32 0, i32 2), align 8
-; CHECK-NEXT:    [[A3:%.*]] = load double, ptr getelementptr inbounds ([8 x double], ptr @f64, i32 0, i32 3), align 8
-; CHECK-NEXT:    [[A4:%.*]] = load double, ptr getelementptr inbounds ([8 x double], ptr @f64, i32 0, i32 4), align 8
-; CHECK-NEXT:    [[A5:%.*]] = load double, ptr getelementptr inbounds ([8 x double], ptr @f64, i32 0, i32 5), align 8
-; CHECK-NEXT:    [[A6:%.*]] = load double, ptr getelementptr inbounds ([8 x double], ptr @f64, i32 0, i32 6), align 8
-; CHECK-NEXT:    [[A7:%.*]] = load double, ptr getelementptr inbounds ([8 x double], ptr @f64, i32 0, i32 7), align 8
-; CHECK-NEXT:    [[R0:%.*]] = call i64 @llvm.llrint.i64.f64(double [[A0]])
-; CHECK-NEXT:    [[R1:%.*]] = call i64 @llvm.llrint.i64.f64(double [[A1]])
-; CHECK-NEXT:    [[R2:%.*]] = call i64 @llvm.llrint.i64.f64(double [[A2]])
-; CHECK-NEXT:    [[R3:%.*]] = call i64 @llvm.llrint.i64.f64(double [[A3]])
-; CHECK-NEXT:    [[R4:%.*]] = call i64 @llvm.llrint.i64.f64(double [[A4]])
-; CHECK-NEXT:    [[R5:%.*]] = call i64 @llvm.llrint.i64.f64(double [[A5]])
-; CHECK-NEXT:    [[R6:%.*]] = call i64 @llvm.llrint.i64.f64(double [[A6]])
-; CHECK-NEXT:    [[R7:%.*]] = call i64 @llvm.llrint.i64.f64(double [[A7]])
-; CHECK-NEXT:    store i64 [[R0]], ptr @r64, align 8
-; CHECK-NEXT:    store i64 [[R1]], ptr getelementptr inbounds ([8 x i64], ptr @r64, i32 0, i32 1), align 8
-; CHECK-NEXT:    store i64 [[R2]], ptr getelementptr inbounds ([8 x i64], ptr @r64, i32 0, i32 2), align 8
-; CHECK-NEXT:    store i64 [[R3]], ptr getelementptr inbounds ([8 x i64], ptr @r64, i32 0, i32 3), align 8
-; CHECK-NEXT:    store i64 [[R4]], ptr getelementptr inbounds ([8 x i64], ptr @r64, i32 0, i32 4), align 8
-; CHECK-NEXT:    store i64 [[R5]], ptr getelementptr inbounds ([8 x i64], ptr @r64, i32 0, i32 5), align 8
-; CHECK-NEXT:    store i64 [[R6]], ptr getelementptr inbounds ([8 x i64], ptr @r64, i32 0, i32 6), align 8
-; CHECK-NEXT:    store i64 [[R7]], ptr getelementptr inbounds ([8 x i64], ptr @r64, i32 0, i32 7), align 8
-; CHECK-NEXT:    ret void
+; SCALAR-LABEL: @llrint_v8f64_v8i64(
+; SCALAR-NEXT:    [[A0:%.*]] = load double, ptr @f64, align 8
+; SCALAR-NEXT:    [[A1:%.*]] = load double, ptr getelementptr inbounds ([8 x double], ptr @f64, i32 0, i32 1), align 8
+; SCALAR-NEXT:    [[A2:%.*]] = load double, ptr getelementptr inbounds ([8 x double], ptr @f64, i32 0, i32 2), align 8
+; SCALAR-NEXT:    [[A3:%.*]] = load double, ptr getelementptr inbounds ([8 x double], ptr @f64, i32 0, i32 3), align 8
+; SCALAR-NEXT:    [[A4:%.*]] = load double, ptr getelementptr inbounds ([8 x double], ptr @f64, i32 0, i32 4), align 8
+; SCALAR-NEXT:    [[A5:%.*]] = load double, ptr getelementptr inbounds ([8 x double], ptr @f64, i32 0, i32 5), align 8
+; SCALAR-NEXT:    [[A6:%.*]] = load double, ptr getelementptr inbounds ([8 x double], ptr @f64, i32 0, i32 6), align 8
+; SCALAR-NEXT:    [[A7:%.*]] = load double, ptr getelementptr inbounds ([8 x double], ptr @f64, i32 0, i32 7), align 8
+; SCALAR-NEXT:    [[R0:%.*]] = call i64 @llvm.llrint.i64.f64(double [[A0]])
+; SCALAR-NEXT:    [[R1:%.*]] = call i64 @llvm.llrint.i64.f64(double [[A1]])
+; SCALAR-NEXT:    [[R2:%.*]] = call i64 @llvm.llrint.i64.f64(double [[A2]])
+; SCALAR-NEXT:    [[R3:%.*]] = call i64 @llvm.llrint.i64.f64(double [[A3]])
+; SCALAR-NEXT:    [[R4:%.*]] = call i64 @llvm.llrint.i64.f64(double [[A4]])
+; SCALAR-NEXT:    [[R5:%.*]] = call i64 @llvm.llrint.i64.f64(double [[A5]])
+; SCALAR-NEXT:    [[R6:%.*]] = call i64 @llvm.llrint.i64.f64(double [[A6]])
+; SCALAR-NEXT:    [[R7:%.*]] = call i64 @llvm.llrint.i64.f64(double [[A7]])
+; SCALAR-NEXT:    store i64 [[R0]], ptr @r64, align 8
+; SCALAR-NEXT:    store i64 [[R1]], ptr getelementptr inbounds ([8 x i64], ptr @r64, i32 0, i32 1), align 8
+; SCALAR-NEXT:    store i64 [[R2]], ptr getelementptr inbounds ([8 x i64], ptr @r64, i32 0, i32 2), align 8
+; SCALAR-NEXT:    store i64 [[R3]], ptr getelementptr inbounds ([8 x i64], ptr @r64, i32 0, i32 3), align 8
+; SCALAR-NEXT:    store i64 [[R4]], ptr getelementptr inbounds ([8 x i64], ptr @r64, i32 0, i32 4), align 8
+; SCALAR-NEXT:    store i64 [[R5]], ptr getelementptr inbounds ([8 x i64], ptr @r64, i32 0, i32 5), align 8
+; SCALAR-NEXT:    store i64 [[R6]], ptr getelementptr inbounds ([8 x i64], ptr @r64, i32 0, i32 6), align 8
+; SCALAR-NEXT:    store i64 [[R7]], ptr getelementptr inbounds ([8 x i64], ptr @r64, i32 0, i32 7), align 8
+; SCALAR-NEXT:    ret void
+;
+; VEC128-LABEL: @llrint_v8f64_v8i64(
+; VEC128-NEXT:    [[A0:%.*]] = load double, ptr @f64, align 8
+; VEC128-NEXT:    [[A1:%.*]] = load double, ptr getelementptr inbounds ([8 x double], ptr @f64, i32 0, i32 1), align 8
+; VEC128-NEXT:    [[A2:%.*]] = load double, ptr getelementptr inbounds ([8 x double], ptr @f64, i32 0, i32 2), align 8
+; VEC128-NEXT:    [[A3:%.*]] = load double, ptr getelementptr inbounds ([8 x double], ptr @f64, i32 0, i32 3), align 8
+; VEC128-NEXT:    [[A4:%.*]] = load double, ptr getelementptr inbounds ([8 x double], ptr @f64, i32 0, i32 4), align 8
+; VEC128-NEXT:    [[A5:%.*]] = load double, ptr getelementptr inbounds ([8 x double], ptr @f64, i32 0, i32 5), align 8
+; VEC128-NEXT:    [[A6:%.*]] = load double, ptr getelementptr inbounds ([8 x double], ptr @f64, i32 0, i32 6), align 8
+; VEC128-NEXT:    [[A7:%.*]] = load double, ptr getelementptr inbounds ([8 x double], ptr @f64, i32 0, i32 7), align 8
+; VEC128-NEXT:    [[R0:%.*]] = call i64 @llvm.llrint.i64.f64(double [[A0]])
+; VEC128-NEXT:    [[R1:%.*]] = call i64 @llvm.llrint.i64.f64(double [[A1]])
+; VEC128-NEXT:    [[R2:%.*]] = call i64 @llvm.llrint.i64.f64(double [[A2]])
+; VEC128-NEXT:    [[R3:%.*]] = call i64 @llvm.llrint.i64.f64(double [[A3]])
+; VEC128-NEXT:    [[R4:%.*]] = call i64 @llvm.llrint.i64.f64(double [[A4]])
+; VEC128-NEXT:    [[R5:%.*]] = call i64 @llvm.llrint.i64.f64(double [[A5]])
+; VEC128-NEXT:    [[R6:%.*]] = call i64 @llvm.llrint.i64.f64(double [[A6]])
+; VEC128-NEXT:    [[R7:%.*]] = call i64 @llvm.llrint.i64.f64(double [[A7]])
+; VEC128-NEXT:    store i64 [[R0]], ptr @r64, align 8
+; VEC128-NEXT:    store i64 [[R1]], ptr getelementptr inbounds ([8 x i64], ptr @r64, i32 0, i32 1), align 8
+; VEC128-NEXT:    store i64 [[R2]], ptr getelementptr inbounds ([8 x i64], ptr @r64, i32 0, i32 2), align 8
+; VEC128-NEXT:    store i64 [[R3]], ptr getelementptr inbounds ([8 x i64], ptr @r64, i32 0, i32 3), align 8
+; VEC128-NEXT:    store i64 [[R4]], ptr getelementptr inbounds ([8 x i64], ptr @r64, i32 0, i32 4), align 8
+; VEC128-NEXT:    store i64 [[R5]], ptr getelementptr inbounds ([8 x i64], ptr @r64, i32 0, i32 5), align 8
+; VEC128-NEXT:    store i64 [[R6]], ptr getelementptr inbounds ([8 x i64], ptr @r64, i32 0, i32 6), align 8
+; VEC128-NEXT:    store i64 [[R7]], ptr getelementptr inbounds ([8 x i64], ptr @r64, i32 0, i32 7), align 8
+; VEC128-NEXT:    ret void
+;
+; VEC256-AVX2-LABEL: @llrint_v8f64_v8i64(
+; VEC256-AVX2-NEXT:    [[A0:%.*]] = load double, ptr @f64, align 8
+; VEC256-AVX2-NEXT:    [[A1:%.*]] = load double, ptr getelementptr inbounds ([8 x double], ptr @f64, i32 0, i32 1), align 8
+; VEC256-AVX2-NEXT:    [[A2:%.*]] = load double, ptr getelementptr inbounds ([8 x double], ptr @f64, i32 0, i32 2), align 8
+; VEC256-AVX2-NEXT:    [[A3:%.*]] = load double, ptr getelementptr inbounds ([8 x double], ptr @f64, i32 0, i32 3), align 8
+; VEC256-AVX2-NEXT:    [[A4:%.*]] = load double, ptr getelementptr inbounds ([8 x double], ptr @f64, i32 0, i32 4), align 8
+; VEC256-AVX2-NEXT:    [[A5:%.*]] = load double, ptr getelementptr inbounds ([8 x double], ptr @f64, i32 0, i32 5), align 8
+; VEC256-AVX2-NEXT:    [[A6:%.*]] = load double, ptr getelementptr inbounds ([8 x double], ptr @f64, i32 0, i32 6), align 8
+; VEC256-AVX2-NEXT:    [[A7:%.*]] = load double, ptr getelementptr inbounds ([8 x double], ptr @f64, i32 0, i32 7), align 8
+; VEC256-AVX2-NEXT:    [[R0:%.*]] = call i64 @llvm.llrint.i64.f64(double [[A0]])
+; VEC256-AVX2-NEXT:    [[R1:%.*]] = call i64 @llvm.llrint.i64.f64(double [[A1]])
+; VEC256-AVX2-NEXT:    [[R2:%.*]] = call i64 @llvm.llrint.i64.f64(double [[A2]])
+; VEC256-AVX2-NEXT:    [[R3:%.*]] = call i64 @llvm.llrint.i64.f64(double [[A3]])
+; VEC256-AVX2-NEXT:    [[R4:%.*]] = call i64 @llvm.llrint.i64.f64(double [[A4]])
+; VEC256-AVX2-NEXT:    [[R5:%.*]] = call i64 @llvm.llrint.i64.f64(double [[A5]])
+; VEC256-AVX2-NEXT:    [[R6:%.*]] = call i64 @llvm.llrint.i64.f64(double [[A6]])
+; VEC256-AVX2-NEXT:    [[R7:%.*]] = call i64 @llvm.llrint.i64.f64(double [[A7]])
+; VEC256-AVX2-NEXT:    store i64 [[R0]], ptr @r64, align 8
+; VEC256-AVX2-NEXT:    store i64 [[R1]], ptr getelementptr inbounds ([8 x i64], ptr @r64, i32 0, i32 1), align 8
+; VEC256-AVX2-NEXT:    store i64 [[R2]], ptr getelementptr inbounds ([8 x i64], ptr @r64, i32 0, i32 2), align 8
+; VEC256-AVX2-NEXT:    store i64 [[R3]], ptr getelementptr inbounds ([8 x i64], ptr @r64, i32 0, i32 3), align 8
+; VEC256-AVX2-NEXT:    store i64 [[R4]], ptr getelementptr inbounds ([8 x i64], ptr @r64, i32 0, i32 4), align 8
+; VEC256-AVX2-NEXT:    store i64 [[R5]], ptr getelementptr inbounds ([8 x i64], ptr @r64, i32 0, i32 5), align 8
+; VEC256-AVX2-NEXT:    store i64 [[R6]], ptr getelementptr inbounds ([8 x i64], ptr @r64, i32 0, i32 6), align 8
+; VEC256-AVX2-NEXT:    store i64 [[R7]], ptr getelementptr inbounds ([8 x i64], ptr @r64, i32 0, i32 7), align 8
+; VEC256-AVX2-NEXT:    ret void
+;
+; VEC256-AVX512-LABEL: @llrint_v8f64_v8i64(
+; VEC256-AVX512-NEXT:    [[TMP1:%.*]] = load <4 x double>, ptr @f64, align 8
+; VEC256-AVX512-NEXT:    [[TMP2:%.*]] = call <4 x i64> @llvm.llrint.v4i64.v4f64(<4 x double> [[TMP1]])
+; VEC256-AVX512-NEXT:    store <4 x i64> [[TMP2]], ptr @r64, align 8
+; VEC256-AVX512-NEXT:    [[TMP3:%.*]] = load <4 x double>, ptr getelementptr inbounds ([8 x double], ptr @f64, i32 0, i32 4), align 8
+; VEC256-AVX512-NEXT:    [[TMP4:%.*]] = call <4 x i64> @llvm.llrint.v4i64.v4f64(<4 x double> [[TMP3]])
+; VEC256-AVX512-NEXT:    store <4 x i64> [[TMP4]], ptr getelementptr inbounds ([8 x i64], ptr @r64, i32 0, i32 4), align 8
+; VEC256-AVX512-NEXT:    ret void
+;
+; VEC512-LABEL: @llrint_v8f64_v8i64(
+; VEC512-NEXT:    [[TMP1:%.*]] = load <8 x double>, ptr @f64, align 8
+; VEC512-NEXT:    [[TMP2:%.*]] = call <8 x i64> @llvm.llrint.v8i64.v8f64(<8 x double> [[TMP1]])
+; VEC512-NEXT:    store <8 x i64> [[TMP2]], ptr @r64, align 8
+; VEC512-NEXT:    ret void
 ;
   %a0 = load double, ptr @f64, align 8
   %a1 = load double, ptr getelementptr inbounds ([8 x double], ptr @f64, i32 0, i32 1), align 8
@@ -392,3 +536,5 @@ define void @llrint_v8f64_v8i64() {
   store i64 %r7, ptr getelementptr inbounds ([8 x i64], ptr @r64, i32 0, i32 7), align 8
   ret void
 }
+;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+; CHECK: {{.*}}
