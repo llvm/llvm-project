@@ -867,30 +867,35 @@ static bool isStreamingCompatible(const FunctionDecl *F) {
   return false;
 }
 
+// Report an error if an argument or return value of type Ty would need to be
+// passed in a floating-point register.
+static void diagnoseIfNeedsFPReg(DiagnosticsEngine &Diags,
+                                 const StringRef ABIName,
+                                 const AArch64ABIInfo &ABIInfo,
+                                 const QualType &Ty, const NamedDecl *D) {
+  const Type *HABase = nullptr;
+  uint64_t HAMembers = 0;
+  if (Ty->isFloatingType() || Ty->isVectorType() ||
+      ABIInfo.isHomogeneousAggregate(Ty, HABase, HAMembers)) {
+    Diags.Report(D->getLocation(), diag::err_target_unsupported_type_for_abi)
+        << D->getDeclName() << Ty << ABIName;
+  }
+}
+
+// If we are using a hard-float ABI, but do not have floating point registers,
+// then report an error for any function arguments or returns which would be
+// passed in floating-pint registers.
 void AArch64TargetCodeGenInfo::checkFunctionABI(
     CodeGenModule &CGM, const FunctionDecl *FuncDecl) const {
   const AArch64ABIInfo &ABIInfo = getABIInfo<AArch64ABIInfo>();
   const TargetInfo &TI = ABIInfo.getContext().getTargetInfo();
 
-  // If we are using a hard-float ABI, but do not have floating point
-  // registers, then report an error for any function arguments or returns
-  // which would be passed in floating-pint registers.
-  auto CheckType = [&CGM, &TI, &ABIInfo](const QualType &Ty,
-                                         const NamedDecl *D) {
-    const Type *HABase = nullptr;
-    uint64_t HAMembers = 0;
-    if (Ty->isFloatingType() || Ty->isVectorType() ||
-        ABIInfo.isHomogeneousAggregate(Ty, HABase, HAMembers)) {
-      CGM.getDiags().Report(D->getLocation(),
-                            diag::err_target_unsupported_type_for_abi)
-          << D->getDeclName() << Ty << TI.getABI();
-    }
-  };
-
   if (!TI.hasFeature("fp") && !ABIInfo.isSoftFloat()) {
-    CheckType(FuncDecl->getReturnType(), FuncDecl);
+    diagnoseIfNeedsFPReg(CGM.getDiags(), TI.getABI(), ABIInfo,
+                         FuncDecl->getReturnType(), FuncDecl);
     for (ParmVarDecl *PVD : FuncDecl->parameters()) {
-      CheckType(PVD->getType(), PVD);
+      diagnoseIfNeedsFPReg(CGM.getDiags(), TI.getABI(), ABIInfo, PVD->getType(),
+                           PVD);
     }
   }
 }
@@ -930,26 +935,12 @@ void AArch64TargetCodeGenInfo::checkFunctionCallABISoftFloat(
   if (!Caller || TI.hasFeature("fp") || ABIInfo.isSoftFloat())
     return;
 
-  for (const CallArg &Arg : Args) {
-    const QualType Ty = Arg.getType();
-    const Type *HABase = nullptr;
-    uint64_t HAMembers = 0;
+  diagnoseIfNeedsFPReg(CGM.getDiags(), TI.getABI(), ABIInfo, ReturnType,
+                       Caller);
 
-    if (Ty->isFloatingType() || Ty->isVectorType() ||
-        ABIInfo.isHomogeneousAggregate(Ty, HABase, HAMembers)) {
-      CGM.getDiags().Report(CallLoc, diag::err_target_unsupported_type_for_abi)
-          << Caller->getDeclName() << Ty << TI.getABI();
-    }
-  }
-
-  const Type *HABase = nullptr;
-  uint64_t HAMembers = 0;
-
-  if (ReturnType->isFloatingType() || ReturnType->isVectorType() ||
-      ABIInfo.isHomogeneousAggregate(ReturnType, HABase, HAMembers)) {
-    CGM.getDiags().Report(CallLoc, diag::err_target_unsupported_type_for_abi)
-        << Caller->getDeclName() << ReturnType << TI.getABI();
-  }
+  for (const CallArg &Arg : Args)
+    diagnoseIfNeedsFPReg(CGM.getDiags(), TI.getABI(), ABIInfo, Arg.getType(),
+                         Caller);
 }
 
 void AArch64TargetCodeGenInfo::checkFunctionCallABI(CodeGenModule &CGM,
