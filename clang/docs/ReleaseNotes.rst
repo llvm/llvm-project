@@ -561,7 +561,7 @@ Bug Fixes to C++ Support
 - Fixed a crash when trying to evaluate a user-defined ``static_assert`` message whose ``size()``
   function returns a large or negative value. Fixes (#GH89407).
 - Fixed a crash where template parameter packs were not expanded correctly in a lambda used
-  as the pattern of a folded expression. (#GH56852), (#GH85667), and partially fixed (#GH18873).
+  as the pattern of a folded expression. (#GH56852), (#GH85667) and (#GH18873).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
