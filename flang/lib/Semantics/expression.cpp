@@ -789,11 +789,9 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::RealLiteralConstant &x) {
   auto kind{AnalyzeKindParam(x.kind, defaultKind)};
   if (letterKind && expoLetter != 'e') {
     if (kind != *letterKind) {
-      if (context_.ShouldWarn(
-              common::LanguageFeature::ExponentMatchingKindParam)) {
-        Say("Explicit kind parameter on real constant disagrees with exponent letter '%c'"_warn_en_US,
-            expoLetter);
-      }
+      Say("Explicit kind parameter on real constant disagrees with "
+          "exponent letter '%c'"_warn_en_US,
+          expoLetter);
     } else if (x.kind &&
         context_.ShouldWarn(
             common::LanguageFeature::ExponentMatchingKindParam)) {
@@ -2778,9 +2776,7 @@ void ExpressionAnalyzer::CheckBadExplicitType(
       if (const auto *typeAndShape{result->GetTypeAndShape()}) {
         if (auto declared{
                 typeAndShape->Characterize(intrinsic, GetFoldingContext())}) {
-          if (!declared->type().IsTkCompatibleWith(typeAndShape->type()) &&
-              context_.ShouldWarn(
-                  common::UsageWarning::IgnoredIntrinsicFunctionType)) {
+          if (!declared->type().IsTkCompatibleWith(typeAndShape->type())) {
             if (auto *msg{Say(
                     "The result type '%s' of the intrinsic function '%s' is not the explicit declared type '%s'"_warn_en_US,
                     typeAndShape->AsFortran(), intrinsic.name(),
@@ -3153,9 +3149,7 @@ std::optional<characteristics::Procedure> ExpressionAnalyzer::CheckCall(
           iter != implicitInterfaces_.end()) {
         std::string whyNot;
         if (!chars->IsCompatibleWith(iter->second.second,
-                /*ignoreImplicitVsExplicit=*/false, &whyNot) &&
-            context_.ShouldWarn(
-                common::UsageWarning::IncompatibleImplicitInterfaces)) {
+                /*ignoreImplicitVsExplicit=*/false, &whyNot)) {
           if (auto *msg{Say(callSite,
                   "Reference to the procedure '%s' has an implicit interface that is distinct from another reference: %s"_warn_en_US,
                   name, whyNot)}) {
@@ -3839,10 +3833,8 @@ bool ExpressionAnalyzer::CheckIntrinsicKind(
     return true;
   } else if (foldingContext_.targetCharacteristics().CanSupportType(
                  category, kind)) {
-    if (context_.ShouldWarn(common::UsageWarning::BadTypeForTarget)) {
-      Say("%s(KIND=%jd) is not an enabled type for this target"_warn_en_US,
-          ToUpperCase(EnumToString(category)), kind);
-    }
+    Say("%s(KIND=%jd) is not an enabled type for this target"_warn_en_US,
+        ToUpperCase(EnumToString(category)), kind);
     return true;
   } else {
     Say("%s(KIND=%jd) is not a supported type"_err_en_US,
@@ -3868,10 +3860,8 @@ bool ExpressionAnalyzer::CheckIntrinsicSize(
     return true;
   } else if (foldingContext_.targetCharacteristics().CanSupportType(
                  category, kind)) {
-    if (context_.ShouldWarn(common::UsageWarning::BadTypeForTarget)) {
-      Say("%s*%jd is not an enabled type for this target"_warn_en_US,
-          ToUpperCase(EnumToString(category)), size);
-    }
+    Say("%s*%jd is not an enabled type for this target"_warn_en_US,
+        ToUpperCase(EnumToString(category)), size);
     return true;
   } else {
     Say("%s*%jd is not a supported type"_err_en_US,

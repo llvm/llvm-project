@@ -563,20 +563,6 @@ def MismatchedDeallocatorChecker : Checker<"MismatchedDeallocator">,
   Dependencies<[DynamicMemoryModeling]>,
   Documentation<HasDocumentation>;
 
-// This must appear before StdCLibraryFunctionsChecker because a dependency.
-def StreamChecker : Checker<"Stream">,
-  HelpText<"Check stream handling functions">,
-  WeakDependencies<[NonNullParamChecker]>,
-  CheckerOptions<[
-    CmdLineOption<Boolean,
-                  "Pedantic",
-                  "If false, assume that stream operations which are often not "
-                  "checked for error do not fail.",
-                  "false",
-                  InAlpha>
-  ]>,
-  Documentation<HasDocumentation>;
-
 def StdCLibraryFunctionsChecker : Checker<"StdCLibraryFunctions">,
   HelpText<"Check for invalid arguments of C standard library functions, "
            "and apply relations between arguments and return value">,
@@ -595,7 +581,7 @@ def StdCLibraryFunctionsChecker : Checker<"StdCLibraryFunctions">,
                   "true",
                   InAlpha>
   ]>,
-  WeakDependencies<[CallAndMessageChecker, NonNullParamChecker, StreamChecker]>,
+  WeakDependencies<[CallAndMessageChecker, NonNullParamChecker]>,
   Documentation<HasDocumentation>;
 
 def VforkChecker : Checker<"Vfork">,
@@ -613,6 +599,20 @@ def ChrootChecker : Checker<"Chroot">,
 def PthreadLockChecker : Checker<"PthreadLock">,
   HelpText<"Simple lock -> unlock checker">,
   Dependencies<[PthreadLockBase]>,
+  Documentation<HasDocumentation>;
+
+def StreamChecker : Checker<"Stream">,
+  HelpText<"Check stream handling functions">,
+  WeakDependencies<[NonNullParamChecker]>,
+  CheckerOptions<[
+    CmdLineOption<Boolean,
+                  "Pedantic",
+                  "If false, assume that stream operations which are often not "
+                  "checked for error do not fail."
+                  "fail.",
+                  "false",
+                  InAlpha>
+  ]>,
   Documentation<HasDocumentation>;
 
 def SimpleStreamChecker : Checker<"SimpleStream">,
@@ -1628,7 +1628,6 @@ def TaintTesterChecker : Checker<"TaintTest">,
 def StreamTesterChecker : Checker<"StreamTester">,
   HelpText<"Add test functions to StreamChecker for test and debugging "
            "purposes.">,
-  WeakDependencies<[StreamChecker]>,
   Documentation<NotDocumented>;
 
 def ErrnoTesterChecker : Checker<"ErrnoTest">,

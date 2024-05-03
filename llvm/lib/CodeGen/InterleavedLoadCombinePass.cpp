@@ -877,9 +877,6 @@ public:
     if (LI->isAtomic())
       return false;
 
-    if (!DL.typeSizeEqualsStoreSize(Result.VTy->getElementType()))
-      return false;
-
     // Get the base polynomial
     computePolynomialFromPointer(*LI->getPointerOperand(), Offset, BasePtr, DL);
 
@@ -893,7 +890,7 @@ public:
           ConstantInt::get(Type::getInt32Ty(LI->getContext()), 0),
           ConstantInt::get(Type::getInt32Ty(LI->getContext()), i),
       };
-      int64_t Ofs = DL.getIndexedOffsetInType(Result.VTy, Idx);
+      int64_t Ofs = DL.getIndexedOffsetInType(Result.VTy, ArrayRef(Idx, 2));
       Result.EI[i] = ElementInfo(Offset + Ofs, i == 0 ? LI : nullptr);
     }
 

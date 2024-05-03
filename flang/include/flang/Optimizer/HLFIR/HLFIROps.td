@@ -87,7 +87,6 @@ def hlfir_DeclareOp : hlfir_Op<"declare", [AttrSizedOperandSegments,
     AnyRefOrBox:$memref,
     Optional<AnyShapeOrShiftType>:$shape,
     Variadic<AnyIntegerType>:$typeparams,
-    Optional<fir_DummyScopeType>:$dummy_scope,
     Builtin_StringAttr:$uniq_name,
     OptionalAttr<fir_FortranVariableFlagsAttr>:$fortran_attrs,
     OptionalAttr<fir_CUDADataAttributeAttr>:$cuda_attr
@@ -97,8 +96,7 @@ def hlfir_DeclareOp : hlfir_Op<"declare", [AttrSizedOperandSegments,
 
   let assemblyFormat = [{
     $memref (`(` $shape^ `)`)? (`typeparams` $typeparams^)?
-    (`dummy_scope` $dummy_scope^)?
-    attr-dict `:` functional-type(operands, results)
+     attr-dict `:` functional-type(operands, results)
   }];
 
   let builders = [

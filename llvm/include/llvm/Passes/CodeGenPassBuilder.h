@@ -29,6 +29,7 @@
 #include "llvm/CodeGen/DwarfEHPrepare.h"
 #include "llvm/CodeGen/ExpandMemCmp.h"
 #include "llvm/CodeGen/ExpandReductions.h"
+#include "llvm/CodeGen/FreeMachineFunction.h"
 #include "llvm/CodeGen/GCMetadata.h"
 #include "llvm/CodeGen/GlobalMerge.h"
 #include "llvm/CodeGen/IndirectBrExpand.h"
@@ -37,8 +38,6 @@
 #include "llvm/CodeGen/JMCInstrumenter.h"
 #include "llvm/CodeGen/LowerEmuTLS.h"
 #include "llvm/CodeGen/MIRPrinter.h"
-#include "llvm/CodeGen/MachineFunctionAnalysis.h"
-#include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/PreISelIntrinsicLowering.h"
 #include "llvm/CodeGen/ReplaceWithVeclib.h"
@@ -200,13 +199,8 @@ protected:
     AddMachinePass(ModulePassManager &MPM, const DerivedT &PB)
         : MPM(MPM), PB(PB) {}
     ~AddMachinePass() {
-      if (!MFPM.isEmpty()) {
-        FunctionPassManager FPM;
-        FPM.addPass(
-            createFunctionToMachineFunctionPassAdaptor(std::move(MFPM)));
-        FPM.addPass(InvalidateAnalysisPass<MachineFunctionAnalysis>());
-        MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
-      }
+      if (!MFPM.isEmpty())
+        MPM.addPass(createModuleToMachineFunctionPassAdaptor(std::move(MFPM)));
     }
 
     template <typename PassT>
@@ -225,8 +219,8 @@ protected:
       } else {
         // Add Module Pass
         if (!MFPM.isEmpty()) {
-          MPM.addPass(createModuleToFunctionPassAdaptor(
-              createFunctionToMachineFunctionPassAdaptor(std::move(MFPM))));
+          MPM.addPass(
+              createModuleToMachineFunctionPassAdaptor(std::move(MFPM)));
           MFPM = MachineFunctionPassManager();
         }
 
@@ -518,7 +512,6 @@ Error CodeGenPassBuilder<Derived, TargetMachineT>::buildPipeline(
 
   {
     AddIRPass addIRPass(MPM, derived());
-    addIRPass(RequireAnalysisPass<MachineModuleAnalysis, Module>());
     addIRPass(RequireAnalysisPass<ProfileSummaryAnalysis, Module>());
     addIRPass(RequireAnalysisPass<CollectorMetadataAnalysis, Module>());
     addISelPasses(addIRPass);
@@ -545,6 +538,7 @@ Error CodeGenPassBuilder<Derived, TargetMachineT>::buildPipeline(
   if (PrintMIR)
     addPass(PrintMIRPass(Out), /*Force=*/true);
 
+  addPass(FreeMachineFunctionPass());
   return verifyStartStop(*StartStopInfo);
 }
 

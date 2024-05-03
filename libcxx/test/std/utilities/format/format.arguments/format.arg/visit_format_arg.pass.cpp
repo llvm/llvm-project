@@ -16,7 +16,6 @@
 #include <algorithm>
 #include <format>
 #include <cassert>
-#include <limits>
 #include <type_traits>
 
 #include "constexpr_char_traits.h"

@@ -47,13 +47,7 @@ enum {
   MO_IE_PC64_HI,
   MO_LD_PC_HI,
   MO_GD_PC_HI,
-  MO_CALL36,
-  MO_DESC_PC_HI,
-  MO_DESC_PC_LO,
-  MO_DESC64_PC_HI,
-  MO_DESC64_PC_LO,
-  MO_DESC_LD,
-  MO_DESC_CALL,
+  MO_CALL36
   // TODO: Add more flags.
 };
 } // end namespace LoongArchII

@@ -43,23 +43,17 @@ static Expr<T> FoldDotProduct(
       Expr<T> products{Fold(
           context, Expr<T>{std::move(conjgA)} * Expr<T>{Constant<T>{*vb}})};
       Constant<T> &cProducts{DEREF(UnwrapConstantValue<T>(products))};
-      [[maybe_unused]] Element correction{};
+      Element correction{}; // Use Kahan summation for greater precision.
       const auto &rounding{context.targetCharacteristics().roundingMode()};
       for (const Element &x : cProducts.values()) {
-        if constexpr (useKahanSummation) {
-          auto next{correction.Add(x, rounding)};
-          overflow |= next.flags.test(RealFlag::Overflow);
-          auto added{sum.Add(next.value, rounding)};
-          overflow |= added.flags.test(RealFlag::Overflow);
-          correction = added.value.Subtract(sum, rounding)
-                           .value.Subtract(next.value, rounding)
-                           .value;
-          sum = std::move(added.value);
-        } else {
-          auto added{sum.Add(x, rounding)};
-          overflow |= added.flags.test(RealFlag::Overflow);
-          sum = std::move(added.value);
-        }
+        auto next{correction.Add(x, rounding)};
+        overflow |= next.flags.test(RealFlag::Overflow);
+        auto added{sum.Add(next.value, rounding)};
+        overflow |= added.flags.test(RealFlag::Overflow);
+        correction = added.value.Subtract(sum, rounding)
+                         .value.Subtract(next.value, rounding)
+                         .value;
+        sum = std::move(added.value);
       }
     } else if constexpr (T::category == TypeCategory::Logical) {
       Expr<T> conjunctions{Fold(context,
@@ -86,28 +80,20 @@ static Expr<T> FoldDotProduct(
       Expr<T> products{
           Fold(context, Expr<T>{Constant<T>{*va}} * Expr<T>{Constant<T>{*vb}})};
       Constant<T> &cProducts{DEREF(UnwrapConstantValue<T>(products))};
-      [[maybe_unused]] Element correction{};
+      Element correction{}; // Use Kahan summation for greater precision.
       const auto &rounding{context.targetCharacteristics().roundingMode()};
       for (const Element &x : cProducts.values()) {
-        if constexpr (useKahanSummation) {
-          auto next{correction.Add(x, rounding)};
-          overflow |= next.flags.test(RealFlag::Overflow);
-          auto added{sum.Add(next.value, rounding)};
-          overflow |= added.flags.test(RealFlag::Overflow);
-          correction = added.value.Subtract(sum, rounding)
-                           .value.Subtract(next.value, rounding)
-                           .value;
-          sum = std::move(added.value);
-        } else {
-          auto added{sum.Add(x, rounding)};
-          overflow |= added.flags.test(RealFlag::Overflow);
-          sum = std::move(added.value);
-        }
+        auto next{correction.Add(x, rounding)};
+        overflow |= next.flags.test(RealFlag::Overflow);
+        auto added{sum.Add(next.value, rounding)};
+        overflow |= added.flags.test(RealFlag::Overflow);
+        correction = added.value.Subtract(sum, rounding)
+                         .value.Subtract(next.value, rounding)
+                         .value;
+        sum = std::move(added.value);
       }
     }
-    if (overflow &&
-        context.languageFeatures().ShouldWarn(
-            common::UsageWarning::FoldingException)) {
+    if (overflow) {
       context.messages().Say(
           "DOT_PRODUCT of %s data overflowed during computation"_warn_en_US,
           T::AsFortran());
@@ -323,9 +309,7 @@ static Expr<T> FoldProduct(
     ProductAccumulator accumulator{arrayAndMask->array};
     auto result{Expr<T>{DoReduction<T>(
         arrayAndMask->array, arrayAndMask->mask, dim, identity, accumulator)}};
-    if (accumulator.overflow() &&
-        context.languageFeatures().ShouldWarn(
-            common::UsageWarning::FoldingException)) {
+    if (accumulator.overflow()) {
       context.messages().Say(
           "PRODUCT() of %s data overflowed"_warn_en_US, T::AsFortran());
     }
@@ -391,9 +375,7 @@ static Expr<T> FoldSum(FoldingContext &context, FunctionRef<T> &&ref) {
         arrayAndMask->array, context.targetCharacteristics().roundingMode()};
     auto result{Expr<T>{DoReduction<T>(
         arrayAndMask->array, arrayAndMask->mask, dim, identity, accumulator)}};
-    if (accumulator.overflow() &&
-        context.languageFeatures().ShouldWarn(
-            common::UsageWarning::FoldingException)) {
+    if (accumulator.overflow()) {
       context.messages().Say(
           "SUM() of %s data overflowed"_warn_en_US, T::AsFortran());
     }

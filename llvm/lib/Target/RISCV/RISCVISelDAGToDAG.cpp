@@ -2099,14 +2099,8 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     MVT SubVecContainerVT = SubVecVT;
     // Establish the correct scalable-vector types for any fixed-length type.
     if (SubVecVT.isFixedLengthVector()) {
+      assert(Idx == 0 && V.isUndef());
       SubVecContainerVT = TLI.getContainerForFixedLengthVector(SubVecVT);
-      TypeSize VecRegSize = TypeSize::getScalable(RISCV::RVVBitsPerBlock);
-      [[maybe_unused]] bool ExactlyVecRegSized =
-          Subtarget->expandVScale(SubVecVT.getSizeInBits())
-              .isKnownMultipleOf(Subtarget->expandVScale(VecRegSize));
-      assert(isPowerOf2_64(Subtarget->expandVScale(SubVecVT.getSizeInBits())
-                               .getKnownMinValue()));
-      assert(Idx == 0 && (ExactlyVecRegSized || V.isUndef()));
     }
     MVT ContainerVT = VT;
     if (VT.isFixedLengthVector())
@@ -3674,6 +3668,7 @@ bool RISCVDAGToDAGISel::performCombineVMergeAndVOps(SDNode *N) {
   }
 
   // Skip if True has side effect.
+  // TODO: Support vleff and vlsegff.
   if (TII->get(TrueOpc).hasUnmodeledSideEffects())
     return false;
 

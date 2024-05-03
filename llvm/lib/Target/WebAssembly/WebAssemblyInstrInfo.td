@@ -78,10 +78,6 @@ def HasMultiMemory :
     Predicate<"Subtarget->hasMultiMemory()">,
     AssemblerPredicate<(all_of FeatureMultiMemory), "multimemory">;
 
-def HasMutableGlobals:
-    Predicate<"Subtarget->hasMutableGlobals()">,
-    AssemblerPredicate<(all_of FeatureMutableGlobals), "mutable-globals">;
-
 //===----------------------------------------------------------------------===//
 // WebAssembly-specific DAG Node Types.
 //===----------------------------------------------------------------------===//

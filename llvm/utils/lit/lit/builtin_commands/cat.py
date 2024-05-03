@@ -55,24 +55,10 @@ def main(argv):
             msvcrt.setmode(sys.stdout.fileno(), os.O_BINARY)
     for filename in filenames:
         try:
-            contents = None
-            is_text = False
-            try:
-                if sys.platform != "win32":
-                    fileToCat = open(filename, "r")
-                    contents = fileToCat.read()
-                    is_text = True
-            except:
-                pass
-
-            if contents is None:
-                fileToCat = open(filename, "rb")
-                contents = fileToCat.read()
-
+            fileToCat = open(filename, "rb")
+            contents = fileToCat.read()
             if show_nonprinting:
                 contents = convertToCaretAndMNotation(contents)
-            elif is_text:
-                contents = contents.encode()
             writer.write(contents)
             sys.stdout.flush()
             fileToCat.close()

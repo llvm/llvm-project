@@ -963,7 +963,7 @@ PassBuilder::buildInlinerPipeline(OptimizationLevel Level,
   MainCGPipeline.addPass(createCGSCCToFunctionPassAdaptor(
       RequireAnalysisPass<ShouldNotRunFunctionPassesAnalysis, Function>()));
 
-  if (Phase != ThinOrFullLTOPhase::ThinLTOPreLink)
+  if (!isLTOPreLink(Phase))
     MainCGPipeline.addPass(CoroSplitPass(Level != OptimizationLevel::O0));
 
   // Make sure we don't affect potential future NoRerun CGSCC adaptors.
@@ -1006,7 +1006,7 @@ PassBuilder::buildModuleInlinerPipeline(OptimizationLevel Level,
       buildFunctionSimplificationPipeline(Level, Phase),
       PTO.EagerlyInvalidateAnalyses));
 
-  if (Phase != ThinOrFullLTOPhase::ThinLTOPreLink)
+  if (!isLTOPreLink(Phase))
     MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(
         CoroSplitPass(Level != OptimizationLevel::O0)));
 
@@ -1185,7 +1185,7 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
   // and argument promotion.
   MPM.addPass(DeadArgumentEliminationPass());
 
-  if (Phase != ThinOrFullLTOPhase::ThinLTOPreLink)
+  if (!isLTOPreLink(Phase))
     MPM.addPass(CoroCleanupPass());
 
   // Optimize globals now that functions are fully simplified.

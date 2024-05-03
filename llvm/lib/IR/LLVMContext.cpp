@@ -118,13 +118,6 @@ void LLVMContext::addModule(Module *M) {
 
 void LLVMContext::removeModule(Module *M) {
   pImpl->OwnedModules.erase(M);
-  pImpl->MachineFunctionNums.erase(M);
-}
-
-unsigned LLVMContext::generateMachineFunctionNum(Function &F) {
-  Module *M = F.getParent();
-  assert(pImpl->OwnedModules.contains(M) && "Unexpected module!");
-  return pImpl->MachineFunctionNums[M]++;
 }
 
 //===----------------------------------------------------------------------===//

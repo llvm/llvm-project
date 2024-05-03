@@ -1135,7 +1135,6 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   std::unique_ptr<VarArgHelper> VAHelper;
   const TargetLibraryInfo *TLI;
   Instruction *FnPrologueEnd;
-  SmallVector<Instruction *, 16> Instructions;
 
   // The following flags disable parts of MSan instrumentation based on
   // exclusion list contents and command-line options.
@@ -1520,11 +1519,6 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     // For PHI nodes we create dummy shadow PHIs which will be finalized later.
     for (BasicBlock *BB : depth_first(FnPrologueEnd->getParent()))
       visit(*BB);
-
-    // `visit` above only collects instructions. Process them after iterating
-    // CFG to avoid requirement on CFG transformations.
-    for (Instruction *I : Instructions)
-      InstVisitor<MemorySanitizerVisitor>::visit(*I);
 
     // Finalize PHI nodes.
     for (PHINode *PN : ShadowPHINodes) {
@@ -2202,8 +2196,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       setOrigin(&I, getCleanOrigin());
       return;
     }
-
-    Instructions.push_back(&I);
+    InstVisitor<MemorySanitizerVisitor>::visit(I);
   }
 
   /// Instrument LoadInst

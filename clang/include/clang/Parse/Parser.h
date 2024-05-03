@@ -1398,21 +1398,12 @@ private:
   // A list of late-parsed attributes.  Used by ParseGNUAttributes.
   class LateParsedAttrList: public SmallVector<LateParsedAttribute *, 2> {
   public:
-    LateParsedAttrList(bool PSoon = false,
-                       bool LateAttrParseExperimentalExtOnly = false)
-        : ParseSoon(PSoon),
-          LateAttrParseExperimentalExtOnly(LateAttrParseExperimentalExtOnly) {}
+    LateParsedAttrList(bool PSoon = false) : ParseSoon(PSoon) { }
 
     bool parseSoon() { return ParseSoon; }
-    /// returns true iff the attribute to be parsed should only be late parsed
-    /// if it is annotated with `LateAttrParseExperimentalExt`
-    bool lateAttrParseExperimentalExtOnly() {
-      return LateAttrParseExperimentalExtOnly;
-    }
 
   private:
-    bool ParseSoon; // Are we planning to parse these shortly after creation?
-    bool LateAttrParseExperimentalExtOnly;
+    bool ParseSoon;  // Are we planning to parse these shortly after creation?
   };
 
   /// Contains the lexed tokens of a member function definition
@@ -3654,12 +3645,11 @@ private:
   ExprResult ParseOpenACCIDExpression();
   /// Parses the variable list for the `cache` construct.
   void ParseOpenACCCacheVarList();
-
-  using OpenACCVarParseResult = std::pair<ExprResult, OpenACCParseCanContinue>;
   /// Parses a single variable in a variable list for OpenACC.
-  OpenACCVarParseResult ParseOpenACCVar();
-  /// Parses the variable list for the variety of places that take a var-list.
-  llvm::SmallVector<Expr *> ParseOpenACCVarList();
+  bool ParseOpenACCVar();
+  /// Parses the variable list for the variety of clauses that take a var-list,
+  /// including the optional Special Token listed for some,based on clause type.
+  bool ParseOpenACCClauseVarList(OpenACCClauseKind Kind);
   /// Parses any parameters for an OpenACC Clause, including required/optional
   /// parens.
   OpenACCClauseParseResult

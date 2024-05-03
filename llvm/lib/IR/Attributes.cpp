@@ -173,8 +173,8 @@ Attribute Attribute::get(LLVMContext &Context, Attribute::AttrKind Kind,
   LLVMContextImpl *pImpl = Context.pImpl;
   FoldingSetNodeID ID;
   ID.AddInteger(Kind);
-  CR.getLower().Profile(ID);
-  CR.getUpper().Profile(ID);
+  ID.AddInteger(CR.getLower());
+  ID.AddInteger(CR.getUpper());
 
   void *InsertPoint;
   AttributeImpl *PA = pImpl->AttrsSet.FindNodeOrInsertPos(ID, InsertPoint);
@@ -2282,7 +2282,7 @@ struct StrBoolAttr {
   static bool isSet(const Function &Fn,
                     StringRef Kind) {
     auto A = Fn.getFnAttribute(Kind);
-    return A.getValueAsString() == "true";
+    return A.getValueAsString().equals("true");
   }
 
   static void set(Function &Fn,

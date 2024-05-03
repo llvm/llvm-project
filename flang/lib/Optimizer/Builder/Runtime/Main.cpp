@@ -7,10 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Optimizer/Builder/Runtime/Main.h"
-#include "flang/Lower/EnvironmentDefault.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
-#include "flang/Optimizer/Builder/Runtime/EnvironmentDefaults.h"
 #include "flang/Optimizer/Builder/Runtime/RTBuilder.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
@@ -20,9 +18,8 @@
 using namespace Fortran::runtime;
 
 /// Create a `int main(...)` that calls the Fortran entry point
-void fir::runtime::genMain(
-    fir::FirOpBuilder &builder, mlir::Location loc,
-    const std::vector<Fortran::lower::EnvironmentDefault> &defs) {
+void fir::runtime::genMain(fir::FirOpBuilder &builder, mlir::Location loc,
+                           fir::GlobalOp &env) {
   auto *context = builder.getContext();
   auto argcTy = builder.getDefaultIntegerType();
   auto ptrTy = mlir::LLVM::LLVMPointerType::get(context);
@@ -51,14 +48,10 @@ void fir::runtime::genMain(
   mlir::OpBuilder::InsertionGuard insertGuard(builder);
   builder.setInsertionPointToStart(block);
 
-  // Create the list of any environment defaults for the runtime to set. The
-  // runtime default list is only created if there is a main program to ensure
-  // it only happens once and to provide consistent results if multiple files
-  // are compiled separately.
-  auto env = fir::runtime::genEnvironmentDefaults(builder, loc, defs);
-
   llvm::SmallVector<mlir::Value, 4> args(block->getArguments());
-  args.push_back(env);
+  auto envAddr =
+      builder.create<fir::AddrOfOp>(loc, env.getType(), env.getSymbol());
+  args.push_back(envAddr);
 
   builder.create<fir::CallOp>(loc, startFn, args);
   builder.create<fir::CallOp>(loc, qqMainFn);

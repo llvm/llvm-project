@@ -184,8 +184,8 @@ TEST_F(PassManagerTest, Basic) {
 
   MachineModuleInfo MMI(LLVMTM);
 
-  MachineFunctionAnalysisManager MFAM;
   LoopAnalysisManager LAM;
+  MachineFunctionAnalysisManager MFAM;
   FunctionAnalysisManager FAM;
   CGSCCAnalysisManager CGAM;
   ModuleAnalysisManager MAM;
@@ -205,17 +205,13 @@ TEST_F(PassManagerTest, Basic) {
   std::vector<int> Counts;
 
   ModulePassManager MPM;
-  FunctionPassManager FPM;
   MachineFunctionPassManager MFPM;
   MPM.addPass(TestMachineModulePass(Count, Counts));
-  FPM.addPass(createFunctionToMachineFunctionPassAdaptor(
+  MPM.addPass(createModuleToMachineFunctionPassAdaptor(
       TestMachineFunctionPass(Count, Counts)));
-  MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
   MPM.addPass(TestMachineModulePass(Count, Counts));
   MFPM.addPass(TestMachineFunctionPass(Count, Counts));
-  FPM = FunctionPassManager();
-  FPM.addPass(createFunctionToMachineFunctionPassAdaptor(std::move(MFPM)));
-  MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
+  MPM.addPass(createModuleToMachineFunctionPassAdaptor(std::move(MFPM)));
 
   testing::internal::CaptureStderr();
   MPM.run(*M, MAM);
@@ -252,10 +248,8 @@ TEST_F(PassManagerTest, DiagnosticHandler) {
   ModulePassManager MPM;
   FunctionPassManager FPM;
   MachineFunctionPassManager MFPM;
-  MPM.addPass(RequireAnalysisPass<MachineModuleAnalysis, Module>());
   MFPM.addPass(ReportWarningPass());
-  FPM.addPass(createFunctionToMachineFunctionPassAdaptor(std::move(MFPM)));
-  MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
+  MPM.addPass(createModuleToMachineFunctionPassAdaptor(std::move(MFPM)));
   testing::internal::CaptureStderr();
   MPM.run(*M, MAM);
   std::string Output = testing::internal::GetCapturedStderr();

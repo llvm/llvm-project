@@ -34,9 +34,6 @@ class MachineModuleInfo;
 class SMDiagnostic;
 class StringRef;
 
-template <typename IRUnitT, typename... ExtraArgTs> class AnalysisManager;
-using ModuleAnalysisManager = AnalysisManager<Module>;
-
 typedef llvm::function_ref<std::optional<std::string>(StringRef, StringRef)>
     DataLayoutCallbackTy;
 
@@ -63,15 +60,6 @@ public:
   ///
   /// \returns true if an error occurred.
   bool parseMachineFunctions(Module &M, MachineModuleInfo &MMI);
-
-  /// Parses MachineFunctions in the MIR file and add them as the result
-  /// of MachineFunctionAnalysis in ModulePassManager \p MAM.
-  /// User should register at least MachineFunctionAnalysis,
-  /// MachineModuleAnalysis, FunctionAnalysisManagerModuleProxy and
-  /// PassInstrumentationAnalysis in \p MAM before parsing MIR.
-  ///
-  /// \returns true if an error occurred.
-  bool parseMachineFunctions(Module &M, ModuleAnalysisManager &MAM);
 };
 
 /// This function is the main interface to the MIR serialization format parser.

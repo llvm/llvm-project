@@ -398,10 +398,11 @@ RISCVISAInfo::parseFeatures(unsigned XLen,
 
   for (auto &Feature : Features) {
     StringRef ExtName = Feature;
+    bool Experimental = false;
     assert(ExtName.size() > 1 && (ExtName[0] == '+' || ExtName[0] == '-'));
     bool Add = ExtName[0] == '+';
     ExtName = ExtName.drop_front(1); // Drop '+' or '-'
-    bool Experimental = stripExperimentalPrefix(ExtName);
+    Experimental = stripExperimentalPrefix(ExtName);
     auto ExtensionInfos = Experimental
                               ? ArrayRef(SupportedExperimentalExtensions)
                               : ArrayRef(SupportedExtensions);
@@ -425,22 +426,22 @@ RISCVISAInfo::parseFeatures(unsigned XLen,
 
 llvm::Expected<std::unique_ptr<RISCVISAInfo>>
 RISCVISAInfo::parseNormalizedArchString(StringRef Arch) {
-  if (llvm::any_of(Arch, isupper))
+  if (llvm::any_of(Arch, isupper)) {
     return createStringError(errc::invalid_argument,
                              "string must be lowercase");
-
+  }
   // Must start with a valid base ISA name.
-  unsigned XLen = 0;
-  if (Arch.consume_front("rv32"))
+  unsigned XLen;
+  if (Arch.starts_with("rv32i") || Arch.starts_with("rv32e"))
     XLen = 32;
-  else if (Arch.consume_front("rv64"))
+  else if (Arch.starts_with("rv64i") || Arch.starts_with("rv64e"))
     XLen = 64;
-
-  if (XLen == 0 || Arch.empty() || (Arch[0] != 'i' && Arch[0] != 'e'))
+  else
     return createStringError(errc::invalid_argument,
                              "arch string must begin with valid base ISA");
-
   std::unique_ptr<RISCVISAInfo> ISAInfo(new RISCVISAInfo(XLen));
+  // Discard rv32/rv64 prefix.
+  Arch = Arch.substr(4);
 
   // Each extension is of the form ${name}${major_version}p${minor_version}
   // and separated by _. Split by _ and then extract the name and version
@@ -460,24 +461,27 @@ RISCVISAInfo::parseNormalizedArchString(StringRef Arch) {
 
     // Split Prefix into the extension name and the major version number
     // (the trailing digits of Prefix).
-    size_t VersionStart = Prefix.size();
-    while (VersionStart != 0) {
-      if (!isDigit(Prefix[VersionStart - 1]))
+    int TrailingDigits = 0;
+    StringRef ExtName = Prefix;
+    while (!ExtName.empty()) {
+      if (!isDigit(ExtName.back()))
         break;
-      --VersionStart;
+      ExtName = ExtName.drop_back(1);
+      TrailingDigits++;
     }
-    if (VersionStart == Prefix.size())
+    if (!TrailingDigits)
       return createStringError(errc::invalid_argument,
                                "extension lacks version in expected format");
 
-    StringRef ExtName = Prefix.slice(0, VersionStart);
-    StringRef MajorVersionStr = Prefix.slice(VersionStart, StringRef::npos);
+    StringRef MajorVersionStr = Prefix.take_back(TrailingDigits);
     if (MajorVersionStr.getAsInteger(10, MajorVersion))
       return createStringError(errc::invalid_argument,
                                "failed to parse major version number");
     ISAInfo->addExtension(ExtName, {MajorVersion, MinorVersion});
   }
-  ISAInfo->updateImpliedLengths();
+  ISAInfo->updateFLen();
+  ISAInfo->updateMinVLen();
+  ISAInfo->updateMaxELen();
   return std::move(ISAInfo);
 }
 
@@ -585,44 +589,43 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
                               bool ExperimentalExtensionVersionCheck,
                               bool IgnoreUnknown) {
   // RISC-V ISA strings must be lowercase.
-  if (llvm::any_of(Arch, isupper))
+  if (llvm::any_of(Arch, isupper)) {
     return createStringError(errc::invalid_argument,
                              "string must be lowercase");
-
-  // ISA string must begin with rv32, rv64, or a profile.
-  unsigned XLen = 0;
-  if (Arch.consume_front("rv32")) {
-    XLen = 32;
-  } else if (Arch.consume_front("rv64")) {
-    XLen = 64;
-  } else {
-    // Try parsing as a profile.
-    auto I = llvm::upper_bound(SupportedProfiles, Arch,
-                               [](StringRef Arch, const RISCVProfile &Profile) {
-                                 return Arch < Profile.Name;
-                               });
-
-    if (I != std::begin(SupportedProfiles) && Arch.starts_with((--I)->Name)) {
-      std::string NewArch = I->MArch.str();
-      StringRef ArchWithoutProfile = Arch.drop_front(I->Name.size());
-      if (!ArchWithoutProfile.empty()) {
-        if (ArchWithoutProfile.front() != '_')
-          return createStringError(
-              errc::invalid_argument,
-              "additional extensions must be after separator '_'");
-        NewArch += ArchWithoutProfile.str();
-      }
-      return parseArchString(NewArch, EnableExperimentalExtension,
-                             ExperimentalExtensionVersionCheck, IgnoreUnknown);
-    }
   }
 
-  if (XLen == 0 || Arch.empty())
+  if (Arch.starts_with("rvi") || Arch.starts_with("rva") ||
+      Arch.starts_with("rvb") || Arch.starts_with("rvm")) {
+    const auto *FoundProfile =
+        llvm::find_if(SupportedProfiles, [Arch](const RISCVProfile &Profile) {
+          return Arch.starts_with(Profile.Name);
+        });
+
+    if (FoundProfile == std::end(SupportedProfiles))
+      return createStringError(errc::invalid_argument, "unsupported profile");
+
+    std::string NewArch = FoundProfile->MArch.str();
+    StringRef ArchWithoutProfile = Arch.substr(FoundProfile->Name.size());
+    if (!ArchWithoutProfile.empty()) {
+      if (!ArchWithoutProfile.starts_with("_"))
+        return createStringError(
+            errc::invalid_argument,
+            "additional extensions must be after separator '_'");
+      NewArch += ArchWithoutProfile.str();
+    }
+    return parseArchString(NewArch, EnableExperimentalExtension,
+                           ExperimentalExtensionVersionCheck, IgnoreUnknown);
+  }
+
+  bool HasRV64 = Arch.starts_with("rv64");
+  // ISA string must begin with rv32 or rv64.
+  if (!(Arch.starts_with("rv32") || HasRV64) || (Arch.size() < 5)) {
     return createStringError(
         errc::invalid_argument,
-        "string must begin with rv32{i,e,g}, rv64{i,e,g}, or a supported "
-        "profile name");
+        "string must begin with rv32{i,e,g} or rv64{i,e,g}");
+  }
 
+  unsigned XLen = HasRV64 ? 64 : 32;
   std::unique_ptr<RISCVISAInfo> ISAInfo(new RISCVISAInfo(XLen));
   MapVector<std::string, RISCVISAUtils::ExtensionVersion,
             std::map<std::string, unsigned>>
@@ -630,20 +633,20 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
 
   // The canonical order specified in ISA manual.
   // Ref: Table 22.1 in RISC-V User-Level ISA V2.2
-  char Baseline = Arch.front();
+  char Baseline = Arch[4];
 
   // First letter should be 'e', 'i' or 'g'.
   switch (Baseline) {
   default:
     return createStringError(errc::invalid_argument,
-                             "first letter after \'rv" + Twine(XLen) +
+                             "first letter after \'" + Arch.slice(0, 4) +
                                  "\' should be 'e', 'i' or 'g'");
   case 'e':
   case 'i':
     break;
   case 'g':
     // g expands to extensions in RISCVGImplications.
-    if (Arch.size() > 1 && isDigit(Arch[1]))
+    if (Arch.size() > 5 && isDigit(Arch[5]))
       return createStringError(errc::invalid_argument,
                                "version not supported for 'g'");
     break;
@@ -653,8 +656,8 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
     return createStringError(errc::invalid_argument,
                              "extension name missing after separator '_'");
 
-  // Skip baseline.
-  StringRef Exts = Arch.drop_front(1);
+  // Skip rvxxx
+  StringRef Exts = Arch.substr(5);
 
   unsigned Major, Minor, ConsumeLength;
   if (Baseline == 'g') {
@@ -665,10 +668,11 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
     // version since the we don't have clear version scheme for that on
     // ISA spec.
     for (const auto *Ext : RISCVGImplications) {
-      auto Version = findDefaultVersion(Ext);
-      assert(Version && "Default extension version not found?");
-      // Postpone AddExtension until end of this function
-      SeenExtMap[Ext] = {Version->Major, Version->Minor};
+      if (auto Version = findDefaultVersion(Ext)) {
+        // Postpone AddExtension until end of this function
+        SeenExtMap[Ext] = {Version->Major, Version->Minor};
+      } else
+        llvm_unreachable("Default extension version not found?");
     }
   } else {
     // Baseline is `i` or `e`
@@ -903,51 +907,41 @@ void RISCVISAInfo::updateCombination() {
   } while (MadeChange);
 }
 
-void RISCVISAInfo::updateImpliedLengths() {
-  assert(FLen == 0 && MaxELenFp == 0 && MaxELen == 0 && MinVLen == 0 &&
-         "Expected lengths to be initialied to zero");
-
+void RISCVISAInfo::updateFLen() {
+  FLen = 0;
   // TODO: Handle q extension.
   if (Exts.count("d"))
     FLen = 64;
   else if (Exts.count("f"))
     FLen = 32;
+}
 
-  if (Exts.count("v")) {
-    MaxELenFp = std::max(MaxELenFp, 64u);
-    MaxELen = std::max(MaxELen, 64u);
-  }
-
+void RISCVISAInfo::updateMinVLen() {
   for (auto const &Ext : Exts) {
     StringRef ExtName = Ext.first;
-    // Infer MaxELen and MaxELenFp from Zve(32/64)(x/f/d)
-    if (ExtName.consume_front("zve")) {
-      unsigned ZveELen;
-      if (ExtName.consumeInteger(10, ZveELen))
-        continue;
-
-      if (ExtName == "f")
-        MaxELenFp = std::max(MaxELenFp, 32u);
-      else if (ExtName == "d")
-        MaxELenFp = std::max(MaxELenFp, 64u);
-      else if (ExtName != "x")
-        continue;
-
-      MaxELen = std::max(MaxELen, ZveELen);
-      continue;
-    }
-
-    // Infer MinVLen from zvl*b.
-    if (ExtName.consume_front("zvl")) {
+    bool IsZvlExt = ExtName.consume_front("zvl") && ExtName.consume_back("b");
+    if (IsZvlExt) {
       unsigned ZvlLen;
-      if (ExtName.consumeInteger(10, ZvlLen))
-        continue;
+      if (!ExtName.getAsInteger(10, ZvlLen))
+        MinVLen = std::max(MinVLen, ZvlLen);
+    }
+  }
+}
 
-      if (ExtName != "b")
-        continue;
-
-      MinVLen = std::max(MinVLen, ZvlLen);
-      continue;
+void RISCVISAInfo::updateMaxELen() {
+  // handles EEW restriction by sub-extension zve
+  for (auto const &Ext : Exts) {
+    StringRef ExtName = Ext.first;
+    bool IsZveExt = ExtName.consume_front("zve");
+    if (IsZveExt) {
+      if (ExtName.back() == 'f')
+        MaxELenFp = std::max(MaxELenFp, 32u);
+      if (ExtName.back() == 'd')
+        MaxELenFp = std::max(MaxELenFp, 64u);
+      ExtName = ExtName.drop_back();
+      unsigned ZveELen;
+      ExtName.getAsInteger(10, ZveELen);
+      MaxELen = std::max(MaxELen, ZveELen);
     }
   }
 }
@@ -973,7 +967,9 @@ llvm::Expected<std::unique_ptr<RISCVISAInfo>>
 RISCVISAInfo::postProcessAndChecking(std::unique_ptr<RISCVISAInfo> &&ISAInfo) {
   ISAInfo->updateImplication();
   ISAInfo->updateCombination();
-  ISAInfo->updateImpliedLengths();
+  ISAInfo->updateFLen();
+  ISAInfo->updateMinVLen();
+  ISAInfo->updateMaxELen();
 
   if (Error Result = ISAInfo->checkDependency())
     return std::move(Result);

@@ -2,7 +2,7 @@
 
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm %s \
 // RUN:     -fcuda-include-gpubinary %t -o - -x hip\
-// RUN:   | FileCheck -check-prefixes=CHECK,GNU,GNU-HIP,HIP %s
+// RUN:   | FileCheck -check-prefixes=CHECK,GNU %s
 
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm %s \
 // RUN:     -fcuda-include-gpubinary %t -o - -x hip\
@@ -11,12 +11,7 @@
 // RUN: %clang_cc1 -triple x86_64-pc-windows-msvc -emit-llvm %s \
 // RUN:     -aux-triple amdgcn-amd-amdhsa -fcuda-include-gpubinary \
 // RUN:     %t -o - -x hip\
-// RUN:   | FileCheck -check-prefixes=CHECK,MSVC,MSVC-HIP,HIP %s
-
-// RUN: %clang_cc1 -triple x86_64-pc-windows-msvc -emit-llvm %s \
-// RUN:     -aux-triple nvptx64 -fcuda-include-gpubinary \
-// RUN:     %t -target-sdk-version=9.2 -o - \
-// RUN:   | FileCheck -check-prefixes=CHECK,MSVC,CUDA %s
+// RUN:   | FileCheck -check-prefixes=CHECK,MSVC %s
 
 // RUN: %clang_cc1 -triple x86_64-pc-windows-msvc -emit-llvm %s \
 // RUN:     -aux-triple amdgcn-amd-amdhsa -fcuda-include-gpubinary \
@@ -27,22 +22,18 @@
 
 // Check kernel handles are emitted for non-MSVC target but not for MSVC target.
 
-// GNU-HIP: @[[HCKERN:ckernel]] = constant ptr @[[CSTUB:__device_stub__ckernel]], align 8
-// GNU-HIP: @[[HNSKERN:_ZN2ns8nskernelEv]] = constant ptr @[[NSSTUB:_ZN2ns23__device_stub__nskernelEv]], align 8
-// GNU-HIP: @[[HTKERN:_Z10kernelfuncIiEvv]] = linkonce_odr constant ptr @[[TSTUB:_Z25__device_stub__kernelfuncIiEvv]], comdat, align 8
-// GNU-HIP: @[[HDKERN:_Z11kernel_declv]] = external constant ptr, align 8
-// GNU-HIP: @[[HTDKERN:_Z20template_kernel_declIiEvT_]] = external constant ptr, align 8
+// GNU: @[[HCKERN:ckernel]] = constant ptr @[[CSTUB:__device_stub__ckernel]], align 8
+// GNU: @[[HNSKERN:_ZN2ns8nskernelEv]] = constant ptr @[[NSSTUB:_ZN2ns23__device_stub__nskernelEv]], align 8
+// GNU: @[[HTKERN:_Z10kernelfuncIiEvv]] = linkonce_odr constant ptr @[[TSTUB:_Z25__device_stub__kernelfuncIiEvv]], comdat, align 8
+// GNU: @[[HDKERN:_Z11kernel_declv]] = external constant ptr, align 8
+// GNU: @[[HTDKERN:_Z20template_kernel_declIiEvT_]] = external constant ptr, align 8
 
-// MSVC-HIP: @[[HCKERN:ckernel]] = dso_local constant ptr @[[CSTUB:__device_stub__ckernel]], align 8
-// MSVC-HIP: @[[HNSKERN:"\?nskernel@ns@@YAXXZ.*"]] = dso_local constant ptr @[[NSSTUB:"\?__device_stub__nskernel@ns@@YAXXZ"]], align 8
-// MSVC-HIP: @[[HTKERN:"\?\?\$kernelfunc@H@@YAXXZ.*"]] = linkonce_odr dso_local constant ptr @[[TSTUB:"\?\?\$__device_stub__kernelfunc@H@@YAXXZ.*"]], comdat, align 8
-// MSVC-HIP: @[[HDKERN:"\?kernel_decl@@YAXXZ.*"]] = external dso_local constant ptr, align 8
-// MSVC-HIP: @[[HTDKERN:"\?\?\$template_kernel_decl@H@@YAXH.*"]] = external dso_local constant ptr, align 8
+// MSVC: @[[HCKERN:ckernel]] = dso_local constant ptr @[[CSTUB:__device_stub__ckernel]], align 8
+// MSVC: @[[HNSKERN:"\?nskernel@ns@@YAXXZ.*"]] = dso_local constant ptr @[[NSSTUB:"\?__device_stub__nskernel@ns@@YAXXZ"]], align 8
+// MSVC: @[[HTKERN:"\?\?\$kernelfunc@H@@YAXXZ.*"]] = linkonce_odr dso_local constant ptr @[[TSTUB:"\?\?\$__device_stub__kernelfunc@H@@YAXXZ.*"]], comdat, align 8
+// MSVC: @[[HDKERN:"\?kernel_decl@@YAXXZ.*"]] = external dso_local constant ptr, align 8
+// MSVC: @[[HTDKERN:"\?\?\$template_kernel_decl@H@@YAXH.*"]] = external dso_local constant ptr, align 8
 extern "C" __global__ void ckernel() {}
-
-// CUDA: @[[HCKERN:__device_stub__ckernel\.id]] = dso_local global i8 0
-// CUDA: @[[HNSKERN:"\?__device_stub__nskernel@ns@@YAXXZ\.id"]] = dso_local global i8 0
-// CUDA: @[[HTKERN:"\?\?\$__device_stub__kernelfunc@H@@YAXXZ\.id"]] = linkonce_odr dso_local global i8 0, comdat
 
 namespace ns {
 __global__ void nskernel() {}
@@ -69,27 +60,18 @@ extern "C" void launch(void *kern);
 
 // Non-template kernel stub functions
 
-// HIP: define{{.*}}@[[CSTUB]]
-// CUDA: define{{.*}}@[[CSTUB:__device_stub__ckernel]]
-// HIP: call{{.*}}@hipLaunchByPtr{{.*}}@[[HCKERN]]
-// CUDA: call{{.*}}@cudaLaunch{{.*}}@[[CSTUB]]
-// CUDA: store volatile i8 1, ptr @[[HCKERN]], align 1
-// CHECK: ret void
+// CHECK: define{{.*}}@[[CSTUB]]
+// CHECK: call{{.*}}@hipLaunchByPtr{{.*}}@[[HCKERN]]
 
-// HIP: define{{.*}}@[[NSSTUB]]
-// CUDA: define{{.*}}@[[NSSTUB:"\?__device_stub__nskernel@ns@@YAXXZ"]]
-// HIP: call{{.*}}@hipLaunchByPtr{{.*}}@[[HNSKERN]]
-// CUDA: call{{.*}}@cudaLaunch{{.*}}@[[NSSTUB]]
-// CUDA: store volatile i8 1, ptr @[[HNSKERN]], align 1
-// CHECK: ret void
+// CHECK: define{{.*}}@[[NSSTUB]]
+// CHECK: call{{.*}}@hipLaunchByPtr{{.*}}@[[HNSKERN]]
 
 // Check kernel stub is called for triple chevron.
 
 // CHECK-LABEL: define{{.*}}@fun1()
 // CHECK: call void @[[CSTUB]]()
 // CHECK: call void @[[NSSTUB]]()
-// HIP: call void @[[TSTUB]]()
-// CUDA: call void @[[TSTUB:"\?\?\$__device_stub__kernelfunc@H@@YAXXZ.*"]]()
+// CHECK: call void @[[TSTUB]]()
 // GNU: call void @[[DSTUB:_Z26__device_stub__kernel_declv]]()
 // GNU: call void @[[TDSTUB:_Z35__device_stub__template_kernel_declIiEvT_]](
 // MSVC: call void @[[DSTUB:"\?__device_stub__kernel_decl@@YAXXZ"]]()
@@ -106,10 +88,7 @@ extern "C" void fun1(void) {
 // Template kernel stub functions
 
 // CHECK: define{{.*}}@[[TSTUB]]
-// HIP: call{{.*}}@hipLaunchByPtr{{.*}}@[[HTKERN]]
-// CUDA: call{{.*}}@cudaLaunch{{.*}}@[[TSTUB]]
-// CUDA: store volatile i8 1, ptr @[[HTKERN]], align 1
-// CHECK: ret void
+// CHECK: call{{.*}}@hipLaunchByPtr{{.*}}@[[HTKERN]]
 
 // Check declaration of stub function for external kernel.
 
@@ -119,11 +98,11 @@ extern "C" void fun1(void) {
 // Check kernel handle is used for passing the kernel as a function pointer.
 
 // CHECK-LABEL: define{{.*}}@fun2()
-// HIP: call void @launch({{.*}}[[HCKERN]]
-// HIP: call void @launch({{.*}}[[HNSKERN]]
-// HIP: call void @launch({{.*}}[[HTKERN]]
-// HIP: call void @launch({{.*}}[[HDKERN]]
-// HIP: call void @launch({{.*}}[[HTDKERN]]
+// CHECK: call void @launch({{.*}}[[HCKERN]]
+// CHECK: call void @launch({{.*}}[[HNSKERN]]
+// CHECK: call void @launch({{.*}}[[HTKERN]]
+// CHECK: call void @launch({{.*}}[[HDKERN]]
+// CHECK: call void @launch({{.*}}[[HTDKERN]]
 extern "C" void fun2() {
   launch((void *)ckernel);
   launch((void *)ns::nskernel);
@@ -135,10 +114,10 @@ extern "C" void fun2() {
 // Check kernel handle is used for assigning a kernel to a function pointer.
 
 // CHECK-LABEL: define{{.*}}@fun3()
-// HIP:  store ptr @[[HCKERN]], ptr @kernel_ptr, align 8
-// HIP:  store ptr @[[HCKERN]], ptr @kernel_ptr, align 8
-// HIP:  store ptr @[[HCKERN]], ptr @void_ptr, align 8
-// HIP:  store ptr @[[HCKERN]], ptr @void_ptr, align 8
+// CHECK:  store ptr @[[HCKERN]], ptr @kernel_ptr, align 8
+// CHECK:  store ptr @[[HCKERN]], ptr @kernel_ptr, align 8
+// CHECK:  store ptr @[[HCKERN]], ptr @void_ptr, align 8
+// CHECK:  store ptr @[[HCKERN]], ptr @void_ptr, align 8
 extern "C" void fun3() {
   kernel_ptr = ckernel;
   kernel_ptr = &ckernel;
@@ -150,11 +129,11 @@ extern "C" void fun3() {
 // used with triple chevron.
 
 // CHECK-LABEL: define{{.*}}@fun4()
-// HIP:  store ptr @[[HCKERN]], ptr @kernel_ptr
-// HIP:  call noundef i32 @{{.*hipConfigureCall}}
-// HIP:  %[[HANDLE:.*]] = load ptr, ptr @kernel_ptr, align 8
-// HIP:  %[[STUB:.*]] = load ptr, ptr %[[HANDLE]], align 8
-// HIP:  call void %[[STUB]]()
+// CHECK:  store ptr @[[HCKERN]], ptr @kernel_ptr
+// CHECK:  call noundef i32 @{{.*hipConfigureCall}}
+// CHECK:  %[[HANDLE:.*]] = load ptr, ptr @kernel_ptr, align 8
+// CHECK:  %[[STUB:.*]] = load ptr, ptr %[[HANDLE]], align 8
+// CHECK:  call void %[[STUB]]()
 extern "C" void fun4() {
   kernel_ptr = ckernel;
   kernel_ptr<<<1,1>>>();
@@ -163,9 +142,9 @@ extern "C" void fun4() {
 // Check kernel handle is passed to a function.
 
 // CHECK-LABEL: define{{.*}}@fun5()
-// HIP:  store ptr @[[HCKERN]], ptr @kernel_ptr
-// HIP:  %[[HANDLE:.*]] = load ptr, ptr @kernel_ptr, align 8
-// HIP:  call void @launch(ptr noundef %[[HANDLE]])
+// CHECK:  store ptr @[[HCKERN]], ptr @kernel_ptr
+// CHECK:  %[[HANDLE:.*]] = load ptr, ptr @kernel_ptr, align 8
+// CHECK:  call void @launch(ptr noundef %[[HANDLE]])
 extern "C" void fun5() {
   kernel_ptr = ckernel;
   launch((void *)kernel_ptr);
@@ -173,10 +152,10 @@ extern "C" void fun5() {
 
 // Check kernel handle is registered.
 
-// HIP-LABEL: define{{.*}}@__hip_register_globals
-// HIP: call{{.*}}@__hipRegisterFunction{{.*}}@[[HCKERN]]{{.*}}@[[CKERN]]
-// HIP: call{{.*}}@__hipRegisterFunction{{.*}}@[[HNSKERN]]{{.*}}@[[NSKERN]]
-// HIP: call{{.*}}@__hipRegisterFunction{{.*}}@[[HTKERN]]{{.*}}@[[TKERN]]
+// CHECK-LABEL: define{{.*}}@__hip_register_globals
+// CHECK: call{{.*}}@__hipRegisterFunction{{.*}}@[[HCKERN]]{{.*}}@[[CKERN]]
+// CHECK: call{{.*}}@__hipRegisterFunction{{.*}}@[[HNSKERN]]{{.*}}@[[NSKERN]]
+// CHECK: call{{.*}}@__hipRegisterFunction{{.*}}@[[HTKERN]]{{.*}}@[[TKERN]]
 // NEG-NOT: call{{.*}}@__hipRegisterFunction{{.*}}__device_stub
 // NEG-NOT: call{{.*}}@__hipRegisterFunction{{.*}}kernel_decl
 // NEG-NOT: call{{.*}}@__hipRegisterFunction{{.*}}template_kernel_decl

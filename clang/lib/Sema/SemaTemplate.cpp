@@ -210,11 +210,10 @@ TemplateNameKind Sema::isTemplateName(Scope *S,
   AssumedTemplateKind AssumedTemplate;
   LookupResult R(*this, TName, Name.getBeginLoc(), LookupOrdinaryName);
   if (LookupTemplateName(R, S, SS, ObjectType, EnteringContext,
-                         /*RequiredTemplate=*/SourceLocation(),
+                         MemberOfUnknownSpecialization, SourceLocation(),
                          &AssumedTemplate,
                          /*AllowTypoCorrection=*/!Disambiguation))
     return TNK_Non_template;
-  MemberOfUnknownSpecialization = R.wasNotFoundInCurrentInstantiation();
 
   if (AssumedTemplate != AssumedTemplateKind::None) {
     TemplateResult = TemplateTy::make(Context.getAssumedTemplateName(TName));
@@ -321,12 +320,15 @@ TemplateNameKind Sema::isTemplateName(Scope *S,
 bool Sema::isDeductionGuideName(Scope *S, const IdentifierInfo &Name,
                                 SourceLocation NameLoc, CXXScopeSpec &SS,
                                 ParsedTemplateTy *Template /*=nullptr*/) {
+  bool MemberOfUnknownSpecialization = false;
+
   // We could use redeclaration lookup here, but we don't need to: the
   // syntactic form of a deduction guide is enough to identify it even
   // if we can't look up the template name at all.
   LookupResult R(*this, DeclarationName(&Name), NameLoc, LookupOrdinaryName);
   if (LookupTemplateName(R, S, SS, /*ObjectType*/ QualType(),
-                         /*EnteringContext*/ false))
+                         /*EnteringContext*/ false,
+                         MemberOfUnknownSpecialization))
     return false;
 
   if (R.empty()) return false;
@@ -372,8 +374,11 @@ bool Sema::DiagnoseUnknownTemplateName(const IdentifierInfo &II,
   return true;
 }
 
-bool Sema::LookupTemplateName(LookupResult &Found, Scope *S, CXXScopeSpec &SS,
-                              QualType ObjectType, bool EnteringContext,
+bool Sema::LookupTemplateName(LookupResult &Found,
+                              Scope *S, CXXScopeSpec &SS,
+                              QualType ObjectType,
+                              bool EnteringContext,
+                              bool &MemberOfUnknownSpecialization,
                               RequiredTemplateKind RequiredTemplate,
                               AssumedTemplateKind *ATK,
                               bool AllowTypoCorrection) {
@@ -386,6 +391,7 @@ bool Sema::LookupTemplateName(LookupResult &Found, Scope *S, CXXScopeSpec &SS,
   Found.setTemplateNameLookup(true);
 
   // Determine where to perform name lookup
+  MemberOfUnknownSpecialization = false;
   DeclContext *LookupCtx = nullptr;
   bool IsDependent = false;
   if (!ObjectType.isNull()) {
@@ -542,7 +548,7 @@ bool Sema::LookupTemplateName(LookupResult &Found, Scope *S, CXXScopeSpec &SS,
   FilterAcceptableTemplateNames(Found, AllowFunctionTemplatesInLookup);
   if (Found.empty()) {
     if (IsDependent) {
-      Found.setNotFoundInCurrentInstantiation();
+      MemberOfUnknownSpecialization = true;
       return false;
     }
 
@@ -5589,9 +5595,11 @@ Sema::BuildQualifiedTemplateIdExpr(CXXScopeSpec &SS,
       RequireCompleteDeclContext(SS, DC))
     return BuildDependentDeclRefExpr(SS, TemplateKWLoc, NameInfo, TemplateArgs);
 
+  bool MemberOfUnknownSpecialization;
   LookupResult R(*this, NameInfo, LookupOrdinaryName);
   if (LookupTemplateName(R, (Scope *)nullptr, SS, QualType(),
-                         /*Entering*/ false, TemplateKWLoc))
+                         /*Entering*/false, MemberOfUnknownSpecialization,
+                         TemplateKWLoc))
     return ExprError();
 
   if (R.isAmbiguous())
@@ -5712,13 +5720,14 @@ TemplateNameKind Sema::ActOnTemplateName(Scope *S,
     DeclarationNameInfo DNI = GetNameFromUnqualifiedId(Name);
     LookupResult R(*this, DNI.getName(), Name.getBeginLoc(),
                    LookupOrdinaryName);
+    bool MOUS;
     // Tell LookupTemplateName that we require a template so that it diagnoses
     // cases where it finds a non-template.
     RequiredTemplateKind RTK = TemplateKWLoc.isValid()
                                    ? RequiredTemplateKind(TemplateKWLoc)
                                    : TemplateNameIsRequired;
-    if (!LookupTemplateName(R, S, SS, ObjectType.get(), EnteringContext, RTK,
-                            /*ATK=*/nullptr, /*AllowTypoCorrection=*/false) &&
+    if (!LookupTemplateName(R, S, SS, ObjectType.get(), EnteringContext, MOUS,
+                            RTK, nullptr, /*AllowTypoCorrection=*/false) &&
         !R.isAmbiguous()) {
       if (LookupCtx)
         Diag(Name.getBeginLoc(), diag::err_no_member)
@@ -5807,7 +5816,7 @@ bool Sema::CheckTemplateTypeArgument(
 
     if (auto *II = NameInfo.getName().getAsIdentifierInfo()) {
       LookupResult Result(*this, NameInfo, LookupOrdinaryName);
-      LookupParsedName(Result, CurScope, &SS, /*ObjectType=*/QualType());
+      LookupParsedName(Result, CurScope, &SS);
 
       if (Result.getAsSingle<TypeDecl>() ||
           Result.getResultKind() ==
@@ -7697,7 +7706,7 @@ ExprResult Sema::CheckTemplateArgument(NonTypeTemplateParmDecl *Param,
     // FIXME: The language rules don't say what happens in this case.
     // FIXME: We get an opaque dependent type out of decltype(auto) if the
     // expression is merely instantiation-dependent; is this enough?
-    if (Arg->isTypeDependent()) {
+    if (CTAK == CTAK_Deduced && Arg->isTypeDependent()) {
       auto *AT = dyn_cast<AutoType>(DeducedT);
       if (AT && AT->isDecltypeAuto()) {
         SugaredConverted = TemplateArgument(Arg);
@@ -8429,9 +8438,10 @@ void Sema::NoteTemplateParameterLocation(const NamedDecl &Decl) {
 /// declaration and the type of its corresponding non-type template
 /// parameter, produce an expression that properly refers to that
 /// declaration.
-ExprResult Sema::BuildExpressionFromDeclTemplateArgument(
-    const TemplateArgument &Arg, QualType ParamType, SourceLocation Loc,
-    NamedDecl *TemplateParam) {
+ExprResult
+Sema::BuildExpressionFromDeclTemplateArgument(const TemplateArgument &Arg,
+                                              QualType ParamType,
+                                              SourceLocation Loc) {
   // C++ [temp.param]p8:
   //
   //   A non-type template-parameter of type "array of T" or
@@ -8498,18 +8508,6 @@ ExprResult Sema::BuildExpressionFromDeclTemplateArgument(
   } else {
     assert(ParamType->isReferenceType() &&
            "unexpected type for decl template argument");
-    if (NonTypeTemplateParmDecl *NTTP =
-            dyn_cast_if_present<NonTypeTemplateParmDecl>(TemplateParam)) {
-      QualType TemplateParamType = NTTP->getType();
-      const AutoType *AT = TemplateParamType->getAs<AutoType>();
-      if (AT && AT->isDecltypeAuto()) {
-        RefExpr = new (getASTContext()) SubstNonTypeTemplateParmExpr(
-            ParamType->getPointeeType(), RefExpr.get()->getValueKind(),
-            RefExpr.get()->getExprLoc(), RefExpr.get(), VD, NTTP->getIndex(),
-            /*PackIndex=*/std::nullopt,
-            /*RefParam=*/true);
-      }
-    }
   }
 
   // At this point we should have the right value category.
@@ -11181,8 +11179,7 @@ DeclResult Sema::ActOnExplicitInstantiation(Scope *S,
                            : TSK_ExplicitInstantiationDeclaration;
 
   LookupResult Previous(*this, NameInfo, LookupOrdinaryName);
-  LookupParsedName(Previous, S, &D.getCXXScopeSpec(),
-                   /*ObjectType=*/QualType());
+  LookupParsedName(Previous, S, &D.getCXXScopeSpec());
 
   if (!R->isFunctionType()) {
     // C++ [temp.explicit]p1:

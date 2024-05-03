@@ -51,12 +51,9 @@ bool VPRecipeBase::mayWriteToMemory() const {
   case VPWidenStoreSC:
     return true;
   case VPReplicateSC:
+  case VPWidenCallSC:
     return cast<Instruction>(getVPSingleValue()->getUnderlyingValue())
         ->mayWriteToMemory();
-  case VPWidenCallSC:
-    return !cast<VPWidenCallRecipe>(this)
-                ->getCalledScalarFunction()
-                ->onlyReadsMemory();
   case VPBranchOnMaskSC:
   case VPScalarIVStepsSC:
   case VPPredInstPHISC:
@@ -90,12 +87,9 @@ bool VPRecipeBase::mayReadFromMemory() const {
   case VPWidenLoadSC:
     return true;
   case VPReplicateSC:
+  case VPWidenCallSC:
     return cast<Instruction>(getVPSingleValue()->getUnderlyingValue())
         ->mayReadFromMemory();
-  case VPWidenCallSC:
-    return !cast<VPWidenCallRecipe>(this)
-                ->getCalledScalarFunction()
-                ->onlyWritesMemory();
   case VPBranchOnMaskSC:
   case VPPredInstPHISC:
   case VPScalarIVStepsSC:
@@ -142,10 +136,9 @@ bool VPRecipeBase::mayHaveSideEffects() const {
     default:
       return true;
     }
-  case VPWidenCallSC: {
-    Function *Fn = cast<VPWidenCallRecipe>(this)->getCalledScalarFunction();
-    return mayWriteToMemory() || !Fn->doesNotThrow() || !Fn->willReturn();
-  }
+  case VPWidenCallSC:
+    return cast<Instruction>(getVPSingleValue()->getUnderlyingValue())
+        ->mayHaveSideEffects();
   case VPBlendSC:
   case VPReductionSC:
   case VPScalarIVStepsSC:
@@ -709,8 +702,8 @@ void VPInstruction::print(raw_ostream &O, const Twine &Indent,
 
 void VPWidenCallRecipe::execute(VPTransformState &State) {
   assert(State.VF.isVector() && "not widening");
-  Function *CalledScalarFn = getCalledScalarFunction();
-  assert(!isDbgInfoIntrinsic(CalledScalarFn->getIntrinsicID()) &&
+  auto &CI = *cast<CallInst>(getUnderlyingInstr());
+  assert(!isa<DbgInfoIntrinsic>(CI) &&
          "DbgInfoIntrinsic should have been dropped during VPlan construction");
   State.setDebugLocFrom(getDebugLoc());
 
@@ -723,10 +716,10 @@ void VPWidenCallRecipe::execute(VPTransformState &State) {
     // Add return type if intrinsic is overloaded on it.
     if (UseIntrinsic &&
         isVectorIntrinsicWithOverloadTypeAtArg(VectorIntrinsicID, -1))
-      TysForDecl.push_back(VectorType::get(
-          CalledScalarFn->getReturnType()->getScalarType(), State.VF));
+      TysForDecl.push_back(
+          VectorType::get(CI.getType()->getScalarType(), State.VF));
     SmallVector<Value *, 4> Args;
-    for (const auto &I : enumerate(arg_operands())) {
+    for (const auto &I : enumerate(operands())) {
       // Some intrinsics have a scalar argument - don't replace it with a
       // vector.
       Value *Arg;
@@ -759,19 +752,16 @@ void VPWidenCallRecipe::execute(VPTransformState &State) {
       VectorF = Variant;
     }
 
-    auto *CI = cast_or_null<CallInst>(getUnderlyingInstr());
     SmallVector<OperandBundleDef, 1> OpBundles;
-    if (CI)
-      CI->getOperandBundlesAsDefs(OpBundles);
-
+    CI.getOperandBundlesAsDefs(OpBundles);
     CallInst *V = State.Builder.CreateCall(VectorF, Args, OpBundles);
 
     if (isa<FPMathOperator>(V))
-      V->copyFastMathFlags(CI);
+      V->copyFastMathFlags(&CI);
 
     if (!V->getType()->isVoidTy())
       State.set(this, V, Part);
-    State.addMetadata(V, CI);
+    State.addMetadata(V, &CI);
   }
 }
 
@@ -780,18 +770,16 @@ void VPWidenCallRecipe::print(raw_ostream &O, const Twine &Indent,
                               VPSlotTracker &SlotTracker) const {
   O << Indent << "WIDEN-CALL ";
 
-  Function *CalledFn = getCalledScalarFunction();
-  if (CalledFn->getReturnType()->isVoidTy())
+  auto *CI = cast<CallInst>(getUnderlyingInstr());
+  if (CI->getType()->isVoidTy())
     O << "void ";
   else {
     printAsOperand(O, SlotTracker);
     O << " = ";
   }
 
-  O << "call @" << CalledFn->getName() << "(";
-  interleaveComma(arg_operands(), O, [&O, &SlotTracker](VPValue *Op) {
-    Op->printAsOperand(O, SlotTracker);
-  });
+  O << "call @" << CI->getCalledFunction()->getName() << "(";
+  printOperands(O, SlotTracker);
   O << ")";
 
   if (VectorIntrinsicID)

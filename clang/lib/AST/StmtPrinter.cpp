@@ -1148,10 +1148,9 @@ void StmtPrinter::VisitOpenACCComputeConstruct(OpenACCComputeConstruct *S) {
 
   if (!S->clauses().empty()) {
     OS << ' ';
-    OpenACCClausePrinter Printer(OS, Policy);
+    OpenACCClausePrinter Printer(OS);
     Printer.VisitClauseList(S->clauses());
   }
-  OS << '\n';
 
   PrintStmt(S->getStructuredBlock());
 }

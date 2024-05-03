@@ -15,18 +15,6 @@ def ModeSoftFloat         : SubtargetFeature<"soft-float","UseSoftFloat",
 // ARM Subtarget features.
 //
 
-// This is currently only used by AArch64, but is required here because ARM and
-// AArch64 share a tablegen backend for TargetParser.
-class Extension<
-  string TargetFeatureName,            // String used for -target-feature.
-  string Spelling,                     // The XYZ in HasXYZ and AEK_XYZ.
-  string Desc,                         // Description.
-  list<SubtargetFeature> Implies = []  // List of dependent features.
-> : SubtargetFeature<TargetFeatureName, "Has" # Spelling, "true", Desc, Implies>
-{
-    string ArchExtKindSpelling = "AEK_" # Spelling; // ArchExtKind enum name.
-}
-
 // Floating Point, HW Division and Neon Support
 
 // FP loads/stores/moves, shared between VFP and MVE (even in the integer-only

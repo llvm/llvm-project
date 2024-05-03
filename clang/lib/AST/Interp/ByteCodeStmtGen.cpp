@@ -292,9 +292,8 @@ bool ByteCodeStmtGen<Emitter>::visitStmt(const Stmt *S) {
   case Stmt::GCCAsmStmtClass:
   case Stmt::MSAsmStmtClass:
   case Stmt::GotoStmtClass:
-    return this->emitInvalid(S);
   case Stmt::LabelStmtClass:
-    return this->visitStmt(cast<LabelStmt>(S)->getSubStmt());
+    return this->emitInvalid(S);
   default: {
     if (auto *Exp = dyn_cast<Expr>(S))
       return this->discard(Exp);

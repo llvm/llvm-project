@@ -14,7 +14,6 @@
 // _Tp midpoint(_Float __a, _Float __b) noexcept
 //
 
-#include <limits>
 #include <numeric>
 #include <cassert>
 

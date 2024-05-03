@@ -15,6 +15,7 @@ import shutil
 import stat
 import sys
 import subprocess
+import pipes
 import shlex
 import tempfile
 import shutil
@@ -60,7 +61,7 @@ def check_cmd(cmd_name, cmd_dir, cmd_path=None):
 
 
 def quote_cmd(cmd):
-    return " ".join(shlex.quote(arg) for arg in cmd)
+    return " ".join(pipes.quote(arg) for arg in cmd)
 
 
 def write_to_script(text, filename):
@@ -219,7 +220,7 @@ fi
         )
 
         for msg in self.expected_output:
-            output += "grep -F %s t.log || exit 1\n" % shlex.quote(msg)
+            output += "grep -F %s t.log || exit 1\n" % pipes.quote(msg)
 
         write_to_script(output, self.testfile)
         self.check_interestingness()
@@ -317,17 +318,9 @@ fi
         interestingness test takes to run.
         """
         print("\nSimplifying the clang command...")
-        new_args = self.clang_args
-
-        # Remove the color diagnostics flag to make it easier to match error
-        # text.
-        new_args = self.try_remove_args(
-            new_args,
-            msg="Removed -fcolor-diagnostics",
-            opts_equal=["-fcolor-diagnostics"],
-        )
 
         # Remove some clang arguments to speed up the interestingness test
+        new_args = self.clang_args
         new_args = self.try_remove_args(
             new_args,
             msg="Removed debug info options",

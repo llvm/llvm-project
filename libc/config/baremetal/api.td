@@ -85,10 +85,5 @@ def TimeAPI : PublicAPI<"time.h"> {
 }
 
 def UCharAPI : PublicAPI<"uchar.h"> {
-  let Types = [
-    "mbstate_t",
-    "char8_t",
-    "char16_t",
-    "char32_t",
-  ];
+  let Types = ["mbstate_t"];
 }

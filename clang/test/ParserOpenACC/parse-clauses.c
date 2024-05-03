@@ -405,10 +405,7 @@ void SelfUpdate() {
 #pragma acc update self
   for(;;){}
 
-  // expected-error@+6{{use of undeclared identifier 'zero'}}
-  // expected-error@+5{{expected ','}}
-  // expected-error@+4{{expected expression}}
-  // expected-warning@+3{{OpenACC clause 'self' not yet implemented, clause ignored}}
+  // expected-error@+3{{use of undeclared identifier 'zero'}}
   // expected-warning@+2{{OpenACC clause 'seq' not yet implemented, clause ignored}}
   // expected-warning@+1{{OpenACC construct 'update' not yet implemented, pragma ignored}}
 #pragma acc update self(zero : s.array[s.value : 5], s.value), seq
@@ -453,13 +450,11 @@ void VarListClauses() {
 #pragma acc serial copy(, seq
   for(;;){}
 
-  // expected-error@+2{{expected expression}}
-  // expected-warning@+1{{OpenACC clause 'copy' not yet implemented, clause ignored}}
+  // expected-error@+1{{expected expression}}
 #pragma acc serial copy()
   for(;;){}
 
-  // expected-error@+3{{expected expression}}
-  // expected-warning@+2{{OpenACC clause 'copy' not yet implemented, clause ignored}}
+  // expected-error@+2{{expected expression}}
   // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
 #pragma acc serial copy(), seq
   for(;;){}
@@ -499,28 +494,24 @@ void VarListClauses() {
 #pragma acc serial copy(HasMem.MemArr[1:3].array[1:2]), seq
   for(;;){}
 
-  // expected-error@+3{{expected expression}}
-  // expected-warning@+2{{OpenACC clause 'copy' not yet implemented, clause ignored}}
+  // expected-error@+2{{expected expression}}
   // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
 #pragma acc serial copy(HasMem.MemArr[:]), seq
   for(;;){}
 
-  // expected-error@+3{{expected expression}}
-  // expected-warning@+2{{OpenACC clause 'copy' not yet implemented, clause ignored}}
+  // expected-error@+2{{expected expression}}
   // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
 #pragma acc serial copy(HasMem.MemArr[::]), seq
   for(;;){}
 
-  // expected-error@+5{{expected expression}}
-  // expected-error@+4{{expected ']'}}
-  // expected-note@+3{{to match this '['}}
-  // expected-warning@+2{{OpenACC clause 'copy' not yet implemented, clause ignored}}
+  // expected-error@+4{{expected expression}}
+  // expected-error@+3{{expected ']'}}
+  // expected-note@+2{{to match this '['}}
   // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
 #pragma acc serial copy(HasMem.MemArr[: :]), seq
   for(;;){}
 
-  // expected-error@+3{{expected expression}}
-  // expected-warning@+2{{OpenACC clause 'copy' not yet implemented, clause ignored}}
+  // expected-error@+2{{expected expression}}
   // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
 #pragma acc serial copy(HasMem.MemArr[3:]), seq
   for(;;){}
@@ -591,11 +582,13 @@ void VarListClauses() {
 #pragma acc serial detach(s.array[s.value : 5], s.value), seq
   for(;;){}
 
-  // expected-error@+2{{expected ','}}
+  // expected-error@+3{{expected ','}}
+  // expected-warning@+2{{OpenACC clause 'private' not yet implemented, clause ignored}}
   // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
 #pragma acc serial private(s.array[s.value] s.array[s.value :5] ), seq
   for(;;){}
 
+  // expected-warning@+2{{OpenACC clause 'private' not yet implemented, clause ignored}}
   // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
 #pragma acc serial private(s.array[s.value : 5], s.value), seq
   for(;;){}
@@ -698,9 +691,7 @@ void VarListClauses() {
 #pragma acc serial copyout(zero : s.array[s.value : 5], s.value), seq
   for(;;){}
 
-  // expected-error@+4{{use of undeclared identifier 'zero'}}
-  // expected-error@+3{{expected ','}}
-  // expected-warning@+2{{OpenACC clause 'copyout' not yet implemented, clause ignored}}
+  // expected-error@+2{{use of undeclared identifier 'zero'}}
   // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
 #pragma acc serial copyout(zero s.array[s.value : 5], s.value), seq
   for(;;){}
@@ -723,9 +714,7 @@ void VarListClauses() {
 #pragma acc serial copyout(invalid:s.array[s.value : 5], s.value), seq
   for(;;){}
 
-  // expected-error@+4{{use of undeclared identifier 'invalid'}}
-  // expected-error@+3{{expected ','}}
-  // expected-warning@+2{{OpenACC clause 'copyout' not yet implemented, clause ignored}}
+  // expected-error@+2{{use of undeclared identifier 'invalid'}}
   // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
 #pragma acc serial copyout(invalid s.array[s.value : 5], s.value), seq
   for(;;){}
@@ -751,9 +740,7 @@ void VarListClauses() {
 #pragma acc serial create(zero : s.array[s.value : 5], s.value), seq
   for(;;){}
 
-  // expected-error@+4{{use of undeclared identifier 'zero'}}
-  // expected-error@+3{{expected ','}}
-  // expected-warning@+2{{OpenACC clause 'create' not yet implemented, clause ignored}}
+  // expected-error@+2{{use of undeclared identifier 'zero'}}
   // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
 #pragma acc serial create(zero s.array[s.value : 5], s.value), seq
   for(;;){}
@@ -776,9 +763,7 @@ void VarListClauses() {
 #pragma acc serial create(invalid:s.array[s.value : 5], s.value), seq
   for(;;){}
 
-  // expected-error@+4{{use of undeclared identifier 'invalid'}}
-  // expected-error@+3{{expected ','}}
-  // expected-warning@+2{{OpenACC clause 'create' not yet implemented, clause ignored}}
+  // expected-error@+2{{use of undeclared identifier 'invalid'}}
   // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
 #pragma acc serial create(invalid s.array[s.value : 5], s.value), seq
   for(;;){}
@@ -804,9 +789,7 @@ void VarListClauses() {
 #pragma acc serial copyin(readonly : s.array[s.value : 5], s.value), seq
   for(;;){}
 
-  // expected-error@+4{{use of undeclared identifier 'readonly'}}
-  // expected-error@+3{{expected ','}}
-  // expected-warning@+2{{OpenACC clause 'copyin' not yet implemented, clause ignored}}
+  // expected-error@+2{{use of undeclared identifier 'readonly'}}
   // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
 #pragma acc serial copyin(readonly s.array[s.value : 5], s.value), seq
   for(;;){}
@@ -829,9 +812,7 @@ void VarListClauses() {
 #pragma acc serial copyin(invalid:s.array[s.value : 5], s.value), seq
   for(;;){}
 
-  // expected-error@+4{{use of undeclared identifier 'invalid'}}
-  // expected-error@+3{{expected ','}}
-  // expected-warning@+2{{OpenACC clause 'copyin' not yet implemented, clause ignored}}
+  // expected-error@+2{{use of undeclared identifier 'invalid'}}
   // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
 #pragma acc serial copyin(invalid s.array[s.value : 5], s.value), seq
   for(;;){}
@@ -842,9 +823,8 @@ void ReductionClauseParsing() {
   // expected-error@+1{{expected '('}}
 #pragma acc serial reduction
   for(;;){}
-  // expected-error@+3{{missing reduction operator, expected '+', '*', 'max', 'min', '&', '|', '^', '&&', or '||', follwed by a ':'}}
-  // expected-error@+2{{expected expression}}
-  // expected-warning@+1{{OpenACC clause 'reduction' not yet implemented, clause ignored}}
+  // expected-error@+2{{missing reduction operator, expected '+', '*', 'max', 'min', '&', '|', '^', '&&', or '||', follwed by a ':'}}
+  // expected-error@+1{{expected expression}}
 #pragma acc serial reduction()
   for(;;){}
   // expected-error@+2{{missing reduction operator, expected '+', '*', 'max', 'min', '&', '|', '^', '&&', or '||', follwed by a ':'}}
