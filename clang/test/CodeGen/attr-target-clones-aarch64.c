@@ -526,8 +526,8 @@ inline int __attribute__((target_clones("fp16", "sve2-bitperm+fcma", "default"))
 // CHECK-MTE-BTI-NEXT:  resolver_entry:
 // CHECK-MTE-BTI-NEXT:    call void @__init_cpu_features_resolver()
 // CHECK-MTE-BTI-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
-// CHECK-MTE-BTI-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 4096
-// CHECK-MTE-BTI-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 4096
+// CHECK-MTE-BTI-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 17592186048512
+// CHECK-MTE-BTI-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 17592186048512
 // CHECK-MTE-BTI-NEXT:    [[TMP3:%.*]] = and i1 true, [[TMP2]]
 // CHECK-MTE-BTI-NEXT:    br i1 [[TMP3]], label [[RESOLVER_RETURN:%.*]], label [[RESOLVER_ELSE:%.*]]
 // CHECK-MTE-BTI:       resolver_return:
@@ -604,7 +604,24 @@ inline int __attribute__((target_clones("fp16", "sve2-bitperm+fcma", "default"))
 //
 // CHECK-MTE-BTI-LABEL: @ftc_dup3.resolver(
 // CHECK-MTE-BTI-NEXT:  resolver_entry:
+// CHECK-MTE-BTI-NEXT:    call void @__init_cpu_features_resolver()
+// CHECK-MTE-BTI-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
+// CHECK-MTE-BTI-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 1125899906842624
+// CHECK-MTE-BTI-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 1125899906842624
+// CHECK-MTE-BTI-NEXT:    [[TMP3:%.*]] = and i1 true, [[TMP2]]
+// CHECK-MTE-BTI-NEXT:    br i1 [[TMP3]], label [[RESOLVER_RETURN:%.*]], label [[RESOLVER_ELSE:%.*]]
+// CHECK-MTE-BTI:       resolver_return:
 // CHECK-MTE-BTI-NEXT:    ret ptr @ftc_dup3._Mbti
+// CHECK-MTE-BTI:       resolver_else:
+// CHECK-MTE-BTI-NEXT:    [[TMP4:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
+// CHECK-MTE-BTI-NEXT:    [[TMP5:%.*]] = and i64 [[TMP4]], 17592186044416
+// CHECK-MTE-BTI-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[TMP5]], 17592186044416
+// CHECK-MTE-BTI-NEXT:    [[TMP7:%.*]] = and i1 true, [[TMP6]]
+// CHECK-MTE-BTI-NEXT:    br i1 [[TMP7]], label [[RESOLVER_RETURN1:%.*]], label [[RESOLVER_ELSE2:%.*]]
+// CHECK-MTE-BTI:       resolver_return1:
+// CHECK-MTE-BTI-NEXT:    ret ptr @ftc_dup3._Mmemtag2
+// CHECK-MTE-BTI:       resolver_else2:
+// CHECK-MTE-BTI-NEXT:    ret ptr @ftc_dup3.default
 //
 //
 // CHECK-MTE-BTI: Function Attrs: noinline nounwind optnone
@@ -712,7 +729,15 @@ inline int __attribute__((target_clones("fp16", "sve2-bitperm+fcma", "default"))
 // CHECK-MTE-BTI:       resolver_return:
 // CHECK-MTE-BTI-NEXT:    ret ptr @ftc_inline3._MsbMsve
 // CHECK-MTE-BTI:       resolver_else:
+// CHECK-MTE-BTI-NEXT:    [[TMP4:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
+// CHECK-MTE-BTI-NEXT:    [[TMP5:%.*]] = and i64 [[TMP4]], 1125899906842624
+// CHECK-MTE-BTI-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[TMP5]], 1125899906842624
+// CHECK-MTE-BTI-NEXT:    [[TMP7:%.*]] = and i1 true, [[TMP6]]
+// CHECK-MTE-BTI-NEXT:    br i1 [[TMP7]], label [[RESOLVER_RETURN1:%.*]], label [[RESOLVER_ELSE2:%.*]]
+// CHECK-MTE-BTI:       resolver_return1:
 // CHECK-MTE-BTI-NEXT:    ret ptr @ftc_inline3._Mbti
+// CHECK-MTE-BTI:       resolver_else2:
+// CHECK-MTE-BTI-NEXT:    ret ptr @ftc_inline3.default
 //
 //
 // CHECK-MTE-BTI: Function Attrs: noinline nounwind optnone
