@@ -11315,9 +11315,9 @@ For ``nusw`` (no unsigned signed wrap):
    index type in a signed sense (``mul nsw``).
  * The successive addition of each offset (without adding the base address)
    does not wrap the pointer index type in a signed sense (``add nsw``).
- * The successive addition of the current address, truncated to the index type
-   and interpreted as an unsigned number, and each offset, interpreted as
-   a signed number, does not wrap the index type.
+ * The successive addition of the current address, truncated to the pointer
+   index type and interpreted as an unsigned number, and each offset,
+   interpreted as a signed number, does not wrap the pointer index type.
 
 For ``nuw`` (no unsigned wrap):
 
@@ -11328,9 +11328,10 @@ For ``nuw`` (no unsigned wrap):
    index type in an unsigned sense (``mul nuw``).
  * The successive addition of each offset (without adding the base address)
    does not wrap the pointer index type in an unsigned sense (``add nuw``).
- * The successive addition of the current address, truncated to the index type
-   and interpreted as an unsigned number, and each offset, also interpreted as
-   an unsigned number, does not wrap the index type (``add nuw``).
+ * The successive addition of the current address, truncated to the pointer
+   index type and interpreted as an unsigned number, and each offset, also
+   interpreted as an unsigned number, does not wrap the pointer index type
+   (``add nuw``).
 
 For ``inbounds`` all rules of the ``nusw`` attribute apply. Additionally,
 if the ``getelementptr`` has any non-zero indices, the following rules apply:
