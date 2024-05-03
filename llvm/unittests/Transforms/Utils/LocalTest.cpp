@@ -916,9 +916,8 @@ TEST(Local, ReplaceAllDbgUsesWith) {
   findDbgUsers(CDbgVals, &C, &CDbgRecords);
   EXPECT_EQ(0U, CDbgVals.size());
   EXPECT_EQ(2U, CDbgRecords.size());
-  EXPECT_TRUE(all_of(CDbgRecords, [](DbgVariableRecord *DVR) {
-    return DVR->isDbgDeclare();
-  }));
+  EXPECT_TRUE(all_of(
+      CDbgRecords, [](DbgVariableRecord *DVR) { return DVR->isDbgDeclare(); }));
 
   EXPECT_TRUE(replaceAllDbgUsesWith(C, D, D, DT));
 
@@ -927,9 +926,8 @@ TEST(Local, ReplaceAllDbgUsesWith) {
   findDbgUsers(DDbgVals, &D, &DDbgRecords);
   EXPECT_EQ(0U, DDbgVals.size());
   EXPECT_EQ(2U, DDbgRecords.size());
-  EXPECT_TRUE(all_of(DDbgRecords, [](DbgVariableRecord *DVR) {
-    return DVR->isDbgDeclare();
-  }));
+  EXPECT_TRUE(all_of(
+      DDbgRecords, [](DbgVariableRecord *DVR) { return DVR->isDbgDeclare(); }));
 
   // Introduce a use-before-def. Check that the dbg.value for %a is salvaged.
   EXPECT_TRUE(replaceAllDbgUsesWith(A, F_, F_, DT));
