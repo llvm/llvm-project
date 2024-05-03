@@ -2089,17 +2089,6 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
     if (IntrinsicID == Intrinsic::canonicalize)
       return constantFoldCanonicalize(Ty, Call, U);
 
-#if defined(HAS_IEE754_FLOAT128) && defined(HAS_LOGF128)
-    if (Ty->isFP128Ty()) {
-      switch (IntrinsicID) {
-      default:
-        return nullptr;
-      case Intrinsic::log:
-        return ConstantFP::get(Ty, logf128(Op->getValueAPF().convertToQuad()));
-      }
-    }
-#endif
-
     if (!Ty->isHalfTy() && !Ty->isFloatTy() && !Ty->isDoubleTy())
       return nullptr;
 
