@@ -29,13 +29,13 @@ struct s4 { struct s4_0 { int f0; } f0; };
 struct s4 f4(void) {}
 
 // APCS-GNU-LABEL: define{{.*}} void @f5(
-// APCS-GNU: ptr noalias sret
+// APCS-GNU: ptr dead_on_unwind noalias writable sret
 // AAPCS-LABEL: define{{.*}} arm_aapcscc i32 @f5()
 struct s5 { struct { } f0; int f1; };
 struct s5 f5(void) {}
 
 // APCS-GNU-LABEL: define{{.*}} void @f6(
-// APCS-GNU: ptr noalias sret
+// APCS-GNU: ptr dead_on_unwind noalias writable sret
 // AAPCS-LABEL: define{{.*}} arm_aapcscc i32 @f6()
 struct s6 { int f0[1]; };
 struct s6 f6(void) {}
@@ -46,7 +46,7 @@ struct s7 { struct { int : 0; } f0; };
 struct s7 f7(void) {}
 
 // APCS-GNU-LABEL: define{{.*}} void @f8(
-// APCS-GNU: ptr noalias sret
+// APCS-GNU: ptr dead_on_unwind noalias writable sret
 // AAPCS-LABEL: define{{.*}} arm_aapcscc void @f8()
 struct s8 { struct { int : 0; } f0[1]; };
 struct s8 f8(void) {}
@@ -62,7 +62,7 @@ struct s10 { int f0; int : 0; int : 0; };
 struct s10 f10(void) {}
 
 // APCS-GNU-LABEL: define{{.*}} void @f11(
-// APCS-GNU: ptr noalias sret
+// APCS-GNU: ptr dead_on_unwind noalias writable sret
 // AAPCS-LABEL: define{{.*}} arm_aapcscc i32 @f11()
 struct s11 { int : 0; int f0; };
 struct s11 f11(void) {}
@@ -73,7 +73,7 @@ union u12 { char f0; short f1; int f2; };
 union u12 f12(void) {}
 
 // APCS-GNU-LABEL: define{{.*}} void @f13(
-// APCS-GNU: ptr noalias sret
+// APCS-GNU: ptr dead_on_unwind noalias writable sret
 
 // FIXME: This should return a float.
 // AAPCS-FIXME: darm_aapcscc efine float @f13()
@@ -81,7 +81,7 @@ struct s13 { float f0; };
 struct s13 f13(void) {}
 
 // APCS-GNU-LABEL: define{{.*}} void @f14(
-// APCS-GNU: ptr noalias sret
+// APCS-GNU: ptr dead_on_unwind noalias writable sret
 // AAPCS-LABEL: define{{.*}} arm_aapcscc i32 @f14()
 union u14 { float f0; };
 union u14 f14(void) {}
@@ -105,13 +105,13 @@ struct s18 { short f0; char f1 : 4; };
 struct s18 f18(void) {}
 
 // APCS-GNU-LABEL: define{{.*}} void @f19(
-// APCS-GNU: ptr noalias sret
+// APCS-GNU: ptr dead_on_unwind noalias writable sret
 // AAPCS-LABEL: define{{.*}} arm_aapcscc i32 @f19()
 struct s19 { int f0; struct s8 f1; };
 struct s19 f19(void) {}
 
 // APCS-GNU-LABEL: define{{.*}} void @f20(
-// APCS-GNU: ptr noalias sret
+// APCS-GNU: ptr dead_on_unwind noalias writable sret
 // AAPCS-LABEL: define{{.*}} arm_aapcscc i32 @f20()
 struct s20 { struct s8 f1; int f0; };
 struct s20 f20(void) {}
@@ -129,10 +129,10 @@ struct s21 f21(void) {}
 // APCS-GNU-LABEL: define{{.*}} i128 @f27()
 // AAPCS-LABEL: define{{.*}} arm_aapcscc i16 @f22()
 // AAPCS-LABEL: define{{.*}} arm_aapcscc i32 @f23()
-// AAPCS: define{{.*}} arm_aapcscc void @f24({{.*}} noalias sret
-// AAPCS: define{{.*}} arm_aapcscc void @f25({{.*}} noalias sret
-// AAPCS: define{{.*}} arm_aapcscc void @f26({{.*}} noalias sret
-// AAPCS: define{{.*}} arm_aapcscc void @f27({{.*}} noalias sret
+// AAPCS: define{{.*}} arm_aapcscc void @f24({{.*}} dead_on_unwind noalias writable sret
+// AAPCS: define{{.*}} arm_aapcscc void @f25({{.*}} dead_on_unwind noalias writable sret
+// AAPCS: define{{.*}} arm_aapcscc void @f26({{.*}} dead_on_unwind noalias writable sret
+// AAPCS: define{{.*}} arm_aapcscc void @f27({{.*}} dead_on_unwind noalias writable sret
 _Complex char       f22(void) {}
 _Complex short      f23(void) {}
 _Complex int        f24(void) {}
@@ -150,8 +150,8 @@ struct s28 f28() {}
 struct s29 { _Complex short f0; };
 struct s29 f29() {}
 
-// APCS-GNU: define{{.*}} void @f30({{.*}} noalias sret
-// AAPCS: define{{.*}} arm_aapcscc void @f30({{.*}} noalias sret
+// APCS-GNU: define{{.*}} void @f30({{.*}} dead_on_unwind noalias writable sret
+// AAPCS: define{{.*}} arm_aapcscc void @f30({{.*}} dead_on_unwind noalias writable sret
 struct s30 { _Complex int f0; };
 struct s30 f30() {}
 

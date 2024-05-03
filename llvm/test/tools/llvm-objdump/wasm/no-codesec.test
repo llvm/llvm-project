@@ -4,9 +4,9 @@
 
 # CHECK: Sections:
 # CHECK-NEXT: Idx Name          Size     VMA      Type
-# CHECK-NEXT:   0 TYPE          00000004 00000000 
-# CHECK-NEXT:   1 FUNCTION      00000002 00000000 
-# CHECK-NEXT:   2 name          00000008 00000000
+# CHECK-NEXT:   0 TYPE          00000004 0000000e
+# CHECK-NEXT:   1 FUNCTION      00000002 00000018
+# CHECK-NEXT:   2 name          00000008 00000020
   
 --- !WASM
 FileHeader:

@@ -616,11 +616,11 @@ bool ELFAsmParser::ParseSectionArguments(bool IsPush, SMLoc loc) {
     if (Mergeable)
       if (parseMergeSize(Size))
         return true;
-    if (Group)
-      if (parseGroup(GroupName, IsComdat))
-        return true;
     if (Flags & ELF::SHF_LINK_ORDER)
       if (parseLinkedToSym(LinkedToSym))
+        return true;
+    if (Group)
+      if (parseGroup(GroupName, IsComdat))
         return true;
     if (maybeParseUniqueID(UniqueID))
       return true;

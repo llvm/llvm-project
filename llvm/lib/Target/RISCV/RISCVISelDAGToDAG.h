@@ -160,6 +160,8 @@ public:
 
   void selectVSETVLI(SDNode *Node);
 
+  void selectSF_VC_X_SE(SDNode *Node);
+
   // Return the RISC-V condition code that matches the given DAG integer
   // condition code. The CondCode must be one of those supported by the RISC-V
   // ISA (see translateSetCCForBranch).
@@ -259,13 +261,6 @@ struct VLX_VSXPseudo {
   uint16_t Pseudo;
 };
 
-struct RISCVMaskedPseudoInfo {
-  uint16_t MaskedPseudo;
-  uint16_t UnmaskedPseudo;
-  uint8_t MaskOpIdx;
-  uint8_t MaskAffectsResult : 1;
-};
-
 #define GET_RISCVVSSEGTable_DECL
 #define GET_RISCVVLSEGTable_DECL
 #define GET_RISCVVLXSEGTable_DECL
@@ -274,8 +269,6 @@ struct RISCVMaskedPseudoInfo {
 #define GET_RISCVVSETable_DECL
 #define GET_RISCVVLXTable_DECL
 #define GET_RISCVVSXTable_DECL
-#define GET_RISCVMaskedPseudosTable_DECL
-#include "RISCVGenSearchableTables.inc"
 } // namespace RISCV
 
 } // namespace llvm

@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
 
 ; GCN-LABEL: {{^}}zext_or_operand_i64:
 ; GCN: buffer_load_dwordx2 v[[[LO:[0-9]+]]:[[HI:[0-9]+]]]

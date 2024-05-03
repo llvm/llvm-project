@@ -15,9 +15,9 @@
 
 ; Check we add .stack_size section to a COMDAT group with the corresponding .text section if such a COMDAT exists.
 ; UNIQ:   .section        .text._Z4fooTIiET_v,"axG",@progbits,_Z4fooTIiET_v,comdat{{$}}
-; UNIQ:   .section        .stack_sizes,"Go",@progbits,_Z4fooTIiET_v,comdat,.text._Z4fooTIiET_v{{$}}
+; UNIQ:   .section        .stack_sizes,"oG",@progbits,.text._Z4fooTIiET_v,_Z4fooTIiET_v,comdat{{$}}
 ; NOUNIQ: .section        .text,"axG",@progbits,_Z4fooTIiET_v,comdat,unique,3
-; NOUNIQ: .section        .stack_sizes,"Go",@progbits,_Z4fooTIiET_v,comdat,.text,unique,3
+; NOUNIQ: .section        .stack_sizes,"oG",@progbits,.text,_Z4fooTIiET_v,comdat,unique,3
 
 $_Z4fooTIiET_v = comdat any
 

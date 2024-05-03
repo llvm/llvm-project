@@ -44,14 +44,6 @@ CMAKE               The CMake binary to use. This variable is optional.
 CLANG_FORMAT        The clang-format binary to use when generating the format
                     ignore list.
 
-ENABLE_CLANG_TIDY   Whether to compile and run clang-tidy checks. This variable
-                    is optional.
-
-ENABLE_STD_MODULES  Whether to enable or disable building the C++23 std
-                    modules. This variable is optional.
-                    TODO MODULES remove when all supported compilers support
-                    modules.
-
 EOF
 }
 
@@ -116,14 +108,6 @@ function clean() {
     rm -rf "${BUILD_DIR}"
 }
 
-if [ -z "${ENABLE_CLANG_TIDY}" ]; then
-    ENABLE_CLANG_TIDY=Off
-fi
-
-if [ -n "${ENABLE_STD_MODULES}" ]; then
-    ENABLE_STD_MODULES="-DLIBCXX_ENABLE_STD_MODULES=${ENABLE_STD_MODULES}"
-fi
-
 function generate-cmake-base() {
     echo "--- Generating CMake"
     ${CMAKE} \
@@ -135,8 +119,6 @@ function generate-cmake-base() {
           -DLIBCXX_ENABLE_WERROR=YES \
           -DLIBCXXABI_ENABLE_WERROR=YES \
           -DLIBUNWIND_ENABLE_WERROR=YES \
-          -DLIBCXX_ENABLE_CLANG_TIDY=${ENABLE_CLANG_TIDY} \
-          ${ENABLE_STD_MODULES} \
           -DLLVM_LIT_ARGS="-sv --xunit-xml-output test-results.xml --timeout=1500 --time-tests" \
           "${@}"
 }
@@ -201,6 +183,49 @@ function check-abi-list() {
 function check-cxx-benchmarks() {
     echo "--- Running the benchmarks"
     ${NINJA} -vC "${BUILD_DIR}" check-cxx-benchmarks
+}
+
+function test-armv7m-picolibc() {
+    clean
+
+    # To make it easier to get this builder up and running, build picolibc
+    # from scratch. Anecdotally, the build-picolibc script takes about 16 seconds.
+    # This could be optimised by building picolibc into the Docker container.
+    ${MONOREPO_ROOT}/libcxx/utils/ci/build-picolibc.sh \
+        --build-dir "${BUILD_DIR}" \
+        --install-dir "${INSTALL_DIR}" \
+        --target armv7m-none-eabi
+
+    echo "--- Generating CMake"
+    flags="--sysroot=${INSTALL_DIR}"
+    ${CMAKE} \
+        -S "${MONOREPO_ROOT}/compiler-rt" \
+        -B "${BUILD_DIR}/compiler-rt" \
+        -GNinja -DCMAKE_MAKE_PROGRAM="${NINJA}" \
+        -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+        -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}" \
+        -DCMAKE_C_FLAGS="${flags}" \
+        -DCMAKE_CXX_FLAGS="${flags}" \
+        -DLLVM_ENABLE_PER_TARGET_RUNTIME_DIR=ON \
+        "${@}"
+    generate-cmake \
+        -DLIBCXX_TEST_CONFIG="armv7m-picolibc-libc++.cfg.in" \
+        -DLIBCXXABI_TEST_CONFIG="armv7m-picolibc-libc++abi.cfg.in" \
+        -DLIBUNWIND_TEST_CONFIG="armv7m-picolibc-libunwind.cfg.in" \
+        -DCMAKE_C_FLAGS="${flags}" \
+        -DCMAKE_CXX_FLAGS="${flags}" \
+        "${@}"
+
+    ${NINJA} -vC "${BUILD_DIR}/compiler-rt" install
+
+    # Prior to clang 19, armv7m-none-eabi normalised to armv7m-none-unknown-eabi.
+    # clang 19 changed this to armv7m-unknown-none-eabi. So for as long as 18.x
+    # is supported, we have to ask clang what the triple will be.
+    NORMALISED_TARGET_TRIPLE=$(${CC-cc} --target=armv7m-none-eabi -print-target-triple)
+    # Without this step linking fails later in the build.
+    mv "${BUILD_DIR}/install/lib/${NORMALISED_TARGET_TRIPLE}"/* "${BUILD_DIR}/install/lib"
+
+    check-runtimes
 }
 
 # Print the version of a few tools to aid diagnostics in some cases
@@ -347,20 +372,24 @@ bootstrapping-build)
           -B "${BUILD_DIR}" \
           -GNinja -DCMAKE_MAKE_PROGRAM="${NINJA}" \
           -DCMAKE_CXX_COMPILER_LAUNCHER="ccache" \
-          -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+          -DCMAKE_BUILD_TYPE=Release \
           -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}" \
-          -DLLVM_ENABLE_PROJECTS="clang" \
+          -DLLVM_ENABLE_PROJECTS="clang;lldb" \
           -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi;libunwind" \
           -DLLVM_RUNTIME_TARGETS="$(${CXX} --print-target-triple)" \
+          -DLLVM_HOST_TRIPLE="$(${CXX} --print-target-triple)" \
           -DLLVM_TARGETS_TO_BUILD="host" \
           -DRUNTIMES_BUILD_ALLOW_DARWIN=ON \
           -DLLVM_ENABLE_ASSERTIONS=ON \
           -DLLVM_LIT_ARGS="-sv --xunit-xml-output test-results.xml --timeout=1500 --time-tests"
 
-    echo "+++ Running the libc++ and libc++abi tests"
+    echo "+++ Running the LLDB libc++ data formatter tests"
+    ${NINJA} -vC "${BUILD_DIR}" check-lldb-api-functionalities-data-formatter-data-formatter-stl-libcxx
+
+    echo "--- Running the libc++ and libc++abi tests"
     ${NINJA} -vC "${BUILD_DIR}" check-runtimes
 
-    echo "--- Installing libc++ and libc++abi to a fake location"
+    echo "+++ Installing libc++ and libc++abi to a fake location"
     ${NINJA} -vC "${BUILD_DIR}" install-runtimes
 
     ccache -s
@@ -401,11 +430,6 @@ generic-hardening-mode-debug)
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-hardening-mode-debug.cmake"
     check-runtimes
     check-abi-list
-;;
-generic-with_llvm_unwinder)
-    clean
-    generate-cmake -DLIBCXXABI_USE_LLVM_UNWINDER=ON
-    check-runtimes
 ;;
 #
 # Module builds
@@ -472,12 +496,22 @@ generic-no-exceptions)
     check-runtimes
     check-abi-list
 ;;
+generic-no-rtti)
+    clean
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-no-rtti.cmake"
+    check-runtimes
+;;
 #
 # Other miscellaneous jobs
 #
 generic-abi-unstable)
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-abi-unstable.cmake"
+    check-runtimes
+;;
+generic-optimized-speed)
+    clean
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-optimized-speed.cmake"
     check-runtimes
 ;;
 apple-system)
@@ -611,39 +645,16 @@ armv7-no-exceptions)
     check-runtimes
 ;;
 armv7m-picolibc)
-    clean
-
-    # To make it easier to get this builder up and running, build picolibc
-    # from scratch. Anecdotally, the build-picolibc script takes about 16 seconds.
-    # This could be optimised by building picolibc into the Docker container.
-    ${MONOREPO_ROOT}/libcxx/utils/ci/build-picolibc.sh \
-        --build-dir "${BUILD_DIR}" \
-        --install-dir "${INSTALL_DIR}" \
-        --target armv7m-none-eabi
-
-    echo "--- Generating CMake"
-    flags="--sysroot=${INSTALL_DIR}"
-    ${CMAKE} \
-        -S "${MONOREPO_ROOT}/compiler-rt" \
-        -B "${BUILD_DIR}/compiler-rt" \
-        -GNinja -DCMAKE_MAKE_PROGRAM="${NINJA}" \
-        -DCMAKE_BUILD_TYPE=RelWithDebInfo \
-        -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}" \
+    test-armv7m-picolibc \
+        -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Armv7M-picolibc.cmake"
+;;
+armv7m-picolibc-no-exceptions)
+    test-armv7m-picolibc \
         -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Armv7M-picolibc.cmake" \
-        -DCMAKE_C_FLAGS="${flags}" \
-        -DCMAKE_CXX_FLAGS="${flags}" \
-        -DLLVM_ENABLE_PER_TARGET_RUNTIME_DIR=ON
-    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Armv7M-picolibc.cmake" \
-        -DLIBCXX_TEST_CONFIG="armv7m-picolibc-libc++.cfg.in" \
-        -DLIBCXXABI_TEST_CONFIG="armv7m-picolibc-libc++abi.cfg.in" \
-        -DLIBUNWIND_TEST_CONFIG="armv7m-picolibc-libunwind.cfg.in" \
-        -DCMAKE_C_FLAGS="${flags}" \
-        -DCMAKE_CXX_FLAGS="${flags}"
-
-    ${NINJA} -vC "${BUILD_DIR}/compiler-rt" install
-    mv "${BUILD_DIR}/install/lib/armv7m-none-eabi"/* "${BUILD_DIR}/install/lib"
-
-    check-runtimes
+        -DLIBCXXABI_ENABLE_EXCEPTIONS=OFF \
+        -DLIBCXXABI_ENABLE_STATIC_UNWINDER=OFF \
+        -DLIBCXX_ENABLE_EXCEPTIONS=OFF \
+        -DLIBCXX_ENABLE_RTTI=OFF
 ;;
 clang-cl-dll)
     clean
@@ -749,12 +760,13 @@ android-ndk-*)
     # level. When tests are run against a device with a newer API level, test
     # programs can be built for any supported API level, but building for the
     # newest API (i.e. the system image's API) is probably the most interesting.
-    PARAMS="target_triple=$(triple_of_arch ${ARCH})$(api_of_emu_img ${ANDROID_EMU_IMG})"
+    PARAMS="executor=${MONOREPO_ROOT}/libcxx/utils/adb_run.py;target_triple=$(triple_of_arch ${ARCH})$(api_of_emu_img ${ANDROID_EMU_IMG})"
     generate-cmake-android -C "${MONOREPO_ROOT}/runtimes/cmake/android/Arch-${ARCH}.cmake" \
                            -C "${MONOREPO_ROOT}/libcxx/cmake/caches/AndroidNDK.cmake" \
                            -DCMAKE_SYSROOT=/opt/android/ndk/sysroot \
                            -DLIBCXX_TEST_PARAMS="${PARAMS}" \
                            -DLIBCXXABI_TEST_PARAMS="${PARAMS}"
+    check-abi-list
     ${NINJA} -vC "${BUILD_DIR}" install-cxx install-cxxabi
 
     # Start the emulator and make sure we can connect to the adb server running

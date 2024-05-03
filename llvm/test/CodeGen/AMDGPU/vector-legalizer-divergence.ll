@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn < %s
+; RUN: llc -mtriple=amdgcn < %s
 
 ; Tests for a bug in SelectionDAG::UpdateNodeOperands exposed by VectorLegalizer
 ; where divergence information is not updated.

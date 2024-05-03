@@ -1,6 +1,6 @@
-# RUN: not --crash llc -march=amdgcn -mcpu=gfx900 -run-pass machineverifier -o /dev/null %s 2>&1 | FileCheck -implicit-check-not="Bad machine code" -check-prefix=GFX9-ERR %s
-# RUN: not --crash llc -march=amdgcn -mcpu=gfx1010 -mattr=-wavefrontsize32,+wavefrontsize64 -run-pass machineverifier -o /dev/null %s 2>&1 | FileCheck -implicit-check-not="Bad machine code" -check-prefix=GFX10PLUS-ERR %s
-# RUN: not --crash llc -march=amdgcn -mcpu=gfx1100 -mattr=-wavefrontsize32,+wavefrontsize64 -run-pass machineverifier -o /dev/null %s 2>&1 | FileCheck -implicit-check-not="Bad machine code" -check-prefix=GFX10PLUS-ERR %s
+# RUN: not --crash llc -mtriple=amdgcn -mcpu=gfx900 -run-pass machineverifier -o /dev/null %s 2>&1 | FileCheck -implicit-check-not="Bad machine code" -check-prefix=GFX9-ERR %s
+# RUN: not --crash llc -mtriple=amdgcn -mcpu=gfx1010 -mattr=-wavefrontsize32,+wavefrontsize64 -run-pass machineverifier -o /dev/null %s 2>&1 | FileCheck -implicit-check-not="Bad machine code" -check-prefix=GFX10PLUS-ERR %s
+# RUN: not --crash llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=-wavefrontsize32,+wavefrontsize64 -run-pass machineverifier -o /dev/null %s 2>&1 | FileCheck -implicit-check-not="Bad machine code" -check-prefix=GFX10PLUS-ERR %s
 
 # GFX9-ERR: *** Bad machine code: VOP* instruction violates constant bus restriction ***
 # GFX9-ERR: $vgpr0 = V_CNDMASK_B32_e64 0, $sgpr0, 0, -1, killed $sgpr0_sgpr1, implicit $exec

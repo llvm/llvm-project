@@ -165,31 +165,34 @@ static FlagArithMnemonic getMnemonicFromOpcode(unsigned Opcode) {
     report_fatal_error("No support for lowering a copy into EFLAGS when used "
                        "by this instruction!");
 
+#define CASE_ND(OP)                                                            \
+  case X86::OP:                                                                \
+  case X86::OP##_ND:
+
 #define LLVM_EXPAND_INSTR_SIZES(MNEMONIC, SUFFIX)                              \
-  case X86::MNEMONIC##8##SUFFIX:                                               \
-  case X86::MNEMONIC##16##SUFFIX:                                              \
-  case X86::MNEMONIC##32##SUFFIX:                                              \
-  case X86::MNEMONIC##64##SUFFIX:
+  CASE_ND(MNEMONIC##8##SUFFIX)                                                 \
+  CASE_ND(MNEMONIC##16##SUFFIX)                                                \
+  CASE_ND(MNEMONIC##32##SUFFIX)                                                \
+  CASE_ND(MNEMONIC##64##SUFFIX)
 
 #define LLVM_EXPAND_ADC_SBB_INSTR(MNEMONIC)                                    \
   LLVM_EXPAND_INSTR_SIZES(MNEMONIC, rr)                                        \
-  LLVM_EXPAND_INSTR_SIZES(MNEMONIC, rr_REV)                                    \
   LLVM_EXPAND_INSTR_SIZES(MNEMONIC, rm)                                        \
   LLVM_EXPAND_INSTR_SIZES(MNEMONIC, mr)                                        \
-  case X86::MNEMONIC##8ri:                                                     \
-  case X86::MNEMONIC##16ri8:                                                   \
-  case X86::MNEMONIC##32ri8:                                                   \
-  case X86::MNEMONIC##64ri8:                                                   \
-  case X86::MNEMONIC##16ri:                                                    \
-  case X86::MNEMONIC##32ri:                                                    \
-  case X86::MNEMONIC##64ri32:                                                  \
-  case X86::MNEMONIC##8mi:                                                     \
-  case X86::MNEMONIC##16mi8:                                                   \
-  case X86::MNEMONIC##32mi8:                                                   \
-  case X86::MNEMONIC##64mi8:                                                   \
-  case X86::MNEMONIC##16mi:                                                    \
-  case X86::MNEMONIC##32mi:                                                    \
-  case X86::MNEMONIC##64mi32:                                                  \
+  CASE_ND(MNEMONIC##8ri)                                                       \
+  CASE_ND(MNEMONIC##16ri8)                                                     \
+  CASE_ND(MNEMONIC##32ri8)                                                     \
+  CASE_ND(MNEMONIC##64ri8)                                                     \
+  CASE_ND(MNEMONIC##16ri)                                                      \
+  CASE_ND(MNEMONIC##32ri)                                                      \
+  CASE_ND(MNEMONIC##64ri32)                                                    \
+  CASE_ND(MNEMONIC##8mi)                                                       \
+  CASE_ND(MNEMONIC##16mi8)                                                     \
+  CASE_ND(MNEMONIC##32mi8)                                                     \
+  CASE_ND(MNEMONIC##64mi8)                                                     \
+  CASE_ND(MNEMONIC##16mi)                                                      \
+  CASE_ND(MNEMONIC##32mi)                                                      \
+  CASE_ND(MNEMONIC##64mi32)                                                    \
   case X86::MNEMONIC##8i8:                                                     \
   case X86::MNEMONIC##16i16:                                                   \
   case X86::MNEMONIC##32i32:                                                   \
@@ -214,6 +217,7 @@ static FlagArithMnemonic getMnemonicFromOpcode(unsigned Opcode) {
     return FlagArithMnemonic::RCR;
 
 #undef LLVM_EXPAND_INSTR_SIZES
+#undef CASE_ND
 
   case X86::SETB_C32r:
   case X86::SETB_C64r:
@@ -438,7 +442,8 @@ bool X86FlagsCopyLoweringPass::runOnMachineFunction(MachineFunction &MF) {
           llvm::reverse(llvm::make_range(Begin, End)), [&](MachineInstr &MI) {
             // Flag any instruction (other than the copy we are
             // currently rewriting) that defs EFLAGS.
-            return &MI != CopyI && MI.findRegisterDefOperand(X86::EFLAGS);
+            return &MI != CopyI &&
+                   MI.findRegisterDefOperand(X86::EFLAGS, /*TRI=*/nullptr);
           });
     };
     auto HasEFLAGSClobberPath = [&](MachineBasicBlock *BeginMBB,
@@ -496,7 +501,7 @@ bool X86FlagsCopyLoweringPass::runOnMachineFunction(MachineFunction &MF) {
       auto DefIt = llvm::find_if(
           llvm::reverse(llvm::make_range(TestMBB->instr_begin(), TestPos)),
           [&](MachineInstr &MI) {
-            return MI.findRegisterDefOperand(X86::EFLAGS);
+            return MI.findRegisterDefOperand(X86::EFLAGS, /*TRI=*/nullptr);
           });
       if (DefIt.base() != TestMBB->instr_begin()) {
         dbgs() << "  Using EFLAGS defined by: ";
@@ -558,9 +563,10 @@ bool X86FlagsCopyLoweringPass::runOnMachineFunction(MachineFunction &MF) {
           break;
         }
 
-        MachineOperand *FlagUse = MI.findRegisterUseOperand(X86::EFLAGS);
+        MachineOperand *FlagUse =
+            MI.findRegisterUseOperand(X86::EFLAGS, /*TRI=*/nullptr);
         if (!FlagUse) {
-          if (MI.findRegisterDefOperand(X86::EFLAGS)) {
+          if (MI.findRegisterDefOperand(X86::EFLAGS, /*TRI=*/nullptr)) {
             // If EFLAGS are defined, it's as-if they were killed. We can stop
             // scanning here.
             //
@@ -600,7 +606,8 @@ bool X86FlagsCopyLoweringPass::runOnMachineFunction(MachineFunction &MF) {
         }
 
         // Otherwise we can just rewrite in-place.
-        if (X86::getCondFromCMov(MI) != X86::COND_INVALID) {
+        if (X86::getCondFromCMov(MI) != X86::COND_INVALID ||
+            X86::getCondFromCFCMov(MI) != X86::COND_INVALID) {
           rewriteCMov(*TestMBB, TestPos, TestLoc, MI, *FlagUse, CondRegs);
         } else if (getCondFromFCMOV(MI.getOpcode()) != X86::COND_INVALID) {
           rewriteFCMov(*TestMBB, TestPos, TestLoc, MI, *FlagUse, CondRegs);
@@ -610,7 +617,7 @@ bool X86FlagsCopyLoweringPass::runOnMachineFunction(MachineFunction &MF) {
           rewriteCopy(MI, *FlagUse, CopyDefI);
         } else {
           // We assume all other instructions that use flags also def them.
-          assert(MI.findRegisterDefOperand(X86::EFLAGS) &&
+          assert(MI.findRegisterDefOperand(X86::EFLAGS, /*TRI=*/nullptr) &&
                  "Expected a def of EFLAGS for this instruction!");
 
           // NB!!! Several arithmetic instructions only *partially* update
@@ -729,7 +736,7 @@ CondRegArray X86FlagsCopyLoweringPass::collectCondsInRegs(
 
     // Stop scanning when we see the first definition of the EFLAGS as prior to
     // this we would potentially capture the wrong flag state.
-    if (MI.findRegisterDefOperand(X86::EFLAGS))
+    if (MI.findRegisterDefOperand(X86::EFLAGS, /*TRI=*/nullptr))
       break;
   }
   return CondRegs;
@@ -807,7 +814,8 @@ void X86FlagsCopyLoweringPass::rewriteArithmetic(
   // Insert an instruction that will set the flag back to the desired value.
   Register TmpReg = MRI->createVirtualRegister(PromoteRC);
   auto AddI =
-      BuildMI(MBB, MI.getIterator(), MI.getDebugLoc(), TII->get(X86::ADD8ri))
+      BuildMI(MBB, MI.getIterator(), MI.getDebugLoc(),
+              TII->get(Subtarget->hasNDD() ? X86::ADD8ri_ND : X86::ADD8ri))
           .addDef(TmpReg, RegState::Dead)
           .addReg(CondReg)
           .addImm(Addend);
@@ -824,7 +832,9 @@ void X86FlagsCopyLoweringPass::rewriteCMov(MachineBasicBlock &TestMBB,
                                            MachineOperand &FlagUse,
                                            CondRegArray &CondRegs) {
   // First get the register containing this specific condition.
-  X86::CondCode Cond = X86::getCondFromCMov(CMovI);
+  X86::CondCode Cond = X86::getCondFromCMov(CMovI) == X86::COND_INVALID
+                           ? X86::getCondFromCFCMov(CMovI)
+                           : X86::getCondFromCMov(CMovI);
   unsigned CondReg;
   bool Inverted;
   std::tie(CondReg, Inverted) =
@@ -906,7 +916,7 @@ void X86FlagsCopyLoweringPass::rewriteCondJmp(
   // Rewrite the jump to use the !ZF flag from the test, and kill its use of
   // flags afterward.
   JmpI.getOperand(1).setImm(Inverted ? X86::COND_E : X86::COND_NE);
-  JmpI.findRegisterUseOperand(X86::EFLAGS)->setIsKill(true);
+  JmpI.findRegisterUseOperand(X86::EFLAGS, /*TRI=*/nullptr)->setIsKill(true);
   LLVM_DEBUG(dbgs() << "    fixed jCC: "; JmpI.dump());
 }
 

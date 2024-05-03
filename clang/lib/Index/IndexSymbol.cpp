@@ -36,7 +36,7 @@ static bool isUnitTest(const ObjCMethodDecl *D) {
     return false;
   if (!D->getReturnType()->isVoidType())
     return false;
-  if (!D->getSelector().getNameForSlot(0).startswith("test"))
+  if (!D->getSelector().getNameForSlot(0).starts_with("test"))
     return false;
   return isUnitTestCase(D->getClassInterface());
 }
@@ -552,8 +552,7 @@ StringRef index::getSymbolSubKindString(SymbolSubKind K) {
   case SymbolSubKind::AccessorSetter: return "acc-set";
   case SymbolSubKind::UsingTypename: return "using-typename";
   case SymbolSubKind::UsingValue: return "using-value";
-  case SymbolSubKind::UsingEnum:
-    return "using-enum";
+  case SymbolSubKind::UsingEnum: return "using-enum";
   }
   llvm_unreachable("invalid symbol subkind");
 }

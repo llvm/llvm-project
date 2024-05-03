@@ -958,7 +958,7 @@ define float @select_undef_fp(float %x) {
 ;
 ; X64-LABEL: select_undef_fp:
 ; X64:       # %bb.0:
-; X64-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X64-NEXT:    movss {{.*#+}} xmm0 = [4.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; X64-NEXT:    retq
   %f = select i1 undef, float 4.0, float %x
   ret float %f

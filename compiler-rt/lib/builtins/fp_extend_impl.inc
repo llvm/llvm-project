@@ -60,7 +60,7 @@ static __inline dst_t __extendXfYf2__(src_t a) {
   dst_rep_t dstExp;
   dst_rep_t dstSigFrac;
 
-  if (srcExp >= 1 && srcExp < srcInfExp) {
+  if (srcExp >= 1 && srcExp < (src_rep_t)srcInfExp) {
     // a is a normal number.
     dstExp = (dst_rep_t)srcExp + (dst_rep_t)(dstExpBias - srcExpBias);
     dstSigFrac = (dst_rep_t)srcSigFrac << (dstSigFracBits - srcSigFracBits);

@@ -15,8 +15,8 @@
 ///    ADD       [~]   ADDA      [~]   ADDI        [~]   ADDQ [ ]   ADDX [~]
 ///    CLR       [ ]   CMP       [~]   CMPA        [~]   CMPI [~]   CMPM [ ]
 ///    CMP2      [ ]   DIVS/DIVU [~]   DIVSL/DIVUL [ ]   EXT  [~]   EXTB [ ]
-///    MULS/MULU [~]   NEG       [~]   NEGX        [~]   SUB  [~]   SUBA [~]
-///    SUBI      [~]   SUBQ      [ ]   SUBX        [~]
+///    MULS/MULU [~]   NEG       [~]   NEGX        [~]   NOT  [~]   SUB  [~]
+///    SUBA      [~]   SUBI      [~]   SUBQ        [ ]   SUBX [~]
 ///
 ///  Map:
 ///
@@ -590,8 +590,9 @@ class MxDiMuOp_DD<string MN, bits<4> CMD, bit SIGNED = false,
 }
 
 // $dreg <- $dreg op $dreg
-class MxDiMuOp_DD_Long<string MN, bits<10> CMD, bit SIGNED = false>
-    : MxInst<(outs MxDRD32:$dst), (ins MxDRD32:$src, MxDRD32:$opd), MN#"\t$opd, $dst", []> {
+class MxDiMuOp_DD_Long<string MN, SDNode NODE, bits<10> CMD, bit SIGNED = false>
+    : MxInst<(outs MxDRD32:$dst), (ins MxDRD32:$src, MxDRD32:$opd), MN#"\t$opd, $dst",
+             [(set i32:$dst, CCR, (NODE i32:$src, i32:$opd))]> {
   let Inst = (ascend
     (descend CMD,
       /*MODE*/0b000, /*REGISTER*/(operand "$opd", 3)),
@@ -622,11 +623,9 @@ class MxDiMuOp_DI<string MN, bits<4> CMD, bit SIGNED = false,
 } // let Constraints
 } // Defs = [CCR]
 
-multiclass MxDiMuOp<string MN, bits<4> CMD, bit isComm = 0> {
-  let isCommutable = isComm in {
-    def "S"#NAME#"d32d16" : MxDiMuOp_DD<MN#"s", CMD, /*SIGNED*/true, MxDRD32, MxDRD16>;
-    def "U"#NAME#"d32d16" : MxDiMuOp_DD<MN#"u", CMD, /*SIGNED*/false, MxDRD32, MxDRD16>;
-  }
+multiclass MxDiMuOp<string MN, bits<4> CMD> {
+  def "S"#NAME#"d32d16" : MxDiMuOp_DD<MN#"s", CMD, /*SIGNED*/true, MxDRD32, MxDRD16>;
+  def "U"#NAME#"d32d16" : MxDiMuOp_DD<MN#"u", CMD, /*SIGNED*/false, MxDRD32, MxDRD16>;
 
   def "S"#NAME#"d32i16" : MxDiMuOp_DI<MN#"s", CMD, /*SIGNED*/true, MxDRD32, Mxi16imm>;
   def "U"#NAME#"d32i16" : MxDiMuOp_DI<MN#"u", CMD, /*SIGNED*/false, MxDRD32, Mxi16imm>;
@@ -634,8 +633,8 @@ multiclass MxDiMuOp<string MN, bits<4> CMD, bit isComm = 0> {
 
 defm DIV : MxDiMuOp<"div", 0x8>;
 
-def SDIVd32d32 : MxDiMuOp_DD_Long<"divs.l", 0x131, /*SIGNED*/true>;
-def UDIVd32d32 : MxDiMuOp_DD_Long<"divu.l", 0x131, /*SIGNED*/false>;
+def SDIVd32d32 : MxDiMuOp_DD_Long<"divs.l", sdiv, 0x131, /*SIGNED*/true>;
+def UDIVd32d32 : MxDiMuOp_DD_Long<"divu.l", udiv, 0x131, /*SIGNED*/false>;
 
 // This is used to cast immediates to 16-bits for operations which don't
 // support smaller immediate sizes.
@@ -685,60 +684,53 @@ def : Pat<(urem i16:$dst, i16:$opd),
             (LSR32di (LSR32di (UDIVd32d16 (MOVZXd32d16 $dst), $opd), 8), 8),
              MxSubRegIndex16Lo)>;
 
-
-// RR i32
-def : Pat<(sdiv i32:$dst, i32:$opd), (SDIVd32d32 $dst, $opd)>;
-
-def : Pat<(udiv i32:$dst, i32:$opd), (UDIVd32d32 $dst, $opd)>;
-
-
 // RI i8
-def : Pat<(sdiv i8:$dst, MximmSExt8:$opd),
+def : Pat<(sdiv i8:$dst, Mxi8immSExt8:$opd),
           (EXTRACT_SUBREG
             (SDIVd32i16 (MOVSXd32d8 $dst), (as_i16imm $opd)),
              MxSubRegIndex8Lo)>;
 
-def : Pat<(udiv i8:$dst, MximmSExt8:$opd),
+def : Pat<(udiv i8:$dst, Mxi8immSExt8:$opd),
           (EXTRACT_SUBREG
             (UDIVd32i16 (MOVZXd32d8 $dst), (as_i16imm $opd)),
              MxSubRegIndex8Lo)>;
 
-def : Pat<(srem i8:$dst, MximmSExt8:$opd),
+def : Pat<(srem i8:$dst, Mxi8immSExt8:$opd),
           (EXTRACT_SUBREG
             (ASR32di (ASR32di (SDIVd32i16 (MOVSXd32d8 $dst), (as_i16imm $opd)), 8), 8),
              MxSubRegIndex8Lo)>;
 
-def : Pat<(urem i8:$dst, MximmSExt8:$opd),
+def : Pat<(urem i8:$dst, Mxi8immSExt8:$opd),
           (EXTRACT_SUBREG
             (LSR32di (LSR32di (UDIVd32i16 (MOVZXd32d8 $dst), (as_i16imm $opd)), 8), 8),
              MxSubRegIndex8Lo)>;
 
 // RI i16
-def : Pat<(sdiv i16:$dst, MximmSExt16:$opd),
+def : Pat<(sdiv i16:$dst, Mxi16immSExt16:$opd),
           (EXTRACT_SUBREG
             (SDIVd32i16 (MOVSXd32d16 $dst), imm:$opd),
              MxSubRegIndex16Lo)>;
 
-def : Pat<(udiv i16:$dst, MximmSExt16:$opd),
+def : Pat<(udiv i16:$dst, Mxi16immSExt16:$opd),
           (EXTRACT_SUBREG
             (UDIVd32i16 (MOVZXd32d16 $dst), imm:$opd),
              MxSubRegIndex16Lo)>;
 
-def : Pat<(srem i16:$dst, MximmSExt16:$opd),
+def : Pat<(srem i16:$dst, Mxi16immSExt16:$opd),
           (EXTRACT_SUBREG
             (ASR32di (ASR32di (SDIVd32i16 (MOVSXd32d16 $dst), imm:$opd), 8), 8),
              MxSubRegIndex16Lo)>;
 
-def : Pat<(urem i16:$dst, MximmSExt16:$opd),
+def : Pat<(urem i16:$dst, Mxi16immSExt16:$opd),
           (EXTRACT_SUBREG
             (LSR32di (LSR32di (UDIVd32i16 (MOVZXd32d16 $dst), imm:$opd), 8), 8),
              MxSubRegIndex16Lo)>;
 
 
-defm MUL : MxDiMuOp<"mul", 0xC, 1>;
+defm MUL : MxDiMuOp<"mul", 0xC>;
 
-def SMULd32d32 : MxDiMuOp_DD_Long<"muls.l", 0x130, /*SIGNED*/true>;
-def UMULd32d32 : MxDiMuOp_DD_Long<"mulu.l", 0x130, /*SIGNED*/false>;
+def SMULd32d32 : MxDiMuOp_DD_Long<"muls.l", MxSMul, 0x130, /*SIGNED*/true>;
+def UMULd32d32 : MxDiMuOp_DD_Long<"mulu.l", MxUMul, 0x130, /*SIGNED*/false>;
 
 // RR
 def : Pat<(mul i16:$dst, i16:$opd),
@@ -760,24 +752,24 @@ def : Pat<(mul i32:$dst, i32:$opd), (SMULd32d32 $dst, $opd)>;
 
 
 // RI
-def : Pat<(mul i16:$dst, MximmSExt16:$opd),
+def : Pat<(mul i16:$dst, Mxi16immSExt16:$opd),
           (EXTRACT_SUBREG
             (SMULd32i16 (MOVXd32d16 $dst), imm:$opd),
              MxSubRegIndex16Lo)>;
 
-def : Pat<(mulhs i16:$dst, MximmSExt16:$opd),
+def : Pat<(mulhs i16:$dst, Mxi16immSExt16:$opd),
           (EXTRACT_SUBREG
             (ASR32di (ASR32di (SMULd32i16 (MOVXd32d16 $dst), imm:$opd), 8), 8),
              MxSubRegIndex16Lo)>;
 
-def : Pat<(mulhu i16:$dst, MximmSExt16:$opd),
+def : Pat<(mulhu i16:$dst, Mxi16immSExt16:$opd),
           (EXTRACT_SUBREG
             (LSR32di (LSR32di (UMULd32i16 (MOVXd32d16 $dst), imm:$opd), 8), 8),
              MxSubRegIndex16Lo)>;
 
 
 //===----------------------------------------------------------------------===//
-// NEG/NEGX
+// NEG/NEGX/NOT
 //===----------------------------------------------------------------------===//
 
 /// ------------+------------+------+---------+---------
@@ -817,12 +809,26 @@ class MxNegX_D<MxType TYPE>
 }
 }
 
+class MxNot_D<MxType TYPE>
+    : MxInst<(outs TYPE.ROp:$dst), (ins TYPE.ROp:$src),
+             "not."#TYPE.Prefix#"\t$dst",
+             [(set TYPE.VT:$dst, (not TYPE.VT:$src))]> {
+  let Inst = (descend 0b01000110,
+    /*SIZE*/!cast<MxEncSize>("MxEncSize"#TYPE.Size).Value,
+    //MODE without last bit
+    0b00,
+    //REGISTER prefixed by D/A bit
+    (operand "$dst", 4)
+  );
+}
+
 } // let Constraints
 } // let Defs = [CCR]
 
 foreach S = [8, 16, 32] in {
   def NEG#S#d  : MxNeg_D<!cast<MxType>("MxType"#S#"d")>;
   def NEGX#S#d : MxNegX_D<!cast<MxType>("MxType"#S#"d")>;
+  def NOT#S#d  : MxNot_D<!cast<MxType>("MxType"#S#"d")>;
 }
 
 def : Pat<(MxSub 0, i8 :$src), (NEG8d  MxDRD8 :$src)>;
@@ -881,16 +887,16 @@ foreach N = ["add", "addc"] in {
             (ADD32df MxDRD32:$src, MxType32.FOp:$opd)>;
 
   // add reg, imm
-  def : Pat<(!cast<SDNode>(N) i8: $src, MximmSExt8:$opd),
+  def : Pat<(!cast<SDNode>(N) i8: $src, Mxi8immSExt8:$opd),
             (ADD8di  MxDRD8 :$src, imm:$opd)>;
-  def : Pat<(!cast<SDNode>(N) i16:$src, MximmSExt16:$opd),
+  def : Pat<(!cast<SDNode>(N) i16:$src, Mxi16immSExt16:$opd),
             (ADD16di MxDRD16:$src, imm:$opd)>;
 
   // LEAp is more complex and thus will be selected over normal ADD32ri but it cannot
   // be used with data registers, here by adding complexity to a simple ADD32ri insts
   // we make sure it will be selected over LEAp
   let AddedComplexity = 15 in {
-  def : Pat<(!cast<SDNode>(N) i32:$src, MximmSExt32:$opd),
+  def : Pat<(!cast<SDNode>(N) i32:$src, Mxi32immSExt32:$opd),
             (ADD32di MxDRD32:$src, imm:$opd)>;
   } // AddedComplexity = 15
 
@@ -949,11 +955,11 @@ foreach N = ["sub", "subc"] in {
             (SUB32df MxDRD32:$src, MxType32.FOp:$opd)>;
 
   // sub reg, imm
-  def : Pat<(!cast<SDNode>(N) i8 :$src, MximmSExt8 :$opd),
+  def : Pat<(!cast<SDNode>(N) i8 :$src, Mxi8immSExt8 :$opd),
             (SUB8di  MxDRD8 :$src, imm:$opd)>;
-  def : Pat<(!cast<SDNode>(N) i16:$src, MximmSExt16:$opd),
+  def : Pat<(!cast<SDNode>(N) i16:$src, Mxi16immSExt16:$opd),
             (SUB16di MxDRD16:$src, imm:$opd)>;
-  def : Pat<(!cast<SDNode>(N) i32:$src, MximmSExt32:$opd),
+  def : Pat<(!cast<SDNode>(N) i32:$src, Mxi32immSExt32:$opd),
             (SUB32di MxDRD32:$src, imm:$opd)>;
 
   // sub imm, (An)
@@ -982,11 +988,11 @@ multiclass BitwisePat<string INST, SDNode OP> {
   def : Pat<(OP i32:$src, i32:$opd),
             (!cast<MxInst>(INST#"32dd") MxDRD32:$src, MxDRD32:$opd)>;
   // op reg, imm
-  def : Pat<(OP i8: $src, MximmSExt8 :$opd),
+  def : Pat<(OP i8: $src, Mxi8immSExt8 :$opd),
             (!cast<MxInst>(INST#"8di")  MxDRD8 :$src, imm:$opd)>;
-  def : Pat<(OP i16:$src, MximmSExt16:$opd),
+  def : Pat<(OP i16:$src, Mxi16immSExt16:$opd),
             (!cast<MxInst>(INST#"16di") MxDRD16:$src, imm:$opd)>;
-  def : Pat<(OP i32:$src, MximmSExt32:$opd),
+  def : Pat<(OP i32:$src, Mxi32immSExt32:$opd),
             (!cast<MxInst>(INST#"32di") MxDRD32:$src, imm:$opd)>;
 }
 

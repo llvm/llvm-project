@@ -323,7 +323,7 @@ static Error InitDebuggingDir(PerfState &State) {
     return make_error<StringError>(std::move(ErrStr), inconvertibleErrorCode());
   }
 
-  State.JitPath = std::string(UniqueDebugDir.str());
+  State.JitPath = std::string(UniqueDebugDir);
 
   return Error::success();
 }

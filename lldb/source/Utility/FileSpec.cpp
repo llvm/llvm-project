@@ -68,9 +68,8 @@ void Denormalize(llvm::SmallVectorImpl<char> &path, FileSpec::Style style) {
 FileSpec::FileSpec() : m_style(GetNativeStyle()) {}
 
 // Default constructor that can take an optional full path to a file on disk.
-FileSpec::FileSpec(llvm::StringRef path, Style style, const Checksum &checksum)
-    : m_checksum(checksum), m_style(style) {
-  SetFile(path, style, checksum);
+FileSpec::FileSpec(llvm::StringRef path, Style style) : m_style(style) {
+  SetFile(path, style);
 }
 
 FileSpec::FileSpec(llvm::StringRef path, const llvm::Triple &triple)
@@ -172,11 +171,9 @@ void FileSpec::SetFile(llvm::StringRef pathname) { SetFile(pathname, m_style); }
 // Update the contents of this object with a new path. The path will be split
 // up into a directory and filename and stored as uniqued string values for
 // quick comparison and efficient memory usage.
-void FileSpec::SetFile(llvm::StringRef pathname, Style style,
-                       const Checksum &checksum) {
+void FileSpec::SetFile(llvm::StringRef pathname, Style style) {
   Clear();
   m_style = (style == Style::native) ? GetNativeStyle() : style;
-  m_checksum = checksum;
 
   if (pathname.empty())
     return;
@@ -311,9 +308,9 @@ bool FileSpec::Match(const FileSpec &pattern, const FileSpec &file) {
 
 std::optional<FileSpec::Style>
 FileSpec::GuessPathStyle(llvm::StringRef absolute_path) {
-  if (absolute_path.startswith("/"))
+  if (absolute_path.starts_with("/"))
     return Style::posix;
-  if (absolute_path.startswith(R"(\\)"))
+  if (absolute_path.starts_with(R"(\\)"))
     return Style::windows;
   if (absolute_path.size() >= 3 && llvm::isAlpha(absolute_path[0]) &&
       (absolute_path.substr(1, 2) == R"(:\)" ||

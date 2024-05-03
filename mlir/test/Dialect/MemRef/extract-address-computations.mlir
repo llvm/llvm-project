@@ -28,7 +28,7 @@ module attributes {transform.with_named_sequence} {
       transform.apply_patterns.memref.extract_address_computations
     } : !transform.any_op
     // Verify that the returned handle is usable.
-    transform.test_print_remark_at_operand %0, "transformed" : !transform.any_op
+    transform.debug.emit_remark_at %0, "transformed" : !transform.any_op
     transform.yield
   }
 }

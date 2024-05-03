@@ -19,15 +19,13 @@ void testFloat(_Atomic(float) *fp) {
   _Atomic(float) x = 2.0f;
 
 // CHECK-NEXT: [[T0:%.*]] = load ptr, ptr [[FP]]
-// CHECK-NEXT: [[T2:%.*]] = load atomic i32, ptr [[T0]] seq_cst, align 4
-// CHECK-NEXT: [[T3:%.*]] = bitcast i32 [[T2]] to float
-// CHECK-NEXT: store float [[T3]], ptr [[F]]
+// CHECK-NEXT: [[T2:%.*]] = load atomic float, ptr [[T0]] seq_cst, align 4
+// CHECK-NEXT: store float [[T2]], ptr [[F]]
   float f = *fp;
 
 // CHECK-NEXT: [[T0:%.*]] = load float, ptr [[F]], align 4
 // CHECK-NEXT: [[T1:%.*]] = load ptr, ptr [[FP]], align 4
-// CHECK-NEXT: [[T2:%.*]] = bitcast float [[T0]] to i32
-// CHECK-NEXT: store atomic i32 [[T2]], ptr [[T1]] seq_cst, align 4
+// CHECK-NEXT: store atomic float [[T0]], ptr [[T1]] seq_cst, align 4
   *fp = f;
 
 // CHECK-NEXT: ret void
@@ -178,7 +176,7 @@ void testPromotedStruct(_Atomic(PS) *fp) {
 }
 
 PS test_promoted_load(_Atomic(PS) *addr) {
-  // CHECK-LABEL: @test_promoted_load(ptr noalias sret(%struct.PS) align 2 %agg.result, ptr noundef %addr)
+  // CHECK-LABEL: @test_promoted_load(ptr dead_on_unwind noalias writable sret(%struct.PS) align 2 %agg.result, ptr noundef %addr)
   // CHECK:   [[ADDR_ARG:%.*]] = alloca ptr, align 4
   // CHECK:   [[ATOMIC_RES:%.*]] = alloca { %struct.PS, [2 x i8] }, align 8
   // CHECK:   store ptr %addr, ptr [[ADDR_ARG]], align 4
@@ -209,7 +207,7 @@ void test_promoted_store(_Atomic(PS) *addr, PS *val) {
 }
 
 PS test_promoted_exchange(_Atomic(PS) *addr, PS *val) {
-  // CHECK-LABEL: @test_promoted_exchange(ptr noalias sret(%struct.PS) align 2 %agg.result, ptr noundef %addr, ptr noundef %val)
+  // CHECK-LABEL: @test_promoted_exchange(ptr dead_on_unwind noalias writable sret(%struct.PS) align 2 %agg.result, ptr noundef %addr, ptr noundef %val)
   // CHECK:   [[ADDR_ARG:%.*]] = alloca ptr, align 4
   // CHECK:   [[VAL_ARG:%.*]] = alloca ptr, align 4
   // CHECK:   [[NONATOMIC_TMP:%.*]] = alloca %struct.PS, align 2

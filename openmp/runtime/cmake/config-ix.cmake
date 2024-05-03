@@ -150,15 +150,20 @@ if(CMAKE_C_COMPILER_ID STREQUAL "Intel" OR CMAKE_C_COMPILER_ID STREQUAL "IntelLL
   check_library_exists(irc_pic _intel_fast_memcpy "" LIBOMP_HAVE_IRC_PIC_LIBRARY)
 endif()
 
-# Checking Threading requirements
-find_package(Threads REQUIRED)
-if(WIN32)
-  if(NOT CMAKE_USE_WIN32_THREADS_INIT)
-    libomp_error_say("Need Win32 thread interface on Windows.")
-  endif()
-else()
-  if(NOT CMAKE_USE_PTHREADS_INIT)
-    libomp_error_say("Need pthread interface on Unix-like systems.")
+# Checking threading requirements. Note that compiling to WebAssembly threads
+# with either the Emscripten or wasi-threads flavor ends up using the pthreads
+# interface in a WebAssembly-compiled libc; CMake does not yet know how to
+# detect this.
+if (NOT WASM)
+  find_package(Threads REQUIRED)
+  if(WIN32)
+    if(NOT CMAKE_USE_WIN32_THREADS_INIT)
+      libomp_error_say("Need Win32 thread interface on Windows.")
+    endif()
+  else()
+    if(NOT CMAKE_USE_PTHREADS_INIT)
+      libomp_error_say("Need pthread interface on Unix-like systems.")
+    endif()
   endif()
 endif()
 
@@ -321,6 +326,7 @@ else()
       (LIBOMP_ARCH STREQUAL i386) OR
 #      (LIBOMP_ARCH STREQUAL arm) OR
       (LIBOMP_ARCH STREQUAL aarch64) OR
+      (LIBOMP_ARCH STREQUAL aarch64_32) OR
       (LIBOMP_ARCH STREQUAL aarch64_a64fx) OR
       (LIBOMP_ARCH STREQUAL ppc64le) OR
       (LIBOMP_ARCH STREQUAL ppc64) OR
@@ -328,7 +334,8 @@ else()
       (LIBOMP_ARCH STREQUAL loongarch64) OR
       (LIBOMP_ARCH STREQUAL s390x))
      AND # OS supported?
-     ((WIN32 AND LIBOMP_HAVE_PSAPI) OR APPLE OR (NOT WIN32 AND LIBOMP_HAVE_WEAK_ATTRIBUTE)))
+     ((WIN32 AND LIBOMP_HAVE_PSAPI) OR APPLE OR
+      (NOT (WIN32 OR ${CMAKE_SYSTEM_NAME} MATCHES "AIX") AND LIBOMP_HAVE_WEAK_ATTRIBUTE)))
     set(LIBOMP_HAVE_OMPT_SUPPORT TRUE)
   else()
     set(LIBOMP_HAVE_OMPT_SUPPORT FALSE)

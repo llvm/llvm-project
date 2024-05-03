@@ -483,4 +483,22 @@ TEST(CopyCountAttr, CopyCount) {
 #endif
 }
 
+// Test stripped printing using test dialect attribute.
+TEST(CopyCountAttr, PrintStripped) {
+  MLIRContext context;
+  context.loadDialect<test::TestDialect>();
+  // Doesn't matter which dialect attribute is used, just chose TestCopyCount
+  // given proximity.
+  test::CopyCount::counter = 0;
+  test::CopyCount copyCount("hello");
+  Attribute res = test::TestCopyCountAttr::get(&context, std::move(copyCount));
+
+  std::string str;
+  llvm::raw_string_ostream os(str);
+  os << "|" << res << "|";
+  res.printStripped(os << "[");
+  os << "]";
+  EXPECT_EQ(os.str(), "|#test.copy_count<hello>|[copy_count<hello>]");
+}
+
 } // namespace

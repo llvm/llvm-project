@@ -26,28 +26,6 @@ using namespace ento;
 
 namespace {
 
-// for ( int a = ...) ... true
-// for ( int a : ...) ... true
-// if ( int* a = ) ... true
-// anything else ... false
-bool isDeclaredInForOrIf(const VarDecl *Var) {
-  assert(Var);
-  auto &ASTCtx = Var->getASTContext();
-  auto parent = ASTCtx.getParents(*Var);
-
-  if (parent.size() == 1) {
-    if (auto *DS = parent.begin()->get<DeclStmt>()) {
-      DynTypedNodeList grandParent = ASTCtx.getParents(*DS);
-      if (grandParent.size() == 1) {
-        return grandParent.begin()->get<ForStmt>() ||
-               grandParent.begin()->get<IfStmt>() ||
-               grandParent.begin()->get<CXXForRangeStmt>();
-      }
-    }
-  }
-  return false;
-}
-
 // FIXME: should be defined by anotations in the future
 bool isRefcountedStringsHack(const VarDecl *V) {
   assert(V);
@@ -143,6 +121,11 @@ public:
     // want to visit those, so we make our own RecursiveASTVisitor.
     struct LocalVisitor : public RecursiveASTVisitor<LocalVisitor> {
       const UncountedLocalVarsChecker *Checker;
+
+      TrivialFunctionAnalysis TFA;
+
+      using Base = RecursiveASTVisitor<LocalVisitor>;
+
       explicit LocalVisitor(const UncountedLocalVarsChecker *Checker)
           : Checker(Checker) {
         assert(Checker);
@@ -153,6 +136,36 @@ public:
 
       bool VisitVarDecl(VarDecl *V) {
         Checker->visitVarDecl(V);
+        return true;
+      }
+
+      bool TraverseIfStmt(IfStmt *IS) {
+        if (!TFA.isTrivial(IS))
+          return Base::TraverseIfStmt(IS);
+        return true;
+      }
+
+      bool TraverseForStmt(ForStmt *FS) {
+        if (!TFA.isTrivial(FS))
+          return Base::TraverseForStmt(FS);
+        return true;
+      }
+
+      bool TraverseCXXForRangeStmt(CXXForRangeStmt *FRS) {
+        if (!TFA.isTrivial(FRS))
+          return Base::TraverseCXXForRangeStmt(FRS);
+        return true;
+      }
+
+      bool TraverseWhileStmt(WhileStmt *WS) {
+        if (!TFA.isTrivial(WS))
+          return Base::TraverseWhileStmt(WS);
+        return true;
+      }
+
+      bool TraverseCompoundStmt(CompoundStmt *CS) {
+        if (!TFA.isTrivial(CS))
+          return Base::TraverseCompoundStmt(CS);
         return true;
       }
     };
@@ -189,18 +202,16 @@ public:
                 dyn_cast_or_null<VarDecl>(Ref->getFoundDecl())) {
           const auto *MaybeGuardianArgType =
               MaybeGuardian->getType().getTypePtr();
-          if (!MaybeGuardianArgType)
-            return;
-          const CXXRecordDecl *const MaybeGuardianArgCXXRecord =
-              MaybeGuardianArgType->getAsCXXRecordDecl();
-          if (!MaybeGuardianArgCXXRecord)
-            return;
-
-          if (MaybeGuardian->isLocalVarDecl() &&
-              (isRefCounted(MaybeGuardianArgCXXRecord) ||
-               isRefcountedStringsHack(MaybeGuardian)) &&
-              isGuardedScopeEmbeddedInGuardianScope(V, MaybeGuardian)) {
-            return;
+          if (MaybeGuardianArgType) {
+            const CXXRecordDecl *const MaybeGuardianArgCXXRecord =
+                MaybeGuardianArgType->getAsCXXRecordDecl();
+            if (MaybeGuardianArgCXXRecord) {
+              if (MaybeGuardian->isLocalVarDecl() &&
+                  (isRefCounted(MaybeGuardianArgCXXRecord) ||
+                   isRefcountedStringsHack(MaybeGuardian)) &&
+                  isGuardedScopeEmbeddedInGuardianScope(V, MaybeGuardian))
+                return;
+            }
           }
 
           // Parameters are guaranteed to be safe for the duration of the call
@@ -217,9 +228,6 @@ public:
   bool shouldSkipVarDecl(const VarDecl *V) const {
     assert(V);
     if (!V->isLocalVarDecl())
-      return true;
-
-    if (isDeclaredInForOrIf(V))
       return true;
 
     return false;

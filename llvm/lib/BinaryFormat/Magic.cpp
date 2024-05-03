@@ -72,6 +72,14 @@ file_magic llvm::identify_magic(StringRef Magic) {
   case 0x03:
     if (startswith(Magic, "\x03\xF0\x00"))
       return file_magic::goff_object;
+    // SPIR-V format in little-endian mode.
+    if (startswith(Magic, "\x03\x02\x23\x07"))
+      return file_magic::spirv_object;
+    break;
+
+  case 0x07: // SPIR-V format in big-endian mode.
+    if (startswith(Magic, "\x07\x23\x02\x03"))
+      return file_magic::spirv_object;
     break;
 
   case 0x10:
@@ -90,6 +98,8 @@ file_magic llvm::identify_magic(StringRef Magic) {
   case 'C':
     if (startswith(Magic, "CCOB"))
       return file_magic::offload_bundle_compressed;
+    if (startswith(Magic, "CPCH"))
+      return file_magic::clang_ast;
     break;
   case '!':
     if (startswith(Magic, "!<arch>\n") || startswith(Magic, "!<thin>\n"))

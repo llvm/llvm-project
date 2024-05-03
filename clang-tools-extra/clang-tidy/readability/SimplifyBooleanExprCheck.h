@@ -64,6 +64,7 @@ private:
                  StringRef Description, SourceRange ReplacementRange,
                  StringRef Replacement);
 
+  const bool IgnoreMacros;
   const bool ChainedConditionalReturn;
   const bool ChainedConditionalAssignment;
   const bool SimplifyDeMorgan;

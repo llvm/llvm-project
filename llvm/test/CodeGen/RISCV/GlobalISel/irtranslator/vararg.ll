@@ -164,7 +164,7 @@ define i32 @va1_va_arg_alloca(ptr %fmt, ...) nounwind {
   ; ILP32-NEXT:   [[DYN_STACKALLOC:%[0-9]+]]:_(p0) = G_DYN_STACKALLOC [[AND]](s32), 1
   ; ILP32-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
   ; ILP32-NEXT:   $x10 = COPY [[DYN_STACKALLOC]](p0)
-  ; ILP32-NEXT:   PseudoCALL target-flags(riscv-plt) @notdead, csr_ilp32_lp64, implicit-def $x1, implicit $x10
+  ; ILP32-NEXT:   PseudoCALL target-flags(riscv-call) @notdead, csr_ilp32_lp64, implicit-def $x1, implicit $x10
   ; ILP32-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; ILP32-NEXT:   $x10 = COPY [[VAARG]](s32)
   ; ILP32-NEXT:   PseudoRET implicit $x10
@@ -209,7 +209,7 @@ define i32 @va1_va_arg_alloca(ptr %fmt, ...) nounwind {
   ; RV32D-ILP32-NEXT:   [[DYN_STACKALLOC:%[0-9]+]]:_(p0) = G_DYN_STACKALLOC [[AND]](s32), 1
   ; RV32D-ILP32-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
   ; RV32D-ILP32-NEXT:   $x10 = COPY [[DYN_STACKALLOC]](p0)
-  ; RV32D-ILP32-NEXT:   PseudoCALL target-flags(riscv-plt) @notdead, csr_ilp32d_lp64d, implicit-def $x1, implicit $x10
+  ; RV32D-ILP32-NEXT:   PseudoCALL target-flags(riscv-call) @notdead, csr_ilp32d_lp64d, implicit-def $x1, implicit $x10
   ; RV32D-ILP32-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; RV32D-ILP32-NEXT:   $x10 = COPY [[VAARG]](s32)
   ; RV32D-ILP32-NEXT:   PseudoRET implicit $x10
@@ -254,7 +254,7 @@ define i32 @va1_va_arg_alloca(ptr %fmt, ...) nounwind {
   ; RV32D-ILP32F-NEXT:   [[DYN_STACKALLOC:%[0-9]+]]:_(p0) = G_DYN_STACKALLOC [[AND]](s32), 1
   ; RV32D-ILP32F-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
   ; RV32D-ILP32F-NEXT:   $x10 = COPY [[DYN_STACKALLOC]](p0)
-  ; RV32D-ILP32F-NEXT:   PseudoCALL target-flags(riscv-plt) @notdead, csr_ilp32f_lp64f, implicit-def $x1, implicit $x10
+  ; RV32D-ILP32F-NEXT:   PseudoCALL target-flags(riscv-call) @notdead, csr_ilp32f_lp64f, implicit-def $x1, implicit $x10
   ; RV32D-ILP32F-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; RV32D-ILP32F-NEXT:   $x10 = COPY [[VAARG]](s32)
   ; RV32D-ILP32F-NEXT:   PseudoRET implicit $x10
@@ -299,7 +299,7 @@ define i32 @va1_va_arg_alloca(ptr %fmt, ...) nounwind {
   ; RV32D-ILP32D-NEXT:   [[DYN_STACKALLOC:%[0-9]+]]:_(p0) = G_DYN_STACKALLOC [[AND]](s32), 1
   ; RV32D-ILP32D-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
   ; RV32D-ILP32D-NEXT:   $x10 = COPY [[DYN_STACKALLOC]](p0)
-  ; RV32D-ILP32D-NEXT:   PseudoCALL target-flags(riscv-plt) @notdead, csr_ilp32d_lp64d, implicit-def $x1, implicit $x10
+  ; RV32D-ILP32D-NEXT:   PseudoCALL target-flags(riscv-call) @notdead, csr_ilp32d_lp64d, implicit-def $x1, implicit $x10
   ; RV32D-ILP32D-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; RV32D-ILP32D-NEXT:   $x10 = COPY [[VAARG]](s32)
   ; RV32D-ILP32D-NEXT:   PseudoRET implicit $x10
@@ -345,7 +345,7 @@ define i32 @va1_va_arg_alloca(ptr %fmt, ...) nounwind {
   ; LP64-NEXT:   [[DYN_STACKALLOC:%[0-9]+]]:_(p0) = G_DYN_STACKALLOC [[AND]](s64), 1
   ; LP64-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
   ; LP64-NEXT:   $x10 = COPY [[DYN_STACKALLOC]](p0)
-  ; LP64-NEXT:   PseudoCALL target-flags(riscv-plt) @notdead, csr_ilp32_lp64, implicit-def $x1, implicit $x10
+  ; LP64-NEXT:   PseudoCALL target-flags(riscv-call) @notdead, csr_ilp32_lp64, implicit-def $x1, implicit $x10
   ; LP64-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; LP64-NEXT:   [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[VAARG]](s32)
   ; LP64-NEXT:   $x10 = COPY [[ANYEXT]](s64)
@@ -392,7 +392,7 @@ define i32 @va1_va_arg_alloca(ptr %fmt, ...) nounwind {
   ; LP64F-NEXT:   [[DYN_STACKALLOC:%[0-9]+]]:_(p0) = G_DYN_STACKALLOC [[AND]](s64), 1
   ; LP64F-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
   ; LP64F-NEXT:   $x10 = COPY [[DYN_STACKALLOC]](p0)
-  ; LP64F-NEXT:   PseudoCALL target-flags(riscv-plt) @notdead, csr_ilp32f_lp64f, implicit-def $x1, implicit $x10
+  ; LP64F-NEXT:   PseudoCALL target-flags(riscv-call) @notdead, csr_ilp32f_lp64f, implicit-def $x1, implicit $x10
   ; LP64F-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; LP64F-NEXT:   [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[VAARG]](s32)
   ; LP64F-NEXT:   $x10 = COPY [[ANYEXT]](s64)
@@ -439,7 +439,7 @@ define i32 @va1_va_arg_alloca(ptr %fmt, ...) nounwind {
   ; LP64D-NEXT:   [[DYN_STACKALLOC:%[0-9]+]]:_(p0) = G_DYN_STACKALLOC [[AND]](s64), 1
   ; LP64D-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
   ; LP64D-NEXT:   $x10 = COPY [[DYN_STACKALLOC]](p0)
-  ; LP64D-NEXT:   PseudoCALL target-flags(riscv-plt) @notdead, csr_ilp32d_lp64d, implicit-def $x1, implicit $x10
+  ; LP64D-NEXT:   PseudoCALL target-flags(riscv-call) @notdead, csr_ilp32d_lp64d, implicit-def $x1, implicit $x10
   ; LP64D-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; LP64D-NEXT:   [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[VAARG]](s32)
   ; LP64D-NEXT:   $x10 = COPY [[ANYEXT]](s64)
@@ -542,7 +542,7 @@ define void @va1_caller() nounwind {
   ; ILP32-NEXT:   $x12 = COPY [[UV]](s32)
   ; ILP32-NEXT:   $x13 = COPY [[UV1]](s32)
   ; ILP32-NEXT:   $x14 = COPY [[C1]](s32)
-  ; ILP32-NEXT:   PseudoCALL target-flags(riscv-plt) @va1, csr_ilp32_lp64, implicit-def $x1, implicit $x10, implicit $x12, implicit $x13, implicit $x14, implicit-def $x10
+  ; ILP32-NEXT:   PseudoCALL target-flags(riscv-call) @va1, csr_ilp32_lp64, implicit-def $x1, implicit $x10, implicit $x12, implicit $x13, implicit $x14, implicit-def $x10
   ; ILP32-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; ILP32-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $x10
   ; ILP32-NEXT:   PseudoRET
@@ -558,7 +558,7 @@ define void @va1_caller() nounwind {
   ; RV32D-ILP32-NEXT:   $x12 = COPY [[UV]](s32)
   ; RV32D-ILP32-NEXT:   $x13 = COPY [[UV1]](s32)
   ; RV32D-ILP32-NEXT:   $x14 = COPY [[C1]](s32)
-  ; RV32D-ILP32-NEXT:   PseudoCALL target-flags(riscv-plt) @va1, csr_ilp32d_lp64d, implicit-def $x1, implicit $x10, implicit $x12, implicit $x13, implicit $x14, implicit-def $x10
+  ; RV32D-ILP32-NEXT:   PseudoCALL target-flags(riscv-call) @va1, csr_ilp32d_lp64d, implicit-def $x1, implicit $x10, implicit $x12, implicit $x13, implicit $x14, implicit-def $x10
   ; RV32D-ILP32-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; RV32D-ILP32-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $x10
   ; RV32D-ILP32-NEXT:   PseudoRET
@@ -574,7 +574,7 @@ define void @va1_caller() nounwind {
   ; RV32D-ILP32F-NEXT:   $x12 = COPY [[UV]](s32)
   ; RV32D-ILP32F-NEXT:   $x13 = COPY [[UV1]](s32)
   ; RV32D-ILP32F-NEXT:   $x14 = COPY [[C1]](s32)
-  ; RV32D-ILP32F-NEXT:   PseudoCALL target-flags(riscv-plt) @va1, csr_ilp32f_lp64f, implicit-def $x1, implicit $x10, implicit $x12, implicit $x13, implicit $x14, implicit-def $x10
+  ; RV32D-ILP32F-NEXT:   PseudoCALL target-flags(riscv-call) @va1, csr_ilp32f_lp64f, implicit-def $x1, implicit $x10, implicit $x12, implicit $x13, implicit $x14, implicit-def $x10
   ; RV32D-ILP32F-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; RV32D-ILP32F-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $x10
   ; RV32D-ILP32F-NEXT:   PseudoRET
@@ -590,7 +590,7 @@ define void @va1_caller() nounwind {
   ; RV32D-ILP32D-NEXT:   $x12 = COPY [[UV]](s32)
   ; RV32D-ILP32D-NEXT:   $x13 = COPY [[UV1]](s32)
   ; RV32D-ILP32D-NEXT:   $x14 = COPY [[C1]](s32)
-  ; RV32D-ILP32D-NEXT:   PseudoCALL target-flags(riscv-plt) @va1, csr_ilp32d_lp64d, implicit-def $x1, implicit $x10, implicit $x12, implicit $x13, implicit $x14, implicit-def $x10
+  ; RV32D-ILP32D-NEXT:   PseudoCALL target-flags(riscv-call) @va1, csr_ilp32d_lp64d, implicit-def $x1, implicit $x10, implicit $x12, implicit $x13, implicit $x14, implicit-def $x10
   ; RV32D-ILP32D-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; RV32D-ILP32D-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $x10
   ; RV32D-ILP32D-NEXT:   PseudoRET
@@ -605,7 +605,7 @@ define void @va1_caller() nounwind {
   ; LP64-NEXT:   $x10 = COPY [[DEF]](p0)
   ; LP64-NEXT:   $x11 = COPY [[C]](s64)
   ; LP64-NEXT:   $x12 = COPY [[ANYEXT]](s64)
-  ; LP64-NEXT:   PseudoCALL target-flags(riscv-plt) @va1, csr_ilp32_lp64, implicit-def $x1, implicit $x10, implicit $x11, implicit $x12, implicit-def $x10
+  ; LP64-NEXT:   PseudoCALL target-flags(riscv-call) @va1, csr_ilp32_lp64, implicit-def $x1, implicit $x10, implicit $x11, implicit $x12, implicit-def $x10
   ; LP64-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; LP64-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $x10
   ; LP64-NEXT:   [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
@@ -621,7 +621,7 @@ define void @va1_caller() nounwind {
   ; LP64F-NEXT:   $x10 = COPY [[DEF]](p0)
   ; LP64F-NEXT:   $x11 = COPY [[C]](s64)
   ; LP64F-NEXT:   $x12 = COPY [[ANYEXT]](s64)
-  ; LP64F-NEXT:   PseudoCALL target-flags(riscv-plt) @va1, csr_ilp32f_lp64f, implicit-def $x1, implicit $x10, implicit $x11, implicit $x12, implicit-def $x10
+  ; LP64F-NEXT:   PseudoCALL target-flags(riscv-call) @va1, csr_ilp32f_lp64f, implicit-def $x1, implicit $x10, implicit $x11, implicit $x12, implicit-def $x10
   ; LP64F-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; LP64F-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $x10
   ; LP64F-NEXT:   [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
@@ -637,7 +637,7 @@ define void @va1_caller() nounwind {
   ; LP64D-NEXT:   $x10 = COPY [[DEF]](p0)
   ; LP64D-NEXT:   $x11 = COPY [[C]](s64)
   ; LP64D-NEXT:   $x12 = COPY [[ANYEXT]](s64)
-  ; LP64D-NEXT:   PseudoCALL target-flags(riscv-plt) @va1, csr_ilp32d_lp64d, implicit-def $x1, implicit $x10, implicit $x11, implicit $x12, implicit-def $x10
+  ; LP64D-NEXT:   PseudoCALL target-flags(riscv-call) @va1, csr_ilp32d_lp64d, implicit-def $x1, implicit $x10, implicit $x11, implicit $x12, implicit-def $x10
   ; LP64D-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; LP64D-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $x10
   ; LP64D-NEXT:   [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
@@ -842,7 +842,7 @@ define void @va2_caller() nounwind {
   ; ILP32-NEXT:   $x10 = COPY [[DEF]](p0)
   ; ILP32-NEXT:   $x12 = COPY [[UV]](s32)
   ; ILP32-NEXT:   $x13 = COPY [[UV1]](s32)
-  ; ILP32-NEXT:   PseudoCALL target-flags(riscv-plt) @va2, csr_ilp32_lp64, implicit-def $x1, implicit $x10, implicit $x12, implicit $x13, implicit-def $x10, implicit-def $x11
+  ; ILP32-NEXT:   PseudoCALL target-flags(riscv-call) @va2, csr_ilp32_lp64, implicit-def $x1, implicit $x10, implicit $x12, implicit $x13, implicit-def $x10, implicit-def $x11
   ; ILP32-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; ILP32-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $x10
   ; ILP32-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $x11
@@ -858,7 +858,7 @@ define void @va2_caller() nounwind {
   ; RV32D-ILP32-NEXT:   $x10 = COPY [[DEF]](p0)
   ; RV32D-ILP32-NEXT:   $x12 = COPY [[UV]](s32)
   ; RV32D-ILP32-NEXT:   $x13 = COPY [[UV1]](s32)
-  ; RV32D-ILP32-NEXT:   PseudoCALL target-flags(riscv-plt) @va2, csr_ilp32d_lp64d, implicit-def $x1, implicit $x10, implicit $x12, implicit $x13, implicit-def $x10, implicit-def $x11
+  ; RV32D-ILP32-NEXT:   PseudoCALL target-flags(riscv-call) @va2, csr_ilp32d_lp64d, implicit-def $x1, implicit $x10, implicit $x12, implicit $x13, implicit-def $x10, implicit-def $x11
   ; RV32D-ILP32-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; RV32D-ILP32-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $x10
   ; RV32D-ILP32-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $x11
@@ -874,7 +874,7 @@ define void @va2_caller() nounwind {
   ; RV32D-ILP32F-NEXT:   $x10 = COPY [[DEF]](p0)
   ; RV32D-ILP32F-NEXT:   $x12 = COPY [[UV]](s32)
   ; RV32D-ILP32F-NEXT:   $x13 = COPY [[UV1]](s32)
-  ; RV32D-ILP32F-NEXT:   PseudoCALL target-flags(riscv-plt) @va2, csr_ilp32f_lp64f, implicit-def $x1, implicit $x10, implicit $x12, implicit $x13, implicit-def $x10, implicit-def $x11
+  ; RV32D-ILP32F-NEXT:   PseudoCALL target-flags(riscv-call) @va2, csr_ilp32f_lp64f, implicit-def $x1, implicit $x10, implicit $x12, implicit $x13, implicit-def $x10, implicit-def $x11
   ; RV32D-ILP32F-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; RV32D-ILP32F-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $x10
   ; RV32D-ILP32F-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $x11
@@ -890,7 +890,7 @@ define void @va2_caller() nounwind {
   ; RV32D-ILP32D-NEXT:   $x10 = COPY [[DEF]](p0)
   ; RV32D-ILP32D-NEXT:   $x12 = COPY [[UV]](s32)
   ; RV32D-ILP32D-NEXT:   $x13 = COPY [[UV1]](s32)
-  ; RV32D-ILP32D-NEXT:   PseudoCALL target-flags(riscv-plt) @va2, csr_ilp32d_lp64d, implicit-def $x1, implicit $x10, implicit $x12, implicit $x13, implicit-def $x10, implicit-def $x11
+  ; RV32D-ILP32D-NEXT:   PseudoCALL target-flags(riscv-call) @va2, csr_ilp32d_lp64d, implicit-def $x1, implicit $x10, implicit $x12, implicit $x13, implicit-def $x10, implicit-def $x11
   ; RV32D-ILP32D-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; RV32D-ILP32D-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $x10
   ; RV32D-ILP32D-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $x11
@@ -904,7 +904,7 @@ define void @va2_caller() nounwind {
   ; LP64-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
   ; LP64-NEXT:   $x10 = COPY [[DEF]](p0)
   ; LP64-NEXT:   $x11 = COPY [[C]](s64)
-  ; LP64-NEXT:   PseudoCALL target-flags(riscv-plt) @va2, csr_ilp32_lp64, implicit-def $x1, implicit $x10, implicit $x11, implicit-def $x10
+  ; LP64-NEXT:   PseudoCALL target-flags(riscv-call) @va2, csr_ilp32_lp64, implicit-def $x1, implicit $x10, implicit $x11, implicit-def $x10
   ; LP64-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; LP64-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $x10
   ; LP64-NEXT:   PseudoRET
@@ -916,7 +916,7 @@ define void @va2_caller() nounwind {
   ; LP64F-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
   ; LP64F-NEXT:   $x10 = COPY [[DEF]](p0)
   ; LP64F-NEXT:   $x11 = COPY [[C]](s64)
-  ; LP64F-NEXT:   PseudoCALL target-flags(riscv-plt) @va2, csr_ilp32f_lp64f, implicit-def $x1, implicit $x10, implicit $x11, implicit-def $x10
+  ; LP64F-NEXT:   PseudoCALL target-flags(riscv-call) @va2, csr_ilp32f_lp64f, implicit-def $x1, implicit $x10, implicit $x11, implicit-def $x10
   ; LP64F-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; LP64F-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $x10
   ; LP64F-NEXT:   PseudoRET
@@ -928,7 +928,7 @@ define void @va2_caller() nounwind {
   ; LP64D-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
   ; LP64D-NEXT:   $x10 = COPY [[DEF]](p0)
   ; LP64D-NEXT:   $x11 = COPY [[C]](s64)
-  ; LP64D-NEXT:   PseudoCALL target-flags(riscv-plt) @va2, csr_ilp32d_lp64d, implicit-def $x1, implicit $x10, implicit $x11, implicit-def $x10
+  ; LP64D-NEXT:   PseudoCALL target-flags(riscv-call) @va2, csr_ilp32d_lp64d, implicit-def $x1, implicit $x10, implicit $x11, implicit-def $x10
   ; LP64D-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; LP64D-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $x10
   ; LP64D-NEXT:   PseudoRET
@@ -1134,7 +1134,7 @@ define void @va3_caller() nounwind {
   ; ILP32-NEXT:   $x12 = COPY [[UV1]](s32)
   ; ILP32-NEXT:   $x14 = COPY [[UV2]](s32)
   ; ILP32-NEXT:   $x15 = COPY [[UV3]](s32)
-  ; ILP32-NEXT:   PseudoCALL target-flags(riscv-plt) @va3, csr_ilp32_lp64, implicit-def $x1, implicit $x10, implicit $x11, implicit $x12, implicit $x14, implicit $x15, implicit-def $x10, implicit-def $x11
+  ; ILP32-NEXT:   PseudoCALL target-flags(riscv-call) @va3, csr_ilp32_lp64, implicit-def $x1, implicit $x10, implicit $x11, implicit $x12, implicit $x14, implicit $x15, implicit-def $x10, implicit-def $x11
   ; ILP32-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; ILP32-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $x10
   ; ILP32-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $x11
@@ -1154,7 +1154,7 @@ define void @va3_caller() nounwind {
   ; RV32D-ILP32-NEXT:   $x12 = COPY [[UV1]](s32)
   ; RV32D-ILP32-NEXT:   $x14 = COPY [[UV2]](s32)
   ; RV32D-ILP32-NEXT:   $x15 = COPY [[UV3]](s32)
-  ; RV32D-ILP32-NEXT:   PseudoCALL target-flags(riscv-plt) @va3, csr_ilp32d_lp64d, implicit-def $x1, implicit $x10, implicit $x11, implicit $x12, implicit $x14, implicit $x15, implicit-def $x10, implicit-def $x11
+  ; RV32D-ILP32-NEXT:   PseudoCALL target-flags(riscv-call) @va3, csr_ilp32d_lp64d, implicit-def $x1, implicit $x10, implicit $x11, implicit $x12, implicit $x14, implicit $x15, implicit-def $x10, implicit-def $x11
   ; RV32D-ILP32-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; RV32D-ILP32-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $x10
   ; RV32D-ILP32-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $x11
@@ -1174,7 +1174,7 @@ define void @va3_caller() nounwind {
   ; RV32D-ILP32F-NEXT:   $x12 = COPY [[UV1]](s32)
   ; RV32D-ILP32F-NEXT:   $x14 = COPY [[UV2]](s32)
   ; RV32D-ILP32F-NEXT:   $x15 = COPY [[UV3]](s32)
-  ; RV32D-ILP32F-NEXT:   PseudoCALL target-flags(riscv-plt) @va3, csr_ilp32f_lp64f, implicit-def $x1, implicit $x10, implicit $x11, implicit $x12, implicit $x14, implicit $x15, implicit-def $x10, implicit-def $x11
+  ; RV32D-ILP32F-NEXT:   PseudoCALL target-flags(riscv-call) @va3, csr_ilp32f_lp64f, implicit-def $x1, implicit $x10, implicit $x11, implicit $x12, implicit $x14, implicit $x15, implicit-def $x10, implicit-def $x11
   ; RV32D-ILP32F-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; RV32D-ILP32F-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $x10
   ; RV32D-ILP32F-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $x11
@@ -1194,7 +1194,7 @@ define void @va3_caller() nounwind {
   ; RV32D-ILP32D-NEXT:   $x12 = COPY [[UV1]](s32)
   ; RV32D-ILP32D-NEXT:   $x14 = COPY [[UV2]](s32)
   ; RV32D-ILP32D-NEXT:   $x15 = COPY [[UV3]](s32)
-  ; RV32D-ILP32D-NEXT:   PseudoCALL target-flags(riscv-plt) @va3, csr_ilp32d_lp64d, implicit-def $x1, implicit $x10, implicit $x11, implicit $x12, implicit $x14, implicit $x15, implicit-def $x10, implicit-def $x11
+  ; RV32D-ILP32D-NEXT:   PseudoCALL target-flags(riscv-call) @va3, csr_ilp32d_lp64d, implicit-def $x1, implicit $x10, implicit $x11, implicit $x12, implicit $x14, implicit $x15, implicit-def $x10, implicit-def $x11
   ; RV32D-ILP32D-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; RV32D-ILP32D-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $x10
   ; RV32D-ILP32D-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $x11
@@ -1211,7 +1211,7 @@ define void @va3_caller() nounwind {
   ; LP64-NEXT:   $x10 = COPY [[ANYEXT]](s64)
   ; LP64-NEXT:   $x11 = COPY [[C1]](s64)
   ; LP64-NEXT:   $x12 = COPY [[C2]](s64)
-  ; LP64-NEXT:   PseudoCALL target-flags(riscv-plt) @va3, csr_ilp32_lp64, implicit-def $x1, implicit $x10, implicit $x11, implicit $x12, implicit-def $x10
+  ; LP64-NEXT:   PseudoCALL target-flags(riscv-call) @va3, csr_ilp32_lp64, implicit-def $x1, implicit $x10, implicit $x11, implicit $x12, implicit-def $x10
   ; LP64-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; LP64-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $x10
   ; LP64-NEXT:   PseudoRET
@@ -1226,7 +1226,7 @@ define void @va3_caller() nounwind {
   ; LP64F-NEXT:   $x10 = COPY [[ANYEXT]](s64)
   ; LP64F-NEXT:   $x11 = COPY [[C1]](s64)
   ; LP64F-NEXT:   $x12 = COPY [[C2]](s64)
-  ; LP64F-NEXT:   PseudoCALL target-flags(riscv-plt) @va3, csr_ilp32f_lp64f, implicit-def $x1, implicit $x10, implicit $x11, implicit $x12, implicit-def $x10
+  ; LP64F-NEXT:   PseudoCALL target-flags(riscv-call) @va3, csr_ilp32f_lp64f, implicit-def $x1, implicit $x10, implicit $x11, implicit $x12, implicit-def $x10
   ; LP64F-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; LP64F-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $x10
   ; LP64F-NEXT:   PseudoRET
@@ -1241,7 +1241,7 @@ define void @va3_caller() nounwind {
   ; LP64D-NEXT:   $x10 = COPY [[ANYEXT]](s64)
   ; LP64D-NEXT:   $x11 = COPY [[C1]](s64)
   ; LP64D-NEXT:   $x12 = COPY [[C2]](s64)
-  ; LP64D-NEXT:   PseudoCALL target-flags(riscv-plt) @va3, csr_ilp32d_lp64d, implicit-def $x1, implicit $x10, implicit $x11, implicit $x12, implicit-def $x10
+  ; LP64D-NEXT:   PseudoCALL target-flags(riscv-call) @va3, csr_ilp32d_lp64d, implicit-def $x1, implicit $x10, implicit $x11, implicit $x12, implicit-def $x10
   ; LP64D-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; LP64D-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $x10
   ; LP64D-NEXT:   PseudoRET
@@ -1288,7 +1288,7 @@ define i32 @va4_va_copy(i32 %argno, ...) nounwind {
   ; ILP32-NEXT:   [[LOAD:%[0-9]+]]:_(p0) = G_LOAD [[FRAME_INDEX2]](p0) :: (dereferenceable load (p0) from %ir.wargs)
   ; ILP32-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
   ; ILP32-NEXT:   $x10 = COPY [[LOAD]](p0)
-  ; ILP32-NEXT:   PseudoCALL target-flags(riscv-plt) @notdead, csr_ilp32_lp64, implicit-def $x1, implicit $x10
+  ; ILP32-NEXT:   PseudoCALL target-flags(riscv-call) @notdead, csr_ilp32_lp64, implicit-def $x1, implicit $x10
   ; ILP32-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; ILP32-NEXT:   [[VAARG1:%[0-9]+]]:_(s32) = G_VAARG [[FRAME_INDEX1]](p0), 4
   ; ILP32-NEXT:   [[VAARG2:%[0-9]+]]:_(s32) = G_VAARG [[FRAME_INDEX1]](p0), 4
@@ -1335,7 +1335,7 @@ define i32 @va4_va_copy(i32 %argno, ...) nounwind {
   ; RV32D-ILP32-NEXT:   [[LOAD:%[0-9]+]]:_(p0) = G_LOAD [[FRAME_INDEX2]](p0) :: (dereferenceable load (p0) from %ir.wargs)
   ; RV32D-ILP32-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
   ; RV32D-ILP32-NEXT:   $x10 = COPY [[LOAD]](p0)
-  ; RV32D-ILP32-NEXT:   PseudoCALL target-flags(riscv-plt) @notdead, csr_ilp32d_lp64d, implicit-def $x1, implicit $x10
+  ; RV32D-ILP32-NEXT:   PseudoCALL target-flags(riscv-call) @notdead, csr_ilp32d_lp64d, implicit-def $x1, implicit $x10
   ; RV32D-ILP32-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; RV32D-ILP32-NEXT:   [[VAARG1:%[0-9]+]]:_(s32) = G_VAARG [[FRAME_INDEX1]](p0), 4
   ; RV32D-ILP32-NEXT:   [[VAARG2:%[0-9]+]]:_(s32) = G_VAARG [[FRAME_INDEX1]](p0), 4
@@ -1382,7 +1382,7 @@ define i32 @va4_va_copy(i32 %argno, ...) nounwind {
   ; RV32D-ILP32F-NEXT:   [[LOAD:%[0-9]+]]:_(p0) = G_LOAD [[FRAME_INDEX2]](p0) :: (dereferenceable load (p0) from %ir.wargs)
   ; RV32D-ILP32F-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
   ; RV32D-ILP32F-NEXT:   $x10 = COPY [[LOAD]](p0)
-  ; RV32D-ILP32F-NEXT:   PseudoCALL target-flags(riscv-plt) @notdead, csr_ilp32f_lp64f, implicit-def $x1, implicit $x10
+  ; RV32D-ILP32F-NEXT:   PseudoCALL target-flags(riscv-call) @notdead, csr_ilp32f_lp64f, implicit-def $x1, implicit $x10
   ; RV32D-ILP32F-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; RV32D-ILP32F-NEXT:   [[VAARG1:%[0-9]+]]:_(s32) = G_VAARG [[FRAME_INDEX1]](p0), 4
   ; RV32D-ILP32F-NEXT:   [[VAARG2:%[0-9]+]]:_(s32) = G_VAARG [[FRAME_INDEX1]](p0), 4
@@ -1429,7 +1429,7 @@ define i32 @va4_va_copy(i32 %argno, ...) nounwind {
   ; RV32D-ILP32D-NEXT:   [[LOAD:%[0-9]+]]:_(p0) = G_LOAD [[FRAME_INDEX2]](p0) :: (dereferenceable load (p0) from %ir.wargs)
   ; RV32D-ILP32D-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
   ; RV32D-ILP32D-NEXT:   $x10 = COPY [[LOAD]](p0)
-  ; RV32D-ILP32D-NEXT:   PseudoCALL target-flags(riscv-plt) @notdead, csr_ilp32d_lp64d, implicit-def $x1, implicit $x10
+  ; RV32D-ILP32D-NEXT:   PseudoCALL target-flags(riscv-call) @notdead, csr_ilp32d_lp64d, implicit-def $x1, implicit $x10
   ; RV32D-ILP32D-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; RV32D-ILP32D-NEXT:   [[VAARG1:%[0-9]+]]:_(s32) = G_VAARG [[FRAME_INDEX1]](p0), 4
   ; RV32D-ILP32D-NEXT:   [[VAARG2:%[0-9]+]]:_(s32) = G_VAARG [[FRAME_INDEX1]](p0), 4
@@ -1477,7 +1477,7 @@ define i32 @va4_va_copy(i32 %argno, ...) nounwind {
   ; LP64-NEXT:   [[LOAD:%[0-9]+]]:_(p0) = G_LOAD [[FRAME_INDEX2]](p0) :: (dereferenceable load (p0) from %ir.wargs, align 4)
   ; LP64-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
   ; LP64-NEXT:   $x10 = COPY [[LOAD]](p0)
-  ; LP64-NEXT:   PseudoCALL target-flags(riscv-plt) @notdead, csr_ilp32_lp64, implicit-def $x1, implicit $x10
+  ; LP64-NEXT:   PseudoCALL target-flags(riscv-call) @notdead, csr_ilp32_lp64, implicit-def $x1, implicit $x10
   ; LP64-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; LP64-NEXT:   [[VAARG1:%[0-9]+]]:_(s32) = G_VAARG [[FRAME_INDEX1]](p0), 4
   ; LP64-NEXT:   [[VAARG2:%[0-9]+]]:_(s32) = G_VAARG [[FRAME_INDEX1]](p0), 4
@@ -1526,7 +1526,7 @@ define i32 @va4_va_copy(i32 %argno, ...) nounwind {
   ; LP64F-NEXT:   [[LOAD:%[0-9]+]]:_(p0) = G_LOAD [[FRAME_INDEX2]](p0) :: (dereferenceable load (p0) from %ir.wargs, align 4)
   ; LP64F-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
   ; LP64F-NEXT:   $x10 = COPY [[LOAD]](p0)
-  ; LP64F-NEXT:   PseudoCALL target-flags(riscv-plt) @notdead, csr_ilp32f_lp64f, implicit-def $x1, implicit $x10
+  ; LP64F-NEXT:   PseudoCALL target-flags(riscv-call) @notdead, csr_ilp32f_lp64f, implicit-def $x1, implicit $x10
   ; LP64F-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; LP64F-NEXT:   [[VAARG1:%[0-9]+]]:_(s32) = G_VAARG [[FRAME_INDEX1]](p0), 4
   ; LP64F-NEXT:   [[VAARG2:%[0-9]+]]:_(s32) = G_VAARG [[FRAME_INDEX1]](p0), 4
@@ -1575,7 +1575,7 @@ define i32 @va4_va_copy(i32 %argno, ...) nounwind {
   ; LP64D-NEXT:   [[LOAD:%[0-9]+]]:_(p0) = G_LOAD [[FRAME_INDEX2]](p0) :: (dereferenceable load (p0) from %ir.wargs, align 4)
   ; LP64D-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
   ; LP64D-NEXT:   $x10 = COPY [[LOAD]](p0)
-  ; LP64D-NEXT:   PseudoCALL target-flags(riscv-plt) @notdead, csr_ilp32d_lp64d, implicit-def $x1, implicit $x10
+  ; LP64D-NEXT:   PseudoCALL target-flags(riscv-call) @notdead, csr_ilp32d_lp64d, implicit-def $x1, implicit $x10
   ; LP64D-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; LP64D-NEXT:   [[VAARG1:%[0-9]+]]:_(s32) = G_VAARG [[FRAME_INDEX1]](p0), 4
   ; LP64D-NEXT:   [[VAARG2:%[0-9]+]]:_(s32) = G_VAARG [[FRAME_INDEX1]](p0), 4

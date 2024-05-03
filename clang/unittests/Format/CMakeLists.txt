@@ -27,6 +27,7 @@ add_clang_unittest(FormatTests
   IntegerLiteralSeparatorTest.cpp
   MacroCallReconstructorTest.cpp
   MacroExpanderTest.cpp
+  MatchFilePathTest.cpp
   NamespaceEndCommentsFixerTest.cpp
   ObjCPropertyAttributeOrderFixerTest.cpp
   QualifierFixerTest.cpp

@@ -13,7 +13,7 @@ define i32 @bar(i64 %key_token2) nounwind {
 ; CHECK-NEXT:    [[IOSPEC:%.*]] = alloca [[STRUCT_KEY:%.*]], align 8
 ; CHECK-NEXT:    [[RET:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    store i32 0, ptr [[IOSPEC]], align 4
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds { i32, i32 }, ptr [[IOSPEC]], i32 0, i32 1
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[IOSPEC]], i32 4
 ; CHECK-NEXT:    store i32 0, ptr [[TMP0]], align 4
 ; CHECK-NEXT:    store i64 [[KEY_TOKEN2:%.*]], ptr [[IOSPEC]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 (...) @foo(ptr nonnull byval([[STRUCT_KEY]]) align 4 [[IOSPEC]], ptr nonnull [[RET]]) #[[ATTR0:[0-9]+]]

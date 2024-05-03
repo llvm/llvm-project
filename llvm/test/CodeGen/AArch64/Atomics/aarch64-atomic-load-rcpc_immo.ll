@@ -35,16 +35,24 @@ define i8 @load_atomic_i8_aligned_monotonic_const(ptr readonly %ptr) {
 }
 
 define i8 @load_atomic_i8_aligned_acquire(ptr %ptr) {
-; CHECK-LABEL: load_atomic_i8_aligned_acquire:
-; CHECK:    ldapurb w0, [x0, #4]
+; GISEL-LABEL: load_atomic_i8_aligned_acquire:
+; GISEL:    add x8, x0, #4
+; GISEL:    ldaprb w0, [x8]
+;
+; SDAG-LABEL: load_atomic_i8_aligned_acquire:
+; SDAG:    ldapurb w0, [x0, #4]
     %gep = getelementptr inbounds i8, ptr %ptr, i32 4
     %r = load atomic i8, ptr %gep acquire, align 1
     ret i8 %r
 }
 
 define i8 @load_atomic_i8_aligned_acquire_const(ptr readonly %ptr) {
-; CHECK-LABEL: load_atomic_i8_aligned_acquire_const:
-; CHECK:    ldapurb w0, [x0, #4]
+; GISEL-LABEL: load_atomic_i8_aligned_acquire_const:
+; GISEL:    add x8, x0, #4
+; GISEL:    ldaprb w0, [x8]
+;
+; SDAG-LABEL: load_atomic_i8_aligned_acquire_const:
+; SDAG:    ldapurb w0, [x0, #4]
     %gep = getelementptr inbounds i8, ptr %ptr, i32 4
     %r = load atomic i8, ptr %gep acquire, align 1
     ret i8 %r
@@ -101,16 +109,24 @@ define i16 @load_atomic_i16_aligned_monotonic_const(ptr readonly %ptr) {
 }
 
 define i16 @load_atomic_i16_aligned_acquire(ptr %ptr) {
-; CHECK-LABEL: load_atomic_i16_aligned_acquire:
-; CHECK:    ldapurh w0, [x0, #8]
+; GISEL-LABEL: load_atomic_i16_aligned_acquire:
+; GISEL:    add x8, x0, #8
+; GISEL:    ldaprh w0, [x8]
+;
+; SDAG-LABEL: load_atomic_i16_aligned_acquire:
+; SDAG:    ldapurh w0, [x0, #8]
     %gep = getelementptr inbounds i16, ptr %ptr, i32 4
     %r = load atomic i16, ptr %gep acquire, align 2
     ret i16 %r
 }
 
 define i16 @load_atomic_i16_aligned_acquire_const(ptr readonly %ptr) {
-; CHECK-LABEL: load_atomic_i16_aligned_acquire_const:
-; CHECK:    ldapurh w0, [x0, #8]
+; GISEL-LABEL: load_atomic_i16_aligned_acquire_const:
+; GISEL:    add x8, x0, #8
+; GISEL:    ldaprh w0, [x8]
+;
+; SDAG-LABEL: load_atomic_i16_aligned_acquire_const:
+; SDAG:    ldapurh w0, [x0, #8]
     %gep = getelementptr inbounds i16, ptr %ptr, i32 4
     %r = load atomic i16, ptr %gep acquire, align 2
     ret i16 %r
@@ -367,16 +383,24 @@ define i8 @load_atomic_i8_unaligned_monotonic_const(ptr readonly %ptr) {
 }
 
 define i8 @load_atomic_i8_unaligned_acquire(ptr %ptr) {
-; CHECK-LABEL: load_atomic_i8_unaligned_acquire:
-; CHECK:    ldapurb w0, [x0, #4]
+; GISEL-LABEL: load_atomic_i8_unaligned_acquire:
+; GISEL:    add x8, x0, #4
+; GISEL:    ldaprb w0, [x8]
+;
+; SDAG-LABEL: load_atomic_i8_unaligned_acquire:
+; SDAG:    ldapurb w0, [x0, #4]
     %gep = getelementptr inbounds i8, ptr %ptr, i32 4
     %r = load atomic i8, ptr %gep acquire, align 1
     ret i8 %r
 }
 
 define i8 @load_atomic_i8_unaligned_acquire_const(ptr readonly %ptr) {
-; CHECK-LABEL: load_atomic_i8_unaligned_acquire_const:
-; CHECK:    ldapurb w0, [x0, #4]
+; GISEL-LABEL: load_atomic_i8_unaligned_acquire_const:
+; GISEL:    add x8, x0, #4
+; GISEL:    ldaprb w0, [x8]
+;
+; SDAG-LABEL: load_atomic_i8_unaligned_acquire_const:
+; SDAG:    ldapurb w0, [x0, #4]
     %gep = getelementptr inbounds i8, ptr %ptr, i32 4
     %r = load atomic i8, ptr %gep acquire, align 1
     ret i8 %r
@@ -819,7 +843,8 @@ define i128 @load_atomic_i128_unaligned_seq_cst_const(ptr readonly %ptr) {
 define i8 @load_atomic_i8_from_gep() {
 ; GISEL-LABEL: load_atomic_i8_from_gep:
 ; GISEL:    bl init
-; GISEL:    ldapurb w0, [x8, #1]
+; GISEL:    add x8, x8, #1
+; GISEL:    ldaprb w0, [x8]
 ;
 ; SDAG-LABEL: load_atomic_i8_from_gep:
 ; SDAG:    bl init
@@ -834,7 +859,8 @@ define i8 @load_atomic_i8_from_gep() {
 define i16 @load_atomic_i16_from_gep() {
 ; GISEL-LABEL: load_atomic_i16_from_gep:
 ; GISEL:    bl init
-; GISEL:    ldapurh w0, [x8, #2]
+; GISEL:    add x8, x8, #2
+; GISEL:    ldaprh w0, [x8]
 ;
 ; SDAG-LABEL: load_atomic_i16_from_gep:
 ; SDAG:    bl init
@@ -884,7 +910,6 @@ define i128 @load_atomic_i128_from_gep() {
 ;
 ; SDAG-LABEL: load_atomic_i128_from_gep:
 ; SDAG:    bl init
-; SDAG:    ldp x0, x1, [sp, #16]
 ; SDAG:    dmb ishld
   %a = alloca [3 x i128]
   call void @init(ptr %a)

@@ -8,7 +8,7 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 // Some fields in the test case variables are deliberately not explicitly initialized, this silences a warning on GCC.
-// ADDITIONAL_COMPILE_FLAGS: -Wno-missing-field-initializers
+// ADDITIONAL_COMPILE_FLAGS(gcc-style-warnings): -Wno-missing-field-initializers
 
 // <map>
 

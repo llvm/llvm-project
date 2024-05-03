@@ -106,6 +106,30 @@ entry:
   ret i32 %or.4
 }
 
+define i32 @rev32_bswap(i32 %v) {
+; CHECK-LABEL: @rev32_bswap(
+; CHECK-NEXT:    [[RET:%.*]] = call i32 @llvm.bitreverse.i32(i32 [[V:%.*]])
+; CHECK-NEXT:    ret i32 [[RET]]
+;
+  %and.i = lshr i32 %v, 1
+  %shr.i = and i32 %and.i, 1431655765
+  %and1.i = shl i32 %v, 1
+  %shl.i = and i32 %and1.i, -1431655766
+  %or.i = or disjoint i32 %shr.i, %shl.i
+  %and2.i = lshr i32 %or.i, 2
+  %shr3.i = and i32 %and2.i, 858993459
+  %and4.i = shl i32 %or.i, 2
+  %shl5.i = and i32 %and4.i, -858993460
+  %or6.i = or disjoint i32 %shr3.i, %shl5.i
+  %and7.i = lshr i32 %or6.i, 4
+  %shr8.i = and i32 %and7.i, 252645135
+  %and9.i = shl i32 %or6.i, 4
+  %shl10.i = and i32 %and9.i, -252645136
+  %or11.i = or disjoint i32 %shr8.i, %shl10.i
+  %ret = call i32 @llvm.bswap.i32(i32 %or11.i)
+  ret i32 %ret
+}
+
 define i64 @rev64(i64 %v) {
 ; CHECK-LABEL: @rev64(
 ; CHECK-NEXT:  entry:
@@ -298,7 +322,7 @@ define i4 @shuf_bitcast_twice_4bits(i4 %x) {
 ; Negative tests - not reverse
 define i4 @shuf_4bits_not_reverse(<4 x i1> %x) {
 ; CHECK-LABEL: @shuf_4bits_not_reverse(
-; CHECK-NEXT:    [[BITREVERSE:%.*]] = shufflevector <4 x i1> [[X:%.*]], <4 x i1> undef, <4 x i32> <i32 3, i32 1, i32 2, i32 0>
+; CHECK-NEXT:    [[BITREVERSE:%.*]] = shufflevector <4 x i1> [[X:%.*]], <4 x i1> poison, <4 x i32> <i32 3, i32 1, i32 2, i32 0>
 ; CHECK-NEXT:    [[CAST:%.*]] = bitcast <4 x i1> [[BITREVERSE]] to i4
 ; CHECK-NEXT:    ret i4 [[CAST]]
 ;
@@ -312,7 +336,7 @@ declare void @use(<4 x i1>)
 
 define i4 @shuf_4bits_extra_use(<4 x i1> %x) {
 ; CHECK-LABEL: @shuf_4bits_extra_use(
-; CHECK-NEXT:    [[BITREVERSE:%.*]] = shufflevector <4 x i1> [[X:%.*]], <4 x i1> undef, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; CHECK-NEXT:    [[BITREVERSE:%.*]] = shufflevector <4 x i1> [[X:%.*]], <4 x i1> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    call void @use(<4 x i1> [[BITREVERSE]])
 ; CHECK-NEXT:    [[CAST:%.*]] = bitcast <4 x i1> [[BITREVERSE]] to i4
 ; CHECK-NEXT:    ret i4 [[CAST]]
@@ -508,3 +532,5 @@ define i64 @rev_all_operand64_multiuse_both(i64 %a, i64 %b) #0 {
   call void @use_i64(i64 %2)
   ret i64 %4
 }
+
+declare i32 @llvm.bswap.i32(i32 %or11.i)

@@ -1,4 +1,6 @@
 // RUN: %clang_cc1 -triple loongarch64 -target-feature +lasx -verify %s
+// RUN: not %clang_cc1 -triple loongarch64 -DFEATURE_CHECK -emit-llvm %s -o /dev/null 2>&1 \
+// RUN:   | FileCheck %s
 
 typedef signed char v32i8 __attribute__((vector_size(32), aligned(32)));
 typedef signed char v32i8_b __attribute__((vector_size(32), aligned(1)));
@@ -20,6 +22,13 @@ typedef float v8f32 __attribute__((vector_size(32), aligned(32)));
 typedef float v8f32_w __attribute__((vector_size(32), aligned(4)));
 typedef double v4f64 __attribute__((vector_size(32), aligned(32)));
 typedef double v4f64_d __attribute__((vector_size(32), aligned(8)));
+
+#ifdef FEATURE_CHECK
+void test_feature(v32i8 _1) {
+// CHECK: error: '__builtin_lasx_xvslli_b' needs target feature lasx
+  (void)__builtin_lasx_xvslli_b(_1, 1);
+}
+#endif
 
 v32i8 xvslli_b(v32i8 _1, int var) {
   v32i8 res = __builtin_lasx_xvslli_b(_1, -1); // expected-error {{argument value 4294967295 is outside the valid range [0, 7]}}

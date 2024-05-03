@@ -1,4 +1,4 @@
-# RUN: not --crash llc -march=amdgcn -run-pass machineverifier %s -o - 2>&1 | FileCheck %s
+# RUN: not --crash llc -mtriple=amdgcn -run-pass machineverifier %s -o - 2>&1 | FileCheck %s
 
 # CHECK: *** Bad machine code: SOP2/SOPC instruction requires too many immediate constants
 # CHECK: - instruction: %0:sreg_32_xm0 = S_ADD_I32

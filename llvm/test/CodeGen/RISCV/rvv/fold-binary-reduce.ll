@@ -343,3 +343,26 @@ declare i64 @llvm.smax.i64(i64, i64)
 declare i64 @llvm.smin.i64(i64, i64)
 declare float @llvm.maxnum.f32(float ,float)
 declare float @llvm.minnum.f32(float ,float)
+
+define void @crash(<2 x i32> %0) {
+; CHECK-LABEL: crash:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
+; CHECK-NEXT:    vmv.x.s a0, v8
+; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
+; CHECK-NEXT:    vmv.v.i v8, 0
+; CHECK-NEXT:    vmv.s.x v9, a0
+; CHECK-NEXT:    vredsum.vs v8, v8, v9
+; CHECK-NEXT:    vmv.x.s a0, v8
+; CHECK-NEXT:    sb a0, 0(zero)
+; CHECK-NEXT:    ret
+entry:
+  %1 = extractelement <2 x i32> %0, i64 0
+  %2 = tail call i16 @llvm.vector.reduce.add.v4i16(<4 x i16> zeroinitializer)
+  %3 = zext i16 %2 to i32
+  %op.rdx = add i32 %1, %3
+  %conv18.us = trunc i32 %op.rdx to i8
+  store i8 %conv18.us, ptr null, align 1
+  ret void
+}
+declare i16 @llvm.vector.reduce.add.v4i16(<4 x i16>)

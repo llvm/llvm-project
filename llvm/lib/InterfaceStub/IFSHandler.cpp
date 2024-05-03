@@ -201,6 +201,12 @@ Expected<std::unique_ptr<IFSStub>> ifs::readIFSFromBuffer(StringRef Buf) {
           "IFS arch '" + *Stub->Target.ArchString + "' is unsupported");
     Stub->Target.Arch = eMachine;
   }
+  for (const auto &Item : Stub->Symbols) {
+    if (Item.Type == IFSSymbolType::Unknown)
+      return createStringError(
+          std::make_error_code(std::errc::invalid_argument),
+          "IFS symbol type for symbol '" + Item.Name + "' is unsupported");
+  }
   return std::move(Stub);
 }
 

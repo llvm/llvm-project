@@ -2694,4 +2694,3 @@ entry:
 }
 
 declare <vscale x 8 x double> @llvm.riscv.sf.vc.v.fvw.se.nxv8f64.nxv8f32.nxv8i32.f32.iXLen(iXLen, <vscale x 8 x double>, <vscale x 8 x i32>, float, iXLen)
-

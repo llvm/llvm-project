@@ -512,7 +512,8 @@ SBBroadcaster SBCommandInterpreter::GetBroadcaster() {
 const char *SBCommandInterpreter::GetBroadcasterClass() {
   LLDB_INSTRUMENT();
 
-  return CommandInterpreter::GetStaticBroadcasterClass().AsCString();
+  return ConstString(CommandInterpreter::GetStaticBroadcasterClass())
+      .AsCString();
 }
 
 const char *SBCommandInterpreter::GetArgumentTypeAsCString(
@@ -555,6 +556,19 @@ bool SBCommandInterpreter::SetCommandOverrideCallback(
     }
   }
   return false;
+}
+
+SBStructuredData SBCommandInterpreter::GetStatistics() {
+  LLDB_INSTRUMENT_VA(this);
+
+  SBStructuredData data;
+  if (!IsValid())
+    return data;
+
+  std::string json_str =
+      llvm::formatv("{0:2}", m_opaque_ptr->GetStatistics()).str();
+  data.m_impl_up->SetObjectSP(StructuredData::ParseJSON(json_str));
+  return data;
 }
 
 lldb::SBCommand SBCommandInterpreter::AddMultiwordCommand(const char *name,

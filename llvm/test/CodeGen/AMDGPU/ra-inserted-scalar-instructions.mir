@@ -407,7 +407,6 @@ body:             |
   ; GCN-NEXT: bb.11:
   ; GCN-NEXT:   successors: %bb.12(0x80000000)
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.12:
   ; GCN-NEXT:   [[SI_SPILL_S64_RESTORE3:%[0-9]+]]:sgpr_64 = SI_SPILL_S64_RESTORE %stack.1, implicit $exec, implicit $sgpr32 :: (load (s64) from %stack.1, align 4, addrspace 5)
   ; GCN-NEXT:   GLOBAL_STORE_DWORD_SADDR undef [[DEF]], undef [[DEF]], [[SI_SPILL_S64_RESTORE3]], 0, 0, implicit $exec :: (store (s32), addrspace 1)

@@ -22,6 +22,11 @@
 #include <stdint.h>
 
 namespace llvm {
+
+namespace Intrinsic {
+using ID = unsigned;
+}
+
 class APInt;
 template <typename T> class ArrayRef;
 class CallBase;
@@ -174,7 +179,8 @@ Constant *ConstantFoldLoadFromConstPtr(Constant *C, Type *Ty,
 /// ones, all undef or all poison), return the corresponding uniform value in
 /// the new type. If the value is not uniform or the result cannot be
 /// represented, return null.
-Constant *ConstantFoldLoadFromUniformValue(Constant *C, Type *Ty);
+Constant *ConstantFoldLoadFromUniformValue(Constant *C, Type *Ty,
+                                           const DataLayout &DL);
 
 /// canConstantFoldCallTo - Return true if its even possible to fold a call to
 /// the specified function.
@@ -185,6 +191,10 @@ bool canConstantFoldCallTo(const CallBase *Call, const Function *F);
 Constant *ConstantFoldCall(const CallBase *Call, Function *F,
                            ArrayRef<Constant *> Operands,
                            const TargetLibraryInfo *TLI = nullptr);
+
+Constant *ConstantFoldBinaryIntrinsic(Intrinsic::ID ID, Constant *LHS,
+                                      Constant *RHS, Type *Ty,
+                                      Instruction *FMFSource);
 
 /// ConstantFoldLoadThroughBitcast - try to cast constant to destination type
 /// returning null if unsuccessful. Can cast pointer to pointer or pointer to

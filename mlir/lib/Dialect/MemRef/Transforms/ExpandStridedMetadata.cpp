@@ -50,7 +50,7 @@ struct StridedMetadata {
 /// \verbatim
 /// baseBuffer, baseOffset, baseSizes, baseStrides =
 ///     extract_strided_metadata(memref)
-/// strides#i = baseStrides#i * subSizes#i
+/// strides#i = baseStrides#i * subStrides#i
 /// offset = baseOffset + sum(subOffset#i * baseStrides#i)
 /// sizes = subSizes
 /// \endverbatim
@@ -69,6 +69,9 @@ resolveSubviewStridedMetadata(RewriterBase &rewriter,
       rewriter.create<memref::ExtractStridedMetadataOp>(origLoc, source);
 
   auto [sourceStrides, sourceOffset] = getStridesAndOffset(sourceType);
+#ifndef NDEBUG
+  auto [resultStrides, resultOffset] = getStridesAndOffset(subview.getType());
+#endif // NDEBUG
 
   // Compute the new strides and offset from the base strides and offset:
   // newStride#i = baseStride#i * subStride#i
@@ -111,6 +114,14 @@ resolveSubviewStridedMetadata(RewriterBase &rewriter,
   // Compute the offset.
   OpFoldResult finalOffset =
       makeComposedFoldedAffineApply(rewriter, origLoc, expr, values);
+#ifndef NDEBUG
+  // Assert that the computed offset matches the offset of the result type of
+  // the subview op (if both are static).
+  std::optional<int64_t> computedOffset = getConstantIntValue(finalOffset);
+  if (computedOffset && !ShapedType::isDynamic(resultOffset))
+    assert(*computedOffset == resultOffset &&
+           "mismatch between computed offset and result type offset");
+#endif // NDEBUG
 
   // The final result is  <baseBuffer, offset, sizes, strides>.
   // Thus we need 1 + 1 + subview.getRank() + subview.getRank(), to hold all
@@ -133,12 +144,25 @@ resolveSubviewStridedMetadata(RewriterBase &rewriter,
   SmallVector<OpFoldResult> finalStrides;
   finalStrides.reserve(subRank);
 
+#ifndef NDEBUG
+  // Iteration variable for result dimensions of the subview op.
+  int64_t j = 0;
+#endif // NDEBUG
   for (unsigned i = 0; i < sourceRank; ++i) {
     if (droppedDims.test(i))
       continue;
 
     finalSizes.push_back(subSizes[i]);
     finalStrides.push_back(strides[i]);
+#ifndef NDEBUG
+    // Assert that the computed stride matches the stride of the result type of
+    // the subview op (if both are static).
+    std::optional<int64_t> computedStride = getConstantIntValue(strides[i]);
+    if (computedStride && !ShapedType::isDynamic(resultStrides[j]))
+      assert(*computedStride == resultStrides[j] &&
+             "mismatch between computed stride and result type stride");
+    ++j;
+#endif // NDEBUG
   }
   assert(finalSizes.size() == subRank &&
          "Should have populated all the values at this point");
@@ -526,6 +550,89 @@ getCollapsedStride(memref::CollapseShapeOp collapseShape, OpBuilder &builder,
   return {makeComposedFoldedAffineMin(builder, collapseShape.getLoc(), minMap,
                                       groupStrides)};
 }
+
+/// From `reshape_like(memref, subSizes, subStrides))` compute
+///
+/// \verbatim
+/// baseBuffer, baseOffset, baseSizes, baseStrides =
+///     extract_strided_metadata(memref)
+/// strides#i = baseStrides#i * subStrides#i
+/// sizes = subSizes
+/// \endverbatim
+///
+/// and return {baseBuffer, baseOffset, sizes, strides}
+template <typename ReassociativeReshapeLikeOp>
+static FailureOr<StridedMetadata> resolveReshapeStridedMetadata(
+    RewriterBase &rewriter, ReassociativeReshapeLikeOp reshape,
+    function_ref<SmallVector<OpFoldResult>(
+        ReassociativeReshapeLikeOp, OpBuilder &,
+        ArrayRef<OpFoldResult> /*origSizes*/, unsigned /*groupId*/)>
+        getReshapedSizes,
+    function_ref<SmallVector<OpFoldResult>(
+        ReassociativeReshapeLikeOp, OpBuilder &,
+        ArrayRef<OpFoldResult> /*origSizes*/,
+        ArrayRef<OpFoldResult> /*origStrides*/, unsigned /*groupId*/)>
+        getReshapedStrides) {
+  // Build a plain extract_strided_metadata(memref) from
+  // extract_strided_metadata(reassociative_reshape_like(memref)).
+  Location origLoc = reshape.getLoc();
+  Value source = reshape.getSrc();
+  auto sourceType = cast<MemRefType>(source.getType());
+  unsigned sourceRank = sourceType.getRank();
+
+  auto newExtractStridedMetadata =
+      rewriter.create<memref::ExtractStridedMetadataOp>(origLoc, source);
+
+  // Collect statically known information.
+  auto [strides, offset] = getStridesAndOffset(sourceType);
+  MemRefType reshapeType = reshape.getResultType();
+  unsigned reshapeRank = reshapeType.getRank();
+
+  OpFoldResult offsetOfr =
+      ShapedType::isDynamic(offset)
+          ? getAsOpFoldResult(newExtractStridedMetadata.getOffset())
+          : rewriter.getIndexAttr(offset);
+
+  // Get the special case of 0-D out of the way.
+  if (sourceRank == 0) {
+    SmallVector<OpFoldResult> ones(reshapeRank, rewriter.getIndexAttr(1));
+    return StridedMetadata{newExtractStridedMetadata.getBaseBuffer(), offsetOfr,
+                           /*sizes=*/ones, /*strides=*/ones};
+  }
+
+  SmallVector<OpFoldResult> finalSizes;
+  finalSizes.reserve(reshapeRank);
+  SmallVector<OpFoldResult> finalStrides;
+  finalStrides.reserve(reshapeRank);
+
+  // Compute the reshaped strides and sizes from the base strides and sizes.
+  SmallVector<OpFoldResult> origSizes =
+      getAsOpFoldResult(newExtractStridedMetadata.getSizes());
+  SmallVector<OpFoldResult> origStrides =
+      getAsOpFoldResult(newExtractStridedMetadata.getStrides());
+  unsigned idx = 0, endIdx = reshape.getReassociationIndices().size();
+  for (; idx != endIdx; ++idx) {
+    SmallVector<OpFoldResult> reshapedSizes =
+        getReshapedSizes(reshape, rewriter, origSizes, /*groupId=*/idx);
+    SmallVector<OpFoldResult> reshapedStrides = getReshapedStrides(
+        reshape, rewriter, origSizes, origStrides, /*groupId=*/idx);
+
+    unsigned groupSize = reshapedSizes.size();
+    for (unsigned i = 0; i < groupSize; ++i) {
+      finalSizes.push_back(reshapedSizes[i]);
+      finalStrides.push_back(reshapedStrides[i]);
+    }
+  }
+  assert(((isa<memref::ExpandShapeOp>(reshape) && idx == sourceRank) ||
+          (isa<memref::CollapseShapeOp>(reshape) && idx == reshapeRank)) &&
+         "We should have visited all the input dimensions");
+  assert(finalSizes.size() == reshapeRank &&
+         "We should have populated all the values");
+
+  return StridedMetadata{newExtractStridedMetadata.getBaseBuffer(), offsetOfr,
+                         finalSizes, finalStrides};
+}
+
 /// Replace `baseBuffer, offset, sizes, strides =
 ///              extract_strided_metadata(reshapeLike(memref))`
 /// With
@@ -556,68 +663,65 @@ public:
 
   LogicalResult matchAndRewrite(ReassociativeReshapeLikeOp reshape,
                                 PatternRewriter &rewriter) const override {
-    // Build a plain extract_strided_metadata(memref) from
-    // extract_strided_metadata(reassociative_reshape_like(memref)).
-    Location origLoc = reshape.getLoc();
-    Value source = reshape.getSrc();
-    auto sourceType = cast<MemRefType>(source.getType());
-    unsigned sourceRank = sourceType.getRank();
-
-    auto newExtractStridedMetadata =
-        rewriter.create<memref::ExtractStridedMetadataOp>(origLoc, source);
-
-    // Collect statically known information.
-    auto [strides, offset] = getStridesAndOffset(sourceType);
-    MemRefType reshapeType = reshape.getResultType();
-    unsigned reshapeRank = reshapeType.getRank();
-
-    OpFoldResult offsetOfr =
-        ShapedType::isDynamic(offset)
-            ? getAsOpFoldResult(newExtractStridedMetadata.getOffset())
-            : rewriter.getIndexAttr(offset);
-
-    // Get the special case of 0-D out of the way.
-    if (sourceRank == 0) {
-      SmallVector<OpFoldResult> ones(reshapeRank, rewriter.getIndexAttr(1));
-      auto memrefDesc = rewriter.create<memref::ReinterpretCastOp>(
-          origLoc, reshapeType, newExtractStridedMetadata.getBaseBuffer(),
-          offsetOfr, /*sizes=*/ones, /*strides=*/ones);
-      rewriter.replaceOp(reshape, memrefDesc.getResult());
-      return success();
+    FailureOr<StridedMetadata> stridedMetadata =
+        resolveReshapeStridedMetadata<ReassociativeReshapeLikeOp>(
+            rewriter, reshape, getReshapedSizes, getReshapedStrides);
+    if (failed(stridedMetadata)) {
+      return rewriter.notifyMatchFailure(reshape,
+                                         "failed to resolve reshape metadata");
     }
 
-    SmallVector<OpFoldResult> finalSizes;
-    finalSizes.reserve(reshapeRank);
-    SmallVector<OpFoldResult> finalStrides;
-    finalStrides.reserve(reshapeRank);
+    rewriter.replaceOpWithNewOp<memref::ReinterpretCastOp>(
+        reshape, reshape.getType(), stridedMetadata->basePtr,
+        stridedMetadata->offset, stridedMetadata->sizes,
+        stridedMetadata->strides);
+    return success();
+  }
+};
 
-    // Compute the reshaped strides and sizes from the base strides and sizes.
-    SmallVector<OpFoldResult> origSizes =
-        getAsOpFoldResult(newExtractStridedMetadata.getSizes());
-    SmallVector<OpFoldResult> origStrides =
-        getAsOpFoldResult(newExtractStridedMetadata.getStrides());
-    unsigned idx = 0, endIdx = reshape.getReassociationIndices().size();
-    for (; idx != endIdx; ++idx) {
-      SmallVector<OpFoldResult> reshapedSizes =
-          getReshapedSizes(reshape, rewriter, origSizes, /*groupId=*/idx);
-      SmallVector<OpFoldResult> reshapedStrides = getReshapedStrides(
-          reshape, rewriter, origSizes, origStrides, /*groupId=*/idx);
+/// Pattern to replace `extract_strided_metadata(collapse_shape)`
+/// With
+///
+/// \verbatim
+/// baseBuffer, baseOffset, baseSizes, baseStrides =
+///     extract_strided_metadata(memref)
+/// strides#i = baseStrides#i * subSizes#i
+/// offset = baseOffset + sum(subOffset#i * baseStrides#i)
+/// sizes = subSizes
+/// \verbatim
+///
+/// with `baseBuffer`, `offset`, `sizes` and `strides` being
+/// the replacements for the original `extract_strided_metadata`.
+struct ExtractStridedMetadataOpCollapseShapeFolder
+    : OpRewritePattern<memref::ExtractStridedMetadataOp> {
+  using OpRewritePattern::OpRewritePattern;
 
-      unsigned groupSize = reshapedSizes.size();
-      for (unsigned i = 0; i < groupSize; ++i) {
-        finalSizes.push_back(reshapedSizes[i]);
-        finalStrides.push_back(reshapedStrides[i]);
-      }
+  LogicalResult matchAndRewrite(memref::ExtractStridedMetadataOp op,
+                                PatternRewriter &rewriter) const override {
+    auto collapseShapeOp =
+        op.getSource().getDefiningOp<memref::CollapseShapeOp>();
+    if (!collapseShapeOp)
+      return failure();
+
+    FailureOr<StridedMetadata> stridedMetadata =
+        resolveReshapeStridedMetadata<memref::CollapseShapeOp>(
+            rewriter, collapseShapeOp, getCollapsedSize, getCollapsedStride);
+    if (failed(stridedMetadata)) {
+      return rewriter.notifyMatchFailure(
+          op,
+          "failed to resolve metadata in terms of source collapse_shape op");
     }
-    assert(((isa<memref::ExpandShapeOp>(reshape) && idx == sourceRank) ||
-            (isa<memref::CollapseShapeOp>(reshape) && idx == reshapeRank)) &&
-           "We should have visited all the input dimensions");
-    assert(finalSizes.size() == reshapeRank &&
-           "We should have populated all the values");
-    auto memrefDesc = rewriter.create<memref::ReinterpretCastOp>(
-        origLoc, reshapeType, newExtractStridedMetadata.getBaseBuffer(),
-        offsetOfr, finalSizes, finalStrides);
-    rewriter.replaceOp(reshape, memrefDesc.getResult());
+
+    Location loc = collapseShapeOp.getLoc();
+    SmallVector<Value> results;
+    results.push_back(stridedMetadata->basePtr);
+    results.push_back(getValueOrCreateConstantIndexOp(rewriter, loc,
+                                                      stridedMetadata->offset));
+    results.append(
+        getValueOrCreateConstantIndexOp(rewriter, loc, stridedMetadata->sizes));
+    results.append(getValueOrCreateConstantIndexOp(rewriter, loc,
+                                                   stridedMetadata->strides));
+    rewriter.replaceOp(op, results);
     return success();
   }
 };
@@ -797,7 +901,7 @@ class RewriteExtractAlignedPointerAsIndexOfViewLikeOp
         extractOp.getSource().getDefiningOp<ViewLikeOpInterface>();
     if (!viewLikeOp)
       return rewriter.notifyMatchFailure(extractOp, "not a ViewLike source");
-    rewriter.updateRootInPlace(extractOp, [&]() {
+    rewriter.modifyOpInPlace(extractOp, [&]() {
       extractOp.getSourceMutable().assign(viewLikeOp.getViewSource());
     });
     return success();
@@ -994,9 +1098,11 @@ void memref::populateExpandStridedMetadataPatterns(
                              getCollapsedStride>,
                ExtractStridedMetadataOpAllocFolder<memref::AllocOp>,
                ExtractStridedMetadataOpAllocFolder<memref::AllocaOp>,
+               ExtractStridedMetadataOpCollapseShapeFolder,
                ExtractStridedMetadataOpGetGlobalFolder,
                RewriteExtractAlignedPointerAsIndexOfViewLikeOp,
                ExtractStridedMetadataOpReinterpretCastFolder,
+               ExtractStridedMetadataOpSubviewFolder,
                ExtractStridedMetadataOpCastFolder,
                ExtractStridedMetadataOpExtractStridedMetadataFolder>(
       patterns.getContext());
@@ -1006,6 +1112,7 @@ void memref::populateResolveExtractStridedMetadataPatterns(
     RewritePatternSet &patterns) {
   patterns.add<ExtractStridedMetadataOpAllocFolder<memref::AllocOp>,
                ExtractStridedMetadataOpAllocFolder<memref::AllocaOp>,
+               ExtractStridedMetadataOpCollapseShapeFolder,
                ExtractStridedMetadataOpGetGlobalFolder,
                ExtractStridedMetadataOpSubviewFolder,
                RewriteExtractAlignedPointerAsIndexOfViewLikeOp,

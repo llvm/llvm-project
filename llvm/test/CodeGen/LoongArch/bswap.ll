@@ -83,20 +83,20 @@ define i48 @test_bswap_i48(i48 %a) nounwind {
 define i80 @test_bswap_i80(i80 %a) nounwind {
 ; LA32-LABEL: test_bswap_i80:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    ld.w $a2, $a1, 0
+; LA32-NEXT:    ld.w $a2, $a1, 4
+; LA32-NEXT:    ld.w $a3, $a1, 8
+; LA32-NEXT:    ld.w $a1, $a1, 0
 ; LA32-NEXT:    revb.2h $a2, $a2
 ; LA32-NEXT:    rotri.w $a2, $a2, 16
-; LA32-NEXT:    ld.w $a3, $a1, 4
 ; LA32-NEXT:    revb.2h $a3, $a3
 ; LA32-NEXT:    rotri.w $a3, $a3, 16
-; LA32-NEXT:    bytepick.w $a4, $a3, $a2, 2
-; LA32-NEXT:    st.w $a4, $a0, 4
-; LA32-NEXT:    ld.w $a1, $a1, 8
+; LA32-NEXT:    bytepick.w $a3, $a3, $a2, 2
 ; LA32-NEXT:    revb.2h $a1, $a1
 ; LA32-NEXT:    rotri.w $a1, $a1, 16
-; LA32-NEXT:    bytepick.w $a1, $a1, $a3, 2
-; LA32-NEXT:    st.w $a1, $a0, 0
-; LA32-NEXT:    srli.w $a1, $a2, 16
+; LA32-NEXT:    bytepick.w $a2, $a2, $a1, 2
+; LA32-NEXT:    srli.w $a1, $a1, 16
+; LA32-NEXT:    st.w $a2, $a0, 4
+; LA32-NEXT:    st.w $a3, $a0, 0
 ; LA32-NEXT:    st.h $a1, $a0, 8
 ; LA32-NEXT:    ret
 ;
@@ -114,22 +114,22 @@ define i80 @test_bswap_i80(i80 %a) nounwind {
 define i128 @test_bswap_i128(i128 %a) nounwind {
 ; LA32-LABEL: test_bswap_i128:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    ld.w $a2, $a1, 0
+; LA32-NEXT:    ld.w $a2, $a1, 12
+; LA32-NEXT:    ld.w $a3, $a1, 0
+; LA32-NEXT:    ld.w $a4, $a1, 8
+; LA32-NEXT:    ld.w $a1, $a1, 4
 ; LA32-NEXT:    revb.2h $a2, $a2
 ; LA32-NEXT:    rotri.w $a2, $a2, 16
-; LA32-NEXT:    st.w $a2, $a0, 12
-; LA32-NEXT:    ld.w $a2, $a1, 4
-; LA32-NEXT:    revb.2h $a2, $a2
-; LA32-NEXT:    rotri.w $a2, $a2, 16
-; LA32-NEXT:    st.w $a2, $a0, 8
-; LA32-NEXT:    ld.w $a2, $a1, 8
-; LA32-NEXT:    revb.2h $a2, $a2
-; LA32-NEXT:    rotri.w $a2, $a2, 16
-; LA32-NEXT:    st.w $a2, $a0, 4
-; LA32-NEXT:    ld.w $a1, $a1, 12
+; LA32-NEXT:    revb.2h $a4, $a4
+; LA32-NEXT:    rotri.w $a4, $a4, 16
 ; LA32-NEXT:    revb.2h $a1, $a1
 ; LA32-NEXT:    rotri.w $a1, $a1, 16
-; LA32-NEXT:    st.w $a1, $a0, 0
+; LA32-NEXT:    revb.2h $a3, $a3
+; LA32-NEXT:    rotri.w $a3, $a3, 16
+; LA32-NEXT:    st.w $a3, $a0, 12
+; LA32-NEXT:    st.w $a1, $a0, 8
+; LA32-NEXT:    st.w $a4, $a0, 4
+; LA32-NEXT:    st.w $a2, $a0, 0
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: test_bswap_i128:

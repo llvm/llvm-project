@@ -9,15 +9,19 @@
 #ifndef _LIBCPP___ALGORITHM_PSTL_ROTATE_COPY_H
 #define _LIBCPP___ALGORITHM_PSTL_ROTATE_COPY_H
 
-#include <__algorithm/pstl_backend.h>
 #include <__algorithm/pstl_copy.h>
 #include <__algorithm/pstl_frontend_dispatch.h>
+#include <__iterator/cpp17_iterator_concepts.h>
+#include <__pstl/configuration.h>
 #include <__type_traits/is_execution_policy.h>
 #include <optional>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
+
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
 
 #if !defined(_LIBCPP_HAS_NO_INCOMPLETE_PSTL) && _LIBCPP_STD_VER >= 17
 
@@ -66,6 +70,10 @@ _LIBCPP_HIDE_FROM_ABI _ForwardOutIterator rotate_copy(
     _ForwardIterator __middle,
     _ForwardIterator __last,
     _ForwardOutIterator __result) {
+  _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardIterator, "rotate_copy requires ForwardIterators");
+  _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardOutIterator, "rotate_copy requires ForwardIterators");
+  _LIBCPP_REQUIRE_CPP17_OUTPUT_ITERATOR(
+      _ForwardOutIterator, decltype(*__first), "rotate_copy requires an OutputIterator");
   auto __res =
       std::__rotate_copy(__policy, std::move(__first), std::move(__middle), std::move(__last), std::move(__result));
   if (!__res)
@@ -76,5 +84,7 @@ _LIBCPP_HIDE_FROM_ABI _ForwardOutIterator rotate_copy(
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // !defined(_LIBCPP_HAS_NO_INCOMPLETE_PSTL) && _LIBCPP_STD_VER >= 17
+
+_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___ALGORITHM_PSTL_ROTATE_COPY_H

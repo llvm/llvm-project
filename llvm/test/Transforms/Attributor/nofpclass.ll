@@ -54,6 +54,18 @@ define float @returned_poison() {
   ret float poison
 }
 
+; Know nothing
+define float @returned_freeze_poison() {
+; CHECK-LABEL: define noundef float @returned_freeze_poison() {
+; CHECK-NEXT:    call void @unknown()
+; CHECK-NEXT:    [[FREEZE_POISON:%.*]] = freeze float poison
+; CHECK-NEXT:    ret float [[FREEZE_POISON]]
+;
+  call void @unknown()
+  %freeze.poison = freeze float poison
+  ret float %freeze.poison
+}
+
 define double @returned_snan() {
 ; CHECK-LABEL: define noundef nofpclass(qnan inf zero sub norm) double @returned_snan() {
 ; CHECK-NEXT:    call void @unknown()
@@ -100,14 +112,24 @@ define <2 x double> @returned_strange_constant_vector_elt() {
   ret <2 x double> <double -0.0, double bitcast (i64 ptrtoint (ptr @unknown to i64) to double)>
 }
 
-; Test a vector element that's an undef/poison
+; Test a vector element that's undef
 define <3 x double> @returned_undef_constant_vector_elt() {
-; CHECK-LABEL: define nofpclass(nan inf pzero sub norm) <3 x double> @returned_undef_constant_vector_elt() {
+; CHECK-LABEL: define nofpclass(nan inf sub norm) <3 x double> @returned_undef_constant_vector_elt() {
 ; CHECK-NEXT:    call void @unknown()
-; CHECK-NEXT:    ret <3 x double> <double -0.000000e+00, double poison, double undef>
+; CHECK-NEXT:    ret <3 x double> <double -0.000000e+00, double 0.000000e+00, double undef>
 ;
   call void @unknown()
-  ret <3 x double> <double -0.0, double poison, double undef>
+  ret <3 x double> <double -0.0, double 0.0, double undef>
+}
+
+; Test a vector element that's poison
+define <3 x double> @returned_poison_constant_vector_elt() {
+; CHECK-LABEL: define nofpclass(nan inf sub norm) <3 x double> @returned_poison_constant_vector_elt() {
+; CHECK-NEXT:    call void @unknown()
+; CHECK-NEXT:    ret <3 x double> <double -0.000000e+00, double 0.000000e+00, double poison>
+;
+  call void @unknown()
+  ret <3 x double> <double -0.0, double 0.0, double poison>
 }
 
 define <2 x double> @returned_qnan_zero_vector() {
@@ -1513,6 +1535,25 @@ define <4 x float> @insertelement_constant_chain() {
   ret <4 x float> %ins.3
 }
 
+define <4 x float> @insertelement_non_constant_chain(i32 %idx) {
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; CHECK-LABEL: define nofpclass(nan inf nzero sub) <4 x float> @insertelement_non_constant_chain
+; CHECK-SAME: (i32 [[IDX:%.*]]) #[[ATTR3]] {
+; CHECK-NEXT:    [[INS_0:%.*]] = insertelement <4 x float> poison, float 1.000000e+00, i32 0
+; CHECK-NEXT:    [[INS_1:%.*]] = insertelement <4 x float> [[INS_0]], float 0.000000e+00, i32 1
+; CHECK-NEXT:    [[INS_2:%.*]] = insertelement <4 x float> [[INS_1]], float -9.000000e+00, i32 2
+; CHECK-NEXT:    [[INS_4:%.*]] = insertelement <4 x float> [[INS_2]], float 3.000000e+00, i32 3
+; CHECK-NEXT:    [[INS_3:%.*]] = insertelement <4 x float> [[INS_2]], float 4.000000e+00, i32 [[IDX]]
+; CHECK-NEXT:    ret <4 x float> [[INS_3]]
+;
+  %ins.0 = insertelement <4 x float> poison, float 1.0, i32 0
+  %ins.1 = insertelement <4 x float> %ins.0, float 0.0, i32 1
+  %ins.2 = insertelement <4 x float> %ins.1, float -9.0, i32 2
+  %ins.3 = insertelement <4 x float> %ins.2, float 3.0, i32 3
+  %ins.4 = insertelement <4 x float> %ins.2, float 4.0, i32 %idx
+  ret <4 x float> %ins.4
+}
+
 define <vscale x 4 x float> @insertelement_scalable_constant_chain() {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define <vscale x 4 x float> @insertelement_scalable_constant_chain
@@ -1582,7 +1623,7 @@ define float @insertelement_extractelement_unknown(<4 x float> nofpclass(zero) %
 
 define <4 x float> @insertelement_index_oob_chain() {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
-; CHECK-LABEL: define <4 x float> @insertelement_index_oob_chain
+; CHECK-LABEL: define nofpclass(nan ninf nzero sub norm) <4 x float> @insertelement_index_oob_chain
 ; CHECK-SAME: () #[[ATTR3]] {
 ; CHECK-NEXT:    [[INSERT:%.*]] = insertelement <4 x float> zeroinitializer, float 0x7FF0000000000000, i32 4
 ; CHECK-NEXT:    ret <4 x float> [[INSERT]]
@@ -1771,6 +1812,32 @@ define float @shufflevector_extractelt3(<2 x float> %arg0, <2 x float> nofpclass
   ret float %extract
 }
 
+define float @shufflevector_constantdatavector_demanded0() {
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; CHECK-LABEL: define nofpclass(nan inf zero sub nnorm) float @shufflevector_constantdatavector_demanded0
+; CHECK-SAME: () #[[ATTR3]] {
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <3 x float> <float 1.000000e+00, float 0x7FF8000000000000, float 0.000000e+00>, <3 x float> poison, <2 x i32> <i32 0, i32 2>
+; CHECK-NEXT:    [[EXTRACT:%.*]] = extractelement <2 x float> [[SHUFFLE]], i32 0
+; CHECK-NEXT:    ret float [[EXTRACT]]
+;
+  %shuffle = shufflevector <3 x float> <float 1.0, float 0x7FF8000000000000, float 0.0>, <3 x float> poison, <2 x i32> <i32 0, i32 2>
+  %extract = extractelement <2 x float> %shuffle, i32 0
+  ret float %extract
+}
+
+define float @shufflevector_constantdatavector_demanded1() {
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; CHECK-LABEL: define nofpclass(nan inf nzero sub norm) float @shufflevector_constantdatavector_demanded1
+; CHECK-SAME: () #[[ATTR3]] {
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <3 x float> <float 1.000000e+00, float 0x7FF8000000000000, float 0.000000e+00>, <3 x float> poison, <2 x i32> <i32 0, i32 2>
+; CHECK-NEXT:    [[EXTRACT:%.*]] = extractelement <2 x float> [[SHUFFLE]], i32 1
+; CHECK-NEXT:    ret float [[EXTRACT]]
+;
+  %shuffle = shufflevector <3 x float> <float 1.0, float 0x7FF8000000000000, float 0.0>, <3 x float> poison, <2 x i32> <i32 0, i32 2>
+  %extract = extractelement <2 x float> %shuffle, i32 1
+  ret float %extract
+}
+
 define i32 @fptosi(float nofpclass(inf nan) %arg) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define i32 @fptosi
@@ -1813,7 +1880,7 @@ define double @fpext(float nofpclass(inf nan) %arg) {
 define float @atomicrmw_fadd(ptr %ptr, float nofpclass(inf nan) %val) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nounwind willreturn memory(argmem: readwrite)
 ; CHECK-LABEL: define float @atomicrmw_fadd
-; CHECK-SAME: (ptr nocapture nofree noundef nonnull dereferenceable(4) [[PTR:%.*]], float nofpclass(nan inf) [[VAL:%.*]]) #[[ATTR6:[0-9]+]] {
+; CHECK-SAME: (ptr nocapture nofree noundef nonnull align 4 dereferenceable(4) [[PTR:%.*]], float nofpclass(nan inf) [[VAL:%.*]]) #[[ATTR6:[0-9]+]] {
 ; CHECK-NEXT:    [[RESULT:%.*]] = atomicrmw fadd ptr [[PTR]], float [[VAL]] seq_cst, align 4
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
@@ -2585,6 +2652,33 @@ define internal float @pow_impl(float %arg, float %arg1) {
 bb:
   %implement.pow = call float asm " ; do pow $0, $1, $2", "=v,v,v"(float %arg, float %arg1)
   ret float %implement.pow
+}
+
+define [4 x float] @constant_aggregate_zero() {
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; CHECK-LABEL: define nofpclass(nan inf nzero sub norm) [4 x float] @constant_aggregate_zero
+; CHECK-SAME: () #[[ATTR3]] {
+; CHECK-NEXT:    ret [4 x float] zeroinitializer
+;
+  ret [4 x float] zeroinitializer
+}
+
+define <vscale x 4 x float> @scalable_splat_pnorm() {
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; CHECK-LABEL: define <vscale x 4 x float> @scalable_splat_pnorm
+; CHECK-SAME: () #[[ATTR3]] {
+; CHECK-NEXT:    ret <vscale x 4 x float> shufflevector (<vscale x 4 x float> insertelement (<vscale x 4 x float> poison, float 1.000000e+00, i64 0), <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer)
+;
+  ret <vscale x 4 x float> splat (float 1.0)
+}
+
+define <vscale x 4 x float> @scalable_splat_zero() {
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; CHECK-LABEL: define noundef nofpclass(nan inf nzero sub norm) <vscale x 4 x float> @scalable_splat_zero
+; CHECK-SAME: () #[[ATTR3]] {
+; CHECK-NEXT:    ret <vscale x 4 x float> zeroinitializer
+;
+  ret <vscale x 4 x float> zeroinitializer
 }
 
 declare i64 @_Z13get_global_idj(i32 noundef)

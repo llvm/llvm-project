@@ -104,9 +104,9 @@ static inline void *UntagPtr(const void *tagged_ptr) {
 }
 
 static inline uptr AddTagToPointer(uptr p, tag_t tag) {
-  return InTaggableRegion(p)
-             ? ((p & ~kAddressTagMask) | ((uptr)tag << kAddressTagShift))
-             : p;
+  return InTaggableRegion(p) ? ((p & ~kAddressTagMask) |
+                                ((uptr)(tag & kTagMask) << kAddressTagShift))
+                             : p;
 }
 
 namespace __hwasan {

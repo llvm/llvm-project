@@ -60,6 +60,7 @@ libc_support_library(
     name = "atoi_test_helper",
     hdrs = ["AtoiTest.h"],
     deps = [
+        "//libc:__support_cpp_limits",
         "//libc:__support_cpp_type_traits",
         "//libc/test/UnitTest:LibcUnitTest",
     ],

@@ -11,7 +11,7 @@ func.func @single_iteration_some(%A: memref<?x?x?xi32>) {
   scf.parallel (%i0, %i1, %i2) = (%c0, %c3, %c7) to (%c1, %c6, %c10) step (%c1, %c2, %c3) {
     %c42 = arith.constant 42 : i32
     memref.store %c42, %A[%i0, %i1, %i2] : memref<?x?x?xi32>
-    scf.yield
+    scf.reduce
   }
   return
 }
@@ -26,7 +26,7 @@ func.func @single_iteration_some(%A: memref<?x?x?xi32>) {
 // CHECK-DAG:           [[C0:%.*]] = arith.constant 0 : index
 // CHECK:           scf.parallel ([[V0:%.*]]) = ([[C3]]) to ([[C6]]) step ([[C2]]) {
 // CHECK:             memref.store [[C42]], [[ARG0]]{{\[}}[[C0]], [[V0]], [[C7]]] : memref<?x?x?xi32>
-// CHECK:             scf.yield
+// CHECK:             scf.reduce
 // CHECK:           }
 // CHECK:           return
 
@@ -42,7 +42,7 @@ func.func @single_iteration_all(%A: memref<?x?x?xi32>) {
   scf.parallel (%i0, %i1, %i2) = (%c0, %c3, %c7) to (%c1, %c6, %c10) step (%c1, %c3, %c3) {
     %c42 = arith.constant 42 : i32
     memref.store %c42, %A[%i0, %i1, %i2] : memref<?x?x?xi32>
-    scf.yield
+    scf.reduce
   }
   return
 }
@@ -55,7 +55,7 @@ func.func @single_iteration_all(%A: memref<?x?x?xi32>) {
 // CHECK-DAG:           [[C0:%.*]] = arith.constant 0 : index
 // CHECK-NOT:           scf.parallel
 // CHECK:               memref.store [[C42]], [[ARG0]]{{\[}}[[C0]], [[C3]], [[C7]]] : memref<?x?x?xi32>
-// CHECK-NOT:           scf.yield
+// CHECK-NOT:           scf.reduce
 // CHECK:               return
 
 // -----
@@ -67,17 +67,15 @@ func.func @single_iteration_reduce(%A: index, %B: index) -> (index, index) {
   %c3 = arith.constant 3 : index
   %c6 = arith.constant 6 : index
   %0:2 = scf.parallel (%i0, %i1) = (%c1, %c3) to (%c2, %c6) step (%c1, %c3) init(%A, %B) -> (index, index) {
-    scf.reduce(%i0) : index {
+    scf.reduce(%i0, %i1 : index, index)  {
     ^bb0(%lhs: index, %rhs: index):
       %1 = arith.addi %lhs, %rhs : index
       scf.reduce.return %1 : index
-    }
-    scf.reduce(%i1) : index {
+    }, {
     ^bb0(%lhs: index, %rhs: index):
       %2 = arith.muli %lhs, %rhs : index
       scf.reduce.return %2 : index
     }
-    scf.yield
   }
   return %0#0, %0#1 : index, index
 }
@@ -109,11 +107,11 @@ func.func @nested_parallel(%0: memref<?x?x?xf64>) -> memref<?x?x?xf64> {
       scf.parallel (%arg3) = (%c0) to (%3) step (%c1) {
         %5 = memref.load %0[%arg1, %arg2, %arg3] : memref<?x?x?xf64>
         memref.store %5, %4[%arg1, %arg2, %arg3] : memref<?x?x?xf64>
-        scf.yield
+        scf.reduce
       }
-      scf.yield
+      scf.reduce
     }
-    scf.yield
+    scf.reduce
   }
   return %4 : memref<?x?x?xf64>
 }
@@ -759,12 +757,11 @@ func.func @remove_empty_parallel_loop(%lb: index, %ub: index, %s: index) {
   // CHECK-NOT: test.transform
   %0 = scf.parallel (%i, %j, %k) = (%lb, %ub, %lb) to (%ub, %ub, %ub) step (%s, %s, %s) init(%init) -> f32 {
     %1 = "test.produce"() : () -> f32
-    scf.reduce(%1) : f32 {
+    scf.reduce(%1 : f32) {
     ^bb0(%lhs: f32, %rhs: f32):
       %2 = "test.transform"(%lhs, %rhs) : (f32, f32) -> f32
       scf.reduce.return %2 : f32
     }
-    scf.yield
   }
   // CHECK: "test.consume"(%[[INIT]])
   "test.consume"(%0) : (f32) -> ()
@@ -1199,6 +1196,35 @@ func.func @while_unused_arg2(%val0: i32) -> i32 {
 // CHECK:           scf.yield
 // CHECK:         }
 // CHECK:         return %[[RES]] : i32
+
+
+// -----
+
+// CHECK-LABEL: func @test_align_args
+//       CHECK:  %[[RES:.*]]:3 = scf.while (%[[ARG0:.*]] = %{{.*}}, %[[ARG1:.*]] = %{{.*}}, %[[ARG2:.*]] = %{{.*}}) : (f32, i32, i64) -> (f32, i32, i64) {
+//       CHECK:  scf.condition(%{{.*}}) %[[ARG0]], %[[ARG1]], %[[ARG2]] : f32, i32, i64
+//       CHECK:  ^bb0(%[[ARG3:.*]]: f32, %[[ARG4:.*]]: i32, %[[ARG5:.*]]: i64):
+//       CHECK:  %[[R1:.*]] = "test.test"(%[[ARG5]]) : (i64) -> f32
+//       CHECK:  %[[R2:.*]] = "test.test"(%[[ARG3]]) : (f32) -> i32
+//       CHECK:  %[[R3:.*]] = "test.test"(%[[ARG4]]) : (i32) -> i64
+//       CHECK:  scf.yield %[[R1]], %[[R2]], %[[R3]] : f32, i32, i64
+//       CHECK:  return %[[RES]]#2, %[[RES]]#0, %[[RES]]#1
+func.func @test_align_args() -> (i64, f32, i32) {
+  %0 = "test.test"() : () -> (f32)
+  %1 = "test.test"() : () -> (i32)
+  %2 = "test.test"() : () -> (i64)
+  %3:3 = scf.while (%arg0 = %0, %arg1 = %1, %arg2 = %2) : (f32, i32, i64) -> (i64, f32, i32) {
+    %cond = "test.test"() : () -> (i1)
+    scf.condition(%cond) %arg2, %arg0, %arg1 : i64, f32, i32
+  } do {
+  ^bb0(%arg3: i64, %arg4: f32, %arg5: i32):
+    %4 = "test.test"(%arg3) : (i64) -> (f32)
+    %5 = "test.test"(%arg4) : (f32) -> (i32)
+    %6 = "test.test"(%arg5) : (i32) -> (i64)
+    scf.yield %4, %5, %6 : f32, i32, i64
+  }
+  return %3#0, %3#1, %3#2 : i64, f32, i32
+}
 
 
 // -----

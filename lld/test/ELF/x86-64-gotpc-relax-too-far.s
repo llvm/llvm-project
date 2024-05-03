@@ -5,7 +5,10 @@
 # RUN: llvm-objdump --no-print-imm-hex -d %t/bin | FileCheck --check-prefix=DISASM %s
 # RUN: llvm-readelf -S %t/bin | FileCheck --check-prefixes=GOT %s
 # RUN: ld.lld -T %t/lds2 %t/a.o -o %t/bin2
-# RUN: llvm-readelf -S %t/bin2 | FileCheck --check-prefixes=UNNECESSARY-GOT %s
+# RUN: llvm-objdump --no-print-imm-hex -d %t/bin2 | FileCheck --check-prefix=DISASM %s
+# RUN: llvm-readelf -S %t/bin2 | FileCheck --check-prefixes=GOT %s
+# RUN: ld.lld -T %t/lds3 %t/a.o -o %t/bin3
+# RUN: llvm-readelf -S %t/bin3 | FileCheck --check-prefixes=UNNECESSARY-GOT %s
 
 # DISASM:      <_foo>:
 # DISASM-NEXT: movl    2097146(%rip), %eax
@@ -47,6 +50,13 @@ SECTIONS {
   data 0x80200000 : { *(data) }
 }
 #--- lds2
+SECTIONS {
+  .text.foo 0x100000 : { *(.text.foo) }
+  .text 0x1ff000 : { . = . + 0x1000 ; *(.text) }
+  .got 0x300000 : { *(.got) }
+  data 0x80200000 : { *(data) }
+}
+#--- lds3
 SECTIONS {
   .text.foo 0x100000 : { *(.text.foo) }
   .text 0x200000 : { *(.text) }

@@ -80,7 +80,7 @@ static std::string getOutputFilePath(llvm::StringRef outputFilename,
   if (!extension.empty() && (inputFilename != "-")) {
     llvm::SmallString<128> path(inputFilename);
     llvm::sys::path::replace_extension(path, extension);
-    outFile = std::string(path.str());
+    outFile = std::string(path);
   }
 
   return outFile;
@@ -257,7 +257,7 @@ getExplicitAndImplicitNVPTXTargetFeatures(clang::DiagnosticsEngine &diags,
     llvm::StringRef userKeyString(llvm::StringRef(userFeature).drop_front(1));
     implicitFeaturesMap[userKeyString.str()] = (userFeature[0] == '+');
     // Check if the user provided a PTX version
-    if (userKeyString.startswith("ptx"))
+    if (userKeyString.starts_with("ptx"))
       ptxVer = true;
   }
 

@@ -24,7 +24,7 @@ struct Y bar(void) {
 
 
 // X86_32: define{{.*}} void @foo(ptr noundef %P)
-// X86_32:   call void @bar(ptr sret(%struct.Y) align 4 %{{[^),]*}})
+// X86_32:   call void @bar(ptr dead_on_unwind writable sret(%struct.Y) align 4 %{{[^),]*}})
 
-// X86_32: define{{.*}} void @bar(ptr noalias sret(%struct.Y) align 4 %{{[^,)]*}})
+// X86_32: define{{.*}} void @bar(ptr dead_on_unwind noalias writable sret(%struct.Y) align 4 %{{[^,)]*}})
 // X86_32:   ret void

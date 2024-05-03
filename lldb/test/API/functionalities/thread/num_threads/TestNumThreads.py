@@ -63,8 +63,9 @@ class NumberOfThreadsTestCase(TestBase):
 
         # Using std::thread may involve extra threads, so we assert that there are
         # at least 4 rather than exactly 4.
-        self.assertTrue(
-            num_threads >= 13,
+        self.assertGreaterEqual(
+            num_threads,
+            13,
             "Number of expected threads and actual threads do not match.",
         )
 
@@ -98,8 +99,9 @@ class NumberOfThreadsTestCase(TestBase):
 
         # Using std::thread may involve extra threads, so we assert that there are
         # at least 10 thread3's rather than exactly 10.
-        self.assertTrue(
-            num_threads >= 10,
+        self.assertGreaterEqual(
+            num_threads,
+            10,
             "Number of expected threads and actual threads do not match.",
         )
 

@@ -15,18 +15,25 @@
 #include "index/Relation.h"
 #include "index/Symbol.h"
 #include "index/SymbolID.h"
+#include "index/SymbolLocation.h"
 #include "index/SymbolOrigin.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
+#include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Index/IndexDataConsumer.h"
 #include "clang/Index/IndexSymbol.h"
 #include "clang/Sema/CodeCompleteConsumer.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
 #include <functional>
 #include <memory>
 #include <optional>
+#include <string>
+#include <utility>
 
 namespace clang {
 namespace clangd {
@@ -177,7 +184,7 @@ private:
 
   // Providers for Symbol.IncludeHeaders.
   // The final spelling is calculated in finish().
-  llvm::DenseMap<SymbolID, std::optional<include_cleaner::Header>>
+  llvm::DenseMap<SymbolID, llvm::SmallVector<include_cleaner::Header>>
       SymbolProviders;
   // Files which contain ObjC symbols.
   // This is finalized and used in finish().

@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -mcpu=tahiti -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=SI %s
+; RUN: llc -mtriple=amdgcn -mcpu=tahiti -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=SI %s
 
 ; SI-LABEL: {{^}}s_or_to_orn2:
 ; SI: s_orn2_b32 s{{[0-9]+}}, s{{[0-9]+}}, 50

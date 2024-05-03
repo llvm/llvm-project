@@ -9,7 +9,7 @@
 
   @x = common local_unnamed_addr global i32 0, align 4
 
-  define void @test(i32* nocapture readonly %p) local_unnamed_addr !dbg !14 {
+  define void @test(ptr nocapture readonly %p) local_unnamed_addr !dbg !14 {
   ; Stripped
   entry:
     br label %block1

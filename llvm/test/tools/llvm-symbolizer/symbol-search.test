@@ -34,6 +34,40 @@ RUN: llvm-symbolizer --obj=%p/Inputs/symbols.so func_01 func_02 | FileCheck --ch
 FUNCS:  /tmp/dbginfo{{[/\]+}}symbols.part1.cpp:12
 FUNCS:  /tmp/dbginfo{{[/\]+}}symbols.part2.cpp:10
 
+# Symbol may be combined with offset.
+RUN: llvm-symbolizer --obj=%p/Inputs/symbols.so func_01+0 | FileCheck --check-prefix=SYMLINE0 %s
+RUN: llvm-addr2line -e %p/Inputs/symbols.so func_01+0 | FileCheck --check-prefix=SYMLINE0 %s
+SYMLINE0: /tmp/dbginfo{{[/\]+}}symbols.part1.cpp:12
+
+RUN: llvm-symbolizer --obj=%p/Inputs/symbols.so func_01+12 | FileCheck --check-prefix=SYMLINE1 %s
+RUN: llvm-addr2line -e %p/Inputs/symbols.so func_01+12 | FileCheck --check-prefix=SYMLINE1 %s
+SYMLINE1: /tmp/dbginfo{{[/\]+}}symbols.part1.cpp:13
+
+RUN: llvm-symbolizer --obj=%p/Inputs/symbols.so func_01+19 | FileCheck --check-prefix=SYMLINE2 %s
+RUN: llvm-addr2line -e %p/Inputs/symbols.so func_01+19 | FileCheck --check-prefix=SYMLINE2 %s
+SYMLINE2: /tmp/dbginfo{{[/\]+}}symbols.part1.cpp:14
+
+# Offset can be specified with various bases.
+RUN: llvm-symbolizer --obj=%p/Inputs/symbols.so func_01+0x0C | FileCheck --check-prefix=SYMLINE1 %s
+RUN: llvm-addr2line -e %p/Inputs/symbols.so func_01+0x0C | FileCheck --check-prefix=SYMLINE1 %s
+
+RUN: llvm-symbolizer --obj=%p/Inputs/symbols.so func_01+014 | FileCheck --check-prefix=SYMLINE1 %s
+RUN: llvm-addr2line -e %p/Inputs/symbols.so func_01+014 | FileCheck --check-prefix=SYMLINE1 %s
+
+# If '+' is not followed by a number, it is part of the symbol name, not an offset separator.
+RUN: llvm-symbolizer --obj=%p/Inputs/symbols.so func_01+ | FileCheck --check-prefix=NONEXISTENT %s
+RUN: llvm-addr2line --obj=%p/Inputs/symbols.so func_01+ | FileCheck --check-prefix=NONEXISTENT %s
+
+RUN: llvm-symbolizer --obj=%p/Inputs/symbols.so func_01+abc | FileCheck --check-prefix=NONEXISTENT %s
+RUN: llvm-addr2line --obj=%p/Inputs/symbols.so func_01+abc | FileCheck --check-prefix=NONEXISTENT %s
+
+RUN: llvm-symbolizer --obj=%p/Inputs/symbols.so func_01+0A | FileCheck --check-prefix=NONEXISTENT %s
+RUN: llvm-addr2line --obj=%p/Inputs/symbols.so func_01+0A | FileCheck --check-prefix=NONEXISTENT %s
+
+# If '+' is not preceded by a symbol, it is part of a symbol name, not an offset separator.
+RUN: llvm-symbolizer --obj=%p/Inputs/symbols.so +0x1138 | FileCheck --check-prefix=NONEXISTENT %s
+RUN: llvm-addr2line --obj=%p/Inputs/symbols.so +0x1138 | FileCheck --check-prefix=NONEXISTENT %s
+
 # Show that C++ mangled names may be specified.
 RUN: llvm-addr2line --obj=%p/Inputs/symbols.so _ZL14static_func_01i | FileCheck --check-prefix=MULTI-CXX %s
 RUN: llvm-symbolizer --obj=%p/Inputs/symbols.so _ZL14static_func_01i | FileCheck --check-prefix=MULTI-CXX %s

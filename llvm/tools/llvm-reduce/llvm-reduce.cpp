@@ -100,6 +100,8 @@ static cl::opt<int>
                                "of delta passes (default=5)"),
                       cl::init(5), cl::cat(LLVMReduceOptions));
 
+extern cl::opt<cl::boolOrDefault> PreserveInputDbgFormat;
+
 static codegen::RegisterCodeGenFlags CGF;
 
 /// Turn off crash debugging features
@@ -139,6 +141,7 @@ static std::pair<StringRef, bool> determineOutputType(bool IsMIR,
 int main(int Argc, char **Argv) {
   InitLLVM X(Argc, Argv);
   const StringRef ToolName(Argv[0]);
+  PreserveInputDbgFormat = cl::boolOrDefault::BOU_TRUE;
 
   cl::HideUnrelatedOptions({&LLVMReduceOptions, &getColorCategory()});
   cl::ParseCommandLineOptions(Argc, Argv, "LLVM automatic testcase reducer.\n");

@@ -14,8 +14,7 @@ define i1 @addition_with_extra_facts_and_args_ult_i64(i64 noundef %a, i64 nounde
 ; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i64 [[B]], [[A]]
 ; CHECK-NEXT:    [[CMP_ADD:%.*]] = icmp ult i64 [[ADD]], [[C]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP_ADD]])
-; CHECK-NEXT:    [[T:%.*]] = icmp ult i64 [[A]], [[C]]
-; CHECK-NEXT:    ret i1 [[T]]
+; CHECK-NEXT:    ret i1 true
 ;
 entry:
   %cmp.a = icmp ule i64 %a, 2048
@@ -40,8 +39,7 @@ define i1 @addition_with_extra_facts_and_args_ult_1(i16 noundef %a, i16 noundef 
 ; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i16 [[B]], [[A]]
 ; CHECK-NEXT:    [[CMP_ADD:%.*]] = icmp ult i16 [[ADD]], [[C]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP_ADD]])
-; CHECK-NEXT:    [[T:%.*]] = icmp ult i16 [[A]], [[C]]
-; CHECK-NEXT:    ret i1 [[T]]
+; CHECK-NEXT:    ret i1 true
 ;
 entry:
   %cmp.a = icmp ule i16 %a, 2048
@@ -66,8 +64,7 @@ define i1 @addition_with_extra_facts_and_args_ult_2(i16 noundef %a, i16 noundef 
 ; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i16 [[B]], [[A]]
 ; CHECK-NEXT:    [[CMP_ADD:%.*]] = icmp ult i16 [[ADD]], [[C]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP_ADD]])
-; CHECK-NEXT:    [[T:%.*]] = icmp ult i16 [[B]], [[C]]
-; CHECK-NEXT:    ret i1 [[T]]
+; CHECK-NEXT:    ret i1 true
 ;
 entry:
   %cmp.a = icmp ule i16 %a, 2048
@@ -92,8 +89,7 @@ define i1 @addition_with_extra_facts_and_args_ult_3(i16 noundef %a, i16 noundef 
 ; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i16 [[B]], [[A]]
 ; CHECK-NEXT:    [[CMP_ADD:%.*]] = icmp ult i16 [[ADD]], [[C]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP_ADD]])
-; CHECK-NEXT:    [[F:%.*]] = icmp uge i16 [[A]], [[C]]
-; CHECK-NEXT:    ret i1 [[F]]
+; CHECK-NEXT:    ret i1 false
 ;
 entry:
   %cmp.a = icmp ule i16 %a, 2048
@@ -118,8 +114,7 @@ define i1 @addition_with_extra_facts_and_args_ult_4(i16 noundef %a, i16 noundef 
 ; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i16 [[B]], [[A]]
 ; CHECK-NEXT:    [[CMP_ADD:%.*]] = icmp ult i16 [[ADD]], [[C]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP_ADD]])
-; CHECK-NEXT:    [[F:%.*]] = icmp uge i16 [[B]], [[C]]
-; CHECK-NEXT:    ret i1 [[F]]
+; CHECK-NEXT:    ret i1 false
 ;
 entry:
   %cmp.a = icmp ule i16 %a, 2048
@@ -201,8 +196,7 @@ define i1 @addition_with_extra_facts_and_return_value_ult_1() {
 ; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i16 [[B]], [[A]]
 ; CHECK-NEXT:    [[CMP_ADD:%.*]] = icmp ult i16 [[ADD]], [[C]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP_ADD]])
-; CHECK-NEXT:    [[T:%.*]] = icmp ult i16 [[A]], [[C]]
-; CHECK-NEXT:    ret i1 [[T]]
+; CHECK-NEXT:    ret i1 true
 ;
 entry:
   %a = call i16 @get()
@@ -232,8 +226,7 @@ define i1 @addition_with_extra_facts_and_return_value_ult_2() {
 ; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i16 [[B]], [[A]]
 ; CHECK-NEXT:    [[CMP_ADD:%.*]] = icmp ult i16 [[ADD]], [[C]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP_ADD]])
-; CHECK-NEXT:    [[F:%.*]] = icmp uge i16 [[A]], [[C]]
-; CHECK-NEXT:    ret i1 [[F]]
+; CHECK-NEXT:    ret i1 false
 ;
 entry:
   %a = call i16 @get()
@@ -259,8 +252,7 @@ define i1 @addition_no_extra_facts_with_return_value_ult_1() {
 ; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i16 [[B]], [[A]]
 ; CHECK-NEXT:    [[CMP_ADD:%.*]] = icmp ult i16 [[ADD]], [[C]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP_ADD]])
-; CHECK-NEXT:    [[T:%.*]] = icmp ult i16 [[A]], [[C]]
-; CHECK-NEXT:    ret i1 [[T]]
+; CHECK-NEXT:    ret i1 true
 ;
 entry:
   %a = call i16 @get()
@@ -282,8 +274,7 @@ define i1 @addition_no_extra_facts_with_return_value_ult_2() {
 ; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i16 [[B]], [[A]]
 ; CHECK-NEXT:    [[CMP_ADD:%.*]] = icmp ult i16 [[ADD]], [[C]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP_ADD]])
-; CHECK-NEXT:    [[F:%.*]] = icmp uge i16 [[A]], [[C]]
-; CHECK-NEXT:    ret i1 [[F]]
+; CHECK-NEXT:    ret i1 false
 ;
 entry:
   %a = call i16 @get()
@@ -326,8 +317,7 @@ define i1 @assume_x_ugt_y_plus_y_via_shl_eq(i8 %x, i8 %y) {
 ; CHECK-NEXT:    [[S:%.*]] = shl nuw i8 [[Y]], 1
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp ugt i8 [[X]], [[S]]
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[C_1]])
-; CHECK-NEXT:    [[C_2:%.*]] = icmp eq i8 [[X]], [[Y]]
-; CHECK-NEXT:    ret i1 [[C_2]]
+; CHECK-NEXT:    ret i1 false
 ;
   %s = shl nuw i8 %y, 1
   %c.1 = icmp ugt i8 %x, %s
@@ -358,8 +348,7 @@ define i1 @assume_x_ugt_y_plus_y_via_add_eq(i8 %x, i8 %y) {
 ; CHECK-NEXT:    [[S:%.*]] = add nuw i8 [[Y]], [[Y]]
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp ugt i8 [[X]], [[S]]
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[C_1]])
-; CHECK-NEXT:    [[C_2:%.*]] = icmp eq i8 [[X]], [[Y]]
-; CHECK-NEXT:    ret i1 [[C_2]]
+; CHECK-NEXT:    ret i1 false
 ;
   %s = add nuw i8 %y, %y
   %c.1 = icmp ugt i8 %x, %s
@@ -390,8 +379,7 @@ define i1 @assume_x_ugt_y_plus_y_via_shl_ne(i8 %x, i8 %y) {
 ; CHECK-NEXT:    [[S:%.*]] = shl nuw i8 [[Y]], 1
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp ugt i8 [[X]], [[S]]
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[C_1]])
-; CHECK-NEXT:    [[C_2:%.*]] = icmp ne i8 [[X]], [[Y]]
-; CHECK-NEXT:    ret i1 [[C_2]]
+; CHECK-NEXT:    ret i1 true
 ;
   %s = shl nuw i8 %y, 1
   %c.1 = icmp ugt i8 %x, %s

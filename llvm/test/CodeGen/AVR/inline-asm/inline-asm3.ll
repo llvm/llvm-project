@@ -383,7 +383,7 @@ define void @add_xyz_i16(i16 signext %0, i16 signext %1) {
 
 @gvar = global i16 0
 
-define i16* @ldi_dreg_symbol() {
+define ptr @ldi_dreg_symbol() {
 ; CHECK-LABEL: ldi_dreg_symbol:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    ;APP
@@ -391,11 +391,11 @@ define i16* @ldi_dreg_symbol() {
 ; CHECK-NEXT:    ldi r24, lo8(gvar)
 ; CHECK-NEXT:    ;NO_APP
 ; CHECK-NEXT:    ret
-  %1 = tail call i16* asm sideeffect "ldi ${0:B}, hi8($1)\0A\09ldi ${0:A}, lo8($1)", "=d,i"(i16* @gvar)
-  ret i16* %1
+  %1 = tail call ptr asm sideeffect "ldi ${0:B}, hi8($1)\0A\09ldi ${0:A}, lo8($1)", "=d,i"(ptr @gvar)
+  ret ptr %1
 }
 
-define i16* @ldi_dreg_imm() {
+define ptr @ldi_dreg_imm() {
 ; CHECK-LABEL: ldi_dreg_imm:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    ;APP
@@ -403,6 +403,6 @@ define i16* @ldi_dreg_imm() {
 ; CHECK-NEXT:    ldi r24, lo8(2345)
 ; CHECK-NEXT:    ;NO_APP
 ; CHECK-NEXT:    ret
-  %1 = tail call i16* asm sideeffect "ldi ${0:B}, hi8($1)\0A\09ldi ${0:A}, lo8($1)", "=d,i"(i16 2345)
-  ret i16* %1
+  %1 = tail call ptr asm sideeffect "ldi ${0:B}, hi8($1)\0A\09ldi ${0:A}, lo8($1)", "=d,i"(i16 2345)
+  ret ptr %1
 }

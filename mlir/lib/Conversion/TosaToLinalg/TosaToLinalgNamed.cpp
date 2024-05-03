@@ -19,11 +19,14 @@
 #include "mlir/Dialect/Tensor/Utils/Utils.h"
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
 #include "mlir/Dialect/Tosa/Utils/ConversionUtils.h"
+#include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Utils/ReshapeOpsUtils.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+
+#include "mlir/Interfaces/InferTypeOpInterface.h"
 
 #include <numeric>
 #include <type_traits>
@@ -33,7 +36,7 @@ using namespace mlir::tosa;
 
 static mlir::Value applyPad(Location loc, Value input, ArrayRef<int64_t> pad,
                             TypedAttr padAttr, OpBuilder &rewriter) {
-  // Input should be padded if necessary.
+  // Input should be padded only if necessary.
   if (llvm::all_of(pad, [](int64_t p) { return p == 0; }))
     return input;
 
@@ -46,7 +49,7 @@ static mlir::Value applyPad(Location loc, Value input, ArrayRef<int64_t> pad,
   SmallVector<int64_t, 4> paddedShape;
   SmallVector<OpFoldResult, 8> lowIndices;
   SmallVector<OpFoldResult, 8> highIndices;
-  for (int i = 0, s = inputShape.size(); i < s; i++) {
+  for (size_t i : llvm::seq(inputShape.size())) {
     auto lowPad = pad[i * 2];
     auto highPad = pad[i * 2 + 1];
     if (ShapedType::isDynamic(inputShape[i]))
@@ -98,9 +101,18 @@ static mlir::Value linalgBroadcastAndMaybeExtSI(PatternRewriter &rewriter,
   // The source tensor is broadcast to all the outer dimensions of the
   // result tensor.
   SmallVector<AffineExpr> sourceDims;
-  for (auto dim : llvm::seq<int64_t>(0, sourceRank)) {
-    auto expr = rewriter.getAffineDimExpr(dim + resultRank - sourceRank);
-    sourceDims.push_back(expr);
+  // In the case of a rank one source tensor with a single element TOSA
+  // specifies that the value be broadcast meaning we need an edge case for a
+  // constant map.
+  assert(sourceTy.hasStaticShape() &&
+         "Dynamic broadcasting shapes not supported!");
+  if (sourceRank == 1 && sourceTy.getDimSize(0) == 1) {
+    sourceDims.push_back(rewriter.getAffineConstantExpr(0));
+  } else {
+    for (auto dim : llvm::seq<int64_t>(0, sourceRank)) {
+      auto expr = rewriter.getAffineDimExpr(dim + resultRank - sourceRank);
+      sourceDims.push_back(expr);
+    }
   }
 
   // Creating maps for the input and output of the broacast-like generic op.
@@ -130,20 +142,19 @@ static mlir::Value linalgBroadcastAndMaybeExtSI(PatternRewriter &rewriter,
 
 static mlir::Value reifyConstantDim(int64_t attr,
                                     ImplicitLocOpBuilder &builder) {
-  return builder.createOrFold<arith::IndexCastOp>(
-      builder.getIndexType(),
-      builder.create<arith::ConstantOp>(builder.getI64IntegerAttr(attr)));
+  return builder.create<arith::ConstantIndexOp>(attr);
 }
 
 // Calculating the output width/height using the formula:
 // H = ((IH+pad_top+pad_bottom-(dilation_y*(KH-1)+1))/stride_y)+1
 // W = ((IW+pad_left+pad_right-(dilation_x*(KW-1)+1))/stride_x)+1
 
-static mlir::Value getConvOutputDim(Location loc, Value inputDim,
-                                    int64_t padBeforeAttr, int64_t padAfterAttr,
-                                    Value kernelDim, int64_t strideAttr,
-                                    int64_t dilationAttr, Type inputETy,
-                                    OpBuilder &rewriter) {
+static mlir::Value getConvOrPoolOutputDim(Location loc, Value inputDim,
+                                          int64_t padBeforeAttr,
+                                          int64_t padAfterAttr, Value kernelDim,
+                                          int64_t strideAttr,
+                                          int64_t dilationAttr,
+                                          OpBuilder &rewriter) {
   ImplicitLocOpBuilder builder(loc, rewriter);
   auto one = rewriter.create<arith::ConstantOp>(
       loc, IntegerAttr::get(inputDim.getType(), 1));
@@ -170,7 +181,6 @@ static SmallVector<Value> inferDynamicDimsForConv(
     ArrayRef<int64_t> dilationAttr, ArrayRef<int64_t> inputSizeDims,
     ArrayRef<int64_t> kernelSizeDims, OpBuilder &rewriter) {
   ShapedType inputTy = cast<ShapedType>(input.getType());
-  Type inputETy = inputTy.getElementType();
   int64_t inputRank = inputTy.getRank();
 
   SmallVector<Value> dynDims;
@@ -189,8 +199,8 @@ static SmallVector<Value> inferDynamicDimsForConv(
           rewriter.create<tensor::DimOp>(loc, weight, kernelDim);
       // H = F(IH, pad_top, pad_bottom, dilation_y, KH, stride_y)
       dynDims[inputDim] =
-          getConvOutputDim(loc, initDynDim, padTop, padBottom, kernelDynDim,
-                           stride, dilation, inputETy, rewriter);
+          getConvOrPoolOutputDim(loc, initDynDim, padTop, padBottom,
+                                 kernelDynDim, stride, dilation, rewriter);
     }
   }
 
@@ -684,20 +694,61 @@ class MaxPool2dConverter : public OpRewritePattern<tosa::MaxPool2dOp> {
 public:
   using OpRewritePattern<tosa::MaxPool2dOp>::OpRewritePattern;
 
+  // Compute the dynamic output sizes of the maxpool operation.
+  static SmallVector<Value>
+  computeDynamicOutputSizes(tosa::MaxPool2dOp op, PatternRewriter &rewriter) {
+    TensorType resultTy = op.getType();
+    Location loc = op.getLoc();
+
+    TypedValue<TensorType> input = op.getInput();
+    ArrayRef<int64_t> kernel = op.getKernel();
+    ArrayRef<int64_t> pad = op.getPad();
+    ArrayRef<int64_t> stride = op.getStride();
+
+    SmallVector<Value> dynamicDims;
+
+    // Batch dimension
+    if (resultTy.isDynamicDim(0))
+      dynamicDims.push_back(rewriter.create<tensor::DimOp>(loc, input, 0));
+
+    // Height/width dimensions
+    for (int64_t dim : {1, 2}) {
+      if (!resultTy.isDynamicDim(dim))
+        continue;
+
+      // Index into the attribute arrays
+      int64_t index = dim - 1;
+
+      // Input height/width
+      Value ihw = rewriter.create<tensor::DimOp>(loc, input, dim);
+
+      // Kernel height/width
+      Value khw = rewriter.create<arith::ConstantIndexOp>(loc, kernel[index]);
+
+      // Output height/width
+      Value ohw = getConvOrPoolOutputDim(loc, ihw, pad[index * 2],
+                                         pad[index * 2 + 1], khw, stride[index],
+                                         /*dilationAttr=*/1, rewriter);
+      dynamicDims.push_back(ohw);
+    }
+
+    // Channel dimension
+    if (resultTy.isDynamicDim(3))
+      dynamicDims.push_back(rewriter.create<tensor::DimOp>(loc, input, 3));
+
+    return dynamicDims;
+  }
+
   LogicalResult matchAndRewrite(tosa::MaxPool2dOp op,
                                 PatternRewriter &rewriter) const final {
     Location loc = op.getLoc();
-    Value input = op.getInput();
-    ShapedType inputTy = cast<ShapedType>(input.getType());
+    TypedValue<TensorType> input = op.getInput();
+    ShapedType inputTy = input.getType();
 
-    ShapedType resultTy = cast<ShapedType>(op.getType());
+    ShapedType resultTy = op.getType();
     Type resultETy = inputTy.getElementType();
 
-    auto dynamicDimsOr =
-        checkHasDynamicBatchDims(rewriter, op, {input, op.getOutput()});
-    if (!dynamicDimsOr.has_value())
-      return failure();
-    SmallVector<Value> dynamicDims = *dynamicDimsOr;
+    SmallVector<Value> dynamicDims = computeDynamicOutputSizes(op, rewriter);
 
     // Determine what the initial value needs to be for the max pool op.
     TypedAttr initialAttr;
@@ -720,6 +771,7 @@ public:
     pad.resize(2, 0);
     llvm::append_range(pad, op.getPad());
     pad.resize(pad.size() + 2, 0);
+
     Value paddedInput = applyPad(loc, input, pad, initialAttr, rewriter);
 
     Value initialValue = rewriter.create<arith::ConstantOp>(loc, initialAttr);
@@ -735,9 +787,7 @@ public:
         loc, resultTy.getShape(), resultTy.getElementType(), dynamicDims);
 
     Value filledEmptyTensor =
-        rewriter
-            .create<linalg::FillOp>(loc, ValueRange{initialValue},
-                                    ValueRange{emptyTensor})
+        rewriter.create<linalg::FillOp>(loc, initialValue, emptyTensor)
             .result();
 
     Value fakeWindowDims =
@@ -844,10 +894,7 @@ public:
             auto padVal = rewriter.create<arith::ConstantIndexOp>(loc, pad);
             Value dpos = rewriter.create<arith::SubIOp>(loc, pos, padVal);
 
-            Value cmp = rewriter.create<arith::CmpIOp>(
-                loc, arith::CmpIPredicate::slt, dpos, zero);
-            Value offset =
-                rewriter.create<arith::SelectOp>(loc, cmp, dpos, zero);
+            Value offset = rewriter.create<arith::MinSIOp>(loc, dpos, zero);
             return rewriter.create<arith::AddIOp>(loc, valid, offset)
                 ->getResult(0);
           };
@@ -867,9 +914,7 @@ public:
             // Determine how much padding was included.
             val = padFn(val, left, pad[i * 2]);
             val = padFn(val, right, pad[i * 2 + 1]);
-            Value cmp = rewriter.create<arith::CmpIOp>(
-                loc, arith::CmpIPredicate::slt, val, one);
-            return rewriter.create<arith::SelectOp>(loc, cmp, one, val);
+            return rewriter.create<arith::MaxSIOp>(loc, one, val);
           };
 
           // Compute the indices from either end.
@@ -889,6 +934,10 @@ public:
             auto countF = rewriter.create<arith::SIToFPOp>(loc, accETy, count);
             poolVal = rewriter.create<arith::DivFOp>(loc, poolVal, countF)
                           ->getResult(0);
+            if (accETy.getIntOrFloatBitWidth() >
+                resultETy.getIntOrFloatBitWidth())
+              poolVal =
+                  rewriter.create<arith::TruncFOp>(loc, resultETy, poolVal);
           } else {
 
             // If we have quantization information we need to apply an offset
@@ -984,6 +1033,31 @@ public:
   }
 };
 
+class TransposeConverter : public OpRewritePattern<tosa::TransposeOp> {
+public:
+  using OpRewritePattern<tosa::TransposeOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(tosa::TransposeOp op,
+                                PatternRewriter &rewriter) const final {
+    SmallVector<int64_t> constantPerms;
+    if (failed(op.getConstantPerms(constantPerms)))
+      return failure();
+
+    Location loc = op.getLoc();
+    // The verifier should have made sure we have a valid permutation tensor.
+    assert(isPermutationVector(constantPerms) && "Expected valid permutation");
+    SmallVector<OpFoldResult> inputSizes =
+        tensor::getMixedSizes(rewriter, loc, op.getInput1());
+    auto permutedSizes =
+        applyPermutation<OpFoldResult>(inputSizes, constantPerms);
+
+    auto permutedInit = rewriter.create<tensor::EmptyOp>(
+        loc, permutedSizes, op.getInput1().getType().getElementType());
+    rewriter.replaceOpWithNewOp<linalg::TransposeOp>(
+        op, op.getInput1(), permutedInit, constantPerms);
+    return success();
+  }
+};
 } // namespace
 
 void mlir::tosa::populateTosaToLinalgNamedConversionPatterns(
@@ -1004,6 +1078,8 @@ void mlir::tosa::populateTosaToLinalgNamedConversionPatterns(
       MatMulConverter,
       MaxPool2dConverter,
       AvgPool2dConverter,
-      FullyConnectedConverter>(patterns->getContext());
+      FullyConnectedConverter,
+      TransposeConverter
+  >(patterns->getContext());
   // clang-format on
 }

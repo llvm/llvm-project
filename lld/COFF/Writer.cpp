@@ -1121,6 +1121,9 @@ void Writer::createMiscChunks() {
     // if we're ultimately not going to write CodeView data to the PDB.
     buildId = make<CVDebugRecordChunk>(ctx);
     debugRecords.emplace_back(COFF::IMAGE_DEBUG_TYPE_CODEVIEW, buildId);
+    if (Symbol *buildidSym = ctx.symtab.findUnderscore("__buildid"))
+      replaceSymbol<DefinedSynthetic>(buildidSym, buildidSym->getName(),
+                                      buildId, 4);
   }
 
   if (config->cetCompat) {
@@ -1376,7 +1379,7 @@ void Writer::createSymbolAndStringTable() {
     sec->setStringTableOff(addEntryToStringTable(sec->name));
   }
 
-  if (ctx.config.debugDwarf || ctx.config.debugSymtab) {
+  if (ctx.config.writeSymtab) {
     for (ObjFile *file : ctx.objFileInstances) {
       for (Symbol *b : file->getSymbols()) {
         auto *d = dyn_cast_or_null<Defined>(b);
@@ -1480,7 +1483,7 @@ void Writer::sortECChunks() {
       llvm::stable_sort(sec->chunks, [=](const Chunk *a, const Chunk *b) {
         std::optional<chpe_range_type> aType = a->getArm64ECRangeType(),
                                        bType = b->getArm64ECRangeType();
-        return !aType || (bType && *aType < *bType);
+        return bType && (!aType || *aType < *bType);
       });
   }
 }
@@ -1799,6 +1802,8 @@ void Writer::createSEHTable() {
 // symbol's offset into that Chunk.
 static void addSymbolToRVASet(SymbolRVASet &rvaSet, Defined *s) {
   Chunk *c = s->getChunk();
+  if (!c)
+    return;
   if (auto *sc = dyn_cast<SectionChunk>(c))
     c = sc->repl; // Look through ICF replacement.
   uint32_t off = s->getRVA() - (c ? c->getRVA() : 0);
@@ -2055,6 +2060,10 @@ void Writer::createRuntimePseudoRelocs() {
     auto *sc = dyn_cast<SectionChunk>(c);
     if (!sc || !sc->live)
       continue;
+    // Don't create pseudo relocations for sections that won't be
+    // mapped at runtime.
+    if (sc->header->Characteristics & IMAGE_SCN_MEM_DISCARDABLE)
+      continue;
     sc->getRuntimePseudoRelocs(rels);
   }
 
@@ -2067,8 +2076,16 @@ void Writer::createRuntimePseudoRelocs() {
     return;
   }
 
-  if (!rels.empty())
+  if (!rels.empty()) {
     log("Writing " + Twine(rels.size()) + " runtime pseudo relocations");
+    const char *symbolName = "_pei386_runtime_relocator";
+    Symbol *relocator = ctx.symtab.findUnderscore(symbolName);
+    if (!relocator)
+      error("output image has runtime pseudo relocations, but the function " +
+            Twine(symbolName) +
+            " is missing; it is needed for fixing the relocations at runtime");
+  }
+
   PseudoRelocTableChunk *table = make<PseudoRelocTableChunk>(rels);
   rdataSec->addChunk(table);
   EmptyChunk *endOfList = make<EmptyChunk>();

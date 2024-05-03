@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // XFAIL: !has-64-bit-atomics
-// UNSUPPORTED: !non-lockfree-atomics
 
 // bool compare_exchange_weak(T& expected, T desired,
 //                            memory_order success, memory_order failure) volatile noexcept;
@@ -166,12 +165,12 @@ void test_impl() {
 
     auto store_one_arg = [](MaybeVolatile<std::atomic<T>>& x, T old_val, T new_val) {
       // could fail spuriously, so put it in a loop
-      while (!x.compare_exchange_weak(old_val, new_val, std::memory_order::seq_cst, std::memory_order_relaxed)) {
+      while (!x.compare_exchange_weak(old_val, new_val, std::memory_order::seq_cst)) {
       }
     };
     auto load_one_arg = [](MaybeVolatile<std::atomic<T>>& x) {
       auto val = x.load(std::memory_order::relaxed);
-      while (!x.compare_exchange_weak(val, val, std::memory_order::seq_cst, std::memory_order_relaxed)) {
+      while (!x.compare_exchange_weak(val, val, std::memory_order::seq_cst)) {
       }
       return val;
     };

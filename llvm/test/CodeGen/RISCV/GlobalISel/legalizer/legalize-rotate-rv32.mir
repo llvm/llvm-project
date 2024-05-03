@@ -2,7 +2,9 @@
 # RUN: llc -mtriple=riscv32 -run-pass=legalizer %s -o - \
 # RUN: | FileCheck %s --check-prefixes=CHECK,RV32I
 # RUN: llc -mtriple=riscv32 -mattr=+zbb -run-pass=legalizer %s -o - \
-# RUN: | FileCheck %s --check-prefixes=CHECK,RV32ZBB
+# RUN: | FileCheck %s --check-prefixes=CHECK,RV32ZBB_OR_RV32ZBKB
+# RUN: llc -mtriple=riscv32 -mattr=+zbkb -run-pass=legalizer %s -o - \
+# RUN: | FileCheck %s --check-prefixes=CHECK,RV32ZBB_OR_RV32ZBKB
 
 ---
 name:            rotl_i8
@@ -92,14 +94,14 @@ body:             |
     ; RV32I-NEXT: $x10 = COPY [[OR]](s32)
     ; RV32I-NEXT: PseudoRET implicit $x10
     ;
-    ; RV32ZBB-LABEL: name: rotl_i32
-    ; RV32ZBB: liveins: $x10, $x11
-    ; RV32ZBB-NEXT: {{  $}}
-    ; RV32ZBB-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
-    ; RV32ZBB-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $x11
-    ; RV32ZBB-NEXT: [[ROTL:%[0-9]+]]:_(s32) = G_ROTL [[COPY]], [[COPY1]](s32)
-    ; RV32ZBB-NEXT: $x10 = COPY [[ROTL]](s32)
-    ; RV32ZBB-NEXT: PseudoRET implicit $x10
+    ; RV32ZBB_OR_RV32ZBKB-LABEL: name: rotl_i32
+    ; RV32ZBB_OR_RV32ZBKB: liveins: $x10, $x11
+    ; RV32ZBB_OR_RV32ZBKB-NEXT: {{  $}}
+    ; RV32ZBB_OR_RV32ZBKB-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
+    ; RV32ZBB_OR_RV32ZBKB-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $x11
+    ; RV32ZBB_OR_RV32ZBKB-NEXT: [[ROTL:%[0-9]+]]:_(s32) = G_ROTL [[COPY]], [[COPY1]](s32)
+    ; RV32ZBB_OR_RV32ZBKB-NEXT: $x10 = COPY [[ROTL]](s32)
+    ; RV32ZBB_OR_RV32ZBKB-NEXT: PseudoRET implicit $x10
     %0:_(s32) = COPY $x10
     %1:_(s32) = COPY $x11
     %2:_(s32) = G_ROTL %0, %1(s32)
@@ -260,14 +262,14 @@ body:             |
     ; RV32I-NEXT: $x10 = COPY [[OR]](s32)
     ; RV32I-NEXT: PseudoRET implicit $x10
     ;
-    ; RV32ZBB-LABEL: name: rotr_i32
-    ; RV32ZBB: liveins: $x10, $x11
-    ; RV32ZBB-NEXT: {{  $}}
-    ; RV32ZBB-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
-    ; RV32ZBB-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $x11
-    ; RV32ZBB-NEXT: [[ROTR:%[0-9]+]]:_(s32) = G_ROTR [[COPY]], [[COPY1]](s32)
-    ; RV32ZBB-NEXT: $x10 = COPY [[ROTR]](s32)
-    ; RV32ZBB-NEXT: PseudoRET implicit $x10
+    ; RV32ZBB_OR_RV32ZBKB-LABEL: name: rotr_i32
+    ; RV32ZBB_OR_RV32ZBKB: liveins: $x10, $x11
+    ; RV32ZBB_OR_RV32ZBKB-NEXT: {{  $}}
+    ; RV32ZBB_OR_RV32ZBKB-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
+    ; RV32ZBB_OR_RV32ZBKB-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $x11
+    ; RV32ZBB_OR_RV32ZBKB-NEXT: [[ROTR:%[0-9]+]]:_(s32) = G_ROTR [[COPY]], [[COPY1]](s32)
+    ; RV32ZBB_OR_RV32ZBKB-NEXT: $x10 = COPY [[ROTR]](s32)
+    ; RV32ZBB_OR_RV32ZBKB-NEXT: PseudoRET implicit $x10
     %0:_(s32) = COPY $x10
     %1:_(s32) = COPY $x11
     %2:_(s32) = G_ROTR %0, %1(s32)

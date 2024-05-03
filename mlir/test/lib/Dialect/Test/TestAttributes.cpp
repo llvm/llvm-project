@@ -19,6 +19,7 @@
 #include "mlir/IR/Types.h"
 #include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/Hashing.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/ADT/bit.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -82,7 +83,7 @@ Attribute TestI64ElementsAttr::parse(AsmParser &parser, Type type) {
 void TestI64ElementsAttr::print(AsmPrinter &printer) const {
   printer << "<[";
   llvm::interleaveComma(getElements(), printer);
-  printer << "] : " << getType() << ">";
+  printer << "]>";
 }
 
 LogicalResult
@@ -215,12 +216,36 @@ llvm::hash_code hash_value(const test::CopyCount &copyCount) {
   return llvm::hash_value(copyCount.value);
 }
 } // namespace test
+
+//===----------------------------------------------------------------------===//
+// TestConditionalAliasAttr
+//===----------------------------------------------------------------------===//
+
+/// Attempt to parse the conditionally-aliased string attribute as a keyword or
+/// string, else try to parse an alias.
+static ParseResult parseConditionalAlias(AsmParser &p, StringAttr &value) {
+  std::string str;
+  if (succeeded(p.parseOptionalKeywordOrString(&str))) {
+    value = StringAttr::get(p.getContext(), str);
+    return success();
+  }
+  return p.parseAttribute(value);
+}
+
+/// Print the string attribute as an alias if it has one, otherwise print it as
+/// a keyword if possible.
+static void printConditionalAlias(AsmPrinter &p, StringAttr value) {
+  if (succeeded(p.printAlias(value)))
+    return;
+  p.printKeywordOrString(value);
+}
+
 //===----------------------------------------------------------------------===//
 // Tablegen Generated Definitions
 //===----------------------------------------------------------------------===//
 
 #include "TestAttrInterfaces.cpp.inc"
-
+#include "TestOpEnums.cpp.inc"
 #define GET_ATTRDEF_CLASSES
 #include "TestAttrDefs.cpp.inc"
 

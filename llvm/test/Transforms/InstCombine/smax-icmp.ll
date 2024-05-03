@@ -804,4 +804,45 @@ end:
   ret void
 }
 
+; Tests from PR76672
+
+define i1 @test_smax_ugt(i32 %a) {
+; CHECK-LABEL: @test_smax_ugt(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[A:%.*]], 1
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  %cond.i = call i32 @llvm.smax.i32(i32 %a, i32 0)
+  %cmp = icmp ugt i32 %cond.i, 1
+  ret i1 %cmp
+}
+
+; Negative tests
+
+define i1 @test_smax_ugt_neg1(i32 %a) {
+; CHECK-LABEL: @test_smax_ugt_neg1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  %cond.i = call i32 @llvm.smax.i32(i32 %a, i32 0)
+  %cmp = icmp ugt i32 %cond.i, -5
+  ret i1 %cmp
+}
+
+define i1 @test_smax_ugt_neg2(i32 %a) {
+; CHECK-LABEL: @test_smax_ugt_neg2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[COND_I:%.*]] = call i32 @llvm.smax.i32(i32 [[A:%.*]], i32 -5)
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[COND_I]], 1
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  %cond.i = call i32 @llvm.smax.i32(i32 %a, i32 -5)
+  %cmp = icmp ugt i32 %cond.i, 1
+  ret i1 %cmp
+}
+
+
 declare i32 @llvm.smax.i32(i32, i32)

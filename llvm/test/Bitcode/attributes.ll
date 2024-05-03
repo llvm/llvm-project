@@ -521,6 +521,26 @@ define void @f90(ptr writable %p) {
   ret void
 }
 
+; CHECK: define void @f91(ptr dead_on_unwind %p)
+define void @f91(ptr dead_on_unwind %p) {
+  ret void
+}
+
+; CHECK: define range(i32 -1, 42) i32 @range_attribute(<4 x i32> range(i32 -1, 42) %a)
+define range(i32 -1, 42) i32 @range_attribute(<4 x i32> range(i32 -1, 42) %a) {
+  ret i32 0
+}
+
+; CHECK: define range(i32 0, 42) i32 @range_attribute_same_range_other_bitwidth(i8 range(i8 0, 42) %a)
+define range(i32 0, 42) i32 @range_attribute_same_range_other_bitwidth(i8 range(i8 0, 42) %a) {
+  ret i32 0
+}
+
+; CHECK: define void @wide_range_attribute(i128 range(i128 618970019642690137449562111, 618970019642690137449562114) %a)
+define void @wide_range_attribute(i128 range(i128 618970019642690137449562111, 618970019642690137449562114) %a) {
+  ret void
+}
+
 ; CHECK: attributes #0 = { noreturn }
 ; CHECK: attributes #1 = { nounwind }
 ; CHECK: attributes #2 = { memory(none) }

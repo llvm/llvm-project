@@ -1,4 +1,3 @@
-// XFAIL: target={{.*}}-aix{{.*}}
 // RUN: c-index-test core -print-source-symbols -- %s -target x86_64-apple-macosx10.7 | FileCheck %s
 
 // CHECK: [[@LINE+1]]:12 | class/ObjC | XCTestCase | c:objc(cs)XCTestCase | _OBJC_CLASS_$_XCTestCase | Decl | rel: 0

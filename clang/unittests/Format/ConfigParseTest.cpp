@@ -184,6 +184,7 @@ TEST(ConfigParseTest, ParsesConfigurationBools) {
   CHECK_PARSE_BOOL(ReflowComments);
   CHECK_PARSE_BOOL(RemoveBracesLLVM);
   CHECK_PARSE_BOOL(RemoveSemicolon);
+  CHECK_PARSE_BOOL(SkipMacroDefinitionBody);
   CHECK_PARSE_BOOL(SpacesInSquareBrackets);
   CHECK_PARSE_BOOL(SpaceInEmptyBlock);
   CHECK_PARSE_BOOL(SpacesInContainerLiterals);
@@ -230,6 +231,7 @@ TEST(ConfigParseTest, ParsesConfigurationBools) {
                           AfterFunctionDefinitionName);
   CHECK_PARSE_NESTED_BOOL(SpaceBeforeParensOptions, AfterIfMacros);
   CHECK_PARSE_NESTED_BOOL(SpaceBeforeParensOptions, AfterOverloadedOperator);
+  CHECK_PARSE_NESTED_BOOL(SpaceBeforeParensOptions, AfterPlacementOperator);
   CHECK_PARSE_NESTED_BOOL(SpaceBeforeParensOptions, BeforeNonEmptyParentheses);
   CHECK_PARSE_NESTED_BOOL(SpacesInParensOptions, InCStyleCasts);
   CHECK_PARSE_NESTED_BOOL(SpacesInParensOptions, InConditionalStatements);
@@ -254,6 +256,8 @@ TEST(ConfigParseTest, ParsesConfiguration) {
   CHECK_PARSE("PenaltyBreakTemplateDeclaration: 1234",
               PenaltyBreakTemplateDeclaration, 1234u);
   CHECK_PARSE("PenaltyBreakOpenParenthesis: 1234", PenaltyBreakOpenParenthesis,
+              1234u);
+  CHECK_PARSE("PenaltyBreakScopeResolution: 1234", PenaltyBreakScopeResolution,
               1234u);
   CHECK_PARSE("PenaltyExcessCharacter: 1234", PenaltyExcessCharacter, 1234u);
   CHECK_PARSE("PenaltyReturnTypeOnItsOwnLine: 1234",
@@ -289,37 +293,43 @@ TEST(ConfigParseTest, ParsesConfiguration) {
 #define CHECK_ALIGN_CONSECUTIVE(FIELD)                                         \
   do {                                                                         \
     Style.FIELD.Enabled = true;                                                \
-    CHECK_PARSE(#FIELD ": None", FIELD,                                        \
-                FormatStyle::AlignConsecutiveStyle(                            \
-                    {/*Enabled=*/false, /*AcrossEmptyLines=*/false,            \
-                     /*AcrossComments=*/false, /*AlignCompound=*/false,        \
-                     /*PadOperators=*/true}));                                 \
-    CHECK_PARSE(#FIELD ": Consecutive", FIELD,                                 \
-                FormatStyle::AlignConsecutiveStyle(                            \
-                    {/*Enabled=*/true, /*AcrossEmptyLines=*/false,             \
-                     /*AcrossComments=*/false, /*AlignCompound=*/false,        \
-                     /*PadOperators=*/true}));                                 \
-    CHECK_PARSE(#FIELD ": AcrossEmptyLines", FIELD,                            \
-                FormatStyle::AlignConsecutiveStyle(                            \
-                    {/*Enabled=*/true, /*AcrossEmptyLines=*/true,              \
-                     /*AcrossComments=*/false, /*AlignCompound=*/false,        \
-                     /*PadOperators=*/true}));                                 \
-    CHECK_PARSE(#FIELD ": AcrossEmptyLinesAndComments", FIELD,                 \
-                FormatStyle::AlignConsecutiveStyle(                            \
-                    {/*Enabled=*/true, /*AcrossEmptyLines=*/true,              \
-                     /*AcrossComments=*/true, /*AlignCompound=*/false,         \
-                     /*PadOperators=*/true}));                                 \
+    CHECK_PARSE(                                                               \
+        #FIELD ": None", FIELD,                                                \
+        FormatStyle::AlignConsecutiveStyle(                                    \
+            {/*Enabled=*/false, /*AcrossEmptyLines=*/false,                    \
+             /*AcrossComments=*/false, /*AlignCompound=*/false,                \
+             /*AlignFunctionPointers=*/false, /*PadOperators=*/true}));        \
+    CHECK_PARSE(                                                               \
+        #FIELD ": Consecutive", FIELD,                                         \
+        FormatStyle::AlignConsecutiveStyle(                                    \
+            {/*Enabled=*/true, /*AcrossEmptyLines=*/false,                     \
+             /*AcrossComments=*/false, /*AlignCompound=*/false,                \
+             /*AlignFunctionPointers=*/false, /*PadOperators=*/true}));        \
+    CHECK_PARSE(                                                               \
+        #FIELD ": AcrossEmptyLines", FIELD,                                    \
+        FormatStyle::AlignConsecutiveStyle(                                    \
+            {/*Enabled=*/true, /*AcrossEmptyLines=*/true,                      \
+             /*AcrossComments=*/false, /*AlignCompound=*/false,                \
+             /*AlignFunctionPointers=*/false, /*PadOperators=*/true}));        \
+    CHECK_PARSE(                                                               \
+        #FIELD ": AcrossEmptyLinesAndComments", FIELD,                         \
+        FormatStyle::AlignConsecutiveStyle(                                    \
+            {/*Enabled=*/true, /*AcrossEmptyLines=*/true,                      \
+             /*AcrossComments=*/true, /*AlignCompound=*/false,                 \
+             /*AlignFunctionPointers=*/false, /*PadOperators=*/true}));        \
     /* For backwards compability, false / true should still parse */           \
-    CHECK_PARSE(#FIELD ": false", FIELD,                                       \
-                FormatStyle::AlignConsecutiveStyle(                            \
-                    {/*Enabled=*/false, /*AcrossEmptyLines=*/false,            \
-                     /*AcrossComments=*/false, /*AlignCompound=*/false,        \
-                     /*PadOperators=*/true}));                                 \
-    CHECK_PARSE(#FIELD ": true", FIELD,                                        \
-                FormatStyle::AlignConsecutiveStyle(                            \
-                    {/*Enabled=*/true, /*AcrossEmptyLines=*/false,             \
-                     /*AcrossComments=*/false, /*AlignCompound=*/false,        \
-                     /*PadOperators=*/true}));                                 \
+    CHECK_PARSE(                                                               \
+        #FIELD ": false", FIELD,                                               \
+        FormatStyle::AlignConsecutiveStyle(                                    \
+            {/*Enabled=*/false, /*AcrossEmptyLines=*/false,                    \
+             /*AcrossComments=*/false, /*AlignCompound=*/false,                \
+             /*AlignFunctionPointers=*/false, /*PadOperators=*/true}));        \
+    CHECK_PARSE(                                                               \
+        #FIELD ": true", FIELD,                                                \
+        FormatStyle::AlignConsecutiveStyle(                                    \
+            {/*Enabled=*/true, /*AcrossEmptyLines=*/false,                     \
+             /*AcrossComments=*/false, /*AlignCompound=*/false,                \
+             /*AlignFunctionPointers=*/false, /*PadOperators=*/true}));        \
                                                                                \
     CHECK_PARSE_NESTED_BOOL(FIELD, Enabled);                                   \
     CHECK_PARSE_NESTED_BOOL(FIELD, AcrossEmptyLines);                          \
@@ -600,24 +610,6 @@ TEST(ConfigParseTest, ParsesConfiguration) {
               SpaceBeforeParens,
               FormatStyle::SBPO_ControlStatementsExceptControlMacros);
 
-  Style.SpaceBeforeParens = FormatStyle::SBPO_Custom;
-  Style.SpaceBeforeParensOptions.AfterPlacementOperator =
-      FormatStyle::SpaceBeforeParensCustom::APO_Always;
-  CHECK_PARSE("SpaceBeforeParensOptions:\n"
-              "  AfterPlacementOperator: Never",
-              SpaceBeforeParensOptions.AfterPlacementOperator,
-              FormatStyle::SpaceBeforeParensCustom::APO_Never);
-
-  CHECK_PARSE("SpaceBeforeParensOptions:\n"
-              "  AfterPlacementOperator: Always",
-              SpaceBeforeParensOptions.AfterPlacementOperator,
-              FormatStyle::SpaceBeforeParensCustom::APO_Always);
-
-  CHECK_PARSE("SpaceBeforeParensOptions:\n"
-              "  AfterPlacementOperator: Leave",
-              SpaceBeforeParensOptions.AfterPlacementOperator,
-              FormatStyle::SpaceBeforeParensCustom::APO_Leave);
-
   // For backward compatibility:
   Style.SpacesInParens = FormatStyle::SIPO_Never;
   Style.SpacesInParensOptions = {};
@@ -685,30 +677,63 @@ TEST(ConfigParseTest, ParsesConfiguration) {
               "  AfterControlStatement: false",
               BraceWrapping.AfterControlStatement, FormatStyle::BWACS_Never);
 
-  Style.AlwaysBreakAfterReturnType = FormatStyle::RTBS_All;
-  CHECK_PARSE("AlwaysBreakAfterReturnType: None", AlwaysBreakAfterReturnType,
+  Style.BreakAfterReturnType = FormatStyle::RTBS_All;
+  CHECK_PARSE("BreakAfterReturnType: None", BreakAfterReturnType,
               FormatStyle::RTBS_None);
-  CHECK_PARSE("AlwaysBreakAfterReturnType: All", AlwaysBreakAfterReturnType,
+  CHECK_PARSE("BreakAfterReturnType: Automatic", BreakAfterReturnType,
+              FormatStyle::RTBS_Automatic);
+  CHECK_PARSE("BreakAfterReturnType: ExceptShortType", BreakAfterReturnType,
+              FormatStyle::RTBS_ExceptShortType);
+  CHECK_PARSE("BreakAfterReturnType: All", BreakAfterReturnType,
               FormatStyle::RTBS_All);
-  CHECK_PARSE("AlwaysBreakAfterReturnType: TopLevel",
-              AlwaysBreakAfterReturnType, FormatStyle::RTBS_TopLevel);
-  CHECK_PARSE("AlwaysBreakAfterReturnType: AllDefinitions",
-              AlwaysBreakAfterReturnType, FormatStyle::RTBS_AllDefinitions);
-  CHECK_PARSE("AlwaysBreakAfterReturnType: TopLevelDefinitions",
-              AlwaysBreakAfterReturnType,
+  CHECK_PARSE("BreakAfterReturnType: TopLevel", BreakAfterReturnType,
+              FormatStyle::RTBS_TopLevel);
+  CHECK_PARSE("BreakAfterReturnType: AllDefinitions", BreakAfterReturnType,
+              FormatStyle::RTBS_AllDefinitions);
+  CHECK_PARSE("BreakAfterReturnType: TopLevelDefinitions", BreakAfterReturnType,
               FormatStyle::RTBS_TopLevelDefinitions);
+  // For backward compatibility:
+  CHECK_PARSE("AlwaysBreakAfterReturnType: None", BreakAfterReturnType,
+              FormatStyle::RTBS_None);
+  CHECK_PARSE("AlwaysBreakAfterReturnType: Automatic", BreakAfterReturnType,
+              FormatStyle::RTBS_Automatic);
+  CHECK_PARSE("AlwaysBreakAfterReturnType: ExceptShortType",
+              BreakAfterReturnType, FormatStyle::RTBS_ExceptShortType);
+  CHECK_PARSE("AlwaysBreakAfterReturnType: All", BreakAfterReturnType,
+              FormatStyle::RTBS_All);
+  CHECK_PARSE("AlwaysBreakAfterReturnType: TopLevel", BreakAfterReturnType,
+              FormatStyle::RTBS_TopLevel);
+  CHECK_PARSE("AlwaysBreakAfterReturnType: AllDefinitions",
+              BreakAfterReturnType, FormatStyle::RTBS_AllDefinitions);
+  CHECK_PARSE("AlwaysBreakAfterReturnType: TopLevelDefinitions",
+              BreakAfterReturnType, FormatStyle::RTBS_TopLevelDefinitions);
 
-  Style.AlwaysBreakTemplateDeclarations = FormatStyle::BTDS_Yes;
-  CHECK_PARSE("AlwaysBreakTemplateDeclarations: No",
-              AlwaysBreakTemplateDeclarations, FormatStyle::BTDS_No);
+  Style.BreakTemplateDeclarations = FormatStyle::BTDS_Yes;
+  CHECK_PARSE("BreakTemplateDeclarations: Leave", BreakTemplateDeclarations,
+              FormatStyle::BTDS_Leave);
+  CHECK_PARSE("BreakTemplateDeclarations: No", BreakTemplateDeclarations,
+              FormatStyle::BTDS_No);
+  CHECK_PARSE("BreakTemplateDeclarations: MultiLine", BreakTemplateDeclarations,
+              FormatStyle::BTDS_MultiLine);
+  CHECK_PARSE("BreakTemplateDeclarations: Yes", BreakTemplateDeclarations,
+              FormatStyle::BTDS_Yes);
+  CHECK_PARSE("BreakTemplateDeclarations: false", BreakTemplateDeclarations,
+              FormatStyle::BTDS_MultiLine);
+  CHECK_PARSE("BreakTemplateDeclarations: true", BreakTemplateDeclarations,
+              FormatStyle::BTDS_Yes);
+  // For backward compatibility:
+  CHECK_PARSE("AlwaysBreakTemplateDeclarations: Leave",
+              BreakTemplateDeclarations, FormatStyle::BTDS_Leave);
+  CHECK_PARSE("AlwaysBreakTemplateDeclarations: No", BreakTemplateDeclarations,
+              FormatStyle::BTDS_No);
   CHECK_PARSE("AlwaysBreakTemplateDeclarations: MultiLine",
-              AlwaysBreakTemplateDeclarations, FormatStyle::BTDS_MultiLine);
-  CHECK_PARSE("AlwaysBreakTemplateDeclarations: Yes",
-              AlwaysBreakTemplateDeclarations, FormatStyle::BTDS_Yes);
+              BreakTemplateDeclarations, FormatStyle::BTDS_MultiLine);
+  CHECK_PARSE("AlwaysBreakTemplateDeclarations: Yes", BreakTemplateDeclarations,
+              FormatStyle::BTDS_Yes);
   CHECK_PARSE("AlwaysBreakTemplateDeclarations: false",
-              AlwaysBreakTemplateDeclarations, FormatStyle::BTDS_MultiLine);
+              BreakTemplateDeclarations, FormatStyle::BTDS_MultiLine);
   CHECK_PARSE("AlwaysBreakTemplateDeclarations: true",
-              AlwaysBreakTemplateDeclarations, FormatStyle::BTDS_Yes);
+              BreakTemplateDeclarations, FormatStyle::BTDS_Yes);
 
   Style.AlwaysBreakAfterDefinitionReturnType = FormatStyle::DRTBS_All;
   CHECK_PARSE("AlwaysBreakAfterDefinitionReturnType: None",
@@ -988,6 +1013,14 @@ TEST(ConfigParseTest, ParsesConfiguration) {
               FormatStyle::BBNSS_OnlyWithParen);
   CHECK_PARSE("AllowBreakBeforeNoexceptSpecifier: Never",
               AllowBreakBeforeNoexceptSpecifier, FormatStyle::BBNSS_Never);
+
+  Style.SeparateDefinitionBlocks = FormatStyle::SDS_Never;
+  CHECK_PARSE("SeparateDefinitionBlocks: Always", SeparateDefinitionBlocks,
+              FormatStyle::SDS_Always);
+  CHECK_PARSE("SeparateDefinitionBlocks: Leave", SeparateDefinitionBlocks,
+              FormatStyle::SDS_Leave);
+  CHECK_PARSE("SeparateDefinitionBlocks: Never", SeparateDefinitionBlocks,
+              FormatStyle::SDS_Never);
 }
 
 TEST(ConfigParseTest, ParsesConfigurationWithLanguages) {
