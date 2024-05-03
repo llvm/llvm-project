@@ -599,10 +599,11 @@ llvm::Expected<std::unique_ptr<RISCVISAInfo>>
 RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
                               bool ExperimentalExtensionVersionCheck,
                               bool IgnoreUnknown) {
-  // RISC-V ISA strings must be lowercase.
-  if (llvm::any_of(Arch, isupper))
+  // RISC-V ISA strings must be [a-z0-9_]
+  if (!llvm::all_of(
+          Arch, [](char C) { return isDigit(C) || isLower(C) || C == '_'; }))
     return createStringError(errc::invalid_argument,
-                             "string must be lowercase");
+                             "string may only contain [a-z0-9_]");
 
   // ISA string must begin with rv32, rv64, or a profile.
   unsigned XLen = 0;
