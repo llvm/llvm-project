@@ -146,8 +146,8 @@ public:
 
   void CalculateTrapHandlerSymbolNames() override;
 
-  llvm::ErrorOr<llvm::MD5::MD5Result>
-  CalculateMD5(const FileSpec &file_spec) override;
+  bool CalculateMD5(const FileSpec &file_spec, uint64_t &low,
+                    uint64_t &high) override;
 
   const lldb::UnixSignalsSP &GetRemoteUnixSignals() override;
 
