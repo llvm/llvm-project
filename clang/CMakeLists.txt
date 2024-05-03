@@ -1011,8 +1011,8 @@ if (CLANG_PROPELLER_INSTRUMENT AND NOT LLVM_BUILD_INSTRUMENTED)
   set(STAMP_DIR ${PROPELLER_ARTIFACTS_DIR}/stamps/propeller-instrumented-clang-stamps/)
   set(build_configuration "$<CONFIG>")
   include(ExternalProject)
-  set(CLANG_PROPELLER_INSTRUMENT_CMAKE_CC_FLAGS "-fbasic-block-sections=labels ${CLANG_PROPELLER_EXTRA_CMAKE_CC_FLAGS}")
-  set(CLANG_PROPELLER_INSTRUMENT_CMAKE_LINKER_FLAGS "-Wl,--lto-basic-block-sections=labels ${CLANG_PROPELLER_EXTRA_CMAKE_LINKER_FLAGS}")
+  set(CLANG_PROPELLER_INSTRUMENT_CMAKE_CC_FLAGS "-fbasic-block-address-map ${CLANG_PROPELLER_EXTRA_CMAKE_CC_FLAGS}")
+  set(CLANG_PROPELLER_INSTRUMENT_CMAKE_LINKER_FLAGS "-Wl,--lto-basic-block-address-map ${CLANG_PROPELLER_EXTRA_CMAKE_LINKER_FLAGS}")
   ExternalProject_Add(clang-propeller-labels
      DEPENDS clang
      PREFIX clang-propeller-labels
