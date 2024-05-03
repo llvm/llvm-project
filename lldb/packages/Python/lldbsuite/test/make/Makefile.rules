@@ -629,9 +629,9 @@ endif
 else
 	$(LD) $(DYLIB_OBJECTS) $(LDFLAGS) -shared -o "$(DYLIB_FILENAME)"
 ifeq "$(SPLIT_DEBUG_SYMBOLS)" "YES"
-	ifeq "$(SAVE_FULL_DEBUG_BINARY)" "YES"
+ifeq "$(SAVE_FULL_DEBUG_BINARY)" "YES"
 	cp "$(DYLIB_FILENAME)" "$(DYLIB_FILENAME).unstripped"
-	endif
+endif
 	$(OBJCOPY) --only-keep-debug "$(DYLIB_FILENAME)" "$(DYLIB_FILENAME).debug"
 	$(OBJCOPY) --strip-debug --add-gnu-debuglink="$(DYLIB_FILENAME).debug" "$(DYLIB_FILENAME)" "$(DYLIB_FILENAME)"
 endif
