@@ -5,6 +5,7 @@
 
 // RUN: ln -s %t/modules %t/modules.symlink
 // RUN: %clang_cc1 -fmodules-cache-path=%t/modules.symlink -fmodules -fimplicit-module-maps -I %S/Inputs -include-pch %t.pch %s -verify
+// RUN: not %clang_cc1 -fmodules-cache-path=%t/modules.dne -fmodules -fimplicit-module-maps -I %S/Inputs -include-pch %t.pch %s -verify
 
 // expected-no-diagnostics
 
