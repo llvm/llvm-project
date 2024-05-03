@@ -496,42 +496,36 @@ void DWARFUnit::extractDIEsIfNeeded(bool CUDieOnly) {
 }
 
 Error DWARFUnit::tryExtractDIEsIfNeeded(bool CUDieOnly) {
-  // read-lock:
   {
     llvm::sys::ScopedReader Lock(m_cu_die_array_mutex);
-    if ((CUDieOnly && !DieArray.empty()) ||
-        DieArray.size() > 1)
+    if ((CUDieOnly && !DieArray.empty()) || DieArray.size() > 1)
       return Error::success(); // Already parsed.
   }
   bool HasCUDie = false;
-  // write-lock:
   {
     llvm::sys::ScopedWriter Lock(m_cu_die_array_mutex);
-    if ((CUDieOnly && !DieArray.empty()) ||
-        DieArray.size() > 1)
+    if ((CUDieOnly && !DieArray.empty()) || DieArray.size() > 1)
       return Error::success(); // Already parsed.
     HasCUDie = !DieArray.empty();
     extractDIEsToVector(!HasCUDie, !CUDieOnly, DieArray);
   }
+  {
+    llvm::sys::ScopedReader Lock(m_all_die_array_mutex);
+    if (DieArray.empty())
+      return Error::success();
 
-  // read-lock:
-{
-  llvm::sys::ScopedReader Lock(m_all_die_array_mutex);
+    // If CU DIE was just parsed, copy several attribute values from it.
+    if (HasCUDie)
+      return Error::success();
+  }
+  llvm::sys::ScopedWriter Lock(m_all_die_array_mutex);
   if (DieArray.empty())
     return Error::success();
 
   // If CU DIE was just parsed, copy several attribute values from it.
   if (HasCUDie)
     return Error::success();
-}
-  // write-lock:
-llvm::sys::ScopedWriter Lock(m_all_die_array_mutex);
-  if (DieArray.empty())
-    return Error::success();
 
-  // If CU DIE was just parsed, copy several attribute values from it.
-  if (HasCUDie)
-    return Error::success();
   DWARFDie UnitDie(this, &DieArray[0]);
   if (std::optional<uint64_t> DWOId =
           toUnsigned(UnitDie.find(DW_AT_GNU_dwo_id)))

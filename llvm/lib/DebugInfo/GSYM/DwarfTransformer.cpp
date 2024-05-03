@@ -589,6 +589,9 @@ Error DwarfTransformer::convert(uint32_t NumThreads, OutputAggregator &Out) {
       handleDie(Out, CUI, Die);
       // Release the line table, once we're done.
       DICtx.clearLineTableForUnit(CU.get());
+      // Free any DIEs that were allocated by the DWARF parser.
+      // If/when they're needed by other CU's, they'll be recreated.
+      CU->clearDIEs(false);
     }
   } else {
     // LLVM Dwarf parser is not thread-safe and we need to parse all DWARF up
@@ -631,7 +634,6 @@ Error DwarfTransformer::convert(uint32_t NumThreads, OutputAggregator &Out) {
             Out << storage;
           }
           Out.Merge(ThreadOut);
-
         });
       }
     }
