@@ -478,12 +478,6 @@ uint64_t BoltAddressTranslation::translate(uint64_t FuncAddress,
     return Offset;
 
   const MapTy &Map = Iter->second;
-  if (IsBranchSrc) {
-    // Try exact lookup first
-    auto KeyVal = Map.find(Offset);
-    if (KeyVal != Map.end() && KeyVal->second & BRANCHENTRY)
-      return KeyVal->second >> 1;
-  }
   auto KeyVal = Map.upper_bound(Offset);
   if (KeyVal == Map.begin())
     return Offset;
@@ -492,6 +486,10 @@ uint64_t BoltAddressTranslation::translate(uint64_t FuncAddress,
 
   const uint32_t Val = KeyVal->second >> 1; // dropping BRANCHENTRY bit
   if (IsBranchSrc) {
+    // Branch entry is found in BAT
+    if (KeyVal->first == Offset && KeyVal->second & BRANCHENTRY)
+      return Val;
+
     // Branch source addresses are translated to the first instruction of the
     // source BB to avoid accounting for modifications BOLT may have made in the
     // BB regarding deletion/addition of instructions.

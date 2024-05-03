@@ -50,7 +50,7 @@ static cl::opt<std::string> InputFilename(cl::Positional,
 
 static cl::list<std::string>
     Translate("translate", cl::desc("translate addresses using BAT"),
-              cl::value_desc("addr[:is_from]"), cl::cat(BatDumpCategory));
+              cl::value_desc("addr[:is_src]"), cl::cat(BatDumpCategory));
 
 static cl::opt<bool> DumpAll("dump-all", cl::desc("dump all BAT tables"),
                              cl::cat(BatDumpCategory));

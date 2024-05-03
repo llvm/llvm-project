@@ -38,8 +38,7 @@ BAT-DUMP-CHECK: Function Address: 0x800040, hash: 0x99e67ed32a203023
 BAT-DUMP-CHECK: 0x34 -> 0x32 hash: 0x6c36179f229b0032
 # Branch entry just above
 BAT-DUMP-CHECK-NEXT: 0x37 -> 0x35 (branch)
-# No entry for that offset
-BAT-DUMP-NOT: 0x3b ->
+# No entry for the offset 0x3b that corresponds to the branch
 # Basic block below
 BAT-DUMP-CHECK-NEXT: 0x3d -> 0x3f hash: 0x6cfc5827a1003f
 BAT-DUMP-CHECK: NumBlocks: 5
