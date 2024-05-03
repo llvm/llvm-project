@@ -36,6 +36,7 @@
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/GlobalVariable.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Type.h"
 #include <optional>
@@ -2216,8 +2217,11 @@ void CodeGenFunction::pushDestroyAndDeferDeactivation(
 void CodeGenFunction::pushDestroyAndDeferDeactivation(
     CleanupKind cleanupKind, Address addr, QualType type, Destroyer *destroyer,
     bool useEHCleanupForArray) {
-  pushCleanupAndDeferDeactivation<DestroyObject>(
-      cleanupKind, addr, type, destroyer, useEHCleanupForArray);
+  llvm::Instruction *DominatingIP =
+      Builder.CreateFlagLoad(llvm::Constant::getNullValue(Int8PtrTy));
+  pushDestroy(cleanupKind, addr, type, destroyer, useEHCleanupForArray);
+  DeferredDeactivationCleanupStack.push_back(
+      {EHStack.stable_begin(), DominatingIP});
 }
 
 void CodeGenFunction::pushStackRestore(CleanupKind Kind, Address SPMem) {
@@ -2252,25 +2256,32 @@ void CodeGenFunction::pushLifetimeExtendedDestroy(CleanupKind cleanupKind,
   }
 
   // Otherwise, we should only destroy the object if it's been initialized.
-  // Re-use the active flag and saved address across both the EH and end of
-  // scope cleanups.
 
-  using SavedType = typename DominatingValue<Address>::saved_type;
   using ConditionalCleanupType =
       EHScopeStack::ConditionalCleanup<DestroyObject, Address, QualType,
                                        Destroyer *, bool>;
+  DominatingValue<Address>::saved_type SavedAddr = saveValueInCond(addr);
 
-  Address ActiveFlag = createCleanupActiveFlag();
-  SavedType SavedAddr = saveValueInCond(addr);
+  // Remember to emit cleanup if we branch-out before end of full-expression
+  // (eg: through stmt-expr or coro suspensions).
+  AllocaTrackerRAII DeactivationAllocas(*this);
+  Address ActiveFlagForDeactivation = createCleanupActiveFlag();
 
   pushCleanupAndDeferDeactivation<ConditionalCleanupType>(
       cleanupKind, SavedAddr, type, destroyer, useEHCleanupForArray);
-  initFullExprCleanupWithFlag(ActiveFlag);
+  initFullExprCleanupWithFlag(ActiveFlagForDeactivation);
+  EHCleanupScope &cleanup = cast<EHCleanupScope>(*EHStack.begin());
+  // Erase the active flag if the cleanup was not emitted.
+  cleanup.AddAuxAllocas(std::move(DeactivationAllocas).Take());
 
   // Since this is lifetime-extended, push it once again to the EHStack after
   // the full expression.
+  // The previous active flag would always be 'false' due to forced deferred
+  // deactivation. Use a separate flag for lifetime-extension to correctly
+  // remember if this branch was taken and the object was initialized.
+  Address ActiveFlagForLifetimeExt = createCleanupActiveFlag();
   pushCleanupAfterFullExprWithActiveFlag<ConditionalCleanupType>(
-      cleanupKind, ActiveFlag, SavedAddr, type, destroyer,
+      cleanupKind, ActiveFlagForLifetimeExt, SavedAddr, type, destroyer,
       useEHCleanupForArray);
 }
 

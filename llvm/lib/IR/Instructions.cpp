@@ -2889,7 +2889,7 @@ bool ShuffleVectorInst::isOneUseSingleSourceMask(int VF) const {
 bool ShuffleVectorInst::isInterleave(unsigned Factor) {
   FixedVectorType *OpTy = dyn_cast<FixedVectorType>(getOperand(0)->getType());
   // shuffle_vector can only interleave fixed length vectors - for scalable
-  // vectors, see the @llvm.experimental.vector.interleave2 intrinsic
+  // vectors, see the @llvm.vector.interleave2 intrinsic
   if (!OpTy)
     return false;
   unsigned OpNumElts = OpTy->getNumElements();
@@ -2976,6 +2976,31 @@ bool ShuffleVectorInst::isInterleaveMask(
   }
 
   return true;
+}
+
+/// Check if the mask is a DE-interleave mask of the given factor
+/// \p Factor like:
+///     <Index, Index+Factor, ..., Index+(NumElts-1)*Factor>
+bool ShuffleVectorInst::isDeInterleaveMaskOfFactor(ArrayRef<int> Mask,
+                                                   unsigned Factor,
+                                                   unsigned &Index) {
+  // Check all potential start indices from 0 to (Factor - 1).
+  for (unsigned Idx = 0; Idx < Factor; Idx++) {
+    unsigned I = 0;
+
+    // Check that elements are in ascending order by Factor. Ignore undef
+    // elements.
+    for (; I < Mask.size(); I++)
+      if (Mask[I] >= 0 && static_cast<unsigned>(Mask[I]) != Idx + I * Factor)
+        break;
+
+    if (I == Mask.size()) {
+      Index = Idx;
+      return true;
+    }
+  }
+
+  return false;
 }
 
 /// Try to lower a vector shuffle as a bit rotation.

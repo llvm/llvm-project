@@ -26,7 +26,9 @@
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/ScopeInfo.h"
+#include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaInternal.h"
+#include "clang/Sema/SemaOpenMP.h"
 #include "clang/Sema/Template.h"
 #include "clang/Sema/TemplateInstCallback.h"
 #include "llvm/Support/TimeProfiler.h"
@@ -398,7 +400,7 @@ static void instantiateOMPDeclareSimdDeclAttr(
     ++SI;
   }
   LinModifiers.append(Attr.modifiers_begin(), Attr.modifiers_end());
-  (void)S.ActOnOpenMPDeclareSimdDirective(
+  (void)S.OpenMP().ActOnOpenMPDeclareSimdDirective(
       S.ConvertDeclToDeclGroup(New), Attr.getBranchState(), Simdlen.get(),
       Uniforms, Aligneds, Alignments, Linears, LinModifiers, Steps,
       Attr.getRange());
@@ -475,9 +477,9 @@ static void instantiateOMPDeclareVariantAttr(
   // Check function/variant ref for `omp declare variant` but not for `omp
   // begin declare variant` (which use implicit attributes).
   std::optional<std::pair<FunctionDecl *, Expr *>> DeclVarData =
-      S.checkOpenMPDeclareVariantFunction(S.ConvertDeclToDeclGroup(New), E, TI,
-                                          Attr.appendArgs_size(),
-                                          Attr.getRange());
+      S.OpenMP().checkOpenMPDeclareVariantFunction(
+          S.ConvertDeclToDeclGroup(New), E, TI, Attr.appendArgs_size(),
+          Attr.getRange());
 
   if (!DeclVarData)
     return;
@@ -538,7 +540,7 @@ static void instantiateOMPDeclareVariantAttr(
     AppendArgs.emplace_back(II.IsTarget, II.IsTargetSync);
   }
 
-  S.ActOnOpenMPDeclareVariantDirective(
+  S.OpenMP().ActOnOpenMPDeclareVariantDirective(
       FD, E, TI, NothingExprs, NeedDevicePtrExprs, AppendArgs, SourceLocation(),
       SourceLocation(), Attr.getRange());
 }
@@ -2294,7 +2296,7 @@ Decl *TemplateDeclInstantiator::VisitFunctionDecl(
       SemaRef, Function->getDeclName(), SourceLocation(),
       D->isLocalExternDecl() ? Sema::LookupRedeclarationWithLinkage
                              : Sema::LookupOrdinaryName,
-      D->isLocalExternDecl() ? Sema::ForExternalRedeclaration
+      D->isLocalExternDecl() ? RedeclarationKind::ForExternalRedeclaration
                              : SemaRef.forRedeclarationInCurContext());
 
   if (DependentFunctionTemplateSpecializationInfo *DFTSI =
@@ -2438,7 +2440,7 @@ Decl *TemplateDeclInstantiator::VisitFunctionDecl(
       return nullptr;
   }
   if (D->isDeleted())
-    SemaRef.SetDeclDeleted(Function, D->getLocation());
+    SemaRef.SetDeclDeleted(Function, D->getLocation(), D->getDeletedMessage());
 
   NamedDecl *PrincipalDecl =
       (TemplateParams ? cast<NamedDecl>(FunctionTemplate) : Function);
@@ -2695,7 +2697,7 @@ Decl *TemplateDeclInstantiator::VisitCXXMethodDecl(
     Method->setInvalidDecl();
 
   LookupResult Previous(SemaRef, NameInfo, Sema::LookupOrdinaryName,
-                        Sema::ForExternalRedeclaration);
+                        RedeclarationKind::ForExternalRedeclaration);
 
   bool IsExplicitSpecialization = false;
 
@@ -2814,7 +2816,8 @@ Decl *TemplateDeclInstantiator::VisitCXXMethodDecl(
       return nullptr;
   }
   if (D->isDeletedAsWritten())
-    SemaRef.SetDeclDeleted(Method, Method->getLocation());
+    SemaRef.SetDeclDeleted(Method, Method->getLocation(),
+                           D->getDeletedMessage());
 
   // If this is an explicit specialization, mark the implicitly-instantiated
   // template specialization as being an explicit specialization too.
@@ -3362,7 +3365,7 @@ Decl *TemplateDeclInstantiator::VisitUsingDecl(UsingDecl *D) {
   // fact, it's not really even possible in non-class scopes).
   bool CheckRedeclaration = Owner->isRecord();
   LookupResult Prev(SemaRef, NameInfo, Sema::LookupUsingDeclName,
-                    Sema::ForVisibleRedeclaration);
+                    RedeclarationKind::ForVisibleRedeclaration);
 
   UsingDecl *NewUD = UsingDecl::Create(SemaRef.Context, Owner,
                                        D->getUsingLoc(),
@@ -3585,7 +3588,7 @@ Decl *TemplateDeclInstantiator::VisitOMPThreadPrivateDecl(
   }
 
   OMPThreadPrivateDecl *TD =
-    SemaRef.CheckOMPThreadPrivateDecl(D->getLocation(), Vars);
+      SemaRef.OpenMP().CheckOMPThreadPrivateDecl(D->getLocation(), Vars);
 
   TD->setAccess(AS_public);
   Owner->addDecl(TD);
@@ -3608,14 +3611,14 @@ Decl *TemplateDeclInstantiator::VisitOMPAllocateDecl(OMPAllocateDecl *D) {
       ExprResult NewE = SemaRef.SubstExpr(AC->getAllocator(), TemplateArgs);
       if (!NewE.isUsable())
         continue;
-      IC = SemaRef.ActOnOpenMPAllocatorClause(
+      IC = SemaRef.OpenMP().ActOnOpenMPAllocatorClause(
           NewE.get(), AC->getBeginLoc(), AC->getLParenLoc(), AC->getEndLoc());
     } else if (auto *AC = dyn_cast<OMPAlignClause>(C)) {
       ExprResult NewE = SemaRef.SubstExpr(AC->getAlignment(), TemplateArgs);
       if (!NewE.isUsable())
         continue;
-      IC = SemaRef.ActOnOpenMPAlignClause(NewE.get(), AC->getBeginLoc(),
-                                          AC->getLParenLoc(), AC->getEndLoc());
+      IC = SemaRef.OpenMP().ActOnOpenMPAlignClause(
+          NewE.get(), AC->getBeginLoc(), AC->getLParenLoc(), AC->getEndLoc());
       // If align clause value ends up being invalid, this can end up null.
       if (!IC)
         continue;
@@ -3623,7 +3626,7 @@ Decl *TemplateDeclInstantiator::VisitOMPAllocateDecl(OMPAllocateDecl *D) {
     Clauses.push_back(IC);
   }
 
-  Sema::DeclGroupPtrTy Res = SemaRef.ActOnOpenMPAllocateDirective(
+  Sema::DeclGroupPtrTy Res = SemaRef.OpenMP().ActOnOpenMPAllocateDirective(
       D->getLocation(), Vars, Clauses, Owner);
   if (Res.get().isNull())
     return nullptr;
@@ -3644,7 +3647,7 @@ Decl *TemplateDeclInstantiator::VisitOMPDeclareReductionDecl(
       D->getType()->containsUnexpandedParameterPack();
   QualType SubstReductionType;
   if (RequiresInstantiation) {
-    SubstReductionType = SemaRef.ActOnOpenMPDeclareReductionType(
+    SubstReductionType = SemaRef.OpenMP().ActOnOpenMPDeclareReductionType(
         D->getLocation(),
         ParsedType::make(SemaRef.SubstType(
             D->getType(), TemplateArgs, D->getLocation(), DeclarationName())));
@@ -3665,7 +3668,7 @@ Decl *TemplateDeclInstantiator::VisitOMPDeclareReductionDecl(
         SemaRef.CurrentInstantiationScope->findInstantiationOf(PrevDeclInScope)
             ->get<Decl *>());
   }
-  auto DRD = SemaRef.ActOnOpenMPDeclareReductionDirectiveStart(
+  auto DRD = SemaRef.OpenMP().ActOnOpenMPDeclareReductionDirectiveStart(
       /*S=*/nullptr, Owner, D->getDeclName(), ReductionTypes, D->getAccess(),
       PrevDeclInScope);
   auto *NewDRD = cast<OMPDeclareReductionDecl>(DRD.get().getSingleDecl());
@@ -3674,7 +3677,7 @@ Decl *TemplateDeclInstantiator::VisitOMPDeclareReductionDecl(
   Expr *SubstInitializer = nullptr;
   // Combiners instantiation sequence.
   if (Combiner) {
-    SemaRef.ActOnOpenMPDeclareReductionCombinerStart(
+    SemaRef.OpenMP().ActOnOpenMPDeclareReductionCombinerStart(
         /*S=*/nullptr, NewDRD);
     SemaRef.CurrentInstantiationScope->InstantiatedLocal(
         cast<DeclRefExpr>(D->getCombinerIn())->getDecl(),
@@ -3686,12 +3689,14 @@ Decl *TemplateDeclInstantiator::VisitOMPDeclareReductionDecl(
     Sema::CXXThisScopeRAII ThisScope(SemaRef, ThisContext, Qualifiers(),
                                      ThisContext);
     SubstCombiner = SemaRef.SubstExpr(Combiner, TemplateArgs).get();
-    SemaRef.ActOnOpenMPDeclareReductionCombinerEnd(NewDRD, SubstCombiner);
+    SemaRef.OpenMP().ActOnOpenMPDeclareReductionCombinerEnd(NewDRD,
+                                                            SubstCombiner);
   }
   // Initializers instantiation sequence.
   if (Init) {
-    VarDecl *OmpPrivParm = SemaRef.ActOnOpenMPDeclareReductionInitializerStart(
-        /*S=*/nullptr, NewDRD);
+    VarDecl *OmpPrivParm =
+        SemaRef.OpenMP().ActOnOpenMPDeclareReductionInitializerStart(
+            /*S=*/nullptr, NewDRD);
     SemaRef.CurrentInstantiationScope->InstantiatedLocal(
         cast<DeclRefExpr>(D->getInitOrig())->getDecl(),
         cast<DeclRefExpr>(NewDRD->getInitOrig())->getDecl());
@@ -3708,8 +3713,8 @@ Decl *TemplateDeclInstantiator::VisitOMPDeclareReductionDecl(
         SemaRef.InstantiateVariableInitializer(OmpPrivParm, OldPrivParm,
                                                TemplateArgs);
     }
-    SemaRef.ActOnOpenMPDeclareReductionInitializerEnd(NewDRD, SubstInitializer,
-                                                      OmpPrivParm);
+    SemaRef.OpenMP().ActOnOpenMPDeclareReductionInitializerEnd(
+        NewDRD, SubstInitializer, OmpPrivParm);
   }
   IsCorrect = IsCorrect && SubstCombiner &&
               (!Init ||
@@ -3718,7 +3723,7 @@ Decl *TemplateDeclInstantiator::VisitOMPDeclareReductionDecl(
                (D->getInitializerKind() != OMPDeclareReductionInitKind::Call &&
                 !SubstInitializer));
 
-  (void)SemaRef.ActOnOpenMPDeclareReductionDirectiveEnd(
+  (void)SemaRef.OpenMP().ActOnOpenMPDeclareReductionDirectiveEnd(
       /*S=*/nullptr, DRD, IsCorrect && !D->isInvalidDecl());
 
   return NewDRD;
@@ -3734,7 +3739,7 @@ TemplateDeclInstantiator::VisitOMPDeclareMapperDecl(OMPDeclareMapperDecl *D) {
   QualType SubstMapperTy;
   DeclarationName VN = D->getVarName();
   if (RequiresInstantiation) {
-    SubstMapperTy = SemaRef.ActOnOpenMPDeclareMapperType(
+    SubstMapperTy = SemaRef.OpenMP().ActOnOpenMPDeclareMapperType(
         D->getLocation(),
         ParsedType::make(SemaRef.SubstType(D->getType(), TemplateArgs,
                                            D->getLocation(), VN)));
@@ -3754,11 +3759,12 @@ TemplateDeclInstantiator::VisitOMPDeclareMapperDecl(OMPDeclareMapperDecl *D) {
   SmallVector<OMPClause *, 6> Clauses;
   // Instantiate the mapper variable.
   DeclarationNameInfo DirName;
-  SemaRef.StartOpenMPDSABlock(llvm::omp::OMPD_declare_mapper, DirName,
-                              /*S=*/nullptr,
-                              (*D->clauselist_begin())->getBeginLoc());
-  ExprResult MapperVarRef = SemaRef.ActOnOpenMPDeclareMapperDirectiveVarDecl(
-      /*S=*/nullptr, SubstMapperTy, D->getLocation(), VN);
+  SemaRef.OpenMP().StartOpenMPDSABlock(llvm::omp::OMPD_declare_mapper, DirName,
+                                       /*S=*/nullptr,
+                                       (*D->clauselist_begin())->getBeginLoc());
+  ExprResult MapperVarRef =
+      SemaRef.OpenMP().ActOnOpenMPDeclareMapperDirectiveVarDecl(
+          /*S=*/nullptr, SubstMapperTy, D->getLocation(), VN);
   SemaRef.CurrentInstantiationScope->InstantiatedLocal(
       cast<DeclRefExpr>(D->getMapperVarRef())->getDecl(),
       cast<DeclRefExpr>(MapperVarRef.get())->getDecl());
@@ -3788,17 +3794,17 @@ TemplateDeclInstantiator::VisitOMPDeclareMapperDecl(OMPDeclareMapperDecl *D) {
         SemaRef.SubstDeclarationNameInfo(OldC->getMapperIdInfo(), TemplateArgs);
     OMPVarListLocTy Locs(OldC->getBeginLoc(), OldC->getLParenLoc(),
                          OldC->getEndLoc());
-    OMPClause *NewC = SemaRef.ActOnOpenMPMapClause(
+    OMPClause *NewC = SemaRef.OpenMP().ActOnOpenMPMapClause(
         OldC->getIteratorModifier(), OldC->getMapTypeModifiers(),
         OldC->getMapTypeModifiersLoc(), SS, NewNameInfo, OldC->getMapType(),
         OldC->isImplicitMapType(), OldC->getMapLoc(), OldC->getColonLoc(),
         NewVars, Locs);
     Clauses.push_back(NewC);
   }
-  SemaRef.EndOpenMPDSABlock(nullptr);
+  SemaRef.OpenMP().EndOpenMPDSABlock(nullptr);
   if (!IsCorrect)
     return nullptr;
-  Sema::DeclGroupPtrTy DG = SemaRef.ActOnOpenMPDeclareMapperDirective(
+  Sema::DeclGroupPtrTy DG = SemaRef.OpenMP().ActOnOpenMPDeclareMapperDirective(
       /*S=*/nullptr, Owner, D->getDeclName(), SubstMapperTy, D->getLocation(),
       VN, D->getAccess(), MapperVarRef.get(), Clauses, PrevDeclInScope);
   Decl *NewDMD = DG.get().getSingleDecl();
@@ -4866,7 +4872,7 @@ TemplateDeclInstantiator::InitMethodInstantiation(CXXMethodDecl *New,
 bool TemplateDeclInstantiator::SubstDefaultedFunction(FunctionDecl *New,
                                                       FunctionDecl *Tmpl) {
   // Transfer across any unqualified lookups.
-  if (auto *DFI = Tmpl->getDefaultedFunctionInfo()) {
+  if (auto *DFI = Tmpl->getDefalutedOrDeletedInfo()) {
     SmallVector<DeclAccessPair, 32> Lookups;
     Lookups.reserve(DFI->getUnqualifiedLookups().size());
     bool AnyChanged = false;
@@ -4881,8 +4887,8 @@ bool TemplateDeclInstantiator::SubstDefaultedFunction(FunctionDecl *New,
 
     // It's unlikely that substitution will change any declarations. Don't
     // store an unnecessary copy in that case.
-    New->setDefaultedFunctionInfo(
-        AnyChanged ? FunctionDecl::DefaultedFunctionInfo::Create(
+    New->setDefaultedOrDeletedInfo(
+        AnyChanged ? FunctionDecl::DefaultedOrDeletedFunctionInfo::Create(
                          SemaRef.Context, Lookups)
                    : DFI);
   }
@@ -5178,6 +5184,7 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
 
     ParmVarDecl *Parm = Function->getParamDecl(0);
     TypeSourceInfo *NewParmSI = IR.TransformType(Parm->getTypeSourceInfo());
+    assert(NewParmSI && "Type transformation failed.");
     Parm->setType(NewParmSI->getType());
     Parm->setTypeSourceInfo(NewParmSI);
   };
@@ -5390,7 +5397,7 @@ void Sema::BuildVariableInstantiation(
       *this, NewVar->getDeclName(), NewVar->getLocation(),
       NewVar->isLocalExternDecl() ? Sema::LookupRedeclarationWithLinkage
                                   : Sema::LookupOrdinaryName,
-      NewVar->isLocalExternDecl() ? Sema::ForExternalRedeclaration
+      NewVar->isLocalExternDecl() ? RedeclarationKind::ForExternalRedeclaration
                                   : forRedeclarationInCurContext());
 
   if (NewVar->isLocalExternDecl() && OldVar->getPreviousDecl() &&
@@ -5489,7 +5496,6 @@ void Sema::InstantiateVariableInitializer(
         *this, Sema::ExpressionEvaluationContext::PotentiallyEvaluated, Var);
 
     keepInLifetimeExtendingContext();
-    keepInMaterializeTemporaryObjectContext();
     // Instantiate the initializer.
     ExprResult Init;
 
@@ -5537,7 +5543,7 @@ void Sema::InstantiateVariableInitializer(
   }
 
   if (getLangOpts().CUDA)
-    checkAllowedCUDAInitializer(Var);
+    CUDA().checkAllowedInitializer(Var);
 }
 
 /// Instantiate the definition of the given variable from its

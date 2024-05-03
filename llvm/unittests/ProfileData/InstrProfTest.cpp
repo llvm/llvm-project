@@ -347,6 +347,9 @@ using ::llvm::memprof::IndexedMemProfRecord;
 using ::llvm::memprof::MemInfoBlock;
 using FrameIdMapTy =
     llvm::DenseMap<::llvm::memprof::FrameId, ::llvm::memprof::Frame>;
+using CallStackIdMapTy =
+    llvm::DenseMap<::llvm::memprof::CallStackId,
+                   ::llvm::SmallVector<::llvm::memprof::FrameId>>;
 
 static FrameIdMapTy getFrameMapping() {
   FrameIdMapTy Mapping;
@@ -359,18 +362,60 @@ static FrameIdMapTy getFrameMapping() {
   return Mapping;
 }
 
+static CallStackIdMapTy getCallStackMapping() {
+  CallStackIdMapTy Mapping;
+  Mapping.insert({0x111, {0, 1}});
+  Mapping.insert({0x222, {2, 3}});
+  Mapping.insert({0x333, {4, 5}});
+  return Mapping;
+}
+
+// Populate all of the fields of MIB.
+MemInfoBlock makeFullMIB() {
+  MemInfoBlock MIB;
+#define MIBEntryDef(NameTag, Name, Type) MIB.NameTag;
+#include "llvm/ProfileData/MIBEntryDef.inc"
+#undef MIBEntryDef
+  return MIB;
+}
+
+// Populate those fields returned by getHotColdSchema.
+MemInfoBlock makePartialMIB() {
+  MemInfoBlock MIB;
+  MIB.AllocCount = 1;
+  MIB.TotalSize = 5;
+  MIB.TotalLifetime = 10;
+  MIB.TotalLifetimeAccessDensity = 23;
+  return MIB;
+}
+
 IndexedMemProfRecord makeRecord(
     std::initializer_list<std::initializer_list<::llvm::memprof::FrameId>>
         AllocFrames,
     std::initializer_list<std::initializer_list<::llvm::memprof::FrameId>>
         CallSiteFrames,
-    const MemInfoBlock &Block = MemInfoBlock()) {
+    const MemInfoBlock &Block = makeFullMIB()) {
   llvm::memprof::IndexedMemProfRecord MR;
   for (const auto &Frames : AllocFrames)
     MR.AllocSites.emplace_back(Frames, llvm::memprof::hashCallStack(Frames),
                                Block);
   for (const auto &Frames : CallSiteFrames)
     MR.CallSites.push_back(Frames);
+  return MR;
+}
+
+IndexedMemProfRecord
+makeRecordV2(std::initializer_list<::llvm::memprof::CallStackId> AllocFrames,
+             std::initializer_list<::llvm::memprof::CallStackId> CallSiteFrames,
+             const MemInfoBlock &Block, const memprof::MemProfSchema &Schema) {
+  llvm::memprof::IndexedMemProfRecord MR;
+  for (const auto &CSId : AllocFrames)
+    // We don't populate IndexedAllocationInfo::CallStack because we use it only
+    // in Version0 and Version1.
+    MR.AllocSites.emplace_back(::llvm::SmallVector<memprof::FrameId>(), CSId,
+                               Block, Schema);
+  for (const auto &CSId : CallSiteFrames)
+    MR.CallSiteIds.push_back(CSId);
   return MR;
 }
 
@@ -408,7 +453,7 @@ MATCHER_P(EqualsRecord, Want, "") {
   return true;
 }
 
-TEST_F(InstrProfTest, test_memprof) {
+TEST_F(InstrProfTest, test_memprof_v0) {
   ASSERT_THAT_ERROR(Writer.mergeProfileKind(InstrProfKind::MemProf),
                     Succeeded());
 
@@ -445,8 +490,92 @@ TEST_F(InstrProfTest, test_memprof) {
   };
 
   const memprof::MemProfRecord WantRecord(IndexedMR, IdToFrameCallback);
-  ASSERT_FALSE(LastUnmappedFrameId.has_value())
+  ASSERT_EQ(LastUnmappedFrameId, std::nullopt)
       << "could not map frame id: " << *LastUnmappedFrameId;
+  EXPECT_THAT(WantRecord, EqualsRecord(Record));
+}
+
+TEST_F(InstrProfTest, test_memprof_v2_full_schema) {
+  const MemInfoBlock MIB = makeFullMIB();
+
+  Writer.setMemProfVersionRequested(memprof::Version2);
+  Writer.setMemProfFullSchema(true);
+
+  ASSERT_THAT_ERROR(Writer.mergeProfileKind(InstrProfKind::MemProf),
+                    Succeeded());
+
+  const IndexedMemProfRecord IndexedMR = makeRecordV2(
+      /*AllocFrames=*/{0x111, 0x222},
+      /*CallSiteFrames=*/{0x333}, MIB, memprof::getFullSchema());
+  const FrameIdMapTy IdToFrameMap = getFrameMapping();
+  const auto CSIdToCallStackMap = getCallStackMapping();
+  for (const auto &I : IdToFrameMap) {
+    Writer.addMemProfFrame(I.first, I.getSecond(), Err);
+  }
+  for (const auto &I : CSIdToCallStackMap) {
+    Writer.addMemProfCallStack(I.first, I.getSecond(), Err);
+  }
+  Writer.addMemProfRecord(/*Id=*/0x9999, IndexedMR);
+
+  auto Profile = Writer.writeBuffer();
+  readProfile(std::move(Profile));
+
+  auto RecordOr = Reader->getMemProfRecord(0x9999);
+  ASSERT_THAT_ERROR(RecordOr.takeError(), Succeeded());
+  const memprof::MemProfRecord &Record = RecordOr.get();
+
+  memprof::FrameIdConverter<decltype(IdToFrameMap)> FrameIdConv(IdToFrameMap);
+  memprof::CallStackIdConverter<decltype(CSIdToCallStackMap)> CSIdConv(
+      CSIdToCallStackMap, FrameIdConv);
+
+  const ::llvm::memprof::MemProfRecord WantRecord =
+      IndexedMR.toMemProfRecord(CSIdConv);
+  ASSERT_EQ(FrameIdConv.LastUnmappedId, std::nullopt)
+      << "could not map frame id: " << *FrameIdConv.LastUnmappedId;
+  ASSERT_EQ(CSIdConv.LastUnmappedId, std::nullopt)
+      << "could not map call stack id: " << *CSIdConv.LastUnmappedId;
+  EXPECT_THAT(WantRecord, EqualsRecord(Record));
+}
+
+TEST_F(InstrProfTest, test_memprof_v2_partial_schema) {
+  const MemInfoBlock MIB = makePartialMIB();
+
+  Writer.setMemProfVersionRequested(memprof::Version2);
+  Writer.setMemProfFullSchema(false);
+
+  ASSERT_THAT_ERROR(Writer.mergeProfileKind(InstrProfKind::MemProf),
+                    Succeeded());
+
+  const IndexedMemProfRecord IndexedMR = makeRecordV2(
+      /*AllocFrames=*/{0x111, 0x222},
+      /*CallSiteFrames=*/{0x333}, MIB, memprof::getHotColdSchema());
+  const FrameIdMapTy IdToFrameMap = getFrameMapping();
+  const auto CSIdToCallStackMap = getCallStackMapping();
+  for (const auto &I : IdToFrameMap) {
+    Writer.addMemProfFrame(I.first, I.getSecond(), Err);
+  }
+  for (const auto &I : CSIdToCallStackMap) {
+    Writer.addMemProfCallStack(I.first, I.getSecond(), Err);
+  }
+  Writer.addMemProfRecord(/*Id=*/0x9999, IndexedMR);
+
+  auto Profile = Writer.writeBuffer();
+  readProfile(std::move(Profile));
+
+  auto RecordOr = Reader->getMemProfRecord(0x9999);
+  ASSERT_THAT_ERROR(RecordOr.takeError(), Succeeded());
+  const memprof::MemProfRecord &Record = RecordOr.get();
+
+  memprof::FrameIdConverter<decltype(IdToFrameMap)> FrameIdConv(IdToFrameMap);
+  memprof::CallStackIdConverter<decltype(CSIdToCallStackMap)> CSIdConv(
+      CSIdToCallStackMap, FrameIdConv);
+
+  const ::llvm::memprof::MemProfRecord WantRecord =
+      IndexedMR.toMemProfRecord(CSIdConv);
+  ASSERT_EQ(FrameIdConv.LastUnmappedId, std::nullopt)
+      << "could not map frame id: " << *FrameIdConv.LastUnmappedId;
+  ASSERT_EQ(CSIdConv.LastUnmappedId, std::nullopt)
+      << "could not map call stack id: " << *CSIdConv.LastUnmappedId;
   EXPECT_THAT(WantRecord, EqualsRecord(Record));
 }
 
@@ -520,22 +649,20 @@ TEST_F(InstrProfTest, test_memprof_merge) {
   ASSERT_THAT_ERROR(RecordOr.takeError(), Succeeded());
   const memprof::MemProfRecord &Record = RecordOr.get();
 
-  memprof::FrameId LastUnmappedFrameId = 0;
-  bool HasFrameMappingError = false;
+  std::optional<memprof::FrameId> LastUnmappedFrameId;
 
   auto IdToFrameCallback = [&](const memprof::FrameId Id) {
     auto Iter = IdToFrameMap.find(Id);
     if (Iter == IdToFrameMap.end()) {
       LastUnmappedFrameId = Id;
-      HasFrameMappingError = true;
       return memprof::Frame(0, 0, 0, false);
     }
     return Iter->second;
   };
 
   const memprof::MemProfRecord WantRecord(IndexedMR, IdToFrameCallback);
-  ASSERT_FALSE(HasFrameMappingError)
-      << "could not map frame id: " << LastUnmappedFrameId;
+  ASSERT_EQ(LastUnmappedFrameId, std::nullopt)
+      << "could not map frame id: " << *LastUnmappedFrameId;
   EXPECT_THAT(WantRecord, EqualsRecord(Record));
 }
 

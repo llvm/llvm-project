@@ -960,9 +960,12 @@ struct OperationState {
   /// Regions that the op will hold.
   SmallVector<std::unique_ptr<Region>, 1> regions;
 
-  // If we're creating an unregistered operation, this Attribute is used to
-  // build the properties. Otherwise it is ignored. For registered operations
-  // see the `getOrAddProperties` method.
+  /// This Attribute is used to opaquely construct the properties of the
+  /// operation. If we're creating an unregistered operation, the Attribute is
+  /// used as-is as the Properties storage of the operation. Otherwise, the
+  /// operation properties are constructed opaquely using its
+  /// `setPropertiesFromAttr` hook. Note that `getOrAddProperties` is the
+  /// preferred method to construct properties from C++.
   Attribute propertiesAttr;
 
 private:
@@ -1034,8 +1037,11 @@ public:
     addAttribute(StringAttr::get(getContext(), name), attr);
   }
 
-  /// Add an attribute with the specified name.
+  /// Add an attribute with the specified name. `name` and `attr` must not be
+  /// null.
   void addAttribute(StringAttr name, Attribute attr) {
+    assert(name && "attribute name cannot be null");
+    assert(attr && "attribute cannot be null");
     attributes.append(name, attr);
   }
 
@@ -1044,7 +1050,11 @@ public:
     attributes.append(newAttributes);
   }
 
-  void addSuccessors(Block *successor) { successors.push_back(successor); }
+  /// Adds a successor to the operation sate. `successor` must not be null.
+  void addSuccessors(Block *successor) {
+    assert(successor && "successor cannot be null");
+    successors.push_back(successor);
+  }
   void addSuccessors(BlockRange newSuccessors);
 
   /// Create a region that should be attached to the operation.  These regions
