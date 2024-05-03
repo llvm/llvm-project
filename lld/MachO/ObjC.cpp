@@ -780,7 +780,7 @@ void ObjcCategoryMerger::emitAndLinkProtocolList(
   listSec->parent = infoCategoryWriter.catPtrListInfo.outputSection;
 
   std::string symName = ptrList.categoryPrefix;
-  symName += extInfo.baseClassName + "_$_(" + extInfo.mergedContainerName + ")";
+  symName += extInfo.baseClassName + "(" + extInfo.mergedContainerName + ")";
 
   Defined *ptrListSym = make<Defined>(
       newStringData(symName.c_str()), /*file=*/parentSym->getObjectFile(),
@@ -838,7 +838,7 @@ void ObjcCategoryMerger::emitAndLinkPointerList(
   listSec->parent = infoCategoryWriter.catPtrListInfo.outputSection;
 
   std::string symName = ptrList.categoryPrefix;
-  symName += extInfo.baseClassName + "_$_" + extInfo.mergedContainerName;
+  symName += extInfo.baseClassName + "(" + extInfo.mergedContainerName + ")";
 
   Defined *ptrListSym = make<Defined>(
       newStringData(symName.c_str()), /*file=*/parentSym->getObjectFile(),
@@ -915,7 +915,7 @@ Defined *ObjcCategoryMerger::emitCategoryBody(const std::string &name,
   addInputSection(newBodySec);
 
   std::string symName =
-      objc::symbol_names::category + baseClassName + "_$_(" + name + ")";
+      objc::symbol_names::category + baseClassName + "(" + name + ")";
   Defined *catBodySym = make<Defined>(
       newStringData(symName.c_str()), /*file=*/objFile, newBodySec,
       /*value=*/0, bodyData.size(), /*isWeakDef=*/false, /*isExternal=*/false,

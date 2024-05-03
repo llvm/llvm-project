@@ -20,7 +20,7 @@ MERGE_CATS-NOT: __OBJC_$_CATEGORY_MyBaseClass_$_Category01
 MERGE_CATS-NOT: __OBJC_$_CATEGORY_MyBaseClass_$_Category02
 
 # Check that the merged cateogry is there, in the correct format
-MERGE_CATS: __OBJC_$_CATEGORY_MyBaseClass_$_(Category01|Category02)
+MERGE_CATS: __OBJC_$_CATEGORY_MyBaseClass(Category01|Category02)
 MERGE_CATS-NEXT:   name {{.*}} Category01|Category02
 MERGE_CATS:       instanceMethods
 MERGE_CATS-NEXT:  24
@@ -37,7 +37,7 @@ MERGE_CATS-NEXT:   instanceProperties 0x0
 
 #### Check merge categories disabled ###
 # Check that the merged category is not there
-NO_MERGE_CATS-NOT: __OBJC_$_CATEGORY_MyBaseClass_$_(Category01|Category02)
+NO_MERGE_CATS-NOT: __OBJC_$_CATEGORY_MyBaseClass(Category01|Category02)
 
 # Check that the original categories are there
 NO_MERGE_CATS: __OBJC_$_CATEGORY_MyBaseClass_$_Category01
