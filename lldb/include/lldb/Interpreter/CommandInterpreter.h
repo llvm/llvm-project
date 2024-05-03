@@ -773,7 +773,7 @@ private:
   /// the list is a dictionary with three keys: "command" (string), "output"
   /// (list of strings) and optionally "error" (list of strings). Each string
   /// in "output" and "error" is a line (without EOL characters).
-  StructuredData::ArraySP m_transcript_structured;
+  StructuredData::ArraySP m_transcript;
 };
 
 } // namespace lldb_private

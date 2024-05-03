@@ -137,7 +137,7 @@ CommandInterpreter::CommandInterpreter(Debugger &debugger,
       m_comment_char('#'), m_batch_command_mode(false),
       m_truncation_warning(eNoOmission), m_max_depth_warning(eNoOmission),
       m_command_source_depth(0),
-      m_transcript_structured(std::make_shared<StructuredData::Array>()) {
+      m_transcript(std::make_shared<StructuredData::Array>()) {
   SetEventName(eBroadcastBitThreadShouldExit, "thread-should-exit");
   SetEventName(eBroadcastBitResetPrompt, "reset-prompt");
   SetEventName(eBroadcastBitQuitCommandReceived, "quit");
@@ -1897,7 +1897,7 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
   // the command.
   auto transcript_item = std::make_shared<StructuredData::Dictionary>();
   transcript_item->AddStringItem("command", command_line);
-  m_transcript_structured->AddItem(transcript_item);
+  m_transcript->AddItem(transcript_item);
 
   bool empty_command = false;
   bool comment_command = false;
@@ -3573,5 +3573,5 @@ llvm::json::Value CommandInterpreter::GetStatistics() {
 }
 
 StructuredData::ArraySP CommandInterpreter::GetTranscript() const {
-  return m_transcript_structured;
+  return m_transcript;
 }

@@ -321,7 +321,7 @@ public:
   /// Returns a list of handled commands, output and error. Each element in
   /// the list is a dictionary with three keys: "command" (string), "output"
   /// (list of strings) and optionally "error" (list of strings). Each string
-  /// in "output" and "error" is a line (without EOL characteres).
+  /// in "output" and "error" is a line (without EOL characters).
   SBStructuredData GetTranscript();
 
 protected:

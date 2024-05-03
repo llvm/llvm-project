@@ -295,28 +295,14 @@ StructuredData::ArraySP StructuredData::Array::SplitString(llvm::StringRef s,
                                                            char separator,
                                                            int maxSplit,
                                                            bool keepEmpty) {
+  // Split the string into a small vector.
+  llvm::SmallVector<StringRef> small_vec;
+  s.split(small_vec, separator, maxSplit, keepEmpty);
+
+  // Copy the substrings from the small vector into the output array.
   auto array_sp = std::make_shared<StructuredData::Array>();
-
-  // Count down from `maxSplit`. When `maxSplit` is -1, this will just split
-  // "forever". This doesn't support splitting more than 2^31 times
-  // intentionally; if we ever want that we can make `maxSplit` a 64-bit integer
-  // but that seems unlikely to be useful.
-  while (maxSplit-- != 0) {
-    size_t idx = s.find(separator);
-    if (idx == llvm::StringLiteral::npos)
-      break;
-
-    // Push this split.
-    if (keepEmpty || idx > 0)
-      array_sp->AddStringItem(s.slice(0, idx));
-
-    // Jump forward.
-    s = s.slice(idx + 1, llvm::StringLiteral::npos);
+  for (auto substring : small_vec) {
+    array_sp->AddStringItem(std::move(substring));
   }
-
-  // Push the tail.
-  if (keepEmpty || !s.empty())
-    array_sp->AddStringItem(s);
-
   return array_sp;
 }

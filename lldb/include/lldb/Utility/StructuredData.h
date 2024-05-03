@@ -293,11 +293,6 @@ public:
     /// Creates an Array of substrings by splitting a string around the
     /// occurrences of a separator character.
     ///
-    /// Note:
-    /// * This is almost the same API and implementation as `StringRef::split`.
-    /// * Not depending on `StringRef::split` because it will involve a
-    ///   temporary `SmallVectorImpl`.
-    ///
     /// \param[in] s
     ///   The input string.
     ///
@@ -396,10 +391,10 @@ public:
   class String : public Object {
   public:
     String() : Object(lldb::eStructuredDataTypeString) {}
-    explicit String(llvm::StringRef s)
-        : Object(lldb::eStructuredDataTypeString), m_value(s) {}
+    explicit String(llvm::StringRef S)
+        : Object(lldb::eStructuredDataTypeString), m_value(S) {}
 
-    void SetValue(llvm::StringRef s) { m_value = std::string(s); }
+    void SetValue(llvm::StringRef S) { m_value = std::string(S); }
 
     llvm::StringRef GetValue() { return m_value; }
 
