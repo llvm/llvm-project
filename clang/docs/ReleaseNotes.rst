@@ -53,6 +53,8 @@ C++ Specific Potentially Breaking Changes
   it's negative spelling can be used to obtain compatibility with previous
   versions of clang.
 
+- Clang now rejects pointer to member from parenthesized expression in unevaluated context such as ``decltype(&(foo::bar))``. (#GH40906).
+
 ABI Changes in This Version
 ---------------------------
 - Fixed Microsoft name mangling of implicitly defined variables used for thread
@@ -187,6 +189,9 @@ C++2c Feature Support
 - Implemented `P0609R3: Attributes for Structured Bindings <https://wg21.link/P0609R3>`_
 
 - Implemented `P2748R5 Disallow Binding a Returned Glvalue to a Temporary <https://wg21.link/P2748R5>`_.
+
+- Implemented `P2809R3: Trivial infinite loops are not Undefined Behavior <https://wg21.link/P2809R3>`_.
+
 
 Resolutions to C++ Defect Reports
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -331,6 +336,10 @@ Modified Compiler Flags
 
 - Carved out ``-Wformat`` warning about scoped enums into a subwarning and
   make it controlled by ``-Wformat-pedantic``. Fixes #GH88595.
+
+- Trivial infinite loops (i.e loops with a constant controlling expresion
+  evaluating to ``true`` and an empty body such as ``while(1);``)
+  are considered infinite, even when the ``-ffinite-loop`` flag is set.
 
 Removed Compiler Flags
 -------------------------

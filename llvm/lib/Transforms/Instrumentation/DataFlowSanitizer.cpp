@@ -357,7 +357,7 @@ public:
 /// useful for updating calls of the old function to the new type.
 struct TransformedFunction {
   TransformedFunction(FunctionType *OriginalType, FunctionType *TransformedType,
-                      std::vector<unsigned> ArgumentIndexMapping)
+                      const std::vector<unsigned> &ArgumentIndexMapping)
       : OriginalType(OriginalType), TransformedType(TransformedType),
         ArgumentIndexMapping(ArgumentIndexMapping) {}
 
