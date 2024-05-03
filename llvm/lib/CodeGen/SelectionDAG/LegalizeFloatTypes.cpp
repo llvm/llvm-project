@@ -134,6 +134,7 @@ void DAGTypeLegalizer::SoftenFloatResult(SDNode *N, unsigned ResNo) {
     case ISD::STRICT_FTRUNC:
     case ISD::FTRUNC:      R = SoftenFloatRes_FTRUNC(N); break;
     case ISD::LOAD:        R = SoftenFloatRes_LOAD(N); break;
+    case ISD::ATOMIC_LOAD: R = SoftenFloatRes_ATOMIC_LOAD(N); break;
     case ISD::ATOMIC_SWAP: R = BitcastToInt_ATOMIC_SWAP(N); break;
     case ISD::SELECT:      R = SoftenFloatRes_SELECT(N); break;
     case ISD::SELECT_CC:   R = SoftenFloatRes_SELECT_CC(N); break;
@@ -813,6 +814,26 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_LOAD(SDNode *N) {
   ReplaceValueWith(SDValue(N, 1), NewL.getValue(1));
   auto ExtendNode = DAG.getNode(ISD::FP_EXTEND, dl, VT, NewL);
   return BitConvertToInteger(ExtendNode);
+}
+
+SDValue DAGTypeLegalizer::SoftenFloatRes_ATOMIC_LOAD(SDNode *N) {
+  AtomicSDNode *L = cast<AtomicSDNode>(N);
+  EVT VT = N->getValueType(0);
+  EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), VT);
+  SDLoc dl(N);
+
+  if (L->getExtensionType() == ISD::NON_EXTLOAD) {
+    SDValue NewL =
+        DAG.getAtomic(ISD::ATOMIC_LOAD, dl, NVT, DAG.getVTList(NVT, MVT::Other),
+                      {L->getChain(), L->getBasePtr()}, L->getMemOperand());
+
+    // Legalized the chain result - switch anything that used the old chain to
+    // use the new one.
+    ReplaceValueWith(SDValue(N, 1), NewL.getValue(1));
+    return NewL;
+  }
+
+  report_fatal_error("softening fp extending atomic load not handled");
 }
 
 SDValue DAGTypeLegalizer::SoftenFloatRes_SELECT(SDNode *N) {
