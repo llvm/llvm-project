@@ -11,10 +11,12 @@
 
 #include "clang/Frontend/FrontendAction.h"
 
+#include "mlir/IR/BuiltinOps.h"
+#include "mlir/IR/OwningOpRef.h"
+
 namespace mlir {
 class MLIRContext;
 class ModuleOp;
-template <typename T> class OwningOpRef;
 } // namespace mlir
 
 namespace cir {
@@ -29,9 +31,7 @@ public:
 private:
   friend class CIRGenConsumer;
 
-  // TODO: this is redundant but just using the OwningModuleRef requires more of
-  // clang against MLIR. Hide this somewhere else.
-  std::unique_ptr<mlir::OwningOpRef<mlir::ModuleOp>> mlirModule;
+  mlir::OwningOpRef<mlir::ModuleOp> mlirModule;
 
   mlir::MLIRContext *mlirContext;
 

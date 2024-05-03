@@ -69,7 +69,7 @@ CIRGenAction::CIRGenAction(OutputType act, mlir::MLIRContext *mlirContext)
     : mlirContext(mlirContext ? mlirContext : new mlir::MLIRContext),
       action(act) {}
 
-CIRGenAction::~CIRGenAction() { mlirModule.reset(); }
+CIRGenAction::~CIRGenAction() { mlirModule.release(); }
 
 std::unique_ptr<ASTConsumer>
 CIRGenAction::CreateASTConsumer(CompilerInstance &ci, StringRef inputFile) {

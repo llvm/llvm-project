@@ -24,11 +24,9 @@
 
 using namespace clang;
 namespace cir {
-/// Implementation of a CIR/MLIR emission from Clang AST.
-///
-/// This will emit operations that are specific to C(++)/ObjC(++) language,
-/// preserving the semantics of the language and (hopefully) allow to perform
-/// accurate analysis and transformation based on these high level semantics.
+
+/// This class organizes the cross-function state that is used while generating
+/// CIR code.
 class CIRGenModule : public CIRGenTypeCache {
   CIRGenModule(CIRGenModule &) = delete;
   CIRGenModule &operator=(CIRGenModule &) = delete;
