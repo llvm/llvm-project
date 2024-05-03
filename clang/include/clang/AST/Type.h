@@ -4776,6 +4776,9 @@ public:
 struct FunctionEffectWithCondition {
   FunctionEffect Effect;
   FunctionEffectCondition Cond;
+
+  /// Return a textual description of the effect, and its condition, if any.
+  std::string description() const;
 };
 
 struct FunctionEffectDiff {

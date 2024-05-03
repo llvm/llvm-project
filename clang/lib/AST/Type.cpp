@@ -5446,3 +5446,10 @@ FunctionEffectsRef FunctionEffectsRef::get(QualType QT) {
 
   return {};
 }
+
+std::string FunctionEffectWithCondition::description() const {
+  std::string Result(Effect.name().str());
+  if (Cond.expr() != nullptr)
+    Result += "(expr)";
+  return Result;
+}

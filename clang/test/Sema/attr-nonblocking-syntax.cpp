@@ -3,7 +3,6 @@
 // Make sure that the attribute gets parsed and attached to the correct AST elements.
 
 #pragma clang diagnostic ignored "-Wunused-variable"
-#pragma clang diagnostic ignored "-Wperf-constraint-implies-noexcept"
 
 // =========================================================================================
 // Square brackets, true

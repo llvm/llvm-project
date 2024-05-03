@@ -217,19 +217,10 @@ namespace {
     /// validating that noderef was used on a pointer or array.
     bool parsedNoDeref;
 
-    // Flags to diagnose illegal permutations of nonblocking(cond) and
-    // nonallocating(cond). Manual logic for finding previous attributes would
-    // be more complex, unless we transformed nonblocking/nonallocating(false)
-    // into distinct separate attributes from the ones which are parsed.
-    FunctionEffectMode parsedNonBlocking;
-    FunctionEffectMode parsedNonAllocating;
-
   public:
     TypeProcessingState(Sema &sema, Declarator &declarator)
         : sema(sema), declarator(declarator),
-          chunkIndex(declarator.getNumTypeObjects()), parsedNoDeref(false),
-          parsedNonBlocking(FunctionEffectMode::None),
-          parsedNonAllocating(FunctionEffectMode::None) {}
+          chunkIndex(declarator.getNumTypeObjects()), parsedNoDeref(false) {}
 
     Sema &getSema() const {
       return sema;
@@ -355,17 +346,6 @@ namespace {
     void setParsedNoDeref(bool parsed) { parsedNoDeref = parsed; }
 
     bool didParseNoDeref() const { return parsedNoDeref; }
-
-    void setParsedNonBlocking(FunctionEffectMode v) { parsedNonBlocking = v; }
-    FunctionEffectMode getParsedNonBlocking() const {
-      return parsedNonBlocking;
-    }
-    void setParsedNonAllocating(FunctionEffectMode v) {
-      parsedNonAllocating = v;
-    }
-    FunctionEffectMode getParsedNonAllocating() const {
-      return parsedNonAllocating;
-    }
 
     ~TypeProcessingState() {
       if (savedAttrs.empty())
@@ -8031,12 +8011,12 @@ handleNonBlockingNonAllocatingTypeAttr(TypeProcessingState &TPState,
   }
 
   // Parse the new  attribute.
-  // non/blocking or non/allocating? Or dependent?
+  // non/blocking or non/allocating? Or conditional (computed)?
   const bool isNonBlocking = PAttr.getKind() == ParsedAttr::AT_NonBlocking ||
                              PAttr.getKind() == ParsedAttr::AT_Blocking;
   Sema &S = TPState.getSema();
 
-  FunctionEffectMode NewState = FunctionEffectMode::None;
+  FunctionEffectMode NewMode = FunctionEffectMode::None;
   Expr *CondExpr = nullptr; // only valid if dependent
 
   if (PAttr.getKind() == ParsedAttr::AT_NonBlocking ||
@@ -8044,96 +8024,75 @@ handleNonBlockingNonAllocatingTypeAttr(TypeProcessingState &TPState,
     // Parse the conditional expression, if any
     if (PAttr.getNumArgs() > 0) {
       CondExpr = PAttr.getArgAsExpr(0);
-      ExprResult E = S.ActOnEffectExpression(CondExpr, NewState);
+      ExprResult E = S.ActOnEffectExpression(CondExpr, NewMode);
       if (E.isInvalid())
         return false;
-      CondExpr = E.get();
+      CondExpr = NewMode == FunctionEffectMode::Dependent ? E.get() : nullptr;
     } else {
-      NewState = FunctionEffectMode::True;
+      NewMode = FunctionEffectMode::True;
     }
   } else {
     // This is the `blocking` or `allocating` attribute.
-    NewState = FunctionEffectMode::False;
+    NewMode = FunctionEffectMode::False;
   }
 
-  auto attrName = [](bool NB, FunctionEffectMode value) {
-    switch (value) {
-    case FunctionEffectMode::False:
-      return NB ? "blocking" : "allocating";
-    case FunctionEffectMode::True:
-      return NB ? "nonblocking" : "nonallocating";
-    case FunctionEffectMode::Dependent:
-      return NB ? "nonblocking(expr)" : "nonallocating(expr)";
-    default:
-      llvm_unreachable("'FunctionEffectMode::None' shouldn't happen");
-    }
-  };
+  const FunctionEffect::Kind FEKind =
+      (NewMode == FunctionEffectMode::False)
+          ? (isNonBlocking ? FunctionEffect::Kind::Blocking
+                           : FunctionEffect::Kind::Allocating)
+          : (isNonBlocking ? FunctionEffect::Kind::NonBlocking
+                           : FunctionEffect::Kind::NonAllocating);
+  const FunctionEffectWithCondition NewEC{FunctionEffect(FEKind),
+                                          FunctionEffectCondition(CondExpr)};
 
   // Diagnose the newly provided attribute as incompatible with a previous one.
-  auto incompatible = [&](bool prevNB, FunctionEffectMode prevValue) {
+  auto incompatible = [&](const FunctionEffectWithCondition &PrevEC) {
     S.Diag(PAttr.getLoc(), diag::err_attributes_are_not_compatible)
-        << attrName(isNonBlocking, NewState) << attrName(prevNB, prevValue)
-        << false;
+        << NewEC.description() << PrevEC.description() << false;
     // we don't necessarily have the location of the previous attribute,
     // so no note.
     PAttr.setInvalid();
     return true;
   };
 
-  const FunctionEffectMode PrevState = isNonBlocking
-                                           ? TPState.getParsedNonBlocking()
-                                           : TPState.getParsedNonAllocating();
-  if (PrevState != FunctionEffectMode::None) {
-    // Only one attribute per constraint is allowed.
-    return incompatible(isNonBlocking, PrevState);
+  // Find previous attributes
+  std::optional<FunctionEffectWithCondition> PrevNonBlocking;
+  std::optional<FunctionEffectWithCondition> PrevNonAllocating;
+
+  for (const FunctionEffectWithCondition &PrevEC : FPT->getFunctionEffects()) {
+    if (PrevEC.Effect.kind() == FEKind ||
+        PrevEC.Effect.oppositeKind() == FEKind)
+      return incompatible(PrevEC);
+    switch (PrevEC.Effect.kind()) {
+    case FunctionEffect::Kind::Blocking:
+    case FunctionEffect::Kind::NonBlocking:
+      PrevNonBlocking = PrevEC;
+      break;
+    case FunctionEffect::Kind::Allocating:
+    case FunctionEffect::Kind::NonAllocating:
+      PrevNonAllocating = PrevEC;
+      break;
+    default:
+      break;
+    }
   }
 
   if (isNonBlocking) {
-    // also check nonblocking(true) against allocating
-    if (NewState == FunctionEffectMode::True &&
-        TPState.getParsedNonAllocating() == FunctionEffectMode::False) {
-      return incompatible(false, FunctionEffectMode::False);
-    }
-    TPState.setParsedNonBlocking(NewState);
+    // new nonblocking(true) is incompatible with previous allocating
+    if (NewMode == FunctionEffectMode::True && PrevNonAllocating &&
+        PrevNonAllocating->Effect.kind() == FunctionEffect::Kind::Allocating)
+      return incompatible(*PrevNonAllocating);
   } else {
-    // also check nonblocking(true) against allocating
-    if (TPState.getParsedNonBlocking() == FunctionEffectMode::True) {
-      if (NewState == FunctionEffectMode::False) {
-        return incompatible(true, FunctionEffectMode::True);
-      }
-    }
-    TPState.setParsedNonAllocating(NewState);
+    // new allocating is incompatible with previous nonblocking(true)
+    if (NewMode == FunctionEffectMode::False && PrevNonBlocking &&
+        PrevNonBlocking->Effect.kind() == FunctionEffect::Kind::NonBlocking)
+      return incompatible(*PrevNonBlocking);
   }
 
-#if 0
-  // Old type-sugar implementation of denied effects
-  if (NewState == FunctionEffectMode::False) {
-    // blocking and allocating are represented as AttributedType sugar,
-    // using those attributes.
-    Attr *A = nullptr;
-    if (isNonBlocking) {
-      A = BlockingAttr::Create(S.Context);
-    } else {
-      A = AllocatingAttr::Create(S.Context);
-    }
-    QT = TPState.getAttributedType(A, QT, QT);
-    return true;
-  }
-#endif
-
-  // All forms of the attributes are represented in a
-  // FunctionEffectsRef attached to a FunctionProtoType.
-  const bool Denied = NewState == FunctionEffectMode::False;
-  const FunctionEffect NewEffect(
-      isNonBlocking ? (Denied ? FunctionEffect::Kind::Blocking
-                              : FunctionEffect::Kind::NonBlocking)
-                    : (Denied ? FunctionEffect::Kind::Allocating
-                              : FunctionEffect::Kind::NonAllocating));
-
+  // Add the effect to the FunctionProtoType
   FunctionProtoType::ExtProtoInfo EPI = FPT->getExtProtoInfo();
   FunctionEffectSet FX(EPI.FunctionEffects);
-  FX.insert(NewEffect,
-            NewState == FunctionEffectMode::Dependent ? CondExpr : nullptr);
+  FX.insert(NewEC.Effect, NewEC.Cond.expr());
   EPI.FunctionEffects = FunctionEffectsRef(FX);
 
   QualType newtype = S.Context.getFunctionType(FPT->getReturnType(),
