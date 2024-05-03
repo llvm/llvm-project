@@ -2055,17 +2055,19 @@ private:
   /// Generate structured or unstructured FIR for an IF construct.
   /// The initial statement may be either an IfStmt or an IfThenStmt.
   void genFIR(const Fortran::parser::IfConstruct &) {
-    mlir::Location loc = toLocation();
     Fortran::lower::pft::Evaluation &eval = getEval();
+
+    // Structured fir.if nest.
     if (eval.lowerAsStructured()) {
-      // Structured fir.if nest.
       fir::IfOp topIfOp, currentIfOp;
       for (Fortran::lower::pft::Evaluation &e : eval.getNestedEvaluations()) {
         auto genIfOp = [&](mlir::Value cond) {
-          auto ifOp = builder->create<fir::IfOp>(loc, cond, /*withElse=*/true);
+          auto ifOp =
+              builder->create<fir::IfOp>(toLocation(), cond, /*withElse=*/true);
           builder->setInsertionPointToStart(&ifOp.getThenRegion().front());
           return ifOp;
         };
+        setCurrentPosition(e.position);
         if (auto *s = e.getIf<Fortran::parser::IfThenStmt>()) {
           topIfOp = currentIfOp = genIfOp(genIfCondition(s, e.negateCondition));
         } else if (auto *s = e.getIf<Fortran::parser::IfStmt>()) {
@@ -2096,6 +2098,7 @@ private:
         else // non-empty block
           genConditionalBranch(cond, e.lexicalSuccessor, e.controlSuccessor);
       };
+      setCurrentPosition(e.position);
       if (auto *s = e.getIf<Fortran::parser::IfThenStmt>()) {
         maybeStartBlock(e.block);
         genIfBranch(genIfCondition(s, e.negateCondition));
@@ -2863,6 +2866,7 @@ private:
     Fortran::lower::StatementContext stmtCtx;
     pushActiveConstruct(eval, stmtCtx);
     for (Fortran::lower::pft::Evaluation &e : eval.getNestedEvaluations()) {
+      setCurrentPosition(e.position);
       if (auto *stmt = e.getIf<Fortran::parser::AssociateStmt>()) {
         if (eval.lowerAsUnstructured())
           maybeStartBlock(e.block);
@@ -2891,10 +2895,10 @@ private:
     Fortran::lower::StatementContext stmtCtx;
     pushActiveConstruct(eval, stmtCtx);
     for (Fortran::lower::pft::Evaluation &e : eval.getNestedEvaluations()) {
+      setCurrentPosition(e.position);
       if (e.getIf<Fortran::parser::BlockStmt>()) {
         if (eval.lowerAsUnstructured())
           maybeStartBlock(e.block);
-        setCurrentPosition(e.position);
         const Fortran::parser::CharBlock &endPosition =
             eval.getLastNestedEvaluation().position;
         localSymbols.pushScope();
@@ -2921,7 +2925,6 @@ private:
       } else if (e.getIf<Fortran::parser::EndBlockStmt>()) {
         if (eval.lowerAsUnstructured())
           maybeStartBlock(e.block);
-        setCurrentPosition(e.position);
         localSymbols.popScope();
       } else {
         genFIR(e);
@@ -2963,7 +2966,6 @@ private:
   }
 
   void genFIR(const Fortran::parser::SelectTypeConstruct &selectTypeConstruct) {
-    mlir::Location loc = toLocation();
     mlir::MLIRContext *context = builder->getContext();
     Fortran::lower::StatementContext stmtCtx;
     fir::ExtendedValue selector;
@@ -2989,6 +2991,8 @@ private:
     pushActiveConstruct(getEval(), stmtCtx);
     for (Fortran::lower::pft::Evaluation &eval :
          getEval().getNestedEvaluations()) {
+      setCurrentPosition(eval.position);
+      mlir::Location loc = toLocation();
       if (auto *selectTypeStmt =
               eval.getIf<Fortran::parser::SelectTypeStmt>()) {
         // A genFIR(SelectTypeStmt) call would have unwanted side effects.
