@@ -643,7 +643,7 @@ bool SystemZInstrInfo::foldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
 
   if (DefOpc == SystemZ::VGBM) {
     int64_t ImmVal = DefMI.getOperand(1).getImm();
-    if (ImmVal !=0) // TODO: Handle other values
+    if (ImmVal != 0) // TODO: Handle other values
       return false;
 
     // Fold gr128 = COPY (vr128 VGBM imm)
