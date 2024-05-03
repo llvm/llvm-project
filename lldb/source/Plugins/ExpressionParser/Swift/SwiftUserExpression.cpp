@@ -828,8 +828,8 @@ exe_scope = exe_ctx.GetBestExecutionContextScope();
       // If fixits are enabled, calculate the fixed expression string.
       if (m_options.GetAutoApplyFixIts() && diagnostic_manager.HasFixIts()) {
         if (m_parser->RewriteExpression(diagnostic_manager)) {
-          size_t fixed_start;
-          size_t fixed_end;
+          uint32_t fixed_start;
+          uint32_t fixed_end;
           const std::string &fixed_expression =
               diagnostic_manager.GetFixedExpression();
           if (SwiftExpressionSourceCode::GetOriginalBodyBounds(

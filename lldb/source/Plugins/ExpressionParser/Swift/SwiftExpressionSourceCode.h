@@ -38,7 +38,7 @@ public:
   // passed to CreateWrapped. Return true if the bounds could be found.  This
   // will also work on text with FixItHints applied.
   static bool GetOriginalBodyBounds(std::string transformed_text,
-                                    size_t &start_loc, size_t &end_loc);
+                                    uint32_t &start_loc, uint32_t &end_loc);
 
   uint32_t GetNumBodyLines();
 
@@ -51,8 +51,8 @@ public:
       llvm::ArrayRef<SwiftASTManipulator::VariableInfo> local_variables) const;
 
 private:
-  SwiftExpressionSourceCode(const char *name, const char *prefix, const char *body,
-                       Wrapping wrap)
+  SwiftExpressionSourceCode(const char *name, const char *prefix,
+                            const char *body, Wrapping wrap)
       : ExpressionSourceCode(name, prefix, body, wrap) {}
   uint32_t m_num_body_lines = 0;
 };
