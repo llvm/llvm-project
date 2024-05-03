@@ -80,6 +80,8 @@ float V7 = []() -> float {
 }();
 // CHECK: @V7 = {{.*}} float 1.000000e+00
 
+#pragma STDC FENV_ROUND FE_DYNAMIC
+
 template<float V> struct L {
   constexpr L() : value(V) {}
   float value;
@@ -93,6 +95,8 @@ L<0.1F> val_d;
 L<0.1F> val_u;
 // CHECK: @val_u = {{.*}} { float 0x3FB99999A0000000 }
 
+#pragma STDC FENV_ROUND FE_DYNAMIC
+
 template<typename T, T C>
 constexpr T foo() {
   return C;
@@ -105,3 +109,25 @@ float var_d = foo<float, 0.1F>();
 #pragma STDC FENV_ROUND FE_UPWARD
 float var_u = foo<float, 0.1F>();
 // CHECK: @var_u = {{.*}} float 0x3FB99999A0000000
+
+#pragma STDC FENV_ROUND FE_DYNAMIC
+
+template<typename T, T f> void foo2() {
+  T Val = f;
+}
+
+void func_01() {
+  #pragma STDC FENV_ROUND FE_DOWNWARD
+  foo2<float, 0.1f>();
+}
+
+void func_02() {
+  #pragma STDC FENV_ROUND FE_UPWARD
+  foo2<float, 0.1f>();
+}
+
+// CHECK-LABEL: define {{.*}} void @_Z4foo2IfTnT_Lf3dccccccEEvv()
+// CHECK:         store float 0x3FB9999980000000, ptr
+
+// CHECK-LABEL: define {{.*}} void @_Z4foo2IfTnT_Lf3dcccccdEEvv()
+// CHECK:         store float 0x3FB99999A0000000, ptr
