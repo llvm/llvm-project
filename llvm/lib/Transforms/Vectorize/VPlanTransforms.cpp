@@ -538,7 +538,6 @@ static void legalizeAndOptimizeInductions(VPlan &Plan, ScalarEvolution &SE) {
   SmallVector<VPRecipeBase *> ToRemove;
   VPBasicBlock *HeaderVPBB = Plan.getVectorLoopRegion()->getEntryBasicBlock();
   bool HasOnlyVectorVFs = !Plan.hasVF(ElementCount::getFixed(1));
-  bool HasOnlyScalarVFs = Plan.hasVF(ElementCount::getFixed(1));
   VPBasicBlock::iterator InsertPt = HeaderVPBB->getFirstNonPhi();
   for (VPRecipeBase &Phi : HeaderVPBB->phis()) {
     // Replace wide pointer inductions which have only their scalars used by
@@ -570,27 +569,22 @@ static void legalizeAndOptimizeInductions(VPlan &Plan, ScalarEvolution &SE) {
     if (!WideIV)
       continue;
 
-    VPInstruction *HeaderMask = nullptr;
-     if (WideIV->isCanonical() &&
-         WideIV->getScalarType() == Plan.getCanonicalIV()->getScalarType()) {
-       HeaderMask =  getHeaderMask(Plan);
-     }
-    if (HasOnlyVectorVFs && none_of(WideIV->users(), [WideIV](VPUser *U) {
-          return U->usesScalars(WideIV);
-        })) {
-      if (HeaderMask)
+    // If there is a header mask, check if WideIV is canonical IV with other
+    // wide users. If that is the case, use it as HeaderMask's operand, so it
+    // can be used when lowering the recipe.
+    if (VPInstruction *HeaderMask = getHeaderMask(Plan)) {
+      if (WideIV->isCanonical() &&
+          (!HasOnlyVectorVFs || any_of(WideIV->users(), [WideIV](VPUser *U) {
+            return !U->usesScalars(WideIV);
+          }))) {
         HeaderMask->setOperand(0, WideIV);
-      continue;
+      }
     }
 
-if (HeaderMask) {
-if (!HasOnlyVectorVFs || any_of(WideIV->users(),
-                [WideIV](VPUser *U) {
-                  return !U->usesScalars(WideIV);
-                })) {
-        HeaderMask->setOperand(0, WideIV);
-}
-}
+    if (HasOnlyVectorVFs && none_of(WideIV->users(), [WideIV](VPUser *U) {
+          return U->usesScalars(WideIV);
+        }))
+      continue;
 
     const InductionDescriptor &ID = WideIV->getInductionDescriptor();
     VPScalarIVStepsRecipe *Steps = createScalarIVSteps(
@@ -606,14 +600,6 @@ if (!HasOnlyVectorVFs || any_of(WideIV->users(),
       WideIV->replaceUsesWithIf(Steps, [WideIV](VPUser &U, unsigned) {
         return U.usesScalars(WideIV);
       });
-/*    if (HeaderMask) {*/
-/*if (WideIV->getNumUsers() != 0)*/
-        /*HeaderMask->setOperand(0, WideIV);*/
-/*else if (vputils::onlyFirstLaneUsed(WideIV)) */
-        /*HeaderMask->setOperand(0, Steps);*/
-    //}
-
-
   }
 }
 
@@ -1202,34 +1188,22 @@ static VPActiveLaneMaskPHIRecipe *addVPLaneMaskPhiAndUpdateExitBranch(
 }
 
 static VPValue *getOrCreateWideCanonicalIV(VPlan &Plan,
-                                           VPInstruction*HeaderMask) {
-
-
-
-  if (auto *CanIV = dyn_cast<VPEVLBasedIVPHIRecipe>(HeaderMask->getOperand(0))) {
-    auto *IV = new VPWidenCanonicalIVRecipe(Plan.getCanonicalIV());
-    IV->setOperand(0, CanIV);
-    IV->insertBefore(HeaderMask);
-    return IV;
+                                           VPInstruction *HeaderMask) {
+  VPValue *Op = HeaderMask->getOperand(0);
+  if (isa<VPWidenIntOrFpInductionRecipe, VPScalarIVStepsRecipe>(Op))
+    return Op;
+  // Check if there is a wide canonical IV that can be re-used.
+  if (auto *CanIV = dyn_cast<VPCanonicalIVPHIRecipe>(Op)) {
+    VPBasicBlock *HeaderVPBB = Plan.getVectorLoopRegion()->getEntryBasicBlock();
+    for (VPRecipeBase &R : HeaderVPBB->phis()) {
+      auto *WideIV = dyn_cast<VPWidenIntOrFpInductionRecipe>(&R);
+      if (WideIV && WideIV->isCanonical())
+        return WideIV;
+    }
   }
-
-  if (auto *CanIV = dyn_cast<VPCanonicalIVPHIRecipe>(HeaderMask->getOperand(0))) {
-		VPBasicBlock *HeaderVPBB = Plan.getVectorLoopRegion()->getEntryBasicBlock();
-		for (VPRecipeBase &R : HeaderVPBB->phis()) {
-			auto *WideIV = dyn_cast<VPWidenIntOrFpInductionRecipe>(&R);
-			if (!WideIV || !WideIV->isCanonical() ||
-					Plan.getCanonicalIV()->getScalarType() != WideIV->getScalarType())
-				continue;
-			return WideIV;
-			break;
-		}
-  auto *IV = new VPWidenCanonicalIVRecipe(Plan.getCanonicalIV());
+  auto *IV = new VPWidenCanonicalIVRecipe(Op);
   IV->insertBefore(HeaderMask);
   return IV;
-
-    }
-    return HeaderMask->getOperand(0);
-
 }
 
 void VPlanTransforms::addActiveLaneMask(
@@ -1247,13 +1221,10 @@ void VPlanTransforms::addActiveLaneMask(
         Plan, DataAndControlFlowWithoutRuntimeCheck);
   } else {
     VPBasicBlock *HeaderVPBB = Plan.getVectorLoopRegion()->getEntryBasicBlock();
-    VPBuilder B;
-    B.setInsertPoint(HeaderVPBB, HeaderVPBB->getFirstNonPhi());
+    VPBuilder B(&*HeaderVPBB->getFirstNonPhi());
     LaneMask = B.createNaryOp(
         VPInstruction::ActiveLaneMask,
-        { 
-        getOrCreateWideCanonicalIV(Plan, HeaderMask),
-         Plan.getTripCount()},
+        {getOrCreateWideCanonicalIV(Plan, HeaderMask), Plan.getTripCount()},
         nullptr, "active.lane.mask");
   }
   HeaderMask->replaceAllUsesWith(LaneMask);

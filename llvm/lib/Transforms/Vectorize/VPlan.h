@@ -1176,13 +1176,16 @@ public:
     BranchOnCount,
     BranchOnCond,
     ComputeReductionResult,
+    // An abstract representation of the vector loops header mask, to be lowered
+    // later depending on target preference. Relevant only when the header may
+    // have a partial mask, i.e., when tail folding. A mask known to always be
+    // full is represented by null, w/o a HeaderMask recipe. A header mask may
+    // not be empty.
+    HeaderMask,
     // Add an offset in bytes (second operand) to a base pointer (first
     // operand). Only generates scalar values (either for the first lane only or
     // for all lanes, depending on its uses).
     PtrAdd,
-    // An abstract representation of the vector loops header mask, to be lowered
-    // later depending on target preference.
-    HeaderMask,
   };
 
 private:
@@ -1323,14 +1326,6 @@ public:
     };
     llvm_unreachable("switch should return");
   }
-  /// Returns true if the recipe only uses the first part of operand \p Op.
-/*  bool usesScalars(const VPValue *Op) const override {*/
-    /*assert(is_contained(operands(), Op) &&*/
-           /*"Op must be an operand of the recipe");*/
-    /*if (getOpcode() == VPInstruction::HeaderMask)*/
-      /*return false;*/
-    /*return  onlyFirstLaneUsed(Op);*/
-  /*}*/
 };
 
 /// VPWidenRecipe is a recipe for producing a copy of vector type its
@@ -2699,14 +2694,13 @@ public:
 /// A Recipe for widening the canonical induction variable of the vector loop.
 class VPWidenCanonicalIVRecipe : public VPSingleDefRecipe {
 public:
-  VPWidenCanonicalIVRecipe(VPCanonicalIVPHIRecipe *CanonicalIV)
-      : VPSingleDefRecipe(VPDef::VPWidenCanonicalIVSC, {CanonicalIV}) {}
+  VPWidenCanonicalIVRecipe(VPValue *Start)
+      : VPSingleDefRecipe(VPDef::VPWidenCanonicalIVSC, {Start}) {}
 
   ~VPWidenCanonicalIVRecipe() override = default;
 
   VPWidenCanonicalIVRecipe *clone() override {
-    return new VPWidenCanonicalIVRecipe(
-        cast<VPCanonicalIVPHIRecipe>(getOperand(0)));
+    return new VPWidenCanonicalIVRecipe(getOperand(0));
   }
 
   VP_CLASSOF_IMPL(VPDef::VPWidenCanonicalIVSC)
@@ -2721,12 +2715,6 @@ public:
   void print(raw_ostream &O, const Twine &Indent,
              VPSlotTracker &SlotTracker) const override;
 #endif
-
-  /// Returns the scalar type of the induction.
-  const Type *getScalarType() const {
-    return cast<VPCanonicalIVPHIRecipe>(getOperand(0)->getDefiningRecipe())
-        ->getScalarType();
-  }
 };
 
 /// A recipe for converting the input value \p IV value to the corresponding
@@ -3066,6 +3054,9 @@ public:
   /// Clone all blocks in the single-entry single-exit region of the block and
   /// their recipes without updating the operands of the cloned recipes.
   VPRegionBlock *clone() override;
+
+  /// Return the header mask recipe of the VPlan, if there is one.
+  VPInstruction *getHeaderMask(VPlan &Plan) const;
 };
 
 /// VPlan models a candidate for vectorization, encoding various decisions take

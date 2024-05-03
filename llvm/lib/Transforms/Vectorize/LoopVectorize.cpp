@@ -8551,7 +8551,10 @@ void LoopVectorizationPlanner::buildVPlansWithVPRecipes(ElementCount MinVF,
         VPlanTransforms::truncateToMinimalBitwidths(
             *Plan, CM.getMinimalBitwidths(), PSE.getSE()->getContext());
       VPlanTransforms::optimize(*Plan, *PSE.getSE());
-      // TODO: try to put it close to addActiveLaneMask().
+      // TODO: The three passes that lower the header mask (addActiveLaneMask,
+      // addExplicitVectorLength, lowerRecipes) should arguably be applied
+      // together, depending on tail folding style, inside
+      // VPlanTransforms::optimize().
       if (CM.foldTailWithEVL())
         VPlanTransforms::addExplicitVectorLength(*Plan);
       VPlanTransforms::lowerRecipes(*Plan);
