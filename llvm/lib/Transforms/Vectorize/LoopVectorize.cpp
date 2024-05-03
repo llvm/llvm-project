@@ -460,9 +460,9 @@ static Value *interleaveVectors(IRBuilderBase &Builder, ArrayRef<Value *> Vals,
   // must use intrinsics to interleave.
   if (VecTy->isScalableTy()) {
     VectorType *WideVecTy = VectorType::getDoubleElementsVectorType(VecTy);
-    return Builder.CreateIntrinsic(
-        WideVecTy, Intrinsic::experimental_vector_interleave2, Vals,
-        /*FMFSource=*/nullptr, Name);
+    return Builder.CreateIntrinsic(WideVecTy, Intrinsic::vector_interleave2,
+                                   Vals,
+                                   /*FMFSource=*/nullptr, Name);
   }
 
   // Fixed length. Start by concatenating all vectors into a wide vector.
@@ -1571,13 +1571,7 @@ public:
   /// Returns true if VP intrinsics with explicit vector length support should
   /// be generated in the tail folded loop.
   bool foldTailWithEVL() const {
-    return getTailFoldingStyle() == TailFoldingStyle::DataWithEVL &&
-           // FIXME: remove this once vp_reverse is supported.
-           none_of(
-               WideningDecisions,
-               [](const std::pair<std::pair<Instruction *, ElementCount>,
-                                  std::pair<InstWidening, InstructionCost>>
-                      &Data) { return Data.second.first == CM_Widen_Reverse; });
+    return getTailFoldingStyle() == TailFoldingStyle::DataWithEVL;
   }
 
   /// Returns true if the Phi is part of an inloop reduction.
@@ -2517,9 +2511,8 @@ void InnerLoopVectorizer::vectorizeInterleaveGroup(
       SmallVector<Value *, 2> Ops = {BlockInMaskPart, BlockInMaskPart};
       auto *MaskTy =
           VectorType::get(Builder.getInt1Ty(), VF.getKnownMinValue() * 2, true);
-      return Builder.CreateIntrinsic(
-          MaskTy, Intrinsic::experimental_vector_interleave2, Ops,
-          /*FMFSource=*/nullptr, "interleaved.mask");
+      return Builder.CreateIntrinsic(MaskTy, Intrinsic::vector_interleave2, Ops,
+                                     /*FMFSource=*/nullptr, "interleaved.mask");
     }
 
     if (!BlockInMask)
@@ -2571,7 +2564,7 @@ void InnerLoopVectorizer::vectorizeInterleaveGroup(
         // Scalable vectors cannot use arbitrary shufflevectors (only splats),
         // so must use intrinsics to deinterleave.
         Value *DI = Builder.CreateIntrinsic(
-            Intrinsic::experimental_vector_deinterleave2, VecTy, NewLoads[Part],
+            Intrinsic::vector_deinterleave2, VecTy, NewLoads[Part],
             /*FMFSource=*/nullptr, "strided.vec");
         unsigned J = 0;
         for (unsigned I = 0; I < InterleaveFactor; ++I) {
@@ -4167,7 +4160,6 @@ void LoopVectorizationCostModel::collectLoopUniforms(ElementCount VF) {
 
   // Worklist containing uniform instructions demanding lane 0.
   SetVector<Instruction *> Worklist;
-  BasicBlock *Latch = TheLoop->getLoopLatch();
 
   // Add uniform instructions demanding lane 0 to the worklist. Instructions
   // that are scalar with predication must not be considered uniform after
@@ -4189,12 +4181,16 @@ void LoopVectorizationCostModel::collectLoopUniforms(ElementCount VF) {
     Worklist.insert(I);
   };
 
-  // Start with the conditional branch. If the branch condition is an
-  // instruction contained in the loop that is only used by the branch, it is
-  // uniform.
-  auto *Cmp = dyn_cast<Instruction>(Latch->getTerminator()->getOperand(0));
-  if (Cmp && TheLoop->contains(Cmp) && Cmp->hasOneUse())
-    addToWorklistIfAllowed(Cmp);
+  // Start with the conditional branches exiting the loop. If the branch
+  // condition is an instruction contained in the loop that is only used by the
+  // branch, it is uniform.
+  SmallVector<BasicBlock *> Exiting;
+  TheLoop->getExitingBlocks(Exiting);
+  for (BasicBlock *E : Exiting) {
+    auto *Cmp = dyn_cast<Instruction>(E->getTerminator()->getOperand(0));
+    if (Cmp && TheLoop->contains(Cmp) && Cmp->hasOneUse())
+      addToWorklistIfAllowed(Cmp);
+  }
 
   auto PrevVF = VF.divideCoefficientBy(2);
   // Return true if all lanes perform the same memory operation, and we can
@@ -4335,6 +4331,7 @@ void LoopVectorizationCostModel::collectLoopUniforms(ElementCount VF) {
   // nodes separately. An induction variable will remain uniform if all users
   // of the induction variable and induction variable update remain uniform.
   // The code below handles both pointer and non-pointer induction variables.
+  BasicBlock *Latch = TheLoop->getLoopLatch();
   for (const auto &Induction : Legal->getInductionVars()) {
     auto *Ind = Induction.first;
     auto *IndUpdate = cast<Instruction>(Ind->getIncomingValueForBlock(Latch));
@@ -6873,11 +6870,15 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I, ElementCount VF,
     // In cases of scalarized and predicated instructions, there will be VF
     // predicated blocks in the vectorized loop. Each branch around these
     // blocks requires also an extract of its vector compare i1 element.
+    // Note that the conditional branch from the loop latch will be replaced by
+    // a single branch controlling the loop, so there is no extra overhead from
+    // scalarization.
     bool ScalarPredicatedBB = false;
     BranchInst *BI = cast<BranchInst>(I);
     if (VF.isVector() && BI->isConditional() &&
         (PredicatedBBsAfterVectorization[VF].count(BI->getSuccessor(0)) ||
-         PredicatedBBsAfterVectorization[VF].count(BI->getSuccessor(1))))
+         PredicatedBBsAfterVectorization[VF].count(BI->getSuccessor(1))) &&
+        BI->getParent() != TheLoop->getLoopLatch())
       ScalarPredicatedBB = true;
 
     if (ScalarPredicatedBB) {
@@ -7443,7 +7444,8 @@ static void AddRuntimeUnrollDisableMetaData(Loop *L) {
 static void createAndCollectMergePhiForReduction(
     VPInstruction *RedResult,
     DenseMap<const RecurrenceDescriptor *, Value *> &ReductionResumeValues,
-    VPTransformState &State, Loop *OrigLoop, BasicBlock *LoopMiddleBlock) {
+    VPTransformState &State, Loop *OrigLoop, BasicBlock *LoopMiddleBlock,
+    bool VectorizingEpilogue) {
   if (!RedResult ||
       RedResult->getOpcode() != VPInstruction::ComputeReductionResult)
     return;
@@ -7456,6 +7458,9 @@ static void createAndCollectMergePhiForReduction(
       State.get(RedResult, VPIteration(State.UF - 1, VPLane::getFirstLane()));
   auto *ResumePhi =
       dyn_cast<PHINode>(PhiR->getStartValue()->getUnderlyingValue());
+  assert((!VectorizingEpilogue || ResumePhi) &&
+         "when vectorizing the epilogue loop, we need a resume phi from main "
+         "vector loop");
 
   // TODO: bc.merge.rdx should not be created here, instead it should be
   // modeled in VPlan.
@@ -7581,9 +7586,9 @@ LoopVectorizationPlanner::executePlan(
   auto *ExitVPBB =
       cast<VPBasicBlock>(BestVPlan.getVectorLoopRegion()->getSingleSuccessor());
   for (VPRecipeBase &R : *ExitVPBB) {
-    createAndCollectMergePhiForReduction(dyn_cast<VPInstruction>(&R),
-                                         ReductionResumeValues, State, OrigLoop,
-                                         State.CFG.VPBB2IRBB[ExitVPBB]);
+    createAndCollectMergePhiForReduction(
+        dyn_cast<VPInstruction>(&R), ReductionResumeValues, State, OrigLoop,
+        State.CFG.VPBB2IRBB[ExitVPBB], ExpandedSCEVs);
   }
 
   // 2.6. Maintain Loop Hints
@@ -8265,6 +8270,7 @@ VPWidenCallRecipe *VPRecipeBuilder::tryToWidenCall(CallInst *CI,
     return nullptr;
 
   SmallVector<VPValue *, 4> Ops(Operands.take_front(CI->arg_size()));
+  Ops.push_back(Operands.back());
 
   // Is it beneficial to perform intrinsic call compared to lib call?
   bool ShouldUseVectorIntrinsic =
@@ -8275,7 +8281,7 @@ VPWidenCallRecipe *VPRecipeBuilder::tryToWidenCall(CallInst *CI,
                 },
                 Range);
   if (ShouldUseVectorIntrinsic)
-    return new VPWidenCallRecipe(*CI, make_range(Ops.begin(), Ops.end()), ID,
+    return new VPWidenCallRecipe(CI, make_range(Ops.begin(), Ops.end()), ID,
                                  CI->getDebugLoc());
 
   Function *Variant = nullptr;
@@ -8328,7 +8334,7 @@ VPWidenCallRecipe *VPRecipeBuilder::tryToWidenCall(CallInst *CI,
       Ops.insert(Ops.begin() + *MaskPos, Mask);
     }
 
-    return new VPWidenCallRecipe(*CI, make_range(Ops.begin(), Ops.end()),
+    return new VPWidenCallRecipe(CI, make_range(Ops.begin(), Ops.end()),
                                  Intrinsic::not_intrinsic, CI->getDebugLoc(),
                                  Variant);
   }
@@ -8817,12 +8823,24 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
     // Only handle constant strides for now.
     if (!ScevStride)
       continue;
-    Constant *CI = ConstantInt::get(Stride->getType(), ScevStride->getAPInt());
 
-    auto *ConstVPV = Plan->getOrAddLiveIn(CI);
-    // The versioned value may not be used in the loop directly, so just add a
-    // new live-in in those cases.
-    Plan->getOrAddLiveIn(StrideV)->replaceAllUsesWith(ConstVPV);
+    auto *CI = Plan->getOrAddLiveIn(
+        ConstantInt::get(Stride->getType(), ScevStride->getAPInt()));
+    if (VPValue *StrideVPV = Plan->getLiveIn(StrideV))
+      StrideVPV->replaceAllUsesWith(CI);
+
+    // The versioned value may not be used in the loop directly but through a
+    // sext/zext. Add new live-ins in those cases.
+    for (Value *U : StrideV->users()) {
+      if (!isa<SExtInst, ZExtInst>(U))
+        continue;
+      VPValue *StrideVPV = Plan->getLiveIn(U);
+      if (!StrideVPV)
+        continue;
+      VPValue *CI = Plan->getOrAddLiveIn(ConstantInt::get(
+          U->getType(), ScevStride->getAPInt().getSExtValue()));
+      StrideVPV->replaceAllUsesWith(CI);
+    }
   }
 
   VPlanTransforms::dropPoisonGeneratingRecipes(*Plan, [this](BasicBlock *BB) {
@@ -9364,12 +9382,18 @@ void VPWidenLoadRecipe::execute(VPTransformState &State) {
   }
 }
 
+static Instruction *createReverseEVL(IRBuilderBase &Builder, Value *Operand,
+                                     Value *EVL, const Twine &Name) {
+  VectorType *ValTy = cast<VectorType>(Operand->getType());
+  Value *AllTrueMask =
+      Builder.CreateVectorSplat(ValTy->getElementCount(), Builder.getTrue());
+  return Builder.CreateIntrinsic(ValTy, Intrinsic::experimental_vp_reverse,
+                                 {Operand, AllTrueMask, EVL}, nullptr, Name);
+}
+
 void VPWidenLoadEVLRecipe::execute(VPTransformState &State) {
   assert(State.UF == 1 && "Expected only UF == 1 when vectorizing with "
                           "explicit vector length.");
-  // FIXME: Support reverse loading after vp_reverse is added.
-  assert(!isReverse() && "Reverse loads are not implemented yet.");
-
   auto *LI = cast<LoadInst>(&Ingredient);
 
   Type *ScalarDataTy = getLoadStoreType(&Ingredient);
@@ -9382,9 +9406,15 @@ void VPWidenLoadEVLRecipe::execute(VPTransformState &State) {
   CallInst *NewLI;
   Value *EVL = State.get(getEVL(), VPIteration(0, 0));
   Value *Addr = State.get(getAddr(), 0, !CreateGather);
-  Value *Mask = getMask()
-                    ? State.get(getMask(), 0)
-                    : Builder.CreateVectorSplat(State.VF, Builder.getTrue());
+  Value *Mask = nullptr;
+  if (VPValue *VPMask = getMask()) {
+    Mask = State.get(VPMask, 0);
+    if (isReverse())
+      Mask = createReverseEVL(Builder, Mask, EVL, "vp.reverse.mask");
+  } else {
+    Mask = Builder.CreateVectorSplat(State.VF, Builder.getTrue());
+  }
+
   if (CreateGather) {
     NewLI =
         Builder.CreateIntrinsic(DataTy, Intrinsic::vp_gather, {Addr, Mask, EVL},
@@ -9398,7 +9428,13 @@ void VPWidenLoadEVLRecipe::execute(VPTransformState &State) {
   NewLI->addParamAttr(
       0, Attribute::getWithAlignment(NewLI->getContext(), Alignment));
   State.addMetadata(NewLI, LI);
-  State.set(this, NewLI, 0);
+  Instruction *Res = NewLI;
+  if (isReverse()) {
+    // Use cheap all-true mask for reverse rather than actual mask, it does not
+    // affect the result.
+    Res = createReverseEVL(Builder, Res, EVL, "vp.reverse");
+  }
+  State.set(this, Res, 0);
 }
 
 void VPWidenStoreRecipe::execute(VPTransformState &State) {
@@ -9444,9 +9480,6 @@ void VPWidenStoreRecipe::execute(VPTransformState &State) {
 void VPWidenStoreEVLRecipe::execute(VPTransformState &State) {
   assert(State.UF == 1 && "Expected only UF == 1 when vectorizing with "
                           "explicit vector length.");
-  // FIXME: Support reverse loading after vp_reverse is added.
-  assert(!isReverse() && "Reverse store are not implemented yet.");
-
   auto *SI = cast<StoreInst>(&Ingredient);
 
   VPValue *StoredValue = getStoredValue();
@@ -9459,10 +9492,19 @@ void VPWidenStoreEVLRecipe::execute(VPTransformState &State) {
   CallInst *NewSI = nullptr;
   Value *StoredVal = State.get(StoredValue, 0);
   Value *EVL = State.get(getEVL(), VPIteration(0, 0));
-  // FIXME: Support reverse store after vp_reverse is added.
-  Value *Mask = getMask()
-                    ? State.get(getMask(), 0)
-                    : Builder.CreateVectorSplat(State.VF, Builder.getTrue());
+  if (isReverse()) {
+    // Use cheap all-true mask for reverse rather than actual mask, it does not
+    // affect the result.
+    StoredVal = createReverseEVL(Builder, StoredVal, EVL, "vp.reverse");
+  }
+  Value *Mask = nullptr;
+  if (VPValue *VPMask = getMask()) {
+    Mask = State.get(VPMask, 0);
+    if (isReverse())
+      Mask = createReverseEVL(Builder, Mask, EVL, "vp.reverse.mask");
+  } else {
+    Mask = Builder.CreateVectorSplat(State.VF, Builder.getTrue());
+  }
   Value *Addr = State.get(getAddr(), 0, !CreateScatter);
   if (CreateScatter) {
     NewSI = Builder.CreateIntrinsic(Type::getVoidTy(EVL->getContext()),

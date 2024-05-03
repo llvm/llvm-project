@@ -205,6 +205,7 @@ enum NodeType {
   /// CopyFromReg - This node indicates that the input value is a virtual or
   /// physical register that is defined outside of the scope of this
   /// SelectionDAG.  The register is available from the RegisterSDNode object.
+  /// Note that CopyFromReg is considered as also freezing the value.
   CopyFromReg,
 
   /// UNDEF - An undefined node.

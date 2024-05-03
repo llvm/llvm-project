@@ -142,6 +142,7 @@ def hasLDU : Predicate<"Subtarget->hasLDU()">;
 
 def doF32FTZ : Predicate<"useF32FTZ()">;
 def doNoF32FTZ : Predicate<"!useF32FTZ()">;
+def doRsqrtOpt : Predicate<"doRsqrtOpt()">;
 
 def doMulWide      : Predicate<"doMulWide">;
 
@@ -1751,8 +1752,9 @@ def ROTL64reg_sw :
             ".reg .b64 %lhs;\n\t"
             ".reg .b64 %rhs;\n\t"
             ".reg .u32 %amt2;\n\t"
-            "shl.b64 \t%lhs, $src, $amt;\n\t"
-            "sub.u32 \t%amt2, 64, $amt;\n\t"
+            "and.b32 \t%amt2, $amt, 63;\n\t"
+            "shl.b64 \t%lhs, $src, %amt2;\n\t"
+            "sub.u32 \t%amt2, 64, %amt2;\n\t"
             "shr.b64 \t%rhs, $src, %amt2;\n\t"
             "add.u64 \t$dst, %lhs, %rhs;\n\t"
             "}}",
@@ -1764,8 +1766,9 @@ def ROTR64reg_sw :
             ".reg .b64 %lhs;\n\t"
             ".reg .b64 %rhs;\n\t"
             ".reg .u32 %amt2;\n\t"
-            "shr.b64 \t%lhs, $src, $amt;\n\t"
-            "sub.u32 \t%amt2, 64, $amt;\n\t"
+            "and.b32 \t%amt2, $amt, 63;\n\t"
+            "shr.b64 \t%lhs, $src, %amt2;\n\t"
+            "sub.u32 \t%amt2, 64, %amt2;\n\t"
             "shl.b64 \t%rhs, $src, %amt2;\n\t"
             "add.u64 \t$dst, %lhs, %rhs;\n\t"
             "}}",

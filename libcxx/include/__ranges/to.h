@@ -24,6 +24,7 @@
 #include <__ranges/concepts.h>
 #include <__ranges/from_range.h>
 #include <__ranges/range_adaptor.h>
+#include <__ranges/ref_view.h>
 #include <__ranges/size.h>
 #include <__ranges/transform_view.h>
 #include <__type_traits/add_pointer.h>
@@ -129,7 +130,7 @@ template <class _Container, input_range _Range, class... _Args>
     // Try the recursive case.
   } else if constexpr (input_range<range_reference_t<_Range>>) {
     return ranges::to<_Container>(
-        __range | views::transform([](auto&& __elem) {
+        ref_view(__range) | views::transform([](auto&& __elem) {
           return ranges::to<range_value_t<_Container>>(std::forward<decltype(__elem)>(__elem));
         }),
         std::forward<_Args>(__args)...);
