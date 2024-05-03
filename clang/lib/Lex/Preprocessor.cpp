@@ -863,9 +863,8 @@ bool Preprocessor::HandleIdentifier(Token &Identifier) {
     CurLexerCallback = CLK_LexAfterModuleImport;
   }
 
-  if ((II.isModulesDecl() ||
-       Identifier.is(tok::kw_module)) &&
-      !InMacroArgs && !DisableMacroExpansion &&
+  if ((II.isModulesDecl() || Identifier.is(tok::kw_module)) && !InMacroArgs &&
+      !DisableMacroExpansion &&
       (getLangOpts().Modules || getLangOpts().DebuggerSupport) &&
       CurLexerCallback != CLK_CachingLexer) {
     CurLexerCallback = CLK_LexAfterModuleDecl;

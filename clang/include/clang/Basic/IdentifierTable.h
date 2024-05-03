@@ -215,9 +215,9 @@ class alignas(IdentifierInfoAlignment) IdentifierInfo {
         IsFutureCompatKeyword(false), IsPoisoned(false),
         IsCPPOperatorKeyword(false), NeedsHandleIdentifier(false),
         IsFromAST(false), ChangedAfterLoad(false), FEChangedAfterLoad(false),
-        RevertedTokenID(false), OutOfDate(false), IsModulesImport(false), IsModulesDecl(false),
-        IsMangledOpenMPVariantName(false), IsDeprecatedMacro(false),
-        IsRestrictExpansion(false), IsFinal(false) {}
+        RevertedTokenID(false), OutOfDate(false), IsModulesImport(false),
+        IsModulesDecl(false), IsMangledOpenMPVariantName(false),
+        IsDeprecatedMacro(false), IsRestrictExpansion(false), IsFinal(false) {}
 
 public:
   IdentifierInfo(const IdentifierInfo &) = delete;

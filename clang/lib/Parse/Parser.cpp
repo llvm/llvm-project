@@ -2705,14 +2705,15 @@ bool Parser::ParseModuleName(
     if (!IsImport && MI) {
       HasMacroInModuleName = true;
       if (MI->isFunctionLike())
-        SkipUntil(tok::r_paren, tok::period, tok::colon, StopAtSemi | StopBeforeMatch);
+        SkipUntil(tok::r_paren, tok::period, tok::colon,
+                  StopAtSemi | StopBeforeMatch);
       Diag(Identifier, diag::err_module_decl_cannot_be_macros)
-            << Identifier.getLocation()
-            << IsPartition << MI->isFunctionLike()
-            << Identifier.getIdentifierInfo();
+          << Identifier.getLocation() << IsPartition << MI->isFunctionLike()
+          << Identifier.getIdentifierInfo();
     } else if (!HasMacroInModuleName) {
       // Record this part of the module path.
-      Path.push_back(std::make_pair(Identifier.getIdentifierInfo(), Identifier.getLocation()));
+      Path.push_back(std::make_pair(Identifier.getIdentifierInfo(),
+                                    Identifier.getLocation()));
     }
 
     if (!TryConsumeToken(tok::period))
