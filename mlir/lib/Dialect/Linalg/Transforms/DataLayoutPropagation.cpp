@@ -757,7 +757,7 @@ pushDownUnPackOpThroughExpandShape(tensor::UnPackOp unPackOp,
   ArrayRef<int64_t> innerDimsPos = unPackOp.getInnerDimsPos();
   ArrayRef<int64_t> outerDimsPerm = unPackOp.getOuterDimsPerm();
 
-  auto expandTy = expandOp.getType().dyn_cast<RankedTensorType>();
+  auto expandTy = dyn_cast<RankedTensorType>(expandOp.getType());
   if (!expandTy)
     return failure();
   ArrayRef<int64_t> dstShape = expandTy.getShape();
