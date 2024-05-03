@@ -823,9 +823,9 @@ inline bool CmpHelperEQ<Pointer>(InterpState &S, CodePtr OpPC, CompareFn Fn) {
     // element in the same array are NOT equal. They have the same Base value,
     // but a different Offset. This is a pretty rare case, so we fix this here
     // by comparing pointers to the first elements.
-    if (!LHS.isZero() && LHS.isArrayRoot())
+    if (!LHS.isZero() && !LHS.isDummy() && LHS.isArrayRoot())
       VL = LHS.atIndex(0).getByteOffset();
-    if (!RHS.isZero() && RHS.isArrayRoot())
+    if (!RHS.isZero() && !RHS.isDummy() && RHS.isArrayRoot())
       VR = RHS.atIndex(0).getByteOffset();
 
     S.Stk.push<BoolT>(BoolT::from(Fn(Compare(VL, VR))));
@@ -1241,16 +1241,14 @@ inline bool GetPtrField(InterpState &S, CodePtr OpPC, uint32_t Off) {
       !CheckNull(S, OpPC, Ptr, CSK_Field))
     return false;
 
-  if (!CheckExtern(S, OpPC, Ptr))
-    return false;
-  if (!CheckRange(S, OpPC, Ptr, CSK_Field))
-    return false;
-  if (!CheckSubobject(S, OpPC, Ptr, CSK_Field))
-    return false;
-
-  if (Ptr.isBlockPointer() && Off > Ptr.block()->getSize())
-    return false;
-
+  if (CheckDummy(S, OpPC, Ptr)) {
+    if (!CheckExtern(S, OpPC, Ptr))
+      return false;
+    if (!CheckRange(S, OpPC, Ptr, CSK_Field))
+      return false;
+    if (!CheckSubobject(S, OpPC, Ptr, CSK_Field))
+      return false;
+  }
   S.Stk.push<Pointer>(Ptr.atField(Off));
   return true;
 }
@@ -2036,6 +2034,11 @@ inline bool ArrayElemPtr(InterpState &S, CodePtr OpPC) {
   if (!Ptr.isZero()) {
     if (!CheckArray(S, OpPC, Ptr))
       return false;
+
+    if (Ptr.isDummy()) {
+      S.Stk.push<Pointer>(Ptr);
+      return true;
+    }
   }
 
   if (!OffsetHelper<T, ArithOp::Add>(S, OpPC, Offset, Ptr))
@@ -2052,6 +2055,11 @@ inline bool ArrayElemPtrPop(InterpState &S, CodePtr OpPC) {
   if (!Ptr.isZero()) {
     if (!CheckArray(S, OpPC, Ptr))
       return false;
+
+    if (Ptr.isDummy()) {
+      S.Stk.push<Pointer>(Ptr);
+      return true;
+    }
   }
 
   if (!OffsetHelper<T, ArithOp::Add>(S, OpPC, Offset, Ptr))
@@ -2105,12 +2113,12 @@ inline bool CopyArray(InterpState &S, CodePtr OpPC, uint32_t SrcIndex, uint32_t 
 inline bool ArrayDecay(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
 
-  if (Ptr.isZero()) {
+  if (Ptr.isZero() || Ptr.isDummy()) {
     S.Stk.push<Pointer>(Ptr);
     return true;
   }
 
-  if (!Ptr.isUnknownSizeArray() || Ptr.isDummy()) {
+  if (!Ptr.isUnknownSizeArray()) {
     S.Stk.push<Pointer>(Ptr.atIndex(0));
     return true;
   }
