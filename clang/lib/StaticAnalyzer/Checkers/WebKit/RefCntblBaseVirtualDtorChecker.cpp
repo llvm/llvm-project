@@ -168,7 +168,7 @@ public:
     return false;
   }
 
-  static bool isRefCountedClass(const CXXRecordDecl* D) {
+  static bool isRefCountedClass(const CXXRecordDecl *D) {
     if (!D->getTemplateInstantiationPattern())
       return false;
     auto *NsDecl = D->getParent();
@@ -177,8 +177,9 @@ public:
     auto NamespaceName = safeGetName(NsDecl);
     auto ClsNameStr = safeGetName(D);
     StringRef ClsName = ClsNameStr; // FIXME: Make safeGetName return StringRef.
-    return NamespaceName == "WTF" && (ClsName.ends_with("RefCounted") ||
-        ClsName == "ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr");
+    return NamespaceName == "WTF" &&
+           (ClsName.ends_with("RefCounted") ||
+            ClsName == "ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr");
   }
 
   void reportBug(const CXXRecordDecl *DerivedClass,
