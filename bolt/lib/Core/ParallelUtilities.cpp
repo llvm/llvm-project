@@ -164,15 +164,6 @@ void runOnEachFunction(BinaryContext &BC, SchedulingPolicy SchedPolicy,
   Pool.wait();
 }
 
-static void ensureAllocatorExists(BinaryContext &BC, unsigned AllocId) {
-  if (!BC.MIB->checkAllocatorExists(AllocId)) {
-    MCPlusBuilder::AllocatorIdTy Id =
-        BC.MIB->initializeNewAnnotationAllocator();
-    (void)Id;
-    assert(AllocId == Id && "Unexpected allocator id created");
-  }
-}
-
 void runOnEachFunctionWithUniqueAllocId(
     BinaryContext &BC, SchedulingPolicy SchedPolicy,
     WorkFuncWithAllocTy WorkFunction, PredicateTy SkipPredicate,
@@ -198,9 +189,17 @@ void runOnEachFunctionWithUniqueAllocId(
   };
 
   unsigned AllocId = 1;
+  auto EnsureAllocatorExists = [&BC](unsigned AllocId) {
+    if (!BC.MIB->checkAllocatorExists(AllocId)) {
+      MCPlusBuilder::AllocatorIdTy Id =
+          BC.MIB->initializeNewAnnotationAllocator();
+      (void)Id;
+      assert(AllocId == Id && "unexpected allocator id created");
+    }
+  };
 
   if (opts::NoThreads || ForceSequential) {
-    EnsureAllocatorExists(BC, AllocId);
+    EnsureAllocatorExists(AllocId);
     runBlock(BC.getBinaryFunctions().begin(), BC.getBinaryFunctions().end(),
              AllocId);
     return;
@@ -224,7 +223,7 @@ void runOnEachFunctionWithUniqueAllocId(
     CurrentCost += computeCostFor(BF, SkipPredicate, SchedPolicy);
 
     if (CurrentCost >= BlockCost) {
-      EnsureAllocatorExists(BC, AllocId);
+      EnsureAllocatorExists(AllocId);
       Pool.async(runBlock, BlockBegin, std::next(It), AllocId);
       AllocId++;
       BlockBegin = std::next(It);
