@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Target/ThreadPlanCallFunction.h"
-#include "lldb/API/SBLanguages.h"
 #include "lldb/Breakpoint/Breakpoint.h"
 #include "lldb/Breakpoint/BreakpointLocation.h"
 #include "lldb/Core/Address.h"
@@ -31,7 +30,8 @@
 #ifdef LLDB_ENABLE_SWIFT
 #include "Plugins/LanguageRuntime/Swift/SwiftLanguageRuntime.h"
 #include "Plugins/ExpressionParser/Swift/SwiftPersistentExpressionState.h"
-#endif //LLDB_ENABLE_SWIFT
+#include "llvm/BinaryFormat/Dwarf.h"
+#endif // LLDB_ENABLE_SWIFT
 
 using namespace lldb;
 using namespace lldb_private;
@@ -428,7 +428,7 @@ void ThreadPlanCallFunction::SetBreakpoints() {
     }
   }
 #ifdef LLDB_ENABLE_SWIFT
-  if (GetExpressionLanguage().name == eLanguageNameSwift) {
+  if (GetExpressionLanguage().name == llvm::dwarf::DW_LNAME_Swift) {
     auto *swift_runtime 
         = SwiftLanguageRuntime::Get(m_process.shared_from_this());
     if (swift_runtime) {

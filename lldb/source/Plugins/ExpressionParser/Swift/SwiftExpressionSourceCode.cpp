@@ -11,16 +11,17 @@
 
 #include "Plugins/ExpressionParser/Swift/SwiftASTManipulator.h"
 #include "Plugins/TypeSystem/Swift/SwiftASTContext.h"
-#include "lldb/API/SBLanguages.h"
 #include "lldb/Target/Language.h"
 #include "lldb/Target/Platform.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/StreamString.h"
 
-#include "llvm/ADT/StringRef.h"
 #include "swift/Basic/LangOptions.h"
 #include "swift/Demangling/Demangle.h"
 #include "swift/Demangling/Demangler.h"
+
+#include "llvm/ADT/StringRef.h"
+#include "llvm/BinaryFormat/Dwarf.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -571,7 +572,7 @@ Status SwiftExpressionSourceCode::GetText(
     const uint32_t pound_line = options.GetPoundLineLine();
     StreamString pound_body;
     if (pound_file && pound_line) {
-      if (wrapping_language.name == eLanguageNameSwift) {
+      if (wrapping_language.name == llvm::dwarf::DW_LNAME_Swift) {
         pound_body.Printf("#sourceLocation(file: \"%s\", line: %u)\n%s",
                           pound_file, pound_line, body);
       } else {
@@ -580,7 +581,7 @@ Status SwiftExpressionSourceCode::GetText(
       body = pound_body.GetString().data();
     }
 
-    if (wrapping_language.name != eLanguageNameSwift) {
+    if (wrapping_language.name != llvm::dwarf::DW_LNAME_Swift) {
       status.SetErrorString("language is not Swift");
       return status;
     }
