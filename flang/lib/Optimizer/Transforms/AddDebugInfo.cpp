@@ -49,7 +49,7 @@ class AddDebugInfoPass : public fir::impl::AddDebugInfoBase<AddDebugInfoPass> {
   void handleDeclareOp(fir::cg::XDeclareOp declOp,
                        mlir::LLVM::DIFileAttr fileAttr,
                        mlir::LLVM::DIScopeAttr scopeAttr,
-                       fir::DebugTypeGenerator &typeGen, uint32_t &argNo);
+                       fir::DebugTypeGenerator &typeGen);
 
 public:
   AddDebugInfoPass(fir::AddDebugInfoOptions options) : Base(options) {}
@@ -68,19 +68,30 @@ static uint32_t getLineFromLoc(mlir::Location loc) {
 void AddDebugInfoPass::handleDeclareOp(fir::cg::XDeclareOp declOp,
                                        mlir::LLVM::DIFileAttr fileAttr,
                                        mlir::LLVM::DIScopeAttr scopeAttr,
-                                       fir::DebugTypeGenerator &typeGen,
-                                       uint32_t &argNo) {
+                                       fir::DebugTypeGenerator &typeGen) {
   mlir::MLIRContext *context = &getContext();
   mlir::OpBuilder builder(context);
+  auto result = fir::NameUniquer::deconstruct(declOp.getUniqName());
 
-  bool isLocal = (declOp.getMemref().getDefiningOp() != nullptr);
+  if (result.first != fir::NameUniquer::NameKind::VARIABLE)
+    return;
+
+  // FIXME: There may be cases where an argument is processed a bit before
+  // DeclareOp is generated. In that case, DeclareOp may point to an
+  // intermediate op and not to BlockArgument. We need to find those cases and
+  // walk the chain to get to the actual argument.
+
+  unsigned argNo = 0;
+  if (auto Arg = llvm::dyn_cast<mlir::BlockArgument>(declOp.getMemref()))
+    argNo = Arg.getArgNumber() + 1;
+
   auto tyAttr = typeGen.convertType(fir::unwrapRefType(declOp.getType()),
                                     fileAttr, scopeAttr, declOp.getLoc());
-  auto result = fir::NameUniquer::deconstruct(declOp.getUniqName());
+
   auto localVarAttr = mlir::LLVM::DILocalVariableAttr::get(
       context, scopeAttr, mlir::StringAttr::get(context, result.second.name),
-      fileAttr, getLineFromLoc(declOp.getLoc()), isLocal ? 0 : argNo++,
-      /* alignInBits*/ 0, tyAttr);
+      fileAttr, getLineFromLoc(declOp.getLoc()), argNo, /* alignInBits*/ 0,
+      tyAttr);
   declOp->setLoc(builder.getFusedLoc({declOp->getLoc()}, localVarAttr));
 }
 
@@ -182,9 +193,8 @@ void AddDebugInfoPass::runOnOperation() {
         funcFileAttr, line, line, subprogramFlags, subTypeAttr);
     funcOp->setLoc(builder.getFusedLoc({funcOp->getLoc()}, spAttr));
 
-    uint32_t argNo = 1;
     funcOp.walk([&](fir::cg::XDeclareOp declOp) {
-      handleDeclareOp(declOp, fileAttr, spAttr, typeGen, argNo);
+      handleDeclareOp(declOp, fileAttr, spAttr, typeGen);
     });
   });
 }
