@@ -63,6 +63,7 @@ bool VPRecipeBase::mayWriteToMemory() const {
   case VPPredInstPHISC:
     return false;
   case VPBlendSC:
+  case VPReductionEVLSC:
   case VPReductionSC:
   case VPWidenCanonicalIVSC:
   case VPWidenCastSC:
@@ -104,6 +105,7 @@ bool VPRecipeBase::mayReadFromMemory() const {
   case VPWidenStoreSC:
     return false;
   case VPBlendSC:
+  case VPReductionEVLSC:
   case VPReductionSC:
   case VPWidenCanonicalIVSC:
   case VPWidenCastSC:
@@ -151,6 +153,7 @@ bool VPRecipeBase::mayHaveSideEffects() const {
     return mayWriteToMemory() || !Fn->doesNotThrow() || !Fn->willReturn();
   }
   case VPBlendSC:
+  case VPReductionEVLSC:
   case VPReductionSC:
   case VPScalarIVStepsSC:
   case VPWidenCanonicalIVSC:
