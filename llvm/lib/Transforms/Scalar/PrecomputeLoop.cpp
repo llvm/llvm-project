@@ -652,6 +652,22 @@ void PrecomputeLoopExpressions::collectCandidateExpressions() {
     return IVInfos.count(V) ||
            computeExpressionCost(V, Tmp, LoopDepth) < MinCostThreshold;
   });
+
+  // Remove IV expression where its subexpression is used in higher order
+  // instructions.
+  remove_if(IVEs, [this](Value *V) {
+    Instruction *Ex = cast<Instruction>(V);
+    for (unsigned i = 0; i < Ex->getNumOperands(); ++i) {
+      Instruction *Op = dyn_cast<Instruction>(Ex->getOperand(i));
+      if (Op && llvm::any_of(Op->users(), [&](Value *U) {
+            return Order[cast<Instruction>(U)] > Order[Ex];
+          }))
+        return true;
+      else
+        continue;
+    }
+    return false;
+  });
 }
 
 void PrecomputeLoopExpressions::extractInductionVariables(Value *Ex,
