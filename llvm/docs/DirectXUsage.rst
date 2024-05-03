@@ -79,7 +79,7 @@ both ``DXBC`` and ``DXIL`` outputs, and the ultimate goal is to support both as
 code generation targets in LLVM, the LLVM codebase uses a more neutral name,
 ``DXContainer``.
 
-The ``DXcontainer`` format is sparsely documented in the functional
+The ``DXContainer`` format is sparsely documented in the functional
 specification, but a reference implementation exists in the
 `DirectXShaderCompiler. <https://github.com/microsoft/DirectXShaderCompiler>`_.
 The format is documented in the LLVM project docs as well (see
