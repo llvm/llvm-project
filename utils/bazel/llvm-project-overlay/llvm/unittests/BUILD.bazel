@@ -362,6 +362,7 @@ cc_test(
     ) + [
         "Support/KnownBitsTest.h",
     ],
+    features = ["-layering_check"],
     shard_count = 20,
     deps = [
         "//llvm:Analysis",
