@@ -8811,7 +8811,18 @@ let Predicates = [HasVLX] in {
   def : Pat<(X86mcvttp2ui (v2f64 (X86VBroadcastld64 addr:$src)),
                           v4i32x_info.ImmAllZerosV, VK2WM:$mask),
             (VCVTTPD2UDQZ128rmbkz VK2WM:$mask, addr:$src)>;
+
+  def : Pat<(v4i32 (lrint VR128X:$src)), (VCVTPS2DQZ128rr VR128X:$src)>;
+  def : Pat<(v4i32 (lrint (loadv4f32 addr:$src))), (VCVTPS2DQZ128rm addr:$src)>;
+  def : Pat<(v8i32 (lrint VR256X:$src)), (VCVTPS2DQZ256rr VR256X:$src)>;
+  def : Pat<(v8i32 (lrint (loadv8f32 addr:$src))), (VCVTPS2DQZ256rm addr:$src)>;
+  def : Pat<(v4i32 (lrint VR256X:$src)), (VCVTPD2DQZ256rr VR256X:$src)>;
+  def : Pat<(v4i32 (lrint (loadv4f64 addr:$src))), (VCVTPD2DQZ256rm addr:$src)>;
 }
+def : Pat<(v16i32 (lrint VR512:$src)), (VCVTPS2DQZrr VR512:$src)>;
+def : Pat<(v16i32 (lrint (loadv16f32 addr:$src))), (VCVTPS2DQZrm addr:$src)>;
+def : Pat<(v8i32 (lrint VR512:$src)), (VCVTPD2DQZrr VR512:$src)>;
+def : Pat<(v8i32 (lrint (loadv8f64 addr:$src))), (VCVTPD2DQZrm addr:$src)>;
 
 let Predicates = [HasDQI, HasVLX] in {
   def : Pat<(v2i64 (X86cvtp2Int (bc_v4f32 (v2f64 (X86vzload64 addr:$src))))),
@@ -8857,6 +8868,30 @@ let Predicates = [HasDQI, HasVLX] in {
                                  (X86cvttp2ui (bc_v4f32 (v2f64 (X86vzload64 addr:$src)))),
                                  v2i64x_info.ImmAllZerosV)),
             (VCVTTPS2UQQZ128rmkz VK2WM:$mask, addr:$src)>;
+
+  def : Pat<(v4i64 (lrint VR128X:$src)), (VCVTPS2QQZ256rr VR128X:$src)>;
+  def : Pat<(v4i64 (lrint (loadv4f32 addr:$src))), (VCVTPS2QQZ256rm addr:$src)>;
+  def : Pat<(v4i64 (llrint VR128X:$src)), (VCVTPS2QQZ256rr VR128X:$src)>;
+  def : Pat<(v4i64 (llrint (loadv4f32 addr:$src))), (VCVTPS2QQZ256rm addr:$src)>;
+  def : Pat<(v2i64 (lrint VR128X:$src)), (VCVTPD2QQZ128rr VR128X:$src)>;
+  def : Pat<(v2i64 (lrint (loadv2f64 addr:$src))), (VCVTPD2QQZ128rm addr:$src)>;
+  def : Pat<(v4i64 (lrint VR256X:$src)), (VCVTPD2QQZ256rr VR256X:$src)>;
+  def : Pat<(v4i64 (lrint (loadv4f64 addr:$src))), (VCVTPD2QQZ256rm addr:$src)>;
+  def : Pat<(v2i64 (llrint VR128X:$src)), (VCVTPD2QQZ128rr VR128X:$src)>;
+  def : Pat<(v2i64 (llrint (loadv2f64 addr:$src))), (VCVTPD2QQZ128rm addr:$src)>;
+  def : Pat<(v4i64 (llrint VR256X:$src)), (VCVTPD2QQZ256rr VR256X:$src)>;
+  def : Pat<(v4i64 (llrint (loadv4f64 addr:$src))), (VCVTPD2QQZ256rm addr:$src)>;
+}
+
+let Predicates = [HasDQI] in {
+  def : Pat<(v8i64 (lrint VR256X:$src)), (VCVTPS2QQZrr VR256X:$src)>;
+  def : Pat<(v8i64 (lrint (loadv8f32 addr:$src))), (VCVTPS2QQZrm addr:$src)>;
+  def : Pat<(v8i64 (llrint VR256X:$src)), (VCVTPS2QQZrr VR256X:$src)>;
+  def : Pat<(v8i64 (llrint (loadv8f32 addr:$src))), (VCVTPS2QQZrm addr:$src)>;
+  def : Pat<(v8i64 (lrint VR512:$src)), (VCVTPD2QQZrr VR512:$src)>;
+  def : Pat<(v8i64 (lrint (loadv8f64 addr:$src))), (VCVTPD2QQZrm addr:$src)>;
+  def : Pat<(v8i64 (llrint VR512:$src)), (VCVTPD2QQZrr VR512:$src)>;
+  def : Pat<(v8i64 (llrint (loadv8f64 addr:$src))), (VCVTPD2QQZrm addr:$src)>;
 }
 
 let Predicates = [HasVLX] in {
