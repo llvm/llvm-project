@@ -9,8 +9,7 @@ define dso_local float @fma(float %0, float %1, float %2) local_unnamed_addr #0 
   ret float %5
 }
 
-; CHECK: Function Attrs: nounwind memory(none)
-; Function Attrs: nofree nosync nounwind readnone speculatable willreturn
+; CHECK-NOT: Function Attrs:
 declare void @llvm.dbg.value(metadata, metadata, metadata) #1
 
 ; CHECK: attributes #0 = { nounwind memory(none) }
