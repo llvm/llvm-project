@@ -43,17 +43,17 @@ define void @test_load_store_i32(ptr %a, ptr %b) sanitize_memory {
 ; ORIGIN-NEXT:    br i1 [[_MSCMP]], label [[TMP14:%.*]], label [[TMP21:%.*]], !prof [[PROF0:![0-9]+]]
 ; ORIGIN:       14:
 ; ORIGIN-NEXT:    [[TMP15:%.*]] = call i32 @__msan_chain_origin(i32 [[TMP7]])
-; ORIGIN-NEXT:    [[TMP16:%.*]] = call i32 @llvm.vscale.i32()
-; ORIGIN-NEXT:    [[TMP17:%.*]] = mul i32 [[TMP16]], 16
-; ORIGIN-NEXT:    [[TMP18:%.*]] = add i32 [[TMP17]], 3
-; ORIGIN-NEXT:    [[TMP19:%.*]] = udiv i32 [[TMP18]], 4
+; ORIGIN-NEXT:    [[TMP16:%.*]] = call i64 @llvm.vscale.i64()
+; ORIGIN-NEXT:    [[TMP17:%.*]] = mul i64 [[TMP16]], 16
+; ORIGIN-NEXT:    [[TMP18:%.*]] = add i64 [[TMP17]], 3
+; ORIGIN-NEXT:    [[TMP19:%.*]] = udiv i64 [[TMP18]], 4
 ; ORIGIN-NEXT:    br label [[DOTSPLIT:%.*]]
 ; ORIGIN:       .split:
-; ORIGIN-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[TMP14]] ], [ [[IV_NEXT:%.*]], [[DOTSPLIT]] ]
-; ORIGIN-NEXT:    [[TMP20:%.*]] = getelementptr i32, ptr [[TMP12]], i32 [[IV]]
+; ORIGIN-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP14]] ], [ [[IV_NEXT:%.*]], [[DOTSPLIT]] ]
+; ORIGIN-NEXT:    [[TMP20:%.*]] = getelementptr i32, ptr [[TMP12]], i64 [[IV]]
 ; ORIGIN-NEXT:    store i32 [[TMP15]], ptr [[TMP20]], align 4
-; ORIGIN-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
-; ORIGIN-NEXT:    [[IV_CHECK:%.*]] = icmp eq i32 [[IV_NEXT]], [[TMP19]]
+; ORIGIN-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; ORIGIN-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP19]]
 ; ORIGIN-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
 ; ORIGIN:       .split.split:
 ; ORIGIN-NEXT:    br label [[TMP21]]
@@ -124,17 +124,17 @@ define void @test_load_store_add_int(ptr %a, ptr %b) sanitize_memory {
 ; ORIGIN-NEXT:    br i1 [[_MSCMP]], label [[TMP25:%.*]], label [[TMP32:%.*]], !prof [[PROF0]]
 ; ORIGIN:       25:
 ; ORIGIN-NEXT:    [[TMP26:%.*]] = call i32 @__msan_chain_origin(i32 [[TMP14]])
-; ORIGIN-NEXT:    [[TMP27:%.*]] = call i32 @llvm.vscale.i32()
-; ORIGIN-NEXT:    [[TMP28:%.*]] = mul i32 [[TMP27]], 64
-; ORIGIN-NEXT:    [[TMP29:%.*]] = add i32 [[TMP28]], 3
-; ORIGIN-NEXT:    [[TMP30:%.*]] = udiv i32 [[TMP29]], 4
+; ORIGIN-NEXT:    [[TMP27:%.*]] = call i64 @llvm.vscale.i64()
+; ORIGIN-NEXT:    [[TMP28:%.*]] = mul i64 [[TMP27]], 64
+; ORIGIN-NEXT:    [[TMP29:%.*]] = add i64 [[TMP28]], 3
+; ORIGIN-NEXT:    [[TMP30:%.*]] = udiv i64 [[TMP29]], 4
 ; ORIGIN-NEXT:    br label [[DOTSPLIT:%.*]]
 ; ORIGIN:       .split:
-; ORIGIN-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[TMP25]] ], [ [[IV_NEXT:%.*]], [[DOTSPLIT]] ]
-; ORIGIN-NEXT:    [[TMP31:%.*]] = getelementptr i32, ptr [[TMP23]], i32 [[IV]]
+; ORIGIN-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP25]] ], [ [[IV_NEXT:%.*]], [[DOTSPLIT]] ]
+; ORIGIN-NEXT:    [[TMP31:%.*]] = getelementptr i32, ptr [[TMP23]], i64 [[IV]]
 ; ORIGIN-NEXT:    store i32 [[TMP26]], ptr [[TMP31]], align 4
-; ORIGIN-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
-; ORIGIN-NEXT:    [[IV_CHECK:%.*]] = icmp eq i32 [[IV_NEXT]], [[TMP30]]
+; ORIGIN-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; ORIGIN-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP30]]
 ; ORIGIN-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
 ; ORIGIN:       .split.split:
 ; ORIGIN-NEXT:    br label [[TMP32]]
@@ -187,17 +187,17 @@ define void @test_load_store_float(ptr %a, ptr %b) sanitize_memory {
 ; ORIGIN-NEXT:    br i1 [[_MSCMP]], label [[TMP14:%.*]], label [[TMP21:%.*]], !prof [[PROF0]]
 ; ORIGIN:       14:
 ; ORIGIN-NEXT:    [[TMP15:%.*]] = call i32 @__msan_chain_origin(i32 [[TMP7]])
-; ORIGIN-NEXT:    [[TMP16:%.*]] = call i32 @llvm.vscale.i32()
-; ORIGIN-NEXT:    [[TMP17:%.*]] = mul i32 [[TMP16]], 16
-; ORIGIN-NEXT:    [[TMP18:%.*]] = add i32 [[TMP17]], 3
-; ORIGIN-NEXT:    [[TMP19:%.*]] = udiv i32 [[TMP18]], 4
+; ORIGIN-NEXT:    [[TMP16:%.*]] = call i64 @llvm.vscale.i64()
+; ORIGIN-NEXT:    [[TMP17:%.*]] = mul i64 [[TMP16]], 16
+; ORIGIN-NEXT:    [[TMP18:%.*]] = add i64 [[TMP17]], 3
+; ORIGIN-NEXT:    [[TMP19:%.*]] = udiv i64 [[TMP18]], 4
 ; ORIGIN-NEXT:    br label [[DOTSPLIT:%.*]]
 ; ORIGIN:       .split:
-; ORIGIN-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[TMP14]] ], [ [[IV_NEXT:%.*]], [[DOTSPLIT]] ]
-; ORIGIN-NEXT:    [[TMP20:%.*]] = getelementptr i32, ptr [[TMP12]], i32 [[IV]]
+; ORIGIN-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP14]] ], [ [[IV_NEXT:%.*]], [[DOTSPLIT]] ]
+; ORIGIN-NEXT:    [[TMP20:%.*]] = getelementptr i32, ptr [[TMP12]], i64 [[IV]]
 ; ORIGIN-NEXT:    store i32 [[TMP15]], ptr [[TMP20]], align 4
-; ORIGIN-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
-; ORIGIN-NEXT:    [[IV_CHECK:%.*]] = icmp eq i32 [[IV_NEXT]], [[TMP19]]
+; ORIGIN-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; ORIGIN-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP19]]
 ; ORIGIN-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
 ; ORIGIN:       .split.split:
 ; ORIGIN-NEXT:    br label [[TMP21]]
@@ -268,17 +268,17 @@ define void @test_load_store_add_float(ptr %a, ptr %b) sanitize_memory {
 ; ORIGIN-NEXT:    br i1 [[_MSCMP]], label [[TMP25:%.*]], label [[TMP32:%.*]], !prof [[PROF0]]
 ; ORIGIN:       25:
 ; ORIGIN-NEXT:    [[TMP26:%.*]] = call i32 @__msan_chain_origin(i32 [[TMP14]])
-; ORIGIN-NEXT:    [[TMP27:%.*]] = call i32 @llvm.vscale.i32()
-; ORIGIN-NEXT:    [[TMP28:%.*]] = mul i32 [[TMP27]], 8
-; ORIGIN-NEXT:    [[TMP29:%.*]] = add i32 [[TMP28]], 3
-; ORIGIN-NEXT:    [[TMP30:%.*]] = udiv i32 [[TMP29]], 4
+; ORIGIN-NEXT:    [[TMP27:%.*]] = call i64 @llvm.vscale.i64()
+; ORIGIN-NEXT:    [[TMP28:%.*]] = mul i64 [[TMP27]], 8
+; ORIGIN-NEXT:    [[TMP29:%.*]] = add i64 [[TMP28]], 3
+; ORIGIN-NEXT:    [[TMP30:%.*]] = udiv i64 [[TMP29]], 4
 ; ORIGIN-NEXT:    br label [[DOTSPLIT:%.*]]
 ; ORIGIN:       .split:
-; ORIGIN-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[TMP25]] ], [ [[IV_NEXT:%.*]], [[DOTSPLIT]] ]
-; ORIGIN-NEXT:    [[TMP31:%.*]] = getelementptr i32, ptr [[TMP23]], i32 [[IV]]
+; ORIGIN-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP25]] ], [ [[IV_NEXT:%.*]], [[DOTSPLIT]] ]
+; ORIGIN-NEXT:    [[TMP31:%.*]] = getelementptr i32, ptr [[TMP23]], i64 [[IV]]
 ; ORIGIN-NEXT:    store i32 [[TMP26]], ptr [[TMP31]], align 4
-; ORIGIN-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
-; ORIGIN-NEXT:    [[IV_CHECK:%.*]] = icmp eq i32 [[IV_NEXT]], [[TMP30]]
+; ORIGIN-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; ORIGIN-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP30]]
 ; ORIGIN-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
 ; ORIGIN:       .split.split:
 ; ORIGIN-NEXT:    br label [[TMP32]]
@@ -362,17 +362,17 @@ define void @test_ret(ptr %a, ptr %b) sanitize_memory {
 ; ORIGIN-NEXT:    br i1 [[_MSCMP]], label [[TMP11:%.*]], label [[TMP18:%.*]], !prof [[PROF0]]
 ; ORIGIN:       11:
 ; ORIGIN-NEXT:    [[TMP12:%.*]] = call i32 @__msan_chain_origin(i32 [[TMP4]])
-; ORIGIN-NEXT:    [[TMP13:%.*]] = call i32 @llvm.vscale.i32()
-; ORIGIN-NEXT:    [[TMP14:%.*]] = mul i32 [[TMP13]], 8
-; ORIGIN-NEXT:    [[TMP15:%.*]] = add i32 [[TMP14]], 3
-; ORIGIN-NEXT:    [[TMP16:%.*]] = udiv i32 [[TMP15]], 4
+; ORIGIN-NEXT:    [[TMP13:%.*]] = call i64 @llvm.vscale.i64()
+; ORIGIN-NEXT:    [[TMP14:%.*]] = mul i64 [[TMP13]], 8
+; ORIGIN-NEXT:    [[TMP15:%.*]] = add i64 [[TMP14]], 3
+; ORIGIN-NEXT:    [[TMP16:%.*]] = udiv i64 [[TMP15]], 4
 ; ORIGIN-NEXT:    br label [[DOTSPLIT:%.*]]
 ; ORIGIN:       .split:
-; ORIGIN-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[TMP11]] ], [ [[IV_NEXT:%.*]], [[DOTSPLIT]] ]
-; ORIGIN-NEXT:    [[TMP17:%.*]] = getelementptr i32, ptr [[TMP9]], i32 [[IV]]
+; ORIGIN-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP11]] ], [ [[IV_NEXT:%.*]], [[DOTSPLIT]] ]
+; ORIGIN-NEXT:    [[TMP17:%.*]] = getelementptr i32, ptr [[TMP9]], i64 [[IV]]
 ; ORIGIN-NEXT:    store i32 [[TMP12]], ptr [[TMP17]], align 4
-; ORIGIN-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
-; ORIGIN-NEXT:    [[IV_CHECK:%.*]] = icmp eq i32 [[IV_NEXT]], [[TMP16]]
+; ORIGIN-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; ORIGIN-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP16]]
 ; ORIGIN-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
 ; ORIGIN:       .split.split:
 ; ORIGIN-NEXT:    br label [[TMP18]]
@@ -410,17 +410,17 @@ define void @fn_param(<vscale x 2 x float> %a, ptr %b) sanitize_memory {
 ; ORIGIN-NEXT:    br i1 [[_MSCMP]], label [[TMP7:%.*]], label [[TMP14:%.*]], !prof [[PROF0]]
 ; ORIGIN:       7:
 ; ORIGIN-NEXT:    [[TMP8:%.*]] = call i32 @__msan_chain_origin(i32 0)
-; ORIGIN-NEXT:    [[TMP9:%.*]] = call i32 @llvm.vscale.i32()
-; ORIGIN-NEXT:    [[TMP10:%.*]] = mul i32 [[TMP9]], 8
-; ORIGIN-NEXT:    [[TMP11:%.*]] = add i32 [[TMP10]], 3
-; ORIGIN-NEXT:    [[TMP12:%.*]] = udiv i32 [[TMP11]], 4
+; ORIGIN-NEXT:    [[TMP9:%.*]] = call i64 @llvm.vscale.i64()
+; ORIGIN-NEXT:    [[TMP10:%.*]] = mul i64 [[TMP9]], 8
+; ORIGIN-NEXT:    [[TMP11:%.*]] = add i64 [[TMP10]], 3
+; ORIGIN-NEXT:    [[TMP12:%.*]] = udiv i64 [[TMP11]], 4
 ; ORIGIN-NEXT:    br label [[DOTSPLIT:%.*]]
 ; ORIGIN:       .split:
-; ORIGIN-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[TMP7]] ], [ [[IV_NEXT:%.*]], [[DOTSPLIT]] ]
-; ORIGIN-NEXT:    [[TMP13:%.*]] = getelementptr i32, ptr [[TMP5]], i32 [[IV]]
+; ORIGIN-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP7]] ], [ [[IV_NEXT:%.*]], [[DOTSPLIT]] ]
+; ORIGIN-NEXT:    [[TMP13:%.*]] = getelementptr i32, ptr [[TMP5]], i64 [[IV]]
 ; ORIGIN-NEXT:    store i32 [[TMP8]], ptr [[TMP13]], align 4
-; ORIGIN-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
-; ORIGIN-NEXT:    [[IV_CHECK:%.*]] = icmp eq i32 [[IV_NEXT]], [[TMP12]]
+; ORIGIN-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; ORIGIN-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP12]]
 ; ORIGIN-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
 ; ORIGIN:       .split.split:
 ; ORIGIN-NEXT:    br label [[TMP14]]
