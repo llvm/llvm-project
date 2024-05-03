@@ -38,10 +38,6 @@ struct AliasAnalysis {
              HostAssoc,
              /// Represents direct memory access whose source cannot be further
              /// determined
-             Direct,
-             /// Represents memory allocated by unknown means and
-             /// with the memory address defined by a memory reading
-             /// operation (e.g. fir::LoadOp).
              Indirect,
              /// Starting point to the analysis whereby nothing is known about
              /// the source
@@ -53,9 +49,17 @@ struct AliasAnalysis {
   struct Source {
     using SourceUnion = llvm::PointerUnion<mlir::SymbolRefAttr, mlir::Value>;
     using Attributes = Fortran::common::EnumSet<Attribute, Attribute_enumSize>;
+    
+    struct SourceOrigin {
+      /// Source definition of a value.
+      SourceUnion u;
 
-    /// Source definition of a value.
-    SourceUnion u;
+      /// Whether the source was reached following data or box reference
+      bool isData{false};
+    };
+
+    SourceOrigin origin;
+
     /// Kind of the memory source.
     SourceKind kind;
     /// Value type of the source definition.
@@ -77,6 +81,12 @@ struct AliasAnalysis {
     /// attribute.
     bool isRecordWithPointerComponent() const;
 
+    bool isDummyArgument() const;
+    bool isData() const;
+    bool isBoxData() const;
+
+    mlir::Type getType() const;
+
     /// Return true, if `ty` is a reference type to a boxed
     /// POINTER object or a raw fir::PointerType.
     static bool isPointerReference(mlir::Type ty);
@@ -94,6 +104,15 @@ struct AliasAnalysis {
   /// Return the memory source of a value.
   Source getSource(mlir::Value);
 };
+
+inline bool operator==(const AliasAnalysis::Source::SourceOrigin &lhs,
+                       const AliasAnalysis::Source::SourceOrigin &rhs) {
+  return lhs.u == rhs.u && lhs.isData == rhs.isData;
+}
+inline bool operator!=(const AliasAnalysis::Source::SourceOrigin &lhs,
+                       const AliasAnalysis::Source::SourceOrigin &rhs) {
+  return !(lhs == rhs);
+}
 
 inline llvm::raw_ostream &operator<<(llvm::raw_ostream &os,
                                      const AliasAnalysis::Source &op) {
