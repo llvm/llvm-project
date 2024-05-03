@@ -2564,7 +2564,8 @@ void PrintCrashIRInstrumentation::registerCallbacks(
 void InstrCountChangedReporter::registerCallbacks(
     PassInstrumentationCallbacks &PIC, ModuleAnalysisManager &MAM) {
 
-  if (!Context.getDiagHandlerPtr()->isAnalysisRemarkEnabled("size-info"))
+  if (!Context.getDiagHandlerPtr()->isAnalysisRemarkEnabled("size-info") ||
+      !MAM.isRegistered<MachineFunctionAnalysisManagerModuleProxy>())
     return;
 
   PIC.registerBeforeNonSkippedPassCallback([this, &MAM, Registered = false](
@@ -2631,8 +2632,7 @@ void InstrCountChangedReporter::registerCallbacks(
 }
 
 void StandardInstrumentations::registerCallbacks(
-    PassInstrumentationCallbacks &PIC, ModuleAnalysisManager *MAM,
-    bool RegisterCodeGenCallbacks) {
+    PassInstrumentationCallbacks &PIC, ModuleAnalysisManager *MAM) {
   PrintIR.registerCallbacks(PIC);
   PrintPass.registerCallbacks(PIC);
   TimePasses.registerCallbacks(PIC);
@@ -2648,8 +2648,7 @@ void StandardInstrumentations::registerCallbacks(
   PrintCrashIR.registerCallbacks(PIC);
   if (MAM) {
     PreservedCFGChecker.registerCallbacks(PIC, *MAM);
-    if (RegisterCodeGenCallbacks)
-      EmitMFSizeRemarks.registerCallbacks(PIC, *MAM);
+    EmitMFSizeRemarks.registerCallbacks(PIC, *MAM);
   }
 
   // TimeProfiling records the pass running time cost.

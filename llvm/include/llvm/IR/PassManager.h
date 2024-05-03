@@ -547,6 +547,11 @@ public:
     return true;
   }
 
+  /// Query whether an analysis pass is registered.
+  template <typename PassT> bool isRegistered() {
+    return AnalysisPasses.contains(PassT::ID());
+  }
+
   /// Invalidate cached analyses for an IR unit.
   ///
   /// Walk through all of the analyses pertaining to this unit of IR and
