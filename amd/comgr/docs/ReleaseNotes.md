@@ -202,6 +202,9 @@ where reporters provide Comgr logs.
 - Refactor nested kernel behavior into new test, as this behavior is less common
 and shouldn't be featured in the baseline tests
 - Add metadata parsing tests for code objects with multiple AMDGPU metadata note entries.
+- Updated Comgr HIP test to not rely on HIP\_COMPILER being set, or a valid HIP
+installation. We can test the functionality of Comgr HIP compilation without
+directly relying on HIP
 
 New Targets
 -----------

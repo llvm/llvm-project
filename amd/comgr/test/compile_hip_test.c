@@ -48,13 +48,13 @@ int main(int Argc, char *Argv[]) {
   amd_comgr_action_info_t ActionInfo;
   amd_comgr_status_t Status;
 
-  SizeSource = setBuf(TEST_OBJ_DIR "/source2.hip", &BufSource);
+  SizeSource = setBuf(TEST_OBJ_DIR "/source1.hip", &BufSource);
 
   Status = amd_comgr_create_data(AMD_COMGR_DATA_KIND_SOURCE, &DataSrc);
   checkError(Status, "amd_comgr_create_data");
   Status = amd_comgr_set_data(DataSrc, SizeSource, BufSource);
   checkError(Status, "amd_comgr_set_data");
-  Status = amd_comgr_set_data_name(DataSrc, "source2.hip");
+  Status = amd_comgr_set_data_name(DataSrc, "source1.hip");
   checkError(Status, "amd_comgr_set_data_name");
   Status = amd_comgr_create_data_set(&DataSetSrc);
   checkError(Status, "amd_comgr_create_data_set");

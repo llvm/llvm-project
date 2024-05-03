@@ -119,6 +119,12 @@ add_test_input_binary(linking-empty   source/linking/empty.cl   source/linking/e
 add_test_input_linked(multiple-note-records source/linking/kernel0.o source/linking/kernel1.o source/multiple-note-records.out -w)
 add_test_input_linked(multiple-note-records-one-kernel source/linking/kernel0.o source/linking/empty.o source/multiple-note-records-one-kernel.out -w)
 
+add_test_input_bitcode_bundle(square source/square.hip source/square.bc)
+add_test_input_object_file_bundle(double source/double.hip source/double.o)
+
+add_test_input_bitcode_bundle(cube source/cube.hip source/cube.bc)
+add_test_archive(cube_archive cube source/cube.bc source/cube.a)
+
 configure_file("source/linking/kernel0.cl" "source/linking/kernel0.cl" COPYONLY)
 configure_file("source/linking/kernel1.cl" "source/linking/kernel1.cl" COPYONLY)
 configure_file("source/linking/empty.cl" "source/linking/empty.cl" COPYONLY)
@@ -133,7 +139,6 @@ configure_file("source/include-macro.h" "source/include-macro.h" COPYONLY)
 configure_file("source/include-nested.h" "source/include-nested.h" COPYONLY)
 configure_file("source/source1.s" "source/source1.s" COPYONLY)
 configure_file("source/source1.hip" "source/source1.hip" COPYONLY)
-configure_file("source/source2.hip" "source/source2.hip" COPYONLY)
 configure_file("source/name-expression.hip" "source/name-expression.hip" COPYONLY)
 configure_file("source/rocm56slice.b" "source/rocm56slice.b" COPYONLY)
 configure_file("source/rocm57slice.b" "source/rocm57slice.b" COPYONLY)
@@ -178,10 +183,6 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
     PRIVATE -D_CRT_SECURE_NO_WARNINGS)
 endif()
 
-if (DEFINED HIP_COMPILER AND "${HIP_COMPILER}" STREQUAL "clang")
-  target_compile_definitions("${name}"
-    PRIVATE -DHIP_COMPILER=${HIP_COMPILER})
-endif()
   target_link_libraries("${name}"
     amd_comgr)
   add_dependencies("${name}"
@@ -232,18 +233,8 @@ add_comgr_test(multithread_test cpp)
 add_comgr_test(nested_kernel_test c)
 add_comgr_test(map_elf_virtual_address_test c)
 add_comgr_test(compile_source_to_executable c)
-
-# Test : Compile HIP tests only if HIP-Clang is installed.
-if (DEFINED HIP_COMPILER AND "${HIP_COMPILER}" STREQUAL "clang")
-  add_test_input_bitcode_bundle(square source/square.hip source/square.bc)
-  add_test_input_object_file_bundle(double source/double.hip source/double.o)
-
-  add_test_input_bitcode_bundle(cube source/cube.hip source/cube.bc)
-  add_test_archive(cube_archive cube source/cube.bc source/cube.a)
-
-  add_comgr_test(compile_hip_test c)
-  add_comgr_test(unbundle_hip_test c)
-  add_comgr_test(compile_hip_to_relocatable c)
-  add_comgr_test(mangled_names_hip_test c)
-  add_comgr_test(name_expression_map_test c)
-endif()
+add_comgr_test(name_expression_map_test c)
+add_comgr_test(compile_hip_test c)
+add_comgr_test(compile_hip_to_relocatable c)
+add_comgr_test(mangled_names_hip_test c)
+add_comgr_test(unbundle_hip_test c)

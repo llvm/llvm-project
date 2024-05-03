@@ -32,8 +32,7 @@
 * THE SOFTWARE.
 *
 *******************************************************************************/
-#include "hip/hip_runtime.h"
 
-__global__ void source1(int *j) {
+void source1(int *j) {
   *j += 2;
 }

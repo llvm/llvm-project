@@ -50,7 +50,7 @@ int main(int argc, char *argv[]) {
   size_t CodeGenOptionsCount =
       sizeof(CodeGenOptions) / sizeof(CodeGenOptions[0]);
 
-  SizeSource = setBuf(TEST_OBJ_DIR "/source2.hip", &BufSource);
+  SizeSource = setBuf(TEST_OBJ_DIR "/source1.hip", &BufSource);
 
   Status = amd_comgr_create_data_set(&DataSetIn);
   checkError(Status, "amd_comgr_create_data_set");

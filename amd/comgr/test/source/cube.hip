@@ -20,17 +20,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-#include "hip/hip_runtime.h"
-
-extern __device__ bool test_flag;
-
-template <typename T>
-__global__ void vector_cube(T* C_d, const T* A_d, size_t N) {
-    size_t offset = (hipBlockIdx_x * hipBlockDim_x + hipThreadIdx_x);
-    size_t stride = hipBlockDim_x * hipGridDim_x;
-
-    if (test_flag)
-      for (size_t i = offset; i < N; i += stride) {
-        C_d[i] = A_d[i] * A_d[i] * A_d[i];
-      }
+void cube(int *j) {
+   *j = *j * *j * *j;
 }

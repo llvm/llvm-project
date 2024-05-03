@@ -20,21 +20,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-#include "hip/hip_runtime.h"
-
-/*
- * Double each element in the array A and write to array C.
- */
-
-__device__ bool test_flag = true;
-
-template <typename T>
-__global__ void vector_double(T* C_d, const T* A_d, size_t N) {
-    size_t offset = (hipBlockIdx_x * hipBlockDim_x + hipThreadIdx_x);
-    size_t stride = hipBlockDim_x * hipGridDim_x;
-
-    if (test_flag)
-      for (size_t i = offset; i < N; i += stride) {
-        C_d[i] = A_d[i] * 2;
-      }
+void doubles(int *j) {
+   *j = *j * 2;
 }

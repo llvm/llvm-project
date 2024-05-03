@@ -110,7 +110,8 @@ int main(int argc, char *argv[]) {
     free(BufSource);
   }
 
-#ifdef HIP_COMPILER
+  // Re-enable post https://github.com/llvm/llvm-project/pull/85672
+#if 0
   // HIP
   {
     char *BufSource;
