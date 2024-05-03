@@ -3053,66 +3053,8 @@ FunctionTemplateDecl *DeclareAggregateDeductionGuideForTypeAlias(
       RHSTemplate, ParamTypes, Loc);
   if (!RHSDeductionGuide)
     return nullptr;
-
-  LocalInstantiationScope Scope(SemaRef);
-  Sema::InstantiatingTemplate BuildingDeductionGuides(
-      SemaRef, AliasTemplate->getLocation(), RHSDeductionGuide,
-      Sema::InstantiatingTemplate::BuildingDeductionGuidesTag{});
-  if (BuildingDeductionGuides.isInvalid())
-    return nullptr;
-
-  // Build a new template parameter list for the synthesized aggregate deduction
-  // guide by transforming the one from RHSDeductionGuide.
-  SmallVector<NamedDecl *> TransformedTemplateParams;
-  // Template args that refer to the rebuilt template parameters.
-  // All template arguments must be initialized in advance.
-  SmallVector<TemplateArgument> TransformedTemplateArgs(
-      RHSDeductionGuide->getTemplateParameters()->size());
-  for (auto *TP : *RHSDeductionGuide->getTemplateParameters()) {
-    // Rebuild any internal references to earlier parameters and reindex as
-    // we go.
-    MultiLevelTemplateArgumentList Args;
-    Args.setKind(TemplateSubstitutionKind::Rewrite);
-    Args.addOuterTemplateArguments(TransformedTemplateArgs);
-    NamedDecl *NewParam = transformTemplateParameter(
-        SemaRef, AliasTemplate->getDeclContext(), TP, Args,
-        /*NewIndex=*/TransformedTemplateParams.size());
-
-    TransformedTemplateArgs[TransformedTemplateParams.size()] =
-        SemaRef.Context.getCanonicalTemplateArgument(
-            SemaRef.Context.getInjectedTemplateArg(NewParam));
-    TransformedTemplateParams.push_back(NewParam);
-  }
-  // FIXME: implement the is_deducible constraint per C++
-  // [over.match.class.deduct]p3.3.
-  Expr *TransformedRequiresClause = transformRequireClause(
-      SemaRef, RHSDeductionGuide, TransformedTemplateArgs);
-  auto *TransformedTemplateParameterList = TemplateParameterList::Create(
-      SemaRef.Context, AliasTemplate->getTemplateParameters()->getTemplateLoc(),
-      AliasTemplate->getTemplateParameters()->getLAngleLoc(),
-      TransformedTemplateParams,
-      AliasTemplate->getTemplateParameters()->getRAngleLoc(),
-      TransformedRequiresClause);
-  auto *TransformedTemplateArgList = TemplateArgumentList::CreateCopy(
-      SemaRef.Context, TransformedTemplateArgs);
-
-  if (auto *TransformedDeductionGuide = SemaRef.InstantiateFunctionDeclaration(
-          RHSDeductionGuide, TransformedTemplateArgList,
-          AliasTemplate->getLocation(),
-          Sema::CodeSynthesisContext::BuildingDeductionGuides)) {
-    auto *GD =
-        llvm::dyn_cast<clang::CXXDeductionGuideDecl>(TransformedDeductionGuide);
-    FunctionTemplateDecl *Result = buildDeductionGuide(
-        SemaRef, AliasTemplate, TransformedTemplateParameterList,
-        GD->getCorrespondingConstructor(), GD->getExplicitSpecifier(),
-        GD->getTypeSourceInfo(), AliasTemplate->getBeginLoc(),
-        AliasTemplate->getLocation(), AliasTemplate->getEndLoc(),
-        GD->isImplicit());
-    cast<CXXDeductionGuideDecl>(Result->getTemplatedDecl())
-        ->setDeductionCandidateKind(DeductionCandidate::Aggregate);
-    return Result;
-  }
-  return nullptr;
+  return BuildDeductionGuideForTypeAlias(SemaRef, AliasTemplate,
+                                         RHSDeductionGuide, Loc);
 }
 
 } // namespace
