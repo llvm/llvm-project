@@ -1222,7 +1222,6 @@ struct Proxy : ProxyDiffTBase<T> {
     operator++();
     return tmp;
   }
-
 };
 
 // This is to make ProxyIterator model `std::indirectly_readable`

@@ -5533,7 +5533,6 @@
 #   error "__cpp_lib_ranges_iota should have the value 202202L in c++23"
 # endif
 
-
 # if !defined(_LIBCPP_VERSION)
 #   ifndef __cpp_lib_ranges_join_with
 #     error "__cpp_lib_ranges_join_with should be defined in c++23"
@@ -7316,10 +7315,10 @@
 # endif
 
 # ifndef __cpp_lib_ranges_iota
-#   error "__cpp_lib_ranges_iota should be defined in c++23"
+#   error "__cpp_lib_ranges_iota should be defined in c++26"
 # endif
 # if __cpp_lib_ranges_iota != 202202L
-#   error "__cpp_lib_ranges_iota should have the value 202202L in c++23"
+#   error "__cpp_lib_ranges_iota should have the value 202202L in c++26"
 # endif
 
 # if !defined(_LIBCPP_VERSION)
