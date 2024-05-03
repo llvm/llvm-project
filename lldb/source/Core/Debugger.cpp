@@ -1512,6 +1512,9 @@ void Debugger::ReportDiagnosticImpl(Severity severity, std::string message,
                                     std::optional<lldb::user_id_t> debugger_id,
                                     std::once_flag *once) {
   auto ReportDiagnosticLambda = [&]() {
+    // Always log diagnostics to the system log.
+    Host::SystemLog(severity, message);
+
     // The diagnostic subsystem is optional but we still want to broadcast
     // events when it's disabled.
     if (Diagnostics::Enabled())
