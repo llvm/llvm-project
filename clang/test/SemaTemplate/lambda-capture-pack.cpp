@@ -83,21 +83,21 @@ template <class = void> void f() {
 
   [](auto ...x) {
     ([&](auto ...y) {
-      // FIXME: This now hits assertion `PackIdx != -1 && "found declaration pack but not pack expanding"'
-      // in Sema::FindInstantiatedDecl.
-      // This is because the captured variable x has been expanded while transforming
-      // the outermost lambda call, but the expansion is held off while transforming
-      // the folded expression. Then, we would hit the assertion when instantiating the
-      // captured variable in TransformLambdaExpr.
-      // I think this is supposed to be ill-formed, but GCC and MSVC currently accept this.
-      // However, if x gets expanded with non-empty arguments, then GCC and MSVC will reject it -
-      // we probably need a diagnostic for it.
-      // ([x, y] { }, ...);
       ([x..., y] { }, ...);
-    })();
-  }();
+    })(1);
+  }(2, 'b');
+
+  [](auto ...x) {  // #outer
+    ([&](auto ...y) { // #inner
+      ([x, y] { }, ...);
+      // expected-error@-1 {{parameter pack 'y' that has a different length (4 vs. 3) from outer parameter packs}}
+      // expected-note-re@#inner {{function template specialization {{.*}} requested here}}
+      // expected-note-re@#outer {{function template specialization {{.*}} requested here}}
+      // expected-note-re@#instantiate-f {{function template specialization {{.*}} requested here}}
+    })('a', 'b', 'c');
+  }(0, 1, 2, 3);
 }
 
-template void f();
+template void f(); // #instantiate-f
 
 }
