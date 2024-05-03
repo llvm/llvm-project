@@ -14,12 +14,12 @@ declare void @free(ptr) allockind("free") "alloc-family"="malloc"
 declare noalias ptr @calloc(i64, i64) allockind("alloc,zeroed") allocsize(0, 1) "alloc-family"="malloc"
 
 ;.
-; CHECK: @[[GINT1:[a-zA-Z0-9_$"\\.-]+]] = internal global i32 undef, align 4
-; CHECK: @[[GINT2:[a-zA-Z0-9_$"\\.-]+]] = internal global i32 0, align 4
-; CHECK: @[[GINT3:[a-zA-Z0-9_$"\\.-]+]] = internal global i32 undef, align 4
-; CHECK: @[[GINT4:[a-zA-Z0-9_$"\\.-]+]] = internal global i32 0, align 4
-; CHECK: @[[GINT5:[a-zA-Z0-9_$"\\.-]+]] = internal global i32 undef, align 4
-; CHECK: @[[B:[a-zA-Z0-9_$"\\.-]+]] = global i32 0
+; CHECK: @GInt1 = internal global i32 undef, align 4
+; CHECK: @GInt2 = internal global i32 0, align 4
+; CHECK: @GInt3 = internal global i32 undef, align 4
+; CHECK: @GInt4 = internal global i32 0, align 4
+; CHECK: @GInt5 = internal global i32 undef, align 4
+; CHECK: @B = global i32 0
 ;.
 define internal void @write1ToGInt1() {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(write)
