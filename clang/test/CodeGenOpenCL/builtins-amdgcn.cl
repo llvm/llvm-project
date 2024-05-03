@@ -839,6 +839,18 @@ unsigned test_wavefrontsize() {
   return __builtin_amdgcn_wavefrontsize();
 }
 
+// CHECK-LABEL test_flt_rounds(
+unsigned test_flt_rounds() {
+
+  // CHECK: call i32 @llvm.get.rounding()
+  unsigned mode = __builtin_flt_rounds();
+
+  // CHECK: call void @llvm.set.rounding(i32 %0)
+  __builtin_set_flt_rounds(mode);
+
+  return mode;
+}
+
 // CHECK-LABEL test_get_fpenv(
 unsigned long test_get_fpenv() {
   // CHECK: call i64 @llvm.get.fpenv.i64()
