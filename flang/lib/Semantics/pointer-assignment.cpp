@@ -266,8 +266,11 @@ bool PointerAssignmentChecker::Check(const evaluate::FunctionRef<T> &f) {
           " that is a not a pointer"_err_en_US;
   } else if (isContiguous_ &&
       !funcResult->attrs.test(FunctionResult::Attr::Contiguous)) {
-    msg = "CONTIGUOUS %s is associated with the result of reference to"
-          " function '%s' that is not known to be contiguous"_warn_en_US;
+    if (context_.ShouldWarn(
+            common::UsageWarning::PointerToPossibleNoncontiguous)) {
+      msg =
+          "CONTIGUOUS %s is associated with the result of reference to function '%s' that is not known to be contiguous"_warn_en_US;
+    }
   } else if (lhsType_) {
     const auto *frTypeAndShape{funcResult->GetTypeAndShape()};
     CHECK(frTypeAndShape);

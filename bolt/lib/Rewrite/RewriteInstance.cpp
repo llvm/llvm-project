@@ -1347,6 +1347,35 @@ void RewriteInstance::discoverFileObjects() {
 
   registerFragments();
   FileSymbols.clear();
+
+  discoverBOLTReserved();
+}
+
+void RewriteInstance::discoverBOLTReserved() {
+  BinaryData *StartBD = BC->getBinaryDataByName(getBOLTReservedStart());
+  BinaryData *EndBD = BC->getBinaryDataByName(getBOLTReservedEnd());
+  if (!StartBD != !EndBD) {
+    BC->errs() << "BOLT-ERROR: one of the symbols is missing from the binary: "
+               << getBOLTReservedStart() << ", " << getBOLTReservedEnd()
+               << '\n';
+    exit(1);
+  }
+
+  if (!StartBD)
+    return;
+
+  if (StartBD->getAddress() >= EndBD->getAddress()) {
+    BC->errs() << "BOLT-ERROR: invalid reserved space boundaries\n";
+    exit(1);
+  }
+  BC->BOLTReserved = AddressRange(StartBD->getAddress(), EndBD->getAddress());
+  BC->outs() << "BOLT-INFO: using reserved space for allocating new sections\n";
+
+  PHDRTableOffset = 0;
+  PHDRTableAddress = 0;
+  NewTextSegmentAddress = 0;
+  NewTextSegmentOffset = 0;
+  NextAvailableAddress = BC->BOLTReserved.start();
 }
 
 Error RewriteInstance::discoverRtFiniAddress() {
@@ -1513,6 +1542,23 @@ void RewriteInstance::registerFragments() {
       StopSymbol = *FSI;
 
     uint64_t ParentAddress{0};
+
+    // BOLT split fragment symbols are emitted just before the main function
+    // symbol.
+    for (ELFSymbolRef NextSymbol = Symbol; NextSymbol < StopSymbol;
+         NextSymbol.moveNext()) {
+      StringRef Name = cantFail(NextSymbol.getName());
+      if (Name == ParentName) {
+        ParentAddress = cantFail(NextSymbol.getValue());
+        goto registerParent;
+      }
+      if (Name.starts_with(ParentName))
+        // With multi-way splitting, there are multiple fragments with different
+        // suffixes. Parent follows the last fragment.
+        continue;
+      break;
+    }
+
     // Iterate over local file symbols and check symbol names to match parent.
     for (ELFSymbolRef Symbol(FSI[-1]); Symbol < StopSymbol; Symbol.moveNext()) {
       if (cantFail(Symbol.getName()) == ParentName) {
@@ -1521,6 +1567,7 @@ void RewriteInstance::registerFragments() {
       }
     }
 
+registerParent:
     // No local parent is found, use global parent function.
     if (!ParentAddress)
       if (BinaryData *ParentBD = BC->getBinaryDataByName(ParentName))
@@ -3599,26 +3646,6 @@ void RewriteInstance::updateMetadata() {
 void RewriteInstance::mapFileSections(BOLTLinker::SectionMapper MapSection) {
   BC->deregisterUnusedSections();
 
-  // Check if the input has a space reserved for BOLT.
-  BinaryData *StartBD = BC->getBinaryDataByName(getBOLTReservedStart());
-  BinaryData *EndBD = BC->getBinaryDataByName(getBOLTReservedEnd());
-  if (!StartBD != !EndBD) {
-    BC->errs() << "BOLT-ERROR: one of the symbols is missing from the binary: "
-               << getBOLTReservedStart() << ", " << getBOLTReservedEnd()
-               << '\n';
-    exit(1);
-  }
-
-  if (StartBD) {
-    PHDRTableOffset = 0;
-    PHDRTableAddress = 0;
-    NewTextSegmentAddress = 0;
-    NewTextSegmentOffset = 0;
-    NextAvailableAddress = StartBD->getAddress();
-    BC->outs()
-        << "BOLT-INFO: using reserved space for allocating new sections\n";
-  }
-
   // If no new .eh_frame was written, remove relocated original .eh_frame.
   BinarySection *RelocatedEHFrameSection =
       getSection(".relocated" + getEHFrameSectionName());
@@ -3639,12 +3666,12 @@ void RewriteInstance::mapFileSections(BOLTLinker::SectionMapper MapSection) {
   // Map the rest of the sections.
   mapAllocatableSections(MapSection);
 
-  if (StartBD) {
-    const uint64_t ReservedSpace = EndBD->getAddress() - StartBD->getAddress();
-    const uint64_t AllocatedSize = NextAvailableAddress - StartBD->getAddress();
-    if (ReservedSpace < AllocatedSize) {
-      BC->errs() << "BOLT-ERROR: reserved space (" << ReservedSpace << " byte"
-                 << (ReservedSpace == 1 ? "" : "s")
+  if (!BC->BOLTReserved.empty()) {
+    const uint64_t AllocatedSize =
+        NextAvailableAddress - BC->BOLTReserved.start();
+    if (BC->BOLTReserved.size() < AllocatedSize) {
+      BC->errs() << "BOLT-ERROR: reserved space (" << BC->BOLTReserved.size()
+                 << " byte" << (BC->BOLTReserved.size() == 1 ? "" : "s")
                  << ") is smaller than required for new allocations ("
                  << AllocatedSize << " bytes)\n";
       exit(1);
@@ -4029,6 +4056,7 @@ void RewriteInstance::patchELFPHDRTable() {
     NewWritableSegmentSize = NextAvailableAddress - NewWritableSegmentAddress;
   }
 
+  const uint64_t SavedPos = OS.tell();
   OS.seek(PHDRTableOffset);
 
   auto createNewTextPhdr = [&]() {
@@ -4133,6 +4161,8 @@ void RewriteInstance::patchELFPHDRTable() {
         << "BOLT-ERROR: could not find PT_GNU_STACK program header to modify\n";
     exit(1);
   }
+
+  OS.seek(SavedPos);
 }
 
 namespace {
@@ -5023,10 +5053,6 @@ void RewriteInstance::patchELFSymTabs(ELFObjectFile<ELFT> *File) {
   assert((DynSymSection || BC->IsStaticExecutable) &&
          "dynamic symbol table expected");
   if (DynSymSection) {
-    // Set pointer to the end of the section, so we can use pwrite to update
-    // the dynamic symbol table.
-    Out->os().seek(DynSymSection->sh_offset + DynSymSection->sh_size);
-
     updateELFSymbolTable(
         File,
         /*IsDynSym=*/true,
@@ -5835,13 +5861,11 @@ void RewriteInstance::writeEHFrameHeader() {
 
   NextAvailableAddress += EHFrameHdrSec.getOutputSize();
 
-  if (const BinaryData *ReservedEnd =
-          BC->getBinaryDataByName(getBOLTReservedEnd())) {
-    if (NextAvailableAddress > ReservedEnd->getAddress()) {
-      BC->errs() << "BOLT-ERROR: unable to fit " << getEHFrameHdrSectionName()
-                 << " into reserved space\n";
-      exit(1);
-    }
+  if (!BC->BOLTReserved.empty() &&
+      (NextAvailableAddress > BC->BOLTReserved.end())) {
+    BC->errs() << "BOLT-ERROR: unable to fit " << getEHFrameHdrSectionName()
+               << " into reserved space\n";
+    exit(1);
   }
 
   // Merge new .eh_frame with the relocated original so that gdb can locate all
@@ -5875,7 +5899,7 @@ uint64_t RewriteInstance::getNewValueForSymbol(const StringRef Name) {
 
 uint64_t RewriteInstance::getFileOffsetForAddress(uint64_t Address) const {
   // Check if it's possibly part of the new segment.
-  if (Address >= NewTextSegmentAddress)
+  if (NewTextSegmentAddress && Address >= NewTextSegmentAddress)
     return Address - NewTextSegmentAddress + NewTextSegmentOffset;
 
   // Find an existing segment that matches the address.

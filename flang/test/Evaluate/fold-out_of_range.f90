@@ -1,4 +1,4 @@
-! RUN: %python %S/test_folding.py %s %flang_fc1
+! RUN: %python %S/test_folding.py %s %flang_fc1 -pedantic
 ! UNSUPPORTED: target=powerpc{{.*}}, target=aarch{{.*}}, target=arm{{.*}}, system-windows, system-solaris
 ! Tests folding of OUT_OF_RANGE().
 module m

@@ -245,7 +245,8 @@ std::string getIRName(Any IR) {
     return C->getName();
 
   if (const auto *L = unwrapIR<Loop>(IR))
-    return L->getName().str();
+    return "loop %" + L->getName().str() + " in function " +
+           L->getHeader()->getParent()->getName().str();
 
   if (const auto *MF = unwrapIR<MachineFunction>(IR))
     return MF->getName().str();
@@ -297,14 +298,6 @@ void unwrapAndPrint(raw_ostream &OS, Any IR) {
     auto *M = unwrapModule(IR);
     assert(M && "should have unwrapped module");
     printIR(OS, M);
-
-    if (const auto *MF = unwrapIR<MachineFunction>(IR)) {
-      auto &MMI = MF->getMMI();
-      for (const auto &F : *M) {
-        if (auto *MF = MMI.getMachineFunction(F))
-          MF->print(OS);
-      }
-    }
     return;
   }
 
