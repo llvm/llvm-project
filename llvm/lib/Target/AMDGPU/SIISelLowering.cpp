@@ -4092,9 +4092,8 @@ SDValue SITargetLowering::lowerSET_ROUNDING(SDValue Op,
       SDValue RoundModeTimesNumBits =
           DAG.getNode(ISD::SHL, SL, MVT::i32, NewMode, Two);
 
-      SDValue TableValue =
+      NewMode =
           DAG.getNode(ISD::SRL, SL, MVT::i32, BitTable, RoundModeTimesNumBits);
-      NewMode = DAG.getNode(ISD::TRUNCATE, SL, MVT::i32, TableValue);
 
       // TODO: SimplifyDemandedBits on the setreg source here can likely reduce
       // the table extracted bits into inline immediates.
