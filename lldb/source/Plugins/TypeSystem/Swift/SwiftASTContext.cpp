@@ -932,7 +932,7 @@ SwiftASTContext::ScopedDiagnostics::GetOptionalErrorKind() const {
     return ErrorKind::swift;
 
   for (size_t i = m_cursor.lldb; i < consumer.m_diagnostics.size(); ++i)
-    if (consumer.m_diagnostics[i]->GetSeverity() == eDiagnosticSeverityError)
+    if (consumer.m_diagnostics[i]->GetSeverity() == eSeverityError)
       return ErrorKind::swift;
 
   return {};
@@ -1800,7 +1800,7 @@ void SwiftASTContext::FilterClangImporterOptions(
               << "Ignoring missing VFS file: " << arg
               << "\nThis is the likely root cause for any subsequent compiler "
                  "errors.";
-          ctx->AddDiagnostic(eDiagnosticSeverityWarning, error);
+          ctx->AddDiagnostic(eSeverityWarning, error);
         }
         continue;
       }
@@ -2050,7 +2050,7 @@ SwiftASTContext::CreateInstance(lldb::LanguageType language, Module &module,
               discover_implicit_search_paths, m_description, errs,
               got_serialized_options, found_swift_modules)) {
         // Validation errors are not fatal for the context.
-        swift_ast_sp->AddDiagnostic(eDiagnosticSeverityError, errs.str());
+        swift_ast_sp->AddDiagnostic(eSeverityError, errs.str());
       }
 
     llvm::StringRef serialized_triple =
@@ -3108,11 +3108,11 @@ void SwiftASTContext::StreamAllDiagnostics(
     if (diag) {
       std::string msg = diag->GetMessage().str();
       switch (diag->GetSeverity()) {
-      case eDiagnosticSeverityError:
+      case eSeverityError:
         Debugger::ReportError(msg, debugger_id, &m_swift_diags_streamed);
         break;
-      case eDiagnosticSeverityWarning:
-      case eDiagnosticSeverityRemark:
+      case eSeverityWarning:
+      case eSeverityInfo:
         Debugger::ReportWarning(msg, debugger_id, &m_swift_warning_streamed);
         break;
       }
@@ -3514,8 +3514,7 @@ swift::ASTContext *SwiftASTContext::GetASTContext() {
 
       // Handle any errors.
       if (!clang_importer_ap || importer_diags->HasErrors()) {
-        AddDiagnostic(eDiagnosticSeverityError,
-                      "failed to create ClangImporter");
+        AddDiagnostic(eSeverityError, "failed to create ClangImporter");
         if (GetLog(LLDBLog::Types)) {
           DiagnosticManager diagnostic_manager;
           importer_diags->PrintDiagnostics(diagnostic_manager);
@@ -4594,7 +4593,7 @@ SwiftASTContext::ReconstructTypeOrWarn(ConstString mangled_typename) {
 
   auto reconstructed_type = ReconstructType(mangled_typename);
   if (!reconstructed_type)
-    AddDiagnostic(eDiagnosticSeverityWarning,
+    AddDiagnostic(eSeverityWarning,
                   llvm::toString(reconstructed_type.takeError()));
   return *reconstructed_type;
 }
@@ -5247,7 +5246,7 @@ bool SwiftASTContext::HasClangImporterErrors() const {
           ->NumClangErrors() != 0);
 }
 
-void SwiftASTContext::AddDiagnostic(DiagnosticSeverity severity,
+void SwiftASTContext::AddDiagnostic(lldb::Severity severity,
                                     llvm::StringRef message) {
   assert(m_diagnostic_consumer_ap);
   HEALTH_LOG_PRINTF("%s", message.str().c_str());
