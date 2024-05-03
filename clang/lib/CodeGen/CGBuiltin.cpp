@@ -18337,14 +18337,13 @@ void CodeGenFunction::AddAMDGCNFenceAddressSpaceMMRA(llvm::Instruction *Inst,
   for (unsigned K = 2; K < E->getNumArgs(); ++K) {
     llvm::Value *V = EmitScalarExpr(E->getArg(K));
     StringRef AS;
-    if (llvm::getConstantStringInfo(V, AS) &&
-        (AS == "local" || AS == "global" || AS == "image")) {
+    if (llvm::getConstantStringInfo(V, AS)) {
       MMRAs.push_back({Tag, AS});
       // TODO: Delete the resulting unused constant?
       continue;
     }
     CGM.Error(E->getExprLoc(),
-              "expected one of \"local\", \"global\" or \"image\"");
+              "expected an address space name as a string literal");
   }
 
   llvm::unique(MMRAs);
