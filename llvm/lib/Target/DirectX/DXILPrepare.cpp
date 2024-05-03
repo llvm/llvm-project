@@ -84,7 +84,7 @@ constexpr bool isValidForDXIL(Attribute::AttrKind Attr) {
 }
 
 static void collectDeadStringAttrs(AttributeMask &DeadAttrs, AttributeSet &&AS,
-                                   StringSet<> LiveKeys) {
+                                   const StringSet<> &LiveKeys) {
   for (auto &Attr : AS) {
     if (!Attr.isStringAttribute())
       continue;
@@ -97,8 +97,8 @@ static void collectDeadStringAttrs(AttributeMask &DeadAttrs, AttributeSet &&AS,
 
 static void removeStringFunctionAttributes(Function &F) {
   AttributeList Attrs = F.getAttributes();
-  StringSet<> LiveKeys = {"waveops-include-helper-lanes"
-                          "fp32-denorm-mode"};
+  const StringSet<> LiveKeys = {"waveops-include-helper-lanes",
+                                "fp32-denorm-mode"};
   // Collect DeadKeys in FnAttrs.
   AttributeMask DeadAttrs;
   collectDeadStringAttrs(DeadAttrs, Attrs.getFnAttrs(), LiveKeys);
