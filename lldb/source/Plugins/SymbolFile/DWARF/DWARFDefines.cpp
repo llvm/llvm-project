@@ -15,18 +15,12 @@
 namespace lldb_private::plugin {
 namespace dwarf {
 
-const char *DW_TAG_value_to_name(uint32_t val) {
-  static char invalid[100];
+llvm::StringRef DW_TAG_value_to_name(dw_tag_t tag) {
+  static constexpr llvm::StringLiteral s_unknown_tag_name("<unknown DW_TAG>");
+  if (llvm::StringRef tag_name = llvm::dwarf::TagString(tag); !tag_name.empty())
+    return tag_name;
 
-  if (val == 0)
-    return "NULL";
-
-  llvm::StringRef llvmstr = llvm::dwarf::TagString(val);
-  if (llvmstr.empty()) {
-    snprintf(invalid, sizeof(invalid), "Unknown DW_TAG constant: 0x%x", val);
-    return invalid;
-  }
-  return llvmstr.data();
+  return s_unknown_tag_name;
 }
 
 const char *DW_AT_value_to_name(uint32_t val) {
