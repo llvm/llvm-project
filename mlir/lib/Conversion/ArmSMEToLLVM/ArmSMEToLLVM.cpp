@@ -406,11 +406,11 @@ addArmSMEConversionPatterns(RewritePatternSet &patterns,
 ///  AFTER:
 ///  ```mlir
 ///     "arm_sme.intr.zero"() <{tile_mask = 17 : i32}> : () -> ()
-///     %v = arm_sme.materialize_ssa_tile : vector<[4]x[4]xi32>
+///     %v = arm_sme.get_tile : vector<[4]x[4]xi32>
 ///  ```
 ///
-///  The 'arm_sme.materialize_ssa_tile' (which models the return) will fold away
-///  once all ArmSME ops have been converted to LLVM intrinsics.
+///  The 'arm_sme.get_tile' (which models the return) will fold away once all
+///  ArmSME ops have been converted to LLVM intrinsics.
 struct ZeroOpConversion : public ConvertArmSMEOpToLLVMPattern<arm_sme::ZeroOp> {
   using ConvertArmSMEOpToLLVMPattern::ConvertArmSMEOpToLLVMPattern;
 

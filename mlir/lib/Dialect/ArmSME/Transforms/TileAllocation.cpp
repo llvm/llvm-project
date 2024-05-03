@@ -164,9 +164,23 @@ private:
   unsigned nextInMemoryTileId = kInMemoryTileIdBase;
 };
 
-// Add new intermediate blocks for the true and false destinations of a
-// `cf.cond_br`. This prevents spurious liveness overlaps due to copies at
-// branches.
+/// Add new intermediate blocks for the true and false destinations of
+/// `cf.cond_br`s that contain tile operands. This prevents spurious liveness
+/// overlaps due to copies at branches.
+///
+///  BEFORE:
+///  ```mlir
+///  cf.cond_br %cond, ^bb1(%tile: vector<[4]x[4]xf32>), ^bb2
+///  ```
+///
+///  AFTER:
+///  ```mlir
+///    cf.cond_br %cond, ^bb1_copy, ^bb2_copy
+///  ^bb1_copy:
+///    cf.br ^bb1(%tile: vector<[4]x[4]xf32>)
+///  ^bb2_copy:
+///    cf.br ^bb2
+///  ```
 void splitCondBranches(IRRewriter &rewriter, FunctionOpInterface function) {
   SmallVector<cf::CondBranchOp> worklist;
   function.walk([&](cf::CondBranchOp condBranch) {
@@ -200,7 +214,18 @@ void splitCondBranches(IRRewriter &rewriter, FunctionOpInterface function) {
   }
 }
 
-/// Inserts tile copies at `cf.br` operations.
+/// Splits conditional branches (see `splitCondBranches`), then inserts tile
+/// copies at `cf.br` operations.
+///
+///  BEFORE:
+///  ```mlir
+///  cf.br ^bb1(%tile: vector<[4]x[4]xf32>)
+///  ```
+///
+///  AFTER:
+///  ```mlir
+///  %copy = arm_sme.copy_tile %tile : vector<[4]x[4]xf32>
+///  ```
 void insertCopiesAtBranches(IRRewriter &rewriter,
                             FunctionOpInterface function) {
   splitCondBranches(rewriter, function);
@@ -219,7 +244,9 @@ void insertCopiesAtBranches(IRRewriter &rewriter,
   }
 }
 
-/// A range where a tile value is live. The range may contain holes.
+/// A live range for a (collection of) tile values. A live range is built up of
+/// intervals [start, end) which represent parts of the program where the value
+/// needs to be live (i.e. in an SME virtual tile).
 struct LiveRange {
   using RangeSet = llvm::IntervalMap<uint64_t, uint8_t, 16,
                                      llvm::IntervalMapHalfOpenInfo<unsigned>>;
@@ -296,33 +323,38 @@ gatherTileLiveRanges(DenseMap<Operation *, unsigned> const &operationToIndexMap,
                      LiveRange::Allocator &liveRangeAllocator,
                      Liveness &liveness, FunctionOpInterface function) {
   DenseMap<Value, LiveRange> liveRanges;
-  auto updateLiveRanges = [&](Value value, Operation *firstUseOrDef,
-                              LivenessBlockInfo const &livenessInfo,
-                              bool liveAtBlockEntry = false) {
+  /// Defines or updates a live range for an SME tile value. Live-ins may update
+  /// an existing live range (rather than define a new one).
+  auto defineOrUpdateValueLiveRange = [&](Value value, Operation *firstUseOrDef,
+                                          LivenessBlockInfo const &livenessInfo,
+                                          bool liveAtBlockEntry = false) {
     if (!isValidSMETileVectorType(value.getType()))
       return;
-    auto it = liveRanges.try_emplace(value, liveRangeAllocator).first;
+    // Find or create a live range for `value`.
+    auto [it, _] = liveRanges.try_emplace(value, liveRangeAllocator);
+    LiveRange &valueLiveRange = it->second;
     auto lastUseInBlock = livenessInfo.getEndOperation(value, firstUseOrDef);
+    // Add the interval [firstUseOrDef, lastUseInBlock) to the live range.
     unsigned start =
         operationToIndexMap.at(firstUseOrDef) + (liveAtBlockEntry ? -1 : 0);
     unsigned end = operationToIndexMap.at(lastUseInBlock);
-    it->second.insert(value, start, end);
+    valueLiveRange.insert(value, start, end);
   };
 
   for (Block &block : function.getBlocks()) {
     LivenessBlockInfo const *livenessInfo = liveness.getLiveness(&block);
     // Handle block arguments:
     for (Value argument : block.getArguments())
-      updateLiveRanges(argument, &block.front(), *livenessInfo,
-                       /*liveAtBlockEntry=*/true);
+      defineOrUpdateValueLiveRange(argument, &block.front(), *livenessInfo,
+                                   /*liveAtBlockEntry=*/true);
     // Handle live-ins:
     for (Value liveIn : livenessInfo->in())
-      updateLiveRanges(liveIn, &block.front(), *livenessInfo,
-                       /*liveAtBlockEntry=*/true);
+      defineOrUpdateValueLiveRange(liveIn, &block.front(), *livenessInfo,
+                                   /*liveAtBlockEntry=*/true);
     // Handle new definitions:
     for (Operation &op : block) {
       for (Value result : op.getResults())
-        updateLiveRanges(result, &op, *livenessInfo);
+        defineOrUpdateValueLiveRange(result, &op, *livenessInfo);
     }
   }
 
