@@ -15,6 +15,7 @@
 #include "CIRGenCall.h"
 #include "CIRGenFunction.h"
 #include "CIRGenModule.h"
+#include "TargetInfo.h"
 #include "UnimplementedFeatureGuarding.h"
 
 // TODO(cir): we shouldn't need this but we currently reuse intrinsic IDs for
@@ -24,6 +25,7 @@
 
 #include "clang/AST/GlobalDecl.h"
 #include "clang/Basic/Builtins.h"
+#include "clang/Basic/TargetBuiltins.h"
 
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/Value.h"
@@ -786,8 +788,56 @@ static mlir::Value buildTargetArchBuiltinExpr(CIRGenFunction *CGF,
                                               const CallExpr *E,
                                               ReturnValueSlot ReturnValue,
                                               llvm::Triple::ArchType Arch) {
-  llvm_unreachable("NYI");
-  return {};
+  // When compiling in HipStdPar mode we have to be conservative in rejecting
+  // target specific features in the FE, and defer the possible error to the
+  // AcceleratorCodeSelection pass, wherein iff an unsupported target builtin is
+  // referenced by an accelerator executable function, we emit an error.
+  // Returning nullptr here leads to the builtin being handled in
+  // EmitStdParUnsupportedBuiltin.
+  if (CGF->getLangOpts().HIPStdPar && CGF->getLangOpts().CUDAIsDevice &&
+      Arch != CGF->getTarget().getTriple().getArch())
+    return nullptr;
+
+  switch (Arch) {
+  case llvm::Triple::arm:
+  case llvm::Triple::armeb:
+  case llvm::Triple::thumb:
+  case llvm::Triple::thumbeb:
+    llvm_unreachable("NYI");
+  case llvm::Triple::aarch64:
+  case llvm::Triple::aarch64_32:
+  case llvm::Triple::aarch64_be:
+    return CGF->buildAArch64BuiltinExpr(BuiltinID, E, Arch);
+  case llvm::Triple::bpfeb:
+  case llvm::Triple::bpfel:
+    llvm_unreachable("NYI");
+  case llvm::Triple::x86:
+  case llvm::Triple::x86_64:
+    return CGF->buildX86BuiltinExpr(BuiltinID, E);
+  case llvm::Triple::ppc:
+  case llvm::Triple::ppcle:
+  case llvm::Triple::ppc64:
+  case llvm::Triple::ppc64le:
+    llvm_unreachable("NYI");
+  case llvm::Triple::r600:
+  case llvm::Triple::amdgcn:
+    llvm_unreachable("NYI");
+  case llvm::Triple::systemz:
+    llvm_unreachable("NYI");
+  case llvm::Triple::nvptx:
+  case llvm::Triple::nvptx64:
+    llvm_unreachable("NYI");
+  case llvm::Triple::wasm32:
+  case llvm::Triple::wasm64:
+    llvm_unreachable("NYI");
+  case llvm::Triple::hexagon:
+    llvm_unreachable("NYI");
+  case llvm::Triple::riscv32:
+  case llvm::Triple::riscv64:
+    llvm_unreachable("NYI");
+  default:
+    return {};
+  }
 }
 
 mlir::Value

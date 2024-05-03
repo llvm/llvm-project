@@ -170,6 +170,12 @@ struct UnimplementedFeature {
   static bool asm_memory_effects() { return false; }
   static bool asm_vector_type() { return false; }
   static bool asm_llvm_assume() { return false; }
+
+  // ARM builtins
+  static bool translateAarch64ToMsvcIntrin() { return false; }
+  static bool neonEquivalentIntrinsicMap() { return false; }
+  static bool arm64SISDIntrinsicMap() { return false; }
+  static bool getNeonType() { return false; }
 };
 } // namespace cir
 
