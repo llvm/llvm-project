@@ -478,6 +478,32 @@ func.func @simple_arith.ceildivsi() -> (i32, i32, i32, i32, i32) {
 
 // -----
 
+// CHECK-LABEL: func @simple_arith.ceildivsi_overflow
+func.func @simple_arith.ceildivsi_overflow() -> (i8, i16, i32) {
+  // The negative values below are MININTs for the corresponding bit-width. The
+  // folder will try to negate them (so that the division operartes on two
+  // positive numbers), but that would cause overflow (negating MININT
+  // overflows). Hence folding should not happen and the original ceildivsi is
+  // preserved.
+
+  // CHECK-COUNT-3:  arith.ceildivsi
+  %0 = arith.constant 7 : i8
+  %min_int_i8 = arith.constant -128 : i8
+  %2 = arith.ceildivsi %min_int_i8, %0 : i8
+
+  %3 = arith.constant 7 : i16
+  %min_int_i16 = arith.constant -32768 : i16
+  %5 = arith.ceildivsi %min_int_i16, %3 : i16
+
+  %6 = arith.constant 7 : i32
+  %min_int_i32 = arith.constant -2147483648 : i32
+  %8 = arith.ceildivsi %min_int_i32, %6 : i32
+
+  return %2, %5, %8 : i8, i16, i32
+}
+
+// -----
+
 // CHECK-LABEL: func @simple_arith.ceildivui
 func.func @simple_arith.ceildivui() -> (i32, i32, i32, i32, i32) {
   // CHECK-DAG: [[C0:%.+]] = arith.constant 0
