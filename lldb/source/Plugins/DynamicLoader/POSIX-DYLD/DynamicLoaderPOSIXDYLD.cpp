@@ -511,14 +511,8 @@ DynamicLoaderPOSIXDYLD::GetStepThroughTrampolinePlan(Thread &thread,
   // __AArch64AbsLongThunk_) added to the function name. If we detect a
   // trampoline with the prefix, we need to remove the prefix to find the
   // function symbol.
-  if (target_name.consume_front("__AArch64ADRPThunk_")) {
-    // An empty target name can happen when for trampolines generated for
-    // section-referencing relocations.
-    if (!target_name.empty()) {
-      images.FindSymbolsWithNameAndType(ConstString(target_name),
-                                        eSymbolTypeCode, target_symbols);
-    }
-  } else if (target_name.consume_front("__AArch64AbsLongThunk_")) {
+  if (target_name.consume_front("__AArch64ADRPThunk_") ||
+      target_name.consume_front("__AArch64AbsLongThunk_")) {
     // An empty target name can happen when for trampolines generated for
     // section-referencing relocations.
     if (!target_name.empty()) {
