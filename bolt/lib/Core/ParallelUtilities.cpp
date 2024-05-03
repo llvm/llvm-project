@@ -169,7 +169,7 @@ static void ensureAllocatorExists(BinaryContext &BC, unsigned AllocId) {
     MCPlusBuilder::AllocatorIdTy Id =
         BC.MIB->initializeNewAnnotationAllocator();
     (void)Id;
-    assert(AllocId == Id && "unexpected allocator id created");
+    assert(AllocId == Id && "Unexpected allocator id created");
   }
 }
 
