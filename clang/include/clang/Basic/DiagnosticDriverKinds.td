@@ -142,6 +142,9 @@ def warn_drv_unsupported_diag_option_for_flang : Warning<
 def warn_drv_unsupported_option_for_processor : Warning<
   "ignoring '%0' option as it is not currently supported for processor '%1'">,
   InGroup<OptionIgnored>;
+def warn_drv_unsupported_openmp_library : Warning<
+  "The library '%0=%1' is not supported, openmp is not be enabled">,
+  InGroup<OptionIgnored>;
 
 def err_drv_invalid_thread_model_for_target : Error<
   "invalid thread model '%0' in '%1' for this target">;
@@ -432,7 +435,7 @@ def warn_drv_diagnostics_misexpect_requires_pgo : Warning<
 def warn_drv_clang_unsupported : Warning<
   "the clang compiler does not support '%0'">;
 def warn_drv_deprecated_arg : Warning<
-  "argument '%0' is deprecated, use '%1' instead">, InGroup<Deprecated>;
+  "argument '%0' is deprecated%select{|, use '%2' instead}1">, InGroup<Deprecated>;
 def warn_drv_deprecated_custom : Warning<
   "argument '%0' is deprecated, %1">, InGroup<Deprecated>;
 def warn_drv_assuming_mfloat_abi_is : Warning<
@@ -663,6 +666,7 @@ def warn_drv_darwin_sdk_invalid_settings : Warning<
   "SDK settings were ignored as 'SDKSettings.json' could not be parsed">,
   InGroup<DiagGroup<"darwin-sdk-settings">>;
 
+def err_missing_sysroot : Error<"no such sysroot directory: '%0'">;
 def err_drv_darwin_sdk_missing_arclite : Error<
   "SDK does not contain 'libarclite' at the path '%0'; try increasing the minimum deployment target">;
 

@@ -1,7 +1,8 @@
-; RUN: llc < %s -asm-verbose=false -verify-machineinstrs -mcpu=mvp -mattr=+multivalue,+tail-call | FileCheck %s
-; RUN: llc < %s -asm-verbose=false -verify-machineinstrs -mcpu=mvp -mattr=+reference-types,+multivalue,+tail-call | FileCheck --check-prefix REF %s
-; RUN: llc < %s -asm-verbose=false -verify-machineinstrs -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers -mcpu=mvp -mattr=+multivalue,+tail-call | FileCheck %s --check-prefix REGS
-; RUN: llc < %s --filetype=obj -mcpu=mvp -mattr=+multivalue,+tail-call | obj2yaml | FileCheck %s --check-prefix OBJ
+; RUN: llc < %s -asm-verbose=false -verify-machineinstrs -mcpu=mvp -mattr=+multivalue,+tail-call -target-abi=experimental-mv | FileCheck %s
+; RUN: llc < %s -asm-verbose=false -verify-machineinstrs -mcpu=mvp -mattr=+reference-types,+multivalue,+tail-call -target-abi=experimental-mv | FileCheck --check-prefix REF %s
+; RUN: llc < %s -asm-verbose=false -verify-machineinstrs -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers -mcpu=mvp -mattr=+multivalue,+tail-call -target-abi=experimental-mv | FileCheck %s --check-prefix REGS
+; RUN: llc < %s --filetype=obj -mcpu=mvp -mattr=+multivalue,+tail-call -target-abi=experimental-mv | obj2yaml | FileCheck %s --check-prefix OBJ
+; RUN: llc < %s -asm-verbose=false -verify-machineinstrs -mcpu=mvp -mattr=+multivalue,+tail-call | FileCheck %s --check-prefix NO-MULTIVALUE
 
 ; Test that the multivalue calls, returns, function types, and block
 ; types work as expected.
@@ -19,6 +20,7 @@ declare void @use_i64(i64)
 ; CHECK-NEXT: i32.const 42{{$}}
 ; CHECK-NEXT: i64.const 42{{$}}
 ; CHECK-NEXT: end_function{{$}}
+; NO-MULTIVALUE-NOT: .functype pair_const () -> (i32, i64)
 define %pair @pair_const() {
   ret %pair { i32 42, i64 42 }
 }

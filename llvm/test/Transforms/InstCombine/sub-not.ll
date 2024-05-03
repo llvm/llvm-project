@@ -34,7 +34,7 @@ define <2 x i8> @sub_not_vec(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %s = sub <2 x i8> %x, %y
-  %r = xor <2 x i8> %s, <i8 -1, i8 undef>
+  %r = xor <2 x i8> %s, <i8 -1, i8 poison>
   ret <2 x i8> %r
 }
 
@@ -69,7 +69,7 @@ define <2 x i8> @dec_sub_vec(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %s = sub <2 x i8> %x, %y
-  %r = add <2 x i8> %s, <i8 -1, i8 undef>
+  %r = add <2 x i8> %s, <i8 -1, i8 poison>
   ret <2 x i8> %r
 }
 
@@ -103,7 +103,7 @@ define <2 x i8> @sub_inc_vec(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-NEXT:    [[R:%.*]] = add <2 x i8> [[S_NEG]], [[Y:%.*]]
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
-  %s = add <2 x i8> %x, <i8 undef, i8 1>
+  %s = add <2 x i8> %x, <i8 poison, i8 1>
   %r = sub <2 x i8> %y, %s
   ret <2 x i8> %r
 }
@@ -138,7 +138,7 @@ define <2 x i8> @sub_dec_vec(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-NEXT:    [[R:%.*]] = add <2 x i8> [[TMP1]], [[X:%.*]]
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
-  %s = add <2 x i8> %x, <i8 undef, i8 -1>
+  %s = add <2 x i8> %x, <i8 poison, i8 -1>
   %r = sub <2 x i8> %s, %y
   ret <2 x i8> %r
 }

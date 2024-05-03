@@ -528,7 +528,7 @@ void test_read_exec_lo(global uint* out) {
 // CHECK-LABEL: @test_read_exec_hi(
 // CHECK: call i64 @llvm.amdgcn.ballot.i64(i1 true)
 // CHECK: lshr i64 [[A:%.*]], 32
-// CHECK: trunc i64 [[B:%.*]] to i32
+// CHECK: trunc nuw i64 [[B:%.*]] to i32
 void test_read_exec_hi(global uint* out) {
   *out = __builtin_amdgcn_read_exec_hi();
 }

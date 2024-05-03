@@ -243,8 +243,12 @@ static SPIRVType *getArgSPIRVType(const Function &F, unsigned ArgIdx,
       continue;
 
     MetadataAsValue *VMD = cast<MetadataAsValue>(II->getOperand(1));
-    SPIRVType *ElementType = GR->getOrCreateSPIRVType(
-        cast<ConstantAsMetadata>(VMD->getMetadata())->getType(), MIRBuilder);
+    Type *ElementTy = cast<ConstantAsMetadata>(VMD->getMetadata())->getType();
+    if (isUntypedPointerTy(ElementTy))
+      ElementTy =
+          TypedPointerType::get(IntegerType::getInt8Ty(II->getContext()),
+                                getPointerAddressSpace(ElementTy));
+    SPIRVType *ElementType = GR->getOrCreateSPIRVType(ElementTy, MIRBuilder);
     return GR->getOrCreateSPIRVPointerType(
         ElementType, MIRBuilder,
         addressSpaceToStorageClass(
@@ -379,7 +383,16 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
   if (F.isDeclaration())
     GR->add(&F, &MIRBuilder.getMF(), FuncVReg);
   FunctionType *FTy = getOriginalFunctionType(F);
-  SPIRVType *RetTy = GR->getOrCreateSPIRVType(FTy->getReturnType(), MIRBuilder);
+  Type *FRetTy = FTy->getReturnType();
+  if (isUntypedPointerTy(FRetTy)) {
+    if (Type *FRetElemTy = GR->findDeducedElementType(&F)) {
+      TypedPointerType *DerivedTy =
+          TypedPointerType::get(FRetElemTy, getPointerAddressSpace(FRetTy));
+      GR->addReturnType(&F, DerivedTy);
+      FRetTy = DerivedTy;
+    }
+  }
+  SPIRVType *RetTy = GR->getOrCreateSPIRVType(FRetTy, MIRBuilder);
   FTy = fixFunctionTypeIfPtrArgs(GR, F, FTy, RetTy, ArgTypeVRegs);
   SPIRVType *FuncTy = GR->getOrCreateOpTypeFunctionWithArgs(
       FTy, RetTy, ArgTypeVRegs, MIRBuilder);
@@ -501,8 +514,13 @@ bool SPIRVCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
     // TODO: support constexpr casts and indirect calls.
     if (CF == nullptr)
       return false;
-    if (FunctionType *FTy = getOriginalFunctionType(*CF))
+    if (FunctionType *FTy = getOriginalFunctionType(*CF)) {
       OrigRetTy = FTy->getReturnType();
+      if (isUntypedPointerTy(OrigRetTy)) {
+        if (auto *DerivedRetTy = GR->findReturnType(CF))
+          OrigRetTy = DerivedRetTy;
+      }
+    }
   }
 
   MachineRegisterInfo *MRI = MIRBuilder.getMRI();

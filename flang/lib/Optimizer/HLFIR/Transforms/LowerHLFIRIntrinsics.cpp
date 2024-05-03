@@ -185,7 +185,7 @@ protected:
 // the width for use in runtime intrinsic calls.
 static unsigned getKindForType(mlir::Type ty) {
   mlir::Type eltty = hlfir::getFortranElementType(ty);
-  unsigned width = eltty.cast<mlir::IntegerType>().getWidth();
+  unsigned width = mlir::cast<mlir::IntegerType>(eltty).getWidth();
   return width / 8;
 }
 

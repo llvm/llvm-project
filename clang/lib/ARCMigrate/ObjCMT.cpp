@@ -1144,7 +1144,7 @@ static bool IsValidIdentifier(ASTContext &Ctx,
     return false;
   std::string NameString = Name;
   NameString[0] = toLowercase(NameString[0]);
-  IdentifierInfo *II = &Ctx.Idents.get(NameString);
+  const IdentifierInfo *II = &Ctx.Idents.get(NameString);
   return II->getTokenID() ==  tok::identifier;
 }
 
@@ -1166,7 +1166,7 @@ bool ObjCMigrateASTConsumer::migrateProperty(ASTContext &Ctx,
   if (OIT_Family != OIT_None)
     return false;
 
-  IdentifierInfo *getterName = GetterSelector.getIdentifierInfoForSlot(0);
+  const IdentifierInfo *getterName = GetterSelector.getIdentifierInfoForSlot(0);
   Selector SetterSelector =
   SelectorTable::constructSetterSelector(PP.getIdentifierTable(),
                                          PP.getSelectorTable(),
@@ -1311,7 +1311,8 @@ void ObjCMigrateASTConsumer::migrateFactoryMethod(ASTContext &Ctx,
   std::string StringLoweredClassName = LoweredClassName.lower();
   LoweredClassName = StringLoweredClassName;
 
-  IdentifierInfo *MethodIdName = OM->getSelector().getIdentifierInfoForSlot(0);
+  const IdentifierInfo *MethodIdName =
+      OM->getSelector().getIdentifierInfoForSlot(0);
   // Handle method with no name at its first selector slot; e.g. + (id):(int)x.
   if (!MethodIdName)
     return;

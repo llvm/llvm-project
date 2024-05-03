@@ -72,4 +72,101 @@ def SparseTensorStorageSpecifier
     : Type<CPred<"::llvm::isa<::mlir::sparse_tensor::StorageSpecifierType>($_self)">, "metadata",
           "::mlir::sparse_tensor::StorageSpecifierType">;
 
+//===----------------------------------------------------------------------===//
+// Sparse Tensor Iteration Types.
+//===----------------------------------------------------------------------===//
+
+def SparseTensor_IterSpace : SparseTensor_Type<"IterSpace"> {
+  let mnemonic = "iter_space";
+
+  let description = [{
+    A sparse iteration space that represents an abstract N-D (sparse) iteration space
+    extracted from a sparse tensor, i.e., a set of (crd_0, crd_1, ..., crd_N) for
+    every stored element (usually nonzeros) in a sparse tensor between the specified
+    [$loLvl, $hiLvl) levels.
+
+    Examples:
+
+    ```mlir
+    // An iteration space extracted from a CSR tensor between levels [0, 2).
+    !iter_space<#CSR, lvls = 0 to 2>
+    ```
+  }];
+
+  let parameters = (ins
+     SparseTensorEncodingAttr : $encoding,
+     "Level" : $loLvl,
+     "Level" : $hiLvl
+  );
+
+  let extraClassDeclaration = [{
+     /// The the dimension of the iteration space.
+     unsigned getSpaceDim() const {
+       return getHiLvl() - getLoLvl();
+     }
+
+     /// Get the level types for the iteration space.
+     ArrayRef<LevelType> getLvlTypes() const {
+       return getEncoding().getLvlTypes().slice(getLoLvl(), getSpaceDim());
+     }
+
+     /// Whether the iteration space is unique (i.e., no duplicated coordinate).
+     bool isUnique() {
+       return !getLvlTypes().back().isa<LevelPropNonDefault::Nonunique>();
+     }
+
+     /// Get the corresponding iterator type.
+     ::mlir::sparse_tensor::IteratorType getIteratorType() const;
+  }];
+
+  let assemblyFormat="`<` $encoding `,` `lvls` `=` custom<LevelRange>($loLvl, $hiLvl) `>`";
+}
+
+def SparseTensor_Iterator : SparseTensor_Type<"Iterator"> {
+  let mnemonic = "iterator";
+
+  let description = [{
+    An iterator that points to the current element in the corresponding iteration space.
+
+    Examples:
+
+    ```mlir
+    // An iterator that iterates over a iteration space of type `!iter_space<#CSR, lvls = 0 to 2>`
+    !iterator<#CSR, lvls = 0 to 2>
+    ```
+  }];
+
+  let parameters = (ins
+     SparseTensorEncodingAttr : $encoding,
+     "Level" : $loLvl,
+     "Level" : $hiLvl
+  );
+
+  let extraClassDeclaration = [{
+     /// Get the corresponding iteration space type.
+     ::mlir::sparse_tensor::IterSpaceType getIterSpaceType() const;
+
+     unsigned getSpaceDim() const { return getIterSpaceType().getSpaceDim(); }
+     ArrayRef<LevelType> getLvlTypes() const { return getIterSpaceType().getLvlTypes(); }
+     bool isUnique() { return getIterSpaceType().isUnique(); }
+  }];
+
+  let assemblyFormat="`<` $encoding `,` `lvls` `=` custom<LevelRange>($loLvl, $hiLvl) `>`";
+}
+
+def IsSparseSparseIterSpaceTypePred
+    : CPred<"::llvm::isa<::mlir::sparse_tensor::IterSpaceType>($_self)">;
+
+def IsSparseSparseIteratorTypePred
+    : CPred<"::llvm::isa<::mlir::sparse_tensor::IteratorType>($_self)">;
+
+def AnySparseIterSpace
+    : Type<IsSparseSparseIterSpaceTypePred, "sparse iteration space",
+          "::mlir::sparse_tensor::IterSpaceType">;
+
+def AnySparseIterator
+    : Type<IsSparseSparseIteratorTypePred, "sparse iterator",
+          "::mlir::sparse_tensor::IteratorType">;
+
+
 #endif // SPARSETENSOR_TYPES

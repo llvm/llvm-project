@@ -1,4 +1,4 @@
-//===-- RISCVInstrInfoZvk.td - RISC-V 'Zvk' instructions -------*- tablegen -*-===//
+//===-- RISCVInstrInfoZvk.td - RISC-V 'Zvk' instructions ---*- tablegen -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -64,7 +64,7 @@ multiclass VROR_IV_V_X_I<string opcodestr, bits<6> funct6>
 // op vd, vs2, vs1
 class PALUVVNoVm<bits<6> funct6, RISCVVFormat opv, string opcodestr>
     : VALUVVNoVm<funct6, opv, opcodestr> {
-  let Inst{6-0} = OPC_OP_P.Value;
+  let Inst{6-0} = OPC_OP_VE.Value;
 }
 
 // op vd, vs2, vs1
@@ -74,13 +74,13 @@ class PALUVVNoVmTernary<bits<6> funct6, RISCVVFormat opv, string opcodestr>
                opcodestr, "$vd, $vs2, $vs1"> {
   let Constraints = "$vd = $vd_wb";
   let vm = 1;
-  let Inst{6-0} = OPC_OP_P.Value;
+  let Inst{6-0} = OPC_OP_VE.Value;
 }
 
 // op vd, vs2, imm
 class PALUVINoVm<bits<6> funct6, string opcodestr, Operand optype>
     : VALUVINoVm<funct6, opcodestr, optype> {
-  let Inst{6-0} = OPC_OP_P.Value;
+  let Inst{6-0} = OPC_OP_VE.Value;
   let Inst{14-12} = OPMVV.Value;
 }
 
@@ -91,7 +91,7 @@ class PALUVINoVmBinary<bits<6> funct6, string opcodestr, Operand optype>
                 opcodestr, "$vd, $vs2, $imm"> {
   let Constraints = "$vd = $vd_wb";
   let vm = 1;
-  let Inst{6-0} = OPC_OP_P.Value;
+  let Inst{6-0} = OPC_OP_VE.Value;
   let Inst{14-12} = OPMVV.Value;
 }
 
@@ -103,7 +103,7 @@ class PALUVs2NoVmBinary<bits<6> funct6, bits<5> vs1, RISCVVFormat opv,
               opcodestr, "$vd, $vs2"> {
   let Constraints = "$vd = $vd_wb";
   let vm = 1;
-  let Inst{6-0} = OPC_OP_P.Value;
+  let Inst{6-0} = OPC_OP_VE.Value;
 }
 
 multiclass VAES_MV_V_S<bits<6> funct6_vv, bits<6> funct6_vs, bits<5> vs1,
@@ -152,7 +152,7 @@ let Predicates = [HasStdExtZvknhaOrZvknhb], RVVConstraint = Sha2Constraint in {
   def VSHA2MS_VV : PALUVVNoVmTernary<0b101101, OPMVV, "vsha2ms.vv">;
 } // Predicates = [HasStdExtZvknhaOrZvknhb]
 
-let Predicates = [HasStdExtZvkned]in {
+let Predicates = [HasStdExtZvkned] in {
   defm VAESDF     : VAES_MV_V_S<0b101000, 0b101001, 0b00001, OPMVV, "vaesdf">;
   defm VAESDM     : VAES_MV_V_S<0b101000, 0b101001, 0b00000, OPMVV, "vaesdm">;
   defm VAESEF     : VAES_MV_V_S<0b101000, 0b101001, 0b00011, OPMVV, "vaesef">;

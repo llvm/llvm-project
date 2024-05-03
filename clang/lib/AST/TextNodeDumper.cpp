@@ -381,6 +381,41 @@ void TextNodeDumper::Visit(const OMPClause *C) {
     OS << " <implicit>";
 }
 
+void TextNodeDumper::Visit(const OpenACCClause *C) {
+  if (!C) {
+    ColorScope Color(OS, ShowColors, NullColor);
+    OS << "<<<NULL>>> OpenACCClause";
+    return;
+  }
+  {
+    ColorScope Color(OS, ShowColors, AttrColor);
+    OS << C->getClauseKind();
+
+    // Handle clauses with parens for types that have no children, likely
+    // because there is no sub expression.
+    switch (C->getClauseKind()) {
+    case OpenACCClauseKind::Default:
+      OS << '(' << cast<OpenACCDefaultClause>(C)->getDefaultClauseKind() << ')';
+      break;
+    case OpenACCClauseKind::If:
+    case OpenACCClauseKind::Self:
+    case OpenACCClauseKind::NumGangs:
+    case OpenACCClauseKind::NumWorkers:
+    case OpenACCClauseKind::Private:
+    case OpenACCClauseKind::VectorLength:
+      // The condition expression will be printed as a part of the 'children',
+      // but print 'clause' here so it is clear what is happening from the dump.
+      OS << " clause";
+      break;
+    default:
+      // Nothing to do here.
+      break;
+    }
+  }
+  dumpPointer(C);
+  dumpSourceRange(SourceRange(C->getBeginLoc(), C->getEndLoc()));
+}
+
 void TextNodeDumper::Visit(const GenericSelectionExpr::ConstAssociation &A) {
   const TypeSourceInfo *TSI = A.getTypeSourceInfo();
   if (TSI) {
@@ -1180,8 +1215,11 @@ void TextNodeDumper::VisitDeclRefExpr(const DeclRefExpr *Node) {
   case NOUR_Constant: OS << " non_odr_use_constant"; break;
   case NOUR_Discarded: OS << " non_odr_use_discarded"; break;
   }
-  if (Node->refersToEnclosingVariableOrCapture())
+  if (Node->isCapturedByCopyInLambdaWithExplicitObjectParameter())
+    OS << " dependent_capture";
+  else if (Node->refersToEnclosingVariableOrCapture())
     OS << " refers_to_enclosing_variable_or_capture";
+
   if (Node->isImmediateEscalating())
     OS << " immediate-escalating";
 }
@@ -1337,6 +1375,8 @@ void TextNodeDumper::VisitCXXBoolLiteralExpr(const CXXBoolLiteralExpr *Node) {
 void TextNodeDumper::VisitCXXThisExpr(const CXXThisExpr *Node) {
   if (Node->isImplicit())
     OS << " implicit";
+  if (Node->isCapturedByCopyInLambdaWithExplicitObjectParameter())
+    OS << " dependent_capture";
   OS << " this";
 }
 
@@ -1420,23 +1460,13 @@ void TextNodeDumper::VisitExpressionTraitExpr(const ExpressionTraitExpr *Node) {
 }
 
 void TextNodeDumper::VisitCXXDefaultArgExpr(const CXXDefaultArgExpr *Node) {
-  if (Node->hasRewrittenInit()) {
+  if (Node->hasRewrittenInit())
     OS << " has rewritten init";
-    AddChild([=] {
-      ColorScope Color(OS, ShowColors, StmtColor);
-      Visit(Node->getExpr());
-    });
-  }
 }
 
 void TextNodeDumper::VisitCXXDefaultInitExpr(const CXXDefaultInitExpr *Node) {
-  if (Node->hasRewrittenInit()) {
+  if (Node->hasRewrittenInit())
     OS << " has rewritten init";
-    AddChild([=] {
-      ColorScope Color(OS, ShowColors, StmtColor);
-      Visit(Node->getExpr());
-    });
-  }
 }
 
 void TextNodeDumper::VisitMaterializeTemporaryExpr(
@@ -1935,6 +1965,9 @@ void TextNodeDumper::VisitFunctionDecl(const FunctionDecl *D) {
     OS << " delete";
   if (D->isTrivial())
     OS << " trivial";
+
+  if (const StringLiteral *M = D->getDeletedMessage())
+    AddChild("delete message", [=] { Visit(M); });
 
   if (D->isIneligibleOrNotSelected())
     OS << (isa<CXXDestructorDecl>(D) ? " not_selected" : " ineligible");
@@ -2684,5 +2717,4 @@ void TextNodeDumper::VisitHLSLBufferDecl(const HLSLBufferDecl *D) {
 
 void TextNodeDumper::VisitOpenACCConstructStmt(const OpenACCConstructStmt *S) {
   OS << " " << S->getDirectiveKind();
-  // TODO OpenACC: Dump clauses as well.
 }

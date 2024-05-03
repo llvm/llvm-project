@@ -237,6 +237,7 @@ endif()
 # These values are not canonicalized within LLVM.
 llvm_canonicalize_cmake_booleans(
   LLDB_BUILD_INTEL_PT
+  LLVM_ENABLE_CURL
   LLDB_ENABLE_PYTHON
   LLDB_ENABLE_LUA
   LLDB_ENABLE_LZMA
@@ -245,8 +246,7 @@ llvm_canonicalize_cmake_booleans(
   LLDB_HAS_LIBCXX
   LLDB_TOOL_LLDB_SERVER_BUILD
   LLDB_USE_SYSTEM_DEBUGSERVER
-  LLDB_IS_64_BITS
-  LLDB_TEST_USE_VENDOR_PACKAGES)
+  LLDB_IS_64_BITS)
 
 # Configure the individual test suites.
 add_subdirectory(API)

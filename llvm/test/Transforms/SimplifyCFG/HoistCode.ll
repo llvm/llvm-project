@@ -125,6 +125,37 @@ F:
   ret i32 %z2
 }
 
+
+define float @hoist_uitofp_flags_preserve(i1 %C, i8 %x) {
+; CHECK-LABEL: @hoist_uitofp_flags_preserve(
+; CHECK-NEXT:  common.ret:
+; CHECK-NEXT:    [[Z1:%.*]] = uitofp nneg i8 [[X:%.*]] to float
+; CHECK-NEXT:    ret float [[Z1]]
+;
+  br i1 %C, label %T, label %F
+T:
+  %z1 = uitofp nneg i8 %x to float
+  ret float %z1
+F:
+  %z2 = uitofp nneg i8 %x to float
+  ret float %z2
+}
+
+define float @hoist_uitofp_flags_drop(i1 %C, i8 %x) {
+; CHECK-LABEL: @hoist_uitofp_flags_drop(
+; CHECK-NEXT:  common.ret:
+; CHECK-NEXT:    [[Z1:%.*]] = uitofp i8 [[X:%.*]] to float
+; CHECK-NEXT:    ret float [[Z1]]
+;
+  br i1 %C, label %T, label %F
+T:
+  %z1 = uitofp nneg i8 %x to float
+  ret float %z1
+F:
+  %z2 = uitofp i8 %x to float
+  ret float %z2
+}
+
 define i32 @hoist_or_flags_preserve(i1 %C, i32 %x, i32 %y) {
 ; CHECK-LABEL: @hoist_or_flags_preserve(
 ; CHECK-NEXT:  common.ret:
