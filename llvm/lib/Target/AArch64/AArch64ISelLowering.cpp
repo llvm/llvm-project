@@ -20572,7 +20572,7 @@ static SDValue tryCombineWhileLo(SDNode *N,
 
   EVT HalfVec = Lo->getValueType(0);
   if (HalfVec != Hi->getValueType(0) ||
-      HalfVec.getVectorMinNumElements() != HalfSize)
+      HalfVec.getVectorElementCount() != ElementCount::getScalable(HalfSize))
     return SDValue();
 
   SelectionDAG &DAG = DCI.DAG;

@@ -85,7 +85,7 @@ define void @test_boring_case_2x2bit_mask(i64 %i, i64 %n) #0 {
     ret void
 }
 
-
+; Negative test for when not extracting exactly two halves of the source vector
 define void @test_partial_extract(i64 %i, i64 %n) #0 {
 ; CHECK-SVE-LABEL: test_partial_extract:
 ; CHECK-SVE:       // %bb.0:
@@ -108,6 +108,46 @@ define void @test_partial_extract(i64 %i, i64 %n) #0 {
     %v0 = call <vscale x 2 x i1> @llvm.vector.extract.nxv2i1.nxv8i1.i64(<vscale x 8 x i1> %r, i64 0)
     %v1 = call <vscale x 2 x i1> @llvm.vector.extract.nxv2i1.nxv8i1.i64(<vscale x 8 x i1> %r, i64 4)
     tail call void @use(<vscale x 2 x i1> %v0, <vscale x 2 x i1> %v1)
+    ret void
+}
+
+;; Negative test for when extracting a fixed-length vector.
+define void @test_fixed_extract(i64 %i, i64 %n) #0 {
+; CHECK-SVE-LABEL: test_fixed_extract:
+; CHECK-SVE:       // %bb.0:
+; CHECK-SVE-NEXT:    whilelo p0.h, x0, x1
+; CHECK-SVE-NEXT:    cset w8, mi
+; CHECK-SVE-NEXT:    mov z0.h, p0/z, #1 // =0x1
+; CHECK-SVE-NEXT:    umov w9, v0.h[4]
+; CHECK-SVE-NEXT:    umov w10, v0.h[1]
+; CHECK-SVE-NEXT:    umov w11, v0.h[5]
+; CHECK-SVE-NEXT:    fmov s0, w8
+; CHECK-SVE-NEXT:    fmov s1, w9
+; CHECK-SVE-NEXT:    mov v0.s[1], w10
+; CHECK-SVE-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-SVE-NEXT:    mov v1.s[1], w11
+; CHECK-SVE-NEXT:    // kill: def $d1 killed $d1 killed $q1
+; CHECK-SVE-NEXT:    b use
+;
+; CHECK-SVE2p1-LABEL: test_fixed_extract:
+; CHECK-SVE2p1:       // %bb.0:
+; CHECK-SVE2p1-NEXT:    whilelo p0.h, x0, x1
+; CHECK-SVE2p1-NEXT:    cset w8, mi
+; CHECK-SVE2p1-NEXT:    mov z0.h, p0/z, #1 // =0x1
+; CHECK-SVE2p1-NEXT:    umov w9, v0.h[4]
+; CHECK-SVE2p1-NEXT:    umov w10, v0.h[1]
+; CHECK-SVE2p1-NEXT:    umov w11, v0.h[5]
+; CHECK-SVE2p1-NEXT:    fmov s0, w8
+; CHECK-SVE2p1-NEXT:    fmov s1, w9
+; CHECK-SVE2p1-NEXT:    mov v0.s[1], w10
+; CHECK-SVE2p1-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-SVE2p1-NEXT:    mov v1.s[1], w11
+; CHECK-SVE2p1-NEXT:    // kill: def $d1 killed $d1 killed $q1
+; CHECK-SVE2p1-NEXT:    b use
+    %r = call <vscale x 8 x i1> @llvm.get.active.lane.mask.nxv8i1.i64(i64 %i, i64 %n)
+    %v0 = call <2 x i1> @llvm.vector.extract.v2i1.nxv8i1.i64(<vscale x 8 x i1> %r, i64 0)
+    %v1 = call <2 x i1> @llvm.vector.extract.v2i1.nxv8i1.i64(<vscale x 8 x i1> %r, i64 4)
+    tail call void @use(<2 x i1> %v0, <2 x i1> %v1)
     ret void
 }
 
