@@ -116,7 +116,7 @@ define i32 @mul_32(i32 %a, i32 %b) {
 ; CHECK-NEXT:    .cfi_def_cfa_offset -16
 ; CHECK-NEXT:    move.l (20,%sp), (4,%sp)
 ; CHECK-NEXT:    move.l (16,%sp), (%sp)
-; CHECK-NEXT:    jsr __mulsi3@PLT
+; CHECK-NEXT:    jsr __mulsi3
 ; CHECK-NEXT:    adda.l #12, %sp
 ; CHECK-NEXT:    rts
     %mul = mul i32 %a, %b
@@ -162,7 +162,7 @@ define i64 @mul_64(i64 %a, i64 %b) {
 ; CHECK-NEXT:    move.l (32,%sp), (8,%sp)
 ; CHECK-NEXT:    move.l (28,%sp), (4,%sp)
 ; CHECK-NEXT:    move.l (24,%sp), (%sp)
-; CHECK-NEXT:    jsr __muldi3@PLT
+; CHECK-NEXT:    jsr __muldi3
 ; CHECK-NEXT:    adda.l #20, %sp
 ; CHECK-NEXT:    rts
     %mul = mul i64 %a, %b
@@ -179,7 +179,7 @@ define i64 @mul3_64(i64 %A) {
 ; CHECK-NEXT:    move.l #0, (8,%sp)
 ; CHECK-NEXT:    move.l (28,%sp), (4,%sp)
 ; CHECK-NEXT:    move.l (24,%sp), (%sp)
-; CHECK-NEXT:    jsr __muldi3@PLT
+; CHECK-NEXT:    jsr __muldi3
 ; CHECK-NEXT:    adda.l #20, %sp
 ; CHECK-NEXT:    rts
     %mul = mul i64 %A, 3
@@ -196,7 +196,7 @@ define i64 @mul40_64(i64 %A) {
 ; CHECK-NEXT:    move.l #0, (8,%sp)
 ; CHECK-NEXT:    move.l (28,%sp), (4,%sp)
 ; CHECK-NEXT:    move.l (24,%sp), (%sp)
-; CHECK-NEXT:    jsr __muldi3@PLT
+; CHECK-NEXT:    jsr __muldi3
 ; CHECK-NEXT:    adda.l #20, %sp
 ; CHECK-NEXT:    rts
     %mul = mul i64 %A, 40
