@@ -279,11 +279,6 @@ if(OPENMP_STANDALONE_BUILD)
       ${LLVM_LIBRARY_DIRS}
     REQUIRED
   )
-# Check LIBOMP_HAVE_VERSION_SCRIPT_FLAG
-  include(LLVMCheckCompilerLinkerFlag)
-  if(NOT APPLE)
-    llvm_check_compiler_linker_flag(C "-Wl,--version-script=${CMAKE_CURRENT_LIST_DIR}/../openmp/runtime/src/exports_test_so.txt" LIBOMP_HAVE_VERSION_SCRIPT_FLAG)
-  endif()
 
   macro(pythonize_bool var)
   if (${var})
@@ -292,6 +287,14 @@ if(OPENMP_STANDALONE_BUILD)
     set(${var} False)
   endif()
   endmacro()
+endif()
+
+if(OPENMP_STANDALONE_BUILD OR TARGET omp)
+  # Check LIBOMP_HAVE_VERSION_SCRIPT_FLAG
+  include(LLVMCheckCompilerLinkerFlag)
+  if(NOT APPLE)
+    llvm_check_compiler_linker_flag(C "-Wl,--version-script=${CMAKE_CURRENT_LIST_DIR}/../openmp/runtime/src/exports_test_so.txt" LIBOMP_HAVE_VERSION_SCRIPT_FLAG)
+  endif()
 endif()
 
 # OMPT support for libomptarget

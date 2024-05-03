@@ -44,3 +44,9 @@ Revert: 41f9c78
   Contacts:
     Konstantin
 ---
+
+Reverts: breaks oclConformance
+  41466a177a95 [SelectionDAG] Correct the implementation of m_AllOnes. (#90776)
+  SWDEV-460097
+  merges: revert : 41466a177a95 [SelectionDAG] Correct the implementation of m_AllOnes. (#90776)
+
