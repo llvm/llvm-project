@@ -688,7 +688,7 @@ struct AMDGPUKernelTy : public GenericKernelTy {
     WGSizeName += "_wg_size";
     GlobalTy HostConstWGSize(WGSizeName, sizeof(decltype(ConstWGSize)),
                              &ConstWGSize);
-    GenericGlobalHandlerTy &GHandler = PluginTy::get().getGlobalHandler();
+    GenericGlobalHandlerTy &GHandler = Device.Plugin.getGlobalHandler();
     if (auto Err =
             GHandler.readGlobalFromImage(Device, AMDImage, HostConstWGSize)) {
       // In case it is not found, we simply stick with the defaults.
@@ -2911,7 +2911,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     if (!AMDGPUKernel)
       return Plugin::error("Failed to allocate memory for AMDGPU kernel");
 
-    new (AMDGPUKernel) AMDGPUKernelTy(Name, PluginTy::get().getGlobalHandler());
+    new (AMDGPUKernel) AMDGPUKernelTy(Name, Plugin.getGlobalHandler());
 
     return *AMDGPUKernel;
   }
@@ -4274,10 +4274,6 @@ struct AMDGPUPluginTy final : public GenericPluginTy {
     UInt32Envar KernTrace("LIBOMPTARGET_KERNEL_TRACE", 0);
     llvm::omp::target::plugin::PrintKernelTrace = KernTrace.get();
 
-#ifdef OMPT_SUPPORT
-    ompt::connectLibrary();
-#endif
-
     // Register event handler to detect memory errors on the devices.
     Status = hsa_amd_register_system_event_handler(eventHandler, nullptr);
     if (auto Err = Plugin::check(
@@ -4365,6 +4361,8 @@ struct AMDGPUPluginTy final : public GenericPluginTy {
   }
 
   Triple::ArchType getTripleArch() const override { return Triple::amdgcn; }
+
+  const char *getName() const override { return GETNAME(TARGET_NAME); }
 
   /// Get the ELF code for recognizing the compatible image binary.
   uint16_t getMagicElfBits() const override { return ELF::EM_AMDGPU; }
@@ -4685,8 +4683,6 @@ Error AMDGPUKernelTy::printLaunchInfoDetails(GenericDeviceTy &GenericDevice,
   return Plugin::success();
 }
 
-GenericPluginTy *PluginTy::createPlugin() { return new AMDGPUPluginTy(); }
-
 template <typename... ArgsTy>
 static Error Plugin::check(int32_t Code, const char *ErrFmt, ArgsTy... Args) {
   hsa_status_t ResultCode = static_cast<hsa_status_t>(Code);
@@ -4779,17 +4775,22 @@ void *AMDGPUDeviceTy::allocate(size_t Size, void *, TargetAllocTy Kind) {
 namespace llvm::omp::target::plugin {
 
 /// Enable/disable kernel profiling for the given device.
-void setOmptQueueProfile(int DeviceId, int Enable) {
-  AMDGPUPluginTy &Plugin = PluginTy::get<AMDGPUPluginTy>();
-  static_cast<AMDGPUDeviceTy &>(Plugin.getDevice(DeviceId))
-      .setOmptQueueProfile(Enable);
+void setOmptQueueProfile(void *Device, int Enable) {
+  reinterpret_cast<llvm::omp::target::plugin::AMDGPUDeviceTy *>(Device)
+      ->setOmptQueueProfile(Enable);
 }
 
 } // namespace llvm::omp::target::plugin
 
 /// Enable/disable kernel profiling for the given device.
-void setGlobalOmptKernelProfile(int DeviceId, int Enable) {
-  llvm::omp::target::plugin::setOmptQueueProfile(DeviceId, Enable);
+void setGlobalOmptKernelProfile(void *Device, int Enable) {
+  llvm::omp::target::plugin::setOmptQueueProfile(Device, Enable);
 }
 
 #endif
+
+extern "C" {
+llvm::omp::target::plugin::GenericPluginTy *createPlugin_amdgpu() {
+  return new llvm::omp::target::plugin::AMDGPUPluginTy();
+}
+}

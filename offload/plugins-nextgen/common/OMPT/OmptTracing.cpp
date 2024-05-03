@@ -53,14 +53,6 @@ double llvm::omp::target::ompt::HostToDeviceOffset = .0;
 
 std::map<ompt_device_t *, int32_t> llvm::omp::target::ompt::Devices;
 
-std::atomic<uint64_t> llvm::omp::target::ompt::TracingTypesEnabled{0};
-
-bool llvm::omp::target::ompt::TracingActive = false;
-
-void llvm::omp::target::ompt::setTracingState(bool State) {
-  TracingActive = State;
-}
-
 std::shared_ptr<llvm::sys::DynamicLibrary>
 llvm::omp::target::ompt::getParentLibrary() {
   static bool ParentLibraryAssigned = false;
@@ -141,7 +133,7 @@ ompt_start_trace(ompt_device_t *Device, ompt_callback_buffer_request_t Request,
       setOmptAsyncCopyProfile(/*Enable=*/true);
       // Enable queue dispatch profiling
       if (DeviceId >= 0)
-        setGlobalOmptKernelProfile(DeviceId, /*Enable=*/1);
+        setGlobalOmptKernelProfile(Device, /*Enable=*/1);
       else
         REPORT("May not enable kernel profiling for invalid device id=%d\n",
                DeviceId);
@@ -179,7 +171,7 @@ OMPT_API_ROUTINE int ompt_stop_trace(ompt_device_t *Device) {
     // Disable queue dispatch profiling
     int DeviceId = getDeviceId(Device);
     if (DeviceId >= 0)
-      setGlobalOmptKernelProfile(DeviceId, /*Enable=*/0);
+      setGlobalOmptKernelProfile(Device, /*Enable=*/0);
     else
       REPORT("May not disable kernel profiling for invalid device id=%d\n",
              DeviceId);

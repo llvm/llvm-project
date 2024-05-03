@@ -30,8 +30,8 @@
 
 //      OPENMP: define internal void @.omp_offloading.descriptor_reg() section ".text.startup" {
 // OPENMP-NEXT: entry:
-// OPENMP-NEXT:   %0 = call i32 @atexit(ptr @.omp_offloading.descriptor_unreg)
 // OPENMP-NEXT:   call void @__tgt_register_lib(ptr @.omp_offloading.descriptor)
+// OPENMP-NEXT:   %0 = call i32 @atexit(ptr @.omp_offloading.descriptor_unreg)
 // OPENMP-NEXT:   ret void
 // OPENMP-NEXT: }
 

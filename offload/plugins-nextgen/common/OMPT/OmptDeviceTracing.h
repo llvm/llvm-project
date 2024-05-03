@@ -28,7 +28,7 @@
 #define DEBUG_PREFIX "OMPT"
 
 extern void setOmptAsyncCopyProfile(bool Enable);
-extern void setGlobalOmptKernelProfile(int DeviceId, int Enable);
+extern void setGlobalOmptKernelProfile(void *Device, int Enable);
 extern uint64_t getSystemTimestampInNs();
 
 namespace llvm {

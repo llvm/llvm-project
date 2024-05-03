@@ -31,16 +31,6 @@ else()
   target_include_directories(omptarget.rtl.host PRIVATE dynamic_ffi)
 endif()
 
-# Install plugin under the lib destination folder.
-install(TARGETS omptarget.rtl.host
-        LIBRARY DESTINATION "${OFFLOAD_INSTALL_LIBDIR}")
-if(NOT DEFINED CMAKE_INSTALL_RPATH)
- set_target_properties(omptarget.rtl.host PROPERTIES
-   INSTALL_RPATH "$ORIGIN" BUILD_RPATH "$ORIGIN:${CMAKE_CURRENT_BINARY_DIR}/.."
-  )
-endif()
-#>>>>>>> d6bf04f4760b0dff3c3d3ff9b560c04438cc25ac
-
 target_include_directories(omptarget.rtl.host PRIVATE
                            ${LIBOMPTARGET_INCLUDE_DIR})
 

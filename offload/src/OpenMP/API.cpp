@@ -668,8 +668,6 @@ EXTERN int omp_is_coarse_grain_mem_region(void *ptr, size_t size) {
     FATAL_MESSAGE(omp_get_default_device(), "%s",
                   toString(DeviceOrErr.takeError()).c_str());
 
-  if (!DeviceOrErr->RTL->query_coarse_grain_mem_region)
-    return 0;
   return DeviceOrErr->RTL->query_coarse_grain_mem_region(
       omp_get_default_device(), ptr, size);
 }

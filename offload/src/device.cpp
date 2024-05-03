@@ -66,7 +66,7 @@ int HostDataToTargetTy::addEventIfNecessary(DeviceTy &Device,
   return OFFLOAD_SUCCESS;
 }
 
-DeviceTy::DeviceTy(PluginAdaptorTy *RTL, int32_t DeviceID, int32_t RTLDeviceID)
+DeviceTy::DeviceTy(GenericPluginTy *RTL, int32_t DeviceID, int32_t RTLDeviceID)
     : DeviceID(DeviceID), RTL(RTL), RTLDeviceID(RTLDeviceID),
       ForceSynchronousTargetRegions(false), MappingInfo(*this) {}
 
@@ -92,7 +92,6 @@ llvm::Error DeviceTy::init() {
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "Failed to initialize device %d\n",
                                    DeviceID);
-  assert(RTL->number_of_team_procs && "Need function pointer to entry point");
   setTeamProcs(RTL->number_of_team_procs(RTLDeviceID));
 
   // Enables recording kernels if set.
@@ -242,7 +241,6 @@ int32_t DeviceTy::dataExchange(void *SrcPtr, DeviceTy &DstDev, void *DstPtr,
 #else
   if (ForceSynchronousTargetRegions || !AsyncInfo) {
 #endif
-    assert(RTL->data_exchange && "RTL->data_exchange is nullptr");
     return RTL->data_exchange(RTLDeviceID, SrcPtr, DstDev.RTLDeviceID, DstPtr,
                               Size);
   }
@@ -275,11 +273,11 @@ int32_t DeviceTy::notifyDataUnmapped(void *HstPtr) {
 int32_t DeviceTy::launchKernel(void *TgtEntryPtr, void **TgtVarsPtr,
                                ptrdiff_t *TgtOffsets, KernelArgsTy &KernelArgs,
                                AsyncInfoTy &AsyncInfo) {
-  if (ForceSynchronousTargetRegions || !RTL->launch_kernel ||
 #ifdef OMPT_SUPPORT
-      ompt::TracingActive ||
+  if (ForceSynchronousTargetRegions || ompt::TracingActive)
+#else
+  if (ForceSynchronousTargetRegions)
 #endif
-      !RTL->synchronize)
     return RTL->launch_kernel_sync(RTLDeviceID, TgtEntryPtr, TgtVarsPtr,
                                    TgtOffsets, &KernelArgs);
   return RTL->launch_kernel(RTLDeviceID, TgtEntryPtr, TgtVarsPtr, TgtOffsets,
@@ -347,27 +345,18 @@ bool DeviceTy::useAutoZeroCopy() {
   if (PM->getRequirements() & OMP_REQ_UNIFIED_SHARED_MEMORY)
     return false;
 
-  if (RTL->use_auto_zero_copy)
-    return RTL->use_auto_zero_copy(RTLDeviceID);
-  return false;
+  return RTL->use_auto_zero_copy(RTLDeviceID);
 }
 
-bool DeviceTy::checkIfAPU() {
-  if (RTL->has_apu_device)
-    return RTL->has_apu_device(RTLDeviceID);
-  return false;
-}
+bool DeviceTy::checkIfAPU() { return RTL->has_apu_device(RTLDeviceID); }
 
 bool DeviceTy::supportsUnifiedMemory() {
-  if (RTL->supports_unified_memory)
-    return RTL->supports_unified_memory(RTLDeviceID);
-  return false;
+  return RTL->supports_unified_memory(RTLDeviceID);
 }
 
 void DeviceTy::zeroCopySanityChecksAndDiag(bool isUnifiedSharedMemory,
                                            bool isAutoZeroCopy,
                                            bool isEagerMaps) {
-  if (RTL->zero_copy_sanity_checks_and_diag)
-    RTL->zero_copy_sanity_checks_and_diag(RTLDeviceID, isUnifiedSharedMemory,
-                                          isAutoZeroCopy, isEagerMaps);
+  RTL->zero_copy_sanity_checks_and_diag(RTLDeviceID, isUnifiedSharedMemory,
+                                        isAutoZeroCopy, isEagerMaps);
 }

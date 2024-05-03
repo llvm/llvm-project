@@ -33,14 +33,17 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 
+#include "PluginInterface.h"
+
+using GenericPluginTy = llvm::omp::target::plugin::GenericPluginTy;
+
 // Forward declarations.
-struct PluginAdaptorTy;
 struct __tgt_bin_desc;
 struct __tgt_target_table;
 
 struct DeviceTy {
   int32_t DeviceID;
-  PluginAdaptorTy *RTL;
+  GenericPluginTy *RTL;
   int32_t RTLDeviceID;
   /// The physical number of processors that may concurrently execute a team
   /// For cuda, this is number of SMs, for amdgcn, this is number of CUs.
@@ -51,7 +54,7 @@ struct DeviceTy {
   /// Controlled via environment flag OMPX_FORCE_SYNC_REGIONS
   bool ForceSynchronousTargetRegions = false;
 
-  DeviceTy(PluginAdaptorTy *RTL, int32_t DeviceID, int32_t RTLDeviceID);
+  DeviceTy(GenericPluginTy *RTL, int32_t DeviceID, int32_t RTLDeviceID);
   // DeviceTy is not copyable
   DeviceTy(const DeviceTy &D) = delete;
   DeviceTy &operator=(const DeviceTy &D) = delete;
