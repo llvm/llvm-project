@@ -27,4 +27,58 @@ for.cond.cleanup:
   ret void
 }
 
+
+define i64 @test_fp_libcall() {
+; CHECK-LABEL: 'test_fp_libcall'
+; CHECK-NEXT:  Determining loop execution counts for: @test_fp_libcall
+; CHECK-NEXT:  Loop %loop: backedge-taken count is i32 90
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 90
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is i32 90
+; CHECK-NEXT:  Loop %loop: Trip multiple is 91
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %fv = phi double [ 1.000000e+00, %entry ], [ %fv.next, %loop ]
+  call void @use(double %fv)
+  %fv.next = call double @llvm.sin.f64(double %fv)
+  %iv.next = add i64 %iv, 1
+  %fcmp = fcmp une double %fv, 0x3FC6BA15EE8460B0
+  br i1 %fcmp, label %loop, label %exit
+
+exit:
+  ret i64 %iv
+}
+
+define i64 @test_nan_sign() {
+; CHECK-LABEL: 'test_nan_sign'
+; CHECK-NEXT:  Determining loop execution counts for: @test_nan_sign
+; CHECK-NEXT:  Loop %loop: backedge-taken count is i32 46
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 46
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is i32 46
+; CHECK-NEXT:  Loop %loop: Trip multiple is 47
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %fv = phi double [ -1.000000e+00, %entry ], [ %fv.next, %loop ]
+  call void @use(double %fv)
+  %a = fsub double %fv, 0x7F86C16C16C16C16
+  %b = fadd double %a, %a
+  %fv.next = fsub double %b, %a
+  %iv.next = add i64 %iv, 1
+  %fv.bc = bitcast double %fv to i64
+  %icmp = icmp slt i64 %fv.bc, 0
+  br i1 %icmp, label %loop, label %exit
+
+exit:
+  ret i64 %iv
+}
+
 declare void @dummy()
+declare void @use(double %i)
+declare double @llvm.sin.f64(double)
