@@ -3066,6 +3066,7 @@ cc_library(
         ":ArithDialect",
         ":BufferizationInterfaces",
         ":BytecodeOpInterface",
+        ":ComplexDialect",
         ":DialectUtils",
         ":IR",
         ":InferTypeOpInterface",
