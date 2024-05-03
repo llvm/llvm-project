@@ -40080,7 +40080,8 @@ static SDValue combineBlendOfPermutes(MVT VT, SDValue N0, SDValue N1,
     if (Demanded0[I]) {
       int M = ScaledMask0[I];
       if (0 <= M) {
-        assert(isUndefOrEqual(NewBlendMask[M], M) && "BlendMask demands LHS AND RHS");
+        assert(isUndefOrEqual(NewBlendMask[M], M) &&
+               "BlendMask demands LHS AND RHS");
         NewBlendMask[M] = M;
         NewPermuteMask[I] = M;
       }
