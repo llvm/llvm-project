@@ -92,3 +92,16 @@ L<0.1F> val_d;
 #pragma STDC FENV_ROUND FE_UPWARD
 L<0.1F> val_u;
 // CHECK: @val_u = {{.*}} { float 0x3FB99999A0000000 }
+
+template<typename T, T C>
+constexpr T foo() {
+  return C;
+}
+
+#pragma STDC FENV_ROUND FE_DOWNWARD
+float var_d = foo<float, 0.1F>();
+// CHECK: @var_d = {{.*}} float 0x3FB9999980000000
+
+#pragma STDC FENV_ROUND FE_UPWARD
+float var_u = foo<float, 0.1F>();
+// CHECK: @var_u = {{.*}} float 0x3FB99999A0000000
