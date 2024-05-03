@@ -16,14 +16,14 @@ void test() {
 }
 
 // CHECK: call void @llvm.dbg.declare(metadata ptr %__range1, metadata ![[RANGE1:[0-9]+]]
-// CHECK: call void @llvm.dbg.declare(metadata ptr {{.*}}, metadata ![[BEGIN1:[0-9]+]]
-// CHECK: call void @llvm.dbg.declare(metadata ptr {{.*}}, metadata ![[END1:[0-9]+]]
+// CHECK: call void @llvm.dbg.declare(metadata ptr {{[^,]*}}, metadata ![[BEGIN1:[0-9]+]]
+// CHECK: call void @llvm.dbg.declare(metadata ptr {{[^,]*}}, metadata ![[END1:[0-9]+]]
 // CHECK: call void @llvm.dbg.declare(metadata ptr %__range2, metadata ![[RANGE2:[0-9]+]]
-// CHECK: call void @llvm.dbg.declare(metadata ptr {{.*}}, metadata ![[BEGIN2:[0-9]+]]
-// CHECK: call void @llvm.dbg.declare(metadata ptr {{.*}}, metadata ![[END2:[0-9]+]]
+// CHECK: call void @llvm.dbg.declare(metadata ptr {{[^,]*}}, metadata ![[BEGIN2:[0-9]+]]
+// CHECK: call void @llvm.dbg.declare(metadata ptr {{[^,]*}}, metadata ![[END2:[0-9]+]]
 // CHECK: call void @llvm.dbg.declare(metadata ptr %__range3, metadata ![[RANGE3:[0-9]+]]
-// CHECK: call void @llvm.dbg.declare(metadata ptr {{.*}}, metadata ![[BEGIN3:[0-9]+]]
-// CHECK: call void @llvm.dbg.declare(metadata ptr {{.*}}, metadata ![[END3:[0-9]+]]
+// CHECK: call void @llvm.dbg.declare(metadata ptr {{[^,]*}}, metadata ![[BEGIN3:[0-9]+]]
+// CHECK: call void @llvm.dbg.declare(metadata ptr {{[^,]*}}, metadata ![[END3:[0-9]+]]
 // CHECK: ![[RANGE1]] = !DILocalVariable(name: "__range1",
 // CHECK: ![[BEGIN1]] = !DILocalVariable(name: "__begin1",
 // CHECK: ![[END1]] = !DILocalVariable(name: "__end1",

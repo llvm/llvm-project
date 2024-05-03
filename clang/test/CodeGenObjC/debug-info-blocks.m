@@ -13,7 +13,7 @@
 // doesn't accidentally step into the function).
 // CHECK: define {{.*}} @__copy_helper_block_{{.*}}(ptr noundef %0, ptr noundef %1)
 // CHECK-NOT: ret
-// CHECK: call {{.*}}, !dbg ![[DBG_LINE:[0-9]+]]
+// CHECK: call void @llvm.dbg.declare({{.+}}), !dbg ![[DBG_LINE:[0-9]+]]
 // CHECK-NOT: ret
 // CHECK: load {{.*}}, !dbg ![[DBG_LINE]]
 // CHECK: ret {{.*}}, !dbg ![[DBG_LINE]]

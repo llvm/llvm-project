@@ -24,7 +24,7 @@ for.body:                                         ; preds = %entry, %for.body
   call void @llvm.dbg.value(metadata i8 %i.06, metadata !14, metadata !DIExpression()), !dbg !17
   call void @llvm.dbg.value(metadata ptr %p.addr.05, metadata !13, metadata !DIExpression()), !dbg !16
 ; CHECK-NOT: call void @llvm.dbg.value(metadata ptr undef
-; CHECK: all void @llvm.dbg.value(metadata ptr %lsr.iv, metadata ![[MID_p:[0-9]+]],  metadata !DIExpression(DW_OP_constu, 3, DW_OP_minus, DW_OP_stack_value))
+; CHECK: call void @llvm.dbg.value(metadata ptr %lsr.iv, metadata ![[MID_p:[0-9]+]],  metadata !DIExpression(DW_OP_constu, 3, DW_OP_minus, DW_OP_stack_value))
   %add.ptr = getelementptr inbounds i8, ptr %p.addr.05, i64 3, !dbg !20
   call void @llvm.dbg.value(metadata ptr %add.ptr, metadata !13, metadata !DIExpression()), !dbg !16
 ; CHECK-NOT: call void @llvm.dbg.value(metadata ptr undef

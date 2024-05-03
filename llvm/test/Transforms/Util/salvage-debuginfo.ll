@@ -12,7 +12,7 @@ entry:
   ; CHECK-SAME: !DIExpression(DW_OP_LLVM_convert, 32, DW_ATE_unsigned,
   ; CHECK-SAME:               DW_OP_LLVM_convert, 64, DW_ATE_unsigned,
   ; CHECK-SAME:               DW_OP_LLVM_convert, 64, DW_ATE_unsigned,
-  ; CHECK-SAME:               DW_OP_LLVM_convert, 32, DW_ATE_unsigned, DW_OP_stack_value))
+  ; CHECK-SAME:               DW_OP_LLVM_convert, 32, DW_ATE_unsigned, DW_OP_stack_value)
   call void @llvm.dbg.value(metadata i32 %i_x, metadata !11, metadata !DIExpression()), !dbg !13
   ret void, !dbg !13
 }

@@ -34,7 +34,7 @@ entry:
   ; Ensure that all dbg intrinsics have the same scope after
   ; LowerDbgDeclare is finished with them.
   ;
-  ; LOWERING: call void @llvm.dbg.value{{.*}}, !dbg ![[LOC:.*]]
+  ; LOWERING: call void @llvm.dbg.value{{.*}}, !dbg ![[LOC:[0-9]+]]
   ; LOWERING: call void @llvm.dbg.value{{.*}}, !dbg ![[LOC]]
   ; LOWERING: call void @llvm.dbg.value{{.*}}, !dbg ![[LOC]]
 %0 = load i32, ptr %map.addr, align 4, !dbg !20, !tbaa !15
