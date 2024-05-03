@@ -3165,6 +3165,7 @@ public:
 ///   following snippet, the return expression of the member function
 ///   'foo()' might remain unresolved until instantiation:
 ///
+/// \code
 /// struct P {
 ///   template <class T> using I = T;
 /// };
@@ -3174,6 +3175,7 @@ public:
 ///     return T::template I<int>;
 ///   }
 /// };
+/// \endcode
 ///
 /// ...which is distinct from modeling function overloads, and therefore we use
 /// a different builtin type 'UnresolvedTemplate' to avoid confusion. This is
