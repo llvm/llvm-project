@@ -301,7 +301,11 @@ static SmallVector<uint8_t, 0> deflateShard(ArrayRef<uint8_t> in, int level,
   // 15 and 8 are default. windowBits=-15 is negative to generate raw deflate
   // data with no zlib header or trailer.
   z_stream s = {};
-  deflateInit2(&s, level, Z_DEFLATED, -15, 8, Z_DEFAULT_STRATEGY);
+  auto res = deflateInit2(&s, level, Z_DEFLATED, -15, 8, Z_DEFAULT_STRATEGY);
+  if (res != 0) {
+    errorOrWarn("--compress-sections: deflateInit2 returned " + Twine(res));
+    return {};
+  }
   s.next_in = const_cast<uint8_t *>(in.data());
   s.avail_in = in.size();
 
