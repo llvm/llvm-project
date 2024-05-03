@@ -39,6 +39,7 @@ char LogHandler::ID;
 char StreamLogHandler::ID;
 char CallbackLogHandler::ID;
 char RotatingLogHandler::ID;
+char TeeLogHandler::ID;
 
 llvm::ManagedStatic<Log::ChannelMap> Log::g_channel_map;
 
@@ -437,4 +438,16 @@ void RotatingLogHandler::Dump(llvm::raw_ostream &stream) const {
     stream << m_messages[idx];
   }
   stream.flush();
+}
+
+TeeLogHandler::TeeLogHandler(std::shared_ptr<LogHandler> first_log_handler,
+                             std::shared_ptr<LogHandler> second_log_handler)
+    : m_first_log_handler(first_log_handler),
+      m_second_log_handler(second_log_handler) {}
+
+void TeeLogHandler::Emit(llvm::StringRef message) {
+  if (m_first_log_handler)
+    m_first_log_handler->Emit(message);
+  if (m_second_log_handler)
+    m_second_log_handler->Emit(message);
 }
