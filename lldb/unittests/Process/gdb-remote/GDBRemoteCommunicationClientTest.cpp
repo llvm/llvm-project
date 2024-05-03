@@ -595,9 +595,8 @@ TEST_F(GDBRemoteCommunicationClientTest, WriteMemoryTags) {
 
 TEST_F(GDBRemoteCommunicationClientTest, CalculateMD5) {
   FileSpec file_spec("/foo/bar", FileSpec::Style::posix);
-  std::future<ErrorOr<MD5::MD5Result>> async_result = std::async(std::launch::async, [&] {
-    return client.CalculateMD5(file_spec);
-  });
+  std::future<ErrorOr<MD5::MD5Result>> async_result = std::async(
+      std::launch::async, [&] { return client.CalculateMD5(file_spec); });
 
   lldb_private::StreamString stream;
   stream.PutCString("vFile:MD5:");
