@@ -1211,8 +1211,7 @@ void ObjcCategoryMerger::removeRefsToErasedIsecs() {
     if (isec->getName() != section_names::addrSig)
       continue;
 
-    auto &_erasedIsecs = erasedIsecs;
-    auto removeRelocs = [&_erasedIsecs](Reloc &r) {
+    auto removeRelocs = [this](Reloc &r) {
       auto *isec = dyn_cast_or_null<ConcatInputSection>(
           r.referent.dyn_cast<InputSection *>());
       if (!isec) {
@@ -1223,7 +1222,7 @@ void ObjcCategoryMerger::removeRefsToErasedIsecs() {
       }
       if (!isec)
         return false;
-      return _erasedIsecs.count(isec) > 0;
+      return erasedIsecs.count(isec) > 0;
     };
 
     isec->relocs.erase(
