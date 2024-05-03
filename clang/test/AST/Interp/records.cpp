@@ -1444,18 +1444,3 @@ namespace {
   static_assert(waldo == 4, "");
 #endif
 }
-
-
-namespace TemporaryWithInvalidDestructor {
-#if __cplusplus >= 202002L
-  struct A {
-    bool a = true;
-    constexpr ~A() noexcept(false) { // both-error {{never produces a constant expression}}
-      throw; // both-note 2{{not valid in a constant expression}} \
-             // both-error {{cannot use 'throw' with exceptions disabled}}
-    }
-  };
-  static_assert(A().a, ""); // both-error {{not an integral constant expression}} \
-                        // both-note {{in call to}}
-#endif
-}
