@@ -448,12 +448,19 @@ protected:
   const SIInstrInfo *TII = nullptr;
   AMDGPU::IsaVersion IV;
   InstCounterType MaxCounter;
+  bool OptNone;
 
 public:
   WaitcntGenerator() {}
-  WaitcntGenerator(const GCNSubtarget *ST, InstCounterType MaxCounter)
-      : ST(ST), TII(ST->getInstrInfo()),
-        IV(AMDGPU::getIsaVersion(ST->getCPU())), MaxCounter(MaxCounter) {}
+  WaitcntGenerator(const MachineFunction &MF, InstCounterType MaxCounter)
+      : ST(&MF.getSubtarget<GCNSubtarget>()), TII(ST->getInstrInfo()),
+        IV(AMDGPU::getIsaVersion(ST->getCPU())), MaxCounter(MaxCounter),
+        OptNone(MF.getFunction().hasOptNone() ||
+                MF.getTarget().getOptLevel() == CodeGenOptLevel::None) {}
+
+  // Return true if the current function should be compiled with no
+  // optimization.
+  bool isOptNone() const { return OptNone; }
 
   // Edits an existing sequence of wait count instructions according
   // to an incoming Waitcnt value, which is itself updated to reflect
@@ -504,8 +511,8 @@ public:
 class WaitcntGeneratorPreGFX12 : public WaitcntGenerator {
 public:
   WaitcntGeneratorPreGFX12() {}
-  WaitcntGeneratorPreGFX12(const GCNSubtarget *ST)
-      : WaitcntGenerator(ST, NUM_NORMAL_INST_CNTS) {}
+  WaitcntGeneratorPreGFX12(const MachineFunction &MF)
+      : WaitcntGenerator(MF, NUM_NORMAL_INST_CNTS) {}
 
   bool
   applyPreexistingWaitcnt(WaitcntBrackets &ScoreBrackets,
@@ -539,8 +546,9 @@ public:
 class WaitcntGeneratorGFX12Plus : public WaitcntGenerator {
 public:
   WaitcntGeneratorGFX12Plus() {}
-  WaitcntGeneratorGFX12Plus(const GCNSubtarget *ST, InstCounterType MaxCounter)
-      : WaitcntGenerator(ST, MaxCounter) {}
+  WaitcntGeneratorGFX12Plus(const MachineFunction &MF,
+                            InstCounterType MaxCounter)
+      : WaitcntGenerator(MF, MaxCounter) {}
 
   bool
   applyPreexistingWaitcnt(WaitcntBrackets &ScoreBrackets,
@@ -596,8 +604,6 @@ private:
   // because of amdgpu-waitcnt-forcezero flag
   bool ForceEmitZeroWaitcnts;
   bool ForceEmitWaitcnt[NUM_INST_CNTS];
-
-  bool OptNone;
 
   // In any given run of this pass, WCG will point to one of these two
   // generator objects, which must have been re-initialised before use
@@ -1203,19 +1209,19 @@ bool WaitcntGeneratorPreGFX12::applyPreexistingWaitcnt(
       continue;
 
     unsigned Opcode = SIInstrInfo::getNonSoftWaitcntOpcode(II.getOpcode());
-    bool IsSoft = Opcode != II.getOpcode();
+    bool TrySimplify = Opcode != II.getOpcode() && !OptNone;
 
     // Update required wait count. If this is a soft waitcnt (= it was added
     // by an earlier pass), it may be entirely removed.
     if (Opcode == AMDGPU::S_WAITCNT) {
       unsigned IEnc = II.getOperand(0).getImm();
       AMDGPU::Waitcnt OldWait = AMDGPU::decodeWaitcnt(IV, IEnc);
-      if (IsSoft)
+      if (TrySimplify)
         ScoreBrackets.simplifyWaitcnt(OldWait);
       Wait = Wait.combined(OldWait);
 
       // Merge consecutive waitcnt of the same type by erasing multiples.
-      if (WaitcntInstr || (!Wait.hasWaitExceptStoreCnt() && IsSoft)) {
+      if (WaitcntInstr || (!Wait.hasWaitExceptStoreCnt() && TrySimplify)) {
         II.eraseFromParent();
         Modified = true;
       } else
@@ -1226,11 +1232,11 @@ bool WaitcntGeneratorPreGFX12::applyPreexistingWaitcnt(
 
       unsigned OldVSCnt =
           TII->getNamedOperand(II, AMDGPU::OpName::simm16)->getImm();
-      if (IsSoft)
+      if (TrySimplify)
         ScoreBrackets.simplifyWaitcnt(InstCounterType::STORE_CNT, OldVSCnt);
       Wait.StoreCnt = std::min(Wait.StoreCnt, OldVSCnt);
 
-      if (WaitcntVsCntInstr || (!Wait.hasWaitStoreCnt() && IsSoft)) {
+      if (WaitcntVsCntInstr || (!Wait.hasWaitStoreCnt() && TrySimplify)) {
         II.eraseFromParent();
         Modified = true;
       } else
@@ -1356,13 +1362,13 @@ bool WaitcntGeneratorGFX12Plus::applyPreexistingWaitcnt(
     // by an earlier pass), it may be entirely removed.
 
     unsigned Opcode = SIInstrInfo::getNonSoftWaitcntOpcode(II.getOpcode());
-    bool IsSoft = Opcode != II.getOpcode();
+    bool TrySimplify = Opcode != II.getOpcode() && !OptNone;
 
     if (Opcode == AMDGPU::S_WAIT_LOADCNT_DSCNT) {
       unsigned OldEnc =
           TII->getNamedOperand(II, AMDGPU::OpName::simm16)->getImm();
       AMDGPU::Waitcnt OldWait = AMDGPU::decodeLoadcntDscnt(IV, OldEnc);
-      if (IsSoft)
+      if (TrySimplify)
         ScoreBrackets.simplifyWaitcnt(OldWait);
       Wait = Wait.combined(OldWait);
       UpdatableInstr = &CombinedLoadDsCntInstr;
@@ -1370,7 +1376,7 @@ bool WaitcntGeneratorGFX12Plus::applyPreexistingWaitcnt(
       unsigned OldEnc =
           TII->getNamedOperand(II, AMDGPU::OpName::simm16)->getImm();
       AMDGPU::Waitcnt OldWait = AMDGPU::decodeStorecntDscnt(IV, OldEnc);
-      if (IsSoft)
+      if (TrySimplify)
         ScoreBrackets.simplifyWaitcnt(OldWait);
       Wait = Wait.combined(OldWait);
       UpdatableInstr = &CombinedStoreDsCntInstr;
@@ -1379,7 +1385,7 @@ bool WaitcntGeneratorGFX12Plus::applyPreexistingWaitcnt(
       assert(CT.has_value());
       unsigned OldCnt =
           TII->getNamedOperand(II, AMDGPU::OpName::simm16)->getImm();
-      if (IsSoft)
+      if (TrySimplify)
         ScoreBrackets.simplifyWaitcnt(CT.value(), OldCnt);
       addWait(Wait, CT.value(), OldCnt);
       UpdatableInstr = &WaitInstrs[CT.value()];
@@ -1649,7 +1655,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
   // * we are not in Dynamic VGPR mode
   else if (MI.getOpcode() == AMDGPU::S_ENDPGM ||
            MI.getOpcode() == AMDGPU::S_ENDPGM_SAVED) {
-    if (ST->getGeneration() >= AMDGPUSubtarget::GFX11 && !OptNone &&
+    if (ST->getGeneration() >= AMDGPUSubtarget::GFX11 && !WCG->isOptNone() &&
         ScoreBrackets.getScoreRange(STORE_CNT) != 0 &&
         !ScoreBrackets.hasPendingEvent(SCRATCH_WRITE_ACCESS))
       ReleaseVGPRInsts.insert(&MI);
@@ -2471,11 +2477,11 @@ bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
 
   if (ST->hasExtendedWaitCounts()) {
     MaxCounter = NUM_EXTENDED_INST_CNTS;
-    WCGGFX12Plus = WaitcntGeneratorGFX12Plus(ST, MaxCounter);
+    WCGGFX12Plus = WaitcntGeneratorGFX12Plus(MF, MaxCounter);
     WCG = &WCGGFX12Plus;
   } else {
     MaxCounter = NUM_NORMAL_INST_CNTS;
-    WCGPreGFX12 = WaitcntGeneratorPreGFX12(ST);
+    WCGPreGFX12 = WaitcntGeneratorPreGFX12(MF);
     WCG = &WCGPreGFX12;
   }
 
@@ -2486,9 +2492,6 @@ bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
   const unsigned *WaitEventMaskForInst = WCG->getWaitEventMask();
 
   SmemAccessCounter = eventCounter(WaitEventMaskForInst, SMEM_ACCESS);
-
-  OptNone = MF.getFunction().hasOptNone() ||
-            MF.getTarget().getOptLevel() == CodeGenOptLevel::None;
 
   HardwareLimits Limits = {};
   if (ST->hasExtendedWaitCounts()) {
