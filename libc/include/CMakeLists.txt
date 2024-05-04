@@ -142,6 +142,7 @@ add_gen_header(
   GEN_HDR assert.h
   DEPENDS
     .llvm_libc_common_h
+    .llvm-libc-macros.assert_macros
 )
 
 add_gen_header(
