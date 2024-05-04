@@ -212,8 +212,48 @@ define <2 x half> @f9(<2 x half> %a) nounwind {
   ret <2 x half> %b
 }
 
-define <4 x bfloat> @f10(<4 x bfloat> %a) nounwind {
+define <3 x bfloat> @f10(<3 x bfloat> %a) nounwind {
 ; X86-LABEL: f10:
+; X86:       # %bb.0:
+; X86-NEXT:    pextrw $0, %xmm0, %eax
+; X86-NEXT:    movdqa %xmm0, %xmm1
+; X86-NEXT:    psrld $16, %xmm1
+; X86-NEXT:    pextrw $0, %xmm1, %ecx
+; X86-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
+; X86-NEXT:    pextrw $0, %xmm0, %edx
+; X86-NEXT:    #ARITH_FENCE
+; X86-NEXT:    #ARITH_FENCE
+; X86-NEXT:    #ARITH_FENCE
+; X86-NEXT:    pinsrw $0, %eax, %xmm0
+; X86-NEXT:    pinsrw $0, %ecx, %xmm1
+; X86-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
+; X86-NEXT:    pinsrw $0, %edx, %xmm1
+; X86-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; X86-NEXT:    retl
+;
+; X64-LABEL: f10:
+; X64:       # %bb.0:
+; X64-NEXT:    pextrw $0, %xmm0, %eax
+; X64-NEXT:    movdqa %xmm0, %xmm1
+; X64-NEXT:    psrld $16, %xmm1
+; X64-NEXT:    pextrw $0, %xmm1, %ecx
+; X64-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
+; X64-NEXT:    pextrw $0, %xmm0, %edx
+; X64-NEXT:    #ARITH_FENCE
+; X64-NEXT:    #ARITH_FENCE
+; X64-NEXT:    #ARITH_FENCE
+; X64-NEXT:    pinsrw $0, %eax, %xmm0
+; X64-NEXT:    pinsrw $0, %ecx, %xmm1
+; X64-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
+; X64-NEXT:    pinsrw $0, %edx, %xmm1
+; X64-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; X64-NEXT:    retq
+  %b = call <3 x bfloat> @llvm.arithmetic.fence.v3bf16(<3 x bfloat> %a)
+  ret <3 x bfloat> %b
+}
+
+define <4 x bfloat> @f11(<4 x bfloat> %a) nounwind {
+; X86-LABEL: f11:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    movdqa %xmm0, %xmm1
@@ -239,7 +279,7 @@ define <4 x bfloat> @f10(<4 x bfloat> %a) nounwind {
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
 ;
-; X64-LABEL: f10:
+; X64-LABEL: f11:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movdqa %xmm0, %xmm1
 ; X64-NEXT:    psrlq $48, %xmm1
@@ -269,6 +309,7 @@ define <4 x bfloat> @f10(<4 x bfloat> %a) nounwind {
 declare half @llvm.arithmetic.fence.f16(half)
 declare bfloat @llvm.arithmetic.fence.bf16(bfloat)
 declare <2 x half> @llvm.arithmetic.fence.v2f16(<2 x half>)
+declare <3 x bfloat> @llvm.arithmetic.fence.v3bf16(<3 x bfloat>)
 declare <4 x bfloat> @llvm.arithmetic.fence.v4bf16(<4 x bfloat>)
 declare float @llvm.arithmetic.fence.f32(float)
 declare double @llvm.arithmetic.fence.f64(double)
