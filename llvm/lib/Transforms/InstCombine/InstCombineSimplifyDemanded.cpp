@@ -336,9 +336,12 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
     // If the RHS is a constant, see if we can change it. Don't alter a -1
     // constant because that's a canonical 'not' op, and that is better for
     // combining, SCEV, and codegen.
-    const APInt *C;
-    if (match(I->getOperand(1), m_APInt(C)) && !C->isAllOnes()) {
-      if ((*C | ~DemandedMask).isAllOnes()) {
+    auto IsNotAllOnes = [](const APInt &C) { return C.isAllOnes(); };
+    auto IsNotAllOnesAndDemandedMask = [&DemandedMask](const APInt &C) {
+      return (C | ~DemandedMask).isAllOnes();
+    };
+    if (match(I->getOperand(1), m_CheckedInt(IsNotAllOnes))) {
+      if (match(I->getOperand(1), m_CheckedInt(IsNotAllOnesAndDemandedMask))) {
         // Force bits to 1 to create a 'not' op.
         I->setOperand(1, ConstantInt::getAllOnesValue(VTy));
         return I;

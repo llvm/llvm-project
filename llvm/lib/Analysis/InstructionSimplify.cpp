@@ -1028,33 +1028,43 @@ static bool isDivZero(Value *X, Value *Y, const SimplifyQuery &Q,
     // Make sure that a constant is not the minimum signed value because taking
     // the abs() of that is undefined.
     Type *Ty = X->getType();
-    const APInt *C;
-    if (match(X, m_APInt(C)) && !C->isMinSignedValue()) {
-      // Is the variable divisor magnitude always greater than the constant
-      // dividend magnitude?
-      // |Y| > |C| --> Y < -abs(C) or Y > abs(C)
-      Constant *PosDividendC = ConstantInt::get(Ty, C->abs());
-      Constant *NegDividendC = ConstantInt::get(Ty, -C->abs());
+
+    // Is the variable divisor magnitude always greater than the constant
+    // dividend magnitude?
+    // |Y| > |C| --> Y < -abs(C) or Y > abs(C)
+    auto CheckSignCmp = [Ty, Y, Q, MaxRecurse](const APInt &C) {
+      if (C.isMinSignedValue())
+        return false;
+      Constant *PosDividendC = ConstantInt::get(Ty, C.abs());
+      Constant *NegDividendC = ConstantInt::get(Ty, -C.abs());
       if (isICmpTrue(CmpInst::ICMP_SLT, Y, NegDividendC, Q, MaxRecurse) ||
           isICmpTrue(CmpInst::ICMP_SGT, Y, PosDividendC, Q, MaxRecurse))
         return true;
-    }
-    if (match(Y, m_APInt(C))) {
+      return false;
+    };
+
+    auto CheckSignCmpY = [Ty, X, Y, Q, MaxRecurse](const APInt &C) {
       // Special-case: we can't take the abs() of a minimum signed value. If
       // that's the divisor, then all we have to do is prove that the dividend
       // is also not the minimum signed value.
-      if (C->isMinSignedValue())
+      if (C.isMinSignedValue())
         return isICmpTrue(CmpInst::ICMP_NE, X, Y, Q, MaxRecurse);
 
       // Is the variable dividend magnitude always less than the constant
       // divisor magnitude?
       // |X| < |C| --> X > -abs(C) and X < abs(C)
-      Constant *PosDivisorC = ConstantInt::get(Ty, C->abs());
-      Constant *NegDivisorC = ConstantInt::get(Ty, -C->abs());
-      if (isICmpTrue(CmpInst::ICMP_SGT, X, NegDivisorC, Q, MaxRecurse) &&
-          isICmpTrue(CmpInst::ICMP_SLT, X, PosDivisorC, Q, MaxRecurse))
+      Constant *PosDividendC = ConstantInt::get(Ty, C.abs());
+      Constant *NegDividendC = ConstantInt::get(Ty, -C.abs());
+      if (isICmpTrue(CmpInst::ICMP_SLT, Y, NegDividendC, Q, MaxRecurse) ||
+          isICmpTrue(CmpInst::ICMP_SGT, Y, PosDividendC, Q, MaxRecurse))
         return true;
-    }
+      return false;
+    };
+
+    if (match(X, m_CheckedInt(CheckSignCmp)))
+      return true;
+    if (match(Y, m_CheckedInt(CheckSignCmpY)))
+      return true;
     return false;
   }
 
@@ -1063,9 +1073,11 @@ static bool isDivZero(Value *X, Value *Y, const SimplifyQuery &Q,
   // Is the unsigned dividend known to be less than a constant divisor?
   // TODO: Convert this (and above) to range analysis
   //      ("computeConstantRangeIncludingKnownBits")?
-  const APInt *C;
-  if (match(Y, m_APInt(C)) &&
-      computeKnownBits(X, /* Depth */ 0, Q).getMaxValue().ult(*C))
+
+  auto CheckULT1 = [X, Q](const APInt &C) {
+    return computeKnownBits(X, /* Depth */ 0, Q).getMaxValue().ult(C);
+  };
+  if (match(Y, m_CheckedInt(CheckULT1)))
     return true;
 
   // Try again for any divisor:
@@ -2362,15 +2374,16 @@ static Value *simplifyOrInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
   // (-1 << X) | (-1 >> (C - X)) --> -1
   // (-1 >> X) | (-1 << (C - X)) --> -1
   // ...with C <= bitwidth (and commuted variants).
-  Value *X, *Y;
+  Value *X = nullptr, *Y = nullptr;
+  auto CheckULE = [X](const APInt &C) {
+    return C.ule(X->getType()->getScalarSizeInBits());
+  };
   if ((match(Op0, m_Shl(m_AllOnes(), m_Value(X))) &&
        match(Op1, m_LShr(m_AllOnes(), m_Value(Y)))) ||
       (match(Op1, m_Shl(m_AllOnes(), m_Value(X))) &&
        match(Op0, m_LShr(m_AllOnes(), m_Value(Y))))) {
-    const APInt *C;
-    if ((match(X, m_Sub(m_APInt(C), m_Specific(Y))) ||
-         match(Y, m_Sub(m_APInt(C), m_Specific(X)))) &&
-        C->ule(X->getType()->getScalarSizeInBits())) {
+    if (match(X, m_Sub(m_CheckedInt(CheckULE), m_Specific(Y))) ||
+        match(Y, m_Sub(m_CheckedInt(CheckULE), m_Specific(X)))) {
       return ConstantInt::getAllOnesValue(X->getType());
     }
   }
@@ -3158,9 +3171,10 @@ static Value *simplifyICmpWithBinOpOnLHS(CmpInst::Predicate Pred,
   // x udiv C >=u x --> false for C != 1.
   // x udiv C ==  x --> false for C != 1.
   // TODO: allow non-constant shift amount/divisor
-  const APInt *C;
-  if ((match(LBO, m_LShr(m_Specific(RHS), m_APInt(C))) && *C != 0) ||
-      (match(LBO, m_UDiv(m_Specific(RHS), m_APInt(C))) && *C != 1)) {
+  auto IsNotZero = [](const APInt &C) { return C != 0; };
+  auto IsNotOne = [](const APInt &C) { return C != 1; };
+  if (match(LBO, m_LShr(m_Specific(RHS), m_CheckedInt(IsNotZero))) ||
+      match(LBO, m_UDiv(m_Specific(RHS), m_CheckedInt(IsNotOne)))) {
     if (isKnownNonZero(RHS, Q)) {
       switch (Pred) {
       default:
@@ -3203,6 +3217,7 @@ static Value *simplifyICmpWithBinOpOnLHS(CmpInst::Predicate Pred,
 
   // (sub C, X) == X, C is odd  --> false
   // (sub C, X) != X, C is odd  --> true
+  const APInt *C;
   if (match(LBO, m_Sub(m_APIntAllowPoison(C), m_Specific(RHS))) &&
       (*C & 1) == 1 && ICmpInst::isEquality(Pred))
     return (Pred == ICmpInst::ICMP_EQ) ? getFalse(ITy) : getTrue(ITy);
