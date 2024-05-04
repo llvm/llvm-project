@@ -225,9 +225,34 @@ public:
     }
   }
 
+  bool isVarIsAVMRefType(const VarDecl *V) const {
+    auto *type = V->getType()->getAs<LValueReferenceType>();
+    if (!type)
+      return false;
+
+    auto ClassDecl = type->getPointeeType()
+                         ->getUnqualifiedDesugaredType()
+                         ->getAsCXXRecordDecl();
+    if (!ClassDecl)
+      return false;
+
+    auto *NsDecl = ClassDecl->getParent();
+    if (!NsDecl || !isa<NamespaceDecl>(NsDecl))
+      return false;
+
+    auto ClsNameStr = safeGetName(ClassDecl);
+    auto NamespaceName = safeGetName(NsDecl);
+
+    // FIXME: These should be implemented via attributes.
+    return NamespaceName == "JSC" && ClsNameStr == "VM";
+  }
+
   bool shouldSkipVarDecl(const VarDecl *V) const {
     assert(V);
     if (!V->isLocalVarDecl())
+      return true;
+
+    if (isVarIsAVMRefType(V))
       return true;
 
     return false;

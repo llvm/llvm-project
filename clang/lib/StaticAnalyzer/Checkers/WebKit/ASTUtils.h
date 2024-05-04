@@ -67,12 +67,13 @@ template <typename T> std::string safeGetName(const T *ASTNode) {
   if (!ND)
     return "";
 
-  // In case F is for example "operator|" the getName() method below would
-  // assert.
-  if (!ND->getDeclName().isIdentifier())
-    return "";
+  if (const auto *Identifier = ND->getIdentifier())
+    return Identifier->getName().str();
 
-  return ND->getName().str();
+  std::string Name;
+  llvm::raw_string_ostream OS(Name);
+  ND->printName(OS);
+  return OS.str().empty() ? "" : OS.str();
 }
 
 } // namespace clang
