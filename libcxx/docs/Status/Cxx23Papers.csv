@@ -108,7 +108,7 @@
 "`P2164R9 <https://wg21.link/P2164R9>`__","LWG", "``views::enumerate``","February 2023","","","|ranges|"
 "`P2711R1 <https://wg21.link/P2711R1>`__","LWG", "Making multi-param constructors of ``views`` ``explicit``","February 2023","|In Progress| [#note-P2711R1]_","","|ranges|"
 "`P2609R3 <https://wg21.link/P2609R3>`__","LWG", "Relaxing Ranges Just A Smidge","February 2023","","","|ranges|"
-"`P2713R1 <https://wg21.link/P2713R1>`__","LWG", "Escaping improvements in ``std::format``","February 2023","","","|format|"
+"`P2713R1 <https://wg21.link/P2713R1>`__","LWG", "Escaping improvements in ``std::format``","February 2023","|Complete|","19.0","|format|"
 "`P2675R1 <https://wg21.link/P2675R1>`__","LWG", "``format``'s width estimation is too approximate and not forward compatible","February 2023","|Complete|","17.0","|format|"
 "`P2572R1 <https://wg21.link/P2572R1>`__","LWG", "``std::format`` fill character allowances","February 2023","|Complete|","17.0","|format|"
 "`P2693R1 <https://wg21.link/P2693R1>`__","LWG", "Formatting ``thread::id`` and ``stacktrace``","February 2023","|Partial| [#note-P2693R1]_","","|format|"
