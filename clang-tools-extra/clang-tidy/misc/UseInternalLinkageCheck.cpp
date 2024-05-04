@@ -61,8 +61,8 @@ void UseInternalLinkageCheck::registerMatchers(MatchFinder *Finder) {
 }
 
 static constexpr StringRef Message =
-    "%0 %1 can be can be made static or moved into an anonymous namespace "
-    "to enforce internal linkage.";
+    "%0 %1 can be made static or moved into an anonymous namespace "
+    "to enforce internal linkage";
 
 void UseInternalLinkageCheck::check(const MatchFinder::MatchResult &Result) {
   if (const auto *FD = Result.Nodes.getNodeAs<FunctionDecl>("fn")) {
