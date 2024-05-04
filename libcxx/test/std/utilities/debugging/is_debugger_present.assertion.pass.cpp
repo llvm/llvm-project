@@ -24,9 +24,10 @@
 // Test without debugger.
 
 void test() {
-  TEST_LIBCPP_ASSERT_FAILURE(std::is_debugger_present(),
-                             "Function is not available. Could not open '/proc/self/status' for reading, libc++ was "
-                             "compiled with _LIBCPP_HAS_NO_FILESYSTEM.");
+  TEST_LIBCPP_ASSERT_FAILURE(
+      std::is_debugger_present(),
+      "Function is not available. Could not open '/proc/self/status' for reading, libc++ was "
+      "compiled with _LIBCPP_HAS_NO_FILESYSTEM.");
 }
 
 int main(int, char**) {
