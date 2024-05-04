@@ -1712,8 +1712,6 @@ transform::PackTransposeOp::apply(transform::TransformRewriter &rewriter,
 // PadOp
 //===---------------------------------------------------------------------===//
 
-static const StringLiteral kPadToMultipleOfKeyword = "pad_to_multiple_of";
-
 void transform::PadOp::build(OpBuilder &b, OperationState &result, Value target,
                              ArrayRef<int64_t> paddingDimensions,
                              ArrayRef<int64_t> padToMultipleOf,
