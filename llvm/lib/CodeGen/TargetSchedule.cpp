@@ -129,8 +129,7 @@ resolveSchedClass(const MachineInstr *MI) const {
   unsigned NIter = 0;
 #endif
   while (SCDesc->isVariant()) {
-    ++NIter;
-    assert(NIter < 6 && "Variants are nested deeper than the magic number");
+    assert(++NIter < 6 && "Variants are nested deeper than the magic number");
 
     SchedClass = STI->resolveSchedClass(SchedClass, MI, this);
     SCDesc = SchedModel.getSchedClassDesc(SchedClass);
