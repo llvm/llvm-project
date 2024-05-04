@@ -552,6 +552,8 @@ Bug Fixes in This Version
 - Clang will no longer emit a duplicate -Wunused-value warning for an expression
   `(A, B)` which evaluates to glvalue `B` that can be converted to non ODR-use. (#GH45783)
 
+- `__builtin_launder` no longer requires a pointer to a complete type. (#GH90949)
+
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
