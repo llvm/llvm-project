@@ -2831,6 +2831,15 @@ void OpenACCClauseEnqueue::VisitNoCreateClause(const OpenACCNoCreateClause &C) {
 void OpenACCClauseEnqueue::VisitCopyClause(const OpenACCCopyClause &C) {
   VisitVarList(C);
 }
+void OpenACCClauseEnqueue::VisitCopyInClause(const OpenACCCopyInClause &C) {
+  VisitVarList(C);
+}
+void OpenACCClauseEnqueue::VisitCopyOutClause(const OpenACCCopyOutClause &C) {
+  VisitVarList(C);
+}
+void OpenACCClauseEnqueue::VisitCreateClause(const OpenACCCreateClause &C) {
+  VisitVarList(C);
+}
 } // namespace
 
 void EnqueueVisitor::EnqueueChildren(const OpenACCClause *C) {
