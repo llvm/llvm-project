@@ -25,10 +25,7 @@ namespace __math {
 
 _LIBCPP_NODISCARD inline _LIBCPP_HIDE_FROM_ABI float fabs(float __x) _NOEXCEPT { return __builtin_fabsf(__x); }
 
-template <class = int>
-_LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI double fabs(double __x) _NOEXCEPT {
-  return __builtin_fabs(__x);
-}
+_LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI double fabs(double __x) _NOEXCEPT { return __builtin_fabs(__x); }
 
 _LIBCPP_NODISCARD inline _LIBCPP_HIDE_FROM_ABI long double fabs(long double __x) _NOEXCEPT {
   return __builtin_fabsl(__x);
