@@ -2,18 +2,19 @@
 
 // This simply tests for syntax.
 
-#my_poly = #polynomial.polynomial<1 + x**1024>
-#my_poly_2 = #polynomial.polynomial<2>
-#my_poly_3 = #polynomial.polynomial<3x>
-#my_poly_4 = #polynomial.polynomial<t**3 + 4t + 2>
+#my_poly = #polynomial.int_polynomial<1 + x**1024>
+#my_poly_2 = #polynomial.int_polynomial<2>
+#my_poly_3 = #polynomial.int_polynomial<3x>
+#my_poly_4 = #polynomial.int_polynomial<t**3 + 4t + 2>
 #ring1 = #polynomial.ring<coefficientType=i32, coefficientModulus=2837465, polynomialModulus=#my_poly>
-#one_plus_x_squared = #polynomial.polynomial<1 + x**2>
+#ring2 = #polynomial.ring<coefficientType=f32>
+#one_plus_x_squared = #polynomial.int_polynomial<1 + x**2>
 
-#ideal = #polynomial.polynomial<-1 + x**1024>
+#ideal = #polynomial.int_polynomial<-1 + x**1024>
 #ring = #polynomial.ring<coefficientType=i32, coefficientModulus=256, polynomialModulus=#ideal, primitiveRoot=193>
 !poly_ty = !polynomial.polynomial<#ring>
 
-#ntt_poly = #polynomial.polynomial<-1 + x**8>
+#ntt_poly = #polynomial.int_polynomial<-1 + x**8>
 #ntt_ring = #polynomial.ring<coefficientType=i32, coefficientModulus=256, polynomialModulus=#ntt_poly, primitiveRoot=31>
 !ntt_poly_ty = !polynomial.polynomial<#ntt_ring>
 
@@ -73,14 +74,15 @@ module {
 
   func.func @test_monic_monomial_mul() {
     %five = arith.constant 5 : index
-    %0 = polynomial.constant #one_plus_x_squared : !polynomial.polynomial<#ring1>
+    %0 = polynomial.constant {value=#one_plus_x_squared} : !polynomial.polynomial<#ring1>
     %1 = polynomial.monic_monomial_mul %0, %five : (!polynomial.polynomial<#ring1>, index) -> !polynomial.polynomial<#ring1>
     return
   }
 
   func.func @test_constant() {
-    %0 = polynomial.constant #one_plus_x_squared : !polynomial.polynomial<#ring1>
-    %1 = polynomial.constant <1 + x**2> : !polynomial.polynomial<#ring1>
+    %0 = polynomial.constant {value=#one_plus_x_squared} : !polynomial.polynomial<#ring1>
+    %1 = polynomial.constant {value=#polynomial.int_polynomial<1 + x**2>} : !polynomial.polynomial<#ring1>
+    %2 = polynomial.constant {value=#polynomial.float_polynomial<1.5 + 0.5 x**2>} : !polynomial.polynomial<#ring2>
     return
   }
 

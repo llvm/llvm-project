@@ -1,7 +1,7 @@
 // RUN: mlir-opt --split-input-file --verify-diagnostics %s
 
-#my_poly = #polynomial.polynomial<1 + x**1024>
-#ring = #polynomial.ring<coefficientType=i16, coefficientModulus=256, polynomialModulus=#my_poly>
+#my_poly = #polynomial.int_polynomial<1 + x**1024>
+#ring = #polynomial.ring<coefficientType=i16, coefficientModulus=256:i32, polynomialModulus=#my_poly>
 !ty = !polynomial.polynomial<#ring>
 
 func.func @test_from_tensor_too_large_coeffs() {
@@ -15,13 +15,13 @@ func.func @test_from_tensor_too_large_coeffs() {
 
 // -----
 
-#my_poly = #polynomial.polynomial<1 + x**4>
-#ring = #polynomial.ring<coefficientType=i32, coefficientModulus=256, polynomialModulus=#my_poly>
+#my_poly = #polynomial.int_polynomial<1 + x**4>
+#ring = #polynomial.ring<coefficientType=i32, coefficientModulus=256:i32, polynomialModulus=#my_poly>
 !ty = !polynomial.polynomial<#ring>
 func.func @test_from_tensor_wrong_tensor_type() {
   %two = arith.constant 2 : i32
   %coeffs1 = tensor.from_elements %two, %two, %two, %two, %two : tensor<5xi32>
-  // expected-error@below {{input type 'tensor<5xi32>' does not match output type '!polynomial.polynomial<#polynomial.ring<coefficientType=i32, coefficientModulus=256 : i32, polynomialModulus=#polynomial.polynomial<1 + x**4>>>'}}
+  // expected-error@below {{input type 'tensor<5xi32>' does not match output type '!polynomial.polynomial<#polynomial.ring<coefficientType = i32, coefficientModulus = 256 : i32, polynomialModulus = <1 + x**4>>>'}}
   // expected-note@below {{at most the degree of the polynomialModulus of the output type's ring attribute}}
   %poly = polynomial.from_tensor %coeffs1 : tensor<5xi32> -> !ty
   return
@@ -29,11 +29,11 @@ func.func @test_from_tensor_wrong_tensor_type() {
 
 // -----
 
-#my_poly = #polynomial.polynomial<1 + x**4>
-#ring = #polynomial.ring<coefficientType=i32, coefficientModulus=256, polynomialModulus=#my_poly>
+#my_poly = #polynomial.int_polynomial<1 + x**4>
+#ring = #polynomial.ring<coefficientType=i32, coefficientModulus=256:i32, polynomialModulus=#my_poly>
 !ty = !polynomial.polynomial<#ring>
 func.func @test_to_tensor_wrong_output_tensor_type(%arg0 : !ty) {
-  // expected-error@below {{input type '!polynomial.polynomial<#polynomial.ring<coefficientType=i32, coefficientModulus=256 : i32, polynomialModulus=#polynomial.polynomial<1 + x**4>>>' does not match output type 'tensor<5xi32>'}}
+  // expected-error@below {{input type '!polynomial.polynomial<#polynomial.ring<coefficientType = i32, coefficientModulus = 256 : i32, polynomialModulus = <1 + x**4>>>' does not match output type 'tensor<5xi32>'}}
   // expected-note@below {{at most the degree of the polynomialModulus of the input type's ring attribute}}
   %tensor = polynomial.to_tensor %arg0 : !ty -> tensor<5xi32>
   return
@@ -41,8 +41,8 @@ func.func @test_to_tensor_wrong_output_tensor_type(%arg0 : !ty) {
 
 // -----
 
-#my_poly = #polynomial.polynomial<1 + x**1024>
-#ring = #polynomial.ring<coefficientType=i16, coefficientModulus=256, polynomialModulus=#my_poly>
+#my_poly = #polynomial.int_polynomial<1 + x**1024>
+#ring = #polynomial.ring<coefficientType=i16, coefficientModulus=256:i32, polynomialModulus=#my_poly>
 !ty = !polynomial.polynomial<#ring>
 
 func.func @test_mul_scalar_wrong_type(%arg0: !ty) -> !ty {
@@ -54,8 +54,8 @@ func.func @test_mul_scalar_wrong_type(%arg0: !ty) -> !ty {
 
 // -----
 
-#my_poly = #polynomial.polynomial<-1 + x**1024>
-#ring = #polynomial.ring<coefficientType=i16, coefficientModulus=256, polynomialModulus=#my_poly, primitiveRoot=31>
+#my_poly = #polynomial.int_polynomial<-1 + x**1024>
+#ring = #polynomial.ring<coefficientType=i16, coefficientModulus=256:i16, polynomialModulus=#my_poly, primitiveRoot=31:i16>
 !poly_ty = !polynomial.polynomial<#ring>
 
 // CHECK-NOT: @test_invalid_ntt
@@ -68,8 +68,8 @@ func.func @test_invalid_ntt(%0 : !poly_ty) {
 
 // -----
 
-#my_poly = #polynomial.polynomial<-1 + x**1024>
-#ring = #polynomial.ring<coefficientType=i16, coefficientModulus=256, polynomialModulus=#my_poly, primitiveRoot=31>
+#my_poly = #polynomial.int_polynomial<-1 + x**1024>
+#ring = #polynomial.ring<coefficientType=i16, coefficientModulus=256:i16, polynomialModulus=#my_poly, primitiveRoot=31:i16>
 !poly_ty = !polynomial.polynomial<#ring>
 
 // CHECK-NOT: @test_invalid_ntt
@@ -82,9 +82,9 @@ func.func @test_invalid_ntt(%0 : !poly_ty) {
 
 // -----
 
-#my_poly = #polynomial.polynomial<-1 + x**1024>
-#ring = #polynomial.ring<coefficientType=i16, coefficientModulus=256, polynomialModulus=#my_poly>
-#ring1 = #polynomial.ring<coefficientType=i16, coefficientModulus=257, polynomialModulus=#my_poly, primitiveRoot=31>
+#my_poly = #polynomial.int_polynomial<-1 + x**1024>
+#ring = #polynomial.ring<coefficientType=i16, coefficientModulus=256:i16, polynomialModulus=#my_poly>
+#ring1 = #polynomial.ring<coefficientType=i16, coefficientModulus=257:i16, polynomialModulus=#my_poly, primitiveRoot=31:i16>
 !poly_ty = !polynomial.polynomial<#ring>
 
 // CHECK-NOT: @test_invalid_intt
@@ -97,8 +97,8 @@ func.func @test_invalid_intt(%0 : tensor<1024xi32, #ring1>) {
 
 // -----
 
-#my_poly = #polynomial.polynomial<-1 + x**1024>
-#ring = #polynomial.ring<coefficientType=i16, coefficientModulus=256, polynomialModulus=#my_poly, primitiveRoot=31>
+#my_poly = #polynomial.int_polynomial<-1 + x**1024>
+#ring = #polynomial.ring<coefficientType=i16, coefficientModulus=256:i16, polynomialModulus=#my_poly, primitiveRoot=31:i16>
 !poly_ty = !polynomial.polynomial<#ring>
 
 // CHECK-NOT: @test_invalid_intt
@@ -112,8 +112,8 @@ func.func @test_invalid_intt(%0 : tensor<1025xi32, #ring>) {
 
 // -----
 
-#my_poly = #polynomial.polynomial<-1 + x**1024>
-#ring = #polynomial.ring<coefficientType=i16, coefficientModulus=256, polynomialModulus=#my_poly>
+#my_poly = #polynomial.int_polynomial<-1 + x**1024>
+#ring = #polynomial.ring<coefficientType=i16, coefficientModulus=256:i16, polynomialModulus=#my_poly>
 !poly_ty = !polynomial.polynomial<#ring>
 
 // CHECK-NOT: @test_invalid_ntt
@@ -126,9 +126,9 @@ func.func @test_invalid_ntt(%0 : !poly_ty) {
 
 // -----
 
-#my_poly = #polynomial.polynomial<-1 + x**8>
+#my_poly = #polynomial.int_polynomial<-1 + x**8>
 // A valid root is 31
-#ring = #polynomial.ring<coefficientType=i16, coefficientModulus=256, polynomialModulus=#my_poly, primitiveRoot=32>
+#ring = #polynomial.ring<coefficientType=i16, coefficientModulus=256:i16, polynomialModulus=#my_poly, primitiveRoot=32:i16>
 !poly_ty = !polynomial.polynomial<#ring>
 
 // CHECK-NOT: @test_invalid_intt
