@@ -192,7 +192,10 @@ static DiagnosedSilenceableFailure reifyMixedParamAndHandleResults(
       continue;
     }
 
-    auto payload = state.getPayloadOps(paramOrHandle.get<Value>());
+    Value handle = paramOrHandle.get<Value>();
+    if (!isa<TransformHandleOpInterface>(handle.getType())
+      return transformOp.emitSilenceableError() << "unexpected value handle";
+    auto payload = state.getPayloadOps(handle);
     if (!llvm::hasSingleElement(payload))
       return transformOp.emitSilenceableError()
              << "requires param or handle that is mapped to 1 payload op";
