@@ -249,7 +249,7 @@ static bool areIdenticalOrDisjointSlices(mlir::Value ref1, mlir::Value ref2) {
     auto isPositiveConstant = [](mlir::Value v) -> bool {
       if (auto conOp =
               mlir::dyn_cast<mlir::arith::ConstantOp>(v.getDefiningOp()))
-        if (auto iattr = conOp.getValue().dyn_cast<mlir::IntegerAttr>())
+        if (auto iattr = mlir::dyn_cast<mlir::IntegerAttr>(conOp.getValue()))
           return iattr.getInt() > 0;
       return false;
     };
@@ -601,7 +601,7 @@ mlir::LogicalResult VariableAssignBufferization::matchAndRewrite(
   // TODO: ExprType check is here to avoid conflicts with
   // ElementalAssignBufferization pattern. We need to combine
   // these matchers into a single one that applies to AssignOp.
-  if (rhs.getType().isa<hlfir::ExprType>())
+  if (mlir::isa<hlfir::ExprType>(rhs.getType()))
     return rewriter.notifyMatchFailure(assign, "RHS is not in memory");
 
   if (!rhs.isArray())
@@ -834,7 +834,7 @@ public:
 
     unsigned rank = mlir::cast<hlfir::ExprType>(mloc.getType()).getShape()[0];
     mlir::Type arrayType = array.getType();
-    if (!arrayType.isa<fir::BoxType>())
+    if (!mlir::isa<fir::BoxType>(arrayType))
       return rewriter.notifyMatchFailure(
           mloc, "Currently requires a boxed type input");
     mlir::Type elementType = hlfir::getFortranElementType(arrayType);
@@ -850,7 +850,7 @@ public:
 
     auto init = [isMax](fir::FirOpBuilder builder, mlir::Location loc,
                         mlir::Type elementType) {
-      if (auto ty = elementType.dyn_cast<mlir::FloatType>()) {
+      if (auto ty = mlir::dyn_cast<mlir::FloatType>(elementType)) {
         const llvm::fltSemantics &sem = ty.getFloatSemantics();
         llvm::APFloat limit = llvm::APFloat::getInf(sem, /*Negative=*/isMax);
         return builder.createRealConstant(loc, elementType, limit);
@@ -901,7 +901,7 @@ public:
 
       // Compare with the max reduction value
       mlir::Value cmp;
-      if (elementType.isa<mlir::FloatType>()) {
+      if (mlir::isa<mlir::FloatType>(elementType)) {
         // For FP reductions we want the first smallest value to be used, that
         // is not NaN. A OGL/OLT condition will usually work for this unless all
         // the values are Nan or Inf. This follows the same logic as
@@ -918,7 +918,7 @@ public:
             loc, mlir::arith::CmpFPredicate::OEQ, elem, elem);
         cmpNan = builder.create<mlir::arith::AndIOp>(loc, cmpNan, cmpNan2);
         cmp = builder.create<mlir::arith::OrIOp>(loc, cmp, cmpNan);
-      } else if (elementType.isa<mlir::IntegerType>()) {
+      } else if (mlir::isa<mlir::IntegerType>(elementType)) {
         cmp = builder.create<mlir::arith::CmpIOp>(
             loc,
             isMax ? mlir::arith::CmpIPredicate::sgt
