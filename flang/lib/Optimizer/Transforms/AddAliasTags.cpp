@@ -164,7 +164,9 @@ void AddAliasTagsPass::runOnAliasInterface(fir::FirAliasTagOpInterface op,
     tag = state.getFuncTree(func).globalDataTree.getTag(name);
 
     // TBAA for SourceKind::Direct
-  } else if (enableDirect && source.isBoxData()) {
+  } else if (enableDirect &&
+             source.kind == fir::AliasAnalysis::SourceKind::Global &&
+             source.isBoxData()) {
     if (source.origin.u.is<mlir::SymbolRefAttr>()) {
       mlir::SymbolRefAttr glbl = source.origin.u.get<mlir::SymbolRefAttr>();
       const char *name = glbl.getRootReference().data();
