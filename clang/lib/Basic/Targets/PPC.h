@@ -366,7 +366,14 @@ public:
   // have Glibc since it is Glibc that provides the HWCAP[2] in the auxv.
   static constexpr int MINIMUM_AIX_OS_MAJOR = 7;
   static constexpr int MINIMUM_AIX_OS_MINOR = 2;
-  bool supportsCpuSupports() const override { return getTriple().isOSGlibc(); }
+  bool supportsCpuSupports() const override {
+    llvm::Triple Triple = getTriple();
+    // AIX 7.2 is the minimum requirement to support __builtin_cpu_supports().
+    return Triple.isOSGlibc() ||
+           (Triple.isOSAIX() &&
+            !Triple.isOSVersionLT(MINIMUM_AIX_OS_MAJOR, MINIMUM_AIX_OS_MINOR));
+  }
+
   bool supportsCpuIs() const override {
     llvm::Triple Triple = getTriple();
     // AIX 7.2 is the minimum requirement to support __builtin_cpu_is().
@@ -422,6 +429,10 @@ public:
   BuiltinVaListKind getBuiltinVaListKind() const override {
     // This is the ELF definition
     return TargetInfo::PowerABIBuiltinVaList;
+  }
+
+  std::pair<unsigned, unsigned> hardwareInterferenceSizes() const override {
+    return std::make_pair(32, 32);
   }
 };
 
@@ -502,6 +513,10 @@ public:
     default:
       return CCCR_Warning;
     }
+  }
+
+  std::pair<unsigned, unsigned> hardwareInterferenceSizes() const override {
+    return std::make_pair(128, 128);
   }
 };
 
