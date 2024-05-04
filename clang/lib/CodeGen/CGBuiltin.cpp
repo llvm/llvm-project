@@ -513,8 +513,8 @@ static Value *emitBinaryMaybeConstrainedFPBuiltin(CodeGenFunction &CGF,
   llvm::Value *Src0 = CGF.EmitScalarExpr(E->getArg(0));
   llvm::Value *Src1 = CGF.EmitScalarExpr(E->getArg(1));
 
+  CodeGenFunction::CGFPOptionsRAII FPOptsRAII(CGF, E);
   if (CGF.Builder.getIsFPConstrained()) {
-    CodeGenFunction::CGFPOptionsRAII FPOptsRAII(CGF, E);
     Function *F = CGF.CGM.getIntrinsic(ConstrainedIntrinsicID, Src0->getType());
     return CGF.Builder.CreateConstrainedFPCall(F, { Src0, Src1 });
   } else {
@@ -530,8 +530,8 @@ static Value *emitBinaryExpMaybeConstrainedFPBuiltin(
   llvm::Value *Src0 = CGF.EmitScalarExpr(E->getArg(0));
   llvm::Value *Src1 = CGF.EmitScalarExpr(E->getArg(1));
 
+  CodeGenFunction::CGFPOptionsRAII FPOptsRAII(CGF, E);
   if (CGF.Builder.getIsFPConstrained()) {
-    CodeGenFunction::CGFPOptionsRAII FPOptsRAII(CGF, E);
     Function *F = CGF.CGM.getIntrinsic(ConstrainedIntrinsicID,
                                        {Src0->getType(), Src1->getType()});
     return CGF.Builder.CreateConstrainedFPCall(F, {Src0, Src1});
@@ -551,8 +551,8 @@ static Value *emitTernaryMaybeConstrainedFPBuiltin(CodeGenFunction &CGF,
   llvm::Value *Src1 = CGF.EmitScalarExpr(E->getArg(1));
   llvm::Value *Src2 = CGF.EmitScalarExpr(E->getArg(2));
 
+  CodeGenFunction::CGFPOptionsRAII FPOptsRAII(CGF, E);
   if (CGF.Builder.getIsFPConstrained()) {
-    CodeGenFunction::CGFPOptionsRAII FPOptsRAII(CGF, E);
     Function *F = CGF.CGM.getIntrinsic(ConstrainedIntrinsicID, Src0->getType());
     return CGF.Builder.CreateConstrainedFPCall(F, { Src0, Src1, Src2 });
   } else {
@@ -704,6 +704,7 @@ static Value *EmitSignBit(CodeGenFunction &CGF, Value *V) {
 
 static RValue emitLibraryCall(CodeGenFunction &CGF, const FunctionDecl *FD,
                               const CallExpr *E, llvm::Constant *calleeValue) {
+  CodeGenFunction::CGFPOptionsRAII FPOptsRAII(CGF, E);
   CGCallee callee = CGCallee::forDirect(calleeValue, GlobalDecl(FD));
   return CGF.EmitCall(E->getCallee()->getType(), callee, E, ReturnValueSlot());
 }
@@ -2660,7 +2661,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     if (OP.hasMathErrnoOverride())
       ErrnoOverriden = OP.getMathErrnoOverride();
   }
-  // True if 'atttibute__((optnone)) is used. This attibute overrides
+  // True if 'attribute__((optnone))' is used. This attribute overrides
   // fast-math which implies math-errno.
   bool OptNone = CurFuncDecl && CurFuncDecl->hasAttr<OptimizeNoneAttr>();
 
