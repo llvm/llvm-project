@@ -123,9 +123,8 @@ exit:
 ; @reduc_store_load with a non-constant dependence distance, resulting in
 ; vectorization with runtime checks.
 ;
-; FIXME: currently this gets vectorized incorrectly.
 ; CHECK-LABEL: @reduc_store_load_with_non_constant_distance_dependence
-; CHECK: vector.body:
+; CHECK-NOT: vector.body:
 define void @reduc_store_load_with_non_constant_distance_dependence(ptr %dst, ptr noalias %dst.2, i64 %off) {
 entry:
   %gep.dst = getelementptr inbounds i32, ptr %dst, i64 42
