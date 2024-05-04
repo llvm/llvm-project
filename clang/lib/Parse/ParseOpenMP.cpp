@@ -4323,13 +4323,12 @@ static OpenMPMapClauseKind isMapType(Parser &P) {
   if (!Tok.isOneOf(tok::identifier, tok::kw_delete))
     return OMPC_MAP_unknown;
   Preprocessor &PP = P.getPreprocessor();
-  OpenMPMapClauseKind MapType =
-      static_cast<OpenMPMapClauseKind>(getOpenMPSimpleClauseType(
-          OMPC_map, PP.getSpelling(Tok), P.getLangOpts()));
+  unsigned MapType = getOpenMPSimpleClauseType(
+          OMPC_map, PP.getSpelling(Tok), P.getLangOpts());
   if (MapType == OMPC_MAP_to || MapType == OMPC_MAP_from ||
       MapType == OMPC_MAP_tofrom || MapType == OMPC_MAP_alloc ||
       MapType == OMPC_MAP_delete || MapType == OMPC_MAP_release)
-    return MapType;
+    return static_cast<OpenMPMapClauseKind>(MapType);
   return OMPC_MAP_unknown;
 }
 
