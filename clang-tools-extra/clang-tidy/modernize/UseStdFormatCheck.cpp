@@ -83,7 +83,8 @@ void UseStdFormatCheck::check(const MatchFinder::MatchResult &Result) {
   if (!Converter.canApply()) {
     diag(StrFormat->getBeginLoc(),
          "unable to use '%0' instead of %1 because %2")
-        << ReplacementFormatFunction << OldFunction->getIdentifier()
+        << StrFormatCall->getSourceRange() << ReplacementFormatFunction
+        << OldFunction->getIdentifier()
         << Converter.conversionNotPossibleReason();
     return;
   }
