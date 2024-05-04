@@ -51,9 +51,10 @@ jobs:
         id: vars
         run: |
           remote_repo='https://github.com/llvm/llvm-project'
-          if [ ${{ steps.version.outputs.LLVM_VERSION_MINOR }} -ne 0 ] || [ ${{ steps.version.outputs.LLVM_VERSION_PATCH }} -eq 0 ]; then
+          echo "BASELINE_VERSION_MINOR=1" >> "$GITHUB_OUTPUT"
+          if [ ${{ steps.version.outputs.LLVM_VERSION_PATCH }} -eq 0 ]; then
             major_version=$(( ${{ steps.version.outputs.LLVM_VERSION_MAJOR }} - 1))
-            baseline_ref="llvmorg-$major_version.0.0"
+            baseline_ref="llvmorg-$major_version.1.0"
 
             # If there is a minor release, we want to use that as the base line.
             minor_ref=$(git ls-remote --refs -t "$remote_repo" llvmorg-"$major_version".[1-9].[0-9] | tail -n1 | grep -o 'llvmorg-.\+' || true)
@@ -75,7 +76,7 @@ jobs:
           else
             {
               echo "BASELINE_VERSION_MAJOR=${{ steps.version.outputs.LLVM_VERSION_MAJOR }}"
-              echo "BASELINE_REF=llvmorg-${{ steps.version.outputs.LLVM_VERSION_MAJOR }}.0.0"
+              echo "BASELINE_REF=llvmorg-${{ steps.version.outputs.LLVM_VERSION_MAJOR }}.1.0"
               echo "ABI_HEADERS=."
               echo "ABI_LIBS=libclang.so libclang-cpp.so"
             } >> "$GITHUB_OUTPUT"
