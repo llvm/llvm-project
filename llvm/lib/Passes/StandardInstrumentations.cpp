@@ -1487,6 +1487,17 @@ void VerifyInstrumentation::registerCallbacks(
                                          "\"{0}\", compilation aborted!",
                                          P));
           }
+
+          // TODO: Use complete MachineVerifierPass.
+          if (auto *MF = unwrapIR<MachineFunction>(IR)) {
+            if (DebugLogging)
+              dbgs() << "Verifying machine function " << MF->getName() << '\n';
+            verifyMachineFunction(
+                formatv("Broken machine function found after pass "
+                        "\"{0}\", compilation aborted!",
+                        P),
+                *MF);
+          }
         }
       });
 }
