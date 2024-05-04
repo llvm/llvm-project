@@ -3946,7 +3946,7 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD, Scope *S,
   const auto NewFX = New->getFunctionEffects();
   QualType OldQTypeForComparison = OldQType;
   if (OldFX != NewFX) {
-    const auto Diffs = FunctionEffectSet::differences(OldFX, NewFX);
+    const auto Diffs = FunctionEffectDifferences(OldFX, NewFX);
     for (const auto &Diff : Diffs) {
       if (Diff.shouldDiagnoseRedeclaration(*Old, OldFX, *New, NewFX)) {
         Diag(New->getLocation(),

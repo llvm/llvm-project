@@ -118,6 +118,7 @@ class EnumDecl;
 class Expr;
 class ExtQualsTypeCommonBase;
 class FunctionDecl;
+class FunctionEffectSet;
 class IdentifierInfo;
 class NamedDecl;
 class ObjCInterfaceDecl;
@@ -4646,12 +4647,6 @@ public:
 
 // ------------------------------------------------------------------------------
 
-class Decl;
-class CXXMethodDecl;
-struct FunctionEffectDiff;
-class FunctionEffectsRef;
-class FunctionEffectSet;
-
 /// Represents an abstract function effect, using just an enumeration describing
 /// its kind.
 class FunctionEffect {
@@ -4790,49 +4785,6 @@ struct FunctionEffectWithCondition {
   }
 };
 
-struct FunctionEffectDiff {
-  enum class Kind { Added, Removed, ConditionMismatch };
-
-  FunctionEffect::Kind EffectKind;
-  Kind DiffKind;
-  FunctionEffectWithCondition Old; // invalid when Added
-  FunctionEffectWithCondition New; // invalid when Removed
-
-  StringRef effectName() const {
-    if (Old.Effect.kind() != FunctionEffect::Kind::None)
-      return Old.Effect.name();
-    return New.Effect.name();
-  }
-
-  /// Describes the result of effects differing between a base class's virtual
-  /// method and an overriding method in a subclass.
-  enum class OverrideResult {
-    NoAction,
-    Warn,
-    Merge // Merge missing effect from base to derived
-  };
-
-  /// Return true if adding or removing the effect as part of a type conversion
-  /// should generate a diagnostic.
-  bool shouldDiagnoseConversion(QualType SrcType,
-                                const FunctionEffectsRef &SrcFX,
-                                QualType DstType,
-                                const FunctionEffectsRef &DstFX) const;
-
-  /// Return true if adding or removing the effect in a redeclaration should
-  /// generate a diagnostic.
-  bool shouldDiagnoseRedeclaration(const FunctionDecl &OldFunction,
-                                   const FunctionEffectsRef &OldFX,
-                                   const FunctionDecl &NewFunction,
-                                   const FunctionEffectsRef &NewFX) const;
-
-  /// Return true if adding or removing the effect in a C++ virtual method
-  /// override should generate a diagnostic.
-  OverrideResult shouldDiagnoseMethodOverride(
-      const CXXMethodDecl &OldMethod, const FunctionEffectsRef &OldFX,
-      const CXXMethodDecl &NewMethod, const FunctionEffectsRef &NewFX) const;
-};
-
 /// Support iteration in parallel through a pair of FunctionEffect and
 /// FunctionEffectCondition containers.
 template <typename Container> class FunctionEffectIterator {
@@ -4877,6 +4829,8 @@ public:
 /// Also, if there are any conditions, at least one of those expressions will be
 /// dependent, but this is only asserted in the constructor of
 /// FunctionProtoType.
+///
+/// See also FunctionEffectSet, in Sema, which provides a mutable set.
 class FunctionEffectsRef {
   // Restrict classes which can call the private constructor -- these friends
   // all maintain the required invariants. FunctionEffectSet is generally the
@@ -4932,7 +4886,7 @@ public:
 };
 
 /// A mutable set of FunctionEffects and possibly conditions attached to them.
-/// Used transitorily within Sema to compare and merge effects on declarations.
+/// Used to compare and merge effects on declarations.
 ///
 /// Has the same invariants as FunctionEffectsRef.
 class FunctionEffectSet {
@@ -4971,12 +4925,6 @@ public:
                                     FunctionEffectsRef RHS);
   static FunctionEffectSet getIntersection(FunctionEffectsRef LHS,
                                            FunctionEffectsRef RHS);
-
-  using Differences = SmallVector<FunctionEffectDiff>;
-
-  /// Caller should short-circuit by checking for equality first.
-  static Differences differences(const FunctionEffectsRef &Old,
-                                 const FunctionEffectsRef &New);
 };
 
 /// Represents a prototype with parameter type info, e.g.

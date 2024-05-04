@@ -18389,7 +18389,7 @@ bool Sema::CheckOverridingFunctionAttributes(CXXMethodDecl *New,
 
   if (OldFX != NewFXOrig) {
     FunctionEffectSet NewFX(NewFXOrig);
-    const auto Diffs = FunctionEffectSet::differences(OldFX, NewFX);
+    const auto Diffs = FunctionEffectDifferences(OldFX, NewFX);
     for (const auto &Diff : Diffs) {
       switch (Diff.shouldDiagnoseMethodOverride(*Old, OldFX, *New, NewFX)) {
       case FunctionEffectDiff::OverrideResult::NoAction:
