@@ -279,12 +279,12 @@ class SelectionDAG {
   SDDbgInfo *DbgInfo;
 
   using CallSiteInfo = MachineFunction::CallSiteInfo;
-  using CallSiteInfoImpl = MachineFunction::CallSiteInfoImpl;
 
   struct NodeExtraInfo {
     CallSiteInfo CSInfo;
     MDNode *HeapAllocSite = nullptr;
     MDNode *PCSections = nullptr;
+    MDNode *MMRA = nullptr;
     bool NoMerge = false;
   };
   /// Out-of-line extra information for SDNodes.
@@ -2083,8 +2083,9 @@ public:
   /// Return true if the specified operand is an ISD::OR or ISD::XOR node
   /// that can be treated as an ISD::ADD node.
   /// or(x,y) == add(x,y) iff haveNoCommonBitsSet(x,y)
-  /// xor(x,y) == add(x,y) iff isMinSignedConstant(y)
-  bool isADDLike(SDValue Op) const;
+  /// xor(x,y) == add(x,y) iff isMinSignedConstant(y) && !NoWrap
+  /// If \p NoWrap is true, this will not match ISD::XOR.
+  bool isADDLike(SDValue Op, bool NoWrap = false) const;
 
   /// Return true if the specified operand is an ISD::ADD with a ConstantSDNode
   /// on the right-hand side, or if it is an ISD::OR with a ConstantSDNode that
@@ -2146,6 +2147,10 @@ public:
   const APInt *getValidShiftAmountConstant(SDValue V,
                                            const APInt &DemandedElts) const;
 
+  /// If a SHL/SRA/SRL node \p V has a constant or splat constant shift amount
+  /// that is less than the element bit-width of the shift node, return it.
+  const APInt *getValidShiftAmountConstant(SDValue V) const;
+
   /// If a SHL/SRA/SRL node \p V has constant shift amounts that are all less
   /// than the element bit-width of the shift node, return the minimum value.
   const APInt *
@@ -2153,10 +2158,20 @@ public:
                                      const APInt &DemandedElts) const;
 
   /// If a SHL/SRA/SRL node \p V has constant shift amounts that are all less
+  /// than the element bit-width of the shift node, return the minimum value.
+  const APInt *
+  getValidMinimumShiftAmountConstant(SDValue V) const;
+
+  /// If a SHL/SRA/SRL node \p V has constant shift amounts that are all less
   /// than the element bit-width of the shift node, return the maximum value.
   const APInt *
   getValidMaximumShiftAmountConstant(SDValue V,
                                      const APInt &DemandedElts) const;
+
+  /// If a SHL/SRA/SRL node \p V has constant shift amounts that are all less
+  /// than the element bit-width of the shift node, return the maximum value.
+  const APInt *
+  getValidMaximumShiftAmountConstant(SDValue V) const;
 
   /// Match a binop + shuffle pyramid that represents a horizontal reduction
   /// over the elements of a vector starting from the EXTRACT_VECTOR_ELT node /p
@@ -2259,7 +2274,7 @@ public:
   }
 
   /// Set CallSiteInfo to be associated with Node.
-  void addCallSiteInfo(const SDNode *Node, CallSiteInfoImpl &&CallInfo) {
+  void addCallSiteInfo(const SDNode *Node, CallSiteInfo &&CallInfo) {
     SDEI[Node].CSInfo = std::move(CallInfo);
   }
   /// Return CallSiteInfo associated with Node, or a default if none exists.
@@ -2280,10 +2295,20 @@ public:
   void addPCSections(const SDNode *Node, MDNode *MD) {
     SDEI[Node].PCSections = MD;
   }
+  /// Set MMRAMetadata to be associated with Node.
+  void addMMRAMetadata(const SDNode *Node, MDNode *MMRA) {
+    SDEI[Node].MMRA = MMRA;
+  }
   /// Return PCSections associated with Node, or nullptr if none exists.
   MDNode *getPCSections(const SDNode *Node) const {
     auto It = SDEI.find(Node);
     return It != SDEI.end() ? It->second.PCSections : nullptr;
+  }
+  /// Return the MMRA MDNode associated with Node, or nullptr if none
+  /// exists.
+  MDNode *getMMRAMetadata(const SDNode *Node) const {
+    auto It = SDEI.find(Node);
+    return It != SDEI.end() ? It->second.MMRA : nullptr;
   }
   /// Set NoMergeSiteInfo to be associated with Node if NoMerge is true.
   void addNoMergeSiteInfo(const SDNode *Node, bool NoMerge) {

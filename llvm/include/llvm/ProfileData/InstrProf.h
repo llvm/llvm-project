@@ -17,6 +17,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitmaskEnum.h"
+#include "llvm/ADT/IntervalMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
@@ -89,6 +90,9 @@ inline StringRef getInstrProfValueProfMemOpFuncName() {
 /// Return the name prefix of variables containing instrumented function names.
 inline StringRef getInstrProfNameVarPrefix() { return "__profn_"; }
 
+/// Return the name prefix of variables containing virtual table profile data.
+inline StringRef getInstrProfVTableVarPrefix() { return "__profvt_"; }
+
 /// Return the name prefix of variables containing per-function control data.
 inline StringRef getInstrProfDataVarPrefix() { return "__profd_"; }
 
@@ -106,9 +110,9 @@ inline StringRef getInstrProfVNodesVarName() { return "__llvm_prf_vnodes"; }
 
 /// Return the name of the variable holding the strings (possibly compressed)
 /// of all function's PGO names.
-inline StringRef getInstrProfNamesVarName() {
-  return "__llvm_prf_nm";
-}
+inline StringRef getInstrProfNamesVarName() { return "__llvm_prf_nm"; }
+
+inline StringRef getInstrProfVTableNamesVarName() { return "__llvm_prf_vnm"; }
 
 /// Return the name of a covarage mapping variable (internal linkage)
 /// for each instrumented source module. Such variables are allocated
@@ -140,7 +144,8 @@ inline StringRef getInstrProfRegFuncName() {
   return "__llvm_profile_register_function";
 }
 
-/// Return the name of the runtime interface that registers the PGO name strings.
+/// Return the name of the runtime interface that registers the PGO name
+/// strings.
 inline StringRef getInstrProfNamesRegFuncName() {
   return "__llvm_profile_register_names_function";
 }
@@ -246,6 +251,9 @@ Error collectGlobalObjectNameStrings(ArrayRef<std::string> NameStrs,
 Error collectPGOFuncNameStrings(ArrayRef<GlobalVariable *> NameVars,
                                 std::string &Result, bool doCompression = true);
 
+Error collectVTableStrings(ArrayRef<GlobalVariable *> VTables,
+                           std::string &Result, bool doCompression);
+
 /// Check if INSTR_PROF_RAW_VERSION_VAR is defined. This global is only being
 /// set in IR PGO compilation.
 bool isIRPGOFlagSet(const Module *M);
@@ -269,13 +277,15 @@ void annotateValueSite(Module &M, Instruction &Inst,
                        uint32_t MaxMDCount = 3);
 
 /// Same as the above interface but using an ArrayRef, as well as \p Sum.
+/// This function will not annotate !prof metadata on the instruction if the
+/// referenced array is empty.
 void annotateValueSite(Module &M, Instruction &Inst,
                        ArrayRef<InstrProfValueData> VDs, uint64_t Sum,
                        InstrProfValueKind ValueKind, uint32_t MaxMDCount);
 
 /// Extract the value profile data from \p Inst which is annotated with
 /// value profile meta data. Return false if there is no value data annotated,
-/// otherwise  return true.
+/// otherwise return true.
 bool getValueProfDataFromInst(const Instruction &Inst,
                               InstrProfValueKind ValueKind,
                               uint32_t MaxNumValueData,
@@ -283,10 +293,22 @@ bool getValueProfDataFromInst(const Instruction &Inst,
                               uint32_t &ActualNumValueData, uint64_t &TotalC,
                               bool GetNoICPValue = false);
 
+/// Extract the value profile data from \p Inst and returns them if \p Inst is
+/// annotated with value profile data. Returns nullptr otherwise. It's similar
+/// to `getValueProfDataFromInst` above except that an array is allocated only
+/// after a preliminary checking that the value profiles of kind `ValueKind`
+/// exist.
+std::unique_ptr<InstrProfValueData[]>
+getValueProfDataFromInst(const Instruction &Inst, InstrProfValueKind ValueKind,
+                         uint32_t MaxNumValueData, uint32_t &ActualNumValueData,
+                         uint64_t &TotalC, bool GetNoICPValue = false);
+
 inline StringRef getPGOFuncNameMetadataName() { return "PGOFuncName"; }
 
 /// Return the PGOFuncName meta data associated with a function.
 MDNode *getPGOFuncNameMetadata(const Function &F);
+
+std::string getPGOName(const GlobalVariable &V, bool InLTO = false);
 
 /// Create the PGOFuncName meta data if PGOFuncName is different from
 /// function's raw name. This should only apply to internal linkage functions
@@ -295,7 +317,7 @@ void createPGOFuncNameMetadata(Function &F, StringRef PGOFuncName);
 
 /// Check if we can use Comdat for profile variables. This will eliminate
 /// the duplicated profile variables for Comdat functions.
-bool needsComdatForCounter(const Function &F, const Module &M);
+bool needsComdatForCounter(const GlobalObject &GV, const Module &M);
 
 /// An enum describing the attributes of an instrumented profile.
 enum class InstrProfKind {
@@ -431,10 +453,18 @@ public:
   using AddrHashMap = std::vector<std::pair<uint64_t, uint64_t>>;
 
 private:
+  using AddrIntervalMap =
+      IntervalMap<uint64_t, uint64_t, 4, IntervalMapHalfOpenInfo<uint64_t>>;
   StringRef Data;
   uint64_t Address = 0;
-  // Unique name strings.
+  // Unique name strings. Used to ensure entries in MD5NameMap (a vector that's
+  // going to be sorted) has unique MD5 keys in the first place.
   StringSet<> NameTab;
+  // Records the unique virtual table names. This is used by InstrProfWriter to
+  // write out an on-disk chained hash table of virtual table names.
+  // InstrProfWriter stores per function profile data (keyed by function names)
+  // so it doesn't use a StringSet for function names.
+  StringSet<> VTableNames;
   // A map from MD5 keys to function name strings.
   std::vector<std::pair<uint64_t, StringRef>> MD5NameMap;
   // A map from MD5 keys to function define. We only populate this map
@@ -443,11 +473,13 @@ private:
   // A map from function runtime address to function name MD5 hash.
   // This map is only populated and used by raw instr profile reader.
   AddrHashMap AddrToMD5Map;
+
+  AddrIntervalMap::Allocator VTableAddrMapAllocator;
+  // This map is only populated and used by raw instr profile reader.
+  AddrIntervalMap VTableAddrMap;
   bool Sorted = false;
 
-  static StringRef getExternalSymbol() {
-    return "** External Symbol **";
-  }
+  static StringRef getExternalSymbol() { return "** External Symbol **"; }
 
   // Returns the canonial name of the given PGOName. In a canonical name, all
   // suffixes that begins with "." except ".__uniq." are stripped.
@@ -469,7 +501,7 @@ private:
   inline void finalizeSymtab();
 
 public:
-  InstrProfSymtab() = default;
+  InstrProfSymtab() : VTableAddrMap(VTableAddrMapAllocator) {}
 
   // Not copyable or movable.
   // Consider std::unique_ptr for move.
@@ -488,8 +520,18 @@ public:
 
   /// \c NameStrings is a string composed of one of more sub-strings
   ///  encoded in the format described in \c collectPGOFuncNameStrings.
-  /// This method is a wrapper to \c readPGOFuncNameStrings method.
+  /// This method is a wrapper to \c readAndDecodeStrings method.
   Error create(StringRef NameStrings);
+
+  /// Initialize symtab states with function names and vtable names. \c
+  /// FuncNameStrings is a string composed of one or more encoded function name
+  /// strings, and \c VTableNameStrings composes of one or more encoded vtable
+  /// names. This interface is solely used by raw profile reader.
+  Error create(StringRef FuncNameStrings, StringRef VTableNameStrings);
+
+  /// Initialize 'this' with the set of vtable names encoded in
+  /// \c CompressedVTableNames.
+  Error initVTableNamesFromCompressedStrings(StringRef CompressedVTableNames);
 
   /// This interface is used by reader of CoverageMapping test
   /// format.
@@ -503,22 +545,49 @@ public:
 
   /// Create InstrProfSymtab from a set of names iteratable from
   /// \p IterRange. This interface is used by IndexedProfReader.
-  template <typename NameIterRange> Error create(const NameIterRange &IterRange);
+  template <typename NameIterRange>
+  Error create(const NameIterRange &IterRange);
 
-  /// Update the symtab by adding \p FuncName to the table. This interface
-  /// is used by the raw and text profile readers.
-  Error addFuncName(StringRef FuncName) {
-    if (FuncName.empty())
+  /// Create InstrProfSymtab from a set of function names and vtable
+  /// names iteratable from \p IterRange. This interface is used by
+  /// IndexedProfReader.
+  template <typename FuncNameIterRange, typename VTableNameIterRange>
+  Error create(const FuncNameIterRange &FuncIterRange,
+               const VTableNameIterRange &VTableIterRange);
+
+  Error addSymbolName(StringRef SymbolName) {
+    if (SymbolName.empty())
       return make_error<InstrProfError>(instrprof_error::malformed,
-                                        "function name is empty");
-    auto Ins = NameTab.insert(FuncName);
+                                        "symbol name is empty");
+
+    // Insert into NameTab so that MD5NameMap (a vector that will be sorted)
+    // won't have duplicated entries in the first place.
+    auto Ins = NameTab.insert(SymbolName);
     if (Ins.second) {
       MD5NameMap.push_back(std::make_pair(
-          IndexedInstrProf::ComputeHash(FuncName), Ins.first->getKey()));
+          IndexedInstrProf::ComputeHash(SymbolName), Ins.first->getKey()));
       Sorted = false;
     }
     return Error::success();
   }
+
+  /// The method name is kept since there are many callers.
+  /// It just forwards to 'addSymbolName'.
+  Error addFuncName(StringRef FuncName) { return addSymbolName(FuncName); }
+
+  /// Adds VTableName as a known symbol, and inserts it to a map that
+  /// tracks all vtable names.
+  Error addVTableName(StringRef VTableName) {
+    if (Error E = addSymbolName(VTableName))
+      return E;
+
+    // Record VTableName. InstrProfWriter uses this set. The comment around
+    // class member explains why.
+    VTableNames.insert(VTableName);
+    return Error::success();
+  }
+
+  const StringSet<> &getVTableNames() const { return VTableNames; }
 
   /// Map a function address to its name's MD5 hash. This interface
   /// is only used by the raw profiler reader.
@@ -526,8 +595,18 @@ public:
     AddrToMD5Map.push_back(std::make_pair(Addr, MD5Val));
   }
 
+  /// Map the address range (i.e., [start_address, end_address)) of a variable
+  /// to  its names' MD5 hash. This interface is only used by the raw profile
+  /// reader.
+  void mapVTableAddress(uint64_t StartAddr, uint64_t EndAddr, uint64_t MD5Val) {
+    VTableAddrMap.insert(StartAddr, EndAddr, MD5Val);
+  }
+
   /// Return a function's hash, or 0, if the function isn't in this SymTab.
   uint64_t getFunctionHashFromAddress(uint64_t Address);
+
+  /// Return a vtable's hash, or 0 if the vtable doesn't exist in this SymTab.
+  uint64_t getVTableHashFromAddress(uint64_t Address);
 
   /// Return function's PGO name from the function name's symbol
   /// address in the object file. If an error occurs, return
@@ -568,6 +647,24 @@ template <typename NameIterRange>
 Error InstrProfSymtab::create(const NameIterRange &IterRange) {
   for (auto Name : IterRange)
     if (Error E = addFuncName(Name))
+      return E;
+
+  finalizeSymtab();
+  return Error::success();
+}
+
+template <typename FuncNameIterRange, typename VTableNameIterRange>
+Error InstrProfSymtab::create(const FuncNameIterRange &FuncIterRange,
+                              const VTableNameIterRange &VTableIterRange) {
+  // Iterate elements by StringRef rather than by const reference.
+  // StringRef is small enough, so the loop is efficient whether
+  // element in the range is std::string or StringRef.
+  for (StringRef Name : FuncIterRange)
+    if (Error E = addFuncName(Name))
+      return E;
+
+  for (StringRef VTableName : VTableIterRange)
+    if (Error E = addVTableName(VTableName))
       return E;
 
   finalizeSymtab();
@@ -877,6 +974,8 @@ private:
       return ValueData->IndirectCallSites;
     case IPVK_MemOPSize:
       return ValueData->MemOPSizes;
+    case IPVK_VTableTarget:
+      return ValueData->VTableTargets;
     default:
       llvm_unreachable("Unknown value kind!");
     }
@@ -1062,9 +1161,15 @@ inline uint64_t ComputeHash(StringRef K) { return ComputeHash(HashType, K); }
 // as appropriate when updating the indexed profile format.
 struct Header {
   uint64_t Magic;
+  // The lower 32 bits specify the version of the indexed profile.
+  // The most significant 32 bits are reserved to specify the variant types of
+  // the profile.
   uint64_t Version;
   uint64_t Unused; // Becomes unused since version 4
   uint64_t HashType;
+  // This field records the offset of this hash table's metadata (i.e., the
+  // number of buckets and entries), which follows right after the payload of
+  // the entire hash table.
   uint64_t HashOffset;
   uint64_t MemProfOffset;
   uint64_t BinaryIdOffset;
@@ -1189,6 +1294,7 @@ namespace RawInstrProf {
 // Version 7: Reorder binary id and include version in signature.
 // Version 8: Use relative counter pointer.
 // Version 9: Added relative bitmap bytes pointer and count used by MC/DC.
+// Version 10: Added vtable, a new type of value profile data.
 const uint64_t Version = INSTR_PROF_RAW_VERSION;
 
 template <class IntPtrT> inline uint64_t getMagic();

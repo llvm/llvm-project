@@ -4,11 +4,11 @@ struct A{};
 
 template <typename T, typename U>
 auto Test(T* pt, U* pu) {
-  // CHECK: UnaryOperator {{.*}} '<dependent type>' prefix '*'
+  // CHECK: UnaryOperator {{.*}} '<dependent type>' lvalue prefix '*'
   // CHECK-NEXT: DeclRefExpr {{.*}} 'T *' lvalue ParmVar {{.*}} 'pt' 'T *'
   (void)*pt;
 
-  // CHECK: UnaryOperator {{.*}} '<dependent type>' prefix '++'
+  // CHECK: UnaryOperator {{.*}} '<dependent type>' lvalue prefix '++'
   // CHECK-NEXT: DeclRefExpr {{.*}} 'T *' lvalue ParmVar {{.*}} 'pt' 'T *'
   (void)(++pt);
 

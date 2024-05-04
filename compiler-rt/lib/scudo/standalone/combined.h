@@ -18,6 +18,7 @@
 #include "local_cache.h"
 #include "mem_map.h"
 #include "memtag.h"
+#include "mutex.h"
 #include "options.h"
 #include "quarantine.h"
 #include "report.h"
@@ -172,23 +173,26 @@ public:
         static_cast<u32>(getFlags()->quarantine_max_chunk_size);
 
     Stats.init();
+    // TODO(chiahungduan): Given that we support setting the default value in
+    // the PrimaryConfig and CacheConfig, consider to deprecate the use of
+    // `release_to_os_interval_ms` flag.
     const s32 ReleaseToOsIntervalMs = getFlags()->release_to_os_interval_ms;
     Primary.init(ReleaseToOsIntervalMs);
     Secondary.init(&Stats, ReleaseToOsIntervalMs);
     Quarantine.init(
         static_cast<uptr>(getFlags()->quarantine_size_kb << 10),
         static_cast<uptr>(getFlags()->thread_local_quarantine_size_kb << 10));
-
-    mapAndInitializeRingBuffer();
   }
 
-  void enableRingBuffer() {
+  void enableRingBuffer() NO_THREAD_SAFETY_ANALYSIS {
     AllocationRingBuffer *RB = getRingBuffer();
     if (RB)
       RB->Depot->enable();
+    RingBufferInitLock.unlock();
   }
 
-  void disableRingBuffer() {
+  void disableRingBuffer() NO_THREAD_SAFETY_ANALYSIS {
+    RingBufferInitLock.lock();
     AllocationRingBuffer *RB = getRingBuffer();
     if (RB)
       RB->Depot->disable();
@@ -915,9 +919,11 @@ public:
       DCHECK(!Primary.Options.load().get(OptionBit::TrackAllocationStacks));
       return;
     }
-    if (Track)
+
+    if (Track) {
+      initRingBufferMaybe();
       Primary.Options.set(OptionBit::TrackAllocationStacks);
-    else
+    } else
       Primary.Options.clear(OptionBit::TrackAllocationStacks);
   }
 
@@ -1091,6 +1097,9 @@ private:
                         alignof(typename AllocationRingBuffer::Entry) ==
                     0,
                 "invalid alignment");
+
+  // Lock to initialize the RingBuffer
+  HybridMutex RingBufferInitLock;
 
   // Pointer to memory mapped area starting with AllocationRingBuffer struct,
   // and immediately followed by Size elements of type Entry.
@@ -1546,11 +1555,16 @@ private:
         RBEntryStart)[N];
   }
 
-  void mapAndInitializeRingBuffer() {
-    if (getFlags()->allocation_ring_buffer_size <= 0)
+  void initRingBufferMaybe() {
+    ScopedLock L(RingBufferInitLock);
+    if (getRingBuffer() != nullptr)
       return;
-    u32 AllocationRingBufferSize =
-        static_cast<u32>(getFlags()->allocation_ring_buffer_size);
+
+    int ring_buffer_size = getFlags()->allocation_ring_buffer_size;
+    if (ring_buffer_size <= 0)
+      return;
+
+    u32 AllocationRingBufferSize = static_cast<u32>(ring_buffer_size);
 
     // We store alloc and free stacks for each entry.
     constexpr u32 kStacksPerRingBufferEntry = 2;

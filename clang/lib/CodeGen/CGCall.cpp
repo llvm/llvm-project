@@ -1585,6 +1585,11 @@ bool CodeGenModule::ReturnTypeUsesSRet(const CGFunctionInfo &FI) {
   return RI.isIndirect() || (RI.isInAlloca() && RI.getInAllocaSRet());
 }
 
+bool CodeGenModule::ReturnTypeHasInReg(const CGFunctionInfo &FI) {
+  const auto &RI = FI.getReturnInfo();
+  return RI.getInReg();
+}
+
 bool CodeGenModule::ReturnSlotInterferesWithArgs(const CGFunctionInfo &FI) {
   return ReturnTypeUsesSRet(FI) &&
          getTargetCodeGenInfo().doesReturnSlotInterfereWithArgs();
@@ -3665,7 +3670,7 @@ static void setUsedBits(CodeGenModule &CGM, const RecordType *RTy, int Offset,
   for (auto I = RD->field_begin(), E = RD->field_end(); I != E; ++I, ++Idx) {
     const FieldDecl *F = *I;
 
-    if (F->isUnnamedBitfield() || F->isZeroLengthBitField(Context) ||
+    if (F->isUnnamedBitField() || F->isZeroLengthBitField(Context) ||
         F->getType()->isIncompleteArrayType())
       continue;
 
@@ -4379,7 +4384,8 @@ void CodeGenFunction::EmitNonNullArgCheck(RValue RV, QualType ArgType,
     NNAttr = getNonNullAttr(AC.getDecl(), PVD, ArgType, ArgNo);
 
   bool CanCheckNullability = false;
-  if (SanOpts.has(SanitizerKind::NullabilityArg) && !NNAttr && PVD) {
+  if (SanOpts.has(SanitizerKind::NullabilityArg) && !NNAttr && PVD &&
+      !PVD->getType()->isRecordType()) {
     auto Nullability = PVD->getType()->getNullability();
     CanCheckNullability = Nullability &&
                           *Nullability == NullabilityKind::NonNull &&
@@ -4692,11 +4698,11 @@ void CodeGenFunction::EmitCallArg(CallArgList &args, const Expr *E,
     AggValueSlot Slot = args.isUsingInAlloca()
         ? createPlaceholderSlot(*this, type) : CreateAggTemp(type, "agg.tmp");
 
-    bool DestroyedInCallee = true, NeedsEHCleanup = true;
+    bool DestroyedInCallee = true, NeedsCleanup = true;
     if (const auto *RD = type->getAsCXXRecordDecl())
       DestroyedInCallee = RD->hasNonTrivialDestructor();
     else
-      NeedsEHCleanup = needsEHCleanup(type.isDestructedType());
+      NeedsCleanup = type.isDestructedType();
 
     if (DestroyedInCallee)
       Slot.setExternallyDestructed();
@@ -4705,21 +4711,23 @@ void CodeGenFunction::EmitCallArg(CallArgList &args, const Expr *E,
     RValue RV = Slot.asRValue();
     args.add(RV, type);
 
-    if (DestroyedInCallee && NeedsEHCleanup) {
+    if (DestroyedInCallee && NeedsCleanup) {
       // Create a no-op GEP between the placeholder and the cleanup so we can
       // RAUW it successfully.  It also serves as a marker of the first
       // instruction where the cleanup is active.
-      pushFullExprCleanup<DestroyUnpassedArg>(EHCleanup, Slot.getAddress(),
-                                              type);
+      pushFullExprCleanup<DestroyUnpassedArg>(NormalAndEHCleanup,
+                                              Slot.getAddress(), type);
       // This unreachable is a temporary marker which will be removed later.
-      llvm::Instruction *IsActive = Builder.CreateUnreachable();
+      llvm::Instruction *IsActive =
+          Builder.CreateFlagLoad(llvm::Constant::getNullValue(Int8PtrTy));
       args.addArgCleanupDeactivation(EHStack.stable_begin(), IsActive);
     }
     return;
   }
 
   if (HasAggregateEvalKind && isa<ImplicitCastExpr>(E) &&
-      cast<CastExpr>(E)->getCastKind() == CK_LValueToRValue) {
+      cast<CastExpr>(E)->getCastKind() == CK_LValueToRValue &&
+      !type->isArrayParameterType()) {
     LValue L = EmitLValue(cast<CastExpr>(E)->getSubExpr());
     assert(L.isSimple());
     args.addUncopiedAggregate(L, type);
@@ -5588,6 +5596,12 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
                              Callee.getAbstractInfo(), Attrs, CallingConv,
                              /*AttrOnCallSite=*/true,
                              /*IsThunk=*/false);
+
+  if (CallingConv == llvm::CallingConv::X86_VectorCall &&
+      getTarget().getTriple().isWindowsArm64EC()) {
+    CGM.Error(Loc, "__vectorcall calling convention is not currently "
+                   "supported");
+  }
 
   if (const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(CurFuncDecl)) {
     if (FD->hasAttr<StrictFPAttr>())

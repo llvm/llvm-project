@@ -1197,6 +1197,14 @@ public:
     return Ctx.getDecayedType(originalType);
   }
 
+  QualType VisitArrayParameterType(const ArrayParameterType *T) {
+    QualType ArrTy = VisitConstantArrayType(T);
+    if (ArrTy.isNull())
+      return {};
+
+    return Ctx.getArrayParameterType(ArrTy);
+  }
+
   SUGARED_TYPE_CLASS(TypeOfExpr)
   SUGARED_TYPE_CLASS(TypeOf)
   SUGARED_TYPE_CLASS(Decltype)
@@ -2502,6 +2510,18 @@ bool Type::isSveVLSBuiltinType() const {
   return false;
 }
 
+QualType Type::getSizelessVectorEltType(const ASTContext &Ctx) const {
+  assert(isSizelessVectorType() && "Must be sizeless vector type");
+  // Currently supports SVE and RVV
+  if (isSVESizelessBuiltinType())
+    return getSveEltType(Ctx);
+
+  if (isRVVSizelessBuiltinType())
+    return getRVVEltType(Ctx);
+
+  llvm_unreachable("Unhandled type");
+}
+
 QualType Type::getSveEltType(const ASTContext &Ctx) const {
   assert(isSveVLSBuiltinType() && "unsupported type!");
 
@@ -3405,8 +3425,8 @@ StringRef BuiltinType::getName(const PrintingPolicy &Policy) const {
     return "reserve_id_t";
   case IncompleteMatrixIdx:
     return "<incomplete matrix index type>";
-  case OMPArraySection:
-    return "<OpenMP array section type>";
+  case ArraySection:
+    return "<array section type>";
   case OMPArrayShaping:
     return "<OpenMP array shaping type>";
   case OMPIterator:
@@ -4454,6 +4474,7 @@ static CachedProperties computeCachedProperties(const Type *T) {
   case Type::ConstantArray:
   case Type::IncompleteArray:
   case Type::VariableArray:
+  case Type::ArrayParameter:
     return Cache::get(cast<ArrayType>(T)->getElementType());
   case Type::Vector:
   case Type::ExtVector:
@@ -4542,6 +4563,7 @@ LinkageInfo LinkageComputer::computeTypeLinkageInfo(const Type *T) {
   case Type::ConstantArray:
   case Type::IncompleteArray:
   case Type::VariableArray:
+  case Type::ArrayParameter:
     return computeTypeLinkageInfo(cast<ArrayType>(T)->getElementType());
   case Type::Vector:
   case Type::ExtVector:
@@ -4642,16 +4664,15 @@ bool Type::canHaveNullability(bool ResultIfUnknown) const {
   case Type::Auto:
     return ResultIfUnknown;
 
-  // Dependent template specializations can instantiate to pointer
-  // types unless they're known to be specializations of a class
-  // template.
+  // Dependent template specializations could instantiate to pointer types.
   case Type::TemplateSpecialization:
-    if (TemplateDecl *templateDecl
-          = cast<TemplateSpecializationType>(type.getTypePtr())
-              ->getTemplateName().getAsTemplateDecl()) {
-      if (isa<ClassTemplateDecl>(templateDecl))
-        return false;
-    }
+    // If it's a known class template, we can already check if it's nullable.
+    if (TemplateDecl *templateDecl =
+            cast<TemplateSpecializationType>(type.getTypePtr())
+                ->getTemplateName()
+                .getAsTemplateDecl())
+      if (auto *CTD = dyn_cast<ClassTemplateDecl>(templateDecl))
+        return CTD->getTemplatedDecl()->hasAttr<TypeNullableAttr>();
     return ResultIfUnknown;
 
   case Type::Builtin:
@@ -4701,12 +4722,23 @@ bool Type::canHaveNullability(bool ResultIfUnknown) const {
     case BuiltinType::BuiltinFn:
     case BuiltinType::NullPtr:
     case BuiltinType::IncompleteMatrixIdx:
-    case BuiltinType::OMPArraySection:
+    case BuiltinType::ArraySection:
     case BuiltinType::OMPArrayShaping:
     case BuiltinType::OMPIterator:
       return false;
     }
     llvm_unreachable("unknown builtin type");
+
+  case Type::Record: {
+    const RecordDecl *RD = cast<RecordType>(type)->getDecl();
+    // For template specializations, look only at primary template attributes.
+    // This is a consistent regardless of whether the instantiation is known.
+    if (const auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(RD))
+      return CTSD->getSpecializedTemplate()
+          ->getTemplatedDecl()
+          ->hasAttr<TypeNullableAttr>();
+    return RD->hasAttr<TypeNullableAttr>();
+  }
 
   // Non-pointer types.
   case Type::Complex:
@@ -4725,7 +4757,6 @@ bool Type::canHaveNullability(bool ResultIfUnknown) const {
   case Type::DependentAddressSpace:
   case Type::FunctionProto:
   case Type::FunctionNoProto:
-  case Type::Record:
   case Type::DeducedTemplateSpecialization:
   case Type::Enum:
   case Type::InjectedClassName:
@@ -4736,6 +4767,7 @@ bool Type::canHaveNullability(bool ResultIfUnknown) const {
   case Type::Pipe:
   case Type::BitInt:
   case Type::DependentBitInt:
+  case Type::ArrayParameter:
     return false;
   }
   llvm_unreachable("bad type kind!");

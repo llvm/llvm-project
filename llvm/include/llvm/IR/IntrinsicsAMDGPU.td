@@ -851,16 +851,19 @@ class AMDGPUImageDimIntrinsic<AMDGPUDimProfile P_,
                               list<SDNodeProperty> sdnodeprops> : Intrinsic<
     P_.RetTypes,        // vdata(VGPR) -- for load/atomic-with-return
     !listconcat(
-      !foreach(arg, P_.DataArgs, arg.Type),      // vdata(VGPR) -- for store/atomic
-      !if(P_.IsAtomic, [], [llvm_i32_ty]),       // dmask(imm)
-      P_.AddrTypes,                              // vaddr(VGPR)
-      [llvm_v8i32_ty],                           // rsrc(SGPR)
-      !if(P_.IsSample, [llvm_v4i32_ty,           // samp(SGPR)
-                        llvm_i1_ty], []),        // unorm(imm)
-      [llvm_i32_ty,                              // texfailctrl(imm; bit 0 = tfe, bit 1 = lwe)
-       llvm_i32_ty]),                            // cachepolicy(imm; bit 0 = glc, bit 1 = slc, bit 2 = dlc;
-                                                 //   gfx12+ imm: bits [0-2] = th, bits [3-4] = scope)
-
+      !foreach(arg, P_.DataArgs, arg.Type),    // vdata(VGPR) -- for store/atomic
+      !if(P_.IsAtomic, [], [llvm_i32_ty]),     // dmask(imm)
+      P_.AddrTypes,                            // vaddr(VGPR)
+      [llvm_v8i32_ty],                         // rsrc(SGPR)
+      !if(P_.IsSample, [llvm_v4i32_ty,         // samp(SGPR)
+                        llvm_i1_ty], []),      // unorm(imm)
+      [llvm_i32_ty,                            // texfailctrl(imm; bit 0 = tfe, bit 1 = lwe)
+       llvm_i32_ty]),                          // auxiliary/cachepolicy(imm):
+                                               //                bit 0 = glc, bit 1 = slc,
+                                               //                bit 2 = dlc (gfx10/gfx11),
+                                               //                bit 4 = scc (gfx90a)
+                                               //        gfx940: bit 0 = sc0, bit 1 = nt, bit 4 = sc1
+                                               //        gfx12+: bits [0-2] = th, bits [3-4] = scope
      !listconcat(props, [IntrNoCallback, IntrNoFree, IntrWillReturn],
           !if(P_.IsAtomic, [], [ImmArg<ArgIndex<AMDGPUImageDimIntrinsicEval<P_>.DmaskArgIndex>>]),
           !if(P_.IsSample, [ImmArg<ArgIndex<AMDGPUImageDimIntrinsicEval<P_>.UnormArgIndex>>], []),
@@ -1085,11 +1088,15 @@ def int_amdgcn_buffer_load : AMDGPUBufferLoad;
 // the offset argument is uniform.
 def int_amdgcn_s_buffer_load : DefaultAttrsIntrinsic <
   [llvm_any_ty],
-  [llvm_v4i32_ty,     // rsrc(SGPR)
-   llvm_i32_ty,       // byte offset
-   llvm_i32_ty],      // cachepolicy(imm; bit 0 = glc, bit 1 = slc, bit 2 = dlc;
-                      //   gfx12+ imm: bits [0-2] = th, bits [3-4] = scope)
-                      // Note: volatile bit is **not** permitted here.
+  [llvm_v4i32_ty,    // rsrc(SGPR)
+   llvm_i32_ty,      // byte offset
+   llvm_i32_ty],     // auxiliary/cachepolicy(imm):
+                     //                bit 0 = glc, bit 1 = slc, bit 2 = dlc (gfx10/gfx11),
+                     //                bit 3 = swz, bit 4 = scc (gfx90a)
+                     //        gfx940: bit 0 = sc0, bit 1 = nt, bit 3 = swz, bit 4 = sc1
+                     //        gfx12+: bits [0-2] = th, bits [3-4] = scope,
+                     //                bit 6 = swz
+                     // Note: volatile bit is **not** permitted here.
   [IntrNoMem, ImmArg<ArgIndex<2>>]>,
   AMDGPURsrcIntrinsic<0>;
 
@@ -1123,19 +1130,16 @@ def int_amdgcn_buffer_store : AMDGPUBufferStore;
 // operation is volatile.
 class AMDGPURawBufferLoad<LLVMType data_ty = llvm_any_ty> : DefaultAttrsIntrinsic <
   [data_ty],
-  [llvm_v4i32_ty,     // rsrc(SGPR)
-   llvm_i32_ty,       // offset(VGPR/imm, included in bounds checking and swizzling)
-   llvm_i32_ty,       // soffset(SGPR/imm, excluded from bounds checking and swizzling)
-   llvm_i32_ty],      // auxiliary data (imm, cachepolicy     (bit 0 = glc,
-                      //                                       bit 1 = slc,
-                      //                                       bit 2 = dlc on gfx10/gfx11),
-                      //                      swizzled buffer (bit 3 = swz),
-                      //                  gfx12+:
-                      //                      cachepolicy (bits [0-2] = th,
-                      //                                   bits [3-4] = scope)
-                      //                      swizzled buffer (bit 6 = swz),
-                      //                  all:
-                      //                      volatile op (bit 31, stripped at lowering))
+  [llvm_v4i32_ty,    // rsrc(SGPR)
+   llvm_i32_ty,      // offset(VGPR/imm, included in bounds checking and swizzling)
+   llvm_i32_ty,      // soffset(SGPR/imm, excluded from bounds checking and swizzling)
+   llvm_i32_ty],     // auxiliary/cachepolicy(imm):
+                     //                bit 0 = glc, bit 1 = slc, bit 2 = dlc (gfx10/gfx11),
+                     //                bit 3 = swz, bit 4 = scc (gfx90a)
+                     //        gfx940: bit 0 = sc0, bit 1 = nt, bit 3 = swz, bit 4 = sc1
+                     //        gfx12+: bits [0-2] = th, bits [3-4] = scope,
+                     //                bit 6 = swz
+                     //           all: volatile op (bit 31, stripped at lowering)
   [IntrReadMem, ImmArg<ArgIndex<3>>], "", [SDNPMemOperand]>,
   AMDGPURsrcIntrinsic<0>;
 def int_amdgcn_raw_buffer_load_format : AMDGPURawBufferLoad<llvm_anyfloat_ty>;
@@ -1143,20 +1147,16 @@ def int_amdgcn_raw_buffer_load : AMDGPURawBufferLoad;
 
 class AMDGPURawPtrBufferLoad<LLVMType data_ty = llvm_any_ty> : DefaultAttrsIntrinsic <
   [data_ty],
-  [AMDGPUBufferRsrcTy,         // rsrc(SGPR)
-   llvm_i32_ty,                 // offset(VGPR/imm, included in bounds checking and swizzling)
-   llvm_i32_ty,                 // soffset(SGPR/imm, excluded from bounds checking and swizzling)
-   llvm_i32_ty],                // auxiliary data (imm, cachepolicy (bit 0 = glc,
-                                //                                   bit 1 = slc,
-                                //                                   bit 2 = dlc on gfx10/gfx11),
-                                //                      swizzled buffer (bit 3 = swz),
-                                //                  gfx12+:
-                                //                      cachepolicy (bits [0-2] = th,
-                                //                                   bits [3-4] = scope)
-                                //                      swizzled buffer (bit 6 = swz),
-                                //                  all:
-                                //                      volatile op (bit 31, stripped at lowering))
-
+  [AMDGPUBufferRsrcTy,    // rsrc(SGPR)
+   llvm_i32_ty,           // offset(VGPR/imm, included in bounds checking and swizzling)
+   llvm_i32_ty,           // soffset(SGPR/imm, excluded from bounds checking and swizzling)
+   llvm_i32_ty],          // auxiliary/cachepolicy(imm):
+                          //                bit 0 = glc, bit 1 = slc, bit 2 = dlc (gfx10/gfx11),
+                          //                bit 3 = swz, bit 4 = scc (gfx90a)
+                          //        gfx940: bit 0 = sc0, bit 1 = nt, bit 3 = swz, bit 4 = sc1
+                          //        gfx12+: bits [0-2] = th, bits [3-4] = scope,
+                          //                bit 6 = swz
+                          //           all: volatile op (bit 31, stripped at lowering)
   [IntrArgMemOnly, IntrReadMem, ReadOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>,
   ImmArg<ArgIndex<3>>], "", [SDNPMemOperand]>,
   AMDGPURsrcIntrinsic<0>;
@@ -1165,20 +1165,17 @@ def int_amdgcn_raw_ptr_buffer_load : AMDGPURawPtrBufferLoad;
 
 class AMDGPUStructBufferLoad<LLVMType data_ty = llvm_any_ty> : DefaultAttrsIntrinsic <
   [data_ty],
-  [llvm_v4i32_ty,     // rsrc(SGPR)
-   llvm_i32_ty,       // vindex(VGPR)
-   llvm_i32_ty,       // offset(VGPR/imm, included in bounds checking and swizzling)
-   llvm_i32_ty,       // soffset(SGPR/imm, excluded from bounds checking and swizzling)
-   llvm_i32_ty],      // auxiliary data (imm, cachepolicy     (bit 0 = glc,
-                      //                                       bit 1 = slc,
-                      //                                       bit 2 = dlc on gfx10/gfx11),
-                      //                      swizzled buffer (bit 3 = swz),
-                      //                  gfx12+:
-                      //                      cachepolicy (bits [0-2] = th,
-                      //                                   bits [3-4] = scope)
-                      //                      swizzled buffer (bit 6 = swz),
-                      //                  all:
-                      //                      volatile op (bit 31, stripped at lowering))
+  [llvm_v4i32_ty,    // rsrc(SGPR)
+   llvm_i32_ty,      // vindex(VGPR)
+   llvm_i32_ty,      // offset(VGPR/imm, included in bounds checking and swizzling)
+   llvm_i32_ty,      // soffset(SGPR/imm, excluded from bounds checking and swizzling)
+   llvm_i32_ty],     // auxiliary/cachepolicy(imm):
+                     //                bit 0 = glc, bit 1 = slc, bit 2 = dlc (gfx10/gfx11),
+                     //                bit 3 = swz, bit 4 = scc (gfx90a)
+                     //        gfx940: bit 0 = sc0, bit 1 = nt, bit 3 = swz, bit 4 = sc1
+                     //        gfx12+: bits [0-2] = th, bits [3-4] = scope,
+                     //                bit 6 = swz
+                     //           all: volatile op (bit 31, stripped at lowering)
   [IntrReadMem, ImmArg<ArgIndex<4>>], "", [SDNPMemOperand]>,
   AMDGPURsrcIntrinsic<0>;
 def int_amdgcn_struct_buffer_load_format : AMDGPUStructBufferLoad;
@@ -1186,20 +1183,17 @@ def int_amdgcn_struct_buffer_load : AMDGPUStructBufferLoad;
 
 class AMDGPUStructPtrBufferLoad<LLVMType data_ty = llvm_any_ty> : DefaultAttrsIntrinsic <
   [data_ty],
-  [AMDGPUBufferRsrcTy,          // rsrc(SGPR)
-   llvm_i32_ty,                 // vindex(VGPR)
-   llvm_i32_ty,                 // offset(VGPR/imm, included in bounds checking and swizzling)
-   llvm_i32_ty,                 // soffset(SGPR/imm, excluded from bounds checking and swizzling)
-   llvm_i32_ty],                // auxiliary data (imm, cachepolicy (bit 0 = glc,
-                                //                                   bit 1 = slc,
-                                //                                   bit 2 = dlc on gfx10/gfx11),
-                                //                      swizzled buffer (bit 3 = swz),
-                                //                  gfx12+:
-                                //                      cachepolicy (bits [0-2] = th,
-                                //                                   bits [3-4] = scope)
-                                //                      swizzled buffer (bit 6 = swz),
-                                //                  all:
-                                //                      volatile op (bit 31, stripped at lowering))
+  [AMDGPUBufferRsrcTy,    // rsrc(SGPR)
+   llvm_i32_ty,           // vindex(VGPR)
+   llvm_i32_ty,           // offset(VGPR/imm, included in bounds checking and swizzling)
+   llvm_i32_ty,           // soffset(SGPR/imm, excluded from bounds checking and swizzling)
+   llvm_i32_ty],          // auxiliary/cachepolicy(imm):
+                          //                bit 0 = glc, bit 1 = slc, bit 2 = dlc (gfx10/gfx11),
+                          //                bit 3 = swz, bit 4 = scc (gfx90a)
+                          //        gfx940: bit 0 = sc0, bit 1 = nt, bit 3 = swz, bit 4 = sc1
+                          //        gfx12+: bits [0-2] = th, bits [3-4] = scope,
+                          //                bit 6 = swz
+                          //           all: volatile op (bit 31, stripped at lowering)
   [IntrArgMemOnly, IntrReadMem, ReadOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>,
    ImmArg<ArgIndex<4>>], "", [SDNPMemOperand]>,
   AMDGPURsrcIntrinsic<0>;
@@ -1208,20 +1202,17 @@ def int_amdgcn_struct_ptr_buffer_load : AMDGPUStructPtrBufferLoad;
 
 class AMDGPURawBufferStore<LLVMType data_ty = llvm_any_ty> : DefaultAttrsIntrinsic <
   [],
-  [data_ty,           // vdata(VGPR)
-   llvm_v4i32_ty,     // rsrc(SGPR)
-   llvm_i32_ty,       // offset(VGPR/imm, included in bounds checking and swizzling)
-   llvm_i32_ty,       // soffset(SGPR/imm, excluded from bounds checking and swizzling)
-   llvm_i32_ty],      // auxiliary data (imm, cachepolicy     (bit 0 = glc,
-                      //                                       bit 1 = slc,
-                      //                                       bit 2 = dlc on gfx10/gfx11),
-                      //                      swizzled buffer (bit 3 = swz),
-                      //                  gfx12+:
-                      //                      cachepolicy (bits [0-2] = th,
-                      //                                   bits [3-4] = scope)
-                      //                      swizzled buffer (bit 6 = swz),
-                      //                  all:
-                      //                      volatile op (bit 31, stripped at lowering))
+  [data_ty,          // vdata(VGPR)
+   llvm_v4i32_ty,    // rsrc(SGPR)
+   llvm_i32_ty,      // offset(VGPR/imm, included in bounds checking and swizzling)
+   llvm_i32_ty,      // soffset(SGPR/imm, excluded from bounds checking and swizzling)
+   llvm_i32_ty],     // auxiliary/cachepolicy(imm):
+                     //                bit 0 = glc, bit 1 = slc, bit 2 = dlc (gfx10/gfx11),
+                     //                bit 3 = swz, bit 4 = scc (gfx90a)
+                     //        gfx940: bit 0 = sc0, bit 1 = nt, bit 3 = swz, bit 4 = sc1
+                     //        gfx12+: bits [0-2] = th, bits [3-4] = scope,
+                     //                bit 6 = swz
+                     //           all: volatile op (bit 31, stripped at lowering)
   [IntrWriteMem, ImmArg<ArgIndex<4>>], "", [SDNPMemOperand]>,
   AMDGPURsrcIntrinsic<1>;
 def int_amdgcn_raw_buffer_store_format : AMDGPURawBufferStore<llvm_anyfloat_ty>;
@@ -1229,20 +1220,17 @@ def int_amdgcn_raw_buffer_store : AMDGPURawBufferStore;
 
 class AMDGPURawPtrBufferStore<LLVMType data_ty = llvm_any_ty> : DefaultAttrsIntrinsic <
   [],
-  [data_ty,                     // vdata(VGPR)
-   AMDGPUBufferRsrcTy,          // rsrc(SGPR)
-   llvm_i32_ty,                 // offset(VGPR/imm, included in bounds checking and swizzling)
-   llvm_i32_ty,                 // soffset(SGPR/imm, excluded from bounds checking and swizzling)
-   llvm_i32_ty],                // auxiliary data (imm, cachepolicy (bit 0 = glc,
-                                //                                   bit 1 = slc,
-                                //                                   bit 2 = dlc on gfx10/gfx11),
-                                //                      swizzled buffer (bit 3 = swz),
-                                //                  gfx12+:
-                                //                      cachepolicy (bits [0-2] = th,
-                                //                                   bits [3-4] = scope)
-                                //                      swizzled buffer (bit 6 = swz),
-                                //                  all:
-                                //                      volatile op (bit 31, stripped at lowering))
+  [data_ty,               // vdata(VGPR)
+   AMDGPUBufferRsrcTy,    // rsrc(SGPR)
+   llvm_i32_ty,           // offset(VGPR/imm, included in bounds checking and swizzling)
+   llvm_i32_ty,           // soffset(SGPR/imm, excluded from bounds checking and swizzling)
+   llvm_i32_ty],          // auxiliary/cachepolicy(imm):
+                          //                bit 0 = glc, bit 1 = slc, bit 2 = dlc (gfx10/gfx11),
+                          //                bit 3 = swz, bit 4 = scc (gfx90a)
+                          //        gfx940: bit 0 = sc0, bit 1 = nt, bit 3 = swz, bit 4 = sc1
+                          //        gfx12+: bits [0-2] = th, bits [3-4] = scope,
+                          //                bit 6 = swz
+                          //           all: volatile op (bit 31, stripped at lowering)
   [IntrArgMemOnly, IntrWriteMem, WriteOnly<ArgIndex<1>>, NoCapture<ArgIndex<1>>,
   ImmArg<ArgIndex<4>>], "", [SDNPMemOperand]>,
   AMDGPURsrcIntrinsic<1>;
@@ -1251,21 +1239,18 @@ def int_amdgcn_raw_ptr_buffer_store : AMDGPURawPtrBufferStore;
 
 class AMDGPUStructBufferStore<LLVMType data_ty = llvm_any_ty> : DefaultAttrsIntrinsic <
   [],
-  [data_ty,           // vdata(VGPR)
-   llvm_v4i32_ty,     // rsrc(SGPR)
-   llvm_i32_ty,       // vindex(VGPR)
-   llvm_i32_ty,       // offset(VGPR/imm, included in bounds checking and swizzling)
-   llvm_i32_ty,       // soffset(SGPR/imm, excluded from bounds checking and swizzling)
-   llvm_i32_ty],      // auxiliary data (imm, cachepolicy     (bit 0 = glc,
-                      //                                       bit 1 = slc,
-                      //                                       bit 2 = dlc on gfx10/gfx11),
-                      //                      swizzled buffer (bit 3 = swz),
-                      //                  gfx12+:
-                      //                      cachepolicy (bits [0-2] = th,
-                      //                                   bits [3-4] = scope)
-                      //                      swizzled buffer (bit 6 = swz),
-                      //                  all:
-                      //                      volatile op (bit 31, stripped at lowering))
+  [data_ty,          // vdata(VGPR)
+   llvm_v4i32_ty,    // rsrc(SGPR)
+   llvm_i32_ty,      // vindex(VGPR)
+   llvm_i32_ty,      // offset(VGPR/imm, included in bounds checking and swizzling)
+   llvm_i32_ty,      // soffset(SGPR/imm, excluded from bounds checking and swizzling)
+   llvm_i32_ty],     // auxiliary/cachepolicy(imm):
+                     //                bit 0 = glc, bit 1 = slc, bit 2 = dlc (gfx10/gfx11),
+                     //                bit 3 = swz, bit 4 = scc (gfx90a)
+                     //        gfx940: bit 0 = sc0, bit 1 = nt, bit 3 = swz, bit 4 = sc1
+                     //        gfx12+: bits [0-2] = th, bits [3-4] = scope,
+                     //                bit 6 = swz
+                     //           all: volatile op (bit 31, stripped at lowering)
   [IntrWriteMem, ImmArg<ArgIndex<5>>], "", [SDNPMemOperand]>,
   AMDGPURsrcIntrinsic<1>;
 def int_amdgcn_struct_buffer_store_format : AMDGPUStructBufferStore;
@@ -1273,21 +1258,18 @@ def int_amdgcn_struct_buffer_store : AMDGPUStructBufferStore;
 
 class AMDGPUStructPtrBufferStore<LLVMType data_ty = llvm_any_ty> : DefaultAttrsIntrinsic <
   [],
-  [data_ty,                     // vdata(VGPR)
-   AMDGPUBufferRsrcTy,          // rsrc(SGPR)
-   llvm_i32_ty,                 // vindex(VGPR)
-   llvm_i32_ty,                 // offset(VGPR/imm, included in bounds checking and swizzling)
-   llvm_i32_ty,                 // soffset(SGPR/imm, excluded from bounds checking and swizzling)
-   llvm_i32_ty],                // auxiliary data (imm, cachepolicy (bit 0 = glc,
-                                //                                   bit 1 = slc,
-                                //                                   bit 2 = dlc on gfx10/gfx11),
-                                //                      swizzled buffer (bit 3 = swz),
-                                //                  gfx12+:
-                                //                      cachepolicy (bits [0-2] = th,
-                                //                                   bits [3-4] = scope)
-                                //                      swizzled buffer (bit 6 = swz),
-                                //                  all:
-                                //                      volatile op (bit 31, stripped at lowering))
+  [data_ty,               // vdata(VGPR)
+   AMDGPUBufferRsrcTy,    // rsrc(SGPR)
+   llvm_i32_ty,           // vindex(VGPR)
+   llvm_i32_ty,           // offset(VGPR/imm, included in bounds checking and swizzling)
+   llvm_i32_ty,           // soffset(SGPR/imm, excluded from bounds checking and swizzling)
+   llvm_i32_ty],          // auxiliary/cachepolicy(imm):
+                          //                bit 0 = glc, bit 1 = slc, bit 2 = dlc (gfx10/gfx11),
+                          //                bit 3 = swz, bit 4 = scc (gfx90a)
+                          //        gfx940: bit 0 = sc0, bit 1 = nt, bit 3 = swz, bit 4 = sc1
+                          //        gfx12+: bits [0-2] = th, bits [3-4] = scope,
+                          //                bit 6 = swz
+                          //           all: volatile op (bit 31, stripped at lowering)
   [IntrArgMemOnly, IntrWriteMem, WriteOnly<ArgIndex<1>>, NoCapture<ArgIndex<1>>,
    ImmArg<ArgIndex<5>>], "", [SDNPMemOperand]>,
   AMDGPURsrcIntrinsic<1>;
@@ -1540,33 +1522,29 @@ def int_amdgcn_raw_tbuffer_load : DefaultAttrsIntrinsic <
      llvm_i32_ty,     // offset(VGPR/imm, included in bounds checking and swizzling)
      llvm_i32_ty,     // soffset(SGPR/imm, excluded from bounds checking and swizzling)
      llvm_i32_ty,     // format(imm; bits 3..0 = dfmt, bits 6..4 = nfmt)
-     llvm_i32_ty],    // auxiliary data (imm, cachepolicy     (bit 0 = glc,
-                      //                                       bit 1 = slc,
-                      //                                       bit 2 = dlc on gfx10/gfx11),
-                      //                      swizzled buffer (bit 3 = swz))
-                      //                  gfx12+:
-                      //                      cachepolicy (bits [0-2] = th,
-                      //                                   bits [3-4] = scope)
-                      //                      swizzled buffer (bit 6 = swz)
+     llvm_i32_ty],    // auxiliary/cachepolicy(imm):
+                      //                bit 0 = glc, bit 1 = slc, bit 2 = dlc (gfx10/gfx11),
+                      //                bit 3 = swz, bit 4 = scc (gfx90a)
+                      //        gfx940: bit 0 = sc0, bit 1 = nt, bit 3 = swz, bit 4 = sc1
+                      //        gfx12+: bits [0-2] = th, bits [3-4] = scope,
+                      //                bit 6 = swz
     [IntrReadMem,
      ImmArg<ArgIndex<3>>, ImmArg<ArgIndex<4>>], "", [SDNPMemOperand]>,
   AMDGPURsrcIntrinsic<0>;
 
 def int_amdgcn_raw_ptr_tbuffer_load : DefaultAttrsIntrinsic <
-    [llvm_any_ty],      // overloaded for types f32/i32, v2f32/v2i32, v4f32/v4i32
+    [llvm_any_ty],       // overloaded for types f32/i32, v2f32/v2i32, v4f32/v4i32
     [AMDGPUBufferRsrcTy, // rsrc(SGPR)
-     llvm_i32_ty,     // offset(VGPR/imm, included in bounds` checking and swizzling)
-     llvm_i32_ty,     // soffset(SGPR/imm, excluded from bounds checking and swizzling)
-     llvm_i32_ty,     // format(imm; bits 3..0 = dfmt, bits 6..4 = nfmt)
-     llvm_i32_ty],    // auxiliary data (imm, cachepolicy     (bit 0 = glc,
-                      //                                       bit 1 = slc,
-                      //                                       bit 2 = dlc on gfx10/gfx11),
-                      //                      swizzled buffer (bit 3 = swz),
-                      //                  gfx12+:
-                      //                      cachepolicy (bits [0-2] = th,
-                      //                                   bits [3-4] = scope)
-                      //                      swizzled buffer (bit 6 = swz)
-                      //                      volatile op (bit 31, stripped at lowering))
+     llvm_i32_ty,       // offset(VGPR/imm, included in bounds` checking and swizzling)
+     llvm_i32_ty,       // soffset(SGPR/imm, excluded from bounds checking and swizzling)
+     llvm_i32_ty,       // format(imm; bits 3..0 = dfmt, bits 6..4 = nfmt)
+     llvm_i32_ty],      // auxiliary/cachepolicy(imm):
+                        //                bit 0 = glc, bit 1 = slc, bit 2 = dlc (gfx10/gfx11),
+                        //                bit 3 = swz, bit 4 = scc (gfx90a)
+                        //        gfx940: bit 0 = sc0, bit 1 = nt, bit 3 = swz, bit 4 = sc1
+                        //        gfx12+: bits [0-2] = th, bits [3-4] = scope,
+                        //                bit 6 = swz
+                        //           all: volatile op (bit 31, stripped at lowering)
     [IntrArgMemOnly, IntrReadMem, ReadOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>,
      ImmArg<ArgIndex<3>>, ImmArg<ArgIndex<4>>], "", [SDNPMemOperand]>,
   AMDGPURsrcIntrinsic<0>;
@@ -1578,16 +1556,13 @@ def int_amdgcn_raw_tbuffer_store : DefaultAttrsIntrinsic <
      llvm_i32_ty,    // offset(VGPR/imm, included in bounds checking and swizzling)
      llvm_i32_ty,    // soffset(SGPR/imm, excluded from bounds checking and swizzling)
      llvm_i32_ty,    // format(imm; bits 3..0 = dfmt, bits 6..4 = nfmt)
-     llvm_i32_ty],   // auxiliary data (imm, cachepolicy     (bit 0 = glc,
-                     //                                       bit 1 = slc,
-                     //                                       bit 2 = dlc on gfx10/gfx11),
-                     //                      swizzled buffer (bit 3 = swz),
-                     //                  gfx12+:
-                     //                      cachepolicy (bits [0-2] = th,
-                     //                                   bits [3-4] = scope)
-                     //                      swizzled buffer (bit 6 = swz),
-                     //                  all:
-                     //                      volatile op (bit 31, stripped at lowering))
+     llvm_i32_ty],   // auxiliary/cachepolicy(imm):
+                     //                bit 0 = glc, bit 1 = slc, bit 2 = dlc (gfx10/gfx11),
+                     //                bit 3 = swz, bit 4 = scc (gfx90a)
+                     //        gfx940: bit 0 = sc0, bit 1 = nt, bit 3 = swz, bit 4 = sc1
+                     //        gfx12+: bits [0-2] = th, bits [3-4] = scope,
+                     //                bit 6 = swz
+                     //           all: volatile op (bit 31, stripped at lowering)
     [IntrWriteMem,
      ImmArg<ArgIndex<4>>, ImmArg<ArgIndex<5>>], "", [SDNPMemOperand]>,
   AMDGPURsrcIntrinsic<1>;
@@ -1599,16 +1574,13 @@ def int_amdgcn_raw_ptr_tbuffer_store : DefaultAttrsIntrinsic <
      llvm_i32_ty,    // offset(VGPR/imm, included in bounds checking and swizzling)
      llvm_i32_ty,    // soffset(SGPR/imm, excluded from bounds checking and swizzling)
      llvm_i32_ty,    // format(imm; bits 3..0 = dfmt, bits 6..4 = nfmt)
-     llvm_i32_ty],   // auxiliary data (imm, cachepolicy     (bit 0 = glc,
-                     //                                       bit 1 = slc,
-                     //                                       bit 2 = dlc on gfx10/gfx11),
-                     //                      swizzled buffer (bit 3 = swz),
-                     //                  gfx12+:
-                     //                      cachepolicy (bits [0-2] = th,
-                     //                                   bits [3-4] = scope)
-                     //                      swizzled buffer (bit 6 = swz),
-                     //                  all:
-                     //                      volatile op (bit 31, stripped at lowering))
+     llvm_i32_ty],   // auxiliary/cachepolicy(imm):
+                     //                bit 0 = glc, bit 1 = slc, bit 2 = dlc (gfx10/gfx11),
+                     //                bit 3 = swz, bit 4 = scc (gfx90a)
+                     //        gfx940: bit 0 = sc0, bit 1 = nt, bit 3 = swz, bit 4 = sc1
+                     //        gfx12+: bits [0-2] = th, bits [3-4] = scope,
+                     //                bit 6 = swz
+                     //           all: volatile op (bit 31, stripped at lowering)
     [IntrArgMemOnly, IntrWriteMem, WriteOnly<ArgIndex<1>>, NoCapture<ArgIndex<1>>,
      ImmArg<ArgIndex<4>>, ImmArg<ArgIndex<5>>], "", [SDNPMemOperand]>,
   AMDGPURsrcIntrinsic<1>;
@@ -1620,59 +1592,50 @@ def int_amdgcn_struct_tbuffer_load : DefaultAttrsIntrinsic <
      llvm_i32_ty,     // offset(VGPR/imm, included in bounds checking and swizzling)
      llvm_i32_ty,     // soffset(SGPR/imm, excluded from bounds checking and swizzling)
      llvm_i32_ty,     // format(imm; bits 3..0 = dfmt, bits 6..4 = nfmt)
-     llvm_i32_ty],    // auxiliary data (imm, cachepolicy     (bit 0 = glc,
-                      //                                       bit 1 = slc,
-                      //                                       bit 2 = dlc on gfx10/gfx11),
-                      //                      swizzled buffer (bit 3 = swz),
-                      //                  gfx12+:
-                      //                      cachepolicy (bits [0-2] = th,
-                      //                                   bits [3-4] = scope)
-                      //                      swizzled buffer (bit 6 = swz),
-                      //                  all:
-                      //                      volatile op (bit 31, stripped at lowering))
+     llvm_i32_ty],    // auxiliary/cachepolicy(imm):
+                      //                bit 0 = glc, bit 1 = slc, bit 2 = dlc (gfx10/gfx11),
+                      //                bit 3 = swz, bit 4 = scc (gfx90a)
+                      //        gfx940: bit 0 = sc0, bit 1 = nt, bit 3 = swz, bit 4 = sc1
+                      //        gfx12+: bits [0-2] = th, bits [3-4] = scope,
+                      //                bit 6 = swz
+                      //           all: volatile op (bit 31, stripped at lowering)
     [IntrReadMem,
      ImmArg<ArgIndex<4>>, ImmArg<ArgIndex<5>>], "", [SDNPMemOperand]>,
   AMDGPURsrcIntrinsic<0>;
 
 def int_amdgcn_struct_ptr_tbuffer_load : DefaultAttrsIntrinsic <
-    [llvm_any_ty],    // overloaded for types f32/i32, v2f32/v2i32, v4f32/v4i32
+    [llvm_any_ty],       // overloaded for types f32/i32, v2f32/v2i32, v4f32/v4i32
     [AMDGPUBufferRsrcTy, // rsrc(SGPR)
-     llvm_i32_ty,     // vindex(VGPR)
-     llvm_i32_ty,     // offset(VGPR/imm, included in bounds checking and swizzling)
-     llvm_i32_ty,     // soffset(SGPR/imm, excluded from bounds checking and swizzling)
-     llvm_i32_ty,     // format(imm; bits 3..0 = dfmt, bits 6..4 = nfmt)
-     llvm_i32_ty],    // auxiliary data (imm, cachepolicy     (bit 0 = glc,
-                      //                                       bit 1 = slc,
-                      //                                       bit 2 = dlc on gfx10/gfx11),
-                      //                      swizzled buffer (bit 3 = swz),
-                      //                  gfx12+:
-                      //                      cachepolicy (bits [0-2] = th,
-                      //                                   bits [3-4] = scope)
-                      //                      swizzled buffer (bit 6 = swz),
-                      //                  all:
-                      //                      volatile op (bit 31, stripped at lowering))
+     llvm_i32_ty,        // vindex(VGPR)
+     llvm_i32_ty,        // offset(VGPR/imm, included in bounds checking and swizzling)
+     llvm_i32_ty,        // soffset(SGPR/imm, excluded from bounds checking and swizzling)
+     llvm_i32_ty,        // format(imm; bits 3..0 = dfmt, bits 6..4 = nfmt)
+     llvm_i32_ty],       // auxiliary/cachepolicy(imm):
+                         //                bit 0 = glc, bit 1 = slc, bit 2 = dlc (gfx10/gfx11),
+                         //                bit 3 = swz, bit 4 = scc (gfx90a)
+                         //        gfx940: bit 0 = sc0, bit 1 = nt, bit 3 = swz, bit 4 = sc1
+                         //        gfx12+: bits [0-2] = th, bits [3-4] = scope,
+                         //                bit 6 = swz
+                         //           all: volatile op (bit 31, stripped at lowering)
     [IntrArgMemOnly, IntrReadMem, ReadOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>,
      ImmArg<ArgIndex<4>>, ImmArg<ArgIndex<5>>], "", [SDNPMemOperand]>,
   AMDGPURsrcIntrinsic<0>;
 
 def int_amdgcn_struct_ptr_tbuffer_store : DefaultAttrsIntrinsic <
     [],
-    [llvm_any_ty,    // vdata(VGPR), overloaded for types f32/i32, v2f32/v2i32, v4f32/v4i32
+    [llvm_any_ty,        // vdata(VGPR), overloaded for types f32/i32, v2f32/v2i32, v4f32/v4i32
      AMDGPUBufferRsrcTy, // rsrc(SGPR)
-     llvm_i32_ty,    // vindex(VGPR)
-     llvm_i32_ty,    // offset(VGPR/imm, included in bounds checking and swizzling)
-     llvm_i32_ty,    // soffset(SGPR/imm, excluded from bounds checking and swizzling)
-     llvm_i32_ty,    // format(imm; bits 3..0 = dfmt, bits 6..4 = nfmt)
-     llvm_i32_ty],   // auxiliary data (imm, cachepolicy     (bit 0 = glc,
-                     //                                       bit 1 = slc,
-                     //                                       bit 2 = dlc on gfx10/gfx11),
-                     //                      swizzled buffer (bit 3 = swz),
-                     //                  gfx12+:
-                     //                      cachepolicy (bits [0-2] = th,
-                     //                                   bits [3-4] = scope)
-                     //                      swizzled buffer (bit 6 = swz),
-                     //                  all:
-                     //                      volatile op (bit 31, stripped at lowering))
+     llvm_i32_ty,        // vindex(VGPR)
+     llvm_i32_ty,        // offset(VGPR/imm, included in bounds checking and swizzling)
+     llvm_i32_ty,        // soffset(SGPR/imm, excluded from bounds checking and swizzling)
+     llvm_i32_ty,        // format(imm; bits 3..0 = dfmt, bits 6..4 = nfmt)
+     llvm_i32_ty],       // auxiliary/cachepolicy(imm):
+                         //                bit 0 = glc, bit 1 = slc, bit 2 = dlc (gfx10/gfx11),
+                         //                bit 3 = swz, bit 4 = scc (gfx90a)
+                         //        gfx940: bit 0 = sc0, bit 1 = nt, bit 3 = swz, bit 4 = sc1
+                         //        gfx12+: bits [0-2] = th, bits [3-4] = scope,
+                         //                bit 6 = swz
+                         //           all: volatile op (bit 31, stripped at lowering)
     [IntrArgMemOnly, IntrWriteMem, WriteOnly<ArgIndex<1>>, NoCapture<ArgIndex<1>>,
      ImmArg<ArgIndex<5>>, ImmArg<ArgIndex<6>>], "", [SDNPMemOperand]>,
   AMDGPURsrcIntrinsic<1>;
@@ -1685,16 +1648,13 @@ def int_amdgcn_struct_tbuffer_store : DefaultAttrsIntrinsic <
      llvm_i32_ty,    // offset(VGPR/imm, included in bounds checking and swizzling)
      llvm_i32_ty,    // soffset(SGPR/imm, excluded from bounds checking and swizzling)
      llvm_i32_ty,    // format(imm; bits 3..0 = dfmt, bits 6..4 = nfmt)
-     llvm_i32_ty],   // auxiliary data (imm, cachepolicy     (bit 0 = glc,
-                     //                                       bit 1 = slc,
-                     //                                       bit 2 = dlc on gfx10/gfx11),
-                     //                      swizzled buffer (bit 3 = swz),
-                     //                  gfx12+:
-                     //                      cachepolicy (bits [0-2] = th,
-                     //                                   bits [3-4] = scope)
-                     //                      swizzled buffer (bit 6 = swz),
-                     //                  all:
-                     //                      volatile op (bit 31, stripped at lowering))
+     llvm_i32_ty],   // auxiliary/cachepolicy(imm):
+                     //                bit 0 = glc, bit 1 = slc, bit 2 = dlc (gfx10/gfx11),
+                     //                bit 3 = swz, bit 4 = scc (gfx90a)
+                     //        gfx940: bit 0 = sc0, bit 1 = nt, bit 3 = swz, bit 4 = sc1
+                     //        gfx12+: bits [0-2] = th, bits [3-4] = scope,
+                     //                bit 6 = swz
+                     //           all: volatile op (bit 31, stripped at lowering)
     [IntrWriteMem,
      ImmArg<ArgIndex<5>>, ImmArg<ArgIndex<6>>], "", [SDNPMemOperand]>,
   AMDGPURsrcIntrinsic<1>;
@@ -1746,44 +1706,38 @@ def int_amdgcn_buffer_atomic_fadd : AMDGPUBufferAtomicFP;
 
 class AMDGPURawBufferLoadLDS : Intrinsic <
   [],
-  [llvm_v4i32_ty,                      // rsrc(SGPR)
-   LLVMQualPointerType<3>,             // LDS base offset
-   llvm_i32_ty,                        // Data byte size: 1/2/4
-   llvm_i32_ty,                        // voffset(VGPR, included in bounds checking and swizzling)
-   llvm_i32_ty,                        // soffset(SGPR/imm, excluded from bounds checking and swizzling)
-   llvm_i32_ty,                        // imm offset(imm, included in bounds checking and swizzling)
-   llvm_i32_ty],                       // auxiliary data (imm, cachepolicy     (bit 0 = glc,
-                                       //                                       bit 1 = slc,
-                                       //                                       bit 2 = dlc on gfx10/gfx11))
-                                       //                      swizzled buffer (bit 3 = swz),
-                                       //                  gfx12+:
-                                       //                      cachepolicy (bits [0-2] = th,
-                                       //                                   bits [3-4] = scope)
-                                       //                      swizzled buffer (bit 6 = swz),
-                                       //                  all:
-                                       //                      volatile op (bit 31, stripped at lowering))
+  [llvm_v4i32_ty,             // rsrc(SGPR)
+   LLVMQualPointerType<3>,    // LDS base offset
+   llvm_i32_ty,               // Data byte size: 1/2/4
+   llvm_i32_ty,               // voffset(VGPR, included in bounds checking and swizzling)
+   llvm_i32_ty,               // soffset(SGPR/imm, excluded from bounds checking and swizzling)
+   llvm_i32_ty,               // imm offset(imm, included in bounds checking and swizzling)
+   llvm_i32_ty],              // auxiliary/cachepolicy(imm):
+                              //                bit 0 = glc, bit 1 = slc, bit 2 = dlc (gfx10/gfx11),
+                              //                bit 3 = swz, bit 4 = scc (gfx90a)
+                              //        gfx940: bit 0 = sc0, bit 1 = nt, bit 3 = swz, bit 4 = sc1
+                              //        gfx12+: bits [0-2] = th, bits [3-4] = scope,
+                              //                bit 6 = swz
+                              //           all: volatile op (bit 31, stripped at lowering)
   [IntrWillReturn, NoCapture<ArgIndex<1>>, ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<5>>,
    ImmArg<ArgIndex<6>>, IntrNoCallback, IntrNoFree], "", [SDNPMemOperand]>, AMDGPURsrcIntrinsic<0>;
 def int_amdgcn_raw_buffer_load_lds : AMDGPURawBufferLoadLDS;
 
 class AMDGPURawPtrBufferLoadLDS : Intrinsic <
   [],
-  [AMDGPUBufferRsrcTy,                 // rsrc(SGPR)
-   LLVMQualPointerType<3>,             // LDS base offset
-   llvm_i32_ty,                        // Data byte size: 1/2/4
-   llvm_i32_ty,                        // voffset(VGPR, included in bounds checking and swizzling)
-   llvm_i32_ty,                        // soffset(SGPR/imm, excluded from bounds checking and swizzling)
-   llvm_i32_ty,                        // imm offset(imm, included in bounds checking and swizzling)
-   llvm_i32_ty],                       // auxiliary data (imm, cachepolicy     (bit 0 = glc,
-                                       //                                       bit 1 = slc,
-                                       //                                       bit 2 = dlc on gfx10/gfx11))
-                                       //                      swizzled buffer (bit 3 = swz),
-                                       //                  gfx12+:
-                                       //                      cachepolicy (bits [0-2] = th,
-                                       //                                   bits [3-4] = scope)
-                                       //                      swizzled buffer (bit 6 = swz),
-                                       //                  all:
-                                       //                      volatile op (bit 31, stripped at lowering))
+  [AMDGPUBufferRsrcTy,        // rsrc(SGPR)
+   LLVMQualPointerType<3>,    // LDS base offset
+   llvm_i32_ty,               // Data byte size: 1/2/4
+   llvm_i32_ty,               // voffset(VGPR, included in bounds checking and swizzling)
+   llvm_i32_ty,               // soffset(SGPR/imm, excluded from bounds checking and swizzling)
+   llvm_i32_ty,               // imm offset(imm, included in bounds checking and swizzling)
+   llvm_i32_ty],              // auxiliary/cachepolicy(imm):
+                              //                bit 0 = glc, bit 1 = slc, bit 2 = dlc (gfx10/gfx11),
+                              //                bit 3 = swz, bit 4 = scc (gfx90a)
+                              //        gfx940: bit 0 = sc0, bit 1 = nt, bit 3 = swz, bit 4 = sc1
+                              //        gfx12+: bits [0-2] = th, bits [3-4] = scope,
+                              //                bit 6 = swz
+                              //           all: volatile op (bit 31, stripped at lowering)
   [IntrWillReturn, IntrArgMemOnly,
    ReadOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>,
    WriteOnly<ArgIndex<1>>, NoCapture<ArgIndex<1>>,
@@ -1793,46 +1747,40 @@ def int_amdgcn_raw_ptr_buffer_load_lds : AMDGPURawPtrBufferLoadLDS;
 
 class AMDGPUStructBufferLoadLDS : Intrinsic <
   [],
-  [llvm_v4i32_ty,                      // rsrc(SGPR)
-   LLVMQualPointerType<3>,             // LDS base offset
-   llvm_i32_ty,                        // Data byte size: 1/2/4
-   llvm_i32_ty,                        // vindex(VGPR)
-   llvm_i32_ty,                        // voffset(VGPR, included in bounds checking and swizzling)
-   llvm_i32_ty,                        // soffset(SGPR/imm, excluded from bounds checking and swizzling)
-   llvm_i32_ty,                        // imm offset(imm, included in bounds checking and swizzling)
-   llvm_i32_ty],                       // auxiliary data (imm, cachepolicy     (bit 0 = glc,
-                                       //                                       bit 1 = slc,
-                                       //                                       bit 2 = dlc on gfx10/gfx11))
-                                       //                      swizzled buffer (bit 3 = swz),
-                                       //                  gfx12+:
-                                       //                      cachepolicy (bits [0-2] = th,
-                                       //                                   bits [3-4] = scope)
-                                       //                      swizzled buffer (bit 6 = swz),
-                                       //                  all:
-                                       //                      volatile op (bit 31, stripped at lowering))
+  [llvm_v4i32_ty,             // rsrc(SGPR)
+   LLVMQualPointerType<3>,    // LDS base offset
+   llvm_i32_ty,               // Data byte size: 1/2/4
+   llvm_i32_ty,               // vindex(VGPR)
+   llvm_i32_ty,               // voffset(VGPR, included in bounds checking and swizzling)
+   llvm_i32_ty,               // soffset(SGPR/imm, excluded from bounds checking and swizzling)
+   llvm_i32_ty,               // imm offset(imm, included in bounds checking and swizzling)
+   llvm_i32_ty],              // auxiliary/cachepolicy(imm):
+                              //                bit 0 = glc, bit 1 = slc, bit 2 = dlc (gfx10/gfx11),
+                              //                bit 3 = swz, bit 4 = scc (gfx90a)
+                              //        gfx940: bit 0 = sc0, bit 1 = nt, bit 3 = swz, bit 4 = sc1
+                              //        gfx12+: bits [0-2] = th, bits [3-4] = scope,
+                              //                bit 6 = swz
+                              //           all: volatile op (bit 31, stripped at lowering)
   [IntrWillReturn, NoCapture<ArgIndex<1>>, ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<6>>,
    ImmArg<ArgIndex<7>>, IntrNoCallback, IntrNoFree], "", [SDNPMemOperand]>, AMDGPURsrcIntrinsic<0>;
 def int_amdgcn_struct_buffer_load_lds : AMDGPUStructBufferLoadLDS;
 
 class AMDGPUStructPtrBufferLoadLDS : Intrinsic <
   [],
-  [AMDGPUBufferRsrcTy,                 // rsrc(SGPR)
-   LLVMQualPointerType<3> ,            // LDS base offset
-   llvm_i32_ty,                        // Data byte size: 1/2/4
-   llvm_i32_ty,                        // vindex(VGPR)
-   llvm_i32_ty,                        // voffset(VGPR, included in bounds checking and swizzling)
-   llvm_i32_ty,                        // soffset(SGPR/imm, excluded from bounds checking and swizzling)
-   llvm_i32_ty,                        // imm offset(imm, included in bounds checking and swizzling)
-   llvm_i32_ty],                       // auxiliary data (imm, cachepolicy     (bit 0 = glc,
-                                       //                                       bit 1 = slc,
-                                       //                                       bit 2 = dlc on gfx10/gfx11))
-                                       //                      swizzled buffer (bit 3 = swz),
-                                       //                  gfx12+:
-                                       //                      cachepolicy (bits [0-2] = th,
-                                       //                                   bits [3-4] = scope)
-                                       //                      swizzled buffer (bit 6 = swz),
-                                       //                  all:
-                                       //                      volatile op (bit 31, stripped at lowering))
+  [AMDGPUBufferRsrcTy,        // rsrc(SGPR)
+   LLVMQualPointerType<3>,    // LDS base offset
+   llvm_i32_ty,               // Data byte size: 1/2/4
+   llvm_i32_ty,               // vindex(VGPR)
+   llvm_i32_ty,               // voffset(VGPR, included in bounds checking and swizzling)
+   llvm_i32_ty,               // soffset(SGPR/imm, excluded from bounds checking and swizzling)
+   llvm_i32_ty,               // imm offset(imm, included in bounds checking and swizzling)
+   llvm_i32_ty],              // auxiliary/cachepolicy(imm):
+                              //                bit 0 = glc, bit 1 = slc, bit 2 = dlc (gfx10/gfx11),
+                              //                bit 3 = swz, bit 4 = scc (gfx90a)
+                              //        gfx940: bit 0 = sc0, bit 1 = nt, bit 3 = swz, bit 4 = sc1
+                              //        gfx12+: bits [0-2] = th, bits [3-4] = scope,
+                              //                bit 6 = swz
+                              //           all: volatile op (bit 31, stripped at lowering)
   [IntrWillReturn, IntrArgMemOnly,
    ReadOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>,
    WriteOnly<ArgIndex<1>>, NoCapture<ArgIndex<1>>,
@@ -1939,9 +1887,12 @@ def int_amdgcn_s_setprio :
                                 IntrHasSideEffects]>;
 
 def int_amdgcn_s_ttracedata :
+  ClangBuiltin<"__builtin_amdgcn_s_ttracedata">,
   DefaultAttrsIntrinsic<[], [llvm_i32_ty],
                         [IntrNoMem, IntrHasSideEffects]>;
+
 def int_amdgcn_s_ttracedata_imm :
+  ClangBuiltin<"__builtin_amdgcn_s_ttracedata_imm">,
   DefaultAttrsIntrinsic<[], [llvm_i16_ty],
                         [IntrNoMem, IntrHasSideEffects, ImmArg<ArgIndex<0>>]>;
 
@@ -2061,6 +2012,24 @@ def int_amdgcn_interp_inreg_p10_f16:
 // llvm.amdgcn.interp.inreg.p2.f16 <p>, <j>, <tmp>, <high>
 // high selects whether high or low 16-bits are used for p operand
 def int_amdgcn_interp_inreg_p2_f16 :
+  DefaultAttrsIntrinsic<[llvm_half_ty],
+            [llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_i1_ty],
+            [IntrNoMem, IntrSpeculatable,
+             ImmArg<ArgIndex<3>>]>;
+
+// llvm.amdgcn.interp.p10.rtz.f16 <p>, <i>, <p0>, <high>
+// gfx11+ fp16 interpolation intrinsic, with round-toward-zero rounding mode.
+// high selects whether high or low 16-bits are used for p and p0 operands
+def int_amdgcn_interp_p10_rtz_f16:
+  DefaultAttrsIntrinsic<[llvm_float_ty],
+            [llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_i1_ty],
+            [IntrNoMem, IntrSpeculatable,
+             ImmArg<ArgIndex<3>>]>;
+
+// llvm.amdgcn.interp.p2.rtz.f16 <p>, <j>, <tmp>, <high>
+// gfx11+ fp16 interpolation intrinsic, with round-toward-zero rounding mode.
+// high selects whether high or low 16-bits are used for p operand
+def int_amdgcn_interp_p2_rtz_f16 :
   DefaultAttrsIntrinsic<[llvm_half_ty],
             [llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_i1_ty],
             [IntrNoMem, IntrSpeculatable,

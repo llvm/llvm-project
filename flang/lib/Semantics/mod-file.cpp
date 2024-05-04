@@ -202,7 +202,7 @@ static void HarvestInitializerSymbols(
           HarvestInitializerSymbols(set, *dtSym.scope());
         }
       } else {
-        CHECK(dtSym.has<UseErrorDetails>());
+        CHECK(dtSym.has<UseDetails>() || dtSym.has<UseErrorDetails>());
       }
     } else if (IsNamedConstant(*symbol) || scope.IsDerivedType()) {
       if (const auto *object{symbol->detailsIf<ObjectEntityDetails>()}) {
@@ -1397,13 +1397,17 @@ Scope *ModFileReader::Read(SourceName name, std::optional<bool> isIntrinsic,
   std::optional<ModuleCheckSumType> checkSum{
       VerifyHeader(sourceFile->content())};
   if (!checkSum) {
-    Say(name, ancestorName, "File has invalid checksum: %s"_warn_en_US,
-        sourceFile->path());
+    if (context_.ShouldWarn(common::UsageWarning::ModuleFile)) {
+      Say(name, ancestorName, "File has invalid checksum: %s"_warn_en_US,
+          sourceFile->path());
+    }
     return nullptr;
   } else if (requiredHash && *requiredHash != *checkSum) {
-    Say(name, ancestorName,
-        "File is not the right module file for %s"_warn_en_US,
-        "'"s + name.ToString() + "': "s + sourceFile->path());
+    if (context_.ShouldWarn(common::UsageWarning::ModuleFile)) {
+      Say(name, ancestorName,
+          "File is not the right module file for %s"_warn_en_US,
+          "'"s + name.ToString() + "': "s + sourceFile->path());
+    }
     return nullptr;
   }
   llvm::raw_null_ostream NullStream;
@@ -1458,11 +1462,11 @@ Scope *ModFileReader::Read(SourceName name, std::optional<bool> isIntrinsic,
     parentScope = ancestor;
   }
   // Process declarations from the module file
-  bool wasInModuleFile{context_.foldingContext().inModuleFile()};
-  context_.foldingContext().set_inModuleFile(true);
+  auto wasModuleFileName{context_.foldingContext().moduleFileName()};
+  context_.foldingContext().set_moduleFileName(name);
   GetModuleDependences(context_.moduleDependences(), sourceFile->content());
   ResolveNames(context_, parseTree, topScope);
-  context_.foldingContext().set_inModuleFile(wasInModuleFile);
+  context_.foldingContext().set_moduleFileName(wasModuleFileName);
   if (!moduleSymbol) {
     // Submodule symbols' storage are owned by their parents' scopes,
     // but their names are not in their parents' dictionaries -- we

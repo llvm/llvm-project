@@ -215,23 +215,41 @@ static Error dumpSectionToFile(StringRef SecName, StringRef Filename,
 }
 
 Error Object::compressOrDecompressSections(const CommonConfig &Config) {
-  // Build a list of the debug sections we are going to replace.
-  // We can't call `AddSection` while iterating over sections,
+  // Build a list of sections we are going to replace.
+  // We can't call `addSection` while iterating over sections,
   // because it would mutate the sections array.
   SmallVector<std::pair<SectionBase *, std::function<SectionBase *()>>, 0>
       ToReplace;
   for (SectionBase &Sec : sections()) {
-    if ((Sec.Flags & SHF_ALLOC) || !StringRef(Sec.Name).starts_with(".debug"))
+    std::optional<DebugCompressionType> CType;
+    for (auto &[Matcher, T] : Config.compressSections)
+      if (Matcher.matches(Sec.Name))
+        CType = T;
+    // Handle --compress-debug-sections and --decompress-debug-sections, which
+    // apply to non-ALLOC debug sections.
+    if (!(Sec.Flags & SHF_ALLOC) && StringRef(Sec.Name).starts_with(".debug")) {
+      if (Config.CompressionType != DebugCompressionType::None)
+        CType = Config.CompressionType;
+      else if (Config.DecompressDebugSections)
+        CType = DebugCompressionType::None;
+    }
+    if (!CType)
       continue;
+
+    if (Sec.ParentSegment)
+      return createStringError(
+          errc::invalid_argument,
+          "section '" + Sec.Name +
+              "' within a segment cannot be (de)compressed");
+
     if (auto *CS = dyn_cast<CompressedSection>(&Sec)) {
-      if (Config.DecompressDebugSections) {
+      if (*CType == DebugCompressionType::None)
         ToReplace.emplace_back(
             &Sec, [=] { return &addSection<DecompressedSection>(*CS); });
-      }
-    } else if (Config.CompressionType != DebugCompressionType::None) {
-      ToReplace.emplace_back(&Sec, [&, S = &Sec] {
+    } else if (*CType != DebugCompressionType::None) {
+      ToReplace.emplace_back(&Sec, [=, S = &Sec] {
         return &addSection<CompressedSection>(
-            CompressedSection(*S, Config.CompressionType, Is64Bits));
+            CompressedSection(*S, *CType, Is64Bits));
       });
     }
   }

@@ -20,6 +20,7 @@
 #include "bolt/Core/JumpTable.h"
 #include "bolt/Core/MCPlusBuilder.h"
 #include "bolt/RuntimeLibs/RuntimeLibrary.h"
+#include "llvm/ADT/AddressRanges.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/iterator.h"
@@ -265,7 +266,8 @@ class BinaryContext {
 
 public:
   static Expected<std::unique_ptr<BinaryContext>>
-  createBinaryContext(const ObjectFile *File, bool IsPIC,
+  createBinaryContext(Triple TheTriple, StringRef InputFileName,
+                      SubtargetFeatures *Features, bool IsPIC,
                       std::unique_ptr<DWARFContext> DwCtx,
                       JournalingStreams Logger);
 
@@ -724,6 +726,9 @@ public:
   uint64_t OldTextSectionAddress{0};
   uint64_t OldTextSectionOffset{0};
   uint64_t OldTextSectionSize{0};
+
+  /// Area in the input binary reserved for BOLT.
+  AddressRange BOLTReserved;
 
   /// Address of the code/function that is executed before any other code in
   /// the binary.

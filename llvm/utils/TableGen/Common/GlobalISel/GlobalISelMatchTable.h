@@ -1884,6 +1884,10 @@ public:
 
   StringRef getSymbolicName() const { return SymbolicName; }
 
+  static void emitRenderOpcodes(MatchTable &Table, RuleMatcher &Rule,
+                                unsigned NewInsnID, unsigned OldInsnID,
+                                unsigned OpIdx, StringRef Name);
+
   void emitRenderOpcodes(MatchTable &Table, RuleMatcher &Rule) const override;
 };
 
@@ -2226,6 +2230,15 @@ public:
   virtual void emitActionOpcodes(MatchTable &Table,
                                  RuleMatcher &Rule) const = 0;
 
+  /// If this opcode has an overload that can call GIR_Done directly, emit that
+  /// instead of the usual opcode and return "true". Return "false" if GIR_Done
+  /// still needs to be emitted.
+  virtual bool emitActionOpcodesAndDone(MatchTable &Table,
+                                        RuleMatcher &Rule) const {
+    emitActionOpcodes(Table, Rule);
+    return false;
+  }
+
 private:
   ActionKind Kind;
 };
@@ -2334,13 +2347,15 @@ public:
   EraseInstAction(unsigned InsnID)
       : MatchAction(AK_EraseInst), InsnID(InsnID) {}
 
+  unsigned getInsnID() const { return InsnID; }
+
   static bool classof(const MatchAction *A) {
     return A->getKind() == AK_EraseInst;
   }
 
   void emitActionOpcodes(MatchTable &Table, RuleMatcher &Rule) const override;
-  static void emitActionOpcodes(MatchTable &Table, RuleMatcher &Rule,
-                                unsigned InsnID);
+  bool emitActionOpcodesAndDone(MatchTable &Table,
+                                RuleMatcher &Rule) const override;
 };
 
 class ReplaceRegAction : public MatchAction {
@@ -2351,11 +2366,11 @@ class ReplaceRegAction : public MatchAction {
 public:
   ReplaceRegAction(unsigned OldInsnID, unsigned OldOpIdx, unsigned NewInsnId,
                    unsigned NewOpIdx)
-      : MatchAction(AK_EraseInst), OldInsnID(OldInsnID), OldOpIdx(OldOpIdx),
+      : MatchAction(AK_ReplaceReg), OldInsnID(OldInsnID), OldOpIdx(OldOpIdx),
         NewInsnId(NewInsnId), NewOpIdx(NewOpIdx) {}
 
   ReplaceRegAction(unsigned OldInsnID, unsigned OldOpIdx, unsigned TempRegID)
-      : MatchAction(AK_EraseInst), OldInsnID(OldInsnID), OldOpIdx(OldOpIdx),
+      : MatchAction(AK_ReplaceReg), OldInsnID(OldInsnID), OldOpIdx(OldOpIdx),
         TempRegID(TempRegID) {}
 
   static bool classof(const MatchAction *A) {
@@ -2381,9 +2396,14 @@ public:
   }
 
   void emitActionOpcodes(MatchTable &Table, RuleMatcher &Rule) const override {
-    Table << MatchTable::Opcode("GIR_ConstrainSelectedInstOperands")
-          << MatchTable::Comment("InsnID") << MatchTable::ULEB128Value(InsnID)
-          << MatchTable::LineBreak;
+    if (InsnID == 0) {
+      Table << MatchTable::Opcode("GIR_RootConstrainSelectedInstOperands")
+            << MatchTable::LineBreak;
+    } else {
+      Table << MatchTable::Opcode("GIR_ConstrainSelectedInstOperands")
+            << MatchTable::Comment("InsnID") << MatchTable::ULEB128Value(InsnID)
+            << MatchTable::LineBreak;
+    }
   }
 };
 

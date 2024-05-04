@@ -1554,7 +1554,6 @@ def CVTPS2DQrm : PDI<0x5B, MRMSrcMem, (outs VR128:$dst), (ins f128mem:$src),
                        (v4i32 (X86cvtp2Int (memopv4f32 addr:$src))))]>,
                      Sched<[WriteCvtPS2ILd]>, SIMD_EXC;
 
-
 // Convert Packed Double FP to Packed DW Integers
 let Predicates = [HasAVX, NoVLX], Uses = [MXCSR], mayRaiseFPException = 1 in {
 // The assembler can recognize rr 256-bit instructions by seeing a ymm
@@ -1584,6 +1583,20 @@ def VCVTPD2DQYrm : SDI<0xE6, MRMSrcMem, (outs VR128:$dst), (ins f256mem:$src),
                        [(set VR128:$dst,
                          (v4i32 (X86cvtp2Int (loadv4f64 addr:$src))))]>,
                        VEX, VEX_L, Sched<[WriteCvtPD2IYLd]>, WIG;
+}
+
+let Predicates = [HasAVX] in {
+  def : Pat<(v4i32 (lrint VR128:$src)), (VCVTPS2DQrr VR128:$src)>;
+  def : Pat<(v4i32 (lrint (loadv4f32 addr:$src))), (VCVTPS2DQrm addr:$src)>;
+  def : Pat<(v8i32 (lrint VR256:$src)), (VCVTPS2DQYrr VR256:$src)>;
+  def : Pat<(v8i32 (lrint (loadv8f32 addr:$src))), (VCVTPS2DQYrm addr:$src)>;
+  def : Pat<(v4i32 (lrint VR256:$src)), (VCVTPD2DQYrr VR256:$src)>;
+  def : Pat<(v4i32 (lrint (loadv4f64 addr:$src))), (VCVTPD2DQYrm addr:$src)>;
+}
+
+let Predicates = [UseSSE2] in {
+  def : Pat<(v4i32 (lrint VR128:$src)), (CVTPS2DQrr VR128:$src)>;
+  def : Pat<(v4i32 (lrint (loadv4f32 addr:$src))), (CVTPS2DQrm addr:$src)>;
 }
 
 def : InstAlias<"vcvtpd2dqx\t{$src, $dst|$dst, $src}",
@@ -5475,35 +5488,35 @@ multiclass sse41_fp_unop_p<bits<8> opc, string OpcodeStr,
   // Intrinsic operation, reg.
   // Vector intrinsic operation, reg
 let Uses = [MXCSR], mayRaiseFPException = 1 in {
-  def r : SS4AIi8<opc, MRMSrcReg,
-                  (outs RC:$dst), (ins RC:$src1, i32u8imm:$src2),
-                  !strconcat(OpcodeStr,
-                  "\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
-                  [(set RC:$dst, (VT (OpNode RC:$src1, timm:$src2)))]>,
-                  Sched<[sched]>;
+  def ri : SS4AIi8<opc, MRMSrcReg,
+                   (outs RC:$dst), (ins RC:$src1, i32u8imm:$src2),
+                   !strconcat(OpcodeStr,
+                   "\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
+                   [(set RC:$dst, (VT (OpNode RC:$src1, timm:$src2)))]>,
+                   Sched<[sched]>;
 
   // Vector intrinsic operation, mem
-  def m : SS4AIi8<opc, MRMSrcMem,
-                  (outs RC:$dst), (ins x86memop:$src1, i32u8imm:$src2),
-                  !strconcat(OpcodeStr,
-                  "\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
-                  [(set RC:$dst,
-                        (VT (OpNode (mem_frag addr:$src1), timm:$src2)))]>,
-                  Sched<[sched.Folded]>;
+  def mi : SS4AIi8<opc, MRMSrcMem,
+                   (outs RC:$dst), (ins x86memop:$src1, i32u8imm:$src2),
+                   !strconcat(OpcodeStr,
+                   "\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
+                   [(set RC:$dst,
+                         (VT (OpNode (mem_frag addr:$src1), timm:$src2)))]>,
+                   Sched<[sched.Folded]>;
 }
 }
 
 multiclass avx_fp_unop_rm<bits<8> opcss, bits<8> opcsd,
                           string OpcodeStr, X86FoldableSchedWrite sched> {
 let ExeDomain = SSEPackedSingle, hasSideEffects = 0, isCodeGenOnly = 1 in {
-  def SSr : SS4AIi8<opcss, MRMSrcReg,
+  def SSri : SS4AIi8<opcss, MRMSrcReg,
         (outs FR32:$dst), (ins FR32:$src1, FR32:$src2, i32u8imm:$src3),
         !strconcat(OpcodeStr,
             "ss\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}"),
       []>, Sched<[sched]>;
 
   let mayLoad = 1 in
-  def SSm : SS4AIi8<opcss, MRMSrcMem,
+  def SSmi : SS4AIi8<opcss, MRMSrcMem,
         (outs FR32:$dst), (ins FR32:$src1, f32mem:$src2, i32u8imm:$src3),
         !strconcat(OpcodeStr,
              "ss\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}"),
@@ -5511,14 +5524,14 @@ let ExeDomain = SSEPackedSingle, hasSideEffects = 0, isCodeGenOnly = 1 in {
 } // ExeDomain = SSEPackedSingle, hasSideEffects = 0
 
 let ExeDomain = SSEPackedDouble, hasSideEffects = 0, isCodeGenOnly = 1 in {
-  def SDr : SS4AIi8<opcsd, MRMSrcReg,
+  def SDri : SS4AIi8<opcsd, MRMSrcReg,
         (outs FR64:$dst), (ins FR64:$src1, FR64:$src2, i32u8imm:$src3),
         !strconcat(OpcodeStr,
               "sd\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}"),
         []>, Sched<[sched]>;
 
   let mayLoad = 1 in
-  def SDm : SS4AIi8<opcsd, MRMSrcMem,
+  def SDmi : SS4AIi8<opcsd, MRMSrcMem,
         (outs FR64:$dst), (ins FR64:$src1, f64mem:$src2, i32u8imm:$src3),
         !strconcat(OpcodeStr,
              "sd\t{$src3, $src2, $src1, $dst|$dst, $src1, $src2, $src3}"),
@@ -5530,44 +5543,44 @@ multiclass sse41_fp_unop_s<bits<8> opcss, bits<8> opcsd,
                            string OpcodeStr, X86FoldableSchedWrite sched> {
 let Uses = [MXCSR], mayRaiseFPException = 1 in {
 let ExeDomain = SSEPackedSingle, hasSideEffects = 0, isCodeGenOnly = 1 in {
-  def SSr : SS4AIi8<opcss, MRMSrcReg,
-                    (outs FR32:$dst), (ins FR32:$src1, i32u8imm:$src2),
-                    !strconcat(OpcodeStr,
-                               "ss\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
-                    []>, Sched<[sched]>;
+  def SSri : SS4AIi8<opcss, MRMSrcReg,
+                     (outs FR32:$dst), (ins FR32:$src1, i32u8imm:$src2),
+                     !strconcat(OpcodeStr,
+                                "ss\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
+                     []>, Sched<[sched]>;
 
   let mayLoad = 1 in
-  def SSm : SS4AIi8<opcss, MRMSrcMem,
-                    (outs FR32:$dst), (ins f32mem:$src1, i32u8imm:$src2),
-                    !strconcat(OpcodeStr,
-                               "ss\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
-                    []>, Sched<[sched.Folded, sched.ReadAfterFold]>;
+  def SSmi : SS4AIi8<opcss, MRMSrcMem,
+                     (outs FR32:$dst), (ins f32mem:$src1, i32u8imm:$src2),
+                     !strconcat(OpcodeStr,
+                                "ss\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
+                     []>, Sched<[sched.Folded, sched.ReadAfterFold]>;
 } // ExeDomain = SSEPackedSingle, hasSideEffects = 0
 
 let ExeDomain = SSEPackedDouble, hasSideEffects = 0, isCodeGenOnly = 1 in {
-  def SDr : SS4AIi8<opcsd, MRMSrcReg,
-                    (outs FR64:$dst), (ins FR64:$src1, i32u8imm:$src2),
-                    !strconcat(OpcodeStr,
-                               "sd\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
-                    []>, Sched<[sched]>;
+  def SDri : SS4AIi8<opcsd, MRMSrcReg,
+                     (outs FR64:$dst), (ins FR64:$src1, i32u8imm:$src2),
+                     !strconcat(OpcodeStr,
+                                "sd\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
+                     []>, Sched<[sched]>;
 
   let mayLoad = 1 in
-  def SDm : SS4AIi8<opcsd, MRMSrcMem,
-                    (outs FR64:$dst), (ins f64mem:$src1, i32u8imm:$src2),
-                    !strconcat(OpcodeStr,
-                               "sd\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
-                    []>, Sched<[sched.Folded, sched.ReadAfterFold]>;
+  def SDmi : SS4AIi8<opcsd, MRMSrcMem,
+                     (outs FR64:$dst), (ins f64mem:$src1, i32u8imm:$src2),
+                     !strconcat(OpcodeStr,
+                                "sd\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
+                     []>, Sched<[sched.Folded, sched.ReadAfterFold]>;
 } // ExeDomain = SSEPackedDouble, hasSideEffects = 0
 }
 }
 
-multiclass sse41_fp_binop_s<bits<8> opcss, bits<8> opcsd,
-                            string OpcodeStr, X86FoldableSchedWrite sched,
-                            ValueType VT32, ValueType VT64,
-                            SDNode OpNode, bit Is2Addr = 1> {
+multiclass sse41_fp_unop_s_int<bits<8> opcss, bits<8> opcsd,
+                               string OpcodeStr, X86FoldableSchedWrite sched,
+                               ValueType VT32, ValueType VT64,
+                               SDNode OpNode, bit Is2Addr = 1> {
 let Uses = [MXCSR], mayRaiseFPException = 1 in {
 let ExeDomain = SSEPackedSingle in {
-  def SSr_Int : SS4AIi8<opcss, MRMSrcReg,
+  def SSri_Int : SS4AIi8<opcss, MRMSrcReg,
         (outs VR128:$dst), (ins VR128:$src1, VR128:$src2, i32u8imm:$src3),
         !if(Is2Addr,
             !strconcat(OpcodeStr,
@@ -5577,7 +5590,7 @@ let ExeDomain = SSEPackedSingle in {
         [(set VR128:$dst, (VT32 (OpNode VR128:$src1, VR128:$src2, timm:$src3)))]>,
         Sched<[sched]>;
 
-  def SSm_Int : SS4AIi8<opcss, MRMSrcMem,
+  def SSmi_Int : SS4AIi8<opcss, MRMSrcMem,
         (outs VR128:$dst), (ins VR128:$src1, ssmem:$src2, i32u8imm:$src3),
         !if(Is2Addr,
             !strconcat(OpcodeStr,
@@ -5590,7 +5603,7 @@ let ExeDomain = SSEPackedSingle in {
 } // ExeDomain = SSEPackedSingle, isCodeGenOnly = 1
 
 let ExeDomain = SSEPackedDouble in {
-  def SDr_Int : SS4AIi8<opcsd, MRMSrcReg,
+  def SDri_Int : SS4AIi8<opcsd, MRMSrcReg,
         (outs VR128:$dst), (ins VR128:$src1, VR128:$src2, i32u8imm:$src3),
         !if(Is2Addr,
             !strconcat(OpcodeStr,
@@ -5600,7 +5613,7 @@ let ExeDomain = SSEPackedDouble in {
         [(set VR128:$dst, (VT64 (OpNode VR128:$src1, VR128:$src2, timm:$src3)))]>,
         Sched<[sched]>;
 
-  def SDm_Int : SS4AIi8<opcsd, MRMSrcMem,
+  def SDmi_Int : SS4AIi8<opcsd, MRMSrcMem,
         (outs VR128:$dst), (ins VR128:$src1, sdmem:$src2, i32u8imm:$src3),
         !if(Is2Addr,
             !strconcat(OpcodeStr,
@@ -5636,25 +5649,25 @@ let Predicates = [HasAVX, NoVLX] in {
   }
 }
 let Predicates = [UseAVX] in {
-  defm VROUND  : sse41_fp_binop_s<0x0A, 0x0B, "vround", SchedWriteFRnd.Scl,
-                                  v4f32, v2f64, X86RndScales, 0>,
-                                  VEX, VVVV, VEX_LIG, WIG, SIMD_EXC;
+  defm VROUND  : sse41_fp_unop_s_int<0x0A, 0x0B, "vround", SchedWriteFRnd.Scl,
+                                     v4f32, v2f64, X86RndScales, 0>,
+                                     VEX, VVVV, VEX_LIG, WIG, SIMD_EXC;
   defm VROUND  : avx_fp_unop_rm<0x0A, 0x0B, "vround", SchedWriteFRnd.Scl>,
                                 VEX, VVVV, VEX_LIG, WIG, SIMD_EXC;
 }
 
 let Predicates = [UseAVX] in {
   def : Pat<(X86any_VRndScale FR32:$src1, timm:$src2),
-            (VROUNDSSr (f32 (IMPLICIT_DEF)), FR32:$src1, timm:$src2)>;
+            (VROUNDSSri (f32 (IMPLICIT_DEF)), FR32:$src1, timm:$src2)>;
   def : Pat<(X86any_VRndScale FR64:$src1, timm:$src2),
-            (VROUNDSDr (f64 (IMPLICIT_DEF)), FR64:$src1, timm:$src2)>;
+            (VROUNDSDri (f64 (IMPLICIT_DEF)), FR64:$src1, timm:$src2)>;
 }
 
 let Predicates = [UseAVX, OptForSize] in {
   def : Pat<(X86any_VRndScale (loadf32 addr:$src1), timm:$src2),
-            (VROUNDSSm (f32 (IMPLICIT_DEF)), addr:$src1, timm:$src2)>;
+            (VROUNDSSmi (f32 (IMPLICIT_DEF)), addr:$src1, timm:$src2)>;
   def : Pat<(X86any_VRndScale (loadf64 addr:$src1), timm:$src2),
-            (VROUNDSDm (f64 (IMPLICIT_DEF)), addr:$src1, timm:$src2)>;
+            (VROUNDSDmi (f64 (IMPLICIT_DEF)), addr:$src1, timm:$src2)>;
 }
 
 let ExeDomain = SSEPackedSingle in
@@ -5667,26 +5680,33 @@ defm ROUNDPD  : sse41_fp_unop_p<0x09, "roundpd", f128mem, VR128, v2f64,
 defm ROUND  : sse41_fp_unop_s<0x0A, 0x0B, "round", SchedWriteFRnd.Scl>;
 
 let Constraints = "$src1 = $dst" in
-defm ROUND  : sse41_fp_binop_s<0x0A, 0x0B, "round", SchedWriteFRnd.Scl,
-                               v4f32, v2f64, X86RndScales>;
+defm ROUND  : sse41_fp_unop_s_int<0x0A, 0x0B, "round", SchedWriteFRnd.Scl,
+                                  v4f32, v2f64, X86RndScales>;
 
 let Predicates = [UseSSE41] in {
   def : Pat<(X86any_VRndScale FR32:$src1, timm:$src2),
-            (ROUNDSSr FR32:$src1, timm:$src2)>;
+            (ROUNDSSri FR32:$src1, timm:$src2)>;
   def : Pat<(X86any_VRndScale FR64:$src1, timm:$src2),
-            (ROUNDSDr FR64:$src1, timm:$src2)>;
+            (ROUNDSDri FR64:$src1, timm:$src2)>;
 }
 
 let Predicates = [UseSSE41, OptForSize] in {
   def : Pat<(X86any_VRndScale (loadf32 addr:$src1), timm:$src2),
-            (ROUNDSSm addr:$src1, timm:$src2)>;
+            (ROUNDSSmi addr:$src1, timm:$src2)>;
   def : Pat<(X86any_VRndScale (loadf64 addr:$src1), timm:$src2),
-            (ROUNDSDm addr:$src1, timm:$src2)>;
+            (ROUNDSDmi addr:$src1, timm:$src2)>;
 }
 
 //===----------------------------------------------------------------------===//
 // SSE4.1 - Packed Bit Test
 //===----------------------------------------------------------------------===//
+
+// ptest is commutable if only the Z flag is used. If the C flag is used,
+// commuting would change which operand is inverted.
+def X86ptest_commutable : PatFrag<(ops node:$src1, node:$src2),
+                                  (X86ptest node:$src1, node:$src2), [{
+  return onlyUsesZeroFlag(SDValue(Node, 0));
+}]>;
 
 // ptest instruction we'll lower to this in X86ISelLowering primarily from
 // the intel intrinsic that corresponds to this.
@@ -5723,6 +5743,17 @@ def PTESTrm : SS48I<0x17, MRMSrcMem, (outs), (ins VR128:$src1, f128mem:$src2),
               Sched<[SchedWriteVecTest.XMM.Folded, SchedWriteVecTest.XMM.ReadAfterFold]>;
 }
 
+let Predicates = [HasAVX] in {
+  def : Pat<(X86ptest_commutable (loadv2i64 addr:$src2), VR128:$src1),
+            (VPTESTrm VR128:$src1, addr:$src2)>;
+  def : Pat<(X86ptest_commutable (loadv4i64 addr:$src2), VR256:$src1),
+            (VPTESTYrm VR256:$src1, addr:$src2)>;
+}
+let Predicates = [UseSSE41] in {
+  def : Pat<(X86ptest_commutable (memopv2i64 addr:$src2), VR128:$src1),
+            (PTESTrm VR128:$src1, addr:$src2)>;
+}
+
 // The bit test instructions below are AVX only
 multiclass avx_bittest<bits<8> opc, string OpcodeStr, RegisterClass RC,
                        X86MemOperand x86memop, PatFrag mem_frag, ValueType vt,
@@ -5737,6 +5768,13 @@ multiclass avx_bittest<bits<8> opc, string OpcodeStr, RegisterClass RC,
             Sched<[sched.Folded, sched.ReadAfterFold]>, VEX;
 }
 
+// testps/testpd are commutable if only the Z flag is used. If the C flag is
+// used, commuting would change which operand is inverted.
+def X86testp_commutable : PatFrag<(ops node:$src1, node:$src2),
+                                  (X86testp node:$src1, node:$src2), [{
+  return onlyUsesZeroFlag(SDValue(Node, 0));
+}]>;
+
 let Defs = [EFLAGS], Predicates = [HasAVX] in {
 let ExeDomain = SSEPackedSingle in {
 defm VTESTPS  : avx_bittest<0x0E, "vtestps", VR128, f128mem, loadv4f32, v4f32,
@@ -5750,6 +5788,18 @@ defm VTESTPD  : avx_bittest<0x0F, "vtestpd", VR128, f128mem, loadv2f64, v2f64,
 defm VTESTPDY : avx_bittest<0x0F, "vtestpd", VR256, f256mem, loadv4f64, v4f64,
                             SchedWriteFTest.YMM>, VEX_L;
 }
+}
+
+let Predicates = [HasAVX] in {
+  def : Pat<(X86testp_commutable (loadv4f32 addr:$src2), VR128:$src),
+            (VTESTPSrm VR128:$src, addr:$src2)>;
+  def : Pat<(X86testp_commutable (loadv8f32 addr:$src2), VR256:$src),
+            (VTESTPSYrm VR256:$src, addr:$src2)>;
+
+  def : Pat<(X86testp_commutable (loadv2f64 addr:$src2), VR128:$src),
+            (VTESTPDrm VR128:$src, addr:$src2)>;
+  def : Pat<(X86testp_commutable (loadv4f64 addr:$src2), VR256:$src),
+            (VTESTPDYrm VR256:$src, addr:$src2)>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -6689,31 +6739,31 @@ let Predicates = [HasCRC32, HasEGPR, In64BitMode], OpMap = T_MAP4, OpEnc = EncEV
 
 // FIXME: Is there a better scheduler class for SHA than WriteVecIMul?
 multiclass SHAI_binop<bits<8> Opc, string OpcodeStr, Intrinsic IntId,
-                      X86FoldableSchedWrite sched, string Suffix = "", bit UsesXMM0 = 0> {
-  def rr#Suffix : I<Opc, MRMSrcReg, (outs VR128:$dst),
-                    (ins VR128:$src1, VR128:$src2),
-                    !if(UsesXMM0,
-                        !strconcat(OpcodeStr, "\t{%xmm0, $src2, $dst|$dst, $src2, xmm0}"),
-                        !strconcat(OpcodeStr, "\t{$src2, $dst|$dst, $src2}")),
-                    [!if(UsesXMM0,
-                         (set VR128:$dst, (IntId VR128:$src1, VR128:$src2, XMM0)),
-                         (set VR128:$dst, (IntId VR128:$src1, VR128:$src2)))]>,
-                    T8, Sched<[sched]>;
+                      X86FoldableSchedWrite sched, bit UsesXMM0 = 0> {
+  def rr : I<Opc, MRMSrcReg, (outs VR128:$dst),
+             (ins VR128:$src1, VR128:$src2),
+             !if(UsesXMM0,
+                 !strconcat(OpcodeStr, "\t{%xmm0, $src2, $dst|$dst, $src2, xmm0}"),
+                 !strconcat(OpcodeStr, "\t{$src2, $dst|$dst, $src2}")),
+             [!if(UsesXMM0,
+                  (set VR128:$dst, (IntId VR128:$src1, VR128:$src2, XMM0)),
+                  (set VR128:$dst, (IntId VR128:$src1, VR128:$src2)))]>,
+             T8, Sched<[sched]>;
 
-  def rm#Suffix : I<Opc, MRMSrcMem, (outs VR128:$dst),
-                    (ins VR128:$src1, i128mem:$src2),
-                    !if(UsesXMM0,
-                        !strconcat(OpcodeStr, "\t{%xmm0, $src2, $dst|$dst, $src2, xmm0}"),
-                        !strconcat(OpcodeStr, "\t{$src2, $dst|$dst, $src2}")),
-                    [!if(UsesXMM0,
-                         (set VR128:$dst, (IntId VR128:$src1,
-                           (memop addr:$src2), XMM0)),
-                         (set VR128:$dst, (IntId VR128:$src1,
-                           (memop addr:$src2))))]>, T8,
-                    Sched<[sched.Folded, sched.ReadAfterFold]>;
+  def rm : I<Opc, MRMSrcMem, (outs VR128:$dst),
+             (ins VR128:$src1, i128mem:$src2),
+             !if(UsesXMM0,
+                 !strconcat(OpcodeStr, "\t{%xmm0, $src2, $dst|$dst, $src2, xmm0}"),
+                 !strconcat(OpcodeStr, "\t{$src2, $dst|$dst, $src2}")),
+             [!if(UsesXMM0,
+                  (set VR128:$dst, (IntId VR128:$src1,
+                    (memop addr:$src2), XMM0)),
+                  (set VR128:$dst, (IntId VR128:$src1,
+                    (memop addr:$src2))))]>, T8,
+             Sched<[sched.Folded, sched.ReadAfterFold]>;
 }
 
-let Constraints = "$src1 = $dst", Predicates = [HasSHA, NoEGPR] in {
+let Constraints = "$src1 = $dst", Predicates = [HasSHA] in {
   def SHA1RNDS4rri : Ii8<0xCC, MRMSrcReg, (outs VR128:$dst),
                          (ins VR128:$src1, VR128:$src2, u8imm:$src3),
                          "sha1rnds4\t{$src3, $src2, $dst|$dst, $src2, $src3}",
@@ -6740,7 +6790,7 @@ let Constraints = "$src1 = $dst", Predicates = [HasSHA, NoEGPR] in {
 
   let Uses=[XMM0] in
   defm SHA256RNDS2 : SHAI_binop<0xCB, "sha256rnds2", int_x86_sha256rnds2,
-                                SchedWriteVecIMul.XMM, "", 1>;
+                                SchedWriteVecIMul.XMM, 1>;
 
   defm SHA256MSG1 : SHAI_binop<0xCC, "sha256msg1", int_x86_sha256msg1,
                                SchedWriteVecIMul.XMM>;
@@ -6748,47 +6798,6 @@ let Constraints = "$src1 = $dst", Predicates = [HasSHA, NoEGPR] in {
                                SchedWriteVecIMul.XMM>;
 }
 
-let Constraints = "$src1 = $dst", Predicates = [HasSHA, HasEGPR, In64BitMode] in {
-  def SHA1RNDS4rri_EVEX: Ii8<0xD4, MRMSrcReg, (outs VR128:$dst),
-                             (ins VR128:$src1, VR128:$src2, u8imm:$src3),
-                             "sha1rnds4\t{$src3, $src2, $dst|$dst, $src2, $src3}",
-                             [(set VR128:$dst,
-                               (int_x86_sha1rnds4 VR128:$src1, VR128:$src2,
-                                (i8 timm:$src3)))]>,
-                         EVEX, NoCD8, T_MAP4, Sched<[SchedWriteVecIMul.XMM]>;
-  def SHA1RNDS4rmi_EVEX: Ii8<0xD4, MRMSrcMem, (outs VR128:$dst),
-                             (ins VR128:$src1, i128mem:$src2, u8imm:$src3),
-                             "sha1rnds4\t{$src3, $src2, $dst|$dst, $src2, $src3}",
-                             [(set VR128:$dst,
-                               (int_x86_sha1rnds4 VR128:$src1,
-                                (memop addr:$src2),
-                                (i8 timm:$src3)))]>,
-                         EVEX, NoCD8, T_MAP4,
-                         Sched<[SchedWriteVecIMul.XMM.Folded,
-                                SchedWriteVecIMul.XMM.ReadAfterFold]>;
-
-  defm SHA1NEXTE : SHAI_binop<0xD8, "sha1nexte", int_x86_sha1nexte,
-                                   SchedWriteVecIMul.XMM, "_EVEX">,
-                        EVEX, NoCD8, T_MAP4;
-  defm SHA1MSG1  : SHAI_binop<0xD9, "sha1msg1", int_x86_sha1msg1,
-                              SchedWriteVecIMul.XMM, "_EVEX">,
-                   EVEX, NoCD8, T_MAP4;
-  defm SHA1MSG2  : SHAI_binop<0xDA, "sha1msg2", int_x86_sha1msg2,
-                              SchedWriteVecIMul.XMM, "_EVEX">,
-                   EVEX, NoCD8, T_MAP4;
-
-  let Uses=[XMM0] in
-  defm SHA256RNDS2 : SHAI_binop<0xDB, "sha256rnds2", int_x86_sha256rnds2,
-                                SchedWriteVecIMul.XMM, "_EVEX", 1>,
-                     EVEX, NoCD8, T_MAP4;
-
-  defm SHA256MSG1 : SHAI_binop<0xDC, "sha256msg1", int_x86_sha256msg1,
-                               SchedWriteVecIMul.XMM, "_EVEX">,
-                    EVEX, NoCD8, T_MAP4;
-  defm SHA256MSG2 : SHAI_binop<0xDD, "sha256msg2", int_x86_sha256msg2,
-                               SchedWriteVecIMul.XMM, "_EVEX">,
-                    EVEX, NoCD8, T_MAP4;
-}
 
 //===----------------------------------------------------------------------===//
 // AES-NI Instructions
@@ -8314,7 +8323,7 @@ let Predicates = [HasAVXNECONVERT] in {
        f256mem>, T8;
   defm VCVTNEPS2BF16 : VCVTNEPS2BF16_BASE, VEX, T8, XS, ExplicitVEXPrefix;
 
-  def : Pat<(v8bf16 (X86cvtneps2bf16 (v4f32 VR128X:$src))),
+  def : Pat<(v8bf16 (X86cvtneps2bf16 (v4f32 VR128:$src))),
             (VCVTNEPS2BF16rr VR128:$src)>;
   def : Pat<(v8bf16 (X86cvtneps2bf16 (loadv4f32 addr:$src))),
             (VCVTNEPS2BF16rm addr:$src)>;

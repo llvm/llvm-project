@@ -9,15 +9,17 @@
 #ifndef LLVM_LIBC_TEST_SRC_MATH_TRUNCTEST_H
 #define LLVM_LIBC_TEST_SRC_MATH_TRUNCTEST_H
 
+#include "test/UnitTest/FEnvSafeTest.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
 
-#include "include/llvm-libc-macros/math-macros.h"
+#include "hdr/math_macros.h"
 
 namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
-template <typename T> class TruncTest : public LIBC_NAMESPACE::testing::Test {
+template <typename T>
+class TruncTest : public LIBC_NAMESPACE::testing::FEnvSafeTest {
 
   DECLARE_SPECIAL_CONSTANTS(T)
 
