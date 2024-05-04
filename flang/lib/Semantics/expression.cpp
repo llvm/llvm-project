@@ -1805,10 +1805,13 @@ void ArrayConstructorContext::Add(const parser::AcImpliedDo &impliedDo) {
   const auto &bounds{std::get<parser::AcImpliedDoControl::Bounds>(control.t)};
   exprAnalyzer_.Analyze(bounds.name);
   parser::CharBlock name{bounds.name.thing.thing.source};
-  const Symbol *symbol{bounds.name.thing.thing.symbol};
   int kind{ImpliedDoIntType::kind};
-  if (const auto dynamicType{DynamicType::From(symbol)}) {
-    kind = dynamicType->kind();
+  if (const Symbol * symbol{bounds.name.thing.thing.symbol}) {
+    if (auto dynamicType{DynamicType::From(symbol)}) {
+      if (dynamicType->category() == TypeCategory::Integer) {
+        kind = dynamicType->kind();
+      }
+    }
   }
   std::optional<Expr<ImpliedDoIntType>> lower{
       GetSpecificIntExpr<ImpliedDoIntType::kind>(bounds.lower)};

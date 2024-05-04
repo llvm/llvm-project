@@ -107,12 +107,6 @@ end
   These definitions yield fairly poor results due to floating-point
   cancellation, and every Fortran compiler (including this one)
   uses better algorithms.
-* When an index variable of a `FORALL` or `DO CONCURRENT` is present
-  in the enclosing scope, and the construct does not have an explicit
-  type specification for its index variables, some weird restrictions
-  in F'2023 subclause 19.4 paragraphs 6 & 8 should apply.  Since this
-  compiler properly scopes these names, violations of these restrictions
-  elicit only portability warnings by default.
 * The rules for pairwise distinguishing the specific procedures of a
   generic interface are inadequate, as admitted in note C.11.6 of F'2023.
   Generic interfaces whose specific procedures can be easily proven by
@@ -727,6 +721,23 @@ end
   is desirable in such context (Fortran interop 1.6.2 in F2018 standards require
   array and structure constructors not to be finalized, so it also makes sense
   not to finalize their allocatable components when releasing their storage).
+
+* F'2023 19.4 paragraph 5: "If integer-type-spec appears in data-implied-do or
+  ac-implied-do-control it has the specified type and type parameters; otherwise
+  it has the type and type parameters that it would have if it were the name of
+  a variable in the innermost executable construct or scoping unit that includes
+  the DATA statement or array constructor, and this type shall be integer type."
+  Reading "would have if it were" as being the subjunctive, this would mean that
+  an untyped implied DO index variable should be implicitly typed according to
+  the rules active in the enclosing scope.  But all other Fortran compilers interpret
+  the "would have if it were" as meaning "has if it is" -- i.e., if the name
+  is visible in the enclosing scope, the type of that name is used as the
+  type of the implied DO index.  So this is an error, not a simple application
+  of the default implicit typing rule:
+```
+character j
+print *, [(j,j=1,10)]
+```
 
 ## De Facto Standard Features
 
