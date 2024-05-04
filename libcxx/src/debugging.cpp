@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <__assert>
 #include <__config>
 #include <debugging>
 
@@ -14,23 +15,22 @@
 #  define NOMINMAX
 #  include <windows.h>
 #elif defined(__APPLE__) || defined(__FreeBSD__)
+#  include <array>
+#  include <csignal>
+#  include <sys/sysctl.h>
+#  include <sys/types.h>
+#  include <unistd.h>
 #  if defined(__FreeBSD__)
 #    include <libutil.h>
 #    include <sys/param.h>
 #    include <sys/proc.h>
 #    include <sys/user.h>
 #  endif // defined(__FreeBSD__)
-#  include <array>
-#  include <csignal>
-#  include <sys/sysctl.h>
-#  include <sys/types.h>
-#  include <unistd.h>
 #elif defined(__linux__)
 #  include <csignal>
 #  include <cstdio>
 #  include <cstdlib>
-#  include <sstream>
-#  include <string>
+#  include <cstring>
 #elif defined(_AIX)
 #  include <charconv>
 #  include <csignal>
@@ -122,30 +122,26 @@ static bool __is_debugger_present() noexcept {
     return false;
   }
 
-  char* line = nullptr;
-  size_t len = 0;
+  char* line           = nullptr;
+  size_t lineLen       = 0;
+  const char* tokenStr = "TracerPid:";
+  bool result          = false;
 
-  std::stringstream ss;
-  std::string token;
-  while ((getline(&line, &len, proc_status_fp)) != -1) {
-    ss.str(line);
-    ss >> token;
+  while ((getline(&line, &lineLen, proc_status_fp)) != -1) {
     // If the process is being debugged "TracerPid"'s value is non-zero.
-    if (token == "TracerPid:") {
-      free(line);
-      fclose(proc_status_fp);
-
-      int pid;
-      ss >> pid;
-
-      return pid != 0;
+    char* tokenPos = strstr(line, tokenStr);
+    if (tokenPos == nullptr) {
+      break;
     }
+
+    result = (atoi(tokenPos + std::strlen(tokenStr)) != 0);
+    break;
   }
 
   free(line);
   fclose(proc_status_fp);
 
-  return false;
+  return result;
 #    endif // _LIBCPP_HAS_NO_FILESYSTEM
 }
 
