@@ -8060,7 +8060,7 @@ requirement:
 
 def DocCatNonBlockingNonAllocating : DocumentationCategory<"Performance Constraint Attributes"> {
   let Content = [{
-The ``nonblocking``, ``blocking``, ``nonallocating`` and ``allocating`` attributes can be attached 
+The ``nonblocking``, ``blocking``, ``nonallocating`` and ``allocating`` attributes can be attached
 to function types, including blocks, C++ lambdas, and member functions. The attributes declare
 constraints about a function's behavior pertaining to blocking and heap memory allocation.
 

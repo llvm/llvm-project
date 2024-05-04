@@ -10497,6 +10497,8 @@ QualType ASTContext::mergeFunctionTypes(QualType lhs, QualType rhs,
 
   FunctionType::ExtInfo einfo = lbaseInfo.withNoReturn(NoReturn);
 
+  std::optional<FunctionEffectSet> MergedFX;
+
   if (lproto && rproto) { // two C99 style function prototypes
     assert((AllowCXX ||
             (!lproto->hasExceptionSpec() && !rproto->hasExceptionSpec())) &&
@@ -10512,7 +10514,19 @@ QualType ASTContext::mergeFunctionTypes(QualType lhs, QualType rhs,
     if (lproto->getMethodQuals() != rproto->getMethodQuals())
       return {};
 
-    // TODO: (nonblocking) Does anything need to be done with FunctionEffects?
+    // Function effects are handled similarly to noreturn, see above.
+    FunctionEffectsRef LHSFX = lproto->getFunctionEffects();
+    FunctionEffectsRef RHSFX = rproto->getFunctionEffects();
+    if (LHSFX != RHSFX) {
+      if (IsConditionalOperator)
+        MergedFX = FunctionEffectSet::getIntersection(LHSFX, RHSFX);
+      else
+        MergedFX = FunctionEffectSet::getUnion(LHSFX, RHSFX);
+      if (*MergedFX != LHSFX)
+        allLTypes = false;
+      if (*MergedFX != RHSFX)
+        allRTypes = false;
+    }
 
     SmallVector<FunctionProtoType::ExtParameterInfo, 4> newParamInfos;
     bool canUseLeft, canUseRight;
@@ -10557,6 +10571,8 @@ QualType ASTContext::mergeFunctionTypes(QualType lhs, QualType rhs,
     EPI.ExtInfo = einfo;
     EPI.ExtParameterInfos =
         newParamInfos.empty() ? nullptr : newParamInfos.data();
+    if (MergedFX)
+      EPI.FunctionEffects = *MergedFX;
     return getFunctionType(retType, types, EPI);
   }
 
@@ -10594,6 +10610,8 @@ QualType ASTContext::mergeFunctionTypes(QualType lhs, QualType rhs,
 
     FunctionProtoType::ExtProtoInfo EPI = proto->getExtProtoInfo();
     EPI.ExtInfo = einfo;
+    if (MergedFX)
+      EPI.FunctionEffects = *MergedFX;
     return getFunctionType(retType, proto->getParamTypes(), EPI);
   }
 

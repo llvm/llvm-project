@@ -4779,6 +4779,15 @@ struct FunctionEffectWithCondition {
 
   /// Return a textual description of the effect, and its condition, if any.
   std::string description() const;
+
+  friend bool operator<(const FunctionEffectWithCondition &LHS,
+                        const FunctionEffectWithCondition &RHS) {
+    if (LHS.Effect < RHS.Effect)
+      return true;
+    if (RHS.Effect < LHS.Effect)
+      return false;
+    return LHS.Cond.expr() < RHS.Cond.expr();
+  }
 };
 
 struct FunctionEffectDiff {
@@ -4858,25 +4867,45 @@ public:
 /// (typically, trailing objects in FunctionProtoType, or borrowed references
 /// from a FunctionEffectSet).
 ///
-/// Invariant: there is never more than one instance of any given effect.
+/// Invariants:
+/// - there is never more than one instance of any given effect.
+/// - the array of conditions is either empty or has the same size as the
+///   array of effects.
+/// - some conditions may be null expressions; each condition pertains to
+///   the effect at the same array index.
+///
+/// Also, if there are any conditions, at least one of those expressions will be
+/// dependent, but this is only asserted in the constructor of
+/// FunctionProtoType.
 class FunctionEffectsRef {
-  ArrayRef<FunctionEffect> Effects;
+  // Restrict classes which can call the private constructor -- these friends
+  // all maintain the required invariants. FunctionEffectSet is generally the
+  // only way in which the arrays are created; FunctionProtoType will not
+  // reorder them.
+  friend FunctionProtoType;
+  friend FunctionEffectSet;
 
-  // The array of conditions is either empty or has the same size
-  // as the array of effects.
+  ArrayRef<FunctionEffect> Effects;
   ArrayRef<FunctionEffectCondition> Conditions;
+
+  // The arrays are expected to have been sorted by the caller, with the
+  // effects in order. The conditions array must be empty or the same size
+  // as the effects array, since the conditions are associated with the effects
+  // at the same array indices.
+  FunctionEffectsRef(ArrayRef<FunctionEffect> FX,
+                     ArrayRef<FunctionEffectCondition> Conds)
+      : Effects(FX), Conditions(Conds) {}
 
 public:
   /// Extract the effects from a Type if it is a function, block, or member
   /// function pointer, or a reference or pointer to one.
   static FunctionEffectsRef get(QualType QT);
 
-  FunctionEffectsRef() = default;
+  /// Asserts invariants.
+  static FunctionEffectsRef create(ArrayRef<FunctionEffect> FX,
+                                   ArrayRef<FunctionEffectCondition> Conds);
 
-  // The arrays are expected to have been sorted by the caller.
-  FunctionEffectsRef(ArrayRef<FunctionEffect> FX,
-                     ArrayRef<FunctionEffectCondition> Conds)
-      : Effects(FX), Conditions(Conds) {}
+  FunctionEffectsRef() = default;
 
   bool empty() const { return Effects.empty(); }
   size_t size() const { return Effects.size(); }
@@ -4905,11 +4934,9 @@ public:
 /// A mutable set of FunctionEffects and possibly conditions attached to them.
 /// Used transitorily within Sema to compare and merge effects on declarations.
 ///
-/// Invariant: there is never more than one instance of any given effect.
+/// Has the same invariants as FunctionEffectsRef.
 class FunctionEffectSet {
   SmallVector<FunctionEffect> Effects;
-  // The vector of conditions is either empty or has the same size
-  // as the vector of effects.
   SmallVector<FunctionEffectCondition> Conditions;
 
 public:
@@ -4942,6 +4969,8 @@ public:
   // Set operations
   static FunctionEffectSet getUnion(FunctionEffectsRef LHS,
                                     FunctionEffectsRef RHS);
+  static FunctionEffectSet getIntersection(FunctionEffectsRef LHS,
+                                           FunctionEffectsRef RHS);
 
   using Differences = SmallVector<FunctionEffectDiff>;
 
@@ -5456,7 +5485,7 @@ public:
   }
 
   // For serialization.
-  ArrayRef<FunctionEffect> getFunctionEffectsOnly() const {
+  ArrayRef<FunctionEffect> getFunctionEffectsWithoutConditions() const {
     if (hasExtraBitfields()) {
       const auto *Bitfields = getTrailingObjects<FunctionTypeExtraBitfields>();
       if (Bitfields->NumFunctionEffects > 0)

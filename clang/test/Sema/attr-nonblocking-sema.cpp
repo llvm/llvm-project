@@ -104,17 +104,9 @@ struct Derived : public Base {
 
 // --- REDECLARATIONS ---
 
-#ifdef __cplusplus
-// In C++, the third declaration gets seen as a redeclaration of the second.
 void f2();
 void f2() [[clang::nonblocking]]; // expected-note {{previous declaration is here}}
 void f2(); // expected-warning {{attribute 'nonblocking' on function does not match previous declaration}}
-#else
-// In C, the third declaration is redeclaration of the first (?).
-void f2();
-void f2() [[clang::nonblocking]];
-void f2();
-#endif
 // Note: we verify that the attribute is actually seen during the constraints tests.
 
 // --- OVERLOADS ---

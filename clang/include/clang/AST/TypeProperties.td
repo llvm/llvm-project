@@ -353,7 +353,7 @@ let Class = FunctionProtoType in {
     let Read = [{ node->getAArch64SMEAttributes() }];
   }
   def : Property<"functionEffects", Array<FunctionEffect>> {
-    let Read = [{ node->getFunctionEffectsOnly() }];
+    let Read = [{ node->getFunctionEffectsWithoutConditions() }];
   }
   def : Property<"functionEffectConds", Array<FunctionEffectCondition>> {
     let Read = [{ node->getFunctionEffectConditions() }];
@@ -374,7 +374,7 @@ let Class = FunctionProtoType in {
     epi.ExtParameterInfos =
       extParameterInfo.empty() ? nullptr : extParameterInfo.data();
     epi.AArch64SMEAttributes = AArch64SMEAttributes;
-    epi.FunctionEffects = FunctionEffectsRef(functionEffects, functionEffectConds);
+    epi.FunctionEffects = FunctionEffectsRef::create(functionEffects, functionEffectConds);
     return ctx.getFunctionType(returnType, parameters, epi);
   }]>;
 }

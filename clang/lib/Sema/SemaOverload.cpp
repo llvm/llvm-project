@@ -1876,8 +1876,7 @@ bool Sema::IsFunctionConversion(QualType FromType, QualType ToType,
     // like dropping effects will fail. In C++ however we do want to
     // alter FromFn. TODO: Is this correct?
     if (getLangOpts().CPlusPlus) {
-      FromFPT =
-          dyn_cast<FunctionProtoType>(FromFn); // in case FromFn changed above
+      FromFPT = cast<FunctionProtoType>(FromFn); // in case FromFn changed above
 
       // Transparently add/drop effects; here we are concerned with
       // language rules/canonicalization. Adding/dropping effects is a warning.

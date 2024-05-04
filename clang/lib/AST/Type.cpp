@@ -3652,19 +3652,29 @@ FunctionProtoType::FunctionProtoType(QualType result, ArrayRef<QualType> params,
 
   if (!epi.FunctionEffects.empty()) {
     auto &ExtraBits = *getTrailingObjects<FunctionTypeExtraBitfields>();
-    // TODO: bitfield overflow?
-    ExtraBits.NumFunctionEffects = epi.FunctionEffects.size();
+    const size_t EffectsCount = epi.FunctionEffects.size();
+    ExtraBits.NumFunctionEffects = EffectsCount;
+    assert(ExtraBits.NumFunctionEffects == EffectsCount &&
+           "effect bitfield overflow");
 
     ArrayRef<FunctionEffect> SrcFX = epi.FunctionEffects.effects();
     auto *DestFX = getTrailingObjects<FunctionEffect>();
-    std::copy(SrcFX.begin(), SrcFX.end(), DestFX);
+    std::uninitialized_copy(SrcFX.begin(), SrcFX.end(), DestFX);
 
     ArrayRef<FunctionEffectCondition> SrcConds =
         epi.FunctionEffects.conditions();
     if (!SrcConds.empty()) {
       ExtraBits.EffectsHaveConditions = true;
       auto *DestConds = getTrailingObjects<FunctionEffectCondition>();
-      std::copy(SrcConds.begin(), SrcConds.end(), DestConds);
+      std::uninitialized_copy(SrcConds.begin(), SrcConds.end(), DestConds);
+      assert(std::any_of(SrcConds.begin(), SrcConds.end(),
+                         [](const FunctionEffectCondition &EC) {
+                           if (const Expr *E = EC.expr())
+                             return E->isTypeDependent() ||
+                                    E->isValueDependent();
+                           return false;
+                         }) &&
+             "expected a dependent expression among the conditions");
       addDependence(TypeDependence::DependentInstantiation);
     }
   }
@@ -5304,6 +5314,30 @@ void FunctionEffectSet::erase(unsigned Idx) {
   }
 }
 
+FunctionEffectSet FunctionEffectSet::getIntersection(FunctionEffectsRef LHS,
+                                                     FunctionEffectsRef RHS) {
+  FunctionEffectSet Result;
+
+  // We could use std::set_intersection but that would require expanding the
+  // container interface to include push_back, making it available to clients
+  // who might fail to maintain invariants.
+  auto IterA = LHS.begin(), EndA = LHS.end();
+  auto IterB = RHS.begin(), EndB = RHS.end();
+
+  while (IterA != EndA && IterB != EndB) {
+    if (*IterA < *IterB)
+      ++IterA;
+    else if (*IterB < *IterA)
+      ++IterB;
+    else {
+      Result.insert((*IterA).Effect, (*IterA).Cond.expr());
+      ++IterA;
+      ++IterB;
+    }
+  }
+  return Result;
+}
+
 FunctionEffectSet FunctionEffectSet::getUnion(FunctionEffectsRef LHS,
                                               FunctionEffectsRef RHS) {
   // Optimize for either of the two sets being empty (very common).
@@ -5415,6 +5449,15 @@ FunctionEffectsRef FunctionEffectsRef::get(QualType QT) {
     return FPT->getFunctionEffects();
 
   return {};
+}
+
+FunctionEffectsRef
+FunctionEffectsRef::create(ArrayRef<FunctionEffect> FX,
+                           ArrayRef<FunctionEffectCondition> Conds) {
+  assert(std::is_sorted(FX.begin(), FX.end()) && "effects should be sorted");
+  assert((Conds.empty() || Conds.size() == FX.size()) &&
+         "effects size should match conditions size");
+  return FunctionEffectsRef(FX, Conds);
 }
 
 std::string FunctionEffectWithCondition::description() const {
