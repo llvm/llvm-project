@@ -746,9 +746,8 @@ calcUniqueIDUpdateFlagsAndSize(const GlobalObject *GO, StringRef SectionName,
   const auto PreviousID =
       Ctx.getELFUniqueIDForEntsize(SectionName, Flags, EntrySize);
   if (PreviousID && (!TM.getSeparateNamedSections() ||
-                     *PreviousID == MCContext::GenericSectionID)) {
+                     *PreviousID == MCContext::GenericSectionID))
     return *PreviousID;
-  }
 
   // If the user has specified the same section name as would be created
   // implicitly for this symbol e.g. .rodata.str1.1, then we don't need
