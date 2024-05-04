@@ -75,10 +75,6 @@ static cl::opt<bool> JumpTableInFunctionSection(
     "jumptable-in-function-section", cl::Hidden, cl::init(false),
     cl::desc("Putting Jump Table in function section"));
 
-static cl::opt<bool> UniqueExplicitSections(
-    "unique-explicit-sections", cl::Hidden, cl::init(true),
-    cl::desc("Putting symbols with explicit section into unique sections"));
-
 static void GetObjCImageInfo(Module &M, unsigned &Version, unsigned &Flags,
                              StringRef &Section) {
   SmallVector<Module::ModuleFlagEntry, 8> ModuleFlags;
