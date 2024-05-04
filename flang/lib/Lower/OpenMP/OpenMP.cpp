@@ -1439,13 +1439,18 @@ genParallelOp(Fortran::lower::AbstractConverter &converter,
         reductionSyms;
     allSymbols.append(privateSyms);
     for (auto [arg, prv] : llvm::zip_equal(allSymbols, region.getArguments())) {
-      converter.bindSymbol(*arg, prv);
+      fir::ExtendedValue hostExV = converter.getSymbolExtendedValue(*arg);
+      converter.bindSymbol(*arg, hlfir::translateToExtendedValue(
+                                     loc, firOpBuilder, hlfir::Entity{prv},
+                                     /*contiguousHint=*/
+                                     Fortran::evaluate::IsSimplyContiguous(
+                                         *arg, converter.getFoldingContext()))
+                                     .first);
     }
 
     return allSymbols;
   };
 
-  // TODO Merge with the reduction CB.
   genInfo.setGenRegionEntryCb(genRegionEntryCB).setDataSharingProcessor(&dsp);
   return genOpWithBody<mlir::omp::ParallelOp>(genInfo, clauseOps);
 }
