@@ -61,7 +61,7 @@ Options
 
 .. option:: StrFormatLikeFunctions
 
-   A semicolon-separated list of (fully qualified) extra function names to
+   A semicolon-separated list of (fully qualified) function names to
    replace, with the requirement that the first parameter contains the
    printf-style format string and the arguments to be formatted follow
    immediately afterwards. The default value for this option is
