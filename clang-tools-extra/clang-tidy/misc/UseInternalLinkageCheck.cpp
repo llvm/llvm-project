@@ -1,5 +1,4 @@
-//===--- UseInternalLinkageCheck.cpp - clang-tidy
-//---------------------------------===//
+//===--- UseInternalLinkageCheck.cpp - clang-tidy--------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -13,6 +12,7 @@
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/ASTMatchers/ASTMatchersMacros.h"
 #include "clang/Basic/Specifiers.h"
+#include "llvm/ADT/STLExtras.h"
 
 using namespace clang::ast_matchers;
 
@@ -27,11 +27,10 @@ AST_POLYMORPHIC_MATCHER(isFirstDecl,
 }
 
 AST_MATCHER(Decl, isInMainFile) {
-  for (const Decl *D : Node.redecls())
-    if (!Finder->getASTContext().getSourceManager().isInMainFile(
-            D->getLocation()))
-      return false;
-  return true;
+  return llvm::all_of(Node.redecls(), [&](const Decl *D) {
+    return Finder->getASTContext().getSourceManager().isInMainFile(
+        D->getLocation());
+  });
 }
 
 AST_POLYMORPHIC_MATCHER(isExternStorageClass,
@@ -62,9 +61,8 @@ void UseInternalLinkageCheck::registerMatchers(MatchFinder *Finder) {
 }
 
 static constexpr StringRef Message =
-    "%0 %1 can be internal linkage, "
-    "marking as static or using anonymous namespace can avoid external "
-    "linkage.";
+    "%0 %1 can be can be made static or moved into an anonymous namespace "
+    "to enforce internal linkage.";
 
 void UseInternalLinkageCheck::check(const MatchFinder::MatchResult &Result) {
   if (const auto *FD = Result.Nodes.getNodeAs<FunctionDecl>("fn")) {

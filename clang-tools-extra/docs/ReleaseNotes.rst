@@ -145,16 +145,17 @@ New checks
   Finds initializer lists for aggregate types that could be
   written as designated initializers instead.
 
+- New :doc:`misc-use-internal-linkage
+  <clang-tidy/checks/misc/use-internal-linkage>` check.
+
+  Detects variables and functions that can be marked as static or moved into
+  an anonymous namespace to enforce internal linkage.
+
 - New :doc:`readability-enum-initial-value
   <clang-tidy/checks/readability/enum-initial-value>` check.
 
   Enforces consistent style for enumerators' initialization, covering three
   styles: none, first only, or all initialized explicitly.
-
-- New :doc:`misc-use-internal-linkage
-  <clang-tidy/checks/misc/use-internal-linkage>` check.
-
-  Detects variable and function can be marked as static.
 
 - New :doc:`readability-math-missing-parentheses
   <clang-tidy/checks/readability/math-missing-parentheses>` check.

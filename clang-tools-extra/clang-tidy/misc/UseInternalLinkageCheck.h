@@ -13,7 +13,8 @@
 
 namespace clang::tidy::misc {
 
-/// Detects variable and function can be marked as static.
+/// Detects variables and functions that can be marked as static or moved into
+/// an anonymous namespace to enforce internal linkage.
 ///
 /// For the user-facing documentation see:
 /// http://clang.llvm.org/extra/clang-tidy/checks/misc/use-internal-linkage.html

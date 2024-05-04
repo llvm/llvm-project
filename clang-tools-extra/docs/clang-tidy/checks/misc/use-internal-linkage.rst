@@ -3,12 +3,12 @@
 misc-use-internal-linkage
 =========================
 
-Detects variable and function can be marked as static.
+Detects variables and functions that can be marked as static or moved into
+an anonymous namespace to enforce internal linkage.
 
 Static functions and variables are scoped to a single file. Marking functions
 and variables as static helps to better remove dead code. In addition, it gives
-the compiler more information and can help compiler make more aggressive
-optimizations.
+the compiler more information and allows for more aggressive optimizations.
 
 Example:
 
