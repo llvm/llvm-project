@@ -186,7 +186,7 @@ constexpr bool non_const_iterator_copy_ctor() {
     // Stride over non-simple view over whose iterators are copy convertible -- should look (statically)
     // like it is possible copy construct the stride view's iterator (the move-only requirement comes from
     // a move of the current between the copied-from iterator to the copied-to iterator).
-    using NotSimpleViewBeingStrided              = NotSimpleViewDifferentEnd<true, false>;
+    using NotSimpleViewBeingStrided = NotSimpleViewDifferentEnd<true, false>;
     //using NotSimpleViewBeingStridedIterator      = std::ranges::iterator_t<NotSimpleViewBeingStrided>;
     //using NotSimpleViewBeingStridedConstIterator = std::ranges::iterator_t<const NotSimpleViewBeingStrided>;
 
@@ -206,7 +206,7 @@ constexpr bool non_const_iterator_copy_ctor() {
     // Stride over non-simple view over whose iterators are move convertible -- should look (statically)
     // like it is possible copy construct the stride view's iterator (the move-only requirement comes from
     // a move of the current between the copied-from iterator to the copied-to iterator).
-    using NotSimpleViewBeingStrided              = NotSimpleViewDifferentEnd<false, true>;
+    using NotSimpleViewBeingStrided = NotSimpleViewDifferentEnd<false, true>;
     //using NotSimpleViewBeingStridedIterator      = std::ranges::iterator_t<NotSimpleViewBeingStrided>;
     //using NotSimpleViewBeingStridedConstIterator = std::ranges::iterator_t<const NotSimpleViewBeingStrided>;
 
@@ -225,7 +225,7 @@ constexpr bool non_const_iterator_copy_ctor() {
   {
     // Stride over non-simple view over whose iterators are not convertible -- should not be able
     // to copy construct the stride view's iterator.
-    using NotSimpleViewBeingStrided              = NotSimpleViewDifferentEnd<false, false>;
+    using NotSimpleViewBeingStrided = NotSimpleViewDifferentEnd<false, false>;
     //using NotSimpleViewBeingStridedIterator      = std::ranges::iterator_t<NotSimpleViewBeingStrided>;
     //using NotSimpleViewBeingStridedConstIterator = std::ranges::iterator_t<const NotSimpleViewBeingStrided>;
 
@@ -244,8 +244,8 @@ constexpr bool non_const_iterator_copy_ctor() {
   {
     // Stride over non-simple view over whose iterators are not convertible -- should not be able
     // to copy construct the stride view's iterator.
-    using NotSimpleViewBeingStrided              = NotSimpleViewDifferentEnd<false, true>;
-    using NotSimpleViewBeingStridedIterator      = std::ranges::iterator_t<NotSimpleViewBeingStrided>;
+    using NotSimpleViewBeingStrided         = NotSimpleViewDifferentEnd<false, true>;
+    using NotSimpleViewBeingStridedIterator = std::ranges::iterator_t<NotSimpleViewBeingStrided>;
     //using NotSimpleViewBeingStridedConstIterator = std::ranges::iterator_t<const NotSimpleViewBeingStrided>;
 
     using StrideView = std::ranges::stride_view<NotSimpleViewBeingStrided>;
@@ -275,7 +275,7 @@ constexpr bool non_const_iterator_copy_ctor() {
     // Stride over non-simple view over whose iterators are copy convertible -- should look (statically)
     // like it is possible copy construct the stride view's iterator (the move-only requirement comes from
     // a move of the current between the copied-from iterator to the copied-to iterator).
-    using NotSimpleViewBeingStrided              = NotSimpleViewDifferentBegin<true, false>;
+    using NotSimpleViewBeingStrided = NotSimpleViewDifferentBegin<true, false>;
     //using NotSimpleViewBeingStridedIterator      = std::ranges::iterator_t<NotSimpleViewBeingStrided>;
     //using NotSimpleViewBeingStridedConstIterator = std::ranges::iterator_t<const NotSimpleViewBeingStrided>;
 
@@ -295,7 +295,7 @@ constexpr bool non_const_iterator_copy_ctor() {
     // Stride over non-simple view over whose iterators are move convertible -- should look (statically)
     // like it is possible copy construct the stride view's iterator (the move-only requirement comes from
     // a move of the current between the copied-from iterator to the copied-to iterator).
-    using NotSimpleViewBeingStrided              = NotSimpleViewDifferentBegin<false, true>;
+    using NotSimpleViewBeingStrided = NotSimpleViewDifferentBegin<false, true>;
     //using NotSimpleViewBeingStridedIterator      = std::ranges::iterator_t<NotSimpleViewBeingStrided>;
     //using NotSimpleViewBeingStridedConstIterator = std::ranges::iterator_t<const NotSimpleViewBeingStrided>;
 
@@ -314,7 +314,7 @@ constexpr bool non_const_iterator_copy_ctor() {
   {
     // Stride over non-simple view over whose iterators are not convertible -- should not be able
     // to copy construct the stride view's iterator.
-    using NotSimpleViewBeingStrided              = NotSimpleViewDifferentBegin<false, false>;
+    using NotSimpleViewBeingStrided = NotSimpleViewDifferentBegin<false, false>;
     //using NotSimpleViewBeingStridedIterator      = std::ranges::iterator_t<NotSimpleViewBeingStrided>;
     //using NotSimpleViewBeingStridedConstIterator = std::ranges::iterator_t<const NotSimpleViewBeingStrided>;
 
