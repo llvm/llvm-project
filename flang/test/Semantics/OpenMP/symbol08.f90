@@ -37,7 +37,7 @@ subroutine test_do
   do j=6,10
    !REF: /test_do/a
    a(1,1,1) = 0.
-   !DEF: /test_do/OtherConstruct1/k (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
+   !DEF: /test_do/OtherConstruct1/k (OmpPrivate) HostAssoc INTEGER(4)
    do k=11,15
     !REF: /test_do/a
     !REF: /test_do/OtherConstruct1/k
@@ -170,9 +170,9 @@ subroutine test_simd
 !$omp parallel do simd
  !DEF: /test_simd/OtherConstruct1/i (OmpLinear, OmpPreDetermined) HostAssoc INTEGER(4)
  do i=1,5
-  !DEF: /test_simd/OtherConstruct1/j (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
+  !DEF: /test_simd/OtherConstruct1/j (OmpPrivate) HostAssoc INTEGER(4)
   do j=6,10
-   !DEF: /test_simd/OtherConstruct1/k (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
+   !DEF: /test_simd/OtherConstruct1/k (OmpPrivate) HostAssoc INTEGER(4)
    do k=11,15
     !REF: /test_simd/a
     !REF: /test_simd/OtherConstruct1/k
@@ -228,7 +228,7 @@ subroutine test_seq_loop
   print *, i, j
   !$omp parallel
   !REF: /test_seq_loop/i
-  !DEF: /test_seq_loop/OtherConstruct1/OtherConstruct1/j (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
+  !DEF: /test_seq_loop/OtherConstruct1/OtherConstruct1/j (OmpPrivate) HostAssoc INTEGER(4)
   print *, i, j
   !$omp do
   !DEF: /test_seq_loop/OtherConstruct1/OtherConstruct1/OtherConstruct1/i (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)

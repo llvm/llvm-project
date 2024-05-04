@@ -9,7 +9,7 @@ program omp_do
   !DEF: /omp_do/n ObjectEntity INTEGER(4)
   integer i,n
   !$omp parallel
-  !DEF: /omp_do/OtherConstruct1/i (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
+  !DEF: /omp_do/OtherConstruct1/i (OmpPrivate) HostAssoc INTEGER(4)
   do i=1,10
     !$omp single
     print *, "hello"

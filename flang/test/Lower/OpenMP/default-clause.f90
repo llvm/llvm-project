@@ -537,16 +537,21 @@ subroutine nested_constructs
 
     integer :: y, z
 !CHECK: omp.parallel {
-!CHECK: %[[INNER_J:.*]] = fir.alloca i32 {bindc_name = "j", pinned}
-!CHECK: %[[INNER_J_DECL:.*]]:2 = hlfir.declare %[[INNER_J]] {{.*}}
-!CHECK: %[[INNER_I:.*]] = fir.alloca i32 {bindc_name = "i", pinned}
-!CHECK: %[[INNER_I_DECL:.*]]:2 = hlfir.declare %[[INNER_I]] {{.*}}
+
 !CHECK: %[[INNER_Y:.*]] = fir.alloca i32 {bindc_name = "y", pinned, uniq_name = "_QFnested_constructsEy"}
 !CHECK: %[[INNER_Y_DECL:.*]]:2 = hlfir.declare %[[INNER_Y]] {{.*}}
 !CHECK: %[[TEMP:.*]] = fir.load %[[Y_DECL]]#0 : !fir.ref<i32>
 !CHECK: hlfir.assign %[[TEMP]] to %[[INNER_Y_DECL]]#0 temporary_lhs : i32, !fir.ref<i32>
+
+!CHECK: %[[INNER_I:.*]] = fir.alloca i32 {bindc_name = "i", pinned, uniq_name
+!CHECK: %[[INNER_I_DECL:.*]]:2 = hlfir.declare %[[INNER_I]] {{.*}}
+
+!CHECK: %[[INNER_J:.*]] = fir.alloca i32 {bindc_name = "j", pinned, uniq_name
+!CHECK: %[[INNER_J_DECL:.*]]:2 = hlfir.declare %[[INNER_J]] {{.*}}
+
 !CHECK: %[[INNER_Z:.*]] = fir.alloca i32 {bindc_name = "z", pinned, uniq_name = "_QFnested_constructsEz"}
 !CHECK: %[[INNER_Z_DECL:.*]]:2 = hlfir.declare %[[INNER_Z]] {{.*}}
+
     !$omp parallel default(private) firstprivate(y)
 !CHECK: {{.*}} = fir.do_loop {{.*}} {
       do i = 1, 10
