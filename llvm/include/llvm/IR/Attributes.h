@@ -947,6 +947,9 @@ public:
   /// arg.
   uint64_t getParamDereferenceableOrNullBytes(unsigned ArgNo) const;
 
+  /// Get range (or std::nullopt if unknown) of an arg.
+  std::optional<ConstantRange> getParamRange(unsigned ArgNo) const;
+
   /// Get the disallowed floating-point classes of the return value.
   FPClassTest getRetNoFPClass() const;
 
@@ -1122,6 +1125,10 @@ public:
   /// Return Attribute with the given Kind. The returned attribute will be
   /// invalid if the Kind is not present in the builder.
   Attribute getAttribute(StringRef Kind) const;
+
+  /// Retrieve the range if the attribute exists (std::nullopt is returned
+  /// otherwise).
+  std::optional<ConstantRange> getRange() const;
 
   /// Return raw (possibly packed/encoded) value of integer attribute or
   /// std::nullopt if not set.
