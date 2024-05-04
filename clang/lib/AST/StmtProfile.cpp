@@ -2492,6 +2492,11 @@ void OpenACCClauseProfiler::VisitIfClause(const OpenACCIfClause &Clause) {
   Profiler.VisitStmt(Clause.getConditionExpr());
 }
 
+void OpenACCClauseProfiler::VisitCopyClause(const OpenACCCopyClause &Clause) {
+  for (auto *E : Clause.getVarList())
+    Profiler.VisitStmt(E);
+}
+
 void OpenACCClauseProfiler::VisitSelfClause(const OpenACCSelfClause &Clause) {
   if (Clause.hasConditionExpr())
     Profiler.VisitStmt(Clause.getConditionExpr());
