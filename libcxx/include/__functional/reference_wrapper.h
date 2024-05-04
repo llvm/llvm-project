@@ -96,24 +96,23 @@ public:
     return __x.get() == __y.get();
   }
 
-  _LIBCPP_HIDE_FROM_ABI friend constexpr auto operator<=>(reference_wrapper __x, reference_wrapper __y) requires {
-    std::__synth_three_way(__x.get(), __y.get());
-  } {
+  _LIBCPP_HIDE_FROM_ABI friend constexpr auto operator<=>(reference_wrapper __x, reference_wrapper __y)
+    requires requires { std::__synth_three_way(__x.get(), __y.get()); }
+  {
     return std::__synth_three_way(__x.get(), __y.get());
   }
 
-  _LIBCPP_HIDE_FROM_ABI friend constexpr auto operator<=>(reference_wrapper __x, const _Tp& __y) requires {
-    std::__synth_three_way(__x.get(), __y);
-  } {
+  _LIBCPP_HIDE_FROM_ABI friend constexpr auto operator<=>(reference_wrapper __x, const _Tp& __y)
+    requires requires { std::__synth_three_way(__x.get(), __y); }
+  {
     return std::__synth_three_way(__x.get(), __y);
   }
 
   _LIBCPP_HIDE_FROM_ABI friend constexpr auto operator<=>(reference_wrapper __x, reference_wrapper<const _Tp> __y)
-    requires(!is_const_v<_Tp>) &&
+    requires(!is_const_v<_Tp>) && requires { std::__synth_three_way(__x.get(), __y.get()); }
   {
-    std::__synth_three_way(__x.get(), __y.get());
+    return std::__synth_three_way(__x.get(), __y.get());
   }
-  { return std::__synth_three_way(__x.get(), __y.get()); }
 
 #endif // _LIBCPP_STD_VER >= 26
 };
