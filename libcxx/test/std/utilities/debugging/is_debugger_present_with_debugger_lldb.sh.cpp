@@ -11,7 +11,7 @@
 // REQUIRES: host-has-lldb-with-python
 // The Android libc++ tests are run on a non-Android host, connected to an
 // Android device over adb.
-// UNSUPPORTED: android, linux && no-filesystem && no-localization
+// UNSUPPORTED: android
 // XFAIL: LIBCXX-PICOLIBC-FIXME
 
 // RUN: %{cxx} %{flags} %s -o %t.exe %{compile_flags} -g %{link_flags}

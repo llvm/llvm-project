@@ -13,7 +13,7 @@
 // Android device over adb. gdb needs special support to make this work (e.g.
 // gdbclient.py, ndk-gdb.py, gdbserver), and the Android organization doesn't
 // support gdb anymore, favoring lldb instead.
-// UNSUPPORTED: android, linux && no-filesystem && no-localization
+// UNSUPPORTED: android
 // XFAIL: LIBCXX-PICOLIBC-FIXME
 
 // RUN: %{cxx} %{flags} %s -o %t.exe %{compile_flags} -g %{link_flags}

@@ -27,7 +27,9 @@
 #  include <unistd.h>
 #elif defined(__linux__)
 #  include <csignal>
-#  include <fstream>
+#  include <cstdio>
+#  include <cstdlib>
+#  include <sstream>
 #  include <string>
 #elif defined(_AIX)
 #  include <charconv>
@@ -109,32 +111,39 @@ static bool __is_debugger_present() noexcept {
                           "Function is not available. Could not open '/proc/self/status' for reading, libc++ was "
                           "compiled with _LIBCPP_HAS_NO_FILESYSTEM.");
   return false;
-#    elif defined(_LIBCPP_HAS_NO_LOCALIZATION)
-  _LIBCPP_ASSERT_INTERNAL(false,
-                          "Function is not available. Could not open '/proc/self/status' for reading, libc++ was "
-                          "compiled with _LIBCPP_HAS_NO_LOCALIZATION.");
-  return false;
 #    else
   // https://docs.kernel.org/filesystems/proc.html
 
   // Get the status information of a process by reading the file /proc/PID/status.
   // The link 'self' points to the process reading the file system.
-  ifstream status_file{"/proc/self/status"};
-  if (!status_file.is_open()) {
+  FILE* proc_status_fp = fopen("/proc/self/status", "r");
+  if (proc_status_fp == nullptr) {
     _LIBCPP_ASSERT_INTERNAL(false, "Could not open '/proc/self/status' for reading.");
     return false;
   }
 
+  char* line = nullptr;
+  size_t len = 0;
+
+  std::stringstream ss;
   std::string token;
-  while (status_file >> token) {
+  while ((getline(&line, &len, proc_status_fp)) != -1) {
+    ss.str(line);
+    ss >> token;
     // If the process is being debugged "TracerPid"'s value is non-zero.
     if (token == "TracerPid:") {
+      free(line);
+      fclose(proc_status_fp);
+
       int pid;
-      status_file >> pid;
+      ss >> pid;
+
       return pid != 0;
     }
-    getline(status_file, token);
   }
+
+  free(line);
+  fclose(proc_status_fp);
 
   return false;
 #    endif // _LIBCPP_HAS_NO_FILESYSTEM
