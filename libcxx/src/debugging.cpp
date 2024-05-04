@@ -15,7 +15,7 @@
 #  define NOMINMAX
 #  include <windows.h>
 #elif defined(__APPLE__) || defined(__FreeBSD__)
-#  if defined(__FreeBSD__)
+#  if defined(__FreeBSD__) // Include order matters.
 #    include <libutil.h>
 #    include <sys/param.h>
 #    include <sys/proc.h>
