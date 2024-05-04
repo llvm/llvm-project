@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s readability-unnecessary-external-linkage %t -- -- -I%S/Inputs/mark-static-var
+// RUN: %check_clang_tidy %s misc-use-internal-linkage %t -- -- -I%S/Inputs/use-internal-linkage
 
 #include "func.h"
 

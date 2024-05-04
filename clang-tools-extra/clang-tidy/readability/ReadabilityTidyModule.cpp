@@ -58,7 +58,6 @@
 #include "StringCompareCheck.h"
 #include "SuspiciousCallArgumentCheck.h"
 #include "UniqueptrDeleteReleaseCheck.h"
-#include "UnnecessaryExternalLinkageCheck.h"
 #include "UppercaseLiteralSuffixCheck.h"
 #include "UseAnyOfAllOfCheck.h"
 #include "UseStdMinMaxCheck.h"
@@ -107,8 +106,6 @@ public:
         "readability-identifier-naming");
     CheckFactories.registerCheck<ImplicitBoolConversionCheck>(
         "readability-implicit-bool-conversion");
-    CheckFactories.registerCheck<UnnecessaryExternalLinkageCheck>(
-        "readability-unnecessary-external-linkage");
     CheckFactories.registerCheck<MathMissingParenthesesCheck>(
         "readability-math-missing-parentheses");
     CheckFactories.registerCheck<RedundantInlineSpecifierCheck>(

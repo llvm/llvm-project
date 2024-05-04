@@ -1,4 +1,4 @@
-//===--- UnnecessaryExternalLinkageCheck.cpp - clang-tidy
+//===--- UseInternalLinkageCheck.cpp - clang-tidy
 //---------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "UnnecessaryExternalLinkageCheck.h"
+#include "UseInternalLinkageCheck.h"
 #include "clang/AST/Decl.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
@@ -16,7 +16,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang::tidy::readability {
+namespace clang::tidy::misc {
 
 namespace {
 
@@ -42,7 +42,7 @@ AST_POLYMORPHIC_MATCHER(isExternStorageClass,
 
 } // namespace
 
-void UnnecessaryExternalLinkageCheck::registerMatchers(MatchFinder *Finder) {
+void UseInternalLinkageCheck::registerMatchers(MatchFinder *Finder) {
   auto Common = allOf(isFirstDecl(), isInMainFile(),
                       unless(anyOf(
                           // 1. internal linkage
@@ -66,8 +66,7 @@ static constexpr StringRef Message =
     "marking as static or using anonymous namespace can avoid external "
     "linkage.";
 
-void UnnecessaryExternalLinkageCheck::check(
-    const MatchFinder::MatchResult &Result) {
+void UseInternalLinkageCheck::check(const MatchFinder::MatchResult &Result) {
   if (const auto *FD = Result.Nodes.getNodeAs<FunctionDecl>("fn")) {
     diag(FD->getLocation(), Message) << "function" << FD;
     return;
@@ -79,4 +78,4 @@ void UnnecessaryExternalLinkageCheck::check(
   llvm_unreachable("");
 }
 
-} // namespace clang::tidy::readability
+} // namespace clang::tidy::misc

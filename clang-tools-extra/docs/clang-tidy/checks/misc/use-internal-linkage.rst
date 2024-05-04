@@ -1,7 +1,7 @@
-.. title:: clang-tidy - readability-unnecessary-external-linkage
+.. title:: clang-tidy - misc-use-internal-linkage
 
-readability-unnecessary-external-linkage
-========================================
+misc-use-internal-linkage
+=========================
 
 Detects variable and function can be marked as static.
 
