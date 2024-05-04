@@ -1157,12 +1157,6 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
                                                    register do not exactly match the FLT_ROUNDS values,
                                                    so a conversion is performed.
 
-  :ref:`llvm.set.rounding<int_set_rounding>`       Input value expected to be one of the valid results
-                                                   from '``llvm.get.rounding``'. Rounding mode is
-                                                   undefined if not passed a valid input. This should be
-                                                   a wave uniform value. In case of a divergent input
-                                                   value, the first active lane's value will be used.
-
   :ref:`llvm.get.fpenv<int_get_fpenv>`             Returns the current value of the AMDGPU floating point environment.
                                                    This stores information related to the current rounding mode,
                                                    denormalization mode, enabled traps, and floating point exceptions.
