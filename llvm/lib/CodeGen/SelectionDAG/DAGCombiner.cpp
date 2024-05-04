@@ -15458,10 +15458,11 @@ SDValue DAGCombiner::visitFREEZE(SDNode *N) {
       N0->getNumValues() != 1 || !N0->hasOneUse())
     return SDValue();
 
-  bool AllowMultipleMaybePoisonOperands = N0.getOpcode() == ISD::BUILD_VECTOR ||
-                                          N0.getOpcode() == ISD::BUILD_PAIR ||
-                                          N0.getOpcode() == ISD::VECTOR_SHUFFLE ||
-                                          N0.getOpcode() == ISD::CONCAT_VECTORS;
+  bool AllowMultipleMaybePoisonOperands =
+      N0.getOpcode() == ISD::BUILD_VECTOR ||
+      N0.getOpcode() == ISD::BUILD_PAIR ||
+      N0.getOpcode() == ISD::VECTOR_SHUFFLE ||
+      N0.getOpcode() == ISD::CONCAT_VECTORS;
 
   // Avoid turning a BUILD_VECTOR that can be recognized as "all zeros", "all
   // ones" or "constant" into something that depends on FrozenUndef. We can
