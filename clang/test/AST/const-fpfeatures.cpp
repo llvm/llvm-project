@@ -131,3 +131,33 @@ void func_02() {
 
 // CHECK-LABEL: define {{.*}} void @_Z4foo2IfTnT_Lf3dcccccdEEvv()
 // CHECK:         store float 0x3FB99999A0000000, ptr
+
+
+// Check literals in macros.
+
+#pragma STDC FENV_ROUND FE_DOWNWARD
+#define CONSTANT_0_1 0.1F
+
+#pragma STDC FENV_ROUND FE_UPWARD
+float C1_ru = CONSTANT_0_1;
+// CHECK: @C1_ru = {{.*}} float 0x3FB99999A0000000
+
+#pragma STDC FENV_ROUND FE_DOWNWARD
+float C1_rd = CONSTANT_0_1;
+// CHECK: @C1_rd = {{.*}} float 0x3FB9999980000000
+
+#pragma STDC FENV_ROUND FE_DOWNWARD
+#define PRAGMA(x) _Pragma(#x)
+#define CONSTANT_0_1_RM(v, rm) ([](){ PRAGMA(STDC FENV_ROUND rm); return v; }())
+
+#pragma STDC FENV_ROUND FE_UPWARD
+float C2_rd = CONSTANT_0_1_RM(0.1F, FE_DOWNWARD);
+float C2_ru = CONSTANT_0_1_RM(0.1F, FE_UPWARD);
+// CHECK: @C2_rd = {{.*}} float 0x3FB9999980000000
+// CHECK: @C2_ru = {{.*}} float 0x3FB99999A0000000
+
+#pragma STDC FENV_ROUND FE_DOWNWARD
+float C3_rd = CONSTANT_0_1_RM(0.1F, FE_DOWNWARD);
+float C3_ru = CONSTANT_0_1_RM(0.1F, FE_UPWARD);
+// CHECK: @C3_rd = {{.*}} float 0x3FB9999980000000
+// CHECK: @C3_ru = {{.*}} float 0x3FB99999A0000000
