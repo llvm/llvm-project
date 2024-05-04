@@ -12,7 +12,7 @@
 
 // class reference_wrapper
 
-// // [refwrap.comparisons], comparisons
+// [refwrap.comparisons], comparisons
 
 // friend constexpr auto operator<=>(reference_wrapper, reference_wrapper<const T>); // Since C++26
 

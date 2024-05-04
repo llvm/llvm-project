@@ -12,7 +12,7 @@
 
 // class reference_wrapper
 
-// // [refwrap.comparisons], comparisons
+// [refwrap.comparisons], comparisons
 // friend constexpr bool operator==(reference_wrapper, reference_wrapper);                                // Since C++26
 
 #include <cassert>

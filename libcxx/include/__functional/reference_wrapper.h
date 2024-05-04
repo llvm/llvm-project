@@ -96,31 +96,24 @@ public:
     return __x.get() == __y.get();
   }
 
-  // `operator<=>`: Checks the constraints of `synth-three-way` as per https://wg21.link/LWG4071 directly
-
-  _LIBCPP_HIDE_FROM_ABI friend constexpr auto operator<=>(reference_wrapper __x, reference_wrapper __y)
-    requires requires(const _Tp __t) {
-      { __t < __t } -> __boolean_testable;
-    }
-  {
+  _LIBCPP_HIDE_FROM_ABI friend constexpr auto operator<=>(reference_wrapper __x, reference_wrapper __y) requires {
+    std::__synth_three_way(__x.get(), __y.get());
+  } {
     return std::__synth_three_way(__x.get(), __y.get());
   }
 
-  _LIBCPP_HIDE_FROM_ABI friend constexpr auto operator<=>(reference_wrapper __x, const _Tp& __y)
-    requires requires(const _Tp __t) {
-      { __t < __t } -> __boolean_testable;
-    }
-  {
+  _LIBCPP_HIDE_FROM_ABI friend constexpr auto operator<=>(reference_wrapper __x, const _Tp& __y) requires {
+    std::__synth_three_way(__x.get(), __y);
+  } {
     return std::__synth_three_way(__x.get(), __y);
   }
 
   _LIBCPP_HIDE_FROM_ABI friend constexpr auto operator<=>(reference_wrapper __x, reference_wrapper<const _Tp> __y)
-    requires(!is_const_v<_Tp>) && requires(const _Tp __t) {
-      { __t < __t } -> __boolean_testable;
-    }
+    requires(!is_const_v<_Tp>) &&
   {
-    return std::__synth_three_way(__x.get(), __y.get());
+    std::__synth_three_way(__x.get(), __y.get());
   }
+  { return std::__synth_three_way(__x.get(), __y.get()); }
 
 #endif // _LIBCPP_STD_VER >= 26
 };
