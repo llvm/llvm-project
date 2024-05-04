@@ -164,6 +164,8 @@ Changes to the C API
 * Added ``LLVMAtomicRMWBinOpUIncWrap`` and ``LLVMAtomicRMWBinOpUDecWrap`` to
   ``LLVMAtomicRMWBinOp`` enum for AtomicRMW instructions.
 
+* Added ``LLVMCreateConstantRangeAttribute`` function for creating ConstantRange Attributes.
+
 Changes to the CodeGen infrastructure
 -------------------------------------
 
