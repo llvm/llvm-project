@@ -15,17 +15,17 @@
 #  define NOMINMAX
 #  include <windows.h>
 #elif defined(__APPLE__) || defined(__FreeBSD__)
-#  include <array>
-#  include <csignal>
-#  include <sys/sysctl.h>
-#  include <sys/types.h>
-#  include <unistd.h>
 #  if defined(__FreeBSD__)
 #    include <libutil.h>
 #    include <sys/param.h>
 #    include <sys/proc.h>
 #    include <sys/user.h>
 #  endif // defined(__FreeBSD__)
+#  include <array>
+#  include <csignal>
+#  include <sys/sysctl.h>
+#  include <sys/types.h>
+#  include <unistd.h>
 #elif defined(__linux__)
 #  include <csignal>
 #  include <cstdio>
