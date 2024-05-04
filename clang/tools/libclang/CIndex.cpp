@@ -2816,6 +2816,10 @@ void OpenACCClauseEnqueue::VisitNumGangsClause(const OpenACCNumGangsClause &C) {
 void OpenACCClauseEnqueue::VisitPrivateClause(const OpenACCPrivateClause &C) {
   VisitVarList(C);
 }
+void OpenACCClauseEnqueue::VisitFirstPrivateClause(
+    const OpenACCFirstPrivateClause &C) {
+  VisitVarList(C);
+}
 } // namespace
 
 void EnqueueVisitor::EnqueueChildren(const OpenACCClause *C) {
