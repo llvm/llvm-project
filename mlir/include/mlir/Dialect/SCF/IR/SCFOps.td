@@ -307,7 +307,8 @@ def ForallOp : SCF_Op<"forall", [
        RecursiveMemoryEffects,
        SingleBlockImplicitTerminator<"scf::InParallelOp">,
        DeclareOpInterfaceMethods<RegionBranchOpInterface>,
-       DestinationStyleOpInterface
+       DestinationStyleOpInterface,
+       HasParallelRegion
      ]> {
   let summary = "evaluate a block multiple times in parallel";
   let description = [{
@@ -764,7 +765,8 @@ def ParallelOp : SCF_Op<"parallel",
           "getSingleLowerBound", "getSingleUpperBound", "getSingleStep"]>,
      RecursiveMemoryEffects,
      DeclareOpInterfaceMethods<RegionBranchOpInterface>,
-     SingleBlockImplicitTerminator<"scf::ReduceOp">]> {
+     SingleBlockImplicitTerminator<"scf::ReduceOp">,
+     HasParallelRegion]> {
   let summary = "parallel for operation";
   let description = [{
     The "scf.parallel" operation represents a loop nest taking 4 groups of SSA
