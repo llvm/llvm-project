@@ -33,7 +33,7 @@ module {
     case (equal, 1) {
       cir.break
     }
-    ]    
+    ]
     cir.return
   }
 // CHECK:  cir.func @shouldFlatSwitchWithoutDefault(%arg0: !s32i) {
@@ -52,7 +52,7 @@ module {
     case (anyof, [1, 2] : !s64i) {
       cir.break
     }
-    ]    
+    ]
     cir.return
   }
 // CHECK:  cir.func @shouldFlatSwitchWithImplicitFallthrough(%arg0: !s64i) {
@@ -72,11 +72,11 @@ module {
       cir.switch (%arg0 : !s64i) [
       case (equal, 1 : !s64i) { // case 1 has its own region
         cir.yield // fallthrough to case 2
-      },      
+      },
       case (equal, 2 : !s64i) {
         cir.break
-      }      
-      ]      
+      }
+      ]
     cir.return
   }
 // CHECK:  cir.func @shouldFlatSwitchWithExplicitFallthrough(%arg0: !s64i) {
@@ -96,8 +96,8 @@ module {
       cir.switch (%arg0 : !s64i) [
       case (equal, 1 : !s64i) {
         cir.yield // fallthrough to exit
-      }      
-      ]   
+      }
+      ]
     cir.return
   }
 // CHECK:  cir.func @shouldFlatSwitchWithFallthroughToExit(%arg0: !s64i) {
@@ -116,7 +116,7 @@ module {
     // CHECK-NOT: llvm.switch
     cir.return
   }
-// CHECK:      cir.func @shouldDropEmptySwitch(%arg0: !s64i) 
+// CHECK:      cir.func @shouldDropEmptySwitch(%arg0: !s64i)
 // CHECK-NOT:    cir.switch.flat
 
 
@@ -131,7 +131,7 @@ module {
       ^bb1:  // no predecessors
         cir.break
       }
-      ] 
+      ]
     }
     cir.return
   }
@@ -168,7 +168,7 @@ module {
       case (equal, 0) {
         cir.scope {
           %6 = cir.load %1 : !cir.ptr<!s32i>, !s32i
-          %7 = cir.const(#cir.int<0> : !s32i) : !s32i
+          %7 = cir.const #cir.int<0> : !s32i
           %8 = cir.cmp(ge, %6, %7) : !s32i, !s32i
           %9 = cir.cast(int_to_bool, %8 : !s32i), !cir.bool
           cir.if %9 {
@@ -177,12 +177,12 @@ module {
         }
         cir.break
       }
-      ] 
-    } 
-    %3 = cir.const(#cir.int<3> : !s32i) : !s32i
+      ]
+    }
+    %3 = cir.const #cir.int<3> : !s32i
     cir.store %3, %2 : !s32i, !cir.ptr<!s32i>
     %4 = cir.load %2 : !cir.ptr<!s32i>, !s32i
-    cir.return %4 : !s32i 
+    cir.return %4 : !s32i
   }
 // CHECK:  cir.func @shouldFlatNestedBreak(%arg0: !s32i, %arg1: !s32i) -> !s32i {
 // CHECK:    cir.switch.flat %3 : !s32i, ^bb7 [
@@ -200,7 +200,7 @@ module {
 // CHECK:    cir.br ^bb7
 // CHECK:  ^bb7:  // 3 preds: ^bb1, ^bb4, ^bb6
 // CHECK:    cir.br ^bb8
-// CHECK:  ^bb8:  // pred: ^bb7    
+// CHECK:  ^bb8:  // pred: ^bb7
 // CHECK:    cir.return %9 : !s32i
 // CHECK:  }
 

@@ -52,10 +52,10 @@ void init(unsigned numImages) {
 // CHECK:       cir.store %12, %7 : !cir.ptr<!ty_22triple22>, !cir.ptr<!cir.ptr<!ty_22triple22>>
 // CHECK:       cir.scope {
 // CHECK:         %13 = cir.alloca !ty_22triple22, !cir.ptr<!ty_22triple22>, ["ref.tmp0"] {alignment = 8 : i64}
-// CHECK:         %14 = cir.const(#cir.zero : !ty_22triple22) : !ty_22triple22
+// CHECK:         %14 = cir.const #cir.zero : !ty_22triple22
 // CHECK:         cir.store %14, %13 : !ty_22triple22, !cir.ptr<!ty_22triple22>
 // CHECK:         %15 = cir.get_member %13[0] {name = "type"} : !cir.ptr<!ty_22triple22> -> !cir.ptr<!u32i>
-// CHECK:         %16 = cir.const(#cir.int<1000024002> : !u32i) : !u32i
+// CHECK:         %16 = cir.const #cir.int<1000024002> : !u32i
 // CHECK:         cir.store %16, %15 : !u32i, !cir.ptr<!u32i>
 // CHECK:         %17 = cir.get_member %13[1] {name = "next"} : !cir.ptr<!ty_22triple22> -> !cir.ptr<!cir.ptr<!void>>
 // CHECK:         %18 = cir.get_member %13[2] {name = "image"} : !cir.ptr<!ty_22triple22> -> !cir.ptr<!u32i>

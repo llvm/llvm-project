@@ -21,7 +21,7 @@ static Init __ioinit2(false);
 // BEFORE-NEXT:   cir.func private @_ZN4InitD1Ev(!cir.ptr<!ty_22Init22>)
 // BEFORE-NEXT:   cir.global "private" internal @_ZL8__ioinit = ctor : !ty_22Init22 {
 // BEFORE-NEXT:     %0 = cir.get_global @_ZL8__ioinit : !cir.ptr<!ty_22Init22>
-// BEFORE-NEXT:     %1 = cir.const(#true) : !cir.bool
+// BEFORE-NEXT:     %1 = cir.const #true
 // BEFORE-NEXT:     cir.call @_ZN4InitC1Eb(%0, %1) : (!cir.ptr<!ty_22Init22>, !cir.bool) -> ()
 // BEFORE-NEXT:   } dtor {
 // BEFORE-NEXT:      %0 = cir.get_global @_ZL8__ioinit : !cir.ptr<!ty_22Init22>
@@ -29,7 +29,7 @@ static Init __ioinit2(false);
 // BEFORE-NEXT:   } {ast = #cir.var.decl.ast}
 // BEFORE:        cir.global "private" internal @_ZL9__ioinit2 = ctor : !ty_22Init22 {
 // BEFORE-NEXT:     %0 = cir.get_global @_ZL9__ioinit2 : !cir.ptr<!ty_22Init22>
-// BEFORE-NEXT:     %1 = cir.const(#false) : !cir.bool
+// BEFORE-NEXT:     %1 = cir.const #false
 // BEFORE-NEXT:     cir.call @_ZN4InitC1Eb(%0, %1) : (!cir.ptr<!ty_22Init22>, !cir.bool) -> ()
 // BEFORE-NEXT:   } dtor  {
 // BEFORE-NEXT:     %0 = cir.get_global @_ZL9__ioinit2 : !cir.ptr<!ty_22Init22>
@@ -46,7 +46,7 @@ static Init __ioinit2(false);
 // AFTER-NEXT:   cir.global "private" internal @_ZL8__ioinit =  #cir.zero : !ty_22Init22 {ast = #cir.var.decl.ast}
 // AFTER-NEXT:   cir.func internal private @__cxx_global_var_init()
 // AFTER-NEXT:     %0 = cir.get_global @_ZL8__ioinit : !cir.ptr<!ty_22Init22>
-// AFTER-NEXT:     %1 = cir.const(#true) : !cir.bool
+// AFTER-NEXT:     %1 = cir.const #true
 // AFTER-NEXT:     cir.call @_ZN4InitC1Eb(%0, %1) : (!cir.ptr<!ty_22Init22>, !cir.bool) -> ()
 // AFTER-NEXT:     %2 = cir.get_global @_ZL8__ioinit : !cir.ptr<!ty_22Init22>
 // AFTER-NEXT:     %3 = cir.get_global @_ZN4InitD1Ev : !cir.ptr<!cir.func<!void (!cir.ptr<!ty_22Init22>)>>
@@ -58,7 +58,7 @@ static Init __ioinit2(false);
 // AFTER:        cir.global "private" internal @_ZL9__ioinit2 =  #cir.zero : !ty_22Init22 {ast = #cir.var.decl.ast}
 // AFTER-NEXT:   cir.func internal private @__cxx_global_var_init.1()
 // AFTER-NEXT:     %0 = cir.get_global @_ZL9__ioinit2 : !cir.ptr<!ty_22Init22>
-// AFTER-NEXT:     %1 = cir.const(#false) : !cir.bool
+// AFTER-NEXT:     %1 = cir.const #false
 // AFTER-NEXT:     cir.call @_ZN4InitC1Eb(%0, %1) : (!cir.ptr<!ty_22Init22>, !cir.bool) -> ()
 // AFTER-NEXT:     %2 = cir.get_global @_ZL9__ioinit2 : !cir.ptr<!ty_22Init22>
 // AFTER-NEXT:     %3 = cir.get_global @_ZN4InitD1Ev : !cir.ptr<!cir.func<!void (!cir.ptr<!ty_22Init22>)>>

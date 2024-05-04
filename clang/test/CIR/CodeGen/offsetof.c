@@ -13,7 +13,7 @@ void foo() {
 }
 
 // CHECK:  cir.func no_proto @foo()
-// CHECK:    {{.*}} = cir.const(#cir.int<0> : !u64i) : !u64i
-// CHECK:    {{.*}} = cir.const(#cir.int<4> : !u64i) : !u64i
+// CHECK:    {{.*}} = cir.const #cir.int<0> : !u64i
+// CHECK:    {{.*}} = cir.const #cir.int<4> : !u64i
 // CHECK:    cir.return
 

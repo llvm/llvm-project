@@ -10,6 +10,6 @@ namespace test1 {
   }
   // CHECK: cir.func @_ZN5test11aEPNS_1AE
 
-  // CHECK: %[[CONST:.*]] = cir.const(#cir.int<4> : !u64i) : !u64i
+  // CHECK: %[[CONST:.*]] = cir.const #cir.int<4> : !u64i
   // CHECK: cir.call @_ZN5test11AdlEPvm({{.*}}, %[[CONST]])
 }

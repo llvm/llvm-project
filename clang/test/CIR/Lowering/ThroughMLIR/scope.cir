@@ -8,7 +8,7 @@ module {
   cir.func @foo() {
     cir.scope {
       %0 = cir.alloca !u32i, !cir.ptr<!u32i>, ["a", init] {alignment = 4 : i64}
-      %1 = cir.const(#cir.int<4> : !u32i) : !u32i
+      %1 = cir.const #cir.int<4> : !u32i
       cir.store %1, %0 : !u32i, !cir.ptr<!u32i>
     }
     cir.return

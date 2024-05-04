@@ -8,13 +8,13 @@ module {
     %1 = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"] {alignment = 4 : i64}
     cir.store %arg0, %0 : !s32i, !cir.ptr<!s32i>
     %2 = cir.load %0 : !cir.ptr<!s32i>, !s32i
-    %3 = cir.const(#cir.int<0> : !s32i) : !s32i
+    %3 = cir.const #cir.int<0> : !s32i
     %4 = cir.cmp(gt, %2, %3) : !s32i, !cir.bool
     %5 = cir.ternary(%4, true {
-      %7 = cir.const(#cir.int<3> : !s32i) : !s32i
+      %7 = cir.const #cir.int<3> : !s32i
       cir.yield %7 : !s32i
     }, false {
-      %7 = cir.const(#cir.int<5> : !s32i) : !s32i
+      %7 = cir.const #cir.int<5> : !s32i
       cir.yield %7 : !s32i
     }) : (!cir.bool) -> !s32i
     cir.store %5, %1 : !s32i, !cir.ptr<!s32i>
@@ -27,14 +27,14 @@ module {
 // CHECK:   %1 = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"] {alignment = 4 : i64}
 // CHECK:   cir.store %arg0, %0 : !s32i, !cir.ptr<!s32i>
 // CHECK:   %2 = cir.load %0 : !cir.ptr<!s32i>, !s32i
-// CHECK:   %3 = cir.const(#cir.int<0> : !s32i) : !s32i
+// CHECK:   %3 = cir.const #cir.int<0> : !s32i
 // CHECK:   %4 = cir.cmp(gt, %2, %3) : !s32i, !cir.bool
 // CHECK:    cir.brcond %4 ^bb1, ^bb2
 // CHECK:  ^bb1:  // pred: ^bb0
-// CHECK:    %5 = cir.const(#cir.int<3> : !s32i) : !s32i
+// CHECK:    %5 = cir.const #cir.int<3> : !s32i
 // CHECK:    cir.br ^bb3(%5 : !s32i)
 // CHECK:  ^bb2:  // pred: ^bb0
-// CHECK:    %6 = cir.const(#cir.int<5> : !s32i) : !s32i
+// CHECK:    %6 = cir.const #cir.int<5> : !s32i
 // CHECK:    cir.br ^bb3(%6 : !s32i)
 // CHECK:  ^bb3(%7: !s32i):  // 2 preds: ^bb1, ^bb2
 // CHECK:    cir.br ^bb4
@@ -43,5 +43,5 @@ module {
 // CHECK:    %8 = cir.load %1 : !cir.ptr<!s32i>, !s32i
 // CHECK:    cir.return %8 : !s32i
 // CHECK:  }
-  
+
 }

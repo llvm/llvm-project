@@ -27,30 +27,30 @@ typedef struct {
   int d : 2;
   int e : 15;
   unsigned f; // type other than int above, not a bitfield
-} S; 
+} S;
 
 typedef struct {
   int a : 3;  // one bitfield with size < 8
   unsigned b;
-} T; 
+} T;
 
 typedef struct {
     char a;
     char b;
     char c;
-  
+
     // startOffset 24 bits, new storage from here
-    int d: 2;  
+    int d: 2;
     int e: 2;
     int f: 4;
     int g: 25;
     int h: 3;
-    int i: 4;  
+    int i: 4;
     int j: 3;
     int k: 8;
 
     int l: 14; // need to be a part of the new storage
-               // because (tail - startOffset) is 65 after 'l' field   
+               // because (tail - startOffset) is 65 after 'l' field
 } U;
 
 // CHECK: !ty_22D22 = !cir.struct<struct "D" {!cir.int<u, 16>, !cir.int<s, 32>}>
@@ -66,9 +66,9 @@ typedef struct {
 
 // CHECK: cir.func {{.*@store_field}}
 // CHECK:   [[TMP0:%.*]] = cir.alloca !ty_22S22, !cir.ptr<!ty_22S22>
-// CHECK:   [[TMP1:%.*]] = cir.const(#cir.int<3> : !s32i) : !s32i
+// CHECK:   [[TMP1:%.*]] = cir.const #cir.int<3> : !s32i
 // CHECK:   [[TMP2:%.*]] = cir.get_member [[TMP0]][2] {name = "e"} : !cir.ptr<!ty_22S22> -> !cir.ptr<!u16i>
-// CHECK:   cir.set_bitfield(#bfi_e, [[TMP2]] : !cir.ptr<!u16i>, [[TMP1]] : !s32i)            
+// CHECK:   cir.set_bitfield(#bfi_e, [[TMP2]] : !cir.ptr<!u16i>, [[TMP1]] : !s32i)
 void store_field() {
   S s;
   s.e = 3;
@@ -93,7 +93,7 @@ void unOp(S* s) {
 }
 
 // CHECK: cir.func {{.*@binOp}}
-// CHECK:   [[TMP0:%.*]] = cir.const(#cir.int<42> : !s32i) : !s32i
+// CHECK:   [[TMP0:%.*]] = cir.const #cir.int<42> : !s32i
 // CHECK:   [[TMP1:%.*]] = cir.get_member {{.*}}[1] {name = "d"} : !cir.ptr<!ty_22S22> -> !cir.ptr<!cir.array<!u8i x 3>>
 // CHECK:   [[TMP2:%.*]] = cir.get_bitfield(#bfi_d, [[TMP1]] : !cir.ptr<!cir.array<!u8i x 3>>) -> !s32i
 // CHECK:   [[TMP3:%.*]] = cir.binop(or, [[TMP2]], [[TMP0]]) : !s32i
@@ -109,7 +109,7 @@ unsigned load_non_bitfield(S *s) {
   return s->f;
 }
 
-// just create a usage of T type 
+// just create a usage of T type
 // CHECK: cir.func {{.*@load_one_bitfield}}
 int load_one_bitfield(T* t) {
   return t->a;
@@ -124,7 +124,7 @@ void createU() {
 // CHECK: cir.func {{.*@createD}}
 // CHECK:   %0 = cir.alloca !ty_22D22, !cir.ptr<!ty_22D22>, ["d"] {alignment = 4 : i64}
 // CHECK:   %1 = cir.cast(bitcast, %0 : !cir.ptr<!ty_22D22>), !cir.ptr<!ty_anon_struct>
-// CHECK:   %2 = cir.const(#cir.const_struct<{#cir.int<33> : !u8i, #cir.int<0> : !u8i, #cir.int<3> : !s32i}> : !ty_anon_struct) : !ty_anon_struct
+// CHECK:   %2 = cir.const #cir.const_struct<{#cir.int<33> : !u8i, #cir.int<0> : !u8i, #cir.int<3> : !s32i}> : !ty_anon_struct
 // CHECK:   cir.store %2, %1 : !ty_anon_struct, !cir.ptr<!ty_anon_struct>
 void createD() {
   D d = {1,2,3};

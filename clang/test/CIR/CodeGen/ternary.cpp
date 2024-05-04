@@ -10,13 +10,13 @@ int x(int y) {
 // CHECK:     %1 = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"] {alignment = 4 : i64}
 // CHECK:     cir.store %arg0, %0 : !s32i, !cir.ptr<!s32i>
 // CHECK:     %2 = cir.load %0 : !cir.ptr<!s32i>, !s32i
-// CHECK:     %3 = cir.const(#cir.int<0> : !s32i) : !s32i
+// CHECK:     %3 = cir.const #cir.int<0> : !s32i
 // CHECK:     %4 = cir.cmp(gt, %2, %3) : !s32i, !cir.bool
 // CHECK:     %5 = cir.ternary(%4, true {
-// CHECK:       %7 = cir.const(#cir.int<3> : !s32i) : !s32i
+// CHECK:       %7 = cir.const #cir.int<3> : !s32i
 // CHECK:       cir.yield %7 : !s32i
 // CHECK:     }, false {
-// CHECK:       %7 = cir.const(#cir.int<5> : !s32i) : !s32i
+// CHECK:       %7 = cir.const #cir.int<5> : !s32i
 // CHECK:       cir.yield %7 : !s32i
 // CHECK:     }) : (!cir.bool) -> !s32i
 // CHECK:     cir.store %5, %1 : !s32i, !cir.ptr<!s32i>
@@ -40,11 +40,11 @@ void m(APIType api) {
 // CHECK:    cir.store %arg0, %0 : !u32i, !cir.ptr<!u32i>
 // CHECK:    %1 = cir.load %0 : !cir.ptr<!u32i>, !u32i
 // CHECK:    %2 = cir.cast(integral, %1 : !u32i), !s32i
-// CHECK:    %3 = cir.const(#cir.int<0> : !u32i) : !u32i
+// CHECK:    %3 = cir.const #cir.int<0> : !u32i
 // CHECK:    %4 = cir.cast(integral, %3 : !u32i), !s32i
 // CHECK:    %5 = cir.cmp(eq, %2, %4) : !s32i, !cir.bool
 // CHECK:    cir.ternary(%5, true {
-// CHECK:      %6 = cir.const(#cir.int<0> : !s32i) : !s32i
+// CHECK:      %6 = cir.const #cir.int<0> : !s32i
 // CHECK:      cir.yield
 // CHECK:    }, false {
 // CHECK:      %6 = cir.get_global @".str" : !cir.ptr<!cir.array<!s8i x 7>>
@@ -66,7 +66,7 @@ int foo(int a, int b) {
 // CHECK:   [[B0:%.*]] = cir.load {{.*}} : !cir.ptr<!s32i>, !s32i
 // CHECK:   [[CMP:%.*]] = cir.cmp(lt, [[A0]], [[B0]]) : !s32i, !cir.bool
 // CHECK:   [[RES:%.*]] = cir.ternary([[CMP]], true {
-// CHECK:     [[ZERO:%.*]] = cir.const(#cir.int<0> : !s32i) : !s32i
+// CHECK:     [[ZERO:%.*]] = cir.const #cir.int<0> : !s32i
 // CHECK:     cir.yield [[ZERO]] : !s32i
 // CHECK:   }, false {
 // CHECK:     [[A1:%.*]] = cir.load {{.*}} : !cir.ptr<!s32i>, !s32i

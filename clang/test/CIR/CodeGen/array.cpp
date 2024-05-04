@@ -15,8 +15,8 @@ void a1() {
 
 // CHECK: cir.func @_Z2a1v()
 // CHECK-NEXT:  %0 = cir.alloca !cir.array<!s32i x 10>, !cir.ptr<!cir.array<!s32i x 10>>, ["a"] {alignment = 16 : i64}
-// CHECK-NEXT:  %1 = cir.const(#cir.int<1> : !s32i) : !s32i
-// CHECK-NEXT:  %2 = cir.const(#cir.int<0> : !s32i) : !s32i
+// CHECK-NEXT:  %1 = cir.const #cir.int<1> : !s32i
+// CHECK-NEXT:  %2 = cir.const #cir.int<0> : !s32i
 // CHECK-NEXT:  %3 = cir.cast(array_to_ptrdecay, %0 : !cir.ptr<!cir.array<!s32i x 10>>), !cir.ptr<!s32i>
 // CHECK-NEXT:  %4 = cir.ptr_stride(%3 : !cir.ptr<!s32i>, %2 : !s32i), !cir.ptr<!s32i>
 // CHECK-NEXT:  cir.store %1, %4 : !s32i, !cir.ptr<!s32i>
@@ -29,7 +29,7 @@ int *a2() {
 // CHECK: cir.func @_Z2a2v() -> !cir.ptr<!s32i>
 // CHECK-NEXT:   %0 = cir.alloca !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>, ["__retval"] {alignment = 8 : i64}
 // CHECK-NEXT:   %1 = cir.alloca !cir.array<!s32i x 4>, !cir.ptr<!cir.array<!s32i x 4>>, ["a"] {alignment = 16 : i64}
-// CHECK-NEXT:   %2 = cir.const(#cir.int<0> : !s32i) : !s32i
+// CHECK-NEXT:   %2 = cir.const #cir.int<0> : !s32i
 // CHECK-NEXT:   %3 = cir.cast(array_to_ptrdecay, %1 : !cir.ptr<!cir.array<!s32i x 4>>), !cir.ptr<!s32i>
 // CHECK-NEXT:   %4 = cir.ptr_stride(%3 : !cir.ptr<!s32i>, %2 : !s32i), !cir.ptr<!s32i>
 // CHECK-NEXT:   cir.store %4, %0 : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
@@ -76,7 +76,7 @@ void testPointerDecaySubscriptAccess(int arr[]) {
 // CHECK: cir.func @{{.+}}testPointerDecaySubscriptAccess
   arr[1];
   // CHECK: %[[#BASE:]] = cir.load %{{.+}} : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
-  // CHECK: %[[#DIM1:]] = cir.const(#cir.int<1> : !s32i) : !s32i
+  // CHECK: %[[#DIM1:]] = cir.const #cir.int<1> : !s32i
   // CHECK: cir.ptr_stride(%[[#BASE]] : !cir.ptr<!s32i>, %[[#DIM1]] : !s32i), !cir.ptr<!s32i>
 }
 
@@ -84,9 +84,9 @@ void testPointerDecayedArrayMultiDimSubscriptAccess(int arr[][3]) {
 // CHECK: cir.func @{{.+}}testPointerDecayedArrayMultiDimSubscriptAccess
   arr[1][2];
   // CHECK: %[[#V1:]] = cir.load %{{.+}} : !cir.ptr<!cir.ptr<!cir.array<!s32i x 3>>>, !cir.ptr<!cir.array<!s32i x 3>>
-  // CHECK: %[[#V2:]] = cir.const(#cir.int<1> : !s32i) : !s32i
+  // CHECK: %[[#V2:]] = cir.const #cir.int<1> : !s32i
   // CHECK: %[[#V3:]] = cir.ptr_stride(%[[#V1]] : !cir.ptr<!cir.array<!s32i x 3>>, %[[#V2]] : !s32i), !cir.ptr<!cir.array<!s32i x 3>>
-  // CHECK: %[[#V4:]] = cir.const(#cir.int<2> : !s32i) : !s32i
+  // CHECK: %[[#V4:]] = cir.const #cir.int<2> : !s32i
   // CHECK: %[[#V5:]] = cir.cast(array_to_ptrdecay, %[[#V3]] : !cir.ptr<!cir.array<!s32i x 3>>), !cir.ptr<!s32i>
   // CHECK: cir.ptr_stride(%[[#V5]] : !cir.ptr<!s32i>, %[[#V4]] : !s32i), !cir.ptr<!s32i>
 }

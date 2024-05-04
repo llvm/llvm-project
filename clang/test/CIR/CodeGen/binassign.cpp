@@ -66,7 +66,7 @@ void exec() {
 // CHECK:     %1 = cir.call @_Z5gettyv() : () -> !u32i
 // CHECK:     cir.store %1, %0 : !u32i, !cir.ptr<!u32i>
 // CHECK:     %2 = cir.cast(integral, %1 : !u32i), !s32i
-// CHECK:     %3 = cir.const(#cir.int<0> : !s32i) : !s32i
+// CHECK:     %3 = cir.const #cir.int<0> : !s32i
 // CHECK:     %4 = cir.cmp(lt, %2, %3) : !s32i, !cir.bool
 // CHECK:     cir.if %4 {
 

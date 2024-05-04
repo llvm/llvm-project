@@ -46,8 +46,8 @@ void d(void) {
 // CHECK:   }
 // CHECK:   cir.func @d()
 // CHECK:     call @a() : () -> ()
-// CHECK:     %0 = cir.const(#cir.int<0> : !s32i) : !s32i
-// CHECK:     %1 = cir.const(#cir.int<1> : !s32i) : !s32i
+// CHECK:     %0 = cir.const #cir.int<0> : !s32i
+// CHECK:     %1 = cir.const #cir.int<1> : !s32i
 // CHECK:     call @b(%0, %1) : (!s32i, !s32i) -> !s32i
 // CHECK:     cir.return
 // CHECK:   }
@@ -84,8 +84,8 @@ void d(void) {
 // CXX-NEXT:   }
 // CXX-NEXT:   cir.func @_Z1dv()
 // CXX-NEXT:     call @_Z1av() : () -> ()
-// CXX-NEXT:     %0 = cir.const(#cir.int<0> : !s32i) : !s32i
-// CXX-NEXT:     %1 = cir.const(#cir.int<1> : !s32i) : !s32i
+// CXX-NEXT:     %0 = cir.const #cir.int<0> : !s32i
+// CXX-NEXT:     %1 = cir.const #cir.int<1> : !s32i
 // CXX-NEXT:     call @_Z1bii(%0, %1) : (!s32i, !s32i) -> !s32i
 // CXX-NEXT:     cir.return
 // CXX-NEXT:   }

@@ -12,7 +12,7 @@ void m() {
 // CHECK: cir.func @_Z1mv()
 // CHECK:     %0 = cir.get_global @".str" : !cir.ptr<!cir.array<!s8i x 7>>
 // CHECK:     %1 = cir.cast(array_to_ptrdecay, %0 : !cir.ptr<!cir.array<!s8i x 7>>), !cir.ptr<!s8i>
-// CHECK:     %2 = cir.const(#cir.int<79> : !s32i) : !s32i
+// CHECK:     %2 = cir.const #cir.int<79> : !s32i
 // CHECK:     %3 = cir.get_global @".str1" : !cir.ptr<!cir.array<!s8i x 9>>
 // CHECK:     %4 = cir.cast(array_to_ptrdecay, %3 : !cir.ptr<!cir.array<!s8i x 9>>), !cir.ptr<!s8i>
 // CHECK:     %5 = cir.get_global @".str2" : !cir.ptr<!cir.array<!s8i x 5>>

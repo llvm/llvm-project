@@ -328,8 +328,8 @@ public:
   }
 
   mlir::TypedAttr getConstPtrAttr(mlir::Type t, uint64_t v) {
-    assert(t.isa<mlir::cir::PointerType>() && "expected cir.ptr");
-    return mlir::cir::ConstPtrAttr::get(getContext(), t, v);
+    return mlir::cir::ConstPtrAttr::get(getContext(),
+                                        t.cast<mlir::cir::PointerType>(), v);
   }
 
   // Creates constant nullptr for pointer type ty.

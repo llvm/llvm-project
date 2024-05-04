@@ -18,7 +18,7 @@ long add(char *a, char *b) {
 
 // CHECK: cir.func @_Z3addPcS_(%arg0: !cir.ptr<!s8i>
 //          %5 = cir.ptr_diff(%3, %4) : !cir.ptr<!s8i> -> !s64i
-//          %6 = cir.const(#cir.int<1> : !s32i) : !s32i
+//          %6 = cir.const #cir.int<1> : !s32i
 //          %7 = cir.cast(integral, %6 : !s32i), !s64i
 //          %8 = cir.binop(add, %5, %7) : !s64i
 

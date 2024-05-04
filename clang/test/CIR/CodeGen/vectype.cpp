@@ -18,13 +18,13 @@ void vector_int_test(int x) {
 
   // Incomplete vector initialization.
   vi4 bb = { x, x + 1 };
-  // CHECK: %[[#zero:]] = cir.const(#cir.int<0> : !s32i) : !s32i
+  // CHECK: %[[#zero:]] = cir.const #cir.int<0> : !s32i
   // CHECK: %{{[0-9]+}} = cir.vec.create(%{{[0-9]+}}, %{{[0-9]+}}, %[[#zero]], %[[#zero]] : !s32i, !s32i, !s32i, !s32i) : !cir.vector<!s32i x 4>
 
   // Scalar to vector conversion, a.k.a. vector splat.  Only valid as an
   // operand of a binary operator, not as a regular conversion.
   bb = a + 7;
-  // CHECK: %[[#seven:]] = cir.const(#cir.int<7> : !s32i) : !s32i
+  // CHECK: %[[#seven:]] = cir.const #cir.int<7> : !s32i
   // CHECK: %{{[0-9]+}} = cir.vec.splat %[[#seven]] : !s32i, !cir.vector<!s32i x 4>
 
   // Vector to vector conversion
@@ -105,13 +105,13 @@ void vector_double_test(int x, double y) {
 
   // Incomplete vector initialization
   vd2 bb = { y };
-  // CHECK: [[#dzero:]] = cir.const(#cir.fp<0.000000e+00> : !cir.double) : !cir.double
+  // CHECK: [[#dzero:]] = cir.const #cir.fp<0.000000e+00> : !cir.double
   // CHECK: %{{[0-9]+}} = cir.vec.create(%{{[0-9]+}}, %[[#dzero]] : !cir.double, !cir.double) : !cir.vector<!cir.double x 2>
 
   // Scalar to vector conversion, a.k.a. vector splat.  Only valid as an
   // operand of a binary operator, not as a regular conversion.
   bb = a + 2.5;
-  // CHECK: %[[#twohalf:]] = cir.const(#cir.fp<2.500000e+00> : !cir.double) : !cir.double
+  // CHECK: %[[#twohalf:]] = cir.const #cir.fp<2.500000e+00> : !cir.double
   // CHECK: %{{[0-9]+}} = cir.vec.splat %[[#twohalf]] : !cir.double, !cir.vector<!cir.double x 2>
 
   // Extract element

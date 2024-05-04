@@ -7,8 +7,8 @@ module {
     %0 = cir.alloca !u32i, !cir.ptr<!u32i>, ["a", init] {alignment = 4 : i64}
     %1 = cir.alloca !u32i, !cir.ptr<!u32i>, ["b", init] {alignment = 4 : i64}
     %2 = cir.alloca !u32i, !cir.ptr<!u32i>, ["x", init] {alignment = 4 : i64}
-    %3 = cir.const(#cir.int<2> : !u32i) : !u32i    cir.store %3, %0 : !u32i, !cir.ptr<!u32i>
-    %4 = cir.const(#cir.int<1> : !u32i) : !u32i    cir.store %4, %1 : !u32i, !cir.ptr<!u32i>
+    %3 = cir.const #cir.int<2> : !u32i    cir.store %3, %0 : !u32i, !cir.ptr<!u32i>
+    %4 = cir.const #cir.int<1> : !u32i    cir.store %4, %1 : !u32i, !cir.ptr<!u32i>
     %5 = cir.load %0 : !cir.ptr<!u32i>, !u32i
     %6 = cir.load %1 : !cir.ptr<!u32i>, !u32i
     %7 = cir.binop(mul, %5, %6) : !u32i

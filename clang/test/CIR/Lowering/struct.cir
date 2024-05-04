@@ -24,7 +24,7 @@ module {
 
   cir.func @shouldConstInitLocalStructsWithConstStructAttr() {
     %0 = cir.alloca !ty_22S2A22, !cir.ptr<!ty_22S2A22>, ["s"] {alignment = 4 : i64}
-    %1 = cir.const(#cir.const_struct<{#cir.int<1> : !s32i}> : !ty_22S2A22) : !ty_22S2A22
+    %1 = cir.const #cir.const_struct<{#cir.int<1> : !s32i}> : !ty_22S2A22
     cir.store %1, %0 : !ty_22S2A22, !cir.ptr<!ty_22S2A22>
     cir.return
   }

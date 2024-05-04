@@ -3178,10 +3178,10 @@ static void buildCtorDtorList(
 //    cir.func @foo(%arg0: !s32i) -> !s32i {
 //      %4 = cir.cast(int_to_bool, %arg0 : !s32i), !cir.bool
 //      cir.if %4 {
-//        %5 = cir.const(#cir.int<1> : !s32i) : !s32i
+//        %5 = cir.const #cir.int<1> : !s32i
 //        cir.return %5 : !s32i
 //      } else {
-//        %5 = cir.const(#cir.int<0> : !s32i) : !s32i
+//        %5 = cir.const #cir.int<0> : !s32i
 //       cir.return %5 : !s32i
 //      }
 //     cir.return %arg0 : !s32i

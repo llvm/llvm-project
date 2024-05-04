@@ -62,7 +62,7 @@ unsigned long long tc2() {
   } catch (...) {
     // CHECK: type (#cir.all)
     // CHECK:   cir.catch_param
-    // CHECK:   cir.const(#cir.int<100> : !s32i) : !s32i
+    // CHECK:   cir.const #cir.int<100> : !s32i
     z = 100;
   }
 
@@ -79,7 +79,7 @@ unsigned long long tc3() {
   } catch (...) {
     // CHECK: type (#cir.all)
     // CHECK:   cir.catch_param
-    // CHECK:   cir.const(#cir.int<100> : !s32i) : !s32i
+    // CHECK:   cir.const #cir.int<100> : !s32i
     z = 100;
   }
 

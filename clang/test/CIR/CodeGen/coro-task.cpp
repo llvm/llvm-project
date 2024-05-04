@@ -158,8 +158,8 @@ VoidTask silly_task() {
 
 // Get coroutine id with __builtin_coro_id.
 
-// CHECK: %[[#NullPtr:]] = cir.const(#cir.ptr<null> : !cir.ptr<!void>) : !cir.ptr<!void>
-// CHECK: %[[#Align:]] = cir.const(#cir.int<16> : !u32i) : !u32i
+// CHECK: %[[#NullPtr:]] = cir.const #cir.ptr<null> : !cir.ptr<!void>
+// CHECK: %[[#Align:]] = cir.const #cir.int<16> : !u32i
 // CHECK: %[[#CoroId:]] = cir.call @__builtin_coro_id(%[[#Align]], %[[#NullPtr]], %[[#NullPtr]], %[[#NullPtr]])
 
 // Perform allocation calling operator 'new' depending on __builtin_coro_alloc and
@@ -261,8 +261,8 @@ VoidTask silly_task() {
 
 // Call builtin coro end and return
 
-// CHECK-NEXT: %[[#CoroEndArg0:]] = cir.const(#cir.ptr<null> : !cir.ptr<!void>)
-// CHECK-NEXT: %[[#CoroEndArg1:]] = cir.const(#false) : !cir.bool
+// CHECK-NEXT: %[[#CoroEndArg0:]] = cir.const #cir.ptr<null> : !cir.ptr<!void>
+// CHECK-NEXT: %[[#CoroEndArg1:]] = cir.const #false
 // CHECK-NEXT: = cir.call @__builtin_coro_end(%[[#CoroEndArg0]], %[[#CoroEndArg1]])
 
 // CHECK: %[[#Tmp1:]] = cir.load %[[#VoidTaskAddr]]
@@ -315,7 +315,7 @@ folly::coro::Task<int> go1() {
 // The call to go(1) has its own scope due to full-expression rules.
 // CHECK: cir.scope {
 // CHECK:   %[[#OneAddr:]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["ref.tmp1", init] {alignment = 4 : i64}
-// CHECK:   %[[#One:]] = cir.const(#cir.int<1> : !s32i) : !s32i
+// CHECK:   %[[#One:]] = cir.const #cir.int<1> : !s32i
 // CHECK:   cir.store %[[#One]], %[[#OneAddr]] : !s32i, !cir.ptr<!s32i>
 // CHECK:   %[[#IntTaskTmp:]] = cir.call @_Z2goRKi(%[[#OneAddr]]) : (!cir.ptr<!s32i>) -> ![[IntTask]]
 // CHECK:   cir.store %[[#IntTaskTmp]], %[[#IntTaskAddr]] : ![[IntTask]], !cir.ptr<![[IntTask]]>
@@ -367,7 +367,7 @@ folly::coro::Task<int> go4() {
 // CHECK: cir.scope {
 // CHECK:   %17 = cir.alloca !s32i, !cir.ptr<!s32i>, ["ref.tmp2", init] {alignment = 4 : i64}
 // CHECK:   %18 = cir.load %3 : !cir.ptr<!cir.ptr<!cir.func<![[IntTask]] (!cir.ptr<!s32i>)>>>, !cir.ptr<!cir.func<![[IntTask]] (!cir.ptr<!s32i>)>>
-// CHECK:   %19 = cir.const(#cir.int<3> : !s32i) : !s32i
+// CHECK:   %19 = cir.const #cir.int<3> : !s32i
 // CHECK:   cir.store %19, %17 : !s32i, !cir.ptr<!s32i>
 
 // Call invoker, which calls operator() indirectly.

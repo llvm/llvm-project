@@ -34,8 +34,8 @@ module  {
 // CHECK:     %1 = cir.alloca !cir.ptr<!ty_22i22>, !cir.ptr<!cir.ptr<!ty_22i22>>, ["i", init]
 
   cir.func @shouldSuccessfullyParseConstStructAttrs() {
-    %0 = cir.const(#cir.const_struct<{#cir.int<1> : !s32i, #cir.int<2> : !s32i}> : !ty_22S122) : !ty_22S122
-    // CHECK: cir.const(#cir.const_struct<{#cir.int<1> : !s32i, #cir.int<2> : !s32i}> : !ty_22S122) : !ty_22S122
+    %0 = cir.const #cir.const_struct<{#cir.int<1> : !s32i, #cir.int<2> : !s32i}> : !ty_22S122
+    // CHECK: cir.const #cir.const_struct<{#cir.int<1> : !s32i, #cir.int<2> : !s32i}> : !ty_22S122
     cir.return
   }
 }

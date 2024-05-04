@@ -18,7 +18,7 @@ auto test1() -> int Point::* {
   return &Point::y;
 }
 // CHECK: cir.func @_Z5test1v() -> !cir.data_member<!s32i in !ty_22Point22>
-// CHECK:   %{{.+}} = cir.const(#cir.data_member<1> : !cir.data_member<!s32i in !ty_22Point22>) : !cir.data_member<!s32i in !ty_22Point22>
+// CHECK:   %{{.+}} = cir.const #cir.data_member<1> : !cir.data_member<!s32i in !ty_22Point22>
 // CHECK: }
 
 int test2(const Point &pt, int Point::*member) {
@@ -51,12 +51,12 @@ auto test_null() -> int Point::* {
   return nullptr;
 }
 // CHECK: cir.func @_Z9test_nullv
-// CHECK:   %{{.+}} = cir.const(#cir.data_member<null> : !cir.data_member<!s32i in !ty_22Point22>) : !cir.data_member<!s32i in !ty_22Point22>
+// CHECK:   %{{.+}} = cir.const #cir.data_member<null> : !cir.data_member<!s32i in !ty_22Point22>
 // CHECK: }
 
 auto test_null_incomplete() -> int Incomplete::* {
   return nullptr;
 }
 // CHECK: cir.func @_Z20test_null_incompletev
-// CHECK:   %{{.+}} = cir.const(#cir.data_member<null> : !cir.data_member<!s32i in !ty_22Incomplete22>) : !cir.data_member<!s32i in !ty_22Incomplete22>
+// CHECK:   %{{.+}} = cir.const #cir.data_member<null> : !cir.data_member<!s32i in !ty_22Incomplete22>
 // CHECK: }
