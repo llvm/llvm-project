@@ -121,12 +121,10 @@ define void @failing(ptr %0, ptr %1) nounwind {
 ; CHECK-AVX2-NEXT:    # => This Inner Loop Header: Depth=2
 ; CHECK-AVX2-NEXT:    vmovdqu 1024(%rdx,%rsi), %xmm5
 ; CHECK-AVX2-NEXT:    vmovdqu 1040(%rdx,%rsi), %xmm6
-; CHECK-AVX2-NEXT:    vpunpcklqdq {{.*#+}} xmm7 = xmm5[0],xmm6[0]
-; CHECK-AVX2-NEXT:    vpunpckhqdq {{.*#+}} xmm5 = xmm5[1],xmm6[1]
-; CHECK-AVX2-NEXT:    vmovq %xmm5, %rdi
-; CHECK-AVX2-NEXT:    vpextrq $1, %xmm5, %r8
-; CHECK-AVX2-NEXT:    vmovq %xmm7, %r9
-; CHECK-AVX2-NEXT:    vpextrq $1, %xmm7, %r10
+; CHECK-AVX2-NEXT:    vpextrq $1, %xmm5, %rdi
+; CHECK-AVX2-NEXT:    vpextrq $1, %xmm6, %r8
+; CHECK-AVX2-NEXT:    vmovq %xmm5, %r9
+; CHECK-AVX2-NEXT:    vmovq %xmm6, %r10
 ; CHECK-AVX2-NEXT:    negq %r10
 ; CHECK-AVX2-NEXT:    movq %rcx, %r10
 ; CHECK-AVX2-NEXT:    sbbq %r8, %r10

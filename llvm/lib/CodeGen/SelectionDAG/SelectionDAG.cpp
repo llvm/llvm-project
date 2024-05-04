@@ -5088,6 +5088,24 @@ bool SelectionDAG::isGuaranteedNotToBeUndefOrPoison(SDValue Op,
     }
     return true;
 
+  case ISD::VECTOR_SHUFFLE: {
+    APInt DemandedLHS, DemandedRHS;
+    auto *SVN = cast<ShuffleVectorSDNode>(Op);
+    if (!getShuffleDemandedElts(DemandedElts.getBitWidth(), SVN->getMask(),
+                                DemandedElts, DemandedLHS, DemandedRHS,
+                                /*AllowUndefElts=*/false))
+      return false;
+    if (!DemandedLHS.isZero() &&
+        !isGuaranteedNotToBeUndefOrPoison(Op.getOperand(0), DemandedLHS,
+                                          PoisonOnly, Depth + 1))
+      return false;
+    if (!DemandedRHS.isZero() &&
+        !isGuaranteedNotToBeUndefOrPoison(Op.getOperand(1), DemandedRHS,
+                                          PoisonOnly, Depth + 1))
+      return false;
+    return true;
+  }
+
     // TODO: Search for noundef attributes from library functions.
 
     // TODO: Pointers dereferenced by ISD::LOAD/STORE ops are noundef.
@@ -5223,6 +5241,15 @@ bool SelectionDAG::canCreateUndefOrPoison(SDValue Op, const APInt &DemandedElts,
     EVT VecVT = Op.getOperand(0).getValueType();
     KnownBits KnownIdx = computeKnownBits(Op.getOperand(2), Depth + 1);
     return KnownIdx.getMaxValue().uge(VecVT.getVectorMinNumElements());
+  }
+
+  case ISD::VECTOR_SHUFFLE: {
+    // Check for any demanded shuffle element that is undef.
+    auto *SVN = cast<ShuffleVectorSDNode>(Op);
+    for (auto [Idx, Elt] : enumerate(SVN->getMask()))
+      if (Elt < 0 && DemandedElts[Idx])
+        return true;
+    return false;
   }
 
   default:
