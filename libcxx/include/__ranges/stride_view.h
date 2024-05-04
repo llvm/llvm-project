@@ -391,8 +391,8 @@ namespace __stride {
 struct __fn {
   template <viewable_range _Range>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Range&& __range, range_difference_t<_Range> __n) const
-      noexcept(noexcept(/**/ stride_view{std::forward<_Range>(__range), __n}))
-          -> decltype(/*--*/ stride_view{std::forward<_Range>(__range), __n}) {
+      noexcept(noexcept(/**/ stride_view{
+          std::forward<_Range>(__range), __n})) -> decltype(/*--*/ stride_view{std::forward<_Range>(__range), __n}) {
     return /*-------------*/ stride_view(std::forward<_Range>(__range), __n);
   }
 
