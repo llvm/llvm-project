@@ -1196,7 +1196,7 @@ TEST(Local, SimplifyCFGWithNullAC) {
   // Obtain BasicBlock of interest to this test, %test.bb.
   BasicBlock *TestBB = nullptr;
   for (BasicBlock &BB : F) {
-    if (BB.getName().equals("test.bb")) {
+    if (BB.getName() == "test.bb") {
       TestBB = &BB;
       break;
     }
