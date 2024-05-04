@@ -81,11 +81,10 @@ void UseStdFormatCheck::check(const MatchFinder::MatchResult &Result) {
                                          getLangOpts());
   const Expr *StrFormatCall = StrFormat->getCallee();
   if (!Converter.canApply()) {
-    DiagnosticBuilder Diag = diag(StrFormat->getBeginLoc(),
-                                  "unable to use '%0' instead of %1 because %2")
-                             << ReplacementFormatFunction
-                             << OldFunction->getIdentifier()
-                             << Converter.conversionNotPossibleReason();
+    diag(StrFormat->getBeginLoc(),
+         "unable to use '%0' instead of %1 because %2")
+        << ReplacementFormatFunction << OldFunction->getIdentifier()
+        << Converter.conversionNotPossibleReason();
     return;
   }
 
