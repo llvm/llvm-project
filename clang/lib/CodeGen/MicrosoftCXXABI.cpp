@@ -1124,6 +1124,20 @@ static bool isTrivialForMSVC(const CXXRecordDecl *RD, QualType Ty,
   // Additionally, we need to ensure that there is a trivial copy assignment
   // operator, a trivial destructor, no user-provided constructors and no
   // deleted copy assignment operator.
+
+  // We need to cover two cases when checking for a deleted copy assignment
+  // operator.
+  //
+  // struct S { int& r; };
+  // The above will have an implicit copy assignment operator that is deleted
+  // and there will not be a `CXXMethodDecl` for the copy assignment operator.
+  // This is handled by the `needsImplicitCopyAssignment()` check below.
+  //
+  // struct S { S& operator=(const S&) = delete; int i; };
+  // The above will not have an implicit copy assignment operator that is
+  // deleted but there is a deleted `CXXMethodDecl` for the declared copy
+  // assignment operator. This is handled by the `isDeleted()` check below.
+
   if (RD->hasProtectedFields() || RD->hasPrivateFields())
     return false;
   if (RD->getNumBases() > 0)
