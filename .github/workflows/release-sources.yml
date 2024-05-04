@@ -1,0 +1,57 @@
+name: Release Sources
+
+permissions:
+  contents: read
+
+on:
+  workflow_dispatch:
+    inputs:
+      release-version:
+        description: Release Version
+        required: true
+        type: string
+  workflow_call:
+    inputs:
+      release-version:
+        description: Release Version
+        required: true
+        type: string
+jobs:
+  release-sources:
+    name: Package Release Sources
+    if: github.repository_owner == 'llvm'
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      attestations: write
+    steps:
+      - name: Checkout LLVM
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        with:
+          ref: llvmorg-${{ inputs.release-version }}
+          fetch-tags: true
+      - name: Install Dependencies
+        run: |
+          pip install -r ./llvm/utils/git/requirements.txt
+      - name: Check Permissions
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          USER_TOKEN: ${{ secrets.RELEASE_TASKS_USER_TOKEN }}
+        run: |
+          ./llvm/utils/release/./github-upload-release.py --token "$GITHUB_TOKEN" --user ${{ github.actor }} --user-token "$USER_TOKEN" check-permissions
+      - name: Create Tarballs
+        run: |
+          ./llvm/utils/release/export.sh -release "${{ inputs.release-version }}" -final
+      - name: Attest Build Provenance
+        id: provenance
+        uses: actions/attest-build-provenance@897ed5eab6ed058a474202017ada7f40bfa52940 # v1.0.0
+        with:
+          subject-path: "*.xz"
+      - name: Create Tarball Artifacts
+        uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808 #v4.3.3
+        with:
+          path: |
+            *.xz
+            ${{ steps.provenance.outputs.bundle-path }}
+
+

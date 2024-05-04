@@ -85,3 +85,11 @@ jobs:
     with:
       release-version: ${{ needs.validate-tag.outputs.release-version }}
       upload: true
+
+  release-sources:
+    name: Package Release Sources
+    needs:
+      - validate-tag
+    uses: ./.github/workflows/release-sources.yml
+    with:
+      release-version: ${{ needs.validate-tag.outputs.release-version }}
