@@ -1,23 +1,10 @@
 // RUN: %check_clang_tidy %s modernize-use-std-format %t -- \
-// RUN:   -config="{CheckOptions: \
-// RUN:             [ \
-// RUN:              { \
-// RUN:                key: StrictMode, value: true \
-// RUN:              }, \
-// RUN:              { \
-// RUN:               key: modernize-use-std-format.StrFormatLikeFunctions, \
-// RUN:               value: 'fmt::sprintf' \
-// RUN:              }, \
-// RUN:              { \
-// RUN:               key: modernize-use-std-format.ReplacementFormatFunction, \
-// RUN:               value: 'fmt::format' \
-// RUN:              }, \
-// RUN:              { \
-// RUN:               key: modernize-use-std-format.FormatHeader, \
-// RUN:               value: '<fmt/core.h>' \
-// RUN:              } \
-// RUN:             ] \
-// RUN:            }" \
+// RUN:   -config="{CheckOptions: { \
+// RUN:              StrictMode: true, \
+// RUN:              modernize-use-std-format.StrFormatLikeFunctions: 'fmt::sprintf', \
+// RUN:              modernize-use-std-format.ReplacementFormatFunction: 'fmt::format', \
+// RUN:              modernize-use-std-format.FormatHeader: '<fmt/core.h>' \
+// RUN:            }}" \
 // RUN:   -- -isystem %clang_tidy_headers
 
 // CHECK-FIXES: #include <fmt/core.h>

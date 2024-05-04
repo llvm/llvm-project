@@ -1,43 +1,19 @@
-// RUN: %check_clang_tidy -check-suffixes=,STRICT \
-// RUN:   -std=c++20 %s modernize-use-std-format %t --      \
-// RUN:   -config="{CheckOptions: \
-// RUN:             [ \
-// RUN:              { \
-// RUN:                key: StrictMode, value: true \
-// RUN:              }, \
-// RUN:              { \
-// RUN:               key: modernize-use-std-format.StrFormatLikeFunctions, \
-// RUN:               value: 'unqualified_strprintf;::strprintf; mynamespace::strprintf2' \
-// RUN:              }, \
-// RUN:              { \
-// RUN:               key: modernize-use-std-format.ReplacementFormatFunction, \
-// RUN:               value: 'fmt::format' \
-// RUN:              }, \
-// RUN:              { \
-// RUN:               key: modernize-use-std-format.FormatHeader, \
-// RUN:               value: '<fmt/core.h>' \
-// RUN:              } \
-// RUN:             ] \
-// RUN:            }" \
+// RUN: %check_clang_tidy -check-suffixes=,STRICT                       \
+// RUN:   -std=c++20 %s modernize-use-std-format %t --                  \
+// RUN:   -config="{CheckOptions: {                                     \
+// RUN:              modernize-use-std-format.StrictMode: true,         \
+// RUN:              modernize-use-std-format.StrFormatLikeFunctions: '::strprintf; mynamespace::strprintf2', \
+// RUN:              modernize-use-std-format.ReplacementFormatFunction: 'fmt::format', \
+// RUN:              modernize-use-std-format.FormatHeader: '<fmt/core.h>' \
+// RUN:            }}"                                                  \
 // RUN:   -- -isystem %clang_tidy_headers
-// RUN: %check_clang_tidy -check-suffixes=,NOTSTRICT \
-// RUN:   -std=c++20 %s modernize-use-std-format %t --      \
-// RUN:   -config="{CheckOptions: \
-// RUN:             [ \
-// RUN:              { \
-// RUN:               key: modernize-use-std-format.StrFormatLikeFunctions, \
-// RUN:               value: '::strprintf; mynamespace::strprintf2' \
-// RUN:              }, \
-// RUN:              { \
-// RUN:               key: modernize-use-std-format.ReplacementFormatFunction, \
-// RUN:               value: 'fmt::format' \
-// RUN:              }, \
-// RUN:              { \
-// RUN:               key: modernize-use-std-format.FormatHeader, \
-// RUN:               value: '<fmt/core.h>' \
-// RUN:              } \
-// RUN:             ] \
-// RUN:            }" \
+// RUN: %check_clang_tidy -check-suffixes=,NOTSTRICT                    \
+// RUN:   -std=c++20 %s modernize-use-std-format %t --                  \
+// RUN:   -config="{CheckOptions: {                                     \
+// RUN:              modernize-use-std-format.StrFormatLikeFunctions: '::strprintf; mynamespace::strprintf2', \
+// RUN:              modernize-use-std-format.ReplacementFormatFunction: 'fmt::format', \
+// RUN:              modernize-use-std-format.FormatHeader: '<fmt/core.h>' \
+// RUN:            }}"                                                  \
 // RUN:   -- -isystem %clang_tidy_headers
 
 #include <cstdio>
