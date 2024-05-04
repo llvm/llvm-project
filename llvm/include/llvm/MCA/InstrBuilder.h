@@ -79,8 +79,7 @@ class InstrBuilder {
   bool FirstCallInst;
   bool FirstReturnInst;
 
-  using InstRecycleCallback =
-      llvm::function_ref<Instruction *(const InstrDesc &)>;
+  using InstRecycleCallback = std::function<Instruction *(const InstrDesc &)>;
   InstRecycleCallback InstRecycleCB;
 
   Expected<const InstrDesc &>
