@@ -6,7 +6,7 @@
 
 
 svfloat32_t test_sin_vv_i8mf8(svfloat32_t v) {
-  
+
   return __builtin_elementwise_sin(v);
   // expected-error@-1 {{1st argument must be a vector, integer or floating point type}}
 }
