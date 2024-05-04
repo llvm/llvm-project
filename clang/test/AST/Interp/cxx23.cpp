@@ -157,3 +157,16 @@ namespace VirtualBases {
     D d;
   }
 }
+
+namespace LabelGoto {
+  constexpr int foo() { // all20-error {{never produces a constant expression}}
+    a: // all20-warning {{use of this statement in a constexpr function is a C++23 extension}}
+    goto a; // all20-note 2{{subexpression not valid in a constant expression}} \
+            // ref23-note {{subexpression not valid in a constant expression}} \
+            // expected23-note {{subexpression not valid in a constant expression}}
+
+    return 1;
+  }
+  static_assert(foo() == 1, ""); // all-error {{not an integral constant expression}} \
+                                 // all-note {{in call to}}
+}

@@ -47,7 +47,7 @@ template <typename T, typename PtrTraits = RawPtrTraits<T>, typename RefDerefTra
   typename PtrTraits::StorageType t;
 
   Ref() : t{} {};
-  Ref(T &t) : t(RefDerefTraits::refIfNotNull(t)) { }
+  Ref(T &t) : t(&RefDerefTraits::ref(t)) { }
   Ref(const Ref& o) : t(RefDerefTraits::refIfNotNull(PtrTraits::unwrap(o.t))) { }
   ~Ref() { RefDerefTraits::derefIfNotNull(PtrTraits::exchange(t, nullptr)); }
   T &get() { return *PtrTraits::unwrap(t); }
@@ -55,7 +55,7 @@ template <typename T, typename PtrTraits = RawPtrTraits<T>, typename RefDerefTra
   T *operator->() { return PtrTraits::unwrap(t); }
   operator const T &() const { return *PtrTraits::unwrap(t); }
   operator T &() { return *PtrTraits::unwrap(t); }
-  T* leakRef() { PtrTraits::exchange(t, nullptr); }
+  T* leakRef() { return PtrTraits::exchange(t, nullptr); }
 };
 
 template <typename T> struct RefPtr {
@@ -67,6 +67,9 @@ template <typename T> struct RefPtr {
     if (t)
       t->ref();
   }
+  RefPtr(Ref<T>&& o)
+    : t(o.leakRef())
+  { }
   ~RefPtr() {
     if (t)
       t->deref();
@@ -76,7 +79,7 @@ template <typename T> struct RefPtr {
   const T *operator->() const { return t; }
   T &operator*() { return *t; }
   RefPtr &operator=(T *) { return *this; }
-  operator bool() { return t; }
+  operator bool() const { return t; }
 };
 
 template <typename T> bool operator==(const RefPtr<T> &, const RefPtr<T> &) {
