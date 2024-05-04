@@ -970,7 +970,6 @@ public:
 
   void setDisallowOptimizations() {
     setFPPreciseEnabled(true);
-    setDisallowFPContract();
   }
 
   storage_type getAsOpaqueInt() const {
