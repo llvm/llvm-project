@@ -17,11 +17,6 @@
 #include "test_iterators.h"
 #include "types.h"
 
-template <class View, class T>
-concept CanBePiped = requires(View&& view, T&& t) {
-  { std::forward<View>(view) | std::forward<T>(t) };
-};
-
 constexpr BasicTestView<cpp17_input_iterator<int*>> make_input_view(int* begin, int* end) {
   return BasicTestView<cpp17_input_iterator<int*>>(cpp17_input_iterator<int*>(begin), cpp17_input_iterator<int*>(end));
 }
