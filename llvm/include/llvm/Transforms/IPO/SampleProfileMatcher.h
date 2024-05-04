@@ -15,12 +15,14 @@
 #define LLVM_TRANSFORMS_IPO_SAMPLEPROFILEMATCHER_H
 
 #include "llvm/ADT/StringSet.h"
+#include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Transforms/Utils/SampleProfileLoaderBaseImpl.h"
 
 namespace llvm {
 
 using AnchorList = std::vector<std::pair<LineLocation, FunctionId>>;
 using AnchorMap = std::map<LineLocation, FunctionId>;
+using FunctionMap = HashKeyMap<std::unordered_map, FunctionId, Function *>;
 
 // Sample profile matching - fuzzy match.
 class SampleProfileMatcher {
@@ -58,6 +60,20 @@ class SampleProfileMatcher {
   StringMap<std::unordered_map<LineLocation, MatchState, LineLocationHash>>
       FuncCallsiteMatchStates;
 
+  struct RenameDecisionCacheHash {
+    uint64_t
+    operator()(const std::pair<const Function *, FunctionId> &P) const {
+      return hash_combine(P.first, P.second);
+    }
+  };
+  std::unordered_map<std::pair<const Function *, FunctionId>, bool,
+                     RenameDecisionCacheHash>
+      RenameDecisionCache;
+
+  FunctionMap *SymbolMap;
+
+  std::shared_ptr<ProfileSymbolList> PSL;
+
   // Profile mismatch statstics:
   uint64_t TotalProfiledFunc = 0;
   // Num of checksum-mismatched function.
@@ -80,9 +96,11 @@ class SampleProfileMatcher {
 public:
   SampleProfileMatcher(Module &M, SampleProfileReader &Reader,
                        const PseudoProbeManager *ProbeManager,
-                       ThinOrFullLTOPhase LTOPhase)
-      : M(M), Reader(Reader), ProbeManager(ProbeManager), LTOPhase(LTOPhase){};
-  void runOnModule();
+                       ThinOrFullLTOPhase LTOPhase,
+                       std::shared_ptr<ProfileSymbolList> PSL)
+      : M(M), Reader(Reader), ProbeManager(ProbeManager), LTOPhase(LTOPhase),
+        PSL(PSL) {};
+  void runOnModule(FunctionMap &SymbolMap);
   void clearMatchingData() {
     // Do not clear FuncMappings, it stores IRLoc to ProfLoc remappings which
     // will be used for sample loader.
@@ -90,16 +108,20 @@ public:
   }
 
 private:
-  FunctionSamples *getFlattenedSamplesFor(const Function &F) {
-    StringRef CanonFName = FunctionSamples::getCanonicalFnName(F);
-    auto It = FlattenedProfiles.find(FunctionId(CanonFName));
+  FunctionSamples *getFlattenedSamplesFor(const FunctionId &Fname) {
+    auto It = FlattenedProfiles.find(Fname);
     if (It != FlattenedProfiles.end())
       return &It->second;
     return nullptr;
   }
-  void runOnFunction(Function &F);
-  void findIRAnchors(const Function &F, AnchorMap &IRAnchors);
-  void findProfileAnchors(const FunctionSamples &FS, AnchorMap &ProfileAnchors);
+  FunctionSamples *getFlattenedSamplesFor(const Function &F) {
+    StringRef CanonFName = FunctionSamples::getCanonicalFnName(F);
+    return getFlattenedSamplesFor(FunctionId(CanonFName));
+  }
+  void runBlockLevelMatching(Function &F);
+  void findIRAnchors(const Function &F, AnchorMap &IRAnchors) const;
+  void findProfileAnchors(const FunctionSamples &FS,
+                          AnchorMap &ProfileAnchors) const;
   // Record the callsite match states for profile staleness report, the result
   // is saved in FuncCallsiteMatchStates.
   void recordCallsiteMatchStates(const Function &F, const AnchorMap &IRAnchors,
@@ -160,6 +182,20 @@ private:
   void runStaleProfileMatching(const Function &F, const AnchorMap &IRAnchors,
                                const AnchorMap &ProfileAnchors,
                                LocToLocMap &IRToProfileLocationMap);
+  void findIRNewCallees(Function &Caller,
+                        const StringMap<Function *> &IRNewFunctions,
+                        std::vector<Function *> &IRNewCallees);
+  float checkFunctionSimilarity(const Function &IRFunc,
+                                const FunctionId &ProfFunc);
+  bool functionIsRenamedImpl(const Function &IRFunc,
+                             const FunctionId &ProfFunc);
+  bool functionIsRenamed(const Function &IRFunc, const FunctionId &ProfFunc);
+  void
+  runFuncRenamingMatchingOnProfile(const StringMap<Function *> &IRNewFunctions,
+                                   FunctionSamples &FS,
+                                   FunctionMap &OldProfToNewSymbolMap);
+  void findIRNewFunctions(StringMap<Function *> &IRNewFunctions);
+  void runFuncLevelMatching();
   void reportOrPersistProfileStats();
 };
 } // end namespace llvm

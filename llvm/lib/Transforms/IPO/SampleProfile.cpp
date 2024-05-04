@@ -544,7 +544,7 @@ protected:
 
   /// Profle Symbol list tells whether a function name appears in the binary
   /// used to generate the current profile.
-  std::unique_ptr<ProfileSymbolList> PSL;
+  std::shared_ptr<ProfileSymbolList> PSL;
 
   /// Total number of samples collected in this profile.
   ///
@@ -2077,7 +2077,7 @@ bool SampleProfileLoader::doInitialization(Module &M,
   if (ReportProfileStaleness || PersistProfileStaleness ||
       SalvageStaleProfile) {
     MatchingManager = std::make_unique<SampleProfileMatcher>(
-        M, *Reader, ProbeManager.get(), LTOPhase);
+        M, *Reader, ProbeManager.get(), LTOPhase, PSL);
   }
 
   return true;
@@ -2198,7 +2198,7 @@ bool SampleProfileLoader::runOnModule(Module &M, ModuleAnalysisManager *AM,
 
   if (ReportProfileStaleness || PersistProfileStaleness ||
       SalvageStaleProfile) {
-    MatchingManager->runOnModule();
+    MatchingManager->runOnModule(SymbolMap);
     MatchingManager->clearMatchingData();
   }
 
