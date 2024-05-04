@@ -16,7 +16,7 @@
 # CHECK1: 0000000000000010  0 NOTYPE  LOCAL  DEFAULT   [[#]] (nonalloc0) sym0
 # CHECK1: 0000000000000008  0 NOTYPE  LOCAL  DEFAULT   [[#]] (nonalloc1) sym1
 
-# RUN: ld.lld -pie a.o --compress-sections '*c0=zlib' --compress-sections .debug_str=zstd -o out2
+# RUN: ld.lld -pie a.o --compress-sections '*c0=zlib' --compress-sections .debug_str=zstd:3 -o out2
 # RUN: llvm-readelf -SrsX -x nonalloc0 -x .debug_str out2 | FileCheck %s --check-prefix=CHECK2
 
 # CHECK2:      Name       Type          Address     Off      Size     ES Flg Lk Inf Al
@@ -39,11 +39,11 @@
 # CHECK2-NEXT: 02000000 00000000 38000000 00000000
 # CHECK2-NEXT: 01000000 00000000 {{.*}}
 
-## --compress-debug-sections=none takes precedence.
-# RUN: ld.lld a.o --compress-debug-sections=none --compress-sections .debug_str=zstd -o out3
+## --compress-sections takes precedence.
+# RUN: ld.lld a.o --compress-sections .debug_str=zstd --compress-debug-sections=none -o out3
 # RUN: llvm-readelf -S out3 | FileCheck %s --check-prefix=CHECK3
 
-# CHECK3:      .debug_str PROGBITS 0000000000000000 [[#%x,]] [[#%x,]] 01 MS   0   0  1
+# CHECK3:      .debug_str PROGBITS 0000000000000000 [[#%x,]] [[#%x,]] 01 MSC  0   0  1
 
 # RUN: not ld.lld a.o --compress-sections '*0=zlib' 2>&1 | \
 # RUN:   FileCheck %s --check-prefix=ERR-ALLOC --implicit-check-not=error:
@@ -61,6 +61,16 @@
 # RUN:   FileCheck -check-prefix=ERR3 %s
 # ERR3:      unknown --compress-sections value: zlib-gabi
 # ERR3-NEXT: --compress-sections: parse error, not 'section-glob=[none|zlib|zstd]'
+
+# RUN: not ld.lld a.o --compress-sections='a=zlib:' --compress-sections='a=zlib:-1' 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=ERR4 --implicit-check-not=error:
+# ERR4: error: --compress-sections: expected a non-negative integer compression level, but got ''
+# ERR4: error: --compress-sections: expected a non-negative integer compression level, but got '-1'
+
+## Invalid compression level for zlib.
+# RUN: not ld.lld a.o --compress-sections='.debug*=zlib:99' 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=ERR6 --implicit-check-not=error:
+# ERR6: error: --compress-sections: deflateInit2 returned -2
 
 .globl _start
 _start:

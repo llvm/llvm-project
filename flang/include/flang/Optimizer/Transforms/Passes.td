@@ -127,7 +127,6 @@ def CharacterConversion : Pass<"character-conversion"> {
     By default the translation is to naively zero-extend or truncate a code
     point to fit the destination size.
   }];
-  let constructor = "::fir::createCharacterConversionPass()";
   let dependentDialects = [ "fir::FIROpsDialect" ];
   let options = [
     Option<"useRuntimeCalls", "use-runtime-calls",
@@ -225,7 +224,6 @@ def SimplifyIntrinsics : Pass<"simplify-intrinsics", "mlir::ModuleOp"> {
     simplified function. The simplified function is added to the current module.
     This function can be inlined by a general purpose inlining pass.
   }];
-  let constructor = "::fir::createSimplifyIntrinsicsPass()";
 
   let options = [
     Option<"enableExperimental", "enable-experimental", "bool",
@@ -249,7 +247,6 @@ def MemoryAllocationOpt : Pass<"memory-allocation-opt", "mlir::func::FuncOp"> {
            "std::size_t", /*default=*/"~static_cast<std::size_t>(0)",
            "Set maximum number of elements of an array allocated on the stack.">
   ];
-  let constructor = "::fir::createMemoryAllocationPass()";
 }
 
 def StackArrays : Pass<"stack-arrays", "mlir::ModuleOp"> {
@@ -259,7 +256,6 @@ def StackArrays : Pass<"stack-arrays", "mlir::ModuleOp"> {
     allocations.
   }];
   let dependentDialects = [ "fir::FIROpsDialect" ];
-  let constructor = "::fir::createStackArraysPass()";
 }
 
 def AddAliasTags : Pass<"fir-add-alias-tags", "mlir::ModuleOp"> {
@@ -287,7 +283,6 @@ def SimplifyRegionLite : Pass<"simplify-region-lite", "mlir::ModuleOp"> {
   let description = [{
     Run region DCE and erase unreachable blocks in regions.
   }];
-  let constructor = "::fir::createSimplifyRegionLitePass()";
 }
 
 def AlgebraicSimplification : Pass<"flang-algebraic-simplification"> {
@@ -303,14 +298,13 @@ def AlgebraicSimplification : Pass<"flang-algebraic-simplification"> {
   let constructor = "::fir::createAlgebraicSimplificationPass()";
 }
 
-def PolymorphicOpConversion : Pass<"fir-polymorphic-op", "::mlir::func::FuncOp"> {
+def PolymorphicOpConversion : Pass<"fir-polymorphic-op", "mlir::ModuleOp"> {
   let summary =
     "Simplify operations on polymorphic types";
   let description = [{
     This pass breaks up the lowering of operations on polymorphic types by 
     introducing an intermediate FIR level that simplifies code geneation. 
   }];
-  let constructor = "::fir::createPolymorphicOpConversionPass()";
   let dependentDialects = [
     "fir::FIROpsDialect", "mlir::func::FuncDialect"
   ];
@@ -324,7 +318,6 @@ def LoopVersioning : Pass<"loop-versioning", "mlir::func::FuncOp"> {
     an array has element sized stride. The element sizes stride allows some
     loops to be vectorized as well as other loop optimizations.
   }];
-  let constructor = "::fir::createLoopVersioningPass()";
   let dependentDialects = [ "fir::FIROpsDialect" ];
 }
 

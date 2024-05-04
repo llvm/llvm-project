@@ -1424,7 +1424,7 @@ bool FastISel::selectIntrinsicCall(const IntrinsicInst *II) {
     // happened (such as an optimised function being always-inlined into an
     // optnone function). We will not be using the extra information in the
     // dbg.assign in that case, just use its dbg.value fields.
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case Intrinsic::dbg_value: {
     // This form of DBG_VALUE is target-independent.
     const DbgValueInst *DI = cast<DbgValueInst>(II);
