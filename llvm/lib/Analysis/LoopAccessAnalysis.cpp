@@ -2465,7 +2465,7 @@ void LoopAccessInfo::analyzeLoop(AAResults *AA, LoopInfo *LI,
     if (isInvariant(Ptr)) {
       // Record store instructions to loop invariant addresses
       StoresToInvariantAddresses.push_back(ST);
-      HasDependenceInvolvingLoopInvariantAddress |=
+      HasStoreStoreDependenceInvolvingLoopInvariantAddress |=
           !UniformStores.insert(Ptr).second;
     }
 
@@ -2521,7 +2521,7 @@ void LoopAccessInfo::analyzeLoop(AAResults *AA, LoopInfo *LI,
     if (UniformStores.count(Ptr)) {
       LLVM_DEBUG(dbgs() << "LAA: Found an unsafe dependency between a uniform "
                            "load and uniform store to the same address!\n");
-      HasDependenceInvolvingLoopInvariantAddress = true;
+      HasLoadStoreDependenceInvolvingLoopInvariantAddress = true;
     }
 
     MemoryLocation Loc = MemoryLocation::get(LD);
@@ -2985,9 +2985,13 @@ void LoopAccessInfo::print(raw_ostream &OS, unsigned Depth) const {
   PtrRtChecking->print(OS, Depth);
   OS << "\n";
 
-  OS.indent(Depth) << "Non vectorizable stores to invariant address were "
-                   << (HasDependenceInvolvingLoopInvariantAddress ? "" : "not ")
-                   << "found in loop.\n";
+  OS.indent(Depth)
+      << "Non vectorizable stores to invariant address were "
+      << (HasStoreStoreDependenceInvolvingLoopInvariantAddress ||
+                  HasLoadStoreDependenceInvolvingLoopInvariantAddress
+              ? ""
+              : "not ")
+      << "found in loop.\n";
 
   OS.indent(Depth) << "SCEV assumptions:\n";
   PSE->getPredicate().print(OS, Depth);

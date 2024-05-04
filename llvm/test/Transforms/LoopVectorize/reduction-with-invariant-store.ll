@@ -118,6 +118,40 @@ exit:
   ret void
 }
 
+; Check that if we have a read from an invariant address, we do not vectorize,
+; even if we vectorize with runtime checks. The test below is a variant of
+; @reduc_store_load with a non-constant dependence distance, resulting in
+; vectorization with runtime checks.
+;
+; CHECK-LABEL: @reduc_store_load_with_non_constant_distance_dependence
+; CHECK-NOT: vector.body:
+define void @reduc_store_load_with_non_constant_distance_dependence(ptr %dst, ptr noalias %dst.2, i64 %off) {
+entry:
+  %gep.dst = getelementptr inbounds i32, ptr %dst, i64 42
+  %dst.2.off = getelementptr inbounds i32, ptr %dst.2, i64 %off
+  store i32 0, ptr %gep.dst, align 4
+  br label %for.body
+
+for.body:
+  %sum = phi i32 [ 0, %entry ], [ %add, %for.body ]
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %gep.src = getelementptr inbounds i32, ptr %dst.2, i64 %iv
+  %0 = load i32, ptr %gep.src, align 4
+  %iv.off = mul i64 %iv, 2
+  %add = add nsw i32 %sum, %0
+  %lv = load i32, ptr %gep.dst
+  store i32 %add, ptr %gep.dst, align 4
+  %gep.src.2 = getelementptr inbounds i32, ptr %dst.2.off, i64 %iv
+  store i32 %lv, ptr %gep.src.2, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, 1000
+  br i1 %exitcond, label %exit, label %for.body
+
+exit:
+  ret void
+}
+
+
 ; Final value is not guaranteed to be stored in an invariant address.
 ; We don't vectorize in that case.
 ;
