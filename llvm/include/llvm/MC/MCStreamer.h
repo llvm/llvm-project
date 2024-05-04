@@ -245,8 +245,6 @@ class MCStreamer {
   /// requires.
   unsigned NextWinCFIID = 0;
 
-  bool UseAssemblerInfoForParsing;
-
   /// Is the assembler allowed to insert padding automatically?  For
   /// correctness reasons, we sometimes need to ensure instructions aren't
   /// separated in unexpected ways.  At the moment, this feature is only
@@ -296,10 +294,9 @@ public:
 
   MCContext &getContext() const { return Context; }
 
+  // MCObjectStreamer has an MCAssembler and allows more expression folding at
+  // parse time.
   virtual MCAssembler *getAssemblerPtr() { return nullptr; }
-
-  void setUseAssemblerInfoForParsing(bool v) { UseAssemblerInfoForParsing = v; }
-  bool getUseAssemblerInfoForParsing() { return UseAssemblerInfoForParsing; }
 
   MCTargetStreamer *getTargetStreamer() {
     return TargetStreamer.get();
