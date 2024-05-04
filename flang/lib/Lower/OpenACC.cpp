@@ -65,7 +65,7 @@ static Op createDataEntryOp(fir::FirOpBuilder &builder, mlir::Location loc,
                             mlir::acc::DataClause dataClause, mlir::Type retTy,
                             mlir::Value isPresent = {}) {
   mlir::Value varPtrPtr;
-  if (auto boxTy = baseAddr.getType().dyn_cast<fir::BaseBoxType>()) {
+  if (auto boxTy = mlir::dyn_cast<fir::BaseBoxType>(baseAddr.getType())) {
     if (isPresent) {
       mlir::Type ifRetTy = boxTy.getEleTy();
       if (!fir::isa_ref_type(ifRetTy))
@@ -2658,7 +2658,7 @@ genACCHostDataOp(Fortran::lower::AbstractConverter &converter,
   if (ifCond) {
     if (auto cst =
             mlir::dyn_cast<mlir::arith::ConstantOp>(ifCond.getDefiningOp()))
-      if (auto boolAttr = cst.getValue().dyn_cast<mlir::BoolAttr>()) {
+      if (auto boolAttr = mlir::dyn_cast<mlir::BoolAttr>(cst.getValue())) {
         if (boolAttr.getValue()) {
           // get rid of the if condition if it is always true.
           ifCond = mlir::Value();

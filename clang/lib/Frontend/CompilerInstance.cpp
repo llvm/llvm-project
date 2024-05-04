@@ -1293,6 +1293,10 @@ compileModuleImpl(CompilerInstance &ImportingInstance, SourceLocation ImportLoc,
                                             diag::remark_module_build_done)
     << ModuleName;
 
+  // Propagate the statistics to the parent FileManager.
+  if (!FrontendOpts.ModulesShareFileManager)
+    ImportingInstance.getFileManager().AddStats(Instance.getFileManager());
+
   if (Crashed) {
     // Clear the ASTConsumer if it hasn't been already, in case it owns streams
     // that must be closed before clearing output files.

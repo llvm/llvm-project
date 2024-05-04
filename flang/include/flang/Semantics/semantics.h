@@ -312,7 +312,7 @@ public:
     return context_.FindScope(where);
   }
   bool AnyFatalError() const { return context_.AnyFatalError(); }
-  void EmitMessages(llvm::raw_ostream &) const;
+  void EmitMessages(llvm::raw_ostream &);
   void DumpSymbols(llvm::raw_ostream &);
   void DumpSymbolsSources(llvm::raw_ostream &) const;
 

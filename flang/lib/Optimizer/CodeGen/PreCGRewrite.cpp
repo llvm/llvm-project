@@ -86,10 +86,10 @@ public:
     // If the embox does not include a shape, then do not convert it
     if (auto shapeVal = embox.getShape())
       return rewriteDynamicShape(embox, rewriter, shapeVal);
-    if (embox.getType().isa<fir::ClassType>())
+    if (mlir::isa<fir::ClassType>(embox.getType()))
       TODO(embox.getLoc(), "embox conversion for fir.class type");
-    if (auto boxTy = embox.getType().dyn_cast<fir::BoxType>())
-      if (auto seqTy = boxTy.getEleTy().dyn_cast<fir::SequenceType>())
+    if (auto boxTy = mlir::dyn_cast<fir::BoxType>(embox.getType()))
+      if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(boxTy.getEleTy()))
         if (!seqTy.hasDynamicExtents())
           return rewriteStaticShape(embox, rewriter, seqTy);
     return mlir::failure();
@@ -281,6 +281,20 @@ public:
   }
 };
 
+class DummyScopeOpConversion
+    : public mlir::OpRewritePattern<fir::DummyScopeOp> {
+public:
+  using OpRewritePattern::OpRewritePattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(fir::DummyScopeOp dummyScopeOp,
+                  mlir::PatternRewriter &rewriter) const override {
+    rewriter.replaceOpWithNewOp<fir::UndefOp>(dummyScopeOp,
+                                              dummyScopeOp.getType());
+    return mlir::success();
+  }
+};
+
 class CodeGenRewrite : public fir::impl::CodeGenRewriteBase<CodeGenRewrite> {
 public:
   void runOnOperation() override final {
@@ -293,11 +307,11 @@ public:
     target.addIllegalOp<fir::ArrayCoorOp>();
     target.addIllegalOp<fir::ReboxOp>();
     target.addIllegalOp<fir::DeclareOp>();
+    target.addIllegalOp<fir::DummyScopeOp>();
     target.addDynamicallyLegalOp<fir::EmboxOp>([](fir::EmboxOp embox) {
-      return !(embox.getShape() || embox.getType()
-                                       .cast<fir::BaseBoxType>()
-                                       .getEleTy()
-                                       .isa<fir::SequenceType>());
+      return !(embox.getShape() ||
+               mlir::isa<fir::SequenceType>(
+                   mlir::cast<fir::BaseBoxType>(embox.getType()).getEleTy()));
     });
     mlir::RewritePatternSet patterns(&context);
     fir::populatePreCGRewritePatterns(patterns);
@@ -322,5 +336,6 @@ std::unique_ptr<mlir::Pass> fir::createFirCodeGenRewritePass() {
 
 void fir::populatePreCGRewritePatterns(mlir::RewritePatternSet &patterns) {
   patterns.insert<EmboxConversion, ArrayCoorConversion, ReboxConversion,
-                  DeclareOpConversion>(patterns.getContext());
+                  DeclareOpConversion, DummyScopeOpConversion>(
+      patterns.getContext());
 }

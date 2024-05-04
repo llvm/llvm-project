@@ -33,6 +33,9 @@ struct OmpObjectList;
 } // namespace parser
 
 namespace lower {
+namespace pft {
+struct Evaluation;
+}
 
 class AbstractConverter;
 
@@ -82,11 +85,15 @@ void insertChildMapInfoIntoParent(
 mlir::Type getLoopVarType(Fortran::lower::AbstractConverter &converter,
                           std::size_t loopVarTypeSize);
 
+Fortran::semantics::Symbol *
+getIterationVariableSymbol(const Fortran::lower::pft::Evaluation &eval);
+
 void gatherFuncAndVarSyms(
     const ObjectList &objects, mlir::omp::DeclareTargetCaptureClause clause,
     llvm::SmallVectorImpl<DeclareTargetCapturePair> &symbolAndClause);
 
 int64_t getCollapseValue(const List<Clause> &clauses);
+uint32_t getOpenMPVersion(mlir::ModuleOp mod);
 
 Fortran::semantics::Symbol *
 getOmpObjectSymbol(const Fortran::parser::OmpObject &ompObject);

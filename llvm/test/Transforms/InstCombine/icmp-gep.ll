@@ -472,7 +472,14 @@ define void @test60_extra_use_fold(ptr %foo, i64 %start.idx, i64 %end.offset) {
 
 define i1 @test_scalable_same(ptr %x) {
 ; CHECK-LABEL: @test_scalable_same(
-; CHECK-NEXT:    ret i1 false
+; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[A_IDX:%.*]] = shl i64 [[TMP1]], 5
+; CHECK-NEXT:    [[A:%.*]] = getelementptr i8, ptr [[X:%.*]], i64 [[A_IDX]]
+; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[B_IDX:%.*]] = shl i64 [[TMP2]], 5
+; CHECK-NEXT:    [[B:%.*]] = getelementptr inbounds i8, ptr [[X]], i64 [[B_IDX]]
+; CHECK-NEXT:    [[C:%.*]] = icmp ugt ptr [[A]], [[B]]
+; CHECK-NEXT:    ret i1 [[C]]
 ;
   %a = getelementptr <vscale x 4 x i8>, ptr %x, i64 8
   %b = getelementptr inbounds <vscale x 4 x i8>, ptr %x, i64 8
@@ -507,11 +514,11 @@ define i1 @test_scalable_xc(ptr %x) {
 define i1 @test_scalable_xy(ptr %foo, i64 %i, i64 %j) {
 ; CHECK-LABEL: @test_scalable_xy(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP2:%.*]] = shl i64 [[TMP1]], 2
-; CHECK-NEXT:    [[GEP2_IDX:%.*]] = mul nsw i64 [[TMP2]], [[J:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = shl i64 [[TMP1]], 4
+; CHECK-NEXT:    [[GEP1_IDX:%.*]] = mul nsw i64 [[TMP2]], [[I:%.*]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP4:%.*]] = shl i64 [[TMP3]], 4
-; CHECK-NEXT:    [[GEP1_IDX:%.*]] = mul nsw i64 [[TMP4]], [[I:%.*]]
+; CHECK-NEXT:    [[TMP4:%.*]] = shl i64 [[TMP3]], 2
+; CHECK-NEXT:    [[GEP2_IDX:%.*]] = mul nsw i64 [[TMP4]], [[J:%.*]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i64 [[GEP2_IDX]], [[GEP1_IDX]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;

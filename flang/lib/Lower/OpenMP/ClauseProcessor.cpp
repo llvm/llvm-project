@@ -23,10 +23,10 @@ namespace omp {
 
 /// Check for unsupported map operand types.
 static void checkMapType(mlir::Location location, mlir::Type type) {
-  if (auto refType = type.dyn_cast<fir::ReferenceType>())
+  if (auto refType = mlir::dyn_cast<fir::ReferenceType>(type))
     type = refType.getElementType();
-  if (auto boxType = type.dyn_cast_or_null<fir::BoxType>())
-    if (!boxType.getElementType().isa<fir::PointerType>())
+  if (auto boxType = mlir::dyn_cast_or_null<fir::BoxType>(type))
+    if (!mlir::isa<fir::PointerType>(boxType.getElementType()))
       TODO(location, "OMPD_target_data MapOperand BoxType");
 }
 
