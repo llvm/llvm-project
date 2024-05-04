@@ -169,17 +169,17 @@ define <16 x i8> @combine_vec_udiv_nonuniform4(<16 x i8> %x) {
 ;
 ; GISEL-LABEL: combine_vec_udiv_nonuniform4:
 ; GISEL:       // %bb.0:
-; GISEL-NEXT:    adrp x8, .LCPI4_2
-; GISEL-NEXT:    adrp x9, .LCPI4_0
-; GISEL-NEXT:    ldr q1, [x8, :lo12:.LCPI4_2]
-; GISEL-NEXT:    adrp x8, .LCPI4_1
-; GISEL-NEXT:    ldr q4, [x9, :lo12:.LCPI4_0]
-; GISEL-NEXT:    ldr q3, [x8, :lo12:.LCPI4_1]
+; GISEL-NEXT:    mov w8, #171 // =0xab
+; GISEL-NEXT:    fmov s1, w8
+; GISEL-NEXT:    adrp x8, .LCPI4_0
+; GISEL-NEXT:    ldr q3, [x8, :lo12:.LCPI4_0]
+; GISEL-NEXT:    mov w8, #7 // =0x7
 ; GISEL-NEXT:    umull2 v2.8h, v0.16b, v1.16b
 ; GISEL-NEXT:    umull v1.8h, v0.8b, v1.8b
+; GISEL-NEXT:    shl v3.16b, v3.16b, #7
 ; GISEL-NEXT:    uzp2 v1.16b, v1.16b, v2.16b
-; GISEL-NEXT:    neg v2.16b, v3.16b
-; GISEL-NEXT:    shl v3.16b, v4.16b, #7
+; GISEL-NEXT:    fmov s2, w8
+; GISEL-NEXT:    neg v2.16b, v2.16b
 ; GISEL-NEXT:    ushl v1.16b, v1.16b, v2.16b
 ; GISEL-NEXT:    sshr v2.16b, v3.16b, #7
 ; GISEL-NEXT:    bif v0.16b, v1.16b, v2.16b
@@ -217,25 +217,66 @@ define <8 x i16> @pr38477(<8 x i16> %a0) {
 ;
 ; GISEL-LABEL: pr38477:
 ; GISEL:       // %bb.0:
-; GISEL-NEXT:    adrp x8, .LCPI5_3
-; GISEL-NEXT:    ldr q1, [x8, :lo12:.LCPI5_3]
-; GISEL-NEXT:    adrp x8, .LCPI5_2
-; GISEL-NEXT:    ldr q3, [x8, :lo12:.LCPI5_2]
-; GISEL-NEXT:    adrp x8, .LCPI5_0
-; GISEL-NEXT:    umull2 v2.4s, v0.8h, v1.8h
+; GISEL-NEXT:    mov w8, #4957 // =0x135d
+; GISEL-NEXT:    mov w9, #16385 // =0x4001
+; GISEL-NEXT:    fmov s1, w8
+; GISEL-NEXT:    mov w8, #57457 // =0xe071
+; GISEL-NEXT:    fmov s4, w9
+; GISEL-NEXT:    fmov s2, w8
+; GISEL-NEXT:    mov w8, #4103 // =0x1007
+; GISEL-NEXT:    mov w9, #35545 // =0x8ad9
+; GISEL-NEXT:    fmov s5, w9
+; GISEL-NEXT:    mov w9, #2048 // =0x800
+; GISEL-NEXT:    mov v1.h[1], v1.h[0]
+; GISEL-NEXT:    fmov s6, w9
+; GISEL-NEXT:    adrp x9, .LCPI5_0
+; GISEL-NEXT:    mov v1.h[2], v2.h[0]
+; GISEL-NEXT:    fmov s2, w8
+; GISEL-NEXT:    mov w8, #32768 // =0x8000
+; GISEL-NEXT:    fmov s3, w8
+; GISEL-NEXT:    mov w8, #0 // =0x0
+; GISEL-NEXT:    mov v1.h[3], v2.h[0]
+; GISEL-NEXT:    mov v2.h[1], v3.h[0]
+; GISEL-NEXT:    mov v1.h[4], v4.h[0]
+; GISEL-NEXT:    fmov s4, w8
+; GISEL-NEXT:    mov w8, #6 // =0x6
+; GISEL-NEXT:    mov v2.h[2], v4.h[0]
+; GISEL-NEXT:    mov v1.h[5], v5.h[0]
+; GISEL-NEXT:    fmov s5, w8
+; GISEL-NEXT:    mov w8, #2115 // =0x843
+; GISEL-NEXT:    mov v2.h[3], v4.h[0]
+; GISEL-NEXT:    mov v7.h[1], v5.h[0]
+; GISEL-NEXT:    mov v1.h[6], v6.h[0]
+; GISEL-NEXT:    fmov s6, w8
+; GISEL-NEXT:    mov w8, #12 // =0xc
+; GISEL-NEXT:    mov v2.h[4], v4.h[0]
+; GISEL-NEXT:    mov v7.h[2], v5.h[0]
+; GISEL-NEXT:    mov v1.h[7], v6.h[0]
+; GISEL-NEXT:    fmov s6, w8
+; GISEL-NEXT:    mov w8, #14 // =0xe
+; GISEL-NEXT:    fmov s16, w8
+; GISEL-NEXT:    mov w8, #4 // =0x4
+; GISEL-NEXT:    mov v2.h[5], v4.h[0]
+; GISEL-NEXT:    mov v7.h[3], v6.h[0]
+; GISEL-NEXT:    umull2 v6.4s, v0.8h, v1.8h
 ; GISEL-NEXT:    umull v1.4s, v0.4h, v1.4h
-; GISEL-NEXT:    uzp2 v1.8h, v1.8h, v2.8h
-; GISEL-NEXT:    sub v2.8h, v0.8h, v1.8h
-; GISEL-NEXT:    umull2 v4.4s, v2.8h, v3.8h
-; GISEL-NEXT:    umull v2.4s, v2.4h, v3.4h
-; GISEL-NEXT:    ldr d3, [x8, :lo12:.LCPI5_0]
-; GISEL-NEXT:    adrp x8, .LCPI5_1
-; GISEL-NEXT:    ushll v3.8h, v3.8b, #0
+; GISEL-NEXT:    mov v2.h[6], v4.h[0]
+; GISEL-NEXT:    mov v7.h[4], v16.h[0]
+; GISEL-NEXT:    uzp2 v1.8h, v1.8h, v6.8h
+; GISEL-NEXT:    mov v2.h[7], v3.h[0]
+; GISEL-NEXT:    mov v7.h[5], v5.h[0]
+; GISEL-NEXT:    ldr d5, [x9, :lo12:.LCPI5_0]
+; GISEL-NEXT:    sub v3.8h, v0.8h, v1.8h
+; GISEL-NEXT:    mov v7.h[6], v4.h[0]
+; GISEL-NEXT:    umull2 v4.4s, v3.8h, v2.8h
+; GISEL-NEXT:    umull v2.4s, v3.4h, v2.4h
+; GISEL-NEXT:    fmov s3, w8
+; GISEL-NEXT:    mov v7.h[7], v3.h[0]
 ; GISEL-NEXT:    uzp2 v2.8h, v2.8h, v4.8h
-; GISEL-NEXT:    ldr q4, [x8, :lo12:.LCPI5_1]
+; GISEL-NEXT:    ushll v3.8h, v5.8b, #0
 ; GISEL-NEXT:    shl v3.8h, v3.8h, #15
 ; GISEL-NEXT:    add v1.8h, v2.8h, v1.8h
-; GISEL-NEXT:    neg v2.8h, v4.8h
+; GISEL-NEXT:    neg v2.8h, v7.8h
 ; GISEL-NEXT:    ushl v1.8h, v1.8h, v2.8h
 ; GISEL-NEXT:    sshr v2.8h, v3.8h, #15
 ; GISEL-NEXT:    bif v0.16b, v1.16b, v2.16b
