@@ -20,12 +20,22 @@ using namespace sampleprof;
 
 #define DEBUG_TYPE "sample-profile-matcher"
 
+static cl::opt<bool> SalvageFunctionRenaming(
+    "salvage-function-renaming", cl::Hidden, cl::init(false),
+    cl::desc("Salvage stale profile by function renaming matching."));
+
+static cl::opt<unsigned> FuncRenamingSimilarityThreshold(
+    "func-renaming-similarity-threshold", cl::Hidden, cl::init(80),
+    cl::desc(
+        "The profile function is considered being renamed if the similarity "
+        "against IR is above the given number(percentage value)."));
+
 extern cl::opt<bool> SalvageStaleProfile;
 extern cl::opt<bool> PersistProfileStaleness;
 extern cl::opt<bool> ReportProfileStaleness;
 
 void SampleProfileMatcher::findIRAnchors(const Function &F,
-                                         AnchorMap &IRAnchors) {
+                                         AnchorMap &IRAnchors) const {
   // For inlined code, recover the original callsite and callee by finding the
   // top-level inline frame. e.g. For frame stack "main:1 @ foo:2 @ bar:3", the
   // top-level frame is "main:1", the callsite is "1" and the callee is "foo".
@@ -95,7 +105,7 @@ void SampleProfileMatcher::findIRAnchors(const Function &F,
 }
 
 void SampleProfileMatcher::findProfileAnchors(const FunctionSamples &FS,
-                                              AnchorMap &ProfileAnchors) {
+                                              AnchorMap &ProfileAnchors) const {
   auto isInvalidLineOffset = [](uint32_t LineOffset) {
     return LineOffset & 0x8000;
   };
@@ -260,6 +270,22 @@ void SampleProfileMatcher::matchNonCallsiteLocs(
   }
 }
 
+// Filter the non-call locations from IRAnchors and ProfileAnchors and write
+// them into a list for random access later.
+static void getFilteredAnchorList(const AnchorMap &IRAnchors,
+                                  const AnchorMap &ProfileAnchors,
+                                  AnchorList &FilteredIRAnchorsList,
+                                  AnchorList &FilteredProfileAnchorList) {
+  for (const auto &I : IRAnchors) {
+    if (I.second.stringRef().empty())
+      continue;
+    FilteredIRAnchorsList.emplace_back(I);
+  }
+
+  for (const auto &I : ProfileAnchors)
+    FilteredProfileAnchorList.emplace_back(I);
+}
+
 // Call target name anchor based profile fuzzy matching.
 // Input:
 // For IR locations, the anchor is the callee name of direct callsite; For
@@ -286,16 +312,9 @@ void SampleProfileMatcher::runStaleProfileMatching(
          "Run stale profile matching only once per function");
 
   AnchorList FilteredProfileAnchorList;
-  for (const auto &I : ProfileAnchors)
-    FilteredProfileAnchorList.emplace_back(I);
-
   AnchorList FilteredIRAnchorsList;
-  // Filter the non-callsite from IRAnchors.
-  for (const auto &I : IRAnchors) {
-    if (I.second.stringRef().empty())
-      continue;
-    FilteredIRAnchorsList.emplace_back(I);
-  }
+  getFilteredAnchorList(IRAnchors, ProfileAnchors, FilteredIRAnchorsList,
+                        FilteredProfileAnchorList);
 
   if (FilteredIRAnchorsList.empty() || FilteredProfileAnchorList.empty())
     return;
@@ -311,7 +330,7 @@ void SampleProfileMatcher::runStaleProfileMatching(
   matchNonCallsiteLocs(MatchedAnchors, IRAnchors, IRToProfileLocationMap);
 }
 
-void SampleProfileMatcher::runOnFunction(Function &F) {
+void SampleProfileMatcher::runBlockLevelMatching(Function &F) {
   // We need to use flattened function samples for matching.
   // Unlike IR, which includes all callsites from the source code, the callsites
   // in profile only show up when they are hit by samples, i,e. the profile
@@ -590,13 +609,260 @@ void SampleProfileMatcher::computeAndReportProfileStaleness() {
   }
 }
 
-void SampleProfileMatcher::runOnModule() {
+// Find functions that don't show in the profile or profile symbol list, which
+// are supposed to be new functions. We use them as the targets for renaming
+// matching.
+void SampleProfileMatcher::findIRNewFunctions(
+    StringMap<Function *> &IRNewFunctions) {
+  // TODO: Support MD5 profile.
+  if (FunctionSamples::UseMD5)
+    return;
+  StringSet<> NamesInProfile;
+  if (auto NameTable = Reader.getNameTable()) {
+    for (auto Name : *NameTable)
+      NamesInProfile.insert(Name.stringRef());
+  }
+
+  for (auto &F : M) {
+    // Skip declarations, as even if the function can be recognized renamed, we
+    // have nothing to do with it.
+    if (F.isDeclaration())
+      continue;
+
+    StringRef CanonFName = FunctionSamples::getCanonicalFnName(F.getName());
+    const auto *FS = getFlattenedSamplesFor(F);
+    if (FS)
+      continue;
+
+    // For extended binary, the full function name symbols exits in the profile
+    // symbol list table.
+    if (NamesInProfile.count(CanonFName))
+      continue;
+
+    if (PSL && PSL->contains(CanonFName))
+      continue;
+
+    LLVM_DEBUG(dbgs() << "Function " << CanonFName
+                      << " is not in profile or symbol list table.\n");
+    IRNewFunctions[CanonFName] = &F;
+  }
+}
+
+void SampleProfileMatcher::findIRNewCallees(
+    Function &Caller, const StringMap<Function *> &IRNewFunctions,
+    std::vector<Function *> &IRNewCallees) {
+  for (auto &BB : Caller) {
+    for (auto &I : BB) {
+      const auto *CB = dyn_cast<CallBase>(&I);
+      if (!CB || isa<IntrinsicInst>(&I))
+        continue;
+      Function *Callee = CB->getCalledFunction();
+      if (!Callee || Callee->isDeclaration())
+        continue;
+      StringRef CalleeName =
+          FunctionSamples::getCanonicalFnName(Callee->getName());
+      if (IRNewFunctions.count(CalleeName))
+        IRNewCallees.push_back(Callee);
+    }
+  }
+}
+
+// Use function similarity to determine if the function is renamed. Compute a
+// similarity ratio between two sequences which are  the function callsite
+// anchors. The returned value is in the range [0, 1]. The bigger the value is,
+// the more similar two sequences are.
+float SampleProfileMatcher::checkFunctionSimilarity(
+    const Function &IRFunc, const FunctionId &ProfFName) {
+  AnchorMap IRAnchors;
+  findIRAnchors(IRFunc, IRAnchors);
+
+  AnchorMap ProfileAnchors;
+  const auto *FSFlattened = getFlattenedSamplesFor(ProfFName);
+  assert(FSFlattened && "Flattened profile sample is null");
+  findProfileAnchors(*FSFlattened, ProfileAnchors);
+
+  AnchorList FilteredProfileAnchorList;
+  AnchorList FilteredIRAnchorsList;
+  getFilteredAnchorList(IRAnchors, ProfileAnchors, FilteredIRAnchorsList,
+                        FilteredProfileAnchorList);
+
+  // If the function is probe based, we trust the checksum info to check the
+  // similarity. Otherwise, if the checksum is mismatched, continue computing
+  // the similarity.
+  if (FunctionSamples::ProfileIsProbeBased) {
+    const auto *FuncDesc = ProbeManager->getDesc(IRFunc);
+    // Make sure function is complex enough.
+    if (IRAnchors.size() - FilteredIRAnchorsList.size() > 5 && FuncDesc &&
+        !ProbeManager->profileIsHashMismatched(*FuncDesc, *FSFlattened)) {
+      return 1.0;
+    }
+  }
+
+  if (FilteredIRAnchorsList.empty() || FilteredProfileAnchorList.empty())
+    return 0.0;
+
+  // Use the diff algorithm to find the LCS between IR and profile.
+  LocToLocMap MatchedAnchors =
+      longestCommonSequence(FilteredIRAnchorsList, FilteredProfileAnchorList);
+
+  return static_cast<float>(MatchedAnchors.size()) * 2 /
+         (FilteredIRAnchorsList.size() + FilteredProfileAnchorList.size());
+}
+
+bool SampleProfileMatcher::functionIsRenamedImpl(const Function &IRFunc,
+                                                 const FunctionId &ProfFunc) {
+  float Similarity = checkFunctionSimilarity(IRFunc, ProfFunc);
+  LLVM_DEBUG(dbgs() << "The similarity between " << IRFunc.getName()
+                    << "(IR) and " << ProfFunc << "(profile) is "
+                    << format("%.2f", Similarity) << "\n");
+  return Similarity * 100 > FuncRenamingSimilarityThreshold;
+}
+
+bool SampleProfileMatcher::functionIsRenamed(const Function &IRFunc,
+                                             const FunctionId &ProfFunc) {
+  auto R = RenameDecisionCache.find({&IRFunc, ProfFunc});
+  if (R != RenameDecisionCache.end())
+    return R->second;
+
+  bool V = functionIsRenamedImpl(IRFunc, ProfFunc);
+  RenameDecisionCache[{&IRFunc, ProfFunc}] = V;
+  return V;
+}
+
+// Run function renaming matching on the profiled CFG edge to limit the matching
+// scope.
+void SampleProfileMatcher::runFuncRenamingMatchingOnProfile(
+    const StringMap<Function *> &IRNewFunctions, FunctionSamples &CallerFS,
+    FunctionMap &OldProfToNewSymbolMap) {
+  auto FindIRFunction = [&](const FunctionId &FName) {
+    // Function can be null if name has conflict, use optional to store the
+    // function pointer.
+    std::optional<Function *> F;
+
+    auto R = SymbolMap->find(FName);
+    if (R != SymbolMap->end())
+      F = R->second;
+
+    auto NewR = OldProfToNewSymbolMap.find(FName);
+    if (NewR != OldProfToNewSymbolMap.end())
+      F = NewR->second;
+
+    return F;
+  };
+
+  // Find the new callees from IR in the current caller scope.
+  std::vector<Function *> IRNewCallees;
+  auto Caller = FindIRFunction(CallerFS.getFunction());
+  if (Caller.has_value() && *Caller) {
+    // No callees for external function, skip the rename matching.
+    if ((*Caller)->isDeclaration())
+      return;
+    findIRNewCallees(**Caller, IRNewFunctions, IRNewCallees);
+  }
+
+  // Run renaming matching on CFG edge(caller-callee).
+  for (auto &CM :
+       const_cast<CallsiteSampleMap &>(CallerFS.getCallsiteSamples())) {
+    auto &CalleeMap = CM.second;
+    // Local container used to update the CallsiteSampleMap.
+    std::vector<std::pair<FunctionId, FunctionSamples *>> FSamplesToUpdate;
+    for (auto &CS : CalleeMap) {
+      auto &CalleeFS = CS.second;
+      auto ProfCallee = CalleeFS.getFunction();
+      auto ExistingIRCallee = FindIRFunction(ProfCallee);
+      // The profile callee is new, run renaming matching.
+      if (!ExistingIRCallee.has_value()) {
+        for (auto *IRCallee : IRNewCallees) {
+          if (functionIsRenamed(*IRCallee, ProfCallee)) {
+            FSamplesToUpdate.emplace_back(ProfCallee, &CalleeFS);
+            OldProfToNewSymbolMap[ProfCallee] = IRCallee;
+            // Update the profile in place so that the deeper level matching
+            // will find the IR function.
+            CalleeFS.setFunction(FunctionId(IRCallee->getName()));
+            LLVM_DEBUG(dbgs() << "Callee renaming is found in function "
+                              << CallerFS.getFunction()
+                              << ", changing profile name from " << ProfCallee
+                              << " to " << IRCallee->getName() << "\n");
+            break;
+          }
+        }
+      } else {
+        // Apply the existing renaming result.
+        auto R = OldProfToNewSymbolMap.find(CalleeFS.getFunction());
+        if (R != OldProfToNewSymbolMap.end()) {
+          FunctionId IRNewCallee(R->second->getName());
+          assert(IRNewCallee != ProfCallee &&
+                 "New callee symbol is not a new function");
+          FSamplesToUpdate.emplace_back(ProfCallee, &CalleeFS);
+          CalleeFS.setFunction(IRNewCallee);
+          LLVM_DEBUG(dbgs() << "Existing callee renaming is found in function "
+                            << CallerFS.getFunction()
+                            << ", changing profile name from " << ProfCallee
+                            << " to " << IRNewCallee << "\n");
+        }
+      }
+      // Note that even there is no renaming in the current scope, there could
+      // be renaming in deeper callee scope, we need to traverse all the callee
+      // profiles.
+      runFuncRenamingMatchingOnProfile(IRNewFunctions, CalleeFS,
+                                       OldProfToNewSymbolMap);
+    }
+
+    // Update the CalleeMap using the new name and remove the old entry.
+    for (auto &P : FSamplesToUpdate) {
+      assert((P.first != P.second->getFunction()) &&
+             "Renamed function name should be different from the old map key");
+      CalleeMap[P.second->getFunction()] = *P.second;
+      CalleeMap.erase(P.first);
+    }
+  }
+}
+
+void SampleProfileMatcher::runFuncLevelMatching() {
+  if (!SalvageFunctionRenaming)
+    return;
+  assert(SymbolMap && "SymbolMap points to null");
+
+  StringMap<Function *> IRNewFunctions;
+  findIRNewFunctions(IRNewFunctions);
+  if (IRNewFunctions.empty())
+    return;
+
+  // The new functions found by the renaming matching. Save them into a map
+  // whose key is the old(profile) function name and value is the new(renamed)
+  // function.
+  FunctionMap OldProfToNewSymbolMap;
+  for (auto &I : Reader.getProfiles())
+    runFuncRenamingMatchingOnProfile(IRNewFunctions, I.second,
+                                     OldProfToNewSymbolMap);
+
+  // Update all the data generated by the old profile.
+  if (!OldProfToNewSymbolMap.empty()) {
+    // Add the new function to the SymbolMap, which will be used in
+    // SampleLoader.
+    for (auto &I : OldProfToNewSymbolMap) {
+      assert(I.second && "New function is null");
+      SymbolMap->emplace(FunctionId(I.second->getName()), I.second);
+    }
+
+    // Re-flatten the profiles after the renaming.
+    FlattenedProfiles.clear();
+    ProfileConverter::flattenProfile(Reader.getProfiles(), FlattenedProfiles,
+                                     FunctionSamples::ProfileIsCS);
+  }
+  RenameDecisionCache.clear();
+}
+
+void SampleProfileMatcher::runOnModule(FunctionMap &SymMap) {
   ProfileConverter::flattenProfile(Reader.getProfiles(), FlattenedProfiles,
                                    FunctionSamples::ProfileIsCS);
+  SymbolMap = &SymMap;
+  runFuncLevelMatching();
+
   for (auto &F : M) {
     if (skipProfileForFunction(F))
       continue;
-    runOnFunction(F);
+    runBlockLevelMatching(F);
   }
   if (SalvageStaleProfile)
     distributeIRToProfileLocationMap();
