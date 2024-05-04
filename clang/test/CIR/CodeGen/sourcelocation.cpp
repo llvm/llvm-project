@@ -32,13 +32,13 @@ int s0(int a, int b) {
 // CIR:     cir.store %6, %3 : !s32i, !cir.ptr<!s32i> loc(#loc23)
 // CIR:     cir.scope {
 // CIR:       %9 = cir.load %3 : !cir.ptr<!s32i>, !s32i loc(#loc13)
-// CIR:       %10 = cir.const(#cir.int<0> : !s32i) : !s32i loc(#loc14)
+// CIR:       %10 = cir.const #cir.int<0> : !s32i loc(#loc14)
 // CIR:       %11 = cir.cmp(gt, %9, %10) : !s32i, !cir.bool loc(#loc26)
 // CIR:       cir.if %11 {
-// CIR:         %12 = cir.const(#cir.int<0> : !s32i) : !s32i loc(#loc16)
+// CIR:         %12 = cir.const #cir.int<0> : !s32i loc(#loc16)
 // CIR:         cir.store %12, %3 : !s32i, !cir.ptr<!s32i> loc(#loc28)
 // CIR:       } else {
-// CIR:         %12 = cir.const(#cir.int<1> : !s32i) : !s32i loc(#loc12)
+// CIR:         %12 = cir.const #cir.int<1> : !s32i loc(#loc12)
 // CIR:         cir.store %12, %3 : !s32i, !cir.ptr<!s32i> loc(#loc29)
 // CIR:       } loc(#loc27)
 // CIR:     } loc(#loc25)

@@ -4,10 +4,10 @@
 module  {
   cir.func @blue(%arg0: !cir.bool) -> !u32i {
     %0 = cir.ternary(%arg0, true {
-      %a = cir.const(#cir.int<0> : !u32i) : !u32i
+      %a = cir.const #cir.int<0> : !u32i
       cir.yield %a : !u32i
     }, false {
-      %b = cir.const(#cir.int<1> : !u32i) : !u32i
+      %b = cir.const #cir.int<1> : !u32i
       cir.yield %b : !u32i
     }) : (!cir.bool) -> !u32i
     cir.return %0 : !u32i
@@ -18,10 +18,10 @@ module  {
 
 // CHECK: cir.func @blue(%arg0: !cir.bool) -> !u32i {
 // CHECK:   %0 = cir.ternary(%arg0, true {
-// CHECK:     %1 = cir.const(#cir.int<0> : !u32i) : !u32i
+// CHECK:     %1 = cir.const #cir.int<0> : !u32i
 // CHECK:     cir.yield %1 : !u32i
 // CHECK:   }, false {
-// CHECK:     %1 = cir.const(#cir.int<1> : !u32i) : !u32i
+// CHECK:     %1 = cir.const #cir.int<1> : !u32i
 // CHECK:     cir.yield %1 : !u32i
 // CHECK:   }) : (!cir.bool) -> !u32i
 // CHECK:   cir.return %0 : !u32i

@@ -264,7 +264,7 @@ def PtrStrideOp : CIR_Op<"ptr_stride",
     a stride (second operand).
 
     ```mlir
-    %3 = cir.const(0 : i32) : i32
+    %3 = cir.const 0 : i32
     %4 = cir.ptr_stride(%2 : !cir.ptr<i32>, %3 : i32), !cir.ptr<i32>
     ```
   }];
@@ -293,7 +293,7 @@ def PtrStrideOp : CIR_Op<"ptr_stride",
 //===----------------------------------------------------------------------===//
 
 def ConstantOp : CIR_Op<"const",
-    [ConstantLike, Pure]> {
+    [ConstantLike, Pure, AllTypesMatch<["value", "res"]>]> {
   // FIXME: Use SameOperandsAndResultType or similar and prevent eye bleeding
   // type repetition in the assembly form.
 
@@ -303,9 +303,9 @@ def ConstantOp : CIR_Op<"const",
     attached to the operation as an attribute.
 
     ```mlir
-      %0 = cir.const(42 : i32) : i32
-      %1 = cir.const(4.2 : f32) : f32
-      %2 = cir.const(nullptr : !cir.ptr<i32>) : !cir.ptr<i32>
+      %0 = cir.const 42 : i32
+      %1 = cir.const 4.2 : f32
+      %2 = cir.const nullptr : !cir.ptr<i32>
     ```
   }];
 
@@ -315,9 +315,7 @@ def ConstantOp : CIR_Op<"const",
   // The constant operation returns a single value of CIR_AnyType.
   let results = (outs CIR_AnyType:$res);
 
-  let assemblyFormat = [{
-    `(` custom<ConstantValue>($value) `)` attr-dict `:` type($res)
-  }];
+  let assemblyFormat = "attr-dict $value";
 
   let hasVerifier = 1;
 
@@ -1111,13 +1109,13 @@ def BitClrsbOp : CIR_BitOp<"bit.clrsb", AnyTypeOf<[SInt32, SInt64]>> {
     !s32i = !cir.int<s, 32>
 
     // %0 = 0xDEADBEEF, 0b1101_1110_1010_1101_1011_1110_1110_1111
-    %0 = cir.const(#cir.int<3735928559> : !s32i) : !s32i
+    %0 = cir.const #cir.int<3735928559> : !s32i
     // %1 will be 1 because there is 1 bit following the most significant bit
     // that is identical to it.
     %1 = cir.bit.clrsb(%0 : !s32i) : !s32i
 
     // %2 = 1, 0b0000_0000_0000_0000_0000_0000_0000_0001
-    %2 = cir.const(#cir.int<1> : !s32i) : !s32i
+    %2 = cir.const #cir.int<1> : !s32i
     // %3 will be 30
     %3 = cir.bit.clrsb(%2 : !s32i) : !s32i
     ```
@@ -1142,7 +1140,7 @@ def BitClzOp : CIR_BitOp<"bit.clz", AnyTypeOf<[UInt16, UInt32, UInt64]>> {
     !u32i = !cir.int<u, 32>
 
     // %0 = 0b0000_0000_0000_0000_0000_0000_0000_1000
-    %0 = cir.const(#cir.int<8> : !u32i) : !u32i
+    %0 = cir.const #cir.int<8> : !u32i
     // %1 will be 28
     %1 = cir.bit.clz(%0 : !u32i) : !s32i
     ```
@@ -1167,7 +1165,7 @@ def BitCtzOp : CIR_BitOp<"bit.ctz", AnyTypeOf<[UInt16, UInt32, UInt64]>> {
     !u32i = !cir.int<u, 32>
 
     // %0 = 0b1000
-    %0 = cir.const(#cir.int<8> : !u32i) : !u32i
+    %0 = cir.const #cir.int<8> : !u32i
     // %1 will be 3
     %1 = cir.bit.ctz(%0 : !u32i) : !s32i
     ```
@@ -1190,7 +1188,7 @@ def BitFfsOp : CIR_BitOp<"bit.ffs", AnyTypeOf<[SInt32, SInt64]>> {
     !s32i = !cir.int<s, 32>
 
     // %0 = 0x0010_1000
-    %0 = cir.const(#cir.int<40> : !s32i) : !s32i
+    %0 = cir.const #cir.int<40> : !s32i
     // #1 will be 4 since the 4th least significant bit is 1.
     %1 = cir.bit.ffs(%0 : !s32i) : !s32i
     ```
@@ -1212,9 +1210,9 @@ def BitParityOp : CIR_BitOp<"bit.parity", AnyTypeOf<[UInt32, UInt64]>> {
     !u32i = !cir.int<u, 32>
 
     // %0 = 0x0110_1000
-    %0 = cir.const(#cir.int<104> : !u32i) : !s32i
+    %0 = cir.const #cir.int<104> : !u32i
     // %1 will be 1 since there are 3 1-bits in %0
-    %1 = cir.bit.parity(%0 : !u32i) : !s32i
+    %1 = cir.bit.parity(%0 : !u32i) : !u32i
     ```
   }];
 }
@@ -1230,13 +1228,12 @@ def BitPopcountOp
     Example:
 
     ```mlir
-    !s32i = !cir.int<s, 32>
     !u32i = !cir.int<u, 32>
 
     // %0 = 0x0110_1000
-    %0 = cir.const(#cir.int<104> : !u32i) : !s32i
+    %0 = cir.const #cir.int<104> : !u32i
     // %1 will be 3 since there are 3 1-bits in %0
-    %1 = cir.bit.popcount(%0 : !u32i) : !s32i
+    %1 = cir.bit.popcount(%0 : !u32i) : !u32i
     ```
   }];
 }
@@ -1260,7 +1257,7 @@ def ByteswapOp : CIR_Op<"bswap", [Pure, SameOperandsAndResultType]> {
     !u32i = !cir.int<u, 32>
 
     // %0 = 0x12345678
-    %0 = cir.const(#cir.int<305419896> : !u32i) : !u32i
+    %0 = cir.const #cir.int<305419896> : !u32i
 
     // %1 should be 0x78563412
     %1 = cir.bswap(%0 : !u32i) : !u32i
@@ -1302,12 +1299,12 @@ def CmpThreeWayOp : CIR_Op<"cmp3way", [Pure, SameTypeOperands]> {
     #cmp3way_strong = #cmp3way_info<strong, lt = -1, eq = 0, gt = 1>
     #cmp3way_partial = #cmp3way_info<strong, lt = -1, eq = 0, gt = 1, unordered = 2>
 
-    %0 = cir.const(#cir.int<0> : !s32i) : !s32i
-    %1 = cir.const(#cir.int<1> : !s32i) : !s32i
+    %0 = cir.const #cir.int<0> : !s32i
+    %1 = cir.const #cir.int<1> : !s32i
     %2 = cir.cmp3way(%0 : !s32i, %1, #cmp3way_strong) : !s8i
 
-    %3 = cir.const(#cir.fp<0.0> : !cir.float) : !cir.float
-    %4 = cir.const(#cir.fp<1.0> : !cir.float) : !cir.float
+    %3 = cir.const #cir.fp<0.0> : !cir.float
+    %4 = cir.const #cir.fp<1.0> : !cir.float
     %5 = cir.cmp3way(%3 : !cir.float, %4, #cmp3way_partial) : !s8i
     ```
   }];
@@ -1961,7 +1958,7 @@ def SetBitfieldOp : CIR_Op<"set_bitfield"> {
     !struct_type = !cir.struct<struct "S" {!cir.int<u, 32>, !cir.int<u, 32>, !cir.int<u, 16>} #cir.record.decl.ast>
     #bfi_d = #cir.bitfield_info<name = "d", storage_type = !u32i, size = 2, offset = 17, is_signed = true>
 
-    %1 = cir.const(#cir.int<3> : !s32i) : !s32i
+    %1 = cir.const #cir.int<3> : !s32i
     %2 = cir.load %0 : !cir.ptr<!cir.ptr<!struct_type>>, !cir.ptr<!struct_type>
     %3 = cir.get_member %2[1] {name = "d"} : !cir.ptr<!struct_type> -> !cir.ptr<!u32i>
     %4 = cir.set_bitfield(#bfi_d, %3 : !cir.ptr<!u32i>, %1 : !s32i) -> !s32i
@@ -3045,7 +3042,7 @@ def MemCpyOp : CIR_Op<"libc.memcpy"> {
 
     ```mlir
       // Copying 2 bytes from one array to a struct:
-      %2 = cir.const(#cir.int<2> : !u32i) : !u32i
+      %2 = cir.const #cir.int<2> : !u32i
       cir.libc.memcpy %2 bytes from %arr to %struct : !cir.ptr<!arr> -> !cir.ptr<!struct>
     ```
   }];

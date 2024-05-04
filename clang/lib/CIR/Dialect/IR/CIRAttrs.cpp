@@ -43,6 +43,11 @@ static mlir::ParseResult
 parseFloatLiteral(mlir::AsmParser &parser,
                   mlir::FailureOr<llvm::APFloat> &value, mlir::Type ty);
 
+static mlir::ParseResult parseConstPtr(mlir::AsmParser &parser,
+                                       uint64_t &value);
+
+static void printConstPtr(mlir::AsmPrinter &p, uint64_t value);
+
 #define GET_ATTRDEF_CLASSES
 #include "clang/CIR/Dialect/IR/CIROpsAttributes.cpp.inc"
 
@@ -213,37 +218,23 @@ void LangAttr::print(AsmPrinter &printer) const {
 // ConstPtrAttr definitions
 //===----------------------------------------------------------------------===//
 
-Attribute ConstPtrAttr::parse(AsmParser &parser, Type odsType) {
-  uint64_t value;
-
-  if (!odsType.isa<cir::PointerType>())
-    return {};
-
-  // Consume the '<' symbol.
-  if (parser.parseLess())
-    return {};
+// TODO: Consider encoding the null value differently and use conditional
+// assembly format instead of custom parsing/printing.
+static ParseResult parseConstPtr(AsmParser &parser, uint64_t &value) {
 
   if (parser.parseOptionalKeyword("null").succeeded()) {
     value = 0;
-  } else {
-    if (parser.parseInteger(value))
-      parser.emitError(parser.getCurrentLocation(), "expected integer value");
+    return success();
   }
 
-  // Consume the '>' symbol.
-  if (parser.parseGreater())
-    return {};
-
-  return ConstPtrAttr::get(odsType, value);
+  return parser.parseInteger(value);
 }
 
-void ConstPtrAttr::print(AsmPrinter &printer) const {
-  printer << '<';
-  if (isNullValue())
-    printer << "null";
+static void printConstPtr(AsmPrinter &p, uint64_t value) {
+  if (!value)
+    p << "null";
   else
-    printer << getValue();
-  printer << '>';
+    p << value;
 }
 
 //===----------------------------------------------------------------------===//

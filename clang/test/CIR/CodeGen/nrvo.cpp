@@ -14,7 +14,7 @@ std::vector<const char*> test_nrvo() {
 // CHECK: cir.func @_Z9test_nrvov() -> ![[VEC]]
 // CHECK:   %0 = cir.alloca ![[VEC]], !cir.ptr<![[VEC]]>, ["__retval", init] {alignment = 8 : i64}
 // CHECK:   %1 = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["nrvo"] {alignment = 1 : i64}
-// CHECK:   %2 = cir.const(#false) : !cir.bool
+// CHECK:   %2 = cir.const #false
 // CHECK:   cir.store %2, %1 : !cir.bool, !cir.ptr<!cir.bool>
 // CHECK:   cir.call @_ZNSt6vectorIPKcEC1Ev(%0) : (!cir.ptr<![[VEC]]>) -> ()
 // CHECK:   cir.scope {
@@ -24,7 +24,7 @@ std::vector<const char*> test_nrvo() {
 // CHECK:     cir.store %7, %5 : !cir.ptr<!s8i>, !cir.ptr<!cir.ptr<!s8i>>
 // CHECK:     cir.call @_ZNSt6vectorIPKcE9push_backEOS1_(%0, %5) : (!cir.ptr<![[VEC]]>, !cir.ptr<!cir.ptr<!s8i>>) -> ()
 // CHECK:   }
-// CHECK:   %3 = cir.const(#true) : !cir.bool
+// CHECK:   %3 = cir.const #true
 // CHECK:   cir.store %3, %1 : !cir.bool, !cir.ptr<!cir.bool>
 // CHECK:   %4 = cir.load %0 : !cir.ptr<![[VEC]]>, ![[VEC]]
 // CHECK:   cir.return %4 : ![[VEC]]

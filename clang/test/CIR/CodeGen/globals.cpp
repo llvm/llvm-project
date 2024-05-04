@@ -67,7 +67,7 @@ int use_func() { return func<int>(); }
 // CHECK-NEXT:   %0 = cir.alloca !u8i, !cir.ptr<!u8i>, ["c", init] {alignment = 1 : i64}
 // CHECK-NEXT:   %1 = cir.get_global @s2 : !cir.ptr<!cir.ptr<!s8i>>
 // CHECK-NEXT:   %2 = cir.load %1 : !cir.ptr<!cir.ptr<!s8i>>, !cir.ptr<!s8i>
-// CHECK-NEXT:   %3 = cir.const(#cir.int<0> : !s32i) : !s32i
+// CHECK-NEXT:   %3 = cir.const #cir.int<0> : !s32i
 // CHECK-NEXT:   %4 = cir.ptr_stride(%2 : !cir.ptr<!s8i>, %3 : !s32i), !cir.ptr<!s8i>
 // CHECK-NEXT:   %5 = cir.load %4 : !cir.ptr<!s8i>, !s8i
 // CHECK-NEXT:   %6 = cir.cast(integral, %5 : !s8i), !u8i
@@ -76,7 +76,7 @@ int use_func() { return func<int>(); }
 
 //      CHECK:  cir.func linkonce_odr @_Z4funcIiET_v() -> !s32i
 // CHECK-NEXT:    %0 = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"] {alignment = 4 : i64}
-// CHECK-NEXT:    %1 = cir.const(#cir.int<0> : !s32i) : !s32i
+// CHECK-NEXT:    %1 = cir.const #cir.int<0> : !s32i
 // CHECK-NEXT:    cir.store %1, %0 : !s32i, !cir.ptr<!s32i>
 // CHECK-NEXT:    %2 = cir.load %0 : !cir.ptr<!s32i>, !s32i
 // CHECK-NEXT:    cir.return %2 : !s32i

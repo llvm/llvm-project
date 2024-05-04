@@ -7,7 +7,7 @@ module  {
     %a = cir.cast (int_to_bool, %arg0 : !s32i), !cir.bool
 
     %3 = cir.cast(array_to_ptrdecay, %0 : !cir.ptr<!cir.array<!s32i x 10>>), !cir.ptr<!s32i>
-    %4 = cir.const(#cir.int<0> : !s32i) : !s32i
+    %4 = cir.const #cir.int<0> : !s32i
     cir.return
   }
 

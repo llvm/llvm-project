@@ -4,7 +4,7 @@
 
 module {
   cir.func @div(%x : !s32i, %y : !s32i) -> !s32i {
-    %3 = cir.const(#cir.int<0> : !s32i) : !s32i
+    %3 = cir.const #cir.int<0> : !s32i
     cir.return %3 : !s32i
   }
 

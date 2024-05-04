@@ -24,7 +24,7 @@ module {
     %8 = cir.alloca !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>, ["e", init] {alignment = 8 : i64}
     cir.store %arg0, %0 : !u32i, !cir.ptr<!u32i>
     cir.store %arg1, %1 : !s32i, !cir.ptr<!s32i>
-    
+
     // Integer casts.
     %9 = cir.load %0 : !cir.ptr<!u32i>, !u32i
     %10 = cir.cast(integral, %9 : !u32i), !s8i
@@ -73,7 +73,7 @@ module {
     // CHECK: %{{.+}} = llvm.fptosi %{{.+}} : f32 to i32
     %28 = cir.cast(float_to_int, %arg2 : !cir.float), !u32i
     // CHECK: %{{.+}} = llvm.fptoui %{{.+}} : f32 to i32
-    %18 = cir.const(#cir.int<0> : !s32i) : !s32i
+    %18 = cir.const #cir.int<0> : !s32i
     // CHECK: %{{.+}} = llvm.fptrunc %{{.+}} : f64 to f32
     %34 = cir.cast(floating, %arg3 : !cir.double), !cir.float
 

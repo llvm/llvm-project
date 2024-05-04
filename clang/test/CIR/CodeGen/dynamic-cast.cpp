@@ -22,13 +22,13 @@ Derived *ptr_cast(Base *b) {
 //      AFTER: cir.func @_Z8ptr_castP4Base
 //      AFTER:   %[[#SRC_IS_NULL:]] = cir.cast(ptr_to_bool, %{{.+}} : !cir.ptr<!ty_22Base22>), !cir.bool
 // AFTER-NEXT:   %{{.+}} = cir.ternary(%[[#SRC_IS_NULL]], true {
-// AFTER-NEXT:     %[[#NULL:]] = cir.const(#cir.ptr<null> : !cir.ptr<!ty_22Derived22>) : !cir.ptr<!ty_22Derived22>
+// AFTER-NEXT:     %[[#NULL:]] = cir.const #cir.ptr<null> : !cir.ptr<!ty_22Derived22>
 // AFTER-NEXT:     cir.yield %[[#NULL]] : !cir.ptr<!ty_22Derived22>
 // AFTER-NEXT:   }, false {
 // AFTER-NEXT:     %[[#SRC_VOID_PTR:]] = cir.cast(bitcast, %2 : !cir.ptr<!ty_22Base22>), !cir.ptr<!void>
-// AFTER-NEXT:     %[[#SRC_RTTI:]] = cir.const(#cir.global_view<@_ZTI4Base> : !cir.ptr<!u8i>) : !cir.ptr<!u8i>
-// AFTER-NEXT:     %[[#DEST_RTTI:]] = cir.const(#cir.global_view<@_ZTI7Derived> : !cir.ptr<!u8i>) : !cir.ptr<!u8i>
-// AFTER-NEXT:     %[[#OFFSET_HINT:]] = cir.const(#cir.int<0> : !s64i) : !s64i
+// AFTER-NEXT:     %[[#SRC_RTTI:]] = cir.const #cir.global_view<@_ZTI4Base> : !cir.ptr<!u8i>
+// AFTER-NEXT:     %[[#DEST_RTTI:]] = cir.const #cir.global_view<@_ZTI7Derived> : !cir.ptr<!u8i>
+// AFTER-NEXT:     %[[#OFFSET_HINT:]] = cir.const #cir.int<0> : !s64i
 // AFTER-NEXT:     %[[#CASTED_PTR:]] = cir.call @__dynamic_cast(%[[#SRC_VOID_PTR]], %[[#SRC_RTTI]], %[[#DEST_RTTI]], %[[#OFFSET_HINT]]) : (!cir.ptr<!void>, !cir.ptr<!u8i>, !cir.ptr<!u8i>, !s64i) -> !cir.ptr<!void>
 // AFTER-NEXT:     %[[#RESULT:]] = cir.cast(bitcast, %[[#CASTED_PTR]] : !cir.ptr<!void>), !cir.ptr<!ty_22Derived22>
 // AFTER-NEXT:     cir.yield %[[#RESULT]] : !cir.ptr<!ty_22Derived22>
@@ -45,9 +45,9 @@ Derived &ref_cast(Base &b) {
 
 //      AFTER: cir.func @_Z8ref_castR4Base
 //      AFTER:   %[[#SRC_VOID_PTR:]] = cir.cast(bitcast, %{{.+}} : !cir.ptr<!ty_22Base22>), !cir.ptr<!void>
-// AFTER-NEXT:   %[[#SRC_RTTI:]] = cir.const(#cir.global_view<@_ZTI4Base> : !cir.ptr<!u8i>) : !cir.ptr<!u8i>
-// AFTER-NEXT:   %[[#DEST_RTTI:]] = cir.const(#cir.global_view<@_ZTI7Derived> : !cir.ptr<!u8i>) : !cir.ptr<!u8i>
-// AFTER-NEXT:   %[[#OFFSET_HINT:]] = cir.const(#cir.int<0> : !s64i) : !s64i
+// AFTER-NEXT:   %[[#SRC_RTTI:]] = cir.const #cir.global_view<@_ZTI4Base> : !cir.ptr<!u8i>
+// AFTER-NEXT:   %[[#DEST_RTTI:]] = cir.const #cir.global_view<@_ZTI7Derived> : !cir.ptr<!u8i>
+// AFTER-NEXT:   %[[#OFFSET_HINT:]] = cir.const #cir.int<0> : !s64i
 // AFTER-NEXT:   %[[#CASTED_PTR:]] = cir.call @__dynamic_cast(%[[#SRC_VOID_PTR]], %[[#SRC_RTTI]], %[[#DEST_RTTI]], %[[#OFFSET_HINT]]) : (!cir.ptr<!void>, !cir.ptr<!u8i>, !cir.ptr<!u8i>, !s64i) -> !cir.ptr<!void>
 // AFTER-NEXT:   %[[#CASTED_PTR_IS_NOT_NULL:]] = cir.cast(ptr_to_bool, %[[#CASTED_PTR]] : !cir.ptr<!void>), !cir.bool
 // AFTER-NEXT:   %[[#CASTED_PTR_IS_NULL:]] = cir.unary(not, %[[#CASTED_PTR_IS_NOT_NULL]]) : !cir.bool, !cir.bool
@@ -67,7 +67,7 @@ void *ptr_cast_to_complete(Base *ptr) {
 // BEFORE-NEXT:   %[[#V20:]] = cir.cast(ptr_to_bool, %[[#V19]] : !cir.ptr<!ty_22Base22>), !cir.bool
 // BEFORE-NEXT:   %[[#V21:]] = cir.unary(not, %[[#V20]]) : !cir.bool, !cir.bool
 // BEFORE-NEXT:   %{{.+}} = cir.ternary(%[[#V21]], true {
-// BEFORE-NEXT:     %[[#V22:]] = cir.const(#cir.ptr<null> : !cir.ptr<!void>) : !cir.ptr<!void>
+// BEFORE-NEXT:     %[[#V22:]] = cir.const #cir.ptr<null> : !cir.ptr<!void>
 // BEFORE-NEXT:     cir.yield %[[#V22]] : !cir.ptr<!void>
 // BEFORE-NEXT:   }, false {
 // BEFORE-NEXT:     %[[#V23:]] = cir.cast(bitcast, %[[#V19]] : !cir.ptr<!ty_22Base22>), !cir.ptr<!cir.ptr<!s64i>>

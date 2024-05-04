@@ -11,7 +11,7 @@ module {
     cir.store %arg0, %0 : !cir.ptr<f64>, !cir.ptr<!cir.ptr<f64>>
     %3 = cir.load %0 : !cir.ptr<!cir.ptr<f64>>, !cir.ptr<f64>
     cir.store %3, %2 : !cir.ptr<f64>, !cir.ptr<!cir.ptr<f64>>
-    %4 = cir.const(#cir.int<0> : !s32i) : !s32i
+    %4 = cir.const #cir.int<0> : !s32i
     %5 = cir.load %1 : !cir.ptr<!s32i>, !s32i
     cir.return %5 : !s32i
   }

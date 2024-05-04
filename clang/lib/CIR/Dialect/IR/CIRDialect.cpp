@@ -364,23 +364,6 @@ LogicalResult ConstantOp::verify() {
   return checkConstantTypes(getOperation(), getType(), getValue());
 }
 
-static ParseResult parseConstantValue(OpAsmParser &parser,
-                                      mlir::Attribute &valueAttr) {
-  NamedAttrList attr;
-  return parser.parseAttribute(valueAttr, "value", attr);
-}
-
-// FIXME: create a CIRConstAttr and hide this away for both global
-// initialization and cir.const operation.
-static void printConstant(OpAsmPrinter &p, Attribute value) {
-  p.printAttribute(value);
-}
-
-static void printConstantValue(OpAsmPrinter &p, cir::ConstantOp op,
-                               Attribute value) {
-  printConstant(p, value);
-}
-
 OpFoldResult ConstantOp::fold(FoldAdaptor /*adaptor*/) { return getValue(); }
 
 //===----------------------------------------------------------------------===//
@@ -1486,6 +1469,18 @@ void ForOp::getSuccessorRegions(
 //===----------------------------------------------------------------------===//
 // GlobalOp
 //===----------------------------------------------------------------------===//
+
+static ParseResult parseConstantValue(OpAsmParser &parser,
+                                      mlir::Attribute &valueAttr) {
+  NamedAttrList attr;
+  return parser.parseAttribute(valueAttr, "value", attr);
+}
+
+// FIXME: create a CIRConstAttr and hide this away for both global
+// initialization and cir.const operation.
+static void printConstant(OpAsmPrinter &p, Attribute value) {
+  p.printAttribute(value);
+}
 
 static void printGlobalOpTypeAndInitialValue(OpAsmPrinter &p, GlobalOp op,
                                              TypeAttr type, Attribute initAttr,

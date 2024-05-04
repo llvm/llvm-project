@@ -117,7 +117,7 @@ module {
       ^bb1:  // no predecessors
         cir.break
       }
-      ] 
+      ]
     }
     cir.return
   }
@@ -148,7 +148,7 @@ module {
       case (equal, 0) {
         cir.scope {
           %6 = cir.load %1 : !cir.ptr<!s32i>, !s32i
-          %7 = cir.const(#cir.int<0> : !s32i) : !s32i
+          %7 = cir.const #cir.int<0> : !s32i
           %8 = cir.cmp(ge, %6, %7) : !s32i, !s32i
           %9 = cir.cast(int_to_bool, %8 : !s32i), !cir.bool
           cir.if %9 {
@@ -157,12 +157,12 @@ module {
         }
         cir.break
       }
-      ] 
-    } 
-    %3 = cir.const(#cir.int<3> : !s32i) : !s32i
+      ]
+    }
+    %3 = cir.const #cir.int<3> : !s32i
     cir.store %3, %2 : !s32i, !cir.ptr<!s32i>
     %4 = cir.load %2 : !cir.ptr<!s32i>, !s32i
-    cir.return %4 : !s32i 
+    cir.return %4 : !s32i
   }
   // CHECK:  llvm.func @shouldLowerNestedBreak
   // CHECK:    llvm.switch %6 : i32, ^bb7 [

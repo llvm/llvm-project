@@ -6,11 +6,11 @@ module {
   cir.func @testFor() {
     cir.scope {
       %0 = cir.alloca !s32i, !cir.ptr<!s32i>, ["i", init] {alignment = 4 : i64}
-      %1 = cir.const(#cir.int<1> : !s32i) : !s32i
+      %1 = cir.const #cir.int<1> : !s32i
       cir.store %1, %0 : !s32i, !cir.ptr<!s32i>
       cir.for : cond {
         %2 = cir.load %0 : !cir.ptr<!s32i>, !s32i
-        %3 = cir.const(#cir.int<10> : !s32i) : !s32i
+        %3 = cir.const #cir.int<10> : !s32i
         %4 = cir.cmp(lt, %2, %3) : !s32i, !s32i
         %5 = cir.cast(int_to_bool, %4 : !s32i), !cir.bool
         cir.condition(%5)
@@ -18,7 +18,7 @@ module {
         cir.scope {
           cir.scope {
             %2 = cir.load %0 : !cir.ptr<!s32i>, !s32i
-            %3 = cir.const(#cir.int<5> : !s32i) : !s32i
+            %3 = cir.const #cir.int<5> : !s32i
             %4 = cir.cmp(eq, %2, %3) : !s32i, !s32i
             %5 = cir.cast(int_to_bool, %4 : !s32i), !cir.bool
             cir.if %5 {
@@ -61,18 +61,18 @@ module {
   // CHECK:  ^bb[[#STEP]]:
   //           [...]
   // CHECK:    llvm.br ^bb[[#COND:]]
-  // CHECK:  ^bb[[#EXIT]]: 
+  // CHECK:  ^bb[[#EXIT]]:
   //           [...]
   // CHECK:  }
 
   cir.func @testForNested() {
     cir.scope {
       %0 = cir.alloca !s32i, !cir.ptr<!s32i>, ["i", init] {alignment = 4 : i64}
-      %1 = cir.const(#cir.int<1> : !s32i) : !s32i
+      %1 = cir.const #cir.int<1> : !s32i
       cir.store %1, %0 : !s32i, !cir.ptr<!s32i>
       cir.for : cond {
         %2 = cir.load %0 : !cir.ptr<!s32i>, !s32i
-        %3 = cir.const(#cir.int<10> : !s32i) : !s32i
+        %3 = cir.const #cir.int<10> : !s32i
         %4 = cir.cmp(lt, %2, %3) : !s32i, !s32i
         %5 = cir.cast(int_to_bool, %4 : !s32i), !cir.bool
         cir.condition(%5)
@@ -80,11 +80,11 @@ module {
         cir.scope {
           cir.scope {
             %2 = cir.alloca !s32i, !cir.ptr<!s32i>, ["j", init] {alignment = 4 : i64}
-            %3 = cir.const(#cir.int<1> : !s32i) : !s32i
+            %3 = cir.const #cir.int<1> : !s32i
             cir.store %3, %2 : !s32i, !cir.ptr<!s32i>
             cir.for : cond {
               %4 = cir.load %2 : !cir.ptr<!s32i>, !s32i
-              %5 = cir.const(#cir.int<10> : !s32i) : !s32i
+              %5 = cir.const #cir.int<10> : !s32i
               %6 = cir.cmp(lt, %4, %5) : !s32i, !s32i
               %7 = cir.cast(int_to_bool, %6 : !s32i), !cir.bool
               cir.condition(%7)
@@ -92,7 +92,7 @@ module {
               cir.scope {
                 cir.scope {
                   %4 = cir.load %2 : !cir.ptr<!s32i>, !s32i
-                  %5 = cir.const(#cir.int<5> : !s32i) : !s32i
+                  %5 = cir.const #cir.int<5> : !s32i
                   %6 = cir.cmp(eq, %4, %5) : !s32i, !s32i
                   %7 = cir.cast(int_to_bool, %6 : !s32i), !cir.bool
                   cir.if %7 {
@@ -120,60 +120,60 @@ module {
     cir.return
   }
 
-  // CHECK:  llvm.func @testForNested()  
+  // CHECK:  llvm.func @testForNested()
   //           [...]
   // CHECK:    llvm.br ^bb[[#COND:]]
   // CHECK:  ^bb[[#COND]]:
   //           [...]
   // CHECK:    llvm.cond_br %{{.+}}, ^bb[[#preNESTED1:]], ^bb[[#EXIT:]]
-  // CHECK:  ^bb[[#preNESTED1]]: 
+  // CHECK:  ^bb[[#preNESTED1]]:
   // CHECK:    llvm.br ^bb[[#preNESTED2:]]
-  // CHECK:  ^bb[[#preNESTED2]]: 
+  // CHECK:  ^bb[[#preNESTED2]]:
   // CHECK:    llvm.br ^bb[[#NESTED:]]
-  // CHECK:  ^bb[[#NESTED]]: 
+  // CHECK:  ^bb[[#NESTED]]:
   //           [...]
   // CHECK:    llvm.br ^bb[[#COND_NESTED:]]
   // CHECK:  ^bb[[#COND_NESTED]]:
   //           [...]
   // CHECK:    llvm.cond_br %{{.+}}, ^bb[[#preBREAK1:]], ^bb[[#EXIT_NESTED:]]
-  // CHECK:  ^bb[[#preBREAK1]]: 
+  // CHECK:  ^bb[[#preBREAK1]]:
   // CHECK:    llvm.br ^bb[[#preBREAK2:]]
-  // CHECK:  ^bb[[#preBREAK2]]: 
+  // CHECK:  ^bb[[#preBREAK2]]:
   // CHECK:    llvm.br ^bb[[#BREAK:]]
-  // CHECK:  ^bb[[#BREAK]]: 
+  // CHECK:  ^bb[[#BREAK]]:
   //           [...]
   // CHECK:    llvm.cond_br %{{.+}}, ^bb[[#preEXIT2:]], ^bb[[#preBODY0:]]
-  // CHECK:  ^bb[[#preEXIT2]]: 
+  // CHECK:  ^bb[[#preEXIT2]]:
   // CHECK:    llvm.br ^bb[[#EXIT_NESTED:]]
-  // CHECK:  ^bb[[#preBODY0]]: 
+  // CHECK:  ^bb[[#preBODY0]]:
   // CHECK:    llvm.br ^bb[[#preBODY1:]]
-  // CHECK:  ^bb[[#preBODY1]]: 
+  // CHECK:  ^bb[[#preBODY1]]:
   // CHECK:    llvm.br ^bb[[#BODY_NESTED:]]
-  // CHECK:  ^bb[[#BODY_NESTED]]: 
+  // CHECK:  ^bb[[#BODY_NESTED]]:
   // CHECK:    llvm.br ^bb[[#STEP_NESTED:]]
-  // CHECK:  ^bb[[#STEP_NESTED]]: 
+  // CHECK:  ^bb[[#STEP_NESTED]]:
   //           [...]
   // CHECK:    llvm.br ^bb[[#COND_NESTED:]]
-  // CHECK:  ^bb[[#EXIT_NESTED]]: 
+  // CHECK:  ^bb[[#EXIT_NESTED]]:
   //           [...]
   // CHECK:    llvm.br ^bb[[#BODY:]]
-  // CHECK:  ^bb[[#BODY]]: 
+  // CHECK:  ^bb[[#BODY]]:
   // CHECK:    llvm.br ^bb[[#STEP:]]
-  // CHECK:  ^bb[[#STEP]]: 
+  // CHECK:  ^bb[[#STEP]]:
   //           [...]
   // CHECK:    llvm.br ^bb[[#COND:]]
-  // CHECK:  ^bb[[#EXIT]]: 
+  // CHECK:  ^bb[[#EXIT]]:
   //           [...]
   // CHECK:  }
 
   cir.func  @testWhile() {
     %0 = cir.alloca !s32i, !cir.ptr<!s32i>, ["i", init] {alignment = 4 : i64}
-    %1 = cir.const(#cir.int<0> : !s32i) : !s32i
+    %1 = cir.const #cir.int<0> : !s32i
     cir.store %1, %0 : !s32i, !cir.ptr<!s32i>
     cir.scope {
       cir.while {
         %2 = cir.load %0 : !cir.ptr<!s32i>, !s32i
-        %3 = cir.const(#cir.int<10> : !s32i) : !s32i
+        %3 = cir.const #cir.int<10> : !s32i
         %4 = cir.cmp(lt, %2, %3) : !s32i, !s32i
         %5 = cir.cast(int_to_bool, %4 : !s32i), !cir.bool
         cir.condition(%5)
@@ -183,7 +183,7 @@ module {
         cir.store %3, %0 : !s32i, !cir.ptr<!s32i>
         cir.scope {
           %4 = cir.load %0 : !cir.ptr<!s32i>, !s32i
-          %5 = cir.const(#cir.int<5> : !s32i) : !s32i
+          %5 = cir.const #cir.int<5> : !s32i
           %6 = cir.cmp(eq, %4, %5) : !s32i, !s32i
           %7 = cir.cast(int_to_bool, %6 : !s32i), !cir.bool
           cir.if %7 {
@@ -203,27 +203,27 @@ module {
   // CHECK:  ^bb[[#COND]]:
   //           [...]
   // CHECK:    llvm.cond_br %{{.+}}, ^bb[[#BODY:]], ^bb[[#EXIT:]]
-  // CHECK:  ^bb[[#BODY]]: 
+  // CHECK:  ^bb[[#BODY]]:
   //           [...]
   // CHECK:    llvm.br ^bb[[#BREAK:]]
-  // CHECK:  ^bb[[#BREAK]]: 
+  // CHECK:  ^bb[[#BREAK]]:
   //           [...]
   // CHECK:    llvm.cond_br %{{.+}}, ^bb[[#preEXIT1:]], ^bb[[#preCOND0:]]
-  // CHECK:  ^bb[[#preEXIT1]]: 
+  // CHECK:  ^bb[[#preEXIT1]]:
   // CHECK:    llvm.br ^bb[[#preEXIT2:]]
-  // CHECK:  ^bb[[#preCOND0]]: 
+  // CHECK:  ^bb[[#preCOND0]]:
   // CHECK:    llvm.br ^bb[[#preCOND1:]]
-  // CHECK:  ^bb[[#preCOND1]]: 
+  // CHECK:  ^bb[[#preCOND1]]:
   // CHECK:    llvm.br ^bb[[#COND:]]
-  // CHECK:  ^bb[[#preEXIT2]]: 
+  // CHECK:  ^bb[[#preEXIT2]]:
   // CHECK:    llvm.br ^bb[[#EXIT:]]
-  // CHECK:  ^bb[[#EXIT]]: 
+  // CHECK:  ^bb[[#EXIT]]:
   //           [...]
   // CHECK:  }
- 
+
 cir.func @testDoWhile() {
     %0 = cir.alloca !s32i, !cir.ptr<!s32i>, ["i", init] {alignment = 4 : i64}
-    %1 = cir.const(#cir.int<0> : !s32i) : !s32i
+    %1 = cir.const #cir.int<0> : !s32i
     cir.store %1, %0 : !s32i, !cir.ptr<!s32i>
     cir.scope {
       cir.do {
@@ -232,7 +232,7 @@ cir.func @testDoWhile() {
         cir.store %3, %0 : !s32i, !cir.ptr<!s32i>
         cir.scope {
           %4 = cir.load %0 : !cir.ptr<!s32i>, !s32i
-          %5 = cir.const(#cir.int<5> : !s32i) : !s32i
+          %5 = cir.const #cir.int<5> : !s32i
           %6 = cir.cmp(eq, %4, %5) : !s32i, !s32i
           %7 = cir.cast(int_to_bool, %6 : !s32i), !cir.bool
           cir.if %7 {
@@ -242,7 +242,7 @@ cir.func @testDoWhile() {
         cir.yield
       } while {
         %2 = cir.load %0 : !cir.ptr<!s32i>, !s32i
-        %3 = cir.const(#cir.int<10> : !s32i) : !s32i
+        %3 = cir.const #cir.int<10> : !s32i
         %4 = cir.cmp(lt, %2, %3) : !s32i, !s32i
         %5 = cir.cast(int_to_bool, %4 : !s32i), !cir.bool
         cir.condition(%5)
@@ -257,21 +257,21 @@ cir.func @testDoWhile() {
   // CHECK:  ^bb[[#COND]]:
   //           [...]
   // CHECK:    llvm.cond_br %{{.+}}, ^bb[[#BODY:]], ^bb[[#EXIT:]]
-  // CHECK:  ^bb[[#BODY]]: 
+  // CHECK:  ^bb[[#BODY]]:
   //           [...]
   // CHECK:    llvm.br ^bb[[#BREAK:]]
-  // CHECK:  ^bb[[#BREAK]]: 
+  // CHECK:  ^bb[[#BREAK]]:
   //           [...]
   // CHECK:    llvm.cond_br %{{.+}}, ^bb[[#preEXIT1:]], ^bb[[#preCOND0:]]
-  // CHECK:  ^bb[[#preEXIT1]]: 
+  // CHECK:  ^bb[[#preEXIT1]]:
   // CHECK:    llvm.br ^bb[[#preEXIT2:]]
-  // CHECK:  ^bb[[#preCOND0]]: 
+  // CHECK:  ^bb[[#preCOND0]]:
   // CHECK:    llvm.br ^bb[[#preCOND1:]]
-  // CHECK:  ^bb[[#preCOND1]]: 
+  // CHECK:  ^bb[[#preCOND1]]:
   // CHECK:    llvm.br ^bb[[#COND:]]
-  // CHECK:  ^bb[[#preEXIT2]]: 
+  // CHECK:  ^bb[[#preEXIT2]]:
   // CHECK:    llvm.br ^bb[[#EXIT:]]
-  // CHECK:  ^bb[[#EXIT]]: 
+  // CHECK:  ^bb[[#EXIT]]:
   //           [...]
   // CHECK:  }
 

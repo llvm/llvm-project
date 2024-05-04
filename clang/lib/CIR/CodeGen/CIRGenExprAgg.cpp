@@ -464,7 +464,7 @@ void AggExprEmitter::buildArrayInit(Address DestPtr, mlir::cir::ArrayType AType,
   mlir::Value element = begin;
 
   // Don't build the 'one' before the cycle to avoid
-  // emmiting the redundant cir.const(1) instrs.
+  // emmiting the redundant `cir.const 1` instrs.
   mlir::Value one;
 
   // Emit the explicit initializers.

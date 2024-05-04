@@ -7,23 +7,23 @@
 !ty_22anon2E122 = !cir.struct<struct "anon.1" {!cir.int<s, 32>, !cir.int<s, 32>} #cir.record.decl.ast>
 module {
   cir.func @testConstArrInit() {
-    %0 = cir.const(#cir.const_array<"string\00" : !cir.array<!s8i x 7>> : !cir.array<!s8i x 7>) : !cir.array<!s8i x 7>
+    %0 = cir.const #cir.const_array<"string\00" : !cir.array<!s8i x 7>> : !cir.array<!s8i x 7>
     // CHECK: llvm.mlir.constant(dense<[115, 116, 114, 105, 110, 103, 0]> : tensor<7xi8>) : !llvm.array<7 x i8>
-    %1 = cir.const(#cir.const_array<[#cir.int<1> : !s32i, #cir.int<2> : !s32i]> : !cir.array<!s32i x 2>) : !cir.array<!s32i x 2>
+    %1 = cir.const #cir.const_array<[#cir.int<1> : !s32i, #cir.int<2> : !s32i]> : !cir.array<!s32i x 2>
     // CHECK: llvm.mlir.constant(dense<[1, 2]> : tensor<2xi32>) : !llvm.array<2 x i32>
-    %3 = cir.const(#cir.const_array<[#cir.fp<1.000000e+00> : !cir.float, #cir.fp<2.000000e+00> : !cir.float]> : !cir.array<!cir.float x 2>) : !cir.array<!cir.float x 2>
+    %3 = cir.const #cir.const_array<[#cir.fp<1.000000e+00> : !cir.float, #cir.fp<2.000000e+00> : !cir.float]> : !cir.array<!cir.float x 2>
     // CHECK: llvm.mlir.constant(dense<[1.000000e+00, 2.000000e+00]> : tensor<2xf32>) : !llvm.array<2 x f32>
-    %4 = cir.const(#cir.zero : !cir.array<!s32i x 3>) : !cir.array<!s32i x 3>
+    %4 = cir.const #cir.zero : !cir.array<!s32i x 3>
     // CHECK: cir.llvmir.zeroinit : !llvm.array<3 x i32>
     cir.return
   }
 
   cir.func @testConvertConstArrayToDenseConst() {
-    %0 = cir.const(#cir.const_array<[#cir.const_array<[#cir.int<1> : !s32i]> : !cir.array<!s32i x 1>, #cir.zero : !cir.array<!s32i x 1>]> : !cir.array<!cir.array<!s32i x 1> x 2>) : !cir.array<!cir.array<!s32i x 1> x 2>
-    %1 = cir.const(#cir.const_array<[#cir.const_array<[#cir.int<1> : !s64i]> : !cir.array<!s64i x 1>, #cir.zero : !cir.array<!s64i x 1>]> : !cir.array<!cir.array<!s64i x 1> x 2>) : !cir.array<!cir.array<!s64i x 1> x 2>
-    %2 = cir.const(#cir.const_array<[#cir.const_array<[#cir.fp<1.000000e+00> : !cir.float]> : !cir.array<!cir.float x 1>, #cir.zero : !cir.array<!cir.float x 1>]> : !cir.array<!cir.array<!cir.float x 1> x 2>) : !cir.array<!cir.array<!cir.float x 1> x 2>
-    %3 = cir.const(#cir.const_array<[#cir.const_array<[#cir.fp<1.000000e+00> : !cir.double]> : !cir.array<!cir.double x 1>, #cir.zero : !cir.array<!cir.double x 1>]> : !cir.array<!cir.array<!cir.double x 1> x 2>) : !cir.array<!cir.array<!cir.double x 1> x 2>
-    %4 = cir.const(#cir.const_array<[#cir.const_array<[#cir.const_array<[#cir.int<1> : !s32i, #cir.int<1> : !s32i, #cir.int<1> : !s32i]> : !cir.array<!s32i x 3>]> : !cir.array<!cir.array<!s32i x 3> x 1>, #cir.zero : !cir.array<!cir.array<!s32i x 3> x 1>]> : !cir.array<!cir.array<!cir.array<!s32i x 3> x 1> x 2>) : !cir.array<!cir.array<!cir.array<!s32i x 3> x 1> x 2>
+    %0 = cir.const #cir.const_array<[#cir.const_array<[#cir.int<1> : !s32i]> : !cir.array<!s32i x 1>, #cir.zero : !cir.array<!s32i x 1>]> : !cir.array<!cir.array<!s32i x 1> x 2>
+    %1 = cir.const #cir.const_array<[#cir.const_array<[#cir.int<1> : !s64i]> : !cir.array<!s64i x 1>, #cir.zero : !cir.array<!s64i x 1>]> : !cir.array<!cir.array<!s64i x 1> x 2>
+    %2 = cir.const #cir.const_array<[#cir.const_array<[#cir.fp<1.000000e+00> : !cir.float]> : !cir.array<!cir.float x 1>, #cir.zero : !cir.array<!cir.float x 1>]> : !cir.array<!cir.array<!cir.float x 1> x 2>
+    %3 = cir.const #cir.const_array<[#cir.const_array<[#cir.fp<1.000000e+00> : !cir.double]> : !cir.array<!cir.double x 1>, #cir.zero : !cir.array<!cir.double x 1>]> : !cir.array<!cir.array<!cir.double x 1> x 2>
+    %4 = cir.const #cir.const_array<[#cir.const_array<[#cir.const_array<[#cir.int<1> : !s32i, #cir.int<1> : !s32i, #cir.int<1> : !s32i]> : !cir.array<!s32i x 3>]> : !cir.array<!cir.array<!s32i x 3> x 1>, #cir.zero : !cir.array<!cir.array<!s32i x 3> x 1>]> : !cir.array<!cir.array<!cir.array<!s32i x 3> x 1> x 2>
 
     cir.return
   }
@@ -37,7 +37,7 @@ module {
 
   cir.func @testConstArrayOfStructs() {
     %0 = cir.alloca !cir.array<!ty_22anon2E122 x 1>, !cir.ptr<!cir.array<!ty_22anon2E122 x 1>>, ["a"] {alignment = 4 : i64}
-    %1 = cir.const(#cir.const_array<[#cir.const_struct<{#cir.int<0> : !s32i, #cir.int<1> : !s32i}> : !ty_22anon2E122]> : !cir.array<!ty_22anon2E122 x 1>) : !cir.array<!ty_22anon2E122 x 1>
+    %1 = cir.const #cir.const_array<[#cir.const_struct<{#cir.int<0> : !s32i, #cir.int<1> : !s32i}> : !ty_22anon2E122]> : !cir.array<!ty_22anon2E122 x 1>
     cir.store %1, %0 : !cir.array<!ty_22anon2E122 x 1>, !cir.ptr<!cir.array<!ty_22anon2E122 x 1>>
     cir.return
   }
@@ -56,7 +56,7 @@ module {
 
   cir.func @testArrWithTrailingZeros() {
     %0 = cir.alloca !cir.array<!s32i x 10>, !cir.ptr<!cir.array<!s32i x 10>>, ["a"] {alignment = 16 : i64}
-    %1 = cir.const(#cir.const_array<[#cir.int<1> : !s32i], trailing_zeros> : !cir.array<!s32i x 10>) : !cir.array<!s32i x 10>
+    %1 = cir.const #cir.const_array<[#cir.int<1> : !s32i], trailing_zeros> : !cir.array<!s32i x 10>
     cir.store %1, %0 : !cir.array<!s32i x 10>, !cir.ptr<!cir.array<!s32i x 10>>
     cir.return
   }
@@ -68,7 +68,7 @@ module {
   // CHECK:   %4 = llvm.insertvalue %3, %2[0] : !llvm.array<10 x i32>
 
   cir.func @testInitArrWithBool() {
-    %1 = cir.const(#cir.const_array<[#cir.bool<true> : !cir.bool]> : !cir.array<!cir.bool x 1>) : !cir.array<!cir.bool x 1>
+    %1 = cir.const #cir.const_array<[#cir.bool<true> : !cir.bool]> : !cir.array<!cir.bool x 1>
     cir.return
   }
 

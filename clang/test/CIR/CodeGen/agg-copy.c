@@ -15,10 +15,10 @@ typedef struct {
 // CHECK:   cir.store %arg0, [[TMP0]] : !cir.ptr<!ty_22A22>, !cir.ptr<!cir.ptr<!ty_22A22>>
 // CHECK:   cir.store %arg1, [[TMP1]] : !cir.ptr<!ty_22A22>, !cir.ptr<!cir.ptr<!ty_22A22>>
 // CHECK:   [[TMP2:%.*]] = cir.load [[TMP0]] : !cir.ptr<!cir.ptr<!ty_22A22>>, !cir.ptr<!ty_22A22>
-// CHECK:   [[TMP3:%.*]] = cir.const(#cir.int<1> : !s32i) : !s32i
+// CHECK:   [[TMP3:%.*]] = cir.const #cir.int<1> : !s32i
 // CHECK:   [[TMP4:%.*]] = cir.ptr_stride([[TMP2]] : !cir.ptr<!ty_22A22>, [[TMP3]] : !s32i), !cir.ptr<!ty_22A22>
 // CHECK:   [[TMP5:%.*]] = cir.load [[TMP1]] : !cir.ptr<!cir.ptr<!ty_22A22>>, !cir.ptr<!ty_22A22>
-// CHECK:   [[TMP6:%.*]] = cir.const(#cir.int<1> : !s32i) : !s32i
+// CHECK:   [[TMP6:%.*]] = cir.const #cir.int<1> : !s32i
 // CHECK:   [[TMP7:%.*]] = cir.ptr_stride([[TMP5]] : !cir.ptr<!ty_22A22>, [[TMP6]] : !s32i), !cir.ptr<!ty_22A22>
 // CHECK:   cir.copy [[TMP7]] to [[TMP4]] : !cir.ptr<!ty_22A22>
 void foo1(A* a1, A* a2) {
@@ -68,7 +68,7 @@ A create() { A a; return a; }
 // CHECK:   [[TMP1:%.*]] = cir.alloca !ty_22A22, !cir.ptr<!ty_22A22>, ["tmp"] {alignment = 4 : i64}
 // CHECK:   [[TMP2:%.*]] = cir.call @create() : () -> !ty_22A22
 // CHECK:   cir.store [[TMP2]], [[TMP1]] : !ty_22A22, !cir.ptr<!ty_22A22>
-// CHECK:   cir.copy [[TMP1]] to [[TMP0]] : !cir.ptr<!ty_22A22> 
+// CHECK:   cir.copy [[TMP1]] to [[TMP0]] : !cir.ptr<!ty_22A22>
 void foo5() {
     A a;
     a = create();

@@ -22,7 +22,7 @@ module {
   cir.func @test(%arg0: !cir.ptr<!ty_22U122>) {
 
     // Should store directly to the union's base address.
-    %5 = cir.const(#true) : !cir.bool
+    %5 = cir.const #true
     %6 = cir.get_member %arg0[0] {name = "b"} : !cir.ptr<!ty_22U122> -> !cir.ptr<!cir.bool>
     cir.store %5, %6 : !cir.bool, !cir.ptr<!cir.bool>
     // CHECK: %[[#VAL:]] = llvm.mlir.constant(1 : i8) : i8

@@ -34,7 +34,7 @@ typedef struct {
 
 // CHECK: cir.func @_Z11store_field
 // CHECK:   [[TMP0:%.*]] = cir.alloca !ty_22S22, !cir.ptr<!ty_22S22>
-// CHECK:   [[TMP1:%.*]] = cir.const(#cir.int<3> : !s32i) : !s32i
+// CHECK:   [[TMP1:%.*]] = cir.const #cir.int<3> : !s32i
 // CHECK:   [[TMP2:%.*]] = cir.cast(bitcast, [[TMP0]] : !cir.ptr<!ty_22S22>), !cir.ptr<!u32i>
 // CHECK:   cir.set_bitfield(#bfi_a, [[TMP2]] : !cir.ptr<!u32i>, [[TMP1]] : !s32i)
 void store_field() {
@@ -57,7 +57,7 @@ unsigned load_non_bitfield(S& s) {
   return s.f;
 }
 
-// just create a usage of T type 
+// just create a usage of T type
 // CHECK: cir.func @_Z17load_one_bitfield
 int load_one_bitfield(T& t) {
   return t.a;

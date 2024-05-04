@@ -5,7 +5,7 @@
 module {
   cir.func @foo() -> !u32i {
     %0 = cir.alloca !u32i, !cir.ptr<!u32i>, ["x", init] {alignment = 4 : i64}
-    %1 = cir.const(#cir.int<1> : !u32i) : !u32i
+    %1 = cir.const #cir.int<1> : !u32i
     cir.store %1, %0 : !u32i, !cir.ptr<!u32i>
     %2 = cir.load %0 : !cir.ptr<!u32i>, !u32i
     cir.return %2 : !u32i
@@ -13,7 +13,7 @@ module {
 
   cir.func @test_volatile() -> !u32i {
     %0 = cir.alloca !u32i, !cir.ptr<!u32i>, ["x", init] {alignment = 4 : i64}
-    %1 = cir.const(#cir.int<1> : !u32i) : !u32i
+    %1 = cir.const #cir.int<1> : !u32i
     cir.store volatile %1, %0 : !u32i, !cir.ptr<!u32i>
     %2 = cir.load volatile %0 : !cir.ptr<!u32i>, !u32i
     cir.return %2 : !u32i

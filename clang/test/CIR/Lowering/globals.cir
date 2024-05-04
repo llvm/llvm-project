@@ -54,7 +54,7 @@ module {
     %0 = cir.alloca !u8i, !cir.ptr<!u8i>, ["c", init] {alignment = 1 : i64}
     %1 = cir.get_global @s2 : !cir.ptr<!cir.ptr<!s8i>>
     %2 = cir.load %1 : !cir.ptr<!cir.ptr<!s8i>>, !cir.ptr<!s8i>
-    %3 = cir.const(#cir.int<0> : !s32i) : !s32i
+    %3 = cir.const #cir.int<0> : !s32i
     %4 = cir.ptr_stride(%2 : !cir.ptr<!s8i>, %3 : !s32i), !cir.ptr<!s8i>
     %5 = cir.load %4 : !cir.ptr<!s8i>, !s8i
     %6 = cir.cast(integral, %5 : !s8i), !u8i
@@ -63,7 +63,7 @@ module {
   }
   cir.func linkonce_odr @_Z4funcIiET_v() -> !s32i {
     %0 = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"] {alignment = 4 : i64}
-    %1 = cir.const(#cir.int<0> : !s32i) : !s32i
+    %1 = cir.const #cir.int<0> : !s32i
     cir.store %1, %0 : !s32i, !cir.ptr<!s32i>
     %2 = cir.load %0 : !cir.ptr<!s32i>, !s32i
     cir.return %2 : !s32i
@@ -182,8 +182,8 @@ module {
 
   cir.global external @zero_array = #cir.zero : !cir.array<!s32i x 16>
   cir.func @use_zero_array() {
-    %0 = cir.const(#cir.global_view<@zero_array> : !cir.ptr<!s32i>) : !cir.ptr<!s32i>
-    %1 = cir.const(#cir.int<0> : !s32i) : !s32i
+    %0 = cir.const #cir.global_view<@zero_array> : !cir.ptr<!s32i>
+    %1 = cir.const #cir.int<0> : !s32i
     %2 = cir.ptr_stride(%0 : !cir.ptr<!s32i>, %1 : !s32i), !cir.ptr<!s32i>
     %3 = cir.load %2 : !cir.ptr<!s32i>, !s32i
     cir.return

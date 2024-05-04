@@ -2,7 +2,7 @@
 !s32i = !cir.int<s, 32>
 
 cir.func @s0() {
-  %1 = cir.const(#cir.int<2> : !s32i) : !s32i
+  %1 = cir.const #cir.int<2> : !s32i
   cir.switch (%1 : !s32i) [
     case (default) {
       cir.return

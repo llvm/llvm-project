@@ -6,7 +6,7 @@ module  {
     %0 = cir.alloca !cir.array<!s32i x 10>, !cir.ptr<!cir.array<!s32i x 10>>, ["x", init]
     %1 = cir.cast(int_to_bool, %arg0 : !s32i), !cir.bool
     %2 = cir.cast(array_to_ptrdecay, %0 : !cir.ptr<!cir.array<!s32i x 10>>), !cir.ptr<!s32i>
-    %3 = cir.const(#cir.int<0> : !s32i) : !s32i
+    %3 = cir.const #cir.int<0> : !s32i
     %4 = cir.ptr_stride(%2 : !cir.ptr<!s32i>, %3 : !s32i), !cir.ptr<!s32i>
     cir.return
   }
@@ -16,7 +16,7 @@ module  {
 // CHECK-NEXT:    %0 = cir.alloca !cir.array<!s32i x 10>, !cir.ptr<!cir.array<!s32i x 10>>, ["x", init]
 // CHECK-NEXT:    %1 = cir.cast(int_to_bool, %arg0 : !s32i), !cir.bool
 // CHECK-NEXT:    %2 = cir.cast(array_to_ptrdecay, %0 : !cir.ptr<!cir.array<!s32i x 10>>), !cir.ptr<!s32i>
-// CHECK-NEXT:    %3 = cir.const(#cir.int<0> : !s32i) : !s32i
+// CHECK-NEXT:    %3 = cir.const #cir.int<0> : !s32i
 // CHECK-NEXT:    %4 = cir.ptr_stride(%2 : !cir.ptr<!s32i>, %3 : !s32i), !cir.ptr<!s32i>
 // CHECK-NEXT:    cir.return
 // CHECK-NEXT:  }

@@ -5,7 +5,7 @@ module {
   cir.func @foo() {
     %0 = cir.alloca !s32i, !cir.ptr<!s32i>, ["a", init] {alignment = 4 : i64}
     %1 = cir.alloca !s32i, !cir.ptr<!s32i>, ["b", init] {alignment = 4 : i64}
-    %2 = cir.const(#cir.int<2> : !s32i) : !s32i
+    %2 = cir.const #cir.int<2> : !s32i
     cir.store %2, %0 : !s32i, !cir.ptr<!s32i>
     cir.store %2, %1 : !s32i, !cir.ptr<!s32i>
 

@@ -4,7 +4,7 @@
 !s64i = !cir.int<s, 64>
 module {
   cir.func @foo(%arg0: !s64i) {
-    %0 = cir.const(#cir.int<1> : !s64i) : !s64i
+    %0 = cir.const #cir.int<1> : !s64i
     %1 = cir.expect(%arg0, %0) : !s64i
     %2 = cir.cast(int_to_bool, %1 : !s64i), !cir.bool
     cir.if %2 {

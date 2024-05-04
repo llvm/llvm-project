@@ -4,5 +4,5 @@
 struct e { e(int); };
 e *g = new e(0);
 
-//CHECK:  {{%.*}} = cir.const(#cir.int<1> : !u64i) : !u64i loc(#loc11)
+//CHECK:  {{%.*}} = cir.const #cir.int<1> : !u64i loc(#loc11)
 //CHECK:  {{%.*}} = cir.call @_Znwm(%1) : (!u64i) -> !cir.ptr<!void> loc(#loc6)

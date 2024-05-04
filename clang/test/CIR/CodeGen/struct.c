@@ -36,7 +36,7 @@ void shouldConstInitStructs(void) {
 // CHECK: cir.func @shouldConstInitStructs
   struct Foo f = {1, 2, {3, 4}};
   // CHECK: %[[#V0:]] = cir.alloca !ty_22Foo22, !cir.ptr<!ty_22Foo22>, ["f"] {alignment = 4 : i64}
-  // CHECK: %[[#V1:]] = cir.const(#cir.const_struct<{#cir.int<1> : !s32i, #cir.int<2> : !s8i, #cir.const_struct<{#cir.int<3> : !s32i, #cir.int<4> : !s8i}> : !ty_22Bar22}> : !ty_22Foo22) : !ty_22Foo22
+  // CHECK: %[[#V1:]] = cir.const #cir.const_struct<{#cir.int<1> : !s32i, #cir.int<2> : !s8i, #cir.const_struct<{#cir.int<3> : !s32i, #cir.int<4> : !s8i}> : !ty_22Bar22}> : !ty_22Foo22
   // CHECK: cir.store %[[#V1]], %[[#V0]] : !ty_22Foo22, !cir.ptr<!ty_22Foo22>
 }
 
@@ -80,13 +80,13 @@ struct Bar shouldGenerateAndAccessStructArrays(void) {
   return s[0];
 }
 // CHECK-DAG: cir.func @shouldGenerateAndAccessStructArrays
-// CHECK-DAG: %[[#STRIDE:]] = cir.const(#cir.int<0> : !s32i) : !s32i
+// CHECK-DAG: %[[#STRIDE:]] = cir.const #cir.int<0> : !s32i
 // CHECK-DAG: %[[#DARR:]] = cir.cast(array_to_ptrdecay, %{{.+}} : !cir.ptr<!cir.array<!ty_22Bar22 x 1>>), !cir.ptr<!ty_22Bar22>
 // CHECK-DAG: %[[#ELT:]] = cir.ptr_stride(%[[#DARR]] : !cir.ptr<!ty_22Bar22>, %[[#STRIDE]] : !s32i), !cir.ptr<!ty_22Bar22>
 // CHECK-DAG: cir.copy %[[#ELT]] to %{{.+}} : !cir.ptr<!ty_22Bar22>
 
 // CHECK-DAG: cir.func @local_decl
-// CHECK-DAG: {{%.}} = cir.alloca !ty_22Local22, !cir.ptr<!ty_22Local22>, ["a"] 
+// CHECK-DAG: {{%.}} = cir.alloca !ty_22Local22, !cir.ptr<!ty_22Local22>, ["a"]
 void local_decl(void) {
   struct Local {
     int i;

@@ -6,6 +6,6 @@ void test(int a) {
 
   // Should generate LValue parenthesis expression.
   (a) = 1;
-  // CHECK: %[[#C:]] = cir.const(#cir.int<1> : !s32i) : !s32i
+  // CHECK: %[[#C:]] = cir.const #cir.int<1> : !s32i
   // CHECK: cir.store %[[#C]], %{{.+}} : !s32i, !cir.ptr<!s32i>
 }

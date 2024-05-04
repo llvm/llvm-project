@@ -5,10 +5,10 @@
 cir.func @foo(%arg0: !cir.bool) -> !s32i {
   cir.brcond %arg0 ^bb1, ^bb2
   ^bb1:
-    %0 = cir.const(#cir.int<1>: !s32i) : !s32i
+    %0 = cir.const #cir.int<1>: !s32i
     cir.return %0 : !s32i
   ^bb2:
-    %1 = cir.const(#cir.int<0>: !s32i) : !s32i
+    %1 = cir.const #cir.int<0>: !s32i
     cir.return %1 : !s32i
 }
 

@@ -3,10 +3,10 @@
 
 module {
   cir.func @foo() {
-    %1 = cir.const(#cir.fp<1.0> : !cir.float) : !cir.float
-    %2 = cir.const(#cir.fp<1.0> : !cir.double) : !cir.double
-    %3 = cir.const(#cir.fp<1.0> : !cir.long_double<!cir.f80>) : !cir.long_double<!cir.f80>
-    %4 = cir.const(#cir.fp<1.0> : !cir.long_double<!cir.double>) : !cir.long_double<!cir.double>
+    %1 = cir.const #cir.fp<1.0> : !cir.float
+    %2 = cir.const #cir.fp<1.0> : !cir.double
+    %3 = cir.const #cir.fp<1.0> : !cir.long_double<!cir.f80>
+    %4 = cir.const #cir.fp<1.0> : !cir.long_double<!cir.double>
     %5 = cir.cos %1 : !cir.float
     %6 = cir.cos %2 : !cir.double
     %7 = cir.cos %3 : !cir.long_double<!cir.f80>
