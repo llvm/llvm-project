@@ -2533,18 +2533,18 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
   case Builtin::BI_bittestandset64:
   case Builtin::BI_interlockedbittestandreset64:
   case Builtin::BI_interlockedbittestandset64:
-    if (CheckBuiltinTargetInSupported(*this, BuiltinID, TheCall,
-                                      {llvm::Triple::x86_64, llvm::Triple::arm,
-                                       llvm::Triple::thumb,
-                                       llvm::Triple::aarch64}))
+    if (CheckBuiltinTargetInSupported(
+            *this, BuiltinID, TheCall,
+            {llvm::Triple::x86_64, llvm::Triple::arm, llvm::Triple::thumb,
+             llvm::Triple::aarch64, llvm::Triple::amdgcn}))
       return ExprError();
     break;
 
   case Builtin::BI__builtin_set_flt_rounds:
-    if (CheckBuiltinTargetInSupported(*this, BuiltinID, TheCall,
-                                      {llvm::Triple::x86, llvm::Triple::x86_64,
-                                       llvm::Triple::arm, llvm::Triple::thumb,
-                                       llvm::Triple::aarch64}))
+    if (CheckBuiltinTargetInSupported(
+            *this, BuiltinID, TheCall,
+            {llvm::Triple::x86, llvm::Triple::x86_64, llvm::Triple::arm,
+             llvm::Triple::thumb, llvm::Triple::aarch64, llvm::Triple::amdgcn}))
       return ExprError();
     break;
 
