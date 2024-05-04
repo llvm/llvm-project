@@ -871,7 +871,11 @@ namespace llvm {
   /// @{
 
   inline bool operator==(StringRef LHS, StringRef RHS) {
-    return LHS.equals(RHS);
+    if (LHS.size() != RHS.size())
+      return 0;
+    if (LHS.empty())
+      return 1;
+    return ::memcmp(LHS.data(), RHS.data(), LHS.size()) == 0;
   }
 
   inline bool operator!=(StringRef LHS, StringRef RHS) { return !(LHS == RHS); }
