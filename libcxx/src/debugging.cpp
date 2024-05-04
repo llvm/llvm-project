@@ -75,18 +75,18 @@ static bool __is_debugger_present() noexcept {
 
   // Initialize mib, which tells 'sysctl' to fetch the information about the current process.
 
-  array mib{CTL_KERN, KERN_PROC, KERN_PROC_PID, ::getpid()};
+  array __mib{CTL_KERN, KERN_PROC, KERN_PROC_PID, getpid()};
 
   // Initialize the flags so that, if 'sysctl' fails for some bizarre
   // reason, we get a predictable result.
 
-  struct kinfo_proc info {};
+  struct kinfo_proc __info {};
 
   // Call sysctl.
   // https://developer.apple.com/library/archive/documentation/System/Conceptual/ManPages_iPhoneOS/man3/sysctl.3.html
 
-  size_t info_size = sizeof(info);
-  if (::sysctl(mib.data(), mib.size(), &info, &info_size, nullptr, 0) != 0) {
+  size_t __info_size = sizeof(__info);
+  if (sysctl(__mib.data(), __mib.size(), &__info, &__info_size, nullptr, 0) != 0) {
     _LIBCPP_ASSERT_INTERNAL(false, "'sysctl' runtime error");
     return false;
   }
@@ -95,12 +95,12 @@ static bool __is_debugger_present() noexcept {
   // https://github.com/freebsd/freebsd-src/blob/7f3184ba797452703904d33377dada5f0f8eae96/sys/sys/proc.h#L822
 
 #    if defined(__FreeBSD__)
-  const auto p_flag = info.ki_flag;
+  const auto __p_flag = info.ki_flag;
 #    else // __APPLE__
-  const auto p_flag = info.kp_proc.p_flag;
+  const auto __p_flag = info.kp_proc.p_flag;
 #    endif
 
-  return ((p_flag & P_TRACED) != 0);
+  return ((__p_flag & P_TRACED) != 0);
 }
 
 #  elif defined(__linux__)
@@ -116,32 +116,32 @@ static bool __is_debugger_present() noexcept {
 
   // Get the status information of a process by reading the file /proc/PID/status.
   // The link 'self' points to the process reading the file system.
-  FILE* proc_status_fp = fopen("/proc/self/status", "r");
-  if (proc_status_fp == nullptr) {
+  FILE* __proc_status_fp = fopen("/proc/self/status", "r");
+  if (__proc_status_fp == nullptr) {
     _LIBCPP_ASSERT_INTERNAL(false, "Could not open '/proc/self/status' for reading.");
     return false;
   }
 
-  char* line           = nullptr;
-  size_t lineLen       = 0;
-  const char* tokenStr = "TracerPid:";
-  bool result          = false;
+  char* __line               = nullptr;
+  size_t __lineLen           = 0;
+  const char* __tokenStr     = "TracerPid:";
+  bool __is_debugger_present = false;
 
-  while ((getline(&line, &lineLen, proc_status_fp)) != -1) {
+  while ((getline(&__line, &__lineLen, __proc_status_fp)) != -1) {
     // If the process is being debugged "TracerPid"'s value is non-zero.
-    char* tokenPos = strstr(line, tokenStr);
-    if (tokenPos == nullptr) {
-      break;
+    char* __tokenPos = strstr(__line, __tokenStr);
+    if (__tokenPos == nullptr) {
+      continue;
     }
 
-    result = (atoi(tokenPos + std::strlen(tokenStr)) != 0);
+    __is_debugger_present = (atoi(__tokenPos + strlen(__tokenStr)) != 0);
     break;
   }
 
-  free(line);
-  fclose(proc_status_fp);
+  free(__line);
+  fclose(__proc_status_fp);
 
-  return result;
+  return __is_debugger_present;
 #    endif // _LIBCPP_HAS_NO_FILESYSTEM
 }
 
@@ -150,27 +150,27 @@ static bool __is_debugger_present() noexcept {
 static bool __is_debugger_present() noexcept {
   // Get the status information of a process by memory mapping the file /proc/PID/status.
   // https://www.ibm.com/docs/en/aix/7.3?topic=files-proc-file
-  char filename[] = "/proc/4294967295/status";
-  if (auto [ptr, ec] = to_chars(filename + 6, filename + 16, getpid()); ec == std::errc()) {
-    strcpy(ptr, "/status");
+  char __filename[] = "/proc/4294967295/status";
+  if (auto [__ptr, __ec] = to_chars(__filename + 6, __filename + 16, getpid()); __ec == errc()) {
+    strcpy(__ptr, "/status");
   } else {
     _LIBCPP_ASSERT_INTERNAL(false, "Could not convert pid to cstring.");
     return false;
   }
 
-  int fd = open(filename, O_RDONLY);
-  if (fd < 0) {
+  int __fd = open(__filename, O_RDONLY);
+  if (__fd < 0) {
     _LIBCPP_ASSERT_INTERNAL(false, "Could not open '/proc/{pid}/status' for reading.");
     return false;
   }
 
-  pstatus_t status;
-  if (read(fd, &status, sizeof(pstatus_t)) < static_cast<ssize_t>(sizeof(pstatus_t))) {
+  pstatus_t __status;
+  if (read(__fd, &__status, sizeof(pstatus_t)) < static_cast<ssize_t>(sizeof(pstatus_t))) {
     _LIBCPP_ASSERT_INTERNAL(false, "Could not read from '/proc/{pid}/status'.");
     return false;
   }
 
-  if (status.pr_flag & STRC)
+  if (__status.pr_flag & STRC)
     return true;
 
   return false;
