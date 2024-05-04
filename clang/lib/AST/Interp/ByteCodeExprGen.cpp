@@ -2025,7 +2025,7 @@ bool ByteCodeExprGen<Emitter>::VisitLambdaExpr(const LambdaExpr *E) {
       if (!this->visit(Init))
         return false;
 
-      if (!this->emitSetField(*T, F.Offset, E))
+      if (!this->emitInitField(*T, F.Offset, E))
         return false;
     } else {
       if (!this->emitDupPtr(E))
