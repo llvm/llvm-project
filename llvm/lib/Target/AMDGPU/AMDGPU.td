@@ -1038,6 +1038,12 @@ def Feature1024AddressableVGPRs : SubtargetFeature<"1024-addressable-vgprs",
   "Has 1024 addressable VGPRs"
 >;
 
+def FeatureVGPRIndexingRegisters : SubtargetFeature<"vgpr-indexing-registers",
+  "HasVGPRIndexingRegisters",
+  "true",
+  "Has index registers for VGPR indexing"
+>;
+
 def FeatureForceVALUThrottle : SubtargetFeature<"force-valu-throttle",
   "HasForceVALUThrottle",
   "true",
@@ -1871,7 +1877,9 @@ def FeatureISAVersion13 : FeatureSet<
    FeaturePermlane16Swap,
    FeatureAshrPkInsts,
    FeatureSupportsSRAMECC,
-   FeatureMLMathInsts]>;
+   FeatureMLMathInsts,
+   FeatureVGPRIndexingRegisters
+]>;
 
 //===----------------------------------------------------------------------===//
 
@@ -2568,6 +2576,9 @@ def Has64BitLiterals : Predicate<"Subtarget->has64BitLiterals()">,
 
 def Has1024AddressableVGPRs : Predicate<"Subtarget->has1024AddressableVGPRs()">,
   AssemblerPredicate<(all_of Feature1024AddressableVGPRs)>;
+
+def HasVGPRIndexingRegisters : Predicate<"Subtarget->hasVGPRIndexingRegisters()">,
+  AssemblerPredicate<(all_of FeatureVGPRIndexingRegisters)>;
 
 def HasFP8ConversionScaleInsts : Predicate<"Subtarget->HasFP8ConversionScaleInsts()">,
   AssemblerPredicate<(all_of FeatureFP8ConversionScaleInsts)>;

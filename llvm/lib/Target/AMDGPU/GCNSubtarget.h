@@ -219,6 +219,7 @@ protected:
   bool HasRestrictedSOffset = false;
   bool Has64BitLiterals = false;
   bool Has1024AddressableVGPRs = false;
+  bool HasVGPRIndexingRegisters = false;
   bool HasBitOp3Insts = false;
   bool HasTanhInsts = false;
   bool HasPrngInst = false;
@@ -1328,6 +1329,8 @@ public:
   bool has64BitLiterals() const { return Has64BitLiterals; }
 
   bool has1024AddressableVGPRs() const { return Has1024AddressableVGPRs; }
+
+  bool hasVGPRIndexingRegisters() const { return HasVGPRIndexingRegisters; }
 
   /// \returns The maximum number of instructions that can be enclosed in an
   /// S_CLAUSE on the given subtarget, or 0 for targets that do not support that

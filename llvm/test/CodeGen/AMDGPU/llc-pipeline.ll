@@ -148,6 +148,7 @@
 ; GCN-O0-NEXT:        Machine Optimization Remark Emitter
 ; GCN-O0-NEXT:        Stack Frame Layout Analysis
 ; GCN-O0-NEXT:    Function register usage analysis
+; GCN-O0-NEXT:    Fix Wave Group Entry
 ; GCN-O0-NEXT:    FunctionPass Manager
 ; GCN-O0-NEXT:      Lazy Machine Block Frequency Analysis
 ; GCN-O0-NEXT:      Machine Optimization Remark Emitter
@@ -424,6 +425,7 @@
 ; GCN-O1-NEXT:        Machine Optimization Remark Emitter
 ; GCN-O1-NEXT:        Stack Frame Layout Analysis
 ; GCN-O1-NEXT:    Function register usage analysis
+; GCN-O1-NEXT:    Fix Wave Group Entry
 ; GCN-O1-NEXT:    FunctionPass Manager
 ; GCN-O1-NEXT:      Lazy Machine Block Frequency Analysis
 ; GCN-O1-NEXT:      Machine Optimization Remark Emitter
@@ -728,6 +730,7 @@
 ; GCN-O1-OPTS-NEXT:        Machine Optimization Remark Emitter
 ; GCN-O1-OPTS-NEXT:        Stack Frame Layout Analysis
 ; GCN-O1-OPTS-NEXT:    Function register usage analysis
+; GCN-O1-OPTS-NEXT:    Fix Wave Group Entry
 ; GCN-O1-OPTS-NEXT:    FunctionPass Manager
 ; GCN-O1-OPTS-NEXT:      Lazy Machine Block Frequency Analysis
 ; GCN-O1-OPTS-NEXT:      Machine Optimization Remark Emitter
@@ -1038,6 +1041,7 @@
 ; GCN-O2-NEXT:        Machine Optimization Remark Emitter
 ; GCN-O2-NEXT:        Stack Frame Layout Analysis
 ; GCN-O2-NEXT:    Function register usage analysis
+; GCN-O2-NEXT:    Fix Wave Group Entry
 ; GCN-O2-NEXT:    FunctionPass Manager
 ; GCN-O2-NEXT:      Lazy Machine Block Frequency Analysis
 ; GCN-O2-NEXT:      Machine Optimization Remark Emitter
@@ -1360,6 +1364,7 @@
 ; GCN-O3-NEXT:        Machine Optimization Remark Emitter
 ; GCN-O3-NEXT:        Stack Frame Layout Analysis
 ; GCN-O3-NEXT:    Function register usage analysis
+; GCN-O3-NEXT:    Fix Wave Group Entry
 ; GCN-O3-NEXT:    FunctionPass Manager
 ; GCN-O3-NEXT:      Lazy Machine Block Frequency Analysis
 ; GCN-O3-NEXT:      Machine Optimization Remark Emitter
