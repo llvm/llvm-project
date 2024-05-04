@@ -221,6 +221,11 @@ New Compiler Flags
 - ``-fexperimental-modules-reduced-bmi`` enables the Reduced BMI for C++20 named modules.
   See the document of standard C++ modules for details.
 
+- ``-fseparate-named-sections`` uses separate unique sections for global
+  symbols in named special sections (i.e. symbols annotated with
+  ``__attribute__((section(...)))``. This enabled linker GC to collect unused
+  symbols without having to use a per-symbol section.
+
 Deprecated Compiler Flags
 -------------------------
 
