@@ -95,9 +95,9 @@ static bool __is_debugger_present() noexcept {
   // https://github.com/freebsd/freebsd-src/blob/7f3184ba797452703904d33377dada5f0f8eae96/sys/sys/proc.h#L822
 
 #    if defined(__FreeBSD__)
-  const auto __p_flag = info.ki_flag;
+  const auto __p_flag = __info.ki_flag;
 #    else // __APPLE__
-  const auto __p_flag = info.kp_proc.p_flag;
+  const auto __p_flag = __info.kp_proc.p_flag;
 #    endif
 
   return ((__p_flag & P_TRACED) != 0);
