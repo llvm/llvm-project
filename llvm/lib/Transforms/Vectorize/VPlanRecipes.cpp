@@ -1222,7 +1222,9 @@ bool VPWidenIntOrFpInductionRecipe::isCanonical() const {
     return false;
   auto *StepC = dyn_cast<ConstantInt>(getStepValue()->getLiveInIRValue());
   auto *StartC = dyn_cast<ConstantInt>(getStartValue()->getLiveInIRValue());
-  return StartC && StartC->isZero() && StepC && StepC->isOne();
+  auto *CanIV = cast<VPCanonicalIVPHIRecipe>(&*getParent()->begin());
+  return StartC && StartC->isZero() && StepC && StepC->isOne() &&
+         getScalarType() == CanIV->getScalarType();
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
