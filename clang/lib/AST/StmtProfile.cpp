@@ -2521,6 +2521,18 @@ void OpenACCClauseProfiler::VisitFirstPrivateClause(
     Profiler.VisitStmt(E);
 }
 
+void OpenACCClauseProfiler::VisitNoCreateClause(
+    const OpenACCNoCreateClause &Clause) {
+  for (auto *E : Clause.getVarList())
+    Profiler.VisitStmt(E);
+}
+
+void OpenACCClauseProfiler::VisitPresentClause(
+    const OpenACCPresentClause &Clause) {
+  for (auto *E : Clause.getVarList())
+    Profiler.VisitStmt(E);
+}
+
 void OpenACCClauseProfiler::VisitVectorLengthClause(
     const OpenACCVectorLengthClause &Clause) {
   assert(Clause.hasIntExpr() &&

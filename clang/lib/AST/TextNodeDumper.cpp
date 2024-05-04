@@ -399,8 +399,10 @@ void TextNodeDumper::Visit(const OpenACCClause *C) {
       break;
     case OpenACCClauseKind::If:
     case OpenACCClauseKind::FirstPrivate:
+    case OpenACCClauseKind::NoCreate:
     case OpenACCClauseKind::NumGangs:
     case OpenACCClauseKind::NumWorkers:
+    case OpenACCClauseKind::Present:
     case OpenACCClauseKind::Private:
     case OpenACCClauseKind::Self:
     case OpenACCClauseKind::VectorLength:
