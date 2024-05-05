@@ -10520,8 +10520,13 @@ QualType ASTContext::mergeFunctionTypes(QualType lhs, QualType rhs,
     if (LHSFX != RHSFX) {
       if (IsConditionalOperator)
         MergedFX = FunctionEffectSet::getIntersection(LHSFX, RHSFX);
-      else
-        MergedFX = FunctionEffectSet::getUnion(LHSFX, RHSFX);
+      else {
+        FunctionEffectSet::Conflicts Errs;
+        MergedFX = FunctionEffectSet::getUnion(LHSFX, RHSFX, Errs);
+        // Here we're discarding a possible error due to conflicts in the effect
+        // sets. But we're not in a context where we can report it. The
+        // operation does however guarantee maintenance of invariants.
+      }
       if (*MergedFX != LHSFX)
         allLTypes = false;
       if (*MergedFX != RHSFX)

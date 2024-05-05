@@ -5164,38 +5164,49 @@ void FunctionEffectsRef::Profile(llvm::FoldingSetNodeID &ID) const {
   }
 }
 
-void FunctionEffectSet::insert(FunctionEffect Effect, Expr *Cond) {
-  // lower_bound would be overkill
+void FunctionEffectSet::insert(const FunctionEffectWithCondition &NewEC,
+                               Conflicts &Errs) {
+  const FunctionEffect::Kind NewOppositeKind = NewEC.Effect.oppositeKind();
+
+  // The index at which insertion will take place; default is at end
+  // but we might find an earlier insertion point.
+  unsigned InsertIdx = Effects.size();
   unsigned Idx = 0;
-  for (unsigned Count = Effects.size(); Idx != Count; ++Idx) {
-    const auto &IterEffect = Effects[Idx];
-    if (IterEffect.kind() == Effect.kind()) {
-      // It's possible here to have incompatible combinations of polarity
-      // (asserted/denied) and condition; for now, we keep whichever came
-      // though this should be improved.
+  for (const FunctionEffectWithCondition &EC : *this) {
+    if (EC.Effect.kind() == NewEC.Effect.kind()) {
+      if (Conditions[Idx].expr() != NewEC.Cond.expr())
+        Errs.push_back({EC, NewEC});
       return;
     }
-    if (Effect.kind() < IterEffect.kind())
-      break;
+
+    if (EC.Effect.kind() == NewOppositeKind) {
+      Errs.push_back({EC, NewEC});
+      return;
+    }
+
+    if (NewEC.Effect.kind() < EC.Effect.kind() && InsertIdx > Idx)
+      InsertIdx = Idx;
+
+    ++Idx;
   }
 
-  if (Cond) {
+  if (NewEC.Cond.expr()) {
     if (Conditions.empty() && !Effects.empty())
       Conditions.resize(Effects.size());
-    Conditions.insert(Conditions.begin() + Idx, Cond);
+    Conditions.insert(Conditions.begin() + InsertIdx, NewEC.Cond.expr());
   }
-  Effects.insert(Effects.begin() + Idx, Effect);
+  Effects.insert(Effects.begin() + InsertIdx, NewEC.Effect);
 }
 
-void FunctionEffectSet::insert(const FunctionEffectsRef &Set) {
+void FunctionEffectSet::insert(const FunctionEffectsRef &Set, Conflicts &Errs) {
   for (const auto &Item : Set)
-    insert(Item.Effect, Item.Cond.expr());
+    insert(Item, Errs);
 }
 
-void FunctionEffectSet::insertIgnoringConditions(
-    const FunctionEffectsRef &Set) {
+void FunctionEffectSet::insertIgnoringConditions(const FunctionEffectsRef &Set,
+                                                 Conflicts &Errs) {
   for (const auto &Item : Set)
-    insert(Item.Effect, nullptr);
+    insert(FunctionEffectWithCondition(Item.Effect, {}), Errs);
 }
 
 void FunctionEffectSet::replaceItem(unsigned Idx,
@@ -5225,6 +5236,7 @@ void FunctionEffectSet::erase(unsigned Idx) {
 FunctionEffectSet FunctionEffectSet::getIntersection(FunctionEffectsRef LHS,
                                                      FunctionEffectsRef RHS) {
   FunctionEffectSet Result;
+  FunctionEffectSet::Conflicts Errs;
 
   // We could use std::set_intersection but that would require expanding the
   // container interface to include push_back, making it available to clients
@@ -5238,23 +5250,29 @@ FunctionEffectSet FunctionEffectSet::getIntersection(FunctionEffectsRef LHS,
     else if (*IterB < *IterA)
       ++IterB;
     else {
-      Result.insert((*IterA).Effect, (*IterA).Cond.expr());
+      Result.insert(*IterA, Errs);
       ++IterA;
       ++IterB;
     }
   }
+
+  // Insertion shouldn't be able to fail; that would mean both input
+  // sets contained conflicts.
+  assert(Errs.empty() && "conflict shouldn't be possible in getIntersection");
+
   return Result;
 }
 
 FunctionEffectSet FunctionEffectSet::getUnion(FunctionEffectsRef LHS,
-                                              FunctionEffectsRef RHS) {
+                                              FunctionEffectsRef RHS,
+                                              Conflicts &Errs) {
   // Optimize for either of the two sets being empty (very common).
   if (LHS.empty())
     return FunctionEffectSet(RHS);
 
-  FunctionEffectSet Result(LHS);
-  Result.insert(RHS);
-  return Result;
+  FunctionEffectSet Combined(LHS);
+  Combined.insert(RHS, Errs);
+  return Combined;
 }
 
 LLVM_DUMP_METHOD void FunctionEffectsRef::dump(llvm::raw_ostream &OS) const {

@@ -8099,7 +8099,9 @@ handleNonBlockingNonAllocatingTypeAttr(TypeProcessingState &TPState,
   // Add the effect to the FunctionProtoType
   FunctionProtoType::ExtProtoInfo EPI = FPT->getExtProtoInfo();
   FunctionEffectSet FX(EPI.FunctionEffects);
-  FX.insert(NewEC.Effect, NewEC.Cond.expr());
+  FunctionEffectSet::Conflicts Errs;
+  FX.insert(NewEC, Errs);
+  assert(Errs.empty() && "effect conflicts should have been diagnosed above");
   EPI.FunctionEffects = FunctionEffectsRef(FX);
 
   QualType NewType = S.Context.getFunctionType(FPT->getReturnType(),

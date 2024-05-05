@@ -10830,6 +10830,9 @@ def warn_mismatched_func_effect_override : Warning<
 def warn_mismatched_func_effect_redeclaration : Warning<
   "attribute '%0' on function does not match previous declaration">,
   InGroup<FunctionEffects>;
+def warn_conflicting_func_effects : Warning<
+  "effects conflict when merging declarations; kept '%0', discarded '%1'">,
+  InGroup<FunctionEffects>;
 
 } // end of sema category
 

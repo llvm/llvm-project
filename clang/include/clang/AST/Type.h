@@ -4772,6 +4772,11 @@ struct FunctionEffectWithCondition {
   FunctionEffect Effect;
   FunctionEffectCondition Cond;
 
+  FunctionEffectWithCondition() = default;
+  FunctionEffectWithCondition(const FunctionEffect &E,
+                              const FunctionEffectCondition &C)
+      : Effect(E), Cond(C) {}
+
   /// Return a textual description of the effect, and its condition, if any.
   std::string description() const;
 
@@ -4913,16 +4918,26 @@ public:
 
   // Mutators
 
-  void insert(FunctionEffect Effect, Expr *Cond);
-  void insert(const FunctionEffectsRef &Set);
-  void insertIgnoringConditions(const FunctionEffectsRef &Set);
+  // On insertion, a conflict occurs when attempting to insert an
+  // effect which is opposite an effect already in the set, or attempting
+  // to insert an effect which is already in the set but with a condition
+  // which is not identical.
+  struct Conflict {
+    FunctionEffectWithCondition Kept;
+    FunctionEffectWithCondition Rejected;
+  };
+  using Conflicts = SmallVector<Conflict>;
+
+  void insert(const FunctionEffectWithCondition &NewEC, Conflicts &Errs);
+  void insert(const FunctionEffectsRef &Set, Conflicts &Errs);
+  void insertIgnoringConditions(const FunctionEffectsRef &Set, Conflicts &Errs);
 
   void replaceItem(unsigned Idx, const FunctionEffectWithCondition &Item);
   void erase(unsigned Idx);
 
   // Set operations
   static FunctionEffectSet getUnion(FunctionEffectsRef LHS,
-                                    FunctionEffectsRef RHS);
+                                    FunctionEffectsRef RHS, Conflicts &Errs);
   static FunctionEffectSet getIntersection(FunctionEffectsRef LHS,
                                            FunctionEffectsRef RHS);
 };

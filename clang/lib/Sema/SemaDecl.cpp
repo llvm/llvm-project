@@ -3959,7 +3959,12 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD, Scope *S,
     // declaration, but that would trigger an additional "conflicting types"
     // error.
     if (const auto *NewFPT = NewQType->getAs<FunctionProtoType>()) {
-      auto MergedFX = FunctionEffectSet::getUnion(OldFX, NewFX);
+      FunctionEffectSet::Conflicts MergeErrs;
+      FunctionEffectSet MergedFX =
+          FunctionEffectSet::getUnion(OldFX, NewFX, MergeErrs);
+      if (!MergeErrs.empty())
+        diagnoseFunctionEffectMergeConflicts(MergeErrs, New->getLocation(),
+                                             Old->getLocation());
 
       FunctionProtoType::ExtProtoInfo EPI = NewFPT->getExtProtoInfo();
       EPI.FunctionEffects = FunctionEffectsRef(MergedFX);
@@ -20787,4 +20792,16 @@ bool Sema::shouldIgnoreInHostDeviceCheck(FunctionDecl *Callee) {
   // known-emitted.
   return LangOpts.CUDA && !LangOpts.CUDAIsDevice &&
          CUDA().IdentifyTarget(Callee) == CUDAFunctionTarget::Global;
+}
+
+// Report a failure to merge function effects between declarations due to a
+// conflict.
+void Sema::diagnoseFunctionEffectMergeConflicts(
+    const FunctionEffectSet::Conflicts &Errs, SourceLocation NewLoc,
+    SourceLocation OldLoc) {
+  for (const FunctionEffectSet::Conflict &Conflict : Errs) {
+    Diag(NewLoc, diag::warn_conflicting_func_effects)
+        << Conflict.Kept.description() << Conflict.Rejected.description();
+    Diag(OldLoc, diag::note_previous_declaration);
+  }
 }
