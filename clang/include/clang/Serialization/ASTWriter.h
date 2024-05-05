@@ -76,6 +76,10 @@ class StoredDeclsList;
 class SwitchCase;
 class Token;
 
+namespace SrcMgr {
+class FileInfo;
+} // namespace SrcMgr
+
 /// Writes an AST file containing the contents of a translation unit.
 ///
 /// The ASTWriter class produces a bitstream containing the serialized
@@ -490,6 +494,11 @@ private:
   /// during \c SourceManager serialization.
   void computeNonAffectingInputFiles();
 
+  /// Some affecting files can be included from files that are not affecting.
+  /// This function erases source locations pointing into such files.
+  SourceLocation getAffectingIncludeLoc(const SourceManager &SourceMgr,
+                                        const SrcMgr::FileInfo &File);
+
   /// Returns an adjusted \c FileID, accounting for any non-affecting input
   /// files.
   FileID getAdjustedFileID(FileID FID) const;
@@ -666,10 +675,6 @@ public:
   /// Emit a source location.
   void AddSourceLocation(SourceLocation Loc, RecordDataImpl &Record,
                          LocSeq *Seq = nullptr);
-
-  /// Return the raw encodings for source locations.
-  SourceLocationEncoding::RawLocEncoding
-  getRawSourceLocationEncoding(SourceLocation Loc, LocSeq *Seq = nullptr);
 
   /// Emit a source range.
   void AddSourceRange(SourceRange Range, RecordDataImpl &Record,

@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -pg -triple powerpc-ibm-aix7.2.0.0 -S -emit-llvm %s -o - | FileCheck %s
-// RUN: %clang_cc1 -pg -triple powerpc64-ibm-aix7.2.0.0 -S -emit-llvm %s -o - | FileCheck %s -check-prefix=CHECK64
+// RUN: %clang_cc1 -pg -triple powerpc-ibm-aix7.2.0.0 -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -pg -triple powerpc64-ibm-aix7.2.0.0 -emit-llvm %s -o - | FileCheck %s -check-prefix=CHECK64
 
 void foo() {
 }

@@ -307,6 +307,8 @@ def err_invalid_vector_long_long_decl_spec : Error <
   "POWER7 or later) to be enabled">;
 def err_invalid_vector_long_double_decl_spec : Error<
   "cannot use 'long double' with '__vector'">;
+def err_invalid_vector_complex_decl_spec : Error<
+  "cannot use '_Complex' with '__vector'">;
 def warn_vector_long_decl_spec_combination : Warning<
   "Use of 'long' with '__vector' is deprecated">, InGroup<Deprecated>;
 
@@ -7509,6 +7511,9 @@ def err_nested_non_static_member_use : Error<
 def warn_cxx98_compat_non_static_member_use : Warning<
   "use of non-static data member %0 in an unevaluated context is "
   "incompatible with C++98">, InGroup<CXX98Compat>, DefaultIgnore;
+def err_form_ptr_to_member_from_parenthesized_expr : Error<
+  "cannot form pointer to member from a parenthesized expression; "
+  "did you mean to remove the parentheses?">;
 def err_invalid_incomplete_type_use : Error<
   "invalid use of incomplete type %0">;
 def err_builtin_func_cast_more_than_one_arg : Error<
@@ -12289,8 +12294,8 @@ def warn_acc_if_self_conflict
               "evaluates to true">,
       InGroup<DiagGroup<"openacc-self-if-potential-conflict">>;
 def err_acc_int_expr_requires_integer
-    : Error<"OpenACC %select{clause|directive}0 '%1' requires expression of "
-            "integer type (%2 invalid)">;
+    : Error<"OpenACC %select{clause '%1'|directive '%2'|sub-array bound}0 "
+            "requires expression of integer type (%3 invalid)">;
 def err_acc_int_expr_incomplete_class_type
     : Error<"OpenACC integer expression has incomplete class type %0">;
 def err_acc_int_expr_explicit_conversion
@@ -12305,4 +12310,31 @@ def err_acc_num_gangs_num_args
             "OpenACC 'num_gangs' "
             "%select{|clause: '%1' directive expects maximum of %2, %3 were "
             "provided}0">;
+def err_acc_not_a_var_ref
+    : Error<"OpenACC variable is not a valid variable name, sub-array, array "
+            "element, or composite variable member">;
+def err_acc_typecheck_subarray_value
+    : Error<"OpenACC sub-array subscripted value is not an array or pointer">;
+def err_acc_subarray_function_type
+    : Error<"OpenACC sub-array cannot be of function type %0">;
+def err_acc_subarray_incomplete_type
+    : Error<"OpenACC sub-array base is of incomplete type %0">;
+def err_acc_subarray_no_length
+    : Error<"OpenACC sub-array length is unspecified and cannot be inferred "
+            "because the subscripted value is %select{not an array|an array of "
+            "unknown bound}0">;
+def err_acc_subarray_negative
+    : Error<"OpenACC sub-array %select{lower bound|length}0 evaluated to "
+            "negative value %1">;
+def err_acc_subarray_out_of_range
+    : Error<"OpenACC sub-array %select{lower bound|length}0 evaluated to a "
+            "value (%1) that would be out of the range of the subscripted "
+            "array size of %2">;
+def err_acc_subarray_base_plus_length_out_of_range
+    : Error<"OpenACC sub-array specified range [%0:%1] would be out of the "
+            "range of the subscripted array size of %2">;
+def warn_acc_deprecated_alias_name
+    : Warning<"OpenACC clause name '%0' is a deprecated clause name and is "
+              "now an alias for '%1'">,
+      InGroup<DiagGroup<"openacc-deprecated-clause-alias">>;
 } // end of sema component.

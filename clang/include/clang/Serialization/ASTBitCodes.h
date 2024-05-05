@@ -23,7 +23,6 @@
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/OperatorKinds.h"
 #include "clang/Basic/SourceLocation.h"
-#include "clang/Serialization/SourceLocationEncoding.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/Bitstream/BitCodes.h"
 #include <cassert>
@@ -168,38 +167,45 @@ const unsigned int NUM_PREDEF_SUBMODULE_IDS = 1;
 
 /// Source range/offset of a preprocessed entity.
 struct PPEntityOffset {
-  using RawLocEncoding = SourceLocationEncoding::RawLocEncoding;
-
   /// Raw source location of beginning of range.
-  RawLocEncoding Begin;
+  SourceLocation::UIntTy Begin;
 
   /// Raw source location of end of range.
-  RawLocEncoding End;
+  SourceLocation::UIntTy End;
 
   /// Offset in the AST file relative to ModuleFile::MacroOffsetsBase.
   uint32_t BitOffset;
 
-  PPEntityOffset(RawLocEncoding Begin, RawLocEncoding End, uint32_t BitOffset)
-      : Begin(Begin), End(End), BitOffset(BitOffset) {}
+  PPEntityOffset(SourceRange R, uint32_t BitOffset)
+      : Begin(R.getBegin().getRawEncoding()), End(R.getEnd().getRawEncoding()),
+        BitOffset(BitOffset) {}
 
-  RawLocEncoding getBegin() const { return Begin; }
-  RawLocEncoding getEnd() const { return End; }
+  SourceLocation getBegin() const {
+    return SourceLocation::getFromRawEncoding(Begin);
+  }
+
+  SourceLocation getEnd() const {
+    return SourceLocation::getFromRawEncoding(End);
+  }
 };
 
 /// Source range of a skipped preprocessor region
 struct PPSkippedRange {
-  using RawLocEncoding = SourceLocationEncoding::RawLocEncoding;
-
   /// Raw source location of beginning of range.
-  RawLocEncoding Begin;
+  SourceLocation::UIntTy Begin;
   /// Raw source location of end of range.
-  RawLocEncoding End;
+  SourceLocation::UIntTy End;
 
-  PPSkippedRange(RawLocEncoding Begin, RawLocEncoding End)
-      : Begin(Begin), End(End) {}
+  PPSkippedRange(SourceRange R)
+      : Begin(R.getBegin().getRawEncoding()), End(R.getEnd().getRawEncoding()) {
+  }
 
-  RawLocEncoding getBegin() const { return Begin; }
-  RawLocEncoding getEnd() const { return End; }
+  SourceLocation getBegin() const {
+    return SourceLocation::getFromRawEncoding(Begin);
+  }
+  SourceLocation getEnd() const {
+    return SourceLocation::getFromRawEncoding(End);
+  }
 };
 
 /// Offset in the AST file. Use splitted 64-bit integer into low/high
@@ -225,10 +231,8 @@ struct UnderalignedInt64 {
 
 /// Source location and bit offset of a declaration.
 struct DeclOffset {
-  using RawLocEncoding = SourceLocationEncoding::RawLocEncoding;
-
   /// Raw source location.
-  RawLocEncoding RawLoc = 0;
+  SourceLocation::UIntTy Loc = 0;
 
   /// Offset relative to the start of the DECLTYPES_BLOCK block. Keep
   /// structure alignment 32-bit and avoid padding gap because undefined
@@ -236,15 +240,17 @@ struct DeclOffset {
   UnderalignedInt64 BitOffset;
 
   DeclOffset() = default;
-  DeclOffset(RawLocEncoding RawLoc, uint64_t BitOffset,
-             uint64_t DeclTypesBlockStartOffset)
-      : RawLoc(RawLoc) {
+  DeclOffset(SourceLocation Loc, uint64_t BitOffset,
+             uint64_t DeclTypesBlockStartOffset) {
+    setLocation(Loc);
     setBitOffset(BitOffset, DeclTypesBlockStartOffset);
   }
 
-  void setRawLoc(RawLocEncoding Loc) { RawLoc = Loc; }
+  void setLocation(SourceLocation L) { Loc = L.getRawEncoding(); }
 
-  RawLocEncoding getRawLoc() const { return RawLoc; }
+  SourceLocation getLocation() const {
+    return SourceLocation::getFromRawEncoding(Loc);
+  }
 
   void setBitOffset(uint64_t Offset, const uint64_t DeclTypesBlockStartOffset) {
     BitOffset.setBitOffset(Offset - DeclTypesBlockStartOffset);
@@ -1085,6 +1091,9 @@ enum PredefinedTypeIDs {
 // \brief WebAssembly reference types with auto numeration
 #define WASM_TYPE(Name, Id, SingletonId) PREDEF_TYPE_##Id##_ID,
 #include "clang/Basic/WebAssemblyReferenceTypes.def"
+
+  /// The placeholder type for unresolved templates.
+  PREDEF_TYPE_UNRESOLVED_TEMPLATE,
   // Sentinel value. Considered a predefined type but not useable as one.
   PREDEF_TYPE_LAST_ID
 };
@@ -1094,7 +1103,7 @@ enum PredefinedTypeIDs {
 ///
 /// Type IDs for non-predefined types will start at
 /// NUM_PREDEF_TYPE_IDs.
-const unsigned NUM_PREDEF_TYPE_IDS = 502;
+const unsigned NUM_PREDEF_TYPE_IDS = 503;
 
 // Ensure we do not overrun the predefined types we reserved
 // in the enum PredefinedTypeIDs above.

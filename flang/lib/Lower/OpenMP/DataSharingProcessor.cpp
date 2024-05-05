@@ -15,9 +15,9 @@
 #include "Utils.h"
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Lower/SymbolMap.h"
+#include "flang/Optimizer/Builder/HLFIRTools.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Semantics/tools.h"
-#include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 
 namespace Fortran {
 namespace lower {
@@ -52,10 +52,37 @@ void DataSharingProcessor::processStep2(mlir::Operation *op, bool isLoop) {
 }
 
 void DataSharingProcessor::insertDeallocs() {
-  // TODO Extend delayed privatization to include a `dealloc` region.
   for (const Fortran::semantics::Symbol *sym : privatizedSymbols)
     if (Fortran::semantics::IsAllocatable(sym->GetUltimate())) {
+      if (!useDelayedPrivatization) {
+        converter.createHostAssociateVarCloneDealloc(*sym);
+        return;
+      }
+
+      Fortran::lower::SymbolBox hsb = converter.lookupOneLevelUpSymbol(*sym);
+      assert(hsb && "Host symbol box not found");
+      mlir::Type symType = hsb.getAddr().getType();
+      mlir::Location symLoc = hsb.getAddr().getLoc();
+      fir::ExtendedValue symExV = converter.getSymbolExtendedValue(*sym);
+      mlir::omp::PrivateClauseOp privatizer = symToPrivatizer.at(sym);
+
+      symTable->pushScope();
+
+      mlir::OpBuilder::InsertionGuard guard(firOpBuilder);
+
+      mlir::Region &deallocRegion = privatizer.getDeallocRegion();
+      fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+      mlir::Block *deallocEntryBlock = firOpBuilder.createBlock(
+          &deallocRegion, /*insertPt=*/{}, symType, symLoc);
+
+      firOpBuilder.setInsertionPointToEnd(deallocEntryBlock);
+      symTable->addSymbol(*sym,
+                          fir::substBase(symExV, deallocRegion.getArgument(0)));
+
       converter.createHostAssociateVarCloneDealloc(*sym);
+      firOpBuilder.create<mlir::omp::YieldOp>(hsb.getAddr().getLoc());
+
+      symTable->popScope();
     }
 }
 
@@ -276,21 +303,38 @@ void DataSharingProcessor::insertLastPrivateCompare(mlir::Operation *op) {
   }
 }
 
+void DataSharingProcessor::collectSymbolsInNestedRegions(
+    Fortran::lower::pft::Evaluation &eval,
+    Fortran::semantics::Symbol::Flag flag,
+    llvm::SetVector<const Fortran::semantics::Symbol *>
+        &symbolsInNestedRegions) {
+  for (Fortran::lower::pft::Evaluation &nestedEval :
+       eval.getNestedEvaluations()) {
+    if (nestedEval.hasNestedEvaluations()) {
+      if (nestedEval.isConstruct())
+        // Recursively look for OpenMP constructs within `nestedEval`'s region
+        collectSymbolsInNestedRegions(nestedEval, flag, symbolsInNestedRegions);
+      else
+        converter.collectSymbolSet(nestedEval, symbolsInNestedRegions, flag,
+                                   /*collectSymbols=*/true,
+                                   /*collectHostAssociatedSymbols=*/false);
+    }
+  }
+}
+
+// Collect symbols to be default privatized in two steps.
+// In step 1, collect all symbols in `eval` that match `flag` into
+// `defaultSymbols`. In step 2, for nested constructs (if any), if and only if
+// the nested construct is an OpenMP construct, collect those nested
+// symbols skipping host associated symbols into `symbolsInNestedRegions`.
+// Later, in current context, all symbols in the set
+// `defaultSymbols` - `symbolsInNestedRegions` will be privatized.
 void DataSharingProcessor::collectSymbols(
     Fortran::semantics::Symbol::Flag flag) {
   converter.collectSymbolSet(eval, defaultSymbols, flag,
                              /*collectSymbols=*/true,
                              /*collectHostAssociatedSymbols=*/true);
-  for (Fortran::lower::pft::Evaluation &e : eval.getNestedEvaluations()) {
-    if (e.hasNestedEvaluations())
-      converter.collectSymbolSet(e, symbolsInNestedRegions, flag,
-                                 /*collectSymbols=*/true,
-                                 /*collectHostAssociatedSymbols=*/false);
-    else
-      converter.collectSymbolSet(e, symbolsInParentRegions, flag,
-                                 /*collectSymbols=*/false,
-                                 /*collectHostAssociatedSymbols=*/true);
-  }
+  collectSymbolsInNestedRegions(eval, flag, symbolsInNestedRegions);
 }
 
 void DataSharingProcessor::collectDefaultSymbols() {
@@ -341,7 +385,6 @@ void DataSharingProcessor::defaultPrivatize(
         !sym->GetUltimate().has<Fortran::semantics::NamelistDetails>() &&
         !Fortran::semantics::IsImpliedDoIndex(sym->GetUltimate()) &&
         !symbolsInNestedRegions.contains(sym) &&
-        !symbolsInParentRegions.contains(sym) &&
         !privatizedSymbols.contains(sym))
       doPrivatize(sym, clauseOps, privateSyms);
   }
@@ -396,8 +439,16 @@ void DataSharingProcessor::doPrivatize(
           &allocRegion, /*insertPt=*/{}, symType, symLoc);
 
       firOpBuilder.setInsertionPointToEnd(allocEntryBlock);
-      symTable->addSymbol(*sym,
-                          fir::substBase(symExV, allocRegion.getArgument(0)));
+
+      fir::ExtendedValue localExV =
+          hlfir::translateToExtendedValue(
+              symLoc, firOpBuilder, hlfir::Entity{allocRegion.getArgument(0)},
+              /*contiguousHint=*/
+              Fortran::evaluate::IsSimplyContiguous(
+                  *sym, converter.getFoldingContext()))
+              .first;
+
+      symTable->addSymbol(*sym, localExV);
       symTable->pushScope();
       cloneSymbol(sym);
       firOpBuilder.create<mlir::omp::YieldOp>(
@@ -414,12 +465,23 @@ void DataSharingProcessor::doPrivatize(
       mlir::Block *copyEntryBlock = firOpBuilder.createBlock(
           &copyRegion, /*insertPt=*/{}, {symType, symType}, {symLoc, symLoc});
       firOpBuilder.setInsertionPointToEnd(copyEntryBlock);
-      symTable->addSymbol(*sym,
-                          fir::substBase(symExV, copyRegion.getArgument(0)),
-                          /*force=*/true);
+
+      auto addSymbol = [&](unsigned argIdx, bool force = false) {
+        symExV.match(
+            [&](const fir::MutableBoxValue &box) {
+              symTable->addSymbol(
+                  *sym, fir::substBase(box, copyRegion.getArgument(argIdx)),
+                  force);
+            },
+            [&](const auto &box) {
+              symTable->addSymbol(*sym, copyRegion.getArgument(argIdx), force);
+            });
+      };
+
+      addSymbol(0, true);
       symTable->pushScope();
-      symTable->addSymbol(*sym,
-                          fir::substBase(symExV, copyRegion.getArgument(1)));
+      addSymbol(1);
+
       auto ip = firOpBuilder.saveInsertionPoint();
       copyFirstPrivateSymbol(sym, &ip);
 
@@ -440,6 +502,8 @@ void DataSharingProcessor::doPrivatize(
 
   if (privateSyms)
     privateSyms->push_back(sym);
+
+  symToPrivatizer[sym] = privatizerOp;
 }
 
 } // namespace omp
