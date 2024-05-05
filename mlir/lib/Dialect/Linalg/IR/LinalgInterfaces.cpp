@@ -76,14 +76,14 @@ bool linalg::isaCopyOpInterface(LinalgOp linalgOp) {
 bool linalg::isaFillOpInterface(GenericOp genericOp) {
   // Structural.
   if (genericOp.getNumParallelLoops() != genericOp.getNumLoops())
-     return false;
+    return false;
 
   if (genericOp.getNumDpsInputs() != 1 || genericOp.getNumDpsInits() != 1)
     return false;
 
   // Input should be referenced and init should not.
   if (!genericOp.payloadUsesValueFromOperand(genericOp.getDpsInputOperand(0)) ||
-       genericOp.payloadUsesValueFromOperand(genericOp.getDpsInitOperand(0)))
+      genericOp.payloadUsesValueFromOperand(genericOp.getDpsInitOperand(0)))
     return false;
 
   OpOperand *value = genericOp.getDpsInputOperand(0);
