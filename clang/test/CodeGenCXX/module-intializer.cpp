@@ -15,7 +15,7 @@
 // RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++20 M-Part.cpp \
 // RUN:    -emit-module-interface -o M-Part.pcm
 // RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++20 M-Part.pcm -S \
-// RUN:    -emit-module-interface  -emit-llvm -o - | FileCheck %s --check-prefix=CHECK-P
+// RUN:    -emit-llvm -o - | FileCheck %s --check-prefix=CHECK-P
 
 // RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++20 M.cpp \
 // RUN:    -fprebuilt-module-path=%t -emit-module-interface -o M.pcm
@@ -23,11 +23,11 @@
 // RUN:    -fprebuilt-module-path=%t -o - | FileCheck %s --check-prefix=CHECK-M
 
 // RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++20 useM.cpp \
-// RUN:   -fprebuilt-module-path=%t -emit-llvm  -o - \
+// RUN:   -fprebuilt-module-path=%t -emit-llvm -o - \
 // RUN:   | FileCheck %s --check-prefix=CHECK-USE
 
 // RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++20 M-impl.cpp \
-// RUN:   -fprebuilt-module-path=%t -emit-llvm  -o - \
+// RUN:   -fprebuilt-module-path=%t -emit-llvm -o - \
 // RUN:   | FileCheck %s --check-prefix=CHECK-IMPL
 
 // RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++20 N.cpp -emit-llvm \
