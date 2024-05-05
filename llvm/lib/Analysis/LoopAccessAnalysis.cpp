@@ -2726,7 +2726,7 @@ void LoopAccessInfo::emitUnsafeDependenceRemark() {
             "to attempt to isolate the offending operations into a separate "
             "loop";
   OptimizationRemarkAnalysis &R =
-      recordAnalysis("UnsafeDep", Dep.getDestination(*this)) << Info;
+      recordAnalysis("UnsafeDep", Dep.getDestination(getDepChecker())) << Info;
 
   switch (Dep.Type) {
   case MemoryDepChecker::Dependence::NoDep:
@@ -2752,7 +2752,7 @@ void LoopAccessInfo::emitUnsafeDependenceRemark() {
     break;
   }
 
-  if (Instruction *I = Dep.getSource(*this)) {
+  if (Instruction *I = Dep.getSource(getDepChecker())) {
     DebugLoc SourceLoc = I->getDebugLoc();
     if (auto *DD = dyn_cast_or_null<Instruction>(getPointerOperand(I)))
       SourceLoc = DD->getDebugLoc();
