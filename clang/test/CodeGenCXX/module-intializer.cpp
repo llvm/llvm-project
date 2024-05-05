@@ -14,7 +14,7 @@
 
 // RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++20 M-Part.cpp \
 // RUN:    -emit-module-interface -o M-Part.pcm
-// RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++20 M-Part.pcm -S \
+// RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++20 M-Part.pcm \
 // RUN:    -emit-llvm -o - | FileCheck %s --check-prefix=CHECK-P
 
 // RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++20 M.cpp \
