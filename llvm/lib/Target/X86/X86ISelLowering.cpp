@@ -30058,7 +30058,9 @@ static SDValue LowerRotate(SDValue Op, const X86Subtarget &Subtarget,
     return R;
 
   // AVX512 implicitly uses modulo rotation amounts.
-  if (Subtarget.hasAVX512() && 32 <= EltSizeInBits) {
+  if ((Subtarget.hasVLX() ||
+       (Subtarget.hasAVX512() && Subtarget.hasEVEX512())) &&
+      32 <= EltSizeInBits) {
     // Attempt to rotate by immediate.
     if (IsCstSplat) {
       unsigned RotOpc = IsROTL ? X86ISD::VROTLI : X86ISD::VROTRI;
