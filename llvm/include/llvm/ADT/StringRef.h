@@ -872,9 +872,9 @@ namespace llvm {
 
   inline bool operator==(StringRef LHS, StringRef RHS) {
     if (LHS.size() != RHS.size())
-      return 0;
+      return false;
     if (LHS.empty())
-      return 1;
+      return true;
     return ::memcmp(LHS.data(), RHS.data(), LHS.size()) == 0;
   }
 
