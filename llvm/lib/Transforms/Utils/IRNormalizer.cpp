@@ -446,22 +446,27 @@ void IRNormalizer::reorderInstructions(Function &F) const {
     LLVM_DEBUG(dbgs() << "Reordering instructions in basic block: "
                       << BB.getName() << "\n");
     // Find the source nodes of the DAG of instructions in this basic block.
+    // Source nodes are instructions that have side effects, are terminators, or 
+    // don't have a parent in the DAG of instructions.
+    //
     // We must iterate from the first to the last instruction otherwise side
     // effecting instructions could be reordered.
 
     std::stack<Instruction *> TopologicalSort;
     SmallPtrSet<const Instruction *, 32> Visited;
     for (auto &I : BB) {
+      // First process side effecting and terminating instructions.
       if (!isOutput(&I) && !I.isTerminator())
-        continue; // I is not a source node.
+        continue;
       LLVM_DEBUG(dbgs() << "\tReordering from source effecting instruction: ";
                  I.dump());
       reorderDefinition(&I, TopologicalSort, Visited);
     }
 
     for (auto &I : BB) {
+      // Process the remaining dead instructions.
       if (Visited.contains(&I))
-        continue; // I is not a source node.
+        continue;
       LLVM_DEBUG(dbgs() << "\tReordering from source instruction: "; I.dump());
       reorderDefinition(&I, TopologicalSort, Visited);
     }
