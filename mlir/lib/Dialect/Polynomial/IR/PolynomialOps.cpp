@@ -108,7 +108,7 @@ LogicalResult MulScalarOp::verify() {
 /// Test if a value is a primitive nth root of unity modulo cmod.
 bool isPrimitiveNthRootOfUnity(const APInt &root, const unsigned n,
                                const APInt &cmod) {
-  // root bitwidth may be 1 less then cmod
+  // Root bitwidth may be 1 less then cmod.
   APInt r = APInt(root).zext(cmod.getBitWidth());
   assert(r.ule(cmod) && "root must be less than cmod");
 
