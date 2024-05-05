@@ -5662,7 +5662,7 @@ On X86-64 and AArch64 targets, this attribute changes the calling convention of 
 The ``preserve_none`` calling convention tries to preserve as few general
 registers as possible. So all general registers are caller saved registers. It
 also uses more general registers to pass arguments. This attribute doesn't
-impact floating-point registers. 
+impact floating-point registers.
 
 - On X86-64, only RSP and RBP are preserved by the callee.
   Registers RDI, RSI, RDX, RCX, R8, R9, R11, R12, R13, R14, R15 and RAX now can
