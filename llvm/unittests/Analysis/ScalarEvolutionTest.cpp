@@ -1098,7 +1098,6 @@ TEST_F(ScalarEvolutionsTest, AssumeLoopExists) {
       "for.body: "
       "  br label %for.body "
       "} "
-      "declare i32 @llvm.loop.decrement.reg.i32.i32.i32(i32, i32) ",
       Err, C);
 
   ASSERT_TRUE(M && "Could not parse module?");
