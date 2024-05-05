@@ -21,8 +21,6 @@
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Support/TimeProfiler.h"
 
-#include <unordered_set>
-
 using namespace llvm;
 using namespace llvm::MachO;
 using namespace lld;
@@ -483,7 +481,7 @@ private:
   // Map of base class Symbol to list of InfoInputCategory's for it
   DenseMap<const Symbol *, std::vector<InfoInputCategory>> categoryMap;
   // Set for tracking InputSection erased via eraseISec
-  std::unordered_set<InputSection *> erasedIsecs;
+  DenseSet<InputSection *> erasedIsecs;
 
   // Normally, the binary data comes from the input files, but since we're
   // generating binary data ourselves, we use the below array to store it in.
@@ -1225,9 +1223,7 @@ void ObjcCategoryMerger::removeRefsToErasedIsecs() {
       return erasedIsecs.count(isec) > 0;
     };
 
-    isec->relocs.erase(
-        std::remove_if(isec->relocs.begin(), isec->relocs.end(), removeRelocs),
-        isec->relocs.end());
+    llvm::erase_if(isec->relocs, removeRelocs);
   }
 }
 
