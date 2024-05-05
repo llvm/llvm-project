@@ -40098,7 +40098,7 @@ static SDValue combineBlendOfPermutes(MVT VT, SDValue N0, SDValue N1,
   assert(isBlendOrUndef(NewBlendMask) && "Bad blend");
   assert(isUndefOrInRange(NewPermuteMask, 0, NumElts) && "Bad permute");
 
-  // v16i6 shuffles can explode in complexity very easily, only accept them if
+  // v16i16 shuffles can explode in complexity very easily, only accept them if
   // the blend mask is the same in the 128-bit subvectors (or can widen to
   // v8i32) and the permute can be widened as well.
   if (VT == MVT::v16i16) {
