@@ -255,6 +255,14 @@ class DXILOpMapping<int opCode, DXILOpClass opClass,
 }
 
 // Concrete definition of DXIL Operation mapping to corresponding LLVM intrinsic
+def Abs : DXILOpMapping<6, unary, int_fabs,
+                         "Returns the absolute value of the input.">;
+def IsInf : DXILOpMapping<9, isSpecialFloat, int_dx_isinf,
+                         "Determines if the specified value is infinite.",
+                         [llvm_i1_ty, llvm_halforfloat_ty]>;
+def Cos  : DXILOpMapping<12, unary, int_cos,
+                         "Returns cosine(theta) for theta in radians.",
+                         [llvm_halforfloat_ty, LLVMMatchType<0>]>;
 def Sin  : DXILOpMapping<13, unary, int_sin,
                          "Returns sine(theta) for theta in radians.",
                          [llvm_halforfloat_ty, LLVMMatchType<0>]>;
@@ -266,18 +274,60 @@ def Frac : DXILOpMapping<22, unary, int_dx_frac,
                          "Returns a fraction from 0 to 1 that represents the "
                          "decimal part of the input.",
                          [llvm_halforfloat_ty, LLVMMatchType<0>]>;
-def Round : DXILOpMapping<26, unary, int_round,
+def Log2 : DXILOpMapping<23, unary, int_log2,
+                         "Returns the base-2 logarithm of the specified value.",
+                         [llvm_halforfloat_ty, LLVMMatchType<0>]>;
+def Sqrt : DXILOpMapping<24, unary, int_sqrt,
+                         "Returns the square root of the specified floating-point"
+                         "value, per component.",
+                         [llvm_halforfloat_ty, LLVMMatchType<0>]>;
+def RSqrt : DXILOpMapping<25, unary, int_dx_rsqrt,
+                         "Returns the reciprocal of the square root of the specified value."
+                         "rsqrt(x) = 1 / sqrt(x).",
+                         [llvm_halforfloat_ty, LLVMMatchType<0>]>;
+def Round : DXILOpMapping<26, unary, int_roundeven,
                          "Returns the input rounded to the nearest integer"
                          "within a floating-point type.",
                          [llvm_halforfloat_ty, LLVMMatchType<0>]>;
+def Floor : DXILOpMapping<27, unary, int_floor,
+                         "Returns the largest integer that is less than or equal to the input.",
+                         [llvm_halforfloat_ty, LLVMMatchType<0>]>;
+def Ceil : DXILOpMapping<28, unary, int_ceil,
+                         "Returns the smallest integer that is greater than or equal to the input.",
+                         [llvm_halforfloat_ty, LLVMMatchType<0>]>;
+def Trunc : DXILOpMapping<29, unary, int_trunc,
+                         "Returns the specified value truncated to the integer component.",
+                         [llvm_halforfloat_ty, LLVMMatchType<0>]>;
+def Rbits : DXILOpMapping<30, unary, int_bitreverse,
+                         "Returns the specified value with its bits reversed.",
+                         [llvm_anyint_ty, LLVMMatchType<0>]>;
+def FMax : DXILOpMapping<35, binary, int_maxnum,
+                         "Float maximum. FMax(a,b) = a > b ? a : b">;
+def FMin : DXILOpMapping<36, binary, int_minnum,
+                         "Float minimum. FMin(a,b) = a < b ? a : b">;
+def SMax : DXILOpMapping<37, binary, int_smax,
+                         "Signed integer maximum. SMax(a,b) = a > b ? a : b">;
+def SMin : DXILOpMapping<38, binary, int_smin,
+                         "Signed integer minimum. SMin(a,b) = a < b ? a : b">;
 def UMax : DXILOpMapping<39, binary, int_umax,
                          "Unsigned integer maximum. UMax(a,b) = a > b ? a : b">;
+def UMin : DXILOpMapping<40, binary, int_umin,
+                         "Unsigned integer minimum. UMin(a,b) = a < b ? a : b">;
 def FMad : DXILOpMapping<46, tertiary, int_fmuladd,
                          "Floating point arithmetic multiply/add operation. fmad(m,a,b) = m * a + b.">;
 def IMad : DXILOpMapping<48, tertiary, int_dx_imad,
                          "Signed integer arithmetic multiply/add operation. imad(m,a,b) = m * a + b.">;
 def UMad : DXILOpMapping<49, tertiary, int_dx_umad,
                          "Unsigned integer arithmetic multiply/add operation. umad(m,a,b) = m * a + b.">;
+let OpTypes = !listconcat([llvm_halforfloat_ty], !listsplat(llvm_halforfloat_ty, 4)) in
+  def Dot2 : DXILOpMapping<54, dot2, int_dx_dot2,
+                           "dot product of two float vectors Dot(a,b) = a[0]*b[0] + ... + a[n]*b[n] where n is between 0 and 1">;
+let OpTypes = !listconcat([llvm_halforfloat_ty], !listsplat(llvm_halforfloat_ty, 6)) in
+  def Dot3 : DXILOpMapping<55, dot3, int_dx_dot3,
+                           "dot product of two float vectors Dot(a,b) = a[0]*b[0] + ... + a[n]*b[n] where n is between 0 and 2">;
+let OpTypes = !listconcat([llvm_halforfloat_ty], !listsplat(llvm_halforfloat_ty, 8)) in
+  def Dot4 : DXILOpMapping<56, dot4, int_dx_dot4,
+                           "dot product of two float vectors Dot(a,b) = a[0]*b[0] + ... + a[n]*b[n] where n is between 0 and 3">;
 def ThreadId : DXILOpMapping<93, threadId, int_dx_thread_id,
                              "Reads the thread ID">;
 def GroupId  : DXILOpMapping<94, groupId, int_dx_group_id,

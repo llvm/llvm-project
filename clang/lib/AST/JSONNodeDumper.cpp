@@ -187,6 +187,8 @@ void JSONNodeDumper::Visit(const CXXCtorInitializer *Init) {
     llvm_unreachable("Unknown initializer type");
 }
 
+void JSONNodeDumper::Visit(const OpenACCClause *C) {}
+
 void JSONNodeDumper::Visit(const OMPClause *C) {}
 
 void JSONNodeDumper::Visit(const BlockDecl::Capture &C) {
@@ -695,7 +697,7 @@ void JSONNodeDumper::VisitArrayType(const ArrayType *AT) {
 void JSONNodeDumper::VisitConstantArrayType(const ConstantArrayType *CAT) {
   // FIXME: this should use ZExt instead of SExt, but JSON doesn't allow a
   // narrowing conversion to int64_t so it cannot be expressed.
-  JOS.attribute("size", CAT->getSize().getSExtValue());
+  JOS.attribute("size", CAT->getSExtSize());
   VisitArrayType(CAT);
 }
 
@@ -973,6 +975,9 @@ void JSONNodeDumper::VisitFunctionDecl(const FunctionDecl *FD) {
   if (FD->isDefaulted())
     JOS.attribute("explicitlyDefaulted",
                   FD->isDeleted() ? "deleted" : "default");
+
+  if (StringLiteral *Msg = FD->getDeletedMessage())
+    JOS.attribute("deletedMessage", Msg->getString());
 }
 
 void JSONNodeDumper::VisitEnumDecl(const EnumDecl *ED) {
@@ -1572,6 +1577,14 @@ void JSONNodeDumper::VisitMaterializeTemporaryExpr(
   }
 
   attributeOnlyIfTrue("boundToLValueRef", MTE->isBoundToLvalueReference());
+}
+
+void JSONNodeDumper::VisitCXXDefaultArgExpr(const CXXDefaultArgExpr *Node) {
+  attributeOnlyIfTrue("hasRewrittenInit", Node->hasRewrittenInit());
+}
+
+void JSONNodeDumper::VisitCXXDefaultInitExpr(const CXXDefaultInitExpr *Node) {
+  attributeOnlyIfTrue("hasRewrittenInit", Node->hasRewrittenInit());
 }
 
 void JSONNodeDumper::VisitCXXDependentScopeMemberExpr(

@@ -1,5 +1,5 @@
-; RUN: llc < %s -mtriple=x86_64-linux-unknown | FileCheck %s --check-prefix=CHECK-64
-; RUN: llc < %s -mtriple=i386-linux-unknown | FileCheck %s --check-prefix=CHECK-32
+; RUN: llc < %s -mtriple=x86_64-linux-unknown -verify-machineinstrs | FileCheck %s --check-prefix=CHECK-64
+; RUN: llc < %s -mtriple=i386-linux-unknown -verify-machineinstrs | FileCheck %s --check-prefix=CHECK-32
 
 ; Test that a large stack offset uses a single add/sub instruction to
 ; adjust the stack pointer.

@@ -10,7 +10,15 @@
 // expected-no-diagnostics
 #endif
 
-namespace dr2847 { // dr2847: 19
+namespace cwg2819 { // cwg2819: 19 tentatively ready 2023-12-01
+#if __cpp_constexpr >= 202306L
+  constexpr void* p = nullptr;
+  constexpr int* q = static_cast<int*>(p);
+  static_assert(q == nullptr);
+#endif
+}
+
+namespace cwg2847 { // cwg2847: 19 review 2024-03-01
 
 #if __cplusplus >= 202002L
 
@@ -57,4 +65,27 @@ void B<int>::g() requires true;
 
 #endif
 
-} // namespace dr2847
+} // namespace cwg2847
+
+namespace cwg2858 { // cwg2858: 19 tentatively ready 2024-04-05
+
+#if __cplusplus > 202302L
+
+template<typename... Ts>
+struct A {
+  // FIXME: The nested-name-specifier in the following friend declarations are declarative,
+  // but we don't treat them as such (yet).
+  friend void Ts...[0]::f();
+  template<typename U>
+  friend void Ts...[0]::g();
+
+  friend struct Ts...[0]::B;
+  // FIXME: The index of the pack-index-specifier is printed as a memory address in the diagnostic.
+  template<typename U>
+  friend struct Ts...[0]::C;
+  // expected-warning-re@-1 {{dependent nested name specifier 'Ts...[{{.*}}]::' for friend template declaration is not supported; ignoring this friend declaration}}
+};
+
+#endif
+
+} // namespace cwg2858

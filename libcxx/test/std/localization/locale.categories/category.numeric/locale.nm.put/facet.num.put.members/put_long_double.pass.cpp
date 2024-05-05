@@ -13,11 +13,6 @@
 // iter_type put(iter_type s, ios_base& iob, char_type fill, long double v) const;
 
 // XFAIL: win32-broken-printf-g-precision
-// XFAIL: LIBCXX-PICOLIBC-FIXME
-
-// Needs more investigation, but this is probably failing on Android M (API 23)
-// and up because the printf formatting of NAN changed.
-// XFAIL: LIBCXX-ANDROID-FIXME && !android-device-api={{21|22}}
 
 #include <locale>
 #include <ios>
@@ -8936,11 +8931,9 @@ void test4()
     std::locale lc = std::locale::classic();
     std::locale lg(lc, new my_numpunct);
 
-    std::string inf;
-
     // This should match the underlying C library
-    std::sprintf(str, "%f", INFINITY);
-    inf = str;
+    std::snprintf(str, sizeof(str), "%f", INFINITY);
+    std::string inf = str;
 
     const my_facet f(1);
     {
@@ -10730,19 +10723,16 @@ void test5()
     std::locale lg(lc, new my_numpunct);
     const my_facet f(1);
 
-    std::string nan;
-    std::string NaN;
-    std::string pnan_sign;
-
     // The output here depends on the underlying C library, so work out what
     // that does.
-    std::sprintf(str, "%f", std::nan(""));
-    nan = str;
+    std::snprintf(str, sizeof(str), "%f", std::nan(""));
+    std::string nan = str;
 
-    std::sprintf(str, "%F", std::nan(""));
-    NaN = str;
+    std::snprintf(str, sizeof(str), "%F", std::nan(""));
+    std::string NaN = str;
 
-    std::sprintf(str, "%+f", std::nan(""));
+    std::snprintf(str, sizeof(str), "%+f", std::nan(""));
+    std::string pnan_sign;
     if (str[0] == '+') {
       pnan_sign = "+";
     }

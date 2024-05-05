@@ -311,7 +311,7 @@ bool matchSplitStoreZero128(MachineInstr &MI, MachineRegisterInfo &MRI) {
   LLT ValTy = MRI.getType(Store.getValueReg());
   if (!ValTy.isVector() || ValTy.getSizeInBits() != 128)
     return false;
-  if (ValTy.getSizeInBits() != Store.getMemSizeInBits())
+  if (Store.getMemSizeInBits() != ValTy.getSizeInBits())
     return false; // Don't split truncating stores.
   if (!MRI.hasOneNonDBGUse(Store.getValueReg()))
     return false;
@@ -658,7 +658,7 @@ bool AArch64PostLegalizerCombiner::optimizeConsecutiveMemOpAddressing(
         APInt Offset;
         LLT StoredValTy = MRI.getType(St->getValueReg());
         unsigned ValSize = StoredValTy.getSizeInBits();
-        if (ValSize < 32 || ValSize != St->getMMO().getSizeInBits())
+        if (ValSize < 32 || St->getMMO().getSizeInBits() != ValSize)
           continue;
 
         Register PtrReg = St->getPointerReg();

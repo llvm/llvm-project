@@ -243,6 +243,18 @@ private:
   bool translateMemFunc(const CallInst &CI, MachineIRBuilder &MIRBuilder,
                         unsigned Opcode);
 
+  /// Translate an LLVM trap intrinsic (trap, debugtrap, ubsantrap).
+  bool translateTrap(const CallInst &U, MachineIRBuilder &MIRBuilder,
+                     unsigned Opcode);
+
+  // Translate @llvm.vector.interleave2 and
+  // @llvm.vector.deinterleave2 intrinsics for fixed-width vector
+  // types into vector shuffles.
+  bool translateVectorInterleave2Intrinsic(const CallInst &CI,
+                                           MachineIRBuilder &MIRBuilder);
+  bool translateVectorDeinterleave2Intrinsic(const CallInst &CI,
+                                             MachineIRBuilder &MIRBuilder);
+
   void getStackGuard(Register DstReg, MachineIRBuilder &MIRBuilder);
 
   bool translateOverflowIntrinsic(const CallInst &CI, unsigned Op,
@@ -579,6 +591,10 @@ private:
     return false;
   }
 
+  bool translateConvergenceControlIntrinsic(const CallInst &CI,
+                                            Intrinsic::ID ID,
+                                            MachineIRBuilder &MIRBuilder);
+
   /// @}
 
   // Builder for machine instruction a la IRBuilder.
@@ -695,6 +711,23 @@ private:
     assert(Regs.size() == 1 &&
            "attempt to get single VReg for aggregate or void");
     return Regs[0];
+  }
+
+  Register getOrCreateConvergenceTokenVReg(const Value &Token) {
+    assert(Token.getType()->isTokenTy());
+    auto &Regs = *VMap.getVRegs(Token);
+    if (!Regs.empty()) {
+      assert(Regs.size() == 1 &&
+             "Expected a single register for convergence tokens.");
+      return Regs[0];
+    }
+
+    auto Reg = MRI->createGenericVirtualRegister(LLT::token());
+    Regs.push_back(Reg);
+    auto &Offsets = *VMap.getOffsets(Token);
+    if (Offsets.empty())
+      Offsets.push_back(0);
+    return Reg;
   }
 
   /// Allocate some vregs and offsets in the VMap. Then populate just the

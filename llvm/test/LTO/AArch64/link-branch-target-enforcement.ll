@@ -32,7 +32,6 @@ entry:
 ; CHECK-DUMP: <main>:
 ; CHECK-DUMP:      bl      0x8 <main+0x8>
 ; CHECK-DUMP: <foo>:
-; CHECK-DUMP:     paciasp
 
 ; `main` doesn't support BTI while `foo` does, so in the binary
 ; we should see only PAC which is supported by both.

@@ -902,6 +902,14 @@ TEST(IOApiTests, EditDoubleInputValues) {
           0}, // max finite
       {"(EX22.0)", "0X.8P1025             ", 0x7ff0000000000000, ovf}, // +Inf
       {"(EX22.0)", "-0X.8P1025            ", 0xfff0000000000000, ovf}, // -Inf
+      {"(RC,EX22.0)", "0X1.0000000000000P0   ", 0x3ff0000000000000, 0},
+      {"(RC,EX22.0)", "0X1.00000000000008P0  ", 0x3ff0000000000001, 0},
+      {"(RC,EX22.0)", "0X1.000000000000008P0 ", 0x3ff0000000000000, 0},
+      {"(RC,EX22.0)", "0X1.00000000000004P0  ", 0x3ff0000000000000, 0},
+      {"(RC,EX22.0)", "0X.80000000000000P1   ", 0x3ff0000000000000, 0},
+      {"(RC,EX22.0)", "0X.80000000000004P1   ", 0x3ff0000000000001, 0},
+      {"(RC,EX22.0)", "0X.800000000000004P1  ", 0x3ff0000000000000, 0},
+      {"(RC,EX22.0)", "0X.80000000000002P1   ", 0x3ff0000000000000, 0},
       {"(RZ,F7.0)", " 2.e308", 0x7fefffffffffffff, 0}, // +HUGE()
       {"(RD,F7.0)", " 2.e308", 0x7fefffffffffffff, 0}, // +HUGE()
       {"(RU,F7.0)", " 2.e308", 0x7ff0000000000000, ovf}, // +Inf
@@ -949,4 +957,21 @@ TEST(IOApiTests, EditDoubleInputValues) {
     ASSERT_EQ(u.raw, want) << '\'' << format << "' failed reading '" << data
                            << "', want " << want << ", got " << u.raw;
   }
+}
+
+// regression test for confusing digit minimization
+TEST(IOApiTests, ConfusingMinimization) {
+  char buffer[8]{};
+  auto cookie{IONAME(BeginInternalListOutput)(buffer, sizeof buffer)};
+  StaticDescriptor<0> staticDescriptor;
+  Descriptor &desc{staticDescriptor.descriptor()};
+  std::uint16_t x{0x7bff}; // HUGE(0._2)
+  desc.Establish(TypeCode{CFI_type_half_float}, sizeof x, &x, 0, nullptr);
+  desc.Check();
+  EXPECT_TRUE(IONAME(OutputDescriptor)(cookie, desc));
+  auto status{IONAME(EndIoStatement)(cookie)};
+  EXPECT_EQ(status, 0);
+  std::string got{std::string{buffer, sizeof buffer}};
+  EXPECT_TRUE(CompareFormattedStrings(" 65504. ", got))
+      << "expected ' 65504. ', got '" << got << '\''; // not 65500.!
 }

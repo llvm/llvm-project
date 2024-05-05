@@ -1,4 +1,5 @@
 ! RUN: bbc -emit-hlfir -fcuda %s -o - | FileCheck %s
+! RUN: bbc -emit-hlfir -fcuda %s -o - | fir-opt | FileCheck %s
 
 ! Test lowering of CUDA kernel loop directive.
 
@@ -23,6 +24,7 @@ subroutine sub1()
 ! CHECK-NOT: fir.do_loop
 ! CHECK: %[[ARG0_I32:.*]] = fir.convert %[[ARG0]] : (index) -> i32
 ! CHECK: fir.store %[[ARG0_I32]] to %[[IV]]#1 : !fir.ref<i32>
+! CHECK: hlfir.assign
 
 
   !$cuf kernel do <<< *, * >>>
@@ -42,10 +44,20 @@ subroutine sub1()
 ! CHECK: fir.cuda_kernel<<<%c1{{.*}}, (%c256{{.*}}, %c1{{.*}})>>> (%{{.*}} : index, %{{.*}} : index) = (%{{.*}}, %{{.*}} : index, index) to (%{{.*}}, %{{.*}} : index, index) step (%{{.*}}, %{{.*}} : index, index)
 ! CHECK: {n = 2 : i64}
 
-! TODO: currently these trigger error in the parser
-! !$cuf kernel do(2) <<< (1,*), (256,1) >>>
-! !$cuf kernel do(2) <<< (*,*), (32,4) >>>
+  !$cuf kernel do(2) <<< (1,*), (256,1) >>>
+  do i = 1, n
+    do j = 1, n
+      c(i,j) = c(i,j) * d(i,j)
+    end do
+  end do
+! CHECK: fir.cuda_kernel<<<(%c1{{.*}}, %c0{{.*}}), (%c256{{.*}}, %c1{{.*}})>>> (%{{.*}} : index, %{{.*}} : index) = (%{{.*}}, %{{.*}} : index, index) to (%{{.*}}, %{{.*}} : index, index)  step (%{{.*}}, %{{.*}} : index, index)
+
+!$cuf kernel do(2) <<< (*,*), (32,4) >>>
+  do i = 1, n
+    do j = 1, n
+      c(i,j) = c(i,j) * d(i,j)
+    end do
+  end do
+
+! CHECK: fir.cuda_kernel<<<*, (%c32{{.*}}, %c4{{.*}})>>> (%{{.*}} : index, %{{.*}} : index) = (%{{.*}}, %{{.*}} : index, index) to (%{{.*}}, %{{.*}} : index, index)  step (%{{.*}}, %{{.*}} : index, index)
 end
-
-
-

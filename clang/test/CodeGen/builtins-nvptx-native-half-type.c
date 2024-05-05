@@ -12,7 +12,7 @@
 
 // RUN: %clang_cc1 -ffp-contract=off -triple nvptx64-unknown-unknown \
 // RUN:   -target-cpu sm_80 -target-feature +ptx70 -fcuda-is-device \
-// RUN:   -fnative-half-type -S -emit-llvm -o - -x cuda %s \
+// RUN:   -fnative-half-type -emit-llvm -o - -x cuda %s \
 // RUN:   | FileCheck -check-prefix=CHECK -check-prefix=CHECK_PTX70_SM80 %s
 
 // RUN: %clang_cc1 -ffp-contract=off -triple nvptx-unknown-unknown -target-cpu \
@@ -22,7 +22,7 @@
 
 // RUN: %clang_cc1 -ffp-contract=off -triple nvptx64-unknown-unknown \
 // RUN:   -target-cpu sm_86 -target-feature +ptx72 -fcuda-is-device \
-// RUN:   -fnative-half-type -S -emit-llvm -o - -x cuda %s \
+// RUN:   -fnative-half-type -emit-llvm -o - -x cuda %s \
 // RUN:   | FileCheck -check-prefix=CHECK -check-prefix=CHECK_PTX72_SM86 %s
 
 // RUN: %clang_cc1 -ffp-contract=off -triple nvptx-unknown-unknown -target-cpu \
@@ -32,7 +32,7 @@
 
 // RUN: %clang_cc1 -ffp-contract=off -triple nvptx64-unknown-unknown \
 // RUN:   -target-cpu sm_53 -target-feature +ptx42 -fcuda-is-device \
-// RUN:   -fnative-half-type -S -emit-llvm -o - -x cuda %s \
+// RUN:   -fnative-half-type -emit-llvm -o - -x cuda %s \
 // RUN:   | FileCheck -check-prefix=CHECK -check-prefix=CHECK_PTX42_SM53 %s
 
 #define __device__ __attribute__((device))

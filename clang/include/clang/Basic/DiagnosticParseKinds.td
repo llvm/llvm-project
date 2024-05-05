@@ -268,6 +268,8 @@ def err_expected_semi_after_namespace_name : Error<
   "expected ';' after namespace name">;
 def err_unexpected_namespace_attributes_alias : Error<
   "attributes cannot be specified on namespace alias">;
+def err_unexpected_qualified_namespace_alias : Error<
+  "namespace alias must be a single identifier">;
 def err_unexpected_nested_namespace_attribute : Error<
   "attributes cannot be specified on a nested namespace definition">;
 def err_inline_namespace_alias : Error<"namespace alias cannot be inline">;
@@ -475,6 +477,15 @@ def err_expected_coloncolon_after_super : Error<
 def ext_decomp_decl_empty : ExtWarn<
   "ISO C++17 does not allow a decomposition group to be empty">,
   InGroup<DiagGroup<"empty-decomposition">>;
+
+// C++26 structured bindings
+def ext_decl_attrs_on_binding : ExtWarn<
+  "an attribute specifier sequence attached to a structured binding declaration "
+  "is a C++2c extension">, InGroup<CXX26>;
+def warn_cxx23_compat_decl_attrs_on_binding : Warning<
+  "an attribute specifier sequence attached to a structured binding declaration "
+  "is incompatible with C++ standards before C++2c">,
+  InGroup<CXXPre26Compat>, DefaultIgnore;
 
 /// Objective-C parser diagnostics
 def err_expected_minus_or_plus : Error<
@@ -861,6 +872,8 @@ def err_empty_requires_expr : Error<
   "a requires expression must contain at least one requirement">;
 def err_requires_expr_parameter_list_ellipsis : Error<
   "varargs not allowed in requires expression">;
+def err_requires_expr_explicit_object_parameter: Error<
+  "a requires expression cannot have an explicit object parameter">;
 def err_expected_semi_requirement : Error<
   "expected ';' at end of requirement">;
 def err_requires_expr_missing_arrow : Error<
@@ -938,6 +951,12 @@ def ext_defaulted_deleted_function : ExtWarn<
 def warn_cxx98_compat_defaulted_deleted_function : Warning<
   "%select{defaulted|deleted}0 function definitions are incompatible with C++98">,
   InGroup<CXX98Compat>, DefaultIgnore;
+
+def ext_delete_with_message : ExtWarn<
+  "'= delete' with a message is a C++2c extension">, InGroup<CXX26>;
+def warn_cxx23_delete_with_message : Warning<
+  "'= delete' with a message is incompatible with C++ standards before C++2c">,
+  DefaultIgnore, InGroup<CXXPre26Compat>;
 
 // C++11 default member initialization
 def ext_nonstatic_member_init : ExtWarn<
@@ -1029,6 +1048,7 @@ def err_expected_lambda_body : Error<"expected body of lambda expression">;
 def warn_cxx98_compat_lambda : Warning<
   "lambda expressions are incompatible with C++98">,
   InGroup<CXX98Compat>, DefaultIgnore;
+def ext_lambda : ExtWarn<"lambdas are a C++11 extension">, InGroup<CXX11>;
 def err_lambda_decl_specifier_repeated : Error<
   "%select{'mutable'|'static'|'constexpr'|'consteval'}0 cannot "
   "appear multiple times in a lambda declarator">;
@@ -1643,7 +1663,7 @@ def warn_ext_int_deprecated : Warning<
   "'_ExtInt' is deprecated; use '_BitInt' instead">, InGroup<DeprecatedType>;
 def ext_bit_int : Extension<
   "'_BitInt' in %select{C17 and earlier|C++}0 is a Clang extension">,
-  InGroup<DiagGroup<"bit-int-extension">>;
+  InGroup<BitIntExtension>;
 } // end of Parse Issue category.
 
 let CategoryName = "Modules Issue" in {

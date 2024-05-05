@@ -200,22 +200,16 @@ namespace std {
 #include <__type_traits/is_assignable.h>
 #include <__type_traits/is_constructible.h>
 #include <__type_traits/is_convertible.h>
-#include <__type_traits/is_copy_assignable.h>
-#include <__type_traits/is_copy_constructible.h>
 #include <__type_traits/is_destructible.h>
-#include <__type_traits/is_move_assignable.h>
-#include <__type_traits/is_move_constructible.h>
-#include <__type_traits/is_nothrow_move_assignable.h>
-#include <__type_traits/is_nothrow_move_constructible.h>
+#include <__type_traits/is_nothrow_assignable.h>
+#include <__type_traits/is_nothrow_constructible.h>
 #include <__type_traits/is_object.h>
 #include <__type_traits/is_reference.h>
 #include <__type_traits/is_scalar.h>
 #include <__type_traits/is_swappable.h>
-#include <__type_traits/is_trivially_copy_assignable.h>
-#include <__type_traits/is_trivially_copy_constructible.h>
+#include <__type_traits/is_trivially_assignable.h>
+#include <__type_traits/is_trivially_constructible.h>
 #include <__type_traits/is_trivially_destructible.h>
-#include <__type_traits/is_trivially_move_assignable.h>
-#include <__type_traits/is_trivially_move_constructible.h>
 #include <__type_traits/negation.h>
 #include <__type_traits/remove_const.h>
 #include <__type_traits/remove_cvref.h>
@@ -1291,6 +1285,7 @@ _LIBCPP_POP_MACROS
 #  include <concepts>
 #  include <ctime>
 #  include <iterator>
+#  include <limits>
 #  include <memory>
 #  include <ratio>
 #  include <stdexcept>

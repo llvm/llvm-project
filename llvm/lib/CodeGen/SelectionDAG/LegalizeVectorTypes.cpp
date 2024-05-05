@@ -1388,6 +1388,13 @@ void DAGTypeLegalizer::SplitVecRes_BITCAST(SDNode *N, SDValue &Lo,
     report_fatal_error("Scalarization of scalable vectors is not supported.");
   }
 
+  if (LoVT.isScalableVector()) {
+    auto [InLo, InHi] = DAG.SplitVectorOperand(N, 0);
+    Lo = DAG.getNode(ISD::BITCAST, dl, LoVT, InLo);
+    Hi = DAG.getNode(ISD::BITCAST, dl, HiVT, InHi);
+    return;
+  }
+
   // In the general case, convert the input to an integer and split it by hand.
   EVT LoIntVT = EVT::getIntegerVT(*DAG.getContext(), LoVT.getSizeInBits());
   EVT HiIntVT = EVT::getIntegerVT(*DAG.getContext(), HiVT.getSizeInBits());
@@ -1967,7 +1974,8 @@ void DAGTypeLegalizer::SplitVecRes_VP_LOAD(VPLoadSDNode *LD, SDValue &Lo,
 
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
       LD->getPointerInfo(), MachineMemOperand::MOLoad,
-      MemoryLocation::UnknownSize, Alignment, LD->getAAInfo(), LD->getRanges());
+      LocationSize::beforeOrAfterPointer(), Alignment, LD->getAAInfo(),
+      LD->getRanges());
 
   Lo =
       DAG.getLoadVP(LD->getAddressingMode(), ExtType, LoVT, dl, Ch, Ptr, Offset,
@@ -1990,8 +1998,8 @@ void DAGTypeLegalizer::SplitVecRes_VP_LOAD(VPLoadSDNode *LD, SDValue &Lo,
           LoMemVT.getStoreSize().getFixedValue());
 
     MMO = DAG.getMachineFunction().getMachineMemOperand(
-        MPI, MachineMemOperand::MOLoad, MemoryLocation::UnknownSize, Alignment,
-        LD->getAAInfo(), LD->getRanges());
+        MPI, MachineMemOperand::MOLoad, LocationSize::beforeOrAfterPointer(),
+        Alignment, LD->getAAInfo(), LD->getRanges());
 
     Hi = DAG.getLoadVP(LD->getAddressingMode(), ExtType, HiVT, dl, Ch, Ptr,
                        Offset, MaskHi, EVLHi, HiMemVT, MMO,
@@ -2070,8 +2078,8 @@ void DAGTypeLegalizer::SplitVecRes_VP_STRIDED_LOAD(VPStridedLoadSDNode *SLD,
 
     MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
         MachinePointerInfo(SLD->getPointerInfo().getAddrSpace()),
-        MachineMemOperand::MOLoad, MemoryLocation::UnknownSize, Alignment,
-        SLD->getAAInfo(), SLD->getRanges());
+        MachineMemOperand::MOLoad, LocationSize::beforeOrAfterPointer(),
+        Alignment, SLD->getAAInfo(), SLD->getRanges());
 
     Hi = DAG.getStridedLoadVP(SLD->getAddressingMode(), SLD->getExtensionType(),
                               HiVT, DL, SLD->getChain(), Ptr, SLD->getOffset(),
@@ -2130,7 +2138,7 @@ void DAGTypeLegalizer::SplitVecRes_MLOAD(MaskedLoadSDNode *MLD,
 
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
       MLD->getPointerInfo(), MachineMemOperand::MOLoad,
-      MemoryLocation::UnknownSize, Alignment, MLD->getAAInfo(),
+      LocationSize::beforeOrAfterPointer(), Alignment, MLD->getAAInfo(),
       MLD->getRanges());
 
   Lo = DAG.getMaskedLoad(LoVT, dl, Ch, Ptr, Offset, MaskLo, PassThruLo, LoMemVT,
@@ -2154,8 +2162,8 @@ void DAGTypeLegalizer::SplitVecRes_MLOAD(MaskedLoadSDNode *MLD,
           LoMemVT.getStoreSize().getFixedValue());
 
     MMO = DAG.getMachineFunction().getMachineMemOperand(
-        MPI, MachineMemOperand::MOLoad, MemoryLocation::UnknownSize, Alignment,
-        MLD->getAAInfo(), MLD->getRanges());
+        MPI, MachineMemOperand::MOLoad, LocationSize::beforeOrAfterPointer(),
+        Alignment, MLD->getAAInfo(), MLD->getRanges());
 
     Hi = DAG.getMaskedLoad(HiVT, dl, Ch, Ptr, Offset, MaskHi, PassThruHi,
                            HiMemVT, MMO, MLD->getAddressingMode(), ExtType,
@@ -2217,7 +2225,8 @@ void DAGTypeLegalizer::SplitVecRes_Gather(MemSDNode *N, SDValue &Lo,
 
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
       N->getPointerInfo(), MachineMemOperand::MOLoad,
-      MemoryLocation::UnknownSize, Alignment, N->getAAInfo(), N->getRanges());
+      LocationSize::beforeOrAfterPointer(), Alignment, N->getAAInfo(),
+      N->getRanges());
 
   if (auto *MGT = dyn_cast<MaskedGatherSDNode>(N)) {
     SDValue PassThru = MGT->getPassThru();
@@ -2884,10 +2893,10 @@ void DAGTypeLegalizer::SplitVecRes_VP_REVERSE(SDNode *N, SDValue &Lo,
   auto PtrInfo = MachinePointerInfo::getFixedStack(MF, FrameIndex);
 
   MachineMemOperand *StoreMMO = DAG.getMachineFunction().getMachineMemOperand(
-      PtrInfo, MachineMemOperand::MOStore, MemoryLocation::UnknownSize,
+      PtrInfo, MachineMemOperand::MOStore, LocationSize::beforeOrAfterPointer(),
       Alignment);
   MachineMemOperand *LoadMMO = DAG.getMachineFunction().getMachineMemOperand(
-      PtrInfo, MachineMemOperand::MOLoad, MemoryLocation::UnknownSize,
+      PtrInfo, MachineMemOperand::MOLoad, LocationSize::beforeOrAfterPointer(),
       Alignment);
 
   unsigned EltWidth = VT.getScalarSizeInBits() / 8;
@@ -3089,6 +3098,10 @@ bool DAGTypeLegalizer::SplitVectorOperand(SDNode *N, unsigned OpNo) {
   case ISD::VP_REDUCE_FMIN:
     Res = SplitVecOp_VP_REDUCE(N, OpNo);
     break;
+  case ISD::VP_CTTZ_ELTS:
+  case ISD::VP_CTTZ_ELTS_ZERO_UNDEF:
+    Res = SplitVecOp_VP_CttzElements(N);
+    break;
   }
 
   // If the result is null, the sub-method took care of registering results etc.
@@ -3257,16 +3270,25 @@ SDValue DAGTypeLegalizer::SplitVecOp_BITCAST(SDNode *N) {
   // For example, i64 = BITCAST v4i16 on alpha.  Typically the vector will
   // end up being split all the way down to individual components.  Convert the
   // split pieces into integers and reassemble.
+  EVT ResVT = N->getValueType(0);
   SDValue Lo, Hi;
   GetSplitVector(N->getOperand(0), Lo, Hi);
+  SDLoc dl(N);
+
+  if (ResVT.isScalableVector()) {
+    auto [LoVT, HiVT] = DAG.GetSplitDestVTs(ResVT);
+    Lo = DAG.getNode(ISD::BITCAST, dl, LoVT, Lo);
+    Hi = DAG.getNode(ISD::BITCAST, dl, HiVT, Hi);
+    return DAG.getNode(ISD::CONCAT_VECTORS, dl, ResVT, Lo, Hi);
+  }
+
   Lo = BitConvertToInteger(Lo);
   Hi = BitConvertToInteger(Hi);
 
   if (DAG.getDataLayout().isBigEndian())
     std::swap(Lo, Hi);
 
-  return DAG.getNode(ISD::BITCAST, SDLoc(N), N->getValueType(0),
-                     JoinIntegers(Lo, Hi));
+  return DAG.getNode(ISD::BITCAST, dl, ResVT, JoinIntegers(Lo, Hi));
 }
 
 SDValue DAGTypeLegalizer::SplitVecOp_INSERT_SUBVECTOR(SDNode *N,
@@ -3478,7 +3500,8 @@ SDValue DAGTypeLegalizer::SplitVecOp_VP_STORE(VPStoreSDNode *N, unsigned OpNo) {
   SDValue Lo, Hi;
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
       N->getPointerInfo(), MachineMemOperand::MOStore,
-      MemoryLocation::UnknownSize, Alignment, N->getAAInfo(), N->getRanges());
+      LocationSize::beforeOrAfterPointer(), Alignment, N->getAAInfo(),
+      N->getRanges());
 
   Lo = DAG.getStoreVP(Ch, DL, DataLo, Ptr, Offset, MaskLo, EVLLo, LoMemVT, MMO,
                       N->getAddressingMode(), N->isTruncatingStore(),
@@ -3501,8 +3524,8 @@ SDValue DAGTypeLegalizer::SplitVecOp_VP_STORE(VPStoreSDNode *N, unsigned OpNo) {
         LoMemVT.getStoreSize().getFixedValue());
 
   MMO = DAG.getMachineFunction().getMachineMemOperand(
-      MPI, MachineMemOperand::MOStore, MemoryLocation::UnknownSize, Alignment,
-      N->getAAInfo(), N->getRanges());
+      MPI, MachineMemOperand::MOStore, LocationSize::beforeOrAfterPointer(),
+      Alignment, N->getAAInfo(), N->getRanges());
 
   Hi = DAG.getStoreVP(Ch, DL, DataHi, Ptr, Offset, MaskHi, EVLHi, HiMemVT, MMO,
                       N->getAddressingMode(), N->isTruncatingStore(),
@@ -3574,8 +3597,8 @@ SDValue DAGTypeLegalizer::SplitVecOp_VP_STRIDED_STORE(VPStridedStoreSDNode *N,
 
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
       MachinePointerInfo(N->getPointerInfo().getAddrSpace()),
-      MachineMemOperand::MOStore, MemoryLocation::UnknownSize, Alignment,
-      N->getAAInfo(), N->getRanges());
+      MachineMemOperand::MOStore, LocationSize::beforeOrAfterPointer(),
+      Alignment, N->getAAInfo(), N->getRanges());
 
   SDValue Hi = DAG.getStridedStoreVP(
       N->getChain(), DL, HiData, Ptr, N->getOffset(), N->getStride(), HiMask,
@@ -3626,7 +3649,8 @@ SDValue DAGTypeLegalizer::SplitVecOp_MSTORE(MaskedStoreSDNode *N,
   SDValue Lo, Hi, Res;
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
       N->getPointerInfo(), MachineMemOperand::MOStore,
-      MemoryLocation::UnknownSize, Alignment, N->getAAInfo(), N->getRanges());
+      LocationSize::beforeOrAfterPointer(), Alignment, N->getAAInfo(),
+      N->getRanges());
 
   Lo = DAG.getMaskedStore(Ch, DL, DataLo, Ptr, Offset, MaskLo, LoMemVT, MMO,
                           N->getAddressingMode(), N->isTruncatingStore(),
@@ -3651,8 +3675,8 @@ SDValue DAGTypeLegalizer::SplitVecOp_MSTORE(MaskedStoreSDNode *N,
           LoMemVT.getStoreSize().getFixedValue());
 
     MMO = DAG.getMachineFunction().getMachineMemOperand(
-        MPI, MachineMemOperand::MOStore, MemoryLocation::UnknownSize, Alignment,
-        N->getAAInfo(), N->getRanges());
+        MPI, MachineMemOperand::MOStore, LocationSize::beforeOrAfterPointer(),
+        Alignment, N->getAAInfo(), N->getRanges());
 
     Hi = DAG.getMaskedStore(Ch, DL, DataHi, Ptr, Offset, MaskHi, HiMemVT, MMO,
                             N->getAddressingMode(), N->isTruncatingStore(),
@@ -3716,7 +3740,8 @@ SDValue DAGTypeLegalizer::SplitVecOp_Scatter(MemSDNode *N, unsigned OpNo) {
   SDValue Lo;
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
       N->getPointerInfo(), MachineMemOperand::MOStore,
-      MemoryLocation::UnknownSize, Alignment, N->getAAInfo(), N->getRanges());
+      LocationSize::beforeOrAfterPointer(), Alignment, N->getAAInfo(),
+      N->getRanges());
 
   if (auto *MSC = dyn_cast<MaskedScatterSDNode>(N)) {
     SDValue OpsLo[] = {Ch, DataLo, MaskLo, Ptr, IndexLo, Ops.Scale};
@@ -4035,6 +4060,29 @@ SDValue DAGTypeLegalizer::SplitVecOp_FP_TO_XINT_SAT(SDNode *N) {
   return DAG.getNode(ISD::CONCAT_VECTORS, dl, ResVT, Lo, Hi);
 }
 
+SDValue DAGTypeLegalizer::SplitVecOp_VP_CttzElements(SDNode *N) {
+  SDLoc DL(N);
+  EVT ResVT = N->getValueType(0);
+
+  SDValue Lo, Hi;
+  SDValue VecOp = N->getOperand(0);
+  GetSplitVector(VecOp, Lo, Hi);
+
+  auto [MaskLo, MaskHi] = SplitMask(N->getOperand(1));
+  auto [EVLLo, EVLHi] =
+      DAG.SplitEVL(N->getOperand(2), VecOp.getValueType(), DL);
+  SDValue VLo = DAG.getZExtOrTrunc(EVLLo, DL, ResVT);
+
+  // if VP_CTTZ_ELTS(Lo) != EVLLo => VP_CTTZ_ELTS(Lo).
+  // else => EVLLo + (VP_CTTZ_ELTS(Hi) or VP_CTTZ_ELTS_ZERO_UNDEF(Hi)).
+  SDValue ResLo = DAG.getNode(ISD::VP_CTTZ_ELTS, DL, ResVT, Lo, MaskLo, EVLLo);
+  SDValue ResLoNotEVL =
+      DAG.getSetCC(DL, getSetCCResultType(ResVT), ResLo, VLo, ISD::SETNE);
+  SDValue ResHi = DAG.getNode(N->getOpcode(), DL, ResVT, Hi, MaskHi, EVLHi);
+  return DAG.getSelect(DL, ResVT, ResLoNotEVL, ResLo,
+                       DAG.getNode(ISD::ADD, DL, ResVT, VLo, ResHi));
+}
+
 //===----------------------------------------------------------------------===//
 //  Result Vector Widening
 //===----------------------------------------------------------------------===//
@@ -4221,7 +4269,8 @@ void DAGTypeLegalizer::WidenVectorResult(SDNode *N, unsigned ResNo) {
     break;
 
   case ISD::IS_FPCLASS:
-    Res = WidenVecRes_IS_FPCLASS(N);
+  case ISD::FPTRUNC_ROUND:
+    Res = WidenVecRes_UnarySameEltsWithScalarArg(N);
     break;
 
   case ISD::FLDEXP:
@@ -4983,7 +5032,10 @@ SDValue DAGTypeLegalizer::WidenVecRes_FCOPYSIGN(SDNode *N) {
   return DAG.UnrollVectorOp(N, WidenVT.getVectorNumElements());
 }
 
-SDValue DAGTypeLegalizer::WidenVecRes_IS_FPCLASS(SDNode *N) {
+/// Result and first source operand are different scalar types, but must have
+/// the same number of elements. There is an additional control argument which
+/// should be passed through unchanged.
+SDValue DAGTypeLegalizer::WidenVecRes_UnarySameEltsWithScalarArg(SDNode *N) {
   SDValue FpValue = N->getOperand(0);
   EVT WidenVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
   if (getTypeAction(FpValue.getValueType()) != TargetLowering::TypeWidenVector)
@@ -6136,6 +6188,10 @@ bool DAGTypeLegalizer::WidenVectorOperand(SDNode *N, unsigned OpNo) {
   case ISD::VP_REDUCE_FMIN:
     Res = WidenVecOp_VP_REDUCE(N);
     break;
+  case ISD::VP_CTTZ_ELTS:
+  case ISD::VP_CTTZ_ELTS_ZERO_UNDEF:
+    Res = WidenVecOp_VP_CttzElements(N);
+    break;
   }
 
   // If Res is null, the sub-method took care of registering the result.
@@ -6897,6 +6953,17 @@ SDValue DAGTypeLegalizer::WidenVecOp_VSELECT(SDNode *N) {
                                LeftIn, RightIn);
   return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, Select,
                      DAG.getVectorIdxConstant(0, DL));
+}
+
+SDValue DAGTypeLegalizer::WidenVecOp_VP_CttzElements(SDNode *N) {
+  SDLoc DL(N);
+  SDValue Source = GetWidenedVector(N->getOperand(0));
+  EVT SrcVT = Source.getValueType();
+  SDValue Mask =
+      GetWidenedMask(N->getOperand(1), SrcVT.getVectorElementCount());
+
+  return DAG.getNode(N->getOpcode(), DL, N->getValueType(0),
+                     {Source, Mask, N->getOperand(2)}, N->getFlags());
 }
 
 //===----------------------------------------------------------------------===//

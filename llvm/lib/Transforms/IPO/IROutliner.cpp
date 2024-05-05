@@ -723,8 +723,8 @@ static void moveFunctionData(Function &Old, Function &New,
     for (Instruction &Val : CurrBB) {
       // Since debug-info originates from many different locations in the
       // program, it will cause incorrect reporting from a debugger if we keep
-      // the same debug instructions. Drop non-intrinsic DPValues here,
-      // collect intrinsics for removal later.
+      // the same debug instructions. Drop non-intrinsic DbgVariableRecords
+      // here, collect intrinsics for removal later.
       Val.dropDbgRecords();
 
       // We must handle the scoping of called functions differently than

@@ -82,6 +82,9 @@ struct InlineDescriptor {
   InlineDescriptor(const Descriptor *D)
       : Offset(sizeof(InlineDescriptor)), IsConst(false), IsInitialized(false),
         IsBase(false), IsActive(false), IsFieldMutable(false), Desc(D) {}
+
+  void dump() const { dump(llvm::errs()); }
+  void dump(llvm::raw_ostream &OS) const;
 };
 
 /// Describes a memory block created by an allocation site.
@@ -112,6 +115,10 @@ public:
   const Record *const ElemRecord = nullptr;
   /// Descriptor of the array element.
   const Descriptor *const ElemDesc = nullptr;
+  /// The primitive type this descriptor was created for,
+  /// or the primitive element type in case this is
+  /// a primitive array.
+  const std::optional<PrimType> PrimT = std::nullopt;
   /// Flag indicating if the block is mutable.
   const bool IsConst = false;
   /// Flag indicating if a field is mutable.
@@ -152,7 +159,11 @@ public:
   Descriptor(const DeclTy &D, const Record *R, MetadataSize MD, bool IsConst,
              bool IsTemporary, bool IsMutable);
 
-  Descriptor(const DeclTy &D, MetadataSize MD);
+  /// Allocates a dummy descriptor.
+  Descriptor(const DeclTy &D);
+
+  /// Allocates a dummy array descriptor.
+  Descriptor(const DeclTy &D, UnknownSize);
 
   QualType getType() const;
   QualType getElemQualType() const;
@@ -160,6 +171,7 @@ public:
 
   const Decl *asDecl() const { return Source.dyn_cast<const Decl *>(); }
   const Expr *asExpr() const { return Source.dyn_cast<const Expr *>(); }
+  const DeclTy &getSource() const { return Source; }
 
   const ValueDecl *asValueDecl() const {
     return dyn_cast_if_present<ValueDecl>(asDecl());
@@ -181,6 +193,11 @@ public:
   unsigned getSize() const {
     assert(!isUnknownSizeArray() && "Array of unknown size");
     return Size;
+  }
+
+  PrimType getPrimType() const {
+    assert(isPrimitiveArray() || isPrimitive());
+    return *PrimT;
   }
 
   /// Returns the allocated size, including metadata.

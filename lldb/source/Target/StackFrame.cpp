@@ -1203,26 +1203,23 @@ bool StackFrame::IsArtificial() const {
   return m_stack_frame_kind == StackFrame::Kind::Artificial;
 }
 
-lldb::LanguageType StackFrame::GetLanguage() {
+SourceLanguage StackFrame::GetLanguage() {
   CompileUnit *cu = GetSymbolContext(eSymbolContextCompUnit).comp_unit;
   if (cu)
     return cu->GetLanguage();
-  return lldb::eLanguageTypeUnknown;
+  return {};
 }
 
-lldb::LanguageType StackFrame::GuessLanguage() {
-  LanguageType lang_type = GetLanguage();
+SourceLanguage StackFrame::GuessLanguage() {
+  SourceLanguage lang_type = GetLanguage();
 
   if (lang_type == eLanguageTypeUnknown) {
-    SymbolContext sc = GetSymbolContext(eSymbolContextFunction
-                                        | eSymbolContextSymbol);
-    if (sc.function) {
-      lang_type = sc.function->GetMangled().GuessLanguage();
-    }
+    SymbolContext sc =
+        GetSymbolContext(eSymbolContextFunction | eSymbolContextSymbol);
+    if (sc.function)
+      lang_type = LanguageType(sc.function->GetMangled().GuessLanguage());
     else if (sc.symbol)
-    {
-      lang_type = sc.symbol->GetMangled().GuessLanguage();
-    }
+      lang_type = SourceLanguage(sc.symbol->GetMangled().GuessLanguage());
   }
 
   return lang_type;
@@ -1302,7 +1299,7 @@ GetBaseExplainingDereference(const Instruction::Operand &operand,
   }
   return std::make_pair(nullptr, 0);
 }
-}
+} // namespace
 
 lldb::ValueObjectSP StackFrame::GuessValueForAddress(lldb::addr_t addr) {
   TargetSP target_sp = CalculateTarget();
@@ -1800,7 +1797,6 @@ void StackFrame::DumpUsingSettingsFormat(Stream *strm, bool show_unique,
     return;
 
   ExecutionContext exe_ctx(shared_from_this());
-  StreamString s;
 
   const FormatEntity::Entry *frame_format = nullptr;
   Target *target = exe_ctx.GetTargetPtr();
@@ -1922,7 +1918,7 @@ bool StackFrame::GetStatus(Stream &strm, bool show_frame_info, bool show_source,
 
           size_t num_lines =
               target->GetSourceManager().DisplaySourceLinesWithLineNumbers(
-                  m_sc.line_entry.file, start_line, m_sc.line_entry.column,
+                  m_sc.line_entry.GetFile(), start_line, m_sc.line_entry.column,
                   source_lines_before, source_lines_after, "->", &strm);
           if (num_lines != 0)
             have_source = true;

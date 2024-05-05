@@ -50,10 +50,15 @@ endif()
 target_compile_options(std
   PUBLIC
     -nostdinc++
-    -Wno-reserved-module-identifier
-    -Wno-reserved-user-defined-literal
     @LIBCXX_COMPILE_FLAGS@
 )
+target_compile_options(std
+  PRIVATE
+    -Wno-reserved-module-identifier
+    -Wno-reserved-user-defined-literal
+)
+target_link_options(std PUBLIC -nostdlib++ -Wl,-rpath,@LIBCXX_LIBRARY_DIR@ -L@LIBCXX_LIBRARY_DIR@)
+target_link_libraries(std c++)
 set_target_properties(std
   PROPERTIES
     OUTPUT_NAME   "c++std"
@@ -67,7 +72,7 @@ target_sources(std.compat
     std.compat.cppm
 )
 
-target_include_directories(std.compat SYSTEM PRIVATE @LIBCXX_CONFIGURED_INCLUDE_DIRS@)
+target_include_directories(std.compat SYSTEM PUBLIC @LIBCXX_CONFIGURED_INCLUDE_DIRS@)
 
 if (NOT @LIBCXX_ENABLE_EXCEPTIONS@)
   target_compile_options(std.compat PUBLIC -fno-exceptions)
@@ -76,13 +81,16 @@ endif()
 target_compile_options(std.compat
   PUBLIC
     -nostdinc++
+    @LIBCXX_COMPILE_FLAGS@
+)
+target_compile_options(std.compat
+ PRIVATE
     -Wno-reserved-module-identifier
     -Wno-reserved-user-defined-literal
-	-fmodule-file=std=${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/std.dir/std.pcm
-    @LIBCXX_COMPILE_FLAGS@
 )
 set_target_properties(std.compat
   PROPERTIES
     OUTPUT_NAME   "c++std.compat"
 )
 add_dependencies(std.compat std)
+target_link_libraries(std.compat PUBLIC std c++)

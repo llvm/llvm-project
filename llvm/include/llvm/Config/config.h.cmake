@@ -290,6 +290,9 @@
 /* Whether tools show host and target info when invoked with --version */
 #cmakedefine01 LLVM_VERSION_PRINTER_SHOW_HOST_TARGET_INFO
 
+/* Whether tools show optional build config flags when invoked with --version */
+#cmakedefine01 LLVM_VERSION_PRINTER_SHOW_BUILD_CONFIG
+
 /* Define if libxml2 is supported on this platform. */
 #cmakedefine LLVM_ENABLE_LIBXML2 ${LLVM_ENABLE_LIBXML2}
 

@@ -4,7 +4,7 @@
 define float @test1(i32 %scale) {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.smax.i32(i32 [[SCALE:%.*]], i32 1)
-; CHECK-NEXT:    [[TMP2:%.*]] = uitofp i32 [[TMP1]] to float
+; CHECK-NEXT:    [[TMP2:%.*]] = uitofp nneg i32 [[TMP1]] to float
 ; CHECK-NEXT:    ret float [[TMP2]]
 ;
   %1 = icmp sgt i32 1, %scale

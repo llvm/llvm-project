@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -std=c++23  -x c++ %s -verify
 // RUN: %clang_cc1 -std=c++20 -pedantic -x c++ %s -verify=ext,expected
+// RUN: %clang_cc1 -std=c++23  -x c++ %s -verify -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -std=c++20 -pedantic -x c++ %s -verify=ext,expected -fexperimental-new-constant-interpreter
 
 struct A{};
 struct B{ explicit operator bool() { return true; } };
@@ -126,3 +128,13 @@ static_assert(f5<D>() == 1); // expected-note 3 {{while checking constraint sati
 static_assert(f5<double>() == 2);
 static_assert(f5<E>() == 1); // expected-note {{while checking constraint satisfaction}} expected-note {{in instantiation of}}
 static_assert(f5<F>() == 2); // expected-note {{while checking constraint satisfaction}} expected-note {{in instantiation of}}
+
+// Do not validate assumptions whose evaluation would have side-effects.
+constexpr int foo() {
+  int a = 0;
+  [[assume(a++)]] [[assume(++a)]]; // expected-warning 2 {{has side effects that will be discarded}} ext-warning 2 {{C++23 extension}}
+  [[assume((a+=1))]]; // expected-warning {{has side effects that will be discarded}} ext-warning {{C++23 extension}}
+  return a;
+}
+
+static_assert(foo() == 0);

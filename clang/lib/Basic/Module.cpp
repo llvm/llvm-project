@@ -140,8 +140,8 @@ bool Module::isUnimportable(const LangOptions &LangOpts,
       return true;
     }
     for (unsigned I = 0, N = Current->Requirements.size(); I != N; ++I) {
-      if (hasFeature(Current->Requirements[I].first, LangOpts, Target) !=
-              Current->Requirements[I].second) {
+      if (hasFeature(Current->Requirements[I].FeatureName, LangOpts, Target) !=
+          Current->Requirements[I].RequiredState) {
         Req = Current->Requirements[I];
         return true;
       }
@@ -305,6 +305,10 @@ bool Module::directlyUses(const Module *Requested) {
   if (Requested->fullModuleNameIs({"_Builtin_stddef", "max_align_t"}) ||
       Requested->fullModuleNameIs({"_Builtin_stddef_wint_t"}))
     return true;
+  // Darwin is allowed is to use our builtin 'ptrauth.h' and its accompanying
+  // module.
+  if (!Requested->Parent && Requested->Name == "ptrauth")
+    return true;
 
   if (NoUndeclaredIncludes)
     UndeclaredUses.insert(Requested);
@@ -315,7 +319,7 @@ bool Module::directlyUses(const Module *Requested) {
 void Module::addRequirement(StringRef Feature, bool RequiredState,
                             const LangOptions &LangOpts,
                             const TargetInfo &Target) {
-  Requirements.push_back(Requirement(std::string(Feature), RequiredState));
+  Requirements.push_back(Requirement{std::string(Feature), RequiredState});
 
   // If this feature is currently available, we're done.
   if (hasFeature(Feature, LangOpts, Target) == RequiredState)
@@ -500,9 +504,9 @@ void Module::print(raw_ostream &OS, unsigned Indent, bool Dump) const {
     for (unsigned I = 0, N = Requirements.size(); I != N; ++I) {
       if (I)
         OS << ", ";
-      if (!Requirements[I].second)
+      if (!Requirements[I].RequiredState)
         OS << "!";
-      OS << Requirements[I].first;
+      OS << Requirements[I].FeatureName;
     }
     OS << "\n";
   }

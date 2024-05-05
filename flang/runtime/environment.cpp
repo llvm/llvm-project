@@ -23,9 +23,11 @@ extern char **environ;
 
 namespace Fortran::runtime {
 
+#ifndef FLANG_RUNTIME_NO_GLOBAL_VAR_DEFS
 RT_OFFLOAD_VAR_GROUP_BEGIN
 RT_VAR_ATTRS ExecutionEnvironment executionEnvironment;
 RT_OFFLOAD_VAR_GROUP_END
+#endif // FLANG_RUNTIME_NO_GLOBAL_VAR_DEFS
 
 static void SetEnvironmentDefaults(const EnvironmentDefaultList *envDefaults) {
   if (!envDefaults) {
@@ -49,7 +51,9 @@ static void SetEnvironmentDefaults(const EnvironmentDefaultList *envDefaults) {
   }
 }
 
-std::optional<Convert> GetConvertFromString(const char *x, std::size_t n) {
+RT_OFFLOAD_API_GROUP_BEGIN
+Fortran::common::optional<Convert> GetConvertFromString(
+    const char *x, std::size_t n) {
   static const char *keywords[]{
       "UNKNOWN", "NATIVE", "LITTLE_ENDIAN", "BIG_ENDIAN", "SWAP", nullptr};
   switch (IdentifyValue(x, n, keywords)) {
@@ -64,9 +68,10 @@ std::optional<Convert> GetConvertFromString(const char *x, std::size_t n) {
   case 4:
     return Convert::Swap;
   default:
-    return std::nullopt;
+    return Fortran::common::nullopt;
   }
 }
+RT_OFFLOAD_API_GROUP_END
 
 void ExecutionEnvironment::Configure(int ac, const char *av[],
     const char *env[], const EnvironmentDefaultList *envDefaults) {

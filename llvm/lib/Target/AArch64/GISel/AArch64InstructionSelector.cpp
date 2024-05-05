@@ -191,7 +191,6 @@ private:
   MachineInstr *tryAdvSIMDModImmFP(Register Dst, unsigned DstSize, APInt Bits,
                                    MachineIRBuilder &MIRBuilder);
 
-  bool selectInsertElt(MachineInstr &I, MachineRegisterInfo &MRI);
   bool tryOptConstantBuildVec(MachineInstr &MI, LLT DstTy,
                               MachineRegisterInfo &MRI);
   /// \returns true if a G_BUILD_VECTOR instruction \p MI can be selected as a
@@ -479,6 +478,8 @@ private:
                           int OpIdx = -1) const;
   void renderLogicalImm64(MachineInstrBuilder &MIB, const MachineInstr &I,
                           int OpIdx = -1) const;
+  void renderUbsanTrap(MachineInstrBuilder &MIB, const MachineInstr &MI,
+                       int OpIdx) const;
   void renderFPImm16(MachineInstrBuilder &MIB, const MachineInstr &MI,
                      int OpIdx = -1) const;
   void renderFPImm32(MachineInstrBuilder &MIB, const MachineInstr &MI,
@@ -2852,8 +2853,8 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
       return false;
     }
 
-    uint64_t MemSizeInBytes = LdSt.getMemSize();
-    unsigned MemSizeInBits = LdSt.getMemSizeInBits();
+    uint64_t MemSizeInBytes = LdSt.getMemSize().getValue();
+    unsigned MemSizeInBits = LdSt.getMemSizeInBits().getValue();
     AtomicOrdering Order = LdSt.getMMO().getSuccessOrdering();
 
     // Need special instructions for atomics that affect ordering.
@@ -3276,7 +3277,7 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
           RBI.getRegBank(SrcReg, MRI, TRI)->getID() == AArch64::GPRRegBankID;
       if (LoadMI && IsGPR) {
         const MachineMemOperand *MemOp = *LoadMI->memoperands_begin();
-        unsigned BytesLoaded = MemOp->getSize();
+        unsigned BytesLoaded = MemOp->getSize().getValue();
         if (BytesLoaded < 4 && SrcTy.getSizeInBytes() == BytesLoaded)
           return selectCopy(I, TII, MRI, TRI, RBI);
       }
@@ -3496,8 +3497,6 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
     return selectShuffleVector(I, MRI);
   case TargetOpcode::G_EXTRACT_VECTOR_ELT:
     return selectExtractElt(I, MRI);
-  case TargetOpcode::G_INSERT_VECTOR_ELT:
-    return selectInsertElt(I, MRI);
   case TargetOpcode::G_CONCAT_VECTORS:
     return selectConcatVectors(I, MRI);
   case TargetOpcode::G_JUMP_TABLE:
@@ -5328,65 +5327,6 @@ bool AArch64InstructionSelector::selectUSMovFromExtend(
   return true;
 }
 
-bool AArch64InstructionSelector::selectInsertElt(MachineInstr &I,
-                                                 MachineRegisterInfo &MRI) {
-  assert(I.getOpcode() == TargetOpcode::G_INSERT_VECTOR_ELT);
-
-  // Get information on the destination.
-  Register DstReg = I.getOperand(0).getReg();
-  const LLT DstTy = MRI.getType(DstReg);
-  unsigned VecSize = DstTy.getSizeInBits();
-
-  // Get information on the element we want to insert into the destination.
-  Register EltReg = I.getOperand(2).getReg();
-  const LLT EltTy = MRI.getType(EltReg);
-  unsigned EltSize = EltTy.getSizeInBits();
-  if (EltSize < 8 || EltSize > 64)
-    return false;
-
-  // Find the definition of the index. Bail out if it's not defined by a
-  // G_CONSTANT.
-  Register IdxReg = I.getOperand(3).getReg();
-  auto VRegAndVal = getIConstantVRegValWithLookThrough(IdxReg, MRI);
-  if (!VRegAndVal)
-    return false;
-  unsigned LaneIdx = VRegAndVal->Value.getSExtValue();
-
-  // Perform the lane insert.
-  Register SrcReg = I.getOperand(1).getReg();
-  const RegisterBank &EltRB = *RBI.getRegBank(EltReg, MRI, TRI);
-
-  if (VecSize < 128) {
-    // If the vector we're inserting into is smaller than 128 bits, widen it
-    // to 128 to do the insert.
-    MachineInstr *ScalarToVec =
-        emitScalarToVector(VecSize, &AArch64::FPR128RegClass, SrcReg, MIB);
-    if (!ScalarToVec)
-      return false;
-    SrcReg = ScalarToVec->getOperand(0).getReg();
-  }
-
-  // Create an insert into a new FPR128 register.
-  // Note that if our vector is already 128 bits, we end up emitting an extra
-  // register.
-  MachineInstr *InsMI =
-      emitLaneInsert(std::nullopt, SrcReg, EltReg, LaneIdx, EltRB, MIB);
-
-  if (VecSize < 128) {
-    // If we had to widen to perform the insert, then we have to demote back to
-    // the original size to get the result we want.
-    if (!emitNarrowVector(DstReg, InsMI->getOperand(0).getReg(), MIB, MRI))
-      return false;
-  } else {
-    // No widening needed.
-    InsMI->getOperand(0).setReg(DstReg);
-    constrainSelectedInstRegOperands(*InsMI, TII, TRI, RBI);
-  }
-
-  I.eraseFromParent();
-  return true;
-}
-
 MachineInstr *AArch64InstructionSelector::tryAdvSIMDModImm8(
     Register Dst, unsigned DstSize, APInt Bits, MachineIRBuilder &Builder) {
   unsigned int Op;
@@ -6159,16 +6099,6 @@ bool AArch64InstructionSelector::selectIntrinsicWithSideEffects(
     constrainSelectedInstRegOperands(*NewI, TII, TRI, RBI);
     break;
   }
-  case Intrinsic::trap:
-    MIB.buildInstr(AArch64::BRK, {}, {}).addImm(1);
-    break;
-  case Intrinsic::debugtrap:
-    MIB.buildInstr(AArch64::BRK, {}, {}).addImm(0xF000);
-    break;
-  case Intrinsic::ubsantrap:
-    MIB.buildInstr(AArch64::BRK, {}, {})
-        .addImm(I.getOperand(1).getImm() | ('U' << 8));
-    break;
   case Intrinsic::aarch64_neon_ld1x2: {
     LLT Ty = MRI.getType(I.getOperand(0).getReg());
     unsigned Opc = 0;
@@ -6915,10 +6845,8 @@ bool AArch64InstructionSelector::isWorthFoldingIntoExtendedReg(
       MI.getParent()->getParent()->getFunction().hasOptSize())
     return true;
 
-  // It's better to avoid folding and recomputing shifts when we don't have a
-  // fastpath.
-  if (!STI.hasAddrLSLFast())
-    return false;
+  // FIXME: Consider checking HasAddrLSLSlow14 and HasALULSLFast as
+  // appropriate.
 
   // We have a fastpath, so folding a shift in and potentially computing it
   // many times may be beneficial. Check if this is only used in memory ops.
@@ -7661,6 +7589,14 @@ void AArch64InstructionSelector::renderLogicalImm64(
   uint64_t CstVal = I.getOperand(1).getCImm()->getZExtValue();
   uint64_t Enc = AArch64_AM::encodeLogicalImmediate(CstVal, 64);
   MIB.addImm(Enc);
+}
+
+void AArch64InstructionSelector::renderUbsanTrap(MachineInstrBuilder &MIB,
+                                                 const MachineInstr &MI,
+                                                 int OpIdx) const {
+  assert(MI.getOpcode() == TargetOpcode::G_UBSANTRAP && OpIdx == 0 &&
+         "Expected G_UBSANTRAP");
+  MIB.addImm(MI.getOperand(0).getImm() | ('U' << 8));
 }
 
 void AArch64InstructionSelector::renderFPImm16(MachineInstrBuilder &MIB,

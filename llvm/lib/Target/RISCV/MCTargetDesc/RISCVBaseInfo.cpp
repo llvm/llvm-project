@@ -16,7 +16,6 @@
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
-#include "llvm/Support/RISCVISAInfo.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/TargetParser.h"
 #include "llvm/TargetParser/Triple.h"
@@ -40,7 +39,7 @@ ABI computeTargetABI(const Triple &TT, const FeatureBitset &FeatureBits,
                      StringRef ABIName) {
   auto TargetABI = getTargetABI(ABIName);
   bool IsRV64 = TT.isArch64Bit();
-  bool IsRVE = FeatureBits[RISCV::FeatureRVE];
+  bool IsRVE = FeatureBits[RISCV::FeatureStdExtE];
 
   if (!ABIName.empty() && TargetABI == ABI_Unknown) {
     errs()
@@ -235,7 +234,5 @@ void RISCVZC::printRlist(unsigned SlistEncode, raw_ostream &OS) {
   }
   OS << "}";
 }
-
-void RISCVZC::printSpimm(int64_t Spimm, raw_ostream &OS) { OS << Spimm; }
 
 } // namespace llvm

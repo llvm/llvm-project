@@ -13,6 +13,7 @@
 #ifndef FORTRAN_LOWER_REDUCTIONPROCESSOR_H
 #define FORTRAN_LOWER_REDUCTIONPROCESSOR_H
 
+#include "Clauses.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Parser/parse-tree.h"
@@ -23,7 +24,7 @@
 
 namespace mlir {
 namespace omp {
-class ReductionDeclareOp;
+class DeclareReductionOp;
 } // namespace omp
 } // namespace mlir
 
@@ -58,29 +59,31 @@ public:
   };
 
   static ReductionIdentifier
-  getReductionType(const Fortran::parser::ProcedureDesignator &pd);
+  getReductionType(const omp::clause::ProcedureDesignator &pd);
 
-  static ReductionIdentifier getReductionType(
-      Fortran::parser::DefinedOperator::IntrinsicOperator intrinsicOp);
+  static ReductionIdentifier
+  getReductionType(omp::clause::DefinedOperator::IntrinsicOperator intrinsicOp);
 
-  static bool supportedIntrinsicProcReduction(
-      const Fortran::parser::ProcedureDesignator &pd);
-
-  static const Fortran::semantics::SourceName
-  getRealName(const Fortran::parser::Name *name);
+  static bool
+  supportedIntrinsicProcReduction(const omp::clause::ProcedureDesignator &pd);
 
   static const Fortran::semantics::SourceName
-  getRealName(const Fortran::parser::ProcedureDesignator &pd);
+  getRealName(const Fortran::semantics::Symbol *symbol);
+
+  static const Fortran::semantics::SourceName
+  getRealName(const omp::clause::ProcedureDesignator &pd);
 
   static bool
   doReductionByRef(const llvm::SmallVectorImpl<mlir::Value> &reductionVars);
 
-  static std::string getReductionName(llvm::StringRef name, mlir::Type ty,
-                                      bool isByRef);
+  static std::string getReductionName(llvm::StringRef name,
+                                      const fir::KindMapping &kindMap,
+                                      mlir::Type ty, bool isByRef);
 
-  static std::string getReductionName(
-      Fortran::parser::DefinedOperator::IntrinsicOperator intrinsicOp,
-      mlir::Type ty, bool isByRef);
+  static std::string
+  getReductionName(omp::clause::DefinedOperator::IntrinsicOperator intrinsicOp,
+                   const fir::KindMapping &kindMap, mlir::Type ty,
+                   bool isByRef);
 
   /// This function returns the identity value of the operator \p
   /// reductionOpName. For example:
@@ -97,6 +100,10 @@ public:
   static mlir::Value getReductionOperation(fir::FirOpBuilder &builder,
                                            mlir::Type type, mlir::Location loc,
                                            mlir::Value op1, mlir::Value op2);
+  template <typename FloatOp, typename IntegerOp, typename ComplexOp>
+  static mlir::Value getReductionOperation(fir::FirOpBuilder &builder,
+                                           mlir::Type type, mlir::Location loc,
+                                           mlir::Value op1, mlir::Value op2);
 
   static mlir::Value createScalarCombiner(fir::FirOpBuilder &builder,
                                           mlir::Location loc,
@@ -107,23 +114,23 @@ public:
   /// Creates an OpenMP reduction declaration and inserts it into the provided
   /// symbol table. The declaration has a constant initializer with the neutral
   /// value `initValue`, and the reduction combiner carried over from `reduce`.
-  /// TODO: Generalize this for non-integer types, add atomic region.
-  static mlir::omp::ReductionDeclareOp
-  createReductionDecl(fir::FirOpBuilder &builder,
-                      llvm::StringRef reductionOpName,
-                      const ReductionIdentifier redId, mlir::Type type,
-                      mlir::Location loc, bool isByRef);
+  /// TODO: add atomic region.
+  static mlir::omp::DeclareReductionOp
+  createDeclareReduction(fir::FirOpBuilder &builder,
+                         llvm::StringRef reductionOpName,
+                         const ReductionIdentifier redId, mlir::Type type,
+                         mlir::Location loc, bool isByRef);
 
   /// Creates a reduction declaration and associates it with an OpenMP block
   /// directive.
-  static void
-  addReductionDecl(mlir::Location currentLocation,
-                   Fortran::lower::AbstractConverter &converter,
-                   const Fortran::parser::OmpReductionClause &reduction,
-                   llvm::SmallVectorImpl<mlir::Value> &reductionVars,
-                   llvm::SmallVectorImpl<mlir::Attribute> &reductionDeclSymbols,
-                   llvm::SmallVectorImpl<const Fortran::semantics::Symbol *>
-                       *reductionSymbols = nullptr);
+  static void addDeclareReduction(
+      mlir::Location currentLocation,
+      Fortran::lower::AbstractConverter &converter,
+      const omp::clause::Reduction &reduction,
+      llvm::SmallVectorImpl<mlir::Value> &reductionVars,
+      llvm::SmallVectorImpl<mlir::Attribute> &reductionDeclSymbols,
+      llvm::SmallVectorImpl<const Fortran::semantics::Symbol *>
+          *reductionSymbols = nullptr);
 };
 
 template <typename FloatOp, typename IntegerOp>
@@ -133,10 +140,24 @@ ReductionProcessor::getReductionOperation(fir::FirOpBuilder &builder,
                                           mlir::Value op1, mlir::Value op2) {
   type = fir::unwrapRefType(type);
   assert(type.isIntOrIndexOrFloat() &&
-         "only integer and float types are currently supported");
+         "only integer, float and complex types are currently supported");
   if (type.isIntOrIndex())
     return builder.create<IntegerOp>(loc, op1, op2);
   return builder.create<FloatOp>(loc, op1, op2);
+}
+
+template <typename FloatOp, typename IntegerOp, typename ComplexOp>
+mlir::Value
+ReductionProcessor::getReductionOperation(fir::FirOpBuilder &builder,
+                                          mlir::Type type, mlir::Location loc,
+                                          mlir::Value op1, mlir::Value op2) {
+  assert((type.isIntOrIndexOrFloat() || fir::isa_complex(type)) &&
+         "only integer, float and complex types are currently supported");
+  if (type.isIntOrIndex())
+    return builder.create<IntegerOp>(loc, op1, op2);
+  if (fir::isa_real(type))
+    return builder.create<FloatOp>(loc, op1, op2);
+  return builder.create<ComplexOp>(loc, op1, op2);
 }
 
 } // namespace omp

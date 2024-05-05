@@ -11,12 +11,13 @@
 
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
+#include "test/UnitTest/FEnvSafeTest.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
 
+#include "hdr/math_macros.h"
 #include <errno.h>
-#include <math.h>
 
 namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
@@ -24,14 +25,14 @@ static constexpr int ROUNDING_MODES[4] = {FE_UPWARD, FE_DOWNWARD, FE_TOWARDZERO,
                                           FE_TONEAREST};
 
 template <typename F, typename I, bool TestModes = false>
-class RoundToIntegerTestTemplate : public LIBC_NAMESPACE::testing::Test {
+class RoundToIntegerTestTemplate
+    : public LIBC_NAMESPACE::testing::FEnvSafeTest {
 public:
   typedef I (*RoundToIntegerFunc)(F);
 
 private:
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<F>;
   using StorageType = typename FPBits::StorageType;
-  using Sign = LIBC_NAMESPACE::fputil::Sign;
 
   const F zero = FPBits::zero().get_val();
   const F neg_zero = FPBits::zero(Sign::NEG).get_val();
@@ -82,6 +83,8 @@ private:
 
 public:
   void SetUp() override {
+    LIBC_NAMESPACE::testing::FEnvSafeTest::SetUp();
+
     if (math_errhandling & MATH_ERREXCEPT) {
       // We will disable all exceptions so that the test will not
       // crash with SIGFPE. We can still use fetestexcept to check

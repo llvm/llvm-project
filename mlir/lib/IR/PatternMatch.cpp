@@ -11,6 +11,7 @@
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/Iterators.h"
 #include "mlir/IR/RegionKindInterface.h"
+#include "llvm/ADT/SmallPtrSet.h"
 
 using namespace mlir;
 
@@ -110,16 +111,28 @@ RewriterBase::~RewriterBase() {
   // Out of line to provide a vtable anchor for the class.
 }
 
+void RewriterBase::replaceAllOpUsesWith(Operation *from, ValueRange to) {
+  // Notify the listener that we're about to replace this op.
+  if (auto *rewriteListener = dyn_cast_if_present<Listener>(listener))
+    rewriteListener->notifyOperationReplaced(from, to);
+
+  replaceAllUsesWith(from->getResults(), to);
+}
+
+void RewriterBase::replaceAllOpUsesWith(Operation *from, Operation *to) {
+  // Notify the listener that we're about to replace this op.
+  if (auto *rewriteListener = dyn_cast_if_present<Listener>(listener))
+    rewriteListener->notifyOperationReplaced(from, to);
+
+  replaceAllUsesWith(from->getResults(), to->getResults());
+}
+
 /// This method replaces the results of the operation with the specified list of
 /// values. The number of provided values must match the number of results of
 /// the operation. The replaced op is erased.
 void RewriterBase::replaceOp(Operation *op, ValueRange newValues) {
   assert(op->getNumResults() == newValues.size() &&
          "incorrect # of replacement values");
-
-  // Notify the listener that we're about to replace this op.
-  if (auto *rewriteListener = dyn_cast_if_present<Listener>(listener))
-    rewriteListener->notifyOperationReplaced(op, newValues);
 
   // Replace all result uses. Also notifies the listener of modifications.
   replaceAllOpUsesWith(op, newValues);
@@ -135,10 +148,6 @@ void RewriterBase::replaceOp(Operation *op, Operation *newOp) {
   assert(op && newOp && "expected non-null op");
   assert(op->getNumResults() == newOp->getNumResults() &&
          "ops have different number of results");
-
-  // Notify the listener that we're about to replace this op.
-  if (auto *rewriteListener = dyn_cast_if_present<Listener>(listener))
-    rewriteListener->notifyOperationReplaced(op, newOp);
 
   // Replace all result uses. Also notifies the listener of modifications.
   replaceAllOpUsesWith(op, newOp->getResults());
@@ -240,6 +249,14 @@ void RewriterBase::finalizeOpModification(Operation *op) {
   // Notify the listener that the operation was modified.
   if (auto *rewriteListener = dyn_cast_if_present<Listener>(listener))
     rewriteListener->notifyOperationModified(op);
+}
+
+void RewriterBase::replaceAllUsesExcept(
+    Value from, Value to, const SmallPtrSetImpl<Operation *> &preservedUsers) {
+  return replaceUsesWithIf(from, to, [&](OpOperand &use) {
+    Operation *user = use.getOwner();
+    return !preservedUsers.contains(user);
+  });
 }
 
 void RewriterBase::replaceUsesWithIf(Value from, Value to,

@@ -55,6 +55,8 @@ static void genUnreachable(fir::FirOpBuilder &builder, mlir::Location loc) {
 void Fortran::lower::genStopStatement(
     Fortran::lower::AbstractConverter &converter,
     const Fortran::parser::StopStmt &stmt) {
+  const bool isError = std::get<Fortran::parser::StopStmt::Kind>(stmt.t) ==
+                       Fortran::parser::StopStmt::Kind::ErrorStop;
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   mlir::Location loc = converter.getCurrentLocation();
   Fortran::lower::StatementContext stmtCtx;
@@ -94,13 +96,12 @@ void Fortran::lower::genStopStatement(
   } else {
     callee = fir::runtime::getRuntimeFunc<mkRTKey(StopStatement)>(loc, builder);
     calleeType = callee.getFunctionType();
-    operands.push_back(
-        builder.createIntegerConstant(loc, calleeType.getInput(0), 0));
+    // Default to values are advised in F'2023 11.4 p2.
+    operands.push_back(builder.createIntegerConstant(
+        loc, calleeType.getInput(0), isError ? 1 : 0));
   }
 
   // Second operand indicates ERROR STOP
-  bool isError = std::get<Fortran::parser::StopStmt::Kind>(stmt.t) ==
-                 Fortran::parser::StopStmt::Kind::ErrorStop;
   operands.push_back(builder.createIntegerConstant(
       loc, calleeType.getInput(operands.size()), isError));
 
