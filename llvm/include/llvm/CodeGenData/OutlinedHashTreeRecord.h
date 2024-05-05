@@ -16,13 +16,22 @@
 #ifndef LLVM_CODEGENDATA_OUTLINEDHASHTREERECORD_H
 #define LLVM_CODEGENDATA_OUTLINEDHASHTREERECORD_H
 
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/CodeGenData/OutlinedHashTree.h"
 
 namespace llvm {
 
+/// HashNodeStable is the serialized, stable, and compact representation
+/// of a HashNode.
+struct HashNodeStable {
+  llvm::yaml::Hex64 Hash;
+  unsigned Terminals;
+  std::vector<unsigned> SuccessorIds;
+};
+
 using IdHashNodeStableMapTy = std::map<unsigned, HashNodeStable>;
-using IdHashNodeMapTy = std::map<unsigned, HashNode *>;
-using HashNodeIdMapTy = std::unordered_map<const HashNode *, unsigned>;
+using IdHashNodeMapTy = DenseMap<unsigned, HashNode *>;
+using HashNodeIdMapTy = DenseMap<const HashNode *, unsigned>;
 
 struct OutlinedHashTreeRecord {
   std::unique_ptr<OutlinedHashTree> HashTree;

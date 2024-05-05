@@ -30,19 +30,12 @@ namespace llvm {
 /// a hash sequence with that occurrence count.
 struct HashNode {
   /// The hash value of the node.
-  stable_hash Hash;
+  stable_hash Hash = 0;
   /// The number of terminals in the sequence ending at this node.
-  unsigned Terminals;
+  std::optional<unsigned> Terminals;
   /// The successors of this node.
+  /// We don't use DenseMap as a stable_hash value can be tombstone.
   std::unordered_map<stable_hash, std::unique_ptr<HashNode>> Successors;
-};
-
-/// HashNodeStable is the serialized, stable, and compact representation
-/// of a HashNode.
-struct HashNodeStable {
-  llvm::yaml::Hex64 Hash;
-  unsigned Terminals;
-  std::vector<unsigned> SuccessorIds;
 };
 
 class OutlinedHashTree {
@@ -51,8 +44,8 @@ class OutlinedHashTree {
       std::function<void(const HashNode *, const HashNode *)>;
   using NodeCallbackFn = std::function<void(const HashNode *)>;
 
-  using HashSequence = std::vector<stable_hash>;
-  using HashSequencePair = std::pair<std::vector<stable_hash>, unsigned>;
+  using HashSequence = SmallVector<stable_hash>;
+  using HashSequencePair = std::pair<HashSequence, unsigned>;
 
 public:
   /// Walks every edge and node in the OutlinedHashTree and calls CallbackEdge
@@ -66,7 +59,7 @@ public:
 
   /// Release all hash nodes except the root hash node.
   void clear() {
-    assert(getRoot()->Hash == 0 && getRoot()->Terminals == 0);
+    assert(getRoot()->Hash == 0 && !getRoot()->Terminals);
     getRoot()->Successors.clear();
   }
 
@@ -83,8 +76,8 @@ public:
   size_t depth() const;
 
   /// \returns the root hash node of a OutlinedHashTree.
-  const HashNode *getRoot() const { return Root.get(); }
-  HashNode *getRoot() { return Root.get(); }
+  const HashNode *getRoot() const { return &Root; }
+  HashNode *getRoot() { return &Root; }
 
   /// Inserts a \p Sequence into the this tree. The last node in the sequence
   /// will increase Terminals.
@@ -94,12 +87,10 @@ public:
   void merge(const OutlinedHashTree *OtherTree);
 
   /// \returns the matching count if \p Sequence exists in the OutlinedHashTree.
-  unsigned find(const HashSequence &Sequence) const;
-
-  OutlinedHashTree() { Root = std::make_unique<HashNode>(); }
+  std::optional<unsigned> find(const HashSequence &Sequence) const;
 
 private:
-  std::unique_ptr<HashNode> Root;
+  HashNode Root;
 };
 
 } // namespace llvm

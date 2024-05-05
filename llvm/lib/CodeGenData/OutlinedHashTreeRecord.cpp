@@ -131,7 +131,7 @@ void OutlinedHashTreeRecord::convertToStableData(
     auto Id = P.second;
     HashNodeStable NodeStable;
     NodeStable.Hash = Node->Hash;
-    NodeStable.Terminals = Node->Terminals;
+    NodeStable.Terminals = Node->Terminals ? *Node->Terminals : 0;
     for (auto &P : Node->Successors)
       NodeStable.SuccessorIds.push_back(NodeIdMap[P.second.get()]);
     IdNodeStableMap[Id] = NodeStable;
@@ -139,7 +139,7 @@ void OutlinedHashTreeRecord::convertToStableData(
 
   // Sort the Successors so that they come out in the same order as in the map.
   for (auto &P : IdNodeStableMap)
-    std::sort(P.second.SuccessorIds.begin(), P.second.SuccessorIds.end());
+    llvm::sort(P.second.SuccessorIds);
 }
 
 void OutlinedHashTreeRecord::convertFromStableData(
@@ -155,7 +155,8 @@ void OutlinedHashTreeRecord::convertFromStableData(
     assert(IdNodeMap.count(Id));
     HashNode *Curr = IdNodeMap[Id];
     Curr->Hash = NodeStable.Hash;
-    Curr->Terminals = NodeStable.Terminals;
+    if (NodeStable.Terminals)
+      Curr->Terminals = NodeStable.Terminals;
     auto &Successors = Curr->Successors;
     assert(Successors.empty());
     for (auto SuccessorId : NodeStable.SuccessorIds) {

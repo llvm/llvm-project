@@ -50,8 +50,9 @@ TEST(OutlinedHashTreeTest, Find) {
   // The node count does not change as the same sequences are added.
   ASSERT_TRUE(HashTree.size() == 4);
   // The terminal counts are accumulated from two same sequences.
-  ASSERT_TRUE(HashTree.find({1, 2, 3}) == 3);
-  ASSERT_TRUE(HashTree.find({1, 2}) == 0);
+  ASSERT_TRUE(HashTree.find({1, 2, 3}));
+  ASSERT_TRUE(HashTree.find({1, 2, 3}).value() == 3);
+  ASSERT_FALSE(HashTree.find({1, 2}));
 }
 
 TEST(OutlinedHashTreeTest, Merge) {

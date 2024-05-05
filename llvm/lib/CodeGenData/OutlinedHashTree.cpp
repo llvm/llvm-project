@@ -24,19 +24,18 @@ using namespace llvm;
 void OutlinedHashTree::walkGraph(NodeCallbackFn CallbackNode,
                                  EdgeCallbackFn CallbackEdge,
                                  bool SortedWalk) const {
-  std::stack<const HashNode *> Stack;
-  Stack.push(getRoot());
+  SmallVector<const HashNode *> Stack;
+  Stack.emplace_back(getRoot());
 
   while (!Stack.empty()) {
-    const auto *Current = Stack.top();
-    Stack.pop();
+    const auto *Current = Stack.pop_back_val();
     if (CallbackNode)
       CallbackNode(Current);
 
     auto HandleNext = [&](const HashNode *Next) {
       if (CallbackEdge)
         CallbackEdge(Current, Next);
-      Stack.push(Next);
+      Stack.emplace_back(Next);
     };
     if (SortedWalk) {
       std::map<stable_hash, const HashNode *> SortedSuccessors;
@@ -72,8 +71,7 @@ size_t OutlinedHashTree::depth() const {
 }
 
 void OutlinedHashTree::insert(const HashSequencePair &SequencePair) {
-  const auto &Sequence = SequencePair.first;
-  unsigned Count = SequencePair.second;
+  auto &[Sequence, Count] = SequencePair;
   HashNode *Current = getRoot();
 
   for (stable_hash StableHash : Sequence) {
@@ -87,22 +85,23 @@ void OutlinedHashTree::insert(const HashSequencePair &SequencePair) {
     } else
       Current = I->second.get();
   }
-  Current->Terminals += Count;
+  if (Count)
+    Current->Terminals = (Current->Terminals ? *Current->Terminals : 0) + Count;
 }
 
 void OutlinedHashTree::merge(const OutlinedHashTree *Tree) {
   HashNode *Dst = getRoot();
   const HashNode *Src = Tree->getRoot();
-  std::stack<std::pair<HashNode *, const HashNode *>> Stack;
-  Stack.push({Dst, Src});
+  SmallVector<std::pair<HashNode *, const HashNode *>> Stack;
+  Stack.emplace_back(Dst, Src);
 
   while (!Stack.empty()) {
-    auto [DstNode, SrcNode] = Stack.top();
-    Stack.pop();
+    auto [DstNode, SrcNode] = Stack.pop_back_val();
     if (!SrcNode)
       continue;
-    DstNode->Terminals += SrcNode->Terminals;
-
+    if (SrcNode->Terminals)
+      DstNode->Terminals =
+          (DstNode->Terminals ? *DstNode->Terminals : 0) + *SrcNode->Terminals;
     for (auto &[Hash, NextSrcNode] : SrcNode->Successors) {
       HashNode *NextDstNode;
       auto I = DstNode->Successors.find(Hash);
@@ -114,12 +113,13 @@ void OutlinedHashTree::merge(const OutlinedHashTree *Tree) {
       } else
         NextDstNode = I->second.get();
 
-      Stack.push({NextDstNode, NextSrcNode.get()});
+      Stack.emplace_back(NextDstNode, NextSrcNode.get());
     }
   }
 }
 
-unsigned OutlinedHashTree::find(const HashSequence &Sequence) const {
+std::optional<unsigned>
+OutlinedHashTree::find(const HashSequence &Sequence) const {
   const HashNode *Current = getRoot();
   for (stable_hash StableHash : Sequence) {
     const auto I = Current->Successors.find(StableHash);
