@@ -125,6 +125,21 @@ TEST(LlvmLibcRwLock, DeadReadTimeoutWrite) {
   for (int i = 0; i < 100; i++) {
     pthread_join(t[i], nullptr);
   }
+  // there is no one waiting for write, so all try_read should succeed
+  for (int i = 0; i < 100; i++) {
+    pthread_create(
+        &t[i], nullptr,
+        [](void *arg) -> void * {
+          RwLock *l = static_cast<RwLock *>(arg);
+          if (!l->try_read())
+            __builtin_trap();
+          return nullptr;
+        },
+        &l);
+  }
+  for (int i = 0; i < 100; i++) {
+    pthread_join(t[i], nullptr);
+  }
 }
 
 TEST(LlvmLibcRwLock, Fork) {
