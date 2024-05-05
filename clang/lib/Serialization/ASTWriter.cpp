@@ -2988,8 +2988,8 @@ void ASTWriter::WriteSubmodules(Module *WritingModule) {
 
     // Emit the requirements.
     for (const auto &R : Mod->Requirements) {
-      RecordData::value_type Record[] = {SUBMODULE_REQUIRES, R.second};
-      Stream.EmitRecordWithBlob(RequiresAbbrev, Record, R.first);
+      RecordData::value_type Record[] = {SUBMODULE_REQUIRES, R.RequiredState};
+      Stream.EmitRecordWithBlob(RequiresAbbrev, Record, R.FeatureName);
     }
 
     // Emit the umbrella header, if there is one.
