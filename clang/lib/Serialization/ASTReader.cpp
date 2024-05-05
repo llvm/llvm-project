@@ -7320,6 +7320,9 @@ QualType ASTReader::GetType(TypeID ID) {
     case PREDEF_TYPE_OVERLOAD_ID:
       T = Context.OverloadTy;
       break;
+    case PREDEF_TYPE_UNRESOLVED_TEMPLATE:
+      T = Context.UnresolvedTemplateTy;
+      break;
     case PREDEF_TYPE_BOUND_MEMBER:
       T = Context.BoundMemberTy;
       break;

@@ -681,6 +681,8 @@ Bug Fixes to C++ Support
   whose type is `decltype(auto)`. Fixes (#GH68885).
 - Clang now correctly treats the noexcept-specifier of a friend function to be a complete-class context.
 - Fix an assertion failure when parsing an invalid members of an anonymous class. (#GH85447)
+- Fixed a misuse of ``UnresolvedLookupExpr`` for ill-formed templated expressions. Fixes (#GH48673), (#GH63243)
+  and (#GH88832).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
