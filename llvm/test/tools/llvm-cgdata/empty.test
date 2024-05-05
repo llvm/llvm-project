@@ -1,22 +1,25 @@
+# Test no input file
+RUN: not llvm-cgdata dump -o - 2>&1 | FileCheck %s --check-prefix=NOFILE --ignore-case
+NOFILE: error: No such file or directory
+
 # Test for empty cgdata file, which is invalid.
 RUN: touch %t_emptyfile.cgtext
-RUN: not llvm-cgdata dump %t_emptyfile.cgtext -text -o - 2>&1 | FileCheck %s --check-prefix ERROR
-ERROR: {{.}}emptyfile.cgtext: empty codegen data
+RUN: not llvm-cgdata dump %t_emptyfile.cgtext -text 2>&1 | FileCheck %s --check-prefix=EMPTY
+EMPTY: {{.}}emptyfile.cgtext: empty codegen data
 
 # Test for empty header in the text format. It can be converted to a valid binary file.
 RUN: printf '#' > %t_emptyheader.cgtext
 RUN: llvm-cgdata dump %t_emptyheader.cgtext -binary -o %t_emptyheader.cgdata
 
 # Without any cgdata other than the header, no data shows by default.
-RUN: llvm-cgdata show %t_emptyheader.cgdata | FileCheck %s --allow-empty --check-prefix EMPTY
-EMPTY-NOT: any
+RUN: llvm-cgdata show %t_emptyheader.cgdata | count 0
 
 # The version number appears when asked, as it's in the header
-RUN: llvm-cgdata show --cgdata-version %t_emptyheader.cgdata | FileCheck %s --check-prefix VERSION
-VERSION: Version: {{.}}
+RUN: llvm-cgdata show --cgdata-version %t_emptyheader.cgdata | FileCheck %s --check-prefix=VERSION
+VERSION: Version: 1
 
 # When converting a binary file (w/ the header only) to a text file, it's an empty file as the text format does not have an explicit header.
-RUN: llvm-cgdata dump %t_emptyheader.cgdata -text -o - | FileCheck %s --allow-empty --check-prefix EMPTY
+RUN: llvm-cgdata dump %t_emptyheader.cgdata -text | count 0
 
 # Synthesize a header only cgdata.
 # struct Header {

@@ -1,17 +1,32 @@
+# REQUIRES: shell
+# UNSUPPORTED: system-windows
+
 # Merge two object files having cgdata (__llvm_outline)
 
 RUN: split-file %s %t
 
+# Synthesize raw cgdata without the header (24 byte) from the indexed cgdata.
+RUN: llvm-cgdata dump -binary %t/raw-1.cgtext -o %t/raw-1.cgdata
+RUN: od -t x1 -j 24 -An %t/raw-1.cgdata | tr -d '\n' | sed 's/ /\\\\/g' > %t/raw-1-bytes.txt
+RUN: sed -i "s/<RAW_1_BYTES>/$(cat %t/raw-1-bytes.txt)/g" %t/merge-1.ll
 RUN: llc -filetype=obj -mtriple arm64-apple-darwin %t/merge-1.ll -o %t/merge-1.o
+
+# Synthesize raw cgdata without the header (24 byte) from the indexed cgdata.
+RUN: llvm-cgdata dump -binary %t/raw-2.cgtext -o %t/raw-2.cgdata
+RUN: od -t x1 -j 24 -An %t/raw-2.cgdata | tr -d '\n' | sed 's/ /\\\\/g' > %t/raw-2-bytes.txt
+RUN: sed -i "s/<RAW_2_BYTES>/$(cat %t/raw-2-bytes.txt)/g" %t/merge-2.ll
 RUN: llc -filetype=obj -mtriple arm64-apple-darwin %t/merge-2.ll -o %t/merge-2.o
+
+# Merge two object files into the codegen data file.
 RUN: llvm-cgdata merge %t/merge-1.o %t/merge-2.o -o %t/merge.cgdata
+
 RUN: llvm-cgdata show %t/merge.cgdata | FileCheck %s
 CHECK: Outlined hash tree:
 CHECK-NEXT:  Total Node Count: 4
 CHECK-NEXT:  Terminal Node Count: 2
 CHECK-NEXT:  Depth: 2
 
-RUN: llvm-cgdata dump %t/merge.cgdata | FileCheck %s --check-prefix TREE
+RUN: llvm-cgdata dump %t/merge.cgdata | FileCheck %s --check-prefix=TREE
 TREE: # Outlined stable hash tree
 TREE-NEXT: :outlined_hash_tree
 TREE-NEXT: ---
@@ -33,42 +48,40 @@ TREE-NEXT:   Terminals:       4
 TREE-NEXT:   SuccessorIds:    [  ]
 TREE-NEXT: ...
 
+;--- raw-1.cgtext
+:outlined_hash_tree
+0:
+  Hash:            0x0
+  Terminals:       0
+  SuccessorIds:    [ 1 ]
+1:
+  Hash:            0x1
+  Terminals:       0
+  SuccessorIds:    [ 2 ]
+2:
+  Hash:            0x2
+  Terminals:       4
+  SuccessorIds:    [  ]
+...
+
 ;--- merge-1.ll
+@.data = private unnamed_addr constant [72 x i8] c"<RAW_1_BYTES>", section "__DATA,__llvm_outline"
 
-; The .data is encoded in a binary form based on the following yaml form. See serialize() in OutlinedHashTreeRecord.cpp
-;---
-;0:
-;  Hash:            0x0
-;  Terminals:       0
-;  SuccessorIds:    [ 1 ]
-;1:
-;  Hash:            0x1
-;  Terminals:       0
-;  SuccessorIds:    [ 2 ]
-;2:
-;  Hash:            0x2
-;  Terminals:       4
-;  SuccessorIds:    [  ]
-;...
-
-@.data = private unnamed_addr constant [72 x i8] c"\03\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\01\00\00\00\01\00\00\00\01\00\00\00\01\00\00\00\00\00\00\00\00\00\00\00\01\00\00\00\02\00\00\00\02\00\00\00\02\00\00\00\00\00\00\00\04\00\00\00\00\00\00\00", section "__DATA,__llvm_outline"
+;--- raw-2.cgtext
+:outlined_hash_tree
+0:
+  Hash:            0x0
+  Terminals:       0
+  SuccessorIds:    [ 1 ]
+1:
+  Hash:            0x1
+  Terminals:       0
+  SuccessorIds:    [ 2 ]
+2:
+  Hash:            0x3
+  Terminals:       5
+  SuccessorIds:    [  ]
+...
 
 ;--- merge-2.ll
-
-; The .data is encoded in a binary form based on the following yaml form. See serialize() in OutlinedHashTreeRecord.cpp
-;---
-;0:
-;  Hash:            0x0
-;  Terminals:       0
-;  SuccessorIds:    [ 1 ]
-;1:
-;  Hash:            0x1
-;  Terminals:       0
-;  SuccessorIds:    [ 2 ]
-;2:
-;  Hash:            0x3
-;  Terminals:       5
-;  SuccessorIds:    [  ]
-;...
-
-@.data = private unnamed_addr constant [72 x i8] c"\03\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\01\00\00\00\01\00\00\00\01\00\00\00\01\00\00\00\00\00\00\00\00\00\00\00\01\00\00\00\02\00\00\00\02\00\00\00\03\00\00\00\00\00\00\00\05\00\00\00\00\00\00\00", section "__DATA,__llvm_outline"
+@.data = private unnamed_addr constant [72 x i8] c"<RAW_2_BYTES>", section "__DATA,__llvm_outline"

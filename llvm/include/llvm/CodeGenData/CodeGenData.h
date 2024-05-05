@@ -107,8 +107,8 @@ class CodeGenData {
   /// Global outlined hash tree that has oulined hash sequences across modules.
   std::unique_ptr<OutlinedHashTree> PublishedHashTree;
 
-  /// This flag is set when -fcgdata-generate is passed.
-  /// Or, it can be mutated with -ftwo-codegen-rounds during two codegen runs.
+  /// This flag is set when -fcodegen-data-generate is passed.
+  /// Or, it can be mutated with -fcodegen-data-thinlto-two-rounds.
   bool EmitCGData;
 
   /// This is a singleton instance which is thread-safe. Unlike profile data
@@ -174,7 +174,7 @@ namespace IndexedCGData {
 const uint64_t Magic = 0x81617461646763ff; // "\xffcgdata\x81"
 
 enum CGDataVersion {
-  // Version 1 is the first version. This version support the outlined
+  // Version 1 is the first version. This version supports the outlined
   // hash tree.
   Version1 = 1,
   CurrentVersion = CG_DATA_INDEX_VERSION
