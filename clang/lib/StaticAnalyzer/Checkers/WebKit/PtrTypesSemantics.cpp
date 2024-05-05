@@ -369,7 +369,7 @@ public:
 
     if (Name == "WTFCrashWithInfo" || Name == "WTFBreakpointTrap" ||
         Name == "WTFReportAssertionFailure" ||
-        Name == "compilerFenceForCrash" || Name == "__builtin_unreachable")
+        Name == "compilerFenceForCrash" || Name.find("__builtin") == 0)
       return true;
 
     return TrivialFunctionAnalysis::isTrivialImpl(Callee, Cache);

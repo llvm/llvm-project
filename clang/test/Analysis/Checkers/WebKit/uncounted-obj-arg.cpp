@@ -226,6 +226,7 @@ public:
   void trivial35() { v++; }
   void trivial36() { ++(*number); }
   void trivial37() { (*number)++; }
+  void trivial38() { v++; if (__builtin_expect(!!(number), 1)) (*number)++; }
 
   static RefCounted& singleton() {
     static RefCounted s_RefCounted;
@@ -364,6 +365,7 @@ public:
     getFieldTrivial().trivial35(); // no-warning
     getFieldTrivial().trivial36(); // no-warning
     getFieldTrivial().trivial37(); // no-warning
+    getFieldTrivial().trivial38(); // no-warning
 
     RefCounted::singleton().trivial18(); // no-warning
     RefCounted::singleton().someFunction(); // no-warning
