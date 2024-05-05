@@ -3983,6 +3983,7 @@ TypeSystemClang::GetMinimumLanguage(lldb::opaque_compiler_type_t type) {
 
       case clang::BuiltinType::Dependent:
       case clang::BuiltinType::Overload:
+      case clang::BuiltinType::UnresolvedTemplate:
       case clang::BuiltinType::BoundMember:
       case clang::BuiltinType::UnknownAny:
         break;
@@ -5962,6 +5963,7 @@ uint32_t TypeSystemClang::GetNumPointeeChildren(clang::QualType type) {
     case clang::BuiltinType::LongDouble:
     case clang::BuiltinType::Dependent:
     case clang::BuiltinType::Overload:
+    case clang::BuiltinType::UnresolvedTemplate:
     case clang::BuiltinType::ObjCId:
     case clang::BuiltinType::ObjCClass:
     case clang::BuiltinType::ObjCSel:
