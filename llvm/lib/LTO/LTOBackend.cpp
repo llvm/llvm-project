@@ -715,8 +715,10 @@ bool lto::initImportList(const Module &M,
       // e.g. record required linkage changes.
       if (Summary->modulePath() == M.getModuleIdentifier())
         continue;
-
       // Add an entry to provoke importing by thinBackend.
+      // Try emplace the entry first. If an entry with the same key already
+      // exists, set the value to 'std::min(existing-value, new-value)' to make
+      // sure a definition takes precedence over a declaration.
       auto [Iter, Inserted] = ImportList[Summary->modulePath()].try_emplace(
           GUID, Summary->importType());
 

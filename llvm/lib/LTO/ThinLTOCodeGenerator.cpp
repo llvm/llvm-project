@@ -766,7 +766,7 @@ void ThinLTOCodeGenerator::crossModuleImport(Module &TheModule,
 void ThinLTOCodeGenerator::gatherImportedSummariesForModule(
     Module &TheModule, ModuleSummaryIndex &Index,
     std::map<std::string, GVSummaryMapTy> &ModuleToSummariesForIndex,
-    const lto::InputFile &File) {
+    const lto::InputFile &File, ModuleToGVSummaryPtrSet &ModuleToDecSummaries) {
   auto ModuleCount = Index.modulePaths().size();
   auto ModuleIdentifier = TheModule.getModuleIdentifier();
 
@@ -794,7 +794,6 @@ void ThinLTOCodeGenerator::gatherImportedSummariesForModule(
                            IsPrevailing(PrevailingCopy), ImportLists,
                            ExportLists);
 
-  ModuleToGVSummaryPtrSet ModuleToDecSummaries;
   llvm::gatherImportedSummariesForModule(
       ModuleIdentifier, ModuleToDefinedGVSummaries,
       ImportLists[ModuleIdentifier], ModuleToSummariesForIndex,

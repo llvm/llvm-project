@@ -158,8 +158,8 @@ void llvm::computeLTOCacheKey(
 
   std::vector<uint64_t> ExportsGUID;
   ExportsGUID.reserve(ExportList.size());
-  for (const auto &VI : ExportList) {
-    auto GUID = VI.first.getGUID();
+  for (const auto &[VI, UnusedImportType] : ExportList) {
+    auto GUID = VI.getGUID();
     ExportsGUID.push_back(GUID);
   }
 
@@ -204,8 +204,8 @@ void llvm::computeLTOCacheKey(
     Hasher.update(ArrayRef<uint8_t>((uint8_t *)&ModHash[0], sizeof(ModHash)));
 
     AddUint64(Entry.getFunctions().size());
-    for (auto &Fn : Entry.getFunctions())
-      AddUint64(Fn.first);
+    for (auto &[GUID, UnusedImportType] : Entry.getFunctions())
+      AddUint64(GUID);
   }
 
   // Include the hash for the resolved ODR.
@@ -275,9 +275,9 @@ void llvm::computeLTOCacheKey(
   // Imported functions may introduce new uses of type identifier resolutions,
   // so we need to collect their used resolutions as well.
   for (const ImportModule &ImpM : ImportModulesVector)
-    for (auto &ImpF : ImpM.getFunctions()) {
+    for (auto &[GUID, UnusedImportType] : ImpM.getFunctions()) {
       GlobalValueSummary *S =
-          Index.findSummaryInModule(ImpF.first, ImpM.getIdentifier());
+          Index.findSummaryInModule(GUID, ImpM.getIdentifier());
       AddUsedThings(S);
       // If this is an alias, we also care about any types/etc. that the aliasee
       // may reference.

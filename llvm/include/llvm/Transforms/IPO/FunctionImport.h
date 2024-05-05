@@ -99,9 +99,11 @@ public:
   /// index's module path string table).
   using ImportMapTy = DenseMap<StringRef, FunctionsToImportTy>;
 
-  /// The map contains an entry for every global value the module exports, the
-  /// key being the value info, and the value indicates whether the definition
-  /// or declaration is visible to another module.
+  /// The map contains an entry for every global value the module exports.
+  /// The key is ValueInfo, and the value indicates whether the definition
+  /// or declaration is visible to another module. If a function's definition is
+  /// visible to other modules, the global values this function referenced are
+  /// visible and shouldn't be internalized.
   using ExportSetTy = DenseMap<ValueInfo, GlobalValueSummary::ImportKind>;
 
   /// A function of this type is used to load modules referenced by the index.
@@ -209,6 +211,10 @@ bool convertToDeclaration(GlobalValue &GV);
 /// \p ModuleToSummariesForIndex will be populated with the needed summaries
 /// from each required module path. Use a std::map instead of StringMap to get
 /// stable order for bitcode emission.
+///
+/// \p ModuleToDecSummaries will be populated with the set of declarations \p
+/// ModulePath need from other modules. They key is module path, and the value
+/// is a set of summary pointers.
 void gatherImportedSummariesForModule(
     StringRef ModulePath,
     const DenseMap<StringRef, GVSummaryMapTy> &ModuleToDefinedGVSummaries,
