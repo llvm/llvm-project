@@ -4894,7 +4894,7 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
     if (log)
       log->Printf("RunThreadPlan could not acquire the RunThreadPlan lock.");
     diagnostic_manager.PutString(
-        eDiagnosticSeverityError,
+        lldb::eSeverityError,
         "RunThreadPlan could not acquire the RunThreadPlan lock.");
     return eExpressionSetupError;
   }
