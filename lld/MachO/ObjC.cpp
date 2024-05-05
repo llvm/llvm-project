@@ -191,12 +191,16 @@ ObjcCategoryChecker::ObjcCategoryChecker()
 static StringRef getReferentString(const Reloc &r) {
   if (auto *isec = r.referent.dyn_cast<InputSection *>())
     return cast<CStringInputSection>(isec)->getStringRefAtOffset(r.addend);
-  auto *sym = cast<Defined>(r.referent.get<Symbol *>());
-  if (auto *s = dyn_cast_or_null<CStringInputSection>(sym->isec()))
-    return s->getStringRefAtOffset(sym->value + r.addend);
 
-  if (isa<ConcatInputSection>(sym->isec())) {
-    auto strData = sym->isec()->data.slice(sym->value + r.addend);
+  auto *sym = cast<Defined>(r.referent.get<Symbol *>());
+  auto *symIsec = sym->isec();
+  auto symOffset = sym->value + r.addend;
+
+  if (auto *s = dyn_cast_or_null<CStringInputSection>(symIsec))
+    return s->getStringRefAtOffset(symOffset);
+
+  if (isa<ConcatInputSection>(symIsec)) {
+    auto strData = symIsec->data.slice(symOffset);
     uint32_t len = strnlen((const char *)strData.data(), strData.size());
     return StringRef((const char *)strData.data(), len);
   }
