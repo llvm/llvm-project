@@ -44,6 +44,7 @@ void clang::EmitClangCommentCommandInfo(RecordKeeper &Records,
        << Tag.getValueAsBit("IsThrowsCommand") << ", "
        << Tag.getValueAsBit("IsDeprecatedCommand") << ", "
        << Tag.getValueAsBit("IsHeaderfileCommand") << ", "
+       << Tag.getValueAsBit("IsParCommand") << ", "
        << Tag.getValueAsBit("IsEmptyParagraphAllowed") << ", "
        << Tag.getValueAsBit("IsVerbatimBlockCommand") << ", "
        << Tag.getValueAsBit("IsVerbatimBlockEndCommand") << ", "

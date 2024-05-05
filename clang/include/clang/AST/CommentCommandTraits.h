@@ -88,6 +88,10 @@ struct CommandInfo {
   LLVM_PREFERRED_TYPE(bool)
   unsigned IsHeaderfileCommand : 1;
 
+  /// True if this is a \\par command.
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned IsParCommand : 1;
+
   /// True if we don't want to warn about this command being passed an empty
   /// paragraph.  Meaningful only for block commands.
   LLVM_PREFERRED_TYPE(bool)
