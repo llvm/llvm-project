@@ -12,7 +12,7 @@ typedef struct DEP {
   size_t addr;
   size_t len;
   unsigned char flags;
-  void * hashentry;
+  void *hashentry;
 } _dep;
 typedef struct ID {
   int reserved_1;

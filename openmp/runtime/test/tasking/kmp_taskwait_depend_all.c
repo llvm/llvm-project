@@ -50,7 +50,7 @@ typedef struct DEP {
   size_t addr;
   size_t len;
   unsigned char flags;
-  void * hashentry;
+  void *hashentry;
 } dep;
 #define DEP_ALL_MEM 0x80
 typedef struct task {

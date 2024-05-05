@@ -92,7 +92,7 @@ typedef struct DEP {
   size_t addr;
   size_t len;
   unsigned char flags;
-  void * dephash;
+  void *dephash;
 } dep;
 #define DEP_ALL_MEM 0x80
 typedef struct task {

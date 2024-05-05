@@ -57,7 +57,7 @@ typedef struct DEP {
   size_t addr;
   size_t len;
   unsigned char flags;
-  void * dephash;
+  void *dephash;
 } dep;
 
 typedef int(* task_entry_t)( int, ptask );
