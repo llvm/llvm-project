@@ -875,6 +875,13 @@ public:
 
   // ----- function effects ---
 
+  /// All functions/lambdas/blocks which have bodies and which have a non-empty
+  /// FunctionEffectsRef to be verified.
+  SmallVector<const Decl *> DeclsWithEffectsToVerify;
+  /// The union of all effects present on DeclsWithEffectsToVerify. Conditions
+  /// are all null.
+  FunctionEffectSet AllEffectsToVerify;
+
   /// Warn when implicitly changing function effects.
   void diagnoseFunctionEffectConversion(QualType DstType, QualType SrcType,
                                         SourceLocation Loc);
@@ -890,6 +897,12 @@ public:
   diagnoseFunctionEffectMergeConflicts(const FunctionEffectSet::Conflicts &Errs,
                                        SourceLocation NewLoc,
                                        SourceLocation OldLoc);
+
+  /// Potentially add a FunctionDecl or BlockDecl to DeclsWithEffectsToVerify.
+  void maybeAddDeclWithEffects(const Decl *D, const FunctionEffectsRef &FX);
+
+  /// Unconditionally add a Decl to DeclsWithEfffectsToVerify.
+  void addDeclWithEffects(const Decl *D, const FunctionEffectsRef &FX);
 
   /// Try to parse the conditional expression attached to an effect attribute
   /// (e.g. 'nonblocking'). (c.f. Sema::ActOnNoexceptSpec). Return an empty

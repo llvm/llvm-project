@@ -4699,7 +4699,7 @@ public:
 
 private:
   LLVM_PREFERRED_TYPE(Kind)
-  unsigned FKind : 3;
+  uint8_t FKind : 3;
 
   // Expansion: for hypothetical TCB+types, there could be one Kind for TCB,
   // then ~16(?) bits "SubKind" to map to a specific named TCB. SubKind would

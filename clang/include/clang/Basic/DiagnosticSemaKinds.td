@@ -10928,6 +10928,55 @@ def warn_imp_cast_drops_unaligned : Warning<
   InGroup<DiagGroup<"unaligned-qualifier-implicit-cast">>;
 
 // Function effects
+def warn_func_effect_allocates : Warning<
+  "'%0' function must not allocate or deallocate memory">,
+  InGroup<FunctionEffects>;
+def note_func_effect_allocates : Note<
+  "function cannot be inferred '%0' because it allocates/deallocates memory">;
+def warn_func_effect_throws_or_catches : Warning<
+  "'%0' function must not throw or catch exceptions">,
+  InGroup<FunctionEffects>;
+def note_func_effect_throws_or_catches : Note<
+  "function cannot be inferred '%0' because it throws or catches exceptions">;
+def warn_func_effect_has_static_local : Warning<
+  "'%0' function must not have static locals">,
+  InGroup<FunctionEffects>;
+def note_func_effect_has_static_local : Note<
+  "function cannot be inferred '%0' because it has a static local">;
+def warn_func_effect_uses_thread_local : Warning<
+  "'%0' function must not use thread-local variables">,
+  InGroup<FunctionEffects>;
+def note_func_effect_uses_thread_local : Note<
+  "function cannot be inferred '%0' because it uses a thread-local variable">;
+def warn_func_effect_calls_objc : Warning<
+  "'%0' function must not access an ObjC method or property">,
+  InGroup<FunctionEffects>;
+def note_func_effect_calls_objc : Note<
+  "function cannot be inferred '%0' because it accesses an ObjC method or property">;
+def warn_func_effect_calls_func_without_effect : Warning<
+  "'%0' function must not call non-'%0' function '%1'">,
+  InGroup<FunctionEffects>;
+def warn_func_effect_calls_expr_without_effect : Warning<
+  "'%0' function must not call non-'%0' expression">,
+  InGroup<FunctionEffects>;
+def note_func_effect_calls_func_without_effect : Note<
+  "function cannot be inferred '%0' because it calls non-'%0' function '%1'">;
+def note_func_effect_call_extern : Note<
+  "function cannot be inferred '%0' because it has no definition in this translation unit">;
+def note_func_effect_call_disallows_inference : Note<
+  "function does not permit inference of '%0'">;
+def note_func_effect_call_virtual : Note<
+  "virtual method cannot be inferred '%0'">;
+def note_func_effect_call_func_ptr : Note<
+  "function pointer cannot be inferred '%0'">;
+def warn_perf_constraint_implies_noexcept : Warning<
+  "'%0' function should be declared noexcept">,
+  InGroup<PerfConstraintImpliesNoexcept>;
+
+// FIXME: It would be nice if we could provide fuller template expansion notes.
+def note_func_effect_from_template : Note<
+  "in template expansion here">;
+
 // spoofing nonblocking/nonallocating
 def warn_invalid_add_func_effects : Warning<
   "attribute '%0' should not be added via type conversion">,

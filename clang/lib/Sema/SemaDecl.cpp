@@ -3854,6 +3854,11 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD, Scope *S,
           OldQTypeForComparison = Context.getFunctionType(
               OldFPT->getReturnType(), OldFPT->getParamTypes(), EPI);
         }
+        if (OldFX.empty()) {
+          // A redeclaration may add the attribute to a previously seen function
+          // body which needs to be verified.
+          maybeAddDeclWithEffects(Old, MergedFX);
+        }
       }
     }
   }
@@ -10897,6 +10902,53 @@ Attr *Sema::getImplicitCodeSegOrSectionAttrForFunction(const FunctionDecl *FD,
   return nullptr;
 }
 
+// Should only be called when getFunctionEffects() returns a non-empty set.
+// Decl should be a FunctionDecl or BlockDecl.
+void Sema::maybeAddDeclWithEffects(const Decl *D,
+                                   const FunctionEffectsRef &FX) {
+  if (!D->hasBody()) {
+    if (const auto *FD = D->getAsFunction(); FD && !FD->willHaveBody())
+      return;
+  }
+
+  if (Diags.getIgnoreAllWarnings() ||
+      (Diags.getSuppressSystemWarnings() &&
+       SourceMgr.isInSystemHeader(D->getLocation())))
+    return;
+
+  if (hasUncompilableErrorOccurred())
+    return;
+
+  // For code in dependent contexts, we'll do this at instantiation time.
+  // Without this check, we would analyze the function based on placeholder
+  // template parameters, and potentially generate spurious diagnostics.
+  if (cast<DeclContext>(D)->isDependentContext())
+    return;
+
+  addDeclWithEffects(D, FX);
+}
+
+void Sema::addDeclWithEffects(const Decl *D, const FunctionEffectsRef &FX) {
+  FunctionEffectSet::Conflicts Errs;
+
+  // To avoid the possibility of conflict, don't add effects which are
+  // not FE_InferrableOnCallees and therefore not verified; this removes
+  // blocking/allocating but keeps nonblocking/nonallocating.
+  // Also, ignore any conditions when building the list of effects.
+  bool AnyVerifiable = false;
+  for (const FunctionEffectWithCondition &EC : FX)
+    if (EC.Effect.flags() & FunctionEffect::FE_InferrableOnCallees) {
+      AllEffectsToVerify.insert(FunctionEffectWithCondition(EC.Effect, nullptr),
+                                Errs);
+      AnyVerifiable = true;
+    }
+  assert(Errs.empty() && "effects conflicts should not be possible here");
+
+  // Record the declaration for later analysis.
+  if (AnyVerifiable)
+    DeclsWithEffectsToVerify.push_back(D);
+}
+
 bool Sema::canFullyTypeCheckRedeclaration(ValueDecl *NewD, ValueDecl *OldD,
                                           QualType NewT, QualType OldT) {
   if (!NewD->getLexicalDeclContext()->isDependentContext())
@@ -15608,6 +15660,10 @@ Decl *Sema::ActOnStartOfFunctionDef(Scope *FnBodyScope, Decl *D,
       getCurLexicalContext()->getDeclKind() != Decl::ObjCCategoryImpl &&
       getCurLexicalContext()->getDeclKind() != Decl::ObjCImplementation)
     Diag(FD->getLocation(), diag::warn_function_def_in_objc_container);
+
+  if (Context.hasAnyFunctionEffects())
+    if (const auto FX = FD->getFunctionEffects(); !FX.empty())
+      maybeAddDeclWithEffects(FD, FX);
 
   return D;
 }
