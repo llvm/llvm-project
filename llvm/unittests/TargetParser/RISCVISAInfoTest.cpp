@@ -125,10 +125,10 @@ TEST(ParseNormalizedArchString, UpdatesFLenMinVLenMaxELen) {
   EXPECT_EQ(Info.getMaxELen(), 64U);
 }
 
-TEST(ParseArchString, RejectsUpperCase) {
+TEST(ParseArchString, RejectsInvalidChars) {
   for (StringRef Input : {"RV32", "rV64", "rv32i2P0", "rv64i2p0_A2p0"}) {
     EXPECT_EQ(toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
-              "string must be lowercase");
+              "string may only contain [a-z0-9_]");
   }
 }
 
