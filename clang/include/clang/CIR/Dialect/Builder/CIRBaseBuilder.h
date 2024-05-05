@@ -205,6 +205,19 @@ public:
     return createSub(lhs, rhs, false, true);
   }
 
+  struct BinOpOverflowResults {
+    mlir::Value result;
+    mlir::Value overflow;
+  };
+
+  BinOpOverflowResults createBinOpOverflowOp(mlir::Location loc,
+                                             mlir::cir::IntType resultTy,
+                                             mlir::cir::BinOpOverflowKind kind,
+                                             mlir::Value lhs, mlir::Value rhs) {
+    auto op = create<mlir::cir::BinOpOverflowOp>(loc, resultTy, kind, lhs, rhs);
+    return {op.getResult(), op.getOverflow()};
+  }
+
   //===--------------------------------------------------------------------===//
   // Cast/Conversion Operators
   //===--------------------------------------------------------------------===//

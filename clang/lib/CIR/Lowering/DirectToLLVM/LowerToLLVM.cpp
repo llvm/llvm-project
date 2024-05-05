@@ -1950,6 +1950,135 @@ public:
   }
 };
 
+class CIRBinOpOverflowOpLowering
+    : public mlir::OpConversionPattern<mlir::cir::BinOpOverflowOp> {
+public:
+  using OpConversionPattern<mlir::cir::BinOpOverflowOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(mlir::cir::BinOpOverflowOp op, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    auto loc = op.getLoc();
+    auto arithKind = op.getKind();
+    auto operandTy = op.getLhs().getType();
+    auto resultTy = op.getResult().getType();
+
+    auto encompassedTyInfo = computeEncompassedTypeWidth(operandTy, resultTy);
+    auto encompassedLLVMTy = rewriter.getIntegerType(encompassedTyInfo.width);
+
+    auto lhs = adaptor.getLhs();
+    auto rhs = adaptor.getRhs();
+    if (operandTy.getWidth() < encompassedTyInfo.width) {
+      if (operandTy.isSigned()) {
+        lhs = rewriter.create<mlir::LLVM::SExtOp>(loc, encompassedLLVMTy, lhs);
+        rhs = rewriter.create<mlir::LLVM::SExtOp>(loc, encompassedLLVMTy, rhs);
+      } else {
+        lhs = rewriter.create<mlir::LLVM::ZExtOp>(loc, encompassedLLVMTy, lhs);
+        rhs = rewriter.create<mlir::LLVM::ZExtOp>(loc, encompassedLLVMTy, rhs);
+      }
+    }
+
+    auto intrinName = getLLVMIntrinName(arithKind, encompassedTyInfo.sign,
+                                        encompassedTyInfo.width);
+    auto intrinNameAttr = mlir::StringAttr::get(op.getContext(), intrinName);
+
+    auto overflowLLVMTy = rewriter.getI1Type();
+    auto intrinRetTy = mlir::LLVM::LLVMStructType::getLiteral(
+        rewriter.getContext(), {encompassedLLVMTy, overflowLLVMTy});
+
+    auto callLLVMIntrinOp = rewriter.create<mlir::LLVM::CallIntrinsicOp>(
+        loc, intrinRetTy, intrinNameAttr, mlir::ValueRange{lhs, rhs});
+    auto intrinRet = callLLVMIntrinOp.getResult(0);
+
+    auto result = rewriter
+                      .create<mlir::LLVM::ExtractValueOp>(loc, intrinRet,
+                                                          ArrayRef<int64_t>{0})
+                      .getResult();
+    auto overflow = rewriter
+                        .create<mlir::LLVM::ExtractValueOp>(
+                            loc, intrinRet, ArrayRef<int64_t>{1})
+                        .getResult();
+
+    if (resultTy.getWidth() < encompassedTyInfo.width) {
+      auto resultLLVMTy = getTypeConverter()->convertType(resultTy);
+      auto truncResult =
+          rewriter.create<mlir::LLVM::TruncOp>(loc, resultLLVMTy, result);
+
+      // Extend the truncated result back to the encompassing type to check for
+      // any overflows during the truncation.
+      mlir::Value truncResultExt;
+      if (resultTy.isSigned())
+        truncResultExt = rewriter.create<mlir::LLVM::SExtOp>(
+            loc, encompassedLLVMTy, truncResult);
+      else
+        truncResultExt = rewriter.create<mlir::LLVM::ZExtOp>(
+            loc, encompassedLLVMTy, truncResult);
+      auto truncOverflow = rewriter.create<mlir::LLVM::ICmpOp>(
+          loc, mlir::LLVM::ICmpPredicate::ne, truncResultExt, result);
+
+      result = truncResult;
+      overflow =
+          rewriter.create<mlir::LLVM::OrOp>(loc, overflow, truncOverflow);
+    }
+
+    auto boolLLVMTy =
+        getTypeConverter()->convertType(op.getOverflow().getType());
+    if (boolLLVMTy != rewriter.getI1Type())
+      overflow = rewriter.create<mlir::LLVM::ZExtOp>(loc, boolLLVMTy, overflow);
+
+    rewriter.replaceOp(op, mlir::ValueRange{result, overflow});
+
+    return mlir::success();
+  }
+
+private:
+  static std::string getLLVMIntrinName(mlir::cir::BinOpOverflowKind opKind,
+                                       bool isSigned, unsigned width) {
+    // The intrinsic name is `@llvm.{s|u}{opKind}.with.overflow.i{width}`
+
+    std::string name = "llvm.";
+
+    if (isSigned)
+      name.push_back('s');
+    else
+      name.push_back('u');
+
+    switch (opKind) {
+    case mlir::cir::BinOpOverflowKind::Add:
+      name.append("add.");
+      break;
+    case mlir::cir::BinOpOverflowKind::Sub:
+      name.append("sub.");
+      break;
+    case mlir::cir::BinOpOverflowKind::Mul:
+      name.append("mul.");
+      break;
+    default:
+      llvm_unreachable("unknown checked arith kind");
+    }
+
+    name.append("with.overflow.i");
+    name.append(std::to_string(width));
+
+    return name;
+  }
+
+  struct EncompassedTypeInfo {
+    bool sign;
+    unsigned width;
+  };
+
+  static EncompassedTypeInfo
+  computeEncompassedTypeWidth(mlir::cir::IntType operandTy,
+                              mlir::cir::IntType resultTy) {
+    auto sign = operandTy.getIsSigned() || resultTy.getIsSigned();
+    auto width =
+        std::max(operandTy.getWidth() + (sign && operandTy.isUnsigned()),
+                 resultTy.getWidth() + (sign && resultTy.isUnsigned()));
+    return {sign, width};
+  }
+};
+
 class CIRShiftOpLowering
     : public mlir::OpConversionPattern<mlir::cir::ShiftOp> {
 public:
@@ -3003,13 +3132,14 @@ void populateCIRToLLVMConversionPatterns(mlir::RewritePatternSet &patterns,
       CIRBitPopcountOpLowering, CIRAtomicCmpXchgLowering, CIRAtomicXchgLowering,
       CIRAtomicFetchLowering, CIRByteswapOpLowering, CIRBrCondOpLowering,
       CIRPtrStrideOpLowering, CIRCallLowering, CIRUnaryOpLowering,
-      CIRBinOpLowering, CIRShiftOpLowering, CIRLoadLowering,
-      CIRConstantLowering, CIRStoreLowering, CIRAllocaLowering, CIRFuncLowering,
-      CIRCastOpLowering, CIRGlobalOpLowering, CIRGetGlobalOpLowering,
-      CIRVAStartLowering, CIRVAEndLowering, CIRVACopyLowering, CIRVAArgLowering,
-      CIRBrOpLowering, CIRGetMemberOpLowering, CIRSwitchFlatOpLowering,
-      CIRPtrDiffOpLowering, CIRCopyOpLowering, CIRMemCpyOpLowering,
-      CIRFAbsOpLowering, CIRExpectOpLowering, CIRVTableAddrPointOpLowering,
+      CIRBinOpLowering, CIRBinOpOverflowOpLowering, CIRShiftOpLowering,
+      CIRLoadLowering, CIRConstantLowering, CIRStoreLowering, CIRAllocaLowering,
+      CIRFuncLowering, CIRCastOpLowering, CIRGlobalOpLowering,
+      CIRGetGlobalOpLowering, CIRVAStartLowering, CIRVAEndLowering,
+      CIRVACopyLowering, CIRVAArgLowering, CIRBrOpLowering,
+      CIRGetMemberOpLowering, CIRSwitchFlatOpLowering, CIRPtrDiffOpLowering,
+      CIRCopyOpLowering, CIRMemCpyOpLowering, CIRFAbsOpLowering,
+      CIRExpectOpLowering, CIRVTableAddrPointOpLowering,
       CIRVectorCreateLowering, CIRVectorInsertLowering,
       CIRVectorExtractLowering, CIRVectorCmpOpLowering, CIRVectorSplatLowering,
       CIRVectorTernaryLowering, CIRVectorShuffleIntsLowering,

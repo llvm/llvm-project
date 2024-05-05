@@ -1,0 +1,67 @@
+// RUN: cir-opt %s -cir-to-llvm -o - | FileCheck %s -check-prefix=MLIR
+// RUN: cir-translate %s -cir-to-llvmir -o -  | FileCheck %s -check-prefix=LLVM
+
+!u32i = !cir.int<u, 32>
+!s32i = !cir.int<s, 32>
+
+module {
+  cir.func @test_add_u32_u32_u32(%lhs: !u32i, %rhs: !u32i, %res: !cir.ptr<!u32i>) -> !cir.bool {
+    %result, %overflow = cir.binop.overflow(add, %lhs, %rhs) : !u32i, (!u32i, !cir.bool)
+    cir.store %result, %res : !u32i, !cir.ptr<!u32i>
+    cir.return %overflow : !cir.bool
+  }
+
+  //      MLIR: llvm.func @test_add_u32_u32_u32(%[[LHS:.+]]: i32, %[[RHS:.+]]: i32, %[[RES_PTR:.+]]: !llvm.ptr) -> i8
+  // MLIR-NEXT:   %[[#INTRIN_RET:]] = llvm.call_intrinsic "llvm.uadd.with.overflow.i32"(%[[LHS]], %[[RHS]]) : (i32, i32) -> !llvm.struct<(i32, i1)>
+  // MLIR-NEXT:   %[[#RES:]] = llvm.extractvalue %[[#INTRIN_RET]][0] : !llvm.struct<(i32, i1)>
+  // MLIR-NEXT:   %[[#OVFL:]] = llvm.extractvalue %[[#INTRIN_RET]][1] : !llvm.struct<(i32, i1)>
+  // MLIR-NEXT:   %[[#OVFL_EXT:]] = llvm.zext %[[#OVFL]] : i1 to i8
+  // MLIR-NEXT:   llvm.store %[[#RES]], %[[RES_PTR]] : i32, !llvm.ptr
+  // MLIR-NEXT:   llvm.return %[[#OVFL_EXT]] : i8
+  // MLIR-NEXT: }
+
+  //      LLVM: define i8 @test_add_u32_u32_u32(i32 %[[#LHS:]], i32 %[[#RHS:]], ptr %[[#RES_PTR:]])
+  // LLVM-NEXT:   %[[#INTRIN_RET:]] = call { i32, i1 } @llvm.uadd.with.overflow.i32(i32 %[[#LHS]], i32 %[[#RHS]])
+  // LLVM-NEXT:   %[[#RES:]] = extractvalue { i32, i1 } %[[#INTRIN_RET]], 0
+  // LLVM-NEXT:   %[[#OVFL:]] = extractvalue { i32, i1 } %[[#INTRIN_RET]], 1
+  // LLVM-NEXT:   %[[#OVFL_EXT:]] = zext i1 %[[#OVFL]] to i8
+  // LLVM-NEXT:   store i32 %[[#RES]], ptr %[[#RES_PTR]], align 4
+  // LLVM-NEXT:   ret i8 %[[#OVFL_EXT]]
+  // LLVM-NEXT: }
+
+  cir.func @test_add_u32_u32_i32(%lhs: !u32i, %rhs: !u32i, %res: !cir.ptr<!s32i>) -> !cir.bool {
+    %result, %overflow = cir.binop.overflow(add, %lhs, %rhs) : !u32i, (!s32i, !cir.bool)
+    cir.store %result, %res : !s32i, !cir.ptr<!s32i>
+    cir.return %overflow : !cir.bool
+  }
+
+  //      MLIR: llvm.func @test_add_u32_u32_i32(%[[LHS:.+]]: i32, %[[RHS:.+]]: i32, %[[RES_PTR:.+]]: !llvm.ptr) -> i8
+  // MLIR-NEXT:   %[[#LHS_EXT:]] = llvm.zext %[[LHS]] : i32 to i33
+  // MLIR-NEXT:   %[[#RHS_EXT:]] = llvm.zext %[[RHS]] : i32 to i33
+  // MLIR-NEXT:   %[[#INTRIN_RET:]] = llvm.call_intrinsic "llvm.sadd.with.overflow.i33"(%[[#LHS_EXT]], %[[#RHS_EXT]]) : (i33, i33) -> !llvm.struct<(i33, i1)>
+  // MLIR-NEXT:   %[[#RES_EXT:]] = llvm.extractvalue %[[#INTRIN_RET]][0] : !llvm.struct<(i33, i1)>
+  // MLIR-NEXT:   %[[#ARITH_OVFL:]] = llvm.extractvalue %[[#INTRIN_RET]][1] : !llvm.struct<(i33, i1)>
+  // MLIR-NEXT:   %[[#RES:]] = llvm.trunc %[[#RES_EXT]] : i33 to i32
+  // MLIR-NEXT:   %[[#RES_EXT_2:]] = llvm.sext %[[#RES]] : i32 to i33
+  // MLIR-NEXT:   %[[#TRUNC_OVFL:]] = llvm.icmp "ne" %[[#RES_EXT_2]], %[[#RES_EXT]] : i33
+  // MLIR-NEXT:   %[[#OVFL:]] = llvm.or %[[#ARITH_OVFL]], %[[#TRUNC_OVFL]]  : i1
+  // MLIR-NEXT:   %[[#OVFL_EXT:]] = llvm.zext %[[#OVFL]] : i1 to i8
+  // MLIR-NEXT:   llvm.store %[[#RES]], %[[RES_PTR]] : i32, !llvm.ptr
+  // MLIR-NEXT:   llvm.return %[[#OVFL_EXT]] : i8
+  // MLIR-NEXT: }
+
+  //      LLVM: define i8 @test_add_u32_u32_i32(i32 %[[#LHS:]], i32 %[[#RHS:]], ptr %[[#RES_PTR:]])
+  // LLVM-NEXT:   %[[#LHS_EXT:]] = zext i32 %[[#LHS]] to i33
+  // LLVM-NEXT:   %[[#RHS_EXT:]] = zext i32 %[[#RHS]] to i33
+  // LLVM-NEXT:   %[[#INTRIN_RET:]] = call { i33, i1 } @llvm.sadd.with.overflow.i33(i33 %[[#LHS_EXT]], i33 %[[#RHS_EXT]])
+  // LLVM-NEXT:   %[[#RES_EXT:]] = extractvalue { i33, i1 } %[[#INTRIN_RET]], 0
+  // LLVM-NEXT:   %[[#ARITH_OVFL:]] = extractvalue { i33, i1 } %[[#INTRIN_RET]], 1
+  // LLVM-NEXT:   %[[#RES:]] = trunc i33 %[[#RES_EXT]] to i32
+  // LLVM-NEXT:   %[[#RES_EXT_2:]] = sext i32 %[[#RES]] to i33
+  // LLVM-NEXT:   %[[#TRUNC_OVFL:]] = icmp ne i33 %[[#RES_EXT_2]], %[[#RES_EXT]]
+  // LLVM-NEXT:   %[[#OVFL:]] = or i1 %[[#ARITH_OVFL]], %[[#TRUNC_OVFL]]
+  // LLVM-NEXT:   %[[#OVFL_EXT:]] = zext i1 %[[#OVFL]] to i8
+  // LLVM-NEXT:   store i32 %[[#RES]], ptr %[[#RES_PTR]], align 4
+  // LLVM-NEXT:   ret i8 %[[#OVFL_EXT]]
+  // LLVM-NEXT: }
+}
