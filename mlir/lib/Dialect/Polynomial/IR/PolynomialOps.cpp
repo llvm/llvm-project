@@ -121,6 +121,8 @@ bool isPrimitiveNthRootOfUnity(const APInt &root, const unsigned n,
   return a.isOne();
 }
 
+/// Verify that the types involved in an NTT or INTT operation are
+/// compatible.
 static LogicalResult verifyNTTOp(Operation *op, RingAttr ring,
                                  RankedTensorType tensorType) {
   auto encoding = tensorType.getEncoding();
