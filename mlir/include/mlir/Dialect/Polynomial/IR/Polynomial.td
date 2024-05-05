@@ -79,7 +79,7 @@ def Polynomial_PolynomialAttr : Polynomial_Attr<"Polynomial", "polynomial"> {
     #poly = #polynomial.polynomial<x**1024 + 1>
     ```
   }];
-  let parameters = (ins "Polynomial":$polynomial);
+  let parameters = (ins "::mlir::polynomial::Polynomial":$polynomial);
   let hasCustomAssemblyFormat = 1;
 }
 
@@ -122,16 +122,16 @@ def Polynomial_RingAttr : Polynomial_Attr<"Ring", "ring"> {
 
   let parameters = (ins
     "Type": $coefficientType,
-    OptionalParameter<"IntegerAttr">: $coefficientModulus,
-    OptionalParameter<"PolynomialAttr">: $polynomialModulus,
-    OptionalParameter<"IntegerAttr">: $primitiveRoot
+    OptionalParameter<"::mlir::IntegerAttr">: $coefficientModulus,
+    OptionalParameter<"::mlir::polynomial::PolynomialAttr">: $polynomialModulus,
+    OptionalParameter<"::mlir::IntegerAttr">: $primitiveRoot
   );
 
   let builders = [
     AttrBuilder<
         (ins "::mlir::Type":$coefficientTy,
-             "IntegerAttr":$coefficientModulusAttr,
-             "PolynomialAttr":$polynomialModulusAttr), [{
+             "::mlir::IntegerAttr":$coefficientModulusAttr,
+             "::mlir::polynomial::PolynomialAttr":$polynomialModulusAttr), [{
       return $_get($_ctxt, coefficientTy, coefficientModulusAttr, polynomialModulusAttr, nullptr);
     }]>
   ];
