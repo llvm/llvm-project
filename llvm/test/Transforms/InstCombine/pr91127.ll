@@ -4,7 +4,7 @@
 define i1 @test_eq1(i32 %x, i16 %y) {
 ; CHECK-LABEL: define i1 @test_eq1(
 ; CHECK-SAME: i32 [[X:%.*]], i16 [[Y:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = zext i16 [[Y]] to i32
+; CHECK-NEXT:    [[TMP1:%.*]] = sext i16 [[Y]] to i32
 ; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[TMP1]], [[X]]
 ; CHECK-NEXT:    ret i1 [[COND]]
 ;
@@ -32,7 +32,7 @@ define i1 @test_eq2(i32 %x, i16 %y) {
 define i1 @test_ult(i32 %x, i16 %y) {
 ; CHECK-LABEL: define i1 @test_ult(
 ; CHECK-SAME: i32 [[X:%.*]], i16 [[Y:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = zext i16 [[Y]] to i32
+; CHECK-NEXT:    [[TMP1:%.*]] = sext i16 [[Y]] to i32
 ; CHECK-NEXT:    [[COND:%.*]] = icmp ugt i32 [[TMP1]], [[X]]
 ; CHECK-NEXT:    ret i1 [[COND]]
 ;
@@ -45,7 +45,7 @@ define i1 @test_ult(i32 %x, i16 %y) {
 define i1 @test_slt(i32 %x, i16 %y) {
 ; CHECK-LABEL: define i1 @test_slt(
 ; CHECK-SAME: i32 [[X:%.*]], i16 [[Y:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = zext i16 [[Y]] to i32
+; CHECK-NEXT:    [[TMP1:%.*]] = sext i16 [[Y]] to i32
 ; CHECK-NEXT:    [[COND:%.*]] = icmp sgt i32 [[TMP1]], [[X]]
 ; CHECK-NEXT:    ret i1 [[COND]]
 ;
