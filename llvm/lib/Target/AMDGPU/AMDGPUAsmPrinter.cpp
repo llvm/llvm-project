@@ -1306,7 +1306,7 @@ void AMDGPUAsmPrinter::emitResourceUsageRemarks(
     // makes it easier to tell which resource usage go with which kernel since
     // the kernel name will always be displayed first.
     std::string LabelStr = RemarkLabel.str() + ": ";
-    if (!RemarkName.equals("FunctionName"))
+    if (RemarkName != "FunctionName")
       LabelStr = Indent + LabelStr;
 
     ORE->emit([&]() {
