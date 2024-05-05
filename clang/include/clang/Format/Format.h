@@ -375,8 +375,8 @@ struct FormatStyle {
     ///   }
     /// \endcode
     bool AcrossComments;
-    /// Whether aligned case labels are aligned on the colon, or on the
-    /// , or on the tokens after the colon.
+    /// Whether aligned case labels are aligned on the colon, or on the tokens
+    /// after the colon.
     /// \code
     ///   true:
     ///   switch (level) {
