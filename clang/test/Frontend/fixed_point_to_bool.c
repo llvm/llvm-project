@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -ffixed-point -S -emit-llvm %s -o - | FileCheck %s
-// RUN: %clang_cc1 -ffixed-point -S -emit-llvm %s -o - -fpadding-on-unsigned-fixed-point | FileCheck %s
+// RUN: %clang_cc1 -ffixed-point -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -ffixed-point -emit-llvm %s -o - -fpadding-on-unsigned-fixed-point | FileCheck %s
 
 _Bool global_b = 1.0k;  // @global_b = {{*.}}global i8 1, align 1
 _Bool global_b2 = 0.0k; // @global_b2 = {{*.}}global i8 0, align 1

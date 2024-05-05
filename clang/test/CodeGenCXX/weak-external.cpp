@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fcxx-exceptions -fexceptions -triple %itanium_abi_triple %s -S -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -fcxx-exceptions -fexceptions -triple %itanium_abi_triple %s -emit-llvm -o - | FileCheck %s
 // PR4262
 
 // CHECK-NOT: _ZNSs12_S_constructIPKcEEPcT_S3_RKSaIcESt20forward_iterator_tag
