@@ -123,13 +123,15 @@ define preserve_nonecc void @caller2(ptr %a) {
 }
 
 ; Preserve_none function can use more registers to pass parameters.
-declare preserve_nonecc i64 @callee_with_many_param2(i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, i64 %a8, i64 %a9, i64 %a10, i64 %a11, i64 %a12, i64 %a13, i64 %a14, i64 %a15, i64 %a16, i64 %a17, i64 %a18, i64 %a19, i64 %a20, i64 %a21)
-define preserve_nonecc i64 @callee_with_many_param(i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, i64 %a8, i64 %a9, i64 %a10, i64 %a11, i64 %a12, i64 %a13, i64 %a14, i64 %a15, i64 %a16, i64 %a17, i64 %a18, i64 %a19, i64 %a20, i64 %a21) {
+declare preserve_nonecc i64 @callee_with_many_param2(i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, i64 %a8, i64 %a9, i64 %a10, i64 %a11, i64 %a12, i64 %a13, i64 %a14, i64 %a15, i64 %a16, i64 %a17, i64 %a18, i64 %a19, i64 %a20, i64 %a21, i64 %a22, i64 %a23, i64 %a24, i64 %a25)
+define preserve_nonecc i64 @callee_with_many_param(i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, i64 %a8, i64 %a9, i64 %a10, i64 %a11, i64 %a12, i64 %a13, i64 %a14, i64 %a15, i64 %a16, i64 %a17, i64 %a18, i64 %a19, i64 %a20, i64 %a21, i64 %a22, i64 %a23, i64 %a24, i64 %a25) {
 ; CHECK-LABEL: callee_with_many_param:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    .cfi_offset w30, -16
+; CHECK-NEXT:    mov x15, x14
+; CHECK-NEXT:    mov x14, x19
 ; CHECK-NEXT:    mov x19, x20
 ; CHECK-NEXT:    mov x20, x21
 ; CHECK-NEXT:    mov x21, x22
@@ -150,6 +152,10 @@ define preserve_nonecc i64 @callee_with_many_param(i64 %a1, i64 %a2, i64 %a3, i6
 ; CHECK-NEXT:    mov x7, x8
 ; CHECK-NEXT:    mov x8, x9
 ; CHECK-NEXT:    mov x9, x10
+; CHECK-NEXT:    mov x10, x11
+; CHECK-NEXT:    mov x11, x12
+; CHECK-NEXT:    mov x12, x13
+; CHECK-NEXT:    mov x13, x15
 ; CHECK-NEXT:    bl callee_with_many_param2
 ; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
@@ -160,6 +166,8 @@ define preserve_nonecc i64 @callee_with_many_param(i64 %a1, i64 %a2, i64 %a3, i6
 ; DARWIN-NEXT:    .cfi_def_cfa_offset 16
 ; DARWIN-NEXT:    .cfi_offset w30, -8
 ; DARWIN-NEXT:    .cfi_offset w29, -16
+; DARWIN-NEXT:    mov x15, x14
+; DARWIN-NEXT:    mov x14, x19
 ; DARWIN-NEXT:    mov x19, x20
 ; DARWIN-NEXT:    mov x20, x21
 ; DARWIN-NEXT:    mov x21, x22
@@ -180,10 +188,14 @@ define preserve_nonecc i64 @callee_with_many_param(i64 %a1, i64 %a2, i64 %a3, i6
 ; DARWIN-NEXT:    mov x7, x8
 ; DARWIN-NEXT:    mov x8, x9
 ; DARWIN-NEXT:    mov x9, x10
+; DARWIN-NEXT:    mov x10, x11
+; DARWIN-NEXT:    mov x11, x12
+; DARWIN-NEXT:    mov x12, x13
+; DARWIN-NEXT:    mov x13, x15
 ; DARWIN-NEXT:    bl _callee_with_many_param2
 ; DARWIN-NEXT:    ldp x29, x30, [sp], #16 ; 16-byte Folded Reload
 ; DARWIN-NEXT:    ret
-  %ret = call preserve_nonecc i64 @callee_with_many_param2(i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, i64 %a8, i64 %a9, i64 %a10, i64 %a11, i64 %a12, i64 %a13, i64 %a14, i64 %a15, i64 %a16, i64 %a17, i64 %a18, i64 %a19, i64 %a20, i64 %a21)
+  %ret = call preserve_nonecc i64 @callee_with_many_param2(i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, i64 %a8, i64 %a9, i64 %a10, i64 %a11, i64 %a12, i64 %a13, i64 %a14, i64 %a15, i64 %a16, i64 %a17, i64 %a18, i64 %a19, i64 %a20, i64 %a21, i64 %a22, i64 %a23, i64 %a24, i64 %a25, i64 %a1)
   ret i64 %ret
 }
 

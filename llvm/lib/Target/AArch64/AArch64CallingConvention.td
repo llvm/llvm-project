@@ -496,23 +496,25 @@ def CC_AArch64_GHC : CallingConv<[
 
 let Entry = 1 in
 def CC_AArch64_Preserve_None : CallingConv<[
-    // We only preserve:
-    // - X18, which is used for the 'nest' parameter.
+    // We can pass arguments in all general registers, except:
+    // - X16/X17, used by the linker as IP0/IP1
+    // - X18, used for the 'nest' parameter
     // - X29, the frame pointer
     // - X30, the link register
-    // All other registers can be used to pass arguments.
+    // General registers are not preserved with the exception of
+    // FP, LR, and X18
     // Non-volatile registers are used first, so functions may call
     // normal functions without saving and reloading arguments.
     CCIfType<[i32], CCAssignToReg<[W19, W20, W21, W22, W23,
                                    W24, W25, W26, W27, W28,
                                    W0, W1, W2, W3, W4, W5,
                                    W6, W7, W8, W9, W10, W11,
-                                   W12, W13, W14, W15, W16, W17]>>,
+                                   W12, W13, W14, W15]>>,
     CCIfType<[i64], CCAssignToReg<[X19, X20, X21, X22, X23,
                                    X24, X25, X26, X27, X28,
                                    X0, X1, X2, X3, X4, X5,
                                    X6, X7, X8, X9, X10, X11,
-                                   X12, X13, X14, X15, X16, X17]>>,
+                                   X12, X13, X14, X15]>>,
 
     CCDelegateTo<CC_AArch64_AAPCS>
 ]>;
