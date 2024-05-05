@@ -1755,10 +1755,13 @@ bool VectorCombine::foldShuffleToIdentity(Instruction &I) {
             return false;
           if (IL.first->getValueID() != Item[0].first->getValueID())
             return false;
+          if (isa<CallInst>(IL.first) && !isa<IntrinsicInst>(IL.first))
+            return false;
           auto *II = dyn_cast<IntrinsicInst>(IL.first);
           return !II ||
-                 II->getIntrinsicID() ==
-                     cast<IntrinsicInst>(Item[0].first)->getIntrinsicID();
+                 (isa<IntrinsicInst>(Item[0].first) &&
+                  II->getIntrinsicID() ==
+                      cast<IntrinsicInst>(Item[0].first)->getIntrinsicID());
         }))
       return false;
 
