@@ -10,7 +10,7 @@
 // RUN: %clang_cc1 -std=c++20 -triple %itanium_abi_triple %t/b.pcm -S \
 // RUN:     -emit-llvm -fmodule-file=a=%t/a.pcm -disable-llvm-passes -o - | FileCheck %t/b.cppm
 // RUN: %clang_cc1 -std=c++20 -triple %itanium_abi_triple %t/c.cpp -fmodule-file=a=%t/a.pcm \
-// RUN:     -S -emit-llvm -disable-llvm-passes -o - | FileCheck %t/c.cpp
+// RUN:     -emit-llvm -disable-llvm-passes -o - | FileCheck %t/c.cpp
 
 // Test again with reduced BMI
 // RUN: rm -rf %t
@@ -24,7 +24,7 @@
 // RUN: %clang_cc1 -std=c++20 -triple %itanium_abi_triple %t/b.pcm -S \
 // RUN:     -emit-llvm -fmodule-file=a=%t/a.pcm -disable-llvm-passes -o - | FileCheck %t/b.cppm
 // RUN: %clang_cc1 -std=c++20 -triple %itanium_abi_triple %t/c.cpp -fmodule-file=a=%t/a.pcm \
-// RUN:     -S -emit-llvm -disable-llvm-passes -o - | FileCheck %t/c.cpp
+// RUN:     -emit-llvm -disable-llvm-passes -o - | FileCheck %t/c.cpp
 
 //--- a.cppm
 export module a;
