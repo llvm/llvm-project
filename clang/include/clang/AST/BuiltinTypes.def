@@ -285,6 +285,9 @@ PLACEHOLDER_TYPE(Overload, OverloadTy)
 //   x->foo       # if only contains non-static members
 PLACEHOLDER_TYPE(BoundMember, BoundMemberTy)
 
+// The type of an unresolved template. Used in UnresolvedLookupExpr.
+PLACEHOLDER_TYPE(UnresolvedTemplate, UnresolvedTemplateTy)
+
 // The type of an expression which refers to a pseudo-object,
 // such as those introduced by Objective C's @property or
 // VS.NET's __property declarations.  A placeholder type.  The
