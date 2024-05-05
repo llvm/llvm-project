@@ -2827,18 +2827,17 @@ bool RISCVAsmParser::parseDirectiveOption() {
         break;
       }
 
+      if (isDigit(Arch.back()))
+        return Error(
+            Loc, "Extension version number parsing not currently implemented");
+
       std::string Feature = RISCVISAInfo::getTargetFeatureForExtension(Arch);
       if (!enableExperimentalExtension() &&
           StringRef(Feature).starts_with("experimental-"))
         return Error(Loc, "Unexpected experimental extensions.");
       auto Ext = llvm::lower_bound(RISCVFeatureKV, Feature);
-      if (Ext == std::end(RISCVFeatureKV) || StringRef(Ext->Key) != Feature) {
-        if (isDigit(Arch.back()))
-          return Error(
-              Loc,
-              "Extension version number parsing not currently implemented");
+      if (Ext == std::end(RISCVFeatureKV) || StringRef(Ext->Key) != Feature)
         return Error(Loc, "unknown extension feature");
-      }
 
       Args.emplace_back(Type, Arch.str());
 
