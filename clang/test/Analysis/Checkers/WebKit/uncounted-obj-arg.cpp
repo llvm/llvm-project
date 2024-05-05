@@ -137,9 +137,24 @@ public:
   Number(int v) : v(v) { }
   Number(double);
   Number operator+(const Number&);
+  Number& operator++() { ++v; return *this; }
+  Number operator++(int) { Number returnValue(v); ++v; return returnValue; }
   const int& value() const { return v; }
+  void someMethod();
+
 private:
   int v;
+};
+
+class ComplexNumber {
+public:
+  ComplexNumber() : real(0), complex(0) { }
+  ComplexNumber& operator++() { real.someMethod(); return *this; }
+  ComplexNumber operator++(int);
+
+private:
+  Number real;
+  Number complex;
 };
 
 class RefCounted {
@@ -208,6 +223,9 @@ public:
   unsigned trivial32() { return sizeof(int); }
   unsigned trivial33() { return ~0xff; }
   template <unsigned v> unsigned trivial34() { return v; }
+  void trivial35() { v++; }
+  void trivial36() { ++(*number); }
+  void trivial37() { (*number)++; }
 
   static RefCounted& singleton() {
     static RefCounted s_RefCounted;
@@ -282,9 +300,12 @@ public:
 
   int nonTrivial13() { return ~otherFunction(); }
   int nonTrivial14() { int r = 0xff; r |= otherFunction(); return r; }
+  void nonTrivial15() { ++complex; }
+  void nonTrivial16() { complex++; }
 
   unsigned v { 0 };
   Number* number { nullptr };
+  ComplexNumber complex;
   Enum enumValue { Enum::Value1 };
 };
 
@@ -340,6 +361,9 @@ public:
     getFieldTrivial().trivial32(); // no-warning
     getFieldTrivial().trivial33(); // no-warning
     getFieldTrivial().trivial34<7>(); // no-warning
+    getFieldTrivial().trivial35(); // no-warning
+    getFieldTrivial().trivial36(); // no-warning
+    getFieldTrivial().trivial37(); // no-warning
 
     RefCounted::singleton().trivial18(); // no-warning
     RefCounted::singleton().someFunction(); // no-warning
@@ -373,6 +397,10 @@ public:
     getFieldTrivial().nonTrivial13();
     // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
     getFieldTrivial().nonTrivial14();
+    // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
+    getFieldTrivial().nonTrivial15();
+    // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
+    getFieldTrivial().nonTrivial16();
     // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
   }
 };

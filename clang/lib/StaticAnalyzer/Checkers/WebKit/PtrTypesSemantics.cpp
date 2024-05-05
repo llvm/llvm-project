@@ -316,9 +316,14 @@ public:
 
     if (UO->isIncrementOp() || UO->isDecrementOp()) {
       // Allow increment or decrement of a POD type.
-      if (auto *RefExpr = dyn_cast<DeclRefExpr>(UO->getSubExpr())) {
+      auto *SubExpr = UO->getSubExpr();
+      if (auto *RefExpr = dyn_cast<DeclRefExpr>(SubExpr)) {
         if (auto *Decl = dyn_cast<VarDecl>(RefExpr->getDecl()))
           return Decl->isLocalVarDeclOrParm() &&
+                 Decl->getType().isPODType(Decl->getASTContext());
+      } else if (auto *ME = dyn_cast<MemberExpr>(SubExpr)) {
+        if (auto *Decl = ME->getMemberDecl())
+          return Visit(ME->getBase()) &&
                  Decl->getType().isPODType(Decl->getASTContext());
       }
     }
@@ -401,6 +406,16 @@ public:
     if (IsGetterOfRefCounted && *IsGetterOfRefCounted)
       return true;
 
+    // Recursively descend into the callee to confirm that it's trivial as well.
+    return TrivialFunctionAnalysis::isTrivialImpl(Callee, Cache);
+  }
+
+  bool VisitCXXOperatorCallExpr(const CXXOperatorCallExpr *OCE) {
+    if (!checkArguments(OCE))
+      return false;
+    auto *Callee = OCE->getCalleeDecl();
+    if (!Callee)
+      return false;
     // Recursively descend into the callee to confirm that it's trivial as well.
     return TrivialFunctionAnalysis::isTrivialImpl(Callee, Cache);
   }
