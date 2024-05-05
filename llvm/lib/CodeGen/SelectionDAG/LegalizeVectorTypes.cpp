@@ -501,7 +501,7 @@ SDValue DAGTypeLegalizer::ScalarizeVecRes_ADDRSPACECAST(SDNode *N) {
   auto *AddrSpaceCastN = cast<AddrSpaceCastSDNode>(N);
   unsigned SrcAS = AddrSpaceCastN->getSrcAddressSpace();
   unsigned DestAS = AddrSpaceCastN->getDestAddressSpace();
-  return DAG.getAddrSpaceCast(SDLoc(N), DestVT, Op, SrcAS, DestAS);
+  return DAG.getAddrSpaceCast(DL, DestVT, Op, SrcAS, DestAS);
 }
 
 SDValue DAGTypeLegalizer::ScalarizeVecRes_SCALAR_TO_VECTOR(SDNode *N) {
