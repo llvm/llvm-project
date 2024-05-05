@@ -163,10 +163,10 @@ TEST(LlvmLibcRwLock, Fork) {
   data->pending.fetch_sub(1);
   while (data->pending)
     /* not UB as operations are atomic */;
+  ASSERT_EQ(data->i.load(cpp::MemoryOrder::RELAXED), 200);
   // early exit to avoid pollute the test output
   if (pid == 0)
     ::exit(0);
-  ASSERT_EQ(data->i.load(cpp::MemoryOrder::RELAXED), 200);
   ASSERT_EQ(munmap(mmap_addr, sizeof(Data)), 0);
 }
 } // namespace LIBC_NAMESPACE
