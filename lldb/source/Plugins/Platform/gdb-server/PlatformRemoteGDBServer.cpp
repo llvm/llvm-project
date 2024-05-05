@@ -684,12 +684,12 @@ Status PlatformRemoteGDBServer::RunShellCommand(
                                           signo_ptr, command_output, timeout);
 }
 
-llvm::ErrorOr<llvm::MD5::MD5Result>
-PlatformRemoteGDBServer::CalculateMD5(const FileSpec &file_spec) {
+bool PlatformRemoteGDBServer::CalculateMD5(const FileSpec &file_spec,
+                                           uint64_t &low, uint64_t &high) {
   if (!IsConnected())
-    return std::make_error_code(std::errc::not_connected);
+    return false;
 
-  return m_gdb_client_up->CalculateMD5(file_spec);
+  return m_gdb_client_up->CalculateMD5(file_spec, low, high);
 }
 
 void PlatformRemoteGDBServer::CalculateTrapHandlerSymbolNames() {
