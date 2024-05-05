@@ -218,8 +218,7 @@ HLSLToolChain::TranslateArgs(const DerivedArgList &Args, StringRef BoundArch,
       }
     }
     if (A->getOption().getID() == options::OPT_emit_pristine_llvm) {
-      // Translate fcgl into -S -emit-llvm and -disable-llvm-passes.
-      DAL->AddFlagArg(nullptr, Opts.getOption(options::OPT_S));
+      // Translate -fcgl into -emit-llvm and -disable-llvm-passes.
       DAL->AddFlagArg(nullptr, Opts.getOption(options::OPT_emit_llvm));
       DAL->AddFlagArg(nullptr,
                       Opts.getOption(options::OPT_disable_llvm_passes));
