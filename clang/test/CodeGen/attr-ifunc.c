@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -triple x86_64-windows -fsyntax-only -verify %s
-// RUN: %clang_cc1 -triple x86_64-linux -fsyntax-only -verify -emit-llvm-only -DCHECK_ALIASES %s
-// RUN: %clang_cc1 -triple x86_64-linux -fsyntax-only -verify -emit-llvm-only %s
-// RUN: %clang_cc1 -triple x86_64-apple-macosx -fsyntax-only -verify -emit-llvm-only %s
+// RUN: %clang_cc1 -triple x86_64-linux -verify -emit-llvm-only -DCHECK_ALIASES %s
+// RUN: %clang_cc1 -triple x86_64-linux -verify -emit-llvm-only %s
+// RUN: %clang_cc1 -triple x86_64-apple-macosx -verify -emit-llvm-only %s
 
 #if defined(_WIN32)
 void foo(void) {}
