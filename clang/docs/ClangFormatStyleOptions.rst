@@ -935,8 +935,8 @@ the configuration (without a prefix: ``Auto``).
       default: return "";
       }
 
-  * ``bool AlignCaseColons`` Whether aligned case labels are aligned on the colon, or on the
-    , or on the tokens after the colon.
+  * ``bool AlignCaseColons`` Whether aligned case labels are aligned on the colon, or on the tokens
+    after the colon.
 
     .. code-block:: c++
 
