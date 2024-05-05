@@ -23,7 +23,7 @@ namespace LIBC_NAMESPACE {
 // A rwlock implementation using futexes.
 // Code is largely based on the Rust standard library implementation.
 // https://github.com/rust-lang/rust/blob/22a5267c83a3e17f2b763279eb24bb632c45dc6b/library/std/src/sys/sync/rwlock/futex.rs
-struct RwLock {
+class RwLock {
   // The state consists of a 30-bit reader counter, a 'readers waiting' flag,
   // and a 'writers waiting' flag. Bits 0..30:
   //   0: Unlocked
