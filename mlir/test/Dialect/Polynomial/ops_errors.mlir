@@ -61,7 +61,7 @@ func.func @test_mul_scalar_wrong_type(%arg0: !ty) -> !ty {
 // CHECK-NOT: @test_invalid_ntt
 // CHECK-NOT: polynomial.ntt
 func.func @test_invalid_ntt(%0 : !poly_ty) {
-  // expected-error@+1 {{expects a ring encoding to be provided to the tensor}}
+  // expected-error@below {{expects a ring encoding to be provided to the tensor}}
   %1 = polynomial.ntt %0 : !poly_ty -> tensor<1024xi32>
   return
 }
@@ -75,7 +75,7 @@ func.func @test_invalid_ntt(%0 : !poly_ty) {
 // CHECK-NOT: @test_invalid_ntt
 // CHECK-NOT: polynomial.ntt
 func.func @test_invalid_ntt(%0 : !poly_ty) {
-  // expected-error@+1 {{tensor encoding is not a ring attribute}}
+  // expected-error@below {{tensor encoding is not a ring attribute}}
   %1 = polynomial.ntt %0 : !poly_ty -> tensor<1024xi32, #my_poly>
   return
 }
@@ -90,7 +90,7 @@ func.func @test_invalid_ntt(%0 : !poly_ty) {
 // CHECK-NOT: @test_invalid_intt
 // CHECK-NOT: polynomial.intt
 func.func @test_invalid_intt(%0 : tensor<1024xi32, #ring1>) {
-  // expected-error@+1 {{not equivalent to the polynomial ring}}
+  // expected-error@below {{not equivalent to the polynomial ring}}
   %1 = polynomial.intt %0 : tensor<1024xi32, #ring1> -> !poly_ty
   return
 }
@@ -119,7 +119,7 @@ func.func @test_invalid_intt(%0 : tensor<1025xi32, #ring>) {
 // CHECK-NOT: @test_invalid_ntt
 // CHECK-NOT: polynomial.ntt
 func.func @test_invalid_ntt(%0 : !poly_ty) {
-  // expected-error@+1 {{does not provide a primitive root of unity, which is required to express an NTT}}
+  // expected-error@below {{does not provide a primitive root of unity, which is required to express an NTT}}
   %1 = polynomial.ntt %0 : !poly_ty -> tensor<1024xi32, #ring>
   return
 }
