@@ -673,8 +673,9 @@ ExprResult Sema::DefaultLvalueConversion(Expr *E) {
   // expressions of certain types in C++.
   if (getLangOpts().CPlusPlus &&
       (E->getType() == Context.OverloadTy ||
-       T->isDependentType() ||
-       T->isRecordType()))
+       // FIXME: This is a hack! We want the lvalue-to-rvalue conversion applied
+       // to pointer types even if the pointee type is dependent.
+       (T->isDependentType() && !T->isPointerType()) || T->isRecordType()))
     return E;
 
   // The C standard is actually really unclear on this point, and
@@ -2751,8 +2752,8 @@ Sema::ActOnIdExpression(Scope *S, CXXScopeSpec &SS,
   if (isBoundsAttrContext() && !getLangOpts().CPlusPlus && S->isClassScope()) {
     // See if this is reference to a field of struct.
     LookupResult R(*this, NameInfo, LookupMemberName);
-    // LookupParsedName handles a name lookup from within anonymous struct.
-    if (LookupParsedName(R, S, &SS)) {
+    // LookupName handles a name lookup from within anonymous struct.
+    if (LookupName(R, S)) {
       if (auto *VD = dyn_cast<ValueDecl>(R.getFoundDecl())) {
         QualType type = VD->getType().getNonReferenceType();
         // This will eventually be translated into MemberExpr upon
@@ -2773,20 +2774,19 @@ Sema::ActOnIdExpression(Scope *S, CXXScopeSpec &SS,
     // lookup to determine that it was a template name in the first place. If
     // this becomes a performance hit, we can work harder to preserve those
     // results until we get here but it's likely not worth it.
-    bool MemberOfUnknownSpecialization;
     AssumedTemplateKind AssumedTemplate;
-    if (LookupTemplateName(R, S, SS, QualType(), /*EnteringContext=*/false,
-                           MemberOfUnknownSpecialization, TemplateKWLoc,
+    if (LookupTemplateName(R, S, SS, /*ObjectType=*/QualType(),
+                           /*EnteringContext=*/false, TemplateKWLoc,
                            &AssumedTemplate))
       return ExprError();
 
-    if (MemberOfUnknownSpecialization ||
-        (R.getResultKind() == LookupResult::NotFoundInCurrentInstantiation))
+    if (R.wasNotFoundInCurrentInstantiation())
       return ActOnDependentIdExpression(SS, TemplateKWLoc, NameInfo,
                                         IsAddressOfOperand, TemplateArgs);
   } else {
     bool IvarLookupFollowUp = II && !SS.isSet() && getCurMethodDecl();
-    LookupParsedName(R, S, &SS, !IvarLookupFollowUp);
+    LookupParsedName(R, S, &SS, /*ObjectType=*/QualType(),
+                     /*AllowBuiltinCreation=*/!IvarLookupFollowUp);
 
     // If the result might be in a dependent base class, this is a dependent
     // id-expression.
@@ -2918,26 +2918,9 @@ Sema::ActOnIdExpression(Scope *S, CXXScopeSpec &SS,
   // to get this right here so that we don't end up making a
   // spuriously dependent expression if we're inside a dependent
   // instance method.
-  if (getLangOpts().CPlusPlus && !R.empty() &&
-      (*R.begin())->isCXXClassMember()) {
-    bool MightBeImplicitMember;
-    if (!IsAddressOfOperand)
-      MightBeImplicitMember = true;
-    else if (!SS.isEmpty())
-      MightBeImplicitMember = false;
-    else if (R.isOverloadedResult())
-      MightBeImplicitMember = false;
-    else if (R.isUnresolvableResult())
-      MightBeImplicitMember = true;
-    else
-      MightBeImplicitMember = isa<FieldDecl>(R.getFoundDecl()) ||
-                              isa<IndirectFieldDecl>(R.getFoundDecl()) ||
-                              isa<MSPropertyDecl>(R.getFoundDecl());
-
-    if (MightBeImplicitMember)
-      return BuildPossibleImplicitMemberExpr(SS, TemplateKWLoc,
-                                             R, TemplateArgs, S);
-  }
+  if (isPotentialImplicitMemberAccess(SS, R, IsAddressOfOperand))
+    return BuildPossibleImplicitMemberExpr(SS, TemplateKWLoc, R, TemplateArgs,
+                                           S);
 
   if (TemplateArgs || TemplateKWLoc.isValid()) {
 
@@ -3471,12 +3454,10 @@ ExprResult Sema::BuildDeclarationNameExpr(const CXXScopeSpec &SS,
   // we've picked a target.
   R.suppressDiagnostics();
 
-  UnresolvedLookupExpr *ULE
-    = UnresolvedLookupExpr::Create(Context, R.getNamingClass(),
-                                   SS.getWithLocInContext(Context),
-                                   R.getLookupNameInfo(),
-                                   NeedsADL, R.isOverloadedResult(),
-                                   R.begin(), R.end());
+  UnresolvedLookupExpr *ULE = UnresolvedLookupExpr::Create(
+      Context, R.getNamingClass(), SS.getWithLocInContext(Context),
+      R.getLookupNameInfo(), NeedsADL, R.begin(), R.end(),
+      /*KnownDependent=*/false);
 
   return ULE;
 }
@@ -3902,7 +3883,7 @@ static Expr *BuildFloatingLiteral(Sema &S, NumericLiteralParser &Literal,
   return FloatingLiteral::Create(S.Context, Val, isExact, Ty, Loc);
 }
 
-bool Sema::CheckLoopHintExpr(Expr *E, SourceLocation Loc) {
+bool Sema::CheckLoopHintExpr(Expr *E, SourceLocation Loc, bool AllowZero) {
   assert(E && "Invalid expression");
 
   if (E->isValueDependent())
@@ -3920,7 +3901,13 @@ bool Sema::CheckLoopHintExpr(Expr *E, SourceLocation Loc) {
   if (R.isInvalid())
     return true;
 
-  bool ValueIsPositive = ValueAPS.isStrictlyPositive();
+  // GCC allows the value of unroll count to be 0.
+  // https://gcc.gnu.org/onlinedocs/gcc/Loop-Specific-Pragmas.html says
+  // "The values of 0 and 1 block any unrolling of the loop."
+  // The values doesn't have to be strictly positive in '#pragma GCC unroll' and
+  // '#pragma unroll' cases.
+  bool ValueIsPositive =
+      AllowZero ? ValueAPS.isNonNegative() : ValueAPS.isStrictlyPositive();
   if (!ValueIsPositive || ValueAPS.getActiveBits() > 31) {
     Diag(E->getExprLoc(), diag::err_pragma_loop_invalid_argument_value)
         << toString(ValueAPS, 10) << ValueIsPositive;
@@ -4150,11 +4137,13 @@ ExprResult Sema::ActOnNumericConstant(const Token &Tok, Scope *UDLScope) {
     // 'wb/uwb' literals are a C23 feature. We support _BitInt as a type in C++,
     // but we do not currently support the suffix in C++ mode because it's not
     // entirely clear whether WG21 will prefer this suffix to return a library
-    // type such as std::bit_int instead of returning a _BitInt.
-    if (Literal.isBitInt && !getLangOpts().CPlusPlus)
-      PP.Diag(Tok.getLocation(), getLangOpts().C23
-                                     ? diag::warn_c23_compat_bitint_suffix
-                                     : diag::ext_c23_bitint_suffix);
+    // type such as std::bit_int instead of returning a _BitInt. '__wb/__uwb'
+    // literals are a C++ extension.
+    if (Literal.isBitInt)
+      PP.Diag(Tok.getLocation(),
+              getLangOpts().CPlusPlus ? diag::ext_cxx_bitint_suffix
+              : getLangOpts().C23     ? diag::warn_c23_compat_bitint_suffix
+                                      : diag::ext_c23_bitint_suffix);
 
     // Get the value in the widest-possible width. What is "widest" depends on
     // whether the literal is a bit-precise integer or not. For a bit-precise
@@ -5080,11 +5069,18 @@ ExprResult Sema::ActOnArraySubscriptExpr(Scope *S, Expr *base,
                                          SourceLocation rbLoc) {
 
   if (base && !base->getType().isNull() &&
-      base->hasPlaceholderType(BuiltinType::OMPArraySection))
-    return OpenMP().ActOnOMPArraySectionExpr(base, lbLoc, ArgExprs.front(),
-                                             SourceLocation(), SourceLocation(),
-                                             /*Length*/ nullptr,
-                                             /*Stride=*/nullptr, rbLoc);
+      base->hasPlaceholderType(BuiltinType::ArraySection)) {
+    auto *AS = cast<ArraySectionExpr>(base);
+    if (AS->isOMPArraySection())
+      return OpenMP().ActOnOMPArraySectionExpr(
+          base, lbLoc, ArgExprs.front(), SourceLocation(), SourceLocation(),
+          /*Length*/ nullptr,
+          /*Stride=*/nullptr, rbLoc);
+
+    return OpenACC().ActOnArraySectionExpr(base, lbLoc, ArgExprs.front(),
+                                           SourceLocation(), /*Length*/ nullptr,
+                                           rbLoc);
+  }
 
   // Since this might be a postfix expression, get rid of ParenListExprs.
   if (isa<ParenListExpr>(base)) {
@@ -6373,7 +6369,7 @@ static bool isPlaceholderToRemoveAsArg(QualType type) {
   case BuiltinType::BoundMember:
   case BuiltinType::BuiltinFn:
   case BuiltinType::IncompleteMatrixIdx:
-  case BuiltinType::OMPArraySection:
+  case BuiltinType::ArraySection:
   case BuiltinType::OMPArrayShaping:
   case BuiltinType::OMPIterator:
     return true;
@@ -10178,8 +10174,9 @@ Sema::CheckSingleAssignmentConstraints(QualType LHSType, ExprResult &CallerRHS,
     // diagnostics and just checking for errors, e.g., during overload
     // resolution, return Incompatible to indicate the failure.
     if (getLangOpts().allowsNonTrivialObjCLifetimeQualifiers() &&
-        CheckObjCConversion(SourceRange(), Ty, E, CCK_ImplicitConversion,
-                            Diagnose, DiagnoseCFAudited) != ACR_okay) {
+        CheckObjCConversion(SourceRange(), Ty, E,
+                            CheckedConversionKind::Implicit, Diagnose,
+                            DiagnoseCFAudited) != ACR_okay) {
       if (!Diagnose)
         return Incompatible;
     }
@@ -12900,14 +12897,15 @@ QualType Sema::CheckCompareOperands(ExprResult &LHS, ExprResult &RHS,
         Expr *E = LHS.get();
         if (getLangOpts().ObjCAutoRefCount)
           CheckObjCConversion(SourceRange(), RHSType, E,
-                              CCK_ImplicitConversion);
+                              CheckedConversionKind::Implicit);
         LHS = ImpCastExprToType(E, RHSType,
                                 RPT ? CK_BitCast :CK_CPointerToObjCPointerCast);
       }
       else {
         Expr *E = RHS.get();
         if (getLangOpts().ObjCAutoRefCount)
-          CheckObjCConversion(SourceRange(), LHSType, E, CCK_ImplicitConversion,
+          CheckObjCConversion(SourceRange(), LHSType, E,
+                              CheckedConversionKind::Implicit,
                               /*Diagnose=*/true,
                               /*DiagnoseCFAudited=*/false, Opc);
         RHS = ImpCastExprToType(E, LHSType,
@@ -14652,6 +14650,22 @@ QualType Sema::CheckAddressOfOperand(ExprResult &OrigOp, SourceLocation OpLoc) {
                  diag::err_cannot_form_pointer_to_member_of_reference_type)
               << dcl->getDeclName() << dcl->getType();
             return QualType();
+          }
+
+          // C++11 [expr.unary.op] p4:
+          // A pointer to member is only formed when an explicit & is used and
+          // its operand is a qualified-id not enclosed in parentheses.
+          if (isa<ParenExpr>(OrigOp.get())) {
+            SourceLocation LeftParenLoc = OrigOp.get()->getBeginLoc(),
+                           RightParenLoc = OrigOp.get()->getEndLoc();
+
+            Diag(LeftParenLoc,
+                 diag::err_form_ptr_to_member_from_parenthesized_expr)
+                << SourceRange(OpLoc, RightParenLoc)
+                << FixItHint::CreateRemoval(LeftParenLoc)
+                << FixItHint::CreateRemoval(RightParenLoc);
+
+            // Continuing might lead to better error recovery.
           }
 
           while (cast<RecordDecl>(Ctx)->isAnonymousStructOrUnion())
@@ -17195,11 +17209,11 @@ bool Sema::DiagnoseAssignmentResult(AssignConvertType ConvTy,
     }
     CheckInferredResultType = DstType->isObjCObjectPointerType() &&
       SrcType->isObjCObjectPointerType();
-    if (!CheckInferredResultType) {
-      ConvHints.tryToFixConversion(SrcExpr, SrcType, DstType, *this);
-    } else if (CheckInferredResultType) {
+    if (CheckInferredResultType) {
       SrcType = SrcType.getUnqualifiedType();
       DstType = DstType.getUnqualifiedType();
+    } else {
+      ConvHints.tryToFixConversion(SrcExpr, SrcType, DstType, *this);
     }
     MayHaveConvFixit = true;
     break;
@@ -17521,6 +17535,12 @@ Sema::VerifyIntegerConstantExpression(Expr *E, llvm::APSInt *Result,
     if (Converted.isInvalid())
       return Converted;
     E = Converted.get();
+    // The 'explicit' case causes us to get a RecoveryExpr.  Give up here so we
+    // don't try to evaluate it later. We also don't want to return the
+    // RecoveryExpr here, as it results in this call succeeding, thus callers of
+    // this function will attempt to use 'Value'.
+    if (isa<RecoveryExpr>(E))
+      return ExprError();
     if (!E->getType()->isIntegralOrUnscopedEnumerationType())
       return ExprError();
   } else if (!E->getType()->isIntegralOrUnscopedEnumerationType()) {
@@ -19704,18 +19724,17 @@ static ExprResult rebuildPotentialResultsAsNonOdrUsed(Sema &S, Expr *E,
       ExprResult Sub = Rebuild(LHS);
       if (!Sub.isUsable())
         return Sub;
-      LHS = Sub.get();
+      BO->setLHS(Sub.get());
     //   -- If e is a comma expression, ...
     } else if (BO->getOpcode() == BO_Comma) {
       ExprResult Sub = Rebuild(RHS);
       if (!Sub.isUsable())
         return Sub;
-      RHS = Sub.get();
+      BO->setRHS(Sub.get());
     } else {
       break;
     }
-    return S.BuildBinOp(nullptr, BO->getOperatorLoc(), BO->getOpcode(),
-                        LHS, RHS);
+    return ExprResult(BO);
   }
 
   //   -- If e has the form (e1)...
@@ -21368,8 +21387,9 @@ ExprResult Sema::CheckPlaceholderExpr(Expr *E) {
     return ExprError();
 
   // Expressions of unknown type.
-  case BuiltinType::OMPArraySection:
-    Diag(E->getBeginLoc(), diag::err_omp_array_section_use);
+  case BuiltinType::ArraySection:
+    Diag(E->getBeginLoc(), diag::err_array_section_use)
+        << cast<ArraySectionExpr>(E)->isOMPArraySection();
     return ExprError();
 
   // Expressions of unknown type.

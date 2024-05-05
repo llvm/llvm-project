@@ -1957,6 +1957,7 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
     // finalizeAddressDependentContent may have added local symbols to the
     // static symbol table.
     finalizeSynthetic(in.symTab.get());
+    finalizeSynthetic(in.debugNames.get());
     finalizeSynthetic(in.ppc64LongBranchTarget.get());
     finalizeSynthetic(in.armCmseSGSection.get());
   }

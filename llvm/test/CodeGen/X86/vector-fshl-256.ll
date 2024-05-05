@@ -2344,17 +2344,15 @@ define <32 x i8> @splatconstant_funnnel_v32i8(<32 x i8> %x, <32 x i8> %y) nounwi
 ;
 ; XOPAVX1-LABEL: splatconstant_funnnel_v32i8:
 ; XOPAVX1:       # %bb.0:
-; XOPAVX1-NEXT:    vextractf128 $1, %ymm1, %xmm2
-; XOPAVX1-NEXT:    vbroadcastss {{.*#+}} xmm3 = [252,252,252,252,252,252,252,252,252,252,252,252,252,252,252,252]
-; XOPAVX1-NEXT:    vpshlb %xmm3, %xmm2, %xmm2
-; XOPAVX1-NEXT:    vpshlb %xmm3, %xmm1, %xmm1
-; XOPAVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm1, %ymm1
-; XOPAVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
-; XOPAVX1-NEXT:    vbroadcastss {{.*#+}} xmm3 = [4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4]
-; XOPAVX1-NEXT:    vpshlb %xmm3, %xmm2, %xmm2
-; XOPAVX1-NEXT:    vpshlb %xmm3, %xmm0, %xmm0
-; XOPAVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
-; XOPAVX1-NEXT:    vorps %ymm1, %ymm0, %ymm0
+; XOPAVX1-NEXT:    vpsrlw $4, %xmm1, %xmm2
+; XOPAVX1-NEXT:    vextractf128 $1, %ymm1, %xmm1
+; XOPAVX1-NEXT:    vpsrlw $4, %xmm1, %xmm1
+; XOPAVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm2, %ymm1
+; XOPAVX1-NEXT:    vpsllw $4, %xmm0, %xmm2
+; XOPAVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; XOPAVX1-NEXT:    vpsllw $4, %xmm0, %xmm0
+; XOPAVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm2, %ymm0
+; XOPAVX1-NEXT:    vpcmov {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm0, %ymm0
 ; XOPAVX1-NEXT:    retq
 ;
 ; XOPAVX2-LABEL: splatconstant_funnnel_v32i8:

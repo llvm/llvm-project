@@ -294,6 +294,8 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
   // the atomic operations in order to exploit SystemZ instructions.
   setOperationAction(ISD::ATOMIC_LOAD,     MVT::i128, Custom);
   setOperationAction(ISD::ATOMIC_STORE,    MVT::i128, Custom);
+  setOperationAction(ISD::ATOMIC_LOAD, MVT::f128, Custom);
+  setOperationAction(ISD::ATOMIC_STORE, MVT::f128, Custom);
 
   // Mark sign/zero extending atomic loads as legal, which will make
   // DAGCombiner fold extensions into atomic loads if possible.
@@ -935,17 +937,11 @@ bool SystemZTargetLowering::hasInlineStackProbe(const MachineFunction &MF) const
 
 TargetLowering::AtomicExpansionKind
 SystemZTargetLowering::shouldCastAtomicLoadInIR(LoadInst *LI) const {
-  // Lower fp128 the same way as i128.
-  if (LI->getType()->isFP128Ty())
-    return AtomicExpansionKind::CastToInteger;
   return AtomicExpansionKind::None;
 }
 
 TargetLowering::AtomicExpansionKind
 SystemZTargetLowering::shouldCastAtomicStoreInIR(StoreInst *SI) const {
-  // Lower fp128 the same way as i128.
-  if (SI->getValueOperand()->getType()->isFP128Ty())
-    return AtomicExpansionKind::CastToInteger;
   return AtomicExpansionKind::None;
 }
 
@@ -3765,7 +3761,7 @@ SDValue SystemZTargetLowering::lowerConstantPool(ConstantPoolSDNode *CP,
 
 SDValue SystemZTargetLowering::lowerFRAMEADDR(SDValue Op,
                                               SelectionDAG &DAG) const {
-  auto *TFL = Subtarget.getFrameLowering<SystemZELFFrameLowering>();
+  auto *TFL = Subtarget.getFrameLowering<SystemZFrameLowering>();
   MachineFunction &MF = DAG.getMachineFunction();
   MachineFrameInfo &MFI = MF.getFrameInfo();
   MFI.setFrameAddressIsTaken(true);
@@ -3816,17 +3812,19 @@ SDValue SystemZTargetLowering::lowerRETURNADDR(SDValue Op,
       report_fatal_error("Unsupported stack frame traversal count");
 
     SDValue FrameAddr = lowerFRAMEADDR(Op, DAG);
-    auto *TFL = Subtarget.getFrameLowering<SystemZELFFrameLowering>();
-    int Offset = (TFL->usePackedStack(MF) ? -2 : 14) *
-                 getTargetMachine().getPointerSize(0);
+    const auto *TFL = Subtarget.getFrameLowering<SystemZFrameLowering>();
+    int Offset = TFL->getReturnAddressOffset(MF);
     SDValue Ptr = DAG.getNode(ISD::ADD, DL, PtrVT, FrameAddr,
                               DAG.getConstant(Offset, DL, PtrVT));
     return DAG.getLoad(PtrVT, DL, DAG.getEntryNode(), Ptr,
                        MachinePointerInfo());
   }
 
-  // Return R14D, which has the return address. Mark it an implicit live-in.
-  Register LinkReg = MF.addLiveIn(SystemZ::R14D, &SystemZ::GR64BitRegClass);
+  // Return R14D (Elf) / R7D (XPLINK), which has the return address. Mark it an
+  // implicit live-in.
+  SystemZCallingConventionRegisters *CCR = Subtarget.getSpecialRegisters();
+  Register LinkReg = MF.addLiveIn(CCR->getReturnFunctionAddressRegister(),
+                                  &SystemZ::GR64BitRegClass);
   return DAG.getCopyFromReg(DAG.getEntryNode(), DL, LinkReg, PtrVT);
 }
 
@@ -4548,7 +4546,9 @@ SDValue SystemZTargetLowering::lowerATOMIC_FENCE(SDValue Op,
 SDValue SystemZTargetLowering::lowerATOMIC_LDST_I128(SDValue Op,
                                                      SelectionDAG &DAG) const {
   auto *Node = cast<AtomicSDNode>(Op.getNode());
-  assert(Node->getMemoryVT() == MVT::i128 && "Only custom lowering i128.");
+  assert(
+      (Node->getMemoryVT() == MVT::i128 || Node->getMemoryVT() == MVT::f128) &&
+      "Only custom lowering i128 or f128.");
   // Use same code to handle both legal and non-legal i128 types.
   SmallVector<SDValue, 2> Results;
   LowerOperationWrapper(Node, Results, DAG);
@@ -6247,6 +6247,46 @@ SDValue SystemZTargetLowering::LowerOperation(SDValue Op,
   }
 }
 
+// Manually lower a bitcast to avoid introducing illegal types after type
+// legalization.
+static SDValue expandBitCastI128ToF128(SelectionDAG &DAG, SDValue Src,
+                                       SDValue Chain, const SDLoc &SL) {
+  SDValue Hi =
+      DAG.getTargetExtractSubreg(SystemZ::subreg_h64, SL, MVT::i64, Src);
+  SDValue Lo =
+      DAG.getTargetExtractSubreg(SystemZ::subreg_l64, SL, MVT::i64, Src);
+
+  Hi = DAG.getBitcast(MVT::f64, Hi);
+  Lo = DAG.getBitcast(MVT::f64, Lo);
+
+  SDNode *Pair = DAG.getMachineNode(
+      SystemZ::REG_SEQUENCE, SL, MVT::f128,
+      {DAG.getTargetConstant(SystemZ::FP128BitRegClassID, SL, MVT::i32), Lo,
+       DAG.getTargetConstant(SystemZ::subreg_l64, SL, MVT::i32), Hi,
+       DAG.getTargetConstant(SystemZ::subreg_h64, SL, MVT::i32)});
+  return SDValue(Pair, 0);
+}
+
+static std::pair<SDValue, SDValue>
+expandBitCastF128ToI128Parts(SelectionDAG &DAG, SDValue Src, const SDLoc &SL) {
+  SDValue LoFP =
+      DAG.getTargetExtractSubreg(SystemZ::subreg_l64, SL, MVT::f64, Src);
+  SDValue HiFP =
+      DAG.getTargetExtractSubreg(SystemZ::subreg_h64, SL, MVT::f64, Src);
+  SDValue Lo = DAG.getNode(ISD::BITCAST, SL, MVT::i64, LoFP);
+  SDValue Hi = DAG.getNode(ISD::BITCAST, SL, MVT::i64, HiFP);
+
+  return {Hi, Lo};
+}
+
+static SDValue expandBitCastF128ToI128(SelectionDAG &DAG, SDValue Src,
+                                       const SDLoc &SL) {
+
+  auto [Hi, Lo] = expandBitCastF128ToI128Parts(DAG, Src, SL);
+  SDNode *Pair = DAG.getMachineNode(SystemZ::PAIR128, SL, MVT::Untyped, Hi, Lo);
+  return SDValue(Pair, 0);
+}
+
 // Lower operations with invalid operand or result types (currently used
 // only for 128-bit integer types).
 void
@@ -6261,15 +6301,41 @@ SystemZTargetLowering::LowerOperationWrapper(SDNode *N,
     MachineMemOperand *MMO = cast<AtomicSDNode>(N)->getMemOperand();
     SDValue Res = DAG.getMemIntrinsicNode(SystemZISD::ATOMIC_LOAD_128,
                                           DL, Tys, Ops, MVT::i128, MMO);
-    Results.push_back(lowerGR128ToI128(DAG, Res));
-    Results.push_back(Res.getValue(1));
+
+    EVT VT = N->getValueType(0);
+
+    if (VT == MVT::i128 || isTypeLegal(MVT::i128)) {
+      SDValue Lowered = lowerGR128ToI128(DAG, Res);
+      Results.push_back(DAG.getBitcast(VT, Lowered));
+      Results.push_back(Res.getValue(1));
+    } else {
+      // For the f128 case, after type legalization, we cannot produce a bitcast
+      // with an illegal type (i.e. i128), so manually lower it.
+      //
+      // FIXME: Really v2i64 should be legal, and should be used in place of
+      // unttyped. Then we could emit the bitcast which will potentially fold
+      // into the use.
+      SDValue Cast = expandBitCastI128ToF128(DAG, Res, Res.getValue(1), DL);
+      Results.push_back(Cast);
+      Results.push_back(Res.getValue(1));
+    }
+
     break;
   }
   case ISD::ATOMIC_STORE: {
     SDLoc DL(N);
     SDVTList Tys = DAG.getVTList(MVT::Other);
-    SDValue Ops[] = {N->getOperand(0), lowerI128ToGR128(DAG, N->getOperand(1)),
-                     N->getOperand(2)};
+    SDValue Val = N->getOperand(1);
+    EVT VT = Val.getValueType();
+
+    if (VT == MVT::i128 || isTypeLegal(MVT::i128)) {
+      Val = DAG.getBitcast(MVT::i128, Val);
+      Val = lowerI128ToGR128(DAG, Val);
+    } else {
+      Val = expandBitCastF128ToI128(DAG, Val, DL);
+    }
+
+    SDValue Ops[] = {N->getOperand(0), Val, N->getOperand(2)};
     MachineMemOperand *MMO = cast<AtomicSDNode>(N)->getMemOperand();
     SDValue Res = DAG.getMemIntrinsicNode(SystemZISD::ATOMIC_STORE_128,
                                           DL, Tys, Ops, MVT::i128, MMO);
@@ -6312,15 +6378,12 @@ SystemZTargetLowering::LowerOperationWrapper(SDNode *N,
         Hi = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i64, VecBC,
                          DAG.getConstant(0, DL, MVT::i32));
       } else {
+        // FIXME: Assert should be moved into expandBitCastF128ToI128Parts
         assert(getRepRegClassFor(MVT::f128) == &SystemZ::FP128BitRegClass &&
                "Unrecognized register class for f128.");
-        SDValue LoFP = DAG.getTargetExtractSubreg(SystemZ::subreg_l64,
-                                                  DL, MVT::f64, Src);
-        SDValue HiFP = DAG.getTargetExtractSubreg(SystemZ::subreg_h64,
-                                                  DL, MVT::f64, Src);
-        Lo = DAG.getNode(ISD::BITCAST, DL, MVT::i64, LoFP);
-        Hi = DAG.getNode(ISD::BITCAST, DL, MVT::i64, HiFP);
+        std::tie(Hi, Lo) = expandBitCastF128ToI128Parts(DAG, Src, DL);
       }
+
       Results.push_back(DAG.getNode(ISD::BUILD_PAIR, DL, MVT::i128, Lo, Hi));
     }
     break;
@@ -8090,9 +8153,9 @@ static bool checkCCKill(MachineInstr &MI, MachineBasicBlock *MBB) {
   MachineBasicBlock::iterator miI(std::next(MachineBasicBlock::iterator(MI)));
   for (MachineBasicBlock::iterator miE = MBB->end(); miI != miE; ++miI) {
     const MachineInstr& mi = *miI;
-    if (mi.readsRegister(SystemZ::CC))
+    if (mi.readsRegister(SystemZ::CC, /*TRI=*/nullptr))
       return false;
-    if (mi.definesRegister(SystemZ::CC))
+    if (mi.definesRegister(SystemZ::CC, /*TRI=*/nullptr))
       break; // Should have kill-flag - update below.
   }
 
@@ -8231,7 +8294,8 @@ SystemZTargetLowering::emitSelect(MachineInstr &MI,
       }
       break;
     }
-    if (NextMI.definesRegister(SystemZ::CC) || NextMI.usesCustomInsertionHook())
+    if (NextMI.definesRegister(SystemZ::CC, /*TRI=*/nullptr) ||
+        NextMI.usesCustomInsertionHook())
       break;
     bool User = false;
     for (auto *SelMI : Selects)
@@ -8249,8 +8313,8 @@ SystemZTargetLowering::emitSelect(MachineInstr &MI,
   }
 
   MachineInstr *LastMI = Selects.back();
-  bool CCKilled =
-      (LastMI->killsRegister(SystemZ::CC) || checkCCKill(*LastMI, MBB));
+  bool CCKilled = (LastMI->killsRegister(SystemZ::CC, /*TRI=*/nullptr) ||
+                   checkCCKill(*LastMI, MBB));
   MachineBasicBlock *StartMBB = MBB;
   MachineBasicBlock *JoinMBB  = SystemZ::splitBlockAfter(LastMI, MBB);
   MachineBasicBlock *FalseMBB = SystemZ::emitBlockAfter(StartMBB);
@@ -8350,7 +8414,8 @@ MachineBasicBlock *SystemZTargetLowering::emitCondStore(MachineInstr &MI,
 
   // Unless CC was killed in the CondStore instruction, mark it as
   // live-in to both FalseMBB and JoinMBB.
-  if (!MI.killsRegister(SystemZ::CC) && !checkCCKill(MI, JoinMBB)) {
+  if (!MI.killsRegister(SystemZ::CC, /*TRI=*/nullptr) &&
+      !checkCCKill(MI, JoinMBB)) {
     FalseMBB->addLiveIn(SystemZ::CC);
     JoinMBB->addLiveIn(SystemZ::CC);
   }
@@ -8753,7 +8818,7 @@ SystemZTargetLowering::emitAtomicCmpSwapW(MachineInstr &MI,
   // If the CC def wasn't dead in the ATOMIC_CMP_SWAPW, mark CC as live-in
   // to the block after the loop.  At this point, CC may have been defined
   // either by the CR in LoopMBB or by the CS in SetMBB.
-  if (!MI.registerDefIsDead(SystemZ::CC))
+  if (!MI.registerDefIsDead(SystemZ::CC, /*TRI=*/nullptr))
     DoneMBB->addLiveIn(SystemZ::CC);
 
   MI.eraseFromParent();
@@ -9627,7 +9692,7 @@ SDValue SystemZTargetLowering::lowerVECREDUCE_ADD(SDValue Op,
   case 8:
   case 16:
     Op = DAG.getNode(SystemZISD::VSUM, DL, MVT::v4i32, Op, Zero);
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case 32:
   case 64:
     Op = DAG.getNode(SystemZISD::VSUM, DL, MVT::i128, Op,

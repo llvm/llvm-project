@@ -208,20 +208,20 @@ struct APIRecord {
     RK_ClassTemplate,
     RK_ClassTemplateSpecialization,
     RK_ClassTemplatePartialSpecialization,
-    RK_LastRecordContext,
-    RK_GlobalFunction,
-    RK_GlobalFunctionTemplate,
-    RK_GlobalFunctionTemplateSpecialization,
+    RK_StructField,
+    RK_UnionField,
+    RK_CXXField,
+    RK_StaticField,
+    RK_CXXFieldTemplate,
     RK_GlobalVariable,
     RK_GlobalVariableTemplate,
     RK_GlobalVariableTemplateSpecialization,
     RK_GlobalVariableTemplatePartialSpecialization,
+    RK_LastRecordContext,
+    RK_GlobalFunction,
+    RK_GlobalFunctionTemplate,
+    RK_GlobalFunctionTemplateSpecialization,
     RK_EnumConstant,
-    RK_StructField,
-    RK_UnionField,
-    RK_StaticField,
-    RK_CXXField,
-    RK_CXXFieldTemplate,
     RK_Concept,
     RK_CXXStaticMethod,
     RK_CXXInstanceMethod,
@@ -321,6 +321,10 @@ public:
 
   RecordContext(APIRecord::RecordKind Kind) : Kind(Kind) {}
 
+  /// Append \p Other children chain into ours and empty out Other's record
+  /// chain.
+  void stealRecordChain(RecordContext &Other);
+
   APIRecord::RecordKind getKind() const { return Kind; }
 
   struct record_iterator {
@@ -370,6 +374,7 @@ private:
   APIRecord::RecordKind Kind;
   mutable APIRecord *First = nullptr;
   mutable APIRecord *Last = nullptr;
+  bool IsWellFormed() const;
 
 protected:
   friend class APISet;
@@ -475,7 +480,7 @@ struct GlobalFunctionTemplateSpecializationRecord : GlobalFunctionRecord {
 };
 
 /// This holds information associated with global functions.
-struct GlobalVariableRecord : APIRecord {
+struct GlobalVariableRecord : APIRecord, RecordContext {
   GlobalVariableRecord(StringRef USR, StringRef Name, SymbolReference Parent,
                        PresumedLoc Loc, AvailabilityInfo Availability,
                        LinkageInfo Linkage, const DocComment &Comment,
@@ -483,23 +488,28 @@ struct GlobalVariableRecord : APIRecord {
                        DeclarationFragments SubHeading, bool IsFromSystemHeader)
       : APIRecord(RK_GlobalVariable, USR, Name, Parent, Loc,
                   std::move(Availability), Linkage, Comment, Declaration,
-                  SubHeading, IsFromSystemHeader) {}
+                  SubHeading, IsFromSystemHeader),
+        RecordContext(RK_GlobalVariable) {}
 
   GlobalVariableRecord(RecordKind Kind, StringRef USR, StringRef Name,
-                       SymbolReference Parent,
-
-                       PresumedLoc Loc, AvailabilityInfo Availability,
-                       LinkageInfo Linkage, const DocComment &Comment,
+                       SymbolReference Parent, PresumedLoc Loc,
+                       AvailabilityInfo Availability, LinkageInfo Linkage,
+                       const DocComment &Comment,
                        DeclarationFragments Declaration,
                        DeclarationFragments SubHeading, bool IsFromSystemHeader)
       : APIRecord(Kind, USR, Name, Parent, Loc, std::move(Availability),
                   Linkage, Comment, Declaration, SubHeading,
-                  IsFromSystemHeader) {}
+                  IsFromSystemHeader),
+        RecordContext(Kind) {}
 
   static bool classof(const APIRecord *Record) {
     return classofKind(Record->getKind());
   }
-  static bool classofKind(RecordKind K) { return K == RK_GlobalVariable; }
+  static bool classofKind(RecordKind K) {
+    return K == RK_GlobalVariable || K == RK_GlobalVariableTemplate ||
+           K == RK_GlobalVariableTemplateSpecialization ||
+           K == RK_GlobalVariableTemplatePartialSpecialization;
+  }
 
 private:
   virtual void anchor();
@@ -591,20 +601,47 @@ private:
   virtual void anchor();
 };
 
-/// This holds information associated with enums.
-struct EnumRecord : APIRecord, RecordContext {
-  EnumRecord(StringRef USR, StringRef Name, SymbolReference Parent,
-             PresumedLoc Loc, AvailabilityInfo Availability,
-             const DocComment &Comment, DeclarationFragments Declaration,
-             DeclarationFragments SubHeading, bool IsFromSystemHeader)
-      : APIRecord(RK_Enum, USR, Name, Parent, Loc, std::move(Availability),
+struct TagRecord : APIRecord, RecordContext {
+  TagRecord(RecordKind Kind, StringRef USR, StringRef Name,
+            SymbolReference Parent, PresumedLoc Loc,
+            AvailabilityInfo Availability, const DocComment &Comment,
+            DeclarationFragments Declaration, DeclarationFragments SubHeading,
+            bool IsFromSystemHeader, bool IsEmbeddedInVarDeclarator,
+            AccessControl Access = AccessControl())
+      : APIRecord(Kind, USR, Name, Parent, Loc, std::move(Availability),
                   LinkageInfo::none(), Comment, Declaration, SubHeading,
-                  IsFromSystemHeader),
-        RecordContext(RK_Enum) {}
+                  IsFromSystemHeader, std::move(Access)),
+        RecordContext(Kind),
+        IsEmbeddedInVarDeclarator(IsEmbeddedInVarDeclarator){};
 
   static bool classof(const APIRecord *Record) {
     return classofKind(Record->getKind());
   }
+  static bool classofKind(RecordKind K) {
+    return K == RK_Struct || K == RK_Union || K == RK_Enum;
+  }
+
+  bool IsEmbeddedInVarDeclarator;
+
+  virtual ~TagRecord() = 0;
+};
+
+/// This holds information associated with enums.
+struct EnumRecord : TagRecord {
+  EnumRecord(StringRef USR, StringRef Name, SymbolReference Parent,
+             PresumedLoc Loc, AvailabilityInfo Availability,
+             const DocComment &Comment, DeclarationFragments Declaration,
+             DeclarationFragments SubHeading, bool IsFromSystemHeader,
+             bool IsEmbeddedInVarDeclarator,
+             AccessControl Access = AccessControl())
+      : TagRecord(RK_Enum, USR, Name, Parent, Loc, std::move(Availability),
+                  Comment, Declaration, SubHeading, IsFromSystemHeader,
+                  IsEmbeddedInVarDeclarator, std::move(Access)) {}
+
+  static bool classof(const APIRecord *Record) {
+    return classofKind(Record->getKind());
+  }
+
   static bool classofKind(RecordKind K) { return K == RK_Enum; }
 
 private:
@@ -612,7 +649,7 @@ private:
 };
 
 /// This holds information associated with struct or union fields fields.
-struct RecordFieldRecord : APIRecord {
+struct RecordFieldRecord : APIRecord, RecordContext {
   RecordFieldRecord(RecordKind Kind, StringRef USR, StringRef Name,
                     SymbolReference Parent, PresumedLoc Loc,
                     AvailabilityInfo Availability, const DocComment &Comment,
@@ -620,7 +657,8 @@ struct RecordFieldRecord : APIRecord {
                     DeclarationFragments SubHeading, bool IsFromSystemHeader)
       : APIRecord(Kind, USR, Name, Parent, Loc, std::move(Availability),
                   LinkageInfo::none(), Comment, Declaration, SubHeading,
-                  IsFromSystemHeader) {}
+                  IsFromSystemHeader),
+        RecordContext(Kind) {}
 
   static bool classof(const APIRecord *Record) {
     return classofKind(Record->getKind());
@@ -633,16 +671,17 @@ struct RecordFieldRecord : APIRecord {
 };
 
 /// This holds information associated with structs and unions.
-struct RecordRecord : APIRecord, RecordContext {
+struct RecordRecord : TagRecord {
   RecordRecord(RecordKind Kind, StringRef USR, StringRef Name,
                SymbolReference Parent, PresumedLoc Loc,
                AvailabilityInfo Availability, const DocComment &Comment,
                DeclarationFragments Declaration,
-               DeclarationFragments SubHeading, bool IsFromSystemHeader)
-      : APIRecord(Kind, USR, Name, Parent, Loc, std::move(Availability),
-                  LinkageInfo::none(), Comment, Declaration, SubHeading,
-                  IsFromSystemHeader),
-        RecordContext(Kind) {}
+               DeclarationFragments SubHeading, bool IsFromSystemHeader,
+               bool IsEmbeddedInVarDeclarator,
+               AccessControl Access = AccessControl())
+      : TagRecord(Kind, USR, Name, Parent, Loc, std::move(Availability),
+                  Comment, Declaration, SubHeading, IsFromSystemHeader,
+                  IsEmbeddedInVarDeclarator, std::move(Access)) {}
 
   static bool classof(const APIRecord *Record) {
     return classofKind(Record->getKind());
@@ -650,6 +689,8 @@ struct RecordRecord : APIRecord, RecordContext {
   static bool classofKind(RecordKind K) {
     return K == RK_Struct || K == RK_Union;
   }
+
+  bool isAnonymousWithNoTypedef() { return Name.empty(); }
 
   virtual ~RecordRecord() = 0;
 };
@@ -676,9 +717,11 @@ struct StructRecord : RecordRecord {
   StructRecord(StringRef USR, StringRef Name, SymbolReference Parent,
                PresumedLoc Loc, AvailabilityInfo Availability,
                const DocComment &Comment, DeclarationFragments Declaration,
-               DeclarationFragments SubHeading, bool IsFromSystemHeader)
+               DeclarationFragments SubHeading, bool IsFromSystemHeader,
+               bool IsEmbeddedInVarDeclarator)
       : RecordRecord(RK_Struct, USR, Name, Parent, Loc, std::move(Availability),
-                     Comment, Declaration, SubHeading, IsFromSystemHeader) {}
+                     Comment, Declaration, SubHeading, IsFromSystemHeader,
+                     IsEmbeddedInVarDeclarator) {}
 
   static bool classof(const APIRecord *Record) {
     return classofKind(Record->getKind());
@@ -711,9 +754,11 @@ struct UnionRecord : RecordRecord {
   UnionRecord(StringRef USR, StringRef Name, SymbolReference Parent,
               PresumedLoc Loc, AvailabilityInfo Availability,
               const DocComment &Comment, DeclarationFragments Declaration,
-              DeclarationFragments SubHeading, bool IsFromSystemHeader)
+              DeclarationFragments SubHeading, bool IsFromSystemHeader,
+              bool IsEmbeddedInVarDeclarator)
       : RecordRecord(RK_Union, USR, Name, Parent, Loc, std::move(Availability),
-                     Comment, Declaration, SubHeading, IsFromSystemHeader) {}
+                     Comment, Declaration, SubHeading, IsFromSystemHeader,
+                     IsEmbeddedInVarDeclarator) {}
 
   static bool classof(const APIRecord *Record) {
     return classofKind(Record->getKind());
@@ -724,7 +769,7 @@ private:
   virtual void anchor();
 };
 
-struct CXXFieldRecord : APIRecord {
+struct CXXFieldRecord : APIRecord, RecordContext {
   CXXFieldRecord(StringRef USR, StringRef Name, SymbolReference Parent,
                  PresumedLoc Loc, AvailabilityInfo Availability,
                  const DocComment &Comment, DeclarationFragments Declaration,
@@ -732,7 +777,8 @@ struct CXXFieldRecord : APIRecord {
                  bool IsFromSystemHeader)
       : APIRecord(RK_CXXField, USR, Name, Parent, Loc, std::move(Availability),
                   LinkageInfo::none(), Comment, Declaration, SubHeading,
-                  IsFromSystemHeader, std::move(Access)) {}
+                  IsFromSystemHeader, std::move(Access)),
+        RecordContext(RK_CXXField) {}
 
   CXXFieldRecord(RecordKind Kind, StringRef USR, StringRef Name,
                  SymbolReference Parent, PresumedLoc Loc,
@@ -742,7 +788,8 @@ struct CXXFieldRecord : APIRecord {
                  bool IsFromSystemHeader)
       : APIRecord(Kind, USR, Name, Parent, Loc, std::move(Availability),
                   LinkageInfo::none(), Comment, Declaration, SubHeading,
-                  IsFromSystemHeader, std::move(Access)) {}
+                  IsFromSystemHeader, std::move(Access)),
+        RecordContext(Kind) {}
 
   static bool classof(const APIRecord *Record) {
     return classofKind(Record->getKind());
@@ -1118,18 +1165,18 @@ struct ObjCContainerRecord : APIRecord, RecordContext {
   virtual ~ObjCContainerRecord() = 0;
 };
 
-struct CXXClassRecord : APIRecord, RecordContext {
+struct CXXClassRecord : RecordRecord {
   SmallVector<SymbolReference> Bases;
 
   CXXClassRecord(StringRef USR, StringRef Name, SymbolReference Parent,
                  PresumedLoc Loc, AvailabilityInfo Availability,
                  const DocComment &Comment, DeclarationFragments Declaration,
                  DeclarationFragments SubHeading, RecordKind Kind,
-                 AccessControl Access, bool IsFromSystemHeader)
-      : APIRecord(Kind, USR, Name, Parent, Loc, std::move(Availability),
-                  LinkageInfo::none(), Comment, Declaration, SubHeading,
-                  IsFromSystemHeader, std::move(Access)),
-        RecordContext(Kind) {}
+                 AccessControl Access, bool IsFromSystemHeader,
+                 bool IsEmbeddedInVarDeclarator = false)
+      : RecordRecord(Kind, USR, Name, Parent, Loc, std::move(Availability),
+                     Comment, Declaration, SubHeading, IsFromSystemHeader,
+                     IsEmbeddedInVarDeclarator, std::move(Access)) {}
 
   static bool classof(const APIRecord *Record) {
     return classofKind(Record->getKind());

@@ -474,6 +474,8 @@ static RTLIB::Libcall getRTLibDesc(unsigned Opcode, unsigned Size) {
     RTLIBCASE(ROUNDEVEN_F);
   case TargetOpcode::G_INTRINSIC_LRINT:
     RTLIBCASE(LRINT_F);
+  case TargetOpcode::G_INTRINSIC_LLRINT:
+    RTLIBCASE(LLRINT_F);
   }
   llvm_unreachable("Unknown libcall function");
 }
@@ -1061,7 +1063,8 @@ LegalizerHelper::libcall(MachineInstr &MI, LostDebugLocObserver &LocObserver) {
       return Status;
     break;
   }
-  case TargetOpcode::G_INTRINSIC_LRINT: {
+  case TargetOpcode::G_INTRINSIC_LRINT:
+  case TargetOpcode::G_INTRINSIC_LLRINT: {
     LLT LLTy = MRI.getType(MI.getOperand(1).getReg());
     unsigned Size = LLTy.getSizeInBits();
     Type *HLTy = getFloatTypeForLLT(Ctx, LLTy);
@@ -2661,6 +2664,7 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
   case TargetOpcode::G_FPTOSI:
   case TargetOpcode::G_FPTOUI:
   case TargetOpcode::G_INTRINSIC_LRINT:
+  case TargetOpcode::G_INTRINSIC_LLRINT:
   case TargetOpcode::G_IS_FPCLASS:
     Observer.changingInstr(MI);
 
@@ -4760,6 +4764,8 @@ LegalizerHelper::fewerElementsVector(MachineInstr &MI, unsigned TypeIdx,
     return fewerElementsVectorMultiEltType(GMI, NumElts, {2 /*pow*/});
   case G_BITCAST:
     return fewerElementsBitcast(MI, TypeIdx, NarrowTy);
+  case G_INTRINSIC_FPTRUNC_ROUND:
+    return fewerElementsVectorMultiEltType(GMI, NumElts, {2});
   default:
     return UnableToLegalize;
   }

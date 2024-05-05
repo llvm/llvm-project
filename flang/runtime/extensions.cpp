@@ -43,9 +43,9 @@ inline void CtimeBuffer(char *buffer, size_t bufsize, const time_t cur_time,
 }
 #endif
 
-#if _REENTRANT || _POSIX_C_SOURCE >= 199506L
-// System is posix-compliant and has getlogin_r
-#include <unistd.h>
+#ifndef _WIN32
+// posix-compliant and has getlogin_r and F_OK
+#include <unistd.h> 
 #endif
 
 extern "C" {

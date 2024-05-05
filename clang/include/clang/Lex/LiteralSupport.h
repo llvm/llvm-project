@@ -80,7 +80,8 @@ public:
   bool isFloat128 : 1;      // 1.0q
   bool isFract : 1;         // 1.0hr/r/lr/uhr/ur/ulr
   bool isAccum : 1;         // 1.0hk/k/lk/uhk/uk/ulk
-  bool isBitInt : 1;        // 1wb, 1uwb (C23)
+  bool isBitInt : 1;        // 1wb, 1uwb (C23) or 1__wb, 1__uwb (Clang extension in C++
+                            // mode)
   uint8_t MicrosoftInteger; // Microsoft suffix extension i8, i16, i32, or i64.
 
 

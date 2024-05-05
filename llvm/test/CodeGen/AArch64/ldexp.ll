@@ -4,9 +4,9 @@
 define double @testExp(double %val, i32 %a) {
 ; CHECK-LABEL: testExp:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    sxtw x8, w0
+; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    fmov d1, x8
 ; CHECK-NEXT:    fscale z0.d, p0/m, z0.d, z1.d
@@ -22,8 +22,8 @@ declare double @ldexp(double, i32) memory(none)
 define float @testExpf(float %val, i32 %a) {
 ; CHECK-LABEL: testExpf:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    fmov s1, w0
+; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 def $z0
 ; CHECK-NEXT:    fscale z0.s, p0/m, z0.s, z1.s
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 killed $z0
@@ -49,9 +49,9 @@ declare fp128 @ldexpl(fp128, i32) memory(none)
 define half @testExpf16(half %val, i32 %a) {
 ; CHECK-LABEL: testExpf16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    fcvt s0, h0
 ; CHECK-NEXT:    fmov s1, w0
+; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    fscale z0.s, p0/m, z0.s, z1.s
 ; CHECK-NEXT:    fcvt h0, s0
 ; CHECK-NEXT:    ret

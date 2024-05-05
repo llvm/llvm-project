@@ -251,11 +251,10 @@ using SectionsClauseOps = detail::Clauses<AllocateClauseOps, NowaitClauseOps,
                                           PrivateClauseOps, ReductionClauseOps>;
 
 // TODO `linear` clause.
-using SimdLoopClauseOps =
-    detail::Clauses<AlignedClauseOps, CollapseClauseOps, IfClauseOps,
-                    LoopRelatedOps, NontemporalClauseOps, OrderClauseOps,
-                    PrivateClauseOps, ReductionClauseOps, SafelenClauseOps,
-                    SimdlenClauseOps>;
+using SimdClauseOps =
+    detail::Clauses<AlignedClauseOps, IfClauseOps, NontemporalClauseOps,
+                    OrderClauseOps, PrivateClauseOps, ReductionClauseOps,
+                    SafelenClauseOps, SimdlenClauseOps>;
 
 using SingleClauseOps = detail::Clauses<AllocateClauseOps, CopyprivateClauseOps,
                                         NowaitClauseOps, PrivateClauseOps>;
@@ -296,10 +295,9 @@ using TeamsClauseOps =
                     PrivateClauseOps, ReductionClauseOps, ThreadLimitClauseOps>;
 
 using WsloopClauseOps =
-    detail::Clauses<AllocateClauseOps, CollapseClauseOps, LinearClauseOps,
-                    LoopRelatedOps, NowaitClauseOps, OrderClauseOps,
-                    OrderedClauseOps, PrivateClauseOps, ReductionClauseOps,
-                    ScheduleClauseOps>;
+    detail::Clauses<AllocateClauseOps, LinearClauseOps, NowaitClauseOps,
+                    OrderClauseOps, OrderedClauseOps, PrivateClauseOps,
+                    ReductionClauseOps, ScheduleClauseOps>;
 
 } // namespace omp
 } // namespace mlir

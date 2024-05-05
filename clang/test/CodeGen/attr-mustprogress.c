@@ -1,22 +1,22 @@
-// RUN: %clang_cc1 -std=c89 -triple=x86_64-unknown-linux-gnu -S -emit-llvm %s -o - | FileCheck --check-prefix=CHECK --check-prefix=C99 %s
-// RUN: %clang_cc1 -std=c99 -triple=x86_64-unknown-linux-gnu -S -emit-llvm %s -o - | FileCheck --check-prefix=CHECK --check-prefix=C99 %s
-// RUN: %clang_cc1 -std=c11 -triple=x86_64-unknown-linux-gnu -S -emit-llvm %s -o - | FileCheck --check-prefix=CHECK --check-prefix=C11 %s
-// RUN: %clang_cc1 -std=c18 -triple=x86_64-unknown-linux-gnu -S -emit-llvm %s -o - | FileCheck --check-prefix=CHECK --check-prefix=C11 %s
-// RUN: %clang_cc1 -std=c2x -triple=x86_64-unknown-linux-gnu -S -emit-llvm %s -o - | FileCheck --check-prefix=CHECK --check-prefix=C11 %s
+// RUN: %clang_cc1 -std=c89 -triple=x86_64-unknown-linux-gnu -emit-llvm %s -o - | FileCheck --check-prefix=CHECK --check-prefix=C99 %s
+// RUN: %clang_cc1 -std=c99 -triple=x86_64-unknown-linux-gnu -emit-llvm %s -o - | FileCheck --check-prefix=CHECK --check-prefix=C99 %s
+// RUN: %clang_cc1 -std=c11 -triple=x86_64-unknown-linux-gnu -emit-llvm %s -o - | FileCheck --check-prefix=CHECK --check-prefix=C11 %s
+// RUN: %clang_cc1 -std=c18 -triple=x86_64-unknown-linux-gnu -emit-llvm %s -o - | FileCheck --check-prefix=CHECK --check-prefix=C11 %s
+// RUN: %clang_cc1 -std=c2x -triple=x86_64-unknown-linux-gnu -emit-llvm %s -o - | FileCheck --check-prefix=CHECK --check-prefix=C11 %s
 //
 // Check -ffinite-loops option in combination with various standard versions.
-// RUN: %clang_cc1 -std=c89 -ffinite-loops -triple=x86_64-unknown-linux-gnu -S -emit-llvm %s -o - | FileCheck --check-prefix=CHECK --check-prefix=FINITE %s
-// RUN: %clang_cc1 -std=c99 -ffinite-loops -triple=x86_64-unknown-linux-gnu -S -emit-llvm %s -o - | FileCheck --check-prefix=CHECK --check-prefix=FINITE %s
-// RUN: %clang_cc1 -std=c11 -ffinite-loops -triple=x86_64-unknown-linux-gnu -S -emit-llvm %s -o - | FileCheck --check-prefix=CHECK --check-prefix=FINITE %s
-// RUN: %clang_cc1 -std=c18 -ffinite-loops -triple=x86_64-unknown-linux-gnu -S -emit-llvm %s -o - | FileCheck --check-prefix=CHECK --check-prefix=FINITE %s
-// RUN: %clang_cc1 -std=c2x -ffinite-loops -triple=x86_64-unknown-linux-gnu -S -emit-llvm %s -o - | FileCheck --check-prefix=CHECK --check-prefix=FINITE %s
+// RUN: %clang_cc1 -std=c89 -ffinite-loops -triple=x86_64-unknown-linux-gnu -emit-llvm %s -o - | FileCheck --check-prefix=CHECK --check-prefix=FINITE %s
+// RUN: %clang_cc1 -std=c99 -ffinite-loops -triple=x86_64-unknown-linux-gnu -emit-llvm %s -o - | FileCheck --check-prefix=CHECK --check-prefix=FINITE %s
+// RUN: %clang_cc1 -std=c11 -ffinite-loops -triple=x86_64-unknown-linux-gnu -emit-llvm %s -o - | FileCheck --check-prefix=CHECK --check-prefix=FINITE %s
+// RUN: %clang_cc1 -std=c18 -ffinite-loops -triple=x86_64-unknown-linux-gnu -emit-llvm %s -o - | FileCheck --check-prefix=CHECK --check-prefix=FINITE %s
+// RUN: %clang_cc1 -std=c2x -ffinite-loops -triple=x86_64-unknown-linux-gnu -emit-llvm %s -o - | FileCheck --check-prefix=CHECK --check-prefix=FINITE %s
 //
 // Check -fno-finite-loops option in combination with various standard versions.
-// RUN: %clang_cc1 -std=c89 -fno-finite-loops -triple=x86_64-unknown-linux-gnu -S -emit-llvm %s -o - | FileCheck --check-prefix=CHECK --check-prefix=C99 %s
-// RUN: %clang_cc1 -std=c99 -fno-finite-loops -triple=x86_64-unknown-linux-gnu -S -emit-llvm %s -o - | FileCheck --check-prefix=CHECK --check-prefix=C99 %s
-// RUN: %clang_cc1 -std=c11 -fno-finite-loops -triple=x86_64-unknown-linux-gnu -S -emit-llvm %s -o - | FileCheck --check-prefix=CHECK --check-prefix=C99 %s
-// RUN: %clang_cc1 -std=c18 -fno-finite-loops -triple=x86_64-unknown-linux-gnu -S -emit-llvm %s -o - | FileCheck --check-prefix=CHECK --check-prefix=C99 %s
-// RUN: %clang_cc1 -std=c2x -fno-finite-loops -triple=x86_64-unknown-linux-gnu -S -emit-llvm %s -o - | FileCheck --check-prefix=CHECK --check-prefix=C99 %s
+// RUN: %clang_cc1 -std=c89 -fno-finite-loops -triple=x86_64-unknown-linux-gnu -emit-llvm %s -o - | FileCheck --check-prefix=CHECK --check-prefix=C99 %s
+// RUN: %clang_cc1 -std=c99 -fno-finite-loops -triple=x86_64-unknown-linux-gnu -emit-llvm %s -o - | FileCheck --check-prefix=CHECK --check-prefix=C99 %s
+// RUN: %clang_cc1 -std=c11 -fno-finite-loops -triple=x86_64-unknown-linux-gnu -emit-llvm %s -o - | FileCheck --check-prefix=CHECK --check-prefix=C99 %s
+// RUN: %clang_cc1 -std=c18 -fno-finite-loops -triple=x86_64-unknown-linux-gnu -emit-llvm %s -o - | FileCheck --check-prefix=CHECK --check-prefix=C99 %s
+// RUN: %clang_cc1 -std=c2x -fno-finite-loops -triple=x86_64-unknown-linux-gnu -emit-llvm %s -o - | FileCheck --check-prefix=CHECK --check-prefix=C99 %s
 
 int a = 0;
 int b = 0;
@@ -30,7 +30,7 @@ int b = 0;
 // CHECK:       for.cond:
 // C99-NOT:       br {{.*}}!llvm.loop
 // C11-NOT:       br {{.*}}!llvm.loop
-// FINITE-NEXT:   br {{.*}}!llvm.loop
+// FINITE-NOR:    br {{.*}}!llvm.loop
 //
 void f0(void) {
   for (; ;) ;
@@ -45,7 +45,7 @@ void f0(void) {
 // CHECK:       for.body:
 // C99-NOT:       br {{.*}}, !llvm.loop
 // C11-NOT:       br {{.*}}, !llvm.loop
-// FINITE-NEXT:   br {{.*}}, !llvm.loop
+// FINITE-NOT:    br {{.*}}, !llvm.loop
 // CHECK:       for.end:
 // CHECK-NEXT:    ret void
 //
@@ -84,7 +84,7 @@ void f2(void) {
 // CHECK:       for.body:
 // C99-NOT:       br {{.*}}, !llvm.loop
 // C11-NOT:       br {{.*}}, !llvm.loop
-// FINITE-NEXT:   br {{.*}}, !llvm.loop
+// FINITE-NOT:    br {{.*}}, !llvm.loop
 // CHECK:       for.end:
 // CHECK-NEXT:    br label %for.cond1
 // CHECK:       for.cond1:
@@ -113,7 +113,7 @@ void F(void) {
 // CHECK:       while.body:
 // C99-NOT:       br {{.*}}, !llvm.loop
 // C11-NOT:       br {{.*}}, !llvm.loop
-// FINITE-NEXT:   br {{.*}}, !llvm.loop
+// FINITE-NOT:    br {{.*}}, !llvm.loop
 //
 void w1(void) {
   while (1) {
@@ -159,7 +159,7 @@ void w2(void) {
 // CHECK:       while.body2:
 // C99-NOT:       br {{.*}} !llvm.loop
 // C11-NOT:       br {{.*}} !llvm.loop
-// FINITE-NEXT:   br {{.*}} !llvm.loop
+// FINITE-NOT:    br {{.*}} !llvm.loop
 //
 void W(void) {
   while (a == b) {
@@ -177,7 +177,7 @@ void W(void) {
 // CHECK:       do.cond:
 // C99-NOT:       br {{.*}}, !llvm.loop
 // C11-NOT:       br {{.*}}, !llvm.loop
-// FINITE-NEXT:   br {{.*}}, !llvm.loop
+// FINITE-NOT:    br {{.*}}, !llvm.loop
 // CHECK:       do.end:
 // CHECK-NEXT:    ret void
 //
