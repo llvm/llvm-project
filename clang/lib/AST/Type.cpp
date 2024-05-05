@@ -3391,6 +3391,8 @@ StringRef BuiltinType::getName(const PrintingPolicy &Policy) const {
     return "<overloaded function type>";
   case BoundMember:
     return "<bound member function type>";
+  case UnresolvedTemplate:
+    return "<unresolved template type>";
   case PseudoObject:
     return "<pseudo-object type>";
   case Dependent:
@@ -4687,6 +4689,7 @@ bool Type::canHaveNullability(bool ResultIfUnknown) const {
 #include "clang/AST/BuiltinTypes.def"
       return false;
 
+    case BuiltinType::UnresolvedTemplate:
     // Dependent types that could instantiate to a pointer type.
     case BuiltinType::Dependent:
     case BuiltinType::Overload:
