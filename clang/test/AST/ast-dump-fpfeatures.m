@@ -1,5 +1,5 @@
 // Test without serialization:
-// RUN: %clang_cc1 -fsyntax-only -triple x86_64-pc-linux -ast-dump %s \
+// RUN: %clang_cc1 -triple x86_64-pc-linux -ast-dump %s \
 // RUN: | FileCheck --strict-whitespace %s
 
 // Test with serialization:

@@ -22708,10 +22708,10 @@ static SDValue EmitCmp(SDValue Op0, SDValue Op1, unsigned X86CC,
   }
 
   // Try to shrink i64 compares if the input has enough zero bits.
-  // FIXME: Do this for non-constant compares for constant on LHS?
-  if (CmpVT == MVT::i64 && isa<ConstantSDNode>(Op1) && !isX86CCSigned(X86CC) &&
+  // TODO: Add sign-bits equivalent for isX86CCSigned(X86CC)?
+  if (CmpVT == MVT::i64 && !isX86CCSigned(X86CC) &&
       Op0.hasOneUse() && // Hacky way to not break CSE opportunities with sub.
-      Op1->getAsAPIntVal().getActiveBits() <= 32 &&
+      DAG.MaskedValueIsZero(Op1, APInt::getHighBitsSet(64, 32)) &&
       DAG.MaskedValueIsZero(Op0, APInt::getHighBitsSet(64, 32))) {
     CmpVT = MVT::i32;
     Op0 = DAG.getNode(ISD::TRUNCATE, dl, CmpVT, Op0);
@@ -30058,7 +30058,9 @@ static SDValue LowerRotate(SDValue Op, const X86Subtarget &Subtarget,
     return R;
 
   // AVX512 implicitly uses modulo rotation amounts.
-  if (Subtarget.hasAVX512() && 32 <= EltSizeInBits) {
+  if ((Subtarget.hasVLX() ||
+       (Subtarget.hasAVX512() && Subtarget.hasEVEX512())) &&
+      32 <= EltSizeInBits) {
     // Attempt to rotate by immediate.
     if (IsCstSplat) {
       unsigned RotOpc = IsROTL ? X86ISD::VROTLI : X86ISD::VROTRI;
