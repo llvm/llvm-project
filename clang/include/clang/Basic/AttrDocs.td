@@ -5669,7 +5669,7 @@ impact floating-point registers.
   be used to pass function arguments. Floating-point registers (XMMs/YMMs) still
   follow the C calling convention.
 - On AArch64, only LR and FP are preserved by the callee.
-  Registers X19-X28 and X0-X17 are used to pass function arguments.
+  Registers X19-X28 and X0-X15 are used to pass function arguments.
   X18, SIMD and floating-point registers follow the AAPCS calling
   convention.
   }];
