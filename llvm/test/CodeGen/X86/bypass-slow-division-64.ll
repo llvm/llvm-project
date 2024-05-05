@@ -56,6 +56,28 @@ define i64 @Test_get_quotient(i64 %a, i64 %b) nounwind {
   ret i64 %result
 }
 
+define i64 @Test_get_quotient_optsize(i64 %a, i64 %b) nounwind optsize {
+; CHECK-LABEL: Test_get_quotient_optsize:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    cqto
+; CHECK-NEXT:    idivq %rsi
+; CHECK-NEXT:    retq
+  %result = sdiv i64 %a, %b
+  ret i64 %result
+}
+
+define i64 @Test_get_quotient_minsize(i64 %a, i64 %b) nounwind minsize {
+; CHECK-LABEL: Test_get_quotient_minsize:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    cqto
+; CHECK-NEXT:    idivq %rsi
+; CHECK-NEXT:    retq
+  %result = sdiv i64 %a, %b
+  ret i64 %result
+}
+
 define i64 @Test_get_remainder(i64 %a, i64 %b) nounwind {
 ; FAST-DIVQ-LABEL: Test_get_remainder:
 ; FAST-DIVQ:       # %bb.0:
@@ -71,18 +93,42 @@ define i64 @Test_get_remainder(i64 %a, i64 %b) nounwind {
 ; SLOW-DIVQ-NEXT:    movq %rdi, %rcx
 ; SLOW-DIVQ-NEXT:    orq %rsi, %rcx
 ; SLOW-DIVQ-NEXT:    shrq $32, %rcx
-; SLOW-DIVQ-NEXT:    je .LBB1_1
+; SLOW-DIVQ-NEXT:    je .LBB3_1
 ; SLOW-DIVQ-NEXT:  # %bb.2:
 ; SLOW-DIVQ-NEXT:    cqto
 ; SLOW-DIVQ-NEXT:    idivq %rsi
 ; SLOW-DIVQ-NEXT:    movq %rdx, %rax
 ; SLOW-DIVQ-NEXT:    retq
-; SLOW-DIVQ-NEXT:  .LBB1_1:
+; SLOW-DIVQ-NEXT:  .LBB3_1:
 ; SLOW-DIVQ-NEXT:    # kill: def $eax killed $eax killed $rax
 ; SLOW-DIVQ-NEXT:    xorl %edx, %edx
 ; SLOW-DIVQ-NEXT:    divl %esi
 ; SLOW-DIVQ-NEXT:    movl %edx, %eax
 ; SLOW-DIVQ-NEXT:    retq
+  %result = srem i64 %a, %b
+  ret i64 %result
+}
+
+define i64 @Test_get_remainder_optsize(i64 %a, i64 %b) nounwind optsize {
+; CHECK-LABEL: Test_get_remainder_optsize:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    cqto
+; CHECK-NEXT:    idivq %rsi
+; CHECK-NEXT:    movq %rdx, %rax
+; CHECK-NEXT:    retq
+  %result = srem i64 %a, %b
+  ret i64 %result
+}
+
+define i64 @Test_get_remainder_minsize(i64 %a, i64 %b) nounwind minsize {
+; CHECK-LABEL: Test_get_remainder_minsize:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    cqto
+; CHECK-NEXT:    idivq %rsi
+; CHECK-NEXT:    movq %rdx, %rax
+; CHECK-NEXT:    retq
   %result = srem i64 %a, %b
   ret i64 %result
 }
@@ -102,13 +148,13 @@ define i64 @Test_get_quotient_and_remainder(i64 %a, i64 %b) nounwind {
 ; SLOW-DIVQ-NEXT:    movq %rdi, %rcx
 ; SLOW-DIVQ-NEXT:    orq %rsi, %rcx
 ; SLOW-DIVQ-NEXT:    shrq $32, %rcx
-; SLOW-DIVQ-NEXT:    je .LBB2_1
+; SLOW-DIVQ-NEXT:    je .LBB6_1
 ; SLOW-DIVQ-NEXT:  # %bb.2:
 ; SLOW-DIVQ-NEXT:    cqto
 ; SLOW-DIVQ-NEXT:    idivq %rsi
 ; SLOW-DIVQ-NEXT:    addq %rdx, %rax
 ; SLOW-DIVQ-NEXT:    retq
-; SLOW-DIVQ-NEXT:  .LBB2_1:
+; SLOW-DIVQ-NEXT:  .LBB6_1:
 ; SLOW-DIVQ-NEXT:    # kill: def $eax killed $eax killed $rax
 ; SLOW-DIVQ-NEXT:    xorl %edx, %edx
 ; SLOW-DIVQ-NEXT:    divl %esi
@@ -116,6 +162,34 @@ define i64 @Test_get_quotient_and_remainder(i64 %a, i64 %b) nounwind {
 ; SLOW-DIVQ-NEXT:    # kill: def $eax killed $eax def $rax
 ; SLOW-DIVQ-NEXT:    addq %rdx, %rax
 ; SLOW-DIVQ-NEXT:    retq
+  %resultdiv = sdiv i64 %a, %b
+  %resultrem = srem i64 %a, %b
+  %result = add i64 %resultdiv, %resultrem
+  ret i64 %result
+}
+
+define i64 @Test_get_quotient_and_remainder_optsize(i64 %a, i64 %b) nounwind optsize {
+; CHECK-LABEL: Test_get_quotient_and_remainder_optsize:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    cqto
+; CHECK-NEXT:    idivq %rsi
+; CHECK-NEXT:    addq %rdx, %rax
+; CHECK-NEXT:    retq
+  %resultdiv = sdiv i64 %a, %b
+  %resultrem = srem i64 %a, %b
+  %result = add i64 %resultdiv, %resultrem
+  ret i64 %result
+}
+
+define i64 @Test_get_quotient_and_remainder_minsize(i64 %a, i64 %b) nounwind minsize {
+; CHECK-LABEL: Test_get_quotient_and_remainder_minsize:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    cqto
+; CHECK-NEXT:    idivq %rsi
+; CHECK-NEXT:    addq %rdx, %rax
+; CHECK-NEXT:    retq
   %resultdiv = sdiv i64 %a, %b
   %resultrem = srem i64 %a, %b
   %result = add i64 %resultdiv, %resultrem
