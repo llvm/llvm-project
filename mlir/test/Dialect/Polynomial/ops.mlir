@@ -10,8 +10,12 @@
 #one_plus_x_squared = #polynomial.polynomial<1 + x**2>
 
 #ideal = #polynomial.polynomial<-1 + x**1024>
-#ring = #polynomial.ring<coefficientType=i32, coefficientModulus=18, polynomialModulus=#ideal>
+#ring = #polynomial.ring<coefficientType=i32, coefficientModulus=256, polynomialModulus=#ideal, primitiveRoot=193>
 !poly_ty = !polynomial.polynomial<#ring>
+
+#ntt_poly = #polynomial.polynomial<-1 + x**8>
+#ntt_ring = #polynomial.ring<coefficientType=i32, coefficientModulus=256, polynomialModulus=#ntt_poly, primitiveRoot=31>
+!ntt_poly_ty = !polynomial.polynomial<#ntt_ring>
 
 module {
   func.func @test_multiply() -> !polynomial.polynomial<#ring1> {
@@ -77,6 +81,16 @@ module {
   func.func @test_constant() {
     %0 = polynomial.constant #one_plus_x_squared : !polynomial.polynomial<#ring1>
     %1 = polynomial.constant <1 + x**2> : !polynomial.polynomial<#ring1>
+    return
+  }
+
+  func.func @test_ntt(%0 : !ntt_poly_ty) {
+    %1 = polynomial.ntt %0 : !ntt_poly_ty -> tensor<8xi32, #ntt_ring>
+    return
+  }
+
+  func.func @test_intt(%0 : tensor<8xi32, #ntt_ring>) {
+    %1 = polynomial.intt %0 : tensor<8xi32, #ntt_ring> -> !ntt_poly_ty
     return
   }
 }
