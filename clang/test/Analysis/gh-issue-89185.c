@@ -7,8 +7,7 @@ void clang_analyzer_dump_ptr(char*);
 void binding_to_label_loc() {
   char *b = &&MyLabel;
 MyLabel:
-  *b = 0; // no-crash
-  clang_analyzer_dump_ptr(b); // expected-warning {{&&MyLabel}}
-  clang_analyzer_dump(*b); // expected-warning {{Unknown}}
-  // FIXME: We should never reach here, as storing to a label is invalid.
+  *b = 0; // expected-warning {{Dereference of the address of a label}}
+  clang_analyzer_dump_ptr(b);
+  clang_analyzer_dump(*b);
 }
