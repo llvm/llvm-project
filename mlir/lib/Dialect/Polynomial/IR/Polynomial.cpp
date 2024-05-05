@@ -35,7 +35,6 @@ FailureOr<PolyT> fromMonomialsImpl(ArrayRef<MonomialT> monomials) {
   return PolyT(monomialsCopy);
 }
 
-
 FailureOr<IntPolynomial>
 IntPolynomial::fromMonomials(ArrayRef<IntMonomial> monomials) {
   return fromMonomialsImpl<IntPolynomial, IntMonomial>(monomials);

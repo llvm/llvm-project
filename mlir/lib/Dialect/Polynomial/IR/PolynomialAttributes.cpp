@@ -102,10 +102,10 @@ parseMonomial(AsmParser &parser, Monomial &monomial, llvm::StringRef &variable,
 }
 
 template <typename PolynoimalAttrTy, typename Monomial>
-LogicalResult parsePolynomialAttr(
-    AsmParser &parser, llvm::SmallVector<Monomial> &monomials,
-    llvm::StringSet<> &variables,
-    ParseCoefficientFn<Monomial> parseAndStoreCoefficient) {
+LogicalResult
+parsePolynomialAttr(AsmParser &parser, llvm::SmallVector<Monomial> &monomials,
+                    llvm::StringSet<> &variables,
+                    ParseCoefficientFn<Monomial> parseAndStoreCoefficient) {
   while (true) {
     Monomial parsedMonomial;
     llvm::StringRef parsedVariableRef;

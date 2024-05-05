@@ -56,7 +56,8 @@ public:
   }
 
   virtual bool isMonic() const = 0;
-  virtual void coefficientToString(llvm::SmallString<16> &coeffString) const = 0;
+  virtual void
+  coefficientToString(llvm::SmallString<16> &coeffString) const = 0;
 
   template <typename T>
   friend ::llvm::hash_code hash_value(const MonomialBase<T> &arg);
