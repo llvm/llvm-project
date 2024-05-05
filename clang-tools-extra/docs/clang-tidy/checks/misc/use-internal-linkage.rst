@@ -13,6 +13,7 @@ the compiler more information and allows for more aggressive optimizations.
 Example:
 
 .. code-block:: c++
+
   int v1; // can be marked as static
 
   void fn1(); // can be marked as static
