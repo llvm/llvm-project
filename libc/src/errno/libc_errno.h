@@ -12,11 +12,8 @@
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/properties/architectures.h"
 
-// TODO: https://github.com/llvm/llvm-project/issues/80172
-// Separate just the definition of errno numbers in
-// include/llvm-libc-macros/* and only include that instead of the system
-// <errno.h>.
-#include <errno.h>
+#include <include/llvm-libc-macros/error-number-macros.h>
+#include <include/llvm-libc-macros/generic-error-number-macros.h>
 
 // This header is to be consumed by internal implementations, in which all of
 // them should refer to `libc_errno` instead of using `errno` directly from
