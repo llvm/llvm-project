@@ -1377,6 +1377,13 @@ enum DebuggerBroadcastBit {
   eBroadcastBitProgressCategory = (1 << 3),
 };
 
+/// Used for expressing severity in logs and diagnostics.
+enum Severity {
+  eSeverityError,
+  eSeverityWarning,
+  eSeverityInfo, // Equivalent to Remark used in clang.
+};
+
 } // namespace lldb
 
 #endif // LLDB_LLDB_ENUMERATIONS_H
