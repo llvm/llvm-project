@@ -18,10 +18,10 @@
 
 namespace LIBC_NAMESPACE {
 
-static long pathconfig(const struct statvfs &s, int name) {
+static long pathconfig(const struct statfs &s, int name) {
   switch (name) {
   case _PC_LINK_MAX:
-    return _POSIX_LINK_MAX;
+    return s.f_type;
 
   case _PC_MAX_CANON:
     return _POSIX_MAX_CANON;
@@ -30,7 +30,7 @@ static long pathconfig(const struct statvfs &s, int name) {
     return _POSIX_MAX_INPUT;
 
   case _PC_NAME_MAX:
-    return _POSIX_NAME_MAX;
+    return s.f_namemax;
 
   case _PC_PATH_MAX:
     return _POSIX_PATH_MAX;
@@ -50,11 +50,15 @@ static long pathconfig(const struct statvfs &s, int name) {
 }
 
 LLVM_LIBC_FUNCTION(long, pathconf, (char *path, int name)) {
-  struct statvfs sb;
-  if (fstatvfs(path, &sb) == -1) {
+  // struct statfs sb;
+  // if (fstatfs(PathFD(path), &sb) == -1) {
+  //   return -1;
+  // }
+  cpp::optional<LinuxStatFs> result = linux_statfs(const char *path);
+  if (!result.has_value()) {
     return -1;
   }
-  return pathconfig(sb, name);
+  return pathconfig(result.value(), name);
 }
 
 } // namespace LIBC_NAMESPACE

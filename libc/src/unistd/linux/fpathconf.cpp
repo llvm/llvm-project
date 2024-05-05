@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/unistd/fsync.h"
-
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/common.h"
 
@@ -47,14 +45,12 @@ static long pathconfig(const struct statvfs &s, int name) {
   }
 }
 
-LLVM_LIBC_FUNCTION(int, fsync, (int fd)) {
-  LLVM_LIBC_FUNCTION(long, fpathconf, (int fd, int name)) {
-    struct statvfs sb;
-    if (statvfs(path, &sb) == -1) {
-      return -1;
-    }
-    return pathconfig(sb, name);
+LLVM_LIBC_FUNCTION(long, fpathconf, (int fd, int name)) {
+  struct statvfs sb;
+  if (statvfs(path, &sb) == -1) {
+    return -1;
   }
+  return pathconfig(sb, name);
 }
 
 } // namespace LIBC_NAMESPACE
