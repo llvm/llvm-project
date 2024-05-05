@@ -39,13 +39,13 @@ def Polynomial_Dialect : Dialect {
     %a = polynomial.constant <1 + x**2 - 3x**3> : polynomial.polynomial<#ring>
 
     // A constant polynomial in a ring with i32 coefficients, modulo (x^1024 + 1)
-    #modulus = #polynomial.polynomial<1 + x**1024>
+    #modulus = #polynomial.int_polynomial<1 + x**1024>
     #ring = #polynomial.ring<coefficientType=i32, polynomialModulus=#modulus>
     %a = polynomial.constant <1 + x**2 - 3x**3> : polynomial.polynomial<#ring>
 
     // A constant polynomial in a ring with i32 coefficients, with a polynomial
     // modulus of (x^1024 + 1) and a coefficient modulus of 17.
-    #modulus = #polynomial.polynomial<1 + x**1024>
+    #modulus = #polynomial.int_polynomial<1 + x**1024>
     #ring = #polynomial.ring<coefficientType=i32, coefficientModulus=17:i32, polynomialModulus=#modulus>
     %a = polynomial.constant <1 + x**2 - 3x**3> : polynomial.polynomial<#ring>
     ```
@@ -126,7 +126,7 @@ def Polynomial_RingAttr : Polynomial_Attr<"Ring", "ring"> {
     `x**1024 - 1`.
 
     ```mlir
-    #poly_mod = #polynomial.polynomial<-1 + x**1024>
+    #poly_mod = #polynomial.int_polynomial<-1 + x**1024>
     #ring = #polynomial.ring<coefficientType=i32,
                              coefficientModulus=4294967291:i32,
                              polynomialModulus=#poly_mod>
@@ -210,10 +210,10 @@ def Polynomial_AddOp : Polynomial_BinaryOp<"add", [Commutative]> {
 
     ```mlir
     // add two polynomials modulo x^1024 - 1
-    #poly = #polynomial.polynomial<x**1024 - 1>
+    #poly = #polynomial.int_polynomial<x**1024 - 1>
     #ring = #polynomial.ring<coefficientType=i32, coefficientModulus=65536:i32, polynomialModulus=#poly>
-    %0 = polynomial.constant #polynomial.polynomial<1 + x**2> : !polynomial.polynomial<#ring>
-    %1 = polynomial.constant #polynomial.polynomial<x**5 - x + 1> : !polynomial.polynomial<#ring>
+    %0 = polynomial.constant #polynomial.int_polynomial<1 + x**2> : !polynomial.polynomial<#ring>
+    %1 = polynomial.constant #polynomial.int_polynomial<x**5 - x + 1> : !polynomial.polynomial<#ring>
     %2 = polynomial.add %0, %1 : !polynomial.polynomial<#ring>
     ```
   }];
@@ -234,10 +234,10 @@ def Polynomial_SubOp : Polynomial_BinaryOp<"sub"> {
 
     ```mlir
     // subtract two polynomials modulo x^1024 - 1
-    #poly = #polynomial.polynomial<x**1024 - 1>
+    #poly = #polynomial.int_polynomial<x**1024 - 1>
     #ring = #polynomial.ring<coefficientType=i32, coefficientModulus=65536:i32, polynomialModulus=#poly>
-    %0 = polynomial.constant #polynomial.polynomial<1 + x**2> : !polynomial.polynomial<#ring>
-    %1 = polynomial.constant #polynomial.polynomial<x**5 - x + 1> : !polynomial.polynomial<#ring>
+    %0 = polynomial.constant #polynomial.int_polynomial<1 + x**2> : !polynomial.polynomial<#ring>
+    %1 = polynomial.constant #polynomial.int_polynomial<x**5 - x + 1> : !polynomial.polynomial<#ring>
     %2 = polynomial.sub %0, %1 : !polynomial.polynomial<#ring>
     ```
   }];
@@ -258,10 +258,10 @@ def Polynomial_MulOp : Polynomial_BinaryOp<"mul", [Commutative]> {
 
     ```mlir
     // multiply two polynomials modulo x^1024 - 1
-    #poly = #polynomial.polynomial<x**1024 - 1>
+    #poly = #polynomial.int_polynomial<x**1024 - 1>
     #ring = #polynomial.ring<coefficientType=i32, coefficientModulus=65536:i32, polynomialModulus=#poly>
-    %0 = polynomial.constant #polynomial.polynomial<1 + x**2> : !polynomial.polynomial<#ring>
-    %1 = polynomial.constant #polynomial.polynomial<x**5 - x + 1> : !polynomial.polynomial<#ring>
+    %0 = polynomial.constant #polynomial.int_polynomial<1 + x**2> : !polynomial.polynomial<#ring>
+    %1 = polynomial.constant #polynomial.int_polynomial<x**5 - x + 1> : !polynomial.polynomial<#ring>
     %2 = polynomial.mul %0, %1 : !polynomial.polynomial<#ring>
     ```
   }];
@@ -283,9 +283,9 @@ def Polynomial_MulScalarOp : Polynomial_Op<"mul_scalar", [
 
     ```mlir
     // multiply two polynomials modulo x^1024 - 1
-    #poly = #polynomial.polynomial<x**1024 - 1>
+    #poly = #polynomial.int_polynomial<x**1024 - 1>
     #ring = #polynomial.ring<coefficientType=i32, coefficientModulus=65536:i32, polynomialModulus=#poly>
-    %0 = polynomial.constant #polynomial.polynomial<1 + x**2> : !polynomial.polynomial<#ring>
+    %0 = polynomial.constant #polynomial.int_polynomial<1 + x**2> : !polynomial.polynomial<#ring>
     %1 = arith.constant 3 : i32
     %2 = polynomial.mul_scalar %0, %1 : !polynomial.polynomial<#ring>, i32
     ```
@@ -314,9 +314,9 @@ def Polynomial_LeadingTermOp: Polynomial_Op<"leading_term"> {
     Example:
 
     ```mlir
-    #poly = #polynomial.polynomial<x**1024 - 1>
+    #poly = #polynomial.int_polynomial<x**1024 - 1>
     #ring = #polynomial.ring<coefficientType=i32, coefficientModulus=65536:i32, polynomialModulus=#poly>
-    %0 = polynomial.constant #polynomial.polynomial<1 + x**2> : !polynomial.polynomial<#ring>
+    %0 = polynomial.constant #polynomial.int_polynomial<1 + x**2> : !polynomial.polynomial<#ring>
     %1, %2 = polynomial.leading_term %0 : !polynomial.polynomial<#ring> -> (index, i32)
     ```
   }];
@@ -337,7 +337,7 @@ def Polynomial_MonomialOp: Polynomial_Op<"monomial"> {
     Example:
 
     ```mlir
-    #poly = #polynomial.polynomial<x**1024 - 1>
+    #poly = #polynomial.int_polynomial<x**1024 - 1>
     #ring = #polynomial.ring<coefficientType=i32, coefficientModulus=65536:i32, polynomialModulus=#poly>
     %deg = arith.constant 1023 : index
     %five = arith.constant 5 : i32
@@ -377,7 +377,7 @@ def Polynomial_FromTensorOp : Polynomial_Op<"from_tensor", [Pure]> {
     Example:
 
     ```mlir
-    #poly = #polynomial.polynomial<x**1024 - 1>
+    #poly = #polynomial.int_polynomial<x**1024 - 1>
     #ring = #polynomial.ring<coefficientType=i32, coefficientModulus=65536:i32, polynomialModulus=#poly>
     %two = arith.constant 2 : i32
     %five = arith.constant 5 : i32
@@ -416,7 +416,7 @@ def Polynomial_ToTensorOp : Polynomial_Op<"to_tensor", [Pure]> {
     Example:
 
     ```mlir
-    #poly = #polynomial.polynomial<x**1024 - 1>
+    #poly = #polynomial.int_polynomial<x**1024 - 1>
     #ring = #polynomial.ring<coefficientType=i32, coefficientModulus=65536:i32, polynomialModulus=#poly>
     %two = arith.constant 2 : i32
     %five = arith.constant 5 : i32
@@ -443,9 +443,12 @@ def Polynomial_ConstantOp : Op<Polynomial_Dialect, "constant", [Pure]> {
     Example:
 
     ```mlir
-    #poly = #polynomial.polynomial<x**1024 - 1>
+    #poly = #polynomial.int_polynomial<x**1024 - 1>
     #ring = #polynomial.ring<coefficientType=i32, coefficientModulus=65536:i32, polynomialModulus=#poly>
-    %0 = polynomial.constant #polynomial.polynomial<1 + x**2> : !polynomial.polynomial<#ring>
+    %0 = polynomial.constant #polynomial.int_polynomial<1 + x**2> : !polynomial.polynomial<#ring>
+
+    #float_ring = #polynomial.ring<coefficientType=f32>
+    %0 = polynomial.constant #polynomial.float_polynomial<0.5 + 1.3e06 x**2> : !polynomial.polynomial<#float_ring>
     ```
   }];
   let arguments = (ins Polynomial_AnyPolynomialAttr:$value);
