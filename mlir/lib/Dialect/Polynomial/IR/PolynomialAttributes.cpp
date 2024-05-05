@@ -212,7 +212,7 @@ Attribute RingAttr::parse(AsmParser &parser, Type type) {
     if (failed(parser.parseEqual()))
       return {};
 
-    auto result = parser.parseInteger(root);
+    ParseResult result = parser.parseInteger(root);
     if (failed(result)) {
       parser.emitError(parser.getCurrentLocation(), "invalid primitiveRoot");
       return {};
