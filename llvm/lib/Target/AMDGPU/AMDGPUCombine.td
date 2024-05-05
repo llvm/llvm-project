@@ -18,7 +18,7 @@ def fcmp_select_to_fmin_fmax_legacy : GICombineRule<
   (match (G_FCMP $cond, $pred, $lhs, $rhs):$fcmp,
          (G_SELECT f32:$dst, $cond, $true, $false):$select,
          [{ return matchFMinFMaxLegacy(*${select}, *${fcmp}, ${matchinfo}); }]),
-  (apply [{ applySelectFCmpToFMinToFMaxLegacy(*${select}, ${matchinfo}); }])>;
+  (apply [{ applySelectFCmpToFMinFMaxLegacy(*${select}, ${matchinfo}); }])>;
 
 
 def uchar_to_float : GICombineRule<
