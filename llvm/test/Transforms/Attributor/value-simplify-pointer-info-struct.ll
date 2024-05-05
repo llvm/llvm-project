@@ -31,7 +31,7 @@ target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16
 declare void @harmless_use(ptr nocapture readonly) nofree norecurse nosync nounwind readnone willreturn nocallback
 
 ;.
-; CHECK: @[[GLOBALS:[a-zA-Z0-9_$"\\.-]+]] = internal constant [[STRUCT_S:%.*]] { i32 42, double 3.140000e+00, ptr null, i32 0 }, align 8
+; CHECK: @GlobalS = internal constant %struct.S { i32 42, double 3.140000e+00, ptr null, i32 0 }, align 8
 ;.
 define i32 @testOneFieldGlobalS(i32 %cmpx) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nounwind willreturn memory(none)

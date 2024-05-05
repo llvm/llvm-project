@@ -156,7 +156,7 @@ TEST(StripTest, LoopMetadata) {
   EXPECT_FALSE(BrokenDebugInfo);
 }
 
-TEST(MetadataTest, DeleteInstUsedByDbgValue) {
+TEST(MetadataTest, DeleteInstUsedByDbgRecord) {
   LLVMContext C;
   std::unique_ptr<Module> M = parseIR(C, R"(
     define i16 @f(i16 %a) !dbg !6 {
@@ -187,12 +187,13 @@ TEST(MetadataTest, DeleteInstUsedByDbgValue) {
 
   // Find the dbg.value using %b.
   SmallVector<DbgValueInst *, 1> DVIs;
-  findDbgValues(DVIs, &I);
+  SmallVector<DbgVariableRecord *, 1> DVRs;
+  findDbgValues(DVIs, &I, &DVRs);
 
   // Delete %b. The dbg.value should now point to undef.
   I.eraseFromParent();
-  EXPECT_EQ(DVIs[0]->getNumVariableLocationOps(), 1u);
-  EXPECT_TRUE(isa<UndefValue>(DVIs[0]->getValue(0)));
+  EXPECT_EQ(DVRs[0]->getNumVariableLocationOps(), 1u);
+  EXPECT_TRUE(isa<UndefValue>(DVRs[0]->getValue(0)));
 }
 
 TEST(DbgVariableIntrinsic, EmptyMDIsKillLocation) {
@@ -230,8 +231,8 @@ TEST(DbgVariableIntrinsic, EmptyMDIsKillLocation) {
 
   // Get the dbg.declare.
   Function &F = *cast<Function>(M->getNamedValue("fun"));
-  DbgVariableIntrinsic *DbgDeclare =
-      cast<DbgVariableIntrinsic>(&F.front().front());
+  DbgVariableRecord *DbgDeclare =
+      cast<DbgVariableRecord>(&*F.front().front().getDbgRecordRange().begin());
   // Check that this form counts as a "no location" marker.
   EXPECT_TRUE(DbgDeclare->isKillLocation());
 }
@@ -239,6 +240,9 @@ TEST(DbgVariableIntrinsic, EmptyMDIsKillLocation) {
 // Duplicate of above test, but in DbgVariableRecord representation.
 TEST(MetadataTest, DeleteInstUsedByDbgVariableRecord) {
   LLVMContext C;
+  bool OldDbgValueMode = UseNewDbgInfoFormat;
+  UseNewDbgInfoFormat = true;
+
   std::unique_ptr<Module> M = parseIR(C, R"(
     define i16 @f(i16 %a) !dbg !6 {
       %b = add i16 %a, 1, !dbg !11
@@ -264,10 +268,7 @@ TEST(MetadataTest, DeleteInstUsedByDbgVariableRecord) {
     !11 = !DILocation(line: 1, column: 1, scope: !6)
 )");
 
-  bool OldDbgValueMode = UseNewDbgInfoFormat;
-  UseNewDbgInfoFormat = true;
   Instruction &I = *M->getFunction("f")->getEntryBlock().getFirstNonPHI();
-  M->convertToNewDbgValues();
 
   // Find the DbgVariableRecords using %b.
   SmallVector<DbgValueInst *, 2> DVIs;
@@ -289,6 +290,8 @@ TEST(MetadataTest, DeleteInstUsedByDbgVariableRecord) {
 // Ensure that the order of dbg.value intrinsics returned by findDbgValues, and
 // their corresponding DbgVariableRecord representation, are consistent.
 TEST(MetadataTest, OrderingOfDbgVariableRecords) {
+  bool OldDbgValueMode = UseNewDbgInfoFormat;
+  UseNewDbgInfoFormat = false;
   LLVMContext C;
   std::unique_ptr<Module> M = parseIR(C, R"(
     define i16 @f(i16 %a) !dbg !6 {
@@ -316,8 +319,6 @@ TEST(MetadataTest, OrderingOfDbgVariableRecords) {
     !12 = !DILocalVariable(name: "bar", scope: !6, file: !1, line: 1, type: !10)
 )");
 
-  bool OldDbgValueMode = UseNewDbgInfoFormat;
-  UseNewDbgInfoFormat = true;
   Instruction &I = *M->getFunction("f")->getEntryBlock().getFirstNonPHI();
 
   SmallVector<DbgValueInst *, 2> DVIs;
@@ -516,14 +517,15 @@ TEST(DbgAssignIntrinsicTest, replaceVariableLocationOp) {
   Value *V1 = Fun.getArg(0);
   Value *P1 = Fun.getArg(1);
   Value *P2 = Fun.getArg(2);
-  DbgAssignIntrinsic *DAI = cast<DbgAssignIntrinsic>(Fun.begin()->begin());
-  ASSERT_TRUE(V1 == DAI->getVariableLocationOp(0));
-  ASSERT_TRUE(P1 == DAI->getAddress());
+  DbgVariableRecord *DbgAssign = cast<DbgVariableRecord>(
+      &*Fun.front().front().getDbgRecordRange().begin());
+  ASSERT_TRUE(V1 == DbgAssign->getVariableLocationOp(0));
+  ASSERT_TRUE(P1 == DbgAssign->getAddress());
 
 #define TEST_REPLACE(Old, New, ExpectedValue, ExpectedAddr)                    \
-  DAI->replaceVariableLocationOp(Old, New);                                    \
-  EXPECT_EQ(DAI->getVariableLocationOp(0), ExpectedValue);                     \
-  EXPECT_EQ(DAI->getAddress(), ExpectedAddr);
+  DbgAssign->replaceVariableLocationOp(Old, New);                              \
+  EXPECT_EQ(DbgAssign->getVariableLocationOp(0), ExpectedValue);               \
+  EXPECT_EQ(DbgAssign->getAddress(), ExpectedAddr);
 
   // Replace address only.
   TEST_REPLACE(/*Old*/ P1, /*New*/ P2, /*Value*/ V1, /*Address*/ P2);
@@ -534,8 +536,8 @@ TEST(DbgAssignIntrinsicTest, replaceVariableLocationOp) {
 
   // Replace address only, value uses a DIArgList.
   // Value = {DIArgList(V1)}, Addr = P1.
-  DAI->setRawLocation(DIArgList::get(C, ValueAsMetadata::get(V1)));
-  DAI->setExpression(DIExpression::get(
+  DbgAssign->setRawLocation(DIArgList::get(C, ValueAsMetadata::get(V1)));
+  DbgAssign->setExpression(DIExpression::get(
       C, {dwarf::DW_OP_LLVM_arg, 0, dwarf::DW_OP_stack_value}));
   TEST_REPLACE(/*Old*/ P1, /*New*/ P2, /*Value*/ V1, /*Address*/ P2);
 #undef TEST_REPLACE
@@ -557,6 +559,152 @@ TEST(IsHeterogeneousDebugTest, V4Module) {
     !0 = !{i32 2, !"Debug Info Version", i32 4}
 )");
   EXPECT_TRUE(isHeterogeneousDebug(*M));
+}
+
+TEST(AssignmentTrackingTest, Utils) {
+  // Test the assignment tracking utils defined in DebugInfo.h namespace at {}.
+  // This includes:
+  //     getAssignmentInsts
+  //     getAssignmentMarkers
+  //     RAUW
+  //     deleteAll
+  //
+  // The input IR includes two functions, fun1 and fun2. Both contain an alloca
+  // with a DIAssignID tag. fun1's alloca is linked to two llvm.dbg.assign
+  // intrinsics, one of which is for an inlined variable and appears before the
+  // alloca.
+
+  LLVMContext C;
+  std::unique_ptr<Module> M = parseIR(C, R"(
+    define dso_local void @fun1() !dbg !7 {
+    entry:
+      call void @llvm.dbg.assign(metadata i32 undef, metadata !10, metadata !DIExpression(), metadata !12, metadata i32 undef, metadata !DIExpression()), !dbg !13
+      %local = alloca i32, align 4, !DIAssignID !12
+      call void @llvm.dbg.assign(metadata i32 undef, metadata !16, metadata !DIExpression(), metadata !12, metadata i32 undef, metadata !DIExpression()), !dbg !15
+      ret void, !dbg !15
+    }
+
+    define dso_local void @fun2() !dbg !17 {
+    entry:
+      %local = alloca i32, align 4, !DIAssignID !20
+      call void @llvm.dbg.assign(metadata i32 undef, metadata !18, metadata !DIExpression(), metadata !20, metadata i32 undef, metadata !DIExpression()), !dbg !19
+      ret void, !dbg !19
+    }
+
+    define dso_local void @fun3() !dbg !21 {
+    entry:
+      %local = alloca i32, align 4, !DIAssignID !24
+      call void @llvm.dbg.assign(metadata i32 undef, metadata !22, metadata !DIExpression(), metadata !24, metadata i32* undef, metadata !DIExpression()), !dbg !23
+      ret void
+    }
+
+    declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, metadata)
+
+    !llvm.dbg.cu = !{!0}
+    !llvm.module.flags = !{!3, !4, !5}
+    !llvm.ident = !{!6}
+
+    !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 14.0.0", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, splitDebugInlining: false, nameTableKind: None)
+    !1 = !DIFile(filename: "test.c", directory: "/")
+    !2 = !{}
+    !3 = !{i32 7, !"Dwarf Version", i32 4}
+    !4 = !{i32 2, !"Debug Info Version", i32 3}
+    !5 = !{i32 1, !"wchar_size", i32 4}
+    !6 = !{!"clang version 14.0.0"}
+    !7 = distinct !DISubprogram(name: "fun1", scope: !1, file: !1, line: 1, type: !8, scopeLine: 1, spFlags: DISPFlagDefinition, unit: !0, retainedNodes: !2)
+    !8 = !DISubroutineType(types: !9)
+    !9 = !{null}
+    !10 = !DILocalVariable(name: "local3", scope: !14, file: !1, line: 2, type: !11)
+    !11 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+    !12 = distinct !DIAssignID()
+    !13 = !DILocation(line: 5, column: 1, scope: !14, inlinedAt: !15)
+    !14 = distinct !DISubprogram(name: "inline", scope: !1, file: !1, line: 1, type: !8, scopeLine: 1, spFlags: DISPFlagDefinition, unit: !0, retainedNodes: !2)
+    !15 = !DILocation(line: 3, column: 1, scope: !7)
+    !16 = !DILocalVariable(name: "local1", scope: !7, file: !1, line: 2, type: !11)
+    !17 = distinct !DISubprogram(name: "fun2", scope: !1, file: !1, line: 1, type: !8, scopeLine: 1, spFlags: DISPFlagDefinition, unit: !0, retainedNodes: !2)
+    !18 = !DILocalVariable(name: "local2", scope: !17, file: !1, line: 2, type: !11)
+    !19 = !DILocation(line: 4, column: 1, scope: !17)
+    !20 = distinct !DIAssignID()
+    !21 = distinct !DISubprogram(name: "fun3", scope: !1, file: !1, line: 1, type: !8, scopeLine: 1, spFlags: DISPFlagDefinition, unit: !0, retainedNodes: !2)
+    !22 = !DILocalVariable(name: "local4", scope: !21, file: !1, line: 2, type: !11)
+    !23 = !DILocation(line: 4, column: 1, scope: !21)
+    !24 = distinct !DIAssignID()
+    )");
+
+  // Check the test IR isn't malformed.
+  ASSERT_TRUE(M);
+
+  Function &Fun1 = *M->getFunction("fun1");
+  Instruction &Alloca = *Fun1.getEntryBlock().getFirstNonPHIOrDbg();
+
+  // 1. Check the Instruction <-> Intrinsic mappings work in fun1.
+  //
+  // Check there are two llvm.dbg.assign intrinsics linked to Alloca.
+  auto CheckFun1Mapping = [&Alloca]() {
+    auto Markers = at::getDVRAssignmentMarkers(&Alloca);
+    EXPECT_TRUE(std::distance(Markers.begin(), Markers.end()) == 2);
+    // Check those two entries are distinct.
+    DbgVariableRecord *First = *Markers.begin();
+    DbgVariableRecord *Second = *std::next(Markers.begin());
+    EXPECT_NE(First, Second);
+
+    // Check that we can get back to Alloca from each llvm.dbg.assign.
+    for (auto *DAI : Markers) {
+      auto Insts = at::getAssignmentInsts(DAI);
+      // Check there is exactly one instruction linked to each intrinsic. Use
+      // ASSERT_TRUE because we're going to dereference the begin iterator.
+      ASSERT_TRUE(std::distance(Insts.begin(), Insts.end()) == 1);
+      EXPECT_FALSE(Insts.empty());
+      // Check the linked instruction is Alloca.
+      Instruction *LinkedInst = *Insts.begin();
+      EXPECT_EQ(LinkedInst, &Alloca);
+    }
+  };
+  CheckFun1Mapping();
+
+  // 2. Check DIAssignID RAUW replaces attachments and uses.
+  //
+  DIAssignID *Old =
+      cast_or_null<DIAssignID>(Alloca.getMetadata(LLVMContext::MD_DIAssignID));
+  DIAssignID *New = DIAssignID::getDistinct(C);
+  ASSERT_TRUE(Old && New && New != Old);
+  at::RAUW(Old, New);
+  // Check fun1's alloca and intrinsics have been updated and the mapping still
+  // works.
+  EXPECT_EQ(New, cast_or_null<DIAssignID>(
+                     Alloca.getMetadata(LLVMContext::MD_DIAssignID)));
+  CheckFun1Mapping();
+
+  // Check that fun2's alloca and intrinsic have not not been updated.
+  Instruction &Fun2Alloca =
+      *M->getFunction("fun2")->getEntryBlock().getFirstNonPHIOrDbg();
+  DIAssignID *Fun2ID = cast_or_null<DIAssignID>(
+      Fun2Alloca.getMetadata(LLVMContext::MD_DIAssignID));
+  EXPECT_NE(New, Fun2ID);
+  auto Fun2Markers = at::getDVRAssignmentMarkers(&Fun2Alloca);
+  ASSERT_TRUE(std::distance(Fun2Markers.begin(), Fun2Markers.end()) == 1);
+  auto Fun2Insts = at::getAssignmentInsts(*Fun2Markers.begin());
+  ASSERT_TRUE(std::distance(Fun2Insts.begin(), Fun2Insts.end()) == 1);
+  EXPECT_EQ(*Fun2Insts.begin(), &Fun2Alloca);
+
+  // 3. Check that deleting dbg.assigns from a specific instruction works.
+  Instruction &Fun3Alloca =
+      *M->getFunction("fun3")->getEntryBlock().getFirstNonPHIOrDbg();
+  auto Fun3Markers = at::getDVRAssignmentMarkers(&Fun3Alloca);
+  ASSERT_TRUE(std::distance(Fun3Markers.begin(), Fun3Markers.end()) == 1);
+  at::deleteAssignmentMarkers(&Fun3Alloca);
+  Fun3Markers = at::getDVRAssignmentMarkers(&Fun3Alloca);
+  EXPECT_EQ(Fun3Markers.empty(), true);
+
+  // 4. Check that deleting works and applies only to the target function.
+  at::deleteAll(&Fun1);
+  // There should now only be the alloca and ret in fun1.
+  EXPECT_EQ(Fun1.begin()->size(), 2u);
+  // fun2's alloca should have the same DIAssignID and remain linked to its
+  // llvm.dbg.assign.
+  EXPECT_EQ(Fun2ID, cast_or_null<DIAssignID>(
+                        Fun2Alloca.getMetadata(LLVMContext::MD_DIAssignID)));
+  EXPECT_FALSE(at::getDVRAssignmentMarkers(&Fun2Alloca).empty());
 }
 
 TEST(IRBuilder, GetSetInsertionPointWithEmptyBasicBlock) {
@@ -642,12 +790,12 @@ TEST(AssignmentTrackingTest, InstrMethods) {
   // Use SetVectors to check that the attachments and markers are unique
   // (another test requirement).
   SetVector<Metadata *> OrigIDs;
-  SetVector<DbgAssignIntrinsic *> Markers;
+  SetVector<DbgVariableRecord *> Markers;
   for (const Instruction *SI : Stores) {
     Metadata *ID = SI->getMetadata(LLVMContext::MD_DIAssignID);
     ASSERT_TRUE(OrigIDs.insert(ID));
     ASSERT_TRUE(ID != nullptr);
-    auto Range = at::getAssignmentMarkers(SI);
+    auto Range = at::getDVRAssignmentMarkers(SI);
     ASSERT_TRUE(std::distance(Range.begin(), Range.end()) == 1);
     ASSERT_TRUE(Markers.insert(*Range.begin()));
   }
@@ -740,6 +888,8 @@ TEST(AssignmentTrackingTest, InstrMethods) {
 // dbg.values that have been converted to a non-instruction format.
 TEST(MetadataTest, ConvertDbgToDbgVariableRecord) {
   LLVMContext C;
+  bool OldDbgValueMode = UseNewDbgInfoFormat;
+  UseNewDbgInfoFormat = false;
   std::unique_ptr<Module> M = parseIR(C, R"(
     define i16 @f(i16 %a) !dbg !6 {
       call void @llvm.dbg.value(metadata i16 %a, metadata !9, metadata !DIExpression()), !dbg !11
@@ -914,14 +1064,14 @@ TEST(MetadataTest, ConvertDbgToDbgVariableRecord) {
   // The record of those trailing DbgVariableRecords would dangle and cause an
   // assertion failure if it lived until the end of the LLVMContext.
   ExitBlock->deleteTrailingDbgRecords();
+  UseNewDbgInfoFormat = OldDbgValueMode;
 }
 
 TEST(MetadataTest, DbgVariableRecordConversionRoutines) {
   LLVMContext C;
 
-  // For the purpose of this test, set and un-set the command line option
-  // corresponding to UseNewDbgInfoFormat.
-  UseNewDbgInfoFormat = true;
+  bool OldDbgValueMode = UseNewDbgInfoFormat;
+  UseNewDbgInfoFormat = false;
 
   std::unique_ptr<Module> M = parseIR(C, R"(
     define i16 @f(i16 %a) !dbg !6 {
@@ -951,6 +1101,11 @@ TEST(MetadataTest, DbgVariableRecordConversionRoutines) {
     !10 = !DIBasicType(name: "ty16", size: 16, encoding: DW_ATE_unsigned)
     !11 = !DILocation(line: 1, column: 1, scope: !6)
 )");
+
+  // For the purpose of this test, set and un-set the command line option
+  // corresponding to UseNewDbgInfoFormat, but only after parsing, to ensure
+  // that the IR starts off in the old format.
+  UseNewDbgInfoFormat = true;
 
   // Check that the conversion routines and utilities between dbg.value
   // debug-info format and DbgVariableRecords works.
@@ -1056,7 +1211,7 @@ TEST(MetadataTest, DbgVariableRecordConversionRoutines) {
   EXPECT_EQ(DVI2->getVariable(), DLV2);
   EXPECT_EQ(DVI2->getExpression(), Expr2);
 
-  UseNewDbgInfoFormat = false;
+  UseNewDbgInfoFormat = OldDbgValueMode;
 }
 
 // Test that the hashing function for DISubprograms produce the same result

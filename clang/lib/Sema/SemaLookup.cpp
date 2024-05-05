@@ -1282,6 +1282,32 @@ bool Sema::CppLookupName(LookupResult &R, Scope *S) {
       if (DeclContext *DC = PreS->getEntity())
         DeclareImplicitMemberFunctionsWithName(*this, Name, R.getNameLoc(), DC);
   }
+  // C++23 [temp.dep.general]p2:
+  //   The component name of an unqualified-id is dependent if
+  //   - it is a conversion-function-id whose conversion-type-id
+  //     is dependent, or
+  //   - it is operator= and the current class is a templated entity, or
+  //   - the unqualified-id is the postfix-expression in a dependent call.
+  if (Name.getNameKind() == DeclarationName::CXXConversionFunctionName &&
+      Name.getCXXNameType()->isDependentType()) {
+    R.setNotFoundInCurrentInstantiation();
+    return false;
+  }
+
+  // If this is the name of an implicitly-declared special member function,
+  // go through the scope stack to implicitly declare
+  if (isImplicitlyDeclaredMemberFunctionName(Name)) {
+    for (Scope *PreS = S; PreS; PreS = PreS->getParent())
+      if (DeclContext *DC = PreS->getEntity()) {
+        if (DC->isDependentContext() && isa<CXXRecordDecl>(DC) &&
+            Name.getCXXOverloadedOperator() == OO_Equal &&
+            !R.isTemplateNameLookup()) {
+          R.setNotFoundInCurrentInstantiation();
+          return false;
+        }
+        DeclareImplicitMemberFunctionsWithName(*this, Name, R.getNameLoc(), DC);
+      }
+  }
 
   // Implicitly declare member functions with the name we're looking for, if in
   // fact we are in a scope where it matters.
@@ -2446,6 +2472,27 @@ bool Sema::LookupQualifiedName(LookupResult &R, DeclContext *LookupCtx,
     }
   } QL(LookupCtx);
 
+  bool TemplateNameLookup = R.isTemplateNameLookup();
+  CXXRecordDecl *LookupRec = dyn_cast<CXXRecordDecl>(LookupCtx);
+  if (!InUnqualifiedLookup && !R.isForRedeclaration()) {
+    // C++23 [temp.dep.type]p5:
+    //   A qualified name is dependent if
+    //   - it is a conversion-function-id whose conversion-type-id
+    //     is dependent, or
+    //   - [...]
+    //   - its lookup context is the current instantiation and it
+    //     is operator=, or
+    //   - [...]
+    if (DeclarationName Name = R.getLookupName();
+        (Name.getNameKind() == DeclarationName::CXXConversionFunctionName &&
+         Name.getCXXNameType()->isDependentType()) ||
+        (Name.getCXXOverloadedOperator() == OO_Equal && LookupRec &&
+         LookupRec->isDependentContext() && !TemplateNameLookup)) {
+      R.setNotFoundInCurrentInstantiation();
+      return false;
+    }
+  }
+
   if (LookupDirect(*this, R, LookupCtx)) {
     R.resolveKind();
     if (isa<CXXRecordDecl>(LookupCtx))
@@ -2471,7 +2518,6 @@ bool Sema::LookupQualifiedName(LookupResult &R, DeclContext *LookupCtx,
 
   // If this isn't a C++ class, we aren't allowed to look into base
   // classes, we're done.
-  CXXRecordDecl *LookupRec = dyn_cast<CXXRecordDecl>(LookupCtx);
   if (!LookupRec || !LookupRec->getDefinition())
     return false;
 
@@ -2536,8 +2582,6 @@ bool Sema::LookupQualifiedName(LookupResult &R, DeclContext *LookupCtx,
         return false;
     return true;
   };
-
-  bool TemplateNameLookup = R.isTemplateNameLookup();
 
   // Determine whether two sets of members contain the same members, as
   // required by C++ [class.member.lookup]p6.
