@@ -204,9 +204,8 @@ Attribute RingAttr::parse(AsmParser &parser, Type type) {
 
   Polynomial poly = polyAttr.getPolynomial();
   APInt root(coefficientModulusAttr.getValue().getBitWidth(), 0);
-  bool hasRoot = succeeded(parser.parseOptionalComma());
   IntegerAttr rootAttr = nullptr;
-  if (hasRoot) {
+  if (succeeded(parser.parseOptionalComma())) {
     if (failed(parser.parseKeyword("primitiveRoot")))
       return {};
 
