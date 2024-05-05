@@ -219,7 +219,7 @@ struct RwLock {
   /// Wake up a single writer.
   LIBC_INLINE bool wake_writer() {
     writer_notify.fetch_add(1, cpp::MemoryOrder::RELEASE);
-    return futex_wake_one(writer_notify);
+    return futex_wake_one(writer_notify, is_shared);
   }
 
   /// Wake up waiting threads after unlocking.
@@ -266,7 +266,7 @@ struct RwLock {
     if (prev == READERS_WAITING &&
         this->state.compare_exchange_strong(prev, 0, cpp::MemoryOrder::RELAXED,
                                             cpp::MemoryOrder::RELAXED))
-      futex_wake_all(this->state);
+      futex_wake_all(this->state, is_shared);
   }
 
   [[gnu::cold]]
