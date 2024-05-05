@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC___SUPPORT_THREADS_LINUX_MUTEX_H
-#define LLVM_LIBC_SRC___SUPPORT_THREADS_LINUX_MUTEX_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_THREADS_LINUX_RWLOCK_H
+#define LLVM_LIBC_SRC___SUPPORT_THREADS_LINUX_RWLOCK_H
 
 #include "src/__support/CPP/atomic.h"
 #include "src/__support/CPP/optional.h"
@@ -409,4 +409,4 @@ public:
 
 } // namespace LIBC_NAMESPACE
 
-#endif // LLVM_LIBC_SRC___SUPPORT_THREADS_LINUX_MUTEX_H
+#endif // LLVM_LIBC_SRC___SUPPORT_THREADS_LINUX_RWLOCK_H
