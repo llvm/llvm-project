@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple loongarch32 -emit-llvm -S -verify %s -o /dev/null
+// RUN: %clang_cc1 -triple loongarch32 -emit-llvm -verify %s -o /dev/null
 // RUN: not %clang_cc1 -triple loongarch32 -DFEATURE_CHECK -emit-llvm %s -o /dev/null 2>&1 \
 // RUN:   | FileCheck %s
 
