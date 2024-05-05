@@ -27,7 +27,7 @@ tryToFindPtrOrigin(const Expr *E, bool StopAtFirstRefCountedObj) {
       E = tempExpr->getSubExpr();
       continue;
     }
-    if (auto* tempExpr = dyn_cast<ParenExpr>(E)) {
+    if (auto *tempExpr = dyn_cast<ParenExpr>(E)) {
       E = tempExpr->getSubExpr();
       continue;
     }
