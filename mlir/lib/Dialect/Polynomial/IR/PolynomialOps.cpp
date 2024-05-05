@@ -128,7 +128,7 @@ static LogicalResult verifyNTTOp(Operation *op, RingAttr ring,
   Attribute encoding = tensorType.getEncoding();
   if (!encoding) {
     return op->emitOpError()
-           << "a ring encoding was not provided to the tensor";
+           << "expects a ring encoding to be provided to the tensor";
   }
   auto encodedRing = dyn_cast<RingAttr>(encoding);
   if (!encodedRing) {

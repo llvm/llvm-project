@@ -61,7 +61,7 @@ func.func @test_mul_scalar_wrong_type(%arg0: !ty) -> !ty {
 // CHECK-NOT: @test_invalid_ntt
 // CHECK-NOT: polynomial.ntt
 func.func @test_invalid_ntt(%0 : !poly_ty) {
-  // expected-error@+1 {{a ring encoding was not provided to the tensor}}
+  // expected-error@+1 {{expects a ring encoding to be provided to the tensor}}
   %1 = polynomial.ntt %0 : !poly_ty -> tensor<1024xi32>
   return
 }
