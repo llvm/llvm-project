@@ -17,8 +17,11 @@ namespace clang::tidy::bugprone {
 
 void ReturnConstRefFromParameterCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
-      returnStmt(hasReturnValue(declRefExpr(to(parmVarDecl(hasType(
-                     hasCanonicalType(matchers::isReferenceToConst())))))))
+      returnStmt(
+          hasReturnValue(declRefExpr(to(parmVarDecl(hasType(hasCanonicalType(
+              qualType(matchers::isReferenceToConst()).bind("type"))))))),
+          hasAncestor(functionDecl(hasReturnTypeLoc(
+              loc(qualType(hasCanonicalType(equalsBoundNode("type"))))))))
           .bind("ret"),
       this);
 }
@@ -28,7 +31,8 @@ void ReturnConstRefFromParameterCheck::check(
   const auto *R = Result.Nodes.getNodeAs<ReturnStmt>("ret");
   diag(R->getRetValue()->getBeginLoc(),
        "returning a constant reference parameter may cause a use-after-free "
-       "when the parameter is constructed from a temporary");
+       "when the parameter is constructed from a temporary")
+      << R->getRetValue()->getSourceRange();
 }
 
 } // namespace clang::tidy::bugprone
