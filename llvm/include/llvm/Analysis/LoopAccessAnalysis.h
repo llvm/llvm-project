@@ -453,8 +453,8 @@ public:
 
   /// Generate the checks and store it.  This also performs the grouping
   /// of pointers to reduce the number of memchecks necessary.
-  void generateChecks(MemoryDepChecker::DepCandidates &DepCands,
-                      bool UseDependencies);
+  void generateChecks(const MemoryDepChecker &DepChecker,
+                      MemoryDepChecker::DepCandidates &DepCands);
 
   /// Returns the checks that generateChecks created. They can be used to ensure
   /// no read/write accesses overlap across all loop iterations.
@@ -521,10 +521,9 @@ public:
 private:
   /// Groups pointers such that a single memcheck is required
   /// between two different groups. This will clear the CheckingGroups vector
-  /// and re-compute it. We will only group dependecies if \p UseDependencies
-  /// is true, otherwise we will create a separate group for each pointer.
-  void groupChecks(MemoryDepChecker::DepCandidates &DepCands,
-                   bool UseDependencies);
+  /// and re-compute it.
+  void groupChecks(const MemoryDepChecker &DepChecker,
+                   MemoryDepChecker::DepCandidates &DepCands);
 
   /// Generate the checks and return them.
   SmallVector<RuntimePointerCheck, 4> generateChecks();

@@ -385,9 +385,10 @@ SmallVector<RuntimePointerCheck, 4> RuntimePointerChecking::generateChecks() {
 }
 
 void RuntimePointerChecking::generateChecks(
-    MemoryDepChecker::DepCandidates &DepCands, bool UseDependencies) {
+    const MemoryDepChecker &DepChecker,
+    MemoryDepChecker::DepCandidates &DepCands) {
   assert(Checks.empty() && "Checks is not empty");
-  groupChecks(DepCands, UseDependencies);
+  groupChecks(DepChecker, DepCands);
   Checks = generateChecks();
 }
 
@@ -454,7 +455,8 @@ bool RuntimeCheckingPtrGroup::addPointer(unsigned Index, const SCEV *Start,
 }
 
 void RuntimePointerChecking::groupChecks(
-    MemoryDepChecker::DepCandidates &DepCands, bool UseDependencies) {
+    const MemoryDepChecker &DepChecker,
+    MemoryDepChecker::DepCandidates &DepCands) {
   // We build the groups from dependency candidates equivalence classes
   // because:
   //    - We know that pointers in the same equivalence class share
@@ -490,21 +492,11 @@ void RuntimePointerChecking::groupChecks(
   // us to perform an accurate check in this case.
   //
   // The above case requires that we have an UnknownDependence between
-  // accesses to the same underlying object. This cannot happen unless
-  // FoundNonConstantDistanceDependence is set, and therefore UseDependencies
-  // is also false. In this case we will use the fallback path and create
-  // separate checking groups for all pointers.
-
-  // If we don't have the dependency partitions, construct a new
-  // checking pointer group for each pointer. This is also required
-  // for correctness, because in this case we can have checking between
-  // pointers to the same underlying object.
-  if (!UseDependencies) {
-    for (unsigned I = 0; I < Pointers.size(); ++I)
-      CheckingGroups.push_back(RuntimeCheckingPtrGroup(I, *this));
-    return;
-  }
-
+  // accesses to the same underlying object. It is the caller's responsibility
+  // to clear any entries for accesses with unknown dependencies from the
+  // dependency partition (DepCands). This is required for correctness, because
+  // in this case we can have checking between pointers to the same underlying
+  // object.
   unsigned TotalComparisons = 0;
 
   DenseMap<Value *, SmallVector<unsigned>> PositionMap;
@@ -528,6 +520,13 @@ void RuntimePointerChecking::groupChecks(
 
     MemoryDepChecker::MemAccessInfo Access(Pointers[I].PointerValue,
                                            Pointers[I].IsWritePtr);
+
+    // If there is no entry in the dependency partition, there are no potential
+    // accesses to merge; simply add a new pointer checking group.
+    if (DepCands.findValue(Access) == DepCands.end()) {
+      CheckingGroups.push_back(RuntimeCheckingPtrGroup(I, *this));
+      continue;
+    }
 
     SmallVector<RuntimeCheckingPtrGroup, 2> Groups;
     auto LeaderI = DepCands.findValue(DepCands.getLeaderValue(Access));
@@ -700,8 +699,10 @@ public:
   ///
   /// Returns true if we need no check or if we do and we can generate them
   /// (i.e. the pointers have computable bounds).
-  bool canCheckPtrAtRT(RuntimePointerChecking &RtCheck, ScalarEvolution *SE,
-                       Loop *TheLoop, const DenseMap<Value *, const SCEV *> &Strides,
+  bool canCheckPtrAtRT(const MemoryDepChecker &DepChecker,
+                       RuntimePointerChecking &RtCheck, ScalarEvolution *SE,
+                       Loop *TheLoop,
+                       const DenseMap<Value *, const SCEV *> &Strides,
                        Value *&UncomputablePtr, bool ShouldCheckWrap = false);
 
   /// Goes over all memory accesses, checks whether a RT check is needed
@@ -716,12 +717,6 @@ public:
   /// Note that this can later be cleared if we retry memcheck analysis without
   /// dependency checking (i.e. FoundNonConstantDistanceDependence).
   bool isDependencyCheckNeeded() { return !CheckDeps.empty(); }
-
-  /// We decided that no dependence analysis would be used.  Reset the state.
-  void resetDepChecks(MemoryDepChecker &DepChecker) {
-    CheckDeps.clear();
-    DepChecker.clearDependences();
-  }
 
   MemAccessInfoList &getDependenciesToCheck() { return CheckDeps; }
 
@@ -1107,7 +1102,8 @@ bool AccessAnalysis::createCheckForAccess(RuntimePointerChecking &RtCheck,
     // The id of the dependence set.
     unsigned DepId;
 
-    if (isDependencyCheckNeeded()) {
+    if (isDependencyCheckNeeded() &&
+        DepCands.findValue(Access) != DepCands.end()) {
       Value *Leader = DepCands.getLeaderValue(Access).getPointer();
       unsigned &LeaderId = DepSetId[Leader];
       if (!LeaderId)
@@ -1126,10 +1122,11 @@ bool AccessAnalysis::createCheckForAccess(RuntimePointerChecking &RtCheck,
   return true;
 }
 
-bool AccessAnalysis::canCheckPtrAtRT(RuntimePointerChecking &RtCheck,
-                                     ScalarEvolution *SE, Loop *TheLoop,
-                                     const DenseMap<Value *, const SCEV *> &StridesMap,
-                                     Value *&UncomputablePtr, bool ShouldCheckWrap) {
+bool AccessAnalysis::canCheckPtrAtRT(
+    const MemoryDepChecker &DepChecker, RuntimePointerChecking &RtCheck,
+    ScalarEvolution *SE, Loop *TheLoop,
+    const DenseMap<Value *, const SCEV *> &StridesMap, Value *&UncomputablePtr,
+    bool ShouldCheckWrap) {
   // Find pointers with computable bounds. We are going to use this information
   // to place a runtime bound check.
   bool CanDoRT = true;
@@ -1137,7 +1134,26 @@ bool AccessAnalysis::canCheckPtrAtRT(RuntimePointerChecking &RtCheck,
   bool MayNeedRTCheck = false;
   if (!IsRTCheckAnalysisNeeded) return true;
 
-  bool IsDepCheckNeeded = isDependencyCheckNeeded();
+  if (auto *Deps = DepChecker.getDependences()) {
+    // If there are unknown dependences, this means runtime checks are needed to
+    // ensure there's no overlap between accesses to the same underlying object.
+    // Remove the equivalence classes containing both source and destination
+    // accesses from DepCands. This ensures runtime checks will be generated
+    // between those accesses and prevents them from being grouped together.
+    for (const auto &Dep : *Deps) {
+      if (Dep.Type != MemoryDepChecker::Dependence::Unknown) {
+        assert(MemoryDepChecker::Dependence::isSafeForVectorization(Dep.Type) ==
+                   MemoryDepChecker::VectorizationSafetyStatus::Safe &&
+               "Should only skip safe dependences");
+        continue;
+      }
+      Instruction *Src = Dep.getSource(DepChecker);
+      Instruction *Dst = Dep.getDestination(DepChecker);
+      DepCands.eraseClass({getPointerOperand(Src), Src->mayWriteToMemory()});
+      DepCands.eraseClass({getPointerOperand(Dst), Dst->mayWriteToMemory()});
+    }
+  } else
+    CheckDeps.clear();
 
   // We assign a consecutive id to access from different alias sets.
   // Accesses between different groups doesn't need to be checked.
@@ -1265,7 +1281,7 @@ bool AccessAnalysis::canCheckPtrAtRT(RuntimePointerChecking &RtCheck,
   }
 
   if (MayNeedRTCheck && CanDoRT)
-    RtCheck.generateChecks(DepCands, IsDepCheckNeeded);
+    RtCheck.generateChecks(DepChecker, DepCands);
 
   LLVM_DEBUG(dbgs() << "LAA: We need to do " << RtCheck.getNumberOfChecks()
                     << " pointer comparisons.\n");
@@ -2625,9 +2641,9 @@ void LoopAccessInfo::analyzeLoop(AAResults *AA, LoopInfo *LI,
   // Find pointers with computable bounds. We are going to use this information
   // to place a runtime bound check.
   Value *UncomputablePtr = nullptr;
-  bool CanDoRTIfNeeded =
-      Accesses.canCheckPtrAtRT(*PtrRtChecking, PSE->getSE(), TheLoop,
-                               SymbolicStrides, UncomputablePtr, false);
+  bool CanDoRTIfNeeded = Accesses.canCheckPtrAtRT(
+      getDepChecker(), *PtrRtChecking, PSE->getSE(), TheLoop, SymbolicStrides,
+      UncomputablePtr, false);
   if (!CanDoRTIfNeeded) {
     auto *I = dyn_cast_or_null<Instruction>(UncomputablePtr);
     recordAnalysis("CantIdentifyArrayBounds", I) 
@@ -2651,16 +2667,14 @@ void LoopAccessInfo::analyzeLoop(AAResults *AA, LoopInfo *LI,
     if (!CanVecMem && DepChecker->shouldRetryWithRuntimeCheck()) {
       LLVM_DEBUG(dbgs() << "LAA: Retrying with memory checks\n");
 
-      // Clear the dependency checks. We assume they are not needed.
-      Accesses.resetDepChecks(*DepChecker);
-
       PtrRtChecking->reset();
       PtrRtChecking->Need = true;
 
       auto *SE = PSE->getSE();
       UncomputablePtr = nullptr;
-      CanDoRTIfNeeded = Accesses.canCheckPtrAtRT(
-          *PtrRtChecking, SE, TheLoop, SymbolicStrides, UncomputablePtr, true);
+      CanDoRTIfNeeded =
+          Accesses.canCheckPtrAtRT(getDepChecker(), *PtrRtChecking, SE, TheLoop,
+                                   SymbolicStrides, UncomputablePtr, true);
 
       // Check that we found the bounds for the pointer.
       if (!CanDoRTIfNeeded) {

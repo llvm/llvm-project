@@ -90,6 +90,10 @@ define void @test_indirect_read_loop_also_modifies_pointer_array(ptr noundef %ar
 ; CHECK-NEXT:    loop.2:
 ; CHECK-NEXT:      Memory dependences are safe with run-time checks
 ; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:        Unknown:
+; CHECK-NEXT:            %l.1 = load ptr, ptr %gep.iv.1, align 8, !tbaa !0 ->
+; CHECK-NEXT:            store i64 %l.2, ptr %gep.iv.2, align 8, !tbaa !0
+; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Check 0:
 ; CHECK-NEXT:        Comparing group ([[GRP1:0x[0-9a-f]+]]):
@@ -158,6 +162,10 @@ define void @test_indirect_write_loop_also_modifies_pointer_array(ptr noundef %a
 ; CHECK-NEXT:    loop.2:
 ; CHECK-NEXT:      Memory dependences are safe with run-time checks
 ; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:        Unknown:
+; CHECK-NEXT:            %l.1 = load ptr, ptr %gep.iv.1, align 8, !tbaa !0 ->
+; CHECK-NEXT:            store ptr %l.1, ptr %gep.iv.2, align 8, !tbaa !0
+; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Check 0:
 ; CHECK-NEXT:        Comparing group ([[GRP3:0x[0-9a-f]+]]):

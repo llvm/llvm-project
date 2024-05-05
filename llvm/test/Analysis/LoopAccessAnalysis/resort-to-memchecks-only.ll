@@ -13,6 +13,10 @@ target triple = "x86_64-apple-macosx10.10.0"
 
 ; CHECK: Memory dependences are safe with run-time checks
 ; CHECK-NEXT: Dependences:
+; CHECK-NEXT:   Unknown:
+; CHECK-NEXT:     %loadA = load i16, ptr %arrayidxA, align 2 ->
+; CHECK-NEXT:     store i16 %mul1, ptr %arrayidxA2, align 2
+; CHECK-EMPTY:
 ; CHECK-NEXT: Run-time memory checks:
 ; CHECK-NEXT: 0:
 ; CHECK-NEXT: Comparing group

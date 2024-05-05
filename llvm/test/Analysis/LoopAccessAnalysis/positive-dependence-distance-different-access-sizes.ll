@@ -10,6 +10,10 @@ define void @test_distance_positive_independent_via_trip_count(ptr %A) {
 ; CHECK-NEXT:    loop:
 ; CHECK-NEXT:      Memory dependences are safe with run-time checks
 ; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:        Unknown:
+; CHECK-NEXT:            %l = load i8, ptr %gep.A, align 1 ->
+; CHECK-NEXT:            store i32 %ext, ptr %gep.A.400, align 4
+; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Check 0:
 ; CHECK-NEXT:        Comparing group ([[GRP1:0x[0-9a-f]+]]):
@@ -55,6 +59,10 @@ define void @test_distance_positive_backwards(ptr %A) {
 ; CHECK-NEXT:    loop:
 ; CHECK-NEXT:      Memory dependences are safe with run-time checks
 ; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:        Unknown:
+; CHECK-NEXT:            %l = load i8, ptr %gep.A, align 1 ->
+; CHECK-NEXT:            store i32 %ext, ptr %gep.A.400, align 4
+; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Check 0:
 ; CHECK-NEXT:        Comparing group ([[GRP3:0x[0-9a-f]+]]):
@@ -98,6 +106,10 @@ define void @test_distance_positive_via_assume(ptr %A, i64 %off) {
 ; CHECK-NEXT:    loop:
 ; CHECK-NEXT:      Memory dependences are safe with run-time checks
 ; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:        Unknown:
+; CHECK-NEXT:            %l = load i8, ptr %gep.A, align 1 ->
+; CHECK-NEXT:            store i32 %ext, ptr %gep.A.400, align 4
+; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Check 0:
 ; CHECK-NEXT:        Comparing group ([[GRP5:0x[0-9a-f]+]]):
