@@ -15,7 +15,7 @@
 // RUN:     -fmodule-file=MyVec:Vec2=%t/MyVec-Vec2.pcm \
 // RUN:     -fmodule-file=MyVec:Type=%t/MyVec-Type.pcm \
 // RUN:     -triple=x86_64-linux-gnu 
-// RUN: %clang_cc1 -std=c++20 %t/MyVec-Calculator.pcm -S -emit-llvm \
+// RUN: %clang_cc1 -std=c++20 %t/MyVec-Calculator.pcm -emit-llvm \
 // RUN:     -fmodule-file=MyVec:Vec=%t/MyVec-Vec.pcm   \
 // RUN:     -fmodule-file=MyVec:Vec2=%t/MyVec-Vec2.pcm \
 // RUN:     -fmodule-file=MyVec:Type=%t/MyVec-Type.pcm \

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -S -emit-llvm -triple i386-linux -std=c++2a -Wno-unknown-pragmas %s -o - | FileCheck %s
+// RUN: %clang_cc1 -emit-llvm -triple i386-linux -std=c++2a -Wno-unknown-pragmas %s -o - | FileCheck %s
 
 // nextUp(1.F) == 0x1.000002p0F
 
