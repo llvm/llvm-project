@@ -21,12 +21,12 @@ module A { header "A.h" export * }
 
 // RUN: %clang_cc1 -fmodules -emit-module %t/A.modulemap -fmodule-name=A -o %t/A0.pcm \
 // RUN:   -fmodule-map-file=%t/X.modulemap
-// RUN: %clang_cc1 -fsyntax-only -module-file-info %t/A0.pcm | FileCheck %s --check-prefix=A0 --implicit-check-not=Y.modulemap
+// RUN: %clang_cc1 -module-file-info %t/A0.pcm | FileCheck %s --check-prefix=A0 --implicit-check-not=Y.modulemap
 // A0: Input file: {{.*}}X.modulemap
 
 // RUN: %clang_cc1 -fmodules -emit-module %t/A.modulemap -fmodule-name=A -o %t/A1.pcm \
 // RUN:   -fmodule-map-file=%t/X.modulemap -fmodule-map-file=%t/Y.modulemap
-// RUN: %clang_cc1 -fsyntax-only -module-file-info %t/A0.pcm | FileCheck %s --check-prefix=A1 \
+// RUN: %clang_cc1 -module-file-info %t/A0.pcm | FileCheck %s --check-prefix=A1 \
 // RUN:   --implicit-check-not=Y.modulemap
 // A1: Input file: {{.*}}X.modulemap
 
@@ -41,6 +41,6 @@ typedef X_int B_int;
 // RUN: %clang_cc1 -fmodules -emit-module %t/B.modulemap -fmodule-name=B -o %t/B.pcm \
 // RUN:   -fmodule-file=A=%t/A0.pcm \
 // RUN:   -fmodule-map-file=%t/A.modulemap -fmodule-map-file=%t/X.modulemap -fmodule-map-file=%t/Y.modulemap
-// RUN: %clang_cc1 -fsyntax-only -module-file-info %t/B.pcm | FileCheck %s --check-prefix=B \
+// RUN: %clang_cc1 -module-file-info %t/B.pcm | FileCheck %s --check-prefix=B \
 // RUN:   --implicit-check-not=X.modulemap --implicit-check-not=Y.modulemap
 // B: Input file: {{.*}}B.modulemap
