@@ -60,13 +60,71 @@ DebugNamesDWARFIndex::GetUnits(const DebugNames &debug_names) {
   return result;
 }
 
-DWARFTypeUnit *
-DebugNamesDWARFIndex::GetForeignTypeUnit(const DebugNames::Entry &entry) const {
+bool
+DebugNamesDWARFIndex::IsForeignTypeUnit(const DebugNames::Entry &entry,
+                                        DWARFTypeUnit *&foreign_tu) const {
+  foreign_tu = nullptr;
   std::optional<uint64_t> type_sig = entry.getForeignTUTypeSignature();
-  if (type_sig)
-    if (auto dwp_sp = m_debug_info.GetDwpSymbolFile())
-      return dwp_sp->DebugInfo().GetTypeUnitForHash(*type_sig);
-  return nullptr;
+  if (!type_sig.has_value())
+    return false;
+  auto dwp_sp = m_debug_info.GetDwpSymbolFile();
+  if (dwp_sp) {
+    // We have a .dwp file, just get the type unit from there.
+    foreign_tu = dwp_sp->DebugInfo().GetTypeUnitForHash(*type_sig);
+  } else {
+    // We have a .dwo file that contains the type unit.
+    foreign_tu = nullptr; // TODO: fixme before checkin
+  }
+  if (foreign_tu == nullptr)
+    return true;
+  // If this entry represents a foreign type unit, we need to verify that
+  // the type unit that ended up in the final .dwp file is the right type
+  // unit. Type units have signatures which are the same across multiple
+  // .dwo files, but only one of those type units will end up in the .dwp
+  // file. The contents of type units for the same type can be different
+  // in different .dwo file, which means the DIE offsets might not be the
+  // same between two different type units. So we need to determine if this
+  // accelerator table matches the type unit in the .dwp file. If it doesn't
+  // match, then we need to ignore this accelerator table entry as the type
+  // unit that is in the .dwp file will have its own index.
+  // In order to determine if the type unit that ended up in a .dwp file
+  // matches this DebugNames::Entry, we need to find the skeleton compile
+  // unit for this entry. We rely on each DebugNames::Entry either having
+  // both a DW_IDX_type_unit and a DW_IDX_compile_unit, or the .debug_names
+  // table has only a single compile unit with multiple type units. Once
+  // we find the skeleton compile unit, we make sure the DW_AT_dwo_name
+  // attributes match.
+  const llvm::DWARFDebugNames::NameIndex *name_index = entry.getNameIndex();
+  assert(name_index);
+  // Ask the entry for the skeleton compile unit offset.
+  std::optional<uint64_t> cu_offset = entry.getForeignTUSkeletonCUOffset();
+  // If the entry doesn't specify the skeleton compile unit offset, then check
+  // if the .debug_names table only has one compile unit. If so, then this is
+  // the skeleton compile unit we should used.
+  if (!cu_offset && name_index->getCUCount() == 1)
+    cu_offset = name_index->getCUOffset(0);
+
+  // If we couldn't find the skeleton compile unit offset, be safe and say there
+  // is no match. We don't want to use an invalid DIE offset on the wrong type
+  // unit.
+  if (cu_offset) {
+    DWARFUnit *cu = m_debug_info.GetUnitAtOffset(DIERef::DebugInfo, *cu_offset);
+    if (cu) {
+      DWARFBaseDIE cu_die = cu->GetUnitDIEOnly();
+      DWARFBaseDIE tu_die = foreign_tu->GetUnitDIEOnly();
+      llvm::StringRef cu_dwo_name =
+          cu_die.GetAttributeValueAsString(DW_AT_dwo_name, nullptr);
+      llvm::StringRef tu_dwo_name =
+          tu_die.GetAttributeValueAsString(DW_AT_dwo_name, nullptr);
+      if (cu_dwo_name != tu_dwo_name)
+        foreign_tu = nullptr; // Ignore this entry, the DWO name doesn't match.
+    } else {
+      foreign_tu = nullptr; // Ignore this entry, we can find the skeleton CU
+    }
+  } else {
+    foreign_tu = nullptr; // Ignore this entry, we can find the skeleton CU
+  }
+  return true;
 }
 
 DWARFUnit *
@@ -292,42 +350,12 @@ void DebugNamesDWARFIndex::GetFullyQualifiedType(
       continue;
 
 
-    DWARFTypeUnit *foreign_tu = GetForeignTypeUnit(entry);
-    if (foreign_tu) {
-      // If this entry represents a foreign type unit, we need to verify that
-      // the type unit that ended up in the final .dwp file is the right type
-      // unit. Type units have signatures which are the same across multiple
-      // .dwo files, but only one of those type units will end up in the .dwp
-      // file. The contents of type units for the same type can be different
-      // in different .dwo file, which means the DIE offsets might not be the
-      // same between two different type units. So we need to determine if this
-      // accelerator table matches the type unit in the .dwp file. If it doesn't
-      // match, then we need to ignore this accelerator table entry as the type
-      // unit that is in the .dwp file will have its own index.
-      const llvm::DWARFDebugNames::NameIndex *name_index = entry.getNameIndex();
-      if (name_index == nullptr)
+    DWARFTypeUnit *foreign_tu = nullptr;
+    if (IsForeignTypeUnit(entry, foreign_tu)) {
+      // If we get a NULL foreign_tu back, the entry doesn't match the type unit
+      // in the .dwp file.
+      if (!foreign_tu)
         continue;
-      // In order to determine if the type unit that ended up in a .dwp file
-      // is valid, we need to grab the type unit and check the attribute on the
-      // type unit matches the .dwo file. For this to happen we rely on each
-      // .dwo file having its own .debug_names table with a single compile unit
-      // and multiple type units. This is the only way we can tell if a type
-      // unit came from a specific .dwo file.
-      if (name_index->getCUCount() == 1) {
-        dw_offset_t cu_offset = name_index->getCUOffset(0);
-        DWARFUnit *cu = m_debug_info.GetUnitAtOffset(DIERef::DebugInfo,
-                                                     cu_offset);
-        if (cu) {
-          DWARFBaseDIE cu_die = cu->GetUnitDIEOnly();
-          DWARFBaseDIE tu_die = foreign_tu->GetUnitDIEOnly();
-          llvm::StringRef cu_dwo_name =
-              cu_die.GetAttributeValueAsString(DW_AT_dwo_name, nullptr);
-          llvm::StringRef tu_dwo_name =
-              tu_die.GetAttributeValueAsString(DW_AT_dwo_name, nullptr);
-          if (cu_dwo_name != tu_dwo_name)
-            continue; // Ignore this entry, the CU DWO doesn't match the TU DWO
-        }
-      }
     }
     // Grab at most one extra parent, subsequent parents are not necessary to
     // test equality.
