@@ -1,12 +1,20 @@
+if(NOT TARGET libc.src.__support.OSUtil.osutil)
+  return()
+endif()
+
 add_header_library(
   futex_word_type
   HDRS
     futex_word.h
+  DEPENDS
+    libc.src.__support.CPP.optional
+    libc.src.__support.CPP.atomic
+    libc.src.__support.CPP.limits
+    libc.src.__support.OSUtil.osutil
+    libc.include.sys_syscall
+    libc.src.time.clock_gettime
+    libc.src.errno.errno
 )
-
-if(NOT TARGET libc.src.__support.OSUtil.osutil)
-  return()
-endif()
 
 add_header_library(
   mutex
@@ -18,6 +26,18 @@ add_header_library(
     libc.src.__support.CPP.atomic
     libc.src.__support.OSUtil.osutil
     libc.src.__support.threads.mutex_common
+)
+
+add_header_library(
+  rwlock
+  HDRS
+    rwlock.h
+  DEPENDS
+    .futex_word_type
+    libc.include.sys_syscall
+    libc.src.__support.CPP.atomic
+    libc.src.__support.CPP.optional
+    libc.src.__support.libc_assert
 )
 
 add_object_library(

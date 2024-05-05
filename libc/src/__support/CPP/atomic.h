@@ -101,6 +101,26 @@ public:
                                        int(mem_ord), int(mem_ord));
   }
 
+  // Atomic compare exchange
+  LIBC_INLINE bool compare_exchange_strong(
+      T &expected, T desired, MemoryOrder success_order,
+      MemoryOrder failure_order,
+      [[maybe_unused]] MemoryScope mem_scope = cpp::MemoryScope::DEVICE) {
+    return __atomic_compare_exchange_n(&val, &expected, desired, false,
+                                       int(success_order), int(failure_order));
+  }
+
+  LIBC_INLINE bool compare_exchange_weak(
+      T &expected, T new_val, MemoryOrder success_order,
+      MemoryOrder failure_order,
+      [[maybe_unused]] MemoryScope mem_scope = cpp::MemoryScope::DEVICE) {
+    return __atomic_compare_exchange_n(
+        &val, &expected, new_val,
+        /* is_weak */ true,
+        /* success_memorder */ static_cast<int>(success_order),
+        /* failure_memorder */ static_cast<int>(failure_order));
+  }
+
   T exchange(T desired, MemoryOrder mem_ord = MemoryOrder::SEQ_CST,
              [[maybe_unused]] MemoryScope mem_scope = MemoryScope::DEVICE) {
 #if __has_builtin(__scoped_atomic_exchange_n)

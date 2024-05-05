@@ -1,0 +1,13 @@
+add_custom_target(libc___support_threads_linux_rwlock_unittests)
+add_libc_unittest(
+  rwlock_test
+  SUITE
+    libc___support_threads_linux_rwlock_unittests
+  SRCS
+    rwlock_test.cpp
+  DEPENDS
+    libc.src.__support.threads.linux.rwlock
+    libc.test.UnitTest.ErrnoSetterMatcher
+    libc.src.sys.mman.mmap
+    libc.src.sys.mman.munmap
+)
