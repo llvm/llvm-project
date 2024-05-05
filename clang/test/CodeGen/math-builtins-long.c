@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-unknown -w -S -o - -emit-llvm %s \
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -w -o - -emit-llvm %s \
 // RUN:   -fmath-errno | FileCheck %s -check-prefix=F80
-// RUN: %clang_cc1 -triple ppc64le-unknown-unknown -w -S -o - -emit-llvm %s \
+// RUN: %clang_cc1 -triple ppc64le-unknown-unknown -w -o - -emit-llvm %s \
 // RUN:   -fmath-errno | FileCheck %s -check-prefix=PPC
 // RUN: %clang_cc1 -triple x86_64-unknown-unknown -mlong-double-128 -w -S \
 // RUN:   -o - -emit-llvm %s -fmath-errno | FileCheck %s -check-prefix=X86F128
