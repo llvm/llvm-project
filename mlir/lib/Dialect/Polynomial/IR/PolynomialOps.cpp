@@ -105,7 +105,7 @@ LogicalResult MulScalarOp::verify() {
   return success();
 }
 
-// Test if a value is a primitive nth root of unity modulo cmod
+/// Test if a value is a primitive nth root of unity modulo cmod.
 bool isPrimitiveNthRootOfUnity(const APInt &root, const unsigned n,
                                const APInt &cmod) {
   // root bitwidth may be 1 less then cmod
