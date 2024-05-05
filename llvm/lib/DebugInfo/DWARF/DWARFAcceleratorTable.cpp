@@ -670,6 +670,26 @@ DWARFDebugNames::Entry::getForeignTUTypeSignature() const {
   return NameIdx->getForeignTUSignature(ForeignTUIndex);
 }
 
+
+std::optional<uint64_t>
+DWARFDebugNames::Entry::getForeignTUSkeletonCUOffset() const {
+  // Must have a DW_IDX_type_unit and it must be a foreign type unit.
+  if (!getForeignTUTypeSignature())
+    return std::nullopt;
+  // Lookup the DW_IDX_compile_unit and make sure we have one, if we don't
+  // we don't default to returning the first compile unit like getCUOffset().
+  std::optional<DWARFFormValue> Off = lookup(dwarf::DW_IDX_compile_unit);
+  if (!Off)
+    return std::nullopt;
+  // Extract the CU index and return the right CU offset.
+  if (std::optional<uint64_t> CUIndex = Off->getAsUnsignedConstant()) {
+    if (*CUIndex >= NameIdx->getCUCount())
+      return std::nullopt;
+    return NameIdx->getCUOffset(*CUIndex);
+  }
+  return std::nullopt;
+}
+
 std::optional<uint64_t> DWARFDebugNames::Entry::getLocalTUIndex() const {
   if (std::optional<DWARFFormValue> Off = lookup(dwarf::DW_IDX_type_unit))
     return Off->getAsUnsignedConstant();

@@ -88,6 +88,31 @@ private:
   DWARFDIE GetDIE(const DebugNames::Entry &entry) const;
   DWARFTypeUnit *GetForeignTypeUnit(const DebugNames::Entry &entry) const;
   // std::optional<DIERef> ToDIERef(const DebugNames::Entry &entry) const;
+
+  /// Checks if an entry is a foreign TU and fetch the type unit.
+  ///
+  /// This function checks if the DebugNames::Entry refers to a foreign TU and
+  /// returns true or false to indicate this. The \a foreign_tu pointer will be
+  /// filled in if this entry matches the type unit's originating .dwo file by
+  /// verifying that the DW_TAG_type_unit DIE has a DW_AT_dwo_name that matches
+  /// the DWO name from the originating skeleton compile unit.
+  ///
+  /// \param[in] entry
+  ///   The accelerator table entry to check.
+  ///
+  /// \param[out] foreign_tu
+  ///   A reference to the foreign type unit pointer that will be filled in
+  ///   with a valid type unit if the entry matches the type unit, or filled in
+  ///   with NULL if the entry isn't valid for the type unit that ended up in
+  ///   the .dwp file.
+  ///
+  /// \returns
+  ///   True if \a entry represents a foreign type unit, false otherwise.
+  bool IsForeignTypeUnit(const DebugNames::Entry &entry, DWARFTypeUnit *&foreign_tu) const;
+
+  DWARFTypeUnit *GetForeignTypeUnit(const DebugNames::Entry &entry) const;
+
+  std::optional<DIERef> ToDIERef(const DebugNames::Entry &entry) const;
   bool ProcessEntry(const DebugNames::Entry &entry,
                     llvm::function_ref<bool(DWARFDIE die)> callback);
 
