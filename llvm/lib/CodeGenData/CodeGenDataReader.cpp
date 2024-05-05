@@ -144,7 +144,7 @@ Error TextCodeGenDataReader::read() {
 
   // Parse the custom header line by line.
   while (Line->starts_with(":")) {
-    StringRef Str = Line->substr(1);
+    StringRef Str = Line->drop_front().rtrim();
     if (Str.equals_insensitive("outlined_hash_tree"))
       DataKind |= CGDataKind::FunctionOutlinedHashTree;
     else
@@ -152,7 +152,7 @@ Error TextCodeGenDataReader::read() {
     ++Line;
   }
 
-  // We treat an empty header (that as a comment # only) as a valid header.
+  // We treat an empty header (that is a comment # only) as a valid header.
   if (Line.is_at_eof()) {
     if (DataKind != CGDataKind::Unknown)
       return error(cgdata_error::bad_header);
@@ -160,7 +160,7 @@ Error TextCodeGenDataReader::read() {
   }
 
   // The YAML docs follow after the header.
-  const char *Pos = (*Line).data();
+  const char *Pos = Line->data();
   size_t Size = reinterpret_cast<size_t>(DataBuffer->getBufferEnd()) -
                 reinterpret_cast<size_t>(Pos);
   yaml::Input YOS(StringRef(Pos, Size));

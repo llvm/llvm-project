@@ -108,8 +108,8 @@ Error CodeGenDataWriter::writeHeader(CGDataOStream &COS) {
 
   Header.OutlinedHashTreeOffset = 0;
 
-  // Only write out up to the CGDataKind. We need to remember the offest of the
-  // remaing fields to allow back patching later.
+  // Only write up to the CGDataKind. We need to remember the offset of the
+  // remaining fields to allow back-patching later.
   COS.write(Header.Magic);
   COS.write32(Header.Version);
   COS.write32(Header.DataKind);
