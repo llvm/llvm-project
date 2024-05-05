@@ -701,26 +701,21 @@ class InlineCostCallAnalyzer final : public CallAnalyzer {
 
   void onFinalizeSwitch(unsigned JumpTableSize, unsigned NumCaseCluster,
                         bool DefaultDestUndefined) override {
+    if (!DefaultDestUndefined)
+      addCost(2 * InstrCost);
     // If suitable for a jump table, consider the cost for the table size and
     // branch to destination.
     // Maximum valid cost increased in this function.
     if (JumpTableSize) {
-      // Suppose a default branch includes one compare and one conditional
-      // branch if it's reachable.
-      if (!DefaultDestUndefined)
-        addCost(2 * InstrCost);
-      // Suppose a jump table requires one load and one jump instruction.
       int64_t JTCost =
-          static_cast<int64_t>(JumpTableSize) * InstrCost + 2 * InstrCost;
+          static_cast<int64_t>(JumpTableSize) * InstrCost + 4 * InstrCost;
       addCost(JTCost);
       return;
     }
 
     if (NumCaseCluster <= 3) {
       // Suppose a comparison includes one compare and one conditional branch.
-      // We can reduce a set of instructions if the default branch is
-      // undefined.
-      addCost((NumCaseCluster - DefaultDestUndefined) * 2 * InstrCost);
+      addCost(NumCaseCluster * 2 * InstrCost);
       return;
     }
 
@@ -1157,7 +1152,7 @@ private:
   // FIXME: These constants are taken from the heuristic-based cost visitor.
   // These should be removed entirely in a later revision to avoid reliance on
   // heuristics in the ML inliner.
-  static constexpr int JTCostMultiplier = 2;
+  static constexpr int JTCostMultiplier = 4;
   static constexpr int CaseClusterCostMultiplier = 2;
   static constexpr int SwitchDefaultDestCostMultiplier = 2;
   static constexpr int SwitchCostMultiplier = 2;
@@ -1240,10 +1235,11 @@ private:
 
   void onFinalizeSwitch(unsigned JumpTableSize, unsigned NumCaseCluster,
                         bool DefaultDestUndefined) override {
+    if (!DefaultDestUndefined)
+      increment(InlineCostFeatureIndex::switch_default_dest_penalty,
+                SwitchDefaultDestCostMultiplier * InstrCost);
+
     if (JumpTableSize) {
-      if (!DefaultDestUndefined)
-        increment(InlineCostFeatureIndex::switch_default_dest_penalty,
-                  SwitchDefaultDestCostMultiplier * InstrCost);
       int64_t JTCost = static_cast<int64_t>(JumpTableSize) * InstrCost +
                        JTCostMultiplier * InstrCost;
       increment(InlineCostFeatureIndex::jump_table_penalty, JTCost);
@@ -1252,8 +1248,7 @@ private:
 
     if (NumCaseCluster <= 3) {
       increment(InlineCostFeatureIndex::case_cluster_penalty,
-                (NumCaseCluster - DefaultDestUndefined) *
-                    CaseClusterCostMultiplier * InstrCost);
+                NumCaseCluster * CaseClusterCostMultiplier * InstrCost);
       return;
     }
 
