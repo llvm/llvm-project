@@ -7,7 +7,7 @@ entry:
   ret i32 %a
 }
 
-define i32 @foo(i32 %a0) {
+define i32 @bar(i32 %a0) {
 entry:
 ; CHECK: %"vl{{([0-9]{5})}}(%a0, 2)"
   %a = add i32 %a0, 2
