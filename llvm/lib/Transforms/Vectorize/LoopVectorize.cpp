@@ -3390,12 +3390,6 @@ static Type *smallestIntegerVectorType(Type *T1, Type *T2) {
   return I1->getBitWidth() < I2->getBitWidth() ? T1 : T2;
 }
 
-static Type *largestIntegerVectorType(Type *T1, Type *T2) {
-  auto *I1 = cast<IntegerType>(cast<VectorType>(T1)->getElementType());
-  auto *I2 = cast<IntegerType>(cast<VectorType>(T2)->getElementType());
-  return I1->getBitWidth() > I2->getBitWidth() ? T1 : T2;
-}
-
 void InnerLoopVectorizer::fixVectorizedLoop(VPTransformState &State,
                                             VPlan &Plan) {
   // Fix widened non-induction PHIs by setting up the PHI operands.
@@ -7128,16 +7122,15 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I, ElementCount VF,
       // "zext i8 %1 to i32" becomes "zext i8 %1 to i16".
       //
       // Calculate the modified src and dest types.
-      Type *MinVecTy = VectorTy;
       if (Opcode == Instruction::Trunc) {
-        SrcVecTy = smallestIntegerVectorType(SrcVecTy, MinVecTy);
+        SrcVecTy = smallestIntegerVectorType(SrcVecTy, VectorTy);
         VectorTy =
-            largestIntegerVectorType(ToVectorTy(I->getType(), VF), MinVecTy);
+            smallestIntegerVectorType(ToVectorTy(I->getType(), VF), VectorTy);
       } else if (Opcode == Instruction::ZExt || Opcode == Instruction::SExt) {
         // Leave SrcVecTy unchanged - we only shrink the destination element
         // type.
         VectorTy =
-            smallestIntegerVectorType(ToVectorTy(I->getType(), VF), MinVecTy);
+            smallestIntegerVectorType(ToVectorTy(I->getType(), VF), VectorTy);
       }
     }
 
