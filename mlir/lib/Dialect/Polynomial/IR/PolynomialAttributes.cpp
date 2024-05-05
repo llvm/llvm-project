@@ -206,10 +206,8 @@ Attribute RingAttr::parse(AsmParser &parser, Type type) {
   APInt root(coefficientModulusAttr.getValue().getBitWidth(), 0);
   IntegerAttr rootAttr = nullptr;
   if (succeeded(parser.parseOptionalComma())) {
-    if (failed(parser.parseKeyword("primitiveRoot")))
-      return {};
-
-    if (failed(parser.parseEqual()))
+    if (failed(parser.parseKeyword("primitiveRoot")) ||
+        failed(parser.parseEqual()))
       return {};
 
     ParseResult result = parser.parseInteger(root);
