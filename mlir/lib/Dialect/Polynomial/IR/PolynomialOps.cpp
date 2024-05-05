@@ -125,7 +125,7 @@ bool isPrimitiveNthRootOfUnity(const APInt &root, const unsigned n,
 /// compatible.
 static LogicalResult verifyNTTOp(Operation *op, RingAttr ring,
                                  RankedTensorType tensorType) {
-  auto encoding = tensorType.getEncoding();
+  Attribute encoding = tensorType.getEncoding();
   if (!encoding) {
     return op->emitOpError()
            << "a ring encoding was not provided to the tensor";
@@ -142,8 +142,8 @@ static LogicalResult verifyNTTOp(Operation *op, RingAttr ring,
            << " is not equivalent to the polynomial ring " << ring;
   }
 
-  auto polyDegree = ring.getPolynomialModulus().getPolynomial().getDegree();
-  auto tensorShape = tensorType.getShape();
+  unsigned polyDegree = ring.getPolynomialModulus().getPolynomial().getDegree();
+  ArrayRef<int64_t> tensorShape = tensorType.getShape();
   bool compatible = tensorShape.size() == 1 && tensorShape[0] == polyDegree;
   if (!compatible) {
     InFlightDiagnostic diag = op->emitOpError()
