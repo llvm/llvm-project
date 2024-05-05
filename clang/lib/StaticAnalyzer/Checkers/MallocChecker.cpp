@@ -1096,13 +1096,15 @@ static bool isStandardNewDelete(const FunctionDecl *FD) {
       Kind != OO_Array_Delete)
     return false;
 
+  bool HasBody = FD->hasBody(); // Prefer using the definition.
+
   // This is standard if and only if it's not defined in a user file.
   SourceLocation L = FD->getLocation();
+
   // If the header for operator delete is not included, it's still defined
   // in an invalid source location. Check to make sure we don't crash.
-  return !L.isValid() ||
-         (!FD->hasBody() && // FIXME: Still a false alarm after CTU inlining.
-          FD->getASTContext().getSourceManager().isInSystemHeader(L));
+  const auto &SM = FD->getASTContext().getSourceManager();
+  return L.isInvalid() || (!HasBody && SM.isInSystemHeader(L));
 }
 
 //===----------------------------------------------------------------------===//
