@@ -61,8 +61,8 @@ cl::opt<CGDataFormat> OutputFormat(
     cl::values(clEnumValN(CD_Text, "text", "Text encoding"),
                clEnumValN(CD_Binary, "binary", "Binary encoding")));
 
-cl::opt<bool> ShowCGDataVersion("cgdata-version", cl::init(false),
-                                cl::desc("Show cgdata version. "),
+cl::opt<bool> ShowCGDataVersion("cgdata-version",
+                                cl::desc("Show cgdata version."),
                                 cl::sub(ShowSubcommand));
 
 static void exitWithError(Twine Message, std::string Whence = "",
