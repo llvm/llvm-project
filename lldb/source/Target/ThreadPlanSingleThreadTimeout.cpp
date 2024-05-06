@@ -76,7 +76,7 @@ void ThreadPlanSingleThreadTimeout::CreateNew(Thread &thread) {
   if (ThreadPlanSingleThreadTimeout::IsAlive())
     return;
   {
-    
+    std::lock_guard<std::mutex> lock(s_mutex);
     s_prev_state = State::WaitTimeout;
   }
   auto timeout_plan = new ThreadPlanSingleThreadTimeout(thread);
@@ -230,5 +230,5 @@ void ThreadPlanSingleThreadTimeout::HandleTimeout() {
 
 bool ThreadPlanSingleThreadTimeout::IsAlive() {
   std::lock_guard<std::mutex> lock(s_mutex);
-  return s_instance != nullptr; 
+  return s_instance != nullptr;
 }
