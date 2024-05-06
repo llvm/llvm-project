@@ -408,6 +408,28 @@ void handleInputEntry(const VarLocResult &from, int fromLine, VarLocResult to,
                       int toLine, const std::vector<VarLocResult> &path,
                       const std::string &type, ordered_json &jResults) {
 
+    auto removeNpeBadSource = [&] {
+        // 根据有缺陷的 source，删除可疑的 source
+        auto &npeSuspectedSources = Global.npeSuspectedSources;
+        for (auto it = npeSuspectedSources.begin();
+             it != npeSuspectedSources.end();) {
+            const auto &loc = *it;
+            const std::string &file = loc["file"];
+            int beginLine = loc["beginLine"];
+            int endLine = loc["endLine"];
+
+            auto &fromFile = Global.functionLocations[from.fid].file;
+            if (beginLine <= fromLine && fromLine <= endLine &&
+                file == fromFile) {
+                logger.info("Removing suspected good source: {}:{}:{}", file,
+                            beginLine, loc["beginColumn"]);
+                it = npeSuspectedSources.erase(it);
+            } else {
+                it++;
+            }
+        };
+    };
+
     // 获取 loc 所在函数的出口
     auto getExit = [](const VarLocResult &loc) {
         requireTrue(loc.isValid());
@@ -446,25 +468,7 @@ void handleInputEntry(const VarLocResult &from, int fromLine, VarLocResult to,
         if (!found)
             logger.warn("Unable to find any path for NPE fix version!");
 
-        // 根据有缺陷的 source，删除可疑的 source
-        auto &npeSuspectedSources = Global.npeSuspectedSources;
-        for (auto it = npeSuspectedSources.begin();
-             it != npeSuspectedSources.end();) {
-            const auto &loc = *it;
-            const std::string &file = loc["file"];
-            int beginLine = loc["beginLine"];
-            int endLine = loc["endLine"];
-
-            auto &fromFile = Global.functionLocations[from.fid].file;
-            if (beginLine <= fromLine && fromLine <= endLine &&
-                file == fromFile) {
-                logger.info("Removing suspected good source: {}:{}:{}", file,
-                            beginLine, loc["beginColumn"]);
-                it = npeSuspectedSources.erase(it);
-            } else {
-                it++;
-            }
-        }
+        removeNpeBadSource();
     } else {
         logger.info("Handle unknown type: {}", type);
         requireTrue(from.isValid());
