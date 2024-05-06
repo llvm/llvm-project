@@ -1323,12 +1323,10 @@ bool Sema::isSameOrCompatibleFunctionType(QualType P, QualType A) {
     return Context.hasSameType(P, A);
 
   // Noreturn and noexcept adjustment.
-  QualType AdjustedParam;
-  if (IsFunctionConversion(P, A, AdjustedParam))
-    return Context.hasSameFunctionTypeIgnoringExceptionSpec(AdjustedParam, A);
+  if (QualType AdjustedParam; IsFunctionConversion(P, A, AdjustedParam))
+    P = AdjustedParam;
 
   // FIXME: Compatible calling conventions.
-
   return Context.hasSameFunctionTypeIgnoringExceptionSpec(P, A);
 }
 
