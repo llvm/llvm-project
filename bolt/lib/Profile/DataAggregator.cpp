@@ -773,9 +773,19 @@ bool DataAggregator::doInterBranch(BinaryFunction *FromFunc,
 
 bool DataAggregator::doBranch(uint64_t From, uint64_t To, uint64_t Count,
                               uint64_t Mispreds) {
+  bool IsReturn = false;
   auto handleAddress = [&](uint64_t &Addr, bool IsFrom) -> BinaryFunction * {
     if (BinaryFunction *Func = getBinaryFunctionContainingAddress(Addr)) {
       Addr -= Func->getAddress();
+      if (IsFrom) {
+        if (Func->hasInstructions()) {
+          if (MCInst *Inst = Func->getInstructionAtOffset(Addr))
+            IsReturn = BC->MIB->isReturn(*Inst);
+        } else if (std::optional<MCInst> Inst =
+                Func->disassembleInstructionAtOffset(Addr)) {
+          IsReturn = BC->MIB->isReturn(*Inst);
+        }
+      }
 
       if (BAT)
         Addr = BAT->translate(Func->getAddress(), Addr, IsFrom);
@@ -792,6 +802,9 @@ bool DataAggregator::doBranch(uint64_t From, uint64_t To, uint64_t Count,
   };
 
   BinaryFunction *FromFunc = handleAddress(From, /*IsFrom=*/true);
+  // Ignore returns.
+  if (IsReturn)
+    return true;
   BinaryFunction *ToFunc = handleAddress(To, /*IsFrom=*/false);
   if (!FromFunc && !ToFunc)
     return false;
@@ -2365,10 +2378,16 @@ std::error_code DataAggregator::writeBATYAML(BinaryContext &BC,
         return CSI;
       };
 
+      // Lookup containing basic block offset and index
+      auto getBlock = [&BlockMap](uint32_t Offset) {
+        auto BlockIt = BlockMap.upper_bound(Offset);
+        assert(BlockIt != BlockMap.begin());
+        --BlockIt;
+        return std::pair(BlockIt->first, BlockIt->second.getBBIndex());
+      };
+
       for (const auto &[FromOffset, SuccKV] : Branches.IntraIndex) {
-        if (!BlockMap.isInputBlock(FromOffset))
-          continue;
-        const unsigned Index = BlockMap.getBBIndex(FromOffset);
+        const auto &[_, Index] = getBlock(FromOffset);
         yaml::bolt::BinaryBasicBlockProfile &YamlBB = YamlBF.Blocks[Index];
         for (const auto &[SuccOffset, SuccDataIdx] : SuccKV)
           if (BlockMap.isInputBlock(SuccOffset))
@@ -2376,10 +2395,7 @@ std::error_code DataAggregator::writeBATYAML(BinaryContext &BC,
                 getSuccessorInfo(SuccOffset, SuccDataIdx));
       }
       for (const auto &[FromOffset, CallTo] : Branches.InterIndex) {
-        auto BlockIt = BlockMap.upper_bound(FromOffset);
-        --BlockIt;
-        const unsigned BlockOffset = BlockIt->first;
-        const unsigned BlockIndex = BlockIt->second.getBBIndex();
+        const auto &[BlockOffset, BlockIndex] = getBlock(FromOffset);
         yaml::bolt::BinaryBasicBlockProfile &YamlBB = YamlBF.Blocks[BlockIndex];
         const uint32_t Offset = FromOffset - BlockOffset;
         for (const auto &[CallToLoc, CallToIdx] : CallTo)
