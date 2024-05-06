@@ -666,35 +666,46 @@ define i32 @rint(i32 %arg) {
 define i32 @lrint(i32 %arg) {
 ; SSE1-LABEL: 'lrint'
 ; SSE1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F32 = call i32 @llvm.lrint.i32.f32(float undef)
-; SSE1-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V4F32 = call <4 x i32> @llvm.lrint.v4i32.v4f32(<4 x float> undef)
-; SSE1-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V8F32 = call <8 x i32> @llvm.lrint.v8i32.v8f32(<8 x float> undef)
-; SSE1-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V16F32 = call <16 x i32> @llvm.lrint.v16i32.v16f32(<16 x float> undef)
+; SSE1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4F32 = call <4 x i32> @llvm.lrint.v4i32.v4f32(<4 x float> undef)
+; SSE1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8F32 = call <8 x i32> @llvm.lrint.v8i32.v8f32(<8 x float> undef)
+; SSE1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V16F32 = call <16 x i32> @llvm.lrint.v16i32.v16f32(<16 x float> undef)
 ; SSE1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F64 = call i32 @llvm.lrint.i32.f64(double undef)
-; SSE1-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V2F64 = call <2 x i32> @llvm.lrint.v2i32.v2f64(<2 x double> undef)
-; SSE1-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V4F64 = call <4 x i32> @llvm.lrint.v4i32.v4f64(<4 x double> undef)
-; SSE1-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V8F64 = call <8 x i32> @llvm.lrint.v8i32.v8f64(<8 x double> undef)
+; SSE1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2F64 = call <2 x i32> @llvm.lrint.v2i32.v2f64(<2 x double> undef)
+; SSE1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4F64 = call <4 x i32> @llvm.lrint.v4i32.v4f64(<4 x double> undef)
+; SSE1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8F64 = call <8 x i32> @llvm.lrint.v8i32.v8f64(<8 x double> undef)
 ; SSE1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 undef
+;
+; SSE2-LABEL: 'lrint'
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F32 = call i32 @llvm.lrint.i32.f32(float undef)
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4F32 = call <4 x i32> @llvm.lrint.v4i32.v4f32(<4 x float> undef)
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8F32 = call <8 x i32> @llvm.lrint.v8i32.v8f32(<8 x float> undef)
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16F32 = call <16 x i32> @llvm.lrint.v16i32.v16f32(<16 x float> undef)
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F64 = call i32 @llvm.lrint.i32.f64(double undef)
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2F64 = call <2 x i32> @llvm.lrint.v2i32.v2f64(<2 x double> undef)
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4F64 = call <4 x i32> @llvm.lrint.v4i32.v4f64(<4 x double> undef)
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V8F64 = call <8 x i32> @llvm.lrint.v8i32.v8f64(<8 x double> undef)
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 undef
 ;
 ; AVX-LABEL: 'lrint'
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F32 = call i32 @llvm.lrint.i32.f32(float undef)
-; AVX-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V4F32 = call <4 x i32> @llvm.lrint.v4i32.v4f32(<4 x float> undef)
-; AVX-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %V8F32 = call <8 x i32> @llvm.lrint.v8i32.v8f32(<8 x float> undef)
-; AVX-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: %V16F32 = call <16 x i32> @llvm.lrint.v16i32.v16f32(<16 x float> undef)
+; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4F32 = call <4 x i32> @llvm.lrint.v4i32.v4f32(<4 x float> undef)
+; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8F32 = call <8 x i32> @llvm.lrint.v8i32.v8f32(<8 x float> undef)
+; AVX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16F32 = call <16 x i32> @llvm.lrint.v16i32.v16f32(<16 x float> undef)
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F64 = call i32 @llvm.lrint.i32.f64(double undef)
-; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V2F64 = call <2 x i32> @llvm.lrint.v2i32.v2f64(<2 x double> undef)
-; AVX-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V4F64 = call <4 x i32> @llvm.lrint.v4i32.v4f64(<4 x double> undef)
-; AVX-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %V8F64 = call <8 x i32> @llvm.lrint.v8i32.v8f64(<8 x double> undef)
+; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2F64 = call <2 x i32> @llvm.lrint.v2i32.v2f64(<2 x double> undef)
+; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4F64 = call <4 x i32> @llvm.lrint.v4i32.v4f64(<4 x double> undef)
+; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8F64 = call <8 x i32> @llvm.lrint.v8i32.v8f64(<8 x double> undef)
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 undef
 ;
 ; AVX512-LABEL: 'lrint'
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F32 = call i32 @llvm.lrint.i32.f32(float undef)
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V4F32 = call <4 x i32> @llvm.lrint.v4i32.v4f32(<4 x float> undef)
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %V8F32 = call <8 x i32> @llvm.lrint.v8i32.v8f32(<8 x float> undef)
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 35 for instruction: %V16F32 = call <16 x i32> @llvm.lrint.v16i32.v16f32(<16 x float> undef)
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4F32 = call <4 x i32> @llvm.lrint.v4i32.v4f32(<4 x float> undef)
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8F32 = call <8 x i32> @llvm.lrint.v8i32.v8f32(<8 x float> undef)
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V16F32 = call <16 x i32> @llvm.lrint.v16i32.v16f32(<16 x float> undef)
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F64 = call i32 @llvm.lrint.i32.f64(double undef)
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V2F64 = call <2 x i32> @llvm.lrint.v2i32.v2f64(<2 x double> undef)
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V4F64 = call <4 x i32> @llvm.lrint.v4i32.v4f64(<4 x double> undef)
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %V8F64 = call <8 x i32> @llvm.lrint.v8i32.v8f64(<8 x double> undef)
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2F64 = call <2 x i32> @llvm.lrint.v2i32.v2f64(<2 x double> undef)
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4F64 = call <4 x i32> @llvm.lrint.v4i32.v4f64(<4 x double> undef)
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8F64 = call <8 x i32> @llvm.lrint.v8i32.v8f64(<8 x double> undef)
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 undef
 ;
   %F32 = call i32 @llvm.lrint.i32.f32(float undef)
@@ -711,38 +722,16 @@ define i32 @lrint(i32 %arg) {
 }
 
 define i32 @llrint(i32 %arg) {
-; SSE1-LABEL: 'llrint'
-; SSE1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F32 = call i64 @llvm.llrint.i64.f32(float undef)
-; SSE1-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V4F32 = call <4 x i64> @llvm.llrint.v4i64.v4f32(<4 x float> undef)
-; SSE1-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V8F32 = call <8 x i64> @llvm.llrint.v8i64.v8f32(<8 x float> undef)
-; SSE1-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V16F32 = call <16 x i64> @llvm.llrint.v16i64.v16f32(<16 x float> undef)
-; SSE1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F64 = call i64 @llvm.llrint.i64.f64(double undef)
-; SSE1-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V2F64 = call <2 x i64> @llvm.llrint.v2i64.v2f64(<2 x double> undef)
-; SSE1-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V4F64 = call <4 x i64> @llvm.llrint.v4i64.v4f64(<4 x double> undef)
-; SSE1-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V8F64 = call <8 x i64> @llvm.llrint.v8i64.v8f64(<8 x double> undef)
-; SSE1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 undef
-;
-; AVX-LABEL: 'llrint'
-; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F32 = call i64 @llvm.llrint.i64.f32(float undef)
-; AVX-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %V4F32 = call <4 x i64> @llvm.llrint.v4i64.v4f32(<4 x float> undef)
-; AVX-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %V8F32 = call <8 x i64> @llvm.llrint.v8i64.v8f32(<8 x float> undef)
-; AVX-NEXT:  Cost Model: Found an estimated cost of 36 for instruction: %V16F32 = call <16 x i64> @llvm.llrint.v16i64.v16f32(<16 x float> undef)
-; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F64 = call i64 @llvm.llrint.i64.f64(double undef)
-; AVX-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V2F64 = call <2 x i64> @llvm.llrint.v2i64.v2f64(<2 x double> undef)
-; AVX-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %V4F64 = call <4 x i64> @llvm.llrint.v4i64.v4f64(<4 x double> undef)
-; AVX-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %V8F64 = call <8 x i64> @llvm.llrint.v8i64.v8f64(<8 x double> undef)
-; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 undef
-;
-; AVX512-LABEL: 'llrint'
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F32 = call i64 @llvm.llrint.i64.f32(float undef)
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %V4F32 = call <4 x i64> @llvm.llrint.v4i64.v4f32(<4 x float> undef)
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 19 for instruction: %V8F32 = call <8 x i64> @llvm.llrint.v8i64.v8f32(<8 x float> undef)
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 38 for instruction: %V16F32 = call <16 x i64> @llvm.llrint.v16i64.v16f32(<16 x float> undef)
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F64 = call i64 @llvm.llrint.i64.f64(double undef)
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V2F64 = call <2 x i64> @llvm.llrint.v2i64.v2f64(<2 x double> undef)
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %V4F64 = call <4 x i64> @llvm.llrint.v4i64.v4f64(<4 x double> undef)
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 19 for instruction: %V8F64 = call <8 x i64> @llvm.llrint.v8i64.v8f64(<8 x double> undef)
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 undef
+; CHECK-LABEL: 'llrint'
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F32 = call i64 @llvm.llrint.i64.f32(float undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4F32 = call <4 x i64> @llvm.llrint.v4i64.v4f32(<4 x float> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8F32 = call <8 x i64> @llvm.llrint.v8i64.v8f32(<8 x float> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V16F32 = call <16 x i64> @llvm.llrint.v16i64.v16f32(<16 x float> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %F64 = call i64 @llvm.llrint.i64.f64(double undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2F64 = call <2 x i64> @llvm.llrint.v2i64.v2f64(<2 x double> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4F64 = call <4 x i64> @llvm.llrint.v4i64.v4f64(<4 x double> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8F64 = call <8 x i64> @llvm.llrint.v8i64.v8f64(<8 x double> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 undef
 ;
   %F32 = call i64 @llvm.llrint.i64.f32(float undef)
   %V4F32 = call <4 x i64> @llvm.llrint.v4i64.v4f32(<4 x float> undef)

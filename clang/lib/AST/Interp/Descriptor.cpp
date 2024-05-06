@@ -347,6 +347,14 @@ Descriptor::Descriptor(const DeclTy &D)
   assert(Source && "Missing source");
 }
 
+/// Dummy array.
+Descriptor::Descriptor(const DeclTy &D, UnknownSize)
+    : Source(D), ElemSize(1), Size(UnknownSizeMark), MDSize(0),
+      AllocSize(MDSize), ElemRecord(nullptr), IsConst(true), IsMutable(false),
+      IsTemporary(false), IsArray(true), IsDummy(true) {
+  assert(Source && "Missing source");
+}
+
 QualType Descriptor::getType() const {
   if (auto *E = asExpr())
     return E->getType();

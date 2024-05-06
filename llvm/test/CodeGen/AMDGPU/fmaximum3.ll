@@ -71,6 +71,7 @@ define amdgpu_kernel void @test_fmaximum3_olt_1_f16(ptr addrspace(1) %out, ptr a
 ; GCN: v_pk_maximum_f16 v0, v0, v1
 ; GCN: v_pk_maximum_f16 v0, v2, v0
 ; GCN: v_pk_maximum_f16 v0, v0, v3
+; GCN-NEXT: s_wait_alu
 ; GCN-NEXT: s_setpc_b64
 define <2 x half> @no_fmaximum3_v2f16(<2 x half> %a, <2 x half> %b, <2 x half> %c, <2 x half> %d) {
 entry:

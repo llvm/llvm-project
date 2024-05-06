@@ -203,6 +203,7 @@ define amdgpu_kernel void @tbuffer_store_d16_xyz(<4 x i32> %rsrc, <4 x half> %da
 ; GFX12-PACKED-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-PACKED-SDAG-NEXT:    s_and_b32 s5, s5, 0xffff
 ; GFX12-PACKED-SDAG-NEXT:    v_mov_b32_e32 v0, s4
+; GFX12-PACKED-SDAG-NEXT:    s_wait_alu 0xfffe
 ; GFX12-PACKED-SDAG-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX12-PACKED-SDAG-NEXT:    v_mov_b32_e32 v2, s6
 ; GFX12-PACKED-SDAG-NEXT:    tbuffer_store_d16_format_xyz v[0:1], v2, s[0:3], null format:[BUF_FMT_10_10_10_2_SNORM] idxen
@@ -218,6 +219,7 @@ define amdgpu_kernel void @tbuffer_store_d16_xyz(<4 x i32> %rsrc, <4 x half> %da
 ; GFX12-PACKED-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-PACKED-GISEL-NEXT:    s_pack_lh_b32_b16 s4, s4, s4
 ; GFX12-PACKED-GISEL-NEXT:    v_mov_b32_e32 v2, s6
+; GFX12-PACKED-GISEL-NEXT:    s_wait_alu 0xfffe
 ; GFX12-PACKED-GISEL-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX12-PACKED-GISEL-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX12-PACKED-GISEL-NEXT:    tbuffer_store_d16_format_xyzw v[0:1], v2, s[0:3], null format:[BUF_FMT_10_10_10_2_SNORM] idxen

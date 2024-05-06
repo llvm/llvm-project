@@ -9,8 +9,6 @@ define double @ignoreStrictfp(double noundef %a, double noundef %b) #0 {
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 2, 2), 1
-; GCN-NEXT:    s_nop 1
-; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 2, 1), 0
 ; GCN-NEXT:    v_add_f64 v[0:1], v[0:1], v[2:3]
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   tail call void @llvm.amdgcn.s.setreg(i32 2177, i32 1)
@@ -24,8 +22,6 @@ define double @set_fpenv(double noundef %a, double noundef %b) #0 {
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 0, 23), 4
 ; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_TRAPSTS, 0, 5), 0
-; GCN-NEXT:    s_nop 0
-; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 2, 1), 0
 ; GCN-NEXT:    v_add_f64 v[0:1], v[0:1], v[2:3]
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
 entry:

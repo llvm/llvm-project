@@ -144,19 +144,16 @@ std::optional<unsigned> Program::getOrCreateDummy(const ValueDecl *VD) {
   if (auto It = DummyVariables.find(VD); It != DummyVariables.end())
     return It->second;
 
+  // Create dummy descriptor.
+  // We create desriptors of 'array of unknown size' if the type is an array
+  // type _and_ the size isn't known (it's not a ConstantArrayType). If the size
+  // is known however, we create a regular dummy pointer.
   Descriptor *Desc;
-  if (std::optional<PrimType> T = Ctx.classify(VD->getType()))
-    Desc = createDescriptor(VD, *T, std::nullopt, true, false);
+  if (const auto *AT = VD->getType()->getAsArrayTypeUnsafe();
+      AT && !isa<ConstantArrayType>(AT))
+    Desc = allocateDescriptor(VD, Descriptor::UnknownSize{});
   else
-    Desc = createDescriptor(VD, VD->getType().getTypePtr(), std::nullopt, true,
-                            false);
-  if (!Desc)
     Desc = allocateDescriptor(VD);
-
-  assert(Desc);
-  Desc->makeDummy();
-
-  assert(Desc->isDummy());
 
   // Allocate a block for storage.
   unsigned I = Globals.size();
@@ -313,7 +310,8 @@ Record *Program::getOrCreateRecord(const RecordDecl *RD) {
   for (const FieldDecl *FD : RD->fields()) {
     // Note that we DO create fields and descriptors
     // for unnamed bitfields here, even though we later ignore
-    // them everywhere. That's so the FieldDecl's getFieldIndex() matches.
+    // them everywhere. That's because so the FieldDecl's
+    // getFieldIndex() matches.
 
     // Reserve space for the field's descriptor and the offset.
     BaseSize += align(sizeof(InlineDescriptor));
@@ -346,7 +344,6 @@ Descriptor *Program::createDescriptor(const DeclTy &D, const Type *Ty,
                                       Descriptor::MetadataSize MDSize,
                                       bool IsConst, bool IsTemporary,
                                       bool IsMutable, const Expr *Init) {
-
   // Classes and structures.
   if (const auto *RT = Ty->getAs<RecordType>()) {
     if (const auto *Record = getOrCreateRecord(RT->getDecl()))
