@@ -1813,6 +1813,7 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPSectionsConstruct &x) {
   case llvm::omp::Directive::OMPD_parallel_sections:
   case llvm::omp::Directive::OMPD_sections:
     PushContext(beginDir.source, beginDir.v);
+    GetContext().withinConstruct = true;
     break;
   default:
     break;
@@ -1825,6 +1826,7 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPCriticalConstruct &x) {
   const auto &beginCriticalDir{std::get<parser::OmpCriticalDirective>(x.t)};
   const auto &endCriticalDir{std::get<parser::OmpEndCriticalDirective>(x.t)};
   PushContext(beginCriticalDir.source, llvm::omp::Directive::OMPD_critical);
+  GetContext().withinConstruct = true;
   if (const auto &criticalName{
           std::get<std::optional<parser::Name>>(beginCriticalDir.t)}) {
     ResolveOmpName(*criticalName, Symbol::Flag::OmpCriticalLock);
