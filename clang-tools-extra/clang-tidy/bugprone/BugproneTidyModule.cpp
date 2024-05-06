@@ -91,6 +91,7 @@
 #include "UnusedRaiiCheck.h"
 #include "UnusedReturnValueCheck.h"
 #include "UseAfterMoveCheck.h"
+#include "VirtualArithmeticCheck.h"
 #include "VirtualNearMissCheck.h"
 
 namespace clang::tidy {
@@ -254,6 +255,8 @@ public:
     CheckFactories.registerCheck<UnusedReturnValueCheck>(
         "bugprone-unused-return-value");
     CheckFactories.registerCheck<UseAfterMoveCheck>("bugprone-use-after-move");
+    CheckFactories.registerCheck<VirtualArithmeticCheck>(
+        "bugprone-virtual-arithmetic");
     CheckFactories.registerCheck<VirtualNearMissCheck>(
         "bugprone-virtual-near-miss");
   }

@@ -87,6 +87,7 @@ add_clang_library(clangTidyBugproneModule
   UnusedRaiiCheck.cpp
   UnusedReturnValueCheck.cpp
   UseAfterMoveCheck.cpp
+  VirtualArithmeticCheck.cpp
   VirtualNearMissCheck.cpp
 
   LINK_LIBS
