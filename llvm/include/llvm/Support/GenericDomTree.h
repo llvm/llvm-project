@@ -328,6 +328,8 @@ protected:
   ///
   bool isPostDominator() const { return IsPostDominator; }
 
+  bool isDFSInfoValid() const { return DFSInfoValid; }
+
   /// compare - Return false if the other dominator tree base matches this
   /// dominator tree base. Otherwise return true.
   bool compare(const DominatorTreeBase &Other) const {
