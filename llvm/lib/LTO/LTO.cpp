@@ -1399,6 +1399,7 @@ public:
                       sys::fs::OpenFlags::OF_None);
     if (EC)
       return errorCodeToError(EC);
+
     writeIndexToFile(CombinedIndex, OS, &ModuleToSummariesForIndex,
                      &ModuleToDeclarationSummaries);
 

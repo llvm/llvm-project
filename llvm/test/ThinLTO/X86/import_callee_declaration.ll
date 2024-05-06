@@ -1,3 +1,5 @@
+; "-debug-only" requires asserts.
+; REQUIRES: asserts
 ; RUN: rm -rf %t && split-file %s %t && cd %t
 
 ; Generate per-module summaries.
@@ -24,18 +26,25 @@
 ; the import type for declarations, and add test coverage for in-process thinlto.
 ;
 ; RUN: llvm-lto2 run \
+; RUN:   -debug-only=function-import \
 ; RUN:   -import-instr-limit=7 \
 ; RUN:   -import-declaration \
 ; RUN:   -thinlto-distributed-indexes \
 ; RUN:   -r=main.bc,main,px \
 ; RUN:   -r=main.bc,small_func, \
 ; RUN:   -r=main.bc,large_func, \
-; RUN:   -r=lib.bc,callee,px \
+; RUN:   -r=lib.bc,callee,pl \
 ; RUN:   -r=lib.bc,large_indirect_callee,px \
 ; RUN:   -r=lib.bc,small_func,px \
 ; RUN:   -r=lib.bc,large_func,px \
 ; RUN:   -r=lib.bc,large_indirect_callee_alias,px \
-; RUN:   -r=lib.bc,calleeAddrs,px -o summary main.bc lib.bc
+; RUN:   -r=lib.bc,calleeAddrs,px -o summary main.bc lib.bc 2>&1 | FileCheck %s --check-prefix=DUMP
+;
+; RUN: llvm-lto -thinlto-action=thinlink -import-declaration -import-instr-limit=7  -o combined.index.bc main.bc lib.bc
+; RUN: llvm-lto -thinlto-action=distributedindexes -debug-only=function-import -import-declaration -import-instr-limit=7 -thinlto-index combined.index.bc main.bc lib.bc 2>&1 | FileCheck %s --check-prefix=DUMP
+; RUN: llvm-dis main.bc.thinlto.bc -o - | FileCheck %s --check-prefix=MAIN-DIS
+
+; DUMP: - 2 function definitions and 3 function declarations imported from lib.bc
 
 ; main.ll should import {large_func, large_indirect_callee} as declarations.
 ; 
@@ -56,11 +65,28 @@
 ; MAIN-DIS: [[LARGEINDIRECT:\^[0-9]+]] = gv: (guid: 14343440786664691134, summaries: (function: (module: [[LIBMOD]], flags: ({{.*}} importType: declaration), insts: 8, {{.*}})))
 ; MAIN-DIS: [[LARGEINDIRECTALIAS:\^[0-9]+]] = gv: (guid: 16730173943625350469, summaries: (alias: (module: [[LIBMOD]], flags: ({{.*}} importType: declaration), aliasee: [[LARGEINDIRECT]])))
 
-; TODO: add test coverage for lto indexing stats.
+; TODO: add test coverage for lto indexing stats (-debug-only=function-import, and 'reqasserts').
 
-; RUN: llvm-lto -thinlto-action=thinlink -import-declaration -import-instr-limit=7  -o combined.index.bc main.bc lib.bc
-; RUN: llvm-lto -thinlto-action=distributedindexes -import-declaration -import-instr-limit=7 -thinlto-index combined.index.bc main.bc lib.bc
-; RUN: llvm-dis main.bc.thinlto.bc -o - | FileCheck %s --check-prefix=MAIN-DIS
+; Run in-process ThinLTO and tests that `callee` remains internalized even if
+; the symbols of its callers (large_func and large_indirect_callee) are exported
+; and visible to main module.
+
+; RUN: llvm-lto2 run \
+; RUN:   -save-temps \
+; RUN:   -import-instr-limit=7 \
+; RUN:   -import-declaration \
+; RUN:   -r=main.bc,main,px \
+; RUN:   -r=main.bc,small_func, \
+; RUN:   -r=main.bc,large_func, \
+; RUN:   -r=lib.bc,callee,pl \
+; RUN:   -r=lib.bc,large_indirect_callee,px \
+; RUN:   -r=lib.bc,small_func,px \
+; RUN:   -r=lib.bc,large_func,px \
+; RUN:   -r=lib.bc,large_indirect_callee_alias,px \
+; RUN:   -r=lib.bc,calleeAddrs,px -o in-process main.bc lib.bc
+
+; RUN: llvm-dis in-process.2.2.internalize.bc -o - | FileCheck %s --check-prefix=INTERNALIZE
+; INTERNALIZE: define internal void @callee()
 
 ;--- main.ll
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
