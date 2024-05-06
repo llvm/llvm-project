@@ -1,5 +1,4 @@
-// FIXME: Actually, "perl".
-REQUIRES: shell
+REQUIRES: perl
 
 RUN: %scan-build -h | FileCheck %s
 RUN: %scan-build --help | FileCheck %s

@@ -1,5 +1,4 @@
-// FIXME: Actually, "perl".
-REQUIRES: shell
+REQUIRES: perl
 
 RUN: rm -rf %t.output_dir && mkdir %t.output_dir
 RUN: %scan-build -plist-html -o %t.output_dir %clang -S %S/Inputs/single_null_dereference.c \

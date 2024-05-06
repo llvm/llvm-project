@@ -1,4 +1,4 @@
-REQUIRES: shell
+REQUIRES: perl
 
 RUN: %scan-build sh -c 'echo "CLANG_CXX=/$(basename "$CLANG_CXX")/"' | FileCheck %s
 

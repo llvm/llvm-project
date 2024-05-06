@@ -523,6 +523,8 @@ endif()
 
 
 if( CLANG_INCLUDE_TESTS )
+  find_package(Perl)
+
   add_subdirectory(unittests)
   list(APPEND CLANG_TEST_DEPS ClangUnitTests)
   list(APPEND CLANG_TEST_PARAMS
