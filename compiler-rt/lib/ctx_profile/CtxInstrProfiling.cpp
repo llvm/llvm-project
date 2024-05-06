@@ -115,8 +115,9 @@ __thread ContextRoot *volatile __llvm_ctx_profile_current_context_root =
 // the dependency on the latter.
 Arena *Arena::allocateNewArena(size_t Size, Arena *Prev) {
   assert(!Prev || Prev->Next == nullptr);
-  Arena *NewArena =
-      new (__sanitizer::InternalAlloc(Size + sizeof(Arena))) Arena(Size);
+  Arena *NewArena = new (__sanitizer::InternalAlloc(
+      Size + sizeof(Arena), /*cache=*/nullptr, /*alignment=*/ExpectedAlignment))
+      Arena(Size);
   if (Prev)
     Prev->Next = NewArena;
   return NewArena;
@@ -136,7 +137,7 @@ inline ContextNode *ContextNode::alloc(char *Place, GUID Guid,
                                        uint32_t NrCounters,
                                        uint32_t NrCallsites,
                                        ContextNode *Next) {
-  assert(reinterpret_cast<uint64_t>(Place) % sizeof(void *) == 0);
+  assert(reinterpret_cast<uint64_t>(Place) % ExpectedAlignment == 0);
   return new (Place) ContextNode(Guid, NrCounters, NrCallsites, Next);
 }
 

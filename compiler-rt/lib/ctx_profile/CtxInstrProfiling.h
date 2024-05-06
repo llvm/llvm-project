@@ -14,6 +14,11 @@
 
 namespace __ctx_profile {
 using GUID = uint64_t;
+static constexpr size_t ExpectedAlignment = 8;
+// We really depend on this, see further below. We currently support x86_64.
+// When we want to support other archs, we need to trace the places Alignment is
+// used and adjust accordingly.
+static_assert(sizeof(void *) == ExpectedAlignment);
 
 /// Arena (bump allocator) forming a linked list. Intentionally not thread safe.
 /// Allocation and de-allocation happen using sanitizer APIs. We make that
@@ -53,6 +58,10 @@ private:
   const uint64_t Size;
 };
 
+// The memory available for allocation follows the Arena header, and we expect
+// it to be thus aligned.
+static_assert(sizeof(Arena) % ExpectedAlignment == 0);
+
 /// The contextual profile is a directed tree where each node has one parent. A
 /// node (ContextNode) corresponds to a function activation. The root of the
 /// tree is at a function that was marked as entrypoint to the compiler. A node
@@ -73,7 +82,7 @@ private:
 ///
 /// The layout is as follows:
 ///
-/// [[statically-declared fields][counters vector][subcontexts vector]]
+/// [[declared fields][counters vector][vector of ptrs to subcontexts]]
 ///
 /// See also documentation on the counters and subContexts members below.
 ///
@@ -112,7 +121,7 @@ public:
   // The counters vector starts right after the static header.
   uint64_t *counters() {
     ContextNode *addr_after = &(this[1]);
-    return reinterpret_cast<uint64_t *>(reinterpret_cast<char *>(addr_after));
+    return reinterpret_cast<uint64_t *>(addr_after);
   }
 
   uint32_t counters_size() const { return NrCounters; }
@@ -145,6 +154,10 @@ public:
 
   uint64_t entrycount() const { return counters()[0]; }
 };
+
+// Verify maintenance to ContextNode doesn't change this invariant, which makes
+// sure the inlined vectors are appropriately aligned.
+static_assert(sizeof(ContextNode) % Alignment == 0);
 
 /// ContextRoots are allocated by LLVM for entrypoints. LLVM is only concerned
 /// with allocating and zero-initializing the global value (as in, GlobalValue)
