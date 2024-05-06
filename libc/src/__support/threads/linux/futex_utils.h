@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC___SUPPORT_THREADS_LINUX_FUTEX_H
-#define LLVM_LIBC_SRC___SUPPORT_THREADS_LINUX_FUTEX_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_THREADS_LINUX_FUTEX_UTILS_H
+#define LLVM_LIBC_SRC___SUPPORT_THREADS_LINUX_FUTEX_UTILS_H
 
 #include "hdr/types/struct_timespec.h"
 #include "src/__support/CPP/atomic.h"
@@ -16,6 +16,7 @@
 #include "src/__support/OSUtil/syscall.h"
 #include "src/__support/macros/attributes.h"
 #include "src/__support/threads/linux/futex_word.h"
+#include <linux/errno.h>
 #include <linux/futex.h>
 
 namespace LIBC_NAMESPACE {
@@ -39,14 +40,26 @@ public:
     if (timeout && timeout->is_realtime) {
       op |= FUTEX_CLOCK_REALTIME;
     }
-    return syscall_impl<long>(
-        /* syscall number */ FUTEX_SYSCALL_ID,
-        /* futex address */ this,
-        /* futex operation  */ op,
-        /* expected value */ expected,
-        /* timeout */ timeout ? &timeout->abs_time : nullptr,
-        /* ignored */ nullptr,
-        /* bitset */ FUTEX_BITSET_MATCH_ANY);
+    for (;;) {
+      if (this->load(cpp::MemoryOrder::RELAXED) != expected)
+        return 0;
+
+      long ret = syscall_impl<long>(
+          /* syscall number */ FUTEX_SYSCALL_ID,
+          /* futex address */ this,
+          /* futex operation  */ op,
+          /* expected value */ expected,
+          /* timeout */ timeout ? &timeout->abs_time : nullptr,
+          /* ignored */ nullptr,
+          /* bitset */ FUTEX_BITSET_MATCH_ANY);
+
+      // continue waiting if interrupted; otherwise return the result
+      // which should normally be 0 or -ETIMEOUT
+      if (ret == -EINTR)
+        continue;
+      else
+        return ret;
+    }
   }
   LIBC_INLINE long notify_one(bool is_shared = false) {
     return syscall_impl<long>(
@@ -74,4 +87,4 @@ static_assert(__is_standard_layout(Futex),
               "Futex must be a standard layout type.");
 } // namespace LIBC_NAMESPACE
 
-#endif // LLVM_LIBC_SRC___SUPPORT_THREADS_LINUX_FUTEX_H
+#endif // LLVM_LIBC_SRC___SUPPORT_THREADS_LINUX_FUTEX_UTILS_H
