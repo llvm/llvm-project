@@ -185,7 +185,7 @@ define void @vla(i32, ptr, ...) local_unnamed_addr {
 ; CHECK-NEXT:    str x8, [x29, #16]
 ; CHECK-NEXT:    add x8, x9, #15
 ; CHECK-NEXT:    mov x23, sp
-; CHECK-NEXT:    lsr x15, x8, #4
+; CHECK-NEXT:    ubfx x15, x8, #4, #29
 ; CHECK-NEXT:    stp x2, x3, [x29, #24]
 ; CHECK-NEXT:    stp x4, x5, [x29, #40]
 ; CHECK-NEXT:    stp x6, x7, [x29, #56]

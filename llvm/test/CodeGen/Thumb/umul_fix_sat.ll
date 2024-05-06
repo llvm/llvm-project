@@ -138,8 +138,10 @@ define i4 @func3(i4 %x, i4 %y) nounwind {
 ; ARM:       @ %bb.0:
 ; ARM-NEXT:    .save {r4, lr}
 ; ARM-NEXT:    push {r4, lr}
-; ARM-NEXT:    movs r2, #15
+; ARM-NEXT:    mov r2, r1
+; ARM-NEXT:    movs r1, #15
 ; ARM-NEXT:    ands r2, r1
+; ARM-NEXT:    ands r0, r1
 ; ARM-NEXT:    lsls r0, r0, #28
 ; ARM-NEXT:    movs r4, #0
 ; ARM-NEXT:    mov r1, r4
@@ -252,8 +254,10 @@ define i4 @func6(i4 %x, i4 %y) nounwind {
 ; ARM:       @ %bb.0:
 ; ARM-NEXT:    .save {r4, lr}
 ; ARM-NEXT:    push {r4, lr}
-; ARM-NEXT:    movs r2, #15
+; ARM-NEXT:    mov r2, r1
+; ARM-NEXT:    movs r1, #15
 ; ARM-NEXT:    ands r2, r1
+; ARM-NEXT:    ands r0, r1
 ; ARM-NEXT:    lsls r0, r0, #28
 ; ARM-NEXT:    movs r4, #0
 ; ARM-NEXT:    mov r1, r4

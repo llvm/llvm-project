@@ -90,9 +90,9 @@ define amdgpu_ps float @ps_main(i32 %idx) {
 ; SI-NEXT:    s_mov_b32 s1, SCRATCH_RSRC_DWORD1
 ; SI-NEXT:    s_mov_b32 s2, -1
 ; SI-NEXT:    s_mov_b32 s3, 0xe8f000
-; SI-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; SI-NEXT:    v_and_b32_e32 v0, 0x7f, v0
 ; SI-NEXT:    s_add_u32 s0, s0, s4
-; SI-NEXT:    v_and_b32_e32 v0, 0x1fc, v0
+; SI-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; SI-NEXT:    v_mov_b32_e32 v2, 0
 ; SI-NEXT:    s_addc_u32 s1, s1, 0
 ; SI-NEXT:    v_add_i32_e32 v1, vcc, 0x200, v0
@@ -216,9 +216,9 @@ define amdgpu_ps float @ps_main(i32 %idx) {
 ; VI-NEXT:    s_mov_b32 s1, SCRATCH_RSRC_DWORD1
 ; VI-NEXT:    s_mov_b32 s2, -1
 ; VI-NEXT:    s_mov_b32 s3, 0xe80000
-; VI-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; VI-NEXT:    v_and_b32_e32 v0, 0x7f, v0
 ; VI-NEXT:    s_add_u32 s0, s0, s4
-; VI-NEXT:    v_and_b32_e32 v0, 0x1fc, v0
+; VI-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; VI-NEXT:    v_mov_b32_e32 v2, 0
 ; VI-NEXT:    s_addc_u32 s1, s1, 0
 ; VI-NEXT:    v_add_u32_e32 v1, vcc, 0x200, v0
@@ -361,7 +361,7 @@ define amdgpu_ps float @ps_main(i32 %idx) {
 ; GFX9-MUBUF-NEXT:    v_mov_b32_e32 v9, 0x3e31934f
 ; GFX9-MUBUF-NEXT:    v_mov_b32_e32 v10, 0x3eae29d8
 ; GFX9-MUBUF-NEXT:    v_mov_b32_e32 v11, 0x3efcd89c
-; GFX9-MUBUF-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GFX9-MUBUF-NEXT:    v_and_b32_e32 v0, 0x7f, v0
 ; GFX9-MUBUF-NEXT:    v_mov_b32_e32 v8, 0xbe319356
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v9, off, s[0:3], 0 offset:252
 ; GFX9-MUBUF-NEXT:    v_mov_b32_e32 v9, 0x3e319356
@@ -374,7 +374,7 @@ define amdgpu_ps float @ps_main(i32 %idx) {
 ; GFX9-MUBUF-NEXT:    v_mov_b32_e32 v14, 0xbf523be3
 ; GFX9-MUBUF-NEXT:    v_mov_b32_e32 v15, 0xbf5f2ee3
 ; GFX9-MUBUF-NEXT:    v_mov_b32_e32 v16, 0xbf638e39
-; GFX9-MUBUF-NEXT:    v_and_b32_e32 v0, 0x1fc, v0
+; GFX9-MUBUF-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v8, off, s[0:3], 0 offset:268
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v9, off, s[0:3], 0 offset:248
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v10, off, s[0:3], 0 offset:240
@@ -470,7 +470,7 @@ define amdgpu_ps float @ps_main(i32 %idx) {
 ; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v10, 0xb7043519
 ; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v11, 0xb702e758
 ; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v12, 0x3e31934f
-; GFX10_W32-MUBUF-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GFX10_W32-MUBUF-NEXT:    v_and_b32_e32 v0, 0x7f, v0
 ; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v1, off, s[0:3], 0 offset:268
 ; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v7, off, s[0:3], 0 offset:264
 ; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v10, off, s[0:3], 0 offset:260
@@ -481,7 +481,7 @@ define amdgpu_ps float @ps_main(i32 %idx) {
 ; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v11, 0x3eae29dc
 ; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v12, 0x3efcd89c
 ; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v13, 0x3efcd89f
-; GFX10_W32-MUBUF-NEXT:    v_and_b32_e32 v0, 0x1fc, v0
+; GFX10_W32-MUBUF-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v7, off, s[0:3], 0 offset:248
 ; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v10, off, s[0:3], 0 offset:244
 ; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v11, off, s[0:3], 0 offset:240
@@ -582,7 +582,7 @@ define amdgpu_ps float @ps_main(i32 %idx) {
 ; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v10, 0xb7043519
 ; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v11, 0xb702e758
 ; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v12, 0x3e31934f
-; GFX10_W64-MUBUF-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GFX10_W64-MUBUF-NEXT:    v_and_b32_e32 v0, 0x7f, v0
 ; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v1, off, s[0:3], 0 offset:268
 ; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v7, off, s[0:3], 0 offset:264
 ; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v10, off, s[0:3], 0 offset:260
@@ -593,7 +593,7 @@ define amdgpu_ps float @ps_main(i32 %idx) {
 ; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v11, 0x3eae29dc
 ; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v12, 0x3efcd89c
 ; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v13, 0x3efcd89f
-; GFX10_W64-MUBUF-NEXT:    v_and_b32_e32 v0, 0x1fc, v0
+; GFX10_W64-MUBUF-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v7, off, s[0:3], 0 offset:248
 ; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v10, off, s[0:3], 0 offset:244
 ; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v11, off, s[0:3], 0 offset:240
@@ -662,9 +662,9 @@ define amdgpu_ps float @ps_main(i32 %idx) {
 ; GFX9-FLATSCR-LABEL: ps_main:
 ; GFX9-FLATSCR:       ; %bb.0:
 ; GFX9-FLATSCR-NEXT:    s_add_u32 flat_scratch_lo, s0, s2
-; GFX9-FLATSCR-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GFX9-FLATSCR-NEXT:    v_and_b32_e32 v0, 0x7f, v0
 ; GFX9-FLATSCR-NEXT:    s_addc_u32 flat_scratch_hi, s1, 0
-; GFX9-FLATSCR-NEXT:    v_and_b32_e32 v23, 0x1fc, v0
+; GFX9-FLATSCR-NEXT:    v_lshlrev_b32_e32 v23, 2, v0
 ; GFX9-FLATSCR-NEXT:    v_mov_b32_e32 v0, 0xbf20e7f4
 ; GFX9-FLATSCR-NEXT:    s_mov_b32 s0, 0
 ; GFX9-FLATSCR-NEXT:    v_mov_b32_e32 v5, 0x3f5f2ee2
@@ -757,13 +757,13 @@ define amdgpu_ps float @ps_main(i32 %idx) {
 ; GFX10-FLATSCR-NEXT:    v_mov_b32_e32 v1, 0xbf20e7f4
 ; GFX10-FLATSCR-NEXT:    v_mov_b32_e32 v6, 0x3f5f2ee2
 ; GFX10-FLATSCR-NEXT:    v_mov_b32_e32 v8, 0x3f3d349e
-; GFX10-FLATSCR-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GFX10-FLATSCR-NEXT:    v_and_b32_e32 v0, 0x7f, v0
 ; GFX10-FLATSCR-NEXT:    v_mov_b32_e32 v7, 0x3f523be1
 ; GFX10-FLATSCR-NEXT:    v_mov_b32_e32 v9, 0xbeae29dc
 ; GFX10-FLATSCR-NEXT:    v_mov_b32_e32 v5, 0x3f638e37
 ; GFX10-FLATSCR-NEXT:    scratch_store_dwordx4 off, v[1:4], off offset:320
 ; GFX10-FLATSCR-NEXT:    v_mov_b32_e32 v2, v8
-; GFX10-FLATSCR-NEXT:    v_and_b32_e32 v0, 0x1fc, v0
+; GFX10-FLATSCR-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX10-FLATSCR-NEXT:    v_mov_b32_e32 v3, v7
 ; GFX10-FLATSCR-NEXT:    v_mov_b32_e32 v4, v6
 ; GFX10-FLATSCR-NEXT:    v_mov_b32_e32 v11, 0xbefcd89f
@@ -844,8 +844,8 @@ define amdgpu_ps float @ps_main(i32 %idx) {
 ; GFX9-FLATSCR-PAL-NEXT:    s_getpc_b64 s[2:3]
 ; GFX9-FLATSCR-PAL-NEXT:    s_mov_b32 s2, s0
 ; GFX9-FLATSCR-PAL-NEXT:    s_load_dwordx2 s[2:3], s[2:3], 0x0
-; GFX9-FLATSCR-PAL-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; GFX9-FLATSCR-PAL-NEXT:    v_and_b32_e32 v23, 0x1fc, v0
+; GFX9-FLATSCR-PAL-NEXT:    v_and_b32_e32 v0, 0x7f, v0
+; GFX9-FLATSCR-PAL-NEXT:    v_lshlrev_b32_e32 v23, 2, v0
 ; GFX9-FLATSCR-PAL-NEXT:    v_mov_b32_e32 v0, 0xbf20e7f4
 ; GFX9-FLATSCR-PAL-NEXT:    v_mov_b32_e32 v5, 0x3f5f2ee2
 ; GFX9-FLATSCR-PAL-NEXT:    s_waitcnt lgkmcnt(0)
@@ -947,13 +947,13 @@ define amdgpu_ps float @ps_main(i32 %idx) {
 ; GFX10-FLATSCR-PAL-NEXT:    v_mov_b32_e32 v1, 0xbf20e7f4
 ; GFX10-FLATSCR-PAL-NEXT:    v_mov_b32_e32 v6, 0x3f5f2ee2
 ; GFX10-FLATSCR-PAL-NEXT:    v_mov_b32_e32 v8, 0x3f3d349e
-; GFX10-FLATSCR-PAL-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GFX10-FLATSCR-PAL-NEXT:    v_and_b32_e32 v0, 0x7f, v0
 ; GFX10-FLATSCR-PAL-NEXT:    v_mov_b32_e32 v7, 0x3f523be1
 ; GFX10-FLATSCR-PAL-NEXT:    v_mov_b32_e32 v9, 0xbeae29dc
 ; GFX10-FLATSCR-PAL-NEXT:    v_mov_b32_e32 v5, 0x3f638e37
 ; GFX10-FLATSCR-PAL-NEXT:    scratch_store_dwordx4 off, v[1:4], off offset:320
 ; GFX10-FLATSCR-PAL-NEXT:    v_mov_b32_e32 v2, v8
-; GFX10-FLATSCR-PAL-NEXT:    v_and_b32_e32 v0, 0x1fc, v0
+; GFX10-FLATSCR-PAL-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX10-FLATSCR-PAL-NEXT:    v_mov_b32_e32 v3, v7
 ; GFX10-FLATSCR-PAL-NEXT:    v_mov_b32_e32 v4, v6
 ; GFX10-FLATSCR-PAL-NEXT:    v_mov_b32_e32 v11, 0xbefcd89f
@@ -1031,45 +1031,47 @@ define amdgpu_ps float @ps_main(i32 %idx) {
 ;
 ; GFX11-FLATSCR-LABEL: ps_main:
 ; GFX11-FLATSCR:       ; %bb.0:
-; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v1, 0xbf20e7f4 :: v_dual_lshlrev_b32 v0, 2, v0
 ; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v28, 0x3703c499
 ; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v19, 0x3efcd89f
 ; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v21, 0xbf5f2ee3
-; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v17, 0xbf3d349e
-; GFX11-FLATSCR-NEXT:    v_and_b32_e32 v37, 0x1fc, v0
-; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v0, 0xbeae29dc
-; GFX11-FLATSCR-NEXT:    scratch_store_b128 off, v[1:4], off offset:320
-; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v23, v21 :: v_dual_mov_b32 v8, 0x3f3d349e
+; GFX11-FLATSCR-NEXT:    v_and_b32_e32 v0, 0x7f, v0
 ; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v7, 0x3f523be1
-; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v24, 0xbf523be3
-; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v12, 0xbe319356 :: v_dual_mov_b32 v31, v19
+; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v6, 0x3f5f2ee2
 ; GFX11-FLATSCR-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
-; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v2, v8
-; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v6, 0x3f5f2ee2 :: v_dual_mov_b32 v3, v7
-; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v5, 0x3f638e37
-; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v15, 0x3e319356
+; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v24, 0xbf523be3 :: v_dual_mov_b32 v23, v21
+; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v8, 0x3f3d349e :: v_dual_lshlrev_b32 v37, 2, v0
+; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v1, 0xbf20e7f4
 ; GFX11-FLATSCR-NEXT:    s_delay_alu instid0(VALU_DEP_3)
-; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v11, 0xbe31934f :: v_dual_mov_b32 v4, v6
+; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v0, 0xbeae29dc :: v_dual_mov_b32 v27, v24
+; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v12, 0xbe319356 :: v_dual_mov_b32 v31, v19
+; GFX11-FLATSCR-NEXT:    scratch_store_b128 off, v[1:4], off offset:320
+; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v3, v7
+; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v17, 0xbf3d349e
+; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v5, 0x3f638e37 :: v_dual_mov_b32 v2, v8
+; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v4, v6 :: v_dual_mov_b32 v15, 0x3e319356
+; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v36, v6
+; GFX11-FLATSCR-NEXT:    s_delay_alu instid0(VALU_DEP_4)
+; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v26, v17
 ; GFX11-FLATSCR-NEXT:    s_clause 0x1
 ; GFX11-FLATSCR-NEXT:    scratch_store_b128 off, v[5:8], off offset:304
 ; GFX11-FLATSCR-NEXT:    scratch_store_b128 off, v[1:4], off offset:288
-; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v2, 0xbefcd89f :: v_dual_mov_b32 v27, v24
-; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v1, v0
+; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v2, 0xbefcd89f :: v_dual_mov_b32 v1, v0
 ; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v13, 0x3eae29dc :: v_dual_mov_b32 v34, v5
 ; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v3, 0xbefcd8a3
-; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v9, 0xb702e758 :: v_dual_mov_b32 v36, v6
+; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v9, 0xb702e758
 ; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v10, 0xb7043519 :: v_dual_mov_b32 v29, v15
+; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v11, 0xbe31934f
 ; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v18, 0xbf20e7f5
 ; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v14, 0x3eae29d8
 ; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v16, 0x3e31934f
 ; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v22, 0xbf638e39
-; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v25, 0x3f20e7f5 :: v_dual_mov_b32 v26, v17
+; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v25, 0x3f20e7f5
 ; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v20, 0x3efcd89c
-; GFX11-FLATSCR-NEXT:    s_delay_alu instid0(VALU_DEP_3)
-; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v30, v13 :: v_dual_mov_b32 v33, v22
+; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v30, v13
 ; GFX11-FLATSCR-NEXT:    s_clause 0x1
 ; GFX11-FLATSCR-NEXT:    scratch_store_b128 off, v[0:3], off offset:272
 ; GFX11-FLATSCR-NEXT:    scratch_store_b128 off, v[9:12], off offset:256
+; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v33, v22
 ; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v1, 0x3f20e7f4
 ; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v9, v18
 ; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v10, v2 :: v_dual_mov_b32 v11, v0
@@ -1165,9 +1167,9 @@ define amdgpu_vs float @vs_main(i32 %idx) {
 ; SI-NEXT:    s_mov_b32 s1, SCRATCH_RSRC_DWORD1
 ; SI-NEXT:    s_mov_b32 s2, -1
 ; SI-NEXT:    s_mov_b32 s3, 0xe8f000
-; SI-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; SI-NEXT:    v_and_b32_e32 v0, 0x7f, v0
 ; SI-NEXT:    s_add_u32 s0, s0, s4
-; SI-NEXT:    v_and_b32_e32 v0, 0x1fc, v0
+; SI-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; SI-NEXT:    v_mov_b32_e32 v2, 0
 ; SI-NEXT:    s_addc_u32 s1, s1, 0
 ; SI-NEXT:    v_add_i32_e32 v1, vcc, 0x200, v0
@@ -1291,9 +1293,9 @@ define amdgpu_vs float @vs_main(i32 %idx) {
 ; VI-NEXT:    s_mov_b32 s1, SCRATCH_RSRC_DWORD1
 ; VI-NEXT:    s_mov_b32 s2, -1
 ; VI-NEXT:    s_mov_b32 s3, 0xe80000
-; VI-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; VI-NEXT:    v_and_b32_e32 v0, 0x7f, v0
 ; VI-NEXT:    s_add_u32 s0, s0, s4
-; VI-NEXT:    v_and_b32_e32 v0, 0x1fc, v0
+; VI-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; VI-NEXT:    v_mov_b32_e32 v2, 0
 ; VI-NEXT:    s_addc_u32 s1, s1, 0
 ; VI-NEXT:    v_add_u32_e32 v1, vcc, 0x200, v0
@@ -1436,7 +1438,7 @@ define amdgpu_vs float @vs_main(i32 %idx) {
 ; GFX9-MUBUF-NEXT:    v_mov_b32_e32 v9, 0x3e31934f
 ; GFX9-MUBUF-NEXT:    v_mov_b32_e32 v10, 0x3eae29d8
 ; GFX9-MUBUF-NEXT:    v_mov_b32_e32 v11, 0x3efcd89c
-; GFX9-MUBUF-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GFX9-MUBUF-NEXT:    v_and_b32_e32 v0, 0x7f, v0
 ; GFX9-MUBUF-NEXT:    v_mov_b32_e32 v8, 0xbe319356
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v9, off, s[0:3], 0 offset:252
 ; GFX9-MUBUF-NEXT:    v_mov_b32_e32 v9, 0x3e319356
@@ -1449,7 +1451,7 @@ define amdgpu_vs float @vs_main(i32 %idx) {
 ; GFX9-MUBUF-NEXT:    v_mov_b32_e32 v14, 0xbf523be3
 ; GFX9-MUBUF-NEXT:    v_mov_b32_e32 v15, 0xbf5f2ee3
 ; GFX9-MUBUF-NEXT:    v_mov_b32_e32 v16, 0xbf638e39
-; GFX9-MUBUF-NEXT:    v_and_b32_e32 v0, 0x1fc, v0
+; GFX9-MUBUF-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v8, off, s[0:3], 0 offset:268
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v9, off, s[0:3], 0 offset:248
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v10, off, s[0:3], 0 offset:240
@@ -1545,7 +1547,7 @@ define amdgpu_vs float @vs_main(i32 %idx) {
 ; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v10, 0xb7043519
 ; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v11, 0xb702e758
 ; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v12, 0x3e31934f
-; GFX10_W32-MUBUF-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GFX10_W32-MUBUF-NEXT:    v_and_b32_e32 v0, 0x7f, v0
 ; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v1, off, s[0:3], 0 offset:268
 ; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v7, off, s[0:3], 0 offset:264
 ; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v10, off, s[0:3], 0 offset:260
@@ -1556,7 +1558,7 @@ define amdgpu_vs float @vs_main(i32 %idx) {
 ; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v11, 0x3eae29dc
 ; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v12, 0x3efcd89c
 ; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v13, 0x3efcd89f
-; GFX10_W32-MUBUF-NEXT:    v_and_b32_e32 v0, 0x1fc, v0
+; GFX10_W32-MUBUF-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v7, off, s[0:3], 0 offset:248
 ; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v10, off, s[0:3], 0 offset:244
 ; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v11, off, s[0:3], 0 offset:240
@@ -1657,7 +1659,7 @@ define amdgpu_vs float @vs_main(i32 %idx) {
 ; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v10, 0xb7043519
 ; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v11, 0xb702e758
 ; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v12, 0x3e31934f
-; GFX10_W64-MUBUF-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GFX10_W64-MUBUF-NEXT:    v_and_b32_e32 v0, 0x7f, v0
 ; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v1, off, s[0:3], 0 offset:268
 ; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v7, off, s[0:3], 0 offset:264
 ; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v10, off, s[0:3], 0 offset:260
@@ -1668,7 +1670,7 @@ define amdgpu_vs float @vs_main(i32 %idx) {
 ; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v11, 0x3eae29dc
 ; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v12, 0x3efcd89c
 ; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v13, 0x3efcd89f
-; GFX10_W64-MUBUF-NEXT:    v_and_b32_e32 v0, 0x1fc, v0
+; GFX10_W64-MUBUF-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v7, off, s[0:3], 0 offset:248
 ; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v10, off, s[0:3], 0 offset:244
 ; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v11, off, s[0:3], 0 offset:240
@@ -1737,9 +1739,9 @@ define amdgpu_vs float @vs_main(i32 %idx) {
 ; GFX9-FLATSCR-LABEL: vs_main:
 ; GFX9-FLATSCR:       ; %bb.0:
 ; GFX9-FLATSCR-NEXT:    s_add_u32 flat_scratch_lo, s0, s2
-; GFX9-FLATSCR-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GFX9-FLATSCR-NEXT:    v_and_b32_e32 v0, 0x7f, v0
 ; GFX9-FLATSCR-NEXT:    s_addc_u32 flat_scratch_hi, s1, 0
-; GFX9-FLATSCR-NEXT:    v_and_b32_e32 v23, 0x1fc, v0
+; GFX9-FLATSCR-NEXT:    v_lshlrev_b32_e32 v23, 2, v0
 ; GFX9-FLATSCR-NEXT:    v_mov_b32_e32 v0, 0xbf20e7f4
 ; GFX9-FLATSCR-NEXT:    s_mov_b32 s0, 0
 ; GFX9-FLATSCR-NEXT:    v_mov_b32_e32 v5, 0x3f5f2ee2
@@ -1832,13 +1834,13 @@ define amdgpu_vs float @vs_main(i32 %idx) {
 ; GFX10-FLATSCR-NEXT:    v_mov_b32_e32 v1, 0xbf20e7f4
 ; GFX10-FLATSCR-NEXT:    v_mov_b32_e32 v6, 0x3f5f2ee2
 ; GFX10-FLATSCR-NEXT:    v_mov_b32_e32 v8, 0x3f3d349e
-; GFX10-FLATSCR-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GFX10-FLATSCR-NEXT:    v_and_b32_e32 v0, 0x7f, v0
 ; GFX10-FLATSCR-NEXT:    v_mov_b32_e32 v7, 0x3f523be1
 ; GFX10-FLATSCR-NEXT:    v_mov_b32_e32 v9, 0xbeae29dc
 ; GFX10-FLATSCR-NEXT:    v_mov_b32_e32 v5, 0x3f638e37
 ; GFX10-FLATSCR-NEXT:    scratch_store_dwordx4 off, v[1:4], off offset:320
 ; GFX10-FLATSCR-NEXT:    v_mov_b32_e32 v2, v8
-; GFX10-FLATSCR-NEXT:    v_and_b32_e32 v0, 0x1fc, v0
+; GFX10-FLATSCR-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX10-FLATSCR-NEXT:    v_mov_b32_e32 v3, v7
 ; GFX10-FLATSCR-NEXT:    v_mov_b32_e32 v4, v6
 ; GFX10-FLATSCR-NEXT:    v_mov_b32_e32 v11, 0xbefcd89f
@@ -1919,8 +1921,8 @@ define amdgpu_vs float @vs_main(i32 %idx) {
 ; GFX9-FLATSCR-PAL-NEXT:    s_getpc_b64 s[2:3]
 ; GFX9-FLATSCR-PAL-NEXT:    s_mov_b32 s2, s0
 ; GFX9-FLATSCR-PAL-NEXT:    s_load_dwordx2 s[2:3], s[2:3], 0x0
-; GFX9-FLATSCR-PAL-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; GFX9-FLATSCR-PAL-NEXT:    v_and_b32_e32 v23, 0x1fc, v0
+; GFX9-FLATSCR-PAL-NEXT:    v_and_b32_e32 v0, 0x7f, v0
+; GFX9-FLATSCR-PAL-NEXT:    v_lshlrev_b32_e32 v23, 2, v0
 ; GFX9-FLATSCR-PAL-NEXT:    v_mov_b32_e32 v0, 0xbf20e7f4
 ; GFX9-FLATSCR-PAL-NEXT:    v_mov_b32_e32 v5, 0x3f5f2ee2
 ; GFX9-FLATSCR-PAL-NEXT:    s_waitcnt lgkmcnt(0)
@@ -2022,13 +2024,13 @@ define amdgpu_vs float @vs_main(i32 %idx) {
 ; GFX10-FLATSCR-PAL-NEXT:    v_mov_b32_e32 v1, 0xbf20e7f4
 ; GFX10-FLATSCR-PAL-NEXT:    v_mov_b32_e32 v6, 0x3f5f2ee2
 ; GFX10-FLATSCR-PAL-NEXT:    v_mov_b32_e32 v8, 0x3f3d349e
-; GFX10-FLATSCR-PAL-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GFX10-FLATSCR-PAL-NEXT:    v_and_b32_e32 v0, 0x7f, v0
 ; GFX10-FLATSCR-PAL-NEXT:    v_mov_b32_e32 v7, 0x3f523be1
 ; GFX10-FLATSCR-PAL-NEXT:    v_mov_b32_e32 v9, 0xbeae29dc
 ; GFX10-FLATSCR-PAL-NEXT:    v_mov_b32_e32 v5, 0x3f638e37
 ; GFX10-FLATSCR-PAL-NEXT:    scratch_store_dwordx4 off, v[1:4], off offset:320
 ; GFX10-FLATSCR-PAL-NEXT:    v_mov_b32_e32 v2, v8
-; GFX10-FLATSCR-PAL-NEXT:    v_and_b32_e32 v0, 0x1fc, v0
+; GFX10-FLATSCR-PAL-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX10-FLATSCR-PAL-NEXT:    v_mov_b32_e32 v3, v7
 ; GFX10-FLATSCR-PAL-NEXT:    v_mov_b32_e32 v4, v6
 ; GFX10-FLATSCR-PAL-NEXT:    v_mov_b32_e32 v11, 0xbefcd89f
@@ -2106,45 +2108,47 @@ define amdgpu_vs float @vs_main(i32 %idx) {
 ;
 ; GFX11-FLATSCR-LABEL: vs_main:
 ; GFX11-FLATSCR:       ; %bb.0:
-; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v1, 0xbf20e7f4 :: v_dual_lshlrev_b32 v0, 2, v0
 ; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v28, 0x3703c499
 ; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v19, 0x3efcd89f
 ; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v21, 0xbf5f2ee3
-; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v17, 0xbf3d349e
-; GFX11-FLATSCR-NEXT:    v_and_b32_e32 v37, 0x1fc, v0
-; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v0, 0xbeae29dc
-; GFX11-FLATSCR-NEXT:    scratch_store_b128 off, v[1:4], off offset:320
-; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v23, v21 :: v_dual_mov_b32 v8, 0x3f3d349e
+; GFX11-FLATSCR-NEXT:    v_and_b32_e32 v0, 0x7f, v0
 ; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v7, 0x3f523be1
-; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v24, 0xbf523be3
-; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v12, 0xbe319356 :: v_dual_mov_b32 v31, v19
+; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v6, 0x3f5f2ee2
 ; GFX11-FLATSCR-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
-; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v2, v8
-; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v6, 0x3f5f2ee2 :: v_dual_mov_b32 v3, v7
-; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v5, 0x3f638e37
-; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v15, 0x3e319356
+; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v24, 0xbf523be3 :: v_dual_mov_b32 v23, v21
+; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v8, 0x3f3d349e :: v_dual_lshlrev_b32 v37, 2, v0
+; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v1, 0xbf20e7f4
 ; GFX11-FLATSCR-NEXT:    s_delay_alu instid0(VALU_DEP_3)
-; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v11, 0xbe31934f :: v_dual_mov_b32 v4, v6
+; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v0, 0xbeae29dc :: v_dual_mov_b32 v27, v24
+; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v12, 0xbe319356 :: v_dual_mov_b32 v31, v19
+; GFX11-FLATSCR-NEXT:    scratch_store_b128 off, v[1:4], off offset:320
+; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v3, v7
+; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v17, 0xbf3d349e
+; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v5, 0x3f638e37 :: v_dual_mov_b32 v2, v8
+; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v4, v6 :: v_dual_mov_b32 v15, 0x3e319356
+; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v36, v6
+; GFX11-FLATSCR-NEXT:    s_delay_alu instid0(VALU_DEP_4)
+; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v26, v17
 ; GFX11-FLATSCR-NEXT:    s_clause 0x1
 ; GFX11-FLATSCR-NEXT:    scratch_store_b128 off, v[5:8], off offset:304
 ; GFX11-FLATSCR-NEXT:    scratch_store_b128 off, v[1:4], off offset:288
-; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v2, 0xbefcd89f :: v_dual_mov_b32 v27, v24
-; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v1, v0
+; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v2, 0xbefcd89f :: v_dual_mov_b32 v1, v0
 ; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v13, 0x3eae29dc :: v_dual_mov_b32 v34, v5
 ; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v3, 0xbefcd8a3
-; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v9, 0xb702e758 :: v_dual_mov_b32 v36, v6
+; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v9, 0xb702e758
 ; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v10, 0xb7043519 :: v_dual_mov_b32 v29, v15
+; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v11, 0xbe31934f
 ; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v18, 0xbf20e7f5
 ; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v14, 0x3eae29d8
 ; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v16, 0x3e31934f
 ; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v22, 0xbf638e39
-; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v25, 0x3f20e7f5 :: v_dual_mov_b32 v26, v17
+; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v25, 0x3f20e7f5
 ; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v20, 0x3efcd89c
-; GFX11-FLATSCR-NEXT:    s_delay_alu instid0(VALU_DEP_3)
-; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v30, v13 :: v_dual_mov_b32 v33, v22
+; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v30, v13
 ; GFX11-FLATSCR-NEXT:    s_clause 0x1
 ; GFX11-FLATSCR-NEXT:    scratch_store_b128 off, v[0:3], off offset:272
 ; GFX11-FLATSCR-NEXT:    scratch_store_b128 off, v[9:12], off offset:256
+; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v33, v22
 ; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v1, 0x3f20e7f4
 ; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v9, v18
 ; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v10, v2 :: v_dual_mov_b32 v11, v0
@@ -2237,9 +2241,9 @@ define amdgpu_cs float @cs_main(i32 %idx) {
 ; SI-NEXT:    s_mov_b32 s1, SCRATCH_RSRC_DWORD1
 ; SI-NEXT:    s_mov_b32 s2, -1
 ; SI-NEXT:    s_mov_b32 s3, 0xe8f000
-; SI-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; SI-NEXT:    v_and_b32_e32 v0, 0x7f, v0
 ; SI-NEXT:    s_add_u32 s0, s0, s4
-; SI-NEXT:    v_and_b32_e32 v0, 0x1fc, v0
+; SI-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; SI-NEXT:    v_mov_b32_e32 v2, 0
 ; SI-NEXT:    s_addc_u32 s1, s1, 0
 ; SI-NEXT:    v_add_i32_e32 v1, vcc, 0x200, v0
@@ -2363,9 +2367,9 @@ define amdgpu_cs float @cs_main(i32 %idx) {
 ; VI-NEXT:    s_mov_b32 s1, SCRATCH_RSRC_DWORD1
 ; VI-NEXT:    s_mov_b32 s2, -1
 ; VI-NEXT:    s_mov_b32 s3, 0xe80000
-; VI-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; VI-NEXT:    v_and_b32_e32 v0, 0x7f, v0
 ; VI-NEXT:    s_add_u32 s0, s0, s4
-; VI-NEXT:    v_and_b32_e32 v0, 0x1fc, v0
+; VI-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; VI-NEXT:    v_mov_b32_e32 v2, 0
 ; VI-NEXT:    s_addc_u32 s1, s1, 0
 ; VI-NEXT:    v_add_u32_e32 v1, vcc, 0x200, v0
@@ -2508,7 +2512,7 @@ define amdgpu_cs float @cs_main(i32 %idx) {
 ; GFX9-MUBUF-NEXT:    v_mov_b32_e32 v9, 0x3e31934f
 ; GFX9-MUBUF-NEXT:    v_mov_b32_e32 v10, 0x3eae29d8
 ; GFX9-MUBUF-NEXT:    v_mov_b32_e32 v11, 0x3efcd89c
-; GFX9-MUBUF-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GFX9-MUBUF-NEXT:    v_and_b32_e32 v0, 0x7f, v0
 ; GFX9-MUBUF-NEXT:    v_mov_b32_e32 v8, 0xbe319356
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v9, off, s[0:3], 0 offset:252
 ; GFX9-MUBUF-NEXT:    v_mov_b32_e32 v9, 0x3e319356
@@ -2521,7 +2525,7 @@ define amdgpu_cs float @cs_main(i32 %idx) {
 ; GFX9-MUBUF-NEXT:    v_mov_b32_e32 v14, 0xbf523be3
 ; GFX9-MUBUF-NEXT:    v_mov_b32_e32 v15, 0xbf5f2ee3
 ; GFX9-MUBUF-NEXT:    v_mov_b32_e32 v16, 0xbf638e39
-; GFX9-MUBUF-NEXT:    v_and_b32_e32 v0, 0x1fc, v0
+; GFX9-MUBUF-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v8, off, s[0:3], 0 offset:268
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v9, off, s[0:3], 0 offset:248
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v10, off, s[0:3], 0 offset:240
@@ -2617,7 +2621,7 @@ define amdgpu_cs float @cs_main(i32 %idx) {
 ; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v10, 0xb7043519
 ; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v11, 0xb702e758
 ; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v12, 0x3e31934f
-; GFX10_W32-MUBUF-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GFX10_W32-MUBUF-NEXT:    v_and_b32_e32 v0, 0x7f, v0
 ; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v1, off, s[0:3], 0 offset:268
 ; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v7, off, s[0:3], 0 offset:264
 ; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v10, off, s[0:3], 0 offset:260
@@ -2628,7 +2632,7 @@ define amdgpu_cs float @cs_main(i32 %idx) {
 ; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v11, 0x3eae29dc
 ; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v12, 0x3efcd89c
 ; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v13, 0x3efcd89f
-; GFX10_W32-MUBUF-NEXT:    v_and_b32_e32 v0, 0x1fc, v0
+; GFX10_W32-MUBUF-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v7, off, s[0:3], 0 offset:248
 ; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v10, off, s[0:3], 0 offset:244
 ; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v11, off, s[0:3], 0 offset:240
@@ -2729,7 +2733,7 @@ define amdgpu_cs float @cs_main(i32 %idx) {
 ; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v10, 0xb7043519
 ; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v11, 0xb702e758
 ; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v12, 0x3e31934f
-; GFX10_W64-MUBUF-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GFX10_W64-MUBUF-NEXT:    v_and_b32_e32 v0, 0x7f, v0
 ; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v1, off, s[0:3], 0 offset:268
 ; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v7, off, s[0:3], 0 offset:264
 ; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v10, off, s[0:3], 0 offset:260
@@ -2740,7 +2744,7 @@ define amdgpu_cs float @cs_main(i32 %idx) {
 ; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v11, 0x3eae29dc
 ; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v12, 0x3efcd89c
 ; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v13, 0x3efcd89f
-; GFX10_W64-MUBUF-NEXT:    v_and_b32_e32 v0, 0x1fc, v0
+; GFX10_W64-MUBUF-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v7, off, s[0:3], 0 offset:248
 ; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v10, off, s[0:3], 0 offset:244
 ; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v11, off, s[0:3], 0 offset:240
@@ -2809,9 +2813,9 @@ define amdgpu_cs float @cs_main(i32 %idx) {
 ; GFX9-FLATSCR-LABEL: cs_main:
 ; GFX9-FLATSCR:       ; %bb.0:
 ; GFX9-FLATSCR-NEXT:    s_add_u32 flat_scratch_lo, s0, s2
-; GFX9-FLATSCR-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GFX9-FLATSCR-NEXT:    v_and_b32_e32 v0, 0x7f, v0
 ; GFX9-FLATSCR-NEXT:    s_addc_u32 flat_scratch_hi, s1, 0
-; GFX9-FLATSCR-NEXT:    v_and_b32_e32 v27, 0x1fc, v0
+; GFX9-FLATSCR-NEXT:    v_lshlrev_b32_e32 v27, 2, v0
 ; GFX9-FLATSCR-NEXT:    v_mov_b32_e32 v0, 0xbf20e7f4
 ; GFX9-FLATSCR-NEXT:    s_mov_b32 s0, 0
 ; GFX9-FLATSCR-NEXT:    v_mov_b32_e32 v5, 0x3f5f2ee2
@@ -2906,13 +2910,13 @@ define amdgpu_cs float @cs_main(i32 %idx) {
 ; GFX10-FLATSCR-NEXT:    v_mov_b32_e32 v1, 0xbf20e7f4
 ; GFX10-FLATSCR-NEXT:    v_mov_b32_e32 v6, 0x3f5f2ee2
 ; GFX10-FLATSCR-NEXT:    v_mov_b32_e32 v8, 0x3f3d349e
-; GFX10-FLATSCR-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GFX10-FLATSCR-NEXT:    v_and_b32_e32 v0, 0x7f, v0
 ; GFX10-FLATSCR-NEXT:    v_mov_b32_e32 v7, 0x3f523be1
 ; GFX10-FLATSCR-NEXT:    v_mov_b32_e32 v9, 0xbeae29dc
 ; GFX10-FLATSCR-NEXT:    v_mov_b32_e32 v5, 0x3f638e37
 ; GFX10-FLATSCR-NEXT:    scratch_store_dwordx4 off, v[1:4], off offset:320
 ; GFX10-FLATSCR-NEXT:    v_mov_b32_e32 v2, v8
-; GFX10-FLATSCR-NEXT:    v_and_b32_e32 v0, 0x1fc, v0
+; GFX10-FLATSCR-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX10-FLATSCR-NEXT:    v_mov_b32_e32 v3, v7
 ; GFX10-FLATSCR-NEXT:    v_mov_b32_e32 v4, v6
 ; GFX10-FLATSCR-NEXT:    v_mov_b32_e32 v11, 0xbefcd89f
@@ -2993,8 +2997,8 @@ define amdgpu_cs float @cs_main(i32 %idx) {
 ; GFX9-FLATSCR-PAL-NEXT:    s_getpc_b64 s[2:3]
 ; GFX9-FLATSCR-PAL-NEXT:    s_mov_b32 s2, s0
 ; GFX9-FLATSCR-PAL-NEXT:    s_load_dwordx2 s[2:3], s[2:3], 0x10
-; GFX9-FLATSCR-PAL-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; GFX9-FLATSCR-PAL-NEXT:    v_and_b32_e32 v27, 0x1fc, v0
+; GFX9-FLATSCR-PAL-NEXT:    v_and_b32_e32 v0, 0x7f, v0
+; GFX9-FLATSCR-PAL-NEXT:    v_lshlrev_b32_e32 v27, 2, v0
 ; GFX9-FLATSCR-PAL-NEXT:    v_mov_b32_e32 v0, 0xbf20e7f4
 ; GFX9-FLATSCR-PAL-NEXT:    v_mov_b32_e32 v5, 0x3f5f2ee2
 ; GFX9-FLATSCR-PAL-NEXT:    s_waitcnt lgkmcnt(0)
@@ -3098,13 +3102,13 @@ define amdgpu_cs float @cs_main(i32 %idx) {
 ; GFX10-FLATSCR-PAL-NEXT:    v_mov_b32_e32 v1, 0xbf20e7f4
 ; GFX10-FLATSCR-PAL-NEXT:    v_mov_b32_e32 v6, 0x3f5f2ee2
 ; GFX10-FLATSCR-PAL-NEXT:    v_mov_b32_e32 v8, 0x3f3d349e
-; GFX10-FLATSCR-PAL-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GFX10-FLATSCR-PAL-NEXT:    v_and_b32_e32 v0, 0x7f, v0
 ; GFX10-FLATSCR-PAL-NEXT:    v_mov_b32_e32 v7, 0x3f523be1
 ; GFX10-FLATSCR-PAL-NEXT:    v_mov_b32_e32 v9, 0xbeae29dc
 ; GFX10-FLATSCR-PAL-NEXT:    v_mov_b32_e32 v5, 0x3f638e37
 ; GFX10-FLATSCR-PAL-NEXT:    scratch_store_dwordx4 off, v[1:4], off offset:320
 ; GFX10-FLATSCR-PAL-NEXT:    v_mov_b32_e32 v2, v8
-; GFX10-FLATSCR-PAL-NEXT:    v_and_b32_e32 v0, 0x1fc, v0
+; GFX10-FLATSCR-PAL-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX10-FLATSCR-PAL-NEXT:    v_mov_b32_e32 v3, v7
 ; GFX10-FLATSCR-PAL-NEXT:    v_mov_b32_e32 v4, v6
 ; GFX10-FLATSCR-PAL-NEXT:    v_mov_b32_e32 v11, 0xbefcd89f
@@ -3182,45 +3186,47 @@ define amdgpu_cs float @cs_main(i32 %idx) {
 ;
 ; GFX11-FLATSCR-LABEL: cs_main:
 ; GFX11-FLATSCR:       ; %bb.0:
-; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v1, 0xbf20e7f4 :: v_dual_lshlrev_b32 v0, 2, v0
 ; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v28, 0x3703c499
 ; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v19, 0x3efcd89f
 ; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v21, 0xbf5f2ee3
-; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v17, 0xbf3d349e
-; GFX11-FLATSCR-NEXT:    v_and_b32_e32 v37, 0x1fc, v0
-; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v0, 0xbeae29dc
-; GFX11-FLATSCR-NEXT:    scratch_store_b128 off, v[1:4], off offset:320
-; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v23, v21 :: v_dual_mov_b32 v8, 0x3f3d349e
+; GFX11-FLATSCR-NEXT:    v_and_b32_e32 v0, 0x7f, v0
 ; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v7, 0x3f523be1
-; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v24, 0xbf523be3
-; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v12, 0xbe319356 :: v_dual_mov_b32 v31, v19
+; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v6, 0x3f5f2ee2
 ; GFX11-FLATSCR-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
-; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v2, v8
-; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v6, 0x3f5f2ee2 :: v_dual_mov_b32 v3, v7
-; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v5, 0x3f638e37
-; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v15, 0x3e319356
+; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v24, 0xbf523be3 :: v_dual_mov_b32 v23, v21
+; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v8, 0x3f3d349e :: v_dual_lshlrev_b32 v37, 2, v0
+; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v1, 0xbf20e7f4
 ; GFX11-FLATSCR-NEXT:    s_delay_alu instid0(VALU_DEP_3)
-; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v11, 0xbe31934f :: v_dual_mov_b32 v4, v6
+; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v0, 0xbeae29dc :: v_dual_mov_b32 v27, v24
+; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v12, 0xbe319356 :: v_dual_mov_b32 v31, v19
+; GFX11-FLATSCR-NEXT:    scratch_store_b128 off, v[1:4], off offset:320
+; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v3, v7
+; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v17, 0xbf3d349e
+; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v5, 0x3f638e37 :: v_dual_mov_b32 v2, v8
+; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v4, v6 :: v_dual_mov_b32 v15, 0x3e319356
+; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v36, v6
+; GFX11-FLATSCR-NEXT:    s_delay_alu instid0(VALU_DEP_4)
+; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v26, v17
 ; GFX11-FLATSCR-NEXT:    s_clause 0x1
 ; GFX11-FLATSCR-NEXT:    scratch_store_b128 off, v[5:8], off offset:304
 ; GFX11-FLATSCR-NEXT:    scratch_store_b128 off, v[1:4], off offset:288
-; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v2, 0xbefcd89f :: v_dual_mov_b32 v27, v24
-; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v1, v0
+; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v2, 0xbefcd89f :: v_dual_mov_b32 v1, v0
 ; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v13, 0x3eae29dc :: v_dual_mov_b32 v34, v5
 ; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v3, 0xbefcd8a3
-; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v9, 0xb702e758 :: v_dual_mov_b32 v36, v6
+; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v9, 0xb702e758
 ; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v10, 0xb7043519 :: v_dual_mov_b32 v29, v15
+; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v11, 0xbe31934f
 ; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v18, 0xbf20e7f5
 ; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v14, 0x3eae29d8
 ; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v16, 0x3e31934f
 ; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v22, 0xbf638e39
-; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v25, 0x3f20e7f5 :: v_dual_mov_b32 v26, v17
+; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v25, 0x3f20e7f5
 ; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v20, 0x3efcd89c
-; GFX11-FLATSCR-NEXT:    s_delay_alu instid0(VALU_DEP_3)
-; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v30, v13 :: v_dual_mov_b32 v33, v22
+; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v30, v13
 ; GFX11-FLATSCR-NEXT:    s_clause 0x1
 ; GFX11-FLATSCR-NEXT:    scratch_store_b128 off, v[0:3], off offset:272
 ; GFX11-FLATSCR-NEXT:    scratch_store_b128 off, v[9:12], off offset:256
+; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v33, v22
 ; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v1, 0x3f20e7f4
 ; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v9, v18
 ; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v10, v2 :: v_dual_mov_b32 v11, v0
@@ -3295,9 +3301,9 @@ define amdgpu_hs float @hs_main(i32 %idx) {
 ; SI-NEXT:    s_mov_b32 s1, SCRATCH_RSRC_DWORD1
 ; SI-NEXT:    s_mov_b32 s2, -1
 ; SI-NEXT:    s_mov_b32 s3, 0xe8f000
-; SI-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; SI-NEXT:    v_and_b32_e32 v0, 0x7f, v0
 ; SI-NEXT:    s_add_u32 s0, s0, s4
-; SI-NEXT:    v_and_b32_e32 v0, 0x1fc, v0
+; SI-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; SI-NEXT:    v_mov_b32_e32 v2, 0
 ; SI-NEXT:    s_addc_u32 s1, s1, 0
 ; SI-NEXT:    v_add_i32_e32 v1, vcc, 0x200, v0
@@ -3421,9 +3427,9 @@ define amdgpu_hs float @hs_main(i32 %idx) {
 ; VI-NEXT:    s_mov_b32 s1, SCRATCH_RSRC_DWORD1
 ; VI-NEXT:    s_mov_b32 s2, -1
 ; VI-NEXT:    s_mov_b32 s3, 0xe80000
-; VI-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; VI-NEXT:    v_and_b32_e32 v0, 0x7f, v0
 ; VI-NEXT:    s_add_u32 s0, s0, s4
-; VI-NEXT:    v_and_b32_e32 v0, 0x1fc, v0
+; VI-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; VI-NEXT:    v_mov_b32_e32 v2, 0
 ; VI-NEXT:    s_addc_u32 s1, s1, 0
 ; VI-NEXT:    v_add_u32_e32 v1, vcc, 0x200, v0
@@ -3565,7 +3571,7 @@ define amdgpu_hs float @hs_main(i32 %idx) {
 ; GFX9-MUBUF-NEXT:    v_mov_b32_e32 v9, 0x3e31934f
 ; GFX9-MUBUF-NEXT:    v_mov_b32_e32 v10, 0x3eae29d8
 ; GFX9-MUBUF-NEXT:    v_mov_b32_e32 v11, 0x3efcd89c
-; GFX9-MUBUF-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GFX9-MUBUF-NEXT:    v_and_b32_e32 v0, 0x7f, v0
 ; GFX9-MUBUF-NEXT:    v_mov_b32_e32 v8, 0xbe319356
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v9, off, s[0:3], 0 offset:252
 ; GFX9-MUBUF-NEXT:    v_mov_b32_e32 v9, 0x3e319356
@@ -3578,7 +3584,7 @@ define amdgpu_hs float @hs_main(i32 %idx) {
 ; GFX9-MUBUF-NEXT:    v_mov_b32_e32 v14, 0xbf523be3
 ; GFX9-MUBUF-NEXT:    v_mov_b32_e32 v15, 0xbf5f2ee3
 ; GFX9-MUBUF-NEXT:    v_mov_b32_e32 v16, 0xbf638e39
-; GFX9-MUBUF-NEXT:    v_and_b32_e32 v0, 0x1fc, v0
+; GFX9-MUBUF-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v8, off, s[0:3], 0 offset:268
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v9, off, s[0:3], 0 offset:248
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v10, off, s[0:3], 0 offset:240
@@ -3673,7 +3679,7 @@ define amdgpu_hs float @hs_main(i32 %idx) {
 ; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v10, 0xb7043519
 ; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v11, 0xb702e758
 ; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v12, 0x3e31934f
-; GFX10_W32-MUBUF-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GFX10_W32-MUBUF-NEXT:    v_and_b32_e32 v0, 0x7f, v0
 ; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v1, off, s[0:3], 0 offset:268
 ; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v7, off, s[0:3], 0 offset:264
 ; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v10, off, s[0:3], 0 offset:260
@@ -3684,7 +3690,7 @@ define amdgpu_hs float @hs_main(i32 %idx) {
 ; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v11, 0x3eae29dc
 ; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v12, 0x3efcd89c
 ; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v13, 0x3efcd89f
-; GFX10_W32-MUBUF-NEXT:    v_and_b32_e32 v0, 0x1fc, v0
+; GFX10_W32-MUBUF-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v7, off, s[0:3], 0 offset:248
 ; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v10, off, s[0:3], 0 offset:244
 ; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v11, off, s[0:3], 0 offset:240
@@ -3784,7 +3790,7 @@ define amdgpu_hs float @hs_main(i32 %idx) {
 ; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v10, 0xb7043519
 ; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v11, 0xb702e758
 ; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v12, 0x3e31934f
-; GFX10_W64-MUBUF-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GFX10_W64-MUBUF-NEXT:    v_and_b32_e32 v0, 0x7f, v0
 ; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v1, off, s[0:3], 0 offset:268
 ; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v7, off, s[0:3], 0 offset:264
 ; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v10, off, s[0:3], 0 offset:260
@@ -3795,7 +3801,7 @@ define amdgpu_hs float @hs_main(i32 %idx) {
 ; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v11, 0x3eae29dc
 ; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v12, 0x3efcd89c
 ; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v13, 0x3efcd89f
-; GFX10_W64-MUBUF-NEXT:    v_and_b32_e32 v0, 0x1fc, v0
+; GFX10_W64-MUBUF-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v7, off, s[0:3], 0 offset:248
 ; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v10, off, s[0:3], 0 offset:244
 ; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v11, off, s[0:3], 0 offset:240
@@ -3864,9 +3870,9 @@ define amdgpu_hs float @hs_main(i32 %idx) {
 ; GFX9-FLATSCR-LABEL: hs_main:
 ; GFX9-FLATSCR:       ; %bb.0:
 ; GFX9-FLATSCR-NEXT:    s_add_u32 flat_scratch_lo, s0, s5
-; GFX9-FLATSCR-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GFX9-FLATSCR-NEXT:    v_and_b32_e32 v0, 0x7f, v0
 ; GFX9-FLATSCR-NEXT:    s_addc_u32 flat_scratch_hi, s1, 0
-; GFX9-FLATSCR-NEXT:    v_and_b32_e32 v23, 0x1fc, v0
+; GFX9-FLATSCR-NEXT:    v_lshlrev_b32_e32 v23, 2, v0
 ; GFX9-FLATSCR-NEXT:    v_mov_b32_e32 v0, 0xbf20e7f4
 ; GFX9-FLATSCR-NEXT:    s_mov_b32 s0, 0
 ; GFX9-FLATSCR-NEXT:    v_mov_b32_e32 v5, 0x3f5f2ee2
@@ -3959,13 +3965,13 @@ define amdgpu_hs float @hs_main(i32 %idx) {
 ; GFX10-FLATSCR-NEXT:    v_mov_b32_e32 v1, 0xbf20e7f4
 ; GFX10-FLATSCR-NEXT:    v_mov_b32_e32 v6, 0x3f5f2ee2
 ; GFX10-FLATSCR-NEXT:    v_mov_b32_e32 v8, 0x3f3d349e
-; GFX10-FLATSCR-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GFX10-FLATSCR-NEXT:    v_and_b32_e32 v0, 0x7f, v0
 ; GFX10-FLATSCR-NEXT:    v_mov_b32_e32 v7, 0x3f523be1
 ; GFX10-FLATSCR-NEXT:    v_mov_b32_e32 v9, 0xbeae29dc
 ; GFX10-FLATSCR-NEXT:    v_mov_b32_e32 v5, 0x3f638e37
 ; GFX10-FLATSCR-NEXT:    scratch_store_dwordx4 off, v[1:4], off offset:320
 ; GFX10-FLATSCR-NEXT:    v_mov_b32_e32 v2, v8
-; GFX10-FLATSCR-NEXT:    v_and_b32_e32 v0, 0x1fc, v0
+; GFX10-FLATSCR-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX10-FLATSCR-NEXT:    v_mov_b32_e32 v3, v7
 ; GFX10-FLATSCR-NEXT:    v_mov_b32_e32 v4, v6
 ; GFX10-FLATSCR-NEXT:    v_mov_b32_e32 v11, 0xbefcd89f
@@ -4046,8 +4052,8 @@ define amdgpu_hs float @hs_main(i32 %idx) {
 ; GFX9-FLATSCR-PAL-NEXT:    s_getpc_b64 s[0:1]
 ; GFX9-FLATSCR-PAL-NEXT:    s_mov_b32 s0, s8
 ; GFX9-FLATSCR-PAL-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
-; GFX9-FLATSCR-PAL-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; GFX9-FLATSCR-PAL-NEXT:    v_and_b32_e32 v23, 0x1fc, v0
+; GFX9-FLATSCR-PAL-NEXT:    v_and_b32_e32 v0, 0x7f, v0
+; GFX9-FLATSCR-PAL-NEXT:    v_lshlrev_b32_e32 v23, 2, v0
 ; GFX9-FLATSCR-PAL-NEXT:    v_mov_b32_e32 v0, 0xbf20e7f4
 ; GFX9-FLATSCR-PAL-NEXT:    v_mov_b32_e32 v5, 0x3f5f2ee2
 ; GFX9-FLATSCR-PAL-NEXT:    s_waitcnt lgkmcnt(0)
@@ -4149,13 +4155,13 @@ define amdgpu_hs float @hs_main(i32 %idx) {
 ; GFX10-FLATSCR-PAL-NEXT:    v_mov_b32_e32 v1, 0xbf20e7f4
 ; GFX10-FLATSCR-PAL-NEXT:    v_mov_b32_e32 v6, 0x3f5f2ee2
 ; GFX10-FLATSCR-PAL-NEXT:    v_mov_b32_e32 v8, 0x3f3d349e
-; GFX10-FLATSCR-PAL-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GFX10-FLATSCR-PAL-NEXT:    v_and_b32_e32 v0, 0x7f, v0
 ; GFX10-FLATSCR-PAL-NEXT:    v_mov_b32_e32 v7, 0x3f523be1
 ; GFX10-FLATSCR-PAL-NEXT:    v_mov_b32_e32 v9, 0xbeae29dc
 ; GFX10-FLATSCR-PAL-NEXT:    v_mov_b32_e32 v5, 0x3f638e37
 ; GFX10-FLATSCR-PAL-NEXT:    scratch_store_dwordx4 off, v[1:4], off offset:320
 ; GFX10-FLATSCR-PAL-NEXT:    v_mov_b32_e32 v2, v8
-; GFX10-FLATSCR-PAL-NEXT:    v_and_b32_e32 v0, 0x1fc, v0
+; GFX10-FLATSCR-PAL-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX10-FLATSCR-PAL-NEXT:    v_mov_b32_e32 v3, v7
 ; GFX10-FLATSCR-PAL-NEXT:    v_mov_b32_e32 v4, v6
 ; GFX10-FLATSCR-PAL-NEXT:    v_mov_b32_e32 v11, 0xbefcd89f
@@ -4233,45 +4239,47 @@ define amdgpu_hs float @hs_main(i32 %idx) {
 ;
 ; GFX11-FLATSCR-LABEL: hs_main:
 ; GFX11-FLATSCR:       ; %bb.0:
-; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v1, 0xbf20e7f4 :: v_dual_lshlrev_b32 v0, 2, v0
 ; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v28, 0x3703c499
 ; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v19, 0x3efcd89f
 ; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v21, 0xbf5f2ee3
-; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v17, 0xbf3d349e
-; GFX11-FLATSCR-NEXT:    v_and_b32_e32 v37, 0x1fc, v0
-; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v0, 0xbeae29dc
-; GFX11-FLATSCR-NEXT:    scratch_store_b128 off, v[1:4], off offset:320
-; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v23, v21 :: v_dual_mov_b32 v8, 0x3f3d349e
+; GFX11-FLATSCR-NEXT:    v_and_b32_e32 v0, 0x7f, v0
 ; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v7, 0x3f523be1
-; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v24, 0xbf523be3
-; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v12, 0xbe319356 :: v_dual_mov_b32 v31, v19
+; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v6, 0x3f5f2ee2
 ; GFX11-FLATSCR-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
-; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v2, v8
-; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v6, 0x3f5f2ee2 :: v_dual_mov_b32 v3, v7
-; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v5, 0x3f638e37
-; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v15, 0x3e319356
+; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v24, 0xbf523be3 :: v_dual_mov_b32 v23, v21
+; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v8, 0x3f3d349e :: v_dual_lshlrev_b32 v37, 2, v0
+; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v1, 0xbf20e7f4
 ; GFX11-FLATSCR-NEXT:    s_delay_alu instid0(VALU_DEP_3)
-; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v11, 0xbe31934f :: v_dual_mov_b32 v4, v6
+; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v0, 0xbeae29dc :: v_dual_mov_b32 v27, v24
+; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v12, 0xbe319356 :: v_dual_mov_b32 v31, v19
+; GFX11-FLATSCR-NEXT:    scratch_store_b128 off, v[1:4], off offset:320
+; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v3, v7
+; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v17, 0xbf3d349e
+; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v5, 0x3f638e37 :: v_dual_mov_b32 v2, v8
+; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v4, v6 :: v_dual_mov_b32 v15, 0x3e319356
+; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v36, v6
+; GFX11-FLATSCR-NEXT:    s_delay_alu instid0(VALU_DEP_4)
+; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v26, v17
 ; GFX11-FLATSCR-NEXT:    s_clause 0x1
 ; GFX11-FLATSCR-NEXT:    scratch_store_b128 off, v[5:8], off offset:304
 ; GFX11-FLATSCR-NEXT:    scratch_store_b128 off, v[1:4], off offset:288
-; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v2, 0xbefcd89f :: v_dual_mov_b32 v27, v24
-; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v1, v0
+; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v2, 0xbefcd89f :: v_dual_mov_b32 v1, v0
 ; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v13, 0x3eae29dc :: v_dual_mov_b32 v34, v5
 ; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v3, 0xbefcd8a3
-; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v9, 0xb702e758 :: v_dual_mov_b32 v36, v6
+; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v9, 0xb702e758
 ; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v10, 0xb7043519 :: v_dual_mov_b32 v29, v15
+; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v11, 0xbe31934f
 ; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v18, 0xbf20e7f5
 ; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v14, 0x3eae29d8
 ; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v16, 0x3e31934f
 ; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v22, 0xbf638e39
-; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v25, 0x3f20e7f5 :: v_dual_mov_b32 v26, v17
+; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v25, 0x3f20e7f5
 ; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v20, 0x3efcd89c
-; GFX11-FLATSCR-NEXT:    s_delay_alu instid0(VALU_DEP_3)
-; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v30, v13 :: v_dual_mov_b32 v33, v22
+; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v30, v13
 ; GFX11-FLATSCR-NEXT:    s_clause 0x1
 ; GFX11-FLATSCR-NEXT:    scratch_store_b128 off, v[0:3], off offset:272
 ; GFX11-FLATSCR-NEXT:    scratch_store_b128 off, v[9:12], off offset:256
+; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v33, v22
 ; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v1, 0x3f20e7f4
 ; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v9, v18
 ; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v10, v2 :: v_dual_mov_b32 v11, v0
@@ -4365,9 +4373,9 @@ define amdgpu_gs float @gs_main(i32 %idx) {
 ; SI-NEXT:    s_mov_b32 s1, SCRATCH_RSRC_DWORD1
 ; SI-NEXT:    s_mov_b32 s2, -1
 ; SI-NEXT:    s_mov_b32 s3, 0xe8f000
-; SI-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; SI-NEXT:    v_and_b32_e32 v0, 0x7f, v0
 ; SI-NEXT:    s_add_u32 s0, s0, s4
-; SI-NEXT:    v_and_b32_e32 v0, 0x1fc, v0
+; SI-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; SI-NEXT:    v_mov_b32_e32 v2, 0
 ; SI-NEXT:    s_addc_u32 s1, s1, 0
 ; SI-NEXT:    v_add_i32_e32 v1, vcc, 0x200, v0
@@ -4491,9 +4499,9 @@ define amdgpu_gs float @gs_main(i32 %idx) {
 ; VI-NEXT:    s_mov_b32 s1, SCRATCH_RSRC_DWORD1
 ; VI-NEXT:    s_mov_b32 s2, -1
 ; VI-NEXT:    s_mov_b32 s3, 0xe80000
-; VI-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; VI-NEXT:    v_and_b32_e32 v0, 0x7f, v0
 ; VI-NEXT:    s_add_u32 s0, s0, s4
-; VI-NEXT:    v_and_b32_e32 v0, 0x1fc, v0
+; VI-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; VI-NEXT:    v_mov_b32_e32 v2, 0
 ; VI-NEXT:    s_addc_u32 s1, s1, 0
 ; VI-NEXT:    v_add_u32_e32 v1, vcc, 0x200, v0
@@ -4635,7 +4643,7 @@ define amdgpu_gs float @gs_main(i32 %idx) {
 ; GFX9-MUBUF-NEXT:    v_mov_b32_e32 v9, 0x3e31934f
 ; GFX9-MUBUF-NEXT:    v_mov_b32_e32 v10, 0x3eae29d8
 ; GFX9-MUBUF-NEXT:    v_mov_b32_e32 v11, 0x3efcd89c
-; GFX9-MUBUF-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GFX9-MUBUF-NEXT:    v_and_b32_e32 v0, 0x7f, v0
 ; GFX9-MUBUF-NEXT:    v_mov_b32_e32 v8, 0xbe319356
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v9, off, s[0:3], 0 offset:252
 ; GFX9-MUBUF-NEXT:    v_mov_b32_e32 v9, 0x3e319356
@@ -4648,7 +4656,7 @@ define amdgpu_gs float @gs_main(i32 %idx) {
 ; GFX9-MUBUF-NEXT:    v_mov_b32_e32 v14, 0xbf523be3
 ; GFX9-MUBUF-NEXT:    v_mov_b32_e32 v15, 0xbf5f2ee3
 ; GFX9-MUBUF-NEXT:    v_mov_b32_e32 v16, 0xbf638e39
-; GFX9-MUBUF-NEXT:    v_and_b32_e32 v0, 0x1fc, v0
+; GFX9-MUBUF-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v8, off, s[0:3], 0 offset:268
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v9, off, s[0:3], 0 offset:248
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v10, off, s[0:3], 0 offset:240
@@ -4743,7 +4751,7 @@ define amdgpu_gs float @gs_main(i32 %idx) {
 ; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v10, 0xb7043519
 ; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v11, 0xb702e758
 ; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v12, 0x3e31934f
-; GFX10_W32-MUBUF-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GFX10_W32-MUBUF-NEXT:    v_and_b32_e32 v0, 0x7f, v0
 ; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v1, off, s[0:3], 0 offset:268
 ; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v7, off, s[0:3], 0 offset:264
 ; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v10, off, s[0:3], 0 offset:260
@@ -4754,7 +4762,7 @@ define amdgpu_gs float @gs_main(i32 %idx) {
 ; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v11, 0x3eae29dc
 ; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v12, 0x3efcd89c
 ; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v13, 0x3efcd89f
-; GFX10_W32-MUBUF-NEXT:    v_and_b32_e32 v0, 0x1fc, v0
+; GFX10_W32-MUBUF-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v7, off, s[0:3], 0 offset:248
 ; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v10, off, s[0:3], 0 offset:244
 ; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v11, off, s[0:3], 0 offset:240
@@ -4854,7 +4862,7 @@ define amdgpu_gs float @gs_main(i32 %idx) {
 ; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v10, 0xb7043519
 ; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v11, 0xb702e758
 ; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v12, 0x3e31934f
-; GFX10_W64-MUBUF-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GFX10_W64-MUBUF-NEXT:    v_and_b32_e32 v0, 0x7f, v0
 ; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v1, off, s[0:3], 0 offset:268
 ; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v7, off, s[0:3], 0 offset:264
 ; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v10, off, s[0:3], 0 offset:260
@@ -4865,7 +4873,7 @@ define amdgpu_gs float @gs_main(i32 %idx) {
 ; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v11, 0x3eae29dc
 ; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v12, 0x3efcd89c
 ; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v13, 0x3efcd89f
-; GFX10_W64-MUBUF-NEXT:    v_and_b32_e32 v0, 0x1fc, v0
+; GFX10_W64-MUBUF-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v7, off, s[0:3], 0 offset:248
 ; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v10, off, s[0:3], 0 offset:244
 ; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v11, off, s[0:3], 0 offset:240
@@ -4934,9 +4942,9 @@ define amdgpu_gs float @gs_main(i32 %idx) {
 ; GFX9-FLATSCR-LABEL: gs_main:
 ; GFX9-FLATSCR:       ; %bb.0:
 ; GFX9-FLATSCR-NEXT:    s_add_u32 flat_scratch_lo, s0, s5
-; GFX9-FLATSCR-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GFX9-FLATSCR-NEXT:    v_and_b32_e32 v0, 0x7f, v0
 ; GFX9-FLATSCR-NEXT:    s_addc_u32 flat_scratch_hi, s1, 0
-; GFX9-FLATSCR-NEXT:    v_and_b32_e32 v23, 0x1fc, v0
+; GFX9-FLATSCR-NEXT:    v_lshlrev_b32_e32 v23, 2, v0
 ; GFX9-FLATSCR-NEXT:    v_mov_b32_e32 v0, 0xbf20e7f4
 ; GFX9-FLATSCR-NEXT:    s_mov_b32 s0, 0
 ; GFX9-FLATSCR-NEXT:    v_mov_b32_e32 v5, 0x3f5f2ee2
@@ -5029,13 +5037,13 @@ define amdgpu_gs float @gs_main(i32 %idx) {
 ; GFX10-FLATSCR-NEXT:    v_mov_b32_e32 v1, 0xbf20e7f4
 ; GFX10-FLATSCR-NEXT:    v_mov_b32_e32 v6, 0x3f5f2ee2
 ; GFX10-FLATSCR-NEXT:    v_mov_b32_e32 v8, 0x3f3d349e
-; GFX10-FLATSCR-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GFX10-FLATSCR-NEXT:    v_and_b32_e32 v0, 0x7f, v0
 ; GFX10-FLATSCR-NEXT:    v_mov_b32_e32 v7, 0x3f523be1
 ; GFX10-FLATSCR-NEXT:    v_mov_b32_e32 v9, 0xbeae29dc
 ; GFX10-FLATSCR-NEXT:    v_mov_b32_e32 v5, 0x3f638e37
 ; GFX10-FLATSCR-NEXT:    scratch_store_dwordx4 off, v[1:4], off offset:320
 ; GFX10-FLATSCR-NEXT:    v_mov_b32_e32 v2, v8
-; GFX10-FLATSCR-NEXT:    v_and_b32_e32 v0, 0x1fc, v0
+; GFX10-FLATSCR-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX10-FLATSCR-NEXT:    v_mov_b32_e32 v3, v7
 ; GFX10-FLATSCR-NEXT:    v_mov_b32_e32 v4, v6
 ; GFX10-FLATSCR-NEXT:    v_mov_b32_e32 v11, 0xbefcd89f
@@ -5116,8 +5124,8 @@ define amdgpu_gs float @gs_main(i32 %idx) {
 ; GFX9-FLATSCR-PAL-NEXT:    s_getpc_b64 s[0:1]
 ; GFX9-FLATSCR-PAL-NEXT:    s_mov_b32 s0, s8
 ; GFX9-FLATSCR-PAL-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
-; GFX9-FLATSCR-PAL-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; GFX9-FLATSCR-PAL-NEXT:    v_and_b32_e32 v23, 0x1fc, v0
+; GFX9-FLATSCR-PAL-NEXT:    v_and_b32_e32 v0, 0x7f, v0
+; GFX9-FLATSCR-PAL-NEXT:    v_lshlrev_b32_e32 v23, 2, v0
 ; GFX9-FLATSCR-PAL-NEXT:    v_mov_b32_e32 v0, 0xbf20e7f4
 ; GFX9-FLATSCR-PAL-NEXT:    v_mov_b32_e32 v5, 0x3f5f2ee2
 ; GFX9-FLATSCR-PAL-NEXT:    s_waitcnt lgkmcnt(0)
@@ -5219,13 +5227,13 @@ define amdgpu_gs float @gs_main(i32 %idx) {
 ; GFX10-FLATSCR-PAL-NEXT:    v_mov_b32_e32 v1, 0xbf20e7f4
 ; GFX10-FLATSCR-PAL-NEXT:    v_mov_b32_e32 v6, 0x3f5f2ee2
 ; GFX10-FLATSCR-PAL-NEXT:    v_mov_b32_e32 v8, 0x3f3d349e
-; GFX10-FLATSCR-PAL-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GFX10-FLATSCR-PAL-NEXT:    v_and_b32_e32 v0, 0x7f, v0
 ; GFX10-FLATSCR-PAL-NEXT:    v_mov_b32_e32 v7, 0x3f523be1
 ; GFX10-FLATSCR-PAL-NEXT:    v_mov_b32_e32 v9, 0xbeae29dc
 ; GFX10-FLATSCR-PAL-NEXT:    v_mov_b32_e32 v5, 0x3f638e37
 ; GFX10-FLATSCR-PAL-NEXT:    scratch_store_dwordx4 off, v[1:4], off offset:320
 ; GFX10-FLATSCR-PAL-NEXT:    v_mov_b32_e32 v2, v8
-; GFX10-FLATSCR-PAL-NEXT:    v_and_b32_e32 v0, 0x1fc, v0
+; GFX10-FLATSCR-PAL-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX10-FLATSCR-PAL-NEXT:    v_mov_b32_e32 v3, v7
 ; GFX10-FLATSCR-PAL-NEXT:    v_mov_b32_e32 v4, v6
 ; GFX10-FLATSCR-PAL-NEXT:    v_mov_b32_e32 v11, 0xbefcd89f
@@ -5303,45 +5311,47 @@ define amdgpu_gs float @gs_main(i32 %idx) {
 ;
 ; GFX11-FLATSCR-LABEL: gs_main:
 ; GFX11-FLATSCR:       ; %bb.0:
-; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v1, 0xbf20e7f4 :: v_dual_lshlrev_b32 v0, 2, v0
 ; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v28, 0x3703c499
 ; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v19, 0x3efcd89f
 ; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v21, 0xbf5f2ee3
-; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v17, 0xbf3d349e
-; GFX11-FLATSCR-NEXT:    v_and_b32_e32 v37, 0x1fc, v0
-; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v0, 0xbeae29dc
-; GFX11-FLATSCR-NEXT:    scratch_store_b128 off, v[1:4], off offset:320
-; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v23, v21 :: v_dual_mov_b32 v8, 0x3f3d349e
+; GFX11-FLATSCR-NEXT:    v_and_b32_e32 v0, 0x7f, v0
 ; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v7, 0x3f523be1
-; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v24, 0xbf523be3
-; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v12, 0xbe319356 :: v_dual_mov_b32 v31, v19
+; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v6, 0x3f5f2ee2
 ; GFX11-FLATSCR-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
-; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v2, v8
-; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v6, 0x3f5f2ee2 :: v_dual_mov_b32 v3, v7
-; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v5, 0x3f638e37
-; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v15, 0x3e319356
+; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v24, 0xbf523be3 :: v_dual_mov_b32 v23, v21
+; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v8, 0x3f3d349e :: v_dual_lshlrev_b32 v37, 2, v0
+; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v1, 0xbf20e7f4
 ; GFX11-FLATSCR-NEXT:    s_delay_alu instid0(VALU_DEP_3)
-; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v11, 0xbe31934f :: v_dual_mov_b32 v4, v6
+; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v0, 0xbeae29dc :: v_dual_mov_b32 v27, v24
+; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v12, 0xbe319356 :: v_dual_mov_b32 v31, v19
+; GFX11-FLATSCR-NEXT:    scratch_store_b128 off, v[1:4], off offset:320
+; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v3, v7
+; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v17, 0xbf3d349e
+; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v5, 0x3f638e37 :: v_dual_mov_b32 v2, v8
+; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v4, v6 :: v_dual_mov_b32 v15, 0x3e319356
+; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v36, v6
+; GFX11-FLATSCR-NEXT:    s_delay_alu instid0(VALU_DEP_4)
+; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v26, v17
 ; GFX11-FLATSCR-NEXT:    s_clause 0x1
 ; GFX11-FLATSCR-NEXT:    scratch_store_b128 off, v[5:8], off offset:304
 ; GFX11-FLATSCR-NEXT:    scratch_store_b128 off, v[1:4], off offset:288
-; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v2, 0xbefcd89f :: v_dual_mov_b32 v27, v24
-; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v1, v0
+; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v2, 0xbefcd89f :: v_dual_mov_b32 v1, v0
 ; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v13, 0x3eae29dc :: v_dual_mov_b32 v34, v5
 ; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v3, 0xbefcd8a3
-; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v9, 0xb702e758 :: v_dual_mov_b32 v36, v6
+; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v9, 0xb702e758
 ; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v10, 0xb7043519 :: v_dual_mov_b32 v29, v15
+; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v11, 0xbe31934f
 ; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v18, 0xbf20e7f5
 ; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v14, 0x3eae29d8
 ; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v16, 0x3e31934f
 ; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v22, 0xbf638e39
-; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v25, 0x3f20e7f5 :: v_dual_mov_b32 v26, v17
+; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v25, 0x3f20e7f5
 ; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v20, 0x3efcd89c
-; GFX11-FLATSCR-NEXT:    s_delay_alu instid0(VALU_DEP_3)
-; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v30, v13 :: v_dual_mov_b32 v33, v22
+; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v30, v13
 ; GFX11-FLATSCR-NEXT:    s_clause 0x1
 ; GFX11-FLATSCR-NEXT:    scratch_store_b128 off, v[0:3], off offset:272
 ; GFX11-FLATSCR-NEXT:    scratch_store_b128 off, v[9:12], off offset:256
+; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v33, v22
 ; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v1, 0x3f20e7f4
 ; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v9, v18
 ; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v10, v2 :: v_dual_mov_b32 v11, v0
@@ -5442,9 +5452,9 @@ define amdgpu_hs <{i32, i32, i32, float}> @hs_ir_uses_scratch_offset(i32 inreg, 
 ; SI-NEXT:    s_mov_b32 s9, SCRATCH_RSRC_DWORD1
 ; SI-NEXT:    s_mov_b32 s10, -1
 ; SI-NEXT:    s_mov_b32 s11, 0xe8f000
-; SI-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; SI-NEXT:    v_and_b32_e32 v0, 0x7f, v0
 ; SI-NEXT:    s_add_u32 s8, s8, s6
-; SI-NEXT:    v_and_b32_e32 v0, 0x1fc, v0
+; SI-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; SI-NEXT:    v_mov_b32_e32 v2, 0
 ; SI-NEXT:    s_addc_u32 s9, s9, 0
 ; SI-NEXT:    v_add_i32_e32 v1, vcc, 0x200, v0
@@ -5568,9 +5578,9 @@ define amdgpu_hs <{i32, i32, i32, float}> @hs_ir_uses_scratch_offset(i32 inreg, 
 ; VI-NEXT:    s_mov_b32 s9, SCRATCH_RSRC_DWORD1
 ; VI-NEXT:    s_mov_b32 s10, -1
 ; VI-NEXT:    s_mov_b32 s11, 0xe80000
-; VI-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; VI-NEXT:    v_and_b32_e32 v0, 0x7f, v0
 ; VI-NEXT:    s_add_u32 s8, s8, s6
-; VI-NEXT:    v_and_b32_e32 v0, 0x1fc, v0
+; VI-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; VI-NEXT:    v_mov_b32_e32 v2, 0
 ; VI-NEXT:    s_addc_u32 s9, s9, 0
 ; VI-NEXT:    v_add_u32_e32 v1, vcc, 0x200, v0
@@ -5713,7 +5723,7 @@ define amdgpu_hs <{i32, i32, i32, float}> @hs_ir_uses_scratch_offset(i32 inreg, 
 ; GFX9-MUBUF-NEXT:    v_mov_b32_e32 v9, 0x3e31934f
 ; GFX9-MUBUF-NEXT:    v_mov_b32_e32 v10, 0x3eae29d8
 ; GFX9-MUBUF-NEXT:    v_mov_b32_e32 v11, 0x3efcd89c
-; GFX9-MUBUF-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GFX9-MUBUF-NEXT:    v_and_b32_e32 v0, 0x7f, v0
 ; GFX9-MUBUF-NEXT:    v_mov_b32_e32 v8, 0xbe319356
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v9, off, s[8:11], 0 offset:252
 ; GFX9-MUBUF-NEXT:    v_mov_b32_e32 v9, 0x3e319356
@@ -5726,7 +5736,7 @@ define amdgpu_hs <{i32, i32, i32, float}> @hs_ir_uses_scratch_offset(i32 inreg, 
 ; GFX9-MUBUF-NEXT:    v_mov_b32_e32 v14, 0xbf523be3
 ; GFX9-MUBUF-NEXT:    v_mov_b32_e32 v15, 0xbf5f2ee3
 ; GFX9-MUBUF-NEXT:    v_mov_b32_e32 v16, 0xbf638e39
-; GFX9-MUBUF-NEXT:    v_and_b32_e32 v0, 0x1fc, v0
+; GFX9-MUBUF-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v8, off, s[8:11], 0 offset:268
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v9, off, s[8:11], 0 offset:248
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v10, off, s[8:11], 0 offset:240
@@ -5822,7 +5832,7 @@ define amdgpu_hs <{i32, i32, i32, float}> @hs_ir_uses_scratch_offset(i32 inreg, 
 ; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v10, 0xb7043519
 ; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v11, 0xb702e758
 ; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v12, 0x3e31934f
-; GFX10_W32-MUBUF-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GFX10_W32-MUBUF-NEXT:    v_and_b32_e32 v0, 0x7f, v0
 ; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v1, off, s[8:11], 0 offset:268
 ; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v7, off, s[8:11], 0 offset:264
 ; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v10, off, s[8:11], 0 offset:260
@@ -5833,7 +5843,7 @@ define amdgpu_hs <{i32, i32, i32, float}> @hs_ir_uses_scratch_offset(i32 inreg, 
 ; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v11, 0x3eae29dc
 ; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v12, 0x3efcd89c
 ; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v13, 0x3efcd89f
-; GFX10_W32-MUBUF-NEXT:    v_and_b32_e32 v0, 0x1fc, v0
+; GFX10_W32-MUBUF-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v7, off, s[8:11], 0 offset:248
 ; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v10, off, s[8:11], 0 offset:244
 ; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v11, off, s[8:11], 0 offset:240
@@ -5934,7 +5944,7 @@ define amdgpu_hs <{i32, i32, i32, float}> @hs_ir_uses_scratch_offset(i32 inreg, 
 ; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v10, 0xb7043519
 ; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v11, 0xb702e758
 ; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v12, 0x3e31934f
-; GFX10_W64-MUBUF-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GFX10_W64-MUBUF-NEXT:    v_and_b32_e32 v0, 0x7f, v0
 ; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v1, off, s[8:11], 0 offset:268
 ; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v7, off, s[8:11], 0 offset:264
 ; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v10, off, s[8:11], 0 offset:260
@@ -5945,7 +5955,7 @@ define amdgpu_hs <{i32, i32, i32, float}> @hs_ir_uses_scratch_offset(i32 inreg, 
 ; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v11, 0x3eae29dc
 ; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v12, 0x3efcd89c
 ; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v13, 0x3efcd89f
-; GFX10_W64-MUBUF-NEXT:    v_and_b32_e32 v0, 0x1fc, v0
+; GFX10_W64-MUBUF-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v7, off, s[8:11], 0 offset:248
 ; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v10, off, s[8:11], 0 offset:244
 ; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v11, off, s[8:11], 0 offset:240
@@ -6015,9 +6025,9 @@ define amdgpu_hs <{i32, i32, i32, float}> @hs_ir_uses_scratch_offset(i32 inreg, 
 ; GFX9-FLATSCR-LABEL: hs_ir_uses_scratch_offset:
 ; GFX9-FLATSCR:       ; %bb.0:
 ; GFX9-FLATSCR-NEXT:    s_add_u32 flat_scratch_lo, s0, s5
-; GFX9-FLATSCR-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GFX9-FLATSCR-NEXT:    v_and_b32_e32 v0, 0x7f, v0
 ; GFX9-FLATSCR-NEXT:    s_addc_u32 flat_scratch_hi, s1, 0
-; GFX9-FLATSCR-NEXT:    v_and_b32_e32 v23, 0x1fc, v0
+; GFX9-FLATSCR-NEXT:    v_lshlrev_b32_e32 v23, 2, v0
 ; GFX9-FLATSCR-NEXT:    v_mov_b32_e32 v0, 0xbf20e7f4
 ; GFX9-FLATSCR-NEXT:    s_mov_b32 s0, 0
 ; GFX9-FLATSCR-NEXT:    v_mov_b32_e32 v5, 0x3f5f2ee2
@@ -6110,14 +6120,14 @@ define amdgpu_hs <{i32, i32, i32, float}> @hs_ir_uses_scratch_offset(i32 inreg, 
 ; GFX10-FLATSCR-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s1
 ; GFX10-FLATSCR-NEXT:    v_mov_b32_e32 v1, 0xbf20e7f4
 ; GFX10-FLATSCR-NEXT:    v_mov_b32_e32 v8, 0x3f3d349e
-; GFX10-FLATSCR-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GFX10-FLATSCR-NEXT:    v_and_b32_e32 v0, 0x7f, v0
 ; GFX10-FLATSCR-NEXT:    v_mov_b32_e32 v6, 0x3f5f2ee2
 ; GFX10-FLATSCR-NEXT:    v_mov_b32_e32 v7, 0x3f523be1
 ; GFX10-FLATSCR-NEXT:    v_mov_b32_e32 v9, 0xbeae29dc
 ; GFX10-FLATSCR-NEXT:    v_mov_b32_e32 v5, 0x3f638e37
 ; GFX10-FLATSCR-NEXT:    scratch_store_dwordx4 off, v[1:4], off offset:320
 ; GFX10-FLATSCR-NEXT:    v_mov_b32_e32 v2, v8
-; GFX10-FLATSCR-NEXT:    v_and_b32_e32 v0, 0x1fc, v0
+; GFX10-FLATSCR-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX10-FLATSCR-NEXT:    v_mov_b32_e32 v3, v7
 ; GFX10-FLATSCR-NEXT:    v_mov_b32_e32 v4, v6
 ; GFX10-FLATSCR-NEXT:    v_mov_b32_e32 v11, 0xbefcd89f
@@ -6199,8 +6209,8 @@ define amdgpu_hs <{i32, i32, i32, float}> @hs_ir_uses_scratch_offset(i32 inreg, 
 ; GFX9-FLATSCR-PAL-NEXT:    s_getpc_b64 s[0:1]
 ; GFX9-FLATSCR-PAL-NEXT:    s_mov_b32 s0, s8
 ; GFX9-FLATSCR-PAL-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
-; GFX9-FLATSCR-PAL-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; GFX9-FLATSCR-PAL-NEXT:    v_and_b32_e32 v23, 0x1fc, v0
+; GFX9-FLATSCR-PAL-NEXT:    v_and_b32_e32 v0, 0x7f, v0
+; GFX9-FLATSCR-PAL-NEXT:    v_lshlrev_b32_e32 v23, 2, v0
 ; GFX9-FLATSCR-PAL-NEXT:    v_mov_b32_e32 v0, 0xbf20e7f4
 ; GFX9-FLATSCR-PAL-NEXT:    v_mov_b32_e32 v5, 0x3f5f2ee2
 ; GFX9-FLATSCR-PAL-NEXT:    s_waitcnt lgkmcnt(0)
@@ -6302,14 +6312,14 @@ define amdgpu_hs <{i32, i32, i32, float}> @hs_ir_uses_scratch_offset(i32 inreg, 
 ; GFX10-FLATSCR-PAL-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s1
 ; GFX10-FLATSCR-PAL-NEXT:    v_mov_b32_e32 v1, 0xbf20e7f4
 ; GFX10-FLATSCR-PAL-NEXT:    v_mov_b32_e32 v8, 0x3f3d349e
-; GFX10-FLATSCR-PAL-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GFX10-FLATSCR-PAL-NEXT:    v_and_b32_e32 v0, 0x7f, v0
 ; GFX10-FLATSCR-PAL-NEXT:    v_mov_b32_e32 v6, 0x3f5f2ee2
 ; GFX10-FLATSCR-PAL-NEXT:    v_mov_b32_e32 v7, 0x3f523be1
 ; GFX10-FLATSCR-PAL-NEXT:    v_mov_b32_e32 v9, 0xbeae29dc
 ; GFX10-FLATSCR-PAL-NEXT:    v_mov_b32_e32 v5, 0x3f638e37
 ; GFX10-FLATSCR-PAL-NEXT:    scratch_store_dwordx4 off, v[1:4], off offset:320
 ; GFX10-FLATSCR-PAL-NEXT:    v_mov_b32_e32 v2, v8
-; GFX10-FLATSCR-PAL-NEXT:    v_and_b32_e32 v0, 0x1fc, v0
+; GFX10-FLATSCR-PAL-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX10-FLATSCR-PAL-NEXT:    v_mov_b32_e32 v3, v7
 ; GFX10-FLATSCR-PAL-NEXT:    v_mov_b32_e32 v4, v6
 ; GFX10-FLATSCR-PAL-NEXT:    v_mov_b32_e32 v11, 0xbefcd89f
@@ -6388,41 +6398,44 @@ define amdgpu_hs <{i32, i32, i32, float}> @hs_ir_uses_scratch_offset(i32 inreg, 
 ;
 ; GFX11-FLATSCR-LABEL: hs_ir_uses_scratch_offset:
 ; GFX11-FLATSCR:       ; %bb.0:
-; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v1, 0xbf20e7f4 :: v_dual_lshlrev_b32 v0, 2, v0
 ; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v28, 0x3703c499
 ; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v19, 0x3efcd89f
 ; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v21, 0xbf5f2ee3
-; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v8, 0x3f3d349e
+; GFX11-FLATSCR-NEXT:    v_and_b32_e32 v0, 0x7f, v0
+; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v24, 0xbf523be3
+; GFX11-FLATSCR-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
+; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v12, 0xbe319356 :: v_dual_mov_b32 v31, v19
+; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v23, v21 :: v_dual_mov_b32 v6, 0x3f5f2ee2
+; GFX11-FLATSCR-NEXT:    s_delay_alu instid0(VALU_DEP_4)
+; GFX11-FLATSCR-NEXT:    v_lshlrev_b32_e32 v37, 2, v0
 ; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v7, 0x3f523be1
+; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v8, 0x3f3d349e
+; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v1, 0xbf20e7f4
+; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v0, 0xbeae29dc :: v_dual_mov_b32 v27, v24
 ; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v17, 0xbf3d349e
-; GFX11-FLATSCR-NEXT:    v_and_b32_e32 v37, 0x1fc, v0
-; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v0, 0xbeae29dc :: v_dual_mov_b32 v23, v21
-; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v6, 0x3f5f2ee2
 ; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v5, 0x3f638e37
 ; GFX11-FLATSCR-NEXT:    scratch_store_b128 off, v[1:4], off offset:320
-; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v2, v8 :: v_dual_mov_b32 v3, v7
-; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v4, v6
-; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v24, 0xbf523be3
+; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v4, v6 :: v_dual_mov_b32 v3, v7
+; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v26, v17
+; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v2, v8
 ; GFX11-FLATSCR-NEXT:    s_clause 0x1
 ; GFX11-FLATSCR-NEXT:    scratch_store_b128 off, v[5:8], off offset:304
 ; GFX11-FLATSCR-NEXT:    scratch_store_b128 off, v[1:4], off offset:288
-; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v2, 0xbefcd89f :: v_dual_mov_b32 v27, v24
-; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v1, v0
+; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v2, 0xbefcd89f :: v_dual_mov_b32 v1, v0
 ; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v13, 0x3eae29dc :: v_dual_mov_b32 v34, v5
 ; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v3, 0xbefcd8a3
 ; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v15, 0x3e319356 :: v_dual_mov_b32 v36, v6
 ; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v9, 0xb702e758
 ; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v10, 0xb7043519
 ; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v11, 0xbe31934f
-; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v12, 0xbe319356 :: v_dual_mov_b32 v31, v19
 ; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v18, 0xbf20e7f5
 ; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v14, 0x3eae29d8
 ; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v16, 0x3e31934f
 ; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v22, 0xbf638e39
-; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v25, 0x3f20e7f5 :: v_dual_mov_b32 v26, v17
+; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v25, 0x3f20e7f5
 ; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v20, 0x3efcd89c :: v_dual_mov_b32 v29, v15
 ; GFX11-FLATSCR-NEXT:    s_delay_alu instid0(VALU_DEP_3)
-; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v33, v22 :: v_dual_mov_b32 v30, v13
+; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v30, v13 :: v_dual_mov_b32 v33, v22
 ; GFX11-FLATSCR-NEXT:    s_clause 0x1
 ; GFX11-FLATSCR-NEXT:    scratch_store_b128 off, v[0:3], off offset:272
 ; GFX11-FLATSCR-NEXT:    scratch_store_b128 off, v[9:12], off offset:256
@@ -6523,9 +6536,9 @@ define amdgpu_gs <{i32, i32, i32, float}> @gs_ir_uses_scratch_offset(i32 inreg, 
 ; SI-NEXT:    s_mov_b32 s9, SCRATCH_RSRC_DWORD1
 ; SI-NEXT:    s_mov_b32 s10, -1
 ; SI-NEXT:    s_mov_b32 s11, 0xe8f000
-; SI-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; SI-NEXT:    v_and_b32_e32 v0, 0x7f, v0
 ; SI-NEXT:    s_add_u32 s8, s8, s6
-; SI-NEXT:    v_and_b32_e32 v0, 0x1fc, v0
+; SI-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; SI-NEXT:    v_mov_b32_e32 v2, 0
 ; SI-NEXT:    s_addc_u32 s9, s9, 0
 ; SI-NEXT:    v_add_i32_e32 v1, vcc, 0x200, v0
@@ -6649,9 +6662,9 @@ define amdgpu_gs <{i32, i32, i32, float}> @gs_ir_uses_scratch_offset(i32 inreg, 
 ; VI-NEXT:    s_mov_b32 s9, SCRATCH_RSRC_DWORD1
 ; VI-NEXT:    s_mov_b32 s10, -1
 ; VI-NEXT:    s_mov_b32 s11, 0xe80000
-; VI-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; VI-NEXT:    v_and_b32_e32 v0, 0x7f, v0
 ; VI-NEXT:    s_add_u32 s8, s8, s6
-; VI-NEXT:    v_and_b32_e32 v0, 0x1fc, v0
+; VI-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; VI-NEXT:    v_mov_b32_e32 v2, 0
 ; VI-NEXT:    s_addc_u32 s9, s9, 0
 ; VI-NEXT:    v_add_u32_e32 v1, vcc, 0x200, v0
@@ -6794,7 +6807,7 @@ define amdgpu_gs <{i32, i32, i32, float}> @gs_ir_uses_scratch_offset(i32 inreg, 
 ; GFX9-MUBUF-NEXT:    v_mov_b32_e32 v9, 0x3e31934f
 ; GFX9-MUBUF-NEXT:    v_mov_b32_e32 v10, 0x3eae29d8
 ; GFX9-MUBUF-NEXT:    v_mov_b32_e32 v11, 0x3efcd89c
-; GFX9-MUBUF-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GFX9-MUBUF-NEXT:    v_and_b32_e32 v0, 0x7f, v0
 ; GFX9-MUBUF-NEXT:    v_mov_b32_e32 v8, 0xbe319356
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v9, off, s[8:11], 0 offset:252
 ; GFX9-MUBUF-NEXT:    v_mov_b32_e32 v9, 0x3e319356
@@ -6807,7 +6820,7 @@ define amdgpu_gs <{i32, i32, i32, float}> @gs_ir_uses_scratch_offset(i32 inreg, 
 ; GFX9-MUBUF-NEXT:    v_mov_b32_e32 v14, 0xbf523be3
 ; GFX9-MUBUF-NEXT:    v_mov_b32_e32 v15, 0xbf5f2ee3
 ; GFX9-MUBUF-NEXT:    v_mov_b32_e32 v16, 0xbf638e39
-; GFX9-MUBUF-NEXT:    v_and_b32_e32 v0, 0x1fc, v0
+; GFX9-MUBUF-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v8, off, s[8:11], 0 offset:268
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v9, off, s[8:11], 0 offset:248
 ; GFX9-MUBUF-NEXT:    buffer_store_dword v10, off, s[8:11], 0 offset:240
@@ -6903,7 +6916,7 @@ define amdgpu_gs <{i32, i32, i32, float}> @gs_ir_uses_scratch_offset(i32 inreg, 
 ; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v10, 0xb7043519
 ; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v11, 0xb702e758
 ; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v12, 0x3e31934f
-; GFX10_W32-MUBUF-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GFX10_W32-MUBUF-NEXT:    v_and_b32_e32 v0, 0x7f, v0
 ; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v1, off, s[8:11], 0 offset:268
 ; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v7, off, s[8:11], 0 offset:264
 ; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v10, off, s[8:11], 0 offset:260
@@ -6914,7 +6927,7 @@ define amdgpu_gs <{i32, i32, i32, float}> @gs_ir_uses_scratch_offset(i32 inreg, 
 ; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v11, 0x3eae29dc
 ; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v12, 0x3efcd89c
 ; GFX10_W32-MUBUF-NEXT:    v_mov_b32_e32 v13, 0x3efcd89f
-; GFX10_W32-MUBUF-NEXT:    v_and_b32_e32 v0, 0x1fc, v0
+; GFX10_W32-MUBUF-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v7, off, s[8:11], 0 offset:248
 ; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v10, off, s[8:11], 0 offset:244
 ; GFX10_W32-MUBUF-NEXT:    buffer_store_dword v11, off, s[8:11], 0 offset:240
@@ -7015,7 +7028,7 @@ define amdgpu_gs <{i32, i32, i32, float}> @gs_ir_uses_scratch_offset(i32 inreg, 
 ; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v10, 0xb7043519
 ; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v11, 0xb702e758
 ; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v12, 0x3e31934f
-; GFX10_W64-MUBUF-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GFX10_W64-MUBUF-NEXT:    v_and_b32_e32 v0, 0x7f, v0
 ; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v1, off, s[8:11], 0 offset:268
 ; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v7, off, s[8:11], 0 offset:264
 ; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v10, off, s[8:11], 0 offset:260
@@ -7026,7 +7039,7 @@ define amdgpu_gs <{i32, i32, i32, float}> @gs_ir_uses_scratch_offset(i32 inreg, 
 ; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v11, 0x3eae29dc
 ; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v12, 0x3efcd89c
 ; GFX10_W64-MUBUF-NEXT:    v_mov_b32_e32 v13, 0x3efcd89f
-; GFX10_W64-MUBUF-NEXT:    v_and_b32_e32 v0, 0x1fc, v0
+; GFX10_W64-MUBUF-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v7, off, s[8:11], 0 offset:248
 ; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v10, off, s[8:11], 0 offset:244
 ; GFX10_W64-MUBUF-NEXT:    buffer_store_dword v11, off, s[8:11], 0 offset:240
@@ -7096,9 +7109,9 @@ define amdgpu_gs <{i32, i32, i32, float}> @gs_ir_uses_scratch_offset(i32 inreg, 
 ; GFX9-FLATSCR-LABEL: gs_ir_uses_scratch_offset:
 ; GFX9-FLATSCR:       ; %bb.0:
 ; GFX9-FLATSCR-NEXT:    s_add_u32 flat_scratch_lo, s0, s5
-; GFX9-FLATSCR-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GFX9-FLATSCR-NEXT:    v_and_b32_e32 v0, 0x7f, v0
 ; GFX9-FLATSCR-NEXT:    s_addc_u32 flat_scratch_hi, s1, 0
-; GFX9-FLATSCR-NEXT:    v_and_b32_e32 v23, 0x1fc, v0
+; GFX9-FLATSCR-NEXT:    v_lshlrev_b32_e32 v23, 2, v0
 ; GFX9-FLATSCR-NEXT:    v_mov_b32_e32 v0, 0xbf20e7f4
 ; GFX9-FLATSCR-NEXT:    s_mov_b32 s0, 0
 ; GFX9-FLATSCR-NEXT:    v_mov_b32_e32 v5, 0x3f5f2ee2
@@ -7191,14 +7204,14 @@ define amdgpu_gs <{i32, i32, i32, float}> @gs_ir_uses_scratch_offset(i32 inreg, 
 ; GFX10-FLATSCR-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s1
 ; GFX10-FLATSCR-NEXT:    v_mov_b32_e32 v1, 0xbf20e7f4
 ; GFX10-FLATSCR-NEXT:    v_mov_b32_e32 v8, 0x3f3d349e
-; GFX10-FLATSCR-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GFX10-FLATSCR-NEXT:    v_and_b32_e32 v0, 0x7f, v0
 ; GFX10-FLATSCR-NEXT:    v_mov_b32_e32 v6, 0x3f5f2ee2
 ; GFX10-FLATSCR-NEXT:    v_mov_b32_e32 v7, 0x3f523be1
 ; GFX10-FLATSCR-NEXT:    v_mov_b32_e32 v9, 0xbeae29dc
 ; GFX10-FLATSCR-NEXT:    v_mov_b32_e32 v5, 0x3f638e37
 ; GFX10-FLATSCR-NEXT:    scratch_store_dwordx4 off, v[1:4], off offset:320
 ; GFX10-FLATSCR-NEXT:    v_mov_b32_e32 v2, v8
-; GFX10-FLATSCR-NEXT:    v_and_b32_e32 v0, 0x1fc, v0
+; GFX10-FLATSCR-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX10-FLATSCR-NEXT:    v_mov_b32_e32 v3, v7
 ; GFX10-FLATSCR-NEXT:    v_mov_b32_e32 v4, v6
 ; GFX10-FLATSCR-NEXT:    v_mov_b32_e32 v11, 0xbefcd89f
@@ -7280,8 +7293,8 @@ define amdgpu_gs <{i32, i32, i32, float}> @gs_ir_uses_scratch_offset(i32 inreg, 
 ; GFX9-FLATSCR-PAL-NEXT:    s_getpc_b64 s[0:1]
 ; GFX9-FLATSCR-PAL-NEXT:    s_mov_b32 s0, s8
 ; GFX9-FLATSCR-PAL-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
-; GFX9-FLATSCR-PAL-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; GFX9-FLATSCR-PAL-NEXT:    v_and_b32_e32 v23, 0x1fc, v0
+; GFX9-FLATSCR-PAL-NEXT:    v_and_b32_e32 v0, 0x7f, v0
+; GFX9-FLATSCR-PAL-NEXT:    v_lshlrev_b32_e32 v23, 2, v0
 ; GFX9-FLATSCR-PAL-NEXT:    v_mov_b32_e32 v0, 0xbf20e7f4
 ; GFX9-FLATSCR-PAL-NEXT:    v_mov_b32_e32 v5, 0x3f5f2ee2
 ; GFX9-FLATSCR-PAL-NEXT:    s_waitcnt lgkmcnt(0)
@@ -7383,14 +7396,14 @@ define amdgpu_gs <{i32, i32, i32, float}> @gs_ir_uses_scratch_offset(i32 inreg, 
 ; GFX10-FLATSCR-PAL-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s1
 ; GFX10-FLATSCR-PAL-NEXT:    v_mov_b32_e32 v1, 0xbf20e7f4
 ; GFX10-FLATSCR-PAL-NEXT:    v_mov_b32_e32 v8, 0x3f3d349e
-; GFX10-FLATSCR-PAL-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GFX10-FLATSCR-PAL-NEXT:    v_and_b32_e32 v0, 0x7f, v0
 ; GFX10-FLATSCR-PAL-NEXT:    v_mov_b32_e32 v6, 0x3f5f2ee2
 ; GFX10-FLATSCR-PAL-NEXT:    v_mov_b32_e32 v7, 0x3f523be1
 ; GFX10-FLATSCR-PAL-NEXT:    v_mov_b32_e32 v9, 0xbeae29dc
 ; GFX10-FLATSCR-PAL-NEXT:    v_mov_b32_e32 v5, 0x3f638e37
 ; GFX10-FLATSCR-PAL-NEXT:    scratch_store_dwordx4 off, v[1:4], off offset:320
 ; GFX10-FLATSCR-PAL-NEXT:    v_mov_b32_e32 v2, v8
-; GFX10-FLATSCR-PAL-NEXT:    v_and_b32_e32 v0, 0x1fc, v0
+; GFX10-FLATSCR-PAL-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX10-FLATSCR-PAL-NEXT:    v_mov_b32_e32 v3, v7
 ; GFX10-FLATSCR-PAL-NEXT:    v_mov_b32_e32 v4, v6
 ; GFX10-FLATSCR-PAL-NEXT:    v_mov_b32_e32 v11, 0xbefcd89f
@@ -7469,41 +7482,44 @@ define amdgpu_gs <{i32, i32, i32, float}> @gs_ir_uses_scratch_offset(i32 inreg, 
 ;
 ; GFX11-FLATSCR-LABEL: gs_ir_uses_scratch_offset:
 ; GFX11-FLATSCR:       ; %bb.0:
-; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v1, 0xbf20e7f4 :: v_dual_lshlrev_b32 v0, 2, v0
 ; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v28, 0x3703c499
 ; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v19, 0x3efcd89f
 ; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v21, 0xbf5f2ee3
-; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v8, 0x3f3d349e
+; GFX11-FLATSCR-NEXT:    v_and_b32_e32 v0, 0x7f, v0
+; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v24, 0xbf523be3
+; GFX11-FLATSCR-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
+; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v12, 0xbe319356 :: v_dual_mov_b32 v31, v19
+; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v23, v21 :: v_dual_mov_b32 v6, 0x3f5f2ee2
+; GFX11-FLATSCR-NEXT:    s_delay_alu instid0(VALU_DEP_4)
+; GFX11-FLATSCR-NEXT:    v_lshlrev_b32_e32 v37, 2, v0
 ; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v7, 0x3f523be1
+; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v8, 0x3f3d349e
+; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v1, 0xbf20e7f4
+; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v0, 0xbeae29dc :: v_dual_mov_b32 v27, v24
 ; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v17, 0xbf3d349e
-; GFX11-FLATSCR-NEXT:    v_and_b32_e32 v37, 0x1fc, v0
-; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v0, 0xbeae29dc :: v_dual_mov_b32 v23, v21
-; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v6, 0x3f5f2ee2
 ; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v5, 0x3f638e37
 ; GFX11-FLATSCR-NEXT:    scratch_store_b128 off, v[1:4], off offset:320
-; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v2, v8 :: v_dual_mov_b32 v3, v7
-; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v4, v6
-; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v24, 0xbf523be3
+; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v4, v6 :: v_dual_mov_b32 v3, v7
+; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v26, v17
+; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v2, v8
 ; GFX11-FLATSCR-NEXT:    s_clause 0x1
 ; GFX11-FLATSCR-NEXT:    scratch_store_b128 off, v[5:8], off offset:304
 ; GFX11-FLATSCR-NEXT:    scratch_store_b128 off, v[1:4], off offset:288
-; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v2, 0xbefcd89f :: v_dual_mov_b32 v27, v24
-; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v1, v0
+; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v2, 0xbefcd89f :: v_dual_mov_b32 v1, v0
 ; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v13, 0x3eae29dc :: v_dual_mov_b32 v34, v5
 ; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v3, 0xbefcd8a3
 ; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v15, 0x3e319356 :: v_dual_mov_b32 v36, v6
 ; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v9, 0xb702e758
 ; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v10, 0xb7043519
 ; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v11, 0xbe31934f
-; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v12, 0xbe319356 :: v_dual_mov_b32 v31, v19
 ; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v18, 0xbf20e7f5
 ; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v14, 0x3eae29d8
 ; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v16, 0x3e31934f
 ; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v22, 0xbf638e39
-; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v25, 0x3f20e7f5 :: v_dual_mov_b32 v26, v17
+; GFX11-FLATSCR-NEXT:    v_mov_b32_e32 v25, 0x3f20e7f5
 ; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v20, 0x3efcd89c :: v_dual_mov_b32 v29, v15
 ; GFX11-FLATSCR-NEXT:    s_delay_alu instid0(VALU_DEP_3)
-; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v33, v22 :: v_dual_mov_b32 v30, v13
+; GFX11-FLATSCR-NEXT:    v_dual_mov_b32 v30, v13 :: v_dual_mov_b32 v33, v22
 ; GFX11-FLATSCR-NEXT:    s_clause 0x1
 ; GFX11-FLATSCR-NEXT:    scratch_store_b128 off, v[0:3], off offset:272
 ; GFX11-FLATSCR-NEXT:    scratch_store_b128 off, v[9:12], off offset:256

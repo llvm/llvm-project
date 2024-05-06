@@ -424,11 +424,9 @@ define i64 @load_UI() nounwind readonly {
 ; MIPS64-EL-NEXT:    ld $1, %got_disp(sui)($1)
 ; MIPS64-EL-NEXT:    lwl $2, 3($1)
 ; MIPS64-EL-NEXT:    lwr $2, 0($1)
-; MIPS64-EL-NEXT:    daddiu $1, $zero, 1
-; MIPS64-EL-NEXT:    dsll $1, $1, 32
-; MIPS64-EL-NEXT:    daddiu $1, $1, -1
+; MIPS64-EL-NEXT:    dsll $1, $2, 32
 ; MIPS64-EL-NEXT:    jr $ra
-; MIPS64-EL-NEXT:    and $2, $2, $1
+; MIPS64-EL-NEXT:    dsrl $2, $1, 32
 ;
 ; MIPS64-EB-LABEL: load_UI:
 ; MIPS64-EB:       # %bb.0: # %entry
@@ -438,11 +436,9 @@ define i64 @load_UI() nounwind readonly {
 ; MIPS64-EB-NEXT:    ld $1, %got_disp(sui)($1)
 ; MIPS64-EB-NEXT:    lwl $2, 0($1)
 ; MIPS64-EB-NEXT:    lwr $2, 3($1)
-; MIPS64-EB-NEXT:    daddiu $1, $zero, 1
-; MIPS64-EB-NEXT:    dsll $1, $1, 32
-; MIPS64-EB-NEXT:    daddiu $1, $1, -1
+; MIPS64-EB-NEXT:    dsll $1, $2, 32
 ; MIPS64-EB-NEXT:    jr $ra
-; MIPS64-EB-NEXT:    and $2, $2, $1
+; MIPS64-EB-NEXT:    dsrl $2, $1, 32
 ;
 ; MIPS64R2-EL-LABEL: load_UI:
 ; MIPS64R2-EL:       # %bb.0: # %entry
@@ -452,8 +448,9 @@ define i64 @load_UI() nounwind readonly {
 ; MIPS64R2-EL-NEXT:    ld $1, %got_disp(sui)($1)
 ; MIPS64R2-EL-NEXT:    lwl $2, 3($1)
 ; MIPS64R2-EL-NEXT:    lwr $2, 0($1)
+; MIPS64R2-EL-NEXT:    dsll $1, $2, 32
 ; MIPS64R2-EL-NEXT:    jr $ra
-; MIPS64R2-EL-NEXT:    dext $2, $2, 0, 32
+; MIPS64R2-EL-NEXT:    dsrl $2, $1, 32
 ;
 ; MIPS64R2-EB-LABEL: load_UI:
 ; MIPS64R2-EB:       # %bb.0: # %entry
@@ -463,8 +460,9 @@ define i64 @load_UI() nounwind readonly {
 ; MIPS64R2-EB-NEXT:    ld $1, %got_disp(sui)($1)
 ; MIPS64R2-EB-NEXT:    lwl $2, 0($1)
 ; MIPS64R2-EB-NEXT:    lwr $2, 3($1)
+; MIPS64R2-EB-NEXT:    dsll $1, $2, 32
 ; MIPS64R2-EB-NEXT:    jr $ra
-; MIPS64R2-EB-NEXT:    dext $2, $2, 0, 32
+; MIPS64R2-EB-NEXT:    dsrl $2, $1, 32
 ;
 ; MIPS64R6-LABEL: load_UI:
 ; MIPS64R6:       # %bb.0: # %entry
@@ -961,12 +959,12 @@ define void @pass_array_byval() nounwind {
 ; MIPS32-EB-NEXT:    addu $gp, $2, $25
 ; MIPS32-EB-NEXT:    lw $1, %got(arr)($gp)
 ; MIPS32-EB-NEXT:    lwl $4, 0($1)
-; MIPS32-EB-NEXT:    lbu $2, 5($1)
 ; MIPS32-EB-NEXT:    lwr $4, 3($1)
-; MIPS32-EB-NEXT:    sll $2, $2, 16
+; MIPS32-EB-NEXT:    lbu $2, 5($1)
 ; MIPS32-EB-NEXT:    lbu $3, 4($1)
-; MIPS32-EB-NEXT:    sll $3, $3, 24
+; MIPS32-EB-NEXT:    sll $3, $3, 8
 ; MIPS32-EB-NEXT:    or $2, $3, $2
+; MIPS32-EB-NEXT:    sll $2, $2, 16
 ; MIPS32-EB-NEXT:    lbu $1, 6($1)
 ; MIPS32-EB-NEXT:    sll $1, $1, 8
 ; MIPS32-EB-NEXT:    lw $25, %call16(extern_func)($gp)
@@ -1031,16 +1029,14 @@ define void @pass_array_byval() nounwind {
 ; MIPS64-EL-NEXT:    daddiu $gp, $1, %lo(%neg(%gp_rel(pass_array_byval)))
 ; MIPS64-EL-NEXT:    ld $1, %got_disp(arr)($gp)
 ; MIPS64-EL-NEXT:    lbu $2, 4($1)
-; MIPS64-EL-NEXT:    dsll $2, $2, 32
 ; MIPS64-EL-NEXT:    lbu $3, 5($1)
-; MIPS64-EL-NEXT:    dsll $3, $3, 40
+; MIPS64-EL-NEXT:    dsll $3, $3, 8
 ; MIPS64-EL-NEXT:    or $2, $3, $2
+; MIPS64-EL-NEXT:    dsll $2, $2, 32
 ; MIPS64-EL-NEXT:    lwl $3, 3($1)
 ; MIPS64-EL-NEXT:    lwr $3, 0($1)
-; MIPS64-EL-NEXT:    daddiu $4, $zero, 1
-; MIPS64-EL-NEXT:    dsll $4, $4, 32
-; MIPS64-EL-NEXT:    daddiu $4, $4, -1
-; MIPS64-EL-NEXT:    and $3, $3, $4
+; MIPS64-EL-NEXT:    dsll $3, $3, 32
+; MIPS64-EL-NEXT:    dsrl $3, $3, 32
 ; MIPS64-EL-NEXT:    or $2, $3, $2
 ; MIPS64-EL-NEXT:    lbu $1, 6($1)
 ; MIPS64-EL-NEXT:    dsll $1, $1, 48
@@ -1063,15 +1059,15 @@ define void @pass_array_byval() nounwind {
 ; MIPS64-EB-NEXT:    daddu $1, $1, $25
 ; MIPS64-EB-NEXT:    daddiu $gp, $1, %lo(%neg(%gp_rel(pass_array_byval)))
 ; MIPS64-EB-NEXT:    ld $1, %got_disp(arr)($gp)
-; MIPS64-EB-NEXT:    lbu $2, 5($1)
-; MIPS64-EB-NEXT:    dsll $2, $2, 16
-; MIPS64-EB-NEXT:    lbu $3, 4($1)
-; MIPS64-EB-NEXT:    dsll $3, $3, 24
-; MIPS64-EB-NEXT:    or $2, $3, $2
-; MIPS64-EB-NEXT:    lwl $3, 0($1)
-; MIPS64-EB-NEXT:    lwr $3, 3($1)
-; MIPS64-EB-NEXT:    dsll $3, $3, 32
-; MIPS64-EB-NEXT:    or $2, $3, $2
+; MIPS64-EB-NEXT:    lwl $2, 0($1)
+; MIPS64-EB-NEXT:    lwr $2, 3($1)
+; MIPS64-EB-NEXT:    dsll $2, $2, 32
+; MIPS64-EB-NEXT:    lbu $3, 5($1)
+; MIPS64-EB-NEXT:    lbu $4, 4($1)
+; MIPS64-EB-NEXT:    dsll $4, $4, 8
+; MIPS64-EB-NEXT:    or $3, $4, $3
+; MIPS64-EB-NEXT:    dsll $3, $3, 16
+; MIPS64-EB-NEXT:    or $2, $2, $3
 ; MIPS64-EB-NEXT:    lbu $1, 6($1)
 ; MIPS64-EB-NEXT:    dsll $1, $1, 8
 ; MIPS64-EB-NEXT:    ld $25, %call16(extern_func)($gp)
@@ -1094,13 +1090,14 @@ define void @pass_array_byval() nounwind {
 ; MIPS64R2-EL-NEXT:    daddiu $gp, $1, %lo(%neg(%gp_rel(pass_array_byval)))
 ; MIPS64R2-EL-NEXT:    ld $1, %got_disp(arr)($gp)
 ; MIPS64R2-EL-NEXT:    lbu $2, 4($1)
-; MIPS64R2-EL-NEXT:    dsll $2, $2, 32
 ; MIPS64R2-EL-NEXT:    lbu $3, 5($1)
-; MIPS64R2-EL-NEXT:    dsll $3, $3, 40
+; MIPS64R2-EL-NEXT:    dsll $3, $3, 8
 ; MIPS64R2-EL-NEXT:    or $2, $3, $2
+; MIPS64R2-EL-NEXT:    dsll $2, $2, 32
 ; MIPS64R2-EL-NEXT:    lwl $3, 3($1)
 ; MIPS64R2-EL-NEXT:    lwr $3, 0($1)
-; MIPS64R2-EL-NEXT:    dext $3, $3, 0, 32
+; MIPS64R2-EL-NEXT:    dsll $3, $3, 32
+; MIPS64R2-EL-NEXT:    dsrl $3, $3, 32
 ; MIPS64R2-EL-NEXT:    or $2, $3, $2
 ; MIPS64R2-EL-NEXT:    lbu $1, 6($1)
 ; MIPS64R2-EL-NEXT:    dsll $1, $1, 48
@@ -1123,16 +1120,15 @@ define void @pass_array_byval() nounwind {
 ; MIPS64R2-EB-NEXT:    daddu $1, $1, $25
 ; MIPS64R2-EB-NEXT:    daddiu $gp, $1, %lo(%neg(%gp_rel(pass_array_byval)))
 ; MIPS64R2-EB-NEXT:    ld $1, %got_disp(arr)($gp)
-; MIPS64R2-EB-NEXT:    lbu $2, 5($1)
-; MIPS64R2-EB-NEXT:    dsll $2, $2, 16
-; MIPS64R2-EB-NEXT:    lbu $3, 4($1)
-; MIPS64R2-EB-NEXT:    dsll $3, $3, 24
-; MIPS64R2-EB-NEXT:    or $2, $3, $2
-; MIPS64R2-EB-NEXT:    lwl $3, 0($1)
-; MIPS64R2-EB-NEXT:    lwr $3, 3($1)
-; MIPS64R2-EB-NEXT:    dext $3, $3, 0, 32
-; MIPS64R2-EB-NEXT:    dsll $3, $3, 32
-; MIPS64R2-EB-NEXT:    or $2, $3, $2
+; MIPS64R2-EB-NEXT:    lwl $2, 0($1)
+; MIPS64R2-EB-NEXT:    lwr $2, 3($1)
+; MIPS64R2-EB-NEXT:    dsll $2, $2, 32
+; MIPS64R2-EB-NEXT:    lbu $3, 5($1)
+; MIPS64R2-EB-NEXT:    lbu $4, 4($1)
+; MIPS64R2-EB-NEXT:    dsll $4, $4, 8
+; MIPS64R2-EB-NEXT:    or $3, $4, $3
+; MIPS64R2-EB-NEXT:    dsll $3, $3, 16
+; MIPS64R2-EB-NEXT:    or $2, $2, $3
 ; MIPS64R2-EB-NEXT:    lbu $1, 6($1)
 ; MIPS64R2-EB-NEXT:    dsll $1, $1, 8
 ; MIPS64R2-EB-NEXT:    ld $25, %call16(extern_func)($gp)

@@ -4,7 +4,8 @@
 define i32 @sbfx1(i32 %a) {
 ; CHECK-LABEL: sbfx1:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    sbfx r0, r0, #7, #11
+; CHECK-NEXT:    lsls r0, r0, #14
+; CHECK-NEXT:    sbfx r0, r0, #21, #11
 ; CHECK-NEXT:    bx lr
 	%t1 = lshr i32 %a, 7
 	%t2 = trunc i32 %t1 to i11

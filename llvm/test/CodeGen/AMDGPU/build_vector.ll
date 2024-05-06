@@ -472,7 +472,7 @@ define amdgpu_kernel void @build_v2i32_from_v4i16_shuffle(ptr addrspace(1) %out,
 ; R600:       ; %bb.0: ; %entry
 ; R600-NEXT:    ALU 0, @10, KC0[], KC1[]
 ; R600-NEXT:    TEX 1 @6
-; R600-NEXT:    ALU 4, @11, KC0[CB0:0-32], KC1[]
+; R600-NEXT:    ALU 7, @11, KC0[CB0:0-32], KC1[]
 ; R600-NEXT:    MEM_RAT_CACHELESS STORE_RAW T0.XY, T1.X, 1
 ; R600-NEXT:    CF_END
 ; R600-NEXT:    PAD
@@ -482,9 +482,12 @@ define amdgpu_kernel void @build_v2i32_from_v4i16_shuffle(ptr addrspace(1) %out,
 ; R600-NEXT:    ALU clause starting at 10:
 ; R600-NEXT:     MOV * T0.X, 0.0,
 ; R600-NEXT:    ALU clause starting at 11:
-; R600-NEXT:     LSHL * T0.Y, T1.X, literal.x,
-; R600-NEXT:    16(2.242078e-44), 0(0.000000e+00)
-; R600-NEXT:     LSHL T0.X, T0.X, literal.x,
+; R600-NEXT:     AND_INT * T0.W, T1.X, literal.x,
+; R600-NEXT:    65535(9.183409e-41), 0(0.000000e+00)
+; R600-NEXT:     LSHL T0.Y, PV.W, literal.x,
+; R600-NEXT:     AND_INT * T0.W, T0.X, literal.y,
+; R600-NEXT:    16(2.242078e-44), 65535(9.183409e-41)
+; R600-NEXT:     LSHL T0.X, PV.W, literal.x,
 ; R600-NEXT:     LSHR * T1.X, KC0[2].Y, literal.y,
 ; R600-NEXT:    16(2.242078e-44), 2(2.802597e-45)
 ;
@@ -493,6 +496,8 @@ define amdgpu_kernel void @build_v2i32_from_v4i16_shuffle(ptr addrspace(1) %out,
 ; GFX6-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
 ; GFX6-NEXT:    s_mov_b32 s7, 0xf000
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX6-NEXT:    s_and_b32 s2, s2, 0xffff
+; GFX6-NEXT:    s_and_b32 s3, s3, 0xffff
 ; GFX6-NEXT:    s_lshl_b32 s3, s3, 16
 ; GFX6-NEXT:    s_lshl_b32 s2, s2, 16
 ; GFX6-NEXT:    s_mov_b32 s6, -1
@@ -511,10 +516,12 @@ define amdgpu_kernel void @build_v2i32_from_v4i16_shuffle(ptr addrspace(1) %out,
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-NEXT:    s_mov_b32 s4, s0
 ; GFX8-NEXT:    s_mov_b32 s5, s1
-; GFX8-NEXT:    s_lshl_b32 s0, s3, 16
-; GFX8-NEXT:    s_lshl_b32 s1, s2, 16
-; GFX8-NEXT:    v_mov_b32_e32 v0, s1
-; GFX8-NEXT:    v_mov_b32_e32 v1, s0
+; GFX8-NEXT:    s_and_b32 s0, s2, 0xffff
+; GFX8-NEXT:    s_and_b32 s1, s3, 0xffff
+; GFX8-NEXT:    s_lshl_b32 s1, s1, 16
+; GFX8-NEXT:    s_lshl_b32 s0, s0, 16
+; GFX8-NEXT:    v_mov_b32_e32 v0, s0
+; GFX8-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX8-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0
 ; GFX8-NEXT:    s_endpgm
 ;
@@ -523,6 +530,8 @@ define amdgpu_kernel void @build_v2i32_from_v4i16_shuffle(ptr addrspace(1) %out,
 ; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
 ; GFX10-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-NEXT:    s_and_b32 s2, s2, 0xffff
+; GFX10-NEXT:    s_and_b32 s3, s3, 0xffff
 ; GFX10-NEXT:    s_lshl_b32 s2, s2, 16
 ; GFX10-NEXT:    s_lshl_b32 s3, s3, 16
 ; GFX10-NEXT:    v_mov_b32_e32 v0, s2
@@ -535,6 +544,8 @@ define amdgpu_kernel void @build_v2i32_from_v4i16_shuffle(ptr addrspace(1) %out,
 ; GFX11-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
 ; GFX11-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    s_and_b32 s2, s2, 0xffff
+; GFX11-NEXT:    s_and_b32 s3, s3, 0xffff
 ; GFX11-NEXT:    s_lshl_b32 s2, s2, 16
 ; GFX11-NEXT:    s_lshl_b32 s3, s3, 16
 ; GFX11-NEXT:    v_mov_b32_e32 v0, s2
@@ -549,6 +560,8 @@ define amdgpu_kernel void @build_v2i32_from_v4i16_shuffle(ptr addrspace(1) %out,
 ; GFX940-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
 ; GFX940-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX940-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX940-NEXT:    s_and_b32 s2, s2, 0xffff
+; GFX940-NEXT:    s_and_b32 s3, s3, 0xffff
 ; GFX940-NEXT:    s_lshl_b32 s3, s3, 16
 ; GFX940-NEXT:    s_lshl_b32 s2, s2, 16
 ; GFX940-NEXT:    v_mov_b32_e32 v0, s2

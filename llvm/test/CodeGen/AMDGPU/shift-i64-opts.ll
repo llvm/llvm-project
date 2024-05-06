@@ -144,9 +144,10 @@ define amdgpu_kernel void @lshr_and_i64_35(ptr addrspace(1) %out, ptr addrspace(
 ; GCN-NEXT:    buffer_load_dword v0, off, s[8:11], 0 offset:4
 ; GCN-NEXT:    s_mov_b32 s4, s0
 ; GCN-NEXT:    s_mov_b32 s5, s1
-; GCN-NEXT:    v_mov_b32_e32 v1, 0
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    v_bfe_u32 v0, v0, 8, 23
+; GCN-NEXT:    v_and_b32_e32 v1, 0x7fffff00, v0
+; GCN-NEXT:    v_mov_b32_e32 v0, 0
+; GCN-NEXT:    v_lshr_b64 v[0:1], v[0:1], 40
 ; GCN-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0
 ; GCN-NEXT:    s_endpgm
   %val = load i64, ptr addrspace(1) %in

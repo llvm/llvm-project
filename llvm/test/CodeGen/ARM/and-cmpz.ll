@@ -193,7 +193,7 @@ false:
 define void @i16_cmpz(i16 %x, ptr %foo) {
 ; T2-LABEL: i16_cmpz:
 ; T2:       @ %bb.0: @ %entry
-; T2-NEXT:    uxth r0, r0
+; T2-NEXT:    and r0, r0, #65024
 ; T2-NEXT:    movs r2, #0
 ; T2-NEXT:    cmp.w r2, r0, lsr #9
 ; T2-NEXT:    it ne
@@ -205,8 +205,10 @@ define void @i16_cmpz(i16 %x, ptr %foo) {
 ; T1-LABEL: i16_cmpz:
 ; T1:       @ %bb.0: @ %entry
 ; T1-NEXT:    push {r7, lr}
-; T1-NEXT:    uxth r0, r0
-; T1-NEXT:    lsrs r0, r0, #9
+; T1-NEXT:    movs r2, #127
+; T1-NEXT:    lsls r2, r2, #9
+; T1-NEXT:    ands r2, r0
+; T1-NEXT:    lsrs r0, r2, #9
 ; T1-NEXT:    bne .LBB5_2
 ; T1-NEXT:  @ %bb.1: @ %if.then
 ; T1-NEXT:    movs r0, #0

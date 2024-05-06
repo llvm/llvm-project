@@ -47,7 +47,8 @@ entry:
 define i32 @test5(i32 %a) {
 ; CHECK-LABEL: test5:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    rlwinm 3, 3, 24, 24, 31
+; CHECK-NEXT:    rlwinm 3, 3, 0, 16, 23
+; CHECK-NEXT:    srawi 3, 3, 8
 ; CHECK-NEXT:    blr
 entry:
   %tmp.1 = and i32 %a, 65280

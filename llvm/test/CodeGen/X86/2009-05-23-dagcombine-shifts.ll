@@ -19,9 +19,9 @@ target triple = "x86_64-unknown-linux-gnu"
 define i64 @foo(i64 %b) nounwind readnone {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movsbq %dil, %rax
-; CHECK-NEXT:    shlq $8, %rax
-; CHECK-NEXT:    incq %rax
+; CHECK-NEXT:    shlq $56, %rdi
+; CHECK-NEXT:    sarq $48, %rdi
+; CHECK-NEXT:    leaq 1(%rdi), %rax
 ; CHECK-NEXT:    retq
 entry:
 	%shl = shl i64 %b, 56		; <i64> [#uses=1]

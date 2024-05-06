@@ -493,10 +493,16 @@ entry:
 }
 
 define i32 @lsl_demand_topmask(i64 %x) {
-; CHECK-LABEL: lsl_demand_topmask:
-; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    ubfx r0, r0, #1, #28
-; CHECK-NEXT:    bx lr
+; CHECK-MVE-LABEL: lsl_demand_topmask:
+; CHECK-MVE:       @ %bb.0: @ %entry
+; CHECK-MVE-NEXT:    lsll r0, r1, #31
+; CHECK-MVE-NEXT:    bic r0, r1, #-268435456
+; CHECK-MVE-NEXT:    bx lr
+;
+; CHECK-NON-MVE-LABEL: lsl_demand_topmask:
+; CHECK-NON-MVE:       @ %bb.0: @ %entry
+; CHECK-NON-MVE-NEXT:    ubfx r0, r0, #1, #28
+; CHECK-NON-MVE-NEXT:    bx lr
 entry:
   %sh = shl i64 %x, 31
   %a = and i64 %sh, 1152921500311879680 ;0x0fffffff00000000

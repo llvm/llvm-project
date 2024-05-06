@@ -293,7 +293,7 @@ define amdgpu_kernel void @v2i15_arg(ptr addrspace(1) nocapture %out, <2 x i15> 
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_and_b32 s3, s2, 0x7fff
-; GCN-NEXT:    s_bfe_u32 s2, s2, 0x100010
+; GCN-NEXT:    s_lshr_b32 s2, s2, 16
 ; GCN-NEXT:    s_lshl_b32 s2, s2, 15
 ; GCN-NEXT:    s_or_b32 s2, s3, s2
 ; GCN-NEXT:    s_andn2_b32 s2, s2, -2.0
@@ -319,9 +319,9 @@ define amdgpu_kernel void @v3i15_arg(ptr addrspace(1) nocapture %out, <3 x i15> 
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_and_b32 s4, s3, 0xffff
 ; GCN-NEXT:    s_and_b32 s5, s2, 0x7fff
-; GCN-NEXT:    s_lshr_b32 s6, s2, 1
+; GCN-NEXT:    s_bfe_u32 s6, s2, 0xf0010
 ; GCN-NEXT:    s_lshl_b64 s[2:3], s[4:5], 30
-; GCN-NEXT:    s_and_b32 s4, s6, 0x3fff8000
+; GCN-NEXT:    s_lshl_b32 s4, s6, 15
 ; GCN-NEXT:    s_and_b32 s6, s3, 0x1fff
 ; GCN-NEXT:    s_or_b32 s4, s5, s4
 ; GCN-NEXT:    s_mov_b32 s5, 0

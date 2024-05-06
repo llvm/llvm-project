@@ -4,12 +4,12 @@
 define i8 @atomicrmw_uinc_wrap_i8(ptr %ptr, i8 %val) {
 ; LA64-LABEL: atomicrmw_uinc_wrap_i8:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    slli.d $a3, $a0, 3
+; LA64-NEXT:    andi $a2, $a0, 3
 ; LA64-NEXT:    bstrins.d $a0, $zero, 1, 0
-; LA64-NEXT:    andi $a2, $a3, 24
-; LA64-NEXT:    ori $a5, $zero, 255
+; LA64-NEXT:    slli.d $a2, $a2, 3
+; LA64-NEXT:    ori $a3, $zero, 255
 ; LA64-NEXT:    ld.w $a4, $a0, 0
-; LA64-NEXT:    sll.w $a3, $a5, $a3
+; LA64-NEXT:    sll.w $a3, $a3, $a2
 ; LA64-NEXT:    nor $a3, $a3, $zero
 ; LA64-NEXT:    andi $a1, $a1, 255
 ; LA64-NEXT:    .p2align 4, , 16
@@ -54,13 +54,13 @@ define i8 @atomicrmw_uinc_wrap_i8(ptr %ptr, i8 %val) {
 define i16 @atomicrmw_uinc_wrap_i16(ptr %ptr, i16 %val) {
 ; LA64-LABEL: atomicrmw_uinc_wrap_i16:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    slli.d $a3, $a0, 3
+; LA64-NEXT:    andi $a2, $a0, 3
 ; LA64-NEXT:    bstrins.d $a0, $zero, 1, 0
-; LA64-NEXT:    andi $a2, $a3, 24
-; LA64-NEXT:    lu12i.w $a4, 15
-; LA64-NEXT:    ori $a5, $a4, 4095
+; LA64-NEXT:    slli.d $a2, $a2, 3
+; LA64-NEXT:    lu12i.w $a3, 15
+; LA64-NEXT:    ori $a3, $a3, 4095
 ; LA64-NEXT:    ld.w $a4, $a0, 0
-; LA64-NEXT:    sll.w $a3, $a5, $a3
+; LA64-NEXT:    sll.w $a3, $a3, $a2
 ; LA64-NEXT:    nor $a3, $a3, $zero
 ; LA64-NEXT:    bstrpick.d $a1, $a1, 15, 0
 ; LA64-NEXT:    .p2align 4, , 16
@@ -180,12 +180,12 @@ define i64 @atomicrmw_uinc_wrap_i64(ptr %ptr, i64 %val) {
 define i8 @atomicrmw_udec_wrap_i8(ptr %ptr, i8 %val) {
 ; LA64-LABEL: atomicrmw_udec_wrap_i8:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    slli.d $a3, $a0, 3
+; LA64-NEXT:    andi $a2, $a0, 3
 ; LA64-NEXT:    bstrins.d $a0, $zero, 1, 0
-; LA64-NEXT:    andi $a2, $a3, 24
-; LA64-NEXT:    ori $a4, $zero, 255
+; LA64-NEXT:    slli.d $a2, $a2, 3
+; LA64-NEXT:    ori $a3, $zero, 255
 ; LA64-NEXT:    ld.w $a5, $a0, 0
-; LA64-NEXT:    sll.w $a3, $a4, $a3
+; LA64-NEXT:    sll.w $a3, $a3, $a2
 ; LA64-NEXT:    nor $a3, $a3, $zero
 ; LA64-NEXT:    andi $a4, $a1, 255
 ; LA64-NEXT:    .p2align 4, , 16
@@ -235,13 +235,13 @@ define i8 @atomicrmw_udec_wrap_i8(ptr %ptr, i8 %val) {
 define i16 @atomicrmw_udec_wrap_i16(ptr %ptr, i16 %val) {
 ; LA64-LABEL: atomicrmw_udec_wrap_i16:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    slli.d $a3, $a0, 3
+; LA64-NEXT:    andi $a2, $a0, 3
 ; LA64-NEXT:    bstrins.d $a0, $zero, 1, 0
-; LA64-NEXT:    andi $a2, $a3, 24
-; LA64-NEXT:    lu12i.w $a4, 15
-; LA64-NEXT:    ori $a4, $a4, 4095
+; LA64-NEXT:    slli.d $a2, $a2, 3
+; LA64-NEXT:    lu12i.w $a3, 15
+; LA64-NEXT:    ori $a3, $a3, 4095
 ; LA64-NEXT:    ld.w $a5, $a0, 0
-; LA64-NEXT:    sll.w $a3, $a4, $a3
+; LA64-NEXT:    sll.w $a3, $a3, $a2
 ; LA64-NEXT:    nor $a3, $a3, $zero
 ; LA64-NEXT:    bstrpick.d $a4, $a1, 15, 0
 ; LA64-NEXT:    .p2align 4, , 16

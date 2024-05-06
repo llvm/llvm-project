@@ -31,8 +31,8 @@ define i32 @and_nosignbit_shl(i32 %x, ptr %dst) {
 define i32 @or_signbit_shl(i32 %x, ptr %dst) {
 ; CHECK-LABEL: or_signbit_shl:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    lsl w8, w0, #8
-; CHECK-NEXT:    orr w0, w8, #0xff000000
+; CHECK-NEXT:    orr w8, w0, #0xffff0000
+; CHECK-NEXT:    lsl w0, w8, #8
 ; CHECK-NEXT:    str w0, [x1]
 ; CHECK-NEXT:    ret
   %t0 = or i32 %x, 4294901760 ; 0xFFFF0000
@@ -108,8 +108,8 @@ define i32 @add_nosignbit_shl(i32 %x, ptr %dst) {
 define i32 @and_signbit_lshr(i32 %x, ptr %dst) {
 ; CHECK-LABEL: and_signbit_lshr:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    lsr w8, w0, #8
-; CHECK-NEXT:    and w0, w8, #0xffff00
+; CHECK-NEXT:    and w8, w0, #0xffff0000
+; CHECK-NEXT:    lsr w0, w8, #8
 ; CHECK-NEXT:    str w0, [x1]
 ; CHECK-NEXT:    ret
   %t0 = and i32 %x, 4294901760 ; 0xFFFF0000
@@ -120,8 +120,8 @@ define i32 @and_signbit_lshr(i32 %x, ptr %dst) {
 define i32 @and_nosignbit_lshr(i32 %x, ptr %dst) {
 ; CHECK-LABEL: and_nosignbit_lshr:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    lsr w8, w0, #8
-; CHECK-NEXT:    and w0, w8, #0x7fff00
+; CHECK-NEXT:    and w8, w0, #0x7fff0000
+; CHECK-NEXT:    lsr w0, w8, #8
 ; CHECK-NEXT:    str w0, [x1]
 ; CHECK-NEXT:    ret
   %t0 = and i32 %x, 2147418112 ; 0x7FFF0000
@@ -211,8 +211,8 @@ define i32 @add_nosignbit_lshr(i32 %x, ptr %dst) {
 define i32 @and_signbit_ashr(i32 %x, ptr %dst) {
 ; CHECK-LABEL: and_signbit_ashr:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    asr w8, w0, #8
-; CHECK-NEXT:    and w0, w8, #0xffffff00
+; CHECK-NEXT:    and w8, w0, #0xffff0000
+; CHECK-NEXT:    asr w0, w8, #8
 ; CHECK-NEXT:    str w0, [x1]
 ; CHECK-NEXT:    ret
   %t0 = and i32 %x, 4294901760 ; 0xFFFF0000
@@ -223,8 +223,8 @@ define i32 @and_signbit_ashr(i32 %x, ptr %dst) {
 define i32 @and_nosignbit_ashr(i32 %x, ptr %dst) {
 ; CHECK-LABEL: and_nosignbit_ashr:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    lsr w8, w0, #8
-; CHECK-NEXT:    and w0, w8, #0x7fff00
+; CHECK-NEXT:    and w8, w0, #0x7fff0000
+; CHECK-NEXT:    asr w0, w8, #8
 ; CHECK-NEXT:    str w0, [x1]
 ; CHECK-NEXT:    ret
   %t0 = and i32 %x, 2147418112 ; 0x7FFF0000

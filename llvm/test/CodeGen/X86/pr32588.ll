@@ -8,10 +8,20 @@
 define void @fn1() {
 ; CHECK-LABEL: fn1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    cmpl $0, c(%rip)
-; CHECK-NEXT:    sete %al
-; CHECK-NEXT:    movl %eax, d(%rip)
+; CHECK-NEXT:    cmpl $0, b(%rip)
+; CHECK-NEXT:    setne %al
+; CHECK-NEXT:    cmpl $0, d(%rip)
+; CHECK-NEXT:    setne %cl
+; CHECK-NEXT:    andb %al, %cl
+; CHECK-NEXT:    movzbl %cl, %eax
+; CHECK-NEXT:    movl %eax, %ecx
+; CHECK-NEXT:    shll $31, %ecx
+; CHECK-NEXT:    shrl $31, %ecx
+; CHECK-NEXT:    subl %eax, %ecx
+; CHECK-NEXT:    sarl %ecx
+; CHECK-NEXT:    cmpl $1, c(%rip)
+; CHECK-NEXT:    adcl $0, %ecx
+; CHECK-NEXT:    movl %ecx, d(%rip)
 ; CHECK-NEXT:    retq
   %t0 = load i32, ptr @c, align 4
   %tobool1 = icmp eq i32 %t0, 0

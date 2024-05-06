@@ -6,7 +6,8 @@ define i32 @test1sext(i64 %A, i64 %B, ptr %P, ptr %P2) nounwind {
 ; CHECK-LABEL: test1sext:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    add r4, r3, r4
-; CHECK-NEXT:    extsw r3, r4
+; CHECK-NEXT:    sldi r3, r4, 32
+; CHECK-NEXT:    sradi r3, r3, 32
 ; CHECK-NEXT:    std r3, 0(r6)
 ; CHECK-NEXT:    add r3, r4, r4
 ; CHECK-NEXT:    stw r4, 0(r5)

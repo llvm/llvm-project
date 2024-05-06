@@ -37,9 +37,11 @@ define i1 @test_srem_even(i4 %X) nounwind {
 ; CHECK-NEXT:    asrs r1, r1, #28
 ; CHECK-NEXT:    movs r2, #3
 ; CHECK-NEXT:    muls r2, r1, r2
-; CHECK-NEXT:    lsrs r1, r2, #31
-; CHECK-NEXT:    lsrs r2, r2, #4
-; CHECK-NEXT:    adds r1, r2, r1
+; CHECK-NEXT:    lsrs r1, r2, #4
+; CHECK-NEXT:    movs r2, #8
+; CHECK-NEXT:    ands r2, r1
+; CHECK-NEXT:    lsrs r2, r2, #3
+; CHECK-NEXT:    adds r1, r1, r2
 ; CHECK-NEXT:    movs r2, #6
 ; CHECK-NEXT:    muls r2, r1, r2
 ; CHECK-NEXT:    subs r0, r0, r2
@@ -59,11 +61,14 @@ define i1 @test_srem_pow2_setne(i6 %X) nounwind {
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    lsls r1, r0, #26
 ; CHECK-NEXT:    asrs r1, r1, #26
-; CHECK-NEXT:    lsrs r1, r1, #30
-; CHECK-NEXT:    adds r1, r0, r1
-; CHECK-NEXT:    movs r2, #60
+; CHECK-NEXT:    lsrs r1, r1, #5
+; CHECK-NEXT:    movs r2, #48
 ; CHECK-NEXT:    ands r2, r1
-; CHECK-NEXT:    subs r1, r0, r2
+; CHECK-NEXT:    lsrs r1, r2, #4
+; CHECK-NEXT:    adds r1, r0, r1
+; CHECK-NEXT:    lsrs r1, r1, #2
+; CHECK-NEXT:    lsls r1, r1, #2
+; CHECK-NEXT:    subs r1, r0, r1
 ; CHECK-NEXT:    movs r0, #63
 ; CHECK-NEXT:    ands r0, r1
 ; CHECK-NEXT:    subs r1, r0, #1

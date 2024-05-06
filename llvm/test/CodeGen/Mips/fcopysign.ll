@@ -14,12 +14,11 @@ define double @func0(double %d0, double %d1) nounwind readnone {
 ; 32-LABEL: func0:
 ; 32:       # %bb.0: # %entry
 ; 32-NEXT:    mfc1 $1, $f15
-; 32-NEXT:    lui $2, 32768
-; 32-NEXT:    and $1, $1, $2
-; 32-NEXT:    lui $2, 32767
-; 32-NEXT:    ori $2, $2, 65535
-; 32-NEXT:    mfc1 $3, $f13
-; 32-NEXT:    and $2, $3, $2
+; 32-NEXT:    srl $1, $1, 31
+; 32-NEXT:    sll $1, $1, 31
+; 32-NEXT:    mfc1 $2, $f13
+; 32-NEXT:    sll $2, $2, 1
+; 32-NEXT:    srl $2, $2, 1
 ; 32-NEXT:    or $1, $2, $1
 ; 32-NEXT:    mfc1 $2, $f12
 ; 32-NEXT:    mtc1 $2, $f0
@@ -40,14 +39,13 @@ define double @func0(double %d0, double %d1) nounwind readnone {
 ;
 ; 64-LABEL: func0:
 ; 64:       # %bb.0: # %entry
-; 64-NEXT:    daddiu $1, $zero, 1
+; 64-NEXT:    dmfc1 $1, $f13
+; 64-NEXT:    dsrl $1, $1, 63
 ; 64-NEXT:    dsll $1, $1, 63
-; 64-NEXT:    dmfc1 $2, $f13
-; 64-NEXT:    and $2, $2, $1
-; 64-NEXT:    dmfc1 $3, $f12
-; 64-NEXT:    daddiu $1, $1, -1
-; 64-NEXT:    and $1, $3, $1
-; 64-NEXT:    or $1, $1, $2
+; 64-NEXT:    dmfc1 $2, $f12
+; 64-NEXT:    dsll $2, $2, 1
+; 64-NEXT:    dsrl $2, $2, 1
+; 64-NEXT:    or $1, $2, $1
 ; 64-NEXT:    jr $ra
 ; 64-NEXT:    dmtc1 $1, $f0
 ;
@@ -74,12 +72,11 @@ define float @func1(float %f0, float %f1) nounwind readnone {
 ; 32-LABEL: func1:
 ; 32:       # %bb.0: # %entry
 ; 32-NEXT:    mfc1 $1, $f14
-; 32-NEXT:    lui $2, 32768
-; 32-NEXT:    and $1, $1, $2
-; 32-NEXT:    lui $2, 32767
-; 32-NEXT:    ori $2, $2, 65535
-; 32-NEXT:    mfc1 $3, $f12
-; 32-NEXT:    and $2, $3, $2
+; 32-NEXT:    srl $1, $1, 31
+; 32-NEXT:    sll $1, $1, 31
+; 32-NEXT:    mfc1 $2, $f12
+; 32-NEXT:    sll $2, $2, 1
+; 32-NEXT:    srl $2, $2, 1
 ; 32-NEXT:    or $1, $2, $1
 ; 32-NEXT:    jr $ra
 ; 32-NEXT:    mtc1 $1, $f0
@@ -96,12 +93,11 @@ define float @func1(float %f0, float %f1) nounwind readnone {
 ; 64-LABEL: func1:
 ; 64:       # %bb.0: # %entry
 ; 64-NEXT:    mfc1 $1, $f13
-; 64-NEXT:    lui $2, 32768
-; 64-NEXT:    and $1, $1, $2
-; 64-NEXT:    lui $2, 32767
-; 64-NEXT:    ori $2, $2, 65535
-; 64-NEXT:    mfc1 $3, $f12
-; 64-NEXT:    and $2, $3, $2
+; 64-NEXT:    srl $1, $1, 31
+; 64-NEXT:    sll $1, $1, 31
+; 64-NEXT:    mfc1 $2, $f12
+; 64-NEXT:    sll $2, $2, 1
+; 64-NEXT:    srl $2, $2, 1
 ; 64-NEXT:    or $1, $2, $1
 ; 64-NEXT:    jr $ra
 ; 64-NEXT:    mtc1 $1, $f0

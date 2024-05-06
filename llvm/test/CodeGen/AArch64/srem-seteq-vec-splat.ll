@@ -185,9 +185,10 @@ define <4 x i32> @test_srem_pow2(<4 x i32> %X) nounwind {
 ; CHECK-NEXT:    cmlt v1.4s, v0.4s, #0
 ; CHECK-NEXT:    mov v2.16b, v0.16b
 ; CHECK-NEXT:    usra v2.4s, v1.4s, #28
+; CHECK-NEXT:    sshr v1.4s, v2.4s, #4
+; CHECK-NEXT:    shl v1.4s, v1.4s, #4
+; CHECK-NEXT:    sub v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    movi v1.4s, #1
-; CHECK-NEXT:    bic v2.4s, #15
-; CHECK-NEXT:    sub v0.4s, v0.4s, v2.4s
 ; CHECK-NEXT:    cmeq v0.4s, v0.4s, #0
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
@@ -201,11 +202,11 @@ define <4 x i32> @test_srem_pow2(<4 x i32> %X) nounwind {
 define <4 x i32> @test_srem_int_min(<4 x i32> %X) nounwind {
 ; CHECK-LABEL: test_srem_int_min:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmlt v2.4s, v0.4s, #0
-; CHECK-NEXT:    mov v3.16b, v0.16b
-; CHECK-NEXT:    movi v1.4s, #128, lsl #24
-; CHECK-NEXT:    usra v3.4s, v2.4s, #1
-; CHECK-NEXT:    and v1.16b, v3.16b, v1.16b
+; CHECK-NEXT:    cmlt v1.4s, v0.4s, #0
+; CHECK-NEXT:    mov v2.16b, v0.16b
+; CHECK-NEXT:    usra v2.4s, v1.4s, #1
+; CHECK-NEXT:    cmlt v1.4s, v2.4s, #0
+; CHECK-NEXT:    shl v1.4s, v1.4s, #31
 ; CHECK-NEXT:    add v0.4s, v1.4s, v0.4s
 ; CHECK-NEXT:    movi v1.4s, #1
 ; CHECK-NEXT:    cmeq v0.4s, v0.4s, #0

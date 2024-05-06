@@ -566,17 +566,17 @@ define amdgpu_kernel void @s_test_imin_sle_v4i8(ptr addrspace(1) %out, [8 x i32]
 ; CI-NEXT:    s_sext_i32_i8 s8, s3
 ; CI-NEXT:    s_bfe_i32 s9, s3, 0x80008
 ; CI-NEXT:    s_bfe_i32 s3, s3, 0x80010
-; CI-NEXT:    s_min_i32 s2, s2, s3
 ; CI-NEXT:    s_min_i32 s4, s4, s7
+; CI-NEXT:    s_min_i32 s2, s2, s3
+; CI-NEXT:    s_lshl_b32 s4, s4, 8
 ; CI-NEXT:    s_and_b32 s2, s2, 0xff
-; CI-NEXT:    s_lshl_b32 s4, s4, 24
-; CI-NEXT:    s_lshl_b32 s2, s2, 16
-; CI-NEXT:    s_or_b32 s2, s4, s2
+; CI-NEXT:    s_or_b32 s2, s2, s4
 ; CI-NEXT:    s_min_i32 s3, s6, s9
 ; CI-NEXT:    s_min_i32 s4, s5, s8
 ; CI-NEXT:    s_lshl_b32 s3, s3, 8
 ; CI-NEXT:    s_and_b32 s4, s4, 0xff
 ; CI-NEXT:    s_or_b32 s3, s4, s3
+; CI-NEXT:    s_lshl_b32 s2, s2, 16
 ; CI-NEXT:    s_and_b32 s3, s3, 0xffff
 ; CI-NEXT:    s_or_b32 s2, s3, s2
 ; CI-NEXT:    v_mov_b32_e32 v0, s0
@@ -827,13 +827,13 @@ define amdgpu_kernel void @s_test_imin_sle_v4i16(ptr addrspace(1) %out, <4 x i16
 ; EG:       ; %bb.0:
 ; EG-NEXT:    ALU 1, @28, KC0[], KC1[]
 ; EG-NEXT:    TEX 1 @12
-; EG-NEXT:    ALU 9, @30, KC0[], KC1[]
+; EG-NEXT:    ALU 11, @30, KC0[], KC1[]
 ; EG-NEXT:    TEX 1 @16
-; EG-NEXT:    ALU 10, @40, KC0[], KC1[]
+; EG-NEXT:    ALU 10, @42, KC0[], KC1[]
 ; EG-NEXT:    TEX 1 @20
-; EG-NEXT:    ALU 10, @51, KC0[], KC1[]
+; EG-NEXT:    ALU 11, @53, KC0[], KC1[]
 ; EG-NEXT:    TEX 1 @24
-; EG-NEXT:    ALU 11, @62, KC0[CB0:0-32], KC1[]
+; EG-NEXT:    ALU 11, @65, KC0[CB0:0-32], KC1[]
 ; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T6.XY, T5.X, 1
 ; EG-NEXT:    CF_END
 ; EG-NEXT:    PAD
@@ -857,13 +857,15 @@ define amdgpu_kernel void @s_test_imin_sle_v4i16(ptr addrspace(1) %out, <4 x i16
 ; EG-NEXT:     BFE_INT * T0.W, T7.X, 0.0, literal.x, BS:VEC_120/SCL_212
 ; EG-NEXT:    16(2.242078e-44), 0(0.000000e+00)
 ; EG-NEXT:     MIN_INT * T0.W, PV.Z, PV.W,
+; EG-NEXT:     AND_INT * T0.W, PV.W, literal.x,
+; EG-NEXT:    65535(9.183409e-41), 0(0.000000e+00)
 ; EG-NEXT:     LSHL T0.W, PV.W, literal.x,
 ; EG-NEXT:     AND_INT * T1.W, T0.Y, literal.y,
 ; EG-NEXT:    16(2.242078e-44), 65535(9.183409e-41)
 ; EG-NEXT:     OR_INT * T0.W, PS, PV.W,
 ; EG-NEXT:     MOV * T3.X, PV.W,
 ; EG-NEXT:     MOV * T0.Y, PV.X,
-; EG-NEXT:    ALU clause starting at 40:
+; EG-NEXT:    ALU clause starting at 42:
 ; EG-NEXT:     BFE_INT T0.Z, T6.X, 0.0, literal.x,
 ; EG-NEXT:     BFE_INT * T0.W, T7.X, 0.0, literal.x, BS:VEC_120/SCL_212
 ; EG-NEXT:    16(2.242078e-44), 0(0.000000e+00)
@@ -875,11 +877,12 @@ define amdgpu_kernel void @s_test_imin_sle_v4i16(ptr addrspace(1) %out, <4 x i16
 ; EG-NEXT:     OR_INT * T0.W, T1.W, PV.W,
 ; EG-NEXT:     MOV T3.X, PV.W,
 ; EG-NEXT:     MOV * T0.Y, T2.X,
-; EG-NEXT:    ALU clause starting at 51:
+; EG-NEXT:    ALU clause starting at 53:
 ; EG-NEXT:     BFE_INT T0.Z, T6.X, 0.0, literal.x,
 ; EG-NEXT:     BFE_INT * T0.W, T7.X, 0.0, literal.x, BS:VEC_120/SCL_212
 ; EG-NEXT:    16(2.242078e-44), 0(0.000000e+00)
-; EG-NEXT:     MIN_INT T0.W, PV.Z, PV.W,
+; EG-NEXT:     MIN_INT * T0.W, PV.Z, PV.W,
+; EG-NEXT:     AND_INT T0.W, PV.W, literal.x,
 ; EG-NEXT:     AND_INT * T1.W, T0.Y, literal.x,
 ; EG-NEXT:    65535(9.183409e-41), 0(0.000000e+00)
 ; EG-NEXT:     LSHL * T0.W, PV.W, literal.x,
@@ -887,7 +890,7 @@ define amdgpu_kernel void @s_test_imin_sle_v4i16(ptr addrspace(1) %out, <4 x i16
 ; EG-NEXT:     OR_INT * T0.W, T1.W, PV.W,
 ; EG-NEXT:     MOV * T2.X, PV.W,
 ; EG-NEXT:     MOV * T0.Y, PV.X,
-; EG-NEXT:    ALU clause starting at 62:
+; EG-NEXT:    ALU clause starting at 65:
 ; EG-NEXT:     BFE_INT T0.Z, T6.X, 0.0, literal.x,
 ; EG-NEXT:     BFE_INT * T0.W, T5.X, 0.0, literal.x, BS:VEC_120/SCL_212
 ; EG-NEXT:    16(2.242078e-44), 0(0.000000e+00)
@@ -3353,7 +3356,7 @@ define amdgpu_kernel void @simplify_demanded_bits_test_min_slt_i16(ptr addrspace
 ; EG:       ; %bb.0:
 ; EG-NEXT:    ALU 0, @10, KC0[], KC1[]
 ; EG-NEXT:    TEX 1 @6
-; EG-NEXT:    ALU 5, @11, KC0[CB0:0-32], KC1[]
+; EG-NEXT:    ALU 8, @11, KC0[CB0:0-32], KC1[]
 ; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T0.X, T1.X, 1
 ; EG-NEXT:    CF_END
 ; EG-NEXT:    PAD
@@ -3366,9 +3369,12 @@ define amdgpu_kernel void @simplify_demanded_bits_test_min_slt_i16(ptr addrspace
 ; EG-NEXT:     BFE_INT T0.Z, T1.X, 0.0, literal.x,
 ; EG-NEXT:     BFE_INT * T0.W, T0.X, 0.0, literal.x, BS:VEC_120/SCL_212
 ; EG-NEXT:    16(2.242078e-44), 0(0.000000e+00)
-; EG-NEXT:     MIN_INT T0.X, PV.Z, PV.W,
-; EG-NEXT:     LSHR * T1.X, KC0[2].Y, literal.x,
-; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
+; EG-NEXT:     MIN_INT * T0.W, PV.Z, PV.W,
+; EG-NEXT:     LSHL * T0.W, PV.W, literal.x,
+; EG-NEXT:    16(2.242078e-44), 0(0.000000e+00)
+; EG-NEXT:     ASHR T0.X, PV.W, literal.x,
+; EG-NEXT:     LSHR * T1.X, KC0[2].Y, literal.y,
+; EG-NEXT:    16(2.242078e-44), 2(2.802597e-45)
 ;
 ; CI-LABEL: simplify_demanded_bits_test_min_slt_i16:
 ; CI:       ; %bb.0:
@@ -3379,6 +3385,7 @@ define amdgpu_kernel void @simplify_demanded_bits_test_min_slt_i16(ptr addrspace
 ; CI-NEXT:    s_sext_i32_i16 s2, s2
 ; CI-NEXT:    s_sext_i32_i16 s3, s3
 ; CI-NEXT:    s_min_i32 s2, s2, s3
+; CI-NEXT:    s_bfe_i32 s2, s2, 0x100000
 ; CI-NEXT:    v_mov_b32_e32 v0, s0
 ; CI-NEXT:    v_mov_b32_e32 v1, s1
 ; CI-NEXT:    v_mov_b32_e32 v2, s2
@@ -3394,6 +3401,7 @@ define amdgpu_kernel void @simplify_demanded_bits_test_min_slt_i16(ptr addrspace
 ; VI-NEXT:    s_sext_i32_i16 s2, s2
 ; VI-NEXT:    s_sext_i32_i16 s3, s3
 ; VI-NEXT:    s_min_i32 s2, s2, s3
+; VI-NEXT:    s_bfe_i32 s2, s2, 0x100000
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
 ; VI-NEXT:    v_mov_b32_e32 v1, s1
 ; VI-NEXT:    v_mov_b32_e32 v2, s2
@@ -3410,6 +3418,7 @@ define amdgpu_kernel void @simplify_demanded_bits_test_min_slt_i16(ptr addrspace
 ; GFX9-NEXT:    s_sext_i32_i16 s2, s2
 ; GFX9-NEXT:    s_sext_i32_i16 s3, s3
 ; GFX9-NEXT:    s_min_i32 s2, s2, s3
+; GFX9-NEXT:    s_bfe_i32 s2, s2, 0x100000
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX9-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX9-NEXT:    s_endpgm
@@ -3425,6 +3434,7 @@ define amdgpu_kernel void @simplify_demanded_bits_test_min_slt_i16(ptr addrspace
 ; GFX10-NEXT:    s_sext_i32_i16 s2, s2
 ; GFX10-NEXT:    s_sext_i32_i16 s3, s3
 ; GFX10-NEXT:    s_min_i32 s2, s2, s3
+; GFX10-NEXT:    s_bfe_i32 s2, s2, 0x100000
 ; GFX10-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX10-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX10-NEXT:    s_endpgm
@@ -3441,6 +3451,8 @@ define amdgpu_kernel void @simplify_demanded_bits_test_min_slt_i16(ptr addrspace
 ; GFX11-NEXT:    s_sext_i32_i16 s3, s3
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_min_i32 s2, s2, s3
+; GFX11-NEXT:    s_bfe_i32 s2, s2, 0x100000
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11-NEXT:    s_nop 0
@@ -4011,9 +4023,9 @@ define amdgpu_kernel void @v_test_imin_sle_v2i16(ptr addrspace(1) %out, ptr addr
 ; EG:       ; %bb.0:
 ; EG-NEXT:    ALU 2, @12, KC0[CB0:0-32], KC1[]
 ; EG-NEXT:    TEX 0 @8
-; EG-NEXT:    ALU 0, @15, KC0[CB0:0-32], KC1[]
+; EG-NEXT:    ALU 2, @15, KC0[CB0:0-32], KC1[]
 ; EG-NEXT:    TEX 0 @10
-; EG-NEXT:    ALU 16, @16, KC0[CB0:0-32], KC1[]
+; EG-NEXT:    ALU 19, @18, KC0[CB0:0-32], KC1[]
 ; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T0.X, T7.X, 1
 ; EG-NEXT:    CF_END
 ; EG-NEXT:    PAD
@@ -4026,15 +4038,20 @@ define amdgpu_kernel void @v_test_imin_sle_v2i16(ptr addrspace(1) %out, ptr addr
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
 ; EG-NEXT:     ADD_INT * T0.X, KC0[2].Z, PV.W,
 ; EG-NEXT:    ALU clause starting at 15:
+; EG-NEXT:     MOV * T3.X, T0.X,
+; EG-NEXT:     MOV T0.X, PV.X,
 ; EG-NEXT:     ADD_INT * T7.X, KC0[2].W, T0.W,
-; EG-NEXT:    ALU clause starting at 16:
-; EG-NEXT:     LSHR T1.W, T0.X, literal.x,
-; EG-NEXT:     LSHR * T2.W, T7.X, literal.x,
+; EG-NEXT:    ALU clause starting at 18:
+; EG-NEXT:     MOV * T2.X, T7.X,
+; EG-NEXT:     MOV T0.Y, PV.X,
+; EG-NEXT:     LSHR * T1.W, T0.X, literal.x,
 ; EG-NEXT:    16(2.242078e-44), 0(0.000000e+00)
-; EG-NEXT:     BFE_INT T8.X, PS, 0.0, literal.x,
-; EG-NEXT:     BFE_INT T0.Y, PV.W, 0.0, literal.x,
-; EG-NEXT:     BFE_INT T0.Z, T7.X, 0.0, literal.x,
-; EG-NEXT:     BFE_INT * T1.W, T0.X, 0.0, literal.x, BS:VEC_120/SCL_212
+; EG-NEXT:     LSHR * T2.W, PV.Y, literal.x,
+; EG-NEXT:    16(2.242078e-44), 0(0.000000e+00)
+; EG-NEXT:     BFE_INT T7.X, PV.W, 0.0, literal.x,
+; EG-NEXT:     BFE_INT T1.Y, T1.W, 0.0, literal.x,
+; EG-NEXT:     BFE_INT T0.Z, T0.Y, 0.0, literal.x,
+; EG-NEXT:     BFE_INT * T1.W, T0.X, 0.0, literal.x,
 ; EG-NEXT:    16(2.242078e-44), 0(0.000000e+00)
 ; EG-NEXT:     MIN_INT T1.W, PV.W, PV.Z,
 ; EG-NEXT:     MIN_INT * T2.W, PV.Y, PV.X,
@@ -4164,9 +4181,9 @@ define amdgpu_kernel void @v_test_imin_ule_v2i16(ptr addrspace(1) %out, ptr addr
 ; EG:       ; %bb.0:
 ; EG-NEXT:    ALU 2, @12, KC0[CB0:0-32], KC1[]
 ; EG-NEXT:    TEX 0 @8
-; EG-NEXT:    ALU 0, @15, KC0[CB0:0-32], KC1[]
+; EG-NEXT:    ALU 2, @15, KC0[CB0:0-32], KC1[]
 ; EG-NEXT:    TEX 0 @10
-; EG-NEXT:    ALU 13, @16, KC0[CB0:0-32], KC1[]
+; EG-NEXT:    ALU 15, @18, KC0[CB0:0-32], KC1[]
 ; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T0.X, T7.X, 1
 ; EG-NEXT:    CF_END
 ; EG-NEXT:    PAD
@@ -4177,15 +4194,19 @@ define amdgpu_kernel void @v_test_imin_ule_v2i16(ptr addrspace(1) %out, ptr addr
 ; EG-NEXT:    ALU clause starting at 12:
 ; EG-NEXT:     LSHL * T0.W, T0.X, literal.x,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
-; EG-NEXT:     ADD_INT * T0.X, KC0[2].W, PV.W,
+; EG-NEXT:     ADD_INT * T0.X, KC0[2].Z, PV.W,
 ; EG-NEXT:    ALU clause starting at 15:
-; EG-NEXT:     ADD_INT * T7.X, KC0[2].Z, T0.W,
-; EG-NEXT:    ALU clause starting at 16:
-; EG-NEXT:     LSHR T1.W, T0.X, literal.x,
-; EG-NEXT:     LSHR * T2.W, T7.X, literal.x,
+; EG-NEXT:     MOV * T3.X, T0.X,
+; EG-NEXT:     MOV T0.X, PV.X,
+; EG-NEXT:     ADD_INT * T7.X, KC0[2].W, T0.W,
+; EG-NEXT:    ALU clause starting at 18:
+; EG-NEXT:     MOV * T2.X, T7.X,
+; EG-NEXT:     MOV * T0.Y, PV.X,
+; EG-NEXT:     LSHR T1.W, PV.Y, literal.x,
+; EG-NEXT:     LSHR * T2.W, T0.X, literal.x,
 ; EG-NEXT:    16(2.242078e-44), 0(0.000000e+00)
-; EG-NEXT:     AND_INT T0.Z, T0.X, literal.x,
-; EG-NEXT:     AND_INT T3.W, T7.X, literal.x, BS:VEC_120/SCL_212
+; EG-NEXT:     AND_INT T0.Z, T0.Y, literal.x,
+; EG-NEXT:     AND_INT T3.W, T0.X, literal.x,
 ; EG-NEXT:     MIN_UINT * T1.W, PS, PV.W,
 ; EG-NEXT:    65535(9.183409e-41), 0(0.000000e+00)
 ; EG-NEXT:     LSHL T1.W, PS, literal.x,

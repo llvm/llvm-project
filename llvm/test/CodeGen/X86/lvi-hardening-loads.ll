@@ -31,7 +31,8 @@ define dso_local i32 @test(ptr %secret, i32 %secret_size) #0 {
 ; X64-ALL-NEXT:    movl %eax, %ecx
 ; X64-ALL-NEXT:    shrl $31, %ecx
 ; X64-ALL-NEXT:    addl %eax, %ecx
-; X64-ALL-NEXT:    andl $-2, %ecx
+; X64-ALL-NEXT:    sarl %ecx
+; X64-ALL-NEXT:    addl %ecx, %ecx
 ; X64-ALL-NEXT:    cmpl %ecx, %eax
 ; X64-ALL-NEXT:    jne .LBB0_4
 ; X64-ALL-NEXT:  # %bb.3: # %if.then

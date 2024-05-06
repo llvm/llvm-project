@@ -120,20 +120,22 @@ define i16 @reverse_cmp_v16i1(<16 x i8> %a0, <16 x i8> %a1) {
 ; SSE2-NEXT:    rolw $8, %ax
 ; SSE2-NEXT:    movl %eax, %ecx
 ; SSE2-NEXT:    andl $3855, %ecx # imm = 0xF0F
-; SSE2-NEXT:    shll $4, %ecx
+; SSE2-NEXT:    shlw $4, %cx
 ; SSE2-NEXT:    shrl $4, %eax
 ; SSE2-NEXT:    andl $3855, %eax # imm = 0xF0F
 ; SSE2-NEXT:    orl %ecx, %eax
 ; SSE2-NEXT:    movl %eax, %ecx
 ; SSE2-NEXT:    andl $13107, %ecx # imm = 0x3333
+; SSE2-NEXT:    shlw $2, %cx
 ; SSE2-NEXT:    shrl $2, %eax
 ; SSE2-NEXT:    andl $13107, %eax # imm = 0x3333
-; SSE2-NEXT:    leal (%rax,%rcx,4), %eax
+; SSE2-NEXT:    orl %ecx, %eax
 ; SSE2-NEXT:    movl %eax, %ecx
 ; SSE2-NEXT:    andl $21845, %ecx # imm = 0x5555
+; SSE2-NEXT:    addw %cx, %cx
 ; SSE2-NEXT:    shrl %eax
 ; SSE2-NEXT:    andl $21845, %eax # imm = 0x5555
-; SSE2-NEXT:    leal (%rax,%rcx,2), %eax
+; SSE2-NEXT:    orl %ecx, %eax
 ; SSE2-NEXT:    # kill: def $ax killed $ax killed $eax
 ; SSE2-NEXT:    retq
 ;

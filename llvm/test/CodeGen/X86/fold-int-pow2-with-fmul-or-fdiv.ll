@@ -1336,8 +1336,9 @@ define float @fdiv_pow_shl_cnt(i64 %cnt_in) nounwind {
 ; CHECK-SSE-LABEL: fdiv_pow_shl_cnt:
 ; CHECK-SSE:       # %bb.0:
 ; CHECK-SSE-NEXT:    andl $31, %edi
+; CHECK-SSE-NEXT:    addl $3, %edi
 ; CHECK-SSE-NEXT:    shll $23, %edi
-; CHECK-SSE-NEXT:    movl $-1115684864, %eax # imm = 0xBD800000
+; CHECK-SSE-NEXT:    movl $-1090519040, %eax # imm = 0xBF000000
 ; CHECK-SSE-NEXT:    subl %edi, %eax
 ; CHECK-SSE-NEXT:    movd %eax, %xmm0
 ; CHECK-SSE-NEXT:    retq
@@ -1345,8 +1346,9 @@ define float @fdiv_pow_shl_cnt(i64 %cnt_in) nounwind {
 ; CHECK-AVX-LABEL: fdiv_pow_shl_cnt:
 ; CHECK-AVX:       # %bb.0:
 ; CHECK-AVX-NEXT:    andl $31, %edi
+; CHECK-AVX-NEXT:    addl $3, %edi
 ; CHECK-AVX-NEXT:    shll $23, %edi
-; CHECK-AVX-NEXT:    movl $-1115684864, %eax # imm = 0xBD800000
+; CHECK-AVX-NEXT:    movl $-1090519040, %eax # imm = 0xBF000000
 ; CHECK-AVX-NEXT:    subl %edi, %eax
 ; CHECK-AVX-NEXT:    vmovd %eax, %xmm0
 ; CHECK-AVX-NEXT:    retq

@@ -591,9 +591,12 @@ define signext i32 @rotr_i32_fshr(i32 signext %a) nounwind {
 ;
 ; LA64-LABEL: rotr_i32_fshr:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    slli.d $a1, $a0, 20
-; LA64-NEXT:    bstrpick.d $a0, $a0, 31, 12
-; LA64-NEXT:    or $a0, $a0, $a1
+; LA64-NEXT:    lu12i.w $a1, -1
+; LA64-NEXT:    lu32i.d $a1, 0
+; LA64-NEXT:    and $a1, $a0, $a1
+; LA64-NEXT:    srli.d $a1, $a1, 12
+; LA64-NEXT:    slli.d $a0, $a0, 20
+; LA64-NEXT:    or $a0, $a1, $a0
 ; LA64-NEXT:    addi.w $a0, $a0, 0
 ; LA64-NEXT:    ret
   %or = tail call i32 @llvm.fshr.i32(i32 %a, i32 %a, i32 12)

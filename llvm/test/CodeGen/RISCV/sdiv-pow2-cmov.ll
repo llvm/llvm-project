@@ -93,7 +93,8 @@ define signext i32 @srem2_32(i32 signext %0) {
 ; NOSFB:       # %bb.0:
 ; NOSFB-NEXT:    srliw a1, a0, 31
 ; NOSFB-NEXT:    add a1, a1, a0
-; NOSFB-NEXT:    andi a1, a1, -2
+; NOSFB-NEXT:    srli a1, a1, 1
+; NOSFB-NEXT:    slli a1, a1, 1
 ; NOSFB-NEXT:    subw a0, a0, a1
 ; NOSFB-NEXT:    ret
 ;
@@ -104,7 +105,8 @@ define signext i32 @srem2_32(i32 signext %0) {
 ; SFB-NEXT:  # %bb.1:
 ; SFB-NEXT:    addi a1, a0, 1
 ; SFB-NEXT:  .LBB4_2:
-; SFB-NEXT:    andi a1, a1, -2
+; SFB-NEXT:    srli a1, a1, 1
+; SFB-NEXT:    slli a1, a1, 1
 ; SFB-NEXT:    subw a0, a0, a1
 ; SFB-NEXT:    ret
   %res = srem i32 %0, 2
@@ -116,7 +118,8 @@ define signext i32 @sremneg2_32(i32 signext %0) {
 ; NOSFB:       # %bb.0:
 ; NOSFB-NEXT:    srliw a1, a0, 31
 ; NOSFB-NEXT:    add a1, a1, a0
-; NOSFB-NEXT:    andi a1, a1, -2
+; NOSFB-NEXT:    srli a1, a1, 1
+; NOSFB-NEXT:    slli a1, a1, 1
 ; NOSFB-NEXT:    subw a0, a0, a1
 ; NOSFB-NEXT:    ret
 ;
@@ -127,7 +130,8 @@ define signext i32 @sremneg2_32(i32 signext %0) {
 ; SFB-NEXT:  # %bb.1:
 ; SFB-NEXT:    addi a1, a0, 1
 ; SFB-NEXT:  .LBB5_2:
-; SFB-NEXT:    andi a1, a1, -2
+; SFB-NEXT:    srli a1, a1, 1
+; SFB-NEXT:    slli a1, a1, 1
 ; SFB-NEXT:    subw a0, a0, a1
 ; SFB-NEXT:    ret
   %res = srem i32 %0, -2
@@ -139,7 +143,8 @@ define i64 @srem2_64(i64 %0) {
 ; NOSFB:       # %bb.0:
 ; NOSFB-NEXT:    srli a1, a0, 63
 ; NOSFB-NEXT:    add a1, a1, a0
-; NOSFB-NEXT:    andi a1, a1, -2
+; NOSFB-NEXT:    srai a1, a1, 1
+; NOSFB-NEXT:    slli a1, a1, 1
 ; NOSFB-NEXT:    sub a0, a0, a1
 ; NOSFB-NEXT:    ret
 ;
@@ -150,7 +155,8 @@ define i64 @srem2_64(i64 %0) {
 ; SFB-NEXT:  # %bb.1:
 ; SFB-NEXT:    addi a1, a0, 1
 ; SFB-NEXT:  .LBB6_2:
-; SFB-NEXT:    andi a1, a1, -2
+; SFB-NEXT:    srai a1, a1, 1
+; SFB-NEXT:    slli a1, a1, 1
 ; SFB-NEXT:    sub a0, a0, a1
 ; SFB-NEXT:    ret
   %res = srem i64 %0, 2
@@ -162,7 +168,8 @@ define i64 @sremneg2_64(i64 %0) {
 ; NOSFB:       # %bb.0:
 ; NOSFB-NEXT:    srli a1, a0, 63
 ; NOSFB-NEXT:    add a1, a1, a0
-; NOSFB-NEXT:    andi a1, a1, -2
+; NOSFB-NEXT:    srai a1, a1, 1
+; NOSFB-NEXT:    slli a1, a1, 1
 ; NOSFB-NEXT:    sub a0, a0, a1
 ; NOSFB-NEXT:    ret
 ;
@@ -173,7 +180,8 @@ define i64 @sremneg2_64(i64 %0) {
 ; SFB-NEXT:  # %bb.1:
 ; SFB-NEXT:    addi a1, a0, 1
 ; SFB-NEXT:  .LBB7_2:
-; SFB-NEXT:    andi a1, a1, -2
+; SFB-NEXT:    srai a1, a1, 1
+; SFB-NEXT:    slli a1, a1, 1
 ; SFB-NEXT:    sub a0, a0, a1
 ; SFB-NEXT:    ret
   %res = srem i64 %0, -2
@@ -274,7 +282,8 @@ define signext i32 @srem8_32(i32 signext %0) {
 ; NOSFB-NEXT:    slli a1, a0, 1
 ; NOSFB-NEXT:    srli a1, a1, 61
 ; NOSFB-NEXT:    add a1, a1, a0
-; NOSFB-NEXT:    andi a1, a1, -8
+; NOSFB-NEXT:    srli a1, a1, 3
+; NOSFB-NEXT:    slli a1, a1, 3
 ; NOSFB-NEXT:    subw a0, a0, a1
 ; NOSFB-NEXT:    ret
 ;
@@ -285,7 +294,8 @@ define signext i32 @srem8_32(i32 signext %0) {
 ; SFB-NEXT:  # %bb.1:
 ; SFB-NEXT:    addi a1, a0, 7
 ; SFB-NEXT:  .LBB12_2:
-; SFB-NEXT:    andi a1, a1, -8
+; SFB-NEXT:    srli a1, a1, 3
+; SFB-NEXT:    slli a1, a1, 3
 ; SFB-NEXT:    subw a0, a0, a1
 ; SFB-NEXT:    ret
   %res = srem i32 %0, 8
@@ -298,7 +308,8 @@ define signext i32 @sremneg8_32(i32 signext %0) {
 ; NOSFB-NEXT:    slli a1, a0, 1
 ; NOSFB-NEXT:    srli a1, a1, 61
 ; NOSFB-NEXT:    add a1, a1, a0
-; NOSFB-NEXT:    andi a1, a1, -8
+; NOSFB-NEXT:    srli a1, a1, 3
+; NOSFB-NEXT:    slli a1, a1, 3
 ; NOSFB-NEXT:    subw a0, a0, a1
 ; NOSFB-NEXT:    ret
 ;
@@ -309,7 +320,8 @@ define signext i32 @sremneg8_32(i32 signext %0) {
 ; SFB-NEXT:  # %bb.1:
 ; SFB-NEXT:    addi a1, a0, 7
 ; SFB-NEXT:  .LBB13_2:
-; SFB-NEXT:    andi a1, a1, -8
+; SFB-NEXT:    srli a1, a1, 3
+; SFB-NEXT:    slli a1, a1, 3
 ; SFB-NEXT:    subw a0, a0, a1
 ; SFB-NEXT:    ret
   %res = srem i32 %0, -8
@@ -322,7 +334,8 @@ define i64 @srem8_64(i64 %0) {
 ; NOSFB-NEXT:    srai a1, a0, 63
 ; NOSFB-NEXT:    srli a1, a1, 61
 ; NOSFB-NEXT:    add a1, a1, a0
-; NOSFB-NEXT:    andi a1, a1, -8
+; NOSFB-NEXT:    srai a1, a1, 3
+; NOSFB-NEXT:    slli a1, a1, 3
 ; NOSFB-NEXT:    sub a0, a0, a1
 ; NOSFB-NEXT:    ret
 ;
@@ -333,7 +346,8 @@ define i64 @srem8_64(i64 %0) {
 ; SFB-NEXT:  # %bb.1:
 ; SFB-NEXT:    addi a1, a0, 7
 ; SFB-NEXT:  .LBB14_2:
-; SFB-NEXT:    andi a1, a1, -8
+; SFB-NEXT:    srai a1, a1, 3
+; SFB-NEXT:    slli a1, a1, 3
 ; SFB-NEXT:    sub a0, a0, a1
 ; SFB-NEXT:    ret
   %res = srem i64 %0, 8
@@ -346,7 +360,8 @@ define i64 @sremneg8_64(i64 %0) {
 ; NOSFB-NEXT:    srai a1, a0, 63
 ; NOSFB-NEXT:    srli a1, a1, 61
 ; NOSFB-NEXT:    add a1, a1, a0
-; NOSFB-NEXT:    andi a1, a1, -8
+; NOSFB-NEXT:    srai a1, a1, 3
+; NOSFB-NEXT:    slli a1, a1, 3
 ; NOSFB-NEXT:    sub a0, a0, a1
 ; NOSFB-NEXT:    ret
 ;
@@ -357,7 +372,8 @@ define i64 @sremneg8_64(i64 %0) {
 ; SFB-NEXT:  # %bb.1:
 ; SFB-NEXT:    addi a1, a0, 7
 ; SFB-NEXT:  .LBB15_2:
-; SFB-NEXT:    andi a1, a1, -8
+; SFB-NEXT:    srai a1, a1, 3
+; SFB-NEXT:    slli a1, a1, 3
 ; SFB-NEXT:    sub a0, a0, a1
 ; SFB-NEXT:    ret
   %res = srem i64 %0, -8

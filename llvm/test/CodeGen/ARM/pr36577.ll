@@ -12,21 +12,22 @@ define dso_local arm_aapcscc ptr @pr36577() {
 ; CHECK-LABEL: pr36577:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    movw r0, :lower16:a
-; CHECK-NEXT:    mvn r1, #7
+; CHECK-NEXT:    mvn r1, #1
 ; CHECK-NEXT:    movt r0, :upper16:a
 ; CHECK-NEXT:    ldrh r0, [r0]
 ; CHECK-NEXT:    mvn r0, r0, lsr #7
-; CHECK-NEXT:    orr r0, r1, r0, lsl #2
+; CHECK-NEXT:    orr r0, r0, r1
+; CHECK-NEXT:    lsl r0, r0, #2
 ; CHECK-NEXT:    bx lr
 ;
 ; CHECK-T2-LABEL: pr36577:
 ; CHECK-T2:       @ %bb.0: @ %entry
 ; CHECK-T2-NEXT:    movw r0, :lower16:a
-; CHECK-T2-NEXT:    mvn r1, #7
+; CHECK-T2-NEXT:    mvn r1, #1
 ; CHECK-T2-NEXT:    movt r0, :upper16:a
 ; CHECK-T2-NEXT:    ldrh r0, [r0]
-; CHECK-T2-NEXT:    mvn.w r0, r0, lsr #7
-; CHECK-T2-NEXT:    orr.w r0, r1, r0, lsl #2
+; CHECK-T2-NEXT:    orn r0, r1, r0, lsr #7
+; CHECK-T2-NEXT:    lsls r0, r0, #2
 ; CHECK-T2-NEXT:    bx lr
 entry:
   %0 = load i16, ptr @a, align 2

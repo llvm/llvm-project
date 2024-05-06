@@ -29,6 +29,10 @@ define i32 @private_load_2xi16_align2(ptr addrspace(5) %p) #0 {
 ; GFX7-UNALIGNED-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-UNALIGNED-NEXT:    buffer_load_dword v0, v0, s[0:3], 0 offen
 ; GFX7-UNALIGNED-NEXT:    s_waitcnt vmcnt(0)
+; GFX7-UNALIGNED-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
+; GFX7-UNALIGNED-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GFX7-UNALIGNED-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
+; GFX7-UNALIGNED-NEXT:    v_or_b32_e32 v0, v0, v1
 ; GFX7-UNALIGNED-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: private_load_2xi16_align2:
@@ -225,6 +229,10 @@ define i32 @private_load_2xi16_align1(ptr addrspace(5) %p) #0 {
 ; GFX7-UNALIGNED-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-UNALIGNED-NEXT:    buffer_load_dword v0, v0, s[0:3], 0 offen
 ; GFX7-UNALIGNED-NEXT:    s_waitcnt vmcnt(0)
+; GFX7-UNALIGNED-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
+; GFX7-UNALIGNED-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GFX7-UNALIGNED-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
+; GFX7-UNALIGNED-NEXT:    v_or_b32_e32 v0, v0, v1
 ; GFX7-UNALIGNED-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: private_load_2xi16_align1:

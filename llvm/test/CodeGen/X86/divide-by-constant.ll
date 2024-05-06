@@ -553,11 +553,11 @@ define i64 @urem_i64_17(i64 %x) nounwind {
 ; X86-NEXT:    movl $-252645135, %edx # imm = 0xF0F0F0F1
 ; X86-NEXT:    movl %ecx, %eax
 ; X86-NEXT:    mull %edx
-; X86-NEXT:    movl %edx, %eax
-; X86-NEXT:    andl $-16, %eax
 ; X86-NEXT:    shrl $4, %edx
-; X86-NEXT:    addl %eax, %edx
-; X86-NEXT:    subl %edx, %ecx
+; X86-NEXT:    movl %edx, %eax
+; X86-NEXT:    shll $4, %eax
+; X86-NEXT:    addl %edx, %eax
+; X86-NEXT:    subl %eax, %ecx
 ; X86-NEXT:    movl %ecx, %eax
 ; X86-NEXT:    xorl %edx, %edx
 ; X86-NEXT:    retl
@@ -567,11 +567,11 @@ define i64 @urem_i64_17(i64 %x) nounwind {
 ; X64-NEXT:    movabsq $-1085102592571150095, %rcx # imm = 0xF0F0F0F0F0F0F0F1
 ; X64-NEXT:    movq %rdi, %rax
 ; X64-NEXT:    mulq %rcx
-; X64-NEXT:    movq %rdx, %rax
-; X64-NEXT:    andq $-16, %rax
 ; X64-NEXT:    shrq $4, %rdx
-; X64-NEXT:    addq %rax, %rdx
-; X64-NEXT:    subq %rdx, %rdi
+; X64-NEXT:    movq %rdx, %rax
+; X64-NEXT:    shlq $4, %rax
+; X64-NEXT:    addq %rdx, %rax
+; X64-NEXT:    subq %rax, %rdi
 ; X64-NEXT:    movq %rdi, %rax
 ; X64-NEXT:    retq
 entry:
@@ -626,11 +626,11 @@ define i64 @urem_i64_257(i64 %x) nounwind {
 ; X86-NEXT:    movl $-16711935, %edx # imm = 0xFF00FF01
 ; X86-NEXT:    movl %ecx, %eax
 ; X86-NEXT:    mull %edx
-; X86-NEXT:    movl %edx, %eax
-; X86-NEXT:    andl $-256, %eax
 ; X86-NEXT:    shrl $8, %edx
-; X86-NEXT:    addl %eax, %edx
-; X86-NEXT:    subl %edx, %ecx
+; X86-NEXT:    movl %edx, %eax
+; X86-NEXT:    shll $8, %eax
+; X86-NEXT:    addl %edx, %eax
+; X86-NEXT:    subl %eax, %ecx
 ; X86-NEXT:    movl %ecx, %eax
 ; X86-NEXT:    xorl %edx, %edx
 ; X86-NEXT:    retl
@@ -640,11 +640,11 @@ define i64 @urem_i64_257(i64 %x) nounwind {
 ; X64-NEXT:    movabsq $-71777214294589695, %rcx # imm = 0xFF00FF00FF00FF01
 ; X64-NEXT:    movq %rdi, %rax
 ; X64-NEXT:    mulq %rcx
-; X64-NEXT:    movq %rdx, %rax
-; X64-NEXT:    andq $-256, %rax
 ; X64-NEXT:    shrq $8, %rdx
-; X64-NEXT:    addq %rax, %rdx
-; X64-NEXT:    subq %rdx, %rdi
+; X64-NEXT:    movq %rdx, %rax
+; X64-NEXT:    shlq $8, %rax
+; X64-NEXT:    addq %rdx, %rax
+; X64-NEXT:    subq %rax, %rdi
 ; X64-NEXT:    movq %rdi, %rax
 ; X64-NEXT:    retq
 entry:
@@ -712,11 +712,11 @@ define i64 @urem_i64_65537(i64 %x) nounwind {
 ; X64-NEXT:    movabsq $-281470681808895, %rcx # imm = 0xFFFF0000FFFF0001
 ; X64-NEXT:    movq %rdi, %rax
 ; X64-NEXT:    mulq %rcx
-; X64-NEXT:    movq %rdx, %rax
-; X64-NEXT:    andq $-65536, %rax # imm = 0xFFFF0000
 ; X64-NEXT:    shrq $16, %rdx
-; X64-NEXT:    addq %rax, %rdx
-; X64-NEXT:    subq %rdx, %rdi
+; X64-NEXT:    movq %rdx, %rax
+; X64-NEXT:    shlq $16, %rax
+; X64-NEXT:    addq %rdx, %rax
+; X64-NEXT:    subq %rax, %rdi
 ; X64-NEXT:    movq %rdi, %rax
 ; X64-NEXT:    retq
 entry:
@@ -752,8 +752,8 @@ define i64 @urem_i64_12(i64 %x) nounwind {
 ; X64-NEXT:    movabsq $-6148914691236517205, %rcx # imm = 0xAAAAAAAAAAAAAAAB
 ; X64-NEXT:    movq %rdi, %rax
 ; X64-NEXT:    mulq %rcx
-; X64-NEXT:    shrq %rdx
-; X64-NEXT:    andq $-4, %rdx
+; X64-NEXT:    shrq $3, %rdx
+; X64-NEXT:    shlq $2, %rdx
 ; X64-NEXT:    leaq (%rdx,%rdx,2), %rax
 ; X64-NEXT:    subq %rax, %rdi
 ; X64-NEXT:    movq %rdi, %rax
@@ -906,11 +906,11 @@ define i64 @udiv_i64_17(i64 %x) nounwind {
 ; X86-NEXT:    movl $-252645135, %ebx # imm = 0xF0F0F0F1
 ; X86-NEXT:    movl %esi, %eax
 ; X86-NEXT:    mull %ebx
-; X86-NEXT:    movl %edx, %eax
-; X86-NEXT:    andl $-16, %eax
 ; X86-NEXT:    shrl $4, %edx
-; X86-NEXT:    addl %eax, %edx
-; X86-NEXT:    subl %edx, %esi
+; X86-NEXT:    movl %edx, %eax
+; X86-NEXT:    shll $4, %eax
+; X86-NEXT:    addl %edx, %eax
+; X86-NEXT:    subl %eax, %esi
 ; X86-NEXT:    subl %esi, %ecx
 ; X86-NEXT:    sbbl $0, %edi
 ; X86-NEXT:    movl %ecx, %eax
@@ -994,11 +994,11 @@ define i64 @udiv_i64_257(i64 %x) nounwind {
 ; X86-NEXT:    movl $-16711935, %ebx # imm = 0xFF00FF01
 ; X86-NEXT:    movl %esi, %eax
 ; X86-NEXT:    mull %ebx
-; X86-NEXT:    movl %edx, %eax
-; X86-NEXT:    andl $-256, %eax
 ; X86-NEXT:    shrl $8, %edx
-; X86-NEXT:    addl %eax, %edx
-; X86-NEXT:    subl %edx, %esi
+; X86-NEXT:    movl %edx, %eax
+; X86-NEXT:    shll $8, %eax
+; X86-NEXT:    addl %edx, %eax
+; X86-NEXT:    subl %eax, %esi
 ; X86-NEXT:    subl %esi, %ecx
 ; X86-NEXT:    sbbl $0, %edi
 ; X86-NEXT:    movl %ecx, %eax

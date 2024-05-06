@@ -249,6 +249,7 @@ define signext i4 @func4(i4 signext %x, i4 signext %y, i4 signext %z) nounwind {
 ; CHECK-T2DSP:       @ %bb.0:
 ; CHECK-T2DSP-NEXT:    muls r1, r2, r1
 ; CHECK-T2DSP-NEXT:    lsls r0, r0, #28
+; CHECK-T2DSP-NEXT:    sbfx r1, r1, #0, #4
 ; CHECK-T2DSP-NEXT:    lsls r1, r1, #28
 ; CHECK-T2DSP-NEXT:    qadd r0, r0, r1
 ; CHECK-T2DSP-NEXT:    asrs r0, r0, #28
@@ -258,6 +259,7 @@ define signext i4 @func4(i4 signext %x, i4 signext %y, i4 signext %z) nounwind {
 ; CHECK-ARM:       @ %bb.0:
 ; CHECK-ARM-NEXT:    smulbb r1, r1, r2
 ; CHECK-ARM-NEXT:    lsl r0, r0, #28
+; CHECK-ARM-NEXT:    sbfx r1, r1, #0, #4
 ; CHECK-ARM-NEXT:    lsl r1, r1, #28
 ; CHECK-ARM-NEXT:    qadd r0, r0, r1
 ; CHECK-ARM-NEXT:    asr r0, r0, #28

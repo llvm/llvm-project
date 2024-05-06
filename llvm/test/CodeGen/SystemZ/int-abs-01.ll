@@ -94,7 +94,11 @@ define i64 @f7(i64 %val) {
 define i64 @f8(i64 %val) {
 ; CHECK-LABEL: f8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lpgfr %r2, %r2
+; CHECK-NEXT:    sllg %r0, %r2, 32
+; CHECK-NEXT:    srag %r2, %r0, 32
+; CHECK-NEXT:    cgibhe %r0, 0, 0(%r14)
+; CHECK-NEXT:  .LBB7_1:
+; CHECK-NEXT:    lcgr %r2, %r2
 ; CHECK-NEXT:    br %r14
   %shl = shl i64 %val, 32
   %ashr = ashr i64 %shl, 32
@@ -108,7 +112,11 @@ define i64 @f8(i64 %val) {
 define i64 @f9(i64 %val) {
 ; CHECK-LABEL: f9:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lpgfr %r2, %r2
+; CHECK-NEXT:    sllg %r0, %r2, 32
+; CHECK-NEXT:    srag %r2, %r0, 32
+; CHECK-NEXT:    cgibh %r0, 0, 0(%r14)
+; CHECK-NEXT:  .LBB8_1:
+; CHECK-NEXT:    lcgr %r2, %r2
 ; CHECK-NEXT:    br %r14
   %shl = shl i64 %val, 32
   %ashr = ashr i64 %shl, 32
@@ -122,7 +130,11 @@ define i64 @f9(i64 %val) {
 define i64 @f10(i64 %val) {
 ; CHECK-LABEL: f10:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lpgfr %r2, %r2
+; CHECK-NEXT:    sllg %r0, %r2, 32
+; CHECK-NEXT:    srag %r2, %r0, 32
+; CHECK-NEXT:    cgibh %r0, 0, 0(%r14)
+; CHECK-NEXT:  .LBB9_1:
+; CHECK-NEXT:    lcgr %r2, %r2
 ; CHECK-NEXT:    br %r14
   %shl = shl i64 %val, 32
   %ashr = ashr i64 %shl, 32
@@ -136,7 +148,11 @@ define i64 @f10(i64 %val) {
 define i64 @f11(i64 %val) {
 ; CHECK-LABEL: f11:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lpgfr %r2, %r2
+; CHECK-NEXT:    sllg %r0, %r2, 32
+; CHECK-NEXT:    srag %r2, %r0, 32
+; CHECK-NEXT:    cgibhe %r0, 0, 0(%r14)
+; CHECK-NEXT:  .LBB10_1:
+; CHECK-NEXT:    lcgr %r2, %r2
 ; CHECK-NEXT:    br %r14
   %shl = shl i64 %val, 32
   %ashr = ashr i64 %shl, 32

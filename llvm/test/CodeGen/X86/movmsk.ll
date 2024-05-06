@@ -10,7 +10,9 @@ define i32 @double_signbit(double %d1) nounwind uwtable readnone ssp {
 ; CHECK-NEXT:    movsd %xmm0, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movsd %xmm0, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movmskpd %xmm0, %eax
-; CHECK-NEXT:    andl $1, %eax
+; CHECK-NEXT:    shlq $63, %rax
+; CHECK-NEXT:    shrq $63, %rax
+; CHECK-NEXT:    ## kill: def $eax killed $eax killed $rax
 ; CHECK-NEXT:    retq
 entry:
   %__x.addr.i = alloca double, align 8
@@ -30,7 +32,9 @@ define i32 @double_add_signbit(double %d1, double %d2) nounwind uwtable readnone
 ; CHECK-NEXT:    movsd %xmm0, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movsd %xmm0, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movmskpd %xmm0, %eax
-; CHECK-NEXT:    andl $1, %eax
+; CHECK-NEXT:    shlq $63, %rax
+; CHECK-NEXT:    shrq $63, %rax
+; CHECK-NEXT:    ## kill: def $eax killed $eax killed $rax
 ; CHECK-NEXT:    retq
 entry:
   %__x.addr.i = alloca double, align 8
@@ -51,6 +55,8 @@ define i32 @float_signbit(float %f1) nounwind uwtable readnone ssp {
 ; CHECK-NEXT:    movss %xmm0, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movmskps %xmm0, %eax
 ; CHECK-NEXT:    andl $1, %eax
+; CHECK-NEXT:    shll $31, %eax
+; CHECK-NEXT:    shrl $31, %eax
 ; CHECK-NEXT:    retq
 entry:
   %__x.addr.i = alloca float, align 4
@@ -70,6 +76,8 @@ define i32 @float_add_signbit(float %f1, float %f2) nounwind uwtable readnone ss
 ; CHECK-NEXT:    movss %xmm0, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movmskps %xmm0, %eax
 ; CHECK-NEXT:    andl $1, %eax
+; CHECK-NEXT:    shll $31, %eax
+; CHECK-NEXT:    shrl $31, %eax
 ; CHECK-NEXT:    retq
 entry:
   %__x.addr.i = alloca float, align 4
@@ -87,7 +95,9 @@ define void @float_call_signbit(double %n) {
 ; CHECK-LABEL: float_call_signbit:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    movmskpd %xmm0, %edi
-; CHECK-NEXT:    andl $1, %edi
+; CHECK-NEXT:    shlq $63, %rdi
+; CHECK-NEXT:    shrq $63, %rdi
+; CHECK-NEXT:    ## kill: def $edi killed $edi killed $rdi
 ; CHECK-NEXT:    jmp _float_call_signbit_callee ## TAILCALL
 entry:
   %t0 = bitcast double %n to i64

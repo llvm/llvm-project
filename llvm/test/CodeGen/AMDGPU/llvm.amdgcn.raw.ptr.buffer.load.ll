@@ -915,14 +915,6 @@ main_body:
 }
 
 define amdgpu_ps void @raw_ptr_buffer_load_v2f16(ptr addrspace(8) inreg %rsrc, ptr addrspace(3) %ptr) {
-; PREGFX10-LABEL: raw_ptr_buffer_load_v2f16:
-; PREGFX10:       ; %bb.0: ; %main_body
-; PREGFX10-NEXT:    buffer_load_dword v1, off, s[0:3], 0
-; PREGFX10-NEXT:    s_mov_b32 m0, -1
-; PREGFX10-NEXT:    s_waitcnt vmcnt(0)
-; PREGFX10-NEXT:    ds_write_b32 v0, v1
-; PREGFX10-NEXT:    s_endpgm
-;
 ; GFX10-LABEL: raw_ptr_buffer_load_v2f16:
 ; GFX10:       ; %bb.0: ; %main_body
 ; GFX10-NEXT:    buffer_load_dword v1, off, s[0:3], 0
@@ -943,14 +935,6 @@ main_body:
 }
 
 define amdgpu_ps void @raw_ptr_buffer_load_v4f16(ptr addrspace(8) inreg %rsrc, ptr addrspace(3) %ptr) {
-; PREGFX10-LABEL: raw_ptr_buffer_load_v4f16:
-; PREGFX10:       ; %bb.0: ; %main_body
-; PREGFX10-NEXT:    buffer_load_dwordx2 v[1:2], off, s[0:3], 0
-; PREGFX10-NEXT:    s_mov_b32 m0, -1
-; PREGFX10-NEXT:    s_waitcnt vmcnt(0)
-; PREGFX10-NEXT:    ds_write_b64 v0, v[1:2]
-; PREGFX10-NEXT:    s_endpgm
-;
 ; GFX10-LABEL: raw_ptr_buffer_load_v4f16:
 ; GFX10:       ; %bb.0: ; %main_body
 ; GFX10-NEXT:    buffer_load_dwordx2 v[1:2], off, s[0:3], 0
@@ -971,14 +955,6 @@ main_body:
 }
 
 define amdgpu_ps void @raw_ptr_buffer_load_v2i16(ptr addrspace(8) inreg %rsrc, ptr addrspace(3) %ptr) {
-; PREGFX10-LABEL: raw_ptr_buffer_load_v2i16:
-; PREGFX10:       ; %bb.0: ; %main_body
-; PREGFX10-NEXT:    buffer_load_dword v1, off, s[0:3], 0
-; PREGFX10-NEXT:    s_mov_b32 m0, -1
-; PREGFX10-NEXT:    s_waitcnt vmcnt(0)
-; PREGFX10-NEXT:    ds_write_b32 v0, v1
-; PREGFX10-NEXT:    s_endpgm
-;
 ; GFX10-LABEL: raw_ptr_buffer_load_v2i16:
 ; GFX10:       ; %bb.0: ; %main_body
 ; GFX10-NEXT:    buffer_load_dword v1, off, s[0:3], 0
@@ -999,14 +975,6 @@ main_body:
 }
 
 define amdgpu_ps void @raw_ptr_buffer_load_v4i16(ptr addrspace(8) inreg %rsrc, ptr addrspace(3) %ptr) {
-; PREGFX10-LABEL: raw_ptr_buffer_load_v4i16:
-; PREGFX10:       ; %bb.0: ; %main_body
-; PREGFX10-NEXT:    buffer_load_dwordx2 v[1:2], off, s[0:3], 0
-; PREGFX10-NEXT:    s_mov_b32 m0, -1
-; PREGFX10-NEXT:    s_waitcnt vmcnt(0)
-; PREGFX10-NEXT:    ds_write_b64 v0, v[1:2]
-; PREGFX10-NEXT:    s_endpgm
-;
 ; GFX10-LABEL: raw_ptr_buffer_load_v4i16:
 ; GFX10:       ; %bb.0: ; %main_body
 ; GFX10-NEXT:    buffer_load_dwordx2 v[1:2], off, s[0:3], 0

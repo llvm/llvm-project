@@ -88,7 +88,7 @@ define i32 @demand_one_byte2(i32 %x) {
 define i64 @demand_one_byte3(i64 %x) {
 ; CHECK-LABEL: demand_one_byte3:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    and x0, x0, #0xff
+; CHECK-NEXT:    ubfx x0, x0, #0, #8
 ; CHECK-NEXT:    ret
   %b = call i64 @llvm.bswap.i64(i64 %x)
   %r = lshr i64 %b, 56

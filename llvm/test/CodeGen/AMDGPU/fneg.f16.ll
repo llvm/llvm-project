@@ -246,6 +246,10 @@ define amdgpu_kernel void @s_fneg_v2f16(ptr addrspace(1) %out, <2 x half> %in) #
 ; CI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
 ; CI-NEXT:    s_xor_b32 s2, s2, 0x80008000
+; CI-NEXT:    s_and_b32 s3, s2, 0xffff
+; CI-NEXT:    s_lshr_b32 s2, s2, 16
+; CI-NEXT:    s_lshl_b32 s2, s2, 16
+; CI-NEXT:    s_or_b32 s2, s3, s2
 ; CI-NEXT:    v_mov_b32_e32 v0, s0
 ; CI-NEXT:    v_mov_b32_e32 v1, s1
 ; CI-NEXT:    v_mov_b32_e32 v2, s2
@@ -294,19 +298,37 @@ define amdgpu_kernel void @s_fneg_v2f16(ptr addrspace(1) %out, <2 x half> %in) #
 }
 
 define amdgpu_kernel void @s_fneg_v2f16_nonload(ptr addrspace(1) %out) #0 {
-; CIVI-LABEL: s_fneg_v2f16_nonload:
-; CIVI:       ; %bb.0:
-; CIVI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
-; CIVI-NEXT:    ;;#ASMSTART
-; CIVI-NEXT:    ; def s2
-; CIVI-NEXT:    ;;#ASMEND
-; CIVI-NEXT:    s_xor_b32 s2, s2, 0x80008000
-; CIVI-NEXT:    v_mov_b32_e32 v2, s2
-; CIVI-NEXT:    s_waitcnt lgkmcnt(0)
-; CIVI-NEXT:    v_mov_b32_e32 v0, s0
-; CIVI-NEXT:    v_mov_b32_e32 v1, s1
-; CIVI-NEXT:    flat_store_dword v[0:1], v2
-; CIVI-NEXT:    s_endpgm
+; CI-LABEL: s_fneg_v2f16_nonload:
+; CI:       ; %bb.0:
+; CI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
+; CI-NEXT:    ;;#ASMSTART
+; CI-NEXT:    ; def s2
+; CI-NEXT:    ;;#ASMEND
+; CI-NEXT:    s_xor_b32 s2, s2, 0x80008000
+; CI-NEXT:    s_and_b32 s3, s2, 0xffff
+; CI-NEXT:    s_lshr_b32 s2, s2, 16
+; CI-NEXT:    s_lshl_b32 s2, s2, 16
+; CI-NEXT:    s_or_b32 s2, s3, s2
+; CI-NEXT:    s_waitcnt lgkmcnt(0)
+; CI-NEXT:    v_mov_b32_e32 v0, s0
+; CI-NEXT:    v_mov_b32_e32 v1, s1
+; CI-NEXT:    v_mov_b32_e32 v2, s2
+; CI-NEXT:    flat_store_dword v[0:1], v2
+; CI-NEXT:    s_endpgm
+;
+; GFX8-LABEL: s_fneg_v2f16_nonload:
+; GFX8:       ; %bb.0:
+; GFX8-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
+; GFX8-NEXT:    ;;#ASMSTART
+; GFX8-NEXT:    ; def s2
+; GFX8-NEXT:    ;;#ASMEND
+; GFX8-NEXT:    s_xor_b32 s2, s2, 0x80008000
+; GFX8-NEXT:    v_mov_b32_e32 v2, s2
+; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX8-NEXT:    v_mov_b32_e32 v0, s0
+; GFX8-NEXT:    v_mov_b32_e32 v1, s1
+; GFX8-NEXT:    flat_store_dword v[0:1], v2
+; GFX8-NEXT:    s_endpgm
 ;
 ; GFX9-LABEL: s_fneg_v2f16_nonload:
 ; GFX9:       ; %bb.0:
@@ -354,6 +376,10 @@ define amdgpu_kernel void @v_fneg_v2f16(ptr addrspace(1) %out, ptr addrspace(1) 
 ; CI-NEXT:    flat_load_dword v2, v[0:1]
 ; CI-NEXT:    s_waitcnt vmcnt(0)
 ; CI-NEXT:    v_xor_b32_e32 v2, 0x80008000, v2
+; CI-NEXT:    v_and_b32_e32 v3, 0xffff, v2
+; CI-NEXT:    v_lshrrev_b32_e32 v2, 16, v2
+; CI-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
+; CI-NEXT:    v_or_b32_e32 v2, v3, v2
 ; CI-NEXT:    flat_store_dword v[0:1], v2
 ; CI-NEXT:    s_endpgm
 ;
@@ -410,6 +436,10 @@ define amdgpu_kernel void @fneg_free_v2f16(ptr addrspace(1) %out, i32 %in) #0 {
 ; CI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
 ; CI-NEXT:    s_xor_b32 s2, s2, 0x80008000
+; CI-NEXT:    s_and_b32 s3, s2, 0xffff
+; CI-NEXT:    s_lshr_b32 s2, s2, 16
+; CI-NEXT:    s_lshl_b32 s2, s2, 16
+; CI-NEXT:    s_or_b32 s2, s3, s2
 ; CI-NEXT:    v_mov_b32_e32 v0, s0
 ; CI-NEXT:    v_mov_b32_e32 v1, s1
 ; CI-NEXT:    v_mov_b32_e32 v2, s2

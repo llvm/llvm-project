@@ -3654,10 +3654,10 @@ define i1 @movmsk_v16i8(<16 x i8> %x, <16 x i8> %y) {
 ; SSE-NEXT:    movl %eax, %ecx
 ; SSE-NEXT:    shrl $15, %ecx
 ; SSE-NEXT:    movl %eax, %edx
-; SSE-NEXT:    shrl $8, %edx
-; SSE-NEXT:    andl $1, %edx
-; SSE-NEXT:    andl $8, %eax
-; SSE-NEXT:    shrl $3, %eax
+; SSE-NEXT:    andl $8, %edx
+; SSE-NEXT:    shrw $3, %dx
+; SSE-NEXT:    andl $256, %eax # imm = 0x100
+; SSE-NEXT:    movzbl %ah, %eax
 ; SSE-NEXT:    xorl %edx, %eax
 ; SSE-NEXT:    andl %ecx, %eax
 ; SSE-NEXT:    # kill: def $al killed $al killed $eax
@@ -3670,10 +3670,10 @@ define i1 @movmsk_v16i8(<16 x i8> %x, <16 x i8> %y) {
 ; AVX1OR2-NEXT:    movl %eax, %ecx
 ; AVX1OR2-NEXT:    shrl $15, %ecx
 ; AVX1OR2-NEXT:    movl %eax, %edx
-; AVX1OR2-NEXT:    shrl $8, %edx
-; AVX1OR2-NEXT:    andl $1, %edx
-; AVX1OR2-NEXT:    andl $8, %eax
-; AVX1OR2-NEXT:    shrl $3, %eax
+; AVX1OR2-NEXT:    andl $8, %edx
+; AVX1OR2-NEXT:    shrw $3, %dx
+; AVX1OR2-NEXT:    andl $256, %eax # imm = 0x100
+; AVX1OR2-NEXT:    movzbl %ah, %eax
 ; AVX1OR2-NEXT:    xorl %edx, %eax
 ; AVX1OR2-NEXT:    andl %ecx, %eax
 ; AVX1OR2-NEXT:    # kill: def $al killed $al killed $eax

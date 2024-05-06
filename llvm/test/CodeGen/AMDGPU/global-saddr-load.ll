@@ -2026,32 +2026,67 @@ define amdgpu_ps float @global_load_saddr_f32_natural_addressing_immoffset(ptr a
 
 ; Range is sufficiently restricted to push the shift into 32-bits.
 define amdgpu_ps float @global_load_f32_saddr_zext_vgpr_range(ptr addrspace(1) inreg %sbase, ptr addrspace(1) %voffset.ptr) {
-; GCN-LABEL: global_load_f32_saddr_zext_vgpr_range:
-; GCN:       ; %bb.0:
-; GCN-NEXT:    global_load_dword v0, v[0:1], off
-; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; GCN-NEXT:    global_load_dword v0, v0, s[2:3]
-; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    ; return to shader part epilog
+; GFX9-LABEL: global_load_f32_saddr_zext_vgpr_range:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    global_load_dword v0, v[0:1], off
+; GFX9-NEXT:    v_mov_b32_e32 v1, 0
+; GFX9-NEXT:    v_mov_b32_e32 v2, s3
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    v_lshlrev_b64 v[0:1], 2, v[0:1]
+; GFX9-NEXT:    v_add_co_u32_e32 v0, vcc, s2, v0
+; GFX9-NEXT:    v_addc_co_u32_e32 v1, vcc, v2, v1, vcc
+; GFX9-NEXT:    global_load_dword v0, v[0:1], off
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    ; return to shader part epilog
+;
+; GFX10-LABEL: global_load_f32_saddr_zext_vgpr_range:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    global_load_dword v0, v[0:1], off
+; GFX10-NEXT:    v_mov_b32_e32 v1, 0
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    v_lshlrev_b64 v[0:1], 2, v[0:1]
+; GFX10-NEXT:    v_add_co_u32 v0, vcc, s2, v0
+; GFX10-NEXT:    v_add_co_ci_u32_e32 v1, vcc, s3, v1, vcc
+; GFX10-NEXT:    global_load_dword v0, v[0:1], off
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-LABEL: global_load_f32_saddr_zext_vgpr_range:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    global_load_b32 v0, v[0:1], off
+; GFX11-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; GFX11-NEXT:    global_load_b32 v0, v0, s[2:3]
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-NEXT:    v_lshlrev_b64 v[0:1], 2, v[0:1]
+; GFX11-NEXT:    v_add_co_u32 v0, vcc, s2, v0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX11-NEXT:    v_add_co_ci_u32_e32 v1, vcc, s3, v1, vcc
+; GFX11-NEXT:    global_load_b32 v0, v[0:1], off
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    ; return to shader part epilog
 ;
-; GFX12-LABEL: global_load_f32_saddr_zext_vgpr_range:
-; GFX12:       ; %bb.0:
-; GFX12-NEXT:    global_load_b32 v0, v[0:1], off
-; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; GFX12-NEXT:    global_load_b32 v0, v0, s[2:3]
-; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    ; return to shader part epilog
+; GFX12-SDAG-LABEL: global_load_f32_saddr_zext_vgpr_range:
+; GFX12-SDAG:       ; %bb.0:
+; GFX12-SDAG-NEXT:    global_load_b32 v0, v[0:1], off
+; GFX12-SDAG-NEXT:    v_mov_b32_e32 v1, 0
+; GFX12-SDAG-NEXT:    s_wait_loadcnt 0x0
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX12-SDAG-NEXT:    v_lshlrev_b64_e32 v[0:1], 2, v[0:1]
+; GFX12-SDAG-NEXT:    v_add_co_u32 v0, vcc, s2, v0
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX12-SDAG-NEXT:    v_add_co_ci_u32_e32 v1, vcc, s3, v1, vcc
+; GFX12-SDAG-NEXT:    global_load_b32 v0, v[0:1], off
+; GFX12-SDAG-NEXT:    s_wait_loadcnt 0x0
+; GFX12-SDAG-NEXT:    ; return to shader part epilog
+;
+; GFX12-GISEL-LABEL: global_load_f32_saddr_zext_vgpr_range:
+; GFX12-GISEL:       ; %bb.0:
+; GFX12-GISEL-NEXT:    global_load_b32 v0, v[0:1], off
+; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX12-GISEL-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GFX12-GISEL-NEXT:    global_load_b32 v0, v0, s[2:3]
+; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX12-GISEL-NEXT:    ; return to shader part epilog
   %voffset = load i32, ptr addrspace(1) %voffset.ptr, !range !0, !noundef !{}
   %zext.offset = zext i32 %voffset to i64
   %gep = getelementptr inbounds float, ptr addrspace(1) %sbase, i64 %zext.offset
@@ -2061,32 +2096,67 @@ define amdgpu_ps float @global_load_f32_saddr_zext_vgpr_range(ptr addrspace(1) i
 
 ; Range is sufficiently restricted to push the shift into 32-bits, with an imm offset
 define amdgpu_ps float @global_load_f32_saddr_zext_vgpr_range_imm_offset(ptr addrspace(1) inreg %sbase, ptr addrspace(1) %voffset.ptr) {
-; GCN-LABEL: global_load_f32_saddr_zext_vgpr_range_imm_offset:
-; GCN:       ; %bb.0:
-; GCN-NEXT:    global_load_dword v0, v[0:1], off
-; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; GCN-NEXT:    global_load_dword v0, v0, s[2:3] offset:400
-; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    ; return to shader part epilog
+; GFX9-LABEL: global_load_f32_saddr_zext_vgpr_range_imm_offset:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    global_load_dword v0, v[0:1], off
+; GFX9-NEXT:    v_mov_b32_e32 v1, 0
+; GFX9-NEXT:    v_mov_b32_e32 v2, s3
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    v_lshlrev_b64 v[0:1], 2, v[0:1]
+; GFX9-NEXT:    v_add_co_u32_e32 v0, vcc, s2, v0
+; GFX9-NEXT:    v_addc_co_u32_e32 v1, vcc, v2, v1, vcc
+; GFX9-NEXT:    global_load_dword v0, v[0:1], off offset:400
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    ; return to shader part epilog
+;
+; GFX10-LABEL: global_load_f32_saddr_zext_vgpr_range_imm_offset:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    global_load_dword v0, v[0:1], off
+; GFX10-NEXT:    v_mov_b32_e32 v1, 0
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    v_lshlrev_b64 v[0:1], 2, v[0:1]
+; GFX10-NEXT:    v_add_co_u32 v0, vcc, s2, v0
+; GFX10-NEXT:    v_add_co_ci_u32_e32 v1, vcc, s3, v1, vcc
+; GFX10-NEXT:    global_load_dword v0, v[0:1], off offset:400
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-LABEL: global_load_f32_saddr_zext_vgpr_range_imm_offset:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    global_load_b32 v0, v[0:1], off
+; GFX11-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; GFX11-NEXT:    global_load_b32 v0, v0, s[2:3] offset:400
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-NEXT:    v_lshlrev_b64 v[0:1], 2, v[0:1]
+; GFX11-NEXT:    v_add_co_u32 v0, vcc, s2, v0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX11-NEXT:    v_add_co_ci_u32_e32 v1, vcc, s3, v1, vcc
+; GFX11-NEXT:    global_load_b32 v0, v[0:1], off offset:400
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    ; return to shader part epilog
 ;
-; GFX12-LABEL: global_load_f32_saddr_zext_vgpr_range_imm_offset:
-; GFX12:       ; %bb.0:
-; GFX12-NEXT:    global_load_b32 v0, v[0:1], off
-; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; GFX12-NEXT:    global_load_b32 v0, v0, s[2:3] offset:400
-; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    ; return to shader part epilog
+; GFX12-SDAG-LABEL: global_load_f32_saddr_zext_vgpr_range_imm_offset:
+; GFX12-SDAG:       ; %bb.0:
+; GFX12-SDAG-NEXT:    global_load_b32 v0, v[0:1], off
+; GFX12-SDAG-NEXT:    v_mov_b32_e32 v1, 0
+; GFX12-SDAG-NEXT:    s_wait_loadcnt 0x0
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX12-SDAG-NEXT:    v_lshlrev_b64_e32 v[0:1], 2, v[0:1]
+; GFX12-SDAG-NEXT:    v_add_co_u32 v0, vcc, s2, v0
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX12-SDAG-NEXT:    v_add_co_ci_u32_e32 v1, vcc, s3, v1, vcc
+; GFX12-SDAG-NEXT:    global_load_b32 v0, v[0:1], off offset:400
+; GFX12-SDAG-NEXT:    s_wait_loadcnt 0x0
+; GFX12-SDAG-NEXT:    ; return to shader part epilog
+;
+; GFX12-GISEL-LABEL: global_load_f32_saddr_zext_vgpr_range_imm_offset:
+; GFX12-GISEL:       ; %bb.0:
+; GFX12-GISEL-NEXT:    global_load_b32 v0, v[0:1], off
+; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX12-GISEL-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GFX12-GISEL-NEXT:    global_load_b32 v0, v0, s[2:3] offset:400
+; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX12-GISEL-NEXT:    ; return to shader part epilog
   %voffset = load i32, ptr addrspace(1) %voffset.ptr, !range !0, !noundef !{}
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds float, ptr addrspace(1) %sbase, i64 %zext.offset

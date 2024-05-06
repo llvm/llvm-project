@@ -10,6 +10,7 @@ define void @extracter0([4 x <4 x i1>] %matrix) nounwind {
 ; CHECK-NEXT:    vpslld xmm0, xmm0, 31
 ; CHECK-NEXT:    vmovmskps edi, xmm0
 ; CHECK-NEXT:    mov ebx, edi
+; CHECK-NEXT:    and bl, 8
 ; CHECK-NEXT:    shr bl, 3
 ; CHECK-NEXT:    mov ebp, edi
 ; CHECK-NEXT:    and bpl, 4
@@ -51,40 +52,42 @@ define void @extracter1([4 x <4 x i1>] %matrix) nounwind {
 ; CHECK-NEXT:    push rbx
 ; CHECK-NEXT:    push rax
 ; CHECK-NEXT:    vpslld xmm1, xmm1, 31
-; CHECK-NEXT:    vmovmskps ebx, xmm1
-; CHECK-NEXT:    mov eax, ebx
-; CHECK-NEXT:    shr al, 3
-; CHECK-NEXT:    mov byte ptr [rsp + 7], al # 1-byte Spill
-; CHECK-NEXT:    mov r14d, ebx
+; CHECK-NEXT:    vmovmskps eax, xmm1
+; CHECK-NEXT:    mov dword ptr [rsp + 4], eax # 4-byte Spill
+; CHECK-NEXT:    mov ebp, eax
+; CHECK-NEXT:    and bpl, 8
+; CHECK-NEXT:    shr bpl, 3
+; CHECK-NEXT:    mov r14d, eax
 ; CHECK-NEXT:    and r14b, 4
 ; CHECK-NEXT:    shr r14b, 2
-; CHECK-NEXT:    mov r15d, ebx
+; CHECK-NEXT:    mov r15d, eax
 ; CHECK-NEXT:    and r15b, 2
 ; CHECK-NEXT:    shr r15b
 ; CHECK-NEXT:    vpslld xmm0, xmm0, 31
 ; CHECK-NEXT:    vmovmskps edi, xmm0
 ; CHECK-NEXT:    mov r12d, edi
+; CHECK-NEXT:    and r12b, 8
 ; CHECK-NEXT:    shr r12b, 3
 ; CHECK-NEXT:    mov r13d, edi
 ; CHECK-NEXT:    and r13b, 4
 ; CHECK-NEXT:    shr r13b, 2
-; CHECK-NEXT:    mov ebp, edi
-; CHECK-NEXT:    and bpl, 2
-; CHECK-NEXT:    shr bpl
+; CHECK-NEXT:    mov ebx, edi
+; CHECK-NEXT:    and bl, 2
+; CHECK-NEXT:    shr bl
 ; CHECK-NEXT:    call print_i1@PLT
-; CHECK-NEXT:    movzx edi, bpl
+; CHECK-NEXT:    movzx edi, bl
 ; CHECK-NEXT:    call print_i1@PLT
 ; CHECK-NEXT:    movzx edi, r13b
 ; CHECK-NEXT:    call print_i1@PLT
 ; CHECK-NEXT:    movzx edi, r12b
 ; CHECK-NEXT:    call print_i1@PLT
-; CHECK-NEXT:    mov edi, ebx
+; CHECK-NEXT:    mov edi, dword ptr [rsp + 4] # 4-byte Reload
 ; CHECK-NEXT:    call print_i1@PLT
 ; CHECK-NEXT:    movzx edi, r15b
 ; CHECK-NEXT:    call print_i1@PLT
 ; CHECK-NEXT:    movzx edi, r14b
 ; CHECK-NEXT:    call print_i1@PLT
-; CHECK-NEXT:    movzx edi, byte ptr [rsp + 7] # 1-byte Folded Reload
+; CHECK-NEXT:    movzx edi, bpl
 ; CHECK-NEXT:    call print_i1@PLT
 ; CHECK-NEXT:    add rsp, 8
 ; CHECK-NEXT:    pop rbx

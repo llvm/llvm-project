@@ -321,6 +321,7 @@ define i4 @func6(i4 %x, i4 %y) nounwind {
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    andb $15, %sil
+; X64-NEXT:    andb $15, %al
 ; X64-NEXT:    shlb $4, %al
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    mulb %sil
@@ -336,6 +337,7 @@ define i4 @func6(i4 %x, i4 %y) nounwind {
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    andb $15, %cl
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    andb $15, %al
 ; X86-NEXT:    shlb $4, %al
 ; X86-NEXT:    mulb %cl
 ; X86-NEXT:    movzbl %al, %ecx

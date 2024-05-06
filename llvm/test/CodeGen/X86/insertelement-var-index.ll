@@ -2285,7 +2285,8 @@ define i32 @PR44139(ptr %p) {
 ; SSE-NEXT:    leal 2147483647(%rax), %ecx
 ; SSE-NEXT:    testl %eax, %eax
 ; SSE-NEXT:    cmovnsl %eax, %ecx
-; SSE-NEXT:    andl $-2147483648, %ecx # imm = 0x80000000
+; SSE-NEXT:    shrl $31, %ecx
+; SSE-NEXT:    shll $31, %ecx
 ; SSE-NEXT:    addl %eax, %ecx
 ; SSE-NEXT:    # kill: def $eax killed $eax killed $rax
 ; SSE-NEXT:    xorl %edx, %edx
@@ -2305,7 +2306,8 @@ define i32 @PR44139(ptr %p) {
 ; AVX1-NEXT:    leal 2147483647(%rax), %ecx
 ; AVX1-NEXT:    testl %eax, %eax
 ; AVX1-NEXT:    cmovnsl %eax, %ecx
-; AVX1-NEXT:    andl $-2147483648, %ecx # imm = 0x80000000
+; AVX1-NEXT:    shrl $31, %ecx
+; AVX1-NEXT:    shll $31, %ecx
 ; AVX1-NEXT:    addl %eax, %ecx
 ; AVX1-NEXT:    # kill: def $eax killed $eax killed $rax
 ; AVX1-NEXT:    xorl %edx, %edx
@@ -2326,7 +2328,8 @@ define i32 @PR44139(ptr %p) {
 ; AVX2-NEXT:    leal 2147483647(%rax), %ecx
 ; AVX2-NEXT:    testl %eax, %eax
 ; AVX2-NEXT:    cmovnsl %eax, %ecx
-; AVX2-NEXT:    andl $-2147483648, %ecx # imm = 0x80000000
+; AVX2-NEXT:    shrl $31, %ecx
+; AVX2-NEXT:    shll $31, %ecx
 ; AVX2-NEXT:    addl %eax, %ecx
 ; AVX2-NEXT:    # kill: def $eax killed $eax killed $rax
 ; AVX2-NEXT:    xorl %edx, %edx
@@ -2345,7 +2348,8 @@ define i32 @PR44139(ptr %p) {
 ; AVX512-NEXT:    leal 2147483647(%rax), %ecx
 ; AVX512-NEXT:    testl %eax, %eax
 ; AVX512-NEXT:    cmovnsl %eax, %ecx
-; AVX512-NEXT:    andl $-2147483648, %ecx # imm = 0x80000000
+; AVX512-NEXT:    shrl $31, %ecx
+; AVX512-NEXT:    shll $31, %ecx
 ; AVX512-NEXT:    addl %eax, %ecx
 ; AVX512-NEXT:    # kill: def $eax killed $eax killed $rax
 ; AVX512-NEXT:    xorl %edx, %edx
@@ -2367,7 +2371,8 @@ define i32 @PR44139(ptr %p) {
 ; X86AVX2-NEXT:    leal 2147483647(%eax), %ecx
 ; X86AVX2-NEXT:    testl %eax, %eax
 ; X86AVX2-NEXT:    cmovnsl %eax, %ecx
-; X86AVX2-NEXT:    andl $-2147483648, %ecx # imm = 0x80000000
+; X86AVX2-NEXT:    shrl $31, %ecx
+; X86AVX2-NEXT:    shll $31, %ecx
 ; X86AVX2-NEXT:    addl %eax, %ecx
 ; X86AVX2-NEXT:    xorl %edx, %edx
 ; X86AVX2-NEXT:    divl %ecx

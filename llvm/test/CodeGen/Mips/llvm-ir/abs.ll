@@ -8,57 +8,54 @@
 define float @abs_s(float %a) {
 ; MIPS32-LABEL: abs_s:
 ; MIPS32:       # %bb.0:
-; MIPS32-NEXT:    lui $1, 32767 # <MCInst #[[#MCINST1:]] LUi
+; MIPS32-NEXT:    mfc1 $1, $f12 # <MCInst #[[#MCINST1:]] MFC1
 ; MIPS32-NEXT:    # <MCOperand Reg:[[#MCREG1:]]>
-; MIPS32-NEXT:    # <MCOperand Imm:32767>>
-; MIPS32-NEXT:    ori $1, $1, 65535 # <MCInst #[[#MCINST2:]] ORi
+; MIPS32-NEXT:    # <MCOperand Reg:[[#MCREG2:]]>>
+; MIPS32-NEXT:    sll $1, $1, 1 # <MCInst #[[#MCINST2:]] SLL
 ; MIPS32-NEXT:    # <MCOperand Reg:[[#MCREG1]]>
 ; MIPS32-NEXT:    # <MCOperand Reg:[[#MCREG1]]>
-; MIPS32-NEXT:    # <MCOperand Imm:65535>>
-; MIPS32-NEXT:    mfc1 $2, $f12 # <MCInst #[[#MCINST3:]] MFC1
-; MIPS32-NEXT:    # <MCOperand Reg:[[#MCREG2:]]>
+; MIPS32-NEXT:    # <MCOperand Imm:1>>
+; MIPS32-NEXT:    srl $1, $1, 1 # <MCInst #[[#MCINST3:]] SRL
+; MIPS32-NEXT:    # <MCOperand Reg:[[#MCREG1]]>
+; MIPS32-NEXT:    # <MCOperand Reg:[[#MCREG1]]>
+; MIPS32-NEXT:    # <MCOperand Imm:1>>
+; MIPS32-NEXT:    jr $ra # <MCInst #[[#MCINST4:]] JR
 ; MIPS32-NEXT:    # <MCOperand Reg:[[#MCREG3:]]>>
-; MIPS32-NEXT:    and $1, $2, $1 # <MCInst #[[#MCINST4:]] AND
-; MIPS32-NEXT:    # <MCOperand Reg:[[#MCREG1]]>
-; MIPS32-NEXT:    # <MCOperand Reg:[[#MCREG2]]>
-; MIPS32-NEXT:    # <MCOperand Reg:[[#MCREG1]]>>
-; MIPS32-NEXT:    jr $ra # <MCInst #[[#MCINST5:]] JR
-; MIPS32-NEXT:    # <MCOperand Reg:[[#MCREG4:]]>>
-; MIPS32-NEXT:    mtc1 $1, $f0 # <MCInst #[[#MCINST6:]] MTC1
-; MIPS32-NEXT:    # <MCOperand Reg:[[#MCREG5:]]>
+; MIPS32-NEXT:    mtc1 $1, $f0 # <MCInst #[[#MCINST5:]] MTC1
+; MIPS32-NEXT:    # <MCOperand Reg:[[#MCREG4:]]>
 ; MIPS32-NEXT:    # <MCOperand Reg:[[#MCREG1]]>>
 ;
 ; MIPS32FP64-LABEL: abs_s:
 ; MIPS32FP64:       # %bb.0:
-; MIPS32FP64-NEXT:    jr $ra # <MCInst #[[#MCINST5:]] JR
-; MIPS32FP64-NEXT:    # <MCOperand Reg:[[#MCREG4:]]>>
-; MIPS32FP64-NEXT:    abs.s $f0, $f12 # <MCInst #[[#MCINST7:]] FABS_S
-; MIPS32FP64-NEXT:    # <MCOperand Reg:[[#MCREG5:]]>
+; MIPS32FP64-NEXT:    jr $ra # <MCInst #[[#MCINST4:]] JR
 ; MIPS32FP64-NEXT:    # <MCOperand Reg:[[#MCREG3:]]>>
+; MIPS32FP64-NEXT:    abs.s $f0, $f12 # <MCInst #[[#MCINST6:]] FABS_S
+; MIPS32FP64-NEXT:    # <MCOperand Reg:[[#MCREG4:]]>
+; MIPS32FP64-NEXT:    # <MCOperand Reg:[[#MCREG2:]]>>
 ;
 ; MM-LABEL: abs_s:
 ; MM:       # %bb.0:
-; MM-NEXT:    jr $ra # <MCInst #[[#MCINST8:]] JR_MM
-; MM-NEXT:    # <MCOperand Reg:[[#MCREG4:]]>>
-; MM-NEXT:    abs.s $f0, $f12 # <MCInst #[[#MCINST9:]] FABS_S_MM
-; MM-NEXT:    # <MCOperand Reg:[[#MCREG5:]]>
+; MM-NEXT:    jr $ra # <MCInst #[[#MCINST7:]] JR_MM
 ; MM-NEXT:    # <MCOperand Reg:[[#MCREG3:]]>>
+; MM-NEXT:    abs.s $f0, $f12 # <MCInst #[[#MCINST8:]] FABS_S_MM
+; MM-NEXT:    # <MCOperand Reg:[[#MCREG4:]]>
+; MM-NEXT:    # <MCOperand Reg:[[#MCREG2:]]>>
 ;
 ; MMFP64-LABEL: abs_s:
 ; MMFP64:       # %bb.0:
-; MMFP64-NEXT:    jr $ra # <MCInst #[[#MCINST8:]] JR_MM
-; MMFP64-NEXT:    # <MCOperand Reg:[[#MCREG4:]]>>
-; MMFP64-NEXT:    abs.s $f0, $f12 # <MCInst #[[#MCINST9:]] FABS_S_MM
-; MMFP64-NEXT:    # <MCOperand Reg:[[#MCREG5:]]>
+; MMFP64-NEXT:    jr $ra # <MCInst #[[#MCINST7:]] JR_MM
 ; MMFP64-NEXT:    # <MCOperand Reg:[[#MCREG3:]]>>
+; MMFP64-NEXT:    abs.s $f0, $f12 # <MCInst #[[#MCINST8:]] FABS_S_MM
+; MMFP64-NEXT:    # <MCOperand Reg:[[#MCREG4:]]>
+; MMFP64-NEXT:    # <MCOperand Reg:[[#MCREG2:]]>>
 ;
 ; MMR6-LABEL: abs_s:
 ; MMR6:       # %bb.0:
-; MMR6-NEXT:    abs.s $f0, $f12 # <MCInst #[[#MCINST9:]] FABS_S_MM
-; MMR6-NEXT:    # <MCOperand Reg:[[#MCREG5:]]>
+; MMR6-NEXT:    abs.s $f0, $f12 # <MCInst #[[#MCINST8:]] FABS_S_MM
+; MMR6-NEXT:    # <MCOperand Reg:[[#MCREG4:]]>
+; MMR6-NEXT:    # <MCOperand Reg:[[#MCREG2:]]>>
+; MMR6-NEXT:    jrc $ra # <MCInst #[[#MCINST9:]] JRC16_MM
 ; MMR6-NEXT:    # <MCOperand Reg:[[#MCREG3:]]>>
-; MMR6-NEXT:    jrc $ra # <MCInst #[[#MCINST10:]] JRC16_MM
-; MMR6-NEXT:    # <MCOperand Reg:[[#MCREG4:]]>>
     %ret = call float @llvm.fabs.f32(float %a)
     ret float %ret
 }
@@ -66,63 +63,60 @@ define float @abs_s(float %a) {
 define double @abs_d(double %a) {
 ; MIPS32-LABEL: abs_d:
 ; MIPS32:       # %bb.0:
-; MIPS32-NEXT:    lui $1, 32767 # <MCInst #[[#MCINST1]] LUi
+; MIPS32-NEXT:    mfc1 $1, $f12 # <MCInst #[[#MCINST1]] MFC1
 ; MIPS32-NEXT:    # <MCOperand Reg:[[#MCREG1]]>
-; MIPS32-NEXT:    # <MCOperand Imm:32767>>
-; MIPS32-NEXT:    ori $1, $1, 65535 # <MCInst #[[#MCINST2]] ORi
-; MIPS32-NEXT:    # <MCOperand Reg:[[#MCREG1]]>
-; MIPS32-NEXT:    # <MCOperand Reg:[[#MCREG1]]>
-; MIPS32-NEXT:    # <MCOperand Imm:65535>>
-; MIPS32-NEXT:    mfc1 $2, $f13 # <MCInst #[[#MCINST3]] MFC1
-; MIPS32-NEXT:    # <MCOperand Reg:[[#MCREG2]]>
-; MIPS32-NEXT:    # <MCOperand Reg:[[#MCREG6:]]>>
-; MIPS32-NEXT:    and $1, $2, $1 # <MCInst #[[#MCINST4]] AND
-; MIPS32-NEXT:    # <MCOperand Reg:[[#MCREG1]]>
-; MIPS32-NEXT:    # <MCOperand Reg:[[#MCREG2]]>
-; MIPS32-NEXT:    # <MCOperand Reg:[[#MCREG1]]>>
-; MIPS32-NEXT:    mfc1 $2, $f12 # <MCInst #[[#MCINST3]] MFC1
-; MIPS32-NEXT:    # <MCOperand Reg:[[#MCREG2]]>
-; MIPS32-NEXT:    # <MCOperand Reg:[[#MCREG3]]>>
-; MIPS32-NEXT:    mtc1 $2, $f0 # <MCInst #[[#MCINST6]] MTC1
-; MIPS32-NEXT:    # <MCOperand Reg:[[#MCREG5]]>
 ; MIPS32-NEXT:    # <MCOperand Reg:[[#MCREG2]]>>
-; MIPS32-NEXT:    jr $ra # <MCInst #[[#MCINST5]] JR
-; MIPS32-NEXT:    # <MCOperand Reg:[[#MCREG4]]>>
-; MIPS32-NEXT:    mtc1 $1, $f1 # <MCInst #[[#MCINST6]] MTC1
-; MIPS32-NEXT:    # <MCOperand Reg:[[#MCREG7:]]>
+; MIPS32-NEXT:    mfc1 $2, $f13 # <MCInst #[[#MCINST1]] MFC1
+; MIPS32-NEXT:    # <MCOperand Reg:[[#MCREG5:]]>
+; MIPS32-NEXT:    # <MCOperand Reg:[[#MCREG6:]]>>
+; MIPS32-NEXT:    sll $2, $2, 1 # <MCInst #[[#MCINST2]] SLL
+; MIPS32-NEXT:    # <MCOperand Reg:[[#MCREG5]]>
+; MIPS32-NEXT:    # <MCOperand Reg:[[#MCREG5]]>
+; MIPS32-NEXT:    # <MCOperand Imm:1>>
+; MIPS32-NEXT:    srl $2, $2, 1 # <MCInst #[[#MCINST3]] SRL
+; MIPS32-NEXT:    # <MCOperand Reg:[[#MCREG5]]>
+; MIPS32-NEXT:    # <MCOperand Reg:[[#MCREG5]]>
+; MIPS32-NEXT:    # <MCOperand Imm:1>>
+; MIPS32-NEXT:    mtc1 $1, $f0 # <MCInst #[[#MCINST5]] MTC1
+; MIPS32-NEXT:    # <MCOperand Reg:[[#MCREG4]]>
 ; MIPS32-NEXT:    # <MCOperand Reg:[[#MCREG1]]>>
+; MIPS32-NEXT:    jr $ra # <MCInst #[[#MCINST4]] JR
+; MIPS32-NEXT:    # <MCOperand Reg:[[#MCREG3]]>>
+; MIPS32-NEXT:    mtc1 $2, $f1 # <MCInst #[[#MCINST5]] MTC1
+; MIPS32-NEXT:    # <MCOperand Reg:[[#MCREG7:]]>
+; MIPS32-NEXT:    # <MCOperand Reg:[[#MCREG5]]>>
 ;
 ; MIPS32FP64-LABEL: abs_d:
 ; MIPS32FP64:       # %bb.0:
-; MIPS32FP64-NEXT:    jr $ra # <MCInst #[[#MCINST5]] JR
-; MIPS32FP64-NEXT:    # <MCOperand Reg:[[#MCREG4]]>>
-; MIPS32FP64-NEXT:    abs.d $f0, $f12 # <MCInst #[[#MCINST11:]] FABS_D64
+; MIPS32FP64-NEXT:    jr $ra # <MCInst #[[#MCINST4]] JR
+; MIPS32FP64-NEXT:    # <MCOperand Reg:[[#MCREG3]]>>
+; MIPS32FP64-NEXT:    abs.d $f0, $f12 # <MCInst #[[#MCINST10:]] FABS_D64
 ; MIPS32FP64-NEXT:    # <MCOperand Reg:[[#MCREG8:]]>
 ; MIPS32FP64-NEXT:    # <MCOperand Reg:[[#MCREG9:]]>>
 ;
 ; MM-LABEL: abs_d:
 ; MM:       # %bb.0:
-; MM-NEXT:    jr $ra # <MCInst #[[#MCINST8]] JR_MM
-; MM-NEXT:    # <MCOperand Reg:[[#MCREG4]]>>
-; MM-NEXT:    abs.d $f0, $f12 # <MCInst #[[#MCINST12:]] FABS_D32_MM
+; MM-NEXT:    jr $ra # <MCInst #[[#MCINST7]] JR_MM
+; MM-NEXT:    # <MCOperand Reg:[[#MCREG3]]>>
+; MM-NEXT:    abs.d $f0, $f12 # <MCInst #[[#MCINST11:]] FABS_D32_MM
 ; MM-NEXT:    # <MCOperand Reg:[[#MCREG10:]]>
 ; MM-NEXT:    # <MCOperand Reg:[[#MCREG11:]]>>
 ;
 ; MMFP64-LABEL: abs_d:
 ; MMFP64:       # %bb.0:
-; MMFP64-NEXT:    jr $ra # <MCInst #[[#MCINST8]] JR_MM
-; MMFP64-NEXT:    # <MCOperand Reg:[[#MCREG4]]>>
-; MMFP64-NEXT:    abs.d $f0, $f12 # <MCInst #[[#MCINST13:]] FABS_D64_MM
+; MMFP64-NEXT:    jr $ra # <MCInst #[[#MCINST7]] JR_MM
+; MMFP64-NEXT:    # <MCOperand Reg:[[#MCREG3]]>>
+; MMFP64-NEXT:    abs.d $f0, $f12 # <MCInst #[[#MCINST12:]] FABS_D64_MM
 ; MMFP64-NEXT:    # <MCOperand Reg:[[#MCREG8:]]>
 ; MMFP64-NEXT:    # <MCOperand Reg:[[#MCREG9:]]>>
 ;
 ; MMR6-LABEL: abs_d:
 ; MMR6:       # %bb.0:
-; MMR6-NEXT:    abs.d $f0, $f12 # <MCInst #[[#MCINST13:]] FABS_D64_MM
+; MMR6-NEXT:    abs.d $f0, $f12 # <MCInst #[[#MCINST12:]] FABS_D64_MM
 ; MMR6-NEXT:    # <MCOperand Reg:[[#MCREG8:]]>
 ; MMR6-NEXT:    # <MCOperand Reg:[[#MCREG9:]]>>
-; MMR6-NEXT:    jrc $ra # <MCInst #[[#MCINST10]] JRC16_MM
-; MMR6-NEXT:    # <MCOperand Reg:[[#MCREG4]]>>
+; MMR6-NEXT:    jrc $ra # <MCInst #[[#MCINST9]] JRC16_MM
+; MMR6-NEXT:    # <MCOperand Reg:[[#MCREG3]]>>
     %ret = call double @llvm.fabs.f64(double %a)
     ret double %ret
 }

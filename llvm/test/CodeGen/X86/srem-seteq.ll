@@ -321,7 +321,8 @@ define i32 @test_srem_pow2(i32 %X) nounwind {
 ; X86-NEXT:    leal 15(%ecx), %edx
 ; X86-NEXT:    testl %ecx, %ecx
 ; X86-NEXT:    cmovnsl %ecx, %edx
-; X86-NEXT:    andl $-16, %edx
+; X86-NEXT:    sarl $4, %edx
+; X86-NEXT:    shll $4, %edx
 ; X86-NEXT:    xorl %eax, %eax
 ; X86-NEXT:    cmpl %edx, %ecx
 ; X86-NEXT:    sete %al
@@ -333,7 +334,8 @@ define i32 @test_srem_pow2(i32 %X) nounwind {
 ; X64-NEXT:    leal 15(%rdi), %ecx
 ; X64-NEXT:    testl %edi, %edi
 ; X64-NEXT:    cmovnsl %edi, %ecx
-; X64-NEXT:    andl $-16, %ecx
+; X64-NEXT:    sarl $4, %ecx
+; X64-NEXT:    shll $4, %ecx
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    cmpl %ecx, %edi
 ; X64-NEXT:    sete %al
@@ -352,7 +354,8 @@ define i32 @test_srem_int_min(i32 %X) nounwind {
 ; X86-NEXT:    leal 2147483647(%ecx), %edx
 ; X86-NEXT:    testl %ecx, %ecx
 ; X86-NEXT:    cmovnsl %ecx, %edx
-; X86-NEXT:    andl $-2147483648, %edx # imm = 0x80000000
+; X86-NEXT:    shrl $31, %edx
+; X86-NEXT:    shll $31, %edx
 ; X86-NEXT:    xorl %eax, %eax
 ; X86-NEXT:    addl %ecx, %edx
 ; X86-NEXT:    sete %al
@@ -364,7 +367,8 @@ define i32 @test_srem_int_min(i32 %X) nounwind {
 ; X64-NEXT:    leal 2147483647(%rdi), %ecx
 ; X64-NEXT:    testl %edi, %edi
 ; X64-NEXT:    cmovnsl %edi, %ecx
-; X64-NEXT:    andl $-2147483648, %ecx # imm = 0x80000000
+; X64-NEXT:    shrl $31, %ecx
+; X64-NEXT:    shll $31, %ecx
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    addl %edi, %ecx
 ; X64-NEXT:    sete %al

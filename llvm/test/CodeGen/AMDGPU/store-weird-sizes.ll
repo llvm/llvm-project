@@ -63,7 +63,8 @@ define amdgpu_kernel void @local_store_i55(ptr addrspace(3) %ptr, i55 %arg) #0 {
 ; HAWAII-NEXT:    v_mov_b32_e32 v3, s0
 ; HAWAII-NEXT:    ds_write_b16 v1, v2 offset:4
 ; HAWAII-NEXT:    s_waitcnt vmcnt(0)
-; HAWAII-NEXT:    v_and_b32_e32 v0, 0x7f, v0
+; HAWAII-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
+; HAWAII-NEXT:    v_bfe_u32 v0, v0, 16, 7
 ; HAWAII-NEXT:    ds_write_b8 v1, v0 offset:6
 ; HAWAII-NEXT:    ds_write_b32 v1, v3
 ; HAWAII-NEXT:    s_endpgm

@@ -24,9 +24,9 @@ define i1 @test_srem_even(i4 %X) nounwind {
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_bfe_i32 v1, v0, 0, 4
 ; CHECK-NEXT:    v_mul_i32_i24_e32 v1, 3, v1
-; CHECK-NEXT:    v_lshrrev_b32_e32 v2, 4, v1
-; CHECK-NEXT:    v_bfe_u32 v1, v1, 7, 1
-; CHECK-NEXT:    v_add_i32_e32 v1, vcc, v2, v1
+; CHECK-NEXT:    v_lshrrev_b32_e32 v1, 4, v1
+; CHECK-NEXT:    v_bfe_u32 v2, v1, 3, 1
+; CHECK-NEXT:    v_add_i32_e32 v1, vcc, v1, v2
 ; CHECK-NEXT:    v_and_b32_e32 v1, 15, v1
 ; CHECK-NEXT:    v_mul_u32_u24_e32 v1, 6, v1
 ; CHECK-NEXT:    v_sub_i32_e32 v0, vcc, v0, v1
@@ -44,9 +44,11 @@ define i1 @test_srem_pow2_setne(i6 %X) nounwind {
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_bfe_i32 v1, v0, 0, 6
-; CHECK-NEXT:    v_bfe_u32 v1, v1, 9, 2
+; CHECK-NEXT:    v_lshrrev_b32_e32 v1, 5, v1
+; CHECK-NEXT:    v_bfe_u32 v1, v1, 4, 2
 ; CHECK-NEXT:    v_add_i32_e32 v1, vcc, v0, v1
-; CHECK-NEXT:    v_and_b32_e32 v1, 60, v1
+; CHECK-NEXT:    v_lshrrev_b32_e32 v1, 2, v1
+; CHECK-NEXT:    v_lshlrev_b32_e32 v1, 2, v1
 ; CHECK-NEXT:    v_sub_i32_e32 v0, vcc, v0, v1
 ; CHECK-NEXT:    v_and_b32_e32 v0, 63, v0
 ; CHECK-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0

@@ -5,7 +5,8 @@ define ptr @test1(ptr %P, i32 %X) {
 ; CHECK-LABEL: test1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    andl $-4, %eax
+; CHECK-NEXT:    shrl $2, %eax
+; CHECK-NEXT:    shll $2, %eax
 ; CHECK-NEXT:    addl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    retl
   %Y = lshr i32 %X, 2
@@ -31,7 +32,8 @@ define ptr @test3(ptr %P, i32 %X) {
 ; CHECK-LABEL: test3:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    andl $-4, %eax
+; CHECK-NEXT:    shrl $2, %eax
+; CHECK-NEXT:    shll $2, %eax
 ; CHECK-NEXT:    addl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    retl
   %Y = ashr i32 %X, 2

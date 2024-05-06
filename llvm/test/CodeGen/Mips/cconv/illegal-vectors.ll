@@ -680,10 +680,10 @@ define <3 x i24> @ret_v3i24(ptr %p) {
 ; MIPS64-NEXT:    or $2, $2, $5
 ; MIPS64-NEXT:    or $1, $1, $3
 ; MIPS64-NEXT:    lbu $3, 4($4)
-; MIPS64-NEXT:    sll $3, $3, 8
 ; MIPS64-NEXT:    lb $5, 3($4)
-; MIPS64-NEXT:    sll $5, $5, 16
+; MIPS64-NEXT:    sll $5, $5, 8
 ; MIPS64-NEXT:    or $3, $5, $3
+; MIPS64-NEXT:    sll $3, $3, 8
 ; MIPS64-NEXT:    lbu $4, 5($4)
 ; MIPS64-NEXT:    or $3, $4, $3
 ; MIPS64-NEXT:    jr $ra
@@ -700,10 +700,10 @@ define <3 x i24> @ret_v3i24(ptr %p) {
 ; MIPS32-NEXT:    or $2, $2, $5
 ; MIPS32-NEXT:    or $1, $1, $3
 ; MIPS32-NEXT:    lbu $3, 4($4)
-; MIPS32-NEXT:    sll $3, $3, 8
 ; MIPS32-NEXT:    lb $5, 3($4)
-; MIPS32-NEXT:    sll $5, $5, 16
+; MIPS32-NEXT:    sll $5, $5, 8
 ; MIPS32-NEXT:    or $3, $5, $3
+; MIPS32-NEXT:    sll $3, $3, 8
 ; MIPS32-NEXT:    lbu $4, 5($4)
 ; MIPS32-NEXT:    or $3, $4, $3
 ; MIPS32-NEXT:    jr $ra
@@ -719,19 +719,19 @@ define void @call_v3i24(ptr %p) nounwind {
 ; MIPS64-NEXT:    sd $ra, 8($sp) # 8-byte Folded Spill
 ; MIPS64-NEXT:    sd $16, 0($sp) # 8-byte Folded Spill
 ; MIPS64-NEXT:    move $16, $4
-; MIPS64-NEXT:    lbu $1, 4($4)
-; MIPS64-NEXT:    lbu $2, 8($4)
-; MIPS64-NEXT:    lh $3, 6($4)
-; MIPS64-NEXT:    dsll $3, $3, 8
-; MIPS64-NEXT:    lbu $4, 2($4)
-; MIPS64-NEXT:    lh $5, 0($16)
-; MIPS64-NEXT:    dsll $5, $5, 8
-; MIPS64-NEXT:    or $4, $4, $5
-; MIPS64-NEXT:    or $6, $2, $3
-; MIPS64-NEXT:    dsll $1, $1, 8
+; MIPS64-NEXT:    lbu $1, 8($4)
+; MIPS64-NEXT:    lh $2, 6($4)
+; MIPS64-NEXT:    dsll $2, $2, 8
+; MIPS64-NEXT:    lbu $3, 2($4)
+; MIPS64-NEXT:    lh $4, 0($4)
+; MIPS64-NEXT:    dsll $4, $4, 8
+; MIPS64-NEXT:    or $4, $3, $4
+; MIPS64-NEXT:    or $6, $1, $2
+; MIPS64-NEXT:    lbu $1, 4($16)
 ; MIPS64-NEXT:    lb $2, 3($16)
-; MIPS64-NEXT:    dsll $2, $2, 16
+; MIPS64-NEXT:    dsll $2, $2, 8
 ; MIPS64-NEXT:    or $1, $2, $1
+; MIPS64-NEXT:    dsll $1, $1, 8
 ; MIPS64-NEXT:    lbu $2, 5($16)
 ; MIPS64-NEXT:    jal arg_v3i24
 ; MIPS64-NEXT:    or $5, $2, $1
@@ -759,19 +759,19 @@ define void @call_v3i24(ptr %p) nounwind {
 ; MIPS32-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
 ; MIPS32-NEXT:    sw $16, 16($sp) # 4-byte Folded Spill
 ; MIPS32-NEXT:    move $16, $4
-; MIPS32-NEXT:    lbu $1, 4($4)
-; MIPS32-NEXT:    lbu $2, 8($4)
-; MIPS32-NEXT:    lh $3, 6($4)
-; MIPS32-NEXT:    sll $3, $3, 8
-; MIPS32-NEXT:    lbu $4, 2($4)
-; MIPS32-NEXT:    lhu $5, 0($16)
-; MIPS32-NEXT:    sll $5, $5, 8
-; MIPS32-NEXT:    or $4, $4, $5
-; MIPS32-NEXT:    or $6, $2, $3
-; MIPS32-NEXT:    sll $1, $1, 8
+; MIPS32-NEXT:    lbu $1, 8($4)
+; MIPS32-NEXT:    lh $2, 6($4)
+; MIPS32-NEXT:    sll $2, $2, 8
+; MIPS32-NEXT:    lbu $3, 2($4)
+; MIPS32-NEXT:    lhu $4, 0($4)
+; MIPS32-NEXT:    sll $4, $4, 8
+; MIPS32-NEXT:    or $4, $3, $4
+; MIPS32-NEXT:    or $6, $1, $2
+; MIPS32-NEXT:    lbu $1, 4($16)
 ; MIPS32-NEXT:    lb $2, 3($16)
-; MIPS32-NEXT:    sll $2, $2, 16
+; MIPS32-NEXT:    sll $2, $2, 8
 ; MIPS32-NEXT:    or $1, $2, $1
+; MIPS32-NEXT:    sll $1, $1, 8
 ; MIPS32-NEXT:    lbu $2, 5($16)
 ; MIPS32-NEXT:    jal arg_v3i24
 ; MIPS32-NEXT:    or $5, $2, $1
@@ -1044,34 +1044,33 @@ define void @arg_v4i18(<4 x i18> %vec, ptr %p) {
 ;
 ; MIPS32-LABEL: arg_v4i18:
 ; MIPS32:       # %bb.0:
-; MIPS32-NEXT:    sll $1, $4, 14
-; MIPS32-NEXT:    lui $2, 63
-; MIPS32-NEXT:    lui $3, 65280
-; MIPS32-NEXT:    and $1, $1, $3
-; MIPS32-NEXT:    ori $2, $2, 65280
-; MIPS32-NEXT:    sll $3, $5, 4
-; MIPS32-NEXT:    and $2, $3, $2
-; MIPS32-NEXT:    sll $4, $4, 22
-; MIPS32-NEXT:    or $2, $4, $2
-; MIPS32-NEXT:    srl $2, $2, 8
-; MIPS32-NEXT:    lui $4, 3
-; MIPS32-NEXT:    or $1, $1, $2
-; MIPS32-NEXT:    ori $2, $4, 65280
-; MIPS32-NEXT:    and $2, $7, $2
-; MIPS32-NEXT:    sll $5, $6, 18
-; MIPS32-NEXT:    or $2, $5, $2
-; MIPS32-NEXT:    lw $5, 16($sp)
-; MIPS32-NEXT:    sb $7, 8($5)
-; MIPS32-NEXT:    sw $1, 0($5)
-; MIPS32-NEXT:    srl $1, $2, 8
-; MIPS32-NEXT:    ori $2, $4, 49152
+; MIPS32-NEXT:    lui $1, 3
+; MIPS32-NEXT:    ori $2, $1, 49152
 ; MIPS32-NEXT:    and $2, $6, $2
 ; MIPS32-NEXT:    srl $2, $2, 14
+; MIPS32-NEXT:    ori $3, $1, 65535
+; MIPS32-NEXT:    and $3, $5, $3
+; MIPS32-NEXT:    sll $3, $3, 4
 ; MIPS32-NEXT:    or $2, $3, $2
 ; MIPS32-NEXT:    sll $2, $2, 24
+; MIPS32-NEXT:    ori $1, $1, 65280
+; MIPS32-NEXT:    and $1, $7, $1
+; MIPS32-NEXT:    sll $5, $6, 18
+; MIPS32-NEXT:    or $1, $5, $1
+; MIPS32-NEXT:    srl $1, $1, 8
 ; MIPS32-NEXT:    or $1, $1, $2
+; MIPS32-NEXT:    lw $2, 16($sp)
+; MIPS32-NEXT:    sb $7, 8($2)
+; MIPS32-NEXT:    sw $1, 4($2)
+; MIPS32-NEXT:    sll $1, $4, 14
+; MIPS32-NEXT:    lui $5, 65280
+; MIPS32-NEXT:    and $1, $1, $5
+; MIPS32-NEXT:    sll $4, $4, 22
+; MIPS32-NEXT:    or $3, $4, $3
+; MIPS32-NEXT:    srl $3, $3, 8
+; MIPS32-NEXT:    or $1, $1, $3
 ; MIPS32-NEXT:    jr $ra
-; MIPS32-NEXT:    sw $1, 4($5)
+; MIPS32-NEXT:    sw $1, 0($2)
   store <4 x i18> %vec, ptr %p
   ret void
 }
@@ -1090,13 +1089,11 @@ define <4 x i18> @ret_v4i18(ptr %p) {
 ; MIPS64-NEXT:    ori $5, $3, 65535
 ; MIPS64-NEXT:    dsrl $3, $2, 28
 ; MIPS64-NEXT:    sll $3, $3, 0
-; MIPS64-NEXT:    lui $7, 3
 ; MIPS64-NEXT:    and $3, $3, $5
 ; MIPS64-NEXT:    and $4, $4, $5
 ; MIPS64-NEXT:    and $5, $1, $5
-; MIPS64-NEXT:    ori $1, $7, 64512
-; MIPS64-NEXT:    dsrl $2, $2, 46
-; MIPS64-NEXT:    and $1, $2, $1
+; MIPS64-NEXT:    dsrl $1, $2, 56
+; MIPS64-NEXT:    dsll $1, $1, 10
 ; MIPS64-NEXT:    dsrl $2, $6, 54
 ; MIPS64-NEXT:    or $1, $2, $1
 ; MIPS64-NEXT:    jr $ra
@@ -1109,17 +1106,16 @@ define <4 x i18> @ret_v4i18(ptr %p) {
 ; MIPS32-NEXT:    sll $6, $2, 8
 ; MIPS32-NEXT:    lui $3, 3
 ; MIPS32-NEXT:    or $1, $1, $6
-; MIPS32-NEXT:    ori $5, $3, 64512
-; MIPS32-NEXT:    lw $4, 0($4)
-; MIPS32-NEXT:    srl $7, $4, 14
-; MIPS32-NEXT:    and $5, $7, $5
 ; MIPS32-NEXT:    srl $7, $2, 24
 ; MIPS32-NEXT:    ori $8, $3, 65535
-; MIPS32-NEXT:    sll $3, $4, 8
-; MIPS32-NEXT:    srl $2, $3, 22
-; MIPS32-NEXT:    or $2, $2, $5
+; MIPS32-NEXT:    lw $2, 0($4)
+; MIPS32-NEXT:    srl $3, $2, 24
+; MIPS32-NEXT:    sll $3, $3, 10
+; MIPS32-NEXT:    sll $4, $2, 8
+; MIPS32-NEXT:    srl $2, $4, 22
+; MIPS32-NEXT:    or $2, $2, $3
 ; MIPS32-NEXT:    and $5, $1, $8
-; MIPS32-NEXT:    or $1, $3, $7
+; MIPS32-NEXT:    or $1, $4, $7
 ; MIPS32-NEXT:    srl $1, $1, 4
 ; MIPS32-NEXT:    and $3, $1, $8
 ; MIPS32-NEXT:    sll $1, $7, 14
@@ -1141,21 +1137,20 @@ define void @call_v4i18(ptr %p) nounwind {
 ; MIPS64-NEXT:    sd $17, 16($sp) # 8-byte Folded Spill
 ; MIPS64-NEXT:    sd $16, 8($sp) # 8-byte Folded Spill
 ; MIPS64-NEXT:    move $16, $4
+; MIPS64-NEXT:    ld $1, 0($4)
+; MIPS64-NEXT:    dsrl $2, $1, 56
+; MIPS64-NEXT:    dsrl $3, $1, 10
 ; MIPS64-NEXT:    lui $17, 3
-; MIPS64-NEXT:    ori $1, $17, 64512
-; MIPS64-NEXT:    ld $2, 0($4)
-; MIPS64-NEXT:    dsrl $3, $2, 46
-; MIPS64-NEXT:    dsrl $4, $2, 10
 ; MIPS64-NEXT:    ori $18, $17, 65535
-; MIPS64-NEXT:    dsrl $5, $2, 28
-; MIPS64-NEXT:    and $5, $5, $18
-; MIPS64-NEXT:    and $6, $4, $18
-; MIPS64-NEXT:    and $1, $3, $1
-; MIPS64-NEXT:    dsll $2, $2, 8
-; MIPS64-NEXT:    dsrl $3, $2, 54
-; MIPS64-NEXT:    or $4, $3, $1
-; MIPS64-NEXT:    lbu $1, 8($16)
-; MIPS64-NEXT:    or $1, $1, $2
+; MIPS64-NEXT:    dsrl $4, $1, 28
+; MIPS64-NEXT:    and $5, $4, $18
+; MIPS64-NEXT:    and $6, $3, $18
+; MIPS64-NEXT:    dsll $2, $2, 10
+; MIPS64-NEXT:    dsll $1, $1, 8
+; MIPS64-NEXT:    dsrl $3, $1, 54
+; MIPS64-NEXT:    or $4, $3, $2
+; MIPS64-NEXT:    lbu $2, 8($16)
+; MIPS64-NEXT:    or $1, $2, $1
 ; MIPS64-NEXT:    jal arg_v4i18
 ; MIPS64-NEXT:    and $7, $1, $18
 ; MIPS64-NEXT:    daddiu $1, $zero, 255
@@ -1208,40 +1203,37 @@ define void @call_v4i18(ptr %p) nounwind {
 ; MIPS32-NEXT:    srl $5, $5, 4
 ; MIPS32-NEXT:    or $6, $6, $1
 ; MIPS32-NEXT:    lui $17, 3
-; MIPS32-NEXT:    ori $7, $17, 64512
-; MIPS32-NEXT:    srl $3, $3, 14
-; MIPS32-NEXT:    and $3, $3, $7
-; MIPS32-NEXT:    ori $8, $17, 65535
+; MIPS32-NEXT:    ori $18, $17, 65535
+; MIPS32-NEXT:    srl $3, $3, 24
+; MIPS32-NEXT:    sll $3, $3, 10
 ; MIPS32-NEXT:    srl $4, $4, 22
 ; MIPS32-NEXT:    or $4, $4, $3
-; MIPS32-NEXT:    and $7, $6, $8
-; MIPS32-NEXT:    and $5, $5, $8
+; MIPS32-NEXT:    and $7, $6, $18
+; MIPS32-NEXT:    and $5, $5, $18
 ; MIPS32-NEXT:    sll $2, $2, 14
 ; MIPS32-NEXT:    srl $1, $1, 18
 ; MIPS32-NEXT:    or $1, $1, $2
 ; MIPS32-NEXT:    jal arg_v4i18
-; MIPS32-NEXT:    and $6, $1, $8
-; MIPS32-NEXT:    ori $18, $17, 49152
-; MIPS32-NEXT:    ori $17, $17, 65280
-; MIPS32-NEXT:    lui $1, 63
+; MIPS32-NEXT:    and $6, $1, $18
+; MIPS32-NEXT:    ori $19, $17, 65280
 ; MIPS32-NEXT:    jal ret_v4i18
-; MIPS32-NEXT:    ori $19, $1, 65280
+; MIPS32-NEXT:    ori $17, $17, 49152
 ; MIPS32-NEXT:    lui $1, 65280
-; MIPS32-NEXT:    and $6, $5, $17
-; MIPS32-NEXT:    sll $7, $4, 18
-; MIPS32-NEXT:    or $6, $7, $6
-; MIPS32-NEXT:    srl $6, $6, 8
-; MIPS32-NEXT:    and $4, $4, $18
-; MIPS32-NEXT:    srl $4, $4, 14
+; MIPS32-NEXT:    and $6, $4, $17
+; MIPS32-NEXT:    srl $6, $6, 14
+; MIPS32-NEXT:    and $3, $3, $18
 ; MIPS32-NEXT:    sll $3, $3, 4
-; MIPS32-NEXT:    or $4, $3, $4
-; MIPS32-NEXT:    sll $4, $4, 24
-; MIPS32-NEXT:    or $4, $6, $4
-; MIPS32-NEXT:    sll $6, $2, 14
+; MIPS32-NEXT:    or $6, $3, $6
+; MIPS32-NEXT:    sll $6, $6, 24
+; MIPS32-NEXT:    and $7, $5, $19
+; MIPS32-NEXT:    sll $4, $4, 18
+; MIPS32-NEXT:    or $4, $4, $7
+; MIPS32-NEXT:    srl $4, $4, 8
+; MIPS32-NEXT:    or $4, $4, $6
 ; MIPS32-NEXT:    sb $5, 8($16)
 ; MIPS32-NEXT:    sw $4, 4($16)
-; MIPS32-NEXT:    and $1, $6, $1
-; MIPS32-NEXT:    and $3, $3, $19
+; MIPS32-NEXT:    sll $4, $2, 14
+; MIPS32-NEXT:    and $1, $4, $1
 ; MIPS32-NEXT:    sll $2, $2, 22
 ; MIPS32-NEXT:    or $2, $2, $3
 ; MIPS32-NEXT:    srl $2, $2, 8
@@ -1341,21 +1333,85 @@ define void @arg_v7i18(<7 x i18> %vec, ptr %p) {
 define <7 x i18> @ret_v7i18(ptr %p) {
 ; MIPS64-LABEL: ret_v7i18:
 ; MIPS64:       # %bb.0:
-; MIPS64-NEXT:    ld $1, 0($5)
+; MIPS64-NEXT:    lui $1, 3
+; MIPS64-NEXT:    ori $2, $1, 65535
+; MIPS64-NEXT:    ld $3, 0($5)
+; MIPS64-NEXT:    dsrl $6, $3, 26
+; MIPS64-NEXT:    and $6, $6, $2
+; MIPS64-NEXT:    dsll $6, $6, 26
+; MIPS64-NEXT:    dsrl $7, $3, 44
+; MIPS64-NEXT:    dsll $7, $7, 44
+; MIPS64-NEXT:    or $6, $7, $6
+; MIPS64-NEXT:    dsrl $7, $3, 8
+; MIPS64-NEXT:    and $7, $7, $2
+; MIPS64-NEXT:    dsll $7, $7, 8
+; MIPS64-NEXT:    ori $1, $1, 64512
+; MIPS64-NEXT:    or $6, $6, $7
+; MIPS64-NEXT:    dsll $3, $3, 10
+; MIPS64-NEXT:    and $1, $3, $1
+; MIPS64-NEXT:    dsrl $1, $1, 10
+; MIPS64-NEXT:    or $1, $6, $1
+; MIPS64-NEXT:    ld $3, 8($5)
+; MIPS64-NEXT:    dsrl $5, $3, 36
+; MIPS64-NEXT:    and $5, $5, $2
+; MIPS64-NEXT:    dsll $5, $5, 36
+; MIPS64-NEXT:    dsrl $6, $3, 54
+; MIPS64-NEXT:    dsll $6, $6, 54
 ; MIPS64-NEXT:    sd $1, 0($4)
-; MIPS64-NEXT:    ld $1, 8($5)
+; MIPS64-NEXT:    or $1, $6, $5
+; MIPS64-NEXT:    dsrl $5, $3, 18
+; MIPS64-NEXT:    and $5, $5, $2
+; MIPS64-NEXT:    dsll $5, $5, 18
+; MIPS64-NEXT:    or $1, $1, $5
+; MIPS64-NEXT:    and $2, $3, $2
+; MIPS64-NEXT:    or $1, $1, $2
 ; MIPS64-NEXT:    jr $ra
 ; MIPS64-NEXT:    sd $1, 8($4)
 ;
 ; MIPS32-LABEL: ret_v7i18:
 ; MIPS32:       # %bb.0:
-; MIPS32-NEXT:    lw $1, 0($5)
-; MIPS32-NEXT:    sw $1, 0($4)
-; MIPS32-NEXT:    lw $1, 4($5)
-; MIPS32-NEXT:    sw $1, 4($4)
-; MIPS32-NEXT:    lw $1, 12($5)
-; MIPS32-NEXT:    sw $1, 12($4)
-; MIPS32-NEXT:    lw $1, 8($5)
+; MIPS32-NEXT:    lui $1, 3
+; MIPS32-NEXT:    ori $2, $1, 65535
+; MIPS32-NEXT:    lw $3, 4($5)
+; MIPS32-NEXT:    srl $6, $3, 8
+; MIPS32-NEXT:    and $6, $6, $2
+; MIPS32-NEXT:    ori $7, $1, 65472
+; MIPS32-NEXT:    lw $8, 0($5)
+; MIPS32-NEXT:    sll $9, $8, 6
+; MIPS32-NEXT:    sll $6, $6, 8
+; MIPS32-NEXT:    and $7, $9, $7
+; MIPS32-NEXT:    srl $9, $3, 26
+; MIPS32-NEXT:    sll $9, $9, 26
+; MIPS32-NEXT:    lw $10, 8($5)
+; MIPS32-NEXT:    srl $11, $10, 4
+; MIPS32-NEXT:    srl $7, $7, 6
+; MIPS32-NEXT:    and $11, $11, $2
+; MIPS32-NEXT:    or $6, $9, $6
+; MIPS32-NEXT:    ori $9, $1, 64512
+; MIPS32-NEXT:    sll $3, $3, 10
+; MIPS32-NEXT:    and $3, $3, $9
+; MIPS32-NEXT:    srl $3, $3, 10
+; MIPS32-NEXT:    lw $5, 12($5)
+; MIPS32-NEXT:    srl $8, $8, 12
+; MIPS32-NEXT:    sll $8, $8, 12
+; MIPS32-NEXT:    or $3, $6, $3
+; MIPS32-NEXT:    sll $6, $11, 4
+; MIPS32-NEXT:    or $7, $8, $7
+; MIPS32-NEXT:    and $2, $5, $2
+; MIPS32-NEXT:    srl $5, $5, 18
+; MIPS32-NEXT:    sll $5, $5, 18
+; MIPS32-NEXT:    or $2, $5, $2
+; MIPS32-NEXT:    srl $5, $10, 22
+; MIPS32-NEXT:    sll $5, $5, 22
+; MIPS32-NEXT:    sw $2, 12($4)
+; MIPS32-NEXT:    sw $7, 0($4)
+; MIPS32-NEXT:    sw $3, 4($4)
+; MIPS32-NEXT:    or $2, $5, $6
+; MIPS32-NEXT:    ori $1, $1, 49152
+; MIPS32-NEXT:    sll $3, $10, 14
+; MIPS32-NEXT:    and $1, $3, $1
+; MIPS32-NEXT:    srl $1, $1, 14
+; MIPS32-NEXT:    or $1, $2, $1
 ; MIPS32-NEXT:    jr $ra
 ; MIPS32-NEXT:    sw $1, 8($4)
   %v = load <7 x i18>, ptr %p
@@ -1365,8 +1421,10 @@ define <7 x i18> @ret_v7i18(ptr %p) {
 define void @call_v7i18(ptr %p) nounwind {
 ; MIPS64-LABEL: call_v7i18:
 ; MIPS64:       # %bb.0:
-; MIPS64-NEXT:    daddiu $sp, $sp, -32
-; MIPS64-NEXT:    sd $ra, 24($sp) # 8-byte Folded Spill
+; MIPS64-NEXT:    daddiu $sp, $sp, -48
+; MIPS64-NEXT:    sd $ra, 40($sp) # 8-byte Folded Spill
+; MIPS64-NEXT:    sd $18, 32($sp) # 8-byte Folded Spill
+; MIPS64-NEXT:    sd $17, 24($sp) # 8-byte Folded Spill
 ; MIPS64-NEXT:    sd $16, 16($sp) # 8-byte Folded Spill
 ; MIPS64-NEXT:    move $16, $4
 ; MIPS64-NEXT:    ld $1, 0($4)
@@ -1375,36 +1433,67 @@ define void @call_v7i18(ptr %p) nounwind {
 ; MIPS64-NEXT:    dsrl $4, $2, 36
 ; MIPS64-NEXT:    dsrl $6, $1, 8
 ; MIPS64-NEXT:    dsrl $5, $1, 26
-; MIPS64-NEXT:    lui $7, 3
-; MIPS64-NEXT:    ori $7, $7, 65535
-; MIPS64-NEXT:    and $10, $2, $7
-; MIPS64-NEXT:    and $5, $5, $7
-; MIPS64-NEXT:    and $6, $6, $7
-; MIPS64-NEXT:    and $8, $4, $7
-; MIPS64-NEXT:    and $9, $3, $7
+; MIPS64-NEXT:    lui $17, 3
+; MIPS64-NEXT:    ori $18, $17, 65535
+; MIPS64-NEXT:    and $10, $2, $18
+; MIPS64-NEXT:    and $5, $5, $18
+; MIPS64-NEXT:    and $6, $6, $18
+; MIPS64-NEXT:    and $8, $4, $18
+; MIPS64-NEXT:    and $9, $3, $18
 ; MIPS64-NEXT:    dsll $3, $1, 10
 ; MIPS64-NEXT:    dsrl $2, $2, 54
 ; MIPS64-NEXT:    or $2, $2, $3
-; MIPS64-NEXT:    and $7, $2, $7
+; MIPS64-NEXT:    and $7, $2, $18
 ; MIPS64-NEXT:    jal arg_v7i18
 ; MIPS64-NEXT:    dsrl $4, $1, 44
 ; MIPS64-NEXT:    jal ret_v7i18
 ; MIPS64-NEXT:    daddiu $4, $sp, 0
-; MIPS64-NEXT:    ld $1, 0($sp)
+; MIPS64-NEXT:    ori $1, $17, 64512
+; MIPS64-NEXT:    ld $2, 0($sp)
+; MIPS64-NEXT:    dsrl $3, $2, 26
+; MIPS64-NEXT:    and $3, $3, $18
+; MIPS64-NEXT:    dsll $3, $3, 26
+; MIPS64-NEXT:    dsrl $4, $2, 44
+; MIPS64-NEXT:    dsll $4, $4, 44
+; MIPS64-NEXT:    or $3, $4, $3
+; MIPS64-NEXT:    dsrl $4, $2, 8
+; MIPS64-NEXT:    and $4, $4, $18
+; MIPS64-NEXT:    dsll $4, $4, 8
+; MIPS64-NEXT:    or $3, $3, $4
+; MIPS64-NEXT:    dsll $2, $2, 10
+; MIPS64-NEXT:    and $1, $2, $1
+; MIPS64-NEXT:    dsrl $1, $1, 10
+; MIPS64-NEXT:    or $1, $3, $1
+; MIPS64-NEXT:    ld $2, 8($sp)
+; MIPS64-NEXT:    dsrl $3, $2, 36
+; MIPS64-NEXT:    and $3, $3, $18
+; MIPS64-NEXT:    dsll $3, $3, 36
+; MIPS64-NEXT:    dsrl $4, $2, 54
+; MIPS64-NEXT:    dsll $4, $4, 54
 ; MIPS64-NEXT:    sd $1, 0($16)
-; MIPS64-NEXT:    ld $1, 8($sp)
+; MIPS64-NEXT:    or $1, $4, $3
+; MIPS64-NEXT:    dsrl $3, $2, 18
+; MIPS64-NEXT:    and $3, $3, $18
+; MIPS64-NEXT:    dsll $3, $3, 18
+; MIPS64-NEXT:    or $1, $1, $3
+; MIPS64-NEXT:    and $2, $2, $18
+; MIPS64-NEXT:    or $1, $1, $2
 ; MIPS64-NEXT:    sd $1, 8($16)
 ; MIPS64-NEXT:    ld $16, 16($sp) # 8-byte Folded Reload
-; MIPS64-NEXT:    ld $ra, 24($sp) # 8-byte Folded Reload
+; MIPS64-NEXT:    ld $17, 24($sp) # 8-byte Folded Reload
+; MIPS64-NEXT:    ld $18, 32($sp) # 8-byte Folded Reload
+; MIPS64-NEXT:    ld $ra, 40($sp) # 8-byte Folded Reload
 ; MIPS64-NEXT:    jr $ra
-; MIPS64-NEXT:    daddiu $sp, $sp, 32
+; MIPS64-NEXT:    daddiu $sp, $sp, 48
 ;
 ; MIPS32-LABEL: call_v7i18:
 ; MIPS32:       # %bb.0:
-; MIPS32-NEXT:    addiu $sp, $sp, -64
-; MIPS32-NEXT:    sw $ra, 60($sp) # 4-byte Folded Spill
-; MIPS32-NEXT:    sw $fp, 56($sp) # 4-byte Folded Spill
-; MIPS32-NEXT:    sw $16, 52($sp) # 4-byte Folded Spill
+; MIPS32-NEXT:    addiu $sp, $sp, -80
+; MIPS32-NEXT:    sw $ra, 76($sp) # 4-byte Folded Spill
+; MIPS32-NEXT:    sw $fp, 72($sp) # 4-byte Folded Spill
+; MIPS32-NEXT:    sw $18, 68($sp) # 4-byte Folded Spill
+; MIPS32-NEXT:    sw $17, 64($sp) # 4-byte Folded Spill
+; MIPS32-NEXT:    sw $16, 60($sp) # 4-byte Folded Spill
 ; MIPS32-NEXT:    move $fp, $sp
 ; MIPS32-NEXT:    addiu $1, $zero, -16
 ; MIPS32-NEXT:    and $sp, $sp, $1
@@ -1415,44 +1504,79 @@ define void @call_v7i18(ptr %p) nounwind {
 ; MIPS32-NEXT:    srl $4, $3, 18
 ; MIPS32-NEXT:    or $2, $4, $2
 ; MIPS32-NEXT:    srl $4, $1, 4
-; MIPS32-NEXT:    lui $5, 3
-; MIPS32-NEXT:    ori $7, $5, 65535
-; MIPS32-NEXT:    and $2, $2, $7
-; MIPS32-NEXT:    and $4, $4, $7
-; MIPS32-NEXT:    and $3, $3, $7
-; MIPS32-NEXT:    lw $8, 4($16)
-; MIPS32-NEXT:    lw $9, 0($16)
-; MIPS32-NEXT:    sll $5, $9, 6
-; MIPS32-NEXT:    srl $6, $8, 26
+; MIPS32-NEXT:    lui $18, 3
+; MIPS32-NEXT:    ori $17, $18, 65535
+; MIPS32-NEXT:    and $2, $2, $17
+; MIPS32-NEXT:    and $4, $4, $17
+; MIPS32-NEXT:    and $3, $3, $17
+; MIPS32-NEXT:    lw $7, 4($16)
+; MIPS32-NEXT:    lw $8, 0($16)
+; MIPS32-NEXT:    sll $5, $8, 6
+; MIPS32-NEXT:    srl $6, $7, 26
 ; MIPS32-NEXT:    sw $3, 24($sp)
 ; MIPS32-NEXT:    sw $4, 16($sp)
 ; MIPS32-NEXT:    sw $2, 20($sp)
 ; MIPS32-NEXT:    or $2, $6, $5
-; MIPS32-NEXT:    srl $3, $8, 8
-; MIPS32-NEXT:    and $6, $3, $7
-; MIPS32-NEXT:    and $5, $2, $7
-; MIPS32-NEXT:    sll $2, $8, 10
+; MIPS32-NEXT:    srl $3, $7, 8
+; MIPS32-NEXT:    and $6, $3, $17
+; MIPS32-NEXT:    and $5, $2, $17
+; MIPS32-NEXT:    sll $2, $7, 10
 ; MIPS32-NEXT:    srl $1, $1, 22
 ; MIPS32-NEXT:    or $1, $1, $2
-; MIPS32-NEXT:    and $7, $1, $7
+; MIPS32-NEXT:    and $7, $1, $17
 ; MIPS32-NEXT:    jal arg_v7i18
-; MIPS32-NEXT:    srl $4, $9, 12
+; MIPS32-NEXT:    srl $4, $8, 12
 ; MIPS32-NEXT:    jal ret_v7i18
 ; MIPS32-NEXT:    addiu $4, $sp, 32
-; MIPS32-NEXT:    lw $1, 32($sp)
-; MIPS32-NEXT:    sw $1, 0($16)
-; MIPS32-NEXT:    lw $1, 36($sp)
+; MIPS32-NEXT:    ori $1, $18, 64512
+; MIPS32-NEXT:    ori $2, $18, 65472
+; MIPS32-NEXT:    ori $3, $18, 49152
+; MIPS32-NEXT:    lw $4, 36($sp)
+; MIPS32-NEXT:    srl $5, $4, 8
+; MIPS32-NEXT:    and $5, $5, $17
+; MIPS32-NEXT:    sll $5, $5, 8
+; MIPS32-NEXT:    lw $6, 32($sp)
+; MIPS32-NEXT:    sll $7, $6, 6
+; MIPS32-NEXT:    and $2, $7, $2
+; MIPS32-NEXT:    srl $7, $4, 26
+; MIPS32-NEXT:    sll $7, $7, 26
+; MIPS32-NEXT:    srl $2, $2, 6
+; MIPS32-NEXT:    or $5, $7, $5
+; MIPS32-NEXT:    sll $4, $4, 10
+; MIPS32-NEXT:    and $1, $4, $1
+; MIPS32-NEXT:    srl $1, $1, 10
+; MIPS32-NEXT:    srl $4, $6, 12
+; MIPS32-NEXT:    sll $4, $4, 12
+; MIPS32-NEXT:    lw $6, 40($sp)
+; MIPS32-NEXT:    srl $7, $6, 4
+; MIPS32-NEXT:    or $1, $5, $1
+; MIPS32-NEXT:    and $5, $7, $17
+; MIPS32-NEXT:    or $2, $4, $2
+; MIPS32-NEXT:    lw $4, 44($sp)
+; MIPS32-NEXT:    and $7, $4, $17
+; MIPS32-NEXT:    srl $4, $4, 18
+; MIPS32-NEXT:    sll $4, $4, 18
+; MIPS32-NEXT:    or $4, $4, $7
+; MIPS32-NEXT:    sw $4, 12($16)
+; MIPS32-NEXT:    sw $2, 0($16)
 ; MIPS32-NEXT:    sw $1, 4($16)
-; MIPS32-NEXT:    lw $1, 40($sp)
+; MIPS32-NEXT:    sll $1, $5, 4
+; MIPS32-NEXT:    srl $2, $6, 22
+; MIPS32-NEXT:    sll $2, $2, 22
+; MIPS32-NEXT:    or $1, $2, $1
+; MIPS32-NEXT:    sll $2, $6, 14
+; MIPS32-NEXT:    and $2, $2, $3
+; MIPS32-NEXT:    srl $2, $2, 14
+; MIPS32-NEXT:    or $1, $1, $2
 ; MIPS32-NEXT:    sw $1, 8($16)
-; MIPS32-NEXT:    lw $1, 44($sp)
-; MIPS32-NEXT:    sw $1, 12($16)
 ; MIPS32-NEXT:    move $sp, $fp
-; MIPS32-NEXT:    lw $16, 52($sp) # 4-byte Folded Reload
-; MIPS32-NEXT:    lw $fp, 56($sp) # 4-byte Folded Reload
-; MIPS32-NEXT:    lw $ra, 60($sp) # 4-byte Folded Reload
+; MIPS32-NEXT:    lw $16, 60($sp) # 4-byte Folded Reload
+; MIPS32-NEXT:    lw $17, 64($sp) # 4-byte Folded Reload
+; MIPS32-NEXT:    lw $18, 68($sp) # 4-byte Folded Reload
+; MIPS32-NEXT:    lw $fp, 72($sp) # 4-byte Folded Reload
+; MIPS32-NEXT:    lw $ra, 76($sp) # 4-byte Folded Reload
 ; MIPS32-NEXT:    jr $ra
-; MIPS32-NEXT:    addiu $sp, $sp, 64
+; MIPS32-NEXT:    addiu $sp, $sp, 80
   %v1 = load <7 x i18>, ptr %p
   call void @arg_v7i18(<7 x i18> %v1)
   %v2 = call <7 x i18> @ret_v7i18()

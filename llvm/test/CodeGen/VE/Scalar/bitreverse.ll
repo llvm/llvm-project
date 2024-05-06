@@ -61,7 +61,11 @@ define zeroext i16 @func16z(i16 zeroext %p) {
 ; CHECK-LABEL: func16z:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    brv %s0, %s0
-; CHECK-NEXT:    srl %s0, %s0, 48
+; CHECK-NEXT:    srl %s0, %s0, 32
+; CHECK-NEXT:    and %s0, %s0, (32)0
+; CHECK-NEXT:    and %s0, %s0, (32)0
+; CHECK-NEXT:    srl %s0, %s0, 16
+; CHECK-NEXT:    adds.w.zx %s0, %s0, (0)1
 ; CHECK-NEXT:    b.l.t (, %s10)
   %r = tail call i16 @llvm.bitreverse.i16(i16 %p)
   ret i16 %r
@@ -81,7 +85,11 @@ define zeroext i8 @func8z(i8 zeroext %p) {
 ; CHECK-LABEL: func8z:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    brv %s0, %s0
-; CHECK-NEXT:    srl %s0, %s0, 56
+; CHECK-NEXT:    srl %s0, %s0, 32
+; CHECK-NEXT:    and %s0, %s0, (32)0
+; CHECK-NEXT:    and %s0, %s0, (32)0
+; CHECK-NEXT:    srl %s0, %s0, 24
+; CHECK-NEXT:    adds.w.zx %s0, %s0, (0)1
 ; CHECK-NEXT:    b.l.t (, %s10)
   %r = tail call i8 @llvm.bitreverse.i8(i8 %p)
   ret i8 %r

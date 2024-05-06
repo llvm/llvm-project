@@ -42,7 +42,8 @@ define signext i32 @ctlz_i32(i32 signext %a) nounwind {
 ; RV64I-NEXT:    add a0, a0, a1
 ; RV64I-NEXT:    slli a1, a0, 16
 ; RV64I-NEXT:    add a0, a0, a1
-; RV64I-NEXT:    srliw a0, a0, 24
+; RV64I-NEXT:    slli a0, a0, 34
+; RV64I-NEXT:    srli a0, a0, 58
 ; RV64I-NEXT:    ret
 ; RV64I-NEXT:  .LBB0_2:
 ; RV64I-NEXT:    li a0, 32
@@ -94,7 +95,8 @@ define signext i32 @log2_i32(i32 signext %a) nounwind {
 ; RV64I-NEXT:    add a0, a0, a1
 ; RV64I-NEXT:    slli a1, a0, 16
 ; RV64I-NEXT:    add a0, a0, a1
-; RV64I-NEXT:    srliw a0, a0, 24
+; RV64I-NEXT:    slli a0, a0, 34
+; RV64I-NEXT:    srli a0, a0, 58
 ; RV64I-NEXT:    j .LBB1_3
 ; RV64I-NEXT:  .LBB1_2:
 ; RV64I-NEXT:    li a0, 32
@@ -155,7 +157,8 @@ define signext i32 @log2_ceil_i32(i32 signext %a) nounwind {
 ; RV64I-NEXT:    add a1, a1, a2
 ; RV64I-NEXT:    slli a2, a1, 16
 ; RV64I-NEXT:    add a1, a1, a2
-; RV64I-NEXT:    srliw a2, a1, 24
+; RV64I-NEXT:    slli a1, a1, 34
+; RV64I-NEXT:    srli a2, a1, 58
 ; RV64I-NEXT:  .LBB2_2: # %cond.end
 ; RV64I-NEXT:    sub a0, a0, a2
 ; RV64I-NEXT:    ret
@@ -209,7 +212,8 @@ define signext i32 @findLastSet_i32(i32 signext %a) nounwind {
 ; RV64I-NEXT:    add a1, a1, a2
 ; RV64I-NEXT:    slli a2, a1, 16
 ; RV64I-NEXT:    add a1, a1, a2
-; RV64I-NEXT:    srliw a1, a1, 24
+; RV64I-NEXT:    slli a1, a1, 34
+; RV64I-NEXT:    srli a1, a1, 58
 ; RV64I-NEXT:    xori a1, a1, 31
 ; RV64I-NEXT:    snez a0, a0
 ; RV64I-NEXT:    addi a0, a0, -1
@@ -270,7 +274,8 @@ define i32 @ctlz_lshr_i32(i32 signext %a) {
 ; RV64I-NEXT:    add a0, a0, a1
 ; RV64I-NEXT:    slli a1, a0, 16
 ; RV64I-NEXT:    add a0, a0, a1
-; RV64I-NEXT:    srliw a0, a0, 24
+; RV64I-NEXT:    slli a0, a0, 34
+; RV64I-NEXT:    srli a0, a0, 58
 ; RV64I-NEXT:    ret
 ; RV64I-NEXT:  .LBB4_2:
 ; RV64I-NEXT:    li a0, 32
@@ -609,14 +614,14 @@ define signext i32 @sexth_i32(i32 signext %a) nounwind {
 define signext i32 @no_sexth_i32(i32 signext %a) nounwind {
 ; RV64I-LABEL: no_sexth_i32:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slli a0, a0, 49
-; RV64I-NEXT:    srai a0, a0, 48
+; RV64I-NEXT:    slli a0, a0, 17
+; RV64I-NEXT:    sraiw a0, a0, 16
 ; RV64I-NEXT:    ret
 ;
 ; RV64XTHEADBB-LABEL: no_sexth_i32:
 ; RV64XTHEADBB:       # %bb.0:
-; RV64XTHEADBB-NEXT:    slli a0, a0, 49
-; RV64XTHEADBB-NEXT:    srai a0, a0, 48
+; RV64XTHEADBB-NEXT:    slli a0, a0, 17
+; RV64XTHEADBB-NEXT:    sraiw a0, a0, 16
 ; RV64XTHEADBB-NEXT:    ret
   %shl = shl i32 %a, 17
   %shr = ashr exact i32 %shl, 16

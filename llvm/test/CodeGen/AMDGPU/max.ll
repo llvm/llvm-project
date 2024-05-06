@@ -736,6 +736,7 @@ define amdgpu_kernel void @simplify_demanded_bits_test_max_slt_i16(ptr addrspace
 ; SI-NEXT:    s_sext_i32_i16 s4, s4
 ; SI-NEXT:    s_sext_i32_i16 s5, s5
 ; SI-NEXT:    s_max_i32 s4, s4, s5
+; SI-NEXT:    s_bfe_i32 s4, s4, 0x100000
 ; SI-NEXT:    v_mov_b32_e32 v0, s4
 ; SI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
@@ -744,7 +745,7 @@ define amdgpu_kernel void @simplify_demanded_bits_test_max_slt_i16(ptr addrspace
 ; EG:       ; %bb.0:
 ; EG-NEXT:    ALU 0, @10, KC0[], KC1[]
 ; EG-NEXT:    TEX 1 @6
-; EG-NEXT:    ALU 5, @11, KC0[CB0:0-32], KC1[]
+; EG-NEXT:    ALU 8, @11, KC0[CB0:0-32], KC1[]
 ; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T0.X, T1.X, 1
 ; EG-NEXT:    CF_END
 ; EG-NEXT:    PAD
@@ -757,9 +758,12 @@ define amdgpu_kernel void @simplify_demanded_bits_test_max_slt_i16(ptr addrspace
 ; EG-NEXT:     BFE_INT T0.Z, T1.X, 0.0, literal.x,
 ; EG-NEXT:     BFE_INT * T0.W, T0.X, 0.0, literal.x, BS:VEC_120/SCL_212
 ; EG-NEXT:    16(2.242078e-44), 0(0.000000e+00)
-; EG-NEXT:     MAX_INT T0.X, PV.Z, PV.W,
-; EG-NEXT:     LSHR * T1.X, KC0[2].Y, literal.x,
-; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
+; EG-NEXT:     MAX_INT * T0.W, PV.Z, PV.W,
+; EG-NEXT:     LSHL * T0.W, PV.W, literal.x,
+; EG-NEXT:    16(2.242078e-44), 0(0.000000e+00)
+; EG-NEXT:     ASHR T0.X, PV.W, literal.x,
+; EG-NEXT:     LSHR * T1.X, KC0[2].Y, literal.y,
+; EG-NEXT:    16(2.242078e-44), 2(2.802597e-45)
   %a.ext = sext i16 %a to i32
   %b.ext = sext i16 %b to i32
   %cmp = icmp sgt i32 %a.ext, %b.ext

@@ -50,10 +50,11 @@ define i32 @mask_add_zext_i32_i64(ptr %base, i32 %i) {
 define i32 @mask_offset_scale_zext_i32_i64(ptr %base, i32 %i) {
 ; X86-LABEL: mask_offset_scale_zext_i32_i64:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    shll $11, %ecx
-; X86-NEXT:    movl 48(%eax,%ecx), %eax
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    shll $8, %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    leal 12(%eax,%eax), %eax
+; X86-NEXT:    movl (%ecx,%eax,4), %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: mask_offset_scale_zext_i32_i64:

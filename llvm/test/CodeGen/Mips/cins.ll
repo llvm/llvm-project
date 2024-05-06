@@ -97,8 +97,9 @@ entry:
 define i64 @cins_shl_and32(i32 signext %n) {
 ; CHECK-LABEL: cins_shl_and32:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    andi $1, $4, 65535
 ; CHECK-NEXT:    jr $ra
-; CHECK-NEXT:    cins32 $2, $4, 15, 15
+; CHECK-NEXT:    dsll $2, $1, 47
 entry:
   %and = and i32 %n, 65535
   %conv = zext i32 %and to i64

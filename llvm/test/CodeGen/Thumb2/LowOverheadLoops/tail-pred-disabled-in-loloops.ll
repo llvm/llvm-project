@@ -41,9 +41,10 @@ define dso_local void @check_option(ptr noalias nocapture %A, ptr noalias nocapt
 ; DISABLED-NEXT:    blt .LBB0_4
 ; DISABLED-NEXT:  @ %bb.1: @ %vector.ph.preheader
 ; DISABLED-NEXT:    adds r7, r3, #3
+; DISABLED-NEXT:    mvn r6, #3
+; DISABLED-NEXT:    lsrs r7, r7, #2
+; DISABLED-NEXT:    add.w r7, r6, r7, lsl #2
 ; DISABLED-NEXT:    movs r6, #1
-; DISABLED-NEXT:    bic r7, r7, #3
-; DISABLED-NEXT:    subs r7, #4
 ; DISABLED-NEXT:    add.w r8, r6, r7, lsr #2
 ; DISABLED-NEXT:  .LBB0_2: @ %vector.ph
 ; DISABLED-NEXT:    @ =>This Loop Header: Depth=1

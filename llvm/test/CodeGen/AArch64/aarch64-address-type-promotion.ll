@@ -8,10 +8,14 @@ target triple = "arm64-apple-macosx10.9"
 define void @foo(ptr nocapture %a, i32 %i) {
 ; CHECK-LABEL: foo:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    add x8, x0, w1, sxtw #2
-; CHECK-NEXT:    ldp w9, w10, [x8, #4]
-; CHECK-NEXT:    add w9, w10, w9
-; CHECK-NEXT:    str w9, [x8]
+; CHECK-NEXT:    ; kill: def $w1 killed $w1 def $x1
+; CHECK-NEXT:    sxtw x8, w1
+; CHECK-NEXT:    add x9, x8, #1
+; CHECK-NEXT:    add x8, x8, #2
+; CHECK-NEXT:    ldr w9, [x0, x9, lsl #2]
+; CHECK-NEXT:    ldr w8, [x0, x8, lsl #2]
+; CHECK-NEXT:    add w8, w8, w9
+; CHECK-NEXT:    str w8, [x0, w1, sxtw #2]
 ; CHECK-NEXT:    ret
 entry:
   %add = add nsw i32 %i, 1

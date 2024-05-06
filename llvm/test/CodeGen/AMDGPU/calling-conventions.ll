@@ -453,8 +453,9 @@ define amdgpu_ps void @ps_mesa_inreg_v2i16(<2 x i16> inreg %arg0) {
 ;
 ; VI-LABEL: ps_mesa_inreg_v2i16:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_and_b32 s1, s0, 0xffff0000
+; VI-NEXT:    s_lshr_b32 s1, s0, 16
 ; VI-NEXT:    s_add_i32 s0, s0, 1
+; VI-NEXT:    s_lshl_b32 s1, s1, 16
 ; VI-NEXT:    s_and_b32 s0, s0, 0xffff
 ; VI-NEXT:    s_or_b32 s0, s1, s0
 ; VI-NEXT:    s_add_i32 s0, s0, 0x10000

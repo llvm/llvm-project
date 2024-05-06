@@ -30,7 +30,8 @@ define i32 @t2(ptr %X, i32 %i) {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movzwl %cx, %ecx
-; X86-NEXT:    movl (%eax,%ecx,4), %eax
+; X86-NEXT:    addl %ecx, %ecx
+; X86-NEXT:    movl (%eax,%ecx,2), %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: t2:

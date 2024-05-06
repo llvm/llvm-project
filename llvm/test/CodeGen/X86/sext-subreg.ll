@@ -7,9 +7,11 @@ define i64 @t(i64 %A, i64 %B, ptr %P, ptr%P2) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addq %rsi, %rdi
 ; CHECK-NEXT:    movl %edi, (%rdx)
-; CHECK-NEXT:    movslq %edi, %rax
+; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    shlq $32, %rax
+; CHECK-NEXT:    sarq $32, %rax
 ; CHECK-NEXT:    movq %rax, (%rcx)
-; CHECK-NEXT:    movl %eax, (%rdx)
+; CHECK-NEXT:    movl %edi, (%rdx)
 ; CHECK-NEXT:    retq
   %C = add i64 %A, %B
   %D = trunc i64 %C to i32

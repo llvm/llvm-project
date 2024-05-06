@@ -11,9 +11,6 @@ define void @_start() {
 ; CHECK-NEXT:    movzbl -9(%rsp), %ecx
 ; CHECK-NEXT:    movzbl -10(%rsp), %edx
 ; CHECK-NEXT:    movzbl -11(%rsp), %esi
-; CHECK-NEXT:    movzbl %cl, %edi
-; CHECK-NEXT:    shrb %cl
-; CHECK-NEXT:    movb %cl, -2(%rsp)
 ; CHECK-NEXT:    andl $31, %eax
 ; CHECK-NEXT:    andl $31, %esi
 ; CHECK-NEXT:    shll $5, %esi
@@ -21,12 +18,16 @@ define void @_start() {
 ; CHECK-NEXT:    andl $31, %edx
 ; CHECK-NEXT:    shll $10, %edx
 ; CHECK-NEXT:    orl %esi, %edx
-; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    shll $15, %eax
-; CHECK-NEXT:    orl %edx, %eax
-; CHECK-NEXT:    movw %ax, -4(%rsp)
-; CHECK-NEXT:    movb %dil, -5(%rsp)
-; CHECK-NEXT:    cmpb $31, %dil
+; CHECK-NEXT:    movzbl %cl, %eax
+; CHECK-NEXT:    movl %eax, %ecx
+; CHECK-NEXT:    shll $15, %ecx
+; CHECK-NEXT:    orl %edx, %ecx
+; CHECK-NEXT:    movw %cx, -4(%rsp)
+; CHECK-NEXT:    andl $983040, %ecx # imm = 0xF0000
+; CHECK-NEXT:    shrl $16, %ecx
+; CHECK-NEXT:    movb %cl, -2(%rsp)
+; CHECK-NEXT:    movb %al, -5(%rsp)
+; CHECK-NEXT:    cmpb $31, %al
 ; CHECK-NEXT:    je .LBB0_2
 ; CHECK-NEXT:  # %bb.1: # %Then
 ; CHECK-NEXT:    int3

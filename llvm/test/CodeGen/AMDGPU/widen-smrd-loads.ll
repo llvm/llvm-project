@@ -303,13 +303,15 @@ define amdgpu_kernel void @widen_v2i8_constant_load(ptr addrspace(4) %arg) {
 ; SI-NEXT:    s_load_dword s1, s[0:1], 0x0
 ; SI-NEXT:    s_mov_b32 s0, 0
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-NEXT:    s_and_b32 s4, s1, 0xff00
-; SI-NEXT:    s_add_i32 s1, s1, 12
-; SI-NEXT:    s_or_b32 s1, s1, 4
-; SI-NEXT:    s_and_b32 s1, s1, 0xff
-; SI-NEXT:    s_or_b32 s1, s4, s1
-; SI-NEXT:    s_addk_i32 s1, 0x2c00
-; SI-NEXT:    s_or_b32 s4, s1, 0x300
+; SI-NEXT:    s_and_b32 s4, s1, 0xffff
+; SI-NEXT:    s_bfe_u32 s1, s1, 0x80008
+; SI-NEXT:    s_add_i32 s4, s4, 12
+; SI-NEXT:    s_add_i32 s1, s1, 44
+; SI-NEXT:    s_or_b32 s1, s1, 3
+; SI-NEXT:    s_or_b32 s4, s4, 4
+; SI-NEXT:    s_lshl_b32 s1, s1, 8
+; SI-NEXT:    s_and_b32 s4, s4, 0xff
+; SI-NEXT:    s_or_b32 s4, s4, s1
 ; SI-NEXT:    s_mov_b32 s1, s0
 ; SI-NEXT:    v_mov_b32_e32 v0, s4
 ; SI-NEXT:    buffer_store_short v0, off, s[0:3], 0
@@ -343,16 +345,17 @@ define amdgpu_kernel void @widen_v2i8_constant_load(ptr addrspace(4) %arg) {
 ; GFX11-NEXT:    s_load_b32 s0, s[0:1], 0x0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_add_nc_u16 v0, s0, 12
-; GFX11-NEXT:    v_and_b32_e64 v1, 0xffffff00, s0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-NEXT:    v_lshrrev_b16 v1, 8, s0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-NEXT:    v_or_b32_e32 v0, 4, v0
+; GFX11-NEXT:    v_lshlrev_b16 v1, 8, v1
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_and_b32_e32 v0, 0xff, v0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_or_b32_e32 v0, v1, v0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_3)
 ; GFX11-NEXT:    v_add_nc_u16 v2, v0, 0x2c00
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX11-NEXT:    v_mov_b32_e32 v1, 0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3)
 ; GFX11-NEXT:    v_or_b32_e32 v2, 0x300, v2
 ; GFX11-NEXT:    global_store_b16 v[0:1], v2, off
 ; GFX11-NEXT:    s_nop 0

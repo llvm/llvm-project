@@ -1233,7 +1233,8 @@ define i32 @test_ctlz_i32(i32 %a) nounwind {
 ; RV64I-NEXT:    add a0, a0, a1
 ; RV64I-NEXT:    slli a1, a0, 16
 ; RV64I-NEXT:    add a0, a0, a1
-; RV64I-NEXT:    srliw a0, a0, 24
+; RV64I-NEXT:    slli a0, a0, 34
+; RV64I-NEXT:    srli a0, a0, 58
 ; RV64I-NEXT:    ret
 ; RV64I-NEXT:  .LBB10_2:
 ; RV64I-NEXT:    li a0, 32
@@ -1870,7 +1871,8 @@ define i32 @test_ctlz_i32_zero_undef(i32 %a) nounwind {
 ; RV64I-NEXT:    add a0, a0, a1
 ; RV64I-NEXT:    slli a1, a0, 16
 ; RV64I-NEXT:    add a0, a0, a1
-; RV64I-NEXT:    srliw a0, a0, 24
+; RV64I-NEXT:    slli a0, a0, 34
+; RV64I-NEXT:    srli a0, a0, 58
 ; RV64I-NEXT:    ret
 ;
 ; RV32M-LABEL: test_ctlz_i32_zero_undef:
@@ -2453,7 +2455,8 @@ define i32 @test_ctpop_i32(i32 %a) nounwind {
 ; RV64I-NEXT:    add a0, a0, a1
 ; RV64I-NEXT:    slli a1, a0, 16
 ; RV64I-NEXT:    add a0, a0, a1
-; RV64I-NEXT:    srliw a0, a0, 24
+; RV64I-NEXT:    slli a0, a0, 34
+; RV64I-NEXT:    srli a0, a0, 58
 ; RV64I-NEXT:    ret
 ;
 ; RV32M-LABEL: test_ctpop_i32:
@@ -2561,7 +2564,8 @@ define i32 @test_ctpop_i32(i32 %a) nounwind {
 ; RV64XTHEADBB-NEXT:    add a0, a0, a1
 ; RV64XTHEADBB-NEXT:    slli a1, a0, 16
 ; RV64XTHEADBB-NEXT:    add a0, a0, a1
-; RV64XTHEADBB-NEXT:    srliw a0, a0, 24
+; RV64XTHEADBB-NEXT:    slli a0, a0, 34
+; RV64XTHEADBB-NEXT:    srli a0, a0, 58
 ; RV64XTHEADBB-NEXT:    ret
   %1 = call i32 @llvm.ctpop.i32(i32 %a)
   ret i32 %1

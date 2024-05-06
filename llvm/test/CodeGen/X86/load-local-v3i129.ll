@@ -5,26 +5,49 @@
 define void @_start() nounwind {
 ; FAST-SHLD-LABEL: _start:
 ; FAST-SHLD:       # %bb.0: # %Entry
-; FAST-SHLD-NEXT:    movq -40(%rsp), %rax
-; FAST-SHLD-NEXT:    movq -32(%rsp), %rcx
-; FAST-SHLD-NEXT:    movq %rcx, %rdx
-; FAST-SHLD-NEXT:    shlq $62, %rdx
-; FAST-SHLD-NEXT:    shrq $2, %rcx
-; FAST-SHLD-NEXT:    shldq $2, %rdx, %rcx
-; FAST-SHLD-NEXT:    andq $-4, %rax
-; FAST-SHLD-NEXT:    incq %rax
-; FAST-SHLD-NEXT:    movq %rax, -40(%rsp)
-; FAST-SHLD-NEXT:    movq %rcx, -32(%rsp)
+; FAST-SHLD-NEXT:    movl -24(%rsp), %eax
+; FAST-SHLD-NEXT:    movq %rax, %rcx
+; FAST-SHLD-NEXT:    shlq $62, %rcx
+; FAST-SHLD-NEXT:    shrl $2, %eax
+; FAST-SHLD-NEXT:    movq -40(%rsp), %rdx
+; FAST-SHLD-NEXT:    movq -32(%rsp), %rsi
+; FAST-SHLD-NEXT:    movq %rsi, %rdi
+; FAST-SHLD-NEXT:    shlq $62, %rdi
+; FAST-SHLD-NEXT:    shrq $2, %rsi
+; FAST-SHLD-NEXT:    shldq $2, %rdi, %rsi
+; FAST-SHLD-NEXT:    shrq $2, %rdx
+; FAST-SHLD-NEXT:    leaq 1(,%rdx,4), %rdx
+; FAST-SHLD-NEXT:    movq %rdx, -40(%rsp)
+; FAST-SHLD-NEXT:    movq %rsi, -32(%rsp)
+; FAST-SHLD-NEXT:    shrq $62, %rcx
+; FAST-SHLD-NEXT:    leal (%rcx,%rax,4), %eax
+; FAST-SHLD-NEXT:    andl $7, %eax
+; FAST-SHLD-NEXT:    movb %al, -24(%rsp)
 ; FAST-SHLD-NEXT:    orq $-2, -56(%rsp)
 ; FAST-SHLD-NEXT:    movq $-1, -48(%rsp)
 ; FAST-SHLD-NEXT:    retq
 ;
 ; SLOW-SHLD-LABEL: _start:
 ; SLOW-SHLD:       # %bb.0: # %Entry
-; SLOW-SHLD-NEXT:    movq -40(%rsp), %rax
-; SLOW-SHLD-NEXT:    andq $-4, %rax
-; SLOW-SHLD-NEXT:    incq %rax
-; SLOW-SHLD-NEXT:    movq %rax, -40(%rsp)
+; SLOW-SHLD-NEXT:    movl -24(%rsp), %eax
+; SLOW-SHLD-NEXT:    movq %rax, %rcx
+; SLOW-SHLD-NEXT:    shlq $62, %rcx
+; SLOW-SHLD-NEXT:    shrl $2, %eax
+; SLOW-SHLD-NEXT:    movq -40(%rsp), %rdx
+; SLOW-SHLD-NEXT:    movq -32(%rsp), %rsi
+; SLOW-SHLD-NEXT:    movq %rsi, %rdi
+; SLOW-SHLD-NEXT:    shrq $2, %rdi
+; SLOW-SHLD-NEXT:    shlq $62, %rsi
+; SLOW-SHLD-NEXT:    shrq $2, %rdx
+; SLOW-SHLD-NEXT:    leaq 1(,%rdx,4), %rdx
+; SLOW-SHLD-NEXT:    movq %rdx, -40(%rsp)
+; SLOW-SHLD-NEXT:    shrq $62, %rsi
+; SLOW-SHLD-NEXT:    leaq (%rsi,%rdi,4), %rdx
+; SLOW-SHLD-NEXT:    movq %rdx, -32(%rsp)
+; SLOW-SHLD-NEXT:    shrq $62, %rcx
+; SLOW-SHLD-NEXT:    leal (%rcx,%rax,4), %eax
+; SLOW-SHLD-NEXT:    andl $7, %eax
+; SLOW-SHLD-NEXT:    movb %al, -24(%rsp)
 ; SLOW-SHLD-NEXT:    orq $-2, -56(%rsp)
 ; SLOW-SHLD-NEXT:    movq $-1, -48(%rsp)
 ; SLOW-SHLD-NEXT:    retq

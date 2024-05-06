@@ -7,12 +7,16 @@ define void @bfi_chain_cse_crash(ptr %0, ptr %ptr) {
 ; CHECK-LABEL: bfi_chain_cse_crash:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    ldrb r2, [r0]
-; CHECK-NEXT:    and r3, r2, #1
-; CHECK-NEXT:    lsr.w r12, r2, #3
-; CHECK-NEXT:    bfi r3, r12, #3, #1
-; CHECK-NEXT:    strb r3, [r0]
-; CHECK-NEXT:    and r0, r2, #4
-; CHECK-NEXT:    bfi r0, r12, #3, #1
+; CHECK-NEXT:    and r12, r2, #1
+; CHECK-NEXT:    lsrs r3, r2, #3
+; CHECK-NEXT:    bfi r12, r3, #3, #1
+; CHECK-NEXT:    strb.w r12, [r0]
+; CHECK-NEXT:    ubfx r0, r2, #2, #1
+; CHECK-NEXT:    lsls r3, r2, #28
+; CHECK-NEXT:    lsl.w r0, r0, #2
+; CHECK-NEXT:    add.w r0, r0, #8
+; CHECK-NEXT:    it pl
+; CHECK-NEXT:    andpl r0, r2, #4
 ; CHECK-NEXT:    strb r0, [r1]
 ; CHECK-NEXT:    bx lr
 entry:

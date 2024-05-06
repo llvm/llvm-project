@@ -377,11 +377,12 @@ entry:
 define amdgpu_kernel void @local_size_x_known_bits(ptr addrspace(1) %out) {
 ; SI-LABEL: local_size_x_known_bits:
 ; SI:       ; %bb.0: ; %entry
-; SI-NEXT:    s_load_dword s4, s[0:1], 0x6
+; SI-NEXT:    s_load_dword s2, s[0:1], 0x6
 ; SI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
-; SI-NEXT:    s_mov_b32 s2, -1
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
+; SI-NEXT:    s_bfe_u32 s4, s2, 0x100000
+; SI-NEXT:    s_mov_b32 s2, -1
 ; SI-NEXT:    v_mov_b32_e32 v0, s4
 ; SI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
@@ -393,20 +394,23 @@ define amdgpu_kernel void @local_size_x_known_bits(ptr addrspace(1) %out) {
 ; VI-NEXT:    s_mov_b32 s3, 0xf000
 ; VI-NEXT:    s_mov_b32 s2, -1
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
+; VI-NEXT:    s_bfe_u32 s4, s4, 0x100000
 ; VI-NEXT:    v_mov_b32_e32 v0, s4
 ; VI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; VI-NEXT:    s_endpgm
 ;
 ; EG-LABEL: local_size_x_known_bits:
 ; EG:       ; %bb.0: ; %entry
-; EG-NEXT:    ALU 2, @4, KC0[CB0:0-32], KC1[]
-; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T1.X, T0.X, 1
+; EG-NEXT:    ALU 4, @4, KC0[CB0:0-32], KC1[]
+; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T0.X, T1.X, 1
 ; EG-NEXT:    CF_END
 ; EG-NEXT:    PAD
 ; EG-NEXT:    ALU clause starting at 4:
-; EG-NEXT:     LSHR T0.X, KC0[2].Y, literal.x,
-; EG-NEXT:     AND_INT * T1.X, KC0[1].Z, literal.y,
-; EG-NEXT:    2(2.802597e-45), 65535(9.183409e-41)
+; EG-NEXT:     LSHL * T0.W, KC0[1].Z, literal.x,
+; EG-NEXT:    16(2.242078e-44), 0(0.000000e+00)
+; EG-NEXT:     LSHR T0.X, PV.W, literal.x,
+; EG-NEXT:     LSHR * T1.X, KC0[2].Y, literal.y,
+; EG-NEXT:    16(2.242078e-44), 2(2.802597e-45)
 entry:
   %size = call i32 @llvm.r600.read.local.size.x() #0
   %shl = shl i32 %size, 16
@@ -424,11 +428,12 @@ entry:
 define amdgpu_kernel void @local_size_y_known_bits(ptr addrspace(1) %out) {
 ; SI-LABEL: local_size_y_known_bits:
 ; SI:       ; %bb.0: ; %entry
-; SI-NEXT:    s_load_dword s4, s[0:1], 0x7
+; SI-NEXT:    s_load_dword s2, s[0:1], 0x7
 ; SI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
-; SI-NEXT:    s_mov_b32 s2, -1
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
+; SI-NEXT:    s_bfe_u32 s4, s2, 0x100000
+; SI-NEXT:    s_mov_b32 s2, -1
 ; SI-NEXT:    v_mov_b32_e32 v0, s4
 ; SI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
@@ -440,20 +445,23 @@ define amdgpu_kernel void @local_size_y_known_bits(ptr addrspace(1) %out) {
 ; VI-NEXT:    s_mov_b32 s3, 0xf000
 ; VI-NEXT:    s_mov_b32 s2, -1
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
+; VI-NEXT:    s_bfe_u32 s4, s4, 0x100000
 ; VI-NEXT:    v_mov_b32_e32 v0, s4
 ; VI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; VI-NEXT:    s_endpgm
 ;
 ; EG-LABEL: local_size_y_known_bits:
 ; EG:       ; %bb.0: ; %entry
-; EG-NEXT:    ALU 2, @4, KC0[CB0:0-32], KC1[]
-; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T1.X, T0.X, 1
+; EG-NEXT:    ALU 4, @4, KC0[CB0:0-32], KC1[]
+; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T0.X, T1.X, 1
 ; EG-NEXT:    CF_END
 ; EG-NEXT:    PAD
 ; EG-NEXT:    ALU clause starting at 4:
-; EG-NEXT:     LSHR T0.X, KC0[2].Y, literal.x,
-; EG-NEXT:     AND_INT * T1.X, KC0[1].W, literal.y,
-; EG-NEXT:    2(2.802597e-45), 65535(9.183409e-41)
+; EG-NEXT:     LSHL * T0.W, KC0[1].W, literal.x,
+; EG-NEXT:    16(2.242078e-44), 0(0.000000e+00)
+; EG-NEXT:     LSHR T0.X, PV.W, literal.x,
+; EG-NEXT:     LSHR * T1.X, KC0[2].Y, literal.y,
+; EG-NEXT:    16(2.242078e-44), 2(2.802597e-45)
 entry:
   %size = call i32 @llvm.r600.read.local.size.y() #0
   %shl = shl i32 %size, 16
@@ -471,11 +479,12 @@ entry:
 define amdgpu_kernel void @local_size_z_known_bits(ptr addrspace(1) %out) {
 ; SI-LABEL: local_size_z_known_bits:
 ; SI:       ; %bb.0: ; %entry
-; SI-NEXT:    s_load_dword s4, s[0:1], 0x8
+; SI-NEXT:    s_load_dword s2, s[0:1], 0x8
 ; SI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
-; SI-NEXT:    s_mov_b32 s2, -1
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
+; SI-NEXT:    s_bfe_u32 s4, s2, 0x100000
+; SI-NEXT:    s_mov_b32 s2, -1
 ; SI-NEXT:    v_mov_b32_e32 v0, s4
 ; SI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
@@ -487,20 +496,23 @@ define amdgpu_kernel void @local_size_z_known_bits(ptr addrspace(1) %out) {
 ; VI-NEXT:    s_mov_b32 s3, 0xf000
 ; VI-NEXT:    s_mov_b32 s2, -1
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
+; VI-NEXT:    s_bfe_u32 s4, s4, 0x100000
 ; VI-NEXT:    v_mov_b32_e32 v0, s4
 ; VI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; VI-NEXT:    s_endpgm
 ;
 ; EG-LABEL: local_size_z_known_bits:
 ; EG:       ; %bb.0: ; %entry
-; EG-NEXT:    ALU 2, @4, KC0[CB0:0-32], KC1[]
-; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T1.X, T0.X, 1
+; EG-NEXT:    ALU 4, @4, KC0[CB0:0-32], KC1[]
+; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T0.X, T1.X, 1
 ; EG-NEXT:    CF_END
 ; EG-NEXT:    PAD
 ; EG-NEXT:    ALU clause starting at 4:
-; EG-NEXT:     LSHR T0.X, KC0[2].Y, literal.x,
-; EG-NEXT:     AND_INT * T1.X, KC0[2].X, literal.y,
-; EG-NEXT:    2(2.802597e-45), 65535(9.183409e-41)
+; EG-NEXT:     LSHL * T0.W, KC0[2].X, literal.x,
+; EG-NEXT:    16(2.242078e-44), 0(0.000000e+00)
+; EG-NEXT:     LSHR T0.X, PV.W, literal.x,
+; EG-NEXT:     LSHR * T1.X, KC0[2].Y, literal.y,
+; EG-NEXT:    16(2.242078e-44), 2(2.802597e-45)
 entry:
   %size = call i32 @llvm.r600.read.local.size.z() #0
   %shl = shl i32 %size, 16

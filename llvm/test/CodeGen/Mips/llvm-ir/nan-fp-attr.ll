@@ -96,14 +96,13 @@ entry:
 define dso_local double @bar(double %a) {
 ; MIPS32R1-LABEL: bar:
 ; MIPS32R1:       # %bb.0: # %entry
-; MIPS32R1-NEXT:    lui $1, 32767
-; MIPS32R1-NEXT:    ori $1, $1, 65535
+; MIPS32R1-NEXT:    mfc1 $1, $f12
 ; MIPS32R1-NEXT:    mfc1 $2, $f13
-; MIPS32R1-NEXT:    and $1, $2, $1
-; MIPS32R1-NEXT:    mfc1 $2, $f12
-; MIPS32R1-NEXT:    mtc1 $2, $f0
+; MIPS32R1-NEXT:    sll $2, $2, 1
+; MIPS32R1-NEXT:    srl $2, $2, 1
+; MIPS32R1-NEXT:    mtc1 $1, $f0
 ; MIPS32R1-NEXT:    jr $ra
-; MIPS32R1-NEXT:    mtc1 $1, $f1
+; MIPS32R1-NEXT:    mtc1 $2, $f1
 ;
 ; MIPS32R2-LABEL: bar:
 ; MIPS32R2:       # %bb.0: # %entry
@@ -128,10 +127,8 @@ define dso_local double @bar(double %a) {
 ; MIPS64R1-LABEL: bar:
 ; MIPS64R1:       # %bb.0: # %entry
 ; MIPS64R1-NEXT:    dmfc1 $1, $f12
-; MIPS64R1-NEXT:    daddiu $2, $zero, 1
-; MIPS64R1-NEXT:    dsll $2, $2, 63
-; MIPS64R1-NEXT:    daddiu $2, $2, -1
-; MIPS64R1-NEXT:    and $1, $1, $2
+; MIPS64R1-NEXT:    dsll $1, $1, 1
+; MIPS64R1-NEXT:    dsrl $1, $1, 1
 ; MIPS64R1-NEXT:    jr $ra
 ; MIPS64R1-NEXT:    dmtc1 $1, $f0
 ;
@@ -248,10 +245,9 @@ entry:
 define dso_local float @bar_2(float %a) {
 ; MIPS32R1-LABEL: bar_2:
 ; MIPS32R1:       # %bb.0: # %entry
-; MIPS32R1-NEXT:    lui $1, 32767
-; MIPS32R1-NEXT:    ori $1, $1, 65535
-; MIPS32R1-NEXT:    mfc1 $2, $f12
-; MIPS32R1-NEXT:    and $1, $2, $1
+; MIPS32R1-NEXT:    mfc1 $1, $f12
+; MIPS32R1-NEXT:    sll $1, $1, 1
+; MIPS32R1-NEXT:    srl $1, $1, 1
 ; MIPS32R1-NEXT:    jr $ra
 ; MIPS32R1-NEXT:    mtc1 $1, $f0
 ;
@@ -274,10 +270,9 @@ define dso_local float @bar_2(float %a) {
 ;
 ; MIPS64R1-LABEL: bar_2:
 ; MIPS64R1:       # %bb.0: # %entry
-; MIPS64R1-NEXT:    lui $1, 32767
-; MIPS64R1-NEXT:    ori $1, $1, 65535
-; MIPS64R1-NEXT:    mfc1 $2, $f12
-; MIPS64R1-NEXT:    and $1, $2, $1
+; MIPS64R1-NEXT:    mfc1 $1, $f12
+; MIPS64R1-NEXT:    sll $1, $1, 1
+; MIPS64R1-NEXT:    srl $1, $1, 1
 ; MIPS64R1-NEXT:    jr $ra
 ; MIPS64R1-NEXT:    mtc1 $1, $f0
 ;

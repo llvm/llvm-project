@@ -192,8 +192,9 @@ entry:
 define i32 @test16(i32 %x) {
 ; CHECK-LABEL: test16:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    lsls r0, r0, #28
-; CHECK-NEXT:    lsrs r0, r0, #26
+; CHECK-NEXT:    movs r1, #15
+; CHECK-NEXT:    ands r1, r0
+; CHECK-NEXT:    lsls r0, r1, #2
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = and i32 %x, 15
@@ -204,8 +205,9 @@ entry:
 define ptr @test17(ptr %p, i32 %x) {
 ; CHECK-LABEL: test17:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    lsls r1, r1, #28
-; CHECK-NEXT:    lsrs r1, r1, #26
+; CHECK-NEXT:    movs r2, #15
+; CHECK-NEXT:    ands r2, r1
+; CHECK-NEXT:    lsls r1, r2, #2
 ; CHECK-NEXT:    adds r0, r0, r1
 ; CHECK-NEXT:    bx lr
 entry:
@@ -218,8 +220,9 @@ define ptr @test18(ptr %p, i32 %x) {
 ; CHECK-LABEL: test18:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    adds r1, r1, #1
-; CHECK-NEXT:    lsls r1, r1, #28
-; CHECK-NEXT:    lsrs r1, r1, #26
+; CHECK-NEXT:    movs r2, #15
+; CHECK-NEXT:    ands r2, r1
+; CHECK-NEXT:    lsls r1, r2, #2
 ; CHECK-NEXT:    adds r0, r0, r1
 ; CHECK-NEXT:    bx lr
 entry:
@@ -233,8 +236,9 @@ define ptr @test19(ptr %p, i32 %x) {
 ; CHECK-LABEL: test19:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    subs r1, r1, #1
-; CHECK-NEXT:    lsls r1, r1, #28
-; CHECK-NEXT:    lsrs r1, r1, #26
+; CHECK-NEXT:    movs r2, #15
+; CHECK-NEXT:    ands r2, r1
+; CHECK-NEXT:    lsls r1, r2, #2
 ; CHECK-NEXT:    adds r0, r0, r1
 ; CHECK-NEXT:    bx lr
 entry:
@@ -248,8 +252,9 @@ define ptr @test20(ptr %p, i32 %x) {
 ; CHECK-LABEL: test20:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    subs r1, r1, #1
-; CHECK-NEXT:    lsls r1, r1, #28
-; CHECK-NEXT:    lsrs r1, r1, #26
+; CHECK-NEXT:    movs r2, #15
+; CHECK-NEXT:    ands r2, r1
+; CHECK-NEXT:    lsls r1, r2, #2
 ; CHECK-NEXT:    adds r0, r0, r1
 ; CHECK-NEXT:    bx lr
 entry:

@@ -9738,6 +9738,64 @@ SDValue DAGCombiner::visitRotate(SDNode *N) {
   return SDValue();
 }
 
+static SDValue setShiftFlags(SelectionDAG &DAG, const SDLoc &DL, SDNode *N) {
+  unsigned Opc = N->getOpcode();
+  assert((Opc == ISD::SHL || Opc == ISD::SRA || Opc == ISD::SRL) &&
+         "Unknown shift opcode");
+  SDNodeFlags Flags = N->getFlags();
+
+  SDValue N0 = N->getOperand(0);
+  SDValue N1 = N->getOperand(1);
+  EVT VT = N->getValueType(0);
+  // Check if we already have the flags.
+  if (Opc == ISD::SHL) {
+    if (Flags.hasNoSignedWrap() && Flags.hasNoUnsignedWrap())
+      return SDValue();
+
+  } else {
+    if (Flags.hasExact())
+      return SDValue();
+
+    // shr (shl X, Y), Y
+    if (sd_match(N0, m_Shl(m_Value(), m_Specific(N1)))) {
+      Flags.setExact(true);
+      return DAG.getNode(Opc, DL, VT, N0, N1, Flags);
+    }
+  }
+
+  // Compute what we know about shift count.
+  KnownBits KnownCnt = DAG.computeKnownBits(N1);
+  // Compute what we know about shift amt.
+  KnownBits KnownAmt = DAG.computeKnownBits(N0);
+  APInt MaxCnt = KnownCnt.getMaxValue();
+  bool Changed = false;
+  if (Opc == ISD::SHL) {
+    // If we have as many leading zeros than maximum shift cnt we have nuw.
+    if (!Flags.hasNoUnsignedWrap() &&
+        MaxCnt.ule(KnownAmt.countMinLeadingZeros())) {
+      Flags.setNoUnsignedWrap(true);
+      Changed = true;
+    }
+    // If we have more sign bits than maximum shift cnt we have nsw.
+    if (!Flags.hasNoSignedWrap()) {
+      if (MaxCnt.ult(KnownAmt.countMinSignBits()) ||
+          MaxCnt.ult(DAG.ComputeNumSignBits(N0))) {
+        Flags.setNoSignedWrap(true);
+        Changed = true;
+      }
+    }
+  } else {
+    // If we have at least as many trailing zeros as maximum count then we have
+    // exact.
+    Changed = MaxCnt.ule(KnownAmt.countMinTrailingZeros());
+    Flags.setExact(Changed);
+  }
+
+  if (Changed)
+    return DAG.getNode(Opc, DL, VT, N0, N1, Flags);
+  return SDValue();
+}
+
 SDValue DAGCombiner::visitSHL(SDNode *N) {
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
@@ -9745,6 +9803,9 @@ SDValue DAGCombiner::visitSHL(SDNode *N) {
     return V;
 
   SDLoc DL(N);
+  if (SDValue V = setShiftFlags(DAG, DL, N))
+    return V;
+
   EVT VT = N0.getValueType();
   EVT ShiftVT = N1.getValueType();
   unsigned OpSizeInBits = VT.getScalarSizeInBits();
@@ -9895,7 +9956,7 @@ SDValue DAGCombiner::visitSHL(SDNode *N) {
       return LHSC.ult(OpSizeInBits) && RHSC.ult(OpSizeInBits) &&
              LHSC.getZExtValue() <= RHSC.getZExtValue();
     };
-    
+
     // fold (shl (sr[la] exact X,  C1), C2) -> (shl    X, (C2-C1)) if C1 <= C2
     // fold (shl (sr[la] exact X,  C1), C2) -> (sr[la] X, (C2-C1)) if C1 >= C2
     if (N0->getFlags().hasExact()) {
@@ -10188,6 +10249,9 @@ SDValue DAGCombiner::visitSRA(SDNode *N) {
     return V;
 
   SDLoc DL(N);
+  if (SDValue V = setShiftFlags(DAG, DL, N))
+    return V;
+
   EVT VT = N0.getValueType();
   unsigned OpSizeInBits = VT.getScalarSizeInBits();
 
@@ -10389,6 +10453,8 @@ SDValue DAGCombiner::visitSRL(SDNode *N) {
     return V;
 
   SDLoc DL(N);
+  if (SDValue V = setShiftFlags(DAG, DL, N))
+    return V;
   EVT VT = N0.getValueType();
   EVT ShiftVT = N1.getValueType();
   unsigned OpSizeInBits = VT.getScalarSizeInBits();
@@ -10637,6 +10703,8 @@ SDValue DAGCombiner::visitSRL(SDNode *N) {
 
   return SDValue();
 }
+
+
 
 SDValue DAGCombiner::visitFunnelShift(SDNode *N) {
   EVT VT = N->getValueType(0);

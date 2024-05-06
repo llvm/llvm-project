@@ -377,18 +377,6 @@ define void @shl_add_ptr_combine_2use_both_max_lds_offset(i32 %idx) #0 {
 ; GCN: buffer_store_dword v{{[0-9]+}}, [[SCALE0]], s[0:3], 0 offen offset:16
 ; GCN: buffer_store_dword v{{[0-9]+}}, [[SCALE1]], s[0:3], 0 offen offset:32
 define void @shl_add_ptr_combine_2use_private(i16 zeroext %idx.arg) #0 {
-; GCN-LABEL: shl_add_ptr_combine_2use_private:
-; GCN:       ; %bb.0:
-; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_lshlrev_b32_e32 v1, 2, v0
-; GCN-NEXT:    v_mov_b32_e32 v2, 9
-; GCN-NEXT:    v_lshlrev_b32_e32 v0, 3, v0
-; GCN-NEXT:    buffer_store_dword v2, v1, s[0:3], 0 offen offset:16
-; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    v_mov_b32_e32 v1, 10
-; GCN-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen offset:32
-; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    s_setpc_b64 s[30:31]
   %idx = zext i16 %idx.arg to i32
   %idx.add = add nuw i32 %idx, 4
   %shl0 = shl i32 %idx.add, 2

@@ -8,8 +8,8 @@ define dso_local i32 @test_rem(i32 %F) local_unnamed_addr #0 {
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    asr r1, r0, #31
 ; CHECK-NEXT:    add r1, r0, r1, lsr #30
-; CHECK-NEXT:    bic r1, r1, #3
-; CHECK-NEXT:    sub r0, r0, r1
+; CHECK-NEXT:    asr r1, r1, #2
+; CHECK-NEXT:    sub r0, r0, r1, lsl #2
 ; CHECK-NEXT:    bx lr
 
 entry:

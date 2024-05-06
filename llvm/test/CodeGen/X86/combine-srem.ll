@@ -59,7 +59,8 @@ define i32 @combine_srem_by_minsigned(i32 %x) {
 ; CHECK-NEXT:    leal 2147483647(%rdi), %eax
 ; CHECK-NEXT:    testl %edi, %edi
 ; CHECK-NEXT:    cmovnsl %edi, %eax
-; CHECK-NEXT:    andl $-2147483648, %eax # imm = 0x80000000
+; CHECK-NEXT:    shrl $31, %eax
+; CHECK-NEXT:    shll $31, %eax
 ; CHECK-NEXT:    addl %edi, %eax
 ; CHECK-NEXT:    retq
   %1 = srem i32 %x, -2147483648
@@ -73,28 +74,20 @@ define <4 x i32> @combine_vec_srem_by_minsigned(<4 x i32> %x) {
 ; SSE-NEXT:    psrad $31, %xmm1
 ; SSE-NEXT:    psrld $1, %xmm1
 ; SSE-NEXT:    paddd %xmm0, %xmm1
-; SSE-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSE-NEXT:    psrld $31, %xmm1
+; SSE-NEXT:    pslld $31, %xmm1
 ; SSE-NEXT:    paddd %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
-; AVX1-LABEL: combine_vec_srem_by_minsigned:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpsrad $31, %xmm0, %xmm1
-; AVX1-NEXT:    vpsrld $1, %xmm1, %xmm1
-; AVX1-NEXT:    vpaddd %xmm1, %xmm0, %xmm1
-; AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
-; AVX1-NEXT:    vpaddd %xmm0, %xmm1, %xmm0
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: combine_vec_srem_by_minsigned:
-; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpsrad $31, %xmm0, %xmm1
-; AVX2-NEXT:    vpsrld $1, %xmm1, %xmm1
-; AVX2-NEXT:    vpaddd %xmm1, %xmm0, %xmm1
-; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [2147483648,2147483648,2147483648,2147483648]
-; AVX2-NEXT:    vpand %xmm2, %xmm1, %xmm1
-; AVX2-NEXT:    vpaddd %xmm0, %xmm1, %xmm0
-; AVX2-NEXT:    retq
+; AVX-LABEL: combine_vec_srem_by_minsigned:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpsrad $31, %xmm0, %xmm1
+; AVX-NEXT:    vpsrld $1, %xmm1, %xmm1
+; AVX-NEXT:    vpaddd %xmm1, %xmm0, %xmm1
+; AVX-NEXT:    vpsrld $31, %xmm1, %xmm1
+; AVX-NEXT:    vpslld $31, %xmm1, %xmm1
+; AVX-NEXT:    vpaddd %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    retq
   %1 = srem <4 x i32> %x, <i32 -2147483648, i32 -2147483648, i32 -2147483648, i32 -2147483648>
   ret <4 x i32> %1
 }
@@ -192,28 +185,20 @@ define <4 x i32> @combine_vec_srem_by_pow2a(<4 x i32> %x) {
 ; SSE-NEXT:    psrad $31, %xmm1
 ; SSE-NEXT:    psrld $30, %xmm1
 ; SSE-NEXT:    paddd %xmm0, %xmm1
-; SSE-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSE-NEXT:    psrld $2, %xmm1
+; SSE-NEXT:    pslld $2, %xmm1
 ; SSE-NEXT:    psubd %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
-; AVX1-LABEL: combine_vec_srem_by_pow2a:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpsrad $31, %xmm0, %xmm1
-; AVX1-NEXT:    vpsrld $30, %xmm1, %xmm1
-; AVX1-NEXT:    vpaddd %xmm1, %xmm0, %xmm1
-; AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
-; AVX1-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: combine_vec_srem_by_pow2a:
-; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpsrad $31, %xmm0, %xmm1
-; AVX2-NEXT:    vpsrld $30, %xmm1, %xmm1
-; AVX2-NEXT:    vpaddd %xmm1, %xmm0, %xmm1
-; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [4294967292,4294967292,4294967292,4294967292]
-; AVX2-NEXT:    vpand %xmm2, %xmm1, %xmm1
-; AVX2-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    retq
+; AVX-LABEL: combine_vec_srem_by_pow2a:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpsrad $31, %xmm0, %xmm1
+; AVX-NEXT:    vpsrld $30, %xmm1, %xmm1
+; AVX-NEXT:    vpaddd %xmm1, %xmm0, %xmm1
+; AVX-NEXT:    vpsrld $2, %xmm1, %xmm1
+; AVX-NEXT:    vpslld $2, %xmm1, %xmm1
+; AVX-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    retq
   %1 = srem <4 x i32> %x, <i32 4, i32 4, i32 4, i32 4>
   ret <4 x i32> %1
 }
@@ -450,7 +435,8 @@ define i32 @combine_srem_two(i32 %x) {
 ; CHECK-NEXT:    movl %edi, %ecx
 ; CHECK-NEXT:    shrl $31, %ecx
 ; CHECK-NEXT:    addl %edi, %ecx
-; CHECK-NEXT:    andl $-2, %ecx
+; CHECK-NEXT:    sarl %ecx
+; CHECK-NEXT:    addl %ecx, %ecx
 ; CHECK-NEXT:    subl %ecx, %eax
 ; CHECK-NEXT:    retq
   %1 = srem i32 %x, 2
@@ -464,7 +450,8 @@ define i32 @combine_srem_negtwo(i32 %x) {
 ; CHECK-NEXT:    movl %edi, %ecx
 ; CHECK-NEXT:    shrl $31, %ecx
 ; CHECK-NEXT:    addl %edi, %ecx
-; CHECK-NEXT:    andl $-2, %ecx
+; CHECK-NEXT:    sarl %ecx
+; CHECK-NEXT:    addl %ecx, %ecx
 ; CHECK-NEXT:    subl %ecx, %eax
 ; CHECK-NEXT:    retq
   %1 = srem i32 %x, -2
@@ -479,7 +466,8 @@ define i8 @combine_i8_srem_negpow2(i8 %x) {
 ; CHECK-NEXT:    sarb $7, %cl
 ; CHECK-NEXT:    shrb $2, %cl
 ; CHECK-NEXT:    addb %al, %cl
-; CHECK-NEXT:    andb $-64, %cl
+; CHECK-NEXT:    sarb $6, %cl
+; CHECK-NEXT:    shlb $6, %cl
 ; CHECK-NEXT:    subb %cl, %al
 ; CHECK-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    retq
@@ -494,7 +482,9 @@ define i16 @combine_i16_srem_pow2(i16 %x) {
 ; CHECK-NEXT:    leal 15(%rax), %ecx
 ; CHECK-NEXT:    testw %ax, %ax
 ; CHECK-NEXT:    cmovnsl %edi, %ecx
-; CHECK-NEXT:    andl $-16, %ecx
+; CHECK-NEXT:    movzwl %cx, %ecx
+; CHECK-NEXT:    shrl $4, %ecx
+; CHECK-NEXT:    shlw $4, %cx
 ; CHECK-NEXT:    subl %ecx, %eax
 ; CHECK-NEXT:    # kill: def $ax killed $ax killed $rax
 ; CHECK-NEXT:    retq
@@ -509,7 +499,8 @@ define i16 @combine_i16_srem_negpow2(i16 %x) {
 ; CHECK-NEXT:    leal 255(%rax), %ecx
 ; CHECK-NEXT:    testw %ax, %ax
 ; CHECK-NEXT:    cmovnsl %edi, %ecx
-; CHECK-NEXT:    andl $-256, %ecx
+; CHECK-NEXT:    movzbl %ch, %ecx
+; CHECK-NEXT:    shlw $8, %cx
 ; CHECK-NEXT:    subl %ecx, %eax
 ; CHECK-NEXT:    # kill: def $ax killed $ax killed $rax
 ; CHECK-NEXT:    retq
@@ -524,7 +515,8 @@ define i32 @combine_srem_pow2(i32 %x) {
 ; CHECK-NEXT:    leal 15(%rax), %ecx
 ; CHECK-NEXT:    testl %edi, %edi
 ; CHECK-NEXT:    cmovnsl %edi, %ecx
-; CHECK-NEXT:    andl $-16, %ecx
+; CHECK-NEXT:    sarl $4, %ecx
+; CHECK-NEXT:    shll $4, %ecx
 ; CHECK-NEXT:    subl %ecx, %eax
 ; CHECK-NEXT:    # kill: def $eax killed $eax killed $rax
 ; CHECK-NEXT:    retq
@@ -539,7 +531,8 @@ define i32 @combine_srem_negpow2(i32 %x) {
 ; CHECK-NEXT:    leal 255(%rax), %ecx
 ; CHECK-NEXT:    testl %edi, %edi
 ; CHECK-NEXT:    cmovnsl %edi, %ecx
-; CHECK-NEXT:    andl $-256, %ecx
+; CHECK-NEXT:    sarl $8, %ecx
+; CHECK-NEXT:    shll $8, %ecx
 ; CHECK-NEXT:    subl %ecx, %eax
 ; CHECK-NEXT:    # kill: def $eax killed $eax killed $rax
 ; CHECK-NEXT:    retq
@@ -554,7 +547,8 @@ define i64 @combine_i64_srem_pow2(i64 %x) {
 ; CHECK-NEXT:    leaq 15(%rdi), %rcx
 ; CHECK-NEXT:    testq %rdi, %rdi
 ; CHECK-NEXT:    cmovnsq %rdi, %rcx
-; CHECK-NEXT:    andq $-16, %rcx
+; CHECK-NEXT:    sarq $4, %rcx
+; CHECK-NEXT:    shlq $4, %rcx
 ; CHECK-NEXT:    subq %rcx, %rax
 ; CHECK-NEXT:    retq
   %1 = srem i64 %x, 16
@@ -568,7 +562,8 @@ define i64 @combine_i64_srem_negpow2(i64 %x) {
 ; CHECK-NEXT:    leaq 255(%rdi), %rcx
 ; CHECK-NEXT:    testq %rdi, %rdi
 ; CHECK-NEXT:    cmovnsq %rdi, %rcx
-; CHECK-NEXT:    andq $-256, %rcx
+; CHECK-NEXT:    sarq $8, %rcx
+; CHECK-NEXT:    shlq $8, %rcx
 ; CHECK-NEXT:    subq %rcx, %rax
 ; CHECK-NEXT:    retq
   %1 = srem i64 %x, -256

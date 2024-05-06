@@ -9,28 +9,45 @@
 @array = weak global [4 x i32] zeroinitializer
 
 define i32 @test_lshr_and1(i32 %x) {
-; CHECK-COMMON-LABEL: test_lshr_and1:
-; CHECK-COMMON:       @ %bb.0: @ %entry
-; CHECK-COMMON-NEXT:    movw r1, :lower16:array
-; CHECK-COMMON-NEXT:    and r0, r0, #12
-; CHECK-COMMON-NEXT:    movt r1, :upper16:array
-; CHECK-COMMON-NEXT:    ldr r0, [r1, r0]
-; CHECK-COMMON-NEXT:    bx lr
+; CHECK-ARM-LABEL: test_lshr_and1:
+; CHECK-ARM:       @ %bb.0: @ %entry
+; CHECK-ARM-NEXT:    movw r1, :lower16:array
+; CHECK-ARM-NEXT:    ubfx r0, r0, #2, #2
+; CHECK-ARM-NEXT:    movt r1, :upper16:array
+; CHECK-ARM-NEXT:    ldr r0, [r1, r0, lsl #2]
+; CHECK-ARM-NEXT:    bx lr
 ;
 ; CHECK-BE-LABEL: test_lshr_and1:
 ; CHECK-BE:       @ %bb.0: @ %entry
 ; CHECK-BE-NEXT:    movw r1, :lower16:array
-; CHECK-BE-NEXT:    and r0, r0, #12
+; CHECK-BE-NEXT:    ubfx r0, r0, #2, #2
 ; CHECK-BE-NEXT:    movt r1, :upper16:array
-; CHECK-BE-NEXT:    ldr r0, [r1, r0]
+; CHECK-BE-NEXT:    ldr r0, [r1, r0, lsl #2]
 ; CHECK-BE-NEXT:    bx lr
+;
+; CHECK-THUMB-LABEL: test_lshr_and1:
+; CHECK-THUMB:       @ %bb.0: @ %entry
+; CHECK-THUMB-NEXT:    movw r1, :lower16:array
+; CHECK-THUMB-NEXT:    ubfx r0, r0, #2, #2
+; CHECK-THUMB-NEXT:    movt r1, :upper16:array
+; CHECK-THUMB-NEXT:    ldr.w r0, [r1, r0, lsl #2]
+; CHECK-THUMB-NEXT:    bx lr
+;
+; CHECK-ALIGN-LABEL: test_lshr_and1:
+; CHECK-ALIGN:       @ %bb.0: @ %entry
+; CHECK-ALIGN-NEXT:    movw r1, :lower16:array
+; CHECK-ALIGN-NEXT:    ubfx r0, r0, #2, #2
+; CHECK-ALIGN-NEXT:    movt r1, :upper16:array
+; CHECK-ALIGN-NEXT:    ldr.w r0, [r1, r0, lsl #2]
+; CHECK-ALIGN-NEXT:    bx lr
 ;
 ; CHECK-V6M-LABEL: test_lshr_and1:
 ; CHECK-V6M:       @ %bb.0: @ %entry
-; CHECK-V6M-NEXT:    movs r1, #12
-; CHECK-V6M-NEXT:    ands r1, r0
-; CHECK-V6M-NEXT:    ldr r0, .LCPI0_0
-; CHECK-V6M-NEXT:    ldr r0, [r0, r1]
+; CHECK-V6M-NEXT:    lsls r0, r0, #28
+; CHECK-V6M-NEXT:    lsrs r0, r0, #30
+; CHECK-V6M-NEXT:    lsls r0, r0, #2
+; CHECK-V6M-NEXT:    ldr r1, .LCPI0_0
+; CHECK-V6M-NEXT:    ldr r0, [r1, r0]
 ; CHECK-V6M-NEXT:    bx lr
 ; CHECK-V6M-NEXT:    .p2align 2
 ; CHECK-V6M-NEXT:  @ %bb.1:

@@ -11,7 +11,8 @@ define i64 @tricky_shl(i64 %a, i64 %b) nounwind {
 ; RV64I-LABEL: tricky_shl:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    sll a0, a0, a1
-; RV64I-NEXT:    sext.w a0, a0
+; RV64I-NEXT:    slli a0, a0, 32
+; RV64I-NEXT:    srai a0, a0, 32
 ; RV64I-NEXT:    ret
   %1 = shl i64 %a, %b
   %2 = shl i64 %1, 32
@@ -34,7 +35,8 @@ define i64 @tricky_lshr(i64 %a, i64 %b) nounwind {
 define i64 @tricky_ashr(i64 %a, i64 %b) nounwind {
 ; RV64I-LABEL: tricky_ashr:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    sext.w a0, a0
+; RV64I-NEXT:    slli a0, a0, 32
+; RV64I-NEXT:    srai a0, a0, 32
 ; RV64I-NEXT:    sra a0, a0, a1
 ; RV64I-NEXT:    ret
   %1 = shl i64 %a, 32

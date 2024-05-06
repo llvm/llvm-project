@@ -7,8 +7,8 @@
 define <vscale x 4 x i32> @sext_inreg(<vscale x 4 x i32> %a) {
 ; CHECK-LABEL: sext_inreg:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    sxth z0.s, p0/m, z0.s
+; CHECK-NEXT:    lsl z0.s, z0.s, #16
+; CHECK-NEXT:    asr z0.s, z0.s, #16
 ; CHECK-NEXT:    ret
   %in = insertelement <vscale x 4 x i32> undef, i32 16, i32 0
   %splat = shufflevector <vscale x 4 x i32> %in, <vscale x 4 x i32> undef, <vscale x 4 x i32> zeroinitializer

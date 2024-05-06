@@ -6528,18 +6528,21 @@ define <2 x half> @v_exp10_fabs_v2f16(<2 x half> %in) {
 ; SI-SDAG-LABEL: v_exp10_fabs_v2f16:
 ; SI-SDAG:       ; %bb.0:
 ; SI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-SDAG-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; SI-SDAG-NEXT:    v_cvt_f16_f32_e32 v1, v1
+; SI-SDAG-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; SI-SDAG-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
+; SI-SDAG-NEXT:    v_or_b32_e32 v0, v0, v1
+; SI-SDAG-NEXT:    v_cvt_f32_f16_e64 v1, |v0|
+; SI-SDAG-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; SI-SDAG-NEXT:    v_cvt_f32_f16_e64 v0, |v0|
-; SI-SDAG-NEXT:    v_cvt_f32_f16_e64 v1, |v1|
-; SI-SDAG-NEXT:    v_mul_f32_e32 v0, 0x3fb8aa3b, v0
 ; SI-SDAG-NEXT:    v_mul_f32_e32 v1, 0x3fb8aa3b, v1
-; SI-SDAG-NEXT:    v_exp_f32_e32 v0, v0
 ; SI-SDAG-NEXT:    v_exp_f32_e32 v1, v1
-; SI-SDAG-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; SI-SDAG-NEXT:    v_mul_f32_e32 v0, 0x3fb8aa3b, v0
+; SI-SDAG-NEXT:    v_exp_f32_e32 v0, v0
 ; SI-SDAG-NEXT:    v_cvt_f16_f32_e32 v1, v1
-; SI-SDAG-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; SI-SDAG-NEXT:    v_cvt_f32_f16_e32 v1, v1
+; SI-SDAG-NEXT:    v_cvt_f16_f32_e32 v2, v0
+; SI-SDAG-NEXT:    v_cvt_f32_f16_e32 v0, v1
+; SI-SDAG-NEXT:    v_cvt_f32_f16_e32 v1, v2
 ; SI-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; SI-GISEL-LABEL: v_exp10_fabs_v2f16:

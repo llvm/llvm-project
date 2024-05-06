@@ -20,12 +20,14 @@ define void @sext_vec() {
 ; CHECK-NEXT:    i32.store8 0
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    i32.const 7
+; CHECK-NEXT:    i32.and
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    i32.const 3
+; CHECK-NEXT:    i32.shr_u
+; CHECK-NEXT:    i32.const 10
 ; CHECK-NEXT:    i32.shl
 ; CHECK-NEXT:    i32.or
-; CHECK-NEXT:    i32.const 7175
-; CHECK-NEXT:    i32.and
 ; CHECK-NEXT:    i32.store16 0
 ; CHECK-NEXT:    # fallthrough-return
   %L1 = load <2 x i3>, ptr undef, align 2

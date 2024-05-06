@@ -339,13 +339,13 @@ main_body:
 ;CHECK: s_waitcnt vmcnt(0)
 ;CHECK: ds_write_b32 v0, [[VAL]]
 define amdgpu_ps void @struct_buffer_load_v2f16(<4 x i32> inreg %rsrc, ptr addrspace(3) %ptr, i32 %idx) {
-; CHECK-LABEL: struct_buffer_load_v2f16:
-; CHECK:       ; %bb.0: ; %main_body
-; CHECK-NEXT:    buffer_load_dword v1, v1, s[0:3], 0 idxen
-; CHECK-NEXT:    s_mov_b32 m0, -1
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    ds_write_b32 v0, v1
-; CHECK-NEXT:    s_endpgm
+; VI-LABEL: struct_buffer_load_v2f16:
+; VI:       ; %bb.0: ; %main_body
+; VI-NEXT:    buffer_load_dword v1, v1, s[0:3], 0 idxen
+; VI-NEXT:    s_mov_b32 m0, -1
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    ds_write_b32 v0, v1
+; VI-NEXT:    s_endpgm
 main_body:
   %val = call <2 x half> @llvm.amdgcn.struct.buffer.load.v2f16(<4 x i32> %rsrc, i32 %idx, i32 0, i32 0, i32 0)
   store <2 x half> %val, ptr addrspace(3) %ptr
@@ -358,13 +358,13 @@ main_body:
 ;CHECK: s_waitcnt vmcnt(0)
 ;CHECK: ds_write_b64 v0, [[VAL]]
 define amdgpu_ps void @struct_buffer_load_v4f16(<4 x i32> inreg %rsrc, ptr addrspace(3) %ptr, i32 %idx) {
-; CHECK-LABEL: struct_buffer_load_v4f16:
-; CHECK:       ; %bb.0: ; %main_body
-; CHECK-NEXT:    buffer_load_dwordx2 v[1:2], v1, s[0:3], 0 idxen
-; CHECK-NEXT:    s_mov_b32 m0, -1
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    ds_write_b64 v0, v[1:2]
-; CHECK-NEXT:    s_endpgm
+; VI-LABEL: struct_buffer_load_v4f16:
+; VI:       ; %bb.0: ; %main_body
+; VI-NEXT:    buffer_load_dwordx2 v[1:2], v1, s[0:3], 0 idxen
+; VI-NEXT:    s_mov_b32 m0, -1
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    ds_write_b64 v0, v[1:2]
+; VI-NEXT:    s_endpgm
 main_body:
   %val = call <4 x half> @llvm.amdgcn.struct.buffer.load.v4f16(<4 x i32> %rsrc, i32 %idx, i32 0, i32 0, i32 0)
   store <4 x half> %val, ptr addrspace(3) %ptr
@@ -396,13 +396,13 @@ main_body:
 ;CHECK: s_waitcnt vmcnt(0)
 ;CHECK: ds_write_b32 v0, [[VAL]]
 define amdgpu_ps void @struct_buffer_load_v2i16(<4 x i32> inreg %rsrc, ptr addrspace(3) %ptr, i32 %idx) {
-; CHECK-LABEL: struct_buffer_load_v2i16:
-; CHECK:       ; %bb.0: ; %main_body
-; CHECK-NEXT:    buffer_load_dword v1, v1, s[0:3], 0 idxen
-; CHECK-NEXT:    s_mov_b32 m0, -1
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    ds_write_b32 v0, v1
-; CHECK-NEXT:    s_endpgm
+; VI-LABEL: struct_buffer_load_v2i16:
+; VI:       ; %bb.0: ; %main_body
+; VI-NEXT:    buffer_load_dword v1, v1, s[0:3], 0 idxen
+; VI-NEXT:    s_mov_b32 m0, -1
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    ds_write_b32 v0, v1
+; VI-NEXT:    s_endpgm
 main_body:
   %val = call <2 x i16> @llvm.amdgcn.struct.buffer.load.v2i16(<4 x i32> %rsrc, i32 %idx, i32 0, i32 0, i32 0)
   store <2 x i16> %val, ptr addrspace(3) %ptr
@@ -415,13 +415,13 @@ main_body:
 ;CHECK: s_waitcnt vmcnt(0)
 ;CHECK: ds_write_b64 v0, [[VAL]]
 define amdgpu_ps void @struct_buffer_load_v4i16(<4 x i32> inreg %rsrc, ptr addrspace(3) %ptr, i32 %idx) {
-; CHECK-LABEL: struct_buffer_load_v4i16:
-; CHECK:       ; %bb.0: ; %main_body
-; CHECK-NEXT:    buffer_load_dwordx2 v[1:2], v1, s[0:3], 0 idxen
-; CHECK-NEXT:    s_mov_b32 m0, -1
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    ds_write_b64 v0, v[1:2]
-; CHECK-NEXT:    s_endpgm
+; VI-LABEL: struct_buffer_load_v4i16:
+; VI:       ; %bb.0: ; %main_body
+; VI-NEXT:    buffer_load_dwordx2 v[1:2], v1, s[0:3], 0 idxen
+; VI-NEXT:    s_mov_b32 m0, -1
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    ds_write_b64 v0, v[1:2]
+; VI-NEXT:    s_endpgm
 main_body:
   %val = call <4 x i16> @llvm.amdgcn.struct.buffer.load.v4i16(<4 x i32> %rsrc, i32 %idx, i32 0, i32 0, i32 0)
   store <4 x i16> %val, ptr addrspace(3) %ptr

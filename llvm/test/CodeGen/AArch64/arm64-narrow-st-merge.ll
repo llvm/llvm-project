@@ -11,15 +11,19 @@ define void @Strh_zero(ptr nocapture %P, i32 %n) {
 ; CHECK-LABEL: Strh_zero:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
-; CHECK-NEXT:    sbfiz x8, x1, #1, #32
-; CHECK-NEXT:    str wzr, [x0, x8]
+; CHECK-NEXT:    sxtw x8, w1
+; CHECK-NEXT:    strh wzr, [x0, w1, sxtw #1]
+; CHECK-NEXT:    add x8, x8, #1
+; CHECK-NEXT:    strh wzr, [x0, x8, lsl #1]
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-STRICT-LABEL: Strh_zero:
 ; CHECK-STRICT:       // %bb.0: // %entry
-; CHECK-STRICT-NEXT:    add x8, x0, w1, sxtw #1
-; CHECK-STRICT-NEXT:    strh wzr, [x8]
-; CHECK-STRICT-NEXT:    strh wzr, [x8, #2]
+; CHECK-STRICT-NEXT:    // kill: def $w1 killed $w1 def $x1
+; CHECK-STRICT-NEXT:    sxtw x8, w1
+; CHECK-STRICT-NEXT:    strh wzr, [x0, w1, sxtw #1]
+; CHECK-STRICT-NEXT:    add x8, x8, #1
+; CHECK-STRICT-NEXT:    strh wzr, [x0, x8, lsl #1]
 ; CHECK-STRICT-NEXT:    ret
 entry:
   %idxprom = sext i32 %n to i64
@@ -43,17 +47,27 @@ define void @Strh_zero_4(ptr nocapture %P, i32 %n) {
 ; CHECK-LABEL: Strh_zero_4:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
-; CHECK-NEXT:    sbfiz x8, x1, #1, #32
-; CHECK-NEXT:    str xzr, [x0, x8]
+; CHECK-NEXT:    sxtw x8, w1
+; CHECK-NEXT:    strh wzr, [x0, w1, sxtw #1]
+; CHECK-NEXT:    add x9, x8, #1
+; CHECK-NEXT:    add x10, x8, #2
+; CHECK-NEXT:    add x8, x8, #3
+; CHECK-NEXT:    strh wzr, [x0, x9, lsl #1]
+; CHECK-NEXT:    strh wzr, [x0, x10, lsl #1]
+; CHECK-NEXT:    strh wzr, [x0, x8, lsl #1]
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-STRICT-LABEL: Strh_zero_4:
 ; CHECK-STRICT:       // %bb.0: // %entry
-; CHECK-STRICT-NEXT:    add x8, x0, w1, sxtw #1
-; CHECK-STRICT-NEXT:    strh wzr, [x8]
-; CHECK-STRICT-NEXT:    strh wzr, [x8, #2]
-; CHECK-STRICT-NEXT:    strh wzr, [x8, #4]
-; CHECK-STRICT-NEXT:    strh wzr, [x8, #6]
+; CHECK-STRICT-NEXT:    // kill: def $w1 killed $w1 def $x1
+; CHECK-STRICT-NEXT:    sxtw x8, w1
+; CHECK-STRICT-NEXT:    strh wzr, [x0, w1, sxtw #1]
+; CHECK-STRICT-NEXT:    add x9, x8, #1
+; CHECK-STRICT-NEXT:    add x10, x8, #2
+; CHECK-STRICT-NEXT:    add x8, x8, #3
+; CHECK-STRICT-NEXT:    strh wzr, [x0, x9, lsl #1]
+; CHECK-STRICT-NEXT:    strh wzr, [x0, x10, lsl #1]
+; CHECK-STRICT-NEXT:    strh wzr, [x0, x8, lsl #1]
 ; CHECK-STRICT-NEXT:    ret
 entry:
   %idxprom = sext i32 %n to i64
@@ -82,14 +96,19 @@ define void @Strw_zero(ptr nocapture %P, i32 %n) {
 ; CHECK-LABEL: Strw_zero:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
-; CHECK-NEXT:    sbfiz x8, x1, #2, #32
-; CHECK-NEXT:    str xzr, [x0, x8]
+; CHECK-NEXT:    sxtw x8, w1
+; CHECK-NEXT:    str wzr, [x0, w1, sxtw #2]
+; CHECK-NEXT:    add x8, x8, #1
+; CHECK-NEXT:    str wzr, [x0, x8, lsl #2]
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-STRICT-LABEL: Strw_zero:
 ; CHECK-STRICT:       // %bb.0: // %entry
-; CHECK-STRICT-NEXT:    add x8, x0, w1, sxtw #2
-; CHECK-STRICT-NEXT:    stp wzr, wzr, [x8]
+; CHECK-STRICT-NEXT:    // kill: def $w1 killed $w1 def $x1
+; CHECK-STRICT-NEXT:    sxtw x8, w1
+; CHECK-STRICT-NEXT:    str wzr, [x0, w1, sxtw #2]
+; CHECK-STRICT-NEXT:    add x8, x8, #1
+; CHECK-STRICT-NEXT:    str wzr, [x0, x8, lsl #2]
 ; CHECK-STRICT-NEXT:    ret
 entry:
   %idxprom = sext i32 %n to i64
@@ -107,14 +126,20 @@ entry:
 define void @Strw_zero_nonzero(ptr nocapture %P, i32 %n)  {
 ; CHECK-LABEL: Strw_zero_nonzero:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    add x8, x0, w1, sxtw #2
-; CHECK-NEXT:    stp wzr, w1, [x8]
+; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
+; CHECK-NEXT:    sxtw x8, w1
+; CHECK-NEXT:    str wzr, [x0, w1, sxtw #2]
+; CHECK-NEXT:    add x8, x8, #1
+; CHECK-NEXT:    str w1, [x0, x8, lsl #2]
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-STRICT-LABEL: Strw_zero_nonzero:
 ; CHECK-STRICT:       // %bb.0: // %entry
-; CHECK-STRICT-NEXT:    add x8, x0, w1, sxtw #2
-; CHECK-STRICT-NEXT:    stp wzr, w1, [x8]
+; CHECK-STRICT-NEXT:    // kill: def $w1 killed $w1 def $x1
+; CHECK-STRICT-NEXT:    sxtw x8, w1
+; CHECK-STRICT-NEXT:    str wzr, [x0, w1, sxtw #2]
+; CHECK-STRICT-NEXT:    add x8, x8, #1
+; CHECK-STRICT-NEXT:    str w1, [x0, x8, lsl #2]
 ; CHECK-STRICT-NEXT:    ret
 entry:
   %idxprom = sext i32 %n to i64
@@ -135,15 +160,28 @@ entry:
 define void @Strw_zero_4(ptr nocapture %P, i32 %n) {
 ; CHECK-LABEL: Strw_zero_4:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    add x8, x0, w1, sxtw #2
-; CHECK-NEXT:    stp xzr, xzr, [x8]
+; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
+; CHECK-NEXT:    sxtw x8, w1
+; CHECK-NEXT:    str wzr, [x0, w1, sxtw #2]
+; CHECK-NEXT:    add x9, x8, #1
+; CHECK-NEXT:    add x10, x8, #2
+; CHECK-NEXT:    add x8, x8, #3
+; CHECK-NEXT:    str wzr, [x0, x9, lsl #2]
+; CHECK-NEXT:    str wzr, [x0, x10, lsl #2]
+; CHECK-NEXT:    str wzr, [x0, x8, lsl #2]
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-STRICT-LABEL: Strw_zero_4:
 ; CHECK-STRICT:       // %bb.0: // %entry
-; CHECK-STRICT-NEXT:    add x8, x0, w1, sxtw #2
-; CHECK-STRICT-NEXT:    stp wzr, wzr, [x8]
-; CHECK-STRICT-NEXT:    stp wzr, wzr, [x8, #8]
+; CHECK-STRICT-NEXT:    // kill: def $w1 killed $w1 def $x1
+; CHECK-STRICT-NEXT:    sxtw x8, w1
+; CHECK-STRICT-NEXT:    str wzr, [x0, w1, sxtw #2]
+; CHECK-STRICT-NEXT:    add x9, x8, #1
+; CHECK-STRICT-NEXT:    add x10, x8, #2
+; CHECK-STRICT-NEXT:    add x8, x8, #3
+; CHECK-STRICT-NEXT:    str wzr, [x0, x9, lsl #2]
+; CHECK-STRICT-NEXT:    str wzr, [x0, x10, lsl #2]
+; CHECK-STRICT-NEXT:    str wzr, [x0, x8, lsl #2]
 ; CHECK-STRICT-NEXT:    ret
 entry:
   %idxprom = sext i32 %n to i64
@@ -202,15 +240,22 @@ entry:
 define void @Sturh_zero(ptr nocapture %P, i32 %n) {
 ; CHECK-LABEL: Sturh_zero:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    add x8, x0, w1, sxtw #1
-; CHECK-NEXT:    stur wzr, [x8, #-6]
+; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
+; CHECK-NEXT:    sxtw x8, w1
+; CHECK-NEXT:    sub x9, x8, #2
+; CHECK-NEXT:    sub x8, x8, #3
+; CHECK-NEXT:    strh wzr, [x0, x9, lsl #1]
+; CHECK-NEXT:    strh wzr, [x0, x8, lsl #1]
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-STRICT-LABEL: Sturh_zero:
 ; CHECK-STRICT:       // %bb.0: // %entry
-; CHECK-STRICT-NEXT:    add x8, x0, w1, sxtw #1
-; CHECK-STRICT-NEXT:    sturh wzr, [x8, #-4]
-; CHECK-STRICT-NEXT:    sturh wzr, [x8, #-6]
+; CHECK-STRICT-NEXT:    // kill: def $w1 killed $w1 def $x1
+; CHECK-STRICT-NEXT:    sxtw x8, w1
+; CHECK-STRICT-NEXT:    sub x9, x8, #2
+; CHECK-STRICT-NEXT:    sub x8, x8, #3
+; CHECK-STRICT-NEXT:    strh wzr, [x0, x9, lsl #1]
+; CHECK-STRICT-NEXT:    strh wzr, [x0, x8, lsl #1]
 ; CHECK-STRICT-NEXT:    ret
 entry:
   %sub = add nsw i32 %n, -2
@@ -234,17 +279,30 @@ entry:
 define void @Sturh_zero_4(ptr nocapture %P, i32 %n) {
 ; CHECK-LABEL: Sturh_zero_4:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    add x8, x0, w1, sxtw #1
-; CHECK-NEXT:    stur xzr, [x8, #-8]
+; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
+; CHECK-NEXT:    sxtw x8, w1
+; CHECK-NEXT:    sub x9, x8, #3
+; CHECK-NEXT:    sub x10, x8, #4
+; CHECK-NEXT:    strh wzr, [x0, x9, lsl #1]
+; CHECK-NEXT:    sub x9, x8, #2
+; CHECK-NEXT:    sub x8, x8, #1
+; CHECK-NEXT:    strh wzr, [x0, x10, lsl #1]
+; CHECK-NEXT:    strh wzr, [x0, x9, lsl #1]
+; CHECK-NEXT:    strh wzr, [x0, x8, lsl #1]
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-STRICT-LABEL: Sturh_zero_4:
 ; CHECK-STRICT:       // %bb.0: // %entry
-; CHECK-STRICT-NEXT:    add x8, x0, w1, sxtw #1
-; CHECK-STRICT-NEXT:    sturh wzr, [x8, #-6]
-; CHECK-STRICT-NEXT:    sturh wzr, [x8, #-8]
-; CHECK-STRICT-NEXT:    sturh wzr, [x8, #-4]
-; CHECK-STRICT-NEXT:    sturh wzr, [x8, #-2]
+; CHECK-STRICT-NEXT:    // kill: def $w1 killed $w1 def $x1
+; CHECK-STRICT-NEXT:    sxtw x8, w1
+; CHECK-STRICT-NEXT:    sub x9, x8, #3
+; CHECK-STRICT-NEXT:    sub x10, x8, #4
+; CHECK-STRICT-NEXT:    strh wzr, [x0, x9, lsl #1]
+; CHECK-STRICT-NEXT:    sub x9, x8, #2
+; CHECK-STRICT-NEXT:    sub x8, x8, #1
+; CHECK-STRICT-NEXT:    strh wzr, [x0, x10, lsl #1]
+; CHECK-STRICT-NEXT:    strh wzr, [x0, x9, lsl #1]
+; CHECK-STRICT-NEXT:    strh wzr, [x0, x8, lsl #1]
 ; CHECK-STRICT-NEXT:    ret
 entry:
   %sub = add nsw i32 %n, -3
@@ -273,14 +331,22 @@ entry:
 define void @Sturw_zero(ptr nocapture %P, i32 %n) {
 ; CHECK-LABEL: Sturw_zero:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    add x8, x0, w1, sxtw #2
-; CHECK-NEXT:    stur xzr, [x8, #-16]
+; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
+; CHECK-NEXT:    sxtw x8, w1
+; CHECK-NEXT:    sub x9, x8, #3
+; CHECK-NEXT:    sub x8, x8, #4
+; CHECK-NEXT:    str wzr, [x0, x9, lsl #2]
+; CHECK-NEXT:    str wzr, [x0, x8, lsl #2]
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-STRICT-LABEL: Sturw_zero:
 ; CHECK-STRICT:       // %bb.0: // %entry
-; CHECK-STRICT-NEXT:    add x8, x0, w1, sxtw #2
-; CHECK-STRICT-NEXT:    stp wzr, wzr, [x8, #-16]
+; CHECK-STRICT-NEXT:    // kill: def $w1 killed $w1 def $x1
+; CHECK-STRICT-NEXT:    sxtw x8, w1
+; CHECK-STRICT-NEXT:    sub x9, x8, #3
+; CHECK-STRICT-NEXT:    sub x8, x8, #4
+; CHECK-STRICT-NEXT:    str wzr, [x0, x9, lsl #2]
+; CHECK-STRICT-NEXT:    str wzr, [x0, x8, lsl #2]
 ; CHECK-STRICT-NEXT:    ret
 entry:
   %sub = add nsw i32 %n, -3
@@ -302,15 +368,30 @@ entry:
 define void @Sturw_zero_4(ptr nocapture %P, i32 %n) {
 ; CHECK-LABEL: Sturw_zero_4:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    add x8, x0, w1, sxtw #2
-; CHECK-NEXT:    stp xzr, xzr, [x8, #-16]
+; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
+; CHECK-NEXT:    sxtw x8, w1
+; CHECK-NEXT:    sub x9, x8, #3
+; CHECK-NEXT:    sub x10, x8, #4
+; CHECK-NEXT:    str wzr, [x0, x9, lsl #2]
+; CHECK-NEXT:    sub x9, x8, #2
+; CHECK-NEXT:    sub x8, x8, #1
+; CHECK-NEXT:    str wzr, [x0, x10, lsl #2]
+; CHECK-NEXT:    str wzr, [x0, x9, lsl #2]
+; CHECK-NEXT:    str wzr, [x0, x8, lsl #2]
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-STRICT-LABEL: Sturw_zero_4:
 ; CHECK-STRICT:       // %bb.0: // %entry
-; CHECK-STRICT-NEXT:    add x8, x0, w1, sxtw #2
-; CHECK-STRICT-NEXT:    stp wzr, wzr, [x8, #-16]
-; CHECK-STRICT-NEXT:    stp wzr, wzr, [x8, #-8]
+; CHECK-STRICT-NEXT:    // kill: def $w1 killed $w1 def $x1
+; CHECK-STRICT-NEXT:    sxtw x8, w1
+; CHECK-STRICT-NEXT:    sub x9, x8, #3
+; CHECK-STRICT-NEXT:    sub x10, x8, #4
+; CHECK-STRICT-NEXT:    str wzr, [x0, x9, lsl #2]
+; CHECK-STRICT-NEXT:    sub x9, x8, #2
+; CHECK-STRICT-NEXT:    sub x8, x8, #1
+; CHECK-STRICT-NEXT:    str wzr, [x0, x10, lsl #2]
+; CHECK-STRICT-NEXT:    str wzr, [x0, x9, lsl #2]
+; CHECK-STRICT-NEXT:    str wzr, [x0, x8, lsl #2]
 ; CHECK-STRICT-NEXT:    ret
 entry:
   %sub = add nsw i32 %n, -3

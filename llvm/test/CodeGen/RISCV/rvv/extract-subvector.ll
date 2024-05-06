@@ -311,10 +311,11 @@ define <vscale x 1 x i8> @extract_nxv8i8_nxv1i8_7(<vscale x 8 x i8> %vec) {
 ; CHECK-LABEL: extract_nxv8i8_nxv1i8_7:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    srli a1, a0, 3
-; CHECK-NEXT:    sub a0, a0, a1
-; CHECK-NEXT:    vsetvli a1, zero, e8, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vx v8, v8, a0
+; CHECK-NEXT:    srli a0, a0, 3
+; CHECK-NEXT:    slli a1, a0, 3
+; CHECK-NEXT:    sub a1, a1, a0
+; CHECK-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
+; CHECK-NEXT:    vslidedown.vx v8, v8, a1
 ; CHECK-NEXT:    ret
   %c = call <vscale x 1 x i8> @llvm.vector.extract.nxv1i8.nxv8i8(<vscale x 8 x i8> %vec, i64 7)
   ret <vscale x 1 x i8> %c

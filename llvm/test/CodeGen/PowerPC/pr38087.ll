@@ -12,8 +12,11 @@ define void @draw_llvm_vs_variant0(<4 x float> %x) {
 ; CHECK-LABEL: draw_llvm_vs_variant0:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxsd v3, 0(r3)
+; CHECK-NEXT:    vspltisw v4, 8
+; CHECK-NEXT:    vadduwm v4, v4, v4
 ; CHECK-NEXT:    vmrghh v3, v3, v3
-; CHECK-NEXT:    vextsh2w v3, v3
+; CHECK-NEXT:    vslw v3, v3, v4
+; CHECK-NEXT:    vsraw v3, v3, v4
 ; CHECK-NEXT:    xvcvsxwsp vs0, v3
 ; CHECK-NEXT:    xxspltw vs0, vs0, 2
 ; CHECK-NEXT:    xvmaddasp vs0, v2, v2

@@ -297,8 +297,11 @@ define <4 x float> @test4elt_signed(i64 %a.coerce) local_unnamed_addr #1 {
 ; CHECK-P9-LABEL: test4elt_signed:
 ; CHECK-P9:       # %bb.0: # %entry
 ; CHECK-P9-NEXT:    mtvsrd v2, r3
+; CHECK-P9-NEXT:    vspltisw v3, 8
 ; CHECK-P9-NEXT:    vmrghh v2, v2, v2
-; CHECK-P9-NEXT:    vextsh2w v2, v2
+; CHECK-P9-NEXT:    vadduwm v3, v3, v3
+; CHECK-P9-NEXT:    vslw v2, v2, v3
+; CHECK-P9-NEXT:    vsraw v2, v2, v3
 ; CHECK-P9-NEXT:    xvcvsxwsp v2, v2
 ; CHECK-P9-NEXT:    blr
 ;
@@ -337,11 +340,15 @@ define void @test8elt_signed(ptr noalias nocapture sret(<8 x float>) %agg.result
 ;
 ; CHECK-P9-LABEL: test8elt_signed:
 ; CHECK-P9:       # %bb.0: # %entry
-; CHECK-P9-NEXT:    vmrglh v3, v2, v2
+; CHECK-P9-NEXT:    vspltisw v3, 8
+; CHECK-P9-NEXT:    vmrglh v4, v2, v2
 ; CHECK-P9-NEXT:    vmrghh v2, v2, v2
-; CHECK-P9-NEXT:    vextsh2w v3, v3
-; CHECK-P9-NEXT:    vextsh2w v2, v2
-; CHECK-P9-NEXT:    xvcvsxwsp vs0, v3
+; CHECK-P9-NEXT:    vadduwm v3, v3, v3
+; CHECK-P9-NEXT:    vslw v4, v4, v3
+; CHECK-P9-NEXT:    vslw v2, v2, v3
+; CHECK-P9-NEXT:    vsraw v4, v4, v3
+; CHECK-P9-NEXT:    vsraw v2, v2, v3
+; CHECK-P9-NEXT:    xvcvsxwsp vs0, v4
 ; CHECK-P9-NEXT:    xvcvsxwsp vs1, v2
 ; CHECK-P9-NEXT:    stxv vs1, 16(r3)
 ; CHECK-P9-NEXT:    stxv vs0, 0(r3)
@@ -404,24 +411,30 @@ define void @test16elt_signed(ptr noalias nocapture sret(<16 x float>) %agg.resu
 ;
 ; CHECK-P9-LABEL: test16elt_signed:
 ; CHECK-P9:       # %bb.0: # %entry
-; CHECK-P9-NEXT:    lxv v3, 0(r4)
-; CHECK-P9-NEXT:    lxv v2, 16(r4)
-; CHECK-P9-NEXT:    vmrglh v4, v3, v3
-; CHECK-P9-NEXT:    vmrghh v3, v3, v3
-; CHECK-P9-NEXT:    vextsh2w v3, v3
-; CHECK-P9-NEXT:    vextsh2w v4, v4
-; CHECK-P9-NEXT:    xvcvsxwsp vs1, v3
-; CHECK-P9-NEXT:    vmrglh v3, v2, v2
+; CHECK-P9-NEXT:    lxv v2, 0(r4)
+; CHECK-P9-NEXT:    vspltisw v3, 8
+; CHECK-P9-NEXT:    vadduwm v3, v3, v3
+; CHECK-P9-NEXT:    vmrglh v4, v2, v2
 ; CHECK-P9-NEXT:    vmrghh v2, v2, v2
+; CHECK-P9-NEXT:    vslw v4, v4, v3
+; CHECK-P9-NEXT:    vslw v2, v2, v3
+; CHECK-P9-NEXT:    vsraw v4, v4, v3
+; CHECK-P9-NEXT:    vsraw v2, v2, v3
 ; CHECK-P9-NEXT:    xvcvsxwsp vs0, v4
-; CHECK-P9-NEXT:    vextsh2w v3, v3
-; CHECK-P9-NEXT:    vextsh2w v2, v2
-; CHECK-P9-NEXT:    xvcvsxwsp vs2, v3
-; CHECK-P9-NEXT:    xvcvsxwsp vs3, v2
+; CHECK-P9-NEXT:    lxv v4, 16(r4)
+; CHECK-P9-NEXT:    xvcvsxwsp vs1, v2
+; CHECK-P9-NEXT:    vmrglh v2, v4, v4
 ; CHECK-P9-NEXT:    stxv vs1, 16(r3)
 ; CHECK-P9-NEXT:    stxv vs0, 0(r3)
-; CHECK-P9-NEXT:    stxv vs3, 48(r3)
+; CHECK-P9-NEXT:    vslw v2, v2, v3
+; CHECK-P9-NEXT:    vsraw v2, v2, v3
+; CHECK-P9-NEXT:    xvcvsxwsp vs2, v2
+; CHECK-P9-NEXT:    vmrghh v2, v4, v4
+; CHECK-P9-NEXT:    vslw v2, v2, v3
 ; CHECK-P9-NEXT:    stxv vs2, 32(r3)
+; CHECK-P9-NEXT:    vsraw v2, v2, v3
+; CHECK-P9-NEXT:    xvcvsxwsp vs3, v2
+; CHECK-P9-NEXT:    stxv vs3, 48(r3)
 ; CHECK-P9-NEXT:    blr
 ;
 ; CHECK-BE-LABEL: test16elt_signed:

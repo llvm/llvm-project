@@ -91,18 +91,6 @@ define i32 @PR15215_good(<4 x i32> %input) nounwind {
 ; X64-NEXT:    leal (%rax,%rdx,4), %eax
 ; X64-NEXT:    leal (%rax,%rcx,8), %eax
 ; X64-NEXT:    retq
-;
-; SSE2-LABEL: PR15215_good:
-; SSE2:       # %bb.0: # %entry
-; SSE2-NEXT:    pslld $31, %xmm0
-; SSE2-NEXT:    movmskps %xmm0, %eax
-; SSE2-NEXT:    ret{{[l|q]}}
-;
-; AVX2-LABEL: PR15215_good:
-; AVX2:       # %bb.0: # %entry
-; AVX2-NEXT:    vpslld $31, %xmm0, %xmm0
-; AVX2-NEXT:    vmovmskps %xmm0, %eax
-; AVX2-NEXT:    ret{{[l|q]}}
 entry:
   %0 = trunc <4 x i32> %input to <4 x i1>
   %1 = extractelement <4 x i1> %0, i32 0

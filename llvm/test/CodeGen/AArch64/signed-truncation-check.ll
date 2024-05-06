@@ -316,7 +316,7 @@ define i1 @add_ultcmp_bad_i8_i16(i16 %x) nounwind {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    and w8, w0, #0xffff
 ; CHECK-NEXT:    add w8, w8, #128
-; CHECK-NEXT:    lsr w0, w8, #16
+; CHECK-NEXT:    ubfx w0, w8, #16, #1
 ; CHECK-NEXT:    ret
   %tmp0 = add i16 %x, 128 ; 1U << (8-1)
   %tmp1 = icmp ult i16 %tmp0, 128 ; 1U << (8-1)

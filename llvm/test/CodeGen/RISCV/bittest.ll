@@ -724,12 +724,11 @@ define signext i32 @bit_31_z_select_i32(i32 signext %a, i32 signext %b, i32 sign
 define signext i32 @bit_31_nz_select_i32(i32 signext %a, i32 signext %b, i32 signext %c) {
 ; RV32-LABEL: bit_31_nz_select_i32:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    srli a3, a0, 31
-; RV32-NEXT:    mv a0, a1
-; RV32-NEXT:    bnez a3, .LBB22_2
+; RV32-NEXT:    bltz a0, .LBB22_2
 ; RV32-NEXT:  # %bb.1:
-; RV32-NEXT:    mv a0, a2
+; RV32-NEXT:    mv a1, a2
 ; RV32-NEXT:  .LBB22_2:
+; RV32-NEXT:    mv a0, a1
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: bit_31_nz_select_i32:
@@ -1224,12 +1223,11 @@ define i64 @bit_63_nz_select_i64(i64 %a, i64 %b, i64 %c) {
 ;
 ; RV64-LABEL: bit_63_nz_select_i64:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    srli a3, a0, 63
-; RV64-NEXT:    mv a0, a1
-; RV64-NEXT:    bnez a3, .LBB36_2
+; RV64-NEXT:    bltz a0, .LBB36_2
 ; RV64-NEXT:  # %bb.1:
-; RV64-NEXT:    mv a0, a2
+; RV64-NEXT:    mv a1, a2
 ; RV64-NEXT:  .LBB36_2:
+; RV64-NEXT:    mv a0, a1
 ; RV64-NEXT:    ret
   %1 = and i64 %a, 9223372036854775808
   %2 = icmp ne i64 %1, 0

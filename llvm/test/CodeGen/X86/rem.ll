@@ -29,7 +29,8 @@ define i32 @test2(i32 %X) {
 ; CHECK-NEXT:    leal 255(%eax), %ecx
 ; CHECK-NEXT:    testl %eax, %eax
 ; CHECK-NEXT:    cmovnsl %eax, %ecx
-; CHECK-NEXT:    andl $-256, %ecx
+; CHECK-NEXT:    sarl $8, %ecx
+; CHECK-NEXT:    shll $8, %ecx
 ; CHECK-NEXT:    subl %ecx, %eax
 ; CHECK-NEXT:    retl
   %tmp1 = srem i32 %X, 256

@@ -6,7 +6,8 @@ define i64 @baz(i32 %A) nounwind {
 ; CHECK-LABEL: baz:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    shlq $49, %rax
+; CHECK-NEXT:    shll $17, %eax
+; CHECK-NEXT:    shlq $32, %rax
 ; CHECK-NEXT:    retq
         %tmp1 = shl i32 %A, 17
         %tmp2 = zext i32 %tmp1 to i64

@@ -14,8 +14,8 @@ define amdgpu_kernel void @add_const_offset(ptr addrspace(1) nocapture %arg) {
 ; CHECK-LABEL: add_const_offset:
 ; CHECK:       ; %bb.0: ; %bb
 ; CHECK-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; CHECK-NEXT:    v_add_u32_e32 v0, vcc, 0xc8, v0
 ; CHECK-NEXT:    v_lshlrev_b32_e32 v0, 4, v0
-; CHECK-NEXT:    v_add_u32_e32 v0, vcc, 0xc80, v0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    v_mov_b32_e32 v1, s1
 ; CHECK-NEXT:    v_add_u32_e32 v0, vcc, s0, v0
@@ -46,8 +46,8 @@ define amdgpu_kernel void @or_const_offset(ptr addrspace(1) nocapture %arg) {
 ; CHECK-LABEL: or_const_offset:
 ; CHECK:       ; %bb.0: ; %bb
 ; CHECK-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; CHECK-NEXT:    v_or_b32_e32 v0, 0x100, v0
 ; CHECK-NEXT:    v_lshlrev_b32_e32 v0, 4, v0
-; CHECK-NEXT:    v_or_b32_e32 v0, 0x1000, v0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    v_mov_b32_e32 v1, s1
 ; CHECK-NEXT:    v_add_u32_e32 v0, vcc, s0, v0

@@ -487,7 +487,8 @@ define amdgpu_kernel void @v_test_add_v2i16_inline_lo_zero_hi(ptr addrspace(1) %
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
 ; VI-NEXT:    v_mov_b32_e32 v1, s1
-; VI-NEXT:    v_and_b32_e32 v3, 0xffff0000, v2
+; VI-NEXT:    v_lshrrev_b32_e32 v3, 16, v2
+; VI-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
 ; VI-NEXT:    v_add_u16_e32 v2, 32, v2
 ; VI-NEXT:    v_or_b32_e32 v2, v2, v3
 ; VI-NEXT:    flat_store_dword v[0:1], v2
@@ -993,7 +994,8 @@ define <2 x i16> @add_inline_imm_neg1_0(<2 x i16> %x) {
 ; VI-LABEL: add_inline_imm_neg1_0:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_and_b32_e32 v1, 0xffff0000, v0
+; VI-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
+; VI-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
 ; VI-NEXT:    v_add_u16_e32 v0, -1, v0
 ; VI-NEXT:    v_or_b32_e32 v0, v0, v1
 ; VI-NEXT:    s_setpc_b64 s[30:31]
@@ -1023,7 +1025,8 @@ define <2 x i16> @add_inline_imm_1_0(<2 x i16> %x) {
 ; VI-LABEL: add_inline_imm_1_0:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_and_b32_e32 v1, 0xffff0000, v0
+; VI-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
+; VI-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
 ; VI-NEXT:    v_add_u16_e32 v0, 1, v0
 ; VI-NEXT:    v_or_b32_e32 v0, v0, v1
 ; VI-NEXT:    s_setpc_b64 s[30:31]

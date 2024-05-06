@@ -603,9 +603,10 @@ define i300 @test4(i300 %a, i300 %b) nounwind {
 ; X64-NEXT:    movq %r12, 16(%rdi)
 ; X64-NEXT:    movq %rax, 24(%rdi)
 ; X64-NEXT:    movl %esi, 32(%rdi)
-; X64-NEXT:    shrq $32, %rsi
-; X64-NEXT:    andl $4095, %esi # imm = 0xFFF
-; X64-NEXT:    movw %si, 36(%rdi)
+; X64-NEXT:    movabsq $17587891077120, %rax # imm = 0xFFF00000000
+; X64-NEXT:    andq %rsi, %rax
+; X64-NEXT:    shrq $32, %rax
+; X64-NEXT:    movw %ax, 36(%rdi)
 ; X64-NEXT:    movq %rdi, %rax
 ; X64-NEXT:    popq %rbx
 ; X64-NEXT:    popq %r12

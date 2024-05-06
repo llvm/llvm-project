@@ -192,12 +192,14 @@ define void @v4i8(ptr %px, ptr %py, ptr %pz) nounwind {
 define void @v2i8(ptr %px, ptr %py, ptr %pz) nounwind {
 ; CHECK-LABEL: v2i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ld1 { v0.b }[0], [x0]
-; CHECK-NEXT:    ld1 { v1.b }[0], [x1]
-; CHECK-NEXT:    add x8, x0, #1
-; CHECK-NEXT:    add x9, x1, #1
-; CHECK-NEXT:    ld1 { v0.b }[4], [x8]
-; CHECK-NEXT:    ld1 { v1.b }[4], [x9]
+; CHECK-NEXT:    ldrsb w8, [x0]
+; CHECK-NEXT:    ldrsb w9, [x1]
+; CHECK-NEXT:    ldrsb w10, [x0, #1]
+; CHECK-NEXT:    ldrsb w11, [x1, #1]
+; CHECK-NEXT:    fmov s0, w8
+; CHECK-NEXT:    fmov s1, w9
+; CHECK-NEXT:    mov v0.s[1], w10
+; CHECK-NEXT:    mov v1.s[1], w11
 ; CHECK-NEXT:    shl v1.2s, v1.2s, #24
 ; CHECK-NEXT:    shl v0.2s, v0.2s, #24
 ; CHECK-NEXT:    sqsub v0.2s, v0.2s, v1.2s
@@ -232,12 +234,14 @@ define void @v4i16(ptr %px, ptr %py, ptr %pz) nounwind {
 define void @v2i16(ptr %px, ptr %py, ptr %pz) nounwind {
 ; CHECK-SD-LABEL: v2i16:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    ld1 { v0.h }[0], [x0]
-; CHECK-SD-NEXT:    ld1 { v1.h }[0], [x1]
-; CHECK-SD-NEXT:    add x8, x0, #2
-; CHECK-SD-NEXT:    add x9, x1, #2
-; CHECK-SD-NEXT:    ld1 { v0.h }[2], [x8]
-; CHECK-SD-NEXT:    ld1 { v1.h }[2], [x9]
+; CHECK-SD-NEXT:    ldrsh w8, [x0]
+; CHECK-SD-NEXT:    ldrsh w9, [x1]
+; CHECK-SD-NEXT:    ldrsh w10, [x0, #2]
+; CHECK-SD-NEXT:    ldrsh w11, [x1, #2]
+; CHECK-SD-NEXT:    fmov s0, w8
+; CHECK-SD-NEXT:    fmov s1, w9
+; CHECK-SD-NEXT:    mov v0.s[1], w10
+; CHECK-SD-NEXT:    mov v1.s[1], w11
 ; CHECK-SD-NEXT:    shl v1.2s, v1.2s, #16
 ; CHECK-SD-NEXT:    shl v0.2s, v0.2s, #16
 ; CHECK-SD-NEXT:    sqsub v0.2s, v0.2s, v1.2s

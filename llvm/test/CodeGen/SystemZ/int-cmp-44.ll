@@ -959,11 +959,12 @@ exit:
 define i64 @f40(i64 %dummy, i64 %a, ptr %dest) {
 ; CHECK-LABEL: f40:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    ltgfr %r2, %r3
+; CHECK-NEXT:    sllg %r0, %r3, 32
+; CHECK-NEXT:    srag %r2, %r0, 32
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    blah %r2
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    bhr %r14
+; CHECK-NEXT:    cgibh %r0, 0, 0(%r14)
 ; CHECK-NEXT:  .LBB39_1: # %store
 ; CHECK-NEXT:    stg %r2, 0(%r4)
 ; CHECK-NEXT:    br %r14

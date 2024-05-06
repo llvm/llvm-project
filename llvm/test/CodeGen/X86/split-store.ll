@@ -197,7 +197,7 @@ define void @int12_int12_pair(i12 signext %tmp1, i12 signext %tmp2, ptr %ref.tmp
 define void @int7_int7_pair(i7 signext %tmp1, i7 signext %tmp2, ptr %ref.tmp) {
 ; CHECK-LABEL: int7_int7_pair:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    shll $7, %esi
+; CHECK-NEXT:    shlw $7, %si
 ; CHECK-NEXT:    andl $127, %edi
 ; CHECK-NEXT:    orl %esi, %edi
 ; CHECK-NEXT:    andl $16383, %edi # imm = 0x3FFF

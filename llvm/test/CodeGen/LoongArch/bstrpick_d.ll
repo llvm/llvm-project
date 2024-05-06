@@ -53,7 +53,8 @@ define i64 @and4095(i64 %a) {
 define i64 @and0xff0_lshr4(i64 %a) {
 ; CHECK-LABEL: and0xff0_lshr4:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    bstrpick.d $a0, $a0, 11, 4
+; CHECK-NEXT:    andi $a0, $a0, 4080
+; CHECK-NEXT:    srli.d $a0, $a0, 4
 ; CHECK-NEXT:    ret
   %and = and i64 %a, 4080
   %shr = lshr i64 %and, 4
@@ -66,7 +67,8 @@ define i64 @and0xff0_lshr4(i64 %a) {
 define i64 @and4080_ashr5(i64 %a) {
 ; CHECK-LABEL: and4080_ashr5:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    bstrpick.d $a0, $a0, 11, 5
+; CHECK-NEXT:    andi $a0, $a0, 4064
+; CHECK-NEXT:    srai.d $a0, $a0, 5
 ; CHECK-NEXT:    ret
   %and = and i64 %a, 4080
   %shr = ashr i64 %and, 5

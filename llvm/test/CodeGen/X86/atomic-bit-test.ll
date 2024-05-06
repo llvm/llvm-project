@@ -34,7 +34,7 @@ define i16 @bts2() nounwind {
 ; X86-NEXT:    xorl %eax, %eax
 ; X86-NEXT:    lock btsw $1, v16
 ; X86-NEXT:    setb %al
-; X86-NEXT:    addl %eax, %eax
+; X86-NEXT:    addw %ax, %ax
 ; X86-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X86-NEXT:    retl
 ;
@@ -43,7 +43,7 @@ define i16 @bts2() nounwind {
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    lock btsw $1, v16(%rip)
 ; X64-NEXT:    setb %al
-; X64-NEXT:    addl %eax, %eax
+; X64-NEXT:    addw %ax, %ax
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq
 entry:
@@ -58,7 +58,7 @@ define i16 @bts15() nounwind {
 ; X86-NEXT:    xorl %eax, %eax
 ; X86-NEXT:    lock btsw $15, v16
 ; X86-NEXT:    setb %al
-; X86-NEXT:    shll $15, %eax
+; X86-NEXT:    shlw $15, %ax
 ; X86-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X86-NEXT:    retl
 ;
@@ -67,7 +67,7 @@ define i16 @bts15() nounwind {
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    lock btsw $15, v16(%rip)
 ; X64-NEXT:    setb %al
-; X64-NEXT:    shll $15, %eax
+; X64-NEXT:    shlw $15, %ax
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq
 entry:
@@ -162,7 +162,7 @@ define i16 @btc2() nounwind {
 ; X86-NEXT:    xorl %eax, %eax
 ; X86-NEXT:    lock btcw $1, v16
 ; X86-NEXT:    setb %al
-; X86-NEXT:    addl %eax, %eax
+; X86-NEXT:    addw %ax, %ax
 ; X86-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X86-NEXT:    retl
 ;
@@ -171,7 +171,7 @@ define i16 @btc2() nounwind {
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    lock btcw $1, v16(%rip)
 ; X64-NEXT:    setb %al
-; X64-NEXT:    addl %eax, %eax
+; X64-NEXT:    addw %ax, %ax
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq
 entry:
@@ -286,7 +286,7 @@ define i16 @btr2() nounwind {
 ; X86-NEXT:    xorl %eax, %eax
 ; X86-NEXT:    lock btrw $1, v16
 ; X86-NEXT:    setb %al
-; X86-NEXT:    addl %eax, %eax
+; X86-NEXT:    addw %ax, %ax
 ; X86-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X86-NEXT:    retl
 ;
@@ -295,7 +295,7 @@ define i16 @btr2() nounwind {
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    lock btrw $1, v16(%rip)
 ; X64-NEXT:    setb %al
-; X64-NEXT:    addl %eax, %eax
+; X64-NEXT:    addw %ax, %ax
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq
 entry:
@@ -310,7 +310,7 @@ define i16 @btr15() nounwind {
 ; X86-NEXT:    xorl %eax, %eax
 ; X86-NEXT:    lock btrw $15, v16
 ; X86-NEXT:    setb %al
-; X86-NEXT:    shll $15, %eax
+; X86-NEXT:    shlw $15, %ax
 ; X86-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X86-NEXT:    retl
 ;
@@ -319,7 +319,7 @@ define i16 @btr15() nounwind {
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    lock btrw $15, v16(%rip)
 ; X64-NEXT:    setb %al
-; X64-NEXT:    shll $15, %eax
+; X64-NEXT:    shlw $15, %ax
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq
 entry:
@@ -443,19 +443,22 @@ entry:
 define i16 @multi_use2() nounwind {
 ; X86-LABEL: multi_use2:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    xorl %eax, %eax
+; X86-NEXT:    xorl %ecx, %ecx
 ; X86-NEXT:    lock btsw $0, v16
-; X86-NEXT:    setb %al
-; X86-NEXT:    leal (%eax,%eax,2), %eax
+; X86-NEXT:    setb %cl
+; X86-NEXT:    movl %ecx, %eax
+; X86-NEXT:    addw %ax, %ax
+; X86-NEXT:    orl %ecx, %eax
 ; X86-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: multi_use2:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    xorl %eax, %eax
+; X64-NEXT:    xorl %ecx, %ecx
 ; X64-NEXT:    lock btsw $0, v16(%rip)
-; X64-NEXT:    setb %al
-; X64-NEXT:    leal (%rax,%rax,2), %eax
+; X64-NEXT:    setb %cl
+; X64-NEXT:    leal (%rcx,%rcx), %eax
+; X64-NEXT:    orl %ecx, %eax
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq
 entry:

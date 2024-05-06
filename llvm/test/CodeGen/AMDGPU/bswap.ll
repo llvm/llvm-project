@@ -618,6 +618,7 @@ define <2 x i16> @v_bswap_v2i16(<2 x i16> %src) {
 ; SI-NEXT:    v_bfi_b32 v1, s4, v1, v3
 ; SI-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
 ; SI-NEXT:    v_alignbit_b32 v0, v1, v0, 16
+; SI-NEXT:    v_bfe_u32 v1, v1, 0, 16
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; VI-LABEL: v_bswap_v2i16:

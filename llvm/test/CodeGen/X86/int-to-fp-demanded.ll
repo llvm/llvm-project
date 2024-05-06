@@ -21,6 +21,7 @@ define i32 @sitofp_signbit_only(i32 %i_in) nounwind {
 ; X64:       # %bb.0:
 ; X64-NEXT:    cvtsi2ss %edi, %xmm0
 ; X64-NEXT:    movmskps %xmm0, %eax
+; X64-NEXT:    andl $1, %eax
 ; X64-NEXT:    shll $31, %eax
 ; X64-NEXT:    retq
   %f = sitofp i32 %i_in to float
@@ -47,6 +48,7 @@ define i32 @sitofp_signbit_only_okay_width(i16 %i_in) nounwind {
 ; X64-NEXT:    movswl %di, %eax
 ; X64-NEXT:    cvtsi2ss %eax, %xmm0
 ; X64-NEXT:    movmskps %xmm0, %eax
+; X64-NEXT:    andl $1, %eax
 ; X64-NEXT:    shll $31, %eax
 ; X64-NEXT:    retq
   %f = sitofp i16 %i_in to float
@@ -70,6 +72,7 @@ define i32 @sitofp_signbit_only_fail_bad_width1(i64 %i_in) nounwind {
 ; X64:       # %bb.0:
 ; X64-NEXT:    cvtsi2ss %rdi, %xmm0
 ; X64-NEXT:    movmskps %xmm0, %eax
+; X64-NEXT:    andl $1, %eax
 ; X64-NEXT:    shll $31, %eax
 ; X64-NEXT:    retq
   %f = sitofp i64 %i_in to float

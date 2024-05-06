@@ -74,8 +74,8 @@ define i32 @rotl_i32(i32 %x, i32 %z) {
 define i64 @rotl_i64(i64 %x, i64 %z) {
 ; CHECK-BE-LABEL: rotl_i64:
 ; CHECK-BE:       # %bb.0:
-; CHECK-BE-NEXT:    srl $1, $7, 5
-; CHECK-BE-NEXT:    andi $1, $1, 1
+; CHECK-BE-NEXT:    andi $1, $7, 32
+; CHECK-BE-NEXT:    srl $1, $1, 5
 ; CHECK-BE-NEXT:    move $3, $4
 ; CHECK-BE-NEXT:    movn $3, $5, $1
 ; CHECK-BE-NEXT:    sllv $2, $3, $7
@@ -92,8 +92,8 @@ define i64 @rotl_i64(i64 %x, i64 %z) {
 ;
 ; CHECK-LE-LABEL: rotl_i64:
 ; CHECK-LE:       # %bb.0:
-; CHECK-LE-NEXT:    srl $1, $6, 5
-; CHECK-LE-NEXT:    andi $1, $1, 1
+; CHECK-LE-NEXT:    andi $1, $6, 32
+; CHECK-LE-NEXT:    srl $1, $1, 5
 ; CHECK-LE-NEXT:    move $3, $4
 ; CHECK-LE-NEXT:    movn $3, $5, $1
 ; CHECK-LE-NEXT:    sllv $2, $3, $6

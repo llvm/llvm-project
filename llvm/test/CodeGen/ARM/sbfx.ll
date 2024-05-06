@@ -15,7 +15,7 @@ entry:
 define i32 @f2(i32 %a) {
 ; CHECK-LABEL: f2:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    bfc r0, #20, #12
+; CHECK-NEXT:    ubfx r0, r0, #0, #20
 ; CHECK-NEXT:    bx lr
 entry:
     %tmp = shl i32 %a, 12

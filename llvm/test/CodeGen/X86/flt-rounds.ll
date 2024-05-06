@@ -11,8 +11,8 @@ define i32 @test_flt_rounds() nounwind {
 ; X86-NEXT:    subl $2, %esp
 ; X86-NEXT:    fnstcw (%esp)
 ; X86-NEXT:    movzwl (%esp), %ecx
-; X86-NEXT:    shrl $9, %ecx
-; X86-NEXT:    andb $6, %cl
+; X86-NEXT:    andl $3072, %ecx # imm = 0xC00
+; X86-NEXT:    shrw $9, %cx
 ; X86-NEXT:    movl $45, %eax
 ; X86-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; X86-NEXT:    shrl %cl, %eax
@@ -24,8 +24,8 @@ define i32 @test_flt_rounds() nounwind {
 ; X64:       # %bb.0:
 ; X64-NEXT:    fnstcw -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    movzwl -{{[0-9]+}}(%rsp), %ecx
-; X64-NEXT:    shrl $9, %ecx
-; X64-NEXT:    andb $6, %cl
+; X64-NEXT:    andl $3072, %ecx # imm = 0xC00
+; X64-NEXT:    shrw $9, %cx
 ; X64-NEXT:    movl $45, %eax
 ; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; X64-NEXT:    shrl %cl, %eax
@@ -46,8 +46,8 @@ define i32 @multiple_flt_rounds() nounwind {
 ; X86-NEXT:    calll fesetround
 ; X86-NEXT:    fnstcw {{[0-9]+}}(%esp)
 ; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    shrl $9, %ecx
-; X86-NEXT:    andb $6, %cl
+; X86-NEXT:    andl $3072, %ecx # imm = 0xC00
+; X86-NEXT:    shrw $9, %cx
 ; X86-NEXT:    movl $45, %esi
 ; X86-NEXT:    movl $45, %eax
 ; X86-NEXT:    # kill: def $cl killed $cl killed $ecx
@@ -60,8 +60,8 @@ define i32 @multiple_flt_rounds() nounwind {
 ; X86-NEXT:    calll fesetround
 ; X86-NEXT:    fnstcw {{[0-9]+}}(%esp)
 ; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    shrl $9, %ecx
-; X86-NEXT:    andb $6, %cl
+; X86-NEXT:    andl $3072, %ecx # imm = 0xC00
+; X86-NEXT:    shrw $9, %cx
 ; X86-NEXT:    movl $45, %eax
 ; X86-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; X86-NEXT:    shrl %cl, %eax
@@ -75,8 +75,8 @@ define i32 @multiple_flt_rounds() nounwind {
 ; X86-NEXT:    calll fesetround
 ; X86-NEXT:    fnstcw {{[0-9]+}}(%esp)
 ; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    shrl $9, %ecx
-; X86-NEXT:    andb $6, %cl
+; X86-NEXT:    andl $3072, %ecx # imm = 0xC00
+; X86-NEXT:    shrw $9, %cx
 ; X86-NEXT:    movl $45, %eax
 ; X86-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; X86-NEXT:    shrl %cl, %eax
@@ -87,8 +87,8 @@ define i32 @multiple_flt_rounds() nounwind {
 ; X86-NEXT:    calll fesetround
 ; X86-NEXT:    fnstcw {{[0-9]+}}(%esp)
 ; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    shrl $9, %ecx
-; X86-NEXT:    andb $6, %cl
+; X86-NEXT:    andl $3072, %ecx # imm = 0xC00
+; X86-NEXT:    shrw $9, %cx
 ; X86-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; X86-NEXT:    shrl %cl, %esi
 ; X86-NEXT:    andl $3, %esi
@@ -114,8 +114,8 @@ define i32 @multiple_flt_rounds() nounwind {
 ; X64-NEXT:    callq fesetround
 ; X64-NEXT:    fnstcw {{[0-9]+}}(%rsp)
 ; X64-NEXT:    movzwl {{[0-9]+}}(%rsp), %ecx
-; X64-NEXT:    shrl $9, %ecx
-; X64-NEXT:    andb $6, %cl
+; X64-NEXT:    andl $3072, %ecx # imm = 0xC00
+; X64-NEXT:    shrw $9, %cx
 ; X64-NEXT:    movl $45, %ebx
 ; X64-NEXT:    movl $45, %eax
 ; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
@@ -128,8 +128,8 @@ define i32 @multiple_flt_rounds() nounwind {
 ; X64-NEXT:    callq fesetround
 ; X64-NEXT:    fnstcw {{[0-9]+}}(%rsp)
 ; X64-NEXT:    movzwl {{[0-9]+}}(%rsp), %ecx
-; X64-NEXT:    shrl $9, %ecx
-; X64-NEXT:    andb $6, %cl
+; X64-NEXT:    andl $3072, %ecx # imm = 0xC00
+; X64-NEXT:    shrw $9, %cx
 ; X64-NEXT:    movl $45, %eax
 ; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; X64-NEXT:    shrl %cl, %eax
@@ -141,8 +141,8 @@ define i32 @multiple_flt_rounds() nounwind {
 ; X64-NEXT:    callq fesetround
 ; X64-NEXT:    fnstcw {{[0-9]+}}(%rsp)
 ; X64-NEXT:    movzwl {{[0-9]+}}(%rsp), %ecx
-; X64-NEXT:    shrl $9, %ecx
-; X64-NEXT:    andb $6, %cl
+; X64-NEXT:    andl $3072, %ecx # imm = 0xC00
+; X64-NEXT:    shrw $9, %cx
 ; X64-NEXT:    movl $45, %eax
 ; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; X64-NEXT:    shrl %cl, %eax
@@ -153,8 +153,8 @@ define i32 @multiple_flt_rounds() nounwind {
 ; X64-NEXT:    callq fesetround
 ; X64-NEXT:    fnstcw {{[0-9]+}}(%rsp)
 ; X64-NEXT:    movzwl {{[0-9]+}}(%rsp), %ecx
-; X64-NEXT:    shrl $9, %ecx
-; X64-NEXT:    andb $6, %cl
+; X64-NEXT:    andl $3072, %ecx # imm = 0xC00
+; X64-NEXT:    shrw $9, %cx
 ; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; X64-NEXT:    shrl %cl, %ebx
 ; X64-NEXT:    andl $3, %ebx

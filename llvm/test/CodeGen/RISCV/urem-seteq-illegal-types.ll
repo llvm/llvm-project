@@ -446,7 +446,8 @@ define void @test_urem_vec(ptr %X) nounwind {
 ; RV32M-NEXT:    andi a2, a2, 2047
 ; RV32M-NEXT:    li a4, 683
 ; RV32M-NEXT:    mul a2, a2, a4
-; RV32M-NEXT:    slli a4, a2, 10
+; RV32M-NEXT:    slli a4, a2, 1
+; RV32M-NEXT:    slli a4, a4, 9
 ; RV32M-NEXT:    slli a2, a2, 21
 ; RV32M-NEXT:    srli a2, a2, 22
 ; RV32M-NEXT:    or a2, a2, a4
@@ -488,7 +489,8 @@ define void @test_urem_vec(ptr %X) nounwind {
 ; RV64M-NEXT:    andi a1, a1, 2047
 ; RV64M-NEXT:    li a4, 683
 ; RV64M-NEXT:    mul a1, a1, a4
-; RV64M-NEXT:    slli a4, a1, 10
+; RV64M-NEXT:    slli a4, a1, 1
+; RV64M-NEXT:    slli a4, a4, 9
 ; RV64M-NEXT:    slli a1, a1, 53
 ; RV64M-NEXT:    srli a1, a1, 54
 ; RV64M-NEXT:    or a1, a1, a4

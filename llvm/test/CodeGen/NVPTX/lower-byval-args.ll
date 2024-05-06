@@ -113,19 +113,19 @@ define dso_local void @dynamic_offset(ptr nocapture %arg, ptr nocapture readonly
 ;
 ; CHECK64-LABEL: dynamic_offset(
 ; CHECK64:       {
-; CHECK64-NEXT:    .reg .b32 %r<3>;
-; CHECK64-NEXT:    .reg .b64 %rd<7>;
+; CHECK64-NEXT:    .reg .b32 %r<2>;
+; CHECK64-NEXT:    .reg .b64 %rd<8>;
 ; CHECK64-EMPTY:
 ; CHECK64-NEXT:  // %bb.0: // %bb
 ; CHECK64-NEXT:    ld.param.u64 %rd1, [dynamic_offset_param_0];
 ; CHECK64-NEXT:    mov.b64 %rd2, dynamic_offset_param_1;
 ; CHECK64-NEXT:    mov.u64 %rd3, %rd2;
 ; CHECK64-NEXT:    cvta.to.global.u64 %rd4, %rd1;
-; CHECK64-NEXT:    ld.param.u32 %r1, [dynamic_offset_param_2];
-; CHECK64-NEXT:    mul.wide.s32 %rd5, %r1, 4;
-; CHECK64-NEXT:    add.s64 %rd6, %rd3, %rd5;
-; CHECK64-NEXT:    ld.param.u32 %r2, [%rd6];
-; CHECK64-NEXT:    st.global.u32 [%rd4], %r2;
+; CHECK64-NEXT:    ld.param.s32 %rd5, [dynamic_offset_param_2];
+; CHECK64-NEXT:    shl.b64 %rd6, %rd5, 2;
+; CHECK64-NEXT:    add.s64 %rd7, %rd3, %rd6;
+; CHECK64-NEXT:    ld.param.u32 %r1, [%rd7];
+; CHECK64-NEXT:    st.global.u32 [%rd4], %r1;
 ; CHECK64-NEXT:    ret;
 bb:
   %tmp = sext i32 %arg2 to i64
@@ -172,18 +172,17 @@ define dso_local void @gep_bitcast(ptr nocapture %out,  ptr nocapture readonly b
 ; CHECK64-LABEL: gep_bitcast(
 ; CHECK64:       {
 ; CHECK64-NEXT:    .reg .b16 %rs<2>;
-; CHECK64-NEXT:    .reg .b32 %r<2>;
-; CHECK64-NEXT:    .reg .b64 %rd<7>;
+; CHECK64-NEXT:    .reg .b64 %rd<8>;
 ; CHECK64-EMPTY:
 ; CHECK64-NEXT:  // %bb.0: // %bb
 ; CHECK64-NEXT:    ld.param.u64 %rd1, [gep_bitcast_param_0];
 ; CHECK64-NEXT:    mov.b64 %rd2, gep_bitcast_param_1;
 ; CHECK64-NEXT:    mov.u64 %rd3, %rd2;
 ; CHECK64-NEXT:    cvta.to.global.u64 %rd4, %rd1;
-; CHECK64-NEXT:    ld.param.u32 %r1, [gep_bitcast_param_2];
-; CHECK64-NEXT:    mul.wide.s32 %rd5, %r1, 4;
-; CHECK64-NEXT:    add.s64 %rd6, %rd3, %rd5;
-; CHECK64-NEXT:    ld.param.u8 %rs1, [%rd6];
+; CHECK64-NEXT:    ld.param.s32 %rd5, [gep_bitcast_param_2];
+; CHECK64-NEXT:    shl.b64 %rd6, %rd5, 2;
+; CHECK64-NEXT:    add.s64 %rd7, %rd3, %rd6;
+; CHECK64-NEXT:    ld.param.u8 %rs1, [%rd7];
 ; CHECK64-NEXT:    st.global.u8 [%rd4], %rs1;
 ; CHECK64-NEXT:    ret;
 bb:
@@ -231,18 +230,17 @@ define dso_local void @gep_bitcast_asc(ptr nocapture %out,  ptr nocapture readon
 ; CHECK64-LABEL: gep_bitcast_asc(
 ; CHECK64:       {
 ; CHECK64-NEXT:    .reg .b16 %rs<2>;
-; CHECK64-NEXT:    .reg .b32 %r<2>;
-; CHECK64-NEXT:    .reg .b64 %rd<7>;
+; CHECK64-NEXT:    .reg .b64 %rd<8>;
 ; CHECK64-EMPTY:
 ; CHECK64-NEXT:  // %bb.0: // %bb
 ; CHECK64-NEXT:    ld.param.u64 %rd1, [gep_bitcast_asc_param_0];
 ; CHECK64-NEXT:    mov.b64 %rd2, gep_bitcast_asc_param_1;
 ; CHECK64-NEXT:    mov.u64 %rd3, %rd2;
 ; CHECK64-NEXT:    cvta.to.global.u64 %rd4, %rd1;
-; CHECK64-NEXT:    ld.param.u32 %r1, [gep_bitcast_asc_param_2];
-; CHECK64-NEXT:    mul.wide.s32 %rd5, %r1, 4;
-; CHECK64-NEXT:    add.s64 %rd6, %rd3, %rd5;
-; CHECK64-NEXT:    ld.param.u8 %rs1, [%rd6];
+; CHECK64-NEXT:    ld.param.s32 %rd5, [gep_bitcast_asc_param_2];
+; CHECK64-NEXT:    shl.b64 %rd6, %rd5, 2;
+; CHECK64-NEXT:    add.s64 %rd7, %rd3, %rd6;
+; CHECK64-NEXT:    ld.param.u8 %rs1, [%rd7];
 ; CHECK64-NEXT:    st.global.u8 [%rd4], %rs1;
 ; CHECK64-NEXT:    ret;
 bb:
@@ -323,38 +321,38 @@ define dso_local void @pointer_escapes(ptr nocapture %arg, ptr byval(%struct.ham
 ; CHECK64-NEXT:    .local .align 4 .b8 __local_depot4[16];
 ; CHECK64-NEXT:    .reg .b64 %SP;
 ; CHECK64-NEXT:    .reg .b64 %SPL;
-; CHECK64-NEXT:    .reg .b32 %r<7>;
-; CHECK64-NEXT:    .reg .b64 %rd<10>;
+; CHECK64-NEXT:    .reg .b32 %r<6>;
+; CHECK64-NEXT:    .reg .b64 %rd<11>;
 ; CHECK64-EMPTY:
 ; CHECK64-NEXT:  // %bb.0: // %bb
 ; CHECK64-NEXT:    mov.u64 %SPL, __local_depot4;
 ; CHECK64-NEXT:    ld.param.u64 %rd1, [pointer_escapes_param_0];
 ; CHECK64-NEXT:    add.u64 %rd3, %SPL, 0;
-; CHECK64-NEXT:    ld.param.u32 %r1, [pointer_escapes_param_2];
-; CHECK64-NEXT:    ld.param.u32 %r2, [pointer_escapes_param_1+12];
-; CHECK64-NEXT:    ld.param.u32 %r3, [pointer_escapes_param_1+8];
-; CHECK64-NEXT:    ld.param.u32 %r4, [pointer_escapes_param_1+4];
-; CHECK64-NEXT:    ld.param.u32 %r5, [pointer_escapes_param_1];
-; CHECK64-NEXT:    st.local.u32 [%rd3], %r5;
-; CHECK64-NEXT:    st.local.u32 [%rd3+4], %r4;
-; CHECK64-NEXT:    st.local.u32 [%rd3+8], %r3;
-; CHECK64-NEXT:    st.local.u32 [%rd3+12], %r2;
-; CHECK64-NEXT:    cvta.to.global.u64 %rd4, %rd1;
-; CHECK64-NEXT:    mul.wide.s32 %rd5, %r1, 4;
-; CHECK64-NEXT:    add.s64 %rd6, %rd3, %rd5;
-; CHECK64-NEXT:    cvta.local.u64 %rd7, %rd6;
-; CHECK64-NEXT:    ld.local.u32 %r6, [%rd6];
-; CHECK64-NEXT:    st.global.u32 [%rd4], %r6;
+; CHECK64-NEXT:    ld.param.s32 %rd4, [pointer_escapes_param_2];
+; CHECK64-NEXT:    ld.param.u32 %r1, [pointer_escapes_param_1+12];
+; CHECK64-NEXT:    ld.param.u32 %r2, [pointer_escapes_param_1+8];
+; CHECK64-NEXT:    ld.param.u32 %r3, [pointer_escapes_param_1+4];
+; CHECK64-NEXT:    ld.param.u32 %r4, [pointer_escapes_param_1];
+; CHECK64-NEXT:    st.local.u32 [%rd3], %r4;
+; CHECK64-NEXT:    st.local.u32 [%rd3+4], %r3;
+; CHECK64-NEXT:    st.local.u32 [%rd3+8], %r2;
+; CHECK64-NEXT:    st.local.u32 [%rd3+12], %r1;
+; CHECK64-NEXT:    cvta.to.global.u64 %rd5, %rd1;
+; CHECK64-NEXT:    shl.b64 %rd6, %rd4, 2;
+; CHECK64-NEXT:    add.s64 %rd7, %rd3, %rd6;
+; CHECK64-NEXT:    cvta.local.u64 %rd8, %rd7;
+; CHECK64-NEXT:    ld.local.u32 %r5, [%rd7];
+; CHECK64-NEXT:    st.global.u32 [%rd5], %r5;
 ; CHECK64-NEXT:    { // callseq 0, 0
 ; CHECK64-NEXT:    .param .b64 param0;
-; CHECK64-NEXT:    st.param.b64 [param0+0], %rd7;
+; CHECK64-NEXT:    st.param.b64 [param0+0], %rd8;
 ; CHECK64-NEXT:    .param .b64 retval0;
 ; CHECK64-NEXT:    call.uni (retval0),
 ; CHECK64-NEXT:    escape,
 ; CHECK64-NEXT:    (
 ; CHECK64-NEXT:    param0
 ; CHECK64-NEXT:    );
-; CHECK64-NEXT:    ld.param.b64 %rd8, [retval0+0];
+; CHECK64-NEXT:    ld.param.b64 %rd9, [retval0+0];
 ; CHECK64-NEXT:    } // callseq 0
 ; CHECK64-NEXT:    ret;
 bb:

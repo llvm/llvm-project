@@ -917,33 +917,50 @@ define <2 x i256> @shl_zext_lshr_outofrange(<2 x i128> %a0) {
 define i128 @lshr_shl_mask(i128 %a0) {
 ; i686-LABEL: lshr_shl_mask:
 ; i686:       # %bb.0:
-; i686-NEXT:    pushl %edi
+; i686-NEXT:    pushl %ebx
 ; i686-NEXT:    .cfi_def_cfa_offset 8
-; i686-NEXT:    pushl %esi
+; i686-NEXT:    pushl %edi
 ; i686-NEXT:    .cfi_def_cfa_offset 12
-; i686-NEXT:    .cfi_offset %esi, -12
-; i686-NEXT:    .cfi_offset %edi, -8
+; i686-NEXT:    pushl %esi
+; i686-NEXT:    .cfi_def_cfa_offset 16
+; i686-NEXT:    .cfi_offset %esi, -16
+; i686-NEXT:    .cfi_offset %edi, -12
+; i686-NEXT:    .cfi_offset %ebx, -8
 ; i686-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; i686-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; i686-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; i686-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; i686-NEXT:    movl $2147483647, %edi # imm = 0x7FFFFFFF
-; i686-NEXT:    andl {{[0-9]+}}(%esp), %edi
+; i686-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; i686-NEXT:    addl %edi, %edi
+; i686-NEXT:    leal (%esi,%esi), %ebx
+; i686-NEXT:    shrl $31, %esi
+; i686-NEXT:    shldl $31, %ebx, %esi
+; i686-NEXT:    leal (%edx,%edx), %ebx
+; i686-NEXT:    shrl $31, %edx
+; i686-NEXT:    shldl $31, %ebx, %edx
+; i686-NEXT:    leal (%ecx,%ecx), %ebx
+; i686-NEXT:    shrl $31, %ecx
+; i686-NEXT:    shldl $31, %ebx, %ecx
+; i686-NEXT:    shrl %edi
 ; i686-NEXT:    movl %edi, 12(%eax)
 ; i686-NEXT:    movl %esi, 8(%eax)
 ; i686-NEXT:    movl %edx, 4(%eax)
 ; i686-NEXT:    movl %ecx, (%eax)
 ; i686-NEXT:    popl %esi
-; i686-NEXT:    .cfi_def_cfa_offset 8
+; i686-NEXT:    .cfi_def_cfa_offset 12
 ; i686-NEXT:    popl %edi
+; i686-NEXT:    .cfi_def_cfa_offset 8
+; i686-NEXT:    popl %ebx
 ; i686-NEXT:    .cfi_def_cfa_offset 4
 ; i686-NEXT:    retl $4
 ;
 ; x86_64-LABEL: lshr_shl_mask:
 ; x86_64:       # %bb.0:
-; x86_64-NEXT:    movq %rdi, %rax
-; x86_64-NEXT:    movabsq $9223372036854775807, %rdx # imm = 0x7FFFFFFFFFFFFFFF
-; x86_64-NEXT:    andq %rsi, %rdx
+; x86_64-NEXT:    leaq (%rsi,%rsi), %rdx
+; x86_64-NEXT:    leaq (%rdi,%rdi), %rax
+; x86_64-NEXT:    shrq $63, %rdi
+; x86_64-NEXT:    shrdq $1, %rdi, %rax
+; x86_64-NEXT:    shrq %rdx
 ; x86_64-NEXT:    retq
   %1 = shl i128 %a0, 1
   %2 = lshr i128 %1, 1

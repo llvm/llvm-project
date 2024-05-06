@@ -180,19 +180,25 @@ entry:
 define <8 x i16> @sub_absv_16_ext(<8 x i16> %a, <8 x i16> %b) local_unnamed_addr {
 ; CHECK-PWR9-LABEL: sub_absv_16_ext:
 ; CHECK-PWR9:       # %bb.0: # %entry
-; CHECK-PWR9-NEXT:    vmrghh v4, v2, v2
+; CHECK-PWR9-NEXT:    vspltisw v4, 8
+; CHECK-PWR9-NEXT:    vmrghh v5, v2, v2
 ; CHECK-PWR9-NEXT:    vmrglh v2, v2, v2
-; CHECK-PWR9-NEXT:    vmrghh v5, v3, v3
+; CHECK-PWR9-NEXT:    vmrghh v0, v3, v3
 ; CHECK-PWR9-NEXT:    vmrglh v3, v3, v3
-; CHECK-PWR9-NEXT:    vextsh2w v2, v2
-; CHECK-PWR9-NEXT:    vextsh2w v3, v3
-; CHECK-PWR9-NEXT:    vextsh2w v4, v4
-; CHECK-PWR9-NEXT:    vextsh2w v5, v5
+; CHECK-PWR9-NEXT:    vadduwm v4, v4, v4
+; CHECK-PWR9-NEXT:    vslw v2, v2, v4
+; CHECK-PWR9-NEXT:    vslw v3, v3, v4
+; CHECK-PWR9-NEXT:    vslw v5, v5, v4
+; CHECK-PWR9-NEXT:    vslw v0, v0, v4
+; CHECK-PWR9-NEXT:    vsraw v2, v2, v4
+; CHECK-PWR9-NEXT:    vsraw v3, v3, v4
+; CHECK-PWR9-NEXT:    vsraw v5, v5, v4
+; CHECK-PWR9-NEXT:    vsraw v0, v0, v4
 ; CHECK-PWR9-NEXT:    xvnegsp v3, v3
 ; CHECK-PWR9-NEXT:    xvnegsp v2, v2
-; CHECK-PWR9-NEXT:    xvnegsp v4, v4
+; CHECK-PWR9-NEXT:    xvnegsp v4, v5
 ; CHECK-PWR9-NEXT:    vabsduw v2, v2, v3
-; CHECK-PWR9-NEXT:    xvnegsp v3, v5
+; CHECK-PWR9-NEXT:    xvnegsp v3, v0
 ; CHECK-PWR9-NEXT:    vabsduw v3, v4, v3
 ; CHECK-PWR9-NEXT:    vpkuwum v2, v3, v2
 ; CHECK-PWR9-NEXT:    blr
@@ -1361,10 +1367,14 @@ define <16 x i8> @zext_sub_absd8(<16 x i4>, <16 x i4>) local_unnamed_addr {
 define <4 x i32> @sext_sub_absd32(<4 x i16>, <4 x i16>) local_unnamed_addr {
 ; CHECK-PWR9-LE-LABEL: sext_sub_absd32:
 ; CHECK-PWR9-LE:       # %bb.0:
+; CHECK-PWR9-LE-NEXT:    vspltisw v4, 8
 ; CHECK-PWR9-LE-NEXT:    vmrglh v2, v2, v2
 ; CHECK-PWR9-LE-NEXT:    vmrglh v3, v3, v3
-; CHECK-PWR9-LE-NEXT:    vextsh2w v2, v2
-; CHECK-PWR9-LE-NEXT:    vextsh2w v3, v3
+; CHECK-PWR9-LE-NEXT:    vadduwm v4, v4, v4
+; CHECK-PWR9-LE-NEXT:    vslw v2, v2, v4
+; CHECK-PWR9-LE-NEXT:    vslw v3, v3, v4
+; CHECK-PWR9-LE-NEXT:    vsraw v2, v2, v4
+; CHECK-PWR9-LE-NEXT:    vsraw v3, v3, v4
 ; CHECK-PWR9-LE-NEXT:    xvnegsp v3, v3
 ; CHECK-PWR9-LE-NEXT:    xvnegsp v2, v2
 ; CHECK-PWR9-LE-NEXT:    vabsduw v2, v2, v3
@@ -1372,10 +1382,14 @@ define <4 x i32> @sext_sub_absd32(<4 x i16>, <4 x i16>) local_unnamed_addr {
 ;
 ; CHECK-PWR9-BE-LABEL: sext_sub_absd32:
 ; CHECK-PWR9-BE:       # %bb.0:
+; CHECK-PWR9-BE-NEXT:    vspltisw v4, 8
 ; CHECK-PWR9-BE-NEXT:    vmrghh v2, v2, v2
 ; CHECK-PWR9-BE-NEXT:    vmrghh v3, v3, v3
-; CHECK-PWR9-BE-NEXT:    vextsh2w v2, v2
-; CHECK-PWR9-BE-NEXT:    vextsh2w v3, v3
+; CHECK-PWR9-BE-NEXT:    vadduwm v4, v4, v4
+; CHECK-PWR9-BE-NEXT:    vslw v2, v2, v4
+; CHECK-PWR9-BE-NEXT:    vslw v3, v3, v4
+; CHECK-PWR9-BE-NEXT:    vsraw v2, v2, v4
+; CHECK-PWR9-BE-NEXT:    vsraw v3, v3, v4
 ; CHECK-PWR9-BE-NEXT:    xvnegsp v3, v3
 ; CHECK-PWR9-BE-NEXT:    xvnegsp v2, v2
 ; CHECK-PWR9-BE-NEXT:    vabsduw v2, v2, v3

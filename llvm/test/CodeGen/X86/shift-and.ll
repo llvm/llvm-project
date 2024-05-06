@@ -209,9 +209,9 @@ define i64 @big_mask_constant(i64 %x) nounwind {
 ;
 ; X64-LABEL: big_mask_constant:
 ; X64:       # %bb.0:
-; X64-NEXT:    movq %rdi, %rax
+; X64-NEXT:    movabsq $17179869184, %rax # imm = 0x400000000
+; X64-NEXT:    andq %rdi, %rax
 ; X64-NEXT:    shrq $7, %rax
-; X64-NEXT:    andl $134217728, %eax # imm = 0x8000000
 ; X64-NEXT:    retq
   %and = and i64 %x, 17179869184 ; 0x400000000
   %sh = lshr i64 %and, 7

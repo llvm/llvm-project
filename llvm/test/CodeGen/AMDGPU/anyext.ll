@@ -156,6 +156,8 @@ define amdgpu_kernel void @anyext_v2i16_to_v2i32() #0 {
 ; GCN-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
 ; GCN-NEXT:    v_cmp_eq_f32_e32 vcc, 0, v0
 ; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
+; GCN-NEXT:    v_lshlrev_b32_e32 v0, 8, v0
+; GCN-NEXT:    v_bfe_u32 v0, v0, 8, 1
 ; GCN-NEXT:    buffer_store_byte v0, off, s[0:3], 0
 ; GCN-NEXT:    s_endpgm
 ;

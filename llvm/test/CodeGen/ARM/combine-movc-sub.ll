@@ -31,8 +31,9 @@ define hidden fastcc ptr @test(ptr %Search, ptr %ClauseList, i32 %Level, ptr noc
 ; CHECK-NEXT:    mov r8, r0
 ; CHECK-NEXT:    movs r0, #1
 ; CHECK-NEXT:    mov r4, r2
-; CHECK-NEXT:    add.w r6, r0, r7, lsr #5
+; CHECK-NEXT:    add.w r0, r0, r7, lsr #5
 ; CHECK-NEXT:    mov r5, r1
+; CHECK-NEXT:    add.w r6, r0, #10
 ; CHECK-NEXT:    mov.w r9, #0
 ; CHECK-NEXT:    b .LBB0_2
 ; CHECK-NEXT:  .LBB0_1: @ %for.inc
@@ -44,8 +45,7 @@ define hidden fastcc ptr @test(ptr %Search, ptr %ClauseList, i32 %Level, ptr noc
 ; CHECK-NEXT:    mov r2, r4
 ; CHECK-NEXT:    cmp r4, #31
 ; CHECK-NEXT:    ldr r0, [r1, #16]
-; CHECK-NEXT:    add.w r0, r0, r6, lsl #2
-; CHECK-NEXT:    ldr r0, [r0, #40]
+; CHECK-NEXT:    ldr.w r0, [r0, r6, lsl #2]
 ; CHECK-NEXT:    it hi
 ; CHECK-NEXT:    andhi r2, r7, #31
 ; CHECK-NEXT:    lsrs r0, r2

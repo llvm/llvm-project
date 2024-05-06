@@ -81,11 +81,10 @@ define i16 @func2(i8 %x, i8 %y) nounwind {
 ; X64-NEXT:    testl %edx, %edx
 ; X64-NEXT:    setne %dl
 ; X64-NEXT:    testb %cl, %dl
-; X64-NEXT:    cmovel %eax, %edi
-; X64-NEXT:    addl %edi, %edi
-; X64-NEXT:    movswl %di, %eax
-; X64-NEXT:    shrl %eax
-; X64-NEXT:    # kill: def $ax killed $ax killed $eax
+; X64-NEXT:    cmovnel %edi, %eax
+; X64-NEXT:    addl %eax, %eax
+; X64-NEXT:    sarw %ax
+; X64-NEXT:    # kill: def $ax killed $ax killed $rax
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: func2:
@@ -93,14 +92,14 @@ define i16 @func2(i8 %x, i8 %y) nounwind {
 ; X86-NEXT:    pushl %ebx
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    movsbl {{[0-9]+}}(%esp), %edi
+; X86-NEXT:    movsbl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    movsbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    shll $14, %ecx
 ; X86-NEXT:    movl %ecx, %eax
 ; X86-NEXT:    cltd
-; X86-NEXT:    idivl %edi
-; X86-NEXT:    leal -1(%eax), %esi
-; X86-NEXT:    testl %edi, %edi
+; X86-NEXT:    idivl %esi
+; X86-NEXT:    leal -1(%eax), %edi
+; X86-NEXT:    testl %esi, %esi
 ; X86-NEXT:    sets %bl
 ; X86-NEXT:    testl %ecx, %ecx
 ; X86-NEXT:    sets %cl
@@ -108,10 +107,9 @@ define i16 @func2(i8 %x, i8 %y) nounwind {
 ; X86-NEXT:    testl %edx, %edx
 ; X86-NEXT:    setne %dl
 ; X86-NEXT:    testb %cl, %dl
-; X86-NEXT:    cmovel %eax, %esi
-; X86-NEXT:    addl %esi, %esi
-; X86-NEXT:    movswl %si, %eax
-; X86-NEXT:    shrl %eax
+; X86-NEXT:    cmovnel %edi, %eax
+; X86-NEXT:    addl %eax, %eax
+; X86-NEXT:    sarw %ax
 ; X86-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi
@@ -127,10 +125,12 @@ define i16 @func2(i8 %x, i8 %y) nounwind {
 define i16 @func3(i15 %x, i8 %y) nounwind {
 ; X64-LABEL: func3:
 ; X64:       # %bb.0:
-; X64-NEXT:    shll $8, %esi
-; X64-NEXT:    movswl %si, %ecx
 ; X64-NEXT:    addl %edi, %edi
-; X64-NEXT:    shrl $4, %ecx
+; X64-NEXT:    sarw %di
+; X64-NEXT:    movsbl %sil, %ecx
+; X64-NEXT:    shlw $7, %cx
+; X64-NEXT:    addw %di, %di
+; X64-NEXT:    sarw $3, %cx
 ; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    cwtd
 ; X64-NEXT:    idivw %cx
@@ -144,43 +144,44 @@ define i16 @func3(i15 %x, i8 %y) nounwind {
 ; X64-NEXT:    testw %dx, %dx
 ; X64-NEXT:    setne %dl
 ; X64-NEXT:    testb %cl, %dl
-; X64-NEXT:    cmovel %eax, %esi
-; X64-NEXT:    addl %esi, %esi
-; X64-NEXT:    movswl %si, %eax
-; X64-NEXT:    shrl %eax
-; X64-NEXT:    # kill: def $ax killed $ax killed $eax
+; X64-NEXT:    cmovnel %esi, %eax
+; X64-NEXT:    addl %eax, %eax
+; X64-NEXT:    sarw %ax
+; X64-NEXT:    # kill: def $ax killed $ax killed $rax
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: func3:
 ; X86:       # %bb.0:
+; X86-NEXT:    pushl %ebx
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    shll $8, %eax
-; X86-NEXT:    movswl %ax, %esi
 ; X86-NEXT:    addl %ecx, %ecx
-; X86-NEXT:    shrl $4, %esi
+; X86-NEXT:    sarw %cx
+; X86-NEXT:    movsbl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    shlw $7, %si
+; X86-NEXT:    sarw $3, %si
+; X86-NEXT:    addw %cx, %cx
 ; X86-NEXT:    movl %ecx, %eax
 ; X86-NEXT:    cwtd
 ; X86-NEXT:    idivw %si
 ; X86-NEXT:    # kill: def $ax killed $ax def $eax
 ; X86-NEXT:    leal -1(%eax), %edi
+; X86-NEXT:    testw %si, %si
+; X86-NEXT:    sets %bl
 ; X86-NEXT:    testw %cx, %cx
 ; X86-NEXT:    sets %cl
-; X86-NEXT:    testw %si, %si
-; X86-NEXT:    sets %ch
-; X86-NEXT:    xorb %cl, %ch
+; X86-NEXT:    xorb %bl, %cl
 ; X86-NEXT:    testw %dx, %dx
-; X86-NEXT:    setne %cl
-; X86-NEXT:    testb %ch, %cl
-; X86-NEXT:    cmovel %eax, %edi
-; X86-NEXT:    addl %edi, %edi
-; X86-NEXT:    movswl %di, %eax
-; X86-NEXT:    shrl %eax
+; X86-NEXT:    setne %dl
+; X86-NEXT:    testb %cl, %dl
+; X86-NEXT:    cmovnel %edi, %eax
+; X86-NEXT:    addl %eax, %eax
+; X86-NEXT:    sarw %ax
 ; X86-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi
+; X86-NEXT:    popl %ebx
 ; X86-NEXT:    retl
   %y2 = sext i8 %y to i15
   %y3 = shl i15 %y2, 7

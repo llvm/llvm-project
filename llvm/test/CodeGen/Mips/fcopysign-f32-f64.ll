@@ -22,10 +22,9 @@ define float @func2(float %d, double %f) nounwind readnone {
 ; 64-NEXT:    add.s $f0, $f12, $f0
 ; 64-NEXT:    mfc1 $1, $f0
 ; 64-NEXT:    dmfc1 $2, $f13
-; 64-NEXT:    lui $3, 32767
-; 64-NEXT:    ori $3, $3, 65535
-; 64-NEXT:    and $1, $1, $3
+; 64-NEXT:    sll $1, $1, 1
 ; 64-NEXT:    dsrl $2, $2, 63
+; 64-NEXT:    srl $1, $1, 1
 ; 64-NEXT:    sll $2, $2, 0
 ; 64-NEXT:    sll $2, $2, 31
 ; 64-NEXT:    or $1, $1, $2
@@ -61,21 +60,19 @@ entry:
 define double @func3(double %d, float %f) nounwind readnone {
 ; 64-LABEL: func3:
 ; 64:       # %bb.0: # %entry
-; 64-NEXT:    lui $1, %highest(.LCPI1_0)
-; 64-NEXT:    daddiu $1, $1, %higher(.LCPI1_0)
-; 64-NEXT:    dsll $1, $1, 16
-; 64-NEXT:    daddiu $1, $1, %hi(.LCPI1_0)
-; 64-NEXT:    dsll $1, $1, 16
-; 64-NEXT:    ldc1 $f0, %lo(.LCPI1_0)($1)
-; 64-NEXT:    add.d $f0, $f12, $f0
 ; 64-NEXT:    mfc1 $1, $f13
-; 64-NEXT:    daddiu $2, $zero, 1
-; 64-NEXT:    dmfc1 $3, $f0
-; 64-NEXT:    dsll $2, $2, 63
-; 64-NEXT:    daddiu $2, $2, -1
-; 64-NEXT:    and $2, $3, $2
 ; 64-NEXT:    srl $1, $1, 31
+; 64-NEXT:    lui $2, %highest(.LCPI1_0)
+; 64-NEXT:    daddiu $2, $2, %higher(.LCPI1_0)
+; 64-NEXT:    dsll $2, $2, 16
+; 64-NEXT:    daddiu $2, $2, %hi(.LCPI1_0)
 ; 64-NEXT:    dsll $1, $1, 63
+; 64-NEXT:    dsll $2, $2, 16
+; 64-NEXT:    ldc1 $f0, %lo(.LCPI1_0)($2)
+; 64-NEXT:    add.d $f0, $f12, $f0
+; 64-NEXT:    dmfc1 $2, $f0
+; 64-NEXT:    dsll $2, $2, 1
+; 64-NEXT:    dsrl $2, $2, 1
 ; 64-NEXT:    or $1, $2, $1
 ; 64-NEXT:    jr $ra
 ; 64-NEXT:    dmtc1 $1, $f0

@@ -127,8 +127,9 @@ define ptr @gep128(i32 %i, ptr %x) {
 ; CHECK-LABEL: gep128:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movslq %edi, %rax
+; CHECK-NEXT:    addq $5, %rax
 ; CHECK-NEXT:    shlq $4, %rax
-; CHECK-NEXT:    leaq 80(%rax,%rsi), %rax
+; CHECK-NEXT:    addq %rsi, %rax
 ; CHECK-NEXT:    retq
 
   %add = add nsw i32 %i, 5

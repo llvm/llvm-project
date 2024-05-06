@@ -93,8 +93,9 @@ define void @ds_bpermute_or_shl(ptr addrspace(1) %out, i32 %base_index, i32 %src
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_and_b32_e32 v2, 62, v2
+; CHECK-NEXT:    v_or_b32_e32 v2, 1, v2
 ; CHECK-NEXT:    v_lshlrev_b32_e32 v2, 2, v2
-; CHECK-NEXT:    ds_bpermute_b32 v2, v2, v3 offset:4
+; CHECK-NEXT:    ds_bpermute_b32 v2, v2, v3
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    flat_store_dword v[0:1], v2
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)

@@ -68,6 +68,7 @@ define i32 @f4(i32 %a) nounwind {
 define i32 @f5(i32 %a, i32 %b) nounwind {
 ; CHECK-LABEL: f5:
 ; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    ubfx r1, r1, #0, #12
 ; CHECK-NEXT:    bfi r0, r1, #20, #4
 ; CHECK-NEXT:    bx lr
 entry:
@@ -82,6 +83,7 @@ entry:
 define i32 @f6(i32 %a, i32 %b) nounwind readnone {
 ; CHECK-LABEL: f6:
 ; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    ubfx r1, r1, #0, #24
 ; CHECK-NEXT:    bfi r0, r1, #8, #9
 ; CHECK-NEXT:    bx lr
 entry:

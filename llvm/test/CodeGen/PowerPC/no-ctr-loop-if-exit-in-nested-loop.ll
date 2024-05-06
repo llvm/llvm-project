@@ -15,37 +15,40 @@ define signext i32 @test(ptr noalias %PtrA, ptr noalias %PtrB, i32 signext %LenA
 ; CHECK-NEXT:    addi 8, 8, 1
 ; CHECK-NEXT:    extsw 7, 7
 ; CHECK-NEXT:    cmpw 8, 5
-; CHECK-NEXT:    sldi 10, 7, 2
-; CHECK-NEXT:    sldi 9, 9, 2
+; CHECK-NEXT:    sldi 11, 7, 2
+; CHECK-NEXT:    sldi 10, 9, 2
 ; CHECK-NEXT:    addi 7, 7, 1
-; CHECK-NEXT:    add 10, 4, 10
+; CHECK-NEXT:    add 11, 4, 11
 ; CHECK-NEXT:    crnot 20, 0
 ; CHECK-NEXT:    bc 12, 20, .LBB0_5
 ; CHECK-NEXT:    .p2align 5
 ; CHECK-NEXT:  .LBB0_2: # %if.end
 ; CHECK-NEXT:    # Parent Loop BB0_1 Depth=1
 ; CHECK-NEXT:    # => This Inner Loop Header: Depth=2
-; CHECK-NEXT:    lwz 12, 4(10)
-; CHECK-NEXT:    addi 11, 10, 4
-; CHECK-NEXT:    cmplwi 12, 0
+; CHECK-NEXT:    lwz 0, 4(11)
+; CHECK-NEXT:    addi 12, 11, 4
+; CHECK-NEXT:    cmplwi 0, 0
 ; CHECK-NEXT:    beq 0, .LBB0_4
 ; CHECK-NEXT:  # %bb.3: # %if.then4
 ; CHECK-NEXT:    #
-; CHECK-NEXT:    lwzx 12, 6, 9
+; CHECK-NEXT:    lwzx 0, 6, 10
 ; CHECK-NEXT:    addi 7, 7, 1
-; CHECK-NEXT:    stw 12, 8(10)
-; CHECK-NEXT:    mr 10, 11
+; CHECK-NEXT:    stw 0, 8(11)
+; CHECK-NEXT:    mr 11, 12
 ; CHECK-NEXT:    bc 4, 20, .LBB0_2
 ; CHECK-NEXT:    b .LBB0_5
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_4: # %if.end9
 ; CHECK-NEXT:    #
-; CHECK-NEXT:    lwzx 10, 6, 9
-; CHECK-NEXT:    addi 10, 10, 1
-; CHECK-NEXT:    stwx 10, 6, 9
+; CHECK-NEXT:    lwzx 9, 6, 10
+; CHECK-NEXT:    addi 9, 9, 1
+; CHECK-NEXT:    stwx 9, 6, 10
 ; CHECK-NEXT:    b .LBB0_1
 ; CHECK-NEXT:  .LBB0_5: # %if.then
-; CHECK-NEXT:    lwax 3, 9, 3
+; CHECK-NEXT:    addi 4, 9, -1
+; CHECK-NEXT:    sldi 4, 4, 2
+; CHECK-NEXT:    add 3, 3, 4
+; CHECK-NEXT:    lwa 3, 4(3)
 ; CHECK-NEXT:    blr
 entry:
   br label %block2
