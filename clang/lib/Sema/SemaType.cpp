@@ -7970,7 +7970,17 @@ static Attr *getCCTypeAttr(ASTContext &Ctx, ParsedAttr &Attr) {
 
 ExprResult Sema::ActOnEffectExpression(Expr *CondExpr, StringRef AttributeName,
                                        FunctionEffectMode &Mode) {
+  auto BadExpr = [&]() {
+    Diag(CondExpr->getExprLoc(), diag::err_attribute_argument_type)
+        << ("'" + AttributeName.str() + "'") << AANT_ArgumentIntegerConstant
+        << CondExpr->getSourceRange();
+  };
+
   if (CondExpr->isTypeDependent() || CondExpr->isValueDependent()) {
+    if (CondExpr->containsUnexpandedParameterPack()) {
+      BadExpr();
+      return ExprResult(/*invalid=*/true);
+    }
     Mode = FunctionEffectMode::Dependent;
     return CondExpr;
   }
@@ -7978,9 +7988,7 @@ ExprResult Sema::ActOnEffectExpression(Expr *CondExpr, StringRef AttributeName,
   std::optional<llvm::APSInt> ConditionValue =
       CondExpr->getIntegerConstantExpr(Context);
   if (!ConditionValue) {
-    Diag(CondExpr->getExprLoc(), diag::err_attribute_argument_type)
-        << AttributeName << AANT_ArgumentIntegerConstant
-        << CondExpr->getSourceRange();
+    BadExpr();
     return ExprResult(/*invalid=*/true);
   }
   Mode = ConditionValue->getExtValue() ? FunctionEffectMode::True
@@ -7996,10 +8004,13 @@ handleNonBlockingNonAllocatingTypeAttr(TypeProcessingState &TPState,
   if (!Unwrapped.isFunctionType())
     return false;
 
+  Sema &S = TPState.getSema();
+
   // Require FunctionProtoType
   auto *FPT = Unwrapped.get()->getAs<FunctionProtoType>();
   if (FPT == nullptr) {
-    // TODO: special diagnostic?
+    S.Diag(PAttr.getLoc(), diag::err_func_with_effects_no_prototype)
+        << PAttr.getAttrName()->getName();
     return true;
   }
 
@@ -8007,7 +8018,6 @@ handleNonBlockingNonAllocatingTypeAttr(TypeProcessingState &TPState,
   // non/blocking or non/allocating? Or conditional (computed)?
   const bool IsNonBlocking = PAttr.getKind() == ParsedAttr::AT_NonBlocking ||
                              PAttr.getKind() == ParsedAttr::AT_Blocking;
-  Sema &S = TPState.getSema();
 
   FunctionEffectMode NewMode = FunctionEffectMode::None;
   Expr *CondExpr = nullptr; // only valid if dependent

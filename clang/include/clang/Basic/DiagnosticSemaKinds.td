@@ -10833,6 +10833,8 @@ def warn_mismatched_func_effect_redeclaration : Warning<
 def warn_conflicting_func_effects : Warning<
   "effects conflict when merging declarations; kept '%0', discarded '%1'">,
   InGroup<FunctionEffects>;
+def err_func_with_effects_no_prototype : Error<
+  "'%0' function must have a prototype">;
 
 } // end of sema category
 
