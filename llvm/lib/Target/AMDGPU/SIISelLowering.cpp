@@ -5984,7 +5984,7 @@ static SDValue lowerBALLOTIntrinsic(const SITargetLowering &TLI, SDNode *N,
 
 static SDValue lowerLaneOp(const SITargetLowering &TLI, SDNode *N,
                            SelectionDAG &DAG) {
-  auto VT = N->getValueType(0);
+  EVT VT = N->getValueType(0);
   unsigned ValSize = VT.getSizeInBits();
   unsigned IntrinsicID = N->getConstantOperandVal(0);
   SDValue Src0 = N->getOperand(1);
@@ -5993,11 +5993,9 @@ static SDValue lowerLaneOp(const SITargetLowering &TLI, SDNode *N,
 
   auto createLaneOp = [&](SDValue &Src0, SDValue &Src1, SDValue &Src2,
                           MVT VT) -> SDValue {
-    return (Src2.getNode()
-                ? DAG.getNode(AMDGPUISD::WRITELANE, SL, VT, {Src0, Src1, Src2})
-            : Src1.getNode()
-                ? DAG.getNode(AMDGPUISD::READLANE, SL, VT, {Src0, Src1})
-                : DAG.getNode(AMDGPUISD::READFIRSTLANE, SL, VT, {Src0}));
+    return (Src2 ? DAG.getNode(AMDGPUISD::WRITELANE, SL, VT, {Src0, Src1, Src2})
+            : Src1 ? DAG.getNode(AMDGPUISD::READLANE, SL, VT, {Src0, Src1})
+                   : DAG.getNode(AMDGPUISD::READFIRSTLANE, SL, VT, {Src0}));
   };
 
   SDValue Src1, Src2, Src0Valid, Src2Valid;
@@ -6015,19 +6013,19 @@ static SDValue lowerLaneOp(const SITargetLowering &TLI, SDNode *N,
     Src0Valid = DAG.getBitcast(IntVT, Src0);
     if (Src2.getNode())
       Src2Valid = DAG.getBitcast(IntVT, Src2);
-    auto LaneOp = createLaneOp(Src0Valid, Src1, Src2Valid, MVT::i32);
+    SDValue LaneOp = createLaneOp(Src0Valid, Src1, Src2Valid, MVT::i32);
     return DAG.getBitcast(VT, LaneOp);
   }
 
   if (ValSize < 32) {
-    auto InitBitCast = DAG.getBitcast(IntVT, Src0);
+    SDValue InitBitCast = DAG.getBitcast(IntVT, Src0);
     Src0Valid = DAG.getAnyExtOrTrunc(InitBitCast, SL, MVT::i32);
     if (Src2.getNode()) {
-      auto Src2Cast = DAG.getBitcast(IntVT, Src2);
+      SDValue Src2Cast = DAG.getBitcast(IntVT, Src2);
       Src2Valid = DAG.getAnyExtOrTrunc(Src2Cast, SL, MVT::i32);
     }
-    auto LaneOp = createLaneOp(Src0Valid, Src1, Src2Valid, MVT::i32);
-    auto Trunc = DAG.getAnyExtOrTrunc(LaneOp, SL, IntVT);
+    SDValue LaneOp = createLaneOp(Src0Valid, Src1, Src2Valid, MVT::i32);
+    SDValue Trunc = DAG.getAnyExtOrTrunc(LaneOp, SL, IntVT);
     return DAG.getBitcast(VT, Trunc);
   }
 
@@ -6038,8 +6036,8 @@ static SDValue lowerLaneOp(const SITargetLowering &TLI, SDNode *N,
     if (Src2.getNode())
       Src2Valid = DAG.getBitcast(VecVT, Src2);
 
-    auto LaneOp = createLaneOp(Src0Valid, Src1, Src2Valid, VecVT);
-    auto UnrolledLaneOp = DAG.UnrollVectorOp(LaneOp.getNode());
+    SDValue LaneOp = createLaneOp(Src0Valid, Src1, Src2Valid, VecVT);
+    SDValue UnrolledLaneOp = DAG.UnrollVectorOp(LaneOp.getNode());
     return DAG.getBitcast(VT, UnrolledLaneOp);
   }
 

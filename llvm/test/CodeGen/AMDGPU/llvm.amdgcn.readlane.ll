@@ -657,6 +657,277 @@ define amdgpu_kernel void @test_readlane_copy_from_sgpr_f64(ptr addrspace(1) %ou
   ret void
 }
 
+define void @test_readlane_half(ptr addrspace(1) %out, half %src, i32 %src1) {
+; CHECK-SDAG-LABEL: test_readlane_half:
+; CHECK-SDAG:       ; %bb.0:
+; CHECK-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s4, v3
+; CHECK-SDAG-NEXT:    s_nop 3
+; CHECK-SDAG-NEXT:    v_readlane_b32 s4, v2, s4
+; CHECK-SDAG-NEXT:    ;;#ASMSTART
+; CHECK-SDAG-NEXT:    ; use s4
+; CHECK-SDAG-NEXT:    ;;#ASMEND
+; CHECK-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; CHECK-GISEL-LABEL: test_readlane_half:
+; CHECK-GISEL:       ; %bb.0:
+; CHECK-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s4, v3
+; CHECK-GISEL-NEXT:    s_nop 3
+; CHECK-GISEL-NEXT:    v_readlane_b32 s4, v2, s4
+; CHECK-GISEL-NEXT:    ;;#ASMSTART
+; CHECK-GISEL-NEXT:    ; use s4
+; CHECK-GISEL-NEXT:    ;;#ASMEND
+; CHECK-GISEL-NEXT:    s_setpc_b64 s[30:31]
+  %x = call half @llvm.amdgcn.readlane.f16(half %src, i32 %src1)
+  call void asm sideeffect "; use $0", "s"(half %x)
+  ret void
+}
+
+define void @test_readlane_float(ptr addrspace(1) %out, float %src, i32 %src1) {
+; CHECK-SDAG-LABEL: test_readlane_float:
+; CHECK-SDAG:       ; %bb.0:
+; CHECK-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s4, v3
+; CHECK-SDAG-NEXT:    s_nop 3
+; CHECK-SDAG-NEXT:    v_readlane_b32 s4, v2, s4
+; CHECK-SDAG-NEXT:    ;;#ASMSTART
+; CHECK-SDAG-NEXT:    ; use s4
+; CHECK-SDAG-NEXT:    ;;#ASMEND
+; CHECK-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; CHECK-GISEL-LABEL: test_readlane_float:
+; CHECK-GISEL:       ; %bb.0:
+; CHECK-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s4, v3
+; CHECK-GISEL-NEXT:    s_nop 3
+; CHECK-GISEL-NEXT:    v_readlane_b32 s4, v2, s4
+; CHECK-GISEL-NEXT:    ;;#ASMSTART
+; CHECK-GISEL-NEXT:    ; use s4
+; CHECK-GISEL-NEXT:    ;;#ASMEND
+; CHECK-GISEL-NEXT:    s_setpc_b64 s[30:31]
+  %x = call float @llvm.amdgcn.readlane.f32(float %src, i32 %src1)
+  call void asm sideeffect "; use $0", "s"(float %x)
+  ret void
+}
+
+define void @test_readlane_bfloat(ptr addrspace(1) %out, bfloat %src, i32 %src1) {
+; CHECK-SDAG-LABEL: test_readlane_bfloat:
+; CHECK-SDAG:       ; %bb.0:
+; CHECK-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s4, v3
+; CHECK-SDAG-NEXT:    s_nop 3
+; CHECK-SDAG-NEXT:    v_readlane_b32 s4, v2, s4
+; CHECK-SDAG-NEXT:    ;;#ASMSTART
+; CHECK-SDAG-NEXT:    ; use s4
+; CHECK-SDAG-NEXT:    ;;#ASMEND
+; CHECK-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; CHECK-GISEL-LABEL: test_readlane_bfloat:
+; CHECK-GISEL:       ; %bb.0:
+; CHECK-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s4, v3
+; CHECK-GISEL-NEXT:    s_nop 3
+; CHECK-GISEL-NEXT:    v_readlane_b32 s4, v2, s4
+; CHECK-GISEL-NEXT:    ;;#ASMSTART
+; CHECK-GISEL-NEXT:    ; use s4
+; CHECK-GISEL-NEXT:    ;;#ASMEND
+; CHECK-GISEL-NEXT:    s_setpc_b64 s[30:31]
+  %x = call bfloat @llvm.amdgcn.readlane.bf16(bfloat %src, i32 %src1)
+  call void asm sideeffect "; use $0", "s"(bfloat %x)
+  ret void
+}
+
+define void @test_readlane_i16(ptr addrspace(1) %out, i16 %src, i32 %src1) {
+; CHECK-SDAG-LABEL: test_readlane_i16:
+; CHECK-SDAG:       ; %bb.0:
+; CHECK-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s4, v3
+; CHECK-SDAG-NEXT:    v_mov_b32_e32 v0, 0xffff
+; CHECK-SDAG-NEXT:    s_nop 2
+; CHECK-SDAG-NEXT:    v_readlane_b32 s4, v2, s4
+; CHECK-SDAG-NEXT:    v_and_b32_e32 v0, s4, v0
+; CHECK-SDAG-NEXT:    ;;#ASMSTART
+; CHECK-SDAG-NEXT:    ; use v0
+; CHECK-SDAG-NEXT:    ;;#ASMEND
+; CHECK-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; CHECK-GISEL-LABEL: test_readlane_i16:
+; CHECK-GISEL:       ; %bb.0:
+; CHECK-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s4, v3
+; CHECK-GISEL-NEXT:    s_nop 3
+; CHECK-GISEL-NEXT:    v_readlane_b32 s4, v2, s4
+; CHECK-GISEL-NEXT:    ;;#ASMSTART
+; CHECK-GISEL-NEXT:    ; use s4
+; CHECK-GISEL-NEXT:    ;;#ASMEND
+; CHECK-GISEL-NEXT:    s_setpc_b64 s[30:31]
+  %x = call i16 @llvm.amdgcn.readlane.i16(i16 %src, i32 %src1)
+  call void asm sideeffect "; use $0", "s"(i16 %x)
+  ret void
+}
+
+define void @test_readlane_v2f16(ptr addrspace(1) %out, <2 x half> %src, i32 %src1) {
+; CHECK-SDAG-LABEL: test_readlane_v2f16:
+; CHECK-SDAG:       ; %bb.0:
+; CHECK-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s4, v3
+; CHECK-SDAG-NEXT:    s_nop 3
+; CHECK-SDAG-NEXT:    v_readlane_b32 s4, v2, s4
+; CHECK-SDAG-NEXT:    ;;#ASMSTART
+; CHECK-SDAG-NEXT:    ; use s4
+; CHECK-SDAG-NEXT:    ;;#ASMEND
+; CHECK-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; CHECK-GISEL-LABEL: test_readlane_v2f16:
+; CHECK-GISEL:       ; %bb.0:
+; CHECK-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s4, v3
+; CHECK-GISEL-NEXT:    s_nop 3
+; CHECK-GISEL-NEXT:    v_readlane_b32 s4, v2, s4
+; CHECK-GISEL-NEXT:    ;;#ASMSTART
+; CHECK-GISEL-NEXT:    ; use s4
+; CHECK-GISEL-NEXT:    ;;#ASMEND
+; CHECK-GISEL-NEXT:    s_setpc_b64 s[30:31]
+  %x = call <2 x half> @llvm.amdgcn.readlane.v2f16(<2 x half> %src, i32 %src1)
+  call void asm sideeffect "; use $0", "s"(<2 x half> %x)
+  ret void
+}
+
+define void @test_readlane_v2f32(ptr addrspace(1) %out, <2 x float> %src, i32 %src1) {
+; CHECK-SDAG-LABEL: test_readlane_v2f32:
+; CHECK-SDAG:       ; %bb.0:
+; CHECK-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s4, v4
+; CHECK-SDAG-NEXT:    s_nop 3
+; CHECK-SDAG-NEXT:    v_readlane_b32 s5, v3, s4
+; CHECK-SDAG-NEXT:    v_readlane_b32 s4, v2, s4
+; CHECK-SDAG-NEXT:    ;;#ASMSTART
+; CHECK-SDAG-NEXT:    ; use s[4:5]
+; CHECK-SDAG-NEXT:    ;;#ASMEND
+; CHECK-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; CHECK-GISEL-LABEL: test_readlane_v2f32:
+; CHECK-GISEL:       ; %bb.0:
+; CHECK-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s5, v4
+; CHECK-GISEL-NEXT:    s_nop 3
+; CHECK-GISEL-NEXT:    v_readlane_b32 s4, v2, s5
+; CHECK-GISEL-NEXT:    v_readlane_b32 s5, v3, s5
+; CHECK-GISEL-NEXT:    ;;#ASMSTART
+; CHECK-GISEL-NEXT:    ; use s[4:5]
+; CHECK-GISEL-NEXT:    ;;#ASMEND
+; CHECK-GISEL-NEXT:    s_setpc_b64 s[30:31]
+  %x = call <2 x float> @llvm.amdgcn.readlane.v2f32(<2 x float> %src, i32 %src1)
+  call void asm sideeffect "; use $0", "s"(<2 x float> %x)
+  ret void
+}
+
+define void @test_readlane_v7i32(ptr addrspace(1) %out, <7 x i32> %src, i32 %src1) {
+; CHECK-SDAG-LABEL: test_readlane_v7i32:
+; CHECK-SDAG:       ; %bb.0:
+; CHECK-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s4, v9
+; CHECK-SDAG-NEXT:    s_nop 3
+; CHECK-SDAG-NEXT:    v_readlane_b32 s10, v8, s4
+; CHECK-SDAG-NEXT:    v_readlane_b32 s9, v7, s4
+; CHECK-SDAG-NEXT:    v_readlane_b32 s8, v6, s4
+; CHECK-SDAG-NEXT:    v_readlane_b32 s7, v5, s4
+; CHECK-SDAG-NEXT:    v_readlane_b32 s6, v4, s4
+; CHECK-SDAG-NEXT:    v_readlane_b32 s5, v3, s4
+; CHECK-SDAG-NEXT:    v_readlane_b32 s4, v2, s4
+; CHECK-SDAG-NEXT:    ;;#ASMSTART
+; CHECK-SDAG-NEXT:    ; use s[4:10]
+; CHECK-SDAG-NEXT:    ;;#ASMEND
+; CHECK-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; CHECK-GISEL-LABEL: test_readlane_v7i32:
+; CHECK-GISEL:       ; %bb.0:
+; CHECK-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s10, v9
+; CHECK-GISEL-NEXT:    s_nop 3
+; CHECK-GISEL-NEXT:    v_readlane_b32 s4, v2, s10
+; CHECK-GISEL-NEXT:    v_readlane_b32 s5, v3, s10
+; CHECK-GISEL-NEXT:    v_readlane_b32 s6, v4, s10
+; CHECK-GISEL-NEXT:    v_readlane_b32 s7, v5, s10
+; CHECK-GISEL-NEXT:    v_readlane_b32 s8, v6, s10
+; CHECK-GISEL-NEXT:    v_readlane_b32 s9, v7, s10
+; CHECK-GISEL-NEXT:    v_readlane_b32 s10, v8, s10
+; CHECK-GISEL-NEXT:    ;;#ASMSTART
+; CHECK-GISEL-NEXT:    ; use s[4:10]
+; CHECK-GISEL-NEXT:    ;;#ASMEND
+; CHECK-GISEL-NEXT:    s_setpc_b64 s[30:31]
+  %x = call <7 x i32> @llvm.amdgcn.readlane.v7i32(<7 x i32> %src, i32 %src1)
+  call void asm sideeffect "; use $0", "s"(<7 x i32> %x)
+  ret void
+}
+
+define void @test_readlane_p0(ptr addrspace(1) %out, ptr %src, i32 %src1) {
+; CHECK-SDAG-LABEL: test_readlane_p0:
+; CHECK-SDAG:       ; %bb.0:
+; CHECK-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s4, v4
+; CHECK-SDAG-NEXT:    s_nop 3
+; CHECK-SDAG-NEXT:    v_readlane_b32 s5, v3, s4
+; CHECK-SDAG-NEXT:    v_readlane_b32 s4, v2, s4
+; CHECK-SDAG-NEXT:    ;;#ASMSTART
+; CHECK-SDAG-NEXT:    ; use s[4:5]
+; CHECK-SDAG-NEXT:    ;;#ASMEND
+; CHECK-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; CHECK-GISEL-LABEL: test_readlane_p0:
+; CHECK-GISEL:       ; %bb.0:
+; CHECK-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s5, v4
+; CHECK-GISEL-NEXT:    s_nop 3
+; CHECK-GISEL-NEXT:    v_readlane_b32 s4, v2, s5
+; CHECK-GISEL-NEXT:    v_readlane_b32 s5, v3, s5
+; CHECK-GISEL-NEXT:    ;;#ASMSTART
+; CHECK-GISEL-NEXT:    ; use s[4:5]
+; CHECK-GISEL-NEXT:    ;;#ASMEND
+; CHECK-GISEL-NEXT:    s_setpc_b64 s[30:31]
+  %x = call ptr @llvm.amdgcn.readlane.p0(ptr %src, i32 %src1)
+  call void asm sideeffect "; use $0", "s"(ptr %x)
+  ret void
+}
+
+define void @test_readlane_v3p0(ptr addrspace(1) %out, <3 x ptr> %src, i32 %src1) {
+; CHECK-SDAG-LABEL: test_readlane_v3p0:
+; CHECK-SDAG:       ; %bb.0:
+; CHECK-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s4, v8
+; CHECK-SDAG-NEXT:    s_nop 3
+; CHECK-SDAG-NEXT:    v_readlane_b32 s9, v7, s4
+; CHECK-SDAG-NEXT:    v_readlane_b32 s8, v6, s4
+; CHECK-SDAG-NEXT:    v_readlane_b32 s7, v5, s4
+; CHECK-SDAG-NEXT:    v_readlane_b32 s6, v4, s4
+; CHECK-SDAG-NEXT:    v_readlane_b32 s5, v3, s4
+; CHECK-SDAG-NEXT:    v_readlane_b32 s4, v2, s4
+; CHECK-SDAG-NEXT:    ;;#ASMSTART
+; CHECK-SDAG-NEXT:    ; use s[4:9]
+; CHECK-SDAG-NEXT:    ;;#ASMEND
+; CHECK-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; CHECK-GISEL-LABEL: test_readlane_v3p0:
+; CHECK-GISEL:       ; %bb.0:
+; CHECK-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s9, v8
+; CHECK-GISEL-NEXT:    s_nop 3
+; CHECK-GISEL-NEXT:    v_readlane_b32 s4, v2, s9
+; CHECK-GISEL-NEXT:    v_readlane_b32 s5, v3, s9
+; CHECK-GISEL-NEXT:    v_readlane_b32 s6, v4, s9
+; CHECK-GISEL-NEXT:    v_readlane_b32 s7, v5, s9
+; CHECK-GISEL-NEXT:    v_readlane_b32 s8, v6, s9
+; CHECK-GISEL-NEXT:    v_readlane_b32 s9, v7, s9
+; CHECK-GISEL-NEXT:    ;;#ASMSTART
+; CHECK-GISEL-NEXT:    ; use s[4:9]
+; CHECK-GISEL-NEXT:    ;;#ASMEND
+; CHECK-GISEL-NEXT:    s_setpc_b64 s[30:31]
+  %x = call <3 x ptr> @llvm.amdgcn.readlane.v3p0(<3 x ptr> %src, i32 %src1)
+  call void asm sideeffect "; use $0", "s"(<3 x ptr> %x)
+  ret void
+}
+
 declare i32 @llvm.amdgcn.workitem.id.x() #2
 
 attributes #0 = { nounwind readnone convergent }

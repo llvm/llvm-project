@@ -5396,44 +5396,78 @@ bool AMDGPULegalizerInfo::legalizeLaneOp(LegalizerHelper &Helper,
   Register DstReg = MI.getOperand(0).getReg();
   Register Src0 = MI.getOperand(2).getReg();
 
+  auto createLaneOp = [&](Register &Src0, Register &Src1,
+                          Register &Src2) -> Register {
+    auto LaneOpDst = B.buildIntrinsic(IID, {S32}).addUse(Src0);
+    if (Src2.isValid())
+      return (LaneOpDst.addUse(Src1).addUse(Src2)).getReg(0);
+    if (Src1.isValid())
+      return (LaneOpDst.addUse(Src1)).getReg(0);
+    return LaneOpDst.getReg(0);
+  };
+
+  Register Src1, Src2, Src0Valid, Src2Valid;
+  if (IID == Intrinsic::amdgcn_readlane || IID == Intrinsic::amdgcn_writelane) {
+    Src1 = MI.getOperand(3).getReg();
+    if (IID == Intrinsic::amdgcn_writelane) {
+      Src2 = MI.getOperand(4).getReg();
+    }
+  }
+
   LLT Ty = MRI.getType(DstReg);
   unsigned Size = Ty.getSizeInBits();
 
-  if (Size == 32)
+  if (Size == 32) {
+    if (Ty.isScalar())
+      // Already legal
+      return true;
+
+    Register Src0Valid = B.buildBitcast(S32, Src0).getReg(0);
+    if (Src2.isValid())
+      Src2Valid = B.buildBitcast(S32, Src2).getReg(0);
+    Register LaneOp = createLaneOp(Src0Valid, Src1, Src2Valid);
+    B.buildBitcast(DstReg, LaneOp);
+    MI.eraseFromParent();
     return true;
+  }
 
   if (Size < 32) {
-    auto Ext = B.buildAnyExt(LLT::scalar(32), Src0).getReg(0);
-    auto LaneOpDst =
-        B.buildIntrinsic(Intrinsic::amdgcn_readlane, {S32}).addUse(Ext);
-    if (IID == Intrinsic::amdgcn_readlane ||
-        IID == Intrinsic::amdgcn_writelane) {
-      auto Src1 = MI.getOperand(3).getReg();
-      LaneOpDst = LaneOpDst.addUse(Src1);
-      if (IID == Intrinsic::amdgcn_writelane) {
-        auto Src2 = MI.getOperand(4).getReg();
-        auto Ext2 = B.buildAnyExt(LLT::scalar(32), Src2).getReg(0);
-        LaneOpDst = LaneOpDst.addUse(Ext2);
-      }
+    Register Src0Cast = MRI.getType(Src0).isScalar()
+                            ? Src0
+                            : B.buildBitcast(LLT::scalar(Size), Src0).getReg(0);
+    Src0Valid = B.buildAnyExt(S32, Src0Cast).getReg(0);
+
+    if (Src2.isValid()) {
+      Register Src2Cast =
+          MRI.getType(Src2).isScalar()
+              ? Src2
+              : B.buildBitcast(LLT::scalar(Size), Src2).getReg(0);
+      Src2Valid = B.buildAnyExt(LLT::scalar(32), Src2Cast).getReg(0);
     }
-    B.buildTrunc(DstReg, LaneOpDst).getReg(0);
-  } else if ((Size % 32) == 0) {
-    SmallVector<Register, 2> Src0Parts, PartialRes;
-    unsigned NumParts = Size / 32;
-    auto WideReg = MRI.createGenericVirtualRegister(LLT::scalar(NumParts * 32));
-    for (unsigned i = 0; i < NumParts; ++i) {
-      Src0Parts.push_back(MRI.createGenericVirtualRegister(S32));
+    Register LaneOp = createLaneOp(Src0Valid, Src1, Src2Valid);
+    if (Ty.isScalar())
+      B.buildTrunc(DstReg, LaneOp);
+    else {
+      auto Trunc = B.buildTrunc(LLT::scalar(Size), LaneOp);
+      B.buildBitcast(DstReg, Trunc);
     }
 
-    B.buildUnmerge(Src0Parts, Src0);
+    MI.eraseFromParent();
+    return true;
+  }
+
+  if ((Size % 32) == 0) {
+    SmallVector<Register, 2> PartialRes;
+    unsigned NumParts = Size / 32;
+    auto Src0Parts = B.buildUnmerge(S32, Src0);
 
     switch (IID) {
     case Intrinsic::amdgcn_readlane: {
-      auto Src1 = MI.getOperand(3).getReg();
+      Register Src1 = MI.getOperand(3).getReg();
       for (unsigned i = 0; i < NumParts; ++i)
         PartialRes.push_back(
             (B.buildIntrinsic(Intrinsic::amdgcn_readlane, {S32})
-                 .addUse(Src0Parts[i])
+                 .addUse(Src0Parts.getReg(i))
                  .addUse(Src1))
                 .getReg(0));
       break;
@@ -5443,35 +5477,37 @@ bool AMDGPULegalizerInfo::legalizeLaneOp(LegalizerHelper &Helper,
       for (unsigned i = 0; i < NumParts; ++i)
         PartialRes.push_back(
             (B.buildIntrinsic(Intrinsic::amdgcn_readfirstlane, {S32})
-                 .addUse(Src0Parts[i]))
+                 .addUse(Src0Parts.getReg(i)))
                 .getReg(0));
 
       break;
     }
     case Intrinsic::amdgcn_writelane: {
-      auto Src1 = MI.getOperand(3).getReg();
-      auto Src2 = MI.getOperand(4).getReg();
-      SmallVector<Register, 2> Src2Parts;
-      for (unsigned i = 0; i < NumParts; ++i) {
-        Src2Parts.push_back(MRI.createGenericVirtualRegister(S32));
-      }
-      B.buildUnmerge(Src2Parts, Src2);
+      Register Src1 = MI.getOperand(3).getReg();
+      Register Src2 = MI.getOperand(4).getReg();
+      auto Src2Parts = B.buildUnmerge(S32, Src2);
 
       for (unsigned i = 0; i < NumParts; ++i)
         PartialRes.push_back(
             (B.buildIntrinsic(Intrinsic::amdgcn_writelane, {S32})
-                 .addUse(Src0Parts[i])
+                 .addUse(Src0Parts.getReg(i))
                  .addUse(Src1)
-                 .addUse(Src2Parts[i]))
+                 .addUse(Src2Parts.getReg(i)))
                 .getReg(0));
     }
     }
-    B.buildMergeLikeInstr(DstReg, PartialRes);
-  } else
-    return false;
 
-  MI.eraseFromParent();
-  return true;
+    if (Ty.isPointerVector()) {
+      auto MergedVec = B.buildMergeLikeInstr(
+          LLT::vector(ElementCount::getFixed(NumParts), S32), PartialRes);
+      B.buildBitcast(DstReg, MergedVec);
+    } else
+      B.buildMergeLikeInstr(DstReg, PartialRes);
+    MI.eraseFromParent();
+    return true;
+  }
+
+  return false;
 }
 
 bool AMDGPULegalizerInfo::getImplicitArgPtr(Register DstReg,
