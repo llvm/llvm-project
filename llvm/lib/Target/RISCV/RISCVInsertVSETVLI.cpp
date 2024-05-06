@@ -1600,9 +1600,7 @@ bool RISCVCoalesceVSETVLI::coalesceVSETVLIs(MachineBasicBlock &MBB) {
       continue;
     }
 
-    Register RegDef = MI.getOperand(0).getReg();
-    assert(RegDef == RISCV::X0 || RegDef.isVirtual());
-    if (RegDef != RISCV::X0 && !MRI->use_nodbg_empty(RegDef))
+    if (!MI.getOperand(0).isDead())
       Used.demandVL();
 
     if (NextMI) {
