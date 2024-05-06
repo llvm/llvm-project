@@ -57,8 +57,8 @@ public:
       // which should normally be 0 or -ETIMEOUT
       if (ret == -EINTR)
         continue;
-      else
-        return ret;
+
+      return ret;
     }
   }
   LIBC_INLINE long notify_one(bool is_shared = false) {
