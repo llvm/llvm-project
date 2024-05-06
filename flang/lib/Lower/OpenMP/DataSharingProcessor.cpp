@@ -87,8 +87,10 @@ void DataSharingProcessor::insertDeallocs() {
 }
 
 void DataSharingProcessor::cloneSymbol(const Fortran::semantics::Symbol *sym) {
-  assert(!sym->test(Fortran::semantics::Symbol::Flag::OmpPreDetermined));
-
+  // Privatization for symbols which are pre-determined (like loop index
+  // variables) happen separately, for everything else privatize here.
+  if (sym->test(Fortran::semantics::Symbol::Flag::OmpPreDetermined))
+    return;
   bool success = converter.createHostAssociateVarClone(*sym);
   (void)success;
   assert(success && "Privatization failed due to existing binding");
