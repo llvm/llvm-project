@@ -38,13 +38,6 @@ multiclass RELAXED_I<dag oops_r, dag iops_r, dag oops_s, dag iops_s,
                             asmstr_s, simdop, HasRelaxedSIMD>;
 }
 
-multiclass HALF_PRECISION_I<dag oops_r, dag iops_r, dag oops_s, dag iops_s,
-                            list<dag> pattern_r, string asmstr_r = "",
-                            string asmstr_s = "", bits<32> simdop = -1> {
-  defm "" : ABSTRACT_SIMD_I<oops_r, iops_r, oops_s, iops_s, pattern_r, asmstr_r,
-                            asmstr_s, simdop, HasHalfPrecision>;
-}
-
 
 defm "" : ARGUMENT<V128, v16i8>;
 defm "" : ARGUMENT<V128, v8i16>;
