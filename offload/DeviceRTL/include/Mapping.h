@@ -105,6 +105,13 @@ uint32_t getMaxTeamThreads(bool IsSPMD);
 /// Return the number of processing elements on the device.
 uint32_t getNumberOfProcessorElements();
 
+uint32_t getSimdLen();
+uint32_t getSimdGroup();
+uint32_t getSimdLane();
+bool isSimdLeader();
+uint32_t getNumSimdGroups();
+LaneMaskTy simdmask();
+
 } // namespace mapping
 
 } // namespace ompx

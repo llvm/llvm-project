@@ -322,6 +322,40 @@ uint32_t mapping::getNumberOfProcessorElements() {
   return static_cast<uint32_t>(config::getHardwareParallelism());
 }
 
+uint32_t mapping::getSimdLen() {
+  return 1;
+}
+
+uint32_t mapping::getSimdGroup() {
+  uint32_t SimdGroup = mapping::getThreadIdInBlock() / mapping::getSimdLen();
+  return SimdGroup;
+}
+
+uint32_t mapping::getSimdLane() {
+  uint32_t SimdId = mapping::getThreadIdInWarp() % mapping::getSimdLen();
+  return SimdId;
+}
+
+bool mapping::isSimdLeader() {
+  return !mapping::getSimdLane();
+}
+
+uint32_t mapping::getNumSimdGroups() {
+  //uint32_t NumGroups = mapping::getBlockSize() / mapping::getSimdLen();
+  uint32_t NumGroups = state::getEffectivePTeamSize() / mapping::getSimdLen();
+  return NumGroups;
+}
+
+LaneMaskTy mapping::simdmask() {
+  uint32_t GroupSize = mapping::getSimdLen();
+  uint32_t Group = mapping::getSimdGroup();
+  uint32_t WarpSize = mapping::getWarpSize();
+  LaneMaskTy Mask = ~(LaneMaskTy)0;
+  Mask = Mask >> (sizeof(LaneMaskTy)*8 - GroupSize);
+  Mask = Mask << (Group * GroupSize) % WarpSize;
+  return Mask;
+}
+
 ///}
 
 /// Execution mode

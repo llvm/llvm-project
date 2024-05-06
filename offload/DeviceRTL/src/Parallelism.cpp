@@ -87,8 +87,10 @@ extern "C" {
                                                    int32_t num_threads,
                                                    void *fn, void **args,
                                                    const int64_t nargs) {
+  //printf("SPMD mode\n");
   uint32_t TId = mapping::getThreadIdInBlock();
   uint32_t NumThreads = determineNumberOfThreads(num_threads);
+  NumThreads = NumThreads / mapping::getSimdLen();
   uint32_t PTeamSize =
       NumThreads == mapping::getMaxTeamThreads() ? 0 : NumThreads;
   // Avoid the race between the read of the `icv::Level` above and the write
@@ -101,6 +103,9 @@ extern "C" {
     state::ValueRAII ParallelTeamSizeRAII(state::ParallelTeamSize, PTeamSize,
                                           1u, TId == 0, ident,
                                           /*ForceTeamState=*/true);
+    //state::ValueRAII SimdLengthRAII(state::SimdLength, StaticSimdLen,
+    //                                 1u, TId == 0, ident,
+    //                                 /*ForceTeamState=*/true);
     state::ValueRAII ActiveLevelRAII(icv::ActiveLevel, 1u, 0u, TId == 0, ident,
                                      /*ForceTeamState=*/true);
     state::ValueRAII LevelRAII(icv::Level, 1u, 0u, TId == 0, ident,
@@ -119,7 +124,7 @@ extern "C" {
     // assumptions above.
     synchronize::threadsAligned(atomic::relaxed);
 
-    if (!PTeamSize || TId < PTeamSize)
+    if (!PTeamSize || (TId < PTeamSize*mapping::getSimdLen()))
       invokeMicrotask(TId, 0, fn, args, nargs);
 
     // Synchronize all threads at the end of a parallel region.
@@ -140,6 +145,8 @@ extern "C" {
 
   return;
 }
+
+
 
 [[clang::always_inline]] void
 __kmpc_parallel_51(IdentTy *ident, int32_t, int32_t if_expr,
@@ -166,6 +173,14 @@ __kmpc_parallel_51(IdentTy *ident, int32_t, int32_t if_expr,
   // From this point forward we know that there is no thread state used.
   ASSERT(state::HasThreadState == false, nullptr);
 
+  //printf("num_threads=%i\n", num_threads);
+  uint32_t NumThreads = determineNumberOfThreads(num_threads);
+  //printf("NumThreads=%i\n", NumThreads);
+  NumThreads = NumThreads / mapping::getSimdLen();
+  //printf("New NumThreads=%i\n", NumThreads);
+  uint32_t MaxTeamThreads = mapping::getMaxTeamThreads();
+  uint32_t PTeamSize = NumThreads == MaxTeamThreads ? 0 : NumThreads;
+  //printf("PTeamSize=%i\n", PTeamSize);
   if (mapping::isSPMDMode()) {
     // This was moved to its own routine so it could be called directly
     // in certain situations to avoid resource consumption of unused
@@ -185,7 +200,7 @@ __kmpc_parallel_51(IdentTy *ident, int32_t, int32_t if_expr,
   // set, but they do not have individual ThreadStates yet. If they ever
   // modify the ICVs beyond this point a ThreadStates will be allocated.
 
-  bool IsActiveParallelRegion = NumThreads > 1;
+  bool IsActiveParallelRegion = NumThreads*mapping::getSimdLen() > 1;
   if (!IsActiveParallelRegion) {
     state::ValueRAII LevelRAII(icv::Level, 1u, 0u, true, ident);
     invokeMicrotask(TId, 0, fn, args, nargs);
@@ -254,12 +269,16 @@ __kmpc_parallel_51(IdentTy *ident, int32_t, int32_t if_expr,
   }
 
   {
+    //printf("Generic execution\n");
     // Note that the order here is important. `icv::Level` has to be updated
     // last or the other updates will cause a thread specific state to be
     // created.
     state::ValueRAII ParallelTeamSizeRAII(state::ParallelTeamSize, PTeamSize,
                                           1u, true, ident,
                                           /*ForceTeamState=*/true);
+    //state::ValueRAII SimdLengthRAII(state::SimdLength, StaticSimdLen,
+    //                                 1u, TId == 0, ident,
+    //                                 /*ForceTeamState=*/true);
     state::ValueRAII ParallelRegionFnRAII(state::ParallelRegionFn, wrapper_fn,
                                           (void *)nullptr, true, ident,
                                           /*ForceTeamState=*/true);
@@ -288,7 +307,7 @@ __kmpc_parallel_51(IdentTy *ident, int32_t, int32_t if_expr,
 
   // Set to true for workers participating in the parallel region.
   uint32_t TId = mapping::getThreadIdInBlock();
-  bool ThreadIsActive = TId < state::getEffectivePTeamSize();
+  bool ThreadIsActive = TId < state::getEffectivePTeamSize()*mapping::getSimdLen();
   return ThreadIsActive;
 }
 

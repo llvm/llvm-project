@@ -167,6 +167,9 @@ double omp_get_wtick(void);
 
 double omp_get_wtime(void);
 ///}
+
+int omp_get_simd_lane(void);
+
 }
 
 extern "C" {
@@ -233,6 +236,12 @@ void __kmpc_target_deinit();
 ///{
 void *__kmpc_reduction_get_fixed_buffer();
 
+int32_t __kmpc_nvptx_simd_reduce_nowait_v2(IdentTy *Loc,
+                                           uint64_t reduce_data_size,
+                                           void *reduce_data,
+                                           ShuffleReductFnTy shflFct,
+                                           InterWarpCopyFnTy cpyFct);
+
 int32_t __kmpc_nvptx_parallel_reduce_nowait_v2(IdentTy *Loc,
                                                uint64_t reduce_data_size,
                                                void *reduce_data,
@@ -256,6 +265,8 @@ void __kmpc_end_ordered(IdentTy *Loc, int32_t TId);
 int32_t __kmpc_cancel_barrier(IdentTy *Loc_ref, int32_t TId);
 
 void __kmpc_barrier(IdentTy *Loc_ref, int32_t TId);
+
+void __kmpc_simd_barrier(void);
 
 void __kmpc_barrier_simple_spmd(IdentTy *Loc_ref, int32_t TId);
 

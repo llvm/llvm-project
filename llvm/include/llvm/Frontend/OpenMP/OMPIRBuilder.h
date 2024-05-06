@@ -285,7 +285,7 @@ public:
   /// Return true if a there are no entries defined.
   bool empty() const;
   /// Return number of entries defined so far.
-  unsigned size() const { return OffloadingEntriesNum; }
+  unsigned size() const { return OffloadingEntriesNum /*OffloadEntriesTargetRegion.size()*/ /*OffloadingEntriesNum*/; }
 
   OffloadEntriesInfoManager(OpenMPIRBuilder *builder) : OMPBuilder(builder) {}
 
@@ -514,6 +514,11 @@ public:
   ///                              all functions are finalized.
   void finalize(Function *Fn = nullptr);
 
+  CallInst *globalizeAlloca(AllocaInst *Alloca, SmallVector<Instruction*, 32>&);
+  void globalizeParallelVars(Function *CurFn);
+  SmallPtrSet<Value*, 32> VarsNeedingGlobalization;
+  void globalizeVars(Function *CurFn);
+
   /// Add attributes known for \p FnID to \p Fn.
   void addAttributes(omp::RuntimeFunction FnID, Function &Fn);
 
@@ -591,6 +596,18 @@ public:
   ///                  placed.
   using BodyGenCallbackTy =
       function_ref<void(InsertPointTy AllocaIP, InsertPointTy CodeGenIP)>;
+
+  using LoopBodyCallbackTy =
+      function_ref<void(
+        BasicBlock *OuterAllocaBB, InsertPointTy AllocaIP, InsertPointTy CodeGenIP,
+        InsertPointTy PrologIP, InsertPointTy ReductionEpilogIP,
+        Value *IterationNum
+      )>;
+
+  using TripCountCallbackTy =
+      function_ref<
+        Value*(llvm::BasicBlock *AllocaBB, InsertPointTy CodeGenIP)
+      >;
 
   // This is created primarily for sections construct as llvm::function_ref
   // (BodyGenCallbackTy) is not storable (as described in the comments of
@@ -671,6 +688,13 @@ public:
   /// \returns The insertion point after the barrier.
   InsertPointTy createCancel(const LocationDescription &Loc, Value *IfCondition,
                              omp::Directive CanceledDirective);
+
+  IRBuilder<>::InsertPoint
+  createSimdLoop(const LocationDescription &Loc, InsertPointTy AllocaIP,
+                 LoopBodyCallbackTy BodyGenCB,
+                 TripCountCallbackTy DistanceCB,
+                 PrivatizeCallbackTy PrivCB,
+                 FinalizeCallbackTy FiniCB);
 
   /// Generator for '#omp parallel'
   ///
@@ -1876,6 +1900,7 @@ public:
       InsertPointTy CodeGenIP, ArrayRef<ReductionInfo> ReductionInfos,
       bool IsNoWait = false, bool IsTeamsReduction = false,
       bool HasDistribute = false,
+      bool IsSimdReduction = false,
       ReductionGenCBKind ReductionGenCBKind = ReductionGenCBKind::MLIR,
       std::optional<omp::GV> GridValue = {}, unsigned ReductionBufNum = 1024,
       Value *SrcLocInfo = nullptr);

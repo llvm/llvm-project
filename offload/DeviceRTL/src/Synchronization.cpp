@@ -533,6 +533,10 @@ void __kmpc_barrier(IdentTy *Loc, int32_t TId) {
   impl::namedBarrier();
 }
 
+void __kmpc_simd_barrier(void) {
+  synchronize::warp(mapping::simdmask());
+}
+
 [[clang::noinline]] void __kmpc_barrier_simple_spmd(IdentTy *Loc, int32_t TId) {
   synchronize::threadsAligned(atomic::OrderingTy::seq_cst);
 }

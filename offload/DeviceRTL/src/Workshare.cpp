@@ -518,6 +518,28 @@ void workshare::init(bool IsSPMD) {
     ThreadDST = nullptr;
 }
 
+template<typename IType>
+void SimdLoop(
+  IdentTy *ident, void *WorkFn, IType TripCount,
+  void **Args
+) {
+  ASSERT(WorkFn, "expected valid outlined function"); 
+  __kmpc_impl_lanemask_t SimdMask = mapping::simdmask();
+  uint32_t Step = mapping::getSimdLen();
+
+  //printf("Thread=%i : Lane=%i : Len=%i : TripCount=%i\n",
+  //       mapping::getThreadIdInBlock(), mapping::getSimdLane(), mapping::getSimdLen(), TripCount);
+
+  synchronize::warp(SimdMask);
+  for(IType omp_iv = (IType) mapping::getSimdLane();
+      omp_iv < TripCount;
+      omp_iv += Step
+  ) {
+    ((void (*)(IType, void**))WorkFn)(omp_iv, Args);
+  }
+  synchronize::warp(SimdMask);
+}
+
 extern "C" {
 
 // init
@@ -683,6 +705,28 @@ void __kmpc_distribute_static_init_8u(IdentTy *loc, int32_t global_tid,
 void __kmpc_for_static_fini(IdentTy *loc, int32_t global_tid) {}
 
 void __kmpc_distribute_static_fini(IdentTy *loc, int32_t global_tid) {}
+
+void __kmpc_simd_4u(
+  IdentTy *ident, void *WorkFn, uint32_t TripCount,
+  void **Args
+) {
+  SimdLoop<uint32_t>(ident, WorkFn, TripCount, Args);
+}
+
+void __kmpc_simd_8u(
+  IdentTy *ident, void *WorkFn, uint64_t TripCount,
+  void **Args
+) {
+  SimdLoop<uint64_t>(ident, WorkFn, TripCount, Args);
+}
+
+void __kmpc_simd(
+  IdentTy *ident, void *WorkFn, void **Args, uint32_t nargs
+) {
+  ASSERT(WorkFn, "expected valid outlined function"); 
+  ((void (*)(void**))WorkFn)(Args);
+}
+
 }
 
 namespace ompx {

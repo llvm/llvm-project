@@ -164,9 +164,57 @@ uint32_t roundToWarpsize(uint32_t s) {
 
 uint32_t kmpcMin(uint32_t x, uint32_t y) { return x < y ? x : y; }
 
+static int32_t nvptx_simd_reduce_nowait(void *reduce_data,
+                                            ShuffleReductFnTy shflFct,
+                                            InterWarpCopyFnTy cpyFct) {
+  uint32_t SimdId = mapping::getSimdLane();
+  uint32_t NumThreads = mapping::getSimdLen();
+  if(NumThreads == 1)
+    return 1;
+
+#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 700
+  if (NumThreads == mapping::getWarpSize())
+    gpu_regular_warp_reduce(reduce_data, shflFct);
+  else 
+    gpu_irregular_warp_reduce(reduce_data, shflFct,
+                              /*LaneCount=*/NumThreads,
+                              /*LaneId=*/mapping::getSimdLane());
+#else
+  __kmpc_impl_lanemask_t Liveness = mapping::simdmask();
+  if (Liveness == lanes::All) // Full warp
+    gpu_regular_warp_reduce(reduce_data, shflFct);
+  else 
+    gpu_irregular_warp_reduce(reduce_data, shflFct,
+                              /*LaneCount=*/utils::popc(Liveness),
+                              /*LaneId=*/mapping::getSimdLane());
+#endif
+
+  return mapping::isSimdLeader();
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
 } // namespace
 
 extern "C" {
+int32_t __kmpc_nvptx_simd_reduce_nowait_v2(IdentTy *Loc,
+                                           uint64_t reduce_data_size,
+                                           void *reduce_data,
+                                           ShuffleReductFnTy shflFct,
+                                           InterWarpCopyFnTy cpyFct) {
+  return nvptx_simd_reduce_nowait(reduce_data, shflFct, cpyFct);
+}
+
 int32_t __kmpc_nvptx_parallel_reduce_nowait_v2(IdentTy *Loc,
                                                uint64_t reduce_data_size,
                                                void *reduce_data,

@@ -1454,6 +1454,7 @@ void CodeGenFunction::EmitOMPReductionClauseInit(
     }
 
     const auto *VD = cast<VarDecl>(cast<DeclRefExpr>(TaskRedRef)->getDecl());
+llvm::dbgs() << "Emitting " << VD->getName() << " " << VD << "\n";
     EmitVarDecl(*VD);
     EmitStoreOfScalar(ReductionDesc, GetAddrOfLocalVar(VD),
                       /*Volatile=*/false, TaskRedRef->getType());
@@ -1494,7 +1495,7 @@ void CodeGenFunction::EmitOMPReductionClauseFinal(
     bool WithNowait = D.getSingleClause<OMPNowaitClause>() ||
                       isOpenMPParallelDirective(EKind) ||
                       TeamsLoopCanBeParallel || ReductionKind == OMPD_simd;
-    bool SimpleReduction = ReductionKind == OMPD_simd;
+    bool SimpleReduction = (CGM.getLangOpts().OpenMPIsTargetDevice ? false : ReductionKind == OMPD_simd);
     // Emit nowait reduction if nowait clause is present or directive is a
     // parallel directive (it always has implicit barrier).
     CGM.getOpenMPRuntime().emitReduction(
@@ -2736,59 +2737,139 @@ GetAlignedMapping(const OMPLoopDirective &S, CodeGenFunction &CGF) {
 // available for "loop bind(thread)", which maps to "simd".
 static void emitOMPSimdDirective(const OMPLoopDirective &S,
                                  CodeGenFunction &CGF, CodeGenModule &CGM) {
-  bool UseOMPIRBuilder =
-      CGM.getLangOpts().OpenMPIRBuilder && isSimdSupportedByOpenMPIRBuilder(S);
-  if (UseOMPIRBuilder) {
-    auto &&CodeGenIRBuilder = [&S, &CGM, UseOMPIRBuilder](CodeGenFunction &CGF,
-                                                          PrePostActionTy &) {
-      // Use the OpenMPIRBuilder if enabled.
-      if (UseOMPIRBuilder) {
-        llvm::MapVector<llvm::Value *, llvm::Value *> AlignedVars =
-            GetAlignedMapping(S, CGF);
-        // Emit the associated statement and get its loop representation.
-        const Stmt *Inner = S.getRawStmt();
-        llvm::CanonicalLoopInfo *CLI =
-            CGF.EmitOMPCollapsedCanonicalLoopNest(Inner, 1);
+  bool UseOMPIRBuilder = CGM.getLangOpts().OpenMPIsTargetDevice;
+  if(UseOMPIRBuilder) {
+    auto *CS = dyn_cast<CapturedStmt>(S.getAssociatedStmt());
+    auto *CL = dyn_cast<OMPCanonicalLoop>(CS->getCapturedStmt());
+    CGCapturedStmtInfo CGSI(*CS, CR_OpenMP);
 
-        llvm::OpenMPIRBuilder &OMPBuilder =
-            CGM.getOpenMPRuntime().getOMPBuilder();
-        // Add SIMD specific metadata
-        llvm::ConstantInt *Simdlen = nullptr;
-        if (const auto *C = S.getSingleClause<OMPSimdlenClause>()) {
-          RValue Len = CGF.EmitAnyExpr(C->getSimdlen(), AggValueSlot::ignored(),
-                                       /*ignoreResult=*/true);
-          auto *Val = cast<llvm::ConstantInt>(Len.getScalarVal());
-          Simdlen = Val;
-        }
-        llvm::ConstantInt *Safelen = nullptr;
-        if (const auto *C = S.getSingleClause<OMPSafelenClause>()) {
-          RValue Len = CGF.EmitAnyExpr(C->getSafelen(), AggValueSlot::ignored(),
-                                       /*ignoreResult=*/true);
-          auto *Val = cast<llvm::ConstantInt>(Len.getScalarVal());
-          Safelen = Val;
-        }
-        llvm::omp::OrderKind Order = llvm::omp::OrderKind::OMP_ORDER_unknown;
-        if (const auto *C = S.getSingleClause<OMPOrderClause>()) {
-          if (C->getKind() == OpenMPOrderClauseKind::OMPC_ORDER_concurrent) {
-            Order = llvm::omp::OrderKind::OMP_ORDER_concurrent;
-          }
-        }
-        // Add simd metadata to the collapsed loop. Do not generate
-        // another loop for if clause. Support for if clause is done earlier.
-        OMPBuilder.applySimd(CLI, AlignedVars,
-                             /*IfCond*/ nullptr, Order, Simdlen, Safelen);
-        return;
-      }
+    CodeGenFunction::CGCapturedStmtRAII CapInfoRAII(*this, &CGSI);
+    llvm::OpenMPIRBuilder::InsertPointTy AllocaIP(
+      AllocaInsertPt->getParent(), AllocaInsertPt->getIterator());
+
+    llvm::OpenMPIRBuilder &OMPBuilder = CGM.getOpenMPRuntime().getOMPBuilder();
+
+    using InsertPointTy = llvm::OpenMPIRBuilder::InsertPointTy;
+
+    // Callback function for generating the trip count of the loop.
+    // This function should assign values to the TripCount and Signed variables
+    llvm::Value *LoopVar;
+    std::string LoopVarName;
+    EmittedClosureTy LoopVarClosure;
+
+    auto DistanceCB = [&](llvm::BasicBlock *AllocaBB,
+                          InsertPointTy CodeGenIP) -> llvm::Value* {
+      InsertPointTy AllocaIP(AllocaBB, AllocaBB->getTerminator()->getIterator());
+      OMPBuilderCBHelpers::OutlinedRegionBodyRAII IRB(
+        *this, AllocaIP, *(CodeGenIP.getBlock()));
+      Builder.restoreIP(CodeGenIP);
+
+      // Emit the loop variable, needed for the distance func
+      const auto *For = dyn_cast<ForStmt>(CL->getLoopStmt());
+      if(const Stmt *InitStmt = For->getInit())
+        EmitStmt(InitStmt);
+
+      auto *LoopVarRef = CL->getLoopVarRef();
+      LValue LCVal = EmitLValue(LoopVarRef);
+      //Address LoopVarAddress = LCVal.getAddress(*this);
+      //LoopVar = dyn_cast<llvm::Instruction>(LoopVarAddress.getPointer());
+      LoopVar = dyn_cast<llvm::Instruction>(LCVal.getPointer(*this));
+      LoopVarName = LoopVarRef->getNameInfo().getAsString();
+
+      // Emit the distance func from the CanonicalLoop
+      const CapturedStmt *DistanceFunc = CL->getDistanceFunc();
+      EmittedClosureTy DistanceClosure = emitCapturedStmtFunc(*this, DistanceFunc);
+
+      // Load the output and store it in the TripCount
+      QualType LogicalTy = DistanceFunc->getCapturedDecl()
+                           ->getParam(0)
+                           ->getType()
+                           .getNonReferenceType();
+
+      //Address CountAddr = CreateMemTemp(LogicalTy, ".count.addr");
+      RawAddress CountAddr = CreateMemTemp(LogicalTy, ".count.addr");
+ 
+      emitCapturedStmtCall(*this, DistanceClosure, {CountAddr.getPointer()});
+      auto *TripCount = Builder.CreateLoad(CountAddr, ".count");
+
+      const CapturedStmt *LoopVarFunc = CL->getLoopVarFunc();
+      LoopVarClosure = emitCapturedStmtFunc(*this, LoopVarFunc);
+
+      return TripCount;
     };
-    {
-      auto LPCRegion =
-          CGOpenMPRuntime::LastprivateConditionalRAII::disable(CGF, S);
-      OMPLexicalScope Scope(CGF, S, OMPD_unknown);
-      CGM.getOpenMPRuntime().emitInlinedDirective(CGF, OMPD_simd,
-                                                  CodeGenIRBuilder);
-    }
+
+    auto FiniCB = [this](InsertPointTy IP) {
+      OMPBuilderCBHelpers::FinalizeOMPRegion(*this, IP);
+    };
+
+    auto PrivCB = [](InsertPointTy AllocaIP, InsertPointTy CodeGenIP,
+                     llvm::Value &, llvm::Value &Val, llvm::Value *&ReplVal) {
+      ReplVal = &Val;
+      return CodeGenIP;
+    };
+
+    auto BodyGenCB = [&]
+                     (//InsertPointTy OuterAllocaIP,
+                      llvm::BasicBlock *OuterAllocaBB,
+                      InsertPointTy AllocaIP, InsertPointTy CodeGenIP,
+                      InsertPointTy Prolog, InsertPointTy ReductionEpilog,
+                      llvm::Value *Virtual) {
+
+      llvm::BasicBlock *CodeGenIPBB = CodeGenIP.getBlock();
+      InsertPointTy OuterAllocaIP(OuterAllocaBB, OuterAllocaBB->getTerminator()->getIterator());
+
+      OMPBuilderCBHelpers::OutlinedRegionBodyRAII IRB(
+        *this, OuterAllocaIP, *(Prolog.getBlock()));
+      Builder.restoreIP(Prolog);
+
+      OMPPrivateScope PrivateScope(*this);
+      EmitOMPFirstprivateClause(S, PrivateScope);
+      EmitOMPPrivateClause(S, PrivateScope);
+      EmitOMPReductionClauseInit(S, PrivateScope);
+      PrivateScope.Privatize();
+
+      const CapturedStmt *LoopVarFunc = CL->getLoopVarFunc();
+
+      Builder.restoreIP(CodeGenIP);
+      emitCapturedStmtCall(*this, LoopVarClosure,
+                           {LoopVar, Virtual});
+
+      // Generate the body of the loop
+      OMPBuilderCBHelpers::EmitOMPOutlinedRegionBody(
+          *this,
+          S.getBody(),
+          AllocaIP,
+          CodeGenIP,
+          "simd");
+
+       llvm::BasicBlock *RedEpilogBB = ReductionEpilog.getBlock();
+       llvm::Instruction *RedEpilogTerminator = RedEpilogBB->getTerminator();
+       llvm::BasicBlock *FinalBlock = RedEpilogBB->getSingleSuccessor();
+
+       Builder.restoreIP(ReductionEpilog);
+       EmitOMPReductionClauseFinal(S, OMPD_simd);
+
+       llvm::BasicBlock *ReductionThenBB = Builder.GetInsertBlock();
+
+       if(!(ReductionThenBB->getTerminator())) {
+         RedEpilogTerminator->eraseFromParent();
+         Builder.CreateBr(FinalBlock);
+       }
+
+    };
+
+    Builder.restoreIP(
+      OMPBuilder.createSimdLoop(
+        Builder,
+        AllocaIP,
+        BodyGenCB,
+        DistanceCB,
+        PrivCB,
+        FiniCB
+    ));
+
     return;
-  }
+  } 
 
   CodeGenFunction::ParentLoopDirectiveForScanRegion ScanRegion(CGF, S);
   CGF.OMPFirstScanLoop = true;

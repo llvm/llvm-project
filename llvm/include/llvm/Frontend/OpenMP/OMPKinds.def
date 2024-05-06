@@ -124,6 +124,9 @@ __OMP_FUNCTION_TYPE(ShuffleReduce, false, Void, VoidPtr, Int16, Int16, Int16)
 __OMP_FUNCTION_TYPE(InterWarpCopy, false, Void, VoidPtr, Int32)
 __OMP_FUNCTION_TYPE(GlobalList, false, Void, VoidPtr, Int32, VoidPtr)
 
+__OMP_FUNCTION_TYPE(LoopTask, false, Void, Int64, VoidPtrPtr)
+__OMP_FUNCTION_TYPE(SimdTask, false, Void, VoidPtrPtr)
+
 #undef __OMP_FUNCTION_TYPE
 #undef OMP_FUNCTION_TYPE
 
@@ -204,6 +207,7 @@ __ICV_RT_GET(proc_bind, omp_get_proc_bind)
 
 
 __OMP_RTL(__kmpc_barrier, false, Void, IdentPtr, Int32)
+__OMP_RTL(__kmpc_simd_barrier, false, Void, )
 __OMP_RTL(__kmpc_cancel, false, Int32, IdentPtr, Int32, Int32)
 __OMP_RTL(__kmpc_cancel_barrier, false, Int32, IdentPtr, Int32)
 __OMP_RTL(__kmpc_error, false, Void, IdentPtr, Int32, Int8Ptr)
@@ -227,6 +231,7 @@ __OMP_RTL(__kmpc_get_hardware_num_threads_in_block, false, Int32, )
 __OMP_RTL(__kmpc_get_warp_size, false, Int32, )
 
 __OMP_RTL(omp_get_thread_num, false, Int32, )
+__OMP_RTL(omp_get_simd_lane, false, Int32, )
 __OMP_RTL(omp_get_num_threads, false, Int32, )
 __OMP_RTL(omp_get_max_threads, false, Int32, )
 __OMP_RTL(omp_in_parallel, false, Int32, )
@@ -484,6 +489,8 @@ __OMP_RTL(__kmpc_kernel_end_parallel, false, Void, )
 __OMP_RTL(__kmpc_serialized_parallel, false, Void, IdentPtr, Int32)
 __OMP_RTL(__kmpc_end_serialized_parallel, false, Void, IdentPtr, Int32)
 __OMP_RTL(__kmpc_shuffle_int32, false, Int32, Int32, Int16, Int16)
+__OMP_RTL(__kmpc_nvptx_simd_reduce_nowait_v2, false, Int32, IdentPtr,
+	  Int64, VoidPtr, ShuffleReducePtr, InterWarpCopyPtr)
 __OMP_RTL(__kmpc_nvptx_parallel_reduce_nowait_v2, false, Int32, IdentPtr,
 	  Int64, VoidPtr, ShuffleReducePtr, InterWarpCopyPtr)
 __OMP_RTL(__kmpc_nvptx_teams_reduce_nowait_v2, false, Int32, IdentPtr,
@@ -508,6 +515,10 @@ __OMP_RTL(__kmpc_syncwarp, false, Void, Int64)
 
 __OMP_RTL(__llvm_profile_register_function, false, Void, VoidPtr)
 __OMP_RTL(__llvm_profile_register_names_function, false, Void, VoidPtr, Int64)
+
+__OMP_RTL(__kmpc_simd_4u, false, Void, IdentPtr, LoopTaskPtr, Int32, VoidPtrPtr)
+__OMP_RTL(__kmpc_simd_8u, false, Void, IdentPtr, LoopTaskPtr, Int64, VoidPtrPtr)
+__OMP_RTL(__kmpc_simd, false, Void, IdentPtr, SimdTaskPtr, VoidPtrPtr, Int32)
 
 __OMP_RTL(__last, false, Void, )
 
@@ -715,6 +726,7 @@ __OMP_RTL_ATTRS(__kmpc_get_hardware_num_threads_in_block, GetterAttrs, ZExt, Par
 __OMP_RTL_ATTRS(__kmpc_get_warp_size, GetterAttrs, ZExt, ParamAttrs())
 
 __OMP_RTL_ATTRS(omp_get_thread_num, GetterAttrs, SExt, ParamAttrs())
+__OMP_RTL_ATTRS(omp_get_simd_lane, GetterAttrs, SExt, ParamAttrs())
 __OMP_RTL_ATTRS(omp_get_num_threads, GetterAttrs, SExt, ParamAttrs())
 __OMP_RTL_ATTRS(omp_get_max_threads, GetterAttrs, SExt, ParamAttrs())
 __OMP_RTL_ATTRS(omp_in_parallel, GetterAttrs, SExt, ParamAttrs())
