@@ -154,10 +154,9 @@ static bool TagIsRecordType(dw_tag_t tag) {
   }
 }
 
-static bool
-IsForwardDeclaration(const lldb_private::plugin::dwarf::DWARFDIE &die,
-                     const ParsedDWARFTypeAttributes &attrs,
-                     LanguageType cu_language) {
+static bool IsForwardDeclaration(const DWARFDIE &die,
+                                 const ParsedDWARFTypeAttributes &attrs,
+                                 LanguageType cu_language) {
   if (attrs.is_forward_declaration)
     return true;
 
@@ -172,7 +171,7 @@ IsForwardDeclaration(const lldb_private::plugin::dwarf::DWARFDIE &die,
   // Note that there is no DW_AT_declaration and there are no children,
   // and the byte size is zero.
   return attrs.byte_size && *attrs.byte_size == 0 && attrs.name &&
-      !die.HasChildren() && cu_language == eLanguageTypeObjC;
+         !die.HasChildren() && cu_language == eLanguageTypeObjC;
 }
 
 TypeSP DWARFASTParserClang::ParseTypeFromClangModule(const SymbolContext &sc,

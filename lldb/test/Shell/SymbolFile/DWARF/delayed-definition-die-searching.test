@@ -1,0 +1,40 @@
+# Test definition DIE searching is delayed until complete type is required.
+
+# RUN: split-file %s %t
+# RUN: %clangxx_host %t/main.cpp %t/t1_def.cpp -g -gsimple-template-names -o %t.out
+# RUN: %lldb -b %t.out -s %t/lldb.cmd | FileCheck %s
+
+# CHECK:      (lldb) p v1
+# CHECK-NEXT: DWARFASTParserClang::ParseTypeFromDWARF{{.*}}DW_TAG_structure_type (DW_TAG_structure_type) name = 't2'
+# CHECK-NEXT: DWARFASTParserClang::ParseTypeFromDWARF{{.*}}DW_TAG_structure_type (DW_TAG_structure_type) name = 't1'
+# CHECK-NEXT: DWARFASTParserClang::ParseTypeFromDWARF{{.*}}DW_TAG_base_type (DW_TAG_base_type) name = 'int'
+# CHECK-NEXT: DW_TAG_structure_type (DW_TAG_structure_type) 't2' resolving forward declaration...
+# CHECK-NEXT: (t2<t1<int> >)  {}
+# CHECK-NEXT: (lldb) p v2
+# CHECK-NEXT: DWARFASTParserClang::ParseTypeFromDWARF{{.*}}DW_TAG_structure_type (DW_TAG_structure_type) name = 't1'
+# CHECK-NEXT: DWARFASTParserClang::ParseTypeFromDWARF{{.*}}DW_TAG_base_type (DW_TAG_base_type) name = 'int'
+# CHECK-NEXT: DW_TAG_structure_type (DW_TAG_structure_type) 't1' resolving forward declaration...
+# CHECK-NEXT: (t1<int>)  {}
+
+#--- lldb.cmd
+log enable dwarf comp
+p v1
+p v2
+
+#--- template.h
+template<typename T>
+struct t1 {
+};
+template<typename T>
+struct t2 {
+};
+
+#--- main.cpp
+#include "template.h"
+t2<t1<int>> v1; // this CU doesn't have definition DIE for t1<int>, but only declaration DIE for it.
+int main() {
+}
+
+#--- t1_def.cpp
+#include "template.h"
+t1<int> v2; // this CU contains definition DIE for t1<int>.
