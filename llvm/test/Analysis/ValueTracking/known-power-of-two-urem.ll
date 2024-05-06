@@ -394,10 +394,9 @@ define i8 @known_power_of_two_rust_next_power_of_two(i8 %x, i8 %y) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[X:%.*]], -1
 ; CHECK-NEXT:    [[TMP2:%.*]] = tail call range(i8 0, 9) i8 @llvm.ctlz.i8(i8 [[TMP1]], i1 true)
 ; CHECK-NEXT:    [[TMP3:%.*]] = lshr i8 -1, [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = add i8 [[TMP3]], 1
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp ugt i8 [[X]], 1
-; CHECK-NEXT:    [[P:%.*]] = select i1 [[TMP5]], i8 [[TMP4]], i8 1
-; CHECK-NEXT:    [[R:%.*]] = urem i8 [[Y:%.*]], [[P]]
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp ugt i8 [[X]], 1
+; CHECK-NEXT:    [[TMP5:%.*]] = select i1 [[TMP4]], i8 [[TMP3]], i8 0
+; CHECK-NEXT:    [[R:%.*]] = and i8 [[TMP5]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %2 = add i8 %x, -1
