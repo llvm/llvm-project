@@ -862,4 +862,26 @@ define i32 @ashr_mul_times_5_div_4_exact_2(i32 %x) {
   ret i32 %ashr
 }
 
+define i32 @mul_splat_fold_known_active_bits(i32 %x) {
+; CHECK-LABEL: @mul_splat_fold_known_active_bits(
+; CHECK-NEXT:    [[XX:%.*]] = and i32 [[X:%.*]], 360
+; CHECK-NEXT:    ret i32 [[XX]]
+;
+  %xx = and i32 %x, 360
+  %m = mul nuw i32 %xx, 65537
+  %t = ashr i32 %m, 16
+  ret i32 %t
+}
+
+define i32 @mul_splat_fold_no_known_active_bits(i32 %x) {
+; CHECK-LABEL: @mul_splat_fold_no_known_active_bits(
+; CHECK-NEXT:    [[TMP1:%.*]] = ashr i32 [[X:%.*]], 16
+; CHECK-NEXT:    [[T:%.*]] = add nsw i32 [[TMP1]], [[X]]
+; CHECK-NEXT:    ret i32 [[T]]
+;
+  %m = mul nsw i32 %x, 65537
+  %t = ashr i32 %m, 16
+  ret i32 %t
+}
+
 declare void @use(i32)
