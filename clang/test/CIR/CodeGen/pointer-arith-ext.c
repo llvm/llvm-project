@@ -57,3 +57,16 @@ void *f4_1(void *a, int b) { return (a -= b); }
 // FP f7_1(FP a, int b) { return (a -= b); }
 // void f8(void *a, int b) { return *(a + b); }
 // void f8_1(void *a, int b) { return a[b]; }
+
+unsigned char *p(unsigned int x) {
+  unsigned char *p;
+  p += 16-x;
+  return p;
+}
+
+// CIR-LABEL: @p
+// CIR: %[[SUB:.*]] = cir.binop(sub
+// CIR: cir.ptr_stride({{.*}} : !cir.ptr<!u8i>, %[[SUB]] : !u32i), !cir.ptr<!u8i>
+
+// LLVM-LABEL: @p
+// LLVM: getelementptr i8, ptr {{.*}}
