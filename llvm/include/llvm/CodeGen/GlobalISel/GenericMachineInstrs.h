@@ -36,79 +36,19 @@ public:
   }
 
   bool hasPoisonGeneratingFlags() const {
-    switch (getOpcode()) {
-    case TargetOpcode::G_ADD:
-    case TargetOpcode::G_SUB:
-    case TargetOpcode::G_MUL:
-    case TargetOpcode::G_SHL:
-    case TargetOpcode::G_TRUNC:
-      return getFlag(NoUWrap) || getFlag(NoSWrap);
-
-    case TargetOpcode::G_UDIV:
-    case TargetOpcode::G_SDIV:
-    case TargetOpcode::G_ASHR:
-    case TargetOpcode::G_LSHR:
-      return getFlag(IsExact);
-
-    case TargetOpcode::G_OR:
-      return getFlag(Disjoint);
-
-    case TargetOpcode::G_UITOFP:
-    case TargetOpcode::G_ZEXT:
-      return getFlag(NonNeg);
-
-    case TargetOpcode::G_FNEG:
-    case TargetOpcode::G_FADD:
-    case TargetOpcode::G_FSUB:
-    case TargetOpcode::G_FMUL:
-    case TargetOpcode::G_FDIV:
-    case TargetOpcode::G_FREM:
-    case TargetOpcode::G_FCMP:
-      return getFlag(FmNoNans) || getFlag(FmNoInfs);
-
-    default:
-      return false;
-    }
+    return getFlag(NoUWrap) || getFlag(NoSWrap) || getFlag(IsExact) ||
+           getFlag(Disjoint) || getFlag(NonNeg) || getFlag(FmNoNans) ||
+           getFlag(FmNoInfs);
   }
 
   void dropPoisonGeneratingFlags() {
-    switch (getOpcode()) {
-    case TargetOpcode::G_ADD:
-    case TargetOpcode::G_SUB:
-    case TargetOpcode::G_MUL:
-    case TargetOpcode::G_SHL:
-    case TargetOpcode::G_TRUNC:
-      clearFlag(NoUWrap);
-      clearFlag(NoSWrap);
-      break;
-
-    case TargetOpcode::G_UDIV:
-    case TargetOpcode::G_SDIV:
-    case TargetOpcode::G_ASHR:
-    case TargetOpcode::G_LSHR:
-      clearFlag(IsExact);
-      break;
-
-    case TargetOpcode::G_OR:
-      clearFlag(Disjoint);
-      break;
-
-    case TargetOpcode::G_UITOFP:
-    case TargetOpcode::G_ZEXT:
-      clearFlag(NonNeg);
-      break;
-
-    case TargetOpcode::G_FNEG:
-    case TargetOpcode::G_FADD:
-    case TargetOpcode::G_FSUB:
-    case TargetOpcode::G_FMUL:
-    case TargetOpcode::G_FDIV:
-    case TargetOpcode::G_FREM:
-    case TargetOpcode::G_FCMP:
-      clearFlag(FmNoNans);
-      clearFlag(FmNoInfs);
-      break;
-    }
+    clearFlag(NoUWrap);
+    clearFlag(NoSWrap);
+    clearFlag(IsExact);
+    clearFlag(Disjoint);
+    clearFlag(NonNeg);
+    clearFlag(FmNoNans);
+    clearFlag(FmNoInfs);
     assert(!hasPoisonGeneratingFlags());
   }
 };
