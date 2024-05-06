@@ -131,7 +131,7 @@ public:
     return const_cast<ContextNode *>(this)->counters();
   }
 
-  // The subcontexts vector starts rigth after the end of the counters vector.
+  // The subcontexts vector starts right after the end of the counters vector.
   ContextNode **subContexts() {
     return reinterpret_cast<ContextNode **>(&(counters()[NrCounters]));
   }
