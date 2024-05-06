@@ -3860,11 +3860,10 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
   // Try to simplify a binop sandwiched between 2 selects with the same
   // condition. This is not valid for div/rem because the select might be
   // preventing a division-by-zero.
-  // TODO: A div/rem restriction is conservative; use something like
-  //       isSafeToSpeculativelyExecute().
   // select(C, binop(select(C, X, Y), W), Z) -> select(C, binop(X, W), Z)
   BinaryOperator *TrueBO;
-  if (match(TrueVal, m_OneUse(m_BinOp(TrueBO))) && !TrueBO->isIntDivRem()) {
+  if (match(TrueVal, m_OneUse(m_BinOp(TrueBO))) &&
+      isSafeToSpeculativelyExecute(TrueBO)) {
     if (auto *TrueBOSI = dyn_cast<SelectInst>(TrueBO->getOperand(0))) {
       if (TrueBOSI->getCondition() == CondVal) {
         replaceOperand(*TrueBO, 0, TrueBOSI->getTrueValue());
