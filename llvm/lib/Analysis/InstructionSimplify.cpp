@@ -1479,6 +1479,29 @@ static Value *simplifyLShrInst(Value *Op0, Value *Op1, bool IsExact,
   if (Q.IIQ.UseInstrInfo && match(Op0, m_NUWShl(m_Value(X), m_Specific(Op1))))
     return X;
 
+  // Look for a "splat" mul pattern - it replicates bits across each half
+  // of a value, so a right shift is just a mask of the low bits:
+  const APInt *MulC;
+  const APInt *ShAmt;
+  if (Q.IIQ.UseInstrInfo && match(Op0, m_NUWMul(m_Value(X), m_APInt(MulC))) &&
+      match(Op1, m_APInt(ShAmt))) {
+    unsigned ShAmtC = ShAmt->getZExtValue();
+    unsigned BitWidth = ShAmt->getBitWidth();
+    if (BitWidth > 2 && (*MulC - 1).isPowerOf2() &&
+        MulC->logBase2() == ShAmtC) {
+      // FIXME: This condition should be covered by the computeKnownBits, but
+      // for some reason it is not, so keep this in for now. This has no
+      // negative effects, but KnownBits should be able to infer a number of
+      // leading bits based on 2^N + 1 not wrapping, as that means 2^N must not
+      // wrap either, which means the top N bits of X must be 0.
+      if (ShAmtC * 2 == BitWidth)
+        return X;
+      const KnownBits XKnown = computeKnownBits(X, /* Depth */ 0, Q);
+      if (XKnown.countMaxActiveBits() <= ShAmtC)
+        return X;
+    }
+  }
+
   // ((X << A) | Y) >> A -> X  if effective width of Y is not larger than A.
   // We can return X as we do in the above case since OR alters no bits in X.
   // SimplifyDemandedBits in InstCombine can do more general optimization for
@@ -1522,6 +1545,22 @@ static Value *simplifyAShrInst(Value *Op0, Value *Op1, bool IsExact,
   Value *X;
   if (Q.IIQ.UseInstrInfo && match(Op0, m_NSWShl(m_Value(X), m_Specific(Op1))))
     return X;
+
+  const APInt *MulC;
+  const APInt *ShAmt;
+  if (Q.IIQ.UseInstrInfo && match(Op0, m_NUWMul(m_Value(X), m_APInt(MulC))) &&
+      match(Op1, m_APInt(ShAmt)) &&
+      cast<OverflowingBinaryOperator>(Op0)->hasNoSignedWrap()) {
+    unsigned ShAmtC = ShAmt->getZExtValue();
+    unsigned BitWidth = ShAmt->getBitWidth();
+    if (BitWidth > 2 && (*MulC - 1).isPowerOf2() &&
+        MulC->logBase2() == ShAmtC &&
+        ShAmtC < BitWidth - 1) /* Minus 1 for the sign bit */ {
+      KnownBits KnownX = computeKnownBits(X, /* Depth */ 0, Q);
+      if (KnownX.countMaxActiveBits() <= ShAmtC)
+        return X;
+    }
+  }
 
   // Arithmetic shifting an all-sign-bit value is a no-op.
   unsigned NumSignBits = ComputeNumSignBits(Op0, Q.DL, 0, Q.AC, Q.CxtI, Q.DT);
