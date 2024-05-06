@@ -36,7 +36,7 @@ public:
                         cpp::optional<Timeout> timeout = cpp::nullopt,
                         bool is_shared = false) {
     // use bitset variants to enforce abs_time
-    uint32_t op = is_shared ? FUTEX_WAIT : FUTEX_WAIT_PRIVATE;
+    uint32_t op = is_shared ? FUTEX_WAIT_BITSET : FUTEX_WAIT_BITSET_PRIVATE;
     if (timeout && timeout->is_realtime) {
       op |= FUTEX_CLOCK_REALTIME;
     }
