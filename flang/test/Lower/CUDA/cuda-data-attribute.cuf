@@ -85,6 +85,13 @@ end
 ! CHECK: fir.cuda_free %[[DECL_U]]#1 : !fir.ref<i32> {cuda_attr = #fir.cuda<unified>}
 ! CHECK: fir.cuda_free %[[DECL_A]]#1 : !fir.ref<!fir.array<10xf32>> {cuda_attr = #fir.cuda<device>}
 
+subroutine dummy(x)
+  real, target, device :: x
+end subroutine
+
+! CHECK: func.func @_QMcuda_varPdummy
+! CHECK-NOT: fir.cuda_free
+
 end module
 
 
