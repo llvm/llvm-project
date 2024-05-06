@@ -582,17 +582,49 @@ static void emitDWOBuilder(const std::string &DWOName,
     Rewriter.writeDWOFiles(CU, OverriddenSections, DWOName, LocWriter);
 }
 
-void DWARFRewriter::addStringHelper(DIEBuilder &DIEBldr, DIE &Die,
-                                    const DWARFUnit &Unit,
-                                    DIEValue &DIEAttrInfo, StringRef Str) {
-  uint32_t NewOffset = StrWriter->addString(Str);
+/// Adds a \p Str to .debug_str section.
+/// Uses \p AttrInfoVal to either update entry in a DIE for legacy DWARF using
+/// \p DebugInfoPatcher, or for DWARF5 update an index in .debug_str_offsets
+/// for this contribution of \p Unit.
+static void addStringHelper(DebugStrOffsetsWriter &StrOffstsWriter,
+                            DebugStrWriter &StrWriter, DIEBuilder &DIEBldr,
+                            DIE &Die, const DWARFUnit &Unit,
+                            DIEValue &DIEAttrInfo, StringRef Str) {
+  uint32_t NewOffset = StrWriter.addString(Str);
   if (Unit.getVersion() >= 5) {
-    StrOffstsWriter->updateAddressMap(DIEAttrInfo.getDIEInteger().getValue(),
-                                      NewOffset);
+    StrOffstsWriter.updateAddressMap(DIEAttrInfo.getDIEInteger().getValue(),
+                                     NewOffset);
     return;
   }
   DIEBldr.replaceValue(&Die, DIEAttrInfo.getAttribute(), DIEAttrInfo.getForm(),
                        DIEInteger(NewOffset));
+}
+
+static std::string
+updateDWONameCompDir(DebugStrOffsetsWriter &StrOffstsWriter,
+                     DebugStrWriter &StrWriter,
+                     std::unordered_map<std::string, uint32_t> &NameToIndexMap,
+                     DWARFUnit &Unit, DIEBuilder &DIEBldr, DIE &UnitDIE) {
+  DIEValue DWONameAttrInfo = UnitDIE.findAttribute(dwarf::DW_AT_dwo_name);
+  if (!DWONameAttrInfo)
+    DWONameAttrInfo = UnitDIE.findAttribute(dwarf::DW_AT_GNU_dwo_name);
+  assert(DWONameAttrInfo && "DW_AT_dwo_name is not in Skeleton CU.");
+  std::string ObjectName;
+
+  ObjectName = getDWOName(Unit, NameToIndexMap);
+  addStringHelper(StrOffstsWriter, StrWriter, DIEBldr, UnitDIE, Unit,
+                  DWONameAttrInfo, ObjectName.c_str());
+
+  DIEValue CompDirAttrInfo = UnitDIE.findAttribute(dwarf::DW_AT_comp_dir);
+  assert(CompDirAttrInfo && "DW_AT_comp_dir is not in Skeleton CU.");
+
+  if (!opts::DwarfOutputPath.empty()) {
+    if (!sys::fs::exists(opts::DwarfOutputPath))
+      sys::fs::create_directory(opts::DwarfOutputPath);
+    addStringHelper(StrOffstsWriter, StrWriter, DIEBldr, UnitDIE, Unit,
+                    CompDirAttrInfo, opts::DwarfOutputPath.c_str());
+  }
+  return ObjectName;
 }
 
 using DWARFUnitVec = std::vector<DWARFUnit *>;
@@ -692,33 +724,6 @@ void DWARFRewriter::updateDebugInfo() {
   // specified.
   std::unordered_map<std::string, uint32_t> NameToIndexMap;
 
-  auto updateDWONameCompDir = [&](DWARFUnit &Unit, DIEBuilder &DIEBldr,
-                                  DIE &UnitDIE) -> std::string {
-    DIEValue DWONameAttrInfo = UnitDIE.findAttribute(dwarf::DW_AT_dwo_name);
-    if (!DWONameAttrInfo)
-      DWONameAttrInfo = UnitDIE.findAttribute(dwarf::DW_AT_GNU_dwo_name);
-    assert(DWONameAttrInfo && "DW_AT_dwo_name is not in Skeleton CU.");
-    std::string ObjectName;
-
-    {
-      std::lock_guard<std::mutex> Lock(AccessMutex);
-      ObjectName = getDWOName(Unit, NameToIndexMap);
-    }
-    addStringHelper(DIEBldr, UnitDIE, Unit, DWONameAttrInfo,
-                    ObjectName.c_str());
-
-    DIEValue CompDirAttrInfo = UnitDIE.findAttribute(dwarf::DW_AT_comp_dir);
-    assert(CompDirAttrInfo && "DW_AT_comp_dir is not in Skeleton CU.");
-
-    if (!opts::DwarfOutputPath.empty()) {
-      if (!sys::fs::exists(opts::DwarfOutputPath))
-        sys::fs::create_directory(opts::DwarfOutputPath);
-      addStringHelper(DIEBldr, UnitDIE, Unit, CompDirAttrInfo,
-                      opts::DwarfOutputPath.c_str());
-    }
-    return ObjectName;
-  };
-
   DWARF5AcceleratorTable DebugNamesTable(opts::CreateDebugNames, BC,
                                          *StrWriter);
   DWPState State;
@@ -741,8 +746,13 @@ void DWARFRewriter::updateDebugInfo() {
       DIEBuilder DWODIEBuilder(BC, &(*SplitCU)->getContext(), DebugNamesTable,
                                Unit);
       DWODIEBuilder.buildDWOUnit(**SplitCU);
-      std::string DWOName = updateDWONameCompDir(
-          *Unit, *DIEBlder, *DIEBlder->getUnitDIEbyUnit(*Unit));
+      std::string DWOName = "";
+      {
+        std::lock_guard<std::mutex> Lock(AccessMutex);
+        DWOName = updateDWONameCompDir(*StrOffstsWriter, *StrWriter,
+                                       NameToIndexMap, *Unit, *DIEBlder,
+                                       *DIEBlder->getUnitDIEbyUnit(*Unit));
+      }
 
       DebugLoclistWriter DebugLocDWoWriter(*Unit, Unit->getVersion(), true);
       DebugRangesSectionWriter *TempRangesSectionWriter = RangesSectionWriter;
