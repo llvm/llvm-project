@@ -7,7 +7,7 @@
 ; RUN: llc < %s -mtriple=x86_64-- -mcpu=x86-64-v3       | FileCheck %s --check-prefixes=CHECK,SLOW-DIVQ
 ; RUN: llc < %s -mtriple=x86_64-- -mcpu=x86-64-v4       | FileCheck %s --check-prefixes=CHECK,SLOW-DIVQ
 ; Intel
-; RUN: llc < %s -mtriple=x86_64-- -mcpu=nehalem         | FileCheck %s --check-prefixes=CHECK,FAST-DIVQ
+; RUN: llc < %s -mtriple=x86_64-- -mcpu=nehalem         | FileCheck %s --check-prefixes=CHECK,SLOW-DIVQ
 ; RUN: llc < %s -mtriple=x86_64-- -mcpu=sandybridge     | FileCheck %s --check-prefixes=CHECK,SLOW-DIVQ
 ; RUN: llc < %s -mtriple=x86_64-- -mcpu=haswell         | FileCheck %s --check-prefixes=CHECK,SLOW-DIVQ
 ; RUN: llc < %s -mtriple=x86_64-- -mcpu=skylake         | FileCheck %s --check-prefixes=CHECK,SLOW-DIVQ
