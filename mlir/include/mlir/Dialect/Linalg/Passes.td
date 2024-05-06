@@ -183,7 +183,7 @@ def LinalgBlockPackMatmul : Pass<"linalg-block-pack-matmul"> {
            /*default=*/"true",
            "Allow packing padding">,
     ListOption<"mnkPaddedSizesNextMultipleOf", "mnk-padded-multiples", "int64_t",
-               "Next multiple of the packing sizes">,
+               "Next multiples of the packing sizes">,
     ListOption<"mnkOrder", "mnk-order", "int64_t",
                "Permutation of matmul (M, N, K) dimensions order">,
     Option<"lhsTransposeOuterBlocks", "lhs-transpose-outer-blocks", "bool",

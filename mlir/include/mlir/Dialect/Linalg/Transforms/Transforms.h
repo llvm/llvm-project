@@ -1171,6 +1171,7 @@ struct PackMatmulOptions {
   /// block factors.
   bool allowPadding = true;
 
+  /// Next multiples of the packing sizes.
   SmallVector<int64_t, 3> mnkPaddedSizesNextMultipleOf;
 
   /// Permutation of matmul (M, N, K) dimensions order.
@@ -1213,8 +1214,8 @@ using ControlPackMatmulFn =
 /// get transposed to [NB][KB] layout. The minor blocks remain unchanged.
 /// The final result is unpacked back to the original layout.
 FailureOr<PackResult>
-blockPackMatmulOp(RewriterBase &rewriter, linalg::LinalgOp matmulOp,
-                  const ControlPackMatmulFn &controlPackMatmul);
+blockPackMatmul(RewriterBase &rewriter, linalg::LinalgOp matmulOp,
+                const ControlPackMatmulFn &controlPackMatmul);
 
 /// Rewrite tensor.from_elements to linalg.generic.
 FailureOr<Operation *>
