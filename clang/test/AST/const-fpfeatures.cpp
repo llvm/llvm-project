@@ -164,3 +164,23 @@ void func_02() {
 // CHECK-LABEL: define {{.*}} void @_Z4foo2IfTnT_Lf3dcccccdEEvv()
 // CHECK:         store float 0x3FB99999A0000000, ptr
 
+
+#pragma STDC FENV_ROUND FE_DOWNWARD
+template <int C>
+float tfunc_01() {
+  return 0.1F;  // Must be 0x3FB9999980000000 in all instantiations.
+}
+template float tfunc_01<0>();
+// CHECK-LABEL: define {{.*}} float @_Z8tfunc_01ILi0EEfv()
+// CHECK:         ret float 0x3FB9999980000000
+
+#pragma STDC FENV_ROUND FE_UPWARD
+template float tfunc_01<1>();
+// CHECK-LABEL: define {{.*}} float @_Z8tfunc_01ILi1EEfv()
+// CHECK:         ret float 0x3FB9999980000000
+
+template<> float tfunc_01<2>() {
+  return 0.1F;
+}
+// CHECK-LABEL: define {{.*}} float @_Z8tfunc_01ILi2EEfv()
+// CHECK:         ret float 0x3FB99999A0000000
