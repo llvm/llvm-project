@@ -1,9 +1,7 @@
-// RUN: %clang_cl_asan -Od -Zi %s -Fe%t
-// RUN: not %run %t 2>&1 | FileCheck %s
-// RUN: %clang_cl_asan -O2 -Zi %s -Fe%t
-// RUN: not %run %t 2>&1 | FileCheck %s
-
-// RUN: %clangxx_asan -O0 %s -o %t && not %run %t 2>&1 | FileCheck %s
+// RUN: %clangxx_asan -O0 %s -o %t && not %run %t 2>&1 | FileCheck %s --check-prefix=CHECK-%os --check-prefix=CHECK
+// RUN: %clangxx_asan -O1 %s -o %t && not %run %t 2>&1 | FileCheck %s --check-prefix=CHECK-%os --check-prefix=CHECK
+// RUN: %clangxx_asan -O2 %s -o %t && not %run %t 2>&1 | FileCheck %s --check-prefix=CHECK-%os --check-prefix=CHECK
+// RUN: %clangxx_asan -O3 %s -o %t && not %run %t 2>&1 | FileCheck %s --check-prefix=CHECK-%os --check-prefix=CHECK
 
 #include <stdio.h>
 #include <wchar.h>
