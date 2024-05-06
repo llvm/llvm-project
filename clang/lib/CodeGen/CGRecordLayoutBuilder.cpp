@@ -948,8 +948,7 @@ void CGRecordLowering::calculateZeroInit() {
 }
 
 // Verify accumulateBitfields computed the correct storage representations.
-void CGRecordLowering::checkBitfieldClipping(
-    bool IsNonVirtualBaseType LLVM_ATTRIBUTE_UNUSED) const {
+void CGRecordLowering::checkBitfieldClipping(bool IsNonVirtualBaseType) const {
 #ifndef NDEBUG
   auto ScissorOffset = calculateTailClippingOffset(IsNonVirtualBaseType);
   auto Tail = CharUnits::Zero();
