@@ -742,7 +742,7 @@ define i32 @mul_splat_fold_wrong_lshr_const(i32 %x) {
 define i32 @mul_splat_fold_no_nuw(i32 %x) {
 ; CHECK-LABEL: @mul_splat_fold_no_nuw(
 ; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[X:%.*]], 16
-; CHECK-NEXT:    [[T:%.*]] = add nsw i32 [[TMP1]], [[X]]
+; CHECK-NEXT:    [[T:%.*]] = add nsw i32 [[X]], [[TMP1]]
 ; CHECK-NEXT:    ret i32 [[T]]
 ;
   %m = mul nsw i32 %x, 65537
@@ -1406,7 +1406,7 @@ define i2 @bool_add_lshr(i1 %a, i1 %b) {
 define i4 @not_bool_add_lshr(i2 %a, i2 %b) {
 ; CHECK-LABEL: @not_bool_add_lshr(
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor i2 [[A:%.*]], -1
-; CHECK-NEXT:    [[ADD_NARROWED_OVERFLOW:%.*]] = icmp ult i2 [[TMP1]], [[B:%.*]]
+; CHECK-NEXT:    [[ADD_NARROWED_OVERFLOW:%.*]] = icmp ugt i2 [[B:%.*]], [[TMP1]]
 ; CHECK-NEXT:    [[LSHR:%.*]] = zext i1 [[ADD_NARROWED_OVERFLOW]] to i4
 ; CHECK-NEXT:    ret i4 [[LSHR]]
 ;
