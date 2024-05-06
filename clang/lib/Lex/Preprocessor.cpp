@@ -55,6 +55,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
@@ -867,6 +868,8 @@ bool Preprocessor::HandleIdentifier(Token &Identifier) {
       !DisableMacroExpansion &&
       (getLangOpts().Modules || getLangOpts().DebuggerSupport) &&
       CurLexerCallback != CLK_CachingLexer) {
+    ModuleDeclExpectsIdentifier = true;
+    ModuleDeclLexingPartitionName = false;
     CurLexerCallback = CLK_LexAfterModuleDecl;
   }
   return true;
@@ -949,6 +952,8 @@ void Preprocessor::Lex(Token &Result) {
         } else if (Result.getIdentifierInfo() == getIdentifierInfo("module")) {
           TrackGMFState.handleModule(StdCXXImportSeqState.afterTopLevelSeq());
           ModuleDeclState.handleModule();
+          ModuleDeclExpectsIdentifier = true;
+          ModuleDeclLexingPartitionName = false;
           CurLexerCallback = CLK_LexAfterModuleDecl;
           break;
         }
@@ -1363,12 +1368,99 @@ bool Preprocessor::LexAfterModuleDecl(Token &Result) {
   recomputeCurLexerKind();
   LexUnexpandedToken(Result);
 
-  // pp-module:
-  //    export[opt] module pp-tokens[opt] ; new-line
-  // Processe tokens just as in normal text, until we see a ';', this means the
-  // end of the module directive.
-  if (!Result.is(tok::semi))
+  auto EnterTokens = [this](ArrayRef<Token> Toks, bool DisableMacroExpansion) {
+    auto ToksCopy = std::make_unique<Token[]>(Toks.size());
+    std::copy(Toks.begin(), Toks.end(), ToksCopy.get());
+    EnterTokenStream(std::move(ToksCopy), Toks.size(), DisableMacroExpansion,
+                     /*IsReinject=*/false);
+  };
+
+  // If we not expect an identifier but got an identifier, it's not a part of
+  // module name.
+  if (!ModuleDeclExpectsIdentifier && Result.is(tok::identifier)) {
+    EnterTokens(Result, /*DisableMacroExpansion=*/false);
+    return false;
+  }
+
+  // The token sequence
+  //
+  // export[opt] module identifier (. identifier)*
+  //
+  // indicates a module import directive. We already saw the 'module'
+  // contextual keyword, so now we're looking for the identifiers.
+  if (ModuleDeclExpectsIdentifier && Result.is(tok::identifier)) {
+    auto *MI = getMacroInfo(Result.getIdentifierInfo());
+    if (MI && MI->isObjectLike()) {
+      auto BuildFixItHint =
+          [&](std::string &Replacement) -> std::optional<FixItHint> {
+        EnterTokens(Result, /*DisableMacroExpansion=*/false);
+        if (!CurTokenLexer)
+          return std::nullopt;
+        Token Tok;
+        bool HasUnknownToken = false;
+        llvm::raw_string_ostream OS(Replacement);
+        do {
+          Lex(Tok);
+          if (const char *Punc = tok::getPunctuatorSpelling(Tok.getKind()))
+            OS << Punc;
+          else if (Tok.isLiteral() && Tok.getLiteralData())
+            OS << StringRef(Tok.getLiteralData(), Tok.getLength());
+          else if (auto *II = Tok.getIdentifierInfo())
+            OS << II->getName();
+          else
+            HasUnknownToken = true;
+        } while (CurTokenLexer && !CurTokenLexer->isAtEnd());
+        if (HasUnknownToken)
+          return std::nullopt;
+        return FixItHint::CreateReplacement(Result.getLocation(), Replacement);
+      };
+      SourceLocation EndLoc = Result.getLocation();
+      std::string Replacement;
+      auto FixIt = BuildFixItHint(Replacement);
+      auto DB = Diag(Result, diag::err_module_decl_cannot_be_macros)
+                << SourceRange(Result.getLocation(), EndLoc)
+                << ModuleDeclLexingPartitionName << Result.getIdentifierInfo()
+                << FixIt.has_value();
+      if (FixIt)
+        DB << Replacement << *FixIt;
+    }
+    ModuleDeclExpectsIdentifier = false;
     CurLexerCallback = CLK_LexAfterModuleDecl;
+    return true;
+  }
+
+  // If we're expecting a '.', a ':' or a ';', and we got a '.', then wait until
+  // we see the next identifier.
+  if (!ModuleDeclExpectsIdentifier && Result.isOneOf(tok::period, tok::colon)) {
+    ModuleDeclExpectsIdentifier = true;
+    ModuleDeclLexingPartitionName = Result.is(tok::colon);
+    CurLexerCallback = CLK_LexAfterModuleDecl;
+    return true;
+  }
+
+  // [cpp.module]/p2: where the pp-tokens (if any) shall not begin with a (
+  // preprocessing token [...]
+  if (!ModuleDeclExpectsIdentifier && Result.is(tok::l_paren)) {
+    ModuleDeclExpectsIdentifier = false;
+    Diag(Result, diag::err_unxepected_paren_in_module_decl)
+        << ModuleDeclLexingPartitionName;
+    Token Tok;
+    // We already have a '('.
+    unsigned NumParens = 1;
+    while (true) {
+      LexUnexpandedToken(Tok);
+      if (Tok.isOneOf(tok::eod, tok::eof, tok::semi, tok::period, tok::colon)) {
+        EnterTokens(Tok, /*DisableMacroExpansion=*/true);
+        break;
+      }
+      if (Tok.is(tok::l_paren))
+        NumParens++;
+      else if (Tok.is(tok::r_paren) && --NumParens == 0)
+        break;
+    }
+    CurLexerCallback = CLK_LexAfterModuleDecl;
+    return false;
+  }
 
   return true;
 }
@@ -1626,3 +1718,10 @@ const char *Preprocessor::getCheckPoint(FileID FID, const char *Start) const {
 
   return nullptr;
 }
+
+#if 0
+def err_module_decl_cannot_be_macros : Error<
+  "the name of a module%select{| partition}0 declaration cannot contains "
+  "%select{an object-like|a function-like}1 macro %2, and the macro will not expand"
+  "%select{|; did you mean '%4'?}3">;
+#endif

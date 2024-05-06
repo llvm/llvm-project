@@ -3812,7 +3812,7 @@ private:
   bool ParseModuleName(
       SourceLocation UseLoc,
       SmallVectorImpl<std::pair<IdentifierInfo *, SourceLocation>> &Path,
-      bool IsImport, bool IsPartition);
+      bool IsImport);
 
   //===--------------------------------------------------------------------===//
   // C++11/G++: Type Traits [Type-Traits.html in the GCC manual]

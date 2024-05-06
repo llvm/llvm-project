@@ -609,6 +609,13 @@ private:
   /// it expects a '.' or ';'.
   bool ModuleImportExpectsIdentifier = false;
 
+  /// Whether the module declaration expects an identifier next. Otherwise,
+  /// it expects a '.' or ';'.
+  bool ModuleDeclExpectsIdentifier = false;
+
+  /// Whether lexing the name of module partition declaration.
+  bool ModuleDeclLexingPartitionName = false;
+
   /// The identifier and source location of the currently-active
   /// \#pragma clang arc_cf_code_audited begin.
   std::pair<IdentifierInfo *, SourceLocation> PragmaARCCFCodeAuditedInfo;
