@@ -55,7 +55,6 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
@@ -1718,10 +1717,3 @@ const char *Preprocessor::getCheckPoint(FileID FID, const char *Start) const {
 
   return nullptr;
 }
-
-#if 0
-def err_module_decl_cannot_be_macros : Error<
-  "the name of a module%select{| partition}0 declaration cannot contains "
-  "%select{an object-like|a function-like}1 macro %2, and the macro will not expand"
-  "%select{|; did you mean '%4'?}3">;
-#endif
