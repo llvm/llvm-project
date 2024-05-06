@@ -22,7 +22,7 @@
 #define B b
 #define C c
 #define FUNC_LIKE(X) function_like_##X
-#define ATTR [[]]
+#define ATTRS [[]]
 #define SEMICOLON ;
 
 #endif
