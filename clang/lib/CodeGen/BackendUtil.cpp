@@ -987,22 +987,6 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
                                            /*DropTypeTests=*/true));
           });
 
-    if (CodeGenOpts.InstrumentFunctions ||
-        CodeGenOpts.InstrumentFunctionEntryBare ||
-        CodeGenOpts.InstrumentFunctionsAfterInlining ||
-        CodeGenOpts.InstrumentForProfiling) {
-      PB.registerPipelineStartEPCallback(
-          [](ModulePassManager &MPM, OptimizationLevel Level) {
-            MPM.addPass(createModuleToFunctionPassAdaptor(
-                EntryExitInstrumenterPass(/*PostInlining=*/false)));
-          });
-      PB.registerOptimizerLastEPCallback(
-          [](ModulePassManager &MPM, OptimizationLevel Level) {
-            MPM.addPass(createModuleToFunctionPassAdaptor(
-                EntryExitInstrumenterPass(/*PostInlining=*/true)));
-          });
-    }
-
     // Register callbacks to schedule sanitizer passes at the appropriate part
     // of the pipeline.
     if (LangOpts.Sanitize.has(SanitizerKind::LocalBounds))
@@ -1016,6 +1000,11 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
     if (!IsThinLTOPostLink) {
       addSanitizers(TargetTriple, CodeGenOpts, LangOpts, PB);
       addKCFIPass(TargetTriple, LangOpts, PB);
+      PB.registerPipelineStartEPCallback(
+          [](ModulePassManager &MPM, OptimizationLevel Level) {
+            MPM.addPass(createModuleToFunctionPassAdaptor(
+                EntryExitInstrumenterPass(/*PostInlining=*/false)));
+          });
     }
 
     if (std::optional<GCOVOptions> Options =
