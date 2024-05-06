@@ -7968,32 +7968,27 @@ static Attr *getCCTypeAttr(ASTContext &Ctx, ParsedAttr &Attr) {
   llvm_unreachable("unexpected attribute kind!");
 }
 
-ExprResult Sema::ActOnEffectExpression(Expr *CondExpr, StringRef AttributeName,
-                                       FunctionEffectMode &Mode) {
+std::optional<FunctionEffectMode>
+Sema::ActOnEffectExpression(Expr *CondExpr, StringRef AttributeName) {
   auto BadExpr = [&]() {
     Diag(CondExpr->getExprLoc(), diag::err_attribute_argument_type)
         << ("'" + AttributeName.str() + "'") << AANT_ArgumentIntegerConstant
         << CondExpr->getSourceRange();
+    return std::nullopt;
   };
 
   if (CondExpr->isTypeDependent() || CondExpr->isValueDependent()) {
-    if (CondExpr->containsUnexpandedParameterPack()) {
-      BadExpr();
-      return ExprResult(/*invalid=*/true);
-    }
-    Mode = FunctionEffectMode::Dependent;
-    return CondExpr;
+    if (CondExpr->containsUnexpandedParameterPack())
+      return BadExpr();
+    return FunctionEffectMode::Dependent;
   }
 
   std::optional<llvm::APSInt> ConditionValue =
       CondExpr->getIntegerConstantExpr(Context);
-  if (!ConditionValue) {
-    BadExpr();
-    return ExprResult(/*invalid=*/true);
-  }
-  Mode = ConditionValue->getExtValue() ? FunctionEffectMode::True
+  if (!ConditionValue)
+    return BadExpr();
+  return ConditionValue->getExtValue() ? FunctionEffectMode::True
                                        : FunctionEffectMode::False;
-  return ExprResult(static_cast<Expr *>(nullptr));
 }
 
 static bool
@@ -8032,13 +8027,15 @@ handleNonBlockingNonAllocatingTypeAttr(TypeProcessingState &TPState,
     // Parse the condition, if any
     if (PAttr.getNumArgs() == 1) {
       CondExpr = PAttr.getArgAsExpr(0);
-      ExprResult E = S.ActOnEffectExpression(
-          CondExpr, PAttr.getAttrName()->getName(), NewMode);
-      if (E.isInvalid()) {
+      std::optional<FunctionEffectMode> MaybeMode =
+          S.ActOnEffectExpression(CondExpr, PAttr.getAttrName()->getName());
+      if (!MaybeMode) {
         PAttr.setInvalid();
         return true;
       }
-      CondExpr = NewMode == FunctionEffectMode::Dependent ? E.get() : nullptr;
+      NewMode = *MaybeMode;
+      if (NewMode != FunctionEffectMode::Dependent)
+        CondExpr = nullptr;
     } else {
       NewMode = FunctionEffectMode::True;
     }
