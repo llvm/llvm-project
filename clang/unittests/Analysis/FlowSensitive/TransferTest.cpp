@@ -3435,7 +3435,9 @@ TEST(TransferTest, ResultObjectLocationDontVisitUnevaluatedContexts) {
         typeof(S2{}) Dummy;
     }
     void typeidTarget() {
+#if __has_feature(cxx_rtti)
         typeid(S2{});
+#endif
     }
     void sizeofTarget() {
         sizeof(S2{});
