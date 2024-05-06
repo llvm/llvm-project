@@ -4509,7 +4509,8 @@ bool SIInstrInfo::canShrink(const MachineInstr &MI,
          // TODO: Can we avoid checking bound_ctrl/fi here?
          // They are only used by permlane*_swap special case.
          !hasModifiersSet(MI, AMDGPU::OpName::bound_ctrl) &&
-         !hasModifiersSet(MI, AMDGPU::OpName::fi);
+         !hasModifiersSet(MI, AMDGPU::OpName::fi) &&
+         !hasModifiersSet(MI, AMDGPU::OpName::byte_sel);
 }
 
 // Set VCC operand with all flags from \p Orig, except for setting it as
