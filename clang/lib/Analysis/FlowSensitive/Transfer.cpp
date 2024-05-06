@@ -68,6 +68,14 @@ static BoolValue &evaluateBooleanEquality(const Expr &LHS, const Expr &RHS,
     if (auto *RHSBool = dyn_cast_or_null<BoolValue>(RHSValue))
       return Env.makeIff(*LHSBool, *RHSBool);
 
+  if (auto *LHSPtr = dyn_cast_or_null<PointerValue>(LHSValue))
+    if (auto *RHSPtr = dyn_cast_or_null<PointerValue>(RHSValue))
+      // If the storage locations are the same, the pointers definitely compare
+      // the same. If the storage locations are different, they may still alias,
+      // so we fall through to the case below that returns an atom.
+      if (&LHSPtr->getPointeeLoc() == &RHSPtr->getPointeeLoc())
+        return Env.getBoolLiteralValue(true);
+
   return Env.makeAtomicBoolValue();
 }
 
