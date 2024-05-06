@@ -2144,8 +2144,6 @@ bool isKnownToBeAPowerOfTwo(const Value *V, bool OrZero, unsigned Depth,
       return OrZero || isKnownNonZero(I->getOperand(0), Q, Depth);
     return false;
   case Instruction::Add: {
-    unsigned BitWidth = V->getType()->getScalarSizeInBits();
-
     // Adding a power-of-two or zero to the same power-of-two or zero yields
     // either the original power-of-two, a larger power-of-two or zero.
     const OverflowingBinaryOperator *VOBO = cast<OverflowingBinaryOperator>(V);
@@ -2160,6 +2158,7 @@ bool isKnownToBeAPowerOfTwo(const Value *V, bool OrZero, unsigned Depth,
           isKnownToBeAPowerOfTwo(I->getOperand(0), OrZero, Depth, Q))
         return true;
 
+      unsigned BitWidth = V->getType()->getScalarSizeInBits();
       KnownBits LHSBits(BitWidth);
       computeKnownBits(I->getOperand(0), LHSBits, Depth, Q);
 
@@ -2175,12 +2174,10 @@ bool isKnownToBeAPowerOfTwo(const Value *V, bool OrZero, unsigned Depth,
           return true;
     }
 
-    // LShr(UINT_MAX, Y) + 1 is a power of two (if nuw) or zero.
-    if (OrZero || Q.IIQ.hasNoUnsignedWrap(VOBO)) {
-      APInt UIntMax = APInt::getMaxValue(BitWidth);
-      if (match(I, m_Add(m_LShr(m_SpecificInt(UIntMax), m_Value()), m_One())))
+    // LShr(UINT_MAX, Y) + 1 is a power of two (if add is nuw) or zero.
+    if (OrZero || Q.IIQ.hasNoUnsignedWrap(VOBO))
+      if (match(I, m_Add(m_LShr(m_AllOnes(), m_Value()), m_One())))
         return true;
-    }
     return false;
   }
   case Instruction::Select:
