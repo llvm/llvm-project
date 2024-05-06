@@ -29,6 +29,9 @@ __sanitizer::Vector<ContextRoot *> AllContextRoots;
 // utility to taint a pointer by setting the LSB. There is an assumption
 // throughout that the addresses of contexts are even (really, they should be
 // align(8), but "even"-ness is the minimum assumption)
+// "scratch contexts" are buffers that we return in certain cases - they are
+// large enough to allow for memory safe counter access, but they don't link
+// subcontexts below them (the runtime recognizes them and enforces that)
 ContextNode *markAsScratch(const ContextNode *Ctx) {
   return reinterpret_cast<ContextNode *>(reinterpret_cast<uint64_t>(Ctx) | 1);
 }
@@ -160,6 +163,7 @@ ContextNode *getCallsiteSlow(uint64_t Guid, ContextNode **InsertionPoint,
     // Arenas.
     __llvm_ctx_profile_current_context_root->CurrentMem = Mem =
         Mem->allocateNewArena(getArenaAllocSize(AllocSize), Mem);
+    AllocPlace = Mem->tryBumpAllocate(AllocSize);
   }
   auto *Ret = ContextNode::alloc(AllocPlace, Guid, NrCounters, NrCallsites,
                                  *InsertionPoint);
@@ -198,6 +202,8 @@ ContextNode *__llvm_ctx_profile_get_context(void *Callee, GUID Guid,
     return TheScratchContext;
 
   auto *Callsite = *CallsiteContext;
+  // in the case of indirect calls, we will have all seen targets forming a
+  // linked list here. Find the one corresponding to this callee.
   while (Callsite && Callsite->guid() != Guid) {
     Callsite = Callsite->next();
   }
@@ -243,6 +249,7 @@ ContextNode *__llvm_ctx_profile_start_context(
     Root->FirstNode->onEntry();
     return Root->FirstNode;
   }
+  // If this thread couldn't take the lock, return scratch context.
   __llvm_ctx_profile_current_context_root = nullptr;
   return TheScratchContext;
 }

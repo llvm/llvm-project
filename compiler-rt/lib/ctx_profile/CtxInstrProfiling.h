@@ -67,14 +67,28 @@ private:
 /// function, the size of the counter and callsite vectors. It is also an
 /// (intrusive) linked list for the purposes of the indirect call case above.
 ///
-/// Allocation is expected to happen on an Arena.
+/// Allocation is expected to happen on an Arena. The allocation lays out inline
+/// the counter and subcontexts vectors. The class offers APIs to correctly
+/// reference the latter.
+///
+/// The layout is as follows:
+///
+/// [[statically-declared fields][counters vector][subcontexts vector]]
+///
+/// See also documentation on the counters and subContexts members below.
 ///
 /// The structure of the ContextNode is known to LLVM, because LLVM needs to:
-///   (1) increment countes, and
+///   (1) increment counts, and
 ///   (2) form a GEP for the position in the subcontext list of a callsite
 /// This means changes to LLVM contextual profile lowering and changes here
 /// must be coupled.
 /// Note: the header content isn't interesting to LLVM (other than its size)
+///
+/// Part of contextual collection is the notion of "scratch contexts". These are
+/// buffers that are "large enough" to allow for memory-safe acceses during
+/// counter increments - meaning the counter increment code in LLVM doesn't need
+/// to be concerned with memory safety. Their subcontexts never get populated,
+/// though. The runtime code here produces and recognizes them.
 class ContextNode final {
   const GUID Guid;
   ContextNode *const Next;
@@ -95,6 +109,7 @@ public:
            sizeof(ContextNode *) * NrCallsites;
   }
 
+  // The counters vector starts right after the static header.
   uint64_t *counters() {
     ContextNode *addr_after = &(this[1]);
     return reinterpret_cast<uint64_t *>(reinterpret_cast<char *>(addr_after));
@@ -107,6 +122,7 @@ public:
     return const_cast<ContextNode *>(this)->counters();
   }
 
+  // The subcontexts vector starts rigth after the end of the counters vector.
   ContextNode **subContexts() {
     return reinterpret_cast<ContextNode **>(&(counters()[NrCounters]));
   }
@@ -131,12 +147,30 @@ public:
 };
 
 /// ContextRoots are allocated by LLVM for entrypoints. LLVM is only concerned
-/// with allocating and zero-initializing the global value for it.
+/// with allocating and zero-initializing the global value (as in, GlobalValue)
+/// for it.
 struct ContextRoot {
   ContextNode *FirstNode = nullptr;
   Arena *FirstMemBlock = nullptr;
   Arena *CurrentMem = nullptr;
   // This is init-ed by the static zero initializer in LLVM.
+  // Taken is used to ensure only one thread traverses the contextual graph -
+  // either to read it or to write it. On server side, the same entrypoint will
+  // be entered by numerous threads, but over time, the profile aggregated by
+  // collecting sequentially on one thread at a time is expected to converge to
+  // the aggregate profile that may have been observable on all the threads.
+  // Note that this is node-by-node aggregation, i.e. summing counters of nodes
+  // at the same position in the graph, not flattening.
+  // Threads that cannot lock Taken (fail TryLock) are given a "scratch context"
+  // - a buffer they can clobber, safely from a memory access perspective.
+  // We could consider relaxing the requirement of more than one thread entering
+  // by holding a few context trees per entrypoint and then aggregating them (as
+  // explained above) at the end of the profile collection - it's a tradeoff
+  // between collection time and memory use: higher precision can be obtained
+  // with either less concurrent collections but more collection time, or with
+  // more concurrent collections (==more memory) and less collection time.
+  // Note that concurrent collection does happen for different entrypoints,
+  // regardless.
   ::__sanitizer::StaticSpinMutex Taken;
 
   // Avoid surprises due to (unlikely) StaticSpinMutex changes.
@@ -198,9 +232,9 @@ void __llvm_ctx_profile_free();
 /// Used to obtain the profile. The Writer is called for each root ContextNode,
 /// with the ContextRoot::Taken taken. The Writer is responsible for traversing
 /// the structure underneath.
-/// The Writer's first parameter is an object it knows about, which is what the
-/// caller of __llvm_ctx_profile_fetch passes as the Data parameter. The second
-/// parameter is the root of a context tree.
+/// The Writer's first parameter plays the role of closure for Writer, and is
+/// what the caller of __llvm_ctx_profile_fetch passes as the Data parameter.
+/// The second parameter is the root of a context tree.
 bool __llvm_ctx_profile_fetch(
     void *Data, bool (*Writer)(void *, const __ctx_profile::ContextNode &));
 }
