@@ -218,9 +218,7 @@ define i32 @cttz_of_lowest_set_bit_wrong_intrinsic(i32 %x) {
 
 define i32 @cttz_of_power_of_two(i32 %x) {
 ; CHECK-LABEL: @cttz_of_power_of_two(
-; CHECK-NEXT:    [[LSHR:%.*]] = lshr i32 -1, [[X:%.*]]
-; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[LSHR]], 1
-; CHECK-NEXT:    [[R:%.*]] = call range(i32 1, 33) i32 @llvm.cttz.i32(i32 [[ADD]], i1 false)
+; CHECK-NEXT:    [[R:%.*]] = sub i32 32, [[X:%.*]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %lshr = lshr i32 -1, %x
@@ -231,9 +229,7 @@ define i32 @cttz_of_power_of_two(i32 %x) {
 
 define i32 @cttz_of_power_of_two_zero_poison(i32 %x) {
 ; CHECK-LABEL: @cttz_of_power_of_two_zero_poison(
-; CHECK-NEXT:    [[LSHR:%.*]] = lshr i32 -1, [[X:%.*]]
-; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[LSHR]], 1
-; CHECK-NEXT:    [[R:%.*]] = call range(i32 1, 33) i32 @llvm.cttz.i32(i32 [[ADD]], i1 true)
+; CHECK-NEXT:    [[R:%.*]] = sub i32 32, [[X:%.*]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %lshr = lshr i32 -1, %x
