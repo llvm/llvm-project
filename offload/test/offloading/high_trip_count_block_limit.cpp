@@ -1,7 +1,7 @@
 // clang-format off
 // RUN: %libomptarget-compilexx-generic && env LIBOMPTARGET_REUSE_BLOCKS_FOR_HIGH_TRIP_COUNT=False %libomptarget-run-generic 2>&1 | %fcheck-generic
-// RUN: %libomptarget-compilexx-generic && env LIBOMPTARGET_REUSE_BLOCKS_FOR_HIGH_TRIP_COUNT=False %libomptarget-run-generic 2>&1 | %fcheck-generic --check-prefix=DEFAULT
-//
+// RUN: %libomptarget-compilexx-generic && %libomptarget-run-generic 2>&1 | %fcheck-generic --check-prefix=DEFAULT
+
 // UNSUPPORTED: aarch64-unknown-linux-gnu 
 // UNSUPPORTED: aarch64-unknown-linux-gnu-LTO 
 // UNSUPPORTED: x86_64-pc-linux-gnu 
