@@ -3663,14 +3663,14 @@ defm rwpi : BoolFOption<"rwpi",
           "Generate read-write position independent code (ARM only)">,
   NegFlag<SetFalse, [], [ClangOption, FlangOption, CC1Option]>>;
 def fplugin_EQ : Joined<["-"], "fplugin=">, Group<f_Group>,
-  Flags<[NoXarchOption]>, MetaVarName<"<dsopath>">,
+  Flags<[NoXarchOption, NoArgumentUnused]>, MetaVarName<"<dsopath>">,
   HelpText<"Load the named plugin (dynamic shared object)">;
 def fplugin_arg : Joined<["-"], "fplugin-arg-">,
-  MetaVarName<"<name>-<arg>">,
+  MetaVarName<"<name>-<arg>">, Flags<[NoArgumentUnused]>,
   HelpText<"Pass <arg> to plugin <name>">;
 def fpass_plugin_EQ : Joined<["-"], "fpass-plugin=">,
   Group<f_Group>, Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
-  MetaVarName<"<dsopath>">,
+  MetaVarName<"<dsopath>">, Flags<[NoArgumentUnused]>,
   HelpText<"Load pass plugin from a dynamic shared object file (only with new pass manager).">,
   MarshallingInfoStringVector<CodeGenOpts<"PassPlugins">>;
 defm tocdata : BoolOption<"m","tocdata",
