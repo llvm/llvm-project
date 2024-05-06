@@ -56,7 +56,7 @@ void RecordRef::determineSize() {
     if (PrevWasContinued && !IsContinuation) {
       createError(object_error::parse_failed,
                   Twine("Record ")
-                      .concat(std::to_string(RecordNum))
+                      .concat(Twine(RecordNum))
                       .concat(" is not a continuation record but the "
                               "preceding record is continued"));
       return;
@@ -67,7 +67,7 @@ void RecordRef::determineSize() {
       if (RecordType != CurrRecordType) {
         createError(object_error::parse_failed,
                     Twine("Record ")
-                        .concat(std::to_string(RecordNum))
+                        .concat(Twine(RecordNum))
                         .concat(" is a continuation record that does not "
                                 "match the type of the previous record"));
         return;
@@ -75,7 +75,7 @@ void RecordRef::determineSize() {
       if (!PrevWasContinued) {
         createError(object_error::parse_failed,
                     Twine("Record ")
-                        .concat(std::to_string(RecordNum))
+                        .concat(Twine(RecordNum))
                         .concat(" is a continuation record that is not "
                                 "preceded by a continued record"));
         return;
