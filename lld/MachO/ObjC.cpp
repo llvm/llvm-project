@@ -201,8 +201,8 @@ static StringRef getReferentString(const Reloc &r) {
 
   if (isa<ConcatInputSection>(symIsec)) {
     auto strData = symIsec->data.slice(symOffset);
-    uint32_t len = strnlen((const char *)strData.data(), strData.size());
-    return StringRef((const char *)strData.data(), len);
+    const char *pszData = reinterpret_cast<const char *>(strData.data());
+    return StringRef(pszData, strnlen(pszData, strData.size()));
   }
 
   llvm_unreachable("unknown reference section in getReferentString");
