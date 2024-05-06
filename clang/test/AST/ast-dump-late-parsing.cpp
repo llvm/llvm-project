@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -triple x86_64-pc-linux -std=c++11 -fcxx-exceptions -fdelayed-template-parsing -ast-dump %s \
+// RUN: %clang_cc1 -triple x86_64-pc-linux -std=c++11 -fcxx-exceptions -fdelayed-template-parsing -ast-dump %s \
 // RUN: | FileCheck %s
 
 #pragma STDC FENV_ROUND FE_DOWNWARD

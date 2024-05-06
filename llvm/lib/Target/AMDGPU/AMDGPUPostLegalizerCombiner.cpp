@@ -70,7 +70,8 @@ public:
   };
 
   // TODO: Make sure fmin_legacy/fmax_legacy don't canonicalize
-  bool matchFMinFMaxLegacy(MachineInstr &MI, FMinFMaxLegacyInfo &Info) const;
+  bool matchFMinFMaxLegacy(MachineInstr &MI, MachineInstr &FCmp,
+                           FMinFMaxLegacyInfo &Info) const;
   void applySelectFCmpToFMinToFMaxLegacy(MachineInstr &MI,
                                          const FMinFMaxLegacyInfo &Info) const;
 
@@ -158,17 +159,14 @@ bool AMDGPUPostLegalizerCombinerImpl::tryCombineAll(MachineInstr &MI) const {
 }
 
 bool AMDGPUPostLegalizerCombinerImpl::matchFMinFMaxLegacy(
-    MachineInstr &MI, FMinFMaxLegacyInfo &Info) const {
-  // FIXME: Type predicate on pattern
-  if (MRI.getType(MI.getOperand(0).getReg()) != LLT::scalar(32))
+    MachineInstr &MI, MachineInstr &FCmp, FMinFMaxLegacyInfo &Info) const {
+  if (!MRI.hasOneNonDBGUse(FCmp.getOperand(0).getReg()))
     return false;
 
-  Register Cond = MI.getOperand(1).getReg();
-  if (!MRI.hasOneNonDBGUse(Cond) ||
-      !mi_match(Cond, MRI,
-                m_GFCmp(m_Pred(Info.Pred), m_Reg(Info.LHS), m_Reg(Info.RHS))))
-    return false;
-
+  Info.Pred =
+      static_cast<CmpInst::Predicate>(FCmp.getOperand(1).getPredicate());
+  Info.LHS = FCmp.getOperand(2).getReg();
+  Info.RHS = FCmp.getOperand(3).getReg();
   Register True = MI.getOperand(2).getReg();
   Register False = MI.getOperand(3).getReg();
 
