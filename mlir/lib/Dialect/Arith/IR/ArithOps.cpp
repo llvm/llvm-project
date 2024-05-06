@@ -683,6 +683,8 @@ OpFoldResult arith::CeilDivSIOp::fold(FoldAdaptor adaptor) {
     return getLhs();
 
   // Don't fold if it would overflow or if it requires a division by zero.
+  // TODO: This hook won't fold operations where a = MININT, because
+  // negating MININT overflows. This can be improved.
   bool overflowOrDiv0 = false;
   auto result = constFoldBinaryOp<IntegerAttr>(
       adaptor.getOperands(), [&](APInt a, const APInt &b) {

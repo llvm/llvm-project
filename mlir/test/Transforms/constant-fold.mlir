@@ -486,6 +486,9 @@ func.func @simple_arith.ceildivsi_overflow() -> (i8, i16, i32) {
   // overflows). Hence folding should not happen and the original ceildivsi is
   // preserved.
 
+  // TODO: The folder should be able to fold the following by avoiding
+  // intermediate operations that overflow.
+
   // CHECK-DAG: %[[C_1:.*]] = arith.constant 7 : i8
   // CHECK-DAG: %[[MIN_I8:.*]] = arith.constant -128 : i8
   // CHECK-DAG: %[[C_2:.*]] = arith.constant 7 : i16
