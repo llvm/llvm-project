@@ -506,7 +506,9 @@ public:
       auto sub = dyn_cast<mlir::LLVM::SubOp>(index.getDefiningOp());
       auto unary =
           dyn_cast<mlir::cir::UnaryOp>(ptrStrideOp.getStride().getDefiningOp());
-      if (unary && unary.getKind() == mlir::cir::UnaryOpKind::Minus && sub)
+      bool rewriteSub =
+          unary && unary.getKind() == mlir::cir::UnaryOpKind::Minus && sub;
+      if (rewriteSub)
         index = index.getDefiningOp()->getOperand(1);
 
       // Handle the cast
@@ -516,7 +518,7 @@ public:
                              *layoutWidth);
 
       // Rewrite the sub in front of extensions/trunc
-      if (sub) {
+      if (rewriteSub) {
         index = rewriter.create<mlir::LLVM::SubOp>(
             index.getLoc(), index.getType(),
             rewriter.create<mlir::LLVM::ConstantOp>(
