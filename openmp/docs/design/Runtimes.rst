@@ -1163,6 +1163,12 @@ of threads possible times the number of teams (aka. blocks) the device prefers
 count to increase outer (team/block) parallelism. The thread count will never
 be reduced below the value passed for this environment variable though.
 
+LIBOMPTARGET_REUSE_BLOCKS_FOR_HIGH_TRIP_COUNT
+"""""""""""""""""""""""""""""""""""""""""""""
+
+This environment variable can be used to control how the OpenMP runtime assigns
+blocks to loops with high trip counts. By default we reuse existing blocks
+rather than spawning new blocks.
 
 
 .. _libomptarget_plugin:
