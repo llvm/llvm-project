@@ -3968,8 +3968,8 @@ InstructionCost AArch64TTIImpl::getShuffleCost(
   if (LT.second.isFixedLengthVector() &&
       LT.second.getVectorNumElements() == Mask.size() &&
       (Kind == TTI::SK_PermuteTwoSrc || Kind == TTI::SK_PermuteSingleSrc) &&
-      (isZIPMask(Mask, LT.second, Unused) ||
-       isUZPMask(Mask, LT.second, Unused) ||
+      (isZIPMask(Mask, LT.second.getVectorNumElements(), Unused) ||
+       isUZPMask(Mask, LT.second.getVectorNumElements(), Unused) ||
        // Check for non-zero lane splats
        all_of(drop_begin(Mask),
               [&Mask](int M) { return M < 0 || M == Mask[0]; })))

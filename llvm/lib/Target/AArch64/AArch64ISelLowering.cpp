@@ -11880,47 +11880,6 @@ static bool isEXTMask(ArrayRef<int> M, EVT VT, bool &ReverseEXT,
   return true;
 }
 
-/// isREVMask - Check if a vector shuffle corresponds to a REV
-/// instruction with the specified blocksize.  (The order of the elements
-/// within each block of the vector is reversed.)
-static bool isREVMask(ArrayRef<int> M, EVT VT, unsigned BlockSize) {
-  assert((BlockSize == 16 || BlockSize == 32 || BlockSize == 64 ||
-          BlockSize == 128) &&
-         "Only possible block sizes for REV are: 16, 32, 64, 128");
-
-  unsigned EltSz = VT.getScalarSizeInBits();
-  unsigned NumElts = VT.getVectorNumElements();
-  unsigned BlockElts = M[0] + 1;
-  // If the first shuffle index is UNDEF, be optimistic.
-  if (M[0] < 0)
-    BlockElts = BlockSize / EltSz;
-
-  if (BlockSize <= EltSz || BlockSize != BlockElts * EltSz)
-    return false;
-
-  for (unsigned i = 0; i < NumElts; ++i) {
-    if (M[i] < 0)
-      continue; // ignore UNDEF indices
-    if ((unsigned)M[i] != (i - i % BlockElts) + (BlockElts - 1 - i % BlockElts))
-      return false;
-  }
-
-  return true;
-}
-
-static bool isTRNMask(ArrayRef<int> M, EVT VT, unsigned &WhichResult) {
-  unsigned NumElts = VT.getVectorNumElements();
-  if (NumElts % 2 != 0)
-    return false;
-  WhichResult = (M[0] == 0 ? 0 : 1);
-  for (unsigned i = 0; i < NumElts; i += 2) {
-    if ((M[i] >= 0 && (unsigned)M[i] != i + WhichResult) ||
-        (M[i + 1] >= 0 && (unsigned)M[i + 1] != i + NumElts + WhichResult))
-      return false;
-  }
-  return true;
-}
-
 /// isZIP_v_undef_Mask - Special case of isZIPMask for canonical form of
 /// "vector_shuffle v, v", i.e., "vector_shuffle v, undef".
 /// Mask is e.g., <0, 0, 1, 1> instead of <0, 4, 1, 5>.
@@ -12585,15 +12544,16 @@ SDValue AArch64TargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
     }
   }
 
-  if (isREVMask(ShuffleMask, VT, 64))
+  unsigned NumElts = VT.getVectorNumElements();
+  unsigned EltSize = VT.getScalarSizeInBits();
+  if (isREVMask(ShuffleMask, EltSize, NumElts, 64))
     return DAG.getNode(AArch64ISD::REV64, dl, V1.getValueType(), V1, V2);
-  if (isREVMask(ShuffleMask, VT, 32))
+  if (isREVMask(ShuffleMask, EltSize, NumElts, 32))
     return DAG.getNode(AArch64ISD::REV32, dl, V1.getValueType(), V1, V2);
-  if (isREVMask(ShuffleMask, VT, 16))
+  if (isREVMask(ShuffleMask, EltSize, NumElts, 16))
     return DAG.getNode(AArch64ISD::REV16, dl, V1.getValueType(), V1, V2);
 
-  if (((VT.getVectorNumElements() == 8 && VT.getScalarSizeInBits() == 16) ||
-       (VT.getVectorNumElements() == 16 && VT.getScalarSizeInBits() == 8)) &&
+  if (((NumElts == 8 && EltSize == 16) || (NumElts == 16 && EltSize == 8)) &&
       ShuffleVectorInst::isReverseMask(ShuffleMask, ShuffleMask.size())) {
     SDValue Rev = DAG.getNode(AArch64ISD::REV64, dl, VT, V1);
     return DAG.getNode(AArch64ISD::EXT, dl, VT, Rev, Rev,
@@ -12615,15 +12575,15 @@ SDValue AArch64TargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
   }
 
   unsigned WhichResult;
-  if (isZIPMask(ShuffleMask, VT, WhichResult)) {
+  if (isZIPMask(ShuffleMask, NumElts, WhichResult)) {
     unsigned Opc = (WhichResult == 0) ? AArch64ISD::ZIP1 : AArch64ISD::ZIP2;
     return DAG.getNode(Opc, dl, V1.getValueType(), V1, V2);
   }
-  if (isUZPMask(ShuffleMask, VT, WhichResult)) {
+  if (isUZPMask(ShuffleMask, NumElts, WhichResult)) {
     unsigned Opc = (WhichResult == 0) ? AArch64ISD::UZP1 : AArch64ISD::UZP2;
     return DAG.getNode(Opc, dl, V1.getValueType(), V1, V2);
   }
-  if (isTRNMask(ShuffleMask, VT, WhichResult)) {
+  if (isTRNMask(ShuffleMask, NumElts, WhichResult)) {
     unsigned Opc = (WhichResult == 0) ? AArch64ISD::TRN1 : AArch64ISD::TRN2;
     return DAG.getNode(Opc, dl, V1.getValueType(), V1, V2);
   }
@@ -12655,7 +12615,7 @@ SDValue AArch64TargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
     int SrcLane = ShuffleMask[Anomaly];
     if (SrcLane >= NumInputElements) {
       SrcVec = V2;
-      SrcLane -= VT.getVectorNumElements();
+      SrcLane -= NumElts;
     }
     SDValue SrcLaneV = DAG.getConstant(SrcLane, dl, MVT::i64);
 
@@ -12675,7 +12635,6 @@ SDValue AArch64TargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
 
   // If the shuffle is not directly supported and it has 4 elements, use
   // the PerfectShuffle-generated table to synthesize it from other shuffles.
-  unsigned NumElts = VT.getVectorNumElements();
   if (NumElts == 4) {
     unsigned PFIndexes[4];
     for (unsigned i = 0; i != 4; ++i) {
@@ -14126,16 +14085,20 @@ bool AArch64TargetLowering::isShuffleMaskLegal(ArrayRef<int> M, EVT VT) const {
   int DummyInt;
   unsigned DummyUnsigned;
 
-  return (ShuffleVectorSDNode::isSplatMask(&M[0], VT) || isREVMask(M, VT, 64) ||
-          isREVMask(M, VT, 32) || isREVMask(M, VT, 16) ||
+  unsigned EltSize = VT.getScalarSizeInBits();
+  unsigned NumElts = VT.getVectorNumElements();
+  return (ShuffleVectorSDNode::isSplatMask(&M[0], VT) ||
+          isREVMask(M, EltSize, NumElts, 64) ||
+          isREVMask(M, EltSize, NumElts, 32) ||
+          isREVMask(M, EltSize, NumElts, 16) ||
           isEXTMask(M, VT, DummyBool, DummyUnsigned) ||
-          // isTBLMask(M, VT) || // FIXME: Port TBL support from ARM.
-          isTRNMask(M, VT, DummyUnsigned) || isUZPMask(M, VT, DummyUnsigned) ||
-          isZIPMask(M, VT, DummyUnsigned) ||
+          isTRNMask(M, NumElts, DummyUnsigned) ||
+          isUZPMask(M, NumElts, DummyUnsigned) ||
+          isZIPMask(M, NumElts, DummyUnsigned) ||
           isTRN_v_undef_Mask(M, VT, DummyUnsigned) ||
           isUZP_v_undef_Mask(M, VT, DummyUnsigned) ||
           isZIP_v_undef_Mask(M, VT, DummyUnsigned) ||
-          isINSMask(M, VT.getVectorNumElements(), DummyBool, DummyInt) ||
+          isINSMask(M, NumElts, DummyBool, DummyInt) ||
           isConcatMask(M, VT, VT.getSizeInBits() == 128));
 }
 
@@ -27486,15 +27449,15 @@ SDValue AArch64TargetLowering::LowerFixedLengthVECTOR_SHUFFLEToSVE(
     return convertFromScalableVector(DAG, VT, Op);
   }
 
+  unsigned EltSize = VT.getScalarSizeInBits();
   for (unsigned LaneSize : {64U, 32U, 16U}) {
-    if (isREVMask(ShuffleMask, VT, LaneSize)) {
+    if (isREVMask(ShuffleMask, EltSize, VT.getVectorNumElements(), LaneSize)) {
       EVT NewVT =
           getPackedSVEVectorVT(EVT::getIntegerVT(*DAG.getContext(), LaneSize));
       unsigned RevOp;
-      unsigned EltSz = VT.getScalarSizeInBits();
-      if (EltSz == 8)
+      if (EltSize == 8)
         RevOp = AArch64ISD::BSWAP_MERGE_PASSTHRU;
-      else if (EltSz == 16)
+      else if (EltSize == 16)
         RevOp = AArch64ISD::REVH_MERGE_PASSTHRU;
       else
         RevOp = AArch64ISD::REVW_MERGE_PASSTHRU;
@@ -27506,8 +27469,8 @@ SDValue AArch64TargetLowering::LowerFixedLengthVECTOR_SHUFFLEToSVE(
     }
   }
 
-  if (Subtarget->hasSVE2p1() && VT.getScalarSizeInBits() == 64 &&
-      isREVMask(ShuffleMask, VT, 128)) {
+  if (Subtarget->hasSVE2p1() && EltSize == 64 &&
+      isREVMask(ShuffleMask, EltSize, VT.getVectorNumElements(), 128)) {
     if (!VT.isFloatingPoint())
       return LowerToPredicatedOp(Op, DAG, AArch64ISD::REVD_MERGE_PASSTHRU);
 
@@ -27519,11 +27482,12 @@ SDValue AArch64TargetLowering::LowerFixedLengthVECTOR_SHUFFLEToSVE(
   }
 
   unsigned WhichResult;
-  if (isZIPMask(ShuffleMask, VT, WhichResult) && WhichResult == 0)
+  if (isZIPMask(ShuffleMask, VT.getVectorNumElements(), WhichResult) &&
+      WhichResult == 0)
     return convertFromScalableVector(
         DAG, VT, DAG.getNode(AArch64ISD::ZIP1, DL, ContainerVT, Op1, Op2));
 
-  if (isTRNMask(ShuffleMask, VT, WhichResult)) {
+  if (isTRNMask(ShuffleMask, VT.getVectorNumElements(), WhichResult)) {
     unsigned Opc = (WhichResult == 0) ? AArch64ISD::TRN1 : AArch64ISD::TRN2;
     return convertFromScalableVector(
         DAG, VT, DAG.getNode(Opc, DL, ContainerVT, Op1, Op2));
@@ -27566,11 +27530,12 @@ SDValue AArch64TargetLowering::LowerFixedLengthVECTOR_SHUFFLEToSVE(
       return convertFromScalableVector(DAG, VT, Op);
     }
 
-    if (isZIPMask(ShuffleMask, VT, WhichResult) && WhichResult != 0)
+    if (isZIPMask(ShuffleMask, VT.getVectorNumElements(), WhichResult) &&
+        WhichResult != 0)
       return convertFromScalableVector(
           DAG, VT, DAG.getNode(AArch64ISD::ZIP2, DL, ContainerVT, Op1, Op2));
 
-    if (isUZPMask(ShuffleMask, VT, WhichResult)) {
+    if (isUZPMask(ShuffleMask, VT.getVectorNumElements(), WhichResult)) {
       unsigned Opc = (WhichResult == 0) ? AArch64ISD::UZP1 : AArch64ISD::UZP2;
       return convertFromScalableVector(
           DAG, VT, DAG.getNode(Opc, DL, ContainerVT, Op1, Op2));

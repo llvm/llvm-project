@@ -145,37 +145,19 @@ define <16 x i8> @vzipQi8_undef(ptr %A, ptr %B) nounwind {
 }
 
 define <8 x i16> @vzip1_undef_01(<8 x i16> %A, <8 x i16> %B) nounwind {
-; CHECK-SD-LABEL: vzip1_undef_01:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    zip1.8h v0, v0, v1
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: vzip1_undef_01:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI8_0
-; CHECK-GI-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
-; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI8_0]
-; CHECK-GI-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
-; CHECK-GI-NEXT:    tbl.16b v0, { v0, v1 }, v2
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: vzip1_undef_01:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    zip1.8h v0, v0, v1
+; CHECK-NEXT:    ret
   %s = shufflevector <8 x i16> %A, <8 x i16> %B, <8 x i32> <i32 undef, i32 undef, i32 1, i32 9, i32 2, i32 10, i32 3, i32 11>
   ret <8 x i16> %s
 }
 
 define <8 x i16> @vzip1_undef_0(<8 x i16> %A, <8 x i16> %B) nounwind {
-; CHECK-SD-LABEL: vzip1_undef_0:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    zip1.8h v0, v0, v1
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: vzip1_undef_0:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI9_0
-; CHECK-GI-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
-; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI9_0]
-; CHECK-GI-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
-; CHECK-GI-NEXT:    tbl.16b v0, { v0, v1 }, v2
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: vzip1_undef_0:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    zip1.8h v0, v0, v1
+; CHECK-NEXT:    ret
   %s = shufflevector <8 x i16> %A, <8 x i16> %B, <8 x i32> <i32 undef, i32 8, i32 1, i32 9, i32 2, i32 10, i32 3, i32 11>
   ret <8 x i16> %s
 }
@@ -190,19 +172,10 @@ define <8 x i16> @vzip1_undef_1(<8 x i16> %A, <8 x i16> %B) nounwind {
 }
 
 define <8 x i16> @vzip1_undef_012(<8 x i16> %A, <8 x i16> %B) nounwind {
-; CHECK-SD-LABEL: vzip1_undef_012:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    zip1.8h v0, v0, v1
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: vzip1_undef_012:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI11_0
-; CHECK-GI-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
-; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI11_0]
-; CHECK-GI-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
-; CHECK-GI-NEXT:    tbl.16b v0, { v0, v1 }, v2
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: vzip1_undef_012:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    zip1.8h v0, v0, v1
+; CHECK-NEXT:    ret
   %s = shufflevector <8 x i16> %A, <8 x i16> %B, <8 x i32> <i32 undef, i32 undef, i32 undef, i32 9, i32 2, i32 10, i32 3, i32 11>
   ret <8 x i16> %s
 }
