@@ -1233,7 +1233,6 @@ void device_type() {
 
 #define acc_async_sync -1
 void AsyncArgument() {
-  // expected-warning@+1{{OpenACC clause 'async' not yet implemented, clause ignored}}
 #pragma acc parallel async
   {}
 
@@ -1250,15 +1249,12 @@ void AsyncArgument() {
 #pragma acc parallel async(4, 3)
   {}
 
-  // expected-warning@+1{{OpenACC clause 'async' not yet implemented, clause ignored}}
 #pragma acc parallel async(returns_int())
   {}
 
-  // expected-warning@+1{{OpenACC clause 'async' not yet implemented, clause ignored}}
 #pragma acc parallel async(5)
   {}
 
-  // expected-warning@+1{{OpenACC clause 'async' not yet implemented, clause ignored}}
 #pragma acc parallel async(acc_async_sync)
   {}
 }
