@@ -10,6 +10,7 @@
 #include "sanitizer_common/sanitizer_allocator_internal.h"
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_dense_map.h"
+#include "sanitizer_common/sanitizer_libc.h"
 #include "sanitizer_common/sanitizer_mutex.h"
 #include "sanitizer_common/sanitizer_placement_new.h"
 #include "sanitizer_common/sanitizer_thread_safety.h"
@@ -142,6 +143,8 @@ inline ContextNode *ContextNode::alloc(char *Place, GUID Guid,
 }
 
 void ContextNode::reset() {
+  // FIXME(mtrofin): this is std::memset, which we can probably use if we
+  // drop/reduce the dependency on sanitizer_common.
   for (uint32_t I = 0; I < NrCounters; ++I)
     counters()[I] = 0;
   for (uint32_t I = 0; I < NrCallsites; ++I)
