@@ -213,4 +213,5 @@ defm : UnsupportedSchedZbkx;
 defm : UnsupportedSchedZfa;
 defm : UnsupportedSchedZfh;
 defm : UnsupportedSchedXsfvcp;
+defm : UnsupportedSchedZvk;
 }

@@ -15,6 +15,7 @@
 #include "Utils.h"
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Lower/SymbolMap.h"
+#include "flang/Optimizer/Builder/HLFIRTools.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Semantics/tools.h"
 
@@ -27,8 +28,10 @@ void DataSharingProcessor::processStep1(
     llvm::SmallVectorImpl<const Fortran::semantics::Symbol *> *privateSyms) {
   collectSymbolsForPrivatization();
   collectDefaultSymbols();
+  collectImplicitSymbols();
   privatize(clauseOps, privateSyms);
   defaultPrivatize(clauseOps, privateSyms);
+  implicitPrivatize(clauseOps, privateSyms);
   insertBarrier();
 }
 
@@ -302,20 +305,117 @@ void DataSharingProcessor::insertLastPrivateCompare(mlir::Operation *op) {
   }
 }
 
+static const Fortran::parser::CharBlock *
+getSource(const Fortran::semantics::SemanticsContext &semaCtx,
+          const Fortran::lower::pft::Evaluation &eval) {
+  const Fortran::parser::CharBlock *source = nullptr;
+
+  auto ompConsVisit = [&](const Fortran::parser::OpenMPConstruct &x) {
+    std::visit(Fortran::common::visitors{
+                   [&](const Fortran::parser::OpenMPSectionsConstruct &x) {
+                     source = &std::get<0>(x.t).source;
+                   },
+                   [&](const Fortran::parser::OpenMPLoopConstruct &x) {
+                     source = &std::get<0>(x.t).source;
+                   },
+                   [&](const Fortran::parser::OpenMPBlockConstruct &x) {
+                     source = &std::get<0>(x.t).source;
+                   },
+                   [&](const Fortran::parser::OpenMPCriticalConstruct &x) {
+                     source = &std::get<0>(x.t).source;
+                   },
+                   [&](const Fortran::parser::OpenMPAtomicConstruct &x) {
+                     std::visit([&](const auto &x) { source = &x.source; },
+                                x.u);
+                   },
+                   [&](const auto &x) { source = &x.source; },
+               },
+               x.u);
+  };
+
+  eval.visit(Fortran::common::visitors{
+      [&](const Fortran::parser::OpenMPConstruct &x) { ompConsVisit(x); },
+      [&](const Fortran::parser::OpenMPDeclarativeConstruct &x) {
+        source = &x.source;
+      },
+      [&](const Fortran::parser::OmpEndLoopDirective &x) {
+        source = &x.source;
+      },
+      [&](const auto &x) {},
+  });
+
+  return source;
+}
+
+void DataSharingProcessor::collectSymbolsInNestedRegions(
+    Fortran::lower::pft::Evaluation &eval,
+    Fortran::semantics::Symbol::Flag flag,
+    llvm::SetVector<const Fortran::semantics::Symbol *>
+        &symbolsInNestedRegions) {
+  for (Fortran::lower::pft::Evaluation &nestedEval :
+       eval.getNestedEvaluations()) {
+    if (nestedEval.hasNestedEvaluations()) {
+      if (nestedEval.isConstruct())
+        // Recursively look for OpenMP constructs within `nestedEval`'s region
+        collectSymbolsInNestedRegions(nestedEval, flag, symbolsInNestedRegions);
+      else
+        converter.collectSymbolSet(nestedEval, symbolsInNestedRegions, flag,
+                                   /*collectSymbols=*/true,
+                                   /*collectHostAssociatedSymbols=*/false);
+    }
+  }
+}
+
+// Collect symbols to be default privatized in two steps.
+// In step 1, collect all symbols in `eval` that match `flag` into
+// `defaultSymbols`. In step 2, for nested constructs (if any), if and only if
+// the nested construct is an OpenMP construct, collect those nested
+// symbols skipping host associated symbols into `symbolsInNestedRegions`.
+// Later, in current context, all symbols in the set
+// `defaultSymbols` - `symbolsInNestedRegions` will be privatized.
 void DataSharingProcessor::collectSymbols(
-    Fortran::semantics::Symbol::Flag flag) {
-  converter.collectSymbolSet(eval, defaultSymbols, flag,
+    Fortran::semantics::Symbol::Flag flag,
+    llvm::SetVector<const Fortran::semantics::Symbol *> &symbols) {
+  // Collect all scopes associated with 'eval'.
+  llvm::SetVector<const Fortran::semantics::Scope *> clauseScopes;
+  std::function<void(const Fortran::semantics::Scope *)> collectScopes =
+      [&](const Fortran::semantics::Scope *scope) {
+        clauseScopes.insert(scope);
+        for (const Fortran::semantics::Scope &child : scope->children())
+          collectScopes(&child);
+      };
+  const Fortran::parser::CharBlock *source =
+      clauses.empty() ? getSource(semaCtx, eval) : &clauses.front().source;
+  const Fortran::semantics::Scope *curScope = nullptr;
+  if (source && !source->empty()) {
+    curScope = &semaCtx.FindScope(*source);
+    collectScopes(curScope);
+  }
+  // Collect all symbols referenced in the evaluation being processed,
+  // that matches 'flag'.
+  llvm::SetVector<const Fortran::semantics::Symbol *> allSymbols;
+  converter.collectSymbolSet(eval, allSymbols, flag,
                              /*collectSymbols=*/true,
                              /*collectHostAssociatedSymbols=*/true);
-  for (Fortran::lower::pft::Evaluation &e : eval.getNestedEvaluations()) {
-    if (e.hasNestedEvaluations())
-      converter.collectSymbolSet(e, symbolsInNestedRegions, flag,
-                                 /*collectSymbols=*/true,
-                                 /*collectHostAssociatedSymbols=*/false);
-    else
-      converter.collectSymbolSet(e, symbolsInParentRegions, flag,
-                                 /*collectSymbols=*/false,
-                                 /*collectHostAssociatedSymbols=*/true);
+  llvm::SetVector<const Fortran::semantics::Symbol *> symbolsInNestedRegions;
+  collectSymbolsInNestedRegions(eval, flag, symbolsInNestedRegions);
+  // Filter-out symbols that must not be privatized.
+  bool collectImplicit = flag == Fortran::semantics::Symbol::Flag::OmpImplicit;
+  auto isPrivatizable = [](const Fortran::semantics::Symbol &sym) -> bool {
+    return !Fortran::semantics::IsProcedure(sym) &&
+           !sym.GetUltimate().has<Fortran::semantics::DerivedTypeDetails>() &&
+           !sym.GetUltimate().has<Fortran::semantics::NamelistDetails>() &&
+           !Fortran::semantics::IsImpliedDoIndex(sym.GetUltimate());
+  };
+  for (const auto *sym : allSymbols) {
+    assert(curScope && "couldn't find current scope");
+    if (isPrivatizable(*sym) && !symbolsInNestedRegions.contains(sym) &&
+        !privatizedSymbols.contains(sym) &&
+        !sym->test(Fortran::semantics::Symbol::Flag::OmpPreDetermined) &&
+        (collectImplicit ||
+         !sym->test(Fortran::semantics::Symbol::Flag::OmpImplicit)) &&
+        clauseScopes.contains(&sym->owner()))
+      symbols.insert(sym);
   }
 }
 
@@ -325,11 +425,20 @@ void DataSharingProcessor::collectDefaultSymbols() {
     if (const auto *defaultClause =
             std::get_if<omp::clause::Default>(&clause.u)) {
       if (defaultClause->v == DataSharingAttribute::Private)
-        collectSymbols(Fortran::semantics::Symbol::Flag::OmpPrivate);
+        collectSymbols(Fortran::semantics::Symbol::Flag::OmpPrivate,
+                       defaultSymbols);
       else if (defaultClause->v == DataSharingAttribute::Firstprivate)
-        collectSymbols(Fortran::semantics::Symbol::Flag::OmpFirstPrivate);
+        collectSymbols(Fortran::semantics::Symbol::Flag::OmpFirstPrivate,
+                       defaultSymbols);
     }
   }
+}
+
+void DataSharingProcessor::collectImplicitSymbols() {
+  // There will be no implicit symbols when a default clause is present.
+  if (defaultSymbols.empty())
+    collectSymbols(Fortran::semantics::Symbol::Flag::OmpImplicit,
+                   implicitSymbols);
 }
 
 void DataSharingProcessor::privatize(
@@ -361,16 +470,15 @@ void DataSharingProcessor::copyLastPrivatize(mlir::Operation *op) {
 void DataSharingProcessor::defaultPrivatize(
     mlir::omp::PrivateClauseOps *clauseOps,
     llvm::SmallVectorImpl<const Fortran::semantics::Symbol *> *privateSyms) {
-  for (const Fortran::semantics::Symbol *sym : defaultSymbols) {
-    if (!Fortran::semantics::IsProcedure(*sym) &&
-        !sym->GetUltimate().has<Fortran::semantics::DerivedTypeDetails>() &&
-        !sym->GetUltimate().has<Fortran::semantics::NamelistDetails>() &&
-        !Fortran::semantics::IsImpliedDoIndex(sym->GetUltimate()) &&
-        !symbolsInNestedRegions.contains(sym) &&
-        !symbolsInParentRegions.contains(sym) &&
-        !privatizedSymbols.contains(sym))
-      doPrivatize(sym, clauseOps, privateSyms);
-  }
+  for (const Fortran::semantics::Symbol *sym : defaultSymbols)
+    doPrivatize(sym, clauseOps, privateSyms);
+}
+
+void DataSharingProcessor::implicitPrivatize(
+    mlir::omp::PrivateClauseOps *clauseOps,
+    llvm::SmallVectorImpl<const Fortran::semantics::Symbol *> *privateSyms) {
+  for (const Fortran::semantics::Symbol *sym : implicitSymbols)
+    doPrivatize(sym, clauseOps, privateSyms);
 }
 
 void DataSharingProcessor::doPrivatize(
@@ -422,8 +530,16 @@ void DataSharingProcessor::doPrivatize(
           &allocRegion, /*insertPt=*/{}, symType, symLoc);
 
       firOpBuilder.setInsertionPointToEnd(allocEntryBlock);
-      symTable->addSymbol(*sym,
-                          fir::substBase(symExV, allocRegion.getArgument(0)));
+
+      fir::ExtendedValue localExV =
+          hlfir::translateToExtendedValue(
+              symLoc, firOpBuilder, hlfir::Entity{allocRegion.getArgument(0)},
+              /*contiguousHint=*/
+              Fortran::evaluate::IsSimplyContiguous(
+                  *sym, converter.getFoldingContext()))
+              .first;
+
+      symTable->addSymbol(*sym, localExV);
       symTable->pushScope();
       cloneSymbol(sym);
       firOpBuilder.create<mlir::omp::YieldOp>(
@@ -440,12 +556,23 @@ void DataSharingProcessor::doPrivatize(
       mlir::Block *copyEntryBlock = firOpBuilder.createBlock(
           &copyRegion, /*insertPt=*/{}, {symType, symType}, {symLoc, symLoc});
       firOpBuilder.setInsertionPointToEnd(copyEntryBlock);
-      symTable->addSymbol(*sym,
-                          fir::substBase(symExV, copyRegion.getArgument(0)),
-                          /*force=*/true);
+
+      auto addSymbol = [&](unsigned argIdx, bool force = false) {
+        symExV.match(
+            [&](const fir::MutableBoxValue &box) {
+              symTable->addSymbol(
+                  *sym, fir::substBase(box, copyRegion.getArgument(argIdx)),
+                  force);
+            },
+            [&](const auto &box) {
+              symTable->addSymbol(*sym, copyRegion.getArgument(argIdx), force);
+            });
+      };
+
+      addSymbol(0, true);
       symTable->pushScope();
-      symTable->addSymbol(*sym,
-                          fir::substBase(symExV, copyRegion.getArgument(1)));
+      addSymbol(1);
+
       auto ip = firOpBuilder.saveInsertionPoint();
       copyFirstPrivateSymbol(sym, &ip);
 
