@@ -1415,9 +1415,8 @@ define void @PR43833_simple(ptr %0, i32 %1) {
   br i1 %11, label %7, label %8
 }
 
-; FIXME: This is a miscompile.
 define ptr @pr91177_non_inbounds_gep(ptr nonnull %arg) {
-; FNATTRS-LABEL: define nonnull ptr @pr91177_non_inbounds_gep(
+; FNATTRS-LABEL: define ptr @pr91177_non_inbounds_gep(
 ; FNATTRS-SAME: ptr nonnull readnone [[ARG:%.*]]) #[[ATTR0]] {
 ; FNATTRS-NEXT:    [[RES:%.*]] = getelementptr i8, ptr [[ARG]], i64 -8
 ; FNATTRS-NEXT:    ret ptr [[RES]]
