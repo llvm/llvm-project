@@ -36,9 +36,12 @@ void DataSharingProcessor::processStep1(
 }
 
 void DataSharingProcessor::processStep2(mlir::Operation *op, bool isLoop) {
-  insPt = firOpBuilder.saveInsertionPoint();
-  copyLastPrivatize(op);
-  firOpBuilder.restoreInsertionPoint(insPt);
+  // 'sections' lastprivate is handled by genOMP()
+  if (!mlir::isa<mlir::omp::SectionsOp>(op)) {
+    insPt = firOpBuilder.saveInsertionPoint();
+    copyLastPrivatize(op);
+    firOpBuilder.restoreInsertionPoint(insPt);
+  }
 
   if (isLoop) {
     // push deallocs out of the loop
@@ -143,6 +146,10 @@ void DataSharingProcessor::collectSymbolsForPrivatization() {
 }
 
 bool DataSharingProcessor::needBarrier() {
+  // Emit implicit barrier to synchronize threads and avoid data races on
+  // initialization of firstprivate variables and post-update of lastprivate
+  // variables.
+  // Emit implicit barrier for linear clause. Maybe on somewhere else.
   for (const Fortran::semantics::Symbol *sym : privatizedSymbols) {
     if (sym->test(Fortran::semantics::Symbol::Flag::OmpFirstPrivate) &&
         sym->test(Fortran::semantics::Symbol::Flag::OmpLastPrivate))
@@ -152,13 +159,6 @@ bool DataSharingProcessor::needBarrier() {
 }
 
 void DataSharingProcessor::insertBarrier() {
-  // Emit implicit barrier to synchronize threads and avoid data races on
-  // initialization of firstprivate variables and post-update of lastprivate
-  // variables.
-  // FIXME: Emit barrier for lastprivate clause when 'sections' directive has
-  // 'nowait' clause. Otherwise, emit barrier when 'sections' directive has
-  // both firstprivate and lastprivate clause.
-  // Emit implicit barrier for linear clause. Maybe on somewhere else.
   if (needBarrier())
     firOpBuilder.create<mlir::omp::BarrierOp>(converter.getCurrentLocation());
 }
@@ -176,76 +176,7 @@ void DataSharingProcessor::insertLastPrivateCompare(mlir::Operation *op) {
     if (clause.id != llvm::omp::OMPC_lastprivate)
       continue;
     // TODO: Add lastprivate support for simd construct
-    if (mlir::isa<mlir::omp::SectionOp>(op)) {
-      if (&eval == &eval.parentConstruct->getLastNestedEvaluation()) {
-        // For `omp.sections`, lastprivatized variables occur in
-        // lexically final `omp.section` operation. The following FIR
-        // shall be generated for the same:
-        //
-        // omp.sections lastprivate(...) {
-        //  omp.section {...}
-        //  omp.section {...}
-        //  omp.section {
-        //      fir.allocate for `private`/`firstprivate`
-        //      <More operations here>
-        //      fir.if %true {
-        //          ^%lpv_update_blk
-        //      }
-        //  }
-        // }
-        //
-        // To keep code consistency while handling privatization
-        // through this control flow, add a `fir.if` operation
-        // that always evaluates to true, in order to create
-        // a dedicated sub-region in `omp.section` where
-        // lastprivate FIR can reside. Later canonicalizations
-        // will optimize away this operation.
-        if (!eval.lowerAsUnstructured()) {
-          auto ifOp = firOpBuilder.create<fir::IfOp>(
-              op->getLoc(),
-              firOpBuilder.createIntegerConstant(
-                  op->getLoc(), firOpBuilder.getIntegerType(1), 0x1),
-              /*else*/ false);
-          firOpBuilder.setInsertionPointToStart(&ifOp.getThenRegion().front());
-
-          const Fortran::parser::OpenMPConstruct *parentOmpConstruct =
-              eval.parentConstruct->getIf<Fortran::parser::OpenMPConstruct>();
-          assert(parentOmpConstruct &&
-                 "Expected a valid enclosing OpenMP construct");
-          const Fortran::parser::OpenMPSectionsConstruct *sectionsConstruct =
-              std::get_if<Fortran::parser::OpenMPSectionsConstruct>(
-                  &parentOmpConstruct->u);
-          assert(sectionsConstruct &&
-                 "Expected an enclosing omp.sections construct");
-          const Fortran::parser::OmpClauseList &sectionsEndClauseList =
-              std::get<Fortran::parser::OmpClauseList>(
-                  std::get<Fortran::parser::OmpEndSectionsDirective>(
-                      sectionsConstruct->t)
-                      .t);
-          for (const Fortran::parser::OmpClause &otherClause :
-               sectionsEndClauseList.v)
-            if (std::get_if<Fortran::parser::OmpClause::Nowait>(&otherClause.u))
-              // Emit implicit barrier to synchronize threads and avoid data
-              // races on post-update of lastprivate variables when `nowait`
-              // clause is present.
-              firOpBuilder.create<mlir::omp::BarrierOp>(
-                  converter.getCurrentLocation());
-          firOpBuilder.setInsertionPointToStart(&ifOp.getThenRegion().front());
-          lastPrivIP = firOpBuilder.saveInsertionPoint();
-          firOpBuilder.setInsertionPoint(ifOp);
-          insPt = firOpBuilder.saveInsertionPoint();
-        } else {
-          // Lastprivate operation is inserted at the end
-          // of the lexically last section in the sections
-          // construct
-          mlir::OpBuilder::InsertionGuard unstructuredSectionsGuard(
-              firOpBuilder);
-          mlir::Operation *lastOper = op->getRegion(0).back().getTerminator();
-          firOpBuilder.setInsertionPoint(lastOper);
-          lastPrivIP = firOpBuilder.saveInsertionPoint();
-        }
-      }
-    } else if (mlir::isa<mlir::omp::WsloopOp>(op)) {
+    if (mlir::isa<mlir::omp::WsloopOp>(op)) {
       // Update the original variable just before exiting the worksharing
       // loop. Conversion as follows:
       //
@@ -297,6 +228,8 @@ void DataSharingProcessor::insertLastPrivateCompare(mlir::Operation *op) {
       assert(loopIV && "loopIV was not set");
       firOpBuilder.create<fir::StoreOp>(loopOp.getLoc(), v, loopIV);
       lastPrivIP = firOpBuilder.saveInsertionPoint();
+    } else if (mlir::isa<mlir::omp::SectionsOp>(op)) {
+      // Already handled by genOMP()
     } else {
       TODO(converter.getCurrentLocation(),
            "lastprivate clause in constructs other than "
