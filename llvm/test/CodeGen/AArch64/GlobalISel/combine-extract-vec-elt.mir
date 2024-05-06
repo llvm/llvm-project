@@ -572,12 +572,6 @@ body:             |
 ...
 ---
 name:            extract_from_build_vector_shuffle_vector_undef
-alignment:       4
-liveins:
-  - { reg: '$x0' }
-  - { reg: '$x1' }
-frameInfo:
-  maxAlignment:    1
 body:             |
   bb.1:
     liveins: $x0, $x1
@@ -597,12 +591,6 @@ body:             |
 ...
 ---
 name:            extract_from_build_vector_shuffle_vector_opaque
-alignment:       4
-liveins:
-  - { reg: '$x0' }
-  - { reg: '$x1' }
-frameInfo:
-  maxAlignment:    1
 body:             |
   bb.1:
     liveins: $x0, $x1
@@ -626,12 +614,6 @@ body:             |
 ...
 ---
 name:            extract_from_build_vector_shuffle_vector_const
-alignment:       4
-liveins:
-  - { reg: '$x0' }
-  - { reg: '$x1' }
-frameInfo:
-  maxAlignment:    1
 body:             |
   bb.1:
     liveins: $x0, $x1

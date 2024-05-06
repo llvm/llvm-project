@@ -378,7 +378,7 @@ bool CombinerHelper::matchExtractVectorElementWithShuffleVector(
   GShuffleVector *Shuffle =
       cast<GShuffleVector>(getDefIgnoringCopies(Extract->getVectorReg(), MRI));
 
-  llvm::ArrayRef<int> Mask = Shuffle->getMask();
+  ArrayRef<int> Mask = Shuffle->getMask();
 
   unsigned Offset = MaybeIndex->Value.getZExtValue();
   int SrcIdx = Mask[Offset];
