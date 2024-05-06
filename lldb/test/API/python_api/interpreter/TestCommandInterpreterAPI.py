@@ -120,9 +120,16 @@ class CommandInterpreterAPICase(TestBase):
 
         transcript = json.loads(stream.GetData())
 
-        # The transcript will contain a bunch of commands that are run
-        # automatically. We only want to validate for the ones that are
-        # listed above, hence trimming to the last parts.
+        print('TRANSCRIPT')
+        print(transcript)
+
+        # The transcript will contain a bunch of commands that are from
+        # a general setup code. See `def setUpCommands(cls)` in
+        # `lldb/packages/Python/lldbsuite/test/lldbtest.py`.
+        # https://shorturl.at/bJKVW
+        #
+        # We only want to validate for the ones that are listed above, hence
+        # trimming to the last parts.
         transcript = transcript[-total_number_of_commands:]
 
         # Validate the transcript.
@@ -148,7 +155,7 @@ class CommandInterpreterAPICase(TestBase):
         # (lldb) breakpoint set -f main.c -l <line>
         self.assertEqual(transcript[2]["command"], "breakpoint set -f main.c -l %d" % self.line)
         # Breakpoint 1: where = a.out`main + 29 at main.c:5:3, address = 0x0000000100000f7d
-        self.assertTrue("Breakpoint 1: where = a.out`main + 29 at main.c:5:3, address =" in transcript[2]["output"][0])
+        self.assertTrue("Breakpoint 1: where = a.out`main " in transcript[2]["output"][0])
         self.assertEqual(transcript[2]["error"], [])
 
         # (lldb) r

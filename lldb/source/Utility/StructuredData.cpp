@@ -302,7 +302,7 @@ StructuredData::ArraySP StructuredData::Array::SplitString(llvm::StringRef s,
   // Copy the substrings from the small vector into the output array.
   auto array_sp = std::make_shared<StructuredData::Array>();
   for (auto substring : small_vec) {
-    array_sp->AddStringItem(std::move(substring));
+    array_sp->AddStringItem(substring);
   }
   return array_sp;
 }
