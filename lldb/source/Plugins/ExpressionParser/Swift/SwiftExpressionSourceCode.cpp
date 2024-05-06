@@ -502,7 +502,6 @@ func $__lldb_expr(_ $__lldb_arg : UnsafeMutablePointer<Any>) {
                             wrapped_expr_text.GetData(), availability.c_str(),
                             current_counter);
     }
-    first_body_line = 5;
   } else if (options.GetBindGenericTypes() == lldb::eDontBind) {
     auto c = MakeGenericSignaturesAndCalls(local_variables, generic_sig,
                                            needs_object_ptr);
@@ -536,7 +535,6 @@ func $__lldb_expr(_ $__lldb_arg : UnsafeMutablePointer<Any>) {
         "%s" // This is the expression text (with newlines).
         "}\n",
         availability.c_str(), wrapped_expr_text.GetData());
-    first_body_line = 4;
   }
   return status;
 }
@@ -564,8 +562,6 @@ Status SwiftExpressionSourceCode::GetText(
     llvm::ArrayRef<SwiftASTManipulator::VariableInfo> local_variables) const {
   Status status;
   Target *target = exe_ctx.GetTargetPtr();
-
-
   if (m_wrap) {
     const char *body = m_body.c_str();
     const char *pound_file = options.GetPoundLineFilePath();
@@ -630,7 +626,8 @@ Status SwiftExpressionSourceCode::GetText(
     bool need_to_declare_log_functions = num_persistent_results == 0;
     EvaluateExpressionOptions localOptions(options);
 
-    localOptions.SetPreparePlaygroundStubFunctions(need_to_declare_log_functions);
+    localOptions.SetPreparePlaygroundStubFunctions(
+        need_to_declare_log_functions);
 
     std::string full_body = m_prefix + m_body;
     status = WrapExpression(wrap_stream, full_body.c_str(), needs_object_ptr,
@@ -645,23 +642,34 @@ Status SwiftExpressionSourceCode::GetText(
     text.append(m_body);
   }
 
+  if (!first_body_line) {
+    // If this is not a playground or REPL expression, compute the
+    // first line, by locating the marker. While this could be
+    // determined statically, it's more future-proof to calculate it
+    // here.
+    uint32_t start_idx, end_idx;
+    if (GetOriginalBodyBounds(text, start_idx, end_idx))
+      first_body_line =
+          StringRef(text.data(), text.size() - start_idx).count('\n') + 1;
+  }
   return status;
 }
 
 bool SwiftExpressionSourceCode::GetOriginalBodyBounds(
-    std::string transformed_text,
-    size_t &start_loc, size_t &end_loc) {
-  const char *start_marker;
-  const char *end_marker;
-
-  start_marker = GetUserCodeStartMarker();
-  end_marker = GetUserCodeEndMarker();
-
-  start_loc = transformed_text.find(start_marker);
-  if (start_loc == std::string::npos)
+    std::string transformed_text, uint32_t &start_loc, uint32_t &end_loc) {
+  StringRef start_marker = GetUserCodeStartMarker();
+  StringRef end_marker = GetUserCodeEndMarker();
+  size_t found_loc = transformed_text.find(start_marker);
+  if (found_loc == StringRef::npos ||
+      found_loc > std::numeric_limits<uint32_t>::max())
     return false;
-  start_loc += strlen(start_marker);
-  end_loc = transformed_text.find(end_marker);
-  return end_loc != std::string::npos;
-  return false;
+  start_loc = found_loc;
+
+  start_loc += start_marker.size();
+  found_loc = transformed_text.find(end_marker);
+  if (found_loc == StringRef::npos ||
+      found_loc > std::numeric_limits<uint32_t>::max())
+    return false;
+  end_loc = found_loc;
+  return true;
 }
