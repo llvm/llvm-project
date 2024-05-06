@@ -1961,7 +1961,6 @@ bool VectorCombine::foldTruncFromReductions(Instruction &I) {
   if (!match(ReductionSrc, m_OneUse(m_Trunc(m_Value(TruncSrc)))))
     return false;
 
-  auto *Trunc = cast<CastInst>(ReductionSrc);
   auto *TruncSrcTy = cast<VectorType>(TruncSrc->getType());
   auto *ReductionSrcTy = cast<VectorType>(ReductionSrc->getType());
   Type *ResultTy = I.getType();
@@ -1969,7 +1968,7 @@ bool VectorCombine::foldTruncFromReductions(Instruction &I) {
   TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
   InstructionCost OldCost =
       TTI.getCastInstrCost(Instruction::Trunc, ReductionSrcTy, TruncSrcTy,
-                           TTI::CastContextHint::None, CostKind, Trunc) +
+                           TTI::CastContextHint::None, CostKind) +
       TTI.getArithmeticReductionCost(ReductionOpc, ReductionSrcTy, std::nullopt,
                                      CostKind);
   InstructionCost NewCost =
