@@ -387,3 +387,27 @@ for.end:
   %r = phi i64 [ %sum, %for.body ]
   ret i64 %r
 }
+
+; https://alive2.llvm.org/ce/z/3QfEHm
+define i8 @known_power_of_two_rust_next_power_of_two(i8 %x, i8 %y) {
+; CHECK-LABEL: @known_power_of_two_rust_next_power_of_two(
+; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[X:%.*]], -1
+; CHECK-NEXT:    [[TMP2:%.*]] = tail call range(i8 0, 9) i8 @llvm.ctlz.i8(i8 [[TMP1]], i1 true)
+; CHECK-NEXT:    [[TMP3:%.*]] = lshr i8 -1, [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = add i8 [[TMP3]], 1
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp ugt i8 [[X]], 1
+; CHECK-NEXT:    [[P:%.*]] = select i1 [[TMP5]], i8 [[TMP4]], i8 1
+; CHECK-NEXT:    [[R:%.*]] = urem i8 [[Y:%.*]], [[P]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %2 = add i8 %x, -1
+  %3 = tail call i8 @llvm.ctlz.i8(i8 %2, i1 true)
+  %4 = lshr i8 -1, %3
+  %5 = add i8 %4, 1
+  %6 = icmp ugt i8 %x, 1
+  %p = select i1 %6, i8 %5, i8 1
+  ; Rust's implementation of `%p = next_power_of_two(%x)`
+
+  %r = urem i8 %y, %p
+  ret i8 %r
+}
