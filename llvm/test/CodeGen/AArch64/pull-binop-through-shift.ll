@@ -81,7 +81,7 @@ define i32 @xor_nosignbit_shl(i32 %x, ptr %dst) {
 define i32 @add_signbit_shl(i32 %x, ptr %dst) {
 ; CHECK-LABEL: add_signbit_shl:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #-16777216
+; CHECK-NEXT:    mov w8, #-16777216 // =0xff000000
 ; CHECK-NEXT:    add w0, w8, w0, lsl #8
 ; CHECK-NEXT:    str w0, [x1]
 ; CHECK-NEXT:    ret
@@ -93,7 +93,7 @@ define i32 @add_signbit_shl(i32 %x, ptr %dst) {
 define i32 @add_nosignbit_shl(i32 %x, ptr %dst) {
 ; CHECK-LABEL: add_nosignbit_shl:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #-16777216
+; CHECK-NEXT:    mov w8, #-16777216 // =0xff000000
 ; CHECK-NEXT:    add w0, w8, w0, lsl #8
 ; CHECK-NEXT:    str w0, [x1]
 ; CHECK-NEXT:    ret
@@ -195,7 +195,7 @@ define i32 @add_signbit_lshr(i32 %x, ptr %dst) {
 define i32 @add_nosignbit_lshr(i32 %x, ptr %dst) {
 ; CHECK-LABEL: add_nosignbit_lshr:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #2147418112
+; CHECK-NEXT:    mov w8, #2147418112 // =0x7fff0000
 ; CHECK-NEXT:    add w8, w0, w8
 ; CHECK-NEXT:    lsr w0, w8, #8
 ; CHECK-NEXT:    str w0, [x1]
@@ -298,7 +298,7 @@ define i32 @add_signbit_ashr(i32 %x, ptr %dst) {
 define i32 @add_nosignbit_ashr(i32 %x, ptr %dst) {
 ; CHECK-LABEL: add_nosignbit_ashr:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #2147418112
+; CHECK-NEXT:    mov w8, #2147418112 // =0x7fff0000
 ; CHECK-NEXT:    add w8, w0, w8
 ; CHECK-NEXT:    asr w0, w8, #8
 ; CHECK-NEXT:    str w0, [x1]
