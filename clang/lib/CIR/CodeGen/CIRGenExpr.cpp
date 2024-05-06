@@ -590,8 +590,11 @@ void CIRGenFunction::buildStoreOfScalar(mlir::Value Value, Address Addr,
 
   Value = buildToMemory(Value, Ty);
 
-  if (Ty->isAtomicType()) {
-    llvm_unreachable("NYI");
+  LValue AtomicLValue = LValue::makeAddr(Addr, Ty, getContext(), BaseInfo);
+  if (Ty->isAtomicType() ||
+      (!isInit && LValueIsSuitableForInlineAtomic(AtomicLValue))) {
+    buildAtomicStore(RValue::get(Value), AtomicLValue, isInit);
+    return;
   }
 
   if (const auto *ClangVecTy = Ty->getAs<clang::VectorType>()) {

@@ -308,3 +308,10 @@ bool fsb(bool *c) {
 
 // LLVM-LABEL: @_Z3fsbPb
 // LLVM: atomicrmw xchg ptr {{.*}}, i8 {{.*}} seq_cst, align 1
+
+// FIXME: crashes
+// void atomicinit(void)
+// {
+//   _Atomic(unsigned int) j = 12;
+//   __c11_atomic_init(&j, 1);
+// }

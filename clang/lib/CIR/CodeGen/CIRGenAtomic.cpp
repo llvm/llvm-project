@@ -1099,3 +1099,52 @@ RValue CIRGenFunction::buildAtomicExpr(AtomicExpr *E) {
   // Long case, when Order isn't obviously constant.
   llvm_unreachable("NYI");
 }
+
+void CIRGenFunction::buildAtomicStore(RValue rvalue, LValue lvalue,
+                                      bool isInit) {
+  bool IsVolatile = lvalue.isVolatileQualified();
+  mlir::cir::MemOrder MO;
+  if (lvalue.getType()->isAtomicType()) {
+    MO = mlir::cir::MemOrder::SequentiallyConsistent;
+  } else {
+    MO = mlir::cir::MemOrder::Release;
+    IsVolatile = true;
+  }
+  return buildAtomicStore(rvalue, lvalue, MO, IsVolatile, isInit);
+}
+
+/// Emit a store to an l-value of atomic type.
+///
+/// Note that the r-value is expected to be an r-value *of the atomic
+/// type*; this means that for aggregate r-values, it should include
+/// storage for any padding that was necessary.
+void CIRGenFunction::buildAtomicStore(RValue rvalue, LValue dest,
+                                      mlir::cir::MemOrder AO, bool IsVolatile,
+                                      bool isInit) {
+  // If this is an aggregate r-value, it should agree in type except
+  // maybe for address-space qualification.
+  assert(!rvalue.isAggregate() ||
+         rvalue.getAggregateAddress().getElementType() ==
+             dest.getAddress().getElementType());
+
+  AtomicInfo atomics(*this, dest, dest.getPointer().getLoc());
+  LValue LVal = atomics.getAtomicLValue();
+
+  // If this is an initialization, just put the value there normally.
+  if (LVal.isSimple()) {
+    if (isInit) {
+      llvm_unreachable("NYI");
+      return;
+    }
+
+    // Check whether we should use a library call.
+    if (atomics.shouldUseLibcall()) {
+      llvm_unreachable("NYI");
+    }
+
+    llvm_unreachable("NYI");
+    return;
+  }
+
+  llvm_unreachable("NYI");
+}

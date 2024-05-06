@@ -1454,7 +1454,6 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
   case CK_AtomicToNonAtomic:
     llvm_unreachable("NYI");
   case CK_NonAtomicToAtomic:
-    llvm_unreachable("NYI");
   case CK_UserDefinedConversion:
     return Visit(const_cast<Expr *>(E));
   case CK_NoOp: {
