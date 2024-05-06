@@ -50,16 +50,16 @@ if(BOOTSTRAPPING_MODE)
     PRIVATE
       swiftCompilerModules)
 
+  # The swiftCompilerModules need swiftrt to work properly.
+  string(REGEX MATCH "^[^-]*" arch ${LLVM_TARGET_TRIPLE})
   if (CMAKE_SYSTEM_NAME MATCHES "Linux|Android|OpenBSD|FreeBSD")
-    # The swiftCompilerModules need swiftrt to work properly.
-    string(REGEX MATCH "^[^-]*" arch ${LLVM_TARGET_TRIPLE})
     string(TOLOWER ${CMAKE_SYSTEM_NAME} platform)
     target_link_libraries(lldbPluginExpressionParserSwift
       PRIVATE
         "${LLDB_SWIFT_LIBS}/${platform}/${arch}/swiftrt${CMAKE_C_OUTPUT_EXTENSION}")
   elseif(CMAKE_SYSTEM_NAME STREQUAL "Windows")
     set(swiftrt_obj
-        ${SWIFT_PATH_TO_SWIFT_SDK}/usr/lib/swift/windows/${SWIFT_HOST_VARIANT_ARCH}/swiftrt${CMAKE_C_OUTPUT_EXTENSION})
+        ${SWIFT_PATH_TO_SWIFT_SDK}/usr/lib/swift/windows/${arch}/swiftrt${CMAKE_C_OUTPUT_EXTENSION})
     target_link_libraries(lldbPluginExpressionParserSwift PRIVATE ${swiftrt_obj})
   endif()
 else()
