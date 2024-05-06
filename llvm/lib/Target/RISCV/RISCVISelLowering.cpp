@@ -13700,43 +13700,58 @@ static SDValue performSETCCCombine(SDNode *N, SelectionDAG &DAG,
   using namespace SDPatternMatch;
   auto matchSelectCC = [](SDValue Op, SDValue VLCandidate, bool Inverse,
                           SDValue &Select) -> bool {
-    // It's almost certain the VL which this pattern tries to match
-    // (the EVL parameter from VP intrinsics and the value setcc compares
-    // against) is zext from i32.
-    auto ZExtVL = m_And(m_Value(), m_SpecificInt(APInt::getLowBitsSet(64, 32)));
-
-    // Remove any sext or zext
-    auto ExtPattern = m_AnyOf(m_Opc(ISD::SIGN_EXTEND_INREG), ZExtVL);
-    if (sd_match(VLCandidate, ExtPattern))
-      VLCandidate = VLCandidate->getOperand(0);
-    if (sd_match(Op, ExtPattern))
+    SDValue VLCandVTNode;
+    EVT VLCandVT = VLCandidate.getValueType();
+    // Remove any sext.
+    if (sd_match(Op, m_Opc(ISD::SIGN_EXTEND_INREG)))
       Op = Op->getOperand(0);
-
-    // Matching VLCandidate or sext/zext + VLCandidate
-    auto VLCandPattern = m_AnyOf(
-        m_Node(ISD::SIGN_EXTEND_INREG, m_Specific(VLCandidate), m_Value()),
-        ZExtVL, m_Specific(VLCandidate));
+    if (sd_match(VLCandidate, m_Node(ISD::SIGN_EXTEND_INREG, m_Value(),
+                                     m_Value(VLCandVTNode)))) {
+      VLCandidate = VLCandidate->getOperand(0);
+      VLCandVT = cast<VTSDNode>(VLCandVTNode)->getVT();
+    }
 
     SDValue VFirst, CC;
-    auto VFirstPattern = m_AllOf(
-        m_Node(RISCVISD::VFIRST_VL, m_Value(), m_Value(), VLCandPattern),
-        m_Value(VFirst));
+    // This is the value used in both VFIRST_VL's VL operand and converting its
+    // result from -1 to VL.
+    SDValue EVL;
+    auto VFirstPattern =
+        m_AllOf(m_Node(RISCVISD::VFIRST_VL, m_Value(), m_Value(), m_Value(EVL)),
+                m_Value(VFirst));
 
     auto SelectCCPattern =
         m_Node(RISCVISD::SELECT_CC, VFirstPattern, m_SpecificInt(0),
-               m_Value(CC), VLCandPattern, m_Deferred(VFirst));
+               m_Value(CC), m_Deferred(EVL), m_Deferred(VFirst));
     auto InvSelectCCPattern =
         m_Node(RISCVISD::SELECT_CC, VFirstPattern, m_SpecificInt(0),
-               m_Value(CC), m_Deferred(VFirst), VLCandPattern);
+               m_Value(CC), m_Deferred(VFirst), m_Deferred(EVL));
 
-    if (Inverse)
-      return sd_match(Op,
-                      m_AllOf(m_OneUse(InvSelectCCPattern), m_Value(Select))) &&
-             cast<CondCodeSDNode>(CC)->get() == ISD::SETGE;
-    else
-      return sd_match(Op,
-                      m_AllOf(m_OneUse(SelectCCPattern), m_Value(Select))) &&
-             cast<CondCodeSDNode>(CC)->get() == ISD::SETLT;
+    if (Inverse) {
+      if (!sd_match(Op,
+                    m_AllOf(m_OneUse(InvSelectCCPattern), m_Value(Select))) ||
+          cast<CondCodeSDNode>(CC)->get() != ISD::SETGE)
+        return false;
+    } else {
+      if (!sd_match(Op, m_AllOf(m_OneUse(SelectCCPattern), m_Value(Select))) ||
+          cast<CondCodeSDNode>(CC)->get() != ISD::SETLT)
+        return false;
+    }
+
+    APInt ZExtMask;
+    unsigned EVLSizeInBits = EVL.getValueType().getFixedSizeInBits();
+    // If it is an extended value, it should be an zext.
+    if (sd_match(EVL, m_And(m_Value(), m_ConstInt(ZExtMask))) &&
+        ZExtMask.isMask()) {
+      EVL = EVL->getOperand(0);
+      EVLSizeInBits = ZExtMask.countTrailingOnes();
+    }
+
+    // Check if VLCandidate and EVL are equal.
+    if (EVL == VLCandidate)
+      // Make sure their original size are the same.
+      return VLCandVT.getFixedSizeInBits() == EVLSizeInBits;
+
+    return false;
   };
 
   auto buildSetCC = [&](SDValue Select, bool Inverse) -> SDValue {
