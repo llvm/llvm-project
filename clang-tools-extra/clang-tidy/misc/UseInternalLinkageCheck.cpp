@@ -20,11 +20,7 @@ namespace clang::tidy::misc {
 
 namespace {
 
-AST_POLYMORPHIC_MATCHER(isFirstDecl,
-                        AST_POLYMORPHIC_SUPPORTED_TYPES(FunctionDecl,
-                                                        VarDecl)) {
-  return Node.isFirstDecl();
-}
+AST_MATCHER(Decl, isFirstDecl) { return Node.isFirstDecl(); }
 
 AST_MATCHER(Decl, isInMainFile) {
   return llvm::all_of(Node.redecls(), [&](const Decl *D) {
@@ -50,7 +46,6 @@ void UseInternalLinkageCheck::registerMatchers(MatchFinder *Finder) {
                           isExternStorageClass(), isExternC(),
                           // 3. template
                           isExplicitTemplateSpecialization(),
-                          clang::ast_matchers::isTemplateInstantiation(),
                           // 4. friend
                           hasAncestor(friendDecl()))));
   Finder->addMatcher(
