@@ -2454,4 +2454,20 @@ TEST(TripleTest, isArmMClass) {
     EXPECT_TRUE(T.isArmMClass());
   }
 }
+
+TEST(TripleTest, DXILNormaizeWithVersion) {
+  EXPECT_EQ("dxilv1.0-unknown-shadermodel6.0",
+            Triple::normalize("dxilv1.0--shadermodel6.0"));
+  EXPECT_EQ("dxilv1.0-unknown-shadermodel6.0",
+            Triple::normalize("dxil--shadermodel6.0"));
+  EXPECT_EQ("dxilv1.1-unknown-shadermodel6.1-library",
+            Triple::normalize("dxil-shadermodel6.1-unknown-library"));
+  EXPECT_EQ("dxilv1.8-unknown-shadermodel6.x-unknown",
+            Triple::normalize("dxil-unknown-shadermodel6.x-unknown"));
+  EXPECT_EQ("dxilv1.8-unknown-shadermodel6.x-unknown",
+            Triple::normalize("dxil-unknown-shadermodel6.x-unknown"));
+  EXPECT_EQ("dxil-unknown-unknown-unknown", Triple::normalize("dxil---"));
+  EXPECT_EQ("dxilv1.0-pc-shadermodel5.0-compute",
+            Triple::normalize("dxil-shadermodel5.0-pc-compute"));
+}
 } // end anonymous namespace
