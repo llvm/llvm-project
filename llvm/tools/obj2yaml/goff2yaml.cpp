@@ -17,17 +17,15 @@
 
 using namespace llvm;
 
-namespace {
-std::string getFixedLengthEBCDICString(DataExtractor &Data,
-                                       DataExtractor::Cursor &C,
-                                       uint64_t Length,
-                                       StringRef TrimChars = {"\0", 1}) {
+static std::string getFixedLengthEBCDICString(DataExtractor &Data,
+                                              DataExtractor::Cursor &C,
+                                              uint64_t Length,
+                                              StringRef TrimChars = {"\0", 1}) {
   StringRef FixedLenStr = Data.getBytes(C, Length);
   SmallString<16> Str;
   ConverterEBCDIC::convertToUTF8(FixedLenStr, Str);
   return Str.str().trim(TrimChars).str();
 }
-} // namespace
 
 class GOFFDumper {
   const object::GOFFObjectFile &Obj;
@@ -55,8 +53,7 @@ Error GOFFDumper::dumpHeader(ArrayRef<uint8_t> Records) {
   YAMLObj.Header.TargetOperatingSystem = Data.getU32(C);
   Data.skip(C, 2);
   YAMLObj.Header.CCSID = Data.getU16(C);
-  YAMLObj.Header.CharacterSetName =
-      getFixedLengthEBCDICString(Data, C, 16);
+  YAMLObj.Header.CharacterSetName = getFixedLengthEBCDICString(Data, C, 16);
   YAMLObj.Header.LanguageProductIdentifier =
       getFixedLengthEBCDICString(Data, C, 16);
   YAMLObj.Header.ArchitectureLevel = Data.getU32(C);

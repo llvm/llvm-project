@@ -25,22 +25,20 @@
 using namespace llvm::object;
 using namespace llvm;
 
-namespace {
 // Return the type of the record.
-GOFF::RecordType getRecordType(const uint8_t *PhysicalRecord) {
+static GOFF::RecordType getRecordType(const uint8_t *PhysicalRecord) {
   return GOFF::RecordType((PhysicalRecord[1] & 0xF0) >> 4);
 }
 
 // Return true if the record is a continuation record.
-bool isContinuation(const uint8_t *PhysicalRecord) {
+static bool isContinuation(const uint8_t *PhysicalRecord) {
   return PhysicalRecord[1] & 0x02;
 }
 
 // Return true if the record has a continuation.
-bool isContinued(const uint8_t *PhysicalRecord) {
+static bool isContinued(const uint8_t *PhysicalRecord) {
   return PhysicalRecord[1] & 0x01;
 }
-} // namespace
 
 void RecordRef::determineSize() {
   GOFF::RecordType CurrRecordType = ::getRecordType(Data);
@@ -57,9 +55,10 @@ void RecordRef::determineSize() {
     // continuation.
     if (PrevWasContinued && !IsContinuation) {
       createError(object_error::parse_failed,
-                  "record " + std::to_string(RecordNum) +
-                      " is not a continuation record but the "
-                      "preceding record is continued");
+                  Twine("Record ")
+                      .concat(std::to_string(RecordNum))
+                      .concat(" is not a continuation record but the "
+                              "preceding record is continued"));
       return;
     }
     // If the current record is a continuation, then the previous record should
@@ -67,16 +66,18 @@ void RecordRef::determineSize() {
     if (IsContinuation) {
       if (RecordType != CurrRecordType) {
         createError(object_error::parse_failed,
-                    "record " + std::to_string(RecordNum) +
-                        " is a continuation record that does not "
-                        "match the type of the previous record");
+                    Twine("Record ")
+                        .concat(std::to_string(RecordNum))
+                        .concat(" is a continuation record that does not "
+                                "match the type of the previous record"));
         return;
       }
       if (!PrevWasContinued) {
         createError(object_error::parse_failed,
-                    "record " + std::to_string(RecordNum) +
-                        " is a continuation record that is not "
-                        "preceded by a continued record");
+                    Twine("Record ")
+                        .concat(std::to_string(RecordNum))
+                        .concat(" is a continuation record that is not "
+                                "preceded by a continued record"));
         return;
       }
     }
