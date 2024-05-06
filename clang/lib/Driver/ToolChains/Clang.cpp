@@ -2883,7 +2883,6 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
       Range = RangeVal;
       break;
     }
-
     case options::OPT_ffp_model_EQ: {
       // If -ffp-model= is seen, reset to fno-fast-math
       HonorINFs = true;
@@ -3126,7 +3125,7 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
       break;
     }
     // The StrictFPModel local variable is needed to report warnings
-    // in the wat we intend. If -ffp-model=strict has been used, we
+    // in the way we intend. If -ffp-model=strict has been used, we
     // want to report a warning for the next option encountered that
     // takes us out of the settings described by fp-model=strict, but
     // we don't want to continue issuing warnings for other conflicting
