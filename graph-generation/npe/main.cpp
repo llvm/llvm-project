@@ -7,6 +7,7 @@ int main() {
     modifyPointer(p);
 
     A *q = p;
+    A *qBad = p;
 
     useAlias(*q);
 

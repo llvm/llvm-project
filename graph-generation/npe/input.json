@@ -70,6 +70,17 @@
                     "column": 9
                 }
             ]
+        },
+        {
+            "type": "npe-bad-source",
+            "locations": [
+                {
+                    "type": "source",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/main.cpp",
+                    "line": 10,
+                    "column": 5
+                }
+            ]
         }
     ]
 }

@@ -60,9 +60,19 @@
                 {
                     "type": "stmt",
                     "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/main.cpp",
-                    "beginLine": 11,
+                    "beginLine": 10,
                     "beginColumn": 5,
-                    "endLine": 11,
+                    "endLine": 10,
+                    "endColumn": 17,
+                    "content": "A *qBad = p;",
+                    "stmtKind": "DeclStmt"
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/main.cpp",
+                    "beginLine": 12,
+                    "beginColumn": 5,
+                    "endLine": 12,
                     "endColumn": 17,
                     "content": "useAlias(*q)",
                     "stmtKind": "CallExpr"
@@ -166,9 +176,9 @@
                 {
                     "type": "stmt",
                     "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/main.cpp",
-                    "beginLine": 13,
+                    "beginLine": 14,
                     "beginColumn": 5,
-                    "endLine": 13,
+                    "endLine": 14,
                     "endColumn": 13,
                     "content": "return 0",
                     "stmtKind": "ReturnStmt"
@@ -178,7 +188,7 @@
                     "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/main.cpp",
                     "beginLine": 3,
                     "beginColumn": 1,
-                    "endLine": 14,
+                    "endLine": 15,
                     "endColumn": 2,
                     "content": "int main() {\n    int x = 42;\n    A *p = new A(&x);\n\n    modifyPointer(p);\n\n    A ..."
                 }
@@ -326,9 +336,19 @@
                 {
                     "type": "stmt",
                     "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/main.cpp",
-                    "beginLine": 11,
+                    "beginLine": 10,
                     "beginColumn": 5,
-                    "endLine": 11,
+                    "endLine": 10,
+                    "endColumn": 17,
+                    "content": "A *qBad = p;",
+                    "stmtKind": "DeclStmt"
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/main.cpp",
+                    "beginLine": 12,
+                    "beginColumn": 5,
+                    "endLine": 12,
                     "endColumn": 17,
                     "content": "useAlias(*q)",
                     "stmtKind": "CallExpr"
@@ -552,9 +572,19 @@
                 {
                     "type": "stmt",
                     "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/main.cpp",
-                    "beginLine": 11,
+                    "beginLine": 10,
                     "beginColumn": 5,
-                    "endLine": 11,
+                    "endLine": 10,
+                    "endColumn": 17,
+                    "content": "A *qBad = p;",
+                    "stmtKind": "DeclStmt"
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/main.cpp",
+                    "beginLine": 12,
+                    "beginColumn": 5,
+                    "endLine": 12,
                     "endColumn": 17,
                     "content": "useAlias(*q)",
                     "stmtKind": "CallExpr"
