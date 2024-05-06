@@ -186,13 +186,26 @@ ObjcCategoryChecker::ObjcCategoryChecker()
       roClassLayout(target->wordSize), listHeaderLayout(target->wordSize),
       methodLayout(target->wordSize) {}
 
-// \p r must point to an offset within a cstring section.
+// \p r must point to an offset within a CStringInputSection or a
+// ConcatInputSection
 static StringRef getReferentString(const Reloc &r) {
   if (auto *isec = r.referent.dyn_cast<InputSection *>())
     return cast<CStringInputSection>(isec)->getStringRefAtOffset(r.addend);
+
   auto *sym = cast<Defined>(r.referent.get<Symbol *>());
-  return cast<CStringInputSection>(sym->isec())
-      ->getStringRefAtOffset(sym->value + r.addend);
+  auto *symIsec = sym->isec();
+  auto symOffset = sym->value + r.addend;
+
+  if (auto *s = dyn_cast_or_null<CStringInputSection>(symIsec))
+    return s->getStringRefAtOffset(symOffset);
+
+  if (isa<ConcatInputSection>(symIsec)) {
+    auto strData = symIsec->data.slice(symOffset);
+    const char *pszData = reinterpret_cast<const char *>(strData.data());
+    return StringRef(pszData, strnlen(pszData, strData.size()));
+  }
+
+  llvm_unreachable("unknown reference section in getReferentString");
 }
 
 void ObjcCategoryChecker::parseMethods(const ConcatInputSection *methodsIsec,

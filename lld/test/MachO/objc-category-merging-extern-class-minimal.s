@@ -118,7 +118,7 @@ __OBJC_$_CATEGORY_MyBaseClass_$_Category01:
 	.quad	0
 	.long	64                              ; 0x40
 	.space	4
-	.section	__TEXT,__objc_classname,cstring_literals
+	.section	__DATA,__objc_const
 l_OBJC_CLASS_NAME_.1:                   ; @OBJC_CLASS_NAME_.1
 	.asciz	"Category02"
 	.section	__TEXT,__objc_methname,cstring_literals
