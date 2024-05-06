@@ -367,7 +367,6 @@ bool CombinerHelper::matchExtractVectorElementWithShuffleVector(
   //                     shufflemask(0, 0, 0, -1)
   //  %extract:_(s32) = G_EXTRACT_VECTOR_ELT %sv(<4 x s32>), %opaque(s64)
   //
-  //
 
   // We try to get the value of the Index register.
   std::optional<ValueAndVReg> MaybeIndex =
