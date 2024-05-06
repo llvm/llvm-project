@@ -506,7 +506,11 @@ void generatePathFromOneEntry(const ordered_json &result,
         VarLocResult varLoc = locateVariable(locator, jsonLoc, isStmt);
         if (!varLoc.isValid()) {
             logger.error("Error: cannot locate {} at {}", type, loc);
-            throw std::runtime_error("Can't locate input entry");
+            // 跳过无法定位的中间路径
+            if (type == "stmt")
+                continue;
+            else
+                throw std::runtime_error("Can't locate input entry");
         }
 
         if (type == "source") {
