@@ -18,7 +18,6 @@
 #include "local_cache.h"
 #include "mem_map.h"
 #include "memtag.h"
-#include "mutex.h"
 #include "options.h"
 #include "quarantine.h"
 #include "report.h"
@@ -182,17 +181,17 @@ public:
     Quarantine.init(
         static_cast<uptr>(getFlags()->quarantine_size_kb << 10),
         static_cast<uptr>(getFlags()->thread_local_quarantine_size_kb << 10));
+
+    mapAndInitializeRingBuffer();
   }
 
-  void enableRingBuffer() NO_THREAD_SAFETY_ANALYSIS {
+  void enableRingBuffer() {
     AllocationRingBuffer *RB = getRingBuffer();
     if (RB)
       RB->Depot->enable();
-    RingBufferInitLock.unlock();
   }
 
-  void disableRingBuffer() NO_THREAD_SAFETY_ANALYSIS {
-    RingBufferInitLock.lock();
+  void disableRingBuffer() {
     AllocationRingBuffer *RB = getRingBuffer();
     if (RB)
       RB->Depot->disable();
@@ -919,11 +918,9 @@ public:
       DCHECK(!Primary.Options.load().get(OptionBit::TrackAllocationStacks));
       return;
     }
-
-    if (Track) {
-      initRingBufferMaybe();
+    if (Track)
       Primary.Options.set(OptionBit::TrackAllocationStacks);
-    } else
+    else
       Primary.Options.clear(OptionBit::TrackAllocationStacks);
   }
 
@@ -1097,9 +1094,6 @@ private:
                         alignof(typename AllocationRingBuffer::Entry) ==
                     0,
                 "invalid alignment");
-
-  // Lock to initialize the RingBuffer
-  HybridMutex RingBufferInitLock;
 
   // Pointer to memory mapped area starting with AllocationRingBuffer struct,
   // and immediately followed by Size elements of type Entry.
@@ -1555,16 +1549,11 @@ private:
         RBEntryStart)[N];
   }
 
-  void initRingBufferMaybe() {
-    ScopedLock L(RingBufferInitLock);
-    if (getRingBuffer() != nullptr)
+  void mapAndInitializeRingBuffer() {
+    if (getFlags()->allocation_ring_buffer_size <= 0)
       return;
-
-    int ring_buffer_size = getFlags()->allocation_ring_buffer_size;
-    if (ring_buffer_size <= 0)
-      return;
-
-    u32 AllocationRingBufferSize = static_cast<u32>(ring_buffer_size);
+    u32 AllocationRingBufferSize =
+        static_cast<u32>(getFlags()->allocation_ring_buffer_size);
 
     // We store alloc and free stacks for each entry.
     constexpr u32 kStacksPerRingBufferEntry = 2;
