@@ -272,3 +272,24 @@ class TypeAndTypeListTestCase(TestBase):
             self.assertTrue(int_enum_uchar)
             self.DebugSBType(int_enum_uchar)
             self.assertEqual(int_enum_uchar.GetName(), "unsigned char")
+
+    def test_GetByteAlign(self):
+        """Exercise SBType::GetByteAlign"""
+        self.build()
+        spec = lldb.SBModuleSpec()
+        spec.SetFileSpec(lldb.SBFileSpec(self.getBuildArtifact()))
+        module = lldb.SBModule(spec)
+        self.assertTrue(module)
+
+        # Invalid types should not crash.
+        self.assertEqual(lldb.SBType().GetByteAlign(), 0)
+
+        # Try a type with natural alignment.
+        void_ptr = module.GetBasicType(lldb.eBasicTypeVoid).GetPointerType()
+        self.assertTrue(void_ptr)
+        # Not exactly guaranteed by the spec, but should be true everywhere we
+        # care about.
+        self.assertEqual(void_ptr.GetByteSize(), void_ptr.GetByteAlign())
+
+        # And an over-aligned type.
+        self.assertEqual(module.FindFirstType("OverAlignedStruct").GetByteAlign(), 128)
