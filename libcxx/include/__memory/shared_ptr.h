@@ -73,7 +73,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 #elif defined(_LIBCPP_COMPILER_GCC)
 #  define _LIBCPP_HAS_BUILTIN_ATOMIC_SUPPORT
 #endif
-
+ 
 template <class _ValueType>
 inline _LIBCPP_HIDE_FROM_ABI _ValueType __libcpp_relaxed_load(_ValueType const* __value) {
 #if !defined(_LIBCPP_HAS_NO_THREADS) && defined(__ATOMIC_RELAXED) &&                                                   \

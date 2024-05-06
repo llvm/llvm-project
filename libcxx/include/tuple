@@ -304,7 +304,7 @@ class __tuple_leaf {
 #  endif
   }
 
-  _LIBCPP_CONSTEXPR_SINCE_CXX14 __tuple_leaf& operator=(const __tuple_leaf&) = delete;
+  _LIBCPP_CONSTEXPR_SINCE_CXX14 __tuple_leaf& operator=(const __tuple_leaf&) = delete; 
 
 public:
   _LIBCPP_HIDE_FROM_ABI constexpr __tuple_leaf() _NOEXCEPT_(is_nothrow_default_constructible<_Hp>::value) : __value_() {
