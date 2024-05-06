@@ -13,6 +13,7 @@
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SparseTensor/IR/SparseTensor.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
+#include "mlir/IR/BuiltinTypeInterfaces.h"
 #include "mlir/IR/Matchers.h"
 #include <optional>
 
@@ -670,6 +671,14 @@ bool MaterializeInDestinationOp::operatesOnDisjointSubset(
 }
 
 LogicalResult MaterializeInDestinationOp::verify() {
+  // The shapes of `source` and `dest` must be compatible.
+  for (auto [srcDim, destDim] : llvm::zip_equal(
+           getSource().getType().getShape(), getDest().getType().getShape())) {
+    if (!ShapedType::isDynamic(srcDim) &&
+        !ShapedType::isDynamicShape(destDim) && srcDim != destDim)
+      return emitOpError("'source' and 'dest' must have compatible shapes");
+  }
+
   if (!isa<TensorType, BaseMemRefType>(getDest().getType()))
     return emitOpError("'dest' must be a tensor or a memref");
   if (auto destType = dyn_cast<TensorType>(getDest().getType())) {
