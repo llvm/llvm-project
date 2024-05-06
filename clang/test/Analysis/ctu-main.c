@@ -4,7 +4,7 @@
 // RUN:   -emit-pch -o %t/ctudir2/ctu-other.c.ast %S/Inputs/ctu-other.c
 // RUN: cp %S/Inputs/ctu-other.c.externalDefMap.ast-dump.txt %t/ctudir2/externalDefMap.txt
 
-// RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -fsyntax-only -std=c89 -analyze \
+// RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -std=c89 -analyze \
 // RUN:   -analyzer-checker=core,debug.ExprInspection \
 // RUN:   -analyzer-config eagerly-assume=false \
 // RUN:   -analyzer-config experimental-enable-naive-ctu-analysis=true \
@@ -14,7 +14,7 @@
 
 // Simulate the behavior of the previous CTU implementation by inlining all
 // functions during the first phase. This way, the second phase is a noop.
-// RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -fsyntax-only -std=c89 -analyze \
+// RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -std=c89 -analyze \
 // RUN:   -analyzer-checker=core,debug.ExprInspection \
 // RUN:   -analyzer-config eagerly-assume=false \
 // RUN:   -analyzer-config experimental-enable-naive-ctu-analysis=true \
