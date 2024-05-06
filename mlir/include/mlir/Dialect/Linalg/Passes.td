@@ -149,31 +149,30 @@ def LinalgBlockPackMatmul : Pass<"linalg-block-pack-matmul"> {
     - minor 2D blocks - inner dimensions, consist of scalar elements
 
     A 2D matmul MxNxK gets reshaped into blocked 4D representation
-    as: [MB][NB][mb][nb] += [MB][KB][mb][kb] * [NB][KB][kb][nb]
+    as: [MB][NB][mb][nb] += [MB][KB][mb][kb] * [NB][KB][nb][kb]
     where the (MB, NB, KB) dimensions represent the major blocks,
     and the (mb, nb, kb) are the minor blocks of their respective
     original 2D dimensions (M, N, K).
 
-    As a part of packing strategy, the RHS operand gets 'block transposed'
-    i.e., the major blocks [KB][NB] get transposed to [NB][KB] layout.
-    The minor blocks remain unchanged.
-    The final result is unpacked back to the original layout.
+    Depending on the initial operands' data layout and the specified
+    packing options, both the major blocks dimensions might get transposed
+    e.g., [MB][KB] -> [KB][MB]. The minor blocks can also be transposed
+    e.g., [mb][kb] -> [kb][mb].
+    Any present batch dimensions remain unchanged.
+    The final result is unpacked back to the original shape.
 
     For example, given a matmul operation:
     ```mlir
       %res = linalg.matmul ins(%A, %B) outs(%C)
     ```
-    the transformation result can be represented as:
+    the default transformation result can be represented as:
     ```mlir
-      %A_packed = pack %A : 2D -> 4D
-      %B_packed = pack %B : 2D -> 4D #block_transposed
-      %C_packed = pack %C : 2D -> 4D
+      %A_packed = pack %A : 2D <MxK> -> 4D <MBxKBxmbxkb>
+      %B_packed = pack %B : 2D <KxN> -> 4D <NBxKBxnbxkb>
+      %C_packed = pack %C : 2D <MxN> -> 4D <MBxNBxmbxnb>
       %res_packed = linalg.mmt4d ins(%A_packed, %B_packed) outs(%C_packed)
-      %res = unpack %res_packed : 4D -> 2D
+      %res = unpack %res_packed : 4D <MBxNBxmbxnb> -> 2D <MxN>
     ```
-
-    This packed data arrangement minimizes distance between consecutive
-    blocks which improves spacial locality and cache behavior.
   }];
   let dependentDialects = ["linalg::LinalgDialect", "tensor::TensorDialect"];
   let options = [
@@ -197,7 +196,7 @@ def LinalgBlockPackMatmul : Pass<"linalg-block-pack-matmul"> {
            "Transpose RHS outer block layout [KB][NB] -> [NB][KB]">,
     Option<"rhsTransposeInnerBlocks", "rhs-transpose-inner-blocks", "bool",
            /*default=*/"true",
-           "Transpose RHS inner block layout [kb][nb] -> [nb][kb]">,
+           "Transpose RHS inner block layout [kb][nb] -> [nb][kb]">
   ];
 }
 
