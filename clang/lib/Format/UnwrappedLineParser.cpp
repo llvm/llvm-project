@@ -2511,6 +2511,7 @@ bool UnwrappedLineParser::parseParens(TokenType AmpAmpTokenType) {
   assert(FormatTok->is(tok::l_paren) && "'(' expected.");
   auto *LeftParen = FormatTok;
   bool SeenEqual = false;
+  bool MightBeFoldExpr = false;
   const bool MightBeStmtExpr = Tokens->peekNextToken()->is(tok::l_brace);
   nextToken();
   do {
@@ -2522,7 +2523,7 @@ bool UnwrappedLineParser::parseParens(TokenType AmpAmpTokenType) {
         parseChildBlock();
       break;
     case tok::r_paren:
-      if (!MightBeStmtExpr && !Line->InMacroBody &&
+      if (!MightBeStmtExpr && !MightBeFoldExpr && !Line->InMacroBody &&
           Style.RemoveParentheses > FormatStyle::RPS_Leave) {
         const auto *Prev = LeftParen->Previous;
         const auto *Next = Tokens->peekNextToken();
@@ -2564,6 +2565,10 @@ bool UnwrappedLineParser::parseParens(TokenType AmpAmpTokenType) {
         nextToken();
         parseBracedList();
       }
+      break;
+    case tok::ellipsis:
+      MightBeFoldExpr = true;
+      nextToken();
       break;
     case tok::equal:
       SeenEqual = true;
