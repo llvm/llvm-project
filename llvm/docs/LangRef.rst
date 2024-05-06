@@ -9113,7 +9113,7 @@ instruction in most regards. The primary difference is that it
 establishes an association with additional labels to define where control
 flow goes after the call.
 
-The output values of a '``callbr``' instruction are available both on the
+The output values of a '``callbr``' instruction are available both in the
 the '``fallthrough``' block, and any '``indirect``' blocks(s).
 
 The only use of this today is to implement the "goto" feature of gcc inline
