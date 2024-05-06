@@ -2228,7 +2228,7 @@ TEST(TransferTest, AssignmentOperator) {
       A Foo = { 1 };
       A Bar = { 2 };
       // [[p1]]
-      Foo = Bar;
+      A &Rval = (Foo = Bar);
       // [[p2]]
       Foo.Baz = 3;
       // [[p3]]
@@ -2274,6 +2274,7 @@ TEST(TransferTest, AssignmentOperator) {
               cast<RecordStorageLocation>(Env2.getStorageLocation(*BarDecl));
 
           EXPECT_TRUE(recordsEqual(*FooLoc2, *BarLoc2, Env2));
+          EXPECT_EQ(&getLocForDecl(ASTCtx, Env2, "Rval"), FooLoc2);
 
           const auto *FooBazVal2 =
               cast<IntegerValue>(getFieldValue(FooLoc2, *BazDecl, Env2));
@@ -2441,7 +2442,75 @@ TEST(TransferTest, AssignmentOperatorReturnsByValue) {
   // This is a crash repro.
   std::string Code = R"(
     struct S {
-      S operator=(S&& other);
+      S operator=(const S&);
+      int i;
+    };
+    void target() {
+      S S1 = { 1 };
+      S S2 = { 2 };
+      S S3 = { 3 };
+      // [[before]]
+      // Test that the returned value is modeled by assigning to another value.
+      S1 = (S2 = S3);
+      (void)0;
+      // [[after]]
+    }
+  )";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        const ValueDecl *S1Decl = findValueDecl(ASTCtx, "S1");
+        const ValueDecl *S2Decl = findValueDecl(ASTCtx, "S2");
+        const ValueDecl *S3Decl = findValueDecl(ASTCtx, "S3");
+
+        const Environment &EnvBefore =
+            getEnvironmentAtAnnotation(Results, "before");
+
+        EXPECT_FALSE(recordsEqual(
+            *EnvBefore.get<RecordStorageLocation>(*S1Decl),
+            *EnvBefore.get<RecordStorageLocation>(*S2Decl), EnvBefore));
+        EXPECT_FALSE(recordsEqual(
+            *EnvBefore.get<RecordStorageLocation>(*S2Decl),
+            *EnvBefore.get<RecordStorageLocation>(*S3Decl), EnvBefore));
+
+        const Environment &EnvAfter =
+            getEnvironmentAtAnnotation(Results, "after");
+
+        EXPECT_TRUE(recordsEqual(*EnvAfter.get<RecordStorageLocation>(*S1Decl),
+                                 *EnvAfter.get<RecordStorageLocation>(*S2Decl),
+                                 EnvAfter));
+        EXPECT_TRUE(recordsEqual(*EnvAfter.get<RecordStorageLocation>(*S2Decl),
+                                 *EnvAfter.get<RecordStorageLocation>(*S3Decl),
+                                 EnvAfter));
+      });
+}
+
+TEST(TransferTest, AssignmentOperatorReturnsDifferentTypeByRef) {
+  // This is a crash repro.
+  std::string Code = R"(
+    struct DifferentType {};
+    struct S {
+      DifferentType& operator=(const S&);
+    };
+    void target() {
+      S s;
+      s = S();
+      // [[p]]
+    }
+  )";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {});
+}
+
+TEST(TransferTest, AssignmentOperatorReturnsDifferentTypeByValue) {
+  // This is a crash repro.
+  std::string Code = R"(
+    struct DifferentType {};
+    struct S {
+      DifferentType operator=(const S&);
     };
     void target() {
       S s;
