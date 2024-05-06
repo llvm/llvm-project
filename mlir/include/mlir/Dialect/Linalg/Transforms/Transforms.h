@@ -1167,14 +1167,26 @@ struct PackMatmulOptions {
   /// the parallel dimensions and kb is the reduction dimension.
   SmallVector<int64_t, 3> blockFactors;
 
-  /// Order of the packed dimensions (mb, nb, kb).
-  SmallVector<int64_t, 3> mnkOrder = {0, 1, 2};
-
-  SmallVector<int64_t, 3> mnkPaddedSizesNextMultipleOf;
-
   /// If true, allows packing of dimensions that only partially fit into the
   /// block factors.
   bool allowPadding = true;
+
+  SmallVector<int64_t, 3> mnkPaddedSizesNextMultipleOf;
+
+  /// Permutation of matmul (M, N, K) dimensions order.
+  SmallVector<int64_t, 3> mnkOrder = {0, 1, 2};
+
+  /// Transpose LHS outer block layout [MB][KB] -> [KB][MB].
+  bool lhsTransposeOuterBlocks = false;
+
+  /// Transpose LHS inner block layout [mb][kb] -> [kb][mb].
+  bool lhsTransposeInnerBlocks = false;
+
+  /// Transpose RHS outer block layout [KB][NB] -> [NB][KB].
+  bool rhsTransposeOuterBlocks = true;
+
+  /// Transpose RHS inner block layout [kb][nb] -> [nb][kb].
+  bool rhsTransposeInnerBlocks = true;
 };
 
 /// Function type which is used to control matmul packing.

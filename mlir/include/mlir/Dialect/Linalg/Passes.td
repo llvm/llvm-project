@@ -179,13 +179,25 @@ def LinalgBlockPackMatmul : Pass<"linalg-block-pack-matmul"> {
   let options = [
     ListOption<"blockFactors", "block-factors", "int64_t",
                "Block factors (mb, nb, kb) for relayout">,
-    ListOption<"mnkOrder", "mnk-order", "int64_t",
-               "Permutation of (mb, nb, kb) dimensions order">,
-    ListOption<"mnkPaddedSizesNextMultipleOf", "mnk-padded-multiples", "int64_t",
-               "Packing sizes next multiple">,
     Option<"allowPadding", "allow-padding", "bool",
            /*default=*/"true",
-           "Allow packing padding">
+           "Allow packing padding">,
+    ListOption<"mnkPaddedSizesNextMultipleOf", "mnk-padded-multiples", "int64_t",
+               "Next multiple of the packing sizes">,
+    ListOption<"mnkOrder", "mnk-order", "int64_t",
+               "Permutation of matmul (M, N, K) dimensions order">,
+    Option<"lhsTransposeOuterBlocks", "lhs-transpose-outer-blocks", "bool",
+           /*default=*/"false",
+           "Transpose LHS outer block layout [MB][KB] -> [KB][MB]">,
+    Option<"lhsTransposeInnerBlocks", "lhs-transpose-inner-blocks", "bool",
+           /*default=*/"false",
+           "Transpose LHS inner block layout [mb][kb] -> [kb][mb]">,
+    Option<"rhsTransposeOuterBlocks", "rhs-transpose-outer-blocks", "bool",
+           /*default=*/"true",
+           "Transpose RHS outer block layout [KB][NB] -> [NB][KB]">,
+    Option<"rhsTransposeInnerBlocks", "rhs-transpose-inner-blocks", "bool",
+           /*default=*/"true",
+           "Transpose RHS inner block layout [kb][nb] -> [nb][kb]">,
   ];
 }
 

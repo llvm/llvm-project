@@ -143,58 +143,170 @@ linalg::blockPackMatmulOp(RewriterBase &rewriter, linalg::LinalgOp matmulOp,
   assert(packedCanonicalMatmul->unPackOps.size() == 1 &&
          "failed matmul unpacking");
 
+  FailureOr<ContractionDimensions> maybeDimensions =
+      inferContractionDims(packedCanonicalMatmul->packedLinalgOp);
+  if (failed(maybeDimensions)) {
+    llvm::errs() << "Failed to infer contraction dims\n";
+  } else {
+    llvm::errs() << "batch: ";
+    for (auto dim : maybeDimensions->batch)
+      llvm::errs() << dim << " ";
+    llvm::errs() << "\n";
+    llvm::errs() << "m: ";
+    for (auto dim : maybeDimensions->m)
+      llvm::errs() << dim << " ";
+    llvm::errs() << "\n";
+    llvm::errs() << "n: ";
+    for (auto dim : maybeDimensions->n)
+      llvm::errs() << dim << " ";
+    llvm::errs() << "\n";
+    llvm::errs() << "k: ";
+    for (auto dim : maybeDimensions->k)
+      llvm::errs() << dim << " ";
+    llvm::errs() << "\n";
+  }
+
+  auto genericOp = dyn_cast<linalg::GenericOp>(
+      packedCanonicalMatmul->packedLinalgOp.getOperation());
+  SmallVector<AffineMap> maps = genericOp.getIndexingMapsArray();
+
+  AffineMap lhsMap = maps[0];
+  llvm::errs() << "m pos:" << maybeDimensions->m.end()[-2] << "\n";
+  llvm::errs() << "A mat m map: "
+               << lhsMap.getDimPosition(0 + maybeDimensions->batch.size())
+               << "\n";
+  llvm::errs() << "k pos:" << maybeDimensions->k.end()[-2] << "\n";
+  llvm::errs() << "A mat k dim: "
+               << lhsMap.getDimPosition(1 + maybeDimensions->batch.size())
+               << "\n";
+
+  unsigned int batchOffset = maybeDimensions->batch.size();
+  bool isLhsOuterTransposed =
+      lhsMap.getDimPosition(0 + batchOffset) != maybeDimensions->m.end()[-2];
+  bool isLhsInnerTransposed =
+      lhsMap.getDimPosition(2 + batchOffset) != maybeDimensions->m.back();
+
   auto applyBatchDim = [&](ArrayRef<int64_t> perms) -> SmallVector<int64_t> {
     // Account for the batch dimension.
-    SmallVector<int64_t> newPerms{0};
+    SmallVector<int64_t> newPerms;
+    for (auto i : llvm::seq<unsigned>(0, batchOffset))
+      newPerms.push_back(0);
     // Offset all permutations.
     for (auto perm : perms)
-      newPerms.push_back(++perm);
+      newPerms.push_back(perm + batchOffset);
     return newPerms;
   };
 
   // If needed, block transpose the packed matmul i.e., transpose the outer
   // dimensions. The inner dimensions (minor blocks) remain unchanged.
-  if (isTransposedLhs) {
-    // The inner blocks' layout is already correctly enforced by the initial
-    // packing.
-    SmallVector<int64_t> lhsInnerPerm{0, 1};
-    // Only block transpose the outer dimensions for LHS matrix.
-    SmallVector<int64_t> lhsOuterPerm{1, 0};
-    // Leave the batch dimension as is.
-    if (isBatchMatmulOp)
-      lhsOuterPerm = applyBatchDim(lhsOuterPerm);
+  // The inner blocks' layout is already correctly enforced by the initial
+  // packing.
+  SmallVector<int64_t> lhsInnerPerm{0, 1};
+  if (isLhsInnerTransposed != options->lhsTransposeInnerBlocks)
+    lhsInnerPerm = {1, 0};
 
-    FailureOr<PackTransposeResult> packedMatmul =
-        packTranspose(rewriter, packedCanonicalMatmul->packOps[0],
-                      packedCanonicalMatmul->packedLinalgOp,
-                      /*maybeUnPackOp=*/nullptr, lhsOuterPerm, lhsInnerPerm);
-    if (failed(packedMatmul))
-      return failure();
+  // Only block transpose the outer dimensions for LHS matrix.
+  SmallVector<int64_t> lhsOuterPerm{0, 1};
+  if (isLhsOuterTransposed != options->lhsTransposeOuterBlocks)
+    lhsOuterPerm = {1, 0};
+  // Leave the batch dimension as is.
+  if (isBatchMatmulOp)
+    lhsOuterPerm = applyBatchDim(lhsOuterPerm);
 
-    packedCanonicalMatmul->packOps[0] = packedMatmul->transposedPackOp;
-    packedCanonicalMatmul->packedLinalgOp = packedMatmul->transposedLinalgOp;
-  }
+  FailureOr<PackTransposeResult> packedLhs =
+      packTranspose(rewriter, packedCanonicalMatmul->packOps[0],
+                    packedCanonicalMatmul->packedLinalgOp,
+                    /*maybeUnPackOp=*/nullptr, lhsOuterPerm, lhsInnerPerm);
+  if (failed(packedLhs))
+    return failure();
 
-  // Transpose the layout of the inner dimension (minor blocks).
-  SmallVector<int64_t> rhsInnerPerm{1, 0};
-  // Block transpose the RHS matrix i.e., transpose the outer dimensions.
-  SmallVector<int64_t> rhsOuterPerm{1, 0};
-  // No need to block transpose if the RHS matrix is already transposed.
-  if (isTransposedRhs)
-    rhsOuterPerm = {0, 1};
+  packedCanonicalMatmul->packOps[0] = packedLhs->transposedPackOp;
+  packedCanonicalMatmul->packedLinalgOp = packedLhs->transposedLinalgOp;
+
+  AffineMap rhsMap = maps[1];
+  bool isRhsOuterTransposed =
+      rhsMap.getDimPosition(0 + batchOffset) != maybeDimensions->k.end()[-2];
+  bool isRhsInnerTransposed =
+      rhsMap.getDimPosition(2 + batchOffset) != maybeDimensions->k.back();
+
+  SmallVector<int64_t> rhsInnerPerm{0, 1};
+  if (isRhsInnerTransposed != options->rhsTransposeInnerBlocks)
+    rhsInnerPerm = {1, 0};
+
+  // Only block transpose the outer dimensions for LHS matrix.
+  SmallVector<int64_t> rhsOuterPerm{0, 1};
+  if (isRhsOuterTransposed != options->rhsTransposeOuterBlocks)
+    rhsOuterPerm = {1, 0};
   // Leave the batch dimension as is.
   if (isBatchMatmulOp)
     rhsOuterPerm = applyBatchDim(rhsOuterPerm);
 
-  FailureOr<PackTransposeResult> packedMatmul =
+  FailureOr<PackTransposeResult> packedRhs =
       packTranspose(rewriter, packedCanonicalMatmul->packOps[1],
                     packedCanonicalMatmul->packedLinalgOp,
                     /*maybeUnPackOp=*/nullptr, rhsOuterPerm, rhsInnerPerm);
-  if (failed(packedMatmul))
+  if (failed(packedRhs))
     return failure();
 
-  packedCanonicalMatmul->packOps[1] = packedMatmul->transposedPackOp;
-  packedCanonicalMatmul->packedLinalgOp = packedMatmul->transposedLinalgOp;
+  packedCanonicalMatmul->packOps[1] = packedRhs->transposedPackOp;
+  packedCanonicalMatmul->packedLinalgOp = packedRhs->transposedLinalgOp;
+
+  // auto applyBatchDim = [&](ArrayRef<int64_t> perms) -> SmallVector<int64_t>
+  // {
+  //   // Account for the batch dimension.
+  //   SmallVector<int64_t> newPerms{0};
+  //   // Offset all permutations.
+  //   for (auto perm : perms)
+  //     newPerms.push_back(++perm);
+  //   return newPerms;
+  // };
+
+  // // If needed, block transpose the packed matmul i.e., transpose the outer
+  // // dimensions. The inner dimensions (minor blocks) remain unchanged.
+  // if (isTransposedLhs) {
+  //   // The inner blocks' layout is already correctly enforced by the
+  //   initial
+  //   // packing.
+  //   SmallVector<int64_t> lhsInnerPerm{0, 1};
+  //   // Only block transpose the outer dimensions for LHS matrix.
+  //   SmallVector<int64_t> lhsOuterPerm{1, 0};
+  //   // Leave the batch dimension as is.
+  //   if (isBatchMatmulOp)
+  //     lhsOuterPerm = applyBatchDim(lhsOuterPerm);
+
+  //   FailureOr<PackTransposeResult> packedMatmul =
+  //       packTranspose(rewriter, packedCanonicalMatmul->packOps[0],
+  //                     packedCanonicalMatmul->packedLinalgOp,
+  //                     /*maybeUnPackOp=*/nullptr, lhsOuterPerm,
+  //                     lhsInnerPerm);
+  //   if (failed(packedMatmul))
+  //     return failure();
+
+  //   packedCanonicalMatmul->packOps[0] = packedMatmul->transposedPackOp;
+  //   packedCanonicalMatmul->packedLinalgOp =
+  //   packedMatmul->transposedLinalgOp;
+  // }
+
+  // // Transpose the layout of the inner dimension (minor blocks).
+  // SmallVector<int64_t> rhsInnerPerm{1, 0};
+  // // Block transpose the RHS matrix i.e., transpose the outer dimensions.
+  // SmallVector<int64_t> rhsOuterPerm{1, 0};
+  // // No need to block transpose if the RHS matrix is already transposed.
+  // if (isTransposedRhs)
+  //   rhsOuterPerm = {0, 1};
+  // // Leave the batch dimension as is.
+  // if (isBatchMatmulOp)
+  //   rhsOuterPerm = applyBatchDim(rhsOuterPerm);
+
+  // FailureOr<PackTransposeResult> packedMatmul =
+  //     packTranspose(rewriter, packedCanonicalMatmul->packOps[1],
+  //                   packedCanonicalMatmul->packedLinalgOp,
+  //                   /*maybeUnPackOp=*/nullptr, rhsOuterPerm, rhsInnerPerm);
+  // if (failed(packedMatmul))
+  //   return failure();
+
+  // packedCanonicalMatmul->packOps[1] = packedMatmul->transposedPackOp;
+  // packedCanonicalMatmul->packedLinalgOp = packedMatmul->transposedLinalgOp;
 
   return packedCanonicalMatmul;
 }
@@ -232,11 +344,15 @@ struct LinalgBlockPackMatmul
         [&](linalg::LinalgOp op) -> PackMatmulOptions {
       PackMatmulOptions options;
       options.blockFactors = SmallVector<int64_t>{*blockFactors};
-      if (!mnkOrder.empty())
-        options.mnkOrder = SmallVector<int64_t>{*mnkOrder};
+      options.allowPadding = allowPadding;
       options.mnkPaddedSizesNextMultipleOf =
           SmallVector<int64_t>{*mnkPaddedSizesNextMultipleOf};
-      options.allowPadding = allowPadding;
+      if (!mnkOrder.empty())
+        options.mnkOrder = SmallVector<int64_t>{*mnkOrder};
+      options.lhsTransposeOuterBlocks = lhsTransposeOuterBlocks;
+      options.lhsTransposeInnerBlocks = lhsTransposeInnerBlocks;
+      options.rhsTransposeOuterBlocks = rhsTransposeOuterBlocks;
+      options.rhsTransposeInnerBlocks = rhsTransposeInnerBlocks;
       return options;
     };
 
