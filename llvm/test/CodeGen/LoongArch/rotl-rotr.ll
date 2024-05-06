@@ -4,7 +4,7 @@
 
 ;; TODO: Add optimization to ISD::ROTL
 
-define i32 @rotl_32(i32 %x, i32 %y) nounwind {
+define signext i32 @rotl_32(i32 signext %x, i32 signext %y) nounwind {
 ; LA32-LABEL: rotl_32:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    ori $a2, $zero, 32
@@ -26,7 +26,7 @@ define i32 @rotl_32(i32 %x, i32 %y) nounwind {
   ret i32 %d
 }
 
-define i32 @rotr_32(i32 %x, i32 %y) nounwind {
+define signext i32 @rotr_32(i32 signext %x, i32 signext %y) nounwind {
 ; LA32-LABEL: rotr_32:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    rotr.w $a0, $a0, $a1
@@ -143,7 +143,7 @@ define i64 @rotr_64(i64 %x, i64 %y) nounwind {
   ret i64 %d
 }
 
-define i32 @rotl_32_mask(i32 %x, i32 %y) nounwind {
+define signext i32 @rotl_32_mask(i32 signext %x, i32 signext %y) nounwind {
 ; LA32-LABEL: rotl_32_mask:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    sub.w $a1, $zero, $a1
@@ -165,7 +165,7 @@ define i32 @rotl_32_mask(i32 %x, i32 %y) nounwind {
   ret i32 %d
 }
 
-define i32 @rotl_32_mask_and_63_and_31(i32 %x, i32 %y) nounwind {
+define signext i32 @rotl_32_mask_and_63_and_31(i32 signext %x, i32 signext %y) nounwind {
 ; LA32-LABEL: rotl_32_mask_and_63_and_31:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    sub.w $a1, $zero, $a1
@@ -188,7 +188,7 @@ define i32 @rotl_32_mask_and_63_and_31(i32 %x, i32 %y) nounwind {
   ret i32 %f
 }
 
-define i32 @rotl_32_mask_or_64_or_32(i32 %x, i32 %y) nounwind {
+define signext i32 @rotl_32_mask_or_64_or_32(i32 signext %x, i32 signext %y) nounwind {
 ; LA32-LABEL: rotl_32_mask_or_64_or_32:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    sub.w $a1, $zero, $a1
@@ -211,7 +211,7 @@ define i32 @rotl_32_mask_or_64_or_32(i32 %x, i32 %y) nounwind {
   ret i32 %f
 }
 
-define i32 @rotr_32_mask(i32 %x, i32 %y) nounwind {
+define signext i32 @rotr_32_mask(i32 signext %x, i32 signext %y) nounwind {
 ; LA32-LABEL: rotr_32_mask:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    rotr.w $a0, $a0, $a1
@@ -229,7 +229,7 @@ define i32 @rotr_32_mask(i32 %x, i32 %y) nounwind {
   ret i32 %d
 }
 
-define i32 @rotr_32_mask_and_63_and_31(i32 %x, i32 %y) nounwind {
+define signext i32 @rotr_32_mask_and_63_and_31(i32 signext %x, i32 signext %y) nounwind {
 ; LA32-LABEL: rotr_32_mask_and_63_and_31:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    rotr.w $a0, $a0, $a1
@@ -248,7 +248,7 @@ define i32 @rotr_32_mask_and_63_and_31(i32 %x, i32 %y) nounwind {
   ret i32 %f
 }
 
-define i32 @rotr_32_mask_or_64_or_32(i32 %x, i32 %y) nounwind {
+define signext i32 @rotr_32_mask_or_64_or_32(i32 signext %x, i32 signext %y) nounwind {
 ; LA32-LABEL: rotr_32_mask_or_64_or_32:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    rotr.w $a0, $a0, $a1
@@ -510,7 +510,7 @@ define i64 @rotr_64_mask_or_128_or_64(i64 %x, i64 %y) nounwind {
   ret i64 %f
 }
 
-define i32 @rotri_i32(i32 %a) nounwind {
+define signext i32 @rotri_i32(i32 signext %a) nounwind {
 ; LA32-LABEL: rotri_i32:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    rotri.w $a0, $a0, 16
