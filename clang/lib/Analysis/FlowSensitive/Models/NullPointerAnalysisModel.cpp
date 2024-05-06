@@ -755,10 +755,10 @@ ComparisonResult compareAndReplace(QualType Type, Value &Val1,
   return ComparisonResult::Same;
 }
 
-std::optional<WidenResult> NullPointerAnalysisModel::widen(QualType Type, Value &Prev,
-                                       const Environment &PrevEnv,
-                                       Value &Current,
-                                       Environment &CurrentEnv) {
+std::optional<WidenResult>
+NullPointerAnalysisModel::widen(QualType Type, Value &Prev,
+                                const Environment &PrevEnv, Value &Current,
+                                Environment &CurrentEnv) {
   if (!Type->isAnyPointerType())
     return std::nullopt;
 
