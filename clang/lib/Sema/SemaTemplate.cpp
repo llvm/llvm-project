@@ -10375,7 +10375,7 @@ Sema::CheckMemberSpecialization(NamedDecl *Member, LookupResult &Previous) {
         Adjusted = adjustCCAndNoReturn(Adjusted, Method->getType());
       // This doesn't handle deduced return types, but both function
       // declarations should be undeduced at this point.
-      if (!Context.hasSameType(Adjusted, Function->getType()))
+      if (!Context.hasSameType(Adjusted, Method->getType()))
         continue;
       if (ConstraintSatisfaction Satisfaction;
           Method->getTrailingRequiresClause() &&
