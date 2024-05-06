@@ -141,7 +141,6 @@ public:
         AttrMask.addAttribute(I);
     }
 
-    
     dxil::ValidatorVersionMD ValVerMD(M);
     VersionTuple ValVer = ValVerMD.getAsVersionTuple();
     bool SkipValidation = ValVer.getMajor() == 0 && ValVer.getMinor() == 0;
