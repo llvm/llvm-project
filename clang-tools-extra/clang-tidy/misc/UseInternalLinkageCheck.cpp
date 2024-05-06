@@ -7,10 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "UseInternalLinkageCheck.h"
+#include "../utils/FileExtensionsUtils.h"
 #include "clang/AST/Decl.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/ASTMatchers/ASTMatchersMacros.h"
+#include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Specifiers.h"
 #include "llvm/ADT/STLExtras.h"
 
@@ -22,10 +24,12 @@ namespace {
 
 AST_MATCHER(Decl, isFirstDecl) { return Node.isFirstDecl(); }
 
-AST_MATCHER(Decl, isInMainFile) {
+AST_MATCHER_P(Decl, isInMainFile, FileExtensionsSet, HeaderFileExtensions) {
   return llvm::all_of(Node.redecls(), [&](const Decl *D) {
-    return Finder->getASTContext().getSourceManager().isInMainFile(
-        D->getLocation());
+    SourceManager &SM = Finder->getASTContext().getSourceManager();
+    const SourceLocation L = D->getLocation();
+    return SM.isInMainFile(L) &&
+           !utils::isSpellingLocInHeaderFile(L, SM, HeaderFileExtensions);
   });
 }
 
@@ -38,7 +42,7 @@ AST_POLYMORPHIC_MATCHER(isExternStorageClass,
 } // namespace
 
 void UseInternalLinkageCheck::registerMatchers(MatchFinder *Finder) {
-  auto Common = allOf(isFirstDecl(), isInMainFile(),
+  auto Common = allOf(isFirstDecl(), isInMainFile(HeaderFileExtensions),
                       unless(anyOf(
                           // 1. internal linkage
                           isStaticStorageClass(), isInAnonymousNamespace(),

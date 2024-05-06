@@ -21,12 +21,16 @@ namespace clang::tidy::misc {
 class UseInternalLinkageCheck : public ClangTidyCheck {
 public:
   UseInternalLinkageCheck(StringRef Name, ClangTidyContext *Context)
-      : ClangTidyCheck(Name, Context) {}
+      : ClangTidyCheck(Name, Context),
+        HeaderFileExtensions(Context->getHeaderFileExtensions()) {}
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
   std::optional<TraversalKind> getCheckTraversalKind() const override {
     return TK_IgnoreUnlessSpelledInSource;
   }
+
+private:
+  FileExtensionsSet HeaderFileExtensions;
 };
 
 } // namespace clang::tidy::misc
