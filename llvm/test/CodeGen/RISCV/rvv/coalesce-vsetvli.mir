@@ -12,7 +12,7 @@ body:             |
     ; CHECK-NEXT: $v0 = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, 3, 6 /* e64 */, 0 /* tu, mu */
     ; CHECK-NEXT: PseudoRET
     %avl:gprnox0 = ADDI $x0, 42
-    dead $x0 = PseudoVSETVLI %avl, 216, implicit-def $vl, implicit-def $vtype
+    dead $x0 = PseudoVSETVLI killed %avl, 216, implicit-def $vl, implicit-def $vtype
     %x:gpr = PseudoVMV_X_S $noreg, 6
     dead $x0 = PseudoVSETIVLI 3, 216, implicit-def $vl, implicit-def $vtype
     $v0 = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, 3, 6, 0
@@ -27,13 +27,15 @@ body:             |
     ; CHECK-LABEL: name: dead_avl_nonvolatile_load
     ; CHECK: liveins: $x1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: dead %avl:gprnox0 = LW $x1, 0 :: (dereferenceable load (s32))
+    ; CHECK-NEXT: %ptr:gpr = COPY $x1
+    ; CHECK-NEXT: dead %avl:gprnox0 = LW %ptr, 0 :: (dereferenceable load (s32))
     ; CHECK-NEXT: $x0 = PseudoVSETIVLI 3, 216 /* e64, m1, ta, ma */, implicit-def $vl, implicit-def $vtype
     ; CHECK-NEXT: dead %x:gpr = PseudoVMV_X_S $noreg, 6 /* e64 */
     ; CHECK-NEXT: $v0 = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, 3, 6 /* e64 */, 0 /* tu, mu */
     ; CHECK-NEXT: PseudoRET
-    %avl:gprnox0 = LW $x1, 0 :: (dereferenceable load (s32))
-    dead $x0 = PseudoVSETVLI %avl, 216, implicit-def $vl, implicit-def $vtype
+    %ptr:gpr = COPY $x1
+    %avl:gprnox0 = LW killed %ptr, 0 :: (dereferenceable load (s32))
+    dead $x0 = PseudoVSETVLI killed %avl, 216, implicit-def $vl, implicit-def $vtype
     %x:gpr = PseudoVMV_X_S $noreg, 6
     dead $x0 = PseudoVSETIVLI 3, 216, implicit-def $vl, implicit-def $vtype
     $v0 = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, 3, 6, 0
@@ -48,13 +50,15 @@ body:             |
     ; CHECK-LABEL: name: dead_avl_volatile_load
     ; CHECK: liveins: $x1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: dead %avl:gprnox0 = LW $x1, 0 :: (volatile dereferenceable load (s32))
+    ; CHECK-NEXT: %ptr:gpr = COPY $x1
+    ; CHECK-NEXT: dead %avl:gprnox0 = LW %ptr, 0 :: (volatile dereferenceable load (s32))
     ; CHECK-NEXT: $x0 = PseudoVSETIVLI 3, 216 /* e64, m1, ta, ma */, implicit-def $vl, implicit-def $vtype
     ; CHECK-NEXT: dead %x:gpr = PseudoVMV_X_S $noreg, 6 /* e64 */
     ; CHECK-NEXT: $v0 = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, 3, 6 /* e64 */, 0 /* tu, mu */
     ; CHECK-NEXT: PseudoRET
-    %avl:gprnox0 = LW $x1, 0 :: (volatile dereferenceable load (s32))
-    dead $x0 = PseudoVSETVLI %avl, 216, implicit-def $vl, implicit-def $vtype
+    %ptr:gpr = COPY $x1
+    %avl:gprnox0 = LW killed %ptr, 0 :: (volatile dereferenceable load (s32))
+    dead $x0 = PseudoVSETVLI killed %avl, 216, implicit-def $vl, implicit-def $vtype
     %x:gpr = PseudoVMV_X_S $noreg, 6
     dead $x0 = PseudoVSETIVLI 3, 216, implicit-def $vl, implicit-def $vtype
     $v0 = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, 3, 6, 0
