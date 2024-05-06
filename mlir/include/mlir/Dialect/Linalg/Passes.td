@@ -155,7 +155,7 @@ def LinalgBlockPackMatmul : Pass<"linalg-block-pack-matmul"> {
     original 2D dimensions (M, N, K).
 
     Depending on the initial operands' data layout and the specified
-    packing options, both the major blocks dimensions might get transposed
+    packing options, the major blocks dimensions might get transposed
     e.g., [MB][KB] -> [KB][MB]. The minor blocks can also be transposed
     e.g., [mb][kb] -> [kb][mb].
     Any present batch dimensions remain unchanged.

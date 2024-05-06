@@ -138,7 +138,7 @@ transposePackedMatmul(RewriterBase &rewriter, linalg::LinalgOp matmulOp,
 /// Pack a matmul operation into blocked 4D layout.
 FailureOr<PackResult>
 linalg::blockPackMatmul(RewriterBase &rewriter, linalg::LinalgOp matmulOp,
-                        const ControlPackMatmulFn &controlPackMatmul) {
+                        const ControlBlockPackMatmulFn &controlPackMatmul) {
   if (matmulOp.hasDynamicShape())
     return rewriter.notifyMatchFailure(matmulOp, "require static shape");
 
@@ -221,7 +221,7 @@ linalg::blockPackMatmul(RewriterBase &rewriter, linalg::LinalgOp matmulOp,
 namespace {
 template <typename OpTy>
 struct BlockPackMatmul : public OpRewritePattern<OpTy> {
-  BlockPackMatmul(MLIRContext *context, ControlPackMatmulFn fun,
+  BlockPackMatmul(MLIRContext *context, ControlBlockPackMatmulFn fun,
                   PatternBenefit benefit = 1)
       : OpRewritePattern<OpTy>(context, benefit), controlFn(std::move(fun)) {}
 
@@ -235,7 +235,7 @@ struct BlockPackMatmul : public OpRewritePattern<OpTy> {
   }
 
 private:
-  ControlPackMatmulFn controlFn;
+  ControlBlockPackMatmulFn controlFn;
 };
 
 /// Convert linalg matmul ops to block layout and back.
