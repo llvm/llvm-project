@@ -259,12 +259,11 @@ public:
       if (Pos.BufferPtr + 1 == Pos.BufferEnd) {
         consumeChar();
         break;
-      } else {
-        consumeChar();
       }
+      consumeChar();
     }
 
-    const unsigned Length = WordText.size();
+    unsigned Length = WordText.size();
     if (Length == 0) {
       Pos = SavedPos;
       return false;
@@ -454,6 +453,7 @@ Parser::parseThrowCommandArgs(TextTokenRetokenizer &Retokenizer,
 ArrayRef<Comment::Argument>
 Parser::parseParCommandArgs(TextTokenRetokenizer &Retokenizer,
                             unsigned NumArgs) {
+  assert(NumArgs > 0);
   auto *Args = new (Allocator.Allocate<Comment::Argument>(NumArgs))
       Comment::Argument[NumArgs];
   unsigned ParsedArgs = 0;
