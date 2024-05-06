@@ -46,12 +46,14 @@ STATISTIC(NumRemovedSExtW, "Number of removed sign-extensions");
 STATISTIC(NumTransformedToWInstrs,
           "Number of instructions transformed to W-ops");
 
-static cl::opt<bool> DisableSExtWRemoval("loongarch-disable-sextw-removal",
-                                         cl::desc("Disable removal of sext.w"),
-                                         cl::init(false), cl::Hidden);
-static cl::opt<bool> DisableStripWSuffix("loongarch-disable-strip-w-suffix",
-                                         cl::desc("Disable strip W suffix"),
-                                         cl::init(false), cl::Hidden);
+static cl::opt<bool>
+    DisableSExtWRemoval("loongarch-disable-sextw-removal",
+                        cl::desc("Disable removal of sign-extend insn"),
+                        cl::init(false), cl::Hidden);
+static cl::opt<bool>
+    DisableCvtToDSuffix("loongarch-disable-cvt-to-d-suffix",
+                        cl::desc("Disable convert to D suffix"),
+                        cl::init(false), cl::Hidden);
 
 namespace {
 
@@ -65,10 +67,12 @@ public:
   bool removeSExtWInstrs(MachineFunction &MF, const LoongArchInstrInfo &TII,
                          const LoongArchSubtarget &ST,
                          MachineRegisterInfo &MRI);
-  bool stripWSuffixes(MachineFunction &MF, const LoongArchInstrInfo &TII,
-                      const LoongArchSubtarget &ST, MachineRegisterInfo &MRI);
-  bool appendWSuffixes(MachineFunction &MF, const LoongArchInstrInfo &TII,
-                       const LoongArchSubtarget &ST, MachineRegisterInfo &MRI);
+  bool convertToDSuffixes(MachineFunction &MF, const LoongArchInstrInfo &TII,
+                          const LoongArchSubtarget &ST,
+                          MachineRegisterInfo &MRI);
+  bool convertToWSuffixes(MachineFunction &MF, const LoongArchInstrInfo &TII,
+                          const LoongArchSubtarget &ST,
+                          MachineRegisterInfo &MRI);
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
@@ -713,10 +717,10 @@ bool LoongArchOptWInstrs::removeSExtWInstrs(MachineFunction &MF,
   return MadeChange;
 }
 
-bool LoongArchOptWInstrs::stripWSuffixes(MachineFunction &MF,
-                                         const LoongArchInstrInfo &TII,
-                                         const LoongArchSubtarget &ST,
-                                         MachineRegisterInfo &MRI) {
+bool LoongArchOptWInstrs::convertToDSuffixes(MachineFunction &MF,
+                                             const LoongArchInstrInfo &TII,
+                                             const LoongArchSubtarget &ST,
+                                             MachineRegisterInfo &MRI) {
   bool MadeChange = false;
   for (MachineBasicBlock &MBB : MF) {
     for (MachineInstr &MI : MBB) {
@@ -739,10 +743,10 @@ bool LoongArchOptWInstrs::stripWSuffixes(MachineFunction &MF,
   return MadeChange;
 }
 
-bool LoongArchOptWInstrs::appendWSuffixes(MachineFunction &MF,
-                                          const LoongArchInstrInfo &TII,
-                                          const LoongArchSubtarget &ST,
-                                          MachineRegisterInfo &MRI) {
+bool LoongArchOptWInstrs::convertToWSuffixes(MachineFunction &MF,
+                                             const LoongArchInstrInfo &TII,
+                                             const LoongArchSubtarget &ST,
+                                             MachineRegisterInfo &MRI) {
   bool MadeChange = false;
   for (MachineBasicBlock &MBB : MF) {
     for (MachineInstr &MI : MBB) {
@@ -805,11 +809,11 @@ bool LoongArchOptWInstrs::runOnMachineFunction(MachineFunction &MF) {
   bool MadeChange = false;
   MadeChange |= removeSExtWInstrs(MF, TII, ST, MRI);
 
-  if (!(DisableStripWSuffix || ST.preferWInst()))
-    MadeChange |= stripWSuffixes(MF, TII, ST, MRI);
+  if (!(DisableCvtToDSuffix || ST.preferWInst()))
+    MadeChange |= convertToDSuffixes(MF, TII, ST, MRI);
 
   if (ST.preferWInst())
-    MadeChange |= appendWSuffixes(MF, TII, ST, MRI);
+    MadeChange |= convertToWSuffixes(MF, TII, ST, MRI);
 
   return MadeChange;
 }
