@@ -906,7 +906,7 @@ public:
 
   bool isRegisteredDummySymbol(
       Fortran::semantics::SymbolRef symRef) const override final {
-    auto *sym = symRef->HasLocalLocality() ? &*symRef : &symRef->GetUltimate();
+    auto *sym = &*symRef;
     return registeredDummySymbols.contains(sym);
   }
 
@@ -5409,7 +5409,7 @@ private:
 
   /// Record the given symbol as a dummy argument of this function.
   void registerDummySymbol(Fortran::semantics::SymbolRef symRef) {
-    auto *sym = symRef->HasLocalLocality() ? &*symRef : &symRef->GetUltimate();
+    auto *sym = &*symRef;
     registeredDummySymbols.insert(sym);
   }
 
