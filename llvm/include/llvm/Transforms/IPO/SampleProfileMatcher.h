@@ -26,6 +26,7 @@ struct Anchor {
 
   Anchor(const LineLocation &Loc, const FunctionId &FuncId)
       : Loc(Loc), FuncId(FuncId) {}
+  Anchor(const LineLocation &Loc, StringRef &FName) : Loc(Loc), FuncId(FName) {}
   bool operator==(const Anchor &Other) const {
     return this->FuncId == Other.FuncId;
   }
@@ -68,6 +69,8 @@ public:
   DiffResult shortestEditScript(const std::vector<Anchor> &A,
                                 const std::vector<Anchor> &B) const;
 };
+
+using AnchorMap = std::map<LineLocation, Anchor>;
 
 // Sample profile matching - fuzzy match.
 class SampleProfileMatcher {
@@ -145,18 +148,13 @@ private:
     return nullptr;
   }
   void runOnFunction(Function &F);
-  void findIRAnchors(const Function &F,
-                     std::map<LineLocation, StringRef> &IRAnchors);
-  void findProfileAnchors(
-      const FunctionSamples &FS,
-      std::map<LineLocation, std::unordered_set<FunctionId>> &ProfileAnchors);
+  void findIRAnchors(const Function &F, AnchorMap &IRAnchors);
+  void findProfileAnchors(const FunctionSamples &FS, AnchorMap &ProfileAnchors);
   // Record the callsite match states for profile staleness report, the result
   // is saved in FuncCallsiteMatchStates.
-  void recordCallsiteMatchStates(
-      const Function &F, const std::map<LineLocation, StringRef> &IRAnchors,
-      const std::map<LineLocation, std::unordered_set<FunctionId>>
-          &ProfileAnchors,
-      const LocToLocMap *IRToProfileLocationMap);
+  void recordCallsiteMatchStates(const Function &F, const AnchorMap &IRAnchors,
+                                 const AnchorMap &ProfileAnchors,
+                                 const LocToLocMap *IRToProfileLocationMap);
 
   bool isMismatchState(const enum MatchState &State) {
     return State == MatchState::InitialMismatch ||
@@ -196,15 +194,12 @@ private:
   LocToLocMap longestCommonSequence(
       const std::vector<Anchor> &IRCallsiteAnchors,
       const std::vector<Anchor> &ProfileCallsiteAnchors) const;
-  void matchNonCallsiteLocsAndWriteResults(
-      const LocToLocMap &AnchorMatchings,
-      const std::map<LineLocation, StringRef> &IRAnchors,
-      LocToLocMap &IRToProfileLocationMap);
-  void runStaleProfileMatching(
-      const Function &F, const std::map<LineLocation, StringRef> &IRAnchors,
-      const std::map<LineLocation, std::unordered_set<FunctionId>>
-          &ProfileAnchors,
-      LocToLocMap &IRToProfileLocationMap);
+  void matchNonCallsiteLocsAndWriteResults(const LocToLocMap &AnchorMatchings,
+                                           const AnchorMap &IRAnchors,
+                                           LocToLocMap &IRToProfileLocationMap);
+  void runStaleProfileMatching(const Function &F, const AnchorMap &IRAnchors,
+                               const AnchorMap &ProfileAnchors,
+                               LocToLocMap &IRToProfileLocationMap);
   void reportOrPersistProfileStats();
 };
 } // end namespace llvm

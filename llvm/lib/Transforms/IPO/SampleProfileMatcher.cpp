@@ -24,8 +24,8 @@ extern cl::opt<bool> SalvageStaleProfile;
 extern cl::opt<bool> PersistProfileStaleness;
 extern cl::opt<bool> ReportProfileStaleness;
 
-void SampleProfileMatcher::findIRAnchors(
-    const Function &F, std::map<LineLocation, StringRef> &IRAnchors) {
+void SampleProfileMatcher::findIRAnchors(const Function &F,
+                                         AnchorMap &IRAnchors) {
   // For inlined code, recover the original callsite and callee by finding the
   // top-level inline frame. e.g. For frame stack "main:1 @ foo:2 @ bar:3", the
   // top-level frame is "main:1", the callsite is "1" and the callee is "foo".
@@ -39,7 +39,7 @@ void SampleProfileMatcher::findIRAnchors(
 
     LineLocation Callsite = FunctionSamples::getCallSiteIdentifier(DIL);
     StringRef CalleeName = PrevDIL->getSubprogramLinkageName();
-    return std::make_pair(Callsite, CalleeName);
+    return std::make_pair(Callsite, Anchor(Callsite, CalleeName));
   };
 
   auto GetCanonicalCalleeName = [](const CallBase *CB) {
@@ -69,7 +69,8 @@ void SampleProfileMatcher::findIRAnchors(
               if (!isa<IntrinsicInst>(&I))
                 CalleeName = GetCanonicalCalleeName(CB);
             }
-            IRAnchors.emplace(LineLocation(Probe->Id, 0), CalleeName);
+            LineLocation Loc = LineLocation(Probe->Id, 0);
+            IRAnchors.emplace(Loc, Anchor(Loc, CalleeName));
           }
         }
       } else {
@@ -84,19 +85,20 @@ void SampleProfileMatcher::findIRAnchors(
         } else {
           LineLocation Callsite = FunctionSamples::getCallSiteIdentifier(DIL);
           StringRef CalleeName = GetCanonicalCalleeName(dyn_cast<CallBase>(&I));
-          IRAnchors.emplace(Callsite, CalleeName);
+          IRAnchors.emplace(Callsite, Anchor(Callsite, CalleeName));
         }
       }
     }
   }
 }
 
-void SampleProfileMatcher::findProfileAnchors(
-    const FunctionSamples &FS,
-    std::map<LineLocation, std::unordered_set<FunctionId>> &ProfileAnchors) {
+void SampleProfileMatcher::findProfileAnchors(const FunctionSamples &FS,
+                                              AnchorMap &ProfileAnchors) {
   auto isInvalidLineOffset = [](uint32_t LineOffset) {
     return LineOffset & 0x8000;
   };
+
+  std::map<LineLocation, std::unordered_set<FunctionId>> ProfileCallsites;
 
   for (const auto &I : FS.getBodySamples()) {
     const LineLocation &Loc = I.first;
@@ -104,7 +106,7 @@ void SampleProfileMatcher::findProfileAnchors(
       continue;
     for (const auto &I : I.second.getCallTargets()) {
       auto Ret =
-          ProfileAnchors.try_emplace(Loc, std::unordered_set<FunctionId>());
+          ProfileCallsites.try_emplace(Loc, std::unordered_set<FunctionId>());
       Ret.first->second.insert(I.first);
     }
   }
@@ -116,32 +118,48 @@ void SampleProfileMatcher::findProfileAnchors(
     const auto &CalleeMap = I.second;
     for (const auto &I : CalleeMap) {
       auto Ret =
-          ProfileAnchors.try_emplace(Loc, std::unordered_set<FunctionId>());
+          ProfileCallsites.try_emplace(Loc, std::unordered_set<FunctionId>());
       Ret.first->second.insert(I.first);
+    }
+  }
+
+  for (const auto &I : ProfileCallsites) {
+    const auto &Loc = I.first;
+    const auto &Callees = I.second;
+    if (Callees.size() == 1) {
+      auto CalleeName = *Callees.begin();
+      ProfileAnchors.emplace(Loc, Anchor(Loc, CalleeName));
+    } else if (Callees.size() > 1) {
+      // use a dummy name(UnknownIndirectCallee) for unknown indrect callee
+      // name.
+      ProfileAnchors.emplace(Loc,
+                             Anchor(Loc, FunctionId(UnknownIndirectCallee)));
     }
   }
 }
 
 MyersDiff::DiffResult
-MyersDiff::shortestEditScript(const std::vector<Anchor> &A,
-                              const std::vector<Anchor> &B) const {
-  int32_t N = A.size(), M = B.size(), Max = N + M;
-  auto Index = [&](int32_t I) { return I + Max; };
+MyersDiff::shortestEditScript(const std::vector<Anchor> &AnchorVec1,
+                              const std::vector<Anchor> &AnchorVec2) const {
+  int32_t Size1 = AnchorVec1.size(), Size2 = AnchorVec2.size(),
+          MaxDepth = Size1 + Size2;
+  auto Index = [&](int32_t I) { return I + MaxDepth; };
 
   DiffResult Diff;
-  if (Max == 0)
+  if (MaxDepth == 0)
     return Diff;
 
   // Backtrack the SES result.
   auto Backtrack = [&](const std::vector<std::vector<int32_t>> &Trace,
-                       const std::vector<Anchor> &A,
-                       const std::vector<Anchor> &B, DiffResult &Diff) {
-    int32_t X = N, Y = M;
-    for (int32_t D = Trace.size() - 1; X > 0 || Y > 0; D--) {
-      const auto &P = Trace[D];
+                       const std::vector<Anchor> &AnchorVec1,
+                       const std::vector<Anchor> &AnchorVec2,
+                       DiffResult &Diff) {
+    int32_t X = Size1, Y = Size2;
+    for (int32_t Depth = Trace.size() - 1; X > 0 || Y > 0; Depth--) {
+      const auto &P = Trace[Depth];
       int32_t K = X - Y;
       int32_t PrevK = K;
-      if (K == -D || (K != D && P[Index(K - 1)] < P[Index(K + 1)]))
+      if (K == -Depth || (K != Depth && P[Index(K - 1)] < P[Index(K + 1)]))
         PrevK = K + 1;
       else
         PrevK = K - 1;
@@ -151,21 +169,21 @@ MyersDiff::shortestEditScript(const std::vector<Anchor> &A,
       while (X > PrevX && Y > PrevY) {
         X--;
         Y--;
-        Diff.addEqualLocations(A[X].Loc, B[Y].Loc);
+        Diff.addEqualLocations(AnchorVec1[X].Loc, AnchorVec2[Y].Loc);
       }
 
-      if (D == 0)
+      if (Depth == 0)
         break;
 
       if (Y == PrevY) {
         X--;
 #ifndef NDEBUG
-        Diff.addInsertion(A[X].Loc);
+        Diff.addInsertion(AnchorVec1[X].Loc);
 #endif
       } else if (X == PrevX) {
         Y--;
 #ifndef NDEBUG
-        Diff.addDeletion(B[Y].Loc);
+        Diff.addDeletion(AnchorVec2[Y].Loc);
 #endif
       }
       X = PrevX;
@@ -176,32 +194,32 @@ MyersDiff::shortestEditScript(const std::vector<Anchor> &A,
   // The greedy LCS/SES algorithm.
 
   // An array contains the endpoints of the furthest reaching D-paths.
-  std::vector<int32_t> V(2 * Max + 1, -1);
+  std::vector<int32_t> V(2 * MaxDepth + 1, -1);
   V[Index(1)] = 0;
   // Trace is used to backtrack the SES result.
   std::vector<std::vector<int32_t>> Trace;
-  for (int32_t D = 0; D <= Max; D++) {
+  for (int32_t Depth = 0; Depth <= MaxDepth; Depth++) {
     Trace.push_back(V);
-    for (int32_t K = -D; K <= D; K += 2) {
+    for (int32_t K = -Depth; K <= Depth; K += 2) {
       int32_t X = 0, Y = 0;
-      if (K == -D || (K != D && V[Index(K - 1)] < V[Index(K + 1)]))
+      if (K == -Depth || (K != Depth && V[Index(K - 1)] < V[Index(K + 1)]))
         X = V[Index(K + 1)];
       else
         X = V[Index(K - 1)] + 1;
       Y = X - K;
-      while (X < N && Y < M && A[X] == B[Y])
+      while (X < Size1 && Y < Size2 && AnchorVec1[X] == AnchorVec2[Y])
         X++, Y++;
 
       V[Index(K)] = X;
 
-      if (X >= N && Y >= M) {
+      if (X >= Size1 && Y >= Size2) {
         // Length of an SES is D.
-        Backtrack(Trace, A, B, Diff);
+        Backtrack(Trace, AnchorVec1, AnchorVec2, Diff);
         return Diff;
       }
     }
   }
-  // Length of an SES is greater than Max.
+  // Length of an SES is greater than MaxDepth.
   return Diff;
 }
 
@@ -216,8 +234,7 @@ LocToLocMap SampleProfileMatcher::longestCommonSequence(
 }
 
 void SampleProfileMatcher::matchNonCallsiteLocsAndWriteResults(
-    const LocToLocMap &MatchedAnchors,
-    const std::map<LineLocation, StringRef> &IRAnchors,
+    const LocToLocMap &MatchedAnchors, const AnchorMap &IRAnchors,
     LocToLocMap &IRToProfileLocationMap) {
   auto InsertMatching = [&](const LineLocation &From, const LineLocation &To) {
     // Skip the unchanged location mapping to save memory.
@@ -230,7 +247,7 @@ void SampleProfileMatcher::matchNonCallsiteLocsAndWriteResults(
   SmallVector<LineLocation> LastMatchedNonAnchors;
   for (const auto &IR : IRAnchors) {
     const auto &Loc = IR.first;
-    [[maybe_unused]] StringRef CalleeName = IR.second;
+    [[maybe_unused]] StringRef CalleeName = IR.second.FuncId.stringRef();
     bool IsMatchedAnchor = false;
 
     // Match the anchor location in lexical order.
@@ -291,36 +308,23 @@ void SampleProfileMatcher::matchNonCallsiteLocsAndWriteResults(
 //   [1, 2, 3(foo), 4,  7,  8(bar), 9]
 // The output mapping: [2->3, 3->4, 5->7, 6->8, 7->9].
 void SampleProfileMatcher::runStaleProfileMatching(
-    const Function &F, const std::map<LineLocation, StringRef> &IRAnchors,
-    const std::map<LineLocation, std::unordered_set<FunctionId>>
-        &ProfileAnchors,
-    LocToLocMap &IRToProfileLocationMap) {
+    const Function &F, const AnchorMap &IRAnchors,
+    const AnchorMap &ProfileAnchors, LocToLocMap &IRToProfileLocationMap) {
   LLVM_DEBUG(dbgs() << "Run stale profile matching for " << F.getName()
                     << "\n");
   assert(IRToProfileLocationMap.empty() &&
          "Run stale profile matching only once per function");
 
   std::vector<Anchor> ProfileCallsiteAnchors;
-  for (const auto &I : ProfileAnchors) {
-    const auto &Loc = I.first;
-    const auto &Callees = I.second;
-    // Filter out possible indirect calls, use direct callee name as anchor.
-    if (Callees.size() == 1) {
-      auto CalleeName = *Callees.begin();
-      ProfileCallsiteAnchors.emplace_back(Loc, CalleeName);
-    } else if (Callees.size() > 1) {
-      ProfileCallsiteAnchors.emplace_back(Loc,
-                                          FunctionId(UnknownIndirectCallee));
-    }
-  }
+  for (const auto &I : ProfileAnchors)
+    ProfileCallsiteAnchors.emplace_back(I.second);
 
   std::vector<Anchor> IRCallsiteAnchors;
+  // Filter the non-callsite from IRAnchors.
   for (const auto &I : IRAnchors) {
-    const auto &Loc = I.first;
-    const auto &CalleeName = I.second;
-    if (CalleeName.empty())
+    if (I.second.FuncId.stringRef().empty())
       continue;
-    IRCallsiteAnchors.emplace_back(Loc, FunctionId(CalleeName));
+    IRCallsiteAnchors.emplace_back(I.second);
   }
 
   if (IRCallsiteAnchors.empty() || ProfileCallsiteAnchors.empty())
@@ -352,11 +356,11 @@ void SampleProfileMatcher::runOnFunction(Function &F) {
   // Anchors for IR. It's a map from IR location to callee name, callee name is
   // empty for non-call instruction and use a dummy name(UnknownIndirectCallee)
   // for unknown indrect callee name.
-  std::map<LineLocation, StringRef> IRAnchors;
+  AnchorMap IRAnchors;
   findIRAnchors(F, IRAnchors);
   // Anchors for profile. It's a map from callsite location to a set of callee
   // name.
-  std::map<LineLocation, std::unordered_set<FunctionId>> ProfileAnchors;
+  AnchorMap ProfileAnchors;
   findProfileAnchors(*FSFlattened, ProfileAnchors);
 
   // Compute the callsite match states for profile staleness report.
@@ -388,9 +392,8 @@ void SampleProfileMatcher::runOnFunction(Function &F) {
 }
 
 void SampleProfileMatcher::recordCallsiteMatchStates(
-    const Function &F, const std::map<LineLocation, StringRef> &IRAnchors,
-    const std::map<LineLocation, std::unordered_set<FunctionId>>
-        &ProfileAnchors,
+    const Function &F, const AnchorMap &IRAnchors,
+    const AnchorMap &ProfileAnchors,
     const LocToLocMap *IRToProfileLocationMap) {
   bool IsPostMatch = IRToProfileLocationMap != nullptr;
   auto &CallsiteMatchStates =
@@ -411,23 +414,12 @@ void SampleProfileMatcher::recordCallsiteMatchStates(
     // After fuzzy profile matching, use the matching result to remap the
     // current IR callsite.
     const auto &ProfileLoc = MapIRLocToProfileLoc(I.first);
-    const auto &IRCalleeName = I.second;
+    const auto &IRCalleeId = I.second.FuncId;
     const auto &It = ProfileAnchors.find(ProfileLoc);
     if (It == ProfileAnchors.end())
       continue;
-    const auto &Callees = It->second;
-
-    bool IsCallsiteMatched = false;
-    // Since indirect call does not have CalleeName, check conservatively if
-    // callsite in the profile is a callsite location. This is to reduce num of
-    // false positive since otherwise all the indirect call samples will be
-    // reported as mismatching.
-    if (IRCalleeName == SampleProfileMatcher::UnknownIndirectCallee)
-      IsCallsiteMatched = true;
-    else if (Callees.size() == 1 && Callees.count(getRepInFormat(IRCalleeName)))
-      IsCallsiteMatched = true;
-
-    if (IsCallsiteMatched) {
+    const auto &ProfCalleeId = It->second.FuncId;
+    if (IRCalleeId == ProfCalleeId) {
       auto It = CallsiteMatchStates.find(ProfileLoc);
       if (It == CallsiteMatchStates.end())
         CallsiteMatchStates.emplace(ProfileLoc, MatchState::InitialMatch);
@@ -444,8 +436,8 @@ void SampleProfileMatcher::recordCallsiteMatchStates(
   // IR callsites.
   for (const auto &I : ProfileAnchors) {
     const auto &Loc = I.first;
-    [[maybe_unused]] const auto &Callees = I.second;
-    assert(!Callees.empty() && "Callees should not be empty");
+    [[maybe_unused]] StringRef CalleeName = I.second.FuncId.stringRef();
+    assert(!CalleeName.empty() && "Callees should not be empty");
     auto It = CallsiteMatchStates.find(Loc);
     if (It == CallsiteMatchStates.end())
       CallsiteMatchStates.emplace(Loc, MatchState::InitialMismatch);
