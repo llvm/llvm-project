@@ -137,8 +137,9 @@ StringRef Triple::getArchName(ArchType Kind, SubArchType SubArch) {
     case Triple::DXILSubArch_v1_8:
       return "dxilv1.8";
     default:
-      return "";
+      break;
     }
+    break;
   default:
     break;
   }
