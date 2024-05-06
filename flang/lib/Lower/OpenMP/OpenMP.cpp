@@ -1430,10 +1430,73 @@ genSectionsOp(Fortran::lower::AbstractConverter &converter,
               ConstructQueue::iterator item) {
   mlir::omp::SectionsClauseOps clauseOps;
   genSectionsClauses(converter, semaCtx, clauses, loc, clauseOps);
-  return genOpWithBody<mlir::omp::SectionsOp>(
+
+  auto &builder = converter.getFirOpBuilder();
+
+  // Insert privatizations before SECTIONS
+  symTable.pushScope();
+  DataSharingProcessor dsp(converter, semaCtx, clauses, eval);
+  dsp.processStep1();
+
+  List<Clause> nonDsaClauses;
+  List<const clause::Lastprivate *> lastprivates;
+
+  for (const Clause &clause : clauses) {
+    if (clause.id == llvm::omp::Clause::OMPC_lastprivate) {
+      lastprivates.push_back(&std::get<clause::Lastprivate>(clause.u));
+    } else {
+      switch (clause.id) {
+      case llvm::omp::Clause::OMPC_firstprivate:
+      case llvm::omp::Clause::OMPC_private:
+      case llvm::omp::Clause::OMPC_shared:
+        break;
+      default:
+        nonDsaClauses.push_back(clause);
+      }
+    }
+  }
+
+  // SECTIONS construct.
+  mlir::omp::SectionsOp sectionsOp = genOpWithBody<mlir::omp::SectionsOp>(
       OpWithBodyGenInfo(converter, symTable, semaCtx, loc, eval,
-                        llvm::omp::Directive::OMPD_sections),
+                        llvm::omp::Directive::OMPD_sections)
+          .setClauses(&nonDsaClauses),
       queue, item, clauseOps);
+
+  if (!lastprivates.empty()) {
+    mlir::Region &sectionsBody = sectionsOp.getRegion();
+    assert(sectionsBody.hasOneBlock());
+    mlir::Block &body = sectionsBody.front();
+
+    auto lastSectionOp = llvm::find_if(
+        llvm::reverse(body.getOperations()), [](const mlir::Operation &op) {
+          return llvm::isa<mlir::omp::SectionOp>(op);
+        });
+    assert(lastSectionOp != body.rend());
+
+    for (const clause::Lastprivate *lastp : lastprivates) {
+      builder.setInsertionPoint(
+          lastSectionOp->getRegion(0).back().getTerminator());
+      mlir::OpBuilder::InsertPoint insp = builder.saveInsertionPoint();
+      const auto &objList = std::get<ObjectList>(lastp->t);
+      for (const Object &object : objList) {
+        Fortran::semantics::Symbol *sym = object.id();
+        converter.copyHostAssociateVar(*sym, &insp);
+      }
+    }
+  }
+
+  // Perform DataSharingProcessor's step2 out of SECTIONS
+  builder.setInsertionPointAfter(sectionsOp.getOperation());
+  dsp.processStep2(sectionsOp, false);
+  // Emit implicit barrier to synchronize threads and avoid data
+  // races on post-update of lastprivate variables when `nowait`
+  // clause is present.
+  if (clauseOps.nowaitAttr && !lastprivates.empty())
+    builder.create<mlir::omp::BarrierOp>(loc);
+
+  symTable.popScope();
+  return sectionsOp;
 }
 
 static mlir::omp::SimdOp
