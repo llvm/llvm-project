@@ -690,8 +690,7 @@ RecurrenceDescriptor::isAnyOfPattern(Loop *Loop, PHINode *OrigPhi,
 RecurrenceDescriptor::InstDesc
 RecurrenceDescriptor::isFindLastIVPattern(PHINode *OrigPhi, Instruction *I,
                                           ScalarEvolution &SE) {
-  // Only match select with single use cmp condition.
-  // TODO: Only handle single use for now.
+  // TODO: Match selects with multi-use cmp conditions.
   CmpInst::Predicate Pred;
   if (!match(I, m_Select(m_OneUse(m_Cmp(Pred, m_Value(), m_Value())), m_Value(),
                          m_Value())))
@@ -725,7 +724,8 @@ RecurrenceDescriptor::isFindLastIVPattern(PHINode *OrigPhi, Instruction *I,
     // Keep the minimum value of the recurrence type as the sentinel value.
     // The maximum acceptable range for the increasing induction variable,
     // called the valid range, will be defined as
-    //   [<sentinel value> + 1, SignedMin(<recurrence type>))
+    //   [<sentinel value> + 1, <sentinel value>)
+    // where <sentinel value> is SignedMin(<recurrence type>)
     // TODO: This range restriction can be lifted by adding an additional
     // virtual OR reduction.
     const APInt Sentinel = APInt::getSignedMinValue(NumBits);
