@@ -540,3 +540,9 @@ LoongArchInstrInfo::getSerializableDirectMachineOperandTargetFlags() const {
       {MO_GD_PC_HI, "loongarch-gd-pc-hi"}};
   return ArrayRef(TargetFlags);
 }
+
+// Returns true if this is the sext.w pattern, addi.w rd, rs, 0.
+bool LoongArch::isSEXT_W(const MachineInstr &MI) {
+  return MI.getOpcode() == LoongArch::ADDI_W && MI.getOperand(1).isReg() &&
+         MI.getOperand(2).isImm() && MI.getOperand(2).getImm() == 0;
+}
