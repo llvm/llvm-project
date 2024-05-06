@@ -127,7 +127,7 @@ define i64 @ashr_add_shl_i36(i64 %r) {
 define i64 @ashr_add_shl_mismatch_shifts1(i64 %r) {
 ; CHECK-LABEL: ashr_add_shl_mismatch_shifts1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, #4294967296
+; CHECK-NEXT:    mov x8, #4294967296 // =0x100000000
 ; CHECK-NEXT:    add x8, x8, x0, lsl #8
 ; CHECK-NEXT:    asr x0, x8, #32
 ; CHECK-NEXT:    ret
@@ -140,7 +140,7 @@ define i64 @ashr_add_shl_mismatch_shifts1(i64 %r) {
 define i64 @ashr_add_shl_mismatch_shifts2(i64 %r) {
 ; CHECK-LABEL: ashr_add_shl_mismatch_shifts2:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, #4294967296
+; CHECK-NEXT:    mov x8, #4294967296 // =0x100000000
 ; CHECK-NEXT:    add x8, x8, x0, lsr #8
 ; CHECK-NEXT:    lsr x0, x8, #8
 ; CHECK-NEXT:    ret
