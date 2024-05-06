@@ -20,7 +20,7 @@ define void @test1() personality ptr @__CxxFrameHandler3 {
 ; CHECK-LABEL: define {{[^@]+}}@test1() personality ptr @__CxxFrameHandler3 {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    invoke void @thunk()
-; CHECK-NEXT:    to label [[OUT:%.*]] unwind label [[CPAD:%.*]]
+; CHECK-NEXT:            to label [[OUT:%.*]] unwind label [[CPAD:%.*]]
 ; CHECK:       out:
 ; CHECK-NEXT:    ret void
 ; CHECK:       cpad:

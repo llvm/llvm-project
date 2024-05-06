@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -x c++ -std=c++20 -triple x86_64-unknown-linux-gnu -emit-pch -o %t %S/cxx_paren_init.h
-// RUN: %clang_cc1 -x c++ -std=c++20 -triple x86_64-unknown-linux-gnu -include-pch %t %s -S -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -x c++ -std=c++20 -triple x86_64-unknown-linux-gnu -include-pch %t %s -emit-llvm -o - | FileCheck %s
 
 // CHECK-DAG: [[STRUCT_S:%.*]] = type { i32, i32 }
 // CHECK-DAG: @{{.*s.*}} = {{(dso_local )?}}global [[STRUCT_S]] { i32 1, i32 2 }, align 4

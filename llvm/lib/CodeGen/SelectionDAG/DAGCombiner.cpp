@@ -8840,6 +8840,10 @@ SDValue DAGCombiner::mergeTruncStores(StoreSDNode *N) {
       if (ShiftAmtC % NarrowNumBits != 0)
         return SDValue();
 
+      // Make sure we aren't reading bits that are shifted in.
+      if (ShiftAmtC > WideVal.getScalarValueSizeInBits() - NarrowNumBits)
+        return SDValue();
+
       Offset = ShiftAmtC / NarrowNumBits;
       WideVal = WideVal.getOperand(0);
     }
@@ -15458,9 +15462,11 @@ SDValue DAGCombiner::visitFREEZE(SDNode *N) {
       N0->getNumValues() != 1 || !N0->hasOneUse())
     return SDValue();
 
-  bool AllowMultipleMaybePoisonOperands = N0.getOpcode() == ISD::BUILD_VECTOR ||
-                                          N0.getOpcode() == ISD::BUILD_PAIR ||
-                                          N0.getOpcode() == ISD::CONCAT_VECTORS;
+  bool AllowMultipleMaybePoisonOperands =
+      N0.getOpcode() == ISD::BUILD_VECTOR ||
+      N0.getOpcode() == ISD::BUILD_PAIR ||
+      N0.getOpcode() == ISD::VECTOR_SHUFFLE ||
+      N0.getOpcode() == ISD::CONCAT_VECTORS;
 
   // Avoid turning a BUILD_VECTOR that can be recognized as "all zeros", "all
   // ones" or "constant" into something that depends on FrozenUndef. We can
@@ -15533,8 +15539,16 @@ SDValue DAGCombiner::visitFREEZE(SDNode *N) {
     if (Op.getOpcode() == ISD::UNDEF)
       Op = DAG.getFreeze(Op);
   }
-  // NOTE: this strips poison generating flags.
-  SDValue R = DAG.getNode(N0.getOpcode(), SDLoc(N0), N0->getVTList(), Ops);
+
+  SDValue R;
+  if (auto *SVN = dyn_cast<ShuffleVectorSDNode>(N0)) {
+    // Special case handling for ShuffleVectorSDNode nodes.
+    R = DAG.getVectorShuffle(N0.getValueType(), SDLoc(N0), Ops[0], Ops[1],
+                             SVN->getMask());
+  } else {
+    // NOTE: this strips poison generating flags.
+    R = DAG.getNode(N0.getOpcode(), SDLoc(N0), N0->getVTList(), Ops);
+  }
   assert(DAG.isGuaranteedNotToBeUndefOrPoison(R, /*PoisonOnly*/ false) &&
          "Can't create node that may be undef/poison!");
   return R;
