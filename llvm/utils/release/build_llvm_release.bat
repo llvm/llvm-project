@@ -252,7 +252,7 @@ set cmake_flags=^
   -DLLDB_TEST_COMPILER=%stage0_bin_dir%/clang.exe ^
   -DPYTHON_HOME=%PYTHONHOME% ^
   -DPython3_ROOT_DIR=%PYTHONHOME% ^
-  -DLIBXML2_INCLUDE_DIRS=%libxmldir%/include/libxml2 ^
+  -DLIBXML2_INCLUDE_DIR=%libxmldir%/include/libxml2 ^
   -DLIBXML2_LIBRARIES=%libxmldir%/lib/libxml2s.lib
 
 cmake -GNinja %cmake_flags% %llvm_src%\llvm || exit /b 1
