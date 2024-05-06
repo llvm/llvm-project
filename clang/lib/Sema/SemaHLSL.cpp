@@ -94,9 +94,10 @@ void SemaHLSL::ActOnFinishBuffer(Decl *Dcl, SourceLocation RBrace) {
     }
   }
 
-  if (HasPackOffset && HasNonPackOffset) {
-    Diag(BufDecl->getLocation(), diag::err_hlsl_packoffset_mix);
-  } else if (HasPackOffset) {
+  if (HasPackOffset && HasNonPackOffset)
+    Diag(BufDecl->getLocation(), diag::warn_hlsl_packoffset_mix);
+
+  if (HasPackOffset) {
     ASTContext &Context = getASTContext();
     // Make sure no overlap in packoffset.
     // Sort PackOffsetVec by offset.
