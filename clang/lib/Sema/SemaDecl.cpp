@@ -13531,7 +13531,7 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
 
   if (VDecl->isInvalidDecl()) {
     ExprResult Res = CorrectDelayedTyposInExpr(Init, VDecl);
-    std::vector<Expr *> SubExprs;
+    SmallVector<Expr *> SubExprs;
     if (Res.isUsable())
       SubExprs.push_back(Res.get());
     ExprResult Recovery =
