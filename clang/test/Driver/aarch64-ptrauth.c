@@ -2,28 +2,16 @@
 // NONE: "-cc1"
 // NONE-NOT: "-fptrauth-
 
-// RUN: %clang -### -c --target=aarch64 -fno-ptrauth-intrinsics -fptrauth-intrinsics %s 2>&1 | FileCheck %s --check-prefix=INTRIN
-// INTRIN: "-cc1"{{.*}} "-fptrauth-intrinsics"
-
-// RUN: %clang -### -c --target=aarch64 -fno-ptrauth-calls -fptrauth-calls %s 2>&1 | FileCheck %s --check-prefix=CALL
-// CALL: "-cc1"{{.*}} "-fptrauth-calls"
-
-// RUN: %clang -### -c --target=aarch64 -fno-ptrauth-returns -fptrauth-returns %s 2>&1 | FileCheck %s --check-prefix=RETURN
-// RETURN: "-cc1"{{.*}} "-fptrauth-returns"
-
-// RUN: %clang -### -c --target=aarch64 -fno-ptrauth-auth-traps -fptrauth-auth-traps %s 2>&1 | FileCheck %s --check-prefix=TRAP
-// TRAP: "-cc1"{{.*}} "-fptrauth-auth-traps"
-
-// RUN: %clang -### -c --target=aarch64 -fno-ptrauth-vtable-pointer-address-discrimination \
-// RUN:   -fptrauth-vtable-pointer-address-discrimination %s 2>&1 | FileCheck %s --check-prefix=VPTRADDR
-// VPTRADDR: "-cc1"{{.*}} "-fptrauth-vtable-pointer-address-discrimination"
-
-// RUN: %clang -### -c --target=aarch64 -fno-ptrauth-vtable-pointer-type-discrimination \
-// RUN:   -fptrauth-vtable-pointer-type-discrimination %s 2>&1 | FileCheck %s --check-prefix=VPTRTYPE
-// VPTRTYPE: "-cc1"{{.*}} "-fptrauth-vtable-pointer-type-discrimination"
-
-// RUN: %clang -### -c --target=aarch64 -fno-ptrauth-init-fini -fptrauth-init-fini %s 2>&1 | FileCheck %s --check-prefix=INITFINI
-// INITFINI: "-cc1"{{.*}} "-fptrauth-init-fini"
+// RUN: %clang -### -c --target=aarch64 \
+// RUN:   -fno-ptrauth-intrinsics -fptrauth-intrinsics \
+// RUN:   -fno-ptrauth-calls -fptrauth-calls \
+// RUN:   -fno-ptrauth-returns -fptrauth-returns \
+// RUN:   -fno-ptrauth-auth-traps -fptrauth-auth-traps \
+// RUN:   -fno-ptrauth-vtable-pointer-address-discrimination -fptrauth-vtable-pointer-address-discrimination \
+// RUN:   -fno-ptrauth-vtable-pointer-type-discrimination -fptrauth-vtable-pointer-type-discrimination \
+// RUN:   -fno-ptrauth-init-fini -fptrauth-init-fini \
+// RUN:   %s 2>&1 | FileCheck %s --check-prefix=ALL
+// ALL: "-cc1"{{.*}} "-fptrauth-intrinsics" "-fptrauth-calls" "-fptrauth-returns" "-fptrauth-auth-traps" "-fptrauth-vtable-pointer-address-discrimination" "-fptrauth-vtable-pointer-type-discrimination" "-fptrauth-init-fini"
 
 // RUN: not %clang -### -c --target=x86_64 -fptrauth-intrinsics -fptrauth-calls -fptrauth-returns -fptrauth-auth-traps \
 // RUN:   -fptrauth-vtable-pointer-address-discrimination -fptrauth-vtable-pointer-type-discrimination \
