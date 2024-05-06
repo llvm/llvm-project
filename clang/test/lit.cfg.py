@@ -181,9 +181,6 @@ if config.clang_staticanalyzer:
         )
     )
 
-if config.perl_executable:
-    config.available_features.add("perl")
-
 llvm_config.add_tool_substitutions(tools, tool_dirs)
 
 config.substitutions.append(

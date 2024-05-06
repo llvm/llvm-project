@@ -1,5 +1,3 @@
-REQUIRES: perl
-
 RUN: rm -rf %t.output_dir && mkdir %t.output_dir
 RUN: cp %S/report-1.html %t.output_dir
 RUN: cp %S/report-2.html %t.output_dir
