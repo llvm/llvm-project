@@ -106,10 +106,9 @@ func.func @block_matmul_with_consumer(
 
 func.func @block_batch_matmul(
     %A: tensor<512x64x128xf32>, %B: tensor<512x128x64xf32>, %C: tensor<512x64x64xf32>) -> tensor<512x64x64xf32> {
-  %0 = tensor.empty() : tensor<512x64x64xf32>
-  %1 = linalg.batch_matmul ins(%A, %B : tensor<512x64x128xf32>, tensor<512x128x64xf32>)
+  %0 = linalg.batch_matmul ins(%A, %B : tensor<512x64x128xf32>, tensor<512x128x64xf32>)
                            outs(%C : tensor<512x64x64xf32>) -> tensor<512x64x64xf32>
-  return %1 : tensor<512x64x64xf32>
+  return %0 : tensor<512x64x64xf32>
 }
 
 // CHECK-DAG: #[[MAP:.+]] = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d0, d1, d3, d4, d6)>
