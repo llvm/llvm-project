@@ -157,7 +157,13 @@ static WidenResult widenDistinctValues(QualType Type, Value &Prev,
                                        Value &Current, Environment &CurrentEnv,
                                        Environment::ValueModel &Model) {
   // Boolean-model widening.
-  if (auto *PrevBool = dyn_cast<BoolValue>(&Prev)) {
+  if (isa<BoolValue>(Prev) && isa<BoolValue>(Current)) {
+    // FIXME: Checking both values should be unnecessary, but we can currently
+    // end up with `BoolValue`s in integer-typed variables. See comment in
+    // `joinDistinctValues()` for details.
+    auto &PrevBool = cast<BoolValue>(Prev);
+    auto &CurBool = cast<BoolValue>(Current);
+
     if (isa<TopBoolValue>(Prev))
       // Safe to return `Prev` here, because Top is never dependent on the
       // environment.
@@ -166,13 +172,12 @@ static WidenResult widenDistinctValues(QualType Type, Value &Prev,
     // We may need to widen to Top, but before we do so, check whether both
     // values are implied to be either true or false in the current environment.
     // In that case, we can simply return a literal instead.
-    auto &CurBool = cast<BoolValue>(Current);
-    bool TruePrev = PrevEnv.proves(PrevBool->formula());
+    bool TruePrev = PrevEnv.proves(PrevBool.formula());
     bool TrueCur = CurrentEnv.proves(CurBool.formula());
     if (TruePrev && TrueCur)
       return {&CurrentEnv.getBoolLiteralValue(true), LatticeEffect::Unchanged};
     if (!TruePrev && !TrueCur &&
-        PrevEnv.proves(PrevEnv.arena().makeNot(PrevBool->formula())) &&
+        PrevEnv.proves(PrevEnv.arena().makeNot(PrevBool.formula())) &&
         CurrentEnv.proves(CurrentEnv.arena().makeNot(CurBool.formula())))
       return {&CurrentEnv.getBoolLiteralValue(false), LatticeEffect::Unchanged};
 
@@ -331,6 +336,29 @@ public:
       if (auto *DefaultInit = dyn_cast<CXXDefaultInitExpr>(InitExpr))
         TraverseStmt(DefaultInit->getExpr());
     }
+  }
+
+  bool TraverseDecl(Decl *D) {
+    // Don't traverse nested record or function declarations.
+    // - We won't be analyzing code contained in these anyway
+    // - We don't model fields that are used only in these nested declaration,
+    //   so trying to propagate a result object to initializers of such fields
+    //   would cause an error.
+    if (isa_and_nonnull<RecordDecl>(D) || isa_and_nonnull<FunctionDecl>(D))
+      return true;
+
+    return RecursiveASTVisitor<ResultObjectVisitor>::TraverseDecl(D);
+  }
+
+  // Don't traverse expressions in unevaluated contexts, as we don't model
+  // fields that are only used in these.
+  // Note: The operand of the `noexcept` operator is an unevaluated operand, but
+  // nevertheless it appears in the Clang CFG, so we don't exclude it here.
+  bool TraverseDecltypeTypeLoc(DecltypeTypeLoc) { return true; }
+  bool TraverseTypeOfExprTypeLoc(TypeOfExprTypeLoc) { return true; }
+  bool TraverseCXXTypeidExpr(CXXTypeidExpr *) { return true; }
+  bool TraverseUnaryExprOrTypeTraitExpr(UnaryExprOrTypeTraitExpr *) {
+    return true;
   }
 
   bool TraverseBindingDecl(BindingDecl *BD) {

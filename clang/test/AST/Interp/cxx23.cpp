@@ -141,3 +141,39 @@ struct check_ice {
     };
 };
 static_assert(check_ice<42>::x == 42);
+
+
+namespace VirtualBases {
+  namespace One {
+    struct U { int n; };
+    struct V : U { int n; };
+    struct A : virtual V { int n; };
+    struct Aa { int n; };
+    struct B : virtual A, Aa {};
+    struct C : virtual A, Aa {};
+    struct D : B, C {};
+
+    /// Calls the constructor of D.
+    D d;
+  }
+}
+
+namespace LabelGoto {
+  constexpr int foo() { // all20-error {{never produces a constant expression}}
+    a: // all20-warning {{use of this statement in a constexpr function is a C++23 extension}}
+    goto a; // all20-note 2{{subexpression not valid in a constant expression}} \
+            // ref23-note {{subexpression not valid in a constant expression}} \
+            // expected23-note {{subexpression not valid in a constant expression}}
+
+    return 1;
+  }
+  static_assert(foo() == 1, ""); // all-error {{not an integral constant expression}} \
+                                 // all-note {{in call to}}
+}
+
+namespace ExplicitLambdaThis {
+  constexpr auto f = [x = 3]<typename Self>(this Self self) { // all20-error {{explicit object parameters are incompatible with C++ standards before C++2b}}
+      return x;
+  };
+  static_assert(f());
+}

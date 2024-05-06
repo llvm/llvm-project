@@ -5184,6 +5184,7 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
 
     ParmVarDecl *Parm = Function->getParamDecl(0);
     TypeSourceInfo *NewParmSI = IR.TransformType(Parm->getTypeSourceInfo());
+    assert(NewParmSI && "Type transformation failed.");
     Parm->setType(NewParmSI->getType());
     Parm->setTypeSourceInfo(NewParmSI);
   };

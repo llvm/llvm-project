@@ -443,12 +443,17 @@ ExprDependence clang::computeDependence(ObjCIndirectCopyRestoreExpr *E) {
   return E->getSubExpr()->getDependence();
 }
 
-ExprDependence clang::computeDependence(OMPArraySectionExpr *E) {
+ExprDependence clang::computeDependence(ArraySectionExpr *E) {
   auto D = E->getBase()->getDependence();
   if (auto *LB = E->getLowerBound())
     D |= LB->getDependence();
   if (auto *Len = E->getLength())
     D |= Len->getDependence();
+
+  if (E->isOMPArraySection()) {
+    if (auto *Stride = E->getStride())
+      D |= Stride->getDependence();
+  }
   return D;
 }
 

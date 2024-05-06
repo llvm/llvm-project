@@ -790,6 +790,27 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
       break;
     return TyL.first + ExtraCost;
   }
+  case Intrinsic::get_active_lane_mask: {
+    auto *RetTy = dyn_cast<FixedVectorType>(ICA.getReturnType());
+    if (RetTy) {
+      EVT RetVT = getTLI()->getValueType(DL, RetTy);
+      EVT OpVT = getTLI()->getValueType(DL, ICA.getArgTypes()[0]);
+      if (!getTLI()->shouldExpandGetActiveLaneMask(RetVT, OpVT) &&
+          !getTLI()->isTypeLegal(RetVT)) {
+        // We don't have enough context at this point to determine if the mask
+        // is going to be kept live after the block, which will force the vXi1
+        // type to be expanded to legal vectors of integers, e.g. v4i1->v4i32.
+        // For now, we just assume the vectorizer created this intrinsic and
+        // the result will be the input for a PHI. In this case the cost will
+        // be extremely high for fixed-width vectors.
+        // NOTE: getScalarizationOverhead returns a cost that's far too
+        // pessimistic for the actual generated codegen. In reality there are
+        // two instructions generated per lane.
+        return RetTy->getNumElements() * 2;
+      }
+    }
+    break;
+  }
   default:
     break;
   }
@@ -3947,8 +3968,8 @@ InstructionCost AArch64TTIImpl::getShuffleCost(
   if (LT.second.isFixedLengthVector() &&
       LT.second.getVectorNumElements() == Mask.size() &&
       (Kind == TTI::SK_PermuteTwoSrc || Kind == TTI::SK_PermuteSingleSrc) &&
-      (isZIPMask(Mask, LT.second, Unused) ||
-       isUZPMask(Mask, LT.second, Unused) ||
+      (isZIPMask(Mask, LT.second.getVectorNumElements(), Unused) ||
+       isUZPMask(Mask, LT.second.getVectorNumElements(), Unused) ||
        // Check for non-zero lane splats
        all_of(drop_begin(Mask),
               [&Mask](int M) { return M < 0 || M == Mask[0]; })))

@@ -2601,8 +2601,7 @@ multiclass RVVOutBuiltinSetZvk<bit HasVV = 1, bit HasVS = 1> {
 
   if HasVS then {
     foreach vs2_lmul = ["(SEFixedLog2LMUL:-1)", "(SEFixedLog2LMUL:0)",
-                        "(SEFixedLog2LMUL:1)", "(SEFixedLog2LMUL:2)",
-                        "(SEFixedLog2LMUL:3)"] in {
+                        "(SEFixedLog2LMUL:1)", "(SEFixedLog2LMUL:2)"] in {
     defvar name = NAME # !if(!eq(NAME, "vaesz"), "", "_vs");
     let OverloadedName = name, IRName = NAME # "_vs", Name = NAME # "_vs",
         IntrinsicTypes = [-1, 1] in

@@ -13,6 +13,7 @@ set(LLVM_LINK_COMPONENTS Support)
 # ValueType definitions.
 add_tablegen(llvm-min-tblgen LLVM_HEADERS
   TableGen.cpp
+  ARMTargetDefEmitter.cpp
   Attributes.cpp
   DirectiveEmitter.cpp
   IntrinsicEmitter.cpp
@@ -32,6 +33,7 @@ set(LLVM_LINK_COMPONENTS
 add_tablegen(llvm-tblgen LLVM
   DESTINATION "${LLVM_TOOLS_INSTALL_DIR}"
   EXPORT LLVM
+  ARMTargetDefEmitter.cpp
   AsmMatcherEmitter.cpp
   AsmWriterEmitter.cpp
   Attributes.cpp
