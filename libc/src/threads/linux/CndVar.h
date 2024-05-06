@@ -10,6 +10,7 @@
 #define LLVM_LIBC_SRC_THREADS_LINUX_CNDVAR_H
 
 #include "src/__support/CPP/atomic.h"
+#include "src/__support/CPP/optional.h"
 #include "src/__support/OSUtil/syscall.h" // For syscall functions.
 #include "src/__support/threads/linux/futex_utils.h"
 #include "src/__support/threads/mutex.h"
@@ -84,7 +85,7 @@ struct CndVar {
       }
     }
 
-    waiter.futex_word.wait(WS_Waiting);
+    waiter.futex_word.wait(WS_Waiting, cpp::nullopt, true);
 
     // At this point, if locking |m| fails, we can simply return as the
     // queued up waiter would have been removed from the queue.
