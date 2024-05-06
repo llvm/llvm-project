@@ -11,6 +11,7 @@
 /// Language (DXIL).
 //===----------------------------------------------------------------------===//
 
+#include "DXILMetadata.h"
 #include "DXILResourceAnalysis.h"
 #include "DXILShaderFlags.h"
 #include "DirectX.h"
@@ -26,6 +27,7 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/VersionTuple.h"
 
 #define DEBUG_TYPE "dxil-prepare"
 
@@ -138,10 +140,20 @@ public:
       if (!isValidForDXIL(I))
         AttrMask.addAttribute(I);
     }
+
+    
+    dxil::ValidatorVersionMD ValVerMD(M);
+    VersionTuple ValVer = ValVerMD.getAsVersionTuple();
+    bool SkipValidation = ValVer.getMajor() == 0 && ValVer.getMinor() == 0;
+
     for (auto &F : M.functions()) {
       F.removeFnAttrs(AttrMask);
       F.removeRetAttrs(AttrMask);
-      removeStringFunctionAttributes(F);
+      // Only remove string attributes if we are not skipping validation.
+      // This will reserve the experimental attributes when validation version
+      // is 0.0 for experiment mode.
+      if (!SkipValidation)
+        removeStringFunctionAttributes(F);
       for (size_t Idx = 0, End = F.arg_size(); Idx < End; ++Idx)
         F.removeParamAttrs(Idx, AttrMask);
 
