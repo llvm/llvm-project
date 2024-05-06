@@ -1763,8 +1763,9 @@ void UnwrappedLineParser::parseStructuralElement(
       break;
     }
     case tok::kw_enum:
-      // Ignore if this is part of "template <enum ..." or "... -> enum".
-      if (Previous && Previous->isOneOf(tok::less, tok::arrow)) {
+      // Ignore if this is part of "template <enum ..." or "... -> enum" or
+      // "template <..., enum ...>".
+      if (Previous && Previous->isOneOf(tok::less, tok::arrow, tok::comma)) {
         nextToken();
         break;
       }

@@ -489,6 +489,10 @@ TEST_F(TokenAnnotatorTest, UnderstandsStructs) {
   EXPECT_TOKEN(Tokens[24], tok::amp, TT_UnaryOperator);
   EXPECT_TOKEN(Tokens[27], tok::l_square, TT_ArraySubscriptLSquare);
   EXPECT_TOKEN(Tokens[32], tok::r_brace, TT_StructRBrace);
+
+  Tokens = annotate("template <typename T, enum E e> struct S {};");
+  ASSERT_EQ(Tokens.size(), 15u) << Tokens;
+  EXPECT_TOKEN(Tokens[11], tok::l_brace, TT_StructLBrace);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsUnions) {
