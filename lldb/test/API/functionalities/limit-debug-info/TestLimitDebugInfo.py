@@ -223,7 +223,6 @@ class LimitDebugInfoTestCase(TestBase):
 
         self._check_incomplete_frame_variable_output()
 
-    @expectedFailureAll(setting=('plugin.typesystem.clang.experimental-redecl-completion', 'true'))
     @skipIf(bugnumber="pr46284", debug_info="gmodules")
     @skipIfWindows  # Clang emits type info even with -flimit-debug-info
     # Requires DW_CC_pass_by_* attributes from Clang 7 to correctly call
@@ -292,7 +291,6 @@ class LimitDebugInfoTestCase(TestBase):
 
         self._check_incomplete_frame_variable_output()
 
-    @expectedFailureAll(setting=('plugin.typesystem.clang.experimental-redecl-completion', 'true'))
     @skipIf(bugnumber="pr46284", debug_info="gmodules")
     @skipIfWindows  # Clang emits type info even with -flimit-debug-info
     # Requires DW_CC_pass_by_* attributes from Clang 7 to correctly call

@@ -45,9 +45,24 @@ class TypeLookupTestCase(TestBase):
             "type lookup PleaseDontBeARealTypeThatExists",
             substrs=["no type was found matching 'PleaseDontBeARealTypeThatExists'"],
         )
-        self.expect("type lookup MyCPPClass", substrs=["setF", "float getF"])
-        self.expect("type lookup MyClass", substrs=["setF", "float getF"])
         self.expect(
             "type lookup MyObjCClass",
             substrs=["@interface MyObjCClass", "int x", "int y"],
         )
+
+    @expectedFailureAll(setting=('plugin.typesystem.clang.experimental-redecl-completion', 'true'))
+    @skipUnlessDarwin
+    @skipIf(archs=["i386"])
+    @skipIfDarwinEmbedded  # swift crash inspecting swift stdlib with little other swift loaded <rdar://problem/55079456>
+    def test_type_lookup_cpp_methods(self):
+        """Test type lookup command."""
+        self.build()
+        self.runCmd("file " + self.getBuildArtifact("a.out"), CURRENT_EXECUTABLE_SET)
+
+        lldbutil.run_break_set_by_file_and_line(
+            self, "main.mm", self.line, num_expected_locations=1, loc_exact=True
+        )
+
+        self.runCmd("run", RUN_SUCCEEDED)
+        self.expect("type lookup MyCPPClass", substrs=["setF", "float getF"])
+        self.expect("type lookup MyClass", substrs=["setF", "float getF"])
