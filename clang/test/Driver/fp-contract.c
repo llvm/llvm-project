@@ -238,3 +238,17 @@
 // RUN: %clang -### -fno-unsafe-math-optimizations -funsafe-math-optimizations \
 // RUN: -ffp-contract=off -c %s 2>&1 | FileCheck --check-prefix=CHECK-FPC-OFF %s
 
+// RUN: %clang -### -funsafe-math-optimizations -ffp-contract=off -c %s 2>&1 \
+// RUN:   | FileCheck --check-prefix=WARN %s
+// WARN: warning: overriding '-funsafe-math-optimizations' option with '-ffp-contract=off'
+
+// This case should not warn
+// RUN: %clang -### -Werror -funsafe-math-optimizations \
+// RUN: -fno-unsafe-math-optimizations -ffp-contract=off -c %s
+
+// RUN: %clang -### -ffast-math -ffp-contract=off -c %s 2>&1 \
+// RUN:   | FileCheck --check-prefix=WARN2 %s
+// WARN2: warning: overriding '-ffast-math' option with '-ffp-contract=off'
+
+// This case should not warn
+// RUN: %clang -### -Werror -ffast-math -fno-fast-math -ffp-contract=off -c %s
