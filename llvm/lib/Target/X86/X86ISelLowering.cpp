@@ -3577,6 +3577,16 @@ static bool isUndefOrZeroOrInRange(ArrayRef<int> Mask, int Low, int Hi) {
       Mask, [Low, Hi](int M) { return isUndefOrZeroOrInRange(M, Low, Hi); });
 }
 
+/// Return true if every element in Mask, is an in-place blend/select mask or is
+/// undef.
+static bool isBlendOrUndef(ArrayRef<int> Mask) {
+  unsigned NumElts = Mask.size();
+  for (auto [I, M] : enumerate(Mask))
+    if (!isUndefOrEqual(M, I) && !isUndefOrEqual(M, I + NumElts))
+      return false;
+  return true;
+}
+
 /// Return true if every element in Mask, beginning
 /// from position Pos and ending in Pos + Size, falls within the specified
 /// sequence (Low, Low + Step, ..., Low + (Size - 1) * Step) or is undef.
@@ -40021,6 +40031,93 @@ static SDValue combineCommutableSHUFP(SDValue N, MVT VT, const SDLoc &DL,
   return SDValue();
 }
 
+// Attempt to fold BLEND(PERMUTE(X),PERMUTE(Y)) -> PERMUTE(BLEND(X,Y))
+// iff we don't demand the same element index for both X and Y.
+static SDValue combineBlendOfPermutes(MVT VT, SDValue N0, SDValue N1,
+                                      ArrayRef<int> BlendMask,
+                                      const APInt &DemandedElts,
+                                      SelectionDAG &DAG, const SDLoc &DL) {
+  assert(isBlendOrUndef(BlendMask) && "Blend shuffle expected");
+  if (!N0.hasOneUse() || !N1.hasOneUse())
+    return SDValue();
+
+  unsigned NumElts = VT.getVectorNumElements();
+  SDValue BC0 = peekThroughOneUseBitcasts(N0);
+  SDValue BC1 = peekThroughOneUseBitcasts(N1);
+
+  // See if both operands are shuffles, and that we can scale the shuffle masks
+  // to the same width as the blend mask.
+  // TODO: Support SM_SentinelZero?
+  SmallVector<SDValue, 2> Ops0, Ops1;
+  SmallVector<int, 32> Mask0, Mask1, ScaledMask0, ScaledMask1;
+  if (!getTargetShuffleMask(BC0, /*AllowSentinelZero=*/false, Ops0, Mask0) ||
+      !getTargetShuffleMask(BC1, /*AllowSentinelZero=*/false, Ops1, Mask1) ||
+      !scaleShuffleElements(Mask0, NumElts, ScaledMask0) ||
+      !scaleShuffleElements(Mask1, NumElts, ScaledMask1))
+    return SDValue();
+
+  // Determine the demanded elts from both permutes.
+  APInt Demanded0, DemandedLHS0, DemandedRHS0;
+  APInt Demanded1, DemandedLHS1, DemandedRHS1;
+  if (!getShuffleDemandedElts(NumElts, BlendMask, DemandedElts, Demanded0,
+                              Demanded1,
+                              /*AllowUndefElts=*/true) ||
+      !getShuffleDemandedElts(NumElts, ScaledMask0, Demanded0, DemandedLHS0,
+                              DemandedRHS0, /*AllowUndefElts=*/true) ||
+      !getShuffleDemandedElts(NumElts, ScaledMask1, Demanded1, DemandedLHS1,
+                              DemandedRHS1, /*AllowUndefElts=*/true))
+    return SDValue();
+
+  // Confirm that we only use a single operand from both permutes and that we
+  // don't demand the same index from both.
+  if (!DemandedRHS0.isZero() || !DemandedRHS1.isZero() ||
+      DemandedLHS0.intersects(DemandedLHS1))
+    return SDValue();
+
+  // Use the permute demanded elts masks as the new blend mask.
+  // Create the new permute mask as a blend of the 2 original permute masks.
+  SmallVector<int, 32> NewBlendMask(NumElts, SM_SentinelUndef);
+  SmallVector<int, 32> NewPermuteMask(NumElts, SM_SentinelUndef);
+  for (int I = 0; I != NumElts; ++I) {
+    if (Demanded0[I]) {
+      int M = ScaledMask0[I];
+      if (0 <= M) {
+        assert(isUndefOrEqual(NewBlendMask[M], M) &&
+               "BlendMask demands LHS AND RHS");
+        NewBlendMask[M] = M;
+        NewPermuteMask[I] = M;
+      }
+    } else if (Demanded1[I]) {
+      int M = ScaledMask1[I];
+      if (0 <= M) {
+        assert(isUndefOrEqual(NewBlendMask[M], M + NumElts) &&
+               "BlendMask demands LHS AND RHS");
+        NewBlendMask[M] = M + NumElts;
+        NewPermuteMask[I] = M;
+      }
+    }
+  }
+  assert(isBlendOrUndef(NewBlendMask) && "Bad blend");
+  assert(isUndefOrInRange(NewPermuteMask, 0, NumElts) && "Bad permute");
+
+  // v16i16 shuffles can explode in complexity very easily, only accept them if
+  // the blend mask is the same in the 128-bit subvectors (or can widen to
+  // v8i32) and the permute can be widened as well.
+  if (VT == MVT::v16i16) {
+    if (!is128BitLaneRepeatedShuffleMask(VT, NewBlendMask) &&
+        !canWidenShuffleElements(NewBlendMask))
+      return SDValue();
+    if (!canWidenShuffleElements(NewPermuteMask))
+      return SDValue();
+  }
+
+  SDValue NewBlend =
+      DAG.getVectorShuffle(VT, DL, DAG.getBitcast(VT, Ops0[0]),
+                           DAG.getBitcast(VT, Ops1[0]), NewBlendMask);
+  return DAG.getVectorShuffle(VT, DL, NewBlend, DAG.getUNDEF(VT),
+                              NewPermuteMask);
+}
+
 // TODO - move this to TLI like isBinOp?
 static bool isUnaryOp(unsigned Opcode) {
   switch (Opcode) {
@@ -41771,6 +41868,15 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
       return true;
     KnownZero = SrcZero.zextOrTrunc(NumElts);
     KnownUndef = SrcUndef.zextOrTrunc(NumElts);
+    break;
+  }
+  case X86ISD::BLENDI: {
+    SmallVector<int, 16> BlendMask;
+    DecodeBLENDMask(NumElts, Op.getConstantOperandVal(2), BlendMask);
+    if (SDValue R = combineBlendOfPermutes(VT.getSimpleVT(), Op.getOperand(0),
+                                           Op.getOperand(1), BlendMask,
+                                           DemandedElts, TLO.DAG, SDLoc(Op)))
+      return TLO.CombineTo(Op, R);
     break;
   }
   case X86ISD::BLENDV: {
