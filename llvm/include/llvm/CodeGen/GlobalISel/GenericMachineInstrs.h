@@ -294,7 +294,7 @@ public:
   }
 };
 
-/// Respresents a G_SHUFFLE_VECTOR.
+/// Represents a G_SHUFFLE_VECTOR.
 class GShuffleVector : public GenericMachineInstr {
 public:
   Register getSrc1Reg() const { return getOperand(1).getReg(); }
