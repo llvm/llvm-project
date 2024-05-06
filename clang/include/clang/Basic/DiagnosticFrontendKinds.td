@@ -135,7 +135,7 @@ def err_fe_no_pch_in_dir : Error<
 def err_fe_action_not_available : Error<
     "action %0 not compiled in">;
 def err_fe_invalid_multiple_actions : Error<
-    "action %0 is specified, another action is not allowed: %1">;
+    "'%0' action ignored; '%1' action specified previously">;
 def err_fe_invalid_alignment : Error<
     "invalid value '%1' in '%0'; alignment must be a power of 2">;
 def err_fe_invalid_exception_model

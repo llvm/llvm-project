@@ -2860,7 +2860,7 @@ static bool ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
         } else {
           if (!A->getOption().matches(OPT_ast_dump_EQ))
             Diags.Report(diag::err_fe_invalid_multiple_actions)
-                << A->getSpelling() << SavedAction->getSpelling();
+                << SavedAction->getSpelling() << A->getSpelling();
           break;
         }
       }
