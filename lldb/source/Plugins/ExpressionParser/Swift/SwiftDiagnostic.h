@@ -29,7 +29,7 @@ public:
     return diag->getKind() == eDiagnosticOriginSwift;
   }
 
-  SwiftDiagnostic(const char *message, DiagnosticSeverity severity,
+  SwiftDiagnostic(const char *message, lldb::Severity severity,
                   uint32_t compiler_id, uint32_t buffer_id)
       : Diagnostic(message, severity, eDiagnosticOriginSwift, compiler_id),
         m_buffer_id(buffer_id) {}

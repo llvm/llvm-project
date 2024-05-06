@@ -458,7 +458,7 @@ public:
   bool HasDiagnostics() const;
   bool HasClangImporterErrors() const;
 
-  void AddDiagnostic(DiagnosticSeverity severity, llvm::StringRef message);
+  void AddDiagnostic(lldb::Severity severity, llvm::StringRef message);
   void RaiseFatalError(std::string msg) const {
     m_fatal_errors.SetErrorString(msg);
   }
