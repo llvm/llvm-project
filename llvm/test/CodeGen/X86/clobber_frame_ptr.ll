@@ -30,11 +30,14 @@ define i32 @foo(i32 %0, i32 %1) {
 ; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
 ; CHECK-NEXT:    pushq %rbp
 ; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    .cfi_remember_state
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x06, 0x77, 0x08, 0x06, 0x11, 0x10, 0x22 #
 ; CHECK-NEXT:    movl %esi, %ebp
 ; CHECK-NEXT:    movq %rdi, %r13
 ; CHECK-NEXT:    callq external@PLT
 ; CHECK-NEXT:    addq $8, %rsp
 ; CHECK-NEXT:    popq %rbp
+; CHECK-NEXT:    .cfi_restore_state
 ; CHECK-NEXT:    leaq -40(%rbp), %rsp
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    popq %r12

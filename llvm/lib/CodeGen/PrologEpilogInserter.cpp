@@ -77,15 +77,15 @@ using MBBVector = SmallVector<MachineBasicBlock *, 4>;
 STATISTIC(NumLeafFuncWithSpills, "Number of leaf functions with CSRs");
 STATISTIC(NumFuncSeen, "Number of functions seen in PEI");
 
-static cl::opt<bool> SpillClobberedFP(
-    "spill-clobbered-fp",
-    cl::desc("Spill clobbered fp register to stack."),
-    cl::init(false), cl::Hidden);
+static cl::opt<bool>
+    SpillClobberedFP("spill-clobbered-fp",
+                     cl::desc("Spill clobbered fp register to stack."),
+                     cl::init(false), cl::Hidden);
 
-static cl::opt<bool> SpillClobberedBP(
-    "spill-clobbered-bp",
-    cl::desc("Spill clobbered bp register to stack."),
-    cl::init(true), cl::Hidden);
+static cl::opt<bool>
+    SpillClobberedBP("spill-clobbered-bp",
+                     cl::desc("Spill clobbered bp register to stack."),
+                     cl::init(true), cl::Hidden);
 
 namespace {
 
@@ -1590,13 +1590,13 @@ static bool accessFrameBasePointer(const MachineInstr &MI, Register FP,
                                    const TargetRegisterInfo *TRI) {
   AccessFP = AccessBP = false;
   if (FP) {
-    if (MI.findRegisterUseOperandIdx(FP, false, TRI) != -1 ||
-        MI.findRegisterDefOperandIdx(FP, false, true, TRI) != -1)
+    if (MI.findRegisterUseOperandIdx(FP, TRI, false) != -1 ||
+        MI.findRegisterDefOperandIdx(FP, TRI, false, true) != -1)
       AccessFP = true;
   }
   if (BP) {
-    if (MI.findRegisterUseOperandIdx(BP, false, TRI) != -1 ||
-        MI.findRegisterDefOperandIdx(BP, false, true, TRI) != -1)
+    if (MI.findRegisterUseOperandIdx(BP, TRI, false) != -1 ||
+        MI.findRegisterDefOperandIdx(BP, TRI, false, true) != -1)
       AccessBP = true;
   }
   return AccessFP || AccessBP;
@@ -1659,17 +1659,18 @@ void PEI::spillFrameBasePointer(MachineFunction &MF) {
         SpillBP |= AccessBP;
 
         // Maintain FPLive and BPLive.
-        if (FPLive && MI->findRegisterDefOperandIdx(FP, false, true, TRI) != -1)
+        if (FPLive && MI->findRegisterDefOperandIdx(FP, TRI, false, true) != -1)
           FPLive = false;
-        if (FP && MI->findRegisterUseOperandIdx(FP, false, TRI) != -1)
+        if (FP && MI->findRegisterUseOperandIdx(FP, TRI, false) != -1)
           FPLive = true;
-        if (BPLive && MI->findRegisterDefOperandIdx(BP, false, true, TRI) != -1)
+        if (BPLive && MI->findRegisterDefOperandIdx(BP, TRI, false, true) != -1)
           BPLive = false;
-        if (BP && MI->findRegisterUseOperandIdx(BP, false, TRI) != -1)
+        if (BP && MI->findRegisterUseOperandIdx(BP, TRI, false) != -1)
           BPLive = true;
 
         Start = MI++;
-      } while ((MI != ME) && (FPLive || BPLive ||
+      } while ((MI != ME) &&
+               (FPLive || BPLive ||
                 accessFrameBasePointer(*MI, FP, BP, AccessFP, AccessBP, TRI)));
 
       // If the bp is clobbered by a call, we should save and restore outside of

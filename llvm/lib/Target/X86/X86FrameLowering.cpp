@@ -4242,9 +4242,9 @@ static int computeSPAdjust4SpillFPBP(MachineFunction &MF,
   return AlignedSize - AllocSize;
 }
 
-void X86FrameLowering::spillFPBPUsingSP(
-    MachineFunction &MF, MachineBasicBlock::iterator BeforeMI,
-    bool SpillFP, bool SpillBP) const {
+void X86FrameLowering::spillFPBPUsingSP(MachineFunction &MF,
+                                        MachineBasicBlock::iterator BeforeMI,
+                                        bool SpillFP, bool SpillBP) const {
   const TargetRegisterClass *RC;
   unsigned RegNum = 0;
   MachineBasicBlock *MBB = BeforeMI->getParent();
@@ -4280,11 +4280,46 @@ void X86FrameLowering::spillFPBPUsingSP(
   int SPAdjust = computeSPAdjust4SpillFPBP(MF, RC, RegNum);
   if (SPAdjust)
     emitSPUpdate(*MBB, BeforeMI, DL, -SPAdjust, false);
+
+  // Emit unwinding information.
+  if (SpillFP && needsDwarfCFI(MF)) {
+    // Emit .cfi_remember_state to remember old frame.
+    unsigned CFIIndex =
+        MF.addFrameInst(MCCFIInstruction::createRememberState(nullptr));
+    BuildMI(*MBB, BeforeMI, DL, TII.get(TargetOpcode::CFI_INSTRUCTION))
+        .addCFIIndex(CFIIndex);
+
+    // Setup new CFA value with DW_CFA_def_cfa_expression:
+    //     DW_OP_breg7+offset, DW_OP_deref, DW_OP_consts 16, DW_OP_plus
+    SmallString<64> CfaExpr;
+    uint8_t buffer[16];
+    int Offset = SPAdjust;
+    if (SpillBP)
+      Offset += TRI->getSpillSize(*RC);
+    Register StackPtr = TRI->getStackRegister();
+    if (STI.isTarget64BitILP32())
+      StackPtr = Register(getX86SubSuperRegister(StackPtr, 64));
+    unsigned DwarfStackPtr = TRI->getDwarfRegNum(StackPtr, true);
+    CfaExpr.push_back((uint8_t)(dwarf::DW_OP_breg0 + DwarfStackPtr));
+    CfaExpr.append(buffer, buffer + encodeSLEB128(Offset, buffer));
+    CfaExpr.push_back(dwarf::DW_OP_deref);
+    CfaExpr.push_back(dwarf::DW_OP_consts);
+    CfaExpr.append(buffer, buffer + encodeSLEB128(SlotSize * 2, buffer));
+    CfaExpr.push_back((uint8_t)dwarf::DW_OP_plus);
+
+    SmallString<64> DefCfaExpr;
+    DefCfaExpr.push_back(dwarf::DW_CFA_def_cfa_expression);
+    DefCfaExpr.append(buffer, buffer + encodeSLEB128(CfaExpr.size(), buffer));
+    DefCfaExpr.append(CfaExpr.str());
+    BuildCFI(*MBB, BeforeMI, DL,
+             MCCFIInstruction::createEscape(nullptr, DefCfaExpr.str()),
+             MachineInstr::FrameSetup);
+  }
 }
 
-void X86FrameLowering::restoreFPBPUsingSP(
-    MachineFunction &MF, MachineBasicBlock::iterator AfterMI,
-    bool SpillFP, bool SpillBP) const {
+void X86FrameLowering::restoreFPBPUsingSP(MachineFunction &MF,
+                                          MachineBasicBlock::iterator AfterMI,
+                                          bool SpillFP, bool SpillBP) const {
   Register FP, BP;
   const TargetRegisterClass *RC;
   unsigned RegNum = 0;
@@ -4321,6 +4356,15 @@ void X86FrameLowering::restoreFPBPUsingSP(
   if (SpillFP) {
     BuildMI(*MBB, Pos, DL,
             TII.get(getPOPOpcode(MF.getSubtarget<X86Subtarget>())), FP);
+
+    // Emit unwinding information.
+    if (needsDwarfCFI(MF)) {
+      // Restore original frame with .cfi_restore_state.
+      unsigned CFIIndex =
+          MF.addFrameInst(MCCFIInstruction::createRestoreState(nullptr));
+      BuildMI(*MBB, Pos, DL, TII.get(TargetOpcode::CFI_INSTRUCTION))
+          .addCFIIndex(CFIIndex);
+    }
   }
 }
 

@@ -184,6 +184,10 @@ void CFIInstrInserter::calculateOutgoingCFAInfo(MBBCFAInfo &MBBInfo) {
   unsigned NumRegs = TRI.getNumSupportedRegs(*MF);
   BitVector CSRSaved(NumRegs), CSRRestored(NumRegs);
 
+#ifndef NDEBUG
+  int RememberState = 0;
+#endif
+
   // Determine cfa offset and register set by the block.
   for (MachineInstr &MI : *MBBInfo.MBB) {
     if (MI.isCFIInstruction()) {
@@ -228,17 +232,23 @@ void CFIInstrInserter::calculateOutgoingCFAInfo(MBBCFAInfo &MBBInfo) {
       case MCCFIInstruction::OpRememberState:
         // TODO: Add support for handling cfi_remember_state.
 #ifndef NDEBUG
-        report_fatal_error(
-            "Support for cfi_remember_state not implemented! Value of CFA "
-            "may be incorrect!\n");
+        // Currently we need cfi_remember_state and cfi_restore_state to be in
+        // the same BB, so it will not impact outgoing CFA.
+        ++RememberState;
+        if (RememberState != 1)
+          report_fatal_error(
+              "Support for cfi_remember_state not implemented! Value of CFA "
+              "may be incorrect!\n");
 #endif
         break;
       case MCCFIInstruction::OpRestoreState:
         // TODO: Add support for handling cfi_restore_state.
 #ifndef NDEBUG
-        report_fatal_error(
-            "Support for cfi_restore_state not implemented! Value of CFA may "
-            "be incorrect!\n");
+        --RememberState;
+        if (RememberState != 0)
+          report_fatal_error(
+              "Support for cfi_restore_state not implemented! Value of CFA may "
+              "be incorrect!\n");
 #endif
         break;
       // Other CFI directives do not affect CFA value.
@@ -263,6 +273,13 @@ void CFIInstrInserter::calculateOutgoingCFAInfo(MBBCFAInfo &MBBInfo) {
       }
     }
   }
+
+#ifndef NDEBUG
+  if (RememberState != 0)
+    report_fatal_error(
+        "Support for cfi_remember_state not implemented! Value of CFA "
+        "may be incorrect!\n");
+#endif
 
   MBBInfo.Processed = true;
 
