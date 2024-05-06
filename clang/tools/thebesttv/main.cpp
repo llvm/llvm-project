@@ -469,6 +469,10 @@ void handleInputEntry(const VarLocResult &from, int fromLine, VarLocResult to,
             logger.warn("Unable to find any path for NPE fix version!");
 
         removeNpeBadSource();
+    } else if (type == "npe-bad-source") {
+        logger.info("Removing bad NPE source ...");
+        requireTrue(from.isValid());
+        removeNpeBadSource();
     } else {
         logger.info("Handle unknown type: {}", type);
         requireTrue(from.isValid());
