@@ -1188,7 +1188,8 @@ bool SwiftLanguage::IsSourceFile(llvm::StringRef file_path) const {
   return file_path.endswith(".swift");
 }
 
-std::vector<FormattersMatchCandidate> SwiftLanguage::GetPossibleFormattersMatches(
+std::vector<FormattersMatchCandidate>
+SwiftLanguage::GetPossibleFormattersMatches(
     ValueObject &valobj, lldb::DynamicValueType use_dynamic) {
   std::vector<FormattersMatchCandidate> result;
 
@@ -1624,10 +1625,12 @@ bool SwiftLanguage::GetFunctionDisplayName(
       return false;
     if (sc->function->GetLanguage() != eLanguageTypeSwift)
       return false;
-    ConstString cs = sc->function->GetDisplayName(sc);
-    if (!cs)
+    std::string display_name = SwiftLanguageRuntime::DemangleSymbolAsString(
+        sc->function->GetMangled().GetMangledName().GetStringRef(),
+        SwiftLanguageRuntime::eSimplified, sc, exe_ctx);
+    if (display_name.empty())
       return false;
-    s.Printf("%s", cs.AsCString());
+    s << display_name;
     return true;
   }
   case Language::FunctionNameRepresentation::eNameWithArgs: {
@@ -1635,10 +1638,11 @@ bool SwiftLanguage::GetFunctionDisplayName(
       return false;
     if (sc->function->GetLanguage() != eLanguageTypeSwift)
       return false;
-    ConstString cs = sc->function->GetDisplayName(sc);
-    if (!cs)
+    std::string display_name = SwiftLanguageRuntime::DemangleSymbolAsString(
+        sc->function->GetMangled().GetMangledName().GetStringRef(),
+        SwiftLanguageRuntime::eSimplified, sc, exe_ctx);
+    if (display_name.empty())
       return false;
-    const char *cstr = cs.AsCString();
     ExecutionContextScope *exe_scope =
         exe_ctx ? exe_ctx->GetBestExecutionContextScope() : NULL;
     const InlineFunctionInfo *inline_info = NULL;
@@ -1661,9 +1665,9 @@ bool SwiftLanguage::GetFunctionDisplayName(
     }
 
     if (inline_info) {
-      s.PutCString(cstr);
+      s << display_name;
       s.PutCString(" [inlined] ");
-      cstr = inline_info->GetName().GetCString();
+      display_name = inline_info->GetName();
     }
 
     VariableList args;
@@ -1671,15 +1675,16 @@ bool SwiftLanguage::GetFunctionDisplayName(
       variable_list_sp->AppendVariablesWithScope(eValueTypeVariableArgument,
                                                  args);
     if (args.GetSize() == 0) {
-      s.PutCString(cstr);
+      s << display_name;
       return true;
     }
+    const char *cstr = display_name.data();
     const char *open_paren = strchr(cstr, '(');
     const char *close_paren = nullptr;
     const char *generic = strchr(cstr, '<');
-    // if before the arguments list begins there is a template sign
+    // If before the arguments list begins there is a template sign
     // then scan to the end of the generic args before you try to find
-    // the arguments list
+    // the arguments list.
     if (generic && open_paren && generic < open_paren) {
       int generic_depth = 1;
       ++generic;
@@ -1701,7 +1706,7 @@ bool SwiftLanguage::GetFunctionDisplayName(
     if (open_paren)
       s.Write(cstr, open_paren - cstr + 1);
     else {
-      s.PutCString(cstr);
+      s << display_name;
       s.PutChar('(');
     }
     const size_t num_args = args.GetSize();
@@ -1711,6 +1716,8 @@ bool SwiftLanguage::GetFunctionDisplayName(
       VariableSP var_sp(args.GetVariableAtIndex(arg_idx));
       ValueObjectSP var_value_sp(
           ValueObjectVariable::Create(exe_scope, var_sp));
+      if (!var_sp || !var_value_sp || var_sp->IsArtificial())
+        continue;
       StreamString ss;
       const char *var_representation = nullptr;
       const char *var_name = var_value_sp->GetName().GetCString();

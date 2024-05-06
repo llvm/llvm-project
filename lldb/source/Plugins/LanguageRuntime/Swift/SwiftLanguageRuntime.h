@@ -141,9 +141,10 @@ public:
   IsSwiftAsyncAwaitResumePartialFunctionSymbol(llvm::StringRef name);
 
   enum DemangleMode { eSimplified, eTypeName, eDisplayTypeName };
-  static std::string DemangleSymbolAsString(llvm::StringRef symbol,
-                                            DemangleMode mode,
-                                            const SymbolContext *sc = nullptr);
+  static std::string
+  DemangleSymbolAsString(llvm::StringRef symbol, DemangleMode mode,
+                         const SymbolContext *sc = nullptr,
+                         const ExecutionContext *exe_ctx = nullptr);
 
   /// Demangle a symbol to a swift::Demangle node tree.
   ///
@@ -246,7 +247,7 @@ public:
   /// Populate a map with the names of all archetypes in a function's generic
   /// context.
   static void GetGenericParameterNamesForFunction(
-      const SymbolContext &sc,
+      const SymbolContext &sc, const ExecutionContext *exe_ctx,
       llvm::DenseMap<ArchetypePath, llvm::StringRef> &dict);
 
   /// Invoke callback for each DependentGenericParamType.

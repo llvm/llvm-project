@@ -523,10 +523,10 @@ bool Function::IsTopLevelFunction() {
   return result;
 }
 
-ConstString Function::GetDisplayName(const SymbolContext *sc) const {
+ConstString Function::GetDisplayName() const {
   if (!m_mangled)
     return GetName();
-  return m_mangled.GetDisplayDemangledName(sc);
+  return m_mangled.GetDisplayDemangledName();
 }
 
 CompilerDeclContext Function::GetDeclContext() {
