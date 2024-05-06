@@ -198,6 +198,25 @@ bool doesClauseApplyToDirective(OpenACCDirectiveKind DirectiveKind,
     default:
       return false;
     }
+  case OpenACCClauseKind::Async:
+    switch (DirectiveKind) {
+    case OpenACCDirectiveKind::Parallel:
+    case OpenACCDirectiveKind::Serial:
+    case OpenACCDirectiveKind::Kernels:
+    case OpenACCDirectiveKind::Data:
+    case OpenACCDirectiveKind::EnterData:
+    case OpenACCDirectiveKind::ExitData:
+    case OpenACCDirectiveKind::Set:
+    case OpenACCDirectiveKind::Update:
+    case OpenACCDirectiveKind::Wait:
+    case OpenACCDirectiveKind::ParallelLoop:
+    case OpenACCDirectiveKind::SerialLoop:
+    case OpenACCDirectiveKind::KernelsLoop:
+      return true;
+    default:
+      return false;
+    }
+
   default:
     // Do nothing so we can go to the 'unimplemented' diagnostic instead.
     return true;
@@ -397,6 +416,27 @@ SemaOpenACC::ActOnClause(ArrayRef<const OpenACCClause *> ExistingClauses,
     return OpenACCVectorLengthClause::Create(
         getASTContext(), Clause.getBeginLoc(), Clause.getLParenLoc(),
         Clause.getIntExprs()[0], Clause.getEndLoc());
+  }
+  case OpenACCClauseKind::Async: {
+    // Restrictions only properly implemented on 'compute' constructs, and
+    // 'compute' constructs are the only construct that can do anything with
+    // this yet, so skip/treat as unimplemented in this case.
+    if (!isOpenACCComputeDirectiveKind(Clause.getDirectiveKind()))
+      break;
+
+    // There is no prose in the standard that says duplicates aren't allowed,
+    // but this diagnostic is present in other compilers, as well as makes
+    // sense.
+    if (checkAlreadyHasClauseOfKind(*this, ExistingClauses, Clause))
+      return nullptr;
+
+    assert(Clause.getNumIntExprs() < 2 &&
+           "Invalid number of expressions for Async");
+
+    return OpenACCAsyncClause::Create(
+        getASTContext(), Clause.getBeginLoc(), Clause.getLParenLoc(),
+        Clause.getNumIntExprs() != 0 ? Clause.getIntExprs()[0] : nullptr,
+        Clause.getEndLoc());
   }
   case OpenACCClauseKind::Private: {
     // Restrictions only properly implemented on 'compute' constructs, and

@@ -127,6 +127,26 @@ OpenACCVectorLengthClause::Create(const ASTContext &C, SourceLocation BeginLoc,
       OpenACCVectorLengthClause(BeginLoc, LParenLoc, IntExpr, EndLoc);
 }
 
+OpenACCAsyncClause::OpenACCAsyncClause(SourceLocation BeginLoc,
+                                       SourceLocation LParenLoc, Expr *IntExpr,
+                                       SourceLocation EndLoc)
+    : OpenACCClauseWithSingleIntExpr(OpenACCClauseKind::Async, BeginLoc,
+                                     LParenLoc, IntExpr, EndLoc) {
+  assert((!IntExpr || IntExpr->isInstantiationDependent() ||
+          IntExpr->getType()->isIntegerType()) &&
+         "Condition expression type not scalar/dependent");
+}
+
+OpenACCAsyncClause *OpenACCAsyncClause::Create(const ASTContext &C,
+                                               SourceLocation BeginLoc,
+                                               SourceLocation LParenLoc,
+                                               Expr *IntExpr,
+                                               SourceLocation EndLoc) {
+  void *Mem =
+      C.Allocate(sizeof(OpenACCAsyncClause), alignof(OpenACCAsyncClause));
+  return new (Mem) OpenACCAsyncClause(BeginLoc, LParenLoc, IntExpr, EndLoc);
+}
+
 OpenACCNumGangsClause *OpenACCNumGangsClause::Create(const ASTContext &C,
                                                      SourceLocation BeginLoc,
                                                      SourceLocation LParenLoc,
@@ -285,6 +305,15 @@ void OpenACCClausePrinter::VisitVectorLengthClause(
   OS << "vector_length(";
   printExpr(C.getIntExpr());
   OS << ")";
+}
+
+void OpenACCClausePrinter::VisitAsyncClause(const OpenACCAsyncClause &C) {
+  OS << "async";
+  if (C.hasIntExpr()) {
+    OS << "(";
+    printExpr(C.getIntExpr());
+    OS << ")";
+  }
 }
 
 void OpenACCClausePrinter::VisitPrivateClause(const OpenACCPrivateClause &C) {
