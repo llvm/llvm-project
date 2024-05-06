@@ -15,19 +15,16 @@ import tempfile
 import threading
 import time
 import sys
-import re
 
 class TestDAP_attachByPortNum(lldbdap_testcase.DAPTestCaseBase):
 
     def runTargetProgramOnPort(self, port=None, program=None):
-        # sim_tool="hexagon-sim"
-        # if isIUTarget():
-        #     sim_tool="iu-sim"
-        target_sim_path=self.getBuiltServerTool("lldb-server")
-        if target_sim_path:
-            target_sim_path +=' g localhost:' +  port + ' '
+        server_tool = "lldb-server"
+        server_path=self.getBuiltinServerTool(server_tool)
+        if server_path:
+            server_path +=' g localhost:' +  port + 
 
-        self.process = subprocess.Popen([target_sim_path + program], shell=True,
+        self.process = subprocess.Popen([server_path + program], shell=True,
                                         stdin=subprocess.PIPE,
                                         stdout=subprocess.PIPE,
                                         stderr=subprocess.PIPE)
@@ -66,7 +63,6 @@ class TestDAP_attachByPortNum(lldbdap_testcase.DAPTestCaseBase):
                             'attach failed (%s)' % (response['message']))
         self.set_and_hit_breakpoint(continueToExit=True)
         self.process.kill()
-        os.system('killall hexagon-sim')
 
     @skipIfWindows
     @skipIfNetBSD  # Hangs on NetBSD as well
