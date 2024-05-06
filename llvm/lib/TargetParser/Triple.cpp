@@ -1244,10 +1244,12 @@ std::string Triple::normalize(StringRef Str) {
     }
     // Add DXIL version only if shadermodel is specified in the triple
     if (OS == Triple::ShaderModel) {
-      VersionTuple Ver = parseVersionFromName(Components[2].drop_front(strlen("shadermodel")));
-      // Default DXIL minor version when Shader Model version is anything other than
-      // 6.[0...8] or 6.x (which translates to latest current SM version)
-      // DXIL version corresponding to Shader Model version other than 6.x is 1.0
+      VersionTuple Ver =
+          parseVersionFromName(Components[2].drop_front(strlen("shadermodel")));
+      // Default DXIL minor version when Shader Model version is anything other
+      // than 6.[0...8] or 6.x (which translates to latest current SM version)
+      // DXIL version corresponding to Shader Model version other than 6.x
+      // is 1.0
       unsigned DXILMinor = 0;
       const unsigned SMMajor = 6;
       const unsigned LatestCurrentDXILMinor = 8;
