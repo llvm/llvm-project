@@ -630,7 +630,7 @@ extern "C" int optMain(
     }
   }
 
-  Triple ModuleTriple(Triple::normalize(M->getTargetTriple()));
+  Triple ModuleTriple(M->getTargetTriple());
   std::string CPUStr, FeaturesStr;
   std::unique_ptr<TargetMachine> TM;
   if (ModuleTriple.getArch()) {
