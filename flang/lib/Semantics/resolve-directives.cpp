@@ -2028,34 +2028,108 @@ void OmpAttributeVisitor::Post(const parser::Name &name) {
       if (found->test(semantics::Symbol::Flag::OmpThreadprivate))
         return;
     }
-    std::vector<Symbol *> defaultDSASymbols;
+
+    // Implicitly determined DSAs
+    // OMP 5.2 5.1.1 - Variables Referenced in a Construct
+    Symbol *lastDeclSymbol = nullptr;
+    std::optional<Symbol::Flag> prevDSA;
     for (int dirDepth{0}; dirDepth < (int)dirContext_.size(); ++dirDepth) {
       DirContext &dirContext = dirContext_[dirDepth];
-      bool hasDataSharingAttr{false};
+      std::optional<Symbol::Flag> dsa;
+
       for (auto symMap : dirContext.objectWithDSA) {
         // if the `symbol` already has a data-sharing attribute
         if (symMap.first->name() == name.symbol->name()) {
-          hasDataSharingAttr = true;
+          dsa = symMap.second;
           break;
         }
       }
-      if (hasDataSharingAttr) {
-        if (defaultDSASymbols.size())
-          symbol = &MakeAssocSymbol(symbol->name(), *defaultDSASymbols.back(),
+
+      // When handling each implicit rule, either a new private symbol is
+      // declared or the last declared symbol is used.
+      // In the latter case, it's necessary to insert a new symbol in the scope
+      // being processed, associated with the last declared symbol.
+      // This captures the fact that, although we are using the last declared
+      // symbol, its DSA could be different in this scope.
+      // Also, because of how symbols are collected in lowering, not inserting
+      // a new symbol in this scope could lead to the conclusion that the
+      // symbol was declared in this construct, which would result in wrong
+      // privatization code being generated.
+      // Consider the following example:
+      //
+      // !$omp parallel default(private)              ! p1
+      //   !$omp parallel default(private) shared(x)  ! p2
+      //     x = 10
+      //   !$omp end parallel
+      // !$omp end parallel
+      //
+      // If a new x symbol was not inserted in the inner parallel construct
+      // (p2), it would use the x symbol definition from the enclosing scope.
+      // Then, when p2's default symbols were collected in lowering, the x
+      // symbol from the outer parallel construct (p1) would be collected, as
+      // it would have the private flag set (note that symbols that don't have
+      // any private flag are considered as shared).
+      // This would make x appear to be defined in p2, causing it to be
+      // privatized in p2 and its privatization in p1 to be skipped.
+      auto declNewSymbol = [&](Symbol::Flag flag) {
+        Symbol *hostSymbol =
+            lastDeclSymbol ? lastDeclSymbol : &symbol->GetUltimate();
+        lastDeclSymbol = DeclarePrivateAccessEntity(
+            *hostSymbol, flag, context_.FindScope(dirContext.directiveSource));
+        return lastDeclSymbol;
+      };
+      auto useLastDeclSymbol = [&]() {
+        if (lastDeclSymbol)
+          MakeAssocSymbol(symbol->name(), *lastDeclSymbol,
               context_.FindScope(dirContext.directiveSource));
+      };
+
+      if (dsa.has_value()) {
+        useLastDeclSymbol();
+        prevDSA = dsa;
         continue;
       }
 
-      if (dirContext.defaultDSA == semantics::Symbol::Flag::OmpPrivate ||
-          dirContext.defaultDSA == semantics::Symbol::Flag::OmpFirstPrivate) {
-        Symbol *hostSymbol = defaultDSASymbols.size() ? defaultDSASymbols.back()
-                                                      : &symbol->GetUltimate();
-        defaultDSASymbols.push_back(
-            DeclarePrivateAccessEntity(*hostSymbol, dirContext.defaultDSA,
-                context_.FindScope(dirContext.directiveSource)));
-      } else if (defaultDSASymbols.size())
-        symbol = &MakeAssocSymbol(symbol->name(), *defaultDSASymbols.back(),
-            context_.FindScope(dirContext.directiveSource));
+      bool taskGenDir = llvm::omp::taskGeneratingSet.test(dirContext.directive);
+      bool targetDir = llvm::omp::allTargetSet.test(dirContext.directive);
+      bool parallelDir = llvm::omp::allParallelSet.test(dirContext.directive);
+
+      if (dirContext.defaultDSA == Symbol::Flag::OmpPrivate ||
+          dirContext.defaultDSA == Symbol::Flag::OmpFirstPrivate ||
+          dirContext.defaultDSA == Symbol::Flag::OmpShared) {
+        // 1) default
+        // Allowed only with parallel, teams and task generating constructs.
+        assert(parallelDir || taskGenDir ||
+            llvm::omp::allTeamsSet.test(dirContext.directive));
+        if (dirContext.defaultDSA != Symbol::Flag::OmpShared)
+          declNewSymbol(dirContext.defaultDSA);
+        else
+          useLastDeclSymbol();
+        dsa = dirContext.defaultDSA;
+      } else if (parallelDir) {
+        // 2) parallel -> shared
+        useLastDeclSymbol();
+        dsa = Symbol::Flag::OmpShared;
+      } else if (!taskGenDir && !targetDir) {
+        // 3) enclosing context
+        useLastDeclSymbol();
+        dsa = prevDSA;
+      } else if (targetDir) {
+        // TODO 4) not mapped target variable -> firstprivate
+        dsa = prevDSA;
+      } else if (taskGenDir) {
+        // TODO 5) dummy arg in orphaned taskgen construct -> firstprivate
+        if (prevDSA == Symbol::Flag::OmpShared) {
+          // 6) shared in enclosing context -> shared
+          useLastDeclSymbol();
+          dsa = Symbol::Flag::OmpShared;
+        } else {
+          // 7) firstprivate
+          dsa = Symbol::Flag::OmpFirstPrivate;
+          declNewSymbol(*dsa)->set(Symbol::Flag::OmpImplicit);
+        }
+      }
+      prevDSA = dsa;
     }
   } // within OpenMP construct
 }
