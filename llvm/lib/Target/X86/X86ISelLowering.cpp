@@ -45954,9 +45954,9 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
   // with out-of-bounds clamping.
 
   // Unlike general shift instructions (SHL/SRL), AVX2's VSHLV/VSRLV handle
-  // shift amounts exceeding the element bitwidth. VSHLV/VSRLV clamps the amount to
-  // bitwidth-1 for unsigned shifts, effectively performing a maximum left shift
-  // of bitwidth-1 positions. and returns zero for unsigned right shifts
+  // shift amounts exceeding the element bitwidth. VSHLV/VSRLV clamps the amount
+  // to bitwidth-1 for unsigned shifts, effectively performing a maximum left
+  // shift of bitwidth-1 positions. and returns zero for unsigned right shifts
   // exceeding bitwidth-1.
   if (N->getOpcode() == ISD::VSELECT &&
       (LHS.getOpcode() == ISD::SRL || LHS.getOpcode() == ISD::SHL) &&
@@ -45968,9 +45968,9 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
         ISD::isConstantSplatVector(Cond.getOperand(1).getNode(), SV) &&
         ISD::isConstantSplatVectorAllZeros(RHS.getNode()) &&
         SV == VT.getScalarSizeInBits()) {
-      return DAG.getNode(
-          LHS.getOpcode() == ISD::SRL ? X86ISD::VSRLV : X86ISD::VSHLV, DL,
-          VT, LHS.getOperand(0), LHS.getOperand(1));
+      return DAG.getNode(LHS.getOpcode() == ISD::SRL ? X86ISD::VSRLV
+                                                     : X86ISD::VSHLV,
+                         DL, VT, LHS.getOperand(0), LHS.getOperand(1));
     }
   }
 
