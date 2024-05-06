@@ -4047,8 +4047,8 @@ LLVMValueRef LLVMBuildIndirectBr(LLVMBuilderRef B, LLVMValueRef Addr,
                                  unsigned NumDests);
 LLVMValueRef LLVMBuildCallBr(LLVMBuilderRef B, LLVMTypeRef Ty, LLVMValueRef Fn,
                              LLVMBasicBlockRef DefaultDest,
-                             LLVMBasicBlockRef *IndrectDests,
-                             unsigned NumIndrectDests, LLVMValueRef *Args,
+                             LLVMBasicBlockRef *IndirectDests,
+                             unsigned NumIndirectDests, LLVMValueRef *Args,
                              unsigned NumArgs, LLVMOperandBundleRef *Bundles,
                              unsigned NumBundles, const char *Name);
 LLVMValueRef LLVMBuildInvoke2(LLVMBuilderRef, LLVMTypeRef Ty, LLVMValueRef Fn,

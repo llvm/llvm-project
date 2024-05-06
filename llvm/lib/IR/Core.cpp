@@ -3272,8 +3272,8 @@ LLVMValueRef LLVMBuildIndirectBr(LLVMBuilderRef B, LLVMValueRef Addr,
 
 LLVMValueRef LLVMBuildCallBr(LLVMBuilderRef B, LLVMTypeRef Ty, LLVMValueRef Fn,
                              LLVMBasicBlockRef DefaultDest,
-                             LLVMBasicBlockRef *IndrectDests,
-                             unsigned NumIndrectDests, LLVMValueRef *Args,
+                             LLVMBasicBlockRef *IndirectDests,
+                             unsigned NumIndirectDests, LLVMValueRef *Args,
                              unsigned NumArgs, LLVMOperandBundleRef *Bundles,
                              unsigned NumBundles, const char *Name) {
 
@@ -3284,7 +3284,7 @@ LLVMValueRef LLVMBuildCallBr(LLVMBuilderRef B, LLVMTypeRef Ty, LLVMValueRef Fn,
   }
 
   SmallVector<BasicBlock *, 8> IDs;
-  for (auto ID : ArrayRef(IndrectDests, NumIndrectDests)) {
+  for (auto ID : ArrayRef(IndirectDests, NumIndirectDests)) {
     BasicBlock *BB = unwrap(ID);
     IDs.push_back(BB);
   }
