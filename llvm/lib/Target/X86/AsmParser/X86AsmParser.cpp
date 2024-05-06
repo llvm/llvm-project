@@ -2296,7 +2296,7 @@ bool X86AsmParser::ParseRoundingModeOp(SMLoc Start, OperandVector &Operands) {
     Operands.push_back(X86Operand::CreateImm(RndModeOp, Start, End));
     return false;
   }
-  if(Tok.getIdentifier().equals("sae")){
+  if (Tok.getIdentifier() == "sae") {
     Parser.Lex();  // Eat the sae
     if (!getLexer().is(AsmToken::RCurly))
       return Error(Tok.getLoc(), "Expected } at this point");
@@ -2567,7 +2567,7 @@ bool X86AsmParser::ParseIntelMemoryOperandSize(unsigned &Size) {
     .Default(0);
   if (Size) {
     const AsmToken &Tok = Lex(); // Eat operand size (e.g., byte, word).
-    if (!(Tok.getString().equals("PTR") || Tok.getString().equals("ptr")))
+    if (!(Tok.getString() == "PTR" || Tok.getString() == "ptr"))
       return Error(Tok.getLoc(), "Expected 'PTR' or 'ptr' token!");
     Lex(); // Eat ptr.
   }
