@@ -1079,6 +1079,7 @@ enum : unsigned {
   // Experimental support for SHT_RELR sections. For details, see proposal
   // at https://groups.google.com/forum/#!topic/generic-abi/bX460iggiKg
   SHT_RELR = 19,         // Relocation entries; only offsets.
+  SHT_CREL = 20,         // CREL relocation entries
   SHT_LOOS = 0x60000000, // Lowest operating system-specific type.
   // Android packed relocation section types.
   // https://android.googlesource.com/platform/bionic/+/6f12bfece5dcc01325e0abba56a46b1bcf991c69/tools/relocation_packer/src/elf_file.cc#37

@@ -39,6 +39,7 @@
 #include "llvm/MC/StringTableBuilder.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/EndianStream.h"
@@ -259,7 +260,7 @@ public:
   void recordRelocation(MCAssembler &Asm, const MCAsmLayout &Layout,
                         const MCFragment *Fragment, const MCFixup &Fixup,
                         MCValue Target, uint64_t &FixedValue) override;
-  bool usesRela(const MCSectionELF &Sec) const;
+  bool usesRela(const MCTargetOptions *, const MCSectionELF &Sec) const;
 
   void executePostLayoutBinding(MCAssembler &Asm,
                                 const MCAsmLayout &Layout) override;
@@ -831,7 +832,15 @@ MCSectionELF *ELFWriter::createRelocationSection(MCContext &Ctx,
     Flags = ELF::SHF_GROUP;
 
   const StringRef SectionName = Sec.getName();
-  const bool Rela = OWriter.usesRela(Sec);
+  const MCTargetOptions *TO = Ctx.getTargetOptions();
+  if (TO && TO->Crel) {
+    MCSectionELF *RelaSection =
+        Ctx.createELFRelSection(".crel" + SectionName, ELF::SHT_CREL, Flags,
+                                /*EntrySize=*/1, Sec.getGroup(), &Sec);
+    return RelaSection;
+  }
+
+  const bool Rela = OWriter.usesRela(TO, Sec);
   unsigned EntrySize;
   if (Rela)
     EntrySize = is64Bit() ? sizeof(ELF::Elf64_Rela) : sizeof(ELF::Elf32_Rela);
@@ -934,10 +943,50 @@ void ELFWriter::WriteSecHdrEntry(uint32_t Name, uint32_t Type, uint64_t Flags,
   WriteWord(EntrySize); // sh_entsize
 }
 
+template <class uint>
+static void encodeCrel(ArrayRef<ELFRelocationEntry> Relocs, raw_ostream &os) {
+  uint OffsetMask = 8, Offset = 0, Addend = 0;
+  uint32_t Symidx = 0, Type = 0;
+  // hdr & 4 indicates 3 flag bits in delta offset and flags members.
+  for (unsigned i = 0, e = Relocs.size(); i != e; ++i)
+    OffsetMask |= Relocs[i].Offset;
+  const int Shift = llvm::countr_zero(OffsetMask);
+  encodeULEB128(Relocs.size() * 8 + /*addend_bit=*/4 + Shift, os);
+  for (const ELFRelocationEntry &Entry : Relocs) {
+    // The delta offset and flags member may be larger than uint64_t. Special
+    // case the first byte (3 flag bits and 4 offset bits). Other ULEB128 bytes
+    // encode the remaining delta offset bits.
+    auto DeltaOffset = static_cast<uint>((Entry.Offset - Offset) >> Shift);
+    Offset = Entry.Offset;
+    uint32_t CurSymidx = Entry.Symbol ? Entry.Symbol->getIndex() : 0;
+    uint8_t B = (DeltaOffset << 3) + (Symidx != CurSymidx) +
+                (Type != Entry.Type ? 2 : 0) + (Addend != Entry.Addend ? 4 : 0);
+    if (DeltaOffset < 0x10) {
+      os << char(B);
+    } else {
+      os << char(B | 0x80);
+      encodeULEB128(DeltaOffset >> 4, os);
+    }
+    if (B & 1) {
+      encodeSLEB128(static_cast<int32_t>(CurSymidx - Symidx), os);
+      Symidx = CurSymidx;
+    }
+    if (B & 2) {
+      encodeSLEB128(static_cast<int32_t>(Entry.Type - Type), os);
+      Type = Entry.Type;
+    }
+    if (B & 4) {
+      encodeSLEB128(std::make_signed_t<uint>(Entry.Addend - Addend), os);
+      Addend = Entry.Addend;
+    }
+  }
+}
+
 void ELFWriter::writeRelocations(const MCAssembler &Asm,
                                        const MCSectionELF &Sec) {
   std::vector<ELFRelocationEntry> &Relocs = OWriter.Relocations[&Sec];
-  const bool Rela = OWriter.usesRela(Sec);
+  const MCTargetOptions *TO = Asm.getContext().getTargetOptions();
+  const bool Rela = OWriter.usesRela(TO, Sec);
 
   // Sort the relocation entries. MIPS needs this.
   OWriter.TargetObjectWriter->sortRelocs(Asm, Relocs);
@@ -977,24 +1026,29 @@ void ELFWriter::writeRelocations(const MCAssembler &Asm,
         }
       }
     }
-    return;
-  }
-  for (const ELFRelocationEntry &Entry : Relocs) {
-    uint32_t Symidx = Entry.Symbol ? Entry.Symbol->getIndex() : 0;
-    if (is64Bit()) {
-      write(Entry.Offset);
-      ELF::Elf64_Rela ERE;
-      ERE.setSymbolAndType(Symidx, Entry.Type);
-      write(ERE.r_info);
-      if (Rela)
-        write(Entry.Addend);
-    } else {
-      write(uint32_t(Entry.Offset));
-      ELF::Elf32_Rela ERE;
-      ERE.setSymbolAndType(Symidx, Entry.Type);
-      write(ERE.r_info);
-      if (Rela)
-        write(uint32_t(Entry.Addend));
+  } else if (TO && TO->Crel) {
+    if (is64Bit())
+      encodeCrel<uint64_t>(Relocs, W.OS);
+    else
+      encodeCrel<uint32_t>(Relocs, W.OS);
+  } else {
+    for (const ELFRelocationEntry &Entry : Relocs) {
+      uint32_t Symidx = Entry.Symbol ? Entry.Symbol->getIndex() : 0;
+      if (is64Bit()) {
+        write(Entry.Offset);
+        ELF::Elf64_Rela ERE;
+        ERE.setSymbolAndType(Symidx, Entry.Type);
+        write(ERE.r_info);
+        if (Rela)
+          write(Entry.Addend);
+      } else {
+        write(uint32_t(Entry.Offset));
+        ELF::Elf32_Rela ERE;
+        ERE.setSymbolAndType(Symidx, Entry.Type);
+        write(ERE.r_info);
+        if (Rela)
+          write(uint32_t(Entry.Addend));
+      }
     }
   }
 }
@@ -1014,7 +1068,8 @@ void ELFWriter::writeSection(const SectionIndexMapTy &SectionIndexMap,
     llvm_unreachable("SHT_DYNAMIC in a relocatable object");
 
   case ELF::SHT_REL:
-  case ELF::SHT_RELA: {
+  case ELF::SHT_RELA:
+  case ELF::SHT_CREL: {
     sh_link = SymbolTableIndex;
     assert(sh_link && ".symtab not found");
     const MCSection *InfoSection = Section.getLinkedToSection();
@@ -1443,6 +1498,7 @@ void ELFObjectWriter::recordRelocation(MCAssembler &Asm,
   uint64_t C = Target.getConstant();
   uint64_t FixupOffset = Layout.getFragmentOffset(Fragment) + Fixup.getOffset();
   MCContext &Ctx = Asm.getContext();
+  const MCTargetOptions *TO = Ctx.getTargetOptions();
 
   if (const MCSymbolRefExpr *RefB = Target.getSymB()) {
     const auto &SymB = cast<MCSymbolELF>(RefB->getSymbol());
@@ -1498,7 +1554,7 @@ void ELFObjectWriter::recordRelocation(MCAssembler &Asm,
   FixedValue = !RelocateWithSymbol && SymA && !SymA->isUndefined()
                    ? C + Layout.getSymbolOffset(*SymA)
                    : C;
-  if (usesRela(FixupSection)) {
+  if (usesRela(TO, FixupSection)) {
     Addend = FixedValue;
     FixedValue = 0;
   }
@@ -1527,9 +1583,11 @@ void ELFObjectWriter::recordRelocation(MCAssembler &Asm,
   Relocations[&FixupSection].push_back(Rec);
 }
 
-bool ELFObjectWriter::usesRela(const MCSectionELF &Sec) const {
-  return hasRelocationAddend() &&
-         Sec.getType() != ELF::SHT_LLVM_CALL_GRAPH_PROFILE;
+bool ELFObjectWriter::usesRela(const MCTargetOptions *TO,
+                               const MCSectionELF &Sec) const {
+  return (hasRelocationAddend() &&
+          Sec.getType() != ELF::SHT_LLVM_CALL_GRAPH_PROFILE) ||
+         (TO && TO->Crel);
 }
 
 bool ELFObjectWriter::isSymbolRefDifferenceFullyResolvedImpl(

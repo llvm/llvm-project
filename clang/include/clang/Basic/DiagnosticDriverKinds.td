@@ -809,6 +809,9 @@ def warn_drv_missing_multilib : Warning<
 def note_drv_available_multilibs : Note<
   "available multilibs are:%0">;
 
+def err_drv_experimental_crel : Error<
+  "-Wa,--experimental-crel must be specified to use -Wa,--crel. CREL is experimental and takes a non-standard section type code">;
+
 def warn_android_unversioned_fallback : Warning<
   "Using unversioned Android target directory %0 for target %1. Unversioned"
   " directories will not be used in Clang 19. Provide a versioned directory"
