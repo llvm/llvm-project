@@ -250,7 +250,12 @@ objc_library(
         "@platforms//os:macos": [],
         "//conditions:default": ["@platforms//:incompatible"],
     }),
-    deps = [":PluginPlatformMacOSXObjCXXHeaders"],
+    deps = [
+        ":PluginPlatformMacOSXObjCXXHeaders",
+        "//lldb:Host",
+        "//lldb:HostMacOSXPrivateHeaders",
+        "//llvm:Support",
+    ],
 )
 
 cc_library(
@@ -275,6 +280,7 @@ cc_library(
         "//lldb:Core",
         "//lldb:Headers",
         "//lldb:Host",
+        "//lldb:HostMacOSXPrivateHeaders",
         "//lldb:InterpreterHeaders",
         "//lldb:SymbolHeaders",
         "//lldb:TargetHeaders",
@@ -282,7 +288,10 @@ cc_library(
         "//llvm:Support",
         "//llvm:TargetParser",
     ] + select({
-        "@platforms//os:macos": [":PluginPlatformMacOSXObjCXX"],
+        "@platforms//os:macos": [
+            ":PluginPlatformMacOSXObjCXX",
+            ":PluginPlatformMacOSXObjCXXHeaders",
+        ],
         "//conditions:default": [],
     }),
 )
@@ -1748,6 +1757,10 @@ cc_library(
         "//lldb:Host",
         "//lldb:HostMacOSXPrivateHeaders",
         "//lldb:Symbol",
+        "//lldb:SymbolHeaders",
+        "//lldb:TargetHeaders",
+        "//lldb:Utility",
+        "//llvm:Support",
     ],
 )
 
