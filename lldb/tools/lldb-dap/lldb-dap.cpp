@@ -751,7 +751,8 @@ void request_attach(const llvm::json::Object &request) {
     return;
   }
 
-  if ((pid == LLDB_INVALID_PROCESS_ID || port == LLDB_INVALID_PORT_NUMBER) && wait_for) {
+  if ((pid == LLDB_INVALID_PROCESS_ID || port == LLDB_INVALID_PORT_NUMBER) &&
+      wait_for) {
     char attach_msg[256];
     auto attach_msg_len = snprintf(attach_msg, sizeof(attach_msg),
                                    "Waiting to attach to \"%s\"...",
