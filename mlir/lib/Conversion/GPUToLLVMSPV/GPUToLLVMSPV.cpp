@@ -29,21 +29,21 @@
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/FormatVariadic.h"
 
+using namespace mlir;
+
 namespace mlir {
 #define GEN_PASS_DEF_CONVERTGPUOPSTOLLVMSPVOPS
 #include "mlir/Conversion/Passes.h.inc"
 } // namespace mlir
 
-namespace {
-using namespace mlir;
-
 //===----------------------------------------------------------------------===//
 // Helper Functions
 //===----------------------------------------------------------------------===//
 
-LLVM::LLVMFuncOp lookupOrCreateSPIRVFn(Operation *symbolTable, StringRef name,
-                                       ArrayRef<Type> paramTypes,
-                                       Type resultType) {
+static LLVM::LLVMFuncOp lookupOrCreateSPIRVFn(Operation *symbolTable,
+                                              StringRef name,
+                                              ArrayRef<Type> paramTypes,
+                                              Type resultType) {
   auto func = dyn_cast_or_null<LLVM::LLVMFuncOp>(
       SymbolTable::lookupSymbolIn(symbolTable, name));
   if (!func) {
@@ -56,14 +56,16 @@ LLVM::LLVMFuncOp lookupOrCreateSPIRVFn(Operation *symbolTable, StringRef name,
   return func;
 }
 
-LLVM::CallOp createSPIRVBuiltinCall(Location loc,
-                                    ConversionPatternRewriter &rewriter,
-                                    LLVM::LLVMFuncOp func, ValueRange args) {
+static LLVM::CallOp createSPIRVBuiltinCall(Location loc,
+                                           ConversionPatternRewriter &rewriter,
+                                           LLVM::LLVMFuncOp func,
+                                           ValueRange args) {
   auto call = rewriter.create<LLVM::CallOp>(loc, func, args);
   call.setCConv(func.getCConv());
   return call;
 }
 
+namespace {
 //===----------------------------------------------------------------------===//
 // Barriers
 //===----------------------------------------------------------------------===//
