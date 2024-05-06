@@ -7414,7 +7414,7 @@ static SDValue lowerBuildVectorAsBroadcast(BuildVectorSDNode *BVOp,
     // With pattern matching, the VBROADCAST node may become a VMOVDDUP.
     if (ScalarSize == 32 ||
         (ScalarSize == 64 && (IsGE256 || Subtarget.hasVLX())) ||
-        CVT == MVT::f16 ||
+        (CVT == MVT::f16 && Subtarget.hasAVX2()) ||
         (OptForSize && (ScalarSize == 64 || Subtarget.hasAVX2()))) {
       const Constant *C = nullptr;
       if (ConstantSDNode *CI = dyn_cast<ConstantSDNode>(Ld))
