@@ -17691,6 +17691,23 @@ static SDValue performMulCombine(SDNode *N, SelectionDAG &DAG,
     return false;
   };
 
+  // Can the const C be decomposed into (1 - (1 - 2^M) * 2^N), eg:
+  // C = 29 is equal to 1 - (1 - 2^3) * 2^2.
+  auto isPowMinusMinusOneConst = [](APInt C, APInt &M, APInt &N) {
+    APInt CVMinus1 = C - 1;
+    if (CVMinus1.isNegative())
+      return false;
+    unsigned TrailingZeroes = CVMinus1.countr_zero();
+    APInt CVPlus1 = CVMinus1.ashr(TrailingZeroes) + 1;
+    if (CVPlus1.isPowerOf2()) {
+      unsigned BitWidth = CVPlus1.getBitWidth();
+      M = APInt(BitWidth, CVPlus1.logBase2());
+      N = APInt(BitWidth, TrailingZeroes);
+      return true;
+    }
+    return false;
+  };
+
   if (ConstValue.isNonNegative()) {
     // (mul x, (2^N + 1) * 2^M) => (shl (add (shl x, N), x), M)
     // (mul x, 2^N - 1) => (sub (shl x, N), x)
@@ -17699,6 +17716,8 @@ static SDValue performMulCombine(SDNode *N, SelectionDAG &DAG,
     //     => MV = (add (shl x, M), x); (add (shl MV, N), MV)
     // (mul x, (2^M + 1) * 2^N + 1))
     //     =>  MV = add (shl x, M), x); add (shl MV, N), x)
+    // (mul x, 1 - (1 - 2^M) * 2^N))
+    //     =>  MV = sub (x - (shl x, M)); sub (x - (shl MV, N))
     APInt SCVMinus1 = ShiftedConstValue - 1;
     APInt SCVPlus1 = ShiftedConstValue + 1;
     APInt CVPlus1 = ConstValue + 1;
@@ -17733,6 +17752,17 @@ static SDValue performMulCombine(SDNode *N, SelectionDAG &DAG,
       if (ShiftM <= 4 && ShiftN <= 4) {
         SDValue MVal = Add(Shl(N0, CVM.getZExtValue()), N0);
         return Add(Shl(MVal, CVN.getZExtValue()), N0);
+      }
+    }
+
+    if (Subtarget->hasALULSLFast() &&
+        isPowMinusMinusOneConst(ConstValue, CVM, CVN)) {
+      unsigned ShiftM = CVM.getZExtValue();
+      unsigned ShiftN = CVN.getZExtValue();
+      // ALULSLFast implicate that Shifts <= 4 places are fast
+      if (ShiftM <= 4 && ShiftN <= 4) {
+        SDValue MVal = Sub(N0, Shl(N0, CVM.getZExtValue()));
+        return Sub(N0, Shl(MVal, CVN.getZExtValue()));
       }
     }
   } else {
