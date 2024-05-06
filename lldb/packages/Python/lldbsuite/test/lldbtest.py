@@ -1572,7 +1572,7 @@ class Base(unittest.TestCase):
 
         return os.environ["CC"]
 
-    def getBuiltServerTool(self, server_tool):
+    def getBuiltinServerTool(self, server_tool):
         # Tries to find simulation/lldb-server/gdbserver tool at the same folder as the lldb.
         lldb_dir = os.path.dirname(lldbtest_config.lldbExec)
         path = shutil.which(server_tool, path=lldb_dir)
