@@ -40068,8 +40068,8 @@ static SDValue combineBlendOfPermutes(MVT VT, SDValue N0, SDValue N1,
 
   // Confirm that we only use a single operand from both permutes and that we
   // don't demand the same index from both.
-  if (!(DemandedRHS0.isZero() && DemandedRHS1.isZero() &&
-        !DemandedLHS0.intersects(DemandedLHS1)))
+  if (!DemandedRHS0.isZero() || !DemandedRHS1.isZero() ||
+      DemandedLHS0.intersects(DemandedLHS1))
     return SDValue();
 
   // Use the permute demanded elts masks as the new blend mask.
