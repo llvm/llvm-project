@@ -295,7 +295,7 @@ public:
       OS << "Symbols:\n";
       for (const auto &E : Symbols) {
         const MangledSymbol &Symbol = E.second;
-        for (auto Name : Symbol.Names) {
+        for (const auto &Name : Symbol.Names) {
           OS << "  - { Name: \""
              << (Symbol.ParentName.empty() || Instance.getLangOpts().CPlusPlus
                      ? ""
