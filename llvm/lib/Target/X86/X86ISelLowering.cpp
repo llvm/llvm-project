@@ -3579,7 +3579,7 @@ static bool isUndefOrZeroOrInRange(ArrayRef<int> Mask, int Low, int Hi) {
 
 /// Return true if every element in Mask, is an in-place blend/select mask or is
 /// undef.
-static bool isBlendOrUndef(ArrayRef<int> Mask) {
+LLVM_ATTRIBUTE_UNUSED static bool isBlendOrUndef(ArrayRef<int> Mask) {
   unsigned NumElts = Mask.size();
   for (auto [I, M] : enumerate(Mask))
     if (!isUndefOrEqual(M, I) && !isUndefOrEqual(M, I + NumElts))
