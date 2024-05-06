@@ -35,7 +35,10 @@ class ThreadPlanSingleThreadTimeout : public ThreadPlan {
 public:
   ~ThreadPlanSingleThreadTimeout() override;
 
-  static void ResetIfNeeded(Thread &thread);
+  // Create a new instance from fresh new state.
+  static void CreateNew(Thread &thread);
+  // Reset and create a new instance from the previous state.
+  static void ResetFromPrevState(Thread &thread);
 
   void GetDescription(Stream *s, lldb::DescriptionLevel level) override;
   bool ValidatePlan(Stream *error) override { return true; }
@@ -56,7 +59,7 @@ public:
 private:
   ThreadPlanSingleThreadTimeout(Thread &thread);
 
-  static bool IsAlive() { return s_instance != nullptr; }
+  static bool IsAlive();
 
   enum class State {
     WaitTimeout,    // Waiting for timeout.
@@ -64,6 +67,7 @@ private:
     Done,           // Finished resume all threads.
   };
 
+  static std::mutex s_mutex;
   static ThreadPlanSingleThreadTimeout *s_instance;
   static State s_prev_state;
 

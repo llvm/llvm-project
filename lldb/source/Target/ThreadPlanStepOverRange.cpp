@@ -141,9 +141,7 @@ bool ThreadPlanStepOverRange::ShouldStop(Event *event_ptr) {
                 GetTarget().GetArchitecture().GetAddressByteSize());
     LLDB_LOGF(log, "ThreadPlanStepOverRange reached %s.", s.GetData());
   }
-
-  if (DoPlanExplainsStop(event_ptr))
-    ClearNextBranchBreakpoint();
+  ClearNextBranchBreakpointExplainedStop();
 
   // If we're out of the range but in the same frame or in our caller's frame
   // then we should stop. When stepping out we only stop others if we are
@@ -349,6 +347,11 @@ bool ThreadPlanStepOverRange::ShouldStop(Event *event_ptr) {
     return false;
 }
 
+void ThreadPlanStepOverRange::DidPush() {
+  if (m_run_mode == lldb::eOnlyThisThread && IsControllingPlan())
+    ThreadPlanSingleThreadTimeout::CreateNew(GetThread());
+}
+
 bool ThreadPlanStepOverRange::DoPlanExplainsStop(Event *event_ptr) {
   // For crashes, breakpoint hits, signals, etc, let the base plan (or some
   // plan above us) handle the stop.  That way the user can see the stop, step
@@ -426,7 +429,7 @@ bool ThreadPlanStepOverRange::DoWillResume(lldb::StateType resume_state,
       }
     }
   }
-  if (m_run_mode == lldb::eOnlyThisThread)
-    ThreadPlanSingleThreadTimeout::ResetIfNeeded(GetThread());
+  if (m_run_mode == lldb::eOnlyThisThread && IsControllingPlan())
+    ThreadPlanSingleThreadTimeout::ResetFromPrevState(GetThread());
   return true;
 }

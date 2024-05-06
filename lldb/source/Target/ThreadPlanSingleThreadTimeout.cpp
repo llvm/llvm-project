@@ -24,6 +24,7 @@
 using namespace lldb_private;
 using namespace lldb;
 
+std::mutex ThreadPlanSingleThreadTimeout::s_mutex;
 ThreadPlanSingleThreadTimeout *ThreadPlanSingleThreadTimeout::s_instance =
     nullptr;
 ThreadPlanSingleThreadTimeout::State
@@ -33,13 +34,14 @@ ThreadPlanSingleThreadTimeout::ThreadPlanSingleThreadTimeout(Thread &thread)
     : ThreadPlan(ThreadPlan::eKindSingleThreadTimeout, "Single thread timeout",
                  thread, eVoteNo, eVoteNoOpinion),
       m_state(State::WaitTimeout), m_exit_flag(false) {
+  std::lock_guard<std::mutex> lock(s_mutex);
   m_timer_thread = std::thread(TimeoutThreadFunc, this);
   s_instance = this;
   m_state = s_prev_state;
 }
 
 ThreadPlanSingleThreadTimeout::~ThreadPlanSingleThreadTimeout() {
-  std::lock_guard<std::mutex> lock(m_mutex);
+  std::lock_guard<std::mutex> lock(s_mutex);
   s_instance = nullptr;
   if (m_state == State::Done)
     m_state = State::WaitTimeout;
@@ -62,12 +64,34 @@ std::string ThreadPlanSingleThreadTimeout::StateToString(State state) {
   }
 }
 
-void ThreadPlanSingleThreadTimeout::ResetIfNeeded(Thread &thread) {
+void ThreadPlanSingleThreadTimeout::CreateNew(Thread &thread) {
   uint64_t timeout_in_ms = thread.GetSingleThreadPlanTimeout();
   if (timeout_in_ms == 0)
     return;
 
-  // TODO: mutex?
+  // Do not create timeout if we are not stopping other threads.
+  if (!thread.GetCurrentPlan()->StopOthers())
+    return;
+
+  if (ThreadPlanSingleThreadTimeout::IsAlive())
+    return;
+  {
+    
+    s_prev_state = State::WaitTimeout;
+  }
+  auto timeout_plan = new ThreadPlanSingleThreadTimeout(thread);
+  ThreadPlanSP thread_plan_sp(timeout_plan);
+  auto status = thread.QueueThreadPlan(thread_plan_sp,
+                                       /*abort_other_plans*/ false);
+  Log *log = GetLog(LLDBLog::Step);
+  LLDB_LOGF(log, "ThreadPlanSingleThreadTimeout pushing a brand new one");
+}
+
+void ThreadPlanSingleThreadTimeout::ResetFromPrevState(Thread &thread) {
+  uint64_t timeout_in_ms = thread.GetSingleThreadPlanTimeout();
+  if (timeout_in_ms == 0)
+    return;
+
   if (ThreadPlanSingleThreadTimeout::IsAlive())
     return;
 
@@ -80,7 +104,7 @@ void ThreadPlanSingleThreadTimeout::ResetIfNeeded(Thread &thread) {
   auto status = thread.QueueThreadPlan(thread_plan_sp,
                                        /*abort_other_plans*/ false);
   Log *log = GetLog(LLDBLog::Step);
-  LLDB_LOGF(log, "ThreadPlanSingleThreadTimeout pushing a new one");
+  LLDB_LOGF(log, "ThreadPlanSingleThreadTimeout reset from previous state");
 }
 
 bool ThreadPlanSingleThreadTimeout::WillStop() {
@@ -88,7 +112,7 @@ bool ThreadPlanSingleThreadTimeout::WillStop() {
   LLDB_LOGF(log, "ThreadPlanSingleThreadTimeout::WillStop().");
 
   // Reset the state during stop.
-  std::lock_guard<std::mutex> lock(m_mutex);
+  std::lock_guard<std::mutex> lock(s_mutex);
   s_prev_state = State::WaitTimeout;
   return true;
 }
@@ -202,4 +226,9 @@ void ThreadPlanSingleThreadTimeout::HandleTimeout() {
   // Private state thread will only send async interrupt
   // in running state so no need to check state here.
   m_process.SendAsyncInterrupt(&GetThread());
+}
+
+bool ThreadPlanSingleThreadTimeout::IsAlive() {
+  std::lock_guard<std::mutex> lock(s_mutex);
+  return s_instance != nullptr; 
 }

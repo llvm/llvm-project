@@ -293,6 +293,20 @@ InstructionList *ThreadPlanStepRange::GetInstructionsForAddress(
   return nullptr;
 }
 
+bool ThreadPlanStepRange::IsNextBranchBreakpointStop(StopInfoSP stop_info_sp) {
+  if (!m_next_branch_bp_sp)
+    return false;
+
+  break_id_t bp_site_id = stop_info_sp->GetValue();
+  BreakpointSiteSP bp_site_sp =
+      m_process.GetBreakpointSiteList().FindByID(bp_site_id);
+  if (!bp_site_sp)
+    return false;
+  else if (!bp_site_sp->IsBreakpointAtThisSite(m_next_branch_bp_sp->GetID()))
+    return false;
+  return true;
+}
+
 void ThreadPlanStepRange::ClearNextBranchBreakpoint() {
   if (m_next_branch_bp_sp) {
     Log *log = GetLog(LLDBLog::Step);
@@ -303,6 +317,11 @@ void ThreadPlanStepRange::ClearNextBranchBreakpoint() {
     m_could_not_resolve_hw_bp = false;
     m_found_calls = false;
   }
+}
+
+void ThreadPlanStepRange::ClearNextBranchBreakpointExplainedStop() {
+  if (IsNextBranchBreakpointStop(GetPrivateStopInfo()))
+    ClearNextBranchBreakpoint();
 }
 
 bool ThreadPlanStepRange::SetNextBranchBreakpoint() {
@@ -392,8 +411,7 @@ bool ThreadPlanStepRange::SetNextBranchBreakpoint() {
 
 bool ThreadPlanStepRange::NextRangeBreakpointExplainsStop(
     lldb::StopInfoSP stop_info_sp) {
-  Log *log = GetLog(LLDBLog::Step);
-  if (!m_next_branch_bp_sp)
+  if (!IsNextBranchBreakpointStop(stop_info_sp))
     return false;
 
   break_id_t bp_site_id = stop_info_sp->GetValue();
@@ -401,29 +419,27 @@ bool ThreadPlanStepRange::NextRangeBreakpointExplainsStop(
       m_process.GetBreakpointSiteList().FindByID(bp_site_id);
   if (!bp_site_sp)
     return false;
-  else if (!bp_site_sp->IsBreakpointAtThisSite(m_next_branch_bp_sp->GetID()))
-    return false;
-  else {
-    // If we've hit the next branch breakpoint, then clear it.
-    size_t num_constituents = bp_site_sp->GetNumberOfConstituents();
-    bool explains_stop = true;
-    // If all the constituents are internal, then we are probably just stepping
-    // over this range from multiple threads, or multiple frames, so we want to
-    // continue.  If one is not internal, then we should not explain the stop,
-    // and let the user breakpoint handle the stop.
-    for (size_t i = 0; i < num_constituents; i++) {
-      if (!bp_site_sp->GetConstituentAtIndex(i)->GetBreakpoint().IsInternal()) {
-        explains_stop = false;
-        break;
-      }
+
+  // If we've hit the next branch breakpoint, then clear it.
+  size_t num_constituents = bp_site_sp->GetNumberOfConstituents();
+  bool explains_stop = true;
+  // If all the constituents are internal, then we are probably just stepping
+  // over this range from multiple threads, or multiple frames, so we want to
+  // continue.  If one is not internal, then we should not explain the stop,
+  // and let the user breakpoint handle the stop.
+  for (size_t i = 0; i < num_constituents; i++) {
+    if (!bp_site_sp->GetConstituentAtIndex(i)->GetBreakpoint().IsInternal()) {
+      explains_stop = false;
+      break;
     }
-    LLDB_LOGF(log,
-              "ThreadPlanStepRange::NextRangeBreakpointExplainsStop - Hit "
-              "next range breakpoint which has %" PRIu64
-              " constituents - explains stop: %u.",
-              (uint64_t)num_constituents, explains_stop);
-    return explains_stop;
   }
+  Log *log = GetLog(LLDBLog::Step);
+  LLDB_LOGF(log,
+            "ThreadPlanStepRange::NextRangeBreakpointExplainsStop - Hit "
+            "next range breakpoint which has %" PRIu64
+            " constituents - explains stop: %u.",
+            (uint64_t)num_constituents, explains_stop);
+  return explains_stop;
 }
 
 bool ThreadPlanStepRange::WillStop() { return true; }

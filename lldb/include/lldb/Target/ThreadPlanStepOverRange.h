@@ -29,6 +29,7 @@ public:
   void GetDescription(Stream *s, lldb::DescriptionLevel level) override;
   void SetStopOthers(bool new_value) override;
   bool ShouldStop(Event *event_ptr) override;
+  void DidPush() override;
 
 protected:
   bool DoPlanExplainsStop(Event *event_ptr) override;
