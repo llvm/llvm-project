@@ -138,7 +138,18 @@ EncompassingIntegerType(ArrayRef<struct WidthAndSignedness> Types) {
 }
 
 RValue CIRGenFunction::buildRotate(const CallExpr *E, bool IsRotateRight) {
-  llvm_unreachable("NYI");
+  auto src = buildScalarExpr(E->getArg(0));
+  auto shiftAmt = buildScalarExpr(E->getArg(1));
+
+  // The builtin's shift arg may have a different type than the source arg and
+  // result, but the CIR ops uses the same type for all values.
+  auto ty = src.getType();
+  shiftAmt = builder.createIntCast(shiftAmt, ty);
+  auto r = builder.create<mlir::cir::RotateOp>(getLoc(E->getSourceRange()), src,
+                                               shiftAmt);
+  if (!IsRotateRight)
+    r->setAttr("left", mlir::UnitAttr::get(src.getContext()));
+  return RValue::get(r);
 }
 
 RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
@@ -765,6 +776,17 @@ RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI_lrotl:
   case Builtin::BI_rotl64:
     return buildRotate(E, false);
+
+  case Builtin::BI__builtin_rotateright8:
+  case Builtin::BI__builtin_rotateright16:
+  case Builtin::BI__builtin_rotateright32:
+  case Builtin::BI__builtin_rotateright64:
+  case Builtin::BI_rotr8: // Microsoft variants of rotate right
+  case Builtin::BI_rotr16:
+  case Builtin::BI_rotr:
+  case Builtin::BI_lrotr:
+  case Builtin::BI_rotr64:
+    return buildRotate(E, true);
 
   case Builtin::BI__builtin_constant_p: {
     mlir::Type ResultType = ConvertType(E->getType());

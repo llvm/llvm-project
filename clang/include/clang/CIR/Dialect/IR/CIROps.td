@@ -1331,6 +1331,40 @@ def ByteswapOp : CIR_Op<"bswap", [Pure, SameOperandsAndResultType]> {
 }
 
 //===----------------------------------------------------------------------===//
+// RotateOp
+//===----------------------------------------------------------------------===//
+
+def RotateOp : CIR_Op<"rotate", [Pure, SameOperandsAndResultType]> {
+  let summary = "Reverse the bytes that constitute the operand integer";
+  let description = [{
+    The `cir.rotate` rotates operand in `src` by the given bit amount `amt`.
+    Its widths must be either 8, 16, 32, or 64 and both `src`, `amt` and
+    `result` be of the same type. The rotate direction is specified by a
+    `left`/`right` keyword.
+
+    This operation covers different C/C++
+    builtins, some examples: `__builtin_rotateleft8`, `__builtin_rotateleft16`,
+    `__builtin_rotateleft32`, `__builtin_rotateleft64`, `_rotl8`, `_rotl16`,
+    `_rotl`, `_lrotl`, `_rotl64`, etc and their "right" variants.
+
+    Example:
+
+    ```mlir
+    %r = cir.rotate left %0, %1 -> !u32i
+    ```
+  }];
+
+  let results = (outs CIR_IntType:$result);
+  let arguments = (ins PrimitiveInt:$src, PrimitiveInt:$amt,
+                       UnitAttr:$left);
+
+  let assemblyFormat = [{
+    (`left` $left^) : (`right`)?
+    $src `,` $amt `->` type($result) attr-dict
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // CmpThreeWayOp
 //===----------------------------------------------------------------------===//
 
