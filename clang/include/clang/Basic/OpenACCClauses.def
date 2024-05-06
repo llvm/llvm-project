@@ -21,6 +21,7 @@
 #define CLAUSE_ALIAS(ALIAS_NAME, CLAUSE_NAME)
 #endif
 
+VISIT_CLAUSE(Attach)
 VISIT_CLAUSE(Copy)
 CLAUSE_ALIAS(PCopy, Copy)
 CLAUSE_ALIAS(PresentOrCopy, Copy)
@@ -34,6 +35,7 @@ VISIT_CLAUSE(Create)
 CLAUSE_ALIAS(PCreate, Create)
 CLAUSE_ALIAS(PresentOrCreate, Create)
 VISIT_CLAUSE(Default)
+VISIT_CLAUSE(DevicePtr)
 VISIT_CLAUSE(FirstPrivate)
 VISIT_CLAUSE(If)
 VISIT_CLAUSE(NoCreate)
