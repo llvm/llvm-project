@@ -2774,32 +2774,28 @@ void request_dataBreakpointInfo(const llvm::json::Object &request) {
                                           : "evaluation failed");
     } else {
       uint64_t load_addr = value.GetValueAsUnsigned();
-      addr = llvm::utohexstr(load_addr);
-      lldb::SBMemoryRegionInfo region;
-      lldb::SBError err =
-          g_dap.target.GetProcess().GetMemoryRegionInfo(load_addr, region);
-      if (err.Success()) {
-        if (!(region.IsReadable() || region.IsWritable())) {
-          body.try_emplace("dataId", nullptr);
-          body.try_emplace("description",
-                           "memory region for address " + addr +
-                               " has no read or write permissions");
-        } else {
-          lldb::SBData data = value.GetPointeeData();
-          if (data.IsValid())
-            size = llvm::utostr(data.GetByteSize());
-          else {
+      lldb::SBData data = value.GetPointeeData();
+      if (data.IsValid()) {
+        size = llvm::utostr(data.GetByteSize());
+        addr = llvm::utohexstr(load_addr);
+        lldb::SBMemoryRegionInfo region;
+        lldb::SBError err =
+            g_dap.target.GetProcess().GetMemoryRegionInfo(load_addr, region);
+        // Only lldb-server supports "qMemoryRegionInfo". So, don't fail this
+        // request if SBProcess::GetMemoryRegionInfo returns error.
+        if (err.Success()) {
+          if (!(region.IsReadable() || region.IsWritable())) {
             body.try_emplace("dataId", nullptr);
             body.try_emplace("description",
-                             "unable to get byte size for expression: " +
-                                 name.str());
+                             "memory region for address " + addr +
+                                 " has no read or write permissions");
           }
         }
       } else {
         body.try_emplace("dataId", nullptr);
         body.try_emplace("description",
-                         "unable to get memory region info for address " +
-                             addr);
+                         "unable to get byte size for expression: " +
+                             name.str());
       }
     }
   } else {
