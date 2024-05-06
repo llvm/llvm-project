@@ -6277,14 +6277,15 @@ QualType TreeTransform<Derived>::TransformFunctionProtoType(
         ExprResult NewExpr = getDerived().TransformExpr(CondExpr);
         if (NewExpr.isInvalid())
           return QualType();
+        const FunctionEffect Effect(EPI.FunctionEffects.effects()[Idx]);
         FunctionEffectMode Mode = FunctionEffectMode::None;
-        NewExpr = SemaRef.ActOnEffectExpression(NewExpr.get(), Mode);
+        NewExpr =
+            SemaRef.ActOnEffectExpression(NewExpr.get(), Effect.name(), Mode);
         if (NewExpr.isInvalid())
           return QualType();
 
         // The condition expression has been transformed, and re-evaluated.
         // It may or may not have become constant.
-        const FunctionEffect Effect(EPI.FunctionEffects.effects()[Idx]);
         FunctionEffectWithCondition EC;
         switch (Mode) {
         case FunctionEffectMode::True:

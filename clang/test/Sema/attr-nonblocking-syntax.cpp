@@ -122,3 +122,63 @@ __attribute__((clang_nonblocking)) void (*nl_func_b)();
 } // namespace gnu_style
 
 // TODO: Duplicate the above for nonallocating
+
+
+
+
+// =========================================================================================
+// Non-blocking with an expression parameter
+
+void t0() [[clang::nonblocking(1 - 1)]];
+// CHECK: FunctionDecl {{.*}} t0 'void () __attribute__((clang_blocking))'
+void t1() [[clang::nonblocking(1 + 1)]];
+// CHECK: FunctionDecl {{.*}} t1 'void () __attribute__((clang_nonblocking))'
+
+template <bool V>
+struct ValueDependent {
+	void nb_method() [[clang::nonblocking(V)]];
+};
+
+void t3() [[clang::nonblocking]]
+{
+	ValueDependent<false> x1;
+	x1.nb_method();
+// CHECK: ClassTemplateSpecializationDecl {{.*}} ValueDependent
+// CHECK: TemplateArgument integral 0
+// CHECK: CXXMethodDecl {{.*}} nb_method 'void () __attribute__((clang_blocking))'
+
+ 	ValueDependent<true> x2;
+ 	x2.nb_method();
+// CHECK: ClassTemplateSpecializationDecl {{.*}} ValueDependent
+// CHECK: TemplateArgument integral 1
+// CHECK: CXXMethodDecl {{.*}} nb_method 'void () __attribute__((clang_nonblocking))'
+}
+
+template <typename X>
+struct TypeDependent {
+	void td_method() [[clang::nonblocking(X::is_nb)]];
+};
+
+struct NBPolicyTrue {
+	static constexpr bool is_nb = true;
+};
+
+struct NBPolicyFalse {
+	static constexpr bool is_nb = false;
+};
+
+void t4()
+{
+	TypeDependent<NBPolicyFalse> x1;
+	x1.td_method();
+// CHECK: ClassTemplateSpecializationDecl {{.*}} TypeDependent
+// CHECK: TemplateArgument type 'NBPolicyFalse'
+// CHECK: CXXMethodDecl {{.*}} td_method 'void () __attribute__((clang_blocking))'
+
+	TypeDependent<NBPolicyTrue> x2;
+	x2.td_method();
+// CHECK: ClassTemplateSpecializationDecl {{.*}} TypeDependent
+// CHECK: TemplateArgument type 'NBPolicyTrue'
+// CHECK: CXXMethodDecl {{.*}} td_method 'void () __attribute__((clang_nonblocking))'
+}
+

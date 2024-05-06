@@ -837,9 +837,9 @@ public:
                                        SourceLocation OldLoc);
 
   /// Try to parse the conditional expression attached to an effect attribute
-  /// (e.g. 'nonblocking'). (c.f. Sema::ActOnNoexceptSpec). If RequireConstexpr,
-  /// then this will fail if the expression is dependent.
-  ExprResult ActOnEffectExpression(Expr *CondExpr, FunctionEffectMode &Mode);
+  /// (e.g. 'nonblocking'). (c.f. Sema::ActOnNoexceptSpec).
+  ExprResult ActOnEffectExpression(Expr *CondExpr, StringRef AttributeName,
+                                   FunctionEffectMode &Mode);
 
   bool makeUnavailableInSystemHeader(SourceLocation loc,
                                      UnavailableAttr::ImplicitReason reason);

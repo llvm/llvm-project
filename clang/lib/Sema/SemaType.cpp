@@ -31,6 +31,7 @@
 #include "clang/Sema/DeclSpec.h"
 #include "clang/Sema/DelayedDiagnostic.h"
 #include "clang/Sema/Lookup.h"
+#include "clang/Sema/ParsedAttr.h"
 #include "clang/Sema/ParsedTemplate.h"
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/SemaCUDA.h"
@@ -7967,31 +7968,24 @@ static Attr *getCCTypeAttr(ASTContext &Ctx, ParsedAttr &Attr) {
   llvm_unreachable("unexpected attribute kind!");
 }
 
-ExprResult Sema::ActOnEffectExpression(Expr *CondExpr,
+ExprResult Sema::ActOnEffectExpression(Expr *CondExpr, StringRef AttributeName,
                                        FunctionEffectMode &Mode) {
-  // see checkFunctionConditionAttr, Sema::CheckCXXBooleanCondition
-  if (!CondExpr->isTypeDependent()) {
-    ExprResult E = PerformContextuallyConvertToBool(CondExpr);
-    if (E.isInvalid())
-      return E;
-    CondExpr = E.get();
-    if (!CondExpr->isValueDependent()) {
-      llvm::APSInt CondInt;
-      E = VerifyIntegerConstantExpression(
-          E.get(), &CondInt,
-          diag::err_constexpr_if_condition_expression_is_not_constant);
-      if (E.isInvalid()) {
-        return E;
-      }
-      Mode =
-          (CondInt != 0) ? FunctionEffectMode::True : FunctionEffectMode::False;
-    } else {
-      Mode = FunctionEffectMode::Dependent;
-    }
-  } else {
+  if (CondExpr->isTypeDependent() || CondExpr->isValueDependent()) {
     Mode = FunctionEffectMode::Dependent;
+    return CondExpr;
   }
-  return CondExpr;
+
+  std::optional<llvm::APSInt> ConditionValue =
+      CondExpr->getIntegerConstantExpr(Context);
+  if (!ConditionValue) {
+    Diag(CondExpr->getExprLoc(), diag::err_attribute_argument_type)
+        << AttributeName << AANT_ArgumentIntegerConstant
+        << CondExpr->getSourceRange();
+    return ExprResult(/*invalid=*/true);
+  }
+  Mode = ConditionValue->getExtValue() ? FunctionEffectMode::True
+                                       : FunctionEffectMode::False;
+  return ExprResult(static_cast<Expr *>(nullptr));
 }
 
 static bool
@@ -8006,7 +8000,7 @@ handleNonBlockingNonAllocatingTypeAttr(TypeProcessingState &TPState,
   auto *FPT = Unwrapped.get()->getAs<FunctionProtoType>();
   if (FPT == nullptr) {
     // TODO: special diagnostic?
-    return false;
+    return true;
   }
 
   // Parse the new  attribute.
@@ -8028,17 +8022,22 @@ handleNonBlockingNonAllocatingTypeAttr(TypeProcessingState &TPState,
     // Parse the condition, if any
     if (PAttr.getNumArgs() == 1) {
       CondExpr = PAttr.getArgAsExpr(0);
-      ExprResult E = S.ActOnEffectExpression(CondExpr, NewMode);
-      if (E.isInvalid())
-        return false;
+      ExprResult E = S.ActOnEffectExpression(
+          CondExpr, PAttr.getAttrName()->getName(), NewMode);
+      if (E.isInvalid()) {
+        PAttr.setInvalid();
+        return true;
+      }
       CondExpr = NewMode == FunctionEffectMode::Dependent ? E.get() : nullptr;
     } else {
       NewMode = FunctionEffectMode::True;
     }
   } else {
     // This is the `blocking` or `allocating` attribute.
-    if (S.CheckAttrNoArgs(PAttr))
+    if (S.CheckAttrNoArgs(PAttr)) {
+      // The attribute has been marked invalid.
       return true;
+    }
     NewMode = FunctionEffectMode::False;
   }
 
