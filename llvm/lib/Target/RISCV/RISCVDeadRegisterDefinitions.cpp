@@ -96,6 +96,7 @@ bool RISCVDeadRegisterDefinitions::runOnMachineFunction(MachineFunction &MF) {
           LLVM_DEBUG(dbgs() << "    Ignoring, register is not a GPR.\n");
           continue;
         }
+        assert(LIS.hasInterval(Reg));
         LIS.removeInterval(Reg);
         MO.setReg(RISCV::X0);
         LLVM_DEBUG(dbgs() << "    Replacing with zero register. New:\n      ";
