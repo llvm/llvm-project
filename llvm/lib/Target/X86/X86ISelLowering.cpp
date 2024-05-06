@@ -40078,7 +40078,7 @@ static SDValue combineBlendOfPermutes(MVT VT, SDValue N0, SDValue N1,
   // Create the new permute mask as a blend of the 2 original permute masks.
   SmallVector<int, 32> NewBlendMask(NumElts, SM_SentinelUndef);
   SmallVector<int, 32> NewPermuteMask(NumElts, SM_SentinelUndef);
-  for (int I = 0; I != NumElts; ++I) {
+  for (unsigned I = 0; I != NumElts; ++I) {
     if (Demanded0[I]) {
       int M = ScaledMask0[I];
       if (0 <= M) {
