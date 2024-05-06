@@ -1437,11 +1437,10 @@ define i32 @and31_add_sexts(i1 %x, i1 %y) {
 
 define i32 @lshr_add_use_sexts(i1 %x, i1 %y, ptr %p) {
 ; CHECK-LABEL: @lshr_add_use_sexts(
-; CHECK-NEXT:    [[XS:%.*]] = sext i1 [[X:%.*]] to i32
 ; CHECK-NEXT:    [[YS:%.*]] = sext i1 [[Y:%.*]] to i32
 ; CHECK-NEXT:    store i32 [[YS]], ptr [[P:%.*]], align 4
-; CHECK-NEXT:    [[SUB:%.*]] = add nsw i32 [[XS]], [[YS]]
-; CHECK-NEXT:    [[R:%.*]] = lshr i32 [[SUB]], 31
+; CHECK-NEXT:    [[TMP1:%.*]] = or i1 [[X:%.*]], [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = zext i1 [[TMP1]] to i32
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %xs = sext i1 %x to i32
@@ -1456,9 +1455,8 @@ define i32 @lshr_add_use_sexts_2(i1 %x, i1 %y, ptr %p) {
 ; CHECK-LABEL: @lshr_add_use_sexts_2(
 ; CHECK-NEXT:    [[XS:%.*]] = sext i1 [[X:%.*]] to i32
 ; CHECK-NEXT:    store i32 [[XS]], ptr [[P:%.*]], align 4
-; CHECK-NEXT:    [[YS:%.*]] = sext i1 [[Y:%.*]] to i32
-; CHECK-NEXT:    [[SUB:%.*]] = add nsw i32 [[XS]], [[YS]]
-; CHECK-NEXT:    [[R:%.*]] = lshr i32 [[SUB]], 31
+; CHECK-NEXT:    [[TMP1:%.*]] = or i1 [[X]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = zext i1 [[TMP1]] to i32
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %xs = sext i1 %x to i32
