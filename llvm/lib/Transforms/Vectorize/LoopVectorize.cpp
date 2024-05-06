@@ -4202,26 +4202,21 @@ ElementCount LoopVectorizationCostModel::getMaximizedVFForTarget(
     WidestRegisterMinEC *= Min;
   }
 
-  // When a scalar epilogue is required, at least one iteration of the scalar
-  // loop has to execute. Adjust MaxTripCount accordingly to avoid picking a
-  // max VF that results in a dead vector loop.
-  if (MaxTripCount > 0 && requiresScalarEpilogue(true))
-    MaxTripCount -= 1;
+  if (MaxTripCount > 0 && MaxTripCount <= WidestRegisterMinEC &&
+      requiresScalarEpilogue(true)) {
+    // When a scalar epilogue is required, at least one iteration of the scalar
+    // loop has to execute. Adjust MaxTripCount accordingly to avoid picking a
+    // max VF that results in a dead vector loop.
+    --MaxTripCount;
 
-  if (MaxTripCount && MaxTripCount <= WidestRegisterMinEC &&
-      (!FoldTailByMasking || isPowerOf2_32(MaxTripCount))) {
-    // If upper bound loop trip count (TC) is known at compile time there is no
-    // point in choosing VF greater than TC (as done in the loop below). Select
-    // maximum power of two which doesn't exceed TC. If MaxVectorElementCount is
-    // scalable, we only fall back on a fixed VF when the TC is less than or
-    // equal to the known number of lanes.
+    // When a scalar epilogue is required, if upper bound loop trip count (TC)
+    // is known at compile time, clamp the VF to a maximum power of two which
+    // doesn't exceed TC, and vectorize using a fixed-length vector.
     auto ClampedUpperTripCount = llvm::bit_floor(MaxTripCount);
     LLVM_DEBUG(dbgs() << "LV: Clamping the MaxVF to maximum power of two not "
                          "exceeding the constant trip count: "
                       << ClampedUpperTripCount << "\n");
-    return ElementCount::get(
-        ClampedUpperTripCount,
-        FoldTailByMasking ? MaxVectorElementCount.isScalable() : false);
+    return ElementCount::getFixed(ClampedUpperTripCount);
   }
 
   TargetTransformInfo::RegisterKind RegKind =
