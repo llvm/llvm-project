@@ -462,7 +462,6 @@ private:
                                      uint32_t offset);
   void tryEraseDefinedAtIsecOffset(const ConcatInputSection *isec,
                                    uint32_t offset);
-  void eraseSymbolAtIsecOffset(ConcatInputSection *isec, uint32_t offset);
 
   // Allocate a null-terminated StringRef backed by generatedSectionData
   StringRef newStringData(const char *str);
@@ -552,10 +551,9 @@ void ObjcCategoryMerger::tryEraseDefinedAtIsecOffset(
   if (!sym)
     return;
 
-  if (auto *cisec = dyn_cast_or_null<ConcatInputSection>(sym->isec())) {
+  if (auto *cisec = dyn_cast_or_null<ConcatInputSection>(sym->isec()))
     eraseISec(cisec);
-  } else if (auto *csisec =
-                 dyn_cast_or_null<CStringInputSection>(sym->isec())) {
+  else if (auto *csisec = dyn_cast_or_null<CStringInputSection>(sym->isec())) {
     uint32_t totalOffset = sym->value + reloc->addend;
     StringPiece &piece = csisec->getStringPiece(totalOffset);
     piece.live = false;
