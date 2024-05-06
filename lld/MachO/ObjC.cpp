@@ -354,9 +354,12 @@ class ObjcCategoryMerger {
     ConcatInputSection *catListIsec;
     ConcatInputSection *catBodyIsec;
     uint32_t offCatListIsec = 0;
+    uint32_t inputIndex = 0;
 
     bool wasMerged = false;
   };
+
+  typedef std::vector<InfoInputCategory> CategoryGroup;
 
   // To write new (merged) categories or classes, we will try make limited
   // assumptions about the alignment and the sections the various class/category
@@ -429,8 +432,7 @@ public:
 
 private:
   void collectAndValidateCategoriesData();
-  void
-  mergeCategoriesIntoSingleCategory(std::vector<InfoInputCategory> &categories);
+  void mergeCategoriesIntoSingleCategory(CategoryGroup &categories);
 
   void eraseISec(ConcatInputSection *isec);
   void removeRefsToErasedIsecs();
@@ -490,8 +492,8 @@ private:
 
   InfoCategoryWriter infoCategoryWriter;
   std::vector<ConcatInputSection *> &allInputSections;
-  // Map of base class Symbol to list of InfoInputCategory's for it
-  DenseMap<const Symbol *, std::vector<InfoInputCategory>> categoryMap;
+  // Info for all input categories, grouped by base class
+  std::vector<CategoryGroup> categoryGroups;
   // Set for tracking InputSection erased via eraseISec
   DenseSet<InputSection *> erasedIsecs;
 
@@ -1061,6 +1063,12 @@ void ObjcCategoryMerger::createSymbolReference(Defined *refFrom,
 }
 
 void ObjcCategoryMerger::collectAndValidateCategoriesData() {
+  // Make category merging deterministic by using a counter for found categories
+  uint32_t inputCategoryIndex = 0;
+  // Map of base class Symbol to list of InfoInputCategory's for it. We use this
+  // for fast lookup of categories to their base class. Later this info will be
+  // moved into 'categoryGroups' member.
+  DenseMap<const Symbol *, std::vector<InfoInputCategory>> categoryMap;
   for (InputSection *sec : allInputSections) {
     if (sec->getName() != section_names::objcCatList)
       continue;
@@ -1090,12 +1098,25 @@ void ObjcCategoryMerger::collectAndValidateCategoriesData() {
           tryGetSymbolAtIsecOffset(catBodyIsec, catLayout.klassOffset);
       assert(classSym && "Category does not have a valid base class");
 
-      InfoInputCategory catInputInfo{catListCisec, catBodyIsec, off};
+      InfoInputCategory catInputInfo{catListCisec, catBodyIsec, off,
+                                     inputCategoryIndex++};
       categoryMap[classSym].push_back(catInputInfo);
 
       collectCategoryWriterInfoFromCategory(catInputInfo);
     }
   }
+
+  // Move categoryMap into categoryGroups and sort by the first category's
+  // inputIndex. This way we can be sure that category merging will be
+  // deterministic across linker runs.
+  categoryGroups.reserve(categoryMap.size());
+  for (auto &mapEntry : categoryMap)
+    categoryGroups.push_back(mapEntry.second);
+
+  std::sort(categoryGroups.begin(), categoryGroups.end(),
+            [](const CategoryGroup &a, const CategoryGroup &b) {
+              return a[0].inputIndex < b[0].inputIndex;
+            });
 }
 
 // In the input we have multiple __objc_catlist InputSection, each of which may
@@ -1173,8 +1194,8 @@ void ObjcCategoryMerger::eraseMergedCategories() {
   // Map of InputSection to a set of offsets of the categories that were merged
   std::map<ConcatInputSection *, std::set<uint64_t>> catListToErasedOffsets;
 
-  for (auto &mapEntry : categoryMap) {
-    for (InfoInputCategory &catInfo : mapEntry.second) {
+  for (auto &catGroup : categoryGroups) {
+    for (InfoInputCategory &catInfo : catGroup) {
       if (catInfo.wasMerged) {
         eraseISec(catInfo.catListIsec);
         catListToErasedOffsets[catInfo.catListIsec].insert(
@@ -1189,8 +1210,8 @@ void ObjcCategoryMerger::eraseMergedCategories() {
   generateCatListForNonErasedCategories(catListToErasedOffsets);
 
   // Erase the old method lists & names of the categories that were merged
-  for (auto &mapEntry : categoryMap) {
-    for (InfoInputCategory &catInfo : mapEntry.second) {
+  for (auto &catgroup : categoryGroups) {
+    for (InfoInputCategory &catInfo : catgroup) {
       if (!catInfo.wasMerged)
         continue;
 
@@ -1241,10 +1262,10 @@ void ObjcCategoryMerger::removeRefsToErasedIsecs() {
 void ObjcCategoryMerger::doMerge() {
   collectAndValidateCategoriesData();
 
-  for (auto &entry : categoryMap)
-    if (entry.second.size() > 1)
+  for (auto &catGroup : categoryGroups)
+    if (catGroup.size() > 1)
       // Merge all categories into a new, single category
-      mergeCategoriesIntoSingleCategory(entry.second);
+      mergeCategoriesIntoSingleCategory(catGroup);
 
   // Erase all categories that were merged
   eraseMergedCategories();
