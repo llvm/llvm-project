@@ -778,13 +778,13 @@ bool DataAggregator::doBranch(uint64_t From, uint64_t To, uint64_t Count,
     if (BinaryFunction *Func = getBinaryFunctionContainingAddress(Addr)) {
       Addr -= Func->getAddress();
       if (IsFrom) {
-        if (Func->hasInstructions()) {
-          if (MCInst *Inst = Func->getInstructionAtOffset(Addr))
-            IsReturn = BC->MIB->isReturn(*Inst);
-        } else if (std::optional<MCInst> Inst =
-                Func->disassembleInstructionAtOffset(Addr)) {
-          IsReturn = BC->MIB->isReturn(*Inst);
-        }
+        auto checkReturn = [&](auto MaybeInst) {
+          IsReturn = MaybeInst && BC->MIB->isReturn(*MaybeInst);
+        };
+        if (Func->hasInstructions())
+          checkReturn(Func->getInstructionAtOffset(Addr));
+        else
+          checkReturn(Func->disassembleInstructionAtOffset(Addr));
       }
 
       if (BAT)
