@@ -486,9 +486,11 @@ RISCVISAInfo::parseNormalizedArchString(StringRef Arch) {
       return createStringError(errc::invalid_argument,
                                "failed to parse major version number");
 
-    if (ExtName[0] == 'z' && (ExtName.size() == 1 || isDigit(ExtName[1])))
+    if ((ExtName[0] == 'z' || ExtName[0] == 's' || ExtName[0] == 'x') &&
+        (ExtName.size() == 1 || isDigit(ExtName[1])))
       return createStringError(errc::invalid_argument,
-                               "'z' must be followed by a letter");
+                               "'" + Twine(ExtName[0]) +
+                                   "' must be followed by a letter");
 
     ISAInfo->addExtension(ExtName, {MajorVersion, MinorVersion});
   }
