@@ -2083,8 +2083,9 @@ public:
   /// Return true if the specified operand is an ISD::OR or ISD::XOR node
   /// that can be treated as an ISD::ADD node.
   /// or(x,y) == add(x,y) iff haveNoCommonBitsSet(x,y)
-  /// xor(x,y) == add(x,y) iff isMinSignedConstant(y)
-  bool isADDLike(SDValue Op) const;
+  /// xor(x,y) == add(x,y) iff isMinSignedConstant(y) && !NoWrap
+  /// If \p NoWrap is true, this will not match ISD::XOR.
+  bool isADDLike(SDValue Op, bool NoWrap = false) const;
 
   /// Return true if the specified operand is an ISD::ADD with a ConstantSDNode
   /// on the right-hand side, or if it is an ISD::OR with a ConstantSDNode that

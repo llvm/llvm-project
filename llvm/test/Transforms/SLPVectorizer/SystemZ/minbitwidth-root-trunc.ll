@@ -7,9 +7,9 @@ define void @test(ptr %a, i8 %0, i16 %b.promoted.i) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext i8 [[TMP0]] to i128
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i16> poison, i16 [[B_PROMOTED_I]], i32 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i16> [[TMP3]], <4 x i16> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i128> poison, i128 [[TMP2]], i32 0
-; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x i128> [[TMP5]], <4 x i128> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP7:%.*]] = trunc <4 x i128> [[TMP6]] to <4 x i16>
+; CHECK-NEXT:    [[TMP5:%.*]] = trunc i128 [[TMP2]] to i16
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x i16> poison, i16 [[TMP5]], i32 0
+; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <4 x i16> [[TMP6]], <4 x i16> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP8:%.*]] = or <4 x i16> [[TMP4]], [[TMP7]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = call i16 @llvm.vector.reduce.and.v4i16(<4 x i16> [[TMP8]])
 ; CHECK-NEXT:    [[TMP11:%.*]] = zext i16 [[TMP9]] to i64

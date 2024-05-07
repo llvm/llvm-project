@@ -1585,6 +1585,11 @@ bool CodeGenModule::ReturnTypeUsesSRet(const CGFunctionInfo &FI) {
   return RI.isIndirect() || (RI.isInAlloca() && RI.getInAllocaSRet());
 }
 
+bool CodeGenModule::ReturnTypeHasInReg(const CGFunctionInfo &FI) {
+  const auto &RI = FI.getReturnInfo();
+  return RI.getInReg();
+}
+
 bool CodeGenModule::ReturnSlotInterferesWithArgs(const CGFunctionInfo &FI) {
   return ReturnTypeUsesSRet(FI) &&
          getTargetCodeGenInfo().doesReturnSlotInterfereWithArgs();
@@ -4693,11 +4698,11 @@ void CodeGenFunction::EmitCallArg(CallArgList &args, const Expr *E,
     AggValueSlot Slot = args.isUsingInAlloca()
         ? createPlaceholderSlot(*this, type) : CreateAggTemp(type, "agg.tmp");
 
-    bool DestroyedInCallee = true, NeedsEHCleanup = true;
+    bool DestroyedInCallee = true, NeedsCleanup = true;
     if (const auto *RD = type->getAsCXXRecordDecl())
       DestroyedInCallee = RD->hasNonTrivialDestructor();
     else
-      NeedsEHCleanup = needsEHCleanup(type.isDestructedType());
+      NeedsCleanup = type.isDestructedType();
 
     if (DestroyedInCallee)
       Slot.setExternallyDestructed();
@@ -4706,14 +4711,15 @@ void CodeGenFunction::EmitCallArg(CallArgList &args, const Expr *E,
     RValue RV = Slot.asRValue();
     args.add(RV, type);
 
-    if (DestroyedInCallee && NeedsEHCleanup) {
+    if (DestroyedInCallee && NeedsCleanup) {
       // Create a no-op GEP between the placeholder and the cleanup so we can
       // RAUW it successfully.  It also serves as a marker of the first
       // instruction where the cleanup is active.
-      pushFullExprCleanup<DestroyUnpassedArg>(EHCleanup, Slot.getAddress(),
-                                              type);
+      pushFullExprCleanup<DestroyUnpassedArg>(NormalAndEHCleanup,
+                                              Slot.getAddress(), type);
       // This unreachable is a temporary marker which will be removed later.
-      llvm::Instruction *IsActive = Builder.CreateUnreachable();
+      llvm::Instruction *IsActive =
+          Builder.CreateFlagLoad(llvm::Constant::getNullValue(Int8PtrTy));
       args.addArgCleanupDeactivation(EHStack.stable_begin(), IsActive);
     }
     return;
@@ -5044,12 +5050,13 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
         (TargetDecl->hasAttr<TargetAttr>() ||
          (CurFuncDecl && CurFuncDecl->hasAttr<TargetAttr>())))
       checkTargetFeatures(Loc, FD);
-
-    // Some architectures (such as x86-64) have the ABI changed based on
-    // attribute-target/features. Give them a chance to diagnose.
-    CGM.getTargetCodeGenInfo().checkFunctionCallABI(
-        CGM, Loc, dyn_cast_or_null<FunctionDecl>(CurCodeDecl), FD, CallArgs);
   }
+
+  // Some architectures (such as x86-64) have the ABI changed based on
+  // attribute-target/features. Give them a chance to diagnose.
+  CGM.getTargetCodeGenInfo().checkFunctionCallABI(
+      CGM, Loc, dyn_cast_or_null<FunctionDecl>(CurCodeDecl),
+      dyn_cast_or_null<FunctionDecl>(TargetDecl), CallArgs, RetTy);
 
   // 1. Set up the arguments.
 

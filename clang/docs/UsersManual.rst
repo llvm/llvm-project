@@ -1452,8 +1452,6 @@ floating point semantic models: precise (the default), strict, and fast.
   "fenv_access", "off", "on", "off"
   "rounding_mode", "tonearest", "dynamic", "tonearest"
   "contract", "on", "off", "fast"
-  "denormal_fp_math", "IEEE", "IEEE", "IEEE"
-  "denormal_fp32_math", "IEEE","IEEE", "IEEE"
   "support_math_errno", "on", "on", "off"
   "no_honor_nans", "off", "off", "on"
   "no_honor_infinities", "off", "off", "on"
@@ -1461,6 +1459,14 @@ floating point semantic models: precise (the default), strict, and fast.
   "allow_reciprocal", "off", "off", "on"
   "allow_approximate_fns", "off", "off", "on"
   "allow_reassociation", "off", "off", "on"
+
+The ``-ffp-model`` option does not modify the ``fdenormal-fp-math``
+setting, but it does have an impact on whether ``crtfastmath.o`` is
+linked. Because linking ``crtfastmath.o`` has a global effect on the
+program, and because the global denormal handling can be changed in
+other ways, the state of ``fdenormal-fp-math`` handling cannot
+be assumed in any function based on fp-model. See :ref:`crtfastmath.o`
+for more details.
 
 .. option:: -ffast-math
 
@@ -1506,7 +1512,8 @@ floating point semantic models: precise (the default), strict, and fast.
 
    * ``-ffp-contract=fast``
 
-   Note: ``-ffast-math`` causes ``crtfastmath.o`` to be linked with code. See
+   Note: ``-ffast-math`` causes ``crtfastmath.o`` to be linked with code unless
+   ``-shared`` or ``-mno-daz-ftz`` is present. See
    :ref:`crtfastmath.o` for more details.
 
 .. option:: -fno-fast-math
@@ -1536,7 +1543,6 @@ floating point semantic models: precise (the default), strict, and fast.
    Also, this option resets following options to their target-dependent defaults.
 
    * ``-f[no-]math-errno``
-   * ``-fdenormal-fp-math=<value>``
 
    There is ambiguity about how ``-ffp-contract``, ``-ffast-math``,
    and ``-fno-fast-math`` behave when combined. To keep the value of
@@ -1559,8 +1565,8 @@ floating point semantic models: precise (the default), strict, and fast.
      ``-ffp-contract`` setting is determined by the default value of
      ``-ffp-contract``.
 
-   Note: ``-fno-fast-math`` implies ``-fdenormal-fp-math=ieee``.
-   ``-fno-fast-math`` causes ``crtfastmath.o`` to not be linked with code.
+   Note: ``-fno-fast-math`` causes ``crtfastmath.o`` to not be linked with code
+   unless ``-mdaz-ftz`` is present.
 
 .. option:: -fdenormal-fp-math=<value>
 
@@ -1690,9 +1696,7 @@ floating point semantic models: precise (the default), strict, and fast.
    * ``-fno-associative-math``
    * ``-fno-reciprocal-math``
    * ``-fsigned-zeros``
-   * ``-ftrapping-math``
    * ``-ffp-contract=on``
-   * ``-fdenormal-fp-math=ieee``
 
    There is ambiguity about how ``-ffp-contract``,
    ``-funsafe-math-optimizations``, and ``-fno-unsafe-math-optimizations``
@@ -1938,10 +1942,13 @@ by using ``#pragma STDC FENV_ROUND`` with a value other than ``FE_DYNAMIC``.
 
 A note about ``crtfastmath.o``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-``-ffast-math`` and ``-funsafe-math-optimizations`` cause ``crtfastmath.o`` to be
-automatically linked,  which adds a static constructor that sets the FTZ/DAZ
+``-ffast-math`` and ``-funsafe-math-optimizations`` without the ``-shared``
+option cause ``crtfastmath.o`` to be
+automatically linked, which adds a static constructor that sets the FTZ/DAZ
 bits in MXCSR, affecting not only the current compilation unit but all static
-and shared libraries included in the program.
+and shared libraries included in the program. This decision can be overridden
+by using either the flag ``-mdaz-ftz`` or ``-mno-daz-ftz`` to respectively
+link or not link ``crtfastmath.o``.
 
 .. _FLT_EVAL_METHOD:
 
@@ -2314,6 +2321,8 @@ are listed below.
    on ELF targets when using the integrated assembler. This flag currently
    only has an effect on ELF targets.
 
+.. _funique_internal_linkage_names:
+
 .. option:: -f[no]-unique-internal-linkage-names
 
    Controls whether Clang emits a unique (best-effort) symbol name for internal
@@ -2443,27 +2452,41 @@ usual build cycle when using sample profilers for optimization:
    usual build flags that you always build your application with. The only
    requirement is that DWARF debug info including source line information is
    generated. This DWARF information is important for the profiler to be able
-   to map instructions back to source line locations.
+   to map instructions back to source line locations. The usefulness of this
+   DWARF information can be improved with the ``-fdebug-info-for-profiling``
+   and ``-funique-internal-linkage-names`` options.
 
-   On Linux, ``-g`` or just ``-gline-tables-only`` is sufficient:
+   On Linux:
 
    .. code-block:: console
 
-     $ clang++ -O2 -gline-tables-only code.cc -o code
+     $ clang++ -O2 -gline-tables-only \
+       -fdebug-info-for-profiling -funique-internal-linkage-names \
+       code.cc -o code
 
    While MSVC-style targets default to CodeView debug information, DWARF debug
    information is required to generate source-level LLVM profiles. Use
    ``-gdwarf`` to include DWARF debug information:
 
-   .. code-block:: console
+   .. code-block:: winbatch
 
-     $ clang-cl -O2 -gdwarf -gline-tables-only coff-profile.cpp -fuse-ld=lld -link -debug:dwarf
+     > clang-cl /O2 -gdwarf -gline-tables-only ^
+       /clang:-fdebug-info-for-profiling /clang:-funique-internal-linkage-names ^
+       code.cc /Fe:code /fuse-ld=lld /link /debug:dwarf
+
+.. note::
+
+   :ref:`-funique-internal-linkage-names <funique_internal_linkage_names>`
+   generates unique names based on given command-line source file paths. If
+   your build system uses absolute source paths and these paths may change
+   between steps 1 and 4, then the uniqued function names may change and result
+   in unused profile data. Consider omitting this option in such cases.
 
 2. Run the executable under a sampling profiler. The specific profiler
    you use does not really matter, as long as its output can be converted
    into the format that the LLVM optimizer understands.
 
-   Two such profilers are the the Linux Perf profiler
+   Two such profilers are the Linux Perf profiler
    (https://perf.wiki.kernel.org/) and Intel's Sampling Enabling Product (SEP),
    available as part of `Intel VTune
    <https://software.intel.com/content/www/us/en/develop/tools/oneapi/components/vtune-profiler.html>`_.
@@ -2477,7 +2500,9 @@ usual build cycle when using sample profilers for optimization:
 
    .. code-block:: console
 
-     $ perf record -b ./code
+     $ perf record -b -e BR_INST_RETIRED.NEAR_TAKEN:uppp ./code
+
+   If the event above is unavailable, ``branches:u`` is probably next-best.
 
    Note the use of the ``-b`` flag. This tells Perf to use the Last Branch
    Record (LBR) to record call chains. While this is not strictly required,
@@ -2527,21 +2552,42 @@ usual build cycle when using sample profilers for optimization:
    that executes faster than the original one. Note that you are not
    required to build the code with the exact same arguments that you
    used in the first step. The only requirement is that you build the code
-   with ``-gline-tables-only`` and ``-fprofile-sample-use``.
+   with the same debug info options and ``-fprofile-sample-use``.
+
+   On Linux:
 
    .. code-block:: console
 
-     $ clang++ -O2 -gline-tables-only -fprofile-sample-use=code.prof code.cc -o code
+     $ clang++ -O2 -gline-tables-only \
+       -fdebug-info-for-profiling -funique-internal-linkage-names \
+       -fprofile-sample-use=code.prof code.cc -o code
 
-  [OPTIONAL] Sampling-based profiles can have inaccuracies or missing block/
-  edge counters. The profile inference algorithm (profi) can be used to infer
-  missing blocks and edge counts, and improve the quality of profile data.
-  Enable it with ``-fsample-profile-use-profi``.
+   On Windows:
 
-  .. code-block:: console
+   .. code-block:: winbatch
 
-    $ clang++ -O2 -gline-tables-only -fprofile-sample-use=code.prof \
-      -fsample-profile-use-profi code.cc -o code
+     > clang-cl /O2 -gdwarf -gline-tables-only ^
+       /clang:-fdebug-info-for-profiling /clang:-funique-internal-linkage-names ^
+       /fprofile-sample-use=code.prof code.cc /Fe:code /fuse-ld=lld /link /debug:dwarf
+
+   [OPTIONAL] Sampling-based profiles can have inaccuracies or missing block/
+   edge counters. The profile inference algorithm (profi) can be used to infer
+   missing blocks and edge counts, and improve the quality of profile data.
+   Enable it with ``-fsample-profile-use-profi``. For example, on Linux:
+
+   .. code-block:: console
+
+     $ clang++ -fsample-profile-use-profi -O2 -gline-tables-only \
+       -fdebug-info-for-profiling -funique-internal-linkage-names \
+       -fprofile-sample-use=code.prof code.cc -o code
+
+   On Windows:
+
+   .. code-block:: winbatch
+
+     > clang-cl /clang:-fsample-profile-use-profi /O2 -gdwarf -gline-tables-only ^
+       /clang:-fdebug-info-for-profiling /clang:-funique-internal-linkage-names ^
+       /fprofile-sample-use=code.prof code.cc /Fe:code /fuse-ld=lld /link /debug:dwarf
 
 Sample Profile Formats
 """"""""""""""""""""""
@@ -3458,7 +3504,7 @@ Differences between ``*17`` and ``*23`` modes:
 - ``nullptr`` and ``nullptr_t`` are supported, only in ``*23`` mode.
 - ``ATOMIC_VAR_INIT`` is removed from ``*23`` mode.
 - ``bool``, ``true``, ``false``, ``alignas``, ``alignof``, ``static_assert``,
-  and ``thread_local` are now first-class keywords, only in ``*23`` mode.
+  and ``thread_local`` are now first-class keywords, only in ``*23`` mode.
 - ``typeof`` and ``typeof_unqual`` are supported, only ``*23`` mode.
 - Bit-precise integers (``_BitInt(N)``) are supported by default in ``*23``
   mode, and as an extension in ``*17`` and earlier modes.
