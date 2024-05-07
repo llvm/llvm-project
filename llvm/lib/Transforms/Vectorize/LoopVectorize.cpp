@@ -1554,6 +1554,12 @@ public:
     }
   }
 
+  void disableTailFolding() {
+    assert(ChosenTailFoldingStyle && "Tail folding must be selected.");
+    ChosenTailFoldingStyle =
+        std::make_pair(TailFoldingStyle::None, TailFoldingStyle::None);
+  }
+
   /// Returns true if all loop blocks should be masked to fold tail loop.
   bool foldTailByMasking() const {
     // TODO: check if it is possible to check for None style independent of
@@ -1641,6 +1647,14 @@ private:
                                        unsigned WidestType,
                                        ElementCount MaxSafeVF,
                                        bool FoldTailByMasking);
+
+  /// true of scalable vectorization is supported and enabled.
+  std::optional<bool> IsScalableVectorizationAllowed;
+
+  /// Checks if the scalable vectorization is supported and enabled. The result
+  /// is stored in \p IsScalableVectorizationAllowed and used later, if
+  /// requested.
+  bool isScalableVectorizationAllowed();
 
   /// \return the maximum legal scalable VF, based on the safe max number
   /// of elements.
@@ -4079,9 +4093,7 @@ bool LoopVectorizationCostModel::interleavedAccessCanBeWidened(
   // needs predication, or it was decided to use masking to deal with gaps
   // (either a gap at the end of a load-access that may result in a speculative
   // load, or any gaps in a store-access).
-  bool PredicatedAccessRequiresMasking =
-      blockNeedsPredicationForAnyReason(I->getParent()) &&
-      Legal->isMaskRequired(I);
+  bool PredicatedAccessRequiresMasking = isPredicatedInst(I);
   bool LoadAccessWithGapsRequiresEpilogMasking =
       isa<LoadInst>(I) && Group->requiresScalarEpilogue() &&
       !isScalarEpilogueAllowed();
@@ -4397,15 +4409,17 @@ bool LoopVectorizationCostModel::runtimeChecksRequired() {
   return false;
 }
 
-ElementCount
-LoopVectorizationCostModel::getMaxLegalScalableVF(unsigned MaxSafeElements) {
+bool LoopVectorizationCostModel::isScalableVectorizationAllowed() {
+  if (IsScalableVectorizationAllowed)
+    return *IsScalableVectorizationAllowed;
+  IsScalableVectorizationAllowed = false;
   if (!TTI.supportsScalableVectors() && !ForceTargetSupportsScalableVectors)
-    return ElementCount::getScalable(0);
+    return false;
 
   if (Hints->isScalableVectorizationDisabled()) {
     reportVectorizationInfo("Scalable vectorization is explicitly disabled",
                             "ScalableVectorizationDisabled", ORE, TheLoop);
-    return ElementCount::getScalable(0);
+    return false;
   }
 
   LLVM_DEBUG(dbgs() << "LV: Scalable vectorization is available\n");
@@ -4425,7 +4439,7 @@ LoopVectorizationCostModel::getMaxLegalScalableVF(unsigned MaxSafeElements) {
         "Scalable vectorization not supported for the reduction "
         "operations found in this loop.",
         "ScalableVFUnfeasible", ORE, TheLoop);
-    return ElementCount::getScalable(0);
+    return false;
   }
 
   // Disable scalable vectorization if the loop contains any instructions
@@ -4437,9 +4451,20 @@ LoopVectorizationCostModel::getMaxLegalScalableVF(unsigned MaxSafeElements) {
     reportVectorizationInfo("Scalable vectorization is not supported "
                             "for all element types found in this loop.",
                             "ScalableVFUnfeasible", ORE, TheLoop);
-    return ElementCount::getScalable(0);
+    return false;
   }
 
+  IsScalableVectorizationAllowed = true;
+  return true;
+}
+
+ElementCount
+LoopVectorizationCostModel::getMaxLegalScalableVF(unsigned MaxSafeElements) {
+  if (!isScalableVectorizationAllowed())
+    return ElementCount::getScalable(0);
+
+  auto MaxScalableVF = ElementCount::getScalable(
+      std::numeric_limits<ElementCount::ScalarTy>::max());
   if (Legal->isSafeForAnyVectorWidth())
     return MaxScalableVF;
 
@@ -4642,6 +4667,11 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
     InterleaveInfo.invalidateGroupsRequiringScalarEpilogue();
   }
 
+  // If we don't know the precise trip count, or if the trip count that we
+  // found modulo the vectorization factor is not zero, try to fold the tail
+  // by masking.
+  // FIXME: look for a smaller MaxVF that does divide TC rather than masking.
+  setTailFoldingStyles(isScalableVectorizationAllowed(), UserIC);
   FixedScalableVFPair MaxFactors = computeFeasibleMaxVF(MaxTC, UserVF, true);
 
   // Avoid tail folding if the trip count is known to be a multiple of any VF
@@ -4673,15 +4703,11 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
     if (Rem->isZero()) {
       // Accept MaxFixedVF if we do not have a tail.
       LLVM_DEBUG(dbgs() << "LV: No tail will remain for any chosen VF.\n");
+      disableTailFolding();
       return MaxFactors;
     }
   }
 
-  // If we don't know the precise trip count, or if the trip count that we
-  // found modulo the vectorization factor is not zero, try to fold the tail
-  // by masking.
-  // FIXME: look for a smaller MaxVF that does divide TC rather than masking.
-  setTailFoldingStyles(MaxFactors.ScalableVF.isScalable(), UserIC);
   if (foldTailByMasking()) {
     if (getTailFoldingStyle() == TailFoldingStyle::DataWithEVL) {
       LLVM_DEBUG(
@@ -6096,7 +6122,7 @@ LoopVectorizationCostModel::getConsecutiveMemOpCost(Instruction *I,
          "Stride should be 1 or -1 for consecutive memory access");
   const Align Alignment = getLoadStoreAlignment(I);
   InstructionCost Cost = 0;
-  if (Legal->isMaskRequired(I)) {
+  if (isPredicatedInst(I)) {
     Cost += TTI.getMaskedMemoryOpCost(I->getOpcode(), VectorTy, Alignment, AS,
                                       CostKind);
   } else {
@@ -6150,7 +6176,7 @@ LoopVectorizationCostModel::getGatherScatterCost(Instruction *I,
 
   return TTI.getAddressComputationCost(VectorTy) +
          TTI.getGatherScatterOpCost(
-             I->getOpcode(), VectorTy, Ptr, Legal->isMaskRequired(I), Alignment,
+             I->getOpcode(), VectorTy, Ptr, isPredicatedInst(I), Alignment,
              TargetTransformInfo::TCK_RecipThroughput, I);
 }
 
@@ -6180,7 +6206,7 @@ LoopVectorizationCostModel::getInterleaveGroupCost(Instruction *I,
       (isa<StoreInst>(I) && (Group->getNumMembers() < Group->getFactor()));
   InstructionCost Cost = TTI.getInterleavedMemoryOpCost(
       I->getOpcode(), WideVecTy, Group->getFactor(), Indices, Group->getAlign(),
-      AS, CostKind, Legal->isMaskRequired(I), UseMaskForGaps);
+      AS, CostKind, isPredicatedInst(I), UseMaskForGaps);
 
   if (Group->isReverse()) {
     // TODO: Add support for reversed masked interleaved access.
@@ -6675,7 +6701,7 @@ void LoopVectorizationCostModel::setVectorizedCallDecision(ElementCount VF) {
       Function *ScalarFunc = CI->getCalledFunction();
       Type *ScalarRetTy = CI->getType();
       SmallVector<Type *, 4> Tys, ScalarTys;
-      bool MaskRequired = Legal->isMaskRequired(CI);
+      bool MaskRequired = isPredicatedInst(CI);
       for (auto &ArgOp : CI->args())
         ScalarTys.push_back(ArgOp->getType());
 
@@ -7072,8 +7098,8 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I, ElementCount VF,
         return TTI::CastContextHint::Interleave;
       case LoopVectorizationCostModel::CM_Scalarize:
       case LoopVectorizationCostModel::CM_Widen:
-        return Legal->isMaskRequired(I) ? TTI::CastContextHint::Masked
-                                        : TTI::CastContextHint::Normal;
+        return isPredicatedInst(I) ? TTI::CastContextHint::Masked
+                                   : TTI::CastContextHint::Normal;
       case LoopVectorizationCostModel::CM_Widen_Reverse:
         return TTI::CastContextHint::Reversed;
       case LoopVectorizationCostModel::CM_Unknown:
@@ -8121,7 +8147,7 @@ VPRecipeBuilder::tryToWidenMemory(Instruction *I, ArrayRef<VPValue *> Operands,
     return nullptr;
 
   VPValue *Mask = nullptr;
-  if (Legal->isMaskRequired(I))
+  if (CM.isPredicatedInst(I))
     Mask = getBlockInMask(I->getParent());
 
   // Determine if the pointer operand of the access is either consecutive or
@@ -8329,7 +8355,7 @@ VPWidenCallRecipe *VPRecipeBuilder::tryToWidenCall(CallInst *CI,
       //      vector variant at this VF requires a mask, so we synthesize an
       //      all-true mask.
       VPValue *Mask = nullptr;
-      if (Legal->isMaskRequired(CI))
+      if (CM.isPredicatedInst(CI))
         Mask = getBlockInMask(CI->getParent());
       else
         Mask = Plan.getOrAddLiveIn(ConstantInt::getTrue(
