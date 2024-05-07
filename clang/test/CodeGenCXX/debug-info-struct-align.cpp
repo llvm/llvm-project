@@ -1,5 +1,5 @@
 //  Test for debug info related to DW_AT_alignment attribute in the struct type.
-// RUN: %clang_cc1 -dwarf-version=5 -debug-info-kind=standalone -S -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -dwarf-version=5 -debug-info-kind=standalone -emit-llvm %s -o - | FileCheck %s
 
 // CHECK-DAG: DICompositeType(tag: DW_TAG_structure_type, name: "MyType", {{.*}}, align: 32
 // CHECK-DAG: DICompositeType(tag: DW_TAG_structure_type, name: "MyType1", {{.*}}, align: 8

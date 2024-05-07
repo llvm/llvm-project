@@ -38,7 +38,9 @@ public:
 };
 } // namespace
 
-static void addConstantsToTrack(MachineFunction &MF, SPIRVGlobalRegistry *GR) {
+static void
+addConstantsToTrack(MachineFunction &MF, SPIRVGlobalRegistry *GR,
+                    DenseMap<MachineInstr *, Type *> &TargetExtConstTypes) {
   MachineRegisterInfo &MRI = MF.getRegInfo();
   DenseMap<MachineInstr *, Register> RegsAlreadyAddedToDT;
   SmallVector<MachineInstr *, 10> ToErase, ToEraseComposites;
@@ -47,6 +49,7 @@ static void addConstantsToTrack(MachineFunction &MF, SPIRVGlobalRegistry *GR) {
       if (!isSpvIntrinsic(MI, Intrinsic::spv_track_constant))
         continue;
       ToErase.push_back(&MI);
+      Register SrcReg = MI.getOperand(2).getReg();
       auto *Const =
           cast<Constant>(cast<ConstantAsMetadata>(
                              MI.getOperand(3).getMetadata()->getOperand(0))
@@ -54,14 +57,14 @@ static void addConstantsToTrack(MachineFunction &MF, SPIRVGlobalRegistry *GR) {
       if (auto *GV = dyn_cast<GlobalValue>(Const)) {
         Register Reg = GR->find(GV, &MF);
         if (!Reg.isValid())
-          GR->add(GV, &MF, MI.getOperand(2).getReg());
+          GR->add(GV, &MF, SrcReg);
         else
           RegsAlreadyAddedToDT[&MI] = Reg;
       } else {
         Register Reg = GR->find(Const, &MF);
         if (!Reg.isValid()) {
           if (auto *ConstVec = dyn_cast<ConstantDataVector>(Const)) {
-            auto *BuildVec = MRI.getVRegDef(MI.getOperand(2).getReg());
+            auto *BuildVec = MRI.getVRegDef(SrcReg);
             assert(BuildVec &&
                    BuildVec->getOpcode() == TargetOpcode::G_BUILD_VECTOR);
             for (unsigned i = 0; i < ConstVec->getNumElements(); ++i) {
@@ -75,7 +78,13 @@ static void addConstantsToTrack(MachineFunction &MF, SPIRVGlobalRegistry *GR) {
                 BuildVec->getOperand(1 + i).setReg(ElemReg);
             }
           }
-          GR->add(Const, &MF, MI.getOperand(2).getReg());
+          GR->add(Const, &MF, SrcReg);
+          if (Const->getType()->isTargetExtTy()) {
+            // remember association so that we can restore it when assign types
+            MachineInstr *SrcMI = MRI.getVRegDef(SrcReg);
+            if (SrcMI && SrcMI->getOpcode() == TargetOpcode::G_CONSTANT)
+              TargetExtConstTypes[SrcMI] = Const->getType();
+          }
         } else {
           RegsAlreadyAddedToDT[&MI] = Reg;
           // This MI is unused and will be removed. If the MI uses
@@ -224,6 +233,10 @@ static SPIRVType *propagateSPIRVType(MachineInstr *MI, SPIRVGlobalRegistry *GR,
         }
         break;
       }
+      case TargetOpcode::G_PTRTOINT:
+        SpirvTy = GR->getOrCreateSPIRVIntegerType(
+            MRI.getType(Reg).getScalarSizeInBits(), MIB);
+        break;
       case TargetOpcode::G_TRUNC:
       case TargetOpcode::G_ADDRSPACE_CAST:
       case TargetOpcode::G_PTR_ADD:
@@ -252,6 +265,7 @@ createNewIdReg(SPIRVType *SpvType, Register SrcReg, MachineRegisterInfo &MRI,
   if (!SpvType)
     SpvType = GR.getSPIRVTypeForVReg(SrcReg);
   assert(SpvType && "VReg is expected to have SPIRV type");
+  LLT SrcLLT = MRI.getType(SrcReg);
   LLT NewT = LLT::scalar(32);
   bool IsFloat = SpvType->getOpcode() == SPIRV::OpTypeFloat;
   bool IsVectorFloat =
@@ -261,10 +275,10 @@ createNewIdReg(SPIRVType *SpvType, Register SrcReg, MachineRegisterInfo &MRI,
   IsFloat |= IsVectorFloat;
   auto GetIdOp = IsFloat ? SPIRV::GET_fID : SPIRV::GET_ID;
   auto DstClass = IsFloat ? &SPIRV::fIDRegClass : &SPIRV::IDRegClass;
-  if (MRI.getType(SrcReg).isPointer()) {
+  if (SrcLLT.isPointer()) {
     unsigned PtrSz = GR.getPointerSize();
     NewT = LLT::pointer(0, PtrSz);
-    bool IsVec = MRI.getType(SrcReg).isVector();
+    bool IsVec = SrcLLT.isVector();
     if (IsVec)
       NewT = LLT::fixed_vector(2, NewT);
     if (PtrSz == 64) {
@@ -284,7 +298,7 @@ createNewIdReg(SPIRVType *SpvType, Register SrcReg, MachineRegisterInfo &MRI,
         DstClass = &SPIRV::pID32RegClass;
       }
     }
-  } else if (MRI.getType(SrcReg).isVector()) {
+  } else if (SrcLLT.isVector()) {
     NewT = LLT::fixed_vector(2, NewT);
     if (IsFloat) {
       GetIdOp = SPIRV::GET_vfID;
@@ -359,8 +373,10 @@ void processInstr(MachineInstr &MI, MachineIRBuilder &MIB,
 }
 } // namespace llvm
 
-static void generateAssignInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
-                                 MachineIRBuilder MIB) {
+static void
+generateAssignInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
+                     MachineIRBuilder MIB,
+                     DenseMap<MachineInstr *, Type *> &TargetExtConstTypes) {
   // Get access to information about available extensions
   const SPIRVSubtarget *ST =
       static_cast<const SPIRVSubtarget *>(&MIB.getMF().getSubtarget());
@@ -417,11 +433,14 @@ static void generateAssignInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
             continue;
         }
         Type *Ty = nullptr;
-        if (MI.getOpcode() == TargetOpcode::G_CONSTANT)
-          Ty = MI.getOperand(1).getCImm()->getType();
-        else if (MI.getOpcode() == TargetOpcode::G_FCONSTANT)
+        if (MI.getOpcode() == TargetOpcode::G_CONSTANT) {
+          auto TargetExtIt = TargetExtConstTypes.find(&MI);
+          Ty = TargetExtIt == TargetExtConstTypes.end()
+                   ? MI.getOperand(1).getCImm()->getType()
+                   : TargetExtIt->second;
+        } else if (MI.getOpcode() == TargetOpcode::G_FCONSTANT) {
           Ty = MI.getOperand(1).getFPImm()->getType();
-        else {
+        } else {
           assert(MI.getOpcode() == TargetOpcode::G_BUILD_VECTOR);
           Type *ElemTy = nullptr;
           MachineInstr *ElemMI = MRI.getVRegDef(MI.getOperand(1).getReg());
@@ -440,6 +459,7 @@ static void generateAssignInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
         insertAssignInstr(Reg, Ty, nullptr, GR, MIB, MRI);
       } else if (MI.getOpcode() == TargetOpcode::G_TRUNC ||
                  MI.getOpcode() == TargetOpcode::G_ZEXT ||
+                 MI.getOpcode() == TargetOpcode::G_PTRTOINT ||
                  MI.getOpcode() == TargetOpcode::G_GLOBAL_VALUE ||
                  MI.getOpcode() == TargetOpcode::COPY ||
                  MI.getOpcode() == TargetOpcode::G_ADDRSPACE_CAST) {
@@ -483,7 +503,8 @@ static void processInstrsWithTypeFolding(MachineFunction &MF,
         continue;
       Register DstReg = MI.getOperand(0).getReg();
       bool IsDstPtr = MRI.getType(DstReg).isPointer();
-      if (IsDstPtr || MRI.getType(DstReg).isVector())
+      bool isDstVec = MRI.getType(DstReg).isVector();
+      if (IsDstPtr || isDstVec)
         MRI.setRegClass(DstReg, &SPIRV::IDRegClass);
       // Don't need to reset type of register holding constant and used in
       // G_ADDRSPACE_CAST, since it breaks legalizer.
@@ -609,10 +630,12 @@ bool SPIRVPreLegalizer::runOnMachineFunction(MachineFunction &MF) {
   SPIRVGlobalRegistry *GR = ST.getSPIRVGlobalRegistry();
   GR->setCurrentFunc(MF);
   MachineIRBuilder MIB(MF);
-  addConstantsToTrack(MF, GR);
+  // a registry of target extension constants
+  DenseMap<MachineInstr *, Type *> TargetExtConstTypes;
+  addConstantsToTrack(MF, GR, TargetExtConstTypes);
   foldConstantsIntoIntrinsics(MF);
   insertBitcasts(MF, GR, MIB);
-  generateAssignInstrs(MF, GR, MIB);
+  generateAssignInstrs(MF, GR, MIB, TargetExtConstTypes);
   processSwitches(MF, GR, MIB);
   processInstrsWithTypeFolding(MF, GR, MIB);
   removeImplicitFallthroughs(MF, MIB);

@@ -12,6 +12,7 @@
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/CodeGenCommonISel.h"
 #include "llvm/CodeGen/GlobalISel/GISelChangeObserver.h"
 #include "llvm/CodeGen/GlobalISel/GISelKnownBits.h"
@@ -28,6 +29,7 @@
 #include "llvm/CodeGen/StackProtector.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetLowering.h"
+#include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/IR/Constants.h"
@@ -1708,4 +1710,85 @@ bool llvm::isPreISelGenericFloatingPointOpcode(unsigned Opc) {
   default:
     return false;
   }
+}
+
+namespace {
+enum class UndefPoisonKind {
+  PoisonOnly = (1 << 0),
+  UndefOnly = (1 << 1),
+  UndefOrPoison = PoisonOnly | UndefOnly,
+};
+}
+
+[[maybe_unused]] static bool includesPoison(UndefPoisonKind Kind) {
+  return (unsigned(Kind) & unsigned(UndefPoisonKind::PoisonOnly)) != 0;
+}
+
+[[maybe_unused]] static bool includesUndef(UndefPoisonKind Kind) {
+  return (unsigned(Kind) & unsigned(UndefPoisonKind::UndefOnly)) != 0;
+}
+
+static bool canCreateUndefOrPoison(Register Reg, const MachineRegisterInfo &MRI,
+                                   bool ConsiderFlagsAndMetadata,
+                                   UndefPoisonKind Kind) {
+  MachineInstr *RegDef = MRI.getVRegDef(Reg);
+
+  switch (RegDef->getOpcode()) {
+  case TargetOpcode::G_FREEZE:
+    return false;
+  default:
+    return true;
+  }
+}
+
+static bool isGuaranteedNotToBeUndefOrPoison(Register Reg,
+                                             const MachineRegisterInfo &MRI,
+                                             unsigned Depth,
+                                             UndefPoisonKind Kind) {
+  if (Depth >= MaxAnalysisRecursionDepth)
+    return false;
+
+  MachineInstr *RegDef = MRI.getVRegDef(Reg);
+
+  switch (RegDef->getOpcode()) {
+  case TargetOpcode::G_FREEZE:
+    return true;
+  case TargetOpcode::G_IMPLICIT_DEF:
+    return !includesUndef(Kind);
+  default:
+    return false;
+  }
+}
+
+bool llvm::canCreateUndefOrPoison(Register Reg, const MachineRegisterInfo &MRI,
+                                  bool ConsiderFlagsAndMetadata) {
+  return ::canCreateUndefOrPoison(Reg, MRI, ConsiderFlagsAndMetadata,
+                                  UndefPoisonKind::UndefOrPoison);
+}
+
+bool canCreatePoison(Register Reg, const MachineRegisterInfo &MRI,
+                     bool ConsiderFlagsAndMetadata = true) {
+  return ::canCreateUndefOrPoison(Reg, MRI, ConsiderFlagsAndMetadata,
+                                  UndefPoisonKind::PoisonOnly);
+}
+
+bool llvm::isGuaranteedNotToBeUndefOrPoison(Register Reg,
+                                            const MachineRegisterInfo &MRI,
+                                            unsigned Depth) {
+  return ::isGuaranteedNotToBeUndefOrPoison(Reg, MRI, Depth,
+                                            UndefPoisonKind::UndefOrPoison);
+}
+
+bool llvm::isGuaranteedNotToBePoison(Register Reg,
+                                     const MachineRegisterInfo &MRI,
+                                     unsigned Depth) {
+  return ::isGuaranteedNotToBeUndefOrPoison(Reg, MRI, Depth,
+                                            UndefPoisonKind::PoisonOnly);
+}
+
+bool llvm::isGuaranteedNotToBeUndef(Register Reg,
+                                    const MachineRegisterInfo &MRI,
+                                    unsigned Depth) {
+  return ::isGuaranteedNotToBeUndefOrPoison(Reg, MRI, Depth,
+                                            UndefPoisonKind::UndefOnly);
 }

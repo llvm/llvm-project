@@ -28,6 +28,7 @@ add_mlir_dialect_library(MLIRLinalgTransforms
   BlockPackMatmul.cpp
   Padding.cpp
   Promotion.cpp
+  RuntimeOpVerification.cpp
   Specialize.cpp
   Split.cpp
   SplitReduction.cpp
@@ -61,6 +62,7 @@ add_mlir_dialect_library(MLIRLinalgTransforms
   MLIRFuncDialect
   MLIRFuncToLLVM
   MLIRFuncTransforms
+  MLIRIndexDialect
   MLIRInferTypeOpInterface
   MLIRIR
   MLIRMemRefDialect

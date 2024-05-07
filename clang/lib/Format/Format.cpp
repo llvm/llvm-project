@@ -100,6 +100,7 @@ struct MappingTraits<FormatStyle::ShortCaseStatementsAlignmentStyle> {
     IO.mapOptional("Enabled", Value.Enabled);
     IO.mapOptional("AcrossEmptyLines", Value.AcrossEmptyLines);
     IO.mapOptional("AcrossComments", Value.AcrossComments);
+    IO.mapOptional("AlignCaseArrows", Value.AlignCaseArrows);
     IO.mapOptional("AlignCaseColons", Value.AlignCaseColons);
   }
 };
@@ -807,7 +808,6 @@ template <> struct MappingTraits<FormatStyle> {
         FormatStyle PredefinedStyle;
         if (getPredefinedStyle(StyleName, Style.Language, &PredefinedStyle) &&
             Style == PredefinedStyle) {
-          IO.mapOptional("# BasedOnStyle", StyleName);
           BasedOnStyle = StyleName;
           break;
         }
@@ -912,6 +912,8 @@ template <> struct MappingTraits<FormatStyle> {
                    Style.AllowBreakBeforeNoexceptSpecifier);
     IO.mapOptional("AllowShortBlocksOnASingleLine",
                    Style.AllowShortBlocksOnASingleLine);
+    IO.mapOptional("AllowShortCaseExpressionOnASingleLine",
+                   Style.AllowShortCaseExpressionOnASingleLine);
     IO.mapOptional("AllowShortCaseLabelsOnASingleLine",
                    Style.AllowShortCaseLabelsOnASingleLine);
     IO.mapOptional("AllowShortCompoundRequirementOnASingleLine",
@@ -1424,6 +1426,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.AllowAllParametersOfDeclarationOnNextLine = true;
   LLVMStyle.AllowBreakBeforeNoexceptSpecifier = FormatStyle::BBNSS_Never;
   LLVMStyle.AllowShortBlocksOnASingleLine = FormatStyle::SBS_Never;
+  LLVMStyle.AllowShortCaseExpressionOnASingleLine = true;
   LLVMStyle.AllowShortCaseLabelsOnASingleLine = false;
   LLVMStyle.AllowShortCompoundRequirementOnASingleLine = true;
   LLVMStyle.AllowShortEnumsOnASingleLine = true;
@@ -3117,6 +3120,7 @@ static void sortCppIncludes(const FormatStyle &Style,
     return;
   }
 
+  const auto OldCursor = Cursor ? *Cursor : 0;
   std::string result;
   for (unsigned Index : Indices) {
     if (!result.empty()) {
@@ -3140,6 +3144,8 @@ static void sortCppIncludes(const FormatStyle &Style,
   // the entire range of blocks. Otherwise, no replacement is generated.
   if (replaceCRLF(result) == replaceCRLF(std::string(Code.substr(
                                  IncludesBeginOffset, IncludesBlockSize)))) {
+    if (Cursor)
+      *Cursor = OldCursor;
     return;
   }
 
