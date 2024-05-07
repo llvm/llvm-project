@@ -1051,7 +1051,7 @@ public:
                   ConversionPatternRewriter &rewriter) const override {
     // Replace the requested position access with corresponding field.
     // The view is restricted to the actual size to ensure clients
-    // of this operation truly obserview size, not capacity!
+    // of this operation truly observe size, not capacity!
     Location loc = op.getLoc();
     Level lvl = op.getLevel();
     auto desc = getDescriptorFromTensorTuple(adaptor.getTensor());
@@ -1073,7 +1073,7 @@ public:
                   ConversionPatternRewriter &rewriter) const override {
     // Replace the requested coordinates access with corresponding field.
     // The view is restricted to the actual size to ensure clients
-    // of this operation truly obserview size, not capacity!
+    // of this operation truly observe size, not capacity!
     Location loc = op.getLoc();
     Level lvl = op.getLevel();
     auto desc = getDescriptorFromTensorTuple(adaptor.getTensor());
@@ -1098,7 +1098,7 @@ public:
                   ConversionPatternRewriter &rewriter) const override {
     // Replace the requested coordinates access with corresponding field.
     // The view is restricted to the actual size to ensure clients
-    // of this operation truly obserview size, not capacity!
+    // of this operation truly observe size, not capacity!
     Location loc = op.getLoc();
     Level lvl = getSparseTensorType(op.getTensor()).getAoSCOOStart();
     auto desc = getDescriptorFromTensorTuple(adaptor.getTensor());
@@ -1119,7 +1119,7 @@ public:
                   ConversionPatternRewriter &rewriter) const override {
     // Replace the requested values access with corresponding field.
     // The view is restricted to the actual size to ensure clients
-    // of this operation truly obserview size, not capacity!
+    // of this operation truly observe size, not capacity!
     Location loc = op.getLoc();
     auto desc = getDescriptorFromTensorTuple(adaptor.getTensor());
     auto mem = desc.getValMemRef();
