@@ -17,18 +17,18 @@ extern "C" {
 RADSAN_EXPORT void radsan_init() { radsan::initialiseInterceptors(); }
 
 RADSAN_EXPORT void radsan_realtime_enter() {
-  radsan::getContextForThisThread().realtimePush();
+  radsan::getContextForThisThread().RealtimePush();
 }
 
 RADSAN_EXPORT void radsan_realtime_exit() {
-  radsan::getContextForThisThread().realtimePop();
+  radsan::getContextForThisThread().RealtimePop();
 }
 
 RADSAN_EXPORT void radsan_off() {
-  radsan::getContextForThisThread().bypassPush();
+  radsan::getContextForThisThread().BypassPush();
 }
 
 RADSAN_EXPORT void radsan_on() {
-  radsan::getContextForThisThread().bypassPop();
+  radsan::getContextForThisThread().BypassPop();
 }
 }
