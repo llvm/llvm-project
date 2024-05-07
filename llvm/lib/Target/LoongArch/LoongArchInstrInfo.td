@@ -1118,7 +1118,7 @@ def : PatGprGpr<loongarch_rotr_w, ROTR_W>;
 def : PatGprGpr_32<rotr, ROTR_W>;
 def : PatGprImm<rotr, ROTRI_D, uimm6>;
 def : PatGprImm_32<rotr, ROTRI_W, uimm5>;
-def : PatGprImm_32<loongarch_rotr_w, ROTRI_W, uimm5>;
+def : PatGprImm<loongarch_rotr_w, ROTRI_W, uimm5>;
 // TODO: Select "_W[U]" instructions for i32xi32 if only lower 32 bits of the
 // product are used.
 def : PatGprGpr<mul, MUL_D>;
