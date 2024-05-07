@@ -211,9 +211,11 @@ bool llvm::isManyPotentiallyReachableFromMany(
     const LoopInfo *LI) {
   // When a stop block is unreachable, it's dominated from everywhere,
   // regardless of whether there's a path between the two blocks.
-  llvm::DenseMap<const BasicBlock *, bool> StopBBReachable;
-  for (auto *BB : StopSet)
-    StopBBReachable[BB] = DT && DT->isReachableFromEntry(BB);
+  SmallPtrSet<const BasicBlock *, 32> StopBBReachable;
+  for (auto *BB : StopSet) {
+    if (DT && DT->isReachableFromEntry(BB))
+      StopBBReachable.insert(BB);
+  }
 
   // We can't skip directly from a block that dominates the stop block if the
   // exclusion block is potentially in between.
@@ -246,7 +248,7 @@ bool llvm::isManyPotentiallyReachableFromMany(
     if (ExclusionSet && ExclusionSet->count(BB))
       continue;
     if (DT && llvm::any_of(StopSet, [&](const BasicBlock *StopBB) {
-          return StopBBReachable[BB] && DT->dominates(BB, StopBB);
+          return StopBBReachable.contains(BB) && DT->dominates(BB, StopBB);
         }))
       return true;
 
