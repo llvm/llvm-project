@@ -57,6 +57,7 @@ MSP430_MCU("msp430i2xxgeneric")
 #undef MSP430_MCU_FEAT
 """
 
+
 def csv2def(csv_path, def_path):
     """
     Parse the devices.csv file at the given path, generate the definitions and
@@ -103,22 +104,22 @@ def csv2def(csv_path, def_path):
         def_file.write(PREFIX.format(version))
 
         for mcu in mcus_multiplier_sw:
-            def_file.write(f"MSP430_MCU(\"{mcu}\")\n")
+            def_file.write(f'MSP430_MCU("{mcu}")\n')
 
         def_file.write("\n// With 16-bit hardware multiplier\n")
 
         for mcu in mcus_multiplier_hw_16:
-            def_file.write(f"MSP430_MCU_FEAT(\"{mcu}\", \"16bit\")\n")
+            def_file.write(f'MSP430_MCU_FEAT("{mcu}", "16bit")\n')
 
         def_file.write("\n// With 32-bit hardware multiplier\n")
 
         for mcu in mcus_multiplier_hw_32:
-            def_file.write(f"MSP430_MCU_FEAT(\"{mcu}\", \"32bit\")\n")
+            def_file.write(f'MSP430_MCU_FEAT("{mcu}", "32bit")\n')
 
         def_file.write(SUFFIX)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     if len(sys.argv) != 3:
         sys.exit(f"Usage: {sys.argv[0]} <CSV_FILE> <DEF_FILE>")
 
