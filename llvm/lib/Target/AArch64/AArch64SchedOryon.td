@@ -33,8 +33,6 @@ def OryonModel : SchedMachineModel {
                                                     MTEUnsupported.F,
                                                     PAUnsupported.F,
                                                     [HasPAuth, HasCSSC]);
-  // FIXME: Remove when all errors have been fixed.
-  let FullInstRWOverlapCheck = 0;
 }
 
 let SchedModel = OryonModel in {
@@ -289,7 +287,7 @@ def ORYONWrite_7Cyc_3Uops_I2 : SchedWriteRes<[ORYONI2]> {
   let NumMicroOps = 3;
 }
 
-// 8 (7+1+1) cycles on I2 and I0/I1, I0. Authentication branch instructions
+// 9 (7+1+1) cycles on I2 and I0/I1, I0. Authentication branch instructions
 // these instructions are broken down to three uops
 // a.	PtrAuth on pipe 2 taking 7 cycles
 // b.	Link Register Update on pipes 0 and 1 taking 1 cycle
@@ -677,9 +675,6 @@ SchedWriteRes<[ORYONFP0123, ORYONFP0123, ORYONFP0123, ORYONFP0123]> {
 // Arithmetic Instructions
 //---
 
-// Table on P74
-//=============
-
 //1, 1, 6
 def : InstRW<[ORYONWrite_1Cyc_I012345],
             (instregex "^ADD(W|X)r(i|r|x)", "^SUB(W|X)r(i|r|x)")>;
@@ -714,9 +709,6 @@ def : InstRW<[ORYONWrite_1Cyc_I0123],
 //Compare Instruciton
 //---
 
-// Table on P75
-//=============
-
 // We have CCMP, CCMN as LLVM DAG node
 // CMP is an alias of SUBS as above
 // CMN is an alias of ADDS as above
@@ -731,8 +723,6 @@ def : InstRW<[ORYONWrite_1Cyc_I0123],
 // Branch
 //---
 
-// Table on P76
-//=============
 def : InstRW<[ORYONWrite_1Cyc_NONE], (instrs B)>;
 def : InstRW<[ORYONWrite_1Cyc_I01], (instrs BL)>;
 def : InstRW<[ORYONWrite_1Cyc_I01],
@@ -740,7 +730,6 @@ def : InstRW<[ORYONWrite_1Cyc_I01],
 def : InstRW<[ORYONWrite_1Cyc_I0], (instrs BR, BLR)>;
 def : InstRW<[ORYONWrite_1Cyc_I0], (instrs RET)>;
 
-// Table on  p47/p76
 // 3 uOp, 1 cycle for branch, 7 cycle for Authentication,
 // 1 cycle for updating link register
 // V8.3a PAC
@@ -749,16 +738,10 @@ def : InstRW<[ORYONWrite_9Cyc_I012],
                     BRAA, BRAAZ, BRAB, BRABZ)>;
 def : InstRW<[ORYONWrite_9Cyc_I012], (instrs RETAA, RETAB, ERETAA, ERETAB)>;
 
-// we temporarily put it here. It needs fix.
-// should LSU get involved? Need check?
-// Should be a combined additive value of load and pauth
 def : InstRW<[ORYONWrite_7Cyc_3Uops_I2], (instregex "^LDRAA", "^LDRAB")>;
 
 // Logical Instructions
 //---
-
-// Table on P77
-//=============
 
 //1,1,4 TST is an alias of ANDS
 def : InstRW<[ORYONWrite_1Cyc_I0123],
@@ -784,9 +767,6 @@ def : InstRW<[ORYONWrite_2Cyc_I012345_I012345_RC],
 // Shift Instructions
 //---
 
-// Table on P78
-//=============
-
 //1,1,6
 def : InstRW<[ORYONWrite_1Cyc_I012345],
             (instregex "^ASRV(W|X)r", "^LSLV(W|X)r",
@@ -796,9 +776,6 @@ def : InstRW<[ORYONWrite_1Cyc_I012345],
 //---
 // Move-Data Bit-field and Sign_Extension Instructions
 //---
-
-// Table on P78
-//=============
 
 //1,1,6
 def : InstRW<[ORYONWrite_1Cyc_I012345],
@@ -814,10 +791,6 @@ def : InstRW<[ORYONWrite_1Cyc_I012345], (instrs COPY)>;
 // Reverse Instructions
 //---
 
-// Table on P79
-//=============
-
-
 //1,1,6
 def : InstRW<[ORYONWrite_1Cyc_I012345],
             (instregex "^RBIT(W|X)r", "^REV(16|32|64)?(W|X)r")>;
@@ -827,9 +800,6 @@ def : InstRW<[ORYONWrite_1Cyc_I012345],
 // Flag Manipulate Instructions
 //---
 
-// Table on P79
-//=============
-
 //1,1,4
 def : InstRW<[ORYONWrite_1Cyc_I0123],
             (instregex "^SETF8", "^SETF16", "^CFINV")>;
@@ -837,9 +807,6 @@ def : InstRW<[ORYONWrite_1Cyc_I0123],
 //---
 // Miscellaneous Instructions
 //---
-
-// Table on P80
-//=============
 
 //1,1,6
 def : InstRW<[ORYONWrite_1Cyc_I012345],
@@ -850,10 +817,6 @@ def : InstRW<[ORYONWrite_1Cyc_I012345],
 // Multiply Instructions
 //---
 
-// Table on P81
-//=============
-
-
 //1,3,2
 def : InstRW<[ORYONWrite_3Cyc_I45],
             (instregex "^MADD(W|X)rrr", "^MSUB(W|X)rrr",
@@ -863,9 +826,6 @@ def : InstRW<[ORYONWrite_3Cyc_I45],
 //---
 // Divide Instructions
 //---
-
-// Table on P81
-//=============
 
 def : InstRW<[ORYONWrite_7Cyc_I2_RC],
              (instregex "^(S|U)DIVWr")>;
@@ -1429,10 +1389,6 @@ def : InstRW<[ORYONWrite_V2V_6Cyc_FP01], (instregex "^FJCVTZS")>;
 def : InstRW<[ORYONWrite_V2V_3Cyc_FP0123], (instregex "^FCVT[HSD][HSD]r",
                                                        "^FRINT(A|I|M|N|P|X|Z)(Sr|Dr)")>;
 
-// floating comparison
-def : InstRW<[ORYONWrite_2Cyc_FP0123], (instregex "^FMAX(NM)?")>;
-def : InstRW<[ORYONWrite_2Cyc_FP0123], (instregex "^FMIN(NM)?")>;
-
 // floating comparison write to NZCV
 def : InstRW<[ORYONWrite_2Cyc_FP01], (instregex "^FCMP(E)?[HSD]r[ir]")>;
 def : InstRW<[ORYONWrite_2Cyc_FP01], (instregex "^FCCMP(E)?[HSD]rr")>;
@@ -1441,8 +1397,7 @@ def : InstRW<[ORYONWrite_2Cyc_FP01], (instregex "^FCCMP(E)?[HSD]rr")>;
 def : InstRW<[ORYONWrite_2Cyc_FP0123], (instregex "^FCSEL")>;
 
 // floating multiply-add
-def : InstRW<[ORYONWrite_4Cyc_FP0123], (instregex "^(F|FN)MADD", "^(F|FN)MSUB",
-                                         "^(F|FN)MUL")>;
+def : InstRW<[ORYONWrite_4Cyc_FP0123], (instregex "^(F|FN)MADD", "^(F|FN)MSUB")>;
 
 // floating unary, cycle/throughput? xls row14
 def : InstRW<[ORYONWrite_2Cyc_FP0123], (instregex "^F(ABS|NEG)[SD]r")>;
@@ -1493,14 +1448,6 @@ def : InstRW<[ORYONWrite_6Cyc_FP3], (instregex "^FDIVv.*16$")>;
 def : InstRW<[ORYONWrite_7Cyc_FP3], (instregex "^FDIVv.*32$")>;
 def : InstRW<[ORYONWrite_9Cyc_FP3], (instregex "^FDIVv.*64$")>;
 
-// FMAX, FMIN
-def : InstRW<[ORYONWrite_2Cyc_FP0123], (instregex "^FMAXv", "^FMAXNMv",
-                                                "^FMINv", "^FMINNMv")>;
-
-// floating multiply-add this is 4/3 need to fine tune
-def : InstRW<[ORYONWrite_4Cyc_FP0123], (instregex "^FMLA(L|L2)?v",
-                                                    "^FMLS(L|L2)?v")>;
-
 def : InstRW<[ORYONWrite_4Cyc_FP0123], (instregex "^FMUL(X)?v",
                                                    "^FRECPSv", "^FRSQRTSv")>;
 
@@ -1508,14 +1455,12 @@ def : InstRW<[ORYONWrite_3Cyc_FP0123], (instregex "^MLAv","^MLSv", "^MULv",
                                                    "^PMULv", "UABAv")>;
 
 def : InstRW<[ORYONWrite_2Cyc_FP0123], (instregex "SABAv", "SABDv",
-                                                   "^EXTv", "^TRN(1|2)v",
                                                    "^(SH|UH)(ADD|SUB)v",
                                                    "^S(MAX|MIN)v",
                                                    "^(SQ|UQ)(ADD|SUB)v",
- //    no such instruction                         "^SQ(R)?((MULH|MLAH|MLSH)v",
                                                    "^(SQ|SQR|UQ|UQR)SHLv",
                                                    "^(SR|UR)HADDv",
-                                                   "^(S|SR|U|UR)SHLv",
+                                                   "^(SR|UR)SHLv",
                                                    "^UABDv",
                                                    "^U(MAX|MIN)v")>;
 // IMAX or UMAX in the above line
@@ -1554,7 +1499,7 @@ def : InstRW<[ORYONWrite_2Cyc_FP0123], (instregex "^ABSv", "^CLSv","^CLZv", "^CN
                                                    "^NEGv", "^NOTv",
                                                    "^RBITv", "^REV(16|32|64)v",
                                                    "^SQ(ABS|NEG)v", "^SQ(XT|XTU)(N|N2)v",
-                                                   "^(SU|US)QADDv", "^(S|U)SHL(L|L2)v",
+                                                   "^(SU|US)QADDv",
                                                    "^UQXT(N|N2)v", "^XTN2?v")>;
 
 def : InstRW<[ORYONWrite_3Cyc_FP0123], (instregex "^FCVT(L|L2|N|N2|XN|XN2)v",
@@ -1575,13 +1520,9 @@ def : InstRW<[ORYONWrite_13Cyc_FP3_RC], (instregex "^FSQRTv.*64$")>;
 // SIMD binary elememt arithmetic instructions
 //==========
 
-def : InstRW<[ORYONWrite_4Cyc_FP0123], (instregex "^FMLAv", "^FMLSv","^FMULX?v",
-                                                   "^F(MLA|MLS)(L|L2)v")>;
+def : InstRW<[ORYONWrite_4Cyc_FP0123], (instregex "^FMLAv", "^FMLSv")>;
 
-
-def : InstRW<[ORYONWrite_3Cyc_FP0123], (instregex "^MLAv", "^MLSv", "^MULv",
-                                                   "^(S|U|SQD)(MLA|MLS|MUL)(L|L2)v",
-                                                   "^SQDMULHv",
+def : InstRW<[ORYONWrite_3Cyc_FP0123], (instregex  "^SQDMULHv",
                                                    "^SQRD(MLA|MLS|MUL)Hv")>;
 
 //==========
@@ -1595,20 +1536,17 @@ def : InstRW<[ORYONWrite_2Cyc_FP0123], (instregex "^EXTv", "^TRN(1|2)v",
 // SIMD immediate instructions
 //==========
 
-def : InstRW<[ORYONWrite_2Cyc_FP0123], (instregex "^FMOVv", "^MOVIv",
-                                                   "^MVNIv")>;
+def : InstRW<[ORYONWrite_2Cyc_FP0123], (instregex  "^MOVIv", "^MVNIv")>;
 
 //==========
 // SIMD shift(immediate) instructions
 //==========
-// "^(S|U)XT(L|L2)v" counted as unary instruction as SHL
 def : InstRW<[ORYONWrite_2Cyc_FP0123], (instregex "^RSHR(N|N2)v", "^SHLv",
                                                    "^(SHL|SHR)(N|N2)v",
                                                    "^SLIv",
                                                    "^(SQ|SQR)SHR(U)?(N|N2)v",
                                                    "^(UQ|UQR)SHR(N|N2)v",
-                                                   "^SQSHL(U)?v",
-                                                   "^UQSHLv",
+                                                   "^SQSHLUv",
                                                    "^SRIv",
                                                    "^(S|SR|U|UR)SHRv",
                                                    "^(S|SR|U|UR)SRAv",
@@ -1674,7 +1612,6 @@ def : InstRW<[ORYONWrite_4Cyc_FP0123], (instregex "^FCADDv", "^FCMLAv")>;
 //==========
 // 3,4 on IMLA, CRYP
 def : InstRW<[ORYONWrite_3Cyc_FP0123], (instregex "^AES[DE]",
-                                                   "^PMULLv",
                                                    "^SM3(TT1|TT2)(A|B)")>;
 
 // 2,4 on CRYP
@@ -1708,10 +1645,10 @@ def : InstRW<[ORYONWrite_4Cyc_FP1_RC4], (instregex "^SHA1(C|P|M)",
 // 4,2 on IMLA
 def : InstRW<[ORYONWrite_4Cyc_FP0123_RC], (instregex "^(S|U|US)MMLA$")>;
 
-// 4,0.5 on IMLA FIX ME!!!
+// 4,0.5 on IMLA
 def : InstRW<[ORYONWrite_8Cyc_FP0123_RC], (instregex "^BFMMLA$")>;
 
-// FIX ME !!! no definition in the BIG Chart yet
+// 4,0.5 on IMLA
 def : InstRW<[ORYONWrite_8Cyc_FP0123_RC], (instregex "^BFMLAL(B|T)")>;
 
 // 3,4
