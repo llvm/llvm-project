@@ -20,6 +20,7 @@ add_llvm_component_library(LLVMTransformUtils
   CountVisits.cpp
   Debugify.cpp
   DemoteRegToStack.cpp
+  DXIL.cpp
   DXILUpgrade.cpp
   EntryExitInstrumenter.cpp
   EscapeEnumerator.cpp
