@@ -19,7 +19,6 @@
 #include "llvm/IR/Module.h"
 #include "llvm/Pass.h"
 #include "llvm/TargetParser/Triple.h"
-#include "llvm/Transforms/Utils/DXIL.h"
 
 using namespace llvm;
 using namespace llvm::dxil;
@@ -49,13 +48,7 @@ bool DXILTranslateMetadata::runOnModule(Module &M) {
   if (ValVerMD.isEmpty())
     ValVerMD.update(VersionTuple(1, 0));
   dxil::createShaderModelMD(M);
-  Expected<dxil::DXILVersion> DXILVer = dxil::DXILVersion::get(M);
-  if (auto E = DXILVer.takeError()) {
-    errs() << "Fail to get DXIL version " << toString(std::move(E)) << "\n";
-    return false;
-  }
-
-  DXILVer->embedDXIL(M);
+  dxil::createDXILVersionMD(M);
 
   const dxil::Resources &Res =
       getAnalysis<DXILResourceWrapper>().getDXILResource();

@@ -11,7 +11,6 @@
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Transforms/Utils/DXIL.h"
 
 using namespace llvm;
 
@@ -34,20 +33,6 @@ static bool handleValVerMetadata(Module &M) {
   return true;
 }
 
-static bool handleDXILVerMetadata(Module &M) {
-  auto V = dxil::DXILVersion::readDXIL(M);
-  if (Error E = V.takeError()) {
-    report_fatal_error(std::move(E), /*gen_crash_diag=*/false);
-  }
-  if (V->empty())
-    return false;
-
-  LLVM_DEBUG(dbgs() << "DXIL: DXIL Version " << *V << "\n");
-  V->embed(M);
-  V->stripDXIL(M);
-  return true;
-}
-
 PreservedAnalyses DXILUpgradePass::run(Module &M, ModuleAnalysisManager &AM) {
   PreservedAnalyses PA;
   // We never add, remove, or change functions here.
@@ -56,7 +41,6 @@ PreservedAnalyses DXILUpgradePass::run(Module &M, ModuleAnalysisManager &AM) {
 
   bool Changed = false;
   Changed |= handleValVerMetadata(M);
-  Changed |= handleDXILVerMetadata(M);
 
   if (!Changed)
     return PreservedAnalyses::all();
