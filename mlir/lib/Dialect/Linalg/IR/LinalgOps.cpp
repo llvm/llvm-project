@@ -493,10 +493,13 @@ public:
   }
 
   // Build the ternary functions defined by OpDSL.
-  Value buildTernaryFn(TernaryFn ternaryFn, Value arg0, Value arg1, Value arg2) {
-    bool headBool = isInteger(arg0) && arg0.getType().getIntOrFloatBitWidth() == 1;
-    bool tailFloatingPoint = isFloatingPoint(arg0) && isFloatingPoint(arg1) && isFloatingPoint(arg2);
-    bool tailnteger = isInteger(arg0) && isInteger(arg1) && isInteger(arg1);
+  Value buildTernaryFn(TernaryFn ternaryFn, Value arg0, Value arg1,
+                       Value arg2) {
+    bool headBool =
+        isInteger(arg0) && arg0.getType().getIntOrFloatBitWidth() == 1;
+    bool tailFloatingPoint =
+        isFloatingPoint(arg0) && isFloatingPoint(arg1) && isFloatingPoint(arg2);
+    bool tailInteger = isInteger(arg0) && isInteger(arg1) && isInteger(arg1);
     OpBuilder::InsertionGuard g(builder);
     builder.setInsertionPointToEnd(&block);
     switch (ternaryFn) {
