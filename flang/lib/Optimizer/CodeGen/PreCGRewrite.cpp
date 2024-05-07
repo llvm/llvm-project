@@ -270,12 +270,20 @@ public:
 };
 
 class DeclareOpConversion : public mlir::OpRewritePattern<fir::DeclareOp> {
+  bool preserveDeclare;
+
 public:
   using OpRewritePattern::OpRewritePattern;
+  DeclareOpConversion(mlir::MLIRContext *ctx, bool preserveDecl)
+      : OpRewritePattern(ctx), preserveDeclare(preserveDecl) {}
 
   mlir::LogicalResult
   matchAndRewrite(fir::DeclareOp declareOp,
                   mlir::PatternRewriter &rewriter) const override {
+    if (!preserveDeclare) {
+      rewriter.replaceOp(declareOp, declareOp.getMemref());
+      return mlir::success();
+    }
     auto loc = declareOp.getLoc();
     llvm::SmallVector<mlir::Value> shapeOpers;
     llvm::SmallVector<mlir::Value> shiftOpers;
@@ -319,6 +327,7 @@ public:
 
 class CodeGenRewrite : public fir::impl::CodeGenRewriteBase<CodeGenRewrite> {
 public:
+  CodeGenRewrite(fir::CodeGenRewriteOptions opts) : Base(opts) {}
   void runOnOperation() override final {
     mlir::ModuleOp mod = getOperation();
 
@@ -336,7 +345,7 @@ public:
                    mlir::cast<fir::BaseBoxType>(embox.getType()).getEleTy()));
     });
     mlir::RewritePatternSet patterns(&context);
-    fir::populatePreCGRewritePatterns(patterns);
+    fir::populatePreCGRewritePatterns(patterns, preserveDeclare);
     if (mlir::failed(
             mlir::applyPartialConversion(mod, target, std::move(patterns)))) {
       mlir::emitError(mlir::UnknownLoc::get(&context),
@@ -352,12 +361,14 @@ public:
 
 } // namespace
 
-std::unique_ptr<mlir::Pass> fir::createFirCodeGenRewritePass() {
-  return std::make_unique<CodeGenRewrite>();
+std::unique_ptr<mlir::Pass>
+fir::createFirCodeGenRewritePass(fir::CodeGenRewriteOptions Options) {
+  return std::make_unique<CodeGenRewrite>(Options);
 }
 
-void fir::populatePreCGRewritePatterns(mlir::RewritePatternSet &patterns) {
+void fir::populatePreCGRewritePatterns(mlir::RewritePatternSet &patterns,
+                                       bool preserveDeclare) {
   patterns.insert<EmboxConversion, ArrayCoorConversion, ReboxConversion,
-                  DeclareOpConversion, DummyScopeOpConversion>(
-      patterns.getContext());
+                  DummyScopeOpConversion>(patterns.getContext());
+  patterns.add<DeclareOpConversion>(patterns.getContext(), preserveDeclare);
 }
