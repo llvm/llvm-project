@@ -4159,6 +4159,11 @@ defm unique_section_names : BoolFOption<"unique-section-names",
   NegFlag<SetFalse, [], [ClangOption, CC1Option],
           "Don't use unique names for text and data sections">,
   PosFlag<SetTrue>>;
+defm separate_named_sections : BoolFOption<"separate-named-sections",
+  CodeGenOpts<"SeparateNamedSections">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option],
+          "Use separate unique sections for named sections (ELF Only)">,
+  NegFlag<SetFalse>>;
 
 defm split_machine_functions: BoolFOption<"split-machine-functions",
   CodeGenOpts<"SplitMachineFunctions">, DefaultFalse,
