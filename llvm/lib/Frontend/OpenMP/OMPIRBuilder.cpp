@@ -1870,6 +1870,9 @@ OpenMPIRBuilder::createTask(const LocationDescription &Loc,
     //    call @__kmpc_omp_task(...)
     //    br label %exit
     //  else:
+    //    ;; Wait for resolution of dependencies, if any, before
+    //    ;; beginning the task
+    //    call @__kmpc_omp_wait_deps(...)
     //    call @__kmpc_omp_task_begin_if0(...)
     //    call @outlined_fn(...)
     //    call @__kmpc_omp_task_complete_if0(...)
@@ -1890,13 +1893,12 @@ OpenMPIRBuilder::createTask(const LocationDescription &Loc,
 
       if (Dependencies.size()) {
         Function *TaskWaitFn =
-            getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_omp_taskwait_deps_51);
+            getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_omp_wait_deps);
         Builder.CreateCall(
             TaskWaitFn,
             {Ident, ThreadID, Builder.getInt32(Dependencies.size()), DepArray,
              ConstantInt::get(Builder.getInt32Ty(), 0),
-             ConstantPointerNull::get(PointerType::getUnqual(M.getContext())),
-             ConstantInt::get(Builder.getInt32Ty(), false)});
+             ConstantPointerNull::get(PointerType::getUnqual(M.getContext()))});
       }
       Function *TaskBeginFn =
           getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_omp_task_begin_if0);
