@@ -72,4 +72,5 @@ SANITIZER_INTERFACE_ATTRIBUTE void radsan_off();
     details about how to use this method.
 */
 SANITIZER_INTERFACE_ATTRIBUTE void radsan_on();
-}
+
+} // extern "C"
