@@ -1989,6 +1989,14 @@ llvm::Value *CodeGenFunction::EmitLoadOfScalar(Address Addr, bool Volatile,
     return EmitAtomicLoad(AtomicLValue, Loc).getScalarVal();
   }
 
+  if (const auto *BIT = Ty->getAs<BitIntType>()) {
+    if (BIT->getNumBits() > 128) {
+      // Long _BitInt has array of bytes as in-memory type.
+      llvm::Type *NewTy = ConvertType(Ty);
+      Addr = Addr.withElementType(NewTy);
+    }
+  }
+
   llvm::LoadInst *Load = Builder.CreateLoad(Addr, Volatile);
   if (isNontemporal) {
     llvm::MDNode *Node = llvm::MDNode::get(

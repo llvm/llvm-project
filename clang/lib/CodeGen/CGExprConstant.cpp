@@ -1774,6 +1774,18 @@ llvm::Constant *ConstantEmitter::emitForMemory(CodeGenModule &CGM,
     return Res;
   }
 
+  if (const auto *BIT = destType->getAs<BitIntType>()) {
+    if (BIT->getNumBits() > 128) {
+      // Long _BitInt has array of bytes as in-memory type.
+      ConstantAggregateBuilder Builder(CGM);
+      llvm::Type *DesiredTy = CGM.getTypes().ConvertTypeForMem(destType);
+      auto *CI = cast<llvm::ConstantInt>(C);
+      llvm::APInt Value = CI->getValue();
+      Builder.addBits(Value, /*OffsetInBits=*/0, /*AllowOverwrite=*/false);
+      return Builder.build(DesiredTy, /*AllowOversized*/ false);
+    }
+  }
+
   return C;
 }
 

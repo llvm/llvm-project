@@ -5348,6 +5348,13 @@ Value *ScalarExprEmitter::VisitVAArgExpr(VAArgExpr *VE) {
     return llvm::UndefValue::get(ArgTy);
   }
 
+  if (const auto *BIT = Ty->getAs<BitIntType>()) {
+    if (BIT->getNumBits() > 128) {
+      // Long _BitInt has array of bytes as in-memory type.
+      ArgPtr = ArgPtr.withElementType(ArgTy);
+    }
+  }
+
   // FIXME Volatility.
   llvm::Value *Val = Builder.CreateLoad(ArgPtr);
 

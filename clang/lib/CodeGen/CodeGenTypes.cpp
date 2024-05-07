@@ -114,6 +114,12 @@ llvm::Type *CodeGenTypes::ConvertTypeForMem(QualType T, bool ForBitField) {
     return llvm::IntegerType::get(getLLVMContext(),
                                   (unsigned)Context.getTypeSize(T));
 
+  if (const auto *BIT = T->getAs<BitIntType>()) {
+    if (BIT->getNumBits() > 128)
+      R = llvm::ArrayType::get(CGM.Int8Ty,
+                               (unsigned)Context.getTypeSize(T) / 8);
+  }
+
   // Else, don't map it.
   return R;
 }
