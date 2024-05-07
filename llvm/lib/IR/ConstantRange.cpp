@@ -521,8 +521,8 @@ static ConstantRange getPreferredRange(
   return CR2;
 }
 
-ConstantRange ConstantRange::intersectWith(const ConstantRange &CR,
-                                           PreferredRangeType Type) const {
+std::optional<ConstantRange>
+ConstantRange::exactIntersectWith(const ConstantRange &CR) const {
   assert(getBitWidth() == CR.getBitWidth() &&
          "ConstantRange types don't agree!");
 
@@ -531,7 +531,7 @@ ConstantRange ConstantRange::intersectWith(const ConstantRange &CR,
   if (CR.isEmptySet() ||    isFullSet()) return CR;
 
   if (!isUpperWrapped() && CR.isUpperWrapped())
-    return CR.intersectWith(*this, Type);
+    return CR.exactIntersectWith(*this);
 
   if (!isUpperWrapped() && !CR.isUpperWrapped()) {
     if (Lower.ult(CR.Lower)) {
@@ -578,7 +578,7 @@ ConstantRange ConstantRange::intersectWith(const ConstantRange &CR,
 
       // ------U   L--- : this
       //  L----------U  : CR
-      return getPreferredRange(*this, CR, Type);
+      return std::nullopt;
     }
     if (CR.Lower.ult(Lower)) {
       // --U      L---- : this
@@ -600,7 +600,7 @@ ConstantRange ConstantRange::intersectWith(const ConstantRange &CR,
     // ------U L-- : this
     // --U L------ : CR
     if (CR.Lower.ult(Upper))
-      return getPreferredRange(*this, CR, Type);
+      return std::nullopt;
 
     // ----U   L-- : this
     // --U   L---- : CR
@@ -624,11 +624,11 @@ ConstantRange ConstantRange::intersectWith(const ConstantRange &CR,
 
   // --U L------ : this
   // ------U L-- : CR
-  return getPreferredRange(*this, CR, Type);
+  return std::nullopt;
 }
 
-ConstantRange ConstantRange::unionWith(const ConstantRange &CR,
-                                       PreferredRangeType Type) const {
+std::optional<ConstantRange>
+ConstantRange::exactUnionWith(const ConstantRange &CR) const {
   assert(getBitWidth() == CR.getBitWidth() &&
          "ConstantRange types don't agree!");
 
@@ -636,7 +636,7 @@ ConstantRange ConstantRange::unionWith(const ConstantRange &CR,
   if (CR.isFullSet() ||    isEmptySet()) return CR;
 
   if (!isUpperWrapped() && CR.isUpperWrapped())
-    return CR.unionWith(*this, Type);
+    return CR.exactUnionWith(*this);
 
   if (!isUpperWrapped() && !CR.isUpperWrapped()) {
     //        L---U  and  L---U        : this
@@ -645,8 +645,7 @@ ConstantRange ConstantRange::unionWith(const ConstantRange &CR,
     //  L---------U
     // -----U L-----
     if (CR.Upper.ult(Lower) || Upper.ult(CR.Lower))
-      return getPreferredRange(
-          ConstantRange(Lower, CR.Upper), ConstantRange(CR.Lower, Upper), Type);
+      return std::nullopt;
 
     APInt L = CR.Lower.ult(Lower) ? CR.Lower : Lower;
     APInt U = (CR.Upper - 1).ugt(Upper - 1) ? CR.Upper : Upper;
@@ -674,8 +673,7 @@ ConstantRange ConstantRange::unionWith(const ConstantRange &CR,
     // ----------U L----
     // ----U L----------
     if (Upper.ult(CR.Lower) && CR.Upper.ult(Lower))
-      return getPreferredRange(
-          ConstantRange(Lower, CR.Upper), ConstantRange(CR.Lower, Upper), Type);
+      return std::nullopt;
 
     // ----U     L----- : this
     //        L----U    : CR
@@ -700,22 +698,20 @@ ConstantRange ConstantRange::unionWith(const ConstantRange &CR,
   return ConstantRange(std::move(L), std::move(U));
 }
 
-std::optional<ConstantRange>
-ConstantRange::exactIntersectWith(const ConstantRange &CR) const {
-  // TODO: This can be implemented more efficiently.
-  ConstantRange Result = intersectWith(CR);
-  if (Result == inverse().unionWith(CR.inverse()).inverse())
-    return Result;
-  return std::nullopt;
+ConstantRange ConstantRange::intersectWith(const ConstantRange &CR,
+                                           PreferredRangeType Type) const {
+  if (std::optional<ConstantRange> Result = exactIntersectWith(CR))
+    return *Result;
+  return getPreferredRange(*this, CR, Type);
+  ;
 }
 
-std::optional<ConstantRange>
-ConstantRange::exactUnionWith(const ConstantRange &CR) const {
-  // TODO: This can be implemented more efficiently.
-  ConstantRange Result = unionWith(CR);
-  if (Result == inverse().intersectWith(CR.inverse()).inverse())
-    return Result;
-  return std::nullopt;
+ConstantRange ConstantRange::unionWith(const ConstantRange &CR,
+                                       PreferredRangeType Type) const {
+  if (std::optional<ConstantRange> Result = exactUnionWith(CR))
+    return *Result;
+  return getPreferredRange(ConstantRange(Lower, CR.Upper),
+                           ConstantRange(CR.Lower, Upper), Type);
 }
 
 ConstantRange ConstantRange::castOp(Instruction::CastOps CastOp,
