@@ -2904,7 +2904,6 @@ static void computeCalleeSaveRegisterPairs(
     if (NeedsWinCFI &&
         RPI.isPaired()) // RPI.FrameIdx must be the lower index of the pair
       RPI.FrameIdx = CSI[i + RegInc].getFrameIdx();
-
     int Scale = RPI.getScale();
 
     int OffsetPre = RPI.isScalable() ? ScalableByteOffset : ByteOffset;
@@ -3008,7 +3007,7 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
     }
     return true;
   }
-  bool PtrueCreated = false;
+  bool PTrueCreated = false;
   for (const RegPairInfo &RPI : llvm::reverse(RegPairs)) {
     unsigned Reg1 = RPI.Reg1;
     unsigned Reg2 = RPI.Reg2;
@@ -3072,10 +3071,13 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
     }
 
     if (RPI.isPaired() && RPI.isScalable()) {
+      const AArch64Subtarget &Subtarget = MF.getSubtarget<AArch64Subtarget>();
       AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
       unsigned PnReg = AFI->getPredicateRegForFillSpill();
-      if (!PtrueCreated) {
-        PtrueCreated = true;
+      assert(((Subtarget.hasSVE2p1() || Subtarget.hasSME2()) && PnReg != 0) &&
+             "Expects SVE2.1 or SME2 target and a predicate register");
+      if (!PTrueCreated) {
+        PTrueCreated = true;
         BuildMI(MBB, MI, DL, TII.get(AArch64::PTRUE_C_B), PnReg)
             .setMIFlags(MachineInstr::FrameSetup);
       }
@@ -3145,7 +3147,6 @@ bool AArch64FrameLowering::restoreCalleeSavedRegisters(
     DL = MBBI->getDebugLoc();
 
   computeCalleeSaveRegisterPairs(MF, CSI, TRI, RegPairs, hasFP(MF));
- 
   if (homogeneousPrologEpilog(MF, &MBB)) {
     auto MIB = BuildMI(MBB, MBBI, DL, TII.get(AArch64::HOM_Epilog))
                    .setMIFlag(MachineInstr::FrameDestroy);
@@ -3166,7 +3167,7 @@ bool AArch64FrameLowering::restoreCalleeSavedRegisters(
   auto ZPREnd = std::find_if_not(ZPRBegin, RegPairs.end(), IsZPR);
   std::reverse(ZPRBegin, ZPREnd);
 
-   bool PtrueCreated = false;
+  bool PTrueCreated = false;
   for (const RegPairInfo &RPI : RegPairs) {
     unsigned Reg1 = RPI.Reg1;
     unsigned Reg2 = RPI.Reg2;
@@ -3227,9 +3228,12 @@ bool AArch64FrameLowering::restoreCalleeSavedRegisters(
 
     AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
     if (RPI.isPaired() && RPI.isScalable()) {
+      const AArch64Subtarget &Subtarget = MF.getSubtarget<AArch64Subtarget>();
       unsigned PnReg = AFI->getPredicateRegForFillSpill();
-      if (!PtrueCreated) {
-        PtrueCreated = true;
+      assert(((Subtarget.hasSVE2p1() || Subtarget.hasSME2()) && PnReg != 0) &&
+             "Expects SVE2.1 or SME2 target and a predicate register");
+      if (!PTrueCreated) {
+        PTrueCreated = true;
         BuildMI(MBB, MBBI, DL, TII.get(AArch64::PTRUE_C_B), PnReg)
             .setMIFlags(MachineInstr::FrameDestroy);
       }
@@ -3351,38 +3355,32 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
           !RegInfo->isReservedReg(MF, PairedReg))
         ExtraCSSpill = PairedReg;
     }
-
-    // Save PReg in FunctionInfo to build PTRUE instruction later. The PTRUE is
-    // being used in the function to save and restore the pair of ZReg
-    AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
-    if (Subtarget.hasSVE2p1() || Subtarget.hasSME2()) {
-      if (AArch64::PPRRegClass.contains(Reg) &&
-          (Reg >= AArch64::P8 && Reg <= AArch64::P15) && SavedRegs.test(Reg) &&
-          AFI->getPredicateRegForFillSpill() == 0)
-        AFI->setPredicateRegForFillSpill((Reg - AArch64::P0) + AArch64::PN0);
-
-      // Check if there is a pair of ZRegs, so it can select P8 to create PTRUE,
-      // in case there is no PRege being saved(above)
-      HasPairZReg =
-          HasPairZReg || (AArch64::ZPRRegClass.contains(Reg, CSRegs[i ^ 1]) &&
-                          SavedRegs.test(CSRegs[i ^ 1]));
-    }
+    // Check if there is a pair of ZRegs, so it can select PReg for spill/fill
+    HasPairZReg |= (AArch64::ZPRRegClass.contains(Reg, CSRegs[i ^ 1]) &&
+                    SavedRegs.test(CSRegs[i ^ 1]));
   }
 
-  // Make sure there is a PReg saved to be used in save and restore when there
-  // is ZReg pair.
-  if ((Subtarget.hasSVE2p1() || Subtarget.hasSME2()) &&
-      (MF.getFunction().getCallingConv() ==
-           CallingConv::AArch64_SVE_VectorCall ||
-       MF.getFunction().getCallingConv() ==
-           CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X0 ||
-       MF.getFunction().getCallingConv() ==
-           CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X2))
-    if (AFI->getPredicateRegForFillSpill() == 0 && HasPairZReg) {
-      assert(!RegInfo->isReservedReg(MF, AArch64::P8) && "P8 is reserved");
+  if (HasPairZReg && (Subtarget.hasSVE2p1() || Subtarget.hasSME2())) {
+    AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
+    // Find a suitable predicate register for the multi-vector spill/fill
+    // instructions.
+    for (unsigned PReg = AArch64::P8; PReg <= AArch64::P15; ++PReg) {
+      if (SavedRegs.test(PReg)) {
+        AFI->setPredicateRegForFillSpill(PReg - AArch64::P0 + AArch64::PN0);
+        break;
+      }
+    }
+    // If no free callee-save has been found assign one.
+    if (!AFI->getPredicateRegForFillSpill() &&
+        MF.getFunction().getCallingConv() ==
+            CallingConv::AArch64_SVE_VectorCall) {
       SavedRegs.set(AArch64::P8);
       AFI->setPredicateRegForFillSpill(AArch64::PN8);
     }
+
+    assert(!RegInfo->isReservedReg(MF, AFI->getPredicateRegForFillSpill()) &&
+           "Predicate cannot be a reserved register");
+  }
 
   if (MF.getFunction().getCallingConv() == CallingConv::Win64 &&
       !Subtarget.isTargetWindows()) {
