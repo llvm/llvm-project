@@ -508,7 +508,7 @@ TEST(TripleTest, ParsedIDs) {
   EXPECT_EQ(Triple::ShaderModel, T.getOS());
   EXPECT_EQ(VersionTuple(1, 8), T.getDXILVersion());
   EXPECT_EQ(Triple::Amplification, T.getEnvironment());
-  
+
   T = Triple("dxilv1.8-unknown-shadermodel6.15-library");
   EXPECT_EQ(Triple::dxil, T.getArch());
   EXPECT_EQ(Triple::DXILSubArch_v1_8, T.getSubArch());
