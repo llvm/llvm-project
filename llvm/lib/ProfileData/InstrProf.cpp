@@ -1283,7 +1283,7 @@ MDNode *mayHaveValueProfileOfKind(const Instruction &Inst,
     return nullptr;
 
   MDString *Tag = cast<MDString>(MD->getOperand(0));
-  if (!Tag || !Tag->getString().equals("VP"))
+  if (!Tag || Tag->getString() != "VP")
     return nullptr;
 
   // Now check kind:
