@@ -66,8 +66,8 @@ func.func @cond_branch_with_backedge(%tileA: vector<[4]x[4]xf32>, %tileB: vector
 ^bb1(%currentIndex: index, %iterTile: vector<[4]x[4]xf32>):
   %continueLoop = arith.cmpi slt, %currentIndex, %c10 : index
   // Live here: %iterTile, %tileB, %tileC, %tileD
-  // %iterTile dies at the `cf.cond_br`, but %tileB, %tileC, %tileD are live out (in the ^bb2 case).
-  // If we inserted the (four) `arm_sme.copy_tile` operations here we would run out of tiles.
+  // %iterTile, %tileB, %tileC, %tileD are live out (in the ^bb2 case). If we
+  // inserted the (four) `arm_sme.copy_tile` operations here we would run out of tiles.
   // However, note that the copies are only needed if we take the ^bb3 path. So, if we add
   // a new block along that path we can insert the copies without any conflicts.
   cf.cond_br %continueLoop, ^bb2, ^bb3(%iterTile, %tileB, %tileC, %tileD : vector<[4]x[4]xf32>, vector<[4]x[4]xf32>, vector<[4]x[4]xf32>, vector<[4]x[4]xf32>)
