@@ -21449,19 +21449,21 @@ static SDValue performUzpCombine(SDNode *N, SelectionDAG &DAG,
   EVT ResVT = N->getValueType(0);
 
   // uzp(extract_lo(x), extract_hi(x)) -> extract_lo(uzp x, x)
-  if(Op0.getOpcode() == ISD::EXTRACT_SUBVECTOR && 
-     Op1.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
-     Op0.getOperand(0) == Op1.getOperand(0)){
-  
+  if (Op0.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
+      Op1.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
+      Op0.getOperand(0) == Op1.getOperand(0)) {
+
     SDValue SourceVec = Op0.getOperand(0);
     uint64_t ExtIdx0 = Op0.getConstantOperandVal(1);
     uint64_t ExtIdx1 = Op1.getConstantOperandVal(1);
     uint64_t NumElements = SourceVec.getValueType().getVectorMinNumElements();
-    if(ExtIdx0 == 0 && ExtIdx1 == NumElements/2){
+    if (ExtIdx0 == 0 && ExtIdx1 == NumElements / 2) {
       EVT OpVT = Op0.getOperand(1).getValueType();
       EVT WidenedResVT = ResVT.getDoubleNumVectorElementsVT(*DAG.getContext());
-      SDValue uzp2 = DAG.getNode(N->getOpcode(), DL, WidenedResVT, SourceVec, SourceVec);
-      return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, ResVT, uzp2, DAG.getConstant(0, DL, OpVT));
+      SDValue uzp2 =
+          DAG.getNode(N->getOpcode(), DL, WidenedResVT, SourceVec, SourceVec);
+      return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, ResVT, uzp2,
+                         DAG.getConstant(0, DL, OpVT));
     }
   }
 
