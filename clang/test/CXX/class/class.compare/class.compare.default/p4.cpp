@@ -161,3 +161,14 @@ struct non_constexpr_type {
 
 my_struct<non_constexpr_type> obj; // cxx2a-note {{in instantiation of template class 'GH61238::my_struct<GH61238::non_constexpr_type>' requested here}}
 }
+
+namespace Constrained {
+  template<typename T>
+  struct A {
+    std::strong_ordering operator<=>(const A&) const requires true = default;
+  };
+
+  bool f(A<int> a) {
+    return a != A<int>();
+  }
+}
