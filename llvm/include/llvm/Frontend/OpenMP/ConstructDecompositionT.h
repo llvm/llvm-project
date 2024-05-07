@@ -92,10 +92,10 @@ struct ConstructDecompositionT {
 
   using ClauseSet = std::unordered_set<const ClauseTy *>;
 
-  ConstructDecompositionT(uint32_t ver, HelperType &hlp,
+  ConstructDecompositionT(uint32_t ver, HelperType &helper,
                           llvm::omp::Directive dir,
                           llvm::ArrayRef<ClauseTy> clauses)
-      : version(ver), construct(dir), helper(hlp) {
+      : version(ver), construct(dir), helper(helper) {
     for (const ClauseTy &clause : clauses)
       nodes.push_back(&clause);
 
@@ -532,20 +532,20 @@ bool ConstructDecompositionT<C, H>::applyClause(
   bool applied = false;
 
   // [5.2:340:3-6]
-  auto hasDistribute = findDirective(llvm::omp::OMPD_distribute);
-  auto hasTeams = findDirective(llvm::omp::OMPD_teams);
-  if (hasDistribute != nullptr) {
-    hasDistribute->clauses.push_back(node);
+  auto dirDistribute = findDirective(llvm::omp::OMPD_distribute);
+  auto dirTeams = findDirective(llvm::omp::OMPD_teams);
+  if (dirDistribute != nullptr) {
+    dirDistribute->clauses.push_back(node);
     applied = true;
     // [5.2:340:17]
-    if (hasTeams != nullptr) {
+    if (dirTeams != nullptr) {
       auto *shared = makeClause(
           llvm::omp::Clause::OMPC_shared,
           tomp::clause::SharedT<TypeTy, IdTy, ExprTy>{/*List=*/clause.v});
-      hasTeams->clauses.push_back(shared);
+      dirTeams->clauses.push_back(shared);
     }
-  } else if (hasTeams != nullptr) {
-    hasTeams->clauses.push_back(node);
+  } else if (dirTeams != nullptr) {
+    dirTeams->clauses.push_back(node);
     applied = true;
   }
 
@@ -560,31 +560,31 @@ bool ConstructDecompositionT<C, H>::applyClause(
     return static_cast<typename decltype(leafs)::value_type *>(nullptr);
   };
 
-  auto hasWorksharing = findWorksharing();
-  if (hasWorksharing != nullptr) {
-    hasWorksharing->clauses.push_back(node);
+  auto dirWorksharing = findWorksharing();
+  if (dirWorksharing != nullptr) {
+    dirWorksharing->clauses.push_back(node);
     applied = true;
   }
 
   // [5.2:340:9]
-  auto hasTaskloop = findDirective(llvm::omp::OMPD_taskloop);
-  if (hasTaskloop != nullptr) {
-    hasTaskloop->clauses.push_back(node);
+  auto dirTaskloop = findDirective(llvm::omp::OMPD_taskloop);
+  if (dirTaskloop != nullptr) {
+    dirTaskloop->clauses.push_back(node);
     applied = true;
   }
 
   // [5.2:340:10]
-  auto hasParallel = findDirective(llvm::omp::OMPD_parallel);
-  if (hasParallel != nullptr) {
-    if (hasTaskloop == nullptr && hasWorksharing == nullptr) {
-      hasParallel->clauses.push_back(node);
+  auto dirParallel = findDirective(llvm::omp::OMPD_parallel);
+  if (dirParallel != nullptr) {
+    if (dirTaskloop == nullptr && dirWorksharing == nullptr) {
+      dirParallel->clauses.push_back(node);
       applied = true;
     } else {
       // [5.2:340:15]
       auto *shared = makeClause(
           llvm::omp::Clause::OMPC_shared,
           tomp::clause::SharedT<TypeTy, IdTy, ExprTy>{/*List=*/clause.v});
-      hasParallel->clauses.push_back(shared);
+      dirParallel->clauses.push_back(shared);
     }
   }
 
@@ -598,8 +598,8 @@ bool ConstructDecompositionT<C, H>::applyClause(
     return false;
   };
 
-  auto hasTarget = findDirective(llvm::omp::OMPD_target);
-  if (hasTarget != nullptr) {
+  auto dirTarget = findDirective(llvm::omp::OMPD_target);
+  if (dirTarget != nullptr) {
     tomp::ObjectListT<IdTy, ExprTy> objects;
     llvm::copy_if(
         clause.v, std::back_inserter(objects), [&](const ObjectTy &object) {
@@ -609,14 +609,14 @@ bool ConstructDecompositionT<C, H>::applyClause(
       auto *firstp = makeClause(
           llvm::omp::Clause::OMPC_firstprivate,
           tomp::clause::FirstprivateT<TypeTy, IdTy, ExprTy>{/*List=*/objects});
-      hasTarget->clauses.push_back(firstp);
+      dirTarget->clauses.push_back(firstp);
       applied = true;
     }
   }
 
   // "task" is not handled by any of the cases above.
-  if (auto hasTask = findDirective(llvm::omp::OMPD_task)) {
-    hasTask->clauses.push_back(node);
+  if (auto dirTask = findDirective(llvm::omp::OMPD_task)) {
+    dirTask->clauses.push_back(node);
     applied = true;
   }
 
@@ -672,26 +672,26 @@ bool ConstructDecompositionT<C, H>::applyClause(
 
   if (!sharedObjects.empty()) {
     // [5.2:340:22]
-    if (auto hasParallel = findDirective(llvm::omp::OMPD_parallel)) {
+    if (auto dirParallel = findDirective(llvm::omp::OMPD_parallel)) {
       auto *shared = makeClause(
           llvm::omp::Clause::OMPC_shared,
           tomp::clause::SharedT<TypeTy, IdTy, ExprTy>{/*List=*/sharedObjects});
-      hasParallel->clauses.push_back(shared);
+      dirParallel->clauses.push_back(shared);
       applied = true;
     }
 
     // [5.2:340:24]
-    if (auto hasTeams = findDirective(llvm::omp::OMPD_teams)) {
+    if (auto dirTeams = findDirective(llvm::omp::OMPD_teams)) {
       auto *shared = makeClause(
           llvm::omp::Clause::OMPC_shared,
           tomp::clause::SharedT<TypeTy, IdTy, ExprTy>{/*List=*/sharedObjects});
-      hasTeams->clauses.push_back(shared);
+      dirTeams->clauses.push_back(shared);
       applied = true;
     }
   }
 
   // [5.2:340:27]
-  if (auto hasTarget = findDirective(llvm::omp::OMPD_target)) {
+  if (auto dirTarget = findDirective(llvm::omp::OMPD_target)) {
     tomp::ObjectListT<IdTy, ExprTy> tofrom;
     llvm::copy_if(
         objects, std::back_inserter(tofrom),
@@ -707,7 +707,7 @@ bool ConstructDecompositionT<C, H>::applyClause(
                           /*MapTypeModifier=*/std::nullopt,
                           /*Mapper=*/std::nullopt, /*Iterator=*/std::nullopt,
                           /*LocatorList=*/std::move(tofrom)}});
-      hasTarget->clauses.push_back(map);
+      dirTarget->clauses.push_back(map);
       applied = true;
     }
   }
@@ -847,8 +847,8 @@ bool ConstructDecompositionT<C, H>::applyClause(
   // [5.2:340:36], [5.2:341:1], [5.2:341:3]
   bool applyToParallel = true, applyToTeams = true;
 
-  auto hasParallel = findDirective(llvm::omp::Directive::OMPD_parallel);
-  if (hasParallel) {
+  auto dirParallel = findDirective(llvm::omp::Directive::OMPD_parallel);
+  if (dirParallel) {
     auto exclusions = llvm::concat<const llvm::omp::Directive>(
         getWorksharingLoop(), tomp::ListT<llvm::omp::Directive>{
                                   llvm::omp::Directive::OMPD_loop,
@@ -863,8 +863,8 @@ bool ConstructDecompositionT<C, H>::applyClause(
       applyToParallel = false;
   }
 
-  auto hasTeams = findDirective(llvm::omp::Directive::OMPD_teams);
-  if (hasTeams) {
+  auto dirTeams = findDirective(llvm::omp::Directive::OMPD_teams);
+  if (dirTeams) {
     // The only exclusion is OMPD_loop.
     if (findDirective(llvm::omp::Directive::OMPD_loop))
       applyToTeams = false;
@@ -918,9 +918,9 @@ bool ConstructDecompositionT<C, H>::applyClause(
   for (auto &leaf : llvm::reverse(leafs)) {
     if (!llvm::omp::isAllowedClauseForDirective(leaf.id, node->id, version))
       continue;
-    if (!applyToParallel && &leaf == hasParallel)
+    if (!applyToParallel && &leaf == dirParallel)
       continue;
-    if (!applyToTeams && &leaf == hasTeams)
+    if (!applyToTeams && &leaf == dirTeams)
       continue;
     // Some form of the clause will be applied past this point.
     if (isValidModifier(leaf.id, effective, effectiveApplied)) {
@@ -946,23 +946,23 @@ bool ConstructDecompositionT<C, H>::applyClause(
 
   // [5.2:341:4]
   if (!sharedObjects.empty()) {
-    if (hasParallel && !applyToParallel) {
+    if (dirParallel && !applyToParallel) {
       auto *shared = makeClause(
           llvm::omp::Clause::OMPC_shared,
           tomp::clause::SharedT<TypeTy, IdTy, ExprTy>{/*List=*/sharedObjects});
-      hasParallel->clauses.push_back(shared);
+      dirParallel->clauses.push_back(shared);
     }
-    if (hasTeams && !applyToTeams) {
+    if (dirTeams && !applyToTeams) {
       auto *shared = makeClause(
           llvm::omp::Clause::OMPC_shared,
           tomp::clause::SharedT<TypeTy, IdTy, ExprTy>{/*List=*/sharedObjects});
-      hasTeams->clauses.push_back(shared);
+      dirTeams->clauses.push_back(shared);
     }
   }
 
   // [5.2:341:10]
-  auto hasTarget = findDirective(llvm::omp::Directive::OMPD_target);
-  if (hasTarget && leafs.size() > 1) {
+  auto dirTarget = findDirective(llvm::omp::Directive::OMPD_target);
+  if (dirTarget && leafs.size() > 1) {
     tomp::ObjectListT<IdTy, ExprTy> tofrom;
     llvm::copy_if(objects, std::back_inserter(tofrom),
                   [&](const ObjectTy &object) {
@@ -980,7 +980,7 @@ bool ConstructDecompositionT<C, H>::applyClause(
                /*Mapper=*/std::nullopt, /*Iterator=*/std::nullopt,
                /*LocatorList=*/std::move(tofrom)}});
 
-      hasTarget->clauses.push_back(map);
+      dirTarget->clauses.push_back(map);
       applied = true;
     }
   }
@@ -1052,7 +1052,7 @@ bool ConstructDecompositionT<C, H>::applyClause(
     return false;
 
   // [5.2:341:15.2], [5.2:341:19]
-  auto hasSimd = findDirective(llvm::omp::Directive::OMPD_simd);
+  auto dirSimd = findDirective(llvm::omp::Directive::OMPD_simd);
   std::optional<ObjectTy> iterVar = helper.getLoopIterVar();
   const auto &objects = std::get<tomp::ObjectListT<IdTy, ExprTy>>(clause.t);
 
@@ -1062,7 +1062,7 @@ bool ConstructDecompositionT<C, H>::applyClause(
 
   for (const ObjectTy &object : objects) {
     last.push_back(object);
-    if (!hasSimd || !iterVar || object.id() != iterVar->id())
+    if (!dirSimd || !iterVar || object.id() != iterVar->id())
       first.push_back(object);
   }
 

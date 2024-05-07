@@ -93,7 +93,7 @@ ConstructQueue buildConstructQueue(
   List<UnitConstruct> constructs;
 
   ConstructDecomposition decompose(modOp, semaCtx, eval, compound, clauses);
-  assert(!decompose.output.empty());
+  assert(!decompose.output.empty() && "Construct decomposition failed");
 
   llvm::SmallVector<llvm::omp::Directive> loweringUnits;
   std::ignore =
