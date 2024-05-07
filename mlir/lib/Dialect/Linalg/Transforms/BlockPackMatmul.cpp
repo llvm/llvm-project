@@ -139,9 +139,6 @@ transposePackedMatmul(RewriterBase &rewriter, linalg::LinalgOp linalgOp,
 FailureOr<PackResult>
 linalg::blockPackMatmul(RewriterBase &rewriter, linalg::LinalgOp linalgOp,
                         const ControlBlockPackMatmulFn &controlPackMatmul) {
-  if (linalgOp.hasDynamicShape())
-    return rewriter.notifyMatchFailure(linalgOp, "require static shape");
-
   if (linalgOp.hasPureBufferSemantics())
     return rewriter.notifyMatchFailure(linalgOp, "require tensor semantics");
 
