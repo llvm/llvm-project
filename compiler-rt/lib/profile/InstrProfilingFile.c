@@ -1360,9 +1360,10 @@ int __llvm_write_custom_profile(const char *Target,
   initFileWriter(&fileWriter, OutputFile);
 
   /* Write custom data to the file */
-  ReturnValue = lprofWriteDataImpl(
-      &fileWriter, DataBegin, DataEnd, CountersBegin, CountersEnd, NULL, NULL,
-      lprofGetVPDataReader(), NamesBegin, NamesEnd, MergeDone);
+  ReturnValue =
+      lprofWriteDataImpl(&fileWriter, DataBegin, DataEnd, CountersBegin,
+                         CountersEnd, NULL, NULL, lprofGetVPDataReader(), NULL,
+                         NULL, NULL, NULL, NamesBegin, NamesEnd, MergeDone);
 
   closeFileObject(OutputFile);
 
