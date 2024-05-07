@@ -53,6 +53,7 @@ enum OpCode {
   OpCodeCast,
   OpCodeSwitch,
   OpCodePHI,
+  OpCodeIndirectCall,
   OpCodeUnimplemented = 255, // YKFIXME: Will eventually be deleted.
 };
 
@@ -479,6 +480,29 @@ private:
     }
   }
 
+  void serialiseIndirectCallInst(CallInst *I, FuncLowerCtxt &FLCtxt,
+                                 unsigned BBIdx, unsigned &InstIdx) {
+
+    serialiseOpcode(OpCodeIndirectCall);
+    // function type:
+    OutStreamer.emitSizeT(typeIndex(I->getFunctionType()));
+    // callee (operand):
+    serialiseOperand(I, FLCtxt, I->getCalledOperand());
+    // num_args:
+    // (this includes static and varargs arguments)
+    OutStreamer.emitInt32(I->arg_size());
+    // args:
+    for (unsigned OI = 0; OI < I->arg_size(); OI++) {
+      serialiseOperand(I, FLCtxt, I->getOperand(OI));
+    }
+
+    // If the return type is non-void, then this defines a local.
+    if (!I->getType()->isVoidTy()) {
+      FLCtxt.updateVLMap(I, InstIdx);
+    }
+    InstIdx++;
+  }
+
   void serialiseCallInst(CallInst *I, FuncLowerCtxt &FLCtxt, unsigned BBIdx,
                          unsigned &InstIdx) {
     if (I->isInlineAsm()) {
@@ -494,6 +518,11 @@ private:
       return;
     }
 
+    if (I->isIndirectCall()) {
+      serialiseIndirectCallInst(I, FLCtxt, BBIdx, InstIdx);
+      return;
+    }
+
     // Stackmap calls are serialised on-demand by folding them into the `call`
     // or `condbr` instruction which they belong to.
     if (I->getCalledFunction()->isIntrinsic() &&
@@ -501,9 +530,7 @@ private:
       return;
     }
 
-    // FIXME: indirect calls.
-    //
-    // Note that this assertion can also fail if you do a direct call without
+    // FIXME: Note that this assertion can fail if you do a direct call without
     // the correct type annotation at the call site.
     //
     // e.g. for a functiion:
