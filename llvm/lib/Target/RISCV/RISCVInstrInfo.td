@@ -46,7 +46,6 @@ def SDT_RISCVIntBinOpW : SDTypeProfile<1, 2, [
 def SDT_RISCVIntShiftDOpW : SDTypeProfile<1, 3, [
   SDTCisSameAs<0, 1>, SDTCisSameAs<0, 2>, SDTCisVT<0, i64>, SDTCisVT<3, i64>
 ]>;
-def SDT_RISCVSWGuardedBrind : SDTypeProfile<0, -1, [SDTCisVT<0, iPTR>]>;
 
 // Target-independent nodes, but with target-specific formats.
 def callseq_start : SDNode<"ISD::CALLSEQ_START", SDT_CallSeqStart,
@@ -71,7 +70,7 @@ def riscv_tail      : SDNode<"RISCVISD::TAIL", SDT_RISCVCall,
                              [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
                               SDNPVariadic]>;
 def riscv_sw_guarded_brind : SDNode<"RISCVISD::SW_GUARDED_BRIND",
-                                    SDT_RISCVSWGuardedBrind, [SDNPHasChain]>;
+                                    SDTBrind, [SDNPHasChain]>;
 def riscv_sllw      : SDNode<"RISCVISD::SLLW", SDT_RISCVIntBinOpW>;
 def riscv_sraw      : SDNode<"RISCVISD::SRAW", SDT_RISCVIntBinOpW>;
 def riscv_srlw      : SDNode<"RISCVISD::SRLW", SDT_RISCVIntBinOpW>;
@@ -1924,12 +1923,6 @@ let Predicates = [IsRV64] in {
 def : Pat<(binop_allwusers<add> GPR:$rs1, (AddiPair:$rs2)),
           (ADDIW (i64 (ADDIW GPR:$rs1, (AddiPairImmLarge AddiPair:$rs2))),
                  (AddiPairImmSmall AddiPair:$rs2))>;
-}
-
-let Predicates = [HasStdExtZicfilp] in {
-def : Pat<(riscv_sw_guarded_brind GPRX7:$rs1), (PseudoBRINDX7 GPRX7:$rs1, 0)>;
-def : Pat<(riscv_sw_guarded_brind (add GPRX7:$rs1, simm12:$imm12)),
-          (PseudoBRINDX7 GPRX7:$rs1, simm12:$imm12)>;
 }
 
 //===----------------------------------------------------------------------===//
