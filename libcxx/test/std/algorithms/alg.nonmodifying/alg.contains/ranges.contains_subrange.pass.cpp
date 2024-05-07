@@ -309,6 +309,10 @@ constexpr bool test() {
     });
   });
 
+  assert(std::ranges::contains_subrange(
+      std::views::iota(0, 5), std::views::iota(0, 5) | std::views::filter([](int) { return true; })));
+  assert(!std::ranges::contains_subrange(std::views::iota(0ULL, 42ULL), std::views::iota(0ULL, 1ULL << 32)));
+
   return true;
 }
 

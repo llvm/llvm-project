@@ -41,6 +41,7 @@ add_llvm_component_library(LLVMCore
   LLVMRemarkStreamer.cpp
   LegacyPassManager.cpp
   MDBuilder.cpp
+  MemoryModelRelaxationAnnotations.cpp
   Mangler.cpp
   Metadata.cpp
   Module.cpp

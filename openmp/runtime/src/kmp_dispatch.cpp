@@ -2397,6 +2397,8 @@ static int __kmp_dispatch_next(ident_t *loc, int gtid, kmp_int32 *p_last,
           sh->u.s.ordered_iteration = 0;
         }
 
+        KMP_MB(); /* Flush all pending memory write invalidates.  */
+
         sh->buffer_index += __kmp_dispatch_num_buffers;
         KD_TRACE(100, ("__kmp_dispatch_next: T#%d change buffer_index:%d\n",
                        gtid, sh->buffer_index));

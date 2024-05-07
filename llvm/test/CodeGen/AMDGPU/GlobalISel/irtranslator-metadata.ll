@@ -5,12 +5,12 @@
 define i32 @reloc_constant() {
   ; CHECK-LABEL: name: reloc_constant
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK:   [[INT0:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.reloc.constant), !0
+  ; CHECK-NEXT:   [[INT:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.reloc.constant), !0
   ; We cannot have any specific metadata check here as ConstantAsMetadata is printed as <raw_ptr_val>
-  ; CHECK:   [[INT1:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.reloc.constant), <0x{{[0-9a-f]+}}>
-  ; CHECK:   [[SUM:%[0-9]+]]:_(s32) = G_ADD [[INT0]], [[INT1]]
-  ; CHECK:   $vgpr0 = COPY [[SUM]](s32)
-  ; CHECK:   SI_RETURN implicit $vgpr0
+  ; CHECK-NEXT:   [[INT1:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.reloc.constant), <0x{{[0-9a-f]+}}>
+  ; CHECK-NEXT:   [[ADD:%[0-9]+]]:_(s32) = G_ADD [[INT]], [[INT1]]
+  ; CHECK-NEXT:   $vgpr0 = COPY [[ADD]](s32)
+  ; CHECK-NEXT:   SI_RETURN implicit $vgpr0
   %val0 = call i32 @llvm.amdgcn.reloc.constant(metadata !0)
   %val1 = call i32 @llvm.amdgcn.reloc.constant(metadata i32 4)
   %res = add i32 %val0, %val1

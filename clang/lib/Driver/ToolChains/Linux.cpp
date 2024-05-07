@@ -237,11 +237,19 @@ Linux::Linux(const Driver &D, const llvm::Triple &Triple, const ArgList &Args)
     ExtraOpts.push_back("relro");
   }
 
-  // Android ARM/AArch64 use max-page-size=4096 to reduce VMA usage. Note, lld
-  // from 11 onwards default max-page-size to 65536 for both ARM and AArch64.
-  if ((Triple.isARM() || Triple.isAArch64()) && Triple.isAndroid()) {
-    ExtraOpts.push_back("-z");
-    ExtraOpts.push_back("max-page-size=4096");
+  // Note, lld from 11 onwards default max-page-size to 65536 for both ARM and
+  // AArch64.
+  if (Triple.isAndroid()) {
+    if (Triple.isARM()) {
+      // Android ARM uses max-page-size=4096 to reduce VMA usage.
+      ExtraOpts.push_back("-z");
+      ExtraOpts.push_back("max-page-size=4096");
+    } else if (Triple.isAArch64() || Triple.getArch() == llvm::Triple::x86_64) {
+      // Android AArch64 uses max-page-size=16384 to support 4k/16k page sizes.
+      // Android emulates a 16k page size for app testing on x86_64 machines.
+      ExtraOpts.push_back("-z");
+      ExtraOpts.push_back("max-page-size=16384");
+    }
   }
 
   if (GCCInstallation.getParentLibPath().contains("opt/rh/"))
@@ -377,7 +385,7 @@ std::string Linux::computeSysRoot() const {
   if (getTriple().isAndroid()) {
     // Android toolchains typically include a sysroot at ../sysroot relative to
     // the clang binary.
-    const StringRef ClangDir = getDriver().getInstalledDir();
+    const StringRef ClangDir = getDriver().Dir;
     std::string AndroidSysRootPath = (ClangDir + "/../sysroot").str();
     if (getVFS().exists(AndroidSysRootPath))
       return AndroidSysRootPath;
@@ -832,25 +840,6 @@ void Linux::addProfileRTLibs(const llvm::opt::ArgList &Args,
     CmdArgs.push_back(Args.MakeArgString(
         Twine("-u", llvm::getInstrProfRuntimeHookVarName())));
   ToolChain::addProfileRTLibs(Args, CmdArgs);
-}
-
-llvm::DenormalMode
-Linux::getDefaultDenormalModeForType(const llvm::opt::ArgList &DriverArgs,
-                                     const JobAction &JA,
-                                     const llvm::fltSemantics *FPType) const {
-  switch (getTriple().getArch()) {
-  case llvm::Triple::x86:
-  case llvm::Triple::x86_64: {
-    std::string Unused;
-    // DAZ and FTZ are turned on in crtfastmath.o
-    if (!DriverArgs.hasArg(options::OPT_nostdlib, options::OPT_nostartfiles) &&
-        isFastMathRuntimeAvailable(DriverArgs, Unused))
-      return llvm::DenormalMode::getPreserveSign();
-    return llvm::DenormalMode::getIEEE();
-  }
-  default:
-    return llvm::DenormalMode::getIEEE();
-  }
 }
 
 void Linux::addExtraOpts(llvm::opt::ArgStringList &CmdArgs) const {

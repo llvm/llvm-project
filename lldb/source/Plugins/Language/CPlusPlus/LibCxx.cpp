@@ -63,7 +63,7 @@ lldb::ValueObjectSP
 lldb_private::formatters::GetSecondValueOfLibCXXCompressedPair(
     ValueObject &pair) {
   ValueObjectSP value;
-  if (pair.GetNumChildren() > 1) {
+  if (pair.GetNumChildrenIgnoringErrors() > 1) {
     ValueObjectSP second_child = pair.GetChildAtIndex(1);
     if (second_child) {
       value = second_child->GetChildMemberWithName("__value_");
@@ -106,13 +106,13 @@ bool lldb_private::formatters::LibcxxFunctionSummaryProvider(
   case CPPLanguageRuntime::LibCppStdFunctionCallableCase::Lambda:
     stream.Printf(
         " Lambda in File %s at Line %u",
-        callable_info.callable_line_entry.file.GetFilename().GetCString(),
+        callable_info.callable_line_entry.GetFile().GetFilename().GetCString(),
         callable_info.callable_line_entry.line);
     break;
   case CPPLanguageRuntime::LibCppStdFunctionCallableCase::CallableObject:
     stream.Printf(
         " Function in File %s at Line %u",
-        callable_info.callable_line_entry.file.GetFilename().GetCString(),
+        callable_info.callable_line_entry.GetFile().GetFilename().GetCString(),
         callable_info.callable_line_entry.line);
     break;
   case CPPLanguageRuntime::LibCppStdFunctionCallableCase::FreeOrMemberFunction:
@@ -351,14 +351,14 @@ lldb_private::formatters::LibCxxMapIteratorSyntheticFrontEnd::Update() {
   return lldb::ChildCacheState::eRefetch;
 }
 
-size_t lldb_private::formatters::LibCxxMapIteratorSyntheticFrontEnd::
-    CalculateNumChildren() {
+llvm::Expected<uint32_t> lldb_private::formatters::
+    LibCxxMapIteratorSyntheticFrontEnd::CalculateNumChildren() {
   return 2;
 }
 
 lldb::ValueObjectSP
 lldb_private::formatters::LibCxxMapIteratorSyntheticFrontEnd::GetChildAtIndex(
-    size_t idx) {
+    uint32_t idx) {
   if (m_pair_ptr)
     return m_pair_ptr->GetChildAtIndex(idx);
   if (m_pair_sp)
@@ -509,13 +509,13 @@ lldb::ChildCacheState lldb_private::formatters::
   return lldb::ChildCacheState::eRefetch;
 }
 
-size_t lldb_private::formatters::LibCxxUnorderedMapIteratorSyntheticFrontEnd::
-    CalculateNumChildren() {
+llvm::Expected<uint32_t> lldb_private::formatters::
+    LibCxxUnorderedMapIteratorSyntheticFrontEnd::CalculateNumChildren() {
   return 2;
 }
 
 lldb::ValueObjectSP lldb_private::formatters::
-    LibCxxUnorderedMapIteratorSyntheticFrontEnd::GetChildAtIndex(size_t idx) {
+    LibCxxUnorderedMapIteratorSyntheticFrontEnd::GetChildAtIndex(uint32_t idx) {
   if (m_pair_sp)
     return m_pair_sp->GetChildAtIndex(idx);
   return lldb::ValueObjectSP();
@@ -566,14 +566,14 @@ lldb_private::formatters::LibcxxSharedPtrSyntheticFrontEnd::
     Update();
 }
 
-size_t lldb_private::formatters::LibcxxSharedPtrSyntheticFrontEnd::
-    CalculateNumChildren() {
+llvm::Expected<uint32_t> lldb_private::formatters::
+    LibcxxSharedPtrSyntheticFrontEnd::CalculateNumChildren() {
   return (m_cntrl ? 1 : 0);
 }
 
 lldb::ValueObjectSP
 lldb_private::formatters::LibcxxSharedPtrSyntheticFrontEnd::GetChildAtIndex(
-    size_t idx) {
+    uint32_t idx) {
   if (!m_cntrl)
     return lldb::ValueObjectSP();
 
@@ -661,8 +661,8 @@ lldb_private::formatters::LibcxxUniquePtrSyntheticFrontEndCreator(
                     : nullptr);
 }
 
-size_t lldb_private::formatters::LibcxxUniquePtrSyntheticFrontEnd::
-    CalculateNumChildren() {
+llvm::Expected<uint32_t> lldb_private::formatters::
+    LibcxxUniquePtrSyntheticFrontEnd::CalculateNumChildren() {
   if (m_value_ptr_sp)
     return m_deleter_sp ? 2 : 1;
   return 0;
@@ -670,7 +670,7 @@ size_t lldb_private::formatters::LibcxxUniquePtrSyntheticFrontEnd::
 
 lldb::ValueObjectSP
 lldb_private::formatters::LibcxxUniquePtrSyntheticFrontEnd::GetChildAtIndex(
-    size_t idx) {
+    uint32_t idx) {
   if (!m_value_ptr_sp)
     return lldb::ValueObjectSP();
 
@@ -1087,8 +1087,10 @@ bool lldb_private::formatters::LibcxxWStringViewSummaryProvider(
                                         dataobj, size);
 }
 
-bool lldb_private::formatters::LibcxxChronoSysSecondsSummaryProvider(
-    ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
+static bool
+LibcxxChronoTimePointSecondsSummaryProvider(ValueObject &valobj, Stream &stream,
+                                            const TypeSummaryOptions &options,
+                                            const char *fmt) {
   ValueObjectSP ptr_sp = valobj.GetChildMemberWithName("__d_");
   if (!ptr_sp)
     return false;
@@ -1112,7 +1114,7 @@ bool lldb_private::formatters::LibcxxChronoSysSecondsSummaryProvider(
   else {
     std::array<char, 128> str;
     std::size_t size =
-        std::strftime(str.data(), str.size(), "%FT%H:%M:%SZ", gmtime(&seconds));
+        std::strftime(str.data(), str.size(), fmt, gmtime(&seconds));
     if (size == 0)
       return false;
 
@@ -1123,8 +1125,22 @@ bool lldb_private::formatters::LibcxxChronoSysSecondsSummaryProvider(
   return true;
 }
 
-bool lldb_private::formatters::LibcxxChronoSysDaysSummaryProvider(
+bool lldb_private::formatters::LibcxxChronoSysSecondsSummaryProvider(
     ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
+  return LibcxxChronoTimePointSecondsSummaryProvider(valobj, stream, options,
+                                                     "%FT%H:%M:%SZ");
+}
+
+bool lldb_private::formatters::LibcxxChronoLocalSecondsSummaryProvider(
+    ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
+  return LibcxxChronoTimePointSecondsSummaryProvider(valobj, stream, options,
+                                                     "%FT%H:%M:%S");
+}
+
+static bool
+LibcxxChronoTimepointDaysSummaryProvider(ValueObject &valobj, Stream &stream,
+                                         const TypeSummaryOptions &options,
+                                         const char *fmt) {
   ValueObjectSP ptr_sp = valobj.GetChildMemberWithName("__d_");
   if (!ptr_sp)
     return false;
@@ -1148,7 +1164,7 @@ bool lldb_private::formatters::LibcxxChronoSysDaysSummaryProvider(
 
     std::array<char, 128> str;
     std::size_t size =
-        std::strftime(str.data(), str.size(), "%FZ", gmtime(&seconds));
+        std::strftime(str.data(), str.size(), fmt, gmtime(&seconds));
     if (size == 0)
       return false;
 
@@ -1156,6 +1172,18 @@ bool lldb_private::formatters::LibcxxChronoSysDaysSummaryProvider(
   }
 
   return true;
+}
+
+bool lldb_private::formatters::LibcxxChronoSysDaysSummaryProvider(
+    ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
+  return LibcxxChronoTimepointDaysSummaryProvider(valobj, stream, options,
+                                                  "%FZ");
+}
+
+bool lldb_private::formatters::LibcxxChronoLocalDaysSummaryProvider(
+    ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
+  return LibcxxChronoTimepointDaysSummaryProvider(valobj, stream, options,
+                                                  "%F");
 }
 
 bool lldb_private::formatters::LibcxxChronoMonthSummaryProvider(
@@ -1192,7 +1220,7 @@ bool lldb_private::formatters::LibcxxChronoWeekdaySummaryProvider(
     return false;
 
   const unsigned weekday = ptr_sp->GetValueAsUnsigned(0);
-  if (weekday >= 0 && weekday < 7)
+  if (weekday < 7)
     stream << "weekday=" << weekdays[weekday];
   else
     stream.Printf("weekday=%u", weekday);

@@ -284,9 +284,10 @@ public:
   /// found on the file system.
   SmallVector<UnresolvedHeaderDirective, 1> MissingHeaders;
 
-  /// An individual requirement: a feature name and a flag indicating
-  /// the required state of that feature.
-  using Requirement = std::pair<std::string, bool>;
+  struct Requirement {
+    std::string FeatureName;
+    bool RequiredState;
+  };
 
   /// The set of language features required to use this module.
   ///
@@ -598,6 +599,11 @@ public:
            Kind == ModulePartitionImplementation;
   }
 
+  /// Is this a module partition implementation unit.
+  bool isModulePartitionImplementation() const {
+    return Kind == ModulePartitionImplementation;
+  }
+
   /// Is this a module implementation.
   bool isModuleImplementation() const {
     return Kind == ModuleImplementationUnit;
@@ -853,12 +859,6 @@ public:
                   VisibleCallback Vis = [](Module *) {},
                   ConflictCallback Cb = [](ArrayRef<Module *>, Module *,
                                            StringRef) {});
-
-  /// Make transitive imports visible for [module.import]/7.
-  void makeTransitiveImportsVisible(
-      Module *M, SourceLocation Loc, VisibleCallback Vis = [](Module *) {},
-      ConflictCallback Cb = [](ArrayRef<Module *>, Module *, StringRef) {});
-
 private:
   /// Import locations for each visible module. Indexed by the module's
   /// VisibilityID.

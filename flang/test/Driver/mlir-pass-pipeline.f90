@@ -28,8 +28,15 @@ end program
 ! ALL-NEXT:   (S) 0 num-cse'd - Number of operations CSE'd
 ! ALL-NEXT:   (S) 0 num-dce'd - Number of operations DCE'd
 
+! ALL-NEXT: Pipeline Collection : ['fir.global', 'func.func', 'omp.declare_reduction', 'omp.private']
+! ALL-NEXT: 'fir.global' Pipeline
+! ALL-NEXT:   CharacterConversion
 ! ALL-NEXT: 'func.func' Pipeline
 ! ALL-NEXT:   ArrayValueCopy
+! ALL-NEXT:   CharacterConversion
+! ALL-NEXT: 'omp.declare_reduction' Pipeline
+! ALL-NEXT:   CharacterConversion
+! ALL-NEXT: 'omp.private' Pipeline
 ! ALL-NEXT:   CharacterConversion
 
 ! ALL-NEXT: Canonicalizer
@@ -49,11 +56,18 @@ end program
 ! ALL-NEXT:   (S) 0 num-cse'd - Number of operations CSE'd
 ! ALL-NEXT:   (S) 0 num-dce'd - Number of operations DCE'd
 
-! ALL-NEXT: 'func.func' Pipeline
-! ALL-NEXT:   PolymorphicOpConversion
+! ALL-NEXT: PolymorphicOpConversion
 ! O2-NEXT:  AddAliasTags
-! O2-NEXT:  'func.func' Pipeline
-! ALL-NEXT:   CFGConversion
+
+! ALL-NEXT: Pipeline Collection : ['fir.global', 'func.func', 'omp.declare_reduction', 'omp.private']
+! ALL-NEXT:    'fir.global' Pipeline
+! ALL-NEXT:      CFGConversion
+! ALL-NEXT:    'func.func' Pipeline
+! ALL-NEXT:      CFGConversion
+! ALL-NEXT:   'omp.declare_reduction' Pipeline
+! ALL-NEXT:      CFGConversion
+! ALL-NEXT:   'omp.private' Pipeline
+! ALL-NEXT:      CFGConversion
 
 ! ALL-NEXT: SCFToControlFlow
 ! ALL-NEXT: Canonicalizer
@@ -63,11 +77,15 @@ end program
 ! ALL-NEXT:   (S) 0 num-dce'd - Number of operations DCE'd
 ! ALL-NEXT: BoxedProcedurePass
 
-! ALL-NEXT: Pipeline Collection : ['fir.global', 'func.func']
+! ALL-NEXT: Pipeline Collection : ['fir.global', 'func.func', 'omp.declare_reduction', 'omp.private']
 ! ALL-NEXT:   'fir.global' Pipeline
-! ALL-NEXT:    AbstractResultOnGlobalOpt
+! ALL-NEXT:    AbstractResultOpt
 ! ALL-NEXT:  'func.func' Pipeline
-! ALL-NEXT:    AbstractResultOnFuncOpt
+! ALL-NEXT:    AbstractResultOpt
+! ALL-NEXT:  'omp.declare_reduction' Pipeline
+! ALL-NEXT:    AbstractResultOpt
+! ALL-NEXT:  'omp.private' Pipeline
+! ALL-NEXT:    AbstractResultOpt
 
 ! ALL-NEXT: CodeGenRewrite
 ! ALL-NEXT:   (S) 0 num-dce'd - Number of operations eliminated

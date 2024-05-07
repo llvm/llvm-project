@@ -79,6 +79,7 @@ struct Section {
   llvm::yaml::Hex16 NumberOfRelocations;
   llvm::yaml::Hex16 NumberOfLineNumbers; // Line number counts. Not supported yet.
   uint32_t Flags;
+  std::optional<XCOFF::DwarfSectionSubtypeFlags> SectionSubtype;
   yaml::BinaryRef SectionData;
   std::vector<Relocation> Relocations;
 };
@@ -230,6 +231,10 @@ namespace yaml {
 
 template <> struct ScalarBitSetTraits<XCOFF::SectionTypeFlags> {
   static void bitset(IO &IO, XCOFF::SectionTypeFlags &Value);
+};
+
+template <> struct ScalarEnumerationTraits<XCOFF::DwarfSectionSubtypeFlags> {
+  static void enumeration(IO &IO, XCOFF::DwarfSectionSubtypeFlags &Value);
 };
 
 template <> struct ScalarEnumerationTraits<XCOFF::StorageClass> {

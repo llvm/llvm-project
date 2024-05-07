@@ -38,7 +38,9 @@ struct B test11(struct B a) { return a; }
 
 #include <stdarg.h>
 
-// For variadic arguments, va_arg will always retreive 
+// The layout of the va_list struct is unchanged between the ABIs, but for
+// aapcs-soft, floating-point arguments will be retreived from the GPR save
+// area, as if they were an integer type of the same size.
 // CHECK-LABEL: define dso_local double @test20(i32 noundef %a, ...)
 // CHECK: %vl = alloca %struct.__va_list, align 8
 // SOFT: %gr_offs_p = getelementptr inbounds %struct.__va_list, ptr %vl, i32 0, i32 3

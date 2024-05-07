@@ -328,9 +328,10 @@ bool X86_64::relaxOnce(int pass) const {
         if (rel.expr != R_RELAX_GOT_PC)
           continue;
 
-        uint64_t v = sec->getRelocTargetVA(
-            sec->file, rel.type, rel.addend,
-            sec->getOutputSection()->addr + rel.offset, *rel.sym, rel.expr);
+        uint64_t v = sec->getRelocTargetVA(sec->file, rel.type, rel.addend,
+                                           sec->getOutputSection()->addr +
+                                               sec->outSecOff + rel.offset,
+                                           *rel.sym, rel.expr);
         if (isInt<32>(v))
           continue;
         if (rel.sym->auxIdx == 0) {

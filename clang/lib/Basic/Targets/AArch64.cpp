@@ -15,6 +15,7 @@
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/TargetBuiltins.h"
 #include "clang/Basic/TargetInfo.h"
+#include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -187,6 +188,8 @@ AArch64TargetInfo::AArch64TargetInfo(const llvm::Triple &Triple,
   assert(UseBitFieldTypeAlignment && "bitfields affect type alignment");
   UseZeroLengthBitfieldAlignment = true;
 
+  HasUnalignedAccess = true;
+
   // AArch64 targets default to using the ARM C++ ABI.
   TheCXXABI.set(TargetCXXABI::GenericAArch64);
 
@@ -205,15 +208,6 @@ bool AArch64TargetInfo::setABI(const std::string &Name) {
 
   ABI = Name;
   return true;
-}
-
-void AArch64TargetInfo::setSupportedArgTypes() {
-  if (!(FPU & FPUMode) && ABI != "aapcs-soft") {
-    // When a hard-float ABI is used on a target without an FPU, all
-    // floating-point argument and return types are rejected because they must
-    // be passed in FP registers.
-    HasFPTypes = false;
-  }
 }
 
 bool AArch64TargetInfo::validateTarget(DiagnosticsEngine &Diags) const {
@@ -387,20 +381,8 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
 
   // ACLE predefines. Many can only have one possible value on v8 AArch64.
   Builder.defineMacro("__ARM_ACLE", "200");
-
-  // __ARM_ARCH is defined as an integer value indicating the current ARM ISA.
-  // For ISAs up to and including v8, __ARM_ARCH is equal to the major version
-  // number. For ISAs from v8.1 onwards, __ARM_ARCH is scaled up to include the
-  // minor version number, e.g. for ARM architecture ARMvX.Y:
-  // __ARM_ARCH = X * 100 + Y.
-  if (ArchInfo->Version.getMajor() == 8 && ArchInfo->Version.getMinor() == 0)
-    Builder.defineMacro("__ARM_ARCH",
-                        std::to_string(ArchInfo->Version.getMajor()));
-  else
-    Builder.defineMacro("__ARM_ARCH",
-                        std::to_string(ArchInfo->Version.getMajor() * 100 +
-                                       ArchInfo->Version.getMinor().value()));
-
+  Builder.defineMacro("__ARM_ARCH",
+                      std::to_string(ArchInfo->Version.getMajor()));
   Builder.defineMacro("__ARM_ARCH_PROFILE",
                       std::string("'") + (char)ArchInfo->Profile + "'");
 
@@ -516,7 +498,7 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
   if (HasPAuthLR)
     Builder.defineMacro("__ARM_FEATURE_PAUTH_LR", "1");
 
-  if (HasUnaligned)
+  if (HasUnalignedAccess)
     Builder.defineMacro("__ARM_FEATURE_UNALIGNED", "1");
 
   if ((FPU & NeonMode) && HasFullFP16)
@@ -699,7 +681,13 @@ StringRef AArch64TargetInfo::getFeatureDependencies(StringRef Name) const {
 }
 
 bool AArch64TargetInfo::validateCpuSupports(StringRef FeatureStr) const {
-  return llvm::AArch64::parseArchExtension(FeatureStr).has_value();
+  // CPU features might be separated by '+', extract them and check
+  llvm::SmallVector<StringRef, 8> Features;
+  FeatureStr.split(Features, "+");
+  for (auto &Feature : Features)
+    if (!llvm::AArch64::parseArchExtension(Feature.trim()).has_value())
+      return false;
+  return true;
 }
 
 bool AArch64TargetInfo::hasFeature(StringRef Feature) const {
@@ -935,7 +923,8 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasSM4 = true;
     }
     if (Feature == "+strict-align")
-      HasUnaligned = false;
+      HasUnalignedAccess = false;
+
     // All predecessor archs are added but select the latest one for ArchKind.
     if (Feature == "+v8a" && ArchInfo->Version < llvm::AArch64::ARMV8A.Version)
       ArchInfo = &llvm::AArch64::ARMV8A;
@@ -1477,6 +1466,11 @@ int AArch64TargetInfo::getEHDataRegisterNumber(unsigned RegNo) const {
   return -1;
 }
 
+bool AArch64TargetInfo::validatePointerAuthKey(
+    const llvm::APSInt &value) const {
+  return 0 <= value && value <= 3;
+}
+
 bool AArch64TargetInfo::hasInt128Type() const { return true; }
 
 AArch64leTargetInfo::AArch64leTargetInfo(const llvm::Triple &Triple,
@@ -1486,11 +1480,11 @@ AArch64leTargetInfo::AArch64leTargetInfo(const llvm::Triple &Triple,
 void AArch64leTargetInfo::setDataLayout() {
   if (getTriple().isOSBinFormatMachO()) {
     if(getTriple().isArch32Bit())
-      resetDataLayout("e-m:o-p:32:32-i64:64-i128:128-n32:64-S128", "_");
+      resetDataLayout("e-m:o-p:32:32-i64:64-i128:128-n32:64-S128-Fn32", "_");
     else
-      resetDataLayout("e-m:o-i64:64-i128:128-n32:64-S128", "_");
+      resetDataLayout("e-m:o-i64:64-i128:128-n32:64-S128-Fn32", "_");
   } else
-    resetDataLayout("e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128");
+    resetDataLayout("e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128-Fn32");
 }
 
 void AArch64leTargetInfo::getTargetDefines(const LangOptions &Opts,
@@ -1513,7 +1507,7 @@ void AArch64beTargetInfo::getTargetDefines(const LangOptions &Opts,
 
 void AArch64beTargetInfo::setDataLayout() {
   assert(!getTriple().isOSBinFormatMachO());
-  resetDataLayout("E-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128");
+  resetDataLayout("E-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128-Fn32");
 }
 
 WindowsARM64TargetInfo::WindowsARM64TargetInfo(const llvm::Triple &Triple,
@@ -1536,8 +1530,8 @@ WindowsARM64TargetInfo::WindowsARM64TargetInfo(const llvm::Triple &Triple,
 
 void WindowsARM64TargetInfo::setDataLayout() {
   resetDataLayout(Triple.isOSBinFormatMachO()
-                      ? "e-m:o-i64:64-i128:128-n32:64-S128"
-                      : "e-m:w-p:64:64-i32:32-i64:64-i128:128-n32:64-S128",
+                      ? "e-m:o-i64:64-i128:128-n32:64-S128-Fn32"
+                      : "e-m:w-p:64:64-i32:32-i64:64-i128:128-n32:64-S128-Fn32",
                   Triple.isOSBinFormatMachO() ? "_" : "");
 }
 
@@ -1549,10 +1543,13 @@ WindowsARM64TargetInfo::getBuiltinVaListKind() const {
 TargetInfo::CallingConvCheckResult
 WindowsARM64TargetInfo::checkCallingConvention(CallingConv CC) const {
   switch (CC) {
+  case CC_X86VectorCall:
+    if (getTriple().isWindowsArm64EC())
+      return CCCR_OK;
+    return CCCR_Ignore;
   case CC_X86StdCall:
   case CC_X86ThisCall:
   case CC_X86FastCall:
-  case CC_X86VectorCall:
     return CCCR_Ignore;
   case CC_C:
   case CC_OpenCLKernel:

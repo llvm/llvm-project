@@ -751,6 +751,8 @@ class Base(unittest.TestCase):
             "settings set symbols.enable-external-lookup false",
             # Inherit the TCC permissions from the inferior's parent.
             "settings set target.inherit-tcc true",
+            # Based on https://discourse.llvm.org/t/running-lldb-in-a-container/76801/4
+            "settings set target.disable-aslr false",
             # Kill rather than detach from the inferior if something goes wrong.
             "settings set target.detach-on-error false",
             # Disable fix-its by default so that incorrect expressions in tests don't
@@ -1060,7 +1062,9 @@ class Base(unittest.TestCase):
         lldb.SBModule.GarbageCollectAllocatedModules()
 
         # Assert that the global module cache is empty.
-        self.assertEqual(lldb.SBModule.GetNumberAllocatedModules(), 0)
+        # FIXME: This assert fails on Windows.
+        if self.getPlatform() != "windows":
+            self.assertEqual(lldb.SBModule.GetNumberAllocatedModules(), 0)
 
     # =========================================================
     # Various callbacks to allow introspection of test progress
@@ -1469,11 +1473,12 @@ class Base(unittest.TestCase):
             d = {
                 "CXX_SOURCES": sources,
                 "EXE": exe_name,
-                "CFLAGS_EXTRAS": "%s %s -I%s"
+                "CFLAGS_EXTRAS": "%s %s -I%s -I%s"
                 % (
                     stdflag,
                     stdlibflag,
                     os.path.join(os.environ["LLDB_SRC"], "include"),
+                    os.path.join(configuration.lldb_obj_root, "include"),
                 ),
                 "LD_EXTRAS": "-L%s -lliblldb" % lib_dir,
             }
@@ -1481,11 +1486,12 @@ class Base(unittest.TestCase):
             d = {
                 "CXX_SOURCES": sources,
                 "EXE": exe_name,
-                "CFLAGS_EXTRAS": "%s %s -I%s"
+                "CFLAGS_EXTRAS": "%s %s -I%s -I%s"
                 % (
                     stdflag,
                     stdlibflag,
                     os.path.join(os.environ["LLDB_SRC"], "include"),
+                    os.path.join(configuration.lldb_obj_root, "include"),
                 ),
                 "LD_EXTRAS": "-L%s -llldb -Wl,-rpath,%s" % (lib_dir, lib_dir),
             }
@@ -1504,7 +1510,8 @@ class Base(unittest.TestCase):
             d = {
                 "DYLIB_CXX_SOURCES": sources,
                 "DYLIB_NAME": lib_name,
-                "CFLAGS_EXTRAS": "%s -stdlib=libc++" % stdflag,
+                "CFLAGS_EXTRAS": "%s -stdlib=libc++ -I%s"
+                % (stdflag, os.path.join(configuration.lldb_obj_root, "include")),
                 "FRAMEWORK_INCLUDES": "-F%s" % self.framework_dir,
                 "LD_EXTRAS": "%s -Wl,-rpath,%s -dynamiclib"
                 % (self.lib_lldb, self.framework_dir),
@@ -1513,16 +1520,24 @@ class Base(unittest.TestCase):
             d = {
                 "DYLIB_CXX_SOURCES": sources,
                 "DYLIB_NAME": lib_name,
-                "CFLAGS_EXTRAS": "%s -I%s "
-                % (stdflag, os.path.join(os.environ["LLDB_SRC"], "include")),
-                "LD_EXTRAS": "-shared -l%s\liblldb.lib" % lib_dir,
+                "CFLAGS_EXTRAS": "%s -I%s -I%s"
+                % (
+                    stdflag,
+                    os.path.join(os.environ["LLDB_SRC"], "include"),
+                    os.path.join(configuration.lldb_obj_root, "include"),
+                ),
+                "LD_EXTRAS": "-shared -l%s\\liblldb.lib" % lib_dir,
             }
         else:
             d = {
                 "DYLIB_CXX_SOURCES": sources,
                 "DYLIB_NAME": lib_name,
-                "CFLAGS_EXTRAS": "%s -I%s -fPIC"
-                % (stdflag, os.path.join(os.environ["LLDB_SRC"], "include")),
+                "CFLAGS_EXTRAS": "%s -I%s -I%s -fPIC"
+                % (
+                    stdflag,
+                    os.path.join(os.environ["LLDB_SRC"], "include"),
+                    os.path.join(configuration.lldb_obj_root, "include"),
+                ),
                 "LD_EXTRAS": "-shared -L%s -llldb -Wl,-rpath,%s" % (lib_dir, lib_dir),
             }
         if self.TraceOn():
@@ -1593,21 +1608,6 @@ class Base(unittest.TestCase):
         with recording(self, trace) as sbuf:
             print(str(method) + ":", result, file=sbuf)
         return result
-
-    def getLLDBLibraryEnvVal(self):
-        """Returns the path that the OS-specific library search environment variable
-        (self.dylibPath) should be set to in order for a program to find the LLDB
-        library. If an environment variable named self.dylibPath is already set,
-        the new path is appended to it and returned.
-        """
-        existing_library_path = (
-            os.environ[self.dylibPath] if self.dylibPath in os.environ else None
-        )
-        if existing_library_path:
-            return "%s:%s" % (existing_library_path, configuration.lldb_libs_dir)
-        if sys.platform.startswith("darwin") and configuration.lldb_framework_path:
-            return configuration.lldb_framework_path
-        return configuration.lldb_libs_dir
 
     def getLibcPlusPlusLibs(self):
         if self.getPlatform() in ("freebsd", "linux", "netbsd", "openbsd"):

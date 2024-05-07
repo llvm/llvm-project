@@ -218,11 +218,25 @@ HLSLToolChain::TranslateArgs(const DerivedArgList &Args, StringRef BoundArch,
       }
     }
     if (A->getOption().getID() == options::OPT_emit_pristine_llvm) {
-      // Translate fcgl into -S -emit-llvm and -disable-llvm-passes.
-      DAL->AddFlagArg(nullptr, Opts.getOption(options::OPT_S));
+      // Translate -fcgl into -emit-llvm and -disable-llvm-passes.
       DAL->AddFlagArg(nullptr, Opts.getOption(options::OPT_emit_llvm));
       DAL->AddFlagArg(nullptr,
                       Opts.getOption(options::OPT_disable_llvm_passes));
+      A->claim();
+      continue;
+    }
+    if (A->getOption().getID() == options::OPT_dxc_hlsl_version) {
+      // Translate -HV into -std for llvm
+      // depending on the value given
+      LangStandard::Kind LangStd = LangStandard::getHLSLLangKind(A->getValue());
+      if (LangStd != LangStandard::lang_unspecified) {
+        LangStandard l = LangStandard::getLangStandardForKind(LangStd);
+        DAL->AddSeparateArg(nullptr, Opts.getOption(options::OPT_std_EQ),
+                            l.getName());
+      } else {
+        getDriver().Diag(diag::err_drv_invalid_value) << "HV" << A->getValue();
+      }
+
       A->claim();
       continue;
     }
@@ -240,9 +254,7 @@ HLSLToolChain::TranslateArgs(const DerivedArgList &Args, StringRef BoundArch,
   if (!DAL->hasArg(options::OPT_O_Group)) {
     DAL->AddJoinedArg(nullptr, Opts.getOption(options::OPT_O), "3");
   }
-  // FIXME: add validation for enable_16bit_types should be after HLSL 2018 and
-  // shader model 6.2.
-  // See: https://github.com/llvm/llvm-project/issues/57876
+
   return DAL;
 }
 

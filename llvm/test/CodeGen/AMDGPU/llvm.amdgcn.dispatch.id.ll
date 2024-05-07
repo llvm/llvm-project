@@ -1,4 +1,5 @@
-; RUN: llc -mtriple=amdgcn--amdhsa -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn--amdhsa < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -global-isel -mtriple=amdgcn--amdhsa < %s | FileCheck -check-prefix=GCN %s
 
 declare i64 @llvm.amdgcn.dispatch.id() #1
 
@@ -18,4 +19,4 @@ attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }
 
 !llvm.module.flags = !{!0}
-!0 = !{i32 1, !"amdgpu_code_object_version", i32 400}
+!0 = !{i32 1, !"amdhsa_code_object_version", i32 400}

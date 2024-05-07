@@ -15,6 +15,8 @@
 #include <algorithm>
 #include <cmath>
 
+#define DEBUG_TYPE "exegesis-latency-benchmarkrunner"
+
 namespace llvm {
 namespace exegesis {
 
@@ -50,13 +52,13 @@ static double computeVariance(const SmallVector<int64_t, 4> &Values) {
 static int64_t findMin(const SmallVector<int64_t, 4> &Values) {
   if (Values.empty())
     return 0;
-  return *std::min_element(Values.begin(), Values.end());
+  return *llvm::min_element(Values);
 }
 
 static int64_t findMax(const SmallVector<int64_t, 4> &Values) {
   if (Values.empty())
     return 0;
-  return *std::max_element(Values.begin(), Values.end());
+  return *llvm::max_element(Values);
 }
 
 static int64_t findMean(const SmallVector<int64_t, 4> &Values) {
@@ -91,9 +93,11 @@ Expected<std::vector<BenchmarkMeasure>> LatencyBenchmarkRunner::runMeasurements(
     if (!ExpectedCounterValues)
       return ExpectedCounterValues.takeError();
     ValuesCount = ExpectedCounterValues.get().size();
-    if (ValuesCount == 1)
+    if (ValuesCount == 1) {
+      LLVM_DEBUG(dbgs() << "Latency value: " << ExpectedCounterValues.get()[0]
+                        << "\n");
       AccumulatedValues.push_back(ExpectedCounterValues.get()[0]);
-    else {
+    } else {
       // We'll keep the reading with lowest variance (ie., most stable)
       double Variance = computeVariance(*ExpectedCounterValues);
       if (MinVariance > Variance) {
@@ -102,8 +106,11 @@ Expected<std::vector<BenchmarkMeasure>> LatencyBenchmarkRunner::runMeasurements(
       }
     }
 
-    for (size_t I = 0; I < ValCounterValues.size(); ++I)
+    for (size_t I = 0; I < ValCounterValues.size(); ++I) {
+      LLVM_DEBUG(dbgs() << getValidationEventName(ValidationCounters[I]) << ": "
+                        << IterationValCounterValues[I] << "\n");
       ValCounterValues[I] += IterationValCounterValues[I];
+    }
   }
 
   std::map<ValidationEvent, int64_t> ValidationInfo;

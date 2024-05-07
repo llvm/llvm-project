@@ -62,7 +62,7 @@ getReassociationIndicesAttribute(OpBuilder &b,
 
 /// Convert Array<Array<AffineExpr>> to Array<Array<int64_t>>.
 SmallVector<ReassociationIndices, 2> convertReassociationMapsToIndices(
-    OpBuilder &b, ArrayRef<ReassociationExprs> reassociationExprs);
+    ArrayRef<ReassociationExprs> reassociationExprs);
 
 /// Return the reassociations maps to use to reshape given the source type and
 /// the target type when possible. Return std::nullopt when this computation
@@ -85,16 +85,21 @@ bool isReassociationValid(ArrayRef<AffineMap> reassociation,
 template <typename ReshapeOpTy, typename InverseReshapeOpTy>
 static OpFoldResult foldReshapeOp(ReshapeOpTy reshapeOp,
                                   ArrayRef<Attribute> operands) {
-  // Fold producer-consumer reshape ops that where the operand type of the
+
+  if (reshapeOp.getSrcType() == reshapeOp.getType())
+    return reshapeOp.getSrc();
+
+  // Fold producer-consumer reshape ops where the operand type of the
   // producer is same as the return type of the consumer.
   auto reshapeSrcOp =
       reshapeOp.getSrc().template getDefiningOp<InverseReshapeOpTy>();
   if (reshapeSrcOp && reshapeSrcOp.getSrcType() == reshapeOp.getResultType())
     return reshapeSrcOp.getSrc();
+
   // Reshape of a constant can be replaced with a new constant.
-  if (auto elements = dyn_cast_or_null<DenseElementsAttr>(operands.front())) {
+  if (auto elements = dyn_cast_or_null<DenseElementsAttr>(operands.front()))
     return elements.reshape(cast<ShapedType>(reshapeOp.getResult().getType()));
-  }
+
   return nullptr;
 }
 
@@ -103,72 +108,56 @@ static OpFoldResult foldReshapeOp(ReshapeOpTy reshapeOp,
 template <typename Op, typename T>
 static LogicalResult verifyReshapeLikeTypes(Op op, T expandedType,
                                             T collapsedType, bool isExpansion) {
+
   unsigned expandedRank = expandedType.getRank();
   unsigned collapsedRank = collapsedType.getRank();
   if (expandedRank < collapsedRank)
-    return op.emitOpError("expected the type ")
-           << expandedType
-           << " to have higher rank than the type = " << collapsedType;
-  if (expandedRank == 0)
-    return op.emitOpError("expected non-zero memref ranks");
-  if (expandedRank == collapsedRank)
-    return op.emitOpError("expected to collapse or expand dims");
+    return op.emitOpError("expected the expanded type, ")
+           << expandedType << " to have a higher (or same) rank "
+           << "than the collapsed type, " << collapsedType << '.';
 
-  if (collapsedRank == 0) {
-    // If collapsed rank is 0, then expanded type must be static shaped and of
-    // sizes 1.
-    if (llvm::any_of(expandedType.getShape(),
-                     [](int64_t dim) -> bool { return dim != 1; }))
-      return op.emitOpError("invalid to reshape tensor/memref with non-unit "
-                            "extent dimensions to zero-rank tensor/memref");
-    return success();
-  }
   if (collapsedRank != op.getReassociation().size())
-    return op.emitOpError("expected rank of the collapsed type(")
-           << collapsedRank << ") to be the number of reassociation maps("
-           << op.getReassociation().size() << ")";
+    return op.emitOpError("expected collapsed rank (")
+           << collapsedRank << ") to equal the number of reassociation maps ("
+           << op.getReassociation().size() << ").";
+
   auto maps = op.getReassociationMaps();
   for (auto it : llvm::enumerate(maps))
     if (it.value().getNumDims() != expandedRank)
       return op.emitOpError("expected reassociation map #")
-             << it.index() << " of same rank as expanded memref("
-             << expandedRank << "), but got " << it.value().getNumDims();
+             << it.index() << " to have size equal to the expanded rank ("
+             << expandedRank << "), but it is  " << it.value().getNumDims()
+             << '.';
+
   int invalidIdx = 0;
   if (!isReassociationValid(maps, &invalidIdx))
     return op.emitOpError("expected reassociation map #")
-           << invalidIdx << " to be valid and contiguous";
-  return verifyReshapeLikeShapes(op, collapsedType, expandedType, isExpansion);
+           << invalidIdx << " to be valid and contiguous.";
+
+  return reshapeLikeShapesAreCompatible(
+      [&](const Twine &msg) { return op->emitOpError(msg); },
+      collapsedType.getShape(), expandedType.getShape(),
+      op.getReassociationIndices(), isExpansion);
 }
 
-/// Verify that shapes of the reshaped types using following rules
-/// 1) if a dimension in the collapsed type is static, then the corresponding
-///    dimensions in the expanded shape should be
+/// Verify that shapes of the reshaped types using following rule:
+/// if a dimension in the collapsed type is static, then the corresponding
+/// dimensions in the expanded shape should be
 ///    a) static
 ///    b) the product should be same as the collaped shape.
-/// 2) if a dimension in the collaped type is dynamic, one and only one of the
-///    corresponding dimensions in the expanded type should be dynamic. This
-///    rule is only needed with reshape operations that are expanding.
 LogicalResult reshapeLikeShapesAreCompatible(
     function_ref<LogicalResult(const Twine &)> emitError,
     ArrayRef<int64_t> collapsedShape, ArrayRef<int64_t> expandedShape,
     ArrayRef<ReassociationIndices> reassociationMaps, bool isExpandingReshape);
 
-template <typename OpTy>
-static LogicalResult verifyReshapeLikeShapes(OpTy op, ShapedType collapsedType,
-                                             ShapedType expandedType,
-                                             bool isExpandingReshape) {
-  return reshapeLikeShapesAreCompatible(
-      [&](const Twine &msg) { return op->emitOpError(msg); },
-      collapsedType.getShape(), expandedType.getShape(),
-      op.getReassociationIndices(), isExpandingReshape);
-}
-
 /// Returns true iff the type is a MemRefType and has a non-identity layout.
 bool hasNonIdentityLayout(Type type);
 
+enum class ReshapeOpKind { kExpand, kCollapse };
+
 /// Pattern to collapse producer/consumer reshape ops that are both collapsing
 /// dimensions or are both expanding dimensions.
-template <typename ReshapeOpTy>
+template <typename ReshapeOpTy, ReshapeOpKind opKind>
 struct ComposeReassociativeReshapeOps : public OpRewritePattern<ReshapeOpTy> {
   using OpRewritePattern<ReshapeOpTy>::OpRewritePattern;
   LogicalResult matchAndRewrite(ReshapeOpTy reshapeOp,
@@ -191,8 +180,18 @@ struct ComposeReassociativeReshapeOps : public OpRewritePattern<ReshapeOpTy> {
                                     rewriter.getContext());
     if (!reassociationIndices)
       return failure();
-    rewriter.replaceOpWithNewOp<ReshapeOpTy>(
-        reshapeOp, resultType, srcReshapeOp.getSrc(), *reassociationIndices);
+
+    if constexpr (opKind == ReshapeOpKind::kExpand) {
+      SmallVector<OpFoldResult> outputShape(
+          getMixedValues(reshapeOp.getStaticOutputShape(),
+                         reshapeOp.getOutputShape(), rewriter));
+      rewriter.replaceOpWithNewOp<ReshapeOpTy>(
+          reshapeOp, resultType, srcReshapeOp.getSrc(), *reassociationIndices,
+          outputShape);
+    } else {
+      rewriter.replaceOpWithNewOp<ReshapeOpTy>(
+          reshapeOp, resultType, srcReshapeOp.getSrc(), *reassociationIndices);
+    }
     return success();
   }
 };
@@ -225,7 +224,8 @@ struct ComposeReassociativeReshapeOps : public OpRewritePattern<ReshapeOpTy> {
 //
 /// When `rank(srcType) < rank(resultType)`, then we just swap `reassociation_1`
 /// `reassociation_2` and produce `expand_shape`.
-template <typename CollapseOpTy, typename ExpandOpTy, typename CastOpTy>
+template <typename CollapseOpTy, typename ExpandOpTy, typename CastOpTy,
+          typename DimOpTy, typename TensorTy>
 struct ComposeCollapseOfExpandOp : public OpRewritePattern<CollapseOpTy> {
   using OpRewritePattern<CollapseOpTy>::OpRewritePattern;
   LogicalResult matchAndRewrite(CollapseOpTy collapseOp,
@@ -332,8 +332,11 @@ struct ComposeExpandOfCollapseOp : public OpRewritePattern<ExpandOpTy> {
     if (!composedReassociation)
       return failure();
 
+    SmallVector<OpFoldResult> outputShape(getMixedValues(
+        expandOp.getStaticOutputShape(), expandOp.getOutputShape(), rewriter));
     rewriter.replaceOpWithNewOp<ExpandOpTy>(
-        expandOp, resultType, collapseOp.getSrc(), *composedReassociation);
+        expandOp, resultType, collapseOp.getSrc(), *composedReassociation,
+        outputShape);
     return success();
   }
 

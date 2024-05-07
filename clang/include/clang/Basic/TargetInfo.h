@@ -24,6 +24,7 @@
 #include "clang/Basic/TargetOptions.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
+#include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/SmallSet.h"
@@ -39,6 +40,7 @@
 #include <cassert>
 #include <optional>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace llvm {
@@ -231,7 +233,6 @@ protected:
   bool HasIbm128;
   bool HasLongDouble;
   bool HasFPReturn;
-  bool HasFPTypes;
   bool HasStrictFP;
 
   unsigned char MaxAtomicPromoteWidth, MaxAtomicInlineWidth;
@@ -266,6 +267,9 @@ protected:
 
   LLVM_PREFERRED_TYPE(bool)
   unsigned AllowAMDGPUUnsafeFPAtomics : 1;
+
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned HasUnalignedAccess : 1;
 
   unsigned ARMCDECoprocMask : 8;
 
@@ -690,9 +694,6 @@ public:
   /// on this target.
   virtual bool hasFPReturn() const { return HasFPReturn; }
 
-  /// Determine whether floating point types are supported for this target.
-  virtual bool hasFPTypes() const { return HasFPTypes; }
-
   /// Determine whether constrained floating point is supported on this target.
   virtual bool hasStrictFP() const { return HasStrictFP; }
 
@@ -860,6 +861,18 @@ public:
     // width, we can introduce a new variable for this if/when some target wants
     // it.
     return PointerWidth;
+  }
+
+  /// Return true iff unaligned accesses are a single instruction (rather than
+  /// a synthesized sequence).
+  bool hasUnalignedAccess() const { return HasUnalignedAccess; }
+
+  /// Return true iff unaligned accesses are cheap. This affects placement and
+  /// size of bitfield loads/stores. (Not the ABI-mandated placement of
+  /// the bitfields themselves.)
+  bool hasCheapUnalignedBitFieldAccess() const {
+    // Simply forward to the unaligned access getter.
+    return hasUnalignedAccess();
   }
 
   /// \brief Returns the default value of the __USER_LABEL_PREFIX__ macro,
@@ -1335,10 +1348,6 @@ public:
     return false;
   }
 
-  /// Make changes to the supported types which depend on both the target
-  /// features and ABI.
-  virtual void setSupportedArgTypes() {}
-
   /// Use the specified unit for FP math.
   ///
   /// \return False on error (invalid unit name).
@@ -1377,13 +1386,35 @@ public:
   }
 
   struct BranchProtectionInfo {
-    LangOptions::SignReturnAddressScopeKind SignReturnAddr =
-        LangOptions::SignReturnAddressScopeKind::None;
-    LangOptions::SignReturnAddressKeyKind SignKey =
-        LangOptions::SignReturnAddressKeyKind::AKey;
-    bool BranchTargetEnforcement = false;
-    bool BranchProtectionPAuthLR = false;
-    bool GuardedControlStack = false;
+    LangOptions::SignReturnAddressScopeKind SignReturnAddr;
+    LangOptions::SignReturnAddressKeyKind SignKey;
+    bool BranchTargetEnforcement;
+    bool BranchProtectionPAuthLR;
+    bool GuardedControlStack;
+
+    BranchProtectionInfo() = default;
+
+    const char *getSignReturnAddrStr() const {
+      switch (SignReturnAddr) {
+      case LangOptions::SignReturnAddressScopeKind::None:
+        return "none";
+      case LangOptions::SignReturnAddressScopeKind::NonLeaf:
+        return "non-leaf";
+      case LangOptions::SignReturnAddressScopeKind::All:
+        return "all";
+      }
+      llvm_unreachable("Unexpected SignReturnAddressScopeKind");
+    }
+
+    const char *getSignKeyStr() const {
+      switch (SignKey) {
+      case LangOptions::SignReturnAddressKeyKind::AKey:
+        return "a_key";
+      case LangOptions::SignReturnAddressKeyKind::BKey:
+        return "b_key";
+      }
+      llvm_unreachable("Unexpected SignReturnAddressKeyKind");
+    }
   };
 
   /// Determine if the Architecture in this TargetInfo supports branch
@@ -1556,6 +1587,11 @@ public:
       return toTargetAddressSpace(AS);
     return getAddressSpaceMap()[(unsigned)AS];
   }
+
+  /// Determine whether the given pointer-authentication key is valid.
+  ///
+  /// The value has been coerced to type 'int'.
+  virtual bool validatePointerAuthKey(const llvm::APSInt &value) const;
 
   /// Map from the address space field in builtin description strings to the
   /// language address space.
@@ -1756,6 +1792,15 @@ public:
 
   /// Whether to support HIP image/texture API's.
   virtual bool hasHIPImageSupport() const { return true; }
+
+  /// The first value in the pair is the minimum offset between two objects to
+  /// avoid false sharing (destructive interference). The second value in the
+  /// pair is maximum size of contiguous memory to promote true sharing
+  /// (constructive interference). Neither of these values are considered part
+  /// of the ABI and can be changed by targets at any time.
+  virtual std::pair<unsigned, unsigned> hardwareInterferenceSizes() const {
+    return std::make_pair(64, 64);
+  }
 
 protected:
   /// Copy type and layout related info.

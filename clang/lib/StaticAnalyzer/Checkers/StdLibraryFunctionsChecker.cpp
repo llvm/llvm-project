@@ -30,7 +30,7 @@
 // was not consciously intended, and therefore it might have been unreachable.
 //
 // This checker uses eval::Call for modeling pure functions (functions without
-// side effets), for which their `Summary' is a precise model. This avoids
+// side effects), for which their `Summary' is a precise model. This avoids
 // unnecessary invalidation passes. Conflicts with other checkers are unlikely
 // because if the function has no other effects, other checkers would probably
 // never want to improve upon the modeling done by this checker.
@@ -2388,12 +2388,15 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
             .ArgConstraint(NotNull(ArgNo(0))));
 
     // int fileno(FILE *stream);
+    // According to POSIX 'fileno' may fail and set 'errno'.
+    // But in Linux it may fail only if the specified file pointer is invalid.
+    // At many places 'fileno' is used without check for failure and a failure
+    // case here would produce a large amount of likely false positive warnings.
+    // To avoid this, we assume here that it does not fail.
     addToFunctionSummaryMap(
         "fileno", Signature(ArgTypes{FilePtrTy}, RetType{IntTy}),
         Summary(NoEvalCall)
-            .Case(ReturnsValidFileDescriptor, ErrnoMustNotBeChecked,
-                  GenericSuccessMsg)
-            .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant, GenericFailureMsg)
+            .Case(ReturnsValidFileDescriptor, ErrnoUnchanged, GenericSuccessMsg)
             .ArgConstraint(NotNull(ArgNo(0))));
 
     // void rewind(FILE *stream);

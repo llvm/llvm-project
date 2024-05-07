@@ -10,7 +10,7 @@ define void @patatino(ptr %blah) {
 ; CHECK:       while.cond:
 ; CHECK-NEXT:    [[MEH:%.*]] = phi ptr [ [[BLAH:%.*]], [[ENTRY:%.*]] ], [ null, [[WHILE_BODY:%.*]] ]
 ; CHECK-NEXT:    switch i32 undef, label [[WHILE_BODY]] [
-; CHECK-NEXT:    i32 666, label [[WHILE_END:%.*]]
+; CHECK-NEXT:      i32 666, label [[WHILE_END:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       while.body:
 ; CHECK-NEXT:    br label [[WHILE_COND]]

@@ -66,7 +66,7 @@ static bool CheckArrayInitialized(InterpState &S, SourceLocation Loc,
                                   const Pointer &BasePtr,
                                   const ConstantArrayType *CAT) {
   bool Result = true;
-  size_t NumElems = CAT->getSize().getZExtValue();
+  size_t NumElems = CAT->getZExtSize();
   QualType ElemType = CAT->getElementType();
 
   if (ElemType->isRecordType()) {
@@ -105,6 +105,8 @@ static bool CheckFieldsInitialized(InterpState &S, SourceLocation Loc,
       Result &= CheckFieldsInitialized(S, Loc, FieldPtr, FieldPtr.getRecord());
     } else if (FieldType->isIncompleteArrayType()) {
       // Nothing to do here.
+    } else if (F.Decl->isUnnamedBitField()) {
+      // Nothing do do here.
     } else if (FieldType->isArrayType()) {
       const auto *CAT =
           cast<ConstantArrayType>(FieldType->getAsArrayTypeUnsafe());
@@ -132,9 +134,10 @@ static bool CheckFieldsInitialized(InterpState &S, SourceLocation Loc,
   return Result;
 }
 
-bool EvaluationResult::checkFullyInitialized(InterpState &S) const {
+bool EvaluationResult::checkFullyInitialized(InterpState &S,
+                                             const Pointer &Ptr) const {
   assert(Source);
-  assert(isLValue());
+  assert(empty());
 
   // Our Source must be a VarDecl.
   const Decl *SourceDecl = Source.dyn_cast<const Decl *>();
@@ -143,7 +146,6 @@ bool EvaluationResult::checkFullyInitialized(InterpState &S) const {
   assert(VD->getType()->isRecordType() || VD->getType()->isArrayType());
   SourceLocation InitLoc = VD->getAnyInitializer()->getExprLoc();
 
-  const Pointer &Ptr = *std::get_if<Pointer>(&Value);
   assert(!Ptr.isZero());
 
   if (const Record *R = Ptr.getRecord())

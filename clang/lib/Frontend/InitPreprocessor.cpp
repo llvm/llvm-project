@@ -181,14 +181,21 @@ static void DefineTypeSize(const Twine &MacroName, TargetInfo::IntType Ty,
                  TI.isTypeSigned(Ty), Builder);
 }
 
-static void DefineFmt(const Twine &Prefix, TargetInfo::IntType Ty,
-                      const TargetInfo &TI, MacroBuilder &Builder) {
-  bool IsSigned = TI.isTypeSigned(Ty);
+static void DefineFmt(const LangOptions &LangOpts, const Twine &Prefix,
+                      TargetInfo::IntType Ty, const TargetInfo &TI,
+                      MacroBuilder &Builder) {
   StringRef FmtModifier = TI.getTypeFormatModifier(Ty);
-  for (const char *Fmt = IsSigned ? "di" : "ouxX"; *Fmt; ++Fmt) {
-    Builder.defineMacro(Prefix + "_FMT" + Twine(*Fmt) + "__",
-                        Twine("\"") + FmtModifier + Twine(*Fmt) + "\"");
-  }
+  auto Emitter = [&](char Fmt) {
+    Builder.defineMacro(Prefix + "_FMT" + Twine(Fmt) + "__",
+                        Twine("\"") + FmtModifier + Twine(Fmt) + "\"");
+  };
+  bool IsSigned = TI.isTypeSigned(Ty);
+  llvm::for_each(StringRef(IsSigned ? "di" : "ouxX"), Emitter);
+
+  // C23 added the b and B modifiers for printing binary output of unsigned
+  // integers. Conditionally define those if compiling in C23 mode.
+  if (LangOpts.C23 && !IsSigned)
+    llvm::for_each(StringRef("bB"), Emitter);
 }
 
 static void DefineType(const Twine &MacroName, TargetInfo::IntType Ty,
@@ -217,7 +224,8 @@ static void DefineTypeSizeAndWidth(const Twine &Prefix, TargetInfo::IntType Ty,
   DefineTypeWidth(Prefix + "_WIDTH__", Ty, TI, Builder);
 }
 
-static void DefineExactWidthIntType(TargetInfo::IntType Ty,
+static void DefineExactWidthIntType(const LangOptions &LangOpts,
+                                    TargetInfo::IntType Ty,
                                     const TargetInfo &TI,
                                     MacroBuilder &Builder) {
   int TypeWidth = TI.getTypeWidth(Ty);
@@ -236,7 +244,7 @@ static void DefineExactWidthIntType(TargetInfo::IntType Ty,
   const char *Prefix = IsSigned ? "__INT" : "__UINT";
 
   DefineType(Prefix + Twine(TypeWidth) + "_TYPE__", Ty, Builder);
-  DefineFmt(Prefix + Twine(TypeWidth), Ty, TI, Builder);
+  DefineFmt(LangOpts, Prefix + Twine(TypeWidth), Ty, TI, Builder);
 
   StringRef ConstSuffix(TI.getTypeConstantSuffix(Ty));
   Builder.defineMacro(Prefix + Twine(TypeWidth) + "_C_SUFFIX__", ConstSuffix);
@@ -259,7 +267,8 @@ static void DefineExactWidthIntTypeSize(TargetInfo::IntType Ty,
   DefineTypeSize(Prefix + Twine(TypeWidth) + "_MAX__", Ty, TI, Builder);
 }
 
-static void DefineLeastWidthIntType(unsigned TypeWidth, bool IsSigned,
+static void DefineLeastWidthIntType(const LangOptions &LangOpts,
+                                    unsigned TypeWidth, bool IsSigned,
                                     const TargetInfo &TI,
                                     MacroBuilder &Builder) {
   TargetInfo::IntType Ty = TI.getLeastIntTypeByWidth(TypeWidth, IsSigned);
@@ -274,11 +283,12 @@ static void DefineLeastWidthIntType(unsigned TypeWidth, bool IsSigned,
     DefineTypeSizeAndWidth(Prefix + Twine(TypeWidth), Ty, TI, Builder);
   else
     DefineTypeSize(Prefix + Twine(TypeWidth) + "_MAX__", Ty, TI, Builder);
-  DefineFmt(Prefix + Twine(TypeWidth), Ty, TI, Builder);
+  DefineFmt(LangOpts, Prefix + Twine(TypeWidth), Ty, TI, Builder);
 }
 
-static void DefineFastIntType(unsigned TypeWidth, bool IsSigned,
-                              const TargetInfo &TI, MacroBuilder &Builder) {
+static void DefineFastIntType(const LangOptions &LangOpts, unsigned TypeWidth,
+                              bool IsSigned, const TargetInfo &TI,
+                              MacroBuilder &Builder) {
   // stdint.h currently defines the fast int types as equivalent to the least
   // types.
   TargetInfo::IntType Ty = TI.getLeastIntTypeByWidth(TypeWidth, IsSigned);
@@ -293,7 +303,7 @@ static void DefineFastIntType(unsigned TypeWidth, bool IsSigned,
     DefineTypeSizeAndWidth(Prefix + Twine(TypeWidth), Ty, TI, Builder);
   else
     DefineTypeSize(Prefix + Twine(TypeWidth) + "_MAX__", Ty, TI, Builder);
-  DefineFmt(Prefix + Twine(TypeWidth), Ty, TI, Builder);
+  DefineFmt(LangOpts, Prefix + Twine(TypeWidth), Ty, TI, Builder);
 }
 
 
@@ -379,8 +389,7 @@ static void InitializeStandardPredefinedMacros(const TargetInfo &TI,
                         Twine((unsigned)LangOpts.getHLSLVersion()));
 
     if (LangOpts.NativeHalfType)
-      Builder.defineMacro("__HLSL_ENABLE_16_BIT",
-                          Twine((unsigned)LangOpts.getHLSLVersion()));
+      Builder.defineMacro("__HLSL_ENABLE_16_BIT", "1");
 
     // Shader target information
     // "enums" for shader stages
@@ -694,7 +703,7 @@ static void InitializeCPlusPlusFeatureTestMacros(const LangOptions &LangOpts,
     Builder.defineMacro("__cpp_nested_namespace_definitions", "201411L");
     Builder.defineMacro("__cpp_variadic_using", "201611L");
     Builder.defineMacro("__cpp_aggregate_bases", "201603L");
-    Builder.defineMacro("__cpp_structured_bindings", "201606L");
+    Builder.defineMacro("__cpp_structured_bindings", "202403L");
     Builder.defineMacro("__cpp_nontype_template_args",
                         "201411L"); // (not latest)
     Builder.defineMacro("__cpp_fold_expressions", "201603L");
@@ -710,10 +719,7 @@ static void InitializeCPlusPlusFeatureTestMacros(const LangOptions &LangOpts,
   if (LangOpts.CPlusPlus20) {
     Builder.defineMacro("__cpp_aggregate_paren_init", "201902L");
 
-    // P0848 is implemented, but we're still waiting for other concepts
-    // issues to be addressed before bumping __cpp_concepts up to 202002L.
-    // Refer to the discussion of this at https://reviews.llvm.org/D128619.
-    Builder.defineMacro("__cpp_concepts", "201907L");
+    Builder.defineMacro("__cpp_concepts", "202002");
     Builder.defineMacro("__cpp_conditional_explicit", "201806L");
     Builder.defineMacro("__cpp_consteval", "202211L");
     Builder.defineMacro("__cpp_constexpr_dynamic_alloc", "201907L");
@@ -726,7 +732,7 @@ static void InitializeCPlusPlusFeatureTestMacros(const LangOptions &LangOpts,
   }
   // C++23 features.
   if (LangOpts.CPlusPlus23) {
-    Builder.defineMacro("__cpp_implicit_move", "202011L");
+    Builder.defineMacro("__cpp_implicit_move", "202207L");
     Builder.defineMacro("__cpp_size_t_suffix", "202011L");
     Builder.defineMacro("__cpp_if_consteval", "202106L");
     Builder.defineMacro("__cpp_multidimensional_subscript", "202211L");
@@ -739,6 +745,9 @@ static void InitializeCPlusPlusFeatureTestMacros(const LangOptions &LangOpts,
     Builder.defineMacro("__cpp_static_call_operator", "202207L");
   Builder.defineMacro("__cpp_named_character_escapes", "202207L");
   Builder.defineMacro("__cpp_placeholder_variables", "202306L");
+
+  // C++26 features supported in earlier language modes.
+  Builder.defineMacro("__cpp_deleted_function", "202403L");
 
   if (LangOpts.Char8)
     Builder.defineMacro("__cpp_char8_t", "202207L");
@@ -1120,19 +1129,20 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
     DefineTypeSizeof("__SIZEOF_INT128__", 128, TI, Builder);
 
   DefineType("__INTMAX_TYPE__", TI.getIntMaxType(), Builder);
-  DefineFmt("__INTMAX", TI.getIntMaxType(), TI, Builder);
+  DefineFmt(LangOpts, "__INTMAX", TI.getIntMaxType(), TI, Builder);
   Builder.defineMacro("__INTMAX_C_SUFFIX__",
                       TI.getTypeConstantSuffix(TI.getIntMaxType()));
   DefineType("__UINTMAX_TYPE__", TI.getUIntMaxType(), Builder);
-  DefineFmt("__UINTMAX", TI.getUIntMaxType(), TI, Builder);
+  DefineFmt(LangOpts, "__UINTMAX", TI.getUIntMaxType(), TI, Builder);
   Builder.defineMacro("__UINTMAX_C_SUFFIX__",
                       TI.getTypeConstantSuffix(TI.getUIntMaxType()));
   DefineType("__PTRDIFF_TYPE__", TI.getPtrDiffType(LangAS::Default), Builder);
-  DefineFmt("__PTRDIFF", TI.getPtrDiffType(LangAS::Default), TI, Builder);
+  DefineFmt(LangOpts, "__PTRDIFF", TI.getPtrDiffType(LangAS::Default), TI,
+            Builder);
   DefineType("__INTPTR_TYPE__", TI.getIntPtrType(), Builder);
-  DefineFmt("__INTPTR", TI.getIntPtrType(), TI, Builder);
+  DefineFmt(LangOpts, "__INTPTR", TI.getIntPtrType(), TI, Builder);
   DefineType("__SIZE_TYPE__", TI.getSizeType(), Builder);
-  DefineFmt("__SIZE", TI.getSizeType(), TI, Builder);
+  DefineFmt(LangOpts, "__SIZE", TI.getSizeType(), TI, Builder);
   DefineType("__WCHAR_TYPE__", TI.getWCharType(), Builder);
   DefineType("__WINT_TYPE__", TI.getWIntType(), Builder);
   DefineTypeSizeAndWidth("__SIG_ATOMIC", TI.getSigAtomicType(), TI, Builder);
@@ -1140,7 +1150,7 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
   DefineType("__CHAR32_TYPE__", TI.getChar32Type(), Builder);
 
   DefineType("__UINTPTR_TYPE__", TI.getUIntPtrType(), Builder);
-  DefineFmt("__UINTPTR", TI.getUIntPtrType(), TI, Builder);
+  DefineFmt(LangOpts, "__UINTPTR", TI.getUIntPtrType(), TI, Builder);
 
   // The C standard requires the width of uintptr_t and intptr_t to be the same,
   // per 7.20.2.4p1. Same for intmax_t and uintmax_t, per 7.20.2.5p1.
@@ -1216,65 +1226,66 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
     Builder.defineMacro("__WINT_UNSIGNED__");
 
   // Define exact-width integer types for stdint.h
-  DefineExactWidthIntType(TargetInfo::SignedChar, TI, Builder);
+  DefineExactWidthIntType(LangOpts, TargetInfo::SignedChar, TI, Builder);
 
   if (TI.getShortWidth() > TI.getCharWidth())
-    DefineExactWidthIntType(TargetInfo::SignedShort, TI, Builder);
+    DefineExactWidthIntType(LangOpts, TargetInfo::SignedShort, TI, Builder);
 
   if (TI.getIntWidth() > TI.getShortWidth())
-    DefineExactWidthIntType(TargetInfo::SignedInt, TI, Builder);
+    DefineExactWidthIntType(LangOpts, TargetInfo::SignedInt, TI, Builder);
 
   if (TI.getLongWidth() > TI.getIntWidth())
-    DefineExactWidthIntType(TargetInfo::SignedLong, TI, Builder);
+    DefineExactWidthIntType(LangOpts, TargetInfo::SignedLong, TI, Builder);
 
   if (TI.getLongLongWidth() > TI.getLongWidth())
-    DefineExactWidthIntType(TargetInfo::SignedLongLong, TI, Builder);
+    DefineExactWidthIntType(LangOpts, TargetInfo::SignedLongLong, TI, Builder);
 
-  DefineExactWidthIntType(TargetInfo::UnsignedChar, TI, Builder);
+  DefineExactWidthIntType(LangOpts, TargetInfo::UnsignedChar, TI, Builder);
   DefineExactWidthIntTypeSize(TargetInfo::UnsignedChar, TI, Builder);
   DefineExactWidthIntTypeSize(TargetInfo::SignedChar, TI, Builder);
 
   if (TI.getShortWidth() > TI.getCharWidth()) {
-    DefineExactWidthIntType(TargetInfo::UnsignedShort, TI, Builder);
+    DefineExactWidthIntType(LangOpts, TargetInfo::UnsignedShort, TI, Builder);
     DefineExactWidthIntTypeSize(TargetInfo::UnsignedShort, TI, Builder);
     DefineExactWidthIntTypeSize(TargetInfo::SignedShort, TI, Builder);
   }
 
   if (TI.getIntWidth() > TI.getShortWidth()) {
-    DefineExactWidthIntType(TargetInfo::UnsignedInt, TI, Builder);
+    DefineExactWidthIntType(LangOpts, TargetInfo::UnsignedInt, TI, Builder);
     DefineExactWidthIntTypeSize(TargetInfo::UnsignedInt, TI, Builder);
     DefineExactWidthIntTypeSize(TargetInfo::SignedInt, TI, Builder);
   }
 
   if (TI.getLongWidth() > TI.getIntWidth()) {
-    DefineExactWidthIntType(TargetInfo::UnsignedLong, TI, Builder);
+    DefineExactWidthIntType(LangOpts, TargetInfo::UnsignedLong, TI, Builder);
     DefineExactWidthIntTypeSize(TargetInfo::UnsignedLong, TI, Builder);
     DefineExactWidthIntTypeSize(TargetInfo::SignedLong, TI, Builder);
   }
 
   if (TI.getLongLongWidth() > TI.getLongWidth()) {
-    DefineExactWidthIntType(TargetInfo::UnsignedLongLong, TI, Builder);
+    DefineExactWidthIntType(LangOpts, TargetInfo::UnsignedLongLong, TI,
+                            Builder);
     DefineExactWidthIntTypeSize(TargetInfo::UnsignedLongLong, TI, Builder);
     DefineExactWidthIntTypeSize(TargetInfo::SignedLongLong, TI, Builder);
   }
 
-  DefineLeastWidthIntType(8, true, TI, Builder);
-  DefineLeastWidthIntType(8, false, TI, Builder);
-  DefineLeastWidthIntType(16, true, TI, Builder);
-  DefineLeastWidthIntType(16, false, TI, Builder);
-  DefineLeastWidthIntType(32, true, TI, Builder);
-  DefineLeastWidthIntType(32, false, TI, Builder);
-  DefineLeastWidthIntType(64, true, TI, Builder);
-  DefineLeastWidthIntType(64, false, TI, Builder);
+  DefineLeastWidthIntType(LangOpts, 8, true, TI, Builder);
+  DefineLeastWidthIntType(LangOpts, 8, false, TI, Builder);
+  DefineLeastWidthIntType(LangOpts, 16, true, TI, Builder);
+  DefineLeastWidthIntType(LangOpts, 16, false, TI, Builder);
+  DefineLeastWidthIntType(LangOpts, 32, true, TI, Builder);
+  DefineLeastWidthIntType(LangOpts, 32, false, TI, Builder);
+  DefineLeastWidthIntType(LangOpts, 64, true, TI, Builder);
+  DefineLeastWidthIntType(LangOpts, 64, false, TI, Builder);
 
-  DefineFastIntType(8, true, TI, Builder);
-  DefineFastIntType(8, false, TI, Builder);
-  DefineFastIntType(16, true, TI, Builder);
-  DefineFastIntType(16, false, TI, Builder);
-  DefineFastIntType(32, true, TI, Builder);
-  DefineFastIntType(32, false, TI, Builder);
-  DefineFastIntType(64, true, TI, Builder);
-  DefineFastIntType(64, false, TI, Builder);
+  DefineFastIntType(LangOpts, 8, true, TI, Builder);
+  DefineFastIntType(LangOpts, 8, false, TI, Builder);
+  DefineFastIntType(LangOpts, 16, true, TI, Builder);
+  DefineFastIntType(LangOpts, 16, false, TI, Builder);
+  DefineFastIntType(LangOpts, 32, true, TI, Builder);
+  DefineFastIntType(LangOpts, 32, false, TI, Builder);
+  DefineFastIntType(LangOpts, 64, true, TI, Builder);
+  DefineFastIntType(LangOpts, 64, false, TI, Builder);
 
   Builder.defineMacro("__USER_LABEL_PREFIX__", TI.getUserLabelPrefix());
 
@@ -1296,6 +1307,16 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
     // FIXME: This is target-dependent.
     Builder.defineMacro("__GCC_ATOMIC_TEST_AND_SET_TRUEVAL", "1");
   }
+
+  // GCC defines these macros in both C and C++ modes despite them being needed
+  // mostly for STL implementations in C++.
+  auto [Destructive, Constructive] = TI.hardwareInterferenceSizes();
+  Builder.defineMacro("__GCC_DESTRUCTIVE_SIZE", Twine(Destructive));
+  Builder.defineMacro("__GCC_CONSTRUCTIVE_SIZE", Twine(Constructive));
+  // We need to use push_macro to allow users to redefine these macros from the
+  // command line with -D and not issue a -Wmacro-redefined warning.
+  Builder.append("#pragma push_macro(\"__GCC_DESTRUCTIVE_SIZE\")");
+  Builder.append("#pragma push_macro(\"__GCC_CONSTRUCTIVE_SIZE\")");
 
   auto addLockFreeMacros = [&](const llvm::Twine &Prefix) {
     // Used by libc++ and libstdc++ to implement ATOMIC_<foo>_LOCK_FREE.

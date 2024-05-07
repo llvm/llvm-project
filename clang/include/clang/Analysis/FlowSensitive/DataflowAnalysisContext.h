@@ -18,8 +18,9 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/TypeOrdering.h"
+#include "clang/Analysis/FlowSensitive/ASTOps.h"
+#include "clang/Analysis/FlowSensitive/AdornedCFG.h"
 #include "clang/Analysis/FlowSensitive/Arena.h"
-#include "clang/Analysis/FlowSensitive/ControlFlowContext.h"
 #include "clang/Analysis/FlowSensitive/Solver.h"
 #include "clang/Analysis/FlowSensitive/StorageLocation.h"
 #include "clang/Analysis/FlowSensitive/Value.h"
@@ -30,37 +31,10 @@
 #include <cassert>
 #include <memory>
 #include <optional>
-#include <type_traits>
-#include <utility>
-#include <vector>
 
 namespace clang {
 namespace dataflow {
 class Logger;
-
-/// Skip past nodes that the CFG does not emit. These nodes are invisible to
-/// flow-sensitive analysis, and should be ignored as they will effectively not
-/// exist.
-///
-///   * `ParenExpr` - The CFG takes the operator precedence into account, but
-///   otherwise omits the node afterwards.
-///
-///   * `ExprWithCleanups` - The CFG will generate the appropriate calls to
-///   destructors and then omit the node.
-///
-const Expr &ignoreCFGOmittedNodes(const Expr &E);
-const Stmt &ignoreCFGOmittedNodes(const Stmt &S);
-
-/// A set of `FieldDecl *`. Use `SmallSetVector` to guarantee deterministic
-/// iteration order.
-using FieldSet = llvm::SmallSetVector<const FieldDecl *, 4>;
-
-/// Returns the set of all fields in the type.
-FieldSet getObjectFields(QualType Type);
-
-/// Returns whether `Fields` and `FieldLocs` contain the same fields.
-bool containsSameFields(const FieldSet &Fields,
-                        const RecordStorageLocation::FieldToLoc &FieldLocs);
 
 struct ContextSensitiveOptions {
   /// The maximum depth to analyze. A value of zero is equivalent to disabling
@@ -183,9 +157,9 @@ public:
   LLVM_DUMP_METHOD void dumpFlowCondition(Atom Token,
                                           llvm::raw_ostream &OS = llvm::dbgs());
 
-  /// Returns the `ControlFlowContext` registered for `F`, if any. Otherwise,
+  /// Returns the `AdornedCFG` registered for `F`, if any. Otherwise,
   /// returns null.
-  const ControlFlowContext *getControlFlowContext(const FunctionDecl *F);
+  const AdornedCFG *getAdornedCFG(const FunctionDecl *F);
 
   const Options &getOptions() { return Opts; }
 
@@ -296,7 +270,7 @@ private:
   llvm::DenseMap<Atom, const Formula *> FlowConditionConstraints;
   const Formula *Invariant = nullptr;
 
-  llvm::DenseMap<const FunctionDecl *, ControlFlowContext> FunctionContexts;
+  llvm::DenseMap<const FunctionDecl *, AdornedCFG> FunctionContexts;
 
   // Fields modeled by environments covered by this context.
   FieldSet ModeledFields;

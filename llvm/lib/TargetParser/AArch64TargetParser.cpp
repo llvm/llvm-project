@@ -69,7 +69,14 @@ bool AArch64::getExtensionFeatures(
 
 StringRef AArch64::resolveCPUAlias(StringRef Name) {
   for (const auto &A : CpuAliases)
-    if (A.Alias == Name)
+    if (A.AltName == Name)
+      return A.Name;
+  return Name;
+}
+
+StringRef AArch64::resolveExtAlias(StringRef Name) {
+  for (const auto &A : ExtAliases)
+    if (A.AltName == Name)
       return A.Name;
   return Name;
 }
@@ -91,7 +98,7 @@ void AArch64::fillValidCPUArchList(SmallVectorImpl<StringRef> &Values) {
       Values.push_back(C.Name);
 
   for (const auto &Alias : CpuAliases)
-    Values.push_back(Alias.Alias);
+    Values.push_back(Alias.AltName);
 }
 
 bool AArch64::isX18ReservedByDefault(const Triple &TT) {
@@ -114,6 +121,10 @@ const AArch64::ArchInfo *AArch64::parseArch(StringRef Arch) {
 }
 
 std::optional<AArch64::ExtensionInfo> AArch64::parseArchExtension(StringRef ArchExt) {
+  // Resolve aliases first.
+  ArchExt = resolveExtAlias(ArchExt);
+
+  // Then find the Extension name.
   for (const auto &A : Extensions) {
     if (ArchExt == A.Name)
       return A;
@@ -175,11 +186,6 @@ void AArch64::ExtensionSet::enable(ArchExtKind E) {
   // Special cases for dependencies which vary depending on the base
   // architecture version.
   if (BaseArch) {
-    // +sve implies +f32mm if the base architecture is v8.6A+ or v9.1A+
-    // It isn't the case in general that sve implies both f64mm and f32mm
-    if (E == AEK_SVE && BaseArch->is_superset(ARMV8_6A))
-      enable(AEK_F32MM);
-
     // +fp16 implies +fp16fml for v8.4A+, but not v9.0-A+
     if (E == AEK_FP16 && BaseArch->is_superset(ARMV8_4A) &&
         !BaseArch->is_superset(ARMV9A))

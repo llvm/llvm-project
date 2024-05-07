@@ -250,6 +250,8 @@ public:
         }
       }
       return false;
+    } else if (!CheckVarOrComponent(ultimate)) {
+      return false;
     } else if (!ultimate.attrs().test(semantics::Attr::TARGET)) {
       if (messages_) {
         messages_->Say(
@@ -267,7 +269,7 @@ public:
       }
       return false;
     } else {
-      return CheckVarOrComponent(ultimate);
+      return true;
     }
   }
   bool operator()(const StaticDataObject &) const { return false; }
@@ -318,24 +320,23 @@ public:
 private:
   bool CheckVarOrComponent(const semantics::Symbol &symbol) {
     const Symbol &ultimate{symbol.GetUltimate()};
-    if (IsAllocatable(ultimate)) {
-      if (messages_) {
-        messages_->Say(
-            "An initial data target may not be a reference to an ALLOCATABLE '%s'"_err_en_US,
-            ultimate.name());
-        emittedMessage_ = true;
-      }
-      return false;
-    } else if (ultimate.Corank() > 0) {
-      if (messages_) {
-        messages_->Say(
-            "An initial data target may not be a reference to a coarray '%s'"_err_en_US,
-            ultimate.name());
-        emittedMessage_ = true;
-      }
-      return false;
+    const char *unacceptable{nullptr};
+    if (ultimate.Corank() > 0) {
+      unacceptable = "a coarray";
+    } else if (IsAllocatable(ultimate)) {
+      unacceptable = "an ALLOCATABLE";
+    } else if (IsPointer(ultimate)) {
+      unacceptable = "a POINTER";
+    } else {
+      return true;
     }
-    return true;
+    if (messages_) {
+      messages_->Say(
+          "An initial data target may not be a reference to %s '%s'"_err_en_US,
+          unacceptable, ultimate.name());
+      emittedMessage_ = true;
+    }
+    return false;
   }
 
   parser::ContextualMessages *messages_;
@@ -357,10 +358,14 @@ bool IsInitialProcedureTarget(const semantics::Symbol &symbol) {
   const auto &ultimate{symbol.GetUltimate()};
   return common::visit(
       common::visitors{
-          [](const semantics::SubprogramDetails &subp) {
-            return !subp.isDummy();
+          [&](const semantics::SubprogramDetails &subp) {
+            return !subp.isDummy() && !subp.stmtFunction() &&
+                symbol.owner().kind() != semantics::Scope::Kind::MainProgram &&
+                symbol.owner().kind() != semantics::Scope::Kind::Subprogram;
           },
-          [](const semantics::SubprogramNameDetails &) { return true; },
+          [](const semantics::SubprogramNameDetails &x) {
+            return x.kind() != semantics::SubprogramKind::Internal;
+          },
           [&](const semantics::ProcEntityDetails &proc) {
             return !semantics::IsPointer(ultimate) && !proc.isDummy();
           },
@@ -473,6 +478,14 @@ std::optional<Expr<SomeType>> NonPointerInitializationExpr(const Symbol &symbol,
           return {std::move(folded)};
         }
       } else if (IsNamedConstant(symbol)) {
+        if (symbol.name() == "numeric_storage_size" &&
+            symbol.owner().IsModule() &&
+            DEREF(symbol.owner().symbol()).name() == "iso_fortran_env") {
+          // Very special case: numeric_storage_size is not folded until
+          // it read from the iso_fortran_env module file, as its value
+          // depends on compilation options.
+          return {std::move(folded)};
+        }
         context.messages().Say(
             "Value of named constant '%s' (%s) cannot be computed as a constant value"_err_en_US,
             symbol.name(), folded.AsFortran());
@@ -653,8 +666,8 @@ public:
             "' not allowed for derived type components or type parameter"
             " values";
       }
-      if (auto procChars{
-              characteristics::Procedure::Characterize(x.proc(), context_)}) {
+      if (auto procChars{characteristics::Procedure::Characterize(
+              x.proc(), context_, /*emitError=*/true)}) {
         const auto iter{std::find_if(procChars->dummyArguments.begin(),
             procChars->dummyArguments.end(),
             [](const characteristics::DummyArgument &dummy) {
@@ -843,8 +856,8 @@ public:
   Result operator()(const Substring &) const { return std::nullopt; }
 
   Result operator()(const ProcedureRef &x) const {
-    if (auto chars{
-            characteristics::Procedure::Characterize(x.proc(), context_)}) {
+    if (auto chars{characteristics::Procedure::Characterize(
+            x.proc(), context_, /*emitError=*/true)}) {
       if (chars->functionResult) {
         const auto &result{*chars->functionResult};
         if (!result.IsProcedurePointer()) {
@@ -1090,8 +1103,8 @@ public:
           }
         }
       }
-      if (auto chars{
-              characteristics::Procedure::Characterize(proc, context_)}) {
+      if (auto chars{characteristics::Procedure::Characterize(
+              proc, context_, /*emitError=*/true)}) {
         if (!chars->CanBeCalledViaImplicitInterface()) {
           if (severity_) {
             auto msg{

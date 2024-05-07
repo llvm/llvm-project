@@ -84,6 +84,11 @@ public:
   /// Provides a convenient hook to handle extra target-specific globals.
   virtual void emitTargetGlobals(CodeGen::CodeGenModule &CGM) const {}
 
+  /// Any further codegen related checks that need to be done on a function
+  /// signature in a target specific manner.
+  virtual void checkFunctionABI(CodeGenModule &CGM,
+                                const FunctionDecl *Decl) const {}
+
   /// Any further codegen related checks that need to be done on a function call
   /// in a target specific manner.
   virtual void checkFunctionCallABI(CodeGenModule &CGM, SourceLocation CallLoc,
@@ -289,6 +294,11 @@ public:
 
   /// Get the AST address space for alloca.
   virtual LangAS getASTAllocaAddressSpace() const { return LangAS::Default; }
+
+  Address performAddrSpaceCast(CodeGen::CodeGenFunction &CGF, Address Addr,
+                               LangAS SrcAddr, LangAS DestAddr,
+                               llvm::Type *DestTy,
+                               bool IsNonNull = false) const;
 
   /// Perform address space cast of an expression of pointer type.
   /// \param V is the LLVM value to be casted to another address space.

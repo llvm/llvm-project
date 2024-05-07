@@ -9,6 +9,12 @@ set(prefixes
   first_leading_one
   first_trailing_zero
   first_trailing_one
+  count_zeros
+  count_ones
+  has_single_bit
+  bit_width
+  bit_floor
+  bit_ceil
 )
 set(suffixes c s i l ll)
 foreach(prefix IN LISTS prefixes)

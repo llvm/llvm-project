@@ -10,7 +10,7 @@
 // DEFINE: %{compile} = mlir-opt %s --sparsifier="%{sparsifier_opts}"
 // DEFINE: %{compile_sve} = mlir-opt %s --sparsifier="%{sparsifier_opts_sve}"
 // DEFINE: %{run_libs} = -shared-libs=%mlir_c_runner_utils,%mlir_runner_utils
-// DEFINE: %{run_opts} = -e entry -entry-point-result=void
+// DEFINE: %{run_opts} = -e main -entry-point-result=void
 // DEFINE: %{run} = mlir-cpu-runner %{run_opts} %{run_libs}
 // DEFINE: %{run_sve} = %mcr_aarch64_cmd --march=aarch64 --mattr="+sve" %{run_opts} %{run_libs}
 //
@@ -68,7 +68,7 @@ module {
     return %0 : tensor<6x6xi32>
   }
 
-  func.func @entry() {
+  func.func @main() {
     %c0 = arith.constant 0 : index
     %i0 = arith.constant 0 : i32
 
@@ -207,13 +207,19 @@ module {
     %v5 = vector.transfer_read %5[%c0, %c0], %i0 : tensor<6x6xi32>, vector<6x6xi32>
     vector.print %v5 : vector<6x6xi32>
 
-    // Release sparse resources.
+    // Release resources.
     bufferization.dealloc_tensor %input_CSR : tensor<10x10xi32, #CSR>
     bufferization.dealloc_tensor %input_DCSR : tensor<10x10xi32, #DCSR>
     bufferization.dealloc_tensor %filter_CSR : tensor<5x5xi32, #CSR>
     bufferization.dealloc_tensor %sinput_CSR : tensor<10x10xi32, #CSR>
     bufferization.dealloc_tensor %sinput_DCSR : tensor<10x10xi32, #DCSR>
     bufferization.dealloc_tensor %sfilter_CSR : tensor<5x5xi32, #CSR>
+    bufferization.dealloc_tensor %0 : tensor<6x6xi32>
+    bufferization.dealloc_tensor %1 : tensor<6x6xi32>
+    bufferization.dealloc_tensor %2 : tensor<6x6xi32>
+    bufferization.dealloc_tensor %3 : tensor<6x6xi32>
+    bufferization.dealloc_tensor %4 : tensor<6x6xi32>
+    bufferization.dealloc_tensor %5 : tensor<6x6xi32>
 
     return
   }

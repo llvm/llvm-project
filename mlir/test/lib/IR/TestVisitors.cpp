@@ -136,12 +136,12 @@ static void testSkipErasureCallbacks(Operation *op) {
       llvm::outs() << "\n";
       block->erase();
       return WalkResult::skip();
-    } else {
-      llvm::outs() << "Cannot erase ";
-      printBlock(block);
-      llvm::outs() << ", still has uses\n";
-      return WalkResult::advance();
     }
+    llvm::outs() << "Cannot erase ";
+    printBlock(block);
+    llvm::outs() << ", still has uses\n";
+    return WalkResult::advance();
+   
   };
 
   llvm::outs() << "Op pre-order erasures (skip)"
