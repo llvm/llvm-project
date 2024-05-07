@@ -1472,18 +1472,21 @@ void TypePrinter::printTag(TagDecl *D, raw_ostream &OS) {
 
   // If this is a class template specialization, print the template
   // arguments.
-  if (auto *S = dyn_cast<ClassTemplateSpecializationDecl>(D)) {
-    const TemplateParameterList *TParams =
-        S->getSpecializedTemplate()->getTemplateParameters();
-    const ASTTemplateArgumentListInfo *TArgAsWritten =
-        S->getTemplateArgsAsWritten();
+  if (const auto *Spec = dyn_cast<ClassTemplateSpecializationDecl>(D)) {
+    ArrayRef<TemplateArgument> Args;
+    TypeSourceInfo *TAW = Spec->getTypeAsWritten();
+    if (!Policy.PrintCanonicalTypes && TAW) {
+      const TemplateSpecializationType *TST =
+        cast<TemplateSpecializationType>(TAW->getType());
+      Args = TST->template_arguments();
+    } else {
+      const TemplateArgumentList &TemplateArgs = Spec->getTemplateArgs();
+      Args = TemplateArgs.asArray();
+    }
     IncludeStrongLifetimeRAII Strong(Policy);
-    if (TArgAsWritten && !Policy.PrintCanonicalTypes)
-      printTemplateArgumentList(OS, TArgAsWritten->arguments(), Policy,
-                                TParams);
-    else
-      printTemplateArgumentList(OS, S->getTemplateArgs().asArray(), Policy,
-                                TParams);
+    printTemplateArgumentList(
+        OS, Args, Policy,
+        Spec->getSpecializedTemplate()->getTemplateParameters());
   }
 
   spaceBeforePlaceHolder(OS);
