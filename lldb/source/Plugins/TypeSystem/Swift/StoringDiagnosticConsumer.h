@@ -243,12 +243,12 @@ public:
   static lldb::Severity SeverityForKind(swift::DiagnosticKind kind) {
     switch (kind) {
     case swift::DiagnosticKind::Error:
-      return eSeverityError;
+      return lldb::eSeverityError;
     case swift::DiagnosticKind::Warning:
-      return eSeverityWarning;
+      return lldb::eSeverityWarning;
     case swift::DiagnosticKind::Note:
     case swift::DiagnosticKind::Remark:
-      return eSeverityInfo;
+      return lldb::eSeverityInfo;
     }
 
     llvm_unreachable("Unhandled DiagnosticKind in switch.");
