@@ -160,9 +160,9 @@ public:
         : Source(Source), Destination(Destination), Type(Type) {}
 
     /// Return the source instruction of the dependence.
-    Instruction *getSource(const LoopAccessInfo &LAI) const;
+    Instruction *getSource(const MemoryDepChecker &DepChecker) const;
     /// Return the destination instruction of the dependence.
-    Instruction *getDestination(const LoopAccessInfo &LAI) const;
+    Instruction *getDestination(const MemoryDepChecker &DepChecker) const;
 
     /// Dependence types that don't prevent vectorization.
     static VectorizationSafetyStatus isSafeForVectorization(DepType Type);
@@ -833,13 +833,13 @@ public:
 };
 
 inline Instruction *MemoryDepChecker::Dependence::getSource(
-    const LoopAccessInfo &LAI) const {
-  return LAI.getDepChecker().getMemoryInstructions()[Source];
+    const MemoryDepChecker &DepChecker) const {
+  return DepChecker.getMemoryInstructions()[Source];
 }
 
 inline Instruction *MemoryDepChecker::Dependence::getDestination(
-    const LoopAccessInfo &LAI) const {
-  return LAI.getDepChecker().getMemoryInstructions()[Destination];
+    const MemoryDepChecker &DepChecker) const {
+  return DepChecker.getMemoryInstructions()[Destination];
 }
 
 } // End llvm namespace

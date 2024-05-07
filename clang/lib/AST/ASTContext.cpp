@@ -1307,6 +1307,9 @@ void ASTContext::InitBuiltinTypes(const TargetInfo &Target,
   // Placeholder type for bound members.
   InitBuiltinType(BoundMemberTy,       BuiltinType::BoundMember);
 
+  // Placeholder type for unresolved templates.
+  InitBuiltinType(UnresolvedTemplateTy, BuiltinType::UnresolvedTemplate);
+
   // Placeholder type for pseudo-objects.
   InitBuiltinType(PseudoObjectTy,      BuiltinType::PseudoObject);
 

@@ -1,6 +1,6 @@
 // Check typeid() + type_info
 
-// RUN: %clang_cc1 %s -triple=aarch64-unknown-fuchsia -O3 -S -o - -emit-llvm -fcxx-exceptions -fexceptions | FileCheck %s
+// RUN: %clang_cc1 %s -triple=aarch64-unknown-fuchsia -O3 -o - -emit-llvm -fcxx-exceptions -fexceptions | FileCheck %s
 
 // CHECK: $_ZTI1A.rtti_proxy = comdat any
 // CHECK: $_ZTI1B.rtti_proxy = comdat any
