@@ -339,7 +339,7 @@ static std::unique_ptr<Logger> makeLoggerFromCommandLine() {
 }
 
 DataflowAnalysisContext::DataflowAnalysisContext(
-    Solver &S, std::unique_ptr<Solver> OwnedSolver, Options Opts)
+    Solver &S, std::unique_ptr<Solver> &&OwnedSolver, Options Opts)
     : S(S), OwnedSolver(std::move(OwnedSolver)), A(std::make_unique<Arena>()),
       Opts(Opts) {
   // If the -dataflow-log command-line flag was set, synthesize a logger.

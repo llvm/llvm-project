@@ -221,7 +221,11 @@ private:
     using DenseMapInfo::isEqual;
   };
 
-  DataflowAnalysisContext(Solver &S, std::unique_ptr<Solver> OwnedSolver,
+  /// `S` is the solver to use. `OwnedSolver` may be:
+  /// *  Null (in which case `S` is non-onwed and must outlive this object), or
+  /// *  Non-null (in which case it must refer to `S`, and the
+  ///    `DataflowAnalysisContext will take ownership of `OwnedSolver`).
+  DataflowAnalysisContext(Solver &S, std::unique_ptr<Solver> &&OwnedSolver,
                           Options Opts);
 
   // Extends the set of modeled field declarations.
