@@ -5050,12 +5050,13 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
         (TargetDecl->hasAttr<TargetAttr>() ||
          (CurFuncDecl && CurFuncDecl->hasAttr<TargetAttr>())))
       checkTargetFeatures(Loc, FD);
-
-    // Some architectures (such as x86-64) have the ABI changed based on
-    // attribute-target/features. Give them a chance to diagnose.
-    CGM.getTargetCodeGenInfo().checkFunctionCallABI(
-        CGM, Loc, dyn_cast_or_null<FunctionDecl>(CurCodeDecl), FD, CallArgs);
   }
+
+  // Some architectures (such as x86-64) have the ABI changed based on
+  // attribute-target/features. Give them a chance to diagnose.
+  CGM.getTargetCodeGenInfo().checkFunctionCallABI(
+      CGM, Loc, dyn_cast_or_null<FunctionDecl>(CurCodeDecl),
+      dyn_cast_or_null<FunctionDecl>(TargetDecl), CallArgs, RetTy);
 
   // 1. Set up the arguments.
 
