@@ -7436,7 +7436,8 @@ AMDGPUAsmParser::parseSendMsgBody(OperandInfoTy &Msg,
     Op.IsDefined = true;
     Op.Loc = getLoc();
     if (isToken(AsmToken::Identifier) &&
-        (Op.Val = getMsgOpId(Msg.Val, getTokenStr())) >= 0) {
+        (Op.Val = getMsgOpId(Msg.Val, getTokenStr(), getSTI())) !=
+            OPR_ID_UNKNOWN) {
       lex(); // skip operation name
     } else if (!parseExpr(Op.Val, "an operation name")) {
       return false;
@@ -7484,7 +7485,10 @@ AMDGPUAsmParser::validateSendMsg(const OperandInfoTy &Msg,
     return false;
   }
   if (!isValidMsgOp(Msg.Val, Op.Val, getSTI(), Strict)) {
-    Error(Op.Loc, "invalid operation id");
+    if (Op.Val == OPR_ID_UNSUPPORTED)
+      Error(Op.Loc, "specified operation id is not supported on this GPU");
+    else
+      Error(Op.Loc, "invalid operation id");
     return false;
   }
   if (Strict && !msgSupportsStream(Msg.Val, Op.Val, getSTI()) &&
