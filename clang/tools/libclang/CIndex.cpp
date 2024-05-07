@@ -2840,6 +2840,13 @@ void OpenACCClauseEnqueue::VisitCopyOutClause(const OpenACCCopyOutClause &C) {
 void OpenACCClauseEnqueue::VisitCreateClause(const OpenACCCreateClause &C) {
   VisitVarList(C);
 }
+void OpenACCClauseEnqueue::VisitAttachClause(const OpenACCAttachClause &C) {
+  VisitVarList(C);
+}
+void OpenACCClauseEnqueue::VisitDevicePtrClause(
+    const OpenACCDevicePtrClause &C) {
+  VisitVarList(C);
+}
 } // namespace
 
 void EnqueueVisitor::EnqueueChildren(const OpenACCClause *C) {

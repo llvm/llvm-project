@@ -5051,6 +5051,8 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
       return true; // "x! as string", "x! in y"
     }
   } else if (Style.Language == FormatStyle::LK_Java) {
+    if (Left.is(TT_CaseLabelArrow) || Right.is(TT_CaseLabelArrow))
+      return true;
     if (Left.is(tok::r_square) && Right.is(tok::l_brace))
       return true;
     // spaces inside square brackets.

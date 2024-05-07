@@ -1510,6 +1510,7 @@ InstCombinerImpl::foldICmpTruncWithTruncOrExt(ICmpInst &Cmp,
       std::swap(X, Y);
       Pred = Cmp.getSwappedPredicate(Pred);
     }
+    YIsSExt = !(NoWrapFlags & TruncInst::NoUnsignedWrap);
   }
   // Try to match icmp (trunc nuw X), (zext Y)
   else if (!Cmp.isSigned() &&

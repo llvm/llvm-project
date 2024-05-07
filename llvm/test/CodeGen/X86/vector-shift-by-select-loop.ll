@@ -115,7 +115,7 @@ define void @vector_variable_shift_left_loop(ptr nocapture %arr, ptr nocapture r
 ; SSE-NEXT:    cmpq %rcx, %rdx
 ; SSE-NEXT:    jne .LBB0_4
 ; SSE-NEXT:  # %bb.5: # %middle.block
-; SSE-NEXT:    cmpq %r9, %rdx
+; SSE-NEXT:    cmpl %r9d, %edx
 ; SSE-NEXT:    jne .LBB0_6
 ; SSE-NEXT:  .LBB0_9: # %for.cond.cleanup
 ; SSE-NEXT:    retq
@@ -239,7 +239,7 @@ define void @vector_variable_shift_left_loop(ptr nocapture %arr, ptr nocapture r
 ; AVX1-NEXT:    cmpq %rcx, %rdx
 ; AVX1-NEXT:    jne .LBB0_4
 ; AVX1-NEXT:  # %bb.5: # %middle.block
-; AVX1-NEXT:    cmpq %r9, %rdx
+; AVX1-NEXT:    cmpl %r9d, %edx
 ; AVX1-NEXT:    jne .LBB0_6
 ; AVX1-NEXT:  .LBB0_9: # %for.cond.cleanup
 ; AVX1-NEXT:    vzeroupper
@@ -314,7 +314,7 @@ define void @vector_variable_shift_left_loop(ptr nocapture %arr, ptr nocapture r
 ; AVX2-NEXT:    cmpq %rcx, %rdx
 ; AVX2-NEXT:    jne .LBB0_4
 ; AVX2-NEXT:  # %bb.5: # %middle.block
-; AVX2-NEXT:    cmpq %r9, %rdx
+; AVX2-NEXT:    cmpl %r9d, %edx
 ; AVX2-NEXT:    jne .LBB0_6
 ; AVX2-NEXT:  .LBB0_9: # %for.cond.cleanup
 ; AVX2-NEXT:    vzeroupper
@@ -413,7 +413,7 @@ define void @vector_variable_shift_left_loop(ptr nocapture %arr, ptr nocapture r
 ; XOP-NEXT:    cmpq %rcx, %rdx
 ; XOP-NEXT:    jne .LBB0_4
 ; XOP-NEXT:  # %bb.5: # %middle.block
-; XOP-NEXT:    cmpq %r9, %rdx
+; XOP-NEXT:    cmpl %r9d, %edx
 ; XOP-NEXT:    jne .LBB0_6
 ; XOP-NEXT:  .LBB0_9: # %for.cond.cleanup
 ; XOP-NEXT:    vzeroupper
