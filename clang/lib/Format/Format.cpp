@@ -3921,12 +3921,13 @@ const char *DefaultFallbackStyle = "LLVM";
 
 llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
 loadAndParseConfigFile(StringRef ConfigFile, llvm::vfs::FileSystem *FS,
-                       FormatStyle *Style, bool AllowUnknownOptions) {
+                       FormatStyle *Style, bool AllowUnknownOptions,
+                       llvm::SourceMgr::DiagHandlerTy DiagHandler = nullptr) {
   llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> Text =
       FS->getBufferForFile(ConfigFile.str());
   if (auto EC = Text.getError())
     return EC;
-  if (auto EC = parseConfiguration(*Text.get(), Style, AllowUnknownOptions))
+  if (auto EC = parseConfiguration(*Text.get(), Style, AllowUnknownOptions, DiagHandler))
     return EC;
   return Text;
 }
@@ -3934,7 +3935,8 @@ loadAndParseConfigFile(StringRef ConfigFile, llvm::vfs::FileSystem *FS,
 llvm::Expected<FormatStyle> getStyle(StringRef StyleName, StringRef FileName,
                                      StringRef FallbackStyleName,
                                      StringRef Code, llvm::vfs::FileSystem *FS,
-                                     bool AllowUnknownOptions) {
+                                     bool AllowUnknownOptions,
+                                     llvm::SourceMgr::DiagHandlerTy DiagHandler) {
   FormatStyle Style = getLLVMStyle(guessLanguage(FileName, Code));
   FormatStyle FallbackStyle = getNoStyle();
   if (!getPredefinedStyle(FallbackStyleName, Style.Language, &FallbackStyle))
@@ -3948,7 +3950,7 @@ llvm::Expected<FormatStyle> getStyle(StringRef StyleName, StringRef FileName,
     StringRef Source = "<command-line>";
     if (std::error_code ec =
             parseConfiguration(llvm::MemoryBufferRef(StyleName, Source), &Style,
-                               AllowUnknownOptions)) {
+                               AllowUnknownOptions, DiagHandler)) {
       return make_string_error("Error parsing -style: " + ec.message());
     }
 
@@ -3968,7 +3970,7 @@ llvm::Expected<FormatStyle> getStyle(StringRef StyleName, StringRef FileName,
       StyleName.starts_with_insensitive("file:")) {
     auto ConfigFile = StyleName.substr(5);
     llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> Text =
-        loadAndParseConfigFile(ConfigFile, FS, &Style, AllowUnknownOptions);
+        loadAndParseConfigFile(ConfigFile, FS, &Style, AllowUnknownOptions, DiagHandler);
     if (auto EC = Text.getError()) {
       return make_string_error("Error reading " + ConfigFile + ": " +
                                EC.message());
@@ -4003,12 +4005,13 @@ llvm::Expected<FormatStyle> getStyle(StringRef StyleName, StringRef FileName,
   // Reset possible inheritance
   Style.InheritsParentConfig = false;
 
-  auto dropDiagnosticHandler = [](const llvm::SMDiagnostic &, void *) {};
+  auto diagHandlerOrDropHandling =
+      DiagHandler ? DiagHandler : [](llvm::SMDiagnostic const &, void *) {};
 
   auto applyChildFormatTexts = [&](FormatStyle *Style) {
     for (const auto &MemBuf : llvm::reverse(ChildFormatTextToApply)) {
       auto EC = parseConfiguration(*MemBuf, Style, AllowUnknownOptions,
-                                   dropDiagnosticHandler);
+                                   diagHandlerOrDropHandling);
       // It was already correctly parsed.
       assert(!EC);
       static_cast<void>(EC);
@@ -4042,7 +4045,7 @@ llvm::Expected<FormatStyle> getStyle(StringRef StyleName, StringRef FileName,
       }
 
       llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> Text =
-          loadAndParseConfigFile(ConfigFile, FS, &Style, AllowUnknownOptions);
+          loadAndParseConfigFile(ConfigFile, FS, &Style, AllowUnknownOptions, DiagHandler);
       if (auto EC = Text.getError()) {
         if (EC != ParseError::Unsuitable) {
           return make_string_error("Error reading " + ConfigFile + ": " +
