@@ -6727,6 +6727,7 @@ cc_library(
         ":IR",
         ":InferTypeOpInterface",
         ":PolynomialAttributesIncGen",
+        ":PolynomialCanonicalizationIncGen",
         ":PolynomialIncGen",
         ":Support",
         "//llvm:Support",
@@ -6815,6 +6816,23 @@ gentbl_cc_library(
     tblgen = ":mlir-tblgen",
     td_file = "include/mlir/Dialect/Polynomial/IR/Polynomial.td",
     deps = [":PolynomialTdFiles"],
+)
+
+gentbl_cc_library(
+    name = "PolynomialCanonicalizationIncGen",
+    strip_include_prefix = "include/mlir/Dialect/Polynomial/IR",
+    tbl_outs = [
+        (
+            ["-gen-rewriters"],
+            "include/mlir/Dialect/Polynomial/IR/PolynomialCanonicalization.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "lib/Dialect/Polynomial/IR/PolynomialCanonicalization.td",
+    deps = [
+        ":ArithOpsTdFiles",
+        ":PolynomialTdFiles",
+    ],
 )
 
 td_library(
