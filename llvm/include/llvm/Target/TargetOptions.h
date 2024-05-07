@@ -277,6 +277,7 @@ namespace llvm {
     /// Use unique names for basic block sections.
     unsigned UniqueBasicBlockSectionNames : 1;
 
+    /// Emit named sections with the same name into different sections.
     unsigned SeparateNamedSections : 1;
 
     /// Emit target-specific trap instruction for 'unreachable' IR instructions.

@@ -223,7 +223,7 @@ New Compiler Flags
 
 - ``-fseparate-named-sections`` uses separate unique sections for global
   symbols in named special sections (i.e. symbols annotated with
-  ``__attribute__((section(...)))``. This enabled linker GC to collect unused
+  ``__attribute__((section(...)))``. This enables linker GC to collect unused
   symbols without having to use a per-symbol section.
 
 Deprecated Compiler Flags
