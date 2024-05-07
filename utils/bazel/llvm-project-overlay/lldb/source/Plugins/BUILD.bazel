@@ -270,6 +270,7 @@ cc_library(
            }),
     hdrs = glob(["Platform/MacOSX/*.h"]),
     include_prefix = "Plugins",
+    tags = ["nobuildkite"],
     deps = [
         ":PlatformMacOSXProperties",
         ":PluginDynamicLoaderDarwinKernelHeaders",
