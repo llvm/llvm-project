@@ -5403,6 +5403,7 @@ def : Pat<(AArch64bsp (v4i32 V128:$Rd), V128:$Rn, V128:$Rm),
 def : Pat<(AArch64bsp (v2i64 V128:$Rd), V128:$Rn, V128:$Rm),
           (BSPv16i8 V128:$Rd, V128:$Rn, V128:$Rm)>;
 
+// The following SetCC patterns are used for GlobalISel only
 multiclass SelectSetCC<PatFrags InFrag, string INST> {
   def : Pat<(v8i8 (InFrag (v8i8 V64:$Rn), (v8i8 V64:$Rm))),
             (v8i8 (!cast<Instruction>(INST # v8i8) (v8i8 V64:$Rn), (v8i8 V64:$Rm)))>;
