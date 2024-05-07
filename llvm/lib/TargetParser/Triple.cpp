@@ -1491,40 +1491,9 @@ VersionTuple Triple::getVulkanVersion() const {
 VersionTuple Triple::getDXILVersion() const {
   if (getArch() != dxil || getOS() != ShaderModel)
     llvm_unreachable("invalid DXIL triple");
-
-  VersionTuple DXILVersion;
-  switch (getSubArch()) {
-  case Triple::NoSubArch:
-  case Triple::DXILSubArch_v1_0:
-    DXILVersion = VersionTuple(1, 0);
-    break;
-  case Triple::DXILSubArch_v1_1:
-    DXILVersion = VersionTuple(1, 1);
-    break;
-  case Triple::DXILSubArch_v1_2:
-    DXILVersion = VersionTuple(1, 2);
-    break;
-  case Triple::DXILSubArch_v1_3:
-    DXILVersion = VersionTuple(1, 3);
-    break;
-  case Triple::DXILSubArch_v1_4:
-    DXILVersion = VersionTuple(1, 4);
-    break;
-  case Triple::DXILSubArch_v1_5:
-    DXILVersion = VersionTuple(1, 5);
-    break;
-  case Triple::DXILSubArch_v1_6:
-    DXILVersion = VersionTuple(1, 6);
-    break;
-  case Triple::DXILSubArch_v1_7:
-    DXILVersion = VersionTuple(1, 7);
-    break;
-  case Triple::DXILSubArch_v1_8:
-    DXILVersion = VersionTuple(1, 8);
-    break;
-  default:
-    llvm_unreachable("invalid DXIL SubArch");
-  }
+  StringRef Arch = getArchName();
+  Arch.consume_front("dxilv");
+  VersionTuple DXILVersion = parseVersionFromName(Arch);
   // FIXME: validate DXIL version against Shader Model version.
   // Tracked by https://github.com/llvm/llvm-project/issues/91388
   return DXILVersion;
