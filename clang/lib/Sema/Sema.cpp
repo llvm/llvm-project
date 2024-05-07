@@ -1408,7 +1408,7 @@ void Sema::ActOnEndOfTranslationUnit() {
         SourceRange DiagRange = DiagD->getLocation();
         if (const auto *VTSD = dyn_cast<VarTemplateSpecializationDecl>(DiagD)) {
           if (const ASTTemplateArgumentListInfo *ASTTAL =
-                  VTSD->getTemplateArgsInfo())
+                  VTSD->getTemplateArgsAsWritten())
             DiagRange.setEnd(ASTTAL->RAngleLoc);
         }
         if (DiagD->isReferenced()) {

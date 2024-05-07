@@ -289,6 +289,10 @@ public:
     return Options.UniqueBasicBlockSectionNames;
   }
 
+  bool getSeparateNamedSections() const {
+    return Options.SeparateNamedSections;
+  }
+
   /// Return true if data objects should be emitted into their own section,
   /// corresponds to -fdata-sections.
   bool getDataSections() const {
