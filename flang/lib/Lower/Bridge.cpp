@@ -2586,7 +2586,7 @@ private:
     llvm::SmallVector<mlir::Location> ivLocs;
     llvm::SmallVector<mlir::Value> ivValues;
     Fortran::lower::pft::Evaluation *loopEval =
-          &getEval().getFirstNestedEvaluation();
+        &getEval().getFirstNestedEvaluation();
     for (unsigned i = 0; i < nestedLoops; ++i) {
       const Fortran::parser::LoopControl *loopControl;
       mlir::Location crtLoc = loc;
