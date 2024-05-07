@@ -55,6 +55,7 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/YAMLParser.h"
+#include "llvm/TargetParser/AArch64TargetParser.h"
 #include "llvm/TargetParser/ARMTargetParserCommon.h"
 #include "llvm/TargetParser/Host.h"
 #include "llvm/TargetParser/LoongArchTargetParser.h"
@@ -1511,6 +1512,7 @@ static void CollectARMPACBTIOptions(const ToolChain &TC, const ArgList &Args,
   } else {
     StringRef DiagMsg;
     llvm::ARM::ParsedBranchProtection PBP;
+    bool EnablePAuthLR = false;
 
     // To know if we need to enable PAuth-LR As part of the standard branch
     // protection option, it needs to be determined if the feature has been
