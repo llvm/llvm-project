@@ -305,13 +305,11 @@ public:
 
   virtual void buildBadCastCall(CIRGenFunction &CGF, mlir::Location loc) = 0;
 
-  virtual mlir::cir::DynamicCastInfoAttr
-  buildDynamicCastInfo(CIRGenFunction &CGF, mlir::Location Loc,
-                       QualType SrcRecordTy, QualType DestRecordTy) = 0;
-
-  virtual mlir::Value buildDynamicCastToVoid(CIRGenFunction &CGF,
-                                             mlir::Location Loc, Address Value,
-                                             QualType SrcRecordTy) = 0;
+  virtual mlir::Value buildDynamicCast(CIRGenFunction &CGF, mlir::Location Loc,
+                                       QualType SrcRecordTy,
+                                       QualType DestRecordTy,
+                                       mlir::cir::PointerType DestCIRTy,
+                                       bool isRefCast, mlir::Value Src) = 0;
 };
 
 /// Creates and Itanium-family ABI

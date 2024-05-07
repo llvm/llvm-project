@@ -140,14 +140,15 @@ def DynamicCastOp : CIR_Op<"dyn_cast"> {
   let summary = "Perform dynamic cast on struct pointers";
   let description = [{
     The `cir.dyn_cast` operation models part of the semantics of the
-    `dynamic_cast` operator in C++. It can be used to perform 2 kinds of casts
+    `dynamic_cast` operator in C++. It can be used to perform 3 kinds of casts
     on struct pointers:
 
     - Down-cast, which casts a base class pointer to a derived class pointer;
-    - Side-cast, which casts a class pointer to a sibling class pointer.
+    - Side-cast, which casts a class pointer to a sibling class pointer;
+    - Cast-to-complete, which casts a class pointer to a void pointer.
 
     The input of the operation must be a struct pointer. The result of the
-    operation is also a struct pointer.
+    operation is either a struct pointer or a void pointer.
 
     The parameter `kind` specifies the semantics of this operation. If its value
     is `ptr`, then the operation models dynamic casts on pointers. Otherwise, if
@@ -163,17 +164,27 @@ def DynamicCastOp : CIR_Op<"dyn_cast"> {
       - Otherwise, the operation will return a null pointer value as its result.
 
     The `info` argument gives detailed information about the requested dynamic
-    cast operation.
+    cast operation. It is an optional `#cir.dyn_cast_info` attribute that is
+    only present when the operation models a down-cast or a side-cast.
+
+    The `relative_layout` argument specifies whether the Itanium C++ ABI vtable
+    uses relative layout. It is only meaningful when the operation models a
+    cast-to-complete operation.
   }];
 
   let arguments = (ins DynamicCastKind:$kind,
                        StructPtr:$src,
-                       DynamicCastInfoAttr:$info);
-  let results = (outs StructPtr:$result);
+                       OptionalAttr<DynamicCastInfoAttr>:$info,
+                       UnitAttr:$relative_layout);
+  let results = (outs CIR_PointerType:$result);
 
   let assemblyFormat = [{
-    `(` $kind `,` $src `:` type($src) `,` qualified($info) `)`
-    `->` type($result) attr-dict
+    `(`
+      $kind `,` $src `:` type($src)
+      (`,` qualified($info)^)?
+      (`relative_layout` $relative_layout^)?
+    `)`
+    `->` qualified(type($result)) attr-dict
   }];
 
   let extraClassDeclaration = [{
@@ -181,7 +192,15 @@ def DynamicCastOp : CIR_Op<"dyn_cast"> {
     bool isRefcast() {
       return getKind() == ::mlir::cir::DynamicCastKind::ref;
     }
+
+    /// Determine whether this operation represents a dynamic cast to a void
+    /// pointer.
+    bool isCastToVoid() {
+      return getType().isVoidPtr();
+    }
   }];
+
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//

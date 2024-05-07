@@ -637,7 +637,18 @@ public:
                             mlir::cir::DynamicCastInfoAttr info) {
     auto castKind = isRefCast ? mlir::cir::DynamicCastKind::ref
                               : mlir::cir::DynamicCastKind::ptr;
-    return create<mlir::cir::DynamicCastOp>(loc, destType, castKind, src, info);
+    return create<mlir::cir::DynamicCastOp>(loc, destType, castKind, src, info,
+                                            /*relative_layout=*/false);
+  }
+
+  mlir::Value createDynCastToVoid(mlir::Location loc, mlir::Value src,
+                                  bool vtableUseRelativeLayout) {
+    // TODO(cir): consider address space here.
+    assert(!UnimplementedFeature::addressSpace());
+    auto destTy = getVoidPtrTy();
+    return create<mlir::cir::DynamicCastOp>(
+        loc, destTy, mlir::cir::DynamicCastKind::ptr, src,
+        mlir::cir::DynamicCastInfoAttr{}, vtableUseRelativeLayout);
   }
 
   cir::Address createBaseClassAddr(mlir::Location loc, cir::Address addr,

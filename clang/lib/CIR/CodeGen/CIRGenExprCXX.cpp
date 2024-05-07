@@ -1136,29 +1136,8 @@ mlir::Value CIRGenFunction::buildDynamicCast(Address ThisAddr,
   if (DCE->isAlwaysNull())
     return buildDynamicCastToNull(*this, loc, destTy);
 
-  if (isDynCastToVoid) {
-    auto srcIsNull = builder.createPtrIsNull(ThisAddr.getPointer());
-    return builder
-        .create<mlir::cir::TernaryOp>(
-            loc, srcIsNull,
-            [&](mlir::OpBuilder &, mlir::Location) {
-              auto nullPtr =
-                  builder.getNullPtr(builder.getVoidPtrTy(), loc).getResult();
-              builder.createYield(loc, nullPtr);
-            },
-            [&](mlir::OpBuilder &, mlir::Location) {
-              auto castedPtr = CGM.getCXXABI().buildDynamicCastToVoid(
-                  *this, loc, ThisAddr, srcRecordTy);
-              builder.createYield(loc, castedPtr);
-            })
-        .getResult();
-  }
-
-  assert(destRecordTy->isRecordType() && "dest type must be a record type!");
-
   auto destCirTy = ConvertType(destTy).cast<mlir::cir::PointerType>();
-  auto castInfo = CGM.getCXXABI().buildDynamicCastInfo(*this, loc, srcRecordTy,
-                                                       destRecordTy);
-  return builder.createDynCast(loc, ThisAddr.getPointer(), destCirTy, isRefCast,
-                               castInfo);
+  return CGM.getCXXABI().buildDynamicCast(*this, loc, srcRecordTy, destRecordTy,
+                                          destCirTy, isRefCast,
+                                          ThisAddr.getPointer());
 }

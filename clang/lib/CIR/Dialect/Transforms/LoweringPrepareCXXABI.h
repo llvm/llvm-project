@@ -16,6 +16,7 @@
 #define LLVM_CLANG_LIB_CIR_LOWERING_PREPARE_CXX_ABI_H
 
 #include "mlir/IR/Value.h"
+#include "clang/AST/ASTContext.h"
 #include "clang/CIR/Dialect/Builder/CIRBaseBuilder.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 
@@ -25,10 +26,11 @@ class LoweringPrepareCXXABI {
 public:
   static LoweringPrepareCXXABI *createItaniumABI();
 
-  virtual mlir::Value lowerDynamicCast(CIRBaseBuilderTy &builder,
-                                       mlir::cir::DynamicCastOp op) = 0;
-
   virtual ~LoweringPrepareCXXABI() {}
+
+  virtual mlir::Value lowerDynamicCast(CIRBaseBuilderTy &builder,
+                                       clang::ASTContext &astCtx,
+                                       mlir::cir::DynamicCastOp op) = 0;
 };
 
 } // namespace cir
