@@ -60,10 +60,10 @@ void Context::PrintDiagnostics(const char *InterceptedFunctionName) {
           "Real-time violation: intercepted call to real-time unsafe function "
           "`%s` in real-time context! Stack trace:\n",
           InterceptedFunctionName);
-  radsan::printStackTrace();
+  radsan::PrintStackTrace();
 }
 
-Context &getContextForThisThread() {
+Context &GetContextForThisThread() {
   auto MakeTlsKey = []() {
     CHECK_EQ(pthread_key_create(&detail::Key, detail::internalFree), 0);
   };

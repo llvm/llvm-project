@@ -10,7 +10,7 @@
 
 #pragma once
 
-#define RADSAN_EXPORT __attribute__((visibility("default")))
+#include "sanitizer_common/sanitizer_internal_defs.h"
 
 extern "C" {
 
@@ -20,7 +20,7 @@ extern "C" {
 
     @warning Do not call this method as a user.
 */
-RADSAN_EXPORT void radsan_init();
+SANITIZER_INTERFACE_ATTRIBUTE void radsan_init();
 
 /** Enter real-time context.
 
@@ -30,7 +30,7 @@ RADSAN_EXPORT void radsan_init();
 
     @warning Do not call this method as a user
 */
-RADSAN_EXPORT void radsan_realtime_enter();
+SANITIZER_INTERFACE_ATTRIBUTE void radsan_realtime_enter();
 
 /** Exit the real-time context.
 
@@ -39,7 +39,7 @@ RADSAN_EXPORT void radsan_realtime_enter();
 
     @warning Do not call this method as a user
 */
-RADSAN_EXPORT void radsan_realtime_exit();
+SANITIZER_INTERFACE_ATTRIBUTE void radsan_realtime_exit();
 
 /** Disable all RADSan error reporting.
 
@@ -64,12 +64,12 @@ RADSAN_EXPORT void radsan_realtime_exit();
         }
 
 */
-RADSAN_EXPORT void radsan_off();
+SANITIZER_INTERFACE_ATTRIBUTE void radsan_off();
 
 /** Re-enable all RADSan error reporting.
 
     The counterpart to `radsan_off`. See the description for `radsan_off` for
     details about how to use this method.
 */
-RADSAN_EXPORT void radsan_on();
+SANITIZER_INTERFACE_ATTRIBUTE void radsan_on();
 }

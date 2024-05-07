@@ -152,7 +152,7 @@ TEST(TestRadsan, CopyingALambdaWithLargeCaptureDiesWhenRealtime) {
 TEST(TestRadsan, AccessingALargeAtomicVariableDiesWhenRealtime) {
   std::atomic<float> SmallAtomic{0.0f};
   ASSERT_TRUE(SmallAtomic.is_lock_free());
-  realtimeInvoke([&SmallAtomic]() { float x = SmallAtomic.load(); });
+  RealtimeInvoke([&SmallAtomic]() { float x = SmallAtomic.load(); });
 
   std::atomic<std::array<float, 2048>> LargeAtomic{};
   ASSERT_FALSE(LargeAtomic.is_lock_free());
@@ -199,5 +199,5 @@ TEST(TestRadsan, DoesNotDieIfTurnedOff) {
     Mutex.unlock();
     radsan_on();
   };
-  realtimeInvoke(RealtimeUnsafeFunc);
+  RealtimeInvoke(RealtimeUnsafeFunc);
 }

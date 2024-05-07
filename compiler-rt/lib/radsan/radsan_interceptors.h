@@ -11,5 +11,5 @@
 #pragma once
 
 namespace radsan {
-void initialiseInterceptors();
+void InitializeInterceptors();
 }

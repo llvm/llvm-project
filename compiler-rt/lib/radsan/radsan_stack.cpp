@@ -28,7 +28,7 @@ void BufferedStackTrace::UnwindImpl(uptr pc, uptr bp, void *context,
 } // namespace __sanitizer
 
 namespace {
-void setGlobalStackTraceFormat() {
+void SetGlobalStackTraceFormat() {
   SetCommonFlagsDefaults();
   CommonFlags cf;
   cf.CopyFrom(*common_flags());
@@ -39,14 +39,14 @@ void setGlobalStackTraceFormat() {
 } // namespace
 
 namespace radsan {
-void printStackTrace() {
+void PrintStackTrace() {
 
-  auto stack = BufferedStackTrace{};
+  BufferedStackTrace Stack{};
 
   GET_CURRENT_PC_BP;
-  stack.Unwind(pc, bp, nullptr, common_flags()->fast_unwind_on_fatal);
+  Stack.Unwind(pc, bp, nullptr, common_flags()->fast_unwind_on_fatal);
 
-  setGlobalStackTraceFormat();
-  stack.Print();
+  SetGlobalStackTraceFormat();
+  Stack.Print();
 }
 } // namespace radsan
