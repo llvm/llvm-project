@@ -158,7 +158,7 @@ bool llvm::isPotentiallyReachableFromMany(
   const Loop *StopLoop = LI ? getOutermostLoop(LI, StopBB) : nullptr;
 
   unsigned Limit = DefaultMaxBBsToExplore;
-  SmallPtrSet<const BasicBlock*, 32> Visited;
+  SmallPtrSet<const BasicBlock *, 32> Visited;
   do {
     BasicBlock *BB = Worklist.pop_back_val();
     if (!Visited.insert(BB).second)
@@ -180,6 +180,89 @@ bool llvm::isPotentiallyReachableFromMany(
       if (LoopsWithHoles.count(Outer))
         Outer = nullptr;
       if (StopLoop && Outer == StopLoop)
+        return true;
+    }
+
+    if (!--Limit) {
+      // We haven't been able to prove it one way or the other. Conservatively
+      // answer true -- that there is potentially a path.
+      return true;
+    }
+
+    if (Outer) {
+      // All blocks in a single loop are reachable from all other blocks. From
+      // any of these blocks, we can skip directly to the exits of the loop,
+      // ignoring any other blocks inside the loop body.
+      Outer->getExitBlocks(Worklist);
+    } else {
+      Worklist.append(succ_begin(BB), succ_end(BB));
+    }
+  } while (!Worklist.empty());
+
+  // We have exhausted all possible paths and are certain that 'To' can not be
+  // reached from 'From'.
+  return false;
+}
+
+bool llvm::isManyPotentiallyReachableFromMany(
+    SmallVectorImpl<BasicBlock *> &Worklist,
+    const SmallPtrSetImpl<const BasicBlock *> &StopSet,
+    const SmallPtrSetImpl<BasicBlock *> *ExclusionSet, const DominatorTree *DT,
+    const LoopInfo *LI) {
+  // When a stop block is unreachable, it's dominated from everywhere,
+  // regardless of whether there's a path between the two blocks.
+  llvm::DenseMap<const BasicBlock *, bool> StopBBReachable;
+  for (auto *BB : StopSet)
+    StopBBReachable[BB] = DT && DT->isReachableFromEntry(BB);
+
+  // We can't skip directly from a block that dominates the stop block if the
+  // exclusion block is potentially in between.
+  if (ExclusionSet && !ExclusionSet->empty())
+    DT = nullptr;
+
+  // Normally any block in a loop is reachable from any other block in a loop,
+  // however excluded blocks might partition the body of a loop to make that
+  // untrue.
+  SmallPtrSet<const Loop *, 8> LoopsWithHoles;
+  if (LI && ExclusionSet) {
+    for (auto *BB : *ExclusionSet) {
+      if (const Loop *L = getOutermostLoop(LI, BB))
+        LoopsWithHoles.insert(L);
+    }
+  }
+
+  llvm::DenseMap<const BasicBlock *, const Loop *> StopLoops;
+  for (auto *StopBB : StopSet)
+    StopLoops[StopBB] = LI ? getOutermostLoop(LI, StopBB) : nullptr;
+
+  unsigned Limit = DefaultMaxBBsToExplore;
+  SmallPtrSet<const BasicBlock*, 32> Visited;
+  do {
+    BasicBlock *BB = Worklist.pop_back_val();
+    if (!Visited.insert(BB).second)
+      continue;
+    if (StopSet.contains(BB))
+      return true;
+    if (ExclusionSet && ExclusionSet->count(BB))
+      continue;
+    if (DT && llvm::any_of(StopSet, [&](const BasicBlock *StopBB) {
+          return StopBBReachable[BB] && DT->dominates(BB, StopBB);
+        }))
+      return true;
+
+    const Loop *Outer = nullptr;
+    if (LI) {
+      Outer = getOutermostLoop(LI, BB);
+      // If we're in a loop with a hole, not all blocks in the loop are
+      // reachable from all other blocks. That implies we can't simply jump to
+      // the loop's exit blocks, as that exit might need to pass through an
+      // excluded block. Clear Outer so we process BB's successors.
+      if (LoopsWithHoles.count(Outer))
+        Outer = nullptr;
+      if (llvm::any_of(StopSet, [&](const BasicBlock *StopBB) {
+            const Loop *StopLoop = StopLoops[StopBB];
+            return StopLoop && StopLoop == Outer;
+          }))
         return true;
     }
 
