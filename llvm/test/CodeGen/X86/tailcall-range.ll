@@ -27,25 +27,27 @@ define range(i64 0, 8) i64 @testmsxs(float %x) {
 ; CHECK-LABEL: testmsxs:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    jmp llroundf@PLT # TAILCALL
-    entry:
-        %ret = tail call i64 @llvm.llround.f32(float %x)
-   ret i64 %ret
+entry:
+  %ret = tail call i64 @llvm.llround.f32(float %x)
+  ret i64 %ret
 }
 
 declare i32 @callee()
 
 define range(i32 0, 2) i32 @func_with_range_attr() {
 ; CHECK-LABEL: func_with_range_attr:
-; CHECK:       # %bb.0:
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    jmp callee@PLT # TAILCALL
-    %1 = musttail call i32 @callee()
-      ret i32 %1
+entry:
+  %ret = musttail call i32 @callee()
+  ret i32 %ret
 }
 
 define i32 @call_with_range_attr() {
 ; CHECK-LABEL: call_with_range_attr:
-; CHECK:       # %bb.0:
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    jmp callee@PLT # TAILCALL
-    %1 = musttail call range(i32 0, 2) i32 @callee()
-      ret i32 %1
+entry:
+  %ret = musttail call range(i32 0, 2) i32 @callee()
+  ret i32 %ret
 }
