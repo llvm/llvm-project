@@ -413,8 +413,9 @@ static bool format(StringRef FileName, bool ErrorOnIncompleteFormat = false) {
   // On Windows, overwriting a file with an open file mapping doesn't work,
   // so read the whole file into memory when formatting in-place.
   ErrorOr<std::unique_ptr<MemoryBuffer>> CodeOrErr =
-      !OutputXML && Inplace ? MemoryBuffer::getFileAsStream(FileName)
-                            : MemoryBuffer::getFileOrSTDIN(FileName);
+      !OutputXML && Inplace
+          ? MemoryBuffer::getFileAsStream(FileName)
+          : MemoryBuffer::getFileOrSTDIN(FileName, /*IsText=*/true);
   if (std::error_code EC = CodeOrErr.getError()) {
     errs() << EC.message() << "\n";
     return true;
@@ -558,7 +559,7 @@ static int dumpConfig() {
     // Read in the code in case the filename alone isn't enough to detect the
     // language.
     ErrorOr<std::unique_ptr<MemoryBuffer>> CodeOrErr =
-        MemoryBuffer::getFileOrSTDIN(FileNames[0]);
+        MemoryBuffer::getFileOrSTDIN(FileNames[0], /*IsText=*/true);
     if (std::error_code EC = CodeOrErr.getError()) {
       llvm::errs() << EC.message() << "\n";
       return 1;

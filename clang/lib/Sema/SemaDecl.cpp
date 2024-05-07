@@ -832,7 +832,7 @@ static bool isTagTypeWithMissingTag(Sema &SemaRef, LookupResult &Result,
                                     IdentifierInfo *&Name,
                                     SourceLocation NameLoc) {
   LookupResult R(SemaRef, Name, NameLoc, Sema::LookupTagName);
-  SemaRef.LookupParsedName(R, S, &SS);
+  SemaRef.LookupParsedName(R, S, &SS, /*ObjectType=*/QualType());
   if (TagDecl *Tag = R.getAsSingle<TagDecl>()) {
     StringRef FixItTagName;
     switch (Tag->getTagKind()) {
@@ -869,7 +869,7 @@ static bool isTagTypeWithMissingTag(Sema &SemaRef, LookupResult &Result,
 
     // Replace lookup results with just the tag decl.
     Result.clear(Sema::LookupTagName);
-    SemaRef.LookupParsedName(Result, S, &SS);
+    SemaRef.LookupParsedName(Result, S, &SS, /*ObjectType=*/QualType());
     return true;
   }
 
@@ -896,7 +896,8 @@ Sema::NameClassification Sema::ClassifyName(Scope *S, CXXScopeSpec &SS,
   }
 
   LookupResult Result(*this, Name, NameLoc, LookupOrdinaryName);
-  LookupParsedName(Result, S, &SS, !CurMethod);
+  LookupParsedName(Result, S, &SS, /*ObjectType=*/QualType(),
+                   /*AllowBuiltinCreation=*/!CurMethod);
 
   if (SS.isInvalid())
     return NameClassification::Error();
@@ -5789,6 +5790,9 @@ Decl *Sema::BuildAnonymousStructOrUnion(Scope *S, DeclSpec &DS,
     Anon = VarDecl::Create(Context, Owner, DS.getBeginLoc(),
                            Record->getLocation(), /*IdentifierInfo=*/nullptr,
                            Context.getTypeDeclType(Record), TInfo, SC);
+    if (Invalid)
+      Anon->setInvalidDecl();
+
     ProcessDeclAttributes(S, Anon, Dc);
 
     // Default-initialize the implicit variable. This initialization will be
@@ -13526,9 +13530,12 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
   }
 
   if (VDecl->isInvalidDecl()) {
-    CorrectDelayedTyposInExpr(Init, VDecl);
+    ExprResult Res = CorrectDelayedTyposInExpr(Init, VDecl);
+    SmallVector<Expr *> SubExprs;
+    if (Res.isUsable())
+      SubExprs.push_back(Res.get());
     ExprResult Recovery =
-        CreateRecoveryExpr(Init->getBeginLoc(), Init->getEndLoc(), {Init});
+        CreateRecoveryExpr(Init->getBeginLoc(), Init->getEndLoc(), SubExprs);
     if (Expr *E = Recovery.get())
       VDecl->setInit(E);
     return;

@@ -438,6 +438,11 @@ TEST_F(TokenAnnotatorTest, UnderstandsStructs) {
   EXPECT_TOKEN(Tokens[2], tok::l_brace, TT_StructLBrace);
   EXPECT_TOKEN(Tokens[3], tok::r_brace, TT_StructRBrace);
 
+  Tokens = annotate("struct macro(a) S {};");
+  ASSERT_EQ(Tokens.size(), 10u) << Tokens;
+  EXPECT_TOKEN(Tokens[6], tok::l_brace, TT_StructLBrace);
+  EXPECT_TOKEN(Tokens[7], tok::r_brace, TT_StructRBrace);
+
   Tokens = annotate("struct EXPORT_MACRO [[nodiscard]] C { int i; };");
   ASSERT_EQ(Tokens.size(), 15u) << Tokens;
   EXPECT_TOKEN(Tokens[8], tok::l_brace, TT_StructLBrace);
@@ -447,6 +452,14 @@ TEST_F(TokenAnnotatorTest, UnderstandsStructs) {
   ASSERT_EQ(Tokens.size(), 19u) << Tokens;
   EXPECT_TOKEN(Tokens[12], tok::l_brace, TT_StructLBrace);
   EXPECT_TOKEN(Tokens[16], tok::r_brace, TT_StructRBrace);
+
+  Tokens = annotate("struct macro(a) S {\n"
+                    "  void f(T &t);\n"
+                    "};");
+  ASSERT_EQ(Tokens.size(), 18u) << Tokens;
+  EXPECT_TOKEN(Tokens[6], tok::l_brace, TT_StructLBrace);
+  EXPECT_TOKEN(Tokens[11], tok::amp, TT_PointerOrReference);
+  EXPECT_TOKEN(Tokens[15], tok::r_brace, TT_StructRBrace);
 
   Tokens = annotate("template <typename T> struct S<const T[N]> {};");
   ASSERT_EQ(Tokens.size(), 18u) << Tokens;
@@ -476,6 +489,10 @@ TEST_F(TokenAnnotatorTest, UnderstandsStructs) {
   EXPECT_TOKEN(Tokens[24], tok::amp, TT_UnaryOperator);
   EXPECT_TOKEN(Tokens[27], tok::l_square, TT_ArraySubscriptLSquare);
   EXPECT_TOKEN(Tokens[32], tok::r_brace, TT_StructRBrace);
+
+  Tokens = annotate("template <typename T, enum E e> struct S {};");
+  ASSERT_EQ(Tokens.size(), 15u) << Tokens;
+  EXPECT_TOKEN(Tokens[11], tok::l_brace, TT_StructLBrace);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsUnions) {
@@ -2962,6 +2979,24 @@ TEST_F(TokenAnnotatorTest, BlockLBrace) {
   EXPECT_BRACE_KIND(Tokens[4], BK_Block);
   EXPECT_TOKEN(Tokens[5], tok::l_brace, TT_BlockLBrace);
   EXPECT_BRACE_KIND(Tokens[5], BK_Block);
+}
+
+TEST_F(TokenAnnotatorTest, SwitchExpression) {
+  auto Style = getLLVMStyle(FormatStyle::LK_Java);
+  auto Tokens = annotate("i = switch (day) {\n"
+                         "  case THURSDAY, SATURDAY -> 8;\n"
+                         "  case WEDNESDAY -> 9;\n"
+                         "  default -> 1;\n"
+                         "};",
+                         Style);
+  ASSERT_EQ(Tokens.size(), 26u) << Tokens;
+  EXPECT_TOKEN(Tokens[6], tok::l_brace, TT_SwitchExpressionLBrace);
+  EXPECT_TOKEN(Tokens[7], tok::kw_case, TT_SwitchExpressionLabel);
+  EXPECT_TOKEN(Tokens[11], tok::arrow, TT_CaseLabelArrow);
+  EXPECT_TOKEN(Tokens[14], tok::kw_case, TT_SwitchExpressionLabel);
+  EXPECT_TOKEN(Tokens[16], tok::arrow, TT_CaseLabelArrow);
+  EXPECT_TOKEN(Tokens[19], tok::kw_default, TT_SwitchExpressionLabel);
+  EXPECT_TOKEN(Tokens[20], tok::arrow, TT_CaseLabelArrow);
 }
 
 } // namespace
