@@ -1200,6 +1200,31 @@ ASTFileSignature ASTWriter::createSignatureForNamedModule() const {
   for (auto [ExportImported, _] : WritingModule->Exports)
     Hasher.update(ExportImported->Signature);
 
+  // We combine all the used modules to make sure the signature is precise.
+  // Consider the case like:
+  //
+  // // a.cppm
+  // export module a;
+  // export inline int a() { ... }
+  //
+  // // b.cppm
+  // export module b;
+  // import a;
+  // export inline int b() { return a(); }
+  //
+  // Since both `a()` and `b()` are inline, we need to make sure the BMI of
+  // `b.pcm` will change after the implementation of `a()` changes. We can't
+  // get that naturally since we won't record the body of `a()` during the
+  // writing process. We can't reuse ODRHash here since ODRHash won't calculate
+  // the called function recursively. So ODRHash will be problematic if `a()`
+  // calls other inline functions.
+  //
+  // Probably we can solve this by a new hash mechanism. But the safety and
+  // efficiency may a problem too. Here we just combine the hash value of the
+  // used modules conservatively.
+  for (Module *M : TouchedTopLevelModules)
+    Hasher.update(M->Signature);
+
   return ASTFileSignature::create(Hasher.result());
 }
 
@@ -6112,8 +6137,12 @@ LocalDeclID ASTWriter::GetDeclRef(const Decl *D) {
 
   // If D comes from an AST file, its declaration ID is already known and
   // fixed.
-  if (D->isFromASTFile())
+  if (D->isFromASTFile()) {
+    if (isWritingStdCXXNamedModules() && D->getOwningModule())
+      TouchedTopLevelModules.insert(D->getOwningModule()->getTopLevelModule());
+
     return LocalDeclID(D->getGlobalID());
+  }
 
   assert(!(reinterpret_cast<uintptr_t>(D) & 0x01) && "Invalid decl pointer");
   LocalDeclID &ID = DeclIDs[D];
