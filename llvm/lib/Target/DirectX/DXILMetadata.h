@@ -30,6 +30,7 @@ public:
   void update(VersionTuple ValidatorVer);
 
   bool isEmpty();
+  VersionTuple getAsVersionTuple();
 };
 
 void createShaderModelMD(Module &M);

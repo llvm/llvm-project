@@ -40,6 +40,15 @@ void ValidatorVersionMD::update(VersionTuple ValidatorVer) {
 
 bool ValidatorVersionMD::isEmpty() { return Entry->getNumOperands() == 0; }
 
+VersionTuple ValidatorVersionMD::getAsVersionTuple() {
+  if (isEmpty())
+    return VersionTuple(1, 0);
+  auto *ValVerMD = cast<MDNode>(Entry->getOperand(0));
+  auto *MajorMD = mdconst::extract<ConstantInt>(ValVerMD->getOperand(0));
+  auto *MinorMD = mdconst::extract<ConstantInt>(ValVerMD->getOperand(1));
+  return VersionTuple(MajorMD->getZExtValue(), MinorMD->getZExtValue());
+}
+
 static StringRef getShortShaderStage(Triple::EnvironmentType Env) {
   switch (Env) {
   case Triple::Pixel:
