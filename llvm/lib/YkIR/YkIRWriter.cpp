@@ -632,21 +632,41 @@ private:
 
   void serialiseGetElementPtrInst(GetElementPtrInst *I, FuncLowerCtxt &FLCtxt,
                                   unsigned BBIdx, unsigned &InstIdx) {
-    unsigned BitWidth = 64;
-    MapVector<Value *, APInt> Offsets;
-    APInt Offset(BitWidth, 0);
-
-    bool Res = I->collectOffset(DL, BitWidth, Offsets, Offset);
-    assert(Res);
-
     // opcode:
     serialiseOpcode(OpCodePtrAdd);
     // type_idx:
     OutStreamer.emitSizeT(typeIndex(I->getType()));
     // pointer:
     serialiseOperand(I, FLCtxt, I->getPointerOperand());
-    // offset:
-    serialiseOperand(I, FLCtxt, ConstantInt::get(I->getContext(), Offset));
+
+    // GetElementPtrInst::collectOffset() reduces the GEP to:
+    //  - a static offset and
+    //  - zero or more dynamic offsets of the form `elem_count * elem_size`,
+    //    where `elem_count` is not known statically.
+    //
+    // We lower this information directly into a Yk PtrAdd instruction.
+    //
+    // Note: the width of the collected constant offset must be the same as the
+    // index type bit-width.
+    unsigned BitWidth = DL.getIndexSizeInBits(I->getPointerAddressSpace());
+    APInt ConstOff(BitWidth, 0);
+    MapVector<Value *, APInt> DynOffs;
+    bool CollectRes = I->collectOffset(DL, BitWidth, DynOffs, ConstOff);
+    assert(CollectRes);
+
+    // const_off:
+    OutStreamer.emitSizeT(ConstOff.getZExtValue());
+    // num_dyn_offs:
+    size_t NumDyn = DynOffs.size();
+    OutStreamer.emitSizeT(NumDyn);
+    // dyn_elem_counts:
+    for (auto &KV : DynOffs) {
+      serialiseOperand(I, FLCtxt, std::get<0>(KV));
+    }
+    // dyn_elem_sizes:
+    for (auto &KV : DynOffs) {
+      OutStreamer.emitSizeT(std::get<1>(KV).getZExtValue());
+    }
 
     FLCtxt.updateVLMap(I, InstIdx);
     InstIdx++;
