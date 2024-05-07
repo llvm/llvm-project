@@ -3797,32 +3797,32 @@ QualType ASTContext::getDependentSizedArrayType(QualType elementType,
           numElements->isValueDependent()) &&
          "Size must be type- or value-dependent!");
 
-  // Dependently-sized array types that do not have a specified number
-  // of elements will have their sizes deduced from a dependent
-  // initializer.  We do no canonicalization here at all, which is okay
-  // because they can't be used in most locations.
-  if (!numElements) {
-    auto *newType = new (*this, alignof(DependentSizedArrayType))
-        DependentSizedArrayType(elementType, QualType(), numElements, ASM,
-                                elementTypeQuals, brackets);
-    Types.push_back(newType);
-    return QualType(newType, 0);
-  }
-
-  // Otherwise, we actually build a new type every time, but we
-  // also build a canonical type.
-
   SplitQualType canonElementType = getCanonicalType(elementType).split();
 
   void *insertPos = nullptr;
   llvm::FoldingSetNodeID ID;
-  DependentSizedArrayType::Profile(ID, *this,
-                                   QualType(canonElementType.Ty, 0),
-                                   ASM, elementTypeQuals, numElements);
+  DependentSizedArrayType::Profile(
+      ID, *this, numElements ? QualType(canonElementType.Ty, 0) : elementType,
+      ASM, elementTypeQuals, numElements);
 
   // Look for an existing type with these properties.
   DependentSizedArrayType *canonTy =
     DependentSizedArrayTypes.FindNodeOrInsertPos(ID, insertPos);
+
+  // Dependently-sized array types that do not have a specified number
+  // of elements will have their sizes deduced from a dependent
+  // initializer.
+  if (!numElements) {
+    if (canonTy)
+      return QualType(canonTy, 0);
+
+    auto *newType = new (*this, alignof(DependentSizedArrayType))
+        DependentSizedArrayType(elementType, QualType(), numElements, ASM,
+                                elementTypeQuals, brackets);
+    DependentSizedArrayTypes.InsertNode(newType, insertPos);
+    Types.push_back(newType);
+    return QualType(newType, 0);
+  }
 
   // If we don't have one, build one.
   if (!canonTy) {
