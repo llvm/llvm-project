@@ -468,7 +468,7 @@ static void checkOptions() {
       error("-z pauth-report only supported on AArch64");
     if (config->zGcsReport != "none")
       error("-z gcs-report only supported on AArch64");
-    if (config->zGcs != "implicit")
+    if (config->zGcs != GcsPolicy::Implicit)
       error("-z gcs only supported on AArch64");
   }
 
@@ -564,18 +564,21 @@ static uint8_t getZStartStopVisibility(opt::InputArgList &args) {
   return ret;
 }
 
-static StringRef getZGcs(opt::InputArgList &args) {
-  StringRef ret = "implicit";
+static GcsPolicy getZGcs(opt::InputArgList &args) {
+  GcsPolicy ret = GcsPolicy::Implicit;
   for (auto *arg : args.filtered(OPT_z)) {
     std::pair<StringRef, StringRef> kv = StringRef(arg->getValue()).split('=');
     if (kv.first == "gcs") {
       arg->claim();
-      if (kv.second == "implicit" || kv.second == "always" ||
-          kv.second == "never")
-        ret = kv.second;
+      if (kv.second == "implicit")
+        ret = GcsPolicy::Implicit;
+      else if (kv.second == "never")
+        ret = GcsPolicy::Never;
+      else if (kv.second == "always")
+        ret = GcsPolicy::Always;
       else if (StringRef(arg->getValue()) == "gcs")
         // -z gcs is the same as -z gcs=always
-        ret = "always";
+        ret = GcsPolicy::Always;
       else
         error("unknown -z gcs= value: " + kv.second);
     }
@@ -2751,9 +2754,9 @@ static void readSecurityNotes() {
     config->andFeatures |= GNU_PROPERTY_X86_FEATURE_1_SHSTK;
 
   // Force enable/disable GCS
-  if (config->zGcs == "always")
+  if (config->zGcs == GcsPolicy::Always)
     config->andFeatures |= GNU_PROPERTY_AARCH64_FEATURE_1_GCS;
-  else if (config->zGcs == "never")
+  else if (config->zGcs == GcsPolicy::Never)
     config->andFeatures &= ~GNU_PROPERTY_AARCH64_FEATURE_1_GCS;
 }
 
