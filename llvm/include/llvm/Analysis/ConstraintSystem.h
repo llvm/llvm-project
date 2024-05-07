@@ -43,6 +43,9 @@ class ConstraintSystem {
     return 0;
   }
 
+  // WARNING: it represents rather the maximum number of coefficients in the
+  // constraints which is actually the number of variables PLUS one (for the
+  // constant part).
   size_t NumVariables = 0;
 
   /// Current linear constraints in the system.
@@ -54,7 +57,13 @@ class ConstraintSystem {
   /// constraint system.
   DenseMap<Value *, unsigned> Value2Index;
 
-  // Eliminate constraints from the system using Fourier–Motzkin elimination.
+  // Eliminate the last variable from the system using Fourier–Motzkin
+  // elimination, while possibly relaxing it if it is beyond
+  // acceptable means (too many created constraints, overflow when
+  // computing the coefficients)
+  //
+  // return true if the updated system is equivalent, otherwise return
+  // false if it is relaxed.
   bool eliminateUsingFM();
 
   /// Returns true if there may be a solution for the constraints in the system.

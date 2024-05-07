@@ -47,6 +47,9 @@ bool ConstraintSystem::eliminateUsingFM() {
     }
   }
 
+  // Track if an overflow occurred when computing coefficents
+  bool Overflow = false;
+
   // Process rows where the variable is != 0.
   unsigned NumRemainingConstraints = RemainingRows.size();
   for (unsigned R1 = 0; R1 < NumRemainingConstraints; R1++) {
@@ -95,14 +98,11 @@ bool ConstraintSystem::eliminateUsingFM() {
           IdxLower += 1;
         }
 
-        if (MulOverflow(UpperV, -1 * LowerLast, M1))
-          return false;
-
-        if (MulOverflow(LowerV, UpperLast, M2))
-          return false;
-
-        if (AddOverflow(M1, M2, N))
-          return false;
+        if (MulOverflow(UpperV, -1 * LowerLast, M1) ||
+            MulOverflow(LowerV, UpperLast, M2) || AddOverflow(M1, M2, N)) {
+          Overflow = true;
+          continue;
+        }
 
         // useless to add a 0 to a sparse vector
         if (N == 0)
@@ -120,13 +120,17 @@ bool ConstraintSystem::eliminateUsingFM() {
   }
   NumVariables -= 1;
 
-  return true;
+  return !Overflow;
 }
 
 bool ConstraintSystem::mayHaveSolutionImpl() {
-  while (!Constraints.empty() && NumVariables > 1) {
-    if (!eliminateUsingFM())
-      return true;
+  while (!Constraints.empty() && Constraints.size() <= 500 &&
+         NumVariables > 1) {
+    if (!eliminateUsingFM()) {
+      LLVM_DEBUG(
+          dbgs()
+          << "Some new constraints has been ignored during elimination.\n");
+    };
   }
 
   if (Constraints.empty() || NumVariables > 1)
