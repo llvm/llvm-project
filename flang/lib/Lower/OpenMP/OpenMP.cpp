@@ -1965,6 +1965,8 @@ static void genOMPDispatch(Fortran::lower::AbstractConverter &converter,
     break;
   case llvm::omp::Directive::OMPD_loop:
   case llvm::omp::Directive::OMPD_masked:
+  case llvm::omp::Directive::OMPD_tile:
+  case llvm::omp::Directive::OMPD_unroll:
     TODO(loc, "Unhandled loop directive (" +
                   llvm::omp::getOpenMPDirectiveName(dir) + ")");
     break;
