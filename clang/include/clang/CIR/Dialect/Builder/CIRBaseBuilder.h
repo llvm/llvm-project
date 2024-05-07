@@ -66,6 +66,14 @@ public:
     return ::mlir::cir::VoidType::get(getContext());
   }
 
+  mlir::cir::IntType getUIntNTy(int N) {
+    return mlir::cir::IntType::get(getContext(), N, false);
+  }
+
+  mlir::cir::IntType getSIntNTy(int N) {
+    return mlir::cir::IntType::get(getContext(), N, true);
+  }
+
   mlir::cir::PointerType getPointerTo(mlir::Type ty,
                                       unsigned addressSpace = 0) {
     assert(!addressSpace && "address space is NYI");
@@ -74,6 +82,18 @@ public:
 
   mlir::cir::PointerType getVoidPtrTy(unsigned addressSpace = 0) {
     return getPointerTo(::mlir::cir::VoidType::get(getContext()), addressSpace);
+  }
+
+  mlir::Value createLoad(mlir::Location loc, mlir::Value ptr) {
+    return create<mlir::cir::LoadOp>(loc, ptr, /*isDeref=*/false,
+                                     /*is_volatile=*/false,
+                                     /*mem_order=*/mlir::cir::MemOrderAttr{});
+  }
+
+  mlir::Value createAlignedLoad(mlir::Location loc, mlir::Value ptr,
+                                uint64_t alignment) {
+    // TODO(cir): implement aligned load in CIRBaseBuilder.
+    return createLoad(loc, ptr);
   }
 
   mlir::Value createNot(mlir::Value value) {

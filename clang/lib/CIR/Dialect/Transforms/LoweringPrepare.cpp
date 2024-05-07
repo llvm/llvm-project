@@ -473,7 +473,9 @@ void LoweringPreparePass::lowerDynamicCastOp(DynamicCastOp op) {
   CIRBaseBuilderTy builder(getContext());
   builder.setInsertionPointAfter(op);
 
-  auto loweredValue = cxxABI->lowerDynamicCast(builder, op);
+  assert(astCtx && "AST context is not available during lowering prepare");
+  auto loweredValue = cxxABI->lowerDynamicCast(builder, *astCtx, op);
+
   op.replaceAllUsesWith(loweredValue);
   op.erase();
 }
