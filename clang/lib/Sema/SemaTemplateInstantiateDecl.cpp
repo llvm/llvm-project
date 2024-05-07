@@ -3932,12 +3932,6 @@ TemplateDeclInstantiator::VisitClassTemplateSpecializationDecl(
   if (SubstQualifier(D, InstD))
     return nullptr;
 
-  // Build the canonical type that describes the converted template
-  // arguments of the class template explicit specialization.
-  QualType CanonType = SemaRef.Context.getTemplateSpecializationType(
-      TemplateName(InstClassTemplate), CanonicalConverted,
-      SemaRef.Context.getRecordType(InstD));
-
   InstD->setAccess(D->getAccess());
   InstD->setInstantiationOfMemberClass(D, TSK_ImplicitInstantiation);
   InstD->setSpecializationKind(D->getSpecializationKind());
