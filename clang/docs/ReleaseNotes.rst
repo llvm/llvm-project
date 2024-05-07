@@ -111,9 +111,6 @@ Clang Frontend Potentially Breaking Changes
     $ clang --target=<your target triple> -print-target-triple
     <the normalized target triple>
 
-- The ``hasTypeLoc`` AST matcher will no longer match a ``classTemplateSpecializationDecl``;
-  existing uses should switch to ``templateArgumentLoc`` or ``hasAnyTemplateArgumentLoc`` instead.
-
 What's New in Clang |release|?
 ==============================
 Some of the major new features and improvements to Clang are listed

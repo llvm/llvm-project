@@ -673,12 +673,9 @@ public:
     IndexCtx.indexTagDecl(
         D, SymbolRelation(SymbolRoleSet(SymbolRole::RelationSpecializationOf),
                           SpecializationOf));
-    // Template specialization arguments.
-    if (const ASTTemplateArgumentListInfo *TemplateArgInfo =
-            D->getTemplateArgsAsWritten()) {
-      for (const auto &Arg : TemplateArgInfo->arguments())
-        handleTemplateArgumentLoc(Arg, D, D->getLexicalDeclContext());
-    }
+    if (TypeSourceInfo *TSI = D->getTypeAsWritten())
+      IndexCtx.indexTypeSourceInfo(TSI, /*Parent=*/nullptr,
+                                   D->getLexicalDeclContext());
     return true;
   }
 
