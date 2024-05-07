@@ -24,35 +24,11 @@ class TestSwiftBacktracePrinting(TestBase):
     def test_swift_backtrace_printing(self):
         """Test printing Swift backtrace"""
         self.build()
-        self.do_test()
+        target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
+            self, 'break here', lldb.SBFileSpec('main.swift'))
 
-    def setUp(self):
-        TestBase.setUp(self)
-        self.main_source = "main.swift"
-        self.main_source_spec = lldb.SBFileSpec(self.main_source)
-
-    def do_test(self):
-        """Test printing Swift backtrace"""
-        exe_name = "a.out"
-        exe = self.getBuildArtifact(exe_name)
-
-        # Create the target
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
-
-        # Set the breakpoints
-        breakpoint = target.BreakpointCreateBySourceRegex(
-            'break here', self.main_source_spec)
-        self.assertTrue(breakpoint.GetNumLocations() > 0, VALID_BREAKPOINT)
-
-        # Launch the process, and do not stop at the entry point.
-        process = target.LaunchSimple(None, None, os.getcwd())
-
-        self.assertTrue(process, PROCESS_IS_VALID)
-
-        self.expect("bt", substrs=['h<T>',
-                                   # FIXME: rdar://65956239 U and T are not resolved!
-                                   'g<U, T>', 'pair', # '12', "Hello world",
+        self.expect("bt", substrs=['h<Int>',
+                                   'g<String, Int>', 'pair', # FIXME: values are still wrong!
                                    'arg1=12', 'arg2="Hello world"'])
         self.expect("breakpoint set -p other", substrs=['g<U, T>'])
 

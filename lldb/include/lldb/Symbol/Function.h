@@ -527,7 +527,7 @@ public:
 
   ConstString GetNameNoArguments(const SymbolContext *sc = nullptr) const;
 
-  ConstString GetDisplayName(const SymbolContext *sc = nullptr) const;
+  ConstString GetDisplayName() const;
 
   const Mangled &GetMangled() const { return m_mangled; }
 

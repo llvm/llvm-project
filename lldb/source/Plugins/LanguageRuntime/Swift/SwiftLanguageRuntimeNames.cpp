@@ -642,7 +642,7 @@ bool SwiftLanguageRuntime::IsSwiftMangledName(llvm::StringRef name) {
 }
 
 void SwiftLanguageRuntime::GetGenericParameterNamesForFunction(
-    const SymbolContext &const_sc,
+    const SymbolContext &const_sc, const ExecutionContext *exe_ctx,
     llvm::DenseMap<SwiftLanguageRuntime::ArchetypePath, StringRef> &dict) {
   // This terrifying cast avoids having too many differences with llvm.org.
   SymbolContext &sc = const_cast<SymbolContext &>(const_sc);
@@ -682,16 +682,47 @@ void SwiftLanguageRuntime::GetGenericParameterNamesForFunction(
     if (!name.empty())
       continue;
 
-    Type *archetype = var_sp->GetType();
-    if (!archetype)
-      continue;
+    ConstString type_name;
 
-    dict.insert({{depth, index}, archetype->GetName().GetStringRef()});
+    // Try to get bind the dynamic type from the exe_ctx.
+    while (exe_ctx) {
+      auto *frame = exe_ctx->GetFramePtr();
+      auto *target = exe_ctx->GetTargetPtr();
+      auto *process = exe_ctx->GetProcessPtr();
+      auto *runtime = SwiftLanguageRuntime::Get(process);
+      if (!frame || !target || !process || !runtime)
+        break;
+      auto type_system_or_err =
+        target->GetScratchTypeSystemForLanguage(eLanguageTypeSwift);
+      if (!type_system_or_err) {
+        llvm::consumeError(type_system_or_err.takeError());
+        break;
+      }
+      auto ts =
+          llvm::dyn_cast_or_null<TypeSystemSwift>(type_system_or_err->get());
+      if (!ts)
+        break;
+      CompilerType generic_type = ts->CreateGenericTypeParamType(depth, index);
+      CompilerType bound_type =
+          runtime->BindGenericTypeParameters(*frame, generic_type);
+      type_name = bound_type.GetDisplayTypeName();
+      break;
+    }
+
+    // Otherwise return the static archetype name from the debug info.
+    if (!type_name) {
+      Type *archetype = var_sp->GetType();
+      if (!archetype)
+        continue;
+      type_name = archetype->GetName();
+    }
+    dict.insert({{depth, index}, type_name.GetStringRef()});
   }
 }
 
 std::string SwiftLanguageRuntime::DemangleSymbolAsString(
-    StringRef symbol, DemangleMode mode, const SymbolContext *sc) {
+    StringRef symbol, DemangleMode mode, const SymbolContext *sc,
+    const ExecutionContext *exe_ctx) {
   bool did_init = false;
   llvm::DenseMap<ArchetypePath, StringRef> dict;
   swift::Demangle::DemangleOptions options;
@@ -723,7 +754,7 @@ std::string SwiftLanguageRuntime::DemangleSymbolAsString(
     // Resolve generic parameters in the current function.
     options.GenericParameterName = [&](uint64_t depth, uint64_t index) {
       if (!did_init) {
-        GetGenericParameterNamesForFunction(*sc, dict);
+        GetGenericParameterNamesForFunction(*sc, exe_ctx, dict);
         did_init = true;
       }
       auto it = dict.find({depth, index});

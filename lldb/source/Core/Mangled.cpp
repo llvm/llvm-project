@@ -45,23 +45,6 @@ static inline bool cstring_is_mangled(llvm::StringRef s) {
   return Mangled::GetManglingScheme(s) != Mangled::eManglingSchemeNone;
 }
 
-#ifdef LLDB_ENABLE_SWIFT
-#pragma mark DisplayDemangledNamesCache
-
-// make the key type be a const char* because that gives us usable
-// DenseMapInfo for free making DenseMap work for ConstString requires
-// us to provide two "invalid" values: the empty key and the tombstone
-// key; but for ConstString, we really don't have any well-known
-// invalid value other than ConstString(nullptr) so, just use const
-// char* as the key as LLVM knows how to do proper DenseMapInfo for
-// pointers
-static ThreadSafeDenseMap<const char *, ConstString>&
-GetDisplayDemangledNamesCache() {
-  static ThreadSafeDenseMap<const char *, ConstString> g_cache;
-  return g_cache;
-}
-#endif // LLDB_ENABLE_SWIFT
-
 #pragma mark Mangled
 
 Mangled::ManglingScheme Mangled::GetManglingScheme(llvm::StringRef const name) {
@@ -363,39 +346,15 @@ ConstString Mangled::GetDemangledName(// BEGIN SWIFT
 
 ConstString Mangled::GetDisplayDemangledName(
 // BEGIN SWIFT
-                                             const SymbolContext *sc
-                                             ) const {
-  ConstString demangled;
+    const SymbolContext *sc) const {
 #ifdef LLDB_ENABLE_SWIFT
-  if (m_mangled) {
-    do {
-      const char *mangled = m_mangled.GetCString();
-
-      if (mangled) {
-        if (SwiftLanguageRuntime::IsSwiftMangledName(m_mangled.GetStringRef())) {
-          auto& display_cache = ::GetDisplayDemangledNamesCache();
-          if (display_cache.Lookup(mangled, demangled) &&
-              demangled)
-            break;
-
-          std::string demangled_std =
-              SwiftLanguageRuntime::DemangleSymbolAsString(
-                  m_mangled.GetStringRef(), SwiftLanguageRuntime::eSimplified,
-                  sc);
-          if (!demangled_std.empty()) {
-            demangled.SetCString(demangled_std.c_str());
-            display_cache.Insert(mangled, demangled);
-            break;
-          }
-        }
-      }
-    } while (0);
-  }
+  if (m_mangled &&
+      SwiftLanguageRuntime::IsSwiftMangledName(m_mangled.GetStringRef()))
+    return ConstString(SwiftLanguageRuntime::DemangleSymbolAsString(
+        m_mangled.GetStringRef(), SwiftLanguageRuntime::eSimplified, sc));
 #endif // LLDB_ENABLE_SWIFT
-  if (!demangled)
-    demangled = GetDemangledName();
-  return demangled ? demangled : m_mangled;
 // END SWIFT
+  return GetDemangledName();
 }
 
 bool Mangled::NameMatches(const RegularExpression &regex) const {

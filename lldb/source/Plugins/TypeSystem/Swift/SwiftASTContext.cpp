@@ -5873,7 +5873,8 @@ GetArchetypeNames(swift::Type swift_type, swift::ASTContext &ast_ctx,
     return dict;
 
   llvm::DenseMap<std::pair<uint64_t, uint64_t>, StringRef> names;
-  SwiftLanguageRuntime::GetGenericParameterNamesForFunction(*sc, names);
+  SwiftLanguageRuntime::GetGenericParameterNamesForFunction(*sc, nullptr,
+                                                            names);
   swift_type.visit([&](swift::Type type) {
     if (!type->isTypeParameter() || dict.count(type->getCanonicalType()))
       return;
