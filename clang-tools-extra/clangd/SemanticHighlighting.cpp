@@ -693,17 +693,22 @@ public:
     return true;
   }
 
-  bool VisitClassTemplatePartialSpecializationDecl(
-      ClassTemplatePartialSpecializationDecl *D) {
-    if (auto *TPL = D->getTemplateParameters())
-      H.addAngleBracketTokens(TPL->getLAngleLoc(), TPL->getRAngleLoc());
+  bool
+  VisitClassTemplateSpecializationDecl(ClassTemplateSpecializationDecl *D) {
     if (auto *Args = D->getTemplateArgsAsWritten())
       H.addAngleBracketTokens(Args->getLAngleLoc(), Args->getRAngleLoc());
     return true;
   }
 
+  bool VisitClassTemplatePartialSpecializationDecl(
+      ClassTemplatePartialSpecializationDecl *D) {
+    if (auto *TPL = D->getTemplateParameters())
+      H.addAngleBracketTokens(TPL->getLAngleLoc(), TPL->getRAngleLoc());
+    return true;
+  }
+
   bool VisitVarTemplateSpecializationDecl(VarTemplateSpecializationDecl *D) {
-    if (auto *Args = D->getTemplateArgsInfo())
+    if (auto *Args = D->getTemplateArgsAsWritten())
       H.addAngleBracketTokens(Args->getLAngleLoc(), Args->getRAngleLoc());
     return true;
   }
@@ -712,8 +717,6 @@ public:
       VarTemplatePartialSpecializationDecl *D) {
     if (auto *TPL = D->getTemplateParameters())
       H.addAngleBracketTokens(TPL->getLAngleLoc(), TPL->getRAngleLoc());
-    if (auto *Args = D->getTemplateArgsAsWritten())
-      H.addAngleBracketTokens(Args->getLAngleLoc(), Args->getRAngleLoc());
     return true;
   }
 
