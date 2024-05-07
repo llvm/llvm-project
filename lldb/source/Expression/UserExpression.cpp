@@ -300,6 +300,8 @@ UserExpression::Evaluate(ExecutionContext &exe_ctx,
             target->GetUserExpressionForLanguage(
                 fixed_expression->c_str(), full_prefix, language, desired_type,
                 options, ctx_obj, error));
+        if (!fixed_expression_sp)
+          break;
         DiagnosticManager fixed_diagnostic_manager;
         parse_success = fixed_expression_sp->Parse(
             fixed_diagnostic_manager, exe_ctx, execution_policy,
