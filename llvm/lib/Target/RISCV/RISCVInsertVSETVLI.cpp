@@ -182,35 +182,10 @@ static bool hasUndefinedMergeOp(const MachineInstr &MI,
     // lanes are undefined.
     return true;
 
-  // If the tied operand is NoReg, an IMPLICIT_DEF, or a REG_SEQEUENCE whose
-  // operands are solely IMPLICIT_DEFS, then the pass through lanes are
-  // undefined.
+  // All undefined passthrus should be $noreg: see
+  // RISCVDAGToDAGISel::doPeepholeNoRegPassThru
   const MachineOperand &UseMO = MI.getOperand(UseOpIdx);
-  if (UseMO.getReg() == RISCV::NoRegister)
-    return true;
-
-  if (UseMO.isUndef())
-    return true;
-  if (UseMO.getReg().isPhysical())
-    return false;
-
-  MachineInstr *UseMI = MRI.getUniqueVRegDef(UseMO.getReg());
-  assert(UseMI);
-  if (UseMI->isImplicitDef())
-    return true;
-
-  if (UseMI->isRegSequence()) {
-    for (unsigned i = 1, e = UseMI->getNumOperands(); i < e; i += 2) {
-      MachineInstr *SourceMI =
-          MRI.getUniqueVRegDef(UseMI->getOperand(i).getReg());
-      assert(SourceMI);
-      if (!SourceMI->isImplicitDef())
-        return false;
-    }
-    return true;
-  }
-
-  return false;
+  return UseMO.getReg() == RISCV::NoRegister || UseMO.isUndef();
 }
 
 /// Which subfields of VL or VTYPE have values we need to preserve?
