@@ -35,7 +35,8 @@ struct TypeTy : public evaluate::SomeType {
 using IdTy = semantics::Symbol *;
 using ExprTy = SomeExpr;
 
-template <typename T> using List = tomp::ListT<T>;
+template <typename T>
+using List = tomp::ListT<T>;
 } // namespace Fortran::lower::omp
 
 namespace tomp::type {
