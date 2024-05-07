@@ -310,8 +310,8 @@ GCNRPTracker::LiveRegSet getLiveRegs(SlotIndex SI, const LiveIntervals &LIS,
 /// After - upon entry or exit of every instruction
 /// Note: there is no entry in the map for instructions with empty live reg set
 /// Complexity = O(NumVirtRegs * averageLiveRangeSegmentsPerReg * lg(R))
-DenseMap<int, GCNRPTracker::LiveRegSet>
-getLiveRegMap(DenseMap<MachineInstr *, int> &R, bool After, LiveIntervals &LIS);
+DenseMap<unsigned, GCNRPTracker::LiveRegSet>
+getLiveRegMap(DenseMap<MachineInstr *, unsigned> &R, bool After, LiveIntervals &LIS);
 
 inline GCNRPTracker::LiveRegSet getLiveRegsAfter(const MachineInstr &MI,
                                                  const LiveIntervals &LIS) {

@@ -646,27 +646,29 @@ void GCNScheduleDAGMILive::computeBlockPressure(unsigned RegionIdx,
   }
 }
 
-DenseMap<int, GCNRPTracker::LiveRegSet>
+DenseMap<unsigned, GCNRPTracker::LiveRegSet>
 GCNScheduleDAGMILive::getBBLiveInMap() const {
   assert(!Regions.empty());
-  DenseMap<MachineInstr *, int> BBStarters;
-  for (int I = Regions.size() - 1; I >= 0; I--) {
-    auto Rgn = Regions[I];
+  DenseMap<MachineInstr *, unsigned> BBStarters;
+  for (unsigned I = Regions.size(); I > 0; I--) {
+    unsigned Idx = I - 1;
+    auto Rgn = Regions[Idx];
     auto *MI = &*skipDebugInstructionsForward(Rgn.first, Rgn.second);
-    BBStarters.insert({MI, I});
+    BBStarters.insert({MI, Idx});
   }
   return getLiveRegMap(BBStarters, false /*After*/, *LIS);
 }
 
-DenseMap<int, GCNRPTracker::LiveRegSet>
+DenseMap<unsigned, GCNRPTracker::LiveRegSet>
 GCNScheduleDAGMILive::getBBLiveOutMap() const {
   assert(!Regions.empty());
-  DenseMap<MachineInstr *, int> BBEnders;
-  for (int I = Regions.size() - 1; I >= 0; I--) {
-    auto Rgn = Regions[I];
+  DenseMap<MachineInstr *, unsigned> BBEnders;
+  for (unsigned I = Regions.size(); I > 0; I--) {
+    unsigned Idx = I - 1;
+    auto Rgn = Regions[Idx];
     auto TheBB = Rgn.first->getParent();
     if (Rgn.second != TheBB->end() && !Rgn.second->isDebugInstr()) {
-      BBEnders.insert({&*Rgn.second, I});
+      BBEnders.insert({&*Rgn.second, Idx});
       continue;
     }
     if (Rgn.second == TheBB->end()) {
@@ -1587,11 +1589,11 @@ bool PreRARematStage::sinkTriviallyRematInsts(const GCNSubtarget &ST,
     DAG.MBBLiveIns.erase(DAG.Regions[Idx].first->getParent());
   }
 
-  if (GCNTrackers)
-    DAG.BBLiveOutMap = DAG.getBBLiveOutMap();
-
   DAG.Regions = NewRegions;
   DAG.RescheduleRegions = NewRescheduleRegions;
+
+  if (GCNTrackers)
+    DAG.BBLiveOutMap = DAG.getBBLiveOutMap();
 
   SIMachineFunctionInfo &MFI = *MF.getInfo<SIMachineFunctionInfo>();
   MFI.increaseOccupancy(MF, ++DAG.MinOccupancy);

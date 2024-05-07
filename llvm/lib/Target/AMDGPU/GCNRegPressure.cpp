@@ -343,20 +343,20 @@ void GCNRPTracker::reset(const MachineInstr &MI,
   MaxPressure = CurPressure = getRegPressure(*MRI, LiveRegs);
 }
 
-DenseMap<int, GCNRPTracker::LiveRegSet>
-llvm::getLiveRegMap(DenseMap<MachineInstr *, int> &R, bool After,
+DenseMap<unsigned, GCNRPTracker::LiveRegSet>
+llvm::getLiveRegMap(DenseMap<MachineInstr *, unsigned> &R, bool After,
                     LiveIntervals &LIS) {
   std::vector<SlotIndex> Indexes;
   // Indexes.reserve(R.size());
   auto &SII = *LIS.getSlotIndexes();
-  for (std::pair<MachineInstr *, int> &Entry : R) {
+  for (std::pair<MachineInstr *, unsigned> &Entry : R) {
     auto SI = SII.getInstructionIndex(*Entry.first);
     Indexes.push_back(After ? SI.getDeadSlot() : SI.getBaseIndex());
   }
   llvm::sort(Indexes);
 
   auto &MRI = (*R.begin()).first->getParent()->getParent()->getRegInfo();
-  DenseMap<int, GCNRPTracker::LiveRegSet> LiveRegMap;
+  DenseMap<unsigned, GCNRPTracker::LiveRegSet> LiveRegMap;
   SmallVector<SlotIndex, 32> LiveIdxs, SRLiveIdxs;
   for (unsigned I = 0, E = MRI.getNumVirtRegs(); I != E; ++I) {
     auto Reg = Register::index2VirtReg(I);

@@ -233,16 +233,16 @@ class GCNScheduleDAGMILive final : public ScheduleDAGMILive {
   DenseMap<const MachineBasicBlock *, GCNRPTracker::LiveRegSet> MBBLiveIns;
 
   // Map of RegionIdx->LiveIns
-  DenseMap<int, GCNRPTracker::LiveRegSet> BBLiveInMap;
+  DenseMap<unsigned, GCNRPTracker::LiveRegSet> BBLiveInMap;
 
   // Calcalute and retun the per region map: RegionIdx->LiveIns
-  DenseMap<int, GCNRPTracker::LiveRegSet> getBBLiveInMap() const;
+  DenseMap<unsigned, GCNRPTracker::LiveRegSet> getBBLiveInMap() const;
 
   // Map of RegionIdx->LiveOuts
-  DenseMap<int, GCNRPTracker::LiveRegSet> BBLiveOutMap;
+  DenseMap<unsigned, GCNRPTracker::LiveRegSet> BBLiveOutMap;
 
   // Calcalute and retun the per region map: RegionIdx->LiveOuts
-  DenseMap<int, GCNRPTracker::LiveRegSet> getBBLiveOutMap() const;
+  DenseMap<unsigned, GCNRPTracker::LiveRegSet> getBBLiveOutMap() const;
 
   // Return current region pressure.
   GCNRegPressure getRealRegPressure(unsigned RegionIdx) const;
