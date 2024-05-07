@@ -48,9 +48,8 @@ bool UniqueDWARFASTTypeList::Find(const DWARFDIE &die,
           case DW_TAG_union_type:
           case DW_TAG_namespace: {
             const char *parent_arg_die_name = parent_arg_die.GetName();
-            if (parent_arg_die_name ==
-                nullptr) // Anonymous (i.e. no-name) struct
-            {
+            if (parent_arg_die_name == nullptr) {
+              // Anonymous (i.e. no-name) struct
               match = false;
             } else {
               const char *parent_pos_die_name = parent_pos_die.GetName();

@@ -23,13 +23,6 @@ public:
   // Constructors and Destructors
   UniqueDWARFASTType() : m_type_sp(), m_die(), m_declaration() {}
 
-  UniqueDWARFASTType(lldb::TypeSP &type_sp, const DWARFDIE &die,
-                     const Declaration &decl, int32_t byte_size,
-                     bool is_forward_declaration)
-      : m_type_sp(type_sp), m_die(die), m_declaration(decl),
-        m_byte_size(byte_size),
-        m_is_forward_declaration(is_forward_declaration) {}
-
   UniqueDWARFASTType(const UniqueDWARFASTType &rhs)
       : m_type_sp(rhs.m_type_sp), m_die(rhs.m_die),
         m_declaration(rhs.m_declaration), m_byte_size(rhs.m_byte_size),

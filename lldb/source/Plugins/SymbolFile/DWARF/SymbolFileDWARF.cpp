@@ -1650,8 +1650,7 @@ bool SymbolFileDWARF::CompleteType(CompilerType &compiler_type) {
     GetForwardDeclCompilerTypeToDIE().erase(die_it);
   }
 
-  Log *log = GetLog(DWARFLog::DebugInfo | DWARFLog::TypeCompletion);
-  if (log)
+  if (Log *log = GetLog(DWARFLog::DebugInfo | DWARFLog::TypeCompletion))
     GetObjectFile()->GetModule()->LogMessageVerboseBacktrace(
         log, "{0:x8}: {1} ({2}) '{3}' resolving forward declaration...",
         dwarf_die.GetID(), DW_TAG_value_to_name(dwarf_die.Tag()),
