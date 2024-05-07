@@ -25,7 +25,7 @@ namespace N {
 
   constexpr std::strong_ordering operator<=>(const A&, const A&) noexcept;
   constexpr std::strong_ordering (*test_a_threeway)(const A&, const A&) = &operator<=>;
-  static_assert((*test_a_threeway)(A(), A())); // expected-error {{static assertion expression is not an integral constant expression}}
+  static_assert(!(*test_a_threeway)(A(), A())); // expected-error {{static assertion expression is not an integral constant expression}}
                                                // expected-note@-1 {{undefined function 'operator<=>' cannot be used in a constant expression}}
 
   constexpr bool (*test_a_equal_not_found)(const A&, const A&) = &operator==; // expected-error {{undeclared}}
