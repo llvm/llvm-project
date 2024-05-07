@@ -10,7 +10,7 @@
 #define LLVM_LIBC_SRC_THREADS_LINUX_CNDVAR_H
 
 #include "src/__support/CPP/atomic.h"
-#include "src/__support/CPP/mutex.h"      // lock_guard
+#include "src/__support/CPP/mutex.h" // lock_guard
 #include "src/__support/CPP/optional.h"
 #include "src/__support/OSUtil/syscall.h" // For syscall functions.
 #include "src/__support/threads/linux/futex_utils.h"
