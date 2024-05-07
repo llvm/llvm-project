@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-export namespace std {
+_LIBCPP_MODULE_EXPORT namespace std {
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
   using std::wctrans_t _LIBCPP_USING_IF_EXISTS;
   using std::wctype_t _LIBCPP_USING_IF_EXISTS;

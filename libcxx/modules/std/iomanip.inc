@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-export namespace std {
+_LIBCPP_MODULE_EXPORT namespace std {
 #ifndef _LIBCPP_HAS_NO_LOCALIZATION
   using std::get_money;
   using std::get_time;

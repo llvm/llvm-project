@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-export namespace std {
+_LIBCPP_MODULE_EXPORT namespace std {
   // [set], class template set
   using std::set;
 

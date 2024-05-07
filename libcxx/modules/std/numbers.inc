@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-export namespace std::numbers {
+_LIBCPP_MODULE_EXPORT namespace std::numbers {
   using std::numbers::e_v;
   using std::numbers::egamma_v;
   using std::numbers::inv_pi_v;

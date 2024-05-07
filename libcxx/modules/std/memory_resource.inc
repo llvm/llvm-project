@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-export namespace std::pmr {
+_LIBCPP_MODULE_EXPORT namespace std::pmr {
   // [mem.res.class], class memory_resource
   using std::pmr::memory_resource;
 

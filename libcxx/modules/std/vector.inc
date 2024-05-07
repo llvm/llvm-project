@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-export namespace std {
+_LIBCPP_MODULE_EXPORT namespace std {
   // [vector], class template vector
   using std::vector;
 

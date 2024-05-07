@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-export namespace std {
+_LIBCPP_MODULE_EXPORT namespace std {
   // [unord.map], class template unordered_­map
   using std::unordered_map;
 

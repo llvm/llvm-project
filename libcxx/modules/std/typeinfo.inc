@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-export namespace std {
+_LIBCPP_MODULE_EXPORT namespace std {
   using std::bad_cast;
   using std::bad_typeid;
   using std::type_info;

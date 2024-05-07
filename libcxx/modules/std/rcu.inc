@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-export namespace std {
+_LIBCPP_MODULE_EXPORT namespace std {
 #if 0
 #  if _LIBCPP_STD_VER >= 23
   // 2.2.3, class template rcu_obj_base using std::rcu_obj_base;

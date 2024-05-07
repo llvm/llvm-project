@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-export namespace std {
+_LIBCPP_MODULE_EXPORT namespace std {
 #ifndef _LIBCPP_HAS_NO_THREADS
   using std::future_errc;
   using std::future_status;

@@ -7,8 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-export namespace std {
-
+_LIBCPP_MODULE_EXPORT namespace std {
   // [cmp.categories], comparison category types
   using std::partial_ordering;
   using std::strong_ordering;

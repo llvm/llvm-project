@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-export {
+_LIBCPP_MODULE_EXPORT {
   using ::isalnum _LIBCPP_USING_IF_EXISTS;
   using ::isalpha _LIBCPP_USING_IF_EXISTS;
   using ::isblank _LIBCPP_USING_IF_EXISTS;
@@ -22,4 +22,4 @@ export {
   using ::isxdigit _LIBCPP_USING_IF_EXISTS;
   using ::tolower _LIBCPP_USING_IF_EXISTS;
   using ::toupper _LIBCPP_USING_IF_EXISTS;
-} // export
+} // _LIBCPP_MODULE_EXPORT

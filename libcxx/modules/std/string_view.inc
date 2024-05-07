@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-export namespace std {
+_LIBCPP_MODULE_EXPORT namespace std {
   // [string.view.template], class template basic_string_view
   using std::basic_string_view;
 

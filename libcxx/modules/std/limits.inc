@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-export namespace std {
+_LIBCPP_MODULE_EXPORT namespace std {
   // [fp.style], floating-point type properties
   using std::float_denorm_style;
   using std::float_round_style;

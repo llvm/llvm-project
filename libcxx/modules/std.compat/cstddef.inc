@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-export {
+_LIBCPP_MODULE_EXPORT {
   using ::max_align_t _LIBCPP_USING_IF_EXISTS;
   using ::nullptr_t;
   using ::ptrdiff_t _LIBCPP_USING_IF_EXISTS;
@@ -19,4 +19,4 @@ export {
   // function templates described in [support.types.byteops]. ...
 
   // [support.types.byteops], byte type operations
-} // export
+} // _LIBCPP_MODULE_EXPORT

@@ -7,11 +7,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-export {
+_LIBCPP_MODULE_EXPORT {
   using ::sig_atomic_t _LIBCPP_USING_IF_EXISTS;
 
   // [support.signal], signal handlers
   using ::signal _LIBCPP_USING_IF_EXISTS;
 
   using ::raise _LIBCPP_USING_IF_EXISTS;
-} // export
+} // _LIBCPP_MODULE_EXPORT

@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-export {
+_LIBCPP_MODULE_EXPORT {
   using ::size_t _LIBCPP_USING_IF_EXISTS;
 
   using ::memchr _LIBCPP_USING_IF_EXISTS;
@@ -33,4 +33,4 @@ export {
   using ::strtok _LIBCPP_USING_IF_EXISTS;
   using ::strxfrm _LIBCPP_USING_IF_EXISTS;
 
-} // export
+} // _LIBCPP_MODULE_EXPORT

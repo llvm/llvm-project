@@ -7,6 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-export {
+_LIBCPP_MODULE_EXPORT {
   // This module exports nothing.
-} // export
+} // _LIBCPP_MODULE_EXPORT

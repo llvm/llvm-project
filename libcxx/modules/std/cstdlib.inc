@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-export namespace std {
+_LIBCPP_MODULE_EXPORT namespace std {
   using std::div_t _LIBCPP_USING_IF_EXISTS;
   using std::ldiv_t _LIBCPP_USING_IF_EXISTS;
   using std::lldiv_t _LIBCPP_USING_IF_EXISTS;

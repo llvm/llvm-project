@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-export namespace std {
+_LIBCPP_MODULE_EXPORT namespace std {
   // [iterator.assoc.types], associated types
   // [incrementable.traits], incrementable traits
   using std::incrementable_traits;

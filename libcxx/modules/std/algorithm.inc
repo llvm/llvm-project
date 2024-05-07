@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-export namespace std {
+_LIBCPP_MODULE_EXPORT namespace std {
   namespace ranges {
     // [algorithms.results], algorithm result types
     using std::ranges::in_found_result;

@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-export {
+_LIBCPP_MODULE_EXPORT {
   // Note the Standard does not mark these symbols optional, but libc++'s header
   // does. So this seems strictly not to be conforming.
 
@@ -25,4 +25,4 @@ export {
   using ::c16rtomb _LIBCPP_USING_IF_EXISTS;
   using ::mbrtoc32 _LIBCPP_USING_IF_EXISTS;
   using ::c32rtomb _LIBCPP_USING_IF_EXISTS;
-} // export
+} // _LIBCPP_MODULE_EXPORT

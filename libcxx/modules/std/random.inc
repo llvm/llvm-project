@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-export namespace std {
+_LIBCPP_MODULE_EXPORT namespace std {
   // [rand.req.urng], uniform random bit generator requirements
   using std::uniform_random_bit_generator;
 

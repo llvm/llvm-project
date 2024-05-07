@@ -7,8 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-export namespace std {
-
+_LIBCPP_MODULE_EXPORT namespace std {
   // floating-point format for primitive numerical conversion
   using std::chars_format;
 

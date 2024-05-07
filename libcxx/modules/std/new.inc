@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-export namespace std {
+_LIBCPP_MODULE_EXPORT namespace std {
   // [alloc.errors], storage allocation errors
   using std::bad_alloc;
   using std::bad_array_new_length;
@@ -34,9 +34,9 @@ export namespace std {
 #endif
 } // namespace std
 
-export {
+_LIBCPP_MODULE_EXPORT {
   using ::operator new;
   using ::operator delete;
   using ::operator new[];
   using ::operator delete[];
-} // export
+} // _LIBCPP_MODULE_EXPORT

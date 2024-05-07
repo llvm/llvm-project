@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-export namespace std {
+_LIBCPP_MODULE_EXPORT namespace std {
   using std::streampos;
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
   using std::wstreampos;

@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-export {
+_LIBCPP_MODULE_EXPORT {
   using ::clock_t _LIBCPP_USING_IF_EXISTS;
   using ::size_t _LIBCPP_USING_IF_EXISTS;
   using ::time_t _LIBCPP_USING_IF_EXISTS;
@@ -25,4 +25,4 @@ export {
   using ::strftime _LIBCPP_USING_IF_EXISTS;
   using ::time _LIBCPP_USING_IF_EXISTS;
   using ::timespec_get _LIBCPP_USING_IF_EXISTS;
-} // export
+} // _LIBCPP_MODULE_EXPORT

@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-export {
+_LIBCPP_MODULE_EXPORT {
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
   using ::wctrans_t _LIBCPP_USING_IF_EXISTS;
   using ::wctype_t _LIBCPP_USING_IF_EXISTS;
@@ -32,4 +32,4 @@ export {
   using ::wctrans _LIBCPP_USING_IF_EXISTS;
   using ::wctype _LIBCPP_USING_IF_EXISTS;
 #endif // _LIBCPP_HAS_NO_WIDE_CHARACTERS
-} // export
+} // _LIBCPP_MODULE_EXPORT

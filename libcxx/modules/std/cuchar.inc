@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-export namespace std {
+_LIBCPP_MODULE_EXPORT namespace std {
   // Note the Standard does not mark these symbols optional, but libc++'s header
   // does. So this seems strictly not to be conforming.
 

@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-export namespace std {
+_LIBCPP_MODULE_EXPORT namespace std {
 #if 0
 #  if _LIBCPP_STD_VER >= 23
   // 4.1.3, class template hazard_pointer_obj_base
