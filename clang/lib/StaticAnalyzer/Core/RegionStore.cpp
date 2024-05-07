@@ -2358,11 +2358,12 @@ StoreRef RegionStoreManager::killBinding(Store ST, Loc L) {
 
 RegionBindingsRef
 RegionStoreManager::bind(RegionBindingsConstRef B, Loc L, SVal V) {
-  if (L.getAs<loc::ConcreteInt>())
+  // We only care about region locations.
+  auto MemRegVal = L.getAs<loc::MemRegionVal>();
+  if (!MemRegVal)
     return B;
 
-  // If we get here, the location should be a region.
-  const MemRegion *R = L.castAs<loc::MemRegionVal>().getRegion();
+  const MemRegion *R = MemRegVal->getRegion();
 
   // Check if the region is a struct region.
   if (const TypedValueRegion* TR = dyn_cast<TypedValueRegion>(R)) {

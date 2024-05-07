@@ -128,6 +128,7 @@ def PromotableMemOpInterface : OpInterface<"PromotableMemOpInterface"> {
       "::mlir::Value", "getStored",
       (ins "const ::mlir::MemorySlot &":$slot,
            "::mlir::RewriterBase &":$rewriter,
+           "::mlir::Value":$reachingDef,
            "const ::mlir::DataLayout &":$dataLayout)
     >,
     InterfaceMethod<[{

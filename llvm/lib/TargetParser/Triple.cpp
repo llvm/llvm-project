@@ -559,9 +559,11 @@ static Triple::ArchType parseArch(StringRef ArchName) {
           .Case("spir64", Triple::spir64)
           .Cases("spirv", "spirv1.5", "spirv1.6", Triple::spirv)
           .Cases("spirv32", "spirv32v1.0", "spirv32v1.1", "spirv32v1.2",
-                 "spirv32v1.3", "spirv32v1.4", "spirv32v1.5", Triple::spirv32)
+            "spirv32v1.3", "spirv32v1.4", "spirv32v1.5",
+            "spirv32v1.6", Triple::spirv32)
           .Cases("spirv64", "spirv64v1.0", "spirv64v1.1", "spirv64v1.2",
-                 "spirv64v1.3", "spirv64v1.4", "spirv64v1.5", Triple::spirv64)
+            "spirv64v1.3", "spirv64v1.4", "spirv64v1.5",
+            "spirv64v1.6", Triple::spirv64)
           .StartsWith("kalimba", Triple::kalimba)
           .Case("lanai", Triple::lanai)
           .Case("renderscript32", Triple::renderscript32)
@@ -1148,6 +1150,12 @@ std::string Triple::normalize(StringRef Str) {
       break;
     }
   }
+
+  // If "none" is in the middle component in a three-component triple, treat it
+  // as the OS (Components[2]) instead of the vendor (Components[1]).
+  if (Found[0] && !Found[1] && !Found[2] && Found[3] &&
+      Components[1] == "none" && Components[2].empty())
+    std::swap(Components[1], Components[2]);
 
   // Replace empty components with "unknown" value.
   for (StringRef &C : Components)

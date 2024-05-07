@@ -75,8 +75,8 @@ void VPlanTransforms::VPInstructionsToVPRecipes(
           NewRecipe = new VPWidenGEPRecipe(GEP, Ingredient.operands());
         } else if (CallInst *CI = dyn_cast<CallInst>(Inst)) {
           NewRecipe = new VPWidenCallRecipe(
-              *CI, drop_end(Ingredient.operands()),
-              getVectorIntrinsicIDForCall(CI, &TLI), CI->getDebugLoc());
+              CI, Ingredient.operands(), getVectorIntrinsicIDForCall(CI, &TLI),
+              CI->getDebugLoc());
         } else if (SelectInst *SI = dyn_cast<SelectInst>(Inst)) {
           NewRecipe = new VPWidenSelectRecipe(*SI, Ingredient.operands());
         } else if (auto *CI = dyn_cast<CastInst>(Inst)) {
@@ -452,8 +452,7 @@ static void removeRedundantCanonicalIVs(VPlan &Plan) {
   for (VPRecipeBase &Phi : HeaderVPBB->phis()) {
     auto *WidenOriginalIV = dyn_cast<VPWidenIntOrFpInductionRecipe>(&Phi);
 
-    if (!WidenOriginalIV || !WidenOriginalIV->isCanonical() ||
-        WidenOriginalIV->getScalarType() != WidenNewIV->getScalarType())
+    if (!WidenOriginalIV || !WidenOriginalIV->isCanonical())
       continue;
 
     // Replace WidenNewIV with WidenOriginalIV if WidenOriginalIV provides
@@ -506,13 +505,12 @@ static void removeDeadRecipes(VPlan &Plan) {
   }
 }
 
-static VPValue *createScalarIVSteps(VPlan &Plan,
-                                    InductionDescriptor::InductionKind Kind,
-                                    Instruction::BinaryOps InductionOpcode,
-                                    FPMathOperator *FPBinOp,
-                                    ScalarEvolution &SE, Instruction *TruncI,
-                                    VPValue *StartV, VPValue *Step,
-                                    VPBasicBlock::iterator IP) {
+static VPScalarIVStepsRecipe *
+createScalarIVSteps(VPlan &Plan, InductionDescriptor::InductionKind Kind,
+                    Instruction::BinaryOps InductionOpcode,
+                    FPMathOperator *FPBinOp, ScalarEvolution &SE,
+                    Instruction *TruncI, VPValue *StartV, VPValue *Step,
+                    VPBasicBlock::iterator IP) {
   VPBasicBlock *HeaderVPBB = Plan.getVectorLoopRegion()->getEntryBasicBlock();
   VPCanonicalIVPHIRecipe *CanonicalIV = Plan.getCanonicalIV();
   VPSingleDefRecipe *BaseIV = CanonicalIV;
@@ -579,16 +577,13 @@ static void legalizeAndOptimizeInductions(VPlan &Plan, ScalarEvolution &SE) {
       VPValue *StartV =
           Plan.getOrAddLiveIn(ConstantInt::get(ID.getStep()->getType(), 0));
       VPValue *StepV = PtrIV->getOperand(1);
-      VPRecipeBase *Steps =
-          createScalarIVSteps(Plan, InductionDescriptor::IK_IntInduction,
-                              Instruction::Add, nullptr, SE, nullptr, StartV,
-                              StepV, InsertPt)
-              ->getDefiningRecipe();
+      VPScalarIVStepsRecipe *Steps = createScalarIVSteps(
+          Plan, InductionDescriptor::IK_IntInduction, Instruction::Add, nullptr,
+          SE, nullptr, StartV, StepV, InsertPt);
 
-      auto *Recipe =
-          new VPInstruction(VPInstruction::PtrAdd,
-                            {PtrIV->getStartValue(), Steps->getVPSingleValue()},
-                            PtrIV->getDebugLoc(), "next.gep");
+      auto *Recipe = new VPInstruction(VPInstruction::PtrAdd,
+                                       {PtrIV->getStartValue(), Steps},
+                                       PtrIV->getDebugLoc(), "next.gep");
 
       Recipe->insertAfter(Steps);
       PtrIV->replaceAllUsesWith(Recipe);
@@ -606,7 +601,7 @@ static void legalizeAndOptimizeInductions(VPlan &Plan, ScalarEvolution &SE) {
       continue;
 
     const InductionDescriptor &ID = WideIV->getInductionDescriptor();
-    VPValue *Steps = createScalarIVSteps(
+    VPScalarIVStepsRecipe *Steps = createScalarIVSteps(
         Plan, ID.getKind(), ID.getInductionOpcode(),
         dyn_cast_or_null<FPMathOperator>(ID.getInductionBinOp()), SE,
         WideIV->getTruncInst(), WideIV->getStartValue(), WideIV->getStepValue(),
@@ -884,18 +879,19 @@ void VPlanTransforms::clearReductionWrapFlags(VPlan &Plan) {
 
 /// Try to simplify recipe \p R.
 static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
+  using namespace llvm::VPlanPatternMatch;
   // Try to remove redundant blend recipes.
   if (auto *Blend = dyn_cast<VPBlendRecipe>(&R)) {
     VPValue *Inc0 = Blend->getIncomingValue(0);
     for (unsigned I = 1; I != Blend->getNumIncomingValues(); ++I)
-      if (Inc0 != Blend->getIncomingValue(I))
+      if (Inc0 != Blend->getIncomingValue(I) &&
+          !match(Blend->getMask(I), m_False()))
         return;
     Blend->replaceAllUsesWith(Inc0);
     Blend->eraseFromParent();
     return;
   }
 
-  using namespace llvm::VPlanPatternMatch;
   VPValue *A;
   if (match(&R, m_Trunc(m_ZExtOrSExt(m_VPValue(A))))) {
     VPValue *Trunc = R.getVPSingleValue();
@@ -1031,7 +1027,9 @@ void VPlanTransforms::truncateToMinimalBitwidths(
       if (auto *VPW = dyn_cast<VPRecipeWithIRFlags>(&R))
         VPW->dropPoisonGeneratingFlags();
 
-      if (OldResSizeInBits != NewResSizeInBits) {
+      using namespace llvm::VPlanPatternMatch;
+      if (OldResSizeInBits != NewResSizeInBits &&
+          !match(&R, m_Binary<Instruction::ICmp>(m_VPValue(), m_VPValue()))) {
         // Extend result to original width.
         auto *Ext =
             new VPWidenCastRecipe(Instruction::ZExt, ResultVPV, OldResTy);
@@ -1040,8 +1038,9 @@ void VPlanTransforms::truncateToMinimalBitwidths(
         Ext->setOperand(0, ResultVPV);
         assert(OldResSizeInBits > NewResSizeInBits && "Nothing to shrink?");
       } else
-        assert(cast<VPWidenRecipe>(&R)->getOpcode() == Instruction::ICmp &&
-               "Only ICmps should not need extending the result.");
+        assert(
+            match(&R, m_Binary<Instruction::ICmp>(m_VPValue(), m_VPValue())) &&
+            "Only ICmps should not need extending the result.");
 
       assert(!isa<VPWidenStoreRecipe>(&R) && "stores cannot be narrowed");
       if (isa<VPWidenLoadRecipe>(&R))
@@ -1203,43 +1202,52 @@ static VPActiveLaneMaskPHIRecipe *addVPLaneMaskPhiAndUpdateExitBranch(
   return LaneMaskPhi;
 }
 
-/// Replaces (ICMP_ULE, WideCanonicalIV, backedge-taken-count) pattern using
-/// the given \p Idiom.
-static void
-replaceHeaderPredicateWith(VPlan &Plan, VPValue &Idiom,
-                           function_ref<bool(VPUser &, unsigned)> Cond = {}) {
+/// Collect all VPValues representing a header mask through the (ICMP_ULE,
+/// WideCanonicalIV, backedge-taken-count) pattern.
+/// TODO: Introduce explicit recipe for header-mask instead of searching
+/// for the header-mask pattern manually.
+static SmallVector<VPValue *> collectAllHeaderMasks(VPlan &Plan) {
+  SmallVector<VPValue *> WideCanonicalIVs;
   auto *FoundWidenCanonicalIVUser =
       find_if(Plan.getCanonicalIV()->users(),
               [](VPUser *U) { return isa<VPWidenCanonicalIVRecipe>(U); });
-  if (FoundWidenCanonicalIVUser == Plan.getCanonicalIV()->users().end())
-    return;
-  auto *WideCanonicalIV =
-      cast<VPWidenCanonicalIVRecipe>(*FoundWidenCanonicalIVUser);
-  // Walk users of WideCanonicalIV and replace all compares of the form
-  // (ICMP_ULE, WideCanonicalIV, backedge-taken-count) with
-  // the given idiom VPValue.
-  VPValue *BTC = Plan.getOrCreateBackedgeTakenCount();
-  for (VPUser *U : SmallVector<VPUser *>(WideCanonicalIV->users())) {
-    auto *CompareToReplace = dyn_cast<VPInstruction>(U);
-    if (!CompareToReplace ||
-        CompareToReplace->getOpcode() != Instruction::ICmp ||
-        CompareToReplace->getPredicate() != CmpInst::ICMP_ULE ||
-        CompareToReplace->getOperand(1) != BTC)
-      continue;
+  assert(count_if(Plan.getCanonicalIV()->users(),
+                  [](VPUser *U) { return isa<VPWidenCanonicalIVRecipe>(U); }) <=
+             1 &&
+         "Must have at most one VPWideCanonicalIVRecipe");
+  if (FoundWidenCanonicalIVUser != Plan.getCanonicalIV()->users().end()) {
+    auto *WideCanonicalIV =
+        cast<VPWidenCanonicalIVRecipe>(*FoundWidenCanonicalIVUser);
+    WideCanonicalIVs.push_back(WideCanonicalIV);
+  }
 
-    assert(CompareToReplace->getOperand(0) == WideCanonicalIV &&
-           "WidenCanonicalIV must be the first operand of the compare");
-    if (Cond) {
-      CompareToReplace->replaceUsesWithIf(&Idiom, Cond);
-      if (!CompareToReplace->getNumUsers())
-        CompareToReplace->eraseFromParent();
-    } else {
-      CompareToReplace->replaceAllUsesWith(&Idiom);
-      CompareToReplace->eraseFromParent();
+  // Also include VPWidenIntOrFpInductionRecipes that represent a widened
+  // version of the canonical induction.
+  VPBasicBlock *HeaderVPBB = Plan.getVectorLoopRegion()->getEntryBasicBlock();
+  for (VPRecipeBase &Phi : HeaderVPBB->phis()) {
+    auto *WidenOriginalIV = dyn_cast<VPWidenIntOrFpInductionRecipe>(&Phi);
+    if (WidenOriginalIV && WidenOriginalIV->isCanonical())
+      WideCanonicalIVs.push_back(WidenOriginalIV);
+  }
+
+  // Walk users of wide canonical IVs and collect to all compares of the form
+  // (ICMP_ULE, WideCanonicalIV, backedge-taken-count).
+  SmallVector<VPValue *> HeaderMasks;
+  VPValue *BTC = Plan.getOrCreateBackedgeTakenCount();
+  for (auto *Wide : WideCanonicalIVs) {
+    for (VPUser *U : SmallVector<VPUser *>(Wide->users())) {
+      auto *HeaderMask = dyn_cast<VPInstruction>(U);
+      if (!HeaderMask || HeaderMask->getOpcode() != Instruction::ICmp ||
+          HeaderMask->getPredicate() != CmpInst::ICMP_ULE ||
+          HeaderMask->getOperand(1) != BTC)
+        continue;
+
+      assert(HeaderMask->getOperand(0) == Wide &&
+             "WidenCanonicalIV must be the first operand of the compare");
+      HeaderMasks.push_back(HeaderMask);
     }
   }
-  if (!WideCanonicalIV->getNumUsers())
-    WideCanonicalIV->eraseFromParent();
+  return HeaderMasks;
 }
 
 void VPlanTransforms::addActiveLaneMask(
@@ -1271,7 +1279,8 @@ void VPlanTransforms::addActiveLaneMask(
   // Walk users of WideCanonicalIV and replace all compares of the form
   // (ICMP_ULE, WideCanonicalIV, backedge-taken-count) with an
   // active-lane-mask.
-  replaceHeaderPredicateWith(Plan, *LaneMask);
+  for (VPValue *HeaderMask : collectAllHeaderMasks(Plan))
+    HeaderMask->replaceAllUsesWith(LaneMask);
 }
 
 /// Add a VPEVLBasedIVPHIRecipe and related recipes to \p Plan and
@@ -1301,17 +1310,7 @@ void VPlanTransforms::addExplicitVectorLength(VPlan &Plan) {
   auto *CanonicalIVPHI = Plan.getCanonicalIV();
   VPValue *StartV = CanonicalIVPHI->getStartValue();
 
-  // TODO: revisit this and try to remove the mask operand.
-  // Walk VPWidenMemoryInstructionRecipe users of WideCanonicalIV and replace
-  // all compares of the form (ICMP_ULE, WideCanonicalIV, backedge-taken-count),
-  // used as mask in VPWidenMemoryInstructionRecipe, with an all-true-mask.
-  Value *TrueMask =
-      ConstantInt::getTrue(CanonicalIVPHI->getScalarType()->getContext());
-  VPValue *VPTrueMask = Plan.getOrAddLiveIn(TrueMask);
-  replaceHeaderPredicateWith(Plan, *VPTrueMask, [](VPUser &U, unsigned) {
-    return isa<VPWidenMemoryRecipe>(U);
-  });
-  // Now create the ExplicitVectorLengthPhi recipe in the main loop.
+  // Create the ExplicitVectorLengthPhi recipe in the main loop.
   auto *EVLPhi = new VPEVLBasedIVPHIRecipe(StartV, DebugLoc());
   EVLPhi->insertAfter(CanonicalIVPHI);
   auto *VPEVL = new VPInstruction(VPInstruction::ExplicitVectorLength,
@@ -1336,6 +1335,29 @@ void VPlanTransforms::addExplicitVectorLength(VPlan &Plan) {
   NextEVLIV->insertBefore(CanonicalIVIncrement);
   EVLPhi->addOperand(NextEVLIV);
 
+  for (VPValue *HeaderMask : collectAllHeaderMasks(Plan)) {
+    for (VPUser *U : collectUsersRecursively(HeaderMask)) {
+      auto *MemR = dyn_cast<VPWidenMemoryRecipe>(U);
+      if (!MemR)
+        continue;
+      VPValue *OrigMask = MemR->getMask();
+      assert(OrigMask && "Unmasked widen memory recipe when folding tail");
+      VPValue *NewMask = HeaderMask == OrigMask ? nullptr : OrigMask;
+      if (auto *L = dyn_cast<VPWidenLoadRecipe>(MemR)) {
+        auto *N = new VPWidenLoadEVLRecipe(L, VPEVL, NewMask);
+        N->insertBefore(L);
+        L->replaceAllUsesWith(N);
+        L->eraseFromParent();
+      } else if (auto *S = dyn_cast<VPWidenStoreRecipe>(MemR)) {
+        auto *N = new VPWidenStoreEVLRecipe(S, VPEVL, NewMask);
+        N->insertBefore(S);
+        S->eraseFromParent();
+      } else {
+        llvm_unreachable("unsupported recipe");
+      }
+    }
+    recursivelyDeleteDeadRecipes(HeaderMask);
+  }
   // Replace all uses of VPCanonicalIVPHIRecipe by
   // VPEVLBasedIVPHIRecipe except for the canonical IV increment.
   CanonicalIVPHI->replaceAllUsesWith(EVLPhi);

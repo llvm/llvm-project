@@ -32,6 +32,6 @@ module m
     call globalsub<<<1, 2>>>
     call globalsub<<<1, 2, 3>>>
     call globalsub<<<1, 2, 3, 4>>>
-    allocate(pa(32), stream = 1, pinned = isPinned)
+    allocate(pa(32), pinned = isPinned)
   end subroutine
 end module

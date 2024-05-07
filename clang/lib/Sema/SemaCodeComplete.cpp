@@ -6714,14 +6714,16 @@ void Sema::CodeCompleteQualifiedId(Scope *S, CXXScopeSpec &SS,
 
   // If the scope is a concept-constrained type parameter, infer nested
   // members based on the constraints.
-  if (const auto *TTPT =
-          dyn_cast_or_null<TemplateTypeParmType>(NNS->getAsType())) {
-    for (const auto &R : ConceptInfo(*TTPT, S).members()) {
-      if (R.Operator != ConceptInfo::Member::Colons)
-        continue;
-      Results.AddResult(CodeCompletionResult(
-          R.render(*this, CodeCompleter->getAllocator(),
-                   CodeCompleter->getCodeCompletionTUInfo())));
+  if (NNS) {
+    if (const auto *TTPT =
+            dyn_cast_or_null<TemplateTypeParmType>(NNS->getAsType())) {
+      for (const auto &R : ConceptInfo(*TTPT, S).members()) {
+        if (R.Operator != ConceptInfo::Member::Colons)
+          continue;
+        Results.AddResult(CodeCompletionResult(
+            R.render(*this, CodeCompleter->getAllocator(),
+                     CodeCompleter->getCodeCompletionTUInfo())));
+      }
     }
   }
 

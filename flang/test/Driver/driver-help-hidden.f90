@@ -63,7 +63,6 @@
 ! CHECK-NEXT:                         Select Windows run-time library
 ! CHECK-NEXT: -fno-automatic          Implies the SAVE attribute for non-automatic local objects in subprograms unless RECURSIVE
 ! CHECK-NEXT: -fno-color-diagnostics  Disable colors in diagnostics
-! CHECK-NEXT: -fno-fortran-main       Do not include Fortran_main.a (provided by Flang) when linking
 ! CHECK-NEXT: -fno-integrated-as      Disable the integrated assembler
 ! CHECK-NEXT: -fno-lto                Disable LTO mode (default)
 ! CHECK-NEXT: -fno-ppc-native-vector-element-order
@@ -109,7 +108,7 @@
 ! CHECK-NEXT: -fxor-operator          Enable .XOR. as a synonym of .NEQV.
 ! CHECK-NEXT: --gcc-install-dir=<value>
 ! CHECK-NEXT:                         Use GCC installation in the specified directory. The directory ends with path components like 'lib{,32,64}/gcc{,-cross}/$triple/$version'. Note: executables (e.g. ld) used by the compiler are not overridden by the selected GCC installation
-! CHECK-NEXT: --gcc-toolchain=<value> Specify a directory where Clang can find 'include' and 'lib{,32,64}/gcc{,-cross}/$triple/$version'. Clang will use the GCC installation with the largest version
+! CHECK-NEXT: --gcc-toolchain=<value> Specify a directory where Flang can find 'lib{,32,64}/gcc{,-cross}/$triple/$version'. Flang will use the GCC installation with the largest version
 ! CHECK-NEXT: -gline-directives-only  Emit debug line info directives only
 ! CHECK-NEXT: -gline-tables-only      Emit debug line number tables only
 ! CHECK-NEXT: -gpulibc                Link the LLVM C Library for GPUs

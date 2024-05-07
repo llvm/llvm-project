@@ -1848,3 +1848,51 @@ define <2 x i128> @uabd_i64(<2 x i64> %a, <2 x i64> %b) {
   %absel = select <2 x i1> %abcmp, <2 x i128> %ababs, <2 x i128> %abdiff
   ret <2 x i128> %absel
 }
+
+define <8 x i16> @pr88784(<8 x i8> %l0, <8 x i8> %l1, <8 x i16> %l2) {
+; CHECK-SD-LABEL: pr88784:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    usubl.8h v0, v0, v1
+; CHECK-SD-NEXT:    cmlt.8h v1, v2, #0
+; CHECK-SD-NEXT:    ssra.8h v0, v2, #15
+; CHECK-SD-NEXT:    eor.16b v0, v1, v0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: pr88784:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    usubl.8h v0, v0, v1
+; CHECK-GI-NEXT:    sshr.8h v1, v2, #15
+; CHECK-GI-NEXT:    ssra.8h v0, v2, #15
+; CHECK-GI-NEXT:    eor.16b v0, v1, v0
+; CHECK-GI-NEXT:    ret
+  %l4 = zext <8 x i8> %l0 to <8 x i16>
+  %l5 = ashr <8 x i16> %l2, <i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15>
+  %l6 = zext <8 x i8> %l1 to <8 x i16>
+  %l7 = sub <8 x i16> %l4, %l6
+  %l8 = add <8 x i16> %l5, %l7
+  %l9 = xor <8 x i16> %l5, %l8
+  ret <8 x i16> %l9
+}
+
+define <8 x i16> @pr88784_fixed(<8 x i8> %l0, <8 x i8> %l1, <8 x i16> %l2) {
+; CHECK-SD-LABEL: pr88784_fixed:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    uabdl.8h v0, v0, v1
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: pr88784_fixed:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    usubl.8h v0, v0, v1
+; CHECK-GI-NEXT:    sshr.8h v1, v0, #15
+; CHECK-GI-NEXT:    ssra.8h v0, v0, #15
+; CHECK-GI-NEXT:    eor.16b v0, v1, v0
+; CHECK-GI-NEXT:    ret
+  %l4 = zext <8 x i8> %l0 to <8 x i16>
+  %l6 = zext <8 x i8> %l1 to <8 x i16>
+  %l7 = sub <8 x i16> %l4, %l6
+  %l5 = ashr <8 x i16> %l7, <i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15>
+  %l8 = add <8 x i16> %l5, %l7
+  %l9 = xor <8 x i16> %l5, %l8
+  ret <8 x i16> %l9
+}
+

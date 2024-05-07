@@ -67,10 +67,10 @@ public:
                    bool MinimizeSize, AAResults *AA, AssumptionCache &AC,
                    TargetLibraryInfo &TLI, TargetTransformInfo &TTI,
                    DominatorTree &DT, OptimizationRemarkEmitter &ORE,
-                   BlockFrequencyInfo *BFI, ProfileSummaryInfo *PSI,
-                   const DataLayout &DL, LoopInfo *LI)
+                   BlockFrequencyInfo *BFI, BranchProbabilityInfo *BPI,
+                   ProfileSummaryInfo *PSI, const DataLayout &DL, LoopInfo *LI)
       : InstCombiner(Worklist, Builder, MinimizeSize, AA, AC, TLI, TTI, DT, ORE,
-                     BFI, PSI, DL, LI) {}
+                     BFI, BPI, PSI, DL, LI) {}
 
   virtual ~InstCombinerImpl() = default;
 
@@ -354,8 +354,9 @@ private:
   }
 
   bool willNotOverflowUnsignedMul(const Value *LHS, const Value *RHS,
-                                  const Instruction &CxtI) const {
-    return computeOverflowForUnsignedMul(LHS, RHS, &CxtI) ==
+                                  const Instruction &CxtI,
+                                  bool IsNSW = false) const {
+    return computeOverflowForUnsignedMul(LHS, RHS, &CxtI, IsNSW) ==
            OverflowResult::NeverOverflows;
   }
 
@@ -376,7 +377,7 @@ private:
     }
   }
 
-  Value *EmitGEPOffset(User *GEP);
+  Value *EmitGEPOffset(GEPOperator *GEP, bool RewriteGEP = false);
   Instruction *scalarizePHI(ExtractElementInst &EI, PHINode *PN);
   Instruction *foldBitcastExtElt(ExtractElementInst &ExtElt);
   Instruction *foldCastedBitwiseLogic(BinaryOperator &I);

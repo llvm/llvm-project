@@ -1412,6 +1412,9 @@ def MultiGPU: DiagGroup<"multi-gpu">;
 // libc and the CRT to be skipped.
 def AVRRtlibLinkingQuirks : DiagGroup<"avr-rtlib-linking-quirks">;
 
+// A warning group related to AArch64 SME function attribues.
+def AArch64SMEAttributes : DiagGroup<"aarch64-sme-attributes">;
+
 // A warning group for things that will change semantics in the future.
 def FutureCompat : DiagGroup<"future-compat">;
 
@@ -1516,6 +1519,9 @@ def UnsafeBufferUsage : DiagGroup<"unsafe-buffer-usage", [UnsafeBufferUsageInCon
 
 // Warnings and notes InstallAPI verification.
 def InstallAPIViolation : DiagGroup<"installapi-violation">;
+
+// Warnings related to _BitInt extension
+def BitIntExtension : DiagGroup<"bit-int-extension">;
 
 // Warnings about misuse of ExtractAPI options.
 def ExtractAPIMisuse : DiagGroup<"extractapi-misuse">;
