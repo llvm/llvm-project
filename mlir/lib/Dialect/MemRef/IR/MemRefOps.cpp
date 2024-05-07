@@ -2353,6 +2353,16 @@ LogicalResult ExpandShapeOp::verify() {
            << " dynamic dims while output_shape has " << getOutputShape().size()
            << " values";
 
+  // Verify if provided output shapes are in agreement with output type.
+  DenseI64ArrayAttr staticOutputShapes = getStaticOutputShapeAttr();
+  ArrayRef<int64_t> resShape = getResult().getType().getShape();
+  unsigned staticShapeNum = 0;
+
+  for (auto [pos, shape] : llvm::enumerate(resShape))
+    if (!ShapedType::isDynamic(shape) &&
+        shape != staticOutputShapes[staticShapeNum++])
+      emitOpError("invalid output shape provided at pos ") << pos;
+
   return success();
 }
 
