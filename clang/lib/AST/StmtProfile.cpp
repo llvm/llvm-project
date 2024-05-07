@@ -2578,6 +2578,13 @@ void OpenACCClauseProfiler::VisitAsyncClause(const OpenACCAsyncClause &Clause) {
   if (Clause.hasIntExpr())
     Profiler.VisitStmt(Clause.getIntExpr());
 }
+
+void OpenACCClauseProfiler::VisitWaitClause(const OpenACCWaitClause &Clause) {
+  if (Clause.hasDevNumExpr())
+    Profiler.VisitStmt(Clause.getDevNumExpr());
+  for (auto *E : Clause.getQueueIdExprs())
+    Profiler.VisitStmt(E);
+}
 } // namespace
 
 void StmtProfiler::VisitOpenACCComputeConstruct(

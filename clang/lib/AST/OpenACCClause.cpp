@@ -147,6 +147,18 @@ OpenACCAsyncClause *OpenACCAsyncClause::Create(const ASTContext &C,
   return new (Mem) OpenACCAsyncClause(BeginLoc, LParenLoc, IntExpr, EndLoc);
 }
 
+OpenACCWaitClause *OpenACCWaitClause::Create(
+    const ASTContext &C, SourceLocation BeginLoc, SourceLocation LParenLoc,
+    Expr *DevNumExpr, SourceLocation QueuesLoc, ArrayRef<Expr *> QueueIdExprs,
+    SourceLocation EndLoc) {
+  // Allocates enough room in trailing storage for all the int-exprs, plus a
+  // placeholder for the devnum.
+  void *Mem = C.Allocate(
+      OpenACCWaitClause::totalSizeToAlloc<Expr *>(QueueIdExprs.size() + 1));
+  return new (Mem) OpenACCWaitClause(BeginLoc, LParenLoc, DevNumExpr, QueuesLoc,
+                                     QueueIdExprs, EndLoc);
+}
+
 OpenACCNumGangsClause *OpenACCNumGangsClause::Create(const ASTContext &C,
                                                      SourceLocation BeginLoc,
                                                      SourceLocation LParenLoc,
@@ -392,4 +404,23 @@ void OpenACCClausePrinter::VisitCreateClause(const OpenACCCreateClause &C) {
   llvm::interleaveComma(C.getVarList(), OS,
                         [&](const Expr *E) { printExpr(E); });
   OS << ")";
+}
+
+void OpenACCClausePrinter::VisitWaitClause(const OpenACCWaitClause &C) {
+  OS << "wait";
+  if (!C.getLParenLoc().isInvalid()) {
+    OS << "(";
+    if (C.hasDevNumExpr()) {
+      OS << "devnum: ";
+      printExpr(C.getDevNumExpr());
+      OS << " : ";
+    }
+
+    if (C.hasQueuesTag())
+      OS << "queues: ";
+
+    llvm::interleaveComma(C.getQueueIdExprs(), OS,
+                          [&](const Expr *E) { printExpr(E); });
+    OS << ")";
+  }
 }

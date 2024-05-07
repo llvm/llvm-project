@@ -867,7 +867,6 @@ Parser::OpenACCClauseParseResult Parser::ParseOpenACCClauseParams(
   SemaOpenACC::OpenACCParsedClause ParsedClause(DirKind, ClauseKind, ClauseLoc);
 
   if (ClauseHasRequiredParens(DirKind, ClauseKind)) {
-    ParsedClause.setLParenLoc(getCurToken().getLocation());
     if (Parens.expectAndConsume()) {
       // We are missing a paren, so assume that the person just forgot the
       // parameter.  Return 'false' so we try to continue on and parse the next
@@ -876,6 +875,7 @@ Parser::OpenACCClauseParseResult Parser::ParseOpenACCClauseParams(
                 Parser::StopBeforeMatch);
       return OpenACCCanContinue();
     }
+    ParsedClause.setLParenLoc(Parens.getOpenLocation());
 
     switch (ClauseKind) {
     case OpenACCClauseKind::Default: {
@@ -1048,8 +1048,8 @@ Parser::OpenACCClauseParseResult Parser::ParseOpenACCClauseParams(
       return OpenACCCannotContinue();
 
   } else if (ClauseHasOptionalParens(DirKind, ClauseKind)) {
-    ParsedClause.setLParenLoc(getCurToken().getLocation());
     if (!Parens.consumeOpen()) {
+      ParsedClause.setLParenLoc(Parens.getOpenLocation());
       switch (ClauseKind) {
       case OpenACCClauseKind::Self: {
         assert(DirKind != OpenACCDirectiveKind::Update);
@@ -1099,13 +1099,19 @@ Parser::OpenACCClauseParseResult Parser::ParseOpenACCClauseParams(
           return OpenACCCanContinue();
         }
         break;
-      case OpenACCClauseKind::Wait:
-        if (ParseOpenACCWaitArgument(ClauseLoc,
-                                     /*IsDirective=*/false)) {
+      case OpenACCClauseKind::Wait: {
+        OpenACCWaitParseInfo Info =
+            ParseOpenACCWaitArgument(ClauseLoc,
+                                     /*IsDirective=*/false);
+        if (Info.Failed) {
           Parens.skipToEnd();
           return OpenACCCanContinue();
         }
+
+        ParsedClause.setWaitDetails(Info.DevNumExpr, Info.QueuesLoc,
+                                    std::move(Info.QueueIdExprs));
         break;
+      }
       default:
         llvm_unreachable("Not an optional parens type?");
       }
@@ -1139,7 +1145,9 @@ Parser::ParseOpenACCAsyncArgument(OpenACCDirectiveKind DK, OpenACCClauseKind CK,
 /// In this section and throughout the specification, the term wait-argument
 /// means:
 /// [ devnum : int-expr : ] [ queues : ] async-argument-list
-bool Parser::ParseOpenACCWaitArgument(SourceLocation Loc, bool IsDirective) {
+Parser::OpenACCWaitParseInfo
+Parser::ParseOpenACCWaitArgument(SourceLocation Loc, bool IsDirective) {
+  OpenACCWaitParseInfo Result;
   // [devnum : int-expr : ]
   if (isOpenACCSpecialToken(OpenACCSpecialTokenKind::DevNum, Tok) &&
       NextToken().is(tok::colon)) {
@@ -1153,18 +1161,25 @@ bool Parser::ParseOpenACCWaitArgument(SourceLocation Loc, bool IsDirective) {
                     : OpenACCDirectiveKind::Invalid,
         IsDirective ? OpenACCClauseKind::Invalid : OpenACCClauseKind::Wait,
         Loc);
-    if (Res.first.isInvalid() && Res.second == OpenACCParseCanContinue::Cannot)
-      return true;
+    if (Res.first.isInvalid() &&
+        Res.second == OpenACCParseCanContinue::Cannot) {
+      Result.Failed = true;
+      return Result;
+    }
 
-    if (ExpectAndConsume(tok::colon))
-      return true;
+    if (ExpectAndConsume(tok::colon)) {
+      Result.Failed = true;
+      return Result;
+    }
+
+    Result.DevNumExpr = Res.first.get();
   }
 
   // [ queues : ]
   if (isOpenACCSpecialToken(OpenACCSpecialTokenKind::Queues, Tok) &&
       NextToken().is(tok::colon)) {
     // Consume queues.
-    ConsumeToken();
+    Result.QueuesLoc = ConsumeToken();
     // Consume colon.
     ConsumeToken();
   }
@@ -1176,8 +1191,10 @@ bool Parser::ParseOpenACCWaitArgument(SourceLocation Loc, bool IsDirective) {
   bool FirstArg = true;
   while (!getCurToken().isOneOf(tok::r_paren, tok::annot_pragma_openacc_end)) {
     if (!FirstArg) {
-      if (ExpectAndConsume(tok::comma))
-        return true;
+      if (ExpectAndConsume(tok::comma)) {
+        Result.Failed = true;
+        return Result;
+      }
     }
     FirstArg = false;
 
@@ -1187,11 +1204,16 @@ bool Parser::ParseOpenACCWaitArgument(SourceLocation Loc, bool IsDirective) {
         IsDirective ? OpenACCClauseKind::Invalid : OpenACCClauseKind::Wait,
         Loc);
 
-    if (Res.first.isInvalid() && Res.second == OpenACCParseCanContinue::Cannot)
-      return true;
+    if (Res.first.isInvalid() &&
+        Res.second == OpenACCParseCanContinue::Cannot) {
+      Result.Failed = true;
+      return Result;
+    }
+
+    Result.QueueIdExprs.push_back(Res.first.get());
   }
 
-  return false;
+  return Result;
 }
 
 ExprResult Parser::ParseOpenACCIDExpression() {
@@ -1360,7 +1382,7 @@ Parser::OpenACCDirectiveParseInfo Parser::ParseOpenACCDirective() {
       break;
     case OpenACCDirectiveKind::Wait:
       // OpenACC has an optional paren-wrapped 'wait-argument'.
-      if (ParseOpenACCWaitArgument(StartLoc, /*IsDirective=*/true))
+      if (ParseOpenACCWaitArgument(StartLoc, /*IsDirective=*/true).Failed)
         T.skipToEnd();
       else
         T.consumeClose();

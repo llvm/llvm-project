@@ -54,8 +54,14 @@ public:
       bool IsZero;
     };
 
+    struct WaitDetails {
+      Expr *DevNumExpr;
+      SourceLocation QueuesLoc;
+      SmallVector<Expr *> QueueIdExprs;
+    };
+
     std::variant<std::monostate, DefaultDetails, ConditionDetails,
-                 IntExprDetails, VarListDetails>
+                 IntExprDetails, VarListDetails, WaitDetails>
         Details = std::monostate{};
 
   public:
@@ -104,12 +110,43 @@ public:
               ClauseKind == OpenACCClauseKind::Async ||
               ClauseKind == OpenACCClauseKind::VectorLength) &&
              "Parsed clause kind does not have a int exprs");
-      //
-      // 'async' has an optional IntExpr, so be tolerant of that.
-      if (ClauseKind == OpenACCClauseKind::Async &&
+
+      // 'async' and 'wait' have an optional IntExpr, so be tolerant of that.
+      if ((ClauseKind == OpenACCClauseKind::Async ||
+           ClauseKind == OpenACCClauseKind::Wait) &&
           std::holds_alternative<std::monostate>(Details))
         return 0;
       return std::get<IntExprDetails>(Details).IntExprs.size();
+    }
+
+    SourceLocation getQueuesLoc() const {
+      assert(ClauseKind == OpenACCClauseKind::Wait &&
+             "Parsed clause kind does not have a queues location");
+
+      if (std::holds_alternative<std::monostate>(Details))
+        return SourceLocation{};
+
+      return std::get<WaitDetails>(Details).QueuesLoc;
+    }
+
+    Expr *getDevNumExpr() const {
+      assert(ClauseKind == OpenACCClauseKind::Wait &&
+             "Parsed clause kind does not have a device number expr");
+
+      if (std::holds_alternative<std::monostate>(Details))
+        return nullptr;
+
+      return std::get<WaitDetails>(Details).DevNumExpr;
+    }
+
+    ArrayRef<Expr *> getQueueIdExprs() const {
+      assert(ClauseKind == OpenACCClauseKind::Wait &&
+             "Parsed clause kind does not have a queue id expr list");
+
+      if (std::holds_alternative<std::monostate>(Details))
+        return ArrayRef<Expr *>{std::nullopt};
+
+      return std::get<WaitDetails>(Details).QueueIdExprs;
     }
 
     ArrayRef<Expr *> getIntExprs() {
@@ -281,6 +318,13 @@ public:
               ClauseKind == OpenACCClauseKind::PresentOrCreate) &&
              "zero: tag only valid on copyout/create");
       Details = VarListDetails{std::move(VarList), IsReadOnly, IsZero};
+    }
+
+    void setWaitDetails(Expr *DevNum, SourceLocation QueuesLoc,
+                        llvm::SmallVector<Expr *> &&IntExprs) {
+      assert(ClauseKind == OpenACCClauseKind::Wait &&
+             "Parsed clause kind does not have a wait-details");
+      Details = WaitDetails{DevNum, QueuesLoc, std::move(IntExprs)};
     }
   };
 
