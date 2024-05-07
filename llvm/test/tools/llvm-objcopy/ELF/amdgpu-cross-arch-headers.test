@@ -1,0 +1,57 @@
+# Show that the --output-format correctly configures both the main output file
+# and DWO output.
+# Note that we don't actually need any DWARF to produce the DWO file.
+
+# RUN: yaml2obj %s -o %t.o
+
+# Without --output-format, the format should match the input.
+
+# RUN: llvm-objcopy %t.o -O elf64-amdgpu %t.elf64_amdgpu.o --split-dwo=%t.elf64_amdgpu.dwo
+# RUN: llvm-readobj --file-headers %t.elf64_amdgpu.o | FileCheck %s --check-prefixes=CHECK,LE,AMDGPU,64,SYSV
+# RUN: llvm-readobj --file-headers %t.elf64_amdgpu.dwo | FileCheck %s --check-prefixes=CHECK,LE,AMDGPU,64,SYSV
+
+!ELF
+FileHeader:
+  Class:           ELFCLASS32
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  # Arbitrary values that do not match any value we convert to via --output-format.
+  Machine:         EM_AMDGPU
+  OSABI:           ELFOSABI_STANDALONE
+  Flags:           [EF_AMDGPU_MACH_AMDGCN_GFX900]
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+  - Name:            .data
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+Symbols:
+  - Name:     foo
+    Type:     STT_FUNC
+    Section:  .text
+    Value:    0x1234
+    Binding:  STB_GLOBAL
+  - Name:     bar
+    Type:     STT_OBJECT
+    Section:  .data
+    Value:    0xabcd
+    Binding:  STB_GLOBAL
+
+# CHECK:             Format:
+# AMDGPU-SAME:       elf64-amdgpu
+
+# AMDGPU-NEXT:       Arch: amdgcn
+
+# 64-NEXT:           AddressSize: 64bit
+
+# 64:                Class: 64-bit
+# LE:                DataEncoding: LittleEndian
+
+# SYSV:              OS/ABI: SystemV (0x0)
+
+# AMDGPU:            Machine: EM_AMDGPU (0xE0)
+
+# 64:                HeaderSize: 64
+
+# 64:                SectionHeaderEntrySize: 64
