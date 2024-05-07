@@ -1501,6 +1501,13 @@ def extract_vector_element_freeze : GICombineRule<
    [{ return Helper.matchExtractVectorElementWithFreeze(${root}, ${matchinfo}); }]),
    (apply [{ Helper.applyBuildFnMO(${root}, ${matchinfo}); }])>;
 
+def extract_vector_element_shuffle_vector : GICombineRule<
+   (defs root:$root, build_fn_matchinfo:$matchinfo),
+   (match (G_SHUFFLE_VECTOR $src, $src1, $src2, $mask),
+          (G_EXTRACT_VECTOR_ELT $root, $src, $idx),
+   [{ return Helper.matchExtractVectorElementWithShuffleVector(${root}, ${matchinfo}); }]),
+   (apply [{ Helper.applyBuildFnMO(${root}, ${matchinfo}); }])>;
+
 // Combines concat operations
 def concat_matchinfo : GIDefMatchData<"SmallVector<Register>">;
 def combine_concat_vector : GICombineRule<
@@ -1578,6 +1585,7 @@ extract_vector_element_build_vector_trunc6,
 extract_vector_element_build_vector_trunc7,
 extract_vector_element_build_vector_trunc8,
 extract_vector_element_freeze,
+extract_vector_element_shuffle_vector,
 insert_vector_element_extract_vector_element
 ]>;
 

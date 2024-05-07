@@ -294,6 +294,18 @@ public:
   }
 };
 
+/// Represents a G_SHUFFLE_VECTOR.
+class GShuffleVector : public GenericMachineInstr {
+public:
+  Register getSrc1Reg() const { return getOperand(1).getReg(); }
+  Register getSrc2Reg() const { return getOperand(2).getReg(); }
+  ArrayRef<int> getMask() const { return getOperand(3).getShuffleMask(); }
+
+  static bool classof(const MachineInstr *MI) {
+    return MI->getOpcode() == TargetOpcode::G_SHUFFLE_VECTOR;
+  }
+};
+
 /// Represents a G_PTR_ADD.
 class GPtrAdd : public GenericMachineInstr {
 public:
