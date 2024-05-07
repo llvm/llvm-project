@@ -2876,21 +2876,21 @@ public:
         return ExprError();
       Base = BaseResult.get();
 
-      // We want to use `BuildMemberReferenceExpr()` so we can use its logic
-      // that materializes `Base` into a temporary if it's a prvalue.
-      // To do so, we need to create a `LookupResult` for `Member`, even though
-      // it's an unnamed field (that we could never actually have looked up).
-      // This small hack seems preferable to duplicating the logic for
-      // materializing the temporary.
-      LookupResult R(getSema(), MemberNameInfo, Sema::LookupMemberName);
-      R.addDecl(Member);
-      R.resolveKind();
+      // `TranformMaterializeTemporaryExpr()` removes materialized temporaries
+      // from the AST, so we need to re-insert them if needed (since
+      // `BuildFieldRefereneExpr()` doesn't do this).
+      if (!isArrow && Base->isPRValue()) {
+        BaseResult = getSema().TemporaryMaterializationConversion(Base);
+        if (BaseResult.isInvalid())
+          return ExprError();
+        Base = BaseResult.get();
+      }
 
       CXXScopeSpec EmptySS;
-      return getSema().BuildMemberReferenceExpr(
-          Base, Base->getType(), OpLoc, isArrow, EmptySS, TemplateKWLoc,
-          FirstQualifierInScope, R, ExplicitTemplateArgs,
-          /*S*/ nullptr);
+      return getSema().BuildFieldReferenceExpr(
+          Base, isArrow, OpLoc, EmptySS, cast<FieldDecl>(Member),
+          DeclAccessPair::make(FoundDecl, FoundDecl->getAccess()),
+          MemberNameInfo);
     }
 
     CXXScopeSpec SS;
