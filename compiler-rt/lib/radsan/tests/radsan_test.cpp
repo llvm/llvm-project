@@ -61,14 +61,14 @@ TEST(TestRadsan, SleepingAThreadDiesWhenRealtime) {
 }
 
 TEST(TestRadsan, IfstreamCreationDiesWhenRealtime) {
-  auto Func = []() { auto ifs = std::ifstream("./file.txt"); };
+  auto Func = []() { std::ifstream ifs{"./file.txt"}; };
   ExpectRealtimeDeath(Func);
   ExpectNonRealtimeSurvival(Func);
   std::remove("./file.txt");
 }
 
 TEST(TestRadsan, OfstreamCreationDiesWhenRealtime) {
-  auto Func = []() { auto ofs = std::ofstream("./file.txt"); };
+  auto Func = []() { std::ofstream ofs{"./file.txt"}; };
   ExpectRealtimeDeath(Func);
   ExpectNonRealtimeSurvival(Func);
   std::remove("./file.txt");
@@ -125,8 +125,8 @@ TEST(TestRadsan, SharedUnlockingASharedMutexDiesWhenRealtime) {
 
 TEST(TestRadsan, LaunchingAThreadDiesWhenRealtime) {
   auto Func = [&]() {
-    auto t = std::thread([]() {});
-    t.join();
+    std::thread Thread{[]() {}};
+    Thread.join();
   };
   ExpectRealtimeDeath(Func);
   ExpectNonRealtimeSurvival(Func);
