@@ -7,9 +7,9 @@ entry:
   ret void
 }
 
-; Make sure extra attribute like hlsl.numthreads are left when validation version is 0.0.
-; CHECK:attributes #0 = { noinline nounwind "hlsl.numthreads"="1,2,1" "hlsl.shader"="compute" } 
-attributes #0 = { noinline nounwind "hlsl.numthreads"="1,2,1" "hlsl.shader"="compute" }
+; Make sure experimental attribute is left when validation version is 0.0.
+; CHECK:attributes #0 = { noinline nounwind "exp-shader"="cs" } 
+attributes #0 = { noinline nounwind "exp-shader"="cs" "hlsl.numthreads"="1,2,1" "hlsl.shader"="compute" }
 
 !dx.valver = !{!0}
 

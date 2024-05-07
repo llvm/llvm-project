@@ -86,25 +86,31 @@ constexpr bool isValidForDXIL(Attribute::AttrKind Attr) {
 }
 
 static void collectDeadStringAttrs(AttributeMask &DeadAttrs, AttributeSet &&AS,
-                                   const StringSet<> &LiveKeys) {
+                                   const StringSet<> &LiveKeys,
+                                   bool AllowExperimental) {
   for (auto &Attr : AS) {
     if (!Attr.isStringAttribute())
       continue;
     StringRef Key = Attr.getKindAsString();
     if (LiveKeys.contains(Key))
       continue;
+    if (AllowExperimental && Key.starts_with("exp-"))
+      continue;
     DeadAttrs.addAttribute(Key);
   }
 }
 
-static void removeStringFunctionAttributes(Function &F) {
+static void removeStringFunctionAttributes(Function &F,
+                                           bool AllowExperimental) {
   AttributeList Attrs = F.getAttributes();
   const StringSet<> LiveKeys = {"waveops-include-helper-lanes",
                                 "fp32-denorm-mode"};
   // Collect DeadKeys in FnAttrs.
   AttributeMask DeadAttrs;
-  collectDeadStringAttrs(DeadAttrs, Attrs.getFnAttrs(), LiveKeys);
-  collectDeadStringAttrs(DeadAttrs, Attrs.getRetAttrs(), LiveKeys);
+  collectDeadStringAttrs(DeadAttrs, Attrs.getFnAttrs(), LiveKeys,
+                         AllowExperimental);
+  collectDeadStringAttrs(DeadAttrs, Attrs.getRetAttrs(), LiveKeys,
+                         AllowExperimental);
 
   F.removeFnAttrs(DeadAttrs);
   F.removeRetAttrs(DeadAttrs);
@@ -151,8 +157,7 @@ public:
       // Only remove string attributes if we are not skipping validation.
       // This will reserve the experimental attributes when validation version
       // is 0.0 for experiment mode.
-      if (!SkipValidation)
-        removeStringFunctionAttributes(F);
+      removeStringFunctionAttributes(F, SkipValidation);
       for (size_t Idx = 0, End = F.arg_size(); Idx < End; ++Idx)
         F.removeParamAttrs(Idx, AttrMask);
 
