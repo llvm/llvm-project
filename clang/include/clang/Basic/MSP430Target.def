@@ -8,7 +8,9 @@
 //
 // This file defines the MSP430 devices and their features.
 //
-// Generated from TI's devices.csv in version 1.212
+// Generated from TI's devices.csv in version 1.212 using the script in
+// Target/MSP430/gen-msp430-def.py - use this tool rather than adding
+// new MCUs by hand.
 //
 //===----------------------------------------------------------------------===//
 
