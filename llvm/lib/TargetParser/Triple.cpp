@@ -115,31 +115,6 @@ StringRef Triple::getArchName(ArchType Kind, SubArchType SubArch) {
     if (SubArch == AArch64SubArch_arm64e)
       return "arm64e";
     break;
-  case Triple::dxil:
-    switch (SubArch) {
-    case Triple::NoSubArch:
-    case Triple::DXILSubArch_v1_0:
-      return "dxilv1.0";
-    case Triple::DXILSubArch_v1_1:
-      return "dxilv1.1";
-    case Triple::DXILSubArch_v1_2:
-      return "dxilv1.2";
-    case Triple::DXILSubArch_v1_3:
-      return "dxilv1.3";
-    case Triple::DXILSubArch_v1_4:
-      return "dxilv1.4";
-    case Triple::DXILSubArch_v1_5:
-      return "dxilv1.5";
-    case Triple::DXILSubArch_v1_6:
-      return "dxilv1.6";
-    case Triple::DXILSubArch_v1_7:
-      return "dxilv1.7";
-    case Triple::DXILSubArch_v1_8:
-      return "dxilv1.8";
-    default:
-      break;
-    }
-    break;
   default:
     break;
   }
@@ -1039,8 +1014,6 @@ Triple::Triple(const Twine &ArchStr, const Twine &VendorStr, const Twine &OSStr,
     ObjectFormat = getDefaultFormat(*this);
 }
 
-static VersionTuple parseVersionFromName(StringRef Name);
-
 std::string Triple::normalize(StringRef Str) {
   bool IsMinGW32 = false;
   bool IsCygwin = false;
@@ -1233,47 +1206,6 @@ std::string Triple::normalize(StringRef Str) {
     }
   }
 
-  // Normalize DXIL triple if it does not include DXIL version number.
-  // Determine DXIL version number using the minor version number of Shader
-  // Model version specified in target triple, if any. Prior to decoupling DXIL
-  // version numbering from that of Shader Model DXIL version 1.Y corresponds to
-  // SM 6.Y. E.g., dxilv1.Y-unknown-shadermodelX.Y-hull
-  if (Components[0] == "dxil") {
-    if (Components.size() > 4) {
-      Components.resize(4);
-    }
-    // Add DXIL version only if shadermodel is specified in the triple
-    if (OS == Triple::ShaderModel) {
-      VersionTuple Ver =
-          parseVersionFromName(Components[2].drop_front(strlen("shadermodel")));
-      // Default DXIL minor version when Shader Model version is anything other
-      // than 6.[0...8] or 6.x (which translates to latest current SM version)
-      // DXIL version corresponding to Shader Model version other than 6.x
-      // is 1.0
-      unsigned DXILMinor = 0;
-      const unsigned SMMajor = 6;
-      const unsigned LatestCurrentDXILMinor = 8;
-      if (!Ver.empty()) {
-        if (Ver.getMajor() == SMMajor) {
-          if (std::optional<unsigned> SMMinor = Ver.getMinor()) {
-            DXILMinor = *SMMinor;
-            // Ensure specified minor version is supported
-            if (DXILMinor > LatestCurrentDXILMinor) {
-              report_fatal_error("Unsupported Shader Model version", false);
-            }
-          }
-        }
-      } else {
-        // Special case: DXIL minor version is set to LatestCurrentDXILMinor for
-        // shadermodel6.x is
-        if (Components[2] == "shadermodel6.x") {
-          DXILMinor = LatestCurrentDXILMinor;
-        }
-      }
-      Components[0] =
-          Components[0].str().append("v1.").append(std::to_string(DXILMinor));
-    }
-  }
   // Stick the corrected components back together to form the normalized string.
   return join(Components, "-");
 }
