@@ -365,37 +365,23 @@ FCmpInst::Predicate ConstrainedFPCmpIntrinsic::getPredicate() const {
   return getFPPredicateFromMD(getArgOperand(2));
 }
 
-bool ConstrainedFPIntrinsic::isUnaryOp() const {
-  switch (getIntrinsicID()) {
-  default:
-    return false;
-#define INSTRUCTION(NAME, NARG, ROUND_MODE, INTRINSIC)                         \
-  case Intrinsic::INTRINSIC:                                                   \
-    return NARG == 1;
-#include "llvm/IR/ConstrainedOps.def"
-  }
-}
+unsigned ConstrainedFPIntrinsic::getNonMetadataArgCount() const {
+  // All constrained fp intrinsics have "fpexcept" metadata.
+  unsigned NumArgs = arg_size() - 1;
 
-bool ConstrainedFPIntrinsic::isTernaryOp() const {
-  switch (getIntrinsicID()) {
-  default:
-    return false;
-#define INSTRUCTION(NAME, NARG, ROUND_MODE, INTRINSIC)                         \
-  case Intrinsic::INTRINSIC:                                                   \
-    return NARG == 3;
-#include "llvm/IR/ConstrainedOps.def"
-  }
+  // Some intrinsics have "round" metadata.
+  if (Intrinsic::hasConstrainedFPRoundingModeOperand(getIntrinsicID()))
+    NumArgs -= 1;
+
+  // Compare intrinsics take their predicate as metadata.
+  if (isa<ConstrainedFPCmpIntrinsic>(this))
+    NumArgs -= 1;
+
+  return NumArgs;
 }
 
 bool ConstrainedFPIntrinsic::classof(const IntrinsicInst *I) {
-  switch (I->getIntrinsicID()) {
-#define INSTRUCTION(NAME, NARGS, ROUND_MODE, INTRINSIC)                        \
-  case Intrinsic::INTRINSIC:
-#include "llvm/IR/ConstrainedOps.def"
-    return true;
-  default:
-    return false;
-  }
+  return Intrinsic::isConstrainedFPIntrinsic(I->getIntrinsicID());
 }
 
 ElementCount VPIntrinsic::getStaticVectorLength() const {
