@@ -818,6 +818,7 @@ def Tensor_InsertOp : Tensor_Op<"insert", [
     MutableOperandRange getDpsInitsMutable() { return getDestMutable(); }
   }];
 
+  let hasCanonicalizer = 1;
   let hasFolder = 1;
   let hasVerifier = 1;
 }

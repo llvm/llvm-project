@@ -20,7 +20,9 @@
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/Location.h"
+#include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeRange.h"
+#include "mlir/Interfaces/DestinationStyleOpInterface.h"
 #include "mlir/Support/LLVM.h"
 
 // Pull in all enum type definitions and utility function declarations.
@@ -157,6 +159,76 @@ Operation *cloneWithoutRegions(OpBuilder &b, Operation *op,
 // those with the provided name.
 SmallVector<NamedAttribute>
 getPrunedAttributeList(Operation *op, ArrayRef<StringRef> elidedAttrs);
+
+/// Folds cast-like operations into a consuming DestinationStyleOpInterface op
+/// if `isPreservingCast` is true. If the cast appears on a 'DPS-init operand',
+/// then the tied result type is updated as well to the type of the cast source,
+/// and a new cast must be inserted on the new op's result. `createCast` is used
+/// to build such required cast ops.
+///
+/// ### Example
+/// If the `isPreservingCast` returns true if the cast is a "generalizing"
+/// `tensor.cast`, then this function would be have as follows:
+///
+/// ```mlir
+/// %1 = tensor.cast %0 : tensor<8x16xf32> to tensor<?x?xf32>
+/// %2 = dps_op %1 ... : tensor<?x?xf32> ...
+/// ```
+///
+/// folds into:
+///
+/// ```mlir
+/// %2 = dps_op %0 ... : tensor<8x16xf32> ...
+/// ```
+LogicalResult foldCastProducers(
+    RewriterBase &rewriter, DestinationStyleOpInterface consumerOp,
+    llvm::function_ref<bool(Operation *)> isPreservingCast,
+    llvm::function_ref<Value(RewriterBase &rewriter, Type originalType,
+                             Value replacement)>
+        createCast);
+
+/// Folds `tensor.cast` ops into a consuming DestinationStyleOpInterface op
+/// if the casts make their operands less static. See also isPreservingCast
+/// above.
+template <typename CastOpType>
+LogicalResult foldCastProducers(DestinationStyleOpInterface op,
+                                RewriterBase &rewriter) {
+  return foldCastProducers(
+      rewriter, op,
+      [](Operation *castOp) -> bool {
+        auto concreteCast = dyn_cast<CastOpType>(castOp);
+        if (!concreteCast)
+          return false;
+        RankedTensorType resultType =
+            dyn_cast<RankedTensorType>(concreteCast.getType());
+        RankedTensorType sourceType =
+            dyn_cast<RankedTensorType>(concreteCast->getOperand(0).getType());
+        if (!resultType || !sourceType)
+          return false;
+        return resultType.isGeneralizationOf(sourceType);
+      },
+      [](RewriterBase &rewriter, Type resultType, Value operand) -> Value {
+        return rewriter.create<CastOpType>(operand.getLoc(), resultType,
+                                           operand);
+      });
+}
+
+/// A generic pattern for an Operation type that implements
+/// DestinationStyleOpInterface, allowing for absorbing cast-like operations
+/// that are producers of operands.
+template <typename OpType, typename CastOpType>
+struct FoldTensorCastIntoConsumerPattern : public OpRewritePattern<OpType> {
+  using OpRewritePattern<OpType>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(OpType op,
+                                PatternRewriter &rewriter) const override {
+    DestinationStyleOpInterface dpsOp =
+        llvm::dyn_cast<DestinationStyleOpInterface>(op.getOperation());
+    if (!dpsOp)
+      return failure();
+    return foldCastProducers<CastOpType>(dpsOp, rewriter);
+  }
+};
 
 } // namespace mlir
 

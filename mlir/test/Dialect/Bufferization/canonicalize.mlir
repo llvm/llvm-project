@@ -388,3 +388,19 @@ func.func @negative_input() -> tensor<?x?x?xf16> {
   %11 = bufferization.alloc_tensor(%c10, %idx-3, %idx27) : tensor<?x?x?xf16>
   return %11 : tensor<?x?x?xf16>
 }
+
+// -----
+
+func.func @materialize_in_destination_tensor_cast(%arg0: tensor<4xf32>, %arg1: index) -> tensor<?xf32> {
+  %0 = bufferization.alloc_tensor(%arg1) : tensor<?xf32>
+  %1 = tensor.cast %arg0 : tensor<4xf32> to tensor<?xf32>
+  %2 = bufferization.materialize_in_destination %1 in %0 : (tensor<?xf32>, tensor<?xf32>) -> tensor<?xf32>
+  return %2 : tensor<?xf32>
+}
+
+// Check that a `tensor.cast` producer is not absorbed.
+
+// CHECK-LABEL: func.func @materialize_in_destination_tensor_cast
+//       CHECK:   tensor.cast
+//       CHECK:   bufferization.materialize_in_destination
+//  CHECK-SAME:    : (tensor<?xf32>, tensor<?xf32>) -> tensor<?xf32>

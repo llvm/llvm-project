@@ -14,6 +14,7 @@
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Utils/ReshapeOpsUtils.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
+#include "mlir/Dialect/Utils/StructuredOpsUtils.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributeInterfaces.h"
 #include "mlir/IR/BuiltinTypeInterfaces.h"
@@ -1369,6 +1370,11 @@ OpFoldResult InsertOp::fold(FoldAdaptor adaptor) {
   return {};
 }
 
+void InsertOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                           MLIRContext *context) {
+  results.add<FoldTensorCastIntoConsumerPattern<InsertOp, CastOp>>(context);
+}
+
 //===----------------------------------------------------------------------===//
 // GenerateOp
 //===----------------------------------------------------------------------===//
@@ -2413,7 +2419,9 @@ void ExtractSliceOp::getCanonicalizationPatterns(RewritePatternSet &results,
   results.add<
       OpWithOffsetSizesAndStridesConstantArgumentFolder<
           ExtractSliceOp, SliceReturnTypeCanonicalizer, SliceCanonicalizer>,
-      ExtractSliceOpCastFolder>(context);
+      ExtractSliceOpCastFolder,
+      FoldTensorCastIntoConsumerPattern<tensor::ExtractSliceOp,
+                                        tensor::CastOp>>(context);
 }
 
 //
@@ -4154,6 +4162,15 @@ static bool inferStaticShape(PackOp packOp, SmallVectorImpl<int64_t> &srcShape,
 }
 
 LogicalResult PackOp::canonicalize(PackOp packOp, PatternRewriter &rewriter) {
+  // pack(cast(x)) -> pack(x)
+  if (packOp.getSource().getDefiningOp<tensor::CastOp>() ||
+      packOp.getDest().getDefiningOp<tensor::CastOp>()) {
+    if (succeeded(foldCastProducers<CastOp>(
+            cast<DestinationStyleOpInterface>(packOp.getOperation()),
+            rewriter)))
+      return success();
+  }
+
   // Fold an unpack(pack(x)) to x.
   if (auto unPackOp = packOp.getSource().getDefiningOp<UnPackOp>()) {
     if (unPackOp.getSourceType() != packOp.getDestType())
@@ -4388,6 +4405,15 @@ static bool inferStaticShape(UnPackOp op, SmallVectorImpl<int64_t> &srcShape,
 
 LogicalResult UnPackOp::canonicalize(UnPackOp unPackOp,
                                      PatternRewriter &rewriter) {
+  // pack(cast(x)) -> pack(x)
+  if (unPackOp.getSource().getDefiningOp<tensor::CastOp>() ||
+      unPackOp.getDest().getDefiningOp<tensor::CastOp>()) {
+    if (succeeded(foldCastProducers<CastOp>(
+            cast<DestinationStyleOpInterface>(unPackOp.getOperation()),
+            rewriter)))
+      return success();
+  }
+
   /// pack(unpack(x)) -> x
   if (PackOp packOp = unPackOp.getSource().getDefiningOp<tensor::PackOp>()) {
     if (packOp.getDestType() != unPackOp.getSourceType())
@@ -4533,9 +4559,7 @@ struct FoldTensorCastProducerOp
 //===----------------------------------------------------------------------===//
 
 void TensorDialect::getCanonicalizationPatterns(
-    RewritePatternSet &results) const {
-  results.add<FoldTensorCastProducerOp>(getContext());
-}
+    RewritePatternSet &results) const {}
 
 //===----------------------------------------------------------------------===//
 // TableGen'd op method definitions
