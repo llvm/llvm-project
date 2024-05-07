@@ -15109,6 +15109,8 @@ StmtResult SemaOpenMP::ActOnOpenMPTileDirective(ArrayRef<OMPClause *> Clauses,
                                                 SourceLocation StartLoc,
                                                 SourceLocation EndLoc) {
   ASTContext &Context = getASTContext();
+  Scope *CurScope = SemaRef.getCurScope();
+
   auto SizesClauses =
       OMPExecutableDirective::getClausesOfKind<OMPSizesClause>(Clauses);
   if (SizesClauses.empty()) {
@@ -15137,6 +15139,7 @@ StmtResult SemaOpenMP::ActOnOpenMPTileDirective(ArrayRef<OMPClause *> Clauses,
                                     NumLoops, AStmt, nullptr, nullptr);
 
   SmallVector<Decl *, 4> PreInits;
+  CaptureVars CopyTransformer(SemaRef);
 
   // Create iteration variables for the generated loops.
   SmallVector<VarDecl *, 4> FloorIndVars;
@@ -15200,19 +15203,30 @@ StmtResult SemaOpenMP::ActOnOpenMPTileDirective(ArrayRef<OMPClause *> Clauses,
     Expr *NumIterations = LoopHelper.NumIterations;
     auto *OrigCntVar = cast<DeclRefExpr>(LoopHelper.Counters[0]);
     QualType CntTy = OrigCntVar->getType();
-    Expr *DimTileSize = SizesClause->getSizesRefs()[I];
-    Scope *CurScope = SemaRef.getCurScope();
 
-    // Commonly used variables.
-    DeclRefExpr *TileIV = buildDeclRefExpr(SemaRef, TileIndVars[I], CntTy,
-                                           OrigCntVar->getExprLoc());
-    DeclRefExpr *FloorIV = buildDeclRefExpr(SemaRef, FloorIndVars[I], CntTy,
-                                            OrigCntVar->getExprLoc());
+    // Commonly used variables. One of the constraints of an AST is that every
+    // node object must appear at most once, hence we define lamdas that create
+    // a new AST node at every use.
+    auto MakeDimTileSize = [&SemaRef = this->SemaRef, &CopyTransformer, I,
+                            SizesClause]() -> Expr * {
+      Expr *DimTileSize = SizesClause->getSizesRefs()[I];
+      return AssertSuccess(CopyTransformer.TransformExpr(DimTileSize));
+    };
+    auto MakeTileIVRef = [&SemaRef = this->SemaRef, &TileIndVars, I, CntTy,
+                          OrigCntVar]() {
+      return buildDeclRefExpr(SemaRef, TileIndVars[I], CntTy,
+                              OrigCntVar->getExprLoc());
+    };
+    auto MakeFloorIVRef = [&SemaRef = this->SemaRef, &FloorIndVars, I, CntTy,
+                           OrigCntVar]() {
+      return buildDeclRefExpr(SemaRef, FloorIndVars[I], CntTy,
+                              OrigCntVar->getExprLoc());
+    };
 
     // For init-statement: auto .tile.iv = .floor.iv
-    SemaRef.AddInitializerToDecl(TileIndVars[I],
-                                 SemaRef.DefaultLvalueConversion(FloorIV).get(),
-                                 /*DirectInit=*/false);
+    SemaRef.AddInitializerToDecl(
+        TileIndVars[I], SemaRef.DefaultLvalueConversion(MakeFloorIVRef()).get(),
+        /*DirectInit=*/false);
     Decl *CounterDecl = TileIndVars[I];
     StmtResult InitStmt = new (Context)
         DeclStmt(DeclGroupRef::Create(Context, &CounterDecl, 1),
@@ -15220,10 +15234,11 @@ StmtResult SemaOpenMP::ActOnOpenMPTileDirective(ArrayRef<OMPClause *> Clauses,
     if (!InitStmt.isUsable())
       return StmtError();
 
-    // For cond-expression: .tile.iv < min(.floor.iv + DimTileSize,
-    // NumIterations)
-    ExprResult EndOfTile = SemaRef.BuildBinOp(
-        CurScope, LoopHelper.Cond->getExprLoc(), BO_Add, FloorIV, DimTileSize);
+    // For cond-expression:
+    //   .tile.iv < min(.floor.iv + DimTileSize, NumIterations)
+    ExprResult EndOfTile =
+        SemaRef.BuildBinOp(CurScope, LoopHelper.Cond->getExprLoc(), BO_Add,
+                           MakeFloorIVRef(), MakeDimTileSize());
     if (!EndOfTile.isUsable())
       return StmtError();
     ExprResult IsPartialTile =
@@ -15238,25 +15253,28 @@ StmtResult SemaOpenMP::ActOnOpenMPTileDirective(ArrayRef<OMPClause *> Clauses,
       return StmtError();
     ExprResult CondExpr =
         SemaRef.BuildBinOp(CurScope, LoopHelper.Cond->getExprLoc(), BO_LT,
-                           TileIV, MinTileAndIterSpace.get());
+                           MakeTileIVRef(), MinTileAndIterSpace.get());
     if (!CondExpr.isUsable())
       return StmtError();
 
     // For incr-statement: ++.tile.iv
     ExprResult IncrStmt = SemaRef.BuildUnaryOp(
-        CurScope, LoopHelper.Inc->getExprLoc(), UO_PreInc, TileIV);
+        CurScope, LoopHelper.Inc->getExprLoc(), UO_PreInc, MakeTileIVRef());
     if (!IncrStmt.isUsable())
       return StmtError();
 
     // Statements to set the original iteration variable's value from the
     // logical iteration number.
     // Generated for loop is:
+    // \code
     // Original_for_init;
-    // for (auto .tile.iv = .floor.iv; .tile.iv < min(.floor.iv + DimTileSize,
-    // NumIterations); ++.tile.iv) {
+    // for (auto .tile.iv = .floor.iv;
+    //      .tile.iv < min(.floor.iv + DimTileSize, NumIterations);
+    //      ++.tile.iv) {
     //   Original_Body;
     //   Original_counter_update;
     // }
+    // \endcode
     // FIXME: If the innermost body is an loop itself, inserting these
     // statements stops it being recognized  as a perfectly nested loop (e.g.
     // for applying tiling again). If this is the case, sink the expressions
@@ -15278,12 +15296,18 @@ StmtResult SemaOpenMP::ActOnOpenMPTileDirective(ArrayRef<OMPClause *> Clauses,
     Expr *NumIterations = LoopHelper.NumIterations;
     DeclRefExpr *OrigCntVar = cast<DeclRefExpr>(LoopHelper.Counters[0]);
     QualType CntTy = OrigCntVar->getType();
-    Expr *DimTileSize = SizesClause->getSizesRefs()[I];
-    Scope *CurScope = SemaRef.getCurScope();
 
     // Commonly used variables.
-    DeclRefExpr *FloorIV = buildDeclRefExpr(SemaRef, FloorIndVars[I], CntTy,
-                                            OrigCntVar->getExprLoc());
+    auto MakeDimTileSize = [&SemaRef = this->SemaRef, &CopyTransformer, I,
+                            SizesClause]() -> Expr * {
+      Expr *DimTileSize = SizesClause->getSizesRefs()[I];
+      return AssertSuccess(CopyTransformer.TransformExpr(DimTileSize));
+    };
+    auto MakeFloorIVRef = [&SemaRef = this->SemaRef, &FloorIndVars, I, CntTy,
+                           OrigCntVar]() {
+      return buildDeclRefExpr(SemaRef, FloorIndVars[I], CntTy,
+                              OrigCntVar->getExprLoc());
+    };
 
     // For init-statement: auto .floor.iv = 0
     SemaRef.AddInitializerToDecl(
@@ -15298,15 +15322,16 @@ StmtResult SemaOpenMP::ActOnOpenMPTileDirective(ArrayRef<OMPClause *> Clauses,
       return StmtError();
 
     // For cond-expression: .floor.iv < NumIterations
-    ExprResult CondExpr = SemaRef.BuildBinOp(
-        CurScope, LoopHelper.Cond->getExprLoc(), BO_LT, FloorIV, NumIterations);
+    ExprResult CondExpr =
+        SemaRef.BuildBinOp(CurScope, LoopHelper.Cond->getExprLoc(), BO_LT,
+                           MakeFloorIVRef(), NumIterations);
     if (!CondExpr.isUsable())
       return StmtError();
 
     // For incr-statement: .floor.iv += DimTileSize
     ExprResult IncrStmt =
         SemaRef.BuildBinOp(CurScope, LoopHelper.Inc->getExprLoc(), BO_AddAssign,
-                           FloorIV, DimTileSize);
+                           MakeFloorIVRef(), MakeDimTileSize());
     if (!IncrStmt.isUsable())
       return StmtError();
 
