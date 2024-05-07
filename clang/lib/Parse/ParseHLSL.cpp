@@ -197,7 +197,7 @@ void Parser::ParseHLSLAnnotations(ParsedAttributes &Attrs,
       return;
     }
     StringRef OffsetStr = Tok.getIdentifierInfo()->getName();
-    SourceLocation OffsetLoc = Tok.getLocation();
+    SourceLocation SubComponentLoc = Tok.getLocation();
     if (OffsetStr[0] != 'c') {
       Diag(Tok.getLocation(), diag::err_hlsl_packoffset_invalid_reg)
           << OffsetStr;
@@ -209,7 +209,7 @@ void Parser::ParseHLSLAnnotations(ParsedAttributes &Attrs,
     if (!OffsetStr.empty()) {
       // Make sure SubComponent is a number.
       if (OffsetStr.getAsInteger(10, SubComponent)) {
-        Diag(OffsetLoc.getLocWithOffset(1),
+        Diag(SubComponentLoc.getLocWithOffset(1),
              diag::err_hlsl_unsupported_register_number);
         SkipUntil(tok::r_paren, StopAtSemi); // skip through )
         return;
@@ -217,6 +217,7 @@ void Parser::ParseHLSLAnnotations(ParsedAttributes &Attrs,
     }
     unsigned Component = 0;
     ConsumeToken(); // consume identifier.
+    SourceLocation ComponentLoc;
     if (Tok.is(tok::period)) {
       ConsumeToken(); // consume period.
       if (!Tok.is(tok::identifier)) {
@@ -225,11 +226,12 @@ void Parser::ParseHLSLAnnotations(ParsedAttributes &Attrs,
         return;
       }
       StringRef ComponentStr = Tok.getIdentifierInfo()->getName();
-      SourceLocation SpaceLoc = Tok.getLocation();
+      ComponentLoc = Tok.getLocation();
       ConsumeToken(); // consume identifier.
       // Make sure Component is a single character.
       if (ComponentStr.size() != 1) {
-        Diag(SpaceLoc, diag::err_hlsl_unsupported_component) << ComponentStr;
+        Diag(ComponentLoc, diag::err_hlsl_unsupported_component)
+            << ComponentStr;
         SkipUntil(tok::r_paren, StopAtSemi); // skip through )
         return;
       }
@@ -251,16 +253,19 @@ void Parser::ParseHLSLAnnotations(ParsedAttributes &Attrs,
         Component = 3;
         break;
       default:
-        Diag(SpaceLoc, diag::err_hlsl_unsupported_component) << ComponentStr;
+        Diag(ComponentLoc, diag::err_hlsl_unsupported_component)
+            << ComponentStr;
         SkipUntil(tok::r_paren, StopAtSemi); // skip through )
         return;
       }
     }
-    unsigned Offset = SubComponent * 4 + Component;
     ASTContext &Ctx = Actions.getASTContext();
+    QualType SizeTy = Ctx.getSizeType();
+    uint64_t SizeTySize = Ctx.getTypeSize(SizeTy);
     ArgExprs.push_back(IntegerLiteral::Create(
-        Ctx, llvm::APInt(Ctx.getTypeSize(Ctx.getSizeType()), Offset),
-        Ctx.getSizeType(), OffsetLoc));
+        Ctx, llvm::APInt(SizeTySize, SubComponent), SizeTy, SubComponentLoc));
+    ArgExprs.push_back(IntegerLiteral::Create(
+        Ctx, llvm::APInt(SizeTySize, Component), SizeTy, ComponentLoc));
     if (ExpectAndConsume(tok::r_paren, diag::err_expected)) {
       SkipUntil(tok::r_paren, StopAtSemi); // skip through )
       return;

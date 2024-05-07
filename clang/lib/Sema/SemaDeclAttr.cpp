@@ -7321,8 +7321,11 @@ static void handleHLSLPackOffsetAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     return;
   }
 
-  uint32_t Offset;
-  if (!checkUInt32Argument(S, AL, AL.getArgAsExpr(0), Offset))
+  uint32_t SubComponent;
+  if (!checkUInt32Argument(S, AL, AL.getArgAsExpr(0), SubComponent))
+    return;
+  uint32_t Component;
+  if (!checkUInt32Argument(S, AL, AL.getArgAsExpr(1), Component))
     return;
 
   QualType T = cast<VarDecl>(D)->getType().getCanonicalType();
@@ -7330,16 +7333,15 @@ static void handleHLSLPackOffsetAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   // TODO: mark matrix type as aggregate type.
   bool IsAggregateTy = (T->isArrayType() || T->isStructureType());
 
-  unsigned ComponentNum = Offset & 0x3;
-  // Check ComponentNum is valid for T.
-  if (ComponentNum) {
+  // Check Component is valid for T.
+  if (Component) {
     unsigned Size = S.getASTContext().getTypeSize(T);
     if (IsAggregateTy || Size > 128) {
       S.Diag(AL.getLoc(), diag::err_hlsl_packoffset_cross_reg_boundary);
       return;
     } else {
-      // Make sure ComponentNum + sizeof(T) <= 4.
-      if ((ComponentNum * 32 + Size) > 128) {
+      // Make sure Component + sizeof(T) <= 4.
+      if ((Component * 32 + Size) > 128) {
         S.Diag(AL.getLoc(), diag::err_hlsl_packoffset_cross_reg_boundary);
         return;
       }
@@ -7347,9 +7349,9 @@ static void handleHLSLPackOffsetAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
       if (const auto *VT = T->getAs<VectorType>())
         EltTy = VT->getElementType();
       unsigned Align = S.getASTContext().getTypeAlign(EltTy);
-      if (Align > 32 && ComponentNum == 1) {
-        // NOTE: ComponentNum 3 will hit err_hlsl_packoffset_cross_reg_boundary.
-        // So we only need to check ComponentNum 1 here.
+      if (Align > 32 && Component == 1) {
+        // NOTE: Component 3 will hit err_hlsl_packoffset_cross_reg_boundary.
+        // So we only need to check Component 1 here.
         S.Diag(AL.getLoc(), diag::err_hlsl_packoffset_alignment_mismatch)
             << Align << EltTy;
         return;
@@ -7357,7 +7359,8 @@ static void handleHLSLPackOffsetAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     }
   }
 
-  D->addAttr(::new (S.Context) HLSLPackOffsetAttr(S.Context, AL, Offset));
+  D->addAttr(::new (S.Context)
+                 HLSLPackOffsetAttr(S.Context, AL, SubComponent, Component));
 }
 
 static void handleHLSLShaderAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
