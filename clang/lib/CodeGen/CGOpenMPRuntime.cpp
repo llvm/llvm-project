@@ -48,6 +48,10 @@
 using namespace clang;
 using namespace CodeGen;
 using namespace llvm::omp;
+// Experiment to make sanitizers easier to debug
+static llvm::cl::opt<bool> NewClangTargetTaskCodeGen(
+    "new-clang-target-task-codegen", llvm::cl::Optional,
+    llvm::cl::desc("new clang target task codegen."), llvm::cl::init(false));
 
 namespace {
 /// Base class for handling code generation inside OpenMP regions.
@@ -9620,9 +9624,13 @@ static void emitTargetCallKernelLaunch(
         DeviceID, RTLoc, AllocaIP));
   };
 
-  if (RequiresOuterTask)
-    CGF.EmitOMPTargetTaskBasedDirective(D, ThenGen, InputInfo);
-  else
+  if (RequiresOuterTask) {
+    if (NewClangTargetTaskCodeGen) {
+      llvm::errs() << "Using OMPIRBuilder for target task codegen\n";
+    } else {
+      CGF.EmitOMPTargetTaskBasedDirective(D, ThenGen, InputInfo);
+    }
+  } else
     OMPRuntime->emitInlinedDirective(CGF, D.getDirectiveKind(), ThenGen);
 }
 
