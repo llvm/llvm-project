@@ -707,16 +707,18 @@ OpFoldResult arith::CeilDivSIOp::fold(FoldAdaptor adaptor) {
           APInt posB = zero.ssub_ov(b, overflowOrDiv0);
           return signedCeilNonnegInputs(posA, posB, overflowOrDiv0);
         }
-        if (!aGtZero && bGtZero) {
-          // A is negative, b is positive, return - ( -a / b).
-          APInt posA = zero.ssub_ov(a, overflowOrDiv0);
-          APInt div = posA.sdiv_ov(b, overflowOrDiv0);
-          return zero.ssub_ov(div, overflowOrDiv0);
-        }
-        // A is positive, b is negative, return - (a / -b).
-        APInt posB = zero.ssub_ov(b, overflowOrDiv0);
-        APInt div = a.sdiv_ov(posB, overflowOrDiv0);
-        return zero.ssub_ov(div, overflowOrDiv0);
+        // If either divisor or dividend is negative, then take their absolute
+        // value and then do a normal signedCeil Division, but add 1 to bring
+        // the quotient down. In essense, Ceil Division with one of the values
+        // negative works like a floorDivision with negated quotient.
+        // Mathematically, -1 * (abs(a)-1/abs(b) + 1) + 1, which after factoring
+        // out -1 yields -1 * [abs(a)-1/abs(b) + 1 - 1]. This is implemented
+        // below.
+        APInt posA = aGtZero ? a : zero.ssub_ov(a, overflowOrDiv0);
+        APInt posB = bGtZero ? b : zero.ssub_ov(b, overflowOrDiv0);
+        APInt div = signedCeilNonnegInputs(posA, posB, overflowOrDiv0);
+        APInt res = div.ssub_ov(APInt::getOneBitSet(bits, 0), overflowOrDiv0);
+        return zero.ssub_ov(res, overflowOrDiv0);
       });
 
   return overflowOrDiv0 ? Attribute() : result;
@@ -2292,12 +2294,12 @@ OpFoldResult arith::SelectOp::fold(FoldAdaptor adaptor) {
 
   // Constant-fold constant operands over non-splat constant condition.
   // select %cst_vec, %cst0, %cst1 => %cst2
-  if (auto cond =
-          llvm::dyn_cast_if_present<DenseElementsAttr>(adaptor.getCondition())) {
-    if (auto lhs =
-            llvm::dyn_cast_if_present<DenseElementsAttr>(adaptor.getTrueValue())) {
-      if (auto rhs =
-              llvm::dyn_cast_if_present<DenseElementsAttr>(adaptor.getFalseValue())) {
+  if (auto cond = llvm::dyn_cast_if_present<DenseElementsAttr>(
+          adaptor.getCondition())) {
+    if (auto lhs = llvm::dyn_cast_if_present<DenseElementsAttr>(
+            adaptor.getTrueValue())) {
+      if (auto rhs = llvm::dyn_cast_if_present<DenseElementsAttr>(
+              adaptor.getFalseValue())) {
         SmallVector<Attribute> results;
         results.reserve(static_cast<size_t>(cond.getNumElements()));
         auto condVals = llvm::make_range(cond.value_begin<BoolAttr>(),
@@ -2552,7 +2554,7 @@ Value mlir::arith::getReductionOp(AtomicRMWKind op, OpBuilder &builder,
     return builder.create<arith::MaximumFOp>(loc, lhs, rhs);
   case AtomicRMWKind::minimumf:
     return builder.create<arith::MinimumFOp>(loc, lhs, rhs);
-   case AtomicRMWKind::maxnumf:
+  case AtomicRMWKind::maxnumf:
     return builder.create<arith::MaxNumFOp>(loc, lhs, rhs);
   case AtomicRMWKind::minnumf:
     return builder.create<arith::MinNumFOp>(loc, lhs, rhs);
