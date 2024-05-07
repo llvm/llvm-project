@@ -1062,6 +1062,7 @@ DWARFUnit::FindRnglistFromOffset(dw_offset_t offset) {
     ranges.Append(DWARFRangeList::Entry(llvm_range.LowPC,
                                         llvm_range.HighPC - llvm_range.LowPC));
   }
+  ranges.Sort();
   return ranges;
 }
 
