@@ -36,7 +36,8 @@ void fn() {
     // expected-note@#fn6_0_stages1_call {{enclose 'fn6_0_stages1' in a __builtin_available check to silence this warning}}
     unsigned C = fn6_0_stages1(); // #fn6_0_stages1_call
 
-    // expected-warning@#fn6_0_stages2_call {{'fn6_0_stages2' is not available in compute shader environment on Shader Model 5.0}}
+    // expected-warning@#fn6_0_stages2_call {{'fn6_0_stages2' is unavailable}}
+    // expected-note@#fn6_0_stages2_def {{'fn6_0_stages2' has been marked as being introduced in Shader Model 6.0 in mesh shader environment here, but the deployment target is Shader Model 5.0 compute shader environment}}
     // expected-note@#fn6_0_stages2_call {{enclose 'fn6_0_stages2' in a __builtin_available check to silence this warning}}
     unsigned E = fn6_0_stages2(); // #fn6_0_stages2_call
 

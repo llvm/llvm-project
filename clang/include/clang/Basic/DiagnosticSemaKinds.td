@@ -3862,10 +3862,16 @@ def warn_availability_fuchsia_unavailable_minor : Warning<
   InGroup<Availability>;
 
 def warn_unguarded_availability :
-  Warning<"%0 %select{is only|is not}5 available %select{|in %4 environment }3on %1 %2 %select{or newer|}5">,
+  Warning<"%0 is only available %select{|in %4 environment }3on %1 %2 or newer">,
+  InGroup<UnguardedAvailability>, DefaultIgnore;
+def warn_unguarded_availability_unavailable :
+  Warning<"%0 is unavailable">,
   InGroup<UnguardedAvailability>, DefaultIgnore;
 def warn_unguarded_availability_new :
   Warning<warn_unguarded_availability.Summary>,
+  InGroup<UnguardedAvailabilityNew>;
+def warn_unguarded_availability_unavailable_new :
+  Warning<warn_unguarded_availability_unavailable.Summary>,
   InGroup<UnguardedAvailabilityNew>;
 def note_decl_unguarded_availability_silence : Note<
   "annotate %select{%1|anonymous %1}0 with an availability attribute to silence this warning">;
@@ -5859,7 +5865,7 @@ def note_availability_specified_here : Note<
   "%select{unavailable|deleted|deprecated}1 here">;
 def note_partial_availability_specified_here : Note<
   "%0 has been marked as being introduced in %1 %2 %select{|in %5 environment }4here, "
-  "but the deployment target is %1 %3">;
+  "but the deployment target is %1 %3%select{| %6 environment }4">;
 def note_implicitly_deleted : Note<
   "explicitly defaulted function was implicitly deleted here">;
 def warn_not_enough_argument : Warning<

@@ -401,35 +401,44 @@ static void DoEmitAvailabilityWarning(Sema &S, AvailabilityResult K,
     // later.
     assert(AA != nullptr && "expecting valid availability attribute");
     VersionTuple Introduced = AA->getIntroduced();
-    bool EnvironmentMatches =
+    bool EnvironmentMatchesOrNone =
         hasMatchingEnvironmentOrNone(S.getASTContext(), AA);
-
-    bool UseNewWarning = shouldDiagnoseAvailabilityByDefault(
-        S.Context, S.Context.getTargetInfo().getPlatformMinVersion(),
-        Introduced);
-    unsigned Warning = UseNewWarning ? diag::warn_unguarded_availability_new
-                                     : diag::warn_unguarded_availability;
 
     const TargetInfo &TI = S.getASTContext().getTargetInfo();
     std::string PlatformName(
         AvailabilityAttr::getPrettyPlatformName(TI.getPlatformName()));
-    std::string TargetEnvironment(AvailabilityAttr::getPrettyEnviromentName(
+    llvm::StringRef TargetEnvironment(AvailabilityAttr::getPrettyEnviromentName(
         TI.getTriple().getEnvironmentName()));
-    VersionTuple UseVersion =
-        EnvironmentMatches ? Introduced : TI.getTriple().getOSVersion();
+    llvm::StringRef AttrEnvironment =
+        AA->getEnvironment() ? AvailabilityAttr::getPrettyEnviromentName(
+                                   AA->getEnvironment()->getName())
+                             : "";
     bool UseEnvironment =
-        (AA->getEnvironment() != nullptr && !TargetEnvironment.empty());
+        (!AttrEnvironment.empty() && !TargetEnvironment.empty());
 
-    S.Diag(Loc, Warning) << OffendingDecl << PlatformName
-                         << UseVersion.getAsString() << UseEnvironment
-                         << TargetEnvironment << !EnvironmentMatches;
+    bool UseNewWarning = shouldDiagnoseAvailabilityByDefault(
+        S.Context, S.Context.getTargetInfo().getPlatformMinVersion(),
+        Introduced);
 
-    if (EnvironmentMatches)
-      S.Diag(OffendingDecl->getLocation(),
-             diag::note_partial_availability_specified_here)
-          << OffendingDecl << PlatformName << UseVersion.getAsString()
-          << S.Context.getTargetInfo().getPlatformMinVersion().getAsString()
+    if (EnvironmentMatchesOrNone) {
+      unsigned DiagKind = UseNewWarning ? diag::warn_unguarded_availability_new
+                                        : diag::warn_unguarded_availability;
+
+      S.Diag(Loc, DiagKind)
+          << OffendingDecl << PlatformName << Introduced.getAsString()
           << UseEnvironment << TargetEnvironment;
+    } else {
+      unsigned DiagKind =
+          UseNewWarning ? diag::warn_unguarded_availability_unavailable_new
+                        : diag::warn_unguarded_availability_unavailable;
+      S.Diag(Loc, DiagKind) << Loc << OffendingDecl;
+    }
+
+    S.Diag(OffendingDecl->getLocation(),
+           diag::note_partial_availability_specified_here)
+        << OffendingDecl << PlatformName << Introduced.getAsString()
+        << S.Context.getTargetInfo().getPlatformMinVersion().getAsString()
+        << UseEnvironment << AttrEnvironment << TargetEnvironment;
 
     if (const auto *Enclosing = findEnclosingDeclToAnnotate(Ctx)) {
       if (const auto *TD = dyn_cast<TagDecl>(Enclosing))
@@ -806,11 +815,11 @@ void DiagnoseUnguardedAvailability::DiagnoseDeclAvailability(
 
     const AvailabilityAttr *AA =
       getAttrForPlatform(SemaRef.getASTContext(), OffendingDecl);
-    bool EnvironmentMatches =
+    bool EnvironmentMatchesOrNone =
         hasMatchingEnvironmentOrNone(SemaRef.getASTContext(), AA);
     VersionTuple Introduced = AA->getIntroduced();
 
-    if (EnvironmentMatches && AvailabilityStack.back() >= Introduced)
+    if (EnvironmentMatchesOrNone && AvailabilityStack.back() >= Introduced)
       return;
 
     // If the context of this function is less available than D, we should not
@@ -824,35 +833,40 @@ void DiagnoseUnguardedAvailability::DiagnoseDeclAvailability(
     // not specified for deployment targets >= to iOS 11 or equivalent or
     // for declarations that were introduced in iOS 11 (macOS 10.13, ...) or
     // later.
-    unsigned DiagKind =
-        shouldDiagnoseAvailabilityByDefault(
-            SemaRef.Context,
-            SemaRef.Context.getTargetInfo().getPlatformMinVersion(), Introduced)
-            ? diag::warn_unguarded_availability_new
-            : diag::warn_unguarded_availability;
+    bool UseNewDiagKind = shouldDiagnoseAvailabilityByDefault(
+        SemaRef.Context,
+        SemaRef.Context.getTargetInfo().getPlatformMinVersion(), Introduced);
 
     const TargetInfo &TI = SemaRef.getASTContext().getTargetInfo();
     std::string PlatformName(
         AvailabilityAttr::getPrettyPlatformName(TI.getPlatformName()));
-    std::string TargetEnvironment(AvailabilityAttr::getPrettyEnviromentName(
+    llvm::StringRef TargetEnvironment(AvailabilityAttr::getPrettyEnviromentName(
         TI.getTriple().getEnvironmentName()));
-    VersionTuple UseVersion =
-        EnvironmentMatches ? Introduced : TI.getTriple().getOSVersion();
+    llvm::StringRef AttrEnvironment =
+        AA->getEnvironment() ? AvailabilityAttr::getPrettyEnviromentName(
+                                   AA->getEnvironment()->getName())
+                             : "";
     bool UseEnvironment =
-        (AA->getEnvironment() != nullptr && !TargetEnvironment.empty());
+        (!AttrEnvironment.empty() && !TargetEnvironment.empty());
 
-    SemaRef.Diag(Range.getBegin(), DiagKind)
-        << Range << D << PlatformName << UseVersion.getAsString()
-        << UseEnvironment << TargetEnvironment << !EnvironmentMatches;
-
-    if (EnvironmentMatches)
-      SemaRef.Diag(OffendingDecl->getLocation(),
-                   diag::note_partial_availability_specified_here)
-          << OffendingDecl << PlatformName << Introduced.getAsString()
-          << SemaRef.Context.getTargetInfo()
-                 .getPlatformMinVersion()
-                 .getAsString()
+    if (EnvironmentMatchesOrNone) {
+      unsigned DiagKind = UseNewDiagKind ? diag::warn_unguarded_availability_new
+                                         : diag::warn_unguarded_availability;
+      SemaRef.Diag(Range.getBegin(), DiagKind)
+          << Range << D << PlatformName << Introduced.getAsString()
           << UseEnvironment << TargetEnvironment;
+    } else {
+      unsigned DiagKind =
+          UseNewDiagKind ? diag::warn_unguarded_availability_unavailable_new
+                         : diag::warn_unguarded_availability_unavailable;
+      SemaRef.Diag(Range.getBegin(), DiagKind) << Range << D;
+    }
+
+    SemaRef.Diag(OffendingDecl->getLocation(),
+                 diag::note_partial_availability_specified_here)
+        << OffendingDecl << PlatformName << Introduced.getAsString()
+        << SemaRef.Context.getTargetInfo().getPlatformMinVersion().getAsString()
+        << UseEnvironment << AttrEnvironment << TargetEnvironment;
 
     auto FixitDiag =
         SemaRef.Diag(Range.getBegin(), diag::note_unguarded_available_silence)
