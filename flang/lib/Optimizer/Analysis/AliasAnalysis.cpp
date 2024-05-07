@@ -108,12 +108,11 @@ AliasResult AliasAnalysis::alias(Value lhs, Value rhs) {
   auto lhsSrc = getSource(lhs);
   auto rhsSrc = getSource(rhs);
   bool approximateSource = lhsSrc.approximateSource || rhsSrc.approximateSource;
-  LLVM_DEBUG(llvm::dbgs() << "AliasAnalysis::alias\n";
+  LLVM_DEBUG(llvm::dbgs() << "\n"; llvm::dbgs() << "AliasAnalysis::alias\n";
              llvm::dbgs() << "  lhs: " << lhs << "\n";
              llvm::dbgs() << "  lhsSrc: " << lhsSrc << "\n";
              llvm::dbgs() << "  rhs: " << rhs << "\n";
-             llvm::dbgs() << "  rhsSrc: " << rhsSrc << "\n";
-             llvm::dbgs() << "\n";);
+             llvm::dbgs() << "  rhsSrc: " << rhsSrc << "\n";);
 
   // Indirect case currently not handled. Conservatively assume
   // it aliases with everything
@@ -122,42 +121,21 @@ AliasResult AliasAnalysis::alias(Value lhs, Value rhs) {
     return AliasResult::MayAlias;
   }
 
-  // If we have reached the same source but comparing box reference against
-  // data we are not comparing apples-to-apples. The 2 cannot alias.
-  if ((lhsSrc.origin.u == rhsSrc.origin.u) &&
-      lhsSrc.isData() != rhsSrc.isData()) {
-    return AliasResult::NoAlias;
-  }
-
   if (lhsSrc.kind == rhsSrc.kind) {
     if (lhsSrc.origin == rhsSrc.origin) {
+      LLVM_DEBUG(llvm::dbgs()
+                 << "  aliasing because same source kind and origin\n");
       if (approximateSource)
         return AliasResult::MayAlias;
       return AliasResult::MustAlias;
     }
 
     // Two host associated accesses may overlap due to an equivalence.
-    if (lhsSrc.kind == SourceKind::HostAssoc)
+    if (lhsSrc.kind == SourceKind::HostAssoc) {
+      LLVM_DEBUG(llvm::dbgs() << "  aliasing because of host association\n");
       return AliasResult::MayAlias;
-
-    // TARGET/POINTER arguments may alias.
-    if (lhsSrc.isTargetOrPointer() && rhsSrc.isTargetOrPointer() &&
-        lhsSrc.isData() == rhsSrc.isData())
-      return AliasResult::MayAlias;
-
-    // Box for POINTER component inside an object of a derived type
-    // may alias box of a POINTER object, as well as boxes for POINTER
-    // components inside two objects of derived types may alias.
-    if ((lhsSrc.isRecordWithPointerComponent() && rhsSrc.isTargetOrPointer()) ||
-        (rhsSrc.isRecordWithPointerComponent() && lhsSrc.isTargetOrPointer()) ||
-        (lhsSrc.isRecordWithPointerComponent() &&
-         rhsSrc.isRecordWithPointerComponent()))
-      return AliasResult::MayAlias;
-
-    return AliasResult::NoAlias;
+    }
   }
-
-  assert(lhsSrc.kind != rhsSrc.kind && "memory source kinds must be different");
 
   Source *src1, *src2;
   if (lhsSrc.kind < rhsSrc.kind) {
@@ -190,8 +168,10 @@ AliasResult AliasAnalysis::alias(Value lhs, Value rhs) {
 
   // Dummy TARGET/POINTER argument may alias with a global TARGET/POINTER.
   if (src1->isTargetOrPointer() && src2->isTargetOrPointer() &&
-      src1->isData() == src2->isData())
+      src1->isData() == src2->isData()) {
+    LLVM_DEBUG(llvm::dbgs() << "  aliasing because of target or pointer\n");
     return AliasResult::MayAlias;
+  }
 
   // Box for POINTER component inside an object of a derived type
   // may alias box of a POINTER object, as well as boxes for POINTER
@@ -199,8 +179,10 @@ AliasResult AliasAnalysis::alias(Value lhs, Value rhs) {
   if ((src1->isRecordWithPointerComponent() && src2->isTargetOrPointer()) ||
       (src2->isRecordWithPointerComponent() && src1->isTargetOrPointer()) ||
       (src1->isRecordWithPointerComponent() &&
-       src2->isRecordWithPointerComponent()))
+       src2->isRecordWithPointerComponent())) {
+    LLVM_DEBUG(llvm::dbgs() << "  aliasing because of pointer components\n");
     return AliasResult::MayAlias;
+  }
 
   return AliasResult::NoAlias;
 }
@@ -306,17 +288,15 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v) {
             breakFromLoop = true;
         })
         .Case<fir::LoadOp>([&](auto op) {
-          if (followBoxData && mlir::isa<fir::BaseBoxType>(op.getType())) {
-            // For now, support the load of an argument or fir.address_of
-            // TODO: generalize to all operations (in particular fir.alloca and
-            // fir.allocmem)
-            auto def = getOriginalDef(op.getMemref());
-            if (isDummyArgument(def) ||
-                def.template getDefiningOp<fir::AddrOfOp>()) {
-              v = def;
-              defOp = v.getDefiningOp();
-              return;
-            }
+          // If the load is from a leaf source, return the leaf. Do not track
+          // through indirections otherwise.
+          // TODO: At support to fir.alloca and fir.allocmem
+          auto def = getOriginalDef(op.getMemref());
+          if (isDummyArgument(def) ||
+              def.template getDefiningOp<fir::AddrOfOp>()) {
+            v = def;
+            defOp = v.getDefiningOp();
+            return;
           }
           // No further tracking for addresses loaded from memory for now.
           type = SourceKind::Indirect;
