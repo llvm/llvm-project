@@ -399,7 +399,7 @@ function(add_compiler_rt_runtime name type)
         if (HAD_ERROR)
           message(FATAL_ERROR "${CMAKE_LINKER} failed with status ${HAD_ERROR}")
         endif()
-        set(NEED_EXPLICIT_ADHOC_CODESIGN 0)
+        set(NEED_EXPLICIT_ADHOC_CODESIGN 1)
         # Apple introduced a new linker by default in Xcode 15. This linker reports itself as ld
         # rather than ld64 and does not match this version regex. That's ok since it never needs
         # the explicit ad-hoc code signature.
