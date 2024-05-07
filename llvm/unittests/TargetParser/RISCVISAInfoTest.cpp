@@ -139,6 +139,7 @@ TEST(ParseNormalizedArchString, UpdatesFLenMinVLenMaxELen) {
   EXPECT_EQ(Info.getFLen(), 64U);
   EXPECT_EQ(Info.getMinVLen(), 64U);
   EXPECT_EQ(Info.getMaxELen(), 64U);
+  EXPECT_EQ(Info.getMaxELenFp(), 64U);
 }
 
 TEST(ParseArchString, RejectsInvalidChars) {
@@ -181,6 +182,9 @@ TEST(ParseArchString, AcceptsSupportedBaseISAsAndSetsXLenAndFLen) {
   EXPECT_TRUE(ExtsRV32I.at("i") == (RISCVISAUtils::ExtensionVersion{2, 1}));
   EXPECT_EQ(InfoRV32I.getXLen(), 32U);
   EXPECT_EQ(InfoRV32I.getFLen(), 0U);
+  EXPECT_EQ(InfoRV32I.getMinVLen(), 0U);
+  EXPECT_EQ(InfoRV32I.getMaxELen(), 0U);
+  EXPECT_EQ(InfoRV32I.getMaxELenFp(), 0U);
 
   auto MaybeRV32E = RISCVISAInfo::parseArchString("rv32e", true);
   ASSERT_THAT_EXPECTED(MaybeRV32E, Succeeded());
@@ -190,6 +194,9 @@ TEST(ParseArchString, AcceptsSupportedBaseISAsAndSetsXLenAndFLen) {
   EXPECT_TRUE(ExtsRV32E.at("e") == (RISCVISAUtils::ExtensionVersion{2, 0}));
   EXPECT_EQ(InfoRV32E.getXLen(), 32U);
   EXPECT_EQ(InfoRV32E.getFLen(), 0U);
+  EXPECT_EQ(InfoRV32E.getMinVLen(), 0U);
+  EXPECT_EQ(InfoRV32E.getMaxELen(), 0U);
+  EXPECT_EQ(InfoRV32E.getMaxELenFp(), 0U);
 
   auto MaybeRV32G = RISCVISAInfo::parseArchString("rv32g", true);
   ASSERT_THAT_EXPECTED(MaybeRV32G, Succeeded());
@@ -206,6 +213,9 @@ TEST(ParseArchString, AcceptsSupportedBaseISAsAndSetsXLenAndFLen) {
               (RISCVISAUtils::ExtensionVersion{2, 0}));
   EXPECT_EQ(InfoRV32G.getXLen(), 32U);
   EXPECT_EQ(InfoRV32G.getFLen(), 64U);
+  EXPECT_EQ(InfoRV32G.getMinVLen(), 0U);
+  EXPECT_EQ(InfoRV32G.getMaxELen(), 0U);
+  EXPECT_EQ(InfoRV32G.getMaxELenFp(), 0U);
 
   auto MaybeRV64I = RISCVISAInfo::parseArchString("rv64i", true);
   ASSERT_THAT_EXPECTED(MaybeRV64I, Succeeded());
@@ -215,6 +225,9 @@ TEST(ParseArchString, AcceptsSupportedBaseISAsAndSetsXLenAndFLen) {
   EXPECT_TRUE(ExtsRV64I.at("i") == (RISCVISAUtils::ExtensionVersion{2, 1}));
   EXPECT_EQ(InfoRV64I.getXLen(), 64U);
   EXPECT_EQ(InfoRV64I.getFLen(), 0U);
+  EXPECT_EQ(InfoRV64I.getMinVLen(), 0U);
+  EXPECT_EQ(InfoRV64I.getMaxELen(), 0U);
+  EXPECT_EQ(InfoRV64I.getMaxELenFp(), 0U);
 
   auto MaybeRV64E = RISCVISAInfo::parseArchString("rv64e", true);
   ASSERT_THAT_EXPECTED(MaybeRV64E, Succeeded());
@@ -224,6 +237,9 @@ TEST(ParseArchString, AcceptsSupportedBaseISAsAndSetsXLenAndFLen) {
   EXPECT_TRUE(ExtsRV64E.at("e") == (RISCVISAUtils::ExtensionVersion{2, 0}));
   EXPECT_EQ(InfoRV64E.getXLen(), 64U);
   EXPECT_EQ(InfoRV64E.getFLen(), 0U);
+  EXPECT_EQ(InfoRV64E.getMinVLen(), 0U);
+  EXPECT_EQ(InfoRV64E.getMaxELen(), 0U);
+  EXPECT_EQ(InfoRV64E.getMaxELenFp(), 0U);
 
   auto MaybeRV64G = RISCVISAInfo::parseArchString("rv64g", true);
   ASSERT_THAT_EXPECTED(MaybeRV64G, Succeeded());
@@ -240,6 +256,38 @@ TEST(ParseArchString, AcceptsSupportedBaseISAsAndSetsXLenAndFLen) {
               (RISCVISAUtils::ExtensionVersion{2, 0}));
   EXPECT_EQ(InfoRV64G.getXLen(), 64U);
   EXPECT_EQ(InfoRV64G.getFLen(), 64U);
+  EXPECT_EQ(InfoRV64G.getMinVLen(), 0U);
+  EXPECT_EQ(InfoRV64G.getMaxELen(), 0U);
+  EXPECT_EQ(InfoRV64G.getMaxELenFp(), 0U);
+
+  auto MaybeRV64GCV = RISCVISAInfo::parseArchString("rv64gcv", true);
+  ASSERT_THAT_EXPECTED(MaybeRV64GCV, Succeeded());
+  RISCVISAInfo &InfoRV64GCV = **MaybeRV64GCV;
+  const auto &ExtsRV64GCV = InfoRV64GCV.getExtensions();
+  EXPECT_EQ(ExtsRV64GCV.size(), 17UL);
+  EXPECT_TRUE(ExtsRV64GCV.at("i") == (RISCVISAUtils::ExtensionVersion{2, 1}));
+  EXPECT_TRUE(ExtsRV64GCV.at("m") == (RISCVISAUtils::ExtensionVersion{2, 0}));
+  EXPECT_TRUE(ExtsRV64GCV.at("a") == (RISCVISAUtils::ExtensionVersion{2, 1}));
+  EXPECT_TRUE(ExtsRV64GCV.at("f") == (RISCVISAUtils::ExtensionVersion{2, 2}));
+  EXPECT_TRUE(ExtsRV64GCV.at("d") == (RISCVISAUtils::ExtensionVersion{2, 2}));
+  EXPECT_TRUE(ExtsRV64GCV.at("c") == (RISCVISAUtils::ExtensionVersion{2, 0}));
+  EXPECT_TRUE(ExtsRV64GCV.at("zicsr") == (RISCVISAUtils::ExtensionVersion{2, 0}));
+  EXPECT_TRUE(ExtsRV64GCV.at("zifencei") ==
+              (RISCVISAUtils::ExtensionVersion{2, 0}));
+  EXPECT_TRUE(ExtsRV64GCV.at("v") == (RISCVISAUtils::ExtensionVersion{1, 0}));
+  EXPECT_TRUE(ExtsRV64GCV.at("zve32x") == (RISCVISAUtils::ExtensionVersion{1, 0}));
+  EXPECT_TRUE(ExtsRV64GCV.at("zve32f") == (RISCVISAUtils::ExtensionVersion{1, 0}));
+  EXPECT_TRUE(ExtsRV64GCV.at("zve64x") == (RISCVISAUtils::ExtensionVersion{1, 0}));
+  EXPECT_TRUE(ExtsRV64GCV.at("zve64f") == (RISCVISAUtils::ExtensionVersion{1, 0}));
+  EXPECT_TRUE(ExtsRV64GCV.at("zve64d") == (RISCVISAUtils::ExtensionVersion{1, 0}));
+  EXPECT_TRUE(ExtsRV64GCV.at("zvl32b") == (RISCVISAUtils::ExtensionVersion{1, 0}));
+  EXPECT_TRUE(ExtsRV64GCV.at("zvl64b") == (RISCVISAUtils::ExtensionVersion{1, 0}));
+  EXPECT_TRUE(ExtsRV64GCV.at("zvl128b") == (RISCVISAUtils::ExtensionVersion{1, 0}));
+  EXPECT_EQ(InfoRV64GCV.getXLen(), 64U);
+  EXPECT_EQ(InfoRV64GCV.getFLen(), 64U);
+  EXPECT_EQ(InfoRV64GCV.getMinVLen(), 128U);
+  EXPECT_EQ(InfoRV64GCV.getMaxELen(), 64U);
+  EXPECT_EQ(InfoRV64GCV.getMaxELenFp(), 64U);
 }
 
 TEST(ParseArchString, RejectsUnrecognizedExtensionNamesByDefault) {
