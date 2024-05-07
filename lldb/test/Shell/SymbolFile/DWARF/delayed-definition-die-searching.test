@@ -5,16 +5,16 @@
 # RUN: %lldb -b %t.out -s %t/lldb.cmd | FileCheck %s
 
 # CHECK:      (lldb) p v1
-# CHECK-NEXT: DWARFASTParserClang::ParseTypeFromDWARF{{.*}}DW_TAG_structure_type (DW_TAG_structure_type) name = 't2'
-# CHECK-NEXT: DWARFASTParserClang::ParseTypeFromDWARF{{.*}}DW_TAG_structure_type (DW_TAG_structure_type) name = 't1'
-# CHECK-NEXT: DWARFASTParserClang::ParseTypeFromDWARF{{.*}}DW_TAG_base_type (DW_TAG_base_type) name = 'int'
-# CHECK-NEXT: DW_TAG_structure_type (DW_TAG_structure_type) 't2' resolving forward declaration...
-# CHECK-NEXT: (t2<t1<int> >)  {}
-# CHECK-NEXT: (lldb) p v2
-# CHECK-NEXT: DWARFASTParserClang::ParseTypeFromDWARF{{.*}}DW_TAG_structure_type (DW_TAG_structure_type) name = 't1'
-# CHECK-NEXT: DWARFASTParserClang::ParseTypeFromDWARF{{.*}}DW_TAG_base_type (DW_TAG_base_type) name = 'int'
-# CHECK-NEXT: DW_TAG_structure_type (DW_TAG_structure_type) 't1' resolving forward declaration...
-# CHECK-NEXT: (t1<int>)  {}
+# CHECK: DWARFASTParserClang::ParseTypeFromDWARF{{.*}}DW_TAG_structure_type (DW_TAG_structure_type) name = 't2'
+# CHECK: DWARFASTParserClang::ParseTypeFromDWARF{{.*}}DW_TAG_structure_type (DW_TAG_structure_type) name = 't1'
+# CHECK: DWARFASTParserClang::ParseTypeFromDWARF{{.*}}DW_TAG_base_type (DW_TAG_base_type) name = 'int'
+# CHECK: DW_TAG_structure_type (DW_TAG_structure_type) 't2' resolving forward declaration...
+# CHECK: (t2<t1<int> >)  {}
+# CHECK: (lldb) p v2
+# CHECK: DWARFASTParserClang::ParseTypeFromDWARF{{.*}}DW_TAG_structure_type (DW_TAG_structure_type) name = 't1'
+# CHECK: DWARFASTParserClang::ParseTypeFromDWARF{{.*}}DW_TAG_base_type (DW_TAG_base_type) name = 'int'
+# CHECK: DW_TAG_structure_type (DW_TAG_structure_type) 't1' resolving forward declaration...
+# CHECK: (t1<int>)  {}
 
 #--- lldb.cmd
 log enable dwarf comp
