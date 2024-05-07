@@ -434,6 +434,7 @@ struct TransferReadToVectorLoadLowering
       return rewriter.notifyMatchFailure(
           read, "vector type is greater than max transfer rank");
     }
+
     if (maskOp)
       return rewriter.notifyMatchFailure(read, "Masked case not supported");
     SmallVector<unsigned> broadcastedDims;

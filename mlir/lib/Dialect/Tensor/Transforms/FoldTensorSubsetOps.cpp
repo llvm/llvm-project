@@ -105,8 +105,6 @@ TransferReadOfExtractSliceOpFolder::matchAndRewriteMaskableOp(
   SmallVector<Value> indices(readOp.getIndices().begin(),
                              readOp.getIndices().end());
   SmallVector<Value> sourceIndices;
-  // In case transfer_read is located inside a MaskOp we want to avoid creating
-  // more ops inside it.
   affine::resolveIndicesIntoOpWithOffsetsAndStrides(
       rewriter, readOp.getLoc(), extractSliceOp.getMixedOffsets(),
       extractSliceOp.getMixedStrides(), extractSliceOp.getDroppedDims(),
