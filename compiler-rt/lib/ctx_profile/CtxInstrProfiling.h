@@ -201,7 +201,7 @@ struct ContextRoot {
 
 /// This API is exposed for testing. See the APIs below about the contract with
 /// LLVM.
-inline bool isScratch(const ContextNode *Ctx) {
+inline bool isScratch(const void *Ctx) {
   return (reinterpret_cast<uint64_t>(Ctx) & 1);
 }
 

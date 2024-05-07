@@ -182,9 +182,13 @@ ContextNode *__llvm_ctx_profile_get_context(void *Callee, GUID Guid,
   if (!__llvm_ctx_profile_current_context_root)
     return TheScratchContext;
 
-  // also fast "out" if the caller is scratch.
+  // also fast "out" if the caller is scratch. We can see if it's scratch by
+  // looking at the interior pointer into the subcontexts vector that the caller
+  // provided, which, if the context is scratch, so is that interior pointer
+  // (because all the address calculations are using even values. Or more
+  // precisely, aligned - 8 values)
   auto **CallsiteContext = consume(__llvm_ctx_profile_callsite[0]);
-  if (!CallsiteContext || isScratch(*CallsiteContext))
+  if (!CallsiteContext || isScratch(CallsiteContext))
     return TheScratchContext;
 
   // if the callee isn't the expected one, return scratch.
