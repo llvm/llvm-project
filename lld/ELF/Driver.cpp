@@ -577,7 +577,7 @@ static StringRef getZGcs(opt::InputArgList &args) {
         // -z gcs is the same as -z gcs=always
         ret = "always";
       else
-        error("unknown -z gcs= value: " + StringRef(kv.second));
+        error("unknown -z gcs= value: " + kv.second);
     }
   }
   return ret;
@@ -1532,8 +1532,8 @@ static void readConfigs(opt::InputArgList &args) {
 
   auto reports = {std::make_pair("bti-report", &config->zBtiReport),
                   std::make_pair("cet-report", &config->zCetReport),
-                  std::make_pair("pauth-report", &config->zPauthReport),
-                  std::make_pair("gcs-report", &config->zGcsReport)};
+                  std::make_pair("gcs-report", &config->zGcsReport),
+                  std::make_pair("pauth-report", &config->zPauthReport)};
   for (opt::Arg *arg : args.filtered(OPT_z)) {
     std::pair<StringRef, StringRef> option =
         StringRef(arg->getValue()).split('=');
