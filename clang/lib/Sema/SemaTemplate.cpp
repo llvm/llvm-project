@@ -9276,6 +9276,8 @@ DeclResult Sema::ActOnClassTemplateSpecialization(
 
   // NOTE: KWLoc is the location of the tag keyword. This will instead
   // store the location of the outermost template keyword in the declaration.
+  SourceLocation TemplateKWLoc = TemplateParameterLists.size() > 0
+    ? TemplateParameterLists[0]->getTemplateLoc() : KWLoc;
   SourceLocation TemplateNameLoc = TemplateId.TemplateNameLoc;
   SourceLocation LAngleLoc = TemplateId.LAngleLoc;
   SourceLocation RAngleLoc = TemplateId.RAngleLoc;
