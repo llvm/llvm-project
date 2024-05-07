@@ -173,8 +173,7 @@ static bool isMaskRegOp(const MachineInstr &MI) {
 /// Note that this is different from "agnostic" as defined by the vector
 /// specification.  Agnostic requires each lane to either be undisturbed, or
 /// take the value -1; no other value is allowed.
-static bool hasUndefinedMergeOp(const MachineInstr &MI,
-                                const MachineRegisterInfo &MRI) {
+static bool hasUndefinedMergeOp(const MachineInstr &MI) {
 
   unsigned UseOpIdx;
   if (!MI.isRegTiedToUseOperand(0, &UseOpIdx))
@@ -404,7 +403,7 @@ DemandedFields getDemanded(const MachineInstr &MI,
     // this for any tail agnostic operation, but we can't as TA requires
     // tail lanes to either be the original value or -1.  We are writing
     // unknown bits to the lanes here.
-    if (hasUndefinedMergeOp(MI, *MRI)) {
+    if (hasUndefinedMergeOp(MI)) {
       if (isFloatScalarMoveOrScalarSplatInstr(MI) && !ST->hasVInstructionsF64())
         Res.SEW = DemandedFields::SEWGreaterThanOrEqualAndLessThan64;
       else
@@ -888,7 +887,7 @@ static VSETVLIInfo computeInfoForInstr(const MachineInstr &MI, uint64_t TSFlags,
 
   bool TailAgnostic = true;
   bool MaskAgnostic = true;
-  if (!hasUndefinedMergeOp(MI, *MRI)) {
+  if (!hasUndefinedMergeOp(MI)) {
     // Start with undisturbed.
     TailAgnostic = false;
     MaskAgnostic = false;
@@ -1084,7 +1083,7 @@ bool RISCVInsertVSETVLI::needVSETVLI(const MachineInstr &MI,
   // * The LMUL1 restriction is for machines whose latency may depend on VL.
   // * As above, this is only legal for tail "undefined" not "agnostic".
   if (isVSlideInstr(MI) && Require.hasAVLImm() && Require.getAVLImm() == 1 &&
-      isLMUL1OrSmaller(CurInfo.getVLMUL()) && hasUndefinedMergeOp(MI, *MRI)) {
+      isLMUL1OrSmaller(CurInfo.getVLMUL()) && hasUndefinedMergeOp(MI)) {
     Used.VLAny = false;
     Used.VLZeroness = true;
     Used.LMUL = false;
@@ -1096,8 +1095,9 @@ bool RISCVInsertVSETVLI::needVSETVLI(const MachineInstr &MI,
   // immediate form of vmv.s.x, and thus frequently use vmv.v.i in it's place.
   // Since a splat is non-constant time in LMUL, we do need to be careful to not
   // increase the number of active vector registers (unlike for vmv.s.x.)
-  if (isScalarSplatInstr(MI) && Require.hasAVLImm() && Require.getAVLImm() == 1 &&
-      isLMUL1OrSmaller(CurInfo.getVLMUL()) && hasUndefinedMergeOp(MI, *MRI)) {
+  if (isScalarSplatInstr(MI) && Require.hasAVLImm() &&
+      Require.getAVLImm() == 1 && isLMUL1OrSmaller(CurInfo.getVLMUL()) &&
+      hasUndefinedMergeOp(MI)) {
     Used.LMUL = false;
     Used.SEWLMULRatio = false;
     Used.VLAny = false;
