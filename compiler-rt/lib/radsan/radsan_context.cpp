@@ -24,9 +24,9 @@ using namespace __sanitizer;
 
 namespace detail {
 
-static pthread_key_t key;
-static pthread_once_t key_once = PTHREAD_ONCE_INIT;
-void internalFree(void *ptr) { InternalFree(ptr); }
+static pthread_key_t Key;
+static pthread_once_t KeyOnce = PTHREAD_ONCE_INIT;
+void internalFree(void *Ptr) { __sanitizer::InternalFree(Ptr); }
 
 } // namespace detail
 
@@ -34,49 +34,49 @@ namespace radsan {
 
 Context::Context() = default;
 
-void Context::realtimePush() { realtime_depth_++; }
+void Context::RealtimePush() { RealtimeDepth++; }
 
-void Context::realtimePop() { realtime_depth_--; }
+void Context::RealtimePop() { RealtimeDepth--; }
 
-void Context::bypassPush() { bypass_depth_++; }
+void Context::BypassPush() { BypassDepth++; }
 
-void Context::bypassPop() { bypass_depth_--; }
+void Context::BypassPop() { BypassDepth--; }
 
-void Context::expectNotRealtime(const char *intercepted_function_name) {
-  if (inRealtimeContext() && !isBypassed()) {
-    bypassPush();
-    printDiagnostics(intercepted_function_name);
+void Context::ExpectNotRealtime(const char *InterceptedFunctionName) {
+  if (InRealtimeContext() && !IsBypassed()) {
+    BypassPush();
+    PrintDiagnostics(InterceptedFunctionName);
     exit(EXIT_FAILURE);
-    bypassPop();
+    BypassPop();
   }
 }
 
-bool Context::inRealtimeContext() const { return realtime_depth_ > 0; }
+bool Context::InRealtimeContext() const { return RealtimeDepth > 0; }
 
-bool Context::isBypassed() const { return bypass_depth_ > 0; }
+bool Context::IsBypassed() const { return BypassDepth > 0; }
 
-void Context::printDiagnostics(const char *intercepted_function_name) {
+void Context::PrintDiagnostics(const char *InterceptedFunctionName) {
   fprintf(stderr,
           "Real-time violation: intercepted call to real-time unsafe function "
           "`%s` in real-time context! Stack trace:\n",
-          intercepted_function_name);
+          InterceptedFunctionName);
   radsan::printStackTrace();
 }
 
 Context &getContextForThisThread() {
-  auto make_tls_key = []() {
-    CHECK_EQ(pthread_key_create(&detail::key, detail::internalFree), 0);
+  auto MakeTlsKey = []() {
+    CHECK_EQ(pthread_key_create(&detail::Key, detail::internalFree), 0);
   };
 
-  pthread_once(&detail::key_once, make_tls_key);
-  auto *ptr = static_cast<Context *>(pthread_getspecific(detail::key));
-  if (ptr == nullptr) {
-    ptr = static_cast<Context *>(InternalAlloc(sizeof(Context)));
-    new(ptr) Context();
-    pthread_setspecific(detail::key, ptr);
+  pthread_once(&detail::KeyOnce, MakeTlsKey);
+  Context *CurrentThreadContext = static_cast<Context *>(pthread_getspecific(detail::Key));
+  if (CurrentThreadContext == nullptr) {
+    CurrentThreadContext = static_cast<Context *>(InternalAlloc(sizeof(Context)));
+    new(CurrentThreadContext) Context();
+    pthread_setspecific(detail::Key, CurrentThreadContext);
   }
 
-  return *ptr;
+  return *CurrentThreadContext;
 }
 
 } // namespace radsan

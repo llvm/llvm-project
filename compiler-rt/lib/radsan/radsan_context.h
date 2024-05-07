@@ -16,21 +16,21 @@ class Context {
 public:
   Context();
 
-  void realtimePush();
-  void realtimePop();
+  void RealtimePush();
+  void RealtimePop();
 
-  void bypassPush();
-  void bypassPop();
+  void BypassPush();
+  void BypassPop();
 
-  void expectNotRealtime(const char *interpreted_function_name);
+  void ExpectNotRealtime(const char *interpreted_function_name);
 
 private:
-  bool inRealtimeContext() const;
-  bool isBypassed() const;
-  void printDiagnostics(const char *intercepted_function_name);
+  bool InRealtimeContext() const;
+  bool IsBypassed() const;
+  void PrintDiagnostics(const char *InterceptedFunctionName);
 
-  int realtime_depth_{0};
-  int bypass_depth_{0};
+  int RealtimeDepth{0};
+  int BypassDepth{0};
 };
 
 Context &getContextForThisThread();
