@@ -1265,6 +1265,7 @@ cc_library(
     name = "PluginDynamicLoaderDarwinKernel",
     srcs = glob(["DynamicLoader/Darwin-Kernel/*.cpp"]),
     include_prefix = "Plugins",
+    tags = ["nobuildkite"],
     deps = [
         ":DynamicLoaderDarwinKernelProperties",
         ":PluginDynamicLoaderDarwinKernelHeaders",
@@ -2146,6 +2147,7 @@ cc_library(
     srcs = glob(["Process/mach-core/*.cpp"]),
     hdrs = glob(["Process/mach-core/*.h"]),
     include_prefix = "Plugins",
+    tags = ["nobuildkite"],
     deps = [
         ":PluginDynamicLoaderDarwinKernelHeaders",
         ":PluginDynamicLoaderMacOSXDYLD",
