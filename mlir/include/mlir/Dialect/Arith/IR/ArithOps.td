@@ -587,10 +587,11 @@ def Arith_CeilDivSIOp : Arith_IntBinaryOp<"ceildivsi",
   let description = [{
     Signed integer division. Rounds towards positive infinity, i.e. `7 / -2 = -3`.
 
-    Divison by zero, or signed division overflow (minimum value divided by -1) 
-    is undefined behavior. When applied to `vector` and `tensor` values, the 
-    behavior is undefined if _any_ of its elements are divided by zero or has a 
-    signed division overflow.
+    Divison by zero, or signed division overflow (minimum value divided by -1)
+    is undefined behavior. While dividing minimum value by a value != -1 shouldn't
+    overflow, the current implementation treats it as such. When applied to `vector`
+    and `tensor` values, the behavior is undefined if _any_ of its elements are
+    divided by zero or has a signed division overflow.
 
     Example:
 
