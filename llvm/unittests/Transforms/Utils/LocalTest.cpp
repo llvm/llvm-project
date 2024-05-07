@@ -764,7 +764,7 @@ TEST(Local, FindDbgRecords) {
                                       R"(
   define dso_local void @fun(ptr %a) #0 !dbg !11 {
   entry:
-    call void @llvm.dbg.assign(metadata ptr %a, metadata !16, metadata !DIExpression(), metadata !15, metadata ptr %a, metadata !DIExpression()), !dbg !19
+      #dbg_assign(ptr %a, !16, !DIExpression(), !15, ptr %a, !DIExpression(), !19)
     ret void
   }
 
