@@ -45,7 +45,7 @@ public:
   /// Preserves original order of instructions.
   static cl::opt<bool> PreserveOrder;
   /// Renames all instructions (including user-named).
-  static cl::opt<bool> RenameAll;
+  static cl::opt<bool> RenameAll; // TODO: Don't rename on empty name
   /// Folds all regular instructions (including pre-outputs).
   static cl::opt<bool> FoldPreOutputs;
   /// Sorts and reorders operands in commutative instructions.
@@ -464,7 +464,12 @@ void IRNormalizer::reorderInstructions(Function &F) const {
     }
 
     for (auto &I : BB) {
-      // Process the remaining dead instructions.
+      // Process the remaining instructions.
+      //
+      // TODO: Do more a intelligent sorting of these instructions. For example,
+      // seperate between dead instructinos and instructions used in another 
+      // block. Use properties of the CFG the order instructions that are used 
+      // in another block. 
       if (Visited.contains(&I))
         continue;
       LLVM_DEBUG(dbgs() << "\tReordering from source instruction: "; I.dump());
@@ -495,7 +500,7 @@ void IRNormalizer::reorderDefinition(
     const auto FirstNonPHIOrDbgOrAlloca =
         BasicBlock->getFirstNonPHIOrDbgOrAlloca();
     if (FirstNonPHIOrDbgOrAlloca == BasicBlock->end())
-      return;
+      return; // TODO: Is this necessary?
     if (Definition->comesBefore(&*FirstNonPHIOrDbgOrAlloca))
       return; // TODO: Do some kind of ordering for these instructions.
   }
