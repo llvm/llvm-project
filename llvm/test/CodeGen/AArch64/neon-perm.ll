@@ -3888,9 +3888,9 @@ entry:
 define %struct.uint8x8x2_t @test_uzp(<16 x i8> %y) {
 ; CHECK-LABEL: test_uzp:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    uzp1 v2.8b, v0.8b, v1.8b
-; CHECK-NEXT:    uzp2 v1.8b, v0.8b, v1.8b
+; CHECK-NEXT:    uzp1 v2.16b, v0.16b, v0.16b
+; CHECK-NEXT:    uzp2 v1.16b, v0.16b, v0.16b
+; CHECK-NEXT:    // kill: def $d1 killed $d1 killed $q1
 ; CHECK-NEXT:    fmov d0, d2
 ; CHECK-NEXT:    ret
 
