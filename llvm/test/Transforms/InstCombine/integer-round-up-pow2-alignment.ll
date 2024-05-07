@@ -437,14 +437,17 @@ define i8 @t17_oneuse(i8 %x) {
   ret i8 %x.roundedup
 }
 
-; Bias is equal to the alignment-1 (as opposed to alignment),
-; so we can just replace %x.roundedup with %x.biased.highbits
+; Negative test: We can't replace with %x.biased.highbits because it is
+; more poisonous.
 define <2 x i4> @t18_replacement_0b0001(<2 x i4> %x) {
 ; CHECK-LABEL: @t18_replacement_0b0001(
-; CHECK-NEXT:    [[X_BIASED:%.*]] = add <2 x i4> [[X:%.*]], <i4 3, i4 3>
+; CHECK-NEXT:    [[X_LOWBITS:%.*]] = and <2 x i4> [[X:%.*]], <i4 3, i4 3>
+; CHECK-NEXT:    [[X_LOWBITS_ARE_ZERO:%.*]] = icmp eq <2 x i4> [[X_LOWBITS]], zeroinitializer
+; CHECK-NEXT:    [[X_BIASED:%.*]] = add <2 x i4> [[X]], <i4 3, i4 3>
 ; CHECK-NEXT:    [[X_BIASED_HIGHBITS:%.*]] = and <2 x i4> [[X_BIASED]], <i4 -4, i4 poison>
 ; CHECK-NEXT:    call void @use.v2i4(<2 x i4> [[X_BIASED_HIGHBITS]])
-; CHECK-NEXT:    ret <2 x i4> [[X_BIASED_HIGHBITS]]
+; CHECK-NEXT:    [[X_ROUNDEDUP:%.*]] = select <2 x i1> [[X_LOWBITS_ARE_ZERO]], <2 x i4> [[X]], <2 x i4> [[X_BIASED_HIGHBITS]]
+; CHECK-NEXT:    ret <2 x i4> [[X_ROUNDEDUP]]
 ;
   %x.lowbits = and <2 x i4> %x, <i4 3, i4 3>
   %x.lowbits.are.zero = icmp eq <2 x i4> %x.lowbits, <i4 0, i4 0>
@@ -454,12 +457,17 @@ define <2 x i4> @t18_replacement_0b0001(<2 x i4> %x) {
   %x.roundedup = select <2 x i1> %x.lowbits.are.zero, <2 x i4> %x, <2 x i4> %x.biased.highbits
   ret <2 x i4> %x.roundedup
 }
+; Negative test: We can't replace with %x.biased.highbits because it is
+; more poisonous.
 define <2 x i4> @t18_replacement_0b0010(<2 x i4> %x) {
 ; CHECK-LABEL: @t18_replacement_0b0010(
-; CHECK-NEXT:    [[X_BIASED:%.*]] = add <2 x i4> [[X:%.*]], <i4 3, i4 poison>
+; CHECK-NEXT:    [[X_LOWBITS:%.*]] = and <2 x i4> [[X:%.*]], <i4 3, i4 3>
+; CHECK-NEXT:    [[X_LOWBITS_ARE_ZERO:%.*]] = icmp eq <2 x i4> [[X_LOWBITS]], zeroinitializer
+; CHECK-NEXT:    [[X_BIASED:%.*]] = add <2 x i4> [[X]], <i4 3, i4 poison>
 ; CHECK-NEXT:    [[X_BIASED_HIGHBITS:%.*]] = and <2 x i4> [[X_BIASED]], <i4 -4, i4 -4>
 ; CHECK-NEXT:    call void @use.v2i4(<2 x i4> [[X_BIASED_HIGHBITS]])
-; CHECK-NEXT:    ret <2 x i4> [[X_BIASED_HIGHBITS]]
+; CHECK-NEXT:    [[X_ROUNDEDUP:%.*]] = select <2 x i1> [[X_LOWBITS_ARE_ZERO]], <2 x i4> [[X]], <2 x i4> [[X_BIASED_HIGHBITS]]
+; CHECK-NEXT:    ret <2 x i4> [[X_ROUNDEDUP]]
 ;
   %x.lowbits = and <2 x i4> %x, <i4 3, i4 3>
   %x.lowbits.are.zero = icmp eq <2 x i4> %x.lowbits, <i4 0, i4 0>

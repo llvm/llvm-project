@@ -1556,6 +1556,9 @@ void CompilerInvocationBase::GenerateCodeGenArgs(const CodeGenOptions &Opts,
                llvm::DICompileUnit::DebugNameTableKind::Default))
     GenerateArg(Consumer, OPT_gpubnames);
 
+  if (Opts.DebugTemplateAlias)
+    GenerateArg(Consumer, OPT_gtemplate_alias);
+
   auto TNK = Opts.getDebugSimpleTemplateNames();
   if (TNK != llvm::codegenoptions::DebugTemplateNamesKind::Full) {
     if (TNK == llvm::codegenoptions::DebugTemplateNamesKind::Simple)
@@ -1826,6 +1829,8 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
                    (Opts.OptimizationLevel > 1));
   Opts.BinutilsVersion =
       std::string(Args.getLastArgValue(OPT_fbinutils_version_EQ));
+
+  Opts.DebugTemplateAlias = Args.hasArg(OPT_gtemplate_alias);
 
   Opts.DebugNameTable = static_cast<unsigned>(
       Args.hasArg(OPT_ggnu_pubnames)
@@ -2544,6 +2549,7 @@ static const auto &getFrontendActionTable() {
       {frontend::DumpTokens, OPT_dump_tokens},
       {frontend::EmitAssembly, OPT_S},
       {frontend::EmitBC, OPT_emit_llvm_bc},
+      {frontend::EmitCIR, OPT_emit_cir},
       {frontend::EmitHTML, OPT_emit_html},
       {frontend::EmitLLVM, OPT_emit_llvm},
       {frontend::EmitLLVMOnly, OPT_emit_llvm_only},
@@ -2886,6 +2892,8 @@ static bool ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
   if (Opts.ProgramAction != frontend::GenerateModule && Opts.IsSystemModule)
     Diags.Report(diag::err_drv_argument_only_allowed_with) << "-fsystem-module"
                                                            << "-emit-module";
+  if (Args.hasArg(OPT_fclangir) || Args.hasArg(OPT_emit_cir))
+    Opts.UseClangIRPipeline = true;
 
   if (Args.hasArg(OPT_aux_target_cpu))
     Opts.AuxTargetCPU = std::string(Args.getLastArgValue(OPT_aux_target_cpu));
@@ -3655,6 +3663,9 @@ void CompilerInvocationBase::GenerateLangArgs(const LangOptions &Opts,
   case LangOptions::ClangABI::Ver17:
     GenerateArg(Consumer, OPT_fclang_abi_compat_EQ, "17.0");
     break;
+  case LangOptions::ClangABI::Ver18:
+    GenerateArg(Consumer, OPT_fclang_abi_compat_EQ, "18.0");
+    break;
   case LangOptions::ClangABI::Latest:
     break;
   }
@@ -4162,6 +4173,8 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
         Opts.setClangABICompat(LangOptions::ClangABI::Ver15);
       else if (Major <= 17)
         Opts.setClangABICompat(LangOptions::ClangABI::Ver17);
+      else if (Major <= 18)
+        Opts.setClangABICompat(LangOptions::ClangABI::Ver18);
     } else if (Ver != "latest") {
       Diags.Report(diag::err_drv_invalid_value)
           << A->getAsString(Args) << A->getValue();
@@ -4327,6 +4340,7 @@ static bool isStrictlyPreprocessorAction(frontend::ActionKind Action) {
   case frontend::ASTView:
   case frontend::EmitAssembly:
   case frontend::EmitBC:
+  case frontend::EmitCIR:
   case frontend::EmitHTML:
   case frontend::EmitLLVM:
   case frontend::EmitLLVMOnly:

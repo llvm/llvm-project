@@ -224,6 +224,29 @@ protected:
 
     return API.createSymbolReference(Name, USR, getOwningModuleName(D));
   }
+
+  bool isEmbeddedInVarDeclarator(const TagDecl &D) {
+    return D.getName().empty() && getTypedefName(&D).empty() &&
+           D.isEmbeddedInDeclarator();
+  }
+
+  void maybeMergeWithAnonymousTag(const DeclaratorDecl &D,
+                                  RecordContext *NewRecordContext) {
+    if (!NewRecordContext)
+      return;
+    auto *Tag = D.getType()->getAsTagDecl();
+    SmallString<128> TagUSR;
+    clang::index::generateUSRForDecl(Tag, TagUSR);
+    if (auto *Record = llvm::dyn_cast_if_present<TagRecord>(
+            API.findRecordForUSR(TagUSR))) {
+      if (Record->IsEmbeddedInVarDeclarator) {
+        NewRecordContext->stealRecordChain(*Record);
+        auto *NewRecord = cast<APIRecord>(NewRecordContext);
+        if (NewRecord->Comment.empty())
+          NewRecord->Comment = Record->Comment;
+      }
+    }
+  }
 };
 
 template <typename Derived>
@@ -273,12 +296,18 @@ bool ExtractAPIVisitorBase<Derived>::VisitVarDecl(const VarDecl *Decl) {
         USR, Name, createHierarchyInformationForDecl(*Decl), Loc,
         AvailabilityInfo::createFromDecl(Decl), Linkage, Comment, Declaration,
         SubHeading, Access, isInSystemHeader(Decl));
-  } else
+  } else {
     // Add the global variable record to the API set.
-    API.createRecord<GlobalVariableRecord>(
+    auto *NewRecord = API.createRecord<GlobalVariableRecord>(
         USR, Name, createHierarchyInformationForDecl(*Decl), Loc,
         AvailabilityInfo::createFromDecl(Decl), Linkage, Comment, Declaration,
         SubHeading, isInSystemHeader(Decl));
+
+    // If this global variable has a non typedef'd anonymous tag type let's
+    // pretend the type's child records are under us in the hierarchy.
+    maybeMergeWithAnonymousTag(*Decl, NewRecord);
+  }
+
   return true;
 }
 
@@ -364,7 +393,7 @@ bool ExtractAPIVisitorBase<Derived>::VisitEnumDecl(const EnumDecl *Decl) {
   if (Name.empty()) {
     llvm::raw_svector_ostream OS(QualifiedNameBuffer);
     Decl->printQualifiedName(OS);
-    Name = QualifiedNameBuffer.str();
+    Name = QualifiedNameBuffer;
   }
 
   SmallString<128> USR;
@@ -385,7 +414,7 @@ bool ExtractAPIVisitorBase<Derived>::VisitEnumDecl(const EnumDecl *Decl) {
   auto *ER = API.createRecord<EnumRecord>(
       USR, Name, createHierarchyInformationForDecl(*Decl), Loc,
       AvailabilityInfo::createFromDecl(Decl), Comment, Declaration, SubHeading,
-      isInSystemHeader(Decl));
+      isInSystemHeader(Decl), isEmbeddedInVarDeclarator(*Decl));
 
   // Now collect information about the enumerators in this enum.
   getDerivedExtractAPIVisitor().recordEnumConstants(ER, Decl->enumerators());
@@ -510,16 +539,10 @@ bool ExtractAPIVisitorBase<Derived>::VisitRecordDecl(const RecordDecl *Decl) {
   if (!getDerivedExtractAPIVisitor().shouldDeclBeIncluded(Decl))
     return true;
 
-  SmallString<128> QualifiedNameBuffer;
   // Collect symbol information.
   StringRef Name = Decl->getName();
   if (Name.empty())
     Name = getTypedefName(Decl);
-  if (Name.empty()) {
-    llvm::raw_svector_ostream OS(QualifiedNameBuffer);
-    Decl->printQualifiedName(OS);
-    Name = QualifiedNameBuffer.str();
-  }
 
   SmallString<128> USR;
   index::generateUSRForDecl(Decl, USR);
@@ -541,12 +564,12 @@ bool ExtractAPIVisitorBase<Derived>::VisitRecordDecl(const RecordDecl *Decl) {
     API.createRecord<UnionRecord>(
         USR, Name, createHierarchyInformationForDecl(*Decl), Loc,
         AvailabilityInfo::createFromDecl(Decl), Comment, Declaration,
-        SubHeading, isInSystemHeader(Decl));
+        SubHeading, isInSystemHeader(Decl), isEmbeddedInVarDeclarator(*Decl));
   else
     API.createRecord<StructRecord>(
         USR, Name, createHierarchyInformationForDecl(*Decl), Loc,
         AvailabilityInfo::createFromDecl(Decl), Comment, Declaration,
-        SubHeading, isInSystemHeader(Decl));
+        SubHeading, isInSystemHeader(Decl), isEmbeddedInVarDeclarator(*Decl));
 
   return true;
 }
@@ -559,6 +582,9 @@ bool ExtractAPIVisitorBase<Derived>::VisitCXXRecordDecl(
     return true;
 
   StringRef Name = Decl->getName();
+  if (Name.empty())
+    Name = getTypedefName(Decl);
+
   SmallString<128> USR;
   index::generateUSRForDecl(Decl, USR);
   PresumedLoc Loc =
@@ -585,8 +611,7 @@ bool ExtractAPIVisitorBase<Derived>::VisitCXXRecordDecl(
   CXXClassRecord *Record;
   if (Decl->getDescribedClassTemplate()) {
     // Inject template fragments before class fragments.
-    Declaration.insert(
-        Declaration.begin(),
+    Declaration.prepend(
         DeclarationFragmentsBuilder::getFragmentsForRedeclarableTemplate(
             Decl->getDescribedClassTemplate()));
     Record = API.createRecord<ClassTemplateRecord>(
@@ -598,7 +623,8 @@ bool ExtractAPIVisitorBase<Derived>::VisitCXXRecordDecl(
     Record = API.createRecord<CXXClassRecord>(
         USR, Name, createHierarchyInformationForDecl(*Decl), Loc,
         AvailabilityInfo::createFromDecl(Decl), Comment, Declaration,
-        SubHeading, Kind, Access, isInSystemHeader(Decl));
+        SubHeading, Kind, Access, isInSystemHeader(Decl),
+        isEmbeddedInVarDeclarator(*Decl));
 
   Record->Bases = getBases(Decl);
 
@@ -1075,18 +1101,17 @@ bool ExtractAPIVisitorBase<Derived>::VisitTypedefNameDecl(
   // If the underlying type was defined as part of the typedef modify it's
   // fragments directly and pretend the typedef doesn't exist.
   if (auto *TagDecl = Decl->getUnderlyingType()->getAsTagDecl()) {
-    if (TagDecl->getName() == Decl->getName() &&
-        TagDecl->isEmbeddedInDeclarator() && TagDecl->isCompleteDefinition()) {
+    if (TagDecl->isEmbeddedInDeclarator() && TagDecl->isCompleteDefinition() &&
+        Decl->getName() == TagDecl->getName()) {
       SmallString<128> TagUSR;
       index::generateUSRForDecl(TagDecl, TagUSR);
       if (auto *Record = API.findRecordForUSR(TagUSR)) {
         DeclarationFragments LeadingFragments;
         LeadingFragments.append("typedef",
-                                DeclarationFragments::FragmentKind::Keyword, "",
-                                nullptr);
+                                DeclarationFragments::FragmentKind::Keyword);
         LeadingFragments.appendSpace();
         Record->Declaration.removeTrailingSemicolon()
-            .insert(Record->Declaration.begin(), std::move(LeadingFragments))
+            .prepend(std::move(LeadingFragments))
             .append(" { ... } ", DeclarationFragments::FragmentKind::Text)
             .append(Name, DeclarationFragments::FragmentKind::Identifier)
             .appendSemicolon();
@@ -1221,25 +1246,30 @@ bool ExtractAPIVisitorBase<Derived>::VisitFieldDecl(const FieldDecl *Decl) {
   DeclarationFragments SubHeading =
       DeclarationFragmentsBuilder::getSubHeading(Decl);
 
+  RecordContext *NewRecord = nullptr;
   if (isa<CXXRecordDecl>(Decl->getDeclContext())) {
     AccessControl Access = DeclarationFragmentsBuilder::getAccessControl(Decl);
 
-    API.createRecord<CXXFieldRecord>(
+    NewRecord = API.createRecord<CXXFieldRecord>(
         USR, Name, createHierarchyInformationForDecl(*Decl), Loc,
         AvailabilityInfo::createFromDecl(Decl), Comment, Declaration,
         SubHeading, Access, isInSystemHeader(Decl));
   } else if (auto *RD = dyn_cast<RecordDecl>(Decl->getDeclContext())) {
     if (RD->isUnion())
-      API.createRecord<UnionFieldRecord>(
+      NewRecord = API.createRecord<UnionFieldRecord>(
           USR, Name, createHierarchyInformationForDecl(*Decl), Loc,
           AvailabilityInfo::createFromDecl(Decl), Comment, Declaration,
           SubHeading, isInSystemHeader(Decl));
     else
-      API.createRecord<StructFieldRecord>(
+      NewRecord = API.createRecord<StructFieldRecord>(
           USR, Name, createHierarchyInformationForDecl(*Decl), Loc,
           AvailabilityInfo::createFromDecl(Decl), Comment, Declaration,
           SubHeading, isInSystemHeader(Decl));
   }
+
+  // If this field has a non typedef'd anonymous tag type let's pretend the
+  // type's child records are under us in the hierarchy.
+  maybeMergeWithAnonymousTag(*Decl, NewRecord);
 
   return true;
 }

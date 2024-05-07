@@ -186,6 +186,7 @@ std::string elf::createResponseFile(const opt::InputArgList &args) {
       os << arg->getSpelling() << quote(rewritePath(arg->getValue())) << "\n";
       break;
     case OPT_call_graph_ordering_file:
+    case OPT_default_script:
     case OPT_dynamic_list:
     case OPT_export_dynamic_symbol_list:
     case OPT_just_symbols:

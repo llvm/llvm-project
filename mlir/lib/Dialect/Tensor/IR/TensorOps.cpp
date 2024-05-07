@@ -820,7 +820,7 @@ struct DimOfDestStyleOp : public OpRewritePattern<DimOp> {
     if (!destOp)
       return failure();
 
-    auto resultIndex = source.cast<OpResult>().getResultNumber();
+    auto resultIndex = cast<OpResult>(source).getResultNumber();
     auto *initOperand = destOp.getDpsInitOperand(resultIndex);
 
     rewriter.modifyOpInPlace(
@@ -1580,6 +1580,44 @@ OpFoldResult ReshapeOp::fold(FoldAdaptor adaptor) {
           llvm::dyn_cast_if_present<DenseElementsAttr>(adaptor.getSource()),
           getResult().getType()))
     return reshapedSource;
+
+  auto source = getSource();
+  auto sourceTy = dyn_cast<RankedTensorType>(source.getType());
+  auto resultTy = dyn_cast<RankedTensorType>(getType());
+
+  if (!sourceTy || !resultTy || sourceTy != resultTy)
+    return {};
+
+  if (auto fromElements = getShape().getDefiningOp<tensor::FromElementsOp>()) {
+    auto elements = fromElements.getElements();
+    bool dynamicNoop =
+        sourceTy.getRank() == static_cast<int64_t>(elements.size());
+    for (int id = 0, s = elements.size(); id < s && dynamicNoop; ++id) {
+      auto element = elements[id];
+
+      if (auto cst = getConstantIntValue(element)) {
+        dynamicNoop &= cst.value() == sourceTy.getDimSize(id);
+        continue;
+      }
+
+      if (auto dimOp = element.getDefiningOp<tensor::DimOp>()) {
+        dynamicNoop &= dimOp.getSource() == source;
+
+        APSInt dim;
+        auto cst = getConstantIntValue(dimOp.getIndex());
+        dynamicNoop &=
+            cst.has_value() && cst.value() == static_cast<int64_t>(id);
+        continue;
+      }
+
+      dynamicNoop = false;
+      break;
+    }
+
+    if (dynamicNoop)
+      return source;
+  }
+
   return {};
 }
 
@@ -1604,6 +1642,44 @@ int64_t ExpandShapeOp::getCorrespondingSourceDim(int64_t resultDim) {
     if (llvm::is_contained(it.value(), resultDim))
       return it.index();
   llvm_unreachable("could not find reassociation group");
+}
+
+FailureOr<SmallVector<OpFoldResult>>
+ExpandShapeOp::inferOutputShape(OpBuilder &b, Location loc,
+                                RankedTensorType expandedType,
+                                ArrayRef<ReassociationIndices> reassociation,
+                                ArrayRef<OpFoldResult> inputShape) {
+  std::optional<SmallVector<OpFoldResult>> outputShape =
+      inferExpandShapeOutputShape(b, loc, expandedType, reassociation,
+                                  inputShape);
+  if (!outputShape)
+    return failure();
+  return *outputShape;
+}
+
+void ExpandShapeOp::build(OpBuilder &builder, OperationState &result,
+                          Type resultType, Value src,
+                          ArrayRef<ReassociationIndices> reassociation,
+                          ArrayRef<OpFoldResult> outputShape) {
+  auto [staticOutputShape, dynamicOutputShape] =
+      decomposeMixedValues(SmallVector<OpFoldResult>(outputShape));
+  build(builder, result, cast<RankedTensorType>(resultType), src,
+        getReassociationIndicesAttribute(builder, reassociation),
+        dynamicOutputShape, staticOutputShape);
+}
+
+void ExpandShapeOp::build(OpBuilder &builder, OperationState &result,
+                          Type resultType, Value src,
+                          ArrayRef<ReassociationIndices> reassociation) {
+  SmallVector<OpFoldResult> inputShape =
+      getMixedSizes(builder, result.location, src);
+  auto tensorResultTy = cast<RankedTensorType>(resultType);
+  FailureOr<SmallVector<OpFoldResult>> outputShape = inferOutputShape(
+      builder, result.location, tensorResultTy, reassociation, inputShape);
+  // Failure of this assertion usually indicates presence of multiple
+  // dynamic dimensions in the same reassociation group.
+  assert(succeeded(outputShape) && "unable to infer output shape");
+  build(builder, result, tensorResultTy, src, reassociation, *outputShape);
 }
 
 SmallVector<AffineMap, 4> CollapseShapeOp::getReassociationMaps() {
@@ -1689,7 +1765,24 @@ static LogicalResult verifyTensorReshapeOp(TensorReshapeOp op,
 }
 
 LogicalResult ExpandShapeOp::verify() {
-  return verifyTensorReshapeOp(*this, getResultType(), getSrcType());
+  auto srcType = getSrcType();
+  auto resultType = getResultType();
+
+  if ((int64_t)getStaticOutputShape().size() != resultType.getRank())
+    return emitOpError("expected number of static shape dims to be equal to "
+                       "the output rank (")
+           << resultType.getRank() << ") but found "
+           << getStaticOutputShape().size() << " inputs instead";
+
+  if ((int64_t)getOutputShape().size() !=
+      llvm::count(getStaticOutputShape(), ShapedType::kDynamic))
+    return emitOpError("mismatch in dynamic dims in output_shape and "
+                       "static_output_shape: static_output_shape has ")
+           << llvm::count(getStaticOutputShape(), ShapedType::kDynamic)
+           << " dynamic dims while output_shape has " << getOutputShape().size()
+           << " values";
+
+  return verifyTensorReshapeOp(*this, resultType, srcType);
 }
 
 LogicalResult CollapseShapeOp::verify() {
@@ -1873,23 +1966,25 @@ struct FoldDimOfCollapseShape : public OpRewritePattern<DimOp> {
 
 void ExpandShapeOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                                 MLIRContext *context) {
-  results.add<ComposeReassociativeReshapeOps<ExpandShapeOp>,
-              ComposeExpandOfCollapseOp<ExpandShapeOp, CollapseShapeOp>,
-              FoldReshapeWithConstant<ExpandShapeOp>,
-              FoldReshapeWithSplat<ExpandShapeOp>,
-              FoldReshapeWithFromElements<ExpandShapeOp>, FoldDimOfExpandShape,
-              FoldDimOfCollapseShape>(context);
+  results.add<
+      ComposeReassociativeReshapeOps<ExpandShapeOp, ReshapeOpKind::kExpand>,
+      ComposeExpandOfCollapseOp<ExpandShapeOp, CollapseShapeOp>,
+      FoldReshapeWithConstant<ExpandShapeOp>,
+      FoldReshapeWithSplat<ExpandShapeOp>,
+      FoldReshapeWithFromElements<ExpandShapeOp>, FoldDimOfExpandShape,
+      FoldDimOfCollapseShape>(context);
 }
 
 void CollapseShapeOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                                   MLIRContext *context) {
-  results
-      .add<ComposeReassociativeReshapeOps<CollapseShapeOp>,
-           ComposeCollapseOfExpandOp<CollapseShapeOp, ExpandShapeOp, CastOp>,
-           FoldReshapeWithConstant<CollapseShapeOp>,
-           FoldReshapeWithSplat<CollapseShapeOp>,
-           FoldReshapeWithFromElements<CollapseShapeOp>, FoldCollapseOfCastOp>(
-          context);
+  results.add<
+      ComposeReassociativeReshapeOps<CollapseShapeOp, ReshapeOpKind::kCollapse>,
+      ComposeCollapseOfExpandOp<CollapseShapeOp, ExpandShapeOp, CastOp,
+                                tensor::DimOp, RankedTensorType>,
+      FoldReshapeWithConstant<CollapseShapeOp>,
+      FoldReshapeWithSplat<CollapseShapeOp>,
+      FoldReshapeWithFromElements<CollapseShapeOp>, FoldCollapseOfCastOp>(
+      context);
 }
 
 OpFoldResult ExpandShapeOp::fold(FoldAdaptor adaptor) {
@@ -3475,7 +3570,7 @@ SplatOp::reifyResultShapes(OpBuilder &builder,
 
 OpFoldResult SplatOp::fold(FoldAdaptor adaptor) {
   auto constOperand = adaptor.getInput();
-  if (!constOperand.isa_and_nonnull<IntegerAttr, FloatAttr>())
+  if (!isa_and_nonnull<IntegerAttr, FloatAttr>(constOperand))
     return {};
 
   // Do not fold if the splat is not statically shaped
@@ -4307,7 +4402,7 @@ LogicalResult UnPackOp::canonicalize(UnPackOp unPackOp,
   /// unpack(destinationStyleOp(x)) -> unpack(x)
   if (auto dstStyleOp =
           unPackOp.getDest().getDefiningOp<DestinationStyleOpInterface>()) {
-    auto destValue = unPackOp.getDest().cast<OpResult>();
+    auto destValue = cast<OpResult>(unPackOp.getDest());
     Value newDest = dstStyleOp.getDpsInits()[destValue.getResultNumber()];
     rewriter.modifyOpInPlace(unPackOp,
                              [&]() { unPackOp.setDpsInitOperand(0, newDest); });

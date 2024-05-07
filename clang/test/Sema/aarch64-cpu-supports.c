@@ -20,7 +20,7 @@ int test_aarch64_features(void) {
   // expected-warning@+1 {{invalid cpu feature string}}
   if (__builtin_cpu_supports("default"))
     return 6;
-  if (__builtin_cpu_supports(" ssbs + crc "))
+  if (__builtin_cpu_supports(" ssbs + bti "))
     return 7;
   return 0;
 }

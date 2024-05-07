@@ -51,8 +51,9 @@ template <typename Class> struct bind_ty {
 };
 
 /// Match a specified integer value or vector of all elements of that
-/// value.
-struct specific_intval {
+/// value. \p BitWidth optionally specifies the bitwidth the matched constant
+/// must have. If it is 0, the matched constant can have any bitwidth.
+template <unsigned BitWidth = 0> struct specific_intval {
   APInt Val;
 
   specific_intval(APInt V) : Val(std::move(V)) {}
@@ -65,15 +66,21 @@ struct specific_intval {
     if (!CI && V->getType()->isVectorTy())
       if (const auto *C = dyn_cast<Constant>(V))
         CI = dyn_cast_or_null<ConstantInt>(
-            C->getSplatValue(/*UndefsAllowed=*/false));
+            C->getSplatValue(/*AllowPoison=*/false));
+    if (!CI)
+      return false;
 
-    return CI && APInt::isSameValue(CI->getValue(), Val);
+    assert((BitWidth == 0 || CI->getBitWidth() == BitWidth) &&
+           "Trying the match constant with unexpected bitwidth.");
+    return APInt::isSameValue(CI->getValue(), Val);
   }
 };
 
-inline specific_intval m_SpecificInt(uint64_t V) {
-  return specific_intval(APInt(64, V));
+inline specific_intval<0> m_SpecificInt(uint64_t V) {
+  return specific_intval<0>(APInt(64, V));
 }
+
+inline specific_intval<1> m_False() { return specific_intval<1>(APInt(64, 0)); }
 
 /// Matching combinators
 template <typename LTy, typename RTy> struct match_combine_or {

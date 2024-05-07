@@ -1462,6 +1462,99 @@ checker).
 
 Default value of the option is ``true``.
 
+.. _unix-Stream:
+
+unix.Stream (C)
+"""""""""""""""
+Check C stream handling functions:
+``fopen, fdopen, freopen, tmpfile, fclose, fread, fwrite, fgetc, fgets, fputc, fputs, fprintf, fscanf, ungetc, getdelim, getline, fseek, fseeko, ftell, ftello, fflush, rewind, fgetpos, fsetpos, clearerr, feof, ferror, fileno``.
+
+The checker maintains information about the C stream objects (``FILE *``) and
+can detect error conditions related to use of streams. The following conditions
+are detected:
+
+* The ``FILE *`` pointer passed to the function is NULL (the single exception is
+  ``fflush`` where NULL is allowed).
+* Use of stream after close.
+* Opened stream is not closed.
+* Read from a stream after end-of-file. (This is not a fatal error but reported
+  by the checker. Stream remains in EOF state and the read operation fails.)
+* Use of stream when the file position is indeterminate after a previous failed
+  operation. Some functions (like ``ferror``, ``clearerr``, ``fseek``) are
+  allowed in this state.
+* Invalid 3rd ("``whence``") argument to ``fseek``.
+
+The stream operations are by this checker usually split into two cases, a success
+and a failure case. However, in the case of write operations (like ``fwrite``,
+``fprintf`` and even ``fsetpos``) this behavior could produce a large amount of
+unwanted reports on projects that don't have error checks around the write
+operations, so by default the checker assumes that write operations always succeed.
+This behavior can be controlled by the ``Pedantic`` flag: With
+``-analyzer-config unix.Stream:Pedantic=true`` the checker will model the
+cases where a write operation fails and report situations where this leads to
+erroneous behavior. (The default is ``Pedantic=false``, where write operations
+are assumed to succeed.)
+
+.. code-block:: c
+
+ void test1() {
+   FILE *p = fopen("foo", "r");
+ } // warn: opened file is never closed
+
+ void test2() {
+   FILE *p = fopen("foo", "r");
+   fseek(p, 1, SEEK_SET); // warn: stream pointer might be NULL
+   fclose(p);
+ }
+
+ void test3() {
+   FILE *p = fopen("foo", "r");
+   if (p) {
+     fseek(p, 1, 3); // warn: third arg should be SEEK_SET, SEEK_END, or SEEK_CUR
+     fclose(p);
+   }
+ }
+
+ void test4() {
+   FILE *p = fopen("foo", "r");
+   if (!p)
+     return;
+
+   fclose(p);
+   fclose(p); // warn: stream already closed
+ }
+
+ void test5() {
+   FILE *p = fopen("foo", "r");
+   if (!p)
+     return;
+
+   fgetc(p);
+   if (!ferror(p))
+     fgetc(p); // warn: possible read after end-of-file
+
+   fclose(p);
+ }
+
+ void test6() {
+   FILE *p = fopen("foo", "r");
+   if (!p)
+     return;
+
+   fgetc(p);
+   if (!feof(p))
+     fgetc(p); // warn: file position may be indeterminate after I/O error
+
+   fclose(p);
+ }
+
+**Limitations**
+
+The checker does not track the correspondence between integer file descriptors
+and ``FILE *`` pointers. Operations on standard streams like ``stdin`` are not
+treated specially and are therefore often not recognized (because these streams
+are usually not opened explicitly by the program, and are global variables).
+
 .. _osx-checkers:
 
 osx
@@ -2940,13 +3033,6 @@ Further examples of injection vulnerabilities this checker can find.
     sprintf(buf, s); // warn: untrusted data used as a format string
   }
 
-  void test() {
-    size_t ts;
-    scanf("%zd", &ts); // 'ts' marked as tainted
-    int *p = (int *)malloc(ts * sizeof(int));
-      // warn: untrusted data used as buffer size
-  }
-
 There are built-in sources, propagations and sinks even if no external taint
 configuration is provided.
 
@@ -2974,9 +3060,7 @@ Default propagations rules:
 
 Default sinks:
  ``printf``, ``setproctitle``, ``system``, ``popen``, ``execl``, ``execle``,
- ``execlp``, ``execv``, ``execvp``, ``execvP``, ``execve``, ``dlopen``,
- ``memcpy``, ``memmove``, ``strncpy``, ``strndup``, ``malloc``, ``calloc``,
- ``alloca``, ``memccpy``, ``realloc``, ``bcopy``
+ ``execlp``, ``execv``, ``execvp``, ``execvP``, ``execve``, ``dlopen``
 
 Please note that there are no built-in filter functions.
 
@@ -3115,99 +3199,6 @@ Check for misuses of stream APIs. Check for misuses of stream APIs: ``fopen, fcl
 
    fclose(F); // warn: closing a previously closed file stream
  }
-
-.. _alpha-unix-Stream:
-
-alpha.unix.Stream (C)
-"""""""""""""""""""""
-Check C stream handling functions:
-``fopen, fdopen, freopen, tmpfile, fclose, fread, fwrite, fgetc, fgets, fputc, fputs, fprintf, fscanf, ungetc, getdelim, getline, fseek, fseeko, ftell, ftello, fflush, rewind, fgetpos, fsetpos, clearerr, feof, ferror, fileno``.
-
-The checker maintains information about the C stream objects (``FILE *``) and
-can detect error conditions related to use of streams. The following conditions
-are detected:
-
-* The ``FILE *`` pointer passed to the function is NULL (the single exception is
-  ``fflush`` where NULL is allowed).
-* Use of stream after close.
-* Opened stream is not closed.
-* Read from a stream after end-of-file. (This is not a fatal error but reported
-  by the checker. Stream remains in EOF state and the read operation fails.)
-* Use of stream when the file position is indeterminate after a previous failed
-  operation. Some functions (like ``ferror``, ``clearerr``, ``fseek``) are
-  allowed in this state.
-* Invalid 3rd ("``whence``") argument to ``fseek``.
-
-The stream operations are by this checker usually split into two cases, a success
-and a failure case. However, in the case of write operations (like ``fwrite``,
-``fprintf`` and even ``fsetpos``) this behavior could produce a large amount of
-unwanted reports on projects that don't have error checks around the write
-operations, so by default the checker assumes that write operations always succeed.
-This behavior can be controlled by the ``Pedantic`` flag: With
-``-analyzer-config alpha.unix.Stream:Pedantic=true`` the checker will model the
-cases where a write operation fails and report situations where this leads to
-erroneous behavior. (The default is ``Pedantic=false``, where write operations
-are assumed to succeed.)
-
-.. code-block:: c
-
- void test1() {
-   FILE *p = fopen("foo", "r");
- } // warn: opened file is never closed
-
- void test2() {
-   FILE *p = fopen("foo", "r");
-   fseek(p, 1, SEEK_SET); // warn: stream pointer might be NULL
-   fclose(p);
- }
-
- void test3() {
-   FILE *p = fopen("foo", "r");
-   if (p) {
-     fseek(p, 1, 3); // warn: third arg should be SEEK_SET, SEEK_END, or SEEK_CUR
-     fclose(p);
-   }
- }
-
- void test4() {
-   FILE *p = fopen("foo", "r");
-   if (!p)
-     return;
-
-   fclose(p);
-   fclose(p); // warn: stream already closed
- }
-
- void test5() {
-   FILE *p = fopen("foo", "r");
-   if (!p)
-     return;
-
-   fgetc(p);
-   if (!ferror(p))
-     fgetc(p); // warn: possible read after end-of-file
-
-   fclose(p);
- }
-
- void test6() {
-   FILE *p = fopen("foo", "r");
-   if (!p)
-     return;
-
-   fgetc(p);
-   if (!feof(p))
-     fgetc(p); // warn: file position may be indeterminate after I/O error
-
-   fclose(p);
- }
-
-**Limitations**
-
-The checker does not track the correspondence between integer file descriptors
-and ``FILE *`` pointers. Operations on standard streams like ``stdin`` are not
-treated specially and are therefore often not recognized (because these streams
-are usually not opened explicitly by the program, and are global variables).
 
 .. _alpha-unix-cstring-BufferOverlap:
 

@@ -713,7 +713,7 @@ define signext i32 @add_i32_4080(i32 %x) {
 ;
 ; LA64-LABEL: add_i32_4080:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    addi.w $a0, $a0, 2047
+; LA64-NEXT:    addi.d $a0, $a0, 2047
 ; LA64-NEXT:    addi.w $a0, $a0, 2033
 ; LA64-NEXT:    ret
   %add = add i32 %x, 4080
@@ -729,7 +729,7 @@ define signext i32 @add_i32_minus_4080(i32 %x) {
 ;
 ; LA64-LABEL: add_i32_minus_4080:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    addi.w $a0, $a0, -2048
+; LA64-NEXT:    addi.d $a0, $a0, -2048
 ; LA64-NEXT:    addi.w $a0, $a0, -2032
 ; LA64-NEXT:    ret
   %add = add i32 %x, -4080
@@ -745,7 +745,7 @@ define signext i32 @add_i32_2048(i32 %x) {
 ;
 ; LA64-LABEL: add_i32_2048:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    addi.w $a0, $a0, 2047
+; LA64-NEXT:    addi.d $a0, $a0, 2047
 ; LA64-NEXT:    addi.w $a0, $a0, 1
 ; LA64-NEXT:    ret
   %add = add i32 %x, 2048
@@ -761,7 +761,7 @@ define signext i32 @add_i32_4094(i32 %x) {
 ;
 ; LA64-LABEL: add_i32_4094:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    addi.w $a0, $a0, 2047
+; LA64-NEXT:    addi.d $a0, $a0, 2047
 ; LA64-NEXT:    addi.w $a0, $a0, 2047
 ; LA64-NEXT:    ret
   %add = add i32 %x, 4094
@@ -777,7 +777,7 @@ define signext i32 @add_i32_minus_2049(i32 %x) {
 ;
 ; LA64-LABEL: add_i32_minus_2049:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    addi.w $a0, $a0, -2048
+; LA64-NEXT:    addi.d $a0, $a0, -2048
 ; LA64-NEXT:    addi.w $a0, $a0, -1
 ; LA64-NEXT:    ret
   %add = add i32 %x, -2049
@@ -793,7 +793,7 @@ define signext i32 @add_i32_minus_4096(i32 %x) {
 ;
 ; LA64-LABEL: add_i32_minus_4096:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    addi.w $a0, $a0, -2048
+; LA64-NEXT:    addi.d $a0, $a0, -2048
 ; LA64-NEXT:    addi.w $a0, $a0, -2048
 ; LA64-NEXT:    ret
   %add = add i32 %x, -4096

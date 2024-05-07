@@ -622,7 +622,7 @@ struct BuiltinDumpStructGenerator {
     for (auto *D : RD->decls()) {
       auto *IFD = dyn_cast<IndirectFieldDecl>(D);
       auto *FD = IFD ? IFD->getAnonField() : dyn_cast<FieldDecl>(D);
-      if (!FD || FD->isUnnamedBitfield() || FD->isAnonymousStructOrUnion())
+      if (!FD || FD->isUnnamedBitField() || FD->isAnonymousStructOrUnion())
         continue;
 
       llvm::SmallString<20> Format = llvm::StringRef("%s%s %s ");
@@ -2346,10 +2346,8 @@ static bool BuiltinCpu(Sema &S, const TargetInfo &TI, CallExpr *TheCall,
   if (!SupportsBI(&TI) && SupportsBI(AuxTI))
     TheTI = AuxTI;
 
-  if (IsCPUSupports && !TheTI->supportsCpuSupports())
-    return S.Diag(TheCall->getBeginLoc(), diag::err_builtin_target_unsupported)
-           << SourceRange(TheCall->getBeginLoc(), TheCall->getEndLoc());
-  if (!IsCPUSupports && !TheTI->supportsCpuIs())
+  if ((!IsCPUSupports && !TheTI->supportsCpuIs()) ||
+      (IsCPUSupports && !TheTI->supportsCpuSupports()))
     return S.Diag(TheCall->getBeginLoc(),
                   TI.getTriple().isOSAIX()
                       ? diag::err_builtin_aix_os_unsupported
@@ -2535,18 +2533,18 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
   case Builtin::BI_bittestandset64:
   case Builtin::BI_interlockedbittestandreset64:
   case Builtin::BI_interlockedbittestandset64:
-    if (CheckBuiltinTargetInSupported(*this, BuiltinID, TheCall,
-                                      {llvm::Triple::x86_64, llvm::Triple::arm,
-                                       llvm::Triple::thumb,
-                                       llvm::Triple::aarch64}))
+    if (CheckBuiltinTargetInSupported(
+            *this, BuiltinID, TheCall,
+            {llvm::Triple::x86_64, llvm::Triple::arm, llvm::Triple::thumb,
+             llvm::Triple::aarch64, llvm::Triple::amdgcn}))
       return ExprError();
     break;
 
   case Builtin::BI__builtin_set_flt_rounds:
-    if (CheckBuiltinTargetInSupported(*this, BuiltinID, TheCall,
-                                      {llvm::Triple::x86, llvm::Triple::x86_64,
-                                       llvm::Triple::arm, llvm::Triple::thumb,
-                                       llvm::Triple::aarch64}))
+    if (CheckBuiltinTargetInSupported(
+            *this, BuiltinID, TheCall,
+            {llvm::Triple::x86, llvm::Triple::x86_64, llvm::Triple::arm,
+             llvm::Triple::thumb, llvm::Triple::aarch64, llvm::Triple::amdgcn}))
       return ExprError();
     break;
 
@@ -3164,13 +3162,20 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
 
     const Expr *Arg = TheCall->getArg(0);
     const auto *TyA = Arg->getType()->getAs<VectorType>();
-    if (!TyA) {
+
+    QualType ElTy;
+    if (TyA)
+      ElTy = TyA->getElementType();
+    else if (Arg->getType()->isSizelessVectorType())
+      ElTy = Arg->getType()->getSizelessVectorEltType(Context);
+
+    if (ElTy.isNull()) {
       Diag(Arg->getBeginLoc(), diag::err_builtin_invalid_arg_type)
           << 1 << /* vector ty*/ 4 << Arg->getType();
       return ExprError();
     }
 
-    TheCall->setType(TyA->getElementType());
+    TheCall->setType(ElTy);
     break;
   }
 
@@ -3186,12 +3191,20 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
 
     const Expr *Arg = TheCall->getArg(0);
     const auto *TyA = Arg->getType()->getAs<VectorType>();
-    if (!TyA || !TyA->getElementType()->isIntegerType()) {
+
+    QualType ElTy;
+    if (TyA)
+      ElTy = TyA->getElementType();
+    else if (Arg->getType()->isSizelessVectorType())
+      ElTy = Arg->getType()->getSizelessVectorEltType(Context);
+
+    if (ElTy.isNull() || !ElTy->isIntegerType()) {
       Diag(Arg->getBeginLoc(), diag::err_builtin_invalid_arg_type)
           << 1  << /* vector of integers */ 6 << Arg->getType();
       return ExprError();
     }
-    TheCall->setType(TyA->getElementType());
+
+    TheCall->setType(ElTy);
     break;
   }
 
@@ -3507,11 +3520,15 @@ bool Sema::ParseSVEImmChecks(
 static ArmStreamingType getArmStreamingFnType(const FunctionDecl *FD) {
   if (FD->hasAttr<ArmLocallyStreamingAttr>())
     return ArmStreaming;
-  if (const auto *T = FD->getType()->getAs<FunctionProtoType>()) {
-    if (T->getAArch64SMEAttributes() & FunctionType::SME_PStateSMEnabledMask)
-      return ArmStreaming;
-    if (T->getAArch64SMEAttributes() & FunctionType::SME_PStateSMCompatibleMask)
-      return ArmStreamingCompatible;
+  if (const Type *Ty = FD->getType().getTypePtrOrNull()) {
+    if (const auto *FPT = Ty->getAs<FunctionProtoType>()) {
+      if (FPT->getAArch64SMEAttributes() &
+          FunctionType::SME_PStateSMEnabledMask)
+        return ArmStreaming;
+      if (FPT->getAArch64SMEAttributes() &
+          FunctionType::SME_PStateSMCompatibleMask)
+        return ArmStreamingCompatible;
+    }
   }
   return ArmNonStreaming;
 }
@@ -7949,6 +7966,8 @@ void Sema::checkCall(NamedDecl *FDecl, const FunctionProtoType *Proto,
     // For variadic functions, we may have more args than parameters.
     // For some K&R functions, we may have less args than parameters.
     const auto N = std::min<unsigned>(Proto->getNumParams(), Args.size());
+    bool IsScalableRet = Proto->getReturnType()->isSizelessVectorType();
+    bool IsScalableArg = false;
     for (unsigned ArgIdx = 0; ArgIdx < N; ++ArgIdx) {
       // Args[ArgIdx] can be null in malformed code.
       if (const Expr *Arg = Args[ArgIdx]) {
@@ -7962,6 +7981,8 @@ void Sema::checkCall(NamedDecl *FDecl, const FunctionProtoType *Proto,
           checkAIXMemberAlignment((Arg->getExprLoc()), Arg);
 
         QualType ParamTy = Proto->getParamType(ArgIdx);
+        if (ParamTy->isSizelessVectorType())
+          IsScalableArg = true;
         QualType ArgTy = Arg->getType();
         CheckArgAlignment(Arg->getExprLoc(), FDecl, std::to_string(ArgIdx + 1),
                           ArgTy, ParamTy);
@@ -7982,6 +8003,30 @@ void Sema::checkCall(NamedDecl *FDecl, const FunctionProtoType *Proto,
       }
     }
 
+    // If the call requires a streaming-mode change and has scalable vector
+    // arguments or return values, then warn the user that the streaming and
+    // non-streaming vector lengths may be different.
+    const auto *CallerFD = dyn_cast<FunctionDecl>(CurContext);
+    if (CallerFD && (!FD || !FD->getBuiltinID()) &&
+        (IsScalableArg || IsScalableRet)) {
+      bool IsCalleeStreaming =
+          ExtInfo.AArch64SMEAttributes & FunctionType::SME_PStateSMEnabledMask;
+      bool IsCalleeStreamingCompatible =
+          ExtInfo.AArch64SMEAttributes &
+          FunctionType::SME_PStateSMCompatibleMask;
+      ArmStreamingType CallerFnType = getArmStreamingFnType(CallerFD);
+      if (!IsCalleeStreamingCompatible &&
+          (CallerFnType == ArmStreamingCompatible ||
+           ((CallerFnType == ArmStreaming) ^ IsCalleeStreaming))) {
+        if (IsScalableArg)
+          Diag(Loc, diag::warn_sme_streaming_pass_return_vl_to_non_streaming)
+              << /*IsArg=*/true;
+        if (IsScalableRet)
+          Diag(Loc, diag::warn_sme_streaming_pass_return_vl_to_non_streaming)
+              << /*IsArg=*/false;
+      }
+    }
+
     FunctionType::ArmStateValue CalleeArmZAState =
         FunctionType::getArmZAState(ExtInfo.AArch64SMEAttributes);
     FunctionType::ArmStateValue CalleeArmZT0State =
@@ -7990,7 +8035,7 @@ void Sema::checkCall(NamedDecl *FDecl, const FunctionProtoType *Proto,
         CalleeArmZT0State != FunctionType::ARM_None) {
       bool CallerHasZAState = false;
       bool CallerHasZT0State = false;
-      if (const auto *CallerFD = dyn_cast<FunctionDecl>(CurContext)) {
+      if (CallerFD) {
         auto *Attr = CallerFD->getAttr<ArmNewAttr>();
         if (Attr && Attr->isNewZA())
           CallerHasZAState = true;
@@ -12512,6 +12557,17 @@ CheckPrintfHandler::checkFormatExpr(const analyze_printf::PrintfSpecifier &FS,
     return true;
   }
 
+  // Diagnose attempts to use '%P' with ObjC object types, which will result in
+  // dumping raw class data (like is-a pointer), not actual data.
+  if (FS.getConversionSpecifier().getKind() == ConversionSpecifier::PArg &&
+      ExprTy->isObjCObjectPointerType()) {
+    const CharSourceRange &CSR =
+        getSpecifierRange(StartSpecifier, SpecifierLen);
+    EmitFormatDiagnostic(S.PDiag(diag::warn_format_P_with_objc_pointer),
+                         E->getExprLoc(), false, CSR);
+    return true;
+  }
+
   ArgType::MatchKind ImplicitMatch = ArgType::NoMatch;
   ArgType::MatchKind Match = AT.matchesType(S.Context, ExprTy);
   ArgType::MatchKind OrigMatch = Match;
@@ -12755,10 +12811,15 @@ CheckPrintfHandler::checkFormatExpr(const analyze_printf::PrintfSpecifier &FS,
         // In this case, the expression could be printed using a different
         // specifier, but we've decided that the specifier is probably correct
         // and we should cast instead. Just use the normal warning message.
+
+        unsigned Diag =
+            IsScopedEnum
+                ? diag::warn_format_conversion_argument_type_mismatch_pedantic
+                : diag::warn_format_conversion_argument_type_mismatch;
+
         EmitFormatDiagnostic(
-            S.PDiag(diag::warn_format_conversion_argument_type_mismatch)
-                << AT.getRepresentativeTypeName(S.Context) << ExprTy << IsEnum
-                << E->getSourceRange(),
+            S.PDiag(Diag) << AT.getRepresentativeTypeName(S.Context) << ExprTy
+                          << IsEnum << E->getSourceRange(),
             E->getBeginLoc(), /*IsStringLocation*/ false, SpecRange, Hints);
       }
     }
@@ -18687,8 +18748,10 @@ void Sema::CheckArrayAccess(const Expr *expr) {
         expr = cast<MemberExpr>(expr)->getBase();
         break;
       }
-      case Stmt::OMPArraySectionExprClass: {
-        const OMPArraySectionExpr *ASE = cast<OMPArraySectionExpr>(expr);
+      case Stmt::ArraySectionExprClass: {
+        const ArraySectionExpr *ASE = cast<ArraySectionExpr>(expr);
+        // FIXME: We should probably be checking all of the elements to the
+        // 'length' here as well.
         if (ASE->getLowerBound())
           CheckArrayAccess(ASE->getBase(), ASE->getLowerBound(),
                            /*ASE=*/nullptr, AllowOnePastEnd > 0);

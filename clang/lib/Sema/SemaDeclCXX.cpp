@@ -910,6 +910,8 @@ Sema::ActOnDecompositionDeclarator(Scope *S, Declarator &D,
 
     auto *BD = BindingDecl::Create(Context, DC, B.NameLoc, VarName);
 
+    ProcessDeclAttributeList(S, BD, *B.Attrs);
+
     // Find the shadowed declaration before filtering for scope.
     NamedDecl *ShadowedDecl = D.getCXXScopeSpec().isEmpty()
                                   ? getShadowedDeclaration(BD, Previous)
@@ -1302,7 +1304,7 @@ static bool checkTupleLikeDecomposition(Sema &S,
       //   in the associated namespaces.
       Expr *Get = UnresolvedLookupExpr::Create(
           S.Context, nullptr, NestedNameSpecifierLoc(), SourceLocation(),
-          DeclarationNameInfo(GetDN, Loc), /*RequiresADL*/ true, &Args,
+          DeclarationNameInfo(GetDN, Loc), /*RequiresADL=*/true, &Args,
           UnresolvedSetIterator(), UnresolvedSetIterator(),
           /*KnownDependent=*/false);
 
@@ -1453,7 +1455,7 @@ static bool checkMemberDecomposition(Sema &S, ArrayRef<BindingDecl*> Bindings,
 
   auto DiagnoseBadNumberOfBindings = [&]() -> bool {
     unsigned NumFields = llvm::count_if(
-        RD->fields(), [](FieldDecl *FD) { return !FD->isUnnamedBitfield(); });
+        RD->fields(), [](FieldDecl *FD) { return !FD->isUnnamedBitField(); });
     assert(Bindings.size() != NumFields);
     S.Diag(Src->getLocation(), diag::err_decomp_decl_wrong_number_bindings)
         << DecompType << (unsigned)Bindings.size() << NumFields << NumFields
@@ -1466,7 +1468,7 @@ static bool checkMemberDecomposition(Sema &S, ArrayRef<BindingDecl*> Bindings,
   //   E shall not have an anonymous union member, ...
   unsigned I = 0;
   for (auto *FD : RD->fields()) {
-    if (FD->isUnnamedBitfield())
+    if (FD->isUnnamedBitField())
       continue;
 
     // All the non-static data members are required to be nameable, so they
@@ -2067,7 +2069,7 @@ static bool CheckConstexprCtorInitializer(Sema &SemaRef,
   if (Field->isInvalidDecl())
     return true;
 
-  if (Field->isUnnamedBitfield())
+  if (Field->isUnnamedBitField())
     return true;
 
   // Anonymous unions with no variant members and empty anonymous structs do not
@@ -4517,7 +4519,7 @@ Sema::BuildMemInitializer(Decl *ConstructorD,
                               DS.getBeginLoc(), DS.getEllipsisLoc());
   } else {
     LookupResult R(*this, MemberOrBase, IdLoc, LookupOrdinaryName);
-    LookupParsedName(R, S, &SS);
+    LookupParsedName(R, S, &SS, /*ObjectType=*/QualType());
 
     TypeDecl *TyD = R.getAsSingle<TypeDecl>();
     if (!TyD) {
@@ -5509,7 +5511,7 @@ bool Sema::SetCtorInitializers(CXXConstructorDecl *Constructor, bool AnyErrors,
       //   A declaration for a bit-field that omits the identifier declares an
       //   unnamed bit-field. Unnamed bit-fields are not members and cannot be
       //   initialized.
-      if (F->isUnnamedBitfield())
+      if (F->isUnnamedBitField())
         continue;
 
       // If we're not generating the implicit copy/move constructor, then we'll
@@ -5638,7 +5640,7 @@ static void DiagnoseBaseOrMemInitializerOrder(
 
   // 3. Direct fields.
   for (auto *Field : ClassDecl->fields()) {
-    if (Field->isUnnamedBitfield())
+    if (Field->isUnnamedBitField())
       continue;
 
     PopulateKeysForFields(Field, IdealInitKeys);
@@ -7030,7 +7032,7 @@ void Sema::CheckCompletedCXXClass(Scope *S, CXXRecordDecl *Record) {
       !Record->isLambda()) {
     bool Complained = false;
     for (const auto *F : Record->fields()) {
-      if (F->hasInClassInitializer() || F->isUnnamedBitfield())
+      if (F->hasInClassInitializer() || F->isUnnamedBitField())
         continue;
 
       if (F->getType()->isReferenceType() ||
@@ -8037,7 +8039,7 @@ protected:
     for (FieldDecl *Field : Record->fields()) {
       // C++23 [class.bit]p2:
       //   Unnamed bit-fields are not members ...
-      if (Field->isUnnamedBitfield())
+      if (Field->isUnnamedBitField())
         continue;
       // Recursively expand anonymous structs.
       if (Field->isAnonymousStructOrUnion()) {
@@ -9396,7 +9398,7 @@ struct SpecialMemberVisitor {
           return true;
 
     for (auto *F : RD->fields())
-      if (!F->isInvalidDecl() && !F->isUnnamedBitfield() &&
+      if (!F->isInvalidDecl() && !F->isUnnamedBitField() &&
           getDerived().visitField(F))
         return true;
 
@@ -9741,7 +9743,7 @@ bool SpecialMemberDeletionInfo::shouldDeleteForAllConstMembers() {
       AllFieldsAreConst) {
     bool AnyFields = false;
     for (auto *F : MD->getParent()->fields())
-      if ((AnyFields = !F->isUnnamedBitfield()))
+      if ((AnyFields = !F->isUnnamedBitField()))
         break;
     if (!AnyFields)
       return false;
@@ -10134,7 +10136,7 @@ static bool checkTrivialClassMembers(Sema &S, CXXRecordDecl *RD,
                                      Sema::TrivialABIHandling TAH,
                                      bool Diagnose) {
   for (const auto *FI : RD->fields()) {
-    if (FI->isInvalidDecl() || FI->isUnnamedBitfield())
+    if (FI->isInvalidDecl() || FI->isUnnamedBitField())
       continue;
 
     QualType FieldType = S.Context.getBaseElementType(FI->getType());
@@ -12052,11 +12054,17 @@ bool Sema::isStdInitializerList(QualType Ty, QualType *Element) {
 
     Template = Specialization->getSpecializedTemplate();
     Arguments = Specialization->getTemplateArgs().data();
-  } else if (const TemplateSpecializationType *TST =
-                 Ty->getAs<TemplateSpecializationType>()) {
-    Template = dyn_cast_or_null<ClassTemplateDecl>(
-        TST->getTemplateName().getAsTemplateDecl());
-    Arguments = TST->template_arguments().begin();
+  } else {
+    const TemplateSpecializationType *TST = nullptr;
+    if (auto *ICN = Ty->getAs<InjectedClassNameType>())
+      TST = ICN->getInjectedTST();
+    else
+      TST = Ty->getAs<TemplateSpecializationType>();
+    if (TST) {
+      Template = dyn_cast_or_null<ClassTemplateDecl>(
+          TST->getTemplateName().getAsTemplateDecl());
+      Arguments = TST->template_arguments().begin();
+    }
   }
   if (!Template)
     return false;
@@ -12262,7 +12270,7 @@ Decl *Sema::ActOnUsingDirective(Scope *S, SourceLocation UsingLoc,
 
   // Lookup namespace name.
   LookupResult R(*this, NamespcName, IdentLoc, LookupNamespaceName);
-  LookupParsedName(R, S, &SS);
+  LookupParsedName(R, S, &SS, /*ObjectType=*/QualType());
   if (R.isAmbiguous())
     return nullptr;
 
@@ -13721,7 +13729,7 @@ Decl *Sema::ActOnNamespaceAliasDef(Scope *S, SourceLocation NamespaceLoc,
 
   // Lookup the namespace name.
   LookupResult R(*this, Ident, IdentLoc, LookupNamespaceName);
-  LookupParsedName(R, S, &SS);
+  LookupParsedName(R, S, &SS, /*ObjectType=*/QualType());
 
   if (R.isAmbiguous())
     return nullptr;
@@ -15201,7 +15209,7 @@ void Sema::DefineImplicitCopyAssignment(SourceLocation CurrentLocation,
   for (auto *Field : ClassDecl->fields()) {
     // FIXME: We should form some kind of AST representation for the implied
     // memcpy in a union copy operation.
-    if (Field->isUnnamedBitfield() || Field->getParent()->isUnion())
+    if (Field->isUnnamedBitField() || Field->getParent()->isUnion())
       continue;
 
     if (Field->isInvalidDecl()) {
@@ -15586,7 +15594,7 @@ void Sema::DefineImplicitMoveAssignment(SourceLocation CurrentLocation,
   for (auto *Field : ClassDecl->fields()) {
     // FIXME: We should form some kind of AST representation for the implied
     // memcpy in a union copy operation.
-    if (Field->isUnnamedBitfield() || Field->getParent()->isUnion())
+    if (Field->isUnnamedBitField() || Field->getParent()->isUnion())
       continue;
 
     if (Field->isInvalidDecl()) {
@@ -19164,40 +19172,40 @@ void Sema::checkExceptionSpecification(
   }
 }
 
-void Sema::actOnDelayedExceptionSpecification(Decl *MethodD,
-             ExceptionSpecificationType EST,
-             SourceRange SpecificationRange,
-             ArrayRef<ParsedType> DynamicExceptions,
-             ArrayRef<SourceRange> DynamicExceptionRanges,
-             Expr *NoexceptExpr) {
-  if (!MethodD)
+void Sema::actOnDelayedExceptionSpecification(
+    Decl *D, ExceptionSpecificationType EST, SourceRange SpecificationRange,
+    ArrayRef<ParsedType> DynamicExceptions,
+    ArrayRef<SourceRange> DynamicExceptionRanges, Expr *NoexceptExpr) {
+  if (!D)
     return;
 
-  // Dig out the method we're referring to.
-  if (FunctionTemplateDecl *FunTmpl = dyn_cast<FunctionTemplateDecl>(MethodD))
-    MethodD = FunTmpl->getTemplatedDecl();
+  // Dig out the function we're referring to.
+  if (FunctionTemplateDecl *FTD = dyn_cast<FunctionTemplateDecl>(D))
+    D = FTD->getTemplatedDecl();
 
-  CXXMethodDecl *Method = dyn_cast<CXXMethodDecl>(MethodD);
-  if (!Method)
+  FunctionDecl *FD = dyn_cast<FunctionDecl>(D);
+  if (!FD)
     return;
 
   // Check the exception specification.
   llvm::SmallVector<QualType, 4> Exceptions;
   FunctionProtoType::ExceptionSpecInfo ESI;
-  checkExceptionSpecification(/*IsTopLevel*/true, EST, DynamicExceptions,
+  checkExceptionSpecification(/*IsTopLevel=*/true, EST, DynamicExceptions,
                               DynamicExceptionRanges, NoexceptExpr, Exceptions,
                               ESI);
 
   // Update the exception specification on the function type.
-  Context.adjustExceptionSpec(Method, ESI, /*AsWritten*/true);
+  Context.adjustExceptionSpec(FD, ESI, /*AsWritten=*/true);
 
-  if (Method->isStatic())
-    checkThisInStaticMemberFunctionExceptionSpec(Method);
+  if (CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(D)) {
+    if (MD->isStatic())
+      checkThisInStaticMemberFunctionExceptionSpec(MD);
 
-  if (Method->isVirtual()) {
-    // Check overrides, which we previously had to delay.
-    for (const CXXMethodDecl *O : Method->overridden_methods())
-      CheckOverridingFunctionExceptionSpec(Method, O);
+    if (MD->isVirtual()) {
+      // Check overrides, which we previously had to delay.
+      for (const CXXMethodDecl *O : MD->overridden_methods())
+        CheckOverridingFunctionExceptionSpec(MD, O);
+    }
   }
 }
 
