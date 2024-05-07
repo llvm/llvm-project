@@ -293,9 +293,16 @@ static bool shouldBeInlined(ExpressionOp expressionOp) {
   if (!result.hasOneUse())
     return false;
 
+  Operation *user = *result.getUsers().begin();
+
+  // Do not inline expressions used by subscript operations, since the
+  // way the subscript operation translation is implemented requires that
+  // variables be materialized.
+  if (isa<emitc::SubscriptOp>(user))
+    return false;
+
   // Do not inline expressions used by other expressions, as any desired
   // expression folding was taken care of by transformations.
-  Operation *user = *result.getUsers().begin();
   return !user->getParentOfType<ExpressionOp>();
 }
 

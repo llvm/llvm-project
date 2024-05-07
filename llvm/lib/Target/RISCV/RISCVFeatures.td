@@ -867,6 +867,9 @@ def FeatureStdExtSscounterenw
                      "'Sscounterenw' (Support writeable scounteren enable "
                      "bit for any hpmcounter that is not read-only zero)">;
 
+def FeatureStdExtSmstateen
+    : RISCVExtension<"smstateen", 1, 0,
+                     "'Smstateen' (Machine-mode view of the state-enable extension)">;
 def FeatureStdExtSsstateen
     : RISCVExtension<"ssstateen", 1, 0,
                      "'Ssstateen' (Supervisor-mode view of the state-enable extension)">;

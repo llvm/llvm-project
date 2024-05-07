@@ -1,5 +1,5 @@
 // REQUIRES: aarch64-registered-target
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +neon -S -verify -emit-llvm -o - %s
+// RUN: %clang_cc1 -triple aarch64 -target-feature +neon -verify -emit-llvm -o - %s
 
 #include <arm_neon_sve_bridge.h>
 
