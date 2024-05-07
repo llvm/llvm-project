@@ -76,6 +76,9 @@ ABI Changes in This Version
   returning a class in a register. This affects some uses of std::pair.
   (#GH86384).
 
+- Fixed Microsoft calling convention when returning classes that have a deleted
+  copy assignment operator. Such a class should be returned indirectly.
+
 AST Dumping Potentially Breaking Changes
 ----------------------------------------
 
