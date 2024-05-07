@@ -2186,9 +2186,6 @@ let TargetGuard = "sme2" in {
 
   def SVSQRSHRUN_X4 : SInst<"svqrshrun[_n]_{0}[_{d}_x4]", "b4i", "il", MergeNone, "aarch64_sve_sqrshrun_x4", [IsStreaming], [ImmCheck<1, ImmCheckShiftRight, 0>]>;
 
-  def REINTERPRET_SVBOOL_TO_SVCOUNT : Inst<"svreinterpret[_c]", "}P", "Pc", MergeNone, "", [IsStreamingCompatible], []>;
-  def REINTERPRET_SVCOUNT_TO_SVBOOL : Inst<"svreinterpret[_b]", "P}", "Pc", MergeNone, "", [IsStreamingCompatible], []>;
-
   // SQDMULH
   def SVSQDMULH_SINGLE_X2 : SInst<"svqdmulh[_single_{d}_x2]", "22d", "csil", MergeNone, "aarch64_sve_sqdmulh_single_vgx2", [IsStreaming], []>;
   def SVSQDMULH_SINGLE_X4 : SInst<"svqdmulh[_single_{d}_x4]", "44d", "csil", MergeNone, "aarch64_sve_sqdmulh_single_vgx4", [IsStreaming], []>;
@@ -2197,6 +2194,9 @@ let TargetGuard = "sme2" in {
 }
 
 let TargetGuard = "sve2p1|sme2" in {
+  def REINTERPRET_SVBOOL_TO_SVCOUNT : Inst<"svreinterpret[_c]", "}P", "Pc", MergeNone, "", [IsStreamingCompatible], []>;
+  def REINTERPRET_SVCOUNT_TO_SVBOOL : Inst<"svreinterpret[_b]", "P}", "Pc", MergeNone, "", [IsStreamingCompatible], []>;
+
   // SQRSHRN / UQRSHRN
   def SVQRSHRN_X2   : SInst<"svqrshrn[_n]_{0}[_{d}_x2]", "h2i", "i",    MergeNone, "aarch64_sve_sqrshrn_x2", [IsStreamingCompatible], [ImmCheck<1, ImmCheck1_16>]>;
   def SVUQRSHRN_X2  : SInst<"svqrshrn[_n]_{0}[_{d}_x2]", "e2i", "Ui",   MergeNone, "aarch64_sve_uqrshrn_x2", [IsStreamingCompatible], [ImmCheck<1, ImmCheck1_16>]>;

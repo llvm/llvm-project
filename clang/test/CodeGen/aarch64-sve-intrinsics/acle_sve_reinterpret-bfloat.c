@@ -4,6 +4,10 @@
 // RUN: %clang_cc1 -fclang-abi-compat=latest -DTUPLE=x2 -triple aarch64 -target-feature +sve -target-feature +bf16 -disable-O0-optnone -Werror -Wall -emit-llvm -o - %s | opt -S -passes=mem2reg,tailcallelim | FileCheck %s -check-prefix=TUPLE2
 // RUN: %clang_cc1 -fclang-abi-compat=latest -DTUPLE=x3 -triple aarch64 -target-feature +sve -target-feature +bf16 -disable-O0-optnone -Werror -Wall -emit-llvm -o - %s | opt -S -passes=mem2reg,tailcallelim | FileCheck %s -check-prefix=TUPLE3
 // RUN: %clang_cc1 -fclang-abi-compat=latest -DTUPLE=x4 -triple aarch64 -target-feature +sve -target-feature +bf16 -disable-O0-optnone -Werror -Wall -emit-llvm -o - %s | opt -S -passes=mem2reg,tailcallelim | FileCheck %s -check-prefix=TUPLE4
+// RUN: %clang_cc1 -fclang-abi-compat=latest -triple aarch64 -target-feature +sme -disable-O0-optnone -Werror -Wall -emit-llvm -o - %s | opt -S -passes=mem2reg,tailcallelim | FileCheck %s
+// RUN: %clang_cc1 -fclang-abi-compat=latest -DTUPLE=x2 -triple aarch64 -target-feature +sme -disable-O0-optnone -Werror -Wall -emit-llvm -o - %s | opt -S -passes=mem2reg,tailcallelim | FileCheck %s -check-prefix=TUPLE2
+// RUN: %clang_cc1 -fclang-abi-compat=latest -DTUPLE=x3 -triple aarch64 -target-feature +sme -disable-O0-optnone -Werror -Wall -emit-llvm -o - %s | opt -S -passes=mem2reg,tailcallelim | FileCheck %s -check-prefix=TUPLE3
+// RUN: %clang_cc1 -fclang-abi-compat=latest -DTUPLE=x4 -triple aarch64 -target-feature +sme -disable-O0-optnone -Werror -Wall -emit-llvm -o - %s | opt -S -passes=mem2reg,tailcallelim | FileCheck %s -check-prefix=TUPLE4
 // RUN: %clang_cc1 -fclang-abi-compat=latest -triple aarch64 -target-feature +sve -target-feature +bf16 -disable-O0-optnone -Werror -Wall -emit-llvm -o - -x c++ %s | opt -S -passes=mem2reg,tailcallelim | FileCheck %s -check-prefix=CPP-CHECK
 // RUN: %clang_cc1 -fclang-abi-compat=latest -DTUPLE=x2 -triple aarch64 -target-feature +sve -target-feature +bf16 -disable-O0-optnone -Werror -Wall -emit-llvm -o - -x c++ %s | opt -S -passes=mem2reg,tailcallelim | FileCheck %s -check-prefix=CPP-TUPLE2
 // RUN: %clang_cc1 -fclang-abi-compat=latest -DTUPLE=x3 -triple aarch64 -target-feature +sve -target-feature +bf16 -disable-O0-optnone -Werror -Wall -emit-llvm -o - -x c++ %s | opt -S -passes=mem2reg,tailcallelim | FileCheck %s -check-prefix=CPP-TUPLE3
@@ -18,8 +22,15 @@
 // RUN: %clang_cc1 -fclang-abi-compat=latest -DSVE_OVERLOADED_FORMS -DTUPLE=x4 -triple aarch64 -target-feature +sve -target-feature +bf16 -disable-O0-optnone -Werror -Wall -emit-llvm -o - -x c++ %s | opt -S -passes=mem2reg,tailcallelim | FileCheck %s -check-prefix=CPP-TUPLE4
 
 // RUN: %clang_cc1 -fclang-abi-compat=latest -triple aarch64 -target-feature +sve -target-feature +bf16 -S -disable-O0-optnone -Werror -Wall -o /dev/null %s
+// RUN: %clang_cc1 -fclang-abi-compat=latest -triple aarch64 -target-feature +sme -S -disable-O0-optnone -Werror -Wall -o /dev/null %s
 
 #include <arm_sve.h>
+
+#if defined __ARM_FEATURE_SME
+#define MODE_ATTR __arm_streaming
+#else
+#define MODE_ATTR
+#endif
 
 #ifdef TUPLE
 #define TYPE_1(base,tuple) base ## tuple ## _t
@@ -81,7 +92,7 @@
 // CPP-TUPLE4-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 32 x bfloat> [[OP:%.*]] to <vscale x 64 x i8>
 // CPP-TUPLE4-NEXT:    ret <vscale x 64 x i8> [[TMP0]]
 //
-TYPE(svint8) test_svreinterpret_s8_bf16(TYPE(svbfloat16) op) {
+TYPE(svint8) test_svreinterpret_s8_bf16(TYPE(svbfloat16) op) MODE_ATTR {
   return SVE_ACLE_FUNC(svreinterpret_s8, _bf16)(op);
 }
 
@@ -125,7 +136,7 @@ TYPE(svint8) test_svreinterpret_s8_bf16(TYPE(svbfloat16) op) {
 // CPP-TUPLE4-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 32 x bfloat> [[OP:%.*]] to <vscale x 32 x i16>
 // CPP-TUPLE4-NEXT:    ret <vscale x 32 x i16> [[TMP0]]
 //
-TYPE(svint16) test_svreinterpret_s16_bf16(TYPE(svbfloat16) op) {
+TYPE(svint16) test_svreinterpret_s16_bf16(TYPE(svbfloat16) op) MODE_ATTR {
   return SVE_ACLE_FUNC(svreinterpret_s16, _bf16)(op);
 }
 
@@ -169,7 +180,7 @@ TYPE(svint16) test_svreinterpret_s16_bf16(TYPE(svbfloat16) op) {
 // CPP-TUPLE4-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 32 x bfloat> [[OP:%.*]] to <vscale x 16 x i32>
 // CPP-TUPLE4-NEXT:    ret <vscale x 16 x i32> [[TMP0]]
 //
-TYPE(svint32) test_svreinterpret_s32_bf16(TYPE(svbfloat16) op) {
+TYPE(svint32) test_svreinterpret_s32_bf16(TYPE(svbfloat16) op) MODE_ATTR {
   return SVE_ACLE_FUNC(svreinterpret_s32, _bf16)(op);
 }
 // CHECK-LABEL: @test_svreinterpret_s64_bf16(
@@ -212,7 +223,7 @@ TYPE(svint32) test_svreinterpret_s32_bf16(TYPE(svbfloat16) op) {
 // CPP-TUPLE4-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 32 x bfloat> [[OP:%.*]] to <vscale x 8 x i64>
 // CPP-TUPLE4-NEXT:    ret <vscale x 8 x i64> [[TMP0]]
 //
-TYPE(svint64) test_svreinterpret_s64_bf16(TYPE(svbfloat16) op) {
+TYPE(svint64) test_svreinterpret_s64_bf16(TYPE(svbfloat16) op) MODE_ATTR {
   return SVE_ACLE_FUNC(svreinterpret_s64, _bf16)(op);
 }
 
@@ -256,7 +267,7 @@ TYPE(svint64) test_svreinterpret_s64_bf16(TYPE(svbfloat16) op) {
 // CPP-TUPLE4-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 32 x bfloat> [[OP:%.*]] to <vscale x 64 x i8>
 // CPP-TUPLE4-NEXT:    ret <vscale x 64 x i8> [[TMP0]]
 //
-TYPE(svuint8) test_svreinterpret_u8_bf16(TYPE(svbfloat16) op) {
+TYPE(svuint8) test_svreinterpret_u8_bf16(TYPE(svbfloat16) op) MODE_ATTR {
   return SVE_ACLE_FUNC(svreinterpret_u8, _bf16)(op);
 }
 
@@ -300,7 +311,7 @@ TYPE(svuint8) test_svreinterpret_u8_bf16(TYPE(svbfloat16) op) {
 // CPP-TUPLE4-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 32 x bfloat> [[OP:%.*]] to <vscale x 32 x i16>
 // CPP-TUPLE4-NEXT:    ret <vscale x 32 x i16> [[TMP0]]
 //
-TYPE(svuint16) test_svreinterpret_u16_bf16(TYPE(svbfloat16) op) {
+TYPE(svuint16) test_svreinterpret_u16_bf16(TYPE(svbfloat16) op) MODE_ATTR {
   return SVE_ACLE_FUNC(svreinterpret_u16, _bf16)(op);
 }
 
@@ -344,7 +355,7 @@ TYPE(svuint16) test_svreinterpret_u16_bf16(TYPE(svbfloat16) op) {
 // CPP-TUPLE4-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 32 x bfloat> [[OP:%.*]] to <vscale x 16 x i32>
 // CPP-TUPLE4-NEXT:    ret <vscale x 16 x i32> [[TMP0]]
 //
-TYPE(svuint32) test_svreinterpret_u32_bf16(TYPE(svbfloat16) op) {
+TYPE(svuint32) test_svreinterpret_u32_bf16(TYPE(svbfloat16) op) MODE_ATTR {
   return SVE_ACLE_FUNC(svreinterpret_u32, _bf16)(op);
 }
 
@@ -388,7 +399,7 @@ TYPE(svuint32) test_svreinterpret_u32_bf16(TYPE(svbfloat16) op) {
 // CPP-TUPLE4-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 32 x bfloat> [[OP:%.*]] to <vscale x 8 x i64>
 // CPP-TUPLE4-NEXT:    ret <vscale x 8 x i64> [[TMP0]]
 //
-TYPE(svuint64) test_svreinterpret_u64_bf16(TYPE(svbfloat16) op) {
+TYPE(svuint64) test_svreinterpret_u64_bf16(TYPE(svbfloat16) op) MODE_ATTR {
   return SVE_ACLE_FUNC(svreinterpret_u64, _bf16)(op);
 }
 
@@ -432,7 +443,7 @@ TYPE(svuint64) test_svreinterpret_u64_bf16(TYPE(svbfloat16) op) {
 // CPP-TUPLE4-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 64 x i8> [[OP:%.*]] to <vscale x 32 x bfloat>
 // CPP-TUPLE4-NEXT:    ret <vscale x 32 x bfloat> [[TMP0]]
 //
-TYPE(svbfloat16) test_svreinterpret_bf16_s8(TYPE(svint8) op) {
+TYPE(svbfloat16) test_svreinterpret_bf16_s8(TYPE(svint8) op) MODE_ATTR {
   return SVE_ACLE_FUNC(svreinterpret_bf16, _s8)(op);
 }
 
@@ -476,7 +487,7 @@ TYPE(svbfloat16) test_svreinterpret_bf16_s8(TYPE(svint8) op) {
 // CPP-TUPLE4-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 32 x i16> [[OP:%.*]] to <vscale x 32 x bfloat>
 // CPP-TUPLE4-NEXT:    ret <vscale x 32 x bfloat> [[TMP0]]
 //
-TYPE(svbfloat16) test_svreinterpret_bf16_s16(TYPE(svint16) op) {
+TYPE(svbfloat16) test_svreinterpret_bf16_s16(TYPE(svint16) op) MODE_ATTR {
   return SVE_ACLE_FUNC(svreinterpret_bf16, _s16)(op);
 }
 
@@ -520,7 +531,7 @@ TYPE(svbfloat16) test_svreinterpret_bf16_s16(TYPE(svint16) op) {
 // CPP-TUPLE4-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 16 x i32> [[OP:%.*]] to <vscale x 32 x bfloat>
 // CPP-TUPLE4-NEXT:    ret <vscale x 32 x bfloat> [[TMP0]]
 //
-TYPE(svbfloat16) test_svreinterpret_bf16_s32(TYPE(svint32) op) {
+TYPE(svbfloat16) test_svreinterpret_bf16_s32(TYPE(svint32) op) MODE_ATTR {
   return SVE_ACLE_FUNC(svreinterpret_bf16, _s32)(op);
 }
 
@@ -564,7 +575,7 @@ TYPE(svbfloat16) test_svreinterpret_bf16_s32(TYPE(svint32) op) {
 // CPP-TUPLE4-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 8 x i64> [[OP:%.*]] to <vscale x 32 x bfloat>
 // CPP-TUPLE4-NEXT:    ret <vscale x 32 x bfloat> [[TMP0]]
 //
-TYPE(svbfloat16) test_svreinterpret_bf16_s64(TYPE(svint64) op) {
+TYPE(svbfloat16) test_svreinterpret_bf16_s64(TYPE(svint64) op) MODE_ATTR {
   return SVE_ACLE_FUNC(svreinterpret_bf16, _s64)(op);
 }
 
@@ -608,7 +619,7 @@ TYPE(svbfloat16) test_svreinterpret_bf16_s64(TYPE(svint64) op) {
 // CPP-TUPLE4-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 64 x i8> [[OP:%.*]] to <vscale x 32 x bfloat>
 // CPP-TUPLE4-NEXT:    ret <vscale x 32 x bfloat> [[TMP0]]
 //
-TYPE(svbfloat16) test_svreinterpret_bf16_u8(TYPE(svuint8) op) {
+TYPE(svbfloat16) test_svreinterpret_bf16_u8(TYPE(svuint8) op) MODE_ATTR {
   return SVE_ACLE_FUNC(svreinterpret_bf16, _u8)(op);
 }
 
@@ -652,7 +663,7 @@ TYPE(svbfloat16) test_svreinterpret_bf16_u8(TYPE(svuint8) op) {
 // CPP-TUPLE4-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 32 x i16> [[OP:%.*]] to <vscale x 32 x bfloat>
 // CPP-TUPLE4-NEXT:    ret <vscale x 32 x bfloat> [[TMP0]]
 //
-TYPE(svbfloat16) test_svreinterpret_bf16_u16(TYPE(svuint16) op) {
+TYPE(svbfloat16) test_svreinterpret_bf16_u16(TYPE(svuint16) op) MODE_ATTR {
   return SVE_ACLE_FUNC(svreinterpret_bf16, _u16)(op);
 }
 
@@ -696,7 +707,7 @@ TYPE(svbfloat16) test_svreinterpret_bf16_u16(TYPE(svuint16) op) {
 // CPP-TUPLE4-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 16 x i32> [[OP:%.*]] to <vscale x 32 x bfloat>
 // CPP-TUPLE4-NEXT:    ret <vscale x 32 x bfloat> [[TMP0]]
 //
-TYPE(svbfloat16) test_svreinterpret_bf16_u32(TYPE(svuint32) op) {
+TYPE(svbfloat16) test_svreinterpret_bf16_u32(TYPE(svuint32) op) MODE_ATTR {
   return SVE_ACLE_FUNC(svreinterpret_bf16, _u32)(op);
 }
 
@@ -740,7 +751,7 @@ TYPE(svbfloat16) test_svreinterpret_bf16_u32(TYPE(svuint32) op) {
 // CPP-TUPLE4-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 8 x i64> [[OP:%.*]] to <vscale x 32 x bfloat>
 // CPP-TUPLE4-NEXT:    ret <vscale x 32 x bfloat> [[TMP0]]
 //
-TYPE(svbfloat16) test_svreinterpret_bf16_u64(TYPE(svuint64) op) {
+TYPE(svbfloat16) test_svreinterpret_bf16_u64(TYPE(svuint64) op) MODE_ATTR {
   return SVE_ACLE_FUNC(svreinterpret_bf16, _u64)(op);
 }
 
@@ -776,7 +787,7 @@ TYPE(svbfloat16) test_svreinterpret_bf16_u64(TYPE(svuint64) op) {
 // CPP-TUPLE4-NEXT:  entry:
 // CPP-TUPLE4-NEXT:    ret <vscale x 32 x bfloat> [[OP:%.*]]
 //
-TYPE(svbfloat16) test_svreinterpret_bf16_bf16(TYPE(svbfloat16) op) {
+TYPE(svbfloat16) test_svreinterpret_bf16_bf16(TYPE(svbfloat16) op) MODE_ATTR {
   return SVE_ACLE_FUNC(svreinterpret_bf16, _bf16)(op);
 }
 
@@ -820,7 +831,7 @@ TYPE(svbfloat16) test_svreinterpret_bf16_bf16(TYPE(svbfloat16) op) {
 // CPP-TUPLE4-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 32 x half> [[OP:%.*]] to <vscale x 32 x bfloat>
 // CPP-TUPLE4-NEXT:    ret <vscale x 32 x bfloat> [[TMP0]]
 //
-TYPE(svbfloat16) test_svreinterpret_bf16_f16(TYPE(svfloat16) op) {
+TYPE(svbfloat16) test_svreinterpret_bf16_f16(TYPE(svfloat16) op) MODE_ATTR {
   return SVE_ACLE_FUNC(svreinterpret_bf16, _f16)(op);
 }
 
@@ -864,7 +875,7 @@ TYPE(svbfloat16) test_svreinterpret_bf16_f16(TYPE(svfloat16) op) {
 // CPP-TUPLE4-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 16 x float> [[OP:%.*]] to <vscale x 32 x bfloat>
 // CPP-TUPLE4-NEXT:    ret <vscale x 32 x bfloat> [[TMP0]]
 //
-TYPE(svbfloat16) test_svreinterpret_bf16_f32(TYPE(svfloat32) op) {
+TYPE(svbfloat16) test_svreinterpret_bf16_f32(TYPE(svfloat32) op) MODE_ATTR {
   return SVE_ACLE_FUNC(svreinterpret_bf16, _f32)(op);
 }
 
@@ -908,7 +919,7 @@ TYPE(svbfloat16) test_svreinterpret_bf16_f32(TYPE(svfloat32) op) {
 // CPP-TUPLE4-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 8 x double> [[OP:%.*]] to <vscale x 32 x bfloat>
 // CPP-TUPLE4-NEXT:    ret <vscale x 32 x bfloat> [[TMP0]]
 //
-TYPE(svbfloat16) test_svreinterpret_bf16_f64(TYPE(svfloat64) op) {
+TYPE(svbfloat16) test_svreinterpret_bf16_f64(TYPE(svfloat64) op) MODE_ATTR {
   return SVE_ACLE_FUNC(svreinterpret_bf16, _f64)(op);
 }
 
@@ -952,7 +963,7 @@ TYPE(svbfloat16) test_svreinterpret_bf16_f64(TYPE(svfloat64) op) {
 // CPP-TUPLE4-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 32 x bfloat> [[OP:%.*]] to <vscale x 16 x float>
 // CPP-TUPLE4-NEXT:    ret <vscale x 16 x float> [[TMP0]]
 //
-TYPE(svfloat32) test_svreinterpret_f32_bf16(TYPE(svbfloat16) op) {
+TYPE(svfloat32) test_svreinterpret_f32_bf16(TYPE(svbfloat16) op) MODE_ATTR {
   return SVE_ACLE_FUNC(svreinterpret_f32, _bf16)(op);
 }
 
@@ -996,7 +1007,7 @@ TYPE(svfloat32) test_svreinterpret_f32_bf16(TYPE(svbfloat16) op) {
 // CPP-TUPLE4-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 32 x bfloat> [[OP:%.*]] to <vscale x 32 x half>
 // CPP-TUPLE4-NEXT:    ret <vscale x 32 x half> [[TMP0]]
 //
-TYPE(svfloat16) test_svreinterpret_f16_bf16(TYPE(svbfloat16) op) {
+TYPE(svfloat16) test_svreinterpret_f16_bf16(TYPE(svbfloat16) op) MODE_ATTR {
   return SVE_ACLE_FUNC(svreinterpret_f16, _bf16)(op);
 }
 
@@ -1040,6 +1051,6 @@ TYPE(svfloat16) test_svreinterpret_f16_bf16(TYPE(svbfloat16) op) {
 // CPP-TUPLE4-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 32 x bfloat> [[OP:%.*]] to <vscale x 8 x double>
 // CPP-TUPLE4-NEXT:    ret <vscale x 8 x double> [[TMP0]]
 //
-TYPE(svfloat64) test_svreinterpret_f64_bf16(TYPE(svbfloat16) op) {
+TYPE(svfloat64) test_svreinterpret_f64_bf16(TYPE(svbfloat16) op) MODE_ATTR {
   return SVE_ACLE_FUNC(svreinterpret_f64, _bf16)(op);
 }
