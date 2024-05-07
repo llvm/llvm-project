@@ -1135,10 +1135,13 @@ InstructionCost GCNTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
   if (IsExtractSubvector)
     Kind = TTI::SK_PermuteSingleSrc;
 
+  if (!isa<FixedVectorType>(VT))
+    return BaseT::getShuffleCost(Kind, VT, Mask, CostKind, Index, SubTp);
+
   unsigned NumVectorElts = cast<FixedVectorType>(VT)->getNumElements();
 
   if (ST->hasVOP3PInsts()) {
-    if (!(cast<FixedVectorType>(VT)->getNumElements() % 2) &&
+    if (!(NumVectorElts % 2) &&
         DL.getTypeSizeInBits(VT->getElementType()) == 16) {
       // With op_sel VOP3P instructions freely can access the low half or high
       // half of a register, so any swizzle is free.
@@ -1153,7 +1156,7 @@ InstructionCost GCNTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
         // typically cheaper than scalarized versions.
         unsigned RequestedElts =
             count_if(Mask, [](int MaskElt) { return MaskElt != -1; });
-        return RequestedElts / 2 + RequestedElts % 2;
+        return alignTo(RequestedElts, 2) / 2;
       }
       default:
         break;
