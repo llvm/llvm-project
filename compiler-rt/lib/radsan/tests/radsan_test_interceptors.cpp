@@ -109,7 +109,7 @@ TEST(TestRadsanInterceptors, freeDiesWhenRealtime) {
 }
 
 TEST(TestRadsanInterceptors, freeSurvivesWhenRealtimeIfArgumentIsNull) {
-  realtimeInvoke([]() { free(NULL); });
+  RealtimeInvoke([]() { free(NULL); });
   ExpectNonRealtimeSurvival([]() { free(NULL); });
 }
 

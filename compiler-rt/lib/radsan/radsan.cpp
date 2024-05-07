@@ -14,21 +14,21 @@
 #include <unistd.h>
 
 extern "C" {
-RADSAN_EXPORT void radsan_init() { radsan::initialiseInterceptors(); }
+SANITIZER_INTERFACE_ATTRIBUTE void radsan_init() { radsan::InitializeInterceptors(); }
 
-RADSAN_EXPORT void radsan_realtime_enter() {
-  radsan::getContextForThisThread().RealtimePush();
+SANITIZER_INTERFACE_ATTRIBUTE void radsan_realtime_enter() {
+  radsan::GetContextForThisThread().RealtimePush();
 }
 
-RADSAN_EXPORT void radsan_realtime_exit() {
-  radsan::getContextForThisThread().RealtimePop();
+SANITIZER_INTERFACE_ATTRIBUTE void radsan_realtime_exit() {
+  radsan::GetContextForThisThread().RealtimePop();
 }
 
-RADSAN_EXPORT void radsan_off() {
-  radsan::getContextForThisThread().BypassPush();
+SANITIZER_INTERFACE_ATTRIBUTE void radsan_off() {
+  radsan::GetContextForThisThread().BypassPush();
 }
 
-RADSAN_EXPORT void radsan_on() {
-  radsan::getContextForThisThread().BypassPop();
+SANITIZER_INTERFACE_ATTRIBUTE void radsan_on() {
+  radsan::GetContextForThisThread().BypassPop();
 }
 }
