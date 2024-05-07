@@ -7,12 +7,12 @@
 // DXV_PATH:dxv{{(.exe)?}}" "-" "-o" "-"
 
 // RUN: %clang_dxc -I test -Vd -Tlib_6_3  -### %s 2>&1 | FileCheck %s --check-prefix=VD
-// VD:"-cc1"{{.*}}"-triple" "dxilv1.3-unknown-shadermodel6.3-library"
+// VD:"-cc1"{{.*}}"-triple" "dxil-unknown-shadermodel6.3-library"
 // VD-NOT:dxv not found
 
 // RUN: %clang_dxc -Tlib_6_3 -ccc-print-bindings --dxv-path=%T -Fo %t.dxo  %s 2>&1 | FileCheck %s --check-prefix=BINDINGS
-// BINDINGS: "dxilv1.3-unknown-shadermodel6.3-library" - "clang", inputs: ["[[INPUT:.+]]"], output: "[[DXC:.+]].dxo"
-// BINDINGS-NEXT: "dxilv1.3-unknown-shadermodel6.3-library" - "hlsl::Validator", inputs: ["[[DXC]].dxo"]
+// BINDINGS: "dxil-unknown-shadermodel6.3-library" - "clang", inputs: ["[[INPUT:.+]]"], output: "[[DXC:.+]].dxo"
+// BINDINGS-NEXT: "dxil-unknown-shadermodel6.3-library" - "hlsl::Validator", inputs: ["[[DXC]].dxo"]
 
 // RUN: %clang_dxc -Tlib_6_3 -ccc-print-phases --dxv-path=%T -Fo %t.dxc  %s 2>&1 | FileCheck %s --check-prefix=PHASES
 
