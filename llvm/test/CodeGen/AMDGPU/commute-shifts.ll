@@ -14,6 +14,10 @@ define amdgpu_ps float @main(float %arg0, float %arg1) #0 {
 ; SI-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
 ; SI-NEXT:    v_cndmask_b32_e32 v0, 0, v1, vcc
 ; SI-NEXT:    v_cvt_pkrtz_f16_f32_e32 v0, s0, v0
+; SI-NEXT:    v_and_b32_e32 v1, 0xffff, v0
+; SI-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
+; SI-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
+; SI-NEXT:    v_or_b32_e32 v0, v1, v0
 ; SI-NEXT:    ; return to shader part epilog
 ;
 ; VI-LABEL: main:

@@ -22,8 +22,8 @@ define i32 @neg_sel_special_constant(i32 %a) {
 ; ANY-LABEL: neg_sel_special_constant:
 ; ANY:       # %bb.0:
 ; ANY-NEXT:    movl %edi, %eax
-; ANY-NEXT:    shrl $22, %eax
-; ANY-NEXT:    andl $512, %eax # imm = 0x200
+; ANY-NEXT:    shrl $31, %eax
+; ANY-NEXT:    shll $9, %eax
 ; ANY-NEXT:    retq
   %tmp.1 = icmp slt i32 %a, 0
   %retval = select i1 %tmp.1, i32 512, i32 0
@@ -82,8 +82,8 @@ define i32 @pos_sel_special_constant(i32 %a) {
 ; ANY:       # %bb.0:
 ; ANY-NEXT:    movl %edi, %eax
 ; ANY-NEXT:    notl %eax
-; ANY-NEXT:    shrl $22, %eax
-; ANY-NEXT:    andl $512, %eax # imm = 0x200
+; ANY-NEXT:    shrl $31, %eax
+; ANY-NEXT:    shll $9, %eax
 ; ANY-NEXT:    retq
   %tmp.1 = icmp sgt i32 %a, -1
   %retval = select i1 %tmp.1, i32 512, i32 0
@@ -159,6 +159,7 @@ define i8 @sel_shift_bool_i8(i1 %t) {
 ; ANY-LABEL: sel_shift_bool_i8:
 ; ANY:       # %bb.0:
 ; ANY-NEXT:    movl %edi, %eax
+; ANY-NEXT:    andb $1, %al
 ; ANY-NEXT:    shlb $7, %al
 ; ANY-NEXT:    # kill: def $al killed $al killed $eax
 ; ANY-NEXT:    retq
@@ -171,7 +172,7 @@ define i16 @sel_shift_bool_i16(i1 %t) {
 ; ANY:       # %bb.0:
 ; ANY-NEXT:    movl %edi, %eax
 ; ANY-NEXT:    andl $1, %eax
-; ANY-NEXT:    shll $7, %eax
+; ANY-NEXT:    shlw $7, %ax
 ; ANY-NEXT:    # kill: def $ax killed $ax killed $eax
 ; ANY-NEXT:    retq
   %shl = select i1 %t, i16 128, i16 0
@@ -194,7 +195,7 @@ define i64 @sel_shift_bool_i64(i1 %t) {
 ; ANY:       # %bb.0:
 ; ANY-NEXT:    movl %edi, %eax
 ; ANY-NEXT:    andl $1, %eax
-; ANY-NEXT:    shll $16, %eax
+; ANY-NEXT:    shlq $16, %rax
 ; ANY-NEXT:    retq
   %shl = select i1 %t, i64 65536, i64 0
   ret i64 %shl

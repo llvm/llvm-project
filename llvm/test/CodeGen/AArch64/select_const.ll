@@ -436,10 +436,11 @@ define i8 @sel_constants_shl_constant(i1 %cond) {
 define i8 @shl_constant_sel_constants(i1 %cond) {
 ; CHECK-LABEL: shl_constant_sel_constants:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #8 // =0x8
+; CHECK-NEXT:    mov w8, #2 // =0x2
 ; CHECK-NEXT:    tst w0, #0x1
-; CHECK-NEXT:    mov w9, #4 // =0x4
-; CHECK-NEXT:    csel w0, w9, w8, ne
+; CHECK-NEXT:    mov w9, #1 // =0x1
+; CHECK-NEXT:    cinc x8, x8, eq
+; CHECK-NEXT:    lsl w0, w9, w8
 ; CHECK-NEXT:    ret
   %sel = select i1 %cond, i8 2, i8 3
   %bo = shl i8 1, %sel
@@ -461,10 +462,11 @@ define i8 @sel_constants_lshr_constant(i1 %cond) {
 define i8 @lshr_constant_sel_constants(i1 %cond) {
 ; CHECK-LABEL: lshr_constant_sel_constants:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #8 // =0x8
+; CHECK-NEXT:    mov w8, #2 // =0x2
 ; CHECK-NEXT:    tst w0, #0x1
-; CHECK-NEXT:    mov w9, #16 // =0x10
-; CHECK-NEXT:    csel w0, w9, w8, ne
+; CHECK-NEXT:    mov w9, #64 // =0x40
+; CHECK-NEXT:    cinc x8, x8, eq
+; CHECK-NEXT:    lsr w0, w9, w8
 ; CHECK-NEXT:    ret
   %sel = select i1 %cond, i8 2, i8 3
   %bo = lshr i8 64, %sel
@@ -485,10 +487,11 @@ define i8 @sel_constants_ashr_constant(i1 %cond) {
 define i8 @ashr_constant_sel_constants(i1 %cond) {
 ; CHECK-LABEL: ashr_constant_sel_constants:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #-16 // =0xfffffff0
+; CHECK-NEXT:    mov w8, #2 // =0x2
 ; CHECK-NEXT:    tst w0, #0x1
-; CHECK-NEXT:    mov w9, #-32 // =0xffffffe0
-; CHECK-NEXT:    csel w0, w9, w8, ne
+; CHECK-NEXT:    mov w9, #-128 // =0xffffff80
+; CHECK-NEXT:    cinc x8, x8, eq
+; CHECK-NEXT:    asr w0, w9, w8
 ; CHECK-NEXT:    ret
   %sel = select i1 %cond, i8 2, i8 3
   %bo = ashr i8 128, %sel

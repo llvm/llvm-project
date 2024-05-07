@@ -37,7 +37,8 @@ define i32 @PR22970_i64(ptr nocapture readonly, i64) {
 ; X64-LABEL: PR22970_i64:
 ; X64:       # %bb.0:
 ; X64-NEXT:    andl $4095, %esi # imm = 0xFFF
-; X64-NEXT:    movl 32(%rdi,%rsi,4), %eax
+; X64-NEXT:    addl $8, %esi
+; X64-NEXT:    movl (%rdi,%rsi,4), %eax
 ; X64-NEXT:    retq
   %3 = and i64 %1, 4095
   %4 = add nuw nsw i64 %3, 8

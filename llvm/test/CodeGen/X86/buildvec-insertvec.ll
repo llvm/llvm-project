@@ -11,6 +11,13 @@ define void @foo(<3 x float> %in, ptr nocapture %out) nounwind {
 ; SSE2-NEXT:    packuswb %xmm0, %xmm0
 ; SSE2-NEXT:    packuswb %xmm0, %xmm0
 ; SSE2-NEXT:    movd %xmm0, %eax
+; SSE2-NEXT:    movzbl %al, %ecx
+; SSE2-NEXT:    movzbl %ah, %edx
+; SSE2-NEXT:    shrl $16, %eax
+; SSE2-NEXT:    shll $8, %edx
+; SSE2-NEXT:    orl %ecx, %edx
+; SSE2-NEXT:    shll $16, %eax
+; SSE2-NEXT:    orl %edx, %eax
 ; SSE2-NEXT:    orl $-16777216, %eax # imm = 0xFF000000
 ; SSE2-NEXT:    movl %eax, (%rdi)
 ; SSE2-NEXT:    retq

@@ -103,8 +103,8 @@ define i1 @pow2_srl(i32 %x, i32 %y) {
 ; CHECK-NEXT:    andb $7, %cl
 ; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; CHECK-NEXT:    shll %cl, %eax
+; CHECK-NEXT:    andl $1048576, %eax # imm = 0x100000
 ; CHECK-NEXT:    shrl $20, %eax
-; CHECK-NEXT:    andl $1, %eax
 ; CHECK-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    retq
   %yy = and i32 %y, 7

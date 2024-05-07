@@ -53,7 +53,8 @@ define i32 @and4095(i32 %a) {
 define i32 @and0xff0_lshr4(i32 %a) {
 ; CHECK-LABEL: and0xff0_lshr4:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    bstrpick.w $a0, $a0, 11, 4
+; CHECK-NEXT:    andi $a0, $a0, 4080
+; CHECK-NEXT:    srli.w $a0, $a0, 4
 ; CHECK-NEXT:    ret
   %and = and i32 %a, 4080
   %shr = lshr i32 %and, 4
@@ -66,7 +67,8 @@ define i32 @and0xff0_lshr4(i32 %a) {
 define i32 @and4080_ashr5(i32 %a) {
 ; CHECK-LABEL: and4080_ashr5:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    bstrpick.w $a0, $a0, 11, 5
+; CHECK-NEXT:    andi $a0, $a0, 4064
+; CHECK-NEXT:    srai.w $a0, $a0, 5
 ; CHECK-NEXT:    ret
   %and = and i32 %a, 4080
   %shr = ashr i32 %and, 5

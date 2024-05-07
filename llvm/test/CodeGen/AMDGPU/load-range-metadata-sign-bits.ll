@@ -7,6 +7,7 @@ define i32 @range_metadata_sext_i8_signed_range_i32(ptr addrspace(1) %ptr) {
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    global_load_dword v0, v[0:1], off glc
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
+; GCN-NEXT:    v_bfe_i32 v0, v0, 0, 8
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %val = load volatile i32, ptr addrspace(1) %ptr, align 4, !range !0, !noundef !{} ; [-127, 128)
   %shl = shl i32 %val, 24
@@ -48,7 +49,7 @@ define i32 @range_metadata_sext_i8_neg_neg_range_i32(ptr addrspace(1) %ptr) {
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    global_load_dword v0, v[0:1], off glc
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    v_and_b32_e32 v0, 63, v0
+; GCN-NEXT:    v_bfe_i32 v0, v0, 0, 7
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %val = load volatile i32, ptr addrspace(1) %ptr, align 4, !range !3, !noundef !{}
   %shl = shl i32 %val, 25
@@ -60,8 +61,12 @@ define i32 @range_metadata_sextload_i8_signed_range_i4_i32(ptr addrspace(1) %ptr
 ; GCN-LABEL: range_metadata_sextload_i8_signed_range_i4_i32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    global_load_sbyte v0, v[0:1], off glc
+; GCN-NEXT:    global_load_ubyte v0, v[0:1], off glc
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
+; GCN-NEXT:    v_mov_b32_e32 v1, 3
+; GCN-NEXT:    v_lshlrev_b16_e32 v0, 3, v0
+; GCN-NEXT:    v_ashrrev_i16_sdwa v0, v1, sext(v0) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_0
+; GCN-NEXT:    v_bfe_i32 v0, v0, 0, 16
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %load = load volatile i8, ptr addrspace(1) %ptr, align 1, !range !4, !noundef !{}
   %shl = shl i8 %load, 3
@@ -76,7 +81,9 @@ define i25 @range_metadata_sext_i8_signed_range_i25(ptr addrspace(1) %ptr) {
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    global_load_dword v0, v[0:1], off glc
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    v_bfe_i32 v0, v0, 0, 2
+; GCN-NEXT:    v_lshlrev_b32_e32 v0, 30, v0
+; GCN-NEXT:    v_ashrrev_i32_e32 v0, 7, v0
+; GCN-NEXT:    v_ashrrev_i32_e32 v0, 23, v0
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %val = load volatile i25, ptr addrspace(1) %ptr, align 4, !range !5, !noundef !{}
   %shl = shl i25 %val, 23
@@ -90,6 +97,7 @@ define i32 @range_metadata_i32_neg1_to_1(ptr addrspace(1) %ptr) {
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    global_load_dword v0, v[0:1], off glc
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
+; GCN-NEXT:    v_bfe_i32 v0, v0, 0, 1
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %val = load volatile i32, ptr addrspace(1) %ptr, align 4, !range !6, !noundef !{}
   %shl = shl i32 %val, 31
@@ -103,8 +111,9 @@ define i64 @range_metadata_sext_i8_signed_range_i64(ptr addrspace(1) %ptr) {
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    global_load_dwordx2 v[0:1], v[0:1], off glc
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    v_lshlrev_b32_e32 v1, 23, v0
-; GCN-NEXT:    v_ashrrev_i64 v[0:1], 55, v[0:1]
+; GCN-NEXT:    v_mov_b32_e32 v1, 0
+; GCN-NEXT:    v_lshlrev_b32_e32 v2, 23, v0
+; GCN-NEXT:    v_ashrrev_i64 v[0:1], 55, v[1:2]
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %val = load volatile i64, ptr addrspace(1) %ptr, align 4, !range !7, !noundef !{}
   %shl = shl i64 %val, 55
@@ -118,6 +127,8 @@ define i64 @range_metadata_sext_i32_signed_range_i64(ptr addrspace(1) %ptr) {
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    global_load_dwordx2 v[0:1], v[0:1], off glc
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
+; GCN-NEXT:    v_lshlrev_b64 v[0:1], 31, v[0:1]
+; GCN-NEXT:    v_ashrrev_i64 v[0:1], 31, v[0:1]
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %val = load volatile i64, ptr addrspace(1) %ptr, align 4, !range !7, !noundef !{}
   %shl = shl i64 %val, 31
@@ -131,6 +142,8 @@ define i64 @range_metadata_sext_i33_signed_range_i64(ptr addrspace(1) %ptr) {
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    global_load_dwordx2 v[0:1], v[0:1], off glc
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
+; GCN-NEXT:    v_lshlrev_b64 v[0:1], 30, v[0:1]
+; GCN-NEXT:    v_ashrrev_i64 v[0:1], 30, v[0:1]
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %val = load volatile i64, ptr addrspace(1) %ptr, align 4, !range !8, !noundef !{}
   %shl = shl i64 %val, 30

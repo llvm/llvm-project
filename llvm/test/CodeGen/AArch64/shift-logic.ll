@@ -233,7 +233,8 @@ define i32 @lshr_or_extra_use(i32 %x, i32 %y, ptr %p) nounwind {
 define i64 @desirable_to_commute1(i64 %x) {
 ; CHECK-LABEL: desirable_to_commute1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and x0, x0, #0x7fff8
+; CHECK-NEXT:    ubfx x8, x0, #3, #16
+; CHECK-NEXT:    lsl x0, x8, #3
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-GISEL-LABEL: desirable_to_commute1:
@@ -250,8 +251,8 @@ define i64 @desirable_to_commute1(i64 %x) {
 define i64 @desirable_to_commute2(ptr %p, i64 %i) {
 ; CHECK-LABEL: desirable_to_commute2:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and x8, x1, #0x1ff8
-; CHECK-NEXT:    ldr x0, [x0, x8]
+; CHECK-NEXT:    ubfx x8, x1, #3, #10
+; CHECK-NEXT:    ldr x0, [x0, x8, lsl #3]
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-GISEL-LABEL: desirable_to_commute2:
@@ -272,7 +273,8 @@ define i64 @desirable_to_commute2(ptr %p, i64 %i) {
 define void @apint_type_mismatch(i16 %a, ptr %p) {
 ; CHECK-LABEL: apint_type_mismatch:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    and w8, w0, #0x7f8
+; CHECK-NEXT:    ubfx w8, w0, #3, #8
+; CHECK-NEXT:    lsl w8, w8, #3
 ; CHECK-NEXT:    str w8, [x1]
 ; CHECK-NEXT:    ret
 ;

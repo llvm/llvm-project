@@ -12,7 +12,8 @@ define void @test_loop(ptr align 1 %src, ptr align 1 %dest, i32 %len) {
 ; CHECK-NEXT:    jb .LBB0_4
 ; CHECK-NEXT:  # %bb.1: # %memcmp.loop.preheader
 ; CHECK-NEXT:    movl %edx, %eax
-; CHECK-NEXT:    andl $-32, %eax
+; CHECK-NEXT:    shrl $5, %eax
+; CHECK-NEXT:    shlq $5, %rax
 ; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB0_2: # %memcmp.loop

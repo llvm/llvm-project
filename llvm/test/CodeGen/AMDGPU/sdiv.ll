@@ -1760,7 +1760,7 @@ define amdgpu_kernel void @v_sdiv_i23(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; EG:       ; %bb.0:
 ; EG-NEXT:    ALU 0, @14, KC0[CB0:0-32], KC1[]
 ; EG-NEXT:    TEX 3 @6
-; EG-NEXT:    ALU 33, @15, KC0[CB0:0-32], KC1[]
+; EG-NEXT:    ALU 37, @15, KC0[CB0:0-32], KC1[]
 ; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T0.X, T1.X, 1
 ; EG-NEXT:    CF_END
 ; EG-NEXT:    PAD
@@ -1801,6 +1801,10 @@ define amdgpu_kernel void @v_sdiv_i23(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; EG-NEXT:     CNDE T0.W, PV.W, 0.0, PS,
 ; EG-NEXT:     FLT_TO_INT * T1.W, PV.Z,
 ; EG-NEXT:     ADD_INT * T0.W, PS, PV.W,
+; EG-NEXT:     LSHL * T0.W, PV.W, literal.x,
+; EG-NEXT:    9(1.261169e-44), 0(0.000000e+00)
+; EG-NEXT:     ASHR * T0.W, PV.W, literal.x,
+; EG-NEXT:    9(1.261169e-44), 0(0.000000e+00)
 ; EG-NEXT:     LSHL * T0.W, PV.W, literal.x,
 ; EG-NEXT:    9(1.261169e-44), 0(0.000000e+00)
 ; EG-NEXT:     ASHR T0.X, PV.W, literal.x,
@@ -1943,7 +1947,7 @@ define amdgpu_kernel void @v_sdiv_i24(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; EG:       ; %bb.0:
 ; EG-NEXT:    ALU 0, @14, KC0[CB0:0-32], KC1[]
 ; EG-NEXT:    TEX 3 @6
-; EG-NEXT:    ALU 29, @15, KC0[CB0:0-32], KC1[]
+; EG-NEXT:    ALU 33, @15, KC0[CB0:0-32], KC1[]
 ; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T0.X, T1.X, 1
 ; EG-NEXT:    CF_END
 ; EG-NEXT:    PAD
@@ -1980,6 +1984,10 @@ define amdgpu_kernel void @v_sdiv_i24(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; EG-NEXT:     CNDE T0.W, PV.W, 0.0, PS,
 ; EG-NEXT:     FLT_TO_INT * T1.W, PV.Z,
 ; EG-NEXT:     ADD_INT * T0.W, PS, PV.W,
+; EG-NEXT:     LSHL * T0.W, PV.W, literal.x,
+; EG-NEXT:    8(1.121039e-44), 0(0.000000e+00)
+; EG-NEXT:     ASHR * T0.W, PV.W, literal.x,
+; EG-NEXT:    8(1.121039e-44), 0(0.000000e+00)
 ; EG-NEXT:     LSHL * T0.W, PV.W, literal.x,
 ; EG-NEXT:    8(1.121039e-44), 0(0.000000e+00)
 ; EG-NEXT:     ASHR T0.X, PV.W, literal.x,

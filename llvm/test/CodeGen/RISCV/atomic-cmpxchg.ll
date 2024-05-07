@@ -41,6 +41,7 @@ define void @cmpxchg_i8_monotonic_monotonic(ptr %ptr, i8 %cmp, i8 %val) nounwind
 ; RV32IA-LABEL: cmpxchg_i8_monotonic_monotonic:
 ; RV32IA:       # %bb.0:
 ; RV32IA-NEXT:    andi a3, a0, -4
+; RV32IA-NEXT:    andi a0, a0, 3
 ; RV32IA-NEXT:    slli a0, a0, 3
 ; RV32IA-NEXT:    li a4, 255
 ; RV32IA-NEXT:    sll a4, a4, a0
@@ -77,6 +78,7 @@ define void @cmpxchg_i8_monotonic_monotonic(ptr %ptr, i8 %cmp, i8 %val) nounwind
 ; RV64IA-WMO-LABEL: cmpxchg_i8_monotonic_monotonic:
 ; RV64IA-WMO:       # %bb.0:
 ; RV64IA-WMO-NEXT:    andi a3, a0, -4
+; RV64IA-WMO-NEXT:    andi a0, a0, 3
 ; RV64IA-WMO-NEXT:    slli a0, a0, 3
 ; RV64IA-WMO-NEXT:    li a4, 255
 ; RV64IA-WMO-NEXT:    sllw a4, a4, a0
@@ -100,6 +102,7 @@ define void @cmpxchg_i8_monotonic_monotonic(ptr %ptr, i8 %cmp, i8 %val) nounwind
 ; RV64IA-ZACAS-LABEL: cmpxchg_i8_monotonic_monotonic:
 ; RV64IA-ZACAS:       # %bb.0:
 ; RV64IA-ZACAS-NEXT:    andi a3, a0, -4
+; RV64IA-ZACAS-NEXT:    andi a0, a0, 3
 ; RV64IA-ZACAS-NEXT:    slli a0, a0, 3
 ; RV64IA-ZACAS-NEXT:    li a4, 255
 ; RV64IA-ZACAS-NEXT:    sllw a4, a4, a0
@@ -128,6 +131,7 @@ define void @cmpxchg_i8_monotonic_monotonic(ptr %ptr, i8 %cmp, i8 %val) nounwind
 ; RV64IA-TSO-LABEL: cmpxchg_i8_monotonic_monotonic:
 ; RV64IA-TSO:       # %bb.0:
 ; RV64IA-TSO-NEXT:    andi a3, a0, -4
+; RV64IA-TSO-NEXT:    andi a0, a0, 3
 ; RV64IA-TSO-NEXT:    slli a0, a0, 3
 ; RV64IA-TSO-NEXT:    li a4, 255
 ; RV64IA-TSO-NEXT:    sllw a4, a4, a0
@@ -168,6 +172,7 @@ define void @cmpxchg_i8_acquire_monotonic(ptr %ptr, i8 %cmp, i8 %val) nounwind {
 ; RV32IA-WMO-LABEL: cmpxchg_i8_acquire_monotonic:
 ; RV32IA-WMO:       # %bb.0:
 ; RV32IA-WMO-NEXT:    andi a3, a0, -4
+; RV32IA-WMO-NEXT:    andi a0, a0, 3
 ; RV32IA-WMO-NEXT:    slli a0, a0, 3
 ; RV32IA-WMO-NEXT:    li a4, 255
 ; RV32IA-WMO-NEXT:    sll a4, a4, a0
@@ -191,6 +196,7 @@ define void @cmpxchg_i8_acquire_monotonic(ptr %ptr, i8 %cmp, i8 %val) nounwind {
 ; RV32IA-WMO-ZACAS-LABEL: cmpxchg_i8_acquire_monotonic:
 ; RV32IA-WMO-ZACAS:       # %bb.0:
 ; RV32IA-WMO-ZACAS-NEXT:    andi a3, a0, -4
+; RV32IA-WMO-ZACAS-NEXT:    andi a0, a0, 3
 ; RV32IA-WMO-ZACAS-NEXT:    slli a0, a0, 3
 ; RV32IA-WMO-ZACAS-NEXT:    li a4, 255
 ; RV32IA-WMO-ZACAS-NEXT:    sll a4, a4, a0
@@ -214,6 +220,7 @@ define void @cmpxchg_i8_acquire_monotonic(ptr %ptr, i8 %cmp, i8 %val) nounwind {
 ; RV32IA-TSO-LABEL: cmpxchg_i8_acquire_monotonic:
 ; RV32IA-TSO:       # %bb.0:
 ; RV32IA-TSO-NEXT:    andi a3, a0, -4
+; RV32IA-TSO-NEXT:    andi a0, a0, 3
 ; RV32IA-TSO-NEXT:    slli a0, a0, 3
 ; RV32IA-TSO-NEXT:    li a4, 255
 ; RV32IA-TSO-NEXT:    sll a4, a4, a0
@@ -237,6 +244,7 @@ define void @cmpxchg_i8_acquire_monotonic(ptr %ptr, i8 %cmp, i8 %val) nounwind {
 ; RV32IA-TSO-ZACAS-LABEL: cmpxchg_i8_acquire_monotonic:
 ; RV32IA-TSO-ZACAS:       # %bb.0:
 ; RV32IA-TSO-ZACAS-NEXT:    andi a3, a0, -4
+; RV32IA-TSO-ZACAS-NEXT:    andi a0, a0, 3
 ; RV32IA-TSO-ZACAS-NEXT:    slli a0, a0, 3
 ; RV32IA-TSO-ZACAS-NEXT:    li a4, 255
 ; RV32IA-TSO-ZACAS-NEXT:    sll a4, a4, a0
@@ -273,6 +281,7 @@ define void @cmpxchg_i8_acquire_monotonic(ptr %ptr, i8 %cmp, i8 %val) nounwind {
 ; RV64IA-WMO-LABEL: cmpxchg_i8_acquire_monotonic:
 ; RV64IA-WMO:       # %bb.0:
 ; RV64IA-WMO-NEXT:    andi a3, a0, -4
+; RV64IA-WMO-NEXT:    andi a0, a0, 3
 ; RV64IA-WMO-NEXT:    slli a0, a0, 3
 ; RV64IA-WMO-NEXT:    li a4, 255
 ; RV64IA-WMO-NEXT:    sllw a4, a4, a0
@@ -296,6 +305,7 @@ define void @cmpxchg_i8_acquire_monotonic(ptr %ptr, i8 %cmp, i8 %val) nounwind {
 ; RV64IA-WMO-ZACAS-LABEL: cmpxchg_i8_acquire_monotonic:
 ; RV64IA-WMO-ZACAS:       # %bb.0:
 ; RV64IA-WMO-ZACAS-NEXT:    andi a3, a0, -4
+; RV64IA-WMO-ZACAS-NEXT:    andi a0, a0, 3
 ; RV64IA-WMO-ZACAS-NEXT:    slli a0, a0, 3
 ; RV64IA-WMO-ZACAS-NEXT:    li a4, 255
 ; RV64IA-WMO-ZACAS-NEXT:    sllw a4, a4, a0
@@ -324,6 +334,7 @@ define void @cmpxchg_i8_acquire_monotonic(ptr %ptr, i8 %cmp, i8 %val) nounwind {
 ; RV64IA-TSO-LABEL: cmpxchg_i8_acquire_monotonic:
 ; RV64IA-TSO:       # %bb.0:
 ; RV64IA-TSO-NEXT:    andi a3, a0, -4
+; RV64IA-TSO-NEXT:    andi a0, a0, 3
 ; RV64IA-TSO-NEXT:    slli a0, a0, 3
 ; RV64IA-TSO-NEXT:    li a4, 255
 ; RV64IA-TSO-NEXT:    sllw a4, a4, a0
@@ -347,6 +358,7 @@ define void @cmpxchg_i8_acquire_monotonic(ptr %ptr, i8 %cmp, i8 %val) nounwind {
 ; RV64IA-TSO-ZACAS-LABEL: cmpxchg_i8_acquire_monotonic:
 ; RV64IA-TSO-ZACAS:       # %bb.0:
 ; RV64IA-TSO-ZACAS-NEXT:    andi a3, a0, -4
+; RV64IA-TSO-ZACAS-NEXT:    andi a0, a0, 3
 ; RV64IA-TSO-ZACAS-NEXT:    slli a0, a0, 3
 ; RV64IA-TSO-ZACAS-NEXT:    li a4, 255
 ; RV64IA-TSO-ZACAS-NEXT:    sllw a4, a4, a0
@@ -392,6 +404,7 @@ define void @cmpxchg_i8_acquire_acquire(ptr %ptr, i8 %cmp, i8 %val) nounwind {
 ; RV32IA-WMO-LABEL: cmpxchg_i8_acquire_acquire:
 ; RV32IA-WMO:       # %bb.0:
 ; RV32IA-WMO-NEXT:    andi a3, a0, -4
+; RV32IA-WMO-NEXT:    andi a0, a0, 3
 ; RV32IA-WMO-NEXT:    slli a0, a0, 3
 ; RV32IA-WMO-NEXT:    li a4, 255
 ; RV32IA-WMO-NEXT:    sll a4, a4, a0
@@ -415,6 +428,7 @@ define void @cmpxchg_i8_acquire_acquire(ptr %ptr, i8 %cmp, i8 %val) nounwind {
 ; RV32IA-WMO-ZACAS-LABEL: cmpxchg_i8_acquire_acquire:
 ; RV32IA-WMO-ZACAS:       # %bb.0:
 ; RV32IA-WMO-ZACAS-NEXT:    andi a3, a0, -4
+; RV32IA-WMO-ZACAS-NEXT:    andi a0, a0, 3
 ; RV32IA-WMO-ZACAS-NEXT:    slli a0, a0, 3
 ; RV32IA-WMO-ZACAS-NEXT:    li a4, 255
 ; RV32IA-WMO-ZACAS-NEXT:    sll a4, a4, a0
@@ -438,6 +452,7 @@ define void @cmpxchg_i8_acquire_acquire(ptr %ptr, i8 %cmp, i8 %val) nounwind {
 ; RV32IA-TSO-LABEL: cmpxchg_i8_acquire_acquire:
 ; RV32IA-TSO:       # %bb.0:
 ; RV32IA-TSO-NEXT:    andi a3, a0, -4
+; RV32IA-TSO-NEXT:    andi a0, a0, 3
 ; RV32IA-TSO-NEXT:    slli a0, a0, 3
 ; RV32IA-TSO-NEXT:    li a4, 255
 ; RV32IA-TSO-NEXT:    sll a4, a4, a0
@@ -461,6 +476,7 @@ define void @cmpxchg_i8_acquire_acquire(ptr %ptr, i8 %cmp, i8 %val) nounwind {
 ; RV32IA-TSO-ZACAS-LABEL: cmpxchg_i8_acquire_acquire:
 ; RV32IA-TSO-ZACAS:       # %bb.0:
 ; RV32IA-TSO-ZACAS-NEXT:    andi a3, a0, -4
+; RV32IA-TSO-ZACAS-NEXT:    andi a0, a0, 3
 ; RV32IA-TSO-ZACAS-NEXT:    slli a0, a0, 3
 ; RV32IA-TSO-ZACAS-NEXT:    li a4, 255
 ; RV32IA-TSO-ZACAS-NEXT:    sll a4, a4, a0
@@ -497,6 +513,7 @@ define void @cmpxchg_i8_acquire_acquire(ptr %ptr, i8 %cmp, i8 %val) nounwind {
 ; RV64IA-WMO-LABEL: cmpxchg_i8_acquire_acquire:
 ; RV64IA-WMO:       # %bb.0:
 ; RV64IA-WMO-NEXT:    andi a3, a0, -4
+; RV64IA-WMO-NEXT:    andi a0, a0, 3
 ; RV64IA-WMO-NEXT:    slli a0, a0, 3
 ; RV64IA-WMO-NEXT:    li a4, 255
 ; RV64IA-WMO-NEXT:    sllw a4, a4, a0
@@ -520,6 +537,7 @@ define void @cmpxchg_i8_acquire_acquire(ptr %ptr, i8 %cmp, i8 %val) nounwind {
 ; RV64IA-WMO-ZACAS-LABEL: cmpxchg_i8_acquire_acquire:
 ; RV64IA-WMO-ZACAS:       # %bb.0:
 ; RV64IA-WMO-ZACAS-NEXT:    andi a3, a0, -4
+; RV64IA-WMO-ZACAS-NEXT:    andi a0, a0, 3
 ; RV64IA-WMO-ZACAS-NEXT:    slli a0, a0, 3
 ; RV64IA-WMO-ZACAS-NEXT:    li a4, 255
 ; RV64IA-WMO-ZACAS-NEXT:    sllw a4, a4, a0
@@ -548,6 +566,7 @@ define void @cmpxchg_i8_acquire_acquire(ptr %ptr, i8 %cmp, i8 %val) nounwind {
 ; RV64IA-TSO-LABEL: cmpxchg_i8_acquire_acquire:
 ; RV64IA-TSO:       # %bb.0:
 ; RV64IA-TSO-NEXT:    andi a3, a0, -4
+; RV64IA-TSO-NEXT:    andi a0, a0, 3
 ; RV64IA-TSO-NEXT:    slli a0, a0, 3
 ; RV64IA-TSO-NEXT:    li a4, 255
 ; RV64IA-TSO-NEXT:    sllw a4, a4, a0
@@ -571,6 +590,7 @@ define void @cmpxchg_i8_acquire_acquire(ptr %ptr, i8 %cmp, i8 %val) nounwind {
 ; RV64IA-TSO-ZACAS-LABEL: cmpxchg_i8_acquire_acquire:
 ; RV64IA-TSO-ZACAS:       # %bb.0:
 ; RV64IA-TSO-ZACAS-NEXT:    andi a3, a0, -4
+; RV64IA-TSO-ZACAS-NEXT:    andi a0, a0, 3
 ; RV64IA-TSO-ZACAS-NEXT:    slli a0, a0, 3
 ; RV64IA-TSO-ZACAS-NEXT:    li a4, 255
 ; RV64IA-TSO-ZACAS-NEXT:    sllw a4, a4, a0
@@ -616,6 +636,7 @@ define void @cmpxchg_i8_release_monotonic(ptr %ptr, i8 %cmp, i8 %val) nounwind {
 ; RV32IA-WMO-LABEL: cmpxchg_i8_release_monotonic:
 ; RV32IA-WMO:       # %bb.0:
 ; RV32IA-WMO-NEXT:    andi a3, a0, -4
+; RV32IA-WMO-NEXT:    andi a0, a0, 3
 ; RV32IA-WMO-NEXT:    slli a0, a0, 3
 ; RV32IA-WMO-NEXT:    li a4, 255
 ; RV32IA-WMO-NEXT:    sll a4, a4, a0
@@ -639,6 +660,7 @@ define void @cmpxchg_i8_release_monotonic(ptr %ptr, i8 %cmp, i8 %val) nounwind {
 ; RV32IA-WMO-ZACAS-LABEL: cmpxchg_i8_release_monotonic:
 ; RV32IA-WMO-ZACAS:       # %bb.0:
 ; RV32IA-WMO-ZACAS-NEXT:    andi a3, a0, -4
+; RV32IA-WMO-ZACAS-NEXT:    andi a0, a0, 3
 ; RV32IA-WMO-ZACAS-NEXT:    slli a0, a0, 3
 ; RV32IA-WMO-ZACAS-NEXT:    li a4, 255
 ; RV32IA-WMO-ZACAS-NEXT:    sll a4, a4, a0
@@ -662,6 +684,7 @@ define void @cmpxchg_i8_release_monotonic(ptr %ptr, i8 %cmp, i8 %val) nounwind {
 ; RV32IA-TSO-LABEL: cmpxchg_i8_release_monotonic:
 ; RV32IA-TSO:       # %bb.0:
 ; RV32IA-TSO-NEXT:    andi a3, a0, -4
+; RV32IA-TSO-NEXT:    andi a0, a0, 3
 ; RV32IA-TSO-NEXT:    slli a0, a0, 3
 ; RV32IA-TSO-NEXT:    li a4, 255
 ; RV32IA-TSO-NEXT:    sll a4, a4, a0
@@ -685,6 +708,7 @@ define void @cmpxchg_i8_release_monotonic(ptr %ptr, i8 %cmp, i8 %val) nounwind {
 ; RV32IA-TSO-ZACAS-LABEL: cmpxchg_i8_release_monotonic:
 ; RV32IA-TSO-ZACAS:       # %bb.0:
 ; RV32IA-TSO-ZACAS-NEXT:    andi a3, a0, -4
+; RV32IA-TSO-ZACAS-NEXT:    andi a0, a0, 3
 ; RV32IA-TSO-ZACAS-NEXT:    slli a0, a0, 3
 ; RV32IA-TSO-ZACAS-NEXT:    li a4, 255
 ; RV32IA-TSO-ZACAS-NEXT:    sll a4, a4, a0
@@ -721,6 +745,7 @@ define void @cmpxchg_i8_release_monotonic(ptr %ptr, i8 %cmp, i8 %val) nounwind {
 ; RV64IA-WMO-LABEL: cmpxchg_i8_release_monotonic:
 ; RV64IA-WMO:       # %bb.0:
 ; RV64IA-WMO-NEXT:    andi a3, a0, -4
+; RV64IA-WMO-NEXT:    andi a0, a0, 3
 ; RV64IA-WMO-NEXT:    slli a0, a0, 3
 ; RV64IA-WMO-NEXT:    li a4, 255
 ; RV64IA-WMO-NEXT:    sllw a4, a4, a0
@@ -744,6 +769,7 @@ define void @cmpxchg_i8_release_monotonic(ptr %ptr, i8 %cmp, i8 %val) nounwind {
 ; RV64IA-WMO-ZACAS-LABEL: cmpxchg_i8_release_monotonic:
 ; RV64IA-WMO-ZACAS:       # %bb.0:
 ; RV64IA-WMO-ZACAS-NEXT:    andi a3, a0, -4
+; RV64IA-WMO-ZACAS-NEXT:    andi a0, a0, 3
 ; RV64IA-WMO-ZACAS-NEXT:    slli a0, a0, 3
 ; RV64IA-WMO-ZACAS-NEXT:    li a4, 255
 ; RV64IA-WMO-ZACAS-NEXT:    sllw a4, a4, a0
@@ -772,6 +798,7 @@ define void @cmpxchg_i8_release_monotonic(ptr %ptr, i8 %cmp, i8 %val) nounwind {
 ; RV64IA-TSO-LABEL: cmpxchg_i8_release_monotonic:
 ; RV64IA-TSO:       # %bb.0:
 ; RV64IA-TSO-NEXT:    andi a3, a0, -4
+; RV64IA-TSO-NEXT:    andi a0, a0, 3
 ; RV64IA-TSO-NEXT:    slli a0, a0, 3
 ; RV64IA-TSO-NEXT:    li a4, 255
 ; RV64IA-TSO-NEXT:    sllw a4, a4, a0
@@ -795,6 +822,7 @@ define void @cmpxchg_i8_release_monotonic(ptr %ptr, i8 %cmp, i8 %val) nounwind {
 ; RV64IA-TSO-ZACAS-LABEL: cmpxchg_i8_release_monotonic:
 ; RV64IA-TSO-ZACAS:       # %bb.0:
 ; RV64IA-TSO-ZACAS-NEXT:    andi a3, a0, -4
+; RV64IA-TSO-ZACAS-NEXT:    andi a0, a0, 3
 ; RV64IA-TSO-ZACAS-NEXT:    slli a0, a0, 3
 ; RV64IA-TSO-ZACAS-NEXT:    li a4, 255
 ; RV64IA-TSO-ZACAS-NEXT:    sllw a4, a4, a0
@@ -840,6 +868,7 @@ define void @cmpxchg_i8_release_acquire(ptr %ptr, i8 %cmp, i8 %val) nounwind {
 ; RV32IA-WMO-LABEL: cmpxchg_i8_release_acquire:
 ; RV32IA-WMO:       # %bb.0:
 ; RV32IA-WMO-NEXT:    andi a3, a0, -4
+; RV32IA-WMO-NEXT:    andi a0, a0, 3
 ; RV32IA-WMO-NEXT:    slli a0, a0, 3
 ; RV32IA-WMO-NEXT:    li a4, 255
 ; RV32IA-WMO-NEXT:    sll a4, a4, a0
@@ -863,6 +892,7 @@ define void @cmpxchg_i8_release_acquire(ptr %ptr, i8 %cmp, i8 %val) nounwind {
 ; RV32IA-WMO-ZACAS-LABEL: cmpxchg_i8_release_acquire:
 ; RV32IA-WMO-ZACAS:       # %bb.0:
 ; RV32IA-WMO-ZACAS-NEXT:    andi a3, a0, -4
+; RV32IA-WMO-ZACAS-NEXT:    andi a0, a0, 3
 ; RV32IA-WMO-ZACAS-NEXT:    slli a0, a0, 3
 ; RV32IA-WMO-ZACAS-NEXT:    li a4, 255
 ; RV32IA-WMO-ZACAS-NEXT:    sll a4, a4, a0
@@ -886,6 +916,7 @@ define void @cmpxchg_i8_release_acquire(ptr %ptr, i8 %cmp, i8 %val) nounwind {
 ; RV32IA-TSO-LABEL: cmpxchg_i8_release_acquire:
 ; RV32IA-TSO:       # %bb.0:
 ; RV32IA-TSO-NEXT:    andi a3, a0, -4
+; RV32IA-TSO-NEXT:    andi a0, a0, 3
 ; RV32IA-TSO-NEXT:    slli a0, a0, 3
 ; RV32IA-TSO-NEXT:    li a4, 255
 ; RV32IA-TSO-NEXT:    sll a4, a4, a0
@@ -909,6 +940,7 @@ define void @cmpxchg_i8_release_acquire(ptr %ptr, i8 %cmp, i8 %val) nounwind {
 ; RV32IA-TSO-ZACAS-LABEL: cmpxchg_i8_release_acquire:
 ; RV32IA-TSO-ZACAS:       # %bb.0:
 ; RV32IA-TSO-ZACAS-NEXT:    andi a3, a0, -4
+; RV32IA-TSO-ZACAS-NEXT:    andi a0, a0, 3
 ; RV32IA-TSO-ZACAS-NEXT:    slli a0, a0, 3
 ; RV32IA-TSO-ZACAS-NEXT:    li a4, 255
 ; RV32IA-TSO-ZACAS-NEXT:    sll a4, a4, a0
@@ -945,6 +977,7 @@ define void @cmpxchg_i8_release_acquire(ptr %ptr, i8 %cmp, i8 %val) nounwind {
 ; RV64IA-WMO-LABEL: cmpxchg_i8_release_acquire:
 ; RV64IA-WMO:       # %bb.0:
 ; RV64IA-WMO-NEXT:    andi a3, a0, -4
+; RV64IA-WMO-NEXT:    andi a0, a0, 3
 ; RV64IA-WMO-NEXT:    slli a0, a0, 3
 ; RV64IA-WMO-NEXT:    li a4, 255
 ; RV64IA-WMO-NEXT:    sllw a4, a4, a0
@@ -968,6 +1001,7 @@ define void @cmpxchg_i8_release_acquire(ptr %ptr, i8 %cmp, i8 %val) nounwind {
 ; RV64IA-WMO-ZACAS-LABEL: cmpxchg_i8_release_acquire:
 ; RV64IA-WMO-ZACAS:       # %bb.0:
 ; RV64IA-WMO-ZACAS-NEXT:    andi a3, a0, -4
+; RV64IA-WMO-ZACAS-NEXT:    andi a0, a0, 3
 ; RV64IA-WMO-ZACAS-NEXT:    slli a0, a0, 3
 ; RV64IA-WMO-ZACAS-NEXT:    li a4, 255
 ; RV64IA-WMO-ZACAS-NEXT:    sllw a4, a4, a0
@@ -996,6 +1030,7 @@ define void @cmpxchg_i8_release_acquire(ptr %ptr, i8 %cmp, i8 %val) nounwind {
 ; RV64IA-TSO-LABEL: cmpxchg_i8_release_acquire:
 ; RV64IA-TSO:       # %bb.0:
 ; RV64IA-TSO-NEXT:    andi a3, a0, -4
+; RV64IA-TSO-NEXT:    andi a0, a0, 3
 ; RV64IA-TSO-NEXT:    slli a0, a0, 3
 ; RV64IA-TSO-NEXT:    li a4, 255
 ; RV64IA-TSO-NEXT:    sllw a4, a4, a0
@@ -1019,6 +1054,7 @@ define void @cmpxchg_i8_release_acquire(ptr %ptr, i8 %cmp, i8 %val) nounwind {
 ; RV64IA-TSO-ZACAS-LABEL: cmpxchg_i8_release_acquire:
 ; RV64IA-TSO-ZACAS:       # %bb.0:
 ; RV64IA-TSO-ZACAS-NEXT:    andi a3, a0, -4
+; RV64IA-TSO-ZACAS-NEXT:    andi a0, a0, 3
 ; RV64IA-TSO-ZACAS-NEXT:    slli a0, a0, 3
 ; RV64IA-TSO-ZACAS-NEXT:    li a4, 255
 ; RV64IA-TSO-ZACAS-NEXT:    sllw a4, a4, a0
@@ -1064,6 +1100,7 @@ define void @cmpxchg_i8_acq_rel_monotonic(ptr %ptr, i8 %cmp, i8 %val) nounwind {
 ; RV32IA-WMO-LABEL: cmpxchg_i8_acq_rel_monotonic:
 ; RV32IA-WMO:       # %bb.0:
 ; RV32IA-WMO-NEXT:    andi a3, a0, -4
+; RV32IA-WMO-NEXT:    andi a0, a0, 3
 ; RV32IA-WMO-NEXT:    slli a0, a0, 3
 ; RV32IA-WMO-NEXT:    li a4, 255
 ; RV32IA-WMO-NEXT:    sll a4, a4, a0
@@ -1087,6 +1124,7 @@ define void @cmpxchg_i8_acq_rel_monotonic(ptr %ptr, i8 %cmp, i8 %val) nounwind {
 ; RV32IA-WMO-ZACAS-LABEL: cmpxchg_i8_acq_rel_monotonic:
 ; RV32IA-WMO-ZACAS:       # %bb.0:
 ; RV32IA-WMO-ZACAS-NEXT:    andi a3, a0, -4
+; RV32IA-WMO-ZACAS-NEXT:    andi a0, a0, 3
 ; RV32IA-WMO-ZACAS-NEXT:    slli a0, a0, 3
 ; RV32IA-WMO-ZACAS-NEXT:    li a4, 255
 ; RV32IA-WMO-ZACAS-NEXT:    sll a4, a4, a0
@@ -1110,6 +1148,7 @@ define void @cmpxchg_i8_acq_rel_monotonic(ptr %ptr, i8 %cmp, i8 %val) nounwind {
 ; RV32IA-TSO-LABEL: cmpxchg_i8_acq_rel_monotonic:
 ; RV32IA-TSO:       # %bb.0:
 ; RV32IA-TSO-NEXT:    andi a3, a0, -4
+; RV32IA-TSO-NEXT:    andi a0, a0, 3
 ; RV32IA-TSO-NEXT:    slli a0, a0, 3
 ; RV32IA-TSO-NEXT:    li a4, 255
 ; RV32IA-TSO-NEXT:    sll a4, a4, a0
@@ -1133,6 +1172,7 @@ define void @cmpxchg_i8_acq_rel_monotonic(ptr %ptr, i8 %cmp, i8 %val) nounwind {
 ; RV32IA-TSO-ZACAS-LABEL: cmpxchg_i8_acq_rel_monotonic:
 ; RV32IA-TSO-ZACAS:       # %bb.0:
 ; RV32IA-TSO-ZACAS-NEXT:    andi a3, a0, -4
+; RV32IA-TSO-ZACAS-NEXT:    andi a0, a0, 3
 ; RV32IA-TSO-ZACAS-NEXT:    slli a0, a0, 3
 ; RV32IA-TSO-ZACAS-NEXT:    li a4, 255
 ; RV32IA-TSO-ZACAS-NEXT:    sll a4, a4, a0
@@ -1169,6 +1209,7 @@ define void @cmpxchg_i8_acq_rel_monotonic(ptr %ptr, i8 %cmp, i8 %val) nounwind {
 ; RV64IA-WMO-LABEL: cmpxchg_i8_acq_rel_monotonic:
 ; RV64IA-WMO:       # %bb.0:
 ; RV64IA-WMO-NEXT:    andi a3, a0, -4
+; RV64IA-WMO-NEXT:    andi a0, a0, 3
 ; RV64IA-WMO-NEXT:    slli a0, a0, 3
 ; RV64IA-WMO-NEXT:    li a4, 255
 ; RV64IA-WMO-NEXT:    sllw a4, a4, a0
@@ -1192,6 +1233,7 @@ define void @cmpxchg_i8_acq_rel_monotonic(ptr %ptr, i8 %cmp, i8 %val) nounwind {
 ; RV64IA-WMO-ZACAS-LABEL: cmpxchg_i8_acq_rel_monotonic:
 ; RV64IA-WMO-ZACAS:       # %bb.0:
 ; RV64IA-WMO-ZACAS-NEXT:    andi a3, a0, -4
+; RV64IA-WMO-ZACAS-NEXT:    andi a0, a0, 3
 ; RV64IA-WMO-ZACAS-NEXT:    slli a0, a0, 3
 ; RV64IA-WMO-ZACAS-NEXT:    li a4, 255
 ; RV64IA-WMO-ZACAS-NEXT:    sllw a4, a4, a0
@@ -1220,6 +1262,7 @@ define void @cmpxchg_i8_acq_rel_monotonic(ptr %ptr, i8 %cmp, i8 %val) nounwind {
 ; RV64IA-TSO-LABEL: cmpxchg_i8_acq_rel_monotonic:
 ; RV64IA-TSO:       # %bb.0:
 ; RV64IA-TSO-NEXT:    andi a3, a0, -4
+; RV64IA-TSO-NEXT:    andi a0, a0, 3
 ; RV64IA-TSO-NEXT:    slli a0, a0, 3
 ; RV64IA-TSO-NEXT:    li a4, 255
 ; RV64IA-TSO-NEXT:    sllw a4, a4, a0
@@ -1243,6 +1286,7 @@ define void @cmpxchg_i8_acq_rel_monotonic(ptr %ptr, i8 %cmp, i8 %val) nounwind {
 ; RV64IA-TSO-ZACAS-LABEL: cmpxchg_i8_acq_rel_monotonic:
 ; RV64IA-TSO-ZACAS:       # %bb.0:
 ; RV64IA-TSO-ZACAS-NEXT:    andi a3, a0, -4
+; RV64IA-TSO-ZACAS-NEXT:    andi a0, a0, 3
 ; RV64IA-TSO-ZACAS-NEXT:    slli a0, a0, 3
 ; RV64IA-TSO-ZACAS-NEXT:    li a4, 255
 ; RV64IA-TSO-ZACAS-NEXT:    sllw a4, a4, a0
@@ -1288,6 +1332,7 @@ define void @cmpxchg_i8_acq_rel_acquire(ptr %ptr, i8 %cmp, i8 %val) nounwind {
 ; RV32IA-WMO-LABEL: cmpxchg_i8_acq_rel_acquire:
 ; RV32IA-WMO:       # %bb.0:
 ; RV32IA-WMO-NEXT:    andi a3, a0, -4
+; RV32IA-WMO-NEXT:    andi a0, a0, 3
 ; RV32IA-WMO-NEXT:    slli a0, a0, 3
 ; RV32IA-WMO-NEXT:    li a4, 255
 ; RV32IA-WMO-NEXT:    sll a4, a4, a0
@@ -1311,6 +1356,7 @@ define void @cmpxchg_i8_acq_rel_acquire(ptr %ptr, i8 %cmp, i8 %val) nounwind {
 ; RV32IA-WMO-ZACAS-LABEL: cmpxchg_i8_acq_rel_acquire:
 ; RV32IA-WMO-ZACAS:       # %bb.0:
 ; RV32IA-WMO-ZACAS-NEXT:    andi a3, a0, -4
+; RV32IA-WMO-ZACAS-NEXT:    andi a0, a0, 3
 ; RV32IA-WMO-ZACAS-NEXT:    slli a0, a0, 3
 ; RV32IA-WMO-ZACAS-NEXT:    li a4, 255
 ; RV32IA-WMO-ZACAS-NEXT:    sll a4, a4, a0
@@ -1334,6 +1380,7 @@ define void @cmpxchg_i8_acq_rel_acquire(ptr %ptr, i8 %cmp, i8 %val) nounwind {
 ; RV32IA-TSO-LABEL: cmpxchg_i8_acq_rel_acquire:
 ; RV32IA-TSO:       # %bb.0:
 ; RV32IA-TSO-NEXT:    andi a3, a0, -4
+; RV32IA-TSO-NEXT:    andi a0, a0, 3
 ; RV32IA-TSO-NEXT:    slli a0, a0, 3
 ; RV32IA-TSO-NEXT:    li a4, 255
 ; RV32IA-TSO-NEXT:    sll a4, a4, a0
@@ -1357,6 +1404,7 @@ define void @cmpxchg_i8_acq_rel_acquire(ptr %ptr, i8 %cmp, i8 %val) nounwind {
 ; RV32IA-TSO-ZACAS-LABEL: cmpxchg_i8_acq_rel_acquire:
 ; RV32IA-TSO-ZACAS:       # %bb.0:
 ; RV32IA-TSO-ZACAS-NEXT:    andi a3, a0, -4
+; RV32IA-TSO-ZACAS-NEXT:    andi a0, a0, 3
 ; RV32IA-TSO-ZACAS-NEXT:    slli a0, a0, 3
 ; RV32IA-TSO-ZACAS-NEXT:    li a4, 255
 ; RV32IA-TSO-ZACAS-NEXT:    sll a4, a4, a0
@@ -1393,6 +1441,7 @@ define void @cmpxchg_i8_acq_rel_acquire(ptr %ptr, i8 %cmp, i8 %val) nounwind {
 ; RV64IA-WMO-LABEL: cmpxchg_i8_acq_rel_acquire:
 ; RV64IA-WMO:       # %bb.0:
 ; RV64IA-WMO-NEXT:    andi a3, a0, -4
+; RV64IA-WMO-NEXT:    andi a0, a0, 3
 ; RV64IA-WMO-NEXT:    slli a0, a0, 3
 ; RV64IA-WMO-NEXT:    li a4, 255
 ; RV64IA-WMO-NEXT:    sllw a4, a4, a0
@@ -1416,6 +1465,7 @@ define void @cmpxchg_i8_acq_rel_acquire(ptr %ptr, i8 %cmp, i8 %val) nounwind {
 ; RV64IA-WMO-ZACAS-LABEL: cmpxchg_i8_acq_rel_acquire:
 ; RV64IA-WMO-ZACAS:       # %bb.0:
 ; RV64IA-WMO-ZACAS-NEXT:    andi a3, a0, -4
+; RV64IA-WMO-ZACAS-NEXT:    andi a0, a0, 3
 ; RV64IA-WMO-ZACAS-NEXT:    slli a0, a0, 3
 ; RV64IA-WMO-ZACAS-NEXT:    li a4, 255
 ; RV64IA-WMO-ZACAS-NEXT:    sllw a4, a4, a0
@@ -1444,6 +1494,7 @@ define void @cmpxchg_i8_acq_rel_acquire(ptr %ptr, i8 %cmp, i8 %val) nounwind {
 ; RV64IA-TSO-LABEL: cmpxchg_i8_acq_rel_acquire:
 ; RV64IA-TSO:       # %bb.0:
 ; RV64IA-TSO-NEXT:    andi a3, a0, -4
+; RV64IA-TSO-NEXT:    andi a0, a0, 3
 ; RV64IA-TSO-NEXT:    slli a0, a0, 3
 ; RV64IA-TSO-NEXT:    li a4, 255
 ; RV64IA-TSO-NEXT:    sllw a4, a4, a0
@@ -1467,6 +1518,7 @@ define void @cmpxchg_i8_acq_rel_acquire(ptr %ptr, i8 %cmp, i8 %val) nounwind {
 ; RV64IA-TSO-ZACAS-LABEL: cmpxchg_i8_acq_rel_acquire:
 ; RV64IA-TSO-ZACAS:       # %bb.0:
 ; RV64IA-TSO-ZACAS-NEXT:    andi a3, a0, -4
+; RV64IA-TSO-ZACAS-NEXT:    andi a0, a0, 3
 ; RV64IA-TSO-ZACAS-NEXT:    slli a0, a0, 3
 ; RV64IA-TSO-ZACAS-NEXT:    li a4, 255
 ; RV64IA-TSO-ZACAS-NEXT:    sllw a4, a4, a0
@@ -1512,6 +1564,7 @@ define void @cmpxchg_i8_seq_cst_monotonic(ptr %ptr, i8 %cmp, i8 %val) nounwind {
 ; RV32IA-LABEL: cmpxchg_i8_seq_cst_monotonic:
 ; RV32IA:       # %bb.0:
 ; RV32IA-NEXT:    andi a3, a0, -4
+; RV32IA-NEXT:    andi a0, a0, 3
 ; RV32IA-NEXT:    slli a0, a0, 3
 ; RV32IA-NEXT:    li a4, 255
 ; RV32IA-NEXT:    sll a4, a4, a0
@@ -1548,6 +1601,7 @@ define void @cmpxchg_i8_seq_cst_monotonic(ptr %ptr, i8 %cmp, i8 %val) nounwind {
 ; RV64IA-WMO-LABEL: cmpxchg_i8_seq_cst_monotonic:
 ; RV64IA-WMO:       # %bb.0:
 ; RV64IA-WMO-NEXT:    andi a3, a0, -4
+; RV64IA-WMO-NEXT:    andi a0, a0, 3
 ; RV64IA-WMO-NEXT:    slli a0, a0, 3
 ; RV64IA-WMO-NEXT:    li a4, 255
 ; RV64IA-WMO-NEXT:    sllw a4, a4, a0
@@ -1571,6 +1625,7 @@ define void @cmpxchg_i8_seq_cst_monotonic(ptr %ptr, i8 %cmp, i8 %val) nounwind {
 ; RV64IA-ZACAS-LABEL: cmpxchg_i8_seq_cst_monotonic:
 ; RV64IA-ZACAS:       # %bb.0:
 ; RV64IA-ZACAS-NEXT:    andi a3, a0, -4
+; RV64IA-ZACAS-NEXT:    andi a0, a0, 3
 ; RV64IA-ZACAS-NEXT:    slli a0, a0, 3
 ; RV64IA-ZACAS-NEXT:    li a4, 255
 ; RV64IA-ZACAS-NEXT:    sllw a4, a4, a0
@@ -1599,6 +1654,7 @@ define void @cmpxchg_i8_seq_cst_monotonic(ptr %ptr, i8 %cmp, i8 %val) nounwind {
 ; RV64IA-TSO-LABEL: cmpxchg_i8_seq_cst_monotonic:
 ; RV64IA-TSO:       # %bb.0:
 ; RV64IA-TSO-NEXT:    andi a3, a0, -4
+; RV64IA-TSO-NEXT:    andi a0, a0, 3
 ; RV64IA-TSO-NEXT:    slli a0, a0, 3
 ; RV64IA-TSO-NEXT:    li a4, 255
 ; RV64IA-TSO-NEXT:    sllw a4, a4, a0
@@ -1644,6 +1700,7 @@ define void @cmpxchg_i8_seq_cst_acquire(ptr %ptr, i8 %cmp, i8 %val) nounwind {
 ; RV32IA-LABEL: cmpxchg_i8_seq_cst_acquire:
 ; RV32IA:       # %bb.0:
 ; RV32IA-NEXT:    andi a3, a0, -4
+; RV32IA-NEXT:    andi a0, a0, 3
 ; RV32IA-NEXT:    slli a0, a0, 3
 ; RV32IA-NEXT:    li a4, 255
 ; RV32IA-NEXT:    sll a4, a4, a0
@@ -1680,6 +1737,7 @@ define void @cmpxchg_i8_seq_cst_acquire(ptr %ptr, i8 %cmp, i8 %val) nounwind {
 ; RV64IA-WMO-LABEL: cmpxchg_i8_seq_cst_acquire:
 ; RV64IA-WMO:       # %bb.0:
 ; RV64IA-WMO-NEXT:    andi a3, a0, -4
+; RV64IA-WMO-NEXT:    andi a0, a0, 3
 ; RV64IA-WMO-NEXT:    slli a0, a0, 3
 ; RV64IA-WMO-NEXT:    li a4, 255
 ; RV64IA-WMO-NEXT:    sllw a4, a4, a0
@@ -1703,6 +1761,7 @@ define void @cmpxchg_i8_seq_cst_acquire(ptr %ptr, i8 %cmp, i8 %val) nounwind {
 ; RV64IA-ZACAS-LABEL: cmpxchg_i8_seq_cst_acquire:
 ; RV64IA-ZACAS:       # %bb.0:
 ; RV64IA-ZACAS-NEXT:    andi a3, a0, -4
+; RV64IA-ZACAS-NEXT:    andi a0, a0, 3
 ; RV64IA-ZACAS-NEXT:    slli a0, a0, 3
 ; RV64IA-ZACAS-NEXT:    li a4, 255
 ; RV64IA-ZACAS-NEXT:    sllw a4, a4, a0
@@ -1731,6 +1790,7 @@ define void @cmpxchg_i8_seq_cst_acquire(ptr %ptr, i8 %cmp, i8 %val) nounwind {
 ; RV64IA-TSO-LABEL: cmpxchg_i8_seq_cst_acquire:
 ; RV64IA-TSO:       # %bb.0:
 ; RV64IA-TSO-NEXT:    andi a3, a0, -4
+; RV64IA-TSO-NEXT:    andi a0, a0, 3
 ; RV64IA-TSO-NEXT:    slli a0, a0, 3
 ; RV64IA-TSO-NEXT:    li a4, 255
 ; RV64IA-TSO-NEXT:    sllw a4, a4, a0
@@ -1776,6 +1836,7 @@ define void @cmpxchg_i8_seq_cst_seq_cst(ptr %ptr, i8 %cmp, i8 %val) nounwind {
 ; RV32IA-LABEL: cmpxchg_i8_seq_cst_seq_cst:
 ; RV32IA:       # %bb.0:
 ; RV32IA-NEXT:    andi a3, a0, -4
+; RV32IA-NEXT:    andi a0, a0, 3
 ; RV32IA-NEXT:    slli a0, a0, 3
 ; RV32IA-NEXT:    li a4, 255
 ; RV32IA-NEXT:    sll a4, a4, a0
@@ -1812,6 +1873,7 @@ define void @cmpxchg_i8_seq_cst_seq_cst(ptr %ptr, i8 %cmp, i8 %val) nounwind {
 ; RV64IA-WMO-LABEL: cmpxchg_i8_seq_cst_seq_cst:
 ; RV64IA-WMO:       # %bb.0:
 ; RV64IA-WMO-NEXT:    andi a3, a0, -4
+; RV64IA-WMO-NEXT:    andi a0, a0, 3
 ; RV64IA-WMO-NEXT:    slli a0, a0, 3
 ; RV64IA-WMO-NEXT:    li a4, 255
 ; RV64IA-WMO-NEXT:    sllw a4, a4, a0
@@ -1835,6 +1897,7 @@ define void @cmpxchg_i8_seq_cst_seq_cst(ptr %ptr, i8 %cmp, i8 %val) nounwind {
 ; RV64IA-ZACAS-LABEL: cmpxchg_i8_seq_cst_seq_cst:
 ; RV64IA-ZACAS:       # %bb.0:
 ; RV64IA-ZACAS-NEXT:    andi a3, a0, -4
+; RV64IA-ZACAS-NEXT:    andi a0, a0, 3
 ; RV64IA-ZACAS-NEXT:    slli a0, a0, 3
 ; RV64IA-ZACAS-NEXT:    li a4, 255
 ; RV64IA-ZACAS-NEXT:    sllw a4, a4, a0
@@ -1863,6 +1926,7 @@ define void @cmpxchg_i8_seq_cst_seq_cst(ptr %ptr, i8 %cmp, i8 %val) nounwind {
 ; RV64IA-TSO-LABEL: cmpxchg_i8_seq_cst_seq_cst:
 ; RV64IA-TSO:       # %bb.0:
 ; RV64IA-TSO-NEXT:    andi a3, a0, -4
+; RV64IA-TSO-NEXT:    andi a0, a0, 3
 ; RV64IA-TSO-NEXT:    slli a0, a0, 3
 ; RV64IA-TSO-NEXT:    li a4, 255
 ; RV64IA-TSO-NEXT:    sllw a4, a4, a0
@@ -1908,6 +1972,7 @@ define void @cmpxchg_i16_monotonic_monotonic(ptr %ptr, i16 %cmp, i16 %val) nounw
 ; RV32IA-LABEL: cmpxchg_i16_monotonic_monotonic:
 ; RV32IA:       # %bb.0:
 ; RV32IA-NEXT:    andi a3, a0, -4
+; RV32IA-NEXT:    andi a0, a0, 3
 ; RV32IA-NEXT:    slli a0, a0, 3
 ; RV32IA-NEXT:    lui a4, 16
 ; RV32IA-NEXT:    addi a4, a4, -1
@@ -1945,6 +2010,7 @@ define void @cmpxchg_i16_monotonic_monotonic(ptr %ptr, i16 %cmp, i16 %val) nounw
 ; RV64IA-WMO-LABEL: cmpxchg_i16_monotonic_monotonic:
 ; RV64IA-WMO:       # %bb.0:
 ; RV64IA-WMO-NEXT:    andi a3, a0, -4
+; RV64IA-WMO-NEXT:    andi a0, a0, 3
 ; RV64IA-WMO-NEXT:    slli a0, a0, 3
 ; RV64IA-WMO-NEXT:    lui a4, 16
 ; RV64IA-WMO-NEXT:    addi a4, a4, -1
@@ -1969,6 +2035,7 @@ define void @cmpxchg_i16_monotonic_monotonic(ptr %ptr, i16 %cmp, i16 %val) nounw
 ; RV64IA-ZACAS-LABEL: cmpxchg_i16_monotonic_monotonic:
 ; RV64IA-ZACAS:       # %bb.0:
 ; RV64IA-ZACAS-NEXT:    andi a3, a0, -4
+; RV64IA-ZACAS-NEXT:    andi a0, a0, 3
 ; RV64IA-ZACAS-NEXT:    slli a0, a0, 3
 ; RV64IA-ZACAS-NEXT:    lui a4, 16
 ; RV64IA-ZACAS-NEXT:    addi a4, a4, -1
@@ -1998,6 +2065,7 @@ define void @cmpxchg_i16_monotonic_monotonic(ptr %ptr, i16 %cmp, i16 %val) nounw
 ; RV64IA-TSO-LABEL: cmpxchg_i16_monotonic_monotonic:
 ; RV64IA-TSO:       # %bb.0:
 ; RV64IA-TSO-NEXT:    andi a3, a0, -4
+; RV64IA-TSO-NEXT:    andi a0, a0, 3
 ; RV64IA-TSO-NEXT:    slli a0, a0, 3
 ; RV64IA-TSO-NEXT:    lui a4, 16
 ; RV64IA-TSO-NEXT:    addi a4, a4, -1
@@ -2039,6 +2107,7 @@ define void @cmpxchg_i16_acquire_monotonic(ptr %ptr, i16 %cmp, i16 %val) nounwin
 ; RV32IA-WMO-LABEL: cmpxchg_i16_acquire_monotonic:
 ; RV32IA-WMO:       # %bb.0:
 ; RV32IA-WMO-NEXT:    andi a3, a0, -4
+; RV32IA-WMO-NEXT:    andi a0, a0, 3
 ; RV32IA-WMO-NEXT:    slli a0, a0, 3
 ; RV32IA-WMO-NEXT:    lui a4, 16
 ; RV32IA-WMO-NEXT:    addi a4, a4, -1
@@ -2063,6 +2132,7 @@ define void @cmpxchg_i16_acquire_monotonic(ptr %ptr, i16 %cmp, i16 %val) nounwin
 ; RV32IA-WMO-ZACAS-LABEL: cmpxchg_i16_acquire_monotonic:
 ; RV32IA-WMO-ZACAS:       # %bb.0:
 ; RV32IA-WMO-ZACAS-NEXT:    andi a3, a0, -4
+; RV32IA-WMO-ZACAS-NEXT:    andi a0, a0, 3
 ; RV32IA-WMO-ZACAS-NEXT:    slli a0, a0, 3
 ; RV32IA-WMO-ZACAS-NEXT:    lui a4, 16
 ; RV32IA-WMO-ZACAS-NEXT:    addi a4, a4, -1
@@ -2087,6 +2157,7 @@ define void @cmpxchg_i16_acquire_monotonic(ptr %ptr, i16 %cmp, i16 %val) nounwin
 ; RV32IA-TSO-LABEL: cmpxchg_i16_acquire_monotonic:
 ; RV32IA-TSO:       # %bb.0:
 ; RV32IA-TSO-NEXT:    andi a3, a0, -4
+; RV32IA-TSO-NEXT:    andi a0, a0, 3
 ; RV32IA-TSO-NEXT:    slli a0, a0, 3
 ; RV32IA-TSO-NEXT:    lui a4, 16
 ; RV32IA-TSO-NEXT:    addi a4, a4, -1
@@ -2111,6 +2182,7 @@ define void @cmpxchg_i16_acquire_monotonic(ptr %ptr, i16 %cmp, i16 %val) nounwin
 ; RV32IA-TSO-ZACAS-LABEL: cmpxchg_i16_acquire_monotonic:
 ; RV32IA-TSO-ZACAS:       # %bb.0:
 ; RV32IA-TSO-ZACAS-NEXT:    andi a3, a0, -4
+; RV32IA-TSO-ZACAS-NEXT:    andi a0, a0, 3
 ; RV32IA-TSO-ZACAS-NEXT:    slli a0, a0, 3
 ; RV32IA-TSO-ZACAS-NEXT:    lui a4, 16
 ; RV32IA-TSO-ZACAS-NEXT:    addi a4, a4, -1
@@ -2148,6 +2220,7 @@ define void @cmpxchg_i16_acquire_monotonic(ptr %ptr, i16 %cmp, i16 %val) nounwin
 ; RV64IA-WMO-LABEL: cmpxchg_i16_acquire_monotonic:
 ; RV64IA-WMO:       # %bb.0:
 ; RV64IA-WMO-NEXT:    andi a3, a0, -4
+; RV64IA-WMO-NEXT:    andi a0, a0, 3
 ; RV64IA-WMO-NEXT:    slli a0, a0, 3
 ; RV64IA-WMO-NEXT:    lui a4, 16
 ; RV64IA-WMO-NEXT:    addi a4, a4, -1
@@ -2172,6 +2245,7 @@ define void @cmpxchg_i16_acquire_monotonic(ptr %ptr, i16 %cmp, i16 %val) nounwin
 ; RV64IA-WMO-ZACAS-LABEL: cmpxchg_i16_acquire_monotonic:
 ; RV64IA-WMO-ZACAS:       # %bb.0:
 ; RV64IA-WMO-ZACAS-NEXT:    andi a3, a0, -4
+; RV64IA-WMO-ZACAS-NEXT:    andi a0, a0, 3
 ; RV64IA-WMO-ZACAS-NEXT:    slli a0, a0, 3
 ; RV64IA-WMO-ZACAS-NEXT:    lui a4, 16
 ; RV64IA-WMO-ZACAS-NEXT:    addi a4, a4, -1
@@ -2201,6 +2275,7 @@ define void @cmpxchg_i16_acquire_monotonic(ptr %ptr, i16 %cmp, i16 %val) nounwin
 ; RV64IA-TSO-LABEL: cmpxchg_i16_acquire_monotonic:
 ; RV64IA-TSO:       # %bb.0:
 ; RV64IA-TSO-NEXT:    andi a3, a0, -4
+; RV64IA-TSO-NEXT:    andi a0, a0, 3
 ; RV64IA-TSO-NEXT:    slli a0, a0, 3
 ; RV64IA-TSO-NEXT:    lui a4, 16
 ; RV64IA-TSO-NEXT:    addi a4, a4, -1
@@ -2225,6 +2300,7 @@ define void @cmpxchg_i16_acquire_monotonic(ptr %ptr, i16 %cmp, i16 %val) nounwin
 ; RV64IA-TSO-ZACAS-LABEL: cmpxchg_i16_acquire_monotonic:
 ; RV64IA-TSO-ZACAS:       # %bb.0:
 ; RV64IA-TSO-ZACAS-NEXT:    andi a3, a0, -4
+; RV64IA-TSO-ZACAS-NEXT:    andi a0, a0, 3
 ; RV64IA-TSO-ZACAS-NEXT:    slli a0, a0, 3
 ; RV64IA-TSO-ZACAS-NEXT:    lui a4, 16
 ; RV64IA-TSO-ZACAS-NEXT:    addi a4, a4, -1
@@ -2271,6 +2347,7 @@ define void @cmpxchg_i16_acquire_acquire(ptr %ptr, i16 %cmp, i16 %val) nounwind 
 ; RV32IA-WMO-LABEL: cmpxchg_i16_acquire_acquire:
 ; RV32IA-WMO:       # %bb.0:
 ; RV32IA-WMO-NEXT:    andi a3, a0, -4
+; RV32IA-WMO-NEXT:    andi a0, a0, 3
 ; RV32IA-WMO-NEXT:    slli a0, a0, 3
 ; RV32IA-WMO-NEXT:    lui a4, 16
 ; RV32IA-WMO-NEXT:    addi a4, a4, -1
@@ -2295,6 +2372,7 @@ define void @cmpxchg_i16_acquire_acquire(ptr %ptr, i16 %cmp, i16 %val) nounwind 
 ; RV32IA-WMO-ZACAS-LABEL: cmpxchg_i16_acquire_acquire:
 ; RV32IA-WMO-ZACAS:       # %bb.0:
 ; RV32IA-WMO-ZACAS-NEXT:    andi a3, a0, -4
+; RV32IA-WMO-ZACAS-NEXT:    andi a0, a0, 3
 ; RV32IA-WMO-ZACAS-NEXT:    slli a0, a0, 3
 ; RV32IA-WMO-ZACAS-NEXT:    lui a4, 16
 ; RV32IA-WMO-ZACAS-NEXT:    addi a4, a4, -1
@@ -2319,6 +2397,7 @@ define void @cmpxchg_i16_acquire_acquire(ptr %ptr, i16 %cmp, i16 %val) nounwind 
 ; RV32IA-TSO-LABEL: cmpxchg_i16_acquire_acquire:
 ; RV32IA-TSO:       # %bb.0:
 ; RV32IA-TSO-NEXT:    andi a3, a0, -4
+; RV32IA-TSO-NEXT:    andi a0, a0, 3
 ; RV32IA-TSO-NEXT:    slli a0, a0, 3
 ; RV32IA-TSO-NEXT:    lui a4, 16
 ; RV32IA-TSO-NEXT:    addi a4, a4, -1
@@ -2343,6 +2422,7 @@ define void @cmpxchg_i16_acquire_acquire(ptr %ptr, i16 %cmp, i16 %val) nounwind 
 ; RV32IA-TSO-ZACAS-LABEL: cmpxchg_i16_acquire_acquire:
 ; RV32IA-TSO-ZACAS:       # %bb.0:
 ; RV32IA-TSO-ZACAS-NEXT:    andi a3, a0, -4
+; RV32IA-TSO-ZACAS-NEXT:    andi a0, a0, 3
 ; RV32IA-TSO-ZACAS-NEXT:    slli a0, a0, 3
 ; RV32IA-TSO-ZACAS-NEXT:    lui a4, 16
 ; RV32IA-TSO-ZACAS-NEXT:    addi a4, a4, -1
@@ -2380,6 +2460,7 @@ define void @cmpxchg_i16_acquire_acquire(ptr %ptr, i16 %cmp, i16 %val) nounwind 
 ; RV64IA-WMO-LABEL: cmpxchg_i16_acquire_acquire:
 ; RV64IA-WMO:       # %bb.0:
 ; RV64IA-WMO-NEXT:    andi a3, a0, -4
+; RV64IA-WMO-NEXT:    andi a0, a0, 3
 ; RV64IA-WMO-NEXT:    slli a0, a0, 3
 ; RV64IA-WMO-NEXT:    lui a4, 16
 ; RV64IA-WMO-NEXT:    addi a4, a4, -1
@@ -2404,6 +2485,7 @@ define void @cmpxchg_i16_acquire_acquire(ptr %ptr, i16 %cmp, i16 %val) nounwind 
 ; RV64IA-WMO-ZACAS-LABEL: cmpxchg_i16_acquire_acquire:
 ; RV64IA-WMO-ZACAS:       # %bb.0:
 ; RV64IA-WMO-ZACAS-NEXT:    andi a3, a0, -4
+; RV64IA-WMO-ZACAS-NEXT:    andi a0, a0, 3
 ; RV64IA-WMO-ZACAS-NEXT:    slli a0, a0, 3
 ; RV64IA-WMO-ZACAS-NEXT:    lui a4, 16
 ; RV64IA-WMO-ZACAS-NEXT:    addi a4, a4, -1
@@ -2433,6 +2515,7 @@ define void @cmpxchg_i16_acquire_acquire(ptr %ptr, i16 %cmp, i16 %val) nounwind 
 ; RV64IA-TSO-LABEL: cmpxchg_i16_acquire_acquire:
 ; RV64IA-TSO:       # %bb.0:
 ; RV64IA-TSO-NEXT:    andi a3, a0, -4
+; RV64IA-TSO-NEXT:    andi a0, a0, 3
 ; RV64IA-TSO-NEXT:    slli a0, a0, 3
 ; RV64IA-TSO-NEXT:    lui a4, 16
 ; RV64IA-TSO-NEXT:    addi a4, a4, -1
@@ -2457,6 +2540,7 @@ define void @cmpxchg_i16_acquire_acquire(ptr %ptr, i16 %cmp, i16 %val) nounwind 
 ; RV64IA-TSO-ZACAS-LABEL: cmpxchg_i16_acquire_acquire:
 ; RV64IA-TSO-ZACAS:       # %bb.0:
 ; RV64IA-TSO-ZACAS-NEXT:    andi a3, a0, -4
+; RV64IA-TSO-ZACAS-NEXT:    andi a0, a0, 3
 ; RV64IA-TSO-ZACAS-NEXT:    slli a0, a0, 3
 ; RV64IA-TSO-ZACAS-NEXT:    lui a4, 16
 ; RV64IA-TSO-ZACAS-NEXT:    addi a4, a4, -1
@@ -2503,6 +2587,7 @@ define void @cmpxchg_i16_release_monotonic(ptr %ptr, i16 %cmp, i16 %val) nounwin
 ; RV32IA-WMO-LABEL: cmpxchg_i16_release_monotonic:
 ; RV32IA-WMO:       # %bb.0:
 ; RV32IA-WMO-NEXT:    andi a3, a0, -4
+; RV32IA-WMO-NEXT:    andi a0, a0, 3
 ; RV32IA-WMO-NEXT:    slli a0, a0, 3
 ; RV32IA-WMO-NEXT:    lui a4, 16
 ; RV32IA-WMO-NEXT:    addi a4, a4, -1
@@ -2527,6 +2612,7 @@ define void @cmpxchg_i16_release_monotonic(ptr %ptr, i16 %cmp, i16 %val) nounwin
 ; RV32IA-WMO-ZACAS-LABEL: cmpxchg_i16_release_monotonic:
 ; RV32IA-WMO-ZACAS:       # %bb.0:
 ; RV32IA-WMO-ZACAS-NEXT:    andi a3, a0, -4
+; RV32IA-WMO-ZACAS-NEXT:    andi a0, a0, 3
 ; RV32IA-WMO-ZACAS-NEXT:    slli a0, a0, 3
 ; RV32IA-WMO-ZACAS-NEXT:    lui a4, 16
 ; RV32IA-WMO-ZACAS-NEXT:    addi a4, a4, -1
@@ -2551,6 +2637,7 @@ define void @cmpxchg_i16_release_monotonic(ptr %ptr, i16 %cmp, i16 %val) nounwin
 ; RV32IA-TSO-LABEL: cmpxchg_i16_release_monotonic:
 ; RV32IA-TSO:       # %bb.0:
 ; RV32IA-TSO-NEXT:    andi a3, a0, -4
+; RV32IA-TSO-NEXT:    andi a0, a0, 3
 ; RV32IA-TSO-NEXT:    slli a0, a0, 3
 ; RV32IA-TSO-NEXT:    lui a4, 16
 ; RV32IA-TSO-NEXT:    addi a4, a4, -1
@@ -2575,6 +2662,7 @@ define void @cmpxchg_i16_release_monotonic(ptr %ptr, i16 %cmp, i16 %val) nounwin
 ; RV32IA-TSO-ZACAS-LABEL: cmpxchg_i16_release_monotonic:
 ; RV32IA-TSO-ZACAS:       # %bb.0:
 ; RV32IA-TSO-ZACAS-NEXT:    andi a3, a0, -4
+; RV32IA-TSO-ZACAS-NEXT:    andi a0, a0, 3
 ; RV32IA-TSO-ZACAS-NEXT:    slli a0, a0, 3
 ; RV32IA-TSO-ZACAS-NEXT:    lui a4, 16
 ; RV32IA-TSO-ZACAS-NEXT:    addi a4, a4, -1
@@ -2612,6 +2700,7 @@ define void @cmpxchg_i16_release_monotonic(ptr %ptr, i16 %cmp, i16 %val) nounwin
 ; RV64IA-WMO-LABEL: cmpxchg_i16_release_monotonic:
 ; RV64IA-WMO:       # %bb.0:
 ; RV64IA-WMO-NEXT:    andi a3, a0, -4
+; RV64IA-WMO-NEXT:    andi a0, a0, 3
 ; RV64IA-WMO-NEXT:    slli a0, a0, 3
 ; RV64IA-WMO-NEXT:    lui a4, 16
 ; RV64IA-WMO-NEXT:    addi a4, a4, -1
@@ -2636,6 +2725,7 @@ define void @cmpxchg_i16_release_monotonic(ptr %ptr, i16 %cmp, i16 %val) nounwin
 ; RV64IA-WMO-ZACAS-LABEL: cmpxchg_i16_release_monotonic:
 ; RV64IA-WMO-ZACAS:       # %bb.0:
 ; RV64IA-WMO-ZACAS-NEXT:    andi a3, a0, -4
+; RV64IA-WMO-ZACAS-NEXT:    andi a0, a0, 3
 ; RV64IA-WMO-ZACAS-NEXT:    slli a0, a0, 3
 ; RV64IA-WMO-ZACAS-NEXT:    lui a4, 16
 ; RV64IA-WMO-ZACAS-NEXT:    addi a4, a4, -1
@@ -2665,6 +2755,7 @@ define void @cmpxchg_i16_release_monotonic(ptr %ptr, i16 %cmp, i16 %val) nounwin
 ; RV64IA-TSO-LABEL: cmpxchg_i16_release_monotonic:
 ; RV64IA-TSO:       # %bb.0:
 ; RV64IA-TSO-NEXT:    andi a3, a0, -4
+; RV64IA-TSO-NEXT:    andi a0, a0, 3
 ; RV64IA-TSO-NEXT:    slli a0, a0, 3
 ; RV64IA-TSO-NEXT:    lui a4, 16
 ; RV64IA-TSO-NEXT:    addi a4, a4, -1
@@ -2689,6 +2780,7 @@ define void @cmpxchg_i16_release_monotonic(ptr %ptr, i16 %cmp, i16 %val) nounwin
 ; RV64IA-TSO-ZACAS-LABEL: cmpxchg_i16_release_monotonic:
 ; RV64IA-TSO-ZACAS:       # %bb.0:
 ; RV64IA-TSO-ZACAS-NEXT:    andi a3, a0, -4
+; RV64IA-TSO-ZACAS-NEXT:    andi a0, a0, 3
 ; RV64IA-TSO-ZACAS-NEXT:    slli a0, a0, 3
 ; RV64IA-TSO-ZACAS-NEXT:    lui a4, 16
 ; RV64IA-TSO-ZACAS-NEXT:    addi a4, a4, -1
@@ -2735,6 +2827,7 @@ define void @cmpxchg_i16_release_acquire(ptr %ptr, i16 %cmp, i16 %val) nounwind 
 ; RV32IA-WMO-LABEL: cmpxchg_i16_release_acquire:
 ; RV32IA-WMO:       # %bb.0:
 ; RV32IA-WMO-NEXT:    andi a3, a0, -4
+; RV32IA-WMO-NEXT:    andi a0, a0, 3
 ; RV32IA-WMO-NEXT:    slli a0, a0, 3
 ; RV32IA-WMO-NEXT:    lui a4, 16
 ; RV32IA-WMO-NEXT:    addi a4, a4, -1
@@ -2759,6 +2852,7 @@ define void @cmpxchg_i16_release_acquire(ptr %ptr, i16 %cmp, i16 %val) nounwind 
 ; RV32IA-WMO-ZACAS-LABEL: cmpxchg_i16_release_acquire:
 ; RV32IA-WMO-ZACAS:       # %bb.0:
 ; RV32IA-WMO-ZACAS-NEXT:    andi a3, a0, -4
+; RV32IA-WMO-ZACAS-NEXT:    andi a0, a0, 3
 ; RV32IA-WMO-ZACAS-NEXT:    slli a0, a0, 3
 ; RV32IA-WMO-ZACAS-NEXT:    lui a4, 16
 ; RV32IA-WMO-ZACAS-NEXT:    addi a4, a4, -1
@@ -2783,6 +2877,7 @@ define void @cmpxchg_i16_release_acquire(ptr %ptr, i16 %cmp, i16 %val) nounwind 
 ; RV32IA-TSO-LABEL: cmpxchg_i16_release_acquire:
 ; RV32IA-TSO:       # %bb.0:
 ; RV32IA-TSO-NEXT:    andi a3, a0, -4
+; RV32IA-TSO-NEXT:    andi a0, a0, 3
 ; RV32IA-TSO-NEXT:    slli a0, a0, 3
 ; RV32IA-TSO-NEXT:    lui a4, 16
 ; RV32IA-TSO-NEXT:    addi a4, a4, -1
@@ -2807,6 +2902,7 @@ define void @cmpxchg_i16_release_acquire(ptr %ptr, i16 %cmp, i16 %val) nounwind 
 ; RV32IA-TSO-ZACAS-LABEL: cmpxchg_i16_release_acquire:
 ; RV32IA-TSO-ZACAS:       # %bb.0:
 ; RV32IA-TSO-ZACAS-NEXT:    andi a3, a0, -4
+; RV32IA-TSO-ZACAS-NEXT:    andi a0, a0, 3
 ; RV32IA-TSO-ZACAS-NEXT:    slli a0, a0, 3
 ; RV32IA-TSO-ZACAS-NEXT:    lui a4, 16
 ; RV32IA-TSO-ZACAS-NEXT:    addi a4, a4, -1
@@ -2844,6 +2940,7 @@ define void @cmpxchg_i16_release_acquire(ptr %ptr, i16 %cmp, i16 %val) nounwind 
 ; RV64IA-WMO-LABEL: cmpxchg_i16_release_acquire:
 ; RV64IA-WMO:       # %bb.0:
 ; RV64IA-WMO-NEXT:    andi a3, a0, -4
+; RV64IA-WMO-NEXT:    andi a0, a0, 3
 ; RV64IA-WMO-NEXT:    slli a0, a0, 3
 ; RV64IA-WMO-NEXT:    lui a4, 16
 ; RV64IA-WMO-NEXT:    addi a4, a4, -1
@@ -2868,6 +2965,7 @@ define void @cmpxchg_i16_release_acquire(ptr %ptr, i16 %cmp, i16 %val) nounwind 
 ; RV64IA-WMO-ZACAS-LABEL: cmpxchg_i16_release_acquire:
 ; RV64IA-WMO-ZACAS:       # %bb.0:
 ; RV64IA-WMO-ZACAS-NEXT:    andi a3, a0, -4
+; RV64IA-WMO-ZACAS-NEXT:    andi a0, a0, 3
 ; RV64IA-WMO-ZACAS-NEXT:    slli a0, a0, 3
 ; RV64IA-WMO-ZACAS-NEXT:    lui a4, 16
 ; RV64IA-WMO-ZACAS-NEXT:    addi a4, a4, -1
@@ -2897,6 +2995,7 @@ define void @cmpxchg_i16_release_acquire(ptr %ptr, i16 %cmp, i16 %val) nounwind 
 ; RV64IA-TSO-LABEL: cmpxchg_i16_release_acquire:
 ; RV64IA-TSO:       # %bb.0:
 ; RV64IA-TSO-NEXT:    andi a3, a0, -4
+; RV64IA-TSO-NEXT:    andi a0, a0, 3
 ; RV64IA-TSO-NEXT:    slli a0, a0, 3
 ; RV64IA-TSO-NEXT:    lui a4, 16
 ; RV64IA-TSO-NEXT:    addi a4, a4, -1
@@ -2921,6 +3020,7 @@ define void @cmpxchg_i16_release_acquire(ptr %ptr, i16 %cmp, i16 %val) nounwind 
 ; RV64IA-TSO-ZACAS-LABEL: cmpxchg_i16_release_acquire:
 ; RV64IA-TSO-ZACAS:       # %bb.0:
 ; RV64IA-TSO-ZACAS-NEXT:    andi a3, a0, -4
+; RV64IA-TSO-ZACAS-NEXT:    andi a0, a0, 3
 ; RV64IA-TSO-ZACAS-NEXT:    slli a0, a0, 3
 ; RV64IA-TSO-ZACAS-NEXT:    lui a4, 16
 ; RV64IA-TSO-ZACAS-NEXT:    addi a4, a4, -1
@@ -2967,6 +3067,7 @@ define void @cmpxchg_i16_acq_rel_monotonic(ptr %ptr, i16 %cmp, i16 %val) nounwin
 ; RV32IA-WMO-LABEL: cmpxchg_i16_acq_rel_monotonic:
 ; RV32IA-WMO:       # %bb.0:
 ; RV32IA-WMO-NEXT:    andi a3, a0, -4
+; RV32IA-WMO-NEXT:    andi a0, a0, 3
 ; RV32IA-WMO-NEXT:    slli a0, a0, 3
 ; RV32IA-WMO-NEXT:    lui a4, 16
 ; RV32IA-WMO-NEXT:    addi a4, a4, -1
@@ -2991,6 +3092,7 @@ define void @cmpxchg_i16_acq_rel_monotonic(ptr %ptr, i16 %cmp, i16 %val) nounwin
 ; RV32IA-WMO-ZACAS-LABEL: cmpxchg_i16_acq_rel_monotonic:
 ; RV32IA-WMO-ZACAS:       # %bb.0:
 ; RV32IA-WMO-ZACAS-NEXT:    andi a3, a0, -4
+; RV32IA-WMO-ZACAS-NEXT:    andi a0, a0, 3
 ; RV32IA-WMO-ZACAS-NEXT:    slli a0, a0, 3
 ; RV32IA-WMO-ZACAS-NEXT:    lui a4, 16
 ; RV32IA-WMO-ZACAS-NEXT:    addi a4, a4, -1
@@ -3015,6 +3117,7 @@ define void @cmpxchg_i16_acq_rel_monotonic(ptr %ptr, i16 %cmp, i16 %val) nounwin
 ; RV32IA-TSO-LABEL: cmpxchg_i16_acq_rel_monotonic:
 ; RV32IA-TSO:       # %bb.0:
 ; RV32IA-TSO-NEXT:    andi a3, a0, -4
+; RV32IA-TSO-NEXT:    andi a0, a0, 3
 ; RV32IA-TSO-NEXT:    slli a0, a0, 3
 ; RV32IA-TSO-NEXT:    lui a4, 16
 ; RV32IA-TSO-NEXT:    addi a4, a4, -1
@@ -3039,6 +3142,7 @@ define void @cmpxchg_i16_acq_rel_monotonic(ptr %ptr, i16 %cmp, i16 %val) nounwin
 ; RV32IA-TSO-ZACAS-LABEL: cmpxchg_i16_acq_rel_monotonic:
 ; RV32IA-TSO-ZACAS:       # %bb.0:
 ; RV32IA-TSO-ZACAS-NEXT:    andi a3, a0, -4
+; RV32IA-TSO-ZACAS-NEXT:    andi a0, a0, 3
 ; RV32IA-TSO-ZACAS-NEXT:    slli a0, a0, 3
 ; RV32IA-TSO-ZACAS-NEXT:    lui a4, 16
 ; RV32IA-TSO-ZACAS-NEXT:    addi a4, a4, -1
@@ -3076,6 +3180,7 @@ define void @cmpxchg_i16_acq_rel_monotonic(ptr %ptr, i16 %cmp, i16 %val) nounwin
 ; RV64IA-WMO-LABEL: cmpxchg_i16_acq_rel_monotonic:
 ; RV64IA-WMO:       # %bb.0:
 ; RV64IA-WMO-NEXT:    andi a3, a0, -4
+; RV64IA-WMO-NEXT:    andi a0, a0, 3
 ; RV64IA-WMO-NEXT:    slli a0, a0, 3
 ; RV64IA-WMO-NEXT:    lui a4, 16
 ; RV64IA-WMO-NEXT:    addi a4, a4, -1
@@ -3100,6 +3205,7 @@ define void @cmpxchg_i16_acq_rel_monotonic(ptr %ptr, i16 %cmp, i16 %val) nounwin
 ; RV64IA-WMO-ZACAS-LABEL: cmpxchg_i16_acq_rel_monotonic:
 ; RV64IA-WMO-ZACAS:       # %bb.0:
 ; RV64IA-WMO-ZACAS-NEXT:    andi a3, a0, -4
+; RV64IA-WMO-ZACAS-NEXT:    andi a0, a0, 3
 ; RV64IA-WMO-ZACAS-NEXT:    slli a0, a0, 3
 ; RV64IA-WMO-ZACAS-NEXT:    lui a4, 16
 ; RV64IA-WMO-ZACAS-NEXT:    addi a4, a4, -1
@@ -3129,6 +3235,7 @@ define void @cmpxchg_i16_acq_rel_monotonic(ptr %ptr, i16 %cmp, i16 %val) nounwin
 ; RV64IA-TSO-LABEL: cmpxchg_i16_acq_rel_monotonic:
 ; RV64IA-TSO:       # %bb.0:
 ; RV64IA-TSO-NEXT:    andi a3, a0, -4
+; RV64IA-TSO-NEXT:    andi a0, a0, 3
 ; RV64IA-TSO-NEXT:    slli a0, a0, 3
 ; RV64IA-TSO-NEXT:    lui a4, 16
 ; RV64IA-TSO-NEXT:    addi a4, a4, -1
@@ -3153,6 +3260,7 @@ define void @cmpxchg_i16_acq_rel_monotonic(ptr %ptr, i16 %cmp, i16 %val) nounwin
 ; RV64IA-TSO-ZACAS-LABEL: cmpxchg_i16_acq_rel_monotonic:
 ; RV64IA-TSO-ZACAS:       # %bb.0:
 ; RV64IA-TSO-ZACAS-NEXT:    andi a3, a0, -4
+; RV64IA-TSO-ZACAS-NEXT:    andi a0, a0, 3
 ; RV64IA-TSO-ZACAS-NEXT:    slli a0, a0, 3
 ; RV64IA-TSO-ZACAS-NEXT:    lui a4, 16
 ; RV64IA-TSO-ZACAS-NEXT:    addi a4, a4, -1
@@ -3199,6 +3307,7 @@ define void @cmpxchg_i16_acq_rel_acquire(ptr %ptr, i16 %cmp, i16 %val) nounwind 
 ; RV32IA-WMO-LABEL: cmpxchg_i16_acq_rel_acquire:
 ; RV32IA-WMO:       # %bb.0:
 ; RV32IA-WMO-NEXT:    andi a3, a0, -4
+; RV32IA-WMO-NEXT:    andi a0, a0, 3
 ; RV32IA-WMO-NEXT:    slli a0, a0, 3
 ; RV32IA-WMO-NEXT:    lui a4, 16
 ; RV32IA-WMO-NEXT:    addi a4, a4, -1
@@ -3223,6 +3332,7 @@ define void @cmpxchg_i16_acq_rel_acquire(ptr %ptr, i16 %cmp, i16 %val) nounwind 
 ; RV32IA-WMO-ZACAS-LABEL: cmpxchg_i16_acq_rel_acquire:
 ; RV32IA-WMO-ZACAS:       # %bb.0:
 ; RV32IA-WMO-ZACAS-NEXT:    andi a3, a0, -4
+; RV32IA-WMO-ZACAS-NEXT:    andi a0, a0, 3
 ; RV32IA-WMO-ZACAS-NEXT:    slli a0, a0, 3
 ; RV32IA-WMO-ZACAS-NEXT:    lui a4, 16
 ; RV32IA-WMO-ZACAS-NEXT:    addi a4, a4, -1
@@ -3247,6 +3357,7 @@ define void @cmpxchg_i16_acq_rel_acquire(ptr %ptr, i16 %cmp, i16 %val) nounwind 
 ; RV32IA-TSO-LABEL: cmpxchg_i16_acq_rel_acquire:
 ; RV32IA-TSO:       # %bb.0:
 ; RV32IA-TSO-NEXT:    andi a3, a0, -4
+; RV32IA-TSO-NEXT:    andi a0, a0, 3
 ; RV32IA-TSO-NEXT:    slli a0, a0, 3
 ; RV32IA-TSO-NEXT:    lui a4, 16
 ; RV32IA-TSO-NEXT:    addi a4, a4, -1
@@ -3271,6 +3382,7 @@ define void @cmpxchg_i16_acq_rel_acquire(ptr %ptr, i16 %cmp, i16 %val) nounwind 
 ; RV32IA-TSO-ZACAS-LABEL: cmpxchg_i16_acq_rel_acquire:
 ; RV32IA-TSO-ZACAS:       # %bb.0:
 ; RV32IA-TSO-ZACAS-NEXT:    andi a3, a0, -4
+; RV32IA-TSO-ZACAS-NEXT:    andi a0, a0, 3
 ; RV32IA-TSO-ZACAS-NEXT:    slli a0, a0, 3
 ; RV32IA-TSO-ZACAS-NEXT:    lui a4, 16
 ; RV32IA-TSO-ZACAS-NEXT:    addi a4, a4, -1
@@ -3308,6 +3420,7 @@ define void @cmpxchg_i16_acq_rel_acquire(ptr %ptr, i16 %cmp, i16 %val) nounwind 
 ; RV64IA-WMO-LABEL: cmpxchg_i16_acq_rel_acquire:
 ; RV64IA-WMO:       # %bb.0:
 ; RV64IA-WMO-NEXT:    andi a3, a0, -4
+; RV64IA-WMO-NEXT:    andi a0, a0, 3
 ; RV64IA-WMO-NEXT:    slli a0, a0, 3
 ; RV64IA-WMO-NEXT:    lui a4, 16
 ; RV64IA-WMO-NEXT:    addi a4, a4, -1
@@ -3332,6 +3445,7 @@ define void @cmpxchg_i16_acq_rel_acquire(ptr %ptr, i16 %cmp, i16 %val) nounwind 
 ; RV64IA-WMO-ZACAS-LABEL: cmpxchg_i16_acq_rel_acquire:
 ; RV64IA-WMO-ZACAS:       # %bb.0:
 ; RV64IA-WMO-ZACAS-NEXT:    andi a3, a0, -4
+; RV64IA-WMO-ZACAS-NEXT:    andi a0, a0, 3
 ; RV64IA-WMO-ZACAS-NEXT:    slli a0, a0, 3
 ; RV64IA-WMO-ZACAS-NEXT:    lui a4, 16
 ; RV64IA-WMO-ZACAS-NEXT:    addi a4, a4, -1
@@ -3361,6 +3475,7 @@ define void @cmpxchg_i16_acq_rel_acquire(ptr %ptr, i16 %cmp, i16 %val) nounwind 
 ; RV64IA-TSO-LABEL: cmpxchg_i16_acq_rel_acquire:
 ; RV64IA-TSO:       # %bb.0:
 ; RV64IA-TSO-NEXT:    andi a3, a0, -4
+; RV64IA-TSO-NEXT:    andi a0, a0, 3
 ; RV64IA-TSO-NEXT:    slli a0, a0, 3
 ; RV64IA-TSO-NEXT:    lui a4, 16
 ; RV64IA-TSO-NEXT:    addi a4, a4, -1
@@ -3385,6 +3500,7 @@ define void @cmpxchg_i16_acq_rel_acquire(ptr %ptr, i16 %cmp, i16 %val) nounwind 
 ; RV64IA-TSO-ZACAS-LABEL: cmpxchg_i16_acq_rel_acquire:
 ; RV64IA-TSO-ZACAS:       # %bb.0:
 ; RV64IA-TSO-ZACAS-NEXT:    andi a3, a0, -4
+; RV64IA-TSO-ZACAS-NEXT:    andi a0, a0, 3
 ; RV64IA-TSO-ZACAS-NEXT:    slli a0, a0, 3
 ; RV64IA-TSO-ZACAS-NEXT:    lui a4, 16
 ; RV64IA-TSO-ZACAS-NEXT:    addi a4, a4, -1
@@ -3431,6 +3547,7 @@ define void @cmpxchg_i16_seq_cst_monotonic(ptr %ptr, i16 %cmp, i16 %val) nounwin
 ; RV32IA-LABEL: cmpxchg_i16_seq_cst_monotonic:
 ; RV32IA:       # %bb.0:
 ; RV32IA-NEXT:    andi a3, a0, -4
+; RV32IA-NEXT:    andi a0, a0, 3
 ; RV32IA-NEXT:    slli a0, a0, 3
 ; RV32IA-NEXT:    lui a4, 16
 ; RV32IA-NEXT:    addi a4, a4, -1
@@ -3468,6 +3585,7 @@ define void @cmpxchg_i16_seq_cst_monotonic(ptr %ptr, i16 %cmp, i16 %val) nounwin
 ; RV64IA-WMO-LABEL: cmpxchg_i16_seq_cst_monotonic:
 ; RV64IA-WMO:       # %bb.0:
 ; RV64IA-WMO-NEXT:    andi a3, a0, -4
+; RV64IA-WMO-NEXT:    andi a0, a0, 3
 ; RV64IA-WMO-NEXT:    slli a0, a0, 3
 ; RV64IA-WMO-NEXT:    lui a4, 16
 ; RV64IA-WMO-NEXT:    addi a4, a4, -1
@@ -3492,6 +3610,7 @@ define void @cmpxchg_i16_seq_cst_monotonic(ptr %ptr, i16 %cmp, i16 %val) nounwin
 ; RV64IA-ZACAS-LABEL: cmpxchg_i16_seq_cst_monotonic:
 ; RV64IA-ZACAS:       # %bb.0:
 ; RV64IA-ZACAS-NEXT:    andi a3, a0, -4
+; RV64IA-ZACAS-NEXT:    andi a0, a0, 3
 ; RV64IA-ZACAS-NEXT:    slli a0, a0, 3
 ; RV64IA-ZACAS-NEXT:    lui a4, 16
 ; RV64IA-ZACAS-NEXT:    addi a4, a4, -1
@@ -3521,6 +3640,7 @@ define void @cmpxchg_i16_seq_cst_monotonic(ptr %ptr, i16 %cmp, i16 %val) nounwin
 ; RV64IA-TSO-LABEL: cmpxchg_i16_seq_cst_monotonic:
 ; RV64IA-TSO:       # %bb.0:
 ; RV64IA-TSO-NEXT:    andi a3, a0, -4
+; RV64IA-TSO-NEXT:    andi a0, a0, 3
 ; RV64IA-TSO-NEXT:    slli a0, a0, 3
 ; RV64IA-TSO-NEXT:    lui a4, 16
 ; RV64IA-TSO-NEXT:    addi a4, a4, -1
@@ -3567,6 +3687,7 @@ define void @cmpxchg_i16_seq_cst_acquire(ptr %ptr, i16 %cmp, i16 %val) nounwind 
 ; RV32IA-LABEL: cmpxchg_i16_seq_cst_acquire:
 ; RV32IA:       # %bb.0:
 ; RV32IA-NEXT:    andi a3, a0, -4
+; RV32IA-NEXT:    andi a0, a0, 3
 ; RV32IA-NEXT:    slli a0, a0, 3
 ; RV32IA-NEXT:    lui a4, 16
 ; RV32IA-NEXT:    addi a4, a4, -1
@@ -3604,6 +3725,7 @@ define void @cmpxchg_i16_seq_cst_acquire(ptr %ptr, i16 %cmp, i16 %val) nounwind 
 ; RV64IA-WMO-LABEL: cmpxchg_i16_seq_cst_acquire:
 ; RV64IA-WMO:       # %bb.0:
 ; RV64IA-WMO-NEXT:    andi a3, a0, -4
+; RV64IA-WMO-NEXT:    andi a0, a0, 3
 ; RV64IA-WMO-NEXT:    slli a0, a0, 3
 ; RV64IA-WMO-NEXT:    lui a4, 16
 ; RV64IA-WMO-NEXT:    addi a4, a4, -1
@@ -3628,6 +3750,7 @@ define void @cmpxchg_i16_seq_cst_acquire(ptr %ptr, i16 %cmp, i16 %val) nounwind 
 ; RV64IA-ZACAS-LABEL: cmpxchg_i16_seq_cst_acquire:
 ; RV64IA-ZACAS:       # %bb.0:
 ; RV64IA-ZACAS-NEXT:    andi a3, a0, -4
+; RV64IA-ZACAS-NEXT:    andi a0, a0, 3
 ; RV64IA-ZACAS-NEXT:    slli a0, a0, 3
 ; RV64IA-ZACAS-NEXT:    lui a4, 16
 ; RV64IA-ZACAS-NEXT:    addi a4, a4, -1
@@ -3657,6 +3780,7 @@ define void @cmpxchg_i16_seq_cst_acquire(ptr %ptr, i16 %cmp, i16 %val) nounwind 
 ; RV64IA-TSO-LABEL: cmpxchg_i16_seq_cst_acquire:
 ; RV64IA-TSO:       # %bb.0:
 ; RV64IA-TSO-NEXT:    andi a3, a0, -4
+; RV64IA-TSO-NEXT:    andi a0, a0, 3
 ; RV64IA-TSO-NEXT:    slli a0, a0, 3
 ; RV64IA-TSO-NEXT:    lui a4, 16
 ; RV64IA-TSO-NEXT:    addi a4, a4, -1
@@ -3703,6 +3827,7 @@ define void @cmpxchg_i16_seq_cst_seq_cst(ptr %ptr, i16 %cmp, i16 %val) nounwind 
 ; RV32IA-LABEL: cmpxchg_i16_seq_cst_seq_cst:
 ; RV32IA:       # %bb.0:
 ; RV32IA-NEXT:    andi a3, a0, -4
+; RV32IA-NEXT:    andi a0, a0, 3
 ; RV32IA-NEXT:    slli a0, a0, 3
 ; RV32IA-NEXT:    lui a4, 16
 ; RV32IA-NEXT:    addi a4, a4, -1
@@ -3740,6 +3865,7 @@ define void @cmpxchg_i16_seq_cst_seq_cst(ptr %ptr, i16 %cmp, i16 %val) nounwind 
 ; RV64IA-WMO-LABEL: cmpxchg_i16_seq_cst_seq_cst:
 ; RV64IA-WMO:       # %bb.0:
 ; RV64IA-WMO-NEXT:    andi a3, a0, -4
+; RV64IA-WMO-NEXT:    andi a0, a0, 3
 ; RV64IA-WMO-NEXT:    slli a0, a0, 3
 ; RV64IA-WMO-NEXT:    lui a4, 16
 ; RV64IA-WMO-NEXT:    addi a4, a4, -1
@@ -3764,6 +3890,7 @@ define void @cmpxchg_i16_seq_cst_seq_cst(ptr %ptr, i16 %cmp, i16 %val) nounwind 
 ; RV64IA-ZACAS-LABEL: cmpxchg_i16_seq_cst_seq_cst:
 ; RV64IA-ZACAS:       # %bb.0:
 ; RV64IA-ZACAS-NEXT:    andi a3, a0, -4
+; RV64IA-ZACAS-NEXT:    andi a0, a0, 3
 ; RV64IA-ZACAS-NEXT:    slli a0, a0, 3
 ; RV64IA-ZACAS-NEXT:    lui a4, 16
 ; RV64IA-ZACAS-NEXT:    addi a4, a4, -1
@@ -3793,6 +3920,7 @@ define void @cmpxchg_i16_seq_cst_seq_cst(ptr %ptr, i16 %cmp, i16 %val) nounwind 
 ; RV64IA-TSO-LABEL: cmpxchg_i16_seq_cst_seq_cst:
 ; RV64IA-TSO:       # %bb.0:
 ; RV64IA-TSO-NEXT:    andi a3, a0, -4
+; RV64IA-TSO-NEXT:    andi a0, a0, 3
 ; RV64IA-TSO-NEXT:    slli a0, a0, 3
 ; RV64IA-TSO-NEXT:    lui a4, 16
 ; RV64IA-TSO-NEXT:    addi a4, a4, -1

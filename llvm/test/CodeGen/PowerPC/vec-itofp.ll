@@ -292,27 +292,34 @@ define void @stest8(ptr nocapture %Sink, ptr nocapture readonly %SrcPtr) {
 ; CHECK-P9-NEXT:    lxv v3, 0(r4)
 ; CHECK-P9-NEXT:    addis r4, r2, .LCPI3_1@toc@ha
 ; CHECK-P9-NEXT:    addi r4, r4, .LCPI3_1@toc@l
-; CHECK-P9-NEXT:    vperm v3, v2, v2, v3
-; CHECK-P9-NEXT:    vextsh2d v3, v3
-; CHECK-P9-NEXT:    xvcvsxddp vs0, v3
-; CHECK-P9-NEXT:    lxv v3, 0(r4)
+; CHECK-P9-NEXT:    lxv v4, 0(r4)
 ; CHECK-P9-NEXT:    addis r4, r2, .LCPI3_2@toc@ha
-; CHECK-P9-NEXT:    addi r4, r4, .LCPI3_2@toc@l
 ; CHECK-P9-NEXT:    vperm v3, v2, v2, v3
-; CHECK-P9-NEXT:    stxv vs0, 0(r3)
-; CHECK-P9-NEXT:    vextsh2d v3, v3
-; CHECK-P9-NEXT:    xvcvsxddp vs1, v3
+; CHECK-P9-NEXT:    addi r4, r4, .LCPI3_2@toc@l
+; CHECK-P9-NEXT:    vsld v3, v3, v4
+; CHECK-P9-NEXT:    vsrad v3, v3, v4
+; CHECK-P9-NEXT:    xvcvsxddp vs0, v3
 ; CHECK-P9-NEXT:    lxv v3, 0(r4)
 ; CHECK-P9-NEXT:    addis r4, r2, .LCPI3_3@toc@ha
 ; CHECK-P9-NEXT:    addi r4, r4, .LCPI3_3@toc@l
 ; CHECK-P9-NEXT:    vperm v3, v2, v2, v3
+; CHECK-P9-NEXT:    stxv vs0, 0(r3)
+; CHECK-P9-NEXT:    vsld v3, v3, v4
+; CHECK-P9-NEXT:    vsrad v3, v3, v4
+; CHECK-P9-NEXT:    xvcvsxddp vs1, v3
+; CHECK-P9-NEXT:    lxv v3, 0(r4)
+; CHECK-P9-NEXT:    addis r4, r2, .LCPI3_4@toc@ha
+; CHECK-P9-NEXT:    addi r4, r4, .LCPI3_4@toc@l
+; CHECK-P9-NEXT:    vperm v3, v2, v2, v3
 ; CHECK-P9-NEXT:    stxv vs1, 16(r3)
-; CHECK-P9-NEXT:    vextsh2d v3, v3
+; CHECK-P9-NEXT:    vsld v3, v3, v4
+; CHECK-P9-NEXT:    vsrad v3, v3, v4
 ; CHECK-P9-NEXT:    xvcvsxddp vs2, v3
 ; CHECK-P9-NEXT:    lxv v3, 0(r4)
 ; CHECK-P9-NEXT:    vperm v2, v2, v2, v3
 ; CHECK-P9-NEXT:    stxv vs2, 32(r3)
-; CHECK-P9-NEXT:    vextsh2d v2, v2
+; CHECK-P9-NEXT:    vsld v2, v2, v4
+; CHECK-P9-NEXT:    vsrad v2, v2, v4
 ; CHECK-P9-NEXT:    xvcvsxddp vs3, v2
 ; CHECK-P9-NEXT:    stxv vs3, 48(r3)
 ; CHECK-P9-NEXT:    blr
@@ -395,13 +402,18 @@ define void @stest4(ptr nocapture %Sink, ptr nocapture readonly %SrcPtr) {
 ; CHECK-P9-NEXT:    lxv v3, 0(r4)
 ; CHECK-P9-NEXT:    addis r4, r2, .LCPI4_1@toc@ha
 ; CHECK-P9-NEXT:    addi r4, r4, .LCPI4_1@toc@l
+; CHECK-P9-NEXT:    lxv v4, 0(r4)
+; CHECK-P9-NEXT:    addis r4, r2, .LCPI4_2@toc@ha
 ; CHECK-P9-NEXT:    vperm v3, v2, v2, v3
-; CHECK-P9-NEXT:    vextsh2d v3, v3
+; CHECK-P9-NEXT:    addi r4, r4, .LCPI4_2@toc@l
+; CHECK-P9-NEXT:    vsld v3, v3, v4
+; CHECK-P9-NEXT:    vsrad v3, v3, v4
 ; CHECK-P9-NEXT:    xvcvsxddp vs0, v3
 ; CHECK-P9-NEXT:    lxv v3, 0(r4)
 ; CHECK-P9-NEXT:    vperm v2, v2, v2, v3
 ; CHECK-P9-NEXT:    stxv vs0, 0(r3)
-; CHECK-P9-NEXT:    vextsh2d v2, v2
+; CHECK-P9-NEXT:    vsld v2, v2, v4
+; CHECK-P9-NEXT:    vsrad v2, v2, v4
 ; CHECK-P9-NEXT:    xvcvsxddp vs1, v2
 ; CHECK-P9-NEXT:    stxv vs1, 16(r3)
 ; CHECK-P9-NEXT:    blr
@@ -457,8 +469,12 @@ define void @stest2(ptr nocapture %Sink, ptr nocapture readonly %SrcPtr) {
 ; CHECK-P9-NEXT:    addis r4, r2, .LCPI5_0@toc@ha
 ; CHECK-P9-NEXT:    addi r4, r4, .LCPI5_0@toc@l
 ; CHECK-P9-NEXT:    lxv vs0, 0(r4)
+; CHECK-P9-NEXT:    addis r4, r2, .LCPI5_1@toc@ha
+; CHECK-P9-NEXT:    addi r4, r4, .LCPI5_1@toc@l
+; CHECK-P9-NEXT:    lxv v3, 0(r4)
 ; CHECK-P9-NEXT:    xxperm v2, v2, vs0
-; CHECK-P9-NEXT:    vextsh2d v2, v2
+; CHECK-P9-NEXT:    vsld v2, v2, v3
+; CHECK-P9-NEXT:    vsrad v2, v2, v3
 ; CHECK-P9-NEXT:    xvcvsxddp vs0, v2
 ; CHECK-P9-NEXT:    stxv vs0, 0(r3)
 ; CHECK-P9-NEXT:    blr

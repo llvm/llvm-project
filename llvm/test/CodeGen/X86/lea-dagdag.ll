@@ -6,9 +6,9 @@ define i16 @and_i8_zext_shl_add_i16(i16 %t0, i8 %t1) {
 ; CHECK-LABEL: and_i8_zext_shl_add_i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    # kill: def $esi killed $esi def $rsi
-; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
 ; CHECK-NEXT:    andl $8, %esi
-; CHECK-NEXT:    leal (%rdi,%rsi,4), %eax
+; CHECK-NEXT:    leal (,%rsi,4), %eax
+; CHECK-NEXT:    addl %edi, %eax
 ; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    retq
   %t4 = and i8 %t1, 8
@@ -82,10 +82,10 @@ define i32 @and_i16_zext_shl_add_i32(i32 %t0, i16 %t1) {
 define i32 @and_i16_shl_zext_add_i32(i32 %t0, i16 %t1) {
 ; CHECK-LABEL: and_i16_shl_zext_add_i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $esi killed $esi def $rsi
 ; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
 ; CHECK-NEXT:    andl $8, %esi
-; CHECK-NEXT:    leal (%rdi,%rsi,4), %eax
+; CHECK-NEXT:    movzwl %si, %eax
+; CHECK-NEXT:    leal (%rdi,%rax,4), %eax
 ; CHECK-NEXT:    retq
   %t4 = and i16 %t1, 8
   %sh = shl i16 %t4, 2

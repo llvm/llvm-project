@@ -126,7 +126,7 @@ define <16 x i8> @test_128_i8_x_16_28_mask_ashr_1(<16 x i8> %a0) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    movi v1.16b, #28
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
-; CHECK-NEXT:    ushr v0.16b, v0.16b, #1
+; CHECK-NEXT:    sshr v0.16b, v0.16b, #1
 ; CHECK-NEXT:    ret
   %t0 = and <16 x i8> %a0, <i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28>
   %t1 = ashr <16 x i8> %t0, <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
@@ -137,7 +137,7 @@ define <16 x i8> @test_128_i8_x_16_28_mask_ashr_2(<16 x i8> %a0) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    movi v1.16b, #28
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
-; CHECK-NEXT:    ushr v0.16b, v0.16b, #2
+; CHECK-NEXT:    sshr v0.16b, v0.16b, #2
 ; CHECK-NEXT:    ret
   %t0 = and <16 x i8> %a0, <i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28, i8 28>
   %t1 = ashr <16 x i8> %t0, <i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2>
@@ -234,6 +234,8 @@ define <16 x i8> @test_128_i8_x_16_7_mask_shl_4(<16 x i8> %a0) {
 define <16 x i8> @test_128_i8_x_16_7_mask_shl_5(<16 x i8> %a0) {
 ; CHECK-LABEL: test_128_i8_x_16_7_mask_shl_5:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    movi v1.16b, #7
+; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    shl v0.16b, v0.16b, #5
 ; CHECK-NEXT:    ret
   %t0 = and <16 x i8> %a0, <i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7>
@@ -328,7 +330,7 @@ define <8 x i16> @test_128_i16_x_8_127_mask_lshr_1(<8 x i16> %a0) {
 define <8 x i16> @test_128_i16_x_8_2032_mask_lshr_3(<8 x i16> %a0) {
 ; CHECK-LABEL: test_128_i16_x_8_2032_mask_lshr_3:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #2032
+; CHECK-NEXT:    mov w8, #2032 // =0x7f0
 ; CHECK-NEXT:    dup v1.8h, w8
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ushr v0.8h, v0.8h, #3
@@ -340,7 +342,7 @@ define <8 x i16> @test_128_i16_x_8_2032_mask_lshr_3(<8 x i16> %a0) {
 define <8 x i16> @test_128_i16_x_8_2032_mask_lshr_4(<8 x i16> %a0) {
 ; CHECK-LABEL: test_128_i16_x_8_2032_mask_lshr_4:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #2032
+; CHECK-NEXT:    mov w8, #2032 // =0x7f0
 ; CHECK-NEXT:    dup v1.8h, w8
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ushr v0.8h, v0.8h, #4
@@ -352,7 +354,7 @@ define <8 x i16> @test_128_i16_x_8_2032_mask_lshr_4(<8 x i16> %a0) {
 define <8 x i16> @test_128_i16_x_8_2032_mask_lshr_5(<8 x i16> %a0) {
 ; CHECK-LABEL: test_128_i16_x_8_2032_mask_lshr_5:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #2032
+; CHECK-NEXT:    mov w8, #2032 // =0x7f0
 ; CHECK-NEXT:    dup v1.8h, w8
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ushr v0.8h, v0.8h, #5
@@ -364,7 +366,7 @@ define <8 x i16> @test_128_i16_x_8_2032_mask_lshr_5(<8 x i16> %a0) {
 define <8 x i16> @test_128_i16_x_8_2032_mask_lshr_6(<8 x i16> %a0) {
 ; CHECK-LABEL: test_128_i16_x_8_2032_mask_lshr_6:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #2032
+; CHECK-NEXT:    mov w8, #2032 // =0x7f0
 ; CHECK-NEXT:    dup v1.8h, w8
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ushr v0.8h, v0.8h, #6
@@ -432,10 +434,10 @@ define <8 x i16> @test_128_i16_x_8_127_mask_ashr_1(<8 x i16> %a0) {
 define <8 x i16> @test_128_i16_x_8_2032_mask_ashr_3(<8 x i16> %a0) {
 ; CHECK-LABEL: test_128_i16_x_8_2032_mask_ashr_3:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #2032
+; CHECK-NEXT:    mov w8, #2032 // =0x7f0
 ; CHECK-NEXT:    dup v1.8h, w8
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
-; CHECK-NEXT:    ushr v0.8h, v0.8h, #3
+; CHECK-NEXT:    sshr v0.8h, v0.8h, #3
 ; CHECK-NEXT:    ret
   %t0 = and <8 x i16> %a0, <i16 2032, i16 2032, i16 2032, i16 2032, i16 2032, i16 2032, i16 2032, i16 2032>
   %t1 = ashr <8 x i16> %t0, <i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3>
@@ -444,10 +446,10 @@ define <8 x i16> @test_128_i16_x_8_2032_mask_ashr_3(<8 x i16> %a0) {
 define <8 x i16> @test_128_i16_x_8_2032_mask_ashr_4(<8 x i16> %a0) {
 ; CHECK-LABEL: test_128_i16_x_8_2032_mask_ashr_4:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #2032
+; CHECK-NEXT:    mov w8, #2032 // =0x7f0
 ; CHECK-NEXT:    dup v1.8h, w8
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
-; CHECK-NEXT:    ushr v0.8h, v0.8h, #4
+; CHECK-NEXT:    sshr v0.8h, v0.8h, #4
 ; CHECK-NEXT:    ret
   %t0 = and <8 x i16> %a0, <i16 2032, i16 2032, i16 2032, i16 2032, i16 2032, i16 2032, i16 2032, i16 2032>
   %t1 = ashr <8 x i16> %t0, <i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4>
@@ -456,7 +458,7 @@ define <8 x i16> @test_128_i16_x_8_2032_mask_ashr_4(<8 x i16> %a0) {
 define <8 x i16> @test_128_i16_x_8_2032_mask_ashr_5(<8 x i16> %a0) {
 ; CHECK-LABEL: test_128_i16_x_8_2032_mask_ashr_5:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #2032
+; CHECK-NEXT:    mov w8, #2032 // =0x7f0
 ; CHECK-NEXT:    dup v1.8h, w8
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ushr v0.8h, v0.8h, #5
@@ -468,7 +470,7 @@ define <8 x i16> @test_128_i16_x_8_2032_mask_ashr_5(<8 x i16> %a0) {
 define <8 x i16> @test_128_i16_x_8_2032_mask_ashr_6(<8 x i16> %a0) {
 ; CHECK-LABEL: test_128_i16_x_8_2032_mask_ashr_6:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #2032
+; CHECK-NEXT:    mov w8, #2032 // =0x7f0
 ; CHECK-NEXT:    dup v1.8h, w8
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ushr v0.8h, v0.8h, #6
@@ -546,6 +548,8 @@ define <8 x i16> @test_128_i16_x_8_127_mask_shl_8(<8 x i16> %a0) {
 define <8 x i16> @test_128_i16_x_8_127_mask_shl_9(<8 x i16> %a0) {
 ; CHECK-LABEL: test_128_i16_x_8_127_mask_shl_9:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    movi v1.8h, #127
+; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    shl v0.8h, v0.8h, #9
 ; CHECK-NEXT:    ret
   %t0 = and <8 x i16> %a0, <i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127>
@@ -565,7 +569,7 @@ define <8 x i16> @test_128_i16_x_8_127_mask_shl_10(<8 x i16> %a0) {
 define <8 x i16> @test_128_i16_x_8_2032_mask_shl_3(<8 x i16> %a0) {
 ; CHECK-LABEL: test_128_i16_x_8_2032_mask_shl_3:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #2032
+; CHECK-NEXT:    mov w8, #2032 // =0x7f0
 ; CHECK-NEXT:    dup v1.8h, w8
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    shl v0.8h, v0.8h, #3
@@ -577,7 +581,7 @@ define <8 x i16> @test_128_i16_x_8_2032_mask_shl_3(<8 x i16> %a0) {
 define <8 x i16> @test_128_i16_x_8_2032_mask_shl_4(<8 x i16> %a0) {
 ; CHECK-LABEL: test_128_i16_x_8_2032_mask_shl_4:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #2032
+; CHECK-NEXT:    mov w8, #2032 // =0x7f0
 ; CHECK-NEXT:    dup v1.8h, w8
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    shl v0.8h, v0.8h, #4
@@ -589,7 +593,7 @@ define <8 x i16> @test_128_i16_x_8_2032_mask_shl_4(<8 x i16> %a0) {
 define <8 x i16> @test_128_i16_x_8_2032_mask_shl_5(<8 x i16> %a0) {
 ; CHECK-LABEL: test_128_i16_x_8_2032_mask_shl_5:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #2032
+; CHECK-NEXT:    mov w8, #2032 // =0x7f0
 ; CHECK-NEXT:    dup v1.8h, w8
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    shl v0.8h, v0.8h, #5
@@ -601,7 +605,7 @@ define <8 x i16> @test_128_i16_x_8_2032_mask_shl_5(<8 x i16> %a0) {
 define <8 x i16> @test_128_i16_x_8_2032_mask_shl_6(<8 x i16> %a0) {
 ; CHECK-LABEL: test_128_i16_x_8_2032_mask_shl_6:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #2032
+; CHECK-NEXT:    mov w8, #2032 // =0x7f0
 ; CHECK-NEXT:    dup v1.8h, w8
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    shl v0.8h, v0.8h, #6
@@ -644,7 +648,7 @@ define <4 x i32> @test_128_i32_x_4_32767_mask_lshr_1(<4 x i32> %a0) {
 define <4 x i32> @test_128_i32_x_4_8388352_mask_lshr_7(<4 x i32> %a0) {
 ; CHECK-LABEL: test_128_i32_x_4_8388352_mask_lshr_7:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #8388352
+; CHECK-NEXT:    mov w8, #8388352 // =0x7fff00
 ; CHECK-NEXT:    dup v1.4s, w8
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ushr v0.4s, v0.4s, #7
@@ -656,7 +660,7 @@ define <4 x i32> @test_128_i32_x_4_8388352_mask_lshr_7(<4 x i32> %a0) {
 define <4 x i32> @test_128_i32_x_4_8388352_mask_lshr_8(<4 x i32> %a0) {
 ; CHECK-LABEL: test_128_i32_x_4_8388352_mask_lshr_8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #8388352
+; CHECK-NEXT:    mov w8, #8388352 // =0x7fff00
 ; CHECK-NEXT:    dup v1.4s, w8
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ushr v0.4s, v0.4s, #8
@@ -668,7 +672,7 @@ define <4 x i32> @test_128_i32_x_4_8388352_mask_lshr_8(<4 x i32> %a0) {
 define <4 x i32> @test_128_i32_x_4_8388352_mask_lshr_9(<4 x i32> %a0) {
 ; CHECK-LABEL: test_128_i32_x_4_8388352_mask_lshr_9:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #8388352
+; CHECK-NEXT:    mov w8, #8388352 // =0x7fff00
 ; CHECK-NEXT:    dup v1.4s, w8
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ushr v0.4s, v0.4s, #9
@@ -680,7 +684,7 @@ define <4 x i32> @test_128_i32_x_4_8388352_mask_lshr_9(<4 x i32> %a0) {
 define <4 x i32> @test_128_i32_x_4_8388352_mask_lshr_10(<4 x i32> %a0) {
 ; CHECK-LABEL: test_128_i32_x_4_8388352_mask_lshr_10:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #8388352
+; CHECK-NEXT:    mov w8, #8388352 // =0x7fff00
 ; CHECK-NEXT:    dup v1.4s, w8
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ushr v0.4s, v0.4s, #10
@@ -748,10 +752,10 @@ define <4 x i32> @test_128_i32_x_4_32767_mask_ashr_1(<4 x i32> %a0) {
 define <4 x i32> @test_128_i32_x_4_8388352_mask_ashr_7(<4 x i32> %a0) {
 ; CHECK-LABEL: test_128_i32_x_4_8388352_mask_ashr_7:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #8388352
+; CHECK-NEXT:    mov w8, #8388352 // =0x7fff00
 ; CHECK-NEXT:    dup v1.4s, w8
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
-; CHECK-NEXT:    ushr v0.4s, v0.4s, #7
+; CHECK-NEXT:    sshr v0.4s, v0.4s, #7
 ; CHECK-NEXT:    ret
   %t0 = and <4 x i32> %a0, <i32 8388352, i32 8388352, i32 8388352, i32 8388352>
   %t1 = ashr <4 x i32> %t0, <i32 7, i32 7, i32 7, i32 7>
@@ -760,10 +764,10 @@ define <4 x i32> @test_128_i32_x_4_8388352_mask_ashr_7(<4 x i32> %a0) {
 define <4 x i32> @test_128_i32_x_4_8388352_mask_ashr_8(<4 x i32> %a0) {
 ; CHECK-LABEL: test_128_i32_x_4_8388352_mask_ashr_8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #8388352
+; CHECK-NEXT:    mov w8, #8388352 // =0x7fff00
 ; CHECK-NEXT:    dup v1.4s, w8
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
-; CHECK-NEXT:    ushr v0.4s, v0.4s, #8
+; CHECK-NEXT:    sshr v0.4s, v0.4s, #8
 ; CHECK-NEXT:    ret
   %t0 = and <4 x i32> %a0, <i32 8388352, i32 8388352, i32 8388352, i32 8388352>
   %t1 = ashr <4 x i32> %t0, <i32 8, i32 8, i32 8, i32 8>
@@ -772,7 +776,7 @@ define <4 x i32> @test_128_i32_x_4_8388352_mask_ashr_8(<4 x i32> %a0) {
 define <4 x i32> @test_128_i32_x_4_8388352_mask_ashr_9(<4 x i32> %a0) {
 ; CHECK-LABEL: test_128_i32_x_4_8388352_mask_ashr_9:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #8388352
+; CHECK-NEXT:    mov w8, #8388352 // =0x7fff00
 ; CHECK-NEXT:    dup v1.4s, w8
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ushr v0.4s, v0.4s, #9
@@ -784,7 +788,7 @@ define <4 x i32> @test_128_i32_x_4_8388352_mask_ashr_9(<4 x i32> %a0) {
 define <4 x i32> @test_128_i32_x_4_8388352_mask_ashr_10(<4 x i32> %a0) {
 ; CHECK-LABEL: test_128_i32_x_4_8388352_mask_ashr_10:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #8388352
+; CHECK-NEXT:    mov w8, #8388352 // =0x7fff00
 ; CHECK-NEXT:    dup v1.4s, w8
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ushr v0.4s, v0.4s, #10
@@ -862,6 +866,8 @@ define <4 x i32> @test_128_i32_x_4_32767_mask_shl_16(<4 x i32> %a0) {
 define <4 x i32> @test_128_i32_x_4_32767_mask_shl_17(<4 x i32> %a0) {
 ; CHECK-LABEL: test_128_i32_x_4_32767_mask_shl_17:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    movi v1.4s, #127, msl #8
+; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    shl v0.4s, v0.4s, #17
 ; CHECK-NEXT:    ret
   %t0 = and <4 x i32> %a0, <i32 32767, i32 32767, i32 32767, i32 32767>
@@ -881,7 +887,7 @@ define <4 x i32> @test_128_i32_x_4_32767_mask_shl_18(<4 x i32> %a0) {
 define <4 x i32> @test_128_i32_x_4_8388352_mask_shl_7(<4 x i32> %a0) {
 ; CHECK-LABEL: test_128_i32_x_4_8388352_mask_shl_7:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #8388352
+; CHECK-NEXT:    mov w8, #8388352 // =0x7fff00
 ; CHECK-NEXT:    dup v1.4s, w8
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    shl v0.4s, v0.4s, #7
@@ -893,7 +899,7 @@ define <4 x i32> @test_128_i32_x_4_8388352_mask_shl_7(<4 x i32> %a0) {
 define <4 x i32> @test_128_i32_x_4_8388352_mask_shl_8(<4 x i32> %a0) {
 ; CHECK-LABEL: test_128_i32_x_4_8388352_mask_shl_8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #8388352
+; CHECK-NEXT:    mov w8, #8388352 // =0x7fff00
 ; CHECK-NEXT:    dup v1.4s, w8
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    shl v0.4s, v0.4s, #8
@@ -905,7 +911,7 @@ define <4 x i32> @test_128_i32_x_4_8388352_mask_shl_8(<4 x i32> %a0) {
 define <4 x i32> @test_128_i32_x_4_8388352_mask_shl_9(<4 x i32> %a0) {
 ; CHECK-LABEL: test_128_i32_x_4_8388352_mask_shl_9:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #8388352
+; CHECK-NEXT:    mov w8, #8388352 // =0x7fff00
 ; CHECK-NEXT:    dup v1.4s, w8
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    shl v0.4s, v0.4s, #9
@@ -917,7 +923,7 @@ define <4 x i32> @test_128_i32_x_4_8388352_mask_shl_9(<4 x i32> %a0) {
 define <4 x i32> @test_128_i32_x_4_8388352_mask_shl_10(<4 x i32> %a0) {
 ; CHECK-LABEL: test_128_i32_x_4_8388352_mask_shl_10:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #8388352
+; CHECK-NEXT:    mov w8, #8388352 // =0x7fff00
 ; CHECK-NEXT:    dup v1.4s, w8
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    shl v0.4s, v0.4s, #10
@@ -948,7 +954,7 @@ define <4 x i32> @test_128_i32_x_4_4294836224_mask_shl_1(<4 x i32> %a0) {
 define <2 x i64> @test_128_i64_x_2_2147483647_mask_lshr_1(<2 x i64> %a0) {
 ; CHECK-LABEL: test_128_i64_x_2_2147483647_mask_lshr_1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #2147483647
+; CHECK-NEXT:    mov w8, #2147483647 // =0x7fffffff
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ushr v0.2d, v0.2d, #1
@@ -961,7 +967,7 @@ define <2 x i64> @test_128_i64_x_2_2147483647_mask_lshr_1(<2 x i64> %a0) {
 define <2 x i64> @test_128_i64_x_2_140737488289792_mask_lshr_15(<2 x i64> %a0) {
 ; CHECK-LABEL: test_128_i64_x_2_140737488289792_mask_lshr_15:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, #140737488289792
+; CHECK-NEXT:    mov x8, #140737488289792 // =0x7fffffff0000
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ushr v0.2d, v0.2d, #15
@@ -973,7 +979,7 @@ define <2 x i64> @test_128_i64_x_2_140737488289792_mask_lshr_15(<2 x i64> %a0) {
 define <2 x i64> @test_128_i64_x_2_140737488289792_mask_lshr_16(<2 x i64> %a0) {
 ; CHECK-LABEL: test_128_i64_x_2_140737488289792_mask_lshr_16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, #140737488289792
+; CHECK-NEXT:    mov x8, #140737488289792 // =0x7fffffff0000
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ushr v0.2d, v0.2d, #16
@@ -985,7 +991,7 @@ define <2 x i64> @test_128_i64_x_2_140737488289792_mask_lshr_16(<2 x i64> %a0) {
 define <2 x i64> @test_128_i64_x_2_140737488289792_mask_lshr_17(<2 x i64> %a0) {
 ; CHECK-LABEL: test_128_i64_x_2_140737488289792_mask_lshr_17:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, #140737488289792
+; CHECK-NEXT:    mov x8, #140737488289792 // =0x7fffffff0000
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ushr v0.2d, v0.2d, #17
@@ -997,7 +1003,7 @@ define <2 x i64> @test_128_i64_x_2_140737488289792_mask_lshr_17(<2 x i64> %a0) {
 define <2 x i64> @test_128_i64_x_2_140737488289792_mask_lshr_18(<2 x i64> %a0) {
 ; CHECK-LABEL: test_128_i64_x_2_140737488289792_mask_lshr_18:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, #140737488289792
+; CHECK-NEXT:    mov x8, #140737488289792 // =0x7fffffff0000
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ushr v0.2d, v0.2d, #18
@@ -1010,7 +1016,7 @@ define <2 x i64> @test_128_i64_x_2_140737488289792_mask_lshr_18(<2 x i64> %a0) {
 define <2 x i64> @test_128_i64_x_2_18446744065119617024_mask_lshr_1(<2 x i64> %a0) {
 ; CHECK-LABEL: test_128_i64_x_2_18446744065119617024_mask_lshr_1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, #-8589934592
+; CHECK-NEXT:    mov x8, #-8589934592 // =0xfffffffe00000000
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ushr v0.2d, v0.2d, #1
@@ -1022,7 +1028,7 @@ define <2 x i64> @test_128_i64_x_2_18446744065119617024_mask_lshr_1(<2 x i64> %a
 define <2 x i64> @test_128_i64_x_2_18446744065119617024_mask_lshr_32(<2 x i64> %a0) {
 ; CHECK-LABEL: test_128_i64_x_2_18446744065119617024_mask_lshr_32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, #-8589934592
+; CHECK-NEXT:    mov x8, #-8589934592 // =0xfffffffe00000000
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ushr v0.2d, v0.2d, #32
@@ -1055,7 +1061,7 @@ define <2 x i64> @test_128_i64_x_2_18446744065119617024_mask_lshr_34(<2 x i64> %
 define <2 x i64> @test_128_i64_x_2_2147483647_mask_ashr_1(<2 x i64> %a0) {
 ; CHECK-LABEL: test_128_i64_x_2_2147483647_mask_ashr_1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #2147483647
+; CHECK-NEXT:    mov w8, #2147483647 // =0x7fffffff
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ushr v0.2d, v0.2d, #1
@@ -1068,10 +1074,10 @@ define <2 x i64> @test_128_i64_x_2_2147483647_mask_ashr_1(<2 x i64> %a0) {
 define <2 x i64> @test_128_i64_x_2_140737488289792_mask_ashr_15(<2 x i64> %a0) {
 ; CHECK-LABEL: test_128_i64_x_2_140737488289792_mask_ashr_15:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, #140737488289792
+; CHECK-NEXT:    mov x8, #140737488289792 // =0x7fffffff0000
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
-; CHECK-NEXT:    ushr v0.2d, v0.2d, #15
+; CHECK-NEXT:    sshr v0.2d, v0.2d, #15
 ; CHECK-NEXT:    ret
   %t0 = and <2 x i64> %a0, <i64 140737488289792, i64 140737488289792>
   %t1 = ashr <2 x i64> %t0, <i64 15, i64 15>
@@ -1080,10 +1086,10 @@ define <2 x i64> @test_128_i64_x_2_140737488289792_mask_ashr_15(<2 x i64> %a0) {
 define <2 x i64> @test_128_i64_x_2_140737488289792_mask_ashr_16(<2 x i64> %a0) {
 ; CHECK-LABEL: test_128_i64_x_2_140737488289792_mask_ashr_16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, #140737488289792
+; CHECK-NEXT:    mov x8, #140737488289792 // =0x7fffffff0000
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
-; CHECK-NEXT:    ushr v0.2d, v0.2d, #16
+; CHECK-NEXT:    sshr v0.2d, v0.2d, #16
 ; CHECK-NEXT:    ret
   %t0 = and <2 x i64> %a0, <i64 140737488289792, i64 140737488289792>
   %t1 = ashr <2 x i64> %t0, <i64 16, i64 16>
@@ -1092,7 +1098,7 @@ define <2 x i64> @test_128_i64_x_2_140737488289792_mask_ashr_16(<2 x i64> %a0) {
 define <2 x i64> @test_128_i64_x_2_140737488289792_mask_ashr_17(<2 x i64> %a0) {
 ; CHECK-LABEL: test_128_i64_x_2_140737488289792_mask_ashr_17:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, #140737488289792
+; CHECK-NEXT:    mov x8, #140737488289792 // =0x7fffffff0000
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ushr v0.2d, v0.2d, #17
@@ -1104,7 +1110,7 @@ define <2 x i64> @test_128_i64_x_2_140737488289792_mask_ashr_17(<2 x i64> %a0) {
 define <2 x i64> @test_128_i64_x_2_140737488289792_mask_ashr_18(<2 x i64> %a0) {
 ; CHECK-LABEL: test_128_i64_x_2_140737488289792_mask_ashr_18:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, #140737488289792
+; CHECK-NEXT:    mov x8, #140737488289792 // =0x7fffffff0000
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ushr v0.2d, v0.2d, #18
@@ -1117,7 +1123,7 @@ define <2 x i64> @test_128_i64_x_2_140737488289792_mask_ashr_18(<2 x i64> %a0) {
 define <2 x i64> @test_128_i64_x_2_18446744065119617024_mask_ashr_1(<2 x i64> %a0) {
 ; CHECK-LABEL: test_128_i64_x_2_18446744065119617024_mask_ashr_1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, #-8589934592
+; CHECK-NEXT:    mov x8, #-8589934592 // =0xfffffffe00000000
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    sshr v0.2d, v0.2d, #1
@@ -1129,7 +1135,7 @@ define <2 x i64> @test_128_i64_x_2_18446744065119617024_mask_ashr_1(<2 x i64> %a
 define <2 x i64> @test_128_i64_x_2_18446744065119617024_mask_ashr_32(<2 x i64> %a0) {
 ; CHECK-LABEL: test_128_i64_x_2_18446744065119617024_mask_ashr_32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, #-8589934592
+; CHECK-NEXT:    mov x8, #-8589934592 // =0xfffffffe00000000
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    sshr v0.2d, v0.2d, #32
@@ -1162,7 +1168,7 @@ define <2 x i64> @test_128_i64_x_2_18446744065119617024_mask_ashr_34(<2 x i64> %
 define <2 x i64> @test_128_i64_x_2_2147483647_mask_shl_1(<2 x i64> %a0) {
 ; CHECK-LABEL: test_128_i64_x_2_2147483647_mask_shl_1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #2147483647
+; CHECK-NEXT:    mov w8, #2147483647 // =0x7fffffff
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    add v0.2d, v0.2d, v0.2d
@@ -1174,7 +1180,7 @@ define <2 x i64> @test_128_i64_x_2_2147483647_mask_shl_1(<2 x i64> %a0) {
 define <2 x i64> @test_128_i64_x_2_2147483647_mask_shl_32(<2 x i64> %a0) {
 ; CHECK-LABEL: test_128_i64_x_2_2147483647_mask_shl_32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #2147483647
+; CHECK-NEXT:    mov w8, #2147483647 // =0x7fffffff
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    shl v0.2d, v0.2d, #32
@@ -1186,6 +1192,9 @@ define <2 x i64> @test_128_i64_x_2_2147483647_mask_shl_32(<2 x i64> %a0) {
 define <2 x i64> @test_128_i64_x_2_2147483647_mask_shl_33(<2 x i64> %a0) {
 ; CHECK-LABEL: test_128_i64_x_2_2147483647_mask_shl_33:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #2147483647 // =0x7fffffff
+; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    shl v0.2d, v0.2d, #33
 ; CHECK-NEXT:    ret
   %t0 = and <2 x i64> %a0, <i64 2147483647, i64 2147483647>
@@ -1205,7 +1214,7 @@ define <2 x i64> @test_128_i64_x_2_2147483647_mask_shl_34(<2 x i64> %a0) {
 define <2 x i64> @test_128_i64_x_2_140737488289792_mask_shl_15(<2 x i64> %a0) {
 ; CHECK-LABEL: test_128_i64_x_2_140737488289792_mask_shl_15:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, #140737488289792
+; CHECK-NEXT:    mov x8, #140737488289792 // =0x7fffffff0000
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    shl v0.2d, v0.2d, #15
@@ -1217,7 +1226,7 @@ define <2 x i64> @test_128_i64_x_2_140737488289792_mask_shl_15(<2 x i64> %a0) {
 define <2 x i64> @test_128_i64_x_2_140737488289792_mask_shl_16(<2 x i64> %a0) {
 ; CHECK-LABEL: test_128_i64_x_2_140737488289792_mask_shl_16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, #140737488289792
+; CHECK-NEXT:    mov x8, #140737488289792 // =0x7fffffff0000
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    shl v0.2d, v0.2d, #16
@@ -1229,7 +1238,7 @@ define <2 x i64> @test_128_i64_x_2_140737488289792_mask_shl_16(<2 x i64> %a0) {
 define <2 x i64> @test_128_i64_x_2_140737488289792_mask_shl_17(<2 x i64> %a0) {
 ; CHECK-LABEL: test_128_i64_x_2_140737488289792_mask_shl_17:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, #140737488289792
+; CHECK-NEXT:    mov x8, #140737488289792 // =0x7fffffff0000
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    shl v0.2d, v0.2d, #17
@@ -1241,7 +1250,7 @@ define <2 x i64> @test_128_i64_x_2_140737488289792_mask_shl_17(<2 x i64> %a0) {
 define <2 x i64> @test_128_i64_x_2_140737488289792_mask_shl_18(<2 x i64> %a0) {
 ; CHECK-LABEL: test_128_i64_x_2_140737488289792_mask_shl_18:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, #140737488289792
+; CHECK-NEXT:    mov x8, #140737488289792 // =0x7fffffff0000
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    shl v0.2d, v0.2d, #18
@@ -1254,7 +1263,7 @@ define <2 x i64> @test_128_i64_x_2_140737488289792_mask_shl_18(<2 x i64> %a0) {
 define <2 x i64> @test_128_i64_x_2_18446744065119617024_mask_shl_1(<2 x i64> %a0) {
 ; CHECK-LABEL: test_128_i64_x_2_18446744065119617024_mask_shl_1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, #-8589934592
+; CHECK-NEXT:    mov x8, #-8589934592 // =0xfffffffe00000000
 ; CHECK-NEXT:    dup v1.2d, x8
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    add v0.2d, v0.2d, v0.2d

@@ -117,7 +117,8 @@ define void @combine_shlsat_vector() nounwind {
 define i16 @combine_shlsat_to_shl(i16 %x) nounwind {
 ; CHECK-LABEL: combine_shlsat_to_shl:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and w0, w0, #0xfffffffc
+; CHECK-NEXT:    ubfx w8, w0, #2, #14
+; CHECK-NEXT:    lsl w0, w8, #2
 ; CHECK-NEXT:    ret
   %x2 = lshr i16 %x, 2
   %tmp = call i16 @llvm.ushl.sat.i16(i16 %x2, i16 2)
@@ -128,9 +129,9 @@ define i16 @combine_shlsat_to_shl(i16 %x) nounwind {
 define i16 @combine_shlsat_to_shl_no_fold(i16 %x) nounwind {
 ; CHECK-LABEL: combine_shlsat_to_shl_no_fold:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    lsl w8, w0, #14
-; CHECK-NEXT:    and w8, w8, #0x3fff0000
-; CHECK-NEXT:    lsl w9, w8, #3
+; CHECK-NEXT:    ubfx w8, w0, #2, #14
+; CHECK-NEXT:    lsl w9, w8, #19
+; CHECK-NEXT:    lsl w8, w8, #16
 ; CHECK-NEXT:    cmp w8, w9, lsr #3
 ; CHECK-NEXT:    csinv w8, w9, wzr, eq
 ; CHECK-NEXT:    lsr w0, w8, #16
@@ -144,6 +145,8 @@ define i16 @combine_shlsat_to_shl_no_fold(i16 %x) nounwind {
 define <2 x i16> @combine_shlsat_to_shl_vec(<2 x i8> %a) nounwind {
 ; CHECK-LABEL: combine_shlsat_to_shl_vec:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    movi d1, #0x0000ff000000ff
+; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    shl v0.2s, v0.2s, #8
 ; CHECK-NEXT:    ret
   %ext = zext <2 x i8> %a to <2 x i16>

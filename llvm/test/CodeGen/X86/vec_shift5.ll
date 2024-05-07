@@ -294,7 +294,7 @@ define <2 x i8> @PR58661(<2 x i8> %a0) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    psrlw $8, %xmm0
 ; CHECK-NEXT:    movd %xmm0, %eax
-; CHECK-NEXT:    shll $8, %eax
+; CHECK-NEXT:    shlw $8, %ax
 ; CHECK-NEXT:    movd %eax, %xmm0
 ; CHECK-NEXT:    ret{{[l|q]}}
   %shuffle = shufflevector <2 x i8> %a0, <2 x i8> <i8 poison, i8 0>, <2 x i32> <i32 1, i32 3>

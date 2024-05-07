@@ -237,20 +237,20 @@ define i16 @btr_16_mask(i16 %x, i16 %n) {
 define i16 @bts_16_mask(i16 %x, i16 %n) {
 ; X64-LABEL: bts_16_mask:
 ; X64:       # %bb.0:
-; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    andb $15, %sil
-; X64-NEXT:    btsl %esi, %eax
+; X64-NEXT:    movl %esi, %ecx
+; X64-NEXT:    andb $15, %cl
+; X64-NEXT:    movw $1, %ax
+; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
+; X64-NEXT:    shlw %cl, %ax
+; X64-NEXT:    orl %edi, %eax
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: bts_16_mask:
 ; X86:       # %bb.0:
+; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    andb $15, %cl
-; X86-NEXT:    movl $1, %eax
-; X86-NEXT:    shll %cl, %eax
-; X86-NEXT:    orw {{[0-9]+}}(%esp), %ax
-; X86-NEXT:    # kill: def $ax killed $ax killed $eax
+; X86-NEXT:    btsw %cx, %ax
 ; X86-NEXT:    retl
   %1 = and i16 %n, 15
   %2 = shl i16 1, %1
@@ -261,20 +261,20 @@ define i16 @bts_16_mask(i16 %x, i16 %n) {
 define i16 @btc_16_mask(i16 %x, i16 %n) {
 ; X64-LABEL: btc_16_mask:
 ; X64:       # %bb.0:
-; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    andb $15, %sil
-; X64-NEXT:    btcl %esi, %eax
+; X64-NEXT:    movl %esi, %ecx
+; X64-NEXT:    andb $15, %cl
+; X64-NEXT:    movw $1, %ax
+; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
+; X64-NEXT:    shlw %cl, %ax
+; X64-NEXT:    xorl %edi, %eax
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: btc_16_mask:
 ; X86:       # %bb.0:
+; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    andb $15, %cl
-; X86-NEXT:    movl $1, %eax
-; X86-NEXT:    shll %cl, %eax
-; X86-NEXT:    xorw {{[0-9]+}}(%esp), %ax
-; X86-NEXT:    # kill: def $ax killed $ax killed $eax
+; X86-NEXT:    btcw %cx, %ax
 ; X86-NEXT:    retl
   %1 = and i16 %n, 15
   %2 = shl i16 1, %1

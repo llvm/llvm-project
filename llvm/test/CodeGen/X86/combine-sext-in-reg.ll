@@ -6,15 +6,29 @@
 define <4 x i64> @sextinreg_zext_v16i8_4i64(<16 x i8> %a0) {
 ; SSE-LABEL: sextinreg_zext_v16i8_4i64:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    pmovsxbq %xmm0, %xmm2
-; SSE-NEXT:    psrld $16, %xmm0
-; SSE-NEXT:    pmovsxbq %xmm0, %xmm1
+; SSE-NEXT:    pmovzxbq {{.*#+}} xmm2 = xmm0[0],zero,zero,zero,zero,zero,zero,zero,xmm0[1],zero,zero,zero,zero,zero,zero,zero
+; SSE-NEXT:    pshufb {{.*#+}} xmm0 = zero,zero,zero,zero,zero,zero,zero,xmm0[2],zero,zero,zero,zero,zero,zero,zero,xmm0[3]
+; SSE-NEXT:    movdqa %xmm2, %xmm1
+; SSE-NEXT:    psllq $56, %xmm1
+; SSE-NEXT:    psrad $31, %xmm1
+; SSE-NEXT:    pslld $24, %xmm2
+; SSE-NEXT:    psrad $24, %xmm2
+; SSE-NEXT:    por %xmm1, %xmm2
+; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,3,3]
+; SSE-NEXT:    psrad $31, %xmm0
+; SSE-NEXT:    psrad $24, %xmm1
+; SSE-NEXT:    pblendw {{.*#+}} xmm1 = xmm1[0,1],xmm0[2,3],xmm1[4,5],xmm0[6,7]
 ; SSE-NEXT:    movdqa %xmm2, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: sextinreg_zext_v16i8_4i64:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpmovsxbq %xmm0, %ymm0
+; AVX-NEXT:    vpmovzxbq {{.*#+}} ymm0 = xmm0[0],zero,zero,zero,zero,zero,zero,zero,xmm0[1],zero,zero,zero,zero,zero,zero,zero,xmm0[2],zero,zero,zero,zero,zero,zero,zero,xmm0[3],zero,zero,zero,zero,zero,zero,zero
+; AVX-NEXT:    vpsllq $56, %ymm0, %ymm1
+; AVX-NEXT:    vpsrad $31, %ymm1, %ymm1
+; AVX-NEXT:    vpslld $24, %ymm0, %ymm0
+; AVX-NEXT:    vpsrad $24, %ymm0, %ymm0
+; AVX-NEXT:    vpor %ymm1, %ymm0, %ymm0
 ; AVX-NEXT:    retq
   %1 = shufflevector <16 x i8> %a0, <16 x i8> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %2 = zext <4 x i8> %1 to <4 x i64>
@@ -27,15 +41,24 @@ define <4 x i64> @sextinreg_zext_v16i8_4i64(<16 x i8> %a0) {
 define <4 x i64> @sextinreg_zext_sext_v16i8_4i64(<16 x i8> %a0) {
 ; SSE-LABEL: sextinreg_zext_sext_v16i8_4i64:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    pmovsxbq %xmm0, %xmm2
-; SSE-NEXT:    psrld $16, %xmm0
-; SSE-NEXT:    pmovsxbq %xmm0, %xmm1
-; SSE-NEXT:    movdqa %xmm2, %xmm0
+; SSE-NEXT:    pmovsxbd %xmm0, %xmm2
+; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm2[0,2,2,3]
+; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm2[0,0,2,1]
+; SSE-NEXT:    pmovzxdq {{.*#+}} xmm3 = xmm2[0],zero,xmm2[1],zero
+; SSE-NEXT:    psrad $31, %xmm0
+; SSE-NEXT:    pblendw {{.*#+}} xmm0 = xmm3[0,1],xmm0[2,3],xmm3[4,5],xmm0[6,7]
+; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[2,2,3,3]
+; SSE-NEXT:    psrad $31, %xmm1
+; SSE-NEXT:    pblendw {{.*#+}} xmm1 = xmm2[0,1],xmm1[2,3],xmm2[4,5],xmm1[6,7]
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: sextinreg_zext_sext_v16i8_4i64:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpmovsxbq %xmm0, %ymm0
+; AVX-NEXT:    vpmovsxbd %xmm0, %xmm0
+; AVX-NEXT:    vpmovzxdq {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
+; AVX-NEXT:    vpsllq $32, %ymm0, %ymm1
+; AVX-NEXT:    vpsrad $31, %ymm1, %ymm1
+; AVX-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0],ymm1[1],ymm0[2],ymm1[3],ymm0[4],ymm1[5],ymm0[6],ymm1[7]
 ; AVX-NEXT:    retq
   %1 = shufflevector <16 x i8> %a0, <16 x i8> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %2 = sext <4 x i8> %1 to <4 x i32>

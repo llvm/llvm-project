@@ -102,6 +102,8 @@ define dso_local void @test5(i32 %X) nounwind minsize {
 ; CHECK-NEXT:    shll $16, %eax
 ; CHECK-NEXT:    movzwl x+4(%rip), %ecx
 ; CHECK-NEXT:    orl %eax, %ecx
+; CHECK-NEXT:    shlq $32, %rcx
+; CHECK-NEXT:    shrq $32, %rcx
 ; CHECK-NEXT:    cmpl $1, %ecx
 ; CHECK-NEXT:    jne bar # TAILCALL
 ; CHECK-NEXT:  # %bb.1: # %if.end

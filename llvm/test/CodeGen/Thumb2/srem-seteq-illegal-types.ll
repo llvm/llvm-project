@@ -26,9 +26,11 @@ define i1 @test_srem_even(i4 %X) nounwind {
 ; CHECK-LABEL: test_srem_even:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    sbfx r1, r0, #0, #4
+; CHECK-NEXT:    movs r2, #8
 ; CHECK-NEXT:    add.w r1, r1, r1, lsl #1
-; CHECK-NEXT:    ubfx r2, r1, #7, #1
-; CHECK-NEXT:    add.w r1, r2, r1, lsr #4
+; CHECK-NEXT:    and.w r2, r2, r1, lsr #4
+; CHECK-NEXT:    lsrs r1, r1, #4
+; CHECK-NEXT:    add.w r1, r1, r2, lsr #3
 ; CHECK-NEXT:    add.w r1, r1, r1, lsl #1
 ; CHECK-NEXT:    sub.w r0, r0, r1, lsl #1
 ; CHECK-NEXT:    and r0, r0, #15
@@ -45,10 +47,11 @@ define i1 @test_srem_pow2_setne(i6 %X) nounwind {
 ; CHECK-LABEL: test_srem_pow2_setne:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    sbfx r1, r0, #0, #6
-; CHECK-NEXT:    ubfx r1, r1, #9, #2
-; CHECK-NEXT:    add r1, r0
-; CHECK-NEXT:    and r1, r1, #60
-; CHECK-NEXT:    subs r0, r0, r1
+; CHECK-NEXT:    movs r2, #48
+; CHECK-NEXT:    and.w r1, r2, r1, lsr #5
+; CHECK-NEXT:    add.w r1, r0, r1, lsr #4
+; CHECK-NEXT:    lsrs r1, r1, #2
+; CHECK-NEXT:    sub.w r0, r0, r1, lsl #2
 ; CHECK-NEXT:    ands r0, r0, #63
 ; CHECK-NEXT:    it ne
 ; CHECK-NEXT:    movne r0, #1

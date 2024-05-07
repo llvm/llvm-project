@@ -63,7 +63,9 @@ define i64 @test4(i64 %f12) nounwind {
 ;
 ; x86_64-LABEL: test4:
 ; x86_64:       # %bb.0:
-; x86_64-NEXT:    movslq %edi, %rax
+; x86_64-NEXT:    movq %rdi, %rax
+; x86_64-NEXT:    shlq $32, %rax
+; x86_64-NEXT:    sarq $32, %rax
 ; x86_64-NEXT:    retq
 	%f11 = shl i64 %f12, 32
 	%tmp7.25 = ashr i64 %f11, 32
@@ -93,13 +95,17 @@ define i16 @test5(i16 %f12) nounwind {
 define i16 @test6(i16 %f12) nounwind {
 ; i686-LABEL: test6:
 ; i686:       # %bb.0:
-; i686-NEXT:    movsbl {{[0-9]+}}(%esp), %eax
+; i686-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; i686-NEXT:    shll $8, %eax
+; i686-NEXT:    sarw $8, %ax
 ; i686-NEXT:    # kill: def $ax killed $ax killed $eax
 ; i686-NEXT:    retl
 ;
 ; x86_64-LABEL: test6:
 ; x86_64:       # %bb.0:
-; x86_64-NEXT:    movsbl %dil, %eax
+; x86_64-NEXT:    movl %edi, %eax
+; x86_64-NEXT:    shll $8, %eax
+; x86_64-NEXT:    sarw $8, %ax
 ; x86_64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; x86_64-NEXT:    retq
 	%f11 = shl i16 %f12, 8

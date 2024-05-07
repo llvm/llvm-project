@@ -49,7 +49,8 @@ define i64 @vscale_one() nounwind {
 ;
 ; RV64-VLEN256EXACT-LABEL: vscale_one:
 ; RV64-VLEN256EXACT:       # %bb.0: # %entry
-; RV64-VLEN256EXACT-NEXT:    li a0, 4
+; RV64-VLEN256EXACT-NEXT:    csrr a0, vlenb
+; RV64-VLEN256EXACT-NEXT:    srli a0, a0, 3
 ; RV64-VLEN256EXACT-NEXT:    ret
 entry:
   %0 = call i64 @llvm.vscale.i64()
@@ -73,7 +74,8 @@ define i64 @vscale_uimmpow2xlen() nounwind {
 ;
 ; RV64-VLEN256EXACT-LABEL: vscale_uimmpow2xlen:
 ; RV64-VLEN256EXACT:       # %bb.0: # %entry
-; RV64-VLEN256EXACT-NEXT:    li a0, 256
+; RV64-VLEN256EXACT-NEXT:    csrr a0, vlenb
+; RV64-VLEN256EXACT-NEXT:    slli a0, a0, 3
 ; RV64-VLEN256EXACT-NEXT:    ret
 entry:
   %0 = call i64 @llvm.vscale.i64()
@@ -128,7 +130,8 @@ define i64 @vscale_select(i32 %x, i32 %y) {
 ;
 ; RV64-VLEN256EXACT-LABEL: vscale_select:
 ; RV64-VLEN256EXACT:       # %bb.0:
-; RV64-VLEN256EXACT-NEXT:    li a0, 4
+; RV64-VLEN256EXACT-NEXT:    csrr a0, vlenb
+; RV64-VLEN256EXACT-NEXT:    srli a0, a0, 3
 ; RV64-VLEN256EXACT-NEXT:    ret
   %a = call i64 @llvm.vscale.i64()
   %b = and i64 %a, 4294967295
@@ -153,7 +156,8 @@ define i64 @vscale_high_bits_zero() nounwind {
 ;
 ; RV64-VLEN256EXACT-LABEL: vscale_high_bits_zero:
 ; RV64-VLEN256EXACT:       # %bb.0: # %entry
-; RV64-VLEN256EXACT-NEXT:    li a0, 4
+; RV64-VLEN256EXACT-NEXT:    csrr a0, vlenb
+; RV64-VLEN256EXACT-NEXT:    srli a0, a0, 3
 ; RV64-VLEN256EXACT-NEXT:    ret
 entry:
   %0 = call i64 @llvm.vscale.i64()
@@ -192,7 +196,8 @@ define i64 @vscale_masked() nounwind {
 ;
 ; RV64-VLEN256EXACT-LABEL: vscale_masked:
 ; RV64-VLEN256EXACT:       # %bb.0: # %entry
-; RV64-VLEN256EXACT-NEXT:    li a0, 4
+; RV64-VLEN256EXACT-NEXT:    csrr a0, vlenb
+; RV64-VLEN256EXACT-NEXT:    srli a0, a0, 3
 ; RV64-VLEN256EXACT-NEXT:    ret
 entry:
   %0 = call i64 @llvm.vscale.i64()

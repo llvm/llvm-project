@@ -3153,6 +3153,10 @@ define amdgpu_kernel void @s_fneg_select_infloop_regression_v2f16(<2 x half> %ar
 ; SI-NEXT:    s_xor_b32 s0, s0, 0x80008000
 ; SI-NEXT:    s_cmp_eq_u32 s1, 1
 ; SI-NEXT:    s_cselect_b32 s0, 0, s0
+; SI-NEXT:    s_and_b32 s1, s0, 0xffff
+; SI-NEXT:    s_lshr_b32 s0, s0, 16
+; SI-NEXT:    s_lshl_b32 s0, s0, 16
+; SI-NEXT:    s_or_b32 s0, s1, s0
 ; SI-NEXT:    v_mov_b32_e32 v0, s2
 ; SI-NEXT:    v_mov_b32_e32 v1, s3
 ; SI-NEXT:    v_mov_b32_e32 v2, s0

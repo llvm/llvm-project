@@ -967,34 +967,38 @@ define amdgpu_kernel void @idot4_acc16_vecMul(ptr addrspace(1) %src1,
 ; GFX7-NEXT:    s_mov_b64 s[8:9], s[4:5]
 ; GFX7-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX7-NEXT:    v_mov_b32_e32 v1, 0
-; GFX7-NEXT:    buffer_load_dword v2, v[0:1], s[8:11], 0 addr64
+; GFX7-NEXT:    buffer_load_dword v3, v[0:1], s[8:11], 0 addr64
 ; GFX7-NEXT:    s_mov_b64 s[8:9], s[6:7]
-; GFX7-NEXT:    buffer_load_dword v0, v[0:1], s[8:11], 0 addr64
+; GFX7-NEXT:    buffer_load_dword v4, v[0:1], s[8:11], 0 addr64
 ; GFX7-NEXT:    s_mov_b32 s2, -1
-; GFX7-NEXT:    buffer_load_ushort v1, off, s[0:3], 0
+; GFX7-NEXT:    buffer_load_ushort v5, off, s[0:3], 0
+; GFX7-NEXT:    v_mov_b32_e32 v0, v1
+; GFX7-NEXT:    v_mov_b32_e32 v2, v1
 ; GFX7-NEXT:    s_waitcnt vmcnt(2)
-; GFX7-NEXT:    v_bfe_i32 v4, v2, 0, 8
-; GFX7-NEXT:    v_bfe_i32 v3, v2, 16, 8
+; GFX7-NEXT:    v_bfe_i32 v1, v3, 16, 8
+; GFX7-NEXT:    v_ashrrev_i32_e32 v7, 24, v3
+; GFX7-NEXT:    v_bfe_i32 v6, v3, 0, 8
+; GFX7-NEXT:    v_bfe_i32 v3, v3, 8, 8
+; GFX7-NEXT:    v_and_b32_e32 v8, 0xffff, v1
+; GFX7-NEXT:    v_lshlrev_b32_e32 v1, 16, v7
 ; GFX7-NEXT:    s_waitcnt vmcnt(1)
-; GFX7-NEXT:    v_bfe_i32 v7, v0, 0, 8
-; GFX7-NEXT:    v_ashrrev_i32_e32 v5, 24, v2
-; GFX7-NEXT:    v_bfe_i32 v2, v2, 8, 8
-; GFX7-NEXT:    v_and_b32_e32 v4, 0xffff, v4
-; GFX7-NEXT:    v_bfe_i32 v6, v0, 16, 8
-; GFX7-NEXT:    v_ashrrev_i32_e32 v8, 24, v0
-; GFX7-NEXT:    v_bfe_i32 v0, v0, 8, 8
-; GFX7-NEXT:    v_and_b32_e32 v7, 0xffff, v7
-; GFX7-NEXT:    v_and_b32_e32 v2, 0xffff, v2
-; GFX7-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX7-NEXT:    s_waitcnt vmcnt(0)
-; GFX7-NEXT:    v_mad_u32_u24 v1, v4, v7, v1
-; GFX7-NEXT:    v_and_b32_e32 v3, 0xffff, v3
+; GFX7-NEXT:    v_ashrrev_i32_e32 v10, 24, v4
+; GFX7-NEXT:    v_bfe_i32 v9, v4, 0, 8
+; GFX7-NEXT:    v_bfe_u32 v11, v3, 0, 16
+; GFX7-NEXT:    v_lshlrev_b32_e32 v3, 16, v10
+; GFX7-NEXT:    v_lshr_b64 v[0:1], v[0:1], 48
+; GFX7-NEXT:    v_bfe_i32 v7, v4, 16, 8
+; GFX7-NEXT:    v_bfe_i32 v4, v4, 8, 8
 ; GFX7-NEXT:    v_and_b32_e32 v6, 0xffff, v6
-; GFX7-NEXT:    v_mad_u32_u24 v0, v2, v0, v1
-; GFX7-NEXT:    v_and_b32_e32 v5, 0xffff, v5
-; GFX7-NEXT:    v_and_b32_e32 v8, 0xffff, v8
-; GFX7-NEXT:    v_mad_u32_u24 v0, v3, v6, v0
-; GFX7-NEXT:    v_mad_u32_u24 v0, v5, v8, v0
+; GFX7-NEXT:    v_and_b32_e32 v9, 0xffff, v9
+; GFX7-NEXT:    v_lshr_b64 v[1:2], v[2:3], 48
+; GFX7-NEXT:    v_bfe_u32 v4, v4, 0, 16
+; GFX7-NEXT:    s_waitcnt vmcnt(0)
+; GFX7-NEXT:    v_mad_u32_u24 v2, v6, v9, v5
+; GFX7-NEXT:    v_and_b32_e32 v7, 0xffff, v7
+; GFX7-NEXT:    v_mad_u32_u24 v2, v11, v4, v2
+; GFX7-NEXT:    v_mad_u32_u24 v2, v8, v7, v2
+; GFX7-NEXT:    v_mad_u32_u24 v0, v0, v1, v2
 ; GFX7-NEXT:    buffer_store_short v0, off, s[0:3], 0
 ; GFX7-NEXT:    s_endpgm
 ;

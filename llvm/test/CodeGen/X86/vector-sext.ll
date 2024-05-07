@@ -3722,6 +3722,7 @@ define <4 x i32> @sext_4i17_to_4i32(ptr %ptr) {
 ; X86-SSE2-NEXT:    sarl $15, %edx
 ; X86-SSE2-NEXT:    movd %edx, %xmm0
 ; X86-SSE2-NEXT:    movl %eax, %edx
+; X86-SSE2-NEXT:    andl $-4, %edx
 ; X86-SSE2-NEXT:    shll $13, %edx
 ; X86-SSE2-NEXT:    sarl $15, %edx
 ; X86-SSE2-NEXT:    movd %edx, %xmm1
@@ -3755,6 +3756,7 @@ define <4 x i32> @sext_4i17_to_4i32(ptr %ptr) {
 ; X86-SSE41-NEXT:    sarl $15, %eax
 ; X86-SSE41-NEXT:    movd %eax, %xmm0
 ; X86-SSE41-NEXT:    pinsrd $1, %ecx, %xmm0
+; X86-SSE41-NEXT:    andl $-4, %esi
 ; X86-SSE41-NEXT:    shll $13, %esi
 ; X86-SSE41-NEXT:    sarl $15, %esi
 ; X86-SSE41-NEXT:    pinsrd $2, %esi, %xmm0

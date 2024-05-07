@@ -14,13 +14,13 @@ define void @fred(i1 %x) #0 {
 ; CHECK:       // %bb.0: // %b0
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     p0 = tstbit(r0,#0)
-; CHECK-NEXT:     if (!p0.new) r2 = #1024
+; CHECK-NEXT:     if (!p0.new) r2 = #512
 ; CHECK-NEXT:     if (p0.new) r2 = #0
 ; CHECK-NEXT:     r5:4 = combine(#0,#0)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     memd(r2+##array+184) = r5:4
-; CHECK-NEXT:     memd(r2+##array+176) = r5:4
+; CHECK-NEXT:     memd(r2<<#1+##array+184) = r5:4
+; CHECK-NEXT:     memd(r2<<#1+##array+176) = r5:4
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     jumpr r31

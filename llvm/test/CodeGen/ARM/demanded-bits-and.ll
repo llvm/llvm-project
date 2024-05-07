@@ -15,6 +15,7 @@ define dso_local void @f(ptr %p) {
 ; CHECK-NEXT:    add r2, r3, r2
 ; CHECK-NEXT:    add r1, r2, r1, lsr #8
 ; CHECK-NEXT:    add r1, r1, #2
+; CHECK-NEXT:    bic r1, r1, #3
 ; CHECK-NEXT:    lsr r1, r1, #2
 ; CHECK-NEXT:    strh r1, [r0]
 ; CHECK-NEXT:    b .LBB0_1

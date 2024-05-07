@@ -24,7 +24,12 @@ define void @passing2(i64 %str.0, i64 %str.1, i16 signext  %s, i32 %j, i8 signex
 ; CHECK-NEXT:    movw %r9w, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    shll $14, %edi
 ; CHECK-NEXT:    sarl $23, %edi
-; CHECK-NEXT:    cmpl %ecx, %edi
+; CHECK-NEXT:    shlw $7, %di
+; CHECK-NEXT:    sarw $7, %di
+; CHECK-NEXT:    shlw $7, %di
+; CHECK-NEXT:    sarw $7, %di
+; CHECK-NEXT:    movswl %di, %eax
+; CHECK-NEXT:    cmpl %ecx, %eax
 ; CHECK-NEXT:    jne LBB0_6
 ; CHECK-NEXT:  ## %bb.1: ## %bb27
 ; CHECK-NEXT:    movb {{[0-9]+}}(%rsp), %al
@@ -33,15 +38,21 @@ define void @passing2(i64 %str.0, i64 %str.1, i16 signext  %s, i32 %j, i8 signex
 ; CHECK-NEXT:  ## %bb.2: ## %bb35
 ; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %eax
 ; CHECK-NEXT:    shll $7, %eax
-; CHECK-NEXT:    cwtl
-; CHECK-NEXT:    shrl $7, %eax
+; CHECK-NEXT:    sarw $7, %ax
+; CHECK-NEXT:    shlw $7, %ax
+; CHECK-NEXT:    sarw $7, %ax
+; CHECK-NEXT:    shlw $7, %ax
+; CHECK-NEXT:    sarw $7, %ax
 ; CHECK-NEXT:    cmpw {{[0-9]+}}(%rsp), %ax
 ; CHECK-NEXT:    jne LBB0_6
 ; CHECK-NEXT:  ## %bb.3: ## %bb51
 ; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %eax
 ; CHECK-NEXT:    shll $7, %eax
-; CHECK-NEXT:    cwtl
-; CHECK-NEXT:    shrl $7, %eax
+; CHECK-NEXT:    sarw $7, %ax
+; CHECK-NEXT:    shlw $7, %ax
+; CHECK-NEXT:    sarw $7, %ax
+; CHECK-NEXT:    shlw $7, %ax
+; CHECK-NEXT:    sarw $7, %ax
 ; CHECK-NEXT:    cmpw {{[0-9]+}}(%rsp), %ax
 ; CHECK-NEXT:    jne LBB0_6
 ; CHECK-NEXT:  ## %bb.4: ## %bb67

@@ -1645,9 +1645,11 @@ define amdgpu_kernel void @v_test_v2i16_x_sub_64_64(ptr addrspace(1) %out, ptr a
 ; SI-SDAG-NEXT:    buffer_load_dword v2, v[0:1], s[4:7], 0 addr64
 ; SI-SDAG-NEXT:    s_mov_b64 s[2:3], s[6:7]
 ; SI-SDAG-NEXT:    s_waitcnt vmcnt(0)
-; SI-SDAG-NEXT:    v_subrev_i32_e32 v3, vcc, 64, v2
-; SI-SDAG-NEXT:    s_mov_b32 s4, 0xffff0000
-; SI-SDAG-NEXT:    v_bfi_b32 v2, s4, v2, v3
+; SI-SDAG-NEXT:    v_lshrrev_b32_e32 v3, 16, v2
+; SI-SDAG-NEXT:    v_subrev_i32_e32 v2, vcc, 64, v2
+; SI-SDAG-NEXT:    v_and_b32_e32 v2, 0xffff, v2
+; SI-SDAG-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
+; SI-SDAG-NEXT:    v_or_b32_e32 v2, v3, v2
 ; SI-SDAG-NEXT:    v_add_i32_e32 v2, vcc, 0xffc00000, v2
 ; SI-SDAG-NEXT:    buffer_store_dword v2, v[0:1], s[0:3], 0 addr64
 ; SI-SDAG-NEXT:    s_endpgm
@@ -1773,9 +1775,11 @@ define amdgpu_kernel void @v_test_v2i16_x_sub_7_64(ptr addrspace(1) %out, ptr ad
 ; SI-SDAG-NEXT:    buffer_load_dword v2, v[0:1], s[4:7], 0 addr64
 ; SI-SDAG-NEXT:    s_mov_b64 s[2:3], s[6:7]
 ; SI-SDAG-NEXT:    s_waitcnt vmcnt(0)
-; SI-SDAG-NEXT:    v_add_i32_e32 v3, vcc, -7, v2
-; SI-SDAG-NEXT:    s_mov_b32 s4, 0xffff0000
-; SI-SDAG-NEXT:    v_bfi_b32 v2, s4, v2, v3
+; SI-SDAG-NEXT:    v_lshrrev_b32_e32 v3, 16, v2
+; SI-SDAG-NEXT:    v_add_i32_e32 v2, vcc, -7, v2
+; SI-SDAG-NEXT:    v_and_b32_e32 v2, 0xffff, v2
+; SI-SDAG-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
+; SI-SDAG-NEXT:    v_or_b32_e32 v2, v3, v2
 ; SI-SDAG-NEXT:    v_add_i32_e32 v2, vcc, 0xffc00000, v2
 ; SI-SDAG-NEXT:    buffer_store_dword v2, v[0:1], s[0:3], 0 addr64
 ; SI-SDAG-NEXT:    s_endpgm
@@ -1914,9 +1918,11 @@ define amdgpu_kernel void @v_test_v2i16_x_sub_64_123(ptr addrspace(1) %out, ptr 
 ; SI-SDAG-NEXT:    buffer_load_dword v2, v[0:1], s[4:7], 0 addr64
 ; SI-SDAG-NEXT:    s_mov_b64 s[2:3], s[6:7]
 ; SI-SDAG-NEXT:    s_waitcnt vmcnt(0)
-; SI-SDAG-NEXT:    v_subrev_i32_e32 v3, vcc, 64, v2
-; SI-SDAG-NEXT:    s_mov_b32 s4, 0xffff0000
-; SI-SDAG-NEXT:    v_bfi_b32 v2, s4, v2, v3
+; SI-SDAG-NEXT:    v_lshrrev_b32_e32 v3, 16, v2
+; SI-SDAG-NEXT:    v_subrev_i32_e32 v2, vcc, 64, v2
+; SI-SDAG-NEXT:    v_and_b32_e32 v2, 0xffff, v2
+; SI-SDAG-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
+; SI-SDAG-NEXT:    v_or_b32_e32 v2, v3, v2
 ; SI-SDAG-NEXT:    v_add_i32_e32 v2, vcc, 0xff850000, v2
 ; SI-SDAG-NEXT:    buffer_store_dword v2, v[0:1], s[0:3], 0 addr64
 ; SI-SDAG-NEXT:    s_endpgm
@@ -2056,9 +2062,11 @@ define amdgpu_kernel void @v_test_v2i16_x_sub_7_0(ptr addrspace(1) %out, ptr add
 ; SI-SDAG-NEXT:    buffer_load_dword v2, v[0:1], s[4:7], 0 addr64
 ; SI-SDAG-NEXT:    s_mov_b64 s[2:3], s[6:7]
 ; SI-SDAG-NEXT:    s_waitcnt vmcnt(0)
-; SI-SDAG-NEXT:    v_add_i32_e32 v3, vcc, -7, v2
-; SI-SDAG-NEXT:    s_mov_b32 s4, 0xffff
-; SI-SDAG-NEXT:    v_bfi_b32 v2, s4, v3, v2
+; SI-SDAG-NEXT:    v_lshrrev_b32_e32 v3, 16, v2
+; SI-SDAG-NEXT:    v_add_i32_e32 v2, vcc, -7, v2
+; SI-SDAG-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
+; SI-SDAG-NEXT:    v_and_b32_e32 v2, 0xffff, v2
+; SI-SDAG-NEXT:    v_or_b32_e32 v2, v2, v3
 ; SI-SDAG-NEXT:    buffer_store_dword v2, v[0:1], s[0:3], 0 addr64
 ; SI-SDAG-NEXT:    s_endpgm
 ;
@@ -2091,11 +2099,12 @@ define amdgpu_kernel void @v_test_v2i16_x_sub_7_0(ptr addrspace(1) %out, ptr add
 ; VI-SDAG-NEXT:    v_add_u32_e32 v0, vcc, s2, v2
 ; VI-SDAG-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; VI-SDAG-NEXT:    flat_load_dword v3, v[0:1]
-; VI-SDAG-NEXT:    v_mov_b32_e32 v1, s1
 ; VI-SDAG-NEXT:    v_add_u32_e32 v0, vcc, s0, v2
+; VI-SDAG-NEXT:    v_mov_b32_e32 v1, s1
 ; VI-SDAG-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; VI-SDAG-NEXT:    s_waitcnt vmcnt(0)
-; VI-SDAG-NEXT:    v_and_b32_e32 v2, 0xffff0000, v3
+; VI-SDAG-NEXT:    v_lshrrev_b32_e32 v2, 16, v3
+; VI-SDAG-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
 ; VI-SDAG-NEXT:    v_add_u16_e32 v3, -7, v3
 ; VI-SDAG-NEXT:    v_or_b32_e32 v2, v3, v2
 ; VI-SDAG-NEXT:    flat_store_dword v[0:1], v2
@@ -2181,6 +2190,10 @@ define amdgpu_kernel void @v_test_v2i16_x_sub_0_16(ptr addrspace(1) %out, ptr ad
 ; SI-SDAG-NEXT:    buffer_load_dword v2, v[0:1], s[4:7], 0 addr64
 ; SI-SDAG-NEXT:    s_mov_b64 s[2:3], s[6:7]
 ; SI-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; SI-SDAG-NEXT:    v_and_b32_e32 v3, 0xffff, v2
+; SI-SDAG-NEXT:    v_lshrrev_b32_e32 v2, 16, v2
+; SI-SDAG-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
+; SI-SDAG-NEXT:    v_or_b32_e32 v2, v2, v3
 ; SI-SDAG-NEXT:    v_add_i32_e32 v2, vcc, 0xfff00000, v2
 ; SI-SDAG-NEXT:    buffer_store_dword v2, v[0:1], s[0:3], 0 addr64
 ; SI-SDAG-NEXT:    s_endpgm
@@ -2303,6 +2316,10 @@ define amdgpu_kernel void @v_test_v2i16_x_sub_0_1_0(ptr addrspace(1) %out, ptr a
 ; SI-SDAG-NEXT:    buffer_load_dword v2, v[0:1], s[4:7], 0 addr64
 ; SI-SDAG-NEXT:    s_mov_b64 s[2:3], s[6:7]
 ; SI-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; SI-SDAG-NEXT:    v_and_b32_e32 v3, 0xffff, v2
+; SI-SDAG-NEXT:    v_lshrrev_b32_e32 v2, 16, v2
+; SI-SDAG-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
+; SI-SDAG-NEXT:    v_or_b32_e32 v2, v2, v3
 ; SI-SDAG-NEXT:    v_add_i32_e32 v2, vcc, 0x3c000000, v2
 ; SI-SDAG-NEXT:    buffer_store_dword v2, v[0:1], s[0:3], 0 addr64
 ; SI-SDAG-NEXT:    s_endpgm
@@ -2438,6 +2455,10 @@ define amdgpu_kernel void @v_test_v2i16_x_sub_0_neg1_0(ptr addrspace(1) %out, pt
 ; SI-SDAG-NEXT:    buffer_load_dword v2, v[0:1], s[4:7], 0 addr64
 ; SI-SDAG-NEXT:    s_mov_b64 s[2:3], s[6:7]
 ; SI-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; SI-SDAG-NEXT:    v_and_b32_e32 v3, 0xffff, v2
+; SI-SDAG-NEXT:    v_lshrrev_b32_e32 v2, 16, v2
+; SI-SDAG-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
+; SI-SDAG-NEXT:    v_or_b32_e32 v2, v2, v3
 ; SI-SDAG-NEXT:    v_add_i32_e32 v2, vcc, 0xbc000000, v2
 ; SI-SDAG-NEXT:    buffer_store_dword v2, v[0:1], s[0:3], 0 addr64
 ; SI-SDAG-NEXT:    s_endpgm
@@ -2574,9 +2595,11 @@ define amdgpu_kernel void @v_test_v2i16_x_add_neg32_neg32(ptr addrspace(1) %out,
 ; SI-SDAG-NEXT:    buffer_load_dword v2, v[0:1], s[4:7], 0 addr64
 ; SI-SDAG-NEXT:    s_mov_b64 s[2:3], s[6:7]
 ; SI-SDAG-NEXT:    s_waitcnt vmcnt(0)
-; SI-SDAG-NEXT:    v_subrev_i32_e32 v3, vcc, 32, v2
-; SI-SDAG-NEXT:    s_mov_b32 s4, 0xffff0000
-; SI-SDAG-NEXT:    v_bfi_b32 v2, s4, v2, v3
+; SI-SDAG-NEXT:    v_lshrrev_b32_e32 v3, 16, v2
+; SI-SDAG-NEXT:    v_subrev_i32_e32 v2, vcc, 32, v2
+; SI-SDAG-NEXT:    v_and_b32_e32 v2, 0xffff, v2
+; SI-SDAG-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
+; SI-SDAG-NEXT:    v_or_b32_e32 v2, v3, v2
 ; SI-SDAG-NEXT:    v_add_i32_e32 v2, vcc, 0xffe00000, v2
 ; SI-SDAG-NEXT:    buffer_store_dword v2, v[0:1], s[0:3], 0 addr64
 ; SI-SDAG-NEXT:    s_endpgm
@@ -2702,6 +2725,10 @@ define amdgpu_kernel void @v_test_v2i16_x_add_0_neg32(ptr addrspace(1) %out, ptr
 ; SI-SDAG-NEXT:    buffer_load_dword v2, v[0:1], s[4:7], 0 addr64
 ; SI-SDAG-NEXT:    s_mov_b64 s[2:3], s[6:7]
 ; SI-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; SI-SDAG-NEXT:    v_and_b32_e32 v3, 0xffff, v2
+; SI-SDAG-NEXT:    v_lshrrev_b32_e32 v2, 16, v2
+; SI-SDAG-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
+; SI-SDAG-NEXT:    v_or_b32_e32 v2, v2, v3
 ; SI-SDAG-NEXT:    v_add_i32_e32 v2, vcc, 0xffe00000, v2
 ; SI-SDAG-NEXT:    buffer_store_dword v2, v[0:1], s[0:3], 0 addr64
 ; SI-SDAG-NEXT:    s_endpgm
@@ -2824,9 +2851,11 @@ define amdgpu_kernel void @v_test_v2i16_x_add_neg32_0(ptr addrspace(1) %out, ptr
 ; SI-SDAG-NEXT:    buffer_load_dword v2, v[0:1], s[4:7], 0 addr64
 ; SI-SDAG-NEXT:    s_mov_b64 s[2:3], s[6:7]
 ; SI-SDAG-NEXT:    s_waitcnt vmcnt(0)
-; SI-SDAG-NEXT:    v_subrev_i32_e32 v3, vcc, 32, v2
-; SI-SDAG-NEXT:    s_mov_b32 s4, 0xffff
-; SI-SDAG-NEXT:    v_bfi_b32 v2, s4, v3, v2
+; SI-SDAG-NEXT:    v_lshrrev_b32_e32 v3, 16, v2
+; SI-SDAG-NEXT:    v_subrev_i32_e32 v2, vcc, 32, v2
+; SI-SDAG-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
+; SI-SDAG-NEXT:    v_and_b32_e32 v2, 0xffff, v2
+; SI-SDAG-NEXT:    v_or_b32_e32 v2, v2, v3
 ; SI-SDAG-NEXT:    buffer_store_dword v2, v[0:1], s[0:3], 0 addr64
 ; SI-SDAG-NEXT:    s_endpgm
 ;
@@ -2859,11 +2888,12 @@ define amdgpu_kernel void @v_test_v2i16_x_add_neg32_0(ptr addrspace(1) %out, ptr
 ; VI-SDAG-NEXT:    v_add_u32_e32 v0, vcc, s2, v2
 ; VI-SDAG-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; VI-SDAG-NEXT:    flat_load_dword v3, v[0:1]
-; VI-SDAG-NEXT:    v_mov_b32_e32 v1, s1
 ; VI-SDAG-NEXT:    v_add_u32_e32 v0, vcc, s0, v2
+; VI-SDAG-NEXT:    v_mov_b32_e32 v1, s1
 ; VI-SDAG-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; VI-SDAG-NEXT:    s_waitcnt vmcnt(0)
-; VI-SDAG-NEXT:    v_and_b32_e32 v2, 0xffff0000, v3
+; VI-SDAG-NEXT:    v_lshrrev_b32_e32 v2, 16, v3
+; VI-SDAG-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
 ; VI-SDAG-NEXT:    v_subrev_u16_e32 v3, 32, v3
 ; VI-SDAG-NEXT:    v_or_b32_e32 v2, v3, v2
 ; VI-SDAG-NEXT:    flat_store_dword v[0:1], v2
@@ -2949,9 +2979,11 @@ define amdgpu_kernel void @v_test_v2i16_x_add_neg16_neg16(ptr addrspace(1) %out,
 ; SI-SDAG-NEXT:    buffer_load_dword v2, v[0:1], s[4:7], 0 addr64
 ; SI-SDAG-NEXT:    s_mov_b64 s[2:3], s[6:7]
 ; SI-SDAG-NEXT:    s_waitcnt vmcnt(0)
-; SI-SDAG-NEXT:    v_add_i32_e32 v3, vcc, -16, v2
-; SI-SDAG-NEXT:    s_mov_b32 s4, 0xffff0000
-; SI-SDAG-NEXT:    v_bfi_b32 v2, s4, v2, v3
+; SI-SDAG-NEXT:    v_lshrrev_b32_e32 v3, 16, v2
+; SI-SDAG-NEXT:    v_add_i32_e32 v2, vcc, -16, v2
+; SI-SDAG-NEXT:    v_and_b32_e32 v2, 0xffff, v2
+; SI-SDAG-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
+; SI-SDAG-NEXT:    v_or_b32_e32 v2, v3, v2
 ; SI-SDAG-NEXT:    v_add_i32_e32 v2, vcc, 0xfff00000, v2
 ; SI-SDAG-NEXT:    buffer_store_dword v2, v[0:1], s[0:3], 0 addr64
 ; SI-SDAG-NEXT:    s_endpgm
@@ -3077,6 +3109,10 @@ define amdgpu_kernel void @v_test_v2i16_x_add_0_neg16(ptr addrspace(1) %out, ptr
 ; SI-SDAG-NEXT:    buffer_load_dword v2, v[0:1], s[4:7], 0 addr64
 ; SI-SDAG-NEXT:    s_mov_b64 s[2:3], s[6:7]
 ; SI-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; SI-SDAG-NEXT:    v_and_b32_e32 v3, 0xffff, v2
+; SI-SDAG-NEXT:    v_lshrrev_b32_e32 v2, 16, v2
+; SI-SDAG-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
+; SI-SDAG-NEXT:    v_or_b32_e32 v2, v2, v3
 ; SI-SDAG-NEXT:    v_add_i32_e32 v2, vcc, 0xfff00000, v2
 ; SI-SDAG-NEXT:    buffer_store_dword v2, v[0:1], s[0:3], 0 addr64
 ; SI-SDAG-NEXT:    s_endpgm
@@ -3199,9 +3235,11 @@ define amdgpu_kernel void @v_test_v2i16_x_add_neg16_0(ptr addrspace(1) %out, ptr
 ; SI-SDAG-NEXT:    buffer_load_dword v2, v[0:1], s[4:7], 0 addr64
 ; SI-SDAG-NEXT:    s_mov_b64 s[2:3], s[6:7]
 ; SI-SDAG-NEXT:    s_waitcnt vmcnt(0)
-; SI-SDAG-NEXT:    v_add_i32_e32 v3, vcc, -16, v2
-; SI-SDAG-NEXT:    s_mov_b32 s4, 0xffff
-; SI-SDAG-NEXT:    v_bfi_b32 v2, s4, v3, v2
+; SI-SDAG-NEXT:    v_lshrrev_b32_e32 v3, 16, v2
+; SI-SDAG-NEXT:    v_add_i32_e32 v2, vcc, -16, v2
+; SI-SDAG-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
+; SI-SDAG-NEXT:    v_and_b32_e32 v2, 0xffff, v2
+; SI-SDAG-NEXT:    v_or_b32_e32 v2, v2, v3
 ; SI-SDAG-NEXT:    buffer_store_dword v2, v[0:1], s[0:3], 0 addr64
 ; SI-SDAG-NEXT:    s_endpgm
 ;
@@ -3234,11 +3272,12 @@ define amdgpu_kernel void @v_test_v2i16_x_add_neg16_0(ptr addrspace(1) %out, ptr
 ; VI-SDAG-NEXT:    v_add_u32_e32 v0, vcc, s2, v2
 ; VI-SDAG-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; VI-SDAG-NEXT:    flat_load_dword v3, v[0:1]
-; VI-SDAG-NEXT:    v_mov_b32_e32 v1, s1
 ; VI-SDAG-NEXT:    v_add_u32_e32 v0, vcc, s0, v2
+; VI-SDAG-NEXT:    v_mov_b32_e32 v1, s1
 ; VI-SDAG-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; VI-SDAG-NEXT:    s_waitcnt vmcnt(0)
-; VI-SDAG-NEXT:    v_and_b32_e32 v2, 0xffff0000, v3
+; VI-SDAG-NEXT:    v_lshrrev_b32_e32 v2, 16, v3
+; VI-SDAG-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
 ; VI-SDAG-NEXT:    v_add_u16_e32 v3, -16, v3
 ; VI-SDAG-NEXT:    v_or_b32_e32 v2, v3, v2
 ; VI-SDAG-NEXT:    flat_store_dword v[0:1], v2
@@ -3323,9 +3362,11 @@ define amdgpu_kernel void @v_test_v2i16_x_add_neg_fpone(ptr addrspace(1) %out, p
 ; SI-SDAG-NEXT:    buffer_load_dword v2, v[0:1], s[4:7], 0 addr64
 ; SI-SDAG-NEXT:    s_mov_b64 s[2:3], s[6:7]
 ; SI-SDAG-NEXT:    s_waitcnt vmcnt(0)
-; SI-SDAG-NEXT:    v_add_i32_e32 v3, vcc, 0xffffc400, v2
-; SI-SDAG-NEXT:    s_mov_b32 s4, 0xffff0000
-; SI-SDAG-NEXT:    v_bfi_b32 v2, s4, v2, v3
+; SI-SDAG-NEXT:    v_lshrrev_b32_e32 v3, 16, v2
+; SI-SDAG-NEXT:    v_add_i32_e32 v2, vcc, 0xffffc400, v2
+; SI-SDAG-NEXT:    v_and_b32_e32 v2, 0xffff, v2
+; SI-SDAG-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
+; SI-SDAG-NEXT:    v_or_b32_e32 v2, v3, v2
 ; SI-SDAG-NEXT:    v_add_i32_e32 v2, vcc, 0xc4000000, v2
 ; SI-SDAG-NEXT:    buffer_store_dword v2, v[0:1], s[0:3], 0 addr64
 ; SI-SDAG-NEXT:    s_endpgm
@@ -3488,9 +3529,11 @@ define amdgpu_kernel void @v_test_v2i16_x_add_neg_negfpone(ptr addrspace(1) %out
 ; SI-SDAG-NEXT:    buffer_load_dword v2, v[0:1], s[4:7], 0 addr64
 ; SI-SDAG-NEXT:    s_mov_b64 s[2:3], s[6:7]
 ; SI-SDAG-NEXT:    s_waitcnt vmcnt(0)
-; SI-SDAG-NEXT:    v_add_i32_e32 v3, vcc, 0x4400, v2
-; SI-SDAG-NEXT:    s_mov_b32 s4, 0xffff0000
-; SI-SDAG-NEXT:    v_bfi_b32 v2, s4, v2, v3
+; SI-SDAG-NEXT:    v_lshrrev_b32_e32 v3, 16, v2
+; SI-SDAG-NEXT:    v_add_i32_e32 v2, vcc, 0x4400, v2
+; SI-SDAG-NEXT:    v_and_b32_e32 v2, 0xffff, v2
+; SI-SDAG-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
+; SI-SDAG-NEXT:    v_or_b32_e32 v2, v3, v2
 ; SI-SDAG-NEXT:    v_add_i32_e32 v2, vcc, 0x44000000, v2
 ; SI-SDAG-NEXT:    buffer_store_dword v2, v[0:1], s[0:3], 0 addr64
 ; SI-SDAG-NEXT:    s_endpgm
@@ -3653,9 +3696,11 @@ define amdgpu_kernel void @v_test_v2i16_x_add_neg_fptwo(ptr addrspace(1) %out, p
 ; SI-SDAG-NEXT:    buffer_load_dword v2, v[0:1], s[4:7], 0 addr64
 ; SI-SDAG-NEXT:    s_mov_b64 s[2:3], s[6:7]
 ; SI-SDAG-NEXT:    s_waitcnt vmcnt(0)
-; SI-SDAG-NEXT:    v_add_i32_e32 v3, vcc, 0x4000, v2
-; SI-SDAG-NEXT:    s_mov_b32 s4, 0xffff0000
-; SI-SDAG-NEXT:    v_bfi_b32 v2, s4, v2, v3
+; SI-SDAG-NEXT:    v_lshrrev_b32_e32 v3, 16, v2
+; SI-SDAG-NEXT:    v_add_i32_e32 v2, vcc, 0x4000, v2
+; SI-SDAG-NEXT:    v_and_b32_e32 v2, 0xffff, v2
+; SI-SDAG-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
+; SI-SDAG-NEXT:    v_or_b32_e32 v2, v3, v2
 ; SI-SDAG-NEXT:    v_add_i32_e32 v2, vcc, 2.0, v2
 ; SI-SDAG-NEXT:    buffer_store_dword v2, v[0:1], s[0:3], 0 addr64
 ; SI-SDAG-NEXT:    s_endpgm
@@ -3781,9 +3826,11 @@ define amdgpu_kernel void @v_test_v2i16_x_add_neg_negfptwo(ptr addrspace(1) %out
 ; SI-SDAG-NEXT:    buffer_load_dword v2, v[0:1], s[4:7], 0 addr64
 ; SI-SDAG-NEXT:    s_mov_b64 s[2:3], s[6:7]
 ; SI-SDAG-NEXT:    s_waitcnt vmcnt(0)
-; SI-SDAG-NEXT:    v_add_i32_e32 v3, vcc, 0xffffc000, v2
-; SI-SDAG-NEXT:    s_mov_b32 s4, 0xffff0000
-; SI-SDAG-NEXT:    v_bfi_b32 v2, s4, v2, v3
+; SI-SDAG-NEXT:    v_lshrrev_b32_e32 v3, 16, v2
+; SI-SDAG-NEXT:    v_add_i32_e32 v2, vcc, 0xffffc000, v2
+; SI-SDAG-NEXT:    v_and_b32_e32 v2, 0xffff, v2
+; SI-SDAG-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
+; SI-SDAG-NEXT:    v_or_b32_e32 v2, v3, v2
 ; SI-SDAG-NEXT:    v_add_i32_e32 v2, vcc, -2.0, v2
 ; SI-SDAG-NEXT:    buffer_store_dword v2, v[0:1], s[0:3], 0 addr64
 ; SI-SDAG-NEXT:    s_endpgm
@@ -3909,7 +3956,8 @@ define amdgpu_kernel void @v_test_v2i16_x_add_undef_neg32(ptr addrspace(1) %out,
 ; SI-SDAG-NEXT:    buffer_load_dword v2, v[0:1], s[4:7], 0 addr64
 ; SI-SDAG-NEXT:    s_mov_b64 s[2:3], s[6:7]
 ; SI-SDAG-NEXT:    s_waitcnt vmcnt(0)
-; SI-SDAG-NEXT:    v_and_b32_e32 v2, 0xffff0000, v2
+; SI-SDAG-NEXT:    v_lshrrev_b32_e32 v2, 16, v2
+; SI-SDAG-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
 ; SI-SDAG-NEXT:    v_add_i32_e32 v2, vcc, 0xffe00000, v2
 ; SI-SDAG-NEXT:    buffer_store_dword v2, v[0:1], s[0:3], 0 addr64
 ; SI-SDAG-NEXT:    s_endpgm

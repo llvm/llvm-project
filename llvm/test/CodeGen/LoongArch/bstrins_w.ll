@@ -94,6 +94,7 @@ define i32 @pat3_swap(i32 %a, i32 %b) nounwind {
 define i32 @pat3_positive_mask0(i32 %a, i32 %b) nounwind {
 ; CHECK-LABEL: pat3_positive_mask0:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    bstrins.w $a1, $zero, 27, 0
 ; CHECK-NEXT:    srli.w $a1, $a1, 28
 ; CHECK-NEXT:    bstrins.w $a0, $a1, 31, 28
 ; CHECK-NEXT:    ret

@@ -19,39 +19,27 @@ define void @phi3(ptr) nounwind {
 ; CHECK-NEXT:    mr 29, 3
 ; CHECK-NEXT:    bl malloc
 ; CHECK-NEXT:    nop
-; CHECK-NEXT:    addi 7, 30, -4
+; CHECK-NEXT:    addi 5, 30, -4
+; CHECK-NEXT:    li 6, 0
 ; CHECK-NEXT:    mtctr 3
 ; CHECK-NEXT:    addi 4, 29, -8
-; CHECK-NEXT:    li 5, 0
-; CHECK-NEXT:    lwzu 8, 4(7)
-; CHECK-NEXT:    bdz .LBB0_5
-; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    extswsli 6, 5, 5
-; CHECK-NEXT:    add 5, 8, 5
-; CHECK-NEXT:    lwzu 8, 4(7)
-; CHECK-NEXT:    bdz .LBB0_4
-; CHECK-NEXT:  # %bb.2:
+; CHECK-NEXT:    lwzu 7, 4(5)
+; CHECK-NEXT:    extsw 8, 6
+; CHECK-NEXT:    sldi 6, 8, 5
 ; CHECK-NEXT:    add 6, 3, 6
-; CHECK-NEXT:    stdu 6, 8(4)
-; CHECK-NEXT:    extswsli 6, 5, 5
-; CHECK-NEXT:    add 5, 8, 5
-; CHECK-NEXT:    lwzu 8, 4(7)
-; CHECK-NEXT:    bdz .LBB0_4
+; CHECK-NEXT:    add 7, 7, 8
+; CHECK-NEXT:    bdz .LBB0_2
 ; CHECK-NEXT:    .p2align 5
-; CHECK-NEXT:  .LBB0_3:
-; CHECK-NEXT:    add 9, 3, 6
-; CHECK-NEXT:    extswsli 6, 5, 5
-; CHECK-NEXT:    add 5, 8, 5
-; CHECK-NEXT:    lwzu 8, 4(7)
-; CHECK-NEXT:    stdu 9, 8(4)
-; CHECK-NEXT:    bdnz .LBB0_3
-; CHECK-NEXT:  .LBB0_4:
-; CHECK-NEXT:    add 6, 3, 6
+; CHECK-NEXT:  .LBB0_1:
+; CHECK-NEXT:    extsw 7, 7
+; CHECK-NEXT:    lwzu 8, 4(5)
 ; CHECK-NEXT:    stdu 6, 8(4)
-; CHECK-NEXT:  .LBB0_5:
-; CHECK-NEXT:    extswsli 5, 5, 5
-; CHECK-NEXT:    add 3, 3, 5
-; CHECK-NEXT:    stdu 3, 8(4)
+; CHECK-NEXT:    sldi 6, 7, 5
+; CHECK-NEXT:    add 7, 8, 7
+; CHECK-NEXT:    add 6, 3, 6
+; CHECK-NEXT:    bdnz .LBB0_1
+; CHECK-NEXT:  .LBB0_2:
+; CHECK-NEXT:    stdu 6, 8(4)
 ; CHECK-NEXT:    addi 1, 1, 64
 ; CHECK-NEXT:    ld 0, 16(1)
 ; CHECK-NEXT:    ld 30, -16(1) # 8-byte Folded Reload

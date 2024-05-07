@@ -12,7 +12,10 @@ define i32 @icmpimm(i32 %x) {
 ;
 ; LA64-LABEL: icmpimm:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    bstrpick.d $a0, $a0, 31, 12
+; LA64-NEXT:    lu12i.w $a1, -1
+; LA64-NEXT:    lu32i.d $a1, 0
+; LA64-NEXT:    and $a0, $a0, $a1
+; LA64-NEXT:    srli.d $a0, $a0, 12
 ; LA64-NEXT:    addi.d $a0, $a0, -1
 ; LA64-NEXT:    sltui $a0, $a0, 1
 ; LA64-NEXT:    ret

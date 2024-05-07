@@ -54,8 +54,9 @@ define <4 x i16> @and_extract_sext_idx4(<8 x i8> %vec) nounwind {
 define <2 x i32> @sext_extract_zext_idx0(<4 x i16> %vec) nounwind {
 ; CHECK-LABEL: sext_extract_zext_idx0:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sshll v0.4s, v0.4h, #0
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-NEXT:    shl v0.2s, v0.2s, #16
+; CHECK-NEXT:    sshr v0.2s, v0.2s, #16
 ; CHECK-NEXT:    ret
   %zext = zext <4 x i16> %vec to <4 x i32>
   %extract = call <2 x i32> @llvm.vector.extract.v2i32.v4i32(<4 x i32> %zext, i64 0)
@@ -95,9 +96,10 @@ define <4 x i16> @sext_extract_sext_idx0(<8 x i8> %vec) nounwind {
 define <2 x i32> @sext_extract_zext_idx2(<4 x i16> %vec) nounwind {
 ; CHECK-LABEL: sext_extract_zext_idx2:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sshll v0.4s, v0.4h, #0
+; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
 ; CHECK-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    shl v0.2s, v0.2s, #16
+; CHECK-NEXT:    sshr v0.2s, v0.2s, #16
 ; CHECK-NEXT:    ret
   %zext = zext <4 x i16> %vec to <4 x i32>
   %extract = call <2 x i32> @llvm.vector.extract.v2i32.v4i32(<4 x i32> %zext, i64 2)

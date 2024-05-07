@@ -106,7 +106,8 @@ define i32 @dont_fold_srem_power_of_two(i32 %x) {
 ; CHECK-NEXT:    leal 63(%rax), %ecx
 ; CHECK-NEXT:    testl %edi, %edi
 ; CHECK-NEXT:    cmovnsl %edi, %ecx
-; CHECK-NEXT:    andl $-64, %ecx
+; CHECK-NEXT:    sarl $6, %ecx
+; CHECK-NEXT:    shll $6, %ecx
 ; CHECK-NEXT:    subl %ecx, %eax
 ; CHECK-NEXT:    # kill: def $eax killed $eax killed $rax
 ; CHECK-NEXT:    retq
@@ -132,7 +133,8 @@ define i32 @dont_fold_srem_i32_smax(i32 %x) {
 ; CHECK-NEXT:    leal 2147483647(%rdi), %eax
 ; CHECK-NEXT:    testl %edi, %edi
 ; CHECK-NEXT:    cmovnsl %edi, %eax
-; CHECK-NEXT:    andl $-2147483648, %eax # imm = 0x80000000
+; CHECK-NEXT:    shrl $31, %eax
+; CHECK-NEXT:    shll $31, %eax
 ; CHECK-NEXT:    addl %edi, %eax
 ; CHECK-NEXT:    retq
   %1 = srem i32 %x, 2147483648

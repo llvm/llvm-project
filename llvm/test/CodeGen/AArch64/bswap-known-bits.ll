@@ -8,7 +8,7 @@ declare i64 @llvm.bswap.i64(i64)
 define i1 @test1(i16 %arg) {
 ; CHECK-LABEL: test1:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    mov w0, #1
+; CHECK-NEXT:    mov w0, #1 ; =0x1
 ; CHECK-NEXT:    ret
   %a = or i16 %arg, 511
   %b = call i16 @llvm.bswap.i16(i16 %a)
@@ -20,7 +20,7 @@ define i1 @test1(i16 %arg) {
 define i1 @test2(i16 %arg) {
 ; CHECK-LABEL: test2:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    mov w0, #1
+; CHECK-NEXT:    mov w0, #1 ; =0x1
 ; CHECK-NEXT:    ret
   %a = or i16 %arg, 1
   %b = call i16 @llvm.bswap.i16(i16 %a)
@@ -32,7 +32,7 @@ define i1 @test2(i16 %arg) {
 define i1 @test3(i16 %arg) {
 ; CHECK-LABEL: test3:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    mov w0, #1
+; CHECK-NEXT:    mov w0, #1 ; =0x1
 ; CHECK-NEXT:    ret
   %a = or i16 %arg, 256
   %b = call i16 @llvm.bswap.i16(i16 %a)
@@ -44,7 +44,7 @@ define i1 @test3(i16 %arg) {
 define i1 @test4(i32 %arg) {
 ; CHECK-LABEL: test4:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    mov w0, #1
+; CHECK-NEXT:    mov w0, #1 ; =0x1
 ; CHECK-NEXT:    ret
   %a = or i32 %arg, 2147483647  ; i32_MAX
   %b = call i32 @llvm.bswap.i32(i32 %a)
@@ -88,7 +88,7 @@ define i32 @demand_one_byte2(i32 %x) {
 define i64 @demand_one_byte3(i64 %x) {
 ; CHECK-LABEL: demand_one_byte3:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    and x0, x0, #0xff
+; CHECK-NEXT:    ubfx x0, x0, #0, #8
 ; CHECK-NEXT:    ret
   %b = call i64 @llvm.bswap.i64(i64 %x)
   %r = lshr i64 %b, 56

@@ -757,6 +757,7 @@ define i1 @scalar_i8_signbit_ne(i8 %x, i8 %y) nounwind {
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    shlb %cl, %al
+; X86-NEXT:    andb $-128, %al
 ; X86-NEXT:    shrb $7, %al
 ; X86-NEXT:    retl
 ;
@@ -766,6 +767,7 @@ define i1 @scalar_i8_signbit_ne(i8 %x, i8 %y) nounwind {
 ; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; X64-NEXT:    shlb %cl, %al
+; X64-NEXT:    andb $-128, %al
 ; X64-NEXT:    shrb $7, %al
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq

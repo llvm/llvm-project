@@ -746,8 +746,8 @@ define i32 @setcc_is_bit_set(i32 %x) {
 ; CHECK-LABEL: setcc_is_bit_set:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    andl $1024, %eax # imm = 0x400
 ; CHECK-NEXT:    shrl $10, %eax
-; CHECK-NEXT:    andl $1, %eax
 ; CHECK-NEXT:    retq
   %a1 = and i32 %x, 1024
   %b1 = icmp ne i32 %a1, 0

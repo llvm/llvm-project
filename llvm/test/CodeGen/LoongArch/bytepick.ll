@@ -14,7 +14,10 @@ define i32 @pick_i32_1(i32 %a, i32 %b) {
 ;
 ; LA64-LABEL: pick_i32_1:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    bstrpick.d $a1, $a1, 31, 24
+; LA64-NEXT:    lu12i.w $a2, -4096
+; LA64-NEXT:    lu32i.d $a2, 0
+; LA64-NEXT:    and $a1, $a1, $a2
+; LA64-NEXT:    srli.d $a1, $a1, 24
 ; LA64-NEXT:    slli.d $a0, $a0, 8
 ; LA64-NEXT:    or $a0, $a1, $a0
 ; LA64-NEXT:    ret
@@ -34,7 +37,13 @@ define signext i32 @pick_i32_1_sext(i32 %a, i32 %b) {
 ;
 ; LA64-LABEL: pick_i32_1_sext:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    bytepick.w $a0, $a1, $a0, 1
+; LA64-NEXT:    lu12i.w $a2, -4096
+; LA64-NEXT:    lu32i.d $a2, 0
+; LA64-NEXT:    and $a1, $a1, $a2
+; LA64-NEXT:    srli.d $a1, $a1, 24
+; LA64-NEXT:    slli.d $a0, $a0, 8
+; LA64-NEXT:    or $a0, $a1, $a0
+; LA64-NEXT:    addi.w $a0, $a0, 0
 ; LA64-NEXT:    ret
   %1 = lshr i32 %b, 24
   %2 = shl i32 %a, 8
@@ -52,7 +61,10 @@ define i32 @pick_i32_2(i32 %a, i32 %b) {
 ;
 ; LA64-LABEL: pick_i32_2:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    bstrpick.d $a1, $a1, 31, 16
+; LA64-NEXT:    lu12i.w $a2, -16
+; LA64-NEXT:    lu32i.d $a2, 0
+; LA64-NEXT:    and $a1, $a1, $a2
+; LA64-NEXT:    srli.d $a1, $a1, 16
 ; LA64-NEXT:    slli.d $a0, $a0, 16
 ; LA64-NEXT:    or $a0, $a1, $a0
 ; LA64-NEXT:    ret
@@ -72,7 +84,13 @@ define signext i32 @pick_i32_2_sext(i32 %a, i32 %b) {
 ;
 ; LA64-LABEL: pick_i32_2_sext:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    bytepick.w $a0, $a1, $a0, 2
+; LA64-NEXT:    lu12i.w $a2, -16
+; LA64-NEXT:    lu32i.d $a2, 0
+; LA64-NEXT:    and $a1, $a1, $a2
+; LA64-NEXT:    srli.d $a1, $a1, 16
+; LA64-NEXT:    slli.d $a0, $a0, 16
+; LA64-NEXT:    or $a0, $a1, $a0
+; LA64-NEXT:    addi.w $a0, $a0, 0
 ; LA64-NEXT:    ret
   %1 = lshr i32 %b, 16
   %2 = shl i32 %a, 16
@@ -91,6 +109,8 @@ define i32 @pick_i32_3(i32 %a, i32 %b) {
 ; LA64-LABEL: pick_i32_3:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    bstrpick.d $a1, $a1, 31, 8
+; LA64-NEXT:    slli.d $a1, $a1, 8
+; LA64-NEXT:    srli.d $a1, $a1, 8
 ; LA64-NEXT:    slli.d $a0, $a0, 24
 ; LA64-NEXT:    or $a0, $a1, $a0
 ; LA64-NEXT:    ret
@@ -110,7 +130,12 @@ define signext i32 @pick_i32_3_sext(i32 %a, i32 %b) {
 ;
 ; LA64-LABEL: pick_i32_3_sext:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    bytepick.w $a0, $a1, $a0, 3
+; LA64-NEXT:    bstrpick.d $a1, $a1, 31, 8
+; LA64-NEXT:    slli.d $a1, $a1, 8
+; LA64-NEXT:    srli.d $a1, $a1, 8
+; LA64-NEXT:    slli.d $a0, $a0, 24
+; LA64-NEXT:    or $a0, $a1, $a0
+; LA64-NEXT:    addi.w $a0, $a0, 0
 ; LA64-NEXT:    ret
   %1 = lshr i32 %b, 8
   %2 = shl i32 %a, 24

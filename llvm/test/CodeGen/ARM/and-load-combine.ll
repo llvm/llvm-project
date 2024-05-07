@@ -1553,28 +1553,32 @@ define void @test27(ptr nocapture %ptr) {
 ; ARM-LABEL: test27:
 ; ARM:       @ %bb.0: @ %entry
 ; ARM-NEXT:    ldrb r1, [r0, #1]
-; ARM-NEXT:    lsl r1, r1, #16
+; ARM-NEXT:    lsl r1, r1, #8
+; ARM-NEXT:    lsl r1, r1, #8
 ; ARM-NEXT:    str r1, [r0]
 ; ARM-NEXT:    bx lr
 ;
 ; ARMEB-LABEL: test27:
 ; ARMEB:       @ %bb.0: @ %entry
 ; ARMEB-NEXT:    ldrb r1, [r0, #2]
-; ARMEB-NEXT:    lsl r1, r1, #16
+; ARMEB-NEXT:    lsl r1, r1, #8
+; ARMEB-NEXT:    lsl r1, r1, #8
 ; ARMEB-NEXT:    str r1, [r0]
 ; ARMEB-NEXT:    bx lr
 ;
 ; THUMB1-LABEL: test27:
 ; THUMB1:       @ %bb.0: @ %entry
 ; THUMB1-NEXT:    ldrb r1, [r0, #1]
-; THUMB1-NEXT:    lsls r1, r1, #16
+; THUMB1-NEXT:    lsls r1, r1, #8
+; THUMB1-NEXT:    lsls r1, r1, #8
 ; THUMB1-NEXT:    str r1, [r0]
 ; THUMB1-NEXT:    bx lr
 ;
 ; THUMB2-LABEL: test27:
 ; THUMB2:       @ %bb.0: @ %entry
 ; THUMB2-NEXT:    ldrb r1, [r0, #1]
-; THUMB2-NEXT:    lsls r1, r1, #16
+; THUMB2-NEXT:    lsls r1, r1, #8
+; THUMB2-NEXT:    lsls r1, r1, #8
 ; THUMB2-NEXT:    str r1, [r0]
 ; THUMB2-NEXT:    bx lr
 entry:

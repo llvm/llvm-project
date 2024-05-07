@@ -8066,9 +8066,9 @@ define void @pr38938(ptr %a0, ptr %a1) nounwind {
 ; X86-NOBMI-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NOBMI-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NOBMI-NEXT:    movl (%ecx), %ecx
-; X86-NOBMI-NEXT:    shrl $19, %ecx
-; X86-NOBMI-NEXT:    andl $4092, %ecx # imm = 0xFFC
-; X86-NOBMI-NEXT:    incl (%eax,%ecx)
+; X86-NOBMI-NEXT:    shrl $21, %ecx
+; X86-NOBMI-NEXT:    andl $1023, %ecx # imm = 0x3FF
+; X86-NOBMI-NEXT:    incl (%eax,%ecx,4)
 ; X86-NOBMI-NEXT:    retl
 ;
 ; X86-BMINOTBM-LABEL: pr38938:
@@ -8091,9 +8091,9 @@ define void @pr38938(ptr %a0, ptr %a1) nounwind {
 ; X64-NOBMI-LABEL: pr38938:
 ; X64-NOBMI:       # %bb.0:
 ; X64-NOBMI-NEXT:    movl (%rsi), %eax
-; X64-NOBMI-NEXT:    shrl $19, %eax
-; X64-NOBMI-NEXT:    andl $4092, %eax # imm = 0xFFC
-; X64-NOBMI-NEXT:    incl (%rdi,%rax)
+; X64-NOBMI-NEXT:    shrl $21, %eax
+; X64-NOBMI-NEXT:    andl $1023, %eax # imm = 0x3FF
+; X64-NOBMI-NEXT:    incl (%rdi,%rax,4)
 ; X64-NOBMI-NEXT:    retq
 ;
 ; X64-BMINOTBM-LABEL: pr38938:
@@ -8182,19 +8182,47 @@ define i32 @c1_i32(i32 %arg) nounwind {
 
 ; Should be still fine, but the result is shifted left afterwards
 define i32 @c2_i32(i32 %arg) nounwind {
-; X86-LABEL: c2_i32:
-; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    shrl $17, %eax
-; X86-NEXT:    andl $4092, %eax # imm = 0xFFC
-; X86-NEXT:    retl
+; X86-NOBMI-LABEL: c2_i32:
+; X86-NOBMI:       # %bb.0:
+; X86-NOBMI-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NOBMI-NEXT:    shrl $19, %eax
+; X86-NOBMI-NEXT:    andl $1023, %eax # imm = 0x3FF
+; X86-NOBMI-NEXT:    shll $2, %eax
+; X86-NOBMI-NEXT:    retl
 ;
-; X64-LABEL: c2_i32:
-; X64:       # %bb.0:
-; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    shrl $17, %eax
-; X64-NEXT:    andl $4092, %eax # imm = 0xFFC
-; X64-NEXT:    retq
+; X86-BMINOTBM-LABEL: c2_i32:
+; X86-BMINOTBM:       # %bb.0:
+; X86-BMINOTBM-NEXT:    movl $2579, %eax # imm = 0xA13
+; X86-BMINOTBM-NEXT:    bextrl %eax, {{[0-9]+}}(%esp), %eax
+; X86-BMINOTBM-NEXT:    shll $2, %eax
+; X86-BMINOTBM-NEXT:    retl
+;
+; X86-BMITBM-LABEL: c2_i32:
+; X86-BMITBM:       # %bb.0:
+; X86-BMITBM-NEXT:    bextrl $2579, {{[0-9]+}}(%esp), %eax # imm = 0xA13
+; X86-BMITBM-NEXT:    shll $2, %eax
+; X86-BMITBM-NEXT:    retl
+;
+; X64-NOBMI-LABEL: c2_i32:
+; X64-NOBMI:       # %bb.0:
+; X64-NOBMI-NEXT:    # kill: def $edi killed $edi def $rdi
+; X64-NOBMI-NEXT:    shrl $19, %edi
+; X64-NOBMI-NEXT:    andl $1023, %edi # imm = 0x3FF
+; X64-NOBMI-NEXT:    leal (,%rdi,4), %eax
+; X64-NOBMI-NEXT:    retq
+;
+; X64-BMINOTBM-LABEL: c2_i32:
+; X64-BMINOTBM:       # %bb.0:
+; X64-BMINOTBM-NEXT:    movl $2579, %eax # imm = 0xA13
+; X64-BMINOTBM-NEXT:    bextrl %eax, %edi, %eax
+; X64-BMINOTBM-NEXT:    shll $2, %eax
+; X64-BMINOTBM-NEXT:    retq
+;
+; X64-BMITBM-LABEL: c2_i32:
+; X64-BMITBM:       # %bb.0:
+; X64-BMITBM-NEXT:    bextrl $2579, %edi, %eax # imm = 0xA13
+; X64-BMITBM-NEXT:    shll $2, %eax
+; X64-BMITBM-NEXT:    retq
   %tmp0 = lshr i32 %arg, 19
   %tmp1 = and i32 %tmp0, 1023
   %tmp2 = shl i32 %tmp1, 2
@@ -8291,20 +8319,49 @@ define i64 @c1_i64(i64 %arg) nounwind {
 
 ; Should be still fine, but the result is shifted left afterwards
 define i64 @c2_i64(i64 %arg) nounwind {
-; X86-LABEL: c2_i64:
-; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    shrl $17, %eax
-; X86-NEXT:    andl $4092, %eax # imm = 0xFFC
-; X86-NEXT:    xorl %edx, %edx
-; X86-NEXT:    retl
+; X86-NOBMI-LABEL: c2_i64:
+; X86-NOBMI:       # %bb.0:
+; X86-NOBMI-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NOBMI-NEXT:    shrl $19, %eax
+; X86-NOBMI-NEXT:    andl $1023, %eax # imm = 0x3FF
+; X86-NOBMI-NEXT:    shll $2, %eax
+; X86-NOBMI-NEXT:    xorl %edx, %edx
+; X86-NOBMI-NEXT:    retl
 ;
-; X64-LABEL: c2_i64:
-; X64:       # %bb.0:
-; X64-NEXT:    movq %rdi, %rax
-; X64-NEXT:    shrq $49, %rax
-; X64-NEXT:    andl $4092, %eax # imm = 0xFFC
-; X64-NEXT:    retq
+; X86-BMINOTBM-LABEL: c2_i64:
+; X86-BMINOTBM:       # %bb.0:
+; X86-BMINOTBM-NEXT:    movl $2579, %eax # imm = 0xA13
+; X86-BMINOTBM-NEXT:    bextrl %eax, {{[0-9]+}}(%esp), %eax
+; X86-BMINOTBM-NEXT:    shll $2, %eax
+; X86-BMINOTBM-NEXT:    xorl %edx, %edx
+; X86-BMINOTBM-NEXT:    retl
+;
+; X86-BMITBM-LABEL: c2_i64:
+; X86-BMITBM:       # %bb.0:
+; X86-BMITBM-NEXT:    bextrl $2579, {{[0-9]+}}(%esp), %eax # imm = 0xA13
+; X86-BMITBM-NEXT:    shll $2, %eax
+; X86-BMITBM-NEXT:    xorl %edx, %edx
+; X86-BMITBM-NEXT:    retl
+;
+; X64-NOBMI-LABEL: c2_i64:
+; X64-NOBMI:       # %bb.0:
+; X64-NOBMI-NEXT:    shrq $51, %rdi
+; X64-NOBMI-NEXT:    andl $1023, %edi # imm = 0x3FF
+; X64-NOBMI-NEXT:    leaq (,%rdi,4), %rax
+; X64-NOBMI-NEXT:    retq
+;
+; X64-BMINOTBM-LABEL: c2_i64:
+; X64-BMINOTBM:       # %bb.0:
+; X64-BMINOTBM-NEXT:    movl $2611, %eax # imm = 0xA33
+; X64-BMINOTBM-NEXT:    bextrq %rax, %rdi, %rax
+; X64-BMINOTBM-NEXT:    shlq $2, %rax
+; X64-BMINOTBM-NEXT:    retq
+;
+; X64-BMITBM-LABEL: c2_i64:
+; X64-BMITBM:       # %bb.0:
+; X64-BMITBM-NEXT:    bextrq $2611, %rdi, %rax # imm = 0xA33
+; X64-BMITBM-NEXT:    shlq $2, %rax
+; X64-BMITBM-NEXT:    retq
   %tmp0 = lshr i64 %arg, 51
   %tmp1 = and i64 %tmp0, 1023
   %tmp2 = shl i64 %tmp1, 2
@@ -8442,21 +8499,55 @@ define void @c6_i32(i32 %arg, ptr %ptr) nounwind {
 
 ; Should be still fine, but the result is shifted left afterwards
 define void @c7_i32(i32 %arg, ptr %ptr) nounwind {
-; X86-LABEL: c7_i32:
-; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    shrl $17, %ecx
-; X86-NEXT:    andl $4092, %ecx # imm = 0xFFC
-; X86-NEXT:    movl %ecx, (%eax)
-; X86-NEXT:    retl
+; X86-NOBMI-LABEL: c7_i32:
+; X86-NOBMI:       # %bb.0:
+; X86-NOBMI-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NOBMI-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NOBMI-NEXT:    shrl $19, %ecx
+; X86-NOBMI-NEXT:    andl $1023, %ecx # imm = 0x3FF
+; X86-NOBMI-NEXT:    shll $2, %ecx
+; X86-NOBMI-NEXT:    movl %ecx, (%eax)
+; X86-NOBMI-NEXT:    retl
 ;
-; X64-LABEL: c7_i32:
-; X64:       # %bb.0:
-; X64-NEXT:    shrl $17, %edi
-; X64-NEXT:    andl $4092, %edi # imm = 0xFFC
-; X64-NEXT:    movl %edi, (%rsi)
-; X64-NEXT:    retq
+; X86-BMINOTBM-LABEL: c7_i32:
+; X86-BMINOTBM:       # %bb.0:
+; X86-BMINOTBM-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-BMINOTBM-NEXT:    movl $2579, %ecx # imm = 0xA13
+; X86-BMINOTBM-NEXT:    bextrl %ecx, {{[0-9]+}}(%esp), %ecx
+; X86-BMINOTBM-NEXT:    shll $2, %ecx
+; X86-BMINOTBM-NEXT:    movl %ecx, (%eax)
+; X86-BMINOTBM-NEXT:    retl
+;
+; X86-BMITBM-LABEL: c7_i32:
+; X86-BMITBM:       # %bb.0:
+; X86-BMITBM-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-BMITBM-NEXT:    bextrl $2579, {{[0-9]+}}(%esp), %ecx # imm = 0xA13
+; X86-BMITBM-NEXT:    shll $2, %ecx
+; X86-BMITBM-NEXT:    movl %ecx, (%eax)
+; X86-BMITBM-NEXT:    retl
+;
+; X64-NOBMI-LABEL: c7_i32:
+; X64-NOBMI:       # %bb.0:
+; X64-NOBMI-NEXT:    shrl $19, %edi
+; X64-NOBMI-NEXT:    andl $1023, %edi # imm = 0x3FF
+; X64-NOBMI-NEXT:    shll $2, %edi
+; X64-NOBMI-NEXT:    movl %edi, (%rsi)
+; X64-NOBMI-NEXT:    retq
+;
+; X64-BMINOTBM-LABEL: c7_i32:
+; X64-BMINOTBM:       # %bb.0:
+; X64-BMINOTBM-NEXT:    movl $2579, %eax # imm = 0xA13
+; X64-BMINOTBM-NEXT:    bextrl %eax, %edi, %eax
+; X64-BMINOTBM-NEXT:    shll $2, %eax
+; X64-BMINOTBM-NEXT:    movl %eax, (%rsi)
+; X64-BMINOTBM-NEXT:    retq
+;
+; X64-BMITBM-LABEL: c7_i32:
+; X64-BMITBM:       # %bb.0:
+; X64-BMITBM-NEXT:    bextrl $2579, %edi, %eax # imm = 0xA13
+; X64-BMITBM-NEXT:    shll $2, %eax
+; X64-BMITBM-NEXT:    movl %eax, (%rsi)
+; X64-BMITBM-NEXT:    retq
   %tmp0 = lshr i32 %arg, 19
   %tmp1 = and i32 %tmp0, 1023
   %tmp2 = shl i32 %tmp1, 2
@@ -8576,22 +8667,58 @@ define void @c6_i64(i64 %arg, ptr %ptr) nounwind {
 
 ; Should be still fine, but the result is shifted left afterwards
 define void @c7_i64(i64 %arg, ptr %ptr) nounwind {
-; X86-LABEL: c7_i64:
-; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    shrl $17, %ecx
-; X86-NEXT:    andl $4092, %ecx # imm = 0xFFC
-; X86-NEXT:    movl %ecx, (%eax)
-; X86-NEXT:    movl $0, 4(%eax)
-; X86-NEXT:    retl
+; X86-NOBMI-LABEL: c7_i64:
+; X86-NOBMI:       # %bb.0:
+; X86-NOBMI-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NOBMI-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NOBMI-NEXT:    shrl $19, %ecx
+; X86-NOBMI-NEXT:    andl $1023, %ecx # imm = 0x3FF
+; X86-NOBMI-NEXT:    shll $2, %ecx
+; X86-NOBMI-NEXT:    movl %ecx, (%eax)
+; X86-NOBMI-NEXT:    movl $0, 4(%eax)
+; X86-NOBMI-NEXT:    retl
 ;
-; X64-LABEL: c7_i64:
-; X64:       # %bb.0:
-; X64-NEXT:    shrq $49, %rdi
-; X64-NEXT:    andl $4092, %edi # imm = 0xFFC
-; X64-NEXT:    movq %rdi, (%rsi)
-; X64-NEXT:    retq
+; X86-BMINOTBM-LABEL: c7_i64:
+; X86-BMINOTBM:       # %bb.0:
+; X86-BMINOTBM-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-BMINOTBM-NEXT:    movl $2579, %ecx # imm = 0xA13
+; X86-BMINOTBM-NEXT:    bextrl %ecx, {{[0-9]+}}(%esp), %ecx
+; X86-BMINOTBM-NEXT:    shll $2, %ecx
+; X86-BMINOTBM-NEXT:    movl %ecx, (%eax)
+; X86-BMINOTBM-NEXT:    movl $0, 4(%eax)
+; X86-BMINOTBM-NEXT:    retl
+;
+; X86-BMITBM-LABEL: c7_i64:
+; X86-BMITBM:       # %bb.0:
+; X86-BMITBM-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-BMITBM-NEXT:    bextrl $2579, {{[0-9]+}}(%esp), %ecx # imm = 0xA13
+; X86-BMITBM-NEXT:    shll $2, %ecx
+; X86-BMITBM-NEXT:    movl %ecx, (%eax)
+; X86-BMITBM-NEXT:    movl $0, 4(%eax)
+; X86-BMITBM-NEXT:    retl
+;
+; X64-NOBMI-LABEL: c7_i64:
+; X64-NOBMI:       # %bb.0:
+; X64-NOBMI-NEXT:    shrq $51, %rdi
+; X64-NOBMI-NEXT:    andl $1023, %edi # imm = 0x3FF
+; X64-NOBMI-NEXT:    shlq $2, %rdi
+; X64-NOBMI-NEXT:    movq %rdi, (%rsi)
+; X64-NOBMI-NEXT:    retq
+;
+; X64-BMINOTBM-LABEL: c7_i64:
+; X64-BMINOTBM:       # %bb.0:
+; X64-BMINOTBM-NEXT:    movl $2611, %eax # imm = 0xA33
+; X64-BMINOTBM-NEXT:    bextrq %rax, %rdi, %rax
+; X64-BMINOTBM-NEXT:    shlq $2, %rax
+; X64-BMINOTBM-NEXT:    movq %rax, (%rsi)
+; X64-BMINOTBM-NEXT:    retq
+;
+; X64-BMITBM-LABEL: c7_i64:
+; X64-BMITBM:       # %bb.0:
+; X64-BMITBM-NEXT:    bextrq $2611, %rdi, %rax # imm = 0xA33
+; X64-BMITBM-NEXT:    shlq $2, %rax
+; X64-BMITBM-NEXT:    movq %rax, (%rsi)
+; X64-BMITBM-NEXT:    retq
   %tmp0 = lshr i64 %arg, 51
   %tmp1 = and i64 %tmp0, 1023
   %tmp2 = shl i64 %tmp1, 2

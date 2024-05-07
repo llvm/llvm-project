@@ -6,12 +6,14 @@ define amdgpu_kernel void @zext_shl64_to_32(ptr addrspace(1) nocapture %out, i32
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dword s4, s[0:1], 0xb
 ; GCN-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; GCN-NEXT:    s_mov_b32 s5, 0
 ; GCN-NEXT:    s_mov_b32 s3, 0xf000
 ; GCN-NEXT:    s_mov_b32 s2, -1
-; GCN-NEXT:    v_mov_b32_e32 v1, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    s_lshl_b32 s4, s4, 2
+; GCN-NEXT:    s_andn2_b32 s4, s4, -2.0
+; GCN-NEXT:    s_lshl_b64 s[4:5], s[4:5], 2
 ; GCN-NEXT:    v_mov_b32_e32 v0, s4
+; GCN-NEXT:    v_mov_b32_e32 v1, s5
 ; GCN-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
 ; GCN-NEXT:    s_endpgm
   %and = and i32 %x, 1073741823
@@ -26,13 +28,14 @@ define amdgpu_kernel void @sext_shl64_to_32(ptr addrspace(1) nocapture %out, i32
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dword s4, s[0:1], 0xb
 ; GCN-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; GCN-NEXT:    s_mov_b32 s5, 0
 ; GCN-NEXT:    s_mov_b32 s3, 0xf000
 ; GCN-NEXT:    s_mov_b32 s2, -1
-; GCN-NEXT:    v_mov_b32_e32 v1, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_and_b32 s4, s4, 0x1fffffff
-; GCN-NEXT:    s_lshl_b32 s4, s4, 2
+; GCN-NEXT:    s_lshl_b64 s[4:5], s[4:5], 2
 ; GCN-NEXT:    v_mov_b32_e32 v0, s4
+; GCN-NEXT:    v_mov_b32_e32 v1, s5
 ; GCN-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
 ; GCN-NEXT:    s_endpgm
   %and = and i32 %x, 536870911

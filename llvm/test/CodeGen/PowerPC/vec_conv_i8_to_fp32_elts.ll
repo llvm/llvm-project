@@ -351,10 +351,13 @@ define <4 x float> @test4elt_signed(i32 %a.coerce) local_unnamed_addr #1 {
 ; CHECK-P9:       # %bb.0: # %entry
 ; CHECK-P9-NEXT:    mtvsrwz v2, r3
 ; CHECK-P9-NEXT:    addis r3, r2, .LCPI5_0@toc@ha
+; CHECK-P9-NEXT:    vspltisw v3, 12
 ; CHECK-P9-NEXT:    addi r3, r3, .LCPI5_0@toc@l
+; CHECK-P9-NEXT:    vadduwm v3, v3, v3
 ; CHECK-P9-NEXT:    lxv vs0, 0(r3)
 ; CHECK-P9-NEXT:    xxperm v2, v2, vs0
-; CHECK-P9-NEXT:    vextsb2w v2, v2
+; CHECK-P9-NEXT:    vslw v2, v2, v3
+; CHECK-P9-NEXT:    vsraw v2, v2, v3
 ; CHECK-P9-NEXT:    xvcvsxwsp v2, v2
 ; CHECK-P9-NEXT:    blr
 ;
@@ -407,17 +410,21 @@ define void @test8elt_signed(ptr noalias nocapture sret(<8 x float>) %agg.result
 ; CHECK-P9:       # %bb.0: # %entry
 ; CHECK-P9-NEXT:    mtvsrd v2, r4
 ; CHECK-P9-NEXT:    addis r4, r2, .LCPI6_0@toc@ha
+; CHECK-P9-NEXT:    vspltisw v4, 12
 ; CHECK-P9-NEXT:    addi r4, r4, .LCPI6_0@toc@l
+; CHECK-P9-NEXT:    vadduwm v4, v4, v4
 ; CHECK-P9-NEXT:    lxv v3, 0(r4)
 ; CHECK-P9-NEXT:    addis r4, r2, .LCPI6_1@toc@ha
 ; CHECK-P9-NEXT:    addi r4, r4, .LCPI6_1@toc@l
 ; CHECK-P9-NEXT:    vperm v3, v2, v2, v3
-; CHECK-P9-NEXT:    vextsb2w v3, v3
+; CHECK-P9-NEXT:    vslw v3, v3, v4
+; CHECK-P9-NEXT:    vsraw v3, v3, v4
 ; CHECK-P9-NEXT:    xvcvsxwsp vs0, v3
 ; CHECK-P9-NEXT:    lxv v3, 0(r4)
 ; CHECK-P9-NEXT:    vperm v2, v2, v2, v3
 ; CHECK-P9-NEXT:    stxv vs0, 0(r3)
-; CHECK-P9-NEXT:    vextsb2w v2, v2
+; CHECK-P9-NEXT:    vslw v2, v2, v4
+; CHECK-P9-NEXT:    vsraw v2, v2, v4
 ; CHECK-P9-NEXT:    xvcvsxwsp vs1, v2
 ; CHECK-P9-NEXT:    stxv vs1, 16(r3)
 ; CHECK-P9-NEXT:    blr
@@ -500,31 +507,37 @@ define void @test16elt_signed(ptr noalias nocapture sret(<16 x float>) %agg.resu
 ; CHECK-P9-LABEL: test16elt_signed:
 ; CHECK-P9:       # %bb.0: # %entry
 ; CHECK-P9-NEXT:    addis r4, r2, .LCPI7_0@toc@ha
+; CHECK-P9-NEXT:    vspltisw v4, 12
 ; CHECK-P9-NEXT:    addi r4, r4, .LCPI7_0@toc@l
+; CHECK-P9-NEXT:    vadduwm v4, v4, v4
 ; CHECK-P9-NEXT:    lxv v3, 0(r4)
 ; CHECK-P9-NEXT:    addis r4, r2, .LCPI7_1@toc@ha
 ; CHECK-P9-NEXT:    addi r4, r4, .LCPI7_1@toc@l
 ; CHECK-P9-NEXT:    vperm v3, v2, v2, v3
-; CHECK-P9-NEXT:    vextsb2w v3, v3
+; CHECK-P9-NEXT:    vslw v3, v3, v4
+; CHECK-P9-NEXT:    vsraw v3, v3, v4
 ; CHECK-P9-NEXT:    xvcvsxwsp vs0, v3
 ; CHECK-P9-NEXT:    lxv v3, 0(r4)
 ; CHECK-P9-NEXT:    addis r4, r2, .LCPI7_2@toc@ha
 ; CHECK-P9-NEXT:    addi r4, r4, .LCPI7_2@toc@l
 ; CHECK-P9-NEXT:    vperm v3, v2, v2, v3
 ; CHECK-P9-NEXT:    stxv vs0, 0(r3)
-; CHECK-P9-NEXT:    vextsb2w v3, v3
+; CHECK-P9-NEXT:    vslw v3, v3, v4
+; CHECK-P9-NEXT:    vsraw v3, v3, v4
 ; CHECK-P9-NEXT:    xvcvsxwsp vs1, v3
 ; CHECK-P9-NEXT:    lxv v3, 0(r4)
 ; CHECK-P9-NEXT:    addis r4, r2, .LCPI7_3@toc@ha
 ; CHECK-P9-NEXT:    addi r4, r4, .LCPI7_3@toc@l
 ; CHECK-P9-NEXT:    vperm v3, v2, v2, v3
 ; CHECK-P9-NEXT:    stxv vs1, 16(r3)
-; CHECK-P9-NEXT:    vextsb2w v3, v3
+; CHECK-P9-NEXT:    vslw v3, v3, v4
+; CHECK-P9-NEXT:    vsraw v3, v3, v4
 ; CHECK-P9-NEXT:    xvcvsxwsp vs2, v3
 ; CHECK-P9-NEXT:    lxv v3, 0(r4)
 ; CHECK-P9-NEXT:    vperm v2, v2, v2, v3
 ; CHECK-P9-NEXT:    stxv vs2, 32(r3)
-; CHECK-P9-NEXT:    vextsb2w v2, v2
+; CHECK-P9-NEXT:    vslw v2, v2, v4
+; CHECK-P9-NEXT:    vsraw v2, v2, v4
 ; CHECK-P9-NEXT:    xvcvsxwsp vs3, v2
 ; CHECK-P9-NEXT:    stxv vs3, 48(r3)
 ; CHECK-P9-NEXT:    blr

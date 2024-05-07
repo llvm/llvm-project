@@ -104,12 +104,14 @@ define i1 @lshr_i1_3(i1 %x) {
 define i8 @lshr_i8_3(i8 %x) {
 ; LA32-LABEL: lshr_i8_3:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    bstrpick.w $a0, $a0, 7, 3
+; LA32-NEXT:    andi $a0, $a0, 248
+; LA32-NEXT:    srli.w $a0, $a0, 3
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: lshr_i8_3:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    bstrpick.d $a0, $a0, 7, 3
+; LA64-NEXT:    andi $a0, $a0, 248
+; LA64-NEXT:    srli.d $a0, $a0, 3
 ; LA64-NEXT:    ret
   %lshr = lshr i8 %x, 3
   ret i8 %lshr
@@ -119,11 +121,15 @@ define i16 @lshr_i16_3(i16 %x) {
 ; LA32-LABEL: lshr_i16_3:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    bstrpick.w $a0, $a0, 15, 3
+; LA32-NEXT:    slli.w $a0, $a0, 3
+; LA32-NEXT:    srli.w $a0, $a0, 3
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: lshr_i16_3:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    bstrpick.d $a0, $a0, 15, 3
+; LA64-NEXT:    slli.d $a0, $a0, 3
+; LA64-NEXT:    srli.d $a0, $a0, 3
 ; LA64-NEXT:    ret
   %lshr = lshr i16 %x, 3
   ret i16 %lshr
@@ -138,6 +144,8 @@ define i32 @lshr_i32_3(i32 %x) {
 ; LA64-LABEL: lshr_i32_3:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    bstrpick.d $a0, $a0, 31, 3
+; LA64-NEXT:    slli.d $a0, $a0, 3
+; LA64-NEXT:    srli.d $a0, $a0, 3
 ; LA64-NEXT:    ret
   %lshr = lshr i32 %x, 3
   ret i32 %lshr

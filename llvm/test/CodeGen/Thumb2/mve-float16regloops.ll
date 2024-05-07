@@ -1012,9 +1012,9 @@ define void @fir(ptr nocapture readonly %S, ptr nocapture readonly %pSrc, ptr no
 ; CHECK-NEXT:    cmp r6, #1
 ; CHECK-NEXT:    it gt
 ; CHECK-NEXT:    asrgt r1, r7, #3
-; CHECK-NEXT:    add.w r7, r5, r4, lsl #1
+; CHECK-NEXT:    subs r7, r4, #1
 ; CHECK-NEXT:    str r1, [sp] @ 4-byte Spill
-; CHECK-NEXT:    subs r1, r7, #2
+; CHECK-NEXT:    add.w r1, r5, r7, lsl #1
 ; CHECK-NEXT:    rsbs r7, r4, #0
 ; CHECK-NEXT:    str r7, [sp, #8] @ 4-byte Spill
 ; CHECK-NEXT:    add.w r7, r3, #16

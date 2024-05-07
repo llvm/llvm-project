@@ -28,8 +28,9 @@ define i8 @v_ssubsat_i8(i8 %lhs, i8 %rhs) {
 ; GFX9-LABEL: v_ssubsat_i8:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_lshlrev_b16_e32 v1, 8, v1
-; GFX9-NEXT:    v_lshlrev_b16_e32 v0, 8, v0
+; GFX9-NEXT:    v_mov_b32_e32 v2, 8
+; GFX9-NEXT:    v_lshlrev_b16_sdwa v1, v2, sext(v1) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_0
+; GFX9-NEXT:    v_lshlrev_b16_sdwa v0, v2, sext(v0) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_0
 ; GFX9-NEXT:    v_sub_i16 v0, v0, v1 clamp
 ; GFX9-NEXT:    v_ashrrev_i16_e32 v0, 8, v0
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
@@ -37,6 +38,8 @@ define i8 @v_ssubsat_i8(i8 %lhs, i8 %rhs) {
 ; GFX10PLUS-LABEL: v_ssubsat_i8:
 ; GFX10PLUS:       ; %bb.0:
 ; GFX10PLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10PLUS-NEXT:    v_bfe_i32 v1, v1, 0, 8
+; GFX10PLUS-NEXT:    v_bfe_i32 v0, v0, 0, 8
 ; GFX10PLUS-NEXT:    v_lshlrev_b16 v1, 8, v1
 ; GFX10PLUS-NEXT:    v_lshlrev_b16 v0, 8, v0
 ; GFX10PLUS-NEXT:    v_sub_nc_i16 v0, v0, v1 clamp
@@ -142,7 +145,7 @@ define <2 x i16> @v_ssubsat_v2i16(<2 x i16> %lhs, <2 x i16> %rhs) {
 ; GFX6-NEXT:    v_lshlrev_b32_e32 v4, 16, v1
 ; GFX6-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX6-NEXT:    v_or_b32_e32 v0, v0, v4
-; GFX6-NEXT:    v_and_b32_e32 v1, 0xffff, v1
+; GFX6-NEXT:    v_bfe_u32 v1, v1, 0, 16
 ; GFX6-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-LABEL: v_ssubsat_v2i16:

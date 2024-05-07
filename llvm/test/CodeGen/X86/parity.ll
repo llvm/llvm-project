@@ -408,7 +408,7 @@ define i16 @parity_16_shift(i16 %0) {
 ; X86-NOPOPCNT-NEXT:    xorl %eax, %eax
 ; X86-NOPOPCNT-NEXT:    xorb %ch, %cl
 ; X86-NOPOPCNT-NEXT:    setnp %al
-; X86-NOPOPCNT-NEXT:    addl %eax, %eax
+; X86-NOPOPCNT-NEXT:    addw %ax, %ax
 ; X86-NOPOPCNT-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X86-NOPOPCNT-NEXT:    retl
 ;
@@ -418,7 +418,7 @@ define i16 @parity_16_shift(i16 %0) {
 ; X64-NOPOPCNT-NEXT:    xorl %eax, %eax
 ; X64-NOPOPCNT-NEXT:    xorb %ch, %cl
 ; X64-NOPOPCNT-NEXT:    setnp %al
-; X64-NOPOPCNT-NEXT:    addl %eax, %eax
+; X64-NOPOPCNT-NEXT:    addw %ax, %ax
 ; X64-NOPOPCNT-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NOPOPCNT-NEXT:    retq
 ;
@@ -427,7 +427,7 @@ define i16 @parity_16_shift(i16 %0) {
 ; X86-POPCNT-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X86-POPCNT-NEXT:    popcntl %eax, %eax
 ; X86-POPCNT-NEXT:    andl $1, %eax
-; X86-POPCNT-NEXT:    addl %eax, %eax
+; X86-POPCNT-NEXT:    addw %ax, %ax
 ; X86-POPCNT-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X86-POPCNT-NEXT:    retl
 ;
@@ -436,7 +436,7 @@ define i16 @parity_16_shift(i16 %0) {
 ; X64-POPCNT-NEXT:    movzwl %di, %eax
 ; X64-POPCNT-NEXT:    popcntl %eax, %eax
 ; X64-POPCNT-NEXT:    andl $1, %eax
-; X64-POPCNT-NEXT:    addl %eax, %eax
+; X64-POPCNT-NEXT:    addw %ax, %ax
 ; X64-POPCNT-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-POPCNT-NEXT:    retq
   %2 = tail call i16 @llvm.ctpop.i16(i16 %0)
@@ -637,7 +637,7 @@ define i64 @parity_64_shift(i64 %0) {
 ; X64-NOPOPCNT-NEXT:    xorl %eax, %eax
 ; X64-NOPOPCNT-NEXT:    xorb %ch, %cl
 ; X64-NOPOPCNT-NEXT:    setnp %al
-; X64-NOPOPCNT-NEXT:    addl %eax, %eax
+; X64-NOPOPCNT-NEXT:    addq %rax, %rax
 ; X64-NOPOPCNT-NEXT:    retq
 ;
 ; X86-POPCNT-LABEL: parity_64_shift:
@@ -654,7 +654,7 @@ define i64 @parity_64_shift(i64 %0) {
 ; X64-POPCNT:       # %bb.0:
 ; X64-POPCNT-NEXT:    popcntq %rdi, %rax
 ; X64-POPCNT-NEXT:    andl $1, %eax
-; X64-POPCNT-NEXT:    addl %eax, %eax
+; X64-POPCNT-NEXT:    addq %rax, %rax
 ; X64-POPCNT-NEXT:    retq
   %2 = tail call i64 @llvm.ctpop.i64(i64 %0)
   %3 = shl nuw nsw i64 %2, 1

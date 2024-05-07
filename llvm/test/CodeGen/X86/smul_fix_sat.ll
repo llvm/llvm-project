@@ -460,6 +460,8 @@ define i4 @func6(i4 %x, i4 %y) nounwind {
 ; X64-NEXT:    shlb $4, %sil
 ; X64-NEXT:    sarb $4, %sil
 ; X64-NEXT:    shlb $4, %al
+; X64-NEXT:    sarb $4, %al
+; X64-NEXT:    shlb $4, %al
 ; X64-NEXT:    xorl %ecx, %ecx
 ; X64-NEXT:    movl %eax, %edx
 ; X64-NEXT:    xorb %sil, %dl
@@ -479,6 +481,8 @@ define i4 @func6(i4 %x, i4 %y) nounwind {
 ; X86-NEXT:    shlb $4, %cl
 ; X86-NEXT:    sarb $4, %cl
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    shlb $4, %al
+; X86-NEXT:    sarb $4, %al
 ; X86-NEXT:    shlb $4, %al
 ; X86-NEXT:    xorl %edx, %edx
 ; X86-NEXT:    movb %al, %ah

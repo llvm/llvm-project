@@ -4,8 +4,9 @@
 define void @cmpxchg_i8_acquire_acquire(ptr %ptr, i8 %cmp, i8 %val) nounwind {
 ; LA64-LABEL: cmpxchg_i8_acquire_acquire:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    slli.d $a3, $a0, 3
+; LA64-NEXT:    andi $a3, $a0, 3
 ; LA64-NEXT:    bstrins.d $a0, $zero, 1, 0
+; LA64-NEXT:    slli.d $a3, $a3, 3
 ; LA64-NEXT:    ori $a4, $zero, 255
 ; LA64-NEXT:    sll.w $a4, $a4, $a3
 ; LA64-NEXT:    andi $a1, $a1, 255
@@ -33,8 +34,9 @@ define void @cmpxchg_i8_acquire_acquire(ptr %ptr, i8 %cmp, i8 %val) nounwind {
 define void @cmpxchg_i16_acquire_acquire(ptr %ptr, i16 %cmp, i16 %val) nounwind {
 ; LA64-LABEL: cmpxchg_i16_acquire_acquire:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    slli.d $a3, $a0, 3
+; LA64-NEXT:    andi $a3, $a0, 3
 ; LA64-NEXT:    bstrins.d $a0, $zero, 1, 0
+; LA64-NEXT:    slli.d $a3, $a3, 3
 ; LA64-NEXT:    lu12i.w $a4, 15
 ; LA64-NEXT:    ori $a4, $a4, 4095
 ; LA64-NEXT:    sll.w $a4, $a4, $a3
@@ -102,8 +104,9 @@ define void @cmpxchg_i64_acquire_acquire(ptr %ptr, i64 %cmp, i64 %val) nounwind 
 define void @cmpxchg_i8_acquire_monotonic(ptr %ptr, i8 %cmp, i8 %val) nounwind {
 ; LA64-LABEL: cmpxchg_i8_acquire_monotonic:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    slli.d $a3, $a0, 3
+; LA64-NEXT:    andi $a3, $a0, 3
 ; LA64-NEXT:    bstrins.d $a0, $zero, 1, 0
+; LA64-NEXT:    slli.d $a3, $a3, 3
 ; LA64-NEXT:    ori $a4, $zero, 255
 ; LA64-NEXT:    sll.w $a4, $a4, $a3
 ; LA64-NEXT:    andi $a1, $a1, 255
@@ -131,8 +134,9 @@ define void @cmpxchg_i8_acquire_monotonic(ptr %ptr, i8 %cmp, i8 %val) nounwind {
 define void @cmpxchg_i16_acquire_monotonic(ptr %ptr, i16 %cmp, i16 %val) nounwind {
 ; LA64-LABEL: cmpxchg_i16_acquire_monotonic:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    slli.d $a3, $a0, 3
+; LA64-NEXT:    andi $a3, $a0, 3
 ; LA64-NEXT:    bstrins.d $a0, $zero, 1, 0
+; LA64-NEXT:    slli.d $a3, $a3, 3
 ; LA64-NEXT:    lu12i.w $a4, 15
 ; LA64-NEXT:    ori $a4, $a4, 4095
 ; LA64-NEXT:    sll.w $a4, $a4, $a3
@@ -200,8 +204,9 @@ define void @cmpxchg_i64_acquire_monotonic(ptr %ptr, i64 %cmp, i64 %val) nounwin
 define i8 @cmpxchg_i8_acquire_acquire_reti8(ptr %ptr, i8 %cmp, i8 %val) nounwind {
 ; LA64-LABEL: cmpxchg_i8_acquire_acquire_reti8:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    slli.d $a3, $a0, 3
+; LA64-NEXT:    andi $a3, $a0, 3
 ; LA64-NEXT:    bstrins.d $a0, $zero, 1, 0
+; LA64-NEXT:    slli.d $a3, $a3, 3
 ; LA64-NEXT:    ori $a4, $zero, 255
 ; LA64-NEXT:    sll.w $a4, $a4, $a3
 ; LA64-NEXT:    andi $a1, $a1, 255
@@ -231,8 +236,9 @@ define i8 @cmpxchg_i8_acquire_acquire_reti8(ptr %ptr, i8 %cmp, i8 %val) nounwind
 define i16 @cmpxchg_i16_acquire_acquire_reti16(ptr %ptr, i16 %cmp, i16 %val) nounwind {
 ; LA64-LABEL: cmpxchg_i16_acquire_acquire_reti16:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    slli.d $a3, $a0, 3
+; LA64-NEXT:    andi $a3, $a0, 3
 ; LA64-NEXT:    bstrins.d $a0, $zero, 1, 0
+; LA64-NEXT:    slli.d $a3, $a3, 3
 ; LA64-NEXT:    lu12i.w $a4, 15
 ; LA64-NEXT:    ori $a4, $a4, 4095
 ; LA64-NEXT:    sll.w $a4, $a4, $a3
@@ -306,8 +312,9 @@ define i64 @cmpxchg_i64_acquire_acquire_reti64(ptr %ptr, i64 %cmp, i64 %val) nou
 define i1 @cmpxchg_i8_acquire_acquire_reti1(ptr %ptr, i8 %cmp, i8 %val) nounwind {
 ; LA64-LABEL: cmpxchg_i8_acquire_acquire_reti1:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    slli.d $a3, $a0, 3
+; LA64-NEXT:    andi $a3, $a0, 3
 ; LA64-NEXT:    bstrins.d $a0, $zero, 1, 0
+; LA64-NEXT:    slli.d $a3, $a3, 3
 ; LA64-NEXT:    ori $a4, $zero, 255
 ; LA64-NEXT:    sll.w $a4, $a4, $a3
 ; LA64-NEXT:    andi $a1, $a1, 255
@@ -339,8 +346,9 @@ define i1 @cmpxchg_i8_acquire_acquire_reti1(ptr %ptr, i8 %cmp, i8 %val) nounwind
 define i1 @cmpxchg_i16_acquire_acquire_reti1(ptr %ptr, i16 %cmp, i16 %val) nounwind {
 ; LA64-LABEL: cmpxchg_i16_acquire_acquire_reti1:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    slli.d $a3, $a0, 3
+; LA64-NEXT:    andi $a3, $a0, 3
 ; LA64-NEXT:    bstrins.d $a0, $zero, 1, 0
+; LA64-NEXT:    slli.d $a3, $a3, 3
 ; LA64-NEXT:    lu12i.w $a4, 15
 ; LA64-NEXT:    ori $a4, $a4, 4095
 ; LA64-NEXT:    sll.w $a4, $a4, $a3
@@ -418,8 +426,9 @@ define i1 @cmpxchg_i64_acquire_acquire_reti1(ptr %ptr, i64 %cmp, i64 %val) nounw
 define void @cmpxchg_i8_monotonic_monotonic(ptr %ptr, i8 %cmp, i8 %val) nounwind {
 ; LA64-LABEL: cmpxchg_i8_monotonic_monotonic:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    slli.d $a3, $a0, 3
+; LA64-NEXT:    andi $a3, $a0, 3
 ; LA64-NEXT:    bstrins.d $a0, $zero, 1, 0
+; LA64-NEXT:    slli.d $a3, $a3, 3
 ; LA64-NEXT:    ori $a4, $zero, 255
 ; LA64-NEXT:    sll.w $a4, $a4, $a3
 ; LA64-NEXT:    andi $a1, $a1, 255
@@ -447,8 +456,9 @@ define void @cmpxchg_i8_monotonic_monotonic(ptr %ptr, i8 %cmp, i8 %val) nounwind
 define void @cmpxchg_i16_monotonic_monotonic(ptr %ptr, i16 %cmp, i16 %val) nounwind {
 ; LA64-LABEL: cmpxchg_i16_monotonic_monotonic:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    slli.d $a3, $a0, 3
+; LA64-NEXT:    andi $a3, $a0, 3
 ; LA64-NEXT:    bstrins.d $a0, $zero, 1, 0
+; LA64-NEXT:    slli.d $a3, $a3, 3
 ; LA64-NEXT:    lu12i.w $a4, 15
 ; LA64-NEXT:    ori $a4, $a4, 4095
 ; LA64-NEXT:    sll.w $a4, $a4, $a3
@@ -516,8 +526,9 @@ define void @cmpxchg_i64_monotonic_monotonic(ptr %ptr, i64 %cmp, i64 %val) nounw
 define i8 @cmpxchg_i8_monotonic_monotonic_reti8(ptr %ptr, i8 %cmp, i8 %val) nounwind {
 ; LA64-LABEL: cmpxchg_i8_monotonic_monotonic_reti8:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    slli.d $a3, $a0, 3
+; LA64-NEXT:    andi $a3, $a0, 3
 ; LA64-NEXT:    bstrins.d $a0, $zero, 1, 0
+; LA64-NEXT:    slli.d $a3, $a3, 3
 ; LA64-NEXT:    ori $a4, $zero, 255
 ; LA64-NEXT:    sll.w $a4, $a4, $a3
 ; LA64-NEXT:    andi $a1, $a1, 255
@@ -547,8 +558,9 @@ define i8 @cmpxchg_i8_monotonic_monotonic_reti8(ptr %ptr, i8 %cmp, i8 %val) noun
 define i16 @cmpxchg_i16_monotonic_monotonic_reti16(ptr %ptr, i16 %cmp, i16 %val) nounwind {
 ; LA64-LABEL: cmpxchg_i16_monotonic_monotonic_reti16:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    slli.d $a3, $a0, 3
+; LA64-NEXT:    andi $a3, $a0, 3
 ; LA64-NEXT:    bstrins.d $a0, $zero, 1, 0
+; LA64-NEXT:    slli.d $a3, $a3, 3
 ; LA64-NEXT:    lu12i.w $a4, 15
 ; LA64-NEXT:    ori $a4, $a4, 4095
 ; LA64-NEXT:    sll.w $a4, $a4, $a3
@@ -622,8 +634,9 @@ define i64 @cmpxchg_i64_monotonic_monotonic_reti64(ptr %ptr, i64 %cmp, i64 %val)
 define i1 @cmpxchg_i8_monotonic_monotonic_reti1(ptr %ptr, i8 %cmp, i8 %val) nounwind {
 ; LA64-LABEL: cmpxchg_i8_monotonic_monotonic_reti1:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    slli.d $a3, $a0, 3
+; LA64-NEXT:    andi $a3, $a0, 3
 ; LA64-NEXT:    bstrins.d $a0, $zero, 1, 0
+; LA64-NEXT:    slli.d $a3, $a3, 3
 ; LA64-NEXT:    ori $a4, $zero, 255
 ; LA64-NEXT:    sll.w $a4, $a4, $a3
 ; LA64-NEXT:    andi $a1, $a1, 255
@@ -655,8 +668,9 @@ define i1 @cmpxchg_i8_monotonic_monotonic_reti1(ptr %ptr, i8 %cmp, i8 %val) noun
 define i1 @cmpxchg_i16_monotonic_monotonic_reti1(ptr %ptr, i16 %cmp, i16 %val) nounwind {
 ; LA64-LABEL: cmpxchg_i16_monotonic_monotonic_reti1:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    slli.d $a3, $a0, 3
+; LA64-NEXT:    andi $a3, $a0, 3
 ; LA64-NEXT:    bstrins.d $a0, $zero, 1, 0
+; LA64-NEXT:    slli.d $a3, $a3, 3
 ; LA64-NEXT:    lu12i.w $a4, 15
 ; LA64-NEXT:    ori $a4, $a4, 4095
 ; LA64-NEXT:    sll.w $a4, $a4, $a3

@@ -14,7 +14,8 @@ define i16 @func(i16 %x, i16 %y) nounwind {
 ; X64:       # %bb.0:
 ; X64-NEXT:    movzwl %si, %ecx
 ; X64-NEXT:    movzwl %di, %eax
-; X64-NEXT:    shll $8, %eax
+; X64-NEXT:    addl %eax, %eax
+; X64-NEXT:    shll $7, %eax
 ; X64-NEXT:    xorl %edx, %edx
 ; X64-NEXT:    divl %ecx
 ; X64-NEXT:    cmpl $131071, %eax # imm = 0x1FFFF
@@ -27,9 +28,9 @@ define i16 @func(i16 %x, i16 %y) nounwind {
 ; X86-LABEL: func:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movzwl %ax, %eax
-; X86-NEXT:    shll $8, %eax
+; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    addl %eax, %eax
+; X86-NEXT:    shll $7, %eax
 ; X86-NEXT:    xorl %edx, %edx
 ; X86-NEXT:    divl %ecx
 ; X86-NEXT:    cmpl $131071, %eax # imm = 0x1FFFF
@@ -54,10 +55,9 @@ define i16 @func2(i8 %x, i8 %y) nounwind {
 ; X64-NEXT:    divl %ecx
 ; X64-NEXT:    cmpl $32767, %eax # imm = 0x7FFF
 ; X64-NEXT:    movl $32767, %ecx # imm = 0x7FFF
-; X64-NEXT:    cmovbl %eax, %ecx
-; X64-NEXT:    addl %ecx, %ecx
-; X64-NEXT:    movswl %cx, %eax
-; X64-NEXT:    shrl %eax
+; X64-NEXT:    cmovael %ecx, %eax
+; X64-NEXT:    addl %eax, %eax
+; X64-NEXT:    sarw %ax
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq
 ;
@@ -72,10 +72,9 @@ define i16 @func2(i8 %x, i8 %y) nounwind {
 ; X86-NEXT:    divl %ecx
 ; X86-NEXT:    cmpl $32767, %eax # imm = 0x7FFF
 ; X86-NEXT:    movl $32767, %ecx # imm = 0x7FFF
-; X86-NEXT:    cmovbl %eax, %ecx
-; X86-NEXT:    addl %ecx, %ecx
-; X86-NEXT:    movswl %cx, %eax
-; X86-NEXT:    shrl %eax
+; X86-NEXT:    cmovael %ecx, %eax
+; X86-NEXT:    addl %eax, %eax
+; X86-NEXT:    sarw %ax
 ; X86-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X86-NEXT:    retl
   %x2 = sext i8 %x to i15
@@ -89,9 +88,11 @@ define i16 @func3(i15 %x, i8 %y) nounwind {
 ; X64-LABEL: func3:
 ; X64:       # %bb.0:
 ; X64-NEXT:    # kill: def $edi killed $edi def $rdi
-; X64-NEXT:    leal (%rdi,%rdi), %eax
+; X64-NEXT:    andl $32767, %edi # imm = 0x7FFF
 ; X64-NEXT:    movzbl %sil, %ecx
-; X64-NEXT:    shll $4, %ecx
+; X64-NEXT:    shll $7, %ecx
+; X64-NEXT:    leal (%rdi,%rdi), %eax
+; X64-NEXT:    shrw $3, %cx
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    xorl %edx, %edx
 ; X64-NEXT:    divw %cx
@@ -101,18 +102,19 @@ define i16 @func3(i15 %x, i8 %y) nounwind {
 ; X64-NEXT:    movl $32767, %ecx # imm = 0x7FFF
 ; X64-NEXT:    cmovbl %eax, %ecx
 ; X64-NEXT:    addl %ecx, %ecx
-; X64-NEXT:    movswl %cx, %eax
-; X64-NEXT:    shrl %eax
-; X64-NEXT:    # kill: def $ax killed $ax killed $eax
+; X64-NEXT:    sarw %cx
+; X64-NEXT:    movl %ecx, %eax
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: func3:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    addl %eax, %eax
-; X86-NEXT:    movzbl %cl, %ecx
-; X86-NEXT:    shll $4, %ecx
+; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    andl $32767, %eax # imm = 0x7FFF
+; X86-NEXT:    movsbl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    shlw $7, %cx
+; X86-NEXT:    andl $32640, %ecx # imm = 0x7F80
+; X86-NEXT:    shrw $3, %cx
+; X86-NEXT:    addw %ax, %ax
 ; X86-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X86-NEXT:    xorl %edx, %edx
 ; X86-NEXT:    divw %cx
@@ -122,9 +124,8 @@ define i16 @func3(i15 %x, i8 %y) nounwind {
 ; X86-NEXT:    movl $32767, %ecx # imm = 0x7FFF
 ; X86-NEXT:    cmovbl %eax, %ecx
 ; X86-NEXT:    addl %ecx, %ecx
-; X86-NEXT:    movswl %cx, %eax
-; X86-NEXT:    shrl %eax
-; X86-NEXT:    # kill: def $ax killed $ax killed $eax
+; X86-NEXT:    sarw %cx
+; X86-NEXT:    movl %ecx, %eax
 ; X86-NEXT:    retl
   %y2 = sext i8 %y to i15
   %y3 = shl i15 %y2, 7
@@ -283,15 +284,14 @@ define i16 @func7(i16 %x, i16 %y) nounwind {
 ; X86-LABEL: func7:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl %ecx, %edx
-; X86-NEXT:    shll $17, %edx
-; X86-NEXT:    shrl $15, %ecx
-; X86-NEXT:    andl $1, %ecx
+; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl %eax, %edx
+; X86-NEXT:    shrl $15, %edx
+; X86-NEXT:    shll $17, %eax
 ; X86-NEXT:    pushl $0
-; X86-NEXT:    pushl %eax
 ; X86-NEXT:    pushl %ecx
 ; X86-NEXT:    pushl %edx
+; X86-NEXT:    pushl %eax
 ; X86-NEXT:    calll __udivdi3
 ; X86-NEXT:    addl $16, %esp
 ; X86-NEXT:    cmpl $131071, %eax # imm = 0x1FFFF

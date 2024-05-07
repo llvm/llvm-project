@@ -765,18 +765,18 @@ define i64 @vselect_any_extend_vector_inreg_crash(ptr %x) {
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
 ; SSE-NEXT:    pcmpeqb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; SSE-NEXT:    movd %xmm0, %eax
+; SSE-NEXT:    movq %xmm0, %rax
 ; SSE-NEXT:    andl $1, %eax
-; SSE-NEXT:    shll $15, %eax
+; SSE-NEXT:    shlq $15, %rax
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: vselect_any_extend_vector_inreg_crash:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
 ; AVX1-NEXT:    vpcmpeqb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; AVX1-NEXT:    vmovd %xmm0, %eax
+; AVX1-NEXT:    vmovq %xmm0, %rax
 ; AVX1-NEXT:    andl $1, %eax
-; AVX1-NEXT:    shll $15, %eax
+; AVX1-NEXT:    shlq $15, %rax
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: vselect_any_extend_vector_inreg_crash:
@@ -784,9 +784,9 @@ define i64 @vselect_any_extend_vector_inreg_crash(ptr %x) {
 ; AVX2-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
 ; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [49,49,49,49]
 ; AVX2-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vmovd %xmm0, %eax
+; AVX2-NEXT:    vmovq %xmm0, %rax
 ; AVX2-NEXT:    andl $1, %eax
-; AVX2-NEXT:    shll $15, %eax
+; AVX2-NEXT:    shlq $15, %rax
 ; AVX2-NEXT:    retq
 0:
   %1 = load <8 x i8>, ptr %x

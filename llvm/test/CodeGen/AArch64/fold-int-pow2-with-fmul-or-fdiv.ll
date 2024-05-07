@@ -525,8 +525,9 @@ define float @fdiv_pow_shl_cnt_fail_neg_int(i64 %cnt) nounwind {
 define float @fdiv_pow_shl_cnt(i64 %cnt_in) nounwind {
 ; CHECK-LABEL: fdiv_pow_shl_cnt:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #-1115684864 // =0xbd800000
 ; CHECK-NEXT:    and w9, w0, #0x1f
+; CHECK-NEXT:    mov w8, #-1090519040 // =0xbf000000
+; CHECK-NEXT:    add w9, w9, #3
 ; CHECK-NEXT:    sub w8, w8, w9, lsl #23
 ; CHECK-NEXT:    fmov s0, w8
 ; CHECK-NEXT:    ret

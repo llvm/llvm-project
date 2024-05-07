@@ -376,7 +376,7 @@ define i1 @uadd_add(i8 %a, i8 %b, ptr %p) {
 ; CHECK-NEXT:    mov w8, #255 // =0xff
 ; CHECK-NEXT:    bic w8, w8, w0
 ; CHECK-NEXT:    add w8, w8, w1, uxtb
-; CHECK-NEXT:    lsr w0, w8, #8
+; CHECK-NEXT:    ubfx w0, w8, #8, #1
 ; CHECK-NEXT:    add w8, w8, #1
 ; CHECK-NEXT:    strb w8, [x2]
 ; CHECK-NEXT:    ret

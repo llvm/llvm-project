@@ -110,9 +110,9 @@ define <3 x i1> @test_urem_vec(<3 x i11> %X) nounwind {
 ; X86:       # %bb.0:
 ; X86-NEXT:    imull $683, {{[0-9]+}}(%esp), %eax # imm = 0x2AB
 ; X86-NEXT:    movl %eax, %ecx
-; X86-NEXT:    shll $10, %ecx
-; X86-NEXT:    andl $2046, %eax # imm = 0x7FE
-; X86-NEXT:    shrl %eax
+; X86-NEXT:    andl $2046, %ecx # imm = 0x7FE
+; X86-NEXT:    shrw %cx
+; X86-NEXT:    shll $10, %eax
 ; X86-NEXT:    orl %ecx, %eax
 ; X86-NEXT:    andl $2047, %eax # imm = 0x7FF
 ; X86-NEXT:    cmpl $342, %eax # imm = 0x156

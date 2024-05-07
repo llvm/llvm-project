@@ -34,6 +34,7 @@ define float @fcopysign_s(float %a, float %b) nounwind {
 define double @fcopysign_d(double %a, double %b) nounwind {
 ; LA32F-LABEL: fcopysign_d:
 ; LA32F:       # %bb.0:
+; LA32F-NEXT:    bstrins.w $a3, $zero, 30, 0
 ; LA32F-NEXT:    srli.w $a2, $a3, 31
 ; LA32F-NEXT:    bstrins.w $a1, $a2, 31, 31
 ; LA32F-NEXT:    ret
@@ -45,6 +46,7 @@ define double @fcopysign_d(double %a, double %b) nounwind {
 ;
 ; LA64F-LABEL: fcopysign_d:
 ; LA64F:       # %bb.0:
+; LA64F-NEXT:    bstrins.d $a1, $zero, 62, 0
 ; LA64F-NEXT:    srli.d $a1, $a1, 63
 ; LA64F-NEXT:    bstrins.d $a0, $a1, 63, 63
 ; LA64F-NEXT:    ret
@@ -61,6 +63,7 @@ define double @fold_promote_d_s(double %a, float %b) nounwind {
 ; LA32F-LABEL: fold_promote_d_s:
 ; LA32F:       # %bb.0:
 ; LA32F-NEXT:    movfr2gr.s $a2, $fa0
+; LA32F-NEXT:    bstrins.w $a2, $zero, 30, 0
 ; LA32F-NEXT:    srli.w $a2, $a2, 31
 ; LA32F-NEXT:    bstrins.w $a1, $a2, 31, 31
 ; LA32F-NEXT:    ret

@@ -4869,7 +4869,9 @@ define i1 @AtomicCmpSwapRes8(ptr %ptr, i8 signext %oldval, i8 signext %newval) n
 ; MIPS32-NEXT:    sll $1, $1, 24
 ; MIPS32-NEXT:    sra $1, $1, 24
 ; MIPS32-NEXT:  # %bb.4: # %entry
-; MIPS32-NEXT:    xor $1, $1, $5
+; MIPS32-NEXT:    sll $2, $5, 24
+; MIPS32-NEXT:    sra $2, $2, 24
+; MIPS32-NEXT:    xor $1, $1, $2
 ; MIPS32-NEXT:    jr $ra
 ; MIPS32-NEXT:    sltiu $2, $1, 1
 ;
@@ -5062,7 +5064,9 @@ define i1 @AtomicCmpSwapRes8(ptr %ptr, i8 signext %oldval, i8 signext %newval) n
 ; MIPS4-NEXT:    sll $1, $1, 24
 ; MIPS4-NEXT:    sra $1, $1, 24
 ; MIPS4-NEXT:  # %bb.4: # %entry
-; MIPS4-NEXT:    xor $1, $1, $5
+; MIPS4-NEXT:    sll $2, $5, 24
+; MIPS4-NEXT:    sra $2, $2, 24
+; MIPS4-NEXT:    xor $1, $1, $2
 ; MIPS4-NEXT:    jr $ra
 ; MIPS4-NEXT:    sltiu $2, $1, 1
 ;
@@ -5097,7 +5101,9 @@ define i1 @AtomicCmpSwapRes8(ptr %ptr, i8 signext %oldval, i8 signext %newval) n
 ; MIPS64-NEXT:    sll $1, $1, 24
 ; MIPS64-NEXT:    sra $1, $1, 24
 ; MIPS64-NEXT:  # %bb.4: # %entry
-; MIPS64-NEXT:    xor $1, $1, $5
+; MIPS64-NEXT:    sll $2, $5, 24
+; MIPS64-NEXT:    sra $2, $2, 24
+; MIPS64-NEXT:    xor $1, $1, $2
 ; MIPS64-NEXT:    jr $ra
 ; MIPS64-NEXT:    sltiu $2, $1, 1
 ;
@@ -5274,7 +5280,9 @@ define i1 @AtomicCmpSwapRes8(ptr %ptr, i8 signext %oldval, i8 signext %newval) n
 ; O1-NEXT:    sll $1, $1, 24
 ; O1-NEXT:    sra $1, $1, 24
 ; O1-NEXT:  # %bb.4: # %entry
-; O1-NEXT:    xor $1, $1, $5
+; O1-NEXT:    sll $2, $5, 24
+; O1-NEXT:    sra $2, $2, 24
+; O1-NEXT:    xor $1, $1, $2
 ; O1-NEXT:    jr $ra
 ; O1-NEXT:    sltiu $2, $1, 1
 ;
@@ -5309,7 +5317,9 @@ define i1 @AtomicCmpSwapRes8(ptr %ptr, i8 signext %oldval, i8 signext %newval) n
 ; O2-NEXT:    sll $1, $1, 24
 ; O2-NEXT:    sra $1, $1, 24
 ; O2-NEXT:  # %bb.4: # %entry
-; O2-NEXT:    xor $1, $1, $5
+; O2-NEXT:    sll $2, $5, 24
+; O2-NEXT:    sra $2, $2, 24
+; O2-NEXT:    xor $1, $1, $2
 ; O2-NEXT:    jr $ra
 ; O2-NEXT:    sltiu $2, $1, 1
 ;
@@ -5344,7 +5354,9 @@ define i1 @AtomicCmpSwapRes8(ptr %ptr, i8 signext %oldval, i8 signext %newval) n
 ; O3-NEXT:    sll $1, $1, 24
 ; O3-NEXT:    sra $1, $1, 24
 ; O3-NEXT:  # %bb.4: # %entry
-; O3-NEXT:    xor $1, $1, $5
+; O3-NEXT:    sll $2, $5, 24
+; O3-NEXT:    sra $2, $2, 24
+; O3-NEXT:    xor $1, $1, $2
 ; O3-NEXT:    jr $ra
 ; O3-NEXT:    sltiu $2, $1, 1
 ;
@@ -5380,7 +5392,9 @@ define i1 @AtomicCmpSwapRes8(ptr %ptr, i8 signext %oldval, i8 signext %newval) n
 ; MIPS32EB-NEXT:    sll $1, $1, 24
 ; MIPS32EB-NEXT:    sra $1, $1, 24
 ; MIPS32EB-NEXT:  # %bb.4: # %entry
-; MIPS32EB-NEXT:    xor $1, $1, $5
+; MIPS32EB-NEXT:    sll $2, $5, 24
+; MIPS32EB-NEXT:    sra $2, $2, 24
+; MIPS32EB-NEXT:    xor $1, $1, $2
 ; MIPS32EB-NEXT:    jr $ra
 ; MIPS32EB-NEXT:    sltiu $2, $1, 1
 entry:

@@ -403,26 +403,31 @@ define amdgpu_kernel void @read2_ptr_is_subreg_arg_offset_f32(ptr addrspace(1) %
 define amdgpu_kernel void @read2_ptr_is_subreg_f32(ptr addrspace(1) %out) #0 {
 ; CI-LABEL: read2_ptr_is_subreg_f32:
 ; CI:       ; %bb.0:
+; CI-NEXT:    v_add_i32_e32 v1, vcc, 8, v0
+; CI-NEXT:    v_lshlrev_b32_e32 v1, 2, v1
 ; CI-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; CI-NEXT:    s_mov_b32 m0, -1
-; CI-NEXT:    ds_read2_b32 v[1:2], v0 offset1:8
+; CI-NEXT:    ds_read_b32 v2, v0
+; CI-NEXT:    ds_read_b32 v1, v1
 ; CI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; CI-NEXT:    s_mov_b32 s3, 0xf000
 ; CI-NEXT:    s_mov_b32 s2, 0
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
-; CI-NEXT:    v_add_f32_e32 v2, v1, v2
+; CI-NEXT:    v_add_f32_e32 v2, v2, v1
 ; CI-NEXT:    v_mov_b32_e32 v1, 0
 ; CI-NEXT:    buffer_store_dword v2, v[0:1], s[0:3], 0 addr64
 ; CI-NEXT:    s_endpgm
 ;
 ; GFX9-LABEL: read2_ptr_is_subreg_f32:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    v_lshlrev_b32_e32 v2, 2, v0
-; GFX9-NEXT:    ds_read2_b32 v[0:1], v2 offset1:8
+; GFX9-NEXT:    v_add_lshl_u32 v1, v0, 8, 2
+; GFX9-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GFX9-NEXT:    ds_read_b32 v2, v0
+; GFX9-NEXT:    ds_read_b32 v1, v1
 ; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    v_add_f32_e32 v0, v0, v1
-; GFX9-NEXT:    global_store_dword v2, v0, s[0:1]
+; GFX9-NEXT:    v_add_f32_e32 v1, v2, v1
+; GFX9-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX9-NEXT:    s_endpgm
   %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %ptr.0 = insertelement <2 x ptr addrspace(3)> undef, ptr addrspace(3) @lds, i32 0

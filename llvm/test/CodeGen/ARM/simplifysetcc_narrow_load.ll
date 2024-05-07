@@ -170,25 +170,27 @@ define i1 @test_33_1_31(ptr %y) {
 ; CHECK-LE-LABEL: test_33_1_31:
 ; CHECK-LE:       @ %bb.0:
 ; CHECK-LE-NEXT:    ldrb r0, [r0, #3]
+; CHECK-LE-NEXT:    and r0, r0, #128
 ; CHECK-LE-NEXT:    lsr r0, r0, #7
 ; CHECK-LE-NEXT:    mov pc, lr
 ;
 ; CHECK-V7-LE-LABEL: test_33_1_31:
 ; CHECK-V7-LE:       @ %bb.0:
 ; CHECK-V7-LE-NEXT:    ldrb r0, [r0, #3]
-; CHECK-V7-LE-NEXT:    lsr r0, r0, #7
+; CHECK-V7-LE-NEXT:    ubfx r0, r0, #7, #1
 ; CHECK-V7-LE-NEXT:    bx lr
 ;
 ; CHECK-BE-LABEL: test_33_1_31:
 ; CHECK-BE:       @ %bb.0:
 ; CHECK-BE-NEXT:    ldrb r0, [r0, #1]
+; CHECK-BE-NEXT:    and r0, r0, #128
 ; CHECK-BE-NEXT:    lsr r0, r0, #7
 ; CHECK-BE-NEXT:    mov pc, lr
 ;
 ; CHECK-V7-BE-LABEL: test_33_1_31:
 ; CHECK-V7-BE:       @ %bb.0:
 ; CHECK-V7-BE-NEXT:    ldrb r0, [r0, #1]
-; CHECK-V7-BE-NEXT:    lsr r0, r0, #7
+; CHECK-V7-BE-NEXT:    ubfx r0, r0, #7, #1
 ; CHECK-V7-BE-NEXT:    bx lr
   %a = load i33, ptr %y
   %b = and i33 %a, u0x80000000

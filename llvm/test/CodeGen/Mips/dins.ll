@@ -45,13 +45,17 @@ define i64 @f123(i64 inreg %bufptr.coerce0, i64 inreg %bufptr.coerce1) local_unn
 ; MIPS64R2-NEXT:    daddiu $1, $zero, 4
 ; MIPS64R2-NEXT:    ld $2, 0($sp)
 ; MIPS64R2-NEXT:    dinsm $2, $1, 28, 6
-; MIPS64R2-NEXT:    daddiu $1, $zero, 5
+; MIPS64R2-NEXT:    daddiu $1, $zero, 16383
+; MIPS64R2-NEXT:    dsll $1, $1, 34
+; MIPS64R2-NEXT:    daddiu $3, $zero, 5
 ; MIPS64R2-NEXT:    sd $2, 0($sp)
 ; MIPS64R2-NEXT:    ld $2, 0($sp)
-; MIPS64R2-NEXT:    dinsu $2, $1, 50, 14
+; MIPS64R2-NEXT:    dinsu $2, $3, 50, 14
 ; MIPS64R2-NEXT:    sd $2, 0($sp)
-; MIPS64R2-NEXT:    ld $1, 0($sp)
-; MIPS64R2-NEXT:    dsrl $1, $1, 50
+; MIPS64R2-NEXT:    ld $2, 0($sp)
+; MIPS64R2-NEXT:    dsrl $2, $2, 16
+; MIPS64R2-NEXT:    and $1, $2, $1
+; MIPS64R2-NEXT:    dsrl $1, $1, 34
 ; MIPS64R2-NEXT:    ld $2, 0($sp)
 ; MIPS64R2-NEXT:    dinsu $2, $1, 34, 16
 ; MIPS64R2-NEXT:    sd $2, 0($sp)
@@ -93,7 +97,9 @@ define i64 @f123(i64 inreg %bufptr.coerce0, i64 inreg %bufptr.coerce1) local_unn
 ; MIPS32R2-NEXT:    lw $2, 0($sp)
 ; MIPS32R2-NEXT:    lw $3, 4($sp)
 ; MIPS32R2-NEXT:    sw $3, 4($sp)
-; MIPS32R2-NEXT:    srl $1, $1, 18
+; MIPS32R2-NEXT:    srl $1, $1, 16
+; MIPS32R2-NEXT:    andi $1, $1, 65532
+; MIPS32R2-NEXT:    srl $1, $1, 2
 ; MIPS32R2-NEXT:    ins $2, $1, 2, 16
 ; MIPS32R2-NEXT:    sw $2, 0($sp)
 ; MIPS32R2-NEXT:    lw $1, 8($sp)
@@ -189,13 +195,17 @@ define i64 @f123(i64 inreg %bufptr.coerce0, i64 inreg %bufptr.coerce1) local_unn
 ; MIPS64R2N32-NEXT:    daddiu $1, $zero, 4
 ; MIPS64R2N32-NEXT:    ld $2, 0($sp)
 ; MIPS64R2N32-NEXT:    dinsm $2, $1, 28, 6
-; MIPS64R2N32-NEXT:    daddiu $1, $zero, 5
+; MIPS64R2N32-NEXT:    daddiu $1, $zero, 16383
+; MIPS64R2N32-NEXT:    dsll $1, $1, 34
+; MIPS64R2N32-NEXT:    daddiu $3, $zero, 5
 ; MIPS64R2N32-NEXT:    sd $2, 0($sp)
 ; MIPS64R2N32-NEXT:    ld $2, 0($sp)
-; MIPS64R2N32-NEXT:    dinsu $2, $1, 50, 14
+; MIPS64R2N32-NEXT:    dinsu $2, $3, 50, 14
 ; MIPS64R2N32-NEXT:    sd $2, 0($sp)
-; MIPS64R2N32-NEXT:    ld $1, 0($sp)
-; MIPS64R2N32-NEXT:    dsrl $1, $1, 50
+; MIPS64R2N32-NEXT:    ld $2, 0($sp)
+; MIPS64R2N32-NEXT:    dsrl $2, $2, 16
+; MIPS64R2N32-NEXT:    and $1, $2, $1
+; MIPS64R2N32-NEXT:    dsrl $1, $1, 34
 ; MIPS64R2N32-NEXT:    ld $2, 0($sp)
 ; MIPS64R2N32-NEXT:    dinsu $2, $1, 34, 16
 ; MIPS64R2N32-NEXT:    sd $2, 0($sp)

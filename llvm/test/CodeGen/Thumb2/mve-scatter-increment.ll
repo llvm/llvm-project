@@ -130,32 +130,34 @@ define arm_aapcs_vfpcc void @scatter_inc_v4i32_complex(<4 x i32> %data1, <4 x i3
 ; CHECK-NEXT:    it lt
 ; CHECK-NEXT:    bxlt lr
 ; CHECK-NEXT:  .LBB3_1: @ %vector.ph.preheader
-; CHECK-NEXT:    .save {r4, lr}
-; CHECK-NEXT:    push {r4, lr}
+; CHECK-NEXT:    .save {r7, lr}
+; CHECK-NEXT:    push {r7, lr}
 ; CHECK-NEXT:    .vsave {d8, d9, d10, d11, d12, d13, d14, d15}
 ; CHECK-NEXT:    vpush {d8, d9, d10, d11, d12, d13, d14, d15}
 ; CHECK-NEXT:    .pad #16
 ; CHECK-NEXT:    sub sp, #16
-; CHECK-NEXT:    adr r4, .LCPI3_2
-; CHECK-NEXT:    bic r2, r1, #3
-; CHECK-NEXT:    vldrw.u32 q3, [r4]
-; CHECK-NEXT:    sub.w r12, r2, #4
-; CHECK-NEXT:    adr.w lr, .LCPI3_1
+; CHECK-NEXT:    lsrs r2, r1, #2
+; CHECK-NEXT:    mvn r3, #3
+; CHECK-NEXT:    add.w r2, r3, r2, lsl #2
 ; CHECK-NEXT:    movs r3, #1
+; CHECK-NEXT:    adr.w lr, .LCPI3_1
+; CHECK-NEXT:    adr.w r12, .LCPI3_0
+; CHECK-NEXT:    add.w r2, r3, r2, lsr #2
+; CHECK-NEXT:    adr r3, .LCPI3_2
+; CHECK-NEXT:    vldrw.u32 q3, [r3]
 ; CHECK-NEXT:    vadd.i32 q3, q3, r0
-; CHECK-NEXT:    add.w r3, r3, r12, lsr #2
 ; CHECK-NEXT:    vstrw.32 q3, [sp] @ 16-byte Spill
 ; CHECK-NEXT:    vldrw.u32 q3, [lr]
-; CHECK-NEXT:    adr.w r12, .LCPI3_0
 ; CHECK-NEXT:    vadd.i32 q4, q3, r0
 ; CHECK-NEXT:    vldrw.u32 q3, [r12]
 ; CHECK-NEXT:    vadd.i32 q3, q3, r0
 ; CHECK-NEXT:  .LBB3_2: @ %vector.ph
 ; CHECK-NEXT:    @ =>This Loop Header: Depth=1
 ; CHECK-NEXT:    @ Child Loop BB3_3 Depth 2
-; CHECK-NEXT:    dls lr, r3
-; CHECK-NEXT:    vmov q6, q4
+; CHECK-NEXT:    dls lr, r2
+; CHECK-NEXT:    bic r0, r1, #3
 ; CHECK-NEXT:    vldrw.u32 q7, [sp] @ 16-byte Reload
+; CHECK-NEXT:    vmov q6, q4
 ; CHECK-NEXT:    vmov q5, q3
 ; CHECK-NEXT:  .LBB3_3: @ %vector.body
 ; CHECK-NEXT:    @ Parent Loop BB3_2 Depth=1
@@ -166,12 +168,12 @@ define arm_aapcs_vfpcc void @scatter_inc_v4i32_complex(<4 x i32> %data1, <4 x i3
 ; CHECK-NEXT:    le lr, .LBB3_3
 ; CHECK-NEXT:  @ %bb.4: @ %middle.block
 ; CHECK-NEXT:    @ in Loop: Header=BB3_2 Depth=1
-; CHECK-NEXT:    cmp r2, r1
+; CHECK-NEXT:    cmp r0, r1
 ; CHECK-NEXT:    bne .LBB3_2
 ; CHECK-NEXT:  @ %bb.5:
 ; CHECK-NEXT:    add sp, #16
 ; CHECK-NEXT:    vpop {d8, d9, d10, d11, d12, d13, d14, d15}
-; CHECK-NEXT:    pop.w {r4, lr}
+; CHECK-NEXT:    pop.w {r7, lr}
 ; CHECK-NEXT:    bx lr
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  @ %bb.6:

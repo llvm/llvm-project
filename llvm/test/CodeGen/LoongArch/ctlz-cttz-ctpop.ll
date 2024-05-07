@@ -214,9 +214,10 @@ define i16 @test_ctpop_i16(i16 %a) nounwind {
 ; LA32-NEXT:    add.w $a0, $a2, $a0
 ; LA32-NEXT:    srli.w $a1, $a0, 4
 ; LA32-NEXT:    add.w $a0, $a0, $a1
-; LA32-NEXT:    bstrpick.w $a1, $a0, 11, 8
-; LA32-NEXT:    andi $a0, $a0, 15
-; LA32-NEXT:    add.w $a0, $a0, $a1
+; LA32-NEXT:    andi $a1, $a0, 15
+; LA32-NEXT:    andi $a0, $a0, 3840
+; LA32-NEXT:    srli.w $a0, $a0, 8
+; LA32-NEXT:    add.w $a0, $a1, $a0
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: test_ctpop_i16:
@@ -234,9 +235,10 @@ define i16 @test_ctpop_i16(i16 %a) nounwind {
 ; LA64-NEXT:    add.d $a0, $a2, $a0
 ; LA64-NEXT:    srli.d $a1, $a0, 4
 ; LA64-NEXT:    add.d $a0, $a0, $a1
-; LA64-NEXT:    bstrpick.d $a1, $a0, 11, 8
-; LA64-NEXT:    andi $a0, $a0, 15
-; LA64-NEXT:    add.d $a0, $a0, $a1
+; LA64-NEXT:    andi $a1, $a0, 15
+; LA64-NEXT:    andi $a0, $a0, 3840
+; LA64-NEXT:    srli.d $a0, $a0, 8
+; LA64-NEXT:    add.d $a0, $a1, $a0
 ; LA64-NEXT:    ret
   %1 = call i16 @llvm.ctpop.i16(i16 %a)
   ret i16 %1
@@ -288,7 +290,10 @@ define i32 @test_ctpop_i32(i32 %a) nounwind {
 ; LA64-NEXT:    lu12i.w $a1, 4112
 ; LA64-NEXT:    ori $a1, $a1, 257
 ; LA64-NEXT:    mul.d $a0, $a0, $a1
-; LA64-NEXT:    bstrpick.d $a0, $a0, 31, 24
+; LA64-NEXT:    lu12i.w $a1, -4096
+; LA64-NEXT:    lu32i.d $a1, 0
+; LA64-NEXT:    and $a0, $a0, $a1
+; LA64-NEXT:    srli.d $a0, $a0, 24
 ; LA64-NEXT:    ret
   %1 = call i32 @llvm.ctpop.i32(i32 %a)
   ret i32 %1

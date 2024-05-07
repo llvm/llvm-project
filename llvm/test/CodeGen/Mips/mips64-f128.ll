@@ -1986,13 +1986,16 @@ define fp128 @libcall2_copysignl() {
 ; CMP_CC_FMT-NEXT:    lui $1, %hi(%neg(%gp_rel(libcall2_copysignl)))
 ; CMP_CC_FMT-NEXT:    daddu $1, $1, $25
 ; CMP_CC_FMT-NEXT:    daddiu $1, $1, %lo(%neg(%gp_rel(libcall2_copysignl)))
-; CMP_CC_FMT-NEXT:    ld $2, %got_disp(gld0)($1)
-; CMP_CC_FMT-NEXT:    ld $4, 8($2)
-; CMP_CC_FMT-NEXT:    ld $1, %got_disp(gld1)($1)
-; CMP_CC_FMT-NEXT:    ld $1, 8($1)
-; CMP_CC_FMT-NEXT:    dsrl $1, $1, 63
-; CMP_CC_FMT-NEXT:    dinsu $4, $1, 63, 1
-; CMP_CC_FMT-NEXT:    ld $2, 0($2)
+; CMP_CC_FMT-NEXT:    daddiu $2, $zero, 1
+; CMP_CC_FMT-NEXT:    dsll $2, $2, 63
+; CMP_CC_FMT-NEXT:    ld $3, %got_disp(gld1)($1)
+; CMP_CC_FMT-NEXT:    ld $3, 8($3)
+; CMP_CC_FMT-NEXT:    and $2, $3, $2
+; CMP_CC_FMT-NEXT:    dsrl $2, $2, 63
+; CMP_CC_FMT-NEXT:    ld $1, %got_disp(gld0)($1)
+; CMP_CC_FMT-NEXT:    ld $4, 8($1)
+; CMP_CC_FMT-NEXT:    dinsu $4, $2, 63, 1
+; CMP_CC_FMT-NEXT:    ld $2, 0($1)
 ; CMP_CC_FMT-NEXT:    jrc $ra
 entry:
   %0 = load fp128, ptr @gld0, align 16

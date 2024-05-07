@@ -22,9 +22,10 @@ define void @store_nxv7f64(<vscale x 7 x double> %val, ptr %ptr) {
 ; CHECK-LABEL: store_nxv7f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    csrr a1, vlenb
-; CHECK-NEXT:    srli a2, a1, 3
-; CHECK-NEXT:    sub a1, a1, a2
-; CHECK-NEXT:    vsetvli zero, a1, e64, m8, ta, ma
+; CHECK-NEXT:    srli a1, a1, 3
+; CHECK-NEXT:    slli a2, a1, 3
+; CHECK-NEXT:    sub a2, a2, a1
+; CHECK-NEXT:    vsetvli zero, a2, e64, m8, ta, ma
 ; CHECK-NEXT:    vse64.v v8, (a0)
 ; CHECK-NEXT:    ret
   store <vscale x 7 x double> %val, ptr %ptr

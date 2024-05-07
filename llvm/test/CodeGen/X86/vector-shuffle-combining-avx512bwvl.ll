@@ -151,7 +151,7 @@ define void @PR46178(ptr %0) {
 define <8 x i32> @PR46393(<8 x i16> %a0, i8 %a1) {
 ; X86-LABEL: PR46393:
 ; X86:       # %bb.0:
-; X86-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
+; X86-NEXT:    vpmovsxwd %xmm0, %ymm0
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    kmovd %eax, %k1
 ; X86-NEXT:    vpslld $16, %ymm0, %ymm0 {%k1} {z}
@@ -159,7 +159,7 @@ define <8 x i32> @PR46393(<8 x i16> %a0, i8 %a1) {
 ;
 ; X64-LABEL: PR46393:
 ; X64:       # %bb.0:
-; X64-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
+; X64-NEXT:    vpmovsxwd %xmm0, %ymm0
 ; X64-NEXT:    kmovd %edi, %k1
 ; X64-NEXT:    vpslld $16, %ymm0, %ymm0 {%k1} {z}
 ; X64-NEXT:    retq

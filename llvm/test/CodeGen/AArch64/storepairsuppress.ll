@@ -168,10 +168,10 @@ define void @load_store_units_critical(ptr %arg, ptr noundef %arg1, i64 noundef 
 ; SUPPRESS-NEXT:    fsub s3, s5, s6
 ; SUPPRESS-NEXT:    fsub s2, s16, s2
 ; SUPPRESS-NEXT:    stp s3, s2, [x8, #40]
-; SUPPRESS-NEXT:    lsl x9, x3, #33
+; SUPPRESS-NEXT:    sbfiz x9, x3, #1, #31
 ; SUPPRESS-NEXT:    ldr x10, [x0, #8]
-; SUPPRESS-NEXT:    add x9, x10, x9, asr #29
-; SUPPRESS-NEXT:    ldp s2, s3, [x9]
+; SUPPRESS-NEXT:    add x10, x10, x9, lsl #3
+; SUPPRESS-NEXT:    ldp s2, s3, [x10]
 ; SUPPRESS-NEXT:    ldp s5, s6, [x8, #16]
 ; SUPPRESS-NEXT:    fmul s16, s4, s3
 ; SUPPRESS-NEXT:    fmul s3, s7, s3
@@ -183,7 +183,7 @@ define void @load_store_units_critical(ptr %arg, ptr noundef %arg1, i64 noundef 
 ; SUPPRESS-NEXT:    fsub s3, s5, s7
 ; SUPPRESS-NEXT:    fsub s2, s6, s2
 ; SUPPRESS-NEXT:    stp s3, s2, [x8, #48]
-; SUPPRESS-NEXT:    add w9, w3, w3, lsl #1
+; SUPPRESS-NEXT:    add w9, w9, w3
 ; SUPPRESS-NEXT:    ldr x10, [x0, #8]
 ; SUPPRESS-NEXT:    add x9, x10, w9, sxtw #3
 ; SUPPRESS-NEXT:    ldp s2, s3, [x9]
@@ -337,10 +337,10 @@ define void @load_store_units_critical(ptr %arg, ptr noundef %arg1, i64 noundef 
 ; NOSUPPRESS-NEXT:    fsub s3, s5, s6
 ; NOSUPPRESS-NEXT:    fsub s2, s16, s2
 ; NOSUPPRESS-NEXT:    stp s3, s2, [x8, #40]
-; NOSUPPRESS-NEXT:    lsl x9, x3, #33
+; NOSUPPRESS-NEXT:    sbfiz x9, x3, #1, #31
 ; NOSUPPRESS-NEXT:    ldr x10, [x0, #8]
-; NOSUPPRESS-NEXT:    add x9, x10, x9, asr #29
-; NOSUPPRESS-NEXT:    ldp s2, s3, [x9]
+; NOSUPPRESS-NEXT:    add x10, x10, x9, lsl #3
+; NOSUPPRESS-NEXT:    ldp s2, s3, [x10]
 ; NOSUPPRESS-NEXT:    ldp s5, s6, [x8, #16]
 ; NOSUPPRESS-NEXT:    fmul s16, s4, s3
 ; NOSUPPRESS-NEXT:    fmul s3, s7, s3
@@ -352,7 +352,7 @@ define void @load_store_units_critical(ptr %arg, ptr noundef %arg1, i64 noundef 
 ; NOSUPPRESS-NEXT:    fsub s3, s5, s7
 ; NOSUPPRESS-NEXT:    fsub s2, s6, s2
 ; NOSUPPRESS-NEXT:    stp s3, s2, [x8, #48]
-; NOSUPPRESS-NEXT:    add w9, w3, w3, lsl #1
+; NOSUPPRESS-NEXT:    add w9, w9, w3
 ; NOSUPPRESS-NEXT:    ldr x10, [x0, #8]
 ; NOSUPPRESS-NEXT:    add x9, x10, w9, sxtw #3
 ; NOSUPPRESS-NEXT:    ldp s2, s3, [x9]

@@ -367,7 +367,7 @@ define amdgpu_kernel void @v_ctpop_v2i16(ptr addrspace(1) noalias %out, ptr addr
 ; EG:       ; %bb.0:
 ; EG-NEXT:    ALU 2, @8, KC0[CB0:0-32], KC1[]
 ; EG-NEXT:    TEX 0 @6
-; EG-NEXT:    ALU 10, @11, KC0[CB0:0-32], KC1[]
+; EG-NEXT:    ALU 12, @11, KC0[CB0:0-32], KC1[]
 ; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T0.X, T6.X, 1
 ; EG-NEXT:    CF_END
 ; EG-NEXT:    PAD
@@ -378,7 +378,9 @@ define amdgpu_kernel void @v_ctpop_v2i16(ptr addrspace(1) noalias %out, ptr addr
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
 ; EG-NEXT:     ADD_INT * T0.X, KC0[2].Z, PV.W,
 ; EG-NEXT:    ALU clause starting at 11:
-; EG-NEXT:     LSHR * T0.W, T0.X, literal.x,
+; EG-NEXT:     MOV * T2.X, T0.X,
+; EG-NEXT:     MOV * T0.X, PV.X,
+; EG-NEXT:     LSHR * T0.W, PV.X, literal.x,
 ; EG-NEXT:    16(2.242078e-44), 0(0.000000e+00)
 ; EG-NEXT:     BCNT_INT T0.W, PV.W,
 ; EG-NEXT:     AND_INT * T1.W, T0.X, literal.x,
@@ -457,50 +459,54 @@ define amdgpu_kernel void @v_ctpop_v4i16(ptr addrspace(1) noalias %out, ptr addr
 ;
 ; EG-LABEL: v_ctpop_v4i16:
 ; EG:       ; %bb.0:
-; EG-NEXT:    ALU 3, @8, KC0[CB0:0-32], KC1[]
+; EG-NEXT:    ALU 2, @8, KC0[CB0:0-32], KC1[]
 ; EG-NEXT:    TEX 0 @6
-; EG-NEXT:    ALU 37, @12, KC0[CB0:0-32], KC1[]
+; EG-NEXT:    ALU 42, @11, KC0[CB0:0-32], KC1[]
 ; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T8.XY, T0.X, 1
 ; EG-NEXT:    CF_END
 ; EG-NEXT:    PAD
 ; EG-NEXT:    Fetch clause starting at 6:
-; EG-NEXT:     VTX_READ_64 T8.XY, T0.X, 0, #1
+; EG-NEXT:     VTX_READ_64 T0.XY, T0.X, 0, #1
 ; EG-NEXT:    ALU clause starting at 8:
-; EG-NEXT:     MOV T0.Y, T4.X,
-; EG-NEXT:     LSHL * T0.W, T0.X, literal.x, BS:VEC_120/SCL_212
+; EG-NEXT:     LSHL * T0.W, T0.X, literal.x,
 ; EG-NEXT:    3(4.203895e-45), 0(0.000000e+00)
 ; EG-NEXT:     ADD_INT * T0.X, KC0[2].Z, PV.W,
-; EG-NEXT:    ALU clause starting at 12:
-; EG-NEXT:     AND_INT * T0.W, T8.X, literal.x,
-; EG-NEXT:    65535(9.183409e-41), 0(0.000000e+00)
-; EG-NEXT:     BCNT_INT T0.W, PV.W,
-; EG-NEXT:     AND_INT * T1.W, T0.Y, literal.x,
-; EG-NEXT:    -65536(nan), 0(0.000000e+00)
-; EG-NEXT:     OR_INT * T0.W, PS, PV.W,
-; EG-NEXT:     MOV * T4.X, PV.W,
-; EG-NEXT:     MOV T0.X, PV.X,
-; EG-NEXT:     LSHR * T0.W, T8.X, literal.x,
-; EG-NEXT:    16(2.242078e-44), 0(0.000000e+00)
-; EG-NEXT:     BCNT_INT T0.W, PV.W,
-; EG-NEXT:     AND_INT * T1.W, PV.X, literal.x,
-; EG-NEXT:    65535(9.183409e-41), 0(0.000000e+00)
-; EG-NEXT:     LSHL * T0.W, PV.W, literal.x,
-; EG-NEXT:    16(2.242078e-44), 0(0.000000e+00)
-; EG-NEXT:     OR_INT * T0.W, T1.W, PV.W,
-; EG-NEXT:     MOV T4.X, PV.W,
-; EG-NEXT:     MOV * T0.X, T5.X,
-; EG-NEXT:     AND_INT * T0.W, T8.Y, literal.x,
+; EG-NEXT:    ALU clause starting at 11:
+; EG-NEXT:     MOV T2.X, T0.X,
+; EG-NEXT:     MOV * T3.X, T0.Y,
+; EG-NEXT:     MOV T0.X, T4.X,
+; EG-NEXT:     MOV * T0.Y, PV.X,
+; EG-NEXT:     AND_INT * T0.W, PV.Y, literal.x,
 ; EG-NEXT:    65535(9.183409e-41), 0(0.000000e+00)
 ; EG-NEXT:     BCNT_INT T0.W, PV.W,
 ; EG-NEXT:     AND_INT * T1.W, T0.X, literal.x,
 ; EG-NEXT:    -65536(nan), 0(0.000000e+00)
 ; EG-NEXT:     OR_INT * T0.W, PS, PV.W,
-; EG-NEXT:     MOV * T5.X, PV.W,
-; EG-NEXT:     MOV T0.X, PV.X,
-; EG-NEXT:     LSHR * T0.W, T8.Y, literal.x,
+; EG-NEXT:     MOV T0.X, T3.X,
+; EG-NEXT:     MOV * T4.X, PV.W,
+; EG-NEXT:     MOV T0.Z, PS,
+; EG-NEXT:     LSHR * T0.W, T0.Y, literal.x,
 ; EG-NEXT:    16(2.242078e-44), 0(0.000000e+00)
 ; EG-NEXT:     BCNT_INT T0.W, PV.W,
-; EG-NEXT:     AND_INT * T1.W, PV.X, literal.x,
+; EG-NEXT:     AND_INT * T1.W, PV.Z, literal.x,
+; EG-NEXT:    65535(9.183409e-41), 0(0.000000e+00)
+; EG-NEXT:     LSHL * T0.W, PV.W, literal.x,
+; EG-NEXT:    16(2.242078e-44), 0(0.000000e+00)
+; EG-NEXT:     OR_INT * T0.W, T1.W, PV.W,
+; EG-NEXT:     MOV T4.X, PV.W,
+; EG-NEXT:     MOV T0.Y, T5.X,
+; EG-NEXT:     AND_INT * T0.W, T0.X, literal.x, BS:VEC_120/SCL_212
+; EG-NEXT:    65535(9.183409e-41), 0(0.000000e+00)
+; EG-NEXT:     BCNT_INT T0.W, PV.W,
+; EG-NEXT:     AND_INT * T1.W, PV.Y, literal.x,
+; EG-NEXT:    -65536(nan), 0(0.000000e+00)
+; EG-NEXT:     OR_INT * T0.W, PS, PV.W,
+; EG-NEXT:     MOV * T5.X, PV.W,
+; EG-NEXT:     MOV T0.Y, PV.X,
+; EG-NEXT:     LSHR * T0.W, T0.X, literal.x,
+; EG-NEXT:    16(2.242078e-44), 0(0.000000e+00)
+; EG-NEXT:     BCNT_INT T0.W, PV.W,
+; EG-NEXT:     AND_INT * T1.W, PV.Y, literal.x,
 ; EG-NEXT:    65535(9.183409e-41), 0(0.000000e+00)
 ; EG-NEXT:     LSHL * T0.W, PV.W, literal.x,
 ; EG-NEXT:    16(2.242078e-44), 0(0.000000e+00)
@@ -601,56 +607,64 @@ define amdgpu_kernel void @v_ctpop_v8i16(ptr addrspace(1) noalias %out, ptr addr
 ;
 ; EG-LABEL: v_ctpop_v8i16:
 ; EG:       ; %bb.0:
-; EG-NEXT:    ALU 3, @8, KC0[CB0:0-32], KC1[]
+; EG-NEXT:    ALU 2, @8, KC0[CB0:0-32], KC1[]
 ; EG-NEXT:    TEX 0 @6
-; EG-NEXT:    ALU 73, @12, KC0[CB0:0-32], KC1[]
-; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T0.XYZW, T12.X, 1
+; EG-NEXT:    ALU 84, @11, KC0[CB0:0-32], KC1[]
+; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T12.XYZW, T0.X, 1
 ; EG-NEXT:    CF_END
 ; EG-NEXT:    PAD
 ; EG-NEXT:    Fetch clause starting at 6:
-; EG-NEXT:     VTX_READ_128 T12.XYZW, T0.X, 0, #1
+; EG-NEXT:     VTX_READ_128 T0.XYZW, T0.X, 0, #1
 ; EG-NEXT:    ALU clause starting at 8:
-; EG-NEXT:     MOV T0.Y, T4.X,
-; EG-NEXT:     LSHL * T0.W, T0.X, literal.x, BS:VEC_120/SCL_212
+; EG-NEXT:     LSHL * T0.W, T0.X, literal.x,
 ; EG-NEXT:    4(5.605194e-45), 0(0.000000e+00)
 ; EG-NEXT:     ADD_INT * T0.X, KC0[2].Z, PV.W,
-; EG-NEXT:    ALU clause starting at 12:
-; EG-NEXT:     LSHR * T0.W, T12.X, literal.x,
+; EG-NEXT:    ALU clause starting at 11:
+; EG-NEXT:     MOV T6.X, T0.Z,
+; EG-NEXT:     MOV * T7.X, T0.W,
+; EG-NEXT:     MOV T2.X, T0.X,
+; EG-NEXT:     MOV * T3.X, T0.Y,
+; EG-NEXT:     MOV T0.X, T4.X,
+; EG-NEXT:     MOV * T0.Y, PV.X,
+; EG-NEXT:     LSHR * T0.W, PV.Y, literal.x,
 ; EG-NEXT:    16(2.242078e-44), 0(0.000000e+00)
 ; EG-NEXT:     BCNT_INT * T0.W, PV.W,
 ; EG-NEXT:     LSHL T0.W, PV.W, literal.x,
-; EG-NEXT:     AND_INT * T1.W, T0.Y, literal.y,
+; EG-NEXT:     AND_INT * T1.W, T0.X, literal.y,
 ; EG-NEXT:    16(2.242078e-44), 65535(9.183409e-41)
 ; EG-NEXT:     OR_INT * T0.W, PS, PV.W,
-; EG-NEXT:     MOV * T4.X, PV.W,
-; EG-NEXT:     MOV T0.X, PV.X,
-; EG-NEXT:     AND_INT * T0.W, T12.X, literal.x,
+; EG-NEXT:     MOV T0.X, T3.X,
+; EG-NEXT:     MOV * T0.Z, T6.X, BS:VEC_120/SCL_212
+; EG-NEXT:     MOV * T1.Y, T7.X,
+; EG-NEXT:     MOV * T4.X, T0.W,
+; EG-NEXT:     MOV T0.W, PV.X,
+; EG-NEXT:     AND_INT * T1.W, T0.Y, literal.x,
 ; EG-NEXT:    65535(9.183409e-41), 0(0.000000e+00)
-; EG-NEXT:     BCNT_INT T0.W, PV.W,
-; EG-NEXT:     AND_INT * T1.W, PV.X, literal.x,
+; EG-NEXT:     BCNT_INT T1.W, PS,
+; EG-NEXT:     AND_INT * T0.W, PV.W, literal.x,
 ; EG-NEXT:    -65536(nan), 0(0.000000e+00)
 ; EG-NEXT:     OR_INT * T0.W, PS, PV.W,
 ; EG-NEXT:     MOV T4.X, PV.W,
-; EG-NEXT:     MOV * T0.X, T5.X,
-; EG-NEXT:     LSHR * T0.W, T12.Y, literal.x,
+; EG-NEXT:     MOV T0.Y, T5.X,
+; EG-NEXT:     LSHR * T0.W, T0.X, literal.x, BS:VEC_120/SCL_212
 ; EG-NEXT:    16(2.242078e-44), 0(0.000000e+00)
 ; EG-NEXT:     BCNT_INT T0.W, PV.W,
-; EG-NEXT:     AND_INT * T1.W, T0.X, literal.x,
+; EG-NEXT:     AND_INT * T1.W, PV.Y, literal.x,
 ; EG-NEXT:    65535(9.183409e-41), 0(0.000000e+00)
 ; EG-NEXT:     LSHL * T0.W, PV.W, literal.x,
 ; EG-NEXT:    16(2.242078e-44), 0(0.000000e+00)
 ; EG-NEXT:     OR_INT * T0.W, T1.W, PV.W,
 ; EG-NEXT:     MOV * T5.X, PV.W,
-; EG-NEXT:     MOV T0.X, PV.X,
-; EG-NEXT:     AND_INT * T0.W, T12.Y, literal.x,
+; EG-NEXT:     MOV T0.Y, PV.X,
+; EG-NEXT:     AND_INT * T0.W, T0.X, literal.x,
 ; EG-NEXT:    65535(9.183409e-41), 0(0.000000e+00)
 ; EG-NEXT:     BCNT_INT T0.W, PV.W,
-; EG-NEXT:     AND_INT * T1.W, PV.X, literal.x,
+; EG-NEXT:     AND_INT * T1.W, PV.Y, literal.x,
 ; EG-NEXT:    -65536(nan), 0(0.000000e+00)
-; EG-NEXT:     OR_INT * T0.Y, PS, PV.W,
-; EG-NEXT:     MOV T5.X, PV.Y,
+; EG-NEXT:     OR_INT * T0.W, PS, PV.W,
+; EG-NEXT:     MOV T5.X, PV.W,
 ; EG-NEXT:     MOV * T0.X, T8.X,
-; EG-NEXT:     LSHR * T0.W, T12.Z, literal.x,
+; EG-NEXT:     LSHR * T0.W, T0.Z, literal.x,
 ; EG-NEXT:    16(2.242078e-44), 0(0.000000e+00)
 ; EG-NEXT:     BCNT_INT T0.W, PV.W,
 ; EG-NEXT:     AND_INT * T1.W, T0.X, literal.x,
@@ -660,7 +674,7 @@ define amdgpu_kernel void @v_ctpop_v8i16(ptr addrspace(1) noalias %out, ptr addr
 ; EG-NEXT:     OR_INT * T0.W, T1.W, PV.W,
 ; EG-NEXT:     MOV * T8.X, PV.W,
 ; EG-NEXT:     MOV T0.X, PV.X,
-; EG-NEXT:     AND_INT * T0.W, T12.Z, literal.x,
+; EG-NEXT:     AND_INT * T0.W, T0.Z, literal.x,
 ; EG-NEXT:    65535(9.183409e-41), 0(0.000000e+00)
 ; EG-NEXT:     BCNT_INT T0.W, PV.W,
 ; EG-NEXT:     AND_INT * T1.W, PV.X, literal.x,
@@ -668,7 +682,7 @@ define amdgpu_kernel void @v_ctpop_v8i16(ptr addrspace(1) noalias %out, ptr addr
 ; EG-NEXT:     OR_INT * T0.W, PS, PV.W,
 ; EG-NEXT:     MOV T8.X, PV.W,
 ; EG-NEXT:     MOV * T0.X, T9.X,
-; EG-NEXT:     LSHR * T0.W, T12.W, literal.x,
+; EG-NEXT:     LSHR * T0.W, T1.Y, literal.x,
 ; EG-NEXT:    16(2.242078e-44), 0(0.000000e+00)
 ; EG-NEXT:     BCNT_INT T0.W, PV.W,
 ; EG-NEXT:     AND_INT * T1.W, T0.X, literal.x,
@@ -678,17 +692,19 @@ define amdgpu_kernel void @v_ctpop_v8i16(ptr addrspace(1) noalias %out, ptr addr
 ; EG-NEXT:     OR_INT * T0.W, T1.W, PV.W,
 ; EG-NEXT:     MOV * T9.X, PV.W,
 ; EG-NEXT:     MOV T0.X, PV.X,
-; EG-NEXT:     AND_INT * T0.W, T12.W, literal.x,
+; EG-NEXT:     AND_INT * T0.W, T1.Y, literal.x,
 ; EG-NEXT:    65535(9.183409e-41), 0(0.000000e+00)
 ; EG-NEXT:     BCNT_INT T0.W, PV.W,
 ; EG-NEXT:     AND_INT * T1.W, PV.X, literal.x,
 ; EG-NEXT:    -65536(nan), 0(0.000000e+00)
-; EG-NEXT:     LSHR T12.X, KC0[2].Y, literal.x,
+; EG-NEXT:     LSHR T0.X, KC0[2].Y, literal.x,
 ; EG-NEXT:     OR_INT * T0.W, PS, PV.W,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
 ; EG-NEXT:     MOV T9.X, PV.W,
-; EG-NEXT:     MOV * T0.X, T4.X,
-; EG-NEXT:     MOV * T0.Z, T8.X,
+; EG-NEXT:     MOV T12.Y, T5.X,
+; EG-NEXT:     MOV * T12.X, T4.X,
+; EG-NEXT:     MOV * T12.W, PV.X,
+; EG-NEXT:     MOV * T12.Z, T8.X,
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %in.gep = getelementptr <8 x i16>, ptr addrspace(1) %in, i32 %tid
   %val = load <8 x i16>, ptr addrspace(1) %in.gep, align 32
@@ -837,77 +853,152 @@ define amdgpu_kernel void @v_ctpop_v16i16(ptr addrspace(1) noalias %out, ptr add
 ;
 ; EG-LABEL: v_ctpop_v16i16:
 ; EG:       ; %bb.0:
-; EG-NEXT:    ALU 3, @12, KC0[CB0:0-32], KC1[]
-; EG-NEXT:    TEX 1 @8
-; EG-NEXT:    ALU 114, @16, KC0[], KC1[]
-; EG-NEXT:    ALU 34, @131, KC0[CB0:0-32], KC1[]
-; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T0.XYZW, T22.X, 0
-; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T20.XYZW, T21.X, 1
+; EG-NEXT:    ALU 2, @14, KC0[CB0:0-32], KC1[]
+; EG-NEXT:    TEX 0 @10
+; EG-NEXT:    ALU 3, @17, KC0[], KC1[]
+; EG-NEXT:    TEX 0 @12
+; EG-NEXT:    ALU 114, @21, KC0[], KC1[]
+; EG-NEXT:    ALU 51, @136, KC0[CB0:0-32], KC1[]
+; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T21.XYZW, T0.X, 0
+; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T22.XYZW, T20.X, 1
 ; EG-NEXT:    CF_END
 ; EG-NEXT:    PAD
-; EG-NEXT:    Fetch clause starting at 8:
-; EG-NEXT:     VTX_READ_128 T20.XYZW, T0.X, 16, #1
-; EG-NEXT:     VTX_READ_128 T21.XYZW, T0.X, 0, #1
-; EG-NEXT:    ALU clause starting at 12:
-; EG-NEXT:     MOV T0.Y, T4.X,
-; EG-NEXT:     LSHL * T0.W, T0.X, literal.x, BS:VEC_120/SCL_212
+; EG-NEXT:    Fetch clause starting at 10:
+; EG-NEXT:     VTX_READ_128 T20.XYZW, T0.X, 0, #1
+; EG-NEXT:    Fetch clause starting at 12:
+; EG-NEXT:     VTX_READ_128 T0.XYZW, T0.X, 16, #1
+; EG-NEXT:    ALU clause starting at 14:
+; EG-NEXT:     LSHL * T0.W, T0.X, literal.x,
 ; EG-NEXT:    5(7.006492e-45), 0(0.000000e+00)
 ; EG-NEXT:     ADD_INT * T0.X, KC0[2].Z, PV.W,
-; EG-NEXT:    ALU clause starting at 16:
-; EG-NEXT:     LSHR * T0.W, T20.X, literal.x,
+; EG-NEXT:    ALU clause starting at 17:
+; EG-NEXT:     MOV T14.X, T20.Z,
+; EG-NEXT:     MOV * T15.X, T20.W,
+; EG-NEXT:     MOV T10.X, T20.X,
+; EG-NEXT:     MOV * T11.X, T20.Y,
+; EG-NEXT:    ALU clause starting at 21:
+; EG-NEXT:     MOV T6.X, T0.Z,
+; EG-NEXT:     MOV * T7.X, T0.W,
+; EG-NEXT:     MOV T2.X, T0.X,
+; EG-NEXT:     MOV * T3.X, T0.Y,
+; EG-NEXT:     MOV T0.X, T4.X,
+; EG-NEXT:     MOV * T0.Y, PV.X,
+; EG-NEXT:     LSHR * T0.W, PV.Y, literal.x,
 ; EG-NEXT:    16(2.242078e-44), 0(0.000000e+00)
 ; EG-NEXT:     BCNT_INT * T0.W, PV.W,
 ; EG-NEXT:     LSHL T0.W, PV.W, literal.x,
-; EG-NEXT:     AND_INT * T1.W, T0.Y, literal.y,
+; EG-NEXT:     AND_INT * T1.W, T0.X, literal.y,
 ; EG-NEXT:    16(2.242078e-44), 65535(9.183409e-41)
 ; EG-NEXT:     OR_INT * T0.W, PS, PV.W,
-; EG-NEXT:     MOV * T4.X, PV.W,
-; EG-NEXT:     MOV T0.X, PV.X,
-; EG-NEXT:     AND_INT * T0.W, T20.X, literal.x,
+; EG-NEXT:     MOV T0.X, T3.X,
+; EG-NEXT:     MOV * T0.Z, T6.X, BS:VEC_120/SCL_212
+; EG-NEXT:     MOV T1.Y, T7.X,
+; EG-NEXT:     MOV T1.Z, T10.X, BS:VEC_120/SCL_212
+; EG-NEXT:     MOV * T1.W, T11.X, BS:VEC_201
+; EG-NEXT:     MOV T2.Y, T14.X,
+; EG-NEXT:     MOV * T2.Z, T15.X, BS:VEC_120/SCL_212
+; EG-NEXT:     MOV * T4.X, T0.W,
+; EG-NEXT:     MOV T0.W, PV.X,
+; EG-NEXT:     AND_INT * T2.W, T0.Y, literal.x,
 ; EG-NEXT:    65535(9.183409e-41), 0(0.000000e+00)
-; EG-NEXT:     BCNT_INT T0.W, PV.W,
-; EG-NEXT:     AND_INT * T1.W, PV.X, literal.x,
+; EG-NEXT:     BCNT_INT T2.W, PS,
+; EG-NEXT:     AND_INT * T0.W, PV.W, literal.x,
 ; EG-NEXT:    -65536(nan), 0(0.000000e+00)
 ; EG-NEXT:     OR_INT * T0.W, PS, PV.W,
 ; EG-NEXT:     MOV T4.X, PV.W,
-; EG-NEXT:     MOV * T0.X, T5.X,
-; EG-NEXT:     LSHR * T0.W, T20.Y, literal.x,
+; EG-NEXT:     MOV T0.Y, T5.X,
+; EG-NEXT:     LSHR * T0.W, T0.X, literal.x, BS:VEC_120/SCL_212
 ; EG-NEXT:    16(2.242078e-44), 0(0.000000e+00)
 ; EG-NEXT:     BCNT_INT T0.W, PV.W,
-; EG-NEXT:     AND_INT * T1.W, T0.X, literal.x,
+; EG-NEXT:     AND_INT * T2.W, PV.Y, literal.x,
 ; EG-NEXT:    65535(9.183409e-41), 0(0.000000e+00)
 ; EG-NEXT:     LSHL * T0.W, PV.W, literal.x,
 ; EG-NEXT:    16(2.242078e-44), 0(0.000000e+00)
-; EG-NEXT:     OR_INT * T0.W, T1.W, PV.W,
+; EG-NEXT:     OR_INT * T0.W, T2.W, PV.W,
 ; EG-NEXT:     MOV * T5.X, PV.W,
-; EG-NEXT:     MOV T0.X, PV.X,
-; EG-NEXT:     AND_INT * T0.W, T20.Y, literal.x,
+; EG-NEXT:     MOV T0.Y, PV.X,
+; EG-NEXT:     AND_INT * T0.W, T0.X, literal.x,
 ; EG-NEXT:    65535(9.183409e-41), 0(0.000000e+00)
 ; EG-NEXT:     BCNT_INT T0.W, PV.W,
-; EG-NEXT:     AND_INT * T1.W, PV.X, literal.x,
+; EG-NEXT:     AND_INT * T2.W, PV.Y, literal.x,
 ; EG-NEXT:    -65536(nan), 0(0.000000e+00)
-; EG-NEXT:     OR_INT * T0.Y, PS, PV.W,
-; EG-NEXT:     MOV T5.X, PV.Y,
+; EG-NEXT:     OR_INT * T0.W, PS, PV.W,
+; EG-NEXT:     MOV T5.X, PV.W,
 ; EG-NEXT:     MOV * T0.X, T8.X,
-; EG-NEXT:     LSHR * T0.W, T20.Z, literal.x,
+; EG-NEXT:     LSHR * T0.W, T0.Z, literal.x,
 ; EG-NEXT:    16(2.242078e-44), 0(0.000000e+00)
 ; EG-NEXT:     BCNT_INT T0.W, PV.W,
-; EG-NEXT:     AND_INT * T1.W, T0.X, literal.x,
+; EG-NEXT:     AND_INT * T2.W, T0.X, literal.x,
 ; EG-NEXT:    65535(9.183409e-41), 0(0.000000e+00)
 ; EG-NEXT:     LSHL * T0.W, PV.W, literal.x,
 ; EG-NEXT:    16(2.242078e-44), 0(0.000000e+00)
-; EG-NEXT:     OR_INT * T0.W, T1.W, PV.W,
+; EG-NEXT:     OR_INT * T0.W, T2.W, PV.W,
 ; EG-NEXT:     MOV * T8.X, PV.W,
 ; EG-NEXT:     MOV T0.X, PV.X,
-; EG-NEXT:     AND_INT * T0.W, T20.Z, literal.x,
+; EG-NEXT:     AND_INT * T0.W, T0.Z, literal.x,
 ; EG-NEXT:    65535(9.183409e-41), 0(0.000000e+00)
 ; EG-NEXT:     BCNT_INT T0.W, PV.W,
-; EG-NEXT:     AND_INT * T1.W, PV.X, literal.x,
+; EG-NEXT:     AND_INT * T2.W, PV.X, literal.x,
 ; EG-NEXT:    -65536(nan), 0(0.000000e+00)
 ; EG-NEXT:     OR_INT * T0.W, PS, PV.W,
 ; EG-NEXT:     MOV T8.X, PV.W,
 ; EG-NEXT:     MOV * T0.X, T9.X,
-; EG-NEXT:     LSHR * T0.W, T20.W, literal.x,
+; EG-NEXT:     LSHR * T0.W, T1.Y, literal.x,
+; EG-NEXT:    16(2.242078e-44), 0(0.000000e+00)
+; EG-NEXT:     BCNT_INT T0.W, PV.W,
+; EG-NEXT:     AND_INT * T2.W, T0.X, literal.x,
+; EG-NEXT:    65535(9.183409e-41), 0(0.000000e+00)
+; EG-NEXT:     LSHL * T0.W, PV.W, literal.x,
+; EG-NEXT:    16(2.242078e-44), 0(0.000000e+00)
+; EG-NEXT:     OR_INT * T0.W, T2.W, PV.W,
+; EG-NEXT:     MOV * T9.X, PV.W,
+; EG-NEXT:     MOV T0.X, PV.X,
+; EG-NEXT:     AND_INT * T0.W, T1.Y, literal.x,
+; EG-NEXT:    65535(9.183409e-41), 0(0.000000e+00)
+; EG-NEXT:     BCNT_INT T0.W, PV.W,
+; EG-NEXT:     AND_INT * T2.W, PV.X, literal.x,
+; EG-NEXT:    -65536(nan), 0(0.000000e+00)
+; EG-NEXT:     OR_INT * T0.W, PS, PV.W,
+; EG-NEXT:     MOV T9.X, PV.W,
+; EG-NEXT:     MOV * T0.X, T12.X,
+; EG-NEXT:     LSHR * T0.W, T1.Z, literal.x,
+; EG-NEXT:    16(2.242078e-44), 0(0.000000e+00)
+; EG-NEXT:     BCNT_INT T0.W, PV.W,
+; EG-NEXT:     AND_INT * T2.W, T0.X, literal.x,
+; EG-NEXT:    65535(9.183409e-41), 0(0.000000e+00)
+; EG-NEXT:     LSHL * T0.W, PV.W, literal.x,
+; EG-NEXT:    16(2.242078e-44), 0(0.000000e+00)
+; EG-NEXT:     OR_INT * T0.W, T2.W, PV.W,
+; EG-NEXT:     MOV * T12.X, PV.W,
+; EG-NEXT:     MOV T0.X, PV.X,
+; EG-NEXT:     AND_INT * T0.W, T1.Z, literal.x,
+; EG-NEXT:    65535(9.183409e-41), 0(0.000000e+00)
+; EG-NEXT:     BCNT_INT T0.W, PV.W,
+; EG-NEXT:     AND_INT * T2.W, PV.X, literal.x,
+; EG-NEXT:    -65536(nan), 0(0.000000e+00)
+; EG-NEXT:     OR_INT * T0.W, PS, PV.W,
+; EG-NEXT:     MOV T12.X, PV.W,
+; EG-NEXT:     MOV * T0.X, T13.X,
+; EG-NEXT:     LSHR * T0.W, T1.W, literal.x,
+; EG-NEXT:    16(2.242078e-44), 0(0.000000e+00)
+; EG-NEXT:     BCNT_INT T0.W, PV.W,
+; EG-NEXT:     AND_INT * T2.W, T0.X, literal.x,
+; EG-NEXT:    65535(9.183409e-41), 0(0.000000e+00)
+; EG-NEXT:     LSHL * T0.W, PV.W, literal.x,
+; EG-NEXT:    16(2.242078e-44), 0(0.000000e+00)
+; EG-NEXT:     OR_INT * T0.W, T2.W, PV.W,
+; EG-NEXT:     MOV * T13.X, PV.W,
+; EG-NEXT:     MOV T0.X, PV.X,
+; EG-NEXT:     AND_INT * T0.W, T1.W, literal.x,
+; EG-NEXT:    65535(9.183409e-41), 0(0.000000e+00)
+; EG-NEXT:     BCNT_INT * T0.W, PV.W,
+; EG-NEXT:    ALU clause starting at 136:
+; EG-NEXT:     AND_INT * T1.W, T0.X, literal.x,
+; EG-NEXT:    -65536(nan), 0(0.000000e+00)
+; EG-NEXT:     OR_INT * T0.W, PV.W, T0.W,
+; EG-NEXT:     MOV T13.X, PV.W,
+; EG-NEXT:     MOV * T0.X, T16.X,
+; EG-NEXT:     LSHR * T0.W, T2.Y, literal.x,
 ; EG-NEXT:    16(2.242078e-44), 0(0.000000e+00)
 ; EG-NEXT:     BCNT_INT T0.W, PV.W,
 ; EG-NEXT:     AND_INT * T1.W, T0.X, literal.x,
@@ -915,96 +1006,45 @@ define amdgpu_kernel void @v_ctpop_v16i16(ptr addrspace(1) noalias %out, ptr add
 ; EG-NEXT:     LSHL * T0.W, PV.W, literal.x,
 ; EG-NEXT:    16(2.242078e-44), 0(0.000000e+00)
 ; EG-NEXT:     OR_INT * T0.W, T1.W, PV.W,
-; EG-NEXT:     MOV * T9.X, PV.W,
+; EG-NEXT:     MOV * T16.X, PV.W,
 ; EG-NEXT:     MOV T0.X, PV.X,
-; EG-NEXT:     AND_INT * T0.W, T20.W, literal.x,
+; EG-NEXT:     AND_INT * T0.W, T2.Y, literal.x,
 ; EG-NEXT:    65535(9.183409e-41), 0(0.000000e+00)
 ; EG-NEXT:     BCNT_INT T0.W, PV.W,
 ; EG-NEXT:     AND_INT * T1.W, PV.X, literal.x,
 ; EG-NEXT:    -65536(nan), 0(0.000000e+00)
 ; EG-NEXT:     OR_INT * T0.W, PS, PV.W,
-; EG-NEXT:     MOV T9.X, PV.W,
-; EG-NEXT:     MOV * T0.X, T12.X,
-; EG-NEXT:     LSHR * T1.W, T21.X, literal.x,
-; EG-NEXT:    16(2.242078e-44), 0(0.000000e+00)
-; EG-NEXT:     BCNT_INT T1.W, PV.W,
-; EG-NEXT:     AND_INT * T2.W, T0.X, literal.x,
-; EG-NEXT:    65535(9.183409e-41), 0(0.000000e+00)
-; EG-NEXT:     LSHL * T1.W, PV.W, literal.x,
-; EG-NEXT:    16(2.242078e-44), 0(0.000000e+00)
-; EG-NEXT:     OR_INT * T1.W, T2.W, PV.W,
-; EG-NEXT:     MOV * T12.X, PV.W,
-; EG-NEXT:     MOV T0.X, PV.X,
-; EG-NEXT:     AND_INT * T1.W, T21.X, literal.x,
-; EG-NEXT:    65535(9.183409e-41), 0(0.000000e+00)
-; EG-NEXT:     BCNT_INT T1.W, PV.W,
-; EG-NEXT:     AND_INT * T2.W, PV.X, literal.x,
-; EG-NEXT:    -65536(nan), 0(0.000000e+00)
-; EG-NEXT:     OR_INT * T1.W, PS, PV.W,
-; EG-NEXT:     MOV T12.X, PV.W,
-; EG-NEXT:     MOV * T0.X, T13.X,
-; EG-NEXT:     LSHR * T1.W, T21.Y, literal.x,
-; EG-NEXT:    16(2.242078e-44), 0(0.000000e+00)
-; EG-NEXT:     BCNT_INT T1.W, PV.W,
-; EG-NEXT:     AND_INT * T2.W, T0.X, literal.x,
-; EG-NEXT:    65535(9.183409e-41), 0(0.000000e+00)
-; EG-NEXT:     LSHL * T1.W, PV.W, literal.x,
-; EG-NEXT:    16(2.242078e-44), 0(0.000000e+00)
-; EG-NEXT:     OR_INT * T1.W, T2.W, PV.W,
-; EG-NEXT:     MOV * T13.X, PV.W,
-; EG-NEXT:     MOV T0.X, PV.X,
-; EG-NEXT:     AND_INT * T1.W, T21.Y, literal.x,
-; EG-NEXT:    65535(9.183409e-41), 0(0.000000e+00)
-; EG-NEXT:     BCNT_INT T1.W, PV.W,
-; EG-NEXT:     AND_INT * T2.W, PV.X, literal.x,
-; EG-NEXT:    -65536(nan), 0(0.000000e+00)
-; EG-NEXT:     OR_INT * T20.Y, PS, PV.W,
-; EG-NEXT:     MOV T13.X, PV.Y,
-; EG-NEXT:     MOV * T0.X, T16.X,
-; EG-NEXT:     LSHR * T1.W, T21.Z, literal.x,
-; EG-NEXT:    16(2.242078e-44), 0(0.000000e+00)
-; EG-NEXT:     BCNT_INT T1.W, PV.W,
-; EG-NEXT:     AND_INT * T2.W, T0.X, literal.x,
-; EG-NEXT:    65535(9.183409e-41), 0(0.000000e+00)
-; EG-NEXT:     LSHL * T1.W, PV.W, literal.x,
-; EG-NEXT:    16(2.242078e-44), 0(0.000000e+00)
-; EG-NEXT:     OR_INT * T1.W, T2.W, PV.W,
-; EG-NEXT:    ALU clause starting at 131:
-; EG-NEXT:     MOV * T16.X, T1.W,
-; EG-NEXT:     MOV T0.X, PV.X,
-; EG-NEXT:     AND_INT * T1.W, T21.Z, literal.x,
-; EG-NEXT:    65535(9.183409e-41), 0(0.000000e+00)
-; EG-NEXT:     BCNT_INT T1.W, PV.W,
-; EG-NEXT:     AND_INT * T2.W, PV.X, literal.x,
-; EG-NEXT:    -65536(nan), 0(0.000000e+00)
-; EG-NEXT:     OR_INT * T1.W, PS, PV.W,
 ; EG-NEXT:     MOV T16.X, PV.W,
 ; EG-NEXT:     MOV * T0.X, T17.X,
-; EG-NEXT:     LSHR * T1.W, T21.W, literal.x,
+; EG-NEXT:     LSHR * T0.W, T2.Z, literal.x,
 ; EG-NEXT:    16(2.242078e-44), 0(0.000000e+00)
-; EG-NEXT:     BCNT_INT T1.W, PV.W,
-; EG-NEXT:     AND_INT * T2.W, T0.X, literal.x,
+; EG-NEXT:     BCNT_INT T0.W, PV.W,
+; EG-NEXT:     AND_INT * T1.W, T0.X, literal.x,
 ; EG-NEXT:    65535(9.183409e-41), 0(0.000000e+00)
-; EG-NEXT:     LSHL * T1.W, PV.W, literal.x,
+; EG-NEXT:     LSHL * T0.W, PV.W, literal.x,
 ; EG-NEXT:    16(2.242078e-44), 0(0.000000e+00)
-; EG-NEXT:     OR_INT * T1.W, T2.W, PV.W,
+; EG-NEXT:     OR_INT * T0.W, T1.W, PV.W,
 ; EG-NEXT:     MOV * T17.X, PV.W,
 ; EG-NEXT:     MOV T0.X, PV.X,
-; EG-NEXT:     AND_INT T1.W, T21.W, literal.x,
-; EG-NEXT:     LSHR * T21.X, KC0[2].Y, literal.y,
+; EG-NEXT:     AND_INT T0.W, T2.Z, literal.x,
+; EG-NEXT:     LSHR * T20.X, KC0[2].Y, literal.y,
 ; EG-NEXT:    65535(9.183409e-41), 2(2.802597e-45)
 ; EG-NEXT:     AND_INT T0.Z, PV.X, literal.x,
-; EG-NEXT:     BCNT_INT T1.W, PV.W,
-; EG-NEXT:     ADD_INT * T2.W, KC0[2].Y, literal.y,
+; EG-NEXT:     BCNT_INT T0.W, PV.W,
+; EG-NEXT:     ADD_INT * T1.W, KC0[2].Y, literal.y,
 ; EG-NEXT:    -65536(nan), 16(2.242078e-44)
-; EG-NEXT:     LSHR T22.X, PS, literal.x,
-; EG-NEXT:     OR_INT * T20.W, PV.Z, PV.W,
+; EG-NEXT:     LSHR T0.X, PS, literal.x,
+; EG-NEXT:     OR_INT * T0.W, PV.Z, PV.W,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
 ; EG-NEXT:     MOV T17.X, PV.W,
-; EG-NEXT:     MOV * T0.X, T4.X,
-; EG-NEXT:     MOV * T0.Z, T8.X,
-; EG-NEXT:     MOV T20.X, T12.X,
-; EG-NEXT:     MOV * T20.Z, T16.X, BS:VEC_120/SCL_212
+; EG-NEXT:     MOV T21.Y, T5.X,
+; EG-NEXT:     MOV * T21.X, T4.X,
+; EG-NEXT:     MOV * T21.W, T9.X,
+; EG-NEXT:     MOV * T21.Z, T8.X,
+; EG-NEXT:     MOV * T22.Y, T13.X,
+; EG-NEXT:     MOV T22.X, T12.X,
+; EG-NEXT:     MOV * T22.W, T17.X, BS:VEC_120/SCL_212
+; EG-NEXT:     MOV * T22.Z, T16.X,
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %in.gep = getelementptr <16 x i16>, ptr addrspace(1) %in, i32 %tid
   %val = load <16 x i16>, ptr addrspace(1) %in.gep, align 32
@@ -1587,11 +1627,11 @@ define amdgpu_kernel void @ctpop_i16_in_br(ptr addrspace(1) %out, ptr addrspace(
 ; EG-NEXT:    ALU clause starting at 32:
 ; EG-NEXT:     BCNT_INT * T0.X, T0.X,
 ; EG-NEXT:    ALU clause starting at 33:
-; EG-NEXT:     LSHL * T1.W, T0.W, literal.x,
+; EG-NEXT:     AND_INT * T1.W, T0.W, literal.x,
 ; EG-NEXT:    3(4.203895e-45), 0(0.000000e+00)
-; EG-NEXT:     AND_INT T1.W, PV.W, literal.x,
+; EG-NEXT:     LSHL T1.W, PV.W, literal.x,
 ; EG-NEXT:     AND_INT * T2.W, T0.X, literal.y,
-; EG-NEXT:    24(3.363116e-44), 65535(9.183409e-41)
+; EG-NEXT:    3(4.203895e-45), 65535(9.183409e-41)
 ; EG-NEXT:     LSHL T1.X, PS, PV.W,
 ; EG-NEXT:     LSHL * T1.W, literal.x, PV.W,
 ; EG-NEXT:    65535(9.183409e-41), 0(0.000000e+00)

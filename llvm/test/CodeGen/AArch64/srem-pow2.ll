@@ -33,8 +33,8 @@ define i16 @fold_srem_2_i16(i16 %x) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    and w8, w0, #0x8000
 ; CHECK-NEXT:    add w8, w0, w8, lsr #15
-; CHECK-NEXT:    and w8, w8, #0xfffffffe
-; CHECK-NEXT:    sub w0, w0, w8
+; CHECK-NEXT:    sbfx w8, w8, #1, #15
+; CHECK-NEXT:    sub w0, w0, w8, lsl #1
 ; CHECK-NEXT:    ret
   %1 = srem i16 %x, 2
   ret i16 %1
@@ -66,10 +66,11 @@ define i16 @fold_srem_pow2_i16(i16 %x) {
 ; CHECK-LABEL: fold_srem_pow2_i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sxth w8, w0
-; CHECK-NEXT:    ubfx w8, w8, #25, #6
-; CHECK-NEXT:    add w8, w0, w8
-; CHECK-NEXT:    and w8, w8, #0xffffffc0
-; CHECK-NEXT:    sub w0, w0, w8
+; CHECK-NEXT:    lsr w8, w8, #15
+; CHECK-NEXT:    and w8, w8, #0xfc00
+; CHECK-NEXT:    add w8, w0, w8, lsr #10
+; CHECK-NEXT:    sbfx w8, w8, #6, #10
+; CHECK-NEXT:    sub w0, w0, w8, lsl #6
 ; CHECK-NEXT:    ret
   %1 = srem i16 %x, 64
   ret i16 %1
@@ -103,10 +104,11 @@ define i16 @fold_srem_smax_i16(i16 %x) {
 ; CHECK-LABEL: fold_srem_smax_i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sxth w8, w0
-; CHECK-NEXT:    ubfx w8, w8, #16, #15
-; CHECK-NEXT:    add w8, w0, w8
-; CHECK-NEXT:    and w8, w8, #0xffff8000
-; CHECK-NEXT:    add w0, w0, w8
+; CHECK-NEXT:    lsr w8, w8, #15
+; CHECK-NEXT:    and w8, w8, #0xfffe
+; CHECK-NEXT:    add w8, w0, w8, lsr #1
+; CHECK-NEXT:    ubfx w8, w8, #15, #1
+; CHECK-NEXT:    add w0, w0, w8, lsl #15
 ; CHECK-NEXT:    ret
   %1 = srem i16 %x, 32768
   ret i16 %1

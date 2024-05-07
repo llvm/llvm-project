@@ -8,8 +8,9 @@ define dso_local i32 @test_lshr_and(i32 %x) {
 ; X86-LABEL: test_lshr_and:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    andl $12, %eax
-; X86-NEXT:    movl array(%eax), %eax
+; X86-NEXT:    shrl $2, %eax
+; X86-NEXT:    andl $3, %eax
+; X86-NEXT:    movl array(,%eax,4), %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_lshr_and:
@@ -30,7 +31,8 @@ define dso_local ptr @test_exact1(i32 %a, i32 %b, ptr %x)  {
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    subl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    sarl %eax
+; X86-NEXT:    sarl $3, %eax
+; X86-NEXT:    shll $2, %eax
 ; X86-NEXT:    addl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    retl
 ;
@@ -52,7 +54,8 @@ define dso_local ptr @test_exact2(i32 %a, i32 %b, ptr %x)  {
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    subl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    sarl %eax
+; X86-NEXT:    sarl $3, %eax
+; X86-NEXT:    shll $2, %eax
 ; X86-NEXT:    addl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    retl
 ;
@@ -74,6 +77,8 @@ define dso_local ptr @test_exact3(i32 %a, i32 %b, ptr %x)  {
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    subl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    shrl $2, %eax
+; X86-NEXT:    shll $2, %eax
 ; X86-NEXT:    addl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    retl
 ;
@@ -95,7 +100,8 @@ define dso_local ptr @test_exact4(i32 %a, i32 %b, ptr %x)  {
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    subl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    shrl %eax
+; X86-NEXT:    shrl $3, %eax
+; X86-NEXT:    shll $2, %eax
 ; X86-NEXT:    addl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    retl
 ;
@@ -117,7 +123,8 @@ define dso_local ptr @test_exact5(i32 %a, i32 %b, ptr %x)  {
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    subl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    shrl %eax
+; X86-NEXT:    shrl $3, %eax
+; X86-NEXT:    shll $2, %eax
 ; X86-NEXT:    addl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    retl
 ;
@@ -139,6 +146,8 @@ define dso_local ptr @test_exact6(i32 %a, i32 %b, ptr %x)  {
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    subl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    shrl $2, %eax
+; X86-NEXT:    shll $2, %eax
 ; X86-NEXT:    addl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    retl
 ;
@@ -167,8 +176,10 @@ define i64 @ashr_add_shl_i32(i64 %r) nounwind {
 ;
 ; X64-LABEL: ashr_add_shl_i32:
 ; X64:       # %bb.0:
-; X64-NEXT:    incl %edi
-; X64-NEXT:    movslq %edi, %rax
+; X64-NEXT:    shlq $32, %rdi
+; X64-NEXT:    movabsq $4294967296, %rax # imm = 0x100000000
+; X64-NEXT:    addq %rdi, %rax
+; X64-NEXT:    sarq $32, %rax
 ; X64-NEXT:    retq
   %conv = shl i64 %r, 32
   %sext = add i64 %conv, 4294967296
@@ -179,17 +190,20 @@ define i64 @ashr_add_shl_i32(i64 %r) nounwind {
 define i64 @ashr_add_shl_i8(i64 %r) nounwind {
 ; X86-LABEL: ashr_add_shl_i8:
 ; X86:       # %bb.0:
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    addb $2, %al
-; X86-NEXT:    movsbl %al, %eax
-; X86-NEXT:    movl %eax, %edx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    shll $24, %edx
+; X86-NEXT:    addl $33554432, %edx # imm = 0x2000000
+; X86-NEXT:    movl %edx, %eax
+; X86-NEXT:    sarl $24, %eax
 ; X86-NEXT:    sarl $31, %edx
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: ashr_add_shl_i8:
 ; X64:       # %bb.0:
-; X64-NEXT:    addb $2, %dil
-; X64-NEXT:    movsbq %dil, %rax
+; X64-NEXT:    shlq $56, %rdi
+; X64-NEXT:    movabsq $144115188075855872, %rax # imm = 0x200000000000000
+; X64-NEXT:    addq %rdi, %rax
+; X64-NEXT:    sarq $56, %rax
 ; X64-NEXT:    retq
   %conv = shl i64 %r, 56
   %sext = add i64 %conv, 144115188075855872
@@ -203,22 +217,26 @@ define <4 x i32> @ashr_add_shl_v4i8(<4 x i32> %r) nounwind {
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %ch
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %dh
-; X86-NEXT:    incb %dh
-; X86-NEXT:    movsbl %dh, %esi
-; X86-NEXT:    incb %ch
-; X86-NEXT:    movsbl %ch, %edi
-; X86-NEXT:    incb %dl
-; X86-NEXT:    movsbl %dl, %edx
-; X86-NEXT:    incb %cl
-; X86-NEXT:    movsbl %cl, %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; X86-NEXT:    shll $24, %edi
+; X86-NEXT:    shll $24, %esi
+; X86-NEXT:    shll $24, %edx
+; X86-NEXT:    shll $24, %ecx
+; X86-NEXT:    addl $16777216, %ecx # imm = 0x1000000
+; X86-NEXT:    addl $16777216, %edx # imm = 0x1000000
+; X86-NEXT:    addl $16777216, %esi # imm = 0x1000000
+; X86-NEXT:    addl $16777216, %edi # imm = 0x1000000
+; X86-NEXT:    sarl $24, %edi
+; X86-NEXT:    sarl $24, %esi
+; X86-NEXT:    sarl $24, %edx
+; X86-NEXT:    sarl $24, %ecx
 ; X86-NEXT:    movl %ecx, 12(%eax)
 ; X86-NEXT:    movl %edx, 8(%eax)
-; X86-NEXT:    movl %edi, 4(%eax)
-; X86-NEXT:    movl %esi, (%eax)
+; X86-NEXT:    movl %esi, 4(%eax)
+; X86-NEXT:    movl %edi, (%eax)
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi
 ; X86-NEXT:    retl $4
@@ -430,9 +448,10 @@ define i64 @ashr_add_neg_shl_i32(i64 %r) nounwind {
 ;
 ; X64-LABEL: ashr_add_neg_shl_i32:
 ; X64:       # %bb.0:
-; X64-NEXT:    movl $1, %eax
-; X64-NEXT:    subl %edi, %eax
-; X64-NEXT:    cltq
+; X64-NEXT:    shlq $32, %rdi
+; X64-NEXT:    movabsq $4294967296, %rax # imm = 0x100000000
+; X64-NEXT:    subq %rdi, %rax
+; X64-NEXT:    sarq $32, %rax
 ; X64-NEXT:    retq
   %conv = mul i64 %r, -4294967296
   %sext = add i64 %conv, 4294967296
@@ -455,9 +474,10 @@ define i64 @ashr_add_neg_shl_i8(i64 %r) nounwind {
 ;
 ; X64-LABEL: ashr_add_neg_shl_i8:
 ; X64:       # %bb.0:
-; X64-NEXT:    movb $2, %al
-; X64-NEXT:    subb %dil, %al
-; X64-NEXT:    movsbq %al, %rax
+; X64-NEXT:    shlq $56, %rdi
+; X64-NEXT:    movabsq $144115188075855872, %rax # imm = 0x200000000000000
+; X64-NEXT:    subq %rdi, %rax
+; X64-NEXT:    sarq $56, %rax
 ; X64-NEXT:    retq
   %conv = mul i64 %r, -72057594037927936
   %sext = add i64 %conv, 144115188075855872
@@ -469,27 +489,39 @@ define i64 @ashr_add_neg_shl_i8(i64 %r) nounwind {
 define <4 x i32> @ashr_add_neg_shl_v4i8(<4 x i32> %r) nounwind {
 ; X86-LABEL: ashr_add_neg_shl_v4i8:
 ; X86:       # %bb.0:
+; X86-NEXT:    pushl %ebp
+; X86-NEXT:    pushl %ebx
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movb $1, %cl
-; X86-NEXT:    movb $1, %dl
-; X86-NEXT:    subb {{[0-9]+}}(%esp), %dl
-; X86-NEXT:    movsbl %dl, %edx
-; X86-NEXT:    movb $1, %ch
-; X86-NEXT:    subb {{[0-9]+}}(%esp), %ch
-; X86-NEXT:    movsbl %ch, %esi
-; X86-NEXT:    movb $1, %ch
-; X86-NEXT:    subb {{[0-9]+}}(%esp), %ch
-; X86-NEXT:    movsbl %ch, %edi
-; X86-NEXT:    subb {{[0-9]+}}(%esp), %cl
-; X86-NEXT:    movsbl %cl, %ecx
-; X86-NEXT:    movl %ecx, 12(%eax)
-; X86-NEXT:    movl %edi, 8(%eax)
-; X86-NEXT:    movl %esi, 4(%eax)
-; X86-NEXT:    movl %edx, (%eax)
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebp
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    shll $24, %edx
+; X86-NEXT:    shll $24, %esi
+; X86-NEXT:    shll $24, %ebx
+; X86-NEXT:    shll $24, %ebp
+; X86-NEXT:    movl $16777216, %ecx # imm = 0x1000000
+; X86-NEXT:    movl $16777216, %edi # imm = 0x1000000
+; X86-NEXT:    subl %ebp, %edi
+; X86-NEXT:    movl $16777216, %ebp # imm = 0x1000000
+; X86-NEXT:    subl %ebx, %ebp
+; X86-NEXT:    movl $16777216, %ebx # imm = 0x1000000
+; X86-NEXT:    subl %esi, %ebx
+; X86-NEXT:    subl %edx, %ecx
+; X86-NEXT:    sarl $24, %ecx
+; X86-NEXT:    sarl $24, %ebx
+; X86-NEXT:    sarl $24, %ebp
+; X86-NEXT:    sarl $24, %edi
+; X86-NEXT:    movl %edi, 12(%eax)
+; X86-NEXT:    movl %ebp, 8(%eax)
+; X86-NEXT:    movl %ebx, 4(%eax)
+; X86-NEXT:    movl %ecx, (%eax)
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi
+; X86-NEXT:    popl %ebx
+; X86-NEXT:    popl %ebp
 ; X86-NEXT:    retl $4
 ;
 ; X64-LABEL: ashr_add_neg_shl_v4i8:

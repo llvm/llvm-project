@@ -17,7 +17,7 @@ define void @f(ptr %0, ptr %pr) {
 ; CHECK-NEXT:    i32x4.extract_lane 0
 ; CHECK-NEXT:    i32.const 1
 ; CHECK-NEXT:    i32.and
-; CHECK-NEXT:    i32.shr_u
+; CHECK-NEXT:    i32.shr_s
 ; CHECK-NEXT:    local.tee 0
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    i32.mul
@@ -27,7 +27,7 @@ define void @f(ptr %0, ptr %pr) {
 ; CHECK-NEXT:    i32x4.extract_lane 1
 ; CHECK-NEXT:    i32.const 1
 ; CHECK-NEXT:    i32.and
-; CHECK-NEXT:    i32.shr_u
+; CHECK-NEXT:    i32.shr_s
 ; CHECK-NEXT:    local.tee 0
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    i32.mul
