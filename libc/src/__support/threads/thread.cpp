@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "thread.h"
-#include "mutex.h"
+#include "src/__support/threads/thread.h"
+#include "src/__support/threads/mutex.h"
 
 #include "src/__support/CPP/array.h"
 #include "src/__support/CPP/optional.h"
