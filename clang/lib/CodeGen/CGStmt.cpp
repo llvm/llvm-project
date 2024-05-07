@@ -3218,26 +3218,25 @@ llvm::IntrinsicInst *
 CodeGenFunction::emitConvergenceLoopToken(llvm::BasicBlock *BB,
                                           llvm::Value *ParentToken) {
   CGBuilderTy::InsertPoint IP = Builder.saveIP();
-
   if (BB->empty())
     Builder.SetInsertPoint(BB);
   else
-    Builder.SetInsertPoint(&BB->front());
+    Builder.SetInsertPoint(BB->getFirstInsertionPt());
 
-  auto CB = Builder.CreateIntrinsic(
+  llvm::CallBase *CB = Builder.CreateIntrinsic(
       llvm::Intrinsic::experimental_convergence_loop, {}, {});
   Builder.restoreIP(IP);
 
-  auto I = addConvergenceControlToken(CB, ParentToken);
+  llvm::CallBase *I = addConvergenceControlToken(CB, ParentToken);
   return cast<llvm::IntrinsicInst>(I);
 }
 
 llvm::IntrinsicInst *
 CodeGenFunction::getOrEmitConvergenceEntryToken(llvm::Function *F) {
-  auto *BB = &F->getEntryBlock();
-  auto *token = getConvergenceToken(BB);
-  if (token)
-    return token;
+  llvm::BasicBlock *BB = &F->getEntryBlock();
+  llvm::IntrinsicInst *Token = getConvergenceToken(BB);
+  if (Token)
+    return Token;
 
   // Adding a convergence token requires the function to be marked as
   // convergent.
@@ -3245,7 +3244,7 @@ CodeGenFunction::getOrEmitConvergenceEntryToken(llvm::Function *F) {
 
   CGBuilderTy::InsertPoint IP = Builder.saveIP();
   Builder.SetInsertPoint(&BB->front());
-  auto I = Builder.CreateIntrinsic(
+  llvm::CallBase *I = Builder.CreateIntrinsic(
       llvm::Intrinsic::experimental_convergence_entry, {}, {});
   assert(isa<llvm::IntrinsicInst>(I));
   Builder.restoreIP(IP);
