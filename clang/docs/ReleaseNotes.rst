@@ -111,12 +111,8 @@ Clang Frontend Potentially Breaking Changes
     $ clang --target=<your target triple> -print-target-triple
     <the normalized target triple>
 
-- The ``getTypeAsWritten`` member function has been removed from ``ClassTemplateSpecializationDecl`` and
-  ``VarTemplateSpecializationDecl``, and a new member function ``getTemplateArgsAsWritten`` returning a
-  ``const ASTTemplateArgumentListInfo *`` has been added to access to the explicitly written template
-  argument list of explicit specializations, partial specializations, and explicit instantiations of
-  class and variable templates. Consequently, the ``hasTypeLoc`` AST matcher will no longer match these
-  declarations and existing uses should switch to ``TemplateArgumentLoc`` matchers instead.
+- The ``hasTypeLoc`` AST matcher will no longer match a ``classTemplateSpecializationDecl``;
+  existing uses should switch to ``templateArgumentLoc`` or ``hasAnyTemplateArgumentLoc`` instead.
 
 What's New in Clang |release|?
 ==============================
