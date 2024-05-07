@@ -3338,16 +3338,15 @@ def : GCNPat <
                         (as_i1timm $bound_ctrl))
 >;
 
-class UpdateDPP64Pat<ValueType vt> : GCNPat <
+foreach vt = [i64, f64] in {
+def : GCNPat <
   (vt (int_amdgcn_update_dpp vt:$old, vt:$src, timm:$dpp_ctrl, timm:$row_mask,
                               timm:$bank_mask, timm:$bound_ctrl)),
   (V_MOV_B64_DPP_PSEUDO VReg_64_Align2:$old, VReg_64_Align2:$src, (as_i32timm $dpp_ctrl),
                         (as_i32timm $row_mask), (as_i32timm $bank_mask),
                         (as_i1timm $bound_ctrl))
 >;
-
-def : UpdateDPP64Pat<i64>;
-def : UpdateDPP64Pat<f64>;
+}
 
 //===----------------------------------------------------------------------===//
 // Fract Patterns
