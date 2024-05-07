@@ -55,7 +55,7 @@ INTERCEPTOR(int, open, const char *path, int oflag, ...) {
   radsan::expectNotRealtime("open");
   va_list args;
   va_start(args, oflag);
-  auto result = REAL(open)(path, oflag, args);
+  const int result = REAL(open)(path, oflag, args);
   va_end(args);
   return result;
 }
@@ -66,7 +66,7 @@ INTERCEPTOR(int, openat, int fd, const char *path, int oflag, ...) {
   radsan::expectNotRealtime("openat");
   va_list args;
   va_start(args, oflag);
-  auto result = REAL(openat)(fd, path, oflag, args);
+  const int result = REAL(openat)(fd, path, oflag, args);
   va_end(args);
   return result;
 }
@@ -75,7 +75,7 @@ INTERCEPTOR(int, creat, const char *path, mode_t mode) {
   // TODO Establish whether we should intercept here if the flag contains
   // O_NONBLOCK
   radsan::expectNotRealtime("creat");
-  auto result = REAL(creat)(path, mode);
+  const int result = REAL(creat)(path, mode);
   return result;
 }
 
@@ -83,7 +83,7 @@ INTERCEPTOR(int, fcntl, int filedes, int cmd, ...) {
   radsan::expectNotRealtime("fcntl");
   va_list args;
   va_start(args, cmd);
-  auto result = REAL(fcntl)(filedes, cmd, args);
+  const int result = REAL(fcntl)(filedes, cmd, args);
   va_end(args);
   return result;
 }
