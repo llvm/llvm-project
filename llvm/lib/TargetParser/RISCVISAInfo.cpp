@@ -881,11 +881,17 @@ void RISCVISAInfo::updateImplication() {
                   });
   }
 
-  // Add Zcf if Zce and F are enabled on RV32.
-  if (XLen == 32 && Exts.count("zce") && Exts.count("f") &&
+  // Add Zcf if C/Zce and F are enabled on RV32.
+  if (XLen == 32 && (Exts.count("c") || Exts.count("zce")) && Exts.count("f") &&
       !Exts.count("zcf")) {
     auto Version = findDefaultVersion("zcf");
     addExtension("zcf", Version.value());
+  }
+
+  // Add Zcd if C and D are enabled.
+  if (Exts.count("c") && Exts.count("d") && !Exts.count("zcd")) {
+    auto Version = findDefaultVersion("zcd");
+    addExtension("zcd", Version.value());
   }
 }
 
