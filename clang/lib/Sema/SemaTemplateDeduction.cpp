@@ -5871,7 +5871,7 @@ FunctionDecl *Sema::getMoreConstrainedFunction(FunctionDecl *FD1,
   FunctionDecl *F2 = FD2;
   if (FunctionDecl *MF = FD2->getInstantiatedFromMemberFunction())
     F2 = MF;
-  llvm::SmallVector<const Expr *, 3> AC1, AC2;
+  llvm::SmallVector<const Expr *, 1> AC1, AC2;
   F1->getAssociatedConstraints(AC1);
   F2->getAssociatedConstraints(AC2);
   bool AtLeastAsConstrained1, AtLeastAsConstrained2;
