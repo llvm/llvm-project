@@ -21,3 +21,13 @@ entry:
   %4 = musttail call i32 (ptr, ...) @foo(ptr null, ...)
   ret i32 %4
 }
+
+declare i64 @llvm.llround.f32(float) nounwind readnone
+define range(i64 0, 8) i64 @testmsxs(float %x) {
+; CHECK-LABEL: testmsxs:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    jmp llroundf@PLT # TAILCALL
+    entry:
+        %0 = tail call i64 @llvm.llround.f32(float %x)
+   ret i64 %0
+}
