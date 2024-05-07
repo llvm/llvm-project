@@ -54,7 +54,7 @@ In this document, module units are classified as:
 * Primary module interface unit
 * Module implementation unit
 * Module partition interface unit
-* Module partition implementation unit
+* Internal module partition unit
 
 A primary module interface unit is a module unit whose module declaration is
 ``export module module_name;`` where ``module_name`` denotes the name of the
@@ -68,7 +68,7 @@ A module partition interface unit is a module unit whose module declaration is
 ``export module module_name:partition_name;``. The ``partition_name`` should be
 unique within any given module.
 
-An module partition implementation unit is a module unit whose module
+An internal module partition unit is a module unit whose module
 declaration is ``module module_name:partition_name;``. The ``partition_name``
 should be unique within any given module.
 
@@ -78,10 +78,10 @@ In this document, we use the following terms:
   or a ``module partition interface unit``.
 
 * An ``importable module unit`` refers to either a ``module interface unit`` or
-  an ``module partition implementation unit``.
+  an ``internal module partition unit``.
 
 * A ``module partition unit`` refers to either a ``module partition interface unit``
-  or an ``module partition implementation unit``.
+  or an ``internal module partition unit``.
 
 Binary Module Interface
 ~~~~~~~~~~~~~~~~~~~~~~~
@@ -946,7 +946,7 @@ implementation module units, it may be suboptimal because the primary module
 interface units now contain entities that do not belong to the interface.
 
 This can potentially be improved by introducing a module partition
-implementation unit. A module partition implementation unit is an importable
+implementation unit. An internal module partition unit is an importable
 module unit which is internal to the module itself.
 
 Providing a header to skip parsing redundant headers
