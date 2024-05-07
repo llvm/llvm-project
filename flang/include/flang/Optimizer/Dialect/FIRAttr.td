@@ -16,7 +16,7 @@
 include "flang/Optimizer/Dialect/FIRDialect.td"
 include "mlir/IR/EnumAttr.td"
 
-class fir_Attr<string name> : AttrDef<fir_Dialect, name>;
+class fir_Attr<string name> : AttrDef<FIROpsDialect, name>;
 
 def FIRnoAttributes  : I32BitEnumAttrCaseNone<"None">;
 def FIRallocatable  : I32BitEnumAttrCaseBit<"allocatable", 0>;
@@ -91,7 +91,7 @@ def fir_CUDADataAttribute : I32EnumAttr<
 }
 
 def fir_CUDADataAttributeAttr :
-    EnumAttr<fir_Dialect, fir_CUDADataAttribute, "cuda"> {
+    EnumAttr<FIROpsDialect, fir_CUDADataAttribute, "cuda"> {
   let assemblyFormat = [{ ```<` $value `>` }];
 }
 
@@ -109,7 +109,7 @@ def fir_CUDAProcAttribute : I32EnumAttr<
 }
 
 def fir_CUDAProcAttributeAttr :
-    EnumAttr<fir_Dialect, fir_CUDAProcAttribute, "cuda_proc"> {
+    EnumAttr<FIROpsDialect, fir_CUDAProcAttribute, "cuda_proc"> {
   let assemblyFormat = [{ ```<` $value `>` }];
 }
 
@@ -135,6 +135,22 @@ def fir_CUDAClusterDimsAttr : fir_Attr<"CUDAClusterDims"> {
   );
 
   let assemblyFormat = "`<` struct(params) `>`";
+}
+
+def fir_CUDADataTransferKind : I32EnumAttr<
+    "CUDADataTransferKind", "CUDA Fortran data transfer kind",
+    [
+      I32EnumAttrCase<"DeviceHost", 0, "device_host">,
+      I32EnumAttrCase<"HostDevice", 1, "host_device">,
+      I32EnumAttrCase<"DeviceDevice", 2, "device_device">,
+    ]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::fir";
+}
+
+def fir_CUDADataTransferKindAttr :
+    EnumAttr<FIROpsDialect, fir_CUDADataTransferKind, "cuda_transfer"> {
+  let assemblyFormat = [{ ```<` $value `>` }];
 }
 
 #endif // FIR_DIALECT_FIR_ATTRS

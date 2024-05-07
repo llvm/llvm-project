@@ -494,6 +494,10 @@ void Sema::ActOnStartOfObjCMethodDef(Scope *FnBodyScope, Decl *D) {
       }
     }
   }
+
+  // Some function attributes (like OptimizeNoneAttr) need actions before
+  // parsing body started.
+  applyFunctionAttributesBeforeParsingBody(D);
 }
 
 namespace {
@@ -1072,6 +1076,7 @@ ObjCInterfaceDecl *Sema::ActOnStartClassInterface(
 
   ProcessDeclAttributeList(TUScope, IDecl, AttrList);
   AddPragmaAttributes(TUScope, IDecl);
+  ProcessAPINotes(IDecl);
 
   // Merge attributes from previous declarations.
   if (PrevIDecl)
@@ -1273,6 +1278,7 @@ ObjCProtocolDecl *Sema::ActOnStartProtocolInterface(
 
   ProcessDeclAttributeList(TUScope, PDecl, AttrList);
   AddPragmaAttributes(TUScope, PDecl);
+  ProcessAPINotes(PDecl);
 
   // Merge attributes from previous declarations.
   if (PrevDecl)
@@ -1816,9 +1822,9 @@ Sema::ActOnForwardProtocolDeclaration(SourceLocation AtProtocolLoc,
 }
 
 ObjCCategoryDecl *Sema::ActOnStartCategoryInterface(
-    SourceLocation AtInterfaceLoc, IdentifierInfo *ClassName,
+    SourceLocation AtInterfaceLoc, const IdentifierInfo *ClassName,
     SourceLocation ClassLoc, ObjCTypeParamList *typeParamList,
-    IdentifierInfo *CategoryName, SourceLocation CategoryLoc,
+    const IdentifierInfo *CategoryName, SourceLocation CategoryLoc,
     Decl *const *ProtoRefs, unsigned NumProtoRefs,
     const SourceLocation *ProtoLocs, SourceLocation EndProtoLoc,
     const ParsedAttributesView &AttrList) {
@@ -1914,9 +1920,9 @@ ObjCCategoryDecl *Sema::ActOnStartCategoryInterface(
 /// category implementation declaration and build an ObjCCategoryImplDecl
 /// object.
 ObjCCategoryImplDecl *Sema::ActOnStartCategoryImplementation(
-    SourceLocation AtCatImplLoc, IdentifierInfo *ClassName,
-    SourceLocation ClassLoc, IdentifierInfo *CatName, SourceLocation CatLoc,
-    const ParsedAttributesView &Attrs) {
+    SourceLocation AtCatImplLoc, const IdentifierInfo *ClassName,
+    SourceLocation ClassLoc, const IdentifierInfo *CatName,
+    SourceLocation CatLoc, const ParsedAttributesView &Attrs) {
   ObjCInterfaceDecl *IDecl = getObjCInterfaceDecl(ClassName, ClassLoc, true);
   ObjCCategoryDecl *CatIDecl = nullptr;
   if (IDecl && IDecl->hasDefinition()) {
@@ -1980,8 +1986,8 @@ ObjCCategoryImplDecl *Sema::ActOnStartCategoryImplementation(
 }
 
 ObjCImplementationDecl *Sema::ActOnStartClassImplementation(
-    SourceLocation AtClassImplLoc, IdentifierInfo *ClassName,
-    SourceLocation ClassLoc, IdentifierInfo *SuperClassname,
+    SourceLocation AtClassImplLoc, const IdentifierInfo *ClassName,
+    SourceLocation ClassLoc, const IdentifierInfo *SuperClassname,
     SourceLocation SuperClassLoc, const ParsedAttributesView &Attrs) {
   ObjCInterfaceDecl *IDecl = nullptr;
   // Check for another declaration kind with the same name.
@@ -2231,12 +2237,16 @@ void Sema::CheckImplementationIvars(ObjCImplementationDecl *ImpDecl,
     Diag(IVI->getLocation(), diag::err_inconsistent_ivar_count);
 }
 
+static bool shouldWarnUndefinedMethod(const ObjCMethodDecl *M) {
+  // No point warning no definition of method which is 'unavailable'.
+  return M->getAvailability() != AR_Unavailable;
+}
+
 static void WarnUndefinedMethod(Sema &S, ObjCImplDecl *Impl,
                                 ObjCMethodDecl *method, bool &IncompleteImpl,
                                 unsigned DiagID,
                                 NamedDecl *NeededFor = nullptr) {
-  // No point warning no definition of method which is 'unavailable'.
-  if (method->getAvailability() == AR_Unavailable)
+  if (!shouldWarnUndefinedMethod(method))
     return;
 
   // FIXME: For now ignore 'IncompleteImpl'.
@@ -2745,7 +2755,7 @@ static void CheckProtocolMethodDefs(
     // implemented in the class, we should not issue "Method definition not
     // found" warnings.
     // FIXME: Use a general GetUnarySelector method for this.
-    IdentifierInfo* II = &S.Context.Idents.get("forwardInvocation");
+    const IdentifierInfo *II = &S.Context.Idents.get("forwardInvocation");
     Selector fISelector = S.Context.Selectors.getSelector(1, &II);
     if (InsMap.count(fISelector))
       // Is IDecl derived from 'NSProxy'? If so, no instance methods
@@ -4807,6 +4817,7 @@ Decl *Sema::ActOnMethodDeclaration(
     // Apply the attributes to the parameter.
     ProcessDeclAttributeList(TUScope, Param, ArgInfo[i].ArgAttrs);
     AddPragmaAttributes(TUScope, Param);
+    ProcessAPINotes(Param);
 
     if (Param->hasAttr<BlocksAttr>()) {
       Diag(Param->getLocation(), diag::err_block_on_nonlocal);
@@ -4837,6 +4848,7 @@ Decl *Sema::ActOnMethodDeclaration(
 
   ProcessDeclAttributeList(TUScope, ObjCMethod, AttrList);
   AddPragmaAttributes(TUScope, ObjCMethod);
+  ProcessAPINotes(ObjCMethod);
 
   // Add the method now.
   const ObjCMethodDecl *PrevMethod = nullptr;
@@ -5097,8 +5109,8 @@ bool Sema::CheckObjCDeclScope(Decl *D) {
 /// Called whenever \@defs(ClassName) is encountered in the source.  Inserts the
 /// instance variables of ClassName into Decls.
 void Sema::ActOnDefs(Scope *S, Decl *TagD, SourceLocation DeclStart,
-                     IdentifierInfo *ClassName,
-                     SmallVectorImpl<Decl*> &Decls) {
+                     const IdentifierInfo *ClassName,
+                     SmallVectorImpl<Decl *> &Decls) {
   // Check that ClassName is a valid class
   ObjCInterfaceDecl *Class = getObjCInterfaceDecl(ClassName, DeclStart);
   if (!Class) {
@@ -5140,8 +5152,7 @@ void Sema::ActOnDefs(Scope *S, Decl *TagD, SourceLocation DeclStart,
 VarDecl *Sema::BuildObjCExceptionDecl(TypeSourceInfo *TInfo, QualType T,
                                       SourceLocation StartLoc,
                                       SourceLocation IdLoc,
-                                      IdentifierInfo *Id,
-                                      bool Invalid) {
+                                      const IdentifierInfo *Id, bool Invalid) {
   // ISO/IEC TR 18037 S6.7.3: "The type of an object with automatic storage
   // duration shall not be qualified by an address-space qualifier."
   // Since all parameters have automatic store duration, they can not have

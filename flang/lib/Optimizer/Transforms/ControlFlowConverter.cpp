@@ -310,11 +310,12 @@ public:
 /// Convert FIR structured control flow ops to CFG ops.
 class CfgConversion : public fir::impl::CFGConversionBase<CfgConversion> {
 public:
+  using CFGConversionBase<CfgConversion>::CFGConversionBase;
+
   void runOnOperation() override {
-    auto *context = &getContext();
+    auto *context = &this->getContext();
     mlir::RewritePatternSet patterns(context);
-    patterns.insert<CfgLoopConv, CfgIfConv, CfgIterWhileConv>(
-        context, forceLoopToExecuteOnce);
+    fir::populateCfgConversionRewrites(patterns, this->forceLoopToExecuteOnce);
     mlir::ConversionTarget target(*context);
     target.addLegalDialect<mlir::affine::AffineDialect,
                            mlir::cf::ControlFlowDialect, FIROpsDialect,
@@ -323,19 +324,20 @@ public:
     // apply the patterns
     target.addIllegalOp<ResultOp, DoLoopOp, IfOp, IterWhileOp>();
     target.markUnknownOpDynamicallyLegal([](Operation *) { return true; });
-    if (mlir::failed(mlir::applyPartialConversion(getOperation(), target,
+    if (mlir::failed(mlir::applyPartialConversion(this->getOperation(), target,
                                                   std::move(patterns)))) {
       mlir::emitError(mlir::UnknownLoc::get(context),
                       "error in converting to CFG\n");
-      signalPassFailure();
+      this->signalPassFailure();
     }
   }
 };
+
 } // namespace
 
-/// Convert FIR's structured control flow ops to CFG ops.  This
-/// conversion enables the `createLowerToCFGPass` to transform these to CFG
-/// form.
-std::unique_ptr<mlir::Pass> fir::createFirToCfgPass() {
-  return std::make_unique<CfgConversion>();
+/// Expose conversion rewriters to other passes
+void fir::populateCfgConversionRewrites(mlir::RewritePatternSet &patterns,
+                                        bool forceLoopToExecuteOnce) {
+  patterns.insert<CfgLoopConv, CfgIfConv, CfgIterWhileConv>(
+      patterns.getContext(), forceLoopToExecuteOnce);
 }

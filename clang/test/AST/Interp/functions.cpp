@@ -123,9 +123,12 @@ namespace FunctionPointers {
   }
 
   constexpr int applyBinOp(int a, int b, int (*op)(int, int)) {
-    return op(a, b);
+    return op(a, b); // both-note {{evaluates to a null function pointer}}
   }
   static_assert(applyBinOp(1, 2, add) == 3, "");
+  static_assert(applyBinOp(1, 2, nullptr) == 3, ""); // both-error {{not an integral constant expression}} \
+                                                     // both-note {{in call to}}
+
 
   constexpr int ignoreReturnValue() {
     int (*foo)(int, int) = add;
@@ -182,6 +185,21 @@ namespace FunctionReturnType {
   constexpr int (*invalidFnPtr)() = m;
   static_assert(invalidFnPtr() == 5, ""); // both-error {{not an integral constant expression}} \
                                           // both-note {{non-constexpr function 'm'}}
+
+
+namespace ToBool {
+  void mismatched(int x) {}
+  typedef void (*callback_t)(int);
+  void foo() {
+    callback_t callback = (callback_t)mismatched; // warns
+    /// Casts a function pointer to a boolean and then back to a function pointer.
+    /// This is extracted from test/Sema/callingconv-cast.c
+    callback = (callback_t)!mismatched; // both-warning {{address of function 'mismatched' will always evaluate to 'true'}} \
+                                        // both-note {{prefix with the address-of operator to silence this warning}}
+  }
+}
+
+
 }
 
 namespace Comparison {
@@ -542,4 +560,60 @@ namespace StaticLocals {
     static const int m; // both-error {{default initialization}}
     static_assert(m == 0, "");
   }
+}
+
+namespace Local {
+  /// We used to run into infinite recursin here because we were
+  /// trying to evaluate t's initializer while evaluating t's initializer.
+  int a() {
+    const int t=t;
+    return t;
+  }
+}
+
+namespace VariadicOperator {
+  struct Callable {
+    float& operator()(...);
+  };
+
+  void test_callable(Callable c) {
+    float &fr = c(10);
+  }
+}
+
+namespace WeakCompare {
+  [[gnu::weak]]void weak_method();
+  static_assert(weak_method != nullptr, ""); // both-error {{not an integral constant expression}} \
+                                             // both-note {{comparison against address of weak declaration '&weak_method' can only be performed at runtim}}
+
+  constexpr auto A = &weak_method;
+  static_assert(A != nullptr, ""); // both-error {{not an integral constant expression}} \
+                                   // both-note {{comparison against address of weak declaration '&weak_method' can only be performed at runtim}}
+}
+
+namespace FromIntegral {
+#if __cplusplus >= 202002L
+  typedef double (*DoubleFn)();
+  int a[(int)DoubleFn((void*)-1)()]; // both-error {{not allowed at file scope}} \
+                                    // both-warning {{variable length arrays}}
+  int b[(int)DoubleFn((void*)(-1 + 1))()]; // both-error {{not allowed at file scope}} \
+                                           // expected-note {{evaluates to a null function pointer}} \
+                                           // both-warning {{variable length arrays}}
+#endif
+}
+
+namespace {
+  template <typename T> using id = T;
+  template <typename T>
+  constexpr void g() {
+    constexpr id<void (T)> f;
+  }
+
+  static_assert((g<int>(), true), "");
+}
+
+namespace {
+  /// The InitListExpr here is of void type.
+  void bir [[clang::annotate("B", {1, 2, 3, 4})]] (); // both-error {{'annotate' attribute requires parameter 1 to be a constant expression}} \
+                                                      // both-note {{subexpression not valid in a constant expression}}
 }

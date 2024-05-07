@@ -9,7 +9,6 @@
 #include "Context.h"
 #include "ByteCodeEmitter.h"
 #include "ByteCodeExprGen.h"
-#include "ByteCodeGenError.h"
 #include "ByteCodeStmtGen.h"
 #include "EvalEmitter.h"
 #include "Interp.h"
@@ -41,8 +40,8 @@ bool Context::isPotentialConstantExpr(State &Parent, const FunctionDecl *FD) {
 }
 
 bool Context::evaluateAsRValue(State &Parent, const Expr *E, APValue &Result) {
-  assert(Stk.empty());
-  ByteCodeExprGen<EvalEmitter> C(*this, *P, Parent, Stk, Result);
+  bool Recursing = !Stk.empty();
+  ByteCodeExprGen<EvalEmitter> C(*this, *P, Parent, Stk);
 
   auto Res = C.interpretExpr(E, /*ConvertResultToRValue=*/E->isGLValue());
 
@@ -51,12 +50,14 @@ bool Context::evaluateAsRValue(State &Parent, const Expr *E, APValue &Result) {
     return false;
   }
 
-  assert(Stk.empty());
+  if (!Recursing) {
+    assert(Stk.empty());
 #ifndef NDEBUG
-  // Make sure we don't rely on some value being still alive in
-  // InterpStack memory.
-  Stk.clear();
+    // Make sure we don't rely on some value being still alive in
+    // InterpStack memory.
+    Stk.clear();
 #endif
+  }
 
   Result = Res.toAPValue();
 
@@ -64,8 +65,8 @@ bool Context::evaluateAsRValue(State &Parent, const Expr *E, APValue &Result) {
 }
 
 bool Context::evaluate(State &Parent, const Expr *E, APValue &Result) {
-  assert(Stk.empty());
-  ByteCodeExprGen<EvalEmitter> C(*this, *P, Parent, Stk, Result);
+  bool Recursing = !Stk.empty();
+  ByteCodeExprGen<EvalEmitter> C(*this, *P, Parent, Stk);
 
   auto Res = C.interpretExpr(E);
   if (Res.isInvalid()) {
@@ -73,53 +74,43 @@ bool Context::evaluate(State &Parent, const Expr *E, APValue &Result) {
     return false;
   }
 
-  assert(Stk.empty());
+  if (!Recursing) {
+    assert(Stk.empty());
 #ifndef NDEBUG
-  // Make sure we don't rely on some value being still alive in
-  // InterpStack memory.
-  Stk.clear();
+    // Make sure we don't rely on some value being still alive in
+    // InterpStack memory.
+    Stk.clear();
 #endif
+  }
+
   Result = Res.toAPValue();
   return true;
 }
 
 bool Context::evaluateAsInitializer(State &Parent, const VarDecl *VD,
                                     APValue &Result) {
-  assert(Stk.empty());
-  ByteCodeExprGen<EvalEmitter> C(*this, *P, Parent, Stk, Result);
+  bool Recursing = !Stk.empty();
+  ByteCodeExprGen<EvalEmitter> C(*this, *P, Parent, Stk);
 
-  auto Res = C.interpretDecl(VD);
+  bool CheckGlobalInitialized =
+      shouldBeGloballyIndexed(VD) &&
+      (VD->getType()->isRecordType() || VD->getType()->isArrayType());
+  auto Res = C.interpretDecl(VD, CheckGlobalInitialized);
   if (Res.isInvalid()) {
     Stk.clear();
     return false;
   }
 
-  assert(Stk.empty());
+  if (!Recursing) {
+    assert(Stk.empty());
 #ifndef NDEBUG
-  // Make sure we don't rely on some value being still alive in
-  // InterpStack memory.
-  Stk.clear();
+    // Make sure we don't rely on some value being still alive in
+    // InterpStack memory.
+    Stk.clear();
 #endif
+  }
 
-  // Ensure global variables are fully initialized.
-  if (shouldBeGloballyIndexed(VD) &&
-      (VD->getType()->isRecordType() || VD->getType()->isArrayType() ||
-       VD->getType()->isAnyComplexType())) {
-    assert(Res.isLValue());
-
-    if (!VD->getType()->isAnyComplexType() &&
-        !Res.checkFullyInitialized(C.getState()))
-      return false;
-
-    // lvalue-to-rvalue conversion. We do this manually here so we can
-    // examine the result above before converting and returning it.
-    std::optional<APValue> RValueResult = Res.toRValue();
-    if (!RValueResult)
-      return false;
-    Result = *RValueResult;
-
-  } else
-    Result = Res.toAPValue();
+  Result = Res.toAPValue();
   return true;
 }
 
@@ -129,7 +120,8 @@ std::optional<PrimType> Context::classify(QualType T) const {
   if (T->isBooleanType())
     return PT_Bool;
 
-  if (T->isAnyComplexType())
+  // We map these to primitive arrays.
+  if (T->isAnyComplexType() || T->isVectorType())
     return std::nullopt;
 
   if (T->isSignedIntegerOrEnumerationType()) {
@@ -175,7 +167,7 @@ std::optional<PrimType> Context::classify(QualType T) const {
   if (T->isReferenceType() || T->isPointerType())
     return PT_Ptr;
 
-  if (const auto *AT = dyn_cast<AtomicType>(T))
+  if (const auto *AT = T->getAs<AtomicType>())
     return classify(AT->getValueType());
 
   if (const auto *DT = dyn_cast<DecltypeType>(T))
@@ -216,22 +208,14 @@ bool Context::Run(State &Parent, const Function *Func, APValue &Result) {
   return false;
 }
 
-bool Context::Check(State &Parent, llvm::Expected<bool> &&Flag) {
-  if (Flag)
-    return *Flag;
-  handleAllErrors(Flag.takeError(), [&Parent](ByteCodeGenError &Err) {
-    Parent.FFDiag(Err.getRange().getBegin(),
-                  diag::err_experimental_clang_interp_failed)
-        << Err.getRange();
-  });
-  return false;
-}
-
 // TODO: Virtual bases?
 const CXXMethodDecl *
 Context::getOverridingFunction(const CXXRecordDecl *DynamicDecl,
                                const CXXRecordDecl *StaticDecl,
                                const CXXMethodDecl *InitialFunction) const {
+  assert(DynamicDecl);
+  assert(StaticDecl);
+  assert(InitialFunction);
 
   const CXXRecordDecl *CurRecord = DynamicDecl;
   const CXXMethodDecl *FoundFunction = InitialFunction;
@@ -277,4 +261,37 @@ const Function *Context::getOrCreateFunction(const FunctionDecl *FD) {
   }
 
   return Func;
+}
+
+unsigned Context::collectBaseOffset(const RecordDecl *BaseDecl,
+                                    const RecordDecl *DerivedDecl) const {
+  assert(BaseDecl);
+  assert(DerivedDecl);
+  const auto *FinalDecl = cast<CXXRecordDecl>(BaseDecl);
+  const RecordDecl *CurDecl = DerivedDecl;
+  const Record *CurRecord = P->getOrCreateRecord(CurDecl);
+  assert(CurDecl && FinalDecl);
+
+  unsigned OffsetSum = 0;
+  for (;;) {
+    assert(CurRecord->getNumBases() > 0);
+    // One level up
+    for (const Record::Base &B : CurRecord->bases()) {
+      const auto *BaseDecl = cast<CXXRecordDecl>(B.Decl);
+
+      if (BaseDecl == FinalDecl || BaseDecl->isDerivedFrom(FinalDecl)) {
+        OffsetSum += B.Offset;
+        CurRecord = B.R;
+        CurDecl = BaseDecl;
+        break;
+      }
+    }
+    if (CurDecl == FinalDecl)
+      break;
+
+    // break;
+  }
+
+  assert(OffsetSum > 0);
+  return OffsetSum;
 }

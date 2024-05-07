@@ -101,7 +101,7 @@ class LLDBTest(TestFormat):
         # Example: "OK (skipped=1, expected failures=1)"
         # Example: "FAILED (failures=3)"
         # Example: "OK"
-        result_regex = r"^(?:OK|FAILED)(?: \((.*)\))?$"
+        result_regex = r"^(?:OK|FAILED)(?: \((.*)\))?\r?$"
         results = re.search(result_regex, err, re.MULTILINE)
 
         # If parsing fails mark this test as unresolved.

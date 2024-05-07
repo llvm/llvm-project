@@ -16,8 +16,8 @@
 
 include "mlir/Pass/PassBase.td"
 
-class AbstractResultOptBase<string optExt, string operation> 
-  : Pass<"abstract-result-on-" # optExt # "-opt", operation> {
+def AbstractResultOpt
+  : Pass<"abstract-result"> {
   let summary = "Convert fir.array, fir.box and fir.rec function result to "
                 "function argument";
   let description = [{
@@ -33,14 +33,6 @@ class AbstractResultOptBase<string optExt, string operation>
            "Pass fir.array<T> result as fir.box<fir.array<T>> argument instead"
            " of fir.ref<fir.array<T>>.">
   ];
-}
-
-def AbstractResultOnFuncOpt : AbstractResultOptBase<"func", "mlir::func::FuncOp"> {
-  let constructor = "::fir::createAbstractResultOnFuncOptPass()";
-}
-
-def AbstractResultOnGlobalOpt : AbstractResultOptBase<"global", "fir::GlobalOp"> {
-  let constructor = "::fir::createAbstractResultOnGlobalOptPass()";
 }
 
 def AffineDialectPromotion : Pass<"promote-to-affine", "::mlir::func::FuncOp"> {
@@ -135,7 +127,6 @@ def CharacterConversion : Pass<"character-conversion"> {
     By default the translation is to naively zero-extend or truncate a code
     point to fit the destination size.
   }];
-  let constructor = "::fir::createCharacterConversionPass()";
   let dependentDialects = [ "fir::FIROpsDialect" ];
   let options = [
     Option<"useRuntimeCalls", "use-runtime-calls",
@@ -145,7 +136,7 @@ def CharacterConversion : Pass<"character-conversion"> {
   ];
 }
 
-def CFGConversion : Pass<"cfg-conversion", "::mlir::func::FuncOp"> {
+def CFGConversion : Pass<"cfg-conversion"> {
   let summary = "Convert FIR structured control flow ops to CFG ops.";
   let description = [{
     Transform the `fir.do_loop`, `fir.if`, `fir.iterate_while` and
@@ -154,7 +145,6 @@ def CFGConversion : Pass<"cfg-conversion", "::mlir::func::FuncOp"> {
 
     This pass is required before code gen to the LLVM IR dialect.
   }];
-  let constructor = "::fir::createFirToCfgPass()";
   let dependentDialects = [
     "fir::FIROpsDialect", "mlir::func::FuncDialect"
   ];
@@ -193,14 +183,33 @@ def MemRefDataFlowOpt : Pass<"fir-memref-dataflow-opt", "::mlir::func::FuncOp"> 
 
 // This needs to be a "mlir::ModuleOp" pass, because we are creating debug for
 // the module in this pass.
-def AddDebugFoundation : Pass<"add-debug-foundation", "mlir::ModuleOp"> {
-  let summary = "Add the foundation for debug info";
+def AddDebugInfo : Pass<"add-debug-info", "mlir::ModuleOp"> {
+  let summary = "Add the debug info";
   let description = [{
-    Add the foundation for emitting debug info that can be understood by llvm.
+    Emit debug info that can be understood by llvm.
   }];
-  let constructor = "::fir::createAddDebugFoundationPass()";
+  let constructor = "::fir::createAddDebugInfoPass()";
   let dependentDialects = [
     "fir::FIROpsDialect", "mlir::func::FuncDialect", "mlir::LLVM::LLVMDialect"
+  ];
+  let options = [
+    Option<"debugLevel", "debug-level",
+           "mlir::LLVM::DIEmissionKind",
+           /*default=*/"mlir::LLVM::DIEmissionKind::Full",
+           "debug level",
+           [{::llvm::cl::values(
+            clEnumValN(mlir::LLVM::DIEmissionKind::Full, "Full", "Emit full debug info"),
+            clEnumValN(mlir::LLVM::DIEmissionKind::LineTablesOnly, "LineTablesOnly", "Emit line tables only"),
+            clEnumValN(mlir::LLVM::DIEmissionKind::None, "None", "Emit no debug information")
+          )}]
+           >,
+    Option<"isOptimized", "is-optimized",
+           "bool", /*default=*/"false",
+           "is optimized.">,
+    Option<"inputFilename", "file-name",
+           "std::string",
+           /*default=*/"std::string{}",
+           "name of the input source file">,
   ];
 }
 
@@ -215,7 +224,6 @@ def SimplifyIntrinsics : Pass<"simplify-intrinsics", "mlir::ModuleOp"> {
     simplified function. The simplified function is added to the current module.
     This function can be inlined by a general purpose inlining pass.
   }];
-  let constructor = "::fir::createSimplifyIntrinsicsPass()";
 
   let options = [
     Option<"enableExperimental", "enable-experimental", "bool",
@@ -239,7 +247,6 @@ def MemoryAllocationOpt : Pass<"memory-allocation-opt", "mlir::func::FuncOp"> {
            "std::size_t", /*default=*/"~static_cast<std::size_t>(0)",
            "Set maximum number of elements of an array allocated on the stack.">
   ];
-  let constructor = "::fir::createMemoryAllocationPass()";
 }
 
 def StackArrays : Pass<"stack-arrays", "mlir::ModuleOp"> {
@@ -249,7 +256,6 @@ def StackArrays : Pass<"stack-arrays", "mlir::ModuleOp"> {
     allocations.
   }];
   let dependentDialects = [ "fir::FIROpsDialect" ];
-  let constructor = "::fir::createStackArraysPass()";
 }
 
 def AddAliasTags : Pass<"fir-add-alias-tags", "mlir::ModuleOp"> {
@@ -277,7 +283,6 @@ def SimplifyRegionLite : Pass<"simplify-region-lite", "mlir::ModuleOp"> {
   let description = [{
     Run region DCE and erase unreachable blocks in regions.
   }];
-  let constructor = "::fir::createSimplifyRegionLitePass()";
 }
 
 def AlgebraicSimplification : Pass<"flang-algebraic-simplification"> {
@@ -293,14 +298,13 @@ def AlgebraicSimplification : Pass<"flang-algebraic-simplification"> {
   let constructor = "::fir::createAlgebraicSimplificationPass()";
 }
 
-def PolymorphicOpConversion : Pass<"fir-polymorphic-op", "::mlir::func::FuncOp"> {
+def PolymorphicOpConversion : Pass<"fir-polymorphic-op", "mlir::ModuleOp"> {
   let summary =
     "Simplify operations on polymorphic types";
   let description = [{
     This pass breaks up the lowering of operations on polymorphic types by 
     introducing an intermediate FIR level that simplifies code geneation. 
   }];
-  let constructor = "::fir::createPolymorphicOpConversionPass()";
   let dependentDialects = [
     "fir::FIROpsDialect", "mlir::func::FuncDialect"
   ];
@@ -314,7 +318,6 @@ def LoopVersioning : Pass<"loop-versioning", "mlir::func::FuncOp"> {
     an array has element sized stride. The element sizes stride allows some
     loops to be vectorized as well as other loop optimizations.
   }];
-  let constructor = "::fir::createLoopVersioningPass()";
   let dependentDialects = [ "fir::FIROpsDialect" ];
 }
 

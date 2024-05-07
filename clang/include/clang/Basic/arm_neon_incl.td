@@ -1,4 +1,4 @@
-//===--- arm_neon_incl.td - ARM NEON compiler interface ------------------------===//
+//===--- arm_neon_incl.td - ARM NEON compiler interface -------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.

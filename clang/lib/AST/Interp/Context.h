@@ -75,6 +75,7 @@ public:
 
   /// Classifies an expression.
   std::optional<PrimType> classify(const Expr *E) const {
+    assert(E);
     if (E->isGLValue()) {
       if (E->getType()->isFunctionType())
         return PT_FnPtr;
@@ -103,12 +104,12 @@ public:
   /// Returns the program. This is only needed for unittests.
   Program &getProgram() const { return *P.get(); }
 
+  unsigned collectBaseOffset(const RecordDecl *BaseDecl,
+                             const RecordDecl *DerivedDecl) const;
+
 private:
   /// Runs a function.
   bool Run(State &Parent, const Function *Func, APValue &Result);
-
-  /// Checks a result from the interpreter.
-  bool Check(State &Parent, llvm::Expected<bool> &&R);
 
   /// Current compilation context.
   ASTContext &Ctx;

@@ -465,7 +465,7 @@ std::vector<FileCoverageSummary> CoverageReport::prepareFileReports(
     S = heavyweight_hardware_concurrency(Files.size());
     S.Limit = true;
   }
-  ThreadPool Pool(S);
+  DefaultThreadPool Pool(S);
 
   std::vector<FileCoverageSummary> FileReports;
   FileReports.reserve(Files.size());
@@ -580,7 +580,7 @@ Expected<FileCoverageSummary> DirectoryCoverageReport::prepareDirectoryReports(
     PoolS = heavyweight_hardware_concurrency(Files.size());
     PoolS.Limit = true;
   }
-  ThreadPool Pool(PoolS);
+  DefaultThreadPool Pool(PoolS);
 
   TPool = &Pool;
   LCPStack = {RootLCP};

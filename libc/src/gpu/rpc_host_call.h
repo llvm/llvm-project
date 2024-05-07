@@ -17,4 +17,4 @@ void rpc_host_call(void *fn, void *buffer, size_t size);
 
 } // namespace LIBC_NAMESPACE
 
-#endif // LLVM_LIBC_SRC_GPU_RPC_H_HOST_CALL
+#endif // LLVM_LIBC_SRC_GPU_RPC_HOST_CALL_H

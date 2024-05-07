@@ -1,8 +1,8 @@
 // RUN: %clang_cc1 -std=c++23 -fsyntax-only -verify=expected,since-cxx20,since-cxx14,cxx20_23,cxx23    %s
 // RUN: %clang_cc1 -std=c++23 -fsyntax-only -verify=expected,since-cxx20,since-cxx14,cxx20_23,cxx23    %s -fdelayed-template-parsing -DDELAYED_TEMPLATE_PARSING
 
-// RUN: %clang_cc1 -std=c++20 -fsyntax-only -verify=expected,since-cxx20,since-cxx14,cxx14_20,cxx20_23 %s
-// RUN: %clang_cc1 -std=c++20 -fsyntax-only -verify=expected,since-cxx20,since-cxx14,cxx14_20,cxx20_23 %s -fdelayed-template-parsing -DDELAYED_TEMPLATE_PARSING
+// RUN: %clang_cc1 -std=c++20 -fsyntax-only -verify=expected,cxx20,since-cxx20,since-cxx14,cxx14_20,cxx20_23 %s
+// RUN: %clang_cc1 -std=c++20 -fsyntax-only -verify=expected,cxx20,since-cxx20,since-cxx14,cxx14_20,cxx20_23 %s -fdelayed-template-parsing -DDELAYED_TEMPLATE_PARSING
 
 // RUN: %clang_cc1 -std=c++14 -fsyntax-only -verify=expected,since-cxx14,cxx14_20,cxx14    %s
 // RUN: %clang_cc1 -std=c++14 -fsyntax-only -verify=expected,since-cxx14,cxx14_20,cxx14    %s -fdelayed-template-parsing -DDELAYED_TEMPLATE_PARSING
@@ -237,6 +237,24 @@ namespace Templates {
     int (S::*(*p)())(double) = f;
     int (S::*(*q)())(double) = f<S, double>;
   }
+
+  template<typename T>
+  struct MemberSpecialization {
+    auto f();
+    template<typename U> auto f(U);
+    template<typename U> auto *f(U);
+  };
+
+  template<>
+  auto MemberSpecialization<int>::f();
+
+  template<>
+  template<typename U>
+  auto MemberSpecialization<int>::f(U);
+
+  template<>
+  template<typename U>
+  auto *MemberSpecialization<int>::f(U);
 }
 
 auto fwd_decl_using();
@@ -299,8 +317,8 @@ namespace Constexpr {
     constexpr int q = Y<int>().f(); // expected-error {{must be initialized by a constant expression}} expected-note {{in call to 'Y<int>().f()'}}
   }
   struct NonLiteral { ~NonLiteral(); } nl; // cxx14-note {{user-provided destructor}}
-  // cxx20_23-note@-1 {{'NonLiteral' is not literal because its destructor is not constexpr}}
-  constexpr auto f2(int n) { return nl; } // expected-error {{return type 'struct NonLiteral' is not a literal type}}
+  // cxx20-note@-1 {{'NonLiteral' is not literal because its destructor is not constexpr}}
+  constexpr auto f2(int n) { return nl; } // cxx14_20-error {{constexpr function's return type 'struct NonLiteral' is not a literal type}}
 }
 
 // It's not really clear whether these are valid, but this matches g++.

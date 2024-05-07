@@ -597,7 +597,7 @@ define <vscale x 4 x i32> @combine_mul_add_imm1(<vscale x 4 x i32> %a, <vscale x
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
 ; CHECK-NEXT:    vmadd.vv v8, v10, v10
 ; CHECK-NEXT:    ret
-  %x = add <vscale x 4 x i32> %a, shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 1, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
+  %x = add <vscale x 4 x i32> %a, splat (i32 1)
   %y = mul <vscale x 4 x i32> %x, %b
   ret <vscale x 4 x i32> %y
 }
@@ -608,7 +608,7 @@ define <vscale x 4 x i32> @combine_mul_add_imm1_2(<vscale x 4 x i32> %a, <vscale
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
 ; CHECK-NEXT:    vmadd.vv v8, v10, v10
 ; CHECK-NEXT:    ret
-  %x = add <vscale x 4 x i32> %a, shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 1, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
+  %x = add <vscale x 4 x i32> %a, splat (i32 1)
   %y = mul <vscale x 4 x i32> %b, %x
   ret <vscale x 4 x i32> %y
 }

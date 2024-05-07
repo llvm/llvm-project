@@ -14,10 +14,8 @@
 #ifndef BOLT_CORE_MCPLUS_H
 #define BOLT_CORE_MCPLUS_H
 
-#include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
-#include "llvm/Support/Casting.h"
 #include <vector>
 
 namespace llvm {
@@ -73,6 +71,7 @@ public:
     kOffset,              /// Offset in the function.
     kLabel,               /// MCSymbol pointing to this instruction.
     kSize,                /// Size of the instruction.
+    kDynamicBranch,       /// Jit instruction patched at runtime.
     kGeneric              /// First generic annotation.
   };
 

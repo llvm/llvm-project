@@ -12,7 +12,7 @@
 //
 // CHECK-ROUND-LABEL: func.func @sparse_expand(
 // CHECK-ROUND-SAME:  %[[A:.*]]: tensor<100xf64, #sparse{{[0-9]*}}>) -> tensor<10x10xf64, #sparse{{[0-9]*}}>
-//      CHECK-ROUND:  %[[E:.*]] = tensor.expand_shape %[[A]] {{\[\[}}0, 1]] : tensor<100xf64, #sparse{{[0-9]*}}> into tensor<10x10xf64, #sparse{{[0-9]*}}>
+//      CHECK-ROUND:  %[[E:.*]] = tensor.expand_shape %[[A]] {{\[\[}}0, 1]] output_shape [10, 10] : tensor<100xf64, #sparse{{[0-9]*}}> into tensor<10x10xf64, #sparse{{[0-9]*}}>
 //      CHECK-ROUND:  return %[[E]] : tensor<10x10xf64, #sparse{{[0-9]*}}>
 //
 // CHECK-LABEL:   func.func @sparse_expand(
@@ -31,7 +31,7 @@
 // CHECK:           %[[SV:.*]] = memref.load %[[V]]{{\[}}%[[I]]] : memref<?xf64>
 // CHECK:           %[[DI0:.*]] = arith.divui %[[SI]], %[[C10]] : index
 // CHECK:           %[[DI1:.*]] = arith.remui %[[SI]], %[[C10]] : index
-// CHECK:           %[[NT:.*]] = sparse_tensor.insert %[[SV]] into %[[R]]{{\[}}%[[DI0]], %[[DI1]]]
+// CHECK:           %[[NT:.*]] = tensor.insert %[[SV]] into %[[R]]{{\[}}%[[DI0]], %[[DI1]]]
 // CHECK:           scf.yield %[[NT:.*]]
 // CHECK:         }
 // CHECK:         %[[NT1:.*]] = sparse_tensor.load %[[RET]] hasInserts
@@ -39,7 +39,7 @@
 // CHECK:         return %[[NT1]] : tensor<10x10xf64, #sparse{{[0-9]*}}>
 //
 func.func @sparse_expand(%arg0: tensor<100xf64, #SparseVector>) -> tensor<10x10xf64, #SparseMatrix> {
-  %0 = tensor.expand_shape %arg0 [[0, 1]] :
+  %0 = tensor.expand_shape %arg0 [[0, 1]] output_shape [10, 10] :
     tensor<100xf64, #SparseVector> into tensor<10x10xf64, #SparseMatrix>
   return %0 : tensor<10x10xf64, #SparseMatrix>
 }
@@ -75,7 +75,7 @@ func.func @sparse_expand(%arg0: tensor<100xf64, #SparseVector>) -> tensor<10x10x
 // CHECK:             %[[SV:.*]] = memref.load %[[V]]{{\[}}%[[J]]] : memref<?xf64>
 // CHECK:             %[[T:.*]] = arith.muli %[[SI0]], %[[C10]] : index
 // CHECK:             %[[DI:.*]] = arith.addi %[[T]], %[[SI1]] : index
-// CHECK:             %[[R1:.*]] = sparse_tensor.insert %[[SV]] into %[[A1]]{{\[}}%[[DI]]]
+// CHECK:             %[[R1:.*]] = tensor.insert %[[SV]] into %[[A1]]{{\[}}%[[DI]]]
 // CHECK              scf.yield %[[R1]]
 // CHECK            }
 // CHECK            scf.yield %[[RET_1]]
@@ -94,8 +94,8 @@ func.func @sparse_collapse(%arg0: tensor<10x10xf64, #SparseMatrix>) -> tensor<10
 // roundtrip:
 //
 // CHECK-ROUND-LABEL: func.func @dynamic_sparse_expand(
-// CHECK-ROUND-SAME:  %[[A:.*]]: tensor<?xf64, #sparse{{[0-9]*}}>) -> tensor<?x10xf64, #sparse{{[0-9]*}}>
-//      CHECK-ROUND:  %[[E:.*]] = tensor.expand_shape %[[A]] {{\[\[}}0, 1]] : tensor<?xf64, #sparse{{[0-9]*}}> into tensor<?x10xf64, #sparse{{[0-9]*}}>
+// CHECK-ROUND-SAME:  %[[A:.*]]: tensor<?xf64, #sparse{{[0-9]*}}>, %[[SZ0:.*]]: index) -> tensor<?x10xf64, #sparse{{[0-9]*}}>
+//      CHECK-ROUND:  %[[E:.*]] = tensor.expand_shape %[[A]] {{\[\[}}0, 1]] output_shape [%[[SZ0]], 10] : tensor<?xf64, #sparse{{[0-9]*}}> into tensor<?x10xf64, #sparse{{[0-9]*}}>
 //      CHECK-ROUND:  return %[[E]] : tensor<?x10xf64, #sparse{{[0-9]*}}>
 //
 // CHECK-LABEL:   func.func @dynamic_sparse_expand(
@@ -120,15 +120,15 @@ func.func @sparse_collapse(%arg0: tensor<10x10xf64, #SparseMatrix>) -> tensor<10
 // CHECK:           %[[T3:.*]] = arith.remui %[[SI]], %[[T2]] : index
 // CHECK:           %[[T4:.*]] = arith.divui %[[T2]], %[[C10]] : index
 // CHECK:           %[[DI1:.*]] = arith.divui %[[T3]], %[[T4]] : index
-// CHECK:           %[[NT:.*]] = sparse_tensor.insert %[[SV]] into %[[R]]{{\[}}%[[DI0]], %[[DI1]]]
+// CHECK:           %[[NT:.*]] = tensor.insert %[[SV]] into %[[R]]{{\[}}%[[DI0]], %[[DI1]]]
 // CHECK:           scf.yield %[[NT]]
 // CHECK:         }
 // CHECK:         %[[NT1:.*]] = sparse_tensor.load %[[RET]] hasInserts
 // CHECK-NOT:     sparse_tensor.convert
 // CHECK:         return %[[NT1]] : tensor<?x10xf64, #sparse{{[0-9]*}}>
 //
-func.func @dynamic_sparse_expand(%arg0: tensor<?xf64, #SparseVector>) -> tensor<?x10xf64, #SparseMatrix> {
-  %0 = tensor.expand_shape %arg0 [[0, 1]] :
+func.func @dynamic_sparse_expand(%arg0: tensor<?xf64, #SparseVector>, %sz0: index) -> tensor<?x10xf64, #SparseMatrix> {
+  %0 = tensor.expand_shape %arg0 [[0, 1]] output_shape [%sz0, 10] :
     tensor<?xf64, #SparseVector> into tensor<?x10xf64, #SparseMatrix>
   return %0 : tensor<?x10xf64, #SparseMatrix>
 }
@@ -169,7 +169,7 @@ func.func @dynamic_sparse_expand(%arg0: tensor<?xf64, #SparseVector>) -> tensor<
 // CHECK:             %[[T3:.*]] = arith.divui %[[T1]], %[[SD1]] : index
 // CHECK:             %[[T4:.*]] = arith.muli %[[SI1]], %[[T3]] : index
 // CHECK:             %[[DI:.*]] = arith.addi %[[T2]], %[[T4]] : index
-// CHECK:             %[[NT:.*]] = sparse_tensor.insert %[[SV]] into %[[R1]]{{\[}}%[[DI]]]
+// CHECK:             %[[NT:.*]] = tensor.insert %[[SV]] into %[[R1]]{{\[}}%[[DI]]]
 // CHECK              scf.yield %[[NT]]
 // CHECK            }
 // CHECK            scf.yield %[[RET_1]]

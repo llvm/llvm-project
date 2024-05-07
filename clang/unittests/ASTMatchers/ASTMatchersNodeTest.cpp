@@ -2321,6 +2321,8 @@ TEST_P(ASTMatchersTest, LambdaCaptureTest_BindsToCaptureOfVarDecl) {
       matches("int main() { int cc; auto f = [=](){ return cc; }; }", matcher));
   EXPECT_TRUE(
       matches("int main() { int cc; auto f = [&](){ return cc; }; }", matcher));
+  EXPECT_TRUE(matches(
+      "void f(int a) { int cc[a]; auto f = [&](){ return cc;}; }", matcher));
 }
 
 TEST_P(ASTMatchersTest, LambdaCaptureTest_BindsToCaptureWithInitializer) {
@@ -2754,7 +2756,7 @@ TEST(MatchFinderAPI, MatchesDynamic) {
 static std::vector<TestClangConfig> allTestClangConfigs() {
   std::vector<TestClangConfig> all_configs;
   for (TestLanguage lang : {Lang_C89, Lang_C99, Lang_CXX03, Lang_CXX11,
-                            Lang_CXX14, Lang_CXX17, Lang_CXX20}) {
+                            Lang_CXX14, Lang_CXX17, Lang_CXX20, Lang_CXX23}) {
     TestClangConfig config;
     config.Language = lang;
 

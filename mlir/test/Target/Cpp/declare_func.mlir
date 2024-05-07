@@ -14,3 +14,11 @@ emitc.declare_func @foo
 emitc.func @foo(%arg0: i32) -> i32 attributes {specifiers = ["static","inline"]} {
     emitc.return %arg0 : i32
 }
+
+
+// CHECK: void array_arg(int32_t [[V2:[^ ]*]][3]);
+emitc.declare_func @array_arg
+// CHECK: void array_arg(int32_t  [[V2:[^ ]*]][3]) {
+emitc.func @array_arg(%arg0: !emitc.array<3xi32>) {
+    emitc.return
+}

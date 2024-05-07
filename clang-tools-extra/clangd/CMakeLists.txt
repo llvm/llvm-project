@@ -182,6 +182,7 @@ target_link_libraries(clangDaemon
   clangIncludeCleaner
   clangPseudo
   clangTidy
+  clangTidyUtils
 
   clangdSupport
   )

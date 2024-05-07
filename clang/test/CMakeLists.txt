@@ -9,6 +9,7 @@ llvm_canonicalize_cmake_booleans(
   CLANG_ENABLE_STATIC_ANALYZER
   CLANG_PLUGIN_SUPPORT
   CLANG_SPAWN_CC1
+  CLANG_ENABLE_CIR
   ENABLE_BACKTRACES
   LLVM_ENABLE_ZLIB
   LLVM_ENABLE_ZSTD
@@ -71,6 +72,7 @@ list(APPEND CLANG_TEST_DEPS
   clang-rename
   clang-refactor
   clang-diff
+  clang-installapi
   clang-scan-deps
   clang-linker-wrapper
   clang-offload-bundler
@@ -135,6 +137,7 @@ if( NOT CLANG_BUILT_STANDALONE )
     llvm-strip
     llvm-symbolizer
     llvm-windres
+    obj2yaml
     opt
     split-file
     yaml2obj

@@ -15,9 +15,10 @@
 #ifndef LLVM_CLANG_AST_INTERP_FUNCTION_H
 #define LLVM_CLANG_AST_INTERP_FUNCTION_H
 
-#include "Source.h"
 #include "Descriptor.h"
+#include "Source.h"
 #include "clang/AST/ASTLambda.h"
+#include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -107,6 +108,8 @@ public:
 
   /// Checks if the first argument is a RVO pointer.
   bool hasRVO() const { return HasRVO; }
+
+  bool hasNonNullAttr() const { return getDecl()->hasAttr<NonNullAttr>(); }
 
   /// Range over the scope blocks.
   llvm::iterator_range<llvm::SmallVector<Scope, 2>::const_iterator>

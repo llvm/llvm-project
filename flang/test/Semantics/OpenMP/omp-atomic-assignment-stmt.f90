@@ -1,3 +1,5 @@
+! REQUIRES: openmp_runtime
+
 ! RUN: %python %S/../test_errors.py %s %flang_fc1 -fopenmp
 ! Semantic checks for various assignments related to atomic constructs
 

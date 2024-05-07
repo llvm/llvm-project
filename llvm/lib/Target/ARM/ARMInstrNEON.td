@@ -7362,8 +7362,10 @@ let PostEncoderMethod = "NEONThumb2DataIPostEncoder",
 }
 
 let Predicates = [HasV8, HasAES] in {
+let isCommutable = 1 in {
 def AESD : AES2Op<"d", 0, 1, int_arm_neon_aesd>;
 def AESE : AES2Op<"e", 0, 0, int_arm_neon_aese>;
+}
 def AESIMC : AES<"imc", 1, 1, int_arm_neon_aesimc>;
 def AESMC : AES<"mc", 1, 0, int_arm_neon_aesmc>;
 }

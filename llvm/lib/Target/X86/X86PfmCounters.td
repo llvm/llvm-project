@@ -24,7 +24,8 @@ defvar DefaultIntelPfmValidationCounters = [
   PfmValidationCounter<L1ICacheLoadMiss, "L1-ICACHE-LOAD-MISSES">,
   PfmValidationCounter<DataTLBLoadMiss, "DTLB_LOAD_MISSES:MISS_CAUSES_A_WALK">,
   PfmValidationCounter<DataTLBStoreMiss, "DTLB_STORE_MISSES:MISS_CAUSES_A_WALK">,
-  PfmValidationCounter<InstructionTLBLoadMiss, "ITLB_MISSES:MISS_CAUSES_A_WALK">
+  PfmValidationCounter<InstructionTLBLoadMiss, "ITLB_MISSES:MISS_CAUSES_A_WALK">,
+  PfmValidationCounter<BranchPredictionMiss, "BRANCH-MISSES">
 ];
 
 def PentiumPfmCounters : ProcPfmCounters {
@@ -203,6 +204,22 @@ def : PfmCountersBinding<"icelake-server", IceLakePfmCounters>;
 def : PfmCountersBinding<"rocketlake", IceLakePfmCounters>;
 def : PfmCountersBinding<"tigerlake", IceLakePfmCounters>;
 
+def AlderLakePfmCounters : ProcPfmCounters {
+  let CycleCounter = UnhaltedCoreCyclesPfmCounter;
+  let UopsCounter = UopsIssuedPfmCounter;
+  let IssueCounters = [
+    PfmIssueCounter<"ADLPPort00", "uops_dispatched_port:port_0">,
+    PfmIssueCounter<"ADLPPort01", "uops_dispatched_port:port_1">,
+    PfmIssueCounter<"ADLPPort02_03_10", "uops_dispatched_port:port_2_3_10">,
+    PfmIssueCounter<"ADLPPort04_09", "uops_dispatched_port:port_4_9">,
+    PfmIssueCounter<"ADLPPort05_11", "uops_dispatched_port:port_5_11">,
+    PfmIssueCounter<"ADLPPort06", "uops_dispatched_port:port_6">,
+    PfmIssueCounter<"ADLPPort07_08", "uops_dispatched_port:port_7_8">
+  ];
+  let ValidationCounters = DefaultIntelPfmValidationCounters;
+}
+def : PfmCountersBinding<"alderlake", AlderLakePfmCounters>;
+
 // AMD X86 Counters.
 defvar DefaultAMDPfmValidationCounters = [
   PfmValidationCounter<InstructionRetired, "RETIRED_INSTRUCTIONS">,
@@ -210,7 +227,8 @@ defvar DefaultAMDPfmValidationCounters = [
   PfmValidationCounter<L1DCacheStoreMiss, "L1-DCACHE-STORE-MISSES">,
   PfmValidationCounter<L1ICacheLoadMiss, "L1-ICACHE-LOAD-MISSES">,
   PfmValidationCounter<DataTLBLoadMiss, "DTLB-LOAD-MISSES">,
-  PfmValidationCounter<InstructionTLBLoadMiss, "ITLB-LOAD-MISSES">
+  PfmValidationCounter<InstructionTLBLoadMiss, "ITLB-LOAD-MISSES">,
+  PfmValidationCounter<BranchPredictionMiss, "BRANCH-MISSES">
 ];
 
 // Set basic counters for AMD cpus that we know libpfm4 supports.

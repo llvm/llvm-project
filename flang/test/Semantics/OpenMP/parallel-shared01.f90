@@ -10,7 +10,7 @@ program omp_parallel_shared
 
   type(my_type) :: my_var
 
-  !ERROR: A variable that is part of another variable (as an array or structure element) cannot appear in a PRIVATE or SHARED clause
+  !ERROR: A variable that is part of another variable (as an array or structure element) cannot appear in a SHARED clause
   !$omp parallel shared(my_var%array)
   do i = 1, 10
     c(i) = a(i) + b(i) +  k

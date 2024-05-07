@@ -1246,11 +1246,11 @@ static void analyzeArguments(TargetLowering::CallLoweringInfo *CLI,
   ArrayRef<MCPhysReg> RegList8;
   ArrayRef<MCPhysReg> RegList16;
   if (Tiny) {
-    RegList8 = ArrayRef(RegList8Tiny, std::size(RegList8Tiny));
-    RegList16 = ArrayRef(RegList16Tiny, std::size(RegList16Tiny));
+    RegList8 = ArrayRef(RegList8Tiny);
+    RegList16 = ArrayRef(RegList16Tiny);
   } else {
-    RegList8 = ArrayRef(RegList8AVR, std::size(RegList8AVR));
-    RegList16 = ArrayRef(RegList16AVR, std::size(RegList16AVR));
+    RegList8 = ArrayRef(RegList8AVR);
+    RegList16 = ArrayRef(RegList16AVR);
   }
 
   unsigned NumArgs = Args.size();

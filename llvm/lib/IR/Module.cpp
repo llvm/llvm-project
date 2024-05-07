@@ -54,6 +54,8 @@
 
 using namespace llvm;
 
+extern cl::opt<bool> UseNewDbgInfoFormat;
+
 //===----------------------------------------------------------------------===//
 // Methods to implement the globals and functions lists.
 //
@@ -72,7 +74,7 @@ template class llvm::SymbolTableListTraits<GlobalIFunc>;
 Module::Module(StringRef MID, LLVMContext &C)
     : Context(C), ValSymTab(std::make_unique<ValueSymbolTable>(-1)),
       ModuleID(std::string(MID)), SourceFileName(std::string(MID)), DL(""),
-      IsNewDbgInfoFormat(false) {
+      IsNewDbgInfoFormat(UseNewDbgInfoFormat) {
   Context.addModule(this);
 }
 
@@ -83,6 +85,28 @@ Module::~Module() {
   FunctionList.clear();
   AliasList.clear();
   IFuncList.clear();
+}
+
+void Module::removeDebugIntrinsicDeclarations() {
+  auto *DeclareIntrinsicFn =
+      Intrinsic::getDeclaration(this, Intrinsic::dbg_declare);
+  assert((!isMaterialized() || DeclareIntrinsicFn->hasZeroLiveUses()) &&
+         "Debug declare intrinsic should have had uses removed.");
+  DeclareIntrinsicFn->eraseFromParent();
+  auto *ValueIntrinsicFn =
+      Intrinsic::getDeclaration(this, Intrinsic::dbg_value);
+  assert((!isMaterialized() || ValueIntrinsicFn->hasZeroLiveUses()) &&
+         "Debug value intrinsic should have had uses removed.");
+  ValueIntrinsicFn->eraseFromParent();
+  auto *AssignIntrinsicFn =
+      Intrinsic::getDeclaration(this, Intrinsic::dbg_assign);
+  assert((!isMaterialized() || AssignIntrinsicFn->hasZeroLiveUses()) &&
+         "Debug assign intrinsic should have had uses removed.");
+  AssignIntrinsicFn->eraseFromParent();
+  auto *LabelntrinsicFn = Intrinsic::getDeclaration(this, Intrinsic::dbg_label);
+  assert((!isMaterialized() || LabelntrinsicFn->hasZeroLiveUses()) &&
+         "Debug label intrinsic should have had uses removed.");
+  LabelntrinsicFn->eraseFromParent();
 }
 
 std::unique_ptr<RandomNumberGenerator>
@@ -149,10 +173,9 @@ FunctionCallee Module::getOrInsertFunction(StringRef Name, FunctionType *Ty,
   if (!F) {
     // Nope, add it
     Function *New = Function::Create(Ty, GlobalVariable::ExternalLinkage,
-                                     DL.getProgramAddressSpace(), Name);
+                                     DL.getProgramAddressSpace(), Name, this);
     if (!New->isIntrinsic())       // Intrinsics get attrs set on construction
       New->setAttributes(AttributeList);
-    FunctionList.push_back(New);
     return {Ty, New}; // Return the new prototype.
   }
 

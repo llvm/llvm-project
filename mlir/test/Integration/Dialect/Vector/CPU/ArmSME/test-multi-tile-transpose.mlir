@@ -1,10 +1,4 @@
-// RUN: mlir-opt %s -arm-sme-vector-legalization -cse -canonicalize \
-// RUN:   -convert-vector-to-arm-sme -allocate-arm-sme-tiles -convert-arm-sme-to-scf \
-// RUN:   -enable-arm-streaming="streaming-mode=streaming-locally za-mode=new-za only-if-required-by-ops" \
-// RUN:   -convert-vector-to-scf -cse -arm-sve-legalize-vector-storage \
-// RUN:   -convert-arm-sme-to-llvm \
-// RUN:   -convert-vector-to-llvm=enable-arm-sve \
-// RUN:   -cse -canonicalize -test-lower-to-llvm | \
+// RUN: mlir-opt %s -test-lower-to-arm-sme -test-lower-to-llvm | \
 // RUN: %mcr_aarch64_cmd \
 // RUN:   -e=main -entry-point-result=void \
 // RUN:   -march=aarch64 -mattr="+sve,+sme" \
@@ -52,12 +46,12 @@ func.func @testTransposedReadWithMask(%maskRows: index, %maskCols: index) {
   vector.transfer_write %readTransposed, %outDyn[%c0, %c0] {in_bounds = [true, true]} : vector<[16]x[4]xf32>, memref<?x?xf32>
 
   /// Print the input memref.
-  vector.print str "Input memref:"
+  vector.print str "Input memref:\n"
   %inUnranked = memref.cast %inDyn : memref<?x?xf32> to memref<*xf32>
   call @printMemrefF32(%inUnranked) : (memref<*xf32>) -> ()
 
   /// Print the result memref.
-  vector.print str "Masked transposed result:"
+  vector.print str "Masked transposed result:\n"
   %outUnranked = memref.cast %outDyn : memref<?x?xf32> to memref<*xf32>
   call @printMemrefF32(%outUnranked) : (memref<*xf32>) -> ()
 
@@ -90,12 +84,12 @@ func.func @testTransposedWriteWithMask(%maskRows: index, %maskCols: index) {
     : vector<[16]x[4]xf32>, memref<?x?xf32>
 
   /// Print the input memref.
-  vector.print str "Input memref:"
+  vector.print str "Input memref:\n"
   %inUnranked = memref.cast %inDyn : memref<?x?xf32> to memref<*xf32>
   call @printMemrefF32(%inUnranked) : (memref<*xf32>) -> ()
 
   /// Print the result memref.
-  vector.print str "Masked transposed result:"
+  vector.print str "Masked transposed result:\n"
   %outUnranked = memref.cast %outDyn : memref<?x?xf32> to memref<*xf32>
   call @printMemrefF32(%outUnranked) : (memref<*xf32>) -> ()
 

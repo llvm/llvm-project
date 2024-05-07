@@ -90,7 +90,7 @@ protected:
 /// class has value-type semantics and is just a simple wrapper around a
 /// ValueImpl that is either owner by a block(in the case of a BlockArgument) or
 /// an Operation(in the case of an OpResult).
-/// As most IR construct, this isn't const-correct, but we keep method
+/// As most IR constructs, this isn't const-correct, but we keep method
 /// consistent and as such method that immediately modify this Value aren't
 /// marked `const` (include modifying the Value use-list).
 class Value {
@@ -98,21 +98,25 @@ public:
   constexpr Value(detail::ValueImpl *impl = nullptr) : impl(impl) {}
 
   template <typename U>
+  [[deprecated("Use mlir::isa<U>() instead")]]
   bool isa() const {
     return llvm::isa<U>(*this);
   }
 
   template <typename U>
+  [[deprecated("Use mlir::dyn_cast<U>() instead")]]
   U dyn_cast() const {
     return llvm::dyn_cast<U>(*this);
   }
 
   template <typename U>
+  [[deprecated("Use mlir::dyn_cast_or_null<U>() instead")]]
   U dyn_cast_or_null() const {
-    return llvm::dyn_cast_if_present<U>(*this);
+    return llvm::dyn_cast_or_null<U>(*this);
   }
 
   template <typename U>
+  [[deprecated("Use mlir::cast<U>() instead")]]
   U cast() const {
     return llvm::cast<U>(*this);
   }

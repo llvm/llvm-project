@@ -23,6 +23,7 @@
 #include "flang/Runtime/matmul-transpose.h"
 #include "terminator.h"
 #include "tools.h"
+#include "flang/Common/optional.h"
 #include "flang/Runtime/c-or-cpp.h"
 #include "flang/Runtime/cpp-type.h"
 #include "flang/Runtime/descriptor.h"
@@ -96,8 +97,8 @@ template <TypeCategory RCAT, int RKIND, typename XT, typename YT>
 inline static RT_API_ATTRS void MatrixTransposedTimesMatrixHelper(
     CppTypeFor<RCAT, RKIND> *RESTRICT product, SubscriptValue rows,
     SubscriptValue cols, const XT *RESTRICT x, const YT *RESTRICT y,
-    SubscriptValue n, std::optional<std::size_t> xColumnByteStride,
-    std::optional<std::size_t> yColumnByteStride) {
+    SubscriptValue n, Fortran::common::optional<std::size_t> xColumnByteStride,
+    Fortran::common::optional<std::size_t> yColumnByteStride) {
   if (!xColumnByteStride) {
     if (!yColumnByteStride) {
       MatrixTransposedTimesMatrix<RCAT, RKIND, XT, YT, false, false>(
@@ -163,7 +164,7 @@ template <TypeCategory RCAT, int RKIND, typename XT, typename YT>
 inline static RT_API_ATTRS void MatrixTransposedTimesVectorHelper(
     CppTypeFor<RCAT, RKIND> *RESTRICT product, SubscriptValue rows,
     SubscriptValue n, const XT *RESTRICT x, const YT *RESTRICT y,
-    std::optional<std::size_t> xColumnByteStride) {
+    Fortran::common::optional<std::size_t> xColumnByteStride) {
   if (!xColumnByteStride) {
     MatrixTransposedTimesVector<RCAT, RKIND, XT, YT, false>(
         product, rows, n, x, y);
@@ -229,7 +230,7 @@ inline static RT_API_ATTRS void DoMatmulTranspose(
         (IS_ALLOCATING || result.IsContiguous())) {
       // Contiguous numeric matrices (maybe with columns
       // separated by a stride).
-      std::optional<std::size_t> xColumnByteStride;
+      Fortran::common::optional<std::size_t> xColumnByteStride;
       if (!x.IsContiguous()) {
         // X's columns are strided.
         SubscriptValue xAt[2]{};
@@ -237,7 +238,7 @@ inline static RT_API_ATTRS void DoMatmulTranspose(
         xAt[1]++;
         xColumnByteStride = x.SubscriptsToByteOffset(xAt);
       }
-      std::optional<std::size_t> yColumnByteStride;
+      Fortran::common::optional<std::size_t> yColumnByteStride;
       if (!y.IsContiguous()) {
         // Y's columns are strided.
         SubscriptValue yAt[2]{};

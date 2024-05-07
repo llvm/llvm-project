@@ -806,6 +806,12 @@ enum Feat00Flags : uint32_t {
   Kernel = 0x40000000,
 };
 
+enum class Arm64ECThunkType : uint8_t {
+  GuestExit = 0,
+  Entry = 1,
+  Exit = 4,
+};
+
 inline bool isReservedSectionNumber(int32_t SectionNumber) {
   return SectionNumber <= 0;
 }

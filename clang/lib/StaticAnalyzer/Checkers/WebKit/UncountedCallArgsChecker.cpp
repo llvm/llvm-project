@@ -53,6 +53,13 @@ public:
       bool shouldVisitTemplateInstantiations() const { return true; }
       bool shouldVisitImplicitCode() const { return false; }
 
+      bool TraverseClassTemplateDecl(ClassTemplateDecl *Decl) {
+        if (isRefType(safeGetName(Decl)))
+          return true;
+        return RecursiveASTVisitor<LocalVisitor>::TraverseClassTemplateDecl(
+            Decl);
+      }
+
       bool VisitCallExpr(const CallExpr *CE) {
         Checker->visitCallExpr(CE);
         return true;
@@ -73,6 +80,11 @@ public:
       unsigned ArgIdx = isa<CXXOperatorCallExpr>(CE) && isa_and_nonnull<CXXMethodDecl>(F);
 
       if (auto *MemberCallExpr = dyn_cast<CXXMemberCallExpr>(CE)) {
+        if (auto *MD = MemberCallExpr->getMethodDecl()) {
+          auto name = safeGetName(MD);
+          if (name == "ref" || name == "deref")
+            return;
+        }
         auto *E = MemberCallExpr->getImplicitObjectArgument();
         QualType ArgType = MemberCallExpr->getObjectType();
         std::optional<bool> IsUncounted =
@@ -165,6 +177,9 @@ public:
     if (!Callee)
       return false;
 
+    if (isMethodOnWTFContainerType(Callee))
+      return true;
+
     auto overloadedOperatorType = Callee->getOverloadedOperator();
     if (overloadedOperatorType == OO_EqualEqual ||
         overloadedOperatorType == OO_ExclaimEqual ||
@@ -191,6 +206,38 @@ public:
       return true;
 
     return false;
+  }
+
+  bool isMethodOnWTFContainerType(const FunctionDecl *Decl) const {
+    if (!isa<CXXMethodDecl>(Decl))
+      return false;
+    auto *ClassDecl = Decl->getParent();
+    if (!ClassDecl || !isa<CXXRecordDecl>(ClassDecl))
+      return false;
+
+    auto *NsDecl = ClassDecl->getParent();
+    if (!NsDecl || !isa<NamespaceDecl>(NsDecl))
+      return false;
+
+    auto MethodName = safeGetName(Decl);
+    auto ClsNameStr = safeGetName(ClassDecl);
+    StringRef ClsName = ClsNameStr; // FIXME: Make safeGetName return StringRef.
+    auto NamespaceName = safeGetName(NsDecl);
+    // FIXME: These should be implemented via attributes.
+    return NamespaceName == "WTF" &&
+           (MethodName == "find" || MethodName == "findIf" ||
+            MethodName == "reverseFind" || MethodName == "reverseFindIf" ||
+            MethodName == "findIgnoringASCIICase" || MethodName == "get" ||
+            MethodName == "inlineGet" || MethodName == "contains" ||
+            MethodName == "containsIf" ||
+            MethodName == "containsIgnoringASCIICase" ||
+            MethodName == "startsWith" || MethodName == "endsWith" ||
+            MethodName == "startsWithIgnoringASCIICase" ||
+            MethodName == "endsWithIgnoringASCIICase" ||
+            MethodName == "substring") &&
+           (ClsName.ends_with("Vector") || ClsName.ends_with("Set") ||
+            ClsName.ends_with("Map") || ClsName == "StringImpl" ||
+            ClsName.ends_with("String"));
   }
 
   void reportBug(const Expr *CallArg, const ParmVarDecl *Param) const {

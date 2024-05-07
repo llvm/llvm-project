@@ -201,4 +201,4 @@ attributes #1 = { nounwind }
 !2 = !{i32 1, i32 1, i32 64}
 
 !llvm.module.flags = !{!99}
-!99 = !{i32 1, !"amdgpu_code_object_version", i32 CODE_OBJECT_VERSION}
+!99 = !{i32 1, !"amdhsa_code_object_version", i32 CODE_OBJECT_VERSION}

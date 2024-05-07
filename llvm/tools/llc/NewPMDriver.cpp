@@ -16,7 +16,6 @@
 #include "llvm/Analysis/CGSCCPassManager.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/CodeGen/CommandFlags.h"
-#include "llvm/CodeGen/FreeMachineFunction.h"
 #include "llvm/CodeGen/MIRParser/MIRParser.h"
 #include "llvm/CodeGen/MIRPrinter.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
@@ -89,30 +88,6 @@ bool LLCDiagnosticHandler::handleDiagnostics(const DiagnosticInfo &DI) {
 
 static llvm::ExitOnError ExitOnErr;
 
-static void RunPasses(bool BOS, ToolOutputFile *Out, Module *M,
-                      LLVMContext &Context, SmallString<0> &Buffer,
-                      ModulePassManager *MPM, ModuleAnalysisManager *MAM,
-                      MachineFunctionPassManager &MFPM,
-                      MachineFunctionAnalysisManager &MFAM) {
-  assert(M && "invalid input module!");
-
-  // Before executing passes, print the final values of the LLVM options.
-  cl::PrintOptionValues();
-
-  if (MPM) {
-    assert(MAM && "expect a ModuleAnalysisManager!");
-    MPM->run(*M, *MAM);
-  }
-
-  ExitOnErr(MFPM.run(*M, MFAM));
-
-  if (Context.getDiagHandlerPtr()->HasErrors)
-    exit(1);
-
-  if (BOS)
-    Out->os() << Buffer;
-}
-
 int llvm::compileModuleWithNewPM(
     StringRef Arg0, std::unique_ptr<Module> M, std::unique_ptr<MIRParser> MIR,
     std::unique_ptr<TargetMachine> Target, std::unique_ptr<ToolOutputFile> Out,
@@ -131,16 +106,6 @@ int llvm::compileModuleWithNewPM(
 
   raw_pwrite_stream *OS = &Out->os();
 
-  // Manually do the buffering rather than using buffer_ostream,
-  // so we can memcmp the contents in CompileTwice mode in future.
-  SmallString<0> Buffer;
-  std::unique_ptr<raw_svector_ostream> BOS;
-  if ((codegen::getFileType() != CodeGenFileType::AssemblyFile &&
-       !Out->os().supportsSeeking())) {
-    BOS = std::make_unique<raw_svector_ostream>(Buffer);
-    OS = BOS.get();
-  }
-
   // Fetch options from TargetPassConfig
   CGPassBuilderOption Opt = getCGPassBuilderOption();
   Opt.DisableVerify = NoVerify;
@@ -150,10 +115,11 @@ int llvm::compileModuleWithNewPM(
   MachineModuleInfo MMI(&LLVMTM);
 
   PassInstrumentationCallbacks PIC;
-  StandardInstrumentations SI(Context, Opt.DebugPM);
+  StandardInstrumentations SI(Context, Opt.DebugPM, !NoVerify);
   SI.registerCallbacks(PIC);
   registerCodeGenCallback(PIC, LLVMTM);
 
+  MachineFunctionAnalysisManager MFAM;
   LoopAnalysisManager LAM;
   FunctionAnalysisManager FAM;
   CGSCCAnalysisManager CGAM;
@@ -163,15 +129,14 @@ int llvm::compileModuleWithNewPM(
   PB.registerCGSCCAnalyses(CGAM);
   PB.registerFunctionAnalyses(FAM);
   PB.registerLoopAnalyses(LAM);
-  PB.crossRegisterProxies(LAM, FAM, CGAM, MAM);
+  PB.registerMachineFunctionAnalyses(MFAM);
+  PB.crossRegisterProxies(LAM, FAM, CGAM, MAM, &MFAM);
 
   FAM.registerPass([&] { return TargetLibraryAnalysis(TLII); });
   MAM.registerPass([&] { return MachineModuleAnalysis(MMI); });
 
-  MachineFunctionAnalysisManager MFAM(FAM, MAM);
-
   ModulePassManager MPM;
-  MachineFunctionPassManager MFPM;
+  FunctionPassManager FPM;
 
   if (!PassPipeline.empty()) {
     // Construct a custom pass pipeline that starts after instruction
@@ -182,49 +147,39 @@ int llvm::compileModuleWithNewPM(
       return 1;
     }
 
-    ExitOnErr(PB.parsePassPipeline(MFPM, PassPipeline));
+    // FIXME: verify that there are no IR passes.
+    ExitOnErr(PB.parsePassPipeline(MPM, PassPipeline));
     MPM.addPass(PrintMIRPreparePass(*OS));
+    MachineFunctionPassManager MFPM;
     MFPM.addPass(PrintMIRPass(*OS));
-    MFPM.addPass(FreeMachineFunctionPass());
+    FPM.addPass(createFunctionToMachineFunctionPassAdaptor(std::move(MFPM)));
+    MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
 
-    auto &MMI = MFAM.getResult<MachineModuleAnalysis>(*M).getMMI();
-    if (MIR->parseMachineFunctions(*M, MMI))
+    if (MIR->parseMachineFunctions(*M, MAM))
       return 1;
   } else {
-    ExitOnErr(LLVMTM.buildCodeGenPipeline(MPM, MFPM, MFAM, *OS,
-                                          DwoOut ? &DwoOut->os() : nullptr,
-                                          FileType, Opt, &PIC));
-
-    auto StartStopInfo = TargetPassConfig::getStartStopInfo(PIC);
-    assert(StartStopInfo && "Expect StartStopInfo!");
-
-    if (auto StopPassName = StartStopInfo->StopPass; !StopPassName.empty()) {
-      MFPM.addPass(PrintMIRPass(*OS));
-      MFPM.addPass(FreeMachineFunctionPass());
-    }
+    ExitOnErr(LLVMTM.buildCodeGenPipeline(
+        MPM, *OS, DwoOut ? &DwoOut->os() : nullptr, FileType, Opt, &PIC));
   }
 
   if (PrintPipelinePasses) {
-    std::string IRPipeline;
-    raw_string_ostream IRSOS(IRPipeline);
-    MPM.printPipeline(IRSOS, [&PIC](StringRef ClassName) {
+    std::string PipelineStr;
+    raw_string_ostream OS(PipelineStr);
+    MPM.printPipeline(OS, [&PIC](StringRef ClassName) {
       auto PassName = PIC.getPassNameForClassName(ClassName);
       return PassName.empty() ? ClassName : PassName;
     });
-    outs() << "IR pipeline: " << IRPipeline << '\n';
-
-    std::string MIRPipeline;
-    raw_string_ostream MIRSOS(MIRPipeline);
-    MFPM.printPipeline(MIRSOS, [&PIC](StringRef ClassName) {
-      auto PassName = PIC.getPassNameForClassName(ClassName);
-      return PassName.empty() ? ClassName : PassName;
-    });
-    outs() << "MIR pipeline: " << MIRPipeline << '\n';
+    outs() << PipelineStr << '\n';
     return 0;
   }
 
-  RunPasses(BOS.get(), Out.get(), M.get(), Context, Buffer, &MPM, &MAM, MFPM,
-            MFAM);
+  // Before executing passes, print the final values of the LLVM options.
+  cl::PrintOptionValues();
+
+  MPM.run(*M, MAM);
+
+  if (Context.getDiagHandlerPtr()->HasErrors)
+    exit(1);
 
   // Declare success.
   Out->keep();

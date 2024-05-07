@@ -5,6 +5,7 @@
 
 ; Should be no changes without profile data
 ; RUN: opt < %s -passes=pgo-force-function-attrs                                  -S -pgo-cold-func-opt=minsize | FileCheck %s --check-prefixes=NONE,CHECK
+; RUN: opt < %s -passes='default<O2>' -enable-pgo-force-function-attrs            -S -pgo-cold-func-opt=minsize | FileCheck %s --check-prefixes=O2
 
 ; NONE-NOT: Function Attrs:
 ; OPTSIZE: Function Attrs: optsize{{$}}
@@ -21,6 +22,12 @@
 ; CHECK: Function Attrs: noinline optnone{{$}}
 ; CHECK-NEXT: define void @cold_optnone()
 
+; NONE: Function Attrs: alwaysinline{{$}}
+; OPTSIZE: Function Attrs: alwaysinline optsize{{$}}
+; MINSIZE: Function Attrs: alwaysinline minsize{{$}}
+; OPTNONE: Function Attrs: alwaysinline{{$}}
+; CHECK-NEXT: define void @cold_alwaysinline()
+
 ; NONE: Function Attrs: cold{{$}}
 ; OPTSIZE: Function Attrs: cold optsize{{$}}
 ; MINSIZE: Function Attrs: cold minsize{{$}}
@@ -30,6 +37,9 @@
 ; CHECK-NOT: Function Attrs: {{.*}}optsize
 ; CHECK-NOT: Function Attrs: {{.*}}minsize
 ; CHECK-NOT: Function Attrs: {{.*}}optnone
+
+; O2: define void @cold_attr(){{.*}} #[[ATTR:[0-9]+]]
+; O2-NOT: #[[ATTR]] = {{.*}}minsize
 
 @s = global i32 0
 
@@ -49,6 +59,11 @@ define void @cold_minsize() minsize !prof !27 {
 }
 
 define void @cold_optnone() noinline optnone !prof !27 {
+  store i32 1, ptr @s, align 4
+  ret void
+}
+
+define void @cold_alwaysinline() alwaysinline !prof !27 {
   store i32 1, ptr @s, align 4
   ret void
 }

@@ -125,7 +125,8 @@ static cl::opt<bool> ComputeDead("compute-dead", cl::init(true), cl::Hidden,
 
 static cl::opt<bool> EnableImportMetadata(
     "enable-import-metadata", cl::init(false), cl::Hidden,
-    cl::desc("Enable import metadata like 'thinlto_src_module'"));
+    cl::desc("Enable import metadata like 'thinlto_src_module' and "
+             "'thinlto_src_file'"));
 
 /// Summary file to use for function importing when using -function-import from
 /// the command line.
@@ -161,6 +162,10 @@ static cl::opt<std::string> WorkloadDefinitions(
              "\"function_to_import_4\"] \n"
              "}"),
     cl::Hidden);
+
+namespace llvm {
+extern cl::opt<bool> EnableMemProfContextDisambiguation;
+}
 
 // Load lazily a module from \p FileName in \p Context.
 static std::unique_ptr<Module> loadFile(const std::string &FileName,
@@ -1642,10 +1647,18 @@ Expected<bool> FunctionImporter::importFunctions(
       if (Import) {
         if (Error Err = F.materialize())
           return std::move(Err);
-        if (EnableImportMetadata) {
-          // Add 'thinlto_src_module' metadata for statistics and debugging.
+        // MemProf should match function's definition and summary,
+        // 'thinlto_src_module' is needed.
+        if (EnableImportMetadata || EnableMemProfContextDisambiguation) {
+          // Add 'thinlto_src_module' and 'thinlto_src_file' metadata for
+          // statistics and debugging.
           F.setMetadata(
               "thinlto_src_module",
+              MDNode::get(DestModule.getContext(),
+                          {MDString::get(DestModule.getContext(),
+                                         SrcModule->getModuleIdentifier())}));
+          F.setMetadata(
+              "thinlto_src_file",
               MDNode::get(DestModule.getContext(),
                           {MDString::get(DestModule.getContext(),
                                          SrcModule->getSourceFileName())}));
@@ -1686,10 +1699,16 @@ Expected<bool> FunctionImporter::importFunctions(
         LLVM_DEBUG(dbgs() << "Is importing aliasee fn " << GO->getGUID() << " "
                           << GO->getName() << " from "
                           << SrcModule->getSourceFileName() << "\n");
-        if (EnableImportMetadata) {
-          // Add 'thinlto_src_module' metadata for statistics and debugging.
+        if (EnableImportMetadata || EnableMemProfContextDisambiguation) {
+          // Add 'thinlto_src_module' and 'thinlto_src_file' metadata for
+          // statistics and debugging.
           Fn->setMetadata(
               "thinlto_src_module",
+              MDNode::get(DestModule.getContext(),
+                          {MDString::get(DestModule.getContext(),
+                                         SrcModule->getModuleIdentifier())}));
+          Fn->setMetadata(
+              "thinlto_src_file",
               MDNode::get(DestModule.getContext(),
                           {MDString::get(DestModule.getContext(),
                                          SrcModule->getSourceFileName())}));

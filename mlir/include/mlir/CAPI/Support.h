@@ -22,7 +22,7 @@
 #include "llvm/ADT/StringRef.h"
 
 namespace llvm {
-class ThreadPool;
+class ThreadPoolInterface;
 } // namespace llvm
 
 /// Converts a StringRef into its MLIR C API equivalent.
@@ -45,7 +45,7 @@ inline mlir::LogicalResult unwrap(MlirLogicalResult res) {
   return mlir::success(mlirLogicalResultIsSuccess(res));
 }
 
-DEFINE_C_API_PTR_METHODS(MlirLlvmThreadPool, llvm::ThreadPool)
+DEFINE_C_API_PTR_METHODS(MlirLlvmThreadPool, llvm::ThreadPoolInterface)
 DEFINE_C_API_METHODS(MlirTypeID, mlir::TypeID)
 DEFINE_C_API_PTR_METHODS(MlirTypeIDAllocator, mlir::TypeIDAllocator)
 

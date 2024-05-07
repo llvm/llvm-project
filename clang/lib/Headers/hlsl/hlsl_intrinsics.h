@@ -101,6 +101,230 @@ _HLSL_BUILTIN_ALIAS(__builtin_elementwise_abs)
 double4 abs(double4);
 
 //===----------------------------------------------------------------------===//
+// all builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn bool all(T x)
+/// \brief Returns True if all components of the \a x parameter are non-zero;
+/// otherwise, false. \param x The input value.
+
+#ifdef __HLSL_ENABLE_16_BIT
+_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_all)
+bool all(int16_t);
+_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_all)
+bool all(int16_t2);
+_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_all)
+bool all(int16_t3);
+_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_all)
+bool all(int16_t4);
+_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_all)
+bool all(uint16_t);
+_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_all)
+bool all(uint16_t2);
+_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_all)
+bool all(uint16_t3);
+_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_all)
+bool all(uint16_t4);
+#endif
+
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_all)
+bool all(half);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_all)
+bool all(half2);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_all)
+bool all(half3);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_all)
+bool all(half4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_all)
+bool all(bool);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_all)
+bool all(bool2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_all)
+bool all(bool3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_all)
+bool all(bool4);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_all)
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_all)
+bool all(int);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_all)
+bool all(int2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_all)
+bool all(int3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_all)
+bool all(int4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_all)
+bool all(uint);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_all)
+bool all(uint2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_all)
+bool all(uint3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_all)
+bool all(uint4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_all)
+bool all(float);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_all)
+bool all(float2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_all)
+bool all(float3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_all)
+bool all(float4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_all)
+bool all(int64_t);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_all)
+bool all(int64_t2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_all)
+bool all(int64_t3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_all)
+bool all(int64_t4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_all)
+bool all(uint64_t);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_all)
+bool all(uint64_t2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_all)
+bool all(uint64_t3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_all)
+bool all(uint64_t4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_all)
+bool all(double);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_all)
+bool all(double2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_all)
+bool all(double3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_all)
+bool all(double4);
+
+//===----------------------------------------------------------------------===//
+// any builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn bool any(T x)
+/// \brief Returns True if any components of the \a x parameter are non-zero;
+/// otherwise, false. \param x The input value.
+
+#ifdef __HLSL_ENABLE_16_BIT
+_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_any)
+bool any(int16_t);
+_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_any)
+bool any(int16_t2);
+_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_any)
+bool any(int16_t3);
+_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_any)
+bool any(int16_t4);
+_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_any)
+bool any(uint16_t);
+_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_any)
+bool any(uint16_t2);
+_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_any)
+bool any(uint16_t3);
+_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_any)
+bool any(uint16_t4);
+#endif
+
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_any)
+bool any(half);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_any)
+bool any(half2);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_any)
+bool any(half3);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_any)
+bool any(half4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_any)
+bool any(bool);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_any)
+bool any(bool2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_any)
+bool any(bool3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_any)
+bool any(bool4);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_any)
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_any)
+bool any(int);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_any)
+bool any(int2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_any)
+bool any(int3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_any)
+bool any(int4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_any)
+bool any(uint);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_any)
+bool any(uint2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_any)
+bool any(uint3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_any)
+bool any(uint4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_any)
+bool any(float);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_any)
+bool any(float2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_any)
+bool any(float3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_any)
+bool any(float4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_any)
+bool any(int64_t);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_any)
+bool any(int64_t2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_any)
+bool any(int64_t3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_any)
+bool any(int64_t4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_any)
+bool any(uint64_t);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_any)
+bool any(uint64_t2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_any)
+bool any(uint64_t3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_any)
+bool any(uint64_t4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_any)
+bool any(double);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_any)
+bool any(double2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_any)
+bool any(double3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_any)
+bool any(double4);
+
+//===----------------------------------------------------------------------===//
 // ceil builtins
 //===----------------------------------------------------------------------===//
 
@@ -131,14 +355,115 @@ float3 ceil(float3);
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_ceil)
 float4 ceil(float4);
 
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_ceil)
-double ceil(double);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_ceil)
-double2 ceil(double2);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_ceil)
-double3 ceil(double3);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_ceil)
-double4 ceil(double4);
+//===----------------------------------------------------------------------===//
+// clamp builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn T clamp(T X, T Min, T Max)
+/// \brief Clamps the specified value \a X to the specified
+/// minimum ( \a Min) and maximum ( \a Max) range.
+/// \param X A value to clamp.
+/// \param Min The specified minimum range.
+/// \param Max The specified maximum range.
+///
+/// Returns The clamped value for the \a X parameter.
+/// For values of -INF or INF, clamp will behave as expected.
+/// However for values of NaN, the results are undefined.
+
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_clamp)
+half clamp(half, half, half);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_clamp)
+half2 clamp(half2, half2, half2);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_clamp)
+half3 clamp(half3, half3, half3);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_clamp)
+half4 clamp(half4, half4, half4);
+
+#ifdef __HLSL_ENABLE_16_BIT
+_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_clamp)
+int16_t clamp(int16_t, int16_t, int16_t);
+_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_clamp)
+int16_t2 clamp(int16_t2, int16_t2, int16_t2);
+_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_clamp)
+int16_t3 clamp(int16_t3, int16_t3, int16_t3);
+_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_clamp)
+int16_t4 clamp(int16_t4, int16_t4, int16_t4);
+
+_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_clamp)
+uint16_t clamp(uint16_t, uint16_t, uint16_t);
+_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_clamp)
+uint16_t2 clamp(uint16_t2, uint16_t2, uint16_t2);
+_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_clamp)
+uint16_t3 clamp(uint16_t3, uint16_t3, uint16_t3);
+_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_clamp)
+uint16_t4 clamp(uint16_t4, uint16_t4, uint16_t4);
+#endif
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_clamp)
+int clamp(int, int, int);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_clamp)
+int2 clamp(int2, int2, int2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_clamp)
+int3 clamp(int3, int3, int3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_clamp)
+int4 clamp(int4, int4, int4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_clamp)
+uint clamp(uint, uint, uint);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_clamp)
+uint2 clamp(uint2, uint2, uint2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_clamp)
+uint3 clamp(uint3, uint3, uint3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_clamp)
+uint4 clamp(uint4, uint4, uint4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_clamp)
+int64_t clamp(int64_t, int64_t, int64_t);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_clamp)
+int64_t2 clamp(int64_t2, int64_t2, int64_t2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_clamp)
+int64_t3 clamp(int64_t3, int64_t3, int64_t3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_clamp)
+int64_t4 clamp(int64_t4, int64_t4, int64_t4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_clamp)
+uint64_t clamp(uint64_t, uint64_t, uint64_t);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_clamp)
+uint64_t2 clamp(uint64_t2, uint64_t2, uint64_t2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_clamp)
+uint64_t3 clamp(uint64_t3, uint64_t3, uint64_t3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_clamp)
+uint64_t4 clamp(uint64_t4, uint64_t4, uint64_t4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_clamp)
+float clamp(float, float, float);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_clamp)
+float2 clamp(float2, float2, float2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_clamp)
+float3 clamp(float3, float3, float3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_clamp)
+float4 clamp(float4, float4, float4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_clamp)
+double clamp(double, double, double);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_clamp)
+double2 clamp(double2, double2, double2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_clamp)
+double3 clamp(double3, double3, double3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_clamp)
+double4 clamp(double4, double4, double4);
 
 //===----------------------------------------------------------------------===//
 // cos builtins
@@ -170,14 +495,167 @@ float3 cos(float3);
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_cos)
 float4 cos(float4);
 
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_cos)
-double cos(double);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_cos)
-double2 cos(double2);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_cos)
-double3 cos(double3);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_cos)
-double4 cos(double4);
+//===----------------------------------------------------------------------===//
+// dot product builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn K dot(T X, T Y)
+/// \brief Return the dot product (a scalar value) of \a X and \a Y.
+/// \param X The X input value.
+/// \param Y The Y input value.
+
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_dot)
+half dot(half, half);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_dot)
+half dot(half2, half2);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_dot)
+half dot(half3, half3);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_dot)
+half dot(half4, half4);
+
+#ifdef __HLSL_ENABLE_16_BIT
+_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_dot)
+int16_t dot(int16_t, int16_t);
+_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_dot)
+int16_t dot(int16_t2, int16_t2);
+_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_dot)
+int16_t dot(int16_t3, int16_t3);
+_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_dot)
+int16_t dot(int16_t4, int16_t4);
+
+_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_dot)
+uint16_t dot(uint16_t, uint16_t);
+_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_dot)
+uint16_t dot(uint16_t2, uint16_t2);
+_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_dot)
+uint16_t dot(uint16_t3, uint16_t3);
+_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_dot)
+uint16_t dot(uint16_t4, uint16_t4);
+#endif
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_dot)
+float dot(float, float);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_dot)
+float dot(float2, float2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_dot)
+float dot(float3, float3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_dot)
+float dot(float4, float4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_dot)
+double dot(double, double);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_dot)
+int dot(int, int);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_dot)
+int dot(int2, int2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_dot)
+int dot(int3, int3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_dot)
+int dot(int4, int4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_dot)
+uint dot(uint, uint);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_dot)
+uint dot(uint2, uint2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_dot)
+uint dot(uint3, uint3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_dot)
+uint dot(uint4, uint4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_dot)
+int64_t dot(int64_t, int64_t);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_dot)
+int64_t dot(int64_t2, int64_t2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_dot)
+int64_t dot(int64_t3, int64_t3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_dot)
+int64_t dot(int64_t4, int64_t4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_dot)
+uint64_t dot(uint64_t, uint64_t);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_dot)
+uint64_t dot(uint64_t2, uint64_t2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_dot)
+uint64_t dot(uint64_t3, uint64_t3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_dot)
+uint64_t dot(uint64_t4, uint64_t4);
+
+//===----------------------------------------------------------------------===//
+// exp builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn T exp(T x)
+/// \brief Returns the base-e exponential, or \a e**x, of the specified value.
+/// \param x The specified input value.
+///
+/// The return value is the base-e exponential of the \a x parameter.
+
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_exp)
+half exp(half);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_exp)
+half2 exp(half2);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_exp)
+half3 exp(half3);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_exp)
+half4 exp(half4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_exp)
+float exp(float);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_exp)
+float2 exp(float2);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_exp)
+float3 exp(float3);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_exp)
+float4 exp(float4);
+
+//===----------------------------------------------------------------------===//
+// exp2 builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn T exp2(T x)
+/// \brief Returns the base 2 exponential, or \a 2**x, of the specified value.
+/// \param x The specified input value.
+///
+/// The base 2 exponential of the \a x parameter.
+
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_exp2)
+half exp2(half);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_exp2)
+half2 exp2(half2);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_exp2)
+half3 exp2(half3);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_exp2)
+half4 exp2(half4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_exp2)
+float exp2(float);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_exp2)
+float2 exp2(float2);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_exp2)
+float3 exp2(float3);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_exp2)
+float4 exp2(float4);
 
 //===----------------------------------------------------------------------===//
 // floor builtins
@@ -210,14 +688,106 @@ float3 floor(float3);
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_floor)
 float4 floor(float4);
 
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_floor)
-double floor(double);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_floor)
-double2 floor(double2);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_floor)
-double3 floor(double3);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_floor)
-double4 floor(double4);
+//===----------------------------------------------------------------------===//
+// frac builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn T frac(T x)
+/// \brief Returns the fractional (or decimal) part of x. \a x parameter.
+/// \param x The specified input value.
+///
+/// If \a the return value is greater than or equal to 0 and less than 1.
+
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_frac)
+half frac(half);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_frac)
+half2 frac(half2);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_frac)
+half3 frac(half3);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_frac)
+half4 frac(half4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_frac)
+float frac(float);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_frac)
+float2 frac(float2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_frac)
+float3 frac(float3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_frac)
+float4 frac(float4);
+
+//===----------------------------------------------------------------------===//
+// isinf builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn T isinf(T x)
+/// \brief Determines if the specified value \a x  is infinite.
+/// \param x The specified input value.
+///
+/// Returns a value of the same size as the input, with a value set
+/// to True if the x parameter is +INF or -INF. Otherwise, False.
+
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_isinf)
+bool isinf(half);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_isinf)
+bool2 isinf(half2);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_isinf)
+bool3 isinf(half3);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_isinf)
+bool4 isinf(half4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_isinf)
+bool isinf(float);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_isinf)
+bool2 isinf(float2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_isinf)
+bool3 isinf(float3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_isinf)
+bool4 isinf(float4);
+
+//===----------------------------------------------------------------------===//
+// lerp builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn T lerp(T x, T y, T s)
+/// \brief Returns the linear interpolation of x to y by s.
+/// \param x [in] The first-floating point value.
+/// \param y [in] The second-floating point value.
+/// \param s [in] A value that linearly interpolates between the x parameter and
+/// the y parameter.
+///
+/// Linear interpolation is based on the following formula: x*(1-s) + y*s which
+/// can equivalently be written as x + s(y-x).
+
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_lerp)
+half lerp(half, half, half);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_lerp)
+half2 lerp(half2, half2, half2);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_lerp)
+half3 lerp(half3, half3, half3);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_lerp)
+half4 lerp(half4, half4, half4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_lerp)
+float lerp(float, float, float);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_lerp)
+float2 lerp(float2, float2, float2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_lerp)
+float3 lerp(float3, float3, float3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_lerp)
+float4 lerp(float4, float4, float4);
 
 //===----------------------------------------------------------------------===//
 // log builtins
@@ -252,15 +822,6 @@ float3 log(float3);
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_log)
 float4 log(float4);
 
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_log)
-double log(double);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_log)
-double2 log(double2);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_log)
-double3 log(double3);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_log)
-double4 log(double4);
-
 //===----------------------------------------------------------------------===//
 // log10 builtins
 //===----------------------------------------------------------------------===//
@@ -293,15 +854,6 @@ _HLSL_BUILTIN_ALIAS(__builtin_elementwise_log10)
 float3 log10(float3);
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_log10)
 float4 log10(float4);
-
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_log10)
-double log10(double);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_log10)
-double2 log10(double2);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_log10)
-double3 log10(double3);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_log10)
-double4 log10(double4);
 
 //===----------------------------------------------------------------------===//
 // log2 builtins
@@ -336,14 +888,110 @@ float3 log2(float3);
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_log2)
 float4 log2(float4);
 
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_log2)
-double log2(double);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_log2)
-double2 log2(double2);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_log2)
-double3 log2(double3);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_log2)
-double4 log2(double4);
+//===----------------------------------------------------------------------===//
+// mad builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn T mad(T M, T A, T B)
+/// \brief The result of \a M * \a A + \a B.
+/// \param M The multiplication value.
+/// \param A The first addition value.
+/// \param B The second addition value.
+
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_mad)
+half mad(half, half, half);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_mad)
+half2 mad(half2, half2, half2);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_mad)
+half3 mad(half3, half3, half3);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_mad)
+half4 mad(half4, half4, half4);
+
+#ifdef __HLSL_ENABLE_16_BIT
+_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_mad)
+int16_t mad(int16_t, int16_t, int16_t);
+_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_mad)
+int16_t2 mad(int16_t2, int16_t2, int16_t2);
+_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_mad)
+int16_t3 mad(int16_t3, int16_t3, int16_t3);
+_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_mad)
+int16_t4 mad(int16_t4, int16_t4, int16_t4);
+
+_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_mad)
+uint16_t mad(uint16_t, uint16_t, uint16_t);
+_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_mad)
+uint16_t2 mad(uint16_t2, uint16_t2, uint16_t2);
+_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_mad)
+uint16_t3 mad(uint16_t3, uint16_t3, uint16_t3);
+_HLSL_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_mad)
+uint16_t4 mad(uint16_t4, uint16_t4, uint16_t4);
+#endif
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_mad)
+int mad(int, int, int);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_mad)
+int2 mad(int2, int2, int2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_mad)
+int3 mad(int3, int3, int3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_mad)
+int4 mad(int4, int4, int4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_mad)
+uint mad(uint, uint, uint);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_mad)
+uint2 mad(uint2, uint2, uint2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_mad)
+uint3 mad(uint3, uint3, uint3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_mad)
+uint4 mad(uint4, uint4, uint4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_mad)
+int64_t mad(int64_t, int64_t, int64_t);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_mad)
+int64_t2 mad(int64_t2, int64_t2, int64_t2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_mad)
+int64_t3 mad(int64_t3, int64_t3, int64_t3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_mad)
+int64_t4 mad(int64_t4, int64_t4, int64_t4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_mad)
+uint64_t mad(uint64_t, uint64_t, uint64_t);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_mad)
+uint64_t2 mad(uint64_t2, uint64_t2, uint64_t2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_mad)
+uint64_t3 mad(uint64_t3, uint64_t3, uint64_t3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_mad)
+uint64_t4 mad(uint64_t4, uint64_t4, uint64_t4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_mad)
+float mad(float, float, float);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_mad)
+float2 mad(float2, float2, float2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_mad)
+float3 mad(float3, float3, float3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_mad)
+float4 mad(float4, float4, float4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_mad)
+double mad(double, double, double);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_mad)
+double2 mad(double2, double2, double2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_mad)
+double3 mad(double3, double3, double3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_mad)
+double4 mad(double4, double4, double4);
 
 //===----------------------------------------------------------------------===//
 // max builtins
@@ -584,15 +1232,6 @@ float3 pow(float3, float3);
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_pow)
 float4 pow(float4, float4);
 
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_pow)
-double pow(double, double);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_pow)
-double2 pow(double2, double2);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_pow)
-double3 pow(double3, double3);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_pow)
-double4 pow(double4, double4);
-
 //===----------------------------------------------------------------------===//
 // reversebits builtins
 //===----------------------------------------------------------------------===//
@@ -602,19 +1241,6 @@ double4 pow(double4, double4);
 /// \param Val The input value.
 
 #ifdef __HLSL_ENABLE_16_BIT
-_HLSL_AVAILABILITY(shadermodel, 6.2)
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_bitreverse)
-int16_t reversebits(int16_t);
-_HLSL_AVAILABILITY(shadermodel, 6.2)
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_bitreverse)
-int16_t2 reversebits(int16_t2);
-_HLSL_AVAILABILITY(shadermodel, 6.2)
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_bitreverse)
-int16_t3 reversebits(int16_t3);
-_HLSL_AVAILABILITY(shadermodel, 6.2)
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_bitreverse)
-int16_t4 reversebits(int16_t4);
-
 _HLSL_AVAILABILITY(shadermodel, 6.2)
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_bitreverse)
 uint16_t reversebits(uint16_t);
@@ -630,15 +1256,6 @@ uint16_t4 reversebits(uint16_t4);
 #endif
 
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_bitreverse)
-int reversebits(int);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_bitreverse)
-int2 reversebits(int2);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_bitreverse)
-int3 reversebits(int3);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_bitreverse)
-int4 reversebits(int4);
-
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_bitreverse)
 uint reversebits(uint);
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_bitreverse)
 uint2 reversebits(uint2);
@@ -648,15 +1265,6 @@ _HLSL_BUILTIN_ALIAS(__builtin_elementwise_bitreverse)
 uint4 reversebits(uint4);
 
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_bitreverse)
-int64_t reversebits(int64_t);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_bitreverse)
-int64_t2 reversebits(int64_t2);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_bitreverse)
-int64_t3 reversebits(int64_t3);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_bitreverse)
-int64_t4 reversebits(int64_t4);
-
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_bitreverse)
 uint64_t reversebits(uint64_t);
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_bitreverse)
 uint64_t2 reversebits(uint64_t2);
@@ -664,6 +1272,114 @@ _HLSL_BUILTIN_ALIAS(__builtin_elementwise_bitreverse)
 uint64_t3 reversebits(uint64_t3);
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_bitreverse)
 uint64_t4 reversebits(uint64_t4);
+
+//===----------------------------------------------------------------------===//
+// rcp builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn T rcp(T x)
+/// \brief Calculates a fast, approximate, per-component reciprocal ie 1 / \a x.
+/// \param x The specified input value.
+///
+/// The return value is the reciprocal of the \a x parameter.
+
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_rcp)
+half rcp(half);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_rcp)
+half2 rcp(half2);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_rcp)
+half3 rcp(half3);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_rcp)
+half4 rcp(half4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_rcp)
+float rcp(float);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_rcp)
+float2 rcp(float2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_rcp)
+float3 rcp(float3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_rcp)
+float4 rcp(float4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_rcp)
+double rcp(double);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_rcp)
+double2 rcp(double2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_rcp)
+double3 rcp(double3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_rcp)
+double4 rcp(double4);
+
+//===----------------------------------------------------------------------===//
+// rsqrt builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn T rsqrt(T x)
+/// \brief Returns the reciprocal of the square root of the specified value.
+/// ie 1 / sqrt( \a x).
+/// \param x The specified input value.
+///
+/// This function uses the following formula: 1 / sqrt(x).
+
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_rsqrt)
+half rsqrt(half);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_rsqrt)
+half2 rsqrt(half2);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_rsqrt)
+half3 rsqrt(half3);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_rsqrt)
+half4 rsqrt(half4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_rsqrt)
+float rsqrt(float);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_rsqrt)
+float2 rsqrt(float2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_rsqrt)
+float3 rsqrt(float3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_rsqrt)
+float4 rsqrt(float4);
+
+//===----------------------------------------------------------------------===//
+// round builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn T round(T x)
+/// \brief Rounds the specified value \a x to the nearest integer.
+/// \param x The specified input value.
+///
+/// The return value is the \a x parameter, rounded to the nearest integer
+/// within a floating-point type. Halfway cases are
+/// rounded to the nearest even value.
+
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_roundeven)
+half round(half);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_roundeven)
+half2 round(half2);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_roundeven)
+half3 round(half3);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_roundeven)
+half4 round(half4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_roundeven)
+float round(float);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_roundeven)
+float2 round(float2);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_roundeven)
+float3 round(float3);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_roundeven)
+float4 round(float4);
 
 //===----------------------------------------------------------------------===//
 // sin builtins
@@ -695,15 +1411,6 @@ float3 sin(float3);
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_sin)
 float4 sin(float4);
 
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_sin)
-double sin(double);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_sin)
-double2 sin(double2);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_sin)
-double3 sin(double3);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_sin)
-double4 sin(double4);
-
 //===----------------------------------------------------------------------===//
 // sqrt builtins
 //===----------------------------------------------------------------------===//
@@ -713,14 +1420,26 @@ double4 sin(double4);
 /// \param Val The input value.
 
 _HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
-_HLSL_BUILTIN_ALIAS(__builtin_sqrtf16)
-half sqrt(half In);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_sqrt)
+half sqrt(half);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_sqrt)
+half2 sqrt(half2);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_sqrt)
+half3 sqrt(half3);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_sqrt)
+half4 sqrt(half4);
 
-_HLSL_BUILTIN_ALIAS(__builtin_sqrtf)
-float sqrt(float In);
-
-_HLSL_BUILTIN_ALIAS(__builtin_sqrt)
-double sqrt(double In);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_sqrt)
+float sqrt(float);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_sqrt)
+float2 sqrt(float2);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_sqrt)
+float3 sqrt(float3);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_sqrt)
+float4 sqrt(float4);
 
 //===----------------------------------------------------------------------===//
 // trunc builtins
@@ -752,15 +1471,6 @@ float3 trunc(float3);
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_trunc)
 float4 trunc(float4);
 
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_trunc)
-double trunc(double);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_trunc)
-double2 trunc(double2);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_trunc)
-double3 trunc(double3);
-_HLSL_BUILTIN_ALIAS(__builtin_elementwise_trunc)
-double4 trunc(double4);
-
 //===----------------------------------------------------------------------===//
 // Wave* builtins
 //===----------------------------------------------------------------------===//
@@ -773,7 +1483,12 @@ double4 trunc(double4);
 /// true, across all active lanes in the current wave.
 _HLSL_AVAILABILITY(shadermodel, 6.0)
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_count_bits)
-uint WaveActiveCountBits(bool Val);
+__attribute__((convergent)) uint WaveActiveCountBits(bool Val);
+
+/// \brief Returns the index of the current lane within the current wave.
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_get_lane_index)
+__attribute__((convergent)) uint WaveGetLaneIndex();
 
 } // namespace hlsl
 #endif //_HLSL_HLSL_INTRINSICS_H_
