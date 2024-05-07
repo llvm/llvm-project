@@ -303,6 +303,11 @@ New Compiler Flags
   allow late parsing certain attributes in specific contexts where they would
   not normally be late parsed.
 
+- ``-fseparate-named-sections`` uses separate unique sections for global
+  symbols in named special sections (i.e. symbols annotated with
+  ``__attribute__((section(...)))``. This enables linker GC to collect unused
+  symbols without having to use a per-symbol section.
+
 Deprecated Compiler Flags
 -------------------------
 
