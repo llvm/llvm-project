@@ -415,7 +415,6 @@ exit:
 
 ; Test case to make sure that uses of versioned strides of type i1 are properly
 ; extended. From https://github.com/llvm/llvm-project/issues/91369.
-; FIXME: Currently miscompiled.
 define void @zext_of_i1_stride(i1 %g, ptr %dst) mustprogress {
 ; CHECK-LABEL: define void @zext_of_i1_stride(
 ; CHECK-SAME: i1 [[G:%.*]], ptr [[DST:%.*]]) #[[ATTR0:[0-9]+]] {
@@ -441,7 +440,7 @@ define void @zext_of_i1_stride(i1 %g, ptr %dst) mustprogress {
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[OFFSET_IDX]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i16, ptr [[DST]], i64 [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i16, ptr [[TMP4]], i32 0
-; CHECK-NEXT:    store <4 x i16> <i16 -1, i16 -1, i16 -1, i16 -1>, ptr [[TMP5]], align 2
+; CHECK-NEXT:    store <4 x i16> <i16 1, i16 1, i16 1, i16 1>, ptr [[TMP5]], align 2
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
