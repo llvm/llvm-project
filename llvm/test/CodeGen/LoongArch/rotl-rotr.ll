@@ -2,8 +2,6 @@
 ; RUN: llc --mtriple=loongarch32 < %s | FileCheck %s --check-prefix=LA32
 ; RUN: llc --mtriple=loongarch64 < %s | FileCheck %s --check-prefix=LA64
 
-;; TODO: Add optimization to ISD::ROTL
-
 define signext i32 @rotl_32(i32 signext %x, i32 signext %y) nounwind {
 ; LA32-LABEL: rotl_32:
 ; LA32:       # %bb.0:
