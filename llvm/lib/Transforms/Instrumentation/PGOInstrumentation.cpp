@@ -2125,7 +2125,7 @@ static bool annotateAllFunctions(
       HotFunctions.push_back(&F);
     if (PGOViewCounts != PGOVCT_None &&
         (ViewBlockFreqFuncName.empty() ||
-         F.getName().equals(ViewBlockFreqFuncName))) {
+         F.getName() == ViewBlockFreqFuncName)) {
       LoopInfo LI{DominatorTree(F)};
       std::unique_ptr<BranchProbabilityInfo> NewBPI =
           std::make_unique<BranchProbabilityInfo>(F, LI);
@@ -2140,7 +2140,7 @@ static bool annotateAllFunctions(
     }
     if (PGOViewRawCounts != PGOVCT_None &&
         (ViewBlockFreqFuncName.empty() ||
-         F.getName().equals(ViewBlockFreqFuncName))) {
+         F.getName() == ViewBlockFreqFuncName)) {
       if (PGOViewRawCounts == PGOVCT_Graph)
         if (ViewBlockFreqFuncName.empty())
           WriteGraph(&Func, Twine("PGORawCounts_") + Func.getFunc().getName());

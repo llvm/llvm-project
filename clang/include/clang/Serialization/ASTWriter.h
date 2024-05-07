@@ -274,7 +274,7 @@ private:
 
   /// Offset of each type in the bitstream, indexed by
   /// the type's ID.
-  std::vector<serialization::UnderalignedInt64> TypeOffsets;
+  std::vector<serialization::UnalignedUInt64> TypeOffsets;
 
   /// The first ID number we can use for our own identifiers.
   serialization::IdentID FirstIdentID = serialization::NUM_PREDEF_IDENT_IDS;
@@ -356,6 +356,13 @@ private:
   /// Cache of indices of anonymous declarations within their lexical
   /// contexts.
   llvm::DenseMap<const Decl *, unsigned> AnonymousDeclarationNumbers;
+
+  /// The external top level module during the writing process. Used to
+  /// generate signature for the module file being written.
+  ///
+  /// Only meaningful for standard C++ named modules. See the comments in
+  /// createSignatureForNamedModule() for details.
+  llvm::DenseSet<Module *> TouchedTopLevelModules;
 
   /// An update to a Decl.
   class DeclUpdate {
@@ -675,6 +682,10 @@ public:
   /// Emit a source location.
   void AddSourceLocation(SourceLocation Loc, RecordDataImpl &Record,
                          LocSeq *Seq = nullptr);
+
+  /// Return the raw encodings for source locations.
+  SourceLocationEncoding::RawLocEncoding
+  getRawSourceLocationEncoding(SourceLocation Loc, LocSeq *Seq = nullptr);
 
   /// Emit a source range.
   void AddSourceRange(SourceRange Range, RecordDataImpl &Record,
