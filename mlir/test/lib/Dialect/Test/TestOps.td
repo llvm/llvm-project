@@ -1351,6 +1351,12 @@ def TestOpInPlaceFold : TEST_Op<"op_in_place_fold"> {
   let hasFolder = 1;
 }
 
+def TestOpInPlaceSelfFold : TEST_Op<"op_in_place_self_fold"> {
+  let arguments = (ins UnitAttr:$folded);
+  let results = (outs I32);
+  let hasFolder = 1;
+}
+
 // Test op that simply returns success.
 def TestOpInPlaceFoldSuccess : TEST_Op<"op_in_place_fold_success"> {
   let results = (outs Variadic<I1>);
@@ -2207,6 +2213,7 @@ def ReifyBoundOp : TEST_Op<"reify_bound", [Pure]> {
 
   let extraClassDeclaration = [{
     ::mlir::presburger::BoundType getBoundType();
+    ::mlir::ValueBoundsConstraintSet::Variable getVariable();
   }];
 
   let hasVerifier = 1;
@@ -2217,18 +2224,29 @@ def CompareOp : TEST_Op<"compare"> {
     Compare `lhs` and `rhs`. A remark is emitted which indicates whether the
     specified comparison operator was proven to hold. The remark also indicates
     whether the opposite comparison operator was proven to hold.
+
+    `var_operands` must have exactly two operands: one for the LHS operand and
+    one for the RHS operand. If `lhs_map` is specified, as many operands as
+    `lhs_map` has inputs are expected instead of the first operand. If `rhs_map`
+    is specified, as many operands as `rhs_map` has inputs are expected instead
+    of the second operand.
   }];
 
-  let arguments = (ins Index:$lhs,
-                       Index:$rhs,
+  let arguments = (ins Variadic<Index>:$var_operands,
                        DefaultValuedAttr<StrAttr, "\"EQ\"">:$cmp,
+                       OptionalAttr<AffineMapAttr>:$lhs_map,
+                       OptionalAttr<AffineMapAttr>:$rhs_map,
                        UnitAttr:$compose);
   let results = (outs);
 
   let extraClassDeclaration = [{
     ::mlir::ValueBoundsConstraintSet::ComparisonOperator
         getComparisonOperator();
+    ::mlir::ValueBoundsConstraintSet::Variable getLhs();
+    ::mlir::ValueBoundsConstraintSet::Variable getRhs();
   }];
+
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//

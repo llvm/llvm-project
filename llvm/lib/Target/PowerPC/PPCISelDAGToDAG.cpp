@@ -510,7 +510,7 @@ SDNode *PPCDAGToDAGISel::getGlobalBaseReg() {
 }
 
 // Check if a SDValue has the toc-data attribute.
-static bool hasTocDataAttr(SDValue Val, unsigned PointerSize) {
+static bool hasTocDataAttr(SDValue Val) {
   GlobalAddressSDNode *GA = dyn_cast<GlobalAddressSDNode>(Val);
   if (!GA)
     return false;
@@ -5302,9 +5302,10 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
       SDValue MDV = N->getOperand(MDIndex);
       const MDNode *MD = cast<MDNodeSDNode>(MDV)->getMD();
       assert(MD->getNumOperands() != 0 && "Empty MDNode in operands!");
-      assert((isa<MDString>(MD->getOperand(0)) && cast<MDString>(
-           MD->getOperand(0))->getString().equals("ppc-trap-reason")) 
-           && "Unsupported annotation data type!");
+      assert((isa<MDString>(MD->getOperand(0)) &&
+              cast<MDString>(MD->getOperand(0))->getString() ==
+                  "ppc-trap-reason") &&
+             "Unsupported annotation data type!");
       for (unsigned i = 1; i < MD->getNumOperands(); i++) {
         assert(isa<MDString>(MD->getOperand(i)) && 
                "Invalid data type for annotation ppc-trap-reason!");
@@ -6115,8 +6116,7 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
 
       assert(isAIXABI && "ELF ABI already handled");
 
-      if (hasTocDataAttr(N->getOperand(0),
-                         CurDAG->getDataLayout().getPointerSize())) {
+      if (hasTocDataAttr(N->getOperand(0))) {
         replaceWith(PPC::ADDItoc, N, MVT::i32);
         return;
       }
@@ -6128,8 +6128,7 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
     if (isPPC64 && CModel == CodeModel::Small) {
       assert(isAIXABI && "ELF ABI handled in common SelectCode");
 
-      if (hasTocDataAttr(N->getOperand(0),
-                         CurDAG->getDataLayout().getPointerSize())) {
+      if (hasTocDataAttr(N->getOperand(0))) {
         replaceWith(PPC::ADDItoc8, N, MVT::i64);
         return;
       }
@@ -6143,23 +6142,43 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
     assert((isPPC64 || (isAIXABI && !isPPC64)) && "We are dealing with 64-bit"
            " ELF/AIX or 32-bit AIX in the following.");
 
-    // Transforms the ISD::TOC_ENTRY node for 32-bit AIX large code model mode
-    // or 64-bit medium (ELF-only) or large (ELF and AIX) code model code. We
-    // generate two instructions as described below. The first source operand
-    // is a symbol reference. If it must be toc-referenced according to
-    // Subtarget, we generate:
+    // Transforms the ISD::TOC_ENTRY node for 32-bit AIX large code model mode,
+    // or 64-bit medium (ELF-only), or large (ELF and AIX) code model code that
+    // does not conain TOC data symbols.
+    // We generate two instructions as described below. The first source
+    // operand is a symbol reference. If it must be referenced via the toc
+    // according to Subtarget, we generate:
     // [32-bit AIX]
     //   LWZtocL(@sym, ADDIStocHA(%r2, @sym))
     // [64-bit ELF/AIX]
     //   LDtocL(@sym, ADDIStocHA8(%x2, @sym))
     // Otherwise we generate:
     //   ADDItocL8(ADDIStocHA8(%x2, @sym), @sym)
+
+    // For large code model with TOC data symbols we generate:
+    // [32-bit AIX]
+    //   ADDItocL(ADDIStocHA(%x2, @sym), @sym)
+    // [64-bit AIX]
+    //   Currently not supported.
+
     SDValue GA = N->getOperand(0);
     SDValue TOCbase = N->getOperand(1);
 
     EVT VT = isPPC64 ? MVT::i64 : MVT::i32;
     SDNode *Tmp = CurDAG->getMachineNode(
         isPPC64 ? PPC::ADDIStocHA8 : PPC::ADDIStocHA, dl, VT, TOCbase, GA);
+
+    // On AIX, if the symbol has the toc-data attribute it will be defined
+    // in the TOC entry, so we use an ADDItocL/ADDItocL8.
+    if (isAIXABI && hasTocDataAttr(GA)) {
+      if (isPPC64)
+        report_fatal_error(
+            "64-bit large code model toc-data not yet supported");
+
+      ReplaceNode(N, CurDAG->getMachineNode(PPC::ADDItocL, dl, VT,
+                                            SDValue(Tmp, 0), GA));
+      return;
+    }
 
     if (PPCLowering->isAccessedAsGotIndirect(GA)) {
       // If it is accessed as got-indirect, we need an extra LWZ/LD to load

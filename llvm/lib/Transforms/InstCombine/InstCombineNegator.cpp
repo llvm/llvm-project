@@ -249,7 +249,7 @@ std::array<Value *, 2> Negator::getSortedOperandsOfBinOp(Instruction *I) {
     unsigned SrcWidth = SrcOp->getType()->getScalarSizeInBits();
     const APInt &FullShift = APInt(SrcWidth, SrcWidth - 1);
     if (IsTrulyNegation &&
-        match(SrcOp, m_LShr(m_Value(X), m_SpecificIntAllowUndef(FullShift)))) {
+        match(SrcOp, m_LShr(m_Value(X), m_SpecificIntAllowPoison(FullShift)))) {
       Value *Ashr = Builder.CreateAShr(X, FullShift);
       return Builder.CreateSExt(Ashr, I->getType());
     }
@@ -320,7 +320,8 @@ std::array<Value *, 2> Negator::getSortedOperandsOfBinOp(Instruction *I) {
     return NegatedPHI;
   }
   case Instruction::Select: {
-    if (isKnownNegation(I->getOperand(1), I->getOperand(2))) {
+    if (isKnownNegation(I->getOperand(1), I->getOperand(2), /*NeedNSW=*/false,
+                        /*AllowPoison=*/false)) {
       // Of one hand of select is known to be negation of another hand,
       // just swap the hands around.
       auto *NewSelect = cast<SelectInst>(I->clone());

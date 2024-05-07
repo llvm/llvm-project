@@ -1355,20 +1355,26 @@ inline bool VirtBaseHelper(InterpState &S, CodePtr OpPC, const RecordDecl *Decl,
   while (Base.isBaseClass())
     Base = Base.getBase();
 
-  auto *Field = Base.getRecord()->getVirtualBase(Decl);
-  S.Stk.push<Pointer>(Base.atField(Field->Offset));
+  const Record::Base *VirtBase = Base.getRecord()->getVirtualBase(Decl);
+  S.Stk.push<Pointer>(Base.atField(VirtBase->Offset));
   return true;
 }
 
-inline bool GetPtrVirtBase(InterpState &S, CodePtr OpPC, const RecordDecl *D) {
+inline bool GetPtrVirtBasePop(InterpState &S, CodePtr OpPC,
+                              const RecordDecl *D) {
+  assert(D);
   const Pointer &Ptr = S.Stk.pop<Pointer>();
   if (!CheckNull(S, OpPC, Ptr, CSK_Base))
+    return false;
+  if (Ptr.isDummy()) // FIXME: Once we have type info for dummy pointers, this
+                     // needs to go.
     return false;
   return VirtBaseHelper(S, OpPC, D, Ptr);
 }
 
 inline bool GetPtrThisVirtBase(InterpState &S, CodePtr OpPC,
                                const RecordDecl *D) {
+  assert(D);
   if (S.checkingPotentialConstantExpression())
     return false;
   const Pointer &This = S.Current->getThis();
@@ -1548,17 +1554,16 @@ bool OffsetHelper(InterpState &S, CodePtr OpPC, const T &Offset,
   if (!CheckArray(S, OpPC, Ptr))
     return false;
 
-  // Get a version of the index comparable to the type.
-  T Index = T::from(Ptr.getIndex(), Offset.bitWidth());
-  // Compute the largest index into the array.
-  T MaxIndex = T::from(Ptr.getNumElems(), Offset.bitWidth());
+  uint64_t Index = Ptr.getIndex();
+  uint64_t MaxIndex = static_cast<uint64_t>(Ptr.getNumElems());
 
   bool Invalid = false;
   // Helper to report an invalid offset, computed as APSInt.
   auto DiagInvalidOffset = [&]() -> void {
     const unsigned Bits = Offset.bitWidth();
-    APSInt APOffset(Offset.toAPSInt().extend(Bits + 2), false);
-    APSInt APIndex(Index.toAPSInt().extend(Bits + 2), false);
+    APSInt APOffset(Offset.toAPSInt().extend(Bits + 2), /*IsUnsigend=*/false);
+    APSInt APIndex(APInt(Bits + 2, Index, /*IsSigned=*/true),
+                   /*IsUnsigned=*/false);
     APSInt NewIndex =
         (Op == ArithOp::Add) ? (APIndex + APOffset) : (APIndex - APOffset);
     S.CCEDiag(S.Current->getSource(OpPC), diag::note_constexpr_array_index)
@@ -1569,22 +1574,24 @@ bool OffsetHelper(InterpState &S, CodePtr OpPC, const T &Offset,
   };
 
   if (Ptr.isBlockPointer()) {
-    T MaxOffset = T::from(MaxIndex - Index, Offset.bitWidth());
+    uint64_t IOffset = static_cast<uint64_t>(Offset);
+    uint64_t MaxOffset = MaxIndex - Index;
+
     if constexpr (Op == ArithOp::Add) {
       // If the new offset would be negative, bail out.
-      if (Offset.isNegative() && (Offset.isMin() || -Offset > Index))
+      if (Offset.isNegative() && (Offset.isMin() || -IOffset > Index))
         DiagInvalidOffset();
 
       // If the new offset would be out of bounds, bail out.
-      if (Offset.isPositive() && Offset > MaxOffset)
+      if (Offset.isPositive() && IOffset > MaxOffset)
         DiagInvalidOffset();
     } else {
       // If the new offset would be negative, bail out.
-      if (Offset.isPositive() && Index < Offset)
+      if (Offset.isPositive() && Index < IOffset)
         DiagInvalidOffset();
 
       // If the new offset would be out of bounds, bail out.
-      if (Offset.isNegative() && (Offset.isMin() || -Offset > MaxOffset))
+      if (Offset.isNegative() && (Offset.isMin() || -IOffset > MaxOffset))
         DiagInvalidOffset();
     }
   }
@@ -1601,7 +1608,7 @@ bool OffsetHelper(InterpState &S, CodePtr OpPC, const T &Offset,
   else
     Result = WideIndex - WideOffset;
 
-  S.Stk.push<Pointer>(Ptr.atIndex(static_cast<unsigned>(Result)));
+  S.Stk.push<Pointer>(Ptr.atIndex(static_cast<uint64_t>(Result)));
   return true;
 }
 
@@ -1832,6 +1839,32 @@ bool CastPointerIntegral(InterpState &S, CodePtr OpPC) {
   return true;
 }
 
+static inline bool CastPointerIntegralAP(InterpState &S, CodePtr OpPC,
+                                         uint32_t BitWidth) {
+  const Pointer &Ptr = S.Stk.pop<Pointer>();
+
+  const SourceInfo &E = S.Current->getSource(OpPC);
+  S.CCEDiag(E, diag::note_constexpr_invalid_cast)
+      << 2 << S.getLangOpts().CPlusPlus << S.Current->getRange(OpPC);
+
+  S.Stk.push<IntegralAP<false>>(
+      IntegralAP<false>::from(Ptr.getIntegerRepresentation(), BitWidth));
+  return true;
+}
+
+static inline bool CastPointerIntegralAPS(InterpState &S, CodePtr OpPC,
+                                          uint32_t BitWidth) {
+  const Pointer &Ptr = S.Stk.pop<Pointer>();
+
+  const SourceInfo &E = S.Current->getSource(OpPC);
+  S.CCEDiag(E, diag::note_constexpr_invalid_cast)
+      << 2 << S.getLangOpts().CPlusPlus << S.Current->getRange(OpPC);
+
+  S.Stk.push<IntegralAP<true>>(
+      IntegralAP<true>::from(Ptr.getIntegerRepresentation(), BitWidth));
+  return true;
+}
+
 //===----------------------------------------------------------------------===//
 // Zero, Nullptr
 //===----------------------------------------------------------------------===//
@@ -1902,9 +1935,14 @@ template <PrimType NameL, PrimType NameR>
 inline bool Shr(InterpState &S, CodePtr OpPC) {
   using LT = typename PrimConv<NameL>::T;
   using RT = typename PrimConv<NameR>::T;
-  const auto &RHS = S.Stk.pop<RT>();
+  auto RHS = S.Stk.pop<RT>();
   const auto &LHS = S.Stk.pop<LT>();
   const unsigned Bits = LHS.bitWidth();
+
+  // OpenCL 6.3j: shift values are effectively % word size of LHS.
+  if (S.getLangOpts().OpenCL)
+    RT::bitAnd(RHS, RT::from(LHS.bitWidth() - 1, RHS.bitWidth()),
+               RHS.bitWidth(), &RHS);
 
   if (!CheckShift(S, OpPC, LHS, RHS, Bits))
     return false;
@@ -1927,9 +1965,14 @@ template <PrimType NameL, PrimType NameR>
 inline bool Shl(InterpState &S, CodePtr OpPC) {
   using LT = typename PrimConv<NameL>::T;
   using RT = typename PrimConv<NameR>::T;
-  const auto &RHS = S.Stk.pop<RT>();
+  auto RHS = S.Stk.pop<RT>();
   const auto &LHS = S.Stk.pop<LT>();
   const unsigned Bits = LHS.bitWidth();
+
+  // OpenCL 6.3j: shift values are effectively % word size of LHS.
+  if (S.getLangOpts().OpenCL)
+    RT::bitAnd(RHS, RT::from(LHS.bitWidth() - 1, RHS.bitWidth()),
+               RHS.bitWidth(), &RHS);
 
   if (!CheckShift(S, OpPC, LHS, RHS, Bits))
     return false;
@@ -2044,6 +2087,24 @@ inline bool ArrayElemPop(InterpState &S, CodePtr OpPC, uint32_t Index) {
     return false;
 
   S.Stk.push<T>(Ptr.atIndex(Index).deref<T>());
+  return true;
+}
+
+template <PrimType Name, class T = typename PrimConv<Name>::T>
+inline bool CopyArray(InterpState &S, CodePtr OpPC, uint32_t SrcIndex, uint32_t DestIndex, uint32_t Size) {
+  const auto &SrcPtr = S.Stk.pop<Pointer>();
+  const auto &DestPtr = S.Stk.peek<Pointer>();
+
+  for (uint32_t I = 0; I != Size; ++I) {
+    const Pointer &SP = SrcPtr.atIndex(SrcIndex + I);
+
+    if (!CheckLoad(S, OpPC, SP))
+      return false;
+
+    const Pointer &DP = DestPtr.atIndex(DestIndex + I);
+    DP.deref<T>() = SP.deref<T>();
+    DP.initialize();
+  }
   return true;
 }
 
@@ -2236,6 +2297,10 @@ inline bool CallPtr(InterpState &S, CodePtr OpPC, uint32_t ArgSize,
         << const_cast<Expr *>(E) << E->getSourceRange();
     return false;
   }
+
+  if (!FuncPtr.isValid())
+    return false;
+
   assert(F);
 
   // Check argument nullability state.
@@ -2294,6 +2359,18 @@ inline bool InvalidDeclRef(InterpState &S, CodePtr OpPC,
                            const DeclRefExpr *DR) {
   assert(DR);
   return CheckDeclRef(S, OpPC, DR);
+}
+
+inline bool Assume(InterpState &S, CodePtr OpPC) {
+  const auto Val = S.Stk.pop<Boolean>();
+
+  if (Val)
+    return true;
+
+  // Else, diagnose.
+  const SourceLocation &Loc = S.Current->getLocation(OpPC);
+  S.CCEDiag(Loc, diag::note_constexpr_assumption_failed);
+  return false;
 }
 
 template <PrimType Name, class T = typename PrimConv<Name>::T>

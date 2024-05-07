@@ -24,16 +24,13 @@ namespace strcmp {
   static_assert(__builtin_strcmp("abab", "abab\0banana") == 0, "");
   static_assert(__builtin_strcmp("abab\0banana", "abab\0canada") == 0, "");
   static_assert(__builtin_strcmp(0, "abab") == 0, ""); // both-error {{not an integral constant}} \
-                                                       // both-note {{dereferenced null}} \
-                                                       // expected-note {{in call to}}
+                                                       // both-note {{dereferenced null}}
   static_assert(__builtin_strcmp("abab", 0) == 0, ""); // both-error {{not an integral constant}} \
-                                                       // both-note {{dereferenced null}} \
-                                                       // expected-note {{in call to}}
+                                                       // both-note {{dereferenced null}}
 
   static_assert(__builtin_strcmp(kFoobar, kFoobazfoobar) == -1, "");
   static_assert(__builtin_strcmp(kFoobar, kFoobazfoobar + 6) == 0, ""); // both-error {{not an integral constant}} \
-                                                                        // both-note {{dereferenced one-past-the-end}} \
-                                                                        // expected-note {{in call to}}
+                                                                        // both-note {{dereferenced one-past-the-end}}
 
   /// Used to assert because we're passing a dummy pointer to
   /// __builtin_strcmp() when evaluating the return statement.
@@ -72,14 +69,11 @@ constexpr const char *a = "foo\0quux";
   static_assert(check(c), "");
 
   constexpr int over1 = __builtin_strlen(a + 9); // both-error {{constant expression}} \
-                                                 // both-note {{one-past-the-end}} \
-                                                 // expected-note {{in call to}}
+                                                 // both-note {{one-past-the-end}}
   constexpr int over2 = __builtin_strlen(b + 9); // both-error {{constant expression}} \
-                                                 // both-note {{one-past-the-end}} \
-                                                 // expected-note {{in call to}}
+                                                 // both-note {{one-past-the-end}}
   constexpr int over3 = __builtin_strlen(c + 9); // both-error {{constant expression}} \
-                                                 // both-note {{one-past-the-end}} \
-                                                 // expected-note {{in call to}}
+                                                 // both-note {{one-past-the-end}}
 
   constexpr int under1 = __builtin_strlen(a - 1); // both-error {{constant expression}} \
                                                   // both-note {{cannot refer to element -1}}
@@ -90,8 +84,7 @@ constexpr const char *a = "foo\0quux";
 
   constexpr char d[] = { 'f', 'o', 'o' }; // no nul terminator.
   constexpr int bad = __builtin_strlen(d); // both-error {{constant expression}} \
-                                           // both-note {{one-past-the-end}} \
-                                           // expected-note {{in call to}}
+                                           // both-note {{one-past-the-end}}
 }
 
 namespace nan {
@@ -114,8 +107,7 @@ namespace nan {
   /// FIXME: Current interpreter misses diagnostics.
   constexpr char f2[] = {'0', 'x', 'A', 'E'}; /// No trailing 0 byte.
   constexpr double NaN7 = __builtin_nan(f2); // both-error {{must be initialized by a constant expression}} \
-                                             // expected-note {{read of dereferenced one-past-the-end pointer}} \
-                                             // expected-note {{in call to}}
+                                             // expected-note {{read of dereferenced one-past-the-end pointer}}
   static_assert(!__builtin_issignaling(__builtin_nan("")), "");
   static_assert(__builtin_issignaling(__builtin_nans("")), "");
 }
@@ -641,3 +633,9 @@ void test7(void) {
   X = CFSTR("foo", "bar"); // both-error {{too many arguments to function call}}
 #endif
 }
+
+/// The actual value on my machine is 22, but I have a feeling this will be different
+/// on other targets, so just checking for != 0 here. Light testing is fine since
+/// the actual implementation uses analyze_os_log::computeOSLogBufferLayout(), which
+/// is tested elsewhere.
+static_assert(__builtin_os_log_format_buffer_size("%{mask.xyz}s", "abc") != 0, "");

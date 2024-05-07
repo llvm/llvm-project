@@ -164,27 +164,29 @@ std::optional<Array> serializeAvailability(const AvailabilityInfo &Avail) {
   if (Avail.isDefault())
     return std::nullopt;
 
-  Object Availability;
   Array AvailabilityArray;
-  Availability["domain"] = Avail.Domain;
-  serializeObject(Availability, "introduced",
-                  serializeSemanticVersion(Avail.Introduced));
-  serializeObject(Availability, "deprecated",
-                  serializeSemanticVersion(Avail.Deprecated));
-  serializeObject(Availability, "obsoleted",
-                  serializeSemanticVersion(Avail.Obsoleted));
+
   if (Avail.isUnconditionallyDeprecated()) {
     Object UnconditionallyDeprecated;
     UnconditionallyDeprecated["domain"] = "*";
     UnconditionallyDeprecated["isUnconditionallyDeprecated"] = true;
     AvailabilityArray.emplace_back(std::move(UnconditionallyDeprecated));
   }
-  if (Avail.isUnconditionallyUnavailable()) {
-    Object UnconditionallyUnavailable;
-    UnconditionallyUnavailable["domain"] = "*";
-    UnconditionallyUnavailable["isUnconditionallyUnavailable"] = true;
-    AvailabilityArray.emplace_back(std::move(UnconditionallyUnavailable));
+  Object Availability;
+
+  Availability["domain"] = Avail.Domain;
+
+  if (Avail.isUnavailable()) {
+    Availability["isUnconditionallyUnavailable"] = true;
+  } else {
+    serializeObject(Availability, "introduced",
+                    serializeSemanticVersion(Avail.Introduced));
+    serializeObject(Availability, "deprecated",
+                    serializeSemanticVersion(Avail.Deprecated));
+    serializeObject(Availability, "obsoleted",
+                    serializeSemanticVersion(Avail.Obsoleted));
   }
+
   AvailabilityArray.emplace_back(std::move(Availability));
   return AvailabilityArray;
 }
@@ -664,6 +666,14 @@ bool SymbolGraphSerializer::shouldSkip(const APIRecord *Record) const {
   // Skip unconditionally unavailable symbols
   if (Record->Availability.isUnconditionallyUnavailable())
     return true;
+
+  // Filter out symbols without a name as we can generate correct symbol graphs
+  // for them. In practice these are anonymous record types that aren't attached
+  // to a declaration.
+  if (auto *Tag = dyn_cast<TagRecord>(Record)) {
+    if (Tag->IsEmbeddedInVarDeclarator)
+      return true;
+  }
 
   // Filter out symbols prefixed with an underscored as they are understood to
   // be symbols clients should not use.

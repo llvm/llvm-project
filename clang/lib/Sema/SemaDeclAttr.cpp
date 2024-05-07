@@ -984,6 +984,21 @@ static void handleErrorAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     D->addAttr(EA);
 }
 
+static void handleExcludeFromExplicitInstantiationAttr(Sema &S, Decl *D,
+                                                       const ParsedAttr &AL) {
+  const auto *PD = isa<CXXRecordDecl>(D)
+                       ? cast<DeclContext>(D)
+                       : D->getDeclContext()->getRedeclContext();
+  if (const auto *RD = dyn_cast<CXXRecordDecl>(PD); RD && RD->isLocalClass()) {
+    S.Diag(AL.getLoc(),
+           diag::warn_attribute_exclude_from_explicit_instantiation_local_class)
+        << AL << /*IsMember=*/!isa<CXXRecordDecl>(D);
+    return;
+  }
+  D->addAttr(::new (S.Context)
+                 ExcludeFromExplicitInstantiationAttr(S.Context, AL));
+}
+
 namespace {
 /// Determines if a given Expr references any of the given function's
 /// ParmVarDecls, or the function's implicit `this` parameter (if applicable).
@@ -2001,6 +2016,8 @@ static void markUsedForAliasOrIfunc(Sema &S, Decl *D, const ParsedAttr &AL,
   LookupResult LR(S, Target, Sema::LookupOrdinaryName);
   if (S.LookupName(LR, S.TUScope)) {
     for (NamedDecl *ND : LR) {
+      if (!isa<FunctionDecl>(ND) && !isa<VarDecl>(ND))
+        continue;
       if (MC->shouldMangleDeclName(ND)) {
         llvm::raw_svector_ostream Out(Name);
         Name.clear();
@@ -9336,6 +9353,9 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
     break;
   case ParsedAttr::AT_Error:
     handleErrorAttr(S, D, AL);
+    break;
+  case ParsedAttr::AT_ExcludeFromExplicitInstantiation:
+    handleExcludeFromExplicitInstantiationAttr(S, D, AL);
     break;
   case ParsedAttr::AT_DiagnoseIf:
     handleDiagnoseIfAttr(S, D, AL);

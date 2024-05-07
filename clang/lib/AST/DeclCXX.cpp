@@ -57,7 +57,8 @@ using namespace clang;
 
 void AccessSpecDecl::anchor() {}
 
-AccessSpecDecl *AccessSpecDecl::CreateDeserialized(ASTContext &C, unsigned ID) {
+AccessSpecDecl *AccessSpecDecl::CreateDeserialized(ASTContext &C,
+                                                   GlobalDeclID ID) {
   return new (C, ID) AccessSpecDecl(EmptyShell());
 }
 
@@ -68,7 +69,7 @@ void LazyASTUnresolvedSet::getFromExternalSource(ASTContext &C) const {
 
   for (ASTUnresolvedSet::iterator I = Impl.begin(); I != Impl.end(); ++I)
     I.setDecl(cast<NamedDecl>(Source->GetExternalDecl(
-        reinterpret_cast<uintptr_t>(I.getDecl()) >> 2)));
+        GlobalDeclID(reinterpret_cast<uintptr_t>(I.getDecl()) >> 2))));
   Impl.Decls.setLazy(false);
 }
 
@@ -160,8 +161,8 @@ CXXRecordDecl::CreateLambda(const ASTContext &C, DeclContext *DC,
   return R;
 }
 
-CXXRecordDecl *
-CXXRecordDecl::CreateDeserialized(const ASTContext &C, unsigned ID) {
+CXXRecordDecl *CXXRecordDecl::CreateDeserialized(const ASTContext &C,
+                                                 GlobalDeclID ID) {
   auto *R = new (C, ID)
       CXXRecordDecl(CXXRecord, TagTypeKind::Struct, C, nullptr,
                     SourceLocation(), SourceLocation(), nullptr, nullptr);
@@ -668,7 +669,7 @@ bool CXXRecordDecl::hasSubobjectAtOffsetZeroOfEmptyBaseType(
     for (auto *FD : X->fields()) {
       // FIXME: Should we really care about the type of the first non-static
       // data member of a non-union if there are preceding unnamed bit-fields?
-      if (FD->isUnnamedBitfield())
+      if (FD->isUnnamedBitField())
         continue;
 
       if (!IsFirstField && !FD->isZeroSize(Ctx))
@@ -947,7 +948,7 @@ void CXXRecordDecl::addedMember(Decl *D) {
     //   A declaration for a bit-field that omits the identifier declares an
     //   unnamed bit-field. Unnamed bit-fields are not members and cannot be
     //   initialized.
-    if (Field->isUnnamedBitfield()) {
+    if (Field->isUnnamedBitField()) {
       // C++ [meta.unary.prop]p4: [LWG2358]
       //   T is a class type [...] with [...] no unnamed bit-fields of non-zero
       //   length
@@ -2162,8 +2163,8 @@ CXXDeductionGuideDecl *CXXDeductionGuideDecl::Create(
                                            TInfo, EndLocation, Ctor, Kind);
 }
 
-CXXDeductionGuideDecl *CXXDeductionGuideDecl::CreateDeserialized(ASTContext &C,
-                                                                 unsigned ID) {
+CXXDeductionGuideDecl *
+CXXDeductionGuideDecl::CreateDeserialized(ASTContext &C, GlobalDeclID ID) {
   return new (C, ID) CXXDeductionGuideDecl(
       C, nullptr, SourceLocation(), ExplicitSpecifier(), DeclarationNameInfo(),
       QualType(), nullptr, SourceLocation(), nullptr,
@@ -2175,8 +2176,8 @@ RequiresExprBodyDecl *RequiresExprBodyDecl::Create(
   return new (C, DC) RequiresExprBodyDecl(C, DC, StartLoc);
 }
 
-RequiresExprBodyDecl *RequiresExprBodyDecl::CreateDeserialized(ASTContext &C,
-                                                               unsigned ID) {
+RequiresExprBodyDecl *
+RequiresExprBodyDecl::CreateDeserialized(ASTContext &C, GlobalDeclID ID) {
   return new (C, ID) RequiresExprBodyDecl(C, nullptr, SourceLocation());
 }
 
@@ -2281,7 +2282,8 @@ CXXMethodDecl::Create(ASTContext &C, CXXRecordDecl *RD, SourceLocation StartLoc,
       isInline, ConstexprKind, EndLocation, TrailingRequiresClause);
 }
 
-CXXMethodDecl *CXXMethodDecl::CreateDeserialized(ASTContext &C, unsigned ID) {
+CXXMethodDecl *CXXMethodDecl::CreateDeserialized(ASTContext &C,
+                                                 GlobalDeclID ID) {
   return new (C, ID) CXXMethodDecl(
       CXXMethod, C, nullptr, SourceLocation(), DeclarationNameInfo(),
       QualType(), nullptr, SC_None, false, false,
@@ -2699,7 +2701,7 @@ CXXConstructorDecl::CXXConstructorDecl(
 void CXXConstructorDecl::anchor() {}
 
 CXXConstructorDecl *CXXConstructorDecl::CreateDeserialized(ASTContext &C,
-                                                           unsigned ID,
+                                                           GlobalDeclID ID,
                                                            uint64_t AllocKind) {
   bool hasTrailingExplicit = static_cast<bool>(AllocKind & TAKHasTailExplicit);
   bool isInheritingConstructor =
@@ -2845,8 +2847,8 @@ bool CXXConstructorDecl::isSpecializationCopyingObject() const {
 
 void CXXDestructorDecl::anchor() {}
 
-CXXDestructorDecl *
-CXXDestructorDecl::CreateDeserialized(ASTContext &C, unsigned ID) {
+CXXDestructorDecl *CXXDestructorDecl::CreateDeserialized(ASTContext &C,
+                                                         GlobalDeclID ID) {
   return new (C, ID) CXXDestructorDecl(
       C, nullptr, SourceLocation(), DeclarationNameInfo(), QualType(), nullptr,
       false, false, false, ConstexprSpecKind::Unspecified, nullptr);
@@ -2877,8 +2879,8 @@ void CXXDestructorDecl::setOperatorDelete(FunctionDecl *OD, Expr *ThisArg) {
 
 void CXXConversionDecl::anchor() {}
 
-CXXConversionDecl *
-CXXConversionDecl::CreateDeserialized(ASTContext &C, unsigned ID) {
+CXXConversionDecl *CXXConversionDecl::CreateDeserialized(ASTContext &C,
+                                                         GlobalDeclID ID) {
   return new (C, ID) CXXConversionDecl(
       C, nullptr, SourceLocation(), DeclarationNameInfo(), QualType(), nullptr,
       false, false, ExplicitSpecifier(), ConstexprSpecKind::Unspecified,
@@ -2924,7 +2926,7 @@ LinkageSpecDecl *LinkageSpecDecl::Create(ASTContext &C, DeclContext *DC,
 }
 
 LinkageSpecDecl *LinkageSpecDecl::CreateDeserialized(ASTContext &C,
-                                                     unsigned ID) {
+                                                     GlobalDeclID ID) {
   return new (C, ID)
       LinkageSpecDecl(nullptr, SourceLocation(), SourceLocation(),
                       LinkageSpecLanguageIDs::C, false);
@@ -2946,7 +2948,7 @@ UsingDirectiveDecl *UsingDirectiveDecl::Create(ASTContext &C, DeclContext *DC,
 }
 
 UsingDirectiveDecl *UsingDirectiveDecl::CreateDeserialized(ASTContext &C,
-                                                           unsigned ID) {
+                                                           GlobalDeclID ID) {
   return new (C, ID) UsingDirectiveDecl(nullptr, SourceLocation(),
                                         SourceLocation(),
                                         NestedNameSpecifierLoc(),
@@ -2985,7 +2987,8 @@ NamespaceDecl *NamespaceDecl::Create(ASTContext &C, DeclContext *DC,
       NamespaceDecl(C, DC, Inline, StartLoc, IdLoc, Id, PrevDecl, Nested);
 }
 
-NamespaceDecl *NamespaceDecl::CreateDeserialized(ASTContext &C, unsigned ID) {
+NamespaceDecl *NamespaceDecl::CreateDeserialized(ASTContext &C,
+                                                 GlobalDeclID ID) {
   return new (C, ID) NamespaceDecl(C, nullptr, false, SourceLocation(),
                                    SourceLocation(), nullptr, nullptr, false);
 }
@@ -3046,8 +3049,8 @@ NamespaceAliasDecl *NamespaceAliasDecl::Create(ASTContext &C, DeclContext *DC,
                                         QualifierLoc, IdentLoc, Namespace);
 }
 
-NamespaceAliasDecl *
-NamespaceAliasDecl::CreateDeserialized(ASTContext &C, unsigned ID) {
+NamespaceAliasDecl *NamespaceAliasDecl::CreateDeserialized(ASTContext &C,
+                                                           GlobalDeclID ID) {
   return new (C, ID) NamespaceAliasDecl(C, nullptr, SourceLocation(),
                                         SourceLocation(), nullptr,
                                         NestedNameSpecifierLoc(),
@@ -3102,8 +3105,8 @@ UsingShadowDecl::UsingShadowDecl(Kind K, ASTContext &C, EmptyShell Empty)
     : NamedDecl(K, nullptr, SourceLocation(), DeclarationName()),
       redeclarable_base(C) {}
 
-UsingShadowDecl *
-UsingShadowDecl::CreateDeserialized(ASTContext &C, unsigned ID) {
+UsingShadowDecl *UsingShadowDecl::CreateDeserialized(ASTContext &C,
+                                                     GlobalDeclID ID) {
   return new (C, ID) UsingShadowDecl(UsingShadow, C, EmptyShell());
 }
 
@@ -3126,7 +3129,7 @@ ConstructorUsingShadowDecl::Create(ASTContext &C, DeclContext *DC,
 }
 
 ConstructorUsingShadowDecl *
-ConstructorUsingShadowDecl::CreateDeserialized(ASTContext &C, unsigned ID) {
+ConstructorUsingShadowDecl::CreateDeserialized(ASTContext &C, GlobalDeclID ID) {
   return new (C, ID) ConstructorUsingShadowDecl(C, EmptyShell());
 }
 
@@ -3174,7 +3177,7 @@ UsingDecl *UsingDecl::Create(ASTContext &C, DeclContext *DC, SourceLocation UL,
   return new (C, DC) UsingDecl(DC, UL, QualifierLoc, NameInfo, HasTypename);
 }
 
-UsingDecl *UsingDecl::CreateDeserialized(ASTContext &C, unsigned ID) {
+UsingDecl *UsingDecl::CreateDeserialized(ASTContext &C, GlobalDeclID ID) {
   return new (C, ID) UsingDecl(nullptr, SourceLocation(),
                                NestedNameSpecifierLoc(), DeclarationNameInfo(),
                                false);
@@ -3198,7 +3201,8 @@ UsingEnumDecl *UsingEnumDecl::Create(ASTContext &C, DeclContext *DC,
       UsingEnumDecl(DC, EnumType->getType()->getAsTagDecl()->getDeclName(), UL, EL, NL, EnumType);
 }
 
-UsingEnumDecl *UsingEnumDecl::CreateDeserialized(ASTContext &C, unsigned ID) {
+UsingEnumDecl *UsingEnumDecl::CreateDeserialized(ASTContext &C,
+                                                 GlobalDeclID ID) {
   return new (C, ID)
       UsingEnumDecl(nullptr, DeclarationName(), SourceLocation(),
                     SourceLocation(), SourceLocation(), nullptr);
@@ -3217,7 +3221,7 @@ UsingPackDecl *UsingPackDecl::Create(ASTContext &C, DeclContext *DC,
   return new (C, DC, Extra) UsingPackDecl(DC, InstantiatedFrom, UsingDecls);
 }
 
-UsingPackDecl *UsingPackDecl::CreateDeserialized(ASTContext &C, unsigned ID,
+UsingPackDecl *UsingPackDecl::CreateDeserialized(ASTContext &C, GlobalDeclID ID,
                                                  unsigned NumExpansions) {
   size_t Extra = additionalSizeToAlloc<NamedDecl *>(NumExpansions);
   auto *Result =
@@ -3243,7 +3247,7 @@ UnresolvedUsingValueDecl::Create(ASTContext &C, DeclContext *DC,
 }
 
 UnresolvedUsingValueDecl *
-UnresolvedUsingValueDecl::CreateDeserialized(ASTContext &C, unsigned ID) {
+UnresolvedUsingValueDecl::CreateDeserialized(ASTContext &C, GlobalDeclID ID) {
   return new (C, ID) UnresolvedUsingValueDecl(nullptr, QualType(),
                                               SourceLocation(),
                                               NestedNameSpecifierLoc(),
@@ -3273,7 +3277,8 @@ UnresolvedUsingTypenameDecl::Create(ASTContext &C, DeclContext *DC,
 }
 
 UnresolvedUsingTypenameDecl *
-UnresolvedUsingTypenameDecl::CreateDeserialized(ASTContext &C, unsigned ID) {
+UnresolvedUsingTypenameDecl::CreateDeserialized(ASTContext &C,
+                                                GlobalDeclID ID) {
   return new (C, ID) UnresolvedUsingTypenameDecl(
       nullptr, SourceLocation(), SourceLocation(), NestedNameSpecifierLoc(),
       SourceLocation(), nullptr, SourceLocation());
@@ -3286,7 +3291,8 @@ UnresolvedUsingIfExistsDecl::Create(ASTContext &Ctx, DeclContext *DC,
 }
 
 UnresolvedUsingIfExistsDecl *
-UnresolvedUsingIfExistsDecl::CreateDeserialized(ASTContext &Ctx, unsigned ID) {
+UnresolvedUsingIfExistsDecl::CreateDeserialized(ASTContext &Ctx,
+                                                GlobalDeclID ID) {
   return new (Ctx, ID)
       UnresolvedUsingIfExistsDecl(nullptr, SourceLocation(), DeclarationName());
 }
@@ -3310,7 +3316,7 @@ StaticAssertDecl *StaticAssertDecl::Create(ASTContext &C, DeclContext *DC,
 }
 
 StaticAssertDecl *StaticAssertDecl::CreateDeserialized(ASTContext &C,
-                                                       unsigned ID) {
+                                                       GlobalDeclID ID) {
   return new (C, ID) StaticAssertDecl(nullptr, SourceLocation(), nullptr,
                                       nullptr, SourceLocation(), false);
 }
@@ -3332,7 +3338,7 @@ BindingDecl *BindingDecl::Create(ASTContext &C, DeclContext *DC,
   return new (C, DC) BindingDecl(DC, IdLoc, Id);
 }
 
-BindingDecl *BindingDecl::CreateDeserialized(ASTContext &C, unsigned ID) {
+BindingDecl *BindingDecl::CreateDeserialized(ASTContext &C, GlobalDeclID ID) {
   return new (C, ID) BindingDecl(nullptr, SourceLocation(), nullptr);
 }
 
@@ -3363,7 +3369,7 @@ DecompositionDecl *DecompositionDecl::Create(ASTContext &C, DeclContext *DC,
 }
 
 DecompositionDecl *DecompositionDecl::CreateDeserialized(ASTContext &C,
-                                                         unsigned ID,
+                                                         GlobalDeclID ID,
                                                          unsigned NumBindings) {
   size_t Extra = additionalSizeToAlloc<BindingDecl *>(NumBindings);
   auto *Result = new (C, ID, Extra)
@@ -3402,7 +3408,7 @@ MSPropertyDecl *MSPropertyDecl::Create(ASTContext &C, DeclContext *DC,
 }
 
 MSPropertyDecl *MSPropertyDecl::CreateDeserialized(ASTContext &C,
-                                                   unsigned ID) {
+                                                   GlobalDeclID ID) {
   return new (C, ID) MSPropertyDecl(nullptr, SourceLocation(),
                                     DeclarationName(), QualType(), nullptr,
                                     SourceLocation(), nullptr, nullptr);
@@ -3419,7 +3425,7 @@ MSGuidDecl *MSGuidDecl::Create(const ASTContext &C, QualType T, Parts P) {
   return new (C, DC) MSGuidDecl(DC, T, P);
 }
 
-MSGuidDecl *MSGuidDecl::CreateDeserialized(ASTContext &C, unsigned ID) {
+MSGuidDecl *MSGuidDecl::CreateDeserialized(ASTContext &C, GlobalDeclID ID) {
   return new (C, ID) MSGuidDecl(nullptr, QualType(), Parts());
 }
 
@@ -3469,7 +3475,8 @@ static bool isValidStructGUID(ASTContext &Ctx, QualType T) {
           return false;
       auto MatcherIt = Fields.begin();
       for (const FieldDecl *FD : RD->fields()) {
-        if (FD->isUnnamedBitfield()) continue;
+        if (FD->isUnnamedBitField())
+          continue;
         if (FD->isBitField() || MatcherIt == Fields.end() ||
             !(*MatcherIt)(FD->getType()))
           return false;
@@ -3528,7 +3535,7 @@ UnnamedGlobalConstantDecl::Create(const ASTContext &C, QualType T,
 }
 
 UnnamedGlobalConstantDecl *
-UnnamedGlobalConstantDecl::CreateDeserialized(ASTContext &C, unsigned ID) {
+UnnamedGlobalConstantDecl::CreateDeserialized(ASTContext &C, GlobalDeclID ID) {
   return new (C, ID)
       UnnamedGlobalConstantDecl(C, nullptr, QualType(), APValue());
 }
