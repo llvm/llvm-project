@@ -17,7 +17,6 @@ def grp_mach_o : OptionGroup<"kind">,
                  HelpText<"llvm-symbolizer Mach-O Specific Options">;
 
 def addresses : F<"addresses", "Show address before line information">;
-def approximate_line : F<"approximate-line","Show approximate non-zero line number information nearest to before the given address.">;
 defm adjust_vma
     : Eq<"adjust-vma", "Add specified offset to object file addresses">,
       MetaVarName<"<offset>">;
@@ -56,6 +55,7 @@ def pretty_print : F<"pretty-print", "Make the output more human friendly">;
 defm print_source_context_lines : Eq<"print-source-context-lines", "Print N lines of source file context">;
 def relative_address : F<"relative-address", "Interpret addresses as addresses relative to the image base">;
 def relativenames : F<"relativenames", "Strip the compilation directory from paths">;
+def skip_line_zero : F<"skip-line-zero","Show approximate non-zero line number information nearest to before the given address.">;
 defm untag_addresses : B<"untag-addresses", "", "Remove memory tags from addresses before symbolization">;
 def use_dia: F<"dia", "Use the DIA library to access symbols (Windows only)">;
 def verbose : F<"verbose", "Print verbose line info">;

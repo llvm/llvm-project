@@ -2,10 +2,10 @@
 
 # RUN: llvm-mc -g -filetype=obj -triple=x86_64-pc-linux %s -o %t.o
 # RUN: llvm-symbolizer --obj=%t.o 0xa | FileCheck --strict-whitespace --match-full-lines --check-prefix=APPROX-DISABLE %s
-# RUN: llvm-symbolizer --obj=%t.o --approximate-line 0xa | FileCheck --strict-whitespace --match-full-lines --check-prefix=APPROX-ENABLE %s
-# RUN: llvm-symbolizer --obj=%t.o --approximate-line 0xa 0x10 | FileCheck --strict-whitespace --match-full-lines --check-prefixes=APPROX-ENABLE,NO-APPROX %s
-# RUN: llvm-symbolizer --obj=%t.o --approximate-line --verbose 0xa | FileCheck --strict-whitespace --match-full-lines --check-prefix=APPROX-VERBOSE %s
-# RUN: llvm-symbolizer --obj=%t.o --approximate-line --output-style=JSON 0xa | FileCheck --strict-whitespace --match-full-lines --check-prefix=APPROX-JSON %s
+# RUN: llvm-symbolizer --obj=%t.o --skip-line-zero 0xa | FileCheck --strict-whitespace --match-full-lines --check-prefix=APPROX-ENABLE %s
+# RUN: llvm-symbolizer --obj=%t.o --skip-line-zero 0xa 0x10 | FileCheck --strict-whitespace --match-full-lines --check-prefixes=APPROX-ENABLE,NO-APPROX %s
+# RUN: llvm-symbolizer --obj=%t.o --skip-line-zero --verbose 0xa | FileCheck --strict-whitespace --match-full-lines --check-prefix=APPROX-VERBOSE %s
+# RUN: llvm-symbolizer --obj=%t.o --skip-line-zero --output-style=JSON 0xa | FileCheck --strict-whitespace --match-full-lines --check-prefix=APPROX-JSON %s
 
 # APPROX-DISABLE:main
 # APPROX-DISABLE-NEXT:{{[/|\]+}}tmp{{[/|\]+}}test{{[/|\]+}}main.c:0:6

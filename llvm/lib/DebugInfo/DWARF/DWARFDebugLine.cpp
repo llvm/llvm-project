@@ -1312,26 +1312,25 @@ uint32_t DWARFDebugLine::LineTable::findRowInSeq(
   return RowPos - Rows.begin();
 }
 
-std::pair<uint32_t, bool>
+uint32_t
 DWARFDebugLine::LineTable::lookupAddress(object::SectionedAddress Address,
-                                         bool ApproximateLine) const {
+                                         bool *IsApproximateLine) const {
 
   // Search for relocatable addresses
-  std::pair<uint32_t, bool> Result =
-      lookupAddressImpl(Address, ApproximateLine);
+  uint32_t Result = lookupAddressImpl(Address, IsApproximateLine);
 
-  if (Result.first != UnknownRowIndex ||
+  if (Result != UnknownRowIndex ||
       Address.SectionIndex == object::SectionedAddress::UndefSection)
     return Result;
 
   // Search for absolute addresses
   Address.SectionIndex = object::SectionedAddress::UndefSection;
-  return lookupAddressImpl(Address, ApproximateLine);
+  return lookupAddressImpl(Address, IsApproximateLine);
 }
 
-std::pair<uint32_t, bool>
+uint32_t
 DWARFDebugLine::LineTable::lookupAddressImpl(object::SectionedAddress Address,
-                                             bool ApproximateLine) const {
+                                             bool *IsApproximateLine) const {
   // First, find an instruction sequence containing the given address.
   DWARFDebugLine::Sequence Sequence;
   Sequence.SectionIndex = Address.SectionIndex;
@@ -1339,25 +1338,18 @@ DWARFDebugLine::LineTable::lookupAddressImpl(object::SectionedAddress Address,
   SequenceIter It = llvm::upper_bound(Sequences, Sequence,
                                       DWARFDebugLine::Sequence::orderByHighPC);
   if (It == Sequences.end() || It->SectionIndex != Address.SectionIndex)
-    return {UnknownRowIndex, false};
+    return UnknownRowIndex;
 
   uint32_t RowIndex = findRowInSeq(*It, Address);
-  bool IsApproximate = false;
-  if (ApproximateLine) {
-    uint32_t ApproxRowIndex = RowIndex;
-    while (ApproxRowIndex >= It->FirstRowIndex) {
-      if (ApproxRowIndex != UnknownRowIndex && Rows[ApproxRowIndex].Line)
-        break;
-      IsApproximate = true;
-      if (ApproxRowIndex != UnknownRowIndex &&
-          (Rows[ApproxRowIndex].BasicBlock | Rows[ApproxRowIndex].PrologueEnd))
-        break;
-      --ApproxRowIndex;
+  if (RowIndex != UnknownRowIndex && DWARFDebugLine::ReportApproximateLine) {
+    for (uint32_t ApproxRowIndex = RowIndex;
+         ApproxRowIndex >= It->FirstRowIndex; --ApproxRowIndex) {
+      if (Rows[ApproxRowIndex].Line)
+        return ApproxRowIndex;
+      *IsApproximateLine = true;
     }
-    if (ApproxRowIndex >= It->FirstRowIndex)
-      RowIndex = ApproxRowIndex;
   }
-  return {RowIndex, IsApproximate};
+  return RowIndex;
 }
 
 bool DWARFDebugLine::LineTable::lookupAddressRange(
@@ -1497,11 +1489,11 @@ bool DWARFDebugLine::Prologue::getFileNameByIndex(
 }
 
 bool DWARFDebugLine::LineTable::getFileLineInfoForAddress(
-    object::SectionedAddress Address, const char *CompDir, bool ApproximateLine,
+    object::SectionedAddress Address, const char *CompDir,
     FileLineInfoKind Kind, DILineInfo &Result) const {
+  bool IsApproximateLine = false;
   // Get the index of row we're looking for in the line table.
-  auto RowIndexValue = lookupAddress(Address, ApproximateLine);
-  uint32_t RowIndex = RowIndexValue.first;
+  uint32_t RowIndex = lookupAddress(Address, &IsApproximateLine);
   if (RowIndex == -1U)
     return false;
   // Take file number and line/column from the row.
@@ -1512,7 +1504,7 @@ bool DWARFDebugLine::LineTable::getFileLineInfoForAddress(
   Result.Column = Row.Column;
   Result.Discriminator = Row.Discriminator;
   Result.Source = getSourceByIndex(Row.File, Kind);
-  Result.IsApproximatedLine = RowIndexValue.second;
+  Result.IsApproximatedLine = IsApproximateLine;
   return true;
 }
 

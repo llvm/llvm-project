@@ -224,11 +224,11 @@ OPTIONS
   This can be used to perform lookups as if the object were relocated by the
   offset.
 
-.. option:: --approximate-line
+.. option:: --skip-line-zero
 
-  Print the approximate non-zero line number that is nearest to before an
-  input address. Nearest lookup is performed by querying the line-table
-  structure for an address having non-zero line information in close proximity.
+  If an address does not have an associated line number, use the last line
+  number from the current sequence in the line-table. Such lines are labeled
+  as "approximate" in the output as they may be misleading.
 
 .. option:: --basenames, -s
 
@@ -384,7 +384,6 @@ OPTIONS
         "ModuleName": "inlined.elf",
         "Symbol": [
           {
-            "Approximate": false,
             "Column": 18,
             "Discriminator": 0,
             "FileName": "/tmp/test.cpp",
@@ -395,7 +394,6 @@ OPTIONS
             "StartLine": 9
           },
           {
-            "Approximate": false,
             "Column": 0,
             "Discriminator": 0,
             "FileName": "/tmp/test.cpp",
@@ -412,7 +410,6 @@ OPTIONS
         "ModuleName": "inlined.elf",
         "Symbol": [
           {
-            "Approximate": false,
             "Column": 3,
             "Discriminator": 0,
             "FileName": "/tmp/test.cpp",

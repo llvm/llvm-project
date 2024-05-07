@@ -240,8 +240,8 @@ public:
 
     /// Returns the index of the row with file/line info for a given address,
     /// or UnknownRowIndex if there is no such row.
-    std::pair<uint32_t, bool> lookupAddress(object::SectionedAddress Address,
-                                            bool ApproximateLine) const;
+    uint32_t lookupAddress(object::SectionedAddress Address,
+                           bool *IsApproximateLine = nullptr) const;
 
     bool lookupAddressRange(object::SectionedAddress Address, uint64_t Size,
                             std::vector<uint32_t> &Result) const;
@@ -268,7 +268,7 @@ public:
     /// Fills the Result argument with the file and line information
     /// corresponding to Address. Returns true on success.
     bool getFileLineInfoForAddress(object::SectionedAddress Address,
-                                   const char *CompDir, bool ApproximateLine,
+                                   const char *CompDir,
                                    DILineInfoSpecifier::FileLineInfoKind Kind,
                                    DILineInfo &Result) const;
 
@@ -302,9 +302,8 @@ public:
     getSourceByIndex(uint64_t FileIndex,
                      DILineInfoSpecifier::FileLineInfoKind Kind) const;
 
-    std::pair<uint32_t, bool>
-    lookupAddressImpl(object::SectionedAddress Address,
-                      bool ApproximateLine) const;
+    uint32_t lookupAddressImpl(object::SectionedAddress Address,
+                               bool *IsApproximateLine = nullptr) const;
 
     bool lookupAddressRangeImpl(object::SectionedAddress Address, uint64_t Size,
                                 std::vector<uint32_t> &Result) const;
@@ -430,6 +429,9 @@ private:
   using LineTableConstIter = LineTableMapTy::const_iterator;
 
   LineTableMapTy LineTableMap;
+
+public:
+  inline static bool ReportApproximateLine = false;
 };
 
 } // end namespace llvm

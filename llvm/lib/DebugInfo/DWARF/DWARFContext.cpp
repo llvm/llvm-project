@@ -1737,6 +1737,7 @@ DILineInfo DWARFContext::getLineInfoForAddress(object::SectionedAddress Address,
   if (!CU)
     return Result;
 
+  DWARFDebugLine::ReportApproximateLine = Spec.ApproximateLine;
   getFunctionNameAndStartLineForAddress(
       CU, Address.Address, Spec.FNKind, Spec.FLIKind, Result.FunctionName,
       Result.StartFileName, Result.StartLine, Result.StartAddress);
@@ -1744,7 +1745,7 @@ DILineInfo DWARFContext::getLineInfoForAddress(object::SectionedAddress Address,
     if (const DWARFLineTable *LineTable = getLineTableForUnit(CU)) {
       LineTable->getFileLineInfoForAddress(
           {Address.Address, Address.SectionIndex}, CU->getCompilationDir(),
-          Spec.ApproximateLine, Spec.FLIKind, Result);
+          Spec.FLIKind, Result);
     }
   }
 
@@ -1831,6 +1832,7 @@ DWARFContext::getInliningInfoForAddress(object::SectionedAddress Address,
 
   const DWARFLineTable *LineTable = nullptr;
   SmallVector<DWARFDie, 4> InlinedChain;
+  DWARFDebugLine::ReportApproximateLine = Spec.ApproximateLine;
   CU->getInlinedChainForAddress(Address.Address, InlinedChain);
   if (InlinedChain.size() == 0) {
     // If there is no DIE for address (e.g. it is in unavailable .dwo file),
@@ -1838,10 +1840,9 @@ DWARFContext::getInliningInfoForAddress(object::SectionedAddress Address,
     if (Spec.FLIKind != FileLineInfoKind::None) {
       DILineInfo Frame;
       LineTable = getLineTableForUnit(CU);
-      if (LineTable &&
-          LineTable->getFileLineInfoForAddress(
-              {Address.Address, Address.SectionIndex}, CU->getCompilationDir(),
-              Spec.ApproximateLine, Spec.FLIKind, Frame))
+      if (LineTable && LineTable->getFileLineInfoForAddress(
+                           {Address.Address, Address.SectionIndex},
+                           CU->getCompilationDir(), Spec.FLIKind, Frame))
         InliningInfo.addFrame(Frame);
     }
     return InliningInfo;
@@ -1868,7 +1869,7 @@ DWARFContext::getInliningInfoForAddress(object::SectionedAddress Address,
         if (LineTable)
           LineTable->getFileLineInfoForAddress(
               {Address.Address, Address.SectionIndex}, CU->getCompilationDir(),
-              Spec.ApproximateLine, Spec.FLIKind, Frame);
+              Spec.FLIKind, Frame);
       } else {
         // Otherwise, use call file, call line and call column from
         // previous DIE in inlined chain.
