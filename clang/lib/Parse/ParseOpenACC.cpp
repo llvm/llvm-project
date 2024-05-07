@@ -945,16 +945,20 @@ Parser::OpenACCClauseParseResult Parser::ParseOpenACCClauseParams(
       // make sure we get the right differentiator.
       assert(DirKind == OpenACCDirectiveKind::Update);
       [[fallthrough]];
-    case OpenACCClauseKind::Attach:
     case OpenACCClauseKind::Delete:
     case OpenACCClauseKind::Detach:
     case OpenACCClauseKind::Device:
     case OpenACCClauseKind::DeviceResident:
-    case OpenACCClauseKind::DevicePtr:
     case OpenACCClauseKind::Host:
     case OpenACCClauseKind::Link:
     case OpenACCClauseKind::UseDevice:
       ParseOpenACCVarList();
+      break;
+    case OpenACCClauseKind::Attach:
+    case OpenACCClauseKind::DevicePtr:
+      // TODO: ERICH: Figure out how to limit to just ptrs?
+      ParsedClause.setVarListDetails(ParseOpenACCVarList(),
+                                     /*IsReadOnly=*/false, /*IsZero=*/false);
       break;
     case OpenACCClauseKind::Copy:
     case OpenACCClauseKind::PCopy:
@@ -1077,7 +1081,12 @@ Parser::OpenACCClauseParseResult Parser::ParseOpenACCClauseParams(
         break;
       }
       case OpenACCClauseKind::Async: {
-        ExprResult AsyncArg = ParseOpenACCAsyncArgument();
+        ExprResult AsyncArg =
+            ParseOpenACCAsyncArgument(OpenACCDirectiveKind::Invalid,
+                                      OpenACCClauseKind::Async, ClauseLoc)
+                .first;
+        ParsedClause.setIntExprDetails(AsyncArg.isUsable() ? AsyncArg.get()
+                                                           : nullptr);
         if (AsyncArg.isInvalid()) {
           Parens.skipToEnd();
           return OpenACCCanContinue();
@@ -1116,8 +1125,10 @@ Parser::OpenACCClauseParseResult Parser::ParseOpenACCClauseParams(
 /// defined in the C header file and the Fortran openacc module. The special
 /// values are negative values, so as not to conflict with a user-specified
 /// nonnegative async-argument.
-ExprResult Parser::ParseOpenACCAsyncArgument() {
-  return getActions().CorrectDelayedTyposInExpr(ParseAssignmentExpression());
+Parser::OpenACCIntExprParseResult
+Parser::ParseOpenACCAsyncArgument(OpenACCDirectiveKind DK, OpenACCClauseKind CK,
+                                  SourceLocation Loc) {
+  return ParseOpenACCIntExpr(DK, CK, Loc);
 }
 
 /// OpenACC 3.3, section 2.16:
@@ -1133,14 +1144,12 @@ bool Parser::ParseOpenACCWaitArgument(SourceLocation Loc, bool IsDirective) {
     // Consume colon.
     ConsumeToken();
 
-    ExprResult IntExpr =
-        ParseOpenACCIntExpr(IsDirective ? OpenACCDirectiveKind::Wait
-                                        : OpenACCDirectiveKind::Invalid,
-                            IsDirective ? OpenACCClauseKind::Invalid
-                                        : OpenACCClauseKind::Wait,
-                            Loc)
-            .first;
-    if (IntExpr.isInvalid())
+    OpenACCIntExprParseResult Res = ParseOpenACCIntExpr(
+        IsDirective ? OpenACCDirectiveKind::Wait
+                    : OpenACCDirectiveKind::Invalid,
+        IsDirective ? OpenACCClauseKind::Invalid : OpenACCClauseKind::Wait,
+        Loc);
+    if (Res.first.isInvalid() && Res.second == OpenACCParseCanContinue::Cannot)
       return true;
 
     if (ExpectAndConsume(tok::colon))
@@ -1168,9 +1177,13 @@ bool Parser::ParseOpenACCWaitArgument(SourceLocation Loc, bool IsDirective) {
     }
     FirstArg = false;
 
-    ExprResult CurArg = ParseOpenACCAsyncArgument();
+    OpenACCIntExprParseResult Res = ParseOpenACCAsyncArgument(
+        IsDirective ? OpenACCDirectiveKind::Wait
+                    : OpenACCDirectiveKind::Invalid,
+        IsDirective ? OpenACCClauseKind::Invalid : OpenACCClauseKind::Wait,
+        Loc);
 
-    if (CurArg.isInvalid())
+    if (Res.first.isInvalid() && Res.second == OpenACCParseCanContinue::Cannot)
       return true;
   }
 
