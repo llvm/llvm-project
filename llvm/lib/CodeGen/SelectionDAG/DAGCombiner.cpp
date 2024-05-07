@@ -8858,7 +8858,8 @@ SDValue DAGCombiner::mergeTruncStores(StoreSDNode *N) {
           stripTruncAndExt(WideVal) != SourceValue)
         return SDValue();
 
-      if (WideVal.getScalarValueSizeInBits() > SourceValue.getScalarValueSizeInBits())
+      if (WideVal.getScalarValueSizeInBits() >
+          SourceValue.getScalarValueSizeInBits())
         SourceValue = WideVal;
 
       // Give up if the source value type is smaller than the store size.
