@@ -770,6 +770,12 @@ Instruction *InstCombinerImpl::visitTrunc(TruncInst &Trunc) {
         return new ICmpInst(ICmpInst::Predicate::ICMP_EQ, X, Zero);
       }
     }
+
+    if (Trunc.hasNoUnsignedWrap() || Trunc.hasNoSignedWrap()) {
+      Value *X, *Y;
+      if (match(Src, m_Xor(m_Value(X), m_Value(Y))))
+        return new ICmpInst(ICmpInst::ICMP_NE, X, Y);
+    }
   }
 
   Value *A, *B;
@@ -897,7 +903,20 @@ Instruction *InstCombinerImpl::visitTrunc(TruncInst &Trunc) {
     }
   }
 
-  return nullptr;
+  bool Changed = false;
+  if (!Trunc.hasNoSignedWrap() &&
+      ComputeMaxSignificantBits(Src, /*Depth=*/0, &Trunc) <= DestWidth) {
+    Trunc.setHasNoSignedWrap(true);
+    Changed = true;
+  }
+  if (!Trunc.hasNoUnsignedWrap() &&
+      MaskedValueIsZero(Src, APInt::getBitsSetFrom(SrcWidth, DestWidth),
+                        /*Depth=*/0, &Trunc)) {
+    Trunc.setHasNoUnsignedWrap(true);
+    Changed = true;
+  }
+
+  return Changed ? &Trunc : nullptr;
 }
 
 Instruction *InstCombinerImpl::transformZExtICmp(ICmpInst *Cmp,
@@ -1468,7 +1487,7 @@ Instruction *InstCombinerImpl::visitSExt(SExtInst &Sext) {
     Value *Y;
     if (Src->hasOneUse() &&
         match(X, m_LShr(m_Value(Y),
-                        m_SpecificIntAllowUndef(XBitSize - SrcBitSize)))) {
+                        m_SpecificIntAllowPoison(XBitSize - SrcBitSize)))) {
       Value *Ashr = Builder.CreateAShr(Y, XBitSize - SrcBitSize);
       return CastInst::CreateIntegerCast(Ashr, DestTy, /* isSigned */ true);
     }
@@ -1964,11 +1983,25 @@ Instruction *InstCombinerImpl::visitFPToSI(FPToSIInst &FI) {
 }
 
 Instruction *InstCombinerImpl::visitUIToFP(CastInst &CI) {
-  return commonCastTransforms(CI);
+  if (Instruction *R = commonCastTransforms(CI))
+    return R;
+  if (!CI.hasNonNeg() && isKnownNonNegative(CI.getOperand(0), SQ)) {
+    CI.setNonNeg();
+    return &CI;
+  }
+  return nullptr;
 }
 
 Instruction *InstCombinerImpl::visitSIToFP(CastInst &CI) {
-  return commonCastTransforms(CI);
+  if (Instruction *R = commonCastTransforms(CI))
+    return R;
+  if (isKnownNonNegative(CI.getOperand(0), SQ)) {
+    auto *UI =
+        CastInst::Create(Instruction::UIToFP, CI.getOperand(0), CI.getType());
+    UI->setNonNeg(true);
+    return UI;
+  }
+  return nullptr;
 }
 
 Instruction *InstCombinerImpl::visitIntToPtr(IntToPtrInst &CI) {
@@ -2023,9 +2056,9 @@ Instruction *InstCombinerImpl::visitPtrToInt(PtrToIntInst &CI) {
     // the GEP otherwise.
     if (GEP->hasOneUse() &&
         isa<ConstantPointerNull>(GEP->getPointerOperand())) {
-      return replaceInstUsesWith(CI,
-                                 Builder.CreateIntCast(EmitGEPOffset(GEP), Ty,
-                                                       /*isSigned=*/false));
+      return replaceInstUsesWith(
+          CI, Builder.CreateIntCast(EmitGEPOffset(cast<GEPOperator>(GEP)), Ty,
+                                    /*isSigned=*/false));
     }
   }
 

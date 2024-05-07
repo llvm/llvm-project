@@ -226,11 +226,8 @@ bool LoongArchAsmBackend::shouldInsertFixupForCodeAlign(
       MCFixup::create(0, Dummy, MCFixupKind(LoongArch::fixup_loongarch_align));
   const MCSymbolRefExpr *MCSym = getSecToAlignSym()[Sec];
   if (MCSym == nullptr) {
-    // Create a symbol and make the value of symbol is zero.
-    MCSymbol *Sym = Ctx.createNamedTempSymbol("la-relax-align");
-    Sym->setFragment(&*Sec->getBeginSymbol()->getFragment());
-    Asm.registerSymbol(*Sym);
-    MCSym = MCSymbolRefExpr::create(Sym, Ctx);
+    // Use section symbol directly.
+    MCSym = MCSymbolRefExpr::create(Sec->getBeginSymbol(), Ctx);
     getSecToAlignSym()[Sec] = MCSym;
   }
 

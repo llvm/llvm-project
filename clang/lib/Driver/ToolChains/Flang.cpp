@@ -15,7 +15,7 @@
 #include "llvm/Frontend/Debug/Options.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Support/RISCVISAInfo.h"
+#include "llvm/TargetParser/RISCVISAInfo.h"
 #include "llvm/TargetParser/RISCVTargetParser.h"
 
 #include <cassert>
@@ -118,7 +118,7 @@ void Flang::addOtherOptions(const ArgList &Args, ArgStringList &CmdArgs) const {
     Arg *gNArg = Args.getLastArg(options::OPT_gN_Group);
     DebugInfoKind = debugLevelToInfoKind(*gNArg);
   } else if (Args.hasArg(options::OPT_g_Flag)) {
-    DebugInfoKind = llvm::codegenoptions::DebugLineTablesOnly;
+    DebugInfoKind = llvm::codegenoptions::FullDebugInfo;
   } else {
     DebugInfoKind = llvm::codegenoptions::NoDebugInfo;
   }
@@ -264,7 +264,7 @@ static void addVSDefines(const ToolChain &TC, const ArgList &Args,
   CmdArgs.push_back(Args.MakeArgString("-D_MSC_FULL_VER=" + Twine(ver)));
   CmdArgs.push_back(Args.MakeArgString("-D_WIN32"));
 
-  llvm::Triple triple = TC.getTriple();
+  const llvm::Triple &triple = TC.getTriple();
   if (triple.isAArch64()) {
     CmdArgs.push_back("-D_M_ARM64=1");
   } else if (triple.isX86() && triple.isArch32Bit()) {
@@ -282,7 +282,6 @@ static void processVSRuntimeLibrary(const ToolChain &TC, const ArgList &Args,
   assert(TC.getTriple().isKnownWindowsMSVCEnvironment() &&
          "can only add VS runtime library on Windows!");
   // if -fno-fortran-main has been passed, skip linking Fortran_main.a
-  bool LinkFortranMain = !Args.hasArg(options::OPT_no_fortran_main);
   if (TC.getTriple().isKnownWindowsMSVCEnvironment()) {
     CmdArgs.push_back(Args.MakeArgString(
         "--dependent-lib=" + TC.getCompilerRTBasename(Args, "builtins")));
@@ -300,8 +299,6 @@ static void processVSRuntimeLibrary(const ToolChain &TC, const ArgList &Args,
   case options::OPT__SLASH_MT:
     CmdArgs.push_back("-D_MT");
     CmdArgs.push_back("--dependent-lib=libcmt");
-    if (LinkFortranMain)
-      CmdArgs.push_back("--dependent-lib=Fortran_main.static.lib");
     CmdArgs.push_back("--dependent-lib=FortranRuntime.static.lib");
     CmdArgs.push_back("--dependent-lib=FortranDecimal.static.lib");
     break;
@@ -309,8 +306,6 @@ static void processVSRuntimeLibrary(const ToolChain &TC, const ArgList &Args,
     CmdArgs.push_back("-D_MT");
     CmdArgs.push_back("-D_DEBUG");
     CmdArgs.push_back("--dependent-lib=libcmtd");
-    if (LinkFortranMain)
-      CmdArgs.push_back("--dependent-lib=Fortran_main.static_dbg.lib");
     CmdArgs.push_back("--dependent-lib=FortranRuntime.static_dbg.lib");
     CmdArgs.push_back("--dependent-lib=FortranDecimal.static_dbg.lib");
     break;
@@ -318,8 +313,6 @@ static void processVSRuntimeLibrary(const ToolChain &TC, const ArgList &Args,
     CmdArgs.push_back("-D_MT");
     CmdArgs.push_back("-D_DLL");
     CmdArgs.push_back("--dependent-lib=msvcrt");
-    if (LinkFortranMain)
-      CmdArgs.push_back("--dependent-lib=Fortran_main.dynamic.lib");
     CmdArgs.push_back("--dependent-lib=FortranRuntime.dynamic.lib");
     CmdArgs.push_back("--dependent-lib=FortranDecimal.dynamic.lib");
     break;
@@ -328,8 +321,6 @@ static void processVSRuntimeLibrary(const ToolChain &TC, const ArgList &Args,
     CmdArgs.push_back("-D_DEBUG");
     CmdArgs.push_back("-D_DLL");
     CmdArgs.push_back("--dependent-lib=msvcrtd");
-    if (LinkFortranMain)
-      CmdArgs.push_back("--dependent-lib=Fortran_main.dynamic_dbg.lib");
     CmdArgs.push_back("--dependent-lib=FortranRuntime.dynamic_dbg.lib");
     CmdArgs.push_back("--dependent-lib=FortranDecimal.dynamic_dbg.lib");
     break;
@@ -589,7 +580,7 @@ static void addFloatingPointOptions(const Driver &D, const ArgList &Args,
 
   if (!HonorINFs && !HonorNaNs && AssociativeMath && ReciprocalMath &&
       ApproxFunc && !SignedZeros &&
-      (FPContract == "fast" || FPContract == "")) {
+      (FPContract == "fast" || FPContract.empty())) {
     CmdArgs.push_back("-ffast-math");
     return;
   }
@@ -679,7 +670,10 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
   CmdArgs.push_back(Args.MakeArgString(TripleStr));
 
   if (isa<PreprocessJobAction>(JA)) {
-      CmdArgs.push_back("-E");
+    CmdArgs.push_back("-E");
+    if (Args.getLastArg(options::OPT_dM)) {
+      CmdArgs.push_back("-dM");
+    }
   } else if (isa<CompileJobAction>(JA) || isa<BackendJobAction>(JA)) {
     if (JA.getType() == types::TY_Nothing) {
       CmdArgs.push_back("-fsyntax-only");
@@ -782,6 +776,10 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
       break;
     }
   }
+
+  // Pass the path to compiler resource files.
+  CmdArgs.push_back("-resource-dir");
+  CmdArgs.push_back(D.ResourceDir.c_str());
 
   // Offloading related options
   addOffloadOptions(C, Inputs, JA, Args, CmdArgs);

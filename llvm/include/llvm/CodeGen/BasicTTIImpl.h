@@ -224,16 +224,16 @@ private:
     // First, compute the cost of the individual memory operations.
     InstructionCost AddrExtractCost =
         IsGatherScatter
-            ? getVectorInstrCost(
-                  Instruction::ExtractElement,
+            ? getScalarizationOverhead(
                   FixedVectorType::get(
                       PointerType::get(VT->getElementType(), 0), VF),
-                  CostKind, -1, nullptr, nullptr)
+                  /*Insert=*/false, /*Extract=*/true, CostKind)
             : 0;
-    InstructionCost LoadCost =
-        VF *
-        (AddrExtractCost + getMemoryOpCost(Opcode, VT->getElementType(),
-                                           Alignment, AddressSpace, CostKind));
+
+    // The cost of the scalar loads/stores.
+    InstructionCost MemoryOpCost =
+        VF * getMemoryOpCost(Opcode, VT->getElementType(), Alignment,
+                             AddressSpace, CostKind);
 
     // Next, compute the cost of packing the result in a vector.
     InstructionCost PackingCost =
@@ -249,16 +249,14 @@ private:
       // operations accurately is quite difficult and the current solution
       // provides a very rough estimate only.
       ConditionalCost =
-          VF *
-          (getVectorInstrCost(
-               Instruction::ExtractElement,
-               FixedVectorType::get(Type::getInt1Ty(DataTy->getContext()), VF),
-               CostKind, -1, nullptr, nullptr) +
-           getCFInstrCost(Instruction::Br, CostKind) +
-           getCFInstrCost(Instruction::PHI, CostKind));
+          getScalarizationOverhead(
+              FixedVectorType::get(Type::getInt1Ty(DataTy->getContext()), VF),
+              /*Insert=*/false, /*Extract=*/true, CostKind) +
+          VF * (getCFInstrCost(Instruction::Br, CostKind) +
+                getCFInstrCost(Instruction::PHI, CostKind));
     }
 
-    return LoadCost + PackingCost + ConditionalCost;
+    return AddrExtractCost + MemoryOpCost + PackingCost + ConditionalCost;
   }
 
 protected:
@@ -428,7 +426,7 @@ public:
   bool useAA() const { return getST()->useAA(); }
 
   bool isTypeLegal(Type *Ty) {
-    EVT VT = getTLI()->getValueType(DL, Ty);
+    EVT VT = getTLI()->getValueType(DL, Ty, /*AllowUnknown=*/true);
     return getTLI()->isTypeLegal(VT);
   }
 
@@ -894,7 +892,7 @@ public:
       unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
       TTI::OperandValueInfo Opd1Info = {TTI::OK_AnyValue, TTI::OP_None},
       TTI::OperandValueInfo Opd2Info = {TTI::OK_AnyValue, TTI::OP_None},
-      ArrayRef<const Value *> Args = ArrayRef<const Value *>(),
+      ArrayRef<const Value *> Args = std::nullopt,
       const Instruction *CxtI = nullptr) {
     // Check if any of the operands are vector operands.
     const TargetLoweringBase *TLI = getTLI();
@@ -1020,7 +1018,8 @@ public:
                                  ArrayRef<int> Mask,
                                  TTI::TargetCostKind CostKind, int Index,
                                  VectorType *SubTp,
-                                 ArrayRef<const Value *> Args = std::nullopt) {
+                                 ArrayRef<const Value *> Args = std::nullopt,
+                                 const Instruction *CxtI = nullptr) {
     switch (improveShuffleKindFromMask(Kind, Mask, Tp, Index, SubTp)) {
     case TTI::SK_Broadcast:
       if (auto *FVT = dyn_cast<FixedVectorType>(Tp))
@@ -1663,12 +1662,12 @@ public:
           TTI::SK_InsertSubvector, cast<VectorType>(Args[0]->getType()),
           std::nullopt, CostKind, Index, cast<VectorType>(Args[1]->getType()));
     }
-    case Intrinsic::experimental_vector_reverse: {
+    case Intrinsic::vector_reverse: {
       return thisT()->getShuffleCost(
           TTI::SK_Reverse, cast<VectorType>(Args[0]->getType()), std::nullopt,
           CostKind, 0, cast<VectorType>(RetTy));
     }
-    case Intrinsic::experimental_vector_splice: {
+    case Intrinsic::vector_splice: {
       unsigned Index = cast<ConstantInt>(Args[2])->getZExtValue();
       return thisT()->getShuffleCost(
           TTI::SK_Splice, cast<VectorType>(Args[0]->getType()), std::nullopt,

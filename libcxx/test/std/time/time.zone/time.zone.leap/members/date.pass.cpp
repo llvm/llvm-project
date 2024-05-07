@@ -9,7 +9,7 @@
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // UNSUPPORTED: no-filesystem, no-localization, no-tzdb
 
-// XFAIL: libcpp-has-no-incomplete-tzdb
+// XFAIL: libcpp-has-no-experimental-tzdb
 // XFAIL: availability-tzdb-missing
 
 // <chrono>
@@ -23,8 +23,6 @@
 
 #include "test_macros.h"
 
-// Add the include path required by test_chrono_leap_second.h when using libc++.
-// ADDITIONAL_COMPILE_FLAGS(stdlib=libc++): -I %{libcxx-dir}/src/include
 #include "test_chrono_leap_second.h"
 
 constexpr void test(const std::chrono::leap_second leap_second, std::chrono::sys_seconds expected) {

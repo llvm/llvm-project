@@ -576,10 +576,13 @@ llvm.func @expect_with_probability(%arg0: i16) {
   llvm.return
 }
 
+llvm.mlir.global external thread_local @tls_var(0 : i32) {addr_space = 0 : i32, alignment = 4 : i64, dso_local} : i32
+
 // CHECK-LABEL: @threadlocal_test
-llvm.func @threadlocal_test(%arg0 : !llvm.ptr) {
-  // CHECK: call ptr @llvm.threadlocal.address.p0(ptr %{{.*}})
-  "llvm.intr.threadlocal.address"(%arg0) : (!llvm.ptr) -> !llvm.ptr
+llvm.func @threadlocal_test() {
+  // CHECK: call ptr @llvm.threadlocal.address.p0(ptr @tls_var)
+  %0 = llvm.mlir.addressof @tls_var : !llvm.ptr
+  "llvm.intr.threadlocal.address"(%0) : (!llvm.ptr) -> !llvm.ptr
   llvm.return
 }
 

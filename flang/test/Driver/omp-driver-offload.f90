@@ -201,3 +201,9 @@
 ! RUN:      -nogpulibc %s 2>&1 \
 ! RUN:   | FileCheck --check-prefix=NO-LIBC-GPU-AMDGPU %s
 ! NO-LIBC-GPU-AMDGPU-NOT: "-lcgpu-amdgpu"
+
+! RUN:   %flang -### -v --target=x86_64-unknown-linux-gnu -fopenmp  \
+! RUN:      --offload-arch=gfx900 \
+! RUN:      --rocm-path=%S/Inputs/rocm %s 2>&1 \
+! RUN:   | FileCheck --check-prefix=ROCM-PATH %s
+! ROCM-PATH: Found HIP installation: {{.*Inputs.*rocm}}, version 3.6.20214-a2917cd

@@ -1,11 +1,11 @@
-// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -verify=expected,both %s
 // RUN: %clang_cc1 -fexperimental-new-constant-interpreter -std=c++14 -verify=expected,both %s
+// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -std=c++17 -verify=expected,both %s
+// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -std=c++17 -triple i686 -verify=expected,both %s
 // RUN: %clang_cc1 -fexperimental-new-constant-interpreter -std=c++20 -verify=expected,both %s
-// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -triple i686 -verify=expected,both %s
-// RUN: %clang_cc1 -verify=ref,both %s
 // RUN: %clang_cc1 -verify=ref,both -std=c++14 %s
+// RUN: %clang_cc1 -verify=ref,both -std=c++17 %s
+// RUN: %clang_cc1 -verify=ref,both -std=c++17 -triple i686 %s
 // RUN: %clang_cc1 -verify=ref,both -std=c++20 %s
-// RUN: %clang_cc1 -verify=ref,both -triple i686 %s
 
 /// Used to crash.
 struct Empty {};
@@ -90,8 +90,7 @@ struct Ints2 {
   int a = 10;
   int b;
 };
-constexpr Ints2 ints22; // both-error {{without a user-provided default constructor}} \
-                        // expected-error {{must be initialized by a constant expression}}
+constexpr Ints2 ints22; // both-error {{without a user-provided default constructor}}
 
 constexpr Ints2 I2 = Ints2{12, 25};
 static_assert(I2.a == 12, "");
@@ -1000,10 +999,9 @@ namespace TemporaryObjectExpr {
       F f{12};
     };
     constexpr int foo(S x) {
-      return x.a; // expected-note {{read of uninitialized object}}
+      return x.a;
     }
-    static_assert(foo(S()) == 0, ""); // expected-error {{not an integral constant expression}} \
-                                      // expected-note {{in call to}}
+    static_assert(foo(S()) == 0, "");
   };
 #endif
 }
@@ -1031,6 +1029,12 @@ namespace ParenInit {
                      // both-note {{required by 'constinit' specifier}} \
                      // both-note {{reference to temporary is not a constant expression}} \
                      // both-note {{temporary created here}}
+
+
+  /// Initializing an array.
+  constexpr void bar(int i, int j) {
+    int arr[4](i, j);
+  }
 }
 #endif
 
@@ -1285,3 +1289,173 @@ namespace {
   }
 }
 #endif
+
+namespace pr18633 {
+  struct A1 {
+    static const int sz;
+    static const int sz2;
+  };
+  const int A1::sz2 = 11;
+  template<typename T>
+  void func () {
+    int arr[A1::sz];
+    // both-warning@-1 {{variable length arrays in C++ are a Clang extension}}
+    // both-note@-2 {{initializer of 'sz' is unknown}}
+    // both-note@-9 {{declared here}}
+  }
+  template<typename T>
+  void func2 () {
+    int arr[A1::sz2];
+  }
+  const int A1::sz = 12;
+  void func2() {
+    func<int>();
+    func2<int>();
+  }
+}
+
+namespace {
+  struct F {
+    static constexpr int Z = 12;
+  };
+  F f;
+  static_assert(f.Z == 12, "");
+}
+
+namespace UnnamedBitFields {
+  struct A {
+    int : 1;
+    double f;
+    int : 1;
+    char c;
+  };
+
+  constexpr A a = (A){1.0, 'a'};
+  static_assert(a.f == 1.0, "");
+  static_assert(a.c == 'a', "");
+}
+
+/// FIXME: This still doesn't work in the new interpreter because
+/// we lack type information for dummy pointers.
+namespace VirtualBases {
+  /// This used to crash.
+  namespace One {
+    class A {
+    protected:
+      int x;
+    };
+    class B : public virtual A {
+    public:
+      int getX() { return x; } // ref-note {{declared here}}
+    };
+
+    class DV : virtual public B{};
+
+    void foo() {
+      DV b;
+      int a[b.getX()]; // both-warning {{variable length arrays}} \
+                       // ref-note {{non-constexpr function 'getX' cannot be used}}
+    }
+  }
+
+  namespace Two {
+    struct U { int n; };
+    struct A : virtual U { int n; };
+    struct B : A {};
+    B a;
+    static_assert((U*)(A*)(&a) == (U*)(&a), "");
+
+    struct C : virtual A {};
+    struct D : B, C {};
+    D d;
+    constexpr B *p = &d;
+    constexpr C *q = &d;
+    static_assert((A*)p == (A*)q, ""); // both-error {{failed}}
+  }
+
+  namespace Three {
+    struct U { int n; };
+    struct V : U { int n; };
+    struct A : virtual V { int n; };
+    struct Aa { int n; };
+    struct B : virtual A, Aa {};
+
+    struct C : virtual A, Aa {};
+
+    struct D : B, C {};
+
+    D d;
+
+    constexpr B *p = &d;
+    constexpr C *q = &d;
+
+    static_assert((void*)p != (void*)q, "");
+    static_assert((A*)p == (A*)q, "");
+    static_assert((Aa*)p != (Aa*)q, "");
+
+    constexpr V *v = p;
+    constexpr V *w = q;
+    constexpr V *x = (A*)p;
+    static_assert(v == w, "");
+    static_assert(v == x, "");
+
+    static_assert((U*)&d == p, "");
+    static_assert((U*)&d == q, "");
+    static_assert((U*)&d == v, "");
+    static_assert((U*)&d == w, "");
+    static_assert((U*)&d == x, "");
+
+    struct X {};
+    struct Y1 : virtual X {};
+    struct Y2 : X {};
+    struct Z : Y1, Y2 {};
+    Z z;
+    static_assert((X*)(Y1*)&z != (X*)(Y2*)&z, "");
+  }
+}
+
+namespace ZeroInit {
+  struct S3 {
+    S3() = default;
+    S3(const S3&) = default;
+    S3(S3&&) = default;
+    constexpr S3(int n) : n(n) {}
+    int n;
+  };
+  constexpr S3 s3d; // both-error {{default initialization of an object of const type 'const S3' without a user-provided default constructor}}
+  static_assert(s3d.n == 0, "");
+
+  struct P {
+    int a = 10;
+  };
+  static_assert(P().a == 10, "");
+}
+
+namespace {
+#if __cplusplus >= 202002L
+  struct C {
+    template <unsigned N> constexpr C(const char (&)[N]) : n(N) {}
+    unsigned n;
+  };
+  template <C c>
+  constexpr auto operator""_c() { return c.n; }
+
+  constexpr auto waldo = "abc"_c;
+  static_assert(waldo == 4, "");
+#endif
+}
+
+
+namespace TemporaryWithInvalidDestructor {
+#if __cplusplus >= 202002L
+  struct A {
+    bool a = true;
+    constexpr ~A() noexcept(false) { // both-error {{never produces a constant expression}}
+      throw; // both-note 2{{not valid in a constant expression}} \
+             // both-error {{cannot use 'throw' with exceptions disabled}}
+    }
+  };
+  static_assert(A().a, ""); // both-error {{not an integral constant expression}} \
+                        // both-note {{in call to}}
+#endif
+}

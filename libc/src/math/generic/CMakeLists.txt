@@ -95,18 +95,6 @@ add_entrypoint_object(
     libc.src.__support.FPUtil.nearest_integer_operations
 )
 
-add_object_library(
-  math_utils
-  SRCS
-    math_utils.cpp
-  HDRS
-    math_utils.h
-  DEPENDS
-    libc.hdr.math_macros
-    libc.include.errno
-    libc.src.errno.errno
-)
-
 add_header_library(
   range_reduction
   HDRS
@@ -716,7 +704,7 @@ add_entrypoint_object(
   DEPENDS
     libc.src.__support.FPUtil.nearest_integer_operations
   COMPILE_OPTIONS
-    -O2
+    -O3
 )
 
 add_entrypoint_object(
@@ -728,7 +716,7 @@ add_entrypoint_object(
   DEPENDS
     libc.src.__support.FPUtil.nearest_integer_operations
   COMPILE_OPTIONS
-    -O2
+    -O3
 )
 
 add_entrypoint_object(
@@ -740,7 +728,20 @@ add_entrypoint_object(
   DEPENDS
     libc.src.__support.FPUtil.nearest_integer_operations
   COMPILE_OPTIONS
-    -O2
+    -O3
+)
+
+add_entrypoint_object(
+  nearbyintf128
+  SRCS
+    nearbyintf128.cpp
+  HDRS
+    ../nearbyintf128.h
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.nearest_integer_operations
+  COMPILE_OPTIONS
+    -O3
 )
 
 add_object_library(
@@ -749,8 +750,6 @@ add_object_library(
     exp_utils.h
   SRCS
     exp_utils.cpp
-  DEPENDS
-    .math_utils
 )
 
 add_entrypoint_object(
@@ -2958,6 +2957,19 @@ add_entrypoint_object(
   HDRS
     ../scalbnl.h
   DEPENDS
+    libc.src.__support.FPUtil.manipulation_functions
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  scalbnf128
+  SRCS
+    scalbnf128.cpp
+  HDRS
+    ../scalbnf128.h
+  DEPENDS
+    libc.src.__support.macros.properties.types
     libc.src.__support.FPUtil.manipulation_functions
   COMPILE_OPTIONS
     -O3

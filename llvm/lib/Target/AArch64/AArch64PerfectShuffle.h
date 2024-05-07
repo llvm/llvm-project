@@ -16,6 +16,8 @@
 
 #include "llvm/ADT/ArrayRef.h"
 
+namespace llvm {
+
 // 31 entries have cost 0
 // 756 entries have cost 1
 // 3690 entries have cost 2
@@ -6586,7 +6588,7 @@ static const unsigned PerfectShuffleTable[6561 + 1] = {
     835584U,     // <u,u,u,u>: Cost 0 copy LHS
     0};
 
-static unsigned getPerfectShuffleCost(llvm::ArrayRef<int> M) {
+inline unsigned getPerfectShuffleCost(llvm::ArrayRef<int> M) {
   assert(M.size() == 4 && "Expected a 4 entry perfect shuffle");
 
   // Special case zero-cost nop copies, from either LHS or RHS.
@@ -6617,5 +6619,110 @@ static unsigned getPerfectShuffleCost(llvm::ArrayRef<int> M) {
   // And extract the cost from the upper bits. The cost is encoded as Cost-1.
   return (PFEntry >> 30) + 1;
 }
+
+/// Return true for zip1 or zip2 masks of the form:
+///  <0,  8, 1,  9, 2, 10, 3, 11> or
+///  <4, 12, 5, 13, 6, 14, 7, 15>
+inline bool isZIPMask(ArrayRef<int> M, unsigned NumElts,
+                      unsigned &WhichResultOut) {
+  if (NumElts % 2 != 0)
+    return false;
+  // Check the first non-undef element for which half to use.
+  unsigned WhichResult = 2;
+  for (unsigned i = 0; i != NumElts / 2; i++) {
+    if (M[i * 2] >= 0) {
+      WhichResult = ((unsigned)M[i * 2] == i ? 0 : 1);
+      break;
+    } else if (M[i * 2 + 1] >= 0) {
+      WhichResult = ((unsigned)M[i * 2 + 1] == NumElts + i ? 0 : 1);
+      break;
+    }
+  }
+  if (WhichResult == 2)
+    return false;
+
+  // Check all elements match.
+  unsigned Idx = WhichResult * NumElts / 2;
+  for (unsigned i = 0; i != NumElts; i += 2) {
+    if ((M[i] >= 0 && (unsigned)M[i] != Idx) ||
+        (M[i + 1] >= 0 && (unsigned)M[i + 1] != Idx + NumElts))
+      return false;
+    Idx += 1;
+  }
+  WhichResultOut = WhichResult;
+  return true;
+}
+
+/// Return true for uzp1 or uzp2 masks of the form:
+///  <0, 2, 4, 6, 8, 10, 12, 14> or
+///  <1, 3, 5, 7, 9, 11, 13, 15>
+inline bool isUZPMask(ArrayRef<int> M, unsigned NumElts,
+                      unsigned &WhichResultOut) {
+  // Check the first non-undef element for which half to use.
+  unsigned WhichResult = 2;
+  for (unsigned i = 0; i != NumElts; i++) {
+    if (M[i] >= 0) {
+      WhichResult = ((unsigned)M[i] == i * 2 ? 0 : 1);
+      break;
+    }
+  }
+  if (WhichResult == 2)
+    return false;
+
+  // Check all elements match.
+  for (unsigned i = 0; i != NumElts; ++i) {
+    if (M[i] < 0)
+      continue; // ignore UNDEF indices
+    if ((unsigned)M[i] != 2 * i + WhichResult)
+      return false;
+  }
+  WhichResultOut = WhichResult;
+  return true;
+}
+
+/// Return true for trn1 or trn2 masks of the form:
+///  <0, 8, 2, 10, 4, 12, 6, 14> or
+///  <1, 9, 3, 11, 5, 13, 7, 15>
+inline bool isTRNMask(ArrayRef<int> M, unsigned NumElts,
+                      unsigned &WhichResult) {
+  if (NumElts % 2 != 0)
+    return false;
+  WhichResult = (M[0] == 0 ? 0 : 1);
+  for (unsigned i = 0; i < NumElts; i += 2) {
+    if ((M[i] >= 0 && (unsigned)M[i] != i + WhichResult) ||
+        (M[i + 1] >= 0 && (unsigned)M[i + 1] != i + NumElts + WhichResult))
+      return false;
+  }
+  return true;
+}
+
+/// isREVMask - Check if a vector shuffle corresponds to a REV
+/// instruction with the specified blocksize.  (The order of the elements
+/// within each block of the vector is reversed.)
+inline bool isREVMask(ArrayRef<int> M, unsigned EltSize, unsigned NumElts,
+                      unsigned BlockSize) {
+  assert((BlockSize == 16 || BlockSize == 32 || BlockSize == 64 ||
+          BlockSize == 128) &&
+         "Only possible block sizes for REV are: 16, 32, 64, 128");
+
+  unsigned BlockElts = M[0] + 1;
+  // If the first shuffle index is UNDEF, be optimistic.
+  if (M[0] < 0)
+    BlockElts = BlockSize / EltSize;
+
+  if (BlockSize <= EltSize || BlockSize != BlockElts * EltSize)
+    return false;
+
+  for (unsigned i = 0; i < NumElts; ++i) {
+    if (M[i] < 0)
+      continue; // ignore UNDEF indices
+    if ((unsigned)M[i] != (i - i % BlockElts) + (BlockElts - 1 - i % BlockElts))
+      return false;
+  }
+
+  return true;
+}
+
+} // namespace llvm
 
 #endif

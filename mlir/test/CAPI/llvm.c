@@ -264,9 +264,9 @@ static void testDebugInfoAttributes(MlirContext ctx) {
   // CHECK: #llvm.di_file<"foo" in "bar">
   mlirAttributeDump(file);
 
-  MlirAttribute compile_unit =
-      mlirLLVMDICompileUnitAttrGet(ctx, id, LLVMDWARFSourceLanguageC99, file,
-                                   foo, false, MlirLLVMDIEmissionKindFull);
+  MlirAttribute compile_unit = mlirLLVMDICompileUnitAttrGet(
+      ctx, id, LLVMDWARFSourceLanguageC99, file, foo, false,
+      MlirLLVMDIEmissionKindFull, MlirLLVMDINameTableKindDefault);
 
   // CHECK: #llvm.di_compile_unit<{{.*}}>
   mlirAttributeDump(compile_unit);

@@ -157,7 +157,8 @@ void Parser::CheckForTemplateAndDigraph(Token &Next, ParsedType ObjectType,
 bool Parser::ParseOptionalCXXScopeSpecifier(
     CXXScopeSpec &SS, ParsedType ObjectType, bool ObjectHadErrors,
     bool EnteringContext, bool *MayBePseudoDestructor, bool IsTypename,
-    IdentifierInfo **LastII, bool OnlyNamespace, bool InUsingDeclaration) {
+    const IdentifierInfo **LastII, bool OnlyNamespace,
+    bool InUsingDeclaration) {
   assert(getLangOpts().CPlusPlus &&
          "Call sites of this function should be guarded by checking for C++");
 
@@ -404,6 +405,20 @@ bool Parser::ParseOptionalCXXScopeSpecifier(
       }
 
       continue;
+    }
+
+    switch (Tok.getKind()) {
+#define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) case tok::kw___##Trait:
+#include "clang/Basic/TransformTypeTraits.def"
+      if (!NextToken().is(tok::l_paren)) {
+        Tok.setKind(tok::identifier);
+        Diag(Tok, diag::ext_keyword_as_ident)
+            << Tok.getIdentifierInfo()->getName() << 0;
+        continue;
+      }
+      [[fallthrough]];
+    default:
+      break;
     }
 
     // The rest of the nested-name-specifier possibilities start with
@@ -2626,7 +2641,7 @@ bool Parser::ParseUnqualifiedIdTemplateId(
     // UnqualifiedId.
 
     // FIXME: Store name for literal operator too.
-    IdentifierInfo *TemplateII =
+    const IdentifierInfo *TemplateII =
         Id.getKind() == UnqualifiedIdKind::IK_Identifier ? Id.Identifier
                                                          : nullptr;
     OverloadedOperatorKind OpKind =
@@ -3909,10 +3924,10 @@ ExprResult Parser::ParseTypeTrait() {
   SmallVector<ParsedType, 2> Args;
   do {
     // Parse the next type.
-    TypeResult Ty =
-        ParseTypeName(/*SourceRange=*/nullptr,
-                      getLangOpts().CPlusPlus ? DeclaratorContext::TemplateArg
-                                              : DeclaratorContext::TypeName);
+    TypeResult Ty = ParseTypeName(/*SourceRange=*/nullptr,
+                                  getLangOpts().CPlusPlus
+                                      ? DeclaratorContext::TemplateTypeArg
+                                      : DeclaratorContext::TypeName);
     if (Ty.isInvalid()) {
       Parens.skipToEnd();
       return ExprError();
@@ -3954,8 +3969,8 @@ ExprResult Parser::ParseArrayTypeTrait() {
   if (T.expectAndConsume())
     return ExprError();
 
-  TypeResult Ty =
-      ParseTypeName(/*SourceRange=*/nullptr, DeclaratorContext::TemplateArg);
+  TypeResult Ty = ParseTypeName(/*SourceRange=*/nullptr,
+                                DeclaratorContext::TemplateTypeArg);
   if (Ty.isInvalid()) {
     SkipUntil(tok::comma, StopAtSemi);
     SkipUntil(tok::r_paren, StopAtSemi);

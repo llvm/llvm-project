@@ -30,9 +30,12 @@
     %loop_ub = llvm.mlir.constant(9 : i32) : i32
     %loop_lb = llvm.mlir.constant(0 : i32) : i32
     %loop_step = llvm.mlir.constant(1 : i32) : i32 
-    omp.wsloop byref reduction(@add_reduction_i_32 %1 -> %arg0 : !llvm.ptr, @add_reduction_i_32 %2 -> %arg1 : !llvm.ptr) for (%loop_cnt) : i32 = (%loop_lb) to (%loop_ub) inclusive step (%loop_step) {
-      llvm.store %0, %arg0 : i32, !llvm.ptr
-      llvm.store %0, %arg1 : i32, !llvm.ptr
+    omp.wsloop byref reduction(@add_reduction_i_32 %1 -> %arg0 : !llvm.ptr, @add_reduction_i_32 %2 -> %arg1 : !llvm.ptr) {
+      omp.loop_nest (%loop_cnt) : i32 = (%loop_lb) to (%loop_ub) inclusive step (%loop_step) {
+        llvm.store %0, %arg0 : i32, !llvm.ptr
+        llvm.store %0, %arg1 : i32, !llvm.ptr
+        omp.yield
+      }
       omp.terminator
     }
     llvm.return
@@ -63,8 +66,10 @@
 // Weirdly the finalization block is generated before the reduction blocks:
 // CHECK: [[FINALIZE:.+]]:
 // CHECK: call void @__kmpc_barrier
-// CHECK: call void @free(ptr %[[PRIV_PTR_I]])
-// CHECK: call void @free(ptr %[[PRIV_PTR_J]])
+// CHECK: %[[PRIV_I:.+]] = load ptr, ptr %[[PRIV_PTR_I]], align 8
+// CHECK: call void @free(ptr %[[PRIV_I]])
+// CHECK: %[[PRIV_J:.+]] = load ptr, ptr %[[PRIV_PTR_J]], align 8
+// CHECK: call void @free(ptr %[[PRIV_J]])
 // CHECK: ret void
 
 // Non-atomic reduction:

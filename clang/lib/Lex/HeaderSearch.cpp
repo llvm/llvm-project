@@ -64,8 +64,7 @@ HeaderFileInfo::getControllingMacro(ExternalPreprocessorSource *External) {
     if (ControllingMacro->isOutOfDate()) {
       assert(External && "We must have an external source if we have a "
                          "controlling macro that is out of date.");
-      External->updateOutOfDateIdentifier(
-          *const_cast<IdentifierInfo *>(ControllingMacro));
+      External->updateOutOfDateIdentifier(*ControllingMacro);
     }
     return ControllingMacro;
   }
@@ -947,9 +946,13 @@ OptionalFileEntryRef HeaderSearch::LookupFile(
       // If we have no includer, that means we're processing a #include
       // from a module build. We should treat this as a system header if we're
       // building a [system] module.
-      bool IncluderIsSystemHeader =
-          Includer ? getFileInfo(*Includer).DirInfo != SrcMgr::C_User :
-          BuildSystemModule;
+      bool IncluderIsSystemHeader = [&]() {
+        if (!Includer)
+          return BuildSystemModule;
+        const HeaderFileInfo *HFI = getExistingFileInfo(*Includer);
+        assert(HFI && "includer without file info");
+        return HFI->DirInfo != SrcMgr::C_User;
+      }();
       if (OptionalFileEntryRef FE = getFileAndSuggestModule(
               TmpDir, IncludeLoc, IncluderAndDir.second, IncluderIsSystemHeader,
               RequestingModule, SuggestedModule)) {
@@ -964,10 +967,11 @@ OptionalFileEntryRef HeaderSearch::LookupFile(
         // Note that we only use one of FromHFI/ToHFI at once, due to potential
         // reallocation of the underlying vector potentially making the first
         // reference binding dangling.
-        HeaderFileInfo &FromHFI = getFileInfo(*Includer);
-        unsigned DirInfo = FromHFI.DirInfo;
-        bool IndexHeaderMapHeader = FromHFI.IndexHeaderMapHeader;
-        StringRef Framework = FromHFI.Framework;
+        const HeaderFileInfo *FromHFI = getExistingFileInfo(*Includer);
+        assert(FromHFI && "includer without file info");
+        unsigned DirInfo = FromHFI->DirInfo;
+        bool IndexHeaderMapHeader = FromHFI->IndexHeaderMapHeader;
+        StringRef Framework = FromHFI->Framework;
 
         HeaderFileInfo &ToHFI = getFileInfo(*FE);
         ToHFI.DirInfo = DirInfo;
@@ -1154,10 +1158,12 @@ OptionalFileEntryRef HeaderSearch::LookupFile(
   // "Foo" is the name of the framework in which the including header was found.
   if (!Includers.empty() && Includers.front().first && !isAngled &&
       !Filename.contains('/')) {
-    HeaderFileInfo &IncludingHFI = getFileInfo(*Includers.front().first);
-    if (IncludingHFI.IndexHeaderMapHeader) {
+    const HeaderFileInfo *IncludingHFI =
+        getExistingFileInfo(*Includers.front().first);
+    assert(IncludingHFI && "includer without file info");
+    if (IncludingHFI->IndexHeaderMapHeader) {
       SmallString<128> ScratchFilename;
-      ScratchFilename += IncludingHFI.Framework;
+      ScratchFilename += IncludingHFI->Framework;
       ScratchFilename += '/';
       ScratchFilename += Filename;
 
@@ -1287,11 +1293,11 @@ OptionalFileEntryRef HeaderSearch::LookupSubframeworkHeader(
   }
 
   // This file is a system header or C++ unfriendly if the old file is.
-  //
-  // Note that the temporary 'DirInfo' is required here, as either call to
-  // getFileInfo could resize the vector and we don't want to rely on order
-  // of evaluation.
-  unsigned DirInfo = getFileInfo(ContextFileEnt).DirInfo;
+  const HeaderFileInfo *ContextHFI = getExistingFileInfo(ContextFileEnt);
+  assert(ContextHFI && "context file without file info");
+  // Note that the temporary 'DirInfo' is required here, as the call to
+  // getFileInfo could resize the vector and might invalidate 'ContextHFI'.
+  unsigned DirInfo = ContextHFI->DirInfo;
   getFileInfo(*File).DirInfo = DirInfo;
 
   FrameworkName.pop_back(); // remove the trailing '/'
@@ -1349,8 +1355,6 @@ static void mergeHeaderFileInfo(HeaderFileInfo &HFI,
     HFI.Framework = OtherHFI.Framework;
 }
 
-/// getFileInfo - Return the HeaderFileInfo structure for the specified
-/// FileEntry.
 HeaderFileInfo &HeaderSearch::getFileInfo(FileEntryRef FE) {
   if (FE.getUID() >= FileInfo.size())
     FileInfo.resize(FE.getUID() + 1);
@@ -1367,27 +1371,20 @@ HeaderFileInfo &HeaderSearch::getFileInfo(FileEntryRef FE) {
   }
 
   HFI->IsValid = true;
-  // We have local information about this header file, so it's no longer
-  // strictly external.
+  // We assume the caller has local information about this header file, so it's
+  // no longer strictly external.
   HFI->External = false;
   return *HFI;
 }
 
-const HeaderFileInfo *
-HeaderSearch::getExistingFileInfo(FileEntryRef FE, bool WantExternal) const {
-  // If we have an external source, ensure we have the latest information.
-  // FIXME: Use a generation count to check whether this is really up to date.
+const HeaderFileInfo *HeaderSearch::getExistingFileInfo(FileEntryRef FE) const {
   HeaderFileInfo *HFI;
   if (ExternalSource) {
-    if (FE.getUID() >= FileInfo.size()) {
-      if (!WantExternal)
-        return nullptr;
+    if (FE.getUID() >= FileInfo.size())
       FileInfo.resize(FE.getUID() + 1);
-    }
 
     HFI = &FileInfo[FE.getUID()];
-    if (!WantExternal && (!HFI->IsValid || HFI->External))
-      return nullptr;
+    // FIXME: Use a generation count to check whether this is really up to date.
     if (!HFI->Resolved) {
       auto ExternalHFI = ExternalSource->GetHeaderFileInfo(FE);
       if (ExternalHFI.IsValid) {
@@ -1396,16 +1393,25 @@ HeaderSearch::getExistingFileInfo(FileEntryRef FE, bool WantExternal) const {
           mergeHeaderFileInfo(*HFI, ExternalHFI);
       }
     }
-  } else if (FE.getUID() >= FileInfo.size()) {
-    return nullptr;
-  } else {
+  } else if (FE.getUID() < FileInfo.size()) {
     HFI = &FileInfo[FE.getUID()];
+  } else {
+    HFI = nullptr;
   }
 
-  if (!HFI->IsValid || (HFI->External && !WantExternal))
-    return nullptr;
+  return (HFI && HFI->IsValid) ? HFI : nullptr;
+}
 
-  return HFI;
+const HeaderFileInfo *
+HeaderSearch::getExistingLocalFileInfo(FileEntryRef FE) const {
+  HeaderFileInfo *HFI;
+  if (FE.getUID() < FileInfo.size()) {
+    HFI = &FileInfo[FE.getUID()];
+  } else {
+    HFI = nullptr;
+  }
+
+  return (HFI && HFI->IsValid && !HFI->External) ? HFI : nullptr;
 }
 
 bool HeaderSearch::isFileMultipleIncludeGuarded(FileEntryRef File) const {
@@ -1568,6 +1574,7 @@ bool HeaderSearch::ShouldEnterIncludeFile(Preprocessor &PP,
     }
   }
 
+  FileInfo.IsLocallyIncluded = true;
   IsFirstIncludeOfFile = PP.markIncluded(File);
   return true;
 }

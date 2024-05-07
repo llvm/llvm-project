@@ -91,6 +91,8 @@ CodeGenFunction::CodeGenFunction(CodeGenModule &cgm, bool suppressNewContext)
 
 CodeGenFunction::~CodeGenFunction() {
   assert(LifetimeExtendedCleanupStack.empty() && "failed to emit a cleanup");
+  assert(DeferredDeactivationCleanupStack.empty() &&
+         "missed to deactivate a cleanup");
 
   if (getLangOpts().OpenMP && CurFn)
     CGM.getOpenMPRuntime().functionFinished(*this);
@@ -346,6 +348,10 @@ static void EmitIfUsed(CodeGenFunction &CGF, llvm::BasicBlock *BB) {
 void CodeGenFunction::FinishFunction(SourceLocation EndLoc) {
   assert(BreakContinueStack.empty() &&
          "mismatched push/pop in break/continue stack!");
+  assert(LifetimeExtendedCleanupStack.empty() &&
+         "mismatched push/pop of cleanups in EHStack!");
+  assert(DeferredDeactivationCleanupStack.empty() &&
+         "mismatched activate/deactivate of cleanups!");
 
   bool OnlySimpleReturnStmts = NumSimpleReturnExprs > 0
     && NumSimpleReturnExprs == NumReturnExprs
@@ -822,7 +828,7 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
   // .cxx_destruct, __destroy_helper_block_ and all of their calees at run time.
   if (SanOpts.has(SanitizerKind::Thread)) {
     if (const auto *OMD = dyn_cast_or_null<ObjCMethodDecl>(D)) {
-      IdentifierInfo *II = OMD->getSelector().getIdentifierInfoForSlot(0);
+      const IdentifierInfo *II = OMD->getSelector().getIdentifierInfoForSlot(0);
       if (OMD->getMethodFamily() == OMF_dealloc ||
           OMD->getMethodFamily() == OMF_initialize ||
           (OMD->getSelector().isUnarySelector() && II->isStr(".cxx_destruct"))) {
@@ -1465,6 +1471,8 @@ void CodeGenFunction::GenerateCode(GlobalDecl GD, llvm::Function *Fn,
 
   // Ensure that the function adheres to the forward progress guarantee, which
   // is required by certain optimizations.
+  // In C++11 and up, the attribute will be removed if the body contains a
+  // trivial empty loop.
   if (checkIfFunctionMustProgress())
     CurFn->addFnAttr(llvm::Attribute::MustProgress);
 
@@ -2753,8 +2761,14 @@ llvm::Value *CodeGenFunction::FormAArch64ResolverCondition(
     const MultiVersionResolverOption &RO) {
   llvm::SmallVector<StringRef, 8> CondFeatures;
   for (const StringRef &Feature : RO.Conditions.Features) {
-    // Form condition for features which are not yet enabled in target
-    if (!getContext().getTargetInfo().hasFeature(Feature))
+    // Optimize the Function Multi Versioning resolver by creating conditions
+    // only for features that are not enabled in the target. The exception is
+    // for features whose extension instructions are executed as NOP on targets
+    // without extension support.
+    if (!getContext().getTargetInfo().hasFeature(Feature) ||
+        Feature.equals("bti") || Feature.equals("memtag") ||
+        Feature.equals("memtag2") || Feature.equals("memtag3") ||
+        Feature.equals("dgh"))
       CondFeatures.push_back(Feature);
   }
   if (!CondFeatures.empty()) {

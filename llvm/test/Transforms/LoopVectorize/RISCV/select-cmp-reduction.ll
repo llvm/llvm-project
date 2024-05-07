@@ -402,7 +402,6 @@ define i32 @pred_select_const_i32_from_icmp(ptr noalias nocapture readonly %src1
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr [[TMP6]], i32 4, <4 x i1> [[TMP4]], <4 x i32> poison)
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq <4 x i32> [[WIDE_MASKED_LOAD]], <i32 2, i32 2, i32 2, i32 2>
 ; CHECK-NEXT:    [[TMP9:%.*]] = or <4 x i1> [[VEC_PHI]], [[TMP8]]
-; CHECK-NEXT:    [[TMP10:%.*]] = xor <4 x i1> [[TMP4]], <i1 true, i1 true, i1 true, i1 true>
 ; CHECK-NEXT:    [[PREDPHI]] = select <4 x i1> [[TMP4]], <4 x i1> [[TMP9]], <4 x i1> [[VEC_PHI]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
@@ -434,7 +433,6 @@ define i32 @pred_select_const_i32_from_icmp(ptr noalias nocapture readonly %src1
 ; SCALABLE-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 4 x i32> @llvm.masked.load.nxv4i32.p0(ptr [[TMP10]], i32 4, <vscale x 4 x i1> [[TMP8]], <vscale x 4 x i32> poison)
 ; SCALABLE-NEXT:    [[TMP12:%.*]] = icmp eq <vscale x 4 x i32> [[WIDE_MASKED_LOAD]], shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 2, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
 ; SCALABLE-NEXT:    [[TMP13:%.*]] = or <vscale x 4 x i1> [[VEC_PHI]], [[TMP12]]
-; SCALABLE-NEXT:    [[TMP14:%.*]] = xor <vscale x 4 x i1> [[TMP8]], shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i64 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer)
 ; SCALABLE-NEXT:    [[PREDPHI]] = select <vscale x 4 x i1> [[TMP8]], <vscale x 4 x i1> [[TMP13]], <vscale x 4 x i1> [[VEC_PHI]]
 ; SCALABLE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP16]]
 ; SCALABLE-NEXT:    [[TMP17:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]

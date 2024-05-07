@@ -121,6 +121,7 @@ static bool run(ArrayRef<const char *> Args, const char *ProgName) {
   // Execute, verify and gather AST results.
   // An invocation is ran for each unique target triple and for each header
   // access level.
+  Records FrontendRecords;
   for (const auto &[Targ, Trip] : Opts.DriverOpts.Targets) {
     Ctx.Verifier->setTarget(Targ);
     Ctx.Slice = std::make_shared<FrontendRecordsSlice>(Trip);
@@ -131,6 +132,7 @@ static bool run(ArrayRef<const char *> Args, const char *ProgName) {
                        InMemoryFileSystem.get(), Opts.getClangFrontendArgs()))
         return EXIT_FAILURE;
     }
+    FrontendRecords.emplace_back(std::move(Ctx.Slice));
   }
 
   if (Ctx.Verifier->verifyRemainingSymbols() == DylibVerifier::Result::Invalid)
@@ -145,7 +147,7 @@ static bool run(ArrayRef<const char *> Args, const char *ProgName) {
     return EXIT_FAILURE;
 
   // Assign attributes for serialization.
-  InterfaceFile IF(Ctx.Verifier->getExports());
+  InterfaceFile IF(Ctx.Verifier->takeExports());
   // Assign attributes that are the same per slice first.
   for (const auto &TargetInfo : Opts.DriverOpts.Targets) {
     IF.addTarget(TargetInfo.first);

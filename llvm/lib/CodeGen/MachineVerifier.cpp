@@ -55,6 +55,7 @@
 #include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/CodeGen/StackMaps.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
+#include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
@@ -1783,6 +1784,60 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
       report("Element type of the destination must be the same size or smaller "
              "than the source type",
              MI);
+      break;
+    }
+
+    break;
+  }
+  case TargetOpcode::G_EXTRACT_VECTOR_ELT: {
+    LLT DstTy = MRI->getType(MI->getOperand(0).getReg());
+    LLT SrcTy = MRI->getType(MI->getOperand(1).getReg());
+    LLT IdxTy = MRI->getType(MI->getOperand(2).getReg());
+
+    if (!DstTy.isScalar() && !DstTy.isPointer()) {
+      report("Destination type must be a scalar or pointer", MI);
+      break;
+    }
+
+    if (!SrcTy.isVector()) {
+      report("First source must be a vector", MI);
+      break;
+    }
+
+    auto TLI = MF->getSubtarget().getTargetLowering();
+    if (IdxTy.getSizeInBits() !=
+        TLI->getVectorIdxTy(MF->getDataLayout()).getFixedSizeInBits()) {
+      report("Index type must match VectorIdxTy", MI);
+      break;
+    }
+
+    break;
+  }
+  case TargetOpcode::G_INSERT_VECTOR_ELT: {
+    LLT DstTy = MRI->getType(MI->getOperand(0).getReg());
+    LLT VecTy = MRI->getType(MI->getOperand(1).getReg());
+    LLT ScaTy = MRI->getType(MI->getOperand(2).getReg());
+    LLT IdxTy = MRI->getType(MI->getOperand(3).getReg());
+
+    if (!DstTy.isVector()) {
+      report("Destination type must be a vector", MI);
+      break;
+    }
+
+    if (VecTy != DstTy) {
+      report("Destination type and vector type must match", MI);
+      break;
+    }
+
+    if (!ScaTy.isScalar() && !ScaTy.isPointer()) {
+      report("Inserted element must be a scalar or pointer", MI);
+      break;
+    }
+
+    auto TLI = MF->getSubtarget().getTargetLowering();
+    if (IdxTy.getSizeInBits() !=
+        TLI->getVectorIdxTy(MF->getDataLayout()).getFixedSizeInBits()) {
+      report("Index type must match VectorIdxTy", MI);
       break;
     }
 

@@ -74,23 +74,6 @@ static std::string getTypeString(Type *T) {
   return Tmp.str();
 }
 
-// Whatever debug info format we parsed, we should convert to the expected debug
-// info format immediately afterwards.
-bool LLParser::finalizeDebugInfoFormat(Module *M) {
-  // We should have already returned an error if we observed both intrinsics and
-  // records in this IR.
-  assert(!(SeenNewDbgInfoFormat && SeenOldDbgInfoFormat) &&
-         "Mixed debug intrinsics/records seen without a parsing error?");
-  if (PreserveInputDbgFormat == cl::boolOrDefault::BOU_TRUE) {
-    UseNewDbgInfoFormat = SeenNewDbgInfoFormat;
-    WriteNewDbgInfoFormatToBitcode = SeenNewDbgInfoFormat;
-    WriteNewDbgInfoFormat = SeenNewDbgInfoFormat;
-  } else if (M) {
-    M->setIsNewDbgInfoFormat(false);
-  }
-  return false;
-}
-
 /// Run: module ::= toplevelentity*
 bool LLParser::Run(bool UpgradeDebugInfo,
                    DataLayoutCallbackTy DataLayoutCallback) {
@@ -108,7 +91,7 @@ bool LLParser::Run(bool UpgradeDebugInfo,
   }
 
   return parseTopLevelEntities() || validateEndOfModule(UpgradeDebugInfo) ||
-         validateEndOfIndex() || finalizeDebugInfoFormat(M);
+         validateEndOfIndex();
 }
 
 bool LLParser::parseStandaloneConstantValue(Constant *&C,
@@ -207,6 +190,18 @@ void LLParser::dropUnknownMetadataReferences() {
 bool LLParser::validateEndOfModule(bool UpgradeDebugInfo) {
   if (!M)
     return false;
+
+  // We should have already returned an error if we observed both intrinsics and
+  // records in this IR.
+  assert(!(SeenNewDbgInfoFormat && SeenOldDbgInfoFormat) &&
+         "Mixed debug intrinsics/records seen without a parsing error?");
+  if (PreserveInputDbgFormat == cl::boolOrDefault::BOU_TRUE) {
+    UseNewDbgInfoFormat = SeenNewDbgInfoFormat;
+    WriteNewDbgInfoFormatToBitcode = SeenNewDbgInfoFormat;
+    WriteNewDbgInfoFormat = SeenNewDbgInfoFormat;
+    M->setNewDbgInfoFormatFlag(SeenNewDbgInfoFormat);
+  }
+
   // Handle any function attribute group forward references.
   for (const auto &RAG : ForwardRefAttrGroups) {
     Value *V = RAG.first;
@@ -326,6 +321,42 @@ bool LLParser::validateEndOfModule(bool UpgradeDebugInfo) {
                      ForwardRefComdats.begin()->first + "'");
 
   for (const auto &[Name, Info] : make_early_inc_range(ForwardRefVals)) {
+    if (StringRef(Name).starts_with("llvm.")) {
+      Intrinsic::ID IID = Function::lookupIntrinsicID(Name);
+      if (IID == Intrinsic::not_intrinsic)
+        // Don't do anything for unknown intrinsics.
+        continue;
+
+      // Automatically create declarations for intrinsics. Intrinsics can only
+      // be called directly, so the call function type directly determines the
+      // declaration function type.
+      //
+      // Additionally, automatically add the required mangling suffix to the
+      // intrinsic name. This means that we may replace a single forward
+      // declaration with multiple functions here.
+      for (Use &U : make_early_inc_range(Info.first->uses())) {
+        auto *CB = dyn_cast<CallBase>(U.getUser());
+        if (!CB || !CB->isCallee(&U))
+          return error(Info.second, "intrinsic can only be used as callee");
+
+        SmallVector<Type *> OverloadTys;
+        if (!Intrinsic::getIntrinsicSignature(IID, CB->getFunctionType(),
+                                              OverloadTys))
+          return error(Info.second, "invalid intrinsic signature");
+
+        U.set(Intrinsic::getDeclaration(M, IID, OverloadTys));
+      }
+
+      Info.first->eraseFromParent();
+      ForwardRefVals.erase(Name);
+      continue;
+    }
+
+    // If incomplete IR is allowed, also add declarations for
+    // non-intrinsics.
+    if (!AllowIncompleteIR)
+      continue;
+
     auto GetCommonFunctionType = [](Value *V) -> FunctionType * {
       FunctionType *FTy = nullptr;
       for (Use &U : V->uses()) {
@@ -337,40 +368,23 @@ bool LLParser::validateEndOfModule(bool UpgradeDebugInfo) {
       return FTy;
     };
 
-    auto GetDeclarationType = [&](StringRef Name, Value *V) -> Type * {
-      // Automatically create declarations for intrinsics. Intrinsics can only
-      // be called directly, so the call function type directly determines the
-      // declaration function type.
-      if (Name.starts_with("llvm."))
-        // Don't do anything if the intrinsic is called with different function
-        // types. This would result in a verifier error anyway.
-        return GetCommonFunctionType(V);
+    // First check whether this global is only used in calls with the same
+    // type, in which case we'll insert a function. Otherwise, fall back to
+    // using a dummy i8 type.
+    Type *Ty = GetCommonFunctionType(Info.first);
+    if (!Ty)
+      Ty = Type::getInt8Ty(Context);
 
-      if (AllowIncompleteIR) {
-        // If incomplete IR is allowed, also add declarations for
-        // non-intrinsics. First check whether this global is only used in
-        // calls with the same type, in which case we'll insert a function.
-        if (auto *Ty = GetCommonFunctionType(V))
-          return Ty;
-
-        // Otherwise, fall back to using a dummy i8 type.
-        return Type::getInt8Ty(Context);
-      }
-      return nullptr;
-    };
-
-    if (Type *Ty = GetDeclarationType(Name, Info.first)) {
-      GlobalValue *GV;
-      if (auto *FTy = dyn_cast<FunctionType>(Ty))
-        GV = Function::Create(FTy, GlobalValue::ExternalLinkage, Name, M);
-      else
-        GV = new GlobalVariable(*M, Ty, /*isConstant*/ false,
-                                GlobalValue::ExternalLinkage,
-                                /*Initializer*/ nullptr, Name);
-      Info.first->replaceAllUsesWith(GV);
-      Info.first->eraseFromParent();
-      ForwardRefVals.erase(Name);
-    }
+    GlobalValue *GV;
+    if (auto *FTy = dyn_cast<FunctionType>(Ty))
+      GV = Function::Create(FTy, GlobalValue::ExternalLinkage, Name, M);
+    else
+      GV = new GlobalVariable(*M, Ty, /*isConstant*/ false,
+                              GlobalValue::ExternalLinkage,
+                              /*Initializer*/ nullptr, Name);
+    Info.first->replaceAllUsesWith(GV);
+    Info.first->eraseFromParent();
+    ForwardRefVals.erase(Name);
   }
 
   if (!ForwardRefVals.empty())
@@ -419,6 +433,9 @@ bool LLParser::validateEndOfModule(bool UpgradeDebugInfo) {
 
   UpgradeModuleFlags(*M);
   UpgradeSectionAttributes(*M);
+
+  if (PreserveInputDbgFormat != cl::boolOrDefault::BOU_TRUE)
+    M->setIsNewDbgInfoFormat(UseNewDbgInfoFormat);
 
   if (!Slots)
     return false;
@@ -2081,6 +2098,20 @@ void LLParser::parseOptionalVisibility(unsigned &Res) {
     break;
   }
   Lex.Lex();
+}
+
+bool LLParser::parseOptionalImportType(lltok::Kind Kind,
+                                       GlobalValueSummary::ImportKind &Res) {
+  switch (Kind) {
+  default:
+    return tokError("unknown import kind. Expect definition or declaration.");
+  case lltok::kw_definition:
+    Res = GlobalValueSummary::Definition;
+    return false;
+  case lltok::kw_declaration:
+    Res = GlobalValueSummary::Declaration;
+    return false;
+  }
 }
 
 /// parseOptionalDLLStorageClass
@@ -6816,6 +6847,7 @@ int LLParser::parseInstruction(Instruction *&Inst, BasicBlock *BB,
   }
 
   // Casts.
+  case lltok::kw_uitofp:
   case lltok::kw_zext: {
     bool NonNeg = EatIfPresent(lltok::kw_nneg);
     bool Res = parseCast(Inst, PFS, KeywordVal);
@@ -6843,7 +6875,6 @@ int LLParser::parseInstruction(Instruction *&Inst, BasicBlock *BB,
   case lltok::kw_fpext:
   case lltok::kw_bitcast:
   case lltok::kw_addrspacecast:
-  case lltok::kw_uitofp:
   case lltok::kw_sitofp:
   case lltok::kw_fptoui:
   case lltok::kw_fptosi:
@@ -8240,6 +8271,8 @@ int LLParser::parseAtomicRMW(Instruction *&Inst, PerFunctionState &PFS) {
     return tokError("atomicrmw cannot be unordered");
   if (!Ptr->getType()->isPointerTy())
     return error(PtrLoc, "atomicrmw operand must be a pointer");
+  if (Val->getType()->isScalableTy())
+    return error(ValLoc, "atomicrmw operand may not be scalable");
 
   if (Operation == AtomicRMWInst::Xchg) {
     if (!Val->getType()->isIntegerTy() &&
@@ -8251,7 +8284,7 @@ int LLParser::parseAtomicRMW(Instruction *&Inst, PerFunctionState &PFS) {
               " operand must be an integer, floating point, or pointer type");
     }
   } else if (IsFP) {
-    if (!Val->getType()->isFloatingPointTy()) {
+    if (!Val->getType()->isFPOrFPVectorTy()) {
       return error(ValLoc, "atomicrmw " +
                                AtomicRMWInst::getOperationName(Operation) +
                                " operand must be a floating point type");
@@ -9228,7 +9261,8 @@ bool LLParser::parseFunctionSummary(std::string Name, GlobalValue::GUID GUID,
   GlobalValueSummary::GVFlags GVFlags = GlobalValueSummary::GVFlags(
       GlobalValue::ExternalLinkage, GlobalValue::DefaultVisibility,
       /*NotEligibleToImport=*/false,
-      /*Live=*/false, /*IsLocal=*/false, /*CanAutoHide=*/false);
+      /*Live=*/false, /*IsLocal=*/false, /*CanAutoHide=*/false,
+      GlobalValueSummary::Definition);
   unsigned InstCount;
   std::vector<FunctionSummary::EdgeTy> Calls;
   FunctionSummary::TypeIdInfo TypeIdInfo;
@@ -9315,7 +9349,8 @@ bool LLParser::parseVariableSummary(std::string Name, GlobalValue::GUID GUID,
   GlobalValueSummary::GVFlags GVFlags = GlobalValueSummary::GVFlags(
       GlobalValue::ExternalLinkage, GlobalValue::DefaultVisibility,
       /*NotEligibleToImport=*/false,
-      /*Live=*/false, /*IsLocal=*/false, /*CanAutoHide=*/false);
+      /*Live=*/false, /*IsLocal=*/false, /*CanAutoHide=*/false,
+      GlobalValueSummary::Definition);
   GlobalVarSummary::GVarFlags GVarFlags(/*ReadOnly*/ false,
                                         /* WriteOnly */ false,
                                         /* Constant */ false,
@@ -9373,7 +9408,8 @@ bool LLParser::parseAliasSummary(std::string Name, GlobalValue::GUID GUID,
   GlobalValueSummary::GVFlags GVFlags = GlobalValueSummary::GVFlags(
       GlobalValue::ExternalLinkage, GlobalValue::DefaultVisibility,
       /*NotEligibleToImport=*/false,
-      /*Live=*/false, /*IsLocal=*/false, /*CanAutoHide=*/false);
+      /*Live=*/false, /*IsLocal=*/false, /*CanAutoHide=*/false,
+      GlobalValueSummary::Definition);
   if (parseToken(lltok::colon, "expected ':' here") ||
       parseToken(lltok::lparen, "expected '(' here") ||
       parseModuleReference(ModulePath) ||
@@ -10158,6 +10194,16 @@ bool LLParser::parseGVFlags(GlobalValueSummary::GVFlags &GVFlags) {
       if (parseToken(lltok::colon, "expected ':'") || parseFlag(Flag))
         return true;
       GVFlags.CanAutoHide = Flag;
+      break;
+    case lltok::kw_importType:
+      Lex.Lex();
+      if (parseToken(lltok::colon, "expected ':'"))
+        return true;
+      GlobalValueSummary::ImportKind IK;
+      if (parseOptionalImportType(Lex.getKind(), IK))
+        return true;
+      GVFlags.ImportType = static_cast<unsigned>(IK);
+      Lex.Lex();
       break;
     default:
       return error(Lex.getLoc(), "expected gv flag type");

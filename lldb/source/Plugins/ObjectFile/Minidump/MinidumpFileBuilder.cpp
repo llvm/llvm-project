@@ -20,6 +20,8 @@
 #include "lldb/Target/StopInfo.h"
 #include "lldb/Target/ThreadList.h"
 #include "lldb/Utility/DataExtractor.h"
+#include "lldb/Utility/LLDBLog.h"
+#include "lldb/Utility/Log.h"
 #include "lldb/Utility/RegisterValue.h"
 
 #include "llvm/ADT/StringRef.h"
@@ -154,8 +156,16 @@ Status WriteString(const std::string &to_write,
 
 llvm::Expected<uint64_t> getModuleFileSize(Target &target,
                                            const ModuleSP &mod) {
-  SectionSP sect_sp = mod->GetObjectFile()->GetBaseAddress().GetSection();
+  // JIT module has the same vm and file size.
   uint64_t SizeOfImage = 0;
+  if (mod->GetObjectFile()->CalculateType() == ObjectFile::Type::eTypeJIT) {
+    for (const auto &section : *mod->GetObjectFile()->GetSectionList()) {
+      SizeOfImage += section->GetByteSize();
+    }
+    return SizeOfImage;
+  }
+
+  SectionSP sect_sp = mod->GetObjectFile()->GetBaseAddress().GetSection();
 
   if (!sect_sp) {
     return llvm::createStringError(std::errc::operation_not_supported,
@@ -226,8 +236,13 @@ Status MinidumpFileBuilder::AddModuleList(Target &target) {
     std::string module_name = mod->GetSpecificationDescription();
     auto maybe_mod_size = getModuleFileSize(target, mod);
     if (!maybe_mod_size) {
-      error.SetErrorStringWithFormat("Unable to get the size of module %s.",
-                                     module_name.c_str());
+      llvm::Error mod_size_err = maybe_mod_size.takeError();
+      llvm::handleAllErrors(std::move(mod_size_err),
+                            [&](const llvm::ErrorInfoBase &E) {
+                              error.SetErrorStringWithFormat(
+                                  "Unable to get the size of module %s: %s.",
+                                  module_name.c_str(), E.message().c_str());
+                            });
       return error;
     }
 
@@ -649,14 +664,20 @@ MinidumpFileBuilder::AddMemoryList(const lldb::ProcessSP &process_sp,
   DataBufferHeap helper_data;
   std::vector<MemoryDescriptor> mem_descriptors;
   for (const auto &core_range : core_ranges) {
-    // Skip empty memory regions or any regions with no permissions.
-    if (core_range.range.empty() || core_range.lldb_permissions == 0)
+    // Skip empty memory regions.
+    if (core_range.range.empty())
       continue;
     const addr_t addr = core_range.range.start();
     const addr_t size = core_range.range.size();
     auto data_up = std::make_unique<DataBufferHeap>(size, 0);
     const size_t bytes_read =
         process_sp->ReadMemory(addr, data_up->GetBytes(), size, error);
+    if (error.Fail()) {
+      Log *log = GetLog(LLDBLog::Object);
+      LLDB_LOGF(log, "Failed to read memory region. Bytes read: %zu, error: %s",
+                bytes_read, error.AsCString());
+      error.Clear();
+    }
     if (bytes_read == 0)
       continue;
     // We have a good memory region with valid bytes to store.

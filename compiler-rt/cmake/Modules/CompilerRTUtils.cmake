@@ -368,6 +368,16 @@ macro(construct_compiler_rt_default_triple)
           "Default triple for which compiler-rt runtimes will be built.")
   endif()
 
+  if ("${CMAKE_C_COMPILER_ID}" MATCHES "Clang")
+    set(option_prefix "")
+    if (CMAKE_C_SIMULATE_ID MATCHES "MSVC")
+      set(option_prefix "/clang:")
+    endif()
+    execute_process(COMMAND ${CMAKE_C_COMPILER} ${option_prefix}--target=${COMPILER_RT_DEFAULT_TARGET_TRIPLE} ${option_prefix}-print-target-triple
+                    OUTPUT_VARIABLE COMPILER_RT_DEFAULT_TARGET_TRIPLE
+                    OUTPUT_STRIP_TRAILING_WHITESPACE)
+  endif()
+
   string(REPLACE "-" ";" LLVM_TARGET_TRIPLE_LIST ${COMPILER_RT_DEFAULT_TARGET_TRIPLE})
   list(GET LLVM_TARGET_TRIPLE_LIST 0 COMPILER_RT_DEFAULT_TARGET_ARCH)
 
