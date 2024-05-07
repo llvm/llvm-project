@@ -99,6 +99,7 @@ class CheckRunner:
         self.has_check_fixes = False
         self.has_check_messages = False
         self.has_check_notes = False
+        self.expect_no_diagnosis = args.expect_no_diagnosis
         self.export_fixes = args.export_fixes
         self.fixes = MessagePrefix("CHECK-FIXES")
         self.messages = MessagePrefix("CHECK-MESSAGES")
@@ -225,6 +226,11 @@ class CheckRunner:
         print(diff_output)
         print("------------------------------------------------------------------")
         return clang_tidy_output
+    
+    def check_no_diagnosis(self, clang_tidy_output):
+        print(clang_tidy_output)
+        if clang_tidy_output != "":
+            sys.exit('expect no diagnosis')
 
     def check_fixes(self):
         if self.has_check_fixes:
@@ -273,11 +279,13 @@ class CheckRunner:
 
     def run(self):
         self.read_input()
-        if self.export_fixes is None:
+        if self.export_fixes is None and not self.expect_no_diagnosis:
             self.get_prefixes()
         self.prepare_test_inputs()
         clang_tidy_output = self.run_clang_tidy()
-        if self.export_fixes is None:
+        if self.expect_no_diagnosis:
+            self.check_no_diagnosis(clang_tidy_output)
+        elif self.export_fixes is None:
             self.check_fixes()
             self.check_messages(clang_tidy_output)
             self.check_notes(clang_tidy_output)
@@ -310,6 +318,7 @@ def parse_arguments():
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument("-expect-clang-tidy-error", action="store_true")
+    parser.add_argument("-expect-no-diagnosis", action="store_true")
     parser.add_argument("-resource-dir")
     parser.add_argument("-assume-filename")
     parser.add_argument("input_file_name")
