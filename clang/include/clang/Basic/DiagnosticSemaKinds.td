@@ -3740,12 +3740,6 @@ def warn_gnu_inline_cplusplus_without_extern : Warning<
   "'gnu_inline' attribute without 'extern' in C++ treated as externally"
   " available, this changed in Clang 10">,
   InGroup<DiagGroup<"gnu-inline-cpp-without-extern">>;
-def warn_sme_streaming_mode_change_no_sve : Warning<
-  "function requires a streaming-mode change, unwinding is not possible without 'sve'">,
-  InGroup<AArch64SMEAttributes>;
-def warn_sme_locally_streaming_no_sve : Warning<
-  "unwinding is not possible for locally-streaming functions without 'sve'">,
-   InGroup<AArch64SMEAttributes>;
 def err_attribute_vecreturn_only_vector_member : Error<
   "the vecreturn attribute can only be used on a class or structure with one member, which must be a vector">;
 def err_attribute_vecreturn_only_pod_record : Error<
@@ -3782,6 +3776,12 @@ def err_conflicting_attributes_arm_state : Error<
   "conflicting attributes for state '%0'">;
 def err_sme_streaming_cannot_be_multiversioned : Error<
   "streaming function cannot be multi-versioned">;
+def err_sme_streaming_mode_change_no_sve : Error<
+  "function requires a streaming-mode change, unwinding is not possible without 'sve'. "
+  "Consider marking this function as 'noexcept' or '__attribute__((nothrow))'">;
+def err_sme_locally_streaming_no_sve : Error<
+  "unwinding is not possible for locally-streaming functions without 'sve'. "
+  "Consider marking this function as 'noexcept' or '__attribute__((nothrow))'">;
 def err_unknown_arm_state : Error<
   "unknown state '%0'">;
 def err_missing_arm_state : Error<

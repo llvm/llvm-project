@@ -1599,7 +1599,8 @@ bool AArch64ExpandPseudo::expandMI(MachineBasicBlock &MBB,
    case AArch64::COALESCER_BARRIER_FPR128:
      MI.eraseFromParent();
      return true;
-   case AArch64::VGUnwindInfoPseudo: {
+   case AArch64::VGSavePseudo:
+   case AArch64::VGRestorePseudo: {
      MachineFunction &MF = *MBB.getParent();
      SMEAttrs FuncAttrs(MF.getFunction());
      bool LocallyStreaming =
@@ -1617,7 +1618,8 @@ bool AArch64ExpandPseudo::expandMI(MachineBasicBlock &MBB,
      const TargetSubtargetInfo &STI = MF.getSubtarget();
      const TargetInstrInfo &TII = *STI.getInstrInfo();
      const TargetRegisterInfo &TRI = *STI.getRegisterInfo();
-     if (MI.getOperand(0).getImm() == 1) {
+
+     if (Opcode == AArch64::VGSavePseudo) {
        // This pseudo has been inserted after a streaming-mode change
        // to save the streaming value of VG before a call.
        // Calculate and emit the CFI offset using VGFrameIdx.
