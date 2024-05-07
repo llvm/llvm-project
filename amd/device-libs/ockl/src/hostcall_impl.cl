@@ -96,14 +96,6 @@ set_ready_flag(uint control)
                              CONTROL_WIDTH_READY_FLAG, 1);
 }
 
-static uint
-optimizationBarrierHack(uint in_val)
-{
-    uint out_val;
-    __asm__ volatile("" : "=v"(out_val) : "0"(in_val));
-    return out_val;
-}
-
 static ulong
 pop(__global ulong *top, __global buffer_t *buffer)
 {
@@ -290,7 +282,6 @@ __ockl_hostcall_internal(void *_buffer, uint service_id, ulong arg0, ulong arg1,
                          ulong arg6, ulong arg7)
 {
     uint me = __ockl_lane_u32();
-    me = optimizationBarrierHack(me);
     uint low = __builtin_amdgcn_readfirstlane(me);
 
     __global buffer_t *buffer = (__global buffer_t *)_buffer;
