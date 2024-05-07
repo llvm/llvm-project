@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple wasm32-unknown-unknown -target-feature +reference-types -target-feature +simd128 -target-feature +relaxed-simd -target-feature +nontrapping-fptoint -target-feature +exception-handling -target-feature +bulk-memory -target-feature +atomics -flax-vector-conversions=none -O3 -emit-llvm -o - %s | FileCheck %s -check-prefixes WEBASSEMBLY,WEBASSEMBLY32
-// RUN: %clang_cc1 -triple wasm64-unknown-unknown -target-feature +reference-types -target-feature +simd128 -target-feature +relaxed-simd -target-feature +nontrapping-fptoint -target-feature +exception-handling -target-feature +bulk-memory -target-feature +atomics -flax-vector-conversions=none -O3 -emit-llvm -o - %s | FileCheck %s -check-prefixes WEBASSEMBLY,WEBASSEMBLY64
+// RUN: %clang_cc1 -triple wasm32-unknown-unknown -target-feature +reference-types -target-feature +simd128 -target-feature +relaxed-simd -target-feature +nontrapping-fptoint -target-feature +exception-handling -target-feature +bulk-memory -target-feature +atomics -target-feature +half-precision -flax-vector-conversions=none -O3 -emit-llvm -o - %s | FileCheck %s -check-prefixes WEBASSEMBLY,WEBASSEMBLY32
+// RUN: %clang_cc1 -triple wasm64-unknown-unknown -target-feature +reference-types -target-feature +simd128 -target-feature +relaxed-simd -target-feature +nontrapping-fptoint -target-feature +exception-handling -target-feature +bulk-memory -target-feature +atomics -target-feature +half-precision -flax-vector-conversions=none -O3 -emit-llvm -o - %s | FileCheck %s -check-prefixes WEBASSEMBLY,WEBASSEMBLY64
 // RUN: not %clang_cc1 -triple wasm64-unknown-unknown -target-feature +reference-types -target-feature +nontrapping-fptoint -target-feature +exception-handling -target-feature +bulk-memory -target-feature +atomics -flax-vector-conversions=none -O3 -emit-llvm -o - %s 2>&1 | FileCheck %s -check-prefixes MISSING-SIMD
 
 // SIMD convenience types
@@ -800,6 +800,11 @@ f32x4 relaxed_dot_bf16x8_add_f32_f32x4(u16x8 a, u16x8 b, f32x4 c) {
   // WEBASSEMBLY: call <4 x float> @llvm.wasm.relaxed.dot.bf16x8.add.f32
   // WEBASSEMBLY-SAME: <8 x i16> %a, <8 x i16> %b, <4 x float> %c)
   // WEBASSEMBLY-NEXT: ret
+}
+
+float load_f16_f32(__fp16 *addr) {
+  return __builtin_wasm_loadf16_f32(addr);
+  // WEBASSEMBLY: call float @llvm.wasm.loadf16.f32(ptr %{{.*}})
 }
 
 __externref_t externref_null() {
