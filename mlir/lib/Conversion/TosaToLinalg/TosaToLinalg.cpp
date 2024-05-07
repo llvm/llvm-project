@@ -2617,3 +2617,37 @@ void mlir::tosa::populateTosaToLinalgConversionPatterns(
       TileConverter>(patterns->getContext());
   // clang-format on
 }
+
+void mlir::tosa::populateTosaToLinalgTypeConversion(TypeConverter &converter) {
+  converter.addConversion([&](Type type) -> std::optional<Type> {
+    if (type.isUnsignedInteger()) {
+      return IntegerType::get(type.getContext(), type.getIntOrFloatBitWidth(),
+                              IntegerType::SignednessSemantics::Signless);
+    }
+    return type;
+  });
+  converter.addConversion([&](TensorType type) -> std::optional<Type> {
+    auto converted = converter.convertType(type.getElementType());
+    if (!converted)
+      return {};
+    return type.clone(converted);
+  });
+  converter.addSourceMaterialization([&](OpBuilder &builder, Type resultType,
+                                         ValueRange inputs,
+                                         Location loc) -> std::optional<Value> {
+    if (inputs.size() != 1)
+      return std::nullopt;
+
+    return builder.create<UnrealizedConversionCastOp>(loc, resultType, inputs)
+        .getResult(0);
+  });
+  converter.addTargetMaterialization([&](OpBuilder &builder, Type resultType,
+                                         ValueRange inputs,
+                                         Location loc) -> std::optional<Value> {
+    if (inputs.size() != 1)
+      return std::nullopt;
+
+    return builder.create<UnrealizedConversionCastOp>(loc, resultType, inputs)
+        .getResult(0);
+  });
+}

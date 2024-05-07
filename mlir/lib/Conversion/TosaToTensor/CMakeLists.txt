@@ -15,6 +15,7 @@ add_mlir_conversion_library(MLIRTosaToTensor
   MLIRIR
   MLIRPass
   MLIRTosaDialect
+  MLIRTosaToLinalg
   MLIRTosaTransforms
   MLIRSupport
   )
