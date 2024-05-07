@@ -2966,7 +2966,7 @@ BuildDeductionGuideForTypeAlias(Sema &SemaRef,
     if (!SemaRef.SubstTemplateArgument(Input, Args, Output)) {
       assert(TemplateArgsForBuildingFPrime[Index].isNull() &&
              "InstantiatedArgs must be null before setting");
-      TemplateArgsForBuildingFPrime[Index] = (Output.getArgument());
+      TemplateArgsForBuildingFPrime[Index] = Output.getArgument();
     }
   }
 
