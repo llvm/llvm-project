@@ -188,13 +188,10 @@ gpu.module @shuffles attributes {
 // Cannot convert due to shuffle width and target subgroup size mismatch
 
 gpu.module @shuffles_mismatch {
-  func.func @gpu_shuffles(%val0: i32, %id: i32,
-                          %val1: i64, %mask: i32,
-                          %val2: f32, %delta_up: i32,
-                          %val3: f64, %delta_down: i32) {
+  func.func @gpu_shuffles(%val: i32, %id: i32) {
     %width = arith.constant 16 : i32
     // expected-error@below {{failed to legalize operation 'gpu.shuffle' that was explicitly marked illegal}}
-    %shuffleResult0, %valid0 = gpu.shuffle idx %val0, %id, %width : i32
+    %shuffleResult, %valid = gpu.shuffle idx %val, %id, %width : i32
     return
   }
 }
@@ -204,13 +201,9 @@ gpu.module @shuffles_mismatch {
 // Cannot convert due to variable shuffle width
 
 gpu.module @shuffles_mismatch {
-  func.func @gpu_shuffles(%val0: i32, %id: i32,
-                          %val1: i64, %mask: i32,
-                          %val2: f32, %delta_up: i32,
-                          %val3: f64, %delta_down: i32,
-                          %width: i32) {
+  func.func @gpu_shuffles(%val: i32, %id: i32, %width: i32) {
     // expected-error@below {{failed to legalize operation 'gpu.shuffle' that was explicitly marked illegal}}
-    %shuffleResult0, %valid0 = gpu.shuffle idx %val0, %id, %width : i32
+    %shuffleResult, %valid = gpu.shuffle idx %val, %id, %width : i32
     return
   }
 }
