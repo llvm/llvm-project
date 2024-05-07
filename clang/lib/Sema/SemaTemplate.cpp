@@ -10380,8 +10380,7 @@ Sema::CheckMemberSpecialization(NamedDecl *Member, LookupResult &Previous) {
     }
     if (Ambiguous) {
       Diag(Member->getLocation(), diag::err_function_member_spec_ambiguous)
-          << Member
-          << (InstantiatedFrom ? InstantiatedFrom : Instantiation);
+          << Member << (InstantiatedFrom ? InstantiatedFrom : Instantiation);
       for (FunctionDecl *Candidate : Candidates)
         Diag(Candidate->getLocation(), diag::note_function_member_spec_matched)
             << Candidate;
