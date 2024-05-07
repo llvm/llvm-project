@@ -14,36 +14,36 @@ if(CMAKE_SYSTEM_PROCESSOR MATCHES "ppc64le$")
 endif()
 
 # Create the library and add the default arguments.
-add_target_library(omptarget.rtl.${machine} ${machine})
+add_target_library(omptarget.rtl.host ${machine})
 
-target_sources(omptarget.rtl.${machine} PRIVATE src/rtl.cpp)
+target_sources(omptarget.rtl.host PRIVATE src/rtl.cpp)
 
 if(LIBOMPTARGET_DEP_LIBFFI_FOUND)
   libomptarget_say("Building ${machine} plugin linked with libffi")
   if(FFI_STATIC_LIBRARIES)
-    target_link_libraries(omptarget.rtl.${machine} PRIVATE FFI::ffi_static)
+    target_link_libraries(omptarget.rtl.host PRIVATE FFI::ffi_static)
   else()
-    target_link_libraries(omptarget.rtl.${machine} PRIVATE FFI::ffi)
+    target_link_libraries(omptarget.rtl.host PRIVATE FFI::ffi)
   endif()
 else()
   libomptarget_say("Building ${machine} plugin for dlopened libffi")
-  target_sources(omptarget.rtl.${machine} PRIVATE dynamic_ffi/ffi.cpp)
-  target_include_directories(omptarget.rtl.${machine} PRIVATE dynamic_ffi)
+  target_sources(omptarget.rtl.host PRIVATE dynamic_ffi/ffi.cpp)
+  target_include_directories(omptarget.rtl.host PRIVATE dynamic_ffi)
 endif()
 
 # Install plugin under the lib destination folder.
-install(TARGETS omptarget.rtl.${machine}
+install(TARGETS omptarget.rtl.host
         LIBRARY DESTINATION "${OFFLOAD_INSTALL_LIBDIR}")
-set_target_properties(omptarget.rtl.${machine} PROPERTIES
+set_target_properties(omptarget.rtl.host PROPERTIES
   INSTALL_RPATH "$ORIGIN" BUILD_RPATH "$ORIGIN:${CMAKE_CURRENT_BINARY_DIR}/.."
   POSITION_INDEPENDENT_CODE ON
   CXX_VISIBILITY_PRESET protected)
 
-target_include_directories(omptarget.rtl.${machine} PRIVATE
+target_include_directories(omptarget.rtl.host PRIVATE
                            ${LIBOMPTARGET_INCLUDE_DIR})
 
 if(LIBOMPTARGET_DEP_LIBFFI_FOUND)
-  list(APPEND LIBOMPTARGET_TESTED_PLUGINS omptarget.rtl.${machine})
+  list(APPEND LIBOMPTARGET_TESTED_PLUGINS omptarget.rtl.host)
   set(LIBOMPTARGET_TESTED_PLUGINS
       "${LIBOMPTARGET_TESTED_PLUGINS}" PARENT_SCOPE)
 else()
@@ -52,37 +52,27 @@ endif()
 
 # Define the target specific triples and ELF machine values.
 if(CMAKE_SYSTEM_PROCESSOR MATCHES "ppc64le$")
-  target_compile_definitions(omptarget.rtl.${machine} PRIVATE TARGET_ELF_ID=EM_PPC64)
-  target_compile_definitions(omptarget.rtl.${machine} PRIVATE
-      LIBOMPTARGET_NEXTGEN_GENERIC_PLUGIN_TRIPLE="powerpc64le-ibm-linux-gnu")
+  target_compile_definitions(omptarget.rtl.host PRIVATE TARGET_ELF_ID=EM_PPC64)
   list(APPEND LIBOMPTARGET_SYSTEM_TARGETS 
        "powerpc64le-ibm-linux-gnu" "powerpc64le-ibm-linux-gnu-LTO")
   set(LIBOMPTARGET_SYSTEM_TARGETS "${LIBOMPTARGET_SYSTEM_TARGETS}" PARENT_SCOPE)
 elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "ppc64$")
-  target_compile_definitions(omptarget.rtl.${machine} PRIVATE TARGET_ELF_ID=EM_PPC64)
-  target_compile_definitions(omptarget.rtl.${machine} PRIVATE
-      LIBOMPTARGET_NEXTGEN_GENERIC_PLUGIN_TRIPLE="powerpc64-ibm-linux-gnu")
+  target_compile_definitions(omptarget.rtl.host PRIVATE TARGET_ELF_ID=EM_PPC64)
   list(APPEND LIBOMPTARGET_SYSTEM_TARGETS 
        "powerpc64-ibm-linux-gnu" "powerpc64-ibm-linux-gnu-LTO")
   set(LIBOMPTARGET_SYSTEM_TARGETS "${LIBOMPTARGET_SYSTEM_TARGETS}" PARENT_SCOPE)
 elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64$")
-  target_compile_definitions(omptarget.rtl.${machine} PRIVATE TARGET_ELF_ID=EM_X86_64)
-  target_compile_definitions(omptarget.rtl.${machine} PRIVATE
-      LIBOMPTARGET_NEXTGEN_GENERIC_PLUGIN_TRIPLE="x86_64-pc-linux-gnu")
+  target_compile_definitions(omptarget.rtl.host PRIVATE TARGET_ELF_ID=EM_X86_64)
   list(APPEND LIBOMPTARGET_SYSTEM_TARGETS 
        "x86_64-pc-linux-gnu" "x86_64-pc-linux-gnu-LTO")
   set(LIBOMPTARGET_SYSTEM_TARGETS "${LIBOMPTARGET_SYSTEM_TARGETS}" PARENT_SCOPE)
 elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64$")
-  target_compile_definitions(omptarget.rtl.${machine} PRIVATE TARGET_ELF_ID=EM_AARCH64)
-  target_compile_definitions(omptarget.rtl.${machine} PRIVATE
-      LIBOMPTARGET_NEXTGEN_GENERIC_PLUGIN_TRIPLE="aarch64-unknown-linux-gnu")
+  target_compile_definitions(omptarget.rtl.host PRIVATE TARGET_ELF_ID=EM_AARCH64)
   list(APPEND LIBOMPTARGET_SYSTEM_TARGETS 
        "aarch64-unknown-linux-gnu" "aarch64-unknown-linux-gnu-LTO")
   set(LIBOMPTARGET_SYSTEM_TARGETS "${LIBOMPTARGET_SYSTEM_TARGETS}" PARENT_SCOPE)
 elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "s390x$")
-  target_compile_definitions(omptarget.rtl.${machine} PRIVATE TARGET_ELF_ID=EM_S390)
-  target_compile_definitions(omptarget.rtl.${machine} PRIVATE
-      LIBOMPTARGET_NEXTGEN_GENERIC_PLUGIN_TRIPLE="s390x-ibm-linux-gnu")
+  target_compile_definitions(omptarget.rtl.host PRIVATE TARGET_ELF_ID=EM_S390)
   list(APPEND LIBOMPTARGET_SYSTEM_TARGETS 
        "s390x-ibm-linux-gnu" "s390x-ibm-linux-gnu-LTO")
   set(LIBOMPTARGET_SYSTEM_TARGETS "${LIBOMPTARGET_SYSTEM_TARGETS}" PARENT_SCOPE)

@@ -41,7 +41,7 @@ inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR int __libcpp_popcount(unsigned lo
 #if _LIBCPP_STD_VER >= 20
 
 template <__libcpp_unsigned_integer _Tp>
-_LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr int popcount(_Tp __t) noexcept {
+[[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr int popcount(_Tp __t) noexcept {
 #  if __has_builtin(__builtin_popcountg)
   return __builtin_popcountg(__t);
 #  else  // __has_builtin(__builtin_popcountg)

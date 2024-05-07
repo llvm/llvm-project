@@ -41,9 +41,9 @@ TEST(MathExtras, onesMask) {
 TEST(MathExtras, isIntN) {
   EXPECT_TRUE(isIntN(16, 32767));
   EXPECT_FALSE(isIntN(16, 32768));
-  EXPECT_TRUE(isUIntN(0, 0));
-  EXPECT_FALSE(isUIntN(0, 1));
-  EXPECT_FALSE(isUIntN(0, -1));
+  EXPECT_TRUE(isIntN(0, 0));
+  EXPECT_FALSE(isIntN(0, 1));
+  EXPECT_FALSE(isIntN(0, -1));
 }
 
 TEST(MathExtras, isUIntN) {
@@ -77,7 +77,7 @@ TEST(MathExtras, maxUIntN) {
   EXPECT_EQ(0xffffffffffffffffULL, maxUIntN(64));
   EXPECT_EQ(1ULL, maxUIntN(1));
   EXPECT_EQ(0x0fULL, maxUIntN(4));
-  EXPECT_EQ(0, maxUIntN(0));
+  EXPECT_EQ(0ULL, maxUIntN(0));
 }
 
 TEST(MathExtras, reverseBits) {

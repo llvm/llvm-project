@@ -848,10 +848,18 @@ public:
   bool matchExtractVectorElementWithBuildVectorTrunc(const MachineOperand &MO,
                                                      BuildFnTy &MatchInfo);
 
+  /// Combine extract vector element with a shuffle vector on the vector
+  /// register.
+  bool matchExtractVectorElementWithShuffleVector(const MachineOperand &MO,
+                                                  BuildFnTy &MatchInfo);
+
   /// Combine extract vector element with a insert vector element on the vector
   /// register and different indices.
   bool matchExtractVectorElementWithDifferentIndices(const MachineOperand &MO,
                                                      BuildFnTy &MatchInfo);
+
+  /// Combine insert vector element OOB.
+  bool matchInsertVectorElementOOB(MachineInstr &MI, BuildFnTy &MatchInfo);
 
 private:
   /// Checks for legality of an indexed variant of \p LdSt.
