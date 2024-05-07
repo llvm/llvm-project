@@ -149,34 +149,34 @@ class BlockInCriticalSectionChecker : public Checker<check::PostCall> {
 private:
   const std::array<MutexDescriptor, 8> MutexDescriptors{
       MemberMutexDescriptor(
-          CallDescription(/*MatchAs=*/CDM::CXXMethod,
-                          /*QualifiedName=*/{"std", "mutex", "lock"},
-                          /*RequiredArgs=*/0),
-          CallDescription(CDM::CXXMethod, {"std", "mutex", "unlock"}, 0)),
+          {/*MatchAs=*/CDM::CXXMethod,
+           /*QualifiedName=*/{"std", "mutex", "lock"},
+           /*RequiredArgs=*/0},
+          {CDM::CXXMethod, {"std", "mutex", "unlock"}, 0}),
       FirstArgMutexDescriptor(
-          CallDescription(CDM::CLibrary, {"pthread_mutex_lock"}, 1),
-          CallDescription(CDM::CLibrary, {"pthread_mutex_unlock"}, 1)),
+          {CDM::CLibrary, {"pthread_mutex_lock"}, 1},
+          {CDM::CLibrary, {"pthread_mutex_unlock"}, 1}),
       FirstArgMutexDescriptor(
-          CallDescription(CDM::CLibrary, {"mtx_lock"}, 1),
-          CallDescription(CDM::CLibrary, {"mtx_unlock"}, 1)),
+          {CDM::CLibrary, {"mtx_lock"}, 1},
+          {CDM::CLibrary, {"mtx_unlock"}, 1}),
       FirstArgMutexDescriptor(
-          CallDescription(CDM::CLibrary, {"pthread_mutex_trylock"}, 1),
-          CallDescription(CDM::CLibrary, {"pthread_mutex_unlock"}, 1)),
+          {CDM::CLibrary, {"pthread_mutex_trylock"}, 1},
+          {CDM::CLibrary, {"pthread_mutex_unlock"}, 1}),
       FirstArgMutexDescriptor(
-          CallDescription(CDM::CLibrary, {"mtx_trylock"}, 1),
-          CallDescription(CDM::CLibrary, {"mtx_unlock"}, 1)),
+          {CDM::CLibrary, {"mtx_trylock"}, 1},
+          {CDM::CLibrary, {"mtx_unlock"}, 1}),
       FirstArgMutexDescriptor(
-          CallDescription(CDM::CLibrary, {"mtx_timedlock"}, 1),
-          CallDescription(CDM::CLibrary, {"mtx_unlock"}, 1)),
+          {CDM::CLibrary, {"mtx_timedlock"}, 1},
+          {CDM::CLibrary, {"mtx_unlock"}, 1}),
       RAIIMutexDescriptor("lock_guard"),
       RAIIMutexDescriptor("unique_lock")};
 
-  const std::array<CallDescription, 5> BlockingFunctions{
-      CallDescription(CDM::CLibrary, {"sleep"}),
-      CallDescription(CDM::CLibrary, {"getc"}),
-      CallDescription(CDM::CLibrary, {"fgets"}),
-      CallDescription(CDM::CLibrary, {"read"}),
-      CallDescription(CDM::CLibrary, {"recv"})};
+  const CallDescriptionSet BlockingFunctions{
+      {CDM::CLibrary, {"sleep"}},
+      {CDM::CLibrary, {"getc"}},
+      {CDM::CLibrary, {"fgets"}},
+      {CDM::CLibrary, {"read"}},
+      {CDM::CLibrary, {"recv"}}};
 
   const BugType BlockInCritSectionBugType{
       this, "Call to blocking function in critical section", "Blocking Error"};
@@ -299,8 +299,7 @@ void BlockInCriticalSectionChecker::handleUnlock(
 
 bool BlockInCriticalSectionChecker::isBlockingInCritSection(
     const CallEvent &Call, CheckerContext &C) const {
-  return llvm::any_of(BlockingFunctions,
-                      [&Call](auto &&Fn) { return Fn.matches(Call); }) &&
+  return BlockingFunctions.contains(Call) &&
          !C.getState()->get<ActiveCritSections>().isEmpty();
 }
 
