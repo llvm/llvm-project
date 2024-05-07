@@ -1029,17 +1029,7 @@ CallInst *IRBuilderBase::CreateConstrainedFPCast(
     UseFMF = FMFSource->getFastMathFlags();
 
   CallInst *C;
-  bool HasRoundingMD = false;
-  switch (ID) {
-  default:
-    break;
-#define INSTRUCTION(NAME, NARG, ROUND_MODE, INTRINSIC)        \
-  case Intrinsic::INTRINSIC:                                \
-    HasRoundingMD = ROUND_MODE;                             \
-    break;
-#include "llvm/IR/ConstrainedOps.def"
-  }
-  if (HasRoundingMD) {
+  if (Intrinsic::hasConstrainedFPRoundingModeOperand(ID)) {
     Value *RoundingV = getConstrainedFPRounding(Rounding);
     C = CreateIntrinsic(ID, {DestTy, V->getType()}, {V, RoundingV, ExceptV},
                         nullptr, Name);
@@ -1088,17 +1078,8 @@ CallInst *IRBuilderBase::CreateConstrainedFPCall(
   llvm::SmallVector<Value *, 6> UseArgs;
 
   append_range(UseArgs, Args);
-  bool HasRoundingMD = false;
-  switch (Callee->getIntrinsicID()) {
-  default:
-    break;
-#define INSTRUCTION(NAME, NARG, ROUND_MODE, INTRINSIC)        \
-  case Intrinsic::INTRINSIC:                                \
-    HasRoundingMD = ROUND_MODE;                             \
-    break;
-#include "llvm/IR/ConstrainedOps.def"
-  }
-  if (HasRoundingMD)
+
+  if (Intrinsic::hasConstrainedFPRoundingModeOperand(Callee->getIntrinsicID()))
     UseArgs.push_back(getConstrainedFPRounding(Rounding));
   UseArgs.push_back(getConstrainedFPExcept(Except));
 
