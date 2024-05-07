@@ -236,6 +236,10 @@ public:
     return AtomicExpansionKind::None;
   }
 
+  AtomicExpansionKind shouldCastAtomicRMWIInIR(AtomicRMWInst *) const override {
+    return AtomicExpansionKind::None;
+  }
+
   static CCAssignFn *CCAssignFnForCall(CallingConv::ID CC, bool IsVarArg);
   static CCAssignFn *CCAssignFnForReturn(CallingConv::ID CC, bool IsVarArg);
 
