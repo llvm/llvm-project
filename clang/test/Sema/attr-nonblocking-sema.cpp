@@ -45,43 +45,43 @@ void nonblocking() [[clang::nonblocking]];
 void nonallocating() [[clang::nonallocating]];
 void type_conversions()
 {
-	// It's fine to remove a performance constraint.
-	void (*fp_plain)();
+  // It's fine to remove a performance constraint.
+  void (*fp_plain)();
 
-	fp_plain = nullptr;
-	fp_plain = unannotated;
-	fp_plain = nonblocking;
-	fp_plain = nonallocating;
+  fp_plain = nullptr;
+  fp_plain = unannotated;
+  fp_plain = nonblocking;
+  fp_plain = nonallocating;
 
-	// Adding/spoofing nonblocking is unsafe.
-	void (*fp_nonblocking)() [[clang::nonblocking]];
-	fp_nonblocking = nullptr;
-	fp_nonblocking = nonblocking;
-	fp_nonblocking = unannotated; // expected-warning {{attribute 'nonblocking' should not be added via type conversion}}
-	fp_nonblocking = nonallocating; // expected-warning {{attribute 'nonblocking' should not be added via type conversion}}
+  // Adding/spoofing nonblocking is unsafe.
+  void (*fp_nonblocking)() [[clang::nonblocking]];
+  fp_nonblocking = nullptr;
+  fp_nonblocking = nonblocking;
+  fp_nonblocking = unannotated; // expected-warning {{attribute 'nonblocking' should not be added via type conversion}}
+  fp_nonblocking = nonallocating; // expected-warning {{attribute 'nonblocking' should not be added via type conversion}}
 
-	// Adding/spoofing nonallocating is unsafe.
-	void (*fp_nonallocating)() [[clang::nonallocating]];
-	fp_nonallocating = nullptr;
-	fp_nonallocating = nonallocating;
-	fp_nonallocating = nonblocking; // no warning because nonblocking includes nonallocating fp_nonallocating = unannotated;
-	fp_nonallocating = unannotated; // expected-warning {{attribute 'nonallocating' should not be added via type conversion}}
+  // Adding/spoofing nonallocating is unsafe.
+  void (*fp_nonallocating)() [[clang::nonallocating]];
+  fp_nonallocating = nullptr;
+  fp_nonallocating = nonallocating;
+  fp_nonallocating = nonblocking; // no warning because nonblocking includes nonallocating fp_nonallocating = unannotated;
+  fp_nonallocating = unannotated; // expected-warning {{attribute 'nonallocating' should not be added via type conversion}}
 }
 
 #ifdef __cplusplus
-// There was a bug: noexcept and nonblocking could be individually removed in conversion, but not both	
+// There was a bug: noexcept and nonblocking could be individually removed in conversion, but not both  
 void type_conversions_2()
 {
-	auto receives_fp = [](void (*fp)()) {
-	};
-	
-	auto ne = +[]() noexcept {};
-	auto nl = +[]() [[clang::nonblocking]] {};
-	auto nl_ne = +[]() noexcept [[clang::nonblocking]] {};
-	
-	receives_fp(ne);
-	receives_fp(nl);
-	receives_fp(nl_ne);
+  auto receives_fp = [](void (*fp)()) {
+  };
+  
+  auto ne = +[]() noexcept {};
+  auto nl = +[]() [[clang::nonblocking]] {};
+  auto nl_ne = +[]() noexcept [[clang::nonblocking]] {};
+  
+  receives_fp(ne);
+  receives_fp(nl);
+  receives_fp(nl_ne);
 }
 #endif
 
@@ -90,17 +90,17 @@ void type_conversions_2()
 // Check this in the syntax tests too.
 #ifdef __cplusplus
 struct Base {
-	virtual void f1();
-	virtual void nonblocking() noexcept [[clang::nonblocking]];
-	virtual void nonallocating() noexcept [[clang::nonallocating]];
-	virtual void f2() [[clang::nonallocating]]; // expected-note {{previous declaration is here}}
+  virtual void f1();
+  virtual void nonblocking() noexcept [[clang::nonblocking]];
+  virtual void nonallocating() noexcept [[clang::nonallocating]];
+  virtual void f2() [[clang::nonallocating]]; // expected-note {{previous declaration is here}}
 };
 
 struct Derived : public Base {
-	void f1() [[clang::nonblocking]] override;
-	void nonblocking() noexcept override;
-	void nonallocating() noexcept override;
-	void f2() [[clang::allocating]] override; // expected-warning {{effects conflict when merging declarations; kept 'allocating', discarded 'nonallocating'}}
+  void f1() [[clang::nonblocking]] override;
+  void nonblocking() noexcept override;
+  void nonallocating() noexcept override;
+  void f2() [[clang::allocating]] override; // expected-warning {{effects conflict when merging declarations; kept 'allocating', discarded 'nonallocating'}}
 };
 #endif // __cplusplus
 
@@ -117,8 +117,8 @@ void f3() [[clang::nonblocking]]; // expected-warning {{effects conflict when me
 // --- OVERLOADS ---
 #ifdef __cplusplus
 struct S {
-	void foo(); // expected-note {{previous declaration is here}}
-	void foo(); // expected-error {{class member cannot be redeclared}}
+  void foo(); // expected-note {{previous declaration is here}}
+  void foo(); // expected-error {{class member cannot be redeclared}}
 };
 #endif // __cplusplus
 

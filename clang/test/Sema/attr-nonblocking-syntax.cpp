@@ -9,33 +9,33 @@
 
 namespace square_brackets {
 
-// On the type of the FunctionDecl
+// 1. On the type of the FunctionDecl
 void nl_function() [[clang::nonblocking]];
 // CHECK: FunctionDecl {{.*}} nl_function 'void () __attribute__((clang_nonblocking))'
 
-// On the type of the VarDecl holding a function pointer
+// 2. On the type of the VarDecl holding a function pointer
 void (*nl_func_a)() [[clang::nonblocking]];
 // CHECK: VarDecl {{.*}} nl_func_a 'void (*)() __attribute__((clang_nonblocking))'
 
-// On the type of the ParmVarDecl of a function parameter
+// 3. On the type of the ParmVarDecl of a function parameter
 static void nlReceiver(void (*nl_func)() [[clang::nonblocking]]);
 // CHECK: ParmVarDecl {{.*}} nl_func 'void (*)() __attribute__((clang_nonblocking))'
 
-// As an AttributedType within the nested types of a typedef
+// 4. As an AttributedType within the nested types of a typedef
 typedef void (*nl_fp_type)() [[clang::nonblocking]];
 // CHECK: TypedefDecl {{.*}} nl_fp_type 'void (*)() __attribute__((clang_nonblocking))'
 using nl_fp_talias = void (*)() [[clang::nonblocking]];
 // CHECK: TypeAliasDecl {{.*}} nl_fp_talias 'void (*)() __attribute__((clang_nonblocking))'
 
-// From a typedef or typealias, on a VarDecl
+// 5. From a typedef or typealias, on a VarDecl
 nl_fp_type nl_fp_var1;
 // CHECK: VarDecl {{.*}} nl_fp_var1 'nl_fp_type':'void (*)() __attribute__((clang_nonblocking))'
 nl_fp_talias nl_fp_var2;
 // CHECK: VarDecl {{.*}} nl_fp_var2 'nl_fp_talias':'void (*)() __attribute__((clang_nonblocking))'
 
-// On type of a FieldDecl
+// 6. On type of a FieldDecl
 struct Struct {
-	void (*nl_func_field)() [[clang::nonblocking]];
+  void (*nl_func_field)() [[clang::nonblocking]];
 // CHECK: FieldDecl {{.*}} nl_func_field 'void (*)() __attribute__((clang_nonblocking))'
 };
 
@@ -51,18 +51,18 @@ decltype(nl1) nl3;
 
 // Attribute propagates from base class virtual method to overrides.
 struct Base {
-	virtual void nb_method() [[clang::nonblocking]];
+  virtual void nb_method() [[clang::nonblocking]];
 };
 struct Derived : public Base {
-	void nb_method() override;
-	// CHECK: CXXMethodDecl {{.*}} nb_method 'void () __attribute__((clang_nonblocking))'
+  void nb_method() override;
+  // CHECK: CXXMethodDecl {{.*}} nb_method 'void () __attribute__((clang_nonblocking))'
 };
 
 // Dependent expression
 template <bool V>
 struct Dependent {
-	void nb_method2() [[clang::nonblocking(V)]];
-	// CHECK: CXXMethodDecl {{.*}} nb_method2 'void () __attribute__((clang_nonblocking(V)))'
+  void nb_method2() [[clang::nonblocking(V)]];
+  // CHECK: CXXMethodDecl {{.*}} nb_method2 'void () __attribute__((clang_nonblocking(V)))'
 };
 
 // --- Blocks ---
@@ -90,40 +90,72 @@ auto nl_lambda = []() [[clang::nonblocking]] {};
 void nl_func_false() [[clang::blocking]];
 // CHECK: FunctionDecl {{.*}} nl_func_false 'void () __attribute__((clang_blocking))'
 
-// TODO: This exposes a bug where a type attribute is lost when inferring a lambda's
-// return type.
 auto nl_lambda_false = []() [[clang::blocking]] {};
+// CHECK: CXXMethodDecl {{.*}} operator() 'void () const __attribute__((clang_blocking))'
 
 } // namespace square_brackets
 
 // =========================================================================================
 // GNU-style attribute, true
 
-// TODO: Duplicate more of the above for GNU-style attribute
-
 namespace gnu_style {
 
-// On the type of the FunctionDecl
+// 1. On the type of the FunctionDecl
 void nl_function() __attribute__((clang_nonblocking));
 // CHECK: FunctionDecl {{.*}} nl_function 'void () __attribute__((clang_nonblocking))'
 
-// Alternate placement on the FunctionDecl
+// 1a. Alternate placement on the FunctionDecl
 __attribute__((clang_nonblocking)) void nl_function();
 // CHECK: FunctionDecl {{.*}} nl_function 'void () __attribute__((clang_nonblocking))'
 
-// On the type of the VarDecl holding a function pointer
+// 2. On the type of the VarDecl holding a function pointer
 void (*nl_func_a)() __attribute__((clang_nonblocking));
 // CHECK: VarDecl {{.*}} nl_func_a 'void (*)() __attribute__((clang_nonblocking))'
 
-// Alternate attribute placement on VarDecl
+// 2a. Alternate attribute placement on VarDecl
 __attribute__((clang_nonblocking)) void (*nl_func_b)();
 // CHECK: VarDecl {{.*}} nl_func_b 'void (*)() __attribute__((clang_nonblocking))'
 
+// 3. On the type of the ParmVarDecl of a function parameter
+static void nlReceiver(void (*nl_func)() __attribute__((clang_nonblocking)));
+// CHECK: ParmVarDecl {{.*}} nl_func 'void (*)() __attribute__((clang_nonblocking))'
+
+// 4. As an AttributedType within the nested types of a typedef
+// Note different placement from square brackets for the typealias.
+typedef void (*nl_fp_type)() __attribute__((clang_nonblocking));
+// CHECK: TypedefDecl {{.*}} nl_fp_type 'void (*)() __attribute__((clang_nonblocking))'
+using nl_fp_talias = __attribute__((clang_nonblocking)) void (*)();
+// CHECK: TypeAliasDecl {{.*}} nl_fp_talias 'void (*)() __attribute__((clang_nonblocking))'
+
+// 5. From a typedef or typealias, on a VarDecl
+nl_fp_type nl_fp_var1;
+// CHECK: VarDecl {{.*}} nl_fp_var1 'nl_fp_type':'void (*)() __attribute__((clang_nonblocking))'
+nl_fp_talias nl_fp_var2;
+// CHECK: VarDecl {{.*}} nl_fp_var2 'nl_fp_talias':'void (*)() __attribute__((clang_nonblocking))'
+
+// 6. On type of a FieldDecl
+struct Struct {
+  void (*nl_func_field)() __attribute__((clang_nonblocking));
+// CHECK: FieldDecl {{.*}} nl_func_field 'void (*)() __attribute__((clang_nonblocking))'
+};
+
 } // namespace gnu_style
 
-// TODO: Duplicate the above for nonallocating
+// =========================================================================================
+// nonallocating and allocating - quick checks because the code paths are generally
+// identical after parsing.
 
+void na_function() [[clang::nonallocating]];
+// CHECK: FunctionDecl {{.*}} na_function 'void () __attribute__((clang_nonallocating))'
 
+void na_true_function() [[clang::nonallocating(true)]];
+// CHECK: FunctionDecl {{.*}} na_true_function 'void () __attribute__((clang_nonallocating))'
+
+void na_false_function() [[clang::nonallocating(false)]];
+// CHECK: FunctionDecl {{.*}} na_false_function 'void () __attribute__((clang_allocating))'
+
+void alloc_function() [[clang::allocating]];
+// CHECK: FunctionDecl {{.*}} alloc_function 'void () __attribute__((clang_allocating))'
 
 
 // =========================================================================================
@@ -136,19 +168,19 @@ void t1() [[clang::nonblocking(1 + 1)]];
 
 template <bool V>
 struct ValueDependent {
-	void nb_method() [[clang::nonblocking(V)]];
+  void nb_method() [[clang::nonblocking(V)]];
 };
 
 void t3() [[clang::nonblocking]]
 {
-	ValueDependent<false> x1;
-	x1.nb_method();
+  ValueDependent<false> x1;
+  x1.nb_method();
 // CHECK: ClassTemplateSpecializationDecl {{.*}} ValueDependent
 // CHECK: TemplateArgument integral 0
 // CHECK: CXXMethodDecl {{.*}} nb_method 'void () __attribute__((clang_blocking))'
 
- 	ValueDependent<true> x2;
- 	x2.nb_method();
+   ValueDependent<true> x2;
+   x2.nb_method();
 // CHECK: ClassTemplateSpecializationDecl {{.*}} ValueDependent
 // CHECK: TemplateArgument integral 1
 // CHECK: CXXMethodDecl {{.*}} nb_method 'void () __attribute__((clang_nonblocking))'
@@ -156,27 +188,27 @@ void t3() [[clang::nonblocking]]
 
 template <typename X>
 struct TypeDependent {
-	void td_method() [[clang::nonblocking(X::is_nb)]];
+  void td_method() [[clang::nonblocking(X::is_nb)]];
 };
 
 struct NBPolicyTrue {
-	static constexpr bool is_nb = true;
+  static constexpr bool is_nb = true;
 };
 
 struct NBPolicyFalse {
-	static constexpr bool is_nb = false;
+  static constexpr bool is_nb = false;
 };
 
 void t4()
 {
-	TypeDependent<NBPolicyFalse> x1;
-	x1.td_method();
+  TypeDependent<NBPolicyFalse> x1;
+  x1.td_method();
 // CHECK: ClassTemplateSpecializationDecl {{.*}} TypeDependent
 // CHECK: TemplateArgument type 'NBPolicyFalse'
 // CHECK: CXXMethodDecl {{.*}} td_method 'void () __attribute__((clang_blocking))'
 
-	TypeDependent<NBPolicyTrue> x2;
-	x2.td_method();
+  TypeDependent<NBPolicyTrue> x2;
+  x2.td_method();
 // CHECK: ClassTemplateSpecializationDecl {{.*}} TypeDependent
 // CHECK: TemplateArgument type 'NBPolicyTrue'
 // CHECK: CXXMethodDecl {{.*}} td_method 'void () __attribute__((clang_nonblocking))'
