@@ -308,17 +308,16 @@ UserExpression::Evaluate(ExecutionContext &exe_ctx,
           diagnostic_manager.Clear();
           user_expression_sp = fixed_expression_sp;
           break;
+        }
+        // The fixed expression also didn't parse. Let's check for any new
+        // fixits we could try.
+        if (!fixed_expression_sp->GetFixedText().empty()) {
+          *fixed_expression = fixed_expression_sp->GetFixedText().str();
         } else {
-          // The fixed expression also didn't parse. Let's check for any new
-          // Fix-Its we could try.
-          if (!fixed_expression_sp->GetFixedText().empty()) {
-            *fixed_expression = fixed_expression_sp->GetFixedText().str();
-          } else {
-            // Fixed expression didn't compile without a fixit, don't retry and
-            // don't tell the user about it.
-            fixed_expression->clear();
-            break;
-          }
+          // Fixed expression didn't compile without a fixit, don't retry and
+          // don't tell the user about it.
+          fixed_expression->clear();
+          break;
         }
       }
     }
