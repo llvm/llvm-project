@@ -150,15 +150,19 @@ def Polynomial_RingAttr : Polynomial_Attr<"Ring", "ring"> {
   );
   let assemblyFormat = "`<` struct(params) `>`";
   let builders = [
-    AttrBuilder<
+    AttrBuilderWithInferredContext<
         (ins "::mlir::Type":$coefficientTy,
               CArg<"::mlir::IntegerAttr", "nullptr"> :$coefficientModulusAttr,
               CArg<"::mlir::polynomial::IntPolynomialAttr", "nullptr"> :$polynomialModulusAttr,
               CArg<"::mlir::IntegerAttr", "nullptr"> :$primitiveRootAttr), [{
-      return $_get($_ctxt, coefficientTy, coefficientModulusAttr, polynomialModulusAttr, primitiveRootAttr);
+      return $_get(
+        coefficientTy.getContext(),
+        coefficientTy,
+        coefficientModulusAttr,
+        polynomialModulusAttr,
+        primitiveRootAttr);
     }]>,
   ];
-  let skipDefaultBuilders = 1;
 }
 
 class Polynomial_Type<string name, string typeMnemonic>
