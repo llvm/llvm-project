@@ -236,6 +236,10 @@ public:
     return AtomicExpansionKind::None;
   }
 
+  AtomicExpansionKind shouldCastAtomicStoreInIR(StoreInst *SI) const override {
+    return AtomicExpansionKind::None;
+  }
+
   AtomicExpansionKind shouldCastAtomicRMWIInIR(AtomicRMWInst *) const override {
     return AtomicExpansionKind::None;
   }
