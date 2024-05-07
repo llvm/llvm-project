@@ -115,7 +115,7 @@ int llvm::compileModuleWithNewPM(
   MachineModuleInfo MMI(&LLVMTM);
 
   PassInstrumentationCallbacks PIC;
-  StandardInstrumentations SI(Context, Opt.DebugPM);
+  StandardInstrumentations SI(Context, Opt.DebugPM, !NoVerify);
   SI.registerCallbacks(PIC);
   registerCodeGenCallback(PIC, LLVMTM);
 

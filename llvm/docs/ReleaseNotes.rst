@@ -164,6 +164,8 @@ Changes to the C API
 * Added ``LLVMAtomicRMWBinOpUIncWrap`` and ``LLVMAtomicRMWBinOpUDecWrap`` to
   ``LLVMAtomicRMWBinOp`` enum for AtomicRMW instructions.
 
+* Added ``LLVMCreateConstantRangeAttribute`` function for creating ConstantRange Attributes.
+
 Changes to the CodeGen infrastructure
 -------------------------------------
 
@@ -220,6 +222,14 @@ Changes to the LLVM tools
 * llvm-readelf's ``-r`` output for RELR has been improved.
   (`#89162 <https://github.com/llvm/llvm-project/pull/89162>`_)
   ``--raw-relr`` has been removed.
+
+* llvm-mca now aborts by default if it is given bad input where previously it
+  would continue. Additionally, it can now continue when it encounters
+  instructions which lack scheduling information. The behaviour can be
+  controlled by the newly introduced
+  `--skip-unsupported-instructions=<none|lack-sched|parse-failure|any>`, as
+  documented in `--help` output and the command guide. (`#90474
+  <https://github.com/llvm/llvm-project/pull/90474>`)
 
 Changes to LLDB
 ---------------------------------

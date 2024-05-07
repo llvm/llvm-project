@@ -183,7 +183,8 @@ public:
   findStoreToLoadDependences(const LoopAccessInfo &LAI) {
     std::forward_list<StoreToLoadForwardingCandidate> Candidates;
 
-    const auto *Deps = LAI.getDepChecker().getDependences();
+    const auto &DepChecker = LAI.getDepChecker();
+    const auto *Deps = DepChecker.getDependences();
     if (!Deps)
       return Candidates;
 
@@ -194,8 +195,8 @@ public:
     SmallPtrSet<Instruction *, 4> LoadsWithUnknownDepedence;
 
     for (const auto &Dep : *Deps) {
-      Instruction *Source = Dep.getSource(LAI);
-      Instruction *Destination = Dep.getDestination(LAI);
+      Instruction *Source = Dep.getSource(DepChecker);
+      Instruction *Destination = Dep.getDestination(DepChecker);
 
       if (Dep.Type == MemoryDepChecker::Dependence::Unknown ||
           Dep.Type == MemoryDepChecker::Dependence::IndirectUnsafe) {
