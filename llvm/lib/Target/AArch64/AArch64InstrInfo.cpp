@@ -9773,7 +9773,7 @@ void AArch64PipelinerLoopInfo::createRemainingIterationsGreaterCondition(
     }
   }
 
-  // If AccCond == 0, the reminder is greater than TC.
+  // If AccCond == 0, the remainder is greater than TC.
   BuildMI(MBB, MBB.end(), Comp->getDebugLoc(), TII->get(AArch64::SUBSXri))
       .addReg(AArch64::XZR, RegState::Define | RegState::Dead)
       .addReg(AccCond)

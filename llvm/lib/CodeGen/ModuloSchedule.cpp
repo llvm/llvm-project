@@ -2171,7 +2171,7 @@ void ModuloScheduleExpanderMVE::insertCondBranch(MachineBasicBlock &MBB,
 /// Generate a pipelined loop that is unrolled by using MVE algorithm and any
 /// other necessary blocks. The control flow is modified to execute the
 /// pipelined loop if the trip count satisfies the condition, otherwise the
-/// original loop. The original loop is also used to execute the reminder
+/// original loop. The original loop is also used to execute the remainder
 /// iterations which occur due to unrolling.
 void ModuloScheduleExpanderMVE::generatePipelinedLoop() {
   // The control flow for pipelining with MVE:
