@@ -50,14 +50,14 @@ entry:
   ret void
 }
 
-define void @inboundsNonNegativeTypeShrink(ptr %in.ptr, i32 %in.idx1) {
-; CHECK-LABEL: define void @inboundsNonNegativeTypeShrink(
+define void @inboundsNonNegativeType_i16i8(ptr %in.ptr, i32 %in.idx1) {
+; CHECK-LABEL: define void @inboundsNonNegativeType_i16i8(
 ; CHECK-SAME: ptr [[IN_PTR:%.*]], i32 [[IN_IDX1:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[IN_IDX1_NNEG:%.*]] = and i32 [[IN_IDX1]], 2147483647
 ; CHECK-NEXT:    [[IDXPROM:%.*]] = sext i32 [[IN_IDX1_NNEG]] to i64
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[IN_PTR]], i64 [[IDXPROM]]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i32 2048
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i16, ptr [[TMP0]], i32 1024
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -67,14 +67,14 @@ entry:
   ret void
 }
 
-define void @inboundsNonNegativeTypeExpand(ptr %in.ptr, i32 %in.idx1) {
-; CHECK-LABEL: define void @inboundsNonNegativeTypeExpand(
+define void @inboundsNonNegative_i8i16(ptr %in.ptr, i32 %in.idx1) {
+; CHECK-LABEL: define void @inboundsNonNegative_i8i16(
 ; CHECK-SAME: ptr [[IN_PTR:%.*]], i32 [[IN_IDX1:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[IN_IDX1_NNEG:%.*]] = and i32 [[IN_IDX1]], 2147483647
 ; CHECK-NEXT:    [[IDXPROM:%.*]] = sext i32 [[IN_IDX1_NNEG]] to i64
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i16, ptr [[IN_PTR]], i64 [[IDXPROM]]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i16, ptr [[TMP0]], i32 512
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i32 1024
 ; CHECK-NEXT:    ret void
 ;
 entry:

@@ -1016,62 +1016,16 @@ bool SeparateConstOffsetFromGEP::reorderGEP(GetElementPtrInst *GEP,
       IsChainInBounds &= KnownPtrGEPIdx.isNonNegative();
     }
   }
-  TypeSize GEPSize = DL->getTypeSizeInBits(GEP->getIndexedType(
-      GEP->getSourceElementType(), GEP->indices().begin()->get()));
-  TypeSize PtrGEPSize = DL->getTypeSizeInBits(PtrGEP->getIndexedType(
-      PtrGEP->getSourceElementType(), PtrGEP->indices().begin()->get()));
 
   IRBuilder<> Builder(GEP);
   Builder.SetCurrentDebugLocation(GEP->getDebugLoc());
-  if (GEPSize > PtrGEPSize) {
-    if (GEPSize % PtrGEPSize)
-      return false;
-    unsigned Ratio = GEPSize / PtrGEPSize;
-    if (NestedByteOffset % Ratio)
-      return false;
-
-    auto NewGEPOffset = Builder.CreateUDiv(
-        *PtrGEP->indices().begin(),
-        Builder.getIntN(
-            PtrGEP->indices().begin()->get()->getType()->getScalarSizeInBits(),
-            Ratio));
-    auto NewSrc = Builder.CreateGEP(GEPType, PtrGEP->getPointerOperand(),
-                                    SmallVector<Value *, 4>(GEP->indices()));
-    cast<GetElementPtrInst>(NewSrc)->setIsInBounds(IsChainInBounds);
-    auto NewGEP = Builder.CreateGEP(GEPType, NewSrc, NewGEPOffset);
-    cast<GetElementPtrInst>(NewGEP)->setIsInBounds(IsChainInBounds);
-    GEP->replaceAllUsesWith(NewGEP);
-    RecursivelyDeleteTriviallyDeadInstructions(GEP);
-    return true;
-  }
-
-  if (GEPSize < PtrGEPSize) {
-    if (PtrGEPSize % GEPSize)
-      return false;
-    unsigned Ratio = PtrGEPSize / GEPSize;
-
-    auto NewGEPOffset = Builder.CreateMul(
-        *PtrGEP->indices().begin(),
-        Builder.getIntN(
-            PtrGEP->indices().begin()->get()->getType()->getScalarSizeInBits(),
-            Ratio));
-    auto NewSrc = Builder.CreateGEP(GEPType, PtrGEP->getPointerOperand(),
-                                    SmallVector<Value *, 4>(GEP->indices()));
-    cast<GetElementPtrInst>(NewSrc)->setIsInBounds(IsChainInBounds);
-    auto NewGEP = Builder.CreateGEP(GEPType, NewSrc, NewGEPOffset);
-    cast<GetElementPtrInst>(NewGEP)->setIsInBounds(IsChainInBounds);
-    GEP->replaceAllUsesWith(NewGEP);
-    RecursivelyDeleteTriviallyDeadInstructions(GEP);
-    return true;
-  }
-
   // For trivial GEP chains, we can swap the indicies.
-  auto NewSrc = Builder.CreateGEP(PtrGEPType, PtrGEP->getPointerOperand(),
-                                  SmallVector<Value *, 4>(GEP->indices()));
-  cast<GetElementPtrInst>(NewSrc)->setIsInBounds(IsChainInBounds);
-  auto NewGEP = Builder.CreateGEP(GEPType, NewSrc,
-                                  SmallVector<Value *, 4>(PtrGEP->indices()));
-  cast<GetElementPtrInst>(NewGEP)->setIsInBounds(IsChainInBounds);
+  Value *NewSrc = Builder.CreateGEP(GEPType, PtrGEP->getPointerOperand(),
+                                    SmallVector<Value *, 4>(GEP->indices()), "",
+                                    IsChainInBounds);
+  Value *NewGEP = Builder.CreateGEP(PtrGEPType, NewSrc,
+                                    SmallVector<Value *, 4>(PtrGEP->indices()),
+                                    "", IsChainInBounds);
   GEP->replaceAllUsesWith(NewGEP);
   RecursivelyDeleteTriviallyDeadInstructions(GEP);
   return true;

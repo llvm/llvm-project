@@ -54,18 +54,18 @@ entry:
 }
 
 
-define void @reorder_expand(ptr addrspace(3) %in.ptr, i32 %in.idx0, i32 %in.idx1) {
-; CHECK-LABEL: define void @reorder_expand(
+define void @reorder_i8half(ptr addrspace(3) %in.ptr, i32 %in.idx0, i32 %in.idx1) {
+; CHECK-LABEL: define void @reorder_i8half(
 ; CHECK-SAME: ptr addrspace(3) [[IN_PTR:%.*]], i32 [[IN_IDX0:%.*]], i32 [[IN_IDX1:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[BASE:%.*]] = getelementptr i8, ptr addrspace(3) [[IN_PTR]], i32 [[IN_IDX0]]
 ; CHECK-NEXT:    [[IDX0:%.*]] = getelementptr half, ptr addrspace(3) [[BASE]], i32 [[IN_IDX1]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr half, ptr addrspace(3) [[BASE]], i32 [[IN_IDX1]]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr half, ptr addrspace(3) [[TMP0]], i32 128
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr addrspace(3) [[TMP0]], i32 256
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr half, ptr addrspace(3) [[BASE]], i32 [[IN_IDX1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr half, ptr addrspace(3) [[TMP2]], i32 256
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr addrspace(3) [[TMP2]], i32 512
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr half, ptr addrspace(3) [[BASE]], i32 [[IN_IDX1]]
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr half, ptr addrspace(3) [[TMP4]], i32 384
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr addrspace(3) [[TMP4]], i32 768
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -80,18 +80,18 @@ entry:
   ret void
 }
 
-define void @reorder_shrink(ptr addrspace(3) %in.ptr, i32 %in.idx0, i32 %in.idx1) {
-; CHECK-LABEL: define void @reorder_shrink(
+define void @reorder_i64half(ptr addrspace(3) %in.ptr, i32 %in.idx0, i32 %in.idx1) {
+; CHECK-LABEL: define void @reorder_i64half(
 ; CHECK-SAME: ptr addrspace(3) [[IN_PTR:%.*]], i32 [[IN_IDX0:%.*]], i32 [[IN_IDX1:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[BASE:%.*]] = getelementptr i64, ptr addrspace(3) [[IN_PTR]], i32 [[IN_IDX0]]
 ; CHECK-NEXT:    [[IDX0:%.*]] = getelementptr half, ptr addrspace(3) [[BASE]], i32 [[IN_IDX1]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr half, ptr addrspace(3) [[BASE]], i32 [[IN_IDX1]]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr half, ptr addrspace(3) [[TMP0]], i32 1024
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i64, ptr addrspace(3) [[TMP0]], i32 256
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr half, ptr addrspace(3) [[BASE]], i32 [[IN_IDX1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr half, ptr addrspace(3) [[TMP2]], i32 2048
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i64, ptr addrspace(3) [[TMP2]], i32 512
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr half, ptr addrspace(3) [[BASE]], i32 [[IN_IDX1]]
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr half, ptr addrspace(3) [[TMP4]], i32 3072
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i64, ptr addrspace(3) [[TMP4]], i32 768
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -106,18 +106,18 @@ entry:
   ret void
 }
 
-define void @reorder_shrink2(ptr addrspace(3) %in.ptr, i32 %in.idx0, i32 %in.idx1) {
-; CHECK-LABEL: define void @reorder_shrink2(
+define void @reorder_halfi8(ptr addrspace(3) %in.ptr, i32 %in.idx0, i32 %in.idx1) {
+; CHECK-LABEL: define void @reorder_halfi8(
 ; CHECK-SAME: ptr addrspace(3) [[IN_PTR:%.*]], i32 [[IN_IDX0:%.*]], i32 [[IN_IDX1:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[BASE:%.*]] = getelementptr half, ptr addrspace(3) [[IN_PTR]], i32 [[IN_IDX0]]
 ; CHECK-NEXT:    [[IDX0:%.*]] = getelementptr i8, ptr addrspace(3) [[BASE]], i32 [[IN_IDX1]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr addrspace(3) [[BASE]], i32 [[IN_IDX1]]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr addrspace(3) [[TMP0]], i32 512
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr half, ptr addrspace(3) [[TMP0]], i32 256
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr addrspace(3) [[BASE]], i32 [[IN_IDX1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr addrspace(3) [[TMP2]], i32 1024
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr half, ptr addrspace(3) [[TMP2]], i32 512
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr addrspace(3) [[BASE]], i32 [[IN_IDX1]]
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr addrspace(3) [[TMP4]], i32 1536
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr half, ptr addrspace(3) [[TMP4]], i32 768
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -140,12 +140,12 @@ define void @bad_index(ptr addrspace(3) %in.ptr, i32 %in.idx0, i32 %in.idx1) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[BASE:%.*]] = getelementptr half, ptr addrspace(3) [[IN_PTR]], i32 [[IN_IDX0]]
 ; CHECK-NEXT:    [[IDX0:%.*]] = getelementptr half, ptr addrspace(3) [[BASE]], i32 [[IN_IDX1]]
-; CHECK-NEXT:    [[CONST1:%.*]] = getelementptr i8, ptr addrspace(3) [[BASE]], i32 1
-; CHECK-NEXT:    [[IDX1:%.*]] = getelementptr half, ptr addrspace(3) [[CONST1]], i32 [[IN_IDX1]]
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr half, ptr addrspace(3) [[BASE]], i32 [[IN_IDX1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr addrspace(3) [[TMP4]], i32 1
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr half, ptr addrspace(3) [[BASE]], i32 [[IN_IDX1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr addrspace(3) [[TMP2]], i32 2
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr half, ptr addrspace(3) [[BASE]], i32 [[IN_IDX1]]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr half, ptr addrspace(3) [[TMP0]], i32 1
-; CHECK-NEXT:    [[CONST3:%.*]] = getelementptr i8, ptr addrspace(3) [[BASE]], i32 3
-; CHECK-NEXT:    [[IDX3:%.*]] = getelementptr half, ptr addrspace(3) [[CONST3]], i32 [[IN_IDX1]]
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr addrspace(3) [[TMP0]], i32 3
 ; CHECK-NEXT:    ret void
 ;
 entry:
