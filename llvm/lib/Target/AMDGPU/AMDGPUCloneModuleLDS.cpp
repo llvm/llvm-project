@@ -25,6 +25,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
+#include "Utils/AMDGPUMemoryUtils.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/CallGraph.h"
@@ -35,6 +36,7 @@
 #include "llvm/Transforms/Utils/Cloning.h"
 
 using namespace llvm;
+using GVToFnMapTy = DenseMap<GlobalVariable *, Function *>;
 
 #define DEBUG_TYPE "amdgpu-clone-module-lds"
 
@@ -57,6 +59,25 @@ static Function *getFunctionDefiningGV(GlobalVariable &GV) {
   return nullptr;
 };
 
+/// Return a map of LDS globals paired with the function defining them
+/// \param M Module in question
+/// \return Map of LDS global variables and their functions
+static GVToFnMapTy collectModuleGlobals(Module &M) {
+  GVToFnMapTy GVToFnMap;
+  for (auto &GA : M.aliases()) {
+    if (auto *GV = dyn_cast<GlobalVariable>(GA.getAliaseeObject())) {
+      if (AMDGPU::isLDSVariableToLower(*GV) && !GVToFnMap.contains(GV))
+        GVToFnMap.insert({GV, getFunctionDefiningGV(*GV)});
+    }
+  }
+
+  for (auto &GV : M.globals()) {
+    if (AMDGPU::isLDSVariableToLower(GV) && !GVToFnMap.contains(&GV))
+      GVToFnMap.insert({&GV, getFunctionDefiningGV(GV)});
+  }
+  return GVToFnMap;
+}
+
 PreservedAnalyses AMDGPUCloneModuleLDSPass::run(Module &M,
                                                 ModuleAnalysisManager &AM) {
   if (MaxCountForClonedFunctions.getValue() == 1)
@@ -77,14 +98,8 @@ PreservedAnalyses AMDGPUCloneModuleLDSPass::run(Module &M,
     }
   }
 
-  DenseMap<GlobalVariable *, Function *> GVToFnMap;
-  for (auto &GV : M.globals()) {
-    if (GVToFnMap.contains(&GV) ||
-        GV.getAddressSpace() != AMDGPUAS::LOCAL_ADDRESS || !GV.hasInitializer())
-      continue;
-
-    auto *OldF = getFunctionDefiningGV(GV);
-    GVToFnMap.insert({&GV, OldF});
+  GVToFnMapTy GVToFnMap = collectModuleGlobals(M);
+  for (auto [GV, OldF] : GVToFnMap) {
     LLVM_DEBUG(dbgs() << "Found LDS " << GV.getName() << " used in function "
                       << OldF->getName() << '\n');
 
@@ -107,19 +122,19 @@ PreservedAnalyses AMDGPUCloneModuleLDSPass::run(Module &M,
          ++ID) {
       // Clone LDS global variable
       auto *NewGV = new GlobalVariable(
-          M, GV.getValueType(), GV.isConstant(), GlobalValue::InternalLinkage,
-          PoisonValue::get(GV.getValueType()),
-          GV.getName() + ".clone." + Twine(ID), &GV,
+          M, GV->getValueType(), GV->isConstant(), GlobalValue::InternalLinkage,
+          PoisonValue::get(GV->getValueType()),
+          GV->getName() + ".clone." + Twine(ID), GV,
           GlobalValue::NotThreadLocal, AMDGPUAS::LOCAL_ADDRESS, false);
-      NewGV->copyAttributesFrom(&GV);
-      NewGV->copyMetadata(&GV, 0);
-      NewGV->setComdat(GV.getComdat());
+      NewGV->copyAttributesFrom(GV);
+      NewGV->copyMetadata(GV, 0);
+      NewGV->setComdat(GV->getComdat());
       LLVM_DEBUG(dbgs() << "Inserting LDS clone with name " << NewGV->getName()
                         << '\n');
 
       // Clone function
       ValueToValueMapTy VMap;
-      VMap[&GV] = NewGV;
+      VMap[GV] = NewGV;
       auto *NewF = CloneFunction(OldF, VMap);
       NewF->setName(OldF->getName() + ".clone." + Twine(ID));
       LLVM_DEBUG(dbgs() << "Inserting function clone with name "

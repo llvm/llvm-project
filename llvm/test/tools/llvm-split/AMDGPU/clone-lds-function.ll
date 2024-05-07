@@ -13,6 +13,7 @@ target triple = "amdgcn-amd-amdhsa"
 ; CHECK: [[LDS_GV_CLONE:@.*\.clone\.0]] = internal unnamed_addr addrspace(3) global [64 x i32] poison, align 16
 ; CHECK: [[LDS_GV:@.*]] = internal unnamed_addr addrspace(3) global [64 x i32] poison, align 16
 @lds_gv = internal unnamed_addr addrspace(3) global [64 x i32] poison, align 16
+@lds_gv_alias = alias ptr addrspace(3), ptr addrspace(3) @lds_gv
 
 define protected amdgpu_kernel void @kernel1(i32 %n) #3 {
 ; CHECK-LABEL: define protected amdgpu_kernel void @kernel1(
