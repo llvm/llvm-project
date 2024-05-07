@@ -23,10 +23,10 @@ namespace omp {
 
 /// Check for unsupported map operand types.
 static void checkMapType(mlir::Location location, mlir::Type type) {
-  if (auto refType = type.dyn_cast<fir::ReferenceType>())
+  if (auto refType = mlir::dyn_cast<fir::ReferenceType>(type))
     type = refType.getElementType();
-  if (auto boxType = type.dyn_cast_or_null<fir::BoxType>())
-    if (!boxType.getElementType().isa<fir::PointerType>())
+  if (auto boxType = mlir::dyn_cast_or_null<fir::BoxType>(type))
+    if (!mlir::isa<fir::PointerType>(boxType.getElementType()))
       TODO(location, "OMPD_target_data MapOperand BoxType");
 }
 
@@ -555,9 +555,16 @@ bool ClauseProcessor::processCopyin() const {
   // synchronize threads and avoid data races on propagation master's thread
   // values of threadprivate variables to local instances of that variables of
   // all other implicit threads.
+
+  // All copies are inserted at either "insPt" (i.e. immediately before it),
+  // or at some earlier point (as determined by "copyHostAssociateVar").
+  // Unless the insertion point is given to "copyHostAssociateVar" explicitly,
+  // it will not restore the builder's insertion point. Since the copies may be
+  // inserted in any order (not following the execution order), make sure the
+  // barrier is inserted following all of them.
+  firOpBuilder.restoreInsertionPoint(insPt);
   if (hasCopyin)
     firOpBuilder.create<mlir::omp::BarrierOp>(converter.getCurrentLocation());
-  firOpBuilder.restoreInsertionPoint(insPt);
   return hasCopyin;
 }
 
@@ -814,7 +821,7 @@ createMapInfoOp(fir::FirOpBuilder &builder, mlir::Location loc,
                 llvm::ArrayRef<mlir::Value> members, uint64_t mapType,
                 mlir::omp::VariableCaptureKind mapCaptureType, mlir::Type retTy,
                 bool isVal) {
-  if (auto boxTy = baseAddr.getType().dyn_cast<fir::BaseBoxType>()) {
+  if (auto boxTy = mlir::dyn_cast<fir::BaseBoxType>(baseAddr.getType())) {
     baseAddr = builder.create<fir::BoxAddrOp>(loc, baseAddr);
     retTy = baseAddr.getType();
   }

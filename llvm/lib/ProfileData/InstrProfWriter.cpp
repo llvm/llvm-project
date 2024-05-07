@@ -184,12 +184,13 @@ public:
 InstrProfWriter::InstrProfWriter(
     bool Sparse, uint64_t TemporalProfTraceReservoirSize,
     uint64_t MaxTemporalProfTraceLength, bool WritePrevVersion,
-    memprof::IndexedVersion MemProfVersionRequested)
+    memprof::IndexedVersion MemProfVersionRequested, bool MemProfFullSchema)
     : Sparse(Sparse), MaxTemporalProfTraceLength(MaxTemporalProfTraceLength),
       TemporalProfTraceReservoirSize(TemporalProfTraceReservoirSize),
       InfoObj(new InstrProfRecordWriterTrait()),
       WritePrevVersion(WritePrevVersion),
-      MemProfVersionRequested(MemProfVersionRequested) {}
+      MemProfVersionRequested(MemProfVersionRequested),
+      MemProfFullSchema(MemProfFullSchema) {}
 
 InstrProfWriter::~InstrProfWriter() { delete InfoObj; }
 
@@ -507,7 +508,7 @@ static Error writeMemProfV0(
   OS.write(0ULL); // Reserve space for the memprof frame payload offset.
   OS.write(0ULL); // Reserve space for the memprof frame table offset.
 
-  auto Schema = memprof::PortableMemInfoBlock::getSchema();
+  auto Schema = memprof::getFullSchema();
   writeMemProfSchema(OS, Schema);
 
   uint64_t RecordTableOffset =
@@ -533,7 +534,7 @@ static Error writeMemProfV1(
   OS.write(0ULL); // Reserve space for the memprof frame payload offset.
   OS.write(0ULL); // Reserve space for the memprof frame table offset.
 
-  auto Schema = memprof::PortableMemInfoBlock::getSchema();
+  auto Schema = memprof::getFullSchema();
   writeMemProfSchema(OS, Schema);
 
   uint64_t RecordTableOffset =
@@ -554,7 +555,8 @@ static Error writeMemProfV2(
         &MemProfRecordData,
     llvm::MapVector<memprof::FrameId, memprof::Frame> &MemProfFrameData,
     llvm::MapVector<memprof::CallStackId, llvm::SmallVector<memprof::FrameId>>
-        &MemProfCallStackData) {
+        &MemProfCallStackData,
+    bool MemProfFullSchema) {
   OS.write(memprof::Version2);
   uint64_t HeaderUpdatePos = OS.tell();
   OS.write(0ULL); // Reserve space for the memprof record table offset.
@@ -563,7 +565,9 @@ static Error writeMemProfV2(
   OS.write(0ULL); // Reserve space for the memprof call stack payload offset.
   OS.write(0ULL); // Reserve space for the memprof call stack table offset.
 
-  auto Schema = memprof::PortableMemInfoBlock::getSchema();
+  auto Schema = memprof::getHotColdSchema();
+  if (MemProfFullSchema)
+    Schema = memprof::getFullSchema();
   writeMemProfSchema(OS, Schema);
 
   uint64_t RecordTableOffset =
@@ -605,7 +609,7 @@ static Error writeMemProf(
     llvm::MapVector<memprof::FrameId, memprof::Frame> &MemProfFrameData,
     llvm::MapVector<memprof::CallStackId, llvm::SmallVector<memprof::FrameId>>
         &MemProfCallStackData,
-    memprof::IndexedVersion MemProfVersionRequested) {
+    memprof::IndexedVersion MemProfVersionRequested, bool MemProfFullSchema) {
 
   switch (MemProfVersionRequested) {
   case memprof::Version0:
@@ -614,7 +618,7 @@ static Error writeMemProf(
     return writeMemProfV1(OS, MemProfRecordData, MemProfFrameData);
   case memprof::Version2:
     return writeMemProfV2(OS, MemProfRecordData, MemProfFrameData,
-                          MemProfCallStackData);
+                          MemProfCallStackData, MemProfFullSchema);
   }
 
   return make_error<InstrProfError>(
@@ -653,8 +657,8 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
                        : IndexedInstrProf::ProfVersion::CurrentVersion;
   // The WritePrevVersion handling will either need to be removed or updated
   // if the version is advanced beyond 12.
-  assert(IndexedInstrProf::ProfVersion::CurrentVersion ==
-         IndexedInstrProf::ProfVersion::Version12);
+  static_assert(IndexedInstrProf::ProfVersion::CurrentVersion ==
+                IndexedInstrProf::ProfVersion::Version12);
   if (static_cast<bool>(ProfileKind & InstrProfKind::IRInstrumentation))
     Header.Version |= VARIANT_MASK_IR_PROF;
   if (static_cast<bool>(ProfileKind & InstrProfKind::ContextSensitive))
@@ -733,7 +737,8 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
   if (static_cast<bool>(ProfileKind & InstrProfKind::MemProf)) {
     MemProfSectionStart = OS.tell();
     if (auto E = writeMemProf(OS, MemProfRecordData, MemProfFrameData,
-                              MemProfCallStackData, MemProfVersionRequested))
+                              MemProfCallStackData, MemProfVersionRequested,
+                              MemProfFullSchema))
       return E;
   }
 

@@ -2213,18 +2213,6 @@ TEST_P(ASTMatchersTest, ReferenceTypeLocTest_BindsToAnyRvalueReferenceTypeLoc) {
   EXPECT_TRUE(matches("float&& r = 3.0;", matcher));
 }
 
-TEST_P(
-    ASTMatchersTest,
-    TemplateSpecializationTypeLocTest_BindsToTemplateSpecializationExplicitInstantiation) {
-  if (!GetParam().isCXX()) {
-    return;
-  }
-  EXPECT_TRUE(
-      matches("template <typename T> class C {}; template class C<int>;",
-              classTemplateSpecializationDecl(
-                  hasName("C"), hasTypeLoc(templateSpecializationTypeLoc()))));
-}
-
 TEST_P(ASTMatchersTest,
        TemplateSpecializationTypeLocTest_BindsToVarDeclTemplateSpecialization) {
   if (!GetParam().isCXX()) {

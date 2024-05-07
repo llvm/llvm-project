@@ -183,13 +183,26 @@ cc_binary(
     ],
 )
 
+py_binary(
+    name = "generate-sbapi-dwarf-enum",
+    srcs = ["scripts/generate-sbapi-dwarf-enum.py"],
+)
+
+genrule(
+    name = "lldb-sbapi-dwarf-enums",
+    srcs = ["//llvm:include/llvm/BinaryFormat/Dwarf.def"],
+    outs = ["include/lldb/API/SBLanguages.h"],
+    cmd = "$(location :generate-sbapi-dwarf-enum) $(location //llvm:include/llvm/BinaryFormat/Dwarf.def) --output $@",
+    tools = [":generate-sbapi-dwarf-enum"],
+)
+
 cc_library(
     name = "API",
     srcs = glob([
         "source/API/**/*.cpp",
         "source/API/**/*.h",
     ]),
-    hdrs = glob(["include/lldb/API/**/*.h"]),
+    hdrs = glob(["include/lldb/API/**/*.h"]) + [":lldb-sbapi-dwarf-enums"],
     strip_include_prefix = "include",
     deps = [
         ":Breakpoint",
@@ -269,7 +282,7 @@ cc_library(
 cc_library(
     name = "Expression",
     srcs = glob(["source/Expression/**/*.cpp"]),
-    hdrs = glob(["include/lldb/Expression/**/*.h"]),
+    hdrs = glob(["include/lldb/Expression/**/*.h"]) + [":lldb-sbapi-dwarf-enums"],
     strip_include_prefix = "include",
     deps = [
         ":Core",
@@ -280,6 +293,7 @@ cc_library(
         ":TargetHeaders",
         ":Utility",
         "//lldb/source/Plugins:PluginSymbolFileDWARFHeaders",
+        "//llvm:BinaryFormat",
         "//llvm:Core",
         "//llvm:DebugInfoDWARF",
         "//llvm:ExecutionEngine",
@@ -344,7 +358,7 @@ cc_library(
 
 cc_library(
     name = "ExpressionHeaders",
-    hdrs = glob(["include/lldb/Expression/**/*.h"]),
+    hdrs = glob(["include/lldb/Expression/**/*.h"]) + [":lldb-sbapi-dwarf-enums"],
     strip_include_prefix = "include",
     deps = ["//llvm:ExecutionEngine"],
 )
@@ -480,8 +494,12 @@ objc_library(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [
+        ":Headers",
         ":HostMacOSXHeaders",
         ":HostMacOSXPrivateHeaders",
+        ":Utility",
+        "//llvm:Support",
+        "//llvm:TargetParser",
     ],
 )
 
@@ -547,7 +565,10 @@ cc_library(
         "//llvm:TargetParser",
         "//llvm:config",
     ] + select({
-        "@platforms//os:macos": [":HostMacOSXObjCXX"],
+        "@platforms//os:macos": [
+            ":HostMacOSXObjCXX",
+            ":HostMacOSXPrivateHeaders",
+        ],
         "//conditions:default": [],
     }),
 )
@@ -673,6 +694,7 @@ cc_library(
         ":TargetProperties",
         ":Utility",
         "//lldb/source/Plugins:PluginProcessUtility",
+        "//llvm:BinaryFormat",
         "//llvm:MC",
         "//llvm:Support",
     ],
@@ -858,7 +880,11 @@ cc_binary(
         "@platforms//os:macos": [],
         "//conditions:default": ["@platforms//:incompatible"],
     }),
-    deps = [":DebugServerCommon"],
+    deps = [
+        ":DebugServerCommon",
+        ":DebugServerCommonHeaders",
+        ":DebugServerCommonMacOSXHeaders",
+    ],
 )
 
 cc_binary(

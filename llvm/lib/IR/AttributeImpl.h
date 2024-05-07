@@ -77,7 +77,7 @@ public:
 
   Type *getValueAsType() const;
 
-  ConstantRange getValueAsConstantRange() const;
+  const ConstantRange &getValueAsConstantRange() const;
 
   /// Used when sorting the attributes.
   bool operator<(const AttributeImpl &AI) const;
@@ -121,8 +121,8 @@ public:
   static void Profile(FoldingSetNodeID &ID, Attribute::AttrKind Kind,
                       const ConstantRange &CR) {
     ID.AddInteger(Kind);
-    ID.AddInteger(CR.getLower());
-    ID.AddInteger(CR.getUpper());
+    CR.getLower().Profile(ID);
+    CR.getUpper().Profile(ID);
   }
 };
 
@@ -219,7 +219,7 @@ public:
   ConstantRangeAttributeImpl(Attribute::AttrKind Kind, const ConstantRange &CR)
       : EnumAttributeImpl(ConstantRangeAttrEntry, Kind), CR(CR) {}
 
-  ConstantRange getConstantRangeValue() const { return CR; }
+  const ConstantRange &getConstantRangeValue() const { return CR; }
 };
 
 class AttributeBitSet {

@@ -126,8 +126,10 @@ struct StoreToLoadForwardingCandidate {
 
     // We don't need to check non-wrapping here because forward/backward
     // dependence wouldn't be valid if these weren't monotonic accesses.
-    auto *Dist = cast<SCEVConstant>(
+    auto *Dist = dyn_cast<SCEVConstant>(
         PSE.getSE()->getMinusSCEV(StorePtrSCEV, LoadPtrSCEV));
+    if (!Dist)
+      return false;
     const APInt &Val = Dist->getAPInt();
     return Val == TypeByteSize * StrideLoad;
   }
@@ -181,7 +183,8 @@ public:
   findStoreToLoadDependences(const LoopAccessInfo &LAI) {
     std::forward_list<StoreToLoadForwardingCandidate> Candidates;
 
-    const auto *Deps = LAI.getDepChecker().getDependences();
+    const auto &DepChecker = LAI.getDepChecker();
+    const auto *Deps = DepChecker.getDependences();
     if (!Deps)
       return Candidates;
 
@@ -192,8 +195,8 @@ public:
     SmallPtrSet<Instruction *, 4> LoadsWithUnknownDepedence;
 
     for (const auto &Dep : *Deps) {
-      Instruction *Source = Dep.getSource(LAI);
-      Instruction *Destination = Dep.getDestination(LAI);
+      Instruction *Source = Dep.getSource(DepChecker);
+      Instruction *Destination = Dep.getDestination(DepChecker);
 
       if (Dep.Type == MemoryDepChecker::Dependence::Unknown ||
           Dep.Type == MemoryDepChecker::Dependence::IndirectUnsafe) {
