@@ -49,10 +49,7 @@ struct is_same<T, T> {
   static const bool value = true;
 };
 
-// The no-suffix behavior is currently wrong. The behavior in DXC is complicated
-// and undocumented. We have a language change planned to address this, and an
-// issue tracking: https://github.com/llvm/llvm-project/issues/85714.
-_Static_assert(is_same<double, __decltype(1.0)>::value, "1.0f literal is double (should be float)");
+_Static_assert(is_same<float, __decltype(1.0)>::value, "1.0 literal is float");
 
 _Static_assert(is_same<half, __decltype(1.0h)>::value, "1.0h literal is half");
 _Static_assert(is_same<float, __decltype(1.0f)>::value, "1.0f literal is float");

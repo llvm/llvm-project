@@ -3579,7 +3579,7 @@ static bool isUndefOrZeroOrInRange(ArrayRef<int> Mask, int Low, int Hi) {
 
 /// Return true if every element in Mask, is an in-place blend/select mask or is
 /// undef.
-static bool isBlendOrUndef(ArrayRef<int> Mask) {
+LLVM_ATTRIBUTE_UNUSED static bool isBlendOrUndef(ArrayRef<int> Mask) {
   unsigned NumElts = Mask.size();
   for (auto [I, M] : enumerate(Mask))
     if (!isUndefOrEqual(M, I) && !isUndefOrEqual(M, I + NumElts))
@@ -40078,7 +40078,7 @@ static SDValue combineBlendOfPermutes(MVT VT, SDValue N0, SDValue N1,
   // Create the new permute mask as a blend of the 2 original permute masks.
   SmallVector<int, 32> NewBlendMask(NumElts, SM_SentinelUndef);
   SmallVector<int, 32> NewPermuteMask(NumElts, SM_SentinelUndef);
-  for (int I = 0; I != NumElts; ++I) {
+  for (unsigned I = 0; I != NumElts; ++I) {
     if (Demanded0[I]) {
       int M = ScaledMask0[I];
       if (0 <= M) {
