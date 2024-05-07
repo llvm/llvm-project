@@ -220,7 +220,7 @@ void gatherImportedSummariesForModule(
     const DenseMap<StringRef, GVSummaryMapTy> &ModuleToDefinedGVSummaries,
     const FunctionImporter::ImportMapTy &ImportList,
     std::map<std::string, GVSummaryMapTy> &ModuleToSummariesForIndex,
-    ModuleToGVSummaryPtrSet &ModuleToDecSummaries);
+    GVSummaryPtrSet &DecSummaries);
 
 /// Emit into \p OutputFilename the files module \p ModulePath will import from.
 std::error_code EmitImportsFiles(

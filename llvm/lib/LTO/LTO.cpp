@@ -1389,11 +1389,11 @@ public:
                   llvm::StringRef ModulePath,
                   const std::string &NewModulePath) {
     std::map<std::string, GVSummaryMapTy> ModuleToSummariesForIndex;
-    ModuleToGVSummaryPtrSet ModuleToDeclarationSummaries;
+    GVSummaryPtrSet DeclarationSummaries;
     std::error_code EC;
     gatherImportedSummariesForModule(ModulePath, ModuleToDefinedGVSummaries,
                                      ImportList, ModuleToSummariesForIndex,
-                                     ModuleToDeclarationSummaries);
+                                     DeclarationSummaries);
 
     raw_fd_ostream OS(NewModulePath + ".thinlto.bc", EC,
                       sys::fs::OpenFlags::OF_None);
@@ -1401,7 +1401,7 @@ public:
       return errorCodeToError(EC);
 
     writeIndexToFile(CombinedIndex, OS, &ModuleToSummariesForIndex,
-                     &ModuleToDeclarationSummaries);
+                     &DeclarationSummaries);
 
     if (ShouldEmitImportsFiles) {
       EC = EmitImportsFiles(ModulePath, NewModulePath + ".imports",

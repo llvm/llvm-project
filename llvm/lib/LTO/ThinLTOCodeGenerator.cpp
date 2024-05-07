@@ -766,7 +766,7 @@ void ThinLTOCodeGenerator::crossModuleImport(Module &TheModule,
 void ThinLTOCodeGenerator::gatherImportedSummariesForModule(
     Module &TheModule, ModuleSummaryIndex &Index,
     std::map<std::string, GVSummaryMapTy> &ModuleToSummariesForIndex,
-    const lto::InputFile &File, ModuleToGVSummaryPtrSet &ModuleToDecSummaries) {
+    const lto::InputFile &File, GVSummaryPtrSet &DecSummaries) {
   auto ModuleCount = Index.modulePaths().size();
   auto ModuleIdentifier = TheModule.getModuleIdentifier();
 
@@ -796,8 +796,7 @@ void ThinLTOCodeGenerator::gatherImportedSummariesForModule(
 
   llvm::gatherImportedSummariesForModule(
       ModuleIdentifier, ModuleToDefinedGVSummaries,
-      ImportLists[ModuleIdentifier], ModuleToSummariesForIndex,
-      ModuleToDecSummaries);
+      ImportLists[ModuleIdentifier], ModuleToSummariesForIndex, DecSummaries);
 }
 
 /**
@@ -838,11 +837,10 @@ void ThinLTOCodeGenerator::emitImports(Module &TheModule, StringRef OutputName,
   // the set of keys in `ModuleToSummariesForIndex` should be a superset of keys
   // in `ModuleToDecSummaries`, so no need to use `ModuleToDecSummaries` in
   // `EmitImportFiles`.
-  ModuleToGVSummaryPtrSet ModuleToDecSummaries;
+  GVSummaryPtrSet DecSummaries;
   llvm::gatherImportedSummariesForModule(
       ModuleIdentifier, ModuleToDefinedGVSummaries,
-      ImportLists[ModuleIdentifier], ModuleToSummariesForIndex,
-      ModuleToDecSummaries);
+      ImportLists[ModuleIdentifier], ModuleToSummariesForIndex, DecSummaries);
 
   std::error_code EC;
   if ((EC = EmitImportsFiles(ModuleIdentifier, OutputName,

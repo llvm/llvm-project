@@ -276,8 +276,7 @@ public:
   void gatherImportedSummariesForModule(
       Module &Module, ModuleSummaryIndex &Index,
       std::map<std::string, GVSummaryMapTy> &ModuleToSummariesForIndex,
-      const lto::InputFile &File,
-      ModuleToGVSummaryPtrSet &ModuleToDecSummaries);
+      const lto::InputFile &File, GVSummaryPtrSet &DecSummaries);
 
   /**
    * Perform internalization. Index is updated to reflect linkage changes.

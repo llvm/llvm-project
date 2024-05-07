@@ -1436,7 +1436,7 @@ void llvm::gatherImportedSummariesForModule(
     const DenseMap<StringRef, GVSummaryMapTy> &ModuleToDefinedGVSummaries,
     const FunctionImporter::ImportMapTy &ImportList,
     std::map<std::string, GVSummaryMapTy> &ModuleToSummariesForIndex,
-    ModuleToGVSummaryPtrSet &ModuleToDecSummaries) {
+    GVSummaryPtrSet &DecSummaries) {
   // Include all summaries from the importing module.
   ModuleToSummariesForIndex[std::string(ModulePath)] =
       ModuleToDefinedGVSummaries.lookup(ModulePath);
@@ -1444,7 +1444,7 @@ void llvm::gatherImportedSummariesForModule(
   for (const auto &ILI : ImportList) {
     std::string ModulePath(ILI.first);
     auto &SummariesForIndex = ModuleToSummariesForIndex[ModulePath];
-    auto &DecSummaries = ModuleToDecSummaries[ModulePath];
+
     const auto &DefinedGVSummaries =
         ModuleToDefinedGVSummaries.lookup(ILI.first);
     for (const auto &[GUID, Type] : ILI.second) {
