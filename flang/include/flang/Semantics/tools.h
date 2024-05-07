@@ -224,6 +224,8 @@ inline bool HasCUDAAttr(const Symbol &sym) {
 
 inline bool NeedCUDAAlloc(const Symbol &sym) {
   bool inDeviceSubprogram{IsCUDADeviceContext(&sym.owner())};
+  if (Fortran::semantics::IsDummy(sym))
+    return false;
   if (const auto *details{
           sym.GetUltimate().detailsIf<semantics::ObjectEntityDetails>()}) {
     if (details->cudaDataAttr() &&
