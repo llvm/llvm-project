@@ -94,8 +94,17 @@ void DataSharingProcessor::insertDeallocs() {
 void DataSharingProcessor::cloneSymbol(const Fortran::semantics::Symbol *sym) {
   // Privatization for symbols which are pre-determined (like loop index
   // variables) happen separately, for everything else privatize here.
-  if (sym->test(Fortran::semantics::Symbol::Flag::OmpPreDetermined))
+  auto isOMPParallelConstruct = [](Fortran::lower::pft::Evaluation &eval) {
+    if (const auto *ompConstruct = eval.getIf<parser::OpenMPConstruct>())
+      if (std::holds_alternative<parser::OpenMPBlockConstruct>(ompConstruct->u))
+        return true;
+    return false;
+  };
+
+  if (sym->test(Fortran::semantics::Symbol::Flag::OmpPreDetermined) &&
+      !isOMPParallelConstruct(eval))
     return;
+
   bool success = converter.createHostAssociateVarClone(*sym);
   (void)success;
   assert(success && "Privatization failed due to existing binding");
@@ -344,7 +353,6 @@ void DataSharingProcessor::collectSymbols(
     assert(curScope && "couldn't find current scope");
     if (isPrivatizable(*sym) && !symbolsInNestedRegions.contains(sym) &&
         !privatizedSymbols.contains(sym) &&
-        !sym->test(Fortran::semantics::Symbol::Flag::OmpPreDetermined) &&
         (collectImplicit ||
          !sym->test(Fortran::semantics::Symbol::Flag::OmpImplicit)) &&
         clauseScopes.contains(&sym->owner()))
