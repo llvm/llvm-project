@@ -66,6 +66,11 @@ static const char *const GCCRegNames[] = {
     "tmm0",  "tmm1",  "tmm2",  "tmm3",  "tmm4",    "tmm5",  "tmm6",  "tmm7",
 };
 
+static const char *const ExtendedGCCRegNames[] = {
+    "r16", "r17", "r18", "r19", "r20", "r21", "r22", "r23",
+    "r24", "r25", "r26", "r27", "r28", "r29", "r30", "r31",
+};
+
 const TargetInfo::AddlRegName AddlRegNames[] = {
     {{"al", "ah", "eax", "rax"}, 0},
     {{"bl", "bh", "ebx", "rbx"}, 3},
@@ -85,6 +90,16 @@ const TargetInfo::AddlRegName AddlRegNames[] = {
     {{"r15d", "r15w", "r15b"}, 45},
 };
 
+const TargetInfo::AddlRegName ExtendedAddlRegNames[] = {
+    {{"r16d", "r16w", "r16b"}, 165}, {{"r17d", "r17w", "r17b"}, 166},
+    {{"r18d", "r18w", "r18b"}, 167}, {{"r19d", "r19w", "r19b"}, 168},
+    {{"r20d", "r20w", "r20b"}, 169}, {{"r21d", "r21w", "r21b"}, 170},
+    {{"r22d", "r22w", "r22b"}, 171}, {{"r23d", "r23w", "r23b"}, 172},
+    {{"r24d", "r24w", "r24b"}, 173}, {{"r25d", "r25w", "r25b"}, 174},
+    {{"r26d", "r26w", "r26b"}, 175}, {{"r27d", "r27w", "r27b"}, 176},
+    {{"r28d", "r28w", "r28b"}, 177}, {{"r29d", "r29w", "r29b"}, 178},
+    {{"r30d", "r30w", "r30b"}, 179}, {{"r31d", "r31w", "r31b"}, 180},
+};
 } // namespace targets
 } // namespace clang
 
@@ -1763,10 +1778,16 @@ void X86TargetInfo::fillValidTuneCPUList(SmallVectorImpl<StringRef> &Values) con
 }
 
 ArrayRef<const char *> X86TargetInfo::getGCCRegNames() const {
+  if (HasEGPR)
+    GCCRegNames.insert(GCCRegNames.end(), ExtendedGCCRegNames.begin(),
+                       ExtendedGCCRegNames.end());
   return llvm::ArrayRef(GCCRegNames);
 }
 
 ArrayRef<TargetInfo::AddlRegName> X86TargetInfo::getGCCAddlRegNames() const {
+  if (HasEGPR)
+    AddlRegNames.insert(AddlRegNames.end(), ExtendedAddlRegNames.begin(),
+                        ExtendedAddlRegNames.end());
   return llvm::ArrayRef(AddlRegNames);
 }
 
