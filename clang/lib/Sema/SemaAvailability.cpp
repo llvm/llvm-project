@@ -228,7 +228,8 @@ shouldDiagnoseAvailabilityByDefault(const ASTContext &Context,
     break;
   case llvm::Triple::ShaderModel:
     // Always enable availability diagnostics for shader models.
-    return true;
+    // HEKOTA TODO
+    return false;
   default:
     // New targets should always warn about availability.
     return Triple.getVendor() == llvm::Triple::Apple;

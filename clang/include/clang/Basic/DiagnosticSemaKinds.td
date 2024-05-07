@@ -12210,6 +12210,10 @@ def err_hlsl_param_qualifier_mismatch :
 def warn_hlsl_impcast_vector_truncation : Warning<
   "implicit conversion truncates vector: %0 to %1">, InGroup<Conversion>;
 
+def warn_hlsl_availability : Warning<
+  "%0 %select{is only|is not}5 available %select{|in %4 environment }3on %1 %2 %select{or newer|}5">,
+  InGroup<HLSLAvailability>, DefaultError;
+
 // Layout randomization diagnostics.
 def err_non_designated_init_used : Error<
   "a randomized struct can only be initialized with a designated initializer">;

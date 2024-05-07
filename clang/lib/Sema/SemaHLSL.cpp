@@ -9,6 +9,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Sema/SemaHLSL.h"
+#include "clang/AST/Decl.h"
+#include "clang/AST/Expr.h"
+#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/TargetInfo.h"
@@ -16,6 +19,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/TargetParser/Triple.h"
 #include <iterator>
@@ -289,4 +293,177 @@ void SemaHLSL::DiagnoseAttrStageMismatch(
   Diag(A->getLoc(), diag::err_hlsl_attr_unsupported_in_stage)
       << A << HLSLShaderAttr::ConvertShaderTypeToStr(Stage)
       << (AllowedStages.size() != 1) << join(StageStrings, ", ");
+}
+
+namespace {
+
+/// HEKOTA TODO: UDPATE
+/// This class implements HLSL availability diagnostics
+///
+/// This is done by traversing all CallExpr nodes that are reachable from exported functions (either library exports or entry functions).
+/// If the callee of an CallExpr is in HLSL namespace and has availability annotation that signifies that the API is unavailable 
+/// for the target shader model and stage, the compiler emits an error in default or strict diagnostic mode (-fhlsl-strict-diagnostics)
+/// or a warning in relaxed mode (-Wno-error=hlsl-availability).
+class DiagnoseHLSLAvailability : public RecursiveASTVisitor<DiagnoseHLSLAvailability> {
+  // HEKOTAS this is probably not needed
+  // typedef RecursiveASTVisitor<DiagnoseHLSLAvailability> Base;
+
+  Sema &SemaRef;
+
+  // Stack of functions to be scaned
+  llvm::SmallVector<const FunctionDecl *, 8> DeclsToScan;
+  // Set of functions already scaned
+  llvm::SmallPtrSet<const FunctionDecl *, 8> ScannedDecls;
+
+  void HandleFunctionOrMethodRef(FunctionDecl *FD, Expr *RefExpr);
+  void CheckDeclAvailability(NamedDecl *D, SourceRange Range);
+  const AvailabilityAttr *FindAvailabilityAttr(const Decl *D);
+  bool HasMatchingEnvironmentOrNone(const AvailabilityAttr *AA);
+
+public:
+  DiagnoseHLSLAvailability(Sema &SemaRef) : SemaRef(SemaRef) {}
+
+  void RunOnTranslationUnit(const TranslationUnitDecl *TU);
+
+  bool VisitDeclRefExpr(DeclRefExpr *DRE) {
+    FunctionDecl *FD = llvm::dyn_cast<FunctionDecl>(DRE->getDecl());
+    if (FD)
+      HandleFunctionOrMethodRef(FD, DRE);
+    return true;
+  }
+
+  bool VisitMemberExpr(MemberExpr *ME) {
+    FunctionDecl *FD = llvm::dyn_cast<FunctionDecl>(ME->getMemberDecl());
+    if (FD)
+      HandleFunctionOrMethodRef(FD, ME);
+    return true;
+  }
+
+  // HEKOTA what is this?
+  //bool VisitTypeLoc(TypeLoc Ty);
+};
+
+void DiagnoseHLSLAvailability::HandleFunctionOrMethodRef(FunctionDecl *FD, Expr *RefExpr) {
+  assert((isa<DeclRefExpr>(RefExpr) || isa<MemberExpr>(RefExpr)) && "expected DeclRefExpr or MemberExpr");
+
+  // has a definition -> add to stack to be scanned
+  const FunctionDecl *FDWithBody = nullptr;
+  if (FD->hasBody(FDWithBody)) {
+    if (!ScannedDecls.contains(FDWithBody))
+      DeclsToScan.push_back(FDWithBody);
+    return;
+  }
+
+  // no definition -> diagnose availability
+  CheckDeclAvailability(FD, SourceRange(RefExpr->getBeginLoc(), RefExpr->getEndLoc()));
+}
+
+void DiagnoseHLSLAvailability::RunOnTranslationUnit(const TranslationUnitDecl *TU) {
+  // Add all shader entry functions and library exports to the stack
+  // of functions to be scanned
+  for (auto &D : TU->decls()) {
+    const FunctionDecl *FD = llvm::dyn_cast<FunctionDecl>(D);
+    // HEKOTA TODO detect also library exports
+    if (!FD || !FD->hasAttr<HLSLShaderAttr>())
+      continue;
+
+    DeclsToScan.push_back(FD);
+  }
+
+  while (!DeclsToScan.empty()) {
+    // Take one decl from the stack and check it by traversing its AST.
+    // For any CallExpr found during the traversal add it's callee to the top of the stack 
+    // to be processed next. Functions already processed are stored in ScannedDecls.
+    const FunctionDecl *FD = DeclsToScan.back();
+    DeclsToScan.pop_back();
+
+    // Decl was already scanned
+    if (ScannedDecls.contains(FD))
+      continue;
+    ScannedDecls.insert(FD);
+
+    Stmt *Body = FD->getBody();
+    assert(Body && "full definition with body expected here");
+
+    TraverseStmt(Body);
+  }
+}
+
+bool DiagnoseHLSLAvailability::HasMatchingEnvironmentOrNone(const AvailabilityAttr *AA) {
+  IdentifierInfo *IIEnvironment = AA->getEnvironment();
+  if (!IIEnvironment)
+    return true;
+
+  auto TargetEnvironment = SemaRef.getASTContext().getTargetInfo().getTriple().getEnvironment();
+  if (TargetEnvironment == llvm::Triple::UnknownEnvironment)
+    return true;
+
+  llvm::Triple::EnvironmentType ET =
+      AvailabilityAttr::getEnvironmentType(IIEnvironment->getName());
+  return TargetEnvironment == ET;
+}
+
+const AvailabilityAttr *DiagnoseHLSLAvailability::FindAvailabilityAttr(const Decl *D) {
+  AvailabilityAttr const *PartialMatch = nullptr;
+  // Check each AvailabilityAttr to find the one for this platform.
+  // For multiple attributes with the same platform try to find one for this
+  // environment.
+  for (const auto *A : D->attrs()) {
+    if (const auto *Avail = dyn_cast<AvailabilityAttr>(A)) {
+      StringRef AttrPlatform = Avail->getPlatform()->getName();
+      StringRef TargetPlatform = SemaRef.getASTContext().getTargetInfo().getPlatformName();
+
+      // Match the platform name.
+      if (AttrPlatform == TargetPlatform) {
+        // Find the best matching attribute for this environment
+        if (HasMatchingEnvironmentOrNone(Avail))
+          return Avail;
+        PartialMatch = Avail;
+      }
+    }
+  }
+  return PartialMatch;
+}
+
+void DiagnoseHLSLAvailability::CheckDeclAvailability(NamedDecl *D, SourceRange Range) {
+  const AvailabilityAttr *AA = FindAvailabilityAttr(D);
+  bool EnvironmentMatches = HasMatchingEnvironmentOrNone(AA);
+  VersionTuple Introduced = AA->getIntroduced();
+  VersionTuple TargetVersion = SemaRef.Context.getTargetInfo().getPlatformMinVersion();
+
+  if (TargetVersion >= Introduced && EnvironmentMatches)
+    return;
+
+  const TargetInfo &TI = SemaRef.getASTContext().getTargetInfo();
+  std::string PlatformName(
+      AvailabilityAttr::getPrettyPlatformName(TI.getPlatformName()));
+  std::string TargetEnvironment(AvailabilityAttr::getPrettyEnviromentName(
+      TI.getTriple().getEnvironmentName()));
+  VersionTuple UseVersion =
+      EnvironmentMatches ? Introduced : TI.getTriple().getOSVersion();
+  bool UseEnvironment =
+      (AA->getEnvironment() != nullptr && !TargetEnvironment.empty());
+
+  SemaRef.Diag(Range.getBegin(), diag::warn_hlsl_availability)
+      << Range << D << PlatformName << UseVersion.getAsString()
+      << UseEnvironment << TargetEnvironment << !EnvironmentMatches;
+
+  if (EnvironmentMatches)
+    SemaRef.Diag(D->getLocation(),
+                  diag::note_partial_availability_specified_here)
+        << D << PlatformName << Introduced.getAsString()
+        << SemaRef.Context.getTargetInfo()
+                .getPlatformMinVersion()
+                .getAsString()
+        << UseEnvironment << TargetEnvironment;
+
+  // SemaRef.Diag(Range.getBegin(), diag::note_unguarded_available_silence)
+  //   << Range << D
+  //   << /*__builtin_available*/ 1;
+}
+
+} // namespace
+
+void SemaHLSL::DiagnoseAvailabilityViolations(TranslationUnitDecl *TU) {
+  DiagnoseHLSLAvailability(SemaRef).RunOnTranslationUnit(TU);
 }
