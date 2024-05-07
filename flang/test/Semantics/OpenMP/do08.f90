@@ -138,30 +138,30 @@ program omp
   !$omp end do
 
   !$omp do collapse(3)
-loopk: do k=1,10
-  loopj: do j=1,10
-    loopi: do i=1,10
-      ifi : if (.true.) then
-              !ERROR: EXIT statement to non-innermost associated loop of an OpenMP DO construct
-              if (cond(i,j,k)) exit
-              if (cond(i,j,k)) exit ifi
-              !ERROR: EXIT statement to non-innermost associated loop of an OpenMP DO construct
-              if (cond(i,j,k)) exit loopi
-              !ERROR: EXIT statement to non-innermost associated loop of an OpenMP DO construct
-              if (cond(i,j,k)) exit loopj
-            end if ifi
+  loopk: do k=1,10
+    loopj: do j=1,10
+      loopi: do i=1,10
+        ifi : if (.true.) then
+          !ERROR: EXIT statement terminates associated loop of an OpenMP DO construct
+          if (cond(i,j,k)) exit
+          if (cond(i,j,k)) exit ifi
+          !ERROR: EXIT statement terminates associated loop of an OpenMP DO construct
+          if (cond(i,j,k)) exit loopi
+          !ERROR: EXIT statement terminates associated loop of an OpenMP DO construct
+          if (cond(i,j,k)) exit loopj
+        end if ifi
       end do loopi
     end do loopj
   end do loopk
   !$omp end do
 
   !$omp do collapse(2)
-loopk: do k=1,10
-  loopj: do j=1,10
-           do i=1,10
-           end do
-           !ERROR: EXIT statement to non-innermost associated loop of an OpenMP DO construct
-           if (cond(i,j,k)) exit
+  loopk: do k=1,10
+    loopj: do j=1,10
+      do i=1,10
+      end do
+      !ERROR: EXIT statement terminates associated loop of an OpenMP DO construct
+      if (cond(i,j,k)) exit
     end do loopj
   end do loopk
   !$omp end do

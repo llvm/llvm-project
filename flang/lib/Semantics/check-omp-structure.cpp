@@ -132,7 +132,7 @@ public:
     }
     if (err) {
       context_.Say(*source_,
-          "EXIT statement to non-innermost associated loop of an OpenMP DO "
+          "EXIT statement terminates associated loop of an OpenMP DO "
           "construct"_err_en_US);
     }
     return true;
