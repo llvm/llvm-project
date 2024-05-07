@@ -78,7 +78,6 @@ MODULE_PASS("insert-gcov-profiling", GCOVProfilerPass())
 MODULE_PASS("instrorderfile", InstrOrderFilePass())
 MODULE_PASS("instrprof", InstrProfilingLoweringPass())
 MODULE_PASS("ctx-instr-lower", PGOCtxProfLoweringPass())
-MODULE_PASS("internalize", InternalizePass())
 MODULE_PASS("invalidate<all>", InvalidateAllAnalysesPass())
 MODULE_PASS("iroutliner", IROutlinerPass())
 MODULE_PASS("jmc-instrumenter", JMCInstrumenterPass())
@@ -200,6 +199,20 @@ MODULE_PASS_WITH_PARAMS(
       return StructuralHashPrinterPass(dbgs(), EnableDetailedStructuralHash);
     },
     parseStructuralHashPrinterPassOptions, "detailed")
+MODULE_PASS_WITH_PARAMS(
+    "internalize", "InternalizePass",
+    [](SmallVector<std::string, 0> PreservedGVs) {
+      if (PreservedGVs.empty())
+        return InternalizePass();
+      auto MustPreserveGV = [=](const GlobalValue &GV) {
+        for (auto &PreservedGV : PreservedGVs)
+          if (GV.getName() == PreservedGV)
+            return true;
+        return false;
+      };
+      return InternalizePass(MustPreserveGV);
+    },
+    parseInternalizeGVs, "preserve-gv=GV")
 #undef MODULE_PASS_WITH_PARAMS
 
 #ifndef CGSCC_ANALYSIS
