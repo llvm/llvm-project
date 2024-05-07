@@ -4283,7 +4283,7 @@ SelectionDAG::computeOverflowForSignedMul(SDValue N0, SDValue N1) const {
 }
 
 SDNodeFlags SelectionDAG::computeShiftFlags(SDValue Op) const {
-  assert((Op.getOpcode() == ISD::SRL ||  Op.getOpcode() == ISD::SRA ||
+  assert((Op.getOpcode() == ISD::SRL || Op.getOpcode() == ISD::SRA ||
           Op.getOpcode() == ISD::SHL) &&
          "Expecting an SHL/SRL/SRA operation.");
   SDValue Op0 = Op.getOperand(0);
@@ -4312,7 +4312,6 @@ SDNodeFlags SelectionDAG::computeShiftFlags(SDValue Op) const {
 
   return Flags;
 }
-
 
 bool SelectionDAG::isKnownToBeAPowerOfTwo(SDValue Val, unsigned Depth) const {
   if (Depth >= MaxRecursionDepth)

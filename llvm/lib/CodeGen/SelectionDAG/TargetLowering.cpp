@@ -4530,12 +4530,11 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
          N0.getOpcode() == ISD::SRA)) {
       bool IsRightShift = N0.getOpcode() != ISD::SHL;
       SDValue N00 = N0.getOperand(0);
-      // We cam't rely on flags already being present on all shift operations,
+      // We can't rely on flags already being present on all shift operations,
       // so let's compute the flags using value tracking.
       SDNodeFlags Flags = DAG.computeShiftFlags(N0);
       if (IsRightShift ? Flags.hasExact()
-                       : (Flags.hasNoUnsignedWrap() ||
-                          Flags.hasNoSignedWrap()))
+                       : (Flags.hasNoUnsignedWrap() || Flags.hasNoSignedWrap()))
         return DAG.getSetCC(dl, VT, N00, N1, Cond);
     }
   }
