@@ -12,8 +12,8 @@ struct A {
   constexpr static int f() requires C<I> && D<I> { return 1; }
   constexpr static int f() requires C<I> { return 2; }
 
-  constexpr static int g() requires C<I> { return 0; } // expected-note {{member function specialization matches 'g'}}
-  constexpr static int g() requires D<I> { return 1; } // expected-note {{member function specialization matches 'g'}}
+  constexpr static int g() requires C<I> { return 0; } // #candidate-0
+  constexpr static int g() requires D<I> { return 1; } // #candidate-1
 
   constexpr static int h() requires C<I> { return 0; } // expected-note {{member declaration nearly matches}}
 };
@@ -42,6 +42,8 @@ constexpr int A<8>::g() { return 3; }
 
 template<>
 constexpr int A<6>::g() { return 4; } // expected-error {{ambiguous member function specialization 'A<6>::g' of 'A::g'}}
+                                      // expected-note@#candidate-0 {{member function specialization matches 'g'}}
+                                      // expected-note@#candidate-1 {{member function specialization matches 'g'}}
 
 static_assert(A<9>::g() == 0);
 static_assert(A<1>::g() == 1);
