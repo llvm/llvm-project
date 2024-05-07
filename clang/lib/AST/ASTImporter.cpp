@@ -443,9 +443,8 @@ namespace clang {
     Expected<FunctionTemplateAndArgsTy>
     ImportFunctionTemplateWithTemplateArgsFromSpecialization(
         FunctionDecl *FromFD);
-
-    template <typename DeclTy>
-    Error ImportTemplateParameterLists(const DeclTy *FromD, DeclTy *ToD);
+    Error ImportTemplateParameterLists(const DeclaratorDecl *FromD,
+                                       DeclaratorDecl *ToD);
 
     Error ImportTemplateInformation(FunctionDecl *FromFD, FunctionDecl *ToFD);
 
@@ -3323,9 +3322,8 @@ ExpectedDecl ASTNodeImporter::VisitEnumConstantDecl(EnumConstantDecl *D) {
   return ToEnumerator;
 }
 
-template <typename DeclTy>
-Error ASTNodeImporter::ImportTemplateParameterLists(const DeclTy *FromD,
-                                                    DeclTy *ToD) {
+Error ASTNodeImporter::ImportTemplateParameterLists(const DeclaratorDecl *FromD,
+                                                    DeclaratorDecl *ToD) {
   unsigned int Num = FromD->getNumTemplateParameterLists();
   if (Num == 0)
     return Error::success();
@@ -6212,16 +6210,15 @@ ExpectedDecl ASTNodeImporter::VisitClassTemplateSpecializationDecl(
   if (!IdLocOrErr)
     return IdLocOrErr.takeError();
 
-  // Import TemplateArgumentListInfo.
-  TemplateArgumentListInfo ToTAInfo;
-  if (const auto *ASTTemplateArgs = D->getTemplateArgsAsWritten()) {
-    if (Error Err = ImportTemplateArgumentListInfo(*ASTTemplateArgs, ToTAInfo))
-      return std::move(Err);
-  }
-
   // Create the specialization.
   ClassTemplateSpecializationDecl *D2 = nullptr;
   if (PartialSpec) {
+    // Import TemplateArgumentListInfo.
+    TemplateArgumentListInfo ToTAInfo;
+    const auto &ASTTemplateArgs = *PartialSpec->getTemplateArgsAsWritten();
+    if (Error Err = ImportTemplateArgumentListInfo(ASTTemplateArgs, ToTAInfo))
+      return std::move(Err);
+
     QualType CanonInjType;
     if (Error Err = importInto(
         CanonInjType, PartialSpec->getInjectedSpecializationType()))
@@ -6231,7 +6228,7 @@ ExpectedDecl ASTNodeImporter::VisitClassTemplateSpecializationDecl(
     if (GetImportedOrCreateDecl<ClassTemplatePartialSpecializationDecl>(
             D2, D, Importer.getToContext(), D->getTagKind(), DC, *BeginLocOrErr,
             *IdLocOrErr, ToTPList, ClassTemplate,
-            llvm::ArrayRef(TemplateArgs.data(), TemplateArgs.size()),
+            llvm::ArrayRef(TemplateArgs.data(), TemplateArgs.size()), ToTAInfo,
             CanonInjType,
             cast_or_null<ClassTemplatePartialSpecializationDecl>(PrevDecl)))
       return D2;
@@ -6279,27 +6276,28 @@ ExpectedDecl ASTNodeImporter::VisitClassTemplateSpecializationDecl(
   else
     return BraceRangeOrErr.takeError();
 
-  if (Error Err = ImportTemplateParameterLists(D, D2))
-    return std::move(Err);
-
   // Import the qualifier, if any.
   if (auto LocOrErr = import(D->getQualifierLoc()))
     D2->setQualifierInfo(*LocOrErr);
   else
     return LocOrErr.takeError();
 
-  if (D->getTemplateArgsAsWritten())
-    D2->setTemplateArgsAsWritten(ToTAInfo);
+  if (auto *TSI = D->getTypeAsWritten()) {
+    if (auto TInfoOrErr = import(TSI))
+      D2->setTypeAsWritten(*TInfoOrErr);
+    else
+      return TInfoOrErr.takeError();
 
-  if (auto LocOrErr = import(D->getTemplateKeywordLoc()))
-    D2->setTemplateKeywordLoc(*LocOrErr);
-  else
-    return LocOrErr.takeError();
+    if (auto LocOrErr = import(D->getTemplateKeywordLoc()))
+      D2->setTemplateKeywordLoc(*LocOrErr);
+    else
+      return LocOrErr.takeError();
 
-  if (auto LocOrErr = import(D->getExternKeywordLoc()))
-    D2->setExternKeywordLoc(*LocOrErr);
-  else
-    return LocOrErr.takeError();
+    if (auto LocOrErr = import(D->getExternLoc()))
+      D2->setExternLoc(*LocOrErr);
+    else
+      return LocOrErr.takeError();
+  }
 
   if (D->getPointOfInstantiation().isValid()) {
     if (auto POIOrErr = import(D->getPointOfInstantiation()))
@@ -6519,7 +6517,7 @@ ExpectedDecl ASTNodeImporter::VisitVarTemplateSpecializationDecl(
   VarTemplateSpecializationDecl *D2 = nullptr;
 
   TemplateArgumentListInfo ToTAInfo;
-  if (const auto *Args = D->getTemplateArgsAsWritten()) {
+  if (const ASTTemplateArgumentListInfo *Args = D->getTemplateArgsInfo()) {
     if (Error Err = ImportTemplateArgumentListInfo(*Args, ToTAInfo))
       return std::move(Err);
   }
@@ -6527,6 +6525,14 @@ ExpectedDecl ASTNodeImporter::VisitVarTemplateSpecializationDecl(
   using PartVarSpecDecl = VarTemplatePartialSpecializationDecl;
   // Create a new specialization.
   if (auto *FromPartial = dyn_cast<PartVarSpecDecl>(D)) {
+    // Import TemplateArgumentListInfo
+    TemplateArgumentListInfo ArgInfos;
+    const auto *FromTAArgsAsWritten = FromPartial->getTemplateArgsAsWritten();
+    // NOTE: FromTAArgsAsWritten and template parameter list are non-null.
+    if (Error Err =
+            ImportTemplateArgumentListInfo(*FromTAArgsAsWritten, ArgInfos))
+      return std::move(Err);
+
     auto ToTPListOrErr = import(FromPartial->getTemplateParameters());
     if (!ToTPListOrErr)
       return ToTPListOrErr.takeError();
@@ -6535,7 +6541,7 @@ ExpectedDecl ASTNodeImporter::VisitVarTemplateSpecializationDecl(
     if (GetImportedOrCreateDecl(ToPartial, D, Importer.getToContext(), DC,
                                 *BeginLocOrErr, *IdLocOrErr, *ToTPListOrErr,
                                 VarTemplate, QualType(), nullptr,
-                                D->getStorageClass(), TemplateArgs))
+                                D->getStorageClass(), TemplateArgs, ArgInfos))
       return ToPartial;
 
     if (Expected<PartVarSpecDecl *> ToInstOrErr =
@@ -6578,9 +6584,7 @@ ExpectedDecl ASTNodeImporter::VisitVarTemplateSpecializationDecl(
   }
 
   D2->setSpecializationKind(D->getSpecializationKind());
-
-  if (D->getTemplateArgsAsWritten())
-    D2->setTemplateArgsAsWritten(ToTAInfo);
+  D2->setTemplateArgsInfo(ToTAInfo);
 
   if (auto LocOrErr = import(D->getQualifierLoc()))
     D2->setQualifierInfo(*LocOrErr);

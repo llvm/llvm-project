@@ -735,8 +735,7 @@ public:
     auto *Declaration =
         cast<syntax::SimpleDeclaration>(handleFreeStandingTagDecl(C));
     foldExplicitTemplateInstantiation(
-        Builder.getTemplateRange(C),
-        Builder.findToken(C->getExternKeywordLoc()),
+        Builder.getTemplateRange(C), Builder.findToken(C->getExternLoc()),
         Builder.findToken(C->getTemplateKeywordLoc()), Declaration, C);
     return true;
   }
