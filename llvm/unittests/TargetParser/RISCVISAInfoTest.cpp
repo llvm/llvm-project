@@ -62,6 +62,22 @@ TEST(ParseNormalizedArchString, RejectsBadZ) {
   }
 }
 
+TEST(ParseNormalizedArchString, RejectsBadS) {
+  for (StringRef Input : {"rv64i2p0_s1p0", "rv32i2p0_s2a1p0"}) {
+    EXPECT_EQ(
+        toString(RISCVISAInfo::parseNormalizedArchString(Input).takeError()),
+        "'s' must be followed by a letter");
+  }
+}
+
+TEST(ParseNormalizedArchString, RejectsBadX) {
+  for (StringRef Input : {"rv64i2p0_x1p0", "rv32i2p0_x2a1p0"}) {
+    EXPECT_EQ(
+        toString(RISCVISAInfo::parseNormalizedArchString(Input).takeError()),
+        "'x' must be followed by a letter");
+  }
+}
+
 TEST(ParseNormalizedArchString, AcceptsValidBaseISAsAndSetsXLen) {
   auto MaybeRV32I = RISCVISAInfo::parseNormalizedArchString("rv32i2p0");
   ASSERT_THAT_EXPECTED(MaybeRV32I, Succeeded());
