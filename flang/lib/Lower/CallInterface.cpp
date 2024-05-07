@@ -218,7 +218,7 @@ Fortran::lower::CallerInterface::characterize() const {
       converter.getFoldingContext();
   std::optional<Fortran::evaluate::characteristics::Procedure> characteristic =
       Fortran::evaluate::characteristics::Procedure::Characterize(
-          procRef.proc(), foldingContext);
+          procRef.proc(), foldingContext, /*emitError=*/false);
   assert(characteristic && "Failed to get characteristic from procRef");
   // The characteristic may not contain the argument characteristic if the
   // ProcedureDesignator has no interface, or may mismatch in case of implicit
@@ -575,13 +575,6 @@ mlir::Value Fortran::lower::CalleeInterface::getHostAssociatedTuple() const {
   return converter.hostAssocTupleValue();
 }
 
-void Fortran::lower::CalleeInterface::setFuncAttrs(
-    mlir::func::FuncOp func) const {
-  if (funit.parentHasHostAssoc())
-    func->setAttr(fir::getInternalProcedureAttrName(),
-                  mlir::UnitAttr::get(func->getContext()));
-}
-
 //===----------------------------------------------------------------------===//
 // CallInterface implementation: this part is common to both caller and callee.
 //===----------------------------------------------------------------------===//
@@ -589,6 +582,34 @@ void Fortran::lower::CalleeInterface::setFuncAttrs(
 static void addSymbolAttribute(mlir::func::FuncOp func,
                                const Fortran::semantics::Symbol &sym,
                                mlir::MLIRContext &mlirContext) {
+  const Fortran::semantics::Symbol &ultimate = sym.GetUltimate();
+  // The link between an internal procedure and its host procedure is lost
+  // in FIR if the host is BIND(C) since the internal mangling will not
+  // allow retrieving the host bind(C) name, and therefore func.func symbol.
+  // Preserve it as an attribute so that this can be later retrieved.
+  if (Fortran::semantics::ClassifyProcedure(ultimate) ==
+      Fortran::semantics::ProcedureDefinitionClass::Internal) {
+    if (ultimate.owner().kind() ==
+        Fortran::semantics::Scope::Kind::Subprogram) {
+      if (const Fortran::semantics::Symbol *hostProcedure =
+              ultimate.owner().symbol()) {
+        std::string hostName = Fortran::lower::mangle::mangleName(
+            *hostProcedure, /*keepExternalInScope=*/true);
+        func->setAttr(
+            fir::getHostSymbolAttrName(),
+            mlir::SymbolRefAttr::get(
+                &mlirContext, mlir::StringAttr::get(&mlirContext, hostName)));
+      }
+    } else if (ultimate.owner().kind() ==
+               Fortran::semantics::Scope::Kind::MainProgram) {
+      func->setAttr(fir::getHostSymbolAttrName(),
+                    mlir::SymbolRefAttr::get(
+                        &mlirContext,
+                        mlir::StringAttr::get(
+                            &mlirContext, fir::NameUniquer::doProgramEntry())));
+    }
+  }
+
   // Only add this on bind(C) functions for which the symbol is not reflected in
   // the current context.
   if (!Fortran::semantics::IsBindCProcedure(sym))
@@ -686,7 +707,6 @@ void Fortran::lower::CallInterface<T>::declare() {
       for (const auto &placeHolder : llvm::enumerate(inputs))
         if (!placeHolder.value().attributes.empty())
           func.setArgAttrs(placeHolder.index(), placeHolder.value().attributes);
-      side().setFuncAttrs(func);
 
       setCUDAAttributes(func, side().getProcedureSymbol(), characteristic);
     }
@@ -1162,7 +1182,7 @@ private:
       Property prop = Property::BaseAddress;
       if (isValueAttr) {
         bool isBuiltinCptrType = fir::isa_builtin_cptr_type(type);
-        if (isBindC || (!type.isa<fir::SequenceType>() &&
+        if (isBindC || (!mlir::isa<fir::SequenceType>(type) &&
                         !obj.attrs.test(Attrs::Optional) &&
                         (dynamicType.category() !=
                              Fortran::common::TypeCategory::Derived ||
@@ -1170,7 +1190,7 @@ private:
           passBy = PassEntityBy::Value;
           prop = Property::Value;
           if (isBuiltinCptrType) {
-            auto recTy = type.dyn_cast<fir::RecordType>();
+            auto recTy = mlir::dyn_cast<fir::RecordType>(type);
             mlir::Type fieldTy = recTy.getTypeList()[0].second;
             passType = fir::ReferenceType::get(fieldTy);
           } else {
@@ -1551,7 +1571,7 @@ public:
                    Fortran::lower::AbstractConverter &c)
       : CallInterface{c}, procDesignator{&procDes},
         proc{Fortran::evaluate::characteristics::Procedure::Characterize(
-                 procDes, converter.getFoldingContext())
+                 procDes, converter.getFoldingContext(), /*emitError=*/false)
                  .value()} {}
   /// Does the procedure characteristics being translated have alternate
   /// returns ?
@@ -1598,10 +1618,6 @@ public:
   getCallDescription() const {
     return proc;
   }
-
-  /// Set internal procedure attribute on MLIR function. Internal procedure
-  /// are defined in the current file and will not go through SignatureBuilder.
-  void setFuncAttrs(mlir::func::FuncOp) const {}
 
   /// This is not the description of an indirect call.
   static constexpr bool isIndirectCall() { return false; }
@@ -1680,7 +1696,7 @@ bool Fortran::lower::mustPassLengthWithDummyProcedure(
     Fortran::lower::AbstractConverter &converter) {
   std::optional<Fortran::evaluate::characteristics::Procedure> characteristics =
       Fortran::evaluate::characteristics::Procedure::Characterize(
-          procedure, converter.getFoldingContext());
+          procedure, converter.getFoldingContext(), /*emitError=*/false);
   return ::mustPassLengthWithDummyProcedure(characteristics);
 }
 
@@ -1698,7 +1714,7 @@ mlir::Type Fortran::lower::getDummyProcedureType(
 }
 
 bool Fortran::lower::isCPtrArgByValueType(mlir::Type ty) {
-  return ty.isa<fir::ReferenceType>() &&
+  return mlir::isa<fir::ReferenceType>(ty) &&
          fir::isa_integer(fir::unwrapRefType(ty));
 }
 

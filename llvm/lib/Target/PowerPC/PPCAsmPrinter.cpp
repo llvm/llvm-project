@@ -27,7 +27,7 @@
 #include "PPCTargetStreamer.h"
 #include "TargetInfo/PowerPCTargetInfo.h"
 #include "llvm/ADT/MapVector.h"
-#include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -242,7 +242,7 @@ class PPCAIXAsmPrinter : public PPCAsmPrinter {
 private:
   /// Symbols lowered from ExternalSymbolSDNodes, we will need to emit extern
   /// linkage for them in AIX.
-  SmallPtrSet<MCSymbol *, 8> ExtSymSDNodeSymbols;
+  SmallSetVector<MCSymbol *, 8> ExtSymSDNodeSymbols;
 
   /// A format indicator and unique trailing identifier to form part of the
   /// sinit/sterm function names.
@@ -1148,15 +1148,27 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
 
     MCSymbolRefExpr::VariantKind VK = GetVKForMO(MO);
 
-    // Always use TOC on AIX. Map the global address operand to be a reference
-    // to the TOC entry we will synthesize later. 'TOCEntry' is a label used to
-    // reference the storage allocated in the TOC which contains the address of
-    // 'MOSymbol'.
-    MCSymbol *TOCEntry =
-        lookUpOrCreateTOCEntry(MOSymbol, getTOCEntryTypeForMO(MO), VK);
-    const MCExpr *Exp = MCSymbolRefExpr::create(TOCEntry,
-                                                MCSymbolRefExpr::VK_PPC_U,
-                                                OutContext);
+    // If the symbol isn't toc-data then use the TOC on AIX.
+    // Map the global address operand to be a reference to the TOC entry we
+    // will synthesize later. 'TOCEntry' is a label used to reference the
+    // storage allocated in the TOC which contains the address of 'MOSymbol'.
+    // If the toc-data attribute is used, the TOC entry contains the data
+    // rather than the address of the MOSymbol.
+    if (![](const MachineOperand &MO) {
+          if (!MO.isGlobal())
+            return false;
+
+          const GlobalVariable *GV = dyn_cast<GlobalVariable>(MO.getGlobal());
+          if (!GV)
+            return false;
+
+          return GV->hasAttribute("toc-data");
+        }(MO)) {
+      MOSymbol = lookUpOrCreateTOCEntry(MOSymbol, getTOCEntryTypeForMO(MO), VK);
+    }
+
+    const MCExpr *Exp = MCSymbolRefExpr::create(
+        MOSymbol, MCSymbolRefExpr::VK_PPC_U, OutContext);
     TmpInst.getOperand(2) = MCOperand::createExpr(Exp);
     EmitToStreamer(*OutStreamer, TmpInst);
     return;
@@ -1273,25 +1285,32 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
     EmitToStreamer(*OutStreamer, TmpInst);
     return;
   }
+  case PPC::ADDItocL:
   case PPC::ADDItocL8: {
-    // Transform %xd = ADDItocL8 %xs, @sym
+    // Transform %xd = ADDItocL %xs, @sym
     LowerPPCMachineInstrToMCInst(MI, TmpInst, *this);
 
-    // Change the opcode to ADDI8. If the global address is external, then
-    // generate a TOC entry and reference that. Otherwise, reference the
-    // symbol directly.
-    TmpInst.setOpcode(PPC::ADDI8);
+    unsigned Op = MI->getOpcode();
+
+    // Change the opcode to load address for tocdata
+    TmpInst.setOpcode(Op == PPC::ADDItocL8 ? PPC::ADDI8 : PPC::LA);
 
     const MachineOperand &MO = MI->getOperand(2);
-    assert((MO.isGlobal() || MO.isCPI()) && "Invalid operand for ADDItocL8.");
+    assert((Op == PPC::ADDItocL8)
+               ? (MO.isGlobal() || MO.isCPI())
+               : MO.isGlobal() && "Invalid operand for ADDItocL8.");
+    assert(!(MO.isGlobal() && Subtarget->isGVIndirectSymbol(MO.getGlobal())) &&
+           "Interposable definitions must use indirect accesses.");
 
-    LLVM_DEBUG(assert(
-        !(MO.isGlobal() && Subtarget->isGVIndirectSymbol(MO.getGlobal())) &&
-        "Interposable definitions must use indirect access."));
+    // Map the operand to its corresponding MCSymbol.
+    const MCSymbol *const MOSymbol = getMCSymbolForTOCPseudoMO(MO, *this);
 
-    const MCExpr *Exp =
-        MCSymbolRefExpr::create(getMCSymbolForTOCPseudoMO(MO, *this),
-                                MCSymbolRefExpr::VK_PPC_TOC_LO, OutContext);
+    const MCExpr *Exp = MCSymbolRefExpr::create(
+        MOSymbol,
+        Op == PPC::ADDItocL8 ? MCSymbolRefExpr::VK_PPC_TOC_LO
+                             : MCSymbolRefExpr::VK_PPC_L,
+        OutContext);
+
     TmpInst.getOperand(2) = MCOperand::createExpr(Exp);
     EmitToStreamer(*OutStreamer, TmpInst);
     return;
@@ -2877,7 +2896,7 @@ void PPCAIXAsmPrinter::emitPGORefs(Module &M) {
   bool HasNonZeroLengthPrfCntsSection = false;
   const DataLayout &DL = M.getDataLayout();
   for (GlobalVariable &GV : M.globals())
-    if (GV.hasSection() && GV.getSection().equals("__llvm_prf_cnts") &&
+    if (GV.hasSection() && GV.getSection() == "__llvm_prf_cnts" &&
         DL.getTypeAllocSize(GV.getValueType()) > 0) {
       HasNonZeroLengthPrfCntsSection = true;
       break;

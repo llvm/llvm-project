@@ -10,10 +10,15 @@
 typedef __SIZE_TYPE__ size_t;
 // cxx98-error@-1 0-1 {{'long long' is a C++11 extension}}
 
-#if __cplusplus < 201103L
-#define fold(x) (__builtin_constant_p(x) ? (x) : (x))
+#if __cplusplus == 199711L
+#define static_assert(...) __extension__ _Static_assert(__VA_ARGS__)
+// cxx98-error@-1 {{variadic macros are a C99 feature}}
+#endif
+
+#if __cplusplus == 199711L
+#define __enable_constant_folding(x) (__builtin_constant_p(x) ? (x) : (x))
 #else
-#define fold
+#define __enable_constant_folding
 #endif
 
 namespace cwg200 { // cwg200: dup 214
@@ -31,7 +36,7 @@ namespace cwg200 { // cwg200: dup 214
 namespace cwg202 { // cwg202: 3.1
   template<typename T> T f();
   template<int (*g)()> struct X {
-    int arr[fold(g == &f<int>) ? 1 : -1];
+    static_assert(__enable_constant_folding(g == &f<int>), "");
   };
   template struct X<f>;
 }
@@ -556,9 +561,9 @@ namespace cwg244 { // cwg244: 11
     B_ptr->B_alias::~B();
     B_ptr->B_alias::~B_alias();
     B_ptr->cwg244::~B();
-    // expected-error@-1 {{qualified member access refers to a member in namespace 'cwg244'}}
+    // expected-error@-1 {{no member named '~B' in namespace 'cwg244'}}
     B_ptr->cwg244::~B_alias();
-    // expected-error@-1 {{qualified member access refers to a member in namespace 'cwg244'}}
+    // expected-error@-1 {{no member named '~B' in namespace 'cwg244'}}
   }
 
   template<typename T, typename U>
@@ -831,7 +836,7 @@ namespace cwg258 { // cwg258: 2.8
 
 namespace cwg259 { // cwg259: 4
   template<typename T> struct A {};
-  template struct A<int>; // #cwg259-A-int 
+  template struct A<int>; // #cwg259-A-int
   template struct A<int>;
   // expected-error@-1 {{duplicate explicit instantiation of 'A<int>'}}
   //   expected-note@#cwg259-A-int {{previous explicit instantiation is here}}
@@ -992,7 +997,7 @@ namespace cwg275 { // cwg275: no
     // expected-error@-1 {{no function template matches function template specialization 'f'}}
   }
 
-  template <class T> void g(T) {} // #cwg275-g 
+  template <class T> void g(T) {} // #cwg275-g
 
   template <> void N::f(char) {}
   template <> void f(int) {}
@@ -1024,7 +1029,7 @@ namespace cwg275 { // cwg275: no
 namespace cwg277 { // cwg277: 3.1
   typedef int *intp;
   int *p = intp();
-  int a[fold(intp() ? -1 : 1)];
+  static_assert(__enable_constant_folding(!intp()), "");
 }
 
 namespace cwg280 { // cwg280: 2.9
@@ -1159,7 +1164,7 @@ namespace cwg285 { // cwg285: yes
 namespace cwg286 { // cwg286: 2.8
   template<class T> struct A {
     class C {
-      template<class T2> struct B {}; // #cwg286-B 
+      template<class T2> struct B {}; // #cwg286-B
     };
   };
 

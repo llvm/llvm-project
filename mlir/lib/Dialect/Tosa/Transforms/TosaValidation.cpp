@@ -200,7 +200,7 @@ private:
     CHECK_RANKS_FOR(BitwiseAnd);
     CHECK_RANKS_FOR(BitwiseOr);
     CHECK_RANKS_FOR(BitwiseXor);
-    CHECK_RANKS_FOR(Div);
+    CHECK_RANKS_FOR(IntDiv);
     CHECK_RANKS_FOR(LogicalAnd);
     CHECK_RANKS_FOR(LogicalLeftShift);
     CHECK_RANKS_FOR(LogicalRightShift);
@@ -357,7 +357,7 @@ private:
   bool levelCheckTransposeConv2d(Operation *op) {
     if (auto transpose = dyn_cast<tosa::TransposeConv2DOp>(op)) {
       if (ShapedType filterType =
-              transpose.getFilter().getType().dyn_cast<ShapedType>()) {
+              dyn_cast<ShapedType>(transpose.getFilter().getType())) {
         auto shape = filterType.getShape();
         assert(shape.size() == 4);
         // level check kernel sizes for kH and KW

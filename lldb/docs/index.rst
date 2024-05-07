@@ -157,6 +157,8 @@ interesting areas to contribute to lldb.
    resources/sbapi
    resources/dataformatters
    resources/extensions
+   resources/lldbgdbremote
+   resources/lldbplatformpackets
    resources/caveats
    resources/projects
    Public C++ API <https://lldb.llvm.org/cpp_reference/namespacelldb.html>
