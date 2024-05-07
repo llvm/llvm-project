@@ -609,6 +609,10 @@ def ForallOp : SCF_Op<"forall", [
 
     // Declare the shared_outs as inits/outs to DestinationStyleOpInterface.
     MutableOperandRange getDpsInitsMutable() { return getOutputsMutable(); }
+
+    /// Returns operations within scf.forall.in_parallel whose destination
+    /// operand is the block argument `bbArg`.
+    SmallVector<Operation*> getCombiningOps(BlockArgument bbArg);
   }];
 }
 
