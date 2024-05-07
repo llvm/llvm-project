@@ -1477,8 +1477,16 @@ static Sema::AccessResult CheckAccess(Sema &S, SourceLocation Loc,
   //   void foo(A::private_type);
   //   void B::foo(A::private_type);
   if (S.DelayedDiagnostics.shouldDelayDiagnostics()) {
-    S.DelayedDiagnostics.add(DelayedDiagnostic::makeAccess(Loc, Entity));
-    return Sema::AR_delayed;
+    Scope *TS = S.getCurScope();
+    bool IsFriendDeclaration = false;
+    while (TS && !IsFriendDeclaration) {
+      IsFriendDeclaration = TS->isFriendScope();
+      TS = TS->getParent();
+    }
+    if (!IsFriendDeclaration) {
+      S.DelayedDiagnostics.add(DelayedDiagnostic::makeAccess(Loc, Entity));
+      return Sema::AR_delayed;
+    }
   }
 
   EffectiveContext EC(S.CurContext);
