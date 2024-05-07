@@ -63,4 +63,3 @@ inline raw_ostream &operator<<(raw_ostream &OS, const DXILVersion &V) {
 } // namespace llvm
 
 #endif // LLVM_TRANSFORMS_UTILS_DXIL_H
-
