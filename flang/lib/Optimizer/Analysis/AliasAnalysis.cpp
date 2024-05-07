@@ -251,7 +251,7 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v) {
   bool followBoxData{mlir::isa<fir::BaseBoxType>(v.getType())};
   bool isBoxRef{fir::isa_ref_type(v.getType()) &&
                 mlir::isa<fir::BaseBoxType>(fir::unwrapRefType(v.getType()))};
-  bool followingData = !isBoxRef || followBoxData;
+  bool followingData = !isBoxRef;
   mlir::SymbolRefAttr global;
   Source::Attributes attributes;
   while (defOp && !breakFromLoop) {
