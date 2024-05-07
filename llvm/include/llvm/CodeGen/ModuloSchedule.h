@@ -427,6 +427,11 @@ private:
                       SmallVectorImpl<ValueMapTy> &CurVRMap,
                       SmallVectorImpl<ValueMapTy> *PrevVRMap);
 
+  void insertCondBranch(MachineBasicBlock &MBB, int RequiredTC,
+                        InstrMapTy &LastStage0Insts,
+                        MachineBasicBlock &GreaterThan,
+                        MachineBasicBlock &Otherwise);
+
 public:
   ModuloScheduleExpanderMVE(MachineFunction &MF, ModuloSchedule &S,
                             LiveIntervals &LIS)

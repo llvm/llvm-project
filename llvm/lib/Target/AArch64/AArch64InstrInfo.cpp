@@ -9640,7 +9640,7 @@ public:
 
   void createRemainingIterationsGreaterCondition(
       int TC, MachineBasicBlock &MBB, SmallVectorImpl<MachineOperand> &Cond,
-      DenseMap<MachineInstr *, MachineInstr *> LastStage0Insts) override;
+      DenseMap<MachineInstr *, MachineInstr *> &LastStage0Insts) override;
 
   void setPreheader(MachineBasicBlock *NewPreheader) override {}
 
@@ -9681,7 +9681,7 @@ static Register cloneInstr(const MachineInstr *MI, unsigned ReplaceOprNum,
 
 void AArch64PipelinerLoopInfo::createRemainingIterationsGreaterCondition(
     int TC, MachineBasicBlock &MBB, SmallVectorImpl<MachineOperand> &Cond,
-    DenseMap<MachineInstr *, MachineInstr *> LastStage0Insts) {
+    DenseMap<MachineInstr *, MachineInstr *> &LastStage0Insts) {
   // Create and accumulate conditions for next TC iterations.
   // Example:
   //   SUBSXrr N, counter, implicit-def $nzcv # compare instruction for the last

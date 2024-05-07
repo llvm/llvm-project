@@ -5460,13 +5460,6 @@ public:
     return TripCount > TC;
   }
 
-  void createRemainingIterationsGreaterCondition(
-      int TC, MachineBasicBlock &MBB, SmallVectorImpl<MachineOperand> &Cond,
-      DenseMap<MachineInstr *, MachineInstr *> LastStage0Insts) override {
-    llvm_unreachable(
-        "Target didn't implement createRemainingIterationsGreaterCondition");
-  }
-
   void setPreheader(MachineBasicBlock *NewPreheader) override {
     // Do nothing. We want the LOOP setup instruction to stay in the *old*
     // preheader, so we can use BDZ in the prologs to adapt the loop trip count.
@@ -5491,8 +5484,6 @@ public:
     // Ensure the loop setup instruction is deleted too.
     LoopCount->eraseFromParent();
   }
-
-  bool isMVEExpanderSupported() override { return false; }
 };
 } // namespace
 

@@ -22,6 +22,10 @@
 #define DEBUG_TYPE "pipeliner"
 using namespace llvm;
 
+static cl::opt<bool> SwapBranchTargetsMVE(
+    "pipeliner-swap-branch-targets-mve", cl::Hidden, cl::init(false),
+    cl::desc("Swap target blocks of a conditional branch for MVE expander"));
+
 void ModuloSchedule::print(raw_ostream &OS) {
   for (MachineInstr *MI : ScheduledInstrs)
     OS << "[stage " << getStage(MI) << " @" << getCycle(MI) << "c] " << *MI;
@@ -2132,18 +2136,36 @@ static MachineBasicBlock *createDedicatedExit(MachineBasicBlock *Loop,
     llvm_unreachable("unexpected loop structure");
   TII->removeBranch(*Loop);
   TII->insertBranch(*Loop, TBB, FBB, Cond, DebugLoc());
-  Loop->removeSuccessor(Exit);
-  Loop->addSuccessor(NewExit);
+  Loop->replaceSuccessor(Exit, NewExit);
   TII->insertUnconditionalBranch(*NewExit, Exit, DebugLoc());
   NewExit->addSuccessor(Exit);
 
-  for (MachineInstr &Phi : Exit->phis()) {
-    for (MachineOperand &MO : Phi.operands())
-      if (MO.isMBB() && MO.getMBB() == Loop)
-        MO.setMBB(NewExit);
-  }
+  Exit->replacePhiUsesWith(Loop, NewExit);
 
   return NewExit;
+}
+
+/// Insert branch code into the end of MBB. It branches to GreaterThan if the
+/// remaining trip count for instructions in LastStage0Insts is greater than
+/// RequiredTC, and to Otherwise otherwise.
+void ModuloScheduleExpanderMVE::insertCondBranch(MachineBasicBlock &MBB,
+                                                 int RequiredTC,
+                                                 InstrMapTy &LastStage0Insts,
+                                                 MachineBasicBlock &GreaterThan,
+                                                 MachineBasicBlock &Otherwise) {
+  SmallVector<MachineOperand, 4> Cond;
+  LoopInfo->createRemainingIterationsGreaterCondition(RequiredTC, MBB, Cond,
+                                                      LastStage0Insts);
+
+  if (SwapBranchTargetsMVE) {
+    // Set SwapBranchTargetsMVE to true if a target prefers to replace TBB and
+    // FBB for optimal performance.
+    if (TII->reverseBranchCondition(Cond))
+      llvm_unreachable("can not reverse branch condition");
+    TII->insertBranch(MBB, &Otherwise, &GreaterThan, Cond, DebugLoc());
+  } else {
+    TII->insertBranch(MBB, &GreaterThan, &Otherwise, Cond, DebugLoc());
+  }
 }
 
 /// Generate a pipelined loop that is unrolled by using MVE algorithm and any
@@ -2262,15 +2284,13 @@ void ModuloScheduleExpanderMVE::generatePipelinedLoop() {
   Epilog->addSuccessor(NewPreheader);
   Epilog->addSuccessor(NewExit);
 
-  SmallVector<MachineOperand, 4> Cond;
-  LoopInfo->createRemainingIterationsGreaterCondition(
-      Schedule.getNumStages() + NumUnroll - 2, *Check, Cond, InstrMapTy());
-  TII->insertBranch(*Check, Prolog, NewPreheader, Cond, DebugLoc());
+  InstrMapTy LastStage0Insts;
+  insertCondBranch(*Check, Schedule.getNumStages() + NumUnroll - 2,
+                   LastStage0Insts, *Prolog, *NewPreheader);
 
   // VRMaps map (prolog/kernel/epilog phase#, original register#) to new
   // register#
   SmallVector<ValueMapTy> PrologVRMap, KernelVRMap, EpilogVRMap;
-  InstrMapTy LastStage0Insts;
   generateProlog(PrologVRMap);
   generateKernel(PrologVRMap, KernelVRMap, LastStage0Insts);
   generateEpilog(KernelVRMap, EpilogVRMap, LastStage0Insts);
@@ -2555,10 +2575,8 @@ void ModuloScheduleExpanderMVE::generateKernel(
   }
 
   // If remaining trip count is greater than NumUnroll-1, loop continues
-  SmallVector<MachineOperand, 4> Cond;
-  LoopInfo->createRemainingIterationsGreaterCondition(NumUnroll - 1, *NewKernel,
-                                                      Cond, LastStage0Insts);
-  TII->insertBranch(*NewKernel, NewKernel, Epilog, Cond, DebugLoc());
+  insertCondBranch(*NewKernel, NumUnroll - 1, LastStage0Insts, *NewKernel,
+                   *Epilog);
 
   LLVM_DEBUG({
     dbgs() << "kernel:\n";
@@ -2598,10 +2616,7 @@ void ModuloScheduleExpanderMVE::generateEpilog(
   // Instructions related to loop control, such as loop counter comparison,
   // are indicated by shouldIgnoreForPipelining() and are assumed to be placed
   // in stage 0. Thus, the map is for the last one in the kernel.
-  SmallVector<MachineOperand, 4> Cond;
-  LoopInfo->createRemainingIterationsGreaterCondition(0, *Epilog, Cond,
-                                                      LastStage0Insts);
-  TII->insertBranch(*Epilog, NewPreheader, NewExit, Cond, DebugLoc());
+  insertCondBranch(*Epilog, 0, LastStage0Insts, *NewPreheader, *NewExit);
 
   LLVM_DEBUG({
     dbgs() << "epilog:\n";

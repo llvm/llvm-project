@@ -769,7 +769,7 @@ public:
 
     /// Create a condition to determine if the remaining trip count for a phase
     /// is greater than TC. Some instructions such as comparisons may be
-    /// inserted at the bottom of MBB. The all instructions expanded for the
+    /// inserted at the bottom of MBB. All instructions expanded for the
     /// phase must be inserted in MBB before calling this function.
     /// LastStage0Insts is the map from the original instructions scheduled at
     /// stage#0 to the expanded instructions for the last iteration of the
@@ -781,7 +781,11 @@ public:
     /// value of the trip count.
     virtual void createRemainingIterationsGreaterCondition(
         int TC, MachineBasicBlock &MBB, SmallVectorImpl<MachineOperand> &Cond,
-        DenseMap<MachineInstr *, MachineInstr *> LastStage0Insts) = 0;
+        DenseMap<MachineInstr *, MachineInstr *> &LastStage0Insts) {
+      llvm_unreachable(
+          "Target didn't implement "
+          "PipelinerLoopInfo::createRemainingIterationsGreaterCondition!");
+    }
 
     /// Modify the loop such that the trip count is
     /// OriginalTC + TripCountAdjust.
@@ -799,7 +803,7 @@ public:
 
     /// Return true if the target can expand pipelined schedule with modulo
     /// variable expansion.
-    virtual bool isMVEExpanderSupported() = 0;
+    virtual bool isMVEExpanderSupported() { return false; }
   };
 
   /// Analyze loop L, which must be a single-basic-block loop, and if the
