@@ -279,3 +279,75 @@ func.func @avoidable_spill(%a: vector<[4]xf32>, %b: vector<[4]xf32>, %c: vector<
   }
   return
 }
+
+// -----
+
+// This test is a follow up to the test of the same name in `tile-allocation-copies.mlir`.
+// This shows the live ranges (which are why we need to split the conditional branch).
+
+//  CHECK-LIVE-RANGE-LABEL: @cond_branch_with_backedge
+//        CHECK-LIVE-RANGE: ^bb1:
+//  CHECK-LIVE-RANGE--NEXT:  ||| |           arith.cmpi
+//  CHECK-LIVE-RANGE--NEXT:  EEE E           cf.cond_br
+//
+//  CHECK-LIVE-RANGE--NEXT: ^[[BB3_COPIES:[[:alnum:]]+]]:
+//  CHECK-LIVE-RANGE--NEXT:  ||| ES          arm_sme.copy_tile
+//  CHECK-LIVE-RANGE--NEXT:  E||  |S         arm_sme.copy_tile
+//  CHECK-LIVE-RANGE--NEXT:   E|  ||S        arm_sme.copy_tile
+//  CHECK-LIVE-RANGE--NEXT:    E  |||S       arm_sme.copy_tile
+//  CHECK-LIVE-RANGE--NEXT:       EEEE       cf.br
+//
+// It is important to note that the first three live ranges in ^bb1 do not end
+// at the `cf.cond_br` they are live-out via the backedge bb1 -> bb2 -> bb1.
+// This means that if we placed the `arm_sme.tile_copies` before the `cf.cond_br`
+// then those live ranges would not end at the copies, resulting in unwanted
+// overlapping live ranges (and hence tile spills).
+//
+// With the conditional branch split and the copies placed in the BB3_COPIES
+// block the first three live ranges end at the copy operations (as the
+// BB3_COPIES block is on the path out of the loop and has no backedge). This
+// means there is no overlaps and the live ranges all merge, as shown below.
+//
+//        CHECK-LIVE-RANGE: ========== Coalesced Live Ranges:
+//        CHECK-LIVE-RANGE: ^bb1:
+//  CHECK-LIVE-RANGE--NEXT: |||| arith.cmpi
+//  CHECK-LIVE-RANGE--NEXT: EEEE cf.cond_br
+//
+//  CHECK-LIVE-RANGE--NEXT: ^[[BB3_COPIES]]:
+//  CHECK-LIVE-RANGE--NEXT: |||| arm_sme.copy_tile
+//  CHECK-LIVE-RANGE--NEXT: |||| arm_sme.copy_tile
+//  CHECK-LIVE-RANGE--NEXT: |||| arm_sme.copy_tile
+//  CHECK-LIVE-RANGE--NEXT: |||| arm_sme.copy_tile
+//  CHECK-LIVE-RANGE--NEXT: EEEE cf.br
+
+// CHECK-LABEL: @cond_branch_with_backedge
+// CHECK-NOT: tile_id = 16
+// CHECK: arm_sme.get_tile {tile_id = 0 : i32} : vector<[4]x[4]xf32>
+// CHECK: arm_sme.get_tile {tile_id = 1 : i32} : vector<[4]x[4]xf32>
+// CHECK: arm_sme.get_tile {tile_id = 2 : i32} : vector<[4]x[4]xf32>
+// CHECK: arm_sme.get_tile {tile_id = 3 : i32} : vector<[4]x[4]xf32>
+// CHECK: arm_sme.move_vector_to_tile_slice {{.*}} {tile_id = 0 : i32} : vector<[4]xf32> into vector<[4]x[4]xf32>
+// CHECK-NOT tile_id = 16
+func.func @cond_branch_with_backedge(%slice: vector<[4]xf32>) {
+  %tileA = arm_sme.get_tile : vector<[4]x[4]xf32>
+  %tileB = arm_sme.get_tile : vector<[4]x[4]xf32>
+  %tileC = arm_sme.get_tile : vector<[4]x[4]xf32>
+  %tileD = arm_sme.get_tile : vector<[4]x[4]xf32>
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c10 = arith.constant 10 : index
+  // Live here: %tileA, %tileB, %tileC, %tileD
+  cf.br ^bb1(%c0, %tileA : index, vector<[4]x[4]xf32>)
+^bb1(%currentIndex: index, %iterTile: vector<[4]x[4]xf32>):
+  %continueLoop = arith.cmpi slt, %currentIndex, %c10 : index
+  // Live here: %iterTile, %tileB, %tileC, %tileD
+  cf.cond_br %continueLoop, ^bb2, ^bb3(%iterTile, %tileB, %tileC, %tileD : vector<[4]x[4]xf32>, vector<[4]x[4]xf32>, vector<[4]x[4]xf32>, vector<[4]x[4]xf32>)
+^bb2:
+  // Live here: %iterTile, %tileB, %tileC, %tileD
+  %nextTile = arm_sme.move_vector_to_tile_slice %slice, %iterTile, %currentIndex : vector<[4]xf32> into vector<[4]x[4]xf32>
+  %nextIndex = arith.addi %currentIndex, %c1 : index
+  cf.br ^bb1(%nextIndex, %nextTile : index, vector<[4]x[4]xf32>)
+^bb3(%finalTileA: vector<[4]x[4]xf32>, %finalTileB: vector<[4]x[4]xf32>, %finalTileC: vector<[4]x[4]xf32>, %finalTileD: vector<[4]x[4]xf32>):
+  // Live here: %finalTileA, %finalTileB, %finalTileC, %finalTileD
+  return
+}
