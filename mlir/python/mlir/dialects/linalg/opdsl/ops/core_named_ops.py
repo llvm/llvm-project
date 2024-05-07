@@ -352,7 +352,7 @@ def powf(
 
 
 @linalg_structured_op
-def selectf(
+def select(
     cond=TensorDef(U),
     lhs=TensorDef(T1),
     rhs=TensorDef(T1),
