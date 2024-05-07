@@ -61,6 +61,79 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
   const LLT v2s64 = LLT::fixed_vector(2, 64);
   const LLT v2p0 = LLT::fixed_vector(2, p0);
 
+  // Scalable vector sizes range from 128 to 2048
+  // Note that subtargets may not support the full range.
+  // See [ScalableVecTypes] below.
+  const LLT nxv16s8 = LLT::scalable_vector(16, s8);
+  const LLT nxv32s8 = LLT::scalable_vector(32, s8);
+  const LLT nxv64s8 = LLT::scalable_vector(64, s8);
+  const LLT nxv128s8 = LLT::scalable_vector(128, s8);
+  const LLT nxv256s8 = LLT::scalable_vector(256, s8);
+
+  const LLT nxv8s16 = LLT::scalable_vector(8, s16);
+  const LLT nxv16s16 = LLT::scalable_vector(16, s16);
+  const LLT nxv32s16 = LLT::scalable_vector(32, s16);
+  const LLT nxv64s16 = LLT::scalable_vector(64, s16);
+  const LLT nxv128s16 = LLT::scalable_vector(128, s16);
+
+  const LLT nxv4s32 = LLT::scalable_vector(4, s32); 
+  const LLT nxv8s32 = LLT::scalable_vector(8, s32); 
+  const LLT nxv16s32 = LLT::scalable_vector(16, s32); 
+  const LLT nxv32s32 = LLT::scalable_vector(32, s32);
+  const LLT nxv64s32 = LLT::scalable_vector(64, s32);
+
+  const LLT nxv2s64 = LLT::scalable_vector(2, s64);
+  const LLT nxv4s64 = LLT::scalable_vector(4, s64);
+  const LLT nxv8s64 = LLT::scalable_vector(8, s64);
+  const LLT nxv16s64 = LLT::scalable_vector(16, s64);
+  const LLT nxv32s64 = LLT::scalable_vector(32, s64);
+
+  const LLT nxv2p0 = LLT::scalable_vector(2, p0);
+  const LLT nxv4p0 = LLT::scalable_vector(4, p0);
+  const LLT nxv8p0 = LLT::scalable_vector(8, p0);
+  const LLT nxv16p0 = LLT::scalable_vector(16, p0);
+  const LLT nxv32p0 = LLT::scalable_vector(32, p0);
+
+  const auto ScalableVec128 = {
+    nxv16s8, nxv8s16, nxv4s32, nxv2s64, nxv2p0,
+  };
+  const auto ScalableVec256 = {
+    nxv32s8, nxv16s16, nxv8s32, nxv4s64, nxv4p0,
+  };
+  const auto ScalableVec512 = {
+    nxv64s8, nxv32s16, nxv16s32, nxv8s64, nxv8p0,
+  };
+  const auto ScalableVec1024 = {
+    nxv128s8, nxv64s16, nxv32s32, nxv16s64, nxv16p0,
+  };
+  const auto ScalableVec2048 = {
+    nxv256s8, nxv128s16, nxv64s32, nxv32s64, nxv32p0,
+  };
+
+  /// Scalable vector types supported by the sub target.
+  /// Empty if SVE is not supported.
+  SmallVector<LLT> ScalableVecTypes;
+  
+  if (ST.hasSVE()) {
+    // Add scalable vector types that are supported by the subtarget
+    const auto MinSize = ST.getMinSVEVectorSizeInBits();
+    auto MaxSize = ST.getMaxSVEVectorSizeInBits();
+    if (MaxSize == 0) {
+      // Unknown max size, assume the target supports all sizes.
+      MaxSize = 2048; 
+    }
+    if (MinSize <= 128 && 128 <= MaxSize)
+      ScalableVecTypes.append(ScalableVec128);
+    if (MinSize <= 256 && 256 <= MaxSize)
+      ScalableVecTypes.append(ScalableVec256);
+    if (MinSize <= 512 && 512 <= MaxSize)
+      ScalableVecTypes.append(ScalableVec512);
+    if (MinSize <= 1024 && 1024 <= MaxSize)
+      ScalableVecTypes.append(ScalableVec1024);
+    if (MinSize <= 2048 && 2048 <= MaxSize)
+      ScalableVecTypes.append(ScalableVec2048);
+  }
+
   std::initializer_list<LLT> PackedVectorAllTypeList = {/* Begin 128bit types */
                                                         v16s8, v8s16, v4s32,
                                                         v2s64, v2p0,
@@ -329,6 +402,18 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
     return ValTy.isPointerVector() && ValTy.getAddressSpace() == 0;
   };
 
+  const auto IsSameScalableVecTy = [=](const LegalityQuery &Query) {
+    // Legal if loading a scalable vector type
+    // into a scalable vector register of the exactly same type
+    if (!Query.Types[0].isScalableVector() || Query.Types[1] != p0)
+      return false;
+    if (Query.MMODescrs[0].MemoryTy != Query.Types[0])
+      return false;
+    if (Query.MMODescrs[0].AlignInBits < 128)
+      return false;
+    return is_contained(ScalableVecTypes, Query.Types[0]);
+  };
+
   getActionDefinitionsBuilder(G_LOAD)
       .customIf([=](const LegalityQuery &Query) {
         return HasRCPC3 && Query.Types[0] == s128 &&
@@ -354,6 +439,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       // These extends are also legal
       .legalForTypesWithMemDesc(
           {{s32, p0, s8, 8}, {s32, p0, s16, 8}, {s64, p0, s32, 8}})
+      .legalIf(IsSameScalableVecTy)
       .widenScalarToNextPow2(0, /* MinSize = */ 8)
       .clampMaxNumElements(0, s8, 16)
       .clampMaxNumElements(0, s16, 8)
@@ -398,7 +484,9 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
            {s64, p0, s64, 8},   {s64, p0, s32, 8}, // truncstorei32 from s64
            {p0, p0, s64, 8},    {s128, p0, s128, 8},  {v16s8, p0, s128, 8},
            {v8s8, p0, s64, 8},  {v4s16, p0, s64, 8},  {v8s16, p0, s128, 8},
-           {v2s32, p0, s64, 8}, {v4s32, p0, s128, 8}, {v2s64, p0, s128, 8}})
+           {v2s32, p0, s64, 8}, {v4s32, p0, s128, 8}, {v2s64, p0, s128, 8},
+          })
+      .legalIf(IsSameScalableVecTy)
       .clampScalar(0, s8, s64)
       .lowerIf([=](const LegalityQuery &Query) {
         return Query.Types[0].isScalar() &&
@@ -440,8 +528,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
           {p0, v4s32, v4s32, 8},
           {p0, v2s64, v2s64, 8},
           {p0, v2p0, v2p0, 8},
-          {p0, s128, s128, 8},
-      })
+          {p0, s128, s128, 8}})
       .unsupported();
 
   auto IndexedLoadBasicPred = [=](const LegalityQuery &Query) {

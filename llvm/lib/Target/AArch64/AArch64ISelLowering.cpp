@@ -26375,12 +26375,20 @@ bool AArch64TargetLowering::shouldLocalize(
   return TargetLoweringBase::shouldLocalize(MI, TTI);
 }
 
+static bool isScalableTySupported(const unsigned Op) {
+  return Op == Instruction::Load || Op == Instruction::Store;
+}
+
 bool AArch64TargetLowering::fallBackToDAGISel(const Instruction &Inst) const {
-  if (Inst.getType()->isScalableTy())
-    return true;
+  const auto ScalableTySupported = isScalableTySupported(Inst.getOpcode());
+
+  // Fallback for scalable vectors
+  if (Inst.getType()->isScalableTy() && !ScalableTySupported) {
+      return true;
+  }
 
   for (unsigned i = 0; i < Inst.getNumOperands(); ++i)
-    if (Inst.getOperand(i)->getType()->isScalableTy())
+    if (Inst.getOperand(i)->getType()->isScalableTy() && !ScalableTySupported)
       return true;
 
   if (const AllocaInst *AI = dyn_cast<AllocaInst>(&Inst)) {

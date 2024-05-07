@@ -652,17 +652,17 @@ bool GIMatchTableExecutor::executeMatchTable(
       MachineMemOperand *MMO =
           *(State.MIs[InsnID]->memoperands_begin() + MMOIdx);
 
-      unsigned Size = MRI.getType(MO.getReg()).getSizeInBits();
+      const auto Size = MRI.getType(MO.getReg()).getSizeInBits();
       if (MatcherOpcode == GIM_CheckMemorySizeEqualToLLT &&
-          MMO->getSizeInBits().getValue() != Size) {
+          MMO->getSizeInBits() != Size) {
         if (handleReject() == RejectAndGiveUp)
           return false;
       } else if (MatcherOpcode == GIM_CheckMemorySizeLessThanLLT &&
-                 MMO->getSizeInBits().getValue() >= Size) {
+                 MMO->getSizeInBits().getValue() >= Size.getKnownMinValue()) {
         if (handleReject() == RejectAndGiveUp)
           return false;
       } else if (MatcherOpcode == GIM_CheckMemorySizeGreaterThanLLT &&
-                 MMO->getSizeInBits().getValue() <= Size)
+                 MMO->getSizeInBits().getValue() <= Size.getKnownMinValue())
         if (handleReject() == RejectAndGiveUp)
           return false;
 

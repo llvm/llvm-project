@@ -901,6 +901,27 @@ static unsigned selectLoadStoreUIOp(unsigned GenericOpc, unsigned RegBankID,
   return GenericOpc;
 }
 
+/// Select the AArch64 opcode for the G_LOAD or G_STORE operation for scalable 
+/// vectors.
+/// \p ElementSize size of the element of the scalable vector
+static unsigned selectLoadStoreSVEOp(const unsigned GenericOpc,
+                                     const unsigned ElementSize) {
+  const bool isStore = GenericOpc == TargetOpcode::G_STORE;
+  
+  switch (ElementSize) {
+    case 8:
+      return isStore ? AArch64::ST1B : AArch64::LD1B;
+    case 16:
+      return isStore ? AArch64::ST1H : AArch64::LD1H;
+    case 32:
+      return isStore ? AArch64::ST1W : AArch64::LD1W;
+    case 64:
+      return isStore ? AArch64::ST1D : AArch64::LD1D;
+  }
+  
+  return GenericOpc;
+}
+
 /// Helper function for selectCopy. Inserts a subregister copy from \p SrcReg
 /// to \p *To.
 ///
@@ -2853,8 +2874,8 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
       return false;
     }
 
-    uint64_t MemSizeInBytes = LdSt.getMemSize().getValue();
-    unsigned MemSizeInBits = LdSt.getMemSizeInBits().getValue();
+    uint64_t MemSizeInBytes = LdSt.getMemSize().getValue().getKnownMinValue();
+    unsigned MemSizeInBits = LdSt.getMemSizeInBits().getValue().getKnownMinValue();
     AtomicOrdering Order = LdSt.getMMO().getSuccessOrdering();
 
     // Need special instructions for atomics that affect ordering.
@@ -2906,9 +2927,23 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
     const LLT ValTy = MRI.getType(ValReg);
     const RegisterBank &RB = *RBI.getRegBank(ValReg, MRI, TRI);
 
+#ifndef NDEBUG
+    if (ValTy.isScalableVector()) {
+        assert(STI.hasSVE() 
+             && "Load/Store register operand is scalable vector "
+                "while SVE is not supported by the target");
+        // assert(RB.getID() == AArch64::SVRRegBankID 
+        //        && "Load/Store register operand is scalable vector "
+        //           "while its register bank is not SVR");
+    }
+#endif
+    
     // The code below doesn't support truncating stores, so we need to split it
     // again.
-    if (isa<GStore>(LdSt) && ValTy.getSizeInBits() > MemSizeInBits) {
+    // Truncate only if type is not scalable vector
+    const bool NeedTrunc = !ValTy.isScalableVector() 
+                      && ValTy.getSizeInBits().getFixedValue() > MemSizeInBits;
+    if (isa<GStore>(LdSt) && NeedTrunc) {
       unsigned SubReg;
       LLT MemTy = LdSt.getMMO().getMemoryType();
       auto *RC = getRegClassForTypeOnBank(MemTy, RB);
@@ -2921,7 +2956,7 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
                       .getReg(0);
       RBI.constrainGenericRegister(Copy, *RC, MRI);
       LdSt.getOperand(0).setReg(Copy);
-    } else if (isa<GLoad>(LdSt) && ValTy.getSizeInBits() > MemSizeInBits) {
+    } else if (isa<GLoad>(LdSt) && NeedTrunc) {
       // If this is an any-extending load from the FPR bank, split it into a regular
       // load + extend.
       if (RB.getID() == AArch64::FPRRegBankID) {
@@ -2951,10 +2986,19 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
     // instruction with an updated opcode, or a new instruction.
     auto SelectLoadStoreAddressingMode = [&]() -> MachineInstr * {
       bool IsStore = isa<GStore>(I);
-      const unsigned NewOpc =
-          selectLoadStoreUIOp(I.getOpcode(), RB.getID(), MemSizeInBits);
+      unsigned NewOpc;
+      if (ValTy.isScalableVector()) {
+        NewOpc = selectLoadStoreSVEOp(I.getOpcode(), ValTy.getElementType().getSizeInBits());
+      } else {
+        NewOpc = selectLoadStoreUIOp(I.getOpcode(), RB.getID(), MemSizeInBits);
+      }
       if (NewOpc == I.getOpcode())
         return nullptr;
+
+      if (ValTy.isScalableVector()) {
+        // Add the predicate register operand
+        I.addOperand(MachineOperand::CreatePredicate(true));
+      }
       // Check if we can fold anything into the addressing mode.
       auto AddrModeFns =
           selectAddrModeIndexed(I.getOperand(1), MemSizeInBytes);
@@ -2970,6 +3014,9 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
       Register CurValReg = I.getOperand(0).getReg();
       IsStore ? NewInst.addUse(CurValReg) : NewInst.addDef(CurValReg);
       NewInst.cloneMemRefs(I);
+      if (ValTy.isScalableVector()) {
+        NewInst.add(I.getOperand(1)); // Copy predicate register
+      }
       for (auto &Fn : *AddrModeFns)
         Fn(NewInst);
       I.eraseFromParent();

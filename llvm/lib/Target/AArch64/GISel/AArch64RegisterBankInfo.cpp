@@ -257,6 +257,7 @@ AArch64RegisterBankInfo::getRegBankFromRegClass(const TargetRegisterClass &RC,
   case AArch64::QQRegClassID:
   case AArch64::QQQRegClassID:
   case AArch64::QQQQRegClassID:
+  case AArch64::ZPRRegClassID:
     return getRegBank(AArch64::FPRRegBankID);
   case AArch64::GPR32commonRegClassID:
   case AArch64::GPR32RegClassID:
@@ -740,11 +741,14 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     LLT Ty = MRI.getType(MO.getReg());
     if (!Ty.isValid())
       continue;
-    OpSize[Idx] = Ty.getSizeInBits();
+    OpSize[Idx] = Ty.getSizeInBits().getKnownMinValue();
 
-    // As a top-level guess, vectors go in FPRs, scalars and pointers in GPRs.
+    // As a top-level guess, scalable vectors go in SVRs, non-scalable
+    // vectors go in FPRs, scalars and pointers in GPRs.
     // For floating-point instructions, scalars go in FPRs.
-    if (Ty.isVector() || isPreISelGenericFloatingPointOpcode(Opc) ||
+    if (Ty.isScalableVector()) 
+      OpRegBankIdx[Idx] = PMI_FirstFPR;
+    else if (Ty.isVector() || isPreISelGenericFloatingPointOpcode(Opc) ||
         Ty.getSizeInBits() > 64)
       OpRegBankIdx[Idx] = PMI_FirstFPR;
     else
