@@ -235,6 +235,49 @@ private:
   ControlBlockPackMatmulFn controlFn;
 };
 
+template <>
+struct BlockPackMatmul<linalg::GenericOp>
+    : public OpRewritePattern<linalg::GenericOp> {
+  BlockPackMatmul(MLIRContext *context, ControlBlockPackMatmulFn fun,
+                  PatternBenefit benefit = 1)
+      : OpRewritePattern<linalg::GenericOp>(context, benefit),
+        controlFn(std::move(fun)) {}
+
+  LogicalResult matchAndRewrite(linalg::GenericOp linalgOp,
+                                PatternRewriter &rewriter) const override {
+    // Match suitable generics.
+    if (failed(linalg::detail::verifyContractionInterface(
+            linalgOp.getOperation()))) {
+      return rewriter.notifyMatchFailure(linalgOp, "not a contraction");
+    }
+
+    using MapList = ArrayRef<ArrayRef<AffineExpr>>;
+    auto infer = [&](MapList m) {
+      return AffineMap::inferFromExprList(m, linalgOp.getContext());
+    };
+
+    AffineExpr i, j, k;
+    bindDims(linalgOp->getContext(), i, j, k);
+    SmallVector<AffineMap> maps = linalgOp.getIndexingMapsArray();
+
+    // For now, only match simple matmuls.
+    if (!(maps == infer({{i, k}, {k, j}, {i, j}}) ||
+          maps == infer({{k, i}, {k, j}, {i, j}}) ||
+          maps == infer({{i, k}, {j, k}, {i, j}}))) {
+      return rewriter.notifyMatchFailure(linalgOp, "not a suitable matmul");
+    }
+
+    FailureOr<PackResult> packedMatmul =
+        blockPackMatmul(rewriter, linalgOp, controlFn);
+    if (failed(packedMatmul))
+      return failure();
+    return success();
+  }
+
+private:
+  ControlBlockPackMatmulFn controlFn;
+};
+
 /// Convert linalg matmul ops to block layout and back.
 struct LinalgBlockPackMatmul
     : public impl::LinalgBlockPackMatmulBase<LinalgBlockPackMatmul> {
@@ -269,7 +312,8 @@ struct LinalgBlockPackMatmul
 
 void linalg::populateBlockPackMatmulPatterns(
     RewritePatternSet &patterns, const ControlBlockPackMatmulFn &controlFn) {
-  patterns.add<BlockPackMatmul<linalg::MatmulOp>,
+  patterns.add<BlockPackMatmul<linalg::GenericOp>,
+               BlockPackMatmul<linalg::MatmulOp>,
                BlockPackMatmul<linalg::BatchMatmulOp>,
                BlockPackMatmul<linalg::MatmulTransposeAOp>,
                BlockPackMatmul<linalg::BatchMatmulTransposeAOp>,
