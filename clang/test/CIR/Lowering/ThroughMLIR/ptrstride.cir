@@ -1,0 +1,78 @@
+// RUN: cir-opt %s -cir-to-mlir | FileCheck %s -check-prefix=MLIR
+// RUN: cir-opt %s -cir-to-mlir -cir-mlir-to-llvm | mlir-translate -mlir-to-llvmir | FileCheck %s -check-prefix=LLVM
+
+!s32i = !cir.int<s, 32>
+module {
+  cir.global "private" external @a : !cir.array<!s32i x 100>
+  cir.global "private" external @aa : !cir.array<!cir.array<!s32i x 100> x 100>
+
+  // int get_1d_array_value() { return a[1]; }
+  // MLIR-LABEL: func.func @get_1d_array_value() -> i32
+  // LLVM-LABEL: define i32 @get_1d_array_value()
+  cir.func @get_1d_array_value() -> !s32i {
+    // MLIR-NEXT: %[[BASE:.*]] = memref.get_global @a : memref<100xi32>
+    // MLIR-NEXT: %[[ONE:.*]] = arith.constant 1 : i32
+    // MLIR-NEXT: %[[INDEX:.*]] = arith.index_cast %[[ONE]] : i32 to index
+    // MLIR-NEXT: %[[VALUE:.*]] = memref.load %[[BASE]][%[[INDEX]]] : memref<100xi32>
+
+    // LLVM-NEXT: load i32, ptr getelementptr (i32, ptr @a, i64 1)
+
+    %1 = cir.get_global @a : !cir.ptr<!cir.array<!s32i x 100>>
+    %2 = cir.const #cir.int<1> : !s32i
+    %3 = cir.cast(array_to_ptrdecay, %1 : !cir.ptr<!cir.array<!s32i x 100>>), !cir.ptr<!s32i>
+    %4 = cir.ptr_stride(%3 : !cir.ptr<!s32i>, %2 : !s32i), !cir.ptr<!s32i>
+    %5 = cir.load %4 : !cir.ptr<!s32i>, !s32i
+    cir.return %5 : !s32i
+  }
+
+  // int get_2d_array_value() { return aa[1][2]; }
+  // MLIR-LABEL: func.func @get_2d_array_value() -> i32
+  // LLVM-LABEL: define i32 @get_2d_array_value()
+  cir.func @get_2d_array_value() -> !s32i {
+    // MLIR-NEXT: %[[BASE:.*]] = memref.get_global @aa : memref<100x100xi32>
+    // MLIR-NEXT: %[[ONE:.*]] = arith.constant 1 : i32
+    // MLIR-NEXT: %[[INDEX1:.*]] = arith.index_cast %[[ONE]] : i32 to index
+    // MLIR-NEXT: %[[TWO:.*]] = arith.constant 2 : i32
+    // MLIR-NEXT: %[[INDEX2:.*]] = arith.index_cast %[[TWO]] : i32 to index
+    // MLIR-NEXT: %[[VALUE:.*]] = memref.load %[[BASE]][%[[INDEX1]], %[[INDEX2]]] : memref<100x100xi32>
+
+    // LLVM-NEXT: load i32, ptr getelementptr (i32, ptr @aa, i64 102)
+
+    %1 = cir.get_global @aa : !cir.ptr<!cir.array<!cir.array<!s32i x 100> x 100>>
+    %2 = cir.const #cir.int<1> : !s32i
+    %3 = cir.cast(array_to_ptrdecay, %1 : !cir.ptr<!cir.array<!cir.array<!s32i x 100> x 100>>), !cir.ptr<!cir.array<!s32i x 100>>
+    %4 = cir.ptr_stride(%3 : !cir.ptr<!cir.array<!s32i x 100>>, %2 : !s32i), !cir.ptr<!cir.array<!s32i x 100>>
+    %5 = cir.const #cir.int<2> : !s32i
+    %6 = cir.cast(array_to_ptrdecay, %4 : !cir.ptr<!cir.array<!s32i x 100>>), !cir.ptr<!s32i>
+    %7 = cir.ptr_stride(%6 : !cir.ptr<!s32i>, %5 : !s32i), !cir.ptr<!s32i>
+    %8 = cir.load %7 : !cir.ptr<!s32i>, !s32i
+    cir.return %8 : !s32i
+  }
+
+  // void inc_1d_array_value() { a[1] += 2; }
+  // MLIR-LABEL: func.func @inc_1d_array_value()
+  // LLVM-LABEL: define void @inc_1d_array_value()
+  cir.func @inc_1d_array_value() {
+    // MLIR-NEXT: %[[TWO:.*]] = arith.constant 2 : i32
+    // MLIR-NEXT: %[[BASE:.*]] = memref.get_global @a : memref<100xi32>
+    // MLIR-NEXT: %[[ONE:.*]] = arith.constant 1 : i32
+    // MLIR-NEXT: %[[INDEX:.*]] = arith.index_cast %[[ONE]] : i32 to index
+    // MLIR-NEXT: %[[VALUE:.*]] = memref.load %[[BASE]][%[[INDEX]]] : memref<100xi32>
+    // MLIR-NEXT: %[[VALUE_INC:.*]] = arith.addi %[[VALUE]], %[[TWO]] : i32
+    // MLIR-NEXT: memref.store %[[VALUE_INC]], %[[BASE]][%[[INDEX]]] : memref<100xi32>
+
+    // LLVM-NEXT: %[[VALUE:.*]] = load i32, ptr getelementptr (i32, ptr @a, i64 1)
+    // LLVM-NEXT: %[[VALUE_INC:.*]] = add i32 %[[VALUE]], 2
+    // LLVM-NEXT: store i32 %[[VALUE_INC]], ptr getelementptr (i32, ptr @a, i64 1)
+
+    %0 = cir.const #cir.int<2> : !s32i
+    %1 = cir.get_global @a : !cir.ptr<!cir.array<!s32i x 100>>
+    %2 = cir.const #cir.int<1> : !s32i
+    %3 = cir.cast(array_to_ptrdecay, %1 : !cir.ptr<!cir.array<!s32i x 100>>), !cir.ptr<!s32i>
+    %4 = cir.ptr_stride(%3 : !cir.ptr<!s32i>, %2 : !s32i), !cir.ptr<!s32i>
+    %5 = cir.load %4 : !cir.ptr<!s32i>, !s32i
+    %6 = cir.binop(add, %5, %0) : !s32i
+    cir.store %6, %4 : !s32i, !cir.ptr<!s32i>
+    cir.return
+  }
+}
