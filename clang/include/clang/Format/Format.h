@@ -5387,10 +5387,11 @@ extern const char *DefaultFallbackStyle;
 /// \returns FormatStyle as specified by ``StyleName``. If ``StyleName`` is
 /// "file" and no file is found, returns ``FallbackStyle``. If no style could be
 /// determined, returns an Error.
-Expected<FormatStyle> getStyle(StringRef StyleName, StringRef FileName,
-                               StringRef FallbackStyle, StringRef Code = "",
-                               llvm::vfs::FileSystem *FS = nullptr,
-                               bool AllowUnknownOptions = false);
+Expected<FormatStyle>
+getStyle(StringRef StyleName, StringRef FileName, StringRef FallbackStyle,
+         StringRef Code = "", llvm::vfs::FileSystem *FS = nullptr,
+         bool AllowUnknownOptions = false,
+         llvm::SourceMgr::DiagHandlerTy DiagHandler = nullptr);
 
 // Guesses the language from the ``FileName`` and ``Code`` to be formatted.
 // Defaults to FormatStyle::LK_Cpp.
