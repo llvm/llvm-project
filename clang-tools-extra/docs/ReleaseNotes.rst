@@ -69,6 +69,9 @@ Code completion
 Code actions
 ^^^^^^^^^^^^
 
+- The tweak for turning unscoped into scoped enums now removes redundant prefixes
+  from the enum values.
+
 Signature help
 ^^^^^^^^^^^^^^
 
@@ -165,6 +168,10 @@ New checks
 
 New check aliases
 ^^^^^^^^^^^^^^^^^
+
+- New alias :doc:`cert-int09-c <clang-tidy/checks/cert/int09-c>` to
+  :doc:`readability-enum-initial-value <clang-tidy/checks/readability/enum-initial-value>`
+  was added.
 
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
