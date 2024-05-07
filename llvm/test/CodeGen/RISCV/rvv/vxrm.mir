@@ -24,7 +24,6 @@ body:     |
     %0:vr = COPY $v8
     %1:vr = COPY $v9
     %2:gprnox0 = COPY $x10
-    %pt:vr = IMPLICIT_DEF
-    renamable $v8 = PseudoVAADD_VV_MF8 %pt, %0, %1, 0, %2, 3 /* e8 */, 0
+    renamable $v8 = PseudoVAADD_VV_MF8 undef $noreg, %0, %1, 0, %2, 3 /* e8 */, 0
     PseudoRET implicit $v8
 ...
