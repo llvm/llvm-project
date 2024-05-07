@@ -47,6 +47,10 @@ using namespace llvm;
 
 DEFINE_SIMPLE_CONVERSION_FUNCTIONS(OperandBundleDef, LLVMOperandBundleRef)
 
+inline BasicBlock **unwrap(LLVMBasicBlockRef *BBs) {
+  return reinterpret_cast<BasicBlock **>(BBs);
+}
+
 #define DEBUG_TYPE "ir"
 
 void llvm::initializeCore(PassRegistry &Registry) {
@@ -3283,14 +3287,9 @@ LLVMValueRef LLVMBuildCallBr(LLVMBuilderRef B, LLVMTypeRef Ty, LLVMValueRef Fn,
     OBs.push_back(*OB);
   }
 
-  SmallVector<BasicBlock *, 8> IDs;
-  for (auto ID : ArrayRef(IndirectDests, NumIndirectDests)) {
-    BasicBlock *BB = unwrap(ID);
-    IDs.push_back(BB);
-  }
-
   return wrap(unwrap(B)->CreateCallBr(
-      unwrap<FunctionType>(Ty), unwrap(Fn), unwrap(DefaultDest), IDs,
+      unwrap<FunctionType>(Ty), unwrap(Fn), unwrap(DefaultDest),
+      ArrayRef(unwrap(IndirectDests), NumIndirectDests),
       ArrayRef<Value *>(unwrap(Args), NumArgs), OBs, Name));
 }
 
