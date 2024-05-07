@@ -210,6 +210,12 @@ what to add to your calendar invite.
        `gcal <https://calendar.google.com/calendar/u/0?cid=MDI1ODI1MDdiYWM3OWQxODY5MDA3MTI1NjZlYzNmYzY5YjMzYWMyNGQ3ZGUwYThjNzZjN2IxOTk3NmYxOTBjMEBncm91cC5jYWxlbmRhci5nb29nbGUuY29t>`__
      - `Meeting details/agenda: <https://docs.google.com/document/d/1QcmUlWftPlBi-Wz6b6PipqJfvjpJ-OuRMRnN9Dm2t0c>`__
 
+   * - Vectorizer Improvement Working Group
+     - Every 2nd Tuesday of the month
+     - `ics <>`__
+       `gcal <>`__
+     - `Meeting details/agenda: <https://docs.google.com/document/d/1Glzy2JiWuysbD-HBWGUOkZqT09GJ4_Ljodr0lXD5XfQ/edit>`__
+
 Past online sync-ups
 ^^^^^^^^^^^^^^^^^^^^
 
