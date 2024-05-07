@@ -1219,7 +1219,7 @@ using ControlBlockPackMatmulFn =
 ///
 /// Return failure if no valid packing options are provided.
 FailureOr<PackResult>
-blockPackMatmul(RewriterBase &rewriter, linalg::LinalgOp matmulOp,
+blockPackMatmul(RewriterBase &rewriter, linalg::LinalgOp linalgOp,
                 const ControlBlockPackMatmulFn &controlPackMatmul);
 
 /// Rewrite tensor.from_elements to linalg.generic.

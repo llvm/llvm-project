@@ -41,14 +41,14 @@ static std::optional<int64_t> getConstantRange(const Range &range) {
 }
 
 /// Return true if all dimensions are fully divisible by the respective tiles.
-static bool validateFullTilesOnDims(linalg::LinalgOp matmulOp,
+static bool validateFullTilesOnDims(linalg::LinalgOp linalgOp,
                                     ArrayRef<OpFoldResult> tiles,
                                     ArrayRef<int64_t> dims) {
   if (dims.size() != tiles.size() || tiles.empty())
     return false;
 
   FailureOr<ContractionDimensions> contractDims =
-      inferContractionDims(matmulOp);
+      inferContractionDims(linalgOp);
   if (failed(contractDims))
     return false;
   unsigned batchDimsOffset = contractDims->batch.size();
@@ -59,7 +59,7 @@ static bool validateFullTilesOnDims(linalg::LinalgOp matmulOp,
   for (size_t i = 0; i < offsetDims.size(); i++)
     offsetDims[i] += batchDimsOffset;
 
-  auto tileOp = cast<TilingInterface>(matmulOp.getOperation());
+  auto tileOp = cast<TilingInterface>(linalgOp.getOperation());
   OpBuilder builder(tileOp);
   OpBuilder::InsertionGuard guard(builder);
   SmallVector<Range> iterationDomain = tileOp.getIterationDomain(builder);
@@ -87,7 +87,7 @@ static bool validateFullTilesOnDims(linalg::LinalgOp matmulOp,
 
 /// Return failure or packed matmul with one of its operands tranposed.
 static FailureOr<PackTransposeResult>
-transposePackedMatmul(RewriterBase &rewriter, linalg::LinalgOp matmulOp,
+transposePackedMatmul(RewriterBase &rewriter, linalg::LinalgOp linalgOp,
                       tensor::PackOp packOp, AffineMap operandMap,
                       ArrayRef<unsigned> blocksStartDimPos,
                       bool transposeOuterBlocks, bool transposeInnerBlocks,
@@ -129,7 +129,7 @@ transposePackedMatmul(RewriterBase &rewriter, linalg::LinalgOp matmulOp,
   outerPerm = offsetPerms;
 
   FailureOr<PackTransposeResult> packTransposedMatmul =
-      packTranspose(rewriter, packOp, matmulOp,
+      packTranspose(rewriter, packOp, linalgOp,
                     /*maybeUnPackOp=*/nullptr, outerPerm, innerPerm);
 
   return packTransposedMatmul;
@@ -137,41 +137,41 @@ transposePackedMatmul(RewriterBase &rewriter, linalg::LinalgOp matmulOp,
 
 /// Pack a matmul operation into blocked 4D layout.
 FailureOr<PackResult>
-linalg::blockPackMatmul(RewriterBase &rewriter, linalg::LinalgOp matmulOp,
+linalg::blockPackMatmul(RewriterBase &rewriter, linalg::LinalgOp linalgOp,
                         const ControlBlockPackMatmulFn &controlPackMatmul) {
-  if (matmulOp.hasDynamicShape())
-    return rewriter.notifyMatchFailure(matmulOp, "require static shape");
+  if (linalgOp.hasDynamicShape())
+    return rewriter.notifyMatchFailure(linalgOp, "require static shape");
 
-  if (matmulOp.hasPureBufferSemantics())
-    return rewriter.notifyMatchFailure(matmulOp, "require tensor semantics");
+  if (linalgOp.hasPureBufferSemantics())
+    return rewriter.notifyMatchFailure(linalgOp, "require tensor semantics");
 
-  std::optional<BlockPackMatmulOptions> options = controlPackMatmul(matmulOp);
+  std::optional<BlockPackMatmulOptions> options = controlPackMatmul(linalgOp);
   if (!options)
-    return rewriter.notifyMatchFailure(matmulOp, "invalid packing options");
+    return rewriter.notifyMatchFailure(linalgOp, "invalid packing options");
 
   if (options->blockFactors.size() != 3)
-    return rewriter.notifyMatchFailure(matmulOp, "require 3 tile factors");
+    return rewriter.notifyMatchFailure(linalgOp, "require 3 tile factors");
 
   SmallVector<OpFoldResult> mnkTiles =
       getAsOpFoldResult(rewriter.getI64ArrayAttr(options->blockFactors));
 
   // If padding is disabled, make sure that dimensions can be packed cleanly.
   if (!options->allowPadding &&
-      !validateFullTilesOnDims(matmulOp, mnkTiles, options->mnkOrder)) {
-    return rewriter.notifyMatchFailure(matmulOp,
+      !validateFullTilesOnDims(linalgOp, mnkTiles, options->mnkOrder)) {
+    return rewriter.notifyMatchFailure(linalgOp,
                                        "expect packing full tiles only");
   }
 
   OpBuilder::InsertionGuard guard(rewriter);
   // The op is replaced, we need to set the insertion point after it.
-  rewriter.setInsertionPointAfter(matmulOp);
+  rewriter.setInsertionPointAfter(linalgOp);
 
   // Pack the matmul operation into blocked layout with two levels of
   // subdivision:
   //   - major 2D blocks - outer dimensions, consist of minor blocks
   //   - minor 2D blocks - inner dimensions, consist of scalar elements
   FailureOr<PackResult> packedMatmul = packMatmulGreedily(
-      rewriter, matmulOp, mnkTiles, options->mnkPaddedSizesNextMultipleOf,
+      rewriter, linalgOp, mnkTiles, options->mnkPaddedSizesNextMultipleOf,
       options->mnkOrder);
   if (failed(packedMatmul))
     return failure();
@@ -225,10 +225,10 @@ struct BlockPackMatmul : public OpRewritePattern<OpTy> {
                   PatternBenefit benefit = 1)
       : OpRewritePattern<OpTy>(context, benefit), controlFn(std::move(fun)) {}
 
-  LogicalResult matchAndRewrite(OpTy matmulOp,
+  LogicalResult matchAndRewrite(OpTy linalgOp,
                                 PatternRewriter &rewriter) const override {
     FailureOr<PackResult> packedMatmul =
-        blockPackMatmul(rewriter, matmulOp, controlFn);
+        blockPackMatmul(rewriter, linalgOp, controlFn);
     if (failed(packedMatmul))
       return failure();
     return success();
