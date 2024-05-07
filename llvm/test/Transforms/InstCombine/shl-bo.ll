@@ -294,6 +294,23 @@ define i8 @lshr_and_or(i8 %a, i8 %y)  {
   ret i8 %l
 }
 
+define i8 @lshr_and_or_disjoint(i8 %a, i8 %y)  {
+; CHECK-LABEL: @lshr_and_or_disjoint(
+; CHECK-NEXT:    [[X:%.*]] = srem i8 [[A:%.*]], 42
+; CHECK-NEXT:    [[B1:%.*]] = shl i8 [[X]], 2
+; CHECK-NEXT:    [[Y_MASK:%.*]] = and i8 [[Y:%.*]], 52
+; CHECK-NEXT:    [[L:%.*]] = or i8 [[Y_MASK]], [[B1]]
+; CHECK-NEXT:    ret i8 [[L]]
+;
+  %x = srem i8 %a, 42 ; thwart complexity-based canonicalization
+  %r = lshr i8 %y, 2
+  %m = and i8 %r, 13
+  %b = or disjoint i8 %x, %m
+  %l = shl i8 %b, 2
+  ret i8 %l
+}
+
+
 define <2 x i8> @lshr_and_or_commute_splat(<2 x i8> %a, <2 x i8> %y)  {
 ; CHECK-LABEL: @lshr_and_or_commute_splat(
 ; CHECK-NEXT:    [[X:%.*]] = srem <2 x i8> [[A:%.*]], <i8 42, i8 42>
