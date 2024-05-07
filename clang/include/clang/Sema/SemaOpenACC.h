@@ -134,6 +134,8 @@ public:
               ClauseKind == OpenACCClauseKind::Create ||
               ClauseKind == OpenACCClauseKind::PCreate ||
               ClauseKind == OpenACCClauseKind::PresentOrCreate ||
+              ClauseKind == OpenACCClauseKind::Attach ||
+              ClauseKind == OpenACCClauseKind::DevicePtr ||
               ClauseKind == OpenACCClauseKind::FirstPrivate) &&
              "Parsed clause kind does not have a var-list");
       return std::get<VarListDetails>(Details).VarList;
@@ -217,6 +219,8 @@ public:
               ClauseKind == OpenACCClauseKind::Create ||
               ClauseKind == OpenACCClauseKind::PCreate ||
               ClauseKind == OpenACCClauseKind::PresentOrCreate ||
+              ClauseKind == OpenACCClauseKind::Attach ||
+              ClauseKind == OpenACCClauseKind::DevicePtr ||
               ClauseKind == OpenACCClauseKind::FirstPrivate) &&
              "Parsed clause kind does not have a var-list");
       assert((!IsReadOnly || ClauseKind == OpenACCClauseKind::CopyIn ||
@@ -251,6 +255,8 @@ public:
               ClauseKind == OpenACCClauseKind::Create ||
               ClauseKind == OpenACCClauseKind::PCreate ||
               ClauseKind == OpenACCClauseKind::PresentOrCreate ||
+              ClauseKind == OpenACCClauseKind::Attach ||
+              ClauseKind == OpenACCClauseKind::DevicePtr ||
               ClauseKind == OpenACCClauseKind::FirstPrivate) &&
              "Parsed clause kind does not have a var-list");
       assert((!IsReadOnly || ClauseKind == OpenACCClauseKind::CopyIn ||
@@ -314,6 +320,10 @@ public:
   /// Called when encountering a 'var' for OpenACC, ensures it is actually a
   /// declaration reference to a variable of the correct type.
   ExprResult ActOnVar(Expr *VarExpr);
+
+  /// Called to check the 'var' type is a variable of pointer type, necessary
+  /// for 'deviceptr' and 'attach' clauses. Returns true on success.
+  bool CheckVarIsPointerType(OpenACCClauseKind ClauseKind, Expr *VarExpr);
 
   /// Checks and creates an Array Section used in an OpenACC construct/clause.
   ExprResult ActOnArraySectionExpr(Expr *Base, SourceLocation LBLoc,
