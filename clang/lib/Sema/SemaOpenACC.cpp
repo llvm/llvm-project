@@ -170,6 +170,34 @@ bool doesClauseApplyToDirective(OpenACCDirectiveKind DirectiveKind,
     default:
       return false;
     }
+  case OpenACCClauseKind::Attach:
+    switch (DirectiveKind) {
+    case OpenACCDirectiveKind::Parallel:
+    case OpenACCDirectiveKind::Serial:
+    case OpenACCDirectiveKind::Kernels:
+    case OpenACCDirectiveKind::Data:
+    case OpenACCDirectiveKind::EnterData:
+    case OpenACCDirectiveKind::ParallelLoop:
+    case OpenACCDirectiveKind::SerialLoop:
+    case OpenACCDirectiveKind::KernelsLoop:
+      return true;
+    default:
+      return false;
+    }
+  case OpenACCClauseKind::DevicePtr:
+    switch (DirectiveKind) {
+    case OpenACCDirectiveKind::Parallel:
+    case OpenACCDirectiveKind::Serial:
+    case OpenACCDirectiveKind::Kernels:
+    case OpenACCDirectiveKind::Data:
+    case OpenACCDirectiveKind::Declare:
+    case OpenACCDirectiveKind::ParallelLoop:
+    case OpenACCDirectiveKind::SerialLoop:
+    case OpenACCDirectiveKind::KernelsLoop:
+      return true;
+    default:
+      return false;
+    }
   default:
     // Do nothing so we can go to the 'unimplemented' diagnostic instead.
     return true;
@@ -513,6 +541,48 @@ SemaOpenACC::ActOnClause(ArrayRef<const OpenACCClause *> ExistingClauses,
                                        Clause.getLParenLoc(), Clause.isZero(),
                                        Clause.getVarList(), Clause.getEndLoc());
   }
+  case OpenACCClauseKind::Attach: {
+    // Restrictions only properly implemented on 'compute' constructs, and
+    // 'compute' constructs are the only construct that can do anything with
+    // this yet, so skip/treat as unimplemented in this case.
+    if (!isOpenACCComputeDirectiveKind(Clause.getDirectiveKind()))
+      break;
+
+    // ActOnVar ensured that everything is a valid variable reference, but we
+    // still have to make sure it is a pointer type.
+    llvm::SmallVector<Expr *> VarList{Clause.getVarList().begin(),
+                                      Clause.getVarList().end()};
+    VarList.erase(std::remove_if(VarList.begin(), VarList.end(), [&](Expr *E) {
+      return CheckVarIsPointerType(OpenACCClauseKind::Attach, E);
+    }), VarList.end());
+    Clause.setVarListDetails(VarList,
+                             /*IsReadOnly=*/false, /*IsZero=*/false);
+
+    return OpenACCAttachClause::Create(getASTContext(), Clause.getBeginLoc(),
+                                       Clause.getLParenLoc(),
+                                       Clause.getVarList(), Clause.getEndLoc());
+  }
+  case OpenACCClauseKind::DevicePtr: {
+    // Restrictions only properly implemented on 'compute' constructs, and
+    // 'compute' constructs are the only construct that can do anything with
+    // this yet, so skip/treat as unimplemented in this case.
+    if (!isOpenACCComputeDirectiveKind(Clause.getDirectiveKind()))
+      break;
+
+    // ActOnVar ensured that everything is a valid variable reference, but we
+    // still have to make sure it is a pointer type.
+    llvm::SmallVector<Expr *> VarList{Clause.getVarList().begin(),
+                                      Clause.getVarList().end()};
+    VarList.erase(std::remove_if(VarList.begin(), VarList.end(), [&](Expr *E) {
+      return CheckVarIsPointerType(OpenACCClauseKind::DevicePtr, E);
+    }), VarList.end());
+    Clause.setVarListDetails(VarList,
+                             /*IsReadOnly=*/false, /*IsZero=*/false);
+
+    return OpenACCDevicePtrClause::Create(
+        getASTContext(), Clause.getBeginLoc(), Clause.getLParenLoc(),
+        Clause.getVarList(), Clause.getEndLoc());
+  }
   default:
     break;
   }
@@ -639,6 +709,36 @@ ExprResult SemaOpenACC::ActOnIntExpr(OpenACCDirectiveKind DK,
   // TODO OpenACC: Do we want to perform usual unary conversions here? When
   // doing codegen we might find that is necessary, but skip it for now.
   return IntExpr;
+}
+
+bool SemaOpenACC::CheckVarIsPointerType(OpenACCClauseKind ClauseKind,
+                                        Expr *VarExpr) {
+  // We already know that VarExpr is a proper reference to a variable, so we
+  // should be able to just take the type of the expression to get the type of
+  // the referenced variable.
+
+  // We've already seen an error, don't diagnose anything else.
+  if (!VarExpr || VarExpr->containsErrors())
+    return false;
+
+  if (isa<ArraySectionExpr>(VarExpr->IgnoreParenImpCasts()) ||
+      VarExpr->hasPlaceholderType(BuiltinType::ArraySection)) {
+    Diag(VarExpr->getExprLoc(), diag::err_array_section_use) << /*OpenACC=*/0;
+    Diag(VarExpr->getExprLoc(), diag::note_acc_expected_pointer_var);
+    return true;
+  }
+
+  QualType Ty = VarExpr->getType();
+  Ty = Ty.getNonReferenceType().getUnqualifiedType();
+
+  // Nothing we can do if this is a dependent type.
+  if (Ty->isDependentType())
+    return false;
+
+  if (!Ty->isPointerType())
+    return Diag(VarExpr->getExprLoc(), diag::err_acc_var_not_pointer_type)
+           << ClauseKind << Ty;
+  return false;
 }
 
 ExprResult SemaOpenACC::ActOnVar(Expr *VarExpr) {

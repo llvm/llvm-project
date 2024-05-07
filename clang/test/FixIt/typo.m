@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -triple x86_64-apple-darwin10 -DNON_FIXITS -verify -Wno-objc-root-class %s
 // RUN: cp %s %t
-// RUN: not %clang_cc1 -x objective-c -fsyntax-only -triple x86_64-apple-darwin10 -fixit -Wno-objc-root-class %t
+// RUN: not %clang_cc1 -x objective-c -triple x86_64-apple-darwin10 -fixit -Wno-objc-root-class %t
 // RUN: %clang_cc1 -x objective-c -fsyntax-only -triple x86_64-apple-darwin10 -pedantic -Werror -Wno-objc-root-class %t
 // RUN: grep "@implementation Sub3" %t
 
