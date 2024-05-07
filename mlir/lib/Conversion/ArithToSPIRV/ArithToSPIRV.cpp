@@ -17,6 +17,7 @@
 #include "mlir/Dialect/SPIRV/Transforms/SPIRVConversion.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/DialectResourceBlobManager.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
@@ -229,16 +230,29 @@ struct ConstantCompositeOpPattern final
     if (!srcType || srcType.getNumElements() == 1)
       return failure();
 
-    // arith.constant should only have vector or tenor types.
+    // arith.constant should only have vector or tensor types.
     assert((isa<VectorType, RankedTensorType>(srcType)));
 
     Type dstType = getTypeConverter()->convertType(srcType);
     if (!dstType)
       return failure();
 
-    auto dstElementsAttr = dyn_cast<DenseElementsAttr>(constOp.getValue());
-    if (!dstElementsAttr)
-      return failure();
+    // Import the resource into the IR to make use of the special handling of
+    // element types later on.
+    mlir::DenseElementsAttr dstElementsAttr;
+    if (auto denseElementsAttr =
+            dyn_cast<DenseElementsAttr>(constOp.getValue())) {
+      dstElementsAttr = denseElementsAttr;
+    } else if (auto resourceAttr =
+                   dyn_cast<DenseResourceElementsAttr>(constOp.getValue())) {
+
+      ArrayRef<char> ptr = resourceAttr.getRawHandle().getBlob()->getData();
+      dstElementsAttr =
+          DenseElementsAttr::getFromRawBuffer(resourceAttr.getType(), ptr);
+    } else {
+      return rewriter.notifyMatchFailure(constOp,
+                                         "Could not decode ElementsAttr");
+    }
 
     ShapedType dstAttrType = dstElementsAttr.getType();
 
