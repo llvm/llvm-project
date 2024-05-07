@@ -85,7 +85,7 @@ static bool validateFullTilesOnDims(linalg::LinalgOp linalgOp,
   return true;
 }
 
-/// Return failure or packed matmul with one of its operands tranposed.
+/// Return failure or packed matmul with one of its operands transposed.
 static FailureOr<PackTransposeResult>
 transposePackedMatmul(RewriterBase &rewriter, linalg::LinalgOp linalgOp,
                       tensor::PackOp packOp, AffineMap operandMap,
