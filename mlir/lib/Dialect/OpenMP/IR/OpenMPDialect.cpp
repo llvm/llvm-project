@@ -469,9 +469,8 @@ ParseResult parseClauseWithRegionArgs(
 static void printClauseWithRegionArgs(OpAsmPrinter &p, Operation *op,
                                       ValueRange argsSubrange,
                                       StringRef clauseName, ValueRange operands,
-                                      TypeRange types, ArrayAttr symbols,
-                                      bool printPrefixSuffix = true) {
-  if (printPrefixSuffix)
+                                      TypeRange types, ArrayAttr symbols) {
+  if (!clauseName.empty())
     p << clauseName << "(";
 
   llvm::interleaveComma(
@@ -479,7 +478,8 @@ static void printClauseWithRegionArgs(OpAsmPrinter &p, Operation *op,
         auto [sym, op, arg, type] = t;
         p << sym << " " << op << " -> " << arg << " : " << type;
       });
-  if (printPrefixSuffix)
+
+  if (!clauseName.empty())
     p << ") ";
 }
 
@@ -1089,9 +1089,9 @@ static void printPrivateList(OpAsmPrinter &p, Operation *op,
   MutableArrayRef argsSubrange(argsBegin + targetOp.getMapOperands().size(),
                                argsBegin + targetOp.getMapOperands().size() +
                                    privateVarTypes.size());
-  printClauseWithRegionArgs(p, op, argsSubrange, "private", privateVarOperands,
-                            privateVarTypes, privatizerSymbols,
-                            /*printPrefixSuffix=*/false);
+  printClauseWithRegionArgs(
+      p, op, argsSubrange, /*clauseName=*/llvm::StringRef{}, privateVarOperands,
+      privateVarTypes, privatizerSymbols);
 }
 
 static void printCaptureType(OpAsmPrinter &p, Operation *op,
@@ -1302,14 +1302,14 @@ void TargetOp::build(OpBuilder &builder, OperationState &state,
                      const TargetClauseOps &clauses) {
   MLIRContext *ctx = builder.getContext();
   // TODO Store clauses in op: allocateVars, allocatorVars, inReductionVars,
-  // inReductionDeclSymbols, privateVars, privatizers, reductionVars,
-  // reductionByRefAttr, reductionDeclSymbols.
+  // inReductionDeclSymbols, reductionVars, reductionByRefAttr,
+  // reductionDeclSymbols.
   TargetOp::build(
       builder, state, clauses.ifVar, clauses.deviceVar, clauses.threadLimitVar,
       makeArrayAttr(ctx, clauses.dependTypeAttrs), clauses.dependVars,
       clauses.nowaitAttr, clauses.isDevicePtrVars, clauses.hasDeviceAddrVars,
       clauses.mapVars, clauses.privateVars,
-      ArrayAttr::get(builder.getContext(), clauses.privatizers));
+      makeArrayAttr(ctx, clauses.privatizers));
 }
 
 LogicalResult TargetOp::verify() {
