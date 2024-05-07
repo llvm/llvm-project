@@ -3338,7 +3338,7 @@ def : GCNPat <
                         (as_i1timm $bound_ctrl))
 >;
 
-foreach vt = [i64, f64] in {
+foreach vt = Reg64Types.types in {
 def : GCNPat <
   (vt (int_amdgcn_update_dpp vt:$old, vt:$src, timm:$dpp_ctrl, timm:$row_mask,
                               timm:$bank_mask, timm:$bound_ctrl)),

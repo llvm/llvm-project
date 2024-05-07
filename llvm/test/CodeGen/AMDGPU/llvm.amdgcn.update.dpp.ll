@@ -81,6 +81,45 @@ define amdgpu_kernel void @update_dppf64_test(ptr addrspace(1) %arg, double %in1
   ret void
 }
 
+; GCN-LABEL: {{^}}update_dppv2i32_test:
+; GCN:     load_{{dwordx2|b64}} v[[[SRC_LO:[0-9]+]]:[[SRC_HI:[0-9]+]]]
+; GCN-DAG: v_mov_b32_dpp v{{[0-9]+}}, v[[SRC_LO]] quad_perm:[1,0,0,0] row_mask:0x1 bank_mask:0x1{{$}}
+; GCN-DAG: v_mov_b32_dpp v{{[0-9]+}}, v[[SRC_HI]] quad_perm:[1,0,0,0] row_mask:0x1 bank_mask:0x1{{$}}
+define amdgpu_kernel void @update_dppv2i32_test(ptr addrspace(1) %arg, <2 x i32> %in1, <2 x i32> %in2) {
+  %id = tail call i32 @llvm.amdgcn.workitem.id.x()
+  %gep = getelementptr inbounds <2 x i32>, ptr addrspace(1) %arg, i32 %id
+  %load = load <2 x i32>, ptr addrspace(1) %gep
+  %tmp0 = call <2 x i32> @llvm.amdgcn.update.dpp.v2i32(<2 x i32> %in1, <2 x i32> %load, i32 1, i32 1, i32 1, i1 false) #0
+  store <2 x i32> %tmp0, ptr addrspace(1) %gep
+  ret void
+}
+
+; GCN-LABEL: {{^}}update_dppv2f32_test:
+; GCN:     load_{{dwordx2|b64}} v[[[SRC_LO:[0-9]+]]:[[SRC_HI:[0-9]+]]]
+; GCN-DAG: v_mov_b32_dpp v{{[0-9]+}}, v[[SRC_LO]] quad_perm:[1,0,0,0] row_mask:0x1 bank_mask:0x1{{$}}
+; GCN-DAG: v_mov_b32_dpp v{{[0-9]+}}, v[[SRC_HI]] quad_perm:[1,0,0,0] row_mask:0x1 bank_mask:0x1{{$}}
+define amdgpu_kernel void @update_dppv2f32_test(ptr addrspace(1) %arg, <2 x float> %in1, <2 x float> %in2) {
+  %id = tail call i32 @llvm.amdgcn.workitem.id.x()
+  %gep = getelementptr inbounds <2 x float>, ptr addrspace(1) %arg, i32 %id
+  %load = load <2 x float>, ptr addrspace(1) %gep
+  %tmp0 = call <2 x float> @llvm.amdgcn.update.dpp.v2f32(<2 x float> %in1, <2 x float> %load, i32 1, i32 1, i32 1, i1 false) #0
+  store <2 x float> %tmp0, ptr addrspace(1) %gep
+  ret void
+}
+
+; GCN-LABEL: {{^}}update_dpp_p0_test:
+; GCN:     load_{{dwordx2|b64}} v[[[SRC_LO:[0-9]+]]:[[SRC_HI:[0-9]+]]]
+; GCN-DAG: v_mov_b32_dpp v{{[0-9]+}}, v[[SRC_LO]] quad_perm:[1,0,0,0] row_mask:0x1 bank_mask:0x1{{$}}
+; GCN-DAG: v_mov_b32_dpp v{{[0-9]+}}, v[[SRC_HI]] quad_perm:[1,0,0,0] row_mask:0x1 bank_mask:0x1{{$}}
+define amdgpu_kernel void @update_dpp_p0_test(ptr addrspace(1) %arg, ptr %in1, ptr %in2) {
+  %id = tail call i32 @llvm.amdgcn.workitem.id.x()
+  %gep = getelementptr inbounds ptr, ptr addrspace(1) %arg, i32 %id
+  %load = load ptr, ptr addrspace(1) %gep
+  %tmp0 = call ptr @llvm.amdgcn.update.dpp.p0(ptr %in1, ptr %load, i32 1, i32 1, i32 1, i1 false) #0
+  store ptr %tmp0, ptr addrspace(1) %gep
+  ret void
+}
+
 ; GCN-LABEL: {{^}}update_dppi64_imm_old_test:
 ; GCN-OPT-DAG: v_mov_b32_e32 v[[OLD_LO:[0-9]+]], 0x3afaedd9
 ; GFX8-OPT-DAG,GFX10-DAG: v_mov_b32_e32 v[[OLD_HI:[0-9]+]], 0x7047
@@ -510,6 +549,5 @@ declare <2 x i16> @llvm.amdgcn.update.dpp.v2i16(<2 x i16>, <2 x i16>, i32, i32, 
 declare <2 x half> @llvm.amdgcn.update.dpp.v2f16(<2 x half>, <2 x half>, i32, i32, i32, i1) #0
 declare float @llvm.amdgcn.update.dpp.f32(float, float, i32, i32, i32, i1) #0
 declare i64 @llvm.amdgcn.update.dpp.i64(i64, i64, i32, i32, i32, i1) #0
-declare double @llvm.amdgcn.update.dpp.f64(double, double, i32, i32, i32, i1) #0
 
 attributes #0 = { nounwind readnone convergent }
