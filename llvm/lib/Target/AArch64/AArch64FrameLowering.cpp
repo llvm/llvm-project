@@ -3128,7 +3128,7 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
     if (RPI.Type == RegPairInfo::ZPR || RPI.Type == RegPairInfo::PPR) {
       MFI.setStackID(FrameIdxReg1, TargetStackID::ScalableVector);
       if (RPI.isPaired())
-         MFI.setStackID(FrameIdxReg2, TargetStackID::ScalableVector);
+        MFI.setStackID(FrameIdxReg2, TargetStackID::ScalableVector);
     }
   }
   return true;
@@ -3262,15 +3262,15 @@ bool AArch64FrameLowering::restoreCalleeSavedRegisters(
             MachineMemOperand::MOLoad, Size, Alignment));
       }
       MIB.addReg(Reg1, getDefRegState(true));
-    MIB.addReg(AArch64::SP)
-        .addImm(RPI.Offset) // [sp, #offset*scale]
-                            // where factor*scale is implicit
-        .setMIFlag(MachineInstr::FrameDestroy);
-    MIB.addMemOperand(MF.getMachineMemOperand(
-        MachinePointerInfo::getFixedStack(MF, FrameIdxReg1),
-        MachineMemOperand::MOLoad, Size, Alignment));
-    if (NeedsWinCFI)
-      InsertSEH(MIB, TII, MachineInstr::FrameDestroy);
+      MIB.addReg(AArch64::SP)
+          .addImm(RPI.Offset) // [sp, #offset*scale]
+                              // where factor*scale is implicit
+          .setMIFlag(MachineInstr::FrameDestroy);
+      MIB.addMemOperand(MF.getMachineMemOperand(
+          MachinePointerInfo::getFixedStack(MF, FrameIdxReg1),
+          MachineMemOperand::MOLoad, Size, Alignment));
+      if (NeedsWinCFI)
+        InsertSEH(MIB, TII, MachineInstr::FrameDestroy);
     }
   }
   return true;
