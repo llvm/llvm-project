@@ -83,41 +83,7 @@ void dxil::createShaderModelMD(Module &M) {
 
 void dxil::createDXILVersionMD(Module &M) {
   Triple TT(Triple::normalize(M.getTargetTriple()));
-  VersionTuple Ver = VersionTuple(1, 0);
-  switch (TT.getSubArch()) {
-  case Triple::DXILSubArch_v1_0:
-    Ver = VersionTuple(1, 0);
-    break;
-  case Triple::DXILSubArch_v1_1:
-    Ver = VersionTuple(1, 1);
-    break;
-  case Triple::DXILSubArch_v1_2:
-    Ver = VersionTuple(1, 2);
-    break;
-  case Triple::DXILSubArch_v1_3:
-    Ver = VersionTuple(1, 3);
-    break;
-  case Triple::DXILSubArch_v1_4:
-    Ver = VersionTuple(1, 4);
-    break;
-  case Triple::DXILSubArch_v1_5:
-    Ver = VersionTuple(1, 5);
-    break;
-  case Triple::DXILSubArch_v1_6:
-    Ver = VersionTuple(1, 6);
-    break;
-  case Triple::DXILSubArch_v1_7:
-    Ver = VersionTuple(1, 7);
-    break;
-  case Triple::DXILSubArch_v1_8:
-    Ver = VersionTuple(1, 8);
-    break;
-  case Triple::NoSubArch:
-    break;
-  default:
-    llvm_unreachable("Unsupported subarch for DXIL generation.");
-    break;
-  }
+  VersionTuple Ver = TT.getDXILVersion();
   LLVMContext &Ctx = M.getContext();
   IRBuilder<> B(Ctx);
   NamedMDNode *Entry = M.getOrInsertNamedMetadata("dx.version");
