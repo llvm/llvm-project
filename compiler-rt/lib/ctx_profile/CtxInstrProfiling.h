@@ -60,7 +60,7 @@ private:
 
 // The memory available for allocation follows the Arena header, and we expect
 // it to be thus aligned.
-static_assert(sizeof(Arena) % ExpectedAlignment == 0);
+static_assert(alignof(Arena) == ExpectedAlignment);
 
 /// The contextual profile is a directed tree where each node has one parent. A
 /// node (ContextNode) corresponds to a function activation. The root of the
@@ -157,7 +157,7 @@ public:
 
 // Verify maintenance to ContextNode doesn't change this invariant, which makes
 // sure the inlined vectors are appropriately aligned.
-static_assert(sizeof(ContextNode) % Alignment == 0);
+static_assert(alignof(ContextNode) == ExpectedAlignment);
 
 /// ContextRoots are allocated by LLVM for entrypoints. LLVM is only concerned
 /// with allocating and zero-initializing the global value (as in, GlobalValue)
@@ -176,17 +176,26 @@ struct ContextRoot {
   // at the same position in the graph, not flattening.
   // Threads that cannot lock Taken (fail TryLock) are given a "scratch context"
   // - a buffer they can clobber, safely from a memory access perspective.
-  // We could consider relaxing the requirement of more than one thread entering
-  // by holding a few context trees per entrypoint and then aggregating them (as
-  // explained above) at the end of the profile collection - it's a tradeoff
-  // between collection time and memory use: higher precision can be obtained
-  // with either less concurrent collections but more collection time, or with
-  // more concurrent collections (==more memory) and less collection time.
-  // Note that concurrent collection does happen for different entrypoints,
-  // regardless.
+  //
+  // Note about "scratch"-ness: we currently ignore the data written in them
+  // (which is anyway clobbered). The design allows for that not be the case -
+  // because "scratch"-ness is first and foremost about not trying to build
+  // subcontexts, and is captured by tainting the pointer value (pointer to the
+  // memory treated as context), but right now, we drop that info.
+  //
+  // We could consider relaxing the requirement of more than one thread
+  // entering by holding a few context trees per entrypoint and then aggregating
+  // them (as explained above) at the end of the profile collection - it's a
+  // tradeoff between collection time and memory use: higher precision can be
+  // obtained with either less concurrent collections but more collection time,
+  // or with more concurrent collections (==more memory) and less collection
+  // time. Note that concurrent collection does happen for different
+  // entrypoints, regardless.
   ::__sanitizer::StaticSpinMutex Taken;
 
-  // Avoid surprises due to (unlikely) StaticSpinMutex changes.
+  // If (unlikely) StaticSpinMutex internals change, we need to modify the LLVM
+  // instrumentation lowering side because it is responsible for allocating and
+  // zero-initializing ContextRoots.
   static_assert(sizeof(Taken) == 1);
 };
 

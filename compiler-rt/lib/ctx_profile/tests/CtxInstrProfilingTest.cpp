@@ -32,7 +32,7 @@ TEST(ArenaTest, Basic) {
 
 TEST_F(ContextTest, Basic) {
   auto *Ctx = __llvm_ctx_profile_start_context(&Root, 1, 10, 4);
-  EXPECT_NE(Ctx, nullptr);
+  ASSERT_NE(Ctx, nullptr);
   EXPECT_NE(Root.CurrentMem, nullptr);
   EXPECT_EQ(Root.FirstMemBlock, Root.CurrentMem);
   EXPECT_EQ(Ctx->size(), sizeof(ContextNode) + 10 * sizeof(uint64_t) +
@@ -50,15 +50,15 @@ TEST_F(ContextTest, Basic) {
 
 TEST_F(ContextTest, Callsite) {
   auto *Ctx = __llvm_ctx_profile_start_context(&Root, 1, 10, 4);
-  int OpaqueValue = 0;
+  int FakeCalleeAddress = 0;
   const bool IsScratch = isScratch(Ctx);
   EXPECT_FALSE(IsScratch);
   // This is the sequence the caller performs - it's the lowering of the
   // instrumentation of the callsite "2". "2" is arbitrary here.
-  __llvm_ctx_profile_expected_callee[0] = &OpaqueValue;
+  __llvm_ctx_profile_expected_callee[0] = &FakeCalleeAddress;
   __llvm_ctx_profile_callsite[0] = &Ctx->subContexts()[2];
   // This is what the callee does
-  auto *Subctx = __llvm_ctx_profile_get_context(&OpaqueValue, 2, 3, 1);
+  auto *Subctx = __llvm_ctx_profile_get_context(&FakeCalleeAddress, 2, 3, 1);
   // We expect the subcontext to be appropriately placed and dimensioned
   EXPECT_EQ(Ctx->subContexts()[2], Subctx);
   EXPECT_EQ(Subctx->counters_size(), 3U);
@@ -74,10 +74,10 @@ TEST_F(ContextTest, Callsite) {
 
 TEST_F(ContextTest, ScratchNoCollection) {
   EXPECT_EQ(__llvm_ctx_profile_current_context_root, nullptr);
-  int OpaqueValue = 0;
+  int FakeCalleeAddress = 0;
   // this would be the very first function executing this. the TLS is empty,
   // too.
-  auto *Ctx = __llvm_ctx_profile_get_context(&OpaqueValue, 2, 3, 1);
+  auto *Ctx = __llvm_ctx_profile_get_context(&FakeCalleeAddress, 2, 3, 1);
   // We never entered a context (_start_context was never called) - so the
   // returned context must be scratch.
   EXPECT_TRUE(isScratch(Ctx));
@@ -85,38 +85,51 @@ TEST_F(ContextTest, ScratchNoCollection) {
 
 TEST_F(ContextTest, ScratchDuringCollection) {
   auto *Ctx = __llvm_ctx_profile_start_context(&Root, 1, 10, 4);
-  int OpaqueValue = 0;
-  int OtherOpaqueValue = 0;
-  __llvm_ctx_profile_expected_callee[0] = &OpaqueValue;
+  int FakeCalleeAddress = 0;
+  int OtherFakeCalleeAddress = 0;
+  __llvm_ctx_profile_expected_callee[0] = &FakeCalleeAddress;
   __llvm_ctx_profile_callsite[0] = &Ctx->subContexts()[2];
-  auto *Subctx = __llvm_ctx_profile_get_context(&OtherOpaqueValue, 2, 3, 1);
+  auto *Subctx =
+      __llvm_ctx_profile_get_context(&OtherFakeCalleeAddress, 2, 3, 1);
   // We expected a different callee - so return scratch. It mimics what happens
-  // in the case of a signal handler - in this case, OtherOpaqueValue is the
-  // signal handler.
+  // in the case of a signal handler - in this case, OtherFakeCalleeAddress is
+  // the signal handler.
   EXPECT_TRUE(isScratch(Subctx));
   EXPECT_EQ(__llvm_ctx_profile_expected_callee[0], nullptr);
   EXPECT_EQ(__llvm_ctx_profile_callsite[0], nullptr);
 
-  int ThirdOpaqueValue = 0;
-  __llvm_ctx_profile_expected_callee[1] = &ThirdOpaqueValue;
+  int ThirdFakeCalleeAddress = 0;
+  __llvm_ctx_profile_expected_callee[1] = &ThirdFakeCalleeAddress;
   __llvm_ctx_profile_callsite[1] = &Subctx->subContexts()[0];
 
-  auto *Subctx2 = __llvm_ctx_profile_get_context(&ThirdOpaqueValue, 3, 0, 0);
+  auto *Subctx2 =
+      __llvm_ctx_profile_get_context(&ThirdFakeCalleeAddress, 3, 0, 0);
+  // We again expect scratch because the '0' position is where the runtime
+  // looks, so it doesn't matter the '1' position is populated correctly.
   EXPECT_TRUE(isScratch(Subctx2));
+
+  __llvm_ctx_profile_expected_callee[0] = &ThirdFakeCalleeAddress;
+  __llvm_ctx_profile_callsite[0] = &Subctx->subContexts()[0];
+  auto *Subctx3 =
+      __llvm_ctx_profile_get_context(&ThirdFakeCalleeAddress, 3, 0, 0);
+  // We expect scratch here, too, because the value placed in
+  // __llvm_ctx_profile_callsite is scratch
+  EXPECT_TRUE(isScratch(Subctx3));
 
   __llvm_ctx_profile_release_context(&Root);
 }
 
 TEST_F(ContextTest, NeedMoreMemory) {
   auto *Ctx = __llvm_ctx_profile_start_context(&Root, 1, 10, 4);
-  int OpaqueValue = 0;
+  int FakeCalleeAddress = 0;
   const bool IsScratch = isScratch(Ctx);
   EXPECT_FALSE(IsScratch);
   const auto *CurrentMem = Root.CurrentMem;
-  __llvm_ctx_profile_expected_callee[0] = &OpaqueValue;
+  __llvm_ctx_profile_expected_callee[0] = &FakeCalleeAddress;
   __llvm_ctx_profile_callsite[0] = &Ctx->subContexts()[2];
   // Allocate a massive subcontext to force new arena allocation
-  auto *Subctx = __llvm_ctx_profile_get_context(&OpaqueValue, 3, 1 << 20, 1);
+  auto *Subctx =
+      __llvm_ctx_profile_get_context(&FakeCalleeAddress, 3, 1 << 20, 1);
   EXPECT_EQ(Ctx->subContexts()[2], Subctx);
   EXPECT_NE(CurrentMem, Root.CurrentMem);
   EXPECT_NE(Root.CurrentMem, nullptr);
@@ -150,10 +163,10 @@ TEST_F(ContextTest, ConcurrentRootCollection) {
 
 TEST_F(ContextTest, Dump) {
   auto *Ctx = __llvm_ctx_profile_start_context(&Root, 1, 10, 4);
-  int OpaqueValue = 0;
-  __llvm_ctx_profile_expected_callee[0] = &OpaqueValue;
+  int FakeCalleeAddress = 0;
+  __llvm_ctx_profile_expected_callee[0] = &FakeCalleeAddress;
   __llvm_ctx_profile_callsite[0] = &Ctx->subContexts()[2];
-  auto *Subctx = __llvm_ctx_profile_get_context(&OpaqueValue, 2, 3, 1);
+  auto *Subctx = __llvm_ctx_profile_get_context(&FakeCalleeAddress, 2, 3, 1);
   (void)Subctx;
   __llvm_ctx_profile_release_context(&Root);
 
