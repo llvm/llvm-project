@@ -85,7 +85,9 @@ Changes to the AMDGPU Backend
 
 Changes to the ARM Backend
 --------------------------
+
 * FEAT_F32MM is no longer activated by default when using `+sve` on v8.6-A or greater. The feature is still available and can be used by adding `+f32mm` to the command line options.
+* armv8-r now implies only fp-armv8d16sp, rather than neon and full fp-armv8. These features are still included by default for cortex-r52. The default cpu for armv8-r is now "generic", for compatibility with variants that do not include neon, fp64, and d32.
 
 Changes to the AVR Backend
 --------------------------
