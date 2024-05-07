@@ -468,7 +468,6 @@ enum Id { // Message ID, width(4) [3:0].
 };
 
 enum Op { // Both GS and SYS operation IDs.
-  OP_UNKNOWN_ = -1,
   OP_SHIFT_ = 4,
   OP_NONE_ = 0,
   // Bits used for operation encoding
@@ -479,14 +478,12 @@ enum Op { // Both GS and SYS operation IDs.
   OP_GS_CUT = 1,
   OP_GS_EMIT = 2,
   OP_GS_EMIT_CUT = 3,
-  OP_GS_LAST_,
   OP_GS_FIRST_ = OP_GS_NOP,
   // SYS operations are encoded in bits 6:4
   OP_SYS_ECC_ERR_INTERRUPT = 1,
   OP_SYS_REG_RD = 2,
   OP_SYS_HOST_TRAP_ACK = 3,
   OP_SYS_TTRACE_PC = 4,
-  OP_SYS_LAST_,
   OP_SYS_FIRST_ = OP_SYS_ECC_ERR_INTERRUPT,
 };
 
