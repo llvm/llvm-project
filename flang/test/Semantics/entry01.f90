@@ -255,3 +255,11 @@ subroutine s7(q,q)
   !ERROR: 'z' appears more than once as a dummy argument name in this ENTRY statement
   entry baz(z,z)
 end
+
+!ERROR: Explicit result variable 'f8e1' of function 'f8' cannot have the same name as an ENTRY into the same scope
+function f8() result(f8e1)
+  entry f8e1()
+  entry f8e2() result(f8e2) ! ok
+  !ERROR: RESULT(f8e1) may not have the same name as an ENTRY in the function
+  entry f8e3() result(f8e1)
+end

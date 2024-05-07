@@ -1352,7 +1352,7 @@ void CheckHelper::CheckSubprogram(
     SubprogramMatchHelper{*this}.Check(symbol, *iface);
   }
   if (const Scope *entryScope{details.entryScope()}) {
-    // ENTRY 15.6.2.6, esp. C1571
+    // ENTRY F'2023 15.6.2.6
     std::optional<parser::MessageFixedText> error;
     const Symbol *subprogram{entryScope->symbol()};
     const SubprogramDetails *subprogramDetails{nullptr};
@@ -1380,6 +1380,25 @@ void CheckHelper::CheckSubprogram(
       if (auto *msg{messages_.Say(symbol.name(), *error)}) {
         if (subprogram) {
           msg->Attach(subprogram->name(), "Containing subprogram"_en_US);
+        }
+      }
+    }
+  }
+  if (details.isFunction() && details.result().name() != symbol.name() &&
+      symbol.scope()) { // F'2023 C1569 & C1583
+    if (auto iter{symbol.owner().find(details.result().name())};
+        iter != symbol.owner().end()) {
+      const Symbol &resNameSym{*iter->second};
+      if (const auto *resNameSubp{resNameSym.detailsIf<SubprogramDetails>()}) {
+        if (const Scope * resNameScope{resNameSubp->entryScope()}) {
+          if (resNameScope == symbol.scope()) {
+            if (auto *msg{messages_.Say(symbol.name(),
+                    "Explicit result variable '%s' of function '%s' cannot have the same name as an ENTRY into the same scope"_err_en_US,
+                    details.result().name(), symbol.name())}) {
+              msg->Attach(
+                  resNameSym.name(), "ENTRY with conflicting name"_en_US);
+            }
+          }
         }
       }
     }
