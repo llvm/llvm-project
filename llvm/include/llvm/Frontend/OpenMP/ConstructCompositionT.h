@@ -286,12 +286,6 @@ template <typename C> void ConstructCompositionT<C>::mergeReduction() {
 template <typename C> void ConstructCompositionT<C>::mergeDSA() {
   using ObjectTy = tomp::type::ObjectT<IdTy, ExprTy>;
 
-  struct Hash {
-    bool operator()(const ObjectTy &object) const {
-      return std::hash<llvm::remove_cvref_t<IdTy>>()(object.id());
-    }
-  };
-
   // Resolve data-sharing attributes.
   enum DSA : int {
     None = 0,
@@ -302,9 +296,17 @@ template <typename C> void ConstructCompositionT<C>::mergeDSA() {
     LastPrivateConditional = 1 << 4,
   };
 
-  // The operator[] will value-initialize (i.e. zero-initialize) the "int"
-  // mapped-value if the given key is not present.
-  std::unordered_map<ObjectTy, int, Hash> objectDsa;
+  // Use ordered containers to avoid non-deterministic output.
+  llvm::SmallVector<std::pair<ObjectTy, int>> objectDsa;
+
+  auto getDsa = [&](const ObjectTy &object) -> std::pair<ObjectTy, int> & {
+    auto found = llvm::find_if(objectDsa, [&](std::pair<ObjectTy, int> &p) {
+      return p.first.id() == object.id();
+    });
+    if (found != objectDsa.end())
+      return *found;
+    return objectDsa.emplace_back(object, DSA::None);
+  };
 
   using SharedTy = tomp::clause::SharedT<TypeTy, IdTy, ExprTy>;
   using PrivateTy = tomp::clause::PrivateT<TypeTy, IdTy, ExprTy>;
@@ -314,17 +316,17 @@ template <typename C> void ConstructCompositionT<C>::mergeDSA() {
   // Visit clauses that affect DSA.
   for (auto &clause : clauseSets[llvm::omp::Clause::OMPC_shared]) {
     for (auto &object : std::get<SharedTy>(clause.u).v)
-      objectDsa[object] |= DSA::Shared;
+      getDsa(object).second |= DSA::Shared;
   }
 
   for (auto &clause : clauseSets[llvm::omp::Clause::OMPC_private]) {
     for (auto &object : std::get<PrivateTy>(clause.u).v)
-      objectDsa[object] |= DSA::Private;
+      getDsa(object).second |= DSA::Private;
   }
 
   for (auto &clause : clauseSets[llvm::omp::Clause::OMPC_firstprivate]) {
     for (auto &object : std::get<FirstprivateTy>(clause.u).v)
-      objectDsa[object] |= DSA::FirstPrivate;
+      getDsa(object).second |= DSA::FirstPrivate;
   }
 
   for (auto &clause : clauseSets[llvm::omp::Clause::OMPC_lastprivate]) {
@@ -334,9 +336,9 @@ template <typename C> void ConstructCompositionT<C>::mergeDSA() {
     for (auto &object : std::get<ListTy>(lastp.t)) {
       auto &mod = std::get<std::optional<ModifierTy>>(lastp.t);
       if (mod && *mod == ModifierTy::Conditional) {
-        objectDsa[object] |= DSA::LastPrivateConditional;
+        getDsa(object).second |= DSA::LastPrivateConditional;
       } else {
-        objectDsa[object] |= DSA::LastPrivate;
+        getDsa(object).second |= DSA::LastPrivate;
       }
     }
   }
@@ -346,7 +348,7 @@ template <typename C> void ConstructCompositionT<C>::mergeDSA() {
     using ReductionTy = tomp::clause::ReductionT<TypeTy, IdTy, ExprTy>;
     using ListTy = typename ReductionTy::List;
     for (auto &object : std::get<ListTy>(std::get<ReductionTy>(clause.u).t))
-      objectDsa[object] &= ~DSA::Shared;
+      getDsa(object).second &= ~DSA::Shared;
   }
 
   tomp::ListT<ObjectTy> privateObj, sharedObj, firstpObj, lastpObj, lastpcObj;

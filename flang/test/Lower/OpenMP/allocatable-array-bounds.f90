@@ -8,24 +8,6 @@
 !HOST: %[[ALLOCA_2:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>> {bindc_name = "sp_write", uniq_name = "_QFread_write_sectionEsp_write"}
 !HOST: %[[DECLARE_2:.*]]:2 = hlfir.declare %[[ALLOCA_2]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFread_write_sectionEsp_write"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)
 
-!HOST: %[[LOAD_3:.*]] = fir.load %[[DECLARE_2]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
-!HOST: %[[LOAD_4:.*]] = fir.load %[[DECLARE_2]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
-!HOST: %[[CONSTANT_5:.*]] = arith.constant 0 : index
-!HOST: %[[BOX_3:.*]]:3 = fir.box_dims %[[LOAD_4]], %[[CONSTANT_5]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>, index) -> (index, index, index)
-!HOST: %[[CONSTANT_6:.*]] = arith.constant 0 : index
-!HOST: %[[BOX_4:.*]]:3 = fir.box_dims %[[LOAD_3]], %[[CONSTANT_6]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>, index) -> (index, index, index)
-!HOST: %[[CONSTANT_7:.*]] = arith.constant 2 : index
-!HOST: %[[LB_2:.*]] = arith.subi %[[CONSTANT_7]], %[[BOX_3]]#0 : index
-!HOST: %[[CONSTANT_8:.*]] = arith.constant 5 : index
-!HOST: %[[UB_2:.*]] = arith.subi %[[CONSTANT_8]], %[[BOX_3]]#0 : index
-!HOST: %[[LOAD_5:.*]] = fir.load %[[DECLARE_2]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
-!HOST: %[[CONSTANT_5:.*]] = arith.constant 0 : index
-!HOST: %[[BOX_5:.*]]:3 = fir.box_dims %[[LOAD_5]], %[[CONSTANT_5]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>, index) -> (index, index, index)
-!HOST: %[[BOUNDS_2:.*]] = omp.map.bounds lower_bound(%[[LB_2]] : index) upper_bound(%[[UB_2]] : index) extent(%[[BOX_5]]#1 : index) stride(%[[BOX_4]]#2 : index) start_idx(%[[BOX_3]]#0 : index) {stride_in_bytes = true}
-!HOST: %[[VAR_PTR_PTR:.*]] = fir.box_offset %[[DECLARE_2]]#1 base_addr : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>
-!HOST: %[[MAP_INFO_MEMBER:.*]] = omp.map.info var_ptr(%[[DECLARE_2]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.array<?xi32>) var_ptr_ptr(%[[VAR_PTR_PTR]] : !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>) map_clauses(tofrom) capture(ByRef) bounds(%[[BOUNDS_2]]) -> !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>> {name = ""}
-!HOST: %[[MAP_INFO_2:.*]] = omp.map.info var_ptr(%[[DECLARE_2]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.box<!fir.heap<!fir.array<?xi32>>>) map_clauses(tofrom) capture(ByRef) members(%[[MAP_INFO_MEMBER]] : !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> {name = "sp_write(2:5)"}
-
 !HOST: %[[LOAD_1:.*]] = fir.load %[[DECLARE_1]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
 !HOST: %[[LOAD_2:.*]] = fir.load %[[DECLARE_1]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
 !HOST: %[[CONSTANT_1:.*]] = arith.constant 0 : index
@@ -43,6 +25,24 @@
 !HOST: %[[VAR_PTR_PTR:.*]] = fir.box_offset %[[DECLARE_1]]#1 base_addr : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>
 !HOST: %[[MAP_INFO_MEMBER:.*]] = omp.map.info var_ptr(%[[DECLARE_1]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.array<?xi32>) var_ptr_ptr(%[[VAR_PTR_PTR]] : !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>) map_clauses(tofrom) capture(ByRef) bounds(%[[BOUNDS_1]]) -> !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>> {name = ""}    
 !HOST: %[[MAP_INFO_1:.*]] = omp.map.info var_ptr(%[[DECLARE_1]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.box<!fir.heap<!fir.array<?xi32>>>) map_clauses(tofrom) capture(ByRef) members(%[[MAP_INFO_MEMBER]] : !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> {name = "sp_read(2:5)"}
+
+!HOST: %[[LOAD_3:.*]] = fir.load %[[DECLARE_2]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+!HOST: %[[LOAD_4:.*]] = fir.load %[[DECLARE_2]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+!HOST: %[[CONSTANT_5:.*]] = arith.constant 0 : index
+!HOST: %[[BOX_3:.*]]:3 = fir.box_dims %[[LOAD_4]], %[[CONSTANT_5]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>, index) -> (index, index, index)
+!HOST: %[[CONSTANT_6:.*]] = arith.constant 0 : index
+!HOST: %[[BOX_4:.*]]:3 = fir.box_dims %[[LOAD_3]], %[[CONSTANT_6]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>, index) -> (index, index, index)
+!HOST: %[[CONSTANT_7:.*]] = arith.constant 2 : index
+!HOST: %[[LB_2:.*]] = arith.subi %[[CONSTANT_7]], %[[BOX_3]]#0 : index
+!HOST: %[[CONSTANT_8:.*]] = arith.constant 5 : index
+!HOST: %[[UB_2:.*]] = arith.subi %[[CONSTANT_8]], %[[BOX_3]]#0 : index
+!HOST: %[[LOAD_5:.*]] = fir.load %[[DECLARE_2]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+!HOST: %[[CONSTANT_5:.*]] = arith.constant 0 : index
+!HOST: %[[BOX_5:.*]]:3 = fir.box_dims %[[LOAD_5]], %[[CONSTANT_5]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>, index) -> (index, index, index)
+!HOST: %[[BOUNDS_2:.*]] = omp.map.bounds lower_bound(%[[LB_2]] : index) upper_bound(%[[UB_2]] : index) extent(%[[BOX_5]]#1 : index) stride(%[[BOX_4]]#2 : index) start_idx(%[[BOX_3]]#0 : index) {stride_in_bytes = true}
+!HOST: %[[VAR_PTR_PTR:.*]] = fir.box_offset %[[DECLARE_2]]#1 base_addr : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>
+!HOST: %[[MAP_INFO_MEMBER:.*]] = omp.map.info var_ptr(%[[DECLARE_2]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.array<?xi32>) var_ptr_ptr(%[[VAR_PTR_PTR]] : !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>) map_clauses(tofrom) capture(ByRef) bounds(%[[BOUNDS_2]]) -> !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>> {name = ""}    
+!HOST: %[[MAP_INFO_2:.*]] = omp.map.info var_ptr(%[[DECLARE_2]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.box<!fir.heap<!fir.array<?xi32>>>) map_clauses(tofrom) capture(ByRef) members(%[[MAP_INFO_MEMBER]] : !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> {name = "sp_write(2:5)"}
 
 subroutine read_write_section()
     integer, allocatable :: sp_read(:)

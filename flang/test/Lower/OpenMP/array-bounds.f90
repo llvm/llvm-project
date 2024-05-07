@@ -14,14 +14,14 @@
 !HOST:  %[[C1:.*]] = arith.constant 1 : index
 !HOST:  %[[C2:.*]] = arith.constant 1 : index
 !HOST:  %[[C3:.*]] = arith.constant 4 : index
-!HOST:  %[[BOUNDS1:.*]] = omp.map.bounds   lower_bound(%[[C2]] : index) upper_bound(%[[C3]] : index) extent(%[[C10_0]] : index) stride(%[[C1]] : index) start_idx(%[[C1]] : index)
-!HOST:  %[[MAP1:.*]] = omp.map.info var_ptr(%[[WRITE_DECL]]#0 : !fir.ref<!fir.array<10xi32>>, !fir.array<10xi32>)   map_clauses(tofrom) capture(ByRef) bounds(%[[BOUNDS1]]) -> !fir.ref<!fir.array<10xi32>> {name = "sp_write(2:5)"}
+!HOST:  %[[BOUNDS0:.*]] = omp.map.bounds   lower_bound(%[[C2]] : index) upper_bound(%[[C3]] : index) extent(%[[C10]] : index) stride(%[[C1]] : index) start_idx(%[[C1]] : index)
+!HOST:  %[[MAP0:.*]] = omp.map.info var_ptr(%[[READ_DECL]]#0 : !fir.ref<!fir.array<10xi32>>, !fir.array<10xi32>)   map_clauses(tofrom) capture(ByRef) bounds(%[[BOUNDS0]]) -> !fir.ref<!fir.array<10xi32>> {name = "sp_read(2:5)"}
 !HOST:  %[[C4:.*]] = arith.constant 1 : index
 !HOST:  %[[C5:.*]] = arith.constant 1 : index
 !HOST:  %[[C6:.*]] = arith.constant 4 : index
-!HOST:  %[[BOUNDS0:.*]] = omp.map.bounds   lower_bound(%[[C5]] : index) upper_bound(%[[C6]] : index) extent(%[[C10]] : index) stride(%[[C4]] : index) start_idx(%[[C4]] : index)
-!HOST:  %[[MAP0:.*]] = omp.map.info var_ptr(%[[READ_DECL]]#0 : !fir.ref<!fir.array<10xi32>>, !fir.array<10xi32>)   map_clauses(tofrom) capture(ByRef) bounds(%[[BOUNDS0]]) -> !fir.ref<!fir.array<10xi32>> {name = "sp_read(2:5)"}
-!HOST:  omp.target map_entries(%[[MAP1]] -> %{{.*}}, %[[MAP0]] -> %{{.*}}, {{.*}} -> {{.*}} : !fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>, !fir.ref<i32>) {
+!HOST:  %[[BOUNDS1:.*]] = omp.map.bounds   lower_bound(%[[C5]] : index) upper_bound(%[[C6]] : index) extent(%[[C10_0]] : index) stride(%[[C4]] : index) start_idx(%[[C4]] : index)
+!HOST:  %[[MAP1:.*]] = omp.map.info var_ptr(%[[WRITE_DECL]]#0 : !fir.ref<!fir.array<10xi32>>, !fir.array<10xi32>)   map_clauses(tofrom) capture(ByRef) bounds(%[[BOUNDS1]]) -> !fir.ref<!fir.array<10xi32>> {name = "sp_write(2:5)"}
+!HOST:  omp.target map_entries(%[[MAP0]] -> %{{.*}}, %[[MAP1]] -> %{{.*}}, {{.*}} -> {{.*}} : !fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>, !fir.ref<i32>) {
 
 subroutine read_write_section()
     integer :: sp_read(10) = (/1,2,3,4,5,6,7,8,9,10/)
