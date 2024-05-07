@@ -29,12 +29,6 @@
 #include <unordered_set>
 #include <utility>
 
-namespace detail {
-template <typename T> struct trivial_hash {
-  size_t operator()(const T &) const { return 1u; }
-};
-} // namespace detail
-
 namespace tomp {
 template <typename ClauseType> struct ConstructCompositionT {
   using ClauseTy = ClauseType;
@@ -49,8 +43,9 @@ template <typename ClauseType> struct ConstructCompositionT {
   DirectiveWithClauses<ClauseTy> merged;
 
 private:
-  using ClauseSet =
-      std::unordered_set<ClauseTy, detail::trivial_hash<ClauseTy>>;
+  // Use an ordered container, since we beed to maintain the order in which
+  // clauses are added to it. This is to avoid non-deterministic output.
+  using ClauseSet = ListT<ClauseTy>;
 
   enum class Presence {
     All,  // Clause is preesnt on all leaf constructs that allow it.
@@ -119,12 +114,14 @@ ConstructCompositionT<C>::ConstructCompositionT(
   for (const auto &[index, leaf] : llvm::enumerate(leafs)) {
     for (const auto &clause : leaf.clauses) {
       // Update clausePresence.
-      auto &set = clausePresence[clause.id];
-      if (set.size() < leafs.size())
-        set.resize(leafs.size());
-      set.set(index);
+      auto &pset = clausePresence[clause.id];
+      if (pset.size() < leafs.size())
+        pset.resize(leafs.size());
+      pset.set(index);
       // Update clauseSets.
-      clauseSets[clause.id].insert(clause);
+      ClauseSet &cset = clauseSets[clause.id];
+      if (!llvm::is_contained(cset, clause))
+        cset.push_back(clause);
     }
   }
 
