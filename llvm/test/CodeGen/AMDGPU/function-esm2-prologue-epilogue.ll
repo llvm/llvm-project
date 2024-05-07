@@ -16,6 +16,7 @@ define float @missing_truncate_promote_bswap(i32 %arg) {
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; GFX12-NEXT:    s_wait_alu 0xfff
+; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 bb:
   %tmp = trunc i32 %arg to i16

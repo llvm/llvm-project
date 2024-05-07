@@ -1,8 +1,8 @@
 // REQUIRES: amdgpu-registered-target
-// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx908 -DMFMA_GFX908_TESTS -S -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-GFX908
-// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx90a -DMFMA_GFX90A_TESTS -S -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-GFX90A
-// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx940 -DMFMA_GFX940_TESTS -S -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-GFX940
-// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx950 -DMFMA_GFX950_TESTS -S -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-GFX950
+// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx908 -DMFMA_GFX908_TESTS -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-GFX908
+// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx90a -DMFMA_GFX90A_TESTS -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-GFX90A
+// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx940 -DMFMA_GFX940_TESTS -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-GFX940
+// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx950 -DMFMA_GFX950_TESTS -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-GFX950
 
 #pragma OPENCL EXTENSION cl_khr_fp64:enable
 

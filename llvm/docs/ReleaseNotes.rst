@@ -88,6 +88,8 @@ Changes to the AMDGPU Backend
 
 * Implemented the ``llvm.get.fpenv`` and ``llvm.set.fpenv`` intrinsics.
 
+* Implemented :ref:`llvm.get.rounding <int_get_rounding>` and :ref:`llvm.set.rounding <int_set_rounding>`
+
 * Initial support for gfx950
 
 Changes to the ARM Backend
@@ -171,6 +173,8 @@ Changes to the C API
 * Added ``LLVMAtomicRMWBinOpUIncWrap`` and ``LLVMAtomicRMWBinOpUDecWrap`` to
   ``LLVMAtomicRMWBinOp`` enum for AtomicRMW instructions.
 
+* Added ``LLVMCreateConstantRangeAttribute`` function for creating ConstantRange Attributes.
+
 Changes to the CodeGen infrastructure
 -------------------------------------
 
@@ -179,6 +183,13 @@ Changes to the Metadata Info
 
 Changes to the Debug Info
 ---------------------------------
+
+* LLVM has switched from using debug intrinsics internally to using debug
+  records by default. This should happen transparently when using the DIBuilder
+  to construct debug variable information, but will require changes for any code
+  that interacts with debug intrinsics directly. Debug intrinsics will only be
+  supported on a best-effort basis from here onwards; for more information, see
+  the `migration docs <https://llvm.org/docs/RemoveDIsDebugInfo.html>`_.
 
 Changes to the LLVM tools
 ---------------------------------

@@ -3978,8 +3978,8 @@ bool AMDGPUAsmParser::validateMIMGAddrSize(const MCInst &Inst,
   const AMDGPU::MIMGBaseOpcodeInfo *BaseOpcode =
       AMDGPU::getMIMGBaseOpcodeInfo(Info->BaseOpcode);
   int VAddr0Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::vaddr0);
-  int RSrcOpName = Desc.TSFlags & SIInstrFlags::MIMG ? AMDGPU::OpName::srsrc
-                                                     : AMDGPU::OpName::rsrc;
+  int RSrcOpName = (Desc.TSFlags & SIInstrFlags::MIMG) ? AMDGPU::OpName::srsrc
+                                                       : AMDGPU::OpName::rsrc;
   int SrsrcIdx = AMDGPU::getNamedOperandIdx(Opc, RSrcOpName);
   int DimIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::dim);
   int A16Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::a16);
@@ -8702,8 +8702,8 @@ void AMDGPUAsmParser::cvtVOP3(MCInst &Inst, const OperandVector &Operands,
   }
 
   if (AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::byte_sel)) {
-    assert(AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::vdst_in));
-    Inst.addOperand(Inst.getOperand(0));
+    if (AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::vdst_in))
+      Inst.addOperand(Inst.getOperand(0));
     addOptionalImmOperand(Inst, Operands, OptionalIdx,
                           AMDGPUOperand::ImmTyByteSel);
   }
@@ -9350,7 +9350,6 @@ void AMDGPUAsmParser::cvtDPP(MCInst &Inst, const OperandVector &Operands, bool I
   OptionalImmIndexMap OptionalIdx;
 
   unsigned I = 1;
-  const unsigned Opc = Inst.getOpcode();
   const MCInstrDesc &Desc = MII.get(Inst.getOpcode());
   for (unsigned J = 0; J < Desc.getNumDefs(); ++J) {
     ((AMDGPUOperand &)*Operands[I++]).addRegOperands(Inst, 1);
@@ -9378,14 +9377,6 @@ void AMDGPUAsmParser::cvtDPP(MCInst &Inst, const OperandVector &Operands, bool I
         Op.addImmOperands(Inst, 1);
       } else if (isRegOrImmWithInputMods(Desc, Inst.getNumOperands())) {
         Op.addRegWithFPInputModsOperands(Inst, 2);
-        if (Opc == AMDGPU::V_CVT_F32_BF8_dpp_gfx12 ||
-            Opc == AMDGPU::V_CVT_F32_FP8_dpp_gfx12 ||
-            Opc == AMDGPU::V_CVT_F32_BF8_dpp8_gfx12 ||
-            Opc == AMDGPU::V_CVT_F32_FP8_dpp8_gfx12) {
-          // Add dummy src1
-          Inst.addOperand(MCOperand::createImm(0));
-          Inst.addOperand(MCOperand::createReg(AMDGPU::getMCReg(0, getSTI())));
-        }
       } else if (Op.isDppFI()) {
         Fi = Op.getImm();
       } else if (Op.isReg()) {
@@ -9396,14 +9387,6 @@ void AMDGPUAsmParser::cvtDPP(MCInst &Inst, const OperandVector &Operands, bool I
     } else {
       if (isRegOrImmWithInputMods(Desc, Inst.getNumOperands())) {
         Op.addRegWithFPInputModsOperands(Inst, 2);
-        if (Opc == AMDGPU::V_CVT_F32_BF8_dpp_gfx12 ||
-            Opc == AMDGPU::V_CVT_F32_FP8_dpp_gfx12 ||
-            Opc == AMDGPU::V_CVT_F32_BF8_dpp8_gfx12 ||
-            Opc == AMDGPU::V_CVT_F32_FP8_dpp8_gfx12) {
-          // Add dummy src1
-          Inst.addOperand(MCOperand::createImm(0));
-          Inst.addOperand(MCOperand::createReg(AMDGPU::getMCReg(0, getSTI())));
-        }
       } else if (Op.isReg()) {
         Op.addRegOperands(Inst, 1);
       } else if (Op.isDPPCtrl()) {

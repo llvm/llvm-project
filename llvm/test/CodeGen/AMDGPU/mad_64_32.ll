@@ -53,6 +53,7 @@ define i64 @mad_i64_i32_sextops(i32 %arg0, i32 %arg1, i64 %arg2) #0 {
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_mad_co_i64_i32 v[0:1], null, v0, v1, v[2:3]
+; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %sext0 = sext i32 %arg0 to i64
   %sext1 = sext i32 %arg1 to i64
@@ -105,6 +106,7 @@ define i64 @mad_i64_i32_sextops_commute(i32 %arg0, i32 %arg1, i64 %arg2) #0 {
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_mad_co_i64_i32 v[0:1], null, v0, v1, v[2:3]
+; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %sext0 = sext i32 %arg0 to i64
   %sext1 = sext i32 %arg1 to i64
@@ -157,6 +159,7 @@ define i64 @mad_u64_u32_zextops(i32 %arg0, i32 %arg1, i64 %arg2) #0 {
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_mad_co_u64_u32 v[0:1], null, v0, v1, v[2:3]
+; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %sext0 = zext i32 %arg0 to i64
   %sext1 = zext i32 %arg1 to i64
@@ -209,6 +212,7 @@ define i64 @mad_u64_u32_zextops_commute(i32 %arg0, i32 %arg1, i64 %arg2) #0 {
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_mad_co_u64_u32 v[0:1], null, v0, v1, v[2:3]
+; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %sext0 = zext i32 %arg0 to i64
   %sext1 = zext i32 %arg1 to i64
@@ -395,6 +399,7 @@ define i128 @mad_i64_i32_sextops_i32_i128(i32 %arg0, i32 %arg1, i128 %arg2) #0 {
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
 ; GFX12-NEXT:    v_add_co_ci_u32_e32 v2, vcc_lo, v8, v4, vcc_lo
 ; GFX12-NEXT:    v_add_co_ci_u32_e32 v3, vcc_lo, v9, v5, vcc_lo
+; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %sext0 = sext i32 %arg0 to i128
   %sext1 = sext i32 %arg1 to i128
@@ -447,6 +452,7 @@ define i63 @mad_i64_i32_sextops_i32_i63(i32 %arg0, i32 %arg1, i63 %arg2) #0 {
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_mad_co_i64_i32 v[0:1], null, v0, v1, v[2:3]
+; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %sext0 = sext i32 %arg0 to i63
   %sext1 = sext i32 %arg1 to i63
@@ -514,6 +520,7 @@ define i63 @mad_i64_i32_sextops_i31_i63(i31 %arg0, i31 %arg1, i63 %arg2) #0 {
 ; GFX12-NEXT:    v_bfe_i32 v0, v0, 0, 31
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_mad_co_i64_i32 v[0:1], null, v0, v1, v[2:3]
+; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %sext0 = sext i31 %arg0 to i63
   %sext1 = sext i31 %arg1 to i63
@@ -589,6 +596,7 @@ define i64 @mad_i64_i32_extops_i32_i64(i32 %arg0, i32 %arg1, i64 %arg2) #0 {
 ; GFX12-NEXT:    v_mad_co_u64_u32 v[0:1], null, v5, v4, v[2:3]
 ; GFX12-NEXT:    v_ashrrev_i32_e32 v2, 31, v5
 ; GFX12-NEXT:    v_mad_co_u64_u32 v[1:2], null, v2, v4, v[1:2]
+; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %ext0 = sext i32 %arg0 to i64
   %ext1 = zext i32 %arg1 to i64
@@ -641,6 +649,7 @@ define i64 @mad_u64_u32_bitops(i64 %arg0, i64 %arg1, i64 %arg2) #0 {
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_mad_co_u64_u32 v[0:1], null, v0, v2, v[4:5]
+; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %trunc.lhs = and i64 %arg0, 4294967295
   %trunc.rhs = and i64 %arg1, 4294967295
@@ -715,6 +724,7 @@ define i64 @mad_u64_u32_bitops_lhs_mask_small(i64 %arg0, i64 %arg1, i64 %arg2) #
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-NEXT:    v_and_b32_e32 v3, 1, v3
 ; GFX12-NEXT:    v_mad_co_u64_u32 v[1:2], null, v3, v2, v[1:2]
+; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %trunc.lhs = and i64 %arg0, 8589934591
   %trunc.rhs = and i64 %arg1, 4294967295
@@ -790,6 +800,7 @@ define i64 @mad_u64_u32_bitops_rhs_mask_small(i64 %arg0, i64 %arg1, i64 %arg2) #
 ; GFX12-NEXT:    v_mad_co_u64_u32 v[0:1], null, v6, v2, v[4:5]
 ; GFX12-NEXT:    v_and_b32_e32 v2, 1, v3
 ; GFX12-NEXT:    v_mad_co_u64_u32 v[1:2], null, v6, v2, v[1:2]
+; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %trunc.lhs = and i64 %arg0, 4294967295
   %trunc.rhs = and i64 %arg1, 8589934591
@@ -842,6 +853,7 @@ define i64 @mad_i64_i32_bitops(i64 %arg0, i64 %arg1, i64 %arg2) #0 {
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_mad_co_i64_i32 v[0:1], null, v0, v2, v[4:5]
+; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %shl.lhs = shl i64 %arg0, 32
   %trunc.lhs = ashr i64 %shl.lhs, 32
@@ -897,6 +909,7 @@ define i64 @mad_i64_i32_unpack_i64ops(i64 %arg0) #0 {
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_mad_co_u64_u32 v[0:1], null, v1, v0, v[0:1]
+; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %tmp4 = lshr i64 %arg0, 32
   %tmp5 = and i64 %arg0, 4294967295
@@ -981,11 +994,14 @@ define amdgpu_kernel void @mad_i64_i32_uniform(ptr addrspace(1) %out, i32 %arg0,
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_mov_b32 s2, s6
 ; GFX12-NEXT:    s_mov_b32 s6, s7
+; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_mov_b32 s7, s3
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_mul_u64 s[2:3], s[2:3], s[6:7]
+; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_add_nc_u64 s[0:1], s[2:3], s[0:1]
 ; GFX12-NEXT:    v_mov_b32_e32 v2, 0
+; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX12-NEXT:    global_store_b64 v2, v[0:1], s[4:5]
 ; GFX12-NEXT:    s_nop 0
@@ -1063,6 +1079,7 @@ define i64 @mad_i64_i32_twice(i32 %arg0, i32 %arg1, i64 %arg2, i64 %arg3) #0 {
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX12-NEXT:    v_xor_b32_e32 v0, v2, v0
 ; GFX12-NEXT:    v_xor_b32_e32 v1, v3, v1
+; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %sext0 = sext i32 %arg0 to i64
   %sext1 = sext i32 %arg1 to i64
@@ -1178,6 +1195,7 @@ define i64 @mad_i64_i32_thrice(i32 %arg0, i32 %arg1, i64 %arg2, i64 %arg3, i64 %
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX12-NEXT:    v_xor_b32_e32 v0, v2, v0
 ; GFX12-NEXT:    v_xor_b32_e32 v1, v3, v1
+; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %sext0 = sext i32 %arg0 to i64
   %sext1 = sext i32 %arg1 to i64
@@ -1259,6 +1277,7 @@ define i64 @mad_i64_i32_secondary_use(i32 %arg0, i32 %arg1, i64 %arg2) #0 {
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX12-NEXT:    v_xor_b32_e32 v0, v2, v0
 ; GFX12-NEXT:    v_xor_b32_e32 v1, v3, v1
+; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %sext0 = sext i32 %arg0 to i64
   %sext1 = sext i32 %arg1 to i64
@@ -1331,6 +1350,7 @@ define i48 @mad_i48_i48(i48 %arg0, i48 %arg1, i48 %arg2) #0 {
 ; GFX12-NEXT:    v_mul_lo_u32 v2, v6, v2
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_add3_u32 v1, v2, v1, v3
+; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %m = mul i48 %arg0, %arg1
   %a = add i48 %m, %arg2

@@ -23,8 +23,10 @@ define amdgpu_cs_chain void @dynamic_vgprs(i32 inreg %exec, <3 x i32> inreg %sgp
 ; GISEL-GFX12-NEXT:    s_mov_b32 s8, retry_vgpr_alloc@abs32@lo
 ; GISEL-GFX12-NEXT:    s_mov_b32 s9, retry_vgpr_alloc@abs32@hi
 ; GISEL-GFX12-NEXT:    s_alloc_vgpr s4
+; GISEL-GFX12-NEXT:    s_wait_alu 0xfffe
 ; GISEL-GFX12-NEXT:    s_cselect_b64 s[6:7], s[6:7], s[8:9]
 ; GISEL-GFX12-NEXT:    s_cselect_b32 exec_lo, s5, -1
+; GISEL-GFX12-NEXT:    s_wait_alu 0xfffe
 ; GISEL-GFX12-NEXT:    s_setpc_b64 s[6:7]
 ;
 ; DAGISEL-GFX12-LABEL: dynamic_vgprs:
@@ -43,8 +45,10 @@ define amdgpu_cs_chain void @dynamic_vgprs(i32 inreg %exec, <3 x i32> inreg %sgp
 ; DAGISEL-GFX12-NEXT:    s_mov_b32 s1, s2
 ; DAGISEL-GFX12-NEXT:    s_mov_b32 s2, s3
 ; DAGISEL-GFX12-NEXT:    s_alloc_vgpr s4
+; DAGISEL-GFX12-NEXT:    s_wait_alu 0xfffe
 ; DAGISEL-GFX12-NEXT:    s_cselect_b64 s[8:9], s[8:9], s[6:7]
 ; DAGISEL-GFX12-NEXT:    s_cselect_b32 exec_lo, s5, -1
+; DAGISEL-GFX12-NEXT:    s_wait_alu 0xfffe
 ; DAGISEL-GFX12-NEXT:    s_setpc_b64 s[8:9]
   call void(ptr, i32, <3 x i32>, { i32, ptr addrspace(5), i32, i32 }, i32, ...) @llvm.amdgcn.cs.chain(ptr @callee, i32 %exec, <3 x i32> inreg %sgpr, { i32, ptr addrspace(5), i32, i32 } %vgpr, i32 1, i32 inreg %num_vgpr, i32 inreg -1, ptr @retry_vgpr_alloc)
   unreachable

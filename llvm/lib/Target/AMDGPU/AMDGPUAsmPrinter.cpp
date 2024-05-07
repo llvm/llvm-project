@@ -1064,6 +1064,10 @@ static void EmitPALMetadataCommon(AMDGPUPALMetadata *MD,
                    (unsigned)(CurrentProgramInfo.LdsSize *
                               getLdsDwGranularity(ST) * sizeof(uint32_t)));
   }
+
+  MD->setHwStage(CC, ".lds_size",
+                 (unsigned)(CurrentProgramInfo.LdsSize *
+                            getLdsDwGranularity(ST) * sizeof(uint32_t)));
 }
 
 // This is the equivalent of EmitProgramInfoSI above, but for when the OS type
@@ -1312,7 +1316,7 @@ void AMDGPUAsmPrinter::emitResourceUsageRemarks(
     // makes it easier to tell which resource usage go with which kernel since
     // the kernel name will always be displayed first.
     std::string LabelStr = RemarkLabel.str() + ": ";
-    if (!RemarkName.equals("FunctionName"))
+    if (RemarkName != "FunctionName")
       LabelStr = Indent + LabelStr;
 
     ORE->emit([&]() {
