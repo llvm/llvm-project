@@ -67,7 +67,9 @@ int main(int argc, char **argv) {
   // "Unknnown command line argument '-D...`" when a macros name is
   // present. The following is a workaround to re-register it again.
   llvm::cl::list<std::string> MacroNames(
-      "D", llvm::cl::desc("Name of the macro to be defined"),
+      "D",
+      llvm::cl::desc(
+          "Name of the macro to be defined -- ignored by mlir-src-sharder"),
       llvm::cl::value_desc("macro name"), llvm::cl::Prefix);
 
   llvm::InitLLVM y(argc, argv);
