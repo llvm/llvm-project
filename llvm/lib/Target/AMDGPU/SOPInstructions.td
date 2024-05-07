@@ -1110,14 +1110,15 @@ def S_CBRANCH_I_FORK : SOPK_Pseudo <
 
 // This is hasSideEffects to allow its use in readcyclecounter selection.
 // FIXME: Need to truncate immediate to 16-bits.
-// FIXME: Missing mode register use. Should have separate pseudos for
-// known may read MODE and only read MODE.
+// FIXME: Should have separate pseudos for known may read MODE and
+// only read MODE.
 def S_GETREG_B32 : SOPK_Pseudo <
   "s_getreg_b32",
   (outs SReg_32:$sdst), (ins hwreg:$simm16),
   "$sdst, $simm16",
   [(set i32:$sdst, (int_amdgcn_s_getreg (i32 timm:$simm16)))]> {
   let hasSideEffects = 1;
+  let Uses = [MODE];
 }
 
 let Defs = [MODE], Uses = [MODE] in {
