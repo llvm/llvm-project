@@ -428,9 +428,10 @@ class IndexBitcodeWriter : public BitcodeWriterBase {
   /// The combined index to write to bitcode.
   const ModuleSummaryIndex &Index;
 
-  /// For each module, provides the set of global value summaries for which the
-  /// value (function, function alias, etc) should be imported as a declaration.
-  const ModuleToGVSummaryPtrSet *ModuleToDecSummaries = nullptr;
+  /// When writing combined summaries, provides the set of global value
+  /// summaries for which the value (function, function alias, etc) should be
+  /// imported as a declaration.
+  const GVSummaryPtrSet *DecSummaries = nullptr;
 
   /// When writing a subset of the index for distributed backends, client
   /// provides a map of modules to the corresponding GUIDs/summaries to write.
@@ -459,14 +460,13 @@ public:
   /// If provided, \p ModuleToDecSummaries specifies the set of summaries for
   /// which the corresponding functions or aliased functions should be imported
   /// as a declaration (but not definition) for each module.
-  IndexBitcodeWriter(
-      BitstreamWriter &Stream, StringTableBuilder &StrtabBuilder,
-      const ModuleSummaryIndex &Index,
-      const ModuleToGVSummaryPtrSet *ModuleToDecSummaries = nullptr,
-      const std::map<std::string, GVSummaryMapTy> *ModuleToSummariesForIndex =
-          nullptr)
+  IndexBitcodeWriter(BitstreamWriter &Stream, StringTableBuilder &StrtabBuilder,
+                     const ModuleSummaryIndex &Index,
+                     const GVSummaryPtrSet *DecSummaries = nullptr,
+                     const std::map<std::string, GVSummaryMapTy>
+                         *ModuleToSummariesForIndex = nullptr)
       : BitcodeWriterBase(Stream, StrtabBuilder), Index(Index),
-        ModuleToDecSummaries(ModuleToDecSummaries),
+        DecSummaries(DecSummaries),
         ModuleToSummariesForIndex(ModuleToSummariesForIndex) {
     // Assign unique value ids to all summaries to be written, for use
     // in writing out the call graph edges. Save the mapping from GUID
@@ -4556,14 +4556,9 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
   unsigned AllocAbbrev = Stream.EmitAbbrev(std::move(Abbv));
 
   auto shouldImportValueAsDecl = [&](GlobalValueSummary *GVS) -> bool {
-    if (ModuleToDecSummaries == nullptr)
+    if (DecSummaries == nullptr)
       return false;
-    auto Iter = ModuleToDecSummaries->find(GVS->modulePath().str());
-    if (Iter == ModuleToDecSummaries->end())
-      return false;
-    // For the current module, the value for GVS should be imported as a
-    // declaration.
-    return Iter->second.contains(GVS);
+    return DecSummaries->contains(GVS);
   };
 
   // The aliases are emitted as a post-pass, and will point to the value
@@ -5062,9 +5057,8 @@ void BitcodeWriter::writeModule(const Module &M,
 void BitcodeWriter::writeIndex(
     const ModuleSummaryIndex *Index,
     const std::map<std::string, GVSummaryMapTy> *ModuleToSummariesForIndex,
-    const ModuleToGVSummaryPtrSet *ModuleToDecSummaries) {
-  IndexBitcodeWriter IndexWriter(*Stream, StrtabBuilder, *Index,
-                                 ModuleToDecSummaries,
+    const GVSummaryPtrSet *DecSummaries) {
+  IndexBitcodeWriter IndexWriter(*Stream, StrtabBuilder, *Index, DecSummaries,
                                  ModuleToSummariesForIndex);
   IndexWriter.write();
 }
@@ -5118,12 +5112,12 @@ void IndexBitcodeWriter::write() {
 void llvm::writeIndexToFile(
     const ModuleSummaryIndex &Index, raw_ostream &Out,
     const std::map<std::string, GVSummaryMapTy> *ModuleToSummariesForIndex,
-    const ModuleToGVSummaryPtrSet *ModuleToDecSummaries) {
+    const GVSummaryPtrSet *DecSummaries) {
   SmallVector<char, 0> Buffer;
   Buffer.reserve(256 * 1024);
 
   BitcodeWriter Writer(Buffer);
-  Writer.writeIndex(&Index, ModuleToSummariesForIndex, ModuleToDecSummaries);
+  Writer.writeIndex(&Index, ModuleToSummariesForIndex, DecSummaries);
   Writer.writeStrtab();
 
   Out.write((char *)&Buffer.front(), Buffer.size());
