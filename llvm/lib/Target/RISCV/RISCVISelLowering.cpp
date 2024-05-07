@@ -1087,6 +1087,23 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       }
     }
 
+    // TODO: Could we merge some code with zvfhmin?
+    if (Subtarget.hasVInstructionsBF16()) {
+      for (MVT VT : BF16VecVTs) {
+        if (!isTypeLegal(VT))
+          continue;
+        setOperationAction({ISD::FP_ROUND, ISD::FP_EXTEND}, VT, Custom);
+        setOperationAction({ISD::VP_FP_ROUND, ISD::VP_FP_EXTEND}, VT, Custom);
+        setOperationAction({ISD::STRICT_FP_ROUND, ISD::STRICT_FP_EXTEND}, VT,
+                           Custom);
+        setOperationAction({ISD::CONCAT_VECTORS, ISD::INSERT_SUBVECTOR,
+                            ISD::EXTRACT_SUBVECTOR},
+                           VT, Custom);
+        setOperationAction({ISD::LOAD, ISD::STORE}, VT, Custom);
+        // TODO: Promote to fp32.
+      }
+    }
+
     if (Subtarget.hasVInstructionsF32()) {
       for (MVT VT : F32VecVTs) {
         if (!isTypeLegal(VT))
@@ -1299,6 +1316,19 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
             continue;
           setOperationPromotedToType(ZvfhminPromoteOps, VT, F32VecVT);
           setOperationPromotedToType(ZvfhminPromoteVPOps, VT, F32VecVT);
+          continue;
+        }
+
+        if (VT.getVectorElementType() == MVT::bf16) {
+          setOperationAction({ISD::FP_ROUND, ISD::FP_EXTEND}, VT, Custom);
+          setOperationAction({ISD::VP_FP_ROUND, ISD::VP_FP_EXTEND}, VT, Custom);
+          setOperationAction({ISD::STRICT_FP_ROUND, ISD::STRICT_FP_EXTEND}, VT,
+                             Custom);
+          setOperationAction({ISD::CONCAT_VECTORS, ISD::INSERT_SUBVECTOR,
+                              ISD::EXTRACT_SUBVECTOR},
+                             VT, Custom);
+          setOperationAction({ISD::LOAD, ISD::STORE}, VT, Custom);
+          // TODO: Promote to fp32.
           continue;
         }
 
@@ -2561,6 +2591,10 @@ static bool useRVVForFixedLengthVectorVT(MVT VT,
     if (!Subtarget.hasVInstructionsF16Minimal())
       return false;
     break;
+  case MVT::bf16:
+    if (!Subtarget.hasVInstructionsBF16())
+      return false;
+    break;
   case MVT::f32:
     if (!Subtarget.hasVInstructionsF32())
       return false;
@@ -2612,6 +2646,7 @@ static MVT getContainerForFixedLengthVector(const TargetLowering &TLI, MVT VT,
   case MVT::i16:
   case MVT::i32:
   case MVT::i64:
+  case MVT::bf16:
   case MVT::f16:
   case MVT::f32:
   case MVT::f64: {
@@ -8101,8 +8136,10 @@ RISCVTargetLowering::lowerStrictFPExtendOrRoundLike(SDValue Op,
 
   // RVV can only widen/truncate fp to types double/half the size as the source.
   if ((VT.getVectorElementType() == MVT::f64 &&
-       SrcVT.getVectorElementType() == MVT::f16) ||
-      (VT.getVectorElementType() == MVT::f16 &&
+       (SrcVT.getVectorElementType() == MVT::f16 ||
+        SrcVT.getVectorElementType() == MVT::bf16)) ||
+      ((VT.getVectorElementType() == MVT::f16 ||
+        VT.getVectorElementType() == MVT::bf16) &&
        SrcVT.getVectorElementType() == MVT::f64)) {
     // For double rounding, the intermediate rounding should be round-to-odd.
     unsigned InterConvOpc = Op.getOpcode() == ISD::STRICT_FP_EXTEND
@@ -8146,9 +8183,12 @@ RISCVTargetLowering::lowerVectorFPExtendOrRoundLike(SDValue Op,
   SDValue Src = Op.getOperand(0);
   MVT SrcVT = Src.getSimpleValueType();
 
-  bool IsDirectExtend = IsExtend && (VT.getVectorElementType() != MVT::f64 ||
-                                     SrcVT.getVectorElementType() != MVT::f16);
-  bool IsDirectTrunc = !IsExtend && (VT.getVectorElementType() != MVT::f16 ||
+  bool IsDirectExtend =
+      IsExtend && (VT.getVectorElementType() != MVT::f64 ||
+                   (SrcVT.getVectorElementType() != MVT::f16 &&
+                    SrcVT.getVectorElementType() != MVT::bf16));
+  bool IsDirectTrunc = !IsExtend && ((VT.getVectorElementType() != MVT::f16 &&
+                                      VT.getVectorElementType() != MVT::bf16) ||
                                      SrcVT.getVectorElementType() != MVT::f64);
 
   bool IsDirectConv = IsDirectExtend || IsDirectTrunc;
