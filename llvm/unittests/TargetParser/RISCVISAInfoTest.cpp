@@ -46,11 +46,35 @@ TEST(ParseNormalizedArchString, RejectsMalformedInputs) {
   }
 }
 
-TEST(ParseNormalizedArchString, OnlyVersion) {
+TEST(ParseNormalizedArchString, RejectsOnlyVersion) {
   for (StringRef Input : {"rv64i2p0_1p0", "rv32i2p0_1p0"}) {
     EXPECT_EQ(
         toString(RISCVISAInfo::parseNormalizedArchString(Input).takeError()),
         "missing extension name");
+  }
+}
+
+TEST(ParseNormalizedArchString, RejectsBadZ) {
+  for (StringRef Input : {"rv64i2p0_z1p0", "rv32i2p0_z2a1p0"}) {
+    EXPECT_EQ(
+        toString(RISCVISAInfo::parseNormalizedArchString(Input).takeError()),
+        "'z' must be followed by a letter");
+  }
+}
+
+TEST(ParseNormalizedArchString, RejectsBadS) {
+  for (StringRef Input : {"rv64i2p0_s1p0", "rv32i2p0_s2a1p0"}) {
+    EXPECT_EQ(
+        toString(RISCVISAInfo::parseNormalizedArchString(Input).takeError()),
+        "'s' must be followed by a letter");
+  }
+}
+
+TEST(ParseNormalizedArchString, RejectsBadX) {
+  for (StringRef Input : {"rv64i2p0_x1p0", "rv32i2p0_x2a1p0"}) {
+    EXPECT_EQ(
+        toString(RISCVISAInfo::parseNormalizedArchString(Input).takeError()),
+        "'x' must be followed by a letter");
   }
 }
 
@@ -117,10 +141,10 @@ TEST(ParseNormalizedArchString, UpdatesFLenMinVLenMaxELen) {
   EXPECT_EQ(Info.getMaxELen(), 64U);
 }
 
-TEST(ParseArchString, RejectsUpperCase) {
+TEST(ParseArchString, RejectsInvalidChars) {
   for (StringRef Input : {"RV32", "rV64", "rv32i2P0", "rv64i2p0_A2p0"}) {
     EXPECT_EQ(toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
-              "string must be lowercase");
+              "string may only contain [a-z0-9_]");
   }
 }
 

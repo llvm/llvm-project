@@ -161,6 +161,18 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::ATOMIC_LOAD, MVT::bf16, Promote);
   AddPromotedToType(ISD::ATOMIC_LOAD, MVT::bf16, MVT::i16);
 
+  setOperationAction(ISD::ATOMIC_STORE, MVT::f32, Promote);
+  AddPromotedToType(ISD::ATOMIC_STORE, MVT::f32, MVT::i32);
+
+  setOperationAction(ISD::ATOMIC_STORE, MVT::f64, Promote);
+  AddPromotedToType(ISD::ATOMIC_STORE, MVT::f64, MVT::i64);
+
+  setOperationAction(ISD::ATOMIC_STORE, MVT::f16, Promote);
+  AddPromotedToType(ISD::ATOMIC_STORE, MVT::f16, MVT::i16);
+
+  setOperationAction(ISD::ATOMIC_STORE, MVT::bf16, Promote);
+  AddPromotedToType(ISD::ATOMIC_STORE, MVT::bf16, MVT::i16);
+
   // There are no 64-bit extloads. These should be done as a 32-bit extload and
   // an extension to 64-bit.
   for (MVT VT : MVT::integer_valuetypes())
@@ -1460,7 +1472,7 @@ SDValue AMDGPUTargetLowering::LowerGlobalAddress(AMDGPUMachineFunction* MFI,
   if (G->getAddressSpace() == AMDGPUAS::LOCAL_ADDRESS ||
       G->getAddressSpace() == AMDGPUAS::REGION_ADDRESS) {
     if (!MFI->isModuleEntryFunction() &&
-        !GV->getName().equals("llvm.amdgcn.module.lds")) {
+        GV->getName() != "llvm.amdgcn.module.lds") {
       SDLoc DL(Op);
       const Function &Fn = DAG.getMachineFunction().getFunction();
       DiagnosticInfoUnsupported BadLDSDecl(
@@ -5988,6 +6000,13 @@ AMDGPUTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
   case AtomicRMWInst::FMax:
   case AtomicRMWInst::FMin:
     return AtomicExpansionKind::CmpXChg;
+  case AtomicRMWInst::Xchg: {
+    const DataLayout &DL = RMW->getFunction()->getParent()->getDataLayout();
+    unsigned ValSize = DL.getTypeSizeInBits(RMW->getType());
+    if (ValSize == 32 || ValSize == 64)
+      return AtomicExpansionKind::None;
+    return AtomicExpansionKind::CmpXChg;
+  }
   default: {
     if (auto *IntTy = dyn_cast<IntegerType>(RMW->getType())) {
       unsigned Size = IntTy->getBitWidth();

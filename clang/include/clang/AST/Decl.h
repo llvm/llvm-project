@@ -5049,6 +5049,11 @@ static constexpr StringRef getOpenMPVariantManglingSeparatorStr() {
   return "$ompvariant";
 }
 
+/// Returns whether the given FunctionDecl has an __arm[_locally]_streaming
+/// attribute.
+bool IsArmStreamingFunction(const FunctionDecl *FD,
+                            bool IncludeLocallyStreaming);
+
 } // namespace clang
 
 #endif // LLVM_CLANG_AST_DECL_H

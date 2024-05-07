@@ -11112,6 +11112,23 @@ class OpenACCClauseTransform final
   SemaOpenACC::OpenACCParsedClause &ParsedClause;
   OpenACCClause *NewClause = nullptr;
 
+  llvm::SmallVector<Expr *> VisitVarList(ArrayRef<Expr *> VarList) {
+    llvm::SmallVector<Expr *> InstantiatedVarList;
+    for (Expr *CurVar : VarList) {
+      ExprResult Res = Self.TransformExpr(CurVar);
+
+      if (!Res.isUsable())
+        continue;
+
+      Res = Self.getSema().OpenACC().ActOnVar(Res.get());
+
+      if (Res.isUsable())
+        InstantiatedVarList.push_back(Res.get());
+    }
+
+    return InstantiatedVarList;
+  }
+
 public:
   OpenACCClauseTransform(TreeTransform<Derived> &Self,
                          ArrayRef<const OpenACCClause *> ExistingClauses,
@@ -11206,22 +11223,134 @@ void OpenACCClauseTransform<Derived>::VisitNumGangsClause(
 template <typename Derived>
 void OpenACCClauseTransform<Derived>::VisitPrivateClause(
     const OpenACCPrivateClause &C) {
-  llvm::SmallVector<Expr *> InstantiatedVarList;
-
-  for (Expr *CurVar : C.getVarList()) {
-    ExprResult Res = Self.TransformExpr(CurVar);
-
-    if (!Res.isUsable())
-      return;
-
-    Res = Self.getSema().OpenACC().ActOnVar(Res.get());
-
-    if (Res.isUsable())
-      InstantiatedVarList.push_back(Res.get());
-  }
-  ParsedClause.setVarListDetails(std::move(InstantiatedVarList));
+  ParsedClause.setVarListDetails(VisitVarList(C.getVarList()),
+                                 /*IsReadOnly=*/false, /*IsZero=*/false);
 
   NewClause = OpenACCPrivateClause::Create(
+      Self.getSema().getASTContext(), ParsedClause.getBeginLoc(),
+      ParsedClause.getLParenLoc(), ParsedClause.getVarList(),
+      ParsedClause.getEndLoc());
+}
+
+template <typename Derived>
+void OpenACCClauseTransform<Derived>::VisitFirstPrivateClause(
+    const OpenACCFirstPrivateClause &C) {
+  ParsedClause.setVarListDetails(VisitVarList(C.getVarList()),
+                                 /*IsReadOnly=*/false, /*IsZero=*/false);
+
+  NewClause = OpenACCFirstPrivateClause::Create(
+      Self.getSema().getASTContext(), ParsedClause.getBeginLoc(),
+      ParsedClause.getLParenLoc(), ParsedClause.getVarList(),
+      ParsedClause.getEndLoc());
+}
+
+template <typename Derived>
+void OpenACCClauseTransform<Derived>::VisitNoCreateClause(
+    const OpenACCNoCreateClause &C) {
+  ParsedClause.setVarListDetails(VisitVarList(C.getVarList()),
+                                 /*IsReadOnly=*/false, /*IsZero=*/false);
+
+  NewClause = OpenACCNoCreateClause::Create(
+      Self.getSema().getASTContext(), ParsedClause.getBeginLoc(),
+      ParsedClause.getLParenLoc(), ParsedClause.getVarList(),
+      ParsedClause.getEndLoc());
+}
+
+template <typename Derived>
+void OpenACCClauseTransform<Derived>::VisitPresentClause(
+    const OpenACCPresentClause &C) {
+  ParsedClause.setVarListDetails(VisitVarList(C.getVarList()),
+                                 /*IsReadOnly=*/false, /*IsZero=*/false);
+
+  NewClause = OpenACCPresentClause::Create(
+      Self.getSema().getASTContext(), ParsedClause.getBeginLoc(),
+      ParsedClause.getLParenLoc(), ParsedClause.getVarList(),
+      ParsedClause.getEndLoc());
+}
+
+template <typename Derived>
+void OpenACCClauseTransform<Derived>::VisitCopyClause(
+    const OpenACCCopyClause &C) {
+  ParsedClause.setVarListDetails(VisitVarList(C.getVarList()),
+                                 /*IsReadOnly=*/false, /*IsZero=*/false);
+
+  NewClause = OpenACCCopyClause::Create(
+      Self.getSema().getASTContext(), ParsedClause.getClauseKind(),
+      ParsedClause.getBeginLoc(), ParsedClause.getLParenLoc(),
+      ParsedClause.getVarList(), ParsedClause.getEndLoc());
+}
+
+template <typename Derived>
+void OpenACCClauseTransform<Derived>::VisitCopyInClause(
+    const OpenACCCopyInClause &C) {
+  ParsedClause.setVarListDetails(VisitVarList(C.getVarList()), C.isReadOnly(),
+                                 /*IsZero=*/false);
+
+  NewClause = OpenACCCopyInClause::Create(
+      Self.getSema().getASTContext(), ParsedClause.getClauseKind(),
+      ParsedClause.getBeginLoc(), ParsedClause.getLParenLoc(),
+      ParsedClause.isReadOnly(), ParsedClause.getVarList(),
+      ParsedClause.getEndLoc());
+}
+
+template <typename Derived>
+void OpenACCClauseTransform<Derived>::VisitCopyOutClause(
+    const OpenACCCopyOutClause &C) {
+  ParsedClause.setVarListDetails(VisitVarList(C.getVarList()),
+                                 /*IsReadOnly=*/false, C.isZero());
+
+  NewClause = OpenACCCopyOutClause::Create(
+      Self.getSema().getASTContext(), ParsedClause.getClauseKind(),
+      ParsedClause.getBeginLoc(), ParsedClause.getLParenLoc(),
+      ParsedClause.isZero(), ParsedClause.getVarList(),
+      ParsedClause.getEndLoc());
+}
+
+template <typename Derived>
+void OpenACCClauseTransform<Derived>::VisitCreateClause(
+    const OpenACCCreateClause &C) {
+  ParsedClause.setVarListDetails(VisitVarList(C.getVarList()),
+                                 /*IsReadOnly=*/false, C.isZero());
+
+  NewClause = OpenACCCreateClause::Create(
+      Self.getSema().getASTContext(), ParsedClause.getClauseKind(),
+      ParsedClause.getBeginLoc(), ParsedClause.getLParenLoc(),
+      ParsedClause.isZero(), ParsedClause.getVarList(),
+      ParsedClause.getEndLoc());
+}
+template <typename Derived>
+void OpenACCClauseTransform<Derived>::VisitAttachClause(
+    const OpenACCAttachClause &C) {
+  llvm::SmallVector<Expr *> VarList = VisitVarList(C.getVarList());
+
+  // Ensure each var is a pointer type.
+  VarList.erase(std::remove_if(VarList.begin(), VarList.end(), [&](Expr *E) {
+    return Self.getSema().OpenACC().CheckVarIsPointerType(
+        OpenACCClauseKind::Attach, E);
+  }), VarList.end());
+
+  ParsedClause.setVarListDetails(VarList,
+                                 /*IsReadOnly=*/false, /*IsZero=*/false);
+  NewClause = OpenACCAttachClause::Create(
+      Self.getSema().getASTContext(), ParsedClause.getBeginLoc(),
+      ParsedClause.getLParenLoc(), ParsedClause.getVarList(),
+      ParsedClause.getEndLoc());
+}
+
+template <typename Derived>
+void OpenACCClauseTransform<Derived>::VisitDevicePtrClause(
+    const OpenACCDevicePtrClause &C) {
+  llvm::SmallVector<Expr *> VarList = VisitVarList(C.getVarList());
+
+  // Ensure each var is a pointer type.
+  VarList.erase(std::remove_if(VarList.begin(), VarList.end(), [&](Expr *E) {
+    return Self.getSema().OpenACC().CheckVarIsPointerType(
+        OpenACCClauseKind::DevicePtr, E);
+  }), VarList.end());
+
+  ParsedClause.setVarListDetails(VarList,
+                                 /*IsReadOnly=*/false, /*IsZero=*/false);
+  NewClause = OpenACCDevicePtrClause::Create(
       Self.getSema().getASTContext(), ParsedClause.getBeginLoc(),
       ParsedClause.getLParenLoc(), ParsedClause.getVarList(),
       ParsedClause.getEndLoc());
@@ -11270,6 +11399,30 @@ void OpenACCClauseTransform<Derived>::VisitVectorLengthClause(
   NewClause = OpenACCVectorLengthClause::Create(
       Self.getSema().getASTContext(), ParsedClause.getBeginLoc(),
       ParsedClause.getLParenLoc(), ParsedClause.getIntExprs()[0],
+      ParsedClause.getEndLoc());
+}
+
+template <typename Derived>
+void OpenACCClauseTransform<Derived>::VisitAsyncClause(
+    const OpenACCAsyncClause &C) {
+  if (C.hasIntExpr()) {
+    ExprResult Res = Self.TransformExpr(const_cast<Expr *>(C.getIntExpr()));
+    if (!Res.isUsable())
+      return;
+
+    Res = Self.getSema().OpenACC().ActOnIntExpr(OpenACCDirectiveKind::Invalid,
+                                                C.getClauseKind(),
+                                                C.getBeginLoc(), Res.get());
+    if (!Res.isUsable())
+      return;
+    ParsedClause.setIntExprDetails(Res.get());
+  }
+
+  NewClause = OpenACCAsyncClause::Create(
+      Self.getSema().getASTContext(), ParsedClause.getBeginLoc(),
+      ParsedClause.getLParenLoc(),
+      ParsedClause.getNumIntExprs() != 0 ? ParsedClause.getIntExprs()[0]
+                                         : nullptr,
       ParsedClause.getEndLoc());
 }
 } // namespace
