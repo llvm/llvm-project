@@ -22,7 +22,7 @@ static Error errInvalid(const char *Msg) {
 }
 
 template <typename... Ts>
-static Error errInvalid(const char *Fmt, const Ts &...Vals) {
+static Error errInvalid(const char *Fmt, const Ts &... Vals) {
   return createStringError(std::errc::invalid_argument, Fmt, Vals...);
 }
 
@@ -34,26 +34,26 @@ Expected<DXILVersion> DXILVersion::get(Module &M) {
                       TT.getArchName().str().c_str());
 
   switch (TT.getSubArch()) {
-  case Triple::NoSubArch:
-  case Triple::DXILSubArch_v1_0:
-    return DXILVersion(1, 0);
-  case Triple::DXILSubArch_v1_1:
-    return DXILVersion(1, 1);
-  case Triple::DXILSubArch_v1_2:
-    return DXILVersion(1, 2);
-  case Triple::DXILSubArch_v1_3:
-    return DXILVersion(1, 3);
-  case Triple::DXILSubArch_v1_4:
-    return DXILVersion(1, 4);
-  case Triple::DXILSubArch_v1_5:
-    return DXILVersion(1, 5);
-  case Triple::DXILSubArch_v1_6:
-    return DXILVersion(1, 6);
-  case Triple::DXILSubArch_v1_7:
-    return DXILVersion(1, 7);
-  case Triple::DXILSubArch_v1_8:
-    return DXILVersion(1, 8);
-  default:
+    case Triple::NoSubArch:
+    case Triple::DXILSubArch_v1_0:
+      return DXILVersion(1, 0);
+    case Triple::DXILSubArch_v1_1:
+      return DXILVersion(1, 1);
+    case Triple::DXILSubArch_v1_2:
+      return DXILVersion(1, 2);
+    case Triple::DXILSubArch_v1_3:
+      return DXILVersion(1, 3);
+    case Triple::DXILSubArch_v1_4:
+      return DXILVersion(1, 4);
+    case Triple::DXILSubArch_v1_5:
+      return DXILVersion(1, 5);
+    case Triple::DXILSubArch_v1_6:
+      return DXILVersion(1, 6);
+    case Triple::DXILSubArch_v1_7:
+      return DXILVersion(1, 7);
+    case Triple::DXILSubArch_v1_8:
+      return DXILVersion(1, 8);
+    default:
     return errInvalid("Cannot get DXIL version for arch '%s'",
                       TT.getArchName().str().c_str());
   }
@@ -82,7 +82,9 @@ Expected<DXILVersion> DXILVersion::readDXIL(Module &M) {
   return DXILVersion(MajorOp->getZExtValue(), MinorOp->getZExtValue());
 }
 
-void DXILVersion::strip(Module &M) { M.setTargetTriple("dxil-ms-dx"); }
+void DXILVersion::strip(Module &M) {
+  M.setTargetTriple("dxil-ms-dx");
+}
 
 void DXILVersion::embed(Module &M) {
   Triple TT(Triple::normalize(M.getTargetTriple()));
