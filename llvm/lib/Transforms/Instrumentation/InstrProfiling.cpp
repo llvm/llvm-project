@@ -869,6 +869,8 @@ void InstrLowerer::lowerValueProfileInst(InstrProfValueProfileInst *Ind) {
                       llvm::InstrProfValueKind::IPVK_MemOPSize);
   CallInst *Call = nullptr;
   auto *TLI = &GetTLI(*Ind->getFunction());
+  auto *NormalizedPtr = ConstantExpr::getPointerBitCastOrAddrSpaceCast(
+      DataVar, PointerType::getUnqual(M.getContext()));
 
   // To support value profiling calls within Windows exception handlers, funclet
   // information contained within operand bundles needs to be copied over to
@@ -877,11 +879,13 @@ void InstrLowerer::lowerValueProfileInst(InstrProfValueProfileInst *Ind) {
   SmallVector<OperandBundleDef, 1> OpBundles;
   Ind->getOperandBundlesAsDefs(OpBundles);
   if (!IsMemOpSize) {
-    Value *Args[3] = {Ind->getTargetValue(), DataVar, Builder.getInt32(Index)};
+    Value *Args[3] = {Ind->getTargetValue(), NormalizedPtr,
+                      Builder.getInt32(Index)};
     Call = Builder.CreateCall(getOrInsertValueProfilingCall(M, *TLI), Args,
                               OpBundles);
   } else {
-    Value *Args[3] = {Ind->getTargetValue(), DataVar, Builder.getInt32(Index)};
+    Value *Args[3] = {Ind->getTargetValue(), NormalizedPtr,
+                      Builder.getInt32(Index)};
     Call = Builder.CreateCall(
         getOrInsertValueProfilingCall(M, *TLI, ValueProfilingCallType::MemOp),
         Args, OpBundles);
@@ -1575,7 +1579,8 @@ void InstrLowerer::createDataVariable(InstrProfCntrInstBase *Inc) {
         getInstrProfSectionName(IPSK_vals, TT.getObjectFormat()));
     ValuesVar->setAlignment(Align(8));
     maybeSetComdat(ValuesVar, Fn, CntsVarName);
-    ValuesPtrExpr = ValuesVar;
+    ValuesPtrExpr = ConstantExpr::getPointerBitCastOrAddrSpaceCast(
+        ValuesVar, PointerType::getUnqual(Fn->getContext()));
   }
 
   uint64_t NumCounters = Inc->getNumCounters()->getZExtValue();
