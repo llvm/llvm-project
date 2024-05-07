@@ -5438,7 +5438,7 @@ def err_function_template_partial_spec : Error<
     "function template partial specialization is not allowed">;
 
 def err_function_member_spec_ambiguous : Error<
-    "ambiguous member function specialization of %q0">;
+    "ambiguous member function specialization of %0">;
 def note_function_member_spec_matched : Note<
     "member function specialization matches %0">;
 

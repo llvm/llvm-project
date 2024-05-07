@@ -41,7 +41,7 @@ template<>
 constexpr int A<8>::g() { return 3; }
 
 template<>
-constexpr int A<6>::g() { return 4; } // expected-error {{ambiguous member function specialization of 'A<6>::g'}}
+constexpr int A<6>::g() { return 4; } // expected-error {{ambiguous member function specialization of 'g'}}
 
 static_assert(A<9>::g() == 0);
 static_assert(A<1>::g() == 1);
