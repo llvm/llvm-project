@@ -551,6 +551,17 @@ void RocmInstallationDetector::AddHIPIncludeArgs(const ArgList &DriverArgs,
     CC1Args.push_back(DriverArgs.MakeArgString(P));
   }
 
+  {
+    // This header implements diagnostics for problematic uses of
+    // device-specific macros. Since these diagnostics should be issued even
+    // when GPU headers are not included, this header is included separately.
+    SmallString<128> P(D.ResourceDir);
+    llvm::sys::path::append(P, "include");
+    CC1Args.push_back("-internal-isystem");
+    CC1Args.push_back(DriverArgs.MakeArgString(P));
+    CC1Args.append({"-include", "__clang_hip_device_macro_guards.h"});
+  }
+
   const auto HandleHipStdPar = [=, &DriverArgs, &CC1Args]() {
     StringRef Inc = getIncludePath();
     auto &FS = D.getVFS();
