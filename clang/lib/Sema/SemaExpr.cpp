@@ -6393,7 +6393,18 @@ ExprResult Sema::BuildCXXDefaultInitExpr(SourceLocation Loc, FieldDecl *Field) {
   ImmediateCallVisitor V(getASTContext());
   if (!NestedDefaultChecking)
     V.TraverseDecl(Field);
-  if (V.HasImmediateCalls || InLifetimeExtendingContext) {
+
+  // CWG1815
+  // Support lifetime extension of temporary created by aggregate
+  // initialization using a default member initializer. We should always rebuild
+  // the initializer if it contains any temporaries (if the initializer
+  // expression is an ExprWithCleanups). Then make sure the normal lifetime
+  // extension code recurses into the default initializer and does lifetime
+  // extension when warranted.
+  bool ContainsAnyTemporaries =
+      isa_and_present<ExprWithCleanups>(Field->getInClassInitializer());
+  if (V.HasImmediateCalls || InLifetimeExtendingContext ||
+      ContainsAnyTemporaries) {
     ExprEvalContexts.back().DelayedDefaultInitializationContext = {Loc, Field,
                                                                    CurContext};
     ExprEvalContexts.back().IsCurrentlyCheckingDefaultArgumentOrInitializer =
@@ -6401,9 +6412,11 @@ ExprResult Sema::BuildCXXDefaultInitExpr(SourceLocation Loc, FieldDecl *Field) {
     // Pass down lifetime extending flag, and collect temporaries in
     // CreateMaterializeTemporaryExpr when we rewrite the call argument.
     keepInLifetimeExtendingContext();
-
     EnsureImmediateInvocationInDefaultArgs Immediate(*this);
     ExprResult Res;
+
+    // Rebuild CXXDefaultInitExpr might cause diagnostics.
+    SFINAETrap Trap(*this);
     runWithSufficientStackSpace(Loc, [&] {
       Res = Immediate.TransformInitializer(Field->getInClassInitializer(),
                                            /*CXXDirectInit=*/false);

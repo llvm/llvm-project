@@ -711,26 +711,6 @@ void InitListChecker::FillInEmptyInitForField(unsigned Init, FieldDecl *Field,
       if (VerifyOnly)
         return;
 
-      // Enter a lifetime extension context, then we can support lifetime
-      // extension of temporary created by aggregate initialization using a
-      // default member initializer (DR1815 https://wg21.link/CWG1815).
-      //
-      // In a lifetime extension context, BuildCXXDefaultInitExpr will clone the
-      // initializer expression on each use that would lifetime extend its
-      // temporaries.
-      EnterExpressionEvaluationContext LifetimeExtensionContext(
-          SemaRef, Sema::ExpressionEvaluationContext::PotentiallyEvaluated,
-          /*LambdaContextDecl=*/nullptr,
-          Sema::ExpressionEvaluationContextRecord::EK_Other, true);
-
-      // Lifetime extension in default-member-init.
-      auto &LastRecord = SemaRef.ExprEvalContexts.back();
-
-      // Just copy previous record, make sure we haven't forget anything.
-      LastRecord =
-          SemaRef.ExprEvalContexts[SemaRef.ExprEvalContexts.size() - 2];
-      LastRecord.InLifetimeExtendingContext = true;
-
       ExprResult DIE = SemaRef.BuildCXXDefaultInitExpr(Loc, Field);
       if (DIE.isInvalid()) {
         hadError = true;
@@ -7720,8 +7700,6 @@ static void visitLocalsRetainedByReferenceBinding(IndirectLocalPath &Path,
     // Step into CXXDefaultInitExprs so we can diagnose cases where a
     // constructor inherits one as an implicit mem-initializer.
     if (auto *DIE = dyn_cast<CXXDefaultInitExpr>(Init)) {
-      assert(DIE->hasRewrittenInit() &&
-             "CXXDefaultInitExpr must has rewritten init");
       Path.push_back(
           {IndirectLocalPathEntry::DefaultInit, DIE, DIE->getField()});
       Init = DIE->getExpr();
@@ -8087,11 +8065,6 @@ static void visitLocalsRetainedByInitializer(IndirectLocalPath &Path,
 enum PathLifetimeKind {
   /// Lifetime-extend along this path.
   Extend,
-  /// We should lifetime-extend, but we don't because (due to technical
-  /// limitations) we can't. This happens for default member initializers,
-  /// which we don't clone for every use, so we don't have a unique
-  /// MaterializeTemporaryExpr to update.
-  ShouldExtend,
   /// Do not lifetime extend along this path.
   NoExtend
 };
@@ -8103,7 +8076,7 @@ shouldLifetimeExtendThroughPath(const IndirectLocalPath &Path) {
   PathLifetimeKind Kind = PathLifetimeKind::Extend;
   for (auto Elem : Path) {
     if (Elem.Kind == IndirectLocalPathEntry::DefaultInit)
-      Kind = PathLifetimeKind::ShouldExtend;
+      Kind = PathLifetimeKind::Extend;
     else if (Elem.Kind != IndirectLocalPathEntry::LambdaCaptureInit)
       return PathLifetimeKind::NoExtend;
   }
@@ -8216,11 +8189,6 @@ void Sema::checkInitializerLifetime(const InitializedEntity &Entity,
       }
 
       switch (shouldLifetimeExtendThroughPath(Path)) {
-      case PathLifetimeKind::ShouldExtend:
-        // We're supposed to lifetime-extend the temporary along this path (per
-        // the resolution of DR1815), we supported that by clone the initializer
-        // expression on each use that would lifetime extend its temporaries.
-        [[fallthrough]];
       case PathLifetimeKind::Extend:
         // Update the storage duration of the materialized temporary.
         // FIXME: Rebuild the expression instead of mutating it.

@@ -216,6 +216,18 @@ namespace cwg1815 { // cwg1815: yes
   //   since-cxx14-note@#cwg1815-B {{initializing field 'r' with default member initializer}}
   //   since-cxx14-note@#cwg1815-b {{in implicit default constructor for 'cwg1815::B' first required here}}
   B b; // #cwg1815-b
+
+#if __cplusplus >= 201703L
+  struct C { const int &r = 0; };
+  constexpr C c = {}; // OK, since cwg1815
+  static_assert(c.r == 0);
+
+  constexpr int f() {
+    A a = {}; // OK, since cwg1815
+    return a.r;
+  }
+  static_assert(f() == 0);
+#endif
 #endif
 }
 

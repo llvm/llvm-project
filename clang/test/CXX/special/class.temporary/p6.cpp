@@ -281,11 +281,25 @@ void check_dr1815() { // dr1815: yes
     A &&a = A{};
     ~B() {}
   };
-
-  // CHECK: void @_Z12check_dr1815v()
-  // CHECK: call void @_ZZ12check_dr1815vEN1BD1Ev(
-  // CHECK: call void @_ZZ12check_dr1815vEN1AD1Ev(
   B a = {};
+  
+  // CHECK: call {{.*}}block_scope_begin_function
+  extern void block_scope_begin_function();
+  extern void block_scope_end_function();
+  block_scope_begin_function();
+  {
+    // CHECK: call void @_ZZ12check_dr1815vEN1BD1Ev
+    // CHECK: call void @_ZZ12check_dr1815vEN1AD1Ev
+    B b = {};
+  }
+  // CHECK: call {{.*}}block_scope_end_function
+  block_scope_end_function();
+
+  // CHECK: call {{.*}}some_other_function
+  extern void some_other_function();
+  some_other_function();
+  // CHECK: call void @_ZZ12check_dr1815vEN1BD1Ev
+  // CHECK: call void @_ZZ12check_dr1815vEN1AD1Ev
 #endif
 }
 
