@@ -150,6 +150,14 @@ TEST(ParseNormalizedArchString, UpdatesFLenMinVLenMaxELen) {
   EXPECT_EQ(Info.getMaxELenFp(), 64U);
 }
 
+TEST(ParseNormalizedArchString, AcceptsUnknownMultiletter) {
+  auto MaybeISAInfo = RISCVISAInfo::parseNormalizedArchString(
+      "rv64i2p0_f2p0_d2p0_zicsr2p0_ykk1p0");
+  ASSERT_THAT_EXPECTED(MaybeISAInfo, Succeeded());
+  RISCVISAInfo &Info = **MaybeISAInfo;
+  EXPECT_EQ(Info.toString(), "rv64i2p0_f2p0_d2p0_zicsr2p0_ykk1p0");
+}
+
 TEST(ParseArchString, RejectsInvalidChars) {
   for (StringRef Input : {"RV32", "rV64", "rv32i2P0", "rv64i2p0_A2p0"}) {
     EXPECT_EQ(toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
