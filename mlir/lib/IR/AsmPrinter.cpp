@@ -189,6 +189,11 @@ struct AsmPrinterOptions {
       "mlir-print-value-users", llvm::cl::init(false),
       llvm::cl::desc(
           "Print users of operation results and block arguments as a comment")};
+
+  llvm::cl::opt<bool> printUniqueSSAIDs{
+      "mlir-print-unique-ssa-ids", llvm::cl::init(false),
+      llvm::cl::desc("Print unique SSA ID numbers for values, block arguments "
+                     "and naming conflicts across all regions")};
 };
 } // namespace
 
@@ -206,7 +211,7 @@ OpPrintingFlags::OpPrintingFlags()
     : printDebugInfoFlag(false), printDebugInfoPrettyFormFlag(false),
       printGenericOpFormFlag(false), skipRegionsFlag(false),
       assumeVerifiedFlag(false), printLocalScope(false),
-      printValueUsersFlag(false) {
+      printValueUsersFlag(false), printUniqueSSAIDsFlag(false) {
   // Initialize based upon command line options, if they are available.
   if (!clOptions.isConstructed())
     return;
@@ -224,6 +229,7 @@ OpPrintingFlags::OpPrintingFlags()
   printLocalScope = clOptions->printLocalScopeOpt;
   skipRegionsFlag = clOptions->skipRegionsOpt;
   printValueUsersFlag = clOptions->printValueUsers;
+  printUniqueSSAIDsFlag = clOptions->printUniqueSSAIDs;
 }
 
 /// Enable the elision of large elements attributes, by printing a '...'
@@ -348,6 +354,11 @@ bool OpPrintingFlags::shouldUseLocalScope() const { return printLocalScope; }
 /// Return if the printer should print users of values.
 bool OpPrintingFlags::shouldPrintValueUsers() const {
   return printValueUsersFlag;
+}
+
+/// Return if the printer should use unique IDs.
+bool OpPrintingFlags::shouldPrintUniqueSSAIDs() const {
+  return printUniqueSSAIDsFlag || shouldPrintGenericOpForm();
 }
 
 //===----------------------------------------------------------------------===//
@@ -1369,8 +1380,14 @@ SSANameState::SSANameState(Operation *op, const OpPrintingFlags &printerFlags)
   while (!nameContext.empty()) {
     Region *region;
     UsedNamesScopeTy *parentScope;
-    std::tie(region, nextValueID, nextArgumentID, nextConflictID, parentScope) =
-        nameContext.pop_back_val();
+
+    if (printerFlags.shouldPrintUniqueSSAIDs())
+      // To print unique SSA IDs, ignore saved ID counts from parent regions
+      std::tie(region, std::ignore, std::ignore, std::ignore, parentScope) =
+          nameContext.pop_back_val();
+    else
+      std::tie(region, nextValueID, nextArgumentID, nextConflictID,
+               parentScope) = nameContext.pop_back_val();
 
     // When we switch from one subtree to another, pop the scopes(needless)
     // until the parent scope.

@@ -173,42 +173,39 @@ GetAffectingModuleMaps(const Preprocessor &PP, Module *RootModule) {
 
   const HeaderSearch &HS = PP.getHeaderSearchInfo();
   const ModuleMap &MM = HS.getModuleMap();
-  const SourceManager &SourceMgr = PP.getSourceManager();
 
   std::set<const FileEntry *> ModuleMaps;
-  auto CollectIncludingModuleMaps = [&](FileID FID, FileEntryRef F) {
-    if (!ModuleMaps.insert(F).second)
-      return;
-    SourceLocation Loc = SourceMgr.getIncludeLoc(FID);
-    // The include location of inferred module maps can point into the header
-    // file that triggered the inferring. Cut off the walk if that's the case.
-    while (Loc.isValid() && isModuleMap(SourceMgr.getFileCharacteristic(Loc))) {
-      FID = SourceMgr.getFileID(Loc);
-      F = *SourceMgr.getFileEntryRefForID(FID);
-      if (!ModuleMaps.insert(F).second)
-        break;
-      Loc = SourceMgr.getIncludeLoc(FID);
-    }
-  };
-
   std::set<const Module *> ProcessedModules;
-  auto CollectIncludingMapsFromAncestors = [&](const Module *M) {
-    for (const Module *Mod = M; Mod; Mod = Mod->Parent) {
-      if (!ProcessedModules.insert(Mod).second)
-        break;
+  auto CollectModuleMapsForHierarchy = [&](const Module *M) {
+    M = M->getTopLevelModule();
+
+    if (!ProcessedModules.insert(M).second)
+      return;
+
+    std::queue<const Module *> Q;
+    Q.push(M);
+    while (!Q.empty()) {
+      const Module *Mod = Q.front();
+      Q.pop();
+
       // The containing module map is affecting, because it's being pointed
       // into by Module::DefinitionLoc.
-      if (FileID FID = MM.getContainingModuleMapFileID(Mod); FID.isValid())
-        CollectIncludingModuleMaps(FID, *SourceMgr.getFileEntryRefForID(FID));
-      // For inferred modules, the module map that allowed inferring is not in
-      // the include chain of the virtual containing module map file. It did
-      // affect the compilation, though.
-      if (FileID FID = MM.getModuleMapFileIDForUniquing(Mod); FID.isValid())
-        CollectIncludingModuleMaps(FID, *SourceMgr.getFileEntryRefForID(FID));
+      if (auto FE = MM.getContainingModuleMapFile(Mod))
+        ModuleMaps.insert(*FE);
+      // For inferred modules, the module map that allowed inferring is not
+      // related to the virtual containing module map file. It did affect the
+      // compilation, though.
+      if (auto FE = MM.getModuleMapFileForUniquing(Mod))
+        ModuleMaps.insert(*FE);
+
+      for (auto *SubM : Mod->submodules())
+        Q.push(SubM);
     }
   };
 
   // Handle all the affecting modules referenced from the root module.
+
+  CollectModuleMapsForHierarchy(RootModule);
 
   std::queue<const Module *> Q;
   Q.push(RootModule);
@@ -216,11 +213,10 @@ GetAffectingModuleMaps(const Preprocessor &PP, Module *RootModule) {
     const Module *CurrentModule = Q.front();
     Q.pop();
 
-    CollectIncludingMapsFromAncestors(CurrentModule);
     for (const Module *ImportedModule : CurrentModule->Imports)
-      CollectIncludingMapsFromAncestors(ImportedModule);
+      CollectModuleMapsForHierarchy(ImportedModule);
     for (const Module *UndeclaredModule : CurrentModule->UndeclaredUses)
-      CollectIncludingMapsFromAncestors(UndeclaredModule);
+      CollectModuleMapsForHierarchy(UndeclaredModule);
 
     for (auto *M : CurrentModule->submodules())
       Q.push(M);
@@ -249,8 +245,26 @@ GetAffectingModuleMaps(const Preprocessor &PP, Module *RootModule) {
 
     for (const auto &KH : HS.findResolvedModulesForHeader(*File))
       if (const Module *M = KH.getModule())
-        CollectIncludingMapsFromAncestors(M);
+        CollectModuleMapsForHierarchy(M);
   }
+
+  // FIXME: This algorithm is not correct for module map hierarchies where
+  // module map file defining a (sub)module of a top-level module X includes
+  // a module map file that defines a (sub)module of another top-level module Y.
+  // Whenever X is affecting and Y is not, "replaying" this PCM file will fail
+  // when parsing module map files for X due to not knowing about the `extern`
+  // module map for Y.
+  //
+  // We don't have a good way to fix it here. We could mark all children of
+  // affecting module map files as being affecting as well, but that's
+  // expensive. SourceManager does not model the edge from parent to child
+  // SLocEntries, so instead, we would need to iterate over leaf module map
+  // files, walk up their include hierarchy and check whether we arrive at an
+  // affecting module map.
+  //
+  // Instead of complicating and slowing down this function, we should probably
+  // just ban module map hierarchies where module map defining a (sub)module X
+  // includes a module map defining a module that's not a submodule of X.
 
   return ModuleMaps;
 }
@@ -1174,26 +1188,72 @@ ASTWriter::createSignature() const {
   return std::make_pair(ASTBlockHash, Signature);
 }
 
+ASTFileSignature ASTWriter::createSignatureForNamedModule() const {
+  llvm::SHA1 Hasher;
+  Hasher.update(StringRef(Buffer.data(), Buffer.size()));
+
+  assert(WritingModule);
+  assert(WritingModule->isNamedModule());
+
+  // We need to combine all the export imported modules no matter
+  // we used it or not.
+  for (auto [ExportImported, _] : WritingModule->Exports)
+    Hasher.update(ExportImported->Signature);
+
+  // We combine all the used modules to make sure the signature is precise.
+  // Consider the case like:
+  //
+  // // a.cppm
+  // export module a;
+  // export inline int a() { ... }
+  //
+  // // b.cppm
+  // export module b;
+  // import a;
+  // export inline int b() { return a(); }
+  //
+  // Since both `a()` and `b()` are inline, we need to make sure the BMI of
+  // `b.pcm` will change after the implementation of `a()` changes. We can't
+  // get that naturally since we won't record the body of `a()` during the
+  // writing process. We can't reuse ODRHash here since ODRHash won't calculate
+  // the called function recursively. So ODRHash will be problematic if `a()`
+  // calls other inline functions.
+  //
+  // Probably we can solve this by a new hash mechanism. But the safety and
+  // efficiency may a problem too. Here we just combine the hash value of the
+  // used modules conservatively.
+  for (Module *M : TouchedTopLevelModules)
+    Hasher.update(M->Signature);
+
+  return ASTFileSignature::create(Hasher.result());
+}
+
+static void BackpatchSignatureAt(llvm::BitstreamWriter &Stream,
+                                 const ASTFileSignature &S, uint64_t BitNo) {
+  for (uint8_t Byte : S) {
+    Stream.BackpatchByte(BitNo, Byte);
+    BitNo += 8;
+  }
+}
+
 ASTFileSignature ASTWriter::backpatchSignature() {
+  if (isWritingStdCXXNamedModules()) {
+    ASTFileSignature Signature = createSignatureForNamedModule();
+    BackpatchSignatureAt(Stream, Signature, SignatureOffset);
+    return Signature;
+  }
+
   if (!WritingModule ||
       !PP->getHeaderSearchInfo().getHeaderSearchOpts().ModulesHashContent)
     return {};
 
   // For implicit modules, write the hash of the PCM as its signature.
-
-  auto BackpatchSignatureAt = [&](const ASTFileSignature &S, uint64_t BitNo) {
-    for (uint8_t Byte : S) {
-      Stream.BackpatchByte(BitNo, Byte);
-      BitNo += 8;
-    }
-  };
-
   ASTFileSignature ASTBlockHash;
   ASTFileSignature Signature;
   std::tie(ASTBlockHash, Signature) = createSignature();
 
-  BackpatchSignatureAt(ASTBlockHash, ASTBlockHashOffset);
-  BackpatchSignatureAt(Signature, SignatureOffset);
+  BackpatchSignatureAt(Stream, ASTBlockHash, ASTBlockHashOffset);
+  BackpatchSignatureAt(Stream, Signature, SignatureOffset);
 
   return Signature;
 }
@@ -1210,9 +1270,11 @@ void ASTWriter::writeUnhashedControlBlock(Preprocessor &PP,
   RecordData Record;
   Stream.EnterSubblock(UNHASHED_CONTROL_BLOCK_ID, 5);
 
-  // For implicit modules, write the hash of the PCM as its signature.
-  if (WritingModule &&
-      PP.getHeaderSearchInfo().getHeaderSearchOpts().ModulesHashContent) {
+  // For implicit modules and C++20 named modules, write the hash of the PCM as
+  // its signature.
+  if (isWritingStdCXXNamedModules() ||
+      (WritingModule &&
+       PP.getHeaderSearchInfo().getHeaderSearchOpts().ModulesHashContent)) {
     // At this point, we don't know the actual signature of the file or the AST
     // block - we're only able to compute those at the end of the serialization
     // process. Let's store dummy signatures for now, and replace them with the
@@ -1223,20 +1285,23 @@ void ASTWriter::writeUnhashedControlBlock(Preprocessor &PP,
     auto Dummy = ASTFileSignature::createDummy();
     SmallString<128> Blob{Dummy.begin(), Dummy.end()};
 
-    auto Abbrev = std::make_shared<BitCodeAbbrev>();
-    Abbrev->Add(BitCodeAbbrevOp(AST_BLOCK_HASH));
-    Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob));
-    unsigned ASTBlockHashAbbrev = Stream.EmitAbbrev(std::move(Abbrev));
+    // We don't need AST Block hash in named modules.
+    if (!isWritingStdCXXNamedModules()) {
+      auto Abbrev = std::make_shared<BitCodeAbbrev>();
+      Abbrev->Add(BitCodeAbbrevOp(AST_BLOCK_HASH));
+      Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob));
+      unsigned ASTBlockHashAbbrev = Stream.EmitAbbrev(std::move(Abbrev));
 
-    Abbrev = std::make_shared<BitCodeAbbrev>();
+      Record.push_back(AST_BLOCK_HASH);
+      Stream.EmitRecordWithBlob(ASTBlockHashAbbrev, Record, Blob);
+      ASTBlockHashOffset = Stream.GetCurrentBitNo() - Blob.size() * 8;
+      Record.clear();
+    }
+
+    auto Abbrev = std::make_shared<BitCodeAbbrev>();
     Abbrev->Add(BitCodeAbbrevOp(SIGNATURE));
     Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob));
     unsigned SignatureAbbrev = Stream.EmitAbbrev(std::move(Abbrev));
-
-    Record.push_back(AST_BLOCK_HASH);
-    Stream.EmitRecordWithBlob(ASTBlockHashAbbrev, Record, Blob);
-    ASTBlockHashOffset = Stream.GetCurrentBitNo() - Blob.size() * 8;
-    Record.clear();
 
     Record.push_back(SIGNATURE);
     Stream.EmitRecordWithBlob(SignatureAbbrev, Record, Blob);
@@ -1639,6 +1704,18 @@ struct InputFileEntry {
 
 } // namespace
 
+SourceLocation ASTWriter::getAffectingIncludeLoc(const SourceManager &SourceMgr,
+                                                 const SrcMgr::FileInfo &File) {
+  SourceLocation IncludeLoc = File.getIncludeLoc();
+  if (IncludeLoc.isValid()) {
+    FileID IncludeFID = SourceMgr.getFileID(IncludeLoc);
+    assert(IncludeFID.isValid() && "IncludeLoc in invalid file");
+    if (!IsSLocAffecting[IncludeFID.ID])
+      IncludeLoc = SourceLocation();
+  }
+  return IncludeLoc;
+}
+
 void ASTWriter::WriteInputFiles(SourceManager &SourceMgr,
                                 HeaderSearchOptions &HSOpts) {
   using namespace llvm;
@@ -1692,7 +1769,7 @@ void ASTWriter::WriteInputFiles(SourceManager &SourceMgr,
     Entry.IsSystemFile = isSystem(File.getFileCharacteristic());
     Entry.IsTransient = Cache->IsTransient;
     Entry.BufferOverridden = Cache->BufferOverridden;
-    Entry.IsTopLevel = File.getIncludeLoc().isInvalid();
+    Entry.IsTopLevel = getAffectingIncludeLoc(SourceMgr, File).isInvalid();
     Entry.IsModuleMap = isModuleMap(File.getFileCharacteristic());
 
     auto ContentHash = hash_code(-1);
@@ -2219,7 +2296,7 @@ void ASTWriter::WriteSourceManagerBlock(SourceManager &SourceMgr,
       SLocEntryOffsets.push_back(Offset);
       // Starting offset of this entry within this module, so skip the dummy.
       Record.push_back(getAdjustedOffset(SLoc->getOffset()) - 2);
-      AddSourceLocation(File.getIncludeLoc(), Record);
+      AddSourceLocation(getAffectingIncludeLoc(SourceMgr, File), Record);
       Record.push_back(File.getFileCharacteristic()); // FIXME: stable encoding
       Record.push_back(File.hasLineDirectives());
 
@@ -2677,8 +2754,10 @@ void ASTWriter::WritePreprocessorDetail(PreprocessingRecord &PPRec,
 
     uint64_t Offset = Stream.GetCurrentBitNo() - MacroOffsetsBase;
     assert((Offset >> 32) == 0 && "Preprocessed entity offset too large");
-    PreprocessedEntityOffsets.push_back(
-        PPEntityOffset(getAdjustedRange((*E)->getSourceRange()), Offset));
+    SourceRange R = getAdjustedRange((*E)->getSourceRange());
+    PreprocessedEntityOffsets.emplace_back(
+        getRawSourceLocationEncoding(R.getBegin()),
+        getRawSourceLocationEncoding(R.getEnd()), Offset);
 
     if (auto *MD = dyn_cast<MacroDefinitionRecord>(*E)) {
       // Record this macro definition's ID.
@@ -2745,7 +2824,9 @@ void ASTWriter::WritePreprocessorDetail(PreprocessingRecord &PPRec,
     std::vector<PPSkippedRange> SerializedSkippedRanges;
     SerializedSkippedRanges.reserve(SkippedRanges.size());
     for (auto const& Range : SkippedRanges)
-      SerializedSkippedRanges.emplace_back(Range);
+      SerializedSkippedRanges.emplace_back(
+          getRawSourceLocationEncoding(Range.getBegin()),
+          getRawSourceLocationEncoding(Range.getEnd()));
 
     using namespace llvm;
     auto Abbrev = std::make_shared<BitCodeAbbrev>();
@@ -2911,8 +2992,8 @@ void ASTWriter::WriteSubmodules(Module *WritingModule) {
       ParentID = SubmoduleIDs[Mod->Parent];
     }
 
-    uint64_t DefinitionLoc =
-        SourceLocationEncoding::encode(getAdjustedLocation(Mod->DefinitionLoc));
+    SourceLocationEncoding::RawLocEncoding DefinitionLoc =
+        getRawSourceLocationEncoding(getAdjustedLocation(Mod->DefinitionLoc));
 
     // Emit the definition of the block.
     {
@@ -2936,8 +3017,8 @@ void ASTWriter::WriteSubmodules(Module *WritingModule) {
 
     // Emit the requirements.
     for (const auto &R : Mod->Requirements) {
-      RecordData::value_type Record[] = {SUBMODULE_REQUIRES, R.second};
-      Stream.EmitRecordWithBlob(RequiresAbbrev, Record, R.first);
+      RecordData::value_type Record[] = {SUBMODULE_REQUIRES, R.RequiredState};
+      Stream.EmitRecordWithBlob(RequiresAbbrev, Record, R.FeatureName);
     }
 
     // Emit the umbrella header, if there is one.
@@ -3195,7 +3276,7 @@ void ASTWriter::WriteType(QualType T) {
     TypeOffsets.emplace_back(Offset);
   else if (TypeOffsets.size() < Index) {
     TypeOffsets.resize(Index + 1);
-    TypeOffsets[Index].setBitOffset(Offset);
+    TypeOffsets[Index].set(Offset);
   } else {
     llvm_unreachable("Types emitted in wrong order");
   }
@@ -3204,6 +3285,17 @@ void ASTWriter::WriteType(QualType T) {
 //===----------------------------------------------------------------------===//
 // Declaration Serialization
 //===----------------------------------------------------------------------===//
+
+static bool IsInternalDeclFromFileContext(const Decl *D) {
+  auto *ND = dyn_cast<NamedDecl>(D);
+  if (!ND)
+    return false;
+
+  if (!D->getDeclContext()->getRedeclContext()->isFileContext())
+    return false;
+
+  return ND->getFormalLinkage() == Linkage::Internal;
+}
 
 /// Write the block containing all of the declaration IDs
 /// lexically declared within the given DeclContext.
@@ -3223,6 +3315,15 @@ uint64_t ASTWriter::WriteDeclContextLexicalBlock(ASTContext &Context,
   SmallVector<DeclID, 128> KindDeclPairs;
   for (const auto *D : DC->decls()) {
     if (DoneWritingDeclsAndTypes && !wasDeclEmitted(D))
+      continue;
+
+    // We don't need to write decls with internal linkage into reduced BMI.
+    // If such decls gets emitted due to it get used from inline functions,
+    // the program illegal. However, there are too many use of static inline
+    // functions in the global module fragment and it will be breaking change
+    // to forbid that. So we have to allow to emit such declarations from GMF.
+    if (GeneratingReducedBMI && !D->isFromExplicitGlobalModule() &&
+        IsInternalDeclFromFileContext(D))
       continue;
 
     KindDeclPairs.push_back(D->getKind());
@@ -3886,6 +3987,13 @@ public:
           !Writer.wasDeclEmitted(DeclForLocalLookup))
         continue;
 
+      // Try to avoid writing internal decls to reduced BMI.
+      // See comments in ASTWriter::WriteDeclContextLexicalBlock for details.
+      if (Writer.isGeneratingReducedBMI() &&
+          !DeclForLocalLookup->isFromExplicitGlobalModule() &&
+          IsInternalDeclFromFileContext(DeclForLocalLookup))
+        continue;
+
       DeclIDs.push_back(Writer.GetDeclRef(DeclForLocalLookup));
     }
     return std::make_pair(Start, DeclIDs.size());
@@ -4255,6 +4363,12 @@ uint64_t ASTWriter::WriteDeclContextVisibleBlock(ASTContext &Context,
           continue;
 
         if (DoneWritingDeclsAndTypes && !wasDeclEmitted(ND))
+          continue;
+
+        // We don't need to force emitting internal decls into reduced BMI.
+        // See comments in ASTWriter::WriteDeclContextLexicalBlock for details.
+        if (GeneratingReducedBMI && !ND->isFromExplicitGlobalModule() &&
+            IsInternalDeclFromFileContext(ND))
           continue;
 
         GetDeclRef(ND);
@@ -4917,8 +5031,7 @@ void ASTWriter::PrepareWritingSpecialDecls(Sema &SemaRef) {
       // is ill-formed. However, in practice, there are a lot of projects
       // uses `static inline` in the headers. So we can't get rid of all
       // static entities in reduced BMI now.
-      if (auto *ND = dyn_cast<NamedDecl>(D);
-          ND && ND->getFormalLinkage() == Linkage::Internal)
+      if (IsInternalDeclFromFileContext(D))
         continue;
     }
 
@@ -5296,7 +5409,6 @@ ASTFileSignature ASTWriter::WriteASTCore(Sema &SemaRef, StringRef isysroot,
 
         // These values should be unique within a chain, since they will be read
         // as keys into ContinuousRangeMaps.
-        writeBaseIDOrNone(M.SLocEntryBaseOffset, M.LocalNumSLocEntries);
         writeBaseIDOrNone(M.BaseIdentifierID, M.LocalNumIdentifiers);
         writeBaseIDOrNone(M.BaseMacroID, M.LocalNumMacros);
         writeBaseIDOrNone(M.BasePreprocessedEntityID,
@@ -5789,10 +5901,34 @@ void ASTWriter::AddFileID(FileID FID, RecordDataImpl &Record) {
   Record.push_back(getAdjustedFileID(FID).getOpaqueValue());
 }
 
+SourceLocationEncoding::RawLocEncoding
+ASTWriter::getRawSourceLocationEncoding(SourceLocation Loc, LocSeq *Seq) {
+  unsigned BaseOffset = 0;
+  unsigned ModuleFileIndex = 0;
+
+  // See SourceLocationEncoding.h for the encoding details.
+  if (Context->getSourceManager().isLoadedSourceLocation(Loc) &&
+      Loc.isValid()) {
+    assert(getChain());
+    auto SLocMapI = getChain()->GlobalSLocOffsetMap.find(
+        SourceManager::MaxLoadedOffset - Loc.getOffset() - 1);
+    assert(SLocMapI != getChain()->GlobalSLocOffsetMap.end() &&
+           "Corrupted global sloc offset map");
+    ModuleFile *F = SLocMapI->second;
+    BaseOffset = F->SLocEntryBaseOffset - 2;
+    // 0 means the location is not loaded. So we need to add 1 to the index to
+    // make it clear.
+    ModuleFileIndex = F->Index + 1;
+    assert(&getChain()->getModuleManager()[F->Index] == F);
+  }
+
+  return SourceLocationEncoding::encode(Loc, BaseOffset, ModuleFileIndex, Seq);
+}
+
 void ASTWriter::AddSourceLocation(SourceLocation Loc, RecordDataImpl &Record,
                                   SourceLocationSequence *Seq) {
   Loc = getAdjustedLocation(Loc);
-  Record.push_back(SourceLocationEncoding::encode(Loc, Seq));
+  Record.push_back(getRawSourceLocationEncoding(Loc, Seq));
 }
 
 void ASTWriter::AddSourceRange(SourceRange Range, RecordDataImpl &Record,
@@ -6001,8 +6137,12 @@ LocalDeclID ASTWriter::GetDeclRef(const Decl *D) {
 
   // If D comes from an AST file, its declaration ID is already known and
   // fixed.
-  if (D->isFromASTFile())
+  if (D->isFromASTFile()) {
+    if (isWritingStdCXXNamedModules() && D->getOwningModule())
+      TouchedTopLevelModules.insert(D->getOwningModule()->getTopLevelModule());
+
     return LocalDeclID(D->getGlobalID());
+  }
 
   assert(!(reinterpret_cast<uintptr_t>(D) & 0x01) && "Invalid decl pointer");
   LocalDeclID &ID = DeclIDs[D];
@@ -7645,6 +7785,12 @@ void ASTRecordWriter::writeOMPChildren(OMPChildren *Data) {
     AddStmt(Data->getChildren()[I]);
 }
 
+void ASTRecordWriter::writeOpenACCVarList(const OpenACCClauseWithVarList *C) {
+  writeUInt32(C->getVarList().size());
+  for (Expr *E : C->getVarList())
+    AddStmt(E);
+}
+
 void ASTRecordWriter::writeOpenACCClause(const OpenACCClause *C) {
   writeEnum(C->getClauseKind());
   writeSourceLocation(C->getBeginLoc());
@@ -7691,6 +7837,86 @@ void ASTRecordWriter::writeOpenACCClause(const OpenACCClause *C) {
     AddStmt(const_cast<Expr *>(NWC->getIntExpr()));
     return;
   }
+  case OpenACCClauseKind::Private: {
+    const auto *PC = cast<OpenACCPrivateClause>(C);
+    writeSourceLocation(PC->getLParenLoc());
+    writeOpenACCVarList(PC);
+    return;
+  }
+  case OpenACCClauseKind::FirstPrivate: {
+    const auto *FPC = cast<OpenACCFirstPrivateClause>(C);
+    writeSourceLocation(FPC->getLParenLoc());
+    writeOpenACCVarList(FPC);
+    return;
+  }
+  case OpenACCClauseKind::Attach: {
+    const auto *AC = cast<OpenACCAttachClause>(C);
+    writeSourceLocation(AC->getLParenLoc());
+    writeOpenACCVarList(AC);
+    return;
+  }
+  case OpenACCClauseKind::DevicePtr: {
+    const auto *DPC = cast<OpenACCDevicePtrClause>(C);
+    writeSourceLocation(DPC->getLParenLoc());
+    writeOpenACCVarList(DPC);
+    return;
+  }
+  case OpenACCClauseKind::NoCreate: {
+    const auto *NCC = cast<OpenACCNoCreateClause>(C);
+    writeSourceLocation(NCC->getLParenLoc());
+    writeOpenACCVarList(NCC);
+    return;
+  }
+  case OpenACCClauseKind::Present: {
+    const auto *PC = cast<OpenACCPresentClause>(C);
+    writeSourceLocation(PC->getLParenLoc());
+    writeOpenACCVarList(PC);
+    return;
+  }
+  case OpenACCClauseKind::Copy:
+  case OpenACCClauseKind::PCopy:
+  case OpenACCClauseKind::PresentOrCopy: {
+    const auto *CC = cast<OpenACCCopyClause>(C);
+    writeSourceLocation(CC->getLParenLoc());
+    writeOpenACCVarList(CC);
+    return;
+  }
+  case OpenACCClauseKind::CopyIn:
+  case OpenACCClauseKind::PCopyIn:
+  case OpenACCClauseKind::PresentOrCopyIn: {
+    const auto *CIC = cast<OpenACCCopyInClause>(C);
+    writeSourceLocation(CIC->getLParenLoc());
+    writeBool(CIC->isReadOnly());
+    writeOpenACCVarList(CIC);
+    return;
+  }
+  case OpenACCClauseKind::CopyOut:
+  case OpenACCClauseKind::PCopyOut:
+  case OpenACCClauseKind::PresentOrCopyOut: {
+    const auto *COC = cast<OpenACCCopyOutClause>(C);
+    writeSourceLocation(COC->getLParenLoc());
+    writeBool(COC->isZero());
+    writeOpenACCVarList(COC);
+    return;
+  }
+  case OpenACCClauseKind::Create:
+  case OpenACCClauseKind::PCreate:
+  case OpenACCClauseKind::PresentOrCreate: {
+    const auto *CC = cast<OpenACCCreateClause>(C);
+    writeSourceLocation(CC->getLParenLoc());
+    writeBool(CC->isZero());
+    writeOpenACCVarList(CC);
+    return;
+  }
+  case OpenACCClauseKind::Async: {
+    const auto *AC = cast<OpenACCAsyncClause>(C);
+    writeSourceLocation(AC->getLParenLoc());
+    writeBool(AC->hasIntExpr());
+    if (AC->hasIntExpr())
+      AddStmt(const_cast<Expr *>(AC->getIntExpr()));
+    return;
+  }
+
   case OpenACCClauseKind::Finalize:
   case OpenACCClauseKind::IfPresent:
   case OpenACCClauseKind::Seq:
@@ -7699,23 +7925,13 @@ void ASTRecordWriter::writeOpenACCClause(const OpenACCClause *C) {
   case OpenACCClauseKind::Worker:
   case OpenACCClauseKind::Vector:
   case OpenACCClauseKind::NoHost:
-  case OpenACCClauseKind::Copy:
   case OpenACCClauseKind::UseDevice:
-  case OpenACCClauseKind::Attach:
   case OpenACCClauseKind::Delete:
   case OpenACCClauseKind::Detach:
   case OpenACCClauseKind::Device:
-  case OpenACCClauseKind::DevicePtr:
   case OpenACCClauseKind::DeviceResident:
-  case OpenACCClauseKind::FirstPrivate:
   case OpenACCClauseKind::Host:
   case OpenACCClauseKind::Link:
-  case OpenACCClauseKind::NoCreate:
-  case OpenACCClauseKind::Present:
-  case OpenACCClauseKind::Private:
-  case OpenACCClauseKind::CopyOut:
-  case OpenACCClauseKind::CopyIn:
-  case OpenACCClauseKind::Create:
   case OpenACCClauseKind::Reduction:
   case OpenACCClauseKind::Collapse:
   case OpenACCClauseKind::Bind:
@@ -7723,7 +7939,6 @@ void ASTRecordWriter::writeOpenACCClause(const OpenACCClause *C) {
   case OpenACCClauseKind::DefaultAsync:
   case OpenACCClauseKind::DeviceType:
   case OpenACCClauseKind::DType:
-  case OpenACCClauseKind::Async:
   case OpenACCClauseKind::Tile:
   case OpenACCClauseKind::Gang:
   case OpenACCClauseKind::Wait:

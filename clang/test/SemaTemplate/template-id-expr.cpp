@@ -186,3 +186,93 @@ class E {
 #endif
 template<typename T> using D = int; // expected-note {{declared here}} 
 E<D> ed; // expected-note {{instantiation of}}
+
+namespace non_functions {
+
+#if __cplusplus >= 201103L
+namespace PR88832 {
+template <typename T> struct O {
+  static const T v = 0;
+};
+
+struct P {
+  template <typename T> using I = typename O<T>::v; // #TypeAlias
+};
+
+struct Q {
+  template <typename T> int foo() {
+    return T::template I<int>;
+    // expected-error@-1 {{'P::I' is expected to be a non-type template, but instantiated to a type alias template}}
+    // expected-note@#TypeAlias {{type alias template declared here}}
+  }
+};
+
+int bar() {
+  return Q().foo<P>(); // expected-note-re {{function template specialization {{.*}} requested here}}
+}
+
+} // namespace PR88832
+#endif
+
+namespace PR63243 {
+
+namespace std {
+template <class T> struct add_pointer { // #add_pointer
+};
+} // namespace std
+
+class A {};
+
+int main() {
+  std::__add_pointer<A>::type ptr;
+  // expected-warning@-1 {{keyword '__add_pointer' will be made available as an identifier here}}
+  // expected-error@-2 {{no template named '__add_pointer'}}
+  // expected-note@#add_pointer {{'add_pointer' declared here}}
+  // expected-error-re@-4 {{no type named 'type' in '{{.*}}std::add_pointer<{{.*}}A>'}}
+
+  __add_pointer<A>::type ptr2;
+  // expected-error@-1 {{no template named '__add_pointer'}}
+  // expected-error-re@-2 {{no type named 'type' in '{{.*}}std::add_pointer<{{.*}}A>'}}
+  // expected-note@#add_pointer {{'std::add_pointer' declared here}}
+}
+
+} // namespace PR63243
+
+namespace PR48673 {
+
+template <typename T> struct C {
+  template <int TT> class Type {}; // #ClassTemplate
+};
+
+template <typename T1> struct A {
+
+  template <typename T2>
+  void foo(T2) {}
+
+  void foo() {
+    C<T1>::template Type<2>;
+    // expected-error@-1 {{'C<float>::Type' is expected to be a non-type template, but instantiated to a class template}}}
+    // expected-note@#ClassTemplate {{class template declared here}}
+
+    foo(C<T1>::Type<2>); // expected-error {{expected expression}}
+
+    foo(C<T1>::template Type<2>);
+    // expected-error@-1 {{'C<float>::Type' is expected to be a non-type template, but instantiated to a class template}}
+    // expected-note@#ClassTemplate {{class template declared here}}
+
+    foo(C<T1>::template Type<2>());
+    // expected-error@-1 {{'C<float>::Type' is expected to be a non-type template, but instantiated to a class template}}
+    // expected-error@-2 {{called object type '<dependent type>' is not a function or function pointer}}
+    // expected-note@#ClassTemplate {{class template declared here}}
+
+    foo(typename C<T1>::template Type<2>());
+  }
+};
+
+void test() {
+  A<float>().foo(); // expected-note-re {{instantiation of member function {{.*}} requested here}}
+}
+
+} // namespace PR48673
+
+}

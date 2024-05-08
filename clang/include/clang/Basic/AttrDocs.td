@@ -2532,6 +2532,9 @@ Example "subtarget features" from the x86 backend include: "mmx", "sse", "sse4.2
 "avx", "xop" and largely correspond to the machine specific options handled by
 the front end.
 
+Note that this attribute does not apply transitively to nested functions such
+as blocks or C++ lambdas.
+
 Additionally, this attribute supports function multiversioning for ELF based
 x86/x86-64 targets, which can be used to create multiple implementations of the
 same function that will be resolved at runtime based on the priority of their
@@ -3787,6 +3790,12 @@ for that function.
 
 This attribute is incompatible with the ``always_inline`` and ``minsize``
 attributes.
+
+Note that this attribute does not apply recursively to nested functions such as
+lambdas or blocks when using declaration-specific attribute syntaxes such as double
+square brackets (``[[]]``) or ``__attribute__``. The ``#pragma`` syntax can be
+used to apply the attribute to all functions, including nested functions, in a
+range of source code.
   }];
 }
 
@@ -5659,11 +5668,12 @@ The ``preserve_none`` calling convention tries to preserve as few general
 registers as possible. So all general registers are caller saved registers. It
 also uses more general registers to pass arguments. This attribute doesn't
 impact floating-point registers (XMMs/YMMs). Floating-point registers still
-follow the c calling convention.
+follow the c calling convention. ``preserve_none``'s ABI is still unstable, and
+may be changed in the future.
 
 - Only RSP and RBP are preserved by callee.
 
-- Register RDI, RSI, RDX, RCX, R8, R9, R11, R12, R13, R14, R15 and RAX now can
+- Register R12, R13, R14, R15, RDI, RSI, RDX, RCX, R8, R9, R11, and RAX now can
   be used to pass function arguments.
   }];
 }

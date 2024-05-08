@@ -2447,12 +2447,14 @@ example:
     memory access, I/O, or other synchronization.  The ``mustprogress``
     attribute is intended to model the requirements of the first section of
     [intro.progress] of the C++ Standard. As a consequence, a loop in a
-    function with the `mustprogress` attribute can be assumed to terminate if
+    function with the ``mustprogress`` attribute can be assumed to terminate if
     it does not interact with the environment in an observable way, and
-    terminating loops without side-effects can be removed. If a `mustprogress`
-    function does not satisfy this contract, the behavior is undefined.  This
-    attribute does not apply transitively to callees, but does apply to call
-    sites within the function. Note that `willreturn` implies `mustprogress`.
+    terminating loops without side-effects can be removed. If a ``mustprogress``
+    function does not satisfy this contract, the behavior is undefined. If a
+    ``mustprogress`` function calls a function not marked ``mustprogress``,
+    and that function never returns, the program is well-defined even if there
+    isn't any other observable progress.  Note that ``willreturn`` implies
+    ``mustprogress``.
 ``"warn-stack-size"="<threshold>"``
     This attribute sets a threshold to emit diagnostics once the frame size is
     known should the frame size exceed the specified value.  It takes one
@@ -9111,8 +9113,8 @@ instruction in most regards. The primary difference is that it
 establishes an association with additional labels to define where control
 flow goes after the call.
 
-The output values of a '``callbr``' instruction are available only to
-the '``fallthrough``' block, not to any '``indirect``' blocks(s).
+The output values of a '``callbr``' instruction are available both in the
+the '``fallthrough``' block, and any '``indirect``' blocks(s).
 
 The only use of this today is to implement the "goto" feature of gcc inline
 assembly where additional labels can be provided as locations for the inline
@@ -15265,6 +15267,43 @@ Semantics:
 """"""""""
 
 Return the same value as a corresponding libm '``cos``' function but without
+trapping or setting ``errno``.
+
+When specified with the fast-math-flag 'afn', the result may be approximated
+using a less accurate calculation.
+
+'``llvm.tan.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+This is an overloaded intrinsic. You can use ``llvm.tan`` on any
+floating-point or vector of floating-point type. Not all targets support
+all types however.
+
+::
+
+      declare float     @llvm.tan.f32(float  %Val)
+      declare double    @llvm.tan.f64(double %Val)
+      declare x86_fp80  @llvm.tan.f80(x86_fp80  %Val)
+      declare fp128     @llvm.tan.f128(fp128 %Val)
+      declare ppc_fp128 @llvm.tan.ppcf128(ppc_fp128  %Val)
+
+Overview:
+"""""""""
+
+The '``llvm.tan.*``' intrinsics return the tangent of the operand.
+
+Arguments:
+""""""""""
+
+The argument and return value are floating-point numbers of the same type.
+
+Semantics:
+""""""""""
+
+Return the same value as a corresponding libm '``tan``' function but without
 trapping or setting ``errno``.
 
 When specified with the fast-math-flag 'afn', the result may be approximated
@@ -24001,6 +24040,54 @@ Examples:
       %also.r = select <4 x i1> %mask, <4 x i32> %t, <4 x i32> poison
 
 
+.. _int_vp_cttz_elts:
+
+'``llvm.vp.cttz.elts.*``' Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+This is an overloaded intrinsic. You can use ```llvm.vp.cttz.elts``` on any
+vector of integer elements, both fixed width and scalable.
+
+::
+
+      declare i32  @llvm.vp.cttz.elts.i32.v16i32 (<16 x i32> <op>, i1 <is_zero_poison>, <16 x i1> <mask>, i32 <vector_length>)
+      declare i64  @llvm.vp.cttz.elts.i64.nxv4i32 (<vscale x 4 x i32> <op>, i1 <is_zero_poison>, <vscale x 4 x i1> <mask>, i32 <vector_length>)
+      declare i64  @llvm.vp.cttz.elts.i64.v256i1 (<256 x i1> <op>, i1 <is_zero_poison>, <256 x i1> <mask>, i32 <vector_length>)
+
+Overview:
+"""""""""
+
+This '```llvm.vp.cttz.elts```' intrinsic counts the number of trailing zero
+elements of a vector. This is basically the vector-predicated version of
+'```llvm.experimental.cttz.elts```'.
+
+Arguments:
+""""""""""
+
+The first argument is the vector to be counted. This argument must be a vector
+with integer element type. The return type must also be an integer type which is
+wide enough to hold the maximum number of elements of the source vector. The
+behavior of this intrinsic is undefined if the return type is not wide enough
+for the number of elements in the input vector.
+
+The second argument is a constant flag that indicates whether the intrinsic
+returns a valid result if the first argument is all zero.
+
+The third operand is the vector mask and has the same number of elements as the
+input vector type. The fourth operand is the explicit vector length of the
+operation.
+
+Semantics:
+""""""""""
+
+The '``llvm.vp.cttz.elts``' intrinsic counts the trailing (least
+significant / lowest-numbered) zero elements in the first operand on each
+enabled lane. If the first argument is all zero and the second argument is true,
+the result is poison. Otherwise, it returns the explicit vector length (i.e. the
+fourth operand).
+
 .. _int_vp_sadd_sat:
 
 '``llvm.vp.sadd.sat.*``' Intrinsics
@@ -26688,6 +26775,8 @@ specified by C standard:
 
 Other values may be used to represent additional rounding modes, supported by a
 target. These values are target-specific.
+
+.. _int_set_rounding:
 
 '``llvm.set.rounding``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

@@ -307,3 +307,17 @@ using AFoo = Foo<int, Derived<U>>;
 
 AFoo a(Derived<int>{});
 } // namespace test22
+
+namespace test23 {
+// We have an aggregate deduction guide "G(T) -> G<T>".
+template<typename T>
+struct G { T t1; };
+
+template<typename X = int>
+using AG = G<int>;
+
+AG ag(1.0);
+// Verify that the aggregate deduction guide "AG(int) -> AG<int>" is built and
+// choosen.
+static_assert(__is_same(decltype(ag.t1), int));
+} // namespace test23

@@ -901,6 +901,19 @@ ArrayRef<Builtin::Info> PPCTargetInfo::getTargetBuiltins() const {
 }
 
 bool PPCTargetInfo::validateCpuSupports(StringRef FeatureStr) const {
+  llvm::Triple Triple = getTriple();
+  if (Triple.isOSAIX()) {
+#define PPC_AIX_FEATURE(NAME, DESC, SUPPORT_METHOD, INDEX, MASK, COMP_OP,      \
+                        VALUE)                                                 \
+  .Case(NAME, true)
+    return llvm::StringSwitch<bool>(FeatureStr)
+#include "llvm/TargetParser/PPCTargetParser.def"
+        .Default(false);
+  }
+
+  assert(Triple.isOSLinux() &&
+         "__builtin_cpu_supports() is only supported for AIX and Linux.");
+
 #define PPC_LNX_FEATURE(NAME, DESC, ENUMNAME, ENUMVAL, HWCAPN) .Case(NAME, true)
   return llvm::StringSwitch<bool>(FeatureStr)
 #include "llvm/TargetParser/PPCTargetParser.def"
@@ -910,7 +923,7 @@ bool PPCTargetInfo::validateCpuSupports(StringRef FeatureStr) const {
 bool PPCTargetInfo::validateCpuIs(StringRef CPUName) const {
   llvm::Triple Triple = getTriple();
   if (Triple.isOSAIX()) {
-#define PPC_AIX_CPU(NAME, SUPPORT, INDEX, OP, VALUE) .Case(NAME, true)
+#define PPC_AIX_CPU(NAME, SUPPORT_METHOD, INDEX, OP, VALUE) .Case(NAME, true)
     return llvm::StringSwitch<bool>(CPUName)
 #include "llvm/TargetParser/PPCTargetParser.def"
         .Default(false);

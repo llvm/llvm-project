@@ -2711,7 +2711,6 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
   SmallVector<Value *, 8> Indices(GEP.indices());
   Type *GEPType = GEP.getType();
   Type *GEPEltType = GEP.getSourceElementType();
-  bool IsGEPSrcEleScalable = GEPEltType->isScalableTy();
   if (Value *V = simplifyGEPInst(GEPEltType, PtrOp, Indices, GEP.isInBounds(),
                                  SQ.getWithInstruction(&GEP)))
     return replaceInstUsesWith(GEP, V);
@@ -2785,6 +2784,14 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
       return replaceInstUsesWith(
           GEP, Builder.CreatePtrAdd(PtrOp, Builder.getInt(Offset), "",
                                     GEP.isInBounds()));
+  }
+
+  // Canonicalize scalable GEPs to an explicit offset using the llvm.vscale
+  // intrinsic. This has better support in BasicAA.
+  if (GEPEltType->isScalableTy()) {
+    Value *Offset = EmitGEPOffset(cast<GEPOperator>(&GEP));
+    return replaceInstUsesWith(
+        GEP, Builder.CreatePtrAdd(PtrOp, Offset, "", GEP.isInBounds()));
   }
 
   // Check to see if the inputs to the PHI node are getelementptr instructions.
@@ -2896,9 +2903,7 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
     if (Instruction *I = visitGEPOfGEP(GEP, Src))
       return I;
 
-  // Skip if GEP source element type is scalable. The type alloc size is unknown
-  // at compile-time.
-  if (GEP.getNumIndices() == 1 && !IsGEPSrcEleScalable) {
+  if (GEP.getNumIndices() == 1) {
     unsigned AS = GEP.getPointerAddressSpace();
     if (GEP.getOperand(1)->getType()->getScalarSizeInBits() ==
         DL.getIndexSizeInBits(AS)) {

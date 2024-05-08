@@ -18,12 +18,13 @@ void templ() {
 #pragma acc parallel vector_length(I)
   for(;;){}
 
-  // expected-warning@+1{{OpenACC clause 'async' not yet implemented, clause ignored}}
 #pragma acc parallel async(T::value)
   for(;;){}
 
-  // expected-warning@+1{{OpenACC clause 'async' not yet implemented, clause ignored}}
 #pragma acc parallel async(I)
+  for(;;){}
+
+#pragma acc parallel async
   for(;;){}
 }
 

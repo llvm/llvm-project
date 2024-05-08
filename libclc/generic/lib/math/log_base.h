@@ -289,7 +289,7 @@ log(double x)
     double ret = is_near ? ret_near : ret_far;
 
     ret = isinf(x) ? as_double(PINFBITPATT_DP64) : ret;
-    ret = isnan(x) | (x < 0.0) ? as_double(QNANBITPATT_DP64) : ret;
+    ret = (isnan(x) | (x < 0.0)) ? as_double(QNANBITPATT_DP64) : ret;
     ret = x == 0.0 ? as_double(NINFBITPATT_DP64) : ret;
     return ret;
 }

@@ -5307,6 +5307,11 @@ public:
   /// \returns The expansion result or SDValue() if it fails.
   SDValue expandVPCTTZ(SDNode *N, SelectionDAG &DAG) const;
 
+  /// Expand VP_CTTZ_ELTS/VP_CTTZ_ELTS_ZERO_UNDEF nodes.
+  /// \param N Node to expand
+  /// \returns The expansion result or SDValue() if it fails.
+  SDValue expandVPCTTZElements(SDNode *N, SelectionDAG &DAG) const;
+
   /// Expand ABS nodes. Expands vector/scalar ABS nodes,
   /// vector nodes can only succeed if all operations are legal/custom.
   /// (ABS x) -> (XOR (ADD x, (SRA x, type_size)), (SRA x, type_size))

@@ -86,7 +86,7 @@ static cl::opt<bool>
 static bool isSmallDataSection(StringRef Sec) {
   // sectionName is either ".sdata" or ".sbss". Looking for an exact match
   // obviates the need for checks for section names such as ".sdatafoo".
-  if (Sec.equals(".sdata") || Sec.equals(".sbss") || Sec.equals(".scommon"))
+  if (Sec == ".sdata" || Sec == ".sbss" || Sec == ".scommon")
     return true;
   // If either ".sdata." or ".sbss." is a substring of the section name
   // then put the symbol in small data.

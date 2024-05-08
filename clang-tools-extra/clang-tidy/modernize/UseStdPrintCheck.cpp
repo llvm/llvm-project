@@ -138,7 +138,8 @@ void UseStdPrintCheck::check(const MatchFinder::MatchResult &Result) {
   if (!Converter.canApply()) {
     diag(PrintfCall->getBeginLoc(),
          "unable to use '%0' instead of %1 because %2")
-        << ReplacementFunction << OldFunction->getIdentifier()
+        << PrintfCall->getSourceRange() << ReplacementFunction
+        << OldFunction->getIdentifier()
         << Converter.conversionNotPossibleReason();
     return;
   }

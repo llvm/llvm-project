@@ -350,6 +350,11 @@ class SystemZDAGToDAGISel : public SelectionDAGISel {
   // Try to expand a boolean SELECT_CCMASK using an IPM sequence.
   SDValue expandSelectBoolean(SDNode *Node);
 
+  // Return true if the flags of N and the subtarget allows for
+  // reassociation, in which case a reg/reg opcode is needed as input to the
+  // MachineCombiner.
+  bool shouldSelectForReassoc(SDNode *N) const;
+
 public:
   static char ID;
 
@@ -2042,6 +2047,15 @@ SDValue SystemZDAGToDAGISel::expandSelectBoolean(SDNode *Node) {
   }
 
   return Result;
+}
+
+bool SystemZDAGToDAGISel::shouldSelectForReassoc(SDNode *N) const {
+  EVT VT = N->getValueType(0);
+  assert(VT.isFloatingPoint() && "Expected FP SDNode");
+  return N->getFlags().hasAllowReassociation() &&
+         N->getFlags().hasNoSignedZeros() && Subtarget->hasVector() &&
+         (VT != MVT::f32 || Subtarget->hasVectorEnhancements1()) &&
+         !N->isStrictFPOpcode();
 }
 
 void SystemZDAGToDAGISel::PreprocessISelDAG() {

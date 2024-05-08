@@ -82,7 +82,6 @@
 #include "llvm/CodeGen/ExpandLargeDivRem.h"
 #include "llvm/CodeGen/ExpandLargeFpConvert.h"
 #include "llvm/CodeGen/ExpandMemCmp.h"
-#include "llvm/CodeGen/FreeMachineFunction.h"
 #include "llvm/CodeGen/GCMetadata.h"
 #include "llvm/CodeGen/GlobalMerge.h"
 #include "llvm/CodeGen/HardwareLoops.h"
@@ -92,7 +91,10 @@
 #include "llvm/CodeGen/JMCInstrumenter.h"
 #include "llvm/CodeGen/LowerEmuTLS.h"
 #include "llvm/CodeGen/MIRPrinter.h"
+#include "llvm/CodeGen/MachineFunctionAnalysis.h"
 #include "llvm/CodeGen/MachinePassManager.h"
+#include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/PreISelIntrinsicLowering.h"
 #include "llvm/CodeGen/SafeStack.h"
 #include "llvm/CodeGen/SelectOptimize.h"
 #include "llvm/CodeGen/ShadowStackGCLowering.h"
@@ -360,6 +362,14 @@ public:
     BasicBlock &BB = F.getEntryBlock();
     new UnreachableInst(F.getContext(), BB.getTerminator()->getIterator());
     return PreservedAnalyses::none();
+  }
+
+  PreservedAnalyses run(MachineFunction &MF, MachineFunctionAnalysisManager &) {
+    // Intentionally create a virtual register and set NoVRegs property.
+    auto &MRI = MF.getRegInfo();
+    MRI.createGenericVirtualRegister(LLT::scalar(8));
+    MF.getProperties().set(MachineFunctionProperties::Property::NoVRegs);
+    return PreservedAnalyses::all();
   }
 
   static StringRef name() { return "TriggerVerifierErrorPass"; }
@@ -1230,7 +1240,7 @@ static bool isFunctionPassName(StringRef Name, CallbacksT &Callbacks) {
   StringRef NameNoBracket = Name.take_until([](char C) { return C == '<'; });
   if (NameNoBracket == "function")
     return true;
-  if (Name == "loop" || Name == "loop-mssa")
+  if (Name == "loop" || Name == "loop-mssa" || Name == "machine-function")
     return true;
 
   // Explicitly handle custom-parsed pass names.
@@ -1406,13 +1416,6 @@ Error PassBuilder::parseModulePass(ModulePassManager &MPM,
       if (auto Err = parseCGSCCPassPipeline(CGPM, InnerPipeline))
         return Err;
       MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(std::move(CGPM)));
-      return Error::success();
-    }
-    if (Name == "machine-function") {
-      MachineFunctionPassManager MFPM;
-      if (auto Err = parseMachinePassPipeline(MFPM, InnerPipeline))
-        return Err;
-      MPM.addPass(createModuleToMachineFunctionPassAdaptor(std::move(MFPM)));
       return Error::success();
     }
     if (auto Params = parseFunctionPipelineName(Name)) {
@@ -1732,6 +1735,13 @@ Error PassBuilder::parseFunctionPass(FunctionPassManager &FPM,
       FPM.addPass(createRepeatedPass(*Count, std::move(NestedFPM)));
       return Error::success();
     }
+    if (Name == "machine-function") {
+      MachineFunctionPassManager MFPM;
+      if (auto Err = parseMachinePassPipeline(MFPM, InnerPipeline))
+        return Err;
+      FPM.addPass(createFunctionToMachineFunctionPassAdaptor(std::move(MFPM)));
+      return Error::success();
+    }
 
     for (auto &C : FunctionPipelineParsingCallbacks)
       if (C(Name, FPM, InnerPipeline))
@@ -1975,6 +1985,8 @@ void PassBuilder::crossRegisterProxies(LoopAnalysisManager &LAM,
   if (MFAM) {
     MAM.registerPass(
         [&] { return MachineFunctionAnalysisManagerModuleProxy(*MFAM); });
+    FAM.registerPass(
+        [&] { return MachineFunctionAnalysisManagerFunctionProxy(*MFAM); });
     MFAM->registerPass(
         [&] { return ModuleAnalysisManagerMachineFunctionProxy(MAM); });
     MFAM->registerPass(
@@ -2023,7 +2035,7 @@ Error PassBuilder::parsePassPipeline(ModulePassManager &MPM,
                                  std::move(*Pipeline)}}}};
     } else if (isMachineFunctionPassName(
                    FirstName, MachineFunctionPipelineParsingCallbacks)) {
-      Pipeline = {{"machine-function", std::move(*Pipeline)}};
+      Pipeline = {{"function", {{"machine-function", std::move(*Pipeline)}}}};
     } else {
       for (auto &C : TopLevelPipelineParsingCallbacks)
         if (C(MPM, *Pipeline))

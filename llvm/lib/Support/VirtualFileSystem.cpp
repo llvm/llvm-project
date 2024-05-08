@@ -151,13 +151,23 @@ bool FileSystem::exists(const Twine &Path) {
   return Status && Status->exists();
 }
 
+llvm::ErrorOr<bool> FileSystem::equivalent(const Twine &A, const Twine &B) {
+  auto StatusA = status(A);
+  if (!StatusA)
+    return StatusA.getError();
+  auto StatusB = status(B);
+  if (!StatusB)
+    return StatusB.getError();
+  return StatusA->equivalent(*StatusB);
+}
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void FileSystem::dump() const { print(dbgs(), PrintType::RecursiveContents); }
 #endif
 
 #ifndef NDEBUG
 static bool isTraversalComponent(StringRef Component) {
-  return Component.equals("..") || Component.equals(".");
+  return Component == ".." || Component == ".";
 }
 
 static bool pathHasTraversal(StringRef Path) {
@@ -1715,7 +1725,7 @@ public:
                       RedirectingFileSystem::Entry *ParentEntry = nullptr) {
     if (!ParentEntry) { // Look for a existent root
       for (const auto &Root : FS->Roots) {
-        if (Name.equals(Root->getName())) {
+        if (Name == Root->getName()) {
           ParentEntry = Root.get();
           return ParentEntry;
         }
@@ -1726,7 +1736,7 @@ public:
            llvm::make_range(DE->contents_begin(), DE->contents_end())) {
         auto *DirContent =
             dyn_cast<RedirectingFileSystem::DirectoryEntry>(Content.get());
-        if (DirContent && Name.equals(Content->getName()))
+        if (DirContent && Name == Content->getName())
           return DirContent;
       }
     }

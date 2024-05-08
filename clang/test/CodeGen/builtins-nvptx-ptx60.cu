@@ -1,14 +1,14 @@
 // RUN: %clang_cc1 -triple nvptx64-unknown-unknown -target-cpu sm_70 \
 // RUN:            -fcuda-is-device -target-feature +ptx60 \
-// RUN:            -S -emit-llvm -o - -x cuda %s \
+// RUN:            -emit-llvm -o - -x cuda %s \
 // RUN:   | FileCheck -check-prefix=CHECK %s
 // RUN: %clang_cc1 -triple nvptx64-unknown-unknown -target-cpu sm_80 \
 // RUN:            -fcuda-is-device -target-feature +ptx65 \
-// RUN:            -S -emit-llvm -o - -x cuda %s \
+// RUN:            -emit-llvm -o - -x cuda %s \
 // RUN:   | FileCheck -check-prefix=CHECK %s
 // RUN: %clang_cc1 -triple nvptx64-unknown-unknown -target-cpu sm_80 \
 // RUN:            -fcuda-is-device -target-feature +ptx70 \
-// RUN:            -S -emit-llvm -o - -x cuda %s \
+// RUN:            -emit-llvm -o - -x cuda %s \
 // RUN:   | FileCheck -check-prefix=CHECK %s
 // RUN: %clang_cc1 -triple nvptx-unknown-unknown -target-cpu sm_70 \
 // RUN:   -fcuda-is-device -S -o /dev/null -x cuda -verify %s

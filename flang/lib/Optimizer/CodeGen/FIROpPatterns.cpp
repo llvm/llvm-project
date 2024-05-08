@@ -243,8 +243,6 @@ ConvertFIRToLLVMPattern::getBlockForAllocaInsert(mlir::Operation *op) const {
     return iface.getAllocaBlock();
   if (auto llvmFuncOp = mlir::dyn_cast<mlir::LLVM::LLVMFuncOp>(op))
     return &llvmFuncOp.front();
-  if (auto ompPrivateOp = mlir::dyn_cast<mlir::omp::PrivateClauseOp>(op))
-    return &ompPrivateOp.getAllocRegion().front();
 
   return getBlockForAllocaInsert(op->getParentOp());
 }
@@ -260,9 +258,10 @@ mlir::Value ConvertFIRToLLVMPattern::genAllocaAndAddrCastWithType(
     mlir::ConversionPatternRewriter &rewriter) const {
   auto thisPt = rewriter.saveInsertionPoint();
   mlir::Operation *parentOp = rewriter.getInsertionBlock()->getParentOp();
-  if (mlir::isa<mlir::omp::DeclareReductionOp>(parentOp)) {
-    // DeclareReductionOp has multiple child regions. We want to get the first
-    // block of whichever of those regions we are currently in
+  if (mlir::isa<mlir::omp::DeclareReductionOp>(parentOp) ||
+      mlir::isa<mlir::omp::PrivateClauseOp>(parentOp)) {
+    // DeclareReductionOp & PrivateClauseOp have multiple child regions. We want
+    // to get the first block of whichever of those regions we are currently in
     mlir::Region *parentRegion = rewriter.getInsertionBlock()->getParent();
     rewriter.setInsertionPointToStart(&parentRegion->front());
   } else {

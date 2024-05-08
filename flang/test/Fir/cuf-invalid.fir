@@ -85,3 +85,21 @@ func.func @_QPsub1() {
   %13 = fir.cuda_deallocate %11 : !fir.ref<!fir.box<none>> errmsg(%16 : !fir.box<none>) {cuda_attr = #fir.cuda<device>} -> i32
   return
 }
+
+// -----
+
+func.func @_QPsub1() {
+  // expected-error@+1{{'fir.cuda_alloc' op expect device, managed or unified cuda attribute}}
+  %0 = fir.cuda_alloc f32 {bindc_name = "r", cuda_attr = #fir.cuda<pinned>, uniq_name = "_QFsub1Er"} -> !fir.ref<f32>
+  fir.cuda_free %0 : !fir.ref<f32> {cuda_attr = #fir.cuda<constant>}
+  return
+}
+
+// -----
+
+func.func @_QPsub1() {
+  %0 = fir.cuda_alloc f32 {bindc_name = "r", cuda_attr = #fir.cuda<device>, uniq_name = "_QFsub1Er"} -> !fir.ref<f32>
+  // expected-error@+1{{'fir.cuda_free' op expect device, managed or unified cuda attribute}}
+  fir.cuda_free %0 : !fir.ref<f32> {cuda_attr = #fir.cuda<constant>}
+  return
+}

@@ -171,6 +171,54 @@ static DiagnosedSilenceableFailure unpackSingleIndexResultPayloadOperations(
   return DiagnosedSilenceableFailure::success();
 }
 
+/// When possible, converts each `OpFoldResult` in `mixedResult` to
+/// an integer if the value can be statically inferred.  If a result
+/// is a `Value` then it must be either a `ParamType` or a handle
+/// to an a constant like op.
+static DiagnosedSilenceableFailure reifyMixedParamAndHandleResults(
+    TransformState &state, TransformOpInterface &transformOp,
+    ArrayRef<OpFoldResult> mixedResults, SmallVectorImpl<int64_t> &reified) {
+  for (OpFoldResult paramOrHandle : mixedResults) {
+    if (isa<Attribute>(paramOrHandle)) {
+      reified.push_back(
+          cast<IntegerAttr>(paramOrHandle.get<Attribute>()).getInt());
+      continue;
+    } else if (isa<ParamType>(paramOrHandle.get<Value>().getType())) {
+      ArrayRef<Attribute> params = state.getParams(paramOrHandle.get<Value>());
+      if (params.size() != 1)
+        return transformOp.emitSilenceableError() << "expected a single param";
+      reified.push_back(
+          cast<IntegerAttr>(params.front()).getValue().getSExtValue());
+      continue;
+    }
+
+    Value handle = paramOrHandle.get<Value>();
+    if (!isa<TransformHandleTypeInterface>(handle.getType()))
+      return transformOp.emitSilenceableError() << "unexpected value handle";
+    auto payload = state.getPayloadOps(handle);
+    if (!llvm::hasSingleElement(payload))
+      return transformOp.emitSilenceableError()
+             << "requires param or handle that is mapped to 1 payload op";
+
+    Operation *paramOrHandlePayloadOp = *payload.begin();
+    if (paramOrHandlePayloadOp->getNumResults() != 1 ||
+        !paramOrHandlePayloadOp->getResult(0).getType().isIndex()) {
+      return transformOp.emitSilenceableError()
+             << "requires param or handle to be result of op with 1 index "
+                "result";
+    }
+
+    IntegerAttr attr;
+    if (!matchPattern(paramOrHandlePayloadOp->getResult(0), m_Constant(&attr)))
+      return transformOp.emitSilenceableError()
+             << "requires param or handle to be the result of a constant like "
+                "op";
+
+    reified.push_back(attr.getInt());
+  }
+  return DiagnosedSilenceableFailure::success();
+}
+
 //===----------------------------------------------------------------------===//
 // Apply...PatternsOp
 //===----------------------------------------------------------------------===//
@@ -1677,18 +1725,60 @@ void transform::PadOp::build(OpBuilder &b, OperationState &result, Value target,
                /*target=*/target,
                /*paddingValues=*/ArrayAttr(), // let inference handle this
                /*paddingDimensions=*/b.getI64ArrayAttr(paddingDimensions),
+               /*padToMultipleOf=*/ValueRange{},
                /*padToMultipleOf=*/
-               (padToMultipleOf.empty() ? ArrayAttr()
-                                        : b.getI64ArrayAttr(padToMultipleOf)),
+               (padToMultipleOf.empty()
+                    ? DenseI64ArrayAttr()
+                    : b.getDenseI64ArrayAttr(padToMultipleOf)),
                /*packPaddings=*/b.getI64ArrayAttr(packPaddings),
                /*transposePaddings=*/b.getArrayAttr(transposePaddings),
                /*copyBackOp=*/b.getStringAttr(copyBackOp));
+}
+
+void transform::PadOp::build(OpBuilder &b, OperationState &result, Value target,
+                             ArrayRef<int64_t> paddingDimensions,
+                             ArrayRef<OpFoldResult> mixedPadToMultipleOf,
+                             ArrayRef<int64_t> packPaddings,
+                             ArrayRef<Attribute> transposePaddings,
+                             StringRef copyBackOp) {
+  auto resultType = transform::AnyOpType::get(b.getContext());
+  SmallVector<int64_t> staticPadToMultipleOf;
+  SmallVector<Value> dynamicPadToMultipleOf;
+  dispatchIndexOpFoldResults(mixedPadToMultipleOf, dynamicPadToMultipleOf,
+                             staticPadToMultipleOf);
+  return build(/*builder=*/b,
+               /*result=*/result,
+               /*types=*/TypeRange{resultType, resultType},
+               /*target=*/target,
+               /*paddingValues=*/ArrayAttr(), // let inference handle this
+               /*paddingDimensions=*/b.getI64ArrayAttr(paddingDimensions),
+               /*padToMultipleOf=*/dynamicPadToMultipleOf,
+               /*padToMultipleOf=*/staticPadToMultipleOf,
+               /*packPaddings=*/b.getI64ArrayAttr(packPaddings),
+               /*transposePaddings=*/b.getArrayAttr(transposePaddings),
+               /*copyBackOp=*/b.getStringAttr(copyBackOp));
+}
+
+void PadOp::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  consumesHandle(getTarget(), effects);
+  onlyReadsHandle(getPadToMultipleOf(), effects);
+  producesHandle(getPadded(), effects);
+  producesHandle(getPad(), effects);
+  producesHandle(getCopy(), effects);
+  modifiesPayload(effects);
+}
+
+SmallVector<OpFoldResult> PadOp::getMixedPadToMultipleOf() {
+  Builder b(getContext());
+  return getMixedValues(getStaticPadToMultipleOf(), getPadToMultipleOf(), b);
 }
 
 DiagnosedSilenceableFailure
 transform::PadOp::apply(transform::TransformRewriter &rewriter,
                         transform::TransformResults &results,
                         transform::TransformState &state) {
+  auto transformOp = cast<TransformOpInterface>(getOperation());
   SmallVector<Operation *> paddedOps, padOps, copyBackOps;
 
   for (Operation *target : state.getPayloadOps(getTarget())) {
@@ -1749,10 +1839,16 @@ transform::PadOp::apply(transform::TransformRewriter &rewriter,
     LinalgPaddingOptions options;
     options.paddingDimensions =
         extractFromIntegerArrayAttr<int64_t>(getPaddingDimensions());
-    SmallVector<int64_t> padToMultipleOf(options.paddingDimensions.size(), 1);
-    if (getPadToMultipleOf().has_value())
+
+    SmallVector<int64_t> padToMultipleOf;
+    DiagnosedSilenceableFailure status = reifyMixedParamAndHandleResults(
+        state, transformOp, getMixedPadToMultipleOf(), padToMultipleOf);
+    if (!status.succeeded())
+      return status;
+    if (padToMultipleOf.empty())
       padToMultipleOf =
-          extractFromIntegerArrayAttr<int64_t>(*getPadToMultipleOf());
+          SmallVector<int64_t>(options.paddingDimensions.size(), 1);
+
     options.padToMultipleOf = padToMultipleOf;
     options.paddingValues = paddingValues;
     options.packPaddings = packPaddings;
@@ -1819,8 +1915,8 @@ LogicalResult transform::PadOp::verify() {
                             "integers, found "
                          << getPaddingDimensions();
   }
-  if (getPadToMultipleOf().has_value()) {
-    if (getPadToMultipleOf()->size() != paddingDimensions.size()) {
+  if (!getMixedPadToMultipleOf().empty()) {
+    if (getMixedPadToMultipleOf().size() != paddingDimensions.size()) {
       return emitOpError() << "expects as many multiples as padding_dimensions";
     }
   }
@@ -2727,86 +2823,6 @@ SmallVector<OpFoldResult> transform::TileUsingForOp::getMixedSizes() {
   return results;
 }
 
-// We want to parse `DenseI64ArrayAttr` using the short form without the
-// `array` prefix to be consistent in the IR with `parseDynamicIndexList`.
-ParseResult parseOptionalInterchange(OpAsmParser &parser,
-                                     OperationState &result) {
-  if (failed(parser.parseOptionalKeyword("interchange")))
-    return success();
-  if (failed(parser.parseEqual()))
-    return failure();
-  result.addAttribute(
-      transform::TileUsingForOp::getInterchangeAttrName(result.name),
-      DenseI64ArrayAttr::parse(parser, Type{}));
-  return success();
-}
-
-void printOptionalInterchange(OpAsmPrinter &p,
-                              ArrayRef<int64_t> interchangeVals) {
-  if (!interchangeVals.empty()) {
-    p << " interchange = [";
-    llvm::interleaveComma(interchangeVals, p,
-                          [&](int64_t integer) { p << integer; });
-    p << "]";
-  }
-}
-
-ParseResult transform::TileUsingForOp::parse(OpAsmParser &parser,
-                                             OperationState &result) {
-  OpAsmParser::UnresolvedOperand target;
-  SmallVector<OpAsmParser::UnresolvedOperand> dynamicSizes;
-  DenseI64ArrayAttr staticSizes;
-  FunctionType functionalType;
-  llvm::SMLoc operandLoc;
-  DenseBoolArrayAttr scalableVals;
-
-  if (parser.parseOperand(target) || parser.getCurrentLocation(&operandLoc) ||
-      parseDynamicIndexList(parser, dynamicSizes, staticSizes, scalableVals) ||
-      parseOptionalInterchange(parser, result) ||
-      parser.parseOptionalAttrDict(result.attributes) ||
-      parser.parseColonType(functionalType))
-    return ParseResult::failure();
-
-  size_t numExpectedLoops =
-      staticSizes.size() - llvm::count(staticSizes.asArrayRef(), 0);
-  if (functionalType.getNumResults() != numExpectedLoops + 1) {
-    return parser.emitError(parser.getNameLoc())
-           << "expected " << (numExpectedLoops + 1) << " result type(s)";
-  }
-  if (functionalType.getNumInputs() != dynamicSizes.size() + 1) {
-    return parser.emitError(operandLoc)
-           << "expected " << dynamicSizes.size() + 1 << " operand type(s)";
-  }
-  if (parser.resolveOperand(target, functionalType.getInputs().front(),
-                            result.operands) ||
-      parser.resolveOperands(dynamicSizes,
-                             functionalType.getInputs().drop_front(),
-                             operandLoc, result.operands)) {
-    return failure();
-  }
-
-  result.addAttribute(getScalableSizesAttrName(result.name), scalableVals);
-
-  result.addAttribute(getStaticSizesAttrName(result.name), staticSizes);
-  result.addTypes(functionalType.getResults());
-  return success();
-}
-
-void TileUsingForOp::print(OpAsmPrinter &p) {
-  p << ' ' << getTarget();
-  printDynamicIndexList(p, getOperation(), getDynamicSizes(), getStaticSizes(),
-                        /*valueTypes=*/{}, getScalableSizesAttr(),
-                        OpAsmParser::Delimiter::Square);
-  printOptionalInterchange(p, getInterchange());
-  p.printOptionalAttrDict(
-      (*this)->getAttrs(),
-      /*elidedAttrs=*/{getInterchangeAttrName(getOperation()->getName()),
-                       getScalableSizesAttrName(getOperation()->getName()),
-                       getStaticSizesAttrName(getOperation()->getName())});
-  p << " : ";
-  p.printFunctionalType(getOperands().getTypes(), getResults().getTypes());
-}
-
 void transform::TileUsingForOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
   consumesHandle(getTarget(), effects);
@@ -3123,80 +3139,6 @@ transform::VectorizeChildrenAndApplyPatternsOp::applyToOne(
 // VectorizeOp
 //===----------------------------------------------------------------------===//
 
-static const StringLiteral kVectorSizesKeyword = "vector_sizes";
-
-ParseResult transform::VectorizeOp::parse(OpAsmParser &parser,
-                                          OperationState &result) {
-  OpAsmParser::UnresolvedOperand target;
-  SmallVector<OpAsmParser::UnresolvedOperand> dynamicSizes;
-  DenseI64ArrayAttr staticSizes;
-  SmallVector<Type> operandTypes;
-  llvm::SMLoc operandLoc;
-  DenseBoolArrayAttr scalableVals;
-
-  if (parser.parseOperand(target) || parser.getCurrentLocation(&operandLoc))
-    return ParseResult::failure();
-
-  if (succeeded(parser.parseOptionalKeyword(kVectorSizesKeyword))) {
-    if (failed(parseDynamicIndexList(parser, dynamicSizes, staticSizes,
-                                     scalableVals)))
-      return ParseResult::failure();
-  }
-
-  if (succeeded(parser.parseOptionalKeyword(
-          getVectorizeNdExtractAttrName(result.name))))
-    result.addAttribute(getVectorizeNdExtractAttrName(result.name),
-                        parser.getBuilder().getUnitAttr());
-
-  if (parser.parseOptionalAttrDict(result.attributes) ||
-      parser.parseColonTypeList(operandTypes))
-    return ParseResult::failure();
-
-  if (operandTypes.size() != dynamicSizes.size() + 1) {
-    return parser.emitError(operandLoc)
-           << "expected " << dynamicSizes.size() + 1 << " operand type(s)";
-  }
-  if (parser.resolveOperand(target, operandTypes.front(), result.operands) ||
-      parser.resolveOperands(dynamicSizes, ArrayRef(operandTypes).drop_front(),
-                             operandLoc, result.operands)) {
-    return failure();
-  }
-
-  if (scalableVals)
-    result.addAttribute(getScalableSizesAttrName(result.name), scalableVals);
-  if (staticSizes)
-    result.addAttribute(getStaticVectorSizesAttrName(result.name), staticSizes);
-
-  return success();
-}
-
-void transform::VectorizeOp::print(OpAsmPrinter &p) {
-  p << ' ' << getTarget() << ' ';
-  if (!getMixedVectorSizes().empty()) {
-    p << kVectorSizesKeyword << ' ';
-    printDynamicIndexList(p, getOperation(), getVectorSizes(),
-                          getStaticVectorSizesAttr(),
-                          /*valueTypes=*/{}, getScalableSizesAttr(),
-                          OpAsmParser::Delimiter::Square);
-  }
-
-  if (getVectorizeNdExtract())
-    p << getVectorizeNdExtractAttrName() << ' ';
-
-  p.printOptionalAttrDict(
-      (*this)->getAttrs(),
-      /*elidedAttrs=*/{
-          getScalableSizesAttrName(getOperation()->getName()),
-          getStaticVectorSizesAttrName(getOperation()->getName())});
-  p << " : ";
-  p << getTarget().getType();
-  if (!getVectorSizes().empty()) {
-    p << ", ";
-    llvm::interleaveComma(getVectorSizes(), p,
-                          [&](Value operand) { p << operand.getType(); });
-  }
-}
-
 DiagnosedSilenceableFailure transform::VectorizeOp::apply(
     transform::TransformRewriter &rewriter,
     mlir::transform::TransformResults &transformResults,
@@ -3204,49 +3146,12 @@ DiagnosedSilenceableFailure transform::VectorizeOp::apply(
   auto targets = state.getPayloadOps(getTarget());
   if (std::empty(targets))
     return DiagnosedSilenceableFailure::success();
-
+  auto transformOp = cast<TransformOpInterface>(getOperation());
   SmallVector<int64_t> vectorSizes;
-  for (OpFoldResult sz : getMixedVectorSizes()) {
-    if (sz.is<Attribute>()) {
-      auto attr = sz.get<Attribute>();
-      vectorSizes.push_back(cast<IntegerAttr>(attr).getInt());
-      continue;
-    } else if (sz.is<Value>() && isa<ParamType>(sz.get<Value>().getType())) {
-      ArrayRef<Attribute> params = state.getParams(sz.get<Value>());
-      if (params.size() != 1)
-        return emitSilenceableFailure(getLoc()) << "expected a single param";
-      vectorSizes.push_back(
-          cast<IntegerAttr>(params.front()).getValue().getSExtValue());
-      continue;
-    }
-
-    auto szPayloads = state.getPayloadOps(sz.get<Value>());
-    if (!llvm::hasSingleElement(szPayloads)) {
-      auto diag = this->emitOpError(
-          "requires vector size handle that is mapped to 1 payload op");
-      diag.attachNote(sz.get<Value>().getLoc())
-          << "mapped to " << llvm::range_size(szPayloads) << " payload ops";
-      return DiagnosedSilenceableFailure::definiteFailure();
-    }
-
-    Operation *szPayloadOp = *szPayloads.begin();
-    if (szPayloadOp->getNumResults() != 1 ||
-        !szPayloadOp->getResult(0).getType().isIndex()) {
-      auto diag = this->emitOpError(
-          "requires vector size payload op with 1 index result");
-      diag.attachNote(szPayloadOp->getLoc()) << "vector size payload op";
-      return DiagnosedSilenceableFailure::definiteFailure();
-    }
-
-    IntegerAttr attr;
-    if (!matchPattern(szPayloadOp->getResult(0), m_Constant(&attr))) {
-      auto diag = this->emitOpError("requires constant vector size");
-      diag.attachNote(szPayloadOp->getLoc()) << "vector size payload op";
-      return DiagnosedSilenceableFailure::definiteFailure();
-    }
-
-    vectorSizes.push_back(attr.getInt());
-  }
+  DiagnosedSilenceableFailure status = reifyMixedParamAndHandleResults(
+      state, transformOp, getMixedVectorSizes(), vectorSizes);
+  if (!status.succeeded())
+    return status;
 
   // TODO: Check that the correct number of vectorSizes was provided.
   for (Operation *target : targets) {

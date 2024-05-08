@@ -97,6 +97,10 @@ private:
   /// from meta data in the file.
   void discoverFileObjects();
 
+  /// Check if the input binary has a space reserved for BOLT and use it for new
+  /// section allocations if found.
+  void discoverBOLTReserved();
+
   /// Check whether we should use DT_FINI or DT_FINI_ARRAY for instrumentation.
   /// DT_FINI is preferred; DT_FINI_ARRAY is only used when no DT_FINI entry was
   /// found.
@@ -421,6 +425,10 @@ private:
 
   /// Section name used for extra BOLT code in addition to .text.
   static StringRef getBOLTTextSectionName() { return ".bolt.text"; }
+
+  /// Symbol markers for BOLT reserved area.
+  static StringRef getBOLTReservedStart() { return "__bolt_reserved_start"; }
+  static StringRef getBOLTReservedEnd() { return "__bolt_reserved_end"; }
 
   /// Common section names.
   static StringRef getEHFrameSectionName() { return ".eh_frame"; }

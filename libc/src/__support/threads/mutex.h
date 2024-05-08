@@ -38,9 +38,9 @@
 // want the constructors of the Mutex classes to be constexprs.
 
 #if defined(__linux__)
-#include "linux/mutex.h"
+#include "src/__support/threads/linux/mutex.h"
 #elif defined(LIBC_TARGET_ARCH_IS_GPU)
-#include "gpu/mutex.h"
+#include "src/__support/threads/gpu/mutex.h"
 #endif // __linux__
 
 namespace LIBC_NAMESPACE {

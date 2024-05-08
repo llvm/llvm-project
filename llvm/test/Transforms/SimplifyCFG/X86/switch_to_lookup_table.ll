@@ -2068,3 +2068,37 @@ cond.end:                                         ; preds = %entry, %cond.false
   %conv = sext i3 %cond to i8
   ret i8 %conv
 }
+
+; Don't create a table with an unknown type
+define { i8, i8 } @test_unknown_result_type(i8 %n) {
+; CHECK-LABEL: @test_unknown_result_type(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    switch i8 [[N:%.*]], label [[SW_DEFAULT:%.*]] [
+; CHECK-NEXT:      i8 0, label [[RETURN:%.*]]
+; CHECK-NEXT:      i8 1, label [[RETURN]]
+; CHECK-NEXT:      i8 2, label [[RETURN]]
+; CHECK-NEXT:    ]
+; CHECK:       sw.default:
+; CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { i8, i8 } undef, i8 0, 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { i8, i8 } [[TMP0]], i8 1, 1
+; CHECK-NEXT:    br label [[RETURN]]
+; CHECK:       return:
+; CHECK-NEXT:    [[RETVAL_0:%.*]] = phi { i8, i8 } [ undef, [[ENTRY:%.*]] ], [ undef, [[ENTRY]] ], [ undef, [[ENTRY]] ], [ [[TMP1]], [[SW_DEFAULT]] ]
+; CHECK-NEXT:    ret { i8, i8 } [[RETVAL_0]]
+;
+entry:
+  switch i8 %n, label %sw.default [
+  i8 0, label %return
+  i8 1, label %return
+  i8 2, label %return
+  ]
+
+sw.default:                                       ; preds = %entry
+  %0 = insertvalue { i8, i8 } undef, i8 0, 0
+  %1 = insertvalue { i8, i8 } %0, i8 1, 1
+  br label %return
+
+return:                                           ; preds = %sw.default, %entry, %entry, %entry
+  %retval.0 = phi { i8, i8 } [ undef, %entry ], [ undef, %entry ], [ undef, %entry ], [ %1, %sw.default ]
+  ret { i8, i8 } %retval.0
+}

@@ -3357,7 +3357,7 @@ void SelectionDAGBuilder::visitInvoke(const InvokeInst &I) {
       break;
     }
     }
-  } else if (I.countOperandBundlesOfType(LLVMContext::OB_deopt)) {
+  } else if (I.hasDeoptState()) {
     // Currently we do not lower any intrinsic calls with deopt operand bundles.
     // Eventually we will support lowering the @llvm.experimental.deoptimize
     // intrinsic, and right now there are no plans to support other intrinsics
@@ -7962,16 +7962,8 @@ void SelectionDAGBuilder::visitConstrainedFPIntrinsic(
   SDValue Chain = DAG.getRoot();
   SmallVector<SDValue, 4> Opers;
   Opers.push_back(Chain);
-  if (FPI.isUnaryOp()) {
-    Opers.push_back(getValue(FPI.getArgOperand(0)));
-  } else if (FPI.isTernaryOp()) {
-    Opers.push_back(getValue(FPI.getArgOperand(0)));
-    Opers.push_back(getValue(FPI.getArgOperand(1)));
-    Opers.push_back(getValue(FPI.getArgOperand(2)));
-  } else {
-    Opers.push_back(getValue(FPI.getArgOperand(0)));
-    Opers.push_back(getValue(FPI.getArgOperand(1)));
-  }
+  for (unsigned I = 0, E = FPI.getNonMetadataArgCount(); I != E; ++I)
+    Opers.push_back(getValue(FPI.getArgOperand(I)));
 
   auto pushOutChain = [this](SDValue Result, fp::ExceptionBehavior EB) {
     assert(Result.getNode()->getNumValues() == 2);
@@ -8074,6 +8066,11 @@ static unsigned getISDForVPIntrinsic(const VPIntrinsic &VPIntrin) {
   case Intrinsic::vp_cttz: {
     bool IsZeroUndef = cast<ConstantInt>(VPIntrin.getArgOperand(1))->isOne();
     ResOPC = IsZeroUndef ? ISD::VP_CTTZ_ZERO_UNDEF : ISD::VP_CTTZ;
+    break;
+  }
+  case Intrinsic::vp_cttz_elts: {
+    bool IsZeroPoison = cast<ConstantInt>(VPIntrin.getArgOperand(1))->isOne();
+    ResOPC = IsZeroPoison ? ISD::VP_CTTZ_ELTS_ZERO_UNDEF : ISD::VP_CTTZ_ELTS;
     break;
   }
 #define HELPER_MAP_VPID_TO_VPSD(VPID, VPSD)                                    \
@@ -8428,7 +8425,9 @@ void SelectionDAGBuilder::visitVectorPredicationIntrinsic(
   case ISD::VP_CTLZ:
   case ISD::VP_CTLZ_ZERO_UNDEF:
   case ISD::VP_CTTZ:
-  case ISD::VP_CTTZ_ZERO_UNDEF: {
+  case ISD::VP_CTTZ_ZERO_UNDEF:
+  case ISD::VP_CTTZ_ELTS_ZERO_UNDEF:
+  case ISD::VP_CTTZ_ELTS: {
     SDValue Result =
         DAG.getNode(Opcode, DL, VTs, {OpValues[0], OpValues[2], OpValues[3]});
     setValue(&VPIntrin, Result);
@@ -9198,7 +9197,7 @@ void SelectionDAGBuilder::visitCall(const CallInst &I) {
 
   SDValue Callee = getValue(I.getCalledOperand());
 
-  if (I.countOperandBundlesOfType(LLVMContext::OB_deopt))
+  if (I.hasDeoptState())
     LowerCallSiteWithDeoptBundle(&I, Callee, nullptr);
   else
     // Check if we can potentially perform a tail call. More detailed checking
