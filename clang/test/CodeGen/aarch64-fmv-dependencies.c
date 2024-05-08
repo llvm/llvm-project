@@ -6,73 +6,74 @@
 // RUN: %clang --target=aarch64-linux-gnu --rtlib=compiler-rt -emit-llvm -S -o - %s | FileCheck %s
 
 
-int __attribute__((target_version("aes"))) fmv(void) { return 0; }
-int __attribute__((target_version("bf16"))) fmv(void) { return 0; }
-int __attribute__((target_version("bti"))) fmv(void) { return 0; }
-int __attribute__((target_version("crc"))) fmv(void) { return 0; }
-int __attribute__((target_version("dgh"))) fmv(void) { return 0; }
-int __attribute__((target_version("dit"))) fmv(void) { return 0; }
-int __attribute__((target_version("dotprod"))) fmv(void) { return 0; }
-int __attribute__((target_version("dpb"))) fmv(void) { return 0; }
-int __attribute__((target_version("dpb2"))) fmv(void) { return 0; }
-int __attribute__((target_version("ebf16"))) fmv(void) { return 0; }
-int __attribute__((target_version("f32mm"))) fmv(void) { return 0; }
-int __attribute__((target_version("f64mm"))) fmv(void) { return 0; }
-int __attribute__((target_version("fcma"))) fmv(void) { return 0; }
-int __attribute__((target_version("flagm"))) fmv(void) { return 0; }
-int __attribute__((target_version("flagm2"))) fmv(void) { return 0; }
-int __attribute__((target_version("fp"))) fmv(void) { return 0; }
-int __attribute__((target_version("fp16"))) fmv(void) { return 0; }
-int __attribute__((target_version("fp16fml"))) fmv(void) { return 0; }
-int __attribute__((target_version("frintts"))) fmv(void) { return 0; }
-int __attribute__((target_version("i8mm"))) fmv(void) { return 0; }
-int __attribute__((target_version("jscvt"))) fmv(void) { return 0; }
-int __attribute__((target_version("ls64"))) fmv(void) { return 0; }
-int __attribute__((target_version("ls64_accdata"))) fmv(void) { return 0; }
-int __attribute__((target_version("ls64_v"))) fmv(void) { return 0; }
-int __attribute__((target_version("lse"))) fmv(void) { return 0; }
-int __attribute__((target_version("memtag"))) fmv(void) { return 0; }
-int __attribute__((target_version("memtag2"))) fmv(void) { return 0; }
-int __attribute__((target_version("memtag3"))) fmv(void) { return 0; }
-int __attribute__((target_version("mops"))) fmv(void) { return 0; }
-int __attribute__((target_version("pmull"))) fmv(void) { return 0; }
-int __attribute__((target_version("predres"))) fmv(void) { return 0; }
-int __attribute__((target_version("rcpc"))) fmv(void) { return 0; }
-int __attribute__((target_version("rcpc2"))) fmv(void) { return 0; }
-int __attribute__((target_version("rcpc3"))) fmv(void) { return 0; }
-int __attribute__((target_version("rdm"))) fmv(void) { return 0; }
-int __attribute__((target_version("rng"))) fmv(void) { return 0; }
-int __attribute__((target_version("rpres"))) fmv(void) { return 0; }
-int __attribute__((target_version("sb"))) fmv(void) { return 0; }
-int __attribute__((target_version("sha1"))) fmv(void) { return 0; }
-int __attribute__((target_version("sha2"))) fmv(void) { return 0; }
-int __attribute__((target_version("sha3"))) fmv(void) { return 0; }
-int __attribute__((target_version("simd"))) fmv(void) { return 0; }
-int __attribute__((target_version("sm4"))) fmv(void) { return 0; }
-int __attribute__((target_version("sme"))) fmv(void) { return 0; }
-int __attribute__((target_version("sme-f64f64"))) fmv(void) { return 0; }
-int __attribute__((target_version("sme-i16i64"))) fmv(void) { return 0; }
-int __attribute__((target_version("sme2"))) fmv(void) { return 0; }
-int __attribute__((target_version("ssbs"))) fmv(void) { return 0; }
-int __attribute__((target_version("ssbs2"))) fmv(void) { return 0; }
-int __attribute__((target_version("sve"))) fmv(void) { return 0; }
-int __attribute__((target_version("sve-bf16"))) fmv(void) { return 0; }
-int __attribute__((target_version("sve-ebf16"))) fmv(void) { return 0; }
-int __attribute__((target_version("sve-i8mm"))) fmv(void) { return 0; }
-int __attribute__((target_version("sve2"))) fmv(void) { return 0; }
-int __attribute__((target_version("sve2-aes"))) fmv(void) { return 0; }
-int __attribute__((target_version("sve2-bitperm"))) fmv(void) { return 0; }
-int __attribute__((target_version("sve2-pmull128"))) fmv(void) { return 0; }
-int __attribute__((target_version("sve2-sha3"))) fmv(void) { return 0; }
-int __attribute__((target_version("sve2-sm4"))) fmv(void) { return 0; }
-int __attribute__((target_version("wfxt"))) fmv(void) { return 0; }
+__attribute__((target_version("aes"))) int fmv(void) { return 0; }
+__attribute__((target_version("bf16"))) int fmv(void) { return 0; }
+__attribute__((target_version("bti"))) int fmv(void) { return 0; }
+__attribute__((target_version("crc"))) int fmv(void) { return 0; }
+__attribute__((target_version("dgh"))) int fmv(void) { return 0; }
+__attribute__((target_version("dit"))) int fmv(void) { return 0; }
+__attribute__((target_version("dotprod"))) int fmv(void) { return 0; }
+__attribute__((target_version("dpb"))) int fmv(void) { return 0; }
+__attribute__((target_version("dpb2"))) int fmv(void) { return 0; }
+__attribute__((target_version("ebf16"))) int fmv(void) { return 0; }
+__attribute__((target_version("f32mm"))) int fmv(void) { return 0; }
+__attribute__((target_version("f64mm"))) int fmv(void) { return 0; }
+__attribute__((target_version("fcma"))) int fmv(void) { return 0; }
+__attribute__((target_version("flagm"))) int fmv(void) { return 0; }
+__attribute__((target_version("flagm2"))) int fmv(void) { return 0; }
+__attribute__((target_version("fp"))) int fmv(void) { return 0; }
+__attribute__((target_version("fp16"))) int fmv(void) { return 0; }
+__attribute__((target_version("fp16fml"))) int fmv(void) { return 0; }
+__attribute__((target_version("frintts"))) int fmv(void) { return 0; }
+__attribute__((target_version("i8mm"))) int fmv(void) { return 0; }
+__attribute__((target_version("jscvt"))) int fmv(void) { return 0; }
+__attribute__((target_version("ls64"))) int fmv(void) { return 0; }
+__attribute__((target_version("ls64_accdata"))) int fmv(void) { return 0; }
+__attribute__((target_version("ls64_v"))) int fmv(void) { return 0; }
+__attribute__((target_version("lse"))) int fmv(void) { return 0; }
+__attribute__((target_version("memtag"))) int fmv(void) { return 0; }
+__attribute__((target_version("memtag2"))) int fmv(void) { return 0; }
+__attribute__((target_version("memtag3"))) int fmv(void) { return 0; }
+__attribute__((target_version("mops"))) int fmv(void) { return 0; }
+__attribute__((target_version("pmull"))) int fmv(void) { return 0; }
+__attribute__((target_version("predres"))) int fmv(void) { return 0; }
+__attribute__((target_version("rcpc"))) int fmv(void) { return 0; }
+__attribute__((target_version("rcpc2"))) int fmv(void) { return 0; }
+__attribute__((target_version("rcpc3"))) int fmv(void) { return 0; }
+__attribute__((target_version("rdm"))) int fmv(void) { return 0; }
+__attribute__((target_version("rng"))) int fmv(void) { return 0; }
+__attribute__((target_version("rpres"))) int fmv(void) { return 0; }
+__attribute__((target_version("sb"))) int fmv(void) { return 0; }
+__attribute__((target_version("sha1"))) int fmv(void) { return 0; }
+__attribute__((target_version("sha2"))) int fmv(void) { return 0; }
+__attribute__((target_version("sha3"))) int fmv(void) { return 0; }
+__attribute__((target_version("simd"))) int fmv(void) { return 0; }
+__attribute__((target_version("sm4"))) int fmv(void) { return 0; }
+__attribute__((target_version("sme"))) int fmv(void) { return 0; }
+__attribute__((target_version("sme-f64f64"))) int fmv(void) { return 0; }
+__attribute__((target_version("sme-i16i64"))) int fmv(void) { return 0; }
+__attribute__((target_version("sme2"))) int fmv(void) { return 0; }
+__attribute__((target_version("ssbs"))) int fmv(void) { return 0; }
+__attribute__((target_version("ssbs2"))) int fmv(void) { return 0; }
+__attribute__((target_version("sve"))) int fmv(void) { return 0; }
+__attribute__((target_version("sve-bf16"))) int fmv(void) { return 0; }
+__attribute__((target_version("sve-ebf16"))) int fmv(void) { return 0; }
+__attribute__((target_version("sve-i8mm"))) int fmv(void) { return 0; }
+__attribute__((target_version("sve2"))) int fmv(void) { return 0; }
+__attribute__((target_version("sve2-aes"))) int fmv(void) { return 0; }
+__attribute__((target_version("sve2-bitperm"))) int fmv(void) { return 0; }
+__attribute__((target_version("sve2-pmull128"))) int fmv(void) { return 0; }
+__attribute__((target_version("sve2-sha3"))) int fmv(void) { return 0; }
+__attribute__((target_version("sve2-sm4"))) int fmv(void) { return 0; }
+__attribute__((target_version("wfxt"))) int fmv(void) { return 0; }
 
-int __attribute__((target_version("default"))) fmv(void);
+__attribute__((target_version("non_existent_extension"))) int fmv(void);
+
+__attribute__((target_version("default"))) int fmv(void);
 
 int caller() {
   return fmv();
 }
-
 //.
 // CHECK: @__aarch64_cpu_features = external dso_local global { i64 }
 // CHECK: @fmv.ifunc = weak_odr dso_local alias i32 (), ptr @fmv

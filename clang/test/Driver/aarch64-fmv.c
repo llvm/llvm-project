@@ -3,6 +3,8 @@
 // FMV is enabled for non-android aarch64 targets:
 // RUN: %clang --target=aarch64 --rtlib=compiler-rt -### -c %s 2>&1 | FileCheck -check-prefix=FMV-ENABLED %s
 // RUN: %clang --target=aarch64-linux-gnu --rtlib=compiler-rt -### -c %s 2>&1 | FileCheck -check-prefix=FMV-ENABLED %s
+// RUN: %clang --target=arm64-apple-ios --rtlib=compiler-rt -### -c %s 2>&1 | FileCheck -check-prefix=FMV-ENABLED %s
+// RUN: %clang --target=arm64-apple-macosx --rtlib=compiler-rt -### -c %s 2>&1 | FileCheck -check-prefix=FMV-ENABLED %s
 
 // android23 defaults to --rtlib=compiler-rt:
 // RUN: %clang --target=aarch64-linux-android23 -### -c %s 2>&1 | FileCheck -check-prefix=FMV-ENABLED %s
