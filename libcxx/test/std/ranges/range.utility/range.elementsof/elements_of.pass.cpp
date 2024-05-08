@@ -12,8 +12,9 @@
 
 #include <ranges>
 
-#include <vector>
 #include <concepts>
+#include <memory>
+#include <vector>
 
 constexpr bool test() {
   {
