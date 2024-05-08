@@ -1513,6 +1513,7 @@ public:
   void buildAtomicStore(RValue rvalue, LValue lvalue, bool isInit);
   void buildAtomicStore(RValue rvalue, LValue lvalue, mlir::cir::MemOrder MO,
                         bool IsVolatile, bool isInit);
+  void buildAtomicInit(Expr *init, LValue dest);
 
   /// Return the address of a local variable.
   Address GetAddrOfLocalVar(const clang::VarDecl *VD) {
