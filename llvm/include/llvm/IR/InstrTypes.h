@@ -1997,13 +1997,19 @@ public:
   /// Get the attribute of a given kind from a given arg
   Attribute getParamAttr(unsigned ArgNo, Attribute::AttrKind Kind) const {
     assert(ArgNo < arg_size() && "Out of bounds");
-    return getAttributes().getParamAttr(ArgNo, Kind);
+    Attribute A = getAttributes().getParamAttr(ArgNo, Kind);
+    if (A.isValid())
+      return A;
+    return getParamAttrOnCalledFunction(ArgNo, Kind);
   }
 
   /// Get the attribute of a given kind from a given arg
   Attribute getParamAttr(unsigned ArgNo, StringRef Kind) const {
     assert(ArgNo < arg_size() && "Out of bounds");
-    return getAttributes().getParamAttr(ArgNo, Kind);
+    Attribute A = getAttributes().getParamAttr(ArgNo, Kind);
+    if (A.isValid())
+      return A;
+    return getParamAttrOnCalledFunction(ArgNo, Kind);
   }
 
   /// Return true if the data operand at index \p i has the attribute \p
@@ -2652,6 +2658,8 @@ private:
     return hasFnAttrOnCalledFunction(Kind);
   }
   template <typename AK> Attribute getFnAttrOnCalledFunction(AK Kind) const;
+  template <typename AK>
+  Attribute getParamAttrOnCalledFunction(unsigned ArgNo, AK Kind) const;
 
   /// Determine whether the return value has the given attribute. Supports
   /// Attribute::AttrKind and StringRef as \p AttrKind types.
