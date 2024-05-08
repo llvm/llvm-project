@@ -206,6 +206,15 @@ transform::TransformState::mapBlockArgument(BlockArgument argument,
       .checkAndReport();
 }
 
+LogicalResult transform::TransformState::mapBlockArguments(
+    Block::BlockArgListType arguments,
+    ArrayRef<SmallVector<MappedValue>> mapping) {
+  for (auto &&[argument, values] : llvm::zip_equal(arguments, mapping))
+    if (failed(mapBlockArgument(argument, values)))
+      return failure();
+  return success();
+}
+
 LogicalResult
 transform::TransformState::setPayloadOps(Value value,
                                          ArrayRef<Operation *> targets) {
@@ -1528,11 +1537,12 @@ void transform::detail::setApplyToOneResults(
 // Utilities for implementing transform ops with regions.
 //===----------------------------------------------------------------------===//
 
-void transform::detail::prepareValueMappings(
-    SmallVectorImpl<SmallVector<transform::MappedValue>> &mappings,
-    ValueRange values, const transform::TransformState &state) {
-  for (Value operand : values) {
-    SmallVector<MappedValue> &mapped = mappings.emplace_back();
+LogicalResult transform::detail::appendValueMappings(
+    MutableArrayRef<SmallVector<transform::MappedValue>> mappings,
+    ValueRange values, const transform::TransformState &state, bool flatten) {
+  assert(mappings.size() == values.size() && "mismatching number of mappings");
+  for (auto &&[operand, mapped] : llvm::zip_equal(values, mappings)) {
+    size_t mappedSize = mapped.size();
     if (llvm::isa<TransformHandleTypeInterface>(operand.getType())) {
       llvm::append_range(mapped, state.getPayloadOps(operand));
     } else if (llvm::isa<TransformValueHandleTypeInterface>(
@@ -1543,7 +1553,21 @@ void transform::detail::prepareValueMappings(
              "unsupported kind of transform dialect value");
       llvm::append_range(mapped, state.getParams(operand));
     }
+
+    if (mapped.size() - mappedSize != 1 && !flatten)
+      return failure();
   }
+  return success();
+}
+
+void transform::detail::prepareValueMappings(
+    SmallVectorImpl<SmallVector<transform::MappedValue>> &mappings,
+    ValueRange values, const transform::TransformState &state) {
+  mappings.resize(mappings.size() + values.size());
+  (void)appendValueMappings(
+      MutableArrayRef<SmallVector<transform::MappedValue>>(mappings).take_back(
+          values.size()),
+      values, state);
 }
 
 void transform::detail::forwardTerminatorOperands(

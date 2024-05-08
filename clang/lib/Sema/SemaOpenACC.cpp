@@ -16,6 +16,7 @@
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/OpenACCKinds.h"
 #include "clang/Sema/Sema.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Casting.h"
 
 using namespace clang;
@@ -103,6 +104,119 @@ bool doesClauseApplyToDirective(OpenACCDirectiveKind DirectiveKind,
     default:
       return false;
     }
+  case OpenACCClauseKind::FirstPrivate:
+    switch (DirectiveKind) {
+    case OpenACCDirectiveKind::Parallel:
+    case OpenACCDirectiveKind::Serial:
+    case OpenACCDirectiveKind::ParallelLoop:
+    case OpenACCDirectiveKind::SerialLoop:
+      return true;
+    default:
+      return false;
+    }
+  case OpenACCClauseKind::Private:
+    switch (DirectiveKind) {
+    case OpenACCDirectiveKind::Parallel:
+    case OpenACCDirectiveKind::Serial:
+    case OpenACCDirectiveKind::Loop:
+    case OpenACCDirectiveKind::ParallelLoop:
+    case OpenACCDirectiveKind::SerialLoop:
+    case OpenACCDirectiveKind::KernelsLoop:
+      return true;
+    default:
+      return false;
+    }
+  case OpenACCClauseKind::NoCreate:
+    switch (DirectiveKind) {
+    case OpenACCDirectiveKind::Parallel:
+    case OpenACCDirectiveKind::Serial:
+    case OpenACCDirectiveKind::Kernels:
+    case OpenACCDirectiveKind::Data:
+    case OpenACCDirectiveKind::ParallelLoop:
+    case OpenACCDirectiveKind::SerialLoop:
+    case OpenACCDirectiveKind::KernelsLoop:
+      return true;
+    default:
+      return false;
+    }
+  case OpenACCClauseKind::Present:
+    switch (DirectiveKind) {
+    case OpenACCDirectiveKind::Parallel:
+    case OpenACCDirectiveKind::Serial:
+    case OpenACCDirectiveKind::Kernels:
+    case OpenACCDirectiveKind::Data:
+    case OpenACCDirectiveKind::Declare:
+    case OpenACCDirectiveKind::ParallelLoop:
+    case OpenACCDirectiveKind::SerialLoop:
+    case OpenACCDirectiveKind::KernelsLoop:
+      return true;
+    default:
+      return false;
+    }
+
+  case OpenACCClauseKind::Copy:
+  case OpenACCClauseKind::PCopy:
+  case OpenACCClauseKind::PresentOrCopy:
+    switch (DirectiveKind) {
+    case OpenACCDirectiveKind::Parallel:
+    case OpenACCDirectiveKind::Serial:
+    case OpenACCDirectiveKind::Kernels:
+    case OpenACCDirectiveKind::Data:
+    case OpenACCDirectiveKind::Declare:
+    case OpenACCDirectiveKind::ParallelLoop:
+    case OpenACCDirectiveKind::SerialLoop:
+    case OpenACCDirectiveKind::KernelsLoop:
+      return true;
+    default:
+      return false;
+    }
+  case OpenACCClauseKind::Attach:
+    switch (DirectiveKind) {
+    case OpenACCDirectiveKind::Parallel:
+    case OpenACCDirectiveKind::Serial:
+    case OpenACCDirectiveKind::Kernels:
+    case OpenACCDirectiveKind::Data:
+    case OpenACCDirectiveKind::EnterData:
+    case OpenACCDirectiveKind::ParallelLoop:
+    case OpenACCDirectiveKind::SerialLoop:
+    case OpenACCDirectiveKind::KernelsLoop:
+      return true;
+    default:
+      return false;
+    }
+  case OpenACCClauseKind::DevicePtr:
+    switch (DirectiveKind) {
+    case OpenACCDirectiveKind::Parallel:
+    case OpenACCDirectiveKind::Serial:
+    case OpenACCDirectiveKind::Kernels:
+    case OpenACCDirectiveKind::Data:
+    case OpenACCDirectiveKind::Declare:
+    case OpenACCDirectiveKind::ParallelLoop:
+    case OpenACCDirectiveKind::SerialLoop:
+    case OpenACCDirectiveKind::KernelsLoop:
+      return true;
+    default:
+      return false;
+    }
+  case OpenACCClauseKind::Async:
+    switch (DirectiveKind) {
+    case OpenACCDirectiveKind::Parallel:
+    case OpenACCDirectiveKind::Serial:
+    case OpenACCDirectiveKind::Kernels:
+    case OpenACCDirectiveKind::Data:
+    case OpenACCDirectiveKind::EnterData:
+    case OpenACCDirectiveKind::ExitData:
+    case OpenACCDirectiveKind::Set:
+    case OpenACCDirectiveKind::Update:
+    case OpenACCDirectiveKind::Wait:
+    case OpenACCDirectiveKind::ParallelLoop:
+    case OpenACCDirectiveKind::SerialLoop:
+    case OpenACCDirectiveKind::KernelsLoop:
+      return true;
+    default:
+      return false;
+    }
+
   default:
     // Do nothing so we can go to the 'unimplemented' diagnostic instead.
     return true;
@@ -303,6 +417,212 @@ SemaOpenACC::ActOnClause(ArrayRef<const OpenACCClause *> ExistingClauses,
         getASTContext(), Clause.getBeginLoc(), Clause.getLParenLoc(),
         Clause.getIntExprs()[0], Clause.getEndLoc());
   }
+  case OpenACCClauseKind::Async: {
+    // Restrictions only properly implemented on 'compute' constructs, and
+    // 'compute' constructs are the only construct that can do anything with
+    // this yet, so skip/treat as unimplemented in this case.
+    if (!isOpenACCComputeDirectiveKind(Clause.getDirectiveKind()))
+      break;
+
+    // There is no prose in the standard that says duplicates aren't allowed,
+    // but this diagnostic is present in other compilers, as well as makes
+    // sense.
+    if (checkAlreadyHasClauseOfKind(*this, ExistingClauses, Clause))
+      return nullptr;
+
+    assert(Clause.getNumIntExprs() < 2 &&
+           "Invalid number of expressions for Async");
+
+    return OpenACCAsyncClause::Create(
+        getASTContext(), Clause.getBeginLoc(), Clause.getLParenLoc(),
+        Clause.getNumIntExprs() != 0 ? Clause.getIntExprs()[0] : nullptr,
+        Clause.getEndLoc());
+  }
+  case OpenACCClauseKind::Private: {
+    // Restrictions only properly implemented on 'compute' constructs, and
+    // 'compute' constructs are the only construct that can do anything with
+    // this yet, so skip/treat as unimplemented in this case.
+    if (!isOpenACCComputeDirectiveKind(Clause.getDirectiveKind()))
+      break;
+
+    // ActOnVar ensured that everything is a valid variable reference, so there
+    // really isn't anything to do here. GCC does some duplicate-finding, though
+    // it isn't apparent in the standard where this is justified.
+
+    return OpenACCPrivateClause::Create(
+        getASTContext(), Clause.getBeginLoc(), Clause.getLParenLoc(),
+        Clause.getVarList(), Clause.getEndLoc());
+  }
+  case OpenACCClauseKind::FirstPrivate: {
+    // Restrictions only properly implemented on 'compute' constructs, and
+    // 'compute' constructs are the only construct that can do anything with
+    // this yet, so skip/treat as unimplemented in this case.
+    if (!isOpenACCComputeDirectiveKind(Clause.getDirectiveKind()))
+      break;
+
+    // ActOnVar ensured that everything is a valid variable reference, so there
+    // really isn't anything to do here. GCC does some duplicate-finding, though
+    // it isn't apparent in the standard where this is justified.
+
+    return OpenACCFirstPrivateClause::Create(
+        getASTContext(), Clause.getBeginLoc(), Clause.getLParenLoc(),
+        Clause.getVarList(), Clause.getEndLoc());
+  }
+  case OpenACCClauseKind::NoCreate: {
+    // Restrictions only properly implemented on 'compute' constructs, and
+    // 'compute' constructs are the only construct that can do anything with
+    // this yet, so skip/treat as unimplemented in this case.
+    if (!isOpenACCComputeDirectiveKind(Clause.getDirectiveKind()))
+      break;
+
+    // ActOnVar ensured that everything is a valid variable reference, so there
+    // really isn't anything to do here. GCC does some duplicate-finding, though
+    // it isn't apparent in the standard where this is justified.
+
+    return OpenACCNoCreateClause::Create(
+        getASTContext(), Clause.getBeginLoc(), Clause.getLParenLoc(),
+        Clause.getVarList(), Clause.getEndLoc());
+  }
+  case OpenACCClauseKind::Present: {
+    // Restrictions only properly implemented on 'compute' constructs, and
+    // 'compute' constructs are the only construct that can do anything with
+    // this yet, so skip/treat as unimplemented in this case.
+    if (!isOpenACCComputeDirectiveKind(Clause.getDirectiveKind()))
+      break;
+
+    // ActOnVar ensured that everything is a valid variable reference, so there
+    // really isn't anything to do here. GCC does some duplicate-finding, though
+    // it isn't apparent in the standard where this is justified.
+
+    return OpenACCPresentClause::Create(
+        getASTContext(), Clause.getBeginLoc(), Clause.getLParenLoc(),
+        Clause.getVarList(), Clause.getEndLoc());
+  }
+  case OpenACCClauseKind::PresentOrCopy:
+  case OpenACCClauseKind::PCopy:
+    Diag(Clause.getBeginLoc(), diag::warn_acc_deprecated_alias_name)
+        << Clause.getClauseKind() << OpenACCClauseKind::Copy;
+    LLVM_FALLTHROUGH;
+  case OpenACCClauseKind::Copy: {
+    // Restrictions only properly implemented on 'compute' constructs, and
+    // 'compute' constructs are the only construct that can do anything with
+    // this yet, so skip/treat as unimplemented in this case.
+    if (!isOpenACCComputeDirectiveKind(Clause.getDirectiveKind()))
+      break;
+
+    // ActOnVar ensured that everything is a valid variable reference, so there
+    // really isn't anything to do here. GCC does some duplicate-finding, though
+    // it isn't apparent in the standard where this is justified.
+
+    return OpenACCCopyClause::Create(
+        getASTContext(), Clause.getClauseKind(), Clause.getBeginLoc(),
+        Clause.getLParenLoc(), Clause.getVarList(), Clause.getEndLoc());
+  }
+  case OpenACCClauseKind::PresentOrCopyIn:
+  case OpenACCClauseKind::PCopyIn:
+    Diag(Clause.getBeginLoc(), diag::warn_acc_deprecated_alias_name)
+        << Clause.getClauseKind() << OpenACCClauseKind::CopyIn;
+    LLVM_FALLTHROUGH;
+  case OpenACCClauseKind::CopyIn: {
+    // Restrictions only properly implemented on 'compute' constructs, and
+    // 'compute' constructs are the only construct that can do anything with
+    // this yet, so skip/treat as unimplemented in this case.
+    if (!isOpenACCComputeDirectiveKind(Clause.getDirectiveKind()))
+      break;
+
+    // ActOnVar ensured that everything is a valid variable reference, so there
+    // really isn't anything to do here. GCC does some duplicate-finding, though
+    // it isn't apparent in the standard where this is justified.
+
+    return OpenACCCopyInClause::Create(
+        getASTContext(), Clause.getClauseKind(), Clause.getBeginLoc(),
+        Clause.getLParenLoc(), Clause.isReadOnly(), Clause.getVarList(),
+        Clause.getEndLoc());
+  }
+  case OpenACCClauseKind::PresentOrCopyOut:
+  case OpenACCClauseKind::PCopyOut:
+    Diag(Clause.getBeginLoc(), diag::warn_acc_deprecated_alias_name)
+        << Clause.getClauseKind() << OpenACCClauseKind::CopyOut;
+    LLVM_FALLTHROUGH;
+  case OpenACCClauseKind::CopyOut: {
+    // Restrictions only properly implemented on 'compute' constructs, and
+    // 'compute' constructs are the only construct that can do anything with
+    // this yet, so skip/treat as unimplemented in this case.
+    if (!isOpenACCComputeDirectiveKind(Clause.getDirectiveKind()))
+      break;
+
+    // ActOnVar ensured that everything is a valid variable reference, so there
+    // really isn't anything to do here. GCC does some duplicate-finding, though
+    // it isn't apparent in the standard where this is justified.
+
+    return OpenACCCopyOutClause::Create(
+        getASTContext(), Clause.getClauseKind(), Clause.getBeginLoc(),
+        Clause.getLParenLoc(), Clause.isZero(), Clause.getVarList(),
+        Clause.getEndLoc());
+  }
+  case OpenACCClauseKind::PresentOrCreate:
+  case OpenACCClauseKind::PCreate:
+    Diag(Clause.getBeginLoc(), diag::warn_acc_deprecated_alias_name)
+        << Clause.getClauseKind() << OpenACCClauseKind::Create;
+    LLVM_FALLTHROUGH;
+  case OpenACCClauseKind::Create: {
+    // Restrictions only properly implemented on 'compute' constructs, and
+    // 'compute' constructs are the only construct that can do anything with
+    // this yet, so skip/treat as unimplemented in this case.
+    if (!isOpenACCComputeDirectiveKind(Clause.getDirectiveKind()))
+      break;
+
+    // ActOnVar ensured that everything is a valid variable reference, so there
+    // really isn't anything to do here. GCC does some duplicate-finding, though
+    // it isn't apparent in the standard where this is justified.
+
+    return OpenACCCreateClause::Create(getASTContext(), Clause.getClauseKind(),
+                                       Clause.getBeginLoc(),
+                                       Clause.getLParenLoc(), Clause.isZero(),
+                                       Clause.getVarList(), Clause.getEndLoc());
+  }
+  case OpenACCClauseKind::Attach: {
+    // Restrictions only properly implemented on 'compute' constructs, and
+    // 'compute' constructs are the only construct that can do anything with
+    // this yet, so skip/treat as unimplemented in this case.
+    if (!isOpenACCComputeDirectiveKind(Clause.getDirectiveKind()))
+      break;
+
+    // ActOnVar ensured that everything is a valid variable reference, but we
+    // still have to make sure it is a pointer type.
+    llvm::SmallVector<Expr *> VarList{Clause.getVarList().begin(),
+                                      Clause.getVarList().end()};
+    VarList.erase(std::remove_if(VarList.begin(), VarList.end(), [&](Expr *E) {
+      return CheckVarIsPointerType(OpenACCClauseKind::Attach, E);
+    }), VarList.end());
+    Clause.setVarListDetails(VarList,
+                             /*IsReadOnly=*/false, /*IsZero=*/false);
+
+    return OpenACCAttachClause::Create(getASTContext(), Clause.getBeginLoc(),
+                                       Clause.getLParenLoc(),
+                                       Clause.getVarList(), Clause.getEndLoc());
+  }
+  case OpenACCClauseKind::DevicePtr: {
+    // Restrictions only properly implemented on 'compute' constructs, and
+    // 'compute' constructs are the only construct that can do anything with
+    // this yet, so skip/treat as unimplemented in this case.
+    if (!isOpenACCComputeDirectiveKind(Clause.getDirectiveKind()))
+      break;
+
+    // ActOnVar ensured that everything is a valid variable reference, but we
+    // still have to make sure it is a pointer type.
+    llvm::SmallVector<Expr *> VarList{Clause.getVarList().begin(),
+                                      Clause.getVarList().end()};
+    VarList.erase(std::remove_if(VarList.begin(), VarList.end(), [&](Expr *E) {
+      return CheckVarIsPointerType(OpenACCClauseKind::DevicePtr, E);
+    }), VarList.end());
+    Clause.setVarListDetails(VarList,
+                             /*IsReadOnly=*/false, /*IsZero=*/false);
+
+    return OpenACCDevicePtrClause::Create(
+        getASTContext(), Clause.getBeginLoc(), Clause.getLParenLoc(),
+        Clause.getVarList(), Clause.getEndLoc());
+  }
   default:
     break;
   }
@@ -340,13 +660,25 @@ ExprResult SemaOpenACC::ActOnIntExpr(OpenACCDirectiveKind DK,
   assert(((DK != OpenACCDirectiveKind::Invalid &&
            CK == OpenACCClauseKind::Invalid) ||
           (DK == OpenACCDirectiveKind::Invalid &&
-           CK != OpenACCClauseKind::Invalid)) &&
+           CK != OpenACCClauseKind::Invalid) ||
+          (DK == OpenACCDirectiveKind::Invalid &&
+           CK == OpenACCClauseKind::Invalid)) &&
          "Only one of directive or clause kind should be provided");
 
   class IntExprConverter : public Sema::ICEConvertDiagnoser {
     OpenACCDirectiveKind DirectiveKind;
     OpenACCClauseKind ClauseKind;
     Expr *IntExpr;
+
+    // gets the index into the diagnostics so we can use this for clauses,
+    // directives, and sub array.s
+    unsigned getDiagKind() const {
+      if (ClauseKind != OpenACCClauseKind::Invalid)
+        return 0;
+      if (DirectiveKind != OpenACCDirectiveKind::Invalid)
+        return 1;
+      return 2;
+    }
 
   public:
     IntExprConverter(OpenACCDirectiveKind DK, OpenACCClauseKind CK,
@@ -363,12 +695,8 @@ ExprResult SemaOpenACC::ActOnIntExpr(OpenACCDirectiveKind DK,
     }
     SemaBase::SemaDiagnosticBuilder diagnoseNotInt(Sema &S, SourceLocation Loc,
                                                    QualType T) override {
-      if (ClauseKind != OpenACCClauseKind::Invalid)
-        return S.Diag(Loc, diag::err_acc_int_expr_requires_integer) <<
-               /*Clause=*/0 << ClauseKind << T;
-
-      return S.Diag(Loc, diag::err_acc_int_expr_requires_integer) <<
-             /*Directive=*/1 << DirectiveKind << T;
+      return S.Diag(Loc, diag::err_acc_int_expr_requires_integer)
+             << getDiagKind() << ClauseKind << DirectiveKind << T;
     }
 
     SemaBase::SemaDiagnosticBuilder
@@ -423,6 +751,82 @@ ExprResult SemaOpenACC::ActOnIntExpr(OpenACCDirectiveKind DK,
   return IntExpr;
 }
 
+bool SemaOpenACC::CheckVarIsPointerType(OpenACCClauseKind ClauseKind,
+                                        Expr *VarExpr) {
+  // We already know that VarExpr is a proper reference to a variable, so we
+  // should be able to just take the type of the expression to get the type of
+  // the referenced variable.
+
+  // We've already seen an error, don't diagnose anything else.
+  if (!VarExpr || VarExpr->containsErrors())
+    return false;
+
+  if (isa<ArraySectionExpr>(VarExpr->IgnoreParenImpCasts()) ||
+      VarExpr->hasPlaceholderType(BuiltinType::ArraySection)) {
+    Diag(VarExpr->getExprLoc(), diag::err_array_section_use) << /*OpenACC=*/0;
+    Diag(VarExpr->getExprLoc(), diag::note_acc_expected_pointer_var);
+    return true;
+  }
+
+  QualType Ty = VarExpr->getType();
+  Ty = Ty.getNonReferenceType().getUnqualifiedType();
+
+  // Nothing we can do if this is a dependent type.
+  if (Ty->isDependentType())
+    return false;
+
+  if (!Ty->isPointerType())
+    return Diag(VarExpr->getExprLoc(), diag::err_acc_var_not_pointer_type)
+           << ClauseKind << Ty;
+  return false;
+}
+
+ExprResult SemaOpenACC::ActOnVar(Expr *VarExpr) {
+  // We still need to retain the array subscript/subarray exprs, so work on a
+  // copy.
+  Expr *CurVarExpr = VarExpr->IgnoreParenImpCasts();
+
+  // Sub-arrays/subscript-exprs are fine as long as the base is a
+  // VarExpr/MemberExpr. So strip all of those off.
+  while (isa<ArraySectionExpr, ArraySubscriptExpr>(CurVarExpr)) {
+    if (auto *SubScrpt = dyn_cast<ArraySubscriptExpr>(CurVarExpr))
+      CurVarExpr = SubScrpt->getBase()->IgnoreParenImpCasts();
+    else
+      CurVarExpr =
+          cast<ArraySectionExpr>(CurVarExpr)->getBase()->IgnoreParenImpCasts();
+  }
+
+  // References to a VarDecl are fine.
+  if (const auto *DRE = dyn_cast<DeclRefExpr>(CurVarExpr)) {
+    if (isa<VarDecl, NonTypeTemplateParmDecl>(
+            DRE->getDecl()->getCanonicalDecl()))
+      return VarExpr;
+  }
+
+  // A MemberExpr that references a Field is valid.
+  if (const auto *ME = dyn_cast<MemberExpr>(CurVarExpr)) {
+    if (isa<FieldDecl>(ME->getMemberDecl()->getCanonicalDecl()))
+      return VarExpr;
+  }
+
+  // Referring to 'this' is always OK.
+  if (isa<CXXThisExpr>(CurVarExpr))
+    return VarExpr;
+
+  // Nothing really we can do here, as these are dependent.  So just return they
+  // are valid.
+  if (isa<DependentScopeDeclRefExpr, CXXDependentScopeMemberExpr>(CurVarExpr))
+    return VarExpr;
+
+  // There isn't really anything we can do in the case of a recovery expr, so
+  // skip the diagnostic rather than produce a confusing diagnostic.
+  if (isa<RecoveryExpr>(CurVarExpr))
+    return ExprError();
+
+  Diag(VarExpr->getExprLoc(), diag::err_acc_not_a_var_ref);
+  return ExprError();
+}
+
 ExprResult SemaOpenACC::ActOnArraySectionExpr(Expr *Base, SourceLocation LBLoc,
                                               Expr *LowerBound,
                                               SourceLocation ColonLoc,
@@ -430,12 +834,211 @@ ExprResult SemaOpenACC::ActOnArraySectionExpr(Expr *Base, SourceLocation LBLoc,
                                               SourceLocation RBLoc) {
   ASTContext &Context = getASTContext();
 
-  // TODO OpenACC: We likely have to reproduce a lot of the same logic from the
-  // OMP version of this, but at the moment we don't have a good way to test it,
-  // so for now we'll just create the node.
+  // Handle placeholders.
+  if (Base->hasPlaceholderType() &&
+      !Base->hasPlaceholderType(BuiltinType::ArraySection)) {
+    ExprResult Result = SemaRef.CheckPlaceholderExpr(Base);
+    if (Result.isInvalid())
+      return ExprError();
+    Base = Result.get();
+  }
+  if (LowerBound && LowerBound->getType()->isNonOverloadPlaceholderType()) {
+    ExprResult Result = SemaRef.CheckPlaceholderExpr(LowerBound);
+    if (Result.isInvalid())
+      return ExprError();
+    Result = SemaRef.DefaultLvalueConversion(Result.get());
+    if (Result.isInvalid())
+      return ExprError();
+    LowerBound = Result.get();
+  }
+  if (Length && Length->getType()->isNonOverloadPlaceholderType()) {
+    ExprResult Result = SemaRef.CheckPlaceholderExpr(Length);
+    if (Result.isInvalid())
+      return ExprError();
+    Result = SemaRef.DefaultLvalueConversion(Result.get());
+    if (Result.isInvalid())
+      return ExprError();
+    Length = Result.get();
+  }
+
+  // Check the 'base' value, it must be an array or pointer type, and not to/of
+  // a function type.
+  QualType OriginalBaseTy = ArraySectionExpr::getBaseOriginalType(Base);
+  QualType ResultTy;
+  if (!Base->isTypeDependent()) {
+    if (OriginalBaseTy->isAnyPointerType()) {
+      ResultTy = OriginalBaseTy->getPointeeType();
+    } else if (OriginalBaseTy->isArrayType()) {
+      ResultTy = OriginalBaseTy->getAsArrayTypeUnsafe()->getElementType();
+    } else {
+      return ExprError(
+          Diag(Base->getExprLoc(), diag::err_acc_typecheck_subarray_value)
+          << Base->getSourceRange());
+    }
+
+    if (ResultTy->isFunctionType()) {
+      Diag(Base->getExprLoc(), diag::err_acc_subarray_function_type)
+          << ResultTy << Base->getSourceRange();
+      return ExprError();
+    }
+
+    if (SemaRef.RequireCompleteType(Base->getExprLoc(), ResultTy,
+                                    diag::err_acc_subarray_incomplete_type,
+                                    Base))
+      return ExprError();
+
+    if (!Base->hasPlaceholderType(BuiltinType::ArraySection)) {
+      ExprResult Result = SemaRef.DefaultFunctionArrayLvalueConversion(Base);
+      if (Result.isInvalid())
+        return ExprError();
+      Base = Result.get();
+    }
+  }
+
+  auto GetRecovery = [&](Expr *E, QualType Ty) {
+    ExprResult Recovery =
+        SemaRef.CreateRecoveryExpr(E->getBeginLoc(), E->getEndLoc(), E, Ty);
+    return Recovery.isUsable() ? Recovery.get() : nullptr;
+  };
+
+  // Ensure both of the expressions are int-exprs.
+  if (LowerBound && !LowerBound->isTypeDependent()) {
+    ExprResult LBRes =
+        ActOnIntExpr(OpenACCDirectiveKind::Invalid, OpenACCClauseKind::Invalid,
+                     LowerBound->getExprLoc(), LowerBound);
+
+    if (LBRes.isUsable())
+      LBRes = SemaRef.DefaultLvalueConversion(LBRes.get());
+    LowerBound =
+        LBRes.isUsable() ? LBRes.get() : GetRecovery(LowerBound, Context.IntTy);
+  }
+
+  if (Length && !Length->isTypeDependent()) {
+    ExprResult LenRes =
+        ActOnIntExpr(OpenACCDirectiveKind::Invalid, OpenACCClauseKind::Invalid,
+                     Length->getExprLoc(), Length);
+
+    if (LenRes.isUsable())
+      LenRes = SemaRef.DefaultLvalueConversion(LenRes.get());
+    Length =
+        LenRes.isUsable() ? LenRes.get() : GetRecovery(Length, Context.IntTy);
+  }
+
+  // Length is required if the base type is not an array of known bounds.
+  if (!Length && (OriginalBaseTy.isNull() ||
+                  (!OriginalBaseTy->isDependentType() &&
+                   !OriginalBaseTy->isConstantArrayType() &&
+                   !OriginalBaseTy->isDependentSizedArrayType()))) {
+    bool IsArray = !OriginalBaseTy.isNull() && OriginalBaseTy->isArrayType();
+    Diag(ColonLoc, diag::err_acc_subarray_no_length) << IsArray;
+    // Fill in a dummy 'length' so that when we instantiate this we don't
+    // double-diagnose here.
+    ExprResult Recovery = SemaRef.CreateRecoveryExpr(
+        ColonLoc, SourceLocation(), ArrayRef<Expr *>{std::nullopt},
+        Context.IntTy);
+    Length = Recovery.isUsable() ? Recovery.get() : nullptr;
+  }
+
+  // Check the values of each of the arguments, they cannot be negative(we
+  // assume), and if the array bound is known, must be within range. As we do
+  // so, do our best to continue with evaluation, we can set the
+  // value/expression to nullptr/nullopt if they are invalid, and treat them as
+  // not present for the rest of evaluation.
+
+  // We don't have to check for dependence, because the dependent size is
+  // represented as a different AST node.
+  std::optional<llvm::APSInt> BaseSize;
+  if (!OriginalBaseTy.isNull() && OriginalBaseTy->isConstantArrayType()) {
+    const auto *ArrayTy = Context.getAsConstantArrayType(OriginalBaseTy);
+    BaseSize = ArrayTy->getSize();
+  }
+
+  auto GetBoundValue = [&](Expr *E) -> std::optional<llvm::APSInt> {
+    if (!E || E->isInstantiationDependent())
+      return std::nullopt;
+
+    Expr::EvalResult Res;
+    if (!E->EvaluateAsInt(Res, Context))
+      return std::nullopt;
+    return Res.Val.getInt();
+  };
+
+  std::optional<llvm::APSInt> LowerBoundValue = GetBoundValue(LowerBound);
+  std::optional<llvm::APSInt> LengthValue = GetBoundValue(Length);
+
+  // Check lower bound for negative or out of range.
+  if (LowerBoundValue.has_value()) {
+    if (LowerBoundValue->isNegative()) {
+      Diag(LowerBound->getExprLoc(), diag::err_acc_subarray_negative)
+          << /*LowerBound=*/0 << toString(*LowerBoundValue, /*Radix=*/10);
+      LowerBoundValue.reset();
+      LowerBound = GetRecovery(LowerBound, LowerBound->getType());
+    } else if (BaseSize.has_value() &&
+               llvm::APSInt::compareValues(*LowerBoundValue, *BaseSize) >= 0) {
+      // Lower bound (start index) must be less than the size of the array.
+      Diag(LowerBound->getExprLoc(), diag::err_acc_subarray_out_of_range)
+          << /*LowerBound=*/0 << toString(*LowerBoundValue, /*Radix=*/10)
+          << toString(*BaseSize, /*Radix=*/10);
+      LowerBoundValue.reset();
+      LowerBound = GetRecovery(LowerBound, LowerBound->getType());
+    }
+  }
+
+  // Check length for negative or out of range.
+  if (LengthValue.has_value()) {
+    if (LengthValue->isNegative()) {
+      Diag(Length->getExprLoc(), diag::err_acc_subarray_negative)
+          << /*Length=*/1 << toString(*LengthValue, /*Radix=*/10);
+      LengthValue.reset();
+      Length = GetRecovery(Length, Length->getType());
+    } else if (BaseSize.has_value() &&
+               llvm::APSInt::compareValues(*LengthValue, *BaseSize) > 0) {
+      // Length must be lessthan or EQUAL to the size of the array.
+      Diag(Length->getExprLoc(), diag::err_acc_subarray_out_of_range)
+          << /*Length=*/1 << toString(*LengthValue, /*Radix=*/10)
+          << toString(*BaseSize, /*Radix=*/10);
+      LengthValue.reset();
+      Length = GetRecovery(Length, Length->getType());
+    }
+  }
+
+  // Adding two APSInts requires matching sign, so extract that here.
+  auto AddAPSInt = [](llvm::APSInt LHS, llvm::APSInt RHS) -> llvm::APSInt {
+    if (LHS.isSigned() == RHS.isSigned())
+      return LHS + RHS;
+
+    unsigned Width = std::max(LHS.getBitWidth(), RHS.getBitWidth()) + 1;
+    return llvm::APSInt(LHS.sext(Width) + RHS.sext(Width), /*Signed=*/true);
+  };
+
+  // If we know all 3 values, we can diagnose that the total value would be out
+  // of range.
+  if (BaseSize.has_value() && LowerBoundValue.has_value() &&
+      LengthValue.has_value() &&
+      llvm::APSInt::compareValues(AddAPSInt(*LowerBoundValue, *LengthValue),
+                                  *BaseSize) > 0) {
+    Diag(Base->getExprLoc(),
+         diag::err_acc_subarray_base_plus_length_out_of_range)
+        << toString(*LowerBoundValue, /*Radix=*/10)
+        << toString(*LengthValue, /*Radix=*/10)
+        << toString(*BaseSize, /*Radix=*/10);
+
+    LowerBoundValue.reset();
+    LowerBound = GetRecovery(LowerBound, LowerBound->getType());
+    LengthValue.reset();
+    Length = GetRecovery(Length, Length->getType());
+  }
+
+  // If any part of the expression is dependent, return a dependent sub-array.
+  QualType ArrayExprTy = Context.ArraySectionTy;
+  if (Base->isTypeDependent() ||
+      (LowerBound && LowerBound->isInstantiationDependent()) ||
+      (Length && Length->isInstantiationDependent()))
+    ArrayExprTy = Context.DependentTy;
+
   return new (Context)
-      ArraySectionExpr(Base, LowerBound, Length, Context.ArraySectionTy,
-                       VK_LValue, OK_Ordinary, ColonLoc, RBLoc);
+      ArraySectionExpr(Base, LowerBound, Length, ArrayExprTy, VK_LValue,
+                       OK_Ordinary, ColonLoc, RBLoc);
 }
 
 bool SemaOpenACC::ActOnStartStmtDirective(OpenACCDirectiveKind K,

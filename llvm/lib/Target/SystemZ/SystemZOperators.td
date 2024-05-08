@@ -829,6 +829,18 @@ def any_fnms : PatFrag<(ops node:$src1, node:$src2, node:$src3),
 // Floating-point negative absolute.
 def fnabs : PatFrag<(ops node:$ptr), (fneg (fabs node:$ptr))>;
 
+// Floating-point operations which will not participate in reassociation, and
+// therefore are candidates for reg/mem folding during isel.
+def z_any_fadd_noreassoc : PatFrag<(ops node:$src1, node:$src2),
+                                   (any_fadd node:$src1, node:$src2),
+                                   [{ return !shouldSelectForReassoc(N); }]>;
+def z_any_fsub_noreassoc : PatFrag<(ops node:$src1, node:$src2),
+                                   (any_fsub node:$src1, node:$src2),
+                                   [{ return !shouldSelectForReassoc(N); }]>;
+def z_any_fmul_noreassoc : PatFrag<(ops node:$src1, node:$src2),
+                                   (any_fmul node:$src1, node:$src2),
+                                   [{ return !shouldSelectForReassoc(N); }]>;
+
 // Strict floating-point fragments.
 def z_any_fcmp    : PatFrags<(ops node:$lhs, node:$rhs),
                              [(z_strict_fcmp node:$lhs, node:$rhs),

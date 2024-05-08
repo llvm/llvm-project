@@ -181,7 +181,7 @@ template class llvm::SymbolTableListTraits<Instruction,
 BasicBlock::BasicBlock(LLVMContext &C, const Twine &Name, Function *NewParent,
                        BasicBlock *InsertBefore)
     : Value(Type::getLabelTy(C), Value::BasicBlockVal),
-      IsNewDbgInfoFormat(false), Parent(nullptr) {
+      IsNewDbgInfoFormat(UseNewDbgInfoFormat), Parent(nullptr) {
 
   if (NewParent)
     insertInto(NewParent, InsertBefore);
@@ -682,7 +682,7 @@ std::optional<uint64_t> BasicBlock::getIrrLoopHeaderWeight() const {
   if (MDNode *MDIrrLoopHeader =
       TI->getMetadata(LLVMContext::MD_irr_loop)) {
     MDString *MDName = cast<MDString>(MDIrrLoopHeader->getOperand(0));
-    if (MDName->getString().equals("loop_header_weight")) {
+    if (MDName->getString() == "loop_header_weight") {
       auto *CI = mdconst::extract<ConstantInt>(MDIrrLoopHeader->getOperand(1));
       return std::optional<uint64_t>(CI->getValue().getZExtValue());
     }
@@ -1009,9 +1009,9 @@ void BasicBlock::spliceDebugInfoImpl(BasicBlock::iterator Dest, BasicBlock *Src,
     // generate the iterator with begin() / getFirstInsertionPt(), it means
     // any trailing debug-info at the end of the block would "normally" have
     // been pushed in front of "First". Move it there now.
-    DbgMarker *FirstMarker = getMarker(First);
     DbgMarker *TrailingDbgRecords = getTrailingDbgRecords();
     if (TrailingDbgRecords) {
+      DbgMarker *FirstMarker = createMarker(First);
       FirstMarker->absorbDebugValues(*TrailingDbgRecords, true);
       TrailingDbgRecords->eraseFromParent();
       deleteTrailingDbgRecords();

@@ -1,5 +1,5 @@
 // RUN: cp %s %t
-// RUN: %clang_cc1 -triple x86_64-apple-darwin9 -fsyntax-only -fblocks -Wformat -fixit %t
+// RUN: %clang_cc1 -triple x86_64-apple-darwin9 -fblocks -Wformat -fixit %t
 // RUN: grep -v CHECK %t | FileCheck %s
 
 /* This is a test of code modifications created by darwin format fix-its hints 

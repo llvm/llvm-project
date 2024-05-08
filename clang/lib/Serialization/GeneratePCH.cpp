@@ -88,6 +88,8 @@ ASTDeserializationListener *PCHGenerator::GetASTDeserializationListener() {
   return &Writer;
 }
 
+void PCHGenerator::anchor() {}
+
 CXX20ModulesGenerator::CXX20ModulesGenerator(Preprocessor &PP,
                                              InMemoryModuleCache &ModuleCache,
                                              StringRef OutputFile,
@@ -114,7 +116,6 @@ void CXX20ModulesGenerator::HandleTranslationUnit(ASTContext &Ctx) {
       getPreprocessor().getHeaderSearchInfo().getHeaderSearchOpts();
   HSOpts.ModulesSkipDiagnosticOptions = true;
   HSOpts.ModulesSkipHeaderSearchPaths = true;
-  HSOpts.ModulesSkipPragmaDiagnosticMappings = true;
 
   PCHGenerator::HandleTranslationUnit(Ctx);
 
@@ -132,3 +133,7 @@ void CXX20ModulesGenerator::HandleTranslationUnit(ASTContext &Ctx) {
   *OS << getBufferPtr()->Data;
   OS->flush();
 }
+
+void CXX20ModulesGenerator::anchor() {}
+
+void ReducedBMIGenerator::anchor() {}

@@ -48,6 +48,7 @@ static_assert(!std::__libcpp_is_trivially_relocatable<MoveOnlyTriviallyCopyable>
 // ----------------------
 
 // basic_string
+#if defined(_LIBCPP_HAS_NO_ASAN) || !defined(_LIBCPP_INSTRUMENTED_WITH_ASAN)
 struct MyChar {
   char c;
 };
@@ -78,7 +79,7 @@ static_assert(
     !std::__libcpp_is_trivially_relocatable<
         std::basic_string<MyChar, NotTriviallyRelocatableCharTraits<MyChar>, test_allocator<MyChar> > >::value,
     "");
-
+#endif
 // unique_ptr
 struct NotTriviallyRelocatableDeleter {
   NotTriviallyRelocatableDeleter(const NotTriviallyRelocatableDeleter&);

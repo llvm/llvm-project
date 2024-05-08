@@ -217,7 +217,13 @@ function test-armv7m-picolibc() {
         "${@}"
 
     ${NINJA} -vC "${BUILD_DIR}/compiler-rt" install
-    mv "${BUILD_DIR}/install/lib/armv7m-none-unknown-eabi"/* "${BUILD_DIR}/install/lib"
+
+    # Prior to clang 19, armv7m-none-eabi normalised to armv7m-none-unknown-eabi.
+    # clang 19 changed this to armv7m-unknown-none-eabi. So for as long as 18.x
+    # is supported, we have to ask clang what the triple will be.
+    NORMALISED_TARGET_TRIPLE=$(${CC-cc} --target=armv7m-none-eabi -print-target-triple)
+    # Without this step linking fails later in the build.
+    mv "${BUILD_DIR}/install/lib/${NORMALISED_TARGET_TRIPLE}"/* "${BUILD_DIR}/install/lib"
 
     check-runtimes
 }

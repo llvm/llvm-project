@@ -128,6 +128,7 @@ MACHINE_FUNCTION_PASS("no-op-machine-function", NoOpMachineFunctionPass())
 MACHINE_FUNCTION_PASS("print", PrintMIRPass())
 MACHINE_FUNCTION_PASS("require-all-machine-function-properties",
                       RequireAllMachineFunctionPropertiesPass())
+MACHINE_FUNCTION_PASS("trigger-verifier-error", TriggerVerifierErrorPass())
 #undef MACHINE_FUNCTION_PASS
 
 // After a pass is converted to new pass manager, its entry should be moved from

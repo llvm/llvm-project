@@ -158,8 +158,9 @@ def PrivateClauseOp : OpenMP_Op<"private", [IsolatedFromAbove]> {
   let description = [{
     This operation provides a declaration of how to implement the
     [first]privatization of a variable. The dialect users should provide
-    information about how to create an instance of the type in the alloc region
-    and how to initialize the copy from the original item in the copy region.
+    information about how to create an instance of the type in the alloc region,
+    how to initialize the copy from the original item in the copy region, and if
+    needed, how to deallocate allocated memory in the dealloc region.
 
     Examples:
 
@@ -187,13 +188,26 @@ def PrivateClauseOp : OpenMP_Op<"private", [IsolatedFromAbove]> {
     }
     ```
 
+    * `private(x)` for "allocatables" would be emitted as:
+    ```mlir
+    omp.private {type = private} @x.privatizer : !some.type alloc {
+    ^bb0(%arg0: !some.type):
+    %0 = ... allocate proper memory for the private clone ...
+    omp.yield(%0 : !fir.ref<i32>)
+    } dealloc {
+    ^bb0(%arg0: !some.type):
+    ... deallocate allocated memory ...
+    omp.yield
+    }
+    ```
+
     There are no restrictions on the body except for:
-    - The `alloc` region has a single argument.
+    - The `alloc` & `dealloc` regions have a single argument.
     - The `copy` region has 2 arguments.
-    - Both regions are terminated by `omp.yield` ops.
+    - All three regions are terminated by `omp.yield` ops.
     The above restrictions and other obvious restrictions (e.g. verifying the
     type of yielded values) are verified by the custom op verifier. The actual
-    contents of the blocks inside both regions are not verified.
+    contents of the blocks inside all regions are not verified.
 
     Instances of this op would then be used by ops that model directives that
     accept data-sharing attribute clauses.
@@ -212,12 +226,14 @@ def PrivateClauseOp : OpenMP_Op<"private", [IsolatedFromAbove]> {
                        DataSharingClauseTypeAttr:$data_sharing_type);
 
   let regions = (region MinSizedRegion<1>:$alloc_region,
-                        AnyRegion:$copy_region);
+                        AnyRegion:$copy_region,
+                        AnyRegion:$dealloc_region);
 
   let assemblyFormat = [{
     $data_sharing_type $sym_name `:` $type
       `alloc` $alloc_region
       (`copy` $copy_region^)?
+      (`dealloc` $dealloc_region^)?
       attr-dict
   }];
 

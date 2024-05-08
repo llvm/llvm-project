@@ -77,7 +77,7 @@ define i32 @test5(i32 %A) nounwind {
 ; CHECK-NEXT:    suba.l #12, %sp
 ; CHECK-NEXT:    move.l #1577682821, (4,%sp)
 ; CHECK-NEXT:    move.l (16,%sp), (%sp)
-; CHECK-NEXT:    jsr __udivsi3@PLT
+; CHECK-NEXT:    jsr __udivsi3
 ; CHECK-NEXT:    adda.l #12, %sp
 ; CHECK-NEXT:    rts
   %tmp1 = udiv i32 %A, 1577682821         ; <i32> [#uses=1]
@@ -114,7 +114,7 @@ define i32 @test7(i32 %x) nounwind {
 ; CHECK-NEXT:    suba.l #12, %sp
 ; CHECK-NEXT:    move.l #28, (4,%sp)
 ; CHECK-NEXT:    move.l (16,%sp), (%sp)
-; CHECK-NEXT:    jsr __udivsi3@PLT
+; CHECK-NEXT:    jsr __udivsi3
 ; CHECK-NEXT:    adda.l #12, %sp
 ; CHECK-NEXT:    rts
   %div = udiv i32 %x, 28
@@ -178,7 +178,7 @@ define i32 @testsize2(i32 %x) minsize nounwind {
 ; CHECK-NEXT:    suba.l #12, %sp
 ; CHECK-NEXT:    move.l #33, (4,%sp)
 ; CHECK-NEXT:    move.l (16,%sp), (%sp)
-; CHECK-NEXT:    jsr __divsi3@PLT
+; CHECK-NEXT:    jsr __divsi3
 ; CHECK-NEXT:    adda.l #12, %sp
 ; CHECK-NEXT:    rts
 entry:
@@ -203,7 +203,7 @@ define i32 @testsize4(i32 %x) minsize nounwind {
 ; CHECK-NEXT:    suba.l #12, %sp
 ; CHECK-NEXT:    move.l #33, (4,%sp)
 ; CHECK-NEXT:    move.l (16,%sp), (%sp)
-; CHECK-NEXT:    jsr __udivsi3@PLT
+; CHECK-NEXT:    jsr __udivsi3
 ; CHECK-NEXT:    adda.l #12, %sp
 ; CHECK-NEXT:    rts
 entry:
