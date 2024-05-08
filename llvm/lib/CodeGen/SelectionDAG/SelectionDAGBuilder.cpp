@@ -3357,7 +3357,7 @@ void SelectionDAGBuilder::visitInvoke(const InvokeInst &I) {
       break;
     }
     }
-  } else if (I.countOperandBundlesOfType(LLVMContext::OB_deopt)) {
+  } else if (I.hasDeoptState()) {
     // Currently we do not lower any intrinsic calls with deopt operand bundles.
     // Eventually we will support lowering the @llvm.experimental.deoptimize
     // intrinsic, and right now there are no plans to support other intrinsics
@@ -9197,7 +9197,7 @@ void SelectionDAGBuilder::visitCall(const CallInst &I) {
 
   SDValue Callee = getValue(I.getCalledOperand());
 
-  if (I.countOperandBundlesOfType(LLVMContext::OB_deopt))
+  if (I.hasDeoptState())
     LowerCallSiteWithDeoptBundle(&I, Callee, nullptr);
   else
     // Check if we can potentially perform a tail call. More detailed checking
