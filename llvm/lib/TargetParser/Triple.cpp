@@ -1420,6 +1420,17 @@ VersionTuple Triple::getVulkanVersion() const {
   return VersionTuple(0);
 }
 
+VersionTuple Triple::getDXILVersion() const {
+  if (getArch() != dxil || getOS() != ShaderModel)
+    llvm_unreachable("invalid DXIL triple");
+  StringRef Arch = getArchName();
+  Arch.consume_front("dxilv");
+  VersionTuple DXILVersion = parseVersionFromName(Arch);
+  // FIXME: validate DXIL version against Shader Model version.
+  // Tracked by https://github.com/llvm/llvm-project/issues/91388
+  return DXILVersion;
+}
+
 void Triple::setTriple(const Twine &Str) {
   *this = Triple(Str);
 }
