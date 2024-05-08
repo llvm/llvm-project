@@ -1687,6 +1687,7 @@ void RISCVInsertVSETVLI::insertReadVL(MachineBasicBlock &MBB) {
     MachineInstr &MI = *I++;
     if (RISCV::isFaultFirstLoad(MI)) {
       Register VLOutput = MI.getOperand(1).getReg();
+      assert(VLOutput.isVirtual());
       if (!MRI->use_nodbg_empty(VLOutput))
         BuildMI(MBB, I, MI.getDebugLoc(), TII->get(RISCV::PseudoReadVL),
                 VLOutput);
