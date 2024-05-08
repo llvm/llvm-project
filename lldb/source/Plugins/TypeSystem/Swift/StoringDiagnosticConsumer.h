@@ -240,15 +240,15 @@ public:
 
   unsigned NumClangErrors() { return m_num_clang_errors; }
 
-  static lldb::Severity SeverityForKind(swift::DiagnosticKind kind) {
+  static DiagnosticSeverity SeverityForKind(swift::DiagnosticKind kind) {
     switch (kind) {
     case swift::DiagnosticKind::Error:
-      return lldb::eSeverityError;
+      return eDiagnosticSeverityError;
     case swift::DiagnosticKind::Warning:
-      return lldb::eSeverityWarning;
+      return eDiagnosticSeverityWarning;
     case swift::DiagnosticKind::Note:
     case swift::DiagnosticKind::Remark:
-      return lldb::eSeverityInfo;
+      return eDiagnosticSeverityRemark;
     }
 
     llvm_unreachable("Unhandled DiagnosticKind in switch.");
@@ -277,7 +277,7 @@ public:
 
     auto format_diagnostic = [&](const RawDiagnostic &diagnostic,
                                  const DiagnosticOrigin origin) {
-      const lldb::Severity severity = SeverityForKind(diagnostic.kind);
+      const DiagnosticSeverity severity = SeverityForKind(diagnostic.kind);
 
       // Make sure the error line is in range or in another file.
       if (diagnostic.bufferID == bufferID && !diagnostic.bufferName.empty() &&
@@ -289,7 +289,7 @@ public:
         return;
 
       // Diagnose global errors.
-      if (severity == lldb::eSeverityError && diagnostic.line == 0) {
+      if (severity == eDiagnosticSeverityError && diagnostic.line == 0) {
         diagnostic_manager.AddDiagnostic(diagnostic.description.c_str(),
                                          severity, origin);
         added_one_diagnostic = true;

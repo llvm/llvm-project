@@ -87,7 +87,6 @@
 #include "swift/Subsystems.h"
 
 using namespace lldb_private;
-using namespace lldb;
 using llvm::make_error;
 using llvm::StringError;
 using llvm::StringRef;
@@ -802,15 +801,15 @@ SetupASTContext(SwiftASTContextForExpressions &swift_ast_context,
   if (!swift_ast_context.GetClangImporter()) {
     std::string swift_error =
         swift_ast_context.GetFatalErrors().AsCString("error: unknown error.");
-    diagnostic_manager.PutString(eSeverityError, swift_error);
-    diagnostic_manager.PutString(eSeverityInfo,
+    diagnostic_manager.PutString(eDiagnosticSeverityError, swift_error);
+    diagnostic_manager.PutString(eDiagnosticSeverityRemark,
                                  "Couldn't initialize Swift expression "
                                  "evaluator due to previous errors.");
     return nullptr;
   }
 
   if (swift_ast_context.HasFatalErrors()) {
-    diagnostic_manager.PutString(eSeverityError,
+    diagnostic_manager.PutString(eDiagnosticSeverityError,
                                  "The AST context is in a fatal error state.");
     return nullptr;
   }
@@ -818,13 +817,13 @@ SetupASTContext(SwiftASTContextForExpressions &swift_ast_context,
   swift::ASTContext *ast_context = swift_ast_context.GetASTContext();
   if (!ast_context) {
     diagnostic_manager.PutString(
-        eSeverityError,
+        eDiagnosticSeverityError,
         "Couldn't initialize the AST context.  Please check your settings.");
     return nullptr;
   }
 
   if (swift_ast_context.HasFatalErrors()) {
-    diagnostic_manager.PutString(eSeverityError,
+    diagnostic_manager.PutString(eDiagnosticSeverityError,
                                  "The AST context is in a fatal error state.");
     return nullptr;
   }
@@ -1485,7 +1484,7 @@ static llvm::Expected<ParsedExpression> ParseAndImport(
     auto type_aliases = AddArchetypeTypeAliases(
         code_manipulator, *stack_frame_sp.get(), swift_ast_context);
     if (!type_aliases)
-      diagnostic_manager.PutString(eSeverityWarning,
+      diagnostic_manager.PutString(eDiagnosticSeverityWarning,
                                    llvm::toString(type_aliases.takeError()));
     else
       external_lookup->RegisterTypeAliases(*type_aliases);
@@ -1745,7 +1744,7 @@ SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
     handleAllErrors(
         parsed_expr.takeError(),
         [&](const ModuleImportError &MIE) {
-          diagnostic_manager.PutString(eSeverityError, MIE.message());
+          diagnostic_manager.PutString(eDiagnosticSeverityError, MIE.message());
           if (MIE.is_new_dylib) {
             retry = true;
             return;
@@ -1766,7 +1765,8 @@ SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
           DiagnoseSwiftASTContextError();
         },
         [&](const StringError &SE) {
-          diagnostic_manager.PutString(eSeverityError, SE.getMessage());
+          diagnostic_manager.PutString(eDiagnosticSeverityError,
+                                       SE.getMessage());
         },
         [](const PropagatedError &P) {});
 
@@ -1815,7 +1815,7 @@ SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
       if (!error)
         continue;
       diagnostic_manager.Printf(
-          eSeverityError,
+          eDiagnosticSeverityError,
           "Missing type debug information for variable \"%s\": %s",
           var.GetName().str().str().c_str(),
           llvm::toString(std::move(error)).c_str());
@@ -1833,7 +1833,7 @@ SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
         parsed_expr->code_manipulator->FixupResultAfterTypeChecking();
 
     if (error) {
-      diagnostic_manager.PutString(eSeverityError,
+      diagnostic_manager.PutString(eDiagnosticSeverityError,
                                    llvm::toString(std::move(error)));
       return ParseResult::unrecoverable_error;
     }
@@ -2051,13 +2051,14 @@ SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
   if (error_kind == ErrorKind::clang ||
       m_swift_ast_ctx.HasClangImporterErrors()) {
     diagnostic_manager.PutString(
-        eSeverityInfo, "couldn't IRGen expression: Clang importer error");
+        eDiagnosticSeverityRemark,
+        "couldn't IRGen expression: Clang importer error");
     DiagnoseSwiftASTContextError();
     return ParseResult::unrecoverable_error;
   }
 
   if (error_kind == ErrorKind::swift) {
-    diagnostic_manager.PutString(eSeverityInfo,
+    diagnostic_manager.PutString(eDiagnosticSeverityRemark,
                                  "couldn't IRGen expression: Swift error");
     DiagnoseSwiftASTContextError();
     return ParseResult::unrecoverable_error;
@@ -2065,7 +2066,7 @@ SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
 
   if (!m_module) {
     diagnostic_manager.Printf(
-        eSeverityError,
+        eDiagnosticSeverityError,
         "couldn't IRGen expression. Please enable the expression log by "
         "running \"log enable lldb expr\", then run the failing expression "
         "again, and file a bug report with the log output.");
@@ -2084,7 +2085,7 @@ SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
       !RedirectCallFromSinkToTrampolineFunction(
           *m_module.get(), *parsed_expr->code_manipulator.get())) {
     diagnostic_manager.Printf(
-        eSeverityError,
+        eDiagnosticSeverityError,
         "couldn't setup call to the trampoline function. Please enable the "
         "expression log by running \"log enable lldb "
         "expr\", then run the failing expression again, and file a "
@@ -2107,13 +2108,15 @@ SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
     bool has_errors = LLVMVerifyModule((LLVMOpaqueModule *)m_module.get(),
                                        LLVMReturnStatusAction, nullptr);
     if (has_errors) {
-      diagnostic_manager.PutString(eSeverityInfo, "LLVM verification error");
+      diagnostic_manager.PutString(eDiagnosticSeverityRemark,
+                                   "LLVM verification error");
       return ParseResult::unrecoverable_error;
     }
   }
 
   if (expr_diagnostics->HasErrors()) {
-    diagnostic_manager.PutString(eSeverityInfo, "post-IRGen error");
+    diagnostic_manager.PutString(eDiagnosticSeverityRemark,
+                                 "post-IRGen error");
     DiagnoseSwiftASTContextError();
     return ParseResult::unrecoverable_error;
   }

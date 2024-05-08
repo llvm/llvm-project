@@ -609,10 +609,10 @@ SwiftUserExpression::GetTextAndSetExpressionParser(
   if (llvm::Error error = RegisterAllVariables(
           sc, stack_frame, *m_swift_ast_ctx, local_variables,
           m_options.GetUseDynamic(), m_options.GetBindGenericTypes())) {
-    diagnostic_manager.PutString(lldb::eSeverityInfo,
+    diagnostic_manager.PutString(eDiagnosticSeverityRemark,
                                  llvm::toString(std::move(error)));
     diagnostic_manager.PutString(
-        lldb::eSeverityError,
+        eDiagnosticSeverityError,
         "Couldn't realize Swift AST type of self. Hint: using `v` to "
         "directly inspect variables and fields may still work.");
     return ParseResult::retry_no_bind_generic_params;
@@ -632,7 +632,7 @@ SwiftUserExpression::GetTextAndSetExpressionParser(
           local_variables, m_generic_signature, *m_swift_ast_ctx, sc.block,
           *stack_frame.get())) {
     diagnostic_manager.PutString(
-        lldb::eSeverityError,
+        eDiagnosticSeverityError,
         "Could not evaluate the expression without binding generic types.");
     return ParseResult::unrecoverable_error;
   }
@@ -644,7 +644,7 @@ SwiftUserExpression::GetTextAndSetExpressionParser(
       m_generic_signature, exe_ctx, first_body_line, local_variables);
   if (status.Fail()) {
     diagnostic_manager.PutString(
-        lldb::eSeverityError,
+        eDiagnosticSeverityError,
         "couldn't construct expression body: " +
             std::string(status.AsCString("<unknown error>")));
     return ParseResult::unrecoverable_error;
@@ -689,7 +689,7 @@ bool SwiftUserExpression::Parse(DiagnosticManager &diagnostic_manager,
     else
       LLDB_LOG(log, error_msg);
 
-    diagnostic_manager.PutString(lldb::eSeverityError, error_msg);
+    diagnostic_manager.PutString(eDiagnosticSeverityError, error_msg);
     if (detail)
       diagnostic_manager.AppendMessageToDiagnostic(detail);
     return false;
@@ -752,7 +752,7 @@ exe_scope = exe_ctx.GetBestExecutionContextScope();
   ScanContext(exe_ctx, err);
 
   if (!err.Success())
-    diagnostic_manager.Printf(lldb::eSeverityWarning, "warning: %s\n",
+    diagnostic_manager.Printf(eDiagnosticSeverityWarning, "warning: %s\n",
                               err.AsCString());
 
   StreamString m_transformed_stream;
