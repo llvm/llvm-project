@@ -557,6 +557,8 @@ def FeatureRandGen : Extension<"rand", "RandGen",
     "Enable Random Number generation instructions (FEAT_RNG)", [],
     "FEAT_RNG", "+rand", 10>;
 
+// NOTE: "memtag" means FEAT_MTE + FEAT_MTE2 for -march or
+// __attribute((target(...))), but only FEAT_MTE for FMV.
 let MArchName = "memtag" in
 def FeatureMTE : Extension<"mte", "MTE",
     "Enable Memory Tagging Extension (FEAT_MTE, FEAT_MTE2)", [],
