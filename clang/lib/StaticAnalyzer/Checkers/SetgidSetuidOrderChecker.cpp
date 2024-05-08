@@ -1,4 +1,4 @@
-//===-- ChrootChecker.cpp - chroot usage checks ---------------------------===//
+//===-- SetgidSetuidOrderChecker.cpp - check privilege revocation calls ---===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 //
-//  This file defines chroot checker, which checks improper use of chroot.
+//  This file defines a checker to detect possible reversed order of privilege
+//  revocations when 'setgid' and 'setuid' is used.
 //
 //===----------------------------------------------------------------------===//
 
