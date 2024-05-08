@@ -1898,11 +1898,11 @@ def TileUsingForOp : Op<Transform_Dialect, "structured.tile_using_for",
   ];
 
   let assemblyFormat = [{
-    $target oilist(
+    $target
       `tile_sizes` custom<DynamicIndexList>(
         $dynamic_sizes,
         $static_sizes,
-        $scalable_sizes))
+        $scalable_sizes)
       (`interchange` `=` $interchange^)?
     attr-dict
     `:` functional-type(operands, results)
@@ -2166,6 +2166,8 @@ def VectorizeOp : Op<Transform_Dialect, "structured.vectorize",
 
   let results = (outs);
 
+  // We use oilist here to elide the optional `vector_sizes` when empty list
+  // is passed.
   let assemblyFormat = [{
     $target oilist(
       `vector_sizes` custom<DynamicIndexList>(
