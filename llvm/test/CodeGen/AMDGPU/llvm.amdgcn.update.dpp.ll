@@ -120,6 +120,30 @@ define amdgpu_kernel void @update_dpp_p0_test(ptr addrspace(1) %arg, ptr %in1, p
   ret void
 }
 
+; GCN-LABEL: {{^}}update_dpp_p3_test:
+; GCN: {{load|read}}_{{dword|b32}} v[[SRC:[0-9]+]]
+; GCN: v_mov_b32_dpp v{{[0-9]+}}, v[[SRC]] quad_perm:[1,0,0,0] row_mask:0x1 bank_mask:0x1{{$}}
+define amdgpu_kernel void @update_dpp_p3_test(ptr addrspace(3) %arg, ptr addrspace(3) %in1, ptr %in2) {
+  %id = tail call i32 @llvm.amdgcn.workitem.id.x()
+  %gep = getelementptr inbounds ptr addrspace(3), ptr addrspace(3) %arg, i32 %id
+  %load = load ptr addrspace(3), ptr addrspace(3) %gep
+  %tmp0 = call ptr addrspace(3) @llvm.amdgcn.update.dpp.p3(ptr addrspace(3) %in1, ptr addrspace(3) %load, i32 1, i32 1, i32 1, i1 false) #0
+  store ptr addrspace(3) %tmp0, ptr addrspace(3) %gep
+  ret void
+}
+
+; GCN-LABEL: {{^}}update_dpp_p5_test:
+; GCN: {{load|read}}_{{dword|b32}} v[[SRC:[0-9]+]]
+; GCN: v_mov_b32_dpp v{{[0-9]+}}, v[[SRC]] quad_perm:[1,0,0,0] row_mask:0x1 bank_mask:0x1{{$}}
+define amdgpu_kernel void @update_dpp_p5_test(ptr addrspace(5) %arg, ptr addrspace(5) %in1, ptr %in2) {
+  %id = tail call i32 @llvm.amdgcn.workitem.id.x()
+  %gep = getelementptr inbounds ptr addrspace(5), ptr addrspace(5) %arg, i32 %id
+  %load = load ptr addrspace(5), ptr addrspace(5) %gep
+  %tmp0 = call ptr addrspace(5) @llvm.amdgcn.update.dpp.p5(ptr addrspace(5) %in1, ptr addrspace(5) %load, i32 1, i32 1, i32 1, i1 false) #0
+  store ptr addrspace(5) %tmp0, ptr addrspace(5) %gep
+  ret void
+}
+
 ; GCN-LABEL: {{^}}update_dppi64_imm_old_test:
 ; GCN-OPT-DAG: v_mov_b32_e32 v[[OLD_LO:[0-9]+]], 0x3afaedd9
 ; GFX8-OPT-DAG,GFX10-DAG: v_mov_b32_e32 v[[OLD_HI:[0-9]+]], 0x7047
