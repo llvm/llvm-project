@@ -401,7 +401,9 @@ public:
     /// This type is the type whose UID is m_encoding_uid as an atomic type.
     eEncodingIsAtomicUID,
     /// This type is the synthetic type whose UID is m_encoding_uid.
-    eEncodingIsSyntheticUID
+    eEncodingIsSyntheticUID,
+    /// This type is a signed pointer.
+    eEncodingIsLLVMPtrAuthUID
   };
 
   enum class ResolveState : unsigned char {
@@ -440,7 +442,7 @@ public:
 
   std::optional<uint64_t> GetByteSize(ExecutionContextScope *exe_scope);
 
-  uint32_t GetNumChildren(bool omit_empty_base_classes);
+  llvm::Expected<uint32_t> GetNumChildren(bool omit_empty_base_classes);
 
   bool IsAggregateType();
 

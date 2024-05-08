@@ -1054,6 +1054,7 @@ void SIFoldOperands::foldOperand(
       // Don't fold if OpToFold doesn't hold an aligned register.
       const TargetRegisterClass *RC =
           TRI->getRegClassForReg(*MRI, OpToFold.getReg());
+      assert(RC);
       if (TRI->hasVectorRegisters(RC) && OpToFold.getSubReg()) {
         unsigned SubReg = OpToFold.getSubReg();
         if (const TargetRegisterClass *SubRC =
@@ -2105,6 +2106,8 @@ bool SIFoldOperands::tryOptimizeAGPRPhis(MachineBasicBlock &MBB) {
 
     for (unsigned K = 1; K < MI.getNumOperands(); K += 2) {
       MachineOperand &PhiMO = MI.getOperand(K);
+      if (!PhiMO.getSubReg())
+        continue;
       RegToMO[{PhiMO.getReg(), PhiMO.getSubReg()}].push_back(&PhiMO);
     }
   }

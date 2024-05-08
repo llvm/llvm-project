@@ -9038,6 +9038,36 @@
 	lcdbr	%f15,%f0
 	lcdbr	%f15,%f9
 
+#CHECK: lcdfr	%f0, %f9                # encoding: [0xb3,0x73,0x00,0x09]
+#CHECK: lcdfr	%f0, %f15               # encoding: [0xb3,0x73,0x00,0x0f]
+#CHECK: lcdfr	%f15, %f0               # encoding: [0xb3,0x73,0x00,0xf0]
+#CHECK: lcdfr	%f15, %f9               # encoding: [0xb3,0x73,0x00,0xf9]
+
+	lcdfr	%f0,%f9
+	lcdfr	%f0,%f15
+	lcdfr	%f15,%f0
+	lcdfr	%f15,%f9
+
+#CHECK: lndfr	%f0, %f9                # encoding: [0xb3,0x71,0x00,0x09]
+#CHECK: lndfr	%f0, %f15               # encoding: [0xb3,0x71,0x00,0x0f]
+#CHECK: lndfr	%f15, %f0               # encoding: [0xb3,0x71,0x00,0xf0]
+#CHECK: lndfr	%f15, %f9               # encoding: [0xb3,0x71,0x00,0xf9]
+
+	lndfr	%f0,%f9
+	lndfr	%f0,%f15
+	lndfr	%f15,%f0
+	lndfr	%f15,%f9
+
+#CHECK: lpdfr	%f0, %f9                # encoding: [0xb3,0x70,0x00,0x09]
+#CHECK: lpdfr	%f0, %f15               # encoding: [0xb3,0x70,0x00,0x0f]
+#CHECK: lpdfr	%f15, %f0               # encoding: [0xb3,0x70,0x00,0xf0]
+#CHECK: lpdfr	%f15, %f9               # encoding: [0xb3,0x70,0x00,0xf9]
+
+	lpdfr	%f0,%f9
+	lpdfr	%f0,%f15
+	lpdfr	%f15,%f0
+	lpdfr	%f15,%f9
+
 #CHECK: lcdr	%f0, %f9                # encoding: [0x23,0x09]
 #CHECK: lcdr	%f0, %f15               # encoding: [0x23,0x0f]
 #CHECK: lcdr	%f15, %f0               # encoding: [0x23,0xf0]

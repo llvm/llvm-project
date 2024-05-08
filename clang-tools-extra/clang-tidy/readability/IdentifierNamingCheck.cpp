@@ -888,8 +888,14 @@ bool IdentifierNamingCheck::matchesStyle(
     return false;
   if (IdentifierNamingCheck::HungarianPrefixType::HPT_Off != Style.HPType) {
     std::string HNPrefix = HungarianNotation.getPrefix(Decl, HNOption);
-    if (!Name.consume_front(HNPrefix))
-      return false;
+    if (!HNPrefix.empty()) {
+      if (!Name.consume_front(HNPrefix))
+        return false;
+      if (Style.HPType ==
+              IdentifierNamingCheck::HungarianPrefixType::HPT_LowerCase &&
+          !Name.consume_front("_"))
+        return false;
+    }
   }
 
   // Ensure the name doesn't have any extra underscores beyond those specified
@@ -1368,6 +1374,10 @@ IdentifierNamingCheck::getFailureInfo(
 std::optional<RenamerClangTidyCheck::FailureInfo>
 IdentifierNamingCheck::getDeclFailureInfo(const NamedDecl *Decl,
                                           const SourceManager &SM) const {
+  // Implicit identifiers cannot be renamed.
+  if (Decl->isImplicit())
+    return std::nullopt;
+
   SourceLocation Loc = Decl->getLocation();
   const FileStyle &FileStyle = getStyleForFile(SM.getFilename(Loc));
   if (!FileStyle.isActive())

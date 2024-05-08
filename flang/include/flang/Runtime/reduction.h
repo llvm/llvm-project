@@ -89,9 +89,11 @@ void RTDECL(CppSumComplex4)(std::complex<float> &, const Descriptor &,
 void RTDECL(CppSumComplex8)(std::complex<double> &, const Descriptor &,
     const char *source, int line, int dim = 0,
     const Descriptor *mask = nullptr);
+#if LDBL_MANT_DIG == 64
 void RTDECL(CppSumComplex10)(std::complex<long double> &, const Descriptor &,
     const char *source, int line, int dim = 0,
     const Descriptor *mask = nullptr);
+#endif
 #if LDBL_MANT_DIG == 113 || HAS_FLOAT128
 void RTDECL(CppSumComplex16)(std::complex<CppFloat128Type> &,
     const Descriptor &, const char *source, int line, int dim = 0,
@@ -364,9 +366,12 @@ double RTDECL(Norm2_8)(
 #if LDBL_MANT_DIG == 64
 long double RTDECL(Norm2_10)(
     const Descriptor &, const char *source, int line, int dim = 0);
-#elif LDBL_MANT_DIG == 113
+#endif
+#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
 long double RTDECL(Norm2_16)(
     const Descriptor &, const char *source, int line, int dim = 0);
+void RTDECL(Norm2DimReal16)(
+    Descriptor &, const Descriptor &, int dim, const char *source, int line);
 #endif
 void RTDECL(Norm2Dim)(
     Descriptor &, const Descriptor &, int dim, const char *source, int line);

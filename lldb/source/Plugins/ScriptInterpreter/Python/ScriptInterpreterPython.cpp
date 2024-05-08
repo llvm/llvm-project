@@ -1417,7 +1417,7 @@ bool ScriptInterpreterPythonImpl::GenerateScriptAliasFunction(
   sstr.Printf("def %s (debugger, args, exe_ctx, result, internal_dict):",
               auto_generated_function_name.c_str());
 
-  if (!GenerateFunction(sstr.GetData(), user_input, /*is_callback=*/true)
+  if (!GenerateFunction(sstr.GetData(), user_input, /*is_callback=*/false)
            .Success())
     return false;
 

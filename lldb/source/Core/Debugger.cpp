@@ -15,6 +15,7 @@
 #include "lldb/Core/ModuleList.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
+#include "lldb/Core/Progress.h"
 #include "lldb/Core/StreamAsynchronousIO.h"
 #include "lldb/DataFormatters/DataVisualization.h"
 #include "lldb/Expression/REPL.h"
@@ -103,7 +104,7 @@ static std::recursive_mutex *g_debugger_list_mutex_ptr =
     nullptr; // NOTE: intentional leak to avoid issues with C++ destructor chain
 static Debugger::DebuggerList *g_debugger_list_ptr =
     nullptr; // NOTE: intentional leak to avoid issues with C++ destructor chain
-static llvm::ThreadPool *g_thread_pool = nullptr;
+static llvm::DefaultThreadPool *g_thread_pool = nullptr;
 
 static constexpr OptionEnumValueElement g_show_disassembly_enum_values[] = {
     {
@@ -608,7 +609,7 @@ void Debugger::Initialize(LoadPluginCallbackType load_plugin_callback) {
          "Debugger::Initialize called more than once!");
   g_debugger_list_mutex_ptr = new std::recursive_mutex();
   g_debugger_list_ptr = new DebuggerList();
-  g_thread_pool = new llvm::ThreadPool(llvm::optimal_concurrency());
+  g_thread_pool = new llvm::DefaultThreadPool(llvm::optimal_concurrency());
   g_load_plugin_callback = load_plugin_callback;
 }
 
@@ -822,8 +823,8 @@ TargetSP Debugger::FindTargetWithProcess(Process *process) {
   return target_sp;
 }
 
-ConstString Debugger::GetStaticBroadcasterClass() {
-  static ConstString class_name("lldb.debugger");
+llvm::StringRef Debugger::GetStaticBroadcasterClass() {
+  static constexpr llvm::StringLiteral class_name("lldb.debugger");
   return class_name;
 }
 
@@ -845,7 +846,7 @@ Debugger::Debugger(lldb::LogOutputCallback log_callback, void *baton)
       m_loaded_plugins(), m_event_handler_thread(), m_io_handler_thread(),
       m_sync_broadcaster(nullptr, "lldb.debugger.sync"),
       m_broadcaster(m_broadcaster_manager_sp,
-                    GetStaticBroadcasterClass().AsCString()),
+                    GetStaticBroadcasterClass().str()),
       m_forward_listener_sp(), m_clear_once() {
   // Initialize the debugger properties as early as possible as other parts of
   // LLDB will start querying them during construction.
@@ -859,6 +860,9 @@ Debugger::Debugger(lldb::LogOutputCallback log_callback, void *baton)
   m_collection_sp->AppendProperty(
       "symbols", "Symbol lookup and cache settings.", true,
       ModuleList::GetGlobalModuleListProperties().GetValueProperties());
+  m_collection_sp->AppendProperty(
+      LanguageProperties::GetSettingName(), "Language settings.", true,
+      Language::GetGlobalLanguageProperties().GetValueProperties());
   if (m_command_interpreter_up) {
     m_collection_sp->AppendProperty(
         "interpreter",
@@ -1111,9 +1115,6 @@ void Debugger::RunIOHandlerSync(const IOHandlerSP &reader_sp) {
   IOHandlerSP top_reader_sp = reader_sp;
 
   while (top_reader_sp) {
-    if (!top_reader_sp)
-      break;
-
     top_reader_sp->Run();
 
     // Don't unwind past the starting point.
@@ -1433,13 +1434,14 @@ void Debugger::SetDestroyCallback(
 static void PrivateReportProgress(Debugger &debugger, uint64_t progress_id,
                                   std::string title, std::string details,
                                   uint64_t completed, uint64_t total,
-                                  bool is_debugger_specific) {
+                                  bool is_debugger_specific,
+                                  uint32_t progress_broadcast_bit) {
   // Only deliver progress events if we have any progress listeners.
-  const uint32_t event_type = Debugger::eBroadcastBitProgress;
-  if (!debugger.GetBroadcaster().EventTypeHasListeners(event_type))
+  if (!debugger.GetBroadcaster().EventTypeHasListeners(progress_broadcast_bit))
     return;
+
   EventSP event_sp(new Event(
-      event_type,
+      progress_broadcast_bit,
       new ProgressEventData(progress_id, std::move(title), std::move(details),
                             completed, total, is_debugger_specific)));
   debugger.GetBroadcaster().BroadcastEvent(event_sp);
@@ -1448,7 +1450,8 @@ static void PrivateReportProgress(Debugger &debugger, uint64_t progress_id,
 void Debugger::ReportProgress(uint64_t progress_id, std::string title,
                               std::string details, uint64_t completed,
                               uint64_t total,
-                              std::optional<lldb::user_id_t> debugger_id) {
+                              std::optional<lldb::user_id_t> debugger_id,
+                              uint32_t progress_category_bit) {
   // Check if this progress is for a specific debugger.
   if (debugger_id) {
     // It is debugger specific, grab it and deliver the event if the debugger
@@ -1457,7 +1460,8 @@ void Debugger::ReportProgress(uint64_t progress_id, std::string title,
     if (debugger_sp)
       PrivateReportProgress(*debugger_sp, progress_id, std::move(title),
                             std::move(details), completed, total,
-                            /*is_debugger_specific*/ true);
+                            /*is_debugger_specific*/ true,
+                            progress_category_bit);
     return;
   }
   // The progress event is not debugger specific, iterate over all debuggers
@@ -1467,23 +1471,23 @@ void Debugger::ReportProgress(uint64_t progress_id, std::string title,
     DebuggerList::iterator pos, end = g_debugger_list_ptr->end();
     for (pos = g_debugger_list_ptr->begin(); pos != end; ++pos)
       PrivateReportProgress(*(*pos), progress_id, title, details, completed,
-                            total, /*is_debugger_specific*/ false);
+                            total, /*is_debugger_specific*/ false,
+                            progress_category_bit);
   }
 }
 
-static void PrivateReportDiagnostic(Debugger &debugger,
-                                    DiagnosticEventData::Type type,
+static void PrivateReportDiagnostic(Debugger &debugger, Severity severity,
                                     std::string message,
                                     bool debugger_specific) {
   uint32_t event_type = 0;
-  switch (type) {
-  case DiagnosticEventData::Type::Info:
-    assert(false && "DiagnosticEventData::Type::Info should not be broadcast");
+  switch (severity) {
+  case eSeverityInfo:
+    assert(false && "eSeverityInfo should not be broadcast");
     return;
-  case DiagnosticEventData::Type::Warning:
+  case eSeverityWarning:
     event_type = Debugger::eBroadcastBitWarning;
     break;
-  case DiagnosticEventData::Type::Error:
+  case eSeverityError:
     event_type = Debugger::eBroadcastBitError;
     break;
   }
@@ -1492,29 +1496,32 @@ static void PrivateReportDiagnostic(Debugger &debugger,
   if (!broadcaster.EventTypeHasListeners(event_type)) {
     // Diagnostics are too important to drop. If nobody is listening, print the
     // diagnostic directly to the debugger's error stream.
-    DiagnosticEventData event_data(type, std::move(message), debugger_specific);
+    DiagnosticEventData event_data(severity, std::move(message),
+                                   debugger_specific);
     StreamSP stream = debugger.GetAsyncErrorStream();
     event_data.Dump(stream.get());
     return;
   }
   EventSP event_sp = std::make_shared<Event>(
       event_type,
-      new DiagnosticEventData(type, std::move(message), debugger_specific));
+      new DiagnosticEventData(severity, std::move(message), debugger_specific));
   broadcaster.BroadcastEvent(event_sp);
 }
 
-void Debugger::ReportDiagnosticImpl(DiagnosticEventData::Type type,
-                                    std::string message,
+void Debugger::ReportDiagnosticImpl(Severity severity, std::string message,
                                     std::optional<lldb::user_id_t> debugger_id,
                                     std::once_flag *once) {
   auto ReportDiagnosticLambda = [&]() {
+    // Always log diagnostics to the system log.
+    Host::SystemLog(severity, message);
+
     // The diagnostic subsystem is optional but we still want to broadcast
     // events when it's disabled.
     if (Diagnostics::Enabled())
       Diagnostics::Instance().Report(message);
 
     // We don't broadcast info events.
-    if (type == DiagnosticEventData::Type::Info)
+    if (severity == lldb::eSeverityInfo)
       return;
 
     // Check if this diagnostic is for a specific debugger.
@@ -1523,7 +1530,8 @@ void Debugger::ReportDiagnosticImpl(DiagnosticEventData::Type type,
       // still exists.
       DebuggerSP debugger_sp = FindDebuggerWithID(*debugger_id);
       if (debugger_sp)
-        PrivateReportDiagnostic(*debugger_sp, type, std::move(message), true);
+        PrivateReportDiagnostic(*debugger_sp, severity, std::move(message),
+                                true);
       return;
     }
     // The diagnostic event is not debugger specific, iterate over all debuggers
@@ -1531,7 +1539,7 @@ void Debugger::ReportDiagnosticImpl(DiagnosticEventData::Type type,
     if (g_debugger_list_ptr && g_debugger_list_mutex_ptr) {
       std::lock_guard<std::recursive_mutex> guard(*g_debugger_list_mutex_ptr);
       for (const auto &debugger : *g_debugger_list_ptr)
-        PrivateReportDiagnostic(*debugger, type, message, false);
+        PrivateReportDiagnostic(*debugger, severity, message, false);
     }
   };
 
@@ -1544,22 +1552,19 @@ void Debugger::ReportDiagnosticImpl(DiagnosticEventData::Type type,
 void Debugger::ReportWarning(std::string message,
                              std::optional<lldb::user_id_t> debugger_id,
                              std::once_flag *once) {
-  ReportDiagnosticImpl(DiagnosticEventData::Type::Warning, std::move(message),
-                       debugger_id, once);
+  ReportDiagnosticImpl(eSeverityWarning, std::move(message), debugger_id, once);
 }
 
 void Debugger::ReportError(std::string message,
                            std::optional<lldb::user_id_t> debugger_id,
                            std::once_flag *once) {
-  ReportDiagnosticImpl(DiagnosticEventData::Type::Error, std::move(message),
-                       debugger_id, once);
+  ReportDiagnosticImpl(eSeverityError, std::move(message), debugger_id, once);
 }
 
 void Debugger::ReportInfo(std::string message,
                           std::optional<lldb::user_id_t> debugger_id,
                           std::once_flag *once) {
-  ReportDiagnosticImpl(DiagnosticEventData::Type::Info, std::move(message),
-                       debugger_id, once);
+  ReportDiagnosticImpl(eSeverityInfo, std::move(message), debugger_id, once);
 }
 
 void Debugger::ReportSymbolChange(const ModuleSpec &module_spec) {
@@ -2190,7 +2195,7 @@ Status Debugger::RunREPL(LanguageType language, const char *repl_options) {
   return err;
 }
 
-llvm::ThreadPool &Debugger::GetThreadPool() {
+llvm::ThreadPoolInterface &Debugger::GetThreadPool() {
   assert(g_thread_pool &&
          "Debugger::GetThreadPool called before Debugger::Initialize");
   return *g_thread_pool;

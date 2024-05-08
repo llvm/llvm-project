@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __LLVM_LIBC_MACROS_SYS_QUEUE_MACROS_H
-#define __LLVM_LIBC_MACROS_SYS_QUEUE_MACROS_H
+#ifndef LLVM_LIBC_MACROS_SYS_QUEUE_MACROS_H
+#define LLVM_LIBC_MACROS_SYS_QUEUE_MACROS_H
 
-#include <llvm-libc-macros/containerof-macro.h>
-#include <llvm-libc-macros/null-macro.h>
+#include "llvm-libc-macros/containerof-macro.h"
+#include "llvm-libc-macros/null-macro.h"
 
 #ifdef __cplusplus
 #define QUEUE_TYPEOF(type) type
@@ -259,4 +259,4 @@
       (head2)->stqh_last = &STAILQ_FIRST(head2);                               \
   } while (0)
 
-#endif // __LLVM_LIBC_MACROS_SYS_QUEUE_MACROS_H
+#endif // LLVM_LIBC_MACROS_SYS_QUEUE_MACROS_H

@@ -14,7 +14,7 @@ extern "C" {
 #if LDBL_MANT_DIG == 113 || HAS_FLOAT128
 CppTypeFor<TypeCategory::Real, 16> RTDEF(AtanF128)(
     CppTypeFor<TypeCategory::Real, 16> x) {
-  return Atan<RTNAME(AtanF128)>::invoke(x);
+  return Atan<true>::invoke(x);
 }
 #endif
 

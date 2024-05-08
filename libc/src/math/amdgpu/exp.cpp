@@ -13,6 +13,6 @@
 
 namespace LIBC_NAMESPACE {
 
-LLVM_LIBC_FUNCTION(double, exp, (double x)) { return __builtin_exp(x); }
+LLVM_LIBC_FUNCTION(double, exp, (double x)) { return __ocml_exp_f64(x); }
 
 } // namespace LIBC_NAMESPACE

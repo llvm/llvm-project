@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "EvalEmitter.h"
-#include "ByteCodeGenError.h"
 #include "Context.h"
 #include "IntegralAP.h"
 #include "Interp.h"
@@ -18,7 +17,7 @@ using namespace clang;
 using namespace clang::interp;
 
 EvalEmitter::EvalEmitter(Context &Ctx, Program &P, State &Parent,
-                         InterpStack &Stk, APValue &Result)
+                         InterpStack &Stk)
     : Ctx(Ctx), P(P), S(Parent, P, Stk, Ctx, this), EvalResult(&Ctx) {
   // Create a dummy frame for the interpreter which does not have locals.
   S.Current =
@@ -35,11 +34,15 @@ EvalEmitter::~EvalEmitter() {
 
 EvaluationResult EvalEmitter::interpretExpr(const Expr *E,
                                             bool ConvertResultToRValue) {
+  S.setEvalLocation(E->getExprLoc());
   this->ConvertResultToRValue = ConvertResultToRValue;
   EvalResult.setSource(E);
 
-  if (!this->visitExpr(E) && EvalResult.empty())
+  if (!this->visitExpr(E)) {
+    // EvalResult may already have a result set, but something failed
+    // after that (e.g. evaluating destructors).
     EvalResult.setInvalid();
+  }
 
   return std::move(this->EvalResult);
 }
@@ -49,7 +52,8 @@ EvaluationResult EvalEmitter::interpretDecl(const VarDecl *VD,
   this->CheckFullyInitialized = CheckFullyInitialized;
   this->ConvertResultToRValue =
       VD->getAnyInitializer() &&
-      (VD->getAnyInitializer()->getType()->isAnyComplexType());
+      (VD->getAnyInitializer()->getType()->isAnyComplexType() ||
+       VD->getAnyInitializer()->getType()->isVectorType());
   EvalResult.setSource(VD);
 
   if (!this->visitDecl(VD) && EvalResult.empty())

@@ -53,13 +53,13 @@ func.func @test_load_store_zaq0() {
 
   // CHECK-LABEL: INITIAL TILE A:
   // CHECK: ( 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7 )
-  vector.print str "INITIAL TILE A:"
+  vector.print str "INITIAL TILE A:\n"
   func.call @print_i8s(%tile_a_bytes, %zaq_size_bytes) : (memref<?xi8>, index) -> ()
   vector.print punctuation <newline>
 
   // CHECK-LABEL: INITIAL TILE B:
   // CHECK: ( 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64 )
-  vector.print str "INITIAL TILE B:"
+  vector.print str "INITIAL TILE B:\n"
   func.call @print_i8s(%tile_b_bytes, %zaq_size_bytes) : (memref<?xi8>, index) -> ()
   vector.print punctuation <newline>
 
@@ -68,13 +68,13 @@ func.func @test_load_store_zaq0() {
 
   // CHECK-LABEL: FINAL TILE A:
   // CHECK: ( 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7 )
-  vector.print str "FINAL TILE A:"
+  vector.print str "FINAL TILE A:\n"
   func.call @print_i8s(%tile_a_bytes, %zaq_size_bytes) : (memref<?xi8>, index) -> ()
   vector.print punctuation <newline>
 
   // CHECK-LABEL: FINAL TILE B:
   // CHECK: ( 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7 )
-  vector.print str "FINAL TILE B:"
+  vector.print str "FINAL TILE B:\n"
   func.call @print_i8s(%tile_b_bytes, %zaq_size_bytes) : (memref<?xi8>, index) -> ()
 
   return

@@ -32,7 +32,7 @@ namespace ref_counted {
   void consume_ref_counted(Ref<RefCountable>) {}
 
   void foo() {
-    consume_refcntbl(provide_ref_counted().get());
+    consume_refcntbl(provide_ref_counted().ptr());
     // no warning
   }
 }
@@ -311,6 +311,17 @@ namespace default_arg {
   void foo() {
     function_with_default_arg();
   }
+}
+
+namespace cxx_member_func {
+  Ref<RefCountable> provideProtected();
+  void foo() {
+    provide()->trivial();
+    provide()->method();
+    // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
+    provideProtected()->method();
+    (provideProtected())->method();
+  };
 }
 
 namespace cxx_member_operator_call {

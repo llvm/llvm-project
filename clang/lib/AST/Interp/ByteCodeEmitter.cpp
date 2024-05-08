@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "ByteCodeEmitter.h"
-#include "ByteCodeGenError.h"
 #include "Context.h"
 #include "Floating.h"
 #include "IntegralAP.h"
@@ -83,11 +82,13 @@ Function *ByteCodeEmitter::compileFunc(const FunctionDecl *FuncDecl) {
   // InterpStack when calling the function.
   bool HasThisPointer = false;
   if (const auto *MD = dyn_cast<CXXMethodDecl>(FuncDecl)) {
-    if (MD->isImplicitObjectMemberFunction() && !IsLambdaStaticInvoker) {
-      HasThisPointer = true;
-      ParamTypes.push_back(PT_Ptr);
-      ParamOffsets.push_back(ParamOffset);
-      ParamOffset += align(primSize(PT_Ptr));
+    if (!IsLambdaStaticInvoker) {
+      HasThisPointer = MD->isInstance();
+      if (MD->isImplicitObjectMemberFunction()) {
+        ParamTypes.push_back(PT_Ptr);
+        ParamOffsets.push_back(ParamOffset);
+        ParamOffset += align(primSize(PT_Ptr));
+      }
     }
 
     // Set up lambda capture to closure record field mapping.
@@ -108,8 +109,12 @@ Function *ByteCodeEmitter::compileFunc(const FunctionDecl *FuncDecl) {
         this->LambdaCaptures[Cap.first] = {
             Offset, Cap.second->getType()->isReferenceType()};
       }
-      if (LTC)
-        this->LambdaThisCapture = R->getField(LTC)->Offset;
+      if (LTC) {
+        QualType CaptureType = R->getField(LTC)->Decl->getType();
+        this->LambdaThisCapture = {R->getField(LTC)->Offset,
+                                   CaptureType->isReferenceType() ||
+                                       CaptureType->isPointerType()};
+      }
     }
   }
 
@@ -298,10 +303,7 @@ bool ByteCodeEmitter::emitOp(Opcode Op, const Tys &... Args, const SourceInfo &S
   if (SI)
     SrcMap.emplace_back(Code.size(), SI);
 
-  // The initializer list forces the expression to be evaluated
-  // for each argument in the variadic template, in order.
-  (void)std::initializer_list<int>{(emit(P, Code, Args, Success), 0)...};
-
+  (..., emit(P, Code, Args, Success));
   return Success;
 }
 

@@ -168,6 +168,10 @@ def FeatureCuMode : SubtargetFeature<"cumode",
   "Enable CU wavefront execution mode"
 >;
 
+def FeaturePreciseMemory
+    : SubtargetFeature<"precise-memory", "EnablePreciseMemory",
+                       "true", "Enable precise memory mode">;
+
 def FeatureSGPRInitBug : SubtargetFeature<"sgpr-init-bug",
   "SGPRInitBug",
   "true",
@@ -301,6 +305,12 @@ def FeatureMSAALoadDstSelBug : SubtargetFeature<"msaa-load-dst-sel-bug",
   "HasMSAALoadDstSelBug",
   "true",
   "MSAA loads not honoring dst_sel bug"
+>;
+
+def FeaturePrivEnabledTrap2NopBug : SubtargetFeature<"priv-enabled-trap2-nop-bug",
+  "HasPrivEnabledTrap2NopBug",
+  "true",
+  "Hardware that runs with PRIV=1 interpreting 's_trap 2' as a nop bug"
 >;
 
 class SubtargetFeatureLDSBankCount <int Value> : SubtargetFeature <
@@ -650,6 +660,12 @@ def FeatureDot10Insts : SubtargetFeature<"dot10-insts",
   "Has v_dot2_f32_f16 instruction"
 >;
 
+def FeatureDot11Insts : SubtargetFeature<"dot11-insts",
+  "HasDot11Insts",
+  "true",
+  "Has v_dot4_f32_fp8_fp8, v_dot4_f32_fp8_bf8, v_dot4_f32_bf8_fp8, v_dot4_f32_bf8_bf8 instructions"
+>;
+
 def FeatureMAIInsts : SubtargetFeature<"mai-insts",
   "HasMAIInsts",
   "true",
@@ -825,10 +841,12 @@ def FeatureNoDataDepHazard : SubtargetFeature<"no-data-dep-hazard",
   "Does not need SW waitstates"
 >;
 
-def FeatureGFX11FullVGPRs : SubtargetFeature<"gfx11-full-vgprs",
-  "HasGFX11FullVGPRs",
+// Allocate 1536 VGPRs for wave32 and 768 VGPRs for wave64
+// with allocation granularity 24 for wave32 and 12 for wave64
+def Feature1_5xVGPRs : SubtargetFeature<"allocate1_5xvgprs",
+  "Has1_5xVGPRs",
   "true",
-  "GFX11 with 50% more physical VGPRs and 50% larger allocation granule than GFX10"
+  "Has 50% more physical VGPRs and 50% larger allocation granule"
 >;
 
 
@@ -1475,22 +1493,25 @@ def FeatureISAVersion11_Generic: FeatureSet<
     [FeatureMSAALoadDstSelBug,
      FeatureVALUTransUseHazard,
      FeatureUserSGPRInit16Bug,
+     FeatureMADIntraFwdBug,
+     FeaturePrivEnabledTrap2NopBug,
      FeatureRequiresCOV6])>;
 
 def FeatureISAVersion11_0_Common : FeatureSet<
   !listconcat(FeatureISAVersion11_Common.Features,
     [FeatureMSAALoadDstSelBug,
      FeatureVALUTransUseHazard,
-     FeatureMADIntraFwdBug])>;
+     FeatureMADIntraFwdBug,
+     FeaturePrivEnabledTrap2NopBug])>;
 
 def FeatureISAVersion11_0_0 : FeatureSet<
   !listconcat(FeatureISAVersion11_0_Common.Features,
-    [FeatureGFX11FullVGPRs,
+    [Feature1_5xVGPRs,
      FeatureUserSGPRInit16Bug])>;
 
 def FeatureISAVersion11_0_1 : FeatureSet<
   !listconcat(FeatureISAVersion11_0_Common.Features,
-    [FeatureGFX11FullVGPRs])>;
+    [Feature1_5xVGPRs])>;
 
 def FeatureISAVersion11_0_2 : FeatureSet<
   !listconcat(FeatureISAVersion11_0_Common.Features,
@@ -1511,7 +1532,7 @@ def FeatureISAVersion11_5_1 : FeatureSet<
     [FeatureSALUFloatInsts,
      FeatureDPPSrc1SGPR,
      FeatureVGPRSingleUseHintInsts,
-     FeatureGFX11FullVGPRs])>;
+     Feature1_5xVGPRs])>;
 
 def FeatureISAVersion12 : FeatureSet<
   [FeatureGFX12,
@@ -1521,6 +1542,7 @@ def FeatureISAVersion12 : FeatureSet<
    FeatureDot8Insts,
    FeatureDot9Insts,
    FeatureDot10Insts,
+   FeatureDot11Insts,
    FeatureNSAEncoding,
    FeaturePartialNSAEncoding,
    FeatureWavefrontSize32,
@@ -1874,10 +1896,16 @@ def D16PreservesUnusedBits :
 def LDSRequiresM0Init : Predicate<"Subtarget->ldsRequiresM0Init()">;
 def NotLDSRequiresM0Init : Predicate<"!Subtarget->ldsRequiresM0Init()">;
 
+def HasExportInsts : Predicate<"Subtarget->hasExportInsts()">,
+  AssemblerPredicate<(all_of (not FeatureGFX90AInsts))>;
+
+def HasVINTERPEncoding : Predicate<"Subtarget->hasVINTERPEncoding()">,
+  AssemblerPredicate<(all_of FeatureGFX11Insts)>;
+
 def HasDSAddTid : Predicate<"Subtarget->getGeneration() >= AMDGPUSubtarget::GFX9">,
   AssemblerPredicate<(all_of FeatureGFX9Insts)>;
 
-def HasLDSFPAtomicAdd : Predicate<"Subtarget->hasLDSFPAtomicAdd()">,
+def HasLDSFPAtomicAddF32 : Predicate<"Subtarget->hasLDSFPAtomicAddF32()">,
   AssemblerPredicate<(all_of FeatureGFX8Insts)>;
 
 def HasAddNoCarryInsts : Predicate<"Subtarget->hasAddNoCarry()">,
@@ -1890,7 +1918,7 @@ def Has16BitInsts : Predicate<"Subtarget->has16BitInsts()">,
 
 def HasTrue16BitInsts : Predicate<"Subtarget->hasTrue16BitInsts()">,
   AssemblerPredicate<(all_of FeatureTrue16BitInsts)>;
-def NotHasTrue16BitInsts : Predicate<"!Subtarget->hasTrue16BitInsts()">;
+def NotHasTrue16BitInsts : True16PredicateClass<"!Subtarget->hasTrue16BitInsts()">;
 
 // Control use of True16 instructions. The real True16 instructions are
 // True16 instructions as they are defined in the ISA. Fake True16
@@ -2022,6 +2050,9 @@ def HasDot9Insts : Predicate<"Subtarget->hasDot9Insts()">,
 
 def HasDot10Insts : Predicate<"Subtarget->hasDot10Insts()">,
   AssemblerPredicate<(all_of FeatureDot10Insts)>;
+
+def HasDot11Insts : Predicate<"Subtarget->hasDot11Insts()">,
+  AssemblerPredicate<(all_of FeatureDot11Insts)>;
 
 def HasGetWaveIdInst : Predicate<"Subtarget->hasGetWaveIdInst()">,
   AssemblerPredicate<(all_of FeatureGetWaveIdInst)>;

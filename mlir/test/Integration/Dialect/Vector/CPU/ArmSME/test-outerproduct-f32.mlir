@@ -35,9 +35,9 @@ func.func @test_outerproduct_no_accumulator_4x4xf32() {
   // WITHOUT-ACC-NEXT: ( 0, 2, 4, 6
   // WITHOUT-ACC-NEXT: ( 0, 3, 6, 9
   // WITHOUT-ACC:      TILE END
-  vector.print str "TILE BEGIN"
+  vector.print str "TILE BEGIN\n"
   vector.print %tile : vector<[4]x[4]xf32>
-  vector.print str "TILE END"
+  vector.print str "TILE END\n"
 
   return
 }
@@ -60,9 +60,9 @@ func.func @test_outerproduct_with_accumulator_4x4xf32() {
   // WITH-ACC-NEXT: ( 10, 12, 14, 16
   // WITH-ACC-NEXT: ( 10, 13, 16, 19
   // WITH-ACC:      TILE END
-  vector.print str "TILE BEGIN"
+  vector.print str "TILE BEGIN\n"
   vector.print %tile : vector<[4]x[4]xf32>
-  vector.print str "TILE END"
+  vector.print str "TILE END\n"
 
   return
 }
@@ -91,9 +91,9 @@ func.func @test_masked_outerproduct_no_accumulator_4x4xf32() {
   // WITH-MASK-NEXT: ( 3, 6, 0, 0
   // WITH-MASK-NEXT: ( 0, 0, 0, 0
   // WITH-MASK:      TILE END
-  vector.print str "TILE BEGIN"
+  vector.print str "TILE BEGIN\n"
   vector.print %tile : vector<[4]x[4]xf32>
-  vector.print str "TILE END"
+  vector.print str "TILE END\n"
 
   return
 }
@@ -124,9 +124,9 @@ func.func @test_masked_outerproduct_with_accumulator_4x4xf32() {
   // WITH-MASK-AND-ACC-NEXT: ( 10, 10, 10, 10
   // WITH-MASK-AND-ACC-NEXT: ( 10, 10, 10, 10
   // WITH-MASK-AND-ACC:      TILE END
-  vector.print str "TILE BEGIN"
+  vector.print str "TILE BEGIN\n"
   vector.print %tile : vector<[4]x[4]xf32>
-  vector.print str "TILE END"
+  vector.print str "TILE END\n"
 
   return
 }

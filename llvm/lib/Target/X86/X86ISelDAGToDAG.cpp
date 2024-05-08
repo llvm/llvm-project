@@ -2353,7 +2353,7 @@ SDValue X86DAGToDAGISel::matchIndexRecursively(SDValue N,
     SDValue Src = N.getOperand(0);
     unsigned SrcOpc = Src.getOpcode();
     if (((SrcOpc == ISD::ADD && Src->getFlags().hasNoUnsignedWrap()) ||
-         CurDAG->isADDLike(Src)) &&
+         CurDAG->isADDLike(Src, /*NoWrap=*/true)) &&
         Src.hasOneUse()) {
       if (CurDAG->isBaseWithConstantOffset(Src)) {
         SDValue AddSrc = Src.getOperand(0);
@@ -2732,13 +2732,15 @@ bool X86DAGToDAGISel::matchAddressRecursively(SDValue N, X86ISelAddressMode &AM,
       insertDAGNode(*CurDAG, N, Zext);
       SDValue NewShl = CurDAG->getNode(ISD::SHL, DL, VT, Zext, ShlAmt);
       insertDAGNode(*CurDAG, N, NewShl);
+      CurDAG->ReplaceAllUsesWith(N, NewShl);
+      CurDAG->RemoveDeadNode(N.getNode());
 
       // Convert the shift to scale factor.
       AM.Scale = 1 << ShAmtV;
-      AM.IndexReg = Zext;
-
-      CurDAG->ReplaceAllUsesWith(N, NewShl);
-      CurDAG->RemoveDeadNode(N.getNode());
+      // If matchIndexRecursively is not called here,
+      // Zext may be replaced by other nodes but later used to call a builder
+      // method
+      AM.IndexReg = matchIndexRecursively(Zext, AM, Depth + 1);
       return false;
     }
 
@@ -2925,11 +2927,10 @@ bool X86DAGToDAGISel::selectAddr(SDNode *Parent, SDValue N, SDValue &Base,
 }
 
 bool X86DAGToDAGISel::selectMOV64Imm32(SDValue N, SDValue &Imm) {
-  // Cannot use 32 bit constants to reference objects in kernel code model.
-  // Cannot use 32 bit constants to reference objects in large PIC mode since
-  // GOTOFF is 64 bits.
+  // Cannot use 32 bit constants to reference objects in kernel/large code
+  // model.
   if (TM.getCodeModel() == CodeModel::Kernel ||
-      (TM.getCodeModel() == CodeModel::Large && TM.isPositionIndependent()))
+      TM.getCodeModel() == CodeModel::Large)
     return false;
 
   // In static codegen with small code model, we can get the address of a label
@@ -3088,13 +3089,19 @@ bool X86DAGToDAGISel::selectLEAAddr(SDValue N,
 bool X86DAGToDAGISel::selectTLSADDRAddr(SDValue N, SDValue &Base,
                                         SDValue &Scale, SDValue &Index,
                                         SDValue &Disp, SDValue &Segment) {
-  assert(N.getOpcode() == ISD::TargetGlobalTLSAddress);
-  auto *GA = cast<GlobalAddressSDNode>(N);
+  assert(N.getOpcode() == ISD::TargetGlobalTLSAddress ||
+         N.getOpcode() == ISD::TargetExternalSymbol);
 
   X86ISelAddressMode AM;
-  AM.GV = GA->getGlobal();
-  AM.Disp += GA->getOffset();
-  AM.SymbolFlags = GA->getTargetFlags();
+  if (auto *GA = dyn_cast<GlobalAddressSDNode>(N)) {
+    AM.GV = GA->getGlobal();
+    AM.Disp += GA->getOffset();
+    AM.SymbolFlags = GA->getTargetFlags();
+  } else {
+    auto *SA = cast<ExternalSymbolSDNode>(N);
+    AM.ES = SA->getSymbol();
+    AM.SymbolFlags = SA->getTargetFlags();
+  }
 
   if (Subtarget->is32Bit()) {
     AM.Scale = 1;
@@ -5039,17 +5046,17 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
       switch (IntNo) {
       default: llvm_unreachable("Impossible intrinsic");
       case Intrinsic::x86_encodekey128:
-        Opcode = GET_EGPR_IF_ENABLED(X86::ENCODEKEY128);
+        Opcode = X86::ENCODEKEY128;
         break;
       case Intrinsic::x86_encodekey256:
-        Opcode = GET_EGPR_IF_ENABLED(X86::ENCODEKEY256);
+        Opcode = X86::ENCODEKEY256;
         break;
       }
 
       SDValue Chain = Node->getOperand(0);
       Chain = CurDAG->getCopyToReg(Chain, dl, X86::XMM0, Node->getOperand(3),
                                    SDValue());
-      if (Opcode == X86::ENCODEKEY256 || Opcode == X86::ENCODEKEY256_EVEX)
+      if (Opcode == X86::ENCODEKEY256)
         Chain = CurDAG->getCopyToReg(Chain, dl, X86::XMM1, Node->getOperand(4),
                                      Chain.getValue(1));
 
@@ -6131,14 +6138,18 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
 
     MachineSDNode *CNode;
     if (NeedMask) {
-      unsigned ROpc = Subtarget->hasAVX() ? X86::VPCMPISTRMrr : X86::PCMPISTRMrr;
-      unsigned MOpc = Subtarget->hasAVX() ? X86::VPCMPISTRMrm : X86::PCMPISTRMrm;
+      unsigned ROpc =
+          Subtarget->hasAVX() ? X86::VPCMPISTRMrri : X86::PCMPISTRMrri;
+      unsigned MOpc =
+          Subtarget->hasAVX() ? X86::VPCMPISTRMrmi : X86::PCMPISTRMrmi;
       CNode = emitPCMPISTR(ROpc, MOpc, MayFoldLoad, dl, MVT::v16i8, Node);
       ReplaceUses(SDValue(Node, 1), SDValue(CNode, 0));
     }
     if (NeedIndex || !NeedMask) {
-      unsigned ROpc = Subtarget->hasAVX() ? X86::VPCMPISTRIrr : X86::PCMPISTRIrr;
-      unsigned MOpc = Subtarget->hasAVX() ? X86::VPCMPISTRIrm : X86::PCMPISTRIrm;
+      unsigned ROpc =
+          Subtarget->hasAVX() ? X86::VPCMPISTRIrri : X86::PCMPISTRIrri;
+      unsigned MOpc =
+          Subtarget->hasAVX() ? X86::VPCMPISTRIrmi : X86::PCMPISTRIrmi;
       CNode = emitPCMPISTR(ROpc, MOpc, MayFoldLoad, dl, MVT::i32, Node);
       ReplaceUses(SDValue(Node, 0), SDValue(CNode, 0));
     }
@@ -6166,15 +6177,19 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
 
     MachineSDNode *CNode;
     if (NeedMask) {
-      unsigned ROpc = Subtarget->hasAVX() ? X86::VPCMPESTRMrr : X86::PCMPESTRMrr;
-      unsigned MOpc = Subtarget->hasAVX() ? X86::VPCMPESTRMrm : X86::PCMPESTRMrm;
-      CNode = emitPCMPESTR(ROpc, MOpc, MayFoldLoad, dl, MVT::v16i8, Node,
-                           InGlue);
+      unsigned ROpc =
+          Subtarget->hasAVX() ? X86::VPCMPESTRMrri : X86::PCMPESTRMrri;
+      unsigned MOpc =
+          Subtarget->hasAVX() ? X86::VPCMPESTRMrmi : X86::PCMPESTRMrmi;
+      CNode =
+          emitPCMPESTR(ROpc, MOpc, MayFoldLoad, dl, MVT::v16i8, Node, InGlue);
       ReplaceUses(SDValue(Node, 1), SDValue(CNode, 0));
     }
     if (NeedIndex || !NeedMask) {
-      unsigned ROpc = Subtarget->hasAVX() ? X86::VPCMPESTRIrr : X86::PCMPESTRIrr;
-      unsigned MOpc = Subtarget->hasAVX() ? X86::VPCMPESTRIrm : X86::PCMPESTRIrm;
+      unsigned ROpc =
+          Subtarget->hasAVX() ? X86::VPCMPESTRIrri : X86::PCMPESTRIrri;
+      unsigned MOpc =
+          Subtarget->hasAVX() ? X86::VPCMPESTRIrmi : X86::PCMPESTRIrmi;
       CNode = emitPCMPESTR(ROpc, MOpc, MayFoldLoad, dl, MVT::i32, Node, InGlue);
       ReplaceUses(SDValue(Node, 0), SDValue(CNode, 0));
     }
@@ -6460,18 +6475,17 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
     default:
       llvm_unreachable("Unexpected opcode!");
     case X86ISD::AESENCWIDE128KL:
-      Opcode = GET_EGPR_IF_ENABLED(X86::AESENCWIDE128KL);
+      Opcode = X86::AESENCWIDE128KL;
       break;
     case X86ISD::AESDECWIDE128KL:
-      Opcode = GET_EGPR_IF_ENABLED(X86::AESDECWIDE128KL);
+      Opcode = X86::AESDECWIDE128KL;
       break;
     case X86ISD::AESENCWIDE256KL:
-      Opcode = GET_EGPR_IF_ENABLED(X86::AESENCWIDE256KL);
+      Opcode = X86::AESENCWIDE256KL;
       break;
     case X86ISD::AESDECWIDE256KL:
-      Opcode = GET_EGPR_IF_ENABLED(X86::AESDECWIDE256KL);
+      Opcode = X86::AESDECWIDE256KL;
       break;
-#undef GET_EGPR_IF_ENABLED
     }
 
     SDValue Chain = Node->getOperand(0);

@@ -44,7 +44,7 @@ static bool recordIsNotEmpty(const RecordDecl *RD) {
   // We consider a record decl to be empty if it contains only unnamed bit-
   // fields, zero-width fields, and fields of empty record type.
   for (const auto *FD : RD->fields()) {
-    if (FD->isUnnamedBitfield())
+    if (FD->isUnnamedBitField())
       continue;
     if (FD->isZeroSize(FD->getASTContext()))
       continue;

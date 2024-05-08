@@ -26,6 +26,7 @@ add_llvm_target(HexagonCodeGen
   HexagonCommonGEP.cpp
   HexagonConstExtenders.cpp
   HexagonConstPropagation.cpp
+  HexagonCopyHoisting.cpp
   HexagonCopyToCombine.cpp
   HexagonEarlyIfConv.cpp
   HexagonExpandCondsets.cpp
@@ -43,6 +44,7 @@ add_llvm_target(HexagonCodeGen
   HexagonISelDAGToDAGHVX.cpp
   HexagonISelLowering.cpp
   HexagonISelLoweringHVX.cpp
+  HexagonLoopAlign.cpp
   HexagonLoopIdiomRecognition.cpp
   HexagonMachineFunctionInfo.cpp
   HexagonMachineScheduler.cpp

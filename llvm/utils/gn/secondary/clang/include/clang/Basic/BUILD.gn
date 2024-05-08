@@ -25,6 +25,7 @@ diag_groups = [
   "CrossTU",
   "Driver",
   "Frontend",
+  "InstallAPI",
   "Lex",
   "Parse",
   "Refactoring",
@@ -64,16 +65,6 @@ clang_tablegen("DiagnosticIndexName") {
 
 clang_tablegen("AttrList") {
   args = [ "-gen-clang-attr-list" ]
-  td_file = "Attr.td"
-}
-
-clang_tablegen("AttrLeftSideCanPrintList") {
-  args = [ "-gen-clang-attr-can-print-left-list" ]
-  td_file = "Attr.td"
-}
-
-clang_tablegen("AttrLeftSideMustPrintList") {
-  args = [ "-gen-clang-attr-must-print-left-list" ]
   td_file = "Attr.td"
 }
 

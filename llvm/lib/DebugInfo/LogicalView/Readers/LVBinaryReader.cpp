@@ -146,6 +146,30 @@ bool LVBinaryReader::getSymbolTableIsComdat(StringRef Name) {
 
 void LVBinaryReader::mapVirtualAddress(const object::ObjectFile &Obj) {
   for (const object::SectionRef &Section : Obj.sections()) {
+    LLVM_DEBUG({
+      Expected<StringRef> SectionNameOrErr = Section.getName();
+      StringRef Name;
+      if (!SectionNameOrErr)
+        consumeError(SectionNameOrErr.takeError());
+      else
+        Name = *SectionNameOrErr;
+      dbgs() << "Index: " << format_decimal(Section.getIndex(), 3) << ", "
+             << "Address: " << hexValue(Section.getAddress()) << ", "
+             << "Size: " << hexValue(Section.getSize()) << ", "
+             << "Name: " << Name << "\n";
+      dbgs() << "isCompressed:   " << Section.isCompressed() << ", "
+             << "isText:         " << Section.isText() << ", "
+             << "isData:         " << Section.isData() << ", "
+             << "isBSS:          " << Section.isBSS() << ", "
+             << "isVirtual:      " << Section.isVirtual() << "\n";
+      dbgs() << "isBitcode:      " << Section.isBitcode() << ", "
+             << "isStripped:     " << Section.isStripped() << ", "
+             << "isBerkeleyText: " << Section.isBerkeleyText() << ", "
+             << "isBerkeleyData: " << Section.isBerkeleyData() << ", "
+             << "isDebugSection: " << Section.isDebugSection() << "\n";
+      dbgs() << "\n";
+    });
+
     if (!Section.isText() || Section.isVirtual() || !Section.getSize())
       continue;
 
@@ -160,9 +184,14 @@ void LVBinaryReader::mapVirtualAddress(const object::ObjectFile &Obj) {
       consumeError(SectionNameOrErr.takeError());
       continue;
     }
-    if ((*SectionNameOrErr).equals(".text") ||
-        (*SectionNameOrErr).equals(".code"))
+    if (*SectionNameOrErr == ".text" || *SectionNameOrErr == "CODE" ||
+        *SectionNameOrErr == ".code") {
       DotTextSectionIndex = Section.getIndex();
+      // If the object is WebAssembly, update the address offset that
+      // will be added to DWARF DW_AT_* attributes.
+      if (Obj.isWasm())
+        WasmCodeSectionOffset = Section.getAddress();
+    }
   }
 
   // Process the symbol table.

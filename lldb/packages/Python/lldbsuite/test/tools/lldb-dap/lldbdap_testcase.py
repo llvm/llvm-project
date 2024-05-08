@@ -6,6 +6,9 @@ from lldbsuite.test.lldbtest import *
 
 
 class DAPTestCaseBase(TestBase):
+    # set timeout based on whether ASAN was enabled or not. Increase
+    # timeout by a factor of 10 if ASAN is enabled.
+    timeoutval = 10 * (10 if ('ASAN_OPTIONS' in os.environ) else 1)
     NO_DEBUG_INFO_TESTCASE = True
 
     def create_debug_adaptor(self, lldbDAPEnv=None):
@@ -215,8 +218,8 @@ class DAPTestCaseBase(TestBase):
         """Set a top level global variable only."""
         return self.dap_server.request_setVariable(2, name, str(value), id=id)
 
-    def stepIn(self, threadId=None, waitForStop=True):
-        self.dap_server.request_stepIn(threadId=threadId)
+    def stepIn(self, threadId=None, targetId=None, waitForStop=True):
+        self.dap_server.request_stepIn(threadId=threadId, targetId=targetId)
         if waitForStop:
             return self.dap_server.wait_for_stopped()
         return None

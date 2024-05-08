@@ -1,6 +1,7 @@
 #ifndef BENCHMARK_REGISTER_H
 #define BENCHMARK_REGISTER_H
 
+#include <algorithm>
 #include <limits>
 #include <vector>
 
@@ -23,7 +24,7 @@ typename std::vector<T>::iterator AddPowers(std::vector<T>* dst, T lo, T hi,
   static const T kmax = std::numeric_limits<T>::max();
 
   // Space out the values in multiples of "mult"
-  for (T i = static_cast<T>(1); i <= hi; i *= mult) {
+  for (T i = static_cast<T>(1); i <= hi; i *= static_cast<T>(mult)) {
     if (i >= lo) {
       dst->push_back(i);
     }
@@ -32,7 +33,7 @@ typename std::vector<T>::iterator AddPowers(std::vector<T>* dst, T lo, T hi,
     if (i > kmax / mult) break;
   }
 
-  return dst->begin() + start_offset;
+  return dst->begin() + static_cast<int>(start_offset);
 }
 
 template <typename T>

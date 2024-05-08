@@ -108,27 +108,23 @@ Pointer Program::getPtrGlobal(unsigned Idx) const {
 }
 
 std::optional<unsigned> Program::getGlobal(const ValueDecl *VD) {
-  auto It = GlobalIndices.find(VD);
-  if (It != GlobalIndices.end())
+  if (auto It = GlobalIndices.find(VD); It != GlobalIndices.end())
     return It->second;
 
   // Find any previous declarations which were already evaluated.
   std::optional<unsigned> Index;
-  for (const Decl *P = VD; P; P = P->getPreviousDecl()) {
-    auto It = GlobalIndices.find(P);
-    if (It != GlobalIndices.end()) {
+  for (const Decl *P = VD->getPreviousDecl(); P; P = P->getPreviousDecl()) {
+    if (auto It = GlobalIndices.find(P); It != GlobalIndices.end()) {
       Index = It->second;
       break;
     }
   }
 
   // Map the decl to the existing index.
-  if (Index) {
+  if (Index)
     GlobalIndices[VD] = *Index;
-    return std::nullopt;
-  }
 
-  return Index;
+  return std::nullopt;
 }
 
 std::optional<unsigned> Program::getOrCreateGlobal(const ValueDecl *VD,
@@ -145,11 +141,20 @@ std::optional<unsigned> Program::getOrCreateGlobal(const ValueDecl *VD,
 
 std::optional<unsigned> Program::getOrCreateDummy(const ValueDecl *VD) {
   // Dedup blocks since they are immutable and pointers cannot be compared.
-  if (auto It = DummyParams.find(VD); It != DummyParams.end())
+  if (auto It = DummyVariables.find(VD); It != DummyVariables.end())
     return It->second;
 
   // Create dummy descriptor.
-  Descriptor *Desc = allocateDescriptor(VD, std::nullopt);
+  // We create desriptors of 'array of unknown size' if the type is an array
+  // type _and_ the size isn't known (it's not a ConstantArrayType). If the size
+  // is known however, we create a regular dummy pointer.
+  Descriptor *Desc;
+  if (const auto *AT = VD->getType()->getAsArrayTypeUnsafe();
+      AT && !isa<ConstantArrayType>(AT))
+    Desc = allocateDescriptor(VD, Descriptor::UnknownSize{});
+  else
+    Desc = allocateDescriptor(VD);
+
   // Allocate a block for storage.
   unsigned I = Globals.size();
 
@@ -158,18 +163,18 @@ std::optional<unsigned> Program::getOrCreateDummy(const ValueDecl *VD) {
   G->block()->invokeCtor();
 
   Globals.push_back(G);
-  DummyParams[VD] = I;
+  DummyVariables[VD] = I;
   return I;
 }
 
 std::optional<unsigned> Program::createGlobal(const ValueDecl *VD,
                                               const Expr *Init) {
-  assert(!getGlobal(VD));
   bool IsStatic, IsExtern;
   if (const auto *Var = dyn_cast<VarDecl>(VD)) {
     IsStatic = Context::shouldBeGloballyIndexed(VD);
-    IsExtern = !Var->getAnyInitializer();
-  } else if (isa<UnnamedGlobalConstantDecl, MSGuidDecl>(VD)) {
+    IsExtern = Var->hasExternalStorage();
+  } else if (isa<UnnamedGlobalConstantDecl, MSGuidDecl,
+                 TemplateParamObjectDecl>(VD)) {
     IsStatic = true;
     IsExtern = false;
   } else {
@@ -303,6 +308,11 @@ Record *Program::getOrCreateRecord(const RecordDecl *RD) {
   // Reserve space for fields.
   Record::FieldList Fields;
   for (const FieldDecl *FD : RD->fields()) {
+    // Note that we DO create fields and descriptors
+    // for unnamed bitfields here, even though we later ignore
+    // them everywhere. That's because so the FieldDecl's
+    // getFieldIndex() matches.
+
     // Reserve space for the field's descriptor and the offset.
     BaseSize += align(sizeof(InlineDescriptor));
 
@@ -346,7 +356,7 @@ Descriptor *Program::createDescriptor(const DeclTy &D, const Type *Ty,
     QualType ElemTy = ArrayType->getElementType();
     // Array of well-known bounds.
     if (auto CAT = dyn_cast<ConstantArrayType>(ArrayType)) {
-      size_t NumElems = CAT->getSize().getZExtValue();
+      size_t NumElems = CAT->getZExtSize();
       if (std::optional<PrimType> T = Ctx.classify(ElemTy)) {
         // Arrays of primitives.
         unsigned ElemSize = primSize(*T);
@@ -400,6 +410,13 @@ Descriptor *Program::createDescriptor(const DeclTy &D, const Type *Ty,
     PrimType ElemTy = *Ctx.classify(CT->getElementType());
     return allocateDescriptor(D, ElemTy, MDSize, 2, IsConst, IsTemporary,
                               IsMutable);
+  }
+
+  // Same with vector types.
+  if (const auto *VT = Ty->getAs<VectorType>()) {
+    PrimType ElemTy = *Ctx.classify(VT->getElementType());
+    return allocateDescriptor(D, ElemTy, MDSize, VT->getNumElements(), IsConst,
+                              IsTemporary, IsMutable);
   }
 
   return nullptr;

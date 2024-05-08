@@ -92,7 +92,7 @@ static cl::opt<std::string> AssumeFileName(
              "  Objective-C: .m .mm\n"
              "  Proto: .proto .protodevel\n"
              "  TableGen: .td\n"
-             "  TextProto: .textpb .pb.txt .textproto .asciipb\n"
+             "  TextProto: .txtpb .textpb .pb.txt .textproto .asciipb\n"
              "  Verilog: .sv .svh .v .vh"),
     cl::init("<stdin>"), cl::cat(ClangFormatCategory));
 
@@ -204,6 +204,11 @@ static cl::opt<bool>
 static cl::list<std::string> FileNames(cl::Positional,
                                        cl::desc("[@<file>] [<file> ...]"),
                                        cl::cat(ClangFormatCategory));
+
+static cl::opt<bool> FailOnIncompleteFormat(
+    "fail-on-incomplete-format",
+    cl::desc("If set, fail with exit code 1 on incomplete format."),
+    cl::init(false), cl::cat(ClangFormatCategory));
 
 namespace clang {
 namespace format {
@@ -399,7 +404,7 @@ class ClangFormatDiagConsumer : public DiagnosticConsumer {
 };
 
 // Returns true on error.
-static bool format(StringRef FileName) {
+static bool format(StringRef FileName, bool ErrorOnIncompleteFormat = false) {
   const bool IsSTDIN = FileName == "-";
   if (!OutputXML && Inplace && IsSTDIN) {
     errs() << "error: cannot use -i when reading from stdin.\n";
@@ -408,8 +413,9 @@ static bool format(StringRef FileName) {
   // On Windows, overwriting a file with an open file mapping doesn't work,
   // so read the whole file into memory when formatting in-place.
   ErrorOr<std::unique_ptr<MemoryBuffer>> CodeOrErr =
-      !OutputXML && Inplace ? MemoryBuffer::getFileAsStream(FileName)
-                            : MemoryBuffer::getFileOrSTDIN(FileName);
+      !OutputXML && Inplace
+          ? MemoryBuffer::getFileAsStream(FileName)
+          : MemoryBuffer::getFileOrSTDIN(FileName, /*IsText=*/true);
   if (std::error_code EC = CodeOrErr.getError()) {
     errs() << EC.message() << "\n";
     return true;
@@ -535,7 +541,7 @@ static bool format(StringRef FileName) {
       Rewrite.getEditBuffer(ID).write(outs());
     }
   }
-  return false;
+  return ErrorOnIncompleteFormat && !Status.FormatComplete;
 }
 
 } // namespace format
@@ -553,7 +559,7 @@ static int dumpConfig() {
     // Read in the code in case the filename alone isn't enough to detect the
     // language.
     ErrorOr<std::unique_ptr<MemoryBuffer>> CodeOrErr =
-        MemoryBuffer::getFileOrSTDIN(FileNames[0]);
+        MemoryBuffer::getFileOrSTDIN(FileNames[0], /*IsText=*/true);
     if (std::error_code EC = CodeOrErr.getError()) {
       llvm::errs() << EC.message() << "\n";
       return 1;
@@ -699,7 +705,7 @@ int main(int argc, const char **argv) {
   }
 
   if (FileNames.empty())
-    return clang::format::format("-");
+    return clang::format::format("-", FailOnIncompleteFormat);
 
   if (FileNames.size() > 1 &&
       (!Offsets.empty() || !Lengths.empty() || !LineRanges.empty())) {
@@ -717,7 +723,7 @@ int main(int argc, const char **argv) {
       errs() << "Formatting [" << FileNo++ << "/" << FileNames.size() << "] "
              << FileName << "\n";
     }
-    Error |= clang::format::format(FileName);
+    Error |= clang::format::format(FileName, FailOnIncompleteFormat);
   }
   return Error ? 1 : 0;
 }

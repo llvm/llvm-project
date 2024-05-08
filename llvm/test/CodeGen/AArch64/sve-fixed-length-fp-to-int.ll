@@ -131,8 +131,8 @@ define <4 x i32> @fcvtzu_v4f16_v4i32(<4 x half> %op1) vscale_range(2,0) #0 {
 define void @fcvtzu_v8f16_v8i32(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-LABEL: fcvtzu_v8f16_v8i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s, vl8
 ; CHECK-NEXT:    ldr q0, [x0]
+; CHECK-NEXT:    ptrue p0.s, vl8
 ; CHECK-NEXT:    uunpklo z0.s, z0.h
 ; CHECK-NEXT:    fcvtzu z0.s, p0/m, z0.h
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x1]
@@ -357,7 +357,6 @@ define void @fcvtzu_v16f32_v16i16(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    ptrue p0.s, vl8
 ; VBITS_GE_256-NEXT:    mov x8, #8 // =0x8
-; VBITS_GE_256-NEXT:    ptrue p1.h, vl16
 ; VBITS_GE_256-NEXT:    ld1w { z0.s }, p0/z, [x0, x8, lsl #2]
 ; VBITS_GE_256-NEXT:    ld1w { z1.s }, p0/z, [x0]
 ; VBITS_GE_256-NEXT:    fcvtzu z0.s, p0/m, z0.s
@@ -366,7 +365,8 @@ define void @fcvtzu_v16f32_v16i16(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256-NEXT:    uzp1 z0.h, z0.h, z0.h
 ; VBITS_GE_256-NEXT:    uzp1 z1.h, z1.h, z1.h
 ; VBITS_GE_256-NEXT:    splice z1.h, p0, z1.h, z0.h
-; VBITS_GE_256-NEXT:    st1h { z1.h }, p1, [x1]
+; VBITS_GE_256-NEXT:    ptrue p0.h, vl16
+; VBITS_GE_256-NEXT:    st1h { z1.h }, p0, [x1]
 ; VBITS_GE_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: fcvtzu_v16f32_v16i16:
@@ -532,8 +532,8 @@ define <2 x i64> @fcvtzu_v2f32_v2i64(<2 x float> %op1) vscale_range(2,0) #0 {
 define void @fcvtzu_v4f32_v4i64(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-LABEL: fcvtzu_v4f32_v4i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d, vl4
 ; CHECK-NEXT:    ldr q0, [x0]
+; CHECK-NEXT:    ptrue p0.d, vl4
 ; CHECK-NEXT:    uunpklo z0.d, z0.s
 ; CHECK-NEXT:    fcvtzu z0.d, p0/m, z0.s
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x1]
@@ -752,7 +752,6 @@ define void @fcvtzu_v8f64_v8i32(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    ptrue p0.d, vl4
 ; VBITS_GE_256-NEXT:    mov x8, #4 // =0x4
-; VBITS_GE_256-NEXT:    ptrue p1.s, vl8
 ; VBITS_GE_256-NEXT:    ld1d { z0.d }, p0/z, [x0, x8, lsl #3]
 ; VBITS_GE_256-NEXT:    ld1d { z1.d }, p0/z, [x0]
 ; VBITS_GE_256-NEXT:    fcvtzu z0.d, p0/m, z0.d
@@ -761,7 +760,8 @@ define void @fcvtzu_v8f64_v8i32(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256-NEXT:    uzp1 z0.s, z0.s, z0.s
 ; VBITS_GE_256-NEXT:    uzp1 z1.s, z1.s, z1.s
 ; VBITS_GE_256-NEXT:    splice z1.s, p0, z1.s, z0.s
-; VBITS_GE_256-NEXT:    st1w { z1.s }, p1, [x1]
+; VBITS_GE_256-NEXT:    ptrue p0.s, vl8
+; VBITS_GE_256-NEXT:    st1w { z1.s }, p0, [x1]
 ; VBITS_GE_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: fcvtzu_v8f64_v8i32:
@@ -1024,8 +1024,8 @@ define <4 x i32> @fcvtzs_v4f16_v4i32(<4 x half> %op1) vscale_range(2,0) #0 {
 define void @fcvtzs_v8f16_v8i32(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-LABEL: fcvtzs_v8f16_v8i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s, vl8
 ; CHECK-NEXT:    ldr q0, [x0]
+; CHECK-NEXT:    ptrue p0.s, vl8
 ; CHECK-NEXT:    uunpklo z0.s, z0.h
 ; CHECK-NEXT:    fcvtzs z0.s, p0/m, z0.h
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x1]
@@ -1250,7 +1250,6 @@ define void @fcvtzs_v16f32_v16i16(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    ptrue p0.s, vl8
 ; VBITS_GE_256-NEXT:    mov x8, #8 // =0x8
-; VBITS_GE_256-NEXT:    ptrue p1.h, vl16
 ; VBITS_GE_256-NEXT:    ld1w { z0.s }, p0/z, [x0, x8, lsl #2]
 ; VBITS_GE_256-NEXT:    ld1w { z1.s }, p0/z, [x0]
 ; VBITS_GE_256-NEXT:    fcvtzs z0.s, p0/m, z0.s
@@ -1259,7 +1258,8 @@ define void @fcvtzs_v16f32_v16i16(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256-NEXT:    uzp1 z0.h, z0.h, z0.h
 ; VBITS_GE_256-NEXT:    uzp1 z1.h, z1.h, z1.h
 ; VBITS_GE_256-NEXT:    splice z1.h, p0, z1.h, z0.h
-; VBITS_GE_256-NEXT:    st1h { z1.h }, p1, [x1]
+; VBITS_GE_256-NEXT:    ptrue p0.h, vl16
+; VBITS_GE_256-NEXT:    st1h { z1.h }, p0, [x1]
 ; VBITS_GE_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: fcvtzs_v16f32_v16i16:
@@ -1425,8 +1425,8 @@ define <2 x i64> @fcvtzs_v2f32_v2i64(<2 x float> %op1) vscale_range(2,0) #0 {
 define void @fcvtzs_v4f32_v4i64(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-LABEL: fcvtzs_v4f32_v4i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d, vl4
 ; CHECK-NEXT:    ldr q0, [x0]
+; CHECK-NEXT:    ptrue p0.d, vl4
 ; CHECK-NEXT:    uunpklo z0.d, z0.s
 ; CHECK-NEXT:    fcvtzs z0.d, p0/m, z0.s
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x1]
@@ -1645,7 +1645,6 @@ define void @fcvtzs_v8f64_v8i32(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    ptrue p0.d, vl4
 ; VBITS_GE_256-NEXT:    mov x8, #4 // =0x4
-; VBITS_GE_256-NEXT:    ptrue p1.s, vl8
 ; VBITS_GE_256-NEXT:    ld1d { z0.d }, p0/z, [x0, x8, lsl #3]
 ; VBITS_GE_256-NEXT:    ld1d { z1.d }, p0/z, [x0]
 ; VBITS_GE_256-NEXT:    fcvtzs z0.d, p0/m, z0.d
@@ -1654,7 +1653,8 @@ define void @fcvtzs_v8f64_v8i32(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256-NEXT:    uzp1 z0.s, z0.s, z0.s
 ; VBITS_GE_256-NEXT:    uzp1 z1.s, z1.s, z1.s
 ; VBITS_GE_256-NEXT:    splice z1.s, p0, z1.s, z0.s
-; VBITS_GE_256-NEXT:    st1w { z1.s }, p1, [x1]
+; VBITS_GE_256-NEXT:    ptrue p0.s, vl8
+; VBITS_GE_256-NEXT:    st1w { z1.s }, p0, [x1]
 ; VBITS_GE_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: fcvtzs_v8f64_v8i32:

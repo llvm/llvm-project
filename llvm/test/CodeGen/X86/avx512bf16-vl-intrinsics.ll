@@ -381,3 +381,25 @@ entry:
   %1 = shufflevector <8 x bfloat> %0, <8 x bfloat> undef, <16 x i32> zeroinitializer
   ret <16 x bfloat> %1
 }
+
+define <16 x i32> @pr83358() {
+; X86-LABEL: pr83358:
+; X86:       # %bb.0:
+; X86-NEXT:    vcvtneps2bf16y {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0 # encoding: [0x62,0xf2,0x7e,0x28,0x72,0x05,A,A,A,A]
+; X86-NEXT:    # fixup A - offset: 6, value: {{\.?LCPI[0-9]+_[0-9]+}}, kind: FK_Data_4
+; X86-NEXT:    vshufi64x2 $0, %zmm0, %zmm0, %zmm0 # encoding: [0x62,0xf3,0xfd,0x48,0x43,0xc0,0x00]
+; X86-NEXT:    # zmm0 = zmm0[0,1,0,1,0,1,0,1]
+; X86-NEXT:    retl # encoding: [0xc3]
+;
+; X64-LABEL: pr83358:
+; X64:       # %bb.0:
+; X64-NEXT:    vcvtneps2bf16y {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # encoding: [0x62,0xf2,0x7e,0x28,0x72,0x05,A,A,A,A]
+; X64-NEXT:    # fixup A - offset: 6, value: {{\.?LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
+; X64-NEXT:    vshufi64x2 $0, %zmm0, %zmm0, %zmm0 # encoding: [0x62,0xf3,0xfd,0x48,0x43,0xc0,0x00]
+; X64-NEXT:    # zmm0 = zmm0[0,1,0,1,0,1,0,1]
+; X64-NEXT:    retq # encoding: [0xc3]
+  %1 = call <8 x bfloat> @llvm.x86.avx512bf16.cvtneps2bf16.256(<8 x float> <float 1.000000e+00, float 2.000000e+00, float 3.000000e+00, float 4.000000e+00, float 5.000000e+00, float 6.000000e+00, float 7.000000e+00, float 8.000000e+00>)
+  %2 = bitcast <8 x bfloat> %1 to <4 x i32>
+  %3 = shufflevector <4 x i32> %2, <4 x i32> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3>
+  ret <16 x i32> %3
+}

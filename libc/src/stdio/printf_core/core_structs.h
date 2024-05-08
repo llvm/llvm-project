@@ -9,6 +9,8 @@
 #ifndef LLVM_LIBC_SRC_STDIO_PRINTF_CORE_CORE_STRUCTS_H
 #define LLVM_LIBC_SRC_STDIO_PRINTF_CORE_CORE_STRUCTS_H
 
+#include "src/__support/macros/config.h"
+
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/FPUtil/FPBits.h"
@@ -22,7 +24,12 @@ namespace printf_core {
 
 // These length modifiers match the length modifiers in the format string, which
 // is why they are formatted differently from the rest of the file.
-enum class LengthModifier { hh, h, l, ll, j, z, t, L, none };
+enum class LengthModifier { hh, h, l, ll, j, z, t, L, w, wf, none };
+
+struct LengthSpec {
+  LengthModifier lm;
+  size_t bit_width;
+};
 
 enum FormatFlags : uint8_t {
   LEFT_JUSTIFIED = 0x01, // -
@@ -44,6 +51,7 @@ struct FormatSection {
   // Format Specifier Values
   FormatFlags flags = FormatFlags(0);
   LengthModifier length_modifier = LengthModifier::none;
+  size_t bit_width = 0;
   int min_width = 0;
   int precision = -1;
 
@@ -66,6 +74,7 @@ struct FormatSection {
       if (!((static_cast<uint8_t>(flags) ==
              static_cast<uint8_t>(other.flags)) &&
             (min_width == other.min_width) && (precision == other.precision) &&
+            (bit_width == other.bit_width) &&
             (length_modifier == other.length_modifier) &&
             (conv_name == other.conv_name)))
         return false;

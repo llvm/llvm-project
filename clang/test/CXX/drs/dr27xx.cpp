@@ -10,7 +10,7 @@
 // expected-no-diagnostics
 #endif
 
-namespace dr2759 { // dr2759: 19
+namespace cwg2759 { // cwg2759: 19
 #if __cplusplus >= 201103L
 
 struct CStruct {
@@ -91,18 +91,18 @@ static_assert(!__is_layout_compatible(UnionLayout, UnionLayout3), "");
 static_assert(!__is_layout_compatible(StructWithAnonUnion, StructWithAnonUnion2), "");
 static_assert(!__is_layout_compatible(StructWithAnonUnion, StructWithAnonUnion3), "");
 #endif
-} // namespace dr2759
+} // namespace cwg2759
 
-namespace dr2789 { // dr2789: 18
+namespace cwg2789 { // cwg2789: 18
 #if __cplusplus >= 202302L
 template <typename T = int>
 struct Base {
-    constexpr void g(); // #dr2789-g1
+    constexpr void g(); // #cwg2789-g1
 };
 
 template <typename T = int>
 struct Base2 {
-    constexpr void g() requires true;  // #dr2789-g2
+    constexpr void g() requires true;  // #cwg2789-g2
 };
 
 template <typename T = int>
@@ -119,13 +119,13 @@ void test() {
     s.f();
     s.g();
     // since-cxx23-error@-1 {{call to member function 'g' is ambiguous}}
-    //   since-cxx23-note@#dr2789-g1 {{candidate function}}
-    //   since-cxx23-note@#dr2789-g2 {{candidate function}}
+    //   since-cxx23-note@#cwg2789-g1 {{candidate function}}
+    //   since-cxx23-note@#cwg2789-g2 {{candidate function}}
 }
 #endif
 }
 
-namespace dr2798 { // dr2798: 17
+namespace cwg2798 { // cwg2798: 17
 #if __cpp_static_assert >= 202306
 struct string {
   constexpr string() {
@@ -147,5 +147,5 @@ consteval X f() { return {}; }
 static_assert(false, f().s);
 // since-cxx26-error@-1 {{static assertion failed: Hello}}
 #endif
-} // namespace dr2798
+} // namespace cwg2798
 

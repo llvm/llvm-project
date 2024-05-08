@@ -307,6 +307,8 @@ public:
     VK_PPC_AIX_TLSGDM,      // symbol@m
     VK_PPC_AIX_TLSIE,       // symbol@ie
     VK_PPC_AIX_TLSLE,       // symbol@le
+    VK_PPC_AIX_TLSLD,       // symbol@ld
+    VK_PPC_AIX_TLSML,       // symbol@ml
     VK_PPC_GOT_TLSLD,       // symbol@got@tlsld
     VK_PPC_GOT_TLSLD_LO,    // symbol@got@tlsld@l
     VK_PPC_GOT_TLSLD_HI,    // symbol@got@tlsld@h
