@@ -282,7 +282,7 @@ public:
   const ConstantRange &getRange() const;
 
   /// Returns the value of the initializes attribute.
-  ConstantRangeList getInitializes() const;
+  ArrayRef<ConstantRange> getInitializes() const;
 
   /// The Attribute is converted to a string of equivalent mnemonic. This
   /// is, presumably, for writing out the mnemonics for the assembly writer.

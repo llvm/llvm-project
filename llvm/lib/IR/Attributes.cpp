@@ -491,10 +491,10 @@ const ConstantRange &Attribute::getRange() const {
   return pImpl->getValueAsConstantRange();
 }
 
-ConstantRangeList Attribute::getInitializes() const {
+ArrayRef<ConstantRange> Attribute::getInitializes() const {
   assert(hasAttribute(Attribute::Initializes) &&
          "Trying to get initializes attr from non-ConstantRangeList attribute");
-  return ConstantRangeList(pImpl->getValueAsConstantRangeList());
+  return pImpl->getValueAsConstantRangeList();
 }
 
 static const char *getModRefStr(ModRefInfo MR) {
