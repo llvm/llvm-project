@@ -132,6 +132,7 @@ end subroutine
 ! CHECK-SAME: (%[[S_REF:.*]]: !fir.ref<i32> {fir.bindc_name = "s"}, %[[E_REF:.*]]: !fir.ref<i32> {fir.bindc_name = "e"}, %[[ST_REF:.*]]: !fir.ref<i32> {fir.bindc_name = "st"}) {
 subroutine loop_with_variable_step(s,e,st)
   integer :: s, e, st
+  ! CHECK: %[[I_REF:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFloop_with_variable_stepEi"}
   ! CHECK: %[[S:.*]] = fir.load %[[S_REF]] : !fir.ref<i32>
   ! CHECK: %[[S_CVT:.*]] = fir.convert %[[S]] : (i32) -> index
   ! CHECK: %[[E:.*]] = fir.load %[[E_REF]] : !fir.ref<i32>
