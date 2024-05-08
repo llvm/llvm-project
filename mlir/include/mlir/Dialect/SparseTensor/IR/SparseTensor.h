@@ -41,6 +41,19 @@ using Level = uint64_t;
 /// including the value `ShapedType::kDynamic` (for shapes).
 using Size = int64_t;
 
+/// A simple structure that encodes a range of levels in the sparse tensors
+/// that forms a COO segment.
+struct COOSegment {
+  std::pair<Level, Level> lvlRange; // [low, high)
+  bool isSoA;
+
+  bool isAoS() const { return !isSoA; }
+  bool isSegmentStart(Level l) const { return l == lvlRange.first; }
+  bool inSegment(Level l) const {
+    return l >= lvlRange.first && l < lvlRange.second;
+  }
+};
+
 } // namespace sparse_tensor
 } // namespace mlir
 
