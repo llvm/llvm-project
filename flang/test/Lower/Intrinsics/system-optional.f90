@@ -9,9 +9,10 @@ INTEGER, OPTIONAL :: exitstat
 call system(command, exitstat)
 
 ! CHECK-NEXT:    %[[cmdstatVal:.*]] = fir.alloca i16
+! CHECK-NEXT:    %[[DSCOPE:.*]] = fir.dummy_scope : !fir.dscope
 ! CHECK-NEXT:    %[[commandUnbox:.*]]:2 = fir.unboxchar %[[commandArg]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
-! CHECK-NEXT:    %[[commandDeclare:.*]]:2 = hlfir.declare %[[commandUnbox]]#0 typeparams %[[commandUnbox]]#1 {fortran_attrs = #fir.var_attrs<optional>, uniq_name = "_QFall_argsEcommand"} : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
-! CHECK-NEXT:    %[[exitstatDeclare:.*]]:2 = hlfir.declare %[[exitstatArg]] {fortran_attrs = #fir.var_attrs<optional>, uniq_name = "_QFall_argsEexitstat"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK-NEXT:    %[[commandDeclare:.*]]:2 = hlfir.declare %[[commandUnbox]]#0 typeparams %[[commandUnbox]]#1 dummy_scope %[[DSCOPE]] {fortran_attrs = #fir.var_attrs<optional>, uniq_name = "_QFall_argsEcommand"} : (!fir.ref<!fir.char<1,?>>, index, !fir.dscope) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
+! CHECK-NEXT:    %[[exitstatDeclare:.*]]:2 = hlfir.declare %[[exitstatArg]] dummy_scope %[[DSCOPE]] {fortran_attrs = #fir.var_attrs<optional>, uniq_name = "_QFall_argsEexitstat"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK-NEXT:    %[[exitstatIsPresent:.*]] = fir.is_present %[[exitstatDeclare]]#0 : (!fir.ref<i32>) -> i1
 ! CHECK-NEXT:    %[[commandBox:.*]] = fir.embox %[[commandDeclare]]#1 typeparams %[[commandUnbox]]#1 : (!fir.ref<!fir.char<1,?>>, index) -> !fir.box<!fir.char<1,?>>
 ! CHECK-NEXT:    %[[exitstatBox:.*]] = fir.embox %[[exitstatDeclare]]#1 : (!fir.ref<i32>) -> !fir.box<i32>
