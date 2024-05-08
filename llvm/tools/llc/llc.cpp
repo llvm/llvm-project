@@ -537,8 +537,8 @@ static int compileModule(char **argv, LLVMContext &Context) {
       // If we are supposed to override the target triple, do so now.
       std::string IRTargetTriple = DataLayoutTargetTriple.str();
       if (!TargetTriple.empty())
-        IRTargetTriple = Triple::normalize(TargetTriple);
-      TheTriple = Triple(IRTargetTriple);
+        IRTargetTriple = TargetTriple;
+      TheTriple = Triple(Triple::normalize(IRTargetTriple));
       if (TheTriple.getTriple().empty())
         TheTriple.setTriple(sys::getDefaultTargetTriple());
 
