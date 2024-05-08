@@ -82,6 +82,8 @@ CudaVersion getCudaVersion(uint32_t raw_version) {
     return CudaVersion::CUDA_122;
   if (raw_version < 12040)
     return CudaVersion::CUDA_123;
+  if (raw_version < 12050)
+    return CudaVersion::CUDA_124;
   return CudaVersion::NEW;
 }
 
@@ -688,6 +690,7 @@ void NVPTX::getNVPTXTargetFeatures(const Driver &D, const llvm::Triple &Triple,
   case CudaVersion::CUDA_##CUDA_VER:                                           \
     PtxFeature = "+ptx" #PTX_VER;                                              \
     break;
+    CASE_CUDA_VERSION(124, 84);
     CASE_CUDA_VERSION(123, 83);
     CASE_CUDA_VERSION(122, 82);
     CASE_CUDA_VERSION(121, 81);
