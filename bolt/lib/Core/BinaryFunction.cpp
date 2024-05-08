@@ -1177,7 +1177,7 @@ BinaryFunction::disassembleInstructionAtOffset(uint64_t Offset) const {
   uint64_t InstrSize = 0;
   const uint64_t InstrAddress = getAddress() + Offset;
   if (BC.DisAsm->getInstruction(Instr, InstrSize, FunctionData->slice(Offset),
-                                 InstrAddress, nulls()))
+                                InstrAddress, nulls()))
     return Instr;
   return std::nullopt;
 }
