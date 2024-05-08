@@ -830,16 +830,43 @@ private:
                                          vector::PrintPunctuation::Comma);
         rewriter.create<vector::PrintOp>(loc, imag,
                                          vector::PrintPunctuation::Close);
-        rewriter.create<vector::PrintOp>(loc, vector::PrintPunctuation::Comma);
+        printEnding(rewriter, loc, forOp.getInductionVar(), step,
+                    forOp.getUpperBound(), /*isComplex*/ true, val);
+
       } else {
-        rewriter.create<vector::PrintOp>(loc, val,
-                                         vector::PrintPunctuation::Comma);
+        printEnding(rewriter, loc, forOp.getInductionVar(), step,
+                    forOp.getUpperBound(), /*isComplex*/ false, val);
       }
     }
     idxs.pop_back();
     rewriter.setInsertionPointAfter(forOp);
     // Close bracket.
     rewriter.create<vector::PrintOp>(loc, vector::PrintPunctuation::Close);
+  }
+
+  // Helper method to print the ending of memref (no punctuation after the last
+  // element).
+  static void printEnding(PatternRewriter &rewriter, Location loc, Value indVar,
+                          Value step, Value upperBound, bool isComplex,
+                          Value val) {
+    auto bound = rewriter.create<arith::AddIOp>(loc, indVar, step);
+    Value cond = rewriter.create<arith::CmpIOp>(loc, arith::CmpIPredicate::eq,
+                                                bound, upperBound);
+    scf::IfOp ifOp = rewriter.create<scf::IfOp>(loc, cond, /*else*/ true);
+    if (isComplex) {
+      rewriter.setInsertionPointToStart(&ifOp.getThenRegion().front());
+      rewriter.create<vector::PrintOp>(loc,
+                                       vector::PrintPunctuation::NoPunctuation);
+      rewriter.setInsertionPointToStart(&ifOp.getElseRegion().front());
+      rewriter.create<vector::PrintOp>(loc, vector::PrintPunctuation::Comma);
+    } else {
+      rewriter.setInsertionPointToStart(&ifOp.getThenRegion().front());
+      rewriter.create<vector::PrintOp>(loc, val,
+                                       vector::PrintPunctuation::NoPunctuation);
+      rewriter.setInsertionPointToStart(&ifOp.getElseRegion().front());
+      rewriter.create<vector::PrintOp>(loc, val,
+                                       vector::PrintPunctuation::Comma);
+    }
   }
 
   // Helper method to print run-time lvl/dim sizes.
