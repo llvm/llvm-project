@@ -4391,7 +4391,8 @@ SDValue AArch64TargetLowering::LowerVectorXRINT(SDValue Op,
 
   // Finally, truncate the rounded floating point to an integer, rounding to
   // zero.
-  SDValue Truncated = DAG.getNode(ISD::FP_TO_SINT, DL, ContainerVT, FOp.getOperand(0));
+  SDValue Truncated =
+      DAG.getNode(ISD::FP_TO_SINT, DL, ContainerVT, FOp.getOperand(0));
 
   if (VT.isScalableVector())
     return Truncated;
