@@ -69,6 +69,21 @@ define i3 @foo3x5(i3 %x) {
   ret i3 %tmp4
 }
 
+define i3 @foo3x5_nsw(i3 %x) {
+; Can be done with two multiplies.
+; CHECK-LABEL: define i3 @foo3x5_nsw(
+; CHECK-SAME: i3 [[X:%.*]]) {
+; CHECK-NEXT:    [[TMP3:%.*]] = mul i3 [[X]], [[X]]
+; CHECK-NEXT:    [[TMP4:%.*]] = mul nsw i3 [[TMP3]], [[X]]
+; CHECK-NEXT:    ret i3 [[TMP4]]
+;
+  %tmp1 = mul i3 %x, %x
+  %tmp2 = mul i3 %tmp1, %x
+  %tmp3 = mul i3 %tmp2, %x
+  %tmp4 = mul nsw i3 %tmp3, %x
+  ret i3 %tmp4
+}
+
 define i3 @foo3x6(i3 %x) {
 ; Can be done with two multiplies.
 ; CHECK-LABEL: define i3 @foo3x6(
