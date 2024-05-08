@@ -3364,6 +3364,8 @@ def fir_CUDAAllocOp : fir_Op<"cuda_alloc", [AttrSizedOperandSegments,
       CArg<"mlir::ValueRange", "{}">:$typeparams,
       CArg<"mlir::ValueRange", "{}">:$shape,
       CArg<"llvm::ArrayRef<mlir::NamedAttribute>", "{}">:$attributes)>];
+
+  let hasVerifier = 1;
 }
 
 def fir_CUDAFreeOp : fir_Op<"cuda_free", [MemoryEffects<[MemFree]>]> {
@@ -3381,6 +3383,8 @@ def fir_CUDAFreeOp : fir_Op<"cuda_free", [MemoryEffects<[MemFree]>]> {
   );
 
   let assemblyFormat = "$devptr `:` qualified(type($devptr)) attr-dict";
+
+  let hasVerifier = 1;
 }
 
 #endif

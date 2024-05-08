@@ -499,7 +499,7 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr = COPY $x11
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gpr = COPY $x10
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gpr = COPY undef $noreg
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:gpr = IMPLICIT_DEF
   ; CHECK-NEXT:   dead [[PseudoVSETVLIX0_:%[0-9]+]]:gpr = PseudoVSETVLIX0 killed $x0, 223 /* e64, mf2, ta, ma */, implicit-def $vl, implicit-def $vtype
   ; CHECK-NEXT:   [[PseudoVID_V_MF2_:%[0-9]+]]:vr = PseudoVID_V_MF2 undef $noreg, -1, 6 /* e64 */, 0 /* tu, mu */, implicit $vl, implicit $vtype
   ; CHECK-NEXT:   dead [[PseudoVSETVLIX0_1:%[0-9]+]]:gpr = PseudoVSETVLIX0 killed $x0, 215 /* e32, mf2, ta, ma */, implicit-def $vl, implicit-def $vtype
@@ -514,8 +514,8 @@ body:             |
   ; CHECK-NEXT:   [[PseudoVLE32_V_MF2_MASK:%[0-9]+]]:vrnov0 = PseudoVLE32_V_MF2_MASK [[PseudoVMV_V_I_MF2_]], killed [[COPY]], $v0, -1, 5 /* e32 */, 0 /* tu, mu */, implicit $vl, implicit $vtype
   ; CHECK-NEXT:   dead $x0 = PseudoVSETVLIX0 killed $x0, 197 /* e8, mf8, ta, ma */, implicit-def $vl, implicit-def $vtype, implicit $vl
   ; CHECK-NEXT:   [[PseudoVCPOP_M_B1_:%[0-9]+]]:gpr = PseudoVCPOP_M_B1 [[PseudoVMSEQ_VI_MF2_]], -1, 0 /* e8 */, implicit $vl, implicit $vtype
-  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:gpr = COPY $x0
-  ; CHECK-NEXT:   BEQ killed [[PseudoVCPOP_M_B1_]], [[COPY3]], %bb.3
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gpr = COPY $x0
+  ; CHECK-NEXT:   BEQ killed [[PseudoVCPOP_M_B1_]], [[COPY2]], %bb.3
   ; CHECK-NEXT:   PseudoBR %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
@@ -524,7 +524,7 @@ body:             |
   ; CHECK-NEXT:   [[LWU:%[0-9]+]]:gpr = LWU [[COPY1]], 0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3:
-  ; CHECK-NEXT:   [[PHI:%[0-9]+]]:gpr = PHI [[COPY2]], %bb.1, [[LWU]], %bb.2
+  ; CHECK-NEXT:   [[PHI:%[0-9]+]]:gpr = PHI [[DEF]], %bb.1, [[LWU]], %bb.2
   ; CHECK-NEXT:   dead $x0 = PseudoVSETVLIX0 killed $x0, 215 /* e32, mf2, ta, ma */, implicit-def $vl, implicit-def $vtype, implicit $vl
   ; CHECK-NEXT:   [[PseudoVADD_VX_MF2_:%[0-9]+]]:vr = nsw PseudoVADD_VX_MF2 undef $noreg, [[PseudoVLE32_V_MF2_MASK]], [[PHI]], -1, 5 /* e32 */, 0 /* tu, mu */, implicit $vl, implicit $vtype
   ; CHECK-NEXT:   $v0 = COPY [[PseudoVADD_VX_MF2_]]
@@ -535,7 +535,7 @@ body:             |
 
     %0:gpr = COPY $x11
     %1:gpr = COPY $x10
-    %2:gpr = COPY undef $noreg
+    %2:gpr = IMPLICIT_DEF
     %3:vr = PseudoVID_V_MF2 undef $noreg, -1, 6, 0
     %4:vrnov0 = PseudoVMV_V_I_MF2 undef $noreg, 0, -1, 5, 0
 

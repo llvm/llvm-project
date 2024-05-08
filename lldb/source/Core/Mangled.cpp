@@ -310,6 +310,8 @@ ConstString Mangled::GetDemangledName() const {
 }
 
 ConstString Mangled::GetDisplayDemangledName() const {
+  if (Language *lang = Language::FindPlugin(GuessLanguage()))
+    return lang->GetDisplayDemangledName(*this);
   return GetDemangledName();
 }
 

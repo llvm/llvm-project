@@ -27,6 +27,7 @@
 // CHECK-NOT: __riscv_shvstvecd {{.*$}}
 // CHECK-NOT: __riscv_smaia {{.*$}}
 // CHECK-NOT: __riscv_smepmp {{.*$}}
+// CHECK-NOT: __riscv_smstateen {{.*$}}
 // CHECK-NOT: __riscv_ssaia {{.*$}}
 // CHECK-NOT: __riscv_ssccptr {{.*$}}
 // CHECK-NOT: __riscv_sscofpmf {{.*$}}
@@ -372,6 +373,14 @@
 // RUN:   -march=rv64isscounterenw -E -dM %s \
 // RUN:   -o - | FileCheck --check-prefix=CHECK-SSCOUNTERENW-EXT %s
 // CHECK-SSCOUNTERENW-EXT: __riscv_sscounterenw 1000000{{$}}
+
+// RUN: %clang --target=riscv32-unknown-linux-gnu \
+// RUN:   -march=rv32ismstateen -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-SMSTATEEN-EXT %s
+// RUN: %clang --target=riscv64-unknown-linux-gnu \
+// RUN:   -march=rv64ismstateen -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-SMSTATEEN-EXT %s
+// CHECK-SMSTATEEN-EXT: __riscv_smstateen 1000000{{$}}
 
 // RUN: %clang --target=riscv32-unknown-linux-gnu \
 // RUN:   -march=rv32issstateen -E -dM %s \

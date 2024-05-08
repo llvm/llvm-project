@@ -29,9 +29,7 @@ define void @cse_matching_load_from_previous_unrolled_iteration(ptr %src, ptr no
 ; CHECK-NEXT:    [[IV_NEXT:%.*]] = add nuw nsw i64 [[IV]], 1
 ; CHECK-NEXT:    [[GEP_SRC_12_1:%.*]] = getelementptr i64, ptr [[SRC_12]], i64 [[IV_NEXT]]
 ; CHECK-NEXT:    [[L_12_1:%.*]] = load i64, ptr [[GEP_SRC_12_1]], align 8
-; CHECK-NEXT:    [[GEP_SRC_4_1:%.*]] = getelementptr i64, ptr [[SRC_4]], i64 [[IV_NEXT]]
-; CHECK-NEXT:    [[L_4_1:%.*]] = load i64, ptr [[GEP_SRC_4_1]], align 8
-; CHECK-NEXT:    [[MUL_1:%.*]] = mul i64 [[L_12_1]], [[L_4_1]]
+; CHECK-NEXT:    [[MUL_1:%.*]] = mul i64 [[L_12_1]], [[L_12]]
 ; CHECK-NEXT:    [[GEP_DST_1:%.*]] = getelementptr i64, ptr [[DST]], i64 [[IV_NEXT]]
 ; CHECK-NEXT:    store i64 [[MUL_1]], ptr [[GEP_DST_1]], align 8
 ; CHECK-NEXT:    [[IV_NEXT_1]] = add nuw nsw i64 [[IV]], 2
@@ -425,8 +423,7 @@ define void @loop_body_with_dead_blocks(ptr %src) {
 ; CHECK:       loop.header.1:
 ; CHECK-NEXT:    br label [[LOOP_BB_1:%.*]]
 ; CHECK:       loop.bb.1:
-; CHECK-NEXT:    [[L_1_1:%.*]] = load i32, ptr [[SRC]], align 8
-; CHECK-NEXT:    [[C_1_1:%.*]] = icmp eq i32 [[L_1_1]], 0
+; CHECK-NEXT:    [[C_1_1:%.*]] = icmp eq i32 [[L_2]], 0
 ; CHECK-NEXT:    br i1 [[C_1_1]], label [[OUTER_HEADER_LOOPEXIT]], label [[LOOP_LATCH_1:%.*]]
 ; CHECK:       loop.latch.1:
 ; CHECK-NEXT:    call void @foo()

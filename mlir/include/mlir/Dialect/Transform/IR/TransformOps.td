@@ -512,7 +512,10 @@ def CollectMatchingOp : TransformDialectOp<"collect_matching", [
 def ForeachMatchOp : TransformDialectOp<"foreach_match", [
     DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
     DeclareOpInterfaceMethods<SymbolUserOpInterface>,
-    DeclareOpInterfaceMethods<TransformOpInterface>]> {
+    DeclareOpInterfaceMethods<TransformOpInterface,
+                              ["allowsRepeatedHandleOperands"]>,
+    DeclareOpInterfaceMethods<OpAsmOpInterface,
+                              ["getAsmResultNames"]>]> {
   let summary = "Applies named sequences when a named matcher succeeds";
   let description = [{
     Given a pair of co-indexed lists of transform dialect symbols (such as
@@ -528,25 +531,31 @@ def ForeachMatchOp : TransformDialectOp<"foreach_match", [
     the following matchers are not applied to the same payload operation. If the
     action succeeds, the next payload operation in walk order is matched. If it
     fails, both silenceable and definite errors are propagated as the result of
-    this op.
+    this op; propagation of silenceable errors is postponed until the end of the
+    walk.
 
-    The matcher symbol must take one operand of a type that implements the same
-    transform dialect interface as the `root` operand (a check is performed at
-    application time to see if the associated payload satisfies the constraints
-    of the actual type). It must not consume the operand as multiple matchers
+    The matcher symbol must take at least one operand of a type that implements
+    the same transform dialect interface as the `root` operand (a check is
+    performed at application time to see if the associated payload satisfies the
+    constraints of the actual type), and may take additional operands with a
+    similar type requirement. It must not consume operands as multiple matchers
     may be applied. The matcher may produce any number of results. The action
     symbol paired with the matcher must take the same number of arguments as the
     matcher has results, and these arguments must implement the same transform
     dialect interfaces, but not necessarily have the exact same type (again, a
     check is performed at application time to see if the associated payload
-    satisfies the constraints of actual types on both sides). The action symbol
-    may not have results. The actions are expected to only modify payload
-    operations nested in the `root` payload operations associated with the
-    operand of this transform operation. Furhermore, the actions may not modify
-    operations outside of the currently matched payload operation, e.g., they
-    may not modify sibling or parent operations. If such behavior is desired,
-    the parent must be matched first and the nested operations obtained by
-    traversing the IR from the parent. This is due to the matching being
+    satisfies the constraints of actual types on both sides).
+
+    The action symbol may have results that are accumulated from all actions and
+    returned from the `foreach_match` operation on success. Unless the
+    `flatten_results` attribute is present, each action result must be
+    associated with exactly one payload entity. The actions are expected to only
+    modify payload operations nested in the `root` payload operations associated
+    with the operand of this transform operation. Furthermore, the actions may
+    not modify operations outside of the currently matched payload operation,
+    e.g., they may not modify sibling or parent operations. If such behavior is
+    desired, the parent must be matched first and the nested operations obtained
+    by traversing the IR from the parent. This is due to the matching being
     performed as a post-order IR walk.
 
     This operation consumes the operand and produces a new handle associated
@@ -573,19 +582,26 @@ def ForeachMatchOp : TransformDialectOp<"foreach_match", [
     produced a definite failure.
   }];
 
-  let arguments = (ins TransformHandleTypeInterface:$root,
-                       UnitAttr:$restrict_root,
-                       SymbolRefArrayAttr:$matchers,
-                       SymbolRefArrayAttr:$actions);
-  let results = (outs TransformHandleTypeInterface:$updated);
+  let arguments =
+      (ins TransformHandleTypeInterface:$root,
+           Variadic<Transform_AnyHandleOrParamType>:$forwarded_inputs,
+           UnitAttr:$restrict_root,
+           UnitAttr:$flatten_results,
+           SymbolRefArrayAttr:$matchers,
+           SymbolRefArrayAttr:$actions);
+  let results =
+      (outs TransformHandleTypeInterface:$updated,
+            Variadic<Transform_AnyHandleOrParamType>:$forwarded_outputs);
 
   let assemblyFormat = [{
-    (`restrict_root` $restrict_root^)?
+    oilist( `restrict_root` $restrict_root
+          | `flatten_results` $flatten_results
+          )
     `in`
-    $root
+    $root (`,` $forwarded_inputs^)?
     custom<ForeachMatchSymbols>($matchers, $actions)
     attr-dict
-    `:` functional-type($root, $updated)
+    `:` functional-type(operands, results)
   }];
 
   let hasVerifier = 1;

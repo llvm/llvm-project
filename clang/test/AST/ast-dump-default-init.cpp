@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-unknown -fsyntax-only -ast-dump %s | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -ast-dump %s | FileCheck %s
 
 struct A {
   int arr[1];

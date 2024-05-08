@@ -199,7 +199,7 @@
 // RUN: not %clang --target=riscv32-unknown-elf -march=rv32imC -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32-LOWER %s
 // RV32-LOWER: error: invalid arch name 'rv32imC',
-// RV32-LOWER: string must be lowercase
+// RV32-LOWER: string may only contain [a-z0-9_]
 
 // RUN: not %clang --target=riscv32-unknown-elf -march=unknown -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32-STR %s

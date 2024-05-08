@@ -232,12 +232,27 @@ inline void addExternalNameConversionPass(
   });
 }
 
+// Use inliner extension point callback to register the default inliner pass.
+inline void registerDefaultInlinerPass(MLIRToLLVMPassPipelineConfig &config) {
+  config.registerFIRInlinerCallback(
+      [](mlir::PassManager &pm, llvm::OptimizationLevel level) {
+        llvm::StringMap<mlir::OpPassManager> pipelines;
+        // The default inliner pass adds the canonicalizer pass with the default
+        // configuration.
+        pm.addPass(mlir::createInlinerPass(
+            pipelines, addCanonicalizerPassWithoutRegionSimplification));
+      });
+}
+
 /// Create a pass pipeline for running default optimization passes for
 /// incremental conversion of FIR.
 ///
 /// \param pm - MLIR pass manager that will hold the pipeline definition
 inline void createDefaultFIROptimizerPassPipeline(
-    mlir::PassManager &pm, const MLIRToLLVMPassPipelineConfig &pc) {
+    mlir::PassManager &pm, MLIRToLLVMPassPipelineConfig &pc) {
+  // Early Optimizer EP Callback
+  pc.invokeFIROptEarlyEPCallbacks(pm, pc.OptLevel);
+
   // simplify the IR
   mlir::GreedyRewriteConfig config;
   config.enableRegionSimplification = false;
@@ -262,11 +277,9 @@ inline void createDefaultFIROptimizerPassPipeline(
   else
     fir::addMemoryAllocationOpt(pm);
 
-  // The default inliner pass adds the canonicalizer pass with the default
-  // configuration. Create the inliner pass with tco config.
-  llvm::StringMap<mlir::OpPassManager> pipelines;
-  pm.addPass(mlir::createInlinerPass(
-      pipelines, addCanonicalizerPassWithoutRegionSimplification));
+  // FIR Inliner Callback
+  pc.invokeFIRInlinerCallback(pm, pc.OptLevel);
+
   pm.addPass(fir::createSimplifyRegionLite());
   pm.addPass(mlir::createCSEPass());
 
@@ -283,6 +296,9 @@ inline void createDefaultFIROptimizerPassPipeline(
   pm.addPass(mlir::createCanonicalizerPass(config));
   pm.addPass(fir::createSimplifyRegionLite());
   pm.addPass(mlir::createCSEPass());
+
+  // Last Optimizer EP Callback
+  pc.invokeFIROptLastEPCallbacks(pm, pc.OptLevel);
 }
 
 /// Create a pass pipeline for lowering from HLFIR to FIR
@@ -375,8 +391,7 @@ inline void createDefaultFIRCodeGenPassPipeline(mlir::PassManager &pm,
 /// \param optLevel - optimization level used for creating FIR optimization
 ///   passes pipeline
 inline void createMLIRToLLVMPassPipeline(mlir::PassManager &pm,
-    const MLIRToLLVMPassPipelineConfig &config,
-    llvm::StringRef inputFilename = {}) {
+    MLIRToLLVMPassPipelineConfig &config, llvm::StringRef inputFilename = {}) {
   fir::createHLFIRToFIRPassPipeline(pm, config.OptLevel);
 
   // Add default optimizer pass pipeline.

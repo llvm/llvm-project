@@ -202,10 +202,10 @@ Expr<Type<TypeCategory::Real, KIND>> FoldIntrinsicFunction(
     }
   } else if (name == "abs") { // incl. zabs & cdabs
     // Argument can be complex or real
-    if (auto *x{UnwrapExpr<Expr<SomeReal>>(args[0])}) {
+    if (UnwrapExpr<Expr<SomeReal>>(args[0])) {
       return FoldElementalIntrinsic<T, T>(
           context, std::move(funcRef), &Scalar<T>::ABS);
-    } else if (auto *z{UnwrapExpr<Expr<SomeComplex>>(args[0])}) {
+    } else if (UnwrapExpr<Expr<SomeComplex>>(args[0])) {
       return FoldElementalIntrinsic<T, ComplexT>(context, std::move(funcRef),
           ScalarFunc<T, ComplexT>([&name, &context](
                                       const Scalar<ComplexT> &z) -> Scalar<T> {

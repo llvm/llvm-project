@@ -121,6 +121,7 @@ public:
   bool VisitCXXRewrittenBinaryOperator(const CXXRewrittenBinaryOperator *E);
   bool VisitPseudoObjectExpr(const PseudoObjectExpr *E);
   bool VisitPackIndexingExpr(const PackIndexingExpr *E);
+  bool VisitRecoveryExpr(const RecoveryExpr *E);
 
 protected:
   bool visitExpr(const Expr *E) override;
@@ -234,7 +235,8 @@ protected:
                                   bool IsExtended = false);
 
   /// Allocates a space storing a local given its type.
-  std::optional<unsigned> allocateLocal(DeclTy &&Decl, bool IsExtended = false);
+  std::optional<unsigned>
+  allocateLocal(DeclTy &&Decl, const ValueDecl *ExtendingDecl = nullptr);
 
 private:
   friend class VariableScope<Emitter>;
@@ -321,8 +323,8 @@ extern template class ByteCodeExprGen<EvalEmitter>;
 /// Scope chain managing the variable lifetimes.
 template <class Emitter> class VariableScope {
 public:
-  VariableScope(ByteCodeExprGen<Emitter> *Ctx)
-      : Ctx(Ctx), Parent(Ctx->VarScope) {
+  VariableScope(ByteCodeExprGen<Emitter> *Ctx, const ValueDecl *VD)
+      : Ctx(Ctx), Parent(Ctx->VarScope), ValDecl(VD) {
     Ctx->VarScope = this;
   }
 
@@ -345,6 +347,24 @@ public:
       this->Parent->addExtended(Local);
   }
 
+  void addExtended(const Scope::Local &Local, const ValueDecl *ExtendingDecl) {
+    // Walk up the chain of scopes until we find the one for ExtendingDecl.
+    // If there is no such scope, attach it to the parent one.
+    VariableScope *P = this;
+    while (P) {
+      if (P->ValDecl == ExtendingDecl) {
+        P->addLocal(Local);
+        return;
+      }
+      P = P->Parent;
+      if (!P)
+        break;
+    }
+
+    // Use the parent scope.
+    addExtended(Local);
+  }
+
   virtual void emitDestruction() {}
   virtual bool emitDestructors() { return true; }
   VariableScope *getParent() const { return Parent; }
@@ -354,12 +374,14 @@ protected:
   ByteCodeExprGen<Emitter> *Ctx;
   /// Link to the parent scope.
   VariableScope *Parent;
+  const ValueDecl *ValDecl = nullptr;
 };
 
 /// Generic scope for local variables.
 template <class Emitter> class LocalScope : public VariableScope<Emitter> {
 public:
-  LocalScope(ByteCodeExprGen<Emitter> *Ctx) : VariableScope<Emitter>(Ctx) {}
+  LocalScope(ByteCodeExprGen<Emitter> *Ctx)
+      : VariableScope<Emitter>(Ctx, nullptr) {}
 
   /// Emit a Destroy op for this scope.
   ~LocalScope() override {
@@ -473,16 +495,9 @@ public:
   }
 };
 
-/// Expression scope which tracks potentially lifetime extended
-/// temporaries which are hoisted to the parent scope on exit.
 template <class Emitter> class ExprScope final : public AutoScope<Emitter> {
 public:
   ExprScope(ByteCodeExprGen<Emitter> *Ctx) : AutoScope<Emitter>(Ctx) {}
-
-  void addExtended(const Scope::Local &Local) override {
-    if (this->Parent)
-      this->Parent->addLocal(Local);
-  }
 };
 
 template <class Emitter> class ArrayIndexScope final {

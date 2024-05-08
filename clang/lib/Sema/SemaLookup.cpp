@@ -1300,7 +1300,8 @@ bool Sema::CppLookupName(LookupResult &R, Scope *S) {
     for (Scope *PreS = S; PreS; PreS = PreS->getParent())
       if (DeclContext *DC = PreS->getEntity()) {
         if (DC->isDependentContext() && isa<CXXRecordDecl>(DC) &&
-            Name.getCXXOverloadedOperator() == OO_Equal) {
+            Name.getCXXOverloadedOperator() == OO_Equal &&
+            !R.isTemplateNameLookup()) {
           R.setNotFoundInCurrentInstantiation();
           return false;
         }
@@ -2471,10 +2472,8 @@ bool Sema::LookupQualifiedName(LookupResult &R, DeclContext *LookupCtx,
     }
   } QL(LookupCtx);
 
+  bool TemplateNameLookup = R.isTemplateNameLookup();
   CXXRecordDecl *LookupRec = dyn_cast<CXXRecordDecl>(LookupCtx);
-  // FIXME: Per [temp.dep.general]p2, an unqualified name is also dependent
-  // if it's a dependent conversion-function-id or operator= where the current
-  // class is a templated entity. This should be handled in LookupName.
   if (!InUnqualifiedLookup && !R.isForRedeclaration()) {
     // C++23 [temp.dep.type]p5:
     //   A qualified name is dependent if
@@ -2488,7 +2487,7 @@ bool Sema::LookupQualifiedName(LookupResult &R, DeclContext *LookupCtx,
         (Name.getNameKind() == DeclarationName::CXXConversionFunctionName &&
          Name.getCXXNameType()->isDependentType()) ||
         (Name.getCXXOverloadedOperator() == OO_Equal && LookupRec &&
-         LookupRec->isDependentContext())) {
+         LookupRec->isDependentContext() && !TemplateNameLookup)) {
       R.setNotFoundInCurrentInstantiation();
       return false;
     }
@@ -2583,8 +2582,6 @@ bool Sema::LookupQualifiedName(LookupResult &R, DeclContext *LookupCtx,
         return false;
     return true;
   };
-
-  bool TemplateNameLookup = R.isTemplateNameLookup();
 
   // Determine whether two sets of members contain the same members, as
   // required by C++ [class.member.lookup]p6.

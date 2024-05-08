@@ -342,7 +342,7 @@ The :doc:`CodeOfConduct` applies to all office hours.
     - English
   * - Maksim Levental and Jeremy Kun
     - MLIR newcomers and general discussion (`livestreamed <https://www.youtube.com/playlist?list=PLhxO86S3jsX2k7kOhZaV-qKWm8tNsUdAE>`__)
-    - Every two weeks, Fridays at 3:00pm US Pacific, for 90 minutes.
+    - Every two weeks, Wednesdays at 2:00pm US Pacific, for 90 minutes.
     - Livestream chat or `Google meet <https://meet.google.com/wit-tvzc-dwc>`__
     - English
   * - Rotating hosts

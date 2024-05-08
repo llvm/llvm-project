@@ -83,6 +83,8 @@ static cl::opt<unsigned> NonGlobalValueMaxNameSize(
     "non-global-value-max-name-size", cl::Hidden, cl::init(1024),
     cl::desc("Maximum size for the name of non-global values."));
 
+extern cl::opt<bool> UseNewDbgInfoFormat;
+
 void Function::convertToNewDbgValues() {
   IsNewDbgInfoFormat = true;
   for (auto &BB : *this) {
@@ -438,7 +440,7 @@ Function::Function(FunctionType *Ty, LinkageTypes Linkage, unsigned AddrSpace,
     : GlobalObject(Ty, Value::FunctionVal,
                    OperandTraits<Function>::op_begin(this), 0, Linkage, name,
                    computeAddrSpace(AddrSpace, ParentModule)),
-      NumArgs(Ty->getNumParams()), IsNewDbgInfoFormat(false) {
+      NumArgs(Ty->getNumParams()), IsNewDbgInfoFormat(UseNewDbgInfoFormat) {
   assert(FunctionType::isValidReturnType(getReturnType()) &&
          "invalid return type");
   setGlobalObjectSubClassData(0);
@@ -1491,7 +1493,19 @@ bool Intrinsic::isConstrainedFPIntrinsic(ID QID) {
 #define INSTRUCTION(NAME, NARG, ROUND_MODE, INTRINSIC)                         \
   case Intrinsic::INTRINSIC:
 #include "llvm/IR/ConstrainedOps.def"
+#undef INSTRUCTION
     return true;
+  default:
+    return false;
+  }
+}
+
+bool Intrinsic::hasConstrainedFPRoundingModeOperand(Intrinsic::ID QID) {
+  switch (QID) {
+#define INSTRUCTION(NAME, NARG, ROUND_MODE, INTRINSIC)                         \
+  case Intrinsic::INTRINSIC:                                                   \
+    return ROUND_MODE == 1;
+#include "llvm/IR/ConstrainedOps.def"
 #undef INSTRUCTION
   default:
     return false;

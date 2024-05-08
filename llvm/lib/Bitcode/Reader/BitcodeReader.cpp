@@ -4319,7 +4319,7 @@ Error BitcodeReader::parseModule(uint64_t ResumeBit,
   if (PreserveInputDbgFormat != cl::boolOrDefault::BOU_TRUE) {
     TheModule->IsNewDbgInfoFormat =
         UseNewDbgInfoFormat &&
-        LoadBitcodeIntoNewDbgInfoFormat == cl::boolOrDefault::BOU_TRUE;
+        LoadBitcodeIntoNewDbgInfoFormat != cl::boolOrDefault::BOU_FALSE;
   }
 
   this->ValueTypeCallback = std::move(Callbacks.ValueType);
@@ -6896,7 +6896,7 @@ Error BitcodeReader::materialize(GlobalValue *GV) {
         MDString *MDS = cast<MDString>(MD->getOperand(0));
         StringRef ProfName = MDS->getString();
         // Check consistency of !prof branch_weights metadata.
-        if (!ProfName.equals("branch_weights"))
+        if (ProfName != "branch_weights")
           continue;
         unsigned ExpectedNumOperands = 0;
         if (BranchInst *BI = dyn_cast<BranchInst>(&I))
@@ -7513,14 +7513,9 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
       TheIndex.setFlags(Record[0]);
       break;
     }
-    case bitc::FS_VALUE_GUID: { // [valueid, refguid_upper32, refguid_lower32]
+    case bitc::FS_VALUE_GUID: { // [valueid, refguid]
       uint64_t ValueID = Record[0];
-      GlobalValue::GUID RefGUID;
-      if (Version >= 10) {
-        RefGUID = Record[1] << 32 | Record[2];
-      } else {
-        RefGUID = Record[1];
-      }
+      GlobalValue::GUID RefGUID = Record[1];
       ValueIdToValueInfoMap[ValueID] = std::make_tuple(
           TheIndex.getOrInsertValueInfo(RefGUID), RefGUID, RefGUID);
       break;

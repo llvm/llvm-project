@@ -9,9 +9,9 @@
 
 export namespace std {
 #ifndef _LIBCPP_HAS_NO_LOCALIZATION
-  using std::lconv;
+  using std::lconv _LIBCPP_USING_IF_EXISTS;
 
-  using std::localeconv;
-  using std::setlocale;
+  using std::localeconv _LIBCPP_USING_IF_EXISTS;
+  using std::setlocale _LIBCPP_USING_IF_EXISTS;
 #endif // _LIBCPP_HAS_NO_LOCALIZATION
 } // namespace std

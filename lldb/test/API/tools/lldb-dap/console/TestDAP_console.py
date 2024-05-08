@@ -4,17 +4,15 @@ Test lldb-dap setBreakpoints request
 
 import dap_server
 import lldbdap_testcase
-import psutil
-from collections import deque
 from lldbsuite.test import lldbutil
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 
 
-def get_subprocess(process_name):
-    queue = deque([psutil.Process(os.getpid())])
+def get_subprocess(root_process, process_name):
+    queue = [root_process]
     while queue:
-        process = queue.popleft()
+        process = queue.pop()
         if process.name() == process_name:
             return process
         queue.extend(process.children())
@@ -131,7 +129,17 @@ class TestDAP_console(lldbdap_testcase.DAPTestCaseBase):
         process_name = (
             "debugserver" if platform.system() in ["Darwin"] else "lldb-server"
         )
-        process = get_subprocess(process_name)
+
+        try:
+            import psutil
+        except ImportError:
+            print(
+                "psutil not installed, please install using 'pip install psutil'. "
+                "Skipping test_exit_status_message_sigterm test.",
+                file=sys.stderr,
+            )
+            return
+        process = get_subprocess(psutil.Process(os.getpid()), process_name)
         process.terminate()
         process.wait()
 

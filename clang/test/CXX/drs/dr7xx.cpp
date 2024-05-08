@@ -28,10 +28,8 @@ namespace cwg712 { // cwg712: partial
         use(a);
         use((a));
         use(cond ? a : a);
-        // FIXME: should only warn once
         use((cond, a));
         // expected-warning@-1 {{left operand of comma operator has no effect}}
-        // expected-warning@-2 {{left operand of comma operator has no effect}}
 
         (void)a;
         // expected-error@-1 {{reference to local variable 'a' declared in enclosing function 'cwg712::f'}} FIXME
