@@ -9739,6 +9739,9 @@ public:
                      const PartialDiagnostic &CandidateDiag,
                      bool Complain = true, QualType TargetType = QualType());
 
+  FunctionDecl *getMoreConstrainedFunction(FunctionDecl *FD1,
+                                           FunctionDecl *FD2);
+
   ///@}
 
   //
