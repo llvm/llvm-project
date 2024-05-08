@@ -1,4 +1,4 @@
-# RUN: llvm-mc -no-type-check -show-encoding -triple=wasm32-unknown-unknown -mattr=+simd128,+relaxed-simd < %s | FileCheck %s
+# RUN: llvm-mc -no-type-check -show-encoding -triple=wasm32-unknown-unknown -mattr=+simd128,+relaxed-simd,+half-precision < %s | FileCheck %s
 
 main:
     .functype main () -> ()
@@ -838,5 +838,8 @@ main:
 
     # CHECK: i32x4.relaxed_dot_i8x16_i7x16_add_s # encoding: [0xfd,0x93,0x02]
     i32x4.relaxed_dot_i8x16_i7x16_add_s
+
+    # CHECK: f32.load_f16 48 # encoding: [0xfc,0x30,0x01,0x30]
+    f32.load_f16 48
 
     end_function

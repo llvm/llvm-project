@@ -843,7 +843,7 @@ define <2 x i6> @not_or_or_not_2i6(<2 x i6> %a0, <2 x i6> %b, <2 x i6> %c) {
 ;
   %a = sdiv <2 x i6> <i6 3, i6 3>, %a0 ; thwart complexity-based canonicalization
   %not1 = xor <2 x i6> %b, <i6 -1, i6 -1>
-  %not2 = xor <2 x i6> %c, <i6 -1, i6 undef>
+  %not2 = xor <2 x i6> %c, <i6 -1, i6 poison>
   %or1 = or <2 x i6> %a, %not1
   %or2 = or <2 x i6> %or1, %not2
   ret <2 x i6> %or2
@@ -4018,7 +4018,7 @@ define <2 x i4> @and_orn_xor_commute1(<2 x i4> %a, <2 x i4> %b) {
 ; CHECK-NEXT:    ret <2 x i4> [[R]]
 ;
   %xor = xor <2 x i4> %a, %b
-  %nota = xor <2 x i4> %a, <i4 -1, i4 undef>
+  %nota = xor <2 x i4> %a, <i4 -1, i4 poison>
   %or = or <2 x i4> %nota, %b
   %r = and <2 x i4> %xor, %or
   ret <2 x i4> %r

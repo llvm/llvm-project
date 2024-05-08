@@ -55,10 +55,9 @@ body: |
     ; CHECK-LABEL: name: v32s8_smin
     ; CHECK: liveins: $x0, $q0, $q1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(s8) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<16 x s8>) = G_BUILD_VECTOR [[DEF]](s8), [[DEF]](s8), [[DEF]](s8), [[DEF]](s8), [[DEF]](s8), [[DEF]](s8), [[DEF]](s8), [[DEF]](s8), [[DEF]](s8), [[DEF]](s8), [[DEF]](s8), [[DEF]](s8), [[DEF]](s8), [[DEF]](s8), [[DEF]](s8), [[DEF]](s8)
-    ; CHECK-NEXT: [[SMIN:%[0-9]+]]:_(<16 x s8>) = G_SMIN [[BUILD_VECTOR]], [[BUILD_VECTOR]]
-    ; CHECK-NEXT: [[SMIN1:%[0-9]+]]:_(<16 x s8>) = G_SMIN [[BUILD_VECTOR]], [[BUILD_VECTOR]]
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(<16 x s8>) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[SMIN:%[0-9]+]]:_(<16 x s8>) = G_SMIN [[DEF]], [[DEF]]
+    ; CHECK-NEXT: [[SMIN1:%[0-9]+]]:_(<16 x s8>) = G_SMIN [[DEF]], [[DEF]]
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
     ; CHECK-NEXT: G_STORE [[SMIN]](<16 x s8>), [[COPY]](p0) :: (store (<16 x s8>), align 32)
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
@@ -125,10 +124,9 @@ body: |
     ; CHECK-LABEL: name: v16s16_smin
     ; CHECK: liveins: $x0, $q0, $q1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s16>) = G_BUILD_VECTOR [[DEF]](s16), [[DEF]](s16), [[DEF]](s16), [[DEF]](s16), [[DEF]](s16), [[DEF]](s16), [[DEF]](s16), [[DEF]](s16)
-    ; CHECK-NEXT: [[SMIN:%[0-9]+]]:_(<8 x s16>) = G_SMIN [[BUILD_VECTOR]], [[BUILD_VECTOR]]
-    ; CHECK-NEXT: [[SMIN1:%[0-9]+]]:_(<8 x s16>) = G_SMIN [[BUILD_VECTOR]], [[BUILD_VECTOR]]
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(<8 x s16>) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[SMIN:%[0-9]+]]:_(<8 x s16>) = G_SMIN [[DEF]], [[DEF]]
+    ; CHECK-NEXT: [[SMIN1:%[0-9]+]]:_(<8 x s16>) = G_SMIN [[DEF]], [[DEF]]
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
     ; CHECK-NEXT: G_STORE [[SMIN]](<8 x s16>), [[COPY]](p0) :: (store (<8 x s16>), align 32)
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
@@ -195,10 +193,9 @@ body: |
     ; CHECK-LABEL: name: v8s32_smin
     ; CHECK: liveins: $x0, $q0, $q1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[DEF]](s32), [[DEF]](s32), [[DEF]](s32), [[DEF]](s32)
-    ; CHECK-NEXT: [[SMIN:%[0-9]+]]:_(<4 x s32>) = G_SMIN [[BUILD_VECTOR]], [[BUILD_VECTOR]]
-    ; CHECK-NEXT: [[SMIN1:%[0-9]+]]:_(<4 x s32>) = G_SMIN [[BUILD_VECTOR]], [[BUILD_VECTOR]]
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(<4 x s32>) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[SMIN:%[0-9]+]]:_(<4 x s32>) = G_SMIN [[DEF]], [[DEF]]
+    ; CHECK-NEXT: [[SMIN1:%[0-9]+]]:_(<4 x s32>) = G_SMIN [[DEF]], [[DEF]]
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
     ; CHECK-NEXT: G_STORE [[SMIN]](<4 x s32>), [[COPY]](p0) :: (store (<4 x s32>), align 32)
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
@@ -331,10 +328,9 @@ body: |
     ; CHECK-LABEL: name: v32s8_umin
     ; CHECK: liveins: $x0, $q0, $q1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(s8) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<16 x s8>) = G_BUILD_VECTOR [[DEF]](s8), [[DEF]](s8), [[DEF]](s8), [[DEF]](s8), [[DEF]](s8), [[DEF]](s8), [[DEF]](s8), [[DEF]](s8), [[DEF]](s8), [[DEF]](s8), [[DEF]](s8), [[DEF]](s8), [[DEF]](s8), [[DEF]](s8), [[DEF]](s8), [[DEF]](s8)
-    ; CHECK-NEXT: [[UMIN:%[0-9]+]]:_(<16 x s8>) = G_UMIN [[BUILD_VECTOR]], [[BUILD_VECTOR]]
-    ; CHECK-NEXT: [[UMIN1:%[0-9]+]]:_(<16 x s8>) = G_UMIN [[BUILD_VECTOR]], [[BUILD_VECTOR]]
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(<16 x s8>) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[UMIN:%[0-9]+]]:_(<16 x s8>) = G_UMIN [[DEF]], [[DEF]]
+    ; CHECK-NEXT: [[UMIN1:%[0-9]+]]:_(<16 x s8>) = G_UMIN [[DEF]], [[DEF]]
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
     ; CHECK-NEXT: G_STORE [[UMIN]](<16 x s8>), [[COPY]](p0) :: (store (<16 x s8>), align 32)
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
@@ -401,10 +397,9 @@ body: |
     ; CHECK-LABEL: name: v16s16_umin
     ; CHECK: liveins: $x0, $q0, $q1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s16>) = G_BUILD_VECTOR [[DEF]](s16), [[DEF]](s16), [[DEF]](s16), [[DEF]](s16), [[DEF]](s16), [[DEF]](s16), [[DEF]](s16), [[DEF]](s16)
-    ; CHECK-NEXT: [[UMIN:%[0-9]+]]:_(<8 x s16>) = G_UMIN [[BUILD_VECTOR]], [[BUILD_VECTOR]]
-    ; CHECK-NEXT: [[UMIN1:%[0-9]+]]:_(<8 x s16>) = G_UMIN [[BUILD_VECTOR]], [[BUILD_VECTOR]]
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(<8 x s16>) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[UMIN:%[0-9]+]]:_(<8 x s16>) = G_UMIN [[DEF]], [[DEF]]
+    ; CHECK-NEXT: [[UMIN1:%[0-9]+]]:_(<8 x s16>) = G_UMIN [[DEF]], [[DEF]]
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
     ; CHECK-NEXT: G_STORE [[UMIN]](<8 x s16>), [[COPY]](p0) :: (store (<8 x s16>), align 32)
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
@@ -471,10 +466,9 @@ body: |
     ; CHECK-LABEL: name: v8s32_umin
     ; CHECK: liveins: $x0, $q0, $q1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[DEF]](s32), [[DEF]](s32), [[DEF]](s32), [[DEF]](s32)
-    ; CHECK-NEXT: [[UMIN:%[0-9]+]]:_(<4 x s32>) = G_UMIN [[BUILD_VECTOR]], [[BUILD_VECTOR]]
-    ; CHECK-NEXT: [[UMIN1:%[0-9]+]]:_(<4 x s32>) = G_UMIN [[BUILD_VECTOR]], [[BUILD_VECTOR]]
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(<4 x s32>) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[UMIN:%[0-9]+]]:_(<4 x s32>) = G_UMIN [[DEF]], [[DEF]]
+    ; CHECK-NEXT: [[UMIN1:%[0-9]+]]:_(<4 x s32>) = G_UMIN [[DEF]], [[DEF]]
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
     ; CHECK-NEXT: G_STORE [[UMIN]](<4 x s32>), [[COPY]](p0) :: (store (<4 x s32>), align 32)
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
@@ -629,10 +623,9 @@ body: |
     ; CHECK-LABEL: name: v32s8_smax
     ; CHECK: liveins: $x0, $q0, $q1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(s8) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<16 x s8>) = G_BUILD_VECTOR [[DEF]](s8), [[DEF]](s8), [[DEF]](s8), [[DEF]](s8), [[DEF]](s8), [[DEF]](s8), [[DEF]](s8), [[DEF]](s8), [[DEF]](s8), [[DEF]](s8), [[DEF]](s8), [[DEF]](s8), [[DEF]](s8), [[DEF]](s8), [[DEF]](s8), [[DEF]](s8)
-    ; CHECK-NEXT: [[SMAX:%[0-9]+]]:_(<16 x s8>) = G_SMAX [[BUILD_VECTOR]], [[BUILD_VECTOR]]
-    ; CHECK-NEXT: [[SMAX1:%[0-9]+]]:_(<16 x s8>) = G_SMAX [[BUILD_VECTOR]], [[BUILD_VECTOR]]
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(<16 x s8>) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[SMAX:%[0-9]+]]:_(<16 x s8>) = G_SMAX [[DEF]], [[DEF]]
+    ; CHECK-NEXT: [[SMAX1:%[0-9]+]]:_(<16 x s8>) = G_SMAX [[DEF]], [[DEF]]
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
     ; CHECK-NEXT: G_STORE [[SMAX]](<16 x s8>), [[COPY]](p0) :: (store (<16 x s8>), align 32)
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
@@ -677,10 +670,9 @@ body: |
     ; CHECK-LABEL: name: v16s16_smax
     ; CHECK: liveins: $x0, $q0, $q1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s16>) = G_BUILD_VECTOR [[DEF]](s16), [[DEF]](s16), [[DEF]](s16), [[DEF]](s16), [[DEF]](s16), [[DEF]](s16), [[DEF]](s16), [[DEF]](s16)
-    ; CHECK-NEXT: [[SMAX:%[0-9]+]]:_(<8 x s16>) = G_SMAX [[BUILD_VECTOR]], [[BUILD_VECTOR]]
-    ; CHECK-NEXT: [[SMAX1:%[0-9]+]]:_(<8 x s16>) = G_SMAX [[BUILD_VECTOR]], [[BUILD_VECTOR]]
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(<8 x s16>) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[SMAX:%[0-9]+]]:_(<8 x s16>) = G_SMAX [[DEF]], [[DEF]]
+    ; CHECK-NEXT: [[SMAX1:%[0-9]+]]:_(<8 x s16>) = G_SMAX [[DEF]], [[DEF]]
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
     ; CHECK-NEXT: G_STORE [[SMAX]](<8 x s16>), [[COPY]](p0) :: (store (<8 x s16>), align 32)
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
@@ -747,10 +739,9 @@ body: |
     ; CHECK-LABEL: name: v8s32_smax
     ; CHECK: liveins: $x0, $q0, $q1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[DEF]](s32), [[DEF]](s32), [[DEF]](s32), [[DEF]](s32)
-    ; CHECK-NEXT: [[SMAX:%[0-9]+]]:_(<4 x s32>) = G_SMAX [[BUILD_VECTOR]], [[BUILD_VECTOR]]
-    ; CHECK-NEXT: [[SMAX1:%[0-9]+]]:_(<4 x s32>) = G_SMAX [[BUILD_VECTOR]], [[BUILD_VECTOR]]
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(<4 x s32>) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[SMAX:%[0-9]+]]:_(<4 x s32>) = G_SMAX [[DEF]], [[DEF]]
+    ; CHECK-NEXT: [[SMAX1:%[0-9]+]]:_(<4 x s32>) = G_SMAX [[DEF]], [[DEF]]
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
     ; CHECK-NEXT: G_STORE [[SMAX]](<4 x s32>), [[COPY]](p0) :: (store (<4 x s32>), align 32)
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
@@ -883,10 +874,9 @@ body: |
     ; CHECK-LABEL: name: v32s8_umax
     ; CHECK: liveins: $x0, $q0, $q1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(s8) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<16 x s8>) = G_BUILD_VECTOR [[DEF]](s8), [[DEF]](s8), [[DEF]](s8), [[DEF]](s8), [[DEF]](s8), [[DEF]](s8), [[DEF]](s8), [[DEF]](s8), [[DEF]](s8), [[DEF]](s8), [[DEF]](s8), [[DEF]](s8), [[DEF]](s8), [[DEF]](s8), [[DEF]](s8), [[DEF]](s8)
-    ; CHECK-NEXT: [[UMAX:%[0-9]+]]:_(<16 x s8>) = G_UMAX [[BUILD_VECTOR]], [[BUILD_VECTOR]]
-    ; CHECK-NEXT: [[UMAX1:%[0-9]+]]:_(<16 x s8>) = G_UMAX [[BUILD_VECTOR]], [[BUILD_VECTOR]]
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(<16 x s8>) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[UMAX:%[0-9]+]]:_(<16 x s8>) = G_UMAX [[DEF]], [[DEF]]
+    ; CHECK-NEXT: [[UMAX1:%[0-9]+]]:_(<16 x s8>) = G_UMAX [[DEF]], [[DEF]]
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
     ; CHECK-NEXT: G_STORE [[UMAX]](<16 x s8>), [[COPY]](p0) :: (store (<16 x s8>), align 32)
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
@@ -953,10 +943,9 @@ body: |
     ; CHECK-LABEL: name: v16s16_umax
     ; CHECK: liveins: $x0, $q0, $q1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s16>) = G_BUILD_VECTOR [[DEF]](s16), [[DEF]](s16), [[DEF]](s16), [[DEF]](s16), [[DEF]](s16), [[DEF]](s16), [[DEF]](s16), [[DEF]](s16)
-    ; CHECK-NEXT: [[UMAX:%[0-9]+]]:_(<8 x s16>) = G_UMAX [[BUILD_VECTOR]], [[BUILD_VECTOR]]
-    ; CHECK-NEXT: [[UMAX1:%[0-9]+]]:_(<8 x s16>) = G_UMAX [[BUILD_VECTOR]], [[BUILD_VECTOR]]
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(<8 x s16>) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[UMAX:%[0-9]+]]:_(<8 x s16>) = G_UMAX [[DEF]], [[DEF]]
+    ; CHECK-NEXT: [[UMAX1:%[0-9]+]]:_(<8 x s16>) = G_UMAX [[DEF]], [[DEF]]
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
     ; CHECK-NEXT: G_STORE [[UMAX]](<8 x s16>), [[COPY]](p0) :: (store (<8 x s16>), align 32)
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
@@ -1023,10 +1012,9 @@ body: |
     ; CHECK-LABEL: name: v8s32_umax
     ; CHECK: liveins: $x0, $q0, $q1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[DEF]](s32), [[DEF]](s32), [[DEF]](s32), [[DEF]](s32)
-    ; CHECK-NEXT: [[UMAX:%[0-9]+]]:_(<4 x s32>) = G_UMAX [[BUILD_VECTOR]], [[BUILD_VECTOR]]
-    ; CHECK-NEXT: [[UMAX1:%[0-9]+]]:_(<4 x s32>) = G_UMAX [[BUILD_VECTOR]], [[BUILD_VECTOR]]
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(<4 x s32>) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[UMAX:%[0-9]+]]:_(<4 x s32>) = G_UMAX [[DEF]], [[DEF]]
+    ; CHECK-NEXT: [[UMAX1:%[0-9]+]]:_(<4 x s32>) = G_UMAX [[DEF]], [[DEF]]
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
     ; CHECK-NEXT: G_STORE [[UMAX]](<4 x s32>), [[COPY]](p0) :: (store (<4 x s32>), align 32)
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 16

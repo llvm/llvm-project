@@ -36,7 +36,7 @@ func.func @test_multiple_return() -> (i32, i32) {
 
 // CHECK: test_float
 func.func @test_float() {
-  // CHECK: foo::constant({(float)0.0e+00, (float)1.000000000e+00})
+  // CHECK: foo::constant({0.0e+00f, 1.000000000e+00f})
   %0 = emitc.call_opaque "foo::constant"() {args = [dense<[0.000000e+00, 1.000000e+00]> : tensor<2xf32>]} : () -> f32
   return
 }

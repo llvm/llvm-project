@@ -10,6 +10,7 @@ func.func @emitc_constant() {
   %c5 = "emitc.constant"(){value = #emitc.opaque<"CHAR_MIN">} : () -> !emitc.opaque<"char">
   %c6 = "emitc.constant"(){value = 2 : index} : () -> index
   %c7 = "emitc.constant"(){value = 2.0 : f32} : () -> f32
+  %f64 = "emitc.constant"(){value = 4.0 : f64} : () -> f64
   %c8 = "emitc.constant"(){value = dense<0> : tensor<i32>} : () -> tensor<i32>
   %c9 = "emitc.constant"(){value = dense<[0, 1]> : tensor<2xindex>} : () -> tensor<2xindex>
   %c10 = "emitc.constant"(){value = dense<[[0.0, 1.0], [2.0, 3.0]]> : tensor<2x2xf32>} : () -> tensor<2x2xf32>
@@ -23,10 +24,11 @@ func.func @emitc_constant() {
 // CPP-DEFAULT-NEXT: uint8_t [[V4:[^ ]*]] = 255;
 // CPP-DEFAULT-NEXT: char [[V5:[^ ]*]] = CHAR_MIN;
 // CPP-DEFAULT-NEXT: size_t [[V6:[^ ]*]] = 2;
-// CPP-DEFAULT-NEXT: float [[V7:[^ ]*]] = (float)2.000000000e+00;
+// CPP-DEFAULT-NEXT: float [[V7:[^ ]*]] = 2.000000000e+00f;
+// CPP-DEFAULT-NEXT: double [[F64:[^ ]*]] = 4.00000000000000000e+00;
 // CPP-DEFAULT-NEXT: Tensor<int32_t> [[V8:[^ ]*]] = {0};
 // CPP-DEFAULT-NEXT: Tensor<size_t, 2> [[V9:[^ ]*]] = {0, 1};
-// CPP-DEFAULT-NEXT: Tensor<float, 2, 2> [[V10:[^ ]*]] = {(float)0.0e+00, (float)1.000000000e+00, (float)2.000000000e+00, (float)3.000000000e+00};
+// CPP-DEFAULT-NEXT: Tensor<float, 2, 2> [[V10:[^ ]*]] = {0.0e+00f, 1.000000000e+00f, 2.000000000e+00f, 3.000000000e+00f};
 
 // CPP-DECLTOP: void emitc_constant() {
 // CPP-DECLTOP-NEXT: int32_t [[V0:[^ ]*]];
@@ -37,6 +39,7 @@ func.func @emitc_constant() {
 // CPP-DECLTOP-NEXT: char [[V5:[^ ]*]];
 // CPP-DECLTOP-NEXT: size_t [[V6:[^ ]*]];
 // CPP-DECLTOP-NEXT: float [[V7:[^ ]*]];
+// CPP-DECLTOP-NEXT: double [[F64:[^ ]*]];
 // CPP-DECLTOP-NEXT: Tensor<int32_t> [[V8:[^ ]*]];
 // CPP-DECLTOP-NEXT: Tensor<size_t, 2> [[V9:[^ ]*]];
 // CPP-DECLTOP-NEXT: Tensor<float, 2, 2> [[V10:[^ ]*]];
@@ -47,7 +50,8 @@ func.func @emitc_constant() {
 // CPP-DECLTOP-NEXT: [[V4]] = 255;
 // CPP-DECLTOP-NEXT: [[V5]] = CHAR_MIN;
 // CPP-DECLTOP-NEXT: [[V6]] = 2;
-// CPP-DECLTOP-NEXT: [[V7]] = (float)2.000000000e+00;
+// CPP-DECLTOP-NEXT: [[V7]] = 2.000000000e+00f;
+// CPP-DECLTOP-NEXT: [[F64]] = 4.00000000000000000e+00;
 // CPP-DECLTOP-NEXT: [[V8]] = {0};
 // CPP-DECLTOP-NEXT: [[V9]] = {0, 1};
-// CPP-DECLTOP-NEXT: [[V10]] = {(float)0.0e+00, (float)1.000000000e+00, (float)2.000000000e+00, (float)3.000000000e+00};
+// CPP-DECLTOP-NEXT: [[V10]] = {0.0e+00f, 1.000000000e+00f, 2.000000000e+00f, 3.000000000e+00f};

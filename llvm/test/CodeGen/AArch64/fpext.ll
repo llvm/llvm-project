@@ -168,8 +168,6 @@ define <2 x float> @fpext_v2f16_v2f32(<2 x half> %a) {
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-GI-NEXT:    mov h1, v0.h[1]
 ; CHECK-GI-NEXT:    mov v0.h[1], v1.h[0]
-; CHECK-GI-NEXT:    mov v0.h[2], v0.h[0]
-; CHECK-GI-NEXT:    mov v0.h[3], v0.h[0]
 ; CHECK-GI-NEXT:    fcvtl v0.4s, v0.4h
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret

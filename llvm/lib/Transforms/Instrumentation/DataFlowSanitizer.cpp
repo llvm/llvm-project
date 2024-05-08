@@ -357,7 +357,7 @@ public:
 /// useful for updating calls of the old function to the new type.
 struct TransformedFunction {
   TransformedFunction(FunctionType *OriginalType, FunctionType *TransformedType,
-                      std::vector<unsigned> ArgumentIndexMapping)
+                      const std::vector<unsigned> &ArgumentIndexMapping)
       : OriginalType(OriginalType), TransformedType(TransformedType),
         ArgumentIndexMapping(ArgumentIndexMapping) {}
 
@@ -1229,8 +1229,8 @@ bool DataFlowSanitizer::initializeModule(Module &M) {
       FunctionType::get(Type::getVoidTy(*Ctx), DFSanMemTransferCallbackArgs,
                         /*isVarArg=*/false);
 
-  ColdCallWeights = MDBuilder(*Ctx).createBranchWeights(1, 1000);
-  OriginStoreWeights = MDBuilder(*Ctx).createBranchWeights(1, 1000);
+  ColdCallWeights = MDBuilder(*Ctx).createUnlikelyBranchWeights();
+  OriginStoreWeights = MDBuilder(*Ctx).createUnlikelyBranchWeights();
   return true;
 }
 
@@ -3201,8 +3201,7 @@ Value *DFSanVisitor::makeAddAcquireOrderingTable(IRBuilder<> &IRB) {
   OrderingTable[(int)AtomicOrderingCABI::seq_cst] =
       (int)AtomicOrderingCABI::seq_cst;
 
-  return ConstantDataVector::get(IRB.getContext(),
-                                 ArrayRef(OrderingTable, NumOrderings));
+  return ConstantDataVector::get(IRB.getContext(), OrderingTable);
 }
 
 void DFSanVisitor::visitLibAtomicLoad(CallBase &CB) {
@@ -3245,8 +3244,7 @@ Value *DFSanVisitor::makeAddReleaseOrderingTable(IRBuilder<> &IRB) {
   OrderingTable[(int)AtomicOrderingCABI::seq_cst] =
       (int)AtomicOrderingCABI::seq_cst;
 
-  return ConstantDataVector::get(IRB.getContext(),
-                                 ArrayRef(OrderingTable, NumOrderings));
+  return ConstantDataVector::get(IRB.getContext(), OrderingTable);
 }
 
 void DFSanVisitor::visitLibAtomicStore(CallBase &CB) {

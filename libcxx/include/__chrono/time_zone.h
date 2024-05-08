@@ -14,8 +14,11 @@
 
 #include <version>
 // Enable the contents of the header only when libc++ was built with experimental features enabled.
-#if !defined(_LIBCPP_HAS_NO_INCOMPLETE_TZDB)
+#if !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_TZDB)
 
+#  include <__chrono/duration.h>
+#  include <__chrono/sys_info.h>
+#  include <__chrono/system_clock.h>
 #  include <__compare/strong_order.h>
 #  include <__config>
 #  include <__memory/unique_ptr.h>
@@ -53,21 +56,29 @@ public:
   _LIBCPP_HIDE_FROM_ABI time_zone(time_zone&&)            = default;
   _LIBCPP_HIDE_FROM_ABI time_zone& operator=(time_zone&&) = default;
 
-  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI string_view name() const noexcept { return __name(); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI string_view name() const noexcept { return __name(); }
+
+  template <class _Duration>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI sys_info get_info(const sys_time<_Duration>& __time) const {
+    return __get_info(chrono::time_point_cast<seconds>(__time));
+  }
 
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI const __impl& __implementation() const noexcept { return *__impl_; }
 
 private:
   [[nodiscard]] _LIBCPP_EXPORTED_FROM_ABI string_view __name() const noexcept;
+
+  [[nodiscard]] _LIBCPP_AVAILABILITY_TZDB _LIBCPP_EXPORTED_FROM_ABI sys_info __get_info(sys_seconds __time) const;
+
   unique_ptr<__impl> __impl_;
 };
 
-_LIBCPP_NODISCARD_EXT _LIBCPP_AVAILABILITY_TZDB _LIBCPP_HIDE_FROM_ABI inline bool
+[[nodiscard]] _LIBCPP_AVAILABILITY_TZDB _LIBCPP_HIDE_FROM_ABI inline bool
 operator==(const time_zone& __x, const time_zone& __y) noexcept {
   return __x.name() == __y.name();
 }
 
-_LIBCPP_NODISCARD_EXT _LIBCPP_AVAILABILITY_TZDB _LIBCPP_HIDE_FROM_ABI inline strong_ordering
+[[nodiscard]] _LIBCPP_AVAILABILITY_TZDB _LIBCPP_HIDE_FROM_ABI inline strong_ordering
 operator<=>(const time_zone& __x, const time_zone& __y) noexcept {
   return __x.name() <=> __y.name();
 }
@@ -81,6 +92,6 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // !defined(_LIBCPP_HAS_NO_INCOMPLETE_TZDB)
+#endif // !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_TZDB)
 
 #endif // _LIBCPP___CHRONO_TIME_ZONE_H

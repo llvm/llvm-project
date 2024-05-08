@@ -73,6 +73,7 @@
 #include "llvm/Transforms/Instrumentation/HWAddressSanitizer.h"
 #include "llvm/Transforms/Instrumentation/InstrProfiling.h"
 #include "llvm/Transforms/Instrumentation/KCFI.h"
+#include "llvm/Transforms/Instrumentation/LowerAllowCheckPass.h"
 #include "llvm/Transforms/Instrumentation/MemProfiler.h"
 #include "llvm/Transforms/Instrumentation/MemorySanitizer.h"
 #include "llvm/Transforms/Instrumentation/PGOInstrumentation.h"
@@ -101,14 +102,24 @@ extern cl::opt<bool> PrintPipelinePasses;
 // Experiment to move sanitizers earlier.
 static cl::opt<bool> ClSanitizeOnOptimizerEarlyEP(
     "sanitizer-early-opt-ep", cl::Optional,
-    cl::desc("Insert sanitizers on OptimizerEarlyEP."), cl::init(false));
+    cl::desc("Insert sanitizers on OptimizerEarlyEP."));
+
+// Experiment to mark cold functions as optsize/minsize/optnone.
+// TODO: remove once this is exposed as a proper driver flag.
+static cl::opt<PGOOptions::ColdFuncOpt> ClPGOColdFuncAttr(
+    "pgo-cold-func-opt", cl::init(PGOOptions::ColdFuncOpt::Default), cl::Hidden,
+    cl::desc(
+        "Function attribute to apply to cold functions as determined by PGO"),
+    cl::values(clEnumValN(PGOOptions::ColdFuncOpt::Default, "default",
+                          "Default (no attribute)"),
+               clEnumValN(PGOOptions::ColdFuncOpt::OptSize, "optsize",
+                          "Mark cold functions with optsize."),
+               clEnumValN(PGOOptions::ColdFuncOpt::MinSize, "minsize",
+                          "Mark cold functions with minsize."),
+               clEnumValN(PGOOptions::ColdFuncOpt::OptNone, "optnone",
+                          "Mark cold functions with optnone.")));
 
 extern cl::opt<InstrProfCorrelator::ProfCorrelatorKind> ProfileCorrelate;
-
-// Re-link builtin bitcodes after optimization
-cl::opt<bool> ClRelinkBuiltinBitcodePostop(
-    "relink-builtin-bitcode-postop", cl::Optional,
-    cl::desc("Re-link builtin bitcodes after optimization."), cl::init(false));
 } // namespace llvm
 
 namespace {
@@ -407,6 +418,7 @@ static bool initTargetOptions(DiagnosticsEngine &Diags,
   Options.UniqueSectionNames = CodeGenOpts.UniqueSectionNames;
   Options.UniqueBasicBlockSectionNames =
       CodeGenOpts.UniqueBasicBlockSectionNames;
+  Options.SeparateNamedSections = CodeGenOpts.SeparateNamedSections;
   Options.TLSSize = CodeGenOpts.TLSSize;
   Options.EnableTLSDESC = CodeGenOpts.EnableTLSDESC;
   Options.EmulatedTLS = CodeGenOpts.EmulatedTLS;
@@ -744,6 +756,16 @@ static void addSanitizers(const Triple &TargetTriple,
     // LastEP does not need GlobalsAA.
     PB.registerOptimizerLastEPCallback(SanitizersCallback);
   }
+
+  if (LowerAllowCheckPass::IsRequested()) {
+    // We can optimize after inliner, and PGO profile matching. The hook below
+    // is called at the end `buildFunctionSimplificationPipeline`, which called
+    // from `buildInlinerPipeline`, which called after profile matching.
+    PB.registerScalarOptimizerLateEPCallback(
+        [](FunctionPassManager &FPM, OptimizationLevel Level) {
+          FPM.addPass(LowerAllowCheckPass());
+        });
+  }
 }
 
 void EmitAssemblyHelper::RunOptimizationPipeline(
@@ -757,42 +779,41 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
         CodeGenOpts.InstrProfileOutput.empty() ? getDefaultProfileGenName()
                                                : CodeGenOpts.InstrProfileOutput,
         "", "", CodeGenOpts.MemoryProfileUsePath, nullptr, PGOOptions::IRInstr,
-        PGOOptions::NoCSAction, PGOOptions::ColdFuncOpt::Default,
+        PGOOptions::NoCSAction, ClPGOColdFuncAttr,
         CodeGenOpts.DebugInfoForProfiling,
         /*PseudoProbeForProfiling=*/false, CodeGenOpts.AtomicProfileUpdate);
   else if (CodeGenOpts.hasProfileIRUse()) {
     // -fprofile-use.
     auto CSAction = CodeGenOpts.hasProfileCSIRUse() ? PGOOptions::CSIRUse
                                                     : PGOOptions::NoCSAction;
-    PGOOpt = PGOOptions(
-        CodeGenOpts.ProfileInstrumentUsePath, "",
-        CodeGenOpts.ProfileRemappingFile, CodeGenOpts.MemoryProfileUsePath, VFS,
-        PGOOptions::IRUse, CSAction, PGOOptions::ColdFuncOpt::Default,
-        CodeGenOpts.DebugInfoForProfiling);
+    PGOOpt = PGOOptions(CodeGenOpts.ProfileInstrumentUsePath, "",
+                        CodeGenOpts.ProfileRemappingFile,
+                        CodeGenOpts.MemoryProfileUsePath, VFS,
+                        PGOOptions::IRUse, CSAction, ClPGOColdFuncAttr,
+                        CodeGenOpts.DebugInfoForProfiling);
   } else if (!CodeGenOpts.SampleProfileFile.empty())
     // -fprofile-sample-use
     PGOOpt = PGOOptions(
         CodeGenOpts.SampleProfileFile, "", CodeGenOpts.ProfileRemappingFile,
         CodeGenOpts.MemoryProfileUsePath, VFS, PGOOptions::SampleUse,
-        PGOOptions::NoCSAction, PGOOptions::ColdFuncOpt::Default,
+        PGOOptions::NoCSAction, ClPGOColdFuncAttr,
         CodeGenOpts.DebugInfoForProfiling, CodeGenOpts.PseudoProbeForProfiling);
   else if (!CodeGenOpts.MemoryProfileUsePath.empty())
     // -fmemory-profile-use (without any of the above options)
     PGOOpt = PGOOptions("", "", "", CodeGenOpts.MemoryProfileUsePath, VFS,
                         PGOOptions::NoAction, PGOOptions::NoCSAction,
-                        PGOOptions::ColdFuncOpt::Default,
-                        CodeGenOpts.DebugInfoForProfiling);
+                        ClPGOColdFuncAttr, CodeGenOpts.DebugInfoForProfiling);
   else if (CodeGenOpts.PseudoProbeForProfiling)
     // -fpseudo-probe-for-profiling
-    PGOOpt = PGOOptions("", "", "", /*MemoryProfile=*/"", nullptr,
-                        PGOOptions::NoAction, PGOOptions::NoCSAction,
-                        PGOOptions::ColdFuncOpt::Default,
-                        CodeGenOpts.DebugInfoForProfiling, true);
+    PGOOpt =
+        PGOOptions("", "", "", /*MemoryProfile=*/"", nullptr,
+                   PGOOptions::NoAction, PGOOptions::NoCSAction,
+                   ClPGOColdFuncAttr, CodeGenOpts.DebugInfoForProfiling, true);
   else if (CodeGenOpts.DebugInfoForProfiling)
     // -fdebug-info-for-profiling
     PGOOpt = PGOOptions("", "", "", /*MemoryProfile=*/"", nullptr,
                         PGOOptions::NoAction, PGOOptions::NoCSAction,
-                        PGOOptions::ColdFuncOpt::Default, true);
+                        ClPGOColdFuncAttr, true);
 
   // Check to see if we want to generate a CS profile.
   if (CodeGenOpts.hasProfileCSIRInstr()) {
@@ -809,14 +830,13 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
                                      : CodeGenOpts.InstrProfileOutput;
       PGOOpt->CSAction = PGOOptions::CSIRInstr;
     } else
-      PGOOpt =
-          PGOOptions("",
-                     CodeGenOpts.InstrProfileOutput.empty()
-                         ? getDefaultProfileGenName()
-                         : CodeGenOpts.InstrProfileOutput,
-                     "", /*MemoryProfile=*/"", nullptr, PGOOptions::NoAction,
-                     PGOOptions::CSIRInstr, PGOOptions::ColdFuncOpt::Default,
-                     CodeGenOpts.DebugInfoForProfiling);
+      PGOOpt = PGOOptions("",
+                          CodeGenOpts.InstrProfileOutput.empty()
+                              ? getDefaultProfileGenName()
+                              : CodeGenOpts.InstrProfileOutput,
+                          "", /*MemoryProfile=*/"", nullptr,
+                          PGOOptions::NoAction, PGOOptions::CSIRInstr,
+                          ClPGOColdFuncAttr, CodeGenOpts.DebugInfoForProfiling);
   }
   if (TM)
     TM->setPGOOption(PGOOpt);
@@ -1030,11 +1050,8 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
     }
   }
 
-  // Re-link against any bitcodes supplied via the -mlink-builtin-bitcode option
-  // Some optimizations may generate new function calls that would not have
-  // been linked pre-optimization (i.e. fused sincos calls generated by
-  // AMDGPULibCalls::fold_sincos.)
-  if (ClRelinkBuiltinBitcodePostop)
+  // Link against bitcodes supplied via the -mlink-builtin-bitcode option
+  if (CodeGenOpts.LinkBitcodePostopt)
     MPM.addPass(LinkInModulesPass(BC, false));
 
   // Add a verifier pass if requested. We don't have to do this if the action

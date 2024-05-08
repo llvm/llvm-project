@@ -68,6 +68,7 @@ add_unittest_framework_library(
     Test.h
     TestLogger.h
   DEPENDS
+    libc.src.__support.big_int
     libc.src.__support.c_string
     libc.src.__support.CPP.string
     libc.src.__support.CPP.string_view
@@ -75,7 +76,6 @@ add_unittest_framework_library(
     libc.src.__support.fixed_point.fx_rep
     libc.src.__support.macros.properties.types
     libc.src.__support.OSUtil.osutil
-    libc.src.__support.uint
     libc.src.__support.uint128
 )
 
@@ -103,21 +103,24 @@ add_header_library(
   HDRS
     StringUtils.h
   DEPENDS
+    libc.src.__support.big_int
     libc.src.__support.CPP.string
     libc.src.__support.CPP.type_traits
-    libc.src.__support.uint
 )
 
 add_unittest_framework_library(
   LibcFPTestHelpers
   SRCS
+    FEnvSafeTest.cpp
     RoundingModeUtils.cpp
   HDRS
+    FEnvSafeTest.h
     FPMatcher.h
     RoundingModeUtils.h
   DEPENDS
     LibcTest
     libc.test.UnitTest.string_utils
+    libc.src.__support.CPP.array
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.fpbits_str
     libc.src.__support.FPUtil.fenv_impl
@@ -134,6 +137,7 @@ add_unittest_framework_library(
     LibcTest
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.fenv_impl
+    libc.hdr.types.fenv_t
 )
 
 add_unittest_framework_library(

@@ -331,3 +331,25 @@ add_perf_binary(
   COMPILE_OPTIONS
     -fno-builtin
 )
+
+add_perf_binary(
+  fmodl_perf
+  SRCS
+    fmodl_perf.cpp
+  DEPENDS
+    .single_input_single_output_diff
+    libc.src.math.fmodl
+  COMPILE_OPTIONS
+    -fno-builtin
+)
+
+add_perf_binary(
+  fmodf128_perf
+  SRCS
+    fmodf128_perf.cpp
+  DEPENDS
+    .single_input_single_output_diff
+    libc.src.math.fmodf128
+  COMPILE_OPTIONS
+    -fno-builtin
+)

@@ -140,10 +140,6 @@ OPTIONS
  (in bytes) to the linked dSYM. The table is sorted by the output size listing
  the object files with the largest contribution first.
 
-.. option:: --symbol-map <bcsymbolmap>
-
- Update the existing dSYMs inplace using symbol map specified.
-
 .. option:: -s, --symtab
 
  Dumps the symbol table found in *executable* or object file(s) and exits.

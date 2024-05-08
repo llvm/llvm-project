@@ -189,7 +189,10 @@ OffloadBinary::create(MemoryBufferRef Buf) {
     return errorCodeToError(object_error::parse_failed);
 
   if (TheHeader->Size > Buf.getBufferSize() ||
-      TheHeader->EntryOffset > TheHeader->Size - sizeof(Entry) ||
+      TheHeader->Size < sizeof(Entry) || TheHeader->Size < sizeof(Header))
+    return errorCodeToError(object_error::unexpected_eof);
+
+  if (TheHeader->EntryOffset > TheHeader->Size - sizeof(Entry) ||
       TheHeader->EntrySize > TheHeader->Size - sizeof(Header))
     return errorCodeToError(object_error::unexpected_eof);
 
@@ -356,7 +359,7 @@ bool object::areTargetsCompatible(const OffloadFile::TargetID &LHS,
     return false;
 
   // If the architecture is "all" we assume it is always compatible.
-  if (LHS.second.equals("generic") || RHS.second.equals("generic"))
+  if (LHS.second == "generic" || RHS.second == "generic")
     return true;
 
   // Only The AMDGPU target requires additional checks.

@@ -9,46 +9,63 @@ CONTAINER_PART(OSG1)
 CONTAINER_PART(PSG1)
 
 #undef CONTAINER_PART
-#endif 
+#endif // CONTAINER_PART
 
 #ifdef SHADER_FEATURE_FLAG
 
-SHADER_FEATURE_FLAG(0, Doubles, "Double-precision floating point")
-SHADER_FEATURE_FLAG(1, ComputeShadersPlusRawAndStructuredBuffers, "Raw and Structured buffers")
-SHADER_FEATURE_FLAG(2, UAVsAtEveryStage, "UAVs at every shader stage")
-SHADER_FEATURE_FLAG(3, Max64UAVs, "64 UAV slots")
-SHADER_FEATURE_FLAG(4, MinimumPrecision, "Minimum-precision data types")
-SHADER_FEATURE_FLAG(5, DX11_1_DoubleExtensions, "Double-precision extensions for 11.1")
-SHADER_FEATURE_FLAG(6, DX11_1_ShaderExtensions, "Shader extensions for 11.1")
-SHADER_FEATURE_FLAG(7, LEVEL9ComparisonFiltering, "Comparison filtering for feature level 9")
-SHADER_FEATURE_FLAG(8, TiledResources, "Tiled resources")
-SHADER_FEATURE_FLAG(9, StencilRef, "PS Output Stencil Ref")
-SHADER_FEATURE_FLAG(10, InnerCoverage, "PS Inner Coverage")
-SHADER_FEATURE_FLAG(11, TypedUAVLoadAdditionalFormats, "Typed UAV Load Additional Formats")
-SHADER_FEATURE_FLAG(12, ROVs, "Raster Ordered UAVs")
-SHADER_FEATURE_FLAG(13, ViewportAndRTArrayIndexFromAnyShaderFeedingRasterizer, "SV_RenderTargetArrayIndex or SV_ViewportArrayIndex from any shader feeding rasterizer")
-SHADER_FEATURE_FLAG(14, WaveOps, "Wave level operations")
-SHADER_FEATURE_FLAG(15, Int64Ops, "64-Bit integer")
-SHADER_FEATURE_FLAG(16, ViewID, "View Instancing")
-SHADER_FEATURE_FLAG(17, Barycentrics, "Barycentrics")
-SHADER_FEATURE_FLAG(18, NativeLowPrecision, "Use native low precision")
-SHADER_FEATURE_FLAG(19, ShadingRate, "Shading Rate")
-SHADER_FEATURE_FLAG(20, Raytracing_Tier_1_1, "Raytracing tier 1.1 features")
-SHADER_FEATURE_FLAG(21, SamplerFeedback, "Sampler feedback")
-SHADER_FEATURE_FLAG(22, AtomicInt64OnTypedResource, "64-bit Atomics on Typed Resources")
-SHADER_FEATURE_FLAG(23, AtomicInt64OnGroupShared, "64-bit Atomics on Group Shared")
-SHADER_FEATURE_FLAG(24, DerivativesInMeshAndAmpShaders, "Derivatives in mesh and amplification shaders")
-SHADER_FEATURE_FLAG(25, ResourceDescriptorHeapIndexing, "Resource descriptor heap indexing")
-SHADER_FEATURE_FLAG(26, SamplerDescriptorHeapIndexing, "Sampler descriptor heap indexing")
-SHADER_FEATURE_FLAG(27, RESERVED, "<RESERVED>")
-SHADER_FEATURE_FLAG(28, AtomicInt64OnHeapResource, "64-bit Atomics on Heap Resources")
-SHADER_FEATURE_FLAG(29, AdvancedTextureOps, "Advanced Texture Ops")
-SHADER_FEATURE_FLAG(30, WriteableMSAATextures, "Writeable MSAA Textures")
+// SHADER_FEATURE_FLAG(bit offset for the shader info flag, bit offset for DXIL module flag, name, description.
 
-SHADER_FEATURE_FLAG(31, NextUnusedBit, "Next reserved shader flag bit (not a flag)")
+SHADER_FEATURE_FLAG(0,   2, Doubles, "Double-precision floating point")
+SHADER_FEATURE_FLAG(1,  17, ComputeShadersPlusRawAndStructuredBuffers, "Raw and Structured buffers")
+SHADER_FEATURE_FLAG(2,  16, UAVsAtEveryStage, "UAVs at every shader stage")
+SHADER_FEATURE_FLAG(3,  15, Max64UAVs, "64 UAV slots")
+SHADER_FEATURE_FLAG(4,  -1, MinimumPrecision, "Minimum-precision data types")
+SHADER_FEATURE_FLAG(5,   6, DX11_1_DoubleExtensions, "Double-precision extensions for 11.1")
+SHADER_FEATURE_FLAG(6,   7, DX11_1_ShaderExtensions, "Shader extensions for 11.1")
+SHADER_FEATURE_FLAG(7,  14, LEVEL9ComparisonFiltering, "Comparison filtering for feature level 9")
+SHADER_FEATURE_FLAG(8,  12, TiledResources, "Tiled resources")
+SHADER_FEATURE_FLAG(9,  11, StencilRef, "PS Output Stencil Ref")
+SHADER_FEATURE_FLAG(10, 10, InnerCoverage, "PS Inner Coverage")
+SHADER_FEATURE_FLAG(11, 13, TypedUAVLoadAdditionalFormats, "Typed UAV Load Additional Formats")
+SHADER_FEATURE_FLAG(12, 18, ROVs, "Raster Ordered UAVs")
+SHADER_FEATURE_FLAG(13,  9, ViewportAndRTArrayIndexFromAnyShaderFeedingRasterizer, "SV_RenderTargetArrayIndex or SV_ViewportArrayIndex from any shader feeding rasterizer")
+SHADER_FEATURE_FLAG(14, 19, WaveOps, "Wave level operations")
+SHADER_FEATURE_FLAG(15, 20, Int64Ops, "64-Bit integer")
+SHADER_FEATURE_FLAG(16, 21, ViewID, "View Instancing")
+SHADER_FEATURE_FLAG(17, 22, Barycentrics, "Barycentrics")
+SHADER_FEATURE_FLAG(18, -1, NativeLowPrecision, "Use native low precision")
+SHADER_FEATURE_FLAG(19, 24, ShadingRate, "Shading Rate")
+SHADER_FEATURE_FLAG(20, 25, Raytracing_Tier_1_1, "Raytracing tier 1.1 features")
+SHADER_FEATURE_FLAG(21, 26, SamplerFeedback, "Sampler feedback")
+SHADER_FEATURE_FLAG(22, 27, AtomicInt64OnTypedResource, "64-bit Atomics on Typed Resources")
+SHADER_FEATURE_FLAG(23, 28, AtomicInt64OnGroupShared, "64-bit Atomics on Group Shared")
+SHADER_FEATURE_FLAG(24, 29, DerivativesInMeshAndAmpShaders, "Derivatives in mesh and amplification shaders")
+SHADER_FEATURE_FLAG(25, 30, ResourceDescriptorHeapIndexing, "Resource descriptor heap indexing")
+SHADER_FEATURE_FLAG(26, 31, SamplerDescriptorHeapIndexing, "Sampler descriptor heap indexing")
+SHADER_FEATURE_FLAG(27, 63, RESERVED, "<RESERVED>")
+SHADER_FEATURE_FLAG(28, 32, AtomicInt64OnHeapResource, "64-bit Atomics on Heap Resources")
+SHADER_FEATURE_FLAG(29, 34, AdvancedTextureOps, "Advanced Texture Ops")
+SHADER_FEATURE_FLAG(30, 35, WriteableMSAATextures, "Writeable MSAA Textures")
+
+SHADER_FEATURE_FLAG(31, 36, NextUnusedBit, "Next reserved shader flag bit (not a flag)")
 
 #undef SHADER_FEATURE_FLAG
-#endif
+#endif // SHADER_FEATURE_FLAG
+
+#ifdef DXIL_MODULE_FLAG
+
+// Only save DXIL module flags which not map to feature flags here.
+DXIL_MODULE_FLAG( 0,  DisableOptimizations,   "D3D11_1_SB_GLOBAL_FLAG_SKIP_OPTIMIZATION")
+DXIL_MODULE_FLAG( 1,  DisableMathRefactoring, "D3D10_SB_GLOBAL_FLAG_REFACTORING_ALLOWED")
+DXIL_MODULE_FLAG( 3,  ForceEarlyDepthStencil, "D3D11_SB_GLOBAL_FLAG_FORCE_EARLY_DEPTH_STENCIL")
+DXIL_MODULE_FLAG( 4,  EnableRawAndStructuredBuffers, "D3D11_SB_GLOBAL_FLAG_ENABLE_RAW_AND_STRUCTURED_BUFFERS")
+DXIL_MODULE_FLAG( 5,  LowPrecisionPresent, "D3D11_1_SB_GLOBAL_FLAG_ENABLE_MINIMUM_PRECISION")
+DXIL_MODULE_FLAG( 8,  AllResourcesBound, "D3D12_SB_GLOBAL_FLAG_ALL_RESOURCES_BOUND")
+DXIL_MODULE_FLAG(23,  UseNativeLowPrecision, "Native 16bit types enabled")
+DXIL_MODULE_FLAG(33,  ResMayNotAlias, "Any UAV may not alias any other UAV")
+
+#undef DXIL_MODULE_FLAG
+#endif // DXIL_MODULE_FLAG
 
 #ifdef SEMANTIC_KIND
 
@@ -86,7 +103,7 @@ SEMANTIC_KIND(30, CullPrimitive)
 SEMANTIC_KIND(30, Invalid)
 
 #undef SEMANTIC_KIND
-#endif
+#endif // SEMANTIC_KIND
 
 #ifdef COMPONENT_TYPE
 
@@ -102,7 +119,7 @@ COMPONENT_TYPE(8, SInt64)
 COMPONENT_TYPE(9, Float64)
 
 #undef COMPONENT_TYPE
-#endif
+#endif // COMPONENT_TYPE
 
 #ifdef COMPONENT_PRECISION
 
@@ -116,7 +133,7 @@ COMPONENT_PRECISION(0xf0, Any16)
 COMPONENT_PRECISION(0xf1, Any10)
 
 #undef COMPONENT_PRECISION
-#endif
+#endif // COMPONENT_PRECISION
 
 #ifdef INTERPOLATION_MODE
 
@@ -131,7 +148,7 @@ INTERPOLATION_MODE(7, LinearNoperspectiveSample)
 INTERPOLATION_MODE(8, Invalid)
 
 #undef INTERPOLATION_MODE
-#endif
+#endif // INTERPOLATION_MODE
 
 #ifdef D3D_SYSTEM_VALUE
 
@@ -165,4 +182,4 @@ D3D_SYSTEM_VALUE(70, InnerCoverage)
 
 #undef D3D_SYSTEM_VALUE
 
-#endif
+#endif // D3D_SYSTEM_VALUE

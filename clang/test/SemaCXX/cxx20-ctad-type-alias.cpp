@@ -230,3 +230,94 @@ using AFoo = Foo<U>*; // expected-note {{template is declared here}}
 
 AFoo s = {1}; // expected-error {{alias template 'AFoo' requires template arguments; argument deduction only allowed for}}
 } // namespace test17
+
+namespace test18 {
+template<typename T>
+concept False = false; // expected-note {{because 'false' evaluated to false}}
+
+template <typename T> struct Foo { T t; };
+
+template<typename T> requires False<T> // expected-note {{because 'int' does not satisfy 'False'}}
+Foo(T) -> Foo<int>;
+
+template <typename U>
+using Bar = Foo<U>; // expected-note {{could not match 'Foo<type-parameter-0-0>' against 'int'}} \
+                    // expected-note {{candidate template ignored: constraints not satisfied}} \
+                    // expected-note {{candidate function template not viable}}
+
+Bar s = {1}; // expected-error {{no viable constructor or deduction guide for deduction of template arguments}}
+} // namespace test18
+
+// GH85406, verify no crash on invalid alias templates.
+namespace test19 {
+template <typename T>
+class Foo {};
+
+template <typename T>
+template <typename K>
+using Bar2 = Foo<K>; // expected-error {{extraneous template parameter list in alias template declaration}}
+
+Bar2 b = 1; // expected-error {{no viable constructor or deduction guide for deduction of template arguments}}
+} // namespace test19
+
+// GH85385
+namespace test20 {
+template <template <typename> typename T>
+struct K {};
+
+template <typename U>
+class Foo {};
+
+// Verify that template template type parameter TTP is referenced/used in the
+// template arguments of the RHS.
+template <template<typename> typename TTP>
+using Bar = Foo<K<TTP>>; // expected-note {{candidate template ignored: could not match 'Foo<K<>>' against 'int'}}
+
+template <class T>
+class Container {};
+Bar t = Foo<K<Container>>();
+
+Bar s = 1; // expected-error {{no viable constructor or deduction guide for deduction of template arguments of}}
+} // namespace test20
+
+namespace test21 {
+template <typename T, unsigned N>
+struct Array { const T member[N]; };
+template <unsigned N>
+using String = Array<char, N>;
+
+// Verify no crash on constructing the aggregate deduction guides.
+String s("hello");
+} // namespace test21
+
+// GH89013
+namespace test22 {
+class Base {};
+template <typename T>
+class Derived final : public Base {};
+
+template <typename T, typename D>
+requires __is_base_of(Base, D)
+struct Foo {
+  explicit Foo(D) {}
+};
+
+template <typename U>
+using AFoo = Foo<int, Derived<U>>;
+
+AFoo a(Derived<int>{});
+} // namespace test22
+
+namespace test23 {
+// We have an aggregate deduction guide "G(T) -> G<T>".
+template<typename T>
+struct G { T t1; };
+
+template<typename X = int>
+using AG = G<int>;
+
+AG ag(1.0);
+// Verify that the aggregate deduction guide "AG(int) -> AG<int>" is built and
+// choosen.
+static_assert(__is_same(decltype(ag.t1), int));
+} // namespace test23

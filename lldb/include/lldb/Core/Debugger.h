@@ -89,7 +89,7 @@ public:
 
   using DebuggerList = std::vector<lldb::DebuggerSP>;
 
-  static ConstString GetStaticBroadcasterClass();
+  static llvm::StringRef GetStaticBroadcasterClass();
 
   /// Get the public broadcaster for this debugger.
   Broadcaster &GetBroadcaster() { return m_broadcaster; }
@@ -630,8 +630,7 @@ protected:
                  std::optional<lldb::user_id_t> debugger_id,
                  uint32_t progress_category_bit = eBroadcastBitProgress);
 
-  static void ReportDiagnosticImpl(DiagnosticEventData::Type type,
-                                   std::string message,
+  static void ReportDiagnosticImpl(lldb::Severity severity, std::string message,
                                    std::optional<lldb::user_id_t> debugger_id,
                                    std::once_flag *once);
 

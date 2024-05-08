@@ -11,9 +11,11 @@ func.func @expand_shape_of_rank_reducing_extract(
 {
   %0 = tensor.extract_slice %t[0, 0, 0, 0][%idx, 1, 1, 5][1, 1, 1, 1]
       : tensor<?x?x?x?xf32> to tensor<?x1x5xf32>
-  %1 = tensor.expand_shape %0 [[0], [1, 2], [3]]
+  %c0 = arith.constant 0 : index
+  %sz0 = tensor.dim %0, %c0 : tensor<?x1x5xf32>
+  %1 = tensor.expand_shape %0 [[0], [1, 2], [3]] output_shape [%sz0, 1, 1, 5]
       : tensor<?x1x5xf32> into tensor<?x1x1x5xf32>
-  %2 = tensor.expand_shape %0 [[0, 1], [2], [3]]
+  %2 = tensor.expand_shape %0 [[0, 1], [2], [3]] output_shape [%sz0, 1, 1, 5]
       : tensor<?x1x5xf32> into tensor<?x1x1x5xf32>
   return %1, %2 : tensor<?x1x1x5xf32>, tensor<?x1x1x5xf32>
 }

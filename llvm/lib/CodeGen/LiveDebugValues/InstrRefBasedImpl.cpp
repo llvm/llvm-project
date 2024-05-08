@@ -1356,10 +1356,11 @@ InstrRefBasedLDV::findLocationForMemOperand(const MachineInstr &MI) {
   // from the stack at some point. Happily the memory operand will tell us
   // the size written to the stack.
   auto *MemOperand = *MI.memoperands_begin();
-  unsigned SizeInBits = MemOperand->getSizeInBits();
+  LocationSize SizeInBits = MemOperand->getSizeInBits();
+  assert(SizeInBits.hasValue() && "Expected to find a valid size!");
 
   // Find that position in the stack indexes we're tracking.
-  auto IdxIt = MTracker->StackSlotIdxes.find({SizeInBits, 0});
+  auto IdxIt = MTracker->StackSlotIdxes.find({SizeInBits.getValue(), 0});
   if (IdxIt == MTracker->StackSlotIdxes.end())
     // That index is not tracked. This is suprising, and unlikely to ever
     // occur, but the safe action is to indicate the variable is optimised out.

@@ -563,6 +563,20 @@ def MismatchedDeallocatorChecker : Checker<"MismatchedDeallocator">,
   Dependencies<[DynamicMemoryModeling]>,
   Documentation<HasDocumentation>;
 
+// This must appear before StdCLibraryFunctionsChecker because a dependency.
+def StreamChecker : Checker<"Stream">,
+  HelpText<"Check stream handling functions">,
+  WeakDependencies<[NonNullParamChecker]>,
+  CheckerOptions<[
+    CmdLineOption<Boolean,
+                  "Pedantic",
+                  "If false, assume that stream operations which are often not "
+                  "checked for error do not fail.",
+                  "false",
+                  InAlpha>
+  ]>,
+  Documentation<HasDocumentation>;
+
 def StdCLibraryFunctionsChecker : Checker<"StdCLibraryFunctions">,
   HelpText<"Check for invalid arguments of C standard library functions, "
            "and apply relations between arguments and return value">,
@@ -581,7 +595,7 @@ def StdCLibraryFunctionsChecker : Checker<"StdCLibraryFunctions">,
                   "true",
                   InAlpha>
   ]>,
-  WeakDependencies<[CallAndMessageChecker, NonNullParamChecker]>,
+  WeakDependencies<[CallAndMessageChecker, NonNullParamChecker, StreamChecker]>,
   Documentation<HasDocumentation>;
 
 def VforkChecker : Checker<"Vfork">,
@@ -601,11 +615,6 @@ def PthreadLockChecker : Checker<"PthreadLock">,
   Dependencies<[PthreadLockBase]>,
   Documentation<HasDocumentation>;
 
-def StreamChecker : Checker<"Stream">,
-  HelpText<"Check stream handling functions">,
-  WeakDependencies<[NonNullParamChecker]>,
-  Documentation<HasDocumentation>;
-
 def SimpleStreamChecker : Checker<"SimpleStream">,
   HelpText<"Check for misuses of stream APIs">,
   Documentation<HasDocumentation>;
@@ -621,6 +630,11 @@ def BlockInCriticalSectionChecker : Checker<"BlockInCriticalSection">,
 //===----------------------------------------------------------------------===//
 
 let ParentPackage = Cplusplus in {
+
+def ArrayDeleteChecker : Checker<"ArrayDelete">,
+  HelpText<"Reports destructions of arrays of polymorphic objects that are "
+           "destructed as their base class.">,
+  Documentation<HasDocumentation>;
 
 def InnerPointerChecker : Checker<"InnerPointer">,
   HelpText<"Check for inner pointers of C++ containers used after "
@@ -777,11 +791,6 @@ def ContainerModeling : Checker<"ContainerModeling">,
   Documentation<NotDocumented>,
   Hidden;
 
-def CXXArrayDeleteChecker : Checker<"ArrayDelete">,
-  HelpText<"Reports destructions of arrays of polymorphic objects that are "
-           "destructed as their base class.">,
-  Documentation<HasDocumentation>;
-
 def DeleteWithNonVirtualDtorChecker : Checker<"DeleteWithNonVirtualDtor">,
   HelpText<"Reports destructions of polymorphic objects with a non-virtual "
            "destructor in their base class">,
@@ -908,7 +917,7 @@ def PaddingChecker : Checker<"Padding">,
                   "24",
                   Released>
   ]>,
-  Documentation<NotDocumented>;
+  Documentation<HasDocumentation>;
 
 } // end: "padding"
 
@@ -1388,7 +1397,7 @@ def CastValueChecker : Checker<"CastValue">,
   Documentation<NotDocumented>;
 
 def ReturnValueChecker : Checker<"ReturnValue">,
-  HelpText<"Model the guaranteed boolean return value of function calls">,
+  HelpText<"Model certain Error() methods that always return true by convention">,
   Documentation<NotDocumented>;
 
 } // end "apiModeling.llvm"
@@ -1619,6 +1628,7 @@ def TaintTesterChecker : Checker<"TaintTest">,
 def StreamTesterChecker : Checker<"StreamTester">,
   HelpText<"Add test functions to StreamChecker for test and debugging "
            "purposes.">,
+  WeakDependencies<[StreamChecker]>,
   Documentation<NotDocumented>;
 
 def ErrnoTesterChecker : Checker<"ErrnoTest">,

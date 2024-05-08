@@ -10,8 +10,6 @@ add_mlir_translation_library(MLIRTargetCpp
   MLIREmitCDialect
   MLIRFuncDialect
   MLIRIR
-  MLIRMathDialect
-  MLIRSCFDialect
   MLIRSupport
   MLIRTranslateLib
   )

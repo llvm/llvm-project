@@ -108,7 +108,6 @@ struct DsymutilOptions {
   bool Flat = false;
   bool InputIsYAMLDebugMap = false;
   bool ForceKeepFunctionForStatic = false;
-  std::string SymbolMap;
   std::string OutputFile;
   std::string Toolchain;
   std::string ReproducerPath;
@@ -341,12 +340,6 @@ static Expected<DsymutilOptions> getOptions(opt::InputArgList &Args) {
     return DWARFLinkerType.takeError();
   }
 
-  if (opt::Arg *SymbolMap = Args.getLastArg(OPT_symbolmap))
-    Options.SymbolMap = SymbolMap->getValue();
-
-  if (Args.hasArg(OPT_symbolmap))
-    Options.LinkOpts.Update = true;
-
   if (Expected<std::vector<std::string>> InputFiles =
           getInputs(Args, Options.LinkOpts.Update)) {
     Options.InputFiles = std::move(*InputFiles);
@@ -560,8 +553,7 @@ getOutputFileName(StringRef InputFile, const DsymutilOptions &Options) {
     return OutputLocation(Options.OutputFile);
 
   // When updating, do in place replacement.
-  if (Options.OutputFile.empty() &&
-      (Options.LinkOpts.Update || !Options.SymbolMap.empty()))
+  if (Options.OutputFile.empty() && Options.LinkOpts.Update)
     return OutputLocation(std::string(InputFile));
 
   // When dumping the debug map, just return an empty output location. This
@@ -668,8 +660,6 @@ int dsymutil_main(int argc, char **argv, const llvm::ToolContext &) {
       return EXIT_FAILURE;
     }
 
-  SymbolMapLoader SymMapLoader(Options.SymbolMap);
-
   for (auto &InputFile : Options.InputFiles) {
     // Dump the symbol table for each input file and requested arch
     if (Options.DumpStab) {
@@ -759,9 +749,6 @@ int dsymutil_main(int argc, char **argv, const llvm::ToolContext &) {
 
         if (Options.DumpDebugMap)
           continue;
-
-        if (!Options.SymbolMap.empty())
-          Options.LinkOpts.Translator = SymMapLoader.Load(InputFile, *Map);
 
         if (Map->begin() == Map->end()) {
           std::lock_guard<std::mutex> Guard(ErrorHandlerMutex);

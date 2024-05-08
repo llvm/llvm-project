@@ -9,6 +9,7 @@
 #ifndef FORTRAN_LOWER_OPENMPUTILS_H
 #define FORTRAN_LOWER_OPENMPUTILS_H
 
+#include "Clauses.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/IR/Location.h"
 #include "mlir/IR/Value.h"
@@ -33,6 +34,9 @@ struct OmpObjectList;
 } // namespace parser
 
 namespace lower {
+namespace pft {
+struct Evaluation;
+}
 
 class AbstractConverter;
 
@@ -45,20 +49,28 @@ using DeclareTargetCapturePair =
 mlir::omp::MapInfoOp
 createMapInfoOp(fir::FirOpBuilder &builder, mlir::Location loc,
                 mlir::Value baseAddr, mlir::Value varPtrPtr, std::string name,
-                mlir::SmallVector<mlir::Value> bounds,
-                mlir::SmallVector<mlir::Value> members, uint64_t mapType,
+                mlir::ArrayRef<mlir::Value> bounds,
+                mlir::ArrayRef<mlir::Value> members, uint64_t mapType,
                 mlir::omp::VariableCaptureKind mapCaptureType, mlir::Type retTy,
                 bool isVal = false);
 
+mlir::Type getLoopVarType(Fortran::lower::AbstractConverter &converter,
+                          std::size_t loopVarTypeSize);
+
+Fortran::semantics::Symbol *
+getIterationVariableSymbol(const Fortran::lower::pft::Evaluation &eval);
+
 void gatherFuncAndVarSyms(
-    const Fortran::parser::OmpObjectList &objList,
-    mlir::omp::DeclareTargetCaptureClause clause,
+    const ObjectList &objects, mlir::omp::DeclareTargetCaptureClause clause,
     llvm::SmallVectorImpl<DeclareTargetCapturePair> &symbolAndClause);
+
+int64_t getCollapseValue(const List<Clause> &clauses);
+uint32_t getOpenMPVersion(mlir::ModuleOp mod);
 
 Fortran::semantics::Symbol *
 getOmpObjectSymbol(const Fortran::parser::OmpObject &ompObject);
 
-void genObjectList(const Fortran::parser::OmpObjectList &objectList,
+void genObjectList(const ObjectList &objects,
                    Fortran::lower::AbstractConverter &converter,
                    llvm::SmallVectorImpl<mlir::Value> &operands);
 

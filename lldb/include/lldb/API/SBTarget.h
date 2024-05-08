@@ -42,7 +42,8 @@ public:
     eBroadcastBitModulesLoaded = (1 << 1),
     eBroadcastBitModulesUnloaded = (1 << 2),
     eBroadcastBitWatchpointChanged = (1 << 3),
-    eBroadcastBitSymbolsLoaded = (1 << 4)
+    eBroadcastBitSymbolsLoaded = (1 << 4),
+    eBroadcastBitSymbolsChanged = (1 << 5),
   };
 
   // Constructors
@@ -878,6 +879,10 @@ public:
                                            uint32_t count,
                                            const char *flavor_string);
 
+  lldb::SBInstructionList ReadInstructions(lldb::SBAddress start_addr,
+                                           lldb::SBAddress end_addr,
+                                           const char *flavor_string);
+
   lldb::SBInstructionList GetInstructions(lldb::SBAddress base_addr,
                                           const void *buf, size_t size);
 
@@ -953,6 +958,7 @@ protected:
   friend class SBSection;
   friend class SBSourceManager;
   friend class SBSymbol;
+  friend class SBTypeStaticField;
   friend class SBValue;
   friend class SBVariablesOptions;
 

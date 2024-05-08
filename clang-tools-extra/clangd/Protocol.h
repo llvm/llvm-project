@@ -1689,6 +1689,48 @@ enum class InlayHintKind {
 };
 llvm::json::Value toJSON(const InlayHintKind &);
 
+/// An inlay hint label part allows for interactive and composite labels
+/// of inlay hints.
+struct InlayHintLabelPart {
+
+  InlayHintLabelPart() = default;
+
+  InlayHintLabelPart(std::string value,
+                     std::optional<Location> location = std::nullopt)
+      : value(std::move(value)), location(std::move(location)) {}
+
+  /// The value of this label part.
+  std::string value;
+
+  /// The tooltip text when you hover over this label part. Depending on
+  /// the client capability `inlayHint.resolveSupport`, clients might resolve
+  /// this property late using the resolve request.
+  std::optional<MarkupContent> tooltip;
+
+  /// An optional source code location that represents this
+  /// label part.
+  ///
+  /// The editor will use this location for the hover and for code navigation
+  /// features: This part will become a clickable link that resolves to the
+  /// definition of the symbol at the given location (not necessarily the
+  /// location itself), it shows the hover that shows at the given location,
+  /// and it shows a context menu with further code navigation commands.
+  ///
+  /// Depending on the client capability `inlayHint.resolveSupport` clients
+  /// might resolve this property late using the resolve request.
+  std::optional<Location> location;
+
+  /// An optional command for this label part.
+  ///
+  /// Depending on the client capability `inlayHint.resolveSupport` clients
+  /// might resolve this property late using the resolve request.
+  std::optional<Command> command;
+};
+llvm::json::Value toJSON(const InlayHintLabelPart &);
+bool operator==(const InlayHintLabelPart &, const InlayHintLabelPart &);
+bool operator<(const InlayHintLabelPart &, const InlayHintLabelPart &);
+llvm::raw_ostream &operator<<(llvm::raw_ostream &, const InlayHintLabelPart &);
+
 /// Inlay hint information.
 struct InlayHint {
   /// The position of this hint.
@@ -1698,7 +1740,7 @@ struct InlayHint {
   /// InlayHintLabelPart label parts.
   ///
   /// *Note* that neither the string nor the label part can be empty.
-  std::string label;
+  std::vector<InlayHintLabelPart> label;
 
   /// The kind of this hint. Can be omitted in which case the client should fall
   /// back to a reasonable default.
@@ -1724,6 +1766,9 @@ struct InlayHint {
   /// The range allows clients more flexibility of when/how to display the hint.
   /// This is an (unserialized) clangd extension.
   Range range;
+
+  /// Join the label[].value together.
+  std::string joinLabels() const;
 };
 llvm::json::Value toJSON(const InlayHint &);
 bool operator==(const InlayHint &, const InlayHint &);

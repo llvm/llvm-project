@@ -343,3 +343,20 @@ define i32 @rem_euclid_pow2_false_arm_folded(i32 %n) {
   %res = select i1 %nonneg, i32 %rem, i32 1
   ret i32 %res
 }
+
+define i8 @pr89516(i8 %n, i8 %x) {
+; CHECK-LABEL: @pr89516(
+; CHECK-NEXT:    [[COND:%.*]] = icmp slt i8 [[X:%.*]], 0
+; CHECK-NEXT:    [[POW2:%.*]] = shl nuw i8 1, [[N:%.*]]
+; CHECK-NEXT:    [[SREM:%.*]] = srem i8 1, [[POW2]]
+; CHECK-NEXT:    [[ADD:%.*]] = select i1 [[COND]], i8 [[POW2]], i8 0
+; CHECK-NEXT:    [[RES:%.*]] = add nuw i8 [[SREM]], [[ADD]]
+; CHECK-NEXT:    ret i8 [[RES]]
+;
+  %cond = icmp slt i8 %x, 0
+  %pow2 = shl nuw i8 1, %n
+  %srem = srem i8 1, %pow2
+  %add = add nuw i8 %srem, %pow2
+  %res = select i1 %cond, i8 %add, i8 %srem
+  ret i8 %res
+}

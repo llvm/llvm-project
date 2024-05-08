@@ -31,18 +31,12 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <class _Tp>
 class allocator;
 
-#if defined(_LIBCPP_ENABLE_CXX20_REMOVED_ALLOCATOR_MEMBERS) && !defined(_LIBCPP_DISABLE_DEPRECATION_WARNINGS)
-#  pragma clang deprecated(                                                                                            \
-      _LIBCPP_ENABLE_CXX20_REMOVED_ALLOCATOR_MEMBERS,                                                                  \
-      "_LIBCPP_ENABLE_CXX20_REMOVED_ALLOCATOR_MEMBERS is deprecated in LLVM 18 and will be removed in LLVM 19")
-#endif
-
-#if _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_ENABLE_CXX20_REMOVED_ALLOCATOR_VOID_SPECIALIZATION)
+#if _LIBCPP_STD_VER <= 17
 // These specializations shouldn't be marked _LIBCPP_DEPRECATED_IN_CXX17.
 // Specializing allocator<void> is deprecated, but not using it.
 template <>
 class _LIBCPP_TEMPLATE_VIS allocator<void> {
-#  if _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_ENABLE_CXX20_REMOVED_ALLOCATOR_MEMBERS)
+#  if _LIBCPP_STD_VER <= 17
 
 public:
   _LIBCPP_DEPRECATED_IN_CXX17 typedef void* pointer;
@@ -58,7 +52,7 @@ public:
 
 template <>
 class _LIBCPP_TEMPLATE_VIS allocator<const void> {
-#  if _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_ENABLE_CXX20_REMOVED_ALLOCATOR_MEMBERS)
+#  if _LIBCPP_STD_VER <= 17
 
 public:
   _LIBCPP_DEPRECATED_IN_CXX17 typedef const void* pointer;
@@ -116,7 +110,7 @@ public:
   template <class _Up>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 allocator(const allocator<_Up>&) _NOEXCEPT {}
 
-  _LIBCPP_NODISCARD_AFTER_CXX17 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _Tp* allocate(size_t __n) {
+  _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _Tp* allocate(size_t __n) {
     if (__n > allocator_traits<allocator>::max_size(*this))
       __throw_bad_array_new_length();
     if (__libcpp_is_constant_evaluated()) {
@@ -141,7 +135,7 @@ public:
   }
 
   // C++20 Removed members
-#if _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_ENABLE_CXX20_REMOVED_ALLOCATOR_MEMBERS)
+#if _LIBCPP_STD_VER <= 17
   _LIBCPP_DEPRECATED_IN_CXX17 typedef _Tp* pointer;
   _LIBCPP_DEPRECATED_IN_CXX17 typedef const _Tp* const_pointer;
   _LIBCPP_DEPRECATED_IN_CXX17 typedef _Tp& reference;
@@ -159,8 +153,7 @@ public:
     return std::addressof(__x);
   }
 
-  _LIBCPP_NODISCARD_AFTER_CXX17 _LIBCPP_HIDE_FROM_ABI _LIBCPP_DEPRECATED_IN_CXX17 _Tp*
-  allocate(size_t __n, const void*) {
+  _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI _LIBCPP_DEPRECATED_IN_CXX17 _Tp* allocate(size_t __n, const void*) {
     return allocate(__n);
   }
 
@@ -196,7 +189,7 @@ public:
   template <class _Up>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 allocator(const allocator<_Up>&) _NOEXCEPT {}
 
-  _LIBCPP_NODISCARD_AFTER_CXX17 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 const _Tp* allocate(size_t __n) {
+  _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 const _Tp* allocate(size_t __n) {
     if (__n > allocator_traits<allocator>::max_size(*this))
       __throw_bad_array_new_length();
     if (__libcpp_is_constant_evaluated()) {
@@ -221,7 +214,7 @@ public:
   }
 
   // C++20 Removed members
-#if _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_ENABLE_CXX20_REMOVED_ALLOCATOR_MEMBERS)
+#if _LIBCPP_STD_VER <= 17
   _LIBCPP_DEPRECATED_IN_CXX17 typedef const _Tp* pointer;
   _LIBCPP_DEPRECATED_IN_CXX17 typedef const _Tp* const_pointer;
   _LIBCPP_DEPRECATED_IN_CXX17 typedef const _Tp& reference;
@@ -236,8 +229,7 @@ public:
     return std::addressof(__x);
   }
 
-  _LIBCPP_NODISCARD_AFTER_CXX17 _LIBCPP_HIDE_FROM_ABI _LIBCPP_DEPRECATED_IN_CXX17 const _Tp*
-  allocate(size_t __n, const void*) {
+  _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI _LIBCPP_DEPRECATED_IN_CXX17 const _Tp* allocate(size_t __n, const void*) {
     return allocate(__n);
   }
 

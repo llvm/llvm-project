@@ -2744,8 +2744,19 @@ ValueObjectSP ValueObject::DoCast(const CompilerType &compiler_type) {
 
 ValueObjectSP ValueObject::Cast(const CompilerType &compiler_type) {
   // Only allow casts if the original type is equal or larger than the cast
-  // type.  We don't know how to fetch more data for all the ConstResult types,
-  // so we can't guarantee this will work:
+  // type, unless we know this is a load address.  Getting the size wrong for
+  // a host side storage could leak lldb memory, so we absolutely want to 
+  // prevent that.  We may not always get the right value, for instance if we
+  // have an expression result value that's copied into a storage location in
+  // the target may not have copied enough memory.  I'm not trying to fix that
+  // here, I'm just making Cast from a smaller to a larger possible in all the
+  // cases where that doesn't risk making a Value out of random lldb memory.
+  // You have to check the ValueObject's Value for the address types, since
+  // ValueObjects that use live addresses will tell you they fetch data from the
+  // live address, but once they are made, they actually don't.
+  // FIXME: Can we make ValueObject's with a live address fetch "more data" from
+  // the live address if it is still valid?
+
   Status error;
   CompilerType my_type = GetCompilerType();
 
@@ -2753,9 +2764,10 @@ ValueObjectSP ValueObject::Cast(const CompilerType &compiler_type) {
       = ExecutionContext(GetExecutionContextRef())
           .GetBestExecutionContextScope();
   if (compiler_type.GetByteSize(exe_scope)
-      <= GetCompilerType().GetByteSize(exe_scope)) {
+      <= GetCompilerType().GetByteSize(exe_scope) 
+      || m_value.GetValueType() == Value::ValueType::LoadAddress)
         return DoCast(compiler_type);
-  }
+
   error.SetErrorString("Can only cast to a type that is equal to or smaller "
                        "than the orignal type.");
 

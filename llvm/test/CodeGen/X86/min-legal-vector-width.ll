@@ -5,10 +5,10 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mcpu=skylake-avx512 | FileCheck %s --check-prefixes=CHECK,CHECK-AVX512
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=-avx512vnni -mcpu=cascadelake | FileCheck %s --check-prefixes=CHECK,CHECK-AVX512
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=-avx512vnni -mcpu=cooperlake | FileCheck %s --check-prefixes=CHECK,CHECK-AVX512
-; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mcpu=cannonlake | FileCheck %s --check-prefixes=CHECK,CHECK-VBMI
-; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=-avx512vnni -mcpu=icelake-client | FileCheck %s --check-prefixes=CHECK,CHECK-VBMI
-; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=-avx512vnni -mcpu=icelake-server | FileCheck %s --check-prefixes=CHECK,CHECK-VBMI
-; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=-avx512vnni -mcpu=tigerlake | FileCheck %s --check-prefixes=CHECK,CHECK-VBMI
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mcpu=cannonlake | FileCheck %s --check-prefixes=CHECK,CHECK-VBMI,CHECK-VBMI1
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=-avx512vnni -mcpu=icelake-client | FileCheck %s --check-prefixes=CHECK,CHECK-VBMI,CHECK-GFNI
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=-avx512vnni -mcpu=icelake-server | FileCheck %s --check-prefixes=CHECK,CHECK-VBMI,CHECK-GFNI
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=-avx512vnni -mcpu=tigerlake | FileCheck %s --check-prefixes=CHECK,CHECK-VBMI,CHECK-GFNI
 
 ; This file primarily contains tests for specific places in X86ISelLowering.cpp that needed be made aware of the legalizer not allowing 512-bit vectors due to prefer-256-bit even though AVX512 is enabled.
 
@@ -2006,12 +2006,31 @@ define <32 x i8> @constant_rotate_v32i8(<32 x i8> %a) nounwind "min-legal-vector
 }
 
 define <32 x i8> @splatconstant_rotate_v32i8(<32 x i8> %a) nounwind "min-legal-vector-width"="256" {
-; CHECK-LABEL: splatconstant_rotate_v32i8:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpsllw $4, %ymm0, %ymm1
-; CHECK-NEXT:    vpsrlw $4, %ymm0, %ymm0
-; CHECK-NEXT:    vpternlogd $216, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm1, %ymm0
-; CHECK-NEXT:    retq
+; CHECK-SKX-LABEL: splatconstant_rotate_v32i8:
+; CHECK-SKX:       # %bb.0:
+; CHECK-SKX-NEXT:    vpsllw $4, %ymm0, %ymm1
+; CHECK-SKX-NEXT:    vpsrlw $4, %ymm0, %ymm0
+; CHECK-SKX-NEXT:    vpternlogd $216, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm1, %ymm0
+; CHECK-SKX-NEXT:    retq
+;
+; CHECK-AVX512-LABEL: splatconstant_rotate_v32i8:
+; CHECK-AVX512:       # %bb.0:
+; CHECK-AVX512-NEXT:    vpsllw $4, %ymm0, %ymm1
+; CHECK-AVX512-NEXT:    vpsrlw $4, %ymm0, %ymm0
+; CHECK-AVX512-NEXT:    vpternlogd $216, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm1, %ymm0
+; CHECK-AVX512-NEXT:    retq
+;
+; CHECK-VBMI1-LABEL: splatconstant_rotate_v32i8:
+; CHECK-VBMI1:       # %bb.0:
+; CHECK-VBMI1-NEXT:    vpsllw $4, %ymm0, %ymm1
+; CHECK-VBMI1-NEXT:    vpsrlw $4, %ymm0, %ymm0
+; CHECK-VBMI1-NEXT:    vpternlogd $216, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm1, %ymm0
+; CHECK-VBMI1-NEXT:    retq
+;
+; CHECK-GFNI-LABEL: splatconstant_rotate_v32i8:
+; CHECK-GFNI:       # %bb.0:
+; CHECK-GFNI-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %ymm0, %ymm0
+; CHECK-GFNI-NEXT:    retq
   %shl = shl <32 x i8> %a, <i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4>
   %lshr = lshr <32 x i8> %a, <i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4>
   %or = or <32 x i8> %shl, %lshr
@@ -2019,13 +2038,35 @@ define <32 x i8> @splatconstant_rotate_v32i8(<32 x i8> %a) nounwind "min-legal-v
 }
 
 define <32 x i8> @splatconstant_rotate_mask_v32i8(<32 x i8> %a) nounwind "min-legal-vector-width"="256" {
-; CHECK-LABEL: splatconstant_rotate_mask_v32i8:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpsllw $4, %ymm0, %ymm1
-; CHECK-NEXT:    vpsrlw $4, %ymm0, %ymm0
-; CHECK-NEXT:    vpternlogd $216, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm1, %ymm0
-; CHECK-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm0, %ymm0
-; CHECK-NEXT:    retq
+; CHECK-SKX-LABEL: splatconstant_rotate_mask_v32i8:
+; CHECK-SKX:       # %bb.0:
+; CHECK-SKX-NEXT:    vpsllw $4, %ymm0, %ymm1
+; CHECK-SKX-NEXT:    vpsrlw $4, %ymm0, %ymm0
+; CHECK-SKX-NEXT:    vpternlogd $216, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm1, %ymm0
+; CHECK-SKX-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm0, %ymm0
+; CHECK-SKX-NEXT:    retq
+;
+; CHECK-AVX512-LABEL: splatconstant_rotate_mask_v32i8:
+; CHECK-AVX512:       # %bb.0:
+; CHECK-AVX512-NEXT:    vpsllw $4, %ymm0, %ymm1
+; CHECK-AVX512-NEXT:    vpsrlw $4, %ymm0, %ymm0
+; CHECK-AVX512-NEXT:    vpternlogd $216, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm1, %ymm0
+; CHECK-AVX512-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm0, %ymm0
+; CHECK-AVX512-NEXT:    retq
+;
+; CHECK-VBMI1-LABEL: splatconstant_rotate_mask_v32i8:
+; CHECK-VBMI1:       # %bb.0:
+; CHECK-VBMI1-NEXT:    vpsllw $4, %ymm0, %ymm1
+; CHECK-VBMI1-NEXT:    vpsrlw $4, %ymm0, %ymm0
+; CHECK-VBMI1-NEXT:    vpternlogd $216, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm1, %ymm0
+; CHECK-VBMI1-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm0, %ymm0
+; CHECK-VBMI1-NEXT:    retq
+;
+; CHECK-GFNI-LABEL: splatconstant_rotate_mask_v32i8:
+; CHECK-GFNI:       # %bb.0:
+; CHECK-GFNI-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %ymm0, %ymm0
+; CHECK-GFNI-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm0, %ymm0
+; CHECK-GFNI-NEXT:    retq
   %shl = shl <32 x i8> %a, <i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4>
   %lshr = lshr <32 x i8> %a, <i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4>
   %rmask = and <32 x i8> %lshr, <i8 55, i8 55, i8 55, i8 55, i8 55, i8 55, i8 55, i8 55, i8 55, i8 55, i8 55, i8 55, i8 55, i8 55, i8 55, i8 55, i8 55, i8 55, i8 55, i8 55, i8 55, i8 55, i8 55, i8 55, i8 55, i8 55, i8 55, i8 55, i8 55, i8 55, i8 55, i8 55>

@@ -86,9 +86,9 @@ AllocationType llvm::memprof::getMIBAllocType(const MDNode *MIB) {
   // types that can be applied based on the allocation profile data.
   auto *MDS = dyn_cast<MDString>(MIB->getOperand(1));
   assert(MDS);
-  if (MDS->getString().equals("cold")) {
+  if (MDS->getString() == "cold") {
     return AllocationType::Cold;
-  } else if (MDS->getString().equals("hot")) {
+  } else if (MDS->getString() == "hot") {
     return AllocationType::Hot;
   }
   return AllocationType::NotCold;

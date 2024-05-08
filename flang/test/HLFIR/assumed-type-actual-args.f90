@@ -1,6 +1,6 @@
 ! Test lowering to FIR of actual arguments that are assumed type
 ! variables (Fortran 2018 7.3.2.2 point 3).
-! RUN: bbc --polymorphic-type -emit-hlfir -o - %s | FileCheck %s
+! RUN: bbc -emit-hlfir -o - %s | FileCheck %s
 
 subroutine test1(x)
   interface

@@ -50,3 +50,21 @@ namespace temp
   // expected-error@-1 2{{concept named in type constraint is not a type concept}}
   using A = TT<int>; // expected-error{{expected ';' after alias declaration}}
 }
+
+namespace PR67235 {
+
+template <class T>
+concept C = true;
+
+template <auto D>
+struct S {};
+
+// Don't destroy annotation 'C' at the end of the lambda; else we'll run into a
+// use-after-free bug while constructing the type constraint 'C' on 'Default'.
+template <typename Ret, C Default = decltype([] { return Ret(); })>
+void func() {}
+
+template <typename Ret, C Default = S<[] { return Ret(); }>>
+void func2() {}
+
+}

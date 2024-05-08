@@ -1085,9 +1085,11 @@ ExprResult Sema::ActOnPackIndexingExpr(Scope *S, Expr *PackExpression,
                                        SourceLocation RSquareLoc) {
   bool isParameterPack = ::isParameterPack(PackExpression);
   if (!isParameterPack) {
-    CorrectDelayedTyposInExpr(IndexExpr);
-    Diag(PackExpression->getBeginLoc(), diag::err_expected_name_of_pack)
-        << PackExpression;
+    if (!PackExpression->containsErrors()) {
+      CorrectDelayedTyposInExpr(IndexExpr);
+      Diag(PackExpression->getBeginLoc(), diag::err_expected_name_of_pack)
+          << PackExpression;
+    }
     return ExprError();
   }
   ExprResult Res =
@@ -1242,6 +1244,17 @@ std::optional<unsigned> Sema::getFullyPackExpandedSize(TemplateArgument Arg) {
     // There's no point recursing in this case; we would have already
     // expanded this pack expansion into the enclosing pack if we could.
     if (Elem.isPackExpansion())
+      return std::nullopt;
+    // Don't guess the size of unexpanded packs. The pack within a template
+    // argument may have yet to be of a PackExpansion type before we see the
+    // ellipsis in the annotation stage.
+    //
+    // This doesn't mean we would invalidate the optimization: Arg can be an
+    // unexpanded pack regardless of Elem's dependence. For instance,
+    // A TemplateArgument that contains either a SubstTemplateTypeParmPackType
+    // or SubstNonTypeTemplateParmPackExpr is always considered Unexpanded, but
+    // the underlying TemplateArgument thereof may not.
+    if (Elem.containsUnexpandedParameterPack())
       return std::nullopt;
   }
   return Pack.pack_size();

@@ -161,6 +161,14 @@ module {
     call @dump_dense_f64(%s24)  : (tensor<4x4xf64>) -> ()
     call @dump_dense_f64(%scsr) : (tensor<4x4xf64>) -> ()
 
+    bufferization.dealloc_tensor %a : tensor<4x8xf64, #BSR>
+    bufferization.dealloc_tensor %b : tensor<4x8xf64, #NV_24>
+    bufferization.dealloc_tensor %c : tensor<4x8xf64, #CSR>
+    bufferization.dealloc_tensor %d : tensor<4x4xf64>
+    bufferization.dealloc_tensor %s : tensor<4x4xf64>
+    bufferization.dealloc_tensor %s24 : tensor<4x4xf64>
+    bufferization.dealloc_tensor %scsr : tensor<4x4xf64>
+
     return
   }
 }

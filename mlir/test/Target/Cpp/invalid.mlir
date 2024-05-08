@@ -10,10 +10,10 @@ func.func @multiple_blocks() {
 
 // -----
 
-func.func @unsupported_std_op(%arg0: f64) -> f64 {
-  // expected-error@+1 {{'math.absf' op unable to find printer for op}}
-  %0 = math.absf %arg0 : f64
-  return %0 : f64
+func.func @unsupported_op(%arg0: i1) {
+  // expected-error@+1 {{'cf.assert' op unable to find printer for op}}
+  cf.assert %arg0, "assertion foo"
+  return
 }
 
 // -----

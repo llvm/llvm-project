@@ -239,3 +239,59 @@ F s(0);
 // CHECK: |-InjectedClassNameType {{.*}} 'F<>' dependent
 // CHECK: | `-CXXRecord {{.*}} 'F'
 // CHECK: `-TemplateTypeParmType {{.*}} 'type-parameter-0-1' dependent depth 0 index 1
+
+template<typename T>
+struct G { T t; };
+
+G g = {1};
+// CHECK-LABEL: Dumping <deduction guide for G>:
+// CHECK: FunctionTemplateDecl
+// CHECK: |-CXXDeductionGuideDecl {{.*}} implicit <deduction guide for G> 'auto (T) -> G<T>' aggregate
+// CHECK: `-CXXDeductionGuideDecl {{.*}} implicit used <deduction guide for G> 'auto (int) -> G<int>' implicit_instantiation aggregate
+
+template<typename X>
+using AG = G<X>;
+AG ag = {1};
+// Verify that the aggregate deduction guide for alias templates is built.
+// CHECK-LABEL: Dumping <deduction guide for AG>
+// CHECK: FunctionTemplateDecl
+// CHECK: |-CXXDeductionGuideDecl {{.*}} 'auto (type-parameter-0-0) -> G<type-parameter-0-0>'
+// CHECK: `-CXXDeductionGuideDecl {{.*}} 'auto (int) -> G<int>' implicit_instantiation
+// CHECK:   |-TemplateArgument type 'int'
+// CHECK:   | `-BuiltinType {{.*}} 'int'
+// CHECK:   `-ParmVarDecl {{.*}} 'int'
+
+template <typename X = int>
+using BG = G<int>;
+BG bg(1.0);
+// CHECK-LABEL: Dumping <deduction guide for BG>
+// CHECK: FunctionTemplateDecl {{.*}} implicit <deduction guide for BG>
+// CHECK: |-CXXDeductionGuideDecl {{.*}} 'auto (int) -> G<int>' aggregate
+
+template <typename D>
+requires (sizeof(D) == 4)
+struct Foo {
+  Foo(D);
+};
+
+template <typename U>
+using AFoo = Foo<G<U>>;
+// Verify that the require-clause from the Foo deduction guide is transformed.
+// The D occurrence should be rewritten to G<type-parameter-0-0>.
+//
+// CHECK-LABEL: Dumping <deduction guide for AFoo>
+// CHECK: FunctionTemplateDecl {{.*}} implicit <deduction guide for AFoo>
+// CHECK-NEXT: |-TemplateTypeParmDecl {{.*}} typename depth 0 index 0 U
+// CHECK-NEXT: |-ParenExpr {{.*}} 'bool'
+// CHECK-NEXT: | `-BinaryOperator {{.*}} 'bool' '=='
+// CHECK-NEXT: |   |-UnaryExprOrTypeTraitExpr {{.*}} 'G<type-parameter-0-0>'
+// CHECK-NEXT: |   `-ImplicitCastExpr {{.*}}
+// CHECK-NEXT: |     `-IntegerLiteral {{.*}}
+// CHECK-NEXT: |-CXXDeductionGuideDecl {{.*}} implicit <deduction guide for AFoo> 'auto (G<type-parameter-0-0>) -> Foo<G<type-parameter-0-0>>'
+// CHECK-NEXT: | `-ParmVarDecl {{.*}} 'G<type-parameter-0-0>'
+// CHECK-NEXT: `-CXXDeductionGuideDecl {{.*}} implicit used <deduction guide for AFoo> 'auto (G<int>) -> Foo<G<int>>' implicit_instantiation
+// CHECK-NEXT:   |-TemplateArgument type 'int'
+// CHECK-NEXT:   | `-BuiltinType {{.*}} 'int'
+// CHECK-NEXT:   `-ParmVarDecl {{.*}} 'G<int>'
+
+AFoo aa(G<int>{});

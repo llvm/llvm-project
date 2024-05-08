@@ -125,7 +125,7 @@ protected:
                                                  StringRef InFile) override;
 
   TranslationUnitKind getTranslationUnitKind() override {
-    return TU_Module;
+    return TU_ClangModule;
   }
 
   bool hasASTFileSupport() const override { return false; }
@@ -138,7 +138,9 @@ protected:
   std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
                                                  StringRef InFile) override;
 
-  TranslationUnitKind getTranslationUnitKind() override { return TU_Module; }
+  TranslationUnitKind getTranslationUnitKind() override {
+    return TU_ClangModule;
+  }
   bool hasASTFileSupport() const override { return false; }
 };
 
@@ -158,6 +160,8 @@ protected:
 
   std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
                                                  StringRef InFile) override;
+
+  TranslationUnitKind getTranslationUnitKind() override { return TU_Complete; }
 
   std::unique_ptr<raw_pwrite_stream>
   CreateOutputFile(CompilerInstance &CI, StringRef InFile) override;

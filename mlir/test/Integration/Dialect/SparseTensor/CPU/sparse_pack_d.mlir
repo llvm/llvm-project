@@ -29,7 +29,7 @@
   crdWidth = 32
 }>
 
-#BatchedCSR = #sparse_tensor.encoding<{
+#DenseCSR = #sparse_tensor.encoding<{
   map = (d0, d1, d2) -> (d0 : dense, d1 : dense, d2 : compressed),
   posWidth = 64,
   crdWidth = 32
@@ -42,7 +42,7 @@
 }>
 
 //
-// Test assembly operation with CCC, batched-CSR and CSR-dense.
+// Test assembly operation with CCC, dense-CSR and CSR-dense.
 //
 module {
   //
@@ -77,7 +77,7 @@ module {
         tensor<6xi64>, tensor<8xi32>), tensor<8xf32> to tensor<4x3x2xf32, #CCC>
 
     //
-    // Setup BatchedCSR.
+    // Setup DenseCSR.
     //
 
     %data1 = arith.constant dense<
@@ -88,7 +88,7 @@ module {
     %crd1 = arith.constant dense<
        [ 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1]> : tensor<16xi32>
 
-    %s1 = sparse_tensor.assemble (%pos1, %crd1), %data1 : (tensor<13xi64>, tensor<16xi32>), tensor<16xf32> to tensor<4x3x2xf32, #BatchedCSR>
+    %s1 = sparse_tensor.assemble (%pos1, %crd1), %data1 : (tensor<13xi64>, tensor<16xi32>), tensor<16xf32> to tensor<4x3x2xf32, #DenseCSR>
 
     //
     // Setup CSRDense.
@@ -137,13 +137,21 @@ module {
     // CHECK-NEXT: ----
     //
     sparse_tensor.print %s0 : tensor<4x3x2xf32, #CCC>
-    sparse_tensor.print %s1 : tensor<4x3x2xf32, #BatchedCSR>
+    sparse_tensor.print %s1 : tensor<4x3x2xf32, #DenseCSR>
     sparse_tensor.print %s2 : tensor<4x3x2xf32, #CSRDense>
 
-    // FIXME: doing this explicitly crashes runtime
-    // bufferization.dealloc_tensor %s0 : tensor<4x3x2xf32, #CCC>
-    // bufferization.dealloc_tensor %s1 : tensor<4x3x2xf32, #BatchedCSR>
-    // bufferization.dealloc_tensor %s2 : tensor<4x3x2xf32, #CSRDense>
+    // TODO: This check is no longer needed once the codegen path uses the
+    // buffer deallocation pass. "dealloc_tensor" turn into a no-op in the
+    // codegen path.
+    %has_runtime = sparse_tensor.has_runtime_library
+    scf.if %has_runtime {
+      // sparse_tensor.assemble copies buffers when running with the runtime
+      // library. Deallocations are not needed when running in codegen mode.
+      bufferization.dealloc_tensor %s0 : tensor<4x3x2xf32, #CCC>
+      bufferization.dealloc_tensor %s1 : tensor<4x3x2xf32, #DenseCSR>
+      bufferization.dealloc_tensor %s2 : tensor<4x3x2xf32, #CSRDense>
+    }
+
     return
   }
 }

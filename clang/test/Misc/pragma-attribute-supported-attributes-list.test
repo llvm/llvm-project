@@ -4,6 +4,7 @@
 
 // CHECK: #pragma clang attribute supports the following attributes:
 // CHECK-NEXT: AMDGPUFlatWorkGroupSize (SubjectMatchRule_function)
+// CHECK-NEXT: AMDGPUMaxNumWorkGroups (SubjectMatchRule_function)
 // CHECK-NEXT: AMDGPUNumSGPR (SubjectMatchRule_function)
 // CHECK-NEXT: AMDGPUNumVGPR (SubjectMatchRule_function)
 // CHECK-NEXT: AMDGPUWavesPerEU (SubjectMatchRule_function)

@@ -544,7 +544,7 @@ TEST(DiagnosticTest, RespectsDiagnosticConfig) {
                   Diag(Main.range("ret"),
                        "void function 'x' should not return a value")));
   Config Cfg;
-  Cfg.Diagnostics.Suppress.insert("return-type");
+  Cfg.Diagnostics.Suppress.insert("return-mismatch");
   WithContextValue WithCfg(Config::Key, std::move(Cfg));
   EXPECT_THAT(TU.build().getDiagnostics(),
               ElementsAre(Diag(Main.range(),

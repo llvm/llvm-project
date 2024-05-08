@@ -580,7 +580,7 @@ PHINode* HardwareLoop::InsertPHICounter(Value *NumElts, Value *EltsRem) {
   BasicBlock *Preheader = L->getLoopPreheader();
   BasicBlock *Header = L->getHeader();
   BasicBlock *Latch = ExitBranch->getParent();
-  IRBuilder<> Builder(Header->getFirstNonPHI());
+  IRBuilder<> Builder(Header, Header->getFirstNonPHIIt());
   PHINode *Index = Builder.CreatePHI(NumElts->getType(), 2);
   Index->addIncoming(NumElts, Preheader);
   Index->addIncoming(EltsRem, Latch);

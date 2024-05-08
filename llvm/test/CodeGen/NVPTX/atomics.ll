@@ -175,6 +175,13 @@ define float @atomicrmw_add_f32_generic(ptr %addr, float %val) {
   ret float %ret
 }
 
+; CHECK-LABEL: atomicrmw_add_f16_generic
+define half @atomicrmw_add_f16_generic(ptr %addr, half %val) {
+; CHECK: atom.cas
+  %ret = atomicrmw fadd ptr %addr, half %val seq_cst
+  ret half %ret
+}
+
 ; CHECK-LABEL: atomicrmw_add_f32_addrspace1
 define float @atomicrmw_add_f32_addrspace1(ptr addrspace(1) %addr, float %val) {
 ; CHECK: atom.global.add.f32

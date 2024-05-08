@@ -441,6 +441,10 @@ public:
   /// Clear live in list.
   void clearLiveIns();
 
+  /// Clear the live in list, and return the removed live in's in \p OldLiveIns.
+  /// Requires that the vector \p OldLiveIns is empty.
+  void clearLiveIns(std::vector<RegisterMaskPair> &OldLiveIns);
+
   /// Add PhysReg as live in to this block, and ensure that there is a copy of
   /// PhysReg to a virtual register of class RC. Return the virtual register
   /// that is a copy of the live in PhysReg.
@@ -477,7 +481,7 @@ public:
   /// Remove entry from the livein set and return iterator to the next.
   livein_iterator removeLiveIn(livein_iterator I);
 
-  std::vector<RegisterMaskPair> getLiveIns() const { return LiveIns; }
+  const std::vector<RegisterMaskPair> &getLiveIns() const { return LiveIns; }
 
   class liveout_iterator {
   public:
