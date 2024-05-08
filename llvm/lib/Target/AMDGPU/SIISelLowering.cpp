@@ -1604,7 +1604,9 @@ bool SITargetLowering::isLegalAddressingMode(const DataLayout &DL,
         return false;
     }
 
-    if (AS == AMDGPUAS::CONSTANT_ADDRESS && AM.BaseOffs < 0) {
+    if ((AS == AMDGPUAS::CONSTANT_ADDRESS ||
+         AS == AMDGPUAS::CONSTANT_ADDRESS_32BIT) &&
+        AM.BaseOffs < 0) {
       // Scalar (non-buffer) loads can only use a negative offset if
       // soffset+offset is non-negative. Since the compiler can only prove that
       // in a few special cases, it is safer to claim that negative offsets are
