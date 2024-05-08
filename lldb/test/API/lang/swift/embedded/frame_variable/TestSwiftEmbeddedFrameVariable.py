@@ -6,14 +6,12 @@ import unittest2
 
 
 class TestSwiftEmbeddedFrameVariable(TestBase):
-    @skipIfDarwin 
     @skipUnlessDarwin
     @swiftTest
     def test(self):
         self.build()
         self.implementation()
 
-    @skipIfDarwin 
     @skipUnlessDarwin
     @swiftTest
     def test_without_ast(self):
