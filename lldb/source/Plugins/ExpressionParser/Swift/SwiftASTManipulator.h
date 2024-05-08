@@ -250,6 +250,12 @@ public:
                 bool make_private = true,
                 swift::DeclContext *decl_ctx = nullptr);
 
+  /// Returns true if $__lldb_result is a non copyable type.
+  /// Currently LLDB cannot deal with expressions whose result is a non copyable
+  /// type, this function exists so LLDB can diagnose this situation and provide
+  /// a proper error message.
+  bool IsExpressionResultNonCopyable();
+
   llvm::Error FixupResultAfterTypeChecking();
 
   static const char *GetArgumentName() { return "$__lldb_arg"; }

@@ -1843,6 +1843,17 @@ SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
         m_options.GetPlaygroundTransformHighPerformance());
   }
 
+  /// Currently LLDB cannot deal with expressions whose result is a non copyable
+  /// type, because there's no easy way to assign $__lldb_result to the result
+  /// of the expression.
+  if (parsed_expr->code_manipulator &&
+      parsed_expr->code_manipulator->IsExpressionResultNonCopyable()) {
+    diagnostic_manager.PutString(
+        eSeverityError,
+        "Cannot evaluate an expression that results in a ~Copyable type");
+    return ParseResult::unrecoverable_error;
+  }
+
   // FIXME: We now should have to do the name binding and type
   //        checking again, but there should be only the result
   //        variable to bind up at this point.
