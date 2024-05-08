@@ -273,9 +273,16 @@ private:
   void SelectFMAD_FMA(SDNode *N);
   void SelectFP_EXTEND(SDNode *N);
   void SelectDSAppendConsume(SDNode *N, unsigned IntrID);
+#ifdef LLPC_BUILD_GFX12
+  void SelectDSBvhStackIntrinsic(SDNode *N, unsigned IntrID);
+#else /* LLPC_BUILD_GFX12 */
   void SelectDSBvhStackIntrinsic(SDNode *N);
+#endif /* LLPC_BUILD_GFX12 */
   void SelectDS_GWS(SDNode *N, unsigned IntrID);
   void SelectInterpP1F16(SDNode *N);
+#ifdef LLPC_BUILD_GFX12
+  void SelectMoveGlobalSReg(SDNode *N);
+#endif /* LLPC_BUILD_GFX12 */
   void SelectINTRINSIC_W_CHAIN(SDNode *N);
   void SelectINTRINSIC_WO_CHAIN(SDNode *N);
   void SelectINTRINSIC_VOID(SDNode *N);

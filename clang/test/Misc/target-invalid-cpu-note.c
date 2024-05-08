@@ -29,7 +29,11 @@
 
 // RUN: not %clang_cc1 -triple nvptx--- -target-cpu not-a-cpu -fsyntax-only %s 2>&1 | FileCheck %s --check-prefix NVPTX
 // NVPTX: error: unknown target CPU 'not-a-cpu'
+#ifdef LLPC_BUILD_GFX12
+// NVPTX-NEXT: note: valid target CPU values are: sm_20, sm_21, sm_30, sm_32, sm_35, sm_37, sm_50, sm_52, sm_53, sm_60, sm_61, sm_62, sm_70, sm_72, sm_75, sm_80, sm_86, sm_87, sm_89, sm_90, sm_90a, gfx600, gfx601, gfx602, gfx700, gfx701, gfx702, gfx703, gfx704, gfx705, gfx801, gfx802, gfx803, gfx805, gfx810, gfx900, gfx902, gfx904, gfx906, gfx908, gfx909, gfx90a, gfx90c, gfx940, gfx941, gfx942, gfx1010, gfx1011, gfx1012, gfx1013, gfx1030, gfx1031, gfx1032, gfx1033, gfx1034, gfx1035, gfx1036, gfx1100, gfx1101, gfx1102, gfx1103, gfx1150, gfx1151, gfx1152, gfx1200, gfx1201{{$}}
+#else /* LLPC_BUILD_GFX12 */
 // NVPTX-NEXT: note: valid target CPU values are: sm_20, sm_21, sm_30, sm_32, sm_35, sm_37, sm_50, sm_52, sm_53, sm_60, sm_61, sm_62, sm_70, sm_72, sm_75, sm_80, sm_86, sm_87, sm_89, sm_90, sm_90a, gfx600, gfx601, gfx602, gfx700, gfx701, gfx702, gfx703, gfx704, gfx705, gfx801, gfx802, gfx803, gfx805, gfx810, gfx900, gfx902, gfx904, gfx906, gfx908, gfx909, gfx90a, gfx90c, gfx940, gfx941, gfx942, gfx1010, gfx1011, gfx1012, gfx1013, gfx1030, gfx1031, gfx1032, gfx1033, gfx1034, gfx1035, gfx1036, gfx1100, gfx1101, gfx1102, gfx1103, gfx1150, gfx1151, gfx1200, gfx1201{{$}}
+#endif /* LLPC_BUILD_GFX12 */
 
 // RUN: not %clang_cc1 -triple r600--- -target-cpu not-a-cpu -fsyntax-only %s 2>&1 | FileCheck %s --check-prefix R600
 // R600: error: unknown target CPU 'not-a-cpu'
@@ -37,7 +41,11 @@
 
 // RUN: not %clang_cc1 -triple amdgcn--- -target-cpu not-a-cpu -fsyntax-only %s 2>&1 | FileCheck %s --check-prefix AMDGCN
 // AMDGCN: error: unknown target CPU 'not-a-cpu'
+#ifdef LLPC_BUILD_GFX12
+// AMDGCN-NEXT: note: valid target CPU values are: gfx600, tahiti, gfx601, pitcairn, verde, gfx602, hainan, oland, gfx700, kaveri, gfx701, hawaii, gfx702, gfx703, kabini, mullins, gfx704, bonaire, gfx705, gfx801, carrizo, gfx802, iceland, tonga, gfx803, fiji, polaris10, polaris11, gfx805, tongapro, gfx810, stoney, gfx900, gfx902, gfx904, gfx906, gfx908, gfx909, gfx90a, gfx90c, gfx940, gfx941, gfx942, gfx1010, gfx1011, gfx1012, gfx1013, gfx1030, gfx1031, gfx1032, gfx1033, gfx1034, gfx1035, gfx1036, gfx1100, gfx1101, gfx1102, gfx1103, gfx1150, gfx1151, gfx1152, gfx1200, gfx1201, gfx9-generic, gfx10-1-generic, gfx10-3-generic, gfx11-generic{{$}}
+#else /* LLPC_BUILD_GFX12 */
 // AMDGCN-NEXT: note: valid target CPU values are: gfx600, tahiti, gfx601, pitcairn, verde, gfx602, hainan, oland, gfx700, kaveri, gfx701, hawaii, gfx702, gfx703, kabini, mullins, gfx704, bonaire, gfx705, gfx801, carrizo, gfx802, iceland, tonga, gfx803, fiji, polaris10, polaris11, gfx805, tongapro, gfx810, stoney, gfx900, gfx902, gfx904, gfx906, gfx908, gfx909, gfx90a, gfx90c, gfx940, gfx941, gfx942, gfx1010, gfx1011, gfx1012, gfx1013, gfx1030, gfx1031, gfx1032, gfx1033, gfx1034, gfx1035, gfx1036, gfx1100, gfx1101, gfx1102, gfx1103, gfx1150, gfx1151, gfx1200, gfx1201, gfx9-generic, gfx10-1-generic, gfx10-3-generic, gfx11-generic{{$}}
+#endif /* LLPC_BUILD_GFX12 */
 
 // RUN: not %clang_cc1 -triple wasm64--- -target-cpu not-a-cpu -fsyntax-only %s 2>&1 | FileCheck %s --check-prefix WEBASM
 // WEBASM: error: unknown target CPU 'not-a-cpu'

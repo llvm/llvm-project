@@ -208,7 +208,15 @@ public:
   bool legalizeBufferAtomic(MachineInstr &MI, MachineIRBuilder &B,
                             Intrinsic::ID IID) const;
 
+#ifdef LLPC_BUILD_GFX12
+  bool legalizeBVHIntersectRayIntrinsic(MachineInstr &MI,
+                                        MachineIRBuilder &B) const;
+
+  bool legalizeBVHDualOrBVH8IntersectRayIntrinsic(MachineInstr &MI,
+                                                  MachineIRBuilder &B) const;
+#else /* LLPC_BUILD_GFX12 */
   bool legalizeBVHIntrinsic(MachineInstr &MI, MachineIRBuilder &B) const;
+#endif /* LLPC_BUILD_GFX12 */
 
   bool legalizeFPTruncRound(MachineInstr &MI, MachineIRBuilder &B) const;
   bool legalizeStackSave(MachineInstr &MI, MachineIRBuilder &B) const;

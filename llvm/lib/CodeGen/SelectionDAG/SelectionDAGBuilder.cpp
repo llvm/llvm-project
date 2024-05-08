@@ -7724,10 +7724,13 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     return;
   }
   case Intrinsic::amdgcn_cs_chain: {
+#ifdef LLPC_BUILD_GFX12
+#else /* LLPC_BUILD_GFX12 */
     assert(I.arg_size() == 5 && "Additional args not supported yet");
     assert(cast<ConstantInt>(I.getOperand(4))->isZero() &&
            "Non-zero flags not supported yet");
 
+#endif /* LLPC_BUILD_GFX12 */
     // At this point we don't care if it's amdgpu_cs_chain or
     // amdgpu_cs_chain_preserve.
     CallingConv::ID CC = CallingConv::AMDGPU_CS_Chain;
@@ -7753,6 +7756,17 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     assert(Args[0].IsInReg && "SGPR args should be marked inreg");
     assert(!Args[1].IsInReg && "VGPR args should not be marked inreg");
     Args[2].IsInReg = true; // EXEC should be inreg
+#ifdef LLPC_BUILD_GFX12
+
+    // Forward the flags and any additional arguments.
+    for (unsigned Idx = 4; Idx < I.arg_size(); ++Idx) {
+      TargetLowering::ArgListEntry Arg;
+      Arg.Node = getValue(I.getOperand(Idx));
+      Arg.Ty = I.getOperand(Idx)->getType();
+      Arg.setAttributes(&I, Idx);
+      Args.push_back(Arg);
+    }
+#endif /* LLPC_BUILD_GFX12 */
 
     TargetLowering::CallLoweringInfo CLI(DAG);
     CLI.setDebugLoc(getCurSDLoc())

@@ -1119,6 +1119,18 @@ bool GCNSchedStage::shouldRevertScheduling(unsigned WavesAfter) {
   if (WavesAfter < DAG.MinOccupancy)
     return true;
 
+#ifdef LLPC_BUILD_GFX12
+  // For dynamic VGPR mode, we don't want to waste any VGPR blocks.
+  if (ST.isDynamicVGPREnabled()) {
+    unsigned BlocksBefore = AMDGPU::IsaInfo::getAllocatedNumVGPRBlocks(
+        &ST, PressureBefore.getVGPRNum(false));
+    unsigned BlocksAfter = AMDGPU::IsaInfo::getAllocatedNumVGPRBlocks(
+        &ST, PressureAfter.getVGPRNum(false));
+    if (BlocksAfter > BlocksBefore)
+      return true;
+  }
+
+#endif /* LLPC_BUILD_GFX12 */
   return false;
 }
 
