@@ -7092,6 +7092,11 @@ def mlink_bitcode_file : Separate<["-"], "mlink-bitcode-file">,
 def mlink_builtin_bitcode : Separate<["-"], "mlink-builtin-bitcode">,
   HelpText<"Link and internalize needed symbols from the given bitcode file "
            "before performing optimizations.">;
+defm link_builtin_bitcode_postopt: BoolMOption<"link-builtin-bitcode-postopt",
+  CodeGenOpts<"LinkBitcodePostopt">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption], "Link builtin bitcodes after the "
+  "optimization pipeline">,
+  NegFlag<SetFalse, [], [ClangOption]>>;
 def vectorize_loops : Flag<["-"], "vectorize-loops">,
   HelpText<"Run the Loop vectorization passes">,
   MarshallingInfoFlag<CodeGenOpts<"VectorizeLoop">>;
