@@ -93,18 +93,12 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .legalFor(PackedVectorAllTypeList)
       .widenScalarToNextPow2(0)
       .clampScalar(0, s8, s64)
-      .fewerElementsIf(
-          [=](const LegalityQuery &Query) {
-            return Query.Types[0].isVector() &&
-                   (Query.Types[0].getElementType() != s64 ||
-                    Query.Types[0].getNumElements() != 2);
-          },
-          [=](const LegalityQuery &Query) {
-            LLT EltTy = Query.Types[0].getElementType();
-            if (EltTy == s64)
-              return std::make_pair(0, LLT::fixed_vector(2, 64));
-            return std::make_pair(0, EltTy);
-          });
+      .moreElementsToNextPow2(0)
+      .widenVectorEltsToVectorMinSize(0, 64)
+      .clampNumElements(0, v8s8, v16s8)
+      .clampNumElements(0, v4s16, v8s16)
+      .clampNumElements(0, v2s32, v4s32)
+      .clampNumElements(0, v2s64, v2s64);
 
   getActionDefinitionsBuilder(G_PHI)
       .legalFor({p0, s16, s32, s64})
@@ -183,7 +177,9 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
 
   getActionDefinitionsBuilder(G_PTR_ADD)
       .legalFor({{p0, s64}, {v2p0, v2s64}})
-      .clampScalar(1, s64, s64);
+      .clampScalar(1, s64, s64)
+      .clampNumElements(0, v2p0, v2p0)
+      .clampNumElements(1, v2s64, v2s64);
 
   getActionDefinitionsBuilder(G_PTRMASK).legalFor({{p0, s64}});
 
@@ -746,6 +742,9 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .legalForCartesianProduct({s32, v2s16, v4s8})
       .legalForCartesianProduct({s64, v8s8, v4s16, v2s32})
       .legalForCartesianProduct({s128, v16s8, v8s16, v4s32, v2s64, v2p0})
+      .lowerIf([=](const LegalityQuery &Query) {
+        return Query.Types[0].isVector() != Query.Types[1].isVector();
+      })
       .moreElementsToNextPow2(0)
       .clampNumElements(0, v8s8, v16s8)
       .clampNumElements(0, v4s16, v8s16)
@@ -1573,7 +1572,7 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
     MI.eraseFromParent();
     return true;
   }
-  case Intrinsic::experimental_vector_reverse:
+  case Intrinsic::vector_reverse:
     // TODO: Add support for vector_reverse
     return false;
   }

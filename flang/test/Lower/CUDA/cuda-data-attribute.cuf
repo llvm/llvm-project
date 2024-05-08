@@ -62,4 +62,36 @@ end subroutine
 ! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<f32> {fir.bindc_name = "du", fir.cuda_attr = #fir.cuda<unified>})
 ! CHECK: %{{.*}}:2 = hlfir.declare %[[ARG0]] {cuda_attr = #fir.cuda<unified>, uniq_name = "_QMcuda_varFdummy_arg_unifiedEdu"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
 
+subroutine cuda_alloc_free(n)
+  integer :: n
+  real, device :: a(10)
+  integer, unified :: u
+  real, managed :: b(n)
+end
+
+! CHECK-LABEL: func.func @_QMcuda_varPcuda_alloc_free
+! CHECK: %[[ALLOC_A:.*]] = fir.cuda_alloc !fir.array<10xf32> {bindc_name = "a", cuda_attr = #fir.cuda<device>, uniq_name = "_QMcuda_varFcuda_alloc_freeEa"} -> !fir.ref<!fir.array<10xf32>>
+! CHECK: %[[SHAPE:.*]] = fir.shape %c10 : (index) -> !fir.shape<1>
+! CHECK: %[[DECL_A:.*]]:2 = hlfir.declare %[[ALLOC_A]](%[[SHAPE]]) {cuda_attr = #fir.cuda<device>, uniq_name = "_QMcuda_varFcuda_alloc_freeEa"} : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xf32>>, !fir.ref<!fir.array<10xf32>>)
+
+! CHECK: %[[ALLOC_U:.*]] = fir.cuda_alloc i32 {bindc_name = "u", cuda_attr = #fir.cuda<unified>, uniq_name = "_QMcuda_varFcuda_alloc_freeEu"} -> !fir.ref<i32>
+! CHECK: %[[DECL_U:.*]]:2 = hlfir.declare %[[ALLOC_U]] {cuda_attr = #fir.cuda<unified>, uniq_name = "_QMcuda_varFcuda_alloc_freeEu"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+
+! CHECK: %[[ALLOC_B:.*]] = fir.cuda_alloc !fir.array<?xf32>, %{{.*}} : index {bindc_name = "b", cuda_attr = #fir.cuda<managed>, uniq_name = "_QMcuda_varFcuda_alloc_freeEb"} -> !fir.ref<!fir.array<?xf32>>
+! CHECK: %[[SHAPE:.*]] = fir.shape %{{.*}} : (index) -> !fir.shape<1>
+! CHECK: %[[DECL_B:.*]]:2 = hlfir.declare %[[ALLOC_B]](%[[SHAPE]]) {cuda_attr = #fir.cuda<managed>, uniq_name = "_QMcuda_varFcuda_alloc_freeEb"} : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>) -> (!fir.box<!fir.array<?xf32>>, !fir.ref<!fir.array<?xf32>>)
+
+! CHECK: fir.cuda_free %[[DECL_B]]#1 : !fir.ref<!fir.array<?xf32>> {cuda_attr = #fir.cuda<managed>}
+! CHECK: fir.cuda_free %[[DECL_U]]#1 : !fir.ref<i32> {cuda_attr = #fir.cuda<unified>}
+! CHECK: fir.cuda_free %[[DECL_A]]#1 : !fir.ref<!fir.array<10xf32>> {cuda_attr = #fir.cuda<device>}
+
+subroutine dummy(x)
+  real, target, device :: x
+end subroutine
+
+! CHECK: func.func @_QMcuda_varPdummy
+! CHECK-NOT: fir.cuda_free
+
 end module
+
+

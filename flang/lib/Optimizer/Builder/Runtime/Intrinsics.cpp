@@ -228,7 +228,8 @@ void fir::runtime::genSystemClock(fir::FirOpBuilder &builder,
     fir::IfOp ifOp{};
     const bool isOptionalArg =
         fir::valueHasFirAttribute(arg, fir::getOptionalAttrName());
-    if (type.dyn_cast<fir::PointerType>() || type.dyn_cast<fir::HeapType>()) {
+    if (mlir::dyn_cast<fir::PointerType>(type) ||
+        mlir::dyn_cast<fir::HeapType>(type)) {
       // Check for a disassociated pointer or an unallocated allocatable.
       assert(!isOptionalArg && "invalid optional argument");
       ifOp = builder.create<fir::IfOp>(loc, builder.genIsNotNullAddr(loc, arg),
@@ -242,7 +243,8 @@ void fir::runtime::genSystemClock(fir::FirOpBuilder &builder,
       builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
     mlir::Type kindTy = func.getFunctionType().getInput(0);
     int integerKind = 8;
-    if (auto intType = fir::unwrapRefType(type).dyn_cast<mlir::IntegerType>())
+    if (auto intType =
+            mlir::dyn_cast<mlir::IntegerType>(fir::unwrapRefType(type)))
       integerKind = intType.getWidth() / 8;
     mlir::Value kind = builder.createIntegerConstant(loc, kindTy, integerKind);
     mlir::Value res =

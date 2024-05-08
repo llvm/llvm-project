@@ -844,11 +844,23 @@ public:
     }
   }
 
+  void VisitUnresolvedLookupExpr(const UnresolvedLookupExpr *E) {
+    if (E->hasExplicitTemplateArgs())
+      for (auto Arg : E->template_arguments())
+        Visit(Arg.getArgument());
+  }
+
   void VisitRequiresExpr(const RequiresExpr *E) {
     for (auto *D : E->getLocalParameters())
       Visit(D);
     for (auto *R : E->getRequirements())
       Visit(R);
+  }
+
+  void VisitTypeTraitExpr(const TypeTraitExpr *E) {
+    // Argument types are not children of the TypeTraitExpr.
+    for (auto *A : E->getArgs())
+      Visit(A->getType());
   }
 
   void VisitLambdaExpr(const LambdaExpr *Node) {

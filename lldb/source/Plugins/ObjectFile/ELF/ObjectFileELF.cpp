@@ -1854,6 +1854,39 @@ public:
 };
 }
 
+// We have to do this because ELF doesn't have section IDs, and also
+// doesn't require section names to be unique.  (We use the section index
+// for section IDs, but that isn't guaranteed to be the same in separate
+// debug images.)
+static SectionSP FindMatchingSection(const SectionList &section_list,
+                                     SectionSP section) {
+  SectionSP sect_sp;
+
+  addr_t vm_addr = section->GetFileAddress();
+  ConstString name = section->GetName();
+  offset_t byte_size = section->GetByteSize();
+  bool thread_specific = section->IsThreadSpecific();
+  uint32_t permissions = section->GetPermissions();
+  uint32_t alignment = section->GetLog2Align();
+
+  for (auto sect : section_list) {
+    if (sect->GetName() == name &&
+        sect->IsThreadSpecific() == thread_specific &&
+        sect->GetPermissions() == permissions &&
+        sect->GetByteSize() == byte_size && sect->GetFileAddress() == vm_addr &&
+        sect->GetLog2Align() == alignment) {
+      sect_sp = sect;
+      break;
+    } else {
+      sect_sp = FindMatchingSection(sect->GetChildren(), section);
+      if (sect_sp)
+        break;
+    }
+  }
+
+  return sect_sp;
+}
+
 void ObjectFileELF::CreateSections(SectionList &unified_section_list) {
   if (m_sections_up)
     return;
@@ -2067,10 +2100,12 @@ unsigned ObjectFileELF::ParseSymbols(Symtab *symtab, user_id_t start_id,
   SectionList *module_section_list =
       module_sp ? module_sp->GetSectionList() : nullptr;
 
-  // Local cache to avoid doing a FindSectionByName for each symbol. The "const
-  // char*" key must came from a ConstString object so they can be compared by
-  // pointer
-  std::unordered_map<const char *, lldb::SectionSP> section_name_to_section;
+  // We might have debug information in a separate object, in which case
+  // we need to map the sections from that object to the sections in the
+  // main object during symbol lookup.  If we had to compare the sections
+  // for every single symbol, that would be expensive, so this map is
+  // used to accelerate the process.
+  std::unordered_map<lldb::SectionSP, lldb::SectionSP> section_map;
 
   unsigned i;
   for (i = 0; i < num_symbols; ++i) {
@@ -2275,14 +2310,14 @@ unsigned ObjectFileELF::ParseSymbols(Symtab *symtab, user_id_t start_id,
 
     if (symbol_section_sp && module_section_list &&
         module_section_list != section_list) {
-      ConstString sect_name = symbol_section_sp->GetName();
-      auto section_it = section_name_to_section.find(sect_name.GetCString());
-      if (section_it == section_name_to_section.end())
-        section_it =
-            section_name_to_section
-                .emplace(sect_name.GetCString(),
-                         module_section_list->FindSectionByName(sect_name))
-                .first;
+      auto section_it = section_map.find(symbol_section_sp);
+      if (section_it == section_map.end()) {
+        section_it = section_map
+                         .emplace(symbol_section_sp,
+                                  FindMatchingSection(*module_section_list,
+                                                      symbol_section_sp))
+                         .first;
+      }
       if (section_it->second)
         symbol_section_sp = section_it->second;
     }
@@ -2321,13 +2356,30 @@ unsigned ObjectFileELF::ParseSymbols(Symtab *symtab, user_id_t start_id,
     bool symbol_size_valid =
         symbol.st_size != 0 || symbol.getType() != STT_FUNC;
 
+    bool is_trampoline = false;
+    if (arch.IsValid() && (arch.GetMachine() == llvm::Triple::aarch64)) {
+      // On AArch64, trampolines are registered as code.
+      // If we detect a trampoline (which starts with __AArch64ADRPThunk_ or
+      // __AArch64AbsLongThunk_) we register the symbol as a trampoline. This
+      // way we will be able to detect the trampoline when we step in a function
+      // and step through the trampoline.
+      if (symbol_type == eSymbolTypeCode) {
+        llvm::StringRef trampoline_name = mangled.GetName().GetStringRef();
+        if (trampoline_name.starts_with("__AArch64ADRPThunk_") ||
+            trampoline_name.starts_with("__AArch64AbsLongThunk_")) {
+          symbol_type = eSymbolTypeTrampoline;
+          is_trampoline = true;
+        }
+      }
+    }
+
     Symbol dc_symbol(
         i + start_id, // ID is the original symbol table index.
         mangled,
         symbol_type,                    // Type of this symbol
         is_global,                      // Is this globally visible?
         false,                          // Is this symbol debug info?
-        false,                          // Is this symbol a trampoline?
+        is_trampoline,                  // Is this symbol a trampoline?
         false,                          // Is this symbol artificial?
         AddressRange(symbol_section_sp, // Section in which this symbol is
                                         // defined or null.

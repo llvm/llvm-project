@@ -23,6 +23,7 @@
 /llvm/lib/Analysis/ScalarEvolution.cpp @nikic
 /llvm/lib/Analysis/ValueTracking.cpp @nikic
 /llvm/lib/IR/ConstantRange.cpp @nikic
+/llvm/lib/IR/Core.cpp @nikic
 /llvm/lib/Transforms/Scalar/CorrelatedValuePropagation.cpp @nikic
 /llvm/lib/Transforms/Scalar/MemCpyOptimizer.cpp @nikic
 /llvm/lib/Transforms/InstCombine/ @nikic
@@ -34,6 +35,10 @@
 
 clang/lib/AST/Interp/ @tbaederr
 clang/test/AST/Interp/ @tbaederr
+
+/clang/include/clang/CIR @lanza @bcardosolopes
+/clang/lib/CIR @lanza @bcardosolopes
+/clang/tools/cir-* @lanza @bcardosolopes
 
 /lldb/ @JDevlieghere
 
