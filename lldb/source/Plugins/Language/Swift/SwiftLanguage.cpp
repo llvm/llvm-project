@@ -1667,7 +1667,7 @@ bool SwiftLanguage::GetFunctionDisplayName(
     if (inline_info) {
       s << display_name;
       s.PutCString(" [inlined] ");
-      display_name = inline_info->GetName();
+      display_name = inline_info->GetName().GetString();
     }
 
     VariableList args;
