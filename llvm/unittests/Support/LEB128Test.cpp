@@ -155,6 +155,12 @@ TEST(LEB128Test, DecodeInvalidULEB128) {
     EXPECT_NE(Error, nullptr);                                                 \
     EXPECT_EQ(0ul, Actual);                                                    \
     EXPECT_EQ(ERROR_OFFSET, ErrorOffset);                                      \
+    Value = reinterpret_cast<const uint8_t *>(VALUE);                          \
+    Error = nullptr;                                                           \
+    Actual = decodeULEB128AndInc(Value, Value + strlen(VALUE), &Error);        \
+    EXPECT_NE(Error, nullptr);                                                 \
+    EXPECT_EQ(0ul, Actual);                                                    \
+    EXPECT_EQ(ERROR_OFFSET, Value - reinterpret_cast<const uint8_t *>(VALUE)); \
   } while (0)
 
   // Buffer overflow.
@@ -224,6 +230,12 @@ TEST(LEB128Test, DecodeInvalidSLEB128) {
     EXPECT_NE(Error, nullptr);                                                 \
     EXPECT_EQ(0ul, Actual);                                                    \
     EXPECT_EQ(ERROR_OFFSET, ErrorOffset);                                      \
+    Value = reinterpret_cast<const uint8_t *>(VALUE);                          \
+    Error = nullptr;                                                           \
+    Actual = decodeSLEB128AndInc(Value, Value + strlen(VALUE), &Error);        \
+    EXPECT_NE(Error, nullptr);                                                 \
+    EXPECT_EQ(0ul, Actual);                                                    \
+    EXPECT_EQ(ERROR_OFFSET, Value - reinterpret_cast<const uint8_t *>(VALUE)); \
   } while (0)
 
   // Buffer overflow.
@@ -246,7 +258,7 @@ TEST(LEB128Test, DecodeAndInc) {
 #define EXPECT_LEB128(FUN, VALUE, SIZE)                                        \
   do {                                                                         \
     const uint8_t *V = reinterpret_cast<const uint8_t *>(VALUE), *P = V;       \
-    auto Expected = FUN(P), Actual = FUN##AndInc(P);                           \
+    auto Expected = FUN(P), Actual = FUN##AndInc(P, P + strlen(VALUE));        \
     EXPECT_EQ(Actual, Expected);                                               \
     EXPECT_EQ(P - V, SIZE);                                                    \
   } while (0)
@@ -254,6 +266,17 @@ TEST(LEB128Test, DecodeAndInc) {
   EXPECT_LEB128(decodeULEB128, "\x80\x01", 2);
   EXPECT_LEB128(decodeSLEB128, "\x7f", 1);
   EXPECT_LEB128(decodeSLEB128, "\x80\x01", 2);
+#undef EXPECT_LEB128
+
+#define EXPECT_LEB128(FUN, VALUE, SIZE)                                        \
+  do {                                                                         \
+    const uint8_t *V = reinterpret_cast<const uint8_t *>(VALUE), *P = V;       \
+    auto Expected = FUN(P), Actual = FUN##AndIncUnsafe(P);                     \
+    EXPECT_EQ(Actual, Expected);                                               \
+    EXPECT_EQ(P - V, SIZE);                                                    \
+  } while (0)
+  EXPECT_LEB128(decodeULEB128, "\x7f", 1);
+  EXPECT_LEB128(decodeULEB128, "\x80\x01", 2);
 #undef EXPECT_LEB128
 }
 
