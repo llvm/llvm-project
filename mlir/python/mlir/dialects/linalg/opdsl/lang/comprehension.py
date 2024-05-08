@@ -343,7 +343,7 @@ class BinaryFn:
 class TernaryFnType:
     """Ternary function.
 
-    A bterary function takes three tensor expressions and returns the
+    A ternary function takes three tensor expressions and returns the
     function evaluation result.
     """
 
