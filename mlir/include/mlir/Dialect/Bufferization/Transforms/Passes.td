@@ -315,11 +315,20 @@ def BufferResultsToOutParams : Pass<"buffer-results-to-out-params", "ModuleOp"> 
     The main issue with this pass (and the out-param calling convention) is that
     buffers for results need to be allocated in the caller. This currently only
     works for static shaped memrefs.
+
+    If the hoist-static-allocs option is on, the pass tries to eliminate the
+    allocation for the returned memref and avoid the memory-copy if possible.
+    This optimization applies on the returned memref which has static shape and
+    is allocated by memref.alloc in the function. It will use the memref given
+    in function argument to replace the allocated memref.
   }];
   let options = [
     Option<"addResultAttribute", "add-result-attr", "bool",
        /*default=*/"false",
        "Add the attribute 'bufferize.result' to all output parameters.">,
+    Option<"hoistStaticAllocs", "hoist-static-allocs",
+       "bool", /*default=*/"false",
+       "Hoist static allocations to call sites.">,
   ];
   let constructor = "mlir::bufferization::createBufferResultsToOutParamsPass()";
   let dependentDialects = ["memref::MemRefDialect"];
