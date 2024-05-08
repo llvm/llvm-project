@@ -40161,9 +40161,12 @@ combineBlendOfPermutes(MVT VT, SDValue N0, SDValue N1, ArrayRef<int> BlendMask,
       return SDValue();
   }
 
-  // Don't introduce lane-crossing permutes without AVX2.
+  // Don't introduce lane-crossing permutes without AVX2, unless it can be
+  // widened to a lane permute (vperm2f128).
   if (VT.is256BitVector() && !Subtarget.hasAVX2() &&
-      isLaneCrossingShuffleMask(128, VT.getScalarSizeInBits(), NewPermuteMask))
+      isLaneCrossingShuffleMask(128, VT.getScalarSizeInBits(),
+                                NewPermuteMask) &&
+      !canScaleShuffleElements(NewPermuteMask, 2))
     return SDValue();
 
   SDValue NewBlend =
