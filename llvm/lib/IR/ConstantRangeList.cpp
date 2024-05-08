@@ -74,7 +74,7 @@ void ConstantRangeList::print(raw_ostream &OS) const {
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void ConstantRangeList::dump() const {
-  print(llvm::dbgs());
-  llvm::dbgs() << '\n';
+  print(dbgs());
+  dbgs() << '\n';
 }
 #endif
