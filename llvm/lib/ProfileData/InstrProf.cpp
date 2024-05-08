@@ -481,8 +481,8 @@ Error InstrProfSymtab::create(Module &M, bool InLTO) {
     if (!G.hasName() || !G.hasMetadata(LLVMContext::MD_type))
       continue;
     if (Error E = addVTableWithName(
-              G, getIRPGOObjectName(G, InLTO, /* PGONameMetadata */ nullptr)))
-        return E;
+            G, getIRPGOObjectName(G, InLTO, /* PGONameMetadata */ nullptr)))
+      return E;
   }
 
   Sorted = false;
@@ -497,7 +497,8 @@ Error InstrProfSymtab::addVTableWithName(GlobalVariable &VTable,
       return E;
 
     bool Inserted = true;
-    std::tie(std::ignore, Inserted) = MD5VTableMap.try_emplace(GlobalValue::getGUID(Name), &VTable);
+    std::tie(std::ignore, Inserted) =
+        MD5VTableMap.try_emplace(GlobalValue::getGUID(Name), &VTable);
     if (!Inserted)
       LLVM_DEBUG(dbgs() << "GUID conflict within one module");
     return Error::success();

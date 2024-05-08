@@ -476,7 +476,7 @@ private:
   // `MD5FuncMap` and `MD5VTableMap`.
   // TODO: Unify the container type and the lambda function 'mapName' inside
   // add{Func,VTable}WithName.
-  DenseMap<uint64_t, GlobalVariable*> MD5VTableMap;
+  DenseMap<uint64_t, GlobalVariable *> MD5VTableMap;
   // A map from function runtime address to function name MD5 hash.
   // This map is only populated and used by raw instr profile reader.
   AddrHashMap AddrToMD5Map;
@@ -646,7 +646,7 @@ public:
 
   /// Return the global variable corresponding to md5 hash. Return nullptr if
   /// not found.
-  inline GlobalVariable* getGlobalVariable(uint64_t MD5Hash);
+  inline GlobalVariable *getGlobalVariable(uint64_t MD5Hash);
 
   /// Return the name section data.
   inline StringRef getNameData() const { return Data; }
@@ -727,7 +727,7 @@ Function* InstrProfSymtab::getFunction(uint64_t FuncMD5Hash) {
   return nullptr;
 }
 
-GlobalVariable* InstrProfSymtab::getGlobalVariable(uint64_t MD5Hash) {
+GlobalVariable *InstrProfSymtab::getGlobalVariable(uint64_t MD5Hash) {
   if (auto Iter = MD5VTableMap.find(MD5Hash); Iter != MD5VTableMap.end())
     return Iter->second;
   return nullptr;
