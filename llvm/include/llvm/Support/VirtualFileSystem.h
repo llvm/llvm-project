@@ -378,6 +378,10 @@ public:
   ///          platform-specific error_code.
   virtual std::error_code makeAbsolute(SmallVectorImpl<char> &Path) const;
 
+  /// \returns true if \p A and \p B represent the same file, or an error or
+  /// false if they do not.
+  llvm::ErrorOr<bool> equivalent(const Twine &A, const Twine &B);
+
   /// Check if files are loaded from a CAS.
   virtual bool isCASFS() const { return false; }
 
