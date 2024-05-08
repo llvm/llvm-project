@@ -801,7 +801,9 @@ RValue CIRGenFunction::buildAtomicExpr(AtomicExpr *E) {
   case AtomicExpr::AO__hip_atomic_fetch_sub:
   case AtomicExpr::AO__opencl_atomic_fetch_add:
   case AtomicExpr::AO__opencl_atomic_fetch_sub:
-    llvm_unreachable("NYI");
+    if (MemTy->isPointerType()) {
+      llvm_unreachable("NYI");
+    }
     [[fallthrough]];
   case AtomicExpr::AO__atomic_fetch_add:
   case AtomicExpr::AO__atomic_fetch_max:
