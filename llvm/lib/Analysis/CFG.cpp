@@ -158,7 +158,7 @@ bool llvm::isPotentiallyReachableFromMany(
   const Loop *StopLoop = LI ? getOutermostLoop(LI, StopBB) : nullptr;
 
   unsigned Limit = DefaultMaxBBsToExplore;
-  SmallPtrSet<const BasicBlock *, 32> Visited;
+  SmallPtrSet<const BasicBlock*, 32> Visited;
   do {
     BasicBlock *BB = Worklist.pop_back_val();
     if (!Visited.insert(BB).second)
