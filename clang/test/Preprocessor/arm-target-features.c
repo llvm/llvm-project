@@ -88,8 +88,8 @@
 // CHECK-V8R: #define __ARM_FEATURE_NUMERIC_MAXMIN 1
 // CHECK-V8R-NOT: #define __ARM_FP 0x
 
-// RUN: %clang -target armv8r-none-linux-gnueabi -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=CHECK-V8R-ALLOW-FP-INSTR %s
-// RUN: %clang -target armv8r-none-linux-gnueabihf -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=CHECK-V8R-ALLOW-FP-INSTR %s
+// RUN: %clang -target armv8r-none-linux-gnueabi -mcpu=cortex-r52 -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=CHECK-V8R-ALLOW-FP-INSTR %s
+// RUN: %clang -target armv8r-none-linux-gnueabihf -mcpu=cortex-r52 -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=CHECK-V8R-ALLOW-FP-INSTR %s
 // CHECK-V8R-ALLOW-FP-INSTR: #define __ARMEL__ 1
 // CHECK-V8R-ALLOW-FP-INSTR: #define __ARM_ARCH 8
 // CHECK-V8R-ALLOW-FP-INSTR: #define __ARM_ARCH_8R__ 1

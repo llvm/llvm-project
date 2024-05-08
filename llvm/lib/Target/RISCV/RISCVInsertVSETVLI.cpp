@@ -194,19 +194,22 @@ static bool hasUndefinedMergeOp(const MachineInstr &MI,
   if (UseMO.getReg().isPhysical())
     return false;
 
-  if (MachineInstr *UseMI = MRI.getVRegDef(UseMO.getReg())) {
-    if (UseMI->isImplicitDef())
-      return true;
+  MachineInstr *UseMI = MRI.getUniqueVRegDef(UseMO.getReg());
+  assert(UseMI);
+  if (UseMI->isImplicitDef())
+    return true;
 
-    if (UseMI->isRegSequence()) {
-      for (unsigned i = 1, e = UseMI->getNumOperands(); i < e; i += 2) {
-        MachineInstr *SourceMI = MRI.getVRegDef(UseMI->getOperand(i).getReg());
-        if (!SourceMI || !SourceMI->isImplicitDef())
-          return false;
-      }
-      return true;
+  if (UseMI->isRegSequence()) {
+    for (unsigned i = 1, e = UseMI->getNumOperands(); i < e; i += 2) {
+      MachineInstr *SourceMI =
+          MRI.getUniqueVRegDef(UseMI->getOperand(i).getReg());
+      assert(SourceMI);
+      if (!SourceMI->isImplicitDef())
+        return false;
     }
+    return true;
   }
+
   return false;
 }
 
@@ -886,7 +889,7 @@ static VSETVLIInfo getInfoForVSETVLI(const MachineInstr &MI,
     if (AVLReg == RISCV::X0)
       NewInfo.setAVLVLMAX();
     else
-      NewInfo.setAVLRegDef(MRI.getVRegDef(AVLReg), AVLReg);
+      NewInfo.setAVLRegDef(MRI.getUniqueVRegDef(AVLReg), AVLReg);
   }
   NewInfo.setVTYPE(MI.getOperand(2).getImm());
 
@@ -958,7 +961,8 @@ static VSETVLIInfo computeInfoForInstr(const MachineInstr &MI, uint64_t TSFlags,
       else
         InstrInfo.setAVLImm(Imm);
     } else {
-      InstrInfo.setAVLRegDef(MRI->getVRegDef(VLOp.getReg()), VLOp.getReg());
+      InstrInfo.setAVLRegDef(MRI->getUniqueVRegDef(VLOp.getReg()),
+                             VLOp.getReg());
     }
   } else {
     assert(isScalarExtractInstr(MI));
@@ -1231,7 +1235,7 @@ void RISCVInsertVSETVLI::transferAfter(VSETVLIInfo &Info,
 
   if (RISCV::isFaultFirstLoad(MI)) {
     // Update AVL to vl-output of the fault first load.
-    Info.setAVLRegDef(MRI->getVRegDef(MI.getOperand(1).getReg()),
+    Info.setAVLRegDef(MRI->getUniqueVRegDef(MI.getOperand(1).getReg()),
                       MI.getOperand(1).getReg());
     return;
   }
@@ -1338,8 +1342,9 @@ bool RISCVInsertVSETVLI::needVSETVLIPHI(const VSETVLIInfo &Require,
     const VSETVLIInfo &PBBExit = BlockInfo[PBB->getNumber()].Exit;
 
     // We need the PHI input to the be the output of a VSET(I)VLI.
-    MachineInstr *DefMI = MRI->getVRegDef(InReg);
-    if (!DefMI || !isVectorConfigInstr(*DefMI))
+    MachineInstr *DefMI = MRI->getUniqueVRegDef(InReg);
+    assert(DefMI);
+    if (!isVectorConfigInstr(*DefMI))
       return true;
 
     // We found a VSET(I)VLI make sure it matches the output of the
@@ -1399,7 +1404,8 @@ void RISCVInsertVSETVLI::emitVSETVLIs(MachineBasicBlock &MBB) {
         MachineOperand &VLOp = MI.getOperand(getVLOpNum(MI));
         if (VLOp.isReg()) {
           Register Reg = VLOp.getReg();
-          MachineInstr *VLOpDef = MRI->getVRegDef(Reg);
+          MachineInstr *VLOpDef = MRI->getUniqueVRegDef(Reg);
+          assert(VLOpDef);
 
           // Erase the AVL operand from the instruction.
           VLOp.setReg(RISCV::NoRegister);
@@ -1409,8 +1415,7 @@ void RISCVInsertVSETVLI::emitVSETVLIs(MachineBasicBlock &MBB) {
           // as an ADDI. However, the ADDI might not have been used in the
           // vsetvli, or a vsetvli might not have been emitted, so it may be
           // dead now.
-          if (VLOpDef && TII->isAddImmediate(*VLOpDef, Reg) &&
-              MRI->use_nodbg_empty(Reg))
+          if (TII->isAddImmediate(*VLOpDef, Reg) && MRI->use_nodbg_empty(Reg))
             VLOpDef->eraseFromParent();
         }
         MI.addOperand(MachineOperand::CreateReg(RISCV::VL, /*isDef*/ false,
@@ -1682,6 +1687,7 @@ void RISCVInsertVSETVLI::insertReadVL(MachineBasicBlock &MBB) {
     MachineInstr &MI = *I++;
     if (RISCV::isFaultFirstLoad(MI)) {
       Register VLOutput = MI.getOperand(1).getReg();
+      assert(VLOutput.isVirtual());
       if (!MRI->use_nodbg_empty(VLOutput))
         BuildMI(MBB, I, MI.getDebugLoc(), TII->get(RISCV::PseudoReadVL),
                 VLOutput);
