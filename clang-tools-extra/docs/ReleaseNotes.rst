@@ -259,6 +259,10 @@ Changes in existing checks
 - Improved :doc:`google-runtime-int <clang-tidy/checks/google/runtime-int>`
   check performance through optimizations.
 
+- Improved :doc:`hicpp-signed-bitwise <clang-tidy/checks/hicpp/signed-bitwise>`
+  check by ignoring false positives involving positive integer literals behind
+  implicit casts when `IgnorePositiveIntegerLiterals` is enabled.
+
 - Improved :doc:`hicpp-ignored-remove-result <clang-tidy/checks/hicpp/ignored-remove-result>`
   check by ignoring other functions with same prefixes as the target specific
   functions.
