@@ -3738,6 +3738,11 @@ static bool scaleShuffleElements(ArrayRef<int> Mask, unsigned NumDstElts,
   return false;
 }
 
+static bool canScaleShuffleElements(ArrayRef<int> Mask, unsigned NumDstElts) {
+  SmallVector<int, 32> ScaledMask;
+  return scaleShuffleElements(Mask, NumDstElts, ScaledMask);
+}
+
 /// Returns true if Elt is a constant zero or a floating point constant +0.0.
 bool X86::isZeroNode(SDValue Elt) {
   return isNullConstant(Elt) || isNullFPConstant(Elt);
@@ -46684,14 +46689,14 @@ static SDValue combineSetCCMOVMSK(SDValue EFLAGS, X86::CondCode &CC,
   // To address this, we check that we can scale the shuffle mask to MOVMSK
   // element width (this will ensure "high" elements match). Its slightly overly
   // conservative, but fine for an edge case fold.
-  SmallVector<int, 32> ShuffleMask, ScaledMaskUnused;
+  SmallVector<int, 32> ShuffleMask;
   SmallVector<SDValue, 2> ShuffleInputs;
   if (NumElts <= CmpBits &&
       getTargetShuffleInputs(peekThroughBitcasts(Vec), ShuffleInputs,
                              ShuffleMask, DAG) &&
       ShuffleInputs.size() == 1 && isCompletePermute(ShuffleMask) &&
       ShuffleInputs[0].getValueSizeInBits() == VecVT.getSizeInBits() &&
-      scaleShuffleElements(ShuffleMask, NumElts, ScaledMaskUnused)) {
+      canScaleShuffleElements(ShuffleMask, NumElts)) {
     SDLoc DL(EFLAGS);
     SDValue Result = DAG.getBitcast(VecVT, ShuffleInputs[0]);
     Result = DAG.getNode(X86ISD::MOVMSK, DL, MVT::i32, Result);
