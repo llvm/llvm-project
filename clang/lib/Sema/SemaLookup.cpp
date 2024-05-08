@@ -1248,6 +1248,13 @@ static DeclContext *findOuterContext(Scope *S) {
   return nullptr;
 }
 
+static bool isDependentAssignmentOperator(DeclarationName Name,
+                                          DeclContext *LookupContext) {
+  const auto *LookupRecord = dyn_cast_if_present<CXXRecordDecl>(LookupContext);
+  return Name.getCXXOverloadedOperator() == OO_Equal && LookupRecord &&
+         !LookupRecord->isBeingDefined() && LookupRecord->isDependentContext();
+}
+
 namespace {
 /// An RAII object to specify that we want to find block scope extern
 /// declarations.
@@ -1268,13 +1275,6 @@ struct FindLocalExternScope {
   bool OldFindLocalExtern;
 };
 } // end anonymous namespace
-
-static bool isDependentAssignmentOperator(DeclarationName Name,
-                                          DeclContext *LookupContext) {
-  auto *LookupRecord = dyn_cast_if_present<CXXRecordDecl>(LookupContext);
-  return Name.getCXXOverloadedOperator() == OO_Equal && LookupRecord &&
-         !LookupRecord->isBeingDefined() && LookupRecord->isDependentContext();
-}
 
 bool Sema::CppLookupName(LookupResult &R, Scope *S) {
   assert(getLangOpts().CPlusPlus && "Can perform only C++ lookup");
