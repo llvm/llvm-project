@@ -13565,10 +13565,27 @@ static SDValue expandMul(SDNode *N, SelectionDAG &DAG,
     if (MulAmt % Divisor != 0)
       continue;
     uint64_t MulAmt2 = MulAmt / Divisor;
-    // 3/5/9 * 2^N -> shXadd (sll X, C), (sll X, C)
-    // Matched in tablegen, avoid perturbing patterns.
-    if (isPowerOf2_64(MulAmt2))
-      return SDValue();
+    // 3/5/9 * 2^N ->  shl (shXadd X, X), N
+    if (isPowerOf2_64(MulAmt2)) {
+      SDLoc DL(N);
+      SDValue X = N->getOperand(0);
+      // Put the shift first if we can fold a zext into the
+      // shift forming a slli.uw.
+      if (X.getOpcode() == ISD::AND && isa<ConstantSDNode>(X.getOperand(1)) &&
+          X.getConstantOperandVal(1) == UINT64_C(0xffffffff)) {
+        SDValue Shl = DAG.getNode(ISD::SHL, DL, VT, X,
+                                  DAG.getConstant(Log2_64(MulAmt2), DL, VT));
+        return DAG.getNode(RISCVISD::SHL_ADD, DL, VT, Shl,
+                           DAG.getConstant(Log2_64(Divisor - 1), DL, VT), Shl);
+      }
+      // Otherwise, put rhe shl second so that it can fold with following
+      // instructions (e.g. sext or add).
+      SDValue Mul359 =
+          DAG.getNode(RISCVISD::SHL_ADD, DL, VT, X,
+                      DAG.getConstant(Log2_64(Divisor - 1), DL, VT), X);
+      return DAG.getNode(ISD::SHL, DL, VT, Mul359,
+                         DAG.getConstant(Log2_64(MulAmt2), DL, VT));
+    }
 
     // 3/5/9 * 3/5/9 -> shXadd (shYadd X, X), (shYadd X, X)
     if (MulAmt2 == 3 || MulAmt2 == 5 || MulAmt2 == 9) {
