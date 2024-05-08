@@ -676,8 +676,8 @@ static AvailabilityResult CheckAvailability(ASTContext &Context,
         Message->clear();
         llvm::raw_string_ostream Out(*Message);
         VersionTuple VTI(A->getIntroduced());
-        Out << "introduced in " << PrettyPlatformName << " " << VTI << EnvName
-            << HintMessage;
+        Out << "introduced in " << PrettyPlatformName << " " << VTI << " "
+            << EnvName << HintMessage;
       }
     }
     // Non-matching environment or no environment on target
