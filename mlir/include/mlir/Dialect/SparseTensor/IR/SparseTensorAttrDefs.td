@@ -502,8 +502,23 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
     //
     // Helper function to translate between level/dimension space.
     //
+
     SmallVector<int64_t> translateShape(::mlir::ArrayRef<int64_t> srcShape, ::mlir::sparse_tensor::CrdTransDirectionKind) const;
     ValueRange translateCrds(::mlir::OpBuilder &builder, ::mlir::Location loc, ::mlir::ValueRange crds, ::mlir::sparse_tensor::CrdTransDirectionKind) const;
+
+    //
+    // COO methods.
+    //
+
+    /// Returns the starting level of this sparse tensor type for a
+    /// trailing COO region that spans **at least** two levels. If
+    /// no such COO region is found, then returns the level-rank.
+    ///
+    /// DEPRECATED: use getCOOSegment instead;
+    Level getAoSCOOStart() const;
+
+    /// Returns a list of COO segments in the sparse tensor types.
+    SmallVector<COOSegment> getCOOSegments() const;
 
     //
     // Printing methods.
