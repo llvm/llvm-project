@@ -147,7 +147,7 @@ static bool isReachableImpl(SmallVectorImpl<BasicBlock *> &Worklist,
 
   // When a stop block is unreachable, it's dominated from everywhere,
   // regardless of whether there's a path between the two blocks.
-  SmallPtrSet<const BasicBlock *, 32> StopBBReachable;
+  SmallPtrSet<const BasicBlock *, 2> StopBBReachable;
   if (DT) {
     if constexpr (IsMany) {
       for (auto *BB : *StopSet) {
