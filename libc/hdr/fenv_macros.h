@@ -17,9 +17,33 @@
 
 #include <fenv.h>
 
+// In some environment, FE_ALL_EXCEPT is set to 0 and the remaining exceptions
+// FE_* are missing.
+#if (FE_ALL_EXCEPT == 0)
+#ifndef FE_DIVBYZERO
+#define FE_DIVBYZERO 0
+#endif // FE_DIVBYZERO
+
+#ifndef FE_INEXACT
+#define FE_INEXACT 0
+#endif // FE_INEXACT
+
+#ifndef FE_INVALID
+#define FE_INVALID 0
+#endif // FE_INVALID
+
+#ifndef FE_OVERFLOW
+#define FE_OVERFLOW 0
+#endif // FE_OVERFLOW
+
+#ifndef FE_UNDERFLOW
+#define FE_UNDERFLOW 0
+#endif // FE_UNDERFLOW
+#else
 // If this is not provided by the system, define it for use internally.
 #ifndef __FE_DENORM
 #define __FE_DENORM (1 << 6)
+#endif
 #endif
 
 #endif // LLVM_LIBC_FULL_BUILD
