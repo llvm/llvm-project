@@ -1959,8 +1959,14 @@ SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
         auto var_info = MaterializeVariable(
             variable, swift_expr, *materializer, *parsed_expr->code_manipulator,
             m_stack_frame_wp, diagnostic_manager, log, repl);
-        if (!var_info)
+        if (!var_info) {
+          auto error_string = llvm::toString(var_info.takeError());
+          LLDB_LOG(log, "Variable info failzed to materialize with error: {0}",
+              error_string);
+                    
+
           return ParseResult::unrecoverable_error;
+        }
 
         const char *name = ConstString(variable.GetName().get()).GetCString();
         variable_map[name] = *var_info;
