@@ -137,7 +137,7 @@ struct TestCompareExchangeStrong {
       test_acquire_release<T>(store_one_arg, load_one_arg);
     }
 
-    // success memory_oreder::seq_cst
+    // success memory_order::seq_cst
     {
       auto store = [](std::atomic_ref<T> const& x, T old_val, T new_val) {
         auto r = x.compare_exchange_strong(old_val, new_val, std::memory_order::seq_cst, std::memory_order::relaxed);
