@@ -691,6 +691,8 @@ Bug Fixes to C++ Support
 - Fix an assertion failure when parsing an invalid members of an anonymous class. (#GH85447)
 - Fixed a misuse of ``UnresolvedLookupExpr`` for ill-formed templated expressions. Fixes (#GH48673), (#GH63243)
   and (#GH88832).
+- Clang now defers all substitution into the exception specification of a function template specialization
+  until the noexcept-specifier is instantiated.
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
