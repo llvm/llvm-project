@@ -31,8 +31,7 @@ int main(int, char**) {
   TEST_LIBCPP_ASSERT_FAILURE(
       ([] {
         alignas(float) std::byte c[2 * sizeof(float)]; // intentionally larger
-        char c[8];
-        float* f = new (c + 1) float(3.14f); // intentionally misaligned
+        float* f = new (c + 1) float(3.14f);           // intentionally misaligned
         [[maybe_unused]] std::atomic_ref<float> r(*f);
       }()),
       "atomic_ref ctor: referenced object must be aligned to required_alignment");
