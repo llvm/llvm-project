@@ -36,7 +36,7 @@ struct TestBitwiseOrAssign {
     std::same_as<T> decltype(auto) y = (a |= T(2));
     assert(y == T(3));
     assert(x == T(3));
-    ASSERT_NOEXCEPT(a &= T(0));
+    ASSERT_NOEXCEPT(a |= T(0));
   }
 };
 
