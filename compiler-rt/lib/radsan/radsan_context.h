@@ -22,7 +22,7 @@ public:
   void BypassPush();
   void BypassPop();
 
-  void ExpectNotRealtime(const char *interpreted_function_name);
+  void ExpectNotRealtime(const char *InterceptedFunctionName);
 
 private:
   bool InRealtimeContext() const;
