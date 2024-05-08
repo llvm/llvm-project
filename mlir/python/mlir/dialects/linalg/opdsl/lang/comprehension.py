@@ -350,16 +350,19 @@ class TernaryFnType:
     def __init__(self, fn_name: str):
         self.fn_name = fn_name
 
-    def __call__(self, arg0: TensorExpression, arg1: TensorExpression, arg2: TensorExpression) -> "TensorFn":
-        return TensorFn(FunctionKind.TERNARY, self.fn_name, None, None, [arg0, arg1, arg2])
+    def __call__(
+        self, arg0: TensorExpression, arg1: TensorExpression, arg2: TensorExpression
+    ) -> "TensorFn":
+        return TensorFn(
+            FunctionKind.TERNARY, self.fn_name, None, None, [arg0, arg1, arg2]
+        )
 
     def __repr__(self):
         return f"{self.fn_name}"
 
 
 class TernaryFn:
-    """Ternary function namespace.
-    """
+    """Ternary function namespace."""
 
     select = TernaryFnType("select")
 
@@ -716,7 +719,9 @@ class TernaryFnAttrDef:
         )
 
     def __call__(self, arg0: TensorExpression, arg1: TensorExpression) -> TensorFn:
-        return TensorFn(FunctionKind.TERNARY, None, self.operand_def, None, [arg0, arg1])
+        return TensorFn(
+            FunctionKind.TERNARY, None, self.operand_def, None, [arg0, arg1]
+        )
 
     def __getitem__(self, reduce_dims: Tuple[DimDef]) -> ReduceFnUse:
         return ReduceFnUse(None, self, *reduce_dims)
