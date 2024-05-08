@@ -78,6 +78,11 @@ void setCurrentDebugTypes(const char **Types, unsigned Count) {
 }
 } // namespace llvm
 
+cl::opt<bool> LogDebugToStdOut(
+    "debug-to-stdout",
+    llvm::cl::desc("Log debugging to stdout instead of stderr"),
+    cl::init(false), cl::Hidden);
+
 // All Debug.h functionality is a no-op in NDEBUG mode.
 #ifndef NDEBUG
 
@@ -161,23 +166,27 @@ static void debug_user_sig_handler(void *Cookie) {
 
 /// dbgs - Return a circular-buffered debug stream.
 raw_ostream &llvm::dbgs() {
-  // Do one-time initialization in a thread-safe way.
-  static struct dbgstream {
-    circular_raw_ostream strm;
+  if (LogDebugToStdOut) {
+    return outs();
+  } else {
+    // Do one-time initialization in a thread-safe way.
+    static struct dbgstream {
+      circular_raw_ostream strm;
 
-    dbgstream()
-        : strm(errs(), "*** Debug Log Output ***\n",
-               (!EnableDebugBuffering || !DebugFlag) ? 0 : *DebugBufferSize) {
-      if (EnableDebugBuffering && DebugFlag && *DebugBufferSize != 0)
-        // TODO: Add a handler for SIGUSER1-type signals so the user can
-        // force a debug dump.
-        sys::AddSignalHandler(&debug_user_sig_handler, nullptr);
-      // Otherwise we've already set the debug stream buffer size to
-      // zero, disabling buffering so it will output directly to errs().
-    }
-  } thestrm;
+      dbgstream()
+          : strm(errs(), "*** Debug Log Output ***\n",
+                 (!EnableDebugBuffering || !DebugFlag) ? 0 : *DebugBufferSize) {
+        if (EnableDebugBuffering && DebugFlag && *DebugBufferSize != 0)
+          // TODO: Add a handler for SIGUSER1-type signals so the user can
+          // force a debug dump.
+          sys::AddSignalHandler(&debug_user_sig_handler, nullptr);
+        // Otherwise we've already set the debug stream buffer size to
+        // zero, disabling buffering so it will output directly to errs().
+      }
+    } thestrm;
 
-  return thestrm.strm;
+    return thestrm.strm;
+  }
 }
 
 #else
@@ -185,7 +194,11 @@ raw_ostream &llvm::dbgs() {
 namespace llvm {
   /// dbgs - Return errs().
   raw_ostream &dbgs() {
-    return errs();
+    if (LogDebugToStdOut) {
+      return outs();
+    } else {
+      return errs();
+    }
   }
 }
 void llvm::initDebugOptions() {}
