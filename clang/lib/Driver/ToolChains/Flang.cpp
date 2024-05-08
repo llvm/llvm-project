@@ -748,6 +748,10 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
   // Add other compile options
   addOtherOptions(Args, CmdArgs);
 
+  // Disable all warnings
+  // TODO: Handle interactions between -w, -pedantic, -Wall, -WOption
+  Args.AddLastArg(CmdArgs, options::OPT_w);
+
   // Forward flags for OpenMP. We don't do this if the current action is an
   // device offloading action other than OpenMP.
   if (Args.hasFlag(options::OPT_fopenmp, options::OPT_fopenmp_EQ,
