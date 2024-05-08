@@ -87,6 +87,27 @@ void AMDGPUInstPrinter::printU32ImmOperand(const MCInst *MI, unsigned OpNo,
   O << formatHex(MI->getOperand(OpNo).getImm() & 0xffffffff);
 }
 
+#ifdef LLPC_BUILD_GFX12
+void AMDGPUInstPrinter::printGlobalSReg32(const MCInst *MI, unsigned OpNo,
+                                          const MCSubtargetInfo &STI,
+                                          raw_ostream &O) {
+  const auto &RegCl = AMDGPUMCRegisterClasses[AMDGPU::SReg_32RegClassID];
+  unsigned Idx = MI->getOperand(OpNo).getImm();
+  assert(Idx < RegCl.getNumRegs());
+  O << getRegisterName(RegCl.getRegister(Idx));
+}
+
+void AMDGPUInstPrinter::printGlobalSReg64(const MCInst *MI, unsigned OpNo,
+                                          const MCSubtargetInfo &STI,
+                                          raw_ostream &O) {
+  const auto &RegCl = AMDGPUMCRegisterClasses[AMDGPU::SReg_64RegClassID];
+  unsigned Idx = MI->getOperand(OpNo).getImm();
+  assert(Idx % 2 == 0);
+  assert(Idx / 2 < RegCl.getNumRegs());
+  O << getRegisterName(RegCl.getRegister(Idx / 2));
+}
+
+#endif /* LLPC_BUILD_GFX12 */
 void AMDGPUInstPrinter::printNamedBit(const MCInst *MI, unsigned OpNo,
                                       raw_ostream &O, StringRef BitName) {
   if (MI->getOperand(OpNo).getImm()) {

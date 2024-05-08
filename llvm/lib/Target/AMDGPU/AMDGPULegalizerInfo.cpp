@@ -6765,8 +6765,13 @@ bool AMDGPULegalizerInfo::legalizeDebugTrap(MachineInstr &MI,
   return true;
 }
 
+#ifdef LLPC_BUILD_GFX12
+bool AMDGPULegalizerInfo::legalizeBVHIntersectRayIntrinsic(
+    MachineInstr &MI, MachineIRBuilder &B) const {
+#else /* LLPC_BUILD_GFX12 */
 bool AMDGPULegalizerInfo::legalizeBVHIntrinsic(MachineInstr &MI,
                                                MachineIRBuilder &B) const {
+#endif /* LLPC_BUILD_GFX12 */
   MachineRegisterInfo &MRI = *B.getMRI();
   const LLT S16 = LLT::scalar(16);
   const LLT S32 = LLT::scalar(32);
@@ -6902,17 +6907,88 @@ bool AMDGPULegalizerInfo::legalizeBVHIntrinsic(MachineInstr &MI,
     Ops.push_back(MergedOps);
   }
 
+#ifdef LLPC_BUILD_GFX12
+  auto MIB = B.buildInstr(AMDGPU::G_AMDGPU_BVH_INTERSECT_RAY)
+                 .addDef(DstReg)
+                 .addImm(Opcode);
+#else /* LLPC_BUILD_GFX12 */
   auto MIB = B.buildInstr(AMDGPU::G_AMDGPU_INTRIN_BVH_INTERSECT_RAY)
     .addDef(DstReg)
     .addImm(Opcode);
+#endif /* LLPC_BUILD_GFX12 */
 
   for (Register R : Ops) {
     MIB.addUse(R);
   }
 
+#ifdef LLPC_BUILD_GFX12
+  MIB.addUse(TDescr);
+
+  MIB.addImm(IsA16 ? 1 : 0).cloneMemRefs(MI);
+
+  MI.eraseFromParent();
+  return true;
+}
+
+bool AMDGPULegalizerInfo::legalizeBVHDualOrBVH8IntersectRayIntrinsic(
+    MachineInstr &MI, MachineIRBuilder &B) const {
+  const LLT S32 = LLT::scalar(32);
+  const LLT V2S32 = LLT::fixed_vector(2, 32);
+
+  Register DstReg = MI.getOperand(0).getReg();
+  Register DstOrigin = MI.getOperand(1).getReg();
+  Register DstDir = MI.getOperand(2).getReg();
+  Register NodePtr = MI.getOperand(4).getReg();
+  Register RayExtent = MI.getOperand(5).getReg();
+  Register InstanceMask = MI.getOperand(6).getReg();
+  Register RayOrigin = MI.getOperand(7).getReg();
+  Register RayDir = MI.getOperand(8).getReg();
+  Register Offsets = MI.getOperand(9).getReg();
+  Register TDescr = MI.getOperand(10).getReg();
+
+  if (!AMDGPU::isGFX12Plus(ST)) {
+    DiagnosticInfoUnsupported BadIntrin(B.getMF().getFunction(),
+                                        "intrinsic not supported on subtarget",
+                                        MI.getDebugLoc());
+    B.getMF().getFunction().getContext().diagnose(BadIntrin);
+    return false;
+  }
+
+  bool IsBVH8 = cast<GIntrinsic>(MI).getIntrinsicID() ==
+                Intrinsic::amdgcn_image_bvh8_intersect_ray;
+  const unsigned NumVDataDwords = 10;
+  const unsigned NumVAddrDwords = IsBVH8 ? 11 : 12;
+  int Opcode = AMDGPU::getMIMGOpcode(
+      IsBVH8 ? AMDGPU::IMAGE_BVH8_INTERSECT_RAY
+             : AMDGPU::IMAGE_BVH_DUAL_INTERSECT_RAY,
+      AMDGPU::MIMGEncGfx12, NumVDataDwords, NumVAddrDwords);
+  assert(Opcode != -1);
+
+  SmallVector<Register, 12> Ops;
+  Ops.push_back(NodePtr);
+  Ops.push_back(B.buildMergeLikeInstr(
+                     V2S32, {RayExtent, B.buildAnyExt(S32, InstanceMask)})
+                    .getReg(0));
+  Ops.push_back(RayOrigin);
+  Ops.push_back(RayDir);
+  Ops.push_back(Offsets);
+
+  auto MIB = B.buildInstr(IsBVH8 ? AMDGPU::G_AMDGPU_BVH8_INTERSECT_RAY
+                                 : AMDGPU::G_AMDGPU_BVH_DUAL_INTERSECT_RAY)
+                 .addDef(DstReg)
+                 .addDef(DstOrigin)
+                 .addDef(DstDir)
+                 .addImm(Opcode);
+
+  for (Register R : Ops)
+    MIB.addUse(R);
+
+  MIB.addUse(TDescr).cloneMemRefs(MI);
+#else /* LLPC_BUILD_GFX12 */
   MIB.addUse(TDescr)
      .addImm(IsA16 ? 1 : 0)
      .cloneMemRefs(MI);
+#endif /* LLPC_BUILD_GFX12 */
 
   MI.eraseFromParent();
   return true;
@@ -7297,7 +7373,14 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
   case Intrinsic::amdgcn_ds_fmax:
     return legalizeDSAtomicFPIntrinsic(Helper, MI, IntrID);
   case Intrinsic::amdgcn_image_bvh_intersect_ray:
+#ifdef LLPC_BUILD_GFX12
+    return legalizeBVHIntersectRayIntrinsic(MI, B);
+  case Intrinsic::amdgcn_image_bvh_dual_intersect_ray:
+  case Intrinsic::amdgcn_image_bvh8_intersect_ray:
+    return legalizeBVHDualOrBVH8IntersectRayIntrinsic(MI, B);
+#else /* LLPC_BUILD_GFX12 */
     return legalizeBVHIntrinsic(MI, B);
+#endif /* LLPC_BUILD_GFX12 */
   case Intrinsic::amdgcn_swmmac_f16_16x16x32_f16:
   case Intrinsic::amdgcn_swmmac_bf16_16x16x32_bf16:
   case Intrinsic::amdgcn_swmmac_f32_16x16x32_bf16:

@@ -295,7 +295,15 @@ def : ProcessorModel<"gfx1151", GFX11SpeedModel,
   FeatureISAVersion11_5_1.Features
 >;
 
+#ifdef LLPC_BUILD_GFX12
+def : ProcessorModel<"gfx1152", GFX11SpeedModel,
+  FeatureISAVersion11_5_2.Features
+>;
+
+// [gfx1100, gfx1101, gfx1102, gfx1103, gfx1150, gfx1151, gfx1152]
+#else /* LLPC_BUILD_GFX12 */
 // [gfx1100, gfx1101, gfx1102, gfx1103, gfx1150, gfx1151]
+#endif /* LLPC_BUILD_GFX12 */
 def : ProcessorModel<"gfx11-generic", GFX11SpeedModel,
   FeatureISAVersion11_Generic.Features
 >;

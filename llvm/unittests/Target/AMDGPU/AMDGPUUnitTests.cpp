@@ -152,6 +152,26 @@ static void testGPRLimits(const char *RegName, bool TestW32W64,
   EXPECT_TRUE(ErrStr.empty()) << ErrStr;
 }
 
+#ifdef LLPC_BUILD_GFX12
+static void testDynamicVGPRLimits(StringRef CPUName, StringRef FS,
+                                  TestFuncTy test) {
+  auto TM = createAMDGPUTargetMachine("amdgcn-amd-", CPUName,
+                                      "+dynamic-vgpr," + FS.str());
+  ASSERT_TRUE(TM) << "No target machine";
+
+  GCNSubtarget ST(TM->getTargetTriple(), std::string(TM->getTargetCPU()),
+                  std::string(TM->getTargetFeatureString()), *TM);
+  ASSERT_TRUE(ST.getFeatureBits().test(AMDGPU::FeatureDynamicVGPR));
+
+  std::stringstream Table;
+  bool Success = testAndRecord(Table, ST, test);
+  EXPECT_TRUE(Success && !PrintCpuRegLimits)
+      << CPUName << " dynamic VGPR " << FS
+      << ":\nOcc    MinVGPR        MaxVGPR\n"
+      << Table.str() << '\n';
+}
+
+#endif /* LLPC_BUILD_GFX12 */
 TEST(AMDGPU, TestVGPRLimitsPerOccupancy) {
   auto test = [](std::stringstream &OS, unsigned Occ, const GCNSubtarget &ST) {
     unsigned MaxVGPRNum = ST.getAddressableNumVGPRs();
@@ -163,4 +183,50 @@ TEST(AMDGPU, TestVGPRLimitsPerOccupancy) {
   };
 
   testGPRLimits("VGPR", true, test);
+#ifdef LLPC_BUILD_GFX12
+
+  testDynamicVGPRLimits("gfx1200", "+wavefrontsize32", test);
+  testDynamicVGPRLimits("gfx1200",
+                        "+wavefrontsize32,+dynamic-vgpr-block-size-32", test);
+}
+
+static void testAbsoluteLimits(StringRef CPUName, StringRef FS,
+                               unsigned ExpectedMinOcc, unsigned ExpectedMaxOcc,
+                               unsigned ExpectedMaxVGPRs) {
+  auto TM = createAMDGPUTargetMachine("amdgcn-amd-", CPUName, FS);
+  ASSERT_TRUE(TM) << "No target machine";
+
+  GCNSubtarget ST(TM->getTargetTriple(), std::string(TM->getTargetCPU()),
+                  std::string(TM->getTargetFeatureString()), *TM);
+
+  // Test function without attributes.
+  LLVMContext Context;
+  Module M("", Context);
+  Function *Func =
+      Function::Create(FunctionType::get(Type::getVoidTy(Context), false),
+                       GlobalValue::ExternalLinkage, "testFunc", &M);
+  Func->setCallingConv(CallingConv::AMDGPU_CS_Chain);
+  Func->addFnAttr("amdgpu-flat-work-group-size", "1,32");
+
+  auto Range = ST.getWavesPerEU(*Func);
+  EXPECT_EQ(ExpectedMinOcc, Range.first) << CPUName << ' ' << FS;
+  EXPECT_EQ(ExpectedMaxOcc, Range.second) << CPUName << ' ' << FS;
+  EXPECT_EQ(ExpectedMaxVGPRs, ST.getMaxNumVGPRs(*Func)) << CPUName << ' ' << FS;
+  EXPECT_EQ(ExpectedMaxVGPRs, ST.getAddressableNumVGPRs())
+      << CPUName << ' ' << FS;
+
+  // Function with requested 'amdgpu-waves-per-eu' in a valid range.
+  Func->addFnAttr("amdgpu-waves-per-eu", "10,12");
+  Range = ST.getWavesPerEU(*Func);
+  EXPECT_EQ(10u, Range.first) << CPUName << ' ' << FS;
+  EXPECT_EQ(12u, Range.second) << CPUName << ' ' << FS;
+}
+
+TEST(AMDGPU, TestOccupancyAbsoluteLimits) {
+  testAbsoluteLimits("gfx1200", "+wavefrontsize32", 1, 16, 256);
+  testAbsoluteLimits("gfx1200", "+wavefrontsize32,+dynamic-vgpr", 1, 16, 128);
+  testAbsoluteLimits(
+      "gfx1200", "+wavefrontsize32,+dynamic-vgpr,+dynamic-vgpr-block-size-32",
+      1, 16, 256);
+#endif /* LLPC_BUILD_GFX12 */
 }

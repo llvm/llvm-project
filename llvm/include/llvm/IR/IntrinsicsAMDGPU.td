@@ -10,7 +10,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifdef LLPC_BUILD_GFX12
+def flat_ptr_ty : LLVMQualPointerType<0>;
+#endif /* LLPC_BUILD_GFX12 */
 def global_ptr_ty : LLVMQualPointerType<1>;
+#ifdef LLPC_BUILD_GFX12
+def local_ptr_ty : LLVMQualPointerType<3>;
+#endif /* LLPC_BUILD_GFX12 */
 
 class AMDGPUReadPreloadRegisterIntrinsic
   : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable]>;
@@ -2253,6 +2259,42 @@ def int_amdgcn_mulhi_u24 : DefaultAttrsIntrinsic<[llvm_i32_ty],
   [IntrNoMem, IntrSpeculatable]
 >;
 
+#ifdef LLPC_BUILD_GFX12
+let Properties = [SDNPMemOperand] in {
+
+  // T @llvm.amdgcn.s.mov.from.global(i16 immarg sgpr, i32 m0)
+  //
+  // T must be i32 or i64.
+  def int_amdgcn_s_mov_from_global : Intrinsic<
+    [llvm_anyint_ty], [llvm_i16_ty, llvm_i32_ty],
+    [ImmArg<ArgIndex<0>>, IntrInaccessibleMemOnly, IntrReadMem,
+     /* Default attributes except for NoSync: */
+     IntrNoCallback, IntrNoFree, IntrWillReturn]
+  >;
+
+  // void @llvm.amdgcn.s.mov.to.global(i16 immarg sgpr, T data, i32 m0)
+  //
+  // T must be i32 or i64.
+  def int_amdgcn_s_mov_to_global : Intrinsic<
+    [], [llvm_i16_ty, llvm_anyint_ty, llvm_i32_ty],
+    [ImmArg<ArgIndex<0>>, IntrInaccessibleMemOnly, IntrWriteMem,
+     /* Default attributes except for NoSync: */
+     IntrNoCallback, IntrNoFree, IntrWillReturn]
+  >;
+
+  // T @llvm.amdgcn.s.swap.to.global(i16 immarg sgpr, T data, i32 m0)
+  //
+  // T must be i32.
+  def int_amdgcn_s_swap_to_global : Intrinsic<
+    [llvm_anyint_ty], [llvm_i16_ty, LLVMMatchType<0>, llvm_i32_ty],
+    [ImmArg<ArgIndex<0>>, IntrInaccessibleMemOnly,
+     /* Default attributes except for NoSync: */
+     IntrNoCallback, IntrNoFree, IntrWillReturn]
+  >;
+
+} // End Properties = [SDNPMemOperand]
+
+#endif /* LLPC_BUILD_GFX12 */
 // llvm.amdgcn.ds.gws.init(i32 bar_val, i32 resource_id)
 //
 // bar_val is the total number of waves that will wait on this
@@ -2645,7 +2687,11 @@ def int_amdgcn_ds_sub_gs_reg_rtn :
             [ImmArg<ArgIndex<1>>, IntrHasSideEffects, IntrWillReturn, IntrNoCallback, IntrNoFree],
             "", [SDNPMemOperand]>;
 
+#ifdef LLPC_BUILD_GFX12
+class IntDSBVHStackRtn :
+#else /* LLPC_BUILD_GFX12 */
 def int_amdgcn_ds_bvh_stack_rtn :
+#endif /* LLPC_BUILD_GFX12 */
   Intrinsic<
     [llvm_i32_ty, llvm_i32_ty], // %vdst, %addr
     [
@@ -2657,6 +2703,10 @@ def int_amdgcn_ds_bvh_stack_rtn :
     [ImmArg<ArgIndex<3>>, IntrWillReturn, IntrNoCallback, IntrNoFree]
   >;
 
+#ifdef LLPC_BUILD_GFX12
+def int_amdgcn_ds_bvh_stack_rtn : IntDSBVHStackRtn;
+
+#endif /* LLPC_BUILD_GFX12 */
 def int_amdgcn_s_wait_event_export_ready :
   ClangBuiltin<"__builtin_amdgcn_s_wait_event_export_ready">,
   Intrinsic<[], [], [IntrNoMem, IntrHasSideEffects, IntrWillReturn]
@@ -2731,6 +2781,56 @@ def int_amdgcn_wmma_bf16_16x16x16_bf16 : AMDGPUWmmaIntrinsicOPSEL<llvm_anyint_ty
 //===----------------------------------------------------------------------===//
 // GFX12 Intrinsics
 //===----------------------------------------------------------------------===//
+#ifdef LLPC_BUILD_GFX12
+
+def int_amdgcn_ds_bvh_stack_push4_pop1_rtn : IntDSBVHStackRtn;
+
+def int_amdgcn_ds_bvh_stack_push8_pop1_rtn :
+  Intrinsic<
+    [llvm_i32_ty, llvm_i32_ty], // %vdst, %addr
+    [
+      llvm_i32_ty,   // %addr
+      llvm_i32_ty,   // %data0
+      llvm_v8i32_ty, // %data1
+      llvm_i32_ty,   // %offset
+    ],
+    [ImmArg<ArgIndex<3>>, IntrWillReturn]
+  >;
+
+def int_amdgcn_ds_bvh_stack_push8_pop2_rtn :
+  Intrinsic<
+    [llvm_i64_ty, llvm_i32_ty], // %vdst, %addr
+    [
+      llvm_i32_ty,   // %addr
+      llvm_i32_ty,   // %data0
+      llvm_v8i32_ty, // %data1
+      llvm_i32_ty,   // %offset
+    ],
+    [ImmArg<ArgIndex<3>>, IntrWillReturn]
+  >;
+
+// <vdata>, <ray_origin>, <ray_dir>
+//   llvm.amdgcn.image.bvh.dual.intersect.ray <node_ptr>, <ray_extent>,
+//                                            <instance_mask>, <ray_origin>,
+//                                            <ray_dir>, <offsets>,
+//                                            <texture_descr>
+def int_amdgcn_image_bvh_dual_intersect_ray :
+  Intrinsic<[llvm_v10i32_ty, llvm_v3f32_ty, llvm_v3f32_ty],
+            [llvm_i64_ty, llvm_float_ty, llvm_i8_ty, llvm_v3f32_ty,
+             llvm_v3f32_ty, llvm_v2i32_ty, llvm_v4i32_ty],
+            [IntrReadMem, IntrWillReturn]>;
+
+// <vdata>, <ray_origin>, <ray_dir>
+//   llvm.amdgcn.image.bvh8.intersect.ray <node_ptr>, <ray_extent>,
+//                                        <instance_mask>, <ray_origin>,
+//                                        <ray_dir>, <offset>,
+//                                        <texture_descr>
+def int_amdgcn_image_bvh8_intersect_ray :
+  Intrinsic<[llvm_v10i32_ty, llvm_v3f32_ty, llvm_v3f32_ty],
+            [llvm_i64_ty, llvm_float_ty, llvm_i8_ty, llvm_v3f32_ty,
+             llvm_v3f32_ty, llvm_i32_ty, llvm_v4i32_ty],
+            [IntrReadMem, IntrWillReturn]>;
+#endif /* LLPC_BUILD_GFX12 */
 
 // llvm.amdgcn.permlane16.var <old> <src0> <src1> <fi> <bound_control>
 def int_amdgcn_permlane16_var : ClangBuiltin<"__builtin_amdgcn_permlane16_var">,

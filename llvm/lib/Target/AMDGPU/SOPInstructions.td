@@ -349,6 +349,48 @@ def S_MOVRELD_B32 : SOP1_32_movreld <"s_movreld_b32">;
 def S_MOVRELD_B64 : SOP1_64_movreld <"s_movreld_b64">;
 } // End Uses = [M0]
 
+#ifdef LLPC_BUILD_GFX12
+// Move from/to global registers.
+//
+// Global register operands are represented as constant operands in Machine IR
+// because they do not interact with regular registers in any way (e.g. for
+// code generation purposes).
+//
+// The instructions are modeled as accessing "memory" (load / store). Think of
+// the global register operands as part of the address of this memory access.
+let SubtargetPredicate = isGFX12Plus, maybeAtomic = 1, Uses = [M0] in {
+
+let mayLoad = 1 in {
+def S_MOV_FROM_GLOBAL_B32 : SOP1_Pseudo <"s_mov_from_global_b32",
+    (outs SReg_32:$sdst), (ins GlobalSReg32:$src0), "$sdst, $src0",
+    [(set i32:$sdst, (int_amdgcn_s_mov_from_global timm:$src0, M0))]>;
+def S_MOV_FROM_GLOBAL_B64 : SOP1_Pseudo <"s_mov_from_global_b64",
+    (outs SReg_64:$sdst), (ins GlobalSReg64:$src0), "$sdst, $src0",
+    [(set i64:$sdst, (int_amdgcn_s_mov_from_global timm:$src0, M0))]>;
+} // End mayLoad = 1
+
+let mayStore = 1 in {
+def S_MOV_TO_GLOBAL_B32 : SOP1_Pseudo <"s_mov_to_global_b32", (outs),
+    (ins GlobalSReg32:$sdst, SSrc_b32:$src0), "$sdst, $src0",
+    [(int_amdgcn_s_mov_to_global timm:$sdst, i32:$src0, M0)]>;
+def S_MOV_TO_GLOBAL_B64 : SOP1_Pseudo <"s_mov_to_global_b64", (outs),
+    (ins GlobalSReg64:$sdst, SSrc_b64:$src0), "$sdst, $src0",
+    [(int_amdgcn_s_mov_to_global timm:$sdst, i64:$src0, M0)]>;
+} // End mayStore = 1
+
+def S_SWAP_TO_GLOBAL_B32 : SOP1_Pseudo <"s_swap_to_global_b32",
+    (outs SReg_32:$src0), (ins GlobalSReg32:$sdst, SReg_32:$src0_tie),
+    "$sdst, $src0",
+    [(set i32:$src0, (int_amdgcn_s_swap_to_global timm:$sdst,
+                                                  i32:$src0_tie, M0))]> {
+  let mayLoad = 1;
+  let mayStore = 1;
+  let Constraints = "$src0_tie = $src0";
+  let DisableEncoding = "$src0_tie";
+}
+} // End SubtargetPredicate = isGFX12Plus, maybeAtomic = 1, Uses = [M0]
+
+#endif /* LLPC_BUILD_GFX12 */
 let SubtargetPredicate = isGFX6GFX7GFX8GFX9 in {
 def S_CBRANCH_JOIN : SOP1_0_32R <"s_cbranch_join">;
 } // End SubtargetPredicate = isGFX6GFX7GFX8GFX9
@@ -415,6 +457,14 @@ let SubtargetPredicate = isGFX11Plus in {
   }
 } // End SubtargetPredicate = isGFX11Plus
 
+#ifdef LLPC_BUILD_GFX12
+let SubtargetPredicate = isGFX12Plus in {
+  let hasSideEffects = 1, Defs = [SCC] in {
+    def S_ALLOC_VGPR : SOP1_0_32 <"s_alloc_vgpr">;
+  }
+} // End SubtargetPredicate = isGFX12Plus
+
+#endif /* LLPC_BUILD_GFX12 */
 class SOP1_F32_Inst<string opName, SDPatternOperator Op, ValueType vt0=f32,
                     ValueType vt1=vt0> :
   SOP1_32<opName, [(set vt0:$sdst, (UniformUnaryFrag<Op> vt1:$src0))]>;
@@ -2060,6 +2110,13 @@ defm S_MOVRELS_B64                : SOP1_Real_gfx11_gfx12<0x041>;
 defm S_MOVRELD_B32                : SOP1_Real_gfx11_gfx12<0x042>;
 defm S_MOVRELD_B64                : SOP1_Real_gfx11_gfx12<0x043>;
 defm S_MOVRELSD_2_B32             : SOP1_Real_gfx11_gfx12<0x044>;
+#ifdef LLPC_BUILD_GFX12
+defm S_MOV_FROM_GLOBAL_B32        : SOP1_Real_gfx12<0x05b>;
+defm S_MOV_FROM_GLOBAL_B64        : SOP1_Real_gfx12<0x05c>;
+defm S_MOV_TO_GLOBAL_B32          : SOP1_Real_gfx12<0x05d>;
+defm S_MOV_TO_GLOBAL_B64          : SOP1_Real_gfx12<0x05e>;
+defm S_SWAP_TO_GLOBAL_B32         : SOP1_Real_gfx12<0x05f>;
+#endif /* LLPC_BUILD_GFX12 */
 defm S_GETPC_B64                  : SOP1_Real_gfx11_gfx12<0x047>;
 defm S_SETPC_B64                  : SOP1_Real_gfx11_gfx12<0x048>;
 defm S_SWAPPC_B64                 : SOP1_Real_gfx11_gfx12<0x049>;
@@ -2077,8 +2134,15 @@ defm S_BARRIER_SIGNAL_ISFIRST_IMM : SOP1_IMM_Real_gfx12<0x04f>;
 defm S_GET_BARRIER_STATE_IMM      : SOP1_IMM_Real_gfx12<0x050>;
 defm S_BARRIER_INIT_IMM           : SOP1_IMM_Real_gfx12<0x051>;
 defm S_BARRIER_JOIN_IMM           : SOP1_IMM_Real_gfx12<0x052>;
+#ifdef LLPC_BUILD_GFX12
+defm S_ALLOC_VGPR                 : SOP1_Real_gfx12<0x053>;
+#endif /* LLPC_BUILD_GFX12 */
 defm S_WAKEUP_BARRIER_IMM         : SOP1_IMM_Real_gfx12<0x057>;
+#ifdef LLPC_BUILD_GFX12
+defm S_SLEEP_VAR                  : SOP1_Real_gfx12<0x058>;
+#else /* LLPC_BUILD_GFX12 */
 defm S_SLEEP_VAR                  : SOP1_IMM_Real_gfx12<0x058>;
+#endif /* LLPC_BUILD_GFX12 */
 
 //===----------------------------------------------------------------------===//
 // SOP1 - GFX1150, GFX12
