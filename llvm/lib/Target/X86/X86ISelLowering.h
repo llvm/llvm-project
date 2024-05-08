@@ -789,6 +789,10 @@ namespace llvm {
     // Perform an FP80 add after changing precision control in FPCW.
     STRICT_FP80_ADD,
 
+    // Conditional compare instructions
+    CCMP,
+    CTEST,
+
     // WARNING: Only add nodes here if they are strict FP nodes. Non-memory and
     // non-strict FP nodes should be above FIRST_TARGET_STRICTFP_OPCODE.
 

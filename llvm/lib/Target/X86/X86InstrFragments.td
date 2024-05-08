@@ -12,6 +12,9 @@ def SDTX86CmpTest : SDTypeProfile<1, 2, [SDTCisVT<0, i32>, SDTCisInt<1>,
 def SDTX86FCmp    : SDTypeProfile<1, 2, [SDTCisVT<0, i32>, SDTCisFP<1>,
                                          SDTCisSameAs<1, 2>]>;
 
+def SDTX86Ccmp    : SDTypeProfile<1, 5,
+                                  [SDTCisVT<3, i8>, SDTCisVT<4, i8>, SDTCisVT<5, i32>]>;
+
 def SDTX86Cmov    : SDTypeProfile<1, 4,
                                   [SDTCisSameAs<0, 1>, SDTCisSameAs<1, 2>,
                                    SDTCisVT<3, i8>, SDTCisVT<4, i32>]>;
@@ -137,6 +140,9 @@ def X86fcmp    : SDNode<"X86ISD::FCMP",     SDTX86FCmp>;
 def X86strict_fcmp : SDNode<"X86ISD::STRICT_FCMP", SDTX86FCmp, [SDNPHasChain]>;
 def X86strict_fcmps : SDNode<"X86ISD::STRICT_FCMPS", SDTX86FCmp, [SDNPHasChain]>;
 def X86bt      : SDNode<"X86ISD::BT",       SDTX86CmpTest>;
+
+def X86ccmp    : SDNode<"X86ISD::CCMP",     SDTX86Ccmp>;
+def X86ctest   : SDNode<"X86ISD::CTEST",    SDTX86Ccmp>;
 
 def X86cmov    : SDNode<"X86ISD::CMOV",     SDTX86Cmov>;
 def X86brcond  : SDNode<"X86ISD::BRCOND",   SDTX86BrCond,

@@ -1801,11 +1801,8 @@ void DAGCombiner::Run(CombineLevel AtLevel) {
 
     if (N->getNumValues() == RV->getNumValues())
       DAG.ReplaceAllUsesWith(N, RV.getNode());
-    else {
-      assert(N->getValueType(0) == RV.getValueType() &&
-             N->getNumValues() == 1 && "Type mismatch");
+    else
       DAG.ReplaceAllUsesWith(N, &RV);
-    }
 
     // Push the new node and any users onto the worklist.  Omit this if the
     // new node is the EntryToken (e.g. if a store managed to get optimized
