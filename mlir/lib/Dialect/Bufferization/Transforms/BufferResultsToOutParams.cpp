@@ -121,7 +121,7 @@ static LogicalResult updateReturnOps(func::FuncOp func,
     OpBuilder builder(op);
     for (auto [orig, arg] : llvm::zip(copyIntoOutParams, appendedEntryArgs)) {
       if (hoistStaticAllocs && isa<memref::AllocOp>(orig.getDefiningOp()) &&
-          orig.getType().cast<MemRefType>().hasStaticShape()) {
+          mlir::cast<MemRefType>(orig.getType()).hasStaticShape()) {
         orig.replaceAllUsesWith(arg);
         orig.getDefiningOp()->erase();
       } else {
