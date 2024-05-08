@@ -693,6 +693,8 @@ Bug Fixes to C++ Support
   and (#GH88832).
 - Clang now defers all substitution into the exception specification of a function template specialization
   until the noexcept-specifier is instantiated.
+- Fix a crash when an implicitly declared ``operator==`` function with a trailing requires-clause has its
+  constraints compared to that of another declaration.
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
