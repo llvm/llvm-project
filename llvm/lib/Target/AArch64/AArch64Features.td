@@ -546,7 +546,6 @@ def FeaturePredRes : Extension<"predres", "PredRes",
 def FeatureCacheDeepPersist : SubtargetFeature<"ccdp", "CCDP", "true",
     "Enable v8.5 Cache Clean to Point of Deep Persistence (FEAT_DPB2)" >;
 
-// NOTE: BTI now has posfeat/negfeat, which it didn't before
 let ArchExtKindSpelling = "AEK_NONE" in
 def FeatureBranchTargetId : Extension<"bti", "BTI",
     "Enable Branch Target Identification (FEAT_BTI)", [],
