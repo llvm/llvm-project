@@ -6,6 +6,7 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
+// XFAIL: !has-64-bit-atomics
 
 // integral-type operator++(int) const noexcept;
 // integral-type operator--(int) const noexcept;
