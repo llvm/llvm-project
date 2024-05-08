@@ -19,14 +19,11 @@ class FmulTest : public LIBC_NAMESPACE::testing::FEnvSafeTest {
 public:
   typedef T (*FMulFunc)(R, R);
 
-  void testMul(FMulFunc func) {
-    EXPECT_FP_EQ(T(1.0), func(1.0, 1.0));
-  }
-  
+  void testMul(FMulFunc func) { EXPECT_FP_EQ(T(1.0), func(1.0, 1.0)); }
 };
 
-#define LIST_FMUL_TESTS(T, R, func)				       \
-  using LlvmLibcFmulTest = FmulTest<T,R>;                                \
-  TEST_F(LlvmLibcFmulTest, Mul) { testMul(&func); }                
+#define LIST_FMUL_TESTS(T, R, func)                                            \
+  using LlvmLibcFmulTest = FmulTest<T, R>;                                     \
+  TEST_F(LlvmLibcFmulTest, Mul) { testMul(&func); }
 
 #endif // LLVM_LIBC_TEST_SRC_MATH_SMOKE_FMULTEST_H
