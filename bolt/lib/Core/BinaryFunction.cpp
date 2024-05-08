@@ -1167,7 +1167,7 @@ void BinaryFunction::handleAArch64IndirectCall(MCInst &Instruction,
   }
 }
 
-const std::optional<MCInst>
+std::optional<MCInst>
 BinaryFunction::disassembleInstructionAtOffset(uint64_t Offset) const {
   assert(CurrentState == State::Empty);
   assert(Offset < MaxSize && "invalid offset");
