@@ -21460,14 +21460,14 @@ static SDValue performUzpCombine(SDNode *N, SelectionDAG &DAG,
     if (ExtIdx0 == 0 && ExtIdx1 == NumElements / 2) {
       EVT OpVT = Op0.getOperand(1).getValueType();
       EVT WidenedResVT = ResVT.getDoubleNumVectorElementsVT(*DAG.getContext());
-      SDValue uzp2 =
-          DAG.getNode(N->getOpcode(), DL, WidenedResVT, SourceVec, SourceVec);
-      return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, ResVT, uzp2,
+      SDValue uzp = DAG.getNode(N->getOpcode(), DL, WidenedResVT, SourceVec,
+                                DAG.getUNDEF(WidenedResVT));
+      return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, ResVT, uzp,
                          DAG.getConstant(0, DL, OpVT));
     }
   }
 
-  // following optimization only work with uzp1
+  // following optimizations only work with uzp1
   if (N->getOpcode() == AArch64ISD::UZP2)
     return SDValue();
 

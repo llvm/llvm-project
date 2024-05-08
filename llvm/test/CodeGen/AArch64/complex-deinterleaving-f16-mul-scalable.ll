@@ -9,12 +9,12 @@ define <vscale x 4 x half> @complex_mul_v4f16(<vscale x 4 x half> %a, <vscale x 
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    uzp2 z2.s, z0.s, z0.s
 ; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
-; CHECK-NEXT:    uzp2 z3.s, z1.s, z1.s
-; CHECK-NEXT:    uzp1 z1.s, z1.s, z1.s
 ; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    uunpklo z2.d, z2.s
+; CHECK-NEXT:    uzp2 z3.s, z1.s, z0.s
 ; CHECK-NEXT:    uunpklo z0.d, z0.s
+; CHECK-NEXT:    uunpklo z2.d, z2.s
 ; CHECK-NEXT:    uunpklo z3.d, z3.s
+; CHECK-NEXT:    uzp1 z1.s, z1.s, z0.s
 ; CHECK-NEXT:    uunpklo z1.d, z1.s
 ; CHECK-NEXT:    movprfx z4, z3
 ; CHECK-NEXT:    fmul z4.h, p0/m, z4.h, z0.h

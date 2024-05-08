@@ -4090,13 +4090,21 @@ entry:
 }
 
 define %struct.uint8x8x2_t @test_uzp(<16 x i8> %y) {
-; CHECK-LABEL: test_uzp:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    uzp1 v2.16b, v0.16b, v0.16b
-; CHECK-NEXT:    uzp2 v1.16b, v0.16b, v0.16b
-; CHECK-NEXT:    // kill: def $d1 killed $d1 killed $q1
-; CHECK-NEXT:    fmov d0, d2
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: test_uzp:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    xtn v2.8b, v0.8h
+; CHECK-SD-NEXT:    uzp2 v1.16b, v0.16b, v0.16b
+; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 killed $q1
+; CHECK-SD-NEXT:    fmov d0, d2
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: test_uzp:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    uzp1 v2.16b, v0.16b, v0.16b
+; CHECK-GI-NEXT:    uzp2 v1.16b, v0.16b, v0.16b
+; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 killed $q1
+; CHECK-GI-NEXT:    fmov d0, d2
+; CHECK-GI-NEXT:    ret
 
 
   %vuzp.i = shufflevector <16 x i8> %y, <16 x i8> undef, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>

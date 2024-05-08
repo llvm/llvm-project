@@ -9,9 +9,9 @@ define <vscale x 4 x half> @complex_add_v4f16(<vscale x 4 x half> %a, <vscale x 
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    uzp1 z2.s, z0.s, z0.s
 ; CHECK-NEXT:    uzp2 z0.s, z0.s, z0.s
-; CHECK-NEXT:    uzp2 z3.s, z1.s, z1.s
-; CHECK-NEXT:    uzp1 z1.s, z1.s, z1.s
 ; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    uzp2 z3.s, z1.s, z0.s
+; CHECK-NEXT:    uzp1 z1.s, z1.s, z0.s
 ; CHECK-NEXT:    uunpklo z2.d, z2.s
 ; CHECK-NEXT:    uunpklo z0.d, z0.s
 ; CHECK-NEXT:    uunpklo z3.d, z3.s
