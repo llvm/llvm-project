@@ -698,3 +698,12 @@ func.func @unpack_mismatch_inner_tile_size_and_output_shape(
   %0 = tensor.unpack %input inner_dims_pos = [0, 1] inner_tiles = [8, 4] into %output : tensor<?x?x8x8xf32> -> tensor<?x?xf32>
   return %0 : tensor<?x?xf32>
 }
+
+// -----
+
+func.func @parallel_insert_slice_out_of_context(%a: tensor<5xf32>, %b: tensor<100xf32>) {
+  // expected-error@+1 {{expects parent op 'ParallelCombiningOpInterface'}}
+  tensor.parallel_insert_slice %a into %b[0][5][1]
+      : tensor<5xf32> into tensor<100xf32>
+  return
+}
