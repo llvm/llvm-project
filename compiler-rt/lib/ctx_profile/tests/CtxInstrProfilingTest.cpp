@@ -178,19 +178,19 @@ TEST_F(ContextTest, Dump) {
 
     bool write(const ContextNode &Node) {
       EXPECT_FALSE(Root->Taken.TryLock());
-      EXPECT_EQ(Node.guid(), 1);
+      EXPECT_EQ(Node.guid(), 1U);
       EXPECT_EQ(Node.counters()[0], Entries);
-      EXPECT_EQ(Node.counters_size(), 10);
-      EXPECT_EQ(Node.callsites_size(), 4);
+      EXPECT_EQ(Node.counters_size(), 10U);
+      EXPECT_EQ(Node.callsites_size(), 4U);
       EXPECT_EQ(Node.subContexts()[0], nullptr);
       EXPECT_EQ(Node.subContexts()[1], nullptr);
       EXPECT_NE(Node.subContexts()[2], nullptr);
       EXPECT_EQ(Node.subContexts()[3], nullptr);
       const auto &SN = *Node.subContexts()[2];
-      EXPECT_EQ(SN.guid(), 2);
+      EXPECT_EQ(SN.guid(), 2U);
       EXPECT_EQ(SN.counters()[0], Entries);
-      EXPECT_EQ(SN.counters_size(), 3);
-      EXPECT_EQ(SN.callsites_size(), 1);
+      EXPECT_EQ(SN.counters_size(), 3U);
+      EXPECT_EQ(SN.callsites_size(), 1U);
       EXPECT_EQ(SN.subContexts()[0], nullptr);
       State = true;
       return true;
