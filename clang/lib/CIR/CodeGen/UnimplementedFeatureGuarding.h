@@ -22,6 +22,7 @@ struct UnimplementedFeature {
   static bool buildTypeCheck() { return false; }
   static bool tbaa() { return false; }
   static bool cleanups() { return false; }
+  static bool emitNullabilityCheck() { return false; }
 
   // GNU vectors are done, but other kinds of vectors haven't been implemented.
   static bool scalableVectors() { return false; }
@@ -59,6 +60,7 @@ struct UnimplementedFeature {
 
   // ObjC
   static bool setObjCGCLValueClass() { return false; }
+  static bool objCLifetime() { return false; }
 
   // Debug info
   static bool generateDebugInfo() { return false; }
