@@ -14252,7 +14252,7 @@ Syntax:
 ::
 
       declare void @llvm.instrprof.mcdc.parameters(ptr <name>, i64 <hash>,
-                                                   i32 <bitmap-bytes>)
+                                                   i32 <bitmap-bits>)
 
 Overview:
 """""""""
@@ -14270,7 +14270,7 @@ name of the entity being instrumented. This should generally be the
 The second argument is a hash value that can be used by the consumer
 of the profile data to detect changes to the instrumented source.
 
-The third argument is the number of bitmap bytes required by the function to
+The third argument is the number of bitmap bits required by the function to
 record the number of test vectors executed for each boolean expression.
 
 Semantics:

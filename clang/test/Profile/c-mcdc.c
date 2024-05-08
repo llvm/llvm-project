@@ -16,7 +16,7 @@ int test(int a, int b, int c, int d, int e, int f) {
 
 // ALLOCATE MCDC TEMP AND ZERO IT.
 // NOPROFPASS-LABEL: @test(
-// NOPROFPASS: call void @llvm.instrprof.mcdc.parameters(ptr @__profn_test, i64 [[HASH:[0-9]+]], i32 2)
+// NOPROFPASS: call void @llvm.instrprof.mcdc.parameters(ptr @__profn_test, i64 [[HASH:[0-9]+]], i32 15)
 // MCDC-LABEL: @test(
 // MCDC: %mcdc.addr = alloca i32, align 4
 // MCDC: store i32 0, ptr %mcdc.addr, align 4

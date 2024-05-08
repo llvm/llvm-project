@@ -1414,7 +1414,7 @@ GlobalVariable *
 InstrLowerer::createRegionBitmaps(InstrProfMCDCBitmapInstBase *Inc,
                                   StringRef Name,
                                   GlobalValue::LinkageTypes Linkage) {
-  uint64_t NumBytes = Inc->getNumBitmapBytes()->getZExtValue();
+  uint64_t NumBytes = Inc->getNumBitmapBytes();
   auto *BitmapTy = ArrayType::get(Type::getInt8Ty(M.getContext()), NumBytes);
   auto GV = new GlobalVariable(M, BitmapTy, false, Linkage,
                                Constant::getNullValue(BitmapTy), Name);
@@ -1433,7 +1433,7 @@ InstrLowerer::getOrCreateRegionBitmaps(InstrProfMCDCBitmapInstBase *Inc) {
   // the corresponding profile section.
   auto *BitmapPtr = setupProfileSection(Inc, IPSK_bitmap);
   PD.RegionBitmaps = BitmapPtr;
-  PD.NumBitmapBytes = Inc->getNumBitmapBytes()->getZExtValue();
+  PD.NumBitmapBytes = Inc->getNumBitmapBytes();
   return PD.RegionBitmaps;
 }
 

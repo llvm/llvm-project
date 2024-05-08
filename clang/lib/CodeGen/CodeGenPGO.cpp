@@ -1224,11 +1224,9 @@ void CodeGenPGO::emitMCDCParameters(CGBuilderTy &Builder) {
   // Emit intrinsic representing MCDC bitmap parameters at function entry.
   // This is used by the instrumentation pass, but it isn't actually lowered to
   // anything.
-  llvm::Value *Args[3] = {
-      llvm::ConstantExpr::getBitCast(FuncNameVar, I8PtrTy),
-      Builder.getInt64(FunctionHash),
-      Builder.getInt32(llvm::alignTo(RegionMCDCState->BitmapBits, CHAR_BIT) /
-                       CHAR_BIT)};
+  llvm::Value *Args[3] = {llvm::ConstantExpr::getBitCast(FuncNameVar, I8PtrTy),
+                          Builder.getInt64(FunctionHash),
+                          Builder.getInt32(RegionMCDCState->BitmapBits)};
   Builder.CreateCall(
       CGM.getIntrinsic(llvm::Intrinsic::instrprof_mcdc_parameters), Args);
 }
