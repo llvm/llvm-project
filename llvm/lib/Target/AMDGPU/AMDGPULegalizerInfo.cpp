@@ -1272,7 +1272,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   // The 64-bit versions produce 32-bit results, but only on the SALU.
   getActionDefinitionsBuilder(G_CTLZ_ZERO_UNDEF)
       .legalFor({{S32, S32}, {S32, S64}})
-      .customFor({{S32, S8}, {S32, S16}})
+      .customIf(scalarNarrowerThan(0, 32))
       .clampScalar(0, S32, S32)
       .clampScalar(1, S32, S64)
       .scalarize(0)
@@ -4168,7 +4168,7 @@ bool AMDGPULegalizerInfo::legalizeCTLZ_ZERO_UNDEF(MachineInstr &MI,
 
   auto ShiftAmt = B.buildConstant(S32, 32u - NumBits);
   auto Extend = B.buildAnyExt(S32, {Src}).getReg(0u);
-  auto Shift = B.buildLShr(S32, {Extend}, ShiftAmt).getReg(0u);
+  auto Shift = B.buildLShr(S32, {Extend}, ShiftAmt);
   B.buildInstr(AMDGPU::G_AMDGPU_FFBH_U32, {Dst}, {Shift});
   MI.eraseFromParent();
   return true;
