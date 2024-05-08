@@ -538,7 +538,9 @@ static int compileModule(char **argv, LLVMContext &Context) {
       std::string IRTargetTriple = DataLayoutTargetTriple.str();
       if (!TargetTriple.empty())
         IRTargetTriple = TargetTriple;
-      TheTriple = Triple(Triple::normalize(IRTargetTriple));
+      if (!IRTargetTriple.empty())
+        IRTargetTriple = Triple::normalize(IRTargetTriple);
+      TheTriple = Triple(IRTargetTriple);
       if (TheTriple.getTriple().empty())
         TheTriple.setTriple(sys::getDefaultTargetTriple());
 
