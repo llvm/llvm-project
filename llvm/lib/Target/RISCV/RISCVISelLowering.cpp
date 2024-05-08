@@ -13431,7 +13431,7 @@ static SDValue expandMul(SDNode *N, SelectionDAG &DAG,
       SDLoc DL(N);
       SDValue X = N->getOperand(0);
       // Put the shift first if we can fold a zext into the
-      // shift forming a sll.uw.
+      // shift forming a slli.uw.
       if (X.getOpcode() == ISD::AND && isa<ConstantSDNode>(X.getOperand(1)) &&
           X.getConstantOperandVal(1) == UINT64_C(0xffffffff)) {
         SDValue Shl = DAG.getNode(ISD::SHL, DL, VT, X,
