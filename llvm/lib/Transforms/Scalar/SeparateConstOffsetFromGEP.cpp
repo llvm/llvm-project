@@ -974,7 +974,7 @@ bool SeparateConstOffsetFromGEP::reorderGEP(GetElementPtrInst *GEP,
                                             TargetTransformInfo &TTI) {
   Type *GEPType = GEP->getSourceElementType();
   // TODO: support reordering for non-trivial GEP chains
-  if (GEPType->isAggregateType() || GEP->getNumIndices() != 1)
+  if (GEP->getNumIndices() != 1)
     return false;
 
   auto PtrGEP = dyn_cast<GetElementPtrInst>(GEP->getPointerOperand());
@@ -982,7 +982,7 @@ bool SeparateConstOffsetFromGEP::reorderGEP(GetElementPtrInst *GEP,
     return false;
   Type *PtrGEPType = PtrGEP->getSourceElementType();
   // TODO: support reordering for non-trivial GEP chains
-  if (PtrGEPType->isAggregateType() || PtrGEP->getNumIndices() != 1)
+  if (PtrGEP->getNumIndices() != 1)
     return false;
 
   bool NestedNeedsExtraction;
@@ -1012,7 +1012,6 @@ bool SeparateConstOffsetFromGEP::reorderGEP(GetElementPtrInst *GEP,
   }
 
   IRBuilder<> Builder(GEP);
-  Builder.SetCurrentDebugLocation(GEP->getDebugLoc());
   // For trivial GEP chains, we can swap the indicies.
   Value *NewSrc = Builder.CreateGEP(GEPType, PtrGEP->getPointerOperand(),
                                     SmallVector<Value *, 4>(GEP->indices()), "",
