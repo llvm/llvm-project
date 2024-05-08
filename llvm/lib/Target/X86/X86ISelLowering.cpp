@@ -22690,7 +22690,7 @@ static SDValue EmitCmp(SDValue Op0, SDValue Op1, unsigned X86CC,
 
   // Only promote the compare up to I32 if it is a 16 bit operation
   // with an immediate.  16 bit immediates are to be avoided.
-  if (CmpVT == MVT::i16 && !Subtarget.isAtom() &&
+  if (CmpVT == MVT::i16 && !Subtarget.hasFastImm16() &&
       !DAG.getMachineFunction().getFunction().hasMinSize()) {
     ConstantSDNode *COp0 = dyn_cast<ConstantSDNode>(Op0);
     ConstantSDNode *COp1 = dyn_cast<ConstantSDNode>(Op1);
