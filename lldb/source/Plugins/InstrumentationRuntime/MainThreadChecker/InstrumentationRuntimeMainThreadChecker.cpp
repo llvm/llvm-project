@@ -150,7 +150,8 @@ static std::string TranslateObjCNameToSwiftName(std::string className,
     }
   };
 
-  MyConsumer consumer(swift::ObjCSelector(*ctx->GetASTContext(), numArguments,
+  ThreadSafeASTContext ast_ctx = ctx->GetASTContext();
+  MyConsumer consumer(swift::ObjCSelector(**ast_ctx, numArguments,
                                           selectorIdentifiers));
   // FIXME(mracek): Switch to a new API that translates the Clang class name
   // to Swift class name, once this API exists. Now we assume they are the same.

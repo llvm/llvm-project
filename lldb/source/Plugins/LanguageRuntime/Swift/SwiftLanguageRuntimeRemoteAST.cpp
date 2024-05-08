@@ -59,17 +59,18 @@ swift::remoteAST::RemoteASTContext &
 SwiftLanguageRuntimeImpl::GetRemoteASTContext(SwiftASTContext &swift_ast_ctx) {
   // If we already have a remote AST context for this AST context,
   // return it.
-  auto known = m_remote_ast_contexts.find(swift_ast_ctx.GetASTContext());
+  ThreadSafeASTContext ast_ctx = swift_ast_ctx.GetASTContext();
+  auto known = m_remote_ast_contexts.find(*ast_ctx);
   if (known != m_remote_ast_contexts.end())
     return *known->second;
 
   // Initialize a new remote AST context.
   (void)GetReflectionContext();
   auto remote_ast_up = std::make_unique<swift::remoteAST::RemoteASTContext>(
-      *swift_ast_ctx.GetASTContext(), GetMemoryReader());
+      **ast_ctx, GetMemoryReader());
   auto &remote_ast = *remote_ast_up;
   m_remote_ast_contexts.insert(
-      {swift_ast_ctx.GetASTContext(), std::move(remote_ast_up)});
+      {*ast_ctx, std::move(remote_ast_up)});
   return remote_ast;
 }
 
@@ -521,7 +522,8 @@ SwiftLanguageRuntimeImpl::GetMetadataPromise(const SymbolContext *sc,
   if (addr == 0 || addr == LLDB_INVALID_ADDRESS)
     return nullptr;
 
-  auto key = std::make_pair(swift_ast_ctx->GetASTContext(), addr);
+  ThreadSafeASTContext ast_ctx = swift_ast_ctx->GetASTContext();
+  auto key = std::make_pair(*ast_ctx, addr);
   auto iter = m_promises_map.find(key);
   if (iter != m_promises_map.end())
     return iter->second;

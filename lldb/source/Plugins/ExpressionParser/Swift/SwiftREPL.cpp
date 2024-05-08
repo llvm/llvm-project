@@ -574,7 +574,7 @@ void SwiftREPL::CompleteCode(const std::string &current_code,
   SwiftASTContextForExpressions *swift_ast = m_swift_ast;
 
   if (swift_ast) {
-    swift::ASTContext *ast = swift_ast->GetASTContext();
+    ThreadSafeASTContext ast = swift_ast->GetASTContext();
     swift::REPLCompletions completions;
     SourceModule completion_module_info;
     completion_module_info.path.push_back(ConstString("repl"));
@@ -587,7 +587,7 @@ void SwiftREPL::CompleteCode(const std::string &current_code,
       repl_module = swift_ast->CreateModule(completion_module_info, error,
                                             importInfo);
       std::optional<unsigned> bufferID;
-      swift::SourceFile *repl_source_file = new (*ast) swift::SourceFile(
+      swift::SourceFile *repl_source_file = new (**ast) swift::SourceFile(
           *repl_module, swift::SourceFileKind::Main, bufferID);
       repl_module->addFile(*repl_source_file);
       swift::performImportResolution(*repl_source_file);

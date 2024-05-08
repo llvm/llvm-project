@@ -780,7 +780,7 @@ static void ResolveSpecialNames(
 
 /// Initialize the SwiftASTContext and return the wrapped
 /// swift::ASTContext when successful.
-static swift::ASTContext *
+static ThreadSafeASTContext
 SetupASTContext(SwiftASTContextForExpressions &swift_ast_context,
                 DiagnosticManager &diagnostic_manager,
                 std::function<bool()> disable_objc_runtime, bool repl,
@@ -794,27 +794,27 @@ SetupASTContext(SwiftASTContextForExpressions &swift_ast_context,
     diagnostic_manager.PutString(eSeverityInfo,
                                  "Couldn't initialize Swift expression "
                                  "evaluator due to previous errors.");
-    return nullptr;
+    return ThreadSafeASTContext();
   }
 
   if (swift_ast_context.HasFatalErrors()) {
     diagnostic_manager.PutString(eSeverityError,
                                  "The AST context is in a fatal error state.");
-    return nullptr;
+    return ThreadSafeASTContext();
   }
 
-  swift::ASTContext *ast_context = swift_ast_context.GetASTContext();
+  ThreadSafeASTContext ast_context = swift_ast_context.GetASTContext();
   if (!ast_context) {
     diagnostic_manager.PutString(
         eSeverityError,
         "Couldn't initialize the AST context.  Please check your settings.");
-    return nullptr;
+    return ThreadSafeASTContext();
   }
 
   if (swift_ast_context.HasFatalErrors()) {
     diagnostic_manager.PutString(eSeverityError,
                                  "The AST context is in a fatal error state.");
-    return nullptr;
+    return ThreadSafeASTContext();
   }
 
   // TODO: Find a way to get contraint-solver output sent to a stream
@@ -1114,7 +1114,7 @@ char ModuleImportError::ID = 0;
 /// This holds the result of ParseAndImport.
 struct ParsedExpression {
   std::unique_ptr<SwiftASTManipulator> code_manipulator;
-  swift::ASTContext &ast_context;
+  ThreadSafeASTContext ast_context;
   swift::ModuleDecl &module;
   LLDBNameLookup &external_lookup;
   swift::SourceFile &source_file;
@@ -1278,7 +1278,7 @@ static llvm::Expected<ParsedExpression> ParseAndImport(
     return !ObjCLanguageRuntime::Get(*process_sp);
   };
 
-  swift::ASTContext *ast_context =
+  ThreadSafeASTContext ast_context =
       SetupASTContext(swift_ast_context, diagnostic_manager,
                       should_disable_objc_runtime, repl, playground);
   if (!ast_context)
@@ -1337,7 +1337,7 @@ static llvm::Expected<ParsedExpression> ParseAndImport(
     importInfo.AdditionalImports.emplace_back(attributed_import);
 
   auto module_id = ast_context->getIdentifier(expr_name_buf);
-  auto &module = *swift::ModuleDecl::create(module_id, *ast_context,
+  auto &module = *swift::ModuleDecl::create(module_id, **ast_context,
                                             importInfo);
 
   swift::SourceFileKind source_file_kind = swift::SourceFileKind::Library;
@@ -1347,7 +1347,7 @@ static llvm::Expected<ParsedExpression> ParseAndImport(
 
   // Create the source file. Note, we disable delayed parsing for the
   // swift expression parser.
-  swift::SourceFile *source_file = new (*ast_context)
+  swift::SourceFile *source_file = new (**ast_context)
       swift::SourceFile(module, source_file_kind, buffer_id,
                         swift::SourceFile::ParsingFlags::DisableDelayedBodies);
   module.addFile(*source_file);
@@ -1504,8 +1504,13 @@ static llvm::Expected<ParsedExpression> ParseAndImport(
   swift::verify(*source_file);
 
   ParsedExpression result = {
-    std::move(code_manipulator), *ast_context, module, *external_lookup,
-    *source_file, std::move(main_filename), /*buffer_id*/0,
+      std::move(code_manipulator),
+      std::move(ast_context),
+      module,
+      *external_lookup,
+      *source_file,
+      std::move(main_filename),
+      /*buffer_id*/ 0,
   };
   return std::move(result);
 }
@@ -2124,7 +2129,7 @@ SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
   // part of the parse from the staging area in the external lookup
   // object into the SwiftPersistentExpressionState.
   swift::ModuleDecl *module = &parsed_expr->module;
-  parsed_expr->ast_context.addLoadedModule(module);
+  parsed_expr->ast_context->addLoadedModule(module);
   m_swift_ast_ctx.CacheModule(module);
   if (m_sc.target_sp) {
     auto *persistent_state =
