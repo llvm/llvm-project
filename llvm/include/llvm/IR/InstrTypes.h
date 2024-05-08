@@ -24,6 +24,7 @@
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/FMF.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/LLVMContext.h"
@@ -309,6 +310,32 @@ public:
     BinaryOperator *BO = Create(Opc, V1, V2, Name, InsertBefore);
     BO->copyIRFlags(CopyO);
     return BO;
+  }
+
+  static BinaryOperator *CreateWithFMF(BinaryOps Opc, Value *V1, Value *V2,
+                                       FastMathFlags FMF,
+                                       const Twine &Name = "",
+                                       Instruction *InsertBefore = nullptr) {
+    BinaryOperator *BO = Create(Opc, V1, V2, Name, InsertBefore);
+    BO->setFastMathFlags(FMF);
+    return BO;
+  }
+
+  static BinaryOperator *CreateFAddFMF(Value *V1, Value *V2, FastMathFlags FMF,
+                                       const Twine &Name = "") {
+    return CreateWithFMF(Instruction::FAdd, V1, V2, FMF, Name);
+  }
+  static BinaryOperator *CreateFSubFMF(Value *V1, Value *V2, FastMathFlags FMF,
+                                       const Twine &Name = "") {
+    return CreateWithFMF(Instruction::FSub, V1, V2, FMF, Name);
+  }
+  static BinaryOperator *CreateFMulFMF(Value *V1, Value *V2, FastMathFlags FMF,
+                                       const Twine &Name = "") {
+    return CreateWithFMF(Instruction::FMul, V1, V2, FMF, Name);
+  }
+  static BinaryOperator *CreateFDivFMF(Value *V1, Value *V2, FastMathFlags FMF,
+                                       const Twine &Name = "") {
+    return CreateWithFMF(Instruction::FDiv, V1, V2, FMF, Name);
   }
 
   static BinaryOperator *CreateFAddFMF(Value *V1, Value *V2,
@@ -1914,6 +1941,11 @@ public:
     Attrs = Attrs.addDereferenceableRetAttr(getContext(), Bytes);
   }
 
+  /// adds the range attribute to the list of attributes.
+  void addRangeRetAttr(const ConstantRange &CR) {
+    Attrs = Attrs.addRangeRetAttr(getContext(), CR);
+  }
+
   /// Determine whether the return value has the given attribute.
   bool hasRetAttr(Attribute::AttrKind Kind) const {
     return hasRetAttrImpl(Kind);
@@ -1965,13 +1997,19 @@ public:
   /// Get the attribute of a given kind from a given arg
   Attribute getParamAttr(unsigned ArgNo, Attribute::AttrKind Kind) const {
     assert(ArgNo < arg_size() && "Out of bounds");
-    return getAttributes().getParamAttr(ArgNo, Kind);
+    Attribute A = getAttributes().getParamAttr(ArgNo, Kind);
+    if (A.isValid())
+      return A;
+    return getParamAttrOnCalledFunction(ArgNo, Kind);
   }
 
   /// Get the attribute of a given kind from a given arg
   Attribute getParamAttr(unsigned ArgNo, StringRef Kind) const {
     assert(ArgNo < arg_size() && "Out of bounds");
-    return getAttributes().getParamAttr(ArgNo, Kind);
+    Attribute A = getAttributes().getParamAttr(ArgNo, Kind);
+    if (A.isValid())
+      return A;
+    return getParamAttrOnCalledFunction(ArgNo, Kind);
   }
 
   /// Return true if the data operand at index \p i has the attribute \p
@@ -2582,6 +2620,11 @@ public:
   op_iterator populateBundleOperandInfos(ArrayRef<OperandBundleDef> Bundles,
                                          const unsigned BeginIndex);
 
+  /// Return true if the call has deopt state bundle.
+  bool hasDeoptState() const {
+    return getOperandBundle(LLVMContext::OB_deopt).has_value();
+  }
+
 public:
   /// Return the BundleOpInfo for the operand at index OpIdx.
   ///
@@ -2615,6 +2658,8 @@ private:
     return hasFnAttrOnCalledFunction(Kind);
   }
   template <typename AK> Attribute getFnAttrOnCalledFunction(AK Kind) const;
+  template <typename AK>
+  Attribute getParamAttrOnCalledFunction(unsigned ArgNo, AK Kind) const;
 
   /// Determine whether the return value has the given attribute. Supports
   /// Attribute::AttrKind and StringRef as \p AttrKind types.

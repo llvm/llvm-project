@@ -68,8 +68,9 @@ defm compress_debug_sections:
   MetaVarName<"[none,zlib,zstd]">;
 
 defm compress_sections: EEq<"compress-sections",
-  "Compress non-SHF_ALLOC output sections matching <section-glob>">,
-  MetaVarName<"<section-glob>=[none|zlib|zstd]">;
+  "Compress output sections that match the glob and do not have the SHF_ALLOC flag. "
+  "The compression level is <level> (if specified) or a default speed-focused level">,
+  MetaVarName<"<section-glob>={none,zlib,zstd}[:level]">;
 
 defm defsym: Eq<"defsym", "Define a symbol alias">, MetaVarName<"<symbol>=<value>">;
 
@@ -152,6 +153,12 @@ def : Flag<["--"], "no-color-diagnostics">, Alias<color_diagnostics>, AliasArgs<
 
 def cref: FF<"cref">,
   HelpText<"Output cross reference table. If -Map is specified, print to the map file">;
+
+defm debug_names: BB<"debug-names",
+    "Generate a merged .debug_names section",
+    "Do not generate a merged .debug_names section (default)">;
+
+defm default_script: EEq<"default-script", "In the absence of --script, read this default linker script">;
 
 defm demangle: B<"demangle",
     "Demangle symbol names (default)",
@@ -551,6 +558,7 @@ HelpText<"Format diagnostics for Visual Studio compatibility">;
 def package_metadata: JJ<"package-metadata=">, HelpText<"Emit package metadata note">;
 
 // Aliases
+def: Separate<["-"], "dT">, Alias<default_script>, HelpText<"Alias for --default-script">;
 def: Separate<["-"], "f">, Alias<auxiliary>, HelpText<"Alias for --auxiliary">;
 def: F<"call_shared">, Alias<Bdynamic>, HelpText<"Alias for --Bdynamic">;
 def: F<"dy">, Alias<Bdynamic>, HelpText<"Alias for --Bdynamic">;

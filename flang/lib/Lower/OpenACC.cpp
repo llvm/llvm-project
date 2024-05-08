@@ -65,7 +65,7 @@ static Op createDataEntryOp(fir::FirOpBuilder &builder, mlir::Location loc,
                             mlir::acc::DataClause dataClause, mlir::Type retTy,
                             mlir::Value isPresent = {}) {
   mlir::Value varPtrPtr;
-  if (auto boxTy = baseAddr.getType().dyn_cast<fir::BaseBoxType>()) {
+  if (auto boxTy = mlir::dyn_cast<fir::BaseBoxType>(baseAddr.getType())) {
     if (isPresent) {
       mlir::Type ifRetTy = boxTy.getEleTy();
       if (!fir::isa_ref_type(ifRetTy))
@@ -2658,7 +2658,7 @@ genACCHostDataOp(Fortran::lower::AbstractConverter &converter,
   if (ifCond) {
     if (auto cst =
             mlir::dyn_cast<mlir::arith::ConstantOp>(ifCond.getDefiningOp()))
-      if (auto boolAttr = cst.getValue().dyn_cast<mlir::BoolAttr>()) {
+      if (auto boolAttr = mlir::dyn_cast<mlir::BoolAttr>(cst.getValue())) {
         if (boolAttr.getValue()) {
           // get rid of the if condition if it is always true.
           ifCond = mlir::Value();
@@ -4187,21 +4187,27 @@ void Fortran::lower::attachDeclarePostDeallocAction(
 
   std::stringstream fctName;
   fctName << converter.mangleName(sym) << declarePostDeallocSuffix.str();
-  mlir::Operation &op = builder.getInsertionBlock()->back();
-  if (op.hasAttr(mlir::acc::getDeclareActionAttrName())) {
-    auto attr = op.getAttrOfType<mlir::acc::DeclareActionAttr>(
+  mlir::Operation *op = &builder.getInsertionBlock()->back();
+  if (auto resOp = mlir::dyn_cast<fir::ResultOp>(*op)) {
+    assert(resOp.getOperands().size() == 0 &&
+           "expect only fir.result op with no operand");
+    op = op->getPrevNode();
+  }
+  assert(op && "expect operation to attach the post deallocation action");
+  if (op->hasAttr(mlir::acc::getDeclareActionAttrName())) {
+    auto attr = op->getAttrOfType<mlir::acc::DeclareActionAttr>(
         mlir::acc::getDeclareActionAttrName());
-    op.setAttr(mlir::acc::getDeclareActionAttrName(),
-               mlir::acc::DeclareActionAttr::get(
-                   builder.getContext(), attr.getPreAlloc(),
-                   attr.getPostAlloc(), attr.getPreDealloc(),
-                   /*postDealloc=*/builder.getSymbolRefAttr(fctName.str())));
+    op->setAttr(mlir::acc::getDeclareActionAttrName(),
+                mlir::acc::DeclareActionAttr::get(
+                    builder.getContext(), attr.getPreAlloc(),
+                    attr.getPostAlloc(), attr.getPreDealloc(),
+                    /*postDealloc=*/builder.getSymbolRefAttr(fctName.str())));
   } else {
-    op.setAttr(mlir::acc::getDeclareActionAttrName(),
-               mlir::acc::DeclareActionAttr::get(
-                   builder.getContext(),
-                   /*preAlloc=*/{}, /*postAlloc=*/{}, /*preDealloc=*/{},
-                   /*postDealloc=*/builder.getSymbolRefAttr(fctName.str())));
+    op->setAttr(mlir::acc::getDeclareActionAttrName(),
+                mlir::acc::DeclareActionAttr::get(
+                    builder.getContext(),
+                    /*preAlloc=*/{}, /*postAlloc=*/{}, /*preDealloc=*/{},
+                    /*postDealloc=*/builder.getSymbolRefAttr(fctName.str())));
   }
 }
 

@@ -230,6 +230,9 @@ public:
     if (!V->isLocalVarDecl())
       return true;
 
+    if (BR->getSourceManager().isInSystemHeader(V->getLocation()))
+      return true;
+
     return false;
   }
 

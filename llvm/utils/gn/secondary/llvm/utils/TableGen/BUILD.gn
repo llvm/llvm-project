@@ -1,5 +1,6 @@
 source_set("llvm-min-tblgen-sources") {
   sources = [
+    "ARMTargetDefEmitter.cpp",
     "Attributes.cpp",
     "DirectiveEmitter.cpp",
     "IntrinsicEmitter.cpp",

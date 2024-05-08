@@ -9,11 +9,12 @@
 #ifndef _LIBCPP___ALGORITHM_PSTL_SORT_H
 #define _LIBCPP___ALGORITHM_PSTL_SORT_H
 
-#include <__algorithm/pstl_backend.h>
 #include <__algorithm/pstl_frontend_dispatch.h>
 #include <__algorithm/pstl_stable_sort.h>
 #include <__config>
 #include <__functional/operations.h>
+#include <__iterator/cpp17_iterator_concepts.h>
+#include <__pstl/configuration.h>
 #include <__type_traits/is_execution_policy.h>
 #include <__type_traits/remove_cvref.h>
 #include <__utility/empty.h>
@@ -60,6 +61,7 @@ template <class _ExecutionPolicy,
           enable_if_t<is_execution_policy_v<_RawPolicy>, int> = 0>
 _LIBCPP_HIDE_FROM_ABI void
 sort(_ExecutionPolicy&& __policy, _RandomAccessIterator __first, _RandomAccessIterator __last, _Comp __comp) {
+  _LIBCPP_REQUIRE_CPP17_RANDOM_ACCESS_ITERATOR(_RandomAccessIterator, "sort requires RandomAccessIterators");
   if (!std::__sort(__policy, std::move(__first), std::move(__last), std::move(__comp)))
     std::__throw_bad_alloc();
 }
@@ -70,6 +72,7 @@ template <class _ExecutionPolicy,
           enable_if_t<is_execution_policy_v<_RawPolicy>, int> = 0>
 _LIBCPP_HIDE_FROM_ABI void
 sort(_ExecutionPolicy&& __policy, _RandomAccessIterator __first, _RandomAccessIterator __last) {
+  _LIBCPP_REQUIRE_CPP17_RANDOM_ACCESS_ITERATOR(_RandomAccessIterator, "sort requires RandomAccessIterators");
   std::sort(std::forward<_ExecutionPolicy>(__policy), std::move(__first), std::move(__last), less{});
 }
 

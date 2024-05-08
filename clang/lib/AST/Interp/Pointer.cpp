@@ -23,7 +23,7 @@ Pointer::Pointer(Block *Pointee)
     : Pointer(Pointee, Pointee->getDescriptor()->getMetadataSize(),
               Pointee->getDescriptor()->getMetadataSize()) {}
 
-Pointer::Pointer(Block *Pointee, unsigned BaseAndOffset)
+Pointer::Pointer(Block *Pointee, uint64_t BaseAndOffset)
     : Pointer(Pointee, BaseAndOffset, BaseAndOffset) {}
 
 Pointer::Pointer(const Pointer &P)
@@ -34,7 +34,7 @@ Pointer::Pointer(const Pointer &P)
     PointeeStorage.BS.Pointee->addPointer(this);
 }
 
-Pointer::Pointer(Block *Pointee, unsigned Base, unsigned Offset)
+Pointer::Pointer(Block *Pointee, unsigned Base, uint64_t Offset)
     : Offset(Offset), StorageKind(Storage::Block) {
   assert((Base == RootPtrMark || Base % alignof(void *) == 0) && "wrong base");
 
@@ -63,9 +63,8 @@ Pointer::~Pointer() {
 }
 
 void Pointer::operator=(const Pointer &P) {
-
   if (!this->isIntegralPointer() || !P.isBlockPointer())
-    assert(P.StorageKind == StorageKind);
+    assert(P.StorageKind == StorageKind || (this->isZero() && P.isZero()));
 
   bool WasBlockPointer = isBlockPointer();
   StorageKind = P.StorageKind;
@@ -92,7 +91,7 @@ void Pointer::operator=(const Pointer &P) {
 
 void Pointer::operator=(Pointer &&P) {
   if (!this->isIntegralPointer() || !P.isBlockPointer())
-    assert(P.StorageKind == StorageKind);
+    assert(P.StorageKind == StorageKind || (this->isZero() && P.isZero()));
 
   bool WasBlockPointer = isBlockPointer();
   StorageKind = P.StorageKind;

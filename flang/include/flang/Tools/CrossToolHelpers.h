@@ -20,11 +20,66 @@
 
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/IR/BuiltinOps.h"
+#include "mlir/Pass/PassRegistry.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Frontend/Debug/Options.h"
 #include "llvm/Passes/OptimizationLevel.h"
 
+// Flang Extension Point Callbacks
+class FlangEPCallBacks {
+public:
+  void registerFIROptEarlyEPCallbacks(
+      const std::function<void(mlir::PassManager &, llvm::OptimizationLevel)>
+          &C) {
+    FIROptEarlyEPCallbacks.push_back(C);
+  }
+
+  void registerFIRInlinerCallback(
+      const std::function<void(mlir::PassManager &, llvm::OptimizationLevel)>
+          &C) {
+    FIRInlinerCallback.push_back(C);
+  }
+
+  void registerFIROptLastEPCallbacks(
+      const std::function<void(mlir::PassManager &, llvm::OptimizationLevel)>
+          &C) {
+    FIROptLastEPCallbacks.push_back(C);
+  }
+
+  void invokeFIROptEarlyEPCallbacks(
+      mlir::PassManager &pm, llvm::OptimizationLevel optLevel) {
+    for (auto &C : FIROptEarlyEPCallbacks)
+      C(pm, optLevel);
+  };
+
+  void invokeFIRInlinerCallback(
+      mlir::PassManager &pm, llvm::OptimizationLevel optLevel) {
+    for (auto &C : FIRInlinerCallback)
+      C(pm, optLevel);
+  };
+
+  void invokeFIROptLastEPCallbacks(
+      mlir::PassManager &pm, llvm::OptimizationLevel optLevel) {
+    for (auto &C : FIROptLastEPCallbacks)
+      C(pm, optLevel);
+  };
+
+private:
+  llvm::SmallVector<
+      std::function<void(mlir::PassManager &, llvm::OptimizationLevel)>, 1>
+      FIROptEarlyEPCallbacks;
+
+  llvm::SmallVector<
+      std::function<void(mlir::PassManager &, llvm::OptimizationLevel)>, 1>
+      FIRInlinerCallback;
+
+  llvm::SmallVector<
+      std::function<void(mlir::PassManager &, llvm::OptimizationLevel)>, 1>
+      FIROptLastEPCallbacks;
+};
+
 /// Configuriation for the MLIR to LLVM pass pipeline.
-struct MLIRToLLVMPassPipelineConfig {
+struct MLIRToLLVMPassPipelineConfig : public FlangEPCallBacks {
   explicit MLIRToLLVMPassPipelineConfig(llvm::OptimizationLevel level) {
     OptLevel = level;
   }
@@ -109,7 +164,7 @@ struct OffloadModuleOpts {
 
 //  Shares assinging of the OpenMP OffloadModuleInterface and its assorted
 //  attributes accross Flang tools (bbc/flang)
-void setOffloadModuleInterfaceAttributes(
+[[maybe_unused]] static void setOffloadModuleInterfaceAttributes(
     mlir::ModuleOp &module, OffloadModuleOpts Opts) {
   // Should be registered by the OpenMPDialect
   if (auto offloadMod = llvm::dyn_cast<mlir::omp::OffloadModuleInterface>(
@@ -127,10 +182,18 @@ void setOffloadModuleInterfaceAttributes(
   }
 }
 
-void setOpenMPVersionAttribute(mlir::ModuleOp &module, int64_t version) {
+[[maybe_unused]] static void setOpenMPVersionAttribute(
+    mlir::ModuleOp &module, int64_t version) {
   module.getOperation()->setAttr(
       mlir::StringAttr::get(module.getContext(), llvm::Twine{"omp.version"}),
       mlir::omp::VersionAttr::get(module.getContext(), version));
+}
+
+[[maybe_unused]] static int64_t getOpenMPVersionAttribute(
+    mlir::ModuleOp module, int64_t fallback = -1) {
+  if (mlir::Attribute verAttr = module->getAttr("omp.version"))
+    return llvm::cast<mlir::omp::VersionAttr>(verAttr).getVersion();
+  return fallback;
 }
 
 #endif // FORTRAN_TOOLS_CROSS_TOOL_HELPERS_H

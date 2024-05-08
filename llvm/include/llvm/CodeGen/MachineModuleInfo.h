@@ -147,10 +147,14 @@ public:
 
   /// Returns the MachineFunction constructed for the IR function \p F.
   /// Creates a new MachineFunction if none exists yet.
+  /// NOTE: New pass manager clients shall not use this method to get
+  /// the `MachineFunction`, use `MachineFunctionAnalysis` instead.
   MachineFunction &getOrCreateMachineFunction(Function &F);
 
   /// \brief Returns the MachineFunction associated to IR function \p F if there
   /// is one, otherwise nullptr.
+  /// NOTE: New pass manager clients shall not use this method to get
+  /// the `MachineFunction`, use `MachineFunctionAnalysis` instead.
   MachineFunction *getMachineFunction(const Function &F) const;
 
   /// Delete the MachineFunction \p MF and reset the link in the IR Function to

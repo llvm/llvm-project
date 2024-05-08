@@ -212,13 +212,11 @@ void TargetLoweringObjectFileELF::Initialize(MCContext &Ctx,
     //        identify N64 from just a triple.
     TTypeEncoding = dwarf::DW_EH_PE_indirect | dwarf::DW_EH_PE_pcrel |
                     dwarf::DW_EH_PE_sdata4;
-    // We don't support PC-relative LSDA references in GAS so we use the default
-    // DW_EH_PE_absptr for those.
 
     // FreeBSD must be explicit about the data size and using pcrel since it's
     // assembler/linker won't do the automatic conversion that the Linux tools
     // do.
-    if (TgtM.getTargetTriple().isOSFreeBSD()) {
+    if (isPositionIndependent() || TgtM.getTargetTriple().isOSFreeBSD()) {
       PersonalityEncoding |= dwarf::DW_EH_PE_pcrel | dwarf::DW_EH_PE_sdata4;
       LSDAEncoding = dwarf::DW_EH_PE_pcrel | dwarf::DW_EH_PE_sdata4;
     }
@@ -733,15 +731,20 @@ calcUniqueIDUpdateFlagsAndSize(const GlobalObject *GO, StringRef SectionName,
       Ctx.isELFGenericMergeableSection(SectionName);
   // If this is the first ocurrence of this section name, treat it as the
   // generic section
-  if (!SymbolMergeable && !SeenSectionNameBefore)
-    return MCContext::GenericSectionID;
+  if (!SymbolMergeable && !SeenSectionNameBefore) {
+    if (TM.getSeparateNamedSections())
+      return NextUniqueID++;
+    else
+      return MCContext::GenericSectionID;
+  }
 
   // Symbols must be placed into sections with compatible entry sizes. Generate
   // unique sections for symbols that have not been assigned to compatible
   // sections.
   const auto PreviousID =
       Ctx.getELFUniqueIDForEntsize(SectionName, Flags, EntrySize);
-  if (PreviousID)
+  if (PreviousID && (!TM.getSeparateNamedSections() ||
+                     *PreviousID == MCContext::GenericSectionID))
     return *PreviousID;
 
   // If the user has specified the same section name as would be created
@@ -796,10 +799,6 @@ static MCSection *selectExplicitSectionGlobal(
     } else if (Attrs.hasAttribute("data-section") && Kind.isData()) {
       SectionName = Attrs.getAttribute("data-section").getValueAsString();
     }
-  }
-  const Function *F = dyn_cast<Function>(GO);
-  if (F && F->hasFnAttribute("implicit-section-name")) {
-    SectionName = F->getFnAttribute("implicit-section-name").getValueAsString();
   }
 
   // Infer section flags from the section name if we can.
@@ -934,7 +933,7 @@ MCSection *TargetLoweringObjectFileELF::getUniqueSectionForFunction(
   unsigned Flags = getELFSectionFlags(Kind);
   // If the function's section names is pre-determined via pragma or a
   // section attribute, call selectExplicitSectionGlobal.
-  if (F.hasSection() || F.hasFnAttribute("implicit-section-name"))
+  if (F.hasSection())
     return selectExplicitSectionGlobal(
         &F, Kind, TM, getContext(), getMangler(), NextUniqueID,
         Used.count(&F), /* ForceUnique = */true);
@@ -1035,7 +1034,7 @@ MCSection *TargetLoweringObjectFileELF::getSectionForMachineBasicBlock(
   // name, or a unique ID for the section.
   SmallString<128> Name;
   StringRef FunctionSectionName = MBB.getParent()->getSection()->getName();
-  if (FunctionSectionName.equals(".text") ||
+  if (FunctionSectionName == ".text" ||
       FunctionSectionName.starts_with(".text.")) {
     // Function is in a regular .text section.
     StringRef FunctionName = MBB.getParent()->getName();
@@ -1296,11 +1295,6 @@ MCSection *TargetLoweringObjectFileMachO::getExplicitSectionGlobal(
     } else if (Attrs.hasAttribute("data-section") && Kind.isData()) {
       SectionName = Attrs.getAttribute("data-section").getValueAsString();
     }
-  }
-
-  const Function *F = dyn_cast<Function>(GO);
-  if (F && F->hasFnAttribute("implicit-section-name")) {
-    SectionName = F->getFnAttribute("implicit-section-name").getValueAsString();
   }
 
   // Parse the section specifier and create it if valid.

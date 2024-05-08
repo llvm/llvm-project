@@ -59,6 +59,12 @@ enum NodeType : unsigned {
 
   // Multiply high for signedxunsigned.
   MULHSU,
+
+  // Represents (ADD (SHL a, b), c) with the arguments appearing in the order
+  // a, b, c.  'b' must be a constant.  Maps to sh1add/sh2add/sh3add with zba
+  // or addsl with XTheadBa.
+  SHL_ADD,
+
   // RV64I shifts, directly matching the semantics of the named RISC-V
   // instructions.
   SLLW,
@@ -955,6 +961,7 @@ private:
   SDValue lowerVPFPIntConvOp(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVPStridedLoad(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVPStridedStore(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerVPCttzElements(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerFixedLengthVectorExtendToRVV(SDValue Op, SelectionDAG &DAG,
                                             unsigned ExtendOpc) const;
   SDValue lowerGET_ROUNDING(SDValue Op, SelectionDAG &DAG) const;
@@ -986,6 +993,8 @@ private:
 
   bool shouldExpandGetVectorLength(EVT TripCountVT, unsigned VF,
                                    bool IsScalable) const override;
+
+  bool shouldExpandCttzElements(EVT VT) const override;
 
   /// RVV code generation for fixed length vectors does not lower all
   /// BUILD_VECTORs. This makes BUILD_VECTOR legalisation a source of stores to
@@ -1041,12 +1050,15 @@ public:
     bool FirstVMask = false;
   };
 
+  template <typename Arg>
   RVVArgDispatcher(const MachineFunction *MF, const RISCVTargetLowering *TLI,
-                   ArrayRef<Type *> TypeList)
+                   ArrayRef<Arg> ArgList)
       : MF(MF), TLI(TLI) {
-    constructArgInfos(TypeList);
+    constructArgInfos(ArgList);
     compute();
   }
+
+  RVVArgDispatcher() = default;
 
   MCPhysReg getNextPhysReg();
 
@@ -1059,7 +1071,7 @@ private:
 
   unsigned CurIdx = 0;
 
-  void constructArgInfos(ArrayRef<Type *> TypeList);
+  template <typename Arg> void constructArgInfos(ArrayRef<Arg> Ret);
   void compute();
   void allocatePhysReg(unsigned NF = 1, unsigned LMul = 1,
                        unsigned StartReg = 0);

@@ -80,6 +80,7 @@
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/IntrinsicsWebAssembly.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/MemoryModelRelaxationAnnotations.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Operator.h"
@@ -1326,7 +1327,8 @@ void SelectionDAGBuilder::visit(const Instruction &I) {
   bool NodeInserted = false;
   std::unique_ptr<SelectionDAG::DAGNodeInsertedListener> InsertedListener;
   MDNode *PCSectionsMD = I.getMetadata(LLVMContext::MD_pcsections);
-  if (PCSectionsMD) {
+  MDNode *MMRA = I.getMetadata(LLVMContext::MD_mmra);
+  if (PCSectionsMD || MMRA) {
     InsertedListener = std::make_unique<SelectionDAG::DAGNodeInsertedListener>(
         DAG, [&](SDNode *) { NodeInserted = true; });
   }
@@ -1338,14 +1340,17 @@ void SelectionDAGBuilder::visit(const Instruction &I) {
     CopyToExportRegsIfNeeded(&I);
 
   // Handle metadata.
-  if (PCSectionsMD) {
+  if (PCSectionsMD || MMRA) {
     auto It = NodeMap.find(&I);
     if (It != NodeMap.end()) {
-      DAG.addPCSections(It->second.getNode(), PCSectionsMD);
+      if (PCSectionsMD)
+        DAG.addPCSections(It->second.getNode(), PCSectionsMD);
+      if (MMRA)
+        DAG.addMMRAMetadata(It->second.getNode(), MMRA);
     } else if (NodeInserted) {
       // This should not happen; if it does, don't let it go unnoticed so we can
       // fix it. Relevant visit*() function is probably missing a setValue().
-      errs() << "warning: loosing !pcsections metadata ["
+      errs() << "warning: loosing !pcsections and/or !mmra metadata ["
              << I.getModule()->getName() << "]\n";
       LLVM_DEBUG(I.dump());
       assert(false);
@@ -3352,7 +3357,7 @@ void SelectionDAGBuilder::visitInvoke(const InvokeInst &I) {
       break;
     }
     }
-  } else if (I.countOperandBundlesOfType(LLVMContext::OB_deopt)) {
+  } else if (I.hasDeoptState()) {
     // Currently we do not lower any intrinsic calls with deopt operand bundles.
     // Eventually we will support lowering the @llvm.experimental.deoptimize
     // intrinsic, and right now there are no plans to support other intrinsics
@@ -5294,9 +5299,9 @@ void SelectionDAGBuilder::visitTargetIntrinsic(const CallInst &I,
       Result =
           DAG.getAssertAlign(getCurSDLoc(), Result, Alignment.valueOrOne());
     }
-
-    setValue(&I, Result);
   }
+
+  setValue(&I, Result);
 }
 
 /// GetSignificand - Get the significand and build it into a floating-point
@@ -7925,19 +7930,19 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
              DAG.getNode(ISD::EXTRACT_SUBVECTOR, sdl, ResultVT, Vec, Index));
     return;
   }
-  case Intrinsic::experimental_vector_reverse:
+  case Intrinsic::vector_reverse:
     visitVectorReverse(I);
     return;
-  case Intrinsic::experimental_vector_splice:
+  case Intrinsic::vector_splice:
     visitVectorSplice(I);
     return;
   case Intrinsic::callbr_landingpad:
     visitCallBrLandingPad(I);
     return;
-  case Intrinsic::experimental_vector_interleave2:
+  case Intrinsic::vector_interleave2:
     visitVectorInterleave(I);
     return;
-  case Intrinsic::experimental_vector_deinterleave2:
+  case Intrinsic::vector_deinterleave2:
     visitVectorDeinterleave(I);
     return;
   case Intrinsic::experimental_convergence_anchor:
@@ -7957,16 +7962,8 @@ void SelectionDAGBuilder::visitConstrainedFPIntrinsic(
   SDValue Chain = DAG.getRoot();
   SmallVector<SDValue, 4> Opers;
   Opers.push_back(Chain);
-  if (FPI.isUnaryOp()) {
-    Opers.push_back(getValue(FPI.getArgOperand(0)));
-  } else if (FPI.isTernaryOp()) {
-    Opers.push_back(getValue(FPI.getArgOperand(0)));
-    Opers.push_back(getValue(FPI.getArgOperand(1)));
-    Opers.push_back(getValue(FPI.getArgOperand(2)));
-  } else {
-    Opers.push_back(getValue(FPI.getArgOperand(0)));
-    Opers.push_back(getValue(FPI.getArgOperand(1)));
-  }
+  for (unsigned I = 0, E = FPI.getNonMetadataArgCount(); I != E; ++I)
+    Opers.push_back(getValue(FPI.getArgOperand(I)));
 
   auto pushOutChain = [this](SDValue Result, fp::ExceptionBehavior EB) {
     assert(Result.getNode()->getNumValues() == 2);
@@ -8069,6 +8066,11 @@ static unsigned getISDForVPIntrinsic(const VPIntrinsic &VPIntrin) {
   case Intrinsic::vp_cttz: {
     bool IsZeroUndef = cast<ConstantInt>(VPIntrin.getArgOperand(1))->isOne();
     ResOPC = IsZeroUndef ? ISD::VP_CTTZ_ZERO_UNDEF : ISD::VP_CTTZ;
+    break;
+  }
+  case Intrinsic::vp_cttz_elts: {
+    bool IsZeroPoison = cast<ConstantInt>(VPIntrin.getArgOperand(1))->isOne();
+    ResOPC = IsZeroPoison ? ISD::VP_CTTZ_ELTS_ZERO_UNDEF : ISD::VP_CTTZ_ELTS;
     break;
   }
 #define HELPER_MAP_VPID_TO_VPSD(VPID, VPSD)                                    \
@@ -8423,7 +8425,9 @@ void SelectionDAGBuilder::visitVectorPredicationIntrinsic(
   case ISD::VP_CTLZ:
   case ISD::VP_CTLZ_ZERO_UNDEF:
   case ISD::VP_CTTZ:
-  case ISD::VP_CTTZ_ZERO_UNDEF: {
+  case ISD::VP_CTTZ_ZERO_UNDEF:
+  case ISD::VP_CTTZ_ELTS_ZERO_UNDEF:
+  case ISD::VP_CTTZ_ELTS: {
     SDValue Result =
         DAG.getNode(Opcode, DL, VTs, {OpValues[0], OpValues[2], OpValues[3]});
     setValue(&VPIntrin, Result);
@@ -9193,7 +9197,7 @@ void SelectionDAGBuilder::visitCall(const CallInst &I) {
 
   SDValue Callee = getValue(I.getCalledOperand());
 
-  if (I.countOperandBundlesOfType(LLVMContext::OB_deopt))
+  if (I.hasDeoptState())
     LowerCallSiteWithDeoptBundle(&I, Callee, nullptr);
   else
     // Check if we can potentially perform a tail call. More detailed checking
@@ -11128,7 +11132,7 @@ static void tryToElideArgumentCopy(
   }
 
   // Perform the elision. Delete the old stack object and replace its only use
-  // in the variable info map. Mark the stack object as mutable.
+  // in the variable info map. Mark the stack object as mutable and aliased.
   LLVM_DEBUG({
     dbgs() << "Eliding argument copy from " << Arg << " to " << *AI << '\n'
            << "  Replacing frame index " << OldIndex << " with " << FixedIndex
@@ -11136,6 +11140,7 @@ static void tryToElideArgumentCopy(
   });
   MFI.RemoveStackObject(OldIndex);
   MFI.setIsImmutableObjectIndex(FixedIndex, false);
+  MFI.setIsAliasedObjectIndex(FixedIndex, true);
   AllocaIndex = FixedIndex;
   ArgCopyElisionFrameIndexMap.insert({OldIndex, FixedIndex});
   for (SDValue ArgVal : ArgVals)

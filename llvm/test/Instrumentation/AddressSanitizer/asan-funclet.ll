@@ -580,5 +580,5 @@ ehcleanup:                                        ; preds = %entry
   cleanupret from %0 unwind to caller
 }
 ;.
-; CHECK-INLINE: [[PROF0]] = !{!"branch_weights", i32 1, i32 100000}
+; CHECK-INLINE: [[PROF0]] = !{!"branch_weights", i32 1, i32 1048575}
 ;.

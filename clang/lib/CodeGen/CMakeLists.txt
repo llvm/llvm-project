@@ -143,6 +143,9 @@ add_clang_library(clangCodeGen
   DEPENDS
   intrinsics_gen
   ClangDriverOptions
+  # These generated headers are included transitively.
+  ARMTargetParserTableGen
+  AArch64TargetParserTableGen
 
   LINK_LIBS
   clangAST

@@ -430,36 +430,47 @@ def collect_original_check_lines(ti: TestInfo, prefix_set: set):
     result[func_name][prefix] is filled with a list of right-hand-sides of check
     lines.
     """
-    result = {}
+    result = collections.defaultdict(lambda: {})
 
+    current_prefix = None
     current_function = None
     for input_line_info in ti.ro_iterlines():
         input_line = input_line_info.line
-        if current_function is not None:
-            if input_line == "":
-                continue
-            if input_line.lstrip().startswith(";"):
-                m = CHECK_RE.match(input_line)
-                if (
-                    m is not None
-                    and m.group(1) in prefix_set
-                    and m.group(2) not in ["LABEL", "SAME"]
-                ):
-                    if m.group(1) not in current_function:
-                        current_function[m.group(1)] = []
-                    current_function[m.group(1)].append(input_line[m.end() :].strip())
-                continue
-            current_function = None
+        if input_line.lstrip().startswith(";"):
+            m = CHECK_RE.match(input_line)
+            if m is not None:
+                prefix = m.group(1)
+                check_kind = m.group(2)
+                line = input_line[m.end() :].strip()
 
-        m = IR_FUNCTION_RE.match(input_line)
-        if m is not None:
-            func_name = m.group(1)
-            if ti.args.function is not None and func_name != ti.args.function:
-                # When filtering on a specific function, skip all others.
-                continue
+                if prefix != current_prefix:
+                    current_function = None
+                    current_prefix = None
 
-            assert func_name not in result
-            current_function = result[func_name] = {}
+                if check_kind not in ["LABEL", "SAME"]:
+                    if current_function is not None:
+                        current_function.append(line)
+                    continue
+
+                if check_kind == "SAME":
+                    continue
+
+                if check_kind == "LABEL":
+                    m = IR_FUNCTION_RE.match(line)
+                    if m is not None:
+                        func_name = m.group(1)
+                        if (
+                            ti.args.function is not None
+                            and func_name != ti.args.function
+                        ):
+                            # When filtering on a specific function, skip all others.
+                            continue
+
+                        current_prefix = prefix
+                        current_function = result[func_name][prefix] = []
+                        continue
+
+        current_function = None
 
     return result
 
@@ -980,10 +991,6 @@ class NamelessValue:
     def is_local_def_ir_value(self):
         return self.ir_prefix == "%"
 
-    # Return true if this kind of IR value is "global", basically if it matches '#{{.*}}'.
-    def is_global_scope_ir_value_match(self, match):
-        return self.global_ir_rhs_regexp is not None
-
     # Return the IR prefix and check prefix we use for this kind or IR value,
     # e.g., (%, TMP) for locals. If the IR prefix is a regex, return the prefix
     # used in the IR output
@@ -1075,10 +1082,10 @@ ir_nameless_values = [
     NamelessValue(r"TBAA_STRUCT", "!", r"!tbaa.struct ", r"![0-9]+", None),
     NamelessValue(r"RNG", "!", r"!range ", r"![0-9]+", None),
     NamelessValue(r"LOOP", "!", r"!llvm.loop ", r"![0-9]+", None),
-    NamelessValue(r"META", "!", r"metadata ", r"![0-9]+", None),
     NamelessValue(r"META", "!", r"", r"![0-9]+", r"(?:distinct |)!.*"),
     NamelessValue(r"ACC_GRP", "!", r"!llvm.access.group ", r"![0-9]+", None),
     NamelessValue(r"META", "!", r"![a-z.]+ ", r"![0-9]+", None),
+    NamelessValue(r"META", "!", r"[, (]", r"![0-9]+", None),
 ]
 
 global_nameless_values = [

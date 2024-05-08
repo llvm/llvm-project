@@ -50,6 +50,7 @@
 #include <thread>
 #include <vector>
 
+#include "lldb/API/SBStream.h"
 #include "lldb/Host/Config.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
@@ -420,8 +421,8 @@ void SendStdOutStdErr(lldb::SBProcess &process) {
 
 void ProgressEventThreadFunction() {
   lldb::SBListener listener("lldb-dap.progress.listener");
-  g_dap.debugger.GetBroadcaster().AddListener(listener,
-                                              lldb::eBroadcastBitProgress);
+  g_dap.debugger.GetBroadcaster().AddListener(
+      listener, lldb::SBDebugger::eBroadcastBitProgress);
   g_dap.broadcaster.AddListener(listener, eBroadcastBitStopProgressThread);
   lldb::SBEvent event;
   bool done = false;
@@ -503,6 +504,10 @@ void EventThreadFunction() {
             SendContinuedEvent();
             break;
           case lldb::eStateExited:
+            lldb::SBStream stream;
+            process.GetStatus(stream);
+            g_dap.SendOutput(OutputType::Console, stream.GetData());
+
             // When restarting, we can get an "exited" event for the process we
             // just killed with the old PID, or even with no PID. In that case
             // we don't have to terminate the session.
@@ -1645,7 +1650,7 @@ void request_initialize(const llvm::json::Object &request) {
   // The debug adapter supports the gotoTargetsRequest.
   body.try_emplace("supportsGotoTargetsRequest", false);
   // The debug adapter supports the stepInTargetsRequest.
-  body.try_emplace("supportsStepInTargetsRequest", false);
+  body.try_emplace("supportsStepInTargetsRequest", true);
   // The debug adapter supports the completions request.
   body.try_emplace("supportsCompletionsRequest", true);
   // The debug adapter supports the disassembly request.
@@ -2769,32 +2774,28 @@ void request_dataBreakpointInfo(const llvm::json::Object &request) {
                                           : "evaluation failed");
     } else {
       uint64_t load_addr = value.GetValueAsUnsigned();
-      addr = llvm::utohexstr(load_addr);
-      lldb::SBMemoryRegionInfo region;
-      lldb::SBError err =
-          g_dap.target.GetProcess().GetMemoryRegionInfo(load_addr, region);
-      if (err.Success()) {
-        if (!(region.IsReadable() || region.IsWritable())) {
-          body.try_emplace("dataId", nullptr);
-          body.try_emplace("description",
-                           "memory region for address " + addr +
-                               " has no read or write permissions");
-        } else {
-          lldb::SBData data = value.GetPointeeData();
-          if (data.IsValid())
-            size = llvm::utostr(data.GetByteSize());
-          else {
+      lldb::SBData data = value.GetPointeeData();
+      if (data.IsValid()) {
+        size = llvm::utostr(data.GetByteSize());
+        addr = llvm::utohexstr(load_addr);
+        lldb::SBMemoryRegionInfo region;
+        lldb::SBError err =
+            g_dap.target.GetProcess().GetMemoryRegionInfo(load_addr, region);
+        // Only lldb-server supports "qMemoryRegionInfo". So, don't fail this
+        // request if SBProcess::GetMemoryRegionInfo returns error.
+        if (err.Success()) {
+          if (!(region.IsReadable() || region.IsWritable())) {
             body.try_emplace("dataId", nullptr);
             body.try_emplace("description",
-                             "unable to get byte size for expression: " +
-                                 name.str());
+                             "memory region for address " + addr +
+                                 " has no read or write permissions");
           }
         }
       } else {
         body.try_emplace("dataId", nullptr);
         body.try_emplace("description",
-                         "unable to get memory region info for address " +
-                             addr);
+                         "unable to get byte size for expression: " +
+                             name.str());
       }
     }
   } else {
@@ -3180,14 +3181,155 @@ void request_stepIn(const llvm::json::Object &request) {
   llvm::json::Object response;
   FillResponse(request, response);
   auto arguments = request.getObject("arguments");
+
+  std::string step_in_target;
+  uint64_t target_id = GetUnsigned(arguments, "targetId", 0);
+  auto it = g_dap.step_in_targets.find(target_id);
+  if (it != g_dap.step_in_targets.end())
+    step_in_target = it->second;
+
+  const bool single_thread = GetBoolean(arguments, "singleThread", false);
+  lldb::RunMode run_mode =
+      single_thread ? lldb::eOnlyThisThread : lldb::eOnlyDuringStepping;
   lldb::SBThread thread = g_dap.GetLLDBThread(*arguments);
   if (thread.IsValid()) {
     // Remember the thread ID that caused the resume so we can set the
     // "threadCausedFocus" boolean value in the "stopped" events.
     g_dap.focus_tid = thread.GetThreadID();
-    thread.StepInto();
+    thread.StepInto(step_in_target.c_str(), run_mode);
   } else {
     response["success"] = llvm::json::Value(false);
+  }
+  g_dap.SendJSON(llvm::json::Value(std::move(response)));
+}
+
+// "StepInTargetsRequest": {
+//   "allOf": [ { "$ref": "#/definitions/Request" }, {
+//     "type": "object",
+//     "description": "This request retrieves the possible step-in targets for
+//     the specified stack frame.\nThese targets can be used in the `stepIn`
+//     request.\nClients should only call this request if the corresponding
+//     capability `supportsStepInTargetsRequest` is true.", "properties": {
+//       "command": {
+//         "type": "string",
+//         "enum": [ "stepInTargets" ]
+//       },
+//       "arguments": {
+//         "$ref": "#/definitions/StepInTargetsArguments"
+//       }
+//     },
+//     "required": [ "command", "arguments"  ]
+//   }]
+// },
+// "StepInTargetsArguments": {
+//   "type": "object",
+//   "description": "Arguments for `stepInTargets` request.",
+//   "properties": {
+//     "frameId": {
+//       "type": "integer",
+//       "description": "The stack frame for which to retrieve the possible
+//       step-in targets."
+//     }
+//   },
+//   "required": [ "frameId" ]
+// },
+// "StepInTargetsResponse": {
+//   "allOf": [ { "$ref": "#/definitions/Response" }, {
+//     "type": "object",
+//     "description": "Response to `stepInTargets` request.",
+//     "properties": {
+//       "body": {
+//         "type": "object",
+//         "properties": {
+//           "targets": {
+//             "type": "array",
+//             "items": {
+//               "$ref": "#/definitions/StepInTarget"
+//             },
+//             "description": "The possible step-in targets of the specified
+//             source location."
+//           }
+//         },
+//         "required": [ "targets" ]
+//       }
+//     },
+//     "required": [ "body" ]
+//   }]
+// }
+void request_stepInTargets(const llvm::json::Object &request) {
+  llvm::json::Object response;
+  FillResponse(request, response);
+  auto arguments = request.getObject("arguments");
+
+  g_dap.step_in_targets.clear();
+  lldb::SBFrame frame = g_dap.GetLLDBFrame(*arguments);
+  if (frame.IsValid()) {
+    lldb::SBAddress pc_addr = frame.GetPCAddress();
+    lldb::SBAddress line_end_addr =
+        pc_addr.GetLineEntry().GetSameLineContiguousAddressRangeEnd(true);
+    lldb::SBInstructionList insts = g_dap.target.ReadInstructions(
+        pc_addr, line_end_addr, /*flavor_string=*/nullptr);
+
+    if (!insts.IsValid()) {
+      response["success"] = false;
+      response["message"] = "Failed to get instructions for frame.";
+      g_dap.SendJSON(llvm::json::Value(std::move(response)));
+      return;
+    }
+
+    llvm::json::Array step_in_targets;
+    const auto num_insts = insts.GetSize();
+    for (size_t i = 0; i < num_insts; ++i) {
+      lldb::SBInstruction inst = insts.GetInstructionAtIndex(i);
+      if (!inst.IsValid())
+        break;
+
+      lldb::addr_t inst_addr = inst.GetAddress().GetLoadAddress(g_dap.target);
+
+      // Note: currently only x86/x64 supports flow kind.
+      lldb::InstructionControlFlowKind flow_kind =
+          inst.GetControlFlowKind(g_dap.target);
+      if (flow_kind == lldb::eInstructionControlFlowKindCall) {
+        // Use call site instruction address as id which is easy to debug.
+        llvm::json::Object step_in_target;
+        step_in_target["id"] = inst_addr;
+
+        llvm::StringRef call_operand_name = inst.GetOperands(g_dap.target);
+        lldb::addr_t call_target_addr;
+        if (call_operand_name.getAsInteger(0, call_target_addr))
+          continue;
+
+        lldb::SBAddress call_target_load_addr =
+            g_dap.target.ResolveLoadAddress(call_target_addr);
+        if (!call_target_load_addr.IsValid())
+          continue;
+
+        // The existing ThreadPlanStepInRange only accept step in target
+        // function with debug info.
+        lldb::SBSymbolContext sc = g_dap.target.ResolveSymbolContextForAddress(
+            call_target_load_addr, lldb::eSymbolContextFunction);
+
+        // The existing ThreadPlanStepInRange only accept step in target
+        // function with debug info.
+        std::string step_in_target_name;
+        if (sc.IsValid() && sc.GetFunction().IsValid())
+          step_in_target_name = sc.GetFunction().GetDisplayName();
+
+        // Skip call sites if we fail to resolve its symbol name.
+        if (step_in_target_name.empty())
+          continue;
+
+        g_dap.step_in_targets.try_emplace(inst_addr, step_in_target_name);
+        step_in_target.try_emplace("label", step_in_target_name);
+        step_in_targets.emplace_back(std::move(step_in_target));
+      }
+    }
+    llvm::json::Object body;
+    body.try_emplace("targets", std::move(step_in_targets));
+    response.try_emplace("body", std::move(body));
+  } else {
+    response["success"] = llvm::json::Value(false);
+    response["message"] = "Failed to get frame for input frameId.";
   }
   g_dap.SendJSON(llvm::json::Value(std::move(response)));
 }
@@ -3904,6 +4046,7 @@ void RegisterRequestCallbacks() {
   g_dap.RegisterRequestCallback("source", request_source);
   g_dap.RegisterRequestCallback("stackTrace", request_stackTrace);
   g_dap.RegisterRequestCallback("stepIn", request_stepIn);
+  g_dap.RegisterRequestCallback("stepInTargets", request_stepInTargets);
   g_dap.RegisterRequestCallback("stepOut", request_stepOut);
   g_dap.RegisterRequestCallback("threads", request_threads);
   g_dap.RegisterRequestCallback("variables", request_variables);
@@ -4049,8 +4192,14 @@ int SetupStdoutStderrRedirection() {
 
 int main(int argc, char *argv[]) {
   llvm::InitLLVM IL(argc, argv, /*InstallPipeSignalExitHandler=*/false);
+#if !defined(__APPLE__)
   llvm::setBugReportMsg("PLEASE submit a bug report to " LLDB_BUG_REPORT_URL
                         " and include the crash backtrace.\n");
+#else
+  llvm::setBugReportMsg("PLEASE submit a bug report to " LLDB_BUG_REPORT_URL
+                        " and include the crash report from "
+                        "~/Library/Logs/DiagnosticReports/.\n");
+#endif
 
   llvm::SmallString<256> program_path(argv[0]);
   llvm::sys::fs::make_absolute(program_path);

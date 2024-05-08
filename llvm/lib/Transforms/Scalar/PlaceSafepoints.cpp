@@ -591,7 +591,7 @@ static Instruction *findLocationForEntrySafepoint(Function &F,
 const char GCSafepointPollName[] = "gc.safepoint_poll";
 
 static bool isGCSafepointPoll(Function &F) {
-  return F.getName().equals(GCSafepointPollName);
+  return F.getName() == GCSafepointPollName;
 }
 
 /// Returns true if this function should be rewritten to include safepoint

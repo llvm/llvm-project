@@ -1933,7 +1933,7 @@ void MicrosoftCXXNameMangler::mangleTemplateArgValue(QualType T,
     for (const CXXBaseSpecifier &B : RD->bases())
       mangleTemplateArgValue(B.getType(), V.getStructBase(BaseIndex++), TAK);
     for (const FieldDecl *FD : RD->fields())
-      if (!FD->isUnnamedBitfield())
+      if (!FD->isUnnamedBitField())
         mangleTemplateArgValue(FD->getType(),
                                V.getStructField(FD->getFieldIndex()), TAK,
                                /*WithScalarType*/ true);

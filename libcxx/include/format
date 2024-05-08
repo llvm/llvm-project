@@ -193,6 +193,8 @@ namespace std {
 #include <__format/concepts.h>
 #include <__format/container_adaptor.h>
 #include <__format/enable_insertable.h>
+#include <__format/escaped_output_table.h>
+#include <__format/extended_grapheme_cluster_table.h>
 #include <__format/format_arg.h>
 #include <__format/format_arg_store.h>
 #include <__format/format_args.h>

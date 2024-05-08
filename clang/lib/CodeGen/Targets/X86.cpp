@@ -1482,8 +1482,8 @@ public:
 
   void checkFunctionCallABI(CodeGenModule &CGM, SourceLocation CallLoc,
                             const FunctionDecl *Caller,
-                            const FunctionDecl *Callee,
-                            const CallArgList &Args) const override;
+                            const FunctionDecl *Callee, const CallArgList &Args,
+                            QualType ReturnType) const override;
 };
 } // namespace
 
@@ -1558,9 +1558,15 @@ static bool checkAVXParam(DiagnosticsEngine &Diag, ASTContext &Ctx,
   return false;
 }
 
-void X86_64TargetCodeGenInfo::checkFunctionCallABI(
-    CodeGenModule &CGM, SourceLocation CallLoc, const FunctionDecl *Caller,
-    const FunctionDecl *Callee, const CallArgList &Args) const {
+void X86_64TargetCodeGenInfo::checkFunctionCallABI(CodeGenModule &CGM,
+                                                   SourceLocation CallLoc,
+                                                   const FunctionDecl *Caller,
+                                                   const FunctionDecl *Callee,
+                                                   const CallArgList &Args,
+                                                   QualType ReturnType) const {
+  if (!Callee)
+    return;
+
   llvm::StringMap<bool> CallerMap;
   llvm::StringMap<bool> CalleeMap;
   unsigned ArgIndex = 0;
@@ -2087,7 +2093,7 @@ void X86_64ABIInfo::classify(QualType Ty, uint64_t OffsetBase, Class &Lo,
       bool BitField = i->isBitField();
 
       // Ignore padding bit-fields.
-      if (BitField && i->isUnnamedBitfield())
+      if (BitField && i->isUnnamedBitField())
         continue;
 
       // AMD64-ABI 3.2.3p2: Rule 1. If the size of an object is larger than
@@ -2128,7 +2134,7 @@ void X86_64ABIInfo::classify(QualType Ty, uint64_t OffsetBase, Class &Lo,
       // structure to be passed in memory even if unaligned, and
       // therefore they can straddle an eightbyte.
       if (BitField) {
-        assert(!i->isUnnamedBitfield());
+        assert(!i->isUnnamedBitField());
         uint64_t Offset = OffsetBase + Layout.getFieldOffset(idx);
         uint64_t Size = i->getBitWidthValue(getContext());
 

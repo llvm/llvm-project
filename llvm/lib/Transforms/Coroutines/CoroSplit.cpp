@@ -1846,11 +1846,10 @@ static void splitAsyncCoroutine(Function &F, coro::Shape &Shape,
     auto ProjectionFunctionName =
         Suspend->getAsyncContextProjectionFunction()->getName();
     bool UseSwiftMangling = false;
-    if (ProjectionFunctionName.equals("__swift_async_resume_project_context")) {
+    if (ProjectionFunctionName == "__swift_async_resume_project_context") {
       ResumeNameSuffix = "TQ";
       UseSwiftMangling = true;
-    } else if (ProjectionFunctionName.equals(
-                   "__swift_async_resume_get_context")) {
+    } else if (ProjectionFunctionName == "__swift_async_resume_get_context") {
       ResumeNameSuffix = "TY";
       UseSwiftMangling = true;
     }

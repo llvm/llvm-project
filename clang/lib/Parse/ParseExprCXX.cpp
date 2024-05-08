@@ -407,6 +407,20 @@ bool Parser::ParseOptionalCXXScopeSpecifier(
       continue;
     }
 
+    switch (Tok.getKind()) {
+#define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) case tok::kw___##Trait:
+#include "clang/Basic/TransformTypeTraits.def"
+      if (!NextToken().is(tok::l_paren)) {
+        Tok.setKind(tok::identifier);
+        Diag(Tok, diag::ext_keyword_as_ident)
+            << Tok.getIdentifierInfo()->getName() << 0;
+        continue;
+      }
+      [[fallthrough]];
+    default:
+      break;
+    }
+
     // The rest of the nested-name-specifier possibilities start with
     // tok::identifier.
     if (Tok.isNot(tok::identifier))
@@ -3910,10 +3924,10 @@ ExprResult Parser::ParseTypeTrait() {
   SmallVector<ParsedType, 2> Args;
   do {
     // Parse the next type.
-    TypeResult Ty =
-        ParseTypeName(/*SourceRange=*/nullptr,
-                      getLangOpts().CPlusPlus ? DeclaratorContext::TemplateArg
-                                              : DeclaratorContext::TypeName);
+    TypeResult Ty = ParseTypeName(/*SourceRange=*/nullptr,
+                                  getLangOpts().CPlusPlus
+                                      ? DeclaratorContext::TemplateTypeArg
+                                      : DeclaratorContext::TypeName);
     if (Ty.isInvalid()) {
       Parens.skipToEnd();
       return ExprError();
@@ -3955,8 +3969,8 @@ ExprResult Parser::ParseArrayTypeTrait() {
   if (T.expectAndConsume())
     return ExprError();
 
-  TypeResult Ty =
-      ParseTypeName(/*SourceRange=*/nullptr, DeclaratorContext::TemplateArg);
+  TypeResult Ty = ParseTypeName(/*SourceRange=*/nullptr,
+                                DeclaratorContext::TemplateTypeArg);
   if (Ty.isInvalid()) {
     SkipUntil(tok::comma, StopAtSemi);
     SkipUntil(tok::r_paren, StopAtSemi);

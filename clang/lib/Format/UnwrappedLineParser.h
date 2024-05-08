@@ -157,7 +157,7 @@ private:
   void parseDoWhile();
   void parseLabel(bool LeftAlignLabel = false);
   void parseCaseLabel();
-  void parseSwitch();
+  void parseSwitch(bool IsExpr);
   void parseNamespace();
   bool parseModuleImport();
   void parseNew();

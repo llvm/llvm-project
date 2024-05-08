@@ -754,36 +754,28 @@ enabled sub-projects. Nearly all of these variable names begin with
   during the build. Enabling this option can significantly speed up build times
   especially when building LLVM in Debug configurations.
 
-**LLVM_PARALLEL_COMPILE_JOBS**:STRING
-  Define the maximum number of concurrent compilation jobs.
-
-**LLVM_PARALLEL_LINK_JOBS**:STRING
-  Define the maximum number of concurrent link jobs.
-
-**LLVM_PARALLEL_TABLEGEN_JOBS**:STRING
-  Define the maximum number of concurrent tablegen jobs.
+**LLVM_PARALLEL_{COMPILE,LINK,TABLEGEN}_JOBS**:STRING
+  Limit the maximum number of concurrent compilation, link or
+  tablegen jobs respectively. The default total number of parallel jobs is
+  determined by the number of logical CPUs.
 
 **LLVM_PROFDATA_FILE**:PATH
   Path to a profdata file to pass into clang's -fprofile-instr-use flag. This
   can only be specified if you're building with clang.
 
-**LLVM_RAM_PER_COMPILE_JOB**:STRING
-  Calculates the amount of Ninja compile jobs according to available resources.
-  Value has to be in MB, overwrites LLVM_PARALLEL_COMPILE_JOBS. Compile jobs 
-  will be between one and amount of logical cores.
-
-**LLVM_RAM_PER_LINK_JOB**:STRING
-  Calculates the amount of Ninja link jobs according to available resources.
-  Value has to be in MB, overwrites LLVM_PARALLEL_LINK_JOBS. Link jobs will 
-  be between one and amount of logical cores. Link jobs will not run 
-  exclusively therefore you should add an offset of one or two compile jobs 
-  to be sure its not terminated in your memory restricted environment. On ELF
-  platforms also consider ``LLVM_USE_SPLIT_DWARF`` in Debug build.
-
-**LLVM_RAM_PER_TABLEGEN_JOB**:STRING
-  Calculates the amount of Ninja tablegen jobs according to available resources.
-  Value has to be in MB, overwrites LLVM_PARALLEL_TABLEGEN_JOBS. Tablegen jobs
-  will be between one and amount of logical cores.
+**LLVM_RAM_PER_{COMPILE,LINK,TABLEGEN}_JOB**:STRING
+  Limit the number of concurrent compile, link or tablegen jobs
+  respectively, depending on available physical memory. The value
+  specified is in MB. The respective
+  ``LLVM_PARALLEL_{COMPILE,LINK,TABLEGEN}_JOBS`` variable is
+  overwritten by computing the memory size divided by the
+  specified value. The largest memory user is linking, but remember
+  that jobs in the other categories might run in parallel to the link
+  jobs, and you need to consider their memory requirements when
+  in a memory-limited environment. Using a
+  ``-DLLVM_RAM_PER_LINK_JOB=10000`` is a good approximation. On ELF
+  platforms debug builds can reduce link-time memory pressure by also
+  using ``LLVM_USE_SPLIT_DWARF``.
 
 **LLVM_REVERSE_ITERATION**:BOOL
   If enabled, all supported unordered llvm containers would be iterated in

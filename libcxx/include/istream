@@ -161,13 +161,15 @@ template <class Stream, class T>
 #include <__config>
 #include <__fwd/istream.h>
 #include <__iterator/istreambuf_iterator.h>
+#include <__ostream/basic_ostream.h>
 #include <__type_traits/conjunction.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/is_base_of.h>
 #include <__utility/declval.h>
 #include <__utility/forward.h>
 #include <bitset>
-#include <ostream>
+#include <ios>
+#include <locale>
 #include <version>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -1362,6 +1364,7 @@ _LIBCPP_END_NAMESPACE_STD
 #if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
 #  include <concepts>
 #  include <iosfwd>
+#  include <ostream>
 #  include <type_traits>
 #endif
 

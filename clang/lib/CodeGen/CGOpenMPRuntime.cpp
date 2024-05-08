@@ -742,8 +742,8 @@ LValue ReductionCodeGen::emitSharedLValue(CodeGenFunction &CGF, const Expr *E) {
 
 LValue ReductionCodeGen::emitSharedLValueUB(CodeGenFunction &CGF,
                                             const Expr *E) {
-  if (const auto *OASE = dyn_cast<OMPArraySectionExpr>(E))
-    return CGF.EmitOMPArraySectionExpr(OASE, /*IsLowerBound=*/false);
+  if (const auto *OASE = dyn_cast<ArraySectionExpr>(E))
+    return CGF.EmitArraySectionExpr(OASE, /*IsLowerBound=*/false);
   return LValue();
 }
 
@@ -800,7 +800,7 @@ void ReductionCodeGen::emitSharedOrigLValue(CodeGenFunction &CGF, unsigned N) {
 
 void ReductionCodeGen::emitAggregateType(CodeGenFunction &CGF, unsigned N) {
   QualType PrivateType = getPrivateType(N);
-  bool AsArraySection = isa<OMPArraySectionExpr>(ClausesData[N].Ref);
+  bool AsArraySection = isa<ArraySectionExpr>(ClausesData[N].Ref);
   if (!PrivateType->isVariablyModifiedType()) {
     Sizes.emplace_back(
         CGF.getTypeSize(OrigAddresses[N].first.getType().getNonReferenceType()),
@@ -941,9 +941,9 @@ static Address castToBase(CodeGenFunction &CGF, QualType BaseTy, QualType ElTy,
 
 static const VarDecl *getBaseDecl(const Expr *Ref, const DeclRefExpr *&DE) {
   const VarDecl *OrigVD = nullptr;
-  if (const auto *OASE = dyn_cast<OMPArraySectionExpr>(Ref)) {
+  if (const auto *OASE = dyn_cast<ArraySectionExpr>(Ref)) {
     const Expr *Base = OASE->getBase()->IgnoreParenImpCasts();
-    while (const auto *TempOASE = dyn_cast<OMPArraySectionExpr>(Base))
+    while (const auto *TempOASE = dyn_cast<ArraySectionExpr>(Base))
       Base = TempOASE->getBase()->IgnoreParenImpCasts();
     while (const auto *TempASE = dyn_cast<ArraySubscriptExpr>(Base))
       Base = TempASE->getBase()->IgnoreParenImpCasts();
@@ -3570,9 +3570,8 @@ getPointerAndSize(CodeGenFunction &CGF, const Expr *E) {
       SizeVal = CGF.Builder.CreateNUWMul(SizeVal, Sz);
     }
   } else if (const auto *ASE =
-                 dyn_cast<OMPArraySectionExpr>(E->IgnoreParenImpCasts())) {
-    LValue UpAddrLVal =
-        CGF.EmitOMPArraySectionExpr(ASE, /*IsLowerBound=*/false);
+                 dyn_cast<ArraySectionExpr>(E->IgnoreParenImpCasts())) {
+    LValue UpAddrLVal = CGF.EmitArraySectionExpr(ASE, /*IsLowerBound=*/false);
     Address UpAddrAddress = UpAddrLVal.getAddress(CGF);
     llvm::Value *UpAddr = CGF.Builder.CreateConstGEP1_32(
         UpAddrAddress.getElementType(), UpAddrAddress.emitRawPointer(CGF),
@@ -6672,8 +6671,8 @@ private:
     // Given that an array section is considered a built-in type, we need to
     // do the calculation based on the length of the section instead of relying
     // on CGF.getTypeSize(E->getType()).
-    if (const auto *OAE = dyn_cast<OMPArraySectionExpr>(E)) {
-      QualType BaseTy = OMPArraySectionExpr::getBaseOriginalType(
+    if (const auto *OAE = dyn_cast<ArraySectionExpr>(E)) {
+      QualType BaseTy = ArraySectionExpr::getBaseOriginalType(
                             OAE->getBase()->IgnoreParenImpCasts())
                             .getCanonicalType();
 
@@ -6779,7 +6778,7 @@ private:
   /// Return true if the provided expression is a final array section. A
   /// final array section, is one whose length can't be proved to be one.
   bool isFinalArraySectionExpression(const Expr *E) const {
-    const auto *OASE = dyn_cast<OMPArraySectionExpr>(E);
+    const auto *OASE = dyn_cast<ArraySectionExpr>(E);
 
     // It is not an array section and therefore not a unity-size one.
     if (!OASE)
@@ -6795,7 +6794,7 @@ private:
     // for this dimension. Also, we should always expect a length if the
     // base type is pointer.
     if (!Length) {
-      QualType BaseQTy = OMPArraySectionExpr::getBaseOriginalType(
+      QualType BaseQTy = ArraySectionExpr::getBaseOriginalType(
                              OASE->getBase()->IgnoreParenImpCasts())
                              .getCanonicalType();
       if (const auto *ATy = dyn_cast<ConstantArrayType>(BaseQTy.getTypePtr()))
@@ -7027,7 +7026,7 @@ private:
     Address BP = Address::invalid();
     const Expr *AssocExpr = I->getAssociatedExpression();
     const auto *AE = dyn_cast<ArraySubscriptExpr>(AssocExpr);
-    const auto *OASE = dyn_cast<OMPArraySectionExpr>(AssocExpr);
+    const auto *OASE = dyn_cast<ArraySectionExpr>(AssocExpr);
     const auto *OAShE = dyn_cast<OMPArrayShapingExpr>(AssocExpr);
 
     if (isa<MemberExpr>(AssocExpr)) {
@@ -7179,14 +7178,14 @@ private:
       // special treatment for array sections given that they are built-in
       // types.
       const auto *OASE =
-          dyn_cast<OMPArraySectionExpr>(I->getAssociatedExpression());
+          dyn_cast<ArraySectionExpr>(I->getAssociatedExpression());
       const auto *OAShE =
           dyn_cast<OMPArrayShapingExpr>(I->getAssociatedExpression());
       const auto *UO = dyn_cast<UnaryOperator>(I->getAssociatedExpression());
       const auto *BO = dyn_cast<BinaryOperator>(I->getAssociatedExpression());
       bool IsPointer =
           OAShE ||
-          (OASE && OMPArraySectionExpr::getBaseOriginalType(OASE)
+          (OASE && ArraySectionExpr::getBaseOriginalType(OASE)
                        .getCanonicalType()
                        ->isAnyPointerType()) ||
           I->getAssociatedExpression()->getType()->isAnyPointerType();
@@ -7207,7 +7206,7 @@ private:
         assert((Next == CE ||
                 isa<MemberExpr>(Next->getAssociatedExpression()) ||
                 isa<ArraySubscriptExpr>(Next->getAssociatedExpression()) ||
-                isa<OMPArraySectionExpr>(Next->getAssociatedExpression()) ||
+                isa<ArraySectionExpr>(Next->getAssociatedExpression()) ||
                 isa<OMPArrayShapingExpr>(Next->getAssociatedExpression()) ||
                 isa<UnaryOperator>(Next->getAssociatedExpression()) ||
                 isa<BinaryOperator>(Next->getAssociatedExpression())) &&
@@ -7439,7 +7438,7 @@ private:
             PartialStruct.LowestElem = {FieldIndex, LowestElem};
             if (IsFinalArraySection) {
               Address HB =
-                  CGF.EmitOMPArraySectionExpr(OASE, /*IsLowerBound=*/false)
+                  CGF.EmitArraySectionExpr(OASE, /*IsLowerBound=*/false)
                       .getAddress(CGF);
               PartialStruct.HighestElem = {FieldIndex, HB};
             } else {
@@ -7452,7 +7451,7 @@ private:
           } else if (FieldIndex > PartialStruct.HighestElem.first) {
             if (IsFinalArraySection) {
               Address HB =
-                  CGF.EmitOMPArraySectionExpr(OASE, /*IsLowerBound=*/false)
+                  CGF.EmitArraySectionExpr(OASE, /*IsLowerBound=*/false)
                       .getAddress(CGF);
               PartialStruct.HighestElem = {FieldIndex, HB};
             } else {
@@ -7510,12 +7509,12 @@ private:
     for (const OMPClauseMappableExprCommon::MappableComponent &Component :
          Components) {
       const Expr *AssocExpr = Component.getAssociatedExpression();
-      const auto *OASE = dyn_cast<OMPArraySectionExpr>(AssocExpr);
+      const auto *OASE = dyn_cast<ArraySectionExpr>(AssocExpr);
 
       if (!OASE)
         continue;
 
-      QualType Ty = OMPArraySectionExpr::getBaseOriginalType(OASE->getBase());
+      QualType Ty = ArraySectionExpr::getBaseOriginalType(OASE->getBase());
       auto *CAT = Context.getAsConstantArrayType(Ty);
       auto *VAT = Context.getAsVariableArrayType(Ty);
 
@@ -7589,7 +7588,7 @@ private:
         continue;
       }
 
-      const auto *OASE = dyn_cast<OMPArraySectionExpr>(AssocExpr);
+      const auto *OASE = dyn_cast<ArraySectionExpr>(AssocExpr);
 
       if (!OASE)
         continue;
@@ -8780,7 +8779,7 @@ static ValueDecl *getDeclFromThisExpr(const Expr *E) {
   if (!E)
     return nullptr;
 
-  if (const auto *OASE = dyn_cast<OMPArraySectionExpr>(E->IgnoreParenCasts()))
+  if (const auto *OASE = dyn_cast<ArraySectionExpr>(E->IgnoreParenCasts()))
     if (const MemberExpr *ME =
             dyn_cast<MemberExpr>(OASE->getBase()->IgnoreParenImpCasts()))
       return ME->getMemberDecl();

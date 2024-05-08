@@ -44,6 +44,8 @@ struct basic_string {
   int compare(const C* s) const;
   int compare(size_type pos, size_type len, const _Type&) const;
   int compare(size_type pos, size_type len, const C* s) const;
+  template<class StringViewLike>
+  int compare(size_type pos1, size_type count1, const StringViewLike& t) const;
 
   size_type find(const _Type& str, size_type pos = 0) const;
   size_type find(const C* s, size_type pos = 0) const;
@@ -129,6 +131,8 @@ bool operator!=(const char*, const std::string&);
 bool operator==(const std::wstring&, const std::wstring&);
 bool operator==(const std::wstring&, const wchar_t*);
 bool operator==(const wchar_t*, const std::wstring&);
+
+size_t strlen(const char* str);
 }
 
 #endif // _STRING_

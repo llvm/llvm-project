@@ -910,63 +910,6 @@ void test() {
 </pre></div></div></td></tr>
 
 
-<tr><td><a id="alpha.unix.Stream"><div class="namedescr expandable"><span class="name">
-alpha.unix.Stream</span><span class="lang">
-(C)</span><div class="descr">
-Check stream handling functions:<div class=functions>fopen<br>
-tmpfile<br>
-fclose<br>
-fread<br>
-fwrite<br>
-fseek<br>
-ftell<br>
-rewind<br>
-fgetpos<br>
-fsetpos<br>
-clearerr<br>
-feof<br>
-ferror<br>
-fileno</div></div></div></a></td>
-<td><div class="exampleContainer expandable">
-<div class="example"><pre>
-void test() {
-  FILE *p = fopen("foo", "r");
-} // warn: opened file is never closed
-</pre></div><div class="separator"></div>
-<div class="example"><pre>
-void test() {
-  FILE *p = fopen("foo", "r");
-  fseek(p, 1, SEEK_SET); // warn: stream pointer might be NULL
-  fclose(p);
-}
-</pre></div><div class="separator"></div>
-<div class="example"><pre>
-void test() {
-  FILE *p = fopen("foo", "r");
-
-  if (p)
-    fseek(p, 1, 3);
-     // warn: third arg should be SEEK_SET, SEEK_END, or SEEK_CUR
-
-  fclose(p);
-}
-</pre></div><div class="separator"></div>
-<div class="example"><pre>
-void test() {
-  FILE *p = fopen("foo", "r");
-  fclose(p);
-  fclose(p); // warn: already closed
-}
-</pre></div><div class="separator"></div>
-<div class="example"><pre>
-void test() {
-  FILE *p = tmpfile();
-  ftell(p); // warn: stream pointer might be NULL
-  fclose(p);
-}
-</pre></div></div></td></tr>
-
-
 <tr><td><a id="alpha.unix.cstring.BufferOverlap"><div class="namedescr expandable"><span class="name">
 alpha.unix.cstring.BufferOverlap</span><span class="lang">
 (C)</span><div class="descr">

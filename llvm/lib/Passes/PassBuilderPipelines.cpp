@@ -651,6 +651,13 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
   LPM2.addPass(LoopIdiomRecognizePass());
   LPM2.addPass(IndVarSimplifyPass());
 
+  {
+    ExtraSimpleLoopUnswitchPassManager ExtraPasses;
+    ExtraPasses.addPass(SimpleLoopUnswitchPass(/* NonTrivial */ Level ==
+                                               OptimizationLevel::O3));
+    LPM2.addPass(std::move(ExtraPasses));
+  }
+
   invokeLateLoopOptimizationsEPCallbacks(LPM2, Level);
 
   LPM2.addPass(LoopDeletionPass());
@@ -956,7 +963,8 @@ PassBuilder::buildInlinerPipeline(OptimizationLevel Level,
   MainCGPipeline.addPass(createCGSCCToFunctionPassAdaptor(
       RequireAnalysisPass<ShouldNotRunFunctionPassesAnalysis, Function>()));
 
-  MainCGPipeline.addPass(CoroSplitPass(Level != OptimizationLevel::O0));
+  if (Phase != ThinOrFullLTOPhase::ThinLTOPreLink)
+    MainCGPipeline.addPass(CoroSplitPass(Level != OptimizationLevel::O0));
 
   // Make sure we don't affect potential future NoRerun CGSCC adaptors.
   MIWP.addLateModulePass(createModuleToFunctionPassAdaptor(
@@ -998,8 +1006,9 @@ PassBuilder::buildModuleInlinerPipeline(OptimizationLevel Level,
       buildFunctionSimplificationPipeline(Level, Phase),
       PTO.EagerlyInvalidateAnalyses));
 
-  MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(
-      CoroSplitPass(Level != OptimizationLevel::O0)));
+  if (Phase != ThinOrFullLTOPhase::ThinLTOPreLink)
+    MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(
+        CoroSplitPass(Level != OptimizationLevel::O0)));
 
   return MPM;
 }
@@ -1162,7 +1171,7 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
   if (EnableSyntheticCounts && !PGOOpt)
     MPM.addPass(SyntheticCountsPropagation());
 
-  if (EnablePGOForceFunctionAttrs)
+  if (EnablePGOForceFunctionAttrs && PGOOpt)
     MPM.addPass(PGOForceFunctionAttrsPass(PGOOpt->ColdOptType));
 
   MPM.addPass(AlwaysInlinerPass(/*InsertLifetimeIntrinsics=*/true));
@@ -1176,7 +1185,8 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
   // and argument promotion.
   MPM.addPass(DeadArgumentEliminationPass());
 
-  MPM.addPass(CoroCleanupPass());
+  if (Phase != ThinOrFullLTOPhase::ThinLTOPreLink)
+    MPM.addPass(CoroCleanupPass());
 
   // Optimize globals now that functions are fully simplified.
   MPM.addPass(GlobalOptPass());

@@ -1000,8 +1000,13 @@ def SDWAVopcDst : BoolRC {
 }
 
 class NamedIntOperand<ValueType Type, string Prefix, bit Optional = 1,
-                      string name = NAME, string ConvertMethod = "nullptr">
+                      string name = NAME>
     : CustomOperand<Type, Optional, name> {
+  let PredicateMethod =
+    "getPredicate([](const AMDGPUOperand &Op) -> bool { "#
+    "return Op.isImmTy(AMDGPUOperand::"#ImmTy#"); })";
+  string Validator = "[](int64_t V) { return true; }";
+  string ConvertMethod = "[](int64_t &V) { return "#Validator#"(V); }";
   let ParserMethod =
     "[this](OperandVector &Operands) -> ParseStatus { "#
     "return parseIntWithPrefix(\""#Prefix#"\", Operands, "#
@@ -1045,8 +1050,10 @@ class ArrayOperand0<string Id, string Name = NAME>
 let ImmTy = "ImmTyOffset" in
 def flat_offset : CustomOperand<i32, 1, "FlatOffset">;
 def Offset : NamedIntOperand<i32, "offset">;
+let Validator = "isUInt<8>" in {
 def Offset0 : NamedIntOperand<i8, "offset0">;
 def Offset1 : NamedIntOperand<i8, "offset1">;
+}
 
 def gds : NamedBitOperand<"gds", "GDS">;
 
@@ -1103,25 +1110,41 @@ let DefaultValue = "0xf" in {
 def DppRowMask : NamedIntOperand<i32, "row_mask">;
 def DppBankMask : NamedIntOperand<i32, "bank_mask">;
 }
-def DppBoundCtrl : NamedIntOperand<i1, "bound_ctrl", 1, "DppBoundCtrl",
-    "[this] (int64_t &BC) -> bool { return convertDppBoundCtrl(BC); }">;
+def DppBoundCtrl : NamedIntOperand<i1, "bound_ctrl"> {
+  let ConvertMethod = "[this] (int64_t &BC) -> bool { return convertDppBoundCtrl(BC); }";
+}
 
 let DecoderMethod = "decodeDpp8FI" in
 def Dpp8FI : NamedIntOperand<i32, "fi", 1, "DppFI">;
 def Dpp16FI : NamedIntOperand<i32, "fi", 1, "DppFI">;
 
 def blgp : CustomOperand<i32, 1, "BLGP">;
-def CBSZ : NamedIntOperand<i32, "cbsz">;
-def ABID : NamedIntOperand<i32, "abid">;
-
+def CBSZ : NamedIntOperand<i32, "cbsz"> {
+  let Validator = "isUInt<3>";
+}
+def ABID : NamedIntOperand<i32, "abid"> {
+  let Validator = "isUInt<4>";
+}
 def hwreg : CustomOperand<i32, 0, "Hwreg">;
 
 def exp_tgt : CustomOperand<i32, 0, "ExpTgt">;
 
-def WaitVDST : NamedIntOperand<i8, "wait_vdst">;
-def WaitEXP : NamedIntOperand<i8, "wait_exp">;
-def WaitVAVDst : NamedIntOperand<i8, "wait_va_vdst">;
-def WaitVMVSrc : NamedIntOperand<i8, "wait_vm_vsrc">;
+def WaitVDST : NamedIntOperand<i8, "wait_vdst"> {
+  let Validator = "isUInt<4>";
+}
+def WaitEXP : NamedIntOperand<i8, "wait_exp"> {
+  let Validator = "isUInt<3>";
+}
+def WaitVAVDst : NamedIntOperand<i8, "wait_va_vdst"> {
+  let Validator = "isUInt<4>";
+}
+def WaitVMVSrc : NamedIntOperand<i8, "wait_vm_vsrc"> {
+  let Validator = "isUInt<1>";
+}
+
+def ByteSel : NamedIntOperand<i8, "byte_sel"> {
+  let Validator = "isUInt<2>";
+}
 
 class KImmFPOperand<ValueType vt> : ImmOperand<vt> {
   let OperandNamespace = "AMDGPU";
@@ -1700,9 +1723,9 @@ class getIns64 <RegisterOperand Src0RC, RegisterOperand Src1RC,
           (ins Src0Mod:$src0_modifiers, Src0RC:$src0,
                Src1Mod:$src1_modifiers, Src1RC:$src1,
                clampmod0:$clamp, omod0:$omod),
-           (ins Src0Mod:$src0_modifiers, Src0RC:$src0,
-               Src1Mod:$src1_modifiers, Src1RC:$src1,
-               clampmod0:$clamp))
+          !con((ins Src0Mod:$src0_modifiers, Src0RC:$src0,
+                    Src1Mod:$src1_modifiers, Src1RC:$src1),
+                !if(HasClamp, (ins clampmod0:$clamp), (ins))))
       /* else */,
         // VOP2 without modifiers
         !if (HasClamp,
@@ -2036,7 +2059,8 @@ class getAsmDPP8 <bit HasDst, int NumSrcArgs, bit HasModifiers, ValueType DstVT 
 class getAsmVOP3Base <int NumSrcArgs, bit HasDst, bit HasClamp,
                        bit HasOpSel, bit HasOMod, bit IsVOP3P,
                        bit HasModifiers, bit Src0HasMods,
-                       bit Src1HasMods, bit Src2HasMods, ValueType DstVT = i32> {
+                       bit Src1HasMods, bit Src2HasMods, ValueType DstVT = i32,
+                       bit HasByteSel = 0> {
   string dst = !if(HasDst,
                    !if(!eq(DstVT.Size, 1),
                        "$sdst",
@@ -2058,6 +2082,7 @@ class getAsmVOP3Base <int NumSrcArgs, bit HasDst, bit HasClamp,
   string src1 = !if(Src1HasMods, src1mods, src1nomods);
   string src2 = !if(Src2HasMods, src2mods, src2nomods);
   string opsel = !if(HasOpSel, "$op_sel", "");
+  string bytesel = !if(HasByteSel, "$byte_sel", "");
   string 3PMods = !if(IsVOP3P,
                       !if(HasOpSel, "$op_sel_hi", "")
                         #!if(HasModifiers, "$neg_lo$neg_hi", ""),
@@ -2065,7 +2090,7 @@ class getAsmVOP3Base <int NumSrcArgs, bit HasDst, bit HasClamp,
   string clamp = !if(HasClamp, "$clamp", "");
   string omod = !if(HasOMod, "$omod", "");
 
-  string ret = dst#!if(!gt(NumSrcArgs,0),", "#src0#src1#src2#opsel#3PMods#clamp#omod, "");
+  string ret = dst#!if(!gt(NumSrcArgs,0),", "#src0#src1#src2#opsel#bytesel#3PMods#clamp#omod, "");
 
 }
 
@@ -2281,7 +2306,9 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableClamp = 0> {
   field bit IsWMMA = 0;
   field bit IsSWMMAC = 0;
 
-  field bit IsFP8 = 0;
+  field bit IsFP8SrcByteSel = 0;
+  field bit IsFP8DstByteSel = 0;
+  field bit IsFP8ByteSel = !or(IsFP8SrcByteSel, IsFP8DstByteSel);
 
   field bit HasDst = !ne(DstVT.Value, untyped.Value);
   field bit HasDst32 = HasDst;
@@ -2401,7 +2428,7 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableClamp = 0> {
   field string AsmDPP8 = getAsmDPP8<HasDst, NumSrcArgs, 0 /*HasModifiers*/, DstVT>.ret;
   field string AsmVOP3Base = getAsmVOP3Base<NumSrcArgs, HasDst, HasClamp,
    HasOpSel, HasOMod, IsVOP3P, HasModifiers, HasModifiers, HasModifiers,
-   HasModifiers, DstVT>.ret;
+   HasModifiers, DstVT, IsFP8ByteSel>.ret;
   field string Asm64 = AsmVOP3Base;
   field string AsmVOP3P = getAsmVOP3P<NumSrcArgs, HasModifiers, HasClamp, HasOpSel>.ret;
   field string AsmVOP3OpSel = getAsmVOP3OpSel<NumSrcArgs,

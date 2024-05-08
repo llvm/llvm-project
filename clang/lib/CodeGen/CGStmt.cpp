@@ -908,6 +908,69 @@ void CodeGenFunction::EmitIfStmt(const IfStmt &S) {
     incrementProfileCounter(&S);
 }
 
+bool CodeGenFunction::checkIfLoopMustProgress(const Expr *ControllingExpression,
+                                              bool HasEmptyBody) {
+  if (CGM.getCodeGenOpts().getFiniteLoops() ==
+      CodeGenOptions::FiniteLoopsKind::Never)
+    return false;
+
+  // Now apply rules for plain C (see  6.8.5.6 in C11).
+  // Loops with constant conditions do not have to make progress in any C
+  // version.
+  // As an extension, we consisider loops whose constant expression
+  // can be constant-folded.
+  Expr::EvalResult Result;
+  bool CondIsConstInt =
+      !ControllingExpression ||
+      (ControllingExpression->EvaluateAsInt(Result, getContext()) &&
+       Result.Val.isInt());
+
+  bool CondIsTrue = CondIsConstInt && (!ControllingExpression ||
+                                       Result.Val.getInt().getBoolValue());
+
+  // Loops with non-constant conditions must make progress in C11 and later.
+  if (getLangOpts().C11 && !CondIsConstInt)
+    return true;
+
+  // [C++26][intro.progress] (DR)
+  // The implementation may assume that any thread will eventually do one of the
+  // following:
+  // [...]
+  // - continue execution of a trivial infinite loop ([stmt.iter.general]).
+  if (CGM.getCodeGenOpts().getFiniteLoops() ==
+          CodeGenOptions::FiniteLoopsKind::Always ||
+      getLangOpts().CPlusPlus11) {
+    if (HasEmptyBody && CondIsTrue) {
+      CurFn->removeFnAttr(llvm::Attribute::MustProgress);
+      return false;
+    }
+    return true;
+  }
+  return false;
+}
+
+// [C++26][stmt.iter.general] (DR)
+// A trivially empty iteration statement is an iteration statement matching one
+// of the following forms:
+//  - while ( expression ) ;
+//  - while ( expression ) { }
+//  - do ; while ( expression ) ;
+//  - do { } while ( expression ) ;
+//  - for ( init-statement expression(opt); ) ;
+//  - for ( init-statement expression(opt); ) { }
+template <typename LoopStmt> static bool hasEmptyLoopBody(const LoopStmt &S) {
+  if constexpr (std::is_same_v<LoopStmt, ForStmt>) {
+    if (S.getInc())
+      return false;
+  }
+  const Stmt *Body = S.getBody();
+  if (!Body || isa<NullStmt>(Body))
+    return true;
+  if (const CompoundStmt *Compound = dyn_cast<CompoundStmt>(Body))
+    return Compound->body_empty();
+  return false;
+}
+
 void CodeGenFunction::EmitWhileStmt(const WhileStmt &S,
                                     ArrayRef<const Attr *> WhileAttrs) {
   // Emit the header for the loop, which will also become
@@ -942,13 +1005,12 @@ void CodeGenFunction::EmitWhileStmt(const WhileStmt &S,
   // while(1) is common, avoid extra exit blocks.  Be sure
   // to correctly handle break/continue though.
   llvm::ConstantInt *C = dyn_cast<llvm::ConstantInt>(BoolCondVal);
-  bool CondIsConstInt = C != nullptr;
-  bool EmitBoolCondBranch = !CondIsConstInt || !C->isOne();
+  bool EmitBoolCondBranch = !C || !C->isOne();
   const SourceRange &R = S.getSourceRange();
   LoopStack.push(LoopHeader.getBlock(), CGM.getContext(), CGM.getCodeGenOpts(),
                  WhileAttrs, SourceLocToDebugLoc(R.getBegin()),
                  SourceLocToDebugLoc(R.getEnd()),
-                 checkIfLoopMustProgress(CondIsConstInt));
+                 checkIfLoopMustProgress(S.getCond(), hasEmptyLoopBody(S)));
 
   // When single byte coverage mode is enabled, add a counter to loop condition.
   if (llvm::EnableSingleByteCoverage)
@@ -1059,14 +1121,13 @@ void CodeGenFunction::EmitDoStmt(const DoStmt &S,
   // "do {} while (0)" is common in macros, avoid extra blocks.  Be sure
   // to correctly handle break/continue though.
   llvm::ConstantInt *C = dyn_cast<llvm::ConstantInt>(BoolCondVal);
-  bool CondIsConstInt = C;
   bool EmitBoolCondBranch = !C || !C->isZero();
 
   const SourceRange &R = S.getSourceRange();
   LoopStack.push(LoopBody, CGM.getContext(), CGM.getCodeGenOpts(), DoAttrs,
                  SourceLocToDebugLoc(R.getBegin()),
                  SourceLocToDebugLoc(R.getEnd()),
-                 checkIfLoopMustProgress(CondIsConstInt));
+                 checkIfLoopMustProgress(S.getCond(), hasEmptyLoopBody(S)));
 
   // As long as the condition is true, iterate the loop.
   if (EmitBoolCondBranch) {
@@ -1109,15 +1170,11 @@ void CodeGenFunction::EmitForStmt(const ForStmt &S,
   llvm::BasicBlock *CondBlock = CondDest.getBlock();
   EmitBlock(CondBlock);
 
-  Expr::EvalResult Result;
-  bool CondIsConstInt =
-      !S.getCond() || S.getCond()->EvaluateAsInt(Result, getContext());
-
   const SourceRange &R = S.getSourceRange();
   LoopStack.push(CondBlock, CGM.getContext(), CGM.getCodeGenOpts(), ForAttrs,
                  SourceLocToDebugLoc(R.getBegin()),
                  SourceLocToDebugLoc(R.getEnd()),
-                 checkIfLoopMustProgress(CondIsConstInt));
+                 checkIfLoopMustProgress(S.getCond(), hasEmptyLoopBody(S)));
 
   // Create a cleanup scope for the condition variable cleanups.
   LexicalScope ConditionScope(*this, S.getSourceRange());
