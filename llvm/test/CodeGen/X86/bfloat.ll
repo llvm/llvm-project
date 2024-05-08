@@ -2420,3 +2420,47 @@ define <16 x bfloat> @concat_dup_v8bf16(<8 x bfloat> %x, <8 x bfloat> %y) {
   %a = shufflevector <8 x bfloat> %x, <8 x bfloat> %y, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
   ret <16 x bfloat> %a
 }
+
+define float @trunc_ext(float %a) nounwind {
+; X86-LABEL: trunc_ext:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-NEXT:    vcvtneps2bf16 %xmm0, %xmm0
+; X86-NEXT:    vmovw %xmm0, %eax
+; X86-NEXT:    shll $16, %eax
+; X86-NEXT:    vmovd %eax, %xmm0
+; X86-NEXT:    vmovd %xmm0, (%esp)
+; X86-NEXT:    flds (%esp)
+; X86-NEXT:    popl %eax
+; X86-NEXT:    retl
+;
+; SSE2-LABEL: trunc_ext:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    pushq %rax
+; SSE2-NEXT:    callq __truncsfbf2@PLT
+; SSE2-NEXT:    pextrw $0, %xmm0, %eax
+; SSE2-NEXT:    shll $16, %eax
+; SSE2-NEXT:    movd %eax, %xmm0
+; SSE2-NEXT:    popq %rax
+; SSE2-NEXT:    retq
+;
+; FP16-LABEL: trunc_ext:
+; FP16:       # %bb.0:
+; FP16-NEXT:    vcvtneps2bf16 %xmm0, %xmm0
+; FP16-NEXT:    vmovw %xmm0, %eax
+; FP16-NEXT:    shll $16, %eax
+; FP16-NEXT:    vmovd %eax, %xmm0
+; FP16-NEXT:    retq
+;
+; AVXNC-LABEL: trunc_ext:
+; AVXNC:       # %bb.0:
+; AVXNC-NEXT:    {vex} vcvtneps2bf16 %xmm0, %xmm0
+; AVXNC-NEXT:    vmovd %xmm0, %eax
+; AVXNC-NEXT:    shll $16, %eax
+; AVXNC-NEXT:    vmovd %eax, %xmm0
+; AVXNC-NEXT:    retq
+  %b = fptrunc float %a to bfloat
+  %c = fpext bfloat %b to float
+  ret float %c
+}
