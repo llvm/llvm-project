@@ -100,6 +100,10 @@ public:
 
   static constexpr size_t required_alignment = alignof(_Tp);
 
+  // The __atomic_always_lock_free builtin takes into account the alignment of the pointer if provided,
+  // so we create a fake pointer with a suitable alignment when querying it. Note that we are guaranteed
+  // that the pointer is going to be aligned properly at runtime because that is a (checked) precondition
+  // of atomic_ref's constructor.
   static constexpr bool is_always_lock_free =
       __atomic_always_lock_free(sizeof(_Tp), reinterpret_cast<void*>(-required_alignment));
 
