@@ -78,18 +78,24 @@ template <class = void> void f() {
 
   // https://github.com/llvm/llvm-project/issues/18873
   [](auto ...y) {
-    ([y] { }, ...);
+    ([y] { }(), ...);
   }();
 
   [](auto ...x) {
     ([&](auto ...y) {
-      ([x..., y] { }, ...);
+      ([x..., y] { }(), ...);
     })(1);
+  }(2, 'b');
+
+  [](auto ...x) {
+    ([&](auto ...y) {
+      ([x, y] { }(), ...);
+    })(1, 'a');
   }(2, 'b');
 
   [](auto ...x) {  // #outer
     ([&](auto ...y) { // #inner
-      ([x, y] { }, ...);
+      ([x, y] { }(), ...);
       // expected-error@-1 {{parameter pack 'y' that has a different length (4 vs. 3) from outer parameter packs}}
       // expected-note-re@#inner {{function template specialization {{.*}} requested here}}
       // expected-note-re@#outer {{function template specialization {{.*}} requested here}}

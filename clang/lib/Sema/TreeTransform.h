@@ -14092,17 +14092,6 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
 
       EllipsisLoc = C->getEllipsisLoc();
     }
-#if 0
-    else if (auto *PVD = cast<VarDecl>(C->getCapturedVar()); PVD->isParameterPack()) {
-      // If the lambda is written within a fold expression, the captured
-      // variable may be expanded later. Preserve the
-      // ContainsUnexpandedParameterPack flag because CXXFoldExpr uses it for the
-      // pattern.
-      LSI->ContainsUnexpandedParameterPack |= true;
-      getSema().tryCaptureVariable(PVD, C->getLocation(), Kind, EllipsisLoc);
-      continue;
-    }
-#endif
 
     // Transform the captured variable.
     auto *CapturedVar = cast_or_null<ValueDecl>(
@@ -14116,11 +14105,8 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
     // variable may be expanded later. Preserve the
     // ContainsUnexpandedParameterPack flag because CXXFoldExpr uses it for the
     // pattern.
-#if 1
-    if (auto *PVD = dyn_cast<VarDecl>(CapturedVar);
-        PVD && !C->isPackExpansion())
-      LSI->ContainsUnexpandedParameterPack |= PVD->isParameterPack();
-#endif
+    LSI->ContainsUnexpandedParameterPack |=
+        cast<VarDecl>(CapturedVar)->isParameterPack();
 
     // Capture the transformed variable.
     getSema().tryCaptureVariable(CapturedVar, C->getLocation(), Kind,
