@@ -3822,7 +3822,9 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI__builtin_elementwise_sin:
     return RValue::get(
         emitUnaryBuiltin(*this, E, llvm::Intrinsic::sin, "elt.sin"));
-
+  case Builtin::BI__builtin_elementwise_tan:
+    return RValue::get(
+        emitUnaryBuiltin(*this, E, llvm::Intrinsic::tan, "elt.tan"));
   case Builtin::BI__builtin_elementwise_trunc:
     return RValue::get(
         emitUnaryBuiltin(*this, E, llvm::Intrinsic::trunc, "elt.trunc"));
