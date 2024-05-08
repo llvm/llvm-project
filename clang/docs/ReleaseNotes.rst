@@ -76,6 +76,9 @@ ABI Changes in This Version
   returning a class in a register. This affects some uses of std::pair.
   (#GH86384).
 
+- Fixed Microsoft calling convention when returning classes that have a deleted
+  copy assignment operator. Such a class should be returned indirectly.
+
 AST Dumping Potentially Breaking Changes
 ----------------------------------------
 
@@ -110,9 +113,6 @@ Clang Frontend Potentially Breaking Changes
 
     $ clang --target=<your target triple> -print-target-triple
     <the normalized target triple>
-
-- The ``hasTypeLoc`` AST matcher will no longer match a ``classTemplateSpecializationDecl``;
-  existing uses should switch to ``templateArgumentLoc`` or ``hasAnyTemplateArgumentLoc`` instead.
 
 What's New in Clang |release|?
 ==============================
@@ -684,6 +684,14 @@ Bug Fixes to C++ Support
 - Fix an assertion failure when parsing an invalid members of an anonymous class. (#GH85447)
 - Fixed a misuse of ``UnresolvedLookupExpr`` for ill-formed templated expressions. Fixes (#GH48673), (#GH63243)
   and (#GH88832).
+- Clang now defers all substitution into the exception specification of a function template specialization
+  until the noexcept-specifier is instantiated.
+- Fix a crash when an implicitly declared ``operator==`` function with a trailing requires-clause has its
+  constraints compared to that of another declaration.
+- Fix a bug where explicit specializations of member functions/function templates would have substitution
+  performed incorrectly when checking constraints. Fixes (#GH90349).
+- Clang now allows constrained member functions to be explicitly specialized for an implicit instantiation
+  of a class template.
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^

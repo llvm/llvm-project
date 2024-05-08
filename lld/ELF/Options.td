@@ -68,7 +68,7 @@ defm compress_debug_sections:
   MetaVarName<"[none,zlib,zstd]">;
 
 defm compress_sections: EEq<"compress-sections",
-  "Compress output sections that match the glob and do not have the SHF_ALLOC flag."
+  "Compress output sections that match the glob and do not have the SHF_ALLOC flag. "
   "The compression level is <level> (if specified) or a default speed-focused level">,
   MetaVarName<"<section-glob>={none,zlib,zstd}[:level]">;
 
