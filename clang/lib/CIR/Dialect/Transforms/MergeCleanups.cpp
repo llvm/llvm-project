@@ -42,6 +42,9 @@ struct RemoveRedudantBranches : public OpRewritePattern<BrOp> {
     Block *block = op.getOperation()->getBlock();
     Block *dest = op.getDest();
 
+    if (isa<mlir::cir::LabelOp>(dest->front()))
+      return failure();
+
     // Single edge between blocks: merge it.
     if (block->getNumSuccessors() == 1 &&
         dest->getSinglePredecessor() == block) {

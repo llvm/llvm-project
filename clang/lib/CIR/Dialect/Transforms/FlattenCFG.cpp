@@ -224,9 +224,11 @@ public:
         });
 
     // Lower optional body region yield.
-    auto bodyYield = dyn_cast<mlir::cir::YieldOp>(body->getTerminator());
-    if (bodyYield)
-      lowerTerminator(bodyYield, (step ? step : cond), rewriter);
+    for (auto &blk : op.getBody().getBlocks()) {
+      auto bodyYield = dyn_cast<mlir::cir::YieldOp>(blk.getTerminator());
+      if (bodyYield)
+        lowerTerminator(bodyYield, (step ? step : cond), rewriter);
+    }
 
     // Lower mandatory step region yield.
     if (step)
