@@ -277,6 +277,7 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
                                G_FCEIL,
                                G_FCOS,
                                G_FSIN,
+                               G_FTAN,
                                G_FSQRT,
                                G_FFLOOR,
                                G_FRINT,
