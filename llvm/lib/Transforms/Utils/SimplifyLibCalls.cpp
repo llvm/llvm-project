@@ -1741,6 +1741,10 @@ Value *LibCallSimplifier::optimizeNew(CallInst *CI, IRBuilderBase &B,
   // For calls that already pass a hot/cold hint, only update the hint if
   // directed by OptimizeExistingHotColdNew. For other calls to new, add a hint
   // if cold or hot, and leave as-is for default handling if "notcold" aka warm.
+  // Note that in cases where we decide it is "notcold", it might be slightly
+  // better to replace the hinted call with a non hinted call, to avoid the
+  // extra paramter and the if condition check of the hint value in the
+  // allocator. This can be considered in the future.
   switch (Func) {
   case LibFunc_Znwm12__hot_cold_t:
     if (OptimizeExistingHotColdNew)
