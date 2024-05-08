@@ -214,7 +214,7 @@ getStartAndEndForAccess(const Loop *Lp, const SCEV *PtrExpr, Type *AccessTy,
   if (SE->isLoopInvariant(PtrExpr, Lp)) {
     ScStart = ScEnd = PtrExpr;
   } else if (auto *AR = dyn_cast<SCEVAddRecExpr>(PtrExpr)) {
-    const SCEV *Ex = PSE.getBackedgeTakenCount();
+    const SCEV *Ex = PSE.getSymbolicMaxBackedgeTakenCount();
 
     ScStart = AR->getStart();
     ScEnd = AR->evaluateAtIteration(Ex, *SE);
@@ -2060,9 +2060,9 @@ MemoryDepChecker::Dependence::DepType MemoryDepChecker::isDependent(
   // stride multiplied by the backedge taken count, the accesses are independet,
   // i.e. they are far enough appart that accesses won't access the same
   // location across all loop ierations.
-  if (HasSameSize &&
-      isSafeDependenceDistance(DL, SE, *(PSE.getBackedgeTakenCount()), *Dist,
-                               MaxStride, TypeByteSize))
+  if (HasSameSize && isSafeDependenceDistance(
+                         DL, SE, *(PSE.getSymbolicMaxBackedgeTakenCount()),
+                         *Dist, MaxStride, TypeByteSize))
     return Dependence::NoDep;
 
   const SCEVConstant *C = dyn_cast<SCEVConstant>(Dist);
@@ -2400,7 +2400,7 @@ bool LoopAccessInfo::canAnalyzeLoop() {
   }
 
   // ScalarEvolution needs to be able to find the exit count.
-  const SCEV *ExitCount = PSE->getBackedgeTakenCount();
+  const SCEV *ExitCount = PSE->getSymbolicMaxBackedgeTakenCount();
   if (isa<SCEVCouldNotCompute>(ExitCount)) {
     recordAnalysis("CantComputeNumberOfIterations")
         << "could not determine number of loop iterations";
@@ -3009,7 +3009,7 @@ void LoopAccessInfo::collectStridedAccess(Value *MemAccess) {
   // of various possible stride specializations, considering the alternatives
   // of using gather/scatters (if available).
 
-  const SCEV *BETakenCount = PSE->getBackedgeTakenCount();
+  const SCEV *BETakenCount = PSE->getSymbolicMaxBackedgeTakenCount();
 
   // Match the types so we can compare the stride and the BETakenCount.
   // The Stride can be positive/negative, so we sign extend Stride;
