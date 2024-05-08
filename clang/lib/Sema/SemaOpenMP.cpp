@@ -15111,7 +15111,7 @@ StmtResult SemaOpenMP::ActOnOpenMPTileDirective(ArrayRef<OMPClause *> Clauses,
   ASTContext &Context = getASTContext();
   Scope *CurScope = SemaRef.getCurScope();
 
-  const OMPSizesClause *SizesClause =
+  const auto *SizesClause =
       OMPExecutableDirective::getSingleClause<OMPSizesClause>(Clauses);
   if (!SizesClause ||
       llvm::any_of(SizesClause->getSizesRefs(), [](Expr *E) { return !E; }))
@@ -17457,8 +17457,7 @@ OMPClause *SemaOpenMP::ActOnOpenMPSizesClause(ArrayRef<Expr *> SizeExprs,
                                               SourceLocation StartLoc,
                                               SourceLocation LParenLoc,
                                               SourceLocation EndLoc) {
-  SmallVector<Expr *> SanitizedSizeExprs;
-  llvm::append_range(SanitizedSizeExprs, SizeExprs);
+  SmallVector<Expr *> SanitizedSizeExprs(SizeExprs);
 
   for (Expr *&SizeExpr : SanitizedSizeExprs) {
     // Skip if already sanitized, e.g. during a partial template instantiation.
