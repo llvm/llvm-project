@@ -357,6 +357,9 @@ Changes in existing checks
   support calls to overloaded operators as base expression and provide fixes to
   expressions with side-effects.
 
+- Improved :doc:`readability-simplify-boolean-expr<clang-tidy/checks/readability/simplify-boolean-expr>`
+  check to avoid to emit warning for macro when IgnoreMacro option is enabled.
+
 - Improved :doc:`readability-static-definition-in-anonymous-namespace
   <clang-tidy/checks/readability/static-definition-in-anonymous-namespace>`
   check by resolving fix-it overlaps in template code by disregarding implicit
