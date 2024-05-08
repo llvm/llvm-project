@@ -501,7 +501,7 @@ def testTileToForallMixedDynamic(target):
     structured.TileUsingForallOp(target, num_threads=[n, 3, 4])
     # CHECK-LABEL: TEST: testTileToForallMixedDynamic
     # CHECK: = transform.structured.tile_using_forall
-    # CHECK-SAME: num_threads [%{{.*}} : !transform.any_op, 3, 4]
+    # CHECK-SAME: num_threads [%{{.*}}, 3, 4] : (!transform.any_op, !transform.any_op)
 
 
 @run
@@ -511,7 +511,7 @@ def testTileToForallPackedDynamic(target):
     structured.TileUsingForallOp(target, num_threads=n)
     # CHECK-LABEL: TEST: testTileToForallPackedDynamic
     # CHECK: = transform.structured.tile_using_forall
-    # CHECK-SAME: num_threads *(%0 : !transform.any_op)
+    # CHECK-SAME: num_threads *(%0) : (!transform.any_op, !transform.any_op)
 
 
 @run
