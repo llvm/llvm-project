@@ -2494,10 +2494,9 @@ Parser::ParseModuleDecl(Sema::ModuleImportState &ImportState) {
     return Actions.ActOnPrivateModuleFragmentDecl(ModuleLoc, PrivateLoc);
   }
 
-  bool HasError = false;
   SmallVector<std::pair<IdentifierInfo *, SourceLocation>, 2> Path;
   if (ParseModuleName(ModuleLoc, Path, /*IsImport=*/false))
-    HasError = true;
+    return nullptr;
   // Parse the optional module-partition.
   SmallVector<std::pair<IdentifierInfo *, SourceLocation>, 2> Partition;
   if (Tok.is(tok::colon)) {
@@ -2507,7 +2506,7 @@ Parser::ParseModuleDecl(Sema::ModuleImportState &ImportState) {
           << SourceRange(ColonLoc, Partition.back().second);
     // Recover by ignoring the partition name.
     else if (ParseModuleName(ModuleLoc, Partition, /*IsImport=*/false))
-      HasError = true;
+      return nullptr;
   }
 
   // We don't support any module attributes yet; just parse them and diagnose.
@@ -2520,9 +2519,8 @@ Parser::ParseModuleDecl(Sema::ModuleImportState &ImportState) {
 
   ExpectAndConsumeSemi(diag::err_module_expected_semi);
 
-  return HasError ? nullptr
-                  : Actions.ActOnModuleDecl(StartLoc, ModuleLoc, MDK, Path,
-                                            Partition, ImportState);
+  return Actions.ActOnModuleDecl(StartLoc, ModuleLoc, MDK, Path, Partition,
+                                 ImportState);
 }
 
 /// Parse a module import declaration. This is essentially the same for
@@ -2677,7 +2675,6 @@ bool Parser::ParseModuleName(
     SourceLocation UseLoc,
     SmallVectorImpl<std::pair<IdentifierInfo *, SourceLocation>> &Path,
     bool IsImport) {
-  bool HasMacroInModuleName = false;
   // Parse the module path.
   while (true) {
     if (!Tok.is(tok::identifier)) {
@@ -2692,15 +2689,12 @@ bool Parser::ParseModuleName(
       return true;
     }
 
-    const auto *MI = PP.getMacroInfo(Tok.getIdentifierInfo());
-    HasMacroInModuleName = !IsImport && MI && MI->isObjectLike();
-
     // Record this part of the module path.
     Path.push_back(std::make_pair(Tok.getIdentifierInfo(), Tok.getLocation()));
     ConsumeToken();
 
     if (!TryConsumeToken(tok::period))
-      return HasMacroInModuleName;
+      return false;
   }
 }
 

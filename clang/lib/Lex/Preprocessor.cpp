@@ -1374,7 +1374,7 @@ bool Preprocessor::LexAfterModuleDecl(Token &Result) {
                      /*IsReinject=*/false);
   };
 
-  // If we not expect an identifier but got an identifier, it's not a part of
+  // If we don't expect an identifier but got an identifier, it's not a part of
   // module name.
   if (!ModuleDeclExpectsIdentifier && Result.is(tok::identifier)) {
     EnterTokens(Result, /*DisableMacroExpansion=*/false);
@@ -1385,43 +1385,14 @@ bool Preprocessor::LexAfterModuleDecl(Token &Result) {
   //
   // export[opt] module identifier (. identifier)*
   //
-  // indicates a module import directive. We already saw the 'module'
+  // indicates a module directive. We already saw the 'module'
   // contextual keyword, so now we're looking for the identifiers.
   if (ModuleDeclExpectsIdentifier && Result.is(tok::identifier)) {
     auto *MI = getMacroInfo(Result.getIdentifierInfo());
     if (MI && MI->isObjectLike()) {
-      auto BuildFixItHint =
-          [&](std::string &Replacement) -> std::optional<FixItHint> {
-        EnterTokens(Result, /*DisableMacroExpansion=*/false);
-        if (!CurTokenLexer)
-          return std::nullopt;
-        Token Tok;
-        bool HasUnknownToken = false;
-        llvm::raw_string_ostream OS(Replacement);
-        do {
-          Lex(Tok);
-          if (const char *Punc = tok::getPunctuatorSpelling(Tok.getKind()))
-            OS << Punc;
-          else if (Tok.isLiteral() && Tok.getLiteralData())
-            OS << StringRef(Tok.getLiteralData(), Tok.getLength());
-          else if (auto *II = Tok.getIdentifierInfo())
-            OS << II->getName();
-          else
-            HasUnknownToken = true;
-        } while (CurTokenLexer && !CurTokenLexer->isAtEnd());
-        if (HasUnknownToken)
-          return std::nullopt;
-        return FixItHint::CreateReplacement(Result.getLocation(), Replacement);
-      };
-      SourceLocation EndLoc = Result.getLocation();
-      std::string Replacement;
-      auto FixIt = BuildFixItHint(Replacement);
-      auto DB = Diag(Result, diag::err_module_decl_cannot_be_macros)
-                << SourceRange(Result.getLocation(), EndLoc)
-                << ModuleDeclLexingPartitionName << Result.getIdentifierInfo()
-                << FixIt.has_value();
-      if (FixIt)
-        DB << Replacement << *FixIt;
+      Diag(Result, diag::err_module_decl_cannot_be_macros)
+          << Result.getLocation() << ModuleDeclLexingPartitionName
+          << Result.getIdentifierInfo();
     }
     ModuleDeclExpectsIdentifier = false;
     CurLexerCallback = CLK_LexAfterModuleDecl;

@@ -25,63 +25,73 @@
 #define ATTRS [[]]
 #define SEMICOLON ;
 
-#endif
+#endif // VERSION_H
 
 //--- A.cppm
+module;
 #include "version.h"
-export module VERSION;  // expected-error {{the name of a module declaration cannot contains an object-like macro 'VERSION', and the macro will not expand}}
+export module VERSION;  // expected-error {{the module name in a module declaration cannot contain an object-like macro 'VERSION', it's consists of one or more identifiers separated by '.'}}
 
 //--- B.cppm
+module;
 #include "version.h"
-export module A.B;      // expected-error {{the name of a module declaration cannot contains an object-like macro 'A', and the macro will not expand}} \
-                        // expected-error {{the name of a module declaration cannot contains an object-like macro 'B', and the macro will not expand}}
+export module A.B;      // expected-error {{the module name in a module declaration cannot contain an object-like macro 'A', it's consists of one or more identifiers separated by '.'}} \
+                        // expected-error {{the module name in a module declaration cannot contain an object-like macro 'B', it's consists of one or more identifiers separated by '.'}}
 
 //--- C.cppm
+module;
 #include "version.h"
-export module A.FUNC_LIKE(foo):C;   // expected-error {{the name of a module declaration cannot contains an object-like macro 'A', and the macro will not expand; did you mean 'a'?}} \
-                                    // expected-error {{unexpected '(' after the name of a module declaration}} \
-                                    // expected-error {{the name of a module partition declaration cannot contains an object-like macro 'C', and the macro will not expand}}
+export module A.FUNC_LIKE(foo):C;   // expected-error {{the module name in a module declaration cannot contain an object-like macro 'A', it's consists of one or more identifiers separated by '.'}} \
+                                    // expected-error {{unexpected '(' after the module name in a module declaration}} \
+                                    // expected-error {{the module name in a module partition declaration cannot contain an object-like macro 'C', it's consists of one or more identifiers separated by '.'}}
 
 //--- D.cppm
+module;
 #include "version.h"
-export module B.A.FUNC_LIKE(bar):C;   // expected-error {{the name of a module declaration cannot contains an object-like macro 'B', and the macro will not expand; did you mean 'b'?}} \
-                                      // expected-error {{the name of a module declaration cannot contains an object-like macro 'A', and the macro will not expand; did you mean 'a'?}} \
-                                      // expected-error {{unexpected '(' after the name of a module declaration}} \
-                                      // expected-error {{the name of a module partition declaration cannot contains an object-like macro 'C', and the macro will not expand; did you mean 'c'?}}
+export module B.A.FUNC_LIKE(bar):C;   // expected-error {{the module name in a module declaration cannot contain an object-like macro 'B', it's consists of one or more identifiers separated by '.'}} \
+                                      // expected-error {{the module name in a module declaration cannot contain an object-like macro 'A', it's consists of one or more identifiers separated by '.'}} \
+                                      // expected-error {{unexpected '(' after the module name in a module declaration}} \
+                                      // expected-error {{the module name in a module partition declaration cannot contain an object-like macro 'C', it's consists of one or more identifiers separated by '.'}}
 
 //--- E.cppm
+module;
 #include "version.h"
 export module a.FUNC_LIKE:c; // OK, FUNC_LIKE would not be treated as a macro name.
 // expected-no-diagnostics
 
 //--- F.cppm
+module;
 #include "version.h"
 export module a.FUNC_LIKE:c ATTRS; // OK, FUNC_LIKE would not be treated as a macro name.
 // expected-no-diagnostics
 
 //--- G.cppm
+module;
 #include "version.h"
-export module A.FUNC_LIKE(B c:C ATTRS // expected-error {{the name of a module declaration cannot contains an object-like macro 'A', and the macro will not expand; did you mean 'a'?}} \
-                                      // expected-error {{unexpected '(' after the name of a module declaration}} \
-                                      // expected-error {{the name of a module partition declaration cannot contains an object-like macro 'C', and the macro will not expand; did you mean 'c'?}} \
+export module A.FUNC_LIKE(B c:C ATTRS // expected-error {{the module name in a module declaration cannot contain an object-like macro 'A', it's consists of one or more identifiers separated by '.'}} \
+                                      // expected-error {{unexpected '(' after the module name in a module declaration}} \
+                                      // expected-error {{the module name in a module partition declaration cannot contain an object-like macro 'C', it's consists of one or more identifiers separated by '.'}} \
                                       // expected-error {{expected ';' after module name}}
 
 //--- H.cppm
+module;
 #include "version.h"
-export module A.FUNC_LIKE(B,). c:C ATTRS  // expected-error {{the name of a module declaration cannot contains an object-like macro 'A', and the macro will not expand; did you mean 'a'?}} \
-                                          // expected-error {{unexpected '(' after the name of a module declaration}} \
-                                          // expected-error {{the name of a module partition declaration cannot contains an object-like macro 'C', and the macro will not expand; did you mean 'c'?}} \
+export module A.FUNC_LIKE(B,). c:C ATTRS  // expected-error {{the module name in a module declaration cannot contain an object-like macro 'A', it's consists of one or more identifiers separated by '.'}} \
+                                          // expected-error {{unexpected '(' after the module name in a module declaration}} \
+                                          // expected-error {{the module name in a module partition declaration cannot contain an object-like macro 'C', it's consists of one or more identifiers separated by '.'}} \
                                           // expected-error {{expected ';' after module name}}
 
 //--- I.cppm
+module;
 #include "version.h"
-export module A.FUNC_LIKE(B,) c:C ATTRS   // expected-error {{the name of a module declaration cannot contains an object-like macro 'A', and the macro will not expand; did you mean 'a'?}} \
-                                          // expected-error {{unexpected '(' after the name of a module declaration}} \
+export module A.FUNC_LIKE(B,) c:C ATTRS   // expected-error {{the module name in a module declaration cannot contain an object-like macro 'A', it's consists of one or more identifiers separated by '.'}} \
+                                          // expected-error {{unexpected '(' after the module name in a module declaration}} \
                                           // expected-error {{expected ';' after module name}} \
                                           // expected-error {{unknown type name 'c'}} \
                                           // expected-error {{expected unqualified-id}}
 
 //--- J.cppm
+module;
 #include "version.h"
 export module unexpanded : unexpanded ATTRS SEMICOLON // OK, ATTRS and SEMICOLON can be expanded.
 // expected-no-diagnostics

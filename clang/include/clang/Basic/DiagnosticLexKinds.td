@@ -933,11 +933,11 @@ def warn_module_conflict : Warning<
 
 // C++20 modules
 def err_module_decl_cannot_be_macros : Error<
-  "the name of a module%select{| partition}0 declaration cannot contains "
-  "an object-like macro %1, and the macro will not expand"
-  "%select{|; did you mean '%3'?}2">;
+  "the module name in a module%select{| partition}0 declaration cannot contain "
+  "an object-like macro %1, it's consists of one or more identifiers "
+  "separated by '.'">;
 def err_unxepected_paren_in_module_decl : Error<
-  "unexpected '(' after the name of a module%select{| partition}0 declaration">;
+  "unexpected '(' after the module name in a module%select{| partition}0 declaration">;
 def err_header_import_semi_in_macro : Error<
   "semicolon terminating header import declaration cannot be produced "
   "by a macro">;
