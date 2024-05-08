@@ -210,3 +210,18 @@ func.func @expression_with_address_taken(%arg0: i32, %arg1: i32, %arg2: !emitc.p
   }
   return %c : i1
 }
+
+// CPP-DEFAULT: int32_t expression_with_subscript_user(void* [[VAL_1:v.+]])
+// CPP-DEFAULT-NEXT:   int64_t [[VAL_2:v.+]] = 0;
+// CPP-DEFAULT-NEXT:   int32_t* [[VAL_3:v.+]] = (int32_t*) [[VAL_1]];
+// CPP-DEFAULT-NEXT:   return [[VAL_3]][[[VAL_2]]];
+
+func.func @expression_with_subscript_user(%arg0: !emitc.ptr<!emitc.opaque<"void">>) -> i32 {
+  %c0 = "emitc.constant"() {value = 0 : i64} : () -> i64
+  %0 = emitc.expression : !emitc.ptr<i32> {
+    %0 = emitc.cast %arg0 : !emitc.ptr<!emitc.opaque<"void">> to !emitc.ptr<i32>
+    emitc.yield %0 : !emitc.ptr<i32>
+  }
+  %1 = emitc.subscript %0[%c0] : (!emitc.ptr<i32>, i64) -> i32
+  return %1 : i32
+}
