@@ -17,20 +17,22 @@
 // Preconditions: The referenced object is aligned to required_alignment.
 
 #include <atomic>
+#include <cstddef>
 
 #include "check_assertion.h"
 
 int main(int, char**) {
   { // no assertion should trigger here
-    char c[8];
+    alignas(float) std::byte c[sizeof(float)];
     float* f = new (c) float(3.14f);
     [[maybe_unused]] std::atomic_ref<float> r(*f);
   }
 
   TEST_LIBCPP_ASSERT_FAILURE(
       ([] {
+        alignas(float) std::byte c[2 * sizeof(float)]; // intentionally larger
         char c[8];
-        float* f = new (c + 1) float(3.14f);
+        float* f = new (c + 1) float(3.14f); // intentionally misaligned
         [[maybe_unused]] std::atomic_ref<float> r(*f);
       }()),
       "atomic_ref ctor: referenced object must be aligned to required_alignment");
