@@ -38,8 +38,7 @@ TEST(ParseNormalizedArchString, RejectsInvalidBaseISA) {
 }
 
 TEST(ParseNormalizedArchString, RejectsMalformedInputs) {
-  for (StringRef Input :
-       {"rv64i2p0_", "rv32i2p0__a2p0", "rv64e2p", "rv32i", "rv64ip1"}) {
+  for (StringRef Input : {"rv64e2p", "rv32i", "rv64ip1"}) {
     EXPECT_EQ(
         toString(RISCVISAInfo::parseNormalizedArchString(Input).takeError()),
         "extension lacks version in expected format");
@@ -516,18 +515,6 @@ TEST(ParseArchString,
       toString(
           RISCVISAInfo::parseArchString("rv32i_zba1p0m", true).takeError()),
       "unsupported standard user-level extension 'zba1p0m'");
-}
-
-TEST(ParseArchString, RejectsDoubleOrTrailingUnderscore) {
-  EXPECT_EQ(
-      toString(RISCVISAInfo::parseArchString("rv64i__m", true).takeError()),
-      "extension name missing after separator '_'");
-
-  for (StringRef Input :
-       {"rv32ezicsr__zifencei", "rv32i_", "rv32izicsr_", "rv64im_"}) {
-    EXPECT_EQ(toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
-              "extension name missing after separator '_'");
-  }
 }
 
 TEST(ParseArchString, RejectsDuplicateExtensionNames) {

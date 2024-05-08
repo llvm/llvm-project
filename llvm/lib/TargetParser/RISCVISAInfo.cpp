@@ -452,7 +452,7 @@ RISCVISAInfo::parseNormalizedArchString(StringRef Arch) {
   // and separated by _. Split by _ and then extract the name and version
   // information for each extension.
   SmallVector<StringRef, 8> Split;
-  Arch.split(Split, '_');
+  Arch.split(Split, '_', /*MaxSplit=*/-1, /*KeepEmpty=*/false);
   for (StringRef Ext : Split) {
     StringRef Prefix, MinorVersionStr;
     std::tie(Prefix, MinorVersionStr) = Ext.rsplit('p');
@@ -651,10 +651,6 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
     break;
   }
 
-  if (Arch.back() == '_')
-    return createStringError(errc::invalid_argument,
-                             "extension name missing after separator '_'");
-
   // Skip baseline.
   StringRef Exts = Arch.drop_front(1);
 
@@ -697,16 +693,10 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
   Exts.consume_front("_");
 
   SmallVector<StringRef, 8> SplitExts;
-  // Only split if the string is not empty. Otherwise the split will push an
-  // empty string into the vector.
-  if (!Exts.empty())
-    Exts.split(SplitExts, '_');
+  Exts.split(SplitExts, '_', /*MaxSplit=*/-1, /*KeepEmpty=*/false);
 
   for (auto Ext : SplitExts) {
-    if (Ext.empty())
-      return createStringError(errc::invalid_argument,
-                               "extension name missing after separator '_'");
-
+    assert(!Ext.empty());
     do {
       if (RISCVISAUtils::AllStdExts.contains(Ext.front())) {
         if (auto E = processSingleLetterExtension(

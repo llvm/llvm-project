@@ -308,11 +308,6 @@
 // RV32-SMINOR0: error: invalid arch name 'rv32ist2p0',
 // RV32-SMINOR0: unsupported standard supervisor-level extension 'st'
 
-// RUN: not %clang --target=riscv32-unknown-elf -march=rv32ixabc_ -### %s \
-// RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32-XSEP %s
-// RV32-XSEP: error: invalid arch name 'rv32ixabc_',
-// RV32-XSEP: extension name missing after separator '_'
-
 // RUN: not %clang --target=riscv32-unknown-elf -march=rv32ixabc_a -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32-PREFIX %s
 // RV32-PREFIX: error: invalid arch name 'rv32ixabc_a',
