@@ -177,7 +177,7 @@ static bool isReachableImpl(SmallVectorImpl<BasicBlock *> &Worklist,
   }
 
   const Loop *StopLoop = nullptr;
-  SmallPtrSet<const Loop *, 8> StopLoops;
+  SmallPtrSet<const Loop *, 2> StopLoops;
 
   if constexpr (IsMany) {
     if (LI) {
