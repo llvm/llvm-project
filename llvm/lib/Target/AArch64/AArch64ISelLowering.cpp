@@ -4374,11 +4374,6 @@ SDValue AArch64TargetLowering::LowerVectorXRINT(SDValue Op,
 
   assert(VT.isVector() && "Expected vector type");
 
-  // We can't custom-lower ISD::[L]LRINT without SVE, since it requires
-  // AArch64ISD::FCVTZS_MERGE_PASSTHRU.
-  if (!Subtarget->isSVEAvailable())
-    return SDValue();
-
   EVT ContainerVT = VT;
   EVT SrcVT = Src.getValueType();
   EVT CastVT =
@@ -4394,24 +4389,9 @@ SDValue AArch64TargetLowering::LowerVectorXRINT(SDValue Op,
   // the current rounding mode.
   SDValue FOp = DAG.getNode(ISD::FRINT, DL, CastVT, Src);
 
-  // In the case of vector filled with f32, ftrunc will convert it to an i32,
-  // but a vector filled with i32 isn't legal. So, FP_EXTEND the f32 into the
-  // required size.
-  size_t SrcSz = SrcVT.getScalarSizeInBits();
-  size_t ContainerSz = ContainerVT.getScalarSizeInBits();
-  if (ContainerSz > SrcSz) {
-    EVT SizedVT = MVT::getVectorVT(MVT::getFloatingPointVT(ContainerSz),
-                                   ContainerVT.getVectorElementCount());
-    FOp = DAG.getNode(ISD::FP_EXTEND, DL, SizedVT, FOp.getOperand(0));
-  }
-
   // Finally, truncate the rounded floating point to an integer, rounding to
   // zero.
-  SDValue Pred = getPredicateForVector(DAG, DL, ContainerVT);
-  SDValue Undef = DAG.getUNDEF(ContainerVT);
-  SDValue Truncated =
-      DAG.getNode(AArch64ISD::FCVTZS_MERGE_PASSTHRU, DL, ContainerVT,
-                  {Pred, FOp.getOperand(0), Undef}, FOp->getFlags());
+  SDValue Truncated = DAG.getNode(ISD::FP_TO_SINT, DL, ContainerVT, FOp.getOperand(0));
 
   if (VT.isScalableVector())
     return Truncated;
