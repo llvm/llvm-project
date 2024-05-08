@@ -482,7 +482,7 @@ namespace N3 {
     auto instantiated(E& e) -> decltype(operator=(e)); // expected-error {{use of undeclared 'operator='}}
   };
 
-  template struct E<int>; // expected-note {{in instantiation of template class 'E<int>' requested here}}
+  template struct E<int>; // expected-note {{in instantiation of template class 'N3::E<int>' requested here}}
 
 } // namespace N3
 

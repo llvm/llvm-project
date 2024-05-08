@@ -1248,13 +1248,6 @@ static DeclContext *findOuterContext(Scope *S) {
   return nullptr;
 }
 
-static bool isDependentAssignmentOperator(DeclarationName Name,
-                                          DeclContext *LookupContext) {
-  const auto *LookupRecord = dyn_cast_if_present<CXXRecordDecl>(LookupContext);
-  return Name.getCXXOverloadedOperator() == OO_Equal && LookupRecord &&
-         !LookupRecord->isBeingDefined() && LookupRecord->isDependentContext();
-}
-
 namespace {
 /// An RAII object to specify that we want to find block scope extern
 /// declarations.
@@ -1274,6 +1267,20 @@ struct FindLocalExternScope {
   LookupResult &R;
   bool OldFindLocalExtern;
 };
+
+/// Returns true if 'operator=' should be treated as a dependent name.
+bool isDependentAssignmentOperator(DeclarationName Name,
+                                   DeclContext *LookupContext) {
+  const auto *LookupRecord = dyn_cast_if_present<CXXRecordDecl>(LookupContext);
+  // If the lookup context is the current instantiation but we are outside a
+  // complete-class context, we will never find the implicitly declared
+  // copy/move assignment operators because they are declared at the closing '}'
+  // of the class specifier. In such cases, we treat 'operator=' like any other
+  // unqualified name because the results of name lookup in the template
+  // definition/instantiation context will always be the same.
+  return Name.getCXXOverloadedOperator() == OO_Equal && LookupRecord &&
+         !LookupRecord->isBeingDefined() && LookupRecord->isDependentContext();
+}
 } // end anonymous namespace
 
 bool Sema::CppLookupName(LookupResult &R, Scope *S) {
