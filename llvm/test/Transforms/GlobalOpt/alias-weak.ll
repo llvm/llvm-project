@@ -19,22 +19,27 @@ define void @baz() {
   ret void
 }
 
-; FIXME: We cannot use `f1_alias` to replace `f1` because they are both in use
+; We cannot use `f1_alias` to replace `f1` because they are both in use
 ; and `f1_alias` could be replaced at link time.
 define internal void @f1() {
   ret void
 }
 
+; FIXME: We can use `f2_alias` to replace `f2` because `b2` is not in use.
 define internal void @f2() {
   ret void
 }
+;.
+; CHECK: @f1_alias = linkonce_odr hidden alias void (), ptr @f1
+; CHECK: @f2_alias = linkonce_odr hidden alias void (), ptr @f2
+;.
 ; CHECK-LABEL: define void @foo() local_unnamed_addr {
 ; CHECK-NEXT:    call void @f1_alias()
 ; CHECK-NEXT:    ret void
 ;
 ;
 ; CHECK-LABEL: define void @bar() local_unnamed_addr {
-; CHECK-NEXT:    call void @f1_alias()
+; CHECK-NEXT:    call void @f1()
 ; CHECK-NEXT:    ret void
 ;
 ;
@@ -43,10 +48,10 @@ define internal void @f2() {
 ; CHECK-NEXT:    ret void
 ;
 ;
-; CHECK-LABEL: define linkonce_odr hidden void @f1_alias() local_unnamed_addr {
+; CHECK-LABEL: define internal void @f1() {
 ; CHECK-NEXT:    ret void
 ;
 ;
-; CHECK-LABEL: define linkonce_odr hidden void @f2_alias() local_unnamed_addr {
+; CHECK-LABEL: define internal void @f2() {
 ; CHECK-NEXT:    ret void
 ;
