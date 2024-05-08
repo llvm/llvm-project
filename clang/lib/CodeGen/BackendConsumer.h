@@ -34,7 +34,6 @@ class BackendConsumer : public ASTConsumer {
   const CodeGenOptions &CodeGenOpts;
   const TargetOptions &TargetOpts;
   const LangOptions &LangOpts;
-  const FileManager &FileMgr;
   std::unique_ptr<raw_pwrite_stream> AsmOutStream;
   ASTContext *Context;
   IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS;
