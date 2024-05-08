@@ -139,8 +139,8 @@ public:
     ID.AddInteger(Kind);
     ID.AddInteger(Val.size());
     for (auto &CR : Val) {
-      ID.AddInteger(CR.getLower());
-      ID.AddInteger(CR.getUpper());
+      CR.getLower().Profile(ID);
+      CR.getUpper().Profile(ID);
     }
   }
 };
