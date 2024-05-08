@@ -14177,7 +14177,7 @@ Overview:
 
 The '``llvm.instrprof.callsite``' intrinsic should be emitted before a callsite
 that's not to a "fake" callee (like another intrinsic or asm). It is used by
-contextual profiling and is side-effectful. Its lowering happens in IR, and
+contextual profiling and has side-effects. Its lowering happens in IR, and
 target-specific backends should never encounter it.
 
 Arguments:
@@ -14209,7 +14209,7 @@ The lowering of ``llvm.instrprof.callsite`` consists of:
 
 
 ``__llvm_ctx_profile_{expected_callee|callsite}`` are initialized by compiler-rt
-and are TLS. They are both 2-sized vectors of pointers. The index into each is
+and are TLS. They are both vectors of pointers of size 2. The index into each is
 determined when the current function obtains the pointer to its context from
 compiler-rt. The pointer's LSB gives the index.
 
