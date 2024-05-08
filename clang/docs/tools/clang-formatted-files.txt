@@ -632,11 +632,12 @@ clang/unittests/Analysis/FlowSensitive/MapLatticeTest.cpp
 clang/unittests/Analysis/FlowSensitive/MatchSwitchTest.cpp
 clang/unittests/Analysis/FlowSensitive/MultiVarConstantPropagationTest.cpp
 clang/unittests/Analysis/FlowSensitive/SingleVarConstantPropagationTest.cpp
-clang/unittests/Analysis/FlowSensitive/SolverTest.cpp
+clang/unittests/Analysis/FlowSensitive/SolverTest.h
 clang/unittests/Analysis/FlowSensitive/TestingSupport.cpp
 clang/unittests/Analysis/FlowSensitive/TestingSupport.h
 clang/unittests/Analysis/FlowSensitive/TestingSupportTest.cpp
 clang/unittests/Analysis/FlowSensitive/TypeErasedDataflowAnalysisTest.cpp
+clang/unittests/Analysis/FlowSensitive/WatchedLiteralsSolverTest.cpp
 clang/unittests/AST/ASTImporterFixtures.cpp
 clang/unittests/AST/ASTImporterFixtures.h
 clang/unittests/AST/ASTImporterObjCTest.cpp
