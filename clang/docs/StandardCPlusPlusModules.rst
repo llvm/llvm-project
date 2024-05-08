@@ -1833,4 +1833,4 @@ Interoperability with Clang Modules
 
 We **wish** to support Clang modules and standard C++ modules at the same time,
 but the mixing them together is not well used/tested yet. Please file new
-github issues as you find interoperability problems.
+GitHub issues as you find interoperability problems.
