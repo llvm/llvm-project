@@ -6125,6 +6125,9 @@ NVPTXTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
       if (Ty->isHalfTy() && STI.getSmVersion() >= 70 &&
           STI.getPTXVersion() >= 63)
         return AtomicExpansionKind::None;
+      if (Ty->isBFloatTy() && STI.getSmVersion() >= 90 &&
+          STI.getPTXVersion() >= 78)
+        return AtomicExpansionKind::None;
       if (Ty->isFloatTy())
         return AtomicExpansionKind::None;
       if (Ty->isDoubleTy() && STI.hasAtomAddF64())

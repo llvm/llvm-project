@@ -538,17 +538,20 @@ Value *Mapper::mapValue(const Value *V) {
 }
 
 void Mapper::remapDbgRecord(DbgRecord &DR) {
+  // Remap DILocations.
+  auto *MappedDILoc = mapMetadata(DR.getDebugLoc());
+  DR.setDebugLoc(DebugLoc(cast<DILocation>(MappedDILoc)));
+
   if (DbgLabelRecord *DLR = dyn_cast<DbgLabelRecord>(&DR)) {
+    // Remap labels.
     DLR->setLabel(cast<DILabel>(mapMetadata(DLR->getLabel())));
     return;
   }
 
   DbgVariableRecord &V = cast<DbgVariableRecord>(DR);
-  // Remap variables and DILocations.
+  // Remap variables.
   auto *MappedVar = mapMetadata(V.getVariable());
-  auto *MappedDILoc = mapMetadata(V.getDebugLoc());
   V.setVariable(cast<DILocalVariable>(MappedVar));
-  V.setDebugLoc(DebugLoc(cast<DILocation>(MappedDILoc)));
 
   bool IgnoreMissingLocals = Flags & RF_IgnoreMissingLocals;
 
