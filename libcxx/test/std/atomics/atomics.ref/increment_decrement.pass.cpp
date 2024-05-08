@@ -52,28 +52,28 @@ struct TestIncrementDecrement {
     std::atomic_ref<T> const a(x);
 
     {
-      std::same_as<T> auto y = ++a;
+      std::same_as<T> decltype(auto) y = ++a;
       assert(y == T(2));
       assert(x == T(2));
       ASSERT_NOEXCEPT(++a);
     }
 
     {
-      std::same_as<T> auto y = --a;
+      std::same_as<T> decltype(auto) y = --a;
       assert(y == T(1));
       assert(x == T(1));
       ASSERT_NOEXCEPT(--a);
     }
 
     {
-      std::same_as<T> auto y = a++;
+      std::same_as<T> decltype(auto) y = a++;
       assert(y == T(1));
       assert(x == T(2));
       ASSERT_NOEXCEPT(a++);
     }
 
     {
-      std::same_as<T> auto y = a--;
+      std::same_as<T> decltype(auto) y = a--;
       assert(y == T(2));
       assert(x == T(1));
       ASSERT_NOEXCEPT(a--);

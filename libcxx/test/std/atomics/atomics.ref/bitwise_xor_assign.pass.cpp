@@ -33,7 +33,7 @@ struct TestBitwiseXorAssign {
     T x(T(1));
     std::atomic_ref<T> const a(x);
 
-    std::same_as<T> auto y = (a ^= T(2));
+    std::same_as<T> decltype(auto) y = (a ^= T(2));
     assert(y == T(3));
     assert(x == T(3));
     ASSERT_NOEXCEPT(a ^= T(0));

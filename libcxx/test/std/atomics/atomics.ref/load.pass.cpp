@@ -25,13 +25,13 @@ struct TestLoad {
     std::atomic_ref<T> const a(x);
 
     {
-      std::same_as<T> auto y = a.load();
+      std::same_as<T> decltype(auto) y = a.load();
       assert(y == T(1));
       ASSERT_NOEXCEPT(a.load());
     }
 
     {
-      std::same_as<T> auto y = a.load(std::memory_order_seq_cst);
+      std::same_as<T> decltype(auto) y = a.load(std::memory_order_seq_cst);
       assert(y == T(1));
       ASSERT_NOEXCEPT(a.load(std::memory_order_seq_cst));
     }

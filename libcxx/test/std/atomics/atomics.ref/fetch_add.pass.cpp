@@ -39,14 +39,14 @@ struct TestFetchAdd {
       std::atomic_ref<T> const a(x);
 
       {
-        std::same_as<T> auto y = a.fetch_add(T(2));
+        std::same_as<T> decltype(auto) y = a.fetch_add(T(2));
         assert(y == T(1));
         assert(x == T(3));
         ASSERT_NOEXCEPT(a.fetch_add(T(0)));
       }
 
       {
-        std::same_as<T> auto y = a.fetch_add(T(4), std::memory_order_relaxed);
+        std::same_as<T> decltype(auto) y = a.fetch_add(T(4), std::memory_order_relaxed);
         assert(y == T(3));
         assert(x == T(7));
         ASSERT_NOEXCEPT(a.fetch_add(T(0), std::memory_order_relaxed));
@@ -58,14 +58,14 @@ struct TestFetchAdd {
       std::atomic_ref<T> const a(p);
 
       {
-        std::same_as<T> auto y = a.fetch_add(2);
+        std::same_as<T> decltype(auto) y = a.fetch_add(2);
         assert(y == &t[1]);
         assert(a == &t[3]);
         ASSERT_NOEXCEPT(a.fetch_add(0));
       }
 
       {
-        std::same_as<T> auto y = a.fetch_add(4, std::memory_order_relaxed);
+        std::same_as<T> decltype(auto) y = a.fetch_add(4, std::memory_order_relaxed);
         assert(y == &t[3]);
         assert(a == &t[7]);
         ASSERT_NOEXCEPT(a.fetch_add(0, std::memory_order_relaxed));

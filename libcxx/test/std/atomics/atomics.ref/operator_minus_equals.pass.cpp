@@ -35,7 +35,7 @@ struct TestOperatorMinusEquals {
       T x(T(3));
       std::atomic_ref<T> const a(x);
 
-      std::same_as<T> auto y = (a -= T(2));
+      std::same_as<T> decltype(auto) y = (a -= T(2));
       assert(y == T(1));
       assert(x == T(1));
       ASSERT_NOEXCEPT(a -= T(0));
@@ -45,7 +45,7 @@ struct TestOperatorMinusEquals {
       T p{&t[3]};
       std::atomic_ref<T> const a(p);
 
-      std::same_as<T> auto y = (a -= 2);
+      std::same_as<T> decltype(auto) y = (a -= 2);
       assert(y == &t[1]);
       assert(a == &t[1]);
       ASSERT_NOEXCEPT(a -= 0);

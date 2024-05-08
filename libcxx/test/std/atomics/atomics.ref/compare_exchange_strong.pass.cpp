@@ -27,7 +27,7 @@ struct TestCompareExchangeStrong {
       std::atomic_ref<T> const a(x);
 
       T t(T(1));
-      std::same_as<bool> auto y = a.compare_exchange_strong(t, T(2));
+      std::same_as<bool> decltype(auto) y = a.compare_exchange_strong(t, T(2));
       assert(y == true);
       assert(a == T(2));
       assert(t == T(1));
@@ -43,7 +43,7 @@ struct TestCompareExchangeStrong {
       std::atomic_ref<T> const a(x);
 
       T t(T(1));
-      std::same_as<bool> auto y = a.compare_exchange_strong(t, T(2), std::memory_order_seq_cst);
+      std::same_as<bool> decltype(auto) y = a.compare_exchange_strong(t, T(2), std::memory_order_seq_cst);
       assert(y == true);
       assert(a == T(2));
       assert(t == T(1));
@@ -59,7 +59,7 @@ struct TestCompareExchangeStrong {
       std::atomic_ref<T> const a(x);
 
       T t(T(1));
-      std::same_as<bool> auto y =
+      std::same_as<bool> decltype(auto) y =
           a.compare_exchange_strong(t, T(2), std::memory_order_release, std::memory_order_relaxed);
       assert(y == true);
       assert(a == T(2));

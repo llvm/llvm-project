@@ -23,7 +23,8 @@ struct TestAssign {
     T x(T(1));
     std::atomic_ref<T> const a(x);
 
-    a = T(2);
+    std::same_as<T> decltype(auto) y = (a = T(2));
+    assert(y == T(2));
     assert(x == T(2));
 
     ASSERT_NOEXCEPT(a = T(0));

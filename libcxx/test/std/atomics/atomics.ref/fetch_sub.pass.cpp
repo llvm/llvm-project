@@ -39,14 +39,14 @@ struct TestFetchSub {
       std::atomic_ref<T> const a(x);
 
       {
-        std::same_as<T> auto y = a.fetch_sub(T(4));
+        std::same_as<T> decltype(auto) y = a.fetch_sub(T(4));
         assert(y == T(7));
         assert(x == T(3));
         ASSERT_NOEXCEPT(a.fetch_sub(T(0)));
       }
 
       {
-        std::same_as<T> auto y = a.fetch_sub(T(2), std::memory_order_relaxed);
+        std::same_as<T> decltype(auto) y = a.fetch_sub(T(2), std::memory_order_relaxed);
         assert(y == T(3));
         assert(x == T(1));
         ASSERT_NOEXCEPT(a.fetch_sub(T(0), std::memory_order_relaxed));
@@ -58,14 +58,14 @@ struct TestFetchSub {
       std::atomic_ref<T> const a(p);
 
       {
-        std::same_as<T> auto y = a.fetch_sub(4);
+        std::same_as<T> decltype(auto) y = a.fetch_sub(4);
         assert(y == &t[7]);
         assert(a == &t[3]);
         ASSERT_NOEXCEPT(a.fetch_sub(0));
       }
 
       {
-        std::same_as<T> auto y = a.fetch_sub(2, std::memory_order_relaxed);
+        std::same_as<T> decltype(auto) y = a.fetch_sub(2, std::memory_order_relaxed);
         assert(y == &t[3]);
         assert(a == &t[1]);
         ASSERT_NOEXCEPT(a.fetch_sub(0, std::memory_order_relaxed));

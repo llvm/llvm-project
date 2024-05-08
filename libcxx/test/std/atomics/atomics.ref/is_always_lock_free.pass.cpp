@@ -21,8 +21,9 @@
 
 template <typename T>
 void check_always_lock_free(std::atomic_ref<T> const a) {
-  if (std::atomic_ref<T>::is_always_lock_free) {
-    std::same_as<bool> auto is_lock_free = a.is_lock_free();
+  std::same_as<const bool> decltype(auto) is_always_lock_free = std::atomic_ref<T>::is_always_lock_free;
+  if (is_always_lock_free) {
+    std::same_as<bool> decltype(auto) is_lock_free = a.is_lock_free();
     assert(is_lock_free);
   }
   ASSERT_NOEXCEPT(a.is_lock_free());

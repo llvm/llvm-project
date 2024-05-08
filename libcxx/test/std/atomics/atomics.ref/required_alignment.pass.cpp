@@ -14,7 +14,8 @@
 
 template <typename T>
 constexpr void check_required_alignment() {
-  assert(std::atomic_ref<T>::required_alignment >= alignof(T));
+  std::same_as<const std::size_t> decltype(auto) required_alignment = std::atomic_ref<T>::required_alignment;
+  assert(required_alignment >= alignof(T));
 }
 
 constexpr bool test() {

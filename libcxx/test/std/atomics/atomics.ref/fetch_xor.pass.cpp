@@ -37,14 +37,14 @@ struct TestFetchXor {
     std::atomic_ref<T> const a(x);
 
     {
-      std::same_as<T> auto y = a.fetch_xor(T(2));
+      std::same_as<T> decltype(auto) y = a.fetch_xor(T(2));
       assert(y == T(1));
       assert(x == T(3));
       ASSERT_NOEXCEPT(a.fetch_xor(T(0)));
     }
 
     {
-      std::same_as<T> auto y = a.fetch_xor(T(2), std::memory_order_relaxed);
+      std::same_as<T> decltype(auto) y = a.fetch_xor(T(2), std::memory_order_relaxed);
       assert(y == T(3));
       assert(x == T(1));
       ASSERT_NOEXCEPT(a.fetch_xor(T(0), std::memory_order_relaxed));

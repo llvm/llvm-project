@@ -24,13 +24,13 @@ struct TestExchange {
     std::atomic_ref<T> const a(x);
 
     {
-      std::same_as<T> auto y = a.exchange(T(2));
+      std::same_as<T> decltype(auto) y = a.exchange(T(2));
       assert(y == T(1));
       ASSERT_NOEXCEPT(a.exchange(T(2)));
     }
 
     {
-      std::same_as<T> auto y = a.exchange(T(3), std::memory_order_seq_cst);
+      std::same_as<T> decltype(auto) y = a.exchange(T(3), std::memory_order_seq_cst);
       assert(y == T(2));
       ASSERT_NOEXCEPT(a.exchange(T(3), std::memory_order_seq_cst));
     }
