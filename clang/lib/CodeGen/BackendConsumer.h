@@ -34,7 +34,6 @@ class BackendConsumer : public ASTConsumer {
   const CodeGenOptions &CodeGenOpts;
   const TargetOptions &TargetOpts;
   const LangOptions &LangOpts;
-  const FileManager &FileMgr;
   std::unique_ptr<raw_pwrite_stream> AsmOutStream;
   ASTContext *Context;
   IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS;
@@ -76,7 +75,7 @@ public:
                   const PreprocessorOptions &PPOpts,
                   const CodeGenOptions &CodeGenOpts,
                   const TargetOptions &TargetOpts, const LangOptions &LangOpts,
-                  const FileManager &FileMgr, const std::string &InFile,
+                  const std::string &InFile,
                   SmallVector<LinkModule, 4> LinkModules,
                   std::unique_ptr<raw_pwrite_stream> OS, llvm::LLVMContext &C,
                   CoverageSourceInfo *CoverageInfo = nullptr);
@@ -90,8 +89,8 @@ public:
                   const PreprocessorOptions &PPOpts,
                   const CodeGenOptions &CodeGenOpts,
                   const TargetOptions &TargetOpts, const LangOptions &LangOpts,
-                  const FileManager &FileMgr, llvm::Module *Module,
-                  SmallVector<LinkModule, 4> LinkModules, llvm::LLVMContext &C,
+                  llvm::Module *Module, SmallVector<LinkModule, 4> LinkModules,
+                  llvm::LLVMContext &C,
                   CoverageSourceInfo *CoverageInfo = nullptr);
 
   llvm::Module *getModule() const;
