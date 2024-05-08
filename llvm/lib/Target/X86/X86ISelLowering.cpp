@@ -40078,10 +40078,10 @@ static SDValue combineCommutableSHUFP(SDValue N, MVT VT, const SDLoc &DL,
 
 // Attempt to fold BLEND(PERMUTE(X),PERMUTE(Y)) -> PERMUTE(BLEND(X,Y))
 // iff we don't demand the same element index for both X and Y.
-static SDValue combineBlendOfPermutes(MVT VT, SDValue N0, SDValue N1,
-                                      ArrayRef<int> BlendMask,
-                                      const APInt &DemandedElts,
-                                      SelectionDAG &DAG, const SDLoc &DL) {
+static SDValue
+combineBlendOfPermutes(MVT VT, SDValue N0, SDValue N1, ArrayRef<int> BlendMask,
+                       const APInt &DemandedElts, SelectionDAG &DAG,
+                       const X86Subtarget &Subtarget, const SDLoc &DL) {
   assert(isBlendOrUndef(BlendMask) && "Blend shuffle expected");
   if (!N0.hasOneUse() || !N1.hasOneUse())
     return SDValue();
@@ -40155,6 +40155,11 @@ static SDValue combineBlendOfPermutes(MVT VT, SDValue N0, SDValue N1,
     if (!canWidenShuffleElements(NewPermuteMask))
       return SDValue();
   }
+
+  // Don't introduce lane-crossing permutes without AVX2.
+  if (VT.is256BitVector() && !Subtarget.hasAVX2() &&
+      isLaneCrossingShuffleMask(128, VT.getScalarSizeInBits(), NewPermuteMask))
+    return SDValue();
 
   SDValue NewBlend =
       DAG.getVectorShuffle(VT, DL, DAG.getBitcast(VT, Ops0[0]),
@@ -41918,9 +41923,9 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
   case X86ISD::BLENDI: {
     SmallVector<int, 16> BlendMask;
     DecodeBLENDMask(NumElts, Op.getConstantOperandVal(2), BlendMask);
-    if (SDValue R = combineBlendOfPermutes(VT.getSimpleVT(), Op.getOperand(0),
-                                           Op.getOperand(1), BlendMask,
-                                           DemandedElts, TLO.DAG, SDLoc(Op)))
+    if (SDValue R = combineBlendOfPermutes(
+            VT.getSimpleVT(), Op.getOperand(0), Op.getOperand(1), BlendMask,
+            DemandedElts, TLO.DAG, Subtarget, SDLoc(Op)))
       return TLO.CombineTo(Op, R);
     break;
   }
