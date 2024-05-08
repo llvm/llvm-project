@@ -15034,6 +15034,30 @@ public:
       return SCEVRewriteVisitor<SCEVLoopGuardRewriter>::visitSMinExpr(Expr);
     return I->second;
   }
+
+  const SCEV *visitAddExpr(const SCEVAddExpr *Expr) {
+    SmallVector<const SCEV *, 2> Operands;
+    bool Changed = false;
+    for (const auto *Op : Expr->operands()) {
+      Operands.push_back(SCEVRewriteVisitor<SCEVLoopGuardRewriter>::visit(Op));
+      Changed |= Op != Operands.back();
+    }
+    // We are only replacing operands with equivalent values, so transfer the
+    // flags from the original expression.
+    return !Changed ? Expr : SE.getAddExpr(Operands, Expr->getNoWrapFlags());
+  }
+
+  const SCEV *visitMulExpr(const SCEVMulExpr *Expr) {
+    SmallVector<const SCEV *, 2> Operands;
+    bool Changed = false;
+    for (const auto *Op : Expr->operands()) {
+      Operands.push_back(SCEVRewriteVisitor<SCEVLoopGuardRewriter>::visit(Op));
+      Changed |= Op != Operands.back();
+    }
+    // We are only replacing operands with equivalent values, so transfer the
+    // flags from the original expression.
+    return !Changed ? Expr : SE.getMulExpr(Operands, Expr->getNoWrapFlags());
+  }
 };
 
 const SCEV *ScalarEvolution::applyLoopGuards(const SCEV *Expr, const Loop *L) {
