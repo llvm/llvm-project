@@ -502,17 +502,24 @@ LogicalResult CastOp::verify() {
 }
 
 OpFoldResult CastOp::fold(FoldAdaptor adaptor) {
-  if (getKind() != mlir::cir::CastKind::integral)
-    return {};
   if (getSrc().getType() != getResult().getType())
     return {};
-  // TODO: for sign differences, it's possible in certain conditions to
-  // create a new attributes that's capable or representing the source.
-  SmallVector<mlir::OpFoldResult, 1> foldResults;
-  auto foldOrder = getSrc().getDefiningOp()->fold(foldResults);
-  if (foldOrder.succeeded() && foldResults[0].is<mlir::Attribute>())
-    return foldResults[0].get<mlir::Attribute>();
-  return {};
+  switch (getKind()) {
+  case mlir::cir::CastKind::integral: {
+    // TODO: for sign differences, it's possible in certain conditions to
+    // create a new attribute that's capable of representing the source.
+    SmallVector<mlir::OpFoldResult, 1> foldResults;
+    auto foldOrder = getSrc().getDefiningOp()->fold(foldResults);
+    if (foldOrder.succeeded() && foldResults[0].is<mlir::Attribute>())
+      return foldResults[0].get<mlir::Attribute>();
+    return {};
+  }
+  case mlir::cir::CastKind::bitcast: {
+    return getSrc();
+  }
+  default:
+    return {};
+  }
 }
 
 //===----------------------------------------------------------------------===//
