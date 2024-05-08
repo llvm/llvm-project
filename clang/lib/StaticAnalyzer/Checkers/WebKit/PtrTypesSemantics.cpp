@@ -309,26 +309,8 @@ public:
   bool VisitDefaultStmt(const DefaultStmt *DS) { return VisitChildren(DS); }
 
   bool VisitUnaryOperator(const UnaryOperator *UO) {
-    // Operator '*' and '!' are allowed as long as the operand is trivial.
-    auto op = UO->getOpcode();
-    if (op == UO_Deref || op == UO_AddrOf || op == UO_LNot || op == UO_Not)
-      return Visit(UO->getSubExpr());
-
-    if (UO->isIncrementOp() || UO->isDecrementOp()) {
-      // Allow increment or decrement of a POD type.
-      auto *SubExpr = UO->getSubExpr();
-      if (auto *RefExpr = dyn_cast<DeclRefExpr>(SubExpr)) {
-        if (auto *Decl = dyn_cast<VarDecl>(RefExpr->getDecl()))
-          return Decl->isLocalVarDeclOrParm() &&
-                 Decl->getType().isPODType(Decl->getASTContext());
-      } else if (auto *ME = dyn_cast<MemberExpr>(SubExpr)) {
-        if (auto *Decl = ME->getMemberDecl())
-          return Visit(ME->getBase()) &&
-                 Decl->getType().isPODType(Decl->getASTContext());
-      }
-    }
-    // Other operators are non-trivial.
-    return false;
+    // Unary operators are trivial if its operand is trivial.
+    return Visit(UO->getSubExpr());
   }
 
   bool VisitBinaryOperator(const BinaryOperator *BO) {
