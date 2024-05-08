@@ -2550,16 +2550,15 @@ ASTDeclReader::VisitClassTemplateSpecializationDeclImpl(
     }
   }
 
-  // extern/template keyword locations for explicit instantiations
-  if (Record.readBool()) {
-    auto *ExplicitInfo = new (C) ExplicitInstantiationInfo;
-    ExplicitInfo->ExternKeywordLoc = readSourceLocation();
+  // Explicit info.
+  if (TypeSourceInfo *TyInfo = readTypeSourceInfo()) {
+    auto *ExplicitInfo =
+        new (C) ClassTemplateSpecializationDecl::ExplicitSpecializationInfo;
+    ExplicitInfo->TypeAsWritten = TyInfo;
+    ExplicitInfo->ExternLoc = readSourceLocation();
     ExplicitInfo->TemplateKeywordLoc = readSourceLocation();
     D->ExplicitInfo = ExplicitInfo;
   }
-
-  if (Record.readBool())
-    D->setTemplateArgsAsWritten(Record.readASTTemplateArgumentListInfo());
 
   return Redecl;
 }
@@ -2570,6 +2569,7 @@ void ASTDeclReader::VisitClassTemplatePartialSpecializationDecl(
   // need them for profiling
   TemplateParameterList *Params = Record.readTemplateParameterList();
   D->TemplateParams = Params;
+  D->ArgsAsWritten = Record.readASTTemplateArgumentListInfo();
 
   RedeclarableResult Redecl = VisitClassTemplateSpecializationDeclImpl(D);
 
@@ -2619,16 +2619,15 @@ ASTDeclReader::VisitVarTemplateSpecializationDeclImpl(
     }
   }
 
-  // extern/template keyword locations for explicit instantiations
-  if (Record.readBool()) {
-    auto *ExplicitInfo = new (C) ExplicitInstantiationInfo;
-    ExplicitInfo->ExternKeywordLoc = readSourceLocation();
+  // Explicit info.
+  if (TypeSourceInfo *TyInfo = readTypeSourceInfo()) {
+    auto *ExplicitInfo =
+        new (C) VarTemplateSpecializationDecl::ExplicitSpecializationInfo;
+    ExplicitInfo->TypeAsWritten = TyInfo;
+    ExplicitInfo->ExternLoc = readSourceLocation();
     ExplicitInfo->TemplateKeywordLoc = readSourceLocation();
     D->ExplicitInfo = ExplicitInfo;
   }
-
-  if (Record.readBool())
-    D->setTemplateArgsAsWritten(Record.readASTTemplateArgumentListInfo());
 
   SmallVector<TemplateArgument, 8> TemplArgs;
   Record.readTemplateArgumentList(TemplArgs, /*Canonicalize*/ true);
@@ -2669,6 +2668,7 @@ void ASTDeclReader::VisitVarTemplatePartialSpecializationDecl(
     VarTemplatePartialSpecializationDecl *D) {
   TemplateParameterList *Params = Record.readTemplateParameterList();
   D->TemplateParams = Params;
+  D->ArgsAsWritten = Record.readASTTemplateArgumentListInfo();
 
   RedeclarableResult Redecl = VisitVarTemplateSpecializationDeclImpl(D);
 
