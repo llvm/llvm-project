@@ -168,6 +168,13 @@ Changes to the C API
 
 * Added ``LLVMCreateConstantRangeAttribute`` function for creating ConstantRange Attributes.
 
+* Added the following functions for creating and accessing data for CallBr instructions:
+
+  * ``LLVMBuildCallBr``
+  * ``LLVMGetCallBrDefaultDest``
+  * ``LLVMGetCallBrNumIndirectDests``
+  * ``LLVMGetCallBrIndirectDest``
+
 Changes to the CodeGen infrastructure
 -------------------------------------
 

@@ -22,8 +22,12 @@ bb:
 define void @g(i32 %arg, ptr %arg1) {
 ; CHECK-LABEL: g:
 ; CHECK:       // %bb.0: // %bb
-; CHECK-NEXT:    and w8, w0, #0xff
-; CHECK-NEXT:    str w8, [x1]
+; CHECK-NEXT:    lsr w8, w0, #8
+; CHECK-NEXT:    lsr w9, w0, #16
+; CHECK-NEXT:    strb w0, [x1]
+; CHECK-NEXT:    strb wzr, [x1, #3]
+; CHECK-NEXT:    strb w8, [x1, #1]
+; CHECK-NEXT:    strb w9, [x1, #2]
 ; CHECK-NEXT:    ret
 bb:
   %i = trunc i32 %arg to i8
