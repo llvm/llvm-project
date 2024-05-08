@@ -154,6 +154,7 @@ AArch64TargetInfo::AArch64TargetInfo(const llvm::Triple &Triple,
   else
     LongWidth = LongAlign = PointerWidth = PointerAlign = 32;
 
+  BitIntMaxAlign = 128;
   MaxVectorAlign = 128;
   MaxAtomicInlineWidth = 128;
   MaxAtomicPromoteWidth = 128;
@@ -1472,11 +1473,6 @@ bool AArch64TargetInfo::validatePointerAuthKey(
 }
 
 bool AArch64TargetInfo::hasInt128Type() const { return true; }
-
-unsigned AArch64TargetInfo::getBitIntAlign(unsigned NumBits) const {
-  return std::clamp<unsigned>(llvm::PowerOf2Ceil(NumBits), getCharWidth(),
-                              getInt128Align());
-}
 
 AArch64leTargetInfo::AArch64leTargetInfo(const llvm::Triple &Triple,
                                          const TargetOptions &Opts)
