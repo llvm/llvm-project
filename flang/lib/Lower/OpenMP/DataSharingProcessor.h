@@ -37,9 +37,12 @@ private:
   mlir::OpBuilder::InsertPoint insPt;
   mlir::Value loopIV;
   // Symbols in private, firstprivate, and/or lastprivate clauses.
-  llvm::SetVector<const Fortran::semantics::Symbol *> privatizedSymbols;
+  llvm::SetVector<const Fortran::semantics::Symbol *>
+      explicitlyPrivatizedSymbols;
   llvm::SetVector<const Fortran::semantics::Symbol *> defaultSymbols;
   llvm::SetVector<const Fortran::semantics::Symbol *> implicitSymbols;
+  llvm::SetVector<const Fortran::semantics::Symbol *> allPrivatizedSymbols;
+
   llvm::DenseMap<const Fortran::semantics::Symbol *, mlir::omp::PrivateClauseOp>
       symToPrivatizer;
   Fortran::lower::AbstractConverter &converter;
