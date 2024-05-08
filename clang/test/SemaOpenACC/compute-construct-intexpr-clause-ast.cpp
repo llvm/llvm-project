@@ -116,7 +116,27 @@ void NormalUses() {
   // CHECK-NEXT: WhileStmt
   // CHECK-NEXT: CXXBoolLiteralExpr
   // CHECK-NEXT: CompoundStmt
+
+#pragma acc kernels async(some_int())
+  while(true){}
+  // CHECK-NEXT: OpenACCComputeConstruct{{.*}}kernels
+  // CHECK-NEXT: async clause
+  // CHECK-NEXT: CallExpr{{.*}}'int'
+  // CHECK-NEXT: ImplicitCastExpr{{.*}}'int (*)()' <FunctionToPointerDecay>
+  // CHECK-NEXT: DeclRefExpr{{.*}}'int ()' lvalue Function{{.*}} 'some_int' 'int ()'
+  // CHECK-NEXT: WhileStmt
+  // CHECK-NEXT: CXXBoolLiteralExpr
+  // CHECK-NEXT: CompoundStmt
+
+#pragma acc kernels async
+  while(true){}
+  // CHECK-NEXT: OpenACCComputeConstruct{{.*}}kernels
+  // CHECK-NEXT: async clause
+  // CHECK-NEXT: WhileStmt
+  // CHECK-NEXT: CXXBoolLiteralExpr
+  // CHECK-NEXT: CompoundStmt
 }
+
 
 template<typename T, typename U>
 void TemplUses(T t, U u) {
@@ -229,6 +249,33 @@ void TemplUses(T t, U u) {
   // CHECK-NEXT: OpenACCComputeConstruct{{.*}}parallel
   // CHECK-NEXT: num_gangs clause
   // CHECK-NEXT: DeclRefExpr{{.*}} 'U' lvalue ParmVar{{.*}} 'u' 'U'
+  // CHECK-NEXT: DependentScopeDeclRefExpr{{.*}} '<dependent type>' lvalue
+  // CHECK-NEXT: NestedNameSpecifier TypeSpec 'U'
+  // CHECK-NEXT: WhileStmt
+  // CHECK-NEXT: CXXBoolLiteralExpr
+  // CHECK-NEXT: CompoundStmt
+
+#pragma acc kernels async
+  while(true){}
+  // CHECK-NEXT: OpenACCComputeConstruct{{.*}}kernels
+  // CHECK-NEXT: async clause
+  // CHECK-NEXT: WhileStmt
+  // CHECK-NEXT: CXXBoolLiteralExpr
+  // CHECK-NEXT: CompoundStmt
+
+#pragma acc kernels async(u)
+  while(true){}
+  // CHECK-NEXT: OpenACCComputeConstruct{{.*}}kernels
+  // CHECK-NEXT: async clause
+  // CHECK-NEXT: DeclRefExpr{{.*}} 'U' lvalue ParmVar{{.*}} 'u' 'U'
+  // CHECK-NEXT: WhileStmt
+  // CHECK-NEXT: CXXBoolLiteralExpr
+  // CHECK-NEXT: CompoundStmt
+
+#pragma acc parallel async (U::value)
+  while(true){}
+  // CHECK-NEXT: OpenACCComputeConstruct{{.*}}parallel
+  // CHECK-NEXT: async clause
   // CHECK-NEXT: DependentScopeDeclRefExpr{{.*}} '<dependent type>' lvalue
   // CHECK-NEXT: NestedNameSpecifier TypeSpec 'U'
   // CHECK-NEXT: WhileStmt
@@ -358,6 +405,31 @@ void TemplUses(T t, U u) {
   // CHECK-NEXT: CXXMemberCallExpr{{.*}}'char'
   // CHECK-NEXT: MemberExpr{{.*}} '<bound member function type>' .operator char
   // CHECK-NEXT: DeclRefExpr{{.*}} 'HasInt' lvalue ParmVar
+  // CHECK-NEXT: ImplicitCastExpr{{.*}} 'int' <LValueToRValue>
+  // CHECK-NEXT: DeclRefExpr{{.*}} 'const int' lvalue Var{{.*}} 'value' 'const int'
+  // CHECK-NEXT: NestedNameSpecifier TypeSpec 'HasInt'
+  // CHECK-NEXT: WhileStmt
+  // CHECK-NEXT: CXXBoolLiteralExpr
+  // CHECK-NEXT: CompoundStmt
+
+  // CHECK-NEXT: OpenACCComputeConstruct{{.*}}kernels
+  // CHECK-NEXT: async clause
+  // CHECK-NEXT: WhileStmt
+  // CHECK-NEXT: CXXBoolLiteralExpr
+  // CHECK-NEXT: CompoundStmt
+
+  // CHECK-NEXT: OpenACCComputeConstruct{{.*}}kernels
+  // CHECK-NEXT: async clause
+  // CHECK-NEXT: ImplicitCastExpr{{.*}} 'char' <UserDefinedConversion>
+  // CHECK-NEXT: CXXMemberCallExpr{{.*}}'char'
+  // CHECK-NEXT: MemberExpr{{.*}} '<bound member function type>' .operator char
+  // CHECK-NEXT: DeclRefExpr{{.*}} 'HasInt' lvalue ParmVar
+  // CHECK-NEXT: WhileStmt
+  // CHECK-NEXT: CXXBoolLiteralExpr
+  // CHECK-NEXT: CompoundStmt
+
+  // CHECK-NEXT: OpenACCComputeConstruct{{.*}}parallel
+  // CHECK-NEXT: async clause
   // CHECK-NEXT: ImplicitCastExpr{{.*}} 'int' <LValueToRValue>
   // CHECK-NEXT: DeclRefExpr{{.*}} 'const int' lvalue Var{{.*}} 'value' 'const int'
   // CHECK-NEXT: NestedNameSpecifier TypeSpec 'HasInt'

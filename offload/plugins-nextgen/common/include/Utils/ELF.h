@@ -24,6 +24,9 @@ namespace elf {
 /// Returns true or false if the \p Buffer is an ELF file.
 bool isELF(llvm::StringRef Buffer);
 
+/// Returns the ELF e_machine value of the current compilation target.
+uint16_t getTargetMachine();
+
 /// Checks if the given \p Object is a valid ELF matching the e_machine value.
 llvm::Expected<bool> checkMachine(llvm::StringRef Object, uint16_t EMachine);
 

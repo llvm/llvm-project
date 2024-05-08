@@ -33,6 +33,7 @@
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 
 #include <any>
+#include <iterator>
 #include <optional>
 #include <utility>
 
@@ -878,36 +879,40 @@ static void collectReductionInfo(
 }
 
 /// handling of DeclareReductionOp's cleanup region
-static LogicalResult inlineReductionCleanup(
-    llvm::SmallVectorImpl<omp::DeclareReductionOp> &reductionDecls,
-    llvm::ArrayRef<llvm::Value *> privateReductionVariables,
-    LLVM::ModuleTranslation &moduleTranslation, llvm::IRBuilderBase &builder) {
-  for (auto [i, reductionDecl] : llvm::enumerate(reductionDecls)) {
-    Region &cleanupRegion = reductionDecl.getCleanupRegion();
-    if (cleanupRegion.empty())
+static LogicalResult
+inlineOmpRegionCleanup(llvm::SmallVectorImpl<Region *> &cleanupRegions,
+                       llvm::ArrayRef<llvm::Value *> privateVariables,
+                       LLVM::ModuleTranslation &moduleTranslation,
+                       llvm::IRBuilderBase &builder, StringRef regionName,
+                       bool shouldLoadCleanupRegionArg = true) {
+  for (auto [i, cleanupRegion] : llvm::enumerate(cleanupRegions)) {
+    if (cleanupRegion->empty())
       continue;
 
     // map the argument to the cleanup region
-    Block &entry = cleanupRegion.front();
+    Block &entry = cleanupRegion->front();
 
     llvm::Instruction *potentialTerminator =
         builder.GetInsertBlock()->empty() ? nullptr
                                           : &builder.GetInsertBlock()->back();
     if (potentialTerminator && potentialTerminator->isTerminator())
       builder.SetInsertPoint(potentialTerminator);
-    llvm::Value *reductionVar = builder.CreateLoad(
-        moduleTranslation.convertType(entry.getArgument(0).getType()),
-        privateReductionVariables[i]);
+    llvm::Value *prviateVarValue =
+        shouldLoadCleanupRegionArg
+            ? builder.CreateLoad(
+                  moduleTranslation.convertType(entry.getArgument(0).getType()),
+                  privateVariables[i])
+            : privateVariables[i];
 
-    moduleTranslation.mapValue(entry.getArgument(0), reductionVar);
+    moduleTranslation.mapValue(entry.getArgument(0), prviateVarValue);
 
-    if (failed(inlineConvertOmpRegions(cleanupRegion, "omp.reduction.cleanup",
-                                       builder, moduleTranslation)))
+    if (failed(inlineConvertOmpRegions(*cleanupRegion, regionName, builder,
+                                       moduleTranslation)))
       return failure();
 
     // clear block argument mapping in case it needs to be re-created with a
     // different source for another use of the same reduction decl
-    moduleTranslation.forgetMapping(cleanupRegion);
+    moduleTranslation.forgetMapping(*cleanupRegion);
   }
   return success();
 }
@@ -1110,8 +1115,14 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
   builder.restoreIP(nextInsertionPoint);
 
   // after the workshare loop, deallocate private reduction variables
-  return inlineReductionCleanup(reductionDecls, privateReductionVariables,
-                                moduleTranslation, builder);
+  SmallVector<Region *> reductionRegions;
+  llvm::transform(reductionDecls, std::back_inserter(reductionRegions),
+                  [](omp::DeclareReductionOp reductionDecl) {
+                    return &reductionDecl.getCleanupRegion();
+                  });
+  return inlineOmpRegionCleanup(reductionRegions, privateReductionVariables,
+                                moduleTranslation, builder,
+                                "omp.reduction.cleanup");
 }
 
 /// A RAII class that on construction replaces the region arguments of the
@@ -1267,6 +1278,9 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
     }
   };
 
+  SmallVector<omp::PrivateClauseOp> privatizerClones;
+  SmallVector<llvm::Value *> privateVariables;
+
   // TODO: Perform appropriate actions according to the data-sharing
   // attribute (shared, private, firstprivate, ...) of variables.
   // Currently shared and private are supported.
@@ -1356,12 +1370,17 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
         opInst.emitError("failed to inline `alloc` region of an `omp.private` "
                          "op in the parallel region");
         bodyGenStatus = failure();
+        privatizerClone.erase();
       } else {
         assert(yieldedValues.size() == 1);
         replacementValue = yieldedValues.front();
+
+        // Keep the LLVM replacement value and the op clone in case we need to
+        // emit cleanup (i.e. deallocation) logic.
+        privateVariables.push_back(replacementValue);
+        privatizerClones.push_back(privatizerClone);
       }
 
-      privatizerClone.erase();
       builder.restoreIP(oldIP);
     }
 
@@ -1376,8 +1395,25 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
 
     // if the reduction has a cleanup region, inline it here to finalize the
     // reduction variables
-    if (failed(inlineReductionCleanup(reductionDecls, privateReductionVariables,
-                                      moduleTranslation, builder)))
+    SmallVector<Region *> reductionCleanupRegions;
+    llvm::transform(reductionDecls, std::back_inserter(reductionCleanupRegions),
+                    [](omp::DeclareReductionOp reductionDecl) {
+                      return &reductionDecl.getCleanupRegion();
+                    });
+    if (failed(inlineOmpRegionCleanup(
+            reductionCleanupRegions, privateReductionVariables,
+            moduleTranslation, builder, "omp.reduction.cleanup")))
+      bodyGenStatus = failure();
+
+    SmallVector<Region *> privateCleanupRegions;
+    llvm::transform(privatizerClones, std::back_inserter(privateCleanupRegions),
+                    [](omp::PrivateClauseOp privatizer) {
+                      return &privatizer.getDeallocRegion();
+                    });
+
+    if (failed(inlineOmpRegionCleanup(
+            privateCleanupRegions, privateVariables, moduleTranslation, builder,
+            "omp.private.dealloc", /*shouldLoadCleanupRegionArg=*/false)))
       bodyGenStatus = failure();
 
     builder.restoreIP(oldIP);
@@ -1402,6 +1438,9 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
   builder.restoreIP(
       ompBuilder->createParallel(ompLoc, allocaIP, bodyGenCB, privCB, finiCB,
                                  ifCond, numThreads, pbKind, isCancellable));
+
+  for (mlir::omp::PrivateClauseOp privatizerClone : privatizerClones)
+    privatizerClone.erase();
 
   return bodyGenStatus;
 }

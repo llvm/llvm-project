@@ -28,10 +28,10 @@ define <vscale x 4 x double> @complex_mul_const(<vscale x 4 x double> %a, <vscal
 ; CHECK-NEXT:    mov z1.d, z4.d
 ; CHECK-NEXT:    ret
 entry:
-  %strided.vec = tail call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.experimental.vector.deinterleave2.nxv4f64(<vscale x 4 x double> %a)
+  %strided.vec = tail call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.vector.deinterleave2.nxv4f64(<vscale x 4 x double> %a)
   %0 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } %strided.vec, 0
   %1 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } %strided.vec, 1
-  %strided.vec48 = tail call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.experimental.vector.deinterleave2.nxv4f64(<vscale x 4 x double> %b)
+  %strided.vec48 = tail call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.vector.deinterleave2.nxv4f64(<vscale x 4 x double> %b)
   %2 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } %strided.vec48, 0
   %3 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } %strided.vec48, 1
   %4 = fmul fast <vscale x 2 x double> %3, %0
@@ -46,7 +46,7 @@ entry:
   %13 = fmul fast <vscale x 2 x double> %9, splat (double 1.100000e+01)
   %14 = fmul fast <vscale x 2 x double> %6, splat (double 3.000000e+00)
   %15 = fsub fast <vscale x 2 x double> %13, %14
-  %interleaved.vec = tail call <vscale x 4 x double> @llvm.experimental.vector.interleave2.nxv4f64(<vscale x 2 x double> %15, <vscale x 2 x double> %12)
+  %interleaved.vec = tail call <vscale x 4 x double> @llvm.vector.interleave2.nxv4f64(<vscale x 2 x double> %15, <vscale x 2 x double> %12)
   ret <vscale x 4 x double> %interleaved.vec
 }
 
@@ -83,10 +83,10 @@ entry:
   %broadcast.splat = shufflevector <vscale x 2 x double> %broadcast.splatinsert, <vscale x 2 x double> poison, <vscale x 2 x i32> zeroinitializer
   %broadcast.splatinsert49 = insertelement <vscale x 2 x double> poison, double %c.coerce.fca.0.extract, i64 0
   %broadcast.splat50 = shufflevector <vscale x 2 x double> %broadcast.splatinsert49, <vscale x 2 x double> poison, <vscale x 2 x i32> zeroinitializer
-  %strided.vec = tail call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.experimental.vector.deinterleave2.nxv4f64(<vscale x 4 x double> %a)
+  %strided.vec = tail call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.vector.deinterleave2.nxv4f64(<vscale x 4 x double> %a)
   %0 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } %strided.vec, 0
   %1 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } %strided.vec, 1
-  %strided.vec48 = tail call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.experimental.vector.deinterleave2.nxv4f64(<vscale x 4 x double> %b)
+  %strided.vec48 = tail call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.vector.deinterleave2.nxv4f64(<vscale x 4 x double> %b)
   %2 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } %strided.vec48, 0
   %3 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } %strided.vec48, 1
   %4 = fmul fast <vscale x 2 x double> %3, %0
@@ -101,9 +101,9 @@ entry:
   %13 = fmul fast <vscale x 2 x double> %9, %broadcast.splat50
   %14 = fmul fast <vscale x 2 x double> %6, %broadcast.splat
   %15 = fsub fast <vscale x 2 x double> %13, %14
-  %interleaved.vec = tail call <vscale x 4 x double> @llvm.experimental.vector.interleave2.nxv4f64(<vscale x 2 x double> %15, <vscale x 2 x double> %12)
+  %interleaved.vec = tail call <vscale x 4 x double> @llvm.vector.interleave2.nxv4f64(<vscale x 2 x double> %15, <vscale x 2 x double> %12)
   ret <vscale x 4 x double> %interleaved.vec
 }
 
-declare { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.experimental.vector.deinterleave2.nxv4f64(<vscale x 4 x double>)
-declare <vscale x 4 x double> @llvm.experimental.vector.interleave2.nxv4f64(<vscale x 2 x double>, <vscale x 2 x double>)
+declare { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.vector.deinterleave2.nxv4f64(<vscale x 4 x double>)
+declare <vscale x 4 x double> @llvm.vector.interleave2.nxv4f64(<vscale x 2 x double>, <vscale x 2 x double>)

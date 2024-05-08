@@ -2330,7 +2330,7 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
     }
 
     // Perform VLAT <-> VLST bitcast through memory.
-    // TODO: since the llvm.experimental.vector.{insert,extract} intrinsics
+    // TODO: since the llvm.vector.{insert,extract} intrinsics
     //       require the element types of the vectors to be the same, we
     //       need to keep this around for bitcasts between VLAT <-> VLST where
     //       the element types of the vectors are not the same, until we figure
@@ -2796,6 +2796,19 @@ ScalarExprEmitter::EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
         llvm::Instruction::Sub;
       llvm::Value *amt = CGF.EmitToMemory(
           llvm::ConstantInt::get(ConvertType(type), 1, true), type);
+      llvm::Value *old =
+          Builder.CreateAtomicRMW(aop, LV.getAddress(CGF), amt,
+                                  llvm::AtomicOrdering::SequentiallyConsistent);
+      return isPre ? Builder.CreateBinOp(op, old, amt) : old;
+    }
+    // Special case for atomic increment/decrement on floats
+    if (type->isFloatingType()) {
+      llvm::AtomicRMWInst::BinOp aop =
+          isInc ? llvm::AtomicRMWInst::FAdd : llvm::AtomicRMWInst::FSub;
+      llvm::Instruction::BinaryOps op =
+          isInc ? llvm::Instruction::FAdd : llvm::Instruction::FSub;
+      llvm::Value *amt = llvm::ConstantFP::get(
+          VMContext, llvm::APFloat(static_cast<float>(1.0)));
       llvm::Value *old =
           Builder.CreateAtomicRMW(aop, LV.getAddress(CGF), amt,
                                   llvm::AtomicOrdering::SequentiallyConsistent);

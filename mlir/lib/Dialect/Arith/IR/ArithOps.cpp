@@ -683,6 +683,8 @@ OpFoldResult arith::CeilDivSIOp::fold(FoldAdaptor adaptor) {
     return getLhs();
 
   // Don't fold if it would overflow or if it requires a division by zero.
+  // TODO: This hook won't fold operations where a = MININT, because
+  // negating MININT overflows. This can be improved.
   bool overflowOrDiv0 = false;
   auto result = constFoldBinaryOp<IntegerAttr>(
       adaptor.getOperands(), [&](APInt a, const APInt &b) {
@@ -701,22 +703,36 @@ OpFoldResult arith::CeilDivSIOp::fold(FoldAdaptor adaptor) {
           // Both positive, return ceil(a, b).
           return signedCeilNonnegInputs(a, b, overflowOrDiv0);
         }
+
+        // No folding happens if any of the intermediate arithmetic operations
+        // overflows.
+        bool overflowNegA = false;
+        bool overflowNegB = false;
+        bool overflowDiv = false;
+        bool overflowNegRes = false;
         if (!aGtZero && !bGtZero) {
           // Both negative, return ceil(-a, -b).
-          APInt posA = zero.ssub_ov(a, overflowOrDiv0);
-          APInt posB = zero.ssub_ov(b, overflowOrDiv0);
-          return signedCeilNonnegInputs(posA, posB, overflowOrDiv0);
+          APInt posA = zero.ssub_ov(a, overflowNegA);
+          APInt posB = zero.ssub_ov(b, overflowNegB);
+          APInt res = signedCeilNonnegInputs(posA, posB, overflowDiv);
+          overflowOrDiv0 = (overflowNegA || overflowNegB || overflowDiv);
+          return res;
         }
         if (!aGtZero && bGtZero) {
           // A is negative, b is positive, return - ( -a / b).
-          APInt posA = zero.ssub_ov(a, overflowOrDiv0);
-          APInt div = posA.sdiv_ov(b, overflowOrDiv0);
-          return zero.ssub_ov(div, overflowOrDiv0);
+          APInt posA = zero.ssub_ov(a, overflowNegA);
+          APInt div = posA.sdiv_ov(b, overflowDiv);
+          APInt res = zero.ssub_ov(div, overflowNegRes);
+          overflowOrDiv0 = (overflowNegA || overflowDiv || overflowNegRes);
+          return res;
         }
         // A is positive, b is negative, return - (a / -b).
-        APInt posB = zero.ssub_ov(b, overflowOrDiv0);
-        APInt div = a.sdiv_ov(posB, overflowOrDiv0);
-        return zero.ssub_ov(div, overflowOrDiv0);
+        APInt posB = zero.ssub_ov(b, overflowNegB);
+        APInt div = a.sdiv_ov(posB, overflowDiv);
+        APInt res = zero.ssub_ov(div, overflowNegRes);
+
+        overflowOrDiv0 = (overflowNegB || overflowDiv || overflowNegRes);
+        return res;
       });
 
   return overflowOrDiv0 ? Attribute() : result;

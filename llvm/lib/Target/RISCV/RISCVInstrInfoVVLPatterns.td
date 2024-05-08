@@ -2670,6 +2670,20 @@ foreach fvtiToFWti = AllWidenableFloatVectors in {
                 GPR:$vl, fvti.Log2SEW, TA_MA)>;
 }
 
+foreach fvtiToFWti = AllWidenableBFloatToFloatVectors in {
+  defvar fvti = fvtiToFWti.Vti;
+  defvar fwti = fvtiToFWti.Wti;
+  let Predicates = [HasVInstructionsBF16] in
+  def : Pat<(fwti.Vector (any_riscv_fpextend_vl
+                             (fvti.Vector fvti.RegClass:$rs1),
+                             (fvti.Mask V0),
+                             VLOpFrag)),
+            (!cast<Instruction>("PseudoVFWCVTBF16_F_F_V_"#fvti.LMul.MX#"_E"#fvti.SEW#"_MASK")
+                (fwti.Vector (IMPLICIT_DEF)), fvti.RegClass:$rs1,
+                (fvti.Mask V0),
+                GPR:$vl, fvti.Log2SEW, TA_MA)>;
+}
+
 // 13.19 Narrowing Floating-Point/Integer Type-Convert Instructions
 defm : VPatNConvertFP2IVL_W_RM<riscv_vfcvt_xu_f_vl, "PseudoVFNCVT_XU_F_W">;
 defm : VPatNConvertFP2IVL_W_RM<riscv_vfcvt_x_f_vl, "PseudoVFNCVT_X_F_W">;
@@ -2712,6 +2726,22 @@ foreach fvtiToFWti = AllWidenableFloatVectors in {
                   (fvti.Vector (IMPLICIT_DEF)), fwti.RegClass:$rs1,
                   (fwti.Mask V0), GPR:$vl, fvti.Log2SEW, TA_MA)>;
   }
+}
+
+foreach fvtiToFWti = AllWidenableBFloatToFloatVectors in {
+  defvar fvti = fvtiToFWti.Vti;
+  defvar fwti = fvtiToFWti.Wti;
+  let Predicates = [HasVInstructionsBF16] in
+    def : Pat<(fvti.Vector (any_riscv_fpround_vl
+                               (fwti.Vector fwti.RegClass:$rs1),
+                               (fwti.Mask V0), VLOpFrag)),
+              (!cast<Instruction>("PseudoVFNCVTBF16_F_F_W_"#fvti.LMul.MX#"_E"#fvti.SEW#"_MASK")
+                  (fvti.Vector (IMPLICIT_DEF)), fwti.RegClass:$rs1,
+                  (fwti.Mask V0),
+                  // Value to indicate no rounding mode change in
+                  // RISCVInsertReadWriteCSR
+                  FRM_DYN,
+                  GPR:$vl, fvti.Log2SEW, TA_MA)>;
 }
 
 // 14. Vector Reduction Operations

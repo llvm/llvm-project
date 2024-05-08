@@ -1,13 +1,13 @@
-// RUN: %clang_cc1 -triple thumbv8m.main   -O0 -mcmse -S -emit-llvm %s -o - | \
+// RUN: %clang_cc1 -triple thumbv8m.main   -O0 -mcmse -emit-llvm %s -o - | \
 // RUN:    FileCheck %s --check-prefixes=CHECK,CHECK-LE,CHECK-SOFTFP
-// RUN: %clang_cc1 -triple thumbebv8m.main -O0 -mcmse -S -emit-llvm %s -o - | \
+// RUN: %clang_cc1 -triple thumbebv8m.main -O0 -mcmse -emit-llvm %s -o - | \
 // RUN:    FileCheck %s --check-prefixes=CHECK,CHECK-BE,CHECK-SOFTFP
-// RUN: %clang_cc1 -triple thumbv8m.main   -O2 -mcmse -S -emit-llvm %s -o - | \
+// RUN: %clang_cc1 -triple thumbv8m.main   -O2 -mcmse -emit-llvm %s -o - | \
 // RUN:    FileCheck %s --check-prefixes=CHECK,CHECK-LE,CHECK-SOFTFP
-// RUN: %clang_cc1 -triple thumbebv8m.main -O2 -mcmse -S -emit-llvm %s -o - | \
+// RUN: %clang_cc1 -triple thumbebv8m.main -O2 -mcmse -emit-llvm %s -o - | \
 // RUN:    FileCheck %s --check-prefixes=CHECK,CHECK-BE,CHECK-SOFTFP
 // RUN: %clang_cc1 -triple thumbv8m.main   -O0 -mcmse -mfloat-abi hard  \
-// RUN:            -S -emit-llvm %s -o - | \
+// RUN:            -emit-llvm %s -o - | \
 // RUN:    FileCheck %s --check-prefixes=CHECK,CHECK-LE,CHECK-HARDFP
 
 // We don't really need to repeat *all* the test cases from cmse-clear-return.c

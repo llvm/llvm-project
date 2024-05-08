@@ -334,24 +334,14 @@ _LIBCPP_HARDENING_MODE_DEBUG
 #    define _LIBCPP_CXX03_LANG
 #  endif
 
-#  ifndef __has_attribute
-#    define __has_attribute(__x) 0
-#  endif
-
-#  ifndef __has_builtin
-#    define __has_builtin(__x) 0
-#  endif
-
+// TODO: Remove once we switch to GCC 14
 #  ifndef __has_extension
 #    define __has_extension(__x) 0
 #  endif
 
+// TODO: Remove once we switch to GCC 14
 #  ifndef __has_feature
 #    define __has_feature(__x) 0
-#  endif
-
-#  ifndef __has_cpp_attribute
-#    define __has_cpp_attribute(__x) 0
 #  endif
 
 #  ifndef __has_constexpr_builtin
@@ -374,10 +364,6 @@ _LIBCPP_HARDENING_MODE_DEBUG
 #  endif
 
 #  define __has_keyword(__x) !(__is_identifier(__x))
-
-#  ifndef __has_include
-#    define __has_include(...) 0
-#  endif
 
 #  ifndef __has_warning
 #    define __has_warning(...) 0
@@ -1390,7 +1376,7 @@ typedef __char32_t char32_t;
 #    define _LIBCPP_NO_DESTROY
 #  endif
 
-#  if __has_attribute(__diagnose_if__) && !defined(_LIBCPP_DISABLE_ADDITIONAL_DIAGNOSTICS)
+#  if __has_attribute(__diagnose_if__)
 #    define _LIBCPP_DIAGNOSE_WARNING(...) __attribute__((__diagnose_if__(__VA_ARGS__, "warning")))
 #  else
 #    define _LIBCPP_DIAGNOSE_WARNING(...)

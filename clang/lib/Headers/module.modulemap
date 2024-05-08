@@ -203,6 +203,11 @@ module _Builtin_stdarg [system] {
     export *
   }
 
+  explicit module header_macro {
+    header "__stdarg_header_macro.h"
+    export *
+  }
+
   explicit module va_arg {
     header "__stdarg_va_arg.h"
     export *
@@ -232,6 +237,10 @@ module _Builtin_stdbool [system] {
 module _Builtin_stddef [system] {
   textual header "stddef.h"
 
+  explicit module header_macro {
+    header "__stddef_header_macro.h"
+    export *
+  }
   // __stddef_max_align_t.h is always in this module, even if
   // -fbuiltin-headers-in-system-modules is passed.
   explicit module max_align_t {

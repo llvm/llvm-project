@@ -69,14 +69,14 @@ vector.body:                                      ; preds = %vector.body, %entry
   %vec.phi27 = phi <vscale x 2 x double> [ zeroinitializer, %entry ], [ %16, %vector.body ]
   %scevgep = getelementptr i8, ptr %a, i64 %lsr.iv
   %scevgep34 = getelementptr i8, ptr %b, i64 %lsr.iv
-  %interleaved.mask = tail call <vscale x 4 x i1> @llvm.experimental.vector.interleave2.nxv4i1(<vscale x 2 x i1> %active.lane.mask, <vscale x 2 x i1> %active.lane.mask)
+  %interleaved.mask = tail call <vscale x 4 x i1> @llvm.vector.interleave2.nxv4i1(<vscale x 2 x i1> %active.lane.mask, <vscale x 2 x i1> %active.lane.mask)
   %wide.masked.vec = tail call <vscale x 4 x double> @llvm.masked.load.nxv4f64.p0(ptr %scevgep, i32 8, <vscale x 4 x i1> %interleaved.mask, <vscale x 4 x double> poison)
-  %strided.vec = tail call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.experimental.vector.deinterleave2.nxv4f64(<vscale x 4 x double> %wide.masked.vec)
+  %strided.vec = tail call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.vector.deinterleave2.nxv4f64(<vscale x 4 x double> %wide.masked.vec)
   %3 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } %strided.vec, 0
   %4 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } %strided.vec, 1
-  %interleaved.mask28 = tail call <vscale x 4 x i1> @llvm.experimental.vector.interleave2.nxv4i1(<vscale x 2 x i1> %active.lane.mask, <vscale x 2 x i1> %active.lane.mask)
+  %interleaved.mask28 = tail call <vscale x 4 x i1> @llvm.vector.interleave2.nxv4i1(<vscale x 2 x i1> %active.lane.mask, <vscale x 2 x i1> %active.lane.mask)
   %wide.masked.vec29 = tail call <vscale x 4 x double> @llvm.masked.load.nxv4f64.p0(ptr %scevgep34, i32 8, <vscale x 4 x i1> %interleaved.mask28, <vscale x 4 x double> poison)
-  %strided.vec30 = tail call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.experimental.vector.deinterleave2.nxv4f64(<vscale x 4 x double> %wide.masked.vec29)
+  %strided.vec30 = tail call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.vector.deinterleave2.nxv4f64(<vscale x 4 x double> %wide.masked.vec29)
   %5 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } %strided.vec30, 0
   %6 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } %strided.vec30, 1
   %7 = fmul fast <vscale x 2 x double> %6, %3
@@ -175,13 +175,13 @@ vector.body:                                      ; preds = %vector.body, %entry
   %4 = icmp ne <vscale x 2 x i32> %wide.load, zeroinitializer
   %scevgep49 = getelementptr i8, ptr %a, i64 %lsr.iv48
   %scevgep50 = getelementptr i8, ptr %b, i64 %lsr.iv48
-  %interleaved.mask = tail call <vscale x 4 x i1> @llvm.experimental.vector.interleave2.nxv4i1(<vscale x 2 x i1> %4, <vscale x 2 x i1> %4)
+  %interleaved.mask = tail call <vscale x 4 x i1> @llvm.vector.interleave2.nxv4i1(<vscale x 2 x i1> %4, <vscale x 2 x i1> %4)
   %wide.masked.vec = tail call <vscale x 4 x double> @llvm.masked.load.nxv4f64.p0(ptr %scevgep49, i32 8, <vscale x 4 x i1> %interleaved.mask, <vscale x 4 x double> poison)
-  %strided.vec = tail call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.experimental.vector.deinterleave2.nxv4f64(<vscale x 4 x double> %wide.masked.vec)
+  %strided.vec = tail call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.vector.deinterleave2.nxv4f64(<vscale x 4 x double> %wide.masked.vec)
   %5 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } %strided.vec, 0
   %6 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } %strided.vec, 1
   %wide.masked.vec32 = tail call <vscale x 4 x double> @llvm.masked.load.nxv4f64.p0(ptr %scevgep50, i32 8, <vscale x 4 x i1> %interleaved.mask, <vscale x 4 x double> poison)
-  %strided.vec33 = tail call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.experimental.vector.deinterleave2.nxv4f64(<vscale x 4 x double> %wide.masked.vec32)
+  %strided.vec33 = tail call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.vector.deinterleave2.nxv4f64(<vscale x 4 x double> %wide.masked.vec32)
   %7 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } %strided.vec33, 0
   %8 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } %strided.vec33, 1
   %9 = fmul fast <vscale x 2 x double> %8, %5
@@ -279,14 +279,14 @@ vector.body:                                      ; preds = %vector.body, %entry
   %scevgep38 = getelementptr i8, ptr %a, i64 %lsr.iv
   %scevgep39 = getelementptr i8, ptr %b, i64 %lsr.iv
   %5 = select <vscale x 2 x i1> %active.lane.mask, <vscale x 2 x i1> %4, <vscale x 2 x i1> zeroinitializer
-  %interleaved.mask = tail call <vscale x 4 x i1> @llvm.experimental.vector.interleave2.nxv4i1(<vscale x 2 x i1> %5, <vscale x 2 x i1> %5)
+  %interleaved.mask = tail call <vscale x 4 x i1> @llvm.vector.interleave2.nxv4i1(<vscale x 2 x i1> %5, <vscale x 2 x i1> %5)
   %wide.masked.vec = tail call <vscale x 4 x double> @llvm.masked.load.nxv4f64.p0(ptr %scevgep38, i32 8, <vscale x 4 x i1> %interleaved.mask, <vscale x 4 x double> poison)
-  %strided.vec = tail call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.experimental.vector.deinterleave2.nxv4f64(<vscale x 4 x double> %wide.masked.vec)
+  %strided.vec = tail call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.vector.deinterleave2.nxv4f64(<vscale x 4 x double> %wide.masked.vec)
   %6 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } %strided.vec, 0
   %7 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } %strided.vec, 1
-  %interleaved.mask31 = tail call <vscale x 4 x i1> @llvm.experimental.vector.interleave2.nxv4i1(<vscale x 2 x i1> %5, <vscale x 2 x i1> %5)
+  %interleaved.mask31 = tail call <vscale x 4 x i1> @llvm.vector.interleave2.nxv4i1(<vscale x 2 x i1> %5, <vscale x 2 x i1> %5)
   %wide.masked.vec32 = tail call <vscale x 4 x double> @llvm.masked.load.nxv4f64.p0(ptr %scevgep39, i32 8, <vscale x 4 x i1> %interleaved.mask31, <vscale x 4 x double> poison)
-  %strided.vec33 = tail call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.experimental.vector.deinterleave2.nxv4f64(<vscale x 4 x double> %wide.masked.vec32)
+  %strided.vec33 = tail call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.vector.deinterleave2.nxv4f64(<vscale x 4 x double> %wide.masked.vec32)
   %8 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } %strided.vec33, 0
   %9 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } %strided.vec33, 1
   %10 = fmul fast <vscale x 2 x double> %9, %6
@@ -320,6 +320,6 @@ declare i64 @llvm.vscale.i64()
 declare <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64, i64)
 declare <vscale x 2 x i32> @llvm.masked.load.nxv2i32.p0(ptr nocapture, i32 immarg, <vscale x 2 x i1>, <vscale x 2 x i32>)
 declare <vscale x 4 x double> @llvm.masked.load.nxv4f64.p0(ptr nocapture, i32 immarg, <vscale x 4 x i1>, <vscale x 4 x double>)
-declare <vscale x 4 x i1> @llvm.experimental.vector.interleave2.nxv4i1(<vscale x 2 x i1>, <vscale x 2 x i1>)
-declare { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.experimental.vector.deinterleave2.nxv4f64(<vscale x 4 x double>)
+declare <vscale x 4 x i1> @llvm.vector.interleave2.nxv4i1(<vscale x 2 x i1>, <vscale x 2 x i1>)
+declare { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.vector.deinterleave2.nxv4f64(<vscale x 4 x double>)
 declare double @llvm.vector.reduce.fadd.nxv2f64(double, <vscale x 2 x double>)

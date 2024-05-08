@@ -1271,6 +1271,9 @@ Value *HWAddressSanitizer::getFrameRecordInfo(IRBuilder<> &IRB) {
   // FP is 0xfffffffffffFFFF0  (4 lower bits are zero)
   // We only really need ~20 lower non-zero bits (FFFF), so we mix like this:
   //       0xFFFFPPPPPPPPPPPP
+  //
+  // FP works because in AArch64FrameLowering::getFrameIndexReference, we
+  // prefer FP-relative offsets for functions compiled with HWASan.
   FP = IRB.CreateShl(FP, 44);
   return IRB.CreateOr(PC, FP);
 }

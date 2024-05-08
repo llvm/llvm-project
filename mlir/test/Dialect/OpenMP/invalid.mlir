@@ -2151,6 +2151,17 @@ omp.private {type = private} @x.privatizer : i32 alloc {
 
 // -----
 
+omp.private {type = private} @x.privatizer : f32 alloc {
+^bb0(%arg0: f32):
+  omp.yield(%arg0 : f32)
+} dealloc {
+^bb0(%arg0: f32):
+  // expected-error @below {{Did not expect any values to be yielded.}}
+  omp.yield(%arg0 : f32)
+}
+
+// -----
+
 omp.private {type = private} @x.privatizer : i32 alloc {
 ^bb0(%arg0: i32):
   // expected-error @below {{expected exit block terminator to be an `omp.yield` op.}}
@@ -2174,6 +2185,17 @@ omp.private {type = firstprivate} @x.privatizer : f32 alloc {
 } copy {
 ^bb0(%arg0: f32):
   omp.yield(%arg0 : f32)
+}
+
+// -----
+
+// expected-error @below {{`dealloc`: expected 1 region arguments, got: 2}}
+omp.private {type = private} @x.privatizer : f32 alloc {
+^bb0(%arg0: f32):
+  omp.yield(%arg0 : f32)
+} dealloc {
+^bb0(%arg0: f32, %arg1: f32):
+  omp.yield
 }
 
 // -----

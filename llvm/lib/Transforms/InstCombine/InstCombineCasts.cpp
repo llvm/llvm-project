@@ -770,6 +770,12 @@ Instruction *InstCombinerImpl::visitTrunc(TruncInst &Trunc) {
         return new ICmpInst(ICmpInst::Predicate::ICMP_EQ, X, Zero);
       }
     }
+
+    if (Trunc.hasNoUnsignedWrap() || Trunc.hasNoSignedWrap()) {
+      Value *X, *Y;
+      if (match(Src, m_Xor(m_Value(X), m_Value(Y))))
+        return new ICmpInst(ICmpInst::ICMP_NE, X, Y);
+    }
   }
 
   Value *A, *B;

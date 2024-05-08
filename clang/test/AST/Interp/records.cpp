@@ -90,8 +90,7 @@ struct Ints2 {
   int a = 10;
   int b;
 };
-constexpr Ints2 ints22; // both-error {{without a user-provided default constructor}} \
-                        // expected-error {{must be initialized by a constant expression}}
+constexpr Ints2 ints22; // both-error {{without a user-provided default constructor}}
 
 constexpr Ints2 I2 = Ints2{12, 25};
 static_assert(I2.a == 12, "");
@@ -1000,10 +999,9 @@ namespace TemporaryObjectExpr {
       F f{12};
     };
     constexpr int foo(S x) {
-      return x.a; // expected-note {{read of uninitialized object}}
+      return x.a;
     }
-    static_assert(foo(S()) == 0, ""); // expected-error {{not an integral constant expression}} \
-                                      // expected-note {{in call to}}
+    static_assert(foo(S()) == 0, "");
   };
 #endif
 }
@@ -1031,6 +1029,12 @@ namespace ParenInit {
                      // both-note {{required by 'constinit' specifier}} \
                      // both-note {{reference to temporary is not a constant expression}} \
                      // both-note {{temporary created here}}
+
+
+  /// Initializing an array.
+  constexpr void bar(int i, int j) {
+    int arr[4](i, j);
+  }
 }
 #endif
 
@@ -1408,4 +1412,50 @@ namespace VirtualBases {
     Z z;
     static_assert((X*)(Y1*)&z != (X*)(Y2*)&z, "");
   }
+}
+
+namespace ZeroInit {
+  struct S3 {
+    S3() = default;
+    S3(const S3&) = default;
+    S3(S3&&) = default;
+    constexpr S3(int n) : n(n) {}
+    int n;
+  };
+  constexpr S3 s3d; // both-error {{default initialization of an object of const type 'const S3' without a user-provided default constructor}}
+  static_assert(s3d.n == 0, "");
+
+  struct P {
+    int a = 10;
+  };
+  static_assert(P().a == 10, "");
+}
+
+namespace {
+#if __cplusplus >= 202002L
+  struct C {
+    template <unsigned N> constexpr C(const char (&)[N]) : n(N) {}
+    unsigned n;
+  };
+  template <C c>
+  constexpr auto operator""_c() { return c.n; }
+
+  constexpr auto waldo = "abc"_c;
+  static_assert(waldo == 4, "");
+#endif
+}
+
+
+namespace TemporaryWithInvalidDestructor {
+#if __cplusplus >= 202002L
+  struct A {
+    bool a = true;
+    constexpr ~A() noexcept(false) { // both-error {{never produces a constant expression}}
+      throw; // both-note 2{{not valid in a constant expression}} \
+             // both-error {{cannot use 'throw' with exceptions disabled}}
+    }
+  };
+  static_assert(A().a, ""); // both-error {{not an integral constant expression}} \
+                        // both-note {{in call to}}
+#endif
 }

@@ -11,7 +11,7 @@
 // cxx98-error@-1 {{variadic macros are a C99 feature}}
 #endif
 
-namespace cwg2149 { // cwg2149: 3.1 drafting 2024-04
+namespace cwg2149 { // cwg2149: 3.1
 #if __cplusplus <= 201103L
 struct X { int i, j, k; };
 #else

@@ -1054,3 +1054,44 @@ define i8 @drop_both_trunc(i16 %x, i16 %y) {
   %res = trunc nuw nsw i16 %and2 to i8
   ret i8 %res
 }
+
+define i1 @trunc_xor(i8 %x, i8 %y) {
+; CHECK-LABEL: @trunc_xor(
+; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = trunc i8 [[XOR]] to i1
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %xor = xor i8 %x, %y
+  %r = trunc i8 %xor to i1
+  ret i1 %r
+}
+
+define i1 @trunc_nuw_xor(i8 %x, i8 %y) {
+; CHECK-LABEL: @trunc_nuw_xor(
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %xor = xor i8 %x, %y
+  %r = trunc nuw i8 %xor to i1
+  ret i1 %r
+}
+
+define i1 @trunc_nsw_xor(i8 %x, i8 %y) {
+; CHECK-LABEL: @trunc_nsw_xor(
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %xor = xor i8 %x, %y
+  %r = trunc nsw i8 %xor to i1
+  ret i1 %r
+}
+
+define <2 x i1> @trunc_nuw_xor_vector(<2 x i8> %x, <2 x i8> %y) {
+; CHECK-LABEL: @trunc_nuw_xor_vector(
+; CHECK-NEXT:    [[R:%.*]] = icmp ne <2 x i8> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret <2 x i1> [[R]]
+;
+  %xor = xor <2 x i8> %x, %y
+  %r = trunc nuw <2 x i8> %xor to <2 x i1>
+  ret <2 x i1> %r
+}
