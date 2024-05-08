@@ -7,6 +7,8 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // UNSUPPORTED: no-threads
+// XFAIL: availability-synchronization_library-missing
+// XFAIL: !has-64-bit-atomics
 
 // void wait(T, memory_order = memory_order::seq_cst) const noexcept;
 
