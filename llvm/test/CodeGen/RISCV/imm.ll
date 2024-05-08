@@ -4144,10 +4144,9 @@ define i64 @imm64_0xFF7FFFFF7FFFFFFE() {
 ;
 ; RV64IZBS-LABEL: imm64_0xFF7FFFFF7FFFFFFE:
 ; RV64IZBS:       # %bb.0:
-; RV64IZBS-NEXT:    lui a0, 1044480
-; RV64IZBS-NEXT:    addiw a0, a0, -1
-; RV64IZBS-NEXT:    slli a0, a0, 31
-; RV64IZBS-NEXT:    addi a0, a0, -1
+; RV64IZBS-NEXT:    li a0, -1
+; RV64IZBS-NEXT:    bclri a0, a0, 31
+; RV64IZBS-NEXT:    bclri a0, a0, 55
 ; RV64IZBS-NEXT:    ret
 ;
 ; RV64IXTHEADBB-LABEL: imm64_0xFF7FFFFF7FFFFFFE:
