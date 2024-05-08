@@ -4764,6 +4764,8 @@ LegalizerHelper::fewerElementsVector(MachineInstr &MI, unsigned TypeIdx,
     return fewerElementsVectorMultiEltType(GMI, NumElts, {2 /*pow*/});
   case G_BITCAST:
     return fewerElementsBitcast(MI, TypeIdx, NarrowTy);
+  case G_INTRINSIC_FPTRUNC_ROUND:
+    return fewerElementsVectorMultiEltType(GMI, NumElts, {2});
   default:
     return UnableToLegalize;
   }

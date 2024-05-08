@@ -244,6 +244,21 @@ public:
                           Environment::ValueModel &Model,
                           ExprJoinBehavior ExprBehavior);
 
+  /// Returns a value that approximates both `Val1` and `Val2`, or null if no
+  /// such value can be produced.
+  ///
+  /// `Env1` and `Env2` can be used to query child values and path condition
+  /// implications of `Val1` and `Val2` respectively. The joined value will be
+  /// produced in `JoinedEnv`.
+  ///
+  /// Requirements:
+  ///
+  ///  `Val1` and `Val2` must model values of type `Type`.
+  static Value *joinValues(QualType Ty, Value *Val1, const Environment &Env1,
+                           Value *Val2, const Environment &Env2,
+                           Environment &JoinedEnv,
+                           Environment::ValueModel &Model);
+
   /// Widens the environment point-wise, using `PrevEnv` as needed to inform the
   /// approximation.
   ///

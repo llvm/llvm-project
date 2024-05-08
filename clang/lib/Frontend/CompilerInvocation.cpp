@@ -2549,6 +2549,7 @@ static const auto &getFrontendActionTable() {
       {frontend::DumpTokens, OPT_dump_tokens},
       {frontend::EmitAssembly, OPT_S},
       {frontend::EmitBC, OPT_emit_llvm_bc},
+      {frontend::EmitCIR, OPT_emit_cir},
       {frontend::EmitHTML, OPT_emit_html},
       {frontend::EmitLLVM, OPT_emit_llvm},
       {frontend::EmitLLVMOnly, OPT_emit_llvm_only},
@@ -2840,6 +2841,30 @@ static bool ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
     }
 
     Opts.ProgramAction = *ProgramAction;
+
+    // Catch common mistakes when multiple actions are specified for cc1 (e.g.
+    // -S -emit-llvm means -emit-llvm while -emit-llvm -S means -S). However, to
+    // support driver `-c -Xclang ACTION` (-cc1 -emit-llvm file -main-file-name
+    // X ACTION), we suppress the error when the two actions are separated by
+    // -main-file-name.
+    //
+    // As an exception, accept composable -ast-dump*.
+    if (!A->getSpelling().starts_with("-ast-dump")) {
+      const Arg *SavedAction = nullptr;
+      for (const Arg *AA :
+           Args.filtered(OPT_Action_Group, OPT_main_file_name)) {
+        if (AA->getOption().matches(OPT_main_file_name)) {
+          SavedAction = nullptr;
+        } else if (!SavedAction) {
+          SavedAction = AA;
+        } else {
+          if (!A->getOption().matches(OPT_ast_dump_EQ))
+            Diags.Report(diag::err_fe_invalid_multiple_actions)
+                << SavedAction->getSpelling() << A->getSpelling();
+          break;
+        }
+      }
+    }
   }
 
   if (const Arg* A = Args.getLastArg(OPT_plugin)) {
@@ -2891,6 +2916,8 @@ static bool ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
   if (Opts.ProgramAction != frontend::GenerateModule && Opts.IsSystemModule)
     Diags.Report(diag::err_drv_argument_only_allowed_with) << "-fsystem-module"
                                                            << "-emit-module";
+  if (Args.hasArg(OPT_fclangir) || Args.hasArg(OPT_emit_cir))
+    Opts.UseClangIRPipeline = true;
 
   if (Args.hasArg(OPT_aux_target_cpu))
     Opts.AuxTargetCPU = std::string(Args.getLastArgValue(OPT_aux_target_cpu));
@@ -4337,6 +4364,7 @@ static bool isStrictlyPreprocessorAction(frontend::ActionKind Action) {
   case frontend::ASTView:
   case frontend::EmitAssembly:
   case frontend::EmitBC:
+  case frontend::EmitCIR:
   case frontend::EmitHTML:
   case frontend::EmitLLVM:
   case frontend::EmitLLVMOnly:

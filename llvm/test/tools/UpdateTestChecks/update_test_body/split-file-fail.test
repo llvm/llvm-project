@@ -1,7 +1,0 @@
-# RUN: cp %s %t && not %update_test_body %t 2>&1 | FileCheck %s
-
-# CHECK: error: -: no part separator was found
-
-.ifdef GEN
-true
-.endif

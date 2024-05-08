@@ -1722,11 +1722,11 @@ static Instruction *foldSelectICmpEq(SelectInst &SI, ICmpInst *ICI,
       return match(CmpRHS, m_Zero()) && match(FalseVal, matchInner);
 
     if (NotMask == NotInner) {
-      return match(FalseVal,
-                   m_c_BinOp(OuterOpc, m_Not(matchInner), m_Specific(CmpRHS)));
+      return match(FalseVal, m_c_BinOp(OuterOpc, m_NotForbidPoison(matchInner),
+                                       m_Specific(CmpRHS)));
     } else if (NotMask == NotRHS) {
-      return match(FalseVal,
-                   m_c_BinOp(OuterOpc, matchInner, m_Not(m_Specific(CmpRHS))));
+      return match(FalseVal, m_c_BinOp(OuterOpc, matchInner,
+                                       m_NotForbidPoison(m_Specific(CmpRHS))));
     } else {
       return match(FalseVal,
                    m_c_BinOp(OuterOpc, matchInner, m_Specific(CmpRHS)));
@@ -2537,8 +2537,8 @@ Instruction *InstCombinerImpl::foldVectorSelect(SelectInst &Sel) {
       if (auto *I = dyn_cast<Instruction>(V))
         I->copyIRFlags(&Sel);
       Module *M = Sel.getModule();
-      Function *F = Intrinsic::getDeclaration(
-          M, Intrinsic::experimental_vector_reverse, V->getType());
+      Function *F =
+          Intrinsic::getDeclaration(M, Intrinsic::vector_reverse, V->getType());
       return CallInst::Create(F, V);
     };
 

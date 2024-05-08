@@ -37,6 +37,7 @@
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/MemoryModelRelaxationAnnotations.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/User.h"
@@ -133,15 +134,27 @@ public:
 };
 
 // IRBuilder to be used for replacement atomic instructions.
-struct ReplacementIRBuilder : IRBuilder<InstSimplifyFolder> {
+struct ReplacementIRBuilder
+    : IRBuilder<InstSimplifyFolder, IRBuilderCallbackInserter> {
+  MDNode *MMRAMD = nullptr;
+
   // Preserves the DebugLoc from I, and preserves still valid metadata.
   // Enable StrictFP builder mode when appropriate.
   explicit ReplacementIRBuilder(Instruction *I, const DataLayout &DL)
-      : IRBuilder(I->getContext(), DL) {
+      : IRBuilder(I->getContext(), DL,
+                  IRBuilderCallbackInserter(
+                      [this](Instruction *I) { addMMRAMD(I); })) {
     SetInsertPoint(I);
     this->CollectMetadataToCopy(I, {LLVMContext::MD_pcsections});
     if (BB->getParent()->getAttributes().hasFnAttr(Attribute::StrictFP))
       this->setIsFPConstrained(true);
+
+    MMRAMD = I->getMetadata(LLVMContext::MD_mmra);
+  }
+
+  void addMMRAMD(Instruction *I) {
+    if (canInstructionHaveMMRAs(*I))
+      I->setMetadata(LLVMContext::MD_mmra, MMRAMD);
   }
 };
 
@@ -421,8 +434,9 @@ AtomicExpandImpl::convertAtomicXchgToIntegerType(AtomicRMWInst *RMWI) {
                       ? Builder.CreatePtrToInt(Val, NewTy)
                       : Builder.CreateBitCast(Val, NewTy);
 
-  auto *NewRMWI = Builder.CreateAtomicRMW(
-      AtomicRMWInst::Xchg, Addr, NewVal, RMWI->getAlign(), RMWI->getOrdering());
+  auto *NewRMWI = Builder.CreateAtomicRMW(AtomicRMWInst::Xchg, Addr, NewVal,
+                                          RMWI->getAlign(), RMWI->getOrdering(),
+                                          RMWI->getSyncScopeID());
   NewRMWI->setVolatile(RMWI->isVolatile());
   LLVM_DEBUG(dbgs() << "Replaced " << *RMWI << " with " << *NewRMWI << "\n");
 
@@ -895,9 +909,10 @@ void AtomicExpandImpl::expandPartwordAtomicRMW(
   Value *ValOperand_Shifted = nullptr;
   if (Op == AtomicRMWInst::Xchg || Op == AtomicRMWInst::Add ||
       Op == AtomicRMWInst::Sub || Op == AtomicRMWInst::Nand) {
+    Value *ValOp = Builder.CreateBitCast(AI->getValOperand(), PMV.IntValueType);
     ValOperand_Shifted =
-        Builder.CreateShl(Builder.CreateZExt(AI->getValOperand(), PMV.WordType),
-                          PMV.ShiftAmt, "ValOperand_Shifted");
+        Builder.CreateShl(Builder.CreateZExt(ValOp, PMV.WordType), PMV.ShiftAmt,
+                          "ValOperand_Shifted");
   }
 
   auto PerformPartwordOp = [&](IRBuilderBase &Builder, Value *Loaded) {
@@ -943,7 +958,7 @@ AtomicRMWInst *AtomicExpandImpl::widenPartwordAtomicRMW(AtomicRMWInst *AI) {
 
   if (Op == AtomicRMWInst::And)
     NewOperand =
-        Builder.CreateOr(PMV.Inv_Mask, ValOperand_Shifted, "AndOperand");
+        Builder.CreateOr(ValOperand_Shifted, PMV.Inv_Mask, "AndOperand");
   else
     NewOperand = ValOperand_Shifted;
 

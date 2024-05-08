@@ -370,7 +370,7 @@ def TDL_DirA : Directive<"dira"> {
 // IMPL-EMPTY:
 // IMPL-NEXT:  static_assert(sizeof(llvm::tdl::Directive) == sizeof(int));
 // IMPL-NEXT:  {{.*}} static const llvm::tdl::Directive LeafConstructTable[][2] = {
-// IMPL-NEXT:    llvm::tdl::TDLD_dira, static_cast<llvm::tdl::Directive>(0),
+// IMPL-NEXT:    {llvm::tdl::TDLD_dira, static_cast<llvm::tdl::Directive>(0),},
 // IMPL-NEXT:  };
 // IMPL-EMPTY:
 // IMPL-NEXT:  {{.*}} static auto LeafConstructTableEndDirective = LeafConstructTable + 1;

@@ -388,17 +388,19 @@ private:
   };
 
   CallDescriptionMap<FnDescription> FnTestDescriptions = {
-      {{{"StreamTesterChecker_make_feof_stream"}, 1},
+      {{CDM::SimpleFunc, {"StreamTesterChecker_make_feof_stream"}, 1},
        {nullptr,
         std::bind(&StreamChecker::evalSetFeofFerror, _1, _2, _3, _4, ErrorFEof,
                   false),
         0}},
-      {{{"StreamTesterChecker_make_ferror_stream"}, 1},
+      {{CDM::SimpleFunc, {"StreamTesterChecker_make_ferror_stream"}, 1},
        {nullptr,
         std::bind(&StreamChecker::evalSetFeofFerror, _1, _2, _3, _4,
                   ErrorFError, false),
         0}},
-      {{{"StreamTesterChecker_make_ferror_indeterminate_stream"}, 1},
+      {{CDM::SimpleFunc,
+        {"StreamTesterChecker_make_ferror_indeterminate_stream"},
+        1},
        {nullptr,
         std::bind(&StreamChecker::evalSetFeofFerror, _1, _2, _3, _4,
                   ErrorFError, true),
@@ -600,7 +602,7 @@ struct StreamOperationEvaluator {
   SValBuilder &SVB;
   const ASTContext &ACtx;
 
-  SymbolRef StreamSym;
+  SymbolRef StreamSym = nullptr;
   const StreamState *SS = nullptr;
   const CallExpr *CE = nullptr;
   StreamErrorState NewES;

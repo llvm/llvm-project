@@ -27,7 +27,7 @@
 #include "PPCTargetStreamer.h"
 #include "TargetInfo/PowerPCTargetInfo.h"
 #include "llvm/ADT/MapVector.h"
-#include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -242,7 +242,7 @@ class PPCAIXAsmPrinter : public PPCAsmPrinter {
 private:
   /// Symbols lowered from ExternalSymbolSDNodes, we will need to emit extern
   /// linkage for them in AIX.
-  SmallPtrSet<MCSymbol *, 8> ExtSymSDNodeSymbols;
+  SmallSetVector<MCSymbol *, 8> ExtSymSDNodeSymbols;
 
   /// A format indicator and unique trailing identifier to form part of the
   /// sinit/sterm function names.
@@ -2896,7 +2896,7 @@ void PPCAIXAsmPrinter::emitPGORefs(Module &M) {
   bool HasNonZeroLengthPrfCntsSection = false;
   const DataLayout &DL = M.getDataLayout();
   for (GlobalVariable &GV : M.globals())
-    if (GV.hasSection() && GV.getSection().equals("__llvm_prf_cnts") &&
+    if (GV.hasSection() && GV.getSection() == "__llvm_prf_cnts" &&
         DL.getTypeAllocSize(GV.getValueType()) > 0) {
       HasNonZeroLengthPrfCntsSection = true;
       break;
