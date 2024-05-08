@@ -44,4 +44,5 @@ elements_of(_Range&&, _Allocator = _Allocator()) -> elements_of<_Range&&, _Alloc
 _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
+
 #endif // _LIBCPP___RANGES_ELEMENTS_OF_H
