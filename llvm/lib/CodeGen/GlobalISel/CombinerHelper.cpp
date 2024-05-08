@@ -4137,14 +4137,6 @@ void CombinerHelper::applyBuildFn(
   MI.eraseFromParent();
 }
 
-void CombinerHelper::applyBuildFnMO(const MachineOperand &MO,
-                                    BuildFnTy &MatchInfo) {
-  MachineInstr *Root = getDefIgnoringCopies(MO.getReg(), MRI);
-  Builder.setInstrAndDebugLoc(*Root);
-  MatchInfo(Builder);
-  Root->eraseFromParent();
-}
-
 void CombinerHelper::applyBuildFnNoErase(
     MachineInstr &MI, std::function<void(MachineIRBuilder &)> &MatchInfo) {
   MatchInfo(Builder);
@@ -7248,6 +7240,81 @@ bool CombinerHelper::matchAddOverflow(MachineInstr &MI, BuildFnTy &MatchInfo) {
     };
     return true;
   }
+  }
+
+  return false;
+}
+
+void CombinerHelper::applyBuildFnMO(const MachineOperand &MO,
+                                    BuildFnTy &MatchInfo) {
+  MachineInstr *Root = getDefIgnoringCopies(MO.getReg(), MRI);
+  MatchInfo(Builder);
+  Root->eraseFromParent();
+}
+
+bool CombinerHelper::matchSextOfTrunc(const MachineOperand &MO,
+                                      BuildFnTy &MatchInfo) {
+  GSext *Sext = cast<GSext>(getDefIgnoringCopies(MO.getReg(), MRI));
+  GTrunc *Trunc = cast<GTrunc>(getDefIgnoringCopies(Sext->getSrcReg(), MRI));
+
+  Register Dst = Sext->getReg(0);
+  Register Src = Trunc->getSrcReg();
+
+  LLT DstTy = MRI.getType(Dst);
+  LLT SrcTy = MRI.getType(Src);
+
+  if (DstTy == SrcTy) {
+    MatchInfo = [=](MachineIRBuilder &B) { B.buildCopy(Dst, Src); };
+    return true;
+  }
+
+  if (DstTy.getScalarSizeInBits() < SrcTy.getScalarSizeInBits() &&
+      isLegalOrBeforeLegalizer({TargetOpcode::G_TRUNC, {DstTy, SrcTy}})) {
+    MatchInfo = [=](MachineIRBuilder &B) {
+      B.buildTrunc(Dst, Src, MachineInstr::MIFlag::NoSWrap);
+    };
+    return true;
+  }
+
+  if (DstTy.getScalarSizeInBits() > SrcTy.getScalarSizeInBits() &&
+      isLegalOrBeforeLegalizer({TargetOpcode::G_SEXT, {DstTy, SrcTy}})) {
+    MatchInfo = [=](MachineIRBuilder &B) { B.buildSExt(Dst, Src); };
+    return true;
+  }
+
+  return false;
+}
+
+bool CombinerHelper::matchZextOfTrunc(const MachineOperand &MO,
+                                      BuildFnTy &MatchInfo) {
+  GZext *Zext = cast<GZext>(getDefIgnoringCopies(MO.getReg(), MRI));
+  GTrunc *Trunc = cast<GTrunc>(getDefIgnoringCopies(Zext->getSrcReg(), MRI));
+
+  Register Dst = Zext->getReg(0);
+  Register Src = Trunc->getSrcReg();
+
+  LLT DstTy = MRI.getType(Dst);
+  LLT SrcTy = MRI.getType(Src);
+
+  if (DstTy == SrcTy) {
+    MatchInfo = [=](MachineIRBuilder &B) { B.buildCopy(Dst, Src); };
+    return true;
+  }
+
+  if (DstTy.getScalarSizeInBits() < SrcTy.getScalarSizeInBits() &&
+      isLegalOrBeforeLegalizer({TargetOpcode::G_TRUNC, {DstTy, SrcTy}})) {
+    MatchInfo = [=](MachineIRBuilder &B) {
+      B.buildTrunc(Dst, Src, MachineInstr::MIFlag::NoUWrap);
+    };
+    return true;
+  }
+
+  if (DstTy.getScalarSizeInBits() > SrcTy.getScalarSizeInBits() &&
+      isLegalOrBeforeLegalizer({TargetOpcode::G_ZEXT, {DstTy, SrcTy}})) {
+    MatchInfo = [=](MachineIRBuilder &B) {
+      B.buildZExt(Dst, Src, MachineInstr::MIFlag::NonNeg);
+    };
+    return true;
   }
 
   return false;

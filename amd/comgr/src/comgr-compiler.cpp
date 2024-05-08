@@ -1066,8 +1066,8 @@ amd_comgr_status_t AMDGPUCompiler::addCompilationFlags() {
 
 amd_comgr_status_t AMDGPUCompiler::addDeviceLibraries() {
 
-  Args.push_back("-mllvm");
-  Args.push_back("-relink-builtin-bitcode-postop");
+  Args.push_back("-Xclang");
+  Args.push_back("-mlink-builtin-bitcode-postopt");
   NoGpuLib = false;
 
   SmallString<256> ClangBinaryPath(env::getLLVMPath());

@@ -399,7 +399,7 @@ static Error parseSegmentLoadCommand(
       return malformedError("load command " + Twine(LoadCommandIndex) +
                             " filesize field in " + CmdName +
                             " greater than vmsize field");
-    IsPageZeroSegment |= StringRef("__PAGEZERO").equals(S.segname);
+    IsPageZeroSegment |= StringRef("__PAGEZERO") == S.segname;
   } else
     return SegOrErr.takeError();
 
@@ -4364,7 +4364,7 @@ BindRebaseSegInfo::BindRebaseSegInfo(const object::MachOObjectFile *Obj) {
     Info.Size = Section.getSize();
     Info.SegmentName =
         Obj->getSectionFinalSegmentName(Section.getRawDataRefImpl());
-    if (!Info.SegmentName.equals(CurSegName)) {
+    if (Info.SegmentName != CurSegName) {
       ++CurSegIndex;
       CurSegName = Info.SegmentName;
       CurSegAddress = Info.Address;
