@@ -1,5 +1,4 @@
 ; RUN: opt -S -dxil-op-lower -mtriple=dxil-pc-shadermodel6.3-library %s | FileCheck %s -check-prefix=SM6_3
-; Half and float are valid for SM6.2 and later
 ; SM6_3: call half @dx.op.unary.f16(i32 13, half %{{.*}})
 ; SM6_3: call float @dx.op.unary.f32(i32 13, float %{{.*}})
 

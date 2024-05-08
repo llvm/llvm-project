@@ -111,9 +111,10 @@ let OpClass = unary in {
 
   def Cos  : DXILOpMapping<12, int_cos, [DXILOpOverload<SM6_0, [llvm_half_ty, llvm_float_ty]>],
                           "Returns cosine(theta) for theta in radians.">;
-  def Sin  : DXILOpMapping<13, int_sin, [DXILOpOverload<SM6_2, [llvm_half_ty, llvm_float_ty]>,
-                                         DXILOpOverload<SM6_0, [llvm_float_ty]>],
+  def Sin  : DXILOpMapping<13, int_sin, [DXILOpOverload<SM6_0, [llvm_half_ty, llvm_float_ty]>],
                            "Returns sine(theta) for theta in radians.">;
+  def Tan  : DXILOpMapping<14, int_tan, [DXILOpOverload<SM6_0, [llvm_half_ty, llvm_float_ty]>],
+                           "Returns tangent(theta) for theta in radians.">;
   def Exp2 : DXILOpMapping<21, int_exp2, [DXILOpOverload<SM6_0, [llvm_half_ty, llvm_float_ty]>],
                            "Returns the base 2 exponential, or 2**x, of the"
                            " specified value. exp2(x) = 2**x.">;
