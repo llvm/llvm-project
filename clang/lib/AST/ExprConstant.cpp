@@ -14481,6 +14481,8 @@ public:
     return true;
   }
 
+  void StoreExponent(LValue Pointer, int exp);
+
   bool VisitCallExpr(const CallExpr *E);
 
   bool VisitUnaryOperator(const UnaryOperator *E);
@@ -14539,6 +14541,19 @@ static bool TryEvaluateBuiltinNaN(const ASTContext &Context,
   return true;
 }
 
+void FloatExprEvaluator::StoreExponent(LValue Pointer, int exp) {
+  const APValue::LValueBase Base = Pointer.getLValueBase();
+  auto *VD = const_cast<ValueDecl *>(Base.dyn_cast<const ValueDecl *>());
+  if (auto *VarD = dyn_cast<VarDecl>(VD)) {
+    clang::IntegerLiteral *IL =
+        clang::IntegerLiteral::Create(Info.Ctx, llvm::APSInt(32, exp),
+                                      Info.Ctx.IntTy, clang::SourceLocation());
+    VarD->setInit(IL);
+  } else {
+    llvm_unreachable("expecting a VarDecl for an exponent");
+  }
+}
+
 bool FloatExprEvaluator::VisitCallExpr(const CallExpr *E) {
   if (!IsConstantEvaluatedBuiltinCall(E))
     return ExprEvaluatorBaseTy::VisitCallExpr(E);
@@ -14554,11 +14569,10 @@ bool FloatExprEvaluator::VisitCallExpr(const CallExpr *E) {
     if (!EvaluateFloat(E->getArg(0), Result, Info) ||
         !EvaluatePointer(E->getArg(1), Pointer, Info))
       return false;
-    llvm::RoundingMode RM = getActiveRoundingMode(Info, E);
     int FrexpExp;
-    FrexpExp = ilogb(Result);
-    FrexpExp = FrexpExp == llvm::detail::IEEEFloat::IEK_Zero ? 0 : FrexpExp + 1;
-    Result =  scalbn(Result, -FrexpExp, RM);
+    llvm::RoundingMode RM = getActiveRoundingMode(Info, E);
+    Result = llvm::frexp(Result, FrexpExp, RM);
+    StoreExponent(Pointer, FrexpExp);
     return true;
   }
   case Builtin::BI__builtin_huge_val:
