@@ -4312,6 +4312,10 @@ static Value *simplifyWithOpReplaced(Value *V, Value *Op, Value *RepOp,
   if (match(I, m_Intrinsic<Intrinsic::is_constant>()))
     return nullptr;
 
+  // Don't simplify freeze.
+  if (isa<FreezeInst>(I))
+    return nullptr;
+
   // Replace Op with RepOp in instruction operands.
   SmallVector<Value *, 8> NewOps;
   bool AnyReplaced = false;
