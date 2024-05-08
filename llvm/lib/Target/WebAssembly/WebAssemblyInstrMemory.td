@@ -171,11 +171,15 @@ defm STORE8_I64 : WebAssemblyStore<I64, "i64.store8", 0x3c>;
 defm STORE16_I64 : WebAssemblyStore<I64, "i64.store16", 0x3d>;
 defm STORE32_I64 : WebAssemblyStore<I64, "i64.store32", 0x3e>;
 
+defm STORE_F16_F32 : WebAssemblyStore<F32, "f32.store_f16", 0xfc31, [HasHalfPrecision]>;
+
 defm : StorePat<i32, truncstorei8, "STORE8_I32">;
 defm : StorePat<i32, truncstorei16, "STORE16_I32">;
 defm : StorePat<i64, truncstorei8, "STORE8_I64">;
 defm : StorePat<i64, truncstorei16, "STORE16_I64">;
 defm : StorePat<i64, truncstorei32, "STORE32_I64">;
+
+defm : StorePat<f32, int_wasm_storef16_f32, "STORE_F16_F32">;
 
 multiclass MemoryOps<WebAssemblyRegClass rc, string B> {
 // Current memory size.

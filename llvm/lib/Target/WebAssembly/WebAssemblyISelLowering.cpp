@@ -914,6 +914,14 @@ bool WebAssemblyTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.align = Align(2);
     Info.flags = MachineMemOperand::MOLoad;
     return true;
+  case Intrinsic::wasm_storef16_f32:
+    Info.opc = ISD::INTRINSIC_VOID;
+    Info.memVT = MVT::f16;
+    Info.ptrVal = I.getArgOperand(1);
+    Info.offset = 0;
+    Info.align = Align(2);
+    Info.flags = MachineMemOperand::MOStore;
+    return true;
   default:
     return false;
   }

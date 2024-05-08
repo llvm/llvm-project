@@ -842,4 +842,7 @@ main:
     # CHECK: f32.load_f16 48 # encoding: [0xfc,0x30,0x01,0x30]
     f32.load_f16 48
 
+    # CHECK: f32.store_f16 32 # encoding: [0xfc,0x31,0x01,0x20]
+    f32.store_f16 32
+
     end_function
