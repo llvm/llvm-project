@@ -20,7 +20,7 @@
 
 using namespace llvm;
 
-#define DEBUG_TYPE "ctx-profile-lower"
+#define DEBUG_TYPE "ctx-instr-lower"
 
 static cl::list<std::string> ContextRoots(
     "profile-context-root", cl::Hidden,
@@ -64,25 +64,37 @@ public:
   bool lowerFunction(Function &F);
 };
 
+// llvm.instrprof.increment[.step] captures the total number of counters as one
+// of its parameters, and llvm.instrprof.callsite captures the total number of
+// callsites. Those values are the same for instances of those intrinsics in
+// this function. Find the first instance of each and return them.
 std::pair<uint32_t, uint32_t> getNrCountersAndCallsites(const Function &F) {
   uint32_t NrCounters = 0;
   uint32_t NrCallsites = 0;
   for (const auto &BB : F) {
     for (const auto &I : BB) {
       if (const auto *Incr = dyn_cast<InstrProfIncrementInst>(&I)) {
-        if (!NrCounters)
-          NrCounters =
-              static_cast<uint32_t>(Incr->getNumCounters()->getZExtValue());
+        uint32_t V =
+            static_cast<uint32_t>(Incr->getNumCounters()->getZExtValue());
+        assert((!NrCounters || V == NrCounters) &&
+               "expected all llvm.instrprof.increment[.step] intrinsics to "
+               "have the same total nr of counters parameter");
+        NrCounters = V;
       } else if (const auto *CSIntr = dyn_cast<InstrProfCallsite>(&I)) {
-        if (!NrCallsites)
-          NrCallsites =
-              static_cast<uint32_t>(CSIntr->getNumCounters()->getZExtValue());
+        uint32_t V =
+            static_cast<uint32_t>(CSIntr->getNumCounters()->getZExtValue());
+        assert((!NrCallsites || V == NrCallsites) &&
+               "expected all llvm.instrprof.callsite intrinsics to have the "
+               "same total nr of callsites parameter");
+        NrCallsites = V;
       }
+#if NDEBUG
       if (NrCounters && NrCallsites)
         return std::make_pair(NrCounters, NrCallsites);
+#endif
     }
   }
-  return {0, 0};
+  return {NrCounters, NrCallsites};
 }
 } // namespace
 
@@ -123,6 +135,15 @@ CtxInstrumentationLowerer::CtxInstrumentationLowerer(Module &M,
       cast<GlobalVariable>(G)->setInitializer(
           Constant::getNullValue(ContextRootTy));
       ContextRootMap.insert(std::make_pair(F, G));
+      for (const auto &BB : *F)
+        for (const auto &I : BB)
+          if (const auto *CB = dyn_cast<CallBase>(&I))
+            if (CB->isMustTailCall()) {
+              M.getContext().emitError(
+                  "The function " + Fname +
+                  " was indicated as a context root, but it features musttail "
+                  "calls, which is not supported.");
+            }
     }
   }
 
@@ -212,7 +233,7 @@ bool CtxInstrumentationLowerer::lowerFunction(Function &F) {
            ArrayType::get(Builder.getPtrTy(), NrCallsites)});
       // Figure out which way we obtain the context object for this function -
       // if it's an entrypoint, then we call StartCtx, otherwise GetCtx. In the
-      // former case, we also set TheRootContext since we need it to release it
+      // former case, we also set TheRootContext since we need to release it
       // at the end (plus it can be used to know if we have an entrypoint or a
       // regular function)
       auto Iter = ContextRootMap.find(&F);
