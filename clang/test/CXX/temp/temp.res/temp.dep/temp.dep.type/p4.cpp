@@ -471,6 +471,14 @@ namespace N3 {
       this->C::operator=(*this);
     }
   };
+
+  template<typename T>
+  struct D {
+    auto instantiated(D& d) -> decltype(operator=(d)); // expected-error {{use of undeclared 'operator='}}
+  };
+
+  template struct D<int>; // expected-note {{in instantiation of template class 'D<int>' requested here}}
+
 } // namespace N3
 
 namespace N4 {
