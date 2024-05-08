@@ -9,7 +9,7 @@ define void @test1(i32 %n) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[N:%.*]], -1
 ; CHECK-NEXT:    br i1 [[CMP]], label [[BB:%.*]], label [[EXIT:%.*]]
 ; CHECK:       bb:
-; CHECK-NEXT:    [[EXT_WIDE:%.*]] = uitofp i32 [[N]] to float
+; CHECK-NEXT:    [[EXT_WIDE:%.*]] = uitofp nneg i32 [[N]] to float
 ; CHECK-NEXT:    call void @use.f32(float [[EXT_WIDE]])
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
@@ -87,7 +87,7 @@ exit:
 define double @test_infer_at_use(i32 noundef %n) {
 ; CHECK-LABEL: @test_infer_at_use(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[N:%.*]], -1
-; CHECK-NEXT:    [[EXT:%.*]] = uitofp i32 [[N]] to double
+; CHECK-NEXT:    [[EXT:%.*]] = uitofp nneg i32 [[N]] to double
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[CMP]], double [[EXT]], double 0.000000e+00
 ; CHECK-NEXT:    ret double [[SELECT]]
 ;
