@@ -1077,8 +1077,8 @@ parsing their headers, those should be included after the import. If the
 imported modules don't provide such a header, one can be made manually for
 improved compile time performance.
 
-Known Problems
---------------
+Known Issues
+------------
 
 The following describes issues in the current implementation of modules. Please
 see
@@ -1092,8 +1092,8 @@ A high-level overview of support for standards features, including modules, can
 be found on the `C++ Feature Status <https://clang.llvm.org/cxx_status.html>`_
 page.
 
-Including headers after import is problematic
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Including headers after import is not well-supported
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The following example is accepted:
 
@@ -1176,15 +1176,15 @@ have ``.cppm`` (or ``.ccm``, ``.cxxm``, ``.c++m``) as the file extension.
 However, the behavior is inconsistent with other compilers. This is tracked by
 `#57416 <https://github.com/llvm/llvm-project/issues/57416>`_.
 
-clang-cl is not compatible with the standard C++ modules
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+clang-cl is not compatible with standard C++ modules
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 ``/clang:-fmodule-file`` and ``/clang:-fprebuilt-module-path`` cannot be used
 to specify the BMI with ``clang-cl.exe``. This is tracked by
 `#64118 <https://github.com/llvm/llvm-project/issues/64118>`_.
 
-false positive ODR violation diagnostic due to using inconsistent qualified but the same type
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Incorrect ODR violation diagnostics
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 ODR violations are a common issue when using modules. Clang sometimes produces
 false-positive diagnostics or fails to produce true-positive diagnostics of the
@@ -1245,14 +1245,15 @@ by `#78173 <https://github.com/llvm/llvm-project/issues/78173>`_.
 Header Units
 ============
 
-How to build projects using header unit
----------------------------------------
+How to build projects using header units
+----------------------------------------
 
 .. warning::
 
-   The user interfaces of header units are experimental. There are still many
-   unanswered question about how tools should interact with header units. The
-   user interfaces described here may change in the future.
+   The support for header units, including related command line options, is
+   experimental. There are still many unanswered question about how tools
+   should interact with header units. The details described here may change in
+   the future.
 
 Quick Start
 ~~~~~~~~~~~
@@ -1280,7 +1281,7 @@ Similar to named modules, ``--precompile`` can be used to produce a BMI.
 However, that requires specifying that the input file is a header by using
 ``-xc++-system-header`` or ``-xc++-user-header``.
 
-The ``-fmodule-header={user,system}`` option can also be used to produce the BMI
+The ``-fmodule-header={user,system}`` option can also be used to produce a BMI
 for header units which have a file extension like `.h` or `.hh`. The argument to
 ``-fmodule-header`` specifies either the user search path or the system search
 path. The default value for ``-fmodule-header`` is ``user``. For example:
@@ -1323,8 +1324,8 @@ file as a header. For example:
   $ clang++ -std=c++20 -fmodule-header=system -xc++-header iostream -o iostream.pcm
   $ clang++ -std=c++20 -fmodule-file=iostream.pcm use.cpp
 
-How to specify the dependent BMIs
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+How to specify dependent BMIs
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 ``-fmodule-file`` can be used to specify a dependent BMI (or multiple times for
 more than one dependent BMI).
@@ -1337,11 +1338,11 @@ This is expect to be solved in a future version of Clang either by the compiler
 finding and specifying ``-fmodule-file`` automatically, or by the use of a
 module-mapper that understands how to map the header name to their PCMs.
 
-Don't compile the BMI
-~~~~~~~~~~~~~~~~~~~~~
+Compiling a header unit to an object file
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-With modules, a BMI cannot be compiled from a header unit due to the semantics
-of header units. For example:
+A header unit cannot be compiled to an object file due to the semantics of
+header units. For example:
 
 .. code-block:: console
 
@@ -1387,8 +1388,8 @@ tries to replace the ``#include <iostream>`` with ``import <iostream>;``
 automatically.
 
 
-Relationships between Clang modules
------------------------------------
+Differences between Clang modules and header units
+--------------------------------------------------
 
 Header units have similar semantics to Clang modules. The semantics of both are
 like headers. Therefore, header units can be mimicked by Clang modules as in
@@ -1427,22 +1428,23 @@ C++ standard (for example, https://wg21.link/p1184r2). Reusing Clang's
 ``modulemap`` may be more difficult if we need to introduce another module
 mapper.
 
-Discover Dependencies
-=====================
+Discovering Dependencies
+========================
 
-Prior to modules, all the translation units in a project can be compiled in
-parallel. The same is not true when using module units. The presence of module
-units requires compiling the translation units in a topological order.
+Without use of modules, all the translation units in a project can be compiled
+in parallel. However, the presence of module units requires compiling the
+translation units in a topological order.
 
-The ``clang-scan-deps`` scanner implemented
-`P1689 <https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2022/p1689r5.html>`_
-to describe the order. Only named modules are supported currently.
+The ``clang-scan-deps`` tool can extract dependency information and produce a
+JSON file conforming to the specification described in
+`P1689 <https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2022/p1689r5.html>`_.
+Only named modules are supported currently.
 
 A compilation database is needed when using ``clang-scan-deps``. See
 `JSON Compilation Database Format Specification <JSONCompilationDatabase.html>`_
 for more information about compilation databases. Note that the ``output``
-entry is necessary for ``clang-scan-deps`` to scan using the P1689 format. For
-example:
+JSON attribute is necessary for ``clang-scan-deps`` to scan using the P1689
+format. For example:
 
 .. code-block:: c++
 
@@ -1615,7 +1617,7 @@ scanning generated source files) is possible. For example:
 
   $ clang-scan-deps -format=p1689 -- <path-to-compiler-executable>/clang++ -std=c++20 impl_part.cppm -c -o impl_part.o
 
-will get:
+will produce:
 
 .. code-block:: text
 
@@ -1641,7 +1643,7 @@ will get:
     "version": 1
   }
 
-Individual command line options can be specified after the ``--``. Then
+Individual command line options can be specified after ``--``.
 ``clang-scan-deps`` will extract the necessary information from the specified
 options. Note that the path to the compiler executable needs to be specified
 explicitly instead of using ``clang++`` directly.
