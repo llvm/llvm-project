@@ -146,6 +146,8 @@ public:
 
   mlir::Value getAtomicSizeValue() const { llvm_unreachable("NYI"); }
 
+  mlir::Value getScalarRValValueOrNull(RValue RVal) const;
+
   /// Cast the given pointer to an integer pointer suitable for atomic
   /// operations if the source.
   Address castToAtomicIntPointer(Address Addr) const;
@@ -160,7 +162,7 @@ public:
                                    SourceLocation loc, bool AsValue) const;
 
   /// Converts a rvalue to integer value.
-  mlir::Value convertRValueToInt(RValue RVal) const;
+  mlir::Value convertRValueToInt(RValue RVal, bool CmpXchg = false) const;
 
   RValue ConvertIntToValueOrAtomic(mlir::Value IntVal, AggValueSlot ResultSlot,
                                    SourceLocation Loc, bool AsValue) const;
@@ -218,7 +220,7 @@ public:
   Address CreateTempAlloca() const;
 
 private:
-  bool requiresMemSetZero(llvm::Type *type) const;
+  bool requiresMemSetZero(mlir::Type ty) const;
 
   /// Emits atomic load as a libcall.
   void EmitAtomicLoadLibcall(mlir::Value AddForLoaded, llvm::AtomicOrdering AO,
@@ -266,6 +268,36 @@ static Address buildValToTemp(CIRGenFunction &CGF, Expr *E) {
   CGF.buildAnyExprToMem(E, DeclPtr, E->getType().getQualifiers(),
                         /*Init*/ true);
   return DeclPtr;
+}
+
+/// Does a store of the given IR type modify the full expected width?
+static bool isFullSizeType(CIRGenModule &CGM, mlir::Type ty,
+                           uint64_t expectedSize) {
+  return (CGM.getDataLayout().getTypeStoreSize(ty) * 8 == expectedSize);
+}
+
+/// Does the atomic type require memsetting to zero before initialization?
+///
+/// The IR type is provided as a way of making certain queries faster.
+bool AtomicInfo::requiresMemSetZero(mlir::Type ty) const {
+  // If the atomic type has size padding, we definitely need a memset.
+  if (hasPadding())
+    return true;
+
+  // Otherwise, do some simple heuristics to try to avoid it:
+  switch (getEvaluationKind()) {
+  // For scalars and complexes, check whether the store size of the
+  // type uses the full size.
+  case TEK_Scalar:
+    return !isFullSizeType(CGF.CGM, ty, AtomicSizeInBits);
+  case TEK_Complex:
+    llvm_unreachable("NYI");
+
+  // Padding in structs has an undefined bit pattern.  User beware.
+  case TEK_Aggregate:
+    return false;
+  }
+  llvm_unreachable("bad evaluation kind");
 }
 
 Address AtomicInfo::castToAtomicIntPointer(Address addr) const {
@@ -682,7 +714,9 @@ RValue CIRGenFunction::buildAtomicExpr(AtomicExpr *E) {
 
   if (E->getOp() == AtomicExpr::AO__c11_atomic_init ||
       E->getOp() == AtomicExpr::AO__opencl_atomic_init) {
-    llvm_unreachable("NYI");
+    LValue lvalue = makeAddrLValue(Ptr, AtomicTy);
+    buildAtomicInit(E->getVal1(), lvalue);
+    return RValue::get(nullptr);
   }
 
   auto TInfo = getContext().getTypeInfoInChars(AtomicTy);
@@ -1113,21 +1147,105 @@ void CIRGenFunction::buildAtomicStore(RValue rvalue, LValue lvalue,
   return buildAtomicStore(rvalue, lvalue, MO, IsVolatile, isInit);
 }
 
+/// Return true if \param ValTy is a type that should be casted to integer
+/// around the atomic memory operation. If \param CmpXchg is true, then the
+/// cast of a floating point type is made as that instruction can not have
+/// floating point operands.  TODO: Allow compare-and-exchange and FP - see
+/// comment in CIRGenAtomicExpandPass.cpp.
+static bool shouldCastToInt(mlir::Type ValTy, bool CmpXchg) {
+  if (mlir::cir::isAnyFloatingPointType(ValTy))
+    return isa<mlir::cir::FP80Type>(ValTy) || CmpXchg;
+  return !isa<mlir::cir::IntType>(ValTy) && !isa<mlir::cir::PointerType>(ValTy);
+}
+
+mlir::Value AtomicInfo::getScalarRValValueOrNull(RValue RVal) const {
+  if (RVal.isScalar() && (!hasPadding() || !LVal.isSimple()))
+    return RVal.getScalarVal();
+  return nullptr;
+}
+
+/// Materialize an r-value into memory for the purposes of storing it
+/// to an atomic type.
+Address AtomicInfo::materializeRValue(RValue rvalue) const {
+  // Aggregate r-values are already in memory, and EmitAtomicStore
+  // requires them to be values of the atomic type.
+  if (rvalue.isAggregate())
+    return rvalue.getAggregateAddress();
+
+  // Otherwise, make a temporary and materialize into it.
+  LValue TempLV = CGF.makeAddrLValue(CreateTempAlloca(), getAtomicType());
+  AtomicInfo Atomics(CGF, TempLV, TempLV.getAddress().getPointer().getLoc());
+  Atomics.emitCopyIntoMemory(rvalue);
+  return TempLV.getAddress();
+}
+
+bool AtomicInfo::emitMemSetZeroIfNecessary() const {
+  assert(LVal.isSimple());
+  Address addr = LVal.getAddress();
+  if (!requiresMemSetZero(addr.getElementType()))
+    return false;
+
+  llvm_unreachable("NYI");
+}
+
+/// Copy an r-value into memory as part of storing to an atomic type.
+/// This needs to create a bit-pattern suitable for atomic operations.
+void AtomicInfo::emitCopyIntoMemory(RValue rvalue) const {
+  assert(LVal.isSimple());
+  // If we have an r-value, the rvalue should be of the atomic type,
+  // which means that the caller is responsible for having zeroed
+  // any padding.  Just do an aggregate copy of that type.
+  if (rvalue.isAggregate()) {
+    llvm_unreachable("NYI");
+    return;
+  }
+
+  // Okay, otherwise we're copying stuff.
+
+  // Zero out the buffer if necessary.
+  emitMemSetZeroIfNecessary();
+
+  // Drill past the padding if present.
+  llvm_unreachable("NYI");
+
+  // Okay, store the rvalue in.
+  if (rvalue.isScalar()) {
+    llvm_unreachable("NYI");
+  } else {
+    llvm_unreachable("NYI");
+  }
+}
+
+mlir::Value AtomicInfo::convertRValueToInt(RValue RVal, bool CmpXchg) const {
+  // If we've got a scalar value of the right size, try to avoid going
+  // through memory. Floats get casted if needed by AtomicExpandPass.
+  if (auto Value = getScalarRValValueOrNull(RVal)) {
+    if (!shouldCastToInt(Value.getType(), CmpXchg)) {
+      return CGF.buildToMemory(Value, ValueTy);
+    } else {
+      llvm_unreachable("NYI");
+    }
+  }
+
+  llvm_unreachable("NYI");
+}
+
 /// Emit a store to an l-value of atomic type.
 ///
 /// Note that the r-value is expected to be an r-value *of the atomic
 /// type*; this means that for aggregate r-values, it should include
 /// storage for any padding that was necessary.
 void CIRGenFunction::buildAtomicStore(RValue rvalue, LValue dest,
-                                      mlir::cir::MemOrder AO, bool IsVolatile,
+                                      mlir::cir::MemOrder MO, bool IsVolatile,
                                       bool isInit) {
   // If this is an aggregate r-value, it should agree in type except
   // maybe for address-space qualification.
+  auto loc = dest.getPointer().getLoc();
   assert(!rvalue.isAggregate() ||
          rvalue.getAggregateAddress().getElementType() ==
              dest.getAddress().getElementType());
 
-  AtomicInfo atomics(*this, dest, dest.getPointer().getLoc());
+  AtomicInfo atomics(*this, dest, loc);
   LValue LVal = atomics.getAtomicLValue();
 
   // If this is an initialization, just put the value there normally.
@@ -1142,9 +1260,59 @@ void CIRGenFunction::buildAtomicStore(RValue rvalue, LValue dest,
       llvm_unreachable("NYI");
     }
 
-    llvm_unreachable("NYI");
+    // Okay, we're doing this natively.
+    auto ValToStore = atomics.convertRValueToInt(rvalue);
+
+    // Do the atomic store.
+    Address Addr = atomics.getAtomicAddress();
+    if (auto Value = atomics.getScalarRValValueOrNull(rvalue))
+      if (shouldCastToInt(Value.getType(), /*CmpXchg=*/false)) {
+        Addr = atomics.castToAtomicIntPointer(Addr);
+        ValToStore = builder.createIntCast(ValToStore, Addr.getElementType());
+      }
+    auto store = builder.createStore(loc, ValToStore, Addr);
+
+    if (MO == mlir::cir::MemOrder::Acquire)
+      MO = mlir::cir::MemOrder::Relaxed; // Monotonic
+    else if (MO == mlir::cir::MemOrder::AcquireRelease)
+      MO = mlir::cir::MemOrder::Release;
+    // Initializations don't need to be atomic.
+    if (!isInit)
+      store.setMemOrder(MO);
+
+    // Other decoration.
+    if (IsVolatile)
+      store.setIsVolatile(true);
+
+    // DecorateInstructionWithTBAA
+    assert(!UnimplementedFeature::tbaa());
     return;
   }
 
   llvm_unreachable("NYI");
+}
+
+void CIRGenFunction::buildAtomicInit(Expr *init, LValue dest) {
+  AtomicInfo atomics(*this, dest, getLoc(init->getSourceRange()));
+
+  switch (atomics.getEvaluationKind()) {
+  case TEK_Scalar: {
+    mlir::Value value = buildScalarExpr(init);
+    atomics.emitCopyIntoMemory(RValue::get(value));
+    return;
+  }
+
+  case TEK_Complex: {
+    llvm_unreachable("NYI");
+    return;
+  }
+
+  case TEK_Aggregate: {
+    // Fix up the destination if the initializer isn't an expression
+    // of atomic type.
+    llvm_unreachable("NYI");
+    return;
+  }
+  }
+  llvm_unreachable("bad evaluation kind");
 }

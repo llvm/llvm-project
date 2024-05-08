@@ -754,6 +754,15 @@ LongDoubleType::verify(function_ref<InFlightDiagnostic()> emitError,
 }
 
 //===----------------------------------------------------------------------===//
+// Floating-point type helpers
+//===----------------------------------------------------------------------===//
+
+bool mlir::cir::isAnyFloatingPointType(mlir::Type t) {
+  return isa<mlir::cir::SingleType, mlir::cir::DoubleType,
+             mlir::cir::LongDoubleType, mlir::cir::FP80Type>(t);
+}
+
+//===----------------------------------------------------------------------===//
 // FuncType Definitions
 //===----------------------------------------------------------------------===//
 
