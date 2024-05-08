@@ -8841,8 +8841,10 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
       VPValue *StrideVPV = Plan->getLiveIn(U);
       if (!StrideVPV)
         continue;
-      VPValue *CI = Plan->getOrAddLiveIn(ConstantInt::get(
-          U->getType(), ScevStride->getAPInt().getSExtValue()));
+      unsigned BW = U->getType()->getScalarSizeInBits();
+      APInt C = isa<SExtInst>(U) ? ScevStride->getAPInt().sext(BW)
+                                 : ScevStride->getAPInt().zext(BW);
+      VPValue *CI = Plan->getOrAddLiveIn(ConstantInt::get(U->getType(), C));
       StrideVPV->replaceAllUsesWith(CI);
     }
   }
