@@ -695,6 +695,10 @@ Bug Fixes to C++ Support
   until the noexcept-specifier is instantiated.
 - Fix a crash when an implicitly declared ``operator==`` function with a trailing requires-clause has its
   constraints compared to that of another declaration.
+- Fix a bug where explicit specializations of member functions/function templates would have substitution
+  performed incorrectly when checking constraints. Fixes (#GH90349).
+- Clang now allows constrained member functions to be explicitly specialized for an implicit instantiation
+  of a class template.
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
