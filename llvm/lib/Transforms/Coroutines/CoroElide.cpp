@@ -341,8 +341,6 @@ bool CoroIdElider::lifetimeEligibleForElide() const {
   if (CoroAllocs.empty())
     return false;
 
-  auto *ContainingFunction = CoroId->getFunction();
-
   // Check that for every coro.begin there is at least one coro.destroy directly
   // referencing the SSA value of that coro.begin along each
   // non-exceptional path.
@@ -354,7 +352,7 @@ bool CoroIdElider::lifetimeEligibleForElide() const {
   // First gather all of the terminators for the function.
   // Consider the final coro.suspend as the real terminator when the current
   // function is a coroutine.
-  for (BasicBlock &B : *ContainingFunction) {
+  for (BasicBlock &B : *FEM.ContainingFunction) {
     auto *TI = B.getTerminator();
 
     if (TI->getNumSuccessors() != 0 || isa<UnreachableInst>(TI))
@@ -422,6 +420,9 @@ bool CoroIdElider::attemptElide() {
 
   auto FrameSizeAndAlign = getFrameLayout(cast<Function>(ResumeAddrConstant));
 
+  auto CallerFunctionName = FEM.ContainingFunction->getName();
+  auto CalleeCoroutineName = CoroId->getCoroutine()->getName();
+
   if (EligibleForElide && FrameSizeAndAlign) {
     elideHeapAllocations(FrameSizeAndAlign->first, FrameSizeAndAlign->second);
     coro::replaceCoroFree(CoroId, /*Elide=*/true);
@@ -429,16 +430,14 @@ bool CoroIdElider::attemptElide() {
 
 #ifndef NDEBUG
       if (!CoroElideInfoOutputFilename.empty())
-        *getOrCreateLogFile()
-            << "Elide " << CoroId->getCoroutine()->getName() << " in "
-            << CoroId->getFunction()->getName() << "\n";
+        *getOrCreateLogFile() << "Elide " << CalleeCoroutineName << " in "
+                              << FEM.ContainingFunction->getName() << "\n";
 #endif
 
       ORE.emit([&]() {
         return OptimizationRemark(DEBUG_TYPE, "CoroElide", CoroId)
-               << "'" << ore::NV("callee", CoroId->getCoroutine()->getName())
-               << "' elided in '"
-               << ore::NV("caller", CoroId->getFunction()->getName())
+               << "'" << ore::NV("callee", CalleeCoroutineName)
+               << "' elided in '" << ore::NV("caller", CallerFunctionName)
                << "' (frame_size="
                << ore::NV("frame_size", FrameSizeAndAlign->first) << ", align="
                << ore::NV("align", FrameSizeAndAlign->second.value()) << ")";
@@ -446,10 +445,9 @@ bool CoroIdElider::attemptElide() {
   } else {
     ORE.emit([&]() {
       auto Remark = OptimizationRemarkMissed(DEBUG_TYPE, "CoroElide", CoroId)
-                    << "'"
-                    << ore::NV("callee", CoroId->getCoroutine()->getName())
+                    << "'" << ore::NV("callee", CalleeCoroutineName)
                     << "' not elided in '"
-                    << ore::NV("caller", CoroId->getFunction()->getName());
+                    << ore::NV("caller", CallerFunctionName);
 
       if (FrameSizeAndAlign)
         return Remark << "' (frame_size="
