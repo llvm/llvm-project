@@ -166,9 +166,9 @@ define signext i32 @addmuladd_multiuse(i32 signext %a) {
 ; CHECK-LABEL: addmuladd_multiuse:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #324 // =0x144
+; CHECK-NEXT:    mov w9, #1300 // =0x514
+; CHECK-NEXT:    madd w8, w0, w8, w9
 ; CHECK-NEXT:    add w9, w0, #4
-; CHECK-NEXT:    mov w10, #4 // =0x4
-; CHECK-NEXT:    madd w8, w9, w8, w10
 ; CHECK-NEXT:    eor w0, w9, w8
 ; CHECK-NEXT:    ret
   %tmp0 = add i32 %a, 4
@@ -198,11 +198,10 @@ define signext i32 @addmuladd_multiuse2(i32 signext %a) {
 ; CHECK-LABEL: addmuladd_multiuse2:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #324 // =0x144
-; CHECK-NEXT:    add w9, w0, #4
-; CHECK-NEXT:    mov w11, #4 // =0x4
-; CHECK-NEXT:    lsl w10, w9, #2
-; CHECK-NEXT:    madd w8, w9, w8, w11
-; CHECK-NEXT:    add w9, w10, #4
+; CHECK-NEXT:    lsl w9, w0, #2
+; CHECK-NEXT:    mov w10, #1300 // =0x514
+; CHECK-NEXT:    madd w8, w0, w8, w10
+; CHECK-NEXT:    add w9, w9, #20
 ; CHECK-NEXT:    eor w0, w8, w9
 ; CHECK-NEXT:    ret
   %tmp0 = add i32 %a, 4
@@ -233,8 +232,8 @@ define signext i32 @addaddmuladd_multiuse(i32 signext %a, i32 %b) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #324 // =0x144
 ; CHECK-NEXT:    add w9, w0, #4
-; CHECK-NEXT:    madd w8, w9, w8, w1
-; CHECK-NEXT:    add w8, w8, #4
+; CHECK-NEXT:    madd w8, w0, w8, w1
+; CHECK-NEXT:    add w8, w8, #1300
 ; CHECK-NEXT:    eor w0, w9, w8
 ; CHECK-NEXT:    ret
   %tmp0 = add i32 %a, 4
@@ -249,12 +248,11 @@ define signext i32 @addaddmuladd_multiuse2(i32 signext %a, i32 %b) {
 ; CHECK-LABEL: addaddmuladd_multiuse2:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #324 // =0x144
-; CHECK-NEXT:    add w9, w0, #4
-; CHECK-NEXT:    mov w10, #162 // =0xa2
-; CHECK-NEXT:    madd w8, w9, w8, w1
-; CHECK-NEXT:    madd w9, w9, w10, w1
-; CHECK-NEXT:    add w8, w8, #4
-; CHECK-NEXT:    add w9, w9, #4
+; CHECK-NEXT:    mov w9, #162 // =0xa2
+; CHECK-NEXT:    madd w8, w0, w8, w1
+; CHECK-NEXT:    madd w9, w0, w9, w1
+; CHECK-NEXT:    add w8, w8, #1300
+; CHECK-NEXT:    add w9, w9, #652
 ; CHECK-NEXT:    eor w0, w9, w8
 ; CHECK-NEXT:    ret
   %tmp0 = add i32 %a, 4
@@ -319,17 +317,17 @@ define void @addmuladd_gep(ptr %p, i64 %a) {
 define i32 @addmuladd_gep2(ptr %p, i32 %a) {
 ; CHECK-LABEL: addmuladd_gep2:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #3240 // =0xca8
 ; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
-; CHECK-NEXT:    sxtw x8, w1
-; CHECK-NEXT:    mov w9, #3240 // =0xca8
-; CHECK-NEXT:    add x8, x8, #1
-; CHECK-NEXT:    madd x9, x8, x9, x0
-; CHECK-NEXT:    ldr w9, [x9, #20]
-; CHECK-NEXT:    tbnz w9, #31, .LBB22_2
+; CHECK-NEXT:    smaddl x8, w1, w8, x0
+; CHECK-NEXT:    ldr w8, [x8, #3260]
+; CHECK-NEXT:    tbnz w8, #31, .LBB22_2
 ; CHECK-NEXT:  // %bb.1:
 ; CHECK-NEXT:    mov w0, wzr
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB22_2: // %then
+; CHECK-NEXT:    sxtw x8, w1
+; CHECK-NEXT:    add x8, x8, #1
 ; CHECK-NEXT:    str x8, [x0]
 ; CHECK-NEXT:    mov w0, #1 // =0x1
 ; CHECK-NEXT:    ret
@@ -351,11 +349,10 @@ define signext i32 @addmuladd_multiuse2_nsw(i32 signext %a) {
 ; CHECK-LABEL: addmuladd_multiuse2_nsw:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #324 // =0x144
-; CHECK-NEXT:    add w9, w0, #4
-; CHECK-NEXT:    mov w11, #4 // =0x4
-; CHECK-NEXT:    lsl w10, w9, #2
-; CHECK-NEXT:    madd w8, w9, w8, w11
-; CHECK-NEXT:    add w9, w10, #4
+; CHECK-NEXT:    lsl w9, w0, #2
+; CHECK-NEXT:    mov w10, #1300 // =0x514
+; CHECK-NEXT:    madd w8, w0, w8, w10
+; CHECK-NEXT:    add w9, w9, #20
 ; CHECK-NEXT:    eor w0, w8, w9
 ; CHECK-NEXT:    ret
   %tmp0 = add nsw i32 %a, 4
@@ -371,11 +368,10 @@ define signext i32 @addmuladd_multiuse2_nuw(i32 signext %a) {
 ; CHECK-LABEL: addmuladd_multiuse2_nuw:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #324 // =0x144
-; CHECK-NEXT:    add w9, w0, #4
-; CHECK-NEXT:    mov w11, #4 // =0x4
-; CHECK-NEXT:    lsl w10, w9, #2
-; CHECK-NEXT:    madd w8, w9, w8, w11
-; CHECK-NEXT:    add w9, w10, #4
+; CHECK-NEXT:    lsl w9, w0, #2
+; CHECK-NEXT:    mov w10, #1300 // =0x514
+; CHECK-NEXT:    madd w8, w0, w8, w10
+; CHECK-NEXT:    add w9, w9, #20
 ; CHECK-NEXT:    eor w0, w8, w9
 ; CHECK-NEXT:    ret
   %tmp0 = add nuw i32 %a, 4
@@ -391,11 +387,10 @@ define signext i32 @addmuladd_multiuse2_nswnuw(i32 signext %a) {
 ; CHECK-LABEL: addmuladd_multiuse2_nswnuw:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #324 // =0x144
-; CHECK-NEXT:    add w9, w0, #4
-; CHECK-NEXT:    mov w11, #4 // =0x4
-; CHECK-NEXT:    lsl w10, w9, #2
-; CHECK-NEXT:    madd w8, w9, w8, w11
-; CHECK-NEXT:    add w9, w10, #4
+; CHECK-NEXT:    lsl w9, w0, #2
+; CHECK-NEXT:    mov w10, #1300 // =0x514
+; CHECK-NEXT:    madd w8, w0, w8, w10
+; CHECK-NEXT:    add w9, w9, #20
 ; CHECK-NEXT:    eor w0, w8, w9
 ; CHECK-NEXT:    ret
   %tmp0 = add nsw nuw i32 %a, 4
