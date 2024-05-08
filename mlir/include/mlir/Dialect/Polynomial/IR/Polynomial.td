@@ -176,7 +176,7 @@ def Polynomial_PolynomialType : Polynomial_Type<"Polynomial", "polynomial"> {
     A type for polynomials in a polynomial quotient ring.
   }];
   let parameters = (ins Polynomial_RingAttr:$ring);
-  let assemblyFormat = "`<` qualified($ring) `>`";
+  let assemblyFormat = "`<` struct(params) `>`";
 }
 
 def PolynomialLike: TypeOrContainer<Polynomial_PolynomialType, "polynomial-like">;
