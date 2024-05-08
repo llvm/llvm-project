@@ -733,7 +733,12 @@ NamedDecl *Parser::ParseTypeParameter(unsigned Depth, unsigned Position) {
   // we introduce the type parameter into the local scope.
   SourceLocation EqualLoc;
   ParsedType DefaultArg;
+  std::optional<DelayTemplateIdDestructionRAII> DontDestructTemplateIds;
   if (TryConsumeToken(tok::equal, EqualLoc)) {
+    // The default argument might contain a lambda declaration; avoid destroying
+    // parsed template ids at the end of that declaration because they can be
+    // used in a type constraint later.
+    DontDestructTemplateIds.emplace(*this, /*DelayTemplateIdDestruction=*/true);
     // The default argument may declare template parameters, notably
     // if it contains a generic lambda, so we need to increase
     // the template depth as these parameters would not be instantiated

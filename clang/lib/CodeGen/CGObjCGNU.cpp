@@ -2905,23 +2905,29 @@ CGObjCGNU::GenerateMessageSend(CodeGenFunction &CGF,
       break;
     case CodeGenOptions::Mixed:
     case CodeGenOptions::NonLegacy:
+      StringRef name = "objc_msgSend";
       if (CGM.ReturnTypeUsesFPRet(ResultType)) {
-        imp =
-            CGM.CreateRuntimeFunction(llvm::FunctionType::get(IdTy, IdTy, true),
-                                      "objc_msgSend_fpret")
-                .getCallee();
+        name = "objc_msgSend_fpret";
       } else if (CGM.ReturnTypeUsesSRet(MSI.CallInfo)) {
-        // The actual types here don't matter - we're going to bitcast the
-        // function anyway
-        imp =
-            CGM.CreateRuntimeFunction(llvm::FunctionType::get(IdTy, IdTy, true),
-                                      "objc_msgSend_stret")
-                .getCallee();
-      } else {
-        imp = CGM.CreateRuntimeFunction(
-                     llvm::FunctionType::get(IdTy, IdTy, true), "objc_msgSend")
-                  .getCallee();
+        name = "objc_msgSend_stret";
+
+        // The address of the memory block is be passed in x8 for POD type,
+        // or in x0 for non-POD type (marked as inreg).
+        bool shouldCheckForInReg =
+            CGM.getContext()
+                .getTargetInfo()
+                .getTriple()
+                .isWindowsMSVCEnvironment() &&
+            CGM.getContext().getTargetInfo().getTriple().isAArch64();
+        if (shouldCheckForInReg && CGM.ReturnTypeHasInReg(MSI.CallInfo)) {
+          name = "objc_msgSend_stret2";
+        }
       }
+      // The actual types here don't matter - we're going to bitcast the
+      // function anyway
+      imp = CGM.CreateRuntimeFunction(llvm::FunctionType::get(IdTy, IdTy, true),
+                                      name)
+                .getCallee();
     }
 
   // Reset the receiver in case the lookup modified it

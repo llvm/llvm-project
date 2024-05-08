@@ -108,16 +108,19 @@ llvm.func @func_with_debug(%arg: i64) {
   // CHECK: call void @func_no_debug(), !dbg ![[NAMED_LOC:[0-9]+]]
   llvm.call @func_no_debug() : () -> () loc("named"("foo.mlir":10:10))
 
-  // CHECK: call void @func_no_debug(), !dbg ![[CALLSITE_LOC:[0-9]+]]
+  // CHECK: call void @func_no_debug(), !dbg ![[MY_SOURCE_LOC:[0-9]+]]
   llvm.call @func_no_debug() : () -> () loc(callsite("nodebug.cc":3:4 at "mysource.cc":5:6))
 
-  // CHECK: call void @func_no_debug(), !dbg ![[CALLSITE_LOC:[0-9]+]]
+  // CHECK: call void @func_no_debug(), !dbg ![[MY_SOURCE_LOC]]
   llvm.call @func_no_debug() : () -> () loc(callsite("nodebug.cc":3:4 at fused<#sp0>["mysource.cc":5:6]))
 
   // CHECK: call void @func_no_debug(), !dbg ![[FUSED_LOC:[0-9]+]]
   llvm.call @func_no_debug() : () -> () loc(fused[callsite(fused<#callee>["mysource.cc":5:6] at "mysource.cc":1:1), "mysource.cc":1:1])
 
-  // CHECK: add i64 %[[ARG]], %[[ARG]], !dbg ![[FUSEDWITH_LOC:[0-9]+]]
+  // CHECK: call void @func_no_debug(), !dbg ![[FUSEDWITH_LOC:[0-9]+]]
+  llvm.call @func_no_debug() : () -> () loc(callsite(callsite(fused<#callee>["foo.mlir":2:4] at "foo.mlir":1:1) at fused<#sp0>["foo.mlir":28:5]))
+
+  // CHECK: add i64 %[[ARG]], %[[ARG]], !dbg ![[FUSEDWITH_LOC]]
   %sum = llvm.add %arg, %arg : i64 loc(callsite(fused<#callee>["foo.mlir":2:4] at fused<#sp0>["foo.mlir":28:5]))
 
   llvm.return
@@ -153,7 +156,7 @@ llvm.func @empty_types() {
 // CHECK: ![[BLOCK_LOC]] = distinct !DILexicalBlock(scope: ![[FUNC_LOC]])
 // CHECK: ![[NO_NAME_VAR]] = !DILocalVariable(scope: ![[BLOCK_LOC]])
 
-// CHECK-DAG: ![[CALLSITE_LOC]] = !DILocation(line: 5, column: 6,
+// CHECK-DAG: ![[MY_SOURCE_LOC]] = !DILocation(line: 5, column: 6
 // CHECK-DAG: ![[FILE_LOC]] = !DILocation(line: 1, column: 2,
 // CHECK-DAG: ![[NAMED_LOC]] = !DILocation(line: 10, column: 10
 // CHECK-DAG: ![[FUSED_LOC]] = !DILocation(line: 1, column: 1
@@ -442,12 +445,16 @@ llvm.mlir.global @global_variable() {dbg_expr = #di_global_variable_expression} 
 #di_subprogram = #llvm.di_subprogram<scope = #di_file, file = #di_file, subprogramFlags = Optimized, type = #di_subroutine_type>
 #di_composite_type = #llvm.di_composite_type<tag = DW_TAG_class_type, recId = distinct[0]<>, scope = #di_subprogram>
 
-#di_global_variable = #llvm.di_global_variable<file = #di_file, line = 1, type = #di_composite_type>
+// Use the inner type standalone outside too. Ensures it's not cached wrong.
+#di_var_type = #llvm.di_subroutine_type<types = #di_composite_type, #di_composite_type_inner>
+#di_global_variable = #llvm.di_global_variable<file = #di_file, line = 1, type = #di_var_type>
 #di_global_variable_expression = #llvm.di_global_variable_expression<var = #di_global_variable>
 
 llvm.mlir.global @global_variable() {dbg_expr = #di_global_variable_expression} : !llvm.struct<()>
 
-// CHECK: distinct !DIGlobalVariable({{.*}}type: ![[COMP:[0-9]+]],
+// CHECK: distinct !DIGlobalVariable({{.*}}type: ![[VAR:[0-9]+]],
+// CHECK: ![[VAR]] = !DISubroutineType(types: ![[COMPS:[0-9]+]])
+// CHECK: ![[COMPS]] = !{![[COMP:[0-9]+]],
 // CHECK: ![[COMP]] = distinct !DICompositeType({{.*}}scope: ![[SCOPE:[0-9]+]],
 // CHECK: ![[SCOPE]] = !DISubprogram({{.*}}type: ![[SUBROUTINE:[0-9]+]],
 // CHECK: ![[SUBROUTINE]] = !DISubroutineType(types: ![[SR_TYPES:[0-9]+]])

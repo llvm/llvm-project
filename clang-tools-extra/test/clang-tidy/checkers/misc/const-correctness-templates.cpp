@@ -58,3 +58,18 @@ void concatenate3(Args... args)
     (..., (stream << args));
 }
 } // namespace gh70323
+
+namespace gh60895 {
+
+template <class T> void f1(T &&a);
+template <class T> void f2(T &&a);
+template <class T> void f1(T &&a) { f2<T>(a); }
+template <class T> void f2(T &&a) { f1<T>(a); }
+void f() {
+  int x = 0;
+  // CHECK-MESSAGES:[[@LINE-1]]:3: warning: variable 'x' of type 'int' can be declared 'const'
+  // CHECK-FIXES: int const x = 0;
+  f1(x);
+}
+
+} // namespace gh60895

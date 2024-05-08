@@ -200,3 +200,13 @@ func.func @test_optional_declare(%arg0: !fir.box<!fir.array<?xi32>>) {
 // CHECK:    %[[VAL_7:.*]] = fir.absent !fir.box<!fir.array<?xi32>>
 // CHECK:    fir.result %[[VAL_7]] : !fir.box<!fir.array<?xi32>>
 // CHECK:  }
+
+func.func @dummy_scope(%arg0: !fir.ref<f32>) {
+  %scope = fir.dummy_scope : !fir.dscope
+  %0:2 = hlfir.declare %arg0 dummy_scope %scope {uniq_name = "x"} : (!fir.ref<f32>, !fir.dscope) -> (!fir.ref<f32>, !fir.ref<f32>)
+  return
+}
+// CHECK-LABEL:   func.func @dummy_scope(
+// CHECK-SAME:    %[[VAL_0:.*]]: !fir.ref<f32>) {
+// CHECK:         %[[SCOPE:.*]] = fir.dummy_scope : !fir.dscope
+// CHECK:         %[[VAL_1:.*]] = fir.declare %[[VAL_0]] dummy_scope %[[SCOPE]] {uniq_name = "x"} : (!fir.ref<f32>, !fir.dscope) -> !fir.ref<f32>

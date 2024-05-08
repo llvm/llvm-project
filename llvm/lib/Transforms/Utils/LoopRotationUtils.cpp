@@ -287,7 +287,7 @@ static void updateBranchWeights(BranchInst &PreHeaderBI, BranchInst &LoopBI,
     return;
 
   SmallVector<uint32_t, 2> Weights;
-  extractFromBranchWeightMD(WeightMD, Weights);
+  extractFromBranchWeightMD32(WeightMD, Weights);
   if (Weights.size() != 2)
     return;
   uint32_t OrigLoopExitWeight = Weights[0];
@@ -639,9 +639,8 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
             !NextDbgInsts.empty()) {
           auto DbgValueRange =
               LoopEntryBranch->cloneDebugInfoFrom(Inst, NextDbgInsts.begin());
-          RemapDbgVariableRecordRange(M, DbgValueRange, ValueMap,
-                                      RF_NoModuleLevelChanges |
-                                          RF_IgnoreMissingLocals);
+          RemapDbgRecordRange(M, DbgValueRange, ValueMap,
+                              RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
           // Erase anything we've seen before.
           for (DbgVariableRecord &DVR :
                make_early_inc_range(filterDbgVars(DbgValueRange)))
@@ -666,9 +665,8 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
       if (LoopEntryBranch->getParent()->IsNewDbgInfoFormat &&
           !NextDbgInsts.empty()) {
         auto Range = C->cloneDebugInfoFrom(Inst, NextDbgInsts.begin());
-        RemapDbgVariableRecordRange(M, Range, ValueMap,
-                                    RF_NoModuleLevelChanges |
-                                        RF_IgnoreMissingLocals);
+        RemapDbgRecordRange(M, Range, ValueMap,
+                            RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
         NextDbgInsts = DbgMarker::getEmptyDbgRecordRange();
         // Erase anything we've seen before.
         for (DbgVariableRecord &DVR :

@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "TestDialect.h"
+#include "TestOps.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"

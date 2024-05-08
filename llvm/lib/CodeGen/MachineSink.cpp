@@ -309,7 +309,7 @@ static bool blockPrologueInterferes(const MachineBasicBlock *BB,
         if (PI->readsRegister(Reg, TRI))
           return true;
         // Check for interference with non-dead defs
-        auto *DefOp = PI->findRegisterDefOperand(Reg, false, true, TRI);
+        auto *DefOp = PI->findRegisterDefOperand(Reg, TRI, false, true);
         if (DefOp && !DefOp->isDead())
           return true;
       }

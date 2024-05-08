@@ -1,5 +1,5 @@
 // REQUIRES: amdgpu-registered-target
-// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -S -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -emit-llvm -o - %s | FileCheck %s
 
 // CHECK-LABEL: @use_flat_scratch_name
 kernel void use_flat_scratch_name()

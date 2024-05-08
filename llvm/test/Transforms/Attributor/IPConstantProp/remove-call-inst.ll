@@ -33,8 +33,8 @@ define internal i32 @wwrite(i64 %i) nounwind readnone {
 ; CGSCC-SAME: () #[[ATTR1:[0-9]+]] {
 ; CGSCC-NEXT:  entry:
 ; CGSCC-NEXT:    switch i64 0, label [[SW_DEFAULT:%.*]] [
-; CGSCC-NEXT:    i64 3, label [[RETURN:%.*]]
-; CGSCC-NEXT:    i64 10, label [[RETURN]]
+; CGSCC-NEXT:      i64 3, label [[RETURN:%.*]]
+; CGSCC-NEXT:      i64 10, label [[RETURN]]
 ; CGSCC-NEXT:    ]
 ; CGSCC:       sw.default:
 ; CGSCC-NEXT:    ret i32 123

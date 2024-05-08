@@ -42,6 +42,13 @@ public:
 
 class LLDB_API SBDebugger {
 public:
+  FLAGS_ANONYMOUS_ENUM(){
+      eBroadcastBitProgress = lldb::DebuggerBroadcastBit::eBroadcastBitProgress,
+      eBroadcastBitWarning = lldb::DebuggerBroadcastBit::eBroadcastBitWarning,
+      eBroadcastBitError = lldb::DebuggerBroadcastBit::eBroadcastBitError,
+      eBroadcastBitProgressCategory =
+          lldb::DebuggerBroadcastBit::eBroadcastBitProgressCategory,
+  };
   SBDebugger();
 
   SBDebugger(const lldb::SBDebugger &rhs);

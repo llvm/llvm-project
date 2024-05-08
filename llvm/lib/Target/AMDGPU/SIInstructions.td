@@ -106,6 +106,12 @@ def ENDPGM_TRAP : SPseudoInstSI<
   let usesCustomInserter = 1;
 }
 
+def SIMULATED_TRAP : SPseudoInstSI<(outs), (ins), [(AMDGPUsimulated_trap)],
+                                   "SIMULATED_TRAP"> {
+  let hasSideEffects = 1;
+  let usesCustomInserter = 1;
+}
+
 def ATOMIC_FENCE : SPseudoInstSI<
   (outs), (ins i32imm:$ordering, i32imm:$scope),
   [(atomic_fence (i32 timm:$ordering), (i32 timm:$scope))],

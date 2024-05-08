@@ -1,8 +1,8 @@
-// RUN: %clang_cc1 -triple riscv64-none-linux-gnu -target-feature +f -target-feature +d -target-feature +zve64d -mvscale-min=1 -mvscale-max=1 -S -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-64
-// RUN: %clang_cc1 -triple riscv64-none-linux-gnu -target-feature +f -target-feature +d -target-feature +zve64d -mvscale-min=2 -mvscale-max=2 -S -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-128
-// RUN: %clang_cc1 -triple riscv64-none-linux-gnu -target-feature +f -target-feature +d -target-feature +zve64d -mvscale-min=4 -mvscale-max=4 -S -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-256
-// RUN: %clang_cc1 -triple riscv64-none-linux-gnu -target-feature +f -target-feature +d -target-feature +zve64d -mvscale-min=8 -mvscale-max=8 -S -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-512
-// RUN: %clang_cc1 -triple riscv64-none-linux-gnu -target-feature +f -target-feature +d -target-feature +zve64d -mvscale-min=16 -mvscale-max=16 -S -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-1024
+// RUN: %clang_cc1 -triple riscv64-none-linux-gnu -target-feature +f -target-feature +d -target-feature +zve64d -mvscale-min=1 -mvscale-max=1 -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-64
+// RUN: %clang_cc1 -triple riscv64-none-linux-gnu -target-feature +f -target-feature +d -target-feature +zve64d -mvscale-min=2 -mvscale-max=2 -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-128
+// RUN: %clang_cc1 -triple riscv64-none-linux-gnu -target-feature +f -target-feature +d -target-feature +zve64d -mvscale-min=4 -mvscale-max=4 -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-256
+// RUN: %clang_cc1 -triple riscv64-none-linux-gnu -target-feature +f -target-feature +d -target-feature +zve64d -mvscale-min=8 -mvscale-max=8 -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-512
+// RUN: %clang_cc1 -triple riscv64-none-linux-gnu -target-feature +f -target-feature +d -target-feature +zve64d -mvscale-min=16 -mvscale-max=16 -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-1024
 
 // REQUIRES: riscv-registered-target
 

@@ -82,6 +82,9 @@ struct InlineDescriptor {
   InlineDescriptor(const Descriptor *D)
       : Offset(sizeof(InlineDescriptor)), IsConst(false), IsInitialized(false),
         IsBase(false), IsActive(false), IsFieldMutable(false), Desc(D) {}
+
+  void dump() const { dump(llvm::errs()); }
+  void dump(llvm::raw_ostream &OS) const;
 };
 
 /// Describes a memory block created by an allocation site.

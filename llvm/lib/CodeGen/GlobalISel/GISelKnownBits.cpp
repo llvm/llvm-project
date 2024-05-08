@@ -64,8 +64,11 @@ KnownBits GISelKnownBits::getKnownBits(MachineInstr &MI) {
 
 KnownBits GISelKnownBits::getKnownBits(Register R) {
   const LLT Ty = MRI.getType(R);
+  // Since the number of lanes in a scalable vector is unknown at compile time,
+  // we track one bit which is implicitly broadcast to all lanes.  This means
+  // that all lanes in a scalable vector are considered demanded.
   APInt DemandedElts =
-      Ty.isVector() ? APInt::getAllOnes(Ty.getNumElements()) : APInt(1, 1);
+      Ty.isFixedVector() ? APInt::getAllOnes(Ty.getNumElements()) : APInt(1, 1);
   return getKnownBits(R, DemandedElts);
 }
 
@@ -693,6 +696,20 @@ unsigned GISelKnownBits::computeNumSignBits(Register R,
     // e.g. i16->i32 = '16' bits known.
     const MachineMemOperand *MMO = *MI.memoperands_begin();
     return TyBits - MMO->getSizeInBits().getValue();
+  }
+  case TargetOpcode::G_AND:
+  case TargetOpcode::G_OR:
+  case TargetOpcode::G_XOR: {
+    Register Src1 = MI.getOperand(1).getReg();
+    unsigned Src1NumSignBits =
+        computeNumSignBits(Src1, DemandedElts, Depth + 1);
+    if (Src1NumSignBits != 1) {
+      Register Src2 = MI.getOperand(2).getReg();
+      unsigned Src2NumSignBits =
+          computeNumSignBits(Src2, DemandedElts, Depth + 1);
+      FirstAnswer = std::min(Src1NumSignBits, Src2NumSignBits);
+    }
+    break;
   }
   case TargetOpcode::G_TRUNC: {
     Register Src = MI.getOperand(1).getReg();

@@ -30,8 +30,8 @@
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Support/RISCVISAInfo.h"
 #include "llvm/Support/VirtualFileSystem.h"
+#include "llvm/TargetParser/RISCVISAInfo.h"
 #include "llvm/TargetParser/TargetParser.h"
 #include <system_error>
 
@@ -1796,9 +1796,7 @@ selectRISCVMultilib(const MultilibSet &RISCVMultilibSet, StringRef Arch,
       }
       auto &MLConfigISAInfo = *MLConfigParseResult;
 
-      const llvm::RISCVISAInfo::OrderedExtensionMap &MLConfigArchExts =
-          MLConfigISAInfo->getExtensions();
-      for (auto MLConfigArchExt : MLConfigArchExts) {
+      for (auto &MLConfigArchExt : MLConfigISAInfo->getExtensions()) {
         auto ExtName = MLConfigArchExt.first;
         NewMultilib.flag(Twine("-", ExtName).str());
 

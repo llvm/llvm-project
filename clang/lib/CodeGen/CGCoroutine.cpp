@@ -413,10 +413,8 @@ llvm::Function *
 CodeGenFunction::generateAwaitSuspendWrapper(Twine const &CoroName,
                                              Twine const &SuspendPointName,
                                              CoroutineSuspendExpr const &S) {
-  std::string FuncName = "__await_suspend_wrapper_";
-  FuncName += CoroName.str();
-  FuncName += '_';
-  FuncName += SuspendPointName.str();
+  std::string FuncName =
+      (CoroName + ".__await_suspend_wrapper__" + SuspendPointName).str();
 
   ASTContext &C = getContext();
 

@@ -13,10 +13,13 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/IR/AttributeMask.h"
+#include "llvm/IR/Attributes.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/MemoryModelRelaxationAnnotations.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Type.h"
@@ -472,6 +475,27 @@ void Instruction::dropPoisonGeneratingMetadata() {
   eraseMetadata(LLVMContext::MD_align);
 }
 
+bool Instruction::hasPoisonGeneratingReturnAttributes() const {
+  if (const auto *CB = dyn_cast<CallBase>(this)) {
+    AttributeSet RetAttrs = CB->getAttributes().getRetAttrs();
+    return RetAttrs.hasAttribute(Attribute::Range) ||
+           RetAttrs.hasAttribute(Attribute::Alignment) ||
+           RetAttrs.hasAttribute(Attribute::NonNull);
+  }
+  return false;
+}
+
+void Instruction::dropPoisonGeneratingReturnAttributes() {
+  if (auto *CB = dyn_cast<CallBase>(this)) {
+    AttributeMask AM;
+    AM.addAttribute(Attribute::Range);
+    AM.addAttribute(Attribute::Alignment);
+    AM.addAttribute(Attribute::NonNull);
+    CB->removeRetAttrs(AM);
+  }
+  assert(!hasPoisonGeneratingReturnAttributes() && "must be kept in sync");
+}
+
 void Instruction::dropUBImplyingAttrsAndUnknownMetadata(
     ArrayRef<unsigned> KnownIDs) {
   dropUnknownNonDebugMetadata(KnownIDs);
@@ -610,6 +634,13 @@ void Instruction::copyIRFlags(const Value *V, bool IncludeWrapFlags) {
     if (auto *OB = dyn_cast<OverflowingBinaryOperator>(V)) {
       setHasNoSignedWrap(OB->hasNoSignedWrap());
       setHasNoUnsignedWrap(OB->hasNoUnsignedWrap());
+    }
+  }
+
+  if (auto *TI = dyn_cast<TruncInst>(V)) {
+    if (isa<TruncInst>(this)) {
+      setHasNoSignedWrap(TI->hasNoSignedWrap());
+      setHasNoUnsignedWrap(TI->hasNoUnsignedWrap());
     }
   }
 

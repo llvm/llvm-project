@@ -29,15 +29,18 @@ Prescanner::Prescanner(Messages &messages, CookedSource &cooked,
     Preprocessor &preprocessor, common::LanguageFeatureControl lfc)
     : messages_{messages}, cooked_{cooked}, preprocessor_{preprocessor},
       allSources_{preprocessor_.allSources()}, features_{lfc},
+      backslashFreeFormContinuation_{preprocessor.AnyDefinitions()},
       encoding_{allSources_.encoding()} {}
 
 Prescanner::Prescanner(const Prescanner &that)
     : messages_{that.messages_}, cooked_{that.cooked_},
       preprocessor_{that.preprocessor_}, allSources_{that.allSources_},
-      features_{that.features_}, inFixedForm_{that.inFixedForm_},
+      features_{that.features_},
+      backslashFreeFormContinuation_{that.backslashFreeFormContinuation_},
+      inFixedForm_{that.inFixedForm_},
       fixedFormColumnLimit_{that.fixedFormColumnLimit_},
-      encoding_{that.encoding_}, prescannerNesting_{that.prescannerNesting_ +
-                                     1},
+      encoding_{that.encoding_},
+      prescannerNesting_{that.prescannerNesting_ + 1},
       skipLeadingAmpersand_{that.skipLeadingAmpersand_},
       compilerDirectiveBloomFilter_{that.compilerDirectiveBloomFilter_},
       compilerDirectiveSentinels_{that.compilerDirectiveSentinels_} {}
@@ -206,8 +209,10 @@ void Prescanner::Statement() {
     case LineClassification::Kind::IncludeDirective:
     case LineClassification::Kind::DefinitionDirective:
     case LineClassification::Kind::PreprocessorDirective:
-      Say(preprocessed->GetProvenanceRange(),
-          "Preprocessed line resembles a preprocessor directive"_warn_en_US);
+      if (features_.ShouldWarn(common::UsageWarning::Preprocessing)) {
+        Say(preprocessed->GetProvenanceRange(),
+            "Preprocessed line resembles a preprocessor directive"_warn_en_US);
+      }
       preprocessed->ToLowerCase()
           .CheckBadFortranCharacters(messages_, *this)
           .CheckBadParentheses(messages_)
@@ -316,10 +321,12 @@ void Prescanner::LabelField(TokenSequence &token) {
     ++column_;
   }
   if (badColumn && !preprocessor_.IsNameDefined(token.CurrentOpenToken())) {
-    Say(GetProvenance(start + *badColumn - 1),
-        *badColumn == 6
-            ? "Statement should not begin with a continuation line"_warn_en_US
-            : "Character in fixed-form label field must be a digit"_warn_en_US);
+    if (features_.ShouldWarn(common::UsageWarning::Scanning)) {
+      Say(GetProvenance(start + *badColumn - 1),
+          *badColumn == 6
+              ? "Statement should not begin with a continuation line"_warn_en_US
+              : "Character in fixed-form label field must be a digit"_warn_en_US);
+    }
     token.clear();
     if (*badColumn < 6) {
       at_ = start;
@@ -796,8 +803,10 @@ void Prescanner::Hollerith(
   while (count-- > 0) {
     if (PadOutCharacterLiteral(tokens)) {
     } else if (*at_ == '\n') {
-      Say(GetProvenanceRange(start, at_),
-          "Possible truncated Hollerith literal"_warn_en_US);
+      if (features_.ShouldWarn(common::UsageWarning::Scanning)) {
+        Say(GetProvenanceRange(start, at_),
+            "Possible truncated Hollerith literal"_warn_en_US);
+      }
       break;
     } else {
       NextChar();
@@ -955,8 +964,10 @@ void Prescanner::FortranInclude(const char *firstQuote) {
     const char *garbage{p};
     for (; *p != '\n' && *p != '!'; ++p) {
     }
-    Say(GetProvenanceRange(garbage, p),
-        "excess characters after path name"_warn_en_US);
+    if (features_.ShouldWarn(common::UsageWarning::Scanning)) {
+      Say(GetProvenanceRange(garbage, p),
+          "excess characters after path name"_warn_en_US);
+    }
   }
   std::string buf;
   llvm::raw_string_ostream error{buf};
@@ -1226,9 +1237,14 @@ bool Prescanner::Continuation(bool mightNeedFixedFormSpace) {
     } else {
       return FreeFormContinuation();
     }
-  } else {
-    return false;
+  } else if (*at_ == '\\' && at_ + 2 == nextLine_ &&
+      backslashFreeFormContinuation_ && !inFixedForm_ && nextLine_ < limit_) {
+    // cpp-like handling of \ at end of a free form source line
+    BeginSourceLine(nextLine_);
+    NextLine();
+    return true;
   }
+  return false;
 }
 
 std::optional<Prescanner::LineClassification>

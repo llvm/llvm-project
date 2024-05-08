@@ -29,8 +29,8 @@ using mlir::LLVM::detail::createIntrinsicCall;
 /// option around.
 static llvm::Type *getXlenType(Attribute opcodeAttr,
                                LLVM::ModuleTranslation &moduleTranslation) {
-  auto intAttr = opcodeAttr.cast<IntegerAttr>();
-  unsigned xlenWidth = intAttr.getType().cast<IntegerType>().getWidth();
+  auto intAttr = cast<IntegerAttr>(opcodeAttr);
+  unsigned xlenWidth = cast<IntegerType>(intAttr.getType()).getWidth();
   return llvm::Type::getIntNTy(moduleTranslation.getLLVMContext(), xlenWidth);
 }
 

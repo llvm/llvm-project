@@ -266,7 +266,7 @@ public:
   explicit operator bool() const { return Qualifier; }
 
   /// Evaluates true when this nested-name-specifier location is
-  /// empty.
+  /// non-empty.
   bool hasQualifier() const { return Qualifier; }
 
   /// Retrieve the nested-name-specifier to which this instance

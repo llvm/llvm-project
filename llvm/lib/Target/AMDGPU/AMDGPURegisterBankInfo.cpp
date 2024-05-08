@@ -2261,7 +2261,7 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
   case AMDGPU::G_FCMP:
     if (!Subtarget.hasSALUFloatInsts())
       break;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case AMDGPU::G_ICMP:
   case AMDGPU::G_UADDO:
   case AMDGPU::G_USUBO:

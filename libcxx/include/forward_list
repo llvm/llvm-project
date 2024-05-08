@@ -761,7 +761,7 @@ public:
     return const_iterator(base::__before_begin());
   }
 
-  _LIBCPP_NODISCARD_AFTER_CXX17 _LIBCPP_HIDE_FROM_ABI bool empty() const _NOEXCEPT {
+  _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI bool empty() const _NOEXCEPT {
     return base::__before_begin()->__next_ == nullptr;
   }
   _LIBCPP_HIDE_FROM_ABI size_type max_size() const _NOEXCEPT {

@@ -4,10 +4,6 @@ LBL0:
 
 # Out of range immediates
 
-# imm12m
-movi a1, 3000
-# CHECK: :[[#@LINE-1]]:10: error: expected immediate in range [-2048, 2047]
-
 # imm8
 addi a1, a2, 300
 # CHECK: :[[#@LINE-1]]:14: error: expected immediate in range [-128, 127]

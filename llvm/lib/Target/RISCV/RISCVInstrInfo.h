@@ -45,7 +45,7 @@ enum CondCode {
 };
 
 CondCode getOppositeBranchCondition(CondCode);
-unsigned getBrCond(CondCode CC);
+unsigned getBrCond(CondCode CC, bool Imm = false);
 
 } // end of namespace RISCVCC
 
@@ -65,7 +65,7 @@ public:
   explicit RISCVInstrInfo(RISCVSubtarget &STI);
 
   MCInst getNop() const override;
-  const MCInstrDesc &getBrCond(RISCVCC::CondCode CC) const;
+  const MCInstrDesc &getBrCond(RISCVCC::CondCode CC, bool Imm = false) const;
 
   Register isLoadFromStackSlot(const MachineInstr &MI,
                                int &FrameIndex) const override;
@@ -266,6 +266,9 @@ public:
       SmallVectorImpl<MachineInstr *> &DelInstrs,
       DenseMap<unsigned, unsigned> &InstrIdxForVirtReg) const override;
 
+  bool hasReassociableOperands(const MachineInstr &Inst,
+                               const MachineBasicBlock *MBB) const override;
+
   bool hasReassociableSibling(const MachineInstr &Inst,
                               bool &Commuted) const override;
 
@@ -273,6 +276,10 @@ public:
                                    bool Invert) const override;
 
   std::optional<unsigned> getInverseOpcode(unsigned Opcode) const override;
+
+  void getReassociateOperandIndices(
+      const MachineInstr &Root, unsigned Pattern,
+      std::array<unsigned, 5> &OperandIndices) const override;
 
   ArrayRef<std::pair<MachineMemOperand::Flags, const char *>>
   getSerializableMachineMemOperandTargetFlags() const override;
@@ -297,6 +304,13 @@ protected:
 
 private:
   unsigned getInstBundleLength(const MachineInstr &MI) const;
+
+  bool isVectorAssociativeAndCommutative(const MachineInstr &MI,
+                                         bool Invert = false) const;
+  bool areRVVInstsReassociable(const MachineInstr &MI1,
+                               const MachineInstr &MI2) const;
+  bool hasReassociableVectorSibling(const MachineInstr &Inst,
+                                    bool &Commuted) const;
 };
 
 namespace RISCV {
@@ -358,6 +372,18 @@ struct PseudoInfo {
 #include "RISCVGenSearchableTables.inc"
 
 } // end namespace RISCVVPseudosTable
+
+namespace RISCV {
+
+struct RISCVMaskedPseudoInfo {
+  uint16_t MaskedPseudo;
+  uint16_t UnmaskedPseudo;
+  uint8_t MaskOpIdx;
+  uint8_t MaskAffectsResult : 1;
+};
+#define GET_RISCVMaskedPseudosTable_DECL
+#include "RISCVGenSearchableTables.inc"
+} // end namespace RISCV
 
 } // end namespace llvm
 #endif

@@ -355,6 +355,9 @@ void Type::GetDescription(Stream *s, lldb::DescriptionLevel level,
     case eEncodingIsSyntheticUID:
       s->PutCString(" (synthetic type)");
       break;
+    case eEncodingIsLLVMPtrAuthUID:
+      s->PutCString(" (ptrauth type)");
+      break;
     }
   }
 }
@@ -416,6 +419,8 @@ void Type::Dump(Stream *s, bool show_context, lldb::DescriptionLevel level) {
     case eEncodingIsSyntheticUID:
       s->PutCString(" (synthetic type)");
       break;
+    case eEncodingIsLLVMPtrAuthUID:
+      s->PutCString(" (ptrauth type)");
     }
   }
 
@@ -477,7 +482,8 @@ std::optional<uint64_t> Type::GetByteSize(ExecutionContextScope *exe_scope) {
     // If we are a pointer or reference, then this is just a pointer size;
     case eEncodingIsPointerUID:
     case eEncodingIsLValueReferenceUID:
-    case eEncodingIsRValueReferenceUID: {
+    case eEncodingIsRValueReferenceUID:
+    case eEncodingIsLLVMPtrAuthUID: {
       if (ArchSpec arch = m_symbol_file->GetObjectFile()->GetArchitecture()) {
         m_byte_size = arch.GetAddressByteSize();
         m_byte_size_has_value = true;
@@ -621,6 +627,12 @@ bool Type::ResolveCompilerType(ResolveState compiler_type_resolve_state) {
             encoding_type->GetForwardCompilerType().GetRValueReferenceType();
         break;
 
+      case eEncodingIsLLVMPtrAuthUID:
+        m_compiler_type =
+            encoding_type->GetForwardCompilerType().AddPtrAuthModifier(
+                m_payload);
+        break;
+
       default:
         llvm_unreachable("Unhandled encoding_data_type.");
       }
@@ -675,6 +687,10 @@ bool Type::ResolveCompilerType(ResolveState compiler_type_resolve_state) {
         case eEncodingIsRValueReferenceUID:
           m_compiler_type = void_compiler_type.GetRValueReferenceType();
           break;
+
+        case eEncodingIsLLVMPtrAuthUID:
+          llvm_unreachable("Cannot handle eEncodingIsLLVMPtrAuthUID without "
+                           "valid encoding_type");
 
         default:
           llvm_unreachable("Unhandled encoding_data_type.");
@@ -1176,21 +1192,8 @@ bool TypeImpl::GetDescription(lldb_private::Stream &strm,
 CompilerType TypeImpl::FindDirectNestedType(llvm::StringRef name) {
   if (name.empty())
     return CompilerType();
-  auto type_system = GetTypeSystem(/*prefer_dynamic*/ false);
-  auto *symbol_file = type_system->GetSymbolFile();
-  if (!symbol_file)
-    return CompilerType();
-  auto decl_context = type_system->GetCompilerDeclContextForType(m_static_type);
-  if (!decl_context.IsValid())
-    return CompilerType();
-  TypeQuery query(decl_context, ConstString(name),
-                  TypeQueryOptions::e_find_one);
-  TypeResults results;
-  symbol_file->FindTypes(query, results);
-  TypeSP type_sp = results.GetFirstType();
-  if (type_sp)
-    return type_sp->GetFullCompilerType();
-  return CompilerType();
+  return GetCompilerType(/*prefer_dynamic=*/false)
+      .GetDirectNestedTypeWithName(name);
 }
 
 bool TypeMemberFunctionImpl::IsValid() {

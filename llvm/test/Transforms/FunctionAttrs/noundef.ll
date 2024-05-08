@@ -166,3 +166,51 @@ define i64 @test_trunc_with_constexpr() {
   %conv = sext i32 %add to i64
   ret i64 %conv
 }
+
+define align 4 ptr @maybe_not_aligned(ptr noundef %p) {
+; CHECK-LABEL: define align 4 ptr @maybe_not_aligned(
+; CHECK-SAME: ptr noundef readnone returned [[P:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    ret ptr [[P]]
+;
+  ret ptr %p
+}
+
+define align 4 ptr @definitely_aligned(ptr noundef align 4 %p) {
+; CHECK-LABEL: define noundef align 4 ptr @definitely_aligned(
+; CHECK-SAME: ptr noundef readnone returned align 4 [[P:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    ret ptr [[P]]
+;
+  ret ptr %p
+}
+
+define nonnull ptr @maybe_not_nonnull(ptr noundef %p) {
+; CHECK-LABEL: define nonnull ptr @maybe_not_nonnull(
+; CHECK-SAME: ptr noundef readnone returned [[P:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    ret ptr [[P]]
+;
+  ret ptr %p
+}
+
+define nonnull ptr @definitely_nonnull(ptr noundef nonnull %p) {
+; CHECK-LABEL: define noundef nonnull ptr @definitely_nonnull(
+; CHECK-SAME: ptr noundef nonnull readnone returned [[P:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    ret ptr [[P]]
+;
+  ret ptr %p
+}
+
+define range(i8 0, 10) i8 @maybe_not_in_range(i8 noundef %v) {
+; CHECK-LABEL: define range(i8 0, 10) i8 @maybe_not_in_range(
+; CHECK-SAME: i8 noundef returned [[V:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    ret i8 [[V]]
+;
+  ret i8 %v
+}
+
+define range(i8 0, 10) i8 @definitely_in_range(i8 noundef range(i8 0, 10) %v) {
+; CHECK-LABEL: define noundef range(i8 0, 10) i8 @definitely_in_range(
+; CHECK-SAME: i8 noundef returned range(i8 0, 10) [[V:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    ret i8 [[V]]
+;
+  ret i8 %v
+}

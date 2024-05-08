@@ -754,3 +754,43 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
         """
         initCommands = ["settings set symbols.load-on-demand true"]
         self.darwin_dwarf_missing_obj(initCommands)
+
+    @no_debug_info_test
+    @skipIfWindows
+    @skipIfRemote
+    def test_value_format(self):
+        """
+        Test that toggle variables value format between decimal and hexical works.
+        """
+        program = self.getBuildArtifact("a.out")
+        self.build_and_launch(program)
+        source = "main.cpp"
+        breakpoint1_line = line_number(source, "// breakpoint 1")
+        lines = [breakpoint1_line]
+
+        breakpoint_ids = self.set_source_breakpoints(source, lines)
+        self.assertEqual(
+            len(breakpoint_ids), len(lines), "expect correct number of breakpoints"
+        )
+        self.continue_to_breakpoints(breakpoint_ids)
+
+        # Verify locals value format decimal
+        is_hex = False
+        var_pt_x = self.dap_server.get_local_variable_child("pt", "x", is_hex=is_hex)
+        self.assertEquals(var_pt_x["value"], "11")
+        var_pt_y = self.dap_server.get_local_variable_child("pt", "y", is_hex=is_hex)
+        self.assertEquals(var_pt_y["value"], "22")
+
+        # Verify locals value format hexical
+        is_hex = True
+        var_pt_x = self.dap_server.get_local_variable_child("pt", "x", is_hex=is_hex)
+        self.assertEquals(var_pt_x["value"], "0x0000000b")
+        var_pt_y = self.dap_server.get_local_variable_child("pt", "y", is_hex=is_hex)
+        self.assertEquals(var_pt_y["value"], "0x00000016")
+
+        # Toggle and verify locals value format decimal again
+        is_hex = False
+        var_pt_x = self.dap_server.get_local_variable_child("pt", "x", is_hex=is_hex)
+        self.assertEquals(var_pt_x["value"], "11")
+        var_pt_y = self.dap_server.get_local_variable_child("pt", "y", is_hex=is_hex)
+        self.assertEquals(var_pt_y["value"], "22")

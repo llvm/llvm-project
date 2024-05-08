@@ -2631,6 +2631,16 @@ public:
     return isInterleaveMask(Mask, Factor, NumInputElts, StartIndexes);
   }
 
+  /// Check if the mask is a DE-interleave mask of the given factor
+  /// \p Factor like:
+  ///     <Index, Index+Factor, ..., Index+(NumElts-1)*Factor>
+  static bool isDeInterleaveMaskOfFactor(ArrayRef<int> Mask, unsigned Factor,
+                                         unsigned &Index);
+  static bool isDeInterleaveMaskOfFactor(ArrayRef<int> Mask, unsigned Factor) {
+    unsigned Unused;
+    return isDeInterleaveMaskOfFactor(Mask, Factor, Unused);
+  }
+
   /// Checks if the shuffle is a bit rotation of the first operand across
   /// multiple subelements, e.g:
   ///

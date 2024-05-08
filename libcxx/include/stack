@@ -231,7 +231,7 @@ public:
 
 #endif
 
-  _LIBCPP_NODISCARD_AFTER_CXX17 _LIBCPP_HIDE_FROM_ABI bool empty() const { return c.empty(); }
+  _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI bool empty() const { return c.empty(); }
   _LIBCPP_HIDE_FROM_ABI size_type size() const { return c.size(); }
   _LIBCPP_HIDE_FROM_ABI reference top() { return c.back(); }
   _LIBCPP_HIDE_FROM_ABI const_reference top() const { return c.back(); }

@@ -29,7 +29,9 @@
 #include <semaphore.h>
 #endif // KMP_OS_LINUX
 #include <sys/resource.h>
-#if !KMP_OS_AIX
+#if KMP_OS_AIX
+#include <sys/ldr.h>
+#else
 #include <sys/syscall.h>
 #endif
 #include <sys/time.h>
@@ -2141,10 +2143,10 @@ int __kmp_is_address_mapped(void *addr) {
   // We pass from number of vm entry's semantic
   // to size of whole entry map list.
   lstsz = lstsz * 4 / 3;
-  buf = reinterpret_cast<char *>(kmpc_malloc(lstsz));
+  buf = reinterpret_cast<char *>(KMP_INTERNAL_MALLOC(lstsz));
   rc = sysctl(mib, 4, buf, &lstsz, NULL, 0);
   if (rc < 0) {
-    kmpc_free(buf);
+    KMP_INTERNAL_FREE(buf);
     return 0;
   }
 
@@ -2168,7 +2170,7 @@ int __kmp_is_address_mapped(void *addr) {
     }
     lw += cursz;
   }
-  kmpc_free(buf);
+  KMP_INTERNAL_FREE(buf);
 #elif KMP_OS_DRAGONFLY
   char err[_POSIX2_LINE_MAX];
   kinfo_proc *proc;
@@ -2234,12 +2236,12 @@ int __kmp_is_address_mapped(void *addr) {
     return 0;
   }
 
-  buf = kmpc_malloc(sz);
+  buf = KMP_INTERNAL_MALLOC(sz);
 
   while (sz > 0 && (rd = pread(file, buf, sz, 0)) == sz) {
     void *newbuf;
     sz <<= 1;
-    newbuf = kmpc_realloc(buf, sz);
+    newbuf = KMP_INTERNAL_REALLOC(buf, sz);
     buf = newbuf;
   }
 
@@ -2255,7 +2257,7 @@ int __kmp_is_address_mapped(void *addr) {
     }
   }
 
-  kmpc_free(map);
+  KMP_INTERNAL_FREE(map);
   close(file);
   KMP_INTERNAL_FREE(name);
 #elif KMP_OS_DARWIN
@@ -2338,9 +2340,48 @@ int __kmp_is_address_mapped(void *addr) {
   found = (int)addr < (__builtin_wasm_memory_size(0) * PAGESIZE);
 #elif KMP_OS_AIX
 
-  (void)rc;
-  // FIXME(AIX): Implement this
-  found = 1;
+  uint32_t loadQueryBufSize = 4096u; // Default loadquery buffer size.
+  char *loadQueryBuf;
+
+  for (;;) {
+    loadQueryBuf = (char *)KMP_INTERNAL_MALLOC(loadQueryBufSize);
+    if (loadQueryBuf == NULL) {
+      return 0;
+    }
+
+    rc = loadquery(L_GETXINFO | L_IGNOREUNLOAD, loadQueryBuf, loadQueryBufSize);
+    if (rc < 0) {
+      KMP_INTERNAL_FREE(loadQueryBuf);
+      if (errno != ENOMEM) {
+        return 0;
+      }
+      // errno == ENOMEM; double the size.
+      loadQueryBufSize <<= 1;
+      continue;
+    }
+    // Obtained the load info successfully.
+    break;
+  }
+
+  struct ld_xinfo *curLdInfo = (struct ld_xinfo *)loadQueryBuf;
+
+  // Loop through the load info to find if there is a match.
+  for (;;) {
+    uintptr_t curDataStart = (uintptr_t)curLdInfo->ldinfo_dataorg;
+    uintptr_t curDataEnd = curDataStart + curLdInfo->ldinfo_datasize;
+
+    // The data segment is readable and writable.
+    if (curDataStart <= (uintptr_t)addr && (uintptr_t)addr < curDataEnd) {
+      found = 1;
+      break;
+    }
+    if (curLdInfo->ldinfo_next == 0u) {
+      // Reached the end of load info.
+      break;
+    }
+    curLdInfo = (struct ld_xinfo *)((char *)curLdInfo + curLdInfo->ldinfo_next);
+  }
+  KMP_INTERNAL_FREE(loadQueryBuf);
 
 #else
 

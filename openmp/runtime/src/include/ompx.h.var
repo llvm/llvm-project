@@ -50,9 +50,12 @@ enum {
   ompx_dim_z = 2,
 };
 
+// TODO: The following implementation is for host fallback. We need to disable
+// generation of host fallback in kernel language mode.
+#pragma omp begin declare variant match(device = {kind(cpu)})
+
 /// ompx_{thread,block}_{id,dim}
 ///{
-#pragma omp begin declare variant match(device = {kind(cpu)})
 #define _TGT_KERNEL_LANGUAGE_HOST_IMPL_GRID_C(NAME, VALUE)                     \
   static inline int ompx_##NAME(int Dim) { return VALUE; }
 

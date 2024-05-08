@@ -36,6 +36,7 @@
 #include "clang/Sema/Template.h"
 #include "clang/Sema/TemplateDeduction.h"
 #include "clang/Sema/TemplateInstCallback.h"
+#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/TimeProfiler.h"
@@ -273,6 +274,13 @@ Response HandleFunction(Sema &SemaRef, const FunctionDecl *Function,
     Result.addOuterTemplateArguments(const_cast<FunctionDecl *>(Function),
                                      TemplateArgs->asArray(),
                                      /*Final=*/false);
+
+    if (RelativeToPrimary &&
+        (Function->getTemplateSpecializationKind() ==
+             TSK_ExplicitSpecialization ||
+         (Function->getFriendObjectKind() &&
+          !Function->getPrimaryTemplate()->getFriendObjectKind())))
+      return Response::UseNextDecl(Function);
 
     // If this function was instantiated from a specialized member that is
     // a function template, we're done.
@@ -1142,7 +1150,8 @@ void Sema::PrintInstantiationStack() {
     case CodeSynthesisContext::DeclaringSpecialMember:
       Diags.Report(Active->PointOfInstantiation,
                    diag::note_in_declaration_of_implicit_special_member)
-        << cast<CXXRecordDecl>(Active->Entity) << Active->SpecialMember;
+          << cast<CXXRecordDecl>(Active->Entity)
+          << llvm::to_underlying(Active->SpecialMember);
       break;
 
     case CodeSynthesisContext::DeclaringImplicitEqualityComparison:
@@ -1160,7 +1169,8 @@ void Sema::PrintInstantiationStack() {
         auto *MD = cast<CXXMethodDecl>(FD);
         Diags.Report(Active->PointOfInstantiation,
                      diag::note_member_synthesized_at)
-            << MD->isExplicitlyDefaulted() << DFK.asSpecialMember()
+            << MD->isExplicitlyDefaulted()
+            << llvm::to_underlying(DFK.asSpecialMember())
             << Context.getTagDeclType(MD->getParent());
       } else if (DFK.isComparison()) {
         QualType RecordType = FD->getParamDecl(0)
@@ -2147,13 +2157,26 @@ TemplateInstantiator::TransformLoopHintAttr(const LoopHintAttr *LH) {
     return LH;
 
   // Generate error if there is a problem with the value.
-  if (getSema().CheckLoopHintExpr(TransformedExpr, LH->getLocation()))
+  if (getSema().CheckLoopHintExpr(TransformedExpr, LH->getLocation(),
+                                  LH->getSemanticSpelling() ==
+                                      LoopHintAttr::Pragma_unroll))
     return LH;
+
+  LoopHintAttr::OptionType Option = LH->getOption();
+  LoopHintAttr::LoopHintState State = LH->getState();
+
+  llvm::APSInt ValueAPS =
+      TransformedExpr->EvaluateKnownConstInt(getSema().getASTContext());
+  // The values of 0 and 1 block any unrolling of the loop.
+  if (ValueAPS.isZero() || ValueAPS.isOne()) {
+    Option = LoopHintAttr::Unroll;
+    State = LoopHintAttr::Disable;
+  }
 
   // Create new LoopHintValueAttr with integral expression in place of the
   // non-type template parameter.
-  return LoopHintAttr::CreateImplicit(getSema().Context, LH->getOption(),
-                                      LH->getState(), TransformedExpr, *LH);
+  return LoopHintAttr::CreateImplicit(getSema().Context, Option, State,
+                                      TransformedExpr, *LH);
 }
 const NoInlineAttr *TemplateInstantiator::TransformStmtNoInlineAttr(
     const Stmt *OrigS, const Stmt *InstS, const NoInlineAttr *A) {
@@ -2498,10 +2521,7 @@ TemplateInstantiator::TransformTemplateTypeParmType(TypeLocBuilder &TLB,
       assert(Arg.getKind() == TemplateArgument::Type &&
              "unexpected nontype template argument kind in template rewrite");
       QualType NewT = Arg.getAsType();
-      assert(isa<TemplateTypeParmType>(NewT) &&
-             "type parm not rewritten to type parm");
-      auto NewTL = TLB.push<TemplateTypeParmTypeLoc>(NewT);
-      NewTL.setNameLoc(TL.getNameLoc());
+      TLB.pushTrivial(SemaRef.Context, NewT, TL.getNameLoc());
       return NewT;
     }
 

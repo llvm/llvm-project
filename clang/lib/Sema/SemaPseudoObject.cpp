@@ -1136,7 +1136,7 @@ static void CheckKeyForObjCARCConversion(Sema &S, QualType ContainerT,
     return;
   QualType T = Getter->parameters()[0]->getType();
   S.CheckObjCConversion(Key->getSourceRange(), T, Key,
-                        Sema::CCK_ImplicitConversion);
+                        CheckedConversionKind::Implicit);
 }
 
 bool ObjCSubscriptOpBuilder::findAtIndexGetter() {

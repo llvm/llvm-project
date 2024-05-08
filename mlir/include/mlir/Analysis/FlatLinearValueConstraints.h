@@ -205,6 +205,10 @@ protected:
 /// where each non-local variable can have an SSA Value attached to it.
 class FlatLinearValueConstraints : public FlatLinearConstraints {
 public:
+  /// The SSA Values attached to each non-local variable are stored as
+  /// identifiers in the constraint system's space.
+  using Identifier = presburger::Identifier;
+
   /// Constructs a constraint system reserving memory for the specified number
   /// of constraints and variables. `valArgs` are the optional SSA values
   /// associated with each dimension/symbol. These must either be empty or match
@@ -217,11 +221,9 @@ public:
       : FlatLinearConstraints(numReservedInequalities, numReservedEqualities,
                               numReservedCols, numDims, numSymbols, numLocals) {
     assert(valArgs.empty() || valArgs.size() == getNumDimAndSymbolVars());
-    values.reserve(numReservedCols);
-    if (valArgs.empty())
-      values.resize(getNumDimAndSymbolVars(), std::nullopt);
-    else
-      values.append(valArgs.begin(), valArgs.end());
+    for (unsigned i = 0, e = valArgs.size(); i < e; ++i)
+      if (valArgs[i])
+        setValue(i, *valArgs[i]);
   }
 
   /// Constructs a constraint system reserving memory for the specified number
@@ -236,11 +238,9 @@ public:
       : FlatLinearConstraints(numReservedInequalities, numReservedEqualities,
                               numReservedCols, numDims, numSymbols, numLocals) {
     assert(valArgs.empty() || valArgs.size() == getNumDimAndSymbolVars());
-    values.reserve(numReservedCols);
-    if (valArgs.empty())
-      values.resize(getNumDimAndSymbolVars(), std::nullopt);
-    else
-      values.append(valArgs.begin(), valArgs.end());
+    for (unsigned i = 0, e = valArgs.size(); i < e; ++i)
+      if (valArgs[i])
+        setValue(i, valArgs[i]);
   }
 
   /// Constructs a constraint system with the specified number of dimensions
@@ -272,11 +272,12 @@ public:
   FlatLinearValueConstraints(const IntegerPolyhedron &fac,
                              ArrayRef<std::optional<Value>> valArgs = {})
       : FlatLinearConstraints(fac) {
-    assert(valArgs.empty() || valArgs.size() == getNumDimAndSymbolVars());
     if (valArgs.empty())
-      values.resize(getNumDimAndSymbolVars(), std::nullopt);
-    else
-      values.append(valArgs.begin(), valArgs.end());
+      return;
+    assert(valArgs.size() == getNumDimAndSymbolVars());
+    for (unsigned i = 0, e = valArgs.size(); i < e; ++i)
+      if (valArgs[i])
+        setValue(i, *valArgs[i]);
   }
 
   /// Creates an affine constraint system from an IntegerSet.
@@ -290,9 +291,6 @@ public:
            cst->getKind() <= Kind::FlatAffineRelation;
   }
 
-  /// Replaces the contents of this FlatLinearValueConstraints with `other`.
-  void clearAndCopyFrom(const IntegerRelation &other) override;
-
   /// Adds a constant bound for the variable associated with the given Value.
   void addBound(presburger::BoundType type, Value val, int64_t value);
   using FlatLinearConstraints::addBound;
@@ -302,7 +300,9 @@ public:
   inline Value getValue(unsigned pos) const {
     assert(pos < getNumDimAndSymbolVars() && "Invalid position");
     assert(hasValue(pos) && "variable's Value not set");
-    return *values[pos];
+    VarKind kind = getVarKindAt(pos);
+    unsigned relativePos = pos - getVarKindOffset(kind);
+    return space.getId(kind, relativePos).getValue<Value>();
   }
 
   /// Returns the Values associated with variables in range [start, end).
@@ -313,25 +313,44 @@ public:
     assert(start <= end && "invalid start position");
     values->clear();
     values->reserve(end - start);
-    for (unsigned i = start; i < end; i++)
+    for (unsigned i = start; i < end; ++i)
       values->push_back(getValue(i));
   }
 
-  inline ArrayRef<std::optional<Value>> getMaybeValues() const {
-    return {values.data(), values.size()};
+  inline SmallVector<std::optional<Value>> getMaybeValues() const {
+    SmallVector<std::optional<Value>> maybeValues;
+    maybeValues.reserve(getNumDimAndSymbolVars());
+    for (unsigned i = 0, e = getNumDimAndSymbolVars(); i < e; ++i)
+      if (hasValue(i)) {
+        maybeValues.push_back(getValue(i));
+      } else {
+        maybeValues.push_back(std::nullopt);
+      }
+    return maybeValues;
   }
 
-  inline ArrayRef<std::optional<Value>>
+  inline SmallVector<std::optional<Value>>
   getMaybeValues(presburger::VarKind kind) const {
     assert(kind != VarKind::Local &&
            "Local variables do not have any value attached to them.");
-    return {values.data() + getVarKindOffset(kind), getNumVarKind(kind)};
+    SmallVector<std::optional<Value>> maybeValues;
+    maybeValues.reserve(getNumVarKind(kind));
+    const unsigned offset = space.getVarKindOffset(kind);
+    for (unsigned i = 0, e = getNumVarKind(kind); i < e; ++i) {
+      if (hasValue(offset + i))
+        maybeValues.push_back(getValue(offset + i));
+      else
+        maybeValues.push_back(std::nullopt);
+    }
+    return maybeValues;
   }
 
   /// Returns true if the pos^th variable has an associated Value.
   inline bool hasValue(unsigned pos) const {
     assert(pos < getNumDimAndSymbolVars() && "Invalid position");
-    return values[pos].has_value();
+    VarKind kind = getVarKindAt(pos);
+    unsigned relativePos = pos - getVarKindOffset(kind);
+    return space.getId(kind, relativePos).hasValue();
   }
 
   unsigned appendDimVar(ValueRange vals);
@@ -358,9 +377,12 @@ public:
   using IntegerPolyhedron::removeVarRange;
 
   /// Sets the Value associated with the pos^th variable.
+  /// Stores the Value in the space's identifiers.
   inline void setValue(unsigned pos, Value val) {
     assert(pos < getNumDimAndSymbolVars() && "invalid var position");
-    values[pos] = val;
+    VarKind kind = getVarKindAt(pos);
+    unsigned relativePos = pos - getVarKindOffset(kind);
+    space.setId(kind, relativePos, presburger::Identifier(val));
   }
 
   /// Sets the Values associated with the variables in the range [start, end).
@@ -386,9 +408,6 @@ public:
   /// Projects out the variable that is associate with Value.
   void projectOut(Value val);
   using IntegerPolyhedron::projectOut;
-
-  /// Swap the posA^th variable with the posB^th variable.
-  void swapVar(unsigned posA, unsigned posB) override;
 
   /// Prints the number of constraints, dimensions, symbols and locals in the
   /// FlatAffineValueConstraints. Also, prints for each variable whether there
@@ -444,28 +463,6 @@ public:
   ///    output = {0 <= d0 <= 6, 1 <= d1 <= 15}
   LogicalResult unionBoundingBox(const FlatLinearValueConstraints &other);
   using IntegerPolyhedron::unionBoundingBox;
-
-protected:
-  /// Eliminates the variable at the specified position using Fourier-Motzkin
-  /// variable elimination, but uses Gaussian elimination if there is an
-  /// equality involving that variable. If the result of the elimination is
-  /// integer exact, `*isResultIntegerExact` is set to true. If `darkShadow` is
-  /// set to true, a potential under approximation (subset) of the rational
-  /// shadow / exact integer shadow is computed.
-  // See implementation comments for more details.
-  void fourierMotzkinEliminate(unsigned pos, bool darkShadow = false,
-                               bool *isResultIntegerExact = nullptr) override;
-
-  /// Returns false if the fields corresponding to various variable counts, or
-  /// equality/inequality buffer sizes aren't consistent; true otherwise. This
-  /// is meant to be used within an assert internally.
-  bool hasConsistentState() const override;
-
-  /// Values corresponding to the (column) non-local variables of this
-  /// constraint system appearing in the order the variables correspond to
-  /// columns. Variables that aren't associated with any Value are set to
-  /// std::nullopt.
-  SmallVector<std::optional<Value>, 8> values;
 };
 
 /// Flattens 'expr' into 'flattenedExpr', which contains the coefficients of the

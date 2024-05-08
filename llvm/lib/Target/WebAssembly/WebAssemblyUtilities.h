@@ -63,6 +63,16 @@ MachineInstr *findCatch(MachineBasicBlock *EHPad);
 /// Returns the appropriate copy opcode for the given register class.
 unsigned getCopyOpcodeForRegClass(const TargetRegisterClass *RC);
 
+/// Returns true if multivalue returns of a function can be lowered directly,
+/// i.e., not indirectly via a pointer parameter that points to the value in
+/// memory.
+bool canLowerMultivalueReturn(const WebAssemblySubtarget *Subtarget);
+
+/// Returns true if the function's return value(s) can be lowered directly,
+/// i.e., not indirectly via a pointer parameter that points to the value in
+/// memory.
+bool canLowerReturn(size_t ResultSize, const WebAssemblySubtarget *Subtarget);
+
 } // end namespace WebAssembly
 
 } // end namespace llvm

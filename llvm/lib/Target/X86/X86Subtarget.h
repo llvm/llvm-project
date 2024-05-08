@@ -244,7 +244,8 @@ public:
   // TODO: Currently we're always allowing widening on CPUs without VLX,
   // because for many cases we don't have a better option.
   bool canExtendTo512DQ() const {
-    return hasAVX512() && (!hasVLX() || getPreferVectorWidth() >= 512);
+    return hasAVX512() && hasEVEX512() &&
+           (!hasVLX() || getPreferVectorWidth() >= 512);
   }
   bool canExtendTo512BW() const  {
     return hasBWI() && canExtendTo512DQ();

@@ -1056,8 +1056,8 @@ public:
   explicit FindImpureCallHelper(FoldingContext &c) : Base{*this}, context_{c} {}
   using Base::operator();
   Result operator()(const ProcedureRef &call) const {
-    if (auto chars{
-            characteristics::Procedure::Characterize(call.proc(), context_)}) {
+    if (auto chars{characteristics::Procedure::Characterize(
+            call.proc(), context_, /*emitError=*/false)}) {
       if (chars->attrs.test(characteristics::Procedure::Attr::Pure)) {
         return (*this)(call.arguments());
       }

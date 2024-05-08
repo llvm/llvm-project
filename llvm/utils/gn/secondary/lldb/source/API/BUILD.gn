@@ -17,6 +17,7 @@ target(liblldb_type, "liblldb") {
 
   output_name = "liblldb"  # XXX lib prefix?
   configs += [ "//llvm/utils/gn/build:lldb_code" ]
+  public_deps = [ "//lldb/include/lldb/API:SBLanguages" ]
   deps = [
     "//lldb/include/lldb/Host:Config",
     "//lldb/source/Breakpoint",

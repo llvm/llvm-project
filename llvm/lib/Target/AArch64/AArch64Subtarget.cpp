@@ -117,6 +117,8 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
   case CortexA35:
   case CortexA53:
   case CortexA55:
+  case CortexR82:
+  case CortexR82AE:
     PrefFunctionAlignment = Align(16);
     PrefLoopAlignment = Align(16);
     MaxBytesForLoopAlignment = 8;
@@ -142,9 +144,7 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
   case CortexA78:
   case CortexA78AE:
   case CortexA78C:
-  case CortexR82:
   case CortexX1:
-  case CortexX1C:
     PrefFunctionAlignment = Align(16);
     PrefLoopAlignment = Align(32);
     MaxBytesForLoopAlignment = 16;
@@ -235,7 +235,9 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
     MaxBytesForLoopAlignment = 16;
     break;
   case NeoverseN2:
+  case NeoverseN3:
   case NeoverseV2:
+  case NeoverseV3:
     PrefFunctionAlignment = Align(16);
     PrefLoopAlignment = Align(32);
     MaxBytesForLoopAlignment = 16;
@@ -470,6 +472,45 @@ void AArch64Subtarget::overrideSchedPolicy(MachineSchedPolicy &Policy,
   // help nearly no benchmark on out-of-order architectures, on the other hand
   // it regresses register pressure on a few benchmarking.
   Policy.DisableLatencyHeuristic = DisableLatencySchedHeuristic;
+}
+
+void AArch64Subtarget::adjustSchedDependency(
+    SUnit *Def, int DefOpIdx, SUnit *Use, int UseOpIdx, SDep &Dep,
+    const TargetSchedModel *SchedModel) const {
+  if (!SchedModel || Dep.getKind() != SDep::Kind::Data || !Dep.getReg() ||
+      !Def->isInstr() || !Use->isInstr() ||
+      (Def->getInstr()->getOpcode() != TargetOpcode::BUNDLE &&
+       Use->getInstr()->getOpcode() != TargetOpcode::BUNDLE))
+    return;
+
+  // If the Def is a BUNDLE, find the last instruction in the bundle that defs
+  // the register.
+  const MachineInstr *DefMI = Def->getInstr();
+  if (DefMI->getOpcode() == TargetOpcode::BUNDLE) {
+    Register Reg = DefMI->getOperand(DefOpIdx).getReg();
+    for (const auto &Op : const_mi_bundle_ops(*DefMI)) {
+      if (Op.isReg() && Op.isDef() && Op.getReg() == Reg) {
+        DefMI = Op.getParent();
+        DefOpIdx = Op.getOperandNo();
+      }
+    }
+  }
+
+  // If the Use is a BUNDLE, find the first instruction that uses the Reg.
+  const MachineInstr *UseMI = Use->getInstr();
+  if (UseMI->getOpcode() == TargetOpcode::BUNDLE) {
+    Register Reg = UseMI->getOperand(UseOpIdx).getReg();
+    for (const auto &Op : const_mi_bundle_ops(*UseMI)) {
+      if (Op.isReg() && Op.isUse() && Op.getReg() == Reg) {
+        UseMI = Op.getParent();
+        UseOpIdx = Op.getOperandNo();
+        break;
+      }
+    }
+  }
+
+  Dep.setLatency(
+      SchedModel->computeOperandLatency(DefMI, DefOpIdx, UseMI, UseOpIdx));
 }
 
 bool AArch64Subtarget::enableEarlyIfConversion() const {

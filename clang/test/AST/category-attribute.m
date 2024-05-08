@@ -1,6 +1,6 @@
 // Test without serialization:
 // RUN: %clang_cc1 -fsyntax-only -verify %s
-// RUN: %clang_cc1 -fsyntax-only -ast-dump %s | FileCheck %s
+// RUN: %clang_cc1 -ast-dump %s | FileCheck %s
 //
 // Test with serialization:
 // RUN: %clang_cc1 -emit-pch -o %t %s

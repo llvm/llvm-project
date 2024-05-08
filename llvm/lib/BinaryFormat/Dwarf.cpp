@@ -411,6 +411,16 @@ llvm::dwarf::LanguageLowerBound(dwarf::SourceLanguage Lang) {
   }
 }
 
+StringRef llvm::dwarf::LanguageDescription(dwarf::SourceLanguageName lname) {
+  switch (lname) {
+#define HANDLE_DW_LNAME(ID, NAME, DESC, LOWER_BOUND)                           \
+  case DW_LNAME_##NAME:                                                        \
+    return DESC;
+#include "llvm/BinaryFormat/Dwarf.def"
+  }
+  return "Unknown";
+}
+
 StringRef llvm::dwarf::CaseString(unsigned Case) {
   switch (Case) {
   case DW_ID_case_sensitive:
