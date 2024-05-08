@@ -6178,10 +6178,16 @@ The current supported opcode vocabulary is limited:
   the last entry from the second last entry and appends the result to the
   expression stack.
 - ``DW_OP_plus_uconst, 93`` adds ``93`` to the working expression.
-- ``DW_OP_LLVM_fragment, 16, 8`` specifies the offset and size (``16`` and ``8``
-  here, respectively) of the variable fragment from the working expression. Note
-  that contrary to DW_OP_bit_piece, the offset is describing the location
-  within the described source variable.
+- ``DW_OP_LLVM_fragment, 16, 8`` specifies that the top of the expression stack
+  is a fragment of the source language variable with the given offset and size
+  (``16`` and ``8`` here, respectively). Note that the offset and size are the
+  opposite way around to ``DW_OP_bit_piece``, and the offset is within the
+  source language variable.
+- ``DW_OP_bit_piece, 8, 16`` specifies that the source language variable can be
+  found in the sequence of bits at the given size and offset (``8`` and ``16``
+  here, respectively) within the top of the expression stack. Note that the
+  offset and size are the opposite way around to ``DW_OP_LLVM_fragment``, and the
+  offset is within the LLVM variable (if that's at the top of the stack).
 - ``DW_OP_LLVM_convert, 16, DW_ATE_signed`` specifies a bit size and encoding
   (``16`` and ``DW_ATE_signed`` here, respectively) to which the top of the
   expression stack is to be converted. Maps into a ``DW_OP_convert`` operation
