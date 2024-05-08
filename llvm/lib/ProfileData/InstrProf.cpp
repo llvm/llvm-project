@@ -492,11 +492,7 @@ Error InstrProfSymtab::create(Module &M, bool InLTO) {
 
 Error InstrProfSymtab::addVTableWithName(GlobalVariable &VTable,
                                          StringRef VTablePGOName) {
-
   auto mapName = [&](StringRef Name) -> Error {
-    // Use 'addSymbolName' rather than 'addVTableName' as 'VTableNames' is
-    // needed by in InstrProfWriter from llvm-profdata, but this function is
-    // called by compiler and tools with LLVM IR.
     if (Error E = addSymbolName(Name))
       return E;
 

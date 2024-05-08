@@ -472,7 +472,10 @@ private:
   // when build the Symtab from a Module.
   std::vector<std::pair<uint64_t, Function *>> MD5FuncMap;
   // A map from MD5 to the global variable. This map is only populated when
-  // building the symtab from a module.
+  // building the symtab from a module. Use separate container instances for
+  // `MD5FuncMap` and `MD5VTableMap`.
+  // TODO: Unify the container type and the lambda function 'mapName' inside
+  // add{Func,VTable}WithName.
   DenseMap<uint64_t, GlobalVariable*> MD5VTableMap;
   // A map from function runtime address to function name MD5 hash.
   // This map is only populated and used by raw instr profile reader.
@@ -492,16 +495,14 @@ private:
 
   // Add the function into the symbol table, by creating the following
   // map entries:
-  // name-set = {PGOFuncName} + {getCanonicalName(PGOFuncName)} if the canonical
-  // name is different from pgo name
+  // name-set = {PGOFuncName} union {getCanonicalName(PGOFuncName)}
   // - In MD5NameMap: <MD5Hash(name), name> for name in name-set
   // - In MD5FuncMap: <MD5Hash(name), &F> for name in name-set
   Error addFuncWithName(Function &F, StringRef PGOFuncName);
 
   // Add the vtable into the symbol table, by creating the following
   // map entries:
-  // name-set = {PGOName} + {getCanonicalName(PGOName)} if the canonical name
-  // is different from pgo name.
+  // name-set = {PGOName} union {getCanonicalName(PGOName)}
   // - In MD5NameMap:  <MD5Hash(name), name> for name in name-set
   // - In MD5VTableMap: <MD5Hash(name), name> for name in name-set
   Error addVTableWithName(GlobalVariable &V, StringRef PGOVTableName);
