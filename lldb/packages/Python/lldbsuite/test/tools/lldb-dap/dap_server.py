@@ -573,7 +573,7 @@ class DebugCommunication(object):
         postRunCommands=None,
         sourceMap=None,
         port=None,
-        hostname=None
+        hostname=None,
     ):
         args_dict = {}
         if pid is not None:
@@ -604,9 +604,9 @@ class DebugCommunication(object):
         if sourceMap:
             args_dict["sourceMap"] = sourceMap
         if port is not None:
-            args_dict['port'] = port
+            args_dict["port"] = port
         if hostname is not None:
-            args_dict['hostname'] = hostname
+            args_dict["hostname"] = hostname
         command_dict = {"command": "attach", "type": "request", "arguments": args_dict}
         return self.send_recv(command_dict)
 

@@ -335,10 +335,20 @@ class DAPTestCaseBase(TestBase):
                 response["success"], "attach failed (%s)" % (response["message"])
             )
 
-    def attach_by_port(self, program=None, pid=None, disconnectAutomatically=True, waitFor=None, sourceInitFile=False, port=None, hostname=None):
-        '''Build the default Makefile target, create the VSCode debug adaptor,
-           and attach to the process.
-        '''
+    def attach_by_port(
+        self,
+        program=None,
+        pid=None,
+        disconnectAutomatically=True,
+        waitFor=None,
+        sourceInitFile=False,
+        port=None,
+        hostname=None,
+    ):
+        """Build the default Makefile target, create the VSCode debug adaptor,
+        and attach to the process.
+        """
+
         # This overloaded function helps to request attach by port number
         # Make sure we disconnect and terminate the VSCode debug adaptor even
         # if we throw an exception during the test case.
@@ -352,7 +362,8 @@ class DAPTestCaseBase(TestBase):
         # Initialize and launch the program
         self.dap_server.request_initialize(sourceInitFile)
         response = self.dap_server.request_attach(
-            program=program, pid=pid, waitFor=waitFor, port=port, hostname=hostname)
+            program=program, pid=pid, waitFor=waitFor, port=port, hostname=hostname
+        )
         return response
 
     def launch(

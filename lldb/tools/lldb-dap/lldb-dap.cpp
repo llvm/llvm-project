@@ -751,7 +751,8 @@ void request_attach(const llvm::json::Object &request) {
     return;
   }
 
-  if ((pid == LLDB_INVALID_PROCESS_ID || port == LLDB_INVALID_PORT_NUMBER) && wait_for) {
+  if ((pid == LLDB_INVALID_PROCESS_ID || port == LLDB_INVALID_PORT_NUMBER) &&
+      wait_for) {
     char attach_msg[256];
     auto attach_msg_len = snprintf(attach_msg, sizeof(attach_msg),
                                    "Waiting to attach to \"%s\"...",
@@ -769,12 +770,7 @@ void request_attach(const llvm::json::Object &request) {
           (port != LLDB_INVALID_PORT_NUMBER)) {
         // If both pid and port numbers are specified.
         error.SetErrorString("The user can't specify both pid and port");
-      } else if ((pid != LLDB_INVALID_PROCESS_ID) &&
-                 (port == LLDB_INVALID_PORT_NUMBER)) {
-        // If pid is specified and port is not.
-        g_dap.target.Attach(attach_info, error);
-      } else if ((port != LLDB_INVALID_PORT_NUMBER) && (port < UINT16_MAX) &&
-                 (pid == LLDB_INVALID_PROCESS_ID)) {
+      } else if ((port != LLDB_INVALID_PORT_NUMBER) && (port < UINT16_MAX)) {
         // If port is specified and pid is not.
         lldb::SBListener listener = g_dap.debugger.GetListener();
 
@@ -790,7 +786,8 @@ void request_attach(const llvm::json::Object &request) {
         g_dap.target.ConnectRemote(listener, connect_url.c_str(), "gdb-remote",
                                    error);
       } else {
-        error.SetErrorString("Invalid pid/port number specified");
+        // Attach by process name or id.
+        g_dap.target.Attach(attach_info, error);
       }
     } else
       g_dap.target.LoadCore(core_file.data(), error);
