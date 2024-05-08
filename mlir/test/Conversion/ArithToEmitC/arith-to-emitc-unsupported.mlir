@@ -63,3 +63,22 @@ func.func @arith_cast_fptoui_i1(%arg0: f32) -> i1 {
   return %t: i1
 }
 
+// -----
+
+func.func @index_cast(%arg0: i32) -> i32 {
+  // expected-error @+1 {{failed to legalize operation 'arith.index_cast'}}
+  %idx = arith.index_cast %arg0 : i32 to index
+  %int = arith.index_cast %idx : index to i32
+
+  return %int : i32
+}
+
+// -----
+
+func.func @index_castui(%arg0: i32) -> i32 {
+  // expected-error @+1 {{failed to legalize operation 'arith.index_castui'}}
+  %idx = arith.index_castui %arg0 : i32 to index
+  %int = arith.index_castui %idx : index to i32
+
+  return %int : i32
+}

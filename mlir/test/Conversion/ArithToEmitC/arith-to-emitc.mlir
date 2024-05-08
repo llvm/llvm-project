@@ -177,3 +177,42 @@ func.func @arith_int_to_float_cast_ops(%arg0: i8, %arg1: i64) {
 
   return
 }
+
+// -----
+
+func.func @trunci(%arg0: i32) -> i8 {
+  // CHECK-LABEL: trunci
+  // CHECK-SAME: (%[[Arg0:[^ ]*]]: i32)
+  // CHECK: %[[CastUI:.*]] = emitc.cast %[[Arg0]] : i32 to ui32
+  // CHECK: %[[Trunc:.*]] = emitc.cast %[[CastUI]] : ui32 to ui8
+  // CHECK: emitc.cast %[[Trunc]] : ui8 to i8
+  %truncd = arith.trunci %arg0 : i32 to i8
+
+  return %truncd : i8
+}
+
+// -----
+
+func.func @extsi(%arg0: i32) {
+  // CHECK-LABEL: extsi
+  // CHECK-SAME: ([[Arg0:[^ ]*]]: i32)
+  // CHECK: emitc.cast [[Arg0]] : i32 to i64
+
+  %extd = arith.extsi %arg0 : i32 to i64
+
+  return
+}
+
+// -----
+
+func.func @extui(%arg0: i32) {
+  // CHECK-LABEL: extui
+  // CHECK-SAME: (%[[Arg0:[^ ]*]]: i32)
+  // CHECK: %[[Conv0:.*]] = emitc.cast %[[Arg0]] : i32 to ui32
+  // CHECK: %[[Conv1:.*]] = emitc.cast %[[Conv0]] : ui32 to ui64
+  // CHECK: emitc.cast %[[Conv1]] : ui64 to i64
+
+  %extd = arith.extui %arg0 : i32 to i64
+
+  return
+}
