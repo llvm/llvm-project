@@ -1059,7 +1059,7 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
       }
     }
 
-    if (F->arg_size() == 2 && Name.equals("coro.end")) {
+    if (F->arg_size() == 2 && Name == "coro.end") {
       rename(F);
       NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::coro_end);
       return true;
@@ -1092,17 +1092,24 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
     break;
   case 'e':
     if (Name.consume_front("experimental.vector.")) {
-      Intrinsic::ID ID = StringSwitch<Intrinsic::ID>(Name)
-                             .StartsWith("extract.", Intrinsic::vector_extract)
-                             .StartsWith("insert.", Intrinsic::vector_insert)
-                             .Default(Intrinsic::not_intrinsic);
+      Intrinsic::ID ID =
+          StringSwitch<Intrinsic::ID>(Name)
+              .StartsWith("extract.", Intrinsic::vector_extract)
+              .StartsWith("insert.", Intrinsic::vector_insert)
+              .StartsWith("splice.", Intrinsic::vector_splice)
+              .StartsWith("reverse.", Intrinsic::vector_reverse)
+              .StartsWith("interleave2.", Intrinsic::vector_interleave2)
+              .StartsWith("deinterleave2.", Intrinsic::vector_deinterleave2)
+              .Default(Intrinsic::not_intrinsic);
       if (ID != Intrinsic::not_intrinsic) {
         const auto *FT = F->getFunctionType();
         SmallVector<Type *, 2> Tys;
-        if (ID == Intrinsic::vector_extract)
+        if (ID == Intrinsic::vector_extract ||
+            ID == Intrinsic::vector_interleave2)
           // Extracting overloads the return type.
           Tys.push_back(FT->getReturnType());
-        Tys.push_back(FT->getParamType(0));
+        if (ID != Intrinsic::vector_interleave2)
+          Tys.push_back(FT->getParamType(0));
         if (ID == Intrinsic::vector_insert)
           // Inserting overloads the inserted type.
           Tys.push_back(FT->getParamType(1));
@@ -5396,6 +5403,14 @@ std::string llvm::UpgradeDataLayoutString(StringRef DL, StringRef TT) {
     if (!DL.contains("-p9") && !DL.starts_with("p9"))
       Res.append("-p9:192:256:256:32");
 
+    return Res;
+  }
+
+  // AArch64 data layout upgrades.
+  if (T.isAArch64()) {
+    // Add "-Fn32"
+    if (!DL.empty() && !DL.contains("-Fn32"))
+      Res.append("-Fn32");
     return Res;
   }
 

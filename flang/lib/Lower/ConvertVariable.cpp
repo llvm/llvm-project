@@ -496,8 +496,8 @@ static fir::GlobalOp defineGlobal(Fortran::lower::AbstractConverter &converter,
   if (mlir::isa<fir::SequenceType>(symTy) &&
       !Fortran::semantics::IsAllocatableOrPointer(sym)) {
     mlir::Type eleTy = mlir::cast<fir::SequenceType>(symTy).getEleTy();
-    if (eleTy.isa<mlir::IntegerType, mlir::FloatType, fir::ComplexType,
-                  fir::LogicalType>()) {
+    if (mlir::isa<mlir::IntegerType, mlir::FloatType, fir::ComplexType,
+                  fir::LogicalType>(eleTy)) {
       const auto *details =
           sym.detailsIf<Fortran::semantics::ObjectEntityDetails>();
       if (details->init()) {
@@ -692,6 +692,22 @@ static mlir::Value createNewLocal(Fortran::lower::AbstractConverter &converter,
   // assumed-size (possible with cray pointee).
   if (ultimateSymbol.test(Fortran::semantics::Symbol::Flag::CrayPointee))
     return builder.create<fir::ZeroOp>(loc, fir::ReferenceType::get(ty));
+
+  if (Fortran::semantics::NeedCUDAAlloc(ultimateSymbol)) {
+    fir::CUDADataAttributeAttr cudaAttr =
+        Fortran::lower::translateSymbolCUDADataAttribute(builder.getContext(),
+                                                         ultimateSymbol);
+    llvm::SmallVector<mlir::Value> indices;
+    llvm::SmallVector<mlir::Value> elidedShape =
+        fir::factory::elideExtentsAlreadyInType(ty, shape);
+    llvm::SmallVector<mlir::Value> elidedLenParams =
+        fir::factory::elideLengthsAlreadyInType(ty, lenParams);
+    auto idxTy = builder.getIndexType();
+    for (mlir::Value sh : elidedShape)
+      indices.push_back(builder.createConvert(loc, idxTy, sh));
+    return builder.create<fir::CUDAAllocOp>(loc, ty, nm, symNm, cudaAttr,
+                                            lenParams, indices);
+  }
 
   // Let the builder do all the heavy lifting.
   if (!Fortran::semantics::IsProcedurePointer(ultimateSymbol))
@@ -926,6 +942,19 @@ static void instantiateLocal(Fortran::lower::AbstractConverter &converter,
                                                  loc, sym);
       });
     }
+  }
+  if (Fortran::semantics::NeedCUDAAlloc(var.getSymbol())) {
+    auto *builder = &converter.getFirOpBuilder();
+    mlir::Location loc = converter.getCurrentLocation();
+    fir::ExtendedValue exv =
+        converter.getSymbolExtendedValue(var.getSymbol(), &symMap);
+    auto *sym = &var.getSymbol();
+    converter.getFctCtx().attachCleanup([builder, loc, exv, sym]() {
+      fir::CUDADataAttributeAttr cudaAttr =
+          Fortran::lower::translateSymbolCUDADataAttribute(
+              builder->getContext(), *sym);
+      builder->create<fir::CUDAFreeOp>(loc, fir::getBase(exv), cudaAttr);
+    });
   }
 }
 

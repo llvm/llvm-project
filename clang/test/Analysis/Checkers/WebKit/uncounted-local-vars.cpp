@@ -1,6 +1,7 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=alpha.webkit.UncountedLocalVarsChecker -verify %s
 
 #include "mock-types.h"
+#include "mock-system-header.h"
 
 void someFunction();
 
@@ -187,3 +188,13 @@ void bar() {
 }
 
 } // namespace ignore_for_if
+
+namespace ignore_system_headers {
+
+RefCountable *provide_ref_ctnbl();
+
+void system_header() {
+  localVar<RefCountable>(provide_ref_ctnbl);
+}
+
+} // ignore_system_headers

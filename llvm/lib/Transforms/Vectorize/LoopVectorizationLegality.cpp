@@ -1067,6 +1067,15 @@ bool LoopVectorizationLegality::canVectorizeMemory() {
   if (!LAI->canVectorizeMemory())
     return false;
 
+  if (LAI->hasLoadStoreDependenceInvolvingLoopInvariantAddress()) {
+    reportVectorizationFailure("We don't allow storing to uniform addresses",
+                               "write to a loop invariant address could not "
+                               "be vectorized",
+                               "CantVectorizeStoreToLoopInvariantAddress", ORE,
+                               TheLoop);
+    return false;
+  }
+
   // We can vectorize stores to invariant address when final reduction value is
   // guaranteed to be stored at the end of the loop. Also, if decision to
   // vectorize loop is made, runtime checks are added so as to make sure that
@@ -1102,13 +1111,12 @@ bool LoopVectorizationLegality::canVectorizeMemory() {
       }
     }
 
-    if (LAI->hasDependenceInvolvingLoopInvariantAddress()) {
+    if (LAI->hasStoreStoreDependenceInvolvingLoopInvariantAddress()) {
       // For each invariant address, check its last stored value is the result
       // of one of our reductions.
       //
-      // We do not check if dependence with loads exists because they are
-      // currently rejected earlier in LoopAccessInfo::analyzeLoop. In case this
-      // behaviour changes we have to modify this code.
+      // We do not check if dependence with loads exists because that is already
+      // checked via hasLoadStoreDependenceInvolvingLoopInvariantAddress.
       ScalarEvolution *SE = PSE.getSE();
       SmallVector<StoreInst *, 4> UnhandledStores;
       for (StoreInst *SI : LAI->getStoresToInvariantAddresses()) {

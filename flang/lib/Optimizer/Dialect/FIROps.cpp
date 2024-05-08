@@ -2498,10 +2498,8 @@ static constexpr llvm::StringRef getTargetOffsetAttr() {
 
 template <typename OpT>
 static mlir::LogicalResult verifyIntegralSwitchTerminator(OpT op) {
-  if (!op.getSelector()
-           .getType()
-           .template isa<mlir::IntegerType, mlir::IndexType,
-                         fir::IntegerType>())
+  if (!mlir::isa<mlir::IntegerType, mlir::IndexType, fir::IntegerType>(
+          op.getSelector().getType()))
     return op.emitOpError("must be an integer");
   auto cases =
       op->template getAttrOfType<mlir::ArrayAttr>(op.getCasesAttr()).getValue();
@@ -2576,7 +2574,7 @@ static void printIntegralSwitchTerminator(OpT op, mlir::OpAsmPrinter &p) {
     if (i)
       p << ", ";
     auto &attr = cases[i];
-    if (auto intAttr = attr.template dyn_cast_or_null<mlir::IntegerAttr>())
+    if (auto intAttr = mlir::dyn_cast_or_null<mlir::IntegerAttr>(attr))
       p << intAttr.getValue();
     else
       p.printAttribute(attr);
@@ -4034,6 +4032,34 @@ mlir::LogicalResult fir::CUDADeallocateOp::verify() {
     return emitOpError("expect stat attribute when errmsg is provided");
   return mlir::success();
 }
+
+void fir::CUDAAllocOp::build(
+    mlir::OpBuilder &builder, mlir::OperationState &result, mlir::Type inType,
+    llvm::StringRef uniqName, llvm::StringRef bindcName,
+    fir::CUDADataAttributeAttr cudaAttr, mlir::ValueRange typeparams,
+    mlir::ValueRange shape, llvm::ArrayRef<mlir::NamedAttribute> attributes) {
+  mlir::StringAttr nameAttr =
+      uniqName.empty() ? mlir::StringAttr{} : builder.getStringAttr(uniqName);
+  mlir::StringAttr bindcAttr =
+      bindcName.empty() ? mlir::StringAttr{} : builder.getStringAttr(bindcName);
+  build(builder, result, wrapAllocaResultType(inType),
+        mlir::TypeAttr::get(inType), nameAttr, bindcAttr, typeparams, shape,
+        cudaAttr);
+  result.addAttributes(attributes);
+}
+
+template <typename Op>
+static mlir::LogicalResult checkCudaAttr(Op op) {
+  if (op.getCudaAttr() == fir::CUDADataAttribute::Device ||
+      op.getCudaAttr() == fir::CUDADataAttribute::Managed ||
+      op.getCudaAttr() == fir::CUDADataAttribute::Unified)
+    return mlir::success();
+  return op.emitOpError("expect device, managed or unified cuda attribute");
+}
+
+mlir::LogicalResult fir::CUDAAllocOp::verify() { return checkCudaAttr(*this); }
+
+mlir::LogicalResult fir::CUDAFreeOp::verify() { return checkCudaAttr(*this); }
 
 //===----------------------------------------------------------------------===//
 // FIROpsDialect

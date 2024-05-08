@@ -4097,12 +4097,12 @@ public:
                                    SmallVectorImpl<QualType> &Exceptions,
                                    FunctionProtoType::ExceptionSpecInfo &ESI);
 
-  /// Add an exception-specification to the given member function
-  /// (or member function template). The exception-specification was parsed
-  /// after the method itself was declared.
+  /// Add an exception-specification to the given member or friend function
+  /// (or function template). The exception-specification was parsed
+  /// after the function itself was declared.
   void actOnDelayedExceptionSpecification(
-      Decl *Method, ExceptionSpecificationType EST,
-      SourceRange SpecificationRange, ArrayRef<ParsedType> DynamicExceptions,
+      Decl *D, ExceptionSpecificationType EST, SourceRange SpecificationRange,
+      ArrayRef<ParsedType> DynamicExceptions,
       ArrayRef<SourceRange> DynamicExceptionRanges, Expr *NoexceptExpr);
 
   class InheritedConstructorInfo;
@@ -6978,12 +6978,6 @@ public:
                                    SourceLocation TemplateKWLoc,
                                    UnqualifiedId &Member, Decl *ObjCImpDecl);
 
-  MemberExpr *BuildMemberExpr(
-      Expr *Base, bool IsArrow, SourceLocation OpLoc, const CXXScopeSpec *SS,
-      SourceLocation TemplateKWLoc, ValueDecl *Member, DeclAccessPair FoundDecl,
-      bool HadMultipleCandidates, const DeclarationNameInfo &MemberNameInfo,
-      QualType Ty, ExprValueKind VK, ExprObjectKind OK,
-      const TemplateArgumentListInfo *TemplateArgs = nullptr);
   MemberExpr *
   BuildMemberExpr(Expr *Base, bool IsArrow, SourceLocation OpLoc,
                   NestedNameSpecifierLoc NNS, SourceLocation TemplateKWLoc,
@@ -7472,7 +7466,7 @@ public:
   bool LookupQualifiedName(LookupResult &R, DeclContext *LookupCtx,
                            CXXScopeSpec &SS);
   bool LookupParsedName(LookupResult &R, Scope *S, CXXScopeSpec *SS,
-                        bool AllowBuiltinCreation = false,
+                        QualType ObjectType, bool AllowBuiltinCreation = false,
                         bool EnteringContext = false);
   ObjCProtocolDecl *LookupProtocol(
       IdentifierInfo *II, SourceLocation IdLoc,
@@ -8881,11 +8875,13 @@ public:
     /// functions (but no function templates).
     FoundFunctions,
   };
-  bool LookupTemplateName(
-      LookupResult &R, Scope *S, CXXScopeSpec &SS, QualType ObjectType,
-      bool EnteringContext, bool &MemberOfUnknownSpecialization,
-      RequiredTemplateKind RequiredTemplate = SourceLocation(),
-      AssumedTemplateKind *ATK = nullptr, bool AllowTypoCorrection = true);
+
+  bool
+  LookupTemplateName(LookupResult &R, Scope *S, CXXScopeSpec &SS,
+                     QualType ObjectType, bool EnteringContext,
+                     RequiredTemplateKind RequiredTemplate = SourceLocation(),
+                     AssumedTemplateKind *ATK = nullptr,
+                     bool AllowTypoCorrection = true);
 
   TemplateNameKind isTemplateName(Scope *S, CXXScopeSpec &SS,
                                   bool hasTemplateKeyword,
@@ -9249,7 +9245,8 @@ public:
   void NoteTemplateParameterLocation(const NamedDecl &Decl);
 
   ExprResult BuildExpressionFromDeclTemplateArgument(
-      const TemplateArgument &Arg, QualType ParamType, SourceLocation Loc);
+      const TemplateArgument &Arg, QualType ParamType, SourceLocation Loc,
+      NamedDecl *TemplateParam = nullptr);
   ExprResult
   BuildExpressionFromNonTypeTemplateArgument(const TemplateArgument &Arg,
                                              SourceLocation Loc);
@@ -9572,9 +9569,10 @@ public:
 
   bool isSameOrCompatibleFunctionType(QualType Param, QualType Arg);
 
-  TemplateArgumentLoc getTrivialTemplateArgumentLoc(const TemplateArgument &Arg,
-                                                    QualType NTTPType,
-                                                    SourceLocation Loc);
+  TemplateArgumentLoc
+  getTrivialTemplateArgumentLoc(const TemplateArgument &Arg, QualType NTTPType,
+                                SourceLocation Loc,
+                                NamedDecl *TemplateParam = nullptr);
 
   /// Get a template argument mapping the given template parameter to itself,
   /// e.g. for X in \c template<int X>, this would return an expression template
@@ -9740,6 +9738,9 @@ public:
                      const PartialDiagnostic &AmbigDiag,
                      const PartialDiagnostic &CandidateDiag,
                      bool Complain = true, QualType TargetType = QualType());
+
+  FunctionDecl *getMoreConstrainedFunction(FunctionDecl *FD1,
+                                           FunctionDecl *FD2);
 
   ///@}
 

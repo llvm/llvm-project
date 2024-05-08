@@ -266,6 +266,9 @@ def Cos  : DXILOpMapping<12, unary, int_cos,
 def Sin  : DXILOpMapping<13, unary, int_sin,
                          "Returns sine(theta) for theta in radians.",
                          [llvm_halforfloat_ty, LLVMMatchType<0>]>;
+def Tan  : DXILOpMapping<14, unary, int_tan,
+                         "Returns tangent(theta) for theta in radians.",
+                         [llvm_halforfloat_ty, LLVMMatchType<0>]>;
 def Exp2 : DXILOpMapping<21, unary, int_exp2,
                          "Returns the base 2 exponential, or 2**x, of the specified value."
                          "exp2(x) = 2**x.",

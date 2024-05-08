@@ -1752,8 +1752,9 @@ def ROTL64reg_sw :
             ".reg .b64 %lhs;\n\t"
             ".reg .b64 %rhs;\n\t"
             ".reg .u32 %amt2;\n\t"
-            "shl.b64 \t%lhs, $src, $amt;\n\t"
-            "sub.u32 \t%amt2, 64, $amt;\n\t"
+            "and.b32 \t%amt2, $amt, 63;\n\t"
+            "shl.b64 \t%lhs, $src, %amt2;\n\t"
+            "sub.u32 \t%amt2, 64, %amt2;\n\t"
             "shr.b64 \t%rhs, $src, %amt2;\n\t"
             "add.u64 \t$dst, %lhs, %rhs;\n\t"
             "}}",
@@ -1765,8 +1766,9 @@ def ROTR64reg_sw :
             ".reg .b64 %lhs;\n\t"
             ".reg .b64 %rhs;\n\t"
             ".reg .u32 %amt2;\n\t"
-            "shr.b64 \t%lhs, $src, $amt;\n\t"
-            "sub.u32 \t%amt2, 64, $amt;\n\t"
+            "and.b32 \t%amt2, $amt, 63;\n\t"
+            "shr.b64 \t%lhs, $src, %amt2;\n\t"
+            "sub.u32 \t%amt2, 64, %amt2;\n\t"
             "shl.b64 \t%rhs, $src, %amt2;\n\t"
             "add.u64 \t$dst, %lhs, %rhs;\n\t"
             "}}",
@@ -2494,10 +2496,6 @@ defm FSetNE : FSET_FORMAT<setne, CmpNE, CmpNE_FTZ>;
 
 defm FSetNUM : FSET_FORMAT<seto, CmpNUM, CmpNUM_FTZ>;
 defm FSetNAN : FSET_FORMAT<setuo, CmpNAN, CmpNAN_FTZ>;
-
-// FIXME: What is this doing here?  Can it be deleted?
-// def ld_param         : SDNode<"NVPTXISD::LOAD_PARAM", SDTLoad,
-//                         [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
 
 def SDTDeclareParamProfile :
   SDTypeProfile<0, 3, [SDTCisInt<0>, SDTCisInt<1>, SDTCisInt<2>]>;
