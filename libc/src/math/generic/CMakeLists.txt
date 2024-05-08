@@ -2043,6 +2043,42 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  fmul
+  SRCS
+    fmul.cpp
+  HDRS
+    ../fmul.h
+  DEPENDS
+    libc.src.__support.FPUtil.basic_operations
+  COMPILE_OPTIONS
+    -O2
+)
+
+add_entrypoint_object(
+  fmull
+  SRCS
+    fmull.cpp
+  HDRS
+    ../fmull.h
+  DEPENDS
+    libc.src.__support.FPUtil.basic_operations
+  COMPILE_OPTIONS
+    -O2
+)
+
+add_entrypoint_object(
+  dmull
+  SRCS
+    dmull.cpp
+  HDRS
+    ../dmull.h
+  DEPENDS
+    libc.src.__support.FPUtil.basic_operations
+  COMPILE_OPTIONS
+    -O2
+)
+
+add_entrypoint_object(
   sqrt
   SRCS
     sqrt.cpp

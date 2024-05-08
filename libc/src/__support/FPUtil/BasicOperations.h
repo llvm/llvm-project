@@ -176,6 +176,18 @@ LIBC_INLINE T fdim(T x, T y) {
 
   return (x > y ? x - y : 0);
 }
+  
+LIBC_INLINE float fmul(double x, double y) {
+  return static_cast<float>(x * y);
+}
+
+LIBC_INLINE float fmull(long double x, long double y) {
+  return static_cast<float>(x * y);
+}
+
+LIBC_INLINE double dmull(long double x, long double y) {
+  return static_cast<double>(x * y);
+}
 
 template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
 LIBC_INLINE int canonicalize(T &cx, const T &x) {
