@@ -52,18 +52,7 @@ struct TestCompareExchangeStrongInvalidMemoryOrder {
   }
 };
 
-void test() {
-  TestEachIntegralType<TestCompareExchangeStrongInvalidMemoryOrder>()();
-
-  TestEachFloatingPointType<TestCompareExchangeStrongInvalidMemoryOrder>()();
-
-  TestEachPointerType<TestCompareExchangeStrongInvalidMemoryOrder>()();
-
-  TestCompareExchangeStrongInvalidMemoryOrder<UserAtomicType>()();
-  TestCompareExchangeStrongInvalidMemoryOrder<LargeUserAtomicType>()();
-}
-
 int main(int, char**) {
-  test();
+  TestEachAtomicType<TestCompareExchangeStrongInvalidMemoryOrder>()();
   return 0;
 }

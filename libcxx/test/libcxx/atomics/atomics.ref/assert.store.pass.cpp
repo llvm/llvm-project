@@ -57,18 +57,7 @@ struct TestStoreInvalidMemoryOrder {
   }
 };
 
-void test() {
-  TestEachIntegralType<TestStoreInvalidMemoryOrder>()();
-
-  TestEachFloatingPointType<TestStoreInvalidMemoryOrder>()();
-
-  TestEachPointerType<TestStoreInvalidMemoryOrder>()();
-
-  TestStoreInvalidMemoryOrder<UserAtomicType>()();
-  TestStoreInvalidMemoryOrder<LargeUserAtomicType>()();
-}
-
 int main(int, char**) {
-  test();
+  TestEachAtomicType<TestStoreInvalidMemoryOrder>()();
   return 0;
 }

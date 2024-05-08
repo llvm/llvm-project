@@ -49,18 +49,7 @@ struct TestWaitInvalidMemoryOrder {
   }
 };
 
-void test() {
-  TestEachIntegralType<TestWaitInvalidMemoryOrder>()();
-
-  TestEachFloatingPointType<TestWaitInvalidMemoryOrder>()();
-
-  TestEachPointerType<TestWaitInvalidMemoryOrder>()();
-
-  TestWaitInvalidMemoryOrder<UserAtomicType>()();
-  TestWaitInvalidMemoryOrder<LargeUserAtomicType>()();
-}
-
 int main(int, char**) {
-  test();
+  TestEachAtomicType<TestWaitInvalidMemoryOrder>()();
   return 0;
 }
