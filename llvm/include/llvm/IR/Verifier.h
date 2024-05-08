@@ -85,7 +85,8 @@ public:
 /// If there are no errors, the function returns false. If an error is found,
 /// a message describing the error is written to OS (if non-null) and true is
 /// returned.
-bool verifyFunction(const Function &F, raw_ostream *OS = nullptr);
+bool verifyFunction(const Function &F, raw_ostream *OS = nullptr,
+                    bool ShouldVerifyMD = true);
 
 /// Check a module for errors.
 ///
@@ -98,7 +99,7 @@ bool verifyFunction(const Function &F, raw_ostream *OS = nullptr);
 /// error and instead *BrokenDebugInfo will be set to true. Debug
 /// info errors can be "recovered" from by stripping the debug info.
 bool verifyModule(const Module &M, raw_ostream *OS = nullptr,
-                  bool *BrokenDebugInfo = nullptr);
+                  bool *BrokenDebugInfo = nullptr, bool ShouldVerifyMD = true);
 
 FunctionPass *createVerifierPass(bool FatalErrors = true);
 

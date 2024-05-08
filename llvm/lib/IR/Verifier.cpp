@@ -150,6 +150,8 @@ struct VerifierSupport {
   bool BrokenDebugInfo = false;
   /// Whether to treat broken debug info as an error.
   bool TreatBrokenDebugInfoAsError = true;
+  /// Whether to verify metadata, which can be expensive in debug builds.
+  bool VerifyMD = true;
 
   explicit VerifierSupport(raw_ostream *OS, const Module &M)
       : OS(OS), M(M), MST(&M), TT(M.getTargetTriple()), DL(M.getDataLayout()),
@@ -399,10 +401,11 @@ class Verifier : public InstVisitor<Verifier>, VerifierSupport {
 
 public:
   explicit Verifier(raw_ostream *OS, bool ShouldTreatBrokenDebugInfoAsError,
-                    const Module &M)
+                    bool ShouldVerifyMD, const Module &M)
       : VerifierSupport(OS, M), LandingPadResultTy(nullptr),
         SawFrameEscape(false), TBAAVerifyHelper(this) {
     TreatBrokenDebugInfoAsError = ShouldTreatBrokenDebugInfoAsError;
+    VerifyMD = ShouldVerifyMD;
   }
 
   bool hasBrokenDebugInfo() const { return BrokenDebugInfo; }
@@ -478,8 +481,9 @@ public:
     for (const GlobalIFunc &GI : M.ifuncs())
       visitGlobalIFunc(GI);
 
-    for (const NamedMDNode &NMD : M.named_metadata())
-      visitNamedMDNode(NMD);
+    if (VerifyMD)
+      for (const NamedMDNode &NMD : M.named_metadata())
+        visitNamedMDNode(NMD);
 
     for (const StringMapEntry<Comdat> &SMEC : M.getComdatSymbolTable())
       visitComdat(SMEC.getValue());
@@ -7057,21 +7061,24 @@ void Verifier::verifyNoAliasScopeDecl() {
 //  Implement the public interfaces to this file...
 //===----------------------------------------------------------------------===//
 
-bool llvm::verifyFunction(const Function &f, raw_ostream *OS) {
+bool llvm::verifyFunction(const Function &f, raw_ostream *OS,
+                          bool ShouldVerifyMD) {
   Function &F = const_cast<Function &>(f);
 
   // Don't use a raw_null_ostream.  Printing IR is expensive.
-  Verifier V(OS, /*ShouldTreatBrokenDebugInfoAsError=*/true, *f.getParent());
+  Verifier V(OS, /*ShouldTreatBrokenDebugInfoAsError=*/true, ShouldVerifyMD,
+             *f.getParent());
 
   // Note that this function's return value is inverted from what you would
   // expect of a function called "verify".
   return !V.verify(F);
 }
 
-bool llvm::verifyModule(const Module &M, raw_ostream *OS,
-                        bool *BrokenDebugInfo) {
+bool llvm::verifyModule(const Module &M, raw_ostream *OS, bool *BrokenDebugInfo,
+                        bool ShouldVerifyMD) {
   // Don't use a raw_null_ostream.  Printing IR is expensive.
-  Verifier V(OS, /*ShouldTreatBrokenDebugInfoAsError=*/!BrokenDebugInfo, M);
+  Verifier V(OS, /*ShouldTreatBrokenDebugInfoAsError=*/!BrokenDebugInfo,
+             ShouldVerifyMD, M);
 
   bool Broken = false;
   for (const Function &F : M)
@@ -7103,8 +7110,9 @@ struct VerifierLegacyPass : public FunctionPass {
   }
 
   bool doInitialization(Module &M) override {
-    V = std::make_unique<Verifier>(
-        &dbgs(), /*ShouldTreatBrokenDebugInfoAsError=*/false, M);
+    V = std::make_unique<Verifier>(&dbgs(),
+                                   /*ShouldTreatBrokenDebugInfoAsError=*/false,
+                                   /*ShouldVerifyMD=*/true, M);
     return false;
   }
 
