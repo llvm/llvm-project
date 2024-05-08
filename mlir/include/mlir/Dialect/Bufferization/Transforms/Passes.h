@@ -166,6 +166,10 @@ struct BufferResultsToOutParamsOpts {
   /// If true, the pass adds a "bufferize.result" attribute to each output
   /// parameter.
   bool addResultAttribute = false;
+
+  /// If true, the pass eliminates the memref.alloc and memcpy if the returned
+  /// memref is allocated in the current function.
+  bool hoistStaticAllocs = false;
 };
 
 /// Creates a pass that converts memref function results to out-params.

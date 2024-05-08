@@ -8,6 +8,7 @@
 
 #include "ABIInfoImpl.h"
 #include "TargetInfo.h"
+#include "clang/AST/Decl.h"
 #include "clang/Basic/DiagnosticFrontend.h"
 #include "llvm/TargetParser/AArch64TargetParser.h"
 
@@ -852,14 +853,6 @@ Address AArch64ABIInfo::EmitMSVAArg(CodeGenFunction &CGF, Address VAListAddr,
                           /*allowHigherAlign*/ false);
 }
 
-static bool isStreaming(const FunctionDecl *F) {
-  if (F->hasAttr<ArmLocallyStreamingAttr>())
-    return true;
-  if (const auto *T = F->getType()->getAs<FunctionProtoType>())
-    return T->getAArch64SMEAttributes() & FunctionType::SME_PStateSMEnabledMask;
-  return false;
-}
-
 static bool isStreamingCompatible(const FunctionDecl *F) {
   if (const auto *T = F->getType()->getAs<FunctionProtoType>())
     return T->getAArch64SMEAttributes() &
@@ -906,8 +899,10 @@ void AArch64TargetCodeGenInfo::checkFunctionCallABIStreaming(
   if (!Caller || !Callee || !Callee->hasAttr<AlwaysInlineAttr>())
     return;
 
-  bool CallerIsStreaming = isStreaming(Caller);
-  bool CalleeIsStreaming = isStreaming(Callee);
+  bool CallerIsStreaming =
+      IsArmStreamingFunction(Caller, /*IncludeLocallyStreaming=*/true);
+  bool CalleeIsStreaming =
+      IsArmStreamingFunction(Callee, /*IncludeLocallyStreaming=*/true);
   bool CallerIsStreamingCompatible = isStreamingCompatible(Caller);
   bool CalleeIsStreamingCompatible = isStreamingCompatible(Callee);
 

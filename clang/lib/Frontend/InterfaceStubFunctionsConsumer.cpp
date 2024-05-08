@@ -33,7 +33,8 @@ class InterfaceStubFunctionsConsumer : public ASTConsumer {
 
     MangledSymbol(const std::string &ParentName, uint8_t Type, uint8_t Binding,
                   std::vector<std::string> Names)
-        : ParentName(ParentName), Type(Type), Binding(Binding), Names(Names) {}
+        : ParentName(ParentName), Type(Type), Binding(Binding),
+          Names(std::move(Names)) {}
   };
   using MangledSymbols = std::map<const NamedDecl *, MangledSymbol>;
 

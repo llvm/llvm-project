@@ -712,6 +712,7 @@ private:
   SDValue PromoteFloatOp_UnaryOp(SDNode *N, unsigned OpNo);
   SDValue PromoteFloatOp_FP_TO_XINT_SAT(SDNode *N, unsigned OpNo);
   SDValue PromoteFloatOp_STORE(SDNode *N, unsigned OpNo);
+  SDValue PromoteFloatOp_ATOMIC_STORE(SDNode *N, unsigned OpNo);
   SDValue PromoteFloatOp_SELECT_CC(SDNode *N, unsigned OpNo);
   SDValue PromoteFloatOp_SETCC(SDNode *N, unsigned OpNo);
 
@@ -757,6 +758,7 @@ private:
   SDValue SoftPromoteHalfOp_SETCC(SDNode *N);
   SDValue SoftPromoteHalfOp_SELECT_CC(SDNode *N, unsigned OpNo);
   SDValue SoftPromoteHalfOp_STORE(SDNode *N, unsigned OpNo);
+  SDValue SoftPromoteHalfOp_ATOMIC_STORE(SDNode *N, unsigned OpNo);
   SDValue SoftPromoteHalfOp_STACKMAP(SDNode *N, unsigned OpNo);
   SDValue SoftPromoteHalfOp_PATCHPOINT(SDNode *N, unsigned OpNo);
 

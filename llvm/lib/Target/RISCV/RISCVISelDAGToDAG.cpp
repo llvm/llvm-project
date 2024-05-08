@@ -3478,8 +3478,15 @@ static bool usesAllOnesMask(SDNode *N, unsigned MaskOpIdx) {
 }
 
 static bool isImplicitDef(SDValue V) {
-  return V.isMachineOpcode() &&
-         V.getMachineOpcode() == TargetOpcode::IMPLICIT_DEF;
+  if (!V.isMachineOpcode())
+    return false;
+  if (V.getMachineOpcode() == TargetOpcode::REG_SEQUENCE) {
+    for (unsigned I = 1; I < V.getNumOperands(); I += 2)
+      if (!isImplicitDef(V.getOperand(I)))
+        return false;
+    return true;
+  }
+  return V.getMachineOpcode() == TargetOpcode::IMPLICIT_DEF;
 }
 
 // Optimize masked RVV pseudo instructions with a known all-ones mask to their
