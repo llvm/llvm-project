@@ -544,9 +544,14 @@ LogicalResult assignTileIdsAndResolveTrivialConflicts(
           continue;
         auto operandTileOp =
             tileOperand->get().getDefiningOp<ArmSMETileOpInterface>();
-        if (!isTriviallyCloneableTileOp(operandTileOp))
-          return tileOp.emitOpError("failed to rectify tile operand with tile "
-                                    "result (move required)");
+        if (!isTriviallyCloneableTileOp(operandTileOp)) {
+          auto error =
+              tileOp.emitOpError("tile operand allocated to different SME "
+                                 "virtial tile (move required)");
+          error.attachNote(tileOperand->get().getLoc())
+              << "tile operand is: " << tileOperand->get();
+          return error;
+        }
         // Cloning prevents a move/spill (though may require recomputation).
         rewriter.setInsertionPoint(tileOp);
         auto clonedOp = operandTileOp.clone();
@@ -567,7 +572,7 @@ LogicalResult assignTileIdsAndResolveTrivialConflicts(
             return;
           if (!isAllocatedToSameTile(predecessorTile)) {
             blockArg.getOwner()->getParentOp()->emitOpError(
-                "block argument not allocated to the same tile as "
+                "block argument not allocated to the same SME virtial tile as "
                 "predecessors");
             tileMismatch = true;
           }

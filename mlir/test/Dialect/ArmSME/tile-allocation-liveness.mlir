@@ -37,8 +37,9 @@ func.func @constant_with_multiple_users(%a: vector<[4]xf32>, %b: vector<[4]xf32>
 //   CHECK-LIVE-RANGE-NEXT: |E test.some_use
 //   CHECK-LIVE-RANGE-NEXT: E  test.some_use
 
+// expected-note@below {{tile operand is: <block argument> of type 'vector<[4]x[4]xf32>'}}
 func.func @value_with_multiple_users(%tile: vector<[4]x[4]xf32>, %a: vector<[4]xf32>, %b: vector<[4]xf32>, %index: index) {
-  // expected-error@below {{op failed to rectify tile operand with tile result (move required)}}
+  // expected-error@below {{op tile operand allocated to different SME virtial tile (move required)}}
   %tile_a = arm_sme.move_vector_to_tile_slice %a, %tile, %index : vector<[4]xf32> into vector<[4]x[4]xf32>
   %tile_b = arm_sme.move_vector_to_tile_slice %b, %tile, %index : vector<[4]xf32> into vector<[4]x[4]xf32>
   "test.some_use"(%tile_a) : (vector<[4]x[4]xf32>) -> ()
@@ -143,8 +144,10 @@ func.func @non_overlapping_branches(%cond: i1) {
 
 // Here %vecA and %vecB are not merged into the same live range (as they are unknown values).
 // This means that %vecA and %vecB are both allocated to different tiles (which is not legal).
+
+// expected-note@below {{tile operand is: <block argument> of type 'vector<[4]x[4]xf32>'}}
 func.func @overlapping_branches(%cond: i1, %vecA: vector<[4]x[4]xf32>, %vecB: vector<[4]x[4]xf32>) {
-  // expected-error@below {{op failed to rectify tile operand with tile result (move required)}}
+  // expected-error@below {{op tile operand allocated to different SME virtial tile (move required)}}
   %tile = scf.if %cond -> vector<[4]x[4]xf32> {
     scf.yield %vecA : vector<[4]x[4]xf32>
   } else {
