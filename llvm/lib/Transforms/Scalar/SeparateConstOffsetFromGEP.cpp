@@ -972,16 +972,12 @@ SeparateConstOffsetFromGEP::lowerToArithmetics(GetElementPtrInst *Variadic,
 
 bool SeparateConstOffsetFromGEP::reorderGEP(GetElementPtrInst *GEP,
                                             TargetTransformInfo &TTI) {
-  Type *GEPType = GEP->getSourceElementType();
-  // TODO: support reordering for non-trivial GEP chains
   if (GEP->getNumIndices() != 1)
     return false;
 
   auto PtrGEP = dyn_cast<GetElementPtrInst>(GEP->getPointerOperand());
   if (!PtrGEP)
     return false;
-  Type *PtrGEPType = PtrGEP->getSourceElementType();
-  // TODO: support reordering for non-trivial GEP chains
   if (PtrGEP->getNumIndices() != 1)
     return false;
 
@@ -1013,10 +1009,10 @@ bool SeparateConstOffsetFromGEP::reorderGEP(GetElementPtrInst *GEP,
 
   IRBuilder<> Builder(GEP);
   // For trivial GEP chains, we can swap the indicies.
-  Value *NewSrc = Builder.CreateGEP(GEPType, PtrGEP->getPointerOperand(),
-                                    SmallVector<Value *, 4>(GEP->indices()), "",
-                                    IsChainInBounds);
-  Value *NewGEP = Builder.CreateGEP(PtrGEPType, NewSrc,
+  Value *NewSrc = Builder.CreateGEP(
+      GEP->getSourceElementType(), PtrGEP->getPointerOperand(),
+      SmallVector<Value *, 4>(GEP->indices()), "", IsChainInBounds);
+  Value *NewGEP = Builder.CreateGEP(PtrGEP->getSourceElementType(), NewSrc,
                                     SmallVector<Value *, 4>(PtrGEP->indices()),
                                     "", IsChainInBounds);
   GEP->replaceAllUsesWith(NewGEP);
