@@ -96,12 +96,14 @@ Value memref::AllocaOp::getDefaultValue(const MemorySlot &slot,
       });
 }
 
-void memref::AllocaOp::handlePromotionComplete(const MemorySlot &slot,
-                                               Value defaultValue,
-                                               OpBuilder &builder) {
+std::optional<PromotableAllocationOpInterface>
+memref::AllocaOp::handlePromotionComplete(const MemorySlot &slot,
+                                          Value defaultValue,
+                                          OpBuilder &builder) {
   if (defaultValue.use_empty())
     defaultValue.getDefiningOp()->erase();
   this->erase();
+  return std::nullopt;
 }
 
 void memref::AllocaOp::handleBlockArgument(const MemorySlot &slot,

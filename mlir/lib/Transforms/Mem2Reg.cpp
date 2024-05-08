@@ -173,7 +173,9 @@ public:
   /// Actually promotes the slot by mutating IR. Promoting a slot DOES
   /// invalidate the MemorySlotPromotionInfo of other slots. Preparation of
   /// promotion info should NOT be performed in batches.
-  void promoteSlot();
+  /// Returns a promotable allocation op if a new allocator was created, nullopt
+  /// otherwise.
+  std::optional<PromotableAllocationOpInterface> promoteSlot();
 
 private:
   /// Computes the reaching definition for all the operations that require
@@ -595,7 +597,8 @@ void MemorySlotPromoter::removeBlockingUses() {
          "after promotion, the slot pointer should not be used anymore");
 }
 
-void MemorySlotPromoter::promoteSlot() {
+std::optional<PromotableAllocationOpInterface>
+MemorySlotPromoter::promoteSlot() {
   computeReachingDefInRegion(slot.ptr.getParentRegion(),
                              getOrCreateDefaultValue());
 
@@ -622,7 +625,7 @@ void MemorySlotPromoter::promoteSlot() {
   if (statistics.promotedAmount)
     (*statistics.promotedAmount)++;
 
-  allocator.handlePromotionComplete(slot, defaultValue, builder);
+  return allocator.handlePromotionComplete(slot, defaultValue, builder);
 }
 
 LogicalResult mlir::tryToPromoteMemorySlots(
@@ -642,6 +645,7 @@ LogicalResult mlir::tryToPromoteMemorySlots(
   SmallVector<PromotableAllocationOpInterface> newWorkList;
   newWorkList.reserve(workList.size());
   while (true) {
+    bool changesInThisRound = false;
     for (PromotableAllocationOpInterface allocator : workList) {
       for (MemorySlot slot : allocator.getPromotableSlots()) {
         if (slot.ptr.use_empty())
@@ -650,17 +654,27 @@ LogicalResult mlir::tryToPromoteMemorySlots(
         MemorySlotPromotionAnalyzer analyzer(slot, dominance, dataLayout);
         std::optional<MemorySlotPromotionInfo> info = analyzer.computeInfo();
         if (info) {
-          MemorySlotPromoter(slot, allocator, builder, dominance, dataLayout,
-                             std::move(*info), statistics, blockIndexCache)
-              .promoteSlot();
-          promotedAny = true;
-          continue;
+          std::optional<PromotableAllocationOpInterface> newAllocator =
+              MemorySlotPromoter(slot, allocator, builder, dominance,
+                                 dataLayout, std::move(*info), statistics,
+                                 blockIndexCache)
+                  .promoteSlot();
+          changesInThisRound = true;
+          // Add newly created allocators to the worklist for further
+          // processing.
+          if (newAllocator)
+            newWorkList.push_back(*newAllocator);
+
+          // Breaking is required, as a modification to an allocator might have
+          // removed it, making the other slots invalid.
+          break;
         }
         newWorkList.push_back(allocator);
       }
     }
-    if (workList.size() == newWorkList.size())
+    if (!changesInThisRound)
       break;
+    promotedAny = true;
 
     // Swap the vector's backing memory and clear the entries in newWorkList
     // afterwards. This ensures that additional heap allocations can be avoided.
