@@ -15,6 +15,7 @@
 #include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
+#include "llvm/ADT/STLExtras.h"
 
 namespace mlir {
 namespace memref {
@@ -153,6 +154,28 @@ void eraseDeadAllocAndStores(RewriterBase &rewriter, Operation *parentOp) {
   });
   for (Operation *op : opToErase)
     rewriter.eraseOp(op);
+}
+
+static SmallVector<OpFoldResult>
+computeSuffixProductIRBlockImpl(Location loc, OpBuilder &builder,
+                                ArrayRef<OpFoldResult> sizes,
+                                OpFoldResult unit) {
+  SmallVector<OpFoldResult> strides(sizes.size(), unit);
+  AffineExpr s0, s1;
+  bindSymbols(builder.getContext(), s0, s1);
+
+  for (int64_t r = strides.size() - 1; r > 0; --r) {
+    strides[r - 1] = affine::makeComposedFoldedAffineApply(
+        builder, loc, s0 * s1, {strides[r], sizes[r]});
+  }
+  return strides;
+}
+
+SmallVector<OpFoldResult>
+computeSuffixProductIRBlock(Location loc, OpBuilder &builder,
+                            ArrayRef<OpFoldResult> sizes) {
+  OpFoldResult unit = builder.getIndexAttr(1);
+  return computeSuffixProductIRBlockImpl(loc, builder, sizes, unit);
 }
 
 } // namespace memref
