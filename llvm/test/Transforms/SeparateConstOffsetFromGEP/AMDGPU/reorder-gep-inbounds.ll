@@ -6,7 +6,7 @@ define void @inboundsPossiblyNegative(ptr %in.ptr, i64 %in.idx1) {
 ; CHECK-SAME: ptr [[IN_PTR:%.*]], i64 [[IN_IDX1:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr <2 x i8>, ptr [[IN_PTR]], i64 [[IN_IDX1]]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr <2 x i8>, ptr [[TMP0]], i32 1
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr <2 x i8>, ptr [[TMP0]], i64 1
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -145,7 +145,7 @@ entry:
 }
 
 define void @vectorType1(ptr %in.ptr, i64 %in.idx1) {
-; CHECK-LABEL: define void @badVectorType(
+; CHECK-LABEL: define void @vectorType1(
 ; CHECK-SAME: ptr [[IN_PTR:%.*]], i64 [[IN_IDX1:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[IN_IDX1_NNEG:%.*]] = and i64 [[IN_IDX1]], 2147483647
@@ -161,7 +161,7 @@ entry:
 }
 
 define void @vectorType2(ptr %in.ptr, i64 %in.idx1) {
-; CHECK-LABEL: define void @badVectorType2(
+; CHECK-LABEL: define void @vectorType2(
 ; CHECK-SAME: ptr [[IN_PTR:%.*]], i64 [[IN_IDX1:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[IN_IDX1_NNEG:%.*]] = and i64 [[IN_IDX1]], 2147483647
@@ -173,6 +173,87 @@ entry:
   %in.idx1.nneg = and i64 %in.idx1, 2147483647
   %const1 = getelementptr inbounds <4 x i8>, ptr %in.ptr, i32 1
   %idx1 = getelementptr inbounds <4 x half>, ptr %const1, i64 %in.idx1.nneg
+  ret void
+}
+
+define void @vectorType3(ptr %in.ptr, i64 %in.idx1) {
+; CHECK-LABEL: define void @vectorType3(
+; CHECK-SAME: ptr [[IN_PTR:%.*]], i64 [[IN_IDX1:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[IN_IDX1_NNEG:%.*]] = and i64 [[IN_IDX1]], 2147483647
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds ptr, ptr [[IN_PTR]], i64 [[IN_IDX1_NNEG]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <4 x ptr>, ptr [[TMP0]], i32 1
+; CHECK-NEXT:    ret void
+;
+entry:
+  %in.idx1.nneg = and i64 %in.idx1, 2147483647
+  %const1 = getelementptr inbounds <4 x ptr>, ptr %in.ptr, i32 1
+  %idx1 = getelementptr inbounds ptr, ptr %const1, i64 %in.idx1.nneg
+  ret void
+}
+
+define void @vectorType4(ptr %in.ptr, i64 %in.idx1) {
+; CHECK-LABEL: define void @vectorType4(
+; CHECK-SAME: ptr [[IN_PTR:%.*]], i64 [[IN_IDX1:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[IN_IDX1_NNEG:%.*]] = and i64 [[IN_IDX1]], 2147483647
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds <8 x ptr addrspace(1)>, ptr [[IN_PTR]], i64 [[IN_IDX1_NNEG]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <4 x ptr>, ptr [[TMP0]], i32 3
+; CHECK-NEXT:    ret void
+;
+entry:
+  %in.idx1.nneg = and i64 %in.idx1, 2147483647
+  %const1 = getelementptr inbounds <4 x ptr>, ptr %in.ptr, i32 3
+  %idx1 = getelementptr inbounds <8 x ptr addrspace(1)>, ptr %const1, i64 %in.idx1.nneg
+  ret void
+}
+
+
+define void @ptrType(ptr %in.ptr, i64 %in.idx1) {
+; CHECK-LABEL: define void @ptrType(
+; CHECK-SAME: ptr [[IN_PTR:%.*]], i64 [[IN_IDX1:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[IN_IDX1_NNEG:%.*]] = and i64 [[IN_IDX1]], 2147483647
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds ptr, ptr [[IN_PTR]], i64 [[IN_IDX1_NNEG]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <4 x ptr>, ptr [[TMP0]], i32 1
+; CHECK-NEXT:    ret void
+;
+entry:
+  %in.idx1.nneg = and i64 %in.idx1, 2147483647
+  %const1 = getelementptr inbounds <4 x ptr>, ptr %in.ptr, i32 1
+  %idx1 = getelementptr inbounds ptr, ptr %const1, i64 %in.idx1.nneg
+  ret void
+}
+
+define void @ptrType2(ptr %in.ptr, i64 %in.idx1) {
+; CHECK-LABEL: define void @ptrType2(
+; CHECK-SAME: ptr [[IN_PTR:%.*]], i64 [[IN_IDX1:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[IN_IDX1_NNEG:%.*]] = and i64 [[IN_IDX1]], 2147483647
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i64, ptr [[IN_PTR]], i64 [[IN_IDX1_NNEG]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds ptr addrspace(3), ptr [[TMP0]], i32 3
+; CHECK-NEXT:    ret void
+;
+entry:
+  %in.idx1.nneg = and i64 %in.idx1, 2147483647
+  %const1 = getelementptr inbounds ptr addrspace(3), ptr %in.ptr, i32 3
+  %idx1 = getelementptr inbounds i64, ptr %const1, i64 %in.idx1.nneg
+  ret void
+}
+
+define void @ptrType3(ptr %in.ptr, i64 %in.idx1) {
+; CHECK-LABEL: define void @ptrType3(
+; CHECK-SAME: ptr [[IN_PTR:%.*]], i64 [[IN_IDX1:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[IN_IDX1_NNEG:%.*]] = and i64 [[IN_IDX1]], 2147483647
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i16, ptr [[IN_PTR]], i64 [[IN_IDX1_NNEG]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds ptr addrspace(7), ptr [[TMP0]], i32 3
+; CHECK-NEXT:    ret void
+;
+entry:
+  %in.idx1.nneg = and i64 %in.idx1, 2147483647
+  %const1 = getelementptr inbounds ptr addrspace(7), ptr %in.ptr, i32 3
+  %idx1 = getelementptr inbounds i16, ptr %const1, i64 %in.idx1.nneg
   ret void
 }
 

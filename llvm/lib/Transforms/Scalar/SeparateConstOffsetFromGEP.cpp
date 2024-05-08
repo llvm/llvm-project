@@ -985,12 +985,6 @@ bool SeparateConstOffsetFromGEP::reorderGEP(GetElementPtrInst *GEP,
   if (PtrGEPType->isAggregateType() || PtrGEP->getNumIndices() != 1)
     return false;
 
-  bool GEPIsPtr = GEPType->getScalarType()->isPtrOrPtrVectorTy();
-  bool PtrGEPIsPtr = PtrGEPType->getScalarType()->isPtrOrPtrVectorTy();
-
-  if (GEPIsPtr != PtrGEPIsPtr)
-    return false;
-
   bool NestedNeedsExtraction;
   int64_t NestedByteOffset =
       accumulateByteOffset(PtrGEP, NestedNeedsExtraction);
