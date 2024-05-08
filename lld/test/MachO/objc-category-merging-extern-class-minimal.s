@@ -153,3 +153,6 @@ L_OBJC_IMAGE_INFO:
 	.long	0
 	.long	96
 .subsections_via_symbols
+
+.addrsig
+.addrsig_sym __OBJC_$_CATEGORY_MyBaseClass_$_Category01
