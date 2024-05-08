@@ -33,10 +33,14 @@ struct TestBitwiseAndAssign {
     T x(T(1));
     std::atomic_ref<T> const a(x);
 
-    std::same_as<T> decltype(auto) y = (a &= T(2));
+    std::same_as<T> decltype(auto) y = (a &= T(1));
+    assert(y == T(1));
+    assert(x == T(1));
+    ASSERT_NOEXCEPT(a &= T(0));
+
+    y = (a &= T(2));
     assert(y == T(0));
     assert(x == T(0));
-    ASSERT_NOEXCEPT(a &= T(0));
   }
 };
 
