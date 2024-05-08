@@ -86,11 +86,12 @@ function ifunc()
   entry ibad2()
   !ERROR: ENTRY in a function may not have an alternate return dummy argument
   entry ibadalt(*) ! C1573
-  !ERROR: RESULT(ifunc) may not have the same name as the function
+  !ERROR: ENTRY cannot have RESULT(ifunc) that is not a variable
   entry isameres() result(ifunc) ! C1574
   entry iok()
-  !ERROR: RESULT(iok) may not have the same name as an ENTRY in the function
+  !ERROR: Explicit RESULT('iok') of function 'isameres2' cannot have the same name as a distinct ENTRY into the same scope
   entry isameres2() result(iok) ! C1574
+  !ERROR: Explicit RESULT('iok2') of function 'isameres3' cannot have the same name as a distinct ENTRY into the same scope
   entry isameres3() result(iok2) ! C1574
   !ERROR: 'iok2' is already declared in this scoping unit
   entry iok2()
@@ -256,10 +257,12 @@ subroutine s7(q,q)
   entry baz(z,z)
 end
 
-!ERROR: Explicit result variable 'f8e1' of function 'f8' cannot have the same name as an ENTRY into the same scope
+!ERROR: Explicit RESULT('f8e1') of function 'f8' cannot have the same name as a distinct ENTRY into the same scope
 function f8() result(f8e1)
   entry f8e1()
   entry f8e2() result(f8e2) ! ok
-  !ERROR: RESULT(f8e1) may not have the same name as an ENTRY in the function
+  !ERROR: Explicit RESULT('f8e1') of function 'f8e3' cannot have the same name as a distinct ENTRY into the same scope
   entry f8e3() result(f8e1)
+  !ERROR: ENTRY cannot have RESULT(f8) that is not a variable
+  entry f8e4() result(f8)
 end

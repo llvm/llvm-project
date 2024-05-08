@@ -1384,16 +1384,18 @@ void CheckHelper::CheckSubprogram(
       }
     }
   }
-  if (details.isFunction() && details.result().name() != symbol.name() &&
-      symbol.scope()) { // F'2023 C1569 & C1583
+  if (details.isFunction() &&
+      details.result().name() != symbol.name()) { // F'2023 C1569 & C1583
     if (auto iter{symbol.owner().find(details.result().name())};
         iter != symbol.owner().end()) {
       const Symbol &resNameSym{*iter->second};
       if (const auto *resNameSubp{resNameSym.detailsIf<SubprogramDetails>()}) {
-        if (const Scope * resNameScope{resNameSubp->entryScope()}) {
-          if (resNameScope == symbol.scope()) {
+        if (const Scope * resNameEntryScope{resNameSubp->entryScope()}) {
+          const Scope *myScope{
+              details.entryScope() ? details.entryScope() : symbol.scope()};
+          if (resNameEntryScope == myScope) {
             if (auto *msg{messages_.Say(symbol.name(),
-                    "Explicit result variable '%s' of function '%s' cannot have the same name as an ENTRY into the same scope"_err_en_US,
+                    "Explicit RESULT('%s') of function '%s' cannot have the same name as a distinct ENTRY into the same scope"_err_en_US,
                     details.result().name(), symbol.name())}) {
               msg->Attach(
                   resNameSym.name(), "ENTRY with conflicting name"_en_US);
