@@ -120,7 +120,7 @@ BackendConsumer::BackendConsumer(
     CoverageSourceInfo *CoverageInfo)
     : Diags(Diags), Action(Action), HeaderSearchOpts(HeaderSearchOpts),
       CodeGenOpts(CodeGenOpts), TargetOpts(TargetOpts), LangOpts(LangOpts),
-      FileMgr(FileMgr), AsmOutStream(std::move(OS)), Context(nullptr), FS(VFS),
+      AsmOutStream(std::move(OS)), Context(nullptr), FS(VFS),
       LLVMIRGeneration("irgen", "LLVM IR Generation Time"),
       LLVMIRGenerationRefCount(0),
       Gen(CreateLLVMCodeGen(Diags, InFile, std::move(VFS), HeaderSearchOpts,
@@ -145,7 +145,7 @@ BackendConsumer::BackendConsumer(
     CoverageSourceInfo *CoverageInfo)
     : Diags(Diags), Action(Action), HeaderSearchOpts(HeaderSearchOpts),
       CodeGenOpts(CodeGenOpts), TargetOpts(TargetOpts), LangOpts(LangOpts),
-      FileMgr(FileMgr), Context(nullptr), FS(VFS),
+      Context(nullptr), FS(VFS),
       LLVMIRGeneration("irgen", "LLVM IR Generation Time"),
       LLVMIRGenerationRefCount(0),
       Gen(CreateLLVMCodeGen(Diags, "", std::move(VFS), HeaderSearchOpts, PPOpts,
