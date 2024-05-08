@@ -4,10 +4,10 @@
 define range(i32 0, 2) i32 @foo(ptr %this) {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movzbl 0, %eax
+; CHECK-NEXT:    movzbl (%rdi), %eax
 ; CHECK-NEXT:    retq
 entry:
-  %call = load volatile i1, ptr null, align 1
+  %call = load volatile i1, ptr %this, align 1
   %spec.select = zext i1 %call to i32
   ret i32 %spec.select
 }
