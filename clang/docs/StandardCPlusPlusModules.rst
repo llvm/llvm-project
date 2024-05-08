@@ -83,10 +83,10 @@ In this document, we use the following terms:
 * A ``module partition unit`` refers to either a ``module partition interface unit``
   or an ``internal module partition unit``.
 
-Binary Module Interface
-~~~~~~~~~~~~~~~~~~~~~~~
+Built Module Interface
+~~~~~~~~~~~~~~~~~~~~~~
 
-A ``Binary Module Interface`` (or ``BMI``) is the precompiled result of an
+A ``Built Module Interface`` (or ``BMI``) is the precompiled result of an
 importable module unit.
 
 Global module fragment
