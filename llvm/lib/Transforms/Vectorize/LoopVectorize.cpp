@@ -9677,7 +9677,6 @@ static bool processLoopInVPlanNativePath(
 
   // Mark the loop as already vectorized to avoid vectorizing again.
   Hints.setAlreadyVectorized();
-  assert(!verifyFunction(*L->getHeader()->getParent(), &dbgs()));
   return true;
 }
 
@@ -10286,7 +10285,6 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     Hints.setAlreadyVectorized();
   }
 
-  assert(!verifyFunction(*L->getHeader()->getParent(), &dbgs()));
   return true;
 }
 
@@ -10318,7 +10316,7 @@ LoopVectorizeResult LoopVectorizePass::runImpl(
       TTI->getMaxInterleaveFactor(ElementCount::getFixed(1)) < 2)
     return LoopVectorizeResult(false, false);
 
-  bool Changed = false, CFGChanged = false;
+  bool Changed = false, CFGChanged = false, ToVectorize = false;
 
   // The vectorizer requires loops to be in simplified form.
   // Since simplification may add new inner loops, it has to run before the
@@ -10347,7 +10345,7 @@ LoopVectorizeResult LoopVectorizePass::runImpl(
     // transform.
     Changed |= formLCSSARecursively(*L, *DT, LI, SE);
 
-    Changed |= CFGChanged |= processLoop(L);
+    Changed |= CFGChanged |= ToVectorize |= processLoop(L);
 
     if (Changed) {
       LAIs->clear();
@@ -10358,6 +10356,8 @@ LoopVectorizeResult LoopVectorizePass::runImpl(
 #endif
     }
   }
+
+  assert(!ToVectorize || !verifyFunction(F, &dbgs()));
 
   // Process each loop nest in the function.
   return LoopVectorizeResult(Changed, CFGChanged);
