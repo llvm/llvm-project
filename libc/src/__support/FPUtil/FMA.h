@@ -16,7 +16,7 @@
 
 #if defined(LIBC_TARGET_ARCH_IS_X86_64)
 #include "x86_64/FMA.h"
-#elif defined(LIBC_TARGET_ARCH_IS_AARCH64)
+#elif defined(LIBC_TARGET_ARCH_IS_ANY_ARM)
 #include "aarch64/FMA.h"
 #elif defined(LIBC_TARGET_ARCH_IS_ANY_RISCV)
 #include "riscv/FMA.h"
