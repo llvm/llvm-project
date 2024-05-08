@@ -3822,7 +3822,9 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI__builtin_elementwise_sin:
     return RValue::get(
         emitUnaryBuiltin(*this, E, llvm::Intrinsic::sin, "elt.sin"));
-
+  case Builtin::BI__builtin_elementwise_tan:
+    return RValue::get(
+        emitUnaryBuiltin(*this, E, llvm::Intrinsic::tan, "elt.tan"));
   case Builtin::BI__builtin_elementwise_trunc:
     return RValue::get(
         emitUnaryBuiltin(*this, E, llvm::Intrinsic::trunc, "elt.trunc"));
@@ -21302,6 +21304,11 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
     Function *Callee =
         CGM.getIntrinsic(Intrinsic::wasm_relaxed_dot_bf16x8_add_f32);
     return Builder.CreateCall(Callee, {LHS, RHS, Acc});
+  }
+  case WebAssembly::BI__builtin_wasm_loadf16_f32: {
+    Value *Addr = EmitScalarExpr(E->getArg(0));
+    Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_loadf16_f32);
+    return Builder.CreateCall(Callee, {Addr});
   }
   case WebAssembly::BI__builtin_wasm_table_get: {
     assert(E->getArg(0)->getType()->isArrayType());

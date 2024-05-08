@@ -1671,10 +1671,9 @@ static LoongArchISD::NodeType getLoongArchWOpcode(unsigned Opcode) {
     return LoongArchISD::SRA_W;
   case ISD::SRL:
     return LoongArchISD::SRL_W;
+  case ISD::ROTL:
   case ISD::ROTR:
     return LoongArchISD::ROTR_W;
-  case ISD::ROTL:
-    return LoongArchISD::ROTL_W;
   case ISD::CTTZ:
     return LoongArchISD::CTZ_W;
   case ISD::CTLZ:
@@ -1704,6 +1703,10 @@ static SDValue customLegalizeToWOp(SDNode *N, SelectionDAG &DAG, int NumOp,
   case 2: {
     NewOp0 = DAG.getNode(ExtOpc, DL, MVT::i64, N->getOperand(0));
     SDValue NewOp1 = DAG.getNode(ExtOpc, DL, MVT::i64, N->getOperand(1));
+    if (N->getOpcode() == ISD::ROTL) {
+      SDValue TmpOp = DAG.getConstant(32, DL, MVT::i64);
+      NewOp1 = DAG.getNode(ISD::SUB, DL, MVT::i64, TmpOp, NewOp1);
+    }
     NewRes = DAG.getNode(WOpcode, DL, MVT::i64, NewOp0, NewOp1);
     break;
   }
@@ -1841,7 +1844,6 @@ void LoongArchTargetLowering::ReplaceNodeResults(
   case ISD::SHL:
   case ISD::SRA:
   case ISD::SRL:
-  case ISD::ROTR:
     assert(VT == MVT::i32 && Subtarget.is64Bit() &&
            "Unexpected custom legalisation");
     if (N->getOperand(1).getOpcode() != ISD::Constant) {
@@ -1850,11 +1852,10 @@ void LoongArchTargetLowering::ReplaceNodeResults(
     }
     break;
   case ISD::ROTL:
-    ConstantSDNode *CN;
-    if ((CN = dyn_cast<ConstantSDNode>(N->getOperand(1)))) {
-      Results.push_back(customLegalizeToWOp(N, DAG, 2));
-      break;
-    }
+  case ISD::ROTR:
+    assert(VT == MVT::i32 && Subtarget.is64Bit() &&
+           "Unexpected custom legalisation");
+    Results.push_back(customLegalizeToWOp(N, DAG, 2));
     break;
   case ISD::FP_TO_SINT: {
     assert(VT == MVT::i32 && Subtarget.is64Bit() &&

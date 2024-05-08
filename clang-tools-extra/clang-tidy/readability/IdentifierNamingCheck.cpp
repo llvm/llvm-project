@@ -1374,6 +1374,10 @@ IdentifierNamingCheck::getFailureInfo(
 std::optional<RenamerClangTidyCheck::FailureInfo>
 IdentifierNamingCheck::getDeclFailureInfo(const NamedDecl *Decl,
                                           const SourceManager &SM) const {
+  // Implicit identifiers cannot be renamed.
+  if (Decl->isImplicit())
+    return std::nullopt;
+
   SourceLocation Loc = Decl->getLocation();
   const FileStyle &FileStyle = getStyleForFile(SM.getFilename(Loc));
   if (!FileStyle.isActive())

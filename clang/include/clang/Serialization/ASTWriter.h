@@ -357,6 +357,13 @@ private:
   /// contexts.
   llvm::DenseMap<const Decl *, unsigned> AnonymousDeclarationNumbers;
 
+  /// The external top level module during the writing process. Used to
+  /// generate signature for the module file being written.
+  ///
+  /// Only meaningful for standard C++ named modules. See the comments in
+  /// createSignatureForNamedModule() for details.
+  llvm::DenseSet<Module *> TouchedTopLevelModules;
+
   /// An update to a Decl.
   class DeclUpdate {
     /// A DeclUpdateKind.

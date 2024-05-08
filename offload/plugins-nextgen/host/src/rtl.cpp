@@ -30,17 +30,23 @@
 #include "llvm/Frontend/OpenMP/OMPGridValues.h"
 #include "llvm/Support/DynamicLibrary.h"
 
+#if !defined(__BYTE_ORDER__) || !defined(__ORDER_LITTLE_ENDIAN__) ||           \
+    !defined(__ORDER_BIG_ENDIAN__)
+#error "Missing preprocessor definitions for endianness detection."
+#endif
+
+#if defined(__BYTE_ORDER__) && (__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__)
+#define LITTLEENDIAN_CPU
+#elif defined(__BYTE_ORDER__) && (__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__)
+#define BIGENDIAN_CPU
+#endif
+
 // The number of devices in this plugin.
 #define NUM_DEVICES 4
 
 // The ELF ID should be defined at compile-time by the build system.
 #ifndef TARGET_ELF_ID
 #define TARGET_ELF_ID EM_NONE
-#endif
-
-// The target triple should be defined at compile-time by the build system.
-#ifndef LIBOMPTARGET_NEXTGEN_GENERIC_PLUGIN_TRIPLE
-#define LIBOMPTARGET_NEXTGEN_GENERIC_PLUGIN_TRIPLE ""
 #endif
 
 namespace llvm {
@@ -421,7 +427,25 @@ struct GenELF64PluginTy final : public GenericPluginTy {
   Expected<bool> isELFCompatible(StringRef) const override { return true; }
 
   Triple::ArchType getTripleArch() const override {
-    return llvm::Triple(LIBOMPTARGET_NEXTGEN_GENERIC_PLUGIN_TRIPLE).getArch();
+#if defined(__x86_64__)
+    return llvm::Triple::x86_64;
+#elif defined(__s390x__)
+    return llvm::Triple::systemz;
+#elif defined(__aarch64__)
+#ifdef LITTLEENDIAN_CPU
+    return llvm::Triple::aarch64_le;
+#else
+    return llvm::Triple::aarch64_be;
+#endif
+#elif defined(__powerpc64__)
+#ifdef LITTLEENDIAN_CPU
+    return llvm::Triple::ppc64le;
+#else
+    return llvm::Triple::ppc64;
+#endif
+#else
+    return llvm::Triple::UnknownArch;
+#endif
   }
 };
 

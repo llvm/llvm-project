@@ -1,4 +1,6 @@
 # REQUIRES: powerpc-registered-target
+## Test CREL for a 32-bit big-endian target.
+
 # RUN: llvm-mc -filetype=obj -crel -triple=ppc %s -o %t.o
 # RUN: llvm-readelf -Sr %t.o | FileCheck %s
 

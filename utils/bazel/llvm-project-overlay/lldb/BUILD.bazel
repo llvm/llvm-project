@@ -494,8 +494,12 @@ objc_library(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [
+        ":Headers",
         ":HostMacOSXHeaders",
         ":HostMacOSXPrivateHeaders",
+        ":Utility",
+        "//llvm:Support",
+        "//llvm:TargetParser",
     ],
 )
 
@@ -561,7 +565,10 @@ cc_library(
         "//llvm:TargetParser",
         "//llvm:config",
     ] + select({
-        "@platforms//os:macos": [":HostMacOSXObjCXX"],
+        "@platforms//os:macos": [
+            ":HostMacOSXObjCXX",
+            ":HostMacOSXPrivateHeaders",
+        ],
         "//conditions:default": [],
     }),
 )
@@ -873,7 +880,11 @@ cc_binary(
         "@platforms//os:macos": [],
         "//conditions:default": ["@platforms//:incompatible"],
     }),
-    deps = [":DebugServerCommon"],
+    deps = [
+        ":DebugServerCommon",
+        ":DebugServerCommonHeaders",
+        ":DebugServerCommonMacOSXHeaders",
+    ],
 )
 
 cc_binary(

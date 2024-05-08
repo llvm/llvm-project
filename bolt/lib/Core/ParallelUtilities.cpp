@@ -231,12 +231,7 @@ void runOnEachFunctionWithUniqueAllocId(
     }
   }
 
-  if (!BC.MIB->checkAllocatorExists(AllocId)) {
-    MCPlusBuilder::AllocatorIdTy Id =
-        BC.MIB->initializeNewAnnotationAllocator();
-    (void)Id;
-    assert(AllocId == Id && "unexpected allocator id created");
-  }
+  EnsureAllocatorExists(AllocId);
 
   Pool.async(runBlock, BlockBegin, BC.getBinaryFunctions().end(), AllocId);
   Lock.unlock();

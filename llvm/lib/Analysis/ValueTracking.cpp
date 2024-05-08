@@ -2173,6 +2173,11 @@ bool isKnownToBeAPowerOfTwo(const Value *V, bool OrZero, unsigned Depth,
         if (OrZero || RHSBits.One.getBoolValue() || LHSBits.One.getBoolValue())
           return true;
     }
+
+    // LShr(UINT_MAX, Y) + 1 is a power of two (if add is nuw) or zero.
+    if (OrZero || Q.IIQ.hasNoUnsignedWrap(VOBO))
+      if (match(I, m_Add(m_LShr(m_AllOnes(), m_Value()), m_One())))
+        return true;
     return false;
   }
   case Instruction::Select:

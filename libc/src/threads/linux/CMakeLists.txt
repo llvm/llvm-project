@@ -9,7 +9,7 @@ add_header_library(
     libc.src.__support.CPP.atomic
     libc.src.__support.OSUtil.osutil
     libc.src.__support.threads.mutex
-    libc.src.__support.threads.linux.futex_word_type
+    libc.src.__support.threads.linux.futex_utils
 )
 
 add_entrypoint_object(

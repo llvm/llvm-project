@@ -375,6 +375,23 @@ struct FormatStyle {
     ///   }
     /// \endcode
     bool AcrossComments;
+    /// Whether to align the case arrows when aligning short case expressions.
+    /// \code{.java}
+    ///   true:
+    ///   i = switch (day) {
+    ///     case THURSDAY, SATURDAY -> 8;
+    ///     case WEDNESDAY          -> 9;
+    ///     default                 -> 0;
+    ///   };
+    ///
+    ///   false:
+    ///   i = switch (day) {
+    ///     case THURSDAY, SATURDAY -> 8;
+    ///     case WEDNESDAY ->          9;
+    ///     default ->                 0;
+    ///   };
+    /// \endcode
+    bool AlignCaseArrows;
     /// Whether aligned case labels are aligned on the colon, or on the tokens
     /// after the colon.
     /// \code
@@ -396,12 +413,14 @@ struct FormatStyle {
     bool operator==(const ShortCaseStatementsAlignmentStyle &R) const {
       return Enabled == R.Enabled && AcrossEmptyLines == R.AcrossEmptyLines &&
              AcrossComments == R.AcrossComments &&
+             AlignCaseArrows == R.AlignCaseArrows &&
              AlignCaseColons == R.AlignCaseColons;
     }
   };
 
   /// Style of aligning consecutive short case labels.
-  /// Only applies if ``AllowShortCaseLabelsOnASingleLine`` is ``true``.
+  /// Only applies if ``AllowShortCaseExpressionOnASingleLine`` or
+  /// ``AllowShortCaseLabelsOnASingleLine`` is ``true``.
   ///
   /// \code{.yaml}
   ///   # Example of usage:
@@ -723,6 +742,19 @@ struct FormatStyle {
   /// single line.
   /// \version 3.5
   ShortBlockStyle AllowShortBlocksOnASingleLine;
+
+  /// Whether to merge a short switch labeled rule into a single line.
+  /// \code{.java}
+  ///   true:                               false:
+  ///   switch (a) {           vs.          switch (a) {
+  ///   case 1 -> 1;                        case 1 ->
+  ///   default -> 0;                         1;
+  ///   };                                  default ->
+  ///                                         0;
+  ///                                       };
+  /// \endcode
+  /// \version 19
+  bool AllowShortCaseExpressionOnASingleLine;
 
   /// If ``true``, short case labels will be contracted to a single line.
   /// \code
@@ -4923,6 +4955,8 @@ struct FormatStyle {
            AllowBreakBeforeNoexceptSpecifier ==
                R.AllowBreakBeforeNoexceptSpecifier &&
            AllowShortBlocksOnASingleLine == R.AllowShortBlocksOnASingleLine &&
+           AllowShortCaseExpressionOnASingleLine ==
+               R.AllowShortCaseExpressionOnASingleLine &&
            AllowShortCaseLabelsOnASingleLine ==
                R.AllowShortCaseLabelsOnASingleLine &&
            AllowShortCompoundRequirementOnASingleLine ==

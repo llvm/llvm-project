@@ -2847,6 +2847,10 @@ void OpenACCClauseEnqueue::VisitDevicePtrClause(
     const OpenACCDevicePtrClause &C) {
   VisitVarList(C);
 }
+void OpenACCClauseEnqueue::VisitAsyncClause(const OpenACCAsyncClause &C) {
+  if (C.hasIntExpr())
+    Visitor.AddStmt(C.getIntExpr());
+}
 } // namespace
 
 void EnqueueVisitor::EnqueueChildren(const OpenACCClause *C) {

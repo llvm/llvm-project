@@ -438,10 +438,10 @@ template <class ELFT> void OutputSection::maybeCompress() {
     compressed.type = ELFCOMPRESS_ZLIB;
     compressed.checksum = checksum;
   }
+#endif
 
   compressed.shards = std::move(shardsOut);
   flags |= SHF_COMPRESSED;
-#endif
 }
 
 static void writeInt(uint8_t *buf, uint64_t data, uint64_t size) {

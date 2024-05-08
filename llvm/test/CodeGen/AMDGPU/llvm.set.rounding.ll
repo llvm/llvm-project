@@ -1661,5 +1661,132 @@ define amdgpu_gfx void @s_set_rounding_select_3_5(i32 inreg %cond) {
   ret void
 }
 
+define amdgpu_kernel void @get_rounding_after_set_rounding_1() {
+; GFX6-LABEL: get_rounding_after_set_rounding_1:
+; GFX6:       ; %bb.0:
+; GFX6-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 0, 4), 0
+; GFX6-NEXT:    s_mov_b32 s3, 0xf000
+; GFX6-NEXT:    s_nop 0
+; GFX6-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_MODE, 0, 4)
+; GFX6-NEXT:    s_lshl_b32 s2, s0, 2
+; GFX6-NEXT:    s_mov_b32 s0, 0xeb24da71
+; GFX6-NEXT:    s_mov_b32 s1, 0xc96f385
+; GFX6-NEXT:    s_lshr_b64 s[0:1], s[0:1], s2
+; GFX6-NEXT:    s_and_b32 s0, s0, 15
+; GFX6-NEXT:    s_add_i32 s1, s0, 4
+; GFX6-NEXT:    s_cmp_lt_u32 s0, 4
+; GFX6-NEXT:    s_cselect_b32 s4, s0, s1
+; GFX6-NEXT:    s_mov_b32 s0, 0
+; GFX6-NEXT:    s_mov_b32 s2, -1
+; GFX6-NEXT:    s_mov_b32 s1, s0
+; GFX6-NEXT:    v_mov_b32_e32 v0, s4
+; GFX6-NEXT:    buffer_store_dword v0, off, s[0:3], 0
+; GFX6-NEXT:    s_waitcnt vmcnt(0)
+; GFX6-NEXT:    s_endpgm
+;
+; GFX7-LABEL: get_rounding_after_set_rounding_1:
+; GFX7:       ; %bb.0:
+; GFX7-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 0, 4), 0
+; GFX7-NEXT:    s_mov_b32 s3, 0xf000
+; GFX7-NEXT:    s_nop 0
+; GFX7-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_MODE, 0, 4)
+; GFX7-NEXT:    s_lshl_b32 s2, s0, 2
+; GFX7-NEXT:    s_mov_b32 s0, 0xeb24da71
+; GFX7-NEXT:    s_mov_b32 s1, 0xc96f385
+; GFX7-NEXT:    s_lshr_b64 s[0:1], s[0:1], s2
+; GFX7-NEXT:    s_and_b32 s0, s0, 15
+; GFX7-NEXT:    s_add_i32 s1, s0, 4
+; GFX7-NEXT:    s_cmp_lt_u32 s0, 4
+; GFX7-NEXT:    s_cselect_b32 s4, s0, s1
+; GFX7-NEXT:    s_mov_b32 s0, 0
+; GFX7-NEXT:    s_mov_b32 s2, -1
+; GFX7-NEXT:    s_mov_b32 s1, s0
+; GFX7-NEXT:    v_mov_b32_e32 v0, s4
+; GFX7-NEXT:    buffer_store_dword v0, off, s[0:3], 0
+; GFX7-NEXT:    s_waitcnt vmcnt(0)
+; GFX7-NEXT:    s_endpgm
+;
+; GFX8-LABEL: get_rounding_after_set_rounding_1:
+; GFX8:       ; %bb.0:
+; GFX8-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 0, 4), 0
+; GFX8-NEXT:    v_mov_b32_e32 v0, 0
+; GFX8-NEXT:    v_mov_b32_e32 v1, 0
+; GFX8-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_MODE, 0, 4)
+; GFX8-NEXT:    s_lshl_b32 s2, s0, 2
+; GFX8-NEXT:    s_mov_b32 s0, 0xeb24da71
+; GFX8-NEXT:    s_mov_b32 s1, 0xc96f385
+; GFX8-NEXT:    s_lshr_b64 s[0:1], s[0:1], s2
+; GFX8-NEXT:    s_and_b32 s0, s0, 15
+; GFX8-NEXT:    s_add_i32 s1, s0, 4
+; GFX8-NEXT:    s_cmp_lt_u32 s0, 4
+; GFX8-NEXT:    s_cselect_b32 s0, s0, s1
+; GFX8-NEXT:    v_mov_b32_e32 v2, s0
+; GFX8-NEXT:    flat_store_dword v[0:1], v2
+; GFX8-NEXT:    s_waitcnt vmcnt(0)
+; GFX8-NEXT:    s_endpgm
+;
+; GFX9-LABEL: get_rounding_after_set_rounding_1:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 0, 4), 0
+; GFX9-NEXT:    v_mov_b32_e32 v0, 0
+; GFX9-NEXT:    v_mov_b32_e32 v1, 0
+; GFX9-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_MODE, 0, 4)
+; GFX9-NEXT:    s_lshl_b32 s2, s0, 2
+; GFX9-NEXT:    s_mov_b32 s0, 0xeb24da71
+; GFX9-NEXT:    s_mov_b32 s1, 0xc96f385
+; GFX9-NEXT:    s_lshr_b64 s[0:1], s[0:1], s2
+; GFX9-NEXT:    s_and_b32 s0, s0, 15
+; GFX9-NEXT:    s_add_i32 s1, s0, 4
+; GFX9-NEXT:    s_cmp_lt_u32 s0, 4
+; GFX9-NEXT:    s_cselect_b32 s0, s0, s1
+; GFX9-NEXT:    v_mov_b32_e32 v2, s0
+; GFX9-NEXT:    global_store_dword v[0:1], v2, off
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    s_endpgm
+;
+; GFX10-LABEL: get_rounding_after_set_rounding_1:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_round_mode 0x0
+; GFX10-NEXT:    v_mov_b32_e32 v0, 0
+; GFX10-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_MODE, 0, 4)
+; GFX10-NEXT:    v_mov_b32_e32 v1, 0
+; GFX10-NEXT:    s_lshl_b32 s2, s0, 2
+; GFX10-NEXT:    s_mov_b32 s0, 0xeb24da71
+; GFX10-NEXT:    s_mov_b32 s1, 0xc96f385
+; GFX10-NEXT:    s_lshr_b64 s[0:1], s[0:1], s2
+; GFX10-NEXT:    s_and_b32 s0, s0, 15
+; GFX10-NEXT:    s_add_i32 s1, s0, 4
+; GFX10-NEXT:    s_cmp_lt_u32 s0, 4
+; GFX10-NEXT:    s_cselect_b32 s0, s0, s1
+; GFX10-NEXT:    v_mov_b32_e32 v2, s0
+; GFX10-NEXT:    global_store_dword v[0:1], v2, off
+; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX10-NEXT:    s_endpgm
+;
+; GFX11-LABEL: get_rounding_after_set_rounding_1:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_round_mode 0x0
+; GFX11-NEXT:    v_mov_b32_e32 v0, 0
+; GFX11-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_MODE, 0, 4)
+; GFX11-NEXT:    s_lshl_b32 s2, s0, 2
+; GFX11-NEXT:    s_mov_b32 s0, 0xeb24da71
+; GFX11-NEXT:    s_mov_b32 s1, 0xc96f385
+; GFX11-NEXT:    s_lshr_b64 s[0:1], s[0:1], s2
+; GFX11-NEXT:    s_and_b32 s0, s0, 15
+; GFX11-NEXT:    s_add_i32 s1, s0, 4
+; GFX11-NEXT:    s_cmp_lt_u32 s0, 4
+; GFX11-NEXT:    s_cselect_b32 s0, s0, s1
+; GFX11-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v2, s0
+; GFX11-NEXT:    global_store_b32 v[0:1], v2, off dlc
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    s_nop 0
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX11-NEXT:    s_endpgm
+  tail call void @llvm.set.rounding(i32 1)
+  %set.mode = tail call i32 @llvm.get.rounding()
+  store volatile i32 %set.mode, ptr addrspace(1) null
+  ret void
+}
+
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
 ; GCN: {{.*}}

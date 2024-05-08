@@ -2,8 +2,6 @@
 ; RUN: llc --mtriple=loongarch32 < %s | FileCheck %s --check-prefix=LA32
 ; RUN: llc --mtriple=loongarch64 < %s | FileCheck %s --check-prefix=LA64
 
-;; TODO: Add optimization to ISD::ROTL
-
 define signext i32 @rotl_32(i32 signext %x, i32 signext %y) nounwind {
 ; LA32-LABEL: rotl_32:
 ; LA32:       # %bb.0:
@@ -14,10 +12,9 @@ define signext i32 @rotl_32(i32 signext %x, i32 signext %y) nounwind {
 ;
 ; LA64-LABEL: rotl_32:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    sll.w $a2, $a0, $a1
-; LA64-NEXT:    sub.d $a1, $zero, $a1
-; LA64-NEXT:    srl.w $a0, $a0, $a1
-; LA64-NEXT:    or $a0, $a2, $a0
+; LA64-NEXT:    ori $a2, $zero, 32
+; LA64-NEXT:    sub.d $a1, $a2, $a1
+; LA64-NEXT:    rotr.w $a0, $a0, $a1
 ; LA64-NEXT:    ret
   %z = sub i32 32, %y
   %b = shl i32 %x, %y
@@ -152,10 +149,9 @@ define signext i32 @rotl_32_mask(i32 signext %x, i32 signext %y) nounwind {
 ;
 ; LA64-LABEL: rotl_32_mask:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    sll.w $a2, $a0, $a1
-; LA64-NEXT:    sub.d $a1, $zero, $a1
-; LA64-NEXT:    srl.w $a0, $a0, $a1
-; LA64-NEXT:    or $a0, $a2, $a0
+; LA64-NEXT:    ori $a2, $zero, 32
+; LA64-NEXT:    sub.d $a1, $a2, $a1
+; LA64-NEXT:    rotr.w $a0, $a0, $a1
 ; LA64-NEXT:    ret
   %z = sub i32 0, %y
   %and = and i32 %z, 31
@@ -174,10 +170,9 @@ define signext i32 @rotl_32_mask_and_63_and_31(i32 signext %x, i32 signext %y) n
 ;
 ; LA64-LABEL: rotl_32_mask_and_63_and_31:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    sll.w $a2, $a0, $a1
-; LA64-NEXT:    sub.d $a1, $zero, $a1
-; LA64-NEXT:    srl.w $a0, $a0, $a1
-; LA64-NEXT:    or $a0, $a2, $a0
+; LA64-NEXT:    ori $a2, $zero, 32
+; LA64-NEXT:    sub.d $a1, $a2, $a1
+; LA64-NEXT:    rotr.w $a0, $a0, $a1
 ; LA64-NEXT:    ret
   %a = and i32 %y, 63
   %b = shl i32 %x, %a
@@ -197,10 +192,9 @@ define signext i32 @rotl_32_mask_or_64_or_32(i32 signext %x, i32 signext %y) nou
 ;
 ; LA64-LABEL: rotl_32_mask_or_64_or_32:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    sll.w $a2, $a0, $a1
-; LA64-NEXT:    sub.d $a1, $zero, $a1
-; LA64-NEXT:    srl.w $a0, $a0, $a1
-; LA64-NEXT:    or $a0, $a2, $a0
+; LA64-NEXT:    ori $a2, $zero, 32
+; LA64-NEXT:    sub.d $a1, $a2, $a1
+; LA64-NEXT:    rotr.w $a0, $a0, $a1
 ; LA64-NEXT:    ret
   %a = or i32 %y, 64
   %b = shl i32 %x, %a
@@ -591,10 +585,7 @@ define signext i32 @rotr_i32_fshr(i32 signext %a) nounwind {
 ;
 ; LA64-LABEL: rotr_i32_fshr:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    slli.d $a1, $a0, 20
-; LA64-NEXT:    bstrpick.d $a0, $a0, 31, 12
-; LA64-NEXT:    or $a0, $a0, $a1
-; LA64-NEXT:    addi.w $a0, $a0, 0
+; LA64-NEXT:    rotri.w $a0, $a0, 12
 ; LA64-NEXT:    ret
   %or = tail call i32 @llvm.fshr.i32(i32 %a, i32 %a, i32 12)
   ret i32 %or

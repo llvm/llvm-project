@@ -31,9 +31,6 @@ for header in public_headers:
 // UNSUPPORTED: windows
 // UNSUPPORTED: buildhost=windows
 
-// The AIX headers don't appear to be compatible with modules
-// UNSUPPORTED: LIBCXX-AIX-FIXME
-
 // The Android headers don't appear to be compatible with modules yet
 // UNSUPPORTED: LIBCXX-ANDROID-FIXME
 
@@ -60,9 +57,6 @@ print(f"""\
 // The Windows headers don't appear to be compatible with modules
 // UNSUPPORTED: windows
 // UNSUPPORTED: buildhost=windows
-
-// The AIX headers don't appear to be compatible with modules
-// UNSUPPORTED: LIBCXX-AIX-FIXME
 
 // The Android headers don't appear to be compatible with modules yet
 // UNSUPPORTED: LIBCXX-ANDROID-FIXME

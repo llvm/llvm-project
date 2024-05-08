@@ -325,6 +325,112 @@ bool CombinerHelper::matchExtractVectorElementWithBuildVectorTrunc(
   return true;
 }
 
+bool CombinerHelper::matchExtractVectorElementWithShuffleVector(
+    const MachineOperand &MO, BuildFnTy &MatchInfo) {
+  GExtractVectorElement *Extract =
+      cast<GExtractVectorElement>(getDefIgnoringCopies(MO.getReg(), MRI));
+
+  //
+  //  %zero:_(s64) = G_CONSTANT i64 0
+  //  %sv:_(<4 x s32>) = G_SHUFFLE_SHUFFLE %arg1(<4 x s32>), %arg2(<4 x s32>),
+  //                     shufflemask(0, 0, 0, 0)
+  //  %extract:_(s32) = G_EXTRACT_VECTOR_ELT %sv(<4 x s32>), %zero(s64)
+  //
+  //  -->
+  //
+  //  %zero1:_(s64) = G_CONSTANT i64 0
+  //  %extract:_(s32) = G_EXTRACT_VECTOR_ELT %arg1(<4 x s32>), %zero1(s64)
+  //
+  //
+  //
+  //
+  //  %three:_(s64) = G_CONSTANT i64 3
+  //  %sv:_(<4 x s32>) = G_SHUFFLE_SHUFFLE %arg1(<4 x s32>), %arg2(<4 x s32>),
+  //                     shufflemask(0, 0, 0, -1)
+  //  %extract:_(s32) = G_EXTRACT_VECTOR_ELT %sv(<4 x s32>), %three(s64)
+  //
+  //  -->
+  //
+  //  %extract:_(s32) = G_IMPLICIT_DEF
+  //
+  //
+  //
+  //
+  //
+  //  %sv:_(<4 x s32>) = G_SHUFFLE_SHUFFLE %arg1(<4 x s32>), %arg2(<4 x s32>),
+  //                     shufflemask(0, 0, 0, -1)
+  //  %extract:_(s32) = G_EXTRACT_VECTOR_ELT %sv(<4 x s32>), %opaque(s64)
+  //
+  //  -->
+  //
+  //  %sv:_(<4 x s32>) = G_SHUFFLE_SHUFFLE %arg1(<4 x s32>), %arg2(<4 x s32>),
+  //                     shufflemask(0, 0, 0, -1)
+  //  %extract:_(s32) = G_EXTRACT_VECTOR_ELT %sv(<4 x s32>), %opaque(s64)
+  //
+
+  // We try to get the value of the Index register.
+  std::optional<ValueAndVReg> MaybeIndex =
+      getIConstantVRegValWithLookThrough(Extract->getIndexReg(), MRI);
+  if (!MaybeIndex)
+    return false;
+
+  GShuffleVector *Shuffle =
+      cast<GShuffleVector>(getDefIgnoringCopies(Extract->getVectorReg(), MRI));
+
+  ArrayRef<int> Mask = Shuffle->getMask();
+
+  unsigned Offset = MaybeIndex->Value.getZExtValue();
+  int SrcIdx = Mask[Offset];
+
+  LLT Src1Type = MRI.getType(Shuffle->getSrc1Reg());
+  // At the IR level a <1 x ty> shuffle  vector is valid, but we want to extract
+  // from a vector.
+  assert(Src1Type.isVector() && "expected to extract from a vector");
+  unsigned LHSWidth = Src1Type.isVector() ? Src1Type.getNumElements() : 1;
+
+  // Note that there is no one use check.
+  Register Dst = Extract->getReg(0);
+  LLT DstTy = MRI.getType(Dst);
+
+  if (SrcIdx < 0 &&
+      isLegalOrBeforeLegalizer({TargetOpcode::G_IMPLICIT_DEF, {DstTy}})) {
+    MatchInfo = [=](MachineIRBuilder &B) { B.buildUndef(Dst); };
+    return true;
+  }
+
+  // If the legality check failed, then we still have to abort.
+  if (SrcIdx < 0)
+    return false;
+
+  Register NewVector;
+
+  // We check in which vector and at what offset to look through.
+  if (SrcIdx < (int)LHSWidth) {
+    NewVector = Shuffle->getSrc1Reg();
+    // SrcIdx unchanged
+  } else { // SrcIdx >= LHSWidth
+    NewVector = Shuffle->getSrc2Reg();
+    SrcIdx -= LHSWidth;
+  }
+
+  LLT IdxTy = MRI.getType(Extract->getIndexReg());
+  LLT NewVectorTy = MRI.getType(NewVector);
+
+  // We check the legality of the look through.
+  if (!isLegalOrBeforeLegalizer(
+          {TargetOpcode::G_EXTRACT_VECTOR_ELT, {DstTy, NewVectorTy, IdxTy}}) ||
+      !isConstantLegalOrBeforeLegalizer({IdxTy}))
+    return false;
+
+  // We look through the shuffle vector.
+  MatchInfo = [=](MachineIRBuilder &B) {
+    auto Idx = B.buildConstant(IdxTy, SrcIdx);
+    B.buildExtractVectorElement(Dst, NewVector, Idx);
+  };
+
+  return true;
+}
+
 bool CombinerHelper::matchInsertVectorElementOOB(MachineInstr &MI,
                                                  BuildFnTy &MatchInfo) {
   GInsertVectorElement *Insert = cast<GInsertVectorElement>(&MI);

@@ -180,6 +180,8 @@ def FmContract  : MIFlagEnum<"FmContract">;
 def FmAfn       : MIFlagEnum<"FmAfn">;
 def FmReassoc   : MIFlagEnum<"FmReassoc">;
 def IsExact     : MIFlagEnum<"IsExact">;
+def NoSWrap     : MIFlagEnum<"NoSWrap">;
+def NoUWrap     : MIFlagEnum<"NoUWrap">;
 
 def MIFlags;
 // def not; -> Already defined as a SDNode
@@ -1501,6 +1503,27 @@ def extract_vector_element_freeze : GICombineRule<
    [{ return Helper.matchExtractVectorElementWithFreeze(${root}, ${matchinfo}); }]),
    (apply [{ Helper.applyBuildFnMO(${root}, ${matchinfo}); }])>;
 
+def sext_trunc : GICombineRule<
+   (defs root:$root, build_fn_matchinfo:$matchinfo),
+   (match (G_TRUNC $src, $x, (MIFlags NoSWrap)),
+          (G_SEXT $root, $src),
+   [{ return Helper.matchSextOfTrunc(${root}, ${matchinfo}); }]),
+   (apply [{ Helper.applyBuildFnMO(${root}, ${matchinfo}); }])>;
+
+def zext_trunc : GICombineRule<
+   (defs root:$root, build_fn_matchinfo:$matchinfo),
+   (match (G_TRUNC $src, $x, (MIFlags NoUWrap)),
+          (G_ZEXT $root, $src),
+   [{ return Helper.matchZextOfTrunc(${root}, ${matchinfo}); }]),
+   (apply [{ Helper.applyBuildFnMO(${root}, ${matchinfo}); }])>;
+
+def extract_vector_element_shuffle_vector : GICombineRule<
+   (defs root:$root, build_fn_matchinfo:$matchinfo),
+   (match (G_SHUFFLE_VECTOR $src, $src1, $src2, $mask),
+          (G_EXTRACT_VECTOR_ELT $root, $src, $idx),
+   [{ return Helper.matchExtractVectorElementWithShuffleVector(${root}, ${matchinfo}); }]),
+   (apply [{ Helper.applyBuildFnMO(${root}, ${matchinfo}); }])>;
+
 // Combines concat operations
 def concat_matchinfo : GIDefMatchData<"SmallVector<Register>">;
 def combine_concat_vector : GICombineRule<
@@ -1578,6 +1601,7 @@ extract_vector_element_build_vector_trunc6,
 extract_vector_element_build_vector_trunc7,
 extract_vector_element_build_vector_trunc8,
 extract_vector_element_freeze,
+extract_vector_element_shuffle_vector,
 insert_vector_element_extract_vector_element
 ]>;
 
@@ -1658,7 +1682,7 @@ def all_combines : GICombineGroup<[trivial_combines, vector_ops_combines,
     sub_add_reg, select_to_minmax, redundant_binop_in_equality,
     fsub_to_fneg, commute_constant_to_rhs, match_ands, match_ors,
     combine_concat_vector, double_icmp_zero_and_or_combine, match_addos,
-    combine_shuffle_concat]>;
+    sext_trunc, zext_trunc, combine_shuffle_concat]>;
 
 // A combine group used to for prelegalizer combiners at -O0. The combines in
 // this group have been selected based on experiments to balance code size and

@@ -2981,6 +2981,24 @@ TEST_F(TokenAnnotatorTest, BlockLBrace) {
   EXPECT_BRACE_KIND(Tokens[5], BK_Block);
 }
 
+TEST_F(TokenAnnotatorTest, SwitchExpression) {
+  auto Style = getLLVMStyle(FormatStyle::LK_Java);
+  auto Tokens = annotate("i = switch (day) {\n"
+                         "  case THURSDAY, SATURDAY -> 8;\n"
+                         "  case WEDNESDAY -> 9;\n"
+                         "  default -> 1;\n"
+                         "};",
+                         Style);
+  ASSERT_EQ(Tokens.size(), 26u) << Tokens;
+  EXPECT_TOKEN(Tokens[6], tok::l_brace, TT_SwitchExpressionLBrace);
+  EXPECT_TOKEN(Tokens[7], tok::kw_case, TT_SwitchExpressionLabel);
+  EXPECT_TOKEN(Tokens[11], tok::arrow, TT_CaseLabelArrow);
+  EXPECT_TOKEN(Tokens[14], tok::kw_case, TT_SwitchExpressionLabel);
+  EXPECT_TOKEN(Tokens[16], tok::arrow, TT_CaseLabelArrow);
+  EXPECT_TOKEN(Tokens[19], tok::kw_default, TT_SwitchExpressionLabel);
+  EXPECT_TOKEN(Tokens[20], tok::arrow, TT_CaseLabelArrow);
+}
+
 } // namespace
 } // namespace format
 } // namespace clang
