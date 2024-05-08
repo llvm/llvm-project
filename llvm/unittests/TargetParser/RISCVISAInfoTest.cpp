@@ -78,6 +78,14 @@ TEST(ParseNormalizedArchString, RejectsBadX) {
   }
 }
 
+TEST(ParseNormalizedArchString, DuplicateExtension) {
+  for (StringRef Input : {"rv64i2p0_a2p0_a1p0"}) {
+    EXPECT_EQ(
+        toString(RISCVISAInfo::parseNormalizedArchString(Input).takeError()),
+        "duplicate extension 'a'");
+  }
+}
+
 TEST(ParseNormalizedArchString, AcceptsValidBaseISAsAndSetsXLen) {
   auto MaybeRV32I = RISCVISAInfo::parseNormalizedArchString("rv32i2p0");
   ASSERT_THAT_EXPECTED(MaybeRV32I, Succeeded());
