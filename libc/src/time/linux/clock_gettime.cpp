@@ -8,16 +8,15 @@
 
 #include "src/time/clock_gettime.h"
 #include "src/__support/common.h"
+#include "src/__support/time/clock_gettime.h"
 #include "src/errno/libc_errno.h"
-#include "src/time/linux/clock_gettime_impl.h"
-#include <time.h>
 
 namespace LIBC_NAMESPACE {
 
 // TODO(michaelrj): Move this into time/linux with the other syscalls.
 LLVM_LIBC_FUNCTION(int, clock_gettime,
                    (clockid_t clockid, struct timespec *ts)) {
-  auto result = internal::clock_gettime_impl(clockid, ts);
+  auto result = internal::clock_gettime(clockid, ts);
 
   // A negative return value indicates an error with the magnitude of the
   // value being the error code.

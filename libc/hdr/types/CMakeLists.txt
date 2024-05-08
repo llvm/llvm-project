@@ -63,3 +63,43 @@ add_proxy_header_library(
     libc.include.llvm-libc-types.fexcept_t
     libc.include.fenv
 )
+
+add_proxy_header_library(
+  time_t
+  HDRS
+    time_t.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.time_t
+)
+
+add_proxy_header_library(
+  clockid_t
+  HDRS
+    clockid_t.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.clockid_t
+)
+
+add_proxy_header_library(
+  clock_t
+  HDRS
+    clock_t.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.clock_t
+)
+
+add_proxy_header_library(
+  suseconds_t
+  HDRS
+    suseconds_t.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.suseconds_t
+)
+
+add_proxy_header_library(
+  struct_timeval
+  HDRS
+    struct_timeval.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.struct_timeval
+)
