@@ -7,11 +7,17 @@
 //===----------------------------------------------------------------------===//
 //
 // This transform allocates SME tiles at the 'func.func' op level for ArmSME
-// operations. It does this using a 16-bit tile mask that has a bit for each
-// 128-bit element tile (ZA0.Q-ZA15.Q), the smallest ZA tile granule.
+// operations. It roughly implements a linear scan register allocator, similar
+// to the one outlined in [1], but with simplifications and assumptions made for
+// our use case. Note that this is a greedy allocator (so it may not always find
+// the most optimal allocation of tiles).
+//
+// The allocator operates at the CF dialect level. It is the responsibility of
+// users to ensure the IR has been lowered to CF before invoking the tile
+// allocator.
 //
 // The 128-bit tiles overlap with other element tiles as follows (see section
-// B2.3.2 of SME spec [1]):
+// B2.3.2 of SME spec [2]):
 //
 //   Tile    Overlaps
 //   ---------------------------------------------------------------------------
@@ -32,7 +38,10 @@
 //   ZA6.D   ZA6.Q, ZA14.Q
 //   ZA7.D   ZA7.Q, ZA15.Q
 //
-// [1] https://developer.arm.com/documentation/ddi0616/aa
+// [1] "Linear Scan Register Allocation in the Context of SSA Form and Register
+//      Constraints" (Hanspeter Mössenböck and Michael Pfeiffer)
+//     https://link.springer.com/content/pdf/10.1007/3-540-45937-5_17.pdf
+// [2] https://developer.arm.com/documentation/ddi0616/aa
 //
 //===----------------------------------------------------------------------===//
 
@@ -214,8 +223,7 @@ void splitCondBranches(IRRewriter &rewriter, FunctionOpInterface function) {
   }
 }
 
-/// Splits conditional branches (see `splitCondBranches`), then inserts tile
-/// copies at `cf.br` operations.
+/// Inserts tile copies at `cf.br` operations.
 ///
 ///  BEFORE:
 ///  ```mlir
@@ -228,7 +236,6 @@ void splitCondBranches(IRRewriter &rewriter, FunctionOpInterface function) {
 ///  ```
 void insertCopiesAtBranches(IRRewriter &rewriter,
                             FunctionOpInterface function) {
-  splitCondBranches(rewriter, function);
   for (Block &block : function.getBlocks()) {
     Operation *terminator = block.getTerminator();
     if (!isa<cf::BranchOp>(terminator))
@@ -242,6 +249,20 @@ void insertCopiesAtBranches(IRRewriter &rewriter,
       }
     }
   }
+}
+
+/// Prepares the IR for tile allocation. It does this by first 'splitting'
+/// conditional branches (see `splitCondBranches`), then inserting tile copies
+/// at branch operations. The conditional branches are split to prevent the
+/// copies needed for them overlapping between the true and false paths of the
+/// branch (see `tile-allocation-copies.mlir` and
+/// `tile-allocation-liveness.mlir` for examples). The copies break up live
+/// ranges and ensure when moving out of SSA the semantics of the program are
+/// persevered.
+void preprocessForTileAllocation(IRRewriter &rewriter,
+                                 FunctionOpInterface function) {
+  splitCondBranches(rewriter, function);
+  insertCopiesAtBranches(rewriter, function);
 }
 
 /// A live range for a (collection of) tile values. A live range is built up of
@@ -295,6 +316,9 @@ struct LiveRange {
 };
 
 /// Number operations within a function to allow computing live ranges.
+/// Operations are numbered consecutively wihin blocks, and the blocks are
+/// topologically sorted (using forward edges). This function is only correct if
+/// all ArmSME have been converted to CF (which is asserted).
 DenseMap<Operation *, unsigned>
 generateOperationNumbering(FunctionOpInterface function) {
   unsigned index = 0;
@@ -304,7 +328,6 @@ generateOperationNumbering(FunctionOpInterface function) {
   for (Block *block : blocks) {
     index++; // We want block args to have their own number.
     for (Operation &op : block->getOperations()) {
-      // This is only correct if all ArmSME have been converted to CF.
 #ifndef NDEBUG
       op.walk([&](ArmSMETileOpInterface nestedOp) {
         assert(&op == nestedOp.getOperation() &&
@@ -324,7 +347,9 @@ gatherTileLiveRanges(DenseMap<Operation *, unsigned> const &operationToIndexMap,
                      Liveness &liveness, FunctionOpInterface function) {
   DenseMap<Value, LiveRange> liveRanges;
   /// Defines or updates a live range for an SME tile value. Live-ins may update
-  /// an existing live range (rather than define a new one).
+  /// an existing live range (rather than define a new one). Note: If
+  /// `liveAtBlockEntry` is true then `firstUseOrDef` is the first operation in
+  /// the block.
   auto defineOrUpdateValueLiveRange = [&](Value value, Operation *firstUseOrDef,
                                           LivenessBlockInfo const &livenessInfo,
                                           bool liveAtBlockEntry = false) {
@@ -335,10 +360,10 @@ gatherTileLiveRanges(DenseMap<Operation *, unsigned> const &operationToIndexMap,
     LiveRange &valueLiveRange = it->second;
     auto lastUseInBlock = livenessInfo.getEndOperation(value, firstUseOrDef);
     // Add the interval [firstUseOrDef, lastUseInBlock) to the live range.
-    unsigned start =
+    unsigned startOpIdx =
         operationToIndexMap.at(firstUseOrDef) + (liveAtBlockEntry ? -1 : 0);
-    unsigned end = operationToIndexMap.at(lastUseInBlock);
-    valueLiveRange.insert(value, start, end);
+    unsigned endOpIdx = operationToIndexMap.at(lastUseInBlock);
+    valueLiveRange.insert(value, startOpIdx, endOpIdx);
   };
 
   for (Block &block : function.getBlocks()) {
@@ -511,6 +536,20 @@ void allocateTilesToLiveRanges(ArrayRef<LiveRange *> liveRanges) {
   }
 }
 
+/// Assigns a tile ID to an MLIR value.
+void assignTileIdToValue(IRRewriter &rewriter, Value value,
+                         IntegerAttr tileIdAttr) {
+  if (auto tileOp = value.getDefiningOp<ArmSMETileOpInterface>())
+    rewriter.modifyOpInPlace(tileOp, [&] { tileOp.setTileId(tileIdAttr); });
+  for (Operation *user : value.getUsers()) {
+    if (auto tileOp = dyn_cast<ArmSMETileOpInterface>(user)) {
+      // Ensure ArmSME ops that don't produce a value still get a tile ID.
+      if (!hasTileResult(tileOp))
+        rewriter.modifyOpInPlace(tileOp, [&] { tileOp.setTileId(tileIdAttr); });
+    }
+  }
+}
+
 /// Assign tile IDs back to IR and attempt to resolve trivial tile ID conflicts.
 LogicalResult assignTileIdsAndResolveTrivialConflicts(
     IRRewriter &rewriter, FunctionOpInterface function,
@@ -523,63 +562,88 @@ LogicalResult assignTileIdsAndResolveTrivialConflicts(
         return true;
       return liveRange->values.contains(value);
     };
-    for (Value value : liveRange->values) {
-      for (Operation *user : value.getUsers()) {
-        if (auto tileOp = dyn_cast<ArmSMETileOpInterface>(user)) {
-          // Ensure ArmSME ops that don't produce a value still get a tile ID.
-          if (!hasTileResult(tileOp))
-            rewriter.modifyOpInPlace(tileOp,
-                                     [&] { tileOp.setTileId(tileIdAttr); });
-        }
-      }
+
+    /// Eliminates copies where the operand has the same tile ID.
+    auto foldRedundantCopies = [&](Value value) -> LogicalResult {
       auto copyOp = value.getDefiningOp<CopyTileOp>();
-      if (copyOp && isAllocatedToSameTile(copyOp.getTile())) {
-        // Fold redundant copies.
-        rewriter.replaceAllUsesWith(copyOp, copyOp.getTile());
-      } else if (auto tileOp = value.getDefiningOp<ArmSMETileOpInterface>()) {
-        rewriter.modifyOpInPlace(tileOp, [&] { tileOp.setTileId(tileIdAttr); });
-        // Rectify operand tile IDs with result tile IDs.
-        OpOperand *tileOperand = getTileOpOperand(tileOp);
-        if (!tileOperand || isAllocatedToSameTile(tileOperand->get()))
-          continue;
-        auto operandTileOp =
-            tileOperand->get().getDefiningOp<ArmSMETileOpInterface>();
-        if (!isTriviallyCloneableTileOp(operandTileOp)) {
-          auto error =
-              tileOp.emitOpError("tile operand allocated to different SME "
-                                 "virtial tile (move required)");
-          error.attachNote(tileOperand->get().getLoc())
-              << "tile operand is: " << tileOperand->get();
-          return error;
-        }
-        // Cloning prevents a move/spill (though may require recomputation).
-        rewriter.setInsertionPoint(tileOp);
-        auto clonedOp = operandTileOp.clone();
-        rewriter.modifyOpInPlace(
-            clonedOp, [&] { clonedOp.setTileId(tileOp.getTileId()); });
-        rewriter.insert(clonedOp);
-        if (copyOp) {
-          rewriter.replaceAllUsesWith(copyOp, clonedOp->getResult(0));
-        } else {
-          rewriter.modifyOpInPlace(
-              tileOp, [&] { tileOperand->assign(clonedOp->getResult(0)); });
-        }
-      } else if (auto blockArg = dyn_cast<BlockArgument>(value)) {
-        // Validate block arguments.
-        bool tileMismatch = false;
-        forEachPredecessorTileValue(blockArg, [&](Value predecessorTile) {
-          if (tileMismatch)
-            return;
-          if (!isAllocatedToSameTile(predecessorTile)) {
-            blockArg.getOwner()->getParentOp()->emitOpError(
-                "block argument not allocated to the same SME virtial tile as "
-                "predecessors");
-            tileMismatch = true;
-          }
-        });
-        if (tileMismatch)
-          return failure();
+      if (!copyOp || !isAllocatedToSameTile(copyOp.getTile()))
+        return failure();
+      rewriter.replaceAllUsesWith(copyOp, copyOp.getTile());
+      return success();
+    };
+
+    /// Validates each predecessor to a tile block argument has been assigned
+    /// the same tile ID.
+    auto validateBlockArguments = [&](Value value) {
+      auto blockArg = dyn_cast<BlockArgument>(value);
+      if (!blockArg) {
+        // Not a block argument (nothing to validate).
+        return success();
       }
+      bool tileMismatch = false;
+      forEachPredecessorTileValue(blockArg, [&](Value predecessorTile) {
+        if (tileMismatch)
+          return;
+        if (!isAllocatedToSameTile(predecessorTile)) {
+          blockArg.getOwner()->getParentOp()->emitOpError(
+              "block argument not allocated to the same SME virtial tile as "
+              "predecessors");
+          tileMismatch = true;
+        }
+      });
+      return success(/*isSuccess=*/!tileMismatch);
+    };
+
+    /// Attempts to resolve (trivial) tile ID conflicts.
+    auto resolveTrivialTileConflicts = [&](Value value) -> LogicalResult {
+      auto tileOp = value.getDefiningOp<ArmSMETileOpInterface>();
+      OpOperand *tileOperand = getTileOpOperand(tileOp);
+      if (!tileOperand || isAllocatedToSameTile(tileOperand->get())) {
+        // Operand already allocated to the correct tile.
+        // No conflict to resolve.
+        return success();
+      }
+      auto operandTileOp =
+          tileOperand->get().getDefiningOp<ArmSMETileOpInterface>();
+      if (!isTriviallyCloneableTileOp(operandTileOp)) {
+        auto error =
+            tileOp.emitOpError("tile operand allocated to different SME "
+                               "virtial tile (move required)");
+        error.attachNote(tileOperand->get().getLoc())
+            << "tile operand is: " << tileOperand->get();
+        return error;
+      }
+      // Cloning prevents a move/spill (though may require recomputation).
+      rewriter.setInsertionPoint(tileOp);
+      auto clonedOp = operandTileOp.clone();
+      rewriter.modifyOpInPlace(clonedOp,
+                               [&] { clonedOp.setTileId(tileOp.getTileId()); });
+      rewriter.insert(clonedOp);
+      if (isa<CopyTileOp>(tileOp)) {
+        rewriter.replaceAllUsesWith(tileOp->getResult(0),
+                                    clonedOp->getResult(0));
+      } else {
+        rewriter.modifyOpInPlace(
+            tileOp, [&] { tileOperand->assign(clonedOp->getResult(0)); });
+      }
+      return success();
+    };
+
+    for (Value value : liveRange->values) {
+      // 1. Assign the tile ID to the value.
+      assignTileIdToValue(rewriter, value, tileIdAttr);
+
+      // 2. Attempt to eliminate redundant tile copies.
+      if (succeeded(foldRedundantCopies(value)))
+        continue;
+
+      // 3. Validate tile block arguments.
+      if (failed(validateBlockArguments(value)))
+        return failure();
+
+      // 4. Attempt to resolve (trivial) tile ID conflicts.
+      if (failed(resolveTrivialTileConflicts(value)))
+        return failure();
     }
   }
   return success();
@@ -619,9 +683,9 @@ struct TestTileAllocationPass
   using TestTileAllocationBase::TestTileAllocationBase;
   void runOnOperation() override {
     FunctionOpInterface function = getOperation();
-    if (tileCopiesOnly) {
+    if (preprocessOnly) {
       IRRewriter rewriter(function);
-      return insertCopiesAtBranches(rewriter, function);
+      return preprocessForTileAllocation(rewriter, function);
     }
     if (failed(arm_sme::allocateSMETiles(function, dumpTileLiveRanges)))
       signalPassFailure();
@@ -634,8 +698,8 @@ LogicalResult mlir::arm_sme::allocateSMETiles(FunctionOpInterface function,
   LiveRange::Allocator liveRangeAllocator;
   IRRewriter rewriter(function.getContext());
 
-  // 1. Insert copy operations at branch operations.
-  insertCopiesAtBranches(rewriter, function);
+  // 1. Preprocess the IR for tile allocation.
+  preprocessForTileAllocation(rewriter, function);
 
   // 2. Gather live ranges for each ArmSME tile within the function.
   Liveness liveness(function);

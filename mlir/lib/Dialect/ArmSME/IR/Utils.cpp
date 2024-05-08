@@ -150,6 +150,8 @@ bool hasTileResult(arm_sme::ArmSMETileOpInterface tileOp) {
 }
 
 OpOperand *getTileOpOperand(arm_sme::ArmSMETileOpInterface tileOp) {
+  if (!tileOp)
+    return nullptr;
   auto isTileOperandType = [](OpOperand &operand) {
     return arm_sme::isValidSMETileVectorType(operand.get().getType());
   };

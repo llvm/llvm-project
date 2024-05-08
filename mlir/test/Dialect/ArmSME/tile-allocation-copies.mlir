@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -test-arm-sme-tile-allocation=tile-copies-only -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -test-arm-sme-tile-allocation=preprocess-only -split-input-file | FileCheck %s
 
 // This file tests the inserting copies for the SME tile allocation. Copies are
 // inserted at `cf.br` ops (the predecessors to block arguments). Conditional

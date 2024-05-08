@@ -74,7 +74,16 @@ VectorType getSMETileTypeForElement(Type elementType);
 void eraseTriviallyDeadTileOps(IRRewriter &rewriter,
                                FunctionOpInterface function);
 
-/// Returns true if `tileOp` can be cloned to resolve conflicts.
+/// Returns true if `tileOp` is trivially cloneable. A tile operation is
+/// trivially cloneable if:
+///
+///  1. It has no operands (and only a single tile result)
+///  2. It is 'Pure'
+///
+/// This ensures that the cloned operation will not share any dependencies with
+/// the original operation (which could also need to be considered), and that
+/// inserting the cloned operation at a different point in the program won't
+/// change the semantics of the program (as it has no side effects).
 bool isTriviallyCloneableTileOp(arm_sme::ArmSMETileOpInterface tileOp);
 
 /// Returns true if `tileOp` produces a tile result.
