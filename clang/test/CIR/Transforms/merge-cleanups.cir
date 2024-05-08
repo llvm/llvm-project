@@ -117,4 +117,13 @@ module  {
     // CHECK: cir.return
   }
 
+  // Should remove redundant bitcasts.
+  // CHECK-LABEL: @ptrbitcastfold
+  //       CHECK:  %[[ARG0:.+]]: !cir.ptr<!s32i>
+  //       CHECK:  cir.return %[[ARG0]] : !cir.ptr<!s32i>
+  cir.func @ptrbitcastfold(%arg0: !cir.ptr<!s32i>) -> !cir.ptr<!s32i> {
+    %0 = cir.cast(bitcast, %arg0: !cir.ptr<!s32i>), !cir.ptr<!s32i>
+    cir.return %0 : !cir.ptr<!s32i>
+  }
+
 }

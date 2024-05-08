@@ -36,8 +36,7 @@ int noProto2();
 int test2(int x) {
   return noProto2(x);
   // CHECK:  [[GGO:%.*]] = cir.get_global @noProto2 : !cir.ptr<!cir.func<!s32i (!s32i)>>
-  // CHECK:  [[CAST:%.*]] = cir.cast(bitcast, %3 : !cir.ptr<!cir.func<!s32i (!s32i)>>), !cir.ptr<!cir.func<!s32i (!s32i)>>
-  // CHECK:  {{.*}} = cir.call [[CAST]](%{{[0-9]+}}) : (!cir.ptr<!cir.func<!s32i (!s32i)>>, !s32i) -> !s32i
+  // CHECK:  {{.*}} = cir.call [[GGO]](%{{[0-9]+}}) : (!cir.ptr<!cir.func<!s32i (!s32i)>>, !s32i) -> !s32i
 }
 int noProto2(int x) { return x; }
 // CHECK: cir.func no_proto @noProto2(%arg0: !s32i {{.+}}) -> !s32i
