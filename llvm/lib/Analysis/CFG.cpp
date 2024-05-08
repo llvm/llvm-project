@@ -212,10 +212,9 @@ bool llvm::isManyPotentiallyReachableFromMany(
   // When a stop block is unreachable, it's dominated from everywhere,
   // regardless of whether there's a path between the two blocks.
   SmallPtrSet<const BasicBlock *, 32> StopBBReachable;
-  for (auto *BB : StopSet) {
+  for (auto *BB : StopSet)
     if (DT && DT->isReachableFromEntry(BB))
       StopBBReachable.insert(BB);
-  }
 
   // We can't skip directly from a block that dominates the stop block if the
   // exclusion block is potentially in between.
@@ -226,16 +225,16 @@ bool llvm::isManyPotentiallyReachableFromMany(
   // however excluded blocks might partition the body of a loop to make that
   // untrue.
   SmallPtrSet<const Loop *, 8> LoopsWithHoles;
-  if (LI && ExclusionSet) {
-    for (auto *BB : *ExclusionSet) {
+  if (LI && ExclusionSet)
+    for (auto *BB : *ExclusionSet)
       if (const Loop *L = getOutermostLoop(LI, BB))
         LoopsWithHoles.insert(L);
-    }
-  }
 
-  llvm::DenseMap<const BasicBlock *, const Loop *> StopLoops;
-  for (auto *StopBB : StopSet)
-    StopLoops[StopBB] = LI ? getOutermostLoop(LI, StopBB) : nullptr;
+  SmallPtrSet<const Loop *, 8> StopLoops;
+  if (LI)
+    for (auto *StopBB : StopSet)
+      if (const Loop *L = getOutermostLoop(LI, StopBB))
+        StopLoops.insert(L);
 
   unsigned Limit = DefaultMaxBBsToExplore;
   SmallPtrSet<const BasicBlock *, 32> Visited;
@@ -261,10 +260,7 @@ bool llvm::isManyPotentiallyReachableFromMany(
       // excluded block. Clear Outer so we process BB's successors.
       if (LoopsWithHoles.count(Outer))
         Outer = nullptr;
-      if (llvm::any_of(StopSet, [&](const BasicBlock *StopBB) {
-            const Loop *StopLoop = StopLoops[StopBB];
-            return StopLoop && StopLoop == Outer;
-          }))
+      if (StopLoops.contains(Outer))
         return true;
     }
 
