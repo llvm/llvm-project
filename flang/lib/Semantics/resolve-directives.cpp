@@ -1112,18 +1112,18 @@ bool AccAttributeVisitor::Pre(const parser::OpenACCCombinedConstruct &x) {
 static bool IsLastNameArray(const parser::Designator &designator) {
   const auto &name{GetLastName(designator)};
   const evaluate::DataRef dataRef{*(name.symbol)};
-  return common::visit(common::visitors{
-                           [](const evaluate::SymbolRef &ref) {
-                             return ref->Rank() > 0 ||
-                                 ref->GetType()->category() ==
-                                 DeclTypeSpec::Numeric;
-                           },
-                           [](const evaluate::ArrayRef &aref) {
-                             return aref.base().IsSymbol() ||
-                                 aref.base().GetComponent().base().Rank() == 0;
-                           },
-                           [](const auto &) { return false; },
-                       },
+  return common::visit(
+      common::visitors{
+          [](const evaluate::SymbolRef &ref) {
+            return ref->Rank() > 0 ||
+                ref->GetType()->category() == DeclTypeSpec::Numeric;
+          },
+          [](const evaluate::ArrayRef &aref) {
+            return aref.base().IsSymbol() ||
+                aref.base().GetComponent().base().Rank() == 0;
+          },
+          [](const auto &) { return false; },
+      },
       dataRef.u);
 }
 
