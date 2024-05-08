@@ -2317,6 +2317,25 @@ section.
   }];
 }
 
+def BPFFastCallDocs : Documentation {
+  let Category = DocCatType;
+  let Content = [{
+Functions annotated with this attribute are likely to be inlined by BPF JIT.
+It is assumed that inlined implementation uses less caller saved registers,
+than a regular function.
+Specifically, the following registers are likely to be preserved:
+- ``R0`` if function return value is ``void``;
+- ``R2-R5` if function takes 1 argument;
+- ``R3-R5` if function takes 2 arguments;
+- ``R4-R5` if function takes 3 arguments;
+- ``R5`` if function takes 4 arguments;
+
+For such functions Clang generates code pattern that allows BPF JIT
+to recognize and remove unnecessary spills and fills of the preserved
+registers.
+  }];
+}
+
 def MipsInterruptDocs : Documentation {
   let Category = DocCatFunction;
   let Heading = "interrupt (MIPS)";
