@@ -35,7 +35,7 @@ struct elements_of {
   _LIBCPP_NO_UNIQUE_ADDRESS _Allocator allocator;
 
   // This explicit constructor is required because AppleClang 15 hasn't implement P0960R3
-  explicit elements_of(_Range&& __range, _Allocator __allocator = _Allocator())
+  _LIBCPP_HIDE_FROM_ABI explicit constexpr elements_of(_Range __range, _Allocator __allocator = _Allocator())
       : range(std::move(__range)), allocator(std::move(__allocator)) {}
 };
 
