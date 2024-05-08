@@ -90,27 +90,24 @@ static FailureOr<PackTransposeResult>
 transposePackedMatmul(RewriterBase &rewriter, linalg::LinalgOp linalgOp,
                       tensor::PackOp packOp, AffineMap operandMap,
                       ArrayRef<unsigned> blocksStartDimPos,
-                      bool transposeOuterBlocks, bool transposeInnerBlocks,
-                      unsigned outerDimsOffset = 0) {
+                      bool transposeOuterBlocks, bool transposeInnerBlocks) {
   assert(operandMap.getNumDims() >= 4 &&
          "expected at least 4D prepacked matmul");
-  assert(blocksStartDimPos.size() == 2 &&
+  assert(blocksStartDimPos.size() >= 2 &&
          "expected starting outer and inner block positions");
 
-  // Base dimension positions in 4D packed matmul.
-  unsigned outerBlockPos = 0;
-  unsigned innerBlockPos = 2;
+  // Bias toward innermost dimensions.
+  unsigned outerBlockPos = operandMap.getNumResults() - 4;
+  unsigned innerBlockPos = operandMap.getNumResults() - 2;
 
   // Transpose control options define the desired block and element layout.
   // Block transposition (outer dimensions) or element transposition (inner
   // dimensions) may not be necessary depending on the original matmul data
   // layout.
   bool isOuterTransposed =
-      operandMap.getDimPosition(outerBlockPos + outerDimsOffset) !=
-      blocksStartDimPos.end()[-2];
+      operandMap.getDimPosition(outerBlockPos) != blocksStartDimPos.end()[-2];
   bool isInnerTransposed =
-      operandMap.getDimPosition(innerBlockPos + outerDimsOffset) !=
-      blocksStartDimPos.back();
+      operandMap.getDimPosition(innerBlockPos) != blocksStartDimPos.back();
 
   // Transpose only the dimensions that need that to conform to the provided
   // transpotion settings.
@@ -123,9 +120,11 @@ transposePackedMatmul(RewriterBase &rewriter, linalg::LinalgOp linalgOp,
 
   // Leave the outer dimensions, like batch, unchanged by offsetting all
   // outer dimensions permutations.
-  SmallVector<int64_t> offsetPerms(outerDimsOffset, 0);
+  SmallVector<int64_t> offsetPerms;
+  for (auto i : llvm::seq(0u, outerBlockPos))
+    offsetPerms.push_back(i);
   for (auto perm : outerPerm)
-    offsetPerms.push_back(perm + outerDimsOffset);
+    offsetPerms.push_back(perm + outerBlockPos);
   outerPerm = offsetPerms;
 
   FailureOr<PackTransposeResult> packTransposedMatmul =
@@ -182,7 +181,6 @@ linalg::blockPackMatmul(RewriterBase &rewriter, linalg::LinalgOp linalgOp,
       inferContractionDims(packedMatmul->packedLinalgOp);
   if (failed(contractDims))
     return failure();
-  unsigned batchDimsOffset = contractDims->batch.size();
 
   auto genericOp =
       dyn_cast<linalg::GenericOp>(packedMatmul->packedLinalgOp.getOperation());
@@ -192,7 +190,7 @@ linalg::blockPackMatmul(RewriterBase &rewriter, linalg::LinalgOp linalgOp,
   FailureOr<PackTransposeResult> packedLhs = transposePackedMatmul(
       rewriter, packedMatmul->packedLinalgOp, packedMatmul->packOps[0], maps[0],
       contractDims->m, options->lhsTransposeOuterBlocks,
-      options->lhsTransposeInnerBlocks, batchDimsOffset);
+      options->lhsTransposeInnerBlocks);
   if (failed(packedLhs))
     return failure();
 
@@ -204,7 +202,7 @@ linalg::blockPackMatmul(RewriterBase &rewriter, linalg::LinalgOp linalgOp,
   FailureOr<PackTransposeResult> packedRhs = transposePackedMatmul(
       rewriter, packedMatmul->packedLinalgOp, packedMatmul->packOps[1], maps[1],
       contractDims->k, options->rhsTransposeOuterBlocks,
-      options->rhsTransposeInnerBlocks, batchDimsOffset);
+      options->rhsTransposeInnerBlocks);
   if (failed(packedRhs))
     return failure();
 
