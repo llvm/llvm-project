@@ -64,54 +64,11 @@ static const char *const GCCRegNames[] = {
     "dr0",   "dr1",   "dr2",   "dr3",   "dr6",     "dr7",
     "bnd0",  "bnd1",  "bnd2",  "bnd3",
     "tmm0",  "tmm1",  "tmm2",  "tmm3",  "tmm4",    "tmm5",  "tmm6",  "tmm7",
-};
-
-static const char *const ExtendedGCCRegNames[] = {
-    "ax",    "dx",    "cx",    "bx",    "si",      "di",    "bp",    "sp",
-    "st",    "st(1)", "st(2)", "st(3)", "st(4)",   "st(5)", "st(6)", "st(7)",
-    "argp",  "flags", "fpcr",  "fpsr",  "dirflag", "frame", "xmm0",  "xmm1",
-    "xmm2",  "xmm3",  "xmm4",  "xmm5",  "xmm6",    "xmm7",  "mm0",   "mm1",
-    "mm2",   "mm3",   "mm4",   "mm5",   "mm6",     "mm7",   "r8",    "r9",
-    "r10",   "r11",   "r12",   "r13",   "r14",     "r15",   "xmm8",  "xmm9",
-    "xmm10", "xmm11", "xmm12", "xmm13", "xmm14",   "xmm15", "ymm0",  "ymm1",
-    "ymm2",  "ymm3",  "ymm4",  "ymm5",  "ymm6",    "ymm7",  "ymm8",  "ymm9",
-    "ymm10", "ymm11", "ymm12", "ymm13", "ymm14",   "ymm15", "xmm16", "xmm17",
-    "xmm18", "xmm19", "xmm20", "xmm21", "xmm22",   "xmm23", "xmm24", "xmm25",
-    "xmm26", "xmm27", "xmm28", "xmm29", "xmm30",   "xmm31", "ymm16", "ymm17",
-    "ymm18", "ymm19", "ymm20", "ymm21", "ymm22",   "ymm23", "ymm24", "ymm25",
-    "ymm26", "ymm27", "ymm28", "ymm29", "ymm30",   "ymm31", "zmm0",  "zmm1",
-    "zmm2",  "zmm3",  "zmm4",  "zmm5",  "zmm6",    "zmm7",  "zmm8",  "zmm9",
-    "zmm10", "zmm11", "zmm12", "zmm13", "zmm14",   "zmm15", "zmm16", "zmm17",
-    "zmm18", "zmm19", "zmm20", "zmm21", "zmm22",   "zmm23", "zmm24", "zmm25",
-    "zmm26", "zmm27", "zmm28", "zmm29", "zmm30",   "zmm31", "k0",    "k1",
-    "k2",    "k3",    "k4",    "k5",    "k6",      "k7",    "cr0",   "cr2",
-    "cr3",   "cr4",   "cr8",   "dr0",   "dr1",     "dr2",   "dr3",   "dr6",
-    "dr7",   "bnd0",  "bnd1",  "bnd2",  "bnd3",    "tmm0",  "tmm1",  "tmm2",
-    "tmm3",  "tmm4",  "tmm5",  "tmm6",  "tmm7",    "r16",   "r17",   "r18",
-    "r19",   "r20",   "r21",   "r22",   "r23",     "r24",   "r25",   "r26",
-    "r27",   "r28",   "r29",   "r30",   "r31",
+    "r16",   "r17",   "r18",   "r19",   "r20",     "r21",   "r22",   "r23",
+    "r24",   "r25",   "r26",   "r27",   "r28",     "r29",   "r30",   "r31",
 };
 
 const TargetInfo::AddlRegName AddlRegNames[] = {
-    {{"al", "ah", "eax", "rax"}, 0},
-    {{"bl", "bh", "ebx", "rbx"}, 3},
-    {{"cl", "ch", "ecx", "rcx"}, 2},
-    {{"dl", "dh", "edx", "rdx"}, 1},
-    {{"esi", "rsi"}, 4},
-    {{"edi", "rdi"}, 5},
-    {{"esp", "rsp"}, 7},
-    {{"ebp", "rbp"}, 6},
-    {{"r8d", "r8w", "r8b"}, 38},
-    {{"r9d", "r9w", "r9b"}, 39},
-    {{"r10d", "r10w", "r10b"}, 40},
-    {{"r11d", "r11w", "r11b"}, 41},
-    {{"r12d", "r12w", "r12b"}, 42},
-    {{"r13d", "r13w", "r13b"}, 43},
-    {{"r14d", "r14w", "r14b"}, 44},
-    {{"r15d", "r15w", "r15b"}, 45},
-};
-
-const TargetInfo::AddlRegName ExtendedAddlRegNames[] = {
     {{"al", "ah", "eax", "rax"}, 0},
     {{"bl", "bh", "ebx", "rbx"}, 3},
     {{"cl", "ch", "ecx", "rcx"}, 2},
@@ -1823,14 +1780,10 @@ void X86TargetInfo::fillValidTuneCPUList(SmallVectorImpl<StringRef> &Values) con
 }
 
 ArrayRef<const char *> X86TargetInfo::getGCCRegNames() const {
-  if (HasEGPR)
-    return llvm::ArrayRef(ExtendedGCCRegNames);
   return llvm::ArrayRef(GCCRegNames);
 }
 
 ArrayRef<TargetInfo::AddlRegName> X86TargetInfo::getGCCAddlRegNames() const {
-  if (HasEGPR)
-    return llvm::ArrayRef(ExtendedAddlRegNames);
   return llvm::ArrayRef(AddlRegNames);
 }
 
