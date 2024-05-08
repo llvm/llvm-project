@@ -215,12 +215,12 @@ define void @ptrType(ptr %in.ptr, i64 %in.idx1) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[IN_IDX1_NNEG:%.*]] = and i64 [[IN_IDX1]], 2147483647
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds ptr, ptr [[IN_PTR]], i64 [[IN_IDX1_NNEG]]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <4 x ptr>, ptr [[TMP0]], i32 1
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds ptr addrspace(2), ptr [[TMP0]], i32 1
 ; CHECK-NEXT:    ret void
 ;
 entry:
   %in.idx1.nneg = and i64 %in.idx1, 2147483647
-  %const1 = getelementptr inbounds <4 x ptr>, ptr %in.ptr, i32 1
+  %const1 = getelementptr inbounds ptr addrspace(2), ptr %in.ptr, i32 1
   %idx1 = getelementptr inbounds ptr, ptr %const1, i64 %in.idx1.nneg
   ret void
 }
