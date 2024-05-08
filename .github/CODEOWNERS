@@ -23,6 +23,7 @@
 /llvm/lib/Analysis/ScalarEvolution.cpp @nikic
 /llvm/lib/Analysis/ValueTracking.cpp @nikic
 /llvm/lib/IR/ConstantRange.cpp @nikic
+/llvm/lib/IR/Core.cpp @nikic
 /llvm/lib/Transforms/Scalar/CorrelatedValuePropagation.cpp @nikic
 /llvm/lib/Transforms/Scalar/MemCpyOptimizer.cpp @nikic
 /llvm/lib/Transforms/InstCombine/ @nikic
