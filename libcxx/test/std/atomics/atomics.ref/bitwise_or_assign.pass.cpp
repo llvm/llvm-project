@@ -40,7 +40,7 @@ struct TestBitwiseOrAssign {
   }
 };
 
-void test() {
+int main(int, char**) {
   TestEachIntegralType<TestBitwiseOrAssign>()();
 
   TestEachFloatingPointType<TestDoesNotHaveBitwiseOrAssign>()();
@@ -50,9 +50,6 @@ void test() {
   TestDoesNotHaveBitwiseOrAssign<bool>()();
   TestDoesNotHaveBitwiseOrAssign<UserAtomicType>()();
   TestDoesNotHaveBitwiseOrAssign<LargeUserAtomicType>()();
-}
 
-int main(int, char**) {
-  test();
   return 0;
 }

@@ -31,18 +31,7 @@ struct TestCtor {
   }
 };
 
-void test() {
-  TestEachIntegralType<TestCtor>()();
-
-  TestEachFloatingPointType<TestCtor>()();
-
-  TestEachPointerType<TestCtor>()();
-
-  TestCtor<UserAtomicType>()();
-  TestCtor<LargeUserAtomicType>()();
-}
-
 int main(int, char**) {
-  test();
+  TestEachAtomicType<TestCtor>()();
   return 0;
 }

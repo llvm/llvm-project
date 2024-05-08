@@ -37,18 +37,7 @@ struct TestExchange {
   }
 };
 
-void test() {
-  TestEachIntegralType<TestExchange>()();
-
-  TestEachFloatingPointType<TestExchange>()();
-
-  TestEachPointerType<TestExchange>()();
-
-  TestExchange<UserAtomicType>()();
-  TestExchange<LargeUserAtomicType>()();
-}
-
 int main(int, char**) {
-  test();
+  TestEachAtomicType<TestExchange>()();
   return 0;
 }

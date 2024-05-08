@@ -54,7 +54,7 @@ struct TestFetchAnd {
   }
 };
 
-void test() {
+int main(int, char**) {
   TestEachIntegralType<TestFetchAnd>()();
 
   TestEachFloatingPointType<TestDoesNotHaveFetchAnd>()();
@@ -64,9 +64,5 @@ void test() {
   TestDoesNotHaveFetchAnd<bool>()();
   TestDoesNotHaveFetchAnd<UserAtomicType>()();
   TestDoesNotHaveFetchAnd<LargeUserAtomicType>()();
-}
-
-int main(int, char**) {
-  test();
   return 0;
 }

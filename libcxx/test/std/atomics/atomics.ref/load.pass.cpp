@@ -54,18 +54,7 @@ struct TestLoad {
   }
 };
 
-void test() {
-  TestEachIntegralType<TestLoad>()();
-
-  TestEachFloatingPointType<TestLoad>()();
-
-  TestEachPointerType<TestLoad>()();
-
-  TestLoad<UserAtomicType>()();
-  TestLoad<LargeUserAtomicType>()();
-}
-
 int main(int, char**) {
-  test();
+  TestEachAtomicType<TestLoad>()();
   return 0;
 }

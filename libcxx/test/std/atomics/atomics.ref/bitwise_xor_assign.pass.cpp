@@ -40,18 +40,16 @@ struct TestBitwiseXorAssign {
   }
 };
 
-void test() {
+int main(int, char**) {
   TestEachIntegralType<TestBitwiseXorAssign>()();
 
   TestEachFloatingPointType<TestDoesNotHaveBitwiseXorAssign>()();
 
   TestEachPointerType<TestDoesNotHaveBitwiseXorAssign>()();
 
+  TestDoesNotHaveBitwiseXorAssign<bool>()();
   TestDoesNotHaveBitwiseXorAssign<UserAtomicType>()();
   TestDoesNotHaveBitwiseXorAssign<LargeUserAtomicType>()();
-}
 
-int main(int, char**) {
-  test();
   return 0;
 }

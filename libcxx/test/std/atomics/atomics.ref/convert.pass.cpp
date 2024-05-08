@@ -37,18 +37,7 @@ struct TestConvert {
   }
 };
 
-void test() {
-  TestEachIntegralType<TestConvert>()();
-
-  TestEachFloatingPointType<TestConvert>()();
-
-  TestEachPointerType<TestConvert>()();
-
-  TestConvert<UserAtomicType>()();
-  TestConvert<LargeUserAtomicType>()();
-}
-
 int main(int, char**) {
-  test();
+  TestEachAtomicType<TestConvert>()();
   return 0;
 }

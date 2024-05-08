@@ -27,18 +27,7 @@ struct TestDeduction {
   }
 };
 
-void test() {
-  TestEachIntegralType<TestDeduction>()();
-
-  TestEachFloatingPointType<TestDeduction>()();
-
-  TestEachPointerType<TestDeduction>()();
-
-  TestDeduction<UserAtomicType>()();
-  TestDeduction<LargeUserAtomicType>()();
-}
-
 int main(int, char**) {
-  test();
+  TestEachAtomicType<TestDeduction>()();
   return 0;
 }

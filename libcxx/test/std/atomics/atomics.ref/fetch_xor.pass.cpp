@@ -52,7 +52,7 @@ struct TestFetchXor {
   }
 };
 
-void test() {
+int main(int, char**) {
   TestEachIntegralType<TestFetchXor>()();
 
   TestEachFloatingPointType<TestDoesNotHaveFetchXor>()();
@@ -62,9 +62,6 @@ void test() {
   TestDoesNotHaveFetchXor<bool>()();
   TestDoesNotHaveFetchXor<UserAtomicType>()();
   TestDoesNotHaveFetchXor<LargeUserAtomicType>()();
-}
 
-int main(int, char**) {
-  test();
   return 0;
 }

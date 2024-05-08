@@ -79,9 +79,7 @@ struct TestWait {
   }
 };
 
-void test() { TestEachAtomicType<TestWait>()(); }
-
 int main(int, char**) {
-  test();
+  TestEachAtomicType<TestWait>()();
   return 0;
 }

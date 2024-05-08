@@ -69,9 +69,7 @@ struct TestNotifyAll {
   }
 };
 
-void test() { TestEachAtomicType<TestNotifyAll>()(); }
-
 int main(int, char**) {
-  test();
+  TestEachAtomicType<TestNotifyAll>()();
   return 0;
 }

@@ -218,9 +218,7 @@ struct TestCompareExchangeWeak {
   }
 };
 
-void test() { TestEachAtomicType<TestCompareExchangeWeak>()(); }
-
 int main(int, char**) {
-  test();
+  TestEachAtomicType<TestCompareExchangeWeak>()();
   return 0;
 }

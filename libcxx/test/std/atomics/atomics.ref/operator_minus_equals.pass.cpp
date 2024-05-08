@@ -62,7 +62,7 @@ struct TestOperatorMinusEquals {
   }
 };
 
-void test() {
+int main(int, char**) {
   TestEachIntegralType<TestOperatorMinusEquals>()();
 
   TestEachFloatingPointType<TestOperatorMinusEquals>()();
@@ -72,9 +72,6 @@ void test() {
   TestDoesNotHaveOperatorMinusEquals<bool>()();
   TestDoesNotHaveOperatorMinusEquals<UserAtomicType>()();
   TestDoesNotHaveOperatorMinusEquals<LargeUserAtomicType>()();
-}
 
-int main(int, char**) {
-  test();
   return 0;
 }

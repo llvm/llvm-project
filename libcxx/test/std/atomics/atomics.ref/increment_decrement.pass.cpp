@@ -81,7 +81,7 @@ struct TestIncrementDecrement {
   }
 };
 
-void test() {
+int main(int, char**) {
   TestEachIntegralType<TestIncrementDecrement>()();
 
   TestEachFloatingPointType<TestDoesNotHaveIncrementDecrement>()();
@@ -91,9 +91,6 @@ void test() {
   TestDoesNotHaveIncrementDecrement<bool>()();
   TestDoesNotHaveIncrementDecrement<UserAtomicType>()();
   TestDoesNotHaveIncrementDecrement<LargeUserAtomicType>()();
-}
 
-int main(int, char**) {
-  test();
   return 0;
 }

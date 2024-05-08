@@ -213,9 +213,7 @@ struct TestCompareExchangeStrong {
   }
 };
 
-void test() { TestEachAtomicType<TestCompareExchangeStrong>()(); }
-
 int main(int, char**) {
-  test();
+  TestEachAtomicType<TestCompareExchangeStrong>()();
   return 0;
 }

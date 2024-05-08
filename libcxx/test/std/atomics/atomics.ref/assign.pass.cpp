@@ -37,18 +37,7 @@ struct TestAssign {
   }
 };
 
-void test() {
-  TestEachIntegralType<TestAssign>()();
-
-  TestEachFloatingPointType<TestAssign>()();
-
-  TestEachPointerType<TestAssign>()();
-
-  TestAssign<UserAtomicType>()();
-  TestAssign<LargeUserAtomicType>()();
-}
-
 int main(int, char**) {
-  test();
+  TestEachAtomicType<TestAssign>()();
   return 0;
 }

@@ -96,7 +96,7 @@ struct TestFetchAdd {
   }
 };
 
-void test() {
+int main(int, char**) {
   TestEachIntegralType<TestFetchAdd>()();
 
   TestEachFloatingPointType<TestFetchAdd>()();
@@ -106,9 +106,6 @@ void test() {
   TestDoesNotHaveFetchAdd<bool>()();
   TestDoesNotHaveFetchAdd<UserAtomicType>()();
   TestDoesNotHaveFetchAdd<LargeUserAtomicType>()();
-}
 
-int main(int, char**) {
-  test();
   return 0;
 }

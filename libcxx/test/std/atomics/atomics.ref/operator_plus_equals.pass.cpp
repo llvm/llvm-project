@@ -62,7 +62,7 @@ struct TestOperatorPlusEquals {
   }
 };
 
-void test() {
+int main(int, char**) {
   TestEachIntegralType<TestOperatorPlusEquals>()();
 
   TestEachFloatingPointType<TestOperatorPlusEquals>()();
@@ -72,9 +72,6 @@ void test() {
   TestDoesNotHaveOperatorPlusEquals<bool>()();
   TestDoesNotHaveOperatorPlusEquals<UserAtomicType>()();
   TestDoesNotHaveOperatorPlusEquals<LargeUserAtomicType>()();
-}
 
-int main(int, char**) {
-  test();
   return 0;
 }
