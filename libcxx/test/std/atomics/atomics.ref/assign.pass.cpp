@@ -20,21 +20,25 @@
 template <typename T>
 struct TestAssign {
   void operator()() const {
-    T x(T(1));
-    std::atomic_ref<T> const a(x);
+    {
+      T x(T(1));
+      std::atomic_ref<T> const a(x);
 
-    std::same_as<T> decltype(auto) y = (a = T(2));
-    assert(y == T(2));
-    assert(x == T(2));
+      std::same_as<T> decltype(auto) y = (a = T(2));
+      assert(y == T(2));
+      assert(x == T(2));
 
-    ASSERT_NOEXCEPT(a = T(0));
-    static_assert(std::is_nothrow_assignable_v<std::atomic_ref<T>, T>);
+      ASSERT_NOEXCEPT(a = T(0));
+      static_assert(std::is_nothrow_assignable_v<std::atomic_ref<T>, T>);
 
-    static_assert(!std::is_copy_assignable_v<std::atomic_ref<T>>);
+      static_assert(!std::is_copy_assignable_v<std::atomic_ref<T>>);
+    }
 
-    auto assign = [](std::atomic_ref<T> const& y, T, T new_val) { y = new_val; };
-    auto load   = [](std::atomic_ref<T> const& y) { return y.load(); };
-    test_seq_cst<T>(assign, load);
+    {
+      auto assign = [](std::atomic_ref<T> const& y, T, T new_val) { y = new_val; };
+      auto load   = [](std::atomic_ref<T> const& y) { return y.load(); };
+      test_seq_cst<T>(assign, load);
+    }
   }
 };
 
