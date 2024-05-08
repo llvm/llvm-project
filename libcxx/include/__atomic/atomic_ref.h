@@ -62,7 +62,7 @@ private:
       _Tp* __ptr, _Tp* __expected, _Tp* __desired, bool __is_weak, int __success, int __failure) noexcept {
     if constexpr (
 #  if __has_builtin(__builtin_clear_padding)
-        has_unique_object_representations_v<_Tp> || same_as<_Tp, float> || same_as<_Tp, double>
+        has_unique_object_representations_v<_Tp> || floating_point<_Tp>
 #  else
         true // NOLINT(readability-simplify-boolean-expr)
 #  endif
