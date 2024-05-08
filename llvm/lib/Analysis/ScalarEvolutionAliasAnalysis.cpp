@@ -67,10 +67,13 @@ AliasResult SCEVAAResult::alias(const MemoryLocation &LocA,
     // Test whether the difference is known to be great enough that memory of
     // the given sizes don't overlap. This assumes that ASizeInt and BSizeInt
     // are non-zero, which is special-cased above.
-    if (!isa<SCEVCouldNotCompute>(BA) &&
-        ASizeInt.ule(SE.getUnsignedRange(BA).getUnsignedMin()) &&
-        (-BSizeInt).uge(SE.getUnsignedRange(BA).getUnsignedMax()))
-      return AliasResult::NoAlias;
+    if (!isa<SCEVCouldNotCompute>(BA)) {
+      if (SE.isSCEVable(BA->getType()))
+        BA = SE.getTruncateOrAnyExtend(BA, AS->getType());
+      if (ASizeInt.ule(SE.getUnsignedRange(BA).getUnsignedMin()) &&
+          (-BSizeInt).uge(SE.getUnsignedRange(BA).getUnsignedMax()))
+        return AliasResult::NoAlias;
+    }
 
     // Folding the subtraction while preserving range information can be tricky
     // (because of INT_MIN, etc.); if the prior test failed, swap AS and BS
@@ -82,10 +85,13 @@ AliasResult SCEVAAResult::alias(const MemoryLocation &LocA,
     // Test whether the difference is known to be great enough that memory of
     // the given sizes don't overlap. This assumes that ASizeInt and BSizeInt
     // are non-zero, which is special-cased above.
-    if (!isa<SCEVCouldNotCompute>(AB) &&
-        BSizeInt.ule(SE.getUnsignedRange(AB).getUnsignedMin()) &&
-        (-ASizeInt).uge(SE.getUnsignedRange(AB).getUnsignedMax()))
-      return AliasResult::NoAlias;
+    if (!isa<SCEVCouldNotCompute>(AB)) {
+      if (SE.isSCEVable(AB->getType()))
+        AB = SE.getTruncateOrAnyExtend(AB, AS->getType());
+      if (BSizeInt.ule(SE.getUnsignedRange(AB).getUnsignedMin()) &&
+          (-ASizeInt).uge(SE.getUnsignedRange(AB).getUnsignedMax()))
+        return AliasResult::NoAlias;
+    }
   }
 
   // If ScalarEvolution can find an underlying object, form a new query.

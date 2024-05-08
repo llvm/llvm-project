@@ -722,6 +722,11 @@ public:
                                       unsigned Depth = 0);
 
   /// Return a SCEV corresponding to a conversion of the input value to the
+  /// specified type.  If the type must be extended, it is any extended.
+  const SCEV *getTruncateOrAnyExtend(const SCEV *V, Type *Ty,
+                                     unsigned Depth = 0);
+
+  /// Return a SCEV corresponding to a conversion of the input value to the
   /// specified type.  If the type must be extended, it is zero extended.  The
   /// conversion must not be narrowing.
   const SCEV *getNoopOrZeroExtend(const SCEV *V, Type *Ty);
@@ -753,6 +758,26 @@ public:
   /// then perform a umin operation with them. N-ary function.
   const SCEV *getUMinFromMismatchedTypes(SmallVectorImpl<const SCEV *> &Ops,
                                          bool Sequential = false);
+
+  /// Promote the operands to the wider of the types using any-extension, and
+  /// then perform a addrec operation with them.
+  const SCEV *
+  getAddRecExprFromMismatchedTypes(const SmallVectorImpl<const SCEV *> &Ops,
+                                   const Loop *L, SCEV::NoWrapFlags Flags);
+
+  /// Promote the operands to the wider of the types using any-extension, and
+  /// then perform a add operation with them.
+  const SCEV *
+  getAddExprFromMismatchedTypes(const SmallVectorImpl<const SCEV *> &Ops,
+                                SCEV::NoWrapFlags Flags = SCEV::FlagAnyWrap,
+                                unsigned Depth = 0);
+  const SCEV *
+  getAddExprFromMismatchedTypes(const SCEV *LHS, const SCEV *RHS,
+                                SCEV::NoWrapFlags Flags = SCEV::FlagAnyWrap,
+                                unsigned Depth = 0) {
+    SmallVector<const SCEV *, 2> Ops = {LHS, RHS};
+    return getAddExprFromMismatchedTypes(Ops, Flags, Depth);
+  }
 
   /// Transitively follow the chain of pointer-type operands until reaching a
   /// SCEV that does not have a single pointer operand. This returns a
