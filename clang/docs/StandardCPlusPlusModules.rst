@@ -350,7 +350,7 @@ implementation unit implicitly imports the primary module interface unit.
   A module-declaration that contains neither an export-keyword nor a module-partition implicitly
   imports the primary module interface unit of the module as if by a module-import-declaration.
 
-The ``-fprebuilt-module-path=<path/to/directory>``, ``-fmodule-file=<path/to/BMI>``, 
+The ``-fprebuilt-module-path=<path/to/directory>``, ``-fmodule-file=<path/to/BMI>``,
 and ``-fmodule-file=<module-name>=<path/to/BMI>`` options may be specified
 multiple times. For example, the command line to compile ``M.cppm`` in
 the previous example could be rewritten as:
@@ -503,7 +503,7 @@ demangled by previous versions of the debugger or demangler. As of LLVM 15.x,
 
   $ llvm-cxxfilt _ZN2NSW1M3fooEv
     NS::foo@M()
-    
+
 The result should be read as ``NS::foo()`` in module ``M``.
 
 The ABI implies that something cannot be declared in a module unit and defined
@@ -1330,7 +1330,7 @@ How to specify the dependent BMIs
 more than one dependent BMI).
 
 With the existing implementation, ``-fprebuilt-module-path`` cannot be used for
-header units (because they are nominally anonymous). For header units, use 
+header units (because they are nominally anonymous). For header units, use
 ``-fmodule-file`` to include the relevant PCM file for each header unit.
 
 This is expect to be solved in a future version of Clang either by the compiler
