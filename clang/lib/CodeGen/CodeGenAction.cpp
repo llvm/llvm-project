@@ -114,13 +114,12 @@ BackendConsumer::BackendConsumer(
     const HeaderSearchOptions &HeaderSearchOpts,
     const PreprocessorOptions &PPOpts, const CodeGenOptions &CodeGenOpts,
     const TargetOptions &TargetOpts, const LangOptions &LangOpts,
-    const FileManager &FileMgr, const std::string &InFile,
-    SmallVector<LinkModule, 4> LinkModules,
+    const std::string &InFile, SmallVector<LinkModule, 4> LinkModules,
     std::unique_ptr<raw_pwrite_stream> OS, LLVMContext &C,
     CoverageSourceInfo *CoverageInfo)
     : Diags(Diags), Action(Action), HeaderSearchOpts(HeaderSearchOpts),
       CodeGenOpts(CodeGenOpts), TargetOpts(TargetOpts), LangOpts(LangOpts),
-      FileMgr(FileMgr), AsmOutStream(std::move(OS)), Context(nullptr), FS(VFS),
+      AsmOutStream(std::move(OS)), Context(nullptr), FS(VFS),
       LLVMIRGeneration("irgen", "LLVM IR Generation Time"),
       LLVMIRGenerationRefCount(0),
       Gen(CreateLLVMCodeGen(Diags, InFile, std::move(VFS), HeaderSearchOpts,
@@ -140,12 +139,11 @@ BackendConsumer::BackendConsumer(
     const HeaderSearchOptions &HeaderSearchOpts,
     const PreprocessorOptions &PPOpts, const CodeGenOptions &CodeGenOpts,
     const TargetOptions &TargetOpts, const LangOptions &LangOpts,
-    const FileManager &FileMgr, llvm::Module *Module,
-    SmallVector<LinkModule, 4> LinkModules, LLVMContext &C,
-    CoverageSourceInfo *CoverageInfo)
+    llvm::Module *Module, SmallVector<LinkModule, 4> LinkModules,
+    LLVMContext &C, CoverageSourceInfo *CoverageInfo)
     : Diags(Diags), Action(Action), HeaderSearchOpts(HeaderSearchOpts),
       CodeGenOpts(CodeGenOpts), TargetOpts(TargetOpts), LangOpts(LangOpts),
-      FileMgr(FileMgr), Context(nullptr), FS(VFS),
+      Context(nullptr), FS(VFS),
       LLVMIRGeneration("irgen", "LLVM IR Generation Time"),
       LLVMIRGenerationRefCount(0),
       Gen(CreateLLVMCodeGen(Diags, "", std::move(VFS), HeaderSearchOpts, PPOpts,
@@ -1022,9 +1020,8 @@ CodeGenAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
   std::unique_ptr<BackendConsumer> Result(new BackendConsumer(
       BA, CI.getDiagnostics(), &CI.getVirtualFileSystem(),
       CI.getHeaderSearchOpts(), CI.getPreprocessorOpts(), CI.getCodeGenOpts(),
-      CI.getTargetOpts(), CI.getLangOpts(), CI.getFileManager(),
-      std::string(InFile), std::move(LinkModules), std::move(OS), *VMContext,
-      CoverageInfo));
+      CI.getTargetOpts(), CI.getLangOpts(), std::string(InFile),
+      std::move(LinkModules), std::move(OS), *VMContext, CoverageInfo));
   BEConsumer = Result.get();
 
   // Enable generating macro debug info only when debug info is not disabled and
@@ -1195,7 +1192,7 @@ void CodeGenAction::ExecuteAction() {
   BackendConsumer Result(BA, CI.getDiagnostics(), &CI.getVirtualFileSystem(),
                          CI.getHeaderSearchOpts(), CI.getPreprocessorOpts(),
                          CI.getCodeGenOpts(), CI.getTargetOpts(),
-                         CI.getLangOpts(), CI.getFileManager(), TheModule.get(),
+                         CI.getLangOpts(), TheModule.get(),
                          std::move(LinkModules), *VMContext, nullptr);
 
   // Link in each pending link module.
