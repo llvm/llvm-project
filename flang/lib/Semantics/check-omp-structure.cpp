@@ -84,23 +84,25 @@ private:
   parser::CharBlock source_;
 };
 
-class OmpCycleChecker {
+class OmpCycleAndExitChecker {
 public:
-  OmpCycleChecker(SemanticsContext &context, std::int64_t cycleLevel)
-      : context_{context}, cycleLevel_{cycleLevel} {}
+  OmpCycleAndExitChecker(SemanticsContext &context, std::int64_t level)
+      : context_{context}, level_{level} {}
 
   template <typename T> bool Pre(const T &) { return true; }
   template <typename T> void Post(const T &) {}
 
   bool Pre(const parser::DoConstruct &dc) {
-    cycleLevel_--;
+    level_--;
     const auto &constructName{std::get<0>(std::get<0>(dc.t).statement.t)};
     if (constructName) {
       constructNamesAndLevels_.emplace(
-          constructName.value().ToString(), cycleLevel_);
+          constructName.value().ToString(), level_);
     }
     return true;
   }
+
+  void Post(const parser::DoConstruct &dc) { level_++; }
 
   bool Pre(const parser::CycleStmt &cyclestmt) {
     std::map<std::string, std::int64_t>::iterator it;
@@ -108,28 +110,43 @@ public:
     if (cyclestmt.v) {
       it = constructNamesAndLevels_.find(cyclestmt.v->source.ToString());
       err = (it != constructNamesAndLevels_.end() && it->second > 0);
-    } else {
-      // If there is no label then the cycle statement is associated with the
-      // closest enclosing DO. Use its level for the checks.
-      err = cycleLevel_ > 0;
+    } else { // If there is no label then use the level of the last enclosing DO
+      err = level_ > 0;
     }
     if (err) {
-      context_.Say(*cycleSource_,
+      context_.Say(*source_,
           "CYCLE statement to non-innermost associated loop of an OpenMP DO "
           "construct"_err_en_US);
     }
     return true;
   }
 
+  bool Pre(const parser::ExitStmt &exitStmt) {
+    std::map<std::string, std::int64_t>::iterator it;
+    bool err{false};
+    if (exitStmt.v) {
+      it = constructNamesAndLevels_.find(exitStmt.v->source.ToString());
+      err = (it != constructNamesAndLevels_.end() && it->second >= 0);
+    } else { // If there is no label then use the level of the last enclosing DO
+      err = level_ >= 0;
+    }
+    if (err) {
+      context_.Say(*source_,
+          "EXIT statement terminates associated loop of an OpenMP DO "
+          "construct"_err_en_US);
+    }
+    return true;
+  }
+
   bool Pre(const parser::Statement<parser::ActionStmt> &actionstmt) {
-    cycleSource_ = &actionstmt.source;
+    source_ = &actionstmt.source;
     return true;
   }
 
 private:
   SemanticsContext &context_;
-  const parser::CharBlock *cycleSource_;
-  std::int64_t cycleLevel_;
+  const parser::CharBlock *source_;
+  std::int64_t level_;
   std::map<std::string, std::int64_t> constructNamesAndLevels_;
 };
 
@@ -657,8 +674,8 @@ std::int64_t OmpStructureChecker::GetOrdCollapseLevel(
 void OmpStructureChecker::CheckCycleConstraints(
     const parser::OpenMPLoopConstruct &x) {
   std::int64_t ordCollapseLevel{GetOrdCollapseLevel(x)};
-  OmpCycleChecker ompCycleChecker{context_, ordCollapseLevel};
-  parser::Walk(x, ompCycleChecker);
+  OmpCycleAndExitChecker checker{context_, ordCollapseLevel};
+  parser::Walk(x, checker);
 }
 
 void OmpStructureChecker::CheckDistLinear(
