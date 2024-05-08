@@ -10356,9 +10356,7 @@ struct AANoFPClassImpl : AANoFPClass {
   const std::string getAsStr(Attributor *A) const override {
     std::string Result = "nofpclass";
     raw_string_ostream OS(Result);
-    OS << getKnownNoFPClass();
-    OS << "/";
-    OS << getAssumedNoFPClass();
+    OS << getKnownNoFPClass() << '/' << getAssumedNoFPClass();
     return Result;
   }
 
