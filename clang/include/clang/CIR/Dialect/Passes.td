@@ -89,6 +89,16 @@ def FlattenCFG : Pass<"cir-flatten-cfg"> {
   let dependentDialects = ["cir::CIRDialect"];
 }
 
+def GotoSolver : Pass<"cir-goto-solver"> {
+  let summary = "Replaces goto operatations with branches";
+  let description = [{
+    This pass transforms CIR and replaces goto-s with branch
+    operations to the proper blocks.
+  }];
+  let constructor = "mlir::createGotoSolverPass()";
+  let dependentDialects = ["cir::CIRDialect"];
+}
+
 def IdiomRecognizer : Pass<"cir-idiom-recognizer"> {
   let summary = "Raise calls to C/C++ libraries to CIR operations";
   let description = [{

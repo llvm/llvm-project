@@ -3752,6 +3752,48 @@ def SwitchFlatOp : CIR_Op<"switch.flat", [AttrSizedOperandSegments, Terminator]>
 }
 
 //===----------------------------------------------------------------------===//
+// GotoOp
+//===----------------------------------------------------------------------===//
+
+def GotoOp : CIR_Op<"goto", [Terminator]> {
+  let description = [{ Transfers control to the specified label.
+
+  Example:
+  ```C++
+    void foo() {
+      goto exit;
+
+    exit:
+      return;
+    }
+    ```
+
+    ```mlir
+    cir.func @foo() {
+      cir.goto "exit"
+    ^bb1:
+      cir.label "exit"
+      cir.return
+    }
+    ```
+  }];
+  let arguments = (ins StrAttr:$label);
+  let assemblyFormat = [{ $label attr-dict }];
+}
+
+//===----------------------------------------------------------------------===//
+// LabelOp
+//===----------------------------------------------------------------------===//
+
+// The LabelOp has AlwaysSpeculatable trait in order to not to be swept by canonicalizer
+def LabelOp : CIR_Op<"label", [AlwaysSpeculatable]> {
+  let description = [{ An identifier which may be referred by cir.goto operation }];
+  let arguments = (ins StrAttr:$label);
+  let assemblyFormat = [{ $label attr-dict }];
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // Atomic operations
 //===----------------------------------------------------------------------===//
 

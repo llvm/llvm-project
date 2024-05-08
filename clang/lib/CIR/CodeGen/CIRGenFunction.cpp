@@ -323,22 +323,6 @@ void CIRGenFunction::LexicalScope::cleanup() {
   auto &builder = CGF.builder;
   auto *localScope = CGF.currLexScope;
 
-  // Handle pending gotos and the solved labels in this scope.
-  while (!localScope->PendingGotos.empty()) {
-    auto gotoInfo = localScope->PendingGotos.back();
-    // FIXME: Currently only support resolving goto labels inside the
-    // same lexical ecope.
-    assert(localScope->SolvedLabels.count(gotoInfo.second) &&
-           "goto across scopes not yet supported");
-
-    // The goto in this lexical context actually maps to a basic
-    // block.
-    auto g = cast<mlir::cir::BrOp>(gotoInfo.first);
-    g.setSuccessor(CGF.LabelMap[gotoInfo.second].getBlock());
-    localScope->PendingGotos.pop_back();
-  }
-  localScope->SolvedLabels.clear();
-
   auto applyCleanup = [&]() {
     if (PerformCleanup) {
       // ApplyDebugLocation
