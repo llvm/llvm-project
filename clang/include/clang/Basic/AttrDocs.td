@@ -7408,6 +7408,26 @@ The full documentation is available here: https://docs.microsoft.com/en-us/windo
   }];
 }
 
+def HLSLPackOffsetDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+The packoffset attribute is used to change the layout of a cbuffer.
+Attribute spelling in HLSL is: ``packoffset( c[Subcomponent][.component] )``.
+A subcomponent is a register number, which is an integer. A component is in the form of [.xyzw].
+
+Examples:
+
+.. code-block:: c++
+
+  cbuffer A {
+    float3 a : packoffset(c0.y);
+    float4 b : packoffset(c4);
+  }
+
+The full documentation is available here: https://learn.microsoft.com/en-us/windows/win32/direct3dhlsl/dx-graphics-hlsl-variable-packoffset
+  }];
+}
+
 def HLSLSV_DispatchThreadIDDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{
