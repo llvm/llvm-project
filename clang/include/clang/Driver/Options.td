@@ -4159,6 +4159,11 @@ defm unique_section_names : BoolFOption<"unique-section-names",
   NegFlag<SetFalse, [], [ClangOption, CC1Option],
           "Don't use unique names for text and data sections">,
   PosFlag<SetTrue>>;
+defm separate_named_sections : BoolFOption<"separate-named-sections",
+  CodeGenOpts<"SeparateNamedSections">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option],
+          "Use separate unique sections for named sections (ELF Only)">,
+  NegFlag<SetFalse>>;
 
 defm split_machine_functions: BoolFOption<"split-machine-functions",
   CodeGenOpts<"SplitMachineFunctions">, DefaultFalse,
@@ -5698,7 +5703,7 @@ def whatsloaded : Flag<["-"], "whatsloaded">;
 def why_load : Flag<["-"], "why_load">;
 def whyload : Flag<["-"], "whyload">, Alias<why_load>;
 def w : Flag<["-"], "w">, HelpText<"Suppress all warnings">,
-  Visibility<[ClangOption, CC1Option]>,
+  Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
   MarshallingInfoFlag<DiagnosticOpts<"IgnoreWarnings">>;
 def x : JoinedOrSeparate<["-"], "x">,
 Flags<[NoXarchOption]>,
