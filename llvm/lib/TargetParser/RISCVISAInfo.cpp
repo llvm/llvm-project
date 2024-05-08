@@ -159,9 +159,9 @@ findDefaultVersion(StringRef ExtName) {
   return std::nullopt;
 }
 
-void RISCVISAInfo::addExtension(StringRef ExtName,
+bool RISCVISAInfo::addExtension(StringRef ExtName,
                                 RISCVISAUtils::ExtensionVersion Version) {
-  Exts[ExtName.str()] = Version;
+  return Exts.emplace(ExtName, Version).second;
 }
 
 static StringRef getExtensionTypeDesc(StringRef Ext) {
@@ -492,7 +492,9 @@ RISCVISAInfo::parseNormalizedArchString(StringRef Arch) {
                                "'" + Twine(ExtName[0]) +
                                    "' must be followed by a letter");
 
-    ISAInfo->addExtension(ExtName, {MajorVersion, MinorVersion});
+    if (!ISAInfo->addExtension(ExtName, {MajorVersion, MinorVersion}))
+      return createStringError(errc::invalid_argument,
+                               "duplicate extension '" + ExtName + "'");
   }
   ISAInfo->updateImpliedLengths();
   return std::move(ISAInfo);

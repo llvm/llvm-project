@@ -26,6 +26,9 @@ for header in public_headers:
 // The GCC compiler flags are not always compatible with clang-tidy.
 // UNSUPPORTED: gcc
 
+// Clang 17 has false positives.
+// UNSUPPORTED: clang-17
+
 {lit_header_restrictions.get(header, '')}
 
 // TODO: run clang-tidy with modules enabled once they are supported

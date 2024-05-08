@@ -18,7 +18,6 @@
 #include "mlir/Transforms/Passes.h"
 #include "mlir/Transforms/RegionUtils.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/GenericIteratedDominanceFrontier.h"
 
 namespace mlir {
@@ -158,15 +157,18 @@ private:
   const DataLayout &dataLayout;
 };
 
+using BlockIndexCache = DenseMap<Region *, DenseMap<Block *, size_t>>;
+
 /// The MemorySlotPromoter handles the state of promoting a memory slot. It
 /// wraps a slot and its associated allocator. This will perform the mutation of
 /// IR.
 class MemorySlotPromoter {
 public:
   MemorySlotPromoter(MemorySlot slot, PromotableAllocationOpInterface allocator,
-                     RewriterBase &rewriter, DominanceInfo &dominance,
+                     OpBuilder &builder, DominanceInfo &dominance,
                      const DataLayout &dataLayout, MemorySlotPromotionInfo info,
-                     const Mem2RegStatistics &statistics);
+                     const Mem2RegStatistics &statistics,
+                     BlockIndexCache &blockIndexCache);
 
   /// Actually promotes the slot by mutating IR. Promoting a slot DOES
   /// invalidate the MemorySlotPromotionInfo of other slots. Preparation of
@@ -195,7 +197,7 @@ private:
 
   MemorySlot slot;
   PromotableAllocationOpInterface allocator;
-  RewriterBase &rewriter;
+  OpBuilder &builder;
   /// Potentially non-initialized default value. Use `getOrCreateDefaultValue`
   /// to initialize it on demand.
   Value defaultValue;
@@ -207,18 +209,21 @@ private:
   const DataLayout &dataLayout;
   MemorySlotPromotionInfo info;
   const Mem2RegStatistics &statistics;
+
+  /// Shared cache of block indices of specific regions.
+  BlockIndexCache &blockIndexCache;
 };
 
 } // namespace
 
 MemorySlotPromoter::MemorySlotPromoter(
     MemorySlot slot, PromotableAllocationOpInterface allocator,
-    RewriterBase &rewriter, DominanceInfo &dominance,
-    const DataLayout &dataLayout, MemorySlotPromotionInfo info,
-    const Mem2RegStatistics &statistics)
-    : slot(slot), allocator(allocator), rewriter(rewriter),
-      dominance(dominance), dataLayout(dataLayout), info(std::move(info)),
-      statistics(statistics) {
+    OpBuilder &builder, DominanceInfo &dominance, const DataLayout &dataLayout,
+    MemorySlotPromotionInfo info, const Mem2RegStatistics &statistics,
+    BlockIndexCache &blockIndexCache)
+    : slot(slot), allocator(allocator), builder(builder), dominance(dominance),
+      dataLayout(dataLayout), info(std::move(info)), statistics(statistics),
+      blockIndexCache(blockIndexCache) {
 #ifndef NDEBUG
   auto isResultOrNewBlockArgument = [&]() {
     if (BlockArgument arg = dyn_cast<BlockArgument>(slot.ptr))
@@ -236,9 +241,9 @@ Value MemorySlotPromoter::getOrCreateDefaultValue() {
   if (defaultValue)
     return defaultValue;
 
-  RewriterBase::InsertionGuard guard(rewriter);
-  rewriter.setInsertionPointToStart(slot.ptr.getParentBlock());
-  return defaultValue = allocator.getDefaultValue(slot, rewriter);
+  OpBuilder::InsertionGuard guard(builder);
+  builder.setInsertionPointToStart(slot.ptr.getParentBlock());
+  return defaultValue = allocator.getDefaultValue(slot, builder);
 }
 
 LogicalResult MemorySlotPromotionAnalyzer::computeBlockingUses(
@@ -437,8 +442,8 @@ Value MemorySlotPromoter::computeReachingDefInBlock(Block *block,
         reachingDefs.insert({memOp, reachingDef});
 
       if (memOp.storesTo(slot)) {
-        rewriter.setInsertionPointAfter(memOp);
-        Value stored = memOp.getStored(slot, rewriter, reachingDef, dataLayout);
+        builder.setInsertionPointAfter(memOp);
+        Value stored = memOp.getStored(slot, builder, reachingDef, dataLayout);
         assert(stored && "a memory operation storing to a slot must provide a "
                          "new definition of the slot");
         reachingDef = stored;
@@ -475,33 +480,10 @@ void MemorySlotPromoter::computeReachingDefInRegion(Region *region,
     Block *block = job.block->getBlock();
 
     if (info.mergePoints.contains(block)) {
-      // If the block is a merge point, we need to add a block argument to hold
-      // the selected reaching definition. This has to be a bit complicated
-      // because of RewriterBase limitations: we need to create a new block with
-      // the extra block argument, move the content of the block to the new
-      // block, and replace the block with the new block in the merge point set.
-      SmallVector<Type> argTypes;
-      SmallVector<Location> argLocs;
-      for (BlockArgument arg : block->getArguments()) {
-        argTypes.push_back(arg.getType());
-        argLocs.push_back(arg.getLoc());
-      }
-      argTypes.push_back(slot.elemType);
-      argLocs.push_back(slot.ptr.getLoc());
-      Block *newBlock = rewriter.createBlock(block, argTypes, argLocs);
-
-      info.mergePoints.erase(block);
-      info.mergePoints.insert(newBlock);
-
-      rewriter.replaceAllUsesWith(block, newBlock);
-      rewriter.mergeBlocks(block, newBlock,
-                           newBlock->getArguments().drop_back());
-
-      block = newBlock;
-
-      BlockArgument blockArgument = block->getArguments().back();
-      rewriter.setInsertionPointToStart(block);
-      allocator.handleBlockArgument(slot, blockArgument, rewriter);
+      BlockArgument blockArgument =
+          block->addArgument(slot.elemType, slot.ptr.getLoc());
+      builder.setInsertionPointToStart(block);
+      allocator.handleBlockArgument(slot, blockArgument, builder);
       job.reachingDef = blockArgument;
 
       if (statistics.newBlockArgumentAmount)
@@ -514,10 +496,8 @@ void MemorySlotPromoter::computeReachingDefInRegion(Region *region,
     if (auto terminator = dyn_cast<BranchOpInterface>(block->getTerminator())) {
       for (BlockOperand &blockOperand : terminator->getBlockOperands()) {
         if (info.mergePoints.contains(blockOperand.get())) {
-          rewriter.modifyOpInPlace(terminator, [&]() {
-            terminator.getSuccessorOperands(blockOperand.getOperandNumber())
-                .append(job.reachingDef);
-          });
+          terminator.getSuccessorOperands(blockOperand.getOperandNumber())
+              .append(job.reachingDef);
         }
       }
     }
@@ -527,15 +507,29 @@ void MemorySlotPromoter::computeReachingDefInRegion(Region *region,
   }
 }
 
+/// Gets or creates a block index mapping for `region`.
+static const DenseMap<Block *, size_t> &
+getOrCreateBlockIndices(BlockIndexCache &blockIndexCache, Region *region) {
+  auto [it, inserted] = blockIndexCache.try_emplace(region);
+  if (!inserted)
+    return it->second;
+
+  DenseMap<Block *, size_t> &blockIndices = it->second;
+  SetVector<Block *> topologicalOrder = getTopologicallySortedBlocks(*region);
+  for (auto [index, block] : llvm::enumerate(topologicalOrder))
+    blockIndices[block] = index;
+  return blockIndices;
+}
+
 /// Sorts `ops` according to dominance. Relies on the topological order of basic
-/// blocks to get a deterministic ordering.
-static void dominanceSort(SmallVector<Operation *> &ops, Region &region) {
+/// blocks to get a deterministic ordering. Uses `blockIndexCache` to avoid the
+/// potentially expensive recomputation of a block index map.
+static void dominanceSort(SmallVector<Operation *> &ops, Region &region,
+                          BlockIndexCache &blockIndexCache) {
   // Produce a topological block order and construct a map to lookup the indices
   // of blocks.
-  DenseMap<Block *, size_t> topoBlockIndices;
-  SetVector<Block *> topologicalOrder = getTopologicallySortedBlocks(region);
-  for (auto [index, block] : llvm::enumerate(topologicalOrder))
-    topoBlockIndices[block] = index;
+  const DenseMap<Block *, size_t> &topoBlockIndices =
+      getOrCreateBlockIndices(blockIndexCache, &region);
 
   // Combining the topological order of the basic blocks together with block
   // internal operation order guarantees a deterministic, dominance respecting
@@ -554,7 +548,8 @@ void MemorySlotPromoter::removeBlockingUses() {
       llvm::make_first_range(info.userToBlockingUses));
 
   // Sort according to dominance.
-  dominanceSort(usersToRemoveUses, *slot.ptr.getParentBlock()->getParent());
+  dominanceSort(usersToRemoveUses, *slot.ptr.getParentBlock()->getParent(),
+                blockIndexCache);
 
   llvm::SmallVector<Operation *> toErase;
   // List of all replaced values in the slot.
@@ -569,9 +564,9 @@ void MemorySlotPromoter::removeBlockingUses() {
       if (!reachingDef)
         reachingDef = getOrCreateDefaultValue();
 
-      rewriter.setInsertionPointAfter(toPromote);
+      builder.setInsertionPointAfter(toPromote);
       if (toPromoteMemOp.removeBlockingUses(
-              slot, info.userToBlockingUses[toPromote], rewriter, reachingDef,
+              slot, info.userToBlockingUses[toPromote], builder, reachingDef,
               dataLayout) == DeletionKind::Delete)
         toErase.push_back(toPromote);
       if (toPromoteMemOp.storesTo(slot))
@@ -581,20 +576,20 @@ void MemorySlotPromoter::removeBlockingUses() {
     }
 
     auto toPromoteBasic = cast<PromotableOpInterface>(toPromote);
-    rewriter.setInsertionPointAfter(toPromote);
+    builder.setInsertionPointAfter(toPromote);
     if (toPromoteBasic.removeBlockingUses(info.userToBlockingUses[toPromote],
-                                          rewriter) == DeletionKind::Delete)
+                                          builder) == DeletionKind::Delete)
       toErase.push_back(toPromote);
     if (toPromoteBasic.requiresReplacedValues())
       toVisit.push_back(toPromoteBasic);
   }
   for (PromotableOpInterface op : toVisit) {
-    rewriter.setInsertionPointAfter(op);
-    op.visitReplacedValues(replacedValuesList, rewriter);
+    builder.setInsertionPointAfter(op);
+    op.visitReplacedValues(replacedValuesList, builder);
   }
 
   for (Operation *toEraseOp : toErase)
-    rewriter.eraseOp(toEraseOp);
+    toEraseOp->erase();
 
   assert(slot.ptr.use_empty() &&
          "after promotion, the slot pointer should not be used anymore");
@@ -617,8 +612,7 @@ void MemorySlotPromoter::promoteSlot() {
       assert(succOperands.size() == mergePoint->getNumArguments() ||
              succOperands.size() + 1 == mergePoint->getNumArguments());
       if (succOperands.size() + 1 == mergePoint->getNumArguments())
-        rewriter.modifyOpInPlace(
-            user, [&]() { succOperands.append(getOrCreateDefaultValue()); });
+        succOperands.append(getOrCreateDefaultValue());
     }
   }
 
@@ -628,26 +622,30 @@ void MemorySlotPromoter::promoteSlot() {
   if (statistics.promotedAmount)
     (*statistics.promotedAmount)++;
 
-  allocator.handlePromotionComplete(slot, defaultValue, rewriter);
+  allocator.handlePromotionComplete(slot, defaultValue, builder);
 }
 
 LogicalResult mlir::tryToPromoteMemorySlots(
-    ArrayRef<PromotableAllocationOpInterface> allocators,
-    RewriterBase &rewriter, const DataLayout &dataLayout,
+    ArrayRef<PromotableAllocationOpInterface> allocators, OpBuilder &builder,
+    const DataLayout &dataLayout, DominanceInfo &dominance,
     Mem2RegStatistics statistics) {
   bool promotedAny = false;
+
+  // A cache that stores deterministic block indices which are used to determine
+  // a valid operation modification order. The block index maps are computed
+  // lazily and cached to avoid expensive recomputation.
+  BlockIndexCache blockIndexCache;
 
   for (PromotableAllocationOpInterface allocator : allocators) {
     for (MemorySlot slot : allocator.getPromotableSlots()) {
       if (slot.ptr.use_empty())
         continue;
 
-      DominanceInfo dominance;
       MemorySlotPromotionAnalyzer analyzer(slot, dominance, dataLayout);
       std::optional<MemorySlotPromotionInfo> info = analyzer.computeInfo();
       if (info) {
-        MemorySlotPromoter(slot, allocator, rewriter, dominance, dataLayout,
-                           std::move(*info), statistics)
+        MemorySlotPromoter(slot, allocator, builder, dominance, dataLayout,
+                           std::move(*info), statistics, blockIndexCache)
             .promoteSlot();
         promotedAny = true;
       }
@@ -669,12 +667,15 @@ struct Mem2Reg : impl::Mem2RegBase<Mem2Reg> {
 
     bool changed = false;
 
+    auto &dataLayoutAnalysis = getAnalysis<DataLayoutAnalysis>();
+    const DataLayout &dataLayout = dataLayoutAnalysis.getAtOrAbove(scopeOp);
+    auto &dominance = getAnalysis<DominanceInfo>();
+
     for (Region &region : scopeOp->getRegions()) {
       if (region.getBlocks().empty())
         continue;
 
       OpBuilder builder(&region.front(), region.front().begin());
-      IRRewriter rewriter(builder);
 
       // Promoting a slot can allow for further promotion of other slots,
       // promotion is tried until no promotion succeeds.
@@ -685,16 +686,12 @@ struct Mem2Reg : impl::Mem2RegBase<Mem2Reg> {
           allocators.emplace_back(allocator);
         });
 
-        auto &dataLayoutAnalysis = getAnalysis<DataLayoutAnalysis>();
-        const DataLayout &dataLayout = dataLayoutAnalysis.getAtOrAbove(scopeOp);
-
         // Attempt promoting until no promotion succeeds.
-        if (failed(tryToPromoteMemorySlots(allocators, rewriter, dataLayout,
-                                           statistics)))
+        if (failed(tryToPromoteMemorySlots(allocators, builder, dataLayout,
+                                           dominance, statistics)))
           break;
 
         changed = true;
-        getAnalysisManager().invalidate({});
       }
     }
     if (!changed)
