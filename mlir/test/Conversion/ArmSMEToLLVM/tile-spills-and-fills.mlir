@@ -72,26 +72,31 @@ func.func @use_too_many_tiles() {
 //  AFTER-LLVM-LOWERING-DAG: %[[C8:.*]] = arith.constant 8 : index
 //  AFTER-LLVM-LOWERING-DAG: %[[VSCALE:.*]] = vector.vscale
 //  AFTER-LLVM-LOWERING-DAG: %[[SVL_H:.*]] = arith.muli %[[VSCALE]], %[[C8]] : index
+
+///     0. Create an in-memory-tile
+///        Note: 16 is the mask for the first in-memory tile
+
 //  AFTER-LLVM-LOWERING-DAG: %[[TILE_ALLOCA:.*]] = memref.alloca(%[[SVL_H]], %[[SVL_H]])
 // AFTER-LLVM-LOWERING-SAME:   {arm_sme.in_memory_tile_id = 16 : i32} : memref<?x?xi16>
 //
 //  AFTER-LLVM-LOWERING-NOT: scf.for
 
-///     1. Create/allocate %0
+///     1. The following instruciton corresponds to %0 after tile allocation
 ///        Note: 17 is the mask for the 32-bit tile 0.
 
 //      AFTER-LLVM-LOWERING: "arm_sme.intr.zero"() <{tile_mask = 17 : i32}>
 //
 //  AFTER-LLVM-LOWERING-NOT: scf.for
 
-///     2. Create/allocate %1
+///     2. The following instruciton corresponds to %1 after tile allocation
 ///        Note: 34 is the mask for the 32-bit tile 1.
 
 //      AFTER-LLVM-LOWERING: "arm_sme.intr.zero"() <{tile_mask = 34 : i32}>
 
-///     3. Spill %0 (the 32-bit tile 0), so that %2 can be allocated (16 bit
-///        tile 0). Note that this is spilling vector<[8]x[8]xi16> rather than
-///        vector<[4]x[4]xi32>
+///     3. swap(<in-memory-tile>, tile 0).
+///        This can be interpreted as spilling %0 (the 32-bit tile 0), so that
+///        %2 can be allocated a tile (16 bit tile 0). Note that this is
+///        swapping vector<[8]x[8]xi16> rather than vector<[4]x[4]xi32>.
 
 //      AFTER-LLVM-LOWERING: scf.for
 // AFTER-LLVM-LOWERING-SAME: %[[C0]] to %[[SVL_H]] step %[[C1]] {
@@ -103,12 +108,13 @@ func.func @use_too_many_tiles() {
 // AFTER-LLVM-LOWERING-NEXT:   vector.store %[[SLICE]], %[[TILE_ALLOCA]]
 // AFTER-LLVM-LOWERING-NEXT: }
 
-///     4. Create/allocate %2
+///     4. The following instruciton corresponds to %3 after tile allocation
 ///        Note: 85 is the mask for the 16-bit tile 0.
 
 //      AFTER-LLVM-LOWERING: "arm_sme.intr.zero"() <{tile_mask = 85 : i32}>
 
-///     5. Re-load %0
+///     5.  swap(<inMemoryTile>, tile 0)
+///         This can be interpreted as restoring %0.
 
 //      AFTER-LLVM-LOWERING: scf.for
 // AFTER-LLVM-LOWERING-SAME: %[[C0]] to %[[SVL_H]] step %[[C1]] {
