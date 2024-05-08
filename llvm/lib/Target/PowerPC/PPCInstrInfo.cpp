@@ -5396,12 +5396,15 @@ void PPCInstrInfo::PromoteInstr32To64ForEmliEXTSW(const Register &Reg,
 
     const TargetRegisterInfo *TRI = MRI->getTargetRegisterInfo();
     const MCInstrDesc &MCID = TII->get(NewOpcode);
-
-    Register SrcReg = MI->getOperand(0).getReg();
     const TargetRegisterClass *NewRC =
         TRI->getRegClass(MCID.operands()[0].RegClass);
+
+    Register SrcReg = MI->getOperand(0).getReg();
     const TargetRegisterClass *SrcRC = MRI->getRegClass(SrcReg);
 
+    // If the register class of the defined register in the 32-bit instruction
+    // is the same as the register class of the defined register in the promoted
+    // 64-bit instruction, we do not need to promote the instruction.
     if (NewRC == SrcRC)
       return;
 
@@ -5422,14 +5425,15 @@ void PPCInstrInfo::PromoteInstr32To64ForEmliEXTSW(const Register &Reg,
         if (!OperandReg.isVirtual())
           continue;
 
-        const TargetRegisterClass *RC =
+        const TargetRegisterClass *NewUsedRegRC =
             TRI->getRegClass(MCID.operands()[i].RegClass);
         const TargetRegisterClass *OrgRC = MRI->getRegClass(OperandReg);
-        if (RC != MRI->getRegClass(OperandReg) &&
+        if (NewUsedRegRC != OrgRC &&
             (OrgRC == &PPC::GPRCRegClass ||
              OrgRC == &PPC::GPRC_and_GPRC_NOR0RegClass)) {
-          Register TmpReg = MRI->createVirtualRegister(RC);
-          Register DstTmpReg = MRI->createVirtualRegister(RC);
+          // Promote the used 32-bit register to 64-bit register.
+          Register TmpReg = MRI->createVirtualRegister(NewUsedRegRC);
+          Register DstTmpReg = MRI->createVirtualRegister(NewUsedRegRC);
           BuildMI(*MBB, MI, DL, TII->get(PPC::IMPLICIT_DEF), TmpReg);
           BuildMI(*MBB, MI, DL, TII->get(PPC::INSERT_SUBREG), DstTmpReg)
               .addReg(TmpReg)
@@ -5443,9 +5447,9 @@ void PPCInstrInfo::PromoteInstr32To64ForEmliEXTSW(const Register &Reg,
       }
     }
 
-    Register NewReg = MRI->createVirtualRegister(NewRC);
+    Register NewDefinedReg = MRI->createVirtualRegister(NewRC);
 
-    BuildMI(*MBB, MI, DL, TII->get(NewOpcode), NewReg);
+    BuildMI(*MBB, MI, DL, TII->get(NewOpcode), NewDefinedReg);
     MachineBasicBlock::instr_iterator Iter(MI);
     --Iter;
     for (unsigned i = 1; i < MI->getNumOperands(); i++)
@@ -5461,8 +5465,8 @@ void PPCInstrInfo::PromoteInstr32To64ForEmliEXTSW(const Register &Reg,
 
     // Demote the 64-bit defined regster to a 32-bit register.
     BuildMI(*MBB, ++Iter, DL, TII->get(PPC::COPY), SrcReg)
-        .addReg(NewReg, RegState::Kill, PPC::sub_32);
-    LV->recomputeForSingleDefVirtReg(NewReg);
+        .addReg(NewDefinedReg, RegState::Kill, PPC::sub_32);
+    LV->recomputeForSingleDefVirtReg(NewDefinedReg);
     return;
   }
   return;
