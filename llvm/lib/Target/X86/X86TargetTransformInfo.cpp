@@ -5828,14 +5828,17 @@ InstructionCost X86TTIImpl::getGSVectorCost(unsigned Opcode,
                                          Alignment, AddressSpace);
   }
 
+  // If we didn't split, this will be a single gather/scatter instruction.
+  if (CostKind == TTI::TCK_CodeSize)
+    return 1;
+
   // The gather / scatter cost is given by Intel architects. It is a rough
   // number since we are looking at one instruction in a time.
-  const int GSOverhead = (Opcode == Instruction::Load)
-                             ? getGatherOverhead()
-                             : getScatterOverhead();
+  const int GSOverhead = (Opcode == Instruction::Load) ? getGatherOverhead()
+                                                       : getScatterOverhead();
   return GSOverhead + VF * getMemoryOpCost(Opcode, SrcVTy->getScalarType(),
                                            MaybeAlign(Alignment), AddressSpace,
-                                           TTI::TCK_RecipThroughput);
+                                           CostKind);
 }
 
 /// Return the cost of full scalarization of gather / scatter operation.
@@ -5892,19 +5895,17 @@ InstructionCost X86TTIImpl::getGatherScatterOpCost(
     unsigned Opcode, Type *SrcVTy, const Value *Ptr, bool VariableMask,
     Align Alignment, TTI::TargetCostKind CostKind,
     const Instruction *I = nullptr) {
-  if (CostKind != TTI::TCK_RecipThroughput) {
-    if ((Opcode == Instruction::Load &&
-         isLegalMaskedGather(SrcVTy, Align(Alignment)) &&
-         !forceScalarizeMaskedGather(cast<VectorType>(SrcVTy),
-                                     Align(Alignment))) ||
-        (Opcode == Instruction::Store &&
-         isLegalMaskedScatter(SrcVTy, Align(Alignment)) &&
-         !forceScalarizeMaskedScatter(cast<VectorType>(SrcVTy),
-                                      Align(Alignment))))
-      return 1;
+  if (CostKind != TTI::TCK_RecipThroughput &&
+      ((Opcode == Instruction::Load &&
+        (!isLegalMaskedGather(SrcVTy, Align(Alignment)) ||
+         forceScalarizeMaskedGather(cast<VectorType>(SrcVTy),
+                                    Align(Alignment)))) ||
+       (Opcode == Instruction::Store &&
+        (!isLegalMaskedScatter(SrcVTy, Align(Alignment)) ||
+         forceScalarizeMaskedScatter(cast<VectorType>(SrcVTy),
+                                     Align(Alignment))))))
     return BaseT::getGatherScatterOpCost(Opcode, SrcVTy, Ptr, VariableMask,
                                          Alignment, CostKind, I);
-  }
 
   assert(SrcVTy->isVectorTy() && "Unexpected data type for Gather/Scatter");
   PointerType *PtrTy = dyn_cast<PointerType>(Ptr->getType());
