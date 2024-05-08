@@ -223,12 +223,12 @@ raw_ostream &operator<<(raw_ostream &OS, const SinkingInstructionCandidate &C) {
 class ModelledPHI {
   SmallVector<Value *, 4> Values;
   SmallVector<BasicBlock *, 4> Blocks;
-  DominatorTree *DT;
 
 public:
   ModelledPHI() = default;
 
-  ModelledPHI(const PHINode *PN, DominatorTree *DT) : DT(DT) {
+  ModelledPHI(const PHINode *PN,
+              const DenseMap<const BasicBlock *, unsigned> &DFS) {
     // BasicBlock comes first so we sort by basic block pointer order,
     // then by value pointer order. No need to call `verifyModelledPHI`
     // As the Values and Blocks are populated in DFSOrder already.
@@ -237,9 +237,8 @@ public:
     for (unsigned I = 0, E = PN->getNumIncomingValues(); I != E; ++I)
       Ops.push_back({PN->getIncomingBlock(I), PN->getIncomingValue(I)});
 
-    auto DFSOrder = [DT](OpsType O1, OpsType O2) {
-      return DT->getNode(O1.first)->getDFSNumIn() <
-             DT->getNode(O2.first)->getDFSNumIn();
+    auto DFSOrder = [DFS](OpsType O1, OpsType O2) {
+      return DFS.lookup(O1.first) < DFS.lookup(O2.first);
     };
     // Sort by DFSNumber to have a deterministic order.
     llvm::sort(Ops, DFSOrder);
@@ -259,11 +258,11 @@ public:
     return M;
   }
 
-  void verifyModelledPHI() {
+  void verifyModelledPHI(const DenseMap<const BasicBlock *, unsigned> &DFS) {
     assert(Values.size() > 1 && Blocks.size() > 1 &&
            "Modelling PHI with less than 2 values");
-    auto DFSOrder = [this](const BasicBlock *BB1, const BasicBlock *BB2) {
-      return DT->getNode(BB1)->getDFSNumIn() < DT->getNode(BB2)->getDFSNumIn();
+    auto DFSOrder = [DFS](const BasicBlock *BB1, const BasicBlock *BB2) {
+      return DFS.lookup(BB1) < DFS.lookup(BB2);
     };
     assert(llvm::is_sorted(Blocks, DFSOrder));
     int C = 0;
@@ -277,19 +276,18 @@ public:
   }
   /// Create a PHI from an array of incoming values and incoming blocks.
   ModelledPHI(SmallVectorImpl<Instruction *> &V,
-              SmallSetVector<BasicBlock *, 4> &B, DominatorTree *DT)
-      : DT(DT) {
+              SmallSetVector<BasicBlock *, 4> &B,
+              const DenseMap<const BasicBlock *, unsigned> &DFS) {
     // The order of Values and Blocks are already as per their DFSNumbers.
     llvm::copy(V, std::back_inserter(Values));
     llvm::copy(B, std::back_inserter(Blocks));
-    verifyModelledPHI();
+    verifyModelledPHI(DFS);
   }
 
   /// Create a PHI from [I[OpNum] for I in Insts].
   /// TODO: Figure out a way to verifyModelledPHI in this constructor.
   ModelledPHI(ArrayRef<Instruction *> Insts, unsigned OpNum,
-              SmallSetVector<BasicBlock *, 4> &B, DominatorTree *DT)
-      : DT(DT) {
+              SmallSetVector<BasicBlock *, 4> &B) {
     llvm::copy(B, std::back_inserter(Blocks));
     for (auto *I : Insts)
       Values.push_back(I->getOperand(OpNum));
@@ -609,6 +607,13 @@ public:
     unsigned NumSunk = 0;
     ReversePostOrderTraversal<Function*> RPOT(&F);
     VN.setReachableBBs(BasicBlocksSet(RPOT.begin(), RPOT.end()));
+    // Populated DFSNumbers ahead of time to avoid updating dominator tree
+    // when CFG is modified. The DFSNumbers of newly created basic blocks
+    // are irrelevant because RPOT is also obtained ahead of time and only
+    // DFSNumbers of original CFG are relevant for sinkable candidates.
+    for (auto *BB : RPOT)
+      if (DT->getNode(BB))
+        DFSNumbers[BB] = DT->getNode(BB)->getDFSNumIn();
     for (auto *N : RPOT)
       NumSunk += sinkBB(N);
 
@@ -618,6 +623,7 @@ public:
 private:
   ValueTable VN;
   DominatorTree *DT;
+  DenseMap<const BasicBlock *, unsigned> DFSNumbers;
 
   bool shouldAvoidSinkingInstruction(Instruction *I) {
     // These instructions may change or break semantics if moved.
@@ -638,7 +644,7 @@ private:
   void analyzeInitialPHIs(BasicBlock *BB, ModelledPHISet &PHIs,
                           SmallPtrSetImpl<Value *> &PHIContents) {
     for (PHINode &PN : BB->phis()) {
-      auto MPHI = ModelledPHI(&PN, DT);
+      auto MPHI = ModelledPHI(&PN, DFSNumbers);
       PHIs.insert(MPHI);
       for (auto *V : MPHI.getValues())
         PHIContents.insert(V);
@@ -726,7 +732,7 @@ GVNSink::analyzeInstructionForSinking(LockstepReverseIterator &LRI,
   }
 
   // The sunk instruction's results.
-  ModelledPHI NewPHI(NewInsts, ActivePreds, DT);
+  ModelledPHI NewPHI(NewInsts, ActivePreds, DFSNumbers);
 
   // Does sinking this instruction render previous PHIs redundant?
   if (NeededPHIs.erase(NewPHI))
@@ -763,7 +769,7 @@ GVNSink::analyzeInstructionForSinking(LockstepReverseIterator &LRI,
     return std::nullopt;
 
   for (unsigned OpNum = 0, E = I0->getNumOperands(); OpNum != E; ++OpNum) {
-    ModelledPHI PHI(NewInsts, OpNum, ActivePreds, DT);
+    ModelledPHI PHI(NewInsts, OpNum, ActivePreds);
     if (PHI.areAllIncomingValuesSame())
       continue;
     if (!canReplaceOperandWithVariable(I0, OpNum))
@@ -802,7 +808,7 @@ unsigned GVNSink::sinkBB(BasicBlock *BBEnd) {
   SmallVector<BasicBlock *, 4> Preds;
   for (auto *B : predecessors(BBEnd)) {
     // Bailout on malformed CFG where BasicBlock has no predecessor(PR42346).
-    if (!DT->getNode(B))
+    if (!DFSNumbers.count(B))
       return 0;
     auto *T = B->getTerminator();
     if (isa<BranchInst>(T) || isa<SwitchInst>(T))
@@ -813,7 +819,7 @@ unsigned GVNSink::sinkBB(BasicBlock *BBEnd) {
   if (Preds.size() < 2)
     return 0;
   auto DFSOrder = [this](const BasicBlock *BB1, const BasicBlock *BB2) {
-    return DT->getNode(BB1)->getDFSNumIn() < DT->getNode(BB2)->getDFSNumIn();
+    return DFSNumbers.lookup(BB1) < DFSNumbers.lookup(BB2);
   };
   // Sort by DFSNumber to have a deterministic order.
   llvm::sort(Preds, DFSOrder);
