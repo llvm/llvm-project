@@ -8,23 +8,22 @@ define void @test1() !dbg !5 {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[BB:%.*]], !dbg
 ; CHECK:  bb:
-; CHECK:    [[IV_INT:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[DOTINT:%.*]], [[BB]] ], !dbg
-; CHECK:    [[INDVAR_CONV:%.*]] = sitofp i32 [[IV_INT]] to double, !dbg
-; CHECK:    [[DOTINT]] = add nuw nsw i32 [[IV_INT]], 1, !dbg
-; CHECK:    [[TMP1:%.*]] = icmp ult i32 [[DOTINT]], 10000, !dbg
+; CHECK:    [[IV_INT:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[DOTINT:%.*]], [[BB]] ], !dbg ![[DBG1:[0-9]+]]
+; CHECK:    [[INDVAR_CONV:%.*]] = sitofp i32 [[IV_INT]] to double, !dbg ![[DBG1]]
+; CHECK:    [[DOTINT]] = add nuw nsw i32 [[IV_INT]], 1, !dbg ![[DBG2:[0-9]+]]
+; CHECK:    [[TMP1:%.*]] = icmp ult i32 [[DOTINT]], 10000, !dbg ![[DBG3:[0-9]+]]
+; CHECK: ![[DBG1]] = !DILocation(line: 2
+; CHECK: ![[DBG2]] = !DILocation(line: 4
+; CHECK: ![[DBG3]] = !DILocation(line: 5
 ;
 entry:
   br label %bb, !dbg !16
 
 bb:                                               ; preds = %bb, %entry
   %iv = phi double [ 0.000000e+00, %entry ], [ %1, %bb ], !dbg !17
-  tail call void @llvm.dbg.value(metadata double %iv, metadata !9, metadata !DIExpression()), !dbg !17
   %0 = tail call i32 @foo(double %iv), !dbg !18
-  tail call void @llvm.dbg.value(metadata i32 %0, metadata !11, metadata !DIExpression()), !dbg !18
   %1 = fadd double %iv, 1.000000e+00, !dbg !19
-  tail call void @llvm.dbg.value(metadata double %1, metadata !13, metadata !DIExpression()), !dbg !19
   %2 = fcmp olt double %1, 1.000000e+04, !dbg !20
-  tail call void @llvm.dbg.value(metadata i1 %2, metadata !14, metadata !DIExpression()), !dbg !20
   br i1 %2, label %bb, label %return, !dbg !21
 
 return:                                           ; preds = %bb
@@ -32,9 +31,6 @@ return:                                           ; preds = %bb
 }
 
 declare i32 @foo(double)
-
-; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
-declare void @llvm.dbg.value(metadata, metadata, metadata)
 
 !llvm.dbg.cu = !{!0}
 !llvm.debugify = !{!2, !3}
