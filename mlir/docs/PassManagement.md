@@ -1359,6 +1359,35 @@ func.func @simple_constant() -> (i32, i32) {
 }
 ```
 
+*   `mlir-print-ir-tree-dir=(directory path)`
+    *   Without setting this option, the IR printed by the instrumentation will
+        be printed to `stderr`. If you provide a directory using this option,
+        the output corresponding to each pass will be printed to a file in the
+        directory tree rooted at `(directory path)`. The path created for each
+        pass reflects the nesting structure of the IR and the pass pipeline.
+    *   The below example illustrates the file tree created by running a pass
+        pipeline on IR that has two `func.func` located within two nested
+        `builtin.module` ops.
+    *   The subdirectories are given names that reflect the parent op names and
+        the symbol names for those ops (if present).
+
+```
+$ pipeline="builtin.module(pass1,pass2,func.func(pass3,pass4))"
+$ mlir-opt foo.mlir -pass-pipeline="$pipeline" -mlir-print-ir-tree-dir=/tmp/pipeline_output
+$ tree /tmp/pipeline_output
+
+/tmp/pass_output
+├── builtin_module_the_symbol_name
+│   ├── 0_pass1.mlir
+│   ├── 1_pass2.mlir
+│   ├── func_func_my_func_name
+│   │   ├── 2_pass3.mlir
+│   │   ├── 3_pass4.mlir
+│   ├── func_func_my_other_func_name
+│   │   ├── 4_pass3.mlir
+│   │   ├── 5_pass4.mlir
+```
+
 ## Crash and Failure Reproduction
 
 The [pass manager](#pass-manager) in MLIR contains a builtin mechanism to
