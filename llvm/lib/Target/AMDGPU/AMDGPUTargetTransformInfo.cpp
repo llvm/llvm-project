@@ -1131,50 +1131,51 @@ InstructionCost GCNTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
                                            const Instruction *CxtI) {
   if (!isa<FixedVectorType>(VT))
     return BaseT::getShuffleCost(Kind, VT, Mask, CostKind, Index, SubTp);
-  
+
   Kind = improveShuffleKindFromMask(Kind, Mask, VT, Index, SubTp);
 
   // Larger vector widths may require additional instructions, but are
   // typically cheaper than scalarized versions.
   unsigned NumVectorElts = cast<FixedVectorType>(VT)->getNumElements();
-  if (ST->hasVOP3PInsts()) {
-    if (DL.getTypeSizeInBits(VT->getElementType()) == 16) {
-      unsigned RequestedElts =
-            count_if(Mask, [](int MaskElt) { return MaskElt != -1; });
-      if (RequestedElts == 0)
+  if (ST->getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS &&
+      DL.getTypeSizeInBits(VT->getElementType()) == 16) {
+    bool HasVOP3P = ST->hasVOP3PInsts();
+    unsigned RequestedElts =
+        count_if(Mask, [](int MaskElt) { return MaskElt != -1; });
+    if (RequestedElts == 0)
+      return 0;
+    switch (Kind) {
+    case TTI::SK_Broadcast:
+    case TTI::SK_Reverse:
+    case TTI::SK_PermuteSingleSrc: {
+      // With op_sel VOP3P instructions freely can access the low half or high
+      // half of a register, so any swizzle of two elements is free.
+      if (HasVOP3P && NumVectorElts == 2)
         return 0;
-      switch (Kind) {
-      case TTI::SK_Broadcast:
-      case TTI::SK_Reverse:
-      case TTI::SK_PermuteSingleSrc: {
-        // With op_sel VOP3P instructions freely can access the low half or high
-        // half of a register, so any swizzle of two elements is free.
-        if (NumVectorElts == 2)
-          return 0;
-        unsigned NumPerms =  alignTo(RequestedElts,2) / 2;
-        // SK_Broadcast just reuses the same mask
-        unsigned NumPermMasks = Kind == TTI::SK_Broadcast ? 1 : NumPerms;
-        return NumPerms + NumPermMasks;
-      }
-      case TTI::SK_ExtractSubvector:
-      case TTI::SK_InsertSubvector: {
-        if (NumVectorElts == 2)
-          return 0;
-        // Insert/extract subvectors require only shifts / extract code to get the relevant bits
-        return alignTo(RequestedElts,2) / 2;
-      }
-      case TTI::SK_PermuteTwoSrc:
-      case TTI::SK_Splice:
-      case TTI::SK_Select: {
-        unsigned NumPerms =  alignTo(RequestedElts,2) / 2;
-        // SK_Select just reuses the same mask
-        unsigned NumPermMasks = Kind == TTI::SK_Select ? 1 : NumPerms;
-        return NumPerms + NumPermMasks;
-      }
+      unsigned NumPerms = alignTo(RequestedElts, 2) / 2;
+      // SK_Broadcast just reuses the same mask
+      unsigned NumPermMasks = Kind == TTI::SK_Broadcast ? 1 : NumPerms;
+      return NumPerms + NumPermMasks;
+    }
+    case TTI::SK_ExtractSubvector:
+    case TTI::SK_InsertSubvector: {
+      if (HasVOP3P && NumVectorElts == 2)
+        return 0;
+      // Insert/extract subvectors require only shifts / extract code to get the
+      // relevant bits
+      return alignTo(RequestedElts, 2) / 2;
+    }
+    case TTI::SK_PermuteTwoSrc:
+    case TTI::SK_Splice:
+    case TTI::SK_Select: {
+      unsigned NumPerms = alignTo(RequestedElts, 2) / 2;
+      // SK_Select just reuses the same mask
+      unsigned NumPermMasks = Kind == TTI::SK_Select ? 1 : NumPerms;
+      return NumPerms + NumPermMasks;
+    }
 
-      default:
-        break;
-      }
+    default:
+      break;
     }
   }
 
