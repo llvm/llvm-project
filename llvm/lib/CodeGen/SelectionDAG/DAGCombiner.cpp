@@ -8728,15 +8728,16 @@ static std::optional<bool> isBigEndian(const ArrayRef<int64_t> ByteOffsets,
   return BigEndian;
 }
 
+// Look through one layer of truncate or extend.
 static SDValue stripTruncAndExt(SDValue Value) {
   switch (Value.getOpcode()) {
   case ISD::TRUNCATE:
   case ISD::ZERO_EXTEND:
   case ISD::SIGN_EXTEND:
   case ISD::ANY_EXTEND:
-    return stripTruncAndExt(Value.getOperand(0));
+    return Value.getOperand(0);
   }
-  return Value;
+  return SDValue();
 }
 
 /// Match a pattern where a wide type scalar value is stored by several narrow
@@ -8849,16 +8850,18 @@ SDValue DAGCombiner::mergeTruncStores(StoreSDNode *N) {
     }
 
     // Stores must share the same source value with different offsets.
-    // Truncate and extends should be stripped to get the single source value.
     if (!SourceValue)
       SourceValue = WideVal;
-    else if (stripTruncAndExt(SourceValue) != stripTruncAndExt(WideVal))
-      return SDValue();
-    else if (SourceValue.getValueType() != WideVT) {
-      if (WideVal.getValueType() == WideVT ||
-          WideVal.getScalarValueSizeInBits() >
-              SourceValue.getScalarValueSizeInBits())
+    else if (SourceValue != WideVal) {
+      // Truncate and extends can be stripped to see if the values are related.
+      if (stripTruncAndExt(SourceValue) != WideVal &&
+          stripTruncAndExt(WideVal) != SourceValue)
+        return SDValue();
+
+      if (WideVal.getScalarValueSizeInBits() >
+          SourceValue.getScalarValueSizeInBits())
         SourceValue = WideVal;
+
       // Give up if the source value type is smaller than the store size.
       if (SourceValue.getScalarValueSizeInBits() < WideVT.getScalarSizeInBits())
         return SDValue();
