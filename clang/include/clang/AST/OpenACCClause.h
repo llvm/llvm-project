@@ -26,7 +26,10 @@ class OpenACCClause {
 protected:
   OpenACCClause(OpenACCClauseKind K, SourceLocation BeginLoc,
                 SourceLocation EndLoc)
-      : Kind(K), Location(BeginLoc, EndLoc) {}
+      : Kind(K), Location(BeginLoc, EndLoc) {
+    assert(!BeginLoc.isInvalid() && !EndLoc.isInvalid() &&
+           "Begin and end location must be valid for OpenACCClause");
+      }
 
 public:
   OpenACCClauseKind getClauseKind() const { return Kind; }

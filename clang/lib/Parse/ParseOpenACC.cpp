@@ -1112,6 +1112,10 @@ Parser::OpenACCClauseParseResult Parser::ParseOpenACCClauseParams(
       ParsedClause.setEndLoc(getCurToken().getLocation());
       if (Parens.consumeClose())
         return OpenACCCannotContinue();
+    } else {
+      // If we have optional parens, make sure we set the end-location to the
+      // clause, as we are a 'single token' clause.
+      ParsedClause.setEndLoc(ClauseLoc);
     }
   }
   return OpenACCSuccess(
