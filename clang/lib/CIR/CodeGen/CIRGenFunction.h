@@ -1181,7 +1181,7 @@ public:
   /// Store the specified rvalue into the specified
   /// lvalue, where both are guaranteed to the have the same type, and that type
   /// is 'Ty'.
-  void buildStoreThroughLValue(RValue Src, LValue Dst);
+  void buildStoreThroughLValue(RValue Src, LValue Dst, bool isInit = false);
 
   void buildStoreThroughBitfieldLValue(RValue Src, LValue Dst,
                                        mlir::Value &Result);

@@ -677,11 +677,20 @@ void CIRGenFunction::buildNullabilityCheck(LValue LHS, mlir::Value RHS,
 
 void CIRGenFunction::buildScalarInit(const Expr *init, mlir::Location loc,
                                      LValue lvalue, bool capturedByInit) {
-  // TODO: this is where a lot of ObjC lifetime stuff would be done.
-  SourceLocRAIIObject Loc{*this, loc};
-  mlir::Value value = buildScalarExpr(init);
-  buildStoreThroughLValue(RValue::get(value), lvalue);
-  return;
+  Qualifiers::ObjCLifetime lifetime = Qualifiers::ObjCLifetime::OCL_None;
+  assert(!UnimplementedFeature::objCLifetime());
+
+  if (!lifetime) {
+    SourceLocRAIIObject Loc{*this, loc};
+    mlir::Value value = buildScalarExpr(init);
+    if (capturedByInit)
+      llvm_unreachable("NYI");
+    assert(!UnimplementedFeature::emitNullabilityCheck());
+    buildStoreThroughLValue(RValue::get(value), lvalue, true);
+    return;
+  }
+
+  llvm_unreachable("NYI");
 }
 
 void CIRGenFunction::buildExprAsInit(const Expr *init, const ValueDecl *D,

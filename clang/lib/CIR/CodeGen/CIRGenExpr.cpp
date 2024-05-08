@@ -667,7 +667,8 @@ RValue CIRGenFunction::buildLoadOfBitfieldLValue(LValue LV,
   return RValue::get(field);
 }
 
-void CIRGenFunction::buildStoreThroughLValue(RValue Src, LValue Dst) {
+void CIRGenFunction::buildStoreThroughLValue(RValue Src, LValue Dst,
+                                             bool isInit) {
   if (!Dst.isSimple()) {
     if (Dst.isVectorElt()) {
       // Read/modify/write the vector, inserting the new element
@@ -698,7 +699,7 @@ void CIRGenFunction::buildStoreThroughLValue(RValue Src, LValue Dst) {
   }
 
   assert(Src.isScalar() && "Can't emit an agg store with this method");
-  buildStoreOfScalar(Src.getScalarVal(), Dst);
+  buildStoreOfScalar(Src.getScalarVal(), Dst, isInit);
 }
 
 void CIRGenFunction::buildStoreThroughBitfieldLValue(RValue Src, LValue Dst,
