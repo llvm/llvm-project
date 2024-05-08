@@ -13537,9 +13537,12 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
   }
 
   if (VDecl->isInvalidDecl()) {
-    CorrectDelayedTyposInExpr(Init, VDecl);
+    ExprResult Res = CorrectDelayedTyposInExpr(Init, VDecl);
+    SmallVector<Expr *> SubExprs;
+    if (Res.isUsable())
+      SubExprs.push_back(Res.get());
     ExprResult Recovery =
-        CreateRecoveryExpr(Init->getBeginLoc(), Init->getEndLoc(), {Init});
+        CreateRecoveryExpr(Init->getBeginLoc(), Init->getEndLoc(), SubExprs);
     if (Expr *E = Recovery.get())
       VDecl->setInit(E);
     return;
