@@ -39,6 +39,9 @@ module {
     %s = sparse_tensor.convert %d : tensor<5x4xf64> to tensor<5x4xf64, #CSR_hi>
 
     //
+    // Note: position for loose_compressed level can vary in the end,
+    // therefore we loosly check it with {{.*}}.
+    //
     // CHECK:   ---- Sparse Tensor ----
     // CHECK-NEXT: nse = 17
     // CHECK-NEXT: dim = ( 5, 4 )
