@@ -373,14 +373,14 @@ StringRef Triple::getObjectFormatTypeName(ObjectFormatType Kind) {
 }
 
 static Triple::ArchType parseBPFArch(StringRef ArchName) {
-  if (ArchName.equals("bpf")) {
+  if (ArchName == "bpf") {
     if (sys::IsLittleEndianHost)
       return Triple::bpfel;
     else
       return Triple::bpfeb;
-  } else if (ArchName.equals("bpf_be") || ArchName.equals("bpfeb")) {
+  } else if (ArchName == "bpf_be" || ArchName == "bpfeb") {
     return Triple::bpfeb;
-  } else if (ArchName.equals("bpf_le") || ArchName.equals("bpfel")) {
+  } else if (ArchName == "bpf_le" || ArchName == "bpfel") {
     return Triple::bpfel;
   } else {
     return Triple::UnknownArch;

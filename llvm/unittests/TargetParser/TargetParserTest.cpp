@@ -572,8 +572,8 @@ bool testARMArch(StringRef Arch, StringRef DefaultCPU, StringRef SubArch,
                  unsigned ArchAttr) {
   ARM::ArchKind AK = ARM::parseArch(Arch);
   bool Result = (AK != ARM::ArchKind::INVALID);
-  Result &= ARM::getDefaultCPU(Arch).equals(DefaultCPU);
-  Result &= ARM::getSubArch(AK).equals(SubArch);
+  Result &= ARM::getDefaultCPU(Arch) == DefaultCPU;
+  Result &= ARM::getSubArch(AK) == SubArch;
   Result &= (ARM::getArchAttr(AK) == ArchAttr);
   return Result;
 }
