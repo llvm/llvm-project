@@ -19,8 +19,10 @@
 #include "flang/Parser/parse-tree.h"
 #include "flang/Parser/tools.h"
 #include "flang/Semantics/expression.h"
+#include <cstdint>
 #include <list>
 #include <map>
+#include <optional>
 #include <sstream>
 
 template <typename T>
@@ -50,6 +52,7 @@ protected:
     Symbol::Flag defaultDSA{Symbol::Flag::AccShared}; // TODOACC
     std::map<const Symbol *, Symbol::Flag> objectWithDSA;
     bool withinConstruct{false};
+    std::optional<int64_t> maskedTId;
     std::int64_t associatedLoopLevel{0};
   };
 
@@ -89,6 +92,9 @@ protected:
   }
   void SetContextAssociatedLoopLevel(std::int64_t level) {
     GetContext().associatedLoopLevel = level;
+  }
+  void SetMaskedTId(std::optional<int64_t> tid) {
+    GetContext().maskedTId = tid;
   }
   Symbol &MakeAssocSymbol(const SourceName &name, Symbol &prev, Scope &scope) {
     const auto pair{scope.try_emplace(name, Attrs{}, HostAssocDetails{prev})};
@@ -646,6 +652,7 @@ public:
 
 private:
   std::int64_t GetAssociatedLoopLevelFromClauses(const parser::OmpClauseList &);
+  std::optional<int64_t> GetMaskedTId(const parser::OmpClauseList &);
 
   Symbol::Flags dataSharingAttributeFlags{Symbol::Flag::OmpShared,
       Symbol::Flag::OmpPrivate, Symbol::Flag::OmpFirstPrivate,
@@ -1105,18 +1112,18 @@ bool AccAttributeVisitor::Pre(const parser::OpenACCCombinedConstruct &x) {
 static bool IsLastNameArray(const parser::Designator &designator) {
   const auto &name{GetLastName(designator)};
   const evaluate::DataRef dataRef{*(name.symbol)};
-  return common::visit(
-      common::visitors{
-          [](const evaluate::SymbolRef &ref) {
-            return ref->Rank() > 0 ||
-                ref->GetType()->category() == DeclTypeSpec::Numeric;
-          },
-          [](const evaluate::ArrayRef &aref) {
-            return aref.base().IsSymbol() ||
-                aref.base().GetComponent().base().Rank() == 0;
-          },
-          [](const auto &) { return false; },
-      },
+  return common::visit(common::visitors{
+                           [](const evaluate::SymbolRef &ref) {
+                             return ref->Rank() > 0 ||
+                                 ref->GetType()->category() ==
+                                 DeclTypeSpec::Numeric;
+                           },
+                           [](const evaluate::ArrayRef &aref) {
+                             return aref.base().IsSymbol() ||
+                                 aref.base().GetComponent().base().Rank() == 0;
+                           },
+                           [](const auto &) { return false; },
+                       },
       dataRef.u);
 }
 
@@ -1498,11 +1505,35 @@ void AccAttributeVisitor::CheckMultipleAppearances(
     AddDataSharingAttributeObject(*target);
   }
 }
+std::optional<int64_t> OmpAttributeVisitor::GetMaskedTId(
+    const parser::OmpClauseList &clauseList) {
+  for (const auto &clause : clauseList.v) {
+    if (const auto *filterClause{
+            std::get_if<parser::OmpClause::Filter>(&clause.u)}) {
+      if (const auto v{EvaluateInt64(context_, filterClause->v)}) {
+        return v;
+      }
+    }
+  }
+  // if no thread id is specified in filter clause, the masked thread id should
+  // be master's
+  return 0;
+}
 
 bool OmpAttributeVisitor::Pre(const parser::OpenMPBlockConstruct &x) {
   const auto &beginBlockDir{std::get<parser::OmpBeginBlockDirective>(x.t)};
   const auto &beginDir{std::get<parser::OmpBlockDirective>(beginBlockDir.t)};
+  const auto &clauseList{std::get<parser::OmpClauseList>(beginBlockDir.t)};
   switch (beginDir.v) {
+  case llvm::omp::Directive::OMPD_masked_taskloop_simd:
+  case llvm::omp::Directive::OMPD_masked_taskloop:
+  case llvm::omp::Directive::OMPD_masked:
+  case llvm::omp::Directive::OMPD_parallel_masked_taskloop_simd:
+  case llvm::omp::Directive::OMPD_parallel_masked_taskloop:
+  case llvm::omp::Directive::OMPD_parallel_masked:
+    PushContext(beginDir.source, beginDir.v);
+    SetMaskedTId(GetMaskedTId(clauseList));
+    break;
   case llvm::omp::Directive::OMPD_master:
   case llvm::omp::Directive::OMPD_ordered:
   case llvm::omp::Directive::OMPD_parallel:
@@ -1532,6 +1563,12 @@ void OmpAttributeVisitor::Post(const parser::OpenMPBlockConstruct &x) {
   const auto &beginBlockDir{std::get<parser::OmpBeginBlockDirective>(x.t)};
   const auto &beginDir{std::get<parser::OmpBlockDirective>(beginBlockDir.t)};
   switch (beginDir.v) {
+  case llvm::omp::Directive::OMPD_masked_taskloop_simd:
+  case llvm::omp::Directive::OMPD_masked_taskloop:
+  case llvm::omp::Directive::OMPD_masked:
+  case llvm::omp::Directive::OMPD_parallel_masked_taskloop_simd:
+  case llvm::omp::Directive::OMPD_parallel_masked_taskloop:
+  case llvm::omp::Directive::OMPD_parallel_masked:
   case llvm::omp::Directive::OMPD_parallel:
   case llvm::omp::Directive::OMPD_single:
   case llvm::omp::Directive::OMPD_target:
