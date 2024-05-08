@@ -432,7 +432,7 @@ if(runtimes)
       # TODO: This is a workaround until flang becomes a first-class project
       # in llvm/CMakeList.txt.  Until then, this line ensures that flang-new is
       # built before "openmp" is built as a runtime project.
-      list(APPEND extra_deps "flang-new")
+      list(APPEND extra_deps "flang-new" "module_files")
     endif()
     foreach(dep opt llvm-link llvm-extract clang clang-offload-packager)
       if(TARGET ${dep})
