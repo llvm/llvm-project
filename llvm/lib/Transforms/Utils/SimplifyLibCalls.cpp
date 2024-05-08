@@ -52,6 +52,10 @@ static cl::opt<bool>
 static cl::opt<bool>
     OptimizeHotColdNew("optimize-hot-cold-new", cl::Hidden, cl::init(false),
                        cl::desc("Enable hot/cold operator new library calls"));
+static cl::opt<bool> OptimizeExistingHotColdNew(
+    "optimize-existing-hot-cold-new", cl::Hidden, cl::init(false),
+    cl::desc(
+        "Enable optimization of existing hot/cold operator new library calls"));
 
 namespace {
 
@@ -81,6 +85,10 @@ struct HotColdHintParser : public cl::parser<unsigned> {
 static cl::opt<unsigned, false, HotColdHintParser> ColdNewHintValue(
     "cold-new-hint-value", cl::Hidden, cl::init(1),
     cl::desc("Value to pass to hot/cold operator new for cold allocation"));
+static cl::opt<unsigned, false, HotColdHintParser>
+    NotColdNewHintValue("notcold-new-hint-value", cl::Hidden, cl::init(128),
+                        cl::desc("Value to pass to hot/cold operator new for "
+                                 "notcold (warm) allocation"));
 static cl::opt<unsigned, false, HotColdHintParser> HotNewHintValue(
     "hot-new-hint-value", cl::Hidden, cl::init(254),
     cl::desc("Value to pass to hot/cold operator new for hot allocation"));
@@ -1722,45 +1730,122 @@ Value *LibCallSimplifier::optimizeNew(CallInst *CI, IRBuilderBase &B,
   uint8_t HotCold;
   if (CI->getAttributes().getFnAttr("memprof").getValueAsString() == "cold")
     HotCold = ColdNewHintValue;
+  else if (CI->getAttributes().getFnAttr("memprof").getValueAsString() ==
+           "notcold")
+    HotCold = NotColdNewHintValue;
   else if (CI->getAttributes().getFnAttr("memprof").getValueAsString() == "hot")
     HotCold = HotNewHintValue;
   else
     return nullptr;
 
+  // For calls that already pass a hot/cold hint, only update the hint if
+  // directed by OptimizeExistingHotColdNew. For other calls to new, add a hint
+  // if cold or hot, and leave as-is for default handling if "notcold" aka warm.
+  // Note that in cases where we decide it is "notcold", it might be slightly
+  // better to replace the hinted call with a non hinted call, to avoid the
+  // extra paramter and the if condition check of the hint value in the
+  // allocator. This can be considered in the future.
   switch (Func) {
+  case LibFunc_Znwm12__hot_cold_t:
+    if (OptimizeExistingHotColdNew)
+      return emitHotColdNew(CI->getArgOperand(0), B, TLI,
+                            LibFunc_Znwm12__hot_cold_t, HotCold);
+    break;
   case LibFunc_Znwm:
-    return emitHotColdNew(CI->getArgOperand(0), B, TLI,
-                          LibFunc_Znwm12__hot_cold_t, HotCold);
+    if (HotCold != NotColdNewHintValue)
+      return emitHotColdNew(CI->getArgOperand(0), B, TLI,
+                            LibFunc_Znwm12__hot_cold_t, HotCold);
+    break;
+  case LibFunc_Znam12__hot_cold_t:
+    if (OptimizeExistingHotColdNew)
+      return emitHotColdNew(CI->getArgOperand(0), B, TLI,
+                            LibFunc_Znam12__hot_cold_t, HotCold);
+    break;
   case LibFunc_Znam:
-    return emitHotColdNew(CI->getArgOperand(0), B, TLI,
-                          LibFunc_Znam12__hot_cold_t, HotCold);
+    if (HotCold != NotColdNewHintValue)
+      return emitHotColdNew(CI->getArgOperand(0), B, TLI,
+                            LibFunc_Znam12__hot_cold_t, HotCold);
+    break;
+  case LibFunc_ZnwmRKSt9nothrow_t12__hot_cold_t:
+    if (OptimizeExistingHotColdNew)
+      return emitHotColdNewNoThrow(
+          CI->getArgOperand(0), CI->getArgOperand(1), B, TLI,
+          LibFunc_ZnwmRKSt9nothrow_t12__hot_cold_t, HotCold);
+    break;
   case LibFunc_ZnwmRKSt9nothrow_t:
-    return emitHotColdNewNoThrow(CI->getArgOperand(0), CI->getArgOperand(1), B,
-                                 TLI, LibFunc_ZnwmRKSt9nothrow_t12__hot_cold_t,
-                                 HotCold);
+    if (HotCold != NotColdNewHintValue)
+      return emitHotColdNewNoThrow(
+          CI->getArgOperand(0), CI->getArgOperand(1), B, TLI,
+          LibFunc_ZnwmRKSt9nothrow_t12__hot_cold_t, HotCold);
+    break;
+  case LibFunc_ZnamRKSt9nothrow_t12__hot_cold_t:
+    if (OptimizeExistingHotColdNew)
+      return emitHotColdNewNoThrow(
+          CI->getArgOperand(0), CI->getArgOperand(1), B, TLI,
+          LibFunc_ZnamRKSt9nothrow_t12__hot_cold_t, HotCold);
+    break;
   case LibFunc_ZnamRKSt9nothrow_t:
-    return emitHotColdNewNoThrow(CI->getArgOperand(0), CI->getArgOperand(1), B,
-                                 TLI, LibFunc_ZnamRKSt9nothrow_t12__hot_cold_t,
-                                 HotCold);
+    if (HotCold != NotColdNewHintValue)
+      return emitHotColdNewNoThrow(
+          CI->getArgOperand(0), CI->getArgOperand(1), B, TLI,
+          LibFunc_ZnamRKSt9nothrow_t12__hot_cold_t, HotCold);
+    break;
+  case LibFunc_ZnwmSt11align_val_t12__hot_cold_t:
+    if (OptimizeExistingHotColdNew)
+      return emitHotColdNewAligned(
+          CI->getArgOperand(0), CI->getArgOperand(1), B, TLI,
+          LibFunc_ZnwmSt11align_val_t12__hot_cold_t, HotCold);
+    break;
   case LibFunc_ZnwmSt11align_val_t:
-    return emitHotColdNewAligned(CI->getArgOperand(0), CI->getArgOperand(1), B,
-                                 TLI, LibFunc_ZnwmSt11align_val_t12__hot_cold_t,
-                                 HotCold);
+    if (HotCold != NotColdNewHintValue)
+      return emitHotColdNewAligned(
+          CI->getArgOperand(0), CI->getArgOperand(1), B, TLI,
+          LibFunc_ZnwmSt11align_val_t12__hot_cold_t, HotCold);
+    break;
+  case LibFunc_ZnamSt11align_val_t12__hot_cold_t:
+    if (OptimizeExistingHotColdNew)
+      return emitHotColdNewAligned(
+          CI->getArgOperand(0), CI->getArgOperand(1), B, TLI,
+          LibFunc_ZnamSt11align_val_t12__hot_cold_t, HotCold);
+    break;
   case LibFunc_ZnamSt11align_val_t:
-    return emitHotColdNewAligned(CI->getArgOperand(0), CI->getArgOperand(1), B,
-                                 TLI, LibFunc_ZnamSt11align_val_t12__hot_cold_t,
-                                 HotCold);
+    if (HotCold != NotColdNewHintValue)
+      return emitHotColdNewAligned(
+          CI->getArgOperand(0), CI->getArgOperand(1), B, TLI,
+          LibFunc_ZnamSt11align_val_t12__hot_cold_t, HotCold);
+    break;
+  case LibFunc_ZnwmSt11align_val_tRKSt9nothrow_t12__hot_cold_t:
+    if (OptimizeExistingHotColdNew)
+      return emitHotColdNewAlignedNoThrow(
+          CI->getArgOperand(0), CI->getArgOperand(1), CI->getArgOperand(2), B,
+          TLI, LibFunc_ZnwmSt11align_val_tRKSt9nothrow_t12__hot_cold_t,
+          HotCold);
+    break;
   case LibFunc_ZnwmSt11align_val_tRKSt9nothrow_t:
-    return emitHotColdNewAlignedNoThrow(
-        CI->getArgOperand(0), CI->getArgOperand(1), CI->getArgOperand(2), B,
-        TLI, LibFunc_ZnwmSt11align_val_tRKSt9nothrow_t12__hot_cold_t, HotCold);
+    if (HotCold != NotColdNewHintValue)
+      return emitHotColdNewAlignedNoThrow(
+          CI->getArgOperand(0), CI->getArgOperand(1), CI->getArgOperand(2), B,
+          TLI, LibFunc_ZnwmSt11align_val_tRKSt9nothrow_t12__hot_cold_t,
+          HotCold);
+    break;
+  case LibFunc_ZnamSt11align_val_tRKSt9nothrow_t12__hot_cold_t:
+    if (OptimizeExistingHotColdNew)
+      return emitHotColdNewAlignedNoThrow(
+          CI->getArgOperand(0), CI->getArgOperand(1), CI->getArgOperand(2), B,
+          TLI, LibFunc_ZnamSt11align_val_tRKSt9nothrow_t12__hot_cold_t,
+          HotCold);
+    break;
   case LibFunc_ZnamSt11align_val_tRKSt9nothrow_t:
-    return emitHotColdNewAlignedNoThrow(
-        CI->getArgOperand(0), CI->getArgOperand(1), CI->getArgOperand(2), B,
-        TLI, LibFunc_ZnamSt11align_val_tRKSt9nothrow_t12__hot_cold_t, HotCold);
+    if (HotCold != NotColdNewHintValue)
+      return emitHotColdNewAlignedNoThrow(
+          CI->getArgOperand(0), CI->getArgOperand(1), CI->getArgOperand(2), B,
+          TLI, LibFunc_ZnamSt11align_val_tRKSt9nothrow_t12__hot_cold_t,
+          HotCold);
+    break;
   default:
     return nullptr;
   }
+  return nullptr;
 }
 
 //===----------------------------------------------------------------------===//
@@ -3675,6 +3760,14 @@ Value *LibCallSimplifier::optimizeStringMemoryLibCall(CallInst *CI,
     case LibFunc_ZnamRKSt9nothrow_t:
     case LibFunc_ZnamSt11align_val_t:
     case LibFunc_ZnamSt11align_val_tRKSt9nothrow_t:
+    case LibFunc_Znwm12__hot_cold_t:
+    case LibFunc_ZnwmRKSt9nothrow_t12__hot_cold_t:
+    case LibFunc_ZnwmSt11align_val_t12__hot_cold_t:
+    case LibFunc_ZnwmSt11align_val_tRKSt9nothrow_t12__hot_cold_t:
+    case LibFunc_Znam12__hot_cold_t:
+    case LibFunc_ZnamRKSt9nothrow_t12__hot_cold_t:
+    case LibFunc_ZnamSt11align_val_t12__hot_cold_t:
+    case LibFunc_ZnamSt11align_val_tRKSt9nothrow_t12__hot_cold_t:
       return optimizeNew(CI, Builder, Func);
     default:
       break;
