@@ -1715,13 +1715,15 @@ void SampleProfileLoader::generateMDProfMetadata(Function &F) {
       // if needed. Sample counts in profiles are 64-bit unsigned values,
       // but internally branch weights are expressed as 32-bit values.
       if (Weight > std::numeric_limits<uint32_t>::max()) {
-        LLVM_DEBUG(dbgs() << " (saturated due to uint32_t overflow)");
+        LLVM_DEBUG(dbgs() << " (saturated due to uint32_t overflow)\n");
         Weight = std::numeric_limits<uint32_t>::max();
       }
       if (!SampleProfileUseProfi) {
         // Weight is added by one to avoid propagation errors introduced by
         // 0 weights.
-        Weights.push_back(static_cast<uint32_t>(Weight + 1));
+        Weights.push_back(static_cast<uint32_t>(
+            Weight == std::numeric_limits<uint32_t>::max() ? Weight
+                                                           : Weight + 1));
       } else {
         // Profi creates proper weights that do not require "+1" adjustments but
         // we evenly split the weight among branches with the same destination.
