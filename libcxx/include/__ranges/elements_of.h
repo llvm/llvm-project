@@ -13,6 +13,7 @@
 #include <__config>
 #include <__memory/allocator.h>
 #include <__ranges/concepts.h>
+#include <__utility/move.h>
 #include <cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
