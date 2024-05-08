@@ -33,12 +33,11 @@ class SetgidSetuidOrderChecker
 
   const CallDescription SetuidDesc{{"setuid"}, 1};
   const CallDescription SetgidDesc{{"setgid"}, 1};
-  const CallDescription SeteuidDesc{{"seteuid"}, 1};
-  const CallDescription SetegidDesc{{"setegid"}, 1};
-  const CallDescription SetreuidDesc{{"setreuid"}, 2};
-  const CallDescription SetregidDesc{{"setregid"}, 2};
-  const CallDescription SetresuidDesc{{"setresuid"}, 3};
-  const CallDescription SetresgidDesc{{"setresgid"}, 3};
+
+  CallDescriptionSet OtherSetPrivilegeDesc{
+      {CDM::CLibrary, {"seteuid"}, 1},   {CDM::CLibrary, {"setegid"}, 1},
+      {CDM::CLibrary, {"setreuid"}, 2},  {CDM::CLibrary, {"setregid"}, 2},
+      {CDM::CLibrary, {"setresuid"}, 3}, {CDM::CLibrary, {"setresgid"}, 3}};
 
 public:
   SetgidSetuidOrderChecker() {}
@@ -84,8 +83,7 @@ void SetgidSetuidOrderChecker::checkPostCall(const CallEvent &Call,
     State = processSetuid(State, Call, C);
   } else if (SetgidDesc.matches(Call)) {
     State = processSetgid(State, Call, C);
-  } else if (matchesAny(Call, SeteuidDesc, SetegidDesc, SetreuidDesc,
-                        SetregidDesc, SetresuidDesc, SetresgidDesc)) {
+  } else if (OtherSetPrivilegeDesc.contains(Call)) {
     State = processOther(State, Call, C);
   }
   if (State)
@@ -180,9 +178,10 @@ bool SetgidSetuidOrderChecker::isFunctionCalledInArg(
 void SetgidSetuidOrderChecker::emitReport(ProgramStateRef State,
                                           CheckerContext &C) const {
   if (ExplodedNode *N = C.generateNonFatalErrorNode(State)) {
-    StringRef Msg = "A 'setgid(getgid())' call following a 'setuid(getuid())' "
-                    "call is likely to fail; Probably order of these "
-                    "statements was reversed mistakenly";
+    llvm::StringLiteral Msg =
+        "A 'setgid(getgid())' call following a 'setuid(getuid())' "
+        "call is likely to fail; probably the order of these "
+        "statements is wrong";
     C.emitReport(std::make_unique<PathSensitiveBugReport>(
         BT_WrongRevocationOrder, Msg, N));
   }
