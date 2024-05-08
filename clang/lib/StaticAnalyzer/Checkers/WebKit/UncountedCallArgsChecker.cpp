@@ -150,6 +150,9 @@ public:
   bool shouldSkipCall(const CallExpr *CE) const {
     const auto *Callee = CE->getDirectCallee();
 
+    if (BR->getSourceManager().isInSystemHeader(CE->getExprLoc()))
+      return true;
+
     if (Callee && TFA.isTrivial(Callee))
       return true;
 

@@ -1,6 +1,7 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=alpha.webkit.UncountedCallArgsChecker -verify %s
 
 #include "mock-types.h"
+#include "mock-system-header.h"
 
 void WTFBreakpointTrap();
 void WTFCrashWithInfo(int, const char*, const char*, int);
@@ -147,6 +148,7 @@ public:
   void ref() const;
   void deref() const;
 
+  void method();
   void someFunction();
   int otherFunction();
 
@@ -398,4 +400,8 @@ void someFunction(const RefCounted&);
 
 void test2() {
     someFunction(*object());
+}
+
+void system_header() {
+  callMethod<RefCountable>(object);
 }
