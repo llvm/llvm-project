@@ -2866,8 +2866,7 @@ define ptr @gep_lshr_i32(ptr %0, i64 %1) {
 ;
 ; RV64ZBA-LABEL: gep_lshr_i32:
 ; RV64ZBA:       # %bb.0: # %entry
-; RV64ZBA-NEXT:    slli a1, a1, 2
-; RV64ZBA-NEXT:    srli a1, a1, 4
+; RV64ZBA-NEXT:    srli a1, a1, 2
 ; RV64ZBA-NEXT:    slli.uw a1, a1, 4
 ; RV64ZBA-NEXT:    sh2add a1, a1, a1
 ; RV64ZBA-NEXT:    add a0, a0, a1
@@ -2891,8 +2890,7 @@ define i64 @srli_slliw(i64 %1) {
 ;
 ; RV64ZBA-LABEL: srli_slliw:
 ; RV64ZBA:       # %bb.0: # %entry
-; RV64ZBA-NEXT:    slli a0, a0, 2
-; RV64ZBA-NEXT:    srli a0, a0, 4
+; RV64ZBA-NEXT:    srli a0, a0, 2
 ; RV64ZBA-NEXT:    slli.uw a0, a0, 4
 ; RV64ZBA-NEXT:    ret
 entry:

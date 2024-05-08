@@ -17141,6 +17141,13 @@ bool RISCVTargetLowering::isDesirableToCommuteWithShift(
         return false;
     }
   }
+
+  // Don't break slli.uw patterns.
+  if (Subtarget.hasStdExtZba() && Ty.isScalarInteger() && N->getOpcode() == ISD::SHL &&
+      N0.getOpcode() == ISD::AND && isa<ConstantSDNode>(N0.getOperand(1)) &&
+      N0.getConstantOperandVal(1) == UINT64_C(0xffffffff))
+    return false;
+
   return true;
 }
 
