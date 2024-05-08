@@ -46,6 +46,23 @@
 #endif
 #endif
 
+// Rounding mode macros might be missing.
+#ifndef FE_DOWNWARD
+#define FE_DOWNWARD 0x400
+#endif // FE_DOWNWARD
+
+#ifndef FE_TONEAREST
+#define FE_TONEAREST 0
+#endif // FE_TONEAREST
+
+#ifndef FE_TOWARDZERO
+#define FE_TOWARDZERO 0xC00
+#endif // FE_TOWARDZERO
+
+#ifndef FE_UPWARD
+#define FE_UPWARD 0x800
+#endif // FE_UPWARD
+
 #endif // LLVM_LIBC_FULL_BUILD
 
 #endif // LLVM_LIBC_HDR_FENV_MACROS_H
