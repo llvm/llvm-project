@@ -6896,7 +6896,7 @@ Error BitcodeReader::materialize(GlobalValue *GV) {
         MDString *MDS = cast<MDString>(MD->getOperand(0));
         StringRef ProfName = MDS->getString();
         // Check consistency of !prof branch_weights metadata.
-        if (!ProfName.equals("branch_weights"))
+        if (ProfName != "branch_weights")
           continue;
         unsigned ExpectedNumOperands = 0;
         if (BranchInst *BI = dyn_cast<BranchInst>(&I))
