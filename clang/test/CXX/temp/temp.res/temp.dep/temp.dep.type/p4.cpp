@@ -484,6 +484,18 @@ namespace N3 {
 
   template struct E<int>; // expected-note {{in instantiation of template class 'N3::E<int>' requested here}}
 
+  template<typename T>
+  struct F {
+    F& operator=(T);
+    struct G;
+  };
+
+  template<typename T>
+  struct F<T>::G : F<T> {
+    using F::operator=;
+  };
+
+  template struct F<int>;
 } // namespace N3
 
 namespace N4 {
