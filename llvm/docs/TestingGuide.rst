@@ -491,7 +491,7 @@ skip ``split-file`` in RUN lines.
   regeneration is needed on another machine.
 
   ``gen`` is invoked with ``PWD`` set to ``/proc/self/cwd``. Clang commands
-  don't need ``-fdebug-compilation-dir=``.
+  don't need ``-fdebug-compilation-dir=`` since its default value is ``PWD``.
 
   Check prefixes should be placed before ``.endif`` since the part after
   ``.endif`` is replaced.
