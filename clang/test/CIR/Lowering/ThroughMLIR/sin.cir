@@ -1,0 +1,30 @@
+// RUN: cir-opt %s -cir-to-mlir -o %t.mlir
+// RUN: FileCheck %s --input-file %t.mlir
+
+module {
+  cir.func @foo() {
+    %1 = cir.const #cir.fp<1.0> : !cir.float
+    %2 = cir.const #cir.fp<1.0> : !cir.double
+    %3 = cir.const #cir.fp<1.0> : !cir.long_double<!cir.f80>
+    %4 = cir.const #cir.fp<1.0> : !cir.long_double<!cir.double>
+    %5 = cir.sin %1 : !cir.float
+    %6 = cir.sin %2 : !cir.double
+    %7 = cir.sin %3 : !cir.long_double<!cir.f80>
+    %8 = cir.sin %4 : !cir.long_double<!cir.double>
+    cir.return
+  }
+}
+
+// CHECK:      module {
+// CHECK-NEXT:   func.func @foo() {
+// CHECK-NEXT:     %[[C0:.+]] = arith.constant 1.000000e+00 : f32
+// CHECK-NEXT:     %[[C1:.+]] = arith.constant 1.000000e+00 : f64
+// CHECK-NEXT:     %[[C2:.+]] = arith.constant 1.000000e+00 : f80
+// CHECK-NEXT:     %[[C3:.+]] = arith.constant 1.000000e+00 : f64
+// CHECK-NEXT:     %{{.+}} = math.sin %[[C0]] : f32
+// CHECK-NEXT:     %{{.+}} = math.sin %[[C1]] : f64
+// CHECK-NEXT:     %{{.+}} = math.sin %[[C2]] : f80
+// CHECK-NEXT:     %{{.+}} = math.sin %[[C3]] : f64
+// CHECK-NEXT:     return
+// CHECK-NEXT:   }
+// CHECK-NEXT: }
