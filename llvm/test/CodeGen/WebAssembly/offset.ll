@@ -1,4 +1,4 @@
-; RUN: llc < %s -asm-verbose=false -wasm-disable-explicit-locals -wasm-keep-registers -disable-wasm-fallthrough-return-opt | FileCheck %s
+; RUN: llc < %s -asm-verbose=false -wasm-disable-explicit-locals -wasm-keep-registers -disable-wasm-fallthrough-return-opt -mattr=+half-precision | FileCheck %s
 
 ; Test constant load and store address offsets.
 
@@ -665,4 +665,30 @@ define {i32,i32,i32,i32} @aggregate_return() {
 ; CHECK: i64.store   0($0), $pop[[L3]]{{$}}
 define {i64,i32,i16,i8} @aggregate_return_without_merge() {
   ret {i64,i32,i16,i8} zeroinitializer
+}
+
+;===----------------------------------------------------------------------------
+; Loads: Half Precision
+;===----------------------------------------------------------------------------
+
+; Fold an offset into a zero-extending load.
+
+; CHECK-LABEL: load_f16_f32_with_folded_offset:
+; CHECK: f32.load_f16 $push0=, 24($0){{$}}
+define float @load_f16_f32_with_folded_offset(ptr %p) {
+  %q = ptrtoint ptr %p to i32
+  %r = add nuw i32 %q, 24
+  %s = inttoptr i32 %r to ptr
+  %t = call float @llvm.wasm.loadf16.f32(ptr %s)
+  ret float %t
+}
+
+; Fold a gep offset into a zero-extending load.
+
+; CHECK-LABEL: load_f16_f32_with_folded_gep_offset:
+; CHECK: f32.load_f16 $push0=, 24($0){{$}}
+define float @load_f16_f32_with_folded_gep_offset(ptr %p) {
+  %s = getelementptr inbounds i8, ptr %p, i32 24
+  %t = call float @llvm.wasm.loadf16.f32(ptr %s)
+  ret float %t
 }
