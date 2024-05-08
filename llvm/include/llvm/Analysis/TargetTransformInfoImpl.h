@@ -32,7 +32,6 @@ class Function;
 /// Base class for use as a mix-in that aids implementing
 /// a TargetTransformInfo-compatible class.
 class TargetTransformInfoImplBase {
-  friend class TargetTransformInfo;
 
 protected:
   typedef TargetTransformInfo TTI;
