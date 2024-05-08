@@ -25,7 +25,7 @@
 template <typename T>
 struct TestStoreInvalidMemoryOrder {
   void operator()() const {
-    {
+    { // no assertion should trigger here
       T x(T(1));
       std::atomic_ref<T> const a(x);
       a.store(T(2), std::memory_order_relaxed);

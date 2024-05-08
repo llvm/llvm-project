@@ -25,7 +25,7 @@
 template <typename T>
 struct TestLoadInvalidMemoryOrder {
   void operator()() const {
-    {
+    { // no assertion should trigger here
       T x(T(1));
       std::atomic_ref<T> const a(x);
       (void)a.load(std::memory_order_relaxed);

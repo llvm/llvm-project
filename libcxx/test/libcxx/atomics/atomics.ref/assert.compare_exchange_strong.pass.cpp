@@ -25,7 +25,7 @@
 template <typename T>
 struct TestCompareExchangeStrongInvalidMemoryOrder {
   void operator()() const {
-    {
+    { // no assertion should trigger here
       T x(T(1));
       std::atomic_ref<T> const a(x);
       T t(T(2));

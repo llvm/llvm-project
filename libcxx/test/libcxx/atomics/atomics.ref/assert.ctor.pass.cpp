@@ -21,7 +21,7 @@
 #include "check_assertion.h"
 
 int main(int, char**) {
-  {
+  { // no assertion should trigger here
     char c[8];
     float* f = new (c) float(3.14f);
     [[maybe_unused]] std::atomic_ref<float> r(*f);
