@@ -12963,14 +12963,15 @@ NamedDecl *Sema::BuildUsingDeclaration(
     return nullptr;
   }
 
-  DeclContext *LookupContext = computeDeclContext(SS);
   NestedNameSpecifierLoc QualifierLoc = SS.getWithLocInContext(Context);
-  if (!LookupContext || EllipsisLoc.isValid()) {
-    NamedDecl *D;
+  DeclContext *LookupContext = computeDeclContext(SS);
+
+  auto BuildDependent = [&] {
+    NamedDecl *D = nullptr;
     // Dependent scope, or an unexpanded pack
     if (!LookupContext && CheckUsingDeclQualifier(UsingLoc, HasTypenameKeyword,
                                                   SS, NameInfo, IdentLoc))
-      return nullptr;
+      return D;
 
     if (HasTypenameKeyword) {
       // FIXME: not all declaration name kinds are legal here
@@ -12987,7 +12988,7 @@ NamedDecl *Sema::BuildUsingDeclaration(
     CurContext->addDecl(D);
     ProcessDeclAttributeList(S, D, AttrList);
     return D;
-  }
+  };
 
   auto Build = [&](bool Invalid) {
     UsingDecl *UD =
@@ -13001,6 +13002,9 @@ NamedDecl *Sema::BuildUsingDeclaration(
   };
   auto BuildInvalid = [&]{ return Build(true); };
   auto BuildValid = [&]{ return Build(false); };
+
+  if (!LookupContext || EllipsisLoc.isValid())
+    return BuildDependent();
 
   if (RequireCompleteDeclContext(SS, LookupContext))
     return BuildInvalid();
@@ -13023,6 +13027,9 @@ NamedDecl *Sema::BuildUsingDeclaration(
   }
 
   LookupQualifiedName(R, LookupContext);
+
+  if (R.wasNotFoundInCurrentInstantiation())
+    return BuildDependent();
 
   // Validate the context, now we have a lookup
   if (CheckUsingDeclQualifier(UsingLoc, HasTypenameKeyword, SS, NameInfo,
