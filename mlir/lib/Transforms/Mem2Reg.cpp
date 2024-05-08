@@ -510,8 +510,8 @@ void MemorySlotPromoter::computeReachingDefInRegion(Region *region,
 /// Gets or creates a block index mapping for `region`.
 static const DenseMap<Block *, size_t> &
 getOrCreateBlockIndices(BlockIndexCache &blockIndexCache, Region *region) {
-  auto [it, created] = blockIndexCache.try_emplace(region);
-  if (!created)
+  auto [it, inserted] = blockIndexCache.try_emplace(region);
+  if (!inserted)
     return it->second;
 
   DenseMap<Block *, size_t> &blockIndices = it->second;
@@ -631,8 +631,9 @@ LogicalResult mlir::tryToPromoteMemorySlots(
     Mem2RegStatistics statistics) {
   bool promotedAny = false;
 
-  // Cache for block index maps. This is required to avoid expensive
-  // recomputations.
+  // A cache that stores deterministic block indices which are used to determine
+  // a valid operation modification order. The block index maps are computed
+  // lazily and cached to avoid expensive recomputation.
   BlockIndexCache blockIndexCache;
 
   for (PromotableAllocationOpInterface allocator : allocators) {
