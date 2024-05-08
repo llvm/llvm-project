@@ -507,7 +507,7 @@ void BreakpointLocation::GetDescription(Stream *s,
       else
         s->PutCString("where = ");
       sc.DumpStopContext(s, m_owner.GetTarget().GetProcessSP().get(), m_address,
-                         false, true, false, true, true);
+                         false, true, false, true, true, true);
     } else {
       if (sc.module_sp) {
         s->EOL();
