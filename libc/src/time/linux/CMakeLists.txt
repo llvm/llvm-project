@@ -1,3 +1,13 @@
+add_header_library(
+  clock_gettime_impl
+  HDRS
+    clock_gettime_impl.h
+  DEPENDS
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.error_or
+)
+
 add_entrypoint_object(
   time
   SRCS
@@ -5,9 +15,8 @@ add_entrypoint_object(
   HDRS
     ../time_func.h
   DEPENDS
+    .clock_gettime_impl
     libc.include.time
-    libc.include.sys_syscall
-    libc.src.__support.OSUtil.osutil
     libc.src.errno.errno
 )
 
@@ -18,10 +27,9 @@ add_entrypoint_object(
   HDRS
     ../clock.h
   DEPENDS
+    .clock_gettime_impl
     libc.include.time
-    libc.include.sys_syscall
     libc.src.__support.CPP.limits
-    libc.src.__support.OSUtil.osutil
     libc.src.errno.errno
 )
 
@@ -32,10 +40,10 @@ add_entrypoint_object(
   HDRS
     ../nanosleep.h
   DEPENDS
-    libc.include.time
     libc.include.sys_syscall
-    libc.src.__support.CPP.limits
     libc.src.__support.OSUtil.osutil
+    libc.include.time
+    libc.src.__support.CPP.limits
     libc.src.errno.errno
 )
 
@@ -46,9 +54,8 @@ add_entrypoint_object(
   HDRS
     ../clock_gettime.h
   DEPENDS
+    .clock_gettime_impl
     libc.include.time
-    libc.include.sys_syscall
-    libc.src.__support.OSUtil.osutil
     libc.src.errno.errno
 )
 
@@ -59,8 +66,7 @@ add_entrypoint_object(
   HDRS
     ../gettimeofday.h
   DEPENDS
+    .clock_gettime_impl
     libc.include.time
-    libc.include.sys_syscall
-    libc.src.__support.OSUtil.osutil
     libc.src.errno.errno
 )
