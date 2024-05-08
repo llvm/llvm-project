@@ -474,10 +474,15 @@ namespace N3 {
 
   template<typename T>
   struct D {
-    auto instantiated(D& d) -> decltype(operator=(d)); // expected-error {{use of undeclared 'operator='}}
+    auto not_instantiated() -> decltype(operator=(0)); // expected-error {{use of undeclared 'operator='}}
   };
 
-  template struct D<int>; // expected-note {{in instantiation of template class 'D<int>' requested here}}
+  template<typename T>
+  struct E {
+    auto instantiated(E& e) -> decltype(operator=(e)); // expected-error {{use of undeclared 'operator='}}
+  };
+
+  template struct E<int>; // expected-note {{in instantiation of template class 'E<int>' requested here}}
 
 } // namespace N3
 
