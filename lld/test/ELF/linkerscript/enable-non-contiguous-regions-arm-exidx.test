@@ -1,13 +1,14 @@
-# If a spilling reorders input sections, the .ARM.exidx table must be rebuilt
-# using the new order.
+## If a spilling reorders input sections, the .ARM.exidx table must be rebuilt
+## using the new order.
 
-RUN: split-file %s %t
-RUN: llvm-mc -filetype=obj -triple=armv7a-none-linux-gnueabi %t/test.s -o %t/test.o
-RUN: ld.lld -T %t/test.ld %t/test.o -o %t/test --enable-non-contiguous-regions
-RUN: llvm-readobj -x .ARM.exidx %t/test | FileCheck %s
+# REQUIRES: arm
+# RUN: split-file %s %t
+# RUN: llvm-mc -filetype=obj -triple=armv7a-none-linux-gnueabi %t/test.s -o %t/test.o
+# RUN: ld.lld -T %t/test.ld %t/test.o -o %t/test --enable-non-contiguous-regions
+# RUN: llvm-readobj -x .ARM.exidx %t/test | FileCheck %s
 
-CHECK:      20000000 08849780 1c000000 10849880
-CHECK-NEXT: 18000000 20849980 14000000 01000000
+# CHECK:      20000000 08849780 1c000000 10849880
+# CHECK-NEXT: 1c000000 01000000
 
 #--- test.ld
 MEMORY {
@@ -49,6 +50,6 @@ f1:
 f2:
  .fnstart
  bx lr
- .save {r9, lr}
- .setfp r9, sp, #0
+ .save {r8, lr}
+ .setfp r8, sp, #0
  .fnend

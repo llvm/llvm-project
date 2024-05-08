@@ -1,111 +1,111 @@
-REQUIRES: x86
+# REQUIRES: x86
 
-RUN: split-file %s %t
-RUN: llvm-mc -n -filetype=obj -triple=x86_64 %t/spill.s -o %t/spill.o
+# RUN: split-file %s %t
+# RUN: llvm-mc -n -filetype=obj -triple=x86_64 %t/spill.s -o %t/spill.o
 
-# An input section must spill to a later match if the region of its first match
-# would overflow.
+## An input section must spill to a later match if the region of its first match
+## would overflow.
 
-RUN: ld.lld -T %t/spill.ld %t/spill.o -o %t/spill --enable-non-contiguous-regions
-RUN: llvm-readelf -S %t/spill | FileCheck %s -check-prefix=SPILL
+# RUN: ld.lld -T %t/spill.ld %t/spill.o -o %t/spill --enable-non-contiguous-regions
+# RUN: llvm-readelf -S %t/spill | FileCheck %s -check-prefix=SPILL
 
-SPILL:      Name          Type     Address          Off    Size
-SPILL:      .first_chance PROGBITS 0000000000000000 001000 000001
-SPILL-NEXT: .last_chance  PROGBITS 0000000000000002 001002 000002
+# SPILL:      Name          Type     Address          Off    Size
+# SPILL:      .first_chance PROGBITS 0000000000000000 001000 000001
+# SPILL-NEXT: .last_chance  PROGBITS 0000000000000002 001002 000002
 
-# A spill off the end must still fails the link.
+## A spill off the end must still fail the link.
 
-RUN: not ld.lld -T %t/spill-fail.ld %t/spill.o -o %t/spill-fail --enable-non-contiguous-regions 2>&1 |\
-RUN:   FileCheck %s -check-prefix=SPILL-FAIL
+# RUN: not ld.lld -T %t/spill-fail.ld %t/spill.o -o %t/spill-fail --enable-non-contiguous-regions 2>&1 |\
+# RUN:   FileCheck %s -check-prefix=SPILL-FAIL
 
-SPILL-FAIL: error: section '.last_chance' will not fit in region 'b': overflowed by 2 bytes
+# SPILL-FAIL: error: section '.last_chance' will not fit in region 'b': overflowed by 2 bytes
 
-# The above spill must still occur if the LMA would overflow, even if the VMA
-# would fit.
+## The above spill must still occur if the LMA would overflow, even if the VMA
+## would fit.
 
-RUN: ld.lld -T %t/spill-lma.ld %t/spill.o -o %t/spill-lma --enable-non-contiguous-regions
-RUN: llvm-readelf -S %t/spill-lma | FileCheck %s -check-prefix=SPILL-LMA
+# RUN: ld.lld -T %t/spill-lma.ld %t/spill.o -o %t/spill-lma --enable-non-contiguous-regions
+# RUN: llvm-readelf -S %t/spill-lma | FileCheck %s -check-prefix=SPILL-LMA
 
-SPILL-LMA:      Name          Type     Address          Off    Size
-SPILL-LMA:      .first_chance PROGBITS 0000000000000000 001000 000001
-SPILL-LMA-NEXT: .last_chance  PROGBITS 0000000000000003 001003 000002
+# SPILL-LMA:      Name          Type     Address          Off    Size
+# SPILL-LMA:      .first_chance PROGBITS 0000000000000000 001000 000001
+# SPILL-LMA-NEXT: .last_chance  PROGBITS 0000000000000003 001003 000002
 
-# A spill must be able to occur to an additional match after the first.
+## A spill must be able to occur to an additional match after the first.
 
-RUN: ld.lld -T %t/spill-later.ld %t/spill.o -o %t/spill-later --enable-non-contiguous-regions
-RUN: llvm-readelf -S %t/spill-later | FileCheck %s -check-prefix=SPILL-LATER
+# RUN: ld.lld -T %t/spill-later.ld %t/spill.o -o %t/spill-later --enable-non-contiguous-regions
+# RUN: llvm-readelf -S %t/spill-later | FileCheck %s -check-prefix=SPILL-LATER
 
-SPILL-LATER:      Name            Type     Address          Off    Size
-SPILL-LATER:      .first_chance   PROGBITS 0000000000000000 001000 000001
-SPILL-LATER-NEXT: .second_chance  PROGBITS 0000000000000002 001001 000000
-SPILL-LATER-NEXT: .last_chance    PROGBITS 0000000000000003 001003 000002
+# SPILL-LATER:      Name            Type     Address          Off    Size
+# SPILL-LATER:      .first_chance   PROGBITS 0000000000000000 001000 000001
+# SPILL-LATER-NEXT: .second_chance  PROGBITS 0000000000000002 001001 000000
+# SPILL-LATER-NEXT: .last_chance    PROGBITS 0000000000000003 001003 000002
 
-# A later overflow must be able to cause an earlier section to spill.
+## A later overflow must be able to cause an earlier section to spill.
 
-RUN: ld.lld -T %t/spill-earlier.ld %t/spill.o -o %t/spill-earlier --enable-non-contiguous-regions
-RUN: llvm-readelf -S %t/spill-earlier | FileCheck %s -check-prefix=SPILL-EARLIER
+# RUN: ld.lld -T %t/spill-earlier.ld %t/spill.o -o %t/spill-earlier --enable-non-contiguous-regions
+# RUN: llvm-readelf -S %t/spill-earlier | FileCheck %s -check-prefix=SPILL-EARLIER
 
-SPILL-EARLIER:      Name          Type     Address          Off    Size
-SPILL-EARLIER:      .first_chance PROGBITS 0000000000000000 001000 000002
-SPILL-EARLIER-NEXT: .last_chance  PROGBITS 0000000000000002 001002 000001
+# SPILL-EARLIER:      Name          Type     Address          Off    Size
+# SPILL-EARLIER:      .first_chance PROGBITS 0000000000000000 001000 000002
+# SPILL-EARLIER-NEXT: .last_chance  PROGBITS 0000000000000002 001002 000001
 
-# An additional match in /DISCARD/ must have no effect.
+## An additional match in /DISCARD/ must have no effect.
 
-RUN: not ld.lld -T %t/no-spill-into-discard.ld %t/spill.o -o %t/no-spill-into-discard --enable-non-contiguous-regions 2>&1 |\
-RUN:   FileCheck %s -check-prefix=NO-SPILL-INTO-DISCARD
+# RUN: not ld.lld -T %t/no-spill-into-discard.ld %t/spill.o -o %t/no-spill-into-discard --enable-non-contiguous-regions 2>&1 |\
+# RUN:   FileCheck %s -check-prefix=NO-SPILL-INTO-DISCARD
 
-NO-SPILL-INTO-DISCARD: error: section '.osec' will not fit in region 'a': overflowed by 1 bytes
+# NO-SPILL-INTO-DISCARD: error: section '.osec' will not fit in region 'a': overflowed by 1 bytes
 
-# An additional match after /DISCARD/ must have no effect.
+## An additional match after /DISCARD/ must have no effect.
 
-RUN: ld.lld -T %t/no-spill-from-discard.ld %t/spill.o -o %t/no-spill-from-discard --enable-non-contiguous-regions
-RUN: llvm-readelf -S %t/no-spill-from-discard | FileCheck %s -check-prefix=NO-SPILL-FROM-DISCARD
+# RUN: ld.lld -T %t/no-spill-from-discard.ld %t/spill.o -o %t/no-spill-from-discard --enable-non-contiguous-regions
+# RUN: llvm-readelf -S %t/no-spill-from-discard | FileCheck %s -check-prefix=NO-SPILL-FROM-DISCARD
 
-NO-SPILL-FROM-DISCARD: Name          Type     Address          Off    Size
-NO-SPILL-FROM-DISCARD-NOT: .osec
+# NO-SPILL-FROM-DISCARD: Name          Type     Address          Off    Size
+# NO-SPILL-FROM-DISCARD-NOT: .osec
 
-# A spill must use the alignment of the later match.
+## A spill must use the alignment of the later match.
 
-RUN: ld.lld -T %t/spill-align.ld %t/spill.o -o %t/spill-align --enable-non-contiguous-regions
-RUN: llvm-readelf -S %t/spill-align | FileCheck %s -check-prefix=SPILL-ALIGN
+# RUN: ld.lld -T %t/spill-align.ld %t/spill.o -o %t/spill-align --enable-non-contiguous-regions
+# RUN: llvm-readelf -S %t/spill-align | FileCheck %s -check-prefix=SPILL-ALIGN
 
-SPILL-ALIGN:      Name          Type     Address          Off    Size
-SPILL-ALIGN:      .first_chance PROGBITS 0000000000000000 000158 000000
-SPILL-ALIGN-NEXT: .last_chance  PROGBITS 0000000000000008 001008 00000a
+# SPILL-ALIGN:      Name          Type     Address          Off    Size
+# SPILL-ALIGN:      .first_chance PROGBITS 0000000000000000 000158 000000
+# SPILL-ALIGN-NEXT: .last_chance  PROGBITS 0000000000000008 001008 00000a
 
-# SHF_MERGEd sections must be spilled according to the matches of the first
-# merged input section (the one giving the resulting section its name).
+## SHF_MERGEd sections must be spilled according to the matches of the first
+## merged input section (the one giving the resulting section its name).
 
-RUN: llvm-mc -n -filetype=obj -triple=x86_64 %t/merge.s -o %t/merge.o
-RUN: ld.lld -T %t/spill-merge.ld %t/merge.o -o %t/spill-merge --enable-non-contiguous-regions
-RUN: llvm-readelf -S %t/spill-merge | FileCheck %s -check-prefix=SPILL-MERGE
+# RUN: llvm-mc -n -filetype=obj -triple=x86_64 %t/merge.s -o %t/merge.o
+# RUN: ld.lld -T %t/spill-merge.ld %t/merge.o -o %t/spill-merge --enable-non-contiguous-regions
+# RUN: llvm-readelf -S %t/spill-merge | FileCheck %s -check-prefix=SPILL-MERGE
 
-SPILL-MERGE:      Name          Type     Address          Off    Size
-SPILL-MERGE:      .first  PROGBITS 0000000000000000 000190 000000
-SPILL-MERGE-NEXT: .second PROGBITS 0000000000000001 001001 000002
-SPILL-MERGE-NEXT: .third  PROGBITS 0000000000000003 001003 000000
+# SPILL-MERGE:      Name          Type     Address          Off    Size
+# SPILL-MERGE:      .first  PROGBITS 0000000000000000 000190 000000
+# SPILL-MERGE-NEXT: .second PROGBITS 0000000000000001 001001 000002
+# SPILL-MERGE-NEXT: .third  PROGBITS 0000000000000003 001003 000000
 
-# An error must be reported for INSERT.
+## An error must be reported for INSERT.
 
-RUN: not ld.lld -T %t/insert.ld %t/spill.o -o %t/insert --enable-non-contiguous-regions 2>&1 |\
-RUN:   FileCheck %s -check-prefix=INSERT
+# RUN: not ld.lld -T %t/insert.ld %t/spill.o -o %t/insert --enable-non-contiguous-regions 2>&1 |\
+# RUN:   FileCheck %s -check-prefix=INSERT
 
-INSERT: error: INSERT cannot be used with --enable-non-contiguous-regions
+# INSERT: error: INSERT cannot be used with --enable-non-contiguous-regions
 
-# An error must be reported for OVERWRITE_SECTIONS.
+## An error must be reported for OVERWRITE_SECTIONS.
 
-RUN: not ld.lld -T %t/overwrite-sections.ld %t/spill.o -o %t/overwrite-sections --enable-non-contiguous-regions 2>&1 |\
-RUN:   FileCheck %s -check-prefix=OVERWRITE_SECTIONS
+# RUN: not ld.lld -T %t/overwrite-sections.ld %t/spill.o -o %t/overwrite-sections --enable-non-contiguous-regions 2>&1 |\
+# RUN:   FileCheck %s -check-prefix=OVERWRITE_SECTIONS
 
-OVERWRITE_SECTIONS: error: OVERWRITE_SECTIONS cannot be used with --enable-non-contiguous-regions
+# OVERWRITE_SECTIONS: error: OVERWRITE_SECTIONS cannot be used with --enable-non-contiguous-regions
 
 # SHF_LINK_ORDER must be reordered if spilling changes relative section order.
 
-RUN: llvm-mc -n -filetype=obj -triple=x86_64 %t/link-order.s -o %t/link-order.o
-RUN: ld.lld -T %t/link-order.ld %t/link-order.o -o %t/link-order --enable-non-contiguous-regions
-RUN: llvm-readobj -x .order %t/link-order | FileCheck %s -check-prefix=LINK-ORDER
+# RUN: llvm-mc -n -filetype=obj -triple=x86_64 %t/link-order.s -o %t/link-order.o
+# RUN: ld.lld -T %t/link-order.ld %t/link-order.o -o %t/link-order --enable-non-contiguous-regions
+# RUN: llvm-readobj -x .order %t/link-order | FileCheck %s -check-prefix=LINK-ORDER
 
-LINK-ORDER: 0201
+# LINK-ORDER: 0201
 
 #--- spill.s
 .section .one_byte_section,"a",@progbits
