@@ -355,8 +355,8 @@ checkDataflow(AnalysisInputs<AnalysisT> AI,
   auto SetupTest = [&StmtToAnnotations,
                     PrevSetupTest = std::move(AI.SetupTest)](
                        AnalysisOutputs &AO) -> llvm::Error {
-    auto MaybeStmtToAnnotations = buildStatementToAnnotationMapping(
-        cast<FunctionDecl>(AO.InitEnv.getDeclCtx()), AO.Code);
+    auto MaybeStmtToAnnotations =
+        buildStatementToAnnotationMapping(AO.InitEnv.getCurrentFunc(), AO.Code);
     if (!MaybeStmtToAnnotations) {
       return MaybeStmtToAnnotations.takeError();
     }
