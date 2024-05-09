@@ -130,7 +130,7 @@ static const Loop *getOutermostLoop(const LoopInfo *LI, const BasicBlock *BB) {
   return L ? L->getOutermostLoop() : nullptr;
 }
 
-template <class T, bool IsMany>
+template <class StopT, bool IsManyStop>
 static bool isReachableImpl(SmallVectorImpl<BasicBlock *> &Worklist,
                             const T *StopBBOrSet,
                             const SmallPtrSetImpl<BasicBlock *> *ExclusionSet,
