@@ -540,6 +540,9 @@ Bug Fixes in This Version
   The values of 0 and 1 block any unrolling of the loop. This keeps the same behavior with GCC.
   Fixes (`#88624 <https://github.com/llvm/llvm-project/issues/88624>`_).
 
+- Clang will no longer emit a duplicate -Wunused-value warning for an expression
+  `(A, B)` which evaluates to glvalue `B` that can be converted to non ODR-use. (#GH45783)
+
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
