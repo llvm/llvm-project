@@ -1194,9 +1194,7 @@ define i32 @or_xor_tree_0001(i32 %ax, i32 %bx, i32 %cx) {
 ; CHECK-NEXT:    [[B:%.*]] = mul i32 [[BX:%.*]], 42
 ; CHECK-NEXT:    [[C:%.*]] = mul i32 [[CX:%.*]], 42
 ; CHECK-NEXT:    [[XOR1:%.*]] = xor i32 [[B]], [[A]]
-; CHECK-NEXT:    [[XOR2:%.*]] = xor i32 [[B]], [[C]]
-; CHECK-NEXT:    [[XOR3:%.*]] = xor i32 [[XOR2]], [[A]]
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[XOR1]], [[XOR3]]
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[XOR1]], [[C]]
 ; CHECK-NEXT:    ret i32 [[OR]]
 ;
   %a = mul i32 %ax, 42
@@ -1215,9 +1213,7 @@ define i32 @or_xor_tree_0010(i32 %ax, i32 %bx, i32 %cx) {
 ; CHECK-NEXT:    [[B:%.*]] = mul i32 [[BX:%.*]], 42
 ; CHECK-NEXT:    [[C:%.*]] = mul i32 [[CX:%.*]], 42
 ; CHECK-NEXT:    [[XOR1:%.*]] = xor i32 [[A]], [[B]]
-; CHECK-NEXT:    [[XOR2:%.*]] = xor i32 [[C]], [[B]]
-; CHECK-NEXT:    [[XOR3:%.*]] = xor i32 [[XOR2]], [[A]]
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[XOR1]], [[XOR3]]
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[XOR1]], [[C]]
 ; CHECK-NEXT:    ret i32 [[OR]]
 ;
   %a = mul i32 %ax, 42
@@ -1236,9 +1232,7 @@ define i32 @or_xor_tree_0011(i32 %ax, i32 %bx, i32 %cx) {
 ; CHECK-NEXT:    [[B:%.*]] = mul i32 [[BX:%.*]], 42
 ; CHECK-NEXT:    [[C:%.*]] = mul i32 [[CX:%.*]], 42
 ; CHECK-NEXT:    [[XOR1:%.*]] = xor i32 [[B]], [[A]]
-; CHECK-NEXT:    [[XOR2:%.*]] = xor i32 [[C]], [[B]]
-; CHECK-NEXT:    [[XOR3:%.*]] = xor i32 [[XOR2]], [[A]]
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[XOR1]], [[XOR3]]
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[XOR1]], [[C]]
 ; CHECK-NEXT:    ret i32 [[OR]]
 ;
   %a = mul i32 %ax, 42
@@ -1257,9 +1251,7 @@ define i32 @or_xor_tree_0100(i32 %ax, i32 %bx, i32 %cx) {
 ; CHECK-NEXT:    [[B:%.*]] = mul i32 [[BX:%.*]], 42
 ; CHECK-NEXT:    [[C:%.*]] = mul i32 [[CX:%.*]], 42
 ; CHECK-NEXT:    [[XOR1:%.*]] = xor i32 [[A]], [[B]]
-; CHECK-NEXT:    [[XOR2:%.*]] = xor i32 [[B]], [[C]]
-; CHECK-NEXT:    [[XOR3:%.*]] = xor i32 [[A]], [[XOR2]]
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[XOR1]], [[XOR3]]
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[XOR1]], [[C]]
 ; CHECK-NEXT:    ret i32 [[OR]]
 ;
   %a = mul i32 %ax, 42
@@ -1278,9 +1270,7 @@ define i32 @or_xor_tree_0101(i32 %ax, i32 %bx, i32 %cx) {
 ; CHECK-NEXT:    [[B:%.*]] = mul i32 [[BX:%.*]], 42
 ; CHECK-NEXT:    [[C:%.*]] = mul i32 [[CX:%.*]], 42
 ; CHECK-NEXT:    [[XOR1:%.*]] = xor i32 [[B]], [[A]]
-; CHECK-NEXT:    [[XOR2:%.*]] = xor i32 [[B]], [[C]]
-; CHECK-NEXT:    [[XOR3:%.*]] = xor i32 [[A]], [[XOR2]]
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[XOR1]], [[XOR3]]
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[XOR1]], [[C]]
 ; CHECK-NEXT:    ret i32 [[OR]]
 ;
   %a = mul i32 %ax, 42
@@ -1299,9 +1289,7 @@ define i32 @or_xor_tree_0110(i32 %ax, i32 %bx, i32 %cx) {
 ; CHECK-NEXT:    [[B:%.*]] = mul i32 [[BX:%.*]], 42
 ; CHECK-NEXT:    [[C:%.*]] = mul i32 [[CX:%.*]], 42
 ; CHECK-NEXT:    [[XOR1:%.*]] = xor i32 [[A]], [[B]]
-; CHECK-NEXT:    [[XOR2:%.*]] = xor i32 [[C]], [[B]]
-; CHECK-NEXT:    [[XOR3:%.*]] = xor i32 [[A]], [[XOR2]]
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[XOR1]], [[XOR3]]
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[XOR1]], [[C]]
 ; CHECK-NEXT:    ret i32 [[OR]]
 ;
   %a = mul i32 %ax, 42
@@ -1320,9 +1308,7 @@ define i32 @or_xor_tree_0111(i32 %ax, i32 %bx, i32 %cx) {
 ; CHECK-NEXT:    [[B:%.*]] = mul i32 [[BX:%.*]], 42
 ; CHECK-NEXT:    [[C:%.*]] = mul i32 [[CX:%.*]], 42
 ; CHECK-NEXT:    [[XOR1:%.*]] = xor i32 [[B]], [[A]]
-; CHECK-NEXT:    [[XOR2:%.*]] = xor i32 [[C]], [[B]]
-; CHECK-NEXT:    [[XOR3:%.*]] = xor i32 [[A]], [[XOR2]]
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[XOR1]], [[XOR3]]
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[XOR1]], [[C]]
 ; CHECK-NEXT:    ret i32 [[OR]]
 ;
   %a = mul i32 %ax, 42
@@ -1360,9 +1346,7 @@ define i32 @or_xor_tree_1001(i32 %ax, i32 %bx, i32 %cx) {
 ; CHECK-NEXT:    [[B:%.*]] = mul i32 [[BX:%.*]], 42
 ; CHECK-NEXT:    [[C:%.*]] = mul i32 [[CX:%.*]], 42
 ; CHECK-NEXT:    [[XOR1:%.*]] = xor i32 [[B]], [[A]]
-; CHECK-NEXT:    [[XOR2:%.*]] = xor i32 [[B]], [[C]]
-; CHECK-NEXT:    [[XOR3:%.*]] = xor i32 [[XOR2]], [[A]]
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[XOR3]], [[XOR1]]
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[XOR1]], [[C]]
 ; CHECK-NEXT:    ret i32 [[OR]]
 ;
   %a = mul i32 %ax, 42
@@ -1381,9 +1365,7 @@ define i32 @or_xor_tree_1010(i32 %ax, i32 %bx, i32 %cx) {
 ; CHECK-NEXT:    [[B:%.*]] = mul i32 [[BX:%.*]], 42
 ; CHECK-NEXT:    [[C:%.*]] = mul i32 [[CX:%.*]], 42
 ; CHECK-NEXT:    [[XOR1:%.*]] = xor i32 [[A]], [[B]]
-; CHECK-NEXT:    [[XOR2:%.*]] = xor i32 [[C]], [[B]]
-; CHECK-NEXT:    [[XOR3:%.*]] = xor i32 [[XOR2]], [[A]]
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[XOR3]], [[XOR1]]
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[XOR1]], [[C]]
 ; CHECK-NEXT:    ret i32 [[OR]]
 ;
   %a = mul i32 %ax, 42
@@ -1402,9 +1384,7 @@ define i32 @or_xor_tree_1011(i32 %ax, i32 %bx, i32 %cx) {
 ; CHECK-NEXT:    [[B:%.*]] = mul i32 [[BX:%.*]], 42
 ; CHECK-NEXT:    [[C:%.*]] = mul i32 [[CX:%.*]], 42
 ; CHECK-NEXT:    [[XOR1:%.*]] = xor i32 [[B]], [[A]]
-; CHECK-NEXT:    [[XOR2:%.*]] = xor i32 [[C]], [[B]]
-; CHECK-NEXT:    [[XOR3:%.*]] = xor i32 [[XOR2]], [[A]]
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[XOR3]], [[XOR1]]
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[XOR1]], [[C]]
 ; CHECK-NEXT:    ret i32 [[OR]]
 ;
   %a = mul i32 %ax, 42
@@ -1423,9 +1403,7 @@ define i32 @or_xor_tree_1100(i32 %ax, i32 %bx, i32 %cx) {
 ; CHECK-NEXT:    [[B:%.*]] = mul i32 [[BX:%.*]], 42
 ; CHECK-NEXT:    [[C:%.*]] = mul i32 [[CX:%.*]], 42
 ; CHECK-NEXT:    [[XOR1:%.*]] = xor i32 [[A]], [[B]]
-; CHECK-NEXT:    [[XOR2:%.*]] = xor i32 [[B]], [[C]]
-; CHECK-NEXT:    [[XOR3:%.*]] = xor i32 [[A]], [[XOR2]]
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[XOR3]], [[XOR1]]
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[XOR1]], [[C]]
 ; CHECK-NEXT:    ret i32 [[OR]]
 ;
   %a = mul i32 %ax, 42
@@ -1444,9 +1422,7 @@ define i32 @or_xor_tree_1101(i32 %ax, i32 %bx, i32 %cx) {
 ; CHECK-NEXT:    [[B:%.*]] = mul i32 [[BX:%.*]], 42
 ; CHECK-NEXT:    [[C:%.*]] = mul i32 [[CX:%.*]], 42
 ; CHECK-NEXT:    [[XOR1:%.*]] = xor i32 [[B]], [[A]]
-; CHECK-NEXT:    [[XOR2:%.*]] = xor i32 [[B]], [[C]]
-; CHECK-NEXT:    [[XOR3:%.*]] = xor i32 [[A]], [[XOR2]]
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[XOR3]], [[XOR1]]
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[XOR1]], [[C]]
 ; CHECK-NEXT:    ret i32 [[OR]]
 ;
   %a = mul i32 %ax, 42
@@ -1465,9 +1441,7 @@ define i32 @or_xor_tree_1110(i32 %ax, i32 %bx, i32 %cx) {
 ; CHECK-NEXT:    [[B:%.*]] = mul i32 [[BX:%.*]], 42
 ; CHECK-NEXT:    [[C:%.*]] = mul i32 [[CX:%.*]], 42
 ; CHECK-NEXT:    [[XOR1:%.*]] = xor i32 [[A]], [[B]]
-; CHECK-NEXT:    [[XOR2:%.*]] = xor i32 [[C]], [[B]]
-; CHECK-NEXT:    [[XOR3:%.*]] = xor i32 [[A]], [[XOR2]]
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[XOR3]], [[XOR1]]
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[XOR1]], [[C]]
 ; CHECK-NEXT:    ret i32 [[OR]]
 ;
   %a = mul i32 %ax, 42
@@ -1486,9 +1460,7 @@ define i32 @or_xor_tree_1111(i32 %ax, i32 %bx, i32 %cx) {
 ; CHECK-NEXT:    [[B:%.*]] = mul i32 [[BX:%.*]], 42
 ; CHECK-NEXT:    [[C:%.*]] = mul i32 [[CX:%.*]], 42
 ; CHECK-NEXT:    [[XOR1:%.*]] = xor i32 [[B]], [[A]]
-; CHECK-NEXT:    [[XOR2:%.*]] = xor i32 [[C]], [[B]]
-; CHECK-NEXT:    [[XOR3:%.*]] = xor i32 [[A]], [[XOR2]]
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[XOR3]], [[XOR1]]
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[XOR1]], [[C]]
 ; CHECK-NEXT:    ret i32 [[OR]]
 ;
   %a = mul i32 %ax, 42
