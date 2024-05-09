@@ -23,6 +23,7 @@
 /llvm/lib/Analysis/ScalarEvolution.cpp @nikic
 /llvm/lib/Analysis/ValueTracking.cpp @nikic
 /llvm/lib/IR/ConstantRange.cpp @nikic
+/llvm/lib/IR/Core.cpp @nikic
 /llvm/lib/Transforms/Scalar/CorrelatedValuePropagation.cpp @nikic
 /llvm/lib/Transforms/Scalar/MemCpyOptimizer.cpp @nikic
 /llvm/lib/Transforms/InstCombine/ @nikic
@@ -63,8 +64,8 @@ clang/test/AST/Interp/ @tbaederr
 /mlir/Dialect/*/Transforms/Bufferize.cpp @matthias-springer
 
 # Linalg Dialect in MLIR.
-/mlir/include/mlir/Dialect/Linalg/* @dcaballe @nicolasvasilache
-/mlir/lib/Dialect/Linalg/* @dcaballe @nicolasvasilache
+/mlir/include/mlir/Dialect/Linalg/* @dcaballe @nicolasvasilache @rengolin
+/mlir/lib/Dialect/Linalg/* @dcaballe @nicolasvasilache @rengolin
 /mlir/lib/Dialect/Linalg/Transforms/DecomposeLinalgOps.cpp @MaheshRavishankar @nicolasvasilache
 /mlir/lib/Dialect/Linalg/Transforms/DropUnitDims.cpp @MaheshRavishankar @nicolasvasilache
 /mlir/lib/Dialect/Linalg/Transforms/ElementwiseOpFusion.cpp @MaheshRavishankar @nicolasvasilache

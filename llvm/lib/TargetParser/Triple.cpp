@@ -115,6 +115,31 @@ StringRef Triple::getArchName(ArchType Kind, SubArchType SubArch) {
     if (SubArch == AArch64SubArch_arm64e)
       return "arm64e";
     break;
+  case Triple::dxil:
+    switch (SubArch) {
+    case Triple::NoSubArch:
+    case Triple::DXILSubArch_v1_0:
+      return "dxilv1.0";
+    case Triple::DXILSubArch_v1_1:
+      return "dxilv1.1";
+    case Triple::DXILSubArch_v1_2:
+      return "dxilv1.2";
+    case Triple::DXILSubArch_v1_3:
+      return "dxilv1.3";
+    case Triple::DXILSubArch_v1_4:
+      return "dxilv1.4";
+    case Triple::DXILSubArch_v1_5:
+      return "dxilv1.5";
+    case Triple::DXILSubArch_v1_6:
+      return "dxilv1.6";
+    case Triple::DXILSubArch_v1_7:
+      return "dxilv1.7";
+    case Triple::DXILSubArch_v1_8:
+      return "dxilv1.8";
+    default:
+      break;
+    }
+    break;
   default:
     break;
   }
@@ -348,14 +373,14 @@ StringRef Triple::getObjectFormatTypeName(ObjectFormatType Kind) {
 }
 
 static Triple::ArchType parseBPFArch(StringRef ArchName) {
-  if (ArchName.equals("bpf")) {
+  if (ArchName == "bpf") {
     if (sys::IsLittleEndianHost)
       return Triple::bpfel;
     else
       return Triple::bpfeb;
-  } else if (ArchName.equals("bpf_be") || ArchName.equals("bpfeb")) {
+  } else if (ArchName == "bpf_be" || ArchName == "bpfeb") {
     return Triple::bpfeb;
-  } else if (ArchName.equals("bpf_le") || ArchName.equals("bpfel")) {
+  } else if (ArchName == "bpf_le" || ArchName == "bpfel") {
     return Triple::bpfel;
   } else {
     return Triple::UnknownArch;
@@ -1014,6 +1039,53 @@ Triple::Triple(const Twine &ArchStr, const Twine &VendorStr, const Twine &OSStr,
     ObjectFormat = getDefaultFormat(*this);
 }
 
+static VersionTuple parseVersionFromName(StringRef Name);
+
+static StringRef getDXILArchNameFromShaderModel(StringRef ShaderModelStr) {
+  VersionTuple Ver =
+      parseVersionFromName(ShaderModelStr.drop_front(strlen("shadermodel")));
+  // Default DXIL minor version when Shader Model version is anything other
+  // than 6.[0...8] or 6.x (which translates to latest current SM version)
+  const unsigned SMMajor = 6;
+  if (!Ver.empty()) {
+    if (Ver.getMajor() == SMMajor) {
+      if (std::optional<unsigned> SMMinor = Ver.getMinor()) {
+        switch (*SMMinor) {
+        case 0:
+          return Triple::getArchName(Triple::dxil, Triple::DXILSubArch_v1_0);
+        case 1:
+          return Triple::getArchName(Triple::dxil, Triple::DXILSubArch_v1_1);
+        case 2:
+          return Triple::getArchName(Triple::dxil, Triple::DXILSubArch_v1_2);
+        case 3:
+          return Triple::getArchName(Triple::dxil, Triple::DXILSubArch_v1_3);
+        case 4:
+          return Triple::getArchName(Triple::dxil, Triple::DXILSubArch_v1_4);
+        case 5:
+          return Triple::getArchName(Triple::dxil, Triple::DXILSubArch_v1_5);
+        case 6:
+          return Triple::getArchName(Triple::dxil, Triple::DXILSubArch_v1_6);
+        case 7:
+          return Triple::getArchName(Triple::dxil, Triple::DXILSubArch_v1_7);
+        case 8:
+          return Triple::getArchName(Triple::dxil, Triple::DXILSubArch_v1_8);
+        default:
+          report_fatal_error("Unsupported Shader Model version", false);
+        }
+      }
+    }
+  } else {
+    // Special case: DXIL minor version is set to LatestCurrentDXILMinor for
+    // shadermodel6.x is
+    if (ShaderModelStr == "shadermodel6.x") {
+      return Triple::getArchName(Triple::dxil, Triple::LatestDXILSubArch);
+    }
+  }
+  // DXIL version corresponding to Shader Model version other than 6.Minor
+  // is 1.0
+  return Triple::getArchName(Triple::dxil, Triple::DXILSubArch_v1_0);
+}
+
 std::string Triple::normalize(StringRef Str) {
   bool IsMinGW32 = false;
   bool IsCygwin = false;
@@ -1206,6 +1278,20 @@ std::string Triple::normalize(StringRef Str) {
     }
   }
 
+  // Normalize DXIL triple if it does not include DXIL version number.
+  // Determine DXIL version number using the minor version number of Shader
+  // Model version specified in target triple, if any. Prior to decoupling DXIL
+  // version numbering from that of Shader Model DXIL version 1.Y corresponds to
+  // SM 6.Y. E.g., dxilv1.Y-unknown-shadermodelX.Y-hull
+  if (Components[0] == "dxil") {
+    if (Components.size() > 4) {
+      Components.resize(4);
+    }
+    // Add DXIL version only if shadermodel is specified in the triple
+    if (OS == Triple::ShaderModel) {
+      Components[0] = getDXILArchNameFromShaderModel(Components[2]);
+    }
+  }
   // Stick the corrected components back together to form the normalized string.
   return join(Components, "-");
 }
@@ -1418,6 +1504,17 @@ VersionTuple Triple::getVulkanVersion() const {
     return VulkanVersion;
 
   return VersionTuple(0);
+}
+
+VersionTuple Triple::getDXILVersion() const {
+  if (getArch() != dxil || getOS() != ShaderModel)
+    llvm_unreachable("invalid DXIL triple");
+  StringRef Arch = getArchName();
+  Arch.consume_front("dxilv");
+  VersionTuple DXILVersion = parseVersionFromName(Arch);
+  // FIXME: validate DXIL version against Shader Model version.
+  // Tracked by https://github.com/llvm/llvm-project/issues/91388
+  return DXILVersion;
 }
 
 void Triple::setTriple(const Twine &Str) {

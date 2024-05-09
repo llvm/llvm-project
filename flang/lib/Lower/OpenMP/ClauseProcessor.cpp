@@ -657,12 +657,12 @@ createCopyFunc(mlir::Location loc, Fortran::lower::AbstractConverter &converter,
           builder.createIntegerConstant(loc, builder.getIndexType(), extent));
     shape = builder.create<fir::ShapeOp>(loc, extents);
   }
-  auto declDst = builder.create<hlfir::DeclareOp>(loc, funcOp.getArgument(0),
-                                                  copyFuncName + "_dst", shape,
-                                                  typeparams, attrs);
-  auto declSrc = builder.create<hlfir::DeclareOp>(loc, funcOp.getArgument(1),
-                                                  copyFuncName + "_src", shape,
-                                                  typeparams, attrs);
+  auto declDst = builder.create<hlfir::DeclareOp>(
+      loc, funcOp.getArgument(0), copyFuncName + "_dst", shape, typeparams,
+      /*dummy_scope=*/nullptr, attrs);
+  auto declSrc = builder.create<hlfir::DeclareOp>(
+      loc, funcOp.getArgument(1), copyFuncName + "_src", shape, typeparams,
+      /*dummy_scope=*/nullptr, attrs);
   converter.copyVar(loc, declDst.getBase(), declSrc.getBase());
   builder.create<mlir::func::ReturnOp>(loc);
   return funcOp;
