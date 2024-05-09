@@ -63,6 +63,7 @@ void AMDGPUInstructionSelector::setupMF(MachineFunction &MF, GISelKnownBits *KB,
                                         BlockFrequencyInfo *BFI) {
   MRI = &MF.getRegInfo();
   Subtarget = &MF.getSubtarget<GCNSubtarget>();
+  Subtarget->checkSubtargetFeatures(MF.getFunction());
   InstructionSelector::setupMF(MF, KB, CoverageInfo, PSI, BFI);
 }
 

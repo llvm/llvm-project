@@ -250,6 +250,10 @@ public:
   GCNSubtarget &initializeSubtargetDependencies(const Triple &TT,
                                                    StringRef GPU, StringRef FS);
 
+  /// Diagnose inconsistent subtarget features before attempting to codegen
+  /// function \p F.
+  void checkSubtargetFeatures(const Function &F) const;
+
   const SIInstrInfo *getInstrInfo() const override {
     return &InstrInfo;
   }
