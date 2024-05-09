@@ -496,7 +496,7 @@ public:
 
   // Represents a parsed type name coming out of GetTypeScopeAndBasename. The
   // structure holds StringRefs pointing to portions of the original name, and
-  // so most not be used after the name is destroyed.
+  // so must not be used after the name is destroyed.
   struct ParsedName {
     lldb::TypeClass type_class = lldb::eTypeClassAny;
 
