@@ -3390,6 +3390,7 @@ multiclass VFLAT_Real_gfx13 <bits<8> op, string name = get_FLAT_ps<NAME>.Mnemoni
     let DecoderNamespace = "GFX13";
 
     let Inst{25-24} = {ps.is_flat_global, ps.is_flat_scratch};
+    let Inst{63} = cpol{CPolBit.SCAL}; // scale offset -- TODO-GFX13: should be 48, update when FFM is ready!
   }
 }
 
