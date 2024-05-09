@@ -98,49 +98,36 @@ void SampleProfileMatcher::findProfileAnchors(const FunctionSamples &FS,
     return LineOffset & 0x8000;
   };
 
-  std::map<LineLocation, std::unordered_set<FunctionId>> ProfileCallsites;
+  auto InsertAnchor = [](const LineLocation &Loc, const FunctionId &CalleeName,
+                         AnchorMap &ProfileAnchors) {
+    auto Ret = ProfileAnchors.try_emplace(Loc, CalleeName);
+    if (!Ret.second) {
+      // For multiple callees, which indicates it's an indirect call, we use a
+      // dummy name(UnknownIndirectCallee) as the indrect callee name.
+      Ret.first->second = FunctionId(UnknownIndirectCallee);
+    }
+  };
 
   for (const auto &I : FS.getBodySamples()) {
     const LineLocation &Loc = I.first;
     if (isInvalidLineOffset(Loc.LineOffset))
       continue;
-    for (const auto &I : I.second.getCallTargets()) {
-      auto Ret =
-          ProfileCallsites.try_emplace(Loc, std::unordered_set<FunctionId>());
-      Ret.first->second.insert(I.first);
-    }
+    for (const auto &C : I.second.getCallTargets())
+      InsertAnchor(Loc, C.first, ProfileAnchors);
   }
 
   for (const auto &I : FS.getCallsiteSamples()) {
     const LineLocation &Loc = I.first;
     if (isInvalidLineOffset(Loc.LineOffset))
       continue;
-    const auto &CalleeMap = I.second;
-    for (const auto &I : CalleeMap) {
-      auto Ret =
-          ProfileCallsites.try_emplace(Loc, std::unordered_set<FunctionId>());
-      Ret.first->second.insert(I.first);
-    }
-  }
-
-  for (const auto &I : ProfileCallsites) {
-    const auto &Loc = I.first;
-    const auto &Callees = I.second;
-    if (Callees.size() == 1) {
-      auto CalleeName = *Callees.begin();
-      ProfileAnchors.emplace(Loc, CalleeName);
-    } else if (Callees.size() > 1) {
-      // use a dummy name(UnknownIndirectCallee) for unknown indrect callee
-      // name.
-      ProfileAnchors.emplace(Loc, FunctionId(UnknownIndirectCallee));
-    }
+    for (const auto &C : I.second)
+      InsertAnchor(Loc, C.first, ProfileAnchors);
   }
 }
 
 LocToLocMap SampleProfileMatcher::longestCommonSequence(
-    const std::vector<Anchor> &AnchorVec1,
-    const std::vector<Anchor> &AnchorVec2) const {
-  int32_t Size1 = AnchorVec1.size(), Size2 = AnchorVec2.size(),
+    const AnchorList &AnchorList1, const AnchorList &AnchorList2) const {
+  int32_t Size1 = AnchorList1.size(), Size2 = AnchorList2.size(),
           MaxDepth = Size1 + Size2;
   auto Index = [&](int32_t I) { return I + MaxDepth; };
 
@@ -150,8 +137,8 @@ LocToLocMap SampleProfileMatcher::longestCommonSequence(
 
   // Backtrack the SES result.
   auto Backtrack = [&](const std::vector<std::vector<int32_t>> &Trace,
-                       const std::vector<Anchor> &AnchorVec1,
-                       const std::vector<Anchor> &AnchorVec2,
+                       const AnchorList &AnchorList1,
+                       const AnchorList &AnchorList2,
                        LocToLocMap &EqualLocations) {
     int32_t X = Size1, Y = Size2;
     for (int32_t Depth = Trace.size() - 1; X > 0 || Y > 0; Depth--) {
@@ -168,7 +155,7 @@ LocToLocMap SampleProfileMatcher::longestCommonSequence(
       while (X > PrevX && Y > PrevY) {
         X--;
         Y--;
-        EqualLocations.insert({AnchorVec1[X].first, AnchorVec2[Y].first});
+        EqualLocations.insert({AnchorList1[X].first, AnchorList2[Y].first});
       }
 
       if (Depth == 0)
@@ -200,14 +187,14 @@ LocToLocMap SampleProfileMatcher::longestCommonSequence(
         X = V[Index(K - 1)] + 1;
       Y = X - K;
       while (X < Size1 && Y < Size2 &&
-             AnchorVec1[X].second == AnchorVec2[Y].second)
+             AnchorList1[X].second == AnchorList2[Y].second)
         X++, Y++;
 
       V[Index(K)] = X;
 
       if (X >= Size1 && Y >= Size2) {
         // Length of an SES is D.
-        Backtrack(Trace, AnchorVec1, AnchorVec2, EqualLocations);
+        Backtrack(Trace, AnchorList1, AnchorList2, EqualLocations);
         return EqualLocations;
       }
     }
@@ -216,7 +203,7 @@ LocToLocMap SampleProfileMatcher::longestCommonSequence(
   return EqualLocations;
 }
 
-void SampleProfileMatcher::matchNonCallsiteLocsAndWriteResults(
+void SampleProfileMatcher::matchNonCallsiteLocs(
     const LocToLocMap &MatchedAnchors, const AnchorMap &IRAnchors,
     LocToLocMap &IRToProfileLocationMap) {
   auto InsertMatching = [&](const LineLocation &From, const LineLocation &To) {
@@ -298,11 +285,11 @@ void SampleProfileMatcher::runStaleProfileMatching(
   assert(IRToProfileLocationMap.empty() &&
          "Run stale profile matching only once per function");
 
-  std::vector<Anchor> FilteredProfileAnchorList;
+  AnchorList FilteredProfileAnchorList;
   for (const auto &I : ProfileAnchors)
     FilteredProfileAnchorList.emplace_back(I);
 
-  std::vector<Anchor> FilteredIRAnchorsList;
+  AnchorList FilteredIRAnchorsList;
   // Filter the non-callsite from IRAnchors.
   for (const auto &I : IRAnchors) {
     if (I.second.stringRef().empty())
@@ -321,8 +308,7 @@ void SampleProfileMatcher::runStaleProfileMatching(
 
   // Match the non-callsite locations and write the result to
   // IRToProfileLocationMap.
-  matchNonCallsiteLocsAndWriteResults(MatchedAnchors, IRAnchors,
-                                      IRToProfileLocationMap);
+  matchNonCallsiteLocs(MatchedAnchors, IRAnchors, IRToProfileLocationMap);
 }
 
 void SampleProfileMatcher::runOnFunction(Function &F) {

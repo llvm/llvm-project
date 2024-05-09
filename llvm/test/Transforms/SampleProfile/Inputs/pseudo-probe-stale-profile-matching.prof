@@ -4,6 +4,7 @@ main:1497:0
  3: 112 bar:60 dummy_calltarget:50
  4: 116
  5: 0
+ 7: 124 bar:124
  9: 126 bar:126
  6: foo:452
   1: 112

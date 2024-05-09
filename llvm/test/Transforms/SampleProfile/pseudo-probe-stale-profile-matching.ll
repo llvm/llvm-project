@@ -71,7 +71,7 @@
 ; CHECK: Location is rematched backwards from 9 to 2
 ; CHECK: Location is rematched backwards from 10 to 3
 ; CHECK: Location is rematched backwards from 11 to 4
-; CHECK: Location is matched from 14 to 7
+; CHECK: Callsite with callee:bar is matched from 14 to 7
 ; CHECK: Callsite with callee:foo is matched from 15 to 8
 ; CHECK: Callsite with callee:bar is matched from 16 to 9
 
@@ -86,6 +86,7 @@
 ; CHECK:    3:  call void @llvm.pseudoprobe(i64 6699318081062747564, i64 3, i32 0, i64 -1), !dbg ![[#]] - weight: 13 - factor: 1.00)
 ; CHECK:    6:  %call1.i5 = call i32 @bar(i32 noundef %add.i4), !dbg ![[#]] - weight: 13 - factor: 1.00)
 ; CHECK:    4:  call void @llvm.pseudoprobe(i64 6699318081062747564, i64 4, i32 0, i64 -1), !dbg ![[#]] - weight: 112 - factor: 1.00)
+; CHECK:    14: %call2 = call i32 @bar(i32 noundef %3), !dbg ![[#]] - weight: 124 - factor: 1.00)
 ; CHECK:    8:  call void @llvm.pseudoprobe(i64 -2624081020897602054, i64 8, i32 0, i64 -1), !dbg ![[#]] - weight: 0 - factor: 1.00)
 ; CHECK:    1:  call void @llvm.pseudoprobe(i64 6699318081062747564, i64 1, i32 0, i64 -1), !dbg ![[#]] - weight: 117 - factor: 1.00)
 ; CHECK:    2:  call void @llvm.pseudoprobe(i64 6699318081062747564, i64 2, i32 0, i64 -1), !dbg ![[#]] - weight: 104 - factor: 1.00)

@@ -19,7 +19,7 @@
 
 namespace llvm {
 
-using Anchor = std::pair<LineLocation, FunctionId>;
+using AnchorList = std::vector<std::pair<LineLocation, FunctionId>>;
 using AnchorMap = std::map<LineLocation, FunctionId>;
 
 // Sample profile matching - fuzzy match.
@@ -151,12 +151,12 @@ private:
   // parts from the resulting SES are used to remap the IR locations to the
   // profile locations. As the number of function callsite is usually not big,
   // we currently just implements the basic greedy version(page 6 of the paper).
-  LocToLocMap longestCommonSequence(
-      const std::vector<Anchor> &IRCallsiteAnchors,
-      const std::vector<Anchor> &ProfileCallsiteAnchors) const;
-  void matchNonCallsiteLocsAndWriteResults(const LocToLocMap &AnchorMatchings,
-                                           const AnchorMap &IRAnchors,
-                                           LocToLocMap &IRToProfileLocationMap);
+  LocToLocMap
+  longestCommonSequence(const AnchorList &IRCallsiteAnchors,
+                        const AnchorList &ProfileCallsiteAnchors) const;
+  void matchNonCallsiteLocs(const LocToLocMap &AnchorMatchings,
+                            const AnchorMap &IRAnchors,
+                            LocToLocMap &IRToProfileLocationMap);
   void runStaleProfileMatching(const Function &F, const AnchorMap &IRAnchors,
                                const AnchorMap &ProfileAnchors,
                                LocToLocMap &IRToProfileLocationMap);
