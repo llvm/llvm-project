@@ -2192,7 +2192,10 @@ CIRGenFunction::buildConditionalBlocks(const AbstractConditionalOperator *E,
 LValue CIRGenFunction::buildConditionalOperatorLValue(
     const AbstractConditionalOperator *expr) {
   if (!expr->isGLValue()) {
-    llvm_unreachable("NYI");
+    // ?: here should be an aggregate.
+    assert(hasAggregateEvaluationKind(expr->getType()) &&
+           "Unexpected conditional operator!");
+    return buildAggExprToLValue(expr);
   }
 
   OpaqueValueMapping binding(*this, expr);

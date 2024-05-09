@@ -271,9 +271,7 @@ public:
   void VisitDesignatedInitUpdateExpr(DesignatedInitUpdateExpr *E) {
     llvm_unreachable("NYI");
   }
-  void VisitAbstractConditionalOperator(const AbstractConditionalOperator *E) {
-    llvm_unreachable("NYI");
-  }
+  void VisitAbstractConditionalOperator(const AbstractConditionalOperator *E);
   void VisitChooseExpr(const ChooseExpr *E) { llvm_unreachable("NYI"); }
   void VisitInitListExpr(InitListExpr *E);
   void VisitCXXParenListOrInitListExpr(Expr *ExprToVisit, ArrayRef<Expr *> Args,
@@ -1299,6 +1297,60 @@ void AggExprEmitter::VisitCXXBindTemporaryExpr(CXXBindTemporaryExpr *E) {
     CGF.buildCXXTemporary(E->getTemporary(), E->getType(), Dest.getAddress());
 }
 
+void AggExprEmitter::VisitAbstractConditionalOperator(
+    const AbstractConditionalOperator *E) {
+  auto &builder = CGF.getBuilder();
+  auto loc = CGF.getLoc(E->getSourceRange());
+
+  // Bind the common expression if necessary.
+  CIRGenFunction::OpaqueValueMapping binding(CGF, E);
+  CIRGenFunction::ConditionalEvaluation eval(CGF);
+  assert(!UnimplementedFeature::getProfileCount());
+
+  // Save whether the destination's lifetime is externally managed.
+  bool isExternallyDestructed = Dest.isExternallyDestructed();
+  bool destructNonTrivialCStruct =
+      !isExternallyDestructed &&
+      E->getType().isDestructedType() == QualType::DK_nontrivial_c_struct;
+  isExternallyDestructed |= destructNonTrivialCStruct;
+
+  CGF.buildIfOnBoolExpr(
+      E->getCond(), /*thenBuilder=*/
+      [&](mlir::OpBuilder &, mlir::Location) {
+        eval.begin(CGF);
+        {
+          CIRGenFunction::LexicalScope lexScope{CGF, loc,
+                                                builder.getInsertionBlock()};
+          Dest.setExternallyDestructed(isExternallyDestructed);
+          assert(!UnimplementedFeature::incrementProfileCounter());
+          Visit(E->getTrueExpr());
+        }
+        eval.end(CGF);
+      },
+      loc,
+      /*elseBuilder=*/
+      [&](mlir::OpBuilder &, mlir::Location) {
+        eval.begin(CGF);
+        {
+          CIRGenFunction::LexicalScope lexScope{CGF, loc,
+                                                builder.getInsertionBlock()};
+          // If the result of an agg expression is unused, then the emission
+          // of the LHS might need to create a destination slot.  That's fine
+          // with us, and we can safely emit the RHS into the same slot, but
+          // we shouldn't claim that it's already being destructed.
+          Dest.setExternallyDestructed(isExternallyDestructed);
+          assert(!UnimplementedFeature::incrementProfileCounter());
+          Visit(E->getFalseExpr());
+        }
+        eval.end(CGF);
+      },
+      loc);
+
+  if (destructNonTrivialCStruct)
+    llvm_unreachable("NYI");
+  assert(!UnimplementedFeature::incrementProfileCounter());
+}
+
 //===----------------------------------------------------------------------===//
 //                        Helpers and dispatcher
 //===----------------------------------------------------------------------===//
@@ -1567,4 +1619,15 @@ CIRGenFunction::getOverlapForFieldInit(const FieldDecl *FD) {
 
   // The tail padding may contain values we need to preserve.
   return AggValueSlot::MayOverlap;
+}
+
+LValue CIRGenFunction::buildAggExprToLValue(const Expr *E) {
+  assert(hasAggregateEvaluationKind(E->getType()) && "Invalid argument!");
+  Address Temp = CreateMemTemp(E->getType(), getLoc(E->getSourceRange()));
+  LValue LV = makeAddrLValue(Temp, E->getType());
+  buildAggExpr(E, AggValueSlot::forLValue(LV, AggValueSlot::IsNotDestructed,
+                                          AggValueSlot::DoesNotNeedGCBarriers,
+                                          AggValueSlot::IsNotAliased,
+                                          AggValueSlot::DoesNotOverlap));
+  return LV;
 }

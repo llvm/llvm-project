@@ -1597,6 +1597,8 @@ public:
     buildAggregateCopy(Dest, Src, EltTy, AggValueSlot::MayOverlap, IsVolatile);
   }
 
+  LValue buildAggExprToLValue(const Expr *E);
+
   /// Emit an aggregate copy.
   ///
   /// \param isVolatile \c true iff either the source or the destination is
