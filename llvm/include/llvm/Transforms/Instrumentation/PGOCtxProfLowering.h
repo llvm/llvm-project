@@ -12,13 +12,16 @@
 #ifndef LLVM_TRANSFORMS_INSTRUMENTATION_PGOCTXPROFLOWERING_H
 #define LLVM_TRANSFORMS_INSTRUMENTATION_PGOCTXPROFLOWERING_H
 
+#include "llvm/IR/PassManager.h"
 namespace llvm {
 class Type;
 
-class PGOCtxProfLoweringPass {
+class PGOCtxProfLoweringPass : public PassInfoMixin<PGOCtxProfLoweringPass> {
 public:
   explicit PGOCtxProfLoweringPass() = default;
   static bool isContextualIRPGOEnabled();
+
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
 };
 } // namespace llvm
 #endif

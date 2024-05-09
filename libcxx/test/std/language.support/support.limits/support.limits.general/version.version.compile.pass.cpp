@@ -7464,17 +7464,11 @@
 #   endif
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_reference_wrapper
-#     error "__cpp_lib_reference_wrapper should be defined in c++26"
-#   endif
-#   if __cpp_lib_reference_wrapper != 202403L
-#     error "__cpp_lib_reference_wrapper should have the value 202403L in c++26"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_reference_wrapper
-#     error "__cpp_lib_reference_wrapper should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_reference_wrapper
+#   error "__cpp_lib_reference_wrapper should be defined in c++26"
+# endif
+# if __cpp_lib_reference_wrapper != 202403L
+#   error "__cpp_lib_reference_wrapper should have the value 202403L in c++26"
 # endif
 
 # ifndef __cpp_lib_remove_cvref
