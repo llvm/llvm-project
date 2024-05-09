@@ -1354,7 +1354,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
         // Turn (and (shl x, c2), c1) -> (slli_uw (srli x, c4-c2), c4) where c1
         // is shifted mask with 32 set bits and c4 trailing zeros.
         unsigned Trailing = llvm::countr_zero(C1);
-        if (Leading + Trailing == 32 && C2 < Trailing &&
+        if (Leading > 0 && Leading + Trailing == 32 && C2 < Trailing &&
             Subtarget->hasStdExtZba() && OneUseOrZExtW) {
           SDNode *SRLI = CurDAG->getMachineNode(
               RISCV::SRLI, DL, VT, X,
