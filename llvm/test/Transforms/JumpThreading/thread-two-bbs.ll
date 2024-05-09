@@ -130,8 +130,8 @@ exit:
 }
 
 
-; Verify that we do *not* thread any edge.  We used to evaluate
-; constant expressions like:
+; Verify that we thread the edge correctly.  We used to evaluate constant
+; expressions like:
 ;
 ;   icmp ugt ptr null, inttoptr (i64 4 to ptr)
 ;
