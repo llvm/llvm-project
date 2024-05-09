@@ -70,6 +70,7 @@ add_proxy_header_library(
     time_t.h
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-types.time_t
+    libc.include.time
 )
 
 add_proxy_header_library(
@@ -78,6 +79,7 @@ add_proxy_header_library(
     clockid_t.h
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-types.clockid_t
+    libc.include.sys_types
 )
 
 add_proxy_header_library(
@@ -86,6 +88,7 @@ add_proxy_header_library(
     clock_t.h
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-types.clock_t
+    libc.include.time
 )
 
 add_proxy_header_library(
@@ -94,6 +97,7 @@ add_proxy_header_library(
     suseconds_t.h
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-types.suseconds_t
+    libc.include.sys_time
 )
 
 add_proxy_header_library(
@@ -102,4 +106,5 @@ add_proxy_header_library(
     struct_timeval.h
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-types.struct_timeval
+    libc.include.sys_time
 )
