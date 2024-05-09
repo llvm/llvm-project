@@ -41,7 +41,7 @@ define float @frem4_nsz(float %x) {
 ; CHECK-FP-NEXT:    vmov s2, r0
 ; CHECK-FP-NEXT:    vdiv.f32 s4, s2, s0
 ; CHECK-FP-NEXT:    vrintz.f32 s4, s4
-; CHECK-FP-NEXT:    vmls.f32 s2, s4, s0
+; CHECK-FP-NEXT:    vfms.f32 s2, s4, s0
 ; CHECK-FP-NEXT:    vmov r0, s2
 ; CHECK-FP-NEXT:    bx lr
 ;

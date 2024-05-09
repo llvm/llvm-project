@@ -17387,8 +17387,13 @@ SDValue DAGCombiner::visitFREM(SDNode *N) {
       (Flags.hasNoSignedZeros() || DAG.isKnownNonNegativeFP(N0))) {
     SDValue Div = DAG.getNode(ISD::FDIV, DL, VT, N0, N1);
     SDValue Rnd = DAG.getNode(ISD::FTRUNC, DL, VT, Div);
-    SDValue Mul = DAG.getNode(ISD::FMUL, DL, VT, Rnd, N1);
-    return DAG.getNode(ISD::FSUB, DL, VT, N0, Mul);
+    if (TLI.isFMAFasterThanFMulAndFAdd(DAG.getMachineFunction(), VT)) {
+      return DAG.getNode(ISD::FMA, DL, VT, DAG.getNode(ISD::FNEG, DL, VT, Rnd),
+                         N1, N0);
+    } else {
+      SDValue Mul = DAG.getNode(ISD::FMUL, DL, VT, Rnd, N1);
+      return DAG.getNode(ISD::FSUB, DL, VT, N0, Mul);
+    }
   }
 
   return SDValue();

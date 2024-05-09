@@ -16,10 +16,9 @@ define float @frem2_nsz(float %x) {
 ; CHECK-SD-LABEL: frem2_nsz:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    fmov s1, #2.00000000
-; CHECK-SD-NEXT:    fdiv s1, s0, s1
-; CHECK-SD-NEXT:    frintz s1, s1
-; CHECK-SD-NEXT:    fadd s1, s1, s1
-; CHECK-SD-NEXT:    fsub s0, s0, s1
+; CHECK-SD-NEXT:    fdiv s2, s0, s1
+; CHECK-SD-NEXT:    frintz s2, s2
+; CHECK-SD-NEXT:    fmsub s0, s2, s1, s0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: frem2_nsz:
@@ -55,10 +54,9 @@ define float @frem2_abs(float %x) {
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    fabs s0, s0
 ; CHECK-SD-NEXT:    fmov s1, #2.00000000
-; CHECK-SD-NEXT:    fdiv s1, s0, s1
-; CHECK-SD-NEXT:    frintz s1, s1
-; CHECK-SD-NEXT:    fadd s1, s1, s1
-; CHECK-SD-NEXT:    fsub s0, s0, s1
+; CHECK-SD-NEXT:    fdiv s2, s0, s1
+; CHECK-SD-NEXT:    frintz s2, s2
+; CHECK-SD-NEXT:    fmsub s0, s2, s1, s0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: frem2_abs:
@@ -76,10 +74,10 @@ define half @hrem2_nsz(half %x) {
 ; CHECK-SD-LABEL: hrem2_nsz:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    fmov h1, #2.00000000
+; CHECK-SD-NEXT:    fmov h2, #-2.00000000
 ; CHECK-SD-NEXT:    fdiv h1, h0, h1
 ; CHECK-SD-NEXT:    frintz h1, h1
-; CHECK-SD-NEXT:    fadd h1, h1, h1
-; CHECK-SD-NEXT:    fsub h0, h0, h1
+; CHECK-SD-NEXT:    fmadd h0, h1, h2, h0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: hrem2_nsz:
@@ -103,10 +101,9 @@ define double @drem2_nsz(double %x) {
 ; CHECK-SD-LABEL: drem2_nsz:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    fmov d1, #2.00000000
-; CHECK-SD-NEXT:    fdiv d1, d0, d1
-; CHECK-SD-NEXT:    frintz d1, d1
-; CHECK-SD-NEXT:    fadd d1, d1, d1
-; CHECK-SD-NEXT:    fsub d0, d0, d1
+; CHECK-SD-NEXT:    fdiv d2, d0, d1
+; CHECK-SD-NEXT:    frintz d2, d2
+; CHECK-SD-NEXT:    fmsub d0, d2, d1, d0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: drem2_nsz:
@@ -170,8 +167,7 @@ define float @fremm2_nsz(float %x) {
 ; CHECK-SD-NEXT:    fmov s1, #-2.00000000
 ; CHECK-SD-NEXT:    fdiv s2, s0, s1
 ; CHECK-SD-NEXT:    frintz s2, s2
-; CHECK-SD-NEXT:    fmul s1, s2, s1
-; CHECK-SD-NEXT:    fsub s0, s0, s1
+; CHECK-SD-NEXT:    fmsub s0, s2, s1, s0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: fremm2_nsz:
@@ -190,8 +186,7 @@ define float @frem4_abs(float %x) {
 ; CHECK-SD-NEXT:    fmov s1, #4.00000000
 ; CHECK-SD-NEXT:    fdiv s2, s0, s1
 ; CHECK-SD-NEXT:    frintz s2, s2
-; CHECK-SD-NEXT:    fmul s1, s2, s1
-; CHECK-SD-NEXT:    fsub s0, s0, s1
+; CHECK-SD-NEXT:    fmsub s0, s2, s1, s0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: frem4_abs:
@@ -212,8 +207,7 @@ define float @frem16_abs(float %x) {
 ; CHECK-SD-NEXT:    fmov s1, #16.00000000
 ; CHECK-SD-NEXT:    fdiv s2, s0, s1
 ; CHECK-SD-NEXT:    frintz s2, s2
-; CHECK-SD-NEXT:    fmul s1, s2, s1
-; CHECK-SD-NEXT:    fsub s0, s0, s1
+; CHECK-SD-NEXT:    fmsub s0, s2, s1, s0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: frem16_abs:
@@ -235,8 +229,7 @@ define float @frem4294967296_abs(float %x) {
 ; CHECK-SD-NEXT:    fmov s1, w8
 ; CHECK-SD-NEXT:    fdiv s2, s0, s1
 ; CHECK-SD-NEXT:    frintz s2, s2
-; CHECK-SD-NEXT:    fmul s1, s2, s1
-; CHECK-SD-NEXT:    fsub s0, s0, s1
+; CHECK-SD-NEXT:    fmsub s0, s2, s1, s0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: frem4294967296_abs:
@@ -259,8 +252,7 @@ define float @frem1152921504606846976_abs(float %x) {
 ; CHECK-SD-NEXT:    fmov s1, w8
 ; CHECK-SD-NEXT:    fdiv s2, s0, s1
 ; CHECK-SD-NEXT:    frintz s2, s2
-; CHECK-SD-NEXT:    fmul s1, s2, s1
-; CHECK-SD-NEXT:    fsub s0, s0, s1
+; CHECK-SD-NEXT:    fmsub s0, s2, s1, s0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: frem1152921504606846976_abs:
@@ -283,8 +275,7 @@ define float @frem4611686018427387904_abs(float %x) {
 ; CHECK-SD-NEXT:    fmov s1, w8
 ; CHECK-SD-NEXT:    fdiv s2, s0, s1
 ; CHECK-SD-NEXT:    frintz s2, s2
-; CHECK-SD-NEXT:    fmul s1, s2, s1
-; CHECK-SD-NEXT:    fsub s0, s0, s1
+; CHECK-SD-NEXT:    fmsub s0, s2, s1, s0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: frem4611686018427387904_abs:
@@ -306,8 +297,7 @@ define float @frem9223372036854775808_abs(float %x) {
 ; CHECK-SD-NEXT:    fabs s0, s0
 ; CHECK-SD-NEXT:    fdiv s2, s0, s1
 ; CHECK-SD-NEXT:    frintz s2, s2
-; CHECK-SD-NEXT:    fmul s1, s2, s1
-; CHECK-SD-NEXT:    fsub s0, s0, s1
+; CHECK-SD-NEXT:    fmsub s0, s2, s1, s0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: frem9223372036854775808_abs:
@@ -325,10 +315,9 @@ define <4 x float> @frem2_nsz_vec(<4 x float> %x) {
 ; CHECK-SD-LABEL: frem2_nsz_vec:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    movi v1.4s, #64, lsl #24
-; CHECK-SD-NEXT:    fdiv v1.4s, v0.4s, v1.4s
-; CHECK-SD-NEXT:    frintz v1.4s, v1.4s
-; CHECK-SD-NEXT:    fadd v1.4s, v1.4s, v1.4s
-; CHECK-SD-NEXT:    fsub v0.4s, v0.4s, v1.4s
+; CHECK-SD-NEXT:    fdiv v2.4s, v0.4s, v1.4s
+; CHECK-SD-NEXT:    frintz v2.4s, v2.4s
+; CHECK-SD-NEXT:    fmls v0.4s, v1.4s, v2.4s
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: frem2_nsz_vec:
@@ -388,8 +377,7 @@ define <4 x float> @frem1152921504606846976_absv(<4 x float> %x) {
 ; CHECK-SD-NEXT:    dup v1.4s, w8
 ; CHECK-SD-NEXT:    fdiv v2.4s, v0.4s, v1.4s
 ; CHECK-SD-NEXT:    frintz v2.4s, v2.4s
-; CHECK-SD-NEXT:    fmul v1.4s, v2.4s, v1.4s
-; CHECK-SD-NEXT:    fsub v0.4s, v0.4s, v1.4s
+; CHECK-SD-NEXT:    fmls v0.4s, v1.4s, v2.4s
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: frem1152921504606846976_absv:
@@ -454,8 +442,7 @@ define float @frem2_nsz_sitofp(float %x, i32 %sa) {
 ; CHECK-SD-NEXT:    scvtf s1, w8
 ; CHECK-SD-NEXT:    fdiv s2, s0, s1
 ; CHECK-SD-NEXT:    frintz s2, s2
-; CHECK-SD-NEXT:    fmul s1, s2, s1
-; CHECK-SD-NEXT:    fsub s0, s0, s1
+; CHECK-SD-NEXT:    fmsub s0, s2, s1, s0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: frem2_nsz_sitofp:
@@ -479,8 +466,7 @@ define float @frem2_nsz_uitofp(float %x, i32 %sa) {
 ; CHECK-SD-NEXT:    ucvtf s1, w8
 ; CHECK-SD-NEXT:    fdiv s2, s0, s1
 ; CHECK-SD-NEXT:    frintz s2, s2
-; CHECK-SD-NEXT:    fmul s1, s2, s1
-; CHECK-SD-NEXT:    fsub s0, s0, s1
+; CHECK-SD-NEXT:    fmsub s0, s2, s1, s0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: frem2_nsz_uitofp:
@@ -505,8 +491,7 @@ define float @frem2_const_sitofp(float %x, i32 %sa) {
 ; CHECK-SD-NEXT:    scvtf s0, w8
 ; CHECK-SD-NEXT:    fdiv s2, s1, s0
 ; CHECK-SD-NEXT:    frintz s2, s2
-; CHECK-SD-NEXT:    fmul s0, s2, s0
-; CHECK-SD-NEXT:    fsub s0, s1, s0
+; CHECK-SD-NEXT:    fmsub s0, s2, s0, s1
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: frem2_const_sitofp:

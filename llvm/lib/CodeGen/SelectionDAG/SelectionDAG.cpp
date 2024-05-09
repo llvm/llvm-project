@@ -5567,7 +5567,7 @@ bool SelectionDAG::isKnownNeverZero(SDValue Op, unsigned Depth) const {
 
 bool SelectionDAG::isKnownNonNegativeFP(SDValue Op) const {
   if (ConstantFPSDNode *C1 = isConstOrConstSplatFP(Op, true))
-    return !C1->isNegative();
+    return !C1->isNegative() && !C1->isNaN();
 
   return Op.getOpcode() == ISD::FABS;
 }
