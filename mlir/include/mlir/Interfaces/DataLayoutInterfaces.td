@@ -194,6 +194,175 @@ def DataLayoutSpecInterface : AttrInterface<"DataLayoutSpecInterface"> {
   }];
 }
 
+def TargetDeviceDescSpecInterface : AttrInterface<"TargetDeviceDescSpecInterface"> {
+  let cppNamespace = "::mlir";
+
+  let description = [{
+    Attribute interface describing a target device description specification.
+
+    A target device description specification is a list of device properties (key)
+    and their values for a specific device. The device is identified using "device_id"
+    (as a key and ui32 value) and "device_type" key which must have a string value.
+    Both "device_id" and "device_type" are mandatory keys. As an example, L1 cache
+    size could be a device property, and its value would be a device specific size.
+
+    A target device description specification is attached to a module as a module level
+    attribute.
+  }];
+
+  let methods = [
+    InterfaceMethod<
+      /*description=*/"Returns the list of layout entries.",
+      /*retTy=*/"::mlir::DataLayoutEntryListRef",
+      /*methodName=*/"getEntries",
+      /*args=*/(ins)
+    >,
+    InterfaceMethod<
+      /*description=*/"Returns the entry related to the given identifier, if "
+                      "present.",
+      /*retTy=*/"::mlir::DataLayoutEntryInterface",
+      /*methodName=*/"getSpecForIdentifier",
+      /*args=*/(ins "::mlir::StringAttr":$identifier),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return ::mlir::detail::filterEntryForIdentifier($_attr.getEntries(),
+                                                        identifier);
+      }]
+    >,
+    InterfaceMethod<
+      /*description=*/"Checks that the entry is well-formed, reports errors "
+                      "at the provided location.",
+      /*retTy=*/"::mlir::LogicalResult",
+      /*methodName=*/"verifyEntry",
+      /*args=*/(ins "::mlir::Location":$loc),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{ return ::mlir::success(); }]
+    >,
+    InterfaceMethod<
+      /*description=*/"Returns the device ID identifier.",
+      /*retTy=*/"::mlir::StringAttr",
+      /*methodName=*/"getDeviceIDIdentifier",
+      /*args=*/(ins "::mlir::MLIRContext *":$context)
+    >,
+    InterfaceMethod<
+      /*description=*/"Returns the device type identifier.",
+      /*retTy=*/"::mlir::StringAttr",
+      /*methodName=*/"getDeviceTypeIdentifier",
+      /*args=*/(ins "::mlir::MLIRContext *":$context)
+    >,
+    InterfaceMethod<
+      /*description=*/"Returns the L1 cache size identifier.",
+      /*retTy=*/"::mlir::StringAttr",
+      /*methodName=*/"getMaxVectorOpWidthIdentifier",
+      /*args=*/(ins "::mlir::MLIRContext *":$context)
+    >,
+    InterfaceMethod<
+      /*description=*/"Returns canonicalizer max iterations identifier.",
+      /*retTy=*/"::mlir::StringAttr",
+      /*methodName=*/"getCanonicalizerMaxIterationsIdentifier",
+      /*args=*/(ins "::mlir::MLIRContext *":$context)
+    >,
+    InterfaceMethod<
+      /*description=*/"Returns canonicalizer max num rewrites identifier.",
+      /*retTy=*/"::mlir::StringAttr",
+      /*methodName=*/"getCanonicalizerMaxNumRewritesIdentifier",
+      /*args=*/(ins "::mlir::MLIRContext *":$context)
+    >,
+    InterfaceMethod<
+      /*description=*/"Returns the entry related to Device ID. The function"
+                      "will crash if the entry is missing.",
+      /*retTy=*/"::mlir::DataLayoutEntryInterface",
+      /*methodName=*/"getSpecForDeviceID",
+      /*args=*/(ins "::mlir::MLIRContext *":$context)
+    >,
+    InterfaceMethod<
+      /*description=*/"Returns the entry related to the given identifier. "
+                      "The function will crash if the entry is missing.",
+      /*retTy=*/"::mlir::DataLayoutEntryInterface",
+      /*methodName=*/"getSpecForDeviceType",
+      /*args=*/(ins "::mlir::MLIRContext *":$context)
+    >,
+    InterfaceMethod<
+      /*description=*/"Returns the entry related to the given identifier, if "
+                      "present. Otherwise, return empty spec.",
+      /*retTy=*/"::mlir::DataLayoutEntryInterface",
+      /*methodName=*/"getSpecForMaxVectorOpWidth",
+      /*args=*/(ins "::mlir::MLIRContext *":$context)
+    >,
+    InterfaceMethod<
+      /*description=*/"Returns the entry related to the given identifier, if "
+                      "present. Otherwise, return empty spec.",
+      /*retTy=*/"::mlir::DataLayoutEntryInterface",
+      /*methodName=*/"getSpecForCanonicalizerMaxIterations",
+      /*args=*/(ins "::mlir::MLIRContext *":$context)
+    >,
+    InterfaceMethod<
+      /*description=*/"Returns the entry related to the given identifier, if "
+                      "present. Otherwise, return empty spec.",
+      /*retTy=*/"::mlir::DataLayoutEntryInterface",
+      /*methodName=*/"getSpecForCanonicalizerMaxNumRewrites",
+      /*args=*/(ins "::mlir::MLIRContext *":$context)
+    >,
+    InterfaceMethod<
+      /*description=*/"Returns the entry related to the given identifier, if "
+                      "present.",
+      /*retTy=*/"uint32_t",
+      /*methodName=*/"getDeviceID",
+      /*args=*/(ins "::mlir::MLIRContext *":$context)
+    >,
+  ];
+
+  let extraClassDeclaration = [{
+    using DeviceID = uint32_t;
+  }];
+}
+
+def TargetSystemDescSpecInterface : AttrInterface<"TargetSystemDescSpecInterface"> {
+  let cppNamespace = "::mlir";
+
+  let description = [{
+    Attribute interface describing a target system description specification.
+
+    A target system description specification is a list of target device
+    specifications, with one device specification for a device in the system. As
+    such, a target system description specification allows specifying a heterogenous
+    system, with devices of different types (e.g., CPU, GPU, etc.)
+
+    The only requirement on a valid target system description specification is that
+    the "device_id" in every target device description specification needs to be
+    unique. This is because, ultimately, this "device_id" is used by the user to
+    query a value of a device property.
+  }];
+
+  let methods = [
+    InterfaceMethod<
+      /*description=*/"Returns the list of layout entries.",
+      /*retTy=*/"::mlir::TargetDeviceDescSpecListRef",
+      /*methodName=*/"getEntries",
+      /*args=*/(ins)
+    >,
+    InterfaceMethod<
+      /*description=*/"Returns the device description spec for given device "
+                      "ID",
+      /*retTy=*/"::mlir::TargetDeviceDescSpecInterface",
+      /*methodName=*/"getDeviceDescForDeviceID",
+      /*args=*/(ins "int":$deviceID)
+    >,
+    InterfaceMethod<
+      /*description=*/"Verifies the validity of the specification and "
+                      "reports "
+                      "any errors at the given location.",
+      /*retTy=*/"::mlir::LogicalResult",
+      /*methodName=*/"verifySpec",
+      /*args=*/(ins "::mlir::Location":$loc),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return ::mlir::detail::verifyTargetSystemDescSpec($_attr, loc);
+      }]
+    >
+  ];
+}
+
 //===----------------------------------------------------------------------===//
 // Operation interface
 //===----------------------------------------------------------------------===//
@@ -225,6 +394,14 @@ def DataLayoutOpInterface : OpInterface<"DataLayoutOpInterface"> {
                       "null if it does not exist.",
       /*retTy=*/"::mlir::DataLayoutSpecInterface",
       /*methodName=*/"getDataLayoutSpec",
+      /*args=*/(ins)
+    >,
+    InterfaceMethod<
+      /*description=*/"Returns the target system desc specification for this "
+                      "op, or "
+                      "null if it does not exist.",
+      /*retTy=*/"::mlir::TargetSystemDescSpecInterface",
+      /*methodName=*/"getTargetSystemDescSpec",
       /*args=*/(ins)
     >,
     StaticInterfaceMethod<
@@ -360,6 +537,39 @@ def DataLayoutOpInterface : OpInterface<"DataLayoutOpInterface"> {
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
         return ::mlir::detail::getDefaultStackAlignment(entry);
+      }]
+    >,
+    StaticInterfaceMethod<
+      /*description=*/"Returns the max vector op width, if the property is "
+                      "defined. Otherwise, it returns std::nullopt.",
+      /*retTy=*/"std::optional<uint32_t>",
+      /*methodName=*/"getMaxVectorOpWidth",
+      /*args=*/(ins "::mlir::DataLayoutEntryInterface":$entry),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return ::mlir::detail::getMaxVectorOpWidth(entry);
+      }]
+    >,
+    StaticInterfaceMethod<
+      /*description=*/"Returns the canonicalizer max iterations, if the "
+                      "property is defined. Otherwise, it returns std::nullopt.",
+      /*retTy=*/"std::optional<int64_t>",
+      /*methodName=*/"getCanonicalizerMaxIterations",
+      /*args=*/(ins "::mlir::DataLayoutEntryInterface":$entry),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return ::mlir::detail::getCanonicalizerMaxIterations(entry);
+      }]
+    >,
+    StaticInterfaceMethod<
+      /*description=*/"Returns the canonicalizer max num rewrites, if the "
+                      "property is defined. Otherwise, it returns std::nullopt.",
+      /*retTy=*/"std::optional<int64_t>",
+      /*methodName=*/"getCanonicalizerMaxNumRewrites",
+      /*args=*/(ins "::mlir::DataLayoutEntryInterface":$entry),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return ::mlir::detail::getCanonicalizerMaxNumRewrites(entry);
       }]
     >,
   ];

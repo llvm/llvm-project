@@ -27,6 +27,13 @@ def DLTI_Dialect : Dialect {
     constexpr const static ::llvm::StringLiteral
     kDataLayoutAttrName = "dlti.dl_spec";
 
+    // Top level attribute name for target system description
+    constexpr const static ::llvm::StringLiteral
+    kTargetSystemDescAttrName = "dlti.tsd_spec";
+
+    constexpr const static ::llvm::StringLiteral
+    kTargetDeviceDescAttrName = "dlti.tdd_spec";
+
     // Constants used in entries.
     constexpr const static ::llvm::StringLiteral
     kDataLayoutEndiannessKey = "dlti.endianness";
@@ -48,6 +55,22 @@ def DLTI_Dialect : Dialect {
 
     constexpr const static ::llvm::StringLiteral
     kDataLayoutStackAlignmentKey = "dlti.stack_alignment";
+
+    // Constants used in target description part of DLTI
+    constexpr const static ::llvm::StringLiteral
+    kTargetDeviceIDKey = "dlti.device_id";
+
+    constexpr const static ::llvm::StringLiteral
+    kTargetDeviceTypeKey = "dlti.device_type";
+
+    constexpr const static ::llvm::StringLiteral
+    kTargetDeviceMaxVectorOpWidthKey = "dlti.max_vector_op_width";
+
+    constexpr const static ::llvm::StringLiteral
+    kTargetDeviceCanonicalizerMaxIterationsKey = "dlti.canonicalizer_max_iterations";
+
+    constexpr const static ::llvm::StringLiteral
+    kTargetDeviceCanonicalizerMaxNumRewritesKey = "dlti.canonicalizer_max_num_rewrites";
   }];
 
   let useDefaultAttributePrinterParser = 1;
@@ -68,6 +91,24 @@ def DLTI_DataLayoutSpecAttr : DialectAttr<
     "Target data layout specification"> {
   let storageType = "::mlir::DataLayoutSpecAttr";
   let returnType = "::mlir::DataLayoutSpecAttr";
+  let convertFromStorage = "$_self";
+}
+
+def DLTI_TargetSystemDescSpecAttr : DialectAttr<
+    DLTI_Dialect,
+    CPred<"::llvm::isa<::mlir::TargetSystemDescSpecAttr>($_self)">,
+    "Target system description part of DLTI"> {
+  let storageType = "::mlir::TargetSystemDescSpecAttr";
+  let returnType = "::mlir::TargetSystemDescSpecAttr";
+  let convertFromStorage = "$_self";
+}
+
+def DLTI_TargetDeviceDescSpecAttr : DialectAttr<
+    DLTI_Dialect,
+    CPred<"::llvm::isa<::mlir::TargetDeviceDescSpecAttr>($_self)">,
+    "Target device description part of DLTI"> {
+  let storageType = "::mlir::TargetDeviceDescSpecAttr";
+  let returnType = "::mlir::TargetDeviceDescSpecAttr";
   let convertFromStorage = "$_self";
 }
 

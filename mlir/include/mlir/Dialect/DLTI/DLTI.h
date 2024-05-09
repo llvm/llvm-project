@@ -21,6 +21,8 @@ namespace mlir {
 namespace impl {
 class DataLayoutEntryStorage;
 class DataLayoutSpecStorage;
+class TargetSystemDescSpecAttrStorage;
+class TargetDeviceDescSpecAttrStorage;
 } // namespace impl
 
 //===----------------------------------------------------------------------===//
@@ -122,6 +124,141 @@ public:
   void print(AsmPrinter &os) const;
 
   static constexpr StringLiteral name = "builtin.data_layout_spec";
+};
+
+//===----------------------------------------------------------------------===//
+// TargetSystemDescSpecAttr
+//===----------------------------------------------------------------------===//
+
+/// A system description attribute is a list of device descriptors, each
+/// having a uniq device ID
+class TargetSystemDescSpecAttr
+    : public Attribute::AttrBase<TargetSystemDescSpecAttr, Attribute,
+                                 impl::TargetSystemDescSpecAttrStorage,
+                                 TargetSystemDescSpecInterface::Trait> {
+public:
+  using Base::Base;
+
+  /// The keyword used for this attribute in custom syntax.
+  constexpr const static StringLiteral kAttrKeyword = "tsd_spec";
+
+  /// Returns a system descriptor attribute from the given system descriptor
+  static TargetSystemDescSpecAttr
+  get(MLIRContext *context, ArrayRef<TargetDeviceDescSpecInterface> entries);
+
+  /// Returns the list of entries.
+  TargetDeviceDescSpecListRef getEntries() const;
+
+  /// Return the device descriptor that matches the given device ID
+  TargetDeviceDescSpecInterface getDeviceDescForDeviceID(uint32_t deviceID);
+
+  /// Returns the specification containing the given list of keys. If the list
+  /// contains duplicate keys or is otherwise invalid, reports errors using the
+  /// given callback and returns null.
+  static TargetSystemDescSpecAttr
+  getChecked(function_ref<InFlightDiagnostic()> emitError, MLIRContext *context,
+             ArrayRef<TargetDeviceDescSpecInterface> entries);
+
+  /// Checks that the given list of entries does not contain duplicate keys.
+  static LogicalResult verify(function_ref<InFlightDiagnostic()> emitError,
+                              ArrayRef<TargetDeviceDescSpecInterface> entries);
+
+  /// Parses an instance of this attribute.
+  static TargetSystemDescSpecAttr parse(AsmParser &parser);
+
+  /// Prints this attribute.
+  void print(AsmPrinter &os) const;
+
+  static constexpr StringLiteral name = "builtin.target_system_description";
+};
+
+//===----------------------------------------------------------------------===//
+// TargetDeviceDescSpecAttr
+//===----------------------------------------------------------------------===//
+
+class TargetDeviceDescSpecAttr
+    : public Attribute::AttrBase<TargetDeviceDescSpecAttr, Attribute,
+                                 impl::TargetDeviceDescSpecAttrStorage,
+                                 TargetDeviceDescSpecInterface::Trait> {
+public:
+  using Base::Base;
+
+  /// The keyword used for this attribute in custom syntax.
+  constexpr const static StringLiteral kAttrKeyword = "tdd_spec";
+
+  /// Returns a system descriptor attribute from the given system descriptor
+  static TargetDeviceDescSpecAttr
+  get(MLIRContext *context, ArrayRef<DataLayoutEntryInterface> entries);
+
+  /// Returns the specification containing the given list of keys. If the list
+  /// contains duplicate keys or is otherwise invalid, reports errors using the
+  /// given callback and returns null.
+  static TargetDeviceDescSpecAttr
+  getChecked(function_ref<InFlightDiagnostic()> emitError, MLIRContext *context,
+             ArrayRef<DataLayoutEntryInterface> entries);
+
+  /// Checks that the given list of entries does not contain duplicate keys.
+  static LogicalResult verify(function_ref<InFlightDiagnostic()> emitError,
+                              ArrayRef<DataLayoutEntryInterface> entries);
+
+  /// Returns the list of entries.
+  DataLayoutEntryListRef getEntries() const;
+
+  /// Parses an instance of this attribute.
+  static TargetDeviceDescSpecAttr parse(AsmParser &parser);
+
+  /// Prints this attribute.
+  void print(AsmPrinter &os) const;
+
+  /// Returns the device ID identifier.
+  StringAttr getDeviceIDIdentifier(MLIRContext *context);
+
+  /// Returns the device type identifier.
+  StringAttr getDeviceTypeIdentifier(MLIRContext *context);
+
+  /// Returns max vector op width identifier.
+  StringAttr getMaxVectorOpWidthIdentifier(MLIRContext *context);
+
+  /// Returns canonicalizer max iterations identifier.
+  StringAttr getCanonicalizerMaxIterationsIdentifier(MLIRContext *context);
+
+  /// Returns canonicalizer max num rewrites identifier.
+  StringAttr getCanonicalizerMaxNumRewritesIdentifier(MLIRContext *context);
+
+  /// Returns the interface spec for device ID
+  /// Since we verify that the spec contains device ID the function
+  /// will return a valid spec.
+  DataLayoutEntryInterface getSpecForDeviceID(MLIRContext *context);
+
+  /// Returns the interface spec for device type
+  /// Since we verify that the spec contains device type the function
+  /// will return a valid spec.
+  DataLayoutEntryInterface getSpecForDeviceType(MLIRContext *context);
+
+  /// Returns the interface spec for max vector op width
+  /// Since max vector op width is an optional property, this function will
+  /// return a valid spec if the property is defined, otherwise it
+  /// will return an empty spec.
+  DataLayoutEntryInterface getSpecForMaxVectorOpWidth(MLIRContext *context);
+
+  /// Returns the interface spec for canonicalizer max iterations.
+  /// Since this is an optional property, this function will
+  /// return a valid spec if the property is defined, otherwise it
+  /// will return an empty spec.
+  DataLayoutEntryInterface
+  getSpecForCanonicalizerMaxIterations(MLIRContext *context);
+
+  /// Returns the interface spec for canonicalizer max num rewrites.
+  /// Since this is an optional property, this function will
+  /// return a valid spec if the property is defined, otherwise it
+  /// will return an empty spec.
+  DataLayoutEntryInterface
+  getSpecForCanonicalizerMaxNumRewrites(MLIRContext *context);
+
+  /// Return the value of device ID
+  uint32_t getDeviceID(MLIRContext *context);
+
+  static constexpr StringLiteral name = "builtin.target_device_description";
 };
 
 } // namespace mlir
