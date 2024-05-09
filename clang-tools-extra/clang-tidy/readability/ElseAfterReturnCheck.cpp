@@ -317,6 +317,10 @@ void ElseAfterReturnCheck::check(const MatchFinder::MatchResult &Result) {
     return;
   }
 
+  if (If->isConsteval()) {
+    return;
+  }
+
   DiagnosticBuilder Diag = diag(ElseLoc, WarningMessage)
                            << ControlFlowInterruptor << SourceRange(ElseLoc);
   removeElseAndBrackets(Diag, *Result.Context, Else, ElseLoc);
