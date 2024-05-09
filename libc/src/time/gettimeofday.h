@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_SRC_TIME_GETTIMEOFDAY_H
 #define LLVM_LIBC_SRC_TIME_GETTIMEOFDAY_H
 
-#include "hdr/types/struct_timeval.h"
+#include <time.h>
 
 namespace LIBC_NAMESPACE {
 

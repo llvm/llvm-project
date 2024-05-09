@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_SRC_TIME_CLOCK_H
 #define LLVM_LIBC_SRC_TIME_CLOCK_H
 
-#include "hdr/types/clock_t.h"
+#include <time.h>
 
 namespace LIBC_NAMESPACE {
 
