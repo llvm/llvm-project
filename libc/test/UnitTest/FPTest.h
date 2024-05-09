@@ -92,8 +92,11 @@ struct FPTest : public ErrnoSafeTest, public FEnvSafeTest {
 // were set
 #define EXPECT_ERRNO_FP_EXCEPT(expected_errno, expected_fexn,                  \
                                expr_or_statement)                              \
-  EXPECT_FP_EXCEPT((expected_fexn),                                            \
-                   EXPECT_ERRNO((expected_errno), expr_or_statement))
+  EXPECT_FP_EXCEPT((expected_fexn), EXPECT_ERRNO((expected_errno), {           \
+                     expr_or_statement;                                        \
+                     if (!(math_errhandling & MATH_ERRNO))                     \
+                       break;                                                  \
+                   }))
 
 #define EXPECT_NO_ERRNO_FP_EXCEPT(expr_or_statement)                           \
   EXPECT_ERRNO_FP_EXCEPT(0, 0, expr_or_statement)

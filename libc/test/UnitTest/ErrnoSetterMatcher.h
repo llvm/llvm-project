@@ -189,7 +189,9 @@ static ErrnoSetterMatcherBuilder<RetT> returns(internal::Comparator<RetT> cmp) {
 
 // Used to check that `LIBC_NAMESPACE::libc_errno` was 0 or a specific
 // errno after executing `expr_or_statement` from a state where
-// `LIBC_NAMESPACE::libc_errno` was 0.
+// `LIBC_NAMESPACE::libc_errno` was 0. This is generic, so does not check
+// `math_errhandling & MATH_ERRNO` before errno matching, see FPTest.h for
+// assertions that check this.
 //
 // Expects `expected` to be convertible to int type.
 //

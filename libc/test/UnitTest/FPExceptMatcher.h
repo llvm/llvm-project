@@ -147,8 +147,10 @@ public:
     expr_or_statement;                                                         \
     int expected_ = (expected);                                                \
     int mask_ = expected_ ? expected_ : FE_ALL_EXCEPT;                         \
-    EXPECT_FP_EXCEPT_EQUAL(expected_,                                          \
-                           LIBC_NAMESPACE::fputil::test_except(mask_));        \
+    if (math_errhandling & MATH_ERREXCEPT) {                                   \
+      EXPECT_FP_EXCEPT_EQUAL(expected_,                                        \
+                             LIBC_NAMESPACE::fputil::test_except(mask_));      \
+    }                                                                          \
   } while (0)
 
 #else // !LIBC_TEST_HAS_MATCHERS()
