@@ -5437,6 +5437,11 @@ def note_function_template_spec_matched : Note<
 def err_function_template_partial_spec : Error<
     "function template partial specialization is not allowed">;
 
+def err_function_member_spec_ambiguous : Error<
+    "ambiguous member function specialization %q0 of %q1">;
+def note_function_member_spec_matched : Note<
+    "member function specialization matches %0">;
+
 // C++ Template Instantiation
 def err_template_recursion_depth_exceeded : Error<
   "recursive template instantiation exceeded maximum depth of %0">,
@@ -12337,4 +12342,7 @@ def warn_acc_deprecated_alias_name
     : Warning<"OpenACC clause name '%0' is a deprecated clause name and is "
               "now an alias for '%1'">,
       InGroup<DiagGroup<"openacc-deprecated-clause-alias">>;
+def err_acc_var_not_pointer_type
+    : Error<"expected pointer in '%0' clause, type is %1">;
+def note_acc_expected_pointer_var : Note<"expected variable of pointer type">;
 } // end of sema component.

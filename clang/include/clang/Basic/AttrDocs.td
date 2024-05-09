@@ -5663,11 +5663,12 @@ The ``preserve_none`` calling convention tries to preserve as few general
 registers as possible. So all general registers are caller saved registers. It
 also uses more general registers to pass arguments. This attribute doesn't
 impact floating-point registers (XMMs/YMMs). Floating-point registers still
-follow the c calling convention.
+follow the c calling convention. ``preserve_none``'s ABI is still unstable, and
+may be changed in the future.
 
 - Only RSP and RBP are preserved by callee.
 
-- Register RDI, RSI, RDX, RCX, R8, R9, R11, R12, R13, R14, R15 and RAX now can
+- Register R12, R13, R14, R15, RDI, RSI, RDX, RCX, R8, R9, R11, and RAX now can
   be used to pass function arguments.
   }];
 }
