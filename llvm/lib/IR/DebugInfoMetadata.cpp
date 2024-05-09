@@ -1427,7 +1427,8 @@ bool DIExpression::isValid() const {
     default:
       return false;
     case dwarf::DW_OP_LLVM_fragment:
-      // A fragment operator must appear at the end.
+    case dwarf::DW_OP_bit_piece:
+      // A fragment or bit piece operator must appear at the end.
       return I->get() + I->getSize() == E->get();
     case dwarf::DW_OP_stack_value: {
       // Must be the last one or followed by a DW_OP_LLVM_fragment.
@@ -1495,7 +1496,6 @@ bool DIExpression::isValid() const {
     case dwarf::DW_OP_ge:
     case dwarf::DW_OP_lt:
     case dwarf::DW_OP_le:
-    case dwarf::DW_OP_bit_piece:
       break;
     }
   }
