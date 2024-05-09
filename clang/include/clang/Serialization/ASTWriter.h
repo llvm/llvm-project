@@ -667,10 +667,6 @@ public:
   void AddSourceLocation(SourceLocation Loc, RecordDataImpl &Record,
                          LocSeq *Seq = nullptr);
 
-  /// Return the raw encodings for source locations.
-  SourceLocationEncoding::RawLocEncoding
-  getRawSourceLocationEncoding(SourceLocation Loc, LocSeq *Seq = nullptr);
-
   /// Emit a source range.
   void AddSourceRange(SourceRange Range, RecordDataImpl &Record,
                       LocSeq *Seq = nullptr);

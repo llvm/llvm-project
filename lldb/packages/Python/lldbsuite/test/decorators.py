@@ -1098,7 +1098,7 @@ def skipUnlessFeature(feature):
                 ).decode("utf-8")
                 # If 'feature: 1' was output, then this feature is available and
                 # the test should not be skipped.
-                if re.match("%s: 1\s*" % feature, output):
+                if re.match(r"%s: 1\s*" % feature, output):
                     return None
                 else:
                     return "%s is not supported on this system." % feature

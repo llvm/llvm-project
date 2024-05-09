@@ -1,0 +1,11 @@
+import("//lldb/utils/TableGen/lldb_tablegen.gni")
+
+lldb_tablegen("SBLanguages") {
+  args = [ "-gen-lldb-sbapi-dwarf-enum" ]
+
+  # See discussion on https://github.com/llvm/llvm-project/pull/89981 for
+  # why this runs tblgen on a .def file.
+  td_file = "//llvm/include/llvm/BinaryFormat/Dwarf.def"
+  output_name = "SBLanguages.h"
+}
+
