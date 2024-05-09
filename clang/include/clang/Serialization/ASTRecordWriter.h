@@ -298,6 +298,8 @@ public:
 
   void writeOpenACCVarList(const OpenACCClauseWithVarList *C);
 
+  void writeOpenACCIntExprList(ArrayRef<Expr *> Exprs);
+
   /// Writes out a single OpenACC Clause.
   void writeOpenACCClause(const OpenACCClause *C);
 
