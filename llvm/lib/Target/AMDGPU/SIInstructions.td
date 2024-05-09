@@ -1947,6 +1947,20 @@ def : GCNPat <
   (S_OR_B32 SReg_32:$src, (S_MOV_B32 (i32 0x80008000))) // Set sign bit
 >;
 
+def : GCNPat <
+  (UniformUnaryFrag<fneg> (bf16 SReg_32:$src)),
+  (S_XOR_B32 SReg_32:$src, (S_MOV_B32 (i32 0x00008000)))
+>;
+
+def : GCNPat <
+  (UniformUnaryFrag<fabs> (bf16 SReg_32:$src)),
+  (S_AND_B32 SReg_32:$src, (S_MOV_B32 (i32 0x00007fff)))
+>;
+
+def : GCNPat <
+  (UniformUnaryFrag<fneg> (fabs (bf16 SReg_32:$src))),
+  (S_OR_B32 SReg_32:$src, (S_MOV_B32 (i32 0x00008000))) // Set sign bit
+>;
 
 // COPY_TO_REGCLASS is needed to avoid using SCC from S_XOR_B32 instead
 // of the real value.
@@ -2042,6 +2056,21 @@ def : GCNPat <
 
 def : GCNPat <
   (fneg (fabs (f16 VGPR_32:$src))),
+  (V_OR_B32_e64 (S_MOV_B32 (i32 0x00008000)), VGPR_32:$src) // Set sign bit
+>;
+
+def : GCNPat <
+  (fabs (bf16 VGPR_32:$src)),
+  (V_AND_B32_e64 (S_MOV_B32 (i32 0x00007fff)), VGPR_32:$src)
+>;
+
+def : GCNPat <
+  (fneg (bf16 VGPR_32:$src)),
+  (V_XOR_B32_e64 (S_MOV_B32 (i32 0x00008000)), VGPR_32:$src)
+>;
+
+def : GCNPat <
+  (fneg (fabs (bf16 VGPR_32:$src))),
   (V_OR_B32_e64 (S_MOV_B32 (i32 0x00008000)), VGPR_32:$src) // Set sign bit
 >;
 
