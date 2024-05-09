@@ -166,9 +166,9 @@ static void debug_user_sig_handler(void *Cookie) {
 
 /// dbgs - Return a circular-buffered debug stream.
 raw_ostream &llvm::dbgs() {
-  if (LogDebugToStdOut) {
+  if (LogDebugToStdOut)
     return outs();
-  } else {
+
     // Do one-time initialization in a thread-safe way.
     static struct dbgstream {
       circular_raw_ostream strm;
@@ -186,7 +186,6 @@ raw_ostream &llvm::dbgs() {
     } thestrm;
 
     return thestrm.strm;
-  }
 }
 
 #else
@@ -194,11 +193,7 @@ raw_ostream &llvm::dbgs() {
 namespace llvm {
   /// dbgs - Return errs().
   raw_ostream &dbgs() {
-    if (LogDebugToStdOut) {
-      return outs();
-    } else {
-      return errs();
-    }
+    return LogDebugToStdOut ? outs() : errs();
   }
 }
 void llvm::initDebugOptions() {}
