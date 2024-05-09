@@ -31,9 +31,7 @@ public:
   const RISCVInstrInfo *TII;
   static char ID;
 
-  RISCVPostRAExpandPseudo() : MachineFunctionPass(ID) {
-    initializeRISCVPostRAExpandPseudoPass(*PassRegistry::getPassRegistry());
-  }
+  RISCVPostRAExpandPseudo() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
