@@ -465,7 +465,7 @@ static void removeRedundantCanonicalIVs(VPlan &Plan) {
                }) ||
         vputils::onlyFirstLaneUsed(WidenNewIV)) {
       WidenNewIV->replaceAllUsesWith(WidenOriginalIV);
-      WidenNewIV->eraseFromParent();
+      // WidenNewIV->eraseFromParent();
       return;
     }
   }
@@ -888,7 +888,7 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
           !match(Blend->getMask(I), m_False()))
         return;
     Blend->replaceAllUsesWith(Inc0);
-    Blend->eraseFromParent();
+    // Blend->eraseFromParent();
     return;
   }
 
