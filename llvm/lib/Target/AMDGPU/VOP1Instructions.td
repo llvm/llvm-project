@@ -143,14 +143,14 @@ multiclass VOP1Inst <string opName, VOPProfile P,
       def _e64_dpp  : VOP3_DPP_Pseudo <opName, P>;
   } // End SubtargetPredicate = isGFX11Plus
 
-  def : MnemonicAlias<opName#"_e32", opName>, LetDummies;
-  def : MnemonicAlias<opName#"_e64", opName>, LetDummies;
+  def : LetDummies, AMDGPUMnemonicAlias<opName#"_e32", opName>;
+  def : LetDummies, AMDGPUMnemonicAlias<opName#"_e64", opName>;
 
   if P.HasExtSDWA then
-    def : MnemonicAlias<opName#"_sdwa", opName>, LetDummies;
+    def : LetDummies, AMDGPUMnemonicAlias<opName#"_sdwa", opName>;
 
   if P.HasExtDPP then
-    def : MnemonicAlias<opName#"_dpp", opName, AMDGPUAsmVariants.DPP>, LetDummies;
+    def : LetDummies, AMDGPUMnemonicAlias<opName#"_dpp", opName, AMDGPUAsmVariants.DPP>;
 }
 
 multiclass VOP1Inst_t16<string opName,
@@ -860,8 +860,9 @@ multiclass VOP1_Real_NO_VOP3_with_name_gfx11<bits<9> op, string opName,
               VOP1_Real_dpp_with_name<GFX11Gen, op, opName, asmName>,
               VOP1_Real_dpp8_with_name<GFX11Gen, op, opName, asmName>;
   defvar ps = !cast<VOP1_Pseudo>(opName#"_e32");
-  def gfx11_alias : MnemonicAlias<ps.Mnemonic, asmName>,
-                    Requires<[isGFX11Plus]>;
+  def gfx11_alias : AMDGPUMnemonicAlias<ps.Mnemonic, asmName> {
+    let AssemblerPredicate = isGFX11Plus;
+  }
 }
 
 multiclass VOP1_Real_NO_VOP3_with_name_gfx12<bits<9> op, string opName,
