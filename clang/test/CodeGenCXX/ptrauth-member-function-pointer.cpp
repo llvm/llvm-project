@@ -102,7 +102,7 @@ typedef void (Derived0::*MethodTy1)();
 // CHECK-NEXT: store { i64, i64 } { i64 ptrtoint (ptr @_ZN5Base08virtual1Ev_vfpthunk_.ptrauth.4 to i64), i64 0 }, ptr %[[METHOD7]], align 8
 // CHECK: ret void
 
-// CHECK: define linkonce_odr hidden void @_ZN5Base08virtual1Ev_vfpthunk_(ptr noundef %[[THIS:.*]]) {{.*}}align 2
+// CHECK: define linkonce_odr hidden void @_ZN5Base08virtual1Ev_vfpthunk_(ptr noundef %[[THIS:.*]])
 // CHECK: %[[THIS_ADDR:.*]] = alloca ptr, align 8
 // CHECK: store ptr %[[THIS]], ptr %[[THIS_ADDR]], align 8
 // CHECK: %[[THIS1:.*]] = load ptr, ptr %[[THIS_ADDR]], align 8
@@ -118,7 +118,7 @@ typedef void (Derived0::*MethodTy1)();
 // CHECK-NEXT: musttail call void %[[V5]](ptr noundef nonnull align {{[0-9]+}} dereferenceable(8) %[[V0]]) [ "ptrauth"(i32 0, i64 %[[V7]]) ]
 // CHECK-NEXT: ret void
 
-// CHECK: define linkonce_odr hidden void @_ZN5Base08virtual3Ev_vfpthunk_(ptr noundef %{{.*}}) {{.*}}align 2
+// CHECK: define linkonce_odr hidden void @_ZN5Base08virtual3Ev_vfpthunk_(ptr noundef %{{.*}})
 // CHECK: load ptr, ptr %{{.*}}, align 8
 // CHECK: load ptr, ptr %{{.*}}, align 8
 // CHECK: %[[VTABLE:.*]] = load ptr, ptr %{{.*}}, align 8
@@ -128,7 +128,7 @@ typedef void (Derived0::*MethodTy1)();
 // CHECK: getelementptr inbounds ptr, ptr %[[V4]], i64 1
 // CHECK: call i64 @llvm.ptrauth.blend(i64 %{{.*}}, i64 53007)
 
-// CHECK: define linkonce_odr hidden void @_ZN5Base016virtual_variadicEiz_vfpthunk_(ptr noundef %[[THIS:.*]], i32 noundef %0, ...){{.*}} align 2
+// CHECK: define linkonce_odr hidden void @_ZN5Base016virtual_variadicEiz_vfpthunk_(ptr noundef %[[THIS:.*]], i32 noundef %0, ...)
 // CHECK: %[[THIS_ADDR:.*]] = alloca ptr, align 8
 // CHECK-NEXT: %[[_ADDR:.*]] = alloca i32, align 4
 // CHECK-NEXT: store ptr %[[THIS]], ptr %[[THIS_ADDR]], align 8
