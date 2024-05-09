@@ -36,4 +36,47 @@ def MathLegalizeToF32 : Pass<"math-legalize-to-f32"> {
   let dependentDialects = ["math::MathDialect", "arith::ArithDialect"];
 }
 
+def MathCanonicalizeF32Promotion : Pass<"math-canonicalize-f32-promotion"> {
+  let summary = "Eliminate redundant truncf/extf pairs";
+  let description = [{
+    `legalize-to-f32` pass does f32 promotion for every op belonging to the
+    illegal op list. Once there are some consecutive illegal ops, `legalize-to-f32`
+    will insert redundant `arith.truncf` and `arith.extf` pairs between the illegal
+    ops.
+    
+    This pass is to eliminate the redundant truncf/extf pairs.
+
+    Example:
+
+    ```mlir
+    // the initial func
+    func.func @bf16_sin_vector(%arg0: vector<32xbf16>) -> vector<32xbf16> {
+        %0 = math.absf %arg0 : vector<32xbf16>
+        %1 = math.sin %0 : vector<32xbf16>
+        return %1 : vector<32xbf16>
+      }
+    // after legalize-to-f32
+    func.func @bf16_sin_vector(%arg0: vector<32xbf16>) -> vector<32xbf16> {
+        %0 = arith.extf %arg0 : vector<32xbf16> to vector<32xf32>
+        %1 = math.absf %0 : vector<32xf32>
+        %2 = arith.truncf %1 : vector<32xf32> to vector<32xbf16>
+        %3 = arith.extf %2 : vector<32xbf16> to vector<32xf32>
+        %4 = math.sin %3 : vector<32xf32>
+        %5 = arith.truncf %4 : vector<32xf32> to vector<32xbf16>
+        return %5 : vector<32xbf16>
+      }
+    // after canonicalize-f32-promotion
+    func.func @bf16_sin_vector(%arg0: vector<32xbf16>) -> vector<32xbf16> {
+        %0 = arith.extf %arg0 : vector<32xbf16> to vector<32xf32>
+        %1 = math.absf %0 : vector<32xf32>
+        %2 = math.sin %1 : vector<32xf32>
+        %3 = arith.truncf %2 : vector<32xf32> to vector<32xbf16>
+        return %3 : vector<32xbf16>
+      }
+    ```
+
+  }];
+  let dependentDialects = ["math::MathDialect", "arith::ArithDialect"];
+}
+
 #endif // MLIR_DIALECT_MATH_TRANSFORMS_PASSES
