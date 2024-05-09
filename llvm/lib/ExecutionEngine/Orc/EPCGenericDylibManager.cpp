@@ -109,6 +109,7 @@ void EPCGenericDylibManager::lookupAsync(tpctypes::DylibHandle H,
         if (SerializationErr) {
           cantFail(Result.takeError());
           Complete(std::move(SerializationErr));
+          return;
         }
         Complete(std::move(Result));
       },
