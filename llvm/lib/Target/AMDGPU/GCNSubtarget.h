@@ -242,6 +242,7 @@ protected:
   bool HasVALUTransUseHazard = false;
   bool HasForceStoreSC0SC1 = false;
   bool HasForceVALUThrottle = false;
+  bool HasAshrPkInsts = false;
   bool HasMLMathInsts = false;
 
   bool RequiresCOV6 = false;
@@ -1301,6 +1302,7 @@ public:
   bool hasPrngInst() const { return HasPrngInst; }
   bool hasPermlane16Swap() const { return HasPermlane16Swap; }
   bool hasPermlane32Swap() const { return HasPermlane32Swap; }
+  bool hasAshrPkInsts() const { return HasAshrPkInsts; }
 
   bool hasAddPC64Inst() const { return GFX12_10Insts; }
 
