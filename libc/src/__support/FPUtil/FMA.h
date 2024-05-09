@@ -11,23 +11,29 @@
 
 #include "src/__support/macros/properties/architectures.h"
 #include "src/__support/macros/properties/cpu_features.h" // LIBC_TARGET_CPU_HAS_FMA
+#include "src/__support/CPP/type_traits.h"
 
 #if defined(LIBC_TARGET_CPU_HAS_FMA)
 
-#if defined(LIBC_TARGET_ARCH_IS_X86_64)
-#include "x86_64/FMA.h"
-#elif defined(LIBC_TARGET_ARCH_IS_ANY_ARM)
-#include "aarch64/FMA.h"
-#elif defined(LIBC_TARGET_ARCH_IS_ANY_RISCV)
-#include "riscv/FMA.h"
-#elif defined(LIBC_TARGET_ARCH_IS_GPU)
-#include "gpu/FMA.h"
-#endif
+namespace LIBC_NAMESPACE {
+namespace fputil {
+
+template <typename T>
+LIBC_INLINE cpp::enable_if_t<cpp::is_same_v<T, float>, T> fma(T x, T y, T z) {
+  return __builtin_fmaf(x, y, z);
+}
+
+template <typename T>
+LIBC_INLINE cpp::enable_if_t<cpp::is_same_v<T, double>, T> fma(T x, T y, T z) {
+  return __builtin_fma(x, y, z);
+}
+
+} // namespace fputil
+} // namespace LIBC_NAMESPACE
 
 #else
 // FMA instructions are not available
 #include "generic/FMA.h"
-#include "src/__support/CPP/type_traits.h"
 
 namespace LIBC_NAMESPACE {
 namespace fputil {
