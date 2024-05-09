@@ -7,5 +7,8 @@
 
 // RUN: clang-query -c 'file %/t/file.script.temp' %s -- | FileCheck %s
 
-// CHECK: file-query.c:11:1: note: "root" binds here
+// CHECK: file-query.c:11:1: note: "f" binds here
 void bar(void) {}
+
+// CHECK: file-query.c:14:1: note: "v" binds here
+int baz{1};
