@@ -310,56 +310,45 @@ InstSeq generateInstSeq(int64_t Val, const MCSubtargetInfo &STI) {
     }
   }
 
-  // Perform optimization with BCLRI/BSETI in the Zbs extension.
+  // Perform optimization with BSETI in the Zbs extension.
   if (Res.size() > 2 && STI.hasFeature(RISCV::FeatureStdExtZbs)) {
-    // 1. For values in range 0xffffffff 7fffffff ~ 0xffffffff 00000000,
-    //    call generateInstSeqImpl with Val|0x80000000 (which is expected be
-    //    an int32), then emit (BCLRI r, 31).
-    // 2. For values in range 0x80000000 ~ 0xffffffff, call generateInstSeqImpl
-    //    with Val&~0x80000000 (which is expected to be an int32), then
-    //    emit (BSETI r, 31).
-    int64_t NewVal;
-    unsigned Opc;
-    if (Val < 0) {
-      Opc = RISCV::BCLRI;
-      NewVal = Val | 0x80000000ll;
-    } else {
-      Opc = RISCV::BSETI;
-      NewVal = Val & ~0x80000000ll;
-    }
-    if (isInt<32>(NewVal)) {
-      RISCVMatInt::InstSeq TmpSeq;
-      generateInstSeqImpl(NewVal, STI, TmpSeq);
-      if ((TmpSeq.size() + 1) < Res.size()) {
-        TmpSeq.emplace_back(Opc, 31);
-        Res = TmpSeq;
-      }
-    }
+    // Create a simm32 value for LUI+ADDIW by forcing the upper 33 bits to zero.
+    // Xor that with original value to get which bits should be set by BSETI.
+    uint64_t Lo = Val & 0x7fffffff;
+    uint64_t Hi = Val ^ Lo;
+    assert(Hi != 0);
+    RISCVMatInt::InstSeq TmpSeq;
 
-    // Try to use BCLRI for upper 32 bits if the original lower 32 bits are
-    // negative int32, or use BSETI for upper 32 bits if the original lower
-    // 32 bits are positive int32.
-    int32_t Lo = Lo_32(Val);
-    uint32_t Hi = Hi_32(Val);
-    Opc = 0;
+    if (Lo != 0)
+      generateInstSeqImpl(Lo, STI, TmpSeq);
+
+    if (TmpSeq.size() + llvm::popcount(Hi) < Res.size()) {
+      do {
+        TmpSeq.emplace_back(RISCV::BSETI, llvm::countr_zero(Hi));
+        Hi &= (Hi - 1); // Clear lowest set bit.
+      } while (Hi != 0);
+      Res = TmpSeq;
+    }
+  }
+
+  // Perform optimization with BCLRI in the Zbs extension.
+  if (Res.size() > 2 && STI.hasFeature(RISCV::FeatureStdExtZbs)) {
+    // Create a simm32 value for LUI+ADDIW by forcing the upper 33 bits to one.
+    // Xor that with original value to get which bits should be cleared by
+    // BCLRI.
+    uint64_t Lo = Val | 0xffffffff80000000;
+    uint64_t Hi = Val ^ Lo;
+    assert(Hi != 0);
+
     RISCVMatInt::InstSeq TmpSeq;
     generateInstSeqImpl(Lo, STI, TmpSeq);
-    // Check if it is profitable to use BCLRI/BSETI.
-    if (Lo > 0 && TmpSeq.size() + llvm::popcount(Hi) < Res.size()) {
-      Opc = RISCV::BSETI;
-    } else if (Lo < 0 && TmpSeq.size() + llvm::popcount(~Hi) < Res.size()) {
-      Opc = RISCV::BCLRI;
-      Hi = ~Hi;
-    }
-    // Search for each bit and build corresponding BCLRI/BSETI.
-    if (Opc > 0) {
-      while (Hi != 0) {
-        unsigned Bit = llvm::countr_zero(Hi);
-        TmpSeq.emplace_back(Opc, Bit + 32);
+
+    if (TmpSeq.size() + llvm::popcount(Hi) < Res.size()) {
+      do {
+        TmpSeq.emplace_back(RISCV::BCLRI, llvm::countr_zero(Hi));
         Hi &= (Hi - 1); // Clear lowest set bit.
-      }
-      if (TmpSeq.size() < Res.size())
-        Res = TmpSeq;
+      } while (Hi != 0);
+      Res = TmpSeq;
     }
   }
 
