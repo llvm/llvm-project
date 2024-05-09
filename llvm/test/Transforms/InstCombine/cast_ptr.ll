@@ -247,9 +247,7 @@ define <2 x i32> @insertelt_extra_use2(<2 x i32> %x, ptr %p) {
 
 define i32 @ptr_add_in_int(i32 %x, i32 %y) {
 ; CHECK-LABEL: @ptr_add_in_int(
-; CHECK-NEXT:    [[PTR:%.*]] = inttoptr i32 [[X:%.*]] to ptr
-; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds i8, ptr [[PTR]], i32 [[Y:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = ptrtoint ptr [[P2]] to i32
+; CHECK-NEXT:    [[R:%.*]] = add nuw i32 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %ptr = inttoptr i32 %x to ptr
@@ -260,9 +258,7 @@ define i32 @ptr_add_in_int(i32 %x, i32 %y) {
 
 define i32 @ptr_add_in_int_const(i32 %x) {
 ; CHECK-LABEL: @ptr_add_in_int_const(
-; CHECK-NEXT:    [[PTR:%.*]] = inttoptr i32 [[X:%.*]] to ptr
-; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds i8, ptr [[PTR]], i32 4096
-; CHECK-NEXT:    [[R:%.*]] = ptrtoint ptr [[P2]] to i32
+; CHECK-NEXT:    [[R:%.*]] = add nuw i32 [[X:%.*]], 4096
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %ptr = inttoptr i32 %x to ptr
