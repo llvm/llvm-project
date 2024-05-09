@@ -2067,6 +2067,9 @@ ObjectFileELF::ParseSymbols(Symtab *symtab, user_id_t start_id,
                             const DataExtractor &strtab_data) {
   ELFSymbol symbol;
   lldb::offset_t offset = 0;
+  // The changes these symbols would make to the class map. We will also update
+  // m_address_class_map but need to tell the caller what changed because the
+  // caller may be another object file.
   FileAddressToAddressClassMap address_class_map;
 
   static ConstString text_section_name(".text");
@@ -2393,6 +2396,8 @@ ObjectFileELF::ParseSymbols(Symtab *symtab, user_id_t start_id,
       dc_symbol.SetIsWeak(true);
     symtab->AddSymbol(dc_symbol);
   }
+
+  m_address_class_map.merge(address_class_map);
   return {i, address_class_map};
 }
 
@@ -2406,7 +2411,11 @@ ObjectFileELF::ParseSymbolTable(Symtab *symbol_table, user_id_t start_id,
         static_cast<ObjectFileELF *>(symtab->GetObjectFile());
     auto [num_symbols, address_class_map] =
         obj_file_elf->ParseSymbolTable(symbol_table, start_id, symtab);
+
+    // The other object file returned the changes it made to its address
+    // class map, make the same changes to ours.
     m_address_class_map.merge(address_class_map);
+
     return {num_symbols, address_class_map};
   }
 
