@@ -1322,11 +1322,11 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
         }
       }
 
+      // Turn (and (shl x, c2), c1) -> (srli (slli c2+c3), c3) if c1 is a mask
+      // shifted by c2 bits with c3 leading zeros.
       if (LeftShift && isShiftedMask_64(C1)) {
         unsigned Leading = XLen - llvm::bit_width(C1);
 
-        // Turn (and (shl x, c2), c1) -> (srli (slli c2+c3), c3) if c1 is a mask
-        // shifted by c2 bits with c3 leading zeros.
         if (C2 + Leading < XLen &&
             C1 == (maskTrailingOnes<uint64_t>(XLen - (C2 + Leading)) << C2)) {
           // Use slli.uw when possible.
