@@ -893,9 +893,10 @@ static void emitWideAPInt(SmallVectorImpl<uint64_t> &Vals, const APInt &A) {
 }
 
 static void emitConstantRange(SmallVectorImpl<uint64_t> &Record,
-                              const ConstantRange &CR) {
+                              const ConstantRange &CR, bool EmitBitWidth) {
   unsigned BitWidth = CR.getBitWidth();
-  Record.push_back(BitWidth);
+  if (EmitBitWidth)
+    Record.push_back(BitWidth);
   if (BitWidth > 64) {
     Record.push_back(CR.getLower().getActiveWords() |
                      (uint64_t(CR.getUpper().getActiveWords()) << 32));
@@ -949,7 +950,8 @@ void ModuleBitcodeWriter::writeAttributeGroupTable() {
       } else if (Attr.isConstantRangeAttribute()) {
         Record.push_back(7);
         Record.push_back(getAttrKindEncoding(Attr.getKindAsEnum()));
-        emitConstantRange(Record, Attr.getValueAsConstantRange());
+        emitConstantRange(Record, Attr.getValueAsConstantRange(),
+                          /*EmitBitWidth=*/true);
       } else {
         assert(Attr.isConstantRangeListAttribute());
         Record.push_back(8);
@@ -957,8 +959,7 @@ void ModuleBitcodeWriter::writeAttributeGroupTable() {
         ArrayRef<ConstantRange> Val = Attr.getValueAsConstantRangeList();
         Record.push_back(Val.size());
         for (auto &CR : Val) {
-          emitSignedInt64(Record, CR.getLower().getSExtValue());
-          emitSignedInt64(Record, CR.getUpper().getSExtValue());
+          emitConstantRange(Record, CR, /*EmitBitWidth=*/false);
         }
       }
     }
@@ -2782,7 +2783,7 @@ void ModuleBitcodeWriter::writeConstants(unsigned FirstVal, unsigned LastVal,
         if (std::optional<ConstantRange> Range = GO->getInRange()) {
           Code = bitc::CST_CODE_CE_GEP_WITH_INRANGE;
           Record.push_back(GO->isInBounds());
-          emitConstantRange(Record, *Range);
+          emitConstantRange(Record, *Range, /*EmitBitWidth=*/true);
         } else if (GO->isInBounds())
           Code = bitc::CST_CODE_CE_INBOUNDS_GEP;
         for (unsigned i = 0, e = CE->getNumOperands(); i != e; ++i) {

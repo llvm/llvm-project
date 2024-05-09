@@ -2343,9 +2343,10 @@ Error BitcodeReader::parseAttributeGroupBlock() {
             return error("Not a constant range list attribute");
 
           SmallVector<ConstantRange, 2> Val;
-          int RangeSize = Record[++i];
-          assert(i + 2 * RangeSize < e);
-          for (int Idx = 0; Idx < RangeSize; ++Idx) {
+          unsigned RangeSize = Record[++i];
+          if (i + 2 * RangeSize >= e)
+            return error("Incomplete constant range list");
+          for (unsigned Idx = 0; Idx < RangeSize; ++Idx) {
             int64_t Start = BitcodeReader::decodeSignRotatedValue(Record[++i]);
             int64_t End = BitcodeReader::decodeSignRotatedValue(Record[++i]);
             Val.push_back(
