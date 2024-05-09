@@ -332,7 +332,8 @@ bool ByteCodeStmtGen<Emitter>::visitCompoundStmt(
 template <class Emitter>
 bool ByteCodeStmtGen<Emitter>::visitDeclStmt(const DeclStmt *DS) {
   for (auto *D : DS->decls()) {
-    if (isa<StaticAssertDecl, TagDecl, TypedefNameDecl, UsingEnumDecl>(D))
+    if (isa<StaticAssertDecl, TagDecl, TypedefNameDecl, UsingEnumDecl,
+            FunctionDecl>(D))
       continue;
 
     const auto *VD = dyn_cast<VarDecl>(D);

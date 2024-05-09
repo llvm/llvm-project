@@ -1039,8 +1039,10 @@ def SDWAVopcDst : BoolRC {
 }
 
 class NamedIntOperand<ValueType Type, string Prefix, bit Optional = 1,
-                      string name = NAME, string ConvertMethod = "nullptr">
+                      string name = NAME>
     : CustomOperand<Type, Optional, name> {
+  string Validator = "[](int64_t V) { return true; }";
+  string ConvertMethod = "[](int64_t &V) { return "#Validator#"(V); }";
   let ParserMethod =
     "[this](OperandVector &Operands) -> ParseStatus { "#
     "return parseIntWithPrefix(\""#Prefix#"\", Operands, "#
@@ -1084,8 +1086,10 @@ class ArrayOperand0<string Id, string Name = NAME>
 let ImmTy = "ImmTyOffset" in
 def flat_offset : CustomOperand<i32, 1, "FlatOffset">;
 def Offset : NamedIntOperand<i32, "offset">;
+let Validator = "isUInt<8>" in {
 def Offset0 : NamedIntOperand<i8, "offset0">;
 def Offset1 : NamedIntOperand<i8, "offset1">;
+}
 
 def gds : NamedBitOperand<"gds", "GDS">;
 
@@ -1142,25 +1146,41 @@ let DefaultValue = "0xf" in {
 def DppRowMask : NamedIntOperand<i32, "row_mask">;
 def DppBankMask : NamedIntOperand<i32, "bank_mask">;
 }
-def DppBoundCtrl : NamedIntOperand<i1, "bound_ctrl", 1, "DppBoundCtrl",
-    "[this] (int64_t &BC) -> bool { return convertDppBoundCtrl(BC); }">;
+def DppBoundCtrl : NamedIntOperand<i1, "bound_ctrl"> {
+  let ConvertMethod = "[this] (int64_t &BC) -> bool { return convertDppBoundCtrl(BC); }";
+}
 
 let DecoderMethod = "decodeDpp8FI" in
 def Dpp8FI : NamedIntOperand<i32, "fi", 1, "DppFI">;
 def Dpp16FI : NamedIntOperand<i32, "fi", 1, "DppFI">;
 
 def blgp : CustomOperand<i32, 1, "BLGP">;
-def CBSZ : NamedIntOperand<i32, "cbsz">;
-def ABID : NamedIntOperand<i32, "abid">;
-
+def CBSZ : NamedIntOperand<i32, "cbsz"> {
+  let Validator = "isUInt<3>";
+}
+def ABID : NamedIntOperand<i32, "abid"> {
+  let Validator = "isUInt<4>";
+}
 def hwreg : CustomOperand<i32, 0, "Hwreg">;
 
 def exp_tgt : CustomOperand<i32, 0, "ExpTgt">;
 
-def WaitVDST : NamedIntOperand<i8, "wait_vdst">;
-def WaitEXP : NamedIntOperand<i8, "wait_exp">;
-def WaitVAVDst : NamedIntOperand<i8, "wait_va_vdst">;
-def WaitVMVSrc : NamedIntOperand<i8, "wait_vm_vsrc">;
+def WaitVDST : NamedIntOperand<i8, "wait_vdst"> {
+  let Validator = "isUInt<4>";
+}
+def WaitEXP : NamedIntOperand<i8, "wait_exp"> {
+  let Validator = "isUInt<3>";
+}
+def WaitVAVDst : NamedIntOperand<i8, "wait_va_vdst"> {
+  let Validator = "isUInt<4>";
+}
+def WaitVMVSrc : NamedIntOperand<i8, "wait_vm_vsrc"> {
+  let Validator = "isUInt<1>";
+}
+
+def ByteSel : NamedIntOperand<i8, "byte_sel"> {
+  let Validator = "isUInt<2>";
+}
 
 def BitOp3 : NamedIntOperand<i8, "bitop3">;
 def bitop3_0 : DefaultOperand<BitOp3, 0>;
@@ -1172,7 +1192,6 @@ def MatrixAScale : CustomOperand<i32, 1, "MatrixAScale">;
 def MatrixBScale : CustomOperand<i32, 1, "MatrixBScale">;
 
 def ScaleSel : NamedIntOperand<i8, "scale_sel">;
-def ByteSel : NamedIntOperand<i8, "byte_sel">;
 
 class KImmFPOperand<ValueType vt> : ImmOperand<vt> {
   let OperandNamespace = "AMDGPU";
