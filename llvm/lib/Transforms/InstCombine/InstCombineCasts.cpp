@@ -2074,12 +2074,16 @@ Instruction *InstCombinerImpl::visitPtrToInt(PtrToIntInst &CI) {
   }
 
   // (ptrtoint (gep (inttoptr Base), Offset)) -> Base + Offset
-  Value *Base, *Offset;
-  if (match(SrcOp, m_OneUse(m_PtrAdd(m_OneUse(m_IntToPtr(m_Value(Base))),
-                                     m_Value(Offset)))) &&
+  Value *Base, *Offset, *GEP;
+  if (match(SrcOp, m_OneUse(m_Value(GEP))) &&
+      match(GEP,
+            m_PtrAdd(m_OneUse(m_IntToPtr(m_Value(Base))), m_Value(Offset))) &&
       Base->getType() == Ty && Offset->getType() == Ty) {
+    auto *GEPInst = cast<GetElementPtrInst>(GEP);
+
     auto *NewOp = BinaryOperator::CreateAdd(Base, Offset);
-    NewOp->setHasNoUnsignedWrap(true);
+    if (GEPInst->isInBounds() && isKnownNonNegative(Offset, SQ))
+      NewOp->setHasNoUnsignedWrap(true);
     return NewOp;
   }
 
