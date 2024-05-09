@@ -53,6 +53,11 @@ enum class EnumUChar : unsigned char {};
 struct alignas(128) OverAlignedStruct {};
 OverAlignedStruct over_aligned_struct;
 
+struct WithNestedTypedef {
+  typedef int TheTypedef;
+};
+WithNestedTypedef::TheTypedef typedefed_value;
+
 int main (int argc, char const *argv[])
 {
     Task *task_head = new Task(-1, NULL);
