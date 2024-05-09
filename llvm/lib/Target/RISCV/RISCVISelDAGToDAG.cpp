@@ -1350,21 +1350,6 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
             return;
           }
         }
-
-        // Turn (and (shl x, c2), c1) -> (slli_uw (srli x, c4-c2), c4) where c1
-        // is shifted mask with 32 set bits and c4 trailing zeros.
-        unsigned Trailing = llvm::countr_zero(C1);
-        if (Leading > 0 && Leading + Trailing == 32 && C2 < Trailing &&
-            Subtarget->hasStdExtZba() && OneUseOrZExtW) {
-          SDNode *SRLI = CurDAG->getMachineNode(
-              RISCV::SRLI, DL, VT, X,
-              CurDAG->getTargetConstant(Trailing - C2, DL, VT));
-          SDNode *SLLI_UW = CurDAG->getMachineNode(
-              RISCV::SLLI_UW, DL, VT, SDValue(SRLI, 0),
-              CurDAG->getTargetConstant(Trailing, DL, VT));
-          ReplaceNode(Node, SLLI_UW);
-          return;
-        }
       }
 
       // Turn (and (shr x, c2), c1) -> (slli (srli x, c2+c3), c3) if c1 is a
@@ -1429,6 +1414,19 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
               RISCV::SLLI, DL, VT, SDValue(SRLIW, 0),
               CurDAG->getTargetConstant(Trailing, DL, VT));
           ReplaceNode(Node, SLLI);
+          return;
+        }
+
+        // If we have 32 bits in the mask, we can use SLLI_UW instead of SLLI.
+        if (C2 < Trailing && Leading + Trailing == 32 && OneUseOrZExtW &&
+            Subtarget->hasStdExtZba()) {
+          SDNode *SRLI = CurDAG->getMachineNode(
+              RISCV::SRLI, DL, VT, X,
+              CurDAG->getTargetConstant(Trailing - C2, DL, VT));
+          SDNode *SLLI_UW = CurDAG->getMachineNode(
+              RISCV::SLLI_UW, DL, VT, SDValue(SRLI, 0),
+              CurDAG->getTargetConstant(Trailing, DL, VT));
+          ReplaceNode(Node, SLLI_UW);
           return;
         }
       }
