@@ -2784,6 +2784,25 @@ struct RegPairInfo {
 
 } // end anonymous namespace
 
+void verify(SmallVectorImpl<RegPairInfo> &RegPairs) {
+  auto IsPPR = [](const RegPairInfo &c) { return c.Reg1 == RegPairInfo::PPR; };
+  auto PPRBegin = std::find_if(RegPairs.begin(), RegPairs.end(), IsPPR);
+  auto IsZPR = [](const RegPairInfo &c) { return c.Type == RegPairInfo::ZPR; };
+  auto ZPRBegin = std::find_if(RegPairs.begin(), RegPairs.end(), IsZPR);
+  assert(!(PPRBegin < ZPRBegin) &&
+         "Expected callee save predicate to be handled first");
+}
+
+unsigned findFreePredicateReg(BitVector &SavedRegs) {
+  for (unsigned PReg = AArch64::P8; PReg <= AArch64::P15; ++PReg) {
+    if (SavedRegs.test(PReg)) {
+      unsigned PNReg = PReg - AArch64::P0 + AArch64::PN0;
+      return PNReg;
+    }
+  }
+  return AArch64::NoRegister;
+}
+
 static void computeCalleeSaveRegisterPairs(
     MachineFunction &MF, ArrayRef<CalleeSavedInfo> CSI,
     const TargetRegisterInfo *TRI, SmallVectorImpl<RegPairInfo> &RegPairs,
@@ -3076,6 +3095,9 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
       unsigned PnReg = AFI->getPredicateRegForFillSpill();
       assert(((Subtarget.hasSVE2p1() || Subtarget.hasSME2()) && PnReg != 0) &&
              "Expects SVE2.1 or SME2 target and a predicate register");
+#ifdef EXPENSIVE_CHECKS
+      verify(RegPairs);
+#endif
       if (!PTrueCreated) {
         PTrueCreated = true;
         BuildMI(MBB, MI, DL, TII.get(AArch64::PTRUE_C_B), PnReg)
@@ -3232,6 +3254,10 @@ bool AArch64FrameLowering::restoreCalleeSavedRegisters(
       unsigned PnReg = AFI->getPredicateRegForFillSpill();
       assert(((Subtarget.hasSVE2p1() || Subtarget.hasSME2()) && PnReg != 0) &&
              "Expects SVE2.1 or SME2 target and a predicate register");
+#ifdef EXPENSIVE_CHECKS
+      assert(!(PPRBegin < ZPRBegin) &&
+             "Expected callee save predicate to be handled first");
+#endif
       if (!PTrueCreated) {
         PTrueCreated = true;
         BuildMI(MBB, MBBI, DL, TII.get(AArch64::PTRUE_C_B), PnReg)
@@ -3364,12 +3390,9 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
     AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
     // Find a suitable predicate register for the multi-vector spill/fill
     // instructions.
-    for (unsigned PReg = AArch64::P8; PReg <= AArch64::P15; ++PReg) {
-      if (SavedRegs.test(PReg)) {
-        AFI->setPredicateRegForFillSpill(PReg - AArch64::P0 + AArch64::PN0);
-        break;
-      }
-    }
+    unsigned PnReg = findFreePredicateReg(SavedRegs);
+    if (PnReg != AArch64::NoRegister)
+      AFI->setPredicateRegForFillSpill(PnReg);
     // If no free callee-save has been found assign one.
     if (!AFI->getPredicateRegForFillSpill() &&
         MF.getFunction().getCallingConv() ==
