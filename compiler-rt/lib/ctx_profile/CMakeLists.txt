@@ -6,6 +6,7 @@ set(CTX_PROFILE_SOURCES
 
 set(CTX_PROFILE_HEADERS
   CtxInstrProfiling.h
+  CtxInstrContextNode.inc
   )
 
 include_directories(..)

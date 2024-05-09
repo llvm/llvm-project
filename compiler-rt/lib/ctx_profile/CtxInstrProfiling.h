@@ -13,7 +13,7 @@
 #include <sanitizer/common_interface_defs.h>
 
 namespace __ctx_profile {
-using GUID = uint64_t;
+
 static constexpr size_t ExpectedAlignment = 8;
 // We really depend on this, see further below. We currently support x86_64.
 // When we want to support other archs, we need to trace the places Alignment is
@@ -62,98 +62,7 @@ private:
 // it to be thus aligned.
 static_assert(alignof(Arena) == ExpectedAlignment);
 
-/// The contextual profile is a directed tree where each node has one parent. A
-/// node (ContextNode) corresponds to a function activation. The root of the
-/// tree is at a function that was marked as entrypoint to the compiler. A node
-/// stores counter values for edges and a vector of subcontexts. These are the
-/// contexts of callees. The index in the subcontext vector corresponds to the
-/// index of the callsite (as was instrumented via llvm.instrprof.callsite). At
-/// that index we find a linked list, potentially empty, of ContextNodes. Direct
-/// calls will have 0 or 1 values in the linked list, but indirect callsites may
-/// have more.
-///
-/// The ContextNode has a fixed sized header describing it - the GUID of the
-/// function, the size of the counter and callsite vectors. It is also an
-/// (intrusive) linked list for the purposes of the indirect call case above.
-///
-/// Allocation is expected to happen on an Arena. The allocation lays out inline
-/// the counter and subcontexts vectors. The class offers APIs to correctly
-/// reference the latter.
-///
-/// The layout is as follows:
-///
-/// [[declared fields][counters vector][vector of ptrs to subcontexts]]
-///
-/// See also documentation on the counters and subContexts members below.
-///
-/// The structure of the ContextNode is known to LLVM, because LLVM needs to:
-///   (1) increment counts, and
-///   (2) form a GEP for the position in the subcontext list of a callsite
-/// This means changes to LLVM contextual profile lowering and changes here
-/// must be coupled.
-/// Note: the header content isn't interesting to LLVM (other than its size)
-///
-/// Part of contextual collection is the notion of "scratch contexts". These are
-/// buffers that are "large enough" to allow for memory-safe acceses during
-/// counter increments - meaning the counter increment code in LLVM doesn't need
-/// to be concerned with memory safety. Their subcontexts never get populated,
-/// though. The runtime code here produces and recognizes them.
-class ContextNode final {
-  const GUID Guid;
-  ContextNode *const Next;
-  const uint32_t NrCounters;
-  const uint32_t NrCallsites;
-
-public:
-  ContextNode(GUID Guid, uint32_t NrCounters, uint32_t NrCallsites,
-              ContextNode *Next = nullptr)
-      : Guid(Guid), Next(Next), NrCounters(NrCounters),
-        NrCallsites(NrCallsites) {}
-  static inline ContextNode *alloc(char *Place, GUID Guid, uint32_t NrCounters,
-                                   uint32_t NrCallsites,
-                                   ContextNode *Next = nullptr);
-
-  static inline size_t getAllocSize(uint32_t NrCounters, uint32_t NrCallsites) {
-    return sizeof(ContextNode) + sizeof(uint64_t) * NrCounters +
-           sizeof(ContextNode *) * NrCallsites;
-  }
-
-  // The counters vector starts right after the static header.
-  uint64_t *counters() {
-    ContextNode *addr_after = &(this[1]);
-    return reinterpret_cast<uint64_t *>(addr_after);
-  }
-
-  uint32_t counters_size() const { return NrCounters; }
-  uint32_t callsites_size() const { return NrCallsites; }
-
-  const uint64_t *counters() const {
-    return const_cast<ContextNode *>(this)->counters();
-  }
-
-  // The subcontexts vector starts right after the end of the counters vector.
-  ContextNode **subContexts() {
-    return reinterpret_cast<ContextNode **>(&(counters()[NrCounters]));
-  }
-
-  ContextNode *const *subContexts() const {
-    return const_cast<ContextNode *>(this)->subContexts();
-  }
-
-  GUID guid() const { return Guid; }
-  ContextNode *next() { return Next; }
-
-  size_t size() const { return getAllocSize(NrCounters, NrCallsites); }
-
-  void reset();
-
-  // since we go through the runtime to get a context back to LLVM, in the entry
-  // basic block, might as well handle incrementing the entry basic block
-  // counter.
-  void onEntry() { ++counters()[0]; }
-
-  uint64_t entrycount() const { return counters()[0]; }
-};
+#include "CtxInstrContextNode.inc"
 
 // Verify maintenance to ContextNode doesn't change this invariant, which makes
 // sure the inlined vectors are appropriately aligned.
