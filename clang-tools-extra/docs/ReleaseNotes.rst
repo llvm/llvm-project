@@ -362,6 +362,11 @@ Changes in existing checks
   check by resolving fix-it overlaps in template code by disregarding implicit
   instances.
 
+- Improved :doc:`readability-string-compare
+  <clang-tidy/checks/readability/string-compare>` check to also detect
+  usages of ``std::string_view::compare``. Added a `StringLikeClasses` option
+  to detect usages of ``compare`` method in custom string-like classes.
+
 Removed checks
 ^^^^^^^^^^^^^^
 
