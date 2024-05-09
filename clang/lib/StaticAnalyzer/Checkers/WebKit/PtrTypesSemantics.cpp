@@ -309,8 +309,8 @@ public:
   bool VisitDefaultStmt(const DefaultStmt *DS) { return VisitChildren(DS); }
 
   bool VisitUnaryOperator(const UnaryOperator *UO) {
-    // Unary operators are trivial if its operand is trivial.
-    return Visit(UO->getSubExpr());
+    // Unary operators are trivial if its operand is trivial except co_await.
+    return UO->getOpcode() != UO_Coawait && Visit(UO->getSubExpr());
   }
 
   bool VisitBinaryOperator(const BinaryOperator *BO) {
