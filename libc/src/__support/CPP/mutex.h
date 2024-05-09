@@ -40,6 +40,9 @@ public:
   lock_guard(const lock_guard &) = delete;
 };
 
+// Deduction guide for lock_guard to suppress CTAD warnings.
+template <typename T> lock_guard(T &) -> lock_guard<T>;
+
 } // namespace cpp
 } // namespace LIBC_NAMESPACE
 
