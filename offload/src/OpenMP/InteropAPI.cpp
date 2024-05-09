@@ -230,14 +230,14 @@ void __tgt_interop_init(ident_t *LocRef, int32_t Gtid,
   }
 
   DeviceTy &Device = *DeviceOrErr;
-  if (!Device.RTL ||
+  if (!Device.RTL || !Device.RTL->init_device_info ||
       Device.RTL->init_device_info(DeviceId, &(InteropPtr)->device_info,
                                    &(InteropPtr)->err_str)) {
     delete InteropPtr;
     InteropPtr = omp_interop_none;
   }
   if (InteropType == kmp_interop_type_tasksync) {
-    if (!Device.RTL ||
+    if (!Device.RTL || !Device.RTL->init_async_info ||
         Device.RTL->init_async_info(DeviceId, &(InteropPtr)->async_info)) {
       delete InteropPtr;
       InteropPtr = omp_interop_none;

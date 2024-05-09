@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "Shared/PluginAPI.h"
 #include "omptarget.h"
 #include "gtest/gtest.h"
 
