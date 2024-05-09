@@ -418,9 +418,20 @@ class CrashLog(symbolication.Symbolicator):
                         with print_lock:
                             print('falling back to binary inside "%s"' % dsym)
                         self.symfile = dsym
-                        for filename in os.listdir(dwarf_dir):
-                            self.path = os.path.join(dwarf_dir, filename)
-                            if self.find_matching_slice():
+                        # Look for the executable next to the dSYM bundle.
+                        parent_dir = os.path.dirname(dsym)
+                        executables = []
+                        for root, _, files in os.walk(parent_dir):
+                            for file in files:
+                                abs_path = os.path.join(root, file)
+                                if os.path.isfile(abs_path) and os.access(
+                                    abs_path, os.X_OK
+                                ):
+                                    executables.append(abs_path)
+                        for binary in executables:
+                            basename = os.path.basename(binary)
+                            if basename == self.identifier:
+                                self.path = binary
                                 found_matching_slice = True
                                 break
                         if found_matching_slice:
