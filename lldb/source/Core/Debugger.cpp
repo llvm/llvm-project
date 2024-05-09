@@ -1485,10 +1485,10 @@ static void PrivateReportDiagnostic(Debugger &debugger, Severity severity,
     assert(false && "eSeverityInfo should not be broadcast");
     return;
   case eSeverityWarning:
-    event_type = Debugger::eBroadcastBitWarning;
+    event_type = lldb::eBroadcastBitWarning;
     break;
   case eSeverityError:
-    event_type = Debugger::eBroadcastBitError;
+    event_type = lldb::eBroadcastBitError;
     break;
   }
 
@@ -1572,7 +1572,7 @@ void Debugger::ReportSymbolChange(const ModuleSpec &module_spec) {
     std::lock_guard<std::recursive_mutex> guard(*g_debugger_list_mutex_ptr);
     for (DebuggerSP debugger_sp : *g_debugger_list_ptr) {
       EventSP event_sp = std::make_shared<Event>(
-          Debugger::eBroadcastSymbolChange,
+          lldb::eBroadcastSymbolChange,
           new SymbolChangeEventData(debugger_sp, module_spec));
       debugger_sp->GetBroadcaster().BroadcastEvent(event_sp);
     }
@@ -1879,8 +1879,9 @@ lldb::thread_result_t Debugger::DefaultEventHandler() {
           CommandInterpreter::eBroadcastBitAsynchronousErrorData);
 
   listener_sp->StartListeningForEvents(
-      &m_broadcaster, eBroadcastBitProgress | eBroadcastBitWarning |
-                          eBroadcastBitError | eBroadcastSymbolChange);
+      &m_broadcaster, lldb::eBroadcastBitProgress | lldb::eBroadcastBitWarning |
+                          lldb::eBroadcastBitError |
+                          lldb::eBroadcastSymbolChange);
 
   // Let the thread that spawned us know that we have started up and that we
   // are now listening to all required events so no events get missed
@@ -1932,11 +1933,11 @@ lldb::thread_result_t Debugger::DefaultEventHandler() {
               }
             }
           } else if (broadcaster == &m_broadcaster) {
-            if (event_type & Debugger::eBroadcastBitProgress)
+            if (event_type & lldb::eBroadcastBitProgress)
               HandleProgressEvent(event_sp);
-            else if (event_type & Debugger::eBroadcastBitWarning)
+            else if (event_type & lldb::eBroadcastBitWarning)
               HandleDiagnosticEvent(event_sp);
-            else if (event_type & Debugger::eBroadcastBitError)
+            else if (event_type & lldb::eBroadcastBitError)
               HandleDiagnosticEvent(event_sp);
           }
         }
