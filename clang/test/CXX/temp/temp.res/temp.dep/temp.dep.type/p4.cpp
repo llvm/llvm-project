@@ -453,6 +453,37 @@ namespace N3 {
       this->A::operator=(*this);
     }
   };
+
+  template<typename T>
+  struct C {
+    template<typename U>
+    void operator=(int);
+
+    void not_instantiated() {
+      operator=<int>(0);
+      C::operator=<int>(0);
+      this->operator=<int>(0);
+      this->C::operator=<int>(0);
+
+      operator=(*this);
+      C::operator=(*this);
+      this->operator=(*this);
+      this->C::operator=(*this);
+    }
+  };
+
+  template<typename T>
+  struct D {
+    auto not_instantiated() -> decltype(operator=(0)); // expected-error {{use of undeclared 'operator='}}
+  };
+
+  template<typename T>
+  struct E {
+    auto instantiated(E& e) -> decltype(operator=(e)); // expected-error {{use of undeclared 'operator='}}
+  };
+
+  template struct E<int>; // expected-note {{in instantiation of template class 'N3::E<int>' requested here}}
+
 } // namespace N3
 
 namespace N4 {

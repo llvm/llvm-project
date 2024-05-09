@@ -1091,6 +1091,38 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_threads_linux_futex_word_type",
+    hdrs = [
+        "src/__support/threads/linux/futex_word.h",
+    ],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_osutil_syscall",
+    ],
+)
+
+libc_support_library(
+    name = "__support_threads_linux_futex_utils",
+    hdrs = [
+        "src/__support/threads/linux/futex_utils.h",
+    ],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_cpp_atomic",
+        ":__support_cpp_optional",
+        ":__support_osutil_syscall",
+        ":__support_threads_linux_futex_word_type",
+        ":types_struct_timespec",
+    ],
+)
+
+libc_support_library(
     name = "__support_threads_mutex",
     hdrs = [
         "src/__support/threads/mutex.h",
@@ -1102,11 +1134,11 @@ libc_support_library(
     }),
     textual_hdrs = [
         "src/__support/threads/linux/mutex.h",
-        "src/__support/threads/linux/futex_word.h",
     ],
     deps = [
         ":__support_cpp_atomic",
         ":__support_osutil_syscall",
+        ":__support_threads_linux_futex_utils",
     ],
 )
 

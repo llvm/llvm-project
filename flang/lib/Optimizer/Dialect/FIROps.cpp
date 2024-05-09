@@ -4048,6 +4048,19 @@ void fir::CUDAAllocOp::build(
   result.addAttributes(attributes);
 }
 
+template <typename Op>
+static mlir::LogicalResult checkCudaAttr(Op op) {
+  if (op.getCudaAttr() == fir::CUDADataAttribute::Device ||
+      op.getCudaAttr() == fir::CUDADataAttribute::Managed ||
+      op.getCudaAttr() == fir::CUDADataAttribute::Unified)
+    return mlir::success();
+  return op.emitOpError("expect device, managed or unified cuda attribute");
+}
+
+mlir::LogicalResult fir::CUDAAllocOp::verify() { return checkCudaAttr(*this); }
+
+mlir::LogicalResult fir::CUDAFreeOp::verify() { return checkCudaAttr(*this); }
+
 //===----------------------------------------------------------------------===//
 // FIROpsDialect
 //===----------------------------------------------------------------------===//

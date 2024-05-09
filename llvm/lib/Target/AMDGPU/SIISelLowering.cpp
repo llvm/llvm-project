@@ -854,9 +854,13 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   if (Subtarget->hasPrefetch())
     setOperationAction(ISD::PREFETCH, MVT::Other, Custom);
 
-  if (Subtarget->hasIEEEMinMax())
+  if (Subtarget->hasIEEEMinMax()) {
     setOperationAction({ISD::FMAXIMUM, ISD::FMINIMUM},
                        {MVT::f16, MVT::f32, MVT::f64, MVT::v2f16}, Legal);
+    setOperationAction({ISD::FMINIMUM, ISD::FMAXIMUM},
+                       {MVT::v4f16, MVT::v8f16, MVT::v16f16, MVT::v32f16},
+                       Custom);
+  }
 
   setOperationAction(ISD::INTRINSIC_WO_CHAIN,
                      {MVT::Other, MVT::f32, MVT::v4f32, MVT::i16, MVT::f16,
@@ -4098,19 +4102,15 @@ SDValue SITargetLowering::lowerSET_ROUNDING(SDValue Op,
       // TODO: SimplifyDemandedBits on the setreg source here can likely reduce
       // the table extracted bits into inline immediates.
     } else {
-      // is_standard = value < 4;
-      // table_index = is_standard ? value : (value - 4)
+      // table_index = umin(value, value - 4)
       // MODE.fp_round = (bit_table >> (table_index << 2)) & 0xf
       SDValue BitTable =
           DAG.getConstant(AMDGPU::FltRoundToHWConversionTable, SL, MVT::i64);
 
       SDValue Four = DAG.getConstant(4, SL, MVT::i32);
-      SDValue IsStandardValue =
-          DAG.getSetCC(SL, MVT::i1, NewMode, Four, ISD::SETULT);
       SDValue OffsetEnum = DAG.getNode(ISD::SUB, SL, MVT::i32, NewMode, Four);
-
-      SDValue IndexVal = DAG.getNode(ISD::SELECT, SL, MVT::i32, IsStandardValue,
-                                     NewMode, OffsetEnum);
+      SDValue IndexVal =
+          DAG.getNode(ISD::UMIN, SL, MVT::i32, NewMode, OffsetEnum);
 
       SDValue Two = DAG.getConstant(2, SL, MVT::i32);
       SDValue RoundModeTimesNumBits =
@@ -5825,6 +5825,8 @@ SDValue SITargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::FMUL:
   case ISD::FMINNUM_IEEE:
   case ISD::FMAXNUM_IEEE:
+  case ISD::FMINIMUM:
+  case ISD::FMAXIMUM:
   case ISD::UADDSAT:
   case ISD::USUBSAT:
   case ISD::SADDSAT:

@@ -15,14 +15,15 @@ subroutine all_args_optional(command, isWait, exitVal, cmdVal, msg)
 ! CHECK-NEXT:    %[[c14:.*]] = arith.constant 14 : i32 
 ! CHECK-NEXT:    %true = arith.constant true 
 ! CHECK-NEXT:    %[[c0:.*]] = arith.constant 0 : i64 
-! CHECK-NEXT:    %[[cmdstatDeclare:.*]] = fir.declare %[[cmdstatArg]] {fortran_attrs = #fir.var_attrs<optional>, uniq_name = "_QFall_args_optionalEcmdval"} : (!fir.ref<i32>) -> !fir.ref<i32>
+! CHECK-NEXT:    %[[DSCOPE:.*]] = fir.dummy_scope : !fir.dscope
+! CHECK-NEXT:    %[[cmdstatDeclare:.*]] = fir.declare %[[cmdstatArg]] dummy_scope %[[DSCOPE]] {fortran_attrs = #fir.var_attrs<optional>, uniq_name = "_QFall_args_optionalEcmdval"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
 ! CHECK-NEXT:    %[[commandUnbox:.*]]:2 = fir.unboxchar %[[commandArg]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
-! CHECK-NEXT:    %[[commandDeclare:.*]] = fir.declare %[[commandUnbox]]#0 typeparams %[[commandUnbox]]#1 {fortran_attrs = #fir.var_attrs<optional>, uniq_name = "_QFall_args_optionalEcommand"} : (!fir.ref<!fir.char<1,?>>, index) -> !fir.ref<!fir.char<1,?>>
+! CHECK-NEXT:    %[[commandDeclare:.*]] = fir.declare %[[commandUnbox]]#0 typeparams %[[commandUnbox]]#1 dummy_scope %[[DSCOPE]] {fortran_attrs = #fir.var_attrs<optional>, uniq_name = "_QFall_args_optionalEcommand"} : (!fir.ref<!fir.char<1,?>>, index, !fir.dscope) -> !fir.ref<!fir.char<1,?>>
 ! CHECK-NEXT:    %[[commandBoxTemp:.*]] = fir.emboxchar %[[commandDeclare]], %[[commandUnbox]]#1 : (!fir.ref<!fir.char<1,?>>, index) -> !fir.boxchar<1>
-! CHECK-NEXT:    %[[exitstatDeclare:.*]] = fir.declare %[[exitstatArg]] {fortran_attrs = #fir.var_attrs<optional>, uniq_name = "_QFall_args_optionalEexitval"} : (!fir.ref<i32>) -> !fir.ref<i32>
-! CHECK-NEXT:    %[[waitDeclare:.*]] = fir.declare %[[waitArg]] {fortran_attrs = #fir.var_attrs<optional>, uniq_name = "_QFall_args_optionalEiswait"} : (!fir.ref<!fir.logical<4>>) -> !fir.ref<!fir.logical<4>>
+! CHECK-NEXT:    %[[exitstatDeclare:.*]] = fir.declare %[[exitstatArg]] dummy_scope %[[DSCOPE]] {fortran_attrs = #fir.var_attrs<optional>, uniq_name = "_QFall_args_optionalEexitval"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
+! CHECK-NEXT:    %[[waitDeclare:.*]] = fir.declare %[[waitArg]] dummy_scope %[[DSCOPE]] {fortran_attrs = #fir.var_attrs<optional>, uniq_name = "_QFall_args_optionalEiswait"} : (!fir.ref<!fir.logical<4>>, !fir.dscope) -> !fir.ref<!fir.logical<4>>
 ! CHECK-NEXT:    %[[cmdmsgUnbox:.*]]:2 = fir.unboxchar %[[cmdmsgArg]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
-! CHECK-NEXT:    %[[cmdmsgDeclare:.*]] = fir.declare %[[cmdmsgUnbox]]#0 typeparams %[[cmdmsgUnbox]]#1 {fortran_attrs = #fir.var_attrs<optional>, uniq_name = "_QFall_args_optionalEmsg"} : (!fir.ref<!fir.char<1,?>>, index) -> !fir.ref<!fir.char<1,?>>
+! CHECK-NEXT:    %[[cmdmsgDeclare:.*]] = fir.declare %[[cmdmsgUnbox]]#0 typeparams %[[cmdmsgUnbox]]#1 dummy_scope %[[DSCOPE]] {fortran_attrs = #fir.var_attrs<optional>, uniq_name = "_QFall_args_optionalEmsg"} : (!fir.ref<!fir.char<1,?>>, index, !fir.dscope) -> !fir.ref<!fir.char<1,?>>
 ! CHECK-NEXT:    %[[cmdmsgBoxTemp:.*]] = fir.emboxchar %[[cmdmsgDeclare]], %[[cmdmsgUnbox]]#1 : (!fir.ref<!fir.char<1,?>>, index) -> !fir.boxchar<1>
 ! CHECK-NEXT:    %[[exitstatIsPresent:.*]] = fir.is_present %[[exitstatDeclare]] : (!fir.ref<i32>) -> i1
 ! CHECK-NEXT:    %[[cmdstatIsPresent:.*]] = fir.is_present %[[cmdstatDeclare]] : (!fir.ref<i32>) -> i1
