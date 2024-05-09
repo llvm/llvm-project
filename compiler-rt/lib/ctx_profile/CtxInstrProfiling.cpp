@@ -288,8 +288,8 @@ void __llvm_ctx_profile_start_collection() {
   __sanitizer::Printf("[ctxprof] Initial NrMemUnits: %zu \n", NrMemUnits);
 }
 
-bool __llvm_ctx_profile_fetch(
-    void *Data, bool (*Writer)(void *W, const ContextNode &)) {
+bool __llvm_ctx_profile_fetch(void *Data,
+                              bool (*Writer)(void *W, const ContextNode &)) {
   assert(Writer);
   __sanitizer::GenericScopedLock<__sanitizer::SpinMutex> Lock(
       &AllContextsMutex);
