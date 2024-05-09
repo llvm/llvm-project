@@ -8,6 +8,10 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20, c++23
 // UNSUPPORTED: libcpp-has-no-incomplete-debugging
+// REQUIRES: host-has-gdb-with-python
+// The Android libc++ tests are run on a non-Android host, connected to an
+// Android device over adb.
+// UNSUPPORTED: android
 // XFAIL: LIBCXX-PICOLIBC-FIXME
 
 // RUN: %{cxx} %{flags} %s -o %t.exe %{compile_flags} -g %{link_flags}
