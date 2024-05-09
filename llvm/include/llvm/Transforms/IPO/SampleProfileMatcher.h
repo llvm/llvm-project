@@ -19,58 +19,8 @@
 
 namespace llvm {
 
-// Callsite location based matching anchor.
-struct Anchor {
-  LineLocation Loc;
-  FunctionId FuncId;
-
-  Anchor(const LineLocation &Loc, const FunctionId &FuncId)
-      : Loc(Loc), FuncId(FuncId) {}
-  Anchor(const LineLocation &Loc, StringRef &FName) : Loc(Loc), FuncId(FName) {}
-  bool operator==(const Anchor &Other) const {
-    return this->FuncId == Other.FuncId;
-  }
-};
-
-// This class implements the Myers diff algorithm used for stale profile
-// matching. The algorithm provides a simple and efficient way to find the
-// Longest Common Subsequence(LCS) or the Shortest Edit Script(SES) of two
-// sequences. For more details, refer to the paper 'An O(ND) Difference
-// Algorithm and Its Variations' by Eugene W. Myers.
-// In the scenario of profile fuzzy matching, the two sequences are the IR
-// callsite anchors and profile callsite anchors. The subsequence equivalent
-// parts from the resulting SES are used to remap the IR locations to the
-// profile locations. As the number of function callsite is usually not big, we
-// currently just implements the basic greedy version(page 6 of the paper).
-class MyersDiff {
-public:
-  struct DiffResult {
-    LocToLocMap EqualLocations;
-#ifndef NDEBUG
-    // New IR locations that are inserted in the new version.
-    std::vector<LineLocation> Insertions;
-    // Old Profile locations that are deleted in the new version.
-    std::vector<LineLocation> Deletions;
-#endif
-    void addEqualLocations(const LineLocation &IRLoc,
-                           const LineLocation &ProfLoc) {
-      EqualLocations.insert({IRLoc, ProfLoc});
-    }
-#ifndef NDEBUG
-    void addInsertion(const LineLocation &IRLoc) {
-      Insertions.push_back(IRLoc);
-    }
-    void addDeletion(const LineLocation &ProfLoc) {
-      Deletions.push_back(ProfLoc);
-    }
-#endif
-  };
-
-  DiffResult shortestEditScript(const std::vector<Anchor> &A,
-                                const std::vector<Anchor> &B) const;
-};
-
-using AnchorMap = std::map<LineLocation, Anchor>;
+using Anchor = std::pair<LineLocation, FunctionId>;
+using AnchorMap = std::map<LineLocation, FunctionId>;
 
 // Sample profile matching - fuzzy match.
 class SampleProfileMatcher {
@@ -191,6 +141,16 @@ private:
   }
   void distributeIRToProfileLocationMap();
   void distributeIRToProfileLocationMap(FunctionSamples &FS);
+  // This function implements the Myers diff algorithm used for stale profile
+  // matching. The algorithm provides a simple and efficient way to find the
+  // Longest Common Subsequence(LCS) or the Shortest Edit Script(SES) of two
+  // sequences. For more details, refer to the paper 'An O(ND) Difference
+  // Algorithm and Its Variations' by Eugene W. Myers.
+  // In the scenario of profile fuzzy matching, the two sequences are the IR
+  // callsite anchors and profile callsite anchors. The subsequence equivalent
+  // parts from the resulting SES are used to remap the IR locations to the
+  // profile locations. As the number of function callsite is usually not big,
+  // we currently just implements the basic greedy version(page 6 of the paper).
   LocToLocMap longestCommonSequence(
       const std::vector<Anchor> &IRCallsiteAnchors,
       const std::vector<Anchor> &ProfileCallsiteAnchors) const;
