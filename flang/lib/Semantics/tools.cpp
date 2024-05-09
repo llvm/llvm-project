@@ -256,15 +256,17 @@ static const Symbol &FollowHostAssoc(const Symbol &symbol) {
 }
 
 bool IsHostAssociated(const Symbol &symbol, const Scope &scope) {
-  return DoesScopeContain(
-      &GetProgramUnitOrBlockConstructContaining(FollowHostAssoc(symbol)),
-      GetProgramUnitOrBlockConstructContaining(scope));
+  const Symbol &base{FollowHostAssoc(symbol)};
+  return base.owner().IsTopLevel() ||
+      DoesScopeContain(&GetProgramUnitOrBlockConstructContaining(base),
+          GetProgramUnitOrBlockConstructContaining(scope));
 }
 
 bool IsHostAssociatedIntoSubprogram(const Symbol &symbol, const Scope &scope) {
-  return DoesScopeContain(
-      &GetProgramUnitOrBlockConstructContaining(FollowHostAssoc(symbol)),
-      GetProgramUnitContaining(scope));
+  const Symbol &base{FollowHostAssoc(symbol)};
+  return base.owner().IsTopLevel() ||
+      DoesScopeContain(&GetProgramUnitOrBlockConstructContaining(base),
+          GetProgramUnitContaining(scope));
 }
 
 bool IsInStmtFunction(const Symbol &symbol) {
