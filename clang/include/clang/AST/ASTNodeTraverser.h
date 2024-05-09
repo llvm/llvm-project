@@ -844,6 +844,12 @@ public:
     }
   }
 
+  void VisitUnresolvedLookupExpr(const UnresolvedLookupExpr *E) {
+    if (E->hasExplicitTemplateArgs())
+      for (auto Arg : E->template_arguments())
+        Visit(Arg.getArgument());
+  }
+
   void VisitRequiresExpr(const RequiresExpr *E) {
     for (auto *D : E->getLocalParameters())
       Visit(D);

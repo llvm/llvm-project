@@ -1030,6 +1030,12 @@ namespace ParenInit {
                      // both-note {{required by 'constinit' specifier}} \
                      // both-note {{reference to temporary is not a constant expression}} \
                      // both-note {{temporary created here}}
+
+
+  /// Initializing an array.
+  constexpr void bar(int i, int j) {
+    int arr[4](i, j);
+  }
 }
 #endif
 

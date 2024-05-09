@@ -148,20 +148,26 @@ void WebAssemblyTargetInfo::setFeatureEnabled(llvm::StringMap<bool> &Features,
 bool WebAssemblyTargetInfo::initFeatureMap(
     llvm::StringMap<bool> &Features, DiagnosticsEngine &Diags, StringRef CPU,
     const std::vector<std::string> &FeaturesVec) const {
-  if (CPU == "bleeding-edge") {
+  auto addGenericFeatures = [&]() {
+    Features["multivalue"] = true;
+    Features["mutable-globals"] = true;
+    Features["reference-types"] = true;
+    Features["sign-ext"] = true;
+  };
+  auto addBleedingEdgeFeatures = [&]() {
+    addGenericFeatures();
     Features["atomics"] = true;
     Features["bulk-memory"] = true;
     Features["multimemory"] = true;
-    Features["mutable-globals"] = true;
     Features["nontrapping-fptoint"] = true;
-    Features["reference-types"] = true;
-    Features["sign-ext"] = true;
     Features["tail-call"] = true;
     Features["half-precision"] = true;
     setSIMDLevel(Features, SIMD128, true);
-  } else if (CPU == "generic") {
-    Features["mutable-globals"] = true;
-    Features["sign-ext"] = true;
+  };
+  if (CPU == "generic") {
+    addGenericFeatures();
+  } else if (CPU == "bleeding-edge") {
+    addBleedingEdgeFeatures();
   }
 
   return TargetInfo::initFeatureMap(Features, Diags, CPU, FeaturesVec);

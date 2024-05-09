@@ -194,15 +194,12 @@ define void @vpmerge_vpload_store(<vscale x 2 x i32> %passthru, ptr %p, <vscale 
   ret void
 }
 
-; FIXME: Merge vmerge.vvm and vleffN.v
 declare { <vscale x 2 x i32>, i64 } @llvm.riscv.vleff.nxv2i32(<vscale x 2 x i32>, ptr, i64)
 define <vscale x 2 x i32> @vpmerge_vleff(<vscale x 2 x i32> %passthru, ptr %p, <vscale x 2 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: vpmerge_vleff:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
-; CHECK-NEXT:    vle32ff.v v9, (a0)
-; CHECK-NEXT:    vsetvli zero, a1, e32, m1, tu, ma
-; CHECK-NEXT:    vmerge.vvm v8, v8, v9, v0
+; CHECK-NEXT:    vsetvli zero, a1, e32, m1, tu, mu
+; CHECK-NEXT:    vle32ff.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
   %1 = zext i32 %vl to i64
   %a = call { <vscale x 2 x i32>, i64 } @llvm.riscv.vleff.nxv2i32(<vscale x 2 x i32> undef, ptr %p, i64 %1)
@@ -634,14 +631,11 @@ define void @vpselect_vpload_store(<vscale x 2 x i32> %passthru, ptr %p, <vscale
   ret void
 }
 
-; FIXME: select vselect.vvm and vleffN.v
 define <vscale x 2 x i32> @vpselect_vleff(<vscale x 2 x i32> %passthru, ptr %p, <vscale x 2 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: vpselect_vleff:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
-; CHECK-NEXT:    vle32ff.v v9, (a0)
-; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
-; CHECK-NEXT:    vmerge.vvm v8, v8, v9, v0
+; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, mu
+; CHECK-NEXT:    vle32ff.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
   %1 = zext i32 %vl to i64
   %a = call { <vscale x 2 x i32>, i64 } @llvm.riscv.vleff.nxv2i32(<vscale x 2 x i32> undef, ptr %p, i64 %1)
@@ -898,22 +892,20 @@ define <vscale x 2 x i32> @vpselect_trunc(<vscale x 2 x i32> %passthru, <vscale 
 define void @test_dag_loop() {
 ; CHECK-LABEL: test_dag_loop:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetivli zero, 1, e16, m8, ta, ma
-; CHECK-NEXT:    vle16.v v8, (zero)
 ; CHECK-NEXT:    vsetvli a0, zero, e8, m4, ta, ma
 ; CHECK-NEXT:    vmclr.m v0
-; CHECK-NEXT:    vmv.v.i v16, 0
+; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:    vsetivli zero, 0, e8, m4, tu, mu
-; CHECK-NEXT:    vmv4r.v v20, v16
-; CHECK-NEXT:    vssubu.vx v20, v16, zero, v0.t
+; CHECK-NEXT:    vmv4r.v v12, v8
+; CHECK-NEXT:    vssubu.vx v12, v8, zero, v0.t
 ; CHECK-NEXT:    vsetvli zero, zero, e8, m4, ta, ma
-; CHECK-NEXT:    vmseq.vv v0, v20, v16
+; CHECK-NEXT:    vmseq.vv v0, v12, v8
 ; CHECK-NEXT:    vsetvli a0, zero, e16, m8, ta, ma
-; CHECK-NEXT:    vmv.v.i v16, 0
-; CHECK-NEXT:    vsetivli zero, 1, e16, m8, tu, ma
-; CHECK-NEXT:    vmerge.vvm v16, v16, v8, v0
+; CHECK-NEXT:    vmv.v.i v8, 0
+; CHECK-NEXT:    vsetivli zero, 1, e16, m8, tu, mu
+; CHECK-NEXT:    vle16.v v8, (zero), v0.t
 ; CHECK-NEXT:    vsetivli zero, 0, e16, m8, ta, ma
-; CHECK-NEXT:    vse16.v v16, (zero)
+; CHECK-NEXT:    vse16.v v8, (zero)
 ; CHECK-NEXT:    ret
 entry:
   %0 = call <vscale x 32 x i16> @llvm.riscv.vle.nxv32i16.i64(<vscale x 32 x i16> undef, ptr null, i64 1)

@@ -169,6 +169,18 @@ def tanh(
 
 
 @linalg_structured_op
+def erf(
+    I=TensorDef(T1),
+    O=TensorDef(T1, output=True),
+):
+    """Applies erf(x) elementwise.
+
+    No numeric casting is performed on the input operand.
+    """
+    O[None] = UnaryFn.erf(I[None])
+
+
+@linalg_structured_op
 def elemwise_binary(
     lhs=TensorDef(T1),
     rhs=TensorDef(T2),
@@ -316,6 +328,27 @@ def min(
     `linalg.generic` with different affine maps for the two operands.
     """
     O[None] = BinaryFn.min_signed(lhs[None], rhs[None])
+
+
+@linalg_structured_op
+def powf(
+    lhs=TensorDef(T1),
+    rhs=TensorDef(T1),
+    O=TensorDef(T1, output=True),
+):
+    """Takes the powf(lhs, rhs) between two inputs, elementwise. For powf(arg, 2) use `linalg.square`.
+
+    Only applies to floating point values.
+
+    The shapes and element types must be identical. The appropriate casts,
+    broadcasts and reductions should be done previously to calling this op.
+
+    This means reduction/broadcast/element cast semantics is explicit. Further
+    passes can take that into account when lowering this code. For example,
+    a `linalg.broadcast` + `linalg.powf` sequence can be lowered to a
+    `linalg.generic` with different affine maps for the two operands.
+    """
+    O[None] = BinaryFn.powf(lhs[None], rhs[None])
 
 
 @linalg_structured_op

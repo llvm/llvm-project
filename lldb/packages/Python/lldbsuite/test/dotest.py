@@ -423,6 +423,7 @@ def parseOptionsAndInitTestdirs():
         configuration.lldb_module_cache_dir = os.path.join(
             configuration.test_build_dir, "module-cache-lldb"
         )
+
     if args.clang_module_cache_dir:
         configuration.clang_module_cache_dir = args.clang_module_cache_dir
     else:
@@ -432,6 +433,8 @@ def parseOptionsAndInitTestdirs():
 
     if args.lldb_libs_dir:
         configuration.lldb_libs_dir = args.lldb_libs_dir
+    if args.lldb_obj_root:
+        configuration.lldb_obj_root = args.lldb_obj_root
 
     if args.enabled_plugins:
         configuration.enabled_plugins = args.enabled_plugins

@@ -167,7 +167,7 @@ C++23, informally referred to as C++26.</p>
  <tr>
   <td>Disallow Binding a Returned Glvalue to a Temporary</td>
   <td><a href="https://wg21.link/P2748R5">P2748R5</a></td>
-  <td class="none" align="center">No</td>
+  <td class="unreleased" align="center">Clang 19</td>
  </tr>
  <tr>
   <td>Clarifying rules for brace elision in aggregate initialization</td>
@@ -177,7 +177,7 @@ C++23, informally referred to as C++26.</p>
  <tr>
   <td>Attributes for Structured Bindings</td>
   <td><a href="https://wg21.link/P0609R3">P0609R3</a></td>
-  <td class="none" align="center">No</td>
+  <td class="none" align="center">Clang 19</td>
  </tr>
  <tr>
   <td>Module Declarations Shouldn’t be Macros</td>
@@ -187,7 +187,7 @@ C++23, informally referred to as C++26.</p>
  <tr>
   <td>Trivial infinite loops are not Undefined Behavior</td>
   <td><a href="https://wg21.link/P2809R3">P2809R3</a> (<a href="#dr">DR</a>)</td>
-  <td class="unreleased" align="center">Clang 19</td>
+  <td class="unreleased" align="center">No</td>
  </tr>
  <tr>
   <td>Erroneous behaviour for uninitialized reads</td>
@@ -462,7 +462,14 @@ C++23, informally referred to as C++26.</p>
     <tr>
       <td>Lifetime extension in range-based for loops</td>
       <td><a href="https://wg21.link/P2718R0">P2718R0</a></td>
-      <td class="unreleased" align="center">Clang 19</td>
+      <td class="partial" align="center">
+        <details>
+          <summary>Clang 19 (Partial)</summary>
+            The lifetime extension of temporaries bound to member references
+            by default member initializers in aggregate initialization was 
+            not supported now.
+        </details>
+      </td>
     </tr>
     <!--Issaquah 2023 papers-->
     <tr>
