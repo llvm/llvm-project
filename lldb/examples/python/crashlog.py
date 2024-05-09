@@ -252,7 +252,7 @@ class CrashLog(symbolication.Symbolicator):
                 self.idents.append(ident)
 
         def did_crash(self):
-            return self.reason is not None
+            return self.crashed
 
         def __str__(self):
             if self.app_specific_backtrace:
@@ -525,6 +525,49 @@ class CrashLog(symbolication.Symbolicator):
 
     def get_target(self):
         return self.target
+
+    def load_images(self, options, loaded_images=None):
+        if not loaded_images:
+            loaded_images = []
+        images_to_load = self.images
+        if options.load_all_images:
+            for image in self.images:
+                image.resolve = True
+        elif options.crashed_only:
+            for thread in self.threads:
+                if thread.did_crash():
+                    images_to_load = []
+                    for ident in thread.idents:
+                        for image in self.find_images_with_identifier(ident):
+                            image.resolve = True
+                            images_to_load.append(image)
+
+        futures = []
+        with tempfile.TemporaryDirectory() as obj_dir:
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+
+                def add_module(image, target, obj_dir):
+                    return image, image.add_module(target, obj_dir)
+
+                for image in images_to_load:
+                    if image not in loaded_images:
+                        if image.uuid == uuid.UUID(int=0):
+                            continue
+                        futures.append(
+                            executor.submit(
+                                add_module,
+                                image=image,
+                                target=self.target,
+                                obj_dir=obj_dir,
+                            )
+                        )
+
+                for future in concurrent.futures.as_completed(futures):
+                    image, err = future.result()
+                    if err:
+                        print(err)
+                    else:
+                        loaded_images.append(image)
 
 
 class CrashLogFormatException(Exception):
@@ -1408,36 +1451,7 @@ def SymbolicateCrashLog(crash_log, options):
     if not target:
         return
 
-    if options.load_all_images:
-        for image in crash_log.images:
-            image.resolve = True
-    elif options.crashed_only:
-        for thread in crash_log.threads:
-            if thread.did_crash():
-                for ident in thread.idents:
-                    for image in crash_log.find_images_with_identifier(ident):
-                        image.resolve = True
-
-    futures = []
-    loaded_images = []
-    with tempfile.TemporaryDirectory() as obj_dir:
-        with concurrent.futures.ThreadPoolExecutor() as executor:
-
-            def add_module(image, target, obj_dir):
-                return image, image.add_module(target, obj_dir)
-
-            for image in crash_log.images:
-                futures.append(
-                    executor.submit(
-                        add_module, image=image, target=target, obj_dir=obj_dir
-                    )
-                )
-            for future in concurrent.futures.as_completed(futures):
-                image, err = future.result()
-                if err:
-                    print(err)
-                else:
-                    loaded_images.append(image)
+    crash_log.load_images(options)
 
     if crash_log.backtraces:
         for thread in crash_log.backtraces:
@@ -1498,7 +1512,11 @@ def load_crashlog_in_scripted_process(debugger, crashlog_path, options, result):
     structured_data = lldb.SBStructuredData()
     structured_data.SetFromJSON(
         json.dumps(
-            {"file_path": crashlog_path, "load_all_images": options.load_all_images}
+            {
+                "file_path": crashlog_path,
+                "load_all_images": options.load_all_images,
+                "crashed_only": options.crashed_only,
+            }
         )
     )
     launch_info = lldb.SBLaunchInfo(None)
