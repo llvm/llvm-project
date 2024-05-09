@@ -430,6 +430,11 @@ public:
     return nullptr;
   }
 
+  /// Deregister JumpTable registered at a given \p Address.
+  bool deregisterJumpTable(uint64_t Address) {
+    return JumpTables.erase(Address);
+  }
+
   unsigned getDWARFEncodingSize(unsigned Encoding) {
     if (Encoding == dwarf::DW_EH_PE_omit)
       return 0;
