@@ -1649,7 +1649,8 @@ def CreateSymbolicateCrashLogOptions(
         "--no-crashed-only",
         action="store_false",
         dest="crashed_only",
-        help="do not symbolicate the crashed thread",
+        help="in batch mode, symbolicate all threads, not only the crashed one",
+        default=False,
     )
     arg_parser.add_argument(
         "--disasm-depth",
