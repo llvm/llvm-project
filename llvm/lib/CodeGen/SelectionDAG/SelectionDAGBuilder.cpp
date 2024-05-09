@@ -6700,22 +6700,24 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
   case Intrinsic::roundeven:
   case Intrinsic::canonicalize: {
     unsigned Opcode;
+    // clang-format off
     switch (Intrinsic) {
     default: llvm_unreachable("Impossible intrinsic");  // Can't reach here.
-    case Intrinsic::sqrt:      Opcode = ISD::FSQRT;      break;
-    case Intrinsic::fabs:      Opcode = ISD::FABS;       break;
-    case Intrinsic::sin:       Opcode = ISD::FSIN;       break;
-    case Intrinsic::cos:       Opcode = ISD::FCOS;       break;
-    case Intrinsic::exp10:     Opcode = ISD::FEXP10;     break;
-    case Intrinsic::floor:     Opcode = ISD::FFLOOR;     break;
-    case Intrinsic::ceil:      Opcode = ISD::FCEIL;      break;
-    case Intrinsic::trunc:     Opcode = ISD::FTRUNC;     break;
-    case Intrinsic::rint:      Opcode = ISD::FRINT;      break;
-    case Intrinsic::nearbyint: Opcode = ISD::FNEARBYINT; break;
-    case Intrinsic::round:     Opcode = ISD::FROUND;     break;
-    case Intrinsic::roundeven: Opcode = ISD::FROUNDEVEN; break;
+    case Intrinsic::sqrt:         Opcode = ISD::FSQRT;         break;
+    case Intrinsic::fabs:         Opcode = ISD::FABS;          break;
+    case Intrinsic::sin:          Opcode = ISD::FSIN;          break;
+    case Intrinsic::cos:          Opcode = ISD::FCOS;          break;
+    case Intrinsic::exp10:        Opcode = ISD::FEXP10;        break;
+    case Intrinsic::floor:        Opcode = ISD::FFLOOR;        break;
+    case Intrinsic::ceil:         Opcode = ISD::FCEIL;         break;
+    case Intrinsic::trunc:        Opcode = ISD::FTRUNC;        break;
+    case Intrinsic::rint:         Opcode = ISD::FRINT;         break;
+    case Intrinsic::nearbyint:    Opcode = ISD::FNEARBYINT;    break;
+    case Intrinsic::round:        Opcode = ISD::FROUND;        break;
+    case Intrinsic::roundeven:    Opcode = ISD::FROUNDEVEN;    break;
     case Intrinsic::canonicalize: Opcode = ISD::FCANONICALIZE; break;
     }
+    // clang-format on
 
     setValue(&I, DAG.getNode(Opcode, sdl,
                              getValue(I.getArgOperand(0)).getValueType(),
@@ -6727,6 +6729,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
   case Intrinsic::lrint:
   case Intrinsic::llrint: {
     unsigned Opcode;
+    // clang-format off
     switch (Intrinsic) {
     default: llvm_unreachable("Impossible intrinsic");  // Can't reach here.
     case Intrinsic::lround:  Opcode = ISD::LROUND;  break;
@@ -6734,6 +6737,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     case Intrinsic::lrint:   Opcode = ISD::LRINT;   break;
     case Intrinsic::llrint:  Opcode = ISD::LLRINT;  break;
     }
+    // clang-format on
 
     EVT RetVT = TLI.getValueType(DAG.getDataLayout(), I.getType());
     setValue(&I, DAG.getNode(Opcode, sdl, RetVT,
