@@ -121,6 +121,7 @@ public:
   bool VisitCXXRewrittenBinaryOperator(const CXXRewrittenBinaryOperator *E);
   bool VisitPseudoObjectExpr(const PseudoObjectExpr *E);
   bool VisitPackIndexingExpr(const PackIndexingExpr *E);
+  bool VisitRecoveryExpr(const RecoveryExpr *E);
 
 protected:
   bool visitExpr(const Expr *E) override;

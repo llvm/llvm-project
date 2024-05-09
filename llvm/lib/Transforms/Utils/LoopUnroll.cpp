@@ -18,17 +18,20 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/ScopedHashTable.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/ADT/ilist_iterator.h"
+#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopIterator.h"
+#include "llvm/Analysis/MemorySSA.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/IR/BasicBlock.h"
@@ -209,13 +212,140 @@ static bool isEpilogProfitable(Loop *L) {
   return false;
 }
 
+struct LoadValue {
+  Instruction *DefI = nullptr;
+  unsigned Generation = 0;
+  LoadValue() = default;
+  LoadValue(Instruction *Inst, unsigned Generation)
+      : DefI(Inst), Generation(Generation) {}
+};
+
+class StackNode {
+  ScopedHashTable<const SCEV *, LoadValue>::ScopeTy LoadScope;
+  unsigned CurrentGeneration;
+  unsigned ChildGeneration;
+  DomTreeNode *Node;
+  DomTreeNode::const_iterator ChildIter;
+  DomTreeNode::const_iterator EndIter;
+  bool Processed = false;
+
+public:
+  StackNode(ScopedHashTable<const SCEV *, LoadValue> &AvailableLoads,
+            unsigned cg, DomTreeNode *N, DomTreeNode::const_iterator Child,
+            DomTreeNode::const_iterator End)
+      : LoadScope(AvailableLoads), CurrentGeneration(cg), ChildGeneration(cg),
+        Node(N), ChildIter(Child), EndIter(End) {}
+  // Accessors.
+  unsigned currentGeneration() const { return CurrentGeneration; }
+  unsigned childGeneration() const { return ChildGeneration; }
+  void childGeneration(unsigned generation) { ChildGeneration = generation; }
+  DomTreeNode *node() { return Node; }
+  DomTreeNode::const_iterator childIter() const { return ChildIter; }
+
+  DomTreeNode *nextChild() {
+    DomTreeNode *Child = *ChildIter;
+    ++ChildIter;
+    return Child;
+  }
+
+  DomTreeNode::const_iterator end() const { return EndIter; }
+  bool isProcessed() const { return Processed; }
+  void process() { Processed = true; }
+};
+
+Value *getMatchingValue(LoadValue LV, LoadInst *LI, unsigned CurrentGeneration,
+                        BatchAAResults &BAA,
+                        function_ref<MemorySSA *()> GetMSSA) {
+  if (!LV.DefI)
+    return nullptr;
+  if (LV.DefI->getType() != LI->getType())
+    return nullptr;
+  if (LV.Generation != CurrentGeneration) {
+    MemorySSA *MSSA = GetMSSA();
+    if (!MSSA)
+      return nullptr;
+    auto *EarlierMA = MSSA->getMemoryAccess(LV.DefI);
+    MemoryAccess *LaterDef =
+        MSSA->getWalker()->getClobberingMemoryAccess(LI, BAA);
+    if (!MSSA->dominates(LaterDef, EarlierMA))
+      return nullptr;
+  }
+  return LV.DefI;
+}
+
+void loadCSE(Loop *L, DominatorTree &DT, ScalarEvolution &SE, LoopInfo &LI,
+             BatchAAResults &BAA, function_ref<MemorySSA *()> GetMSSA) {
+  ScopedHashTable<const SCEV *, LoadValue> AvailableLoads;
+  SmallVector<std::unique_ptr<StackNode>> NodesToProcess;
+  DomTreeNode *HeaderD = DT.getNode(L->getHeader());
+  NodesToProcess.emplace_back(new StackNode(AvailableLoads, 0, HeaderD,
+                                            HeaderD->begin(), HeaderD->end()));
+
+  unsigned CurrentGeneration = 0;
+  while (!NodesToProcess.empty()) {
+    StackNode *NodeToProcess = &*NodesToProcess.back();
+
+    CurrentGeneration = NodeToProcess->currentGeneration();
+
+    if (!NodeToProcess->isProcessed()) {
+      // Process the node.
+
+      // If this block has a single predecessor, then the predecessor is the
+      // parent
+      // of the domtree node and all of the live out memory values are still
+      // current in this block.  If this block has multiple predecessors, then
+      // they could have invalidated the live-out memory values of our parent
+      // value.  For now, just be conservative and invalidate memory if this
+      // block has multiple predecessors.
+      if (!NodeToProcess->node()->getBlock()->getSinglePredecessor())
+        ++CurrentGeneration;
+      for (auto &I : make_early_inc_range(*NodeToProcess->node()->getBlock())) {
+
+        auto *Load = dyn_cast<LoadInst>(&I);
+        if (!Load || !Load->isSimple()) {
+          if (I.mayWriteToMemory())
+            CurrentGeneration++;
+          continue;
+        }
+
+        const SCEV *PtrSCEV = SE.getSCEV(Load->getPointerOperand());
+        LoadValue LV = AvailableLoads.lookup(PtrSCEV);
+        if (Value *M =
+                getMatchingValue(LV, Load, CurrentGeneration, BAA, GetMSSA)) {
+          if (LI.replacementPreservesLCSSAForm(Load, M)) {
+            Load->replaceAllUsesWith(M);
+            Load->eraseFromParent();
+          }
+        } else {
+          AvailableLoads.insert(PtrSCEV, LoadValue(Load, CurrentGeneration));
+        }
+      }
+      NodeToProcess->childGeneration(CurrentGeneration);
+      NodeToProcess->process();
+    } else if (NodeToProcess->childIter() != NodeToProcess->end()) {
+      // Push the next child onto the stack.
+      DomTreeNode *Child = NodeToProcess->nextChild();
+      if (!L->contains(Child->getBlock()))
+        continue;
+      NodesToProcess.emplace_back(
+          new StackNode(AvailableLoads, NodeToProcess->childGeneration(), Child,
+                        Child->begin(), Child->end()));
+    } else {
+      // It has been processed, and there are no more children to process,
+      // so delete it and pop it off the stack.
+      NodesToProcess.pop_back();
+    }
+  }
+}
+
 /// Perform some cleanup and simplifications on loops after unrolling. It is
 /// useful to simplify the IV's in the new loop, as well as do a quick
 /// simplify/dce pass of the instructions.
 void llvm::simplifyLoopAfterUnroll(Loop *L, bool SimplifyIVs, LoopInfo *LI,
                                    ScalarEvolution *SE, DominatorTree *DT,
                                    AssumptionCache *AC,
-                                   const TargetTransformInfo *TTI) {
+                                   const TargetTransformInfo *TTI,
+                                   AAResults *AA) {
   using namespace llvm::PatternMatch;
 
   // Simplify any new induction variables in the partially unrolled loop.
@@ -229,6 +359,16 @@ void llvm::simplifyLoopAfterUnroll(Loop *L, bool SimplifyIVs, LoopInfo *LI,
       Value *V = DeadInsts.pop_back_val();
       if (Instruction *Inst = dyn_cast_or_null<Instruction>(V))
         RecursivelyDeleteTriviallyDeadInstructions(Inst);
+    }
+
+    if (AA) {
+      std::unique_ptr<MemorySSA> MSSA = nullptr;
+      BatchAAResults BAA(*AA);
+      loadCSE(L, *DT, *SE, *LI, BAA, [L, AA, DT, &MSSA]() -> MemorySSA * {
+        if (!MSSA)
+          MSSA.reset(new MemorySSA(*L, AA, DT));
+        return &*MSSA;
+      });
     }
   }
 
@@ -292,12 +432,11 @@ void llvm::simplifyLoopAfterUnroll(Loop *L, bool SimplifyIVs, LoopInfo *LI,
 ///
 /// If RemainderLoop is non-null, it will receive the remainder loop (if
 /// required and not fully unrolled).
-LoopUnrollResult llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
-                                  ScalarEvolution *SE, DominatorTree *DT,
-                                  AssumptionCache *AC,
-                                  const TargetTransformInfo *TTI,
-                                  OptimizationRemarkEmitter *ORE,
-                                  bool PreserveLCSSA, Loop **RemainderLoop) {
+LoopUnrollResult
+llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
+                 ScalarEvolution *SE, DominatorTree *DT, AssumptionCache *AC,
+                 const TargetTransformInfo *TTI, OptimizationRemarkEmitter *ORE,
+                 bool PreserveLCSSA, Loop **RemainderLoop, AAResults *AA) {
   assert(DT && "DomTree is required");
 
   if (!L->getLoopPreheader()) {
@@ -852,7 +991,7 @@ LoopUnrollResult llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
   // At this point, the code is well formed.  We now simplify the unrolled loop,
   // doing constant propagation and dead code elimination as we go.
   simplifyLoopAfterUnroll(L, !CompletelyUnroll && ULO.Count > 1, LI, SE, DT, AC,
-                          TTI);
+                          TTI, AA);
 
   NumCompletelyUnrolled += CompletelyUnroll;
   ++NumUnrolled;

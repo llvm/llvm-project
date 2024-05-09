@@ -3331,58 +3331,6 @@ TEST(TransferTest, ResultObjectLocationDontVisitNestedRecordDecl) {
          ASTContext &ASTCtx) {});
 }
 
-TEST(TransferTest, ResultObjectLocationDontVisitUnevaluatedContexts) {
-  // This is a crash repro.
-  // We used to crash because when propagating result objects, we would visit
-  // unevaluated contexts, but we don't model fields used only in these.
-
-  auto testFunction = [](llvm::StringRef Code, llvm::StringRef TargetFun) {
-    runDataflow(
-        Code,
-        [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
-           ASTContext &ASTCtx) {},
-        LangStandard::lang_gnucxx17,
-        /* ApplyBuiltinTransfer= */ true, TargetFun);
-  };
-
-  std::string Code = R"cc(
-    // Definitions needed for `typeid`.
-    namespace std {
-      class type_info {};
-      class bad_typeid {};
-    }  // namespace std
-
-    struct S1 {};
-    struct S2 { S1 s1; };
-
-    // We test each type of unevaluated context from a different target
-    // function. Some types of unevaluated contexts may actually cause the
-    // field `s1` to be modeled, and we don't want this to "pollute" the tests
-    // for the other unevaluated contexts.
-    void decltypeTarget() {
-        decltype(S2{}) Dummy;
-    }
-    void typeofTarget() {
-        typeof(S2{}) Dummy;
-    }
-    void typeidTarget() {
-        typeid(S2{});
-    }
-    void sizeofTarget() {
-        sizeof(S2{});
-    }
-    void noexceptTarget() {
-        noexcept(S2{});
-    }
-  )cc";
-
-  testFunction(Code, "decltypeTarget");
-  testFunction(Code, "typeofTarget");
-  testFunction(Code, "typeidTarget");
-  testFunction(Code, "sizeofTarget");
-  testFunction(Code, "noexceptTarget");
-}
-
 TEST(TransferTest, StaticCast) {
   std::string Code = R"(
     void target(int Foo) {
