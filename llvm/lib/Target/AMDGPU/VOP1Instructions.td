@@ -1310,7 +1310,7 @@ defm V_RNDNE_F64      : VOP1_Real_gfx7_gfx10_NO_DPP_gfx11_gfx13_with_DPP16_gfx12
 defm V_FLOOR_F64      : VOP1_Real_gfx7_gfx10_NO_DPP_gfx11_gfx13_with_DPP16_gfx12<0x01a>;
 
 //===----------------------------------------------------------------------===//
-// GFX6, GFX7, GFX10, GFX11, GFX12
+// GFX6, GFX7, GFX10, GFX11, GFX12, GFX13
 //===----------------------------------------------------------------------===//
 
 let AssemblerPredicate = isGFX6GFX7, DecoderNamespace = "GFX6GFX7" in {
@@ -1416,6 +1416,10 @@ defm V_CLREXCP           : VOP1_Real_gfx6_gfx7_gfx10<0x041>;
 defm V_MOVRELD_B32       : VOP1_Real_gfx6_gfx7_gfx10_FULL_gfx11_gfx12<0x042>;
 defm V_MOVRELS_B32       : VOP1_Real_gfx6_gfx7_gfx10_FULL_gfx11_gfx12<0x043>;
 defm V_MOVRELSD_B32      : VOP1_Real_gfx6_gfx7_gfx10_FULL_gfx11_gfx12<0x044>;
+
+def : AMDGPUMnemonicAlias<"v_brev_b32", "v_bfrev_b32"> {
+  let AssemblerPredicate = isGFX13Plus;
+}
 
 //===----------------------------------------------------------------------===//
 // GFX8, GFX9 (VI).
