@@ -12,6 +12,7 @@ void foo(int x) {
   A a = {.x = x};
 }
 
+// CHECK: ![[anon:.*]] = !cir.struct<struct  {!cir.int<s, 32>}>
 // CHECK: #[[bfi_x:.*]] = #cir.bitfield_info<name = "x", storage_type = !u32i, size = 16, offset = 0, is_signed = true>
 // CHECK: #[[bfi_y:.*]] = #cir.bitfield_info<name = "y", storage_type = !u32i, size = 16, offset = 16, is_signed = true>
 
@@ -27,3 +28,6 @@ void foo(int x) {
 // CHECK:  %[[VAL_8:.*]] = cir.const #cir.int<0> : !s32i
 // CHECK:  %[[VAL_9:.*]] = cir.set_bitfield(#[[bfi_y]], %[[VAL_7]] : !cir.ptr<!u32i>, %[[VAL_8]] : !s32i) -> !s32i
 // CHECK:  cir.return
+
+union { int i; float f; } u = { };
+// CHECK: cir.global external @u = #cir.zero : ![[anon]]
