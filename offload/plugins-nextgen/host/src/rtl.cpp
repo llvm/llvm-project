@@ -385,10 +385,6 @@ struct GenELF64PluginTy final : public GenericPluginTy {
 
   /// Initialize the plugin and return the number of devices.
   Expected<int32_t> initImpl() override {
-#ifdef OMPT_SUPPORT
-    ompt::connectLibrary();
-#endif
-
 #ifdef USES_DYNAMIC_FFI
     if (auto Err = Plugin::check(ffi_init(), "Failed to initialize libffi"))
       return std::move(Err);
@@ -445,9 +441,9 @@ struct GenELF64PluginTy final : public GenericPluginTy {
     return llvm::Triple::UnknownArch;
 #endif
   }
-};
 
-GenericPluginTy *PluginTy::createPlugin() { return new GenELF64PluginTy(); }
+  const char *getName() const override { return GETNAME(TARGET_NAME); }
+};
 
 template <typename... ArgsTy>
 static Error Plugin::check(int32_t Code, const char *ErrMsg, ArgsTy... Args) {
@@ -462,3 +458,9 @@ static Error Plugin::check(int32_t Code, const char *ErrMsg, ArgsTy... Args) {
 } // namespace target
 } // namespace omp
 } // namespace llvm
+
+extern "C" {
+llvm::omp::target::plugin::GenericPluginTy *createPlugin_host() {
+  return new llvm::omp::target::plugin::GenELF64PluginTy();
+}
+}

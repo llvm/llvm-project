@@ -66,6 +66,4 @@ target_include_directories(PluginCommon PUBLIC
   ${LIBOMPTARGET_INCLUDE_DIR}
 )
 
-set_target_properties(PluginCommon PROPERTIES
-  POSITION_INDEPENDENT_CODE ON
-  CXX_VISIBILITY_PRESET protected)
+set_target_properties(PluginCommon PROPERTIES POSITION_INDEPENDENT_CODE ON)
