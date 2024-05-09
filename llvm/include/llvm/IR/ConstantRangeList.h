@@ -1,4 +1,4 @@
-//===- ConstantRangeList.h - A list of constant range -----------*- C++ -*-===//
+//===- ConstantRangeList.h - A list of constant ranges ----------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // Represent a list of signed ConstantRange and do NOT support wrap around the
-// end of the numeric range. Ranges in the list are ordered and no overlapping.
+// end of the numeric range. Ranges in the list are ordered and not overlapping.
 // Ranges should have the same bitwidth. Each range's lower should be less than
 // its upper.
 //
@@ -47,10 +47,7 @@ public:
   SmallVectorImpl<ConstantRange>::const_iterator end() const {
     return Ranges.end();
   }
-  ConstantRange getRange(unsigned i) const {
-    assert(i < Ranges.size());
-    return Ranges[i];
-  }
+  ConstantRange getRange(unsigned i) const { return Ranges[i]; }
 
   /// Return true if this list contains no members.
   bool empty() const { return Ranges.empty(); }
@@ -78,7 +75,10 @@ public:
 
   /// Print out the ranges to a stream.
   void print(raw_ostream &OS) const;
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   void dump() const;
+#endif
 };
 
 } // end namespace llvm

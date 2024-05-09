@@ -5,13 +5,6 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// Represent a list of signed ConstantRange and do NOT support wrap around the
-// end of the numeric range. Ranges in the list are ordered and no overlapping.
-// Ranges should have the same bitwidth. Each range's lower should be less than
-// its upper.
-//
-//===----------------------------------------------------------------------===//
 
 #include "llvm/IR/ConstantRangeList.h"
 #include <cstddef>

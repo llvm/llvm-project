@@ -1632,13 +1632,14 @@ Currently, only the following parameter attributes are defined:
     parameter. Other arbitrary accesses to the same memory via other pointers
     are allowed.
 
-    The ``writable`` or ``dereferenceable`` attribute does not imply the
-    ``initializes`` attribute. The ``initializes`` does not imply ``writeonly``
-    since ``initializes`` allows reading from the pointer after writing.
+    The ``writable`` or ``dereferenceable`` attribute do not imply the
+    ``initializes`` attribute. The ``initializes`` attribute does not imply
+    ``writeonly`` since ``initializes`` allows reading from the pointer
+    after writing.
 
     This attribute is a list of constant ranges in ascending order with no
-    overlapping or consecutive list elements. ``LoN/HiN`` are 64-bit ints, and
-    negative values are allowed in case the argument points partway into
+    overlapping or consecutive list elements. ``LoN/HiN`` are 64-bit integers,
+    and negative values are allowed in case the argument points partway into
     an allocation. An empty list is not allowed.
 
 ``dead_on_unwind``
