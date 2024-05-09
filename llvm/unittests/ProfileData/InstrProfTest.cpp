@@ -1782,7 +1782,6 @@ TEST(SymtabTest, instr_prof_symtab_module_test) {
     EXPECT_THAT(PGOFuncName.str(), EndsWith(Funcs[I].str()));
   }
 
-  StringRef VTables[] = {"ExternalGV", "LocalGV"};
   for (auto [VTableName, PGOName] : {std::pair{"ExternalGV", "ExternalGV"},
                                      {"LocalGV", "MyModule.cpp;LocalGV"}}) {
     GlobalVariable *GV =
