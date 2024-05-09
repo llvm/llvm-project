@@ -253,7 +253,7 @@ MachineInstr *SSACCmpConv::findConvertibleCompare(MachineBasicBlock *MBB) {
   if (I == MBB->end())
     return nullptr;
   // The terminator must be controlled by the flags.
-  if (!I->readsRegister(X86::EFLAGS)) {
+  if (!I->readsRegister(X86::EFLAGS, TRI)) {
     ++NumCmpTermRejs;
     LLVM_DEBUG(dbgs() << "Flags not used by terminator: " << *I);
     return nullptr;
