@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sme -fsyntax-only -verify -emit-llvm %s
+// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sme -verify -emit-llvm %s
 
 // REQUIRES: aarch64-registered-target
 
