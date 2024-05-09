@@ -4650,8 +4650,7 @@ const SCEV *ScalarEvolution::removePointerBase(const SCEV *P) {
     Ops[0] = removePointerBase(Ops[0]);
     // Don't try to transfer nowrap flags for now. We could in some cases
     // (for example, if pointer operand of the AddRec is a SCEVUnknown).
-    return getAddRecExprFromMismatchedTypes(Ops, AddRec->getLoop(),
-                                            SCEV::FlagAnyWrap);
+    return getAddRecExpr(Ops, AddRec->getLoop(), SCEV::FlagAnyWrap);
   }
   if (auto *Add = dyn_cast<SCEVAddExpr>(P)) {
     // The base of an Add is the pointer operand.
@@ -4666,29 +4665,10 @@ const SCEV *ScalarEvolution::removePointerBase(const SCEV *P) {
     *PtrOp = removePointerBase(*PtrOp);
     // Don't try to transfer nowrap flags for now. We could in some cases
     // (for example, if the pointer operand of the Add is a SCEVUnknown).
-    return getAddExprFromMismatchedTypes(Ops);
+    return getAddExpr(Ops);
   }
-
-  if (auto *Unknown = dyn_cast<SCEVUnknown>(P)) {
-    if (auto *O = dyn_cast<Operator>(Unknown->getValue())) {
-      if (O->getOpcode() == Instruction::IntToPtr) {
-        Value *Op0 = O->getOperand(0);
-        if (isa<ConstantInt>(Op0))
-          return getConstant(dyn_cast<ConstantInt>(Op0));
-        return getSCEV(Op0);
-      }
-    }
-  }
-
   // Any other expression must be a pointer base.
   return getZero(P->getType());
-}
-
-static bool isIntToPtr(const SCEV *V) {
-  if (auto *Unknown = dyn_cast<SCEVUnknown>(V))
-    if (auto *Op = dyn_cast<Operator>(Unknown->getValue()))
-      return Op->getOpcode() == Instruction::IntToPtr;
-  return false;
 }
 
 const SCEV *ScalarEvolution::getMinusSCEV(const SCEV *LHS, const SCEV *RHS,
@@ -4698,15 +4678,12 @@ const SCEV *ScalarEvolution::getMinusSCEV(const SCEV *LHS, const SCEV *RHS,
   if (LHS == RHS)
     return getZero(LHS->getType());
 
-  // If we subtract two pointers except inttoptrs with different pointer bases,
-  // bail.
+  // If we subtract two pointers with different pointer bases, bail.
   // Eventually, we're going to add an assertion to getMulExpr that we
   // can't multiply by a pointer.
   if (RHS->getType()->isPointerTy()) {
-    const SCEV *LBase = getPointerBase(LHS);
-    const SCEV *RBase = getPointerBase(RHS);
     if (!LHS->getType()->isPointerTy() ||
-        (LBase != RBase && (!isIntToPtr(LBase) || !isIntToPtr(RBase))))
+        getPointerBase(LHS) != getPointerBase(RHS))
       return getCouldNotCompute();
     LHS = removePointerBase(LHS);
     RHS = removePointerBase(RHS);
@@ -4741,8 +4718,7 @@ const SCEV *ScalarEvolution::getMinusSCEV(const SCEV *LHS, const SCEV *RHS,
   // larger scope than intended.
   auto NegFlags = RHSIsNotMinSigned ? SCEV::FlagNSW : SCEV::FlagAnyWrap;
 
-  return getAddExprFromMismatchedTypes(LHS, getNegativeSCEV(RHS, NegFlags),
-                                       AddFlags, Depth);
+  return getAddExpr(LHS, getNegativeSCEV(RHS, NegFlags), AddFlags, Depth);
 }
 
 const SCEV *ScalarEvolution::getTruncateOrZeroExtend(const SCEV *V, Type *Ty,
@@ -4767,18 +4743,6 @@ const SCEV *ScalarEvolution::getTruncateOrSignExtend(const SCEV *V, Type *Ty,
   if (getTypeSizeInBits(SrcTy) > getTypeSizeInBits(Ty))
     return getTruncateExpr(V, Ty, Depth);
   return getSignExtendExpr(V, Ty, Depth);
-}
-
-const SCEV *ScalarEvolution::getTruncateOrAnyExtend(const SCEV *V, Type *Ty,
-                                                    unsigned Depth) {
-  Type *SrcTy = V->getType();
-  assert(SrcTy->isIntOrPtrTy() && Ty->isIntOrPtrTy() &&
-         "Cannot truncate or any extend with non-integer arguments!");
-  if (getTypeSizeInBits(SrcTy) == getTypeSizeInBits(Ty))
-    return V; // No conversion
-  if (getTypeSizeInBits(SrcTy) > getTypeSizeInBits(Ty))
-    return getTruncateExpr(V, Ty, Depth);
-  return getAnyExtendExpr(V, Ty);
 }
 
 const SCEV *
@@ -4873,58 +4837,6 @@ ScalarEvolution::getUMinFromMismatchedTypes(SmallVectorImpl<const SCEV *> &Ops,
 
   // Generate umin.
   return getUMinExpr(PromotedOps, Sequential);
-}
-
-const SCEV *ScalarEvolution::getAddRecExprFromMismatchedTypes(
-    const SmallVectorImpl<const SCEV *> &Ops, const Loop *L,
-    SCEV::NoWrapFlags Flags) {
-  assert(!Ops.empty() && "At least one operand must be!");
-  // Trivial case.
-  if (Ops.size() == 1)
-    return Ops[0];
-
-  // Find the max type first.
-  Type *MaxType = nullptr;
-  for (const auto *S : Ops)
-    if (MaxType)
-      MaxType = getWiderType(MaxType, S->getType());
-    else
-      MaxType = S->getType();
-  assert(MaxType && "Failed to find maximum type!");
-
-  // Extend all ops to max type.
-  SmallVector<const SCEV *, 2> PromotedOps;
-  PromotedOps.reserve(Ops.size());
-  for (const auto *S : Ops)
-    PromotedOps.push_back(getNoopOrAnyExtend(S, MaxType));
-
-  return getAddRecExpr(PromotedOps, L, Flags);
-}
-
-const SCEV *ScalarEvolution::getAddExprFromMismatchedTypes(
-    const SmallVectorImpl<const SCEV *> &Ops, SCEV::NoWrapFlags Flags,
-    unsigned Depth) {
-  assert(!Ops.empty() && "At least one operand must be!");
-  // Trivial case.
-  if (Ops.size() == 1)
-    return Ops[0];
-
-  // Find the max type first.
-  Type *MaxType = nullptr;
-  for (const auto *S : Ops)
-    if (MaxType)
-      MaxType = getWiderType(MaxType, S->getType());
-    else
-      MaxType = S->getType();
-  assert(MaxType && "Failed to find maximum type!");
-
-  // Extend all ops to max type.
-  SmallVector<const SCEV *, 2> PromotedOps;
-  PromotedOps.reserve(Ops.size());
-  for (const auto *S : Ops)
-    PromotedOps.push_back(getNoopOrAnyExtend(S, MaxType));
-
-  return getAddExpr(PromotedOps, Flags, Depth);
 }
 
 const SCEV *ScalarEvolution::getPointerBase(const SCEV *V) {
