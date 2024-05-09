@@ -142,17 +142,18 @@ bool isPointerType(Expr *E) {
     return type && type->isAnyPointerType();
 }
 
-void NpeSourceVisitor::saveNpeSuspectedSources(const SourceRange &range) {
+std::optional<typename std::set<ordered_json>::iterator>
+NpeSourceVisitor::saveNpeSuspectedSources(const SourceRange &range) {
     ordered_json loc;
     // something wrong with location
     if (!saveLocationInfo(*Context, range, loc))
-        return;
+        return std::nullopt;
     // source outside current project
     const std::string &file = loc["file"];
     if (!Global.isUnderProject(file))
-        return;
+        return std::nullopt;
 
-    reservoirSamplingAddElement(Global.npeSuspectedSources, loc, 100000);
+    return reservoirSamplingAddElement(Global.npeSuspectedSources, loc, 100000);
 }
 
 bool NpeSourceVisitor::VisitVarDecl(VarDecl *D) {

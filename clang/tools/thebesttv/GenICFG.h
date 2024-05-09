@@ -37,7 +37,9 @@ class GenICFGVisitor : public RecursiveASTVisitor<GenICFGVisitor> {
 class NpeSourceVisitor : public RecursiveASTVisitor<NpeSourceVisitor> {
 
     ASTContext *Context;
-    void saveNpeSuspectedSources(const SourceRange &range);
+
+    std::optional<typename std::set<ordered_json>::iterator>
+    saveNpeSuspectedSources(const SourceRange &range);
 
   public:
     explicit NpeSourceVisitor(ASTContext *Context) : Context(Context) {}
