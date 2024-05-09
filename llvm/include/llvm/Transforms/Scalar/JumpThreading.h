@@ -142,7 +142,7 @@ public:
   }
 
   Constant *evaluateOnPredecessorEdge(BasicBlock *BB, BasicBlock *PredPredBB,
-                                      Value *cond);
+                                      Value *cond, const DataLayout &DL);
   bool maybethreadThroughTwoBasicBlocks(BasicBlock *BB, Value *Cond);
   void threadThroughTwoBasicBlocks(BasicBlock *PredPredBB, BasicBlock *PredBB,
                                    BasicBlock *BB, BasicBlock *SuccBB);

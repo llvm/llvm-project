@@ -810,7 +810,7 @@ Instruction *InstCombinerImpl::tryFoldInstWithCtpopWithNot(Instruction *I) {
   // the icmp will simplify to true/false.
   if (Opc == Instruction::ICmp && !cast<ICmpInst>(I)->isEquality()) {
     Constant *Cmp =
-        ConstantFoldCompareInstruction(ICmpInst::ICMP_UGT, C, BitWidthC);
+        ConstantFoldCompareInstOperands(ICmpInst::ICMP_UGT, C, BitWidthC, DL);
     if (Cmp && !Cmp->isZeroValue())
       return nullptr;
   }
