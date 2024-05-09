@@ -1170,7 +1170,7 @@ TEST_F(CoreAPIsStandardTest, ErrorFromAutoSuspendedAsynchronousGeneratorTest) {
       },
       NoDependenciesToRegister);
 
-  EXPECT_EQ(LookupsCompleted, 0);
+  EXPECT_EQ(LookupsCompleted, 0U);
 
   // Suspend the first lookup.
   auto LS1 = std::move(G.takeLookup().LS);
@@ -1185,7 +1185,7 @@ TEST_F(CoreAPIsStandardTest, ErrorFromAutoSuspendedAsynchronousGeneratorTest) {
       },
       NoDependenciesToRegister);
 
-  EXPECT_EQ(LookupsCompleted, 0);
+  EXPECT_EQ(LookupsCompleted, 0U);
 
   // Unsuspend the first lookup.
   LS1.continueLookup(make_error<StringError>("boom", inconvertibleErrorCode()));
@@ -1194,7 +1194,7 @@ TEST_F(CoreAPIsStandardTest, ErrorFromAutoSuspendedAsynchronousGeneratorTest) {
   G.takeLookup().LS.continueLookup(
       make_error<StringError>("boom", inconvertibleErrorCode()));
 
-  EXPECT_EQ(LookupsCompleted, 2);
+  EXPECT_EQ(LookupsCompleted, 2U);
 }
 
 TEST_F(CoreAPIsStandardTest, BlockedGeneratorAutoSuspensionTest) {
