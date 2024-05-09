@@ -8,5 +8,5 @@ add_libc_test(
   SRCS vdso_test.cpp
   DEPENDS
     libc.src.__support.OSUtil.vdso
-    libc.include.llvm-libc-types.struct_timeval # TODO: update this to proxy header once available
+    libc.hdr.types.struct_timeval
 )
