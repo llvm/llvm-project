@@ -50,41 +50,8 @@ static const char *RISCVGImplications[] = {
 #define GET_SUPPORTED_EXTENSIONS
 #include "llvm/TargetParser/RISCVTargetParserDef.inc"
 
-static constexpr RISCVProfile SupportedProfiles[] = {
-    {"rvi20u32", "rv32i"},
-    {"rvi20u64", "rv64i"},
-    {"rva20u64", "rv64imafdc_ziccamoa_ziccif_zicclsm_ziccrse_zicntr_za128rs"},
-    {"rva20s64", "rv64imafdc_ziccamoa_ziccif_zicclsm_ziccrse_zicntr_zifencei_"
-                 "za128rs_ssccptr_sstvala_sstvecd_svade_svbare"},
-    {"rva22u64",
-     "rv64imafdc_zic64b_zicbom_zicbop_zicboz_ziccamoa_ziccif_zicclsm_ziccrse_"
-     "zicntr_zihintpause_zihpm_za64rs_zfhmin_zba_zbb_zbs_zkt"},
-    {"rva22s64",
-     "rv64imafdc_zic64b_zicbom_zicbop_zicboz_ziccamoa_ziccif_zicclsm_ziccrse_"
-     "zicntr_zifencei_zihintpause_zihpm_za64rs_zfhmin_zba_zbb_zbs_zkt_ssccptr_"
-     "sscounterenw_sstvala_sstvecd_svade_svbare_svinval_svpbmt"},
-    {"rva23u64",
-     "rv64imafdcv_zic64b_zicbom_zicbop_zicboz_ziccamoa_ziccif_zicclsm_ziccrse_"
-     "zicntr_zicond_zihintntl_zihintpause_zihpm_zimop_za64rs_zawrs_zfa_zfhmin_"
-     "zcb_zcmop_zba_zbb_zbs_zkt_zvbb_zvfhmin_zvkt"},
-    {"rva23s64",
-     "rv64imafdcvh_zic64b_zicbom_zicbop_zicboz_ziccamoa_ziccif_zicclsm_ziccrse_"
-     "zicntr_zicond_zifencei_zihintntl_zihintpause_zihpm_zimop_za64rs_zawrs_"
-     "zfa_zfhmin_zcb_zcmop_zba_zbb_zbs_zkt_zvbb_zvfhmin_zvkt_shcounterenw_"
-     "shgatpa_shtvala_shvsatpa_shvstvala_shvstvecd_ssccptr_sscofpmf_"
-     "sscounterenw_ssnpm0p8_ssstateen_sstc_sstvala_sstvecd_ssu64xl_svade_"
-     "svbare_svinval_svnapot_svpbmt"},
-    {"rvb23u64", "rv64imafdc_zic64b_zicbom_zicbop_zicboz_ziccamoa_ziccif_"
-                 "zicclsm_ziccrse_zicntr_zicond_zihintntl_zihintpause_zihpm_"
-                 "zimop_za64rs_zawrs_zfa_zcb_zcmop_zba_zbb_zbs_zkt"},
-    {"rvb23s64",
-     "rv64imafdc_zic64b_zicbom_zicbop_zicboz_ziccamoa_ziccif_zicclsm_ziccrse_"
-     "zicntr_zicond_zifencei_zihintntl_zihintpause_zihpm_zimop_za64rs_zawrs_"
-     "zfa_zcb_zcmop_zba_zbb_zbs_zkt_ssccptr_sscofpmf_sscounterenw_sstc_sstvala_"
-     "sstvecd_ssu64xl_svade_svbare_svinval_svnapot_svpbmt"},
-    {"rvm23u32", "rv32im_zicbop_zicond_zicsr_zihintntl_zihintpause_zimop_zca_"
-                 "zcb_zce_zcmop_zcmp_zcmt_zba_zbb_zbs"},
-};
+#define GET_SUPPORTED_PROFILES
+#include "llvm/TargetParser/RISCVTargetParserDef.inc"
 
 static void verifyTables() {
 #ifndef NDEBUG
@@ -112,7 +79,7 @@ void llvm::riscvExtensionsHelp(StringMap<StringRef> DescMap) {
   outs() << "All available -march extensions for RISC-V\n\n";
   PrintExtension("Name", "Version", (DescMap.empty() ? "" : "Description"));
 
-  RISCVISAInfo::OrderedExtensionMap ExtMap;
+  RISCVISAUtils::OrderedExtensionMap ExtMap;
   for (const auto &E : SupportedExtensions)
     ExtMap[E.Name] = {E.Version.Major, E.Version.Minor};
   for (const auto &E : ExtMap) {
@@ -847,14 +814,20 @@ Error RISCVISAInfo::checkDependency() {
 
 struct ImpliedExtsEntry {
   StringLiteral Name;
-  ArrayRef<const char *> Exts;
+  const char *ImpliedExt;
 
   bool operator<(const ImpliedExtsEntry &Other) const {
     return Name < Other.Name;
   }
-
-  bool operator<(StringRef Other) const { return Name < Other; }
 };
+
+static bool operator<(const ImpliedExtsEntry &LHS, StringRef RHS) {
+  return LHS.Name < RHS;
+}
+
+static bool operator<(StringRef LHS, const ImpliedExtsEntry &RHS) {
+  return LHS < RHS.Name;
+}
 
 #define GET_IMPLIED_EXTENSIONS
 #include "llvm/TargetParser/RISCVTargetParserDef.inc"
@@ -880,18 +853,19 @@ void RISCVISAInfo::updateImplication() {
 
   while (!WorkList.empty()) {
     StringRef ExtName = WorkList.pop_back_val();
-    auto I = llvm::lower_bound(ImpliedExts, ExtName);
-    if (I != std::end(ImpliedExts) && I->Name == ExtName) {
-      for (const char *ImpliedExt : I->Exts) {
-        if (WorkList.count(ImpliedExt))
-          continue;
-        if (Exts.count(ImpliedExt))
-          continue;
-        auto Version = findDefaultVersion(ImpliedExt);
-        addExtension(ImpliedExt, Version.value());
-        WorkList.insert(ImpliedExt);
-      }
-    }
+    auto Range = std::equal_range(std::begin(ImpliedExts),
+                                  std::end(ImpliedExts), ExtName);
+    std::for_each(Range.first, Range.second,
+                  [&](const ImpliedExtsEntry &Implied) {
+                    const char *ImpliedExt = Implied.ImpliedExt;
+                    if (WorkList.count(ImpliedExt))
+                      return;
+                    if (Exts.count(ImpliedExt))
+                      return;
+                    auto Version = findDefaultVersion(ImpliedExt);
+                    addExtension(ImpliedExt, Version.value());
+                    WorkList.insert(ImpliedExt);
+                  });
   }
 
   // Add Zcf if Zce and F are enabled on RV32.
@@ -902,42 +876,34 @@ void RISCVISAInfo::updateImplication() {
   }
 }
 
-struct CombinedExtsEntry {
-  StringLiteral CombineExt;
-  ArrayRef<const char *> RequiredExts;
-};
-
-static constexpr CombinedExtsEntry CombineIntoExts[] = {
-    {{"zk"}, {ImpliedExtsZk}},
-    {{"zkn"}, {ImpliedExtsZkn}},
-    {{"zks"}, {ImpliedExtsZks}},
-    {{"zvkn"}, {ImpliedExtsZvkn}},
-    {{"zvknc"}, {ImpliedExtsZvknc}},
-    {{"zvkng"}, {ImpliedExtsZvkng}},
-    {{"zvks"}, {ImpliedExtsZvks}},
-    {{"zvksc"}, {ImpliedExtsZvksc}},
-    {{"zvksg"}, {ImpliedExtsZvksg}},
+static constexpr StringLiteral CombineIntoExts[] = {
+    {"zk"},    {"zkn"},  {"zks"},   {"zvkn"},  {"zvknc"},
+    {"zvkng"}, {"zvks"}, {"zvksc"}, {"zvksg"},
 };
 
 void RISCVISAInfo::updateCombination() {
-  bool IsNewCombine = false;
+  bool MadeChange = false;
   do {
-    IsNewCombine = false;
-    for (CombinedExtsEntry CombineIntoExt : CombineIntoExts) {
-      auto CombineExt = CombineIntoExt.CombineExt;
-      auto RequiredExts = CombineIntoExt.RequiredExts;
+    MadeChange = false;
+    for (StringRef CombineExt : CombineIntoExts) {
       if (hasExtension(CombineExt))
         continue;
-      bool IsAllRequiredFeatureExist = true;
-      for (const char *Ext : RequiredExts)
-        IsAllRequiredFeatureExist &= hasExtension(Ext);
-      if (IsAllRequiredFeatureExist) {
+
+      // Look up the extension in the ImpliesExt table to find everything it
+      // depends on.
+      auto Range = std::equal_range(std::begin(ImpliedExts),
+                                    std::end(ImpliedExts), CombineExt);
+      bool HasAllRequiredFeatures = std::all_of(
+          Range.first, Range.second, [&](const ImpliedExtsEntry &Implied) {
+            return hasExtension(Implied.ImpliedExt);
+          });
+      if (HasAllRequiredFeatures) {
         auto Version = findDefaultVersion(CombineExt);
         addExtension(CombineExt, Version.value());
-        IsNewCombine = true;
+        MadeChange = true;
       }
     }
-  } while (IsNewCombine);
+  } while (MadeChange);
 }
 
 void RISCVISAInfo::updateFLen() {

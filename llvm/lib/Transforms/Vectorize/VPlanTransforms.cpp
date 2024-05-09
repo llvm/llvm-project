@@ -506,13 +506,12 @@ static void removeDeadRecipes(VPlan &Plan) {
   }
 }
 
-static VPValue *createScalarIVSteps(VPlan &Plan,
-                                    InductionDescriptor::InductionKind Kind,
-                                    Instruction::BinaryOps InductionOpcode,
-                                    FPMathOperator *FPBinOp,
-                                    ScalarEvolution &SE, Instruction *TruncI,
-                                    VPValue *StartV, VPValue *Step,
-                                    VPBasicBlock::iterator IP) {
+static VPScalarIVStepsRecipe *
+createScalarIVSteps(VPlan &Plan, InductionDescriptor::InductionKind Kind,
+                    Instruction::BinaryOps InductionOpcode,
+                    FPMathOperator *FPBinOp, ScalarEvolution &SE,
+                    Instruction *TruncI, VPValue *StartV, VPValue *Step,
+                    VPBasicBlock::iterator IP) {
   VPBasicBlock *HeaderVPBB = Plan.getVectorLoopRegion()->getEntryBasicBlock();
   VPCanonicalIVPHIRecipe *CanonicalIV = Plan.getCanonicalIV();
   VPSingleDefRecipe *BaseIV = CanonicalIV;
@@ -579,16 +578,13 @@ static void legalizeAndOptimizeInductions(VPlan &Plan, ScalarEvolution &SE) {
       VPValue *StartV =
           Plan.getOrAddLiveIn(ConstantInt::get(ID.getStep()->getType(), 0));
       VPValue *StepV = PtrIV->getOperand(1);
-      VPRecipeBase *Steps =
-          createScalarIVSteps(Plan, InductionDescriptor::IK_IntInduction,
-                              Instruction::Add, nullptr, SE, nullptr, StartV,
-                              StepV, InsertPt)
-              ->getDefiningRecipe();
+      VPScalarIVStepsRecipe *Steps = createScalarIVSteps(
+          Plan, InductionDescriptor::IK_IntInduction, Instruction::Add, nullptr,
+          SE, nullptr, StartV, StepV, InsertPt);
 
-      auto *Recipe =
-          new VPInstruction(VPInstruction::PtrAdd,
-                            {PtrIV->getStartValue(), Steps->getVPSingleValue()},
-                            PtrIV->getDebugLoc(), "next.gep");
+      auto *Recipe = new VPInstruction(VPInstruction::PtrAdd,
+                                       {PtrIV->getStartValue(), Steps},
+                                       PtrIV->getDebugLoc(), "next.gep");
 
       Recipe->insertAfter(Steps);
       PtrIV->replaceAllUsesWith(Recipe);
@@ -606,7 +602,7 @@ static void legalizeAndOptimizeInductions(VPlan &Plan, ScalarEvolution &SE) {
       continue;
 
     const InductionDescriptor &ID = WideIV->getInductionDescriptor();
-    VPValue *Steps = createScalarIVSteps(
+    VPScalarIVStepsRecipe *Steps = createScalarIVSteps(
         Plan, ID.getKind(), ID.getInductionOpcode(),
         dyn_cast_or_null<FPMathOperator>(ID.getInductionBinOp()), SE,
         WideIV->getTruncInst(), WideIV->getStartValue(), WideIV->getStepValue(),

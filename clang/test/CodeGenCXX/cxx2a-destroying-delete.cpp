@@ -108,10 +108,10 @@ struct J {
 // CHECK-MSABI-LABEL: define {{.*}}@"?j@@
 J *j() {
   // CHECK-ITANIUM: invoke {{.*}}@_ZN1JC1Ev(
-  // CHECK-ITANIUM: call {{.*}}@_ZdlPvm(
+  // CHECK-ITANIUM: call {{.*}}@_ZdlPv(
   // CHECK-NOT: }
   // CHECK-MSABI: invoke {{.*}}@"??0J@@Q{{AE|EAA}}@XZ"(
-  // CHECK-MSABI: call {{.*}}@"??3@YAXP{{E?}}AX{{I|_K}}@Z"(
+  // CHECK-MSABI: call {{.*}}@"??3@YAXP{{E?}}AX@Z"(
   return new J;
   // CHECK: }
 }

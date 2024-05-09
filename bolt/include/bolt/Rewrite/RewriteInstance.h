@@ -424,6 +424,7 @@ private:
 
   /// Common section names.
   static StringRef getEHFrameSectionName() { return ".eh_frame"; }
+  static StringRef getEHFrameHdrSectionName() { return ".eh_frame_hdr"; }
   static StringRef getRelaDynSectionName() { return ".rela.dyn"; }
 
   /// FILE symbol name used for local fragments of global functions.

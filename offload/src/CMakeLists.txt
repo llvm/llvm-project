@@ -74,12 +74,9 @@ endmacro()
 set(LIBOMPTARGET_PLUGINS_TO_LOAD "" CACHE STRING
   "Comma separated list of plugin names to look for at runtime")
 if (NOT LIBOMPTARGET_PLUGINS_TO_LOAD)
-	check_plugin_target(ppc64)
-	check_plugin_target(x86_64)
 	check_plugin_target(cuda)
-	check_plugin_target(aarch64)
 	check_plugin_target(amdgpu)
-	check_plugin_target(s390x)
+	check_plugin_target(host)
 endif()
 
 list(TRANSFORM LIBOMPTARGET_PLUGINS_TO_LOAD PREPEND "\"libomptarget.rtl.")

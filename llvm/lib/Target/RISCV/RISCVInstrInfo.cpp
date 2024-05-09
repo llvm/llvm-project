@@ -3132,6 +3132,11 @@ bool RISCVInstrInfo::findCommutedOpIndices(const MachineInstr &MI,
   case CASE_RVV_OPCODE_WIDEN(VWMACC_VV):
   case CASE_RVV_OPCODE_WIDEN(VWMACCU_VV):
   case CASE_RVV_OPCODE_UNMASK(VADC_VVM):
+  case CASE_RVV_OPCODE(VSADD_VV):
+  case CASE_RVV_OPCODE(VSADDU_VV):
+  case CASE_RVV_OPCODE(VAADD_VV):
+  case CASE_RVV_OPCODE(VAADDU_VV):
+  case CASE_RVV_OPCODE(VSMUL_VV):
     // Operands 2 and 3 are commutable.
     return fixCommutedOpIndices(SrcOpIdx1, SrcOpIdx2, 2, 3);
   case CASE_VFMA_SPLATS(FMADD):

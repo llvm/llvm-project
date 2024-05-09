@@ -9,7 +9,7 @@ void free(void *);
 } // namespace std
 
 void *operator new(size_t size) { return std::malloc(size); }
-void operator delete(void *ptr, size_t size) { std::free(ptr); }
+void operator delete(void *ptr) { std::free(ptr); }
 
 struct S {
   S() {}
@@ -49,7 +49,7 @@ void test() {
 // CHECK-NEXT: PostCall (operator delete)
 }
 
-void operator delete(void *ptr, size_t size) {
+void operator delete(void *ptr) {
   std::free(ptr);
 // CHECK-NO-INLINE-NEXT: PreCall (std::free)
 // CHECK-NO-INLINE-NEXT: PostCall (std::free)

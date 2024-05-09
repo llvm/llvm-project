@@ -3168,7 +3168,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     }
     break;
   }
-  case Intrinsic::experimental_vector_reverse: {
+  case Intrinsic::vector_reverse: {
     Value *BO0, *BO1, *X, *Y;
     Value *Vec = II->getArgOperand(0);
     if (match(Vec, m_OneUse(m_BinOp(m_Value(BO0), m_Value(BO1))))) {

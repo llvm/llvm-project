@@ -6697,6 +6697,7 @@ cc_library(
     ]),
     includes = ["include"],
     deps = [
+        ":ArithDialect",
         ":IR",
         ":InferTypeOpInterface",
         ":PolynomialAttributesIncGen",

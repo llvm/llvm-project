@@ -12,6 +12,16 @@ struct S {
 // CHECK-MESSAGES: :[[@LINE+1]]:7: warning: declaration of 'operator new' has no matching declaration of 'operator delete' at the same scope
 void *operator new(size_t size) noexcept(false);
 
+struct T {
+  // Sized deallocations are not enabled by default, and so this new/delete pair
+  // does not match. However, we expect only one warning, for the new, because
+  // the operator delete is a placement delete and we do not warn on mismatching
+  // placement operations.
+  // CHECK-MESSAGES: :[[@LINE+1]]:9: warning: declaration of 'operator new' has no matching declaration of 'operator delete' at the same scope
+  void *operator new(size_t size) noexcept;
+  void operator delete(void *ptr, size_t) noexcept; // ok only if sized deallocation is enabled
+};
+
 struct U {
   void *operator new(size_t size) noexcept;
   void operator delete(void *ptr) noexcept;

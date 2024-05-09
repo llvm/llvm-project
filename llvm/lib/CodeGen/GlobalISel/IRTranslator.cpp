@@ -1804,7 +1804,7 @@ bool IRTranslator::translateTrap(const CallInst &CI,
 
 bool IRTranslator::translateVectorInterleave2Intrinsic(
     const CallInst &CI, MachineIRBuilder &MIRBuilder) {
-  assert(CI.getIntrinsicID() == Intrinsic::experimental_vector_interleave2 &&
+  assert(CI.getIntrinsicID() == Intrinsic::vector_interleave2 &&
          "This function can only be called on the interleave2 intrinsic!");
   // Canonicalize interleave2 to G_SHUFFLE_VECTOR (similar to SelectionDAG).
   Register Op0 = getOrCreateVReg(*CI.getOperand(0));
@@ -1820,7 +1820,7 @@ bool IRTranslator::translateVectorInterleave2Intrinsic(
 
 bool IRTranslator::translateVectorDeinterleave2Intrinsic(
     const CallInst &CI, MachineIRBuilder &MIRBuilder) {
-  assert(CI.getIntrinsicID() == Intrinsic::experimental_vector_deinterleave2 &&
+  assert(CI.getIntrinsicID() == Intrinsic::vector_deinterleave2 &&
          "This function can only be called on the deinterleave2 intrinsic!");
   // Canonicalize deinterleave2 to shuffles that extract sub-vectors (similar to
   // SelectionDAG).
@@ -2572,15 +2572,15 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
     return true;
   }
 
-  case Intrinsic::experimental_vector_interleave2:
-  case Intrinsic::experimental_vector_deinterleave2: {
+  case Intrinsic::vector_interleave2:
+  case Intrinsic::vector_deinterleave2: {
     // Both intrinsics have at least one operand.
     Value *Op0 = CI.getOperand(0);
     LLT ResTy = getLLTForType(*Op0->getType(), MIRBuilder.getDataLayout());
     if (!ResTy.isFixedVector())
       return false;
 
-    if (CI.getIntrinsicID() == Intrinsic::experimental_vector_interleave2)
+    if (CI.getIntrinsicID() == Intrinsic::vector_interleave2)
       return translateVectorInterleave2Intrinsic(CI, MIRBuilder);
 
     return translateVectorDeinterleave2Intrinsic(CI, MIRBuilder);

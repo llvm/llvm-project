@@ -874,14 +874,10 @@ class VOP3_DPPe_Common_Base<bits<10> op, VOPProfile P> : Enc96 {
   let Inst{9}     = !if(P.HasSrc1Mods, src1_modifiers{1}, 0);
   let Inst{10}    = !if(P.HasSrc2Mods, src2_modifiers{1}, 0);
   // OPSEL must be set such that the low result only uses low inputs, and the high result only uses high inputs.
-  let Inst{11} = !if(P.HasOpSel, !if(P.HasSrc0Mods, src0_modifiers{2}, 0),
-                                 !if(P.IsFP8SrcByteSel, byte_sel{1}, ?));
-  let Inst{12} = !if(P.HasOpSel, !if(P.HasSrc1Mods, src1_modifiers{2}, 0),
-                                 !if(P.IsFP8SrcByteSel, byte_sel{0}, ?));
-  let Inst{13} = !if(P.HasOpSel, !if(P.HasSrc2Mods, src2_modifiers{2}, 0),
-                                 !if(P.IsFP8DstByteSel, byte_sel{0}, ?));
-  let Inst{14} = !if(P.HasOpSel, !if(P.HasSrc0Mods, src0_modifiers{3}, 0),
-                                 !if(P.IsFP8DstByteSel, byte_sel{1}, ?));
+  let Inst{11} = !if(P.HasOpSel,!if(P.HasSrc0Mods, src0_modifiers{2}, 0),!if(P.IsFP8SrcByteSel, byte_sel{1}, ?));
+  let Inst{12} = !if(P.HasOpSel,!if(P.HasSrc1Mods, src1_modifiers{2}, 0),!if(P.IsFP8SrcByteSel, byte_sel{0}, ?));
+  let Inst{13} = !if(P.HasOpSel,!if(P.HasSrc2Mods, src2_modifiers{2}, 0),!if(P.IsFP8DstByteSel, byte_sel{0}, ?));
+  let Inst{14} = !if(P.HasOpSel,!if(P.HasSrc0Mods, src0_modifiers{3}, 0),!if(P.IsFP8DstByteSel, byte_sel{1}, ?));
   let Inst{15}    = !if(P.HasClamp, clamp, 0);
   let Inst{25-16} = op;
   let Inst{31-26} = 0x35;

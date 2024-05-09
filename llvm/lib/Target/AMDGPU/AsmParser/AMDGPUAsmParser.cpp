@@ -9170,8 +9170,7 @@ void AMDGPUAsmParser::cvtVOP3P(MCInst &Inst, const OperandVector &Operands,
       Opc == AMDGPU::V_CVT_SR_FP8_F32_vi ||
       Opc == AMDGPU::V_CVT_SR_BF8_F32_gfx12_e64_gfx12 ||
       Opc == AMDGPU::V_CVT_SR_FP8_F32_gfx12_e64_gfx12) {
-    // Placeholder for src1_mods or src2_mods
-    Inst.addOperand(MCOperand::createImm(0));
+    Inst.addOperand(MCOperand::createImm(0)); // Placeholder for src2_mods
     Inst.addOperand(Inst.getOperand(0));
   }
 
@@ -9759,10 +9758,11 @@ void AMDGPUAsmParser::cvtVOP3DPP(MCInst &Inst, const OperandVector &Operands,
         Opc == AMDGPU::V_CVT_SR_FP8_F32_gfx12_e64_dpp8_gfx12 ||
         Opc == AMDGPU::V_CVT_SR_BF8_F32_gfx12_e64_dpp_gfx12 ||
         Opc == AMDGPU::V_CVT_SR_FP8_F32_gfx12_e64_dpp_gfx12;
-    if (IsVOP3CvtSrDpp &&
-        Src2ModIdx == static_cast<int>(Inst.getNumOperands())) {
-      Inst.addOperand(MCOperand::createImm(0));
-      Inst.addOperand(MCOperand::createReg(0));
+    if (IsVOP3CvtSrDpp) {
+      if (Src2ModIdx == static_cast<int>(Inst.getNumOperands())) {
+        Inst.addOperand(MCOperand::createImm(0));
+        Inst.addOperand(MCOperand::createReg(0));
+      }
     }
 
     auto TiedTo = Desc.getOperandConstraint(Inst.getNumOperands(),
