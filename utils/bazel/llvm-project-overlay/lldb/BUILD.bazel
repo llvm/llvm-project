@@ -728,37 +728,57 @@ cc_library(
     ],
 )
 
-cc_library(
-    name = "liblldb.static",
+genrule(
+    name = "gen_exports_file_linux",
+    srcs = ["//lldb:source/API/liblldb-private.exports"],
+    outs = ["exports_linux.txt"],
+    cmd = """
+cat > $(OUTS) <<EOF
+{
+  global:
+    $$(sed 's/$$/;/g' $(SRCS))
+};
+EOF
+""",
+)
+
+genrule(
+    name = "gen_exports_file_macos",
+    srcs = ["//lldb:source/API/liblldb-private.exports"],
+    outs = ["exports_macos.txt"],
+    cmd = "sed 's/^/_/g' $(SRCS) > $(OUTS)",
+)
+
+cc_binary(
+    name = "lldb{}".format(PACKAGE_VERSION),
+    additional_linker_inputs = select({
+        "@platforms//os:linux": [
+            ":gen_exports_file_linux",
+        ],
+        "@platforms//os:macos": [
+            ":gen_exports_file_macos",
+        ],
+        "//conditions:default": [],
+    }),
+    linkopts = select({
+        "@platforms//os:linux": [
+            "-Wl,--export-dynamic-symbol-list=$(location :gen_exports_file_linux)",
+        ],
+        "@platforms//os:macos": [
+            "-Wl,-exported_symbols_list,$(location :gen_exports_file_macos)",
+        ],
+        "//conditions:default": [],
+    }),
+    linkshared = True,
     deps = [
         ":API",
         ":Interpreter",
     ],
 )
 
-cc_shared_library(
-    name = "liblldb",
-    # TODO: Remove once fixed https://github.com/bazelbuild/bazel/issues/21893
-    additional_linker_inputs = select({
-        "@platforms//os:macos": [
-            ":HostMacOSXObjCXX",
-            "//lldb/source/Plugins:PluginPlatformMacOSXObjCXX",
-        ],
-        "//conditions:default": [],
-    }),
-    shared_lib_name = select({
-        "@platforms//os:macos": "liblldb{}.dylib".format(PACKAGE_VERSION),
-        "@platforms//os:linux": "liblldb{}.so".format(PACKAGE_VERSION),
-    }),
-    # TODO: Remove once fixed https://github.com/bazelbuild/bazel/issues/21893
-    user_link_flags = select({
-        "@platforms//os:macos": [
-            "$(location :HostMacOSXObjCXX)",
-            "$(location //lldb/source/Plugins:PluginPlatformMacOSXObjCXX)",
-        ],
-        "//conditions:default": [],
-    }),
-    deps = [":liblldb.static"],
+cc_import(
+    name = "liblldb_wrapper",
+    shared_library = "lldb{}".format(PACKAGE_VERSION),
 )
 
 gentbl_cc_library(
@@ -794,7 +814,7 @@ cc_binary(
     deps = [
         ":APIHeaders",
         ":Host",
-        ":liblldb.static",
+        ":liblldb_wrapper",
         ":lldb_options_inc_gen",
         "//llvm:Option",
         "//llvm:Support",
