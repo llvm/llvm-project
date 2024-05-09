@@ -132,14 +132,14 @@ static const Loop *getOutermostLoop(const LoopInfo *LI, const BasicBlock *BB) {
 
 template <class StopT, bool IsManyStop>
 static bool isReachableImpl(SmallVectorImpl<BasicBlock *> &Worklist,
-                            const T *StopBBOrSet,
+                            const StopT *StopBBOrSet,
                             const SmallPtrSetImpl<BasicBlock *> *ExclusionSet,
                             const DominatorTree *DT, const LoopInfo *LI) {
   const BasicBlock *StopBB;
   const SmallPtrSetImpl<const BasicBlock *> *StopSet;
 
   // SmallPtrSetImpl is incompatible with LLVM's casting functions.
-  if constexpr (IsMany)
+  if constexpr (IsManyStop)
     StopSet =
         static_cast<const SmallPtrSetImpl<const BasicBlock *> *>(StopBBOrSet);
   else
@@ -149,7 +149,7 @@ static bool isReachableImpl(SmallVectorImpl<BasicBlock *> &Worklist,
   // regardless of whether there's a path between the two blocks.
   SmallPtrSet<const BasicBlock *, 2> StopBBReachable;
   if (DT) {
-    if constexpr (IsMany) {
+    if constexpr (IsManyStop) {
       for (auto *BB : *StopSet) {
         if (DT->isReachableFromEntry(BB))
           StopBBReachable.insert(BB);
@@ -179,16 +179,15 @@ static bool isReachableImpl(SmallVectorImpl<BasicBlock *> &Worklist,
   const Loop *StopLoop = nullptr;
   SmallPtrSet<const Loop *, 2> StopLoops;
 
-  if constexpr (IsMany) {
-    if (LI) {
+  if (LI) {
+    if constexpr (IsManyStop) {
       for (auto *StopSetBB : *StopSet) {
         if (const Loop *L = getOutermostLoop(LI, StopSetBB))
           StopLoops.insert(L);
       }
-    }
-  } else {
-    if (LI)
+    } else {
       StopLoop = getOutermostLoop(LI, StopBB);
+    }
   }
 
   unsigned Limit = DefaultMaxBBsToExplore;
@@ -197,7 +196,7 @@ static bool isReachableImpl(SmallVectorImpl<BasicBlock *> &Worklist,
     BasicBlock *BB = Worklist.pop_back_val();
     if (!Visited.insert(BB).second)
       continue;
-    if constexpr (IsMany) {
+    if constexpr (IsManyStop) {
       if (StopSet->contains(BB))
         return true;
     } else {
@@ -207,7 +206,7 @@ static bool isReachableImpl(SmallVectorImpl<BasicBlock *> &Worklist,
     if (ExclusionSet && ExclusionSet->count(BB))
       continue;
     if (DT) {
-      if constexpr (IsMany) {
+      if constexpr (IsManyStop) {
         if (llvm::any_of(*StopSet, [&](const BasicBlock *StopBB) {
               return StopBBReachable.contains(BB) && DT->dominates(BB, StopBB);
             }))
@@ -227,7 +226,7 @@ static bool isReachableImpl(SmallVectorImpl<BasicBlock *> &Worklist,
       // excluded block. Clear Outer so we process BB's successors.
       if (LoopsWithHoles.count(Outer))
         Outer = nullptr;
-      if constexpr (IsMany) {
+      if constexpr (IsManyStop) {
         if (StopLoops.contains(Outer))
           return true;
       } else {
