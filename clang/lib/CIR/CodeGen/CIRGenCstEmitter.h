@@ -95,7 +95,11 @@ public:
     return emitForMemory(CGM, C, T);
   }
 
-  // static llvm::Constant *emitNullForMemory(CodeGenModule &CGM, QualType T);
+  mlir::Attribute emitNullForMemory(mlir::Location loc, QualType T) {
+    return emitNullForMemory(loc, CGM, T);
+  }
+  static mlir::Attribute emitNullForMemory(mlir::Location loc,
+                                           CIRGenModule &CGM, QualType T);
   static mlir::Attribute emitForMemory(CIRGenModule &CGM, mlir::Attribute C,
                                        clang::QualType T);
 

@@ -662,7 +662,8 @@ bool ConstStructBuilder::Build(InitListExpr *ILE, bool AllowOverwrite) {
     if (Init)
       EltInit = Emitter.tryEmitPrivateForMemory(Init, Field->getType());
     else
-      llvm_unreachable("NYI");
+      EltInit = Emitter.emitNullForMemory(CGM.getLoc(ILE->getSourceRange()),
+                                          Field->getType());
 
     if (!EltInit)
       return false;
@@ -1865,4 +1866,13 @@ mlir::Attribute ConstantEmitter::emitAbstract(SourceLocation loc,
     llvm_unreachable("NYI");
   }
   return C;
+}
+
+mlir::Attribute ConstantEmitter::emitNullForMemory(mlir::Location loc,
+                                                   CIRGenModule &CGM,
+                                                   QualType T) {
+  auto cstOp = dyn_cast<mlir::cir::ConstantOp>(
+      CGM.buildNullConstant(T, loc).getDefiningOp());
+  assert(cstOp && "expected cir.const op");
+  return emitForMemory(CGM, cstOp.getValue(), T);
 }
