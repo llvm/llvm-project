@@ -1257,7 +1257,7 @@ void CodeGenPGO::emitMCDCTestVectorBitmapUpdate(CGBuilderTy &Builder,
   // index represents an executed test vector.
   llvm::Value *Args[5] = {llvm::ConstantExpr::getBitCast(FuncNameVar, I8PtrTy),
                           Builder.getInt64(FunctionHash),
-                          Builder.getInt32(RegionMCDCState->BitmapBits),
+                          Builder.getInt32(0), // Unused
                           Builder.getInt32(MCDCTestVectorBitmapOffset),
                           MCDCCondBitmapAddr.emitRawPointer(CGF)};
   Builder.CreateCall(

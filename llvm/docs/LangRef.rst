@@ -14337,7 +14337,7 @@ Syntax:
 ::
 
       declare void @llvm.instrprof.mcdc.tvbitmap.update(ptr <name>, i64 <hash>,
-                                                        i32 <bitmap-bytes>)
+                                                        i32 <unused>)
                                                         i32 <bitmap-index>,
                                                         ptr <mcdc-temp-addr>)
 
@@ -14362,10 +14362,9 @@ name of the entity being instrumented. This should generally be the
 The second argument is a hash value that can be used by the consumer
 of the profile data to detect changes to the instrumented source.
 
-The third argument is the number of bitmap bytes required by the function to
-record the number of test vectors executed for each boolean expression.
+The third argument is not used.
 
-The fourth argument is the byte index into the global test vector bitmap
+The fourth argument is the bit index into the global test vector bitmap
 corresponding to the function.
 
 The fifth argument is the address of the condition bitmap, which contains a
