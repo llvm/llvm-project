@@ -4310,7 +4310,9 @@ MaybeExpr ArgumentAnalyzer::TryDefinedOp(
     if (Symbol *symbol{scope.FindSymbol(oprName)}) {
       anyPossibilities = true;
       parser::Name name{symbol->name(), symbol};
-      result = context_.AnalyzeDefinedOp(name, GetActuals());
+      if (!fatalErrors_) {
+        result = context_.AnalyzeDefinedOp(name, GetActuals());
+      }
       if (result) {
         inaccessible = CheckAccessibleSymbol(scope, *symbol);
         if (inaccessible) {
