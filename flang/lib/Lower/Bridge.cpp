@@ -675,25 +675,28 @@ public:
           auto if_builder = builder->genIfThenElse(loc, isAllocated);
           if_builder.genThen([&]() {
             std::string name = mangleName(sym) + ".alloc";
-            if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(symType)) {
-              fir::ExtendedValue read = fir::factory::genMutableBoxRead(
-                  *builder, loc, box, /*mayBePolymorphic=*/false);
-              if (auto read_arr_box = read.getBoxOf<fir::ArrayBoxValue>()) {
-                fir::factory::genInlinedAllocation(
-                    *builder, loc, *new_box, read_arr_box->getLBounds(),
-                    read_arr_box->getExtents(),
-                    /*lenParams=*/std::nullopt, name,
-                    /*mustBeHeap=*/true);
-              } else if (auto read_char_arr_box =
-                             read.getBoxOf<fir::CharArrayBoxValue>()) {
-                fir::factory::genInlinedAllocation(
-                    *builder, loc, *new_box, read_char_arr_box->getLBounds(),
-                    read_char_arr_box->getExtents(),
-                    read_char_arr_box->getLen(), name,
-                    /*mustBeHeap=*/true);
-              } else {
-                TODO(loc, "Unhandled allocatable box type");
-              }
+            fir::ExtendedValue read = fir::factory::genMutableBoxRead(
+                *builder, loc, box, /*mayBePolymorphic=*/false);
+            if (auto read_arr_box = read.getBoxOf<fir::ArrayBoxValue>()) {
+              fir::factory::genInlinedAllocation(
+                  *builder, loc, *new_box, read_arr_box->getLBounds(),
+                  read_arr_box->getExtents(),
+                  /*lenParams=*/std::nullopt, name,
+                  /*mustBeHeap=*/true);
+            } else if (auto read_char_arr_box =
+                           read.getBoxOf<fir::CharArrayBoxValue>()) {
+              fir::factory::genInlinedAllocation(
+                  *builder, loc, *new_box, read_char_arr_box->getLBounds(),
+                  read_char_arr_box->getExtents(), read_char_arr_box->getLen(),
+                  name,
+                  /*mustBeHeap=*/true);
+            } else if (auto read_char_box =
+                           read.getBoxOf<fir::CharBoxValue>()) {
+              fir::factory::genInlinedAllocation(*builder, loc, *new_box,
+                                                 /*lbounds=*/std::nullopt,
+                                                 /*extents=*/std::nullopt,
+                                                 read_char_box->getLen(), name,
+                                                 /*mustBeHeap=*/true);
             } else {
               fir::factory::genInlinedAllocation(
                   *builder, loc, *new_box, box.getMutableProperties().lbounds,

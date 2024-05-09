@@ -626,7 +626,7 @@ func.func @test_simple_i32(%arg0: tensor<1xi32>) -> () {
 
   // CHECK: linalg.generic
   // CHECK: arith.divsi
-  %4 = tosa.div %arg0, %arg0 : (tensor<1xi32>, tensor<1xi32>) -> tensor<1xi32>
+  %40 = tosa.int_div %arg0, %arg0 : (tensor<1xi32>, tensor<1xi32>) -> tensor<1xi32>
 
   // CHECK: linalg.generic
   // CHECK: ^bb0(%[[ARG1:.*]]: i32, %[[ARG2:.*]]: i32):
