@@ -121,7 +121,7 @@ attributes #6 = { noreturn nounwind }
 ; CHECK-LABEL: define dso_local noundef range(i32 0, 2) i32 @_Z10call_catchi
 ; CHECK-SAME: (i32 noundef [[NUM:%.*]]) local_unnamed_addr #[[ATTR1:[0-9]+]] !type [[META4]] !type [[META5]] !type [[META6]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    store ptr @_Z9nothrow_ei.cfi_jt, ptr @catch_ptr, align 8, !tbaa [[TBAA7:![0-9]+]]
+; CHECK-NEXT:    store ptr @.cfi.jumptable, ptr @catch_ptr, align 8, !tbaa [[TBAA7:![0-9]+]]
 ; CHECK-NEXT:    [[TOBOOL_NOT_I:%.*]] = icmp ne i32 [[NUM]], 0
 ; CHECK-NEXT:    [[DOT_I:%.*]] = zext i1 [[TOBOOL_NOT_I]] to i32
 ; CHECK-NEXT:    ret i32 [[DOT_I]]
@@ -152,7 +152,7 @@ attributes #6 = { noreturn nounwind }
 ;
 ;
 ; CHECK: Function Attrs: naked nocf_check noinline nounwind
-; CHECK-LABEL: define internal void @_Z9nothrow_ei.cfi_jt
+; CHECK-LABEL: define private void @.cfi.jumptable
 ; CHECK-SAME: () #[[ATTR5:[0-9]+]] align 8 {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    tail call void asm sideeffect "jmp ${0:c}@plt\0Aint3\0Aint3\0Aint3\0A", "s"(ptr nonnull @_Z9nothrow_ei) #[[ATTR7:[0-9]+]]

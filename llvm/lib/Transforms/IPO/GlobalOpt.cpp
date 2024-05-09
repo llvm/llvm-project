@@ -2215,6 +2215,17 @@ static bool hasUseOtherThanLLVMUsed(GlobalAlias &GA, const LLVMUsed &U) {
   return !U.usedCount(&GA) && !U.compilerUsedCount(&GA);
 }
 
+static bool hasMoreThanOneUseOtherThanLLVMUsed(GlobalValue &V,
+                                               const LLVMUsed &U) {
+  unsigned N = 2;
+  assert((!U.usedCount(&V) || !U.compilerUsedCount(&V)) &&
+         "We should have removed the duplicated "
+         "element from llvm.compiler.used");
+  if (U.usedCount(&V) || U.compilerUsedCount(&V))
+    ++N;
+  return V.hasNUsesOrMore(N);
+}
+
 static bool mayHaveOtherReferences(GlobalValue &GV, const LLVMUsed &U) {
   if (!GV.hasLocalLinkage())
     return true;
@@ -2224,9 +2235,6 @@ static bool mayHaveOtherReferences(GlobalValue &GV, const LLVMUsed &U) {
 
 static bool hasUsesToReplace(GlobalAlias &GA, const LLVMUsed &U,
                              bool &RenameTarget) {
-  if (GA.isWeakForLinker())
-    return false;
-
   RenameTarget = false;
   bool Ret = false;
   if (hasUseOtherThanLLVMUsed(GA, U))
@@ -2245,6 +2253,13 @@ static bool hasUsesToReplace(GlobalAlias &GA, const LLVMUsed &U,
   //   define ... @a(...)
   Constant *Aliasee = GA.getAliasee();
   GlobalValue *Target = cast<GlobalValue>(Aliasee->stripPointerCasts());
+  // Don't perform the transform if the alias may be replaced at link time while
+  // someone is using the aliasee (e.g., multiple aliases potentially target it
+  // or someone calls it).
+  if (GA.isWeakForLinker())
+    Ret = false;
+  if (hasMoreThanOneUseOtherThanLLVMUsed(*Target, U))
+    return Ret;
   if (mayHaveOtherReferences(*Target, U))
     return Ret;
 

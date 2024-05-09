@@ -25,13 +25,12 @@ define internal void @f1() {
   ret void
 }
 
-; FIXME: We can use `f2_alias` to replace `f2` because `b2` is not in use.
+; We can use `f2_alias` to replace `f2` because `b2` is not in use.
 define internal void @f2() {
   ret void
 }
 ;.
 ; CHECK: @f1_alias = linkonce_odr hidden alias void (), ptr @f1
-; CHECK: @f2_alias = linkonce_odr hidden alias void (), ptr @f2
 ;.
 ; CHECK-LABEL: define void @foo() local_unnamed_addr {
 ; CHECK-NEXT:    call void @f1_alias()
@@ -52,6 +51,6 @@ define internal void @f2() {
 ; CHECK-NEXT:    ret void
 ;
 ;
-; CHECK-LABEL: define internal void @f2() {
+; CHECK-LABEL: define linkonce_odr hidden void @f2_alias() local_unnamed_addr {
 ; CHECK-NEXT:    ret void
 ;
