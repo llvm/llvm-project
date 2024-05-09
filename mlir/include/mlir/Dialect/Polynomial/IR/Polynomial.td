@@ -53,6 +53,7 @@ def Polynomial_Dialect : Dialect {
 
   let useDefaultTypePrinterParser = 1;
   let useDefaultAttributePrinterParser = 1;
+  let hasConstantMaterializer = 1;
 }
 
 class Polynomial_Attr<string name, string attrMnemonic, list<Trait> traits = []>
@@ -83,6 +84,30 @@ def Polynomial_IntPolynomialAttr : Polynomial_Attr<"IntPolynomial", "int_polynom
   let hasCustomAssemblyFormat = 1;
 }
 
+def Polynomial_TypedIntPolynomialAttr : Polynomial_Attr<
+    "TypedIntPolynomial", "typed_int_polynomial", [TypedAttrInterface]> {
+  let summary = "A typed variant of int_polynomial for constant folding.";
+  let parameters = (ins "::mlir::Type":$type, "::mlir::polynomial::IntPolynomialAttr":$value);
+  let assemblyFormat = "`<` struct(params) `>`";
+  let builders = [
+    AttrBuilderWithInferredContext<(ins "Type":$type,
+                                        "const IntPolynomial &":$value), [{
+      return $_get(
+        type.getContext(),
+        type,
+        IntPolynomialAttr::get(type.getContext(), value));
+    }]>,
+    AttrBuilderWithInferredContext<(ins "Type":$type,
+                                        "const Attribute &":$value), [{
+      return $_get(type.getContext(), type, ::llvm::cast<IntPolynomialAttr>(value));
+    }]>
+  ];
+  let extraClassDeclaration = [{
+    // used for constFoldBinaryOp
+    using ValueType = ::mlir::Attribute;
+  }];
+}
+
 def Polynomial_FloatPolynomialAttr : Polynomial_Attr<"FloatPolynomial", "float_polynomial"> {
   let summary = "An attribute containing a single-variable polynomial with double precision floating point coefficients.";
   let description = [{
@@ -103,6 +128,30 @@ def Polynomial_FloatPolynomialAttr : Polynomial_Attr<"FloatPolynomial", "float_p
   }];
   let parameters = (ins "FloatPolynomial":$polynomial);
   let hasCustomAssemblyFormat = 1;
+}
+
+def Polynomial_TypedFloatPolynomialAttr : Polynomial_Attr<
+    "TypedFloatPolynomial", "typed_float_polynomial", [TypedAttrInterface]> {
+  let summary = "A typed variant of float_polynomial for constant folding.";
+  let parameters = (ins "::mlir::Type":$type, "::mlir::polynomial::FloatPolynomialAttr":$value);
+  let assemblyFormat = "`<` struct(params) `>`";
+  let builders = [
+    AttrBuilderWithInferredContext<(ins "Type":$type,
+                                        "const FloatPolynomial &":$value), [{
+      return $_get(
+        type.getContext(),
+        type,
+        FloatPolynomialAttr::get(type.getContext(), value));
+    }]>,
+    AttrBuilderWithInferredContext<(ins "Type":$type,
+                                        "const Attribute &":$value), [{
+      return $_get(type.getContext(), type, ::llvm::cast<FloatPolynomialAttr>(value));
+    }]>
+  ];
+  let extraClassDeclaration = [{
+    // used for constFoldBinaryOp
+    using ValueType = ::mlir::Attribute;
+  }];
 }
 
 def Polynomial_RingAttr : Polynomial_Attr<"Ring", "ring"> {
@@ -221,6 +270,7 @@ def Polynomial_AddOp : Polynomial_BinaryOp<"add", [Commutative]> {
     %2 = polynomial.add %0, %1 : !polynomial.polynomial<#ring>
     ```
   }];
+  let hasFolder = 1;
 }
 
 def Polynomial_SubOp : Polynomial_BinaryOp<"sub"> {
@@ -441,7 +491,7 @@ def Polynomial_AnyPolynomialAttr : AnyAttrOf<[
 ]>;
 
 // Not deriving from Polynomial_Op due to need for custom assembly format
-def Polynomial_ConstantOp : Op<Polynomial_Dialect, "constant", [Pure]> {
+def Polynomial_ConstantOp : Op<Polynomial_Dialect, "constant", [Pure, ConstantLike]> {
   let summary = "Define a constant polynomial via an attribute.";
   let description = [{
     Example:
@@ -458,6 +508,7 @@ def Polynomial_ConstantOp : Op<Polynomial_Dialect, "constant", [Pure]> {
   let arguments = (ins Polynomial_AnyPolynomialAttr:$value);
   let results = (outs Polynomial_PolynomialType:$output);
   let assemblyFormat = "attr-dict `:` type($output)";
+  let hasFolder = 1;
 }
 
 def Polynomial_NTTOp : Polynomial_Op<"ntt", [Pure]> {

@@ -7,10 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Polynomial/IR/PolynomialOps.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/CommonFolders.h"
 #include "mlir/Dialect/Polynomial/IR/Polynomial.h"
 #include "mlir/Dialect/Polynomial/IR/PolynomialAttributes.h"
 #include "mlir/Dialect/Polynomial/IR/PolynomialTypes.h"
 #include "mlir/IR/Builders.h"
+#include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/Support/LogicalResult.h"
@@ -18,6 +21,41 @@
 
 using namespace mlir;
 using namespace mlir::polynomial;
+
+OpFoldResult ConstantOp::fold(ConstantOp::FoldAdaptor adaptor) {
+  PolynomialType ty = dyn_cast<PolynomialType>(getOutput().getType());
+
+  if (isa<FloatPolynomialAttr>(ty.getRing().getPolynomialModulus()))
+    return TypedFloatPolynomialAttr::get(
+        ty, cast<FloatPolynomialAttr>(getValue()).getPolynomial());
+
+  assert(isa<IntPolynomialAttr>(ty.getRing().getPolynomialModulus()) &&
+         "expected float or integer polynomial");
+  return TypedIntPolynomialAttr::get(
+      ty, cast<IntPolynomialAttr>(getValue()).getPolynomial());
+}
+
+OpFoldResult AddOp::fold(AddOp::FoldAdaptor adaptor) {
+  auto lhsElements = dyn_cast<ShapedType>(getLhs().getType());
+  PolynomialType elementType = cast<PolynomialType>(
+      lhsElements ? lhsElements.getElementType() : getLhs().getType());
+  MLIRContext *context = getContext();
+
+  if (isa<FloatType>(elementType.getRing().getCoefficientType()))
+    return constFoldBinaryOp<TypedFloatPolynomialAttr>(
+      adaptor.getOperands(), elementType, [&](Attribute a, const Attribute &b) {
+        return FloatPolynomialAttr::get(
+            context, cast<FloatPolynomialAttr>(a).getPolynomial().add(
+                         cast<FloatPolynomialAttr>(b).getPolynomial()));
+      });
+
+  return constFoldBinaryOp<TypedIntPolynomialAttr>(
+      adaptor.getOperands(), elementType, [&](Attribute a, const Attribute &b) {
+        return IntPolynomialAttr::get(
+            context, cast<IntPolynomialAttr>(a).getPolynomial().add(
+                         cast<IntPolynomialAttr>(b).getPolynomial()));
+      });
+}
 
 void FromTensorOp::build(OpBuilder &builder, OperationState &result,
                          Value input, RingAttr ring) {

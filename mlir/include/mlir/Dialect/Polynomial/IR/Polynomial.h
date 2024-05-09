@@ -175,6 +175,20 @@ public:
         continue;
       }
 
+      while (it1->getExponent().ult(it2->getExponent())) {
+        newTerms.emplace_back(*it1);
+        it1++;
+        if (it1 == terms.end())
+          break;
+      }
+
+      while (it2->getExponent().ult(it1->getExponent())) {
+        newTerms.emplace_back(*it2);
+        it2++;
+        if (it2 == terms.end())
+          break;
+      }
+
       newTerms.emplace_back(it1->add(*it2));
       it1++;
       it2++;

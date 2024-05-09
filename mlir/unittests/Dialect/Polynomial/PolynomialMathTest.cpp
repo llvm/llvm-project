@@ -20,9 +20,10 @@ TEST(AddTest, checkSameDegreeAdditionOfIntPolynomial) {
 }
 
 TEST(AddTest, checkDifferentDegreeAdditionOfIntPolynomial) {
-  IntPolynomial x = IntPolynomial::fromCoefficients({1, 2});
+  IntMonomial term2t = IntMonomial(2, 1);
+  IntPolynomial x = IntPolynomial::fromMonomials({term2t}).value();
   IntPolynomial y = IntPolynomial::fromCoefficients({2, 3, 4});
-  IntPolynomial expected = IntPolynomial::fromCoefficients({3, 5, 4});
+  IntPolynomial expected = IntPolynomial::fromCoefficients({2, 5, 4});
   EXPECT_EQ(expected, x.add(y));
   EXPECT_EQ(expected, y.add(x));
 }
