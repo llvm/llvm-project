@@ -10,6 +10,7 @@ import lit.formats
 if config.host_os not in ["Linux"]:
     config.unsupported = True
 
+
 def get_required_attr(config, attr_name):
     attr_value = getattr(config, attr_name, None)
     if attr_value == None:
