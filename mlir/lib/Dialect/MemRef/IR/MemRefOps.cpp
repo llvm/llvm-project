@@ -1742,20 +1742,18 @@ ParseResult PrefetchOp::parse(OpAsmParser &parser, OperationState &result) {
       parser.resolveOperands(indexInfo, indexTy, result.operands))
     return failure();
 
-  if (!readOrWrite.equals("read") && !readOrWrite.equals("write"))
+  if (readOrWrite != "read" && readOrWrite != "write")
     return parser.emitError(parser.getNameLoc(),
                             "rw specifier has to be 'read' or 'write'");
-  result.addAttribute(
-      PrefetchOp::getIsWriteAttrStrName(),
-      parser.getBuilder().getBoolAttr(readOrWrite.equals("write")));
+  result.addAttribute(PrefetchOp::getIsWriteAttrStrName(),
+                      parser.getBuilder().getBoolAttr(readOrWrite == "write"));
 
-  if (!cacheType.equals("data") && !cacheType.equals("instr"))
+  if (cacheType != "data" && cacheType != "instr")
     return parser.emitError(parser.getNameLoc(),
                             "cache type has to be 'data' or 'instr'");
 
-  result.addAttribute(
-      PrefetchOp::getIsDataCacheAttrStrName(),
-      parser.getBuilder().getBoolAttr(cacheType.equals("data")));
+  result.addAttribute(PrefetchOp::getIsDataCacheAttrStrName(),
+                      parser.getBuilder().getBoolAttr(cacheType == "data"));
 
   return success();
 }
