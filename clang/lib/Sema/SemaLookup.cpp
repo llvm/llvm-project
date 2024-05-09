@@ -1267,6 +1267,20 @@ struct FindLocalExternScope {
   LookupResult &R;
   bool OldFindLocalExtern;
 };
+
+/// Returns true if 'operator=' should be treated as a dependent name.
+bool isDependentAssignmentOperator(DeclarationName Name,
+                                   DeclContext *LookupContext) {
+  const auto *LookupRecord = dyn_cast_if_present<CXXRecordDecl>(LookupContext);
+  // If the lookup context is the current instantiation but we are outside a
+  // complete-class context, we will never find the implicitly declared
+  // copy/move assignment operators because they are declared at the closing '}'
+  // of the class specifier. In such cases, we treat 'operator=' like any other
+  // unqualified name because the results of name lookup in the template
+  // definition/instantiation context will always be the same.
+  return Name.getCXXOverloadedOperator() == OO_Equal && LookupRecord &&
+         !LookupRecord->isBeingDefined() && LookupRecord->isDependentContext();
+}
 } // end anonymous namespace
 
 bool Sema::CppLookupName(LookupResult &R, Scope *S) {
@@ -1275,13 +1289,6 @@ bool Sema::CppLookupName(LookupResult &R, Scope *S) {
   DeclarationName Name = R.getLookupName();
   Sema::LookupNameKind NameKind = R.getLookupKind();
 
-  // If this is the name of an implicitly-declared special member function,
-  // go through the scope stack to implicitly declare
-  if (isImplicitlyDeclaredMemberFunctionName(Name)) {
-    for (Scope *PreS = S; PreS; PreS = PreS->getParent())
-      if (DeclContext *DC = PreS->getEntity())
-        DeclareImplicitMemberFunctionsWithName(*this, Name, R.getNameLoc(), DC);
-  }
   // C++23 [temp.dep.general]p2:
   //   The component name of an unqualified-id is dependent if
   //   - it is a conversion-function-id whose conversion-type-id
@@ -1299,9 +1306,8 @@ bool Sema::CppLookupName(LookupResult &R, Scope *S) {
   if (isImplicitlyDeclaredMemberFunctionName(Name)) {
     for (Scope *PreS = S; PreS; PreS = PreS->getParent())
       if (DeclContext *DC = PreS->getEntity()) {
-        if (DC->isDependentContext() && isa<CXXRecordDecl>(DC) &&
-            Name.getCXXOverloadedOperator() == OO_Equal &&
-            !R.isTemplateNameLookup()) {
+        if (!R.isTemplateNameLookup() &&
+            isDependentAssignmentOperator(Name, DC)) {
           R.setNotFoundInCurrentInstantiation();
           return false;
         }
@@ -2472,8 +2478,6 @@ bool Sema::LookupQualifiedName(LookupResult &R, DeclContext *LookupCtx,
     }
   } QL(LookupCtx);
 
-  bool TemplateNameLookup = R.isTemplateNameLookup();
-  CXXRecordDecl *LookupRec = dyn_cast<CXXRecordDecl>(LookupCtx);
   if (!InUnqualifiedLookup && !R.isForRedeclaration()) {
     // C++23 [temp.dep.type]p5:
     //   A qualified name is dependent if
@@ -2486,13 +2490,14 @@ bool Sema::LookupQualifiedName(LookupResult &R, DeclContext *LookupCtx,
     if (DeclarationName Name = R.getLookupName();
         (Name.getNameKind() == DeclarationName::CXXConversionFunctionName &&
          Name.getCXXNameType()->isDependentType()) ||
-        (Name.getCXXOverloadedOperator() == OO_Equal && LookupRec &&
-         LookupRec->isDependentContext() && !TemplateNameLookup)) {
+        (!R.isTemplateNameLookup() &&
+         isDependentAssignmentOperator(Name, LookupCtx))) {
       R.setNotFoundInCurrentInstantiation();
       return false;
     }
   }
 
+  CXXRecordDecl *LookupRec = dyn_cast<CXXRecordDecl>(LookupCtx);
   if (LookupDirect(*this, R, LookupCtx)) {
     R.resolveKind();
     if (LookupRec)
@@ -2604,7 +2609,7 @@ bool Sema::LookupQualifiedName(LookupResult &R, DeclContext *LookupCtx,
         //   template, and if the name is used as a template-name, the
         //   reference refers to the class template itself and not a
         //   specialization thereof, and is not ambiguous.
-        if (TemplateNameLookup)
+        if (R.isTemplateNameLookup())
           if (auto *TD = getAsTemplateNameDecl(ND))
             ND = TD;
 
