@@ -312,9 +312,8 @@ InstSeq generateInstSeq(int64_t Val, const MCSubtargetInfo &STI) {
 
   // Perform optimization with BSETI in the Zbs extension.
   if (Res.size() > 2 && STI.hasFeature(RISCV::FeatureStdExtZbs)) {
-    // Create a simm32 value for LUI+ADDIW with by forcing the upper 33 bits to
-    // zero. Xor that with original value to get which bits need to be set by
-    // BSETI.
+    // Create a simm32 value for LUI+ADDIW by forcing the upper 33 bits to zero.
+    // Xor that with original value to get which bits should be set by BSETI.
     uint64_t Lo = Val & 0x7fffffff;
     uint64_t Hi = Val ^ Lo;
     assert(Hi != 0);
@@ -334,8 +333,8 @@ InstSeq generateInstSeq(int64_t Val, const MCSubtargetInfo &STI) {
 
   // Perform optimization with BCLRI in the Zbs extension.
   if (Res.size() > 2 && STI.hasFeature(RISCV::FeatureStdExtZbs)) {
-    // Create a simm32 value for LUI+ADDIW with by forcing the upper 33 bits to
-    // one. Xor that with original value to get which bits need to be cleared by
+    // Create a simm32 value for LUI+ADDIW by forcing the upper 33 bits to one.
+    // Xor that with original value to get which bits should be cleared by
     // BCLRI.
     uint64_t Lo = Val | 0xffffffff80000000;
     uint64_t Hi = Val ^ Lo;
