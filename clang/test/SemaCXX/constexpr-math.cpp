@@ -26,6 +26,17 @@ int main() {
   static_assert(is_same_val<__builtin_fminf(+INFINITY, 0), 0.f>);
   static_assert(is_same_val<__builtin_fminf(-INFINITY, 0), -INFINITY>);
   static_assert(is_same_val<__builtin_fminf(NAN, NAN), NAN>);
+  static_assert(is_same_val<__builtin_fminl(123.456L, 789.012L), 123.456L>);
+
+  // fmax
+  static_assert(is_same_val<__builtin_fmax(15.24, 1.3), 15.24>);
+  static_assert(is_same_val<__builtin_fmax(-0.0, +0.0), +0.0>);
+  static_assert(is_same_val<__builtin_fmax(+0.0, -0.0), +0.0>);
+  static_assert(is_same_val<__builtin_fmaxf(NAN, -1), -1.f>);
+  static_assert(is_same_val<__builtin_fmaxf(+INFINITY, 0), INFINITY>);
+  static_assert(is_same_val<__builtin_fmaxf(-INFINITY, 0), 0.f>);
+  static_assert(is_same_val<__builtin_fmaxf(NAN, NAN), NAN>);
+  static_assert(is_same_val<__builtin_fmaxl(123.456L, 789.012L), 789.012L>);
 
   // frexp
   static_assert(is_same_val<__builtin_frexp(123.45, &i), 123.45/128>);
@@ -35,6 +46,7 @@ int main() {
   static_assert(is_same_val<__builtin_frexpf(-NAN, &i), -NAN>);
   static_assert(is_same_val<__builtin_frexpf(INFINITY, &i), INFINITY>);
   static_assert(is_same_val<__builtin_frexpf(-INFINITY, &i), -INFINITY>);
-  
+  static_assert(is_same_val<__builtin_frexpl(123.45L, &i), 123.45L/128>);
+
   return 0;
 }

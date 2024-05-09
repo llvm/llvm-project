@@ -17,78 +17,110 @@
 // WIN-SAME: ) #[[ATTR0:[0-9]+]] {
 // WIN-NEXT:  entry:
 // WIN-NEXT:    [[I:%.*]] = alloca i32, align 4
-// WIN-NEXT:    [[F1:%.*]] = alloca double, align 8
-// WIN-NEXT:    [[F2:%.*]] = alloca double, align 8
-// WIN-NEXT:    [[F3:%.*]] = alloca double, align 8
-// WIN-NEXT:    [[F4:%.*]] = alloca float, align 4
-// WIN-NEXT:    [[F5:%.*]] = alloca float, align 4
-// WIN-NEXT:    [[F6:%.*]] = alloca float, align 4
-// WIN-NEXT:    [[F7:%.*]] = alloca float, align 4
-// WIN-NEXT:    [[F8:%.*]] = alloca x86_fp80, align 16
-// WIN-NEXT:    [[F9:%.*]] = alloca double, align 8
-// WIN-NEXT:    [[F10:%.*]] = alloca double, align 8
-// WIN-NEXT:    [[F11:%.*]] = alloca double, align 8
-// WIN-NEXT:    [[F12:%.*]] = alloca float, align 4
-// WIN-NEXT:    [[F13:%.*]] = alloca float, align 4
-// WIN-NEXT:    [[F14:%.*]] = alloca float, align 4
-// WIN-NEXT:    [[F15:%.*]] = alloca float, align 4
-// WIN-NEXT:    [[F16:%.*]] = alloca x86_fp80, align 16
+// WIN-NEXT:    [[MIN1:%.*]] = alloca double, align 8
+// WIN-NEXT:    [[MIN2:%.*]] = alloca double, align 8
+// WIN-NEXT:    [[MIN3:%.*]] = alloca double, align 8
+// WIN-NEXT:    [[MIN4:%.*]] = alloca float, align 4
+// WIN-NEXT:    [[MIN5:%.*]] = alloca float, align 4
+// WIN-NEXT:    [[MIN6:%.*]] = alloca float, align 4
+// WIN-NEXT:    [[MIN7:%.*]] = alloca float, align 4
+// WIN-NEXT:    [[MIN8:%.*]] = alloca x86_fp80, align 16
+// WIN-NEXT:    [[MAX1:%.*]] = alloca double, align 8
+// WIN-NEXT:    [[MAX2:%.*]] = alloca double, align 8
+// WIN-NEXT:    [[MAX3:%.*]] = alloca double, align 8
+// WIN-NEXT:    [[MAX4:%.*]] = alloca float, align 4
+// WIN-NEXT:    [[MAX5:%.*]] = alloca float, align 4
+// WIN-NEXT:    [[MAX6:%.*]] = alloca float, align 4
+// WIN-NEXT:    [[MAX7:%.*]] = alloca float, align 4
+// WIN-NEXT:    [[MAX8:%.*]] = alloca x86_fp80, align 16
+// WIN-NEXT:    [[FREXP1:%.*]] = alloca double, align 8
+// WIN-NEXT:    [[FREXP2:%.*]] = alloca double, align 8
+// WIN-NEXT:    [[FREXP3:%.*]] = alloca double, align 8
+// WIN-NEXT:    [[FREXP4:%.*]] = alloca float, align 4
+// WIN-NEXT:    [[FREXP5:%.*]] = alloca float, align 4
+// WIN-NEXT:    [[FREXP6:%.*]] = alloca float, align 4
+// WIN-NEXT:    [[FREXP7:%.*]] = alloca float, align 4
+// WIN-NEXT:    [[FREXP8:%.*]] = alloca x86_fp80, align 16
 // WIN-NEXT:    store i32 0, ptr [[I]], align 4
-// WIN-NEXT:    store double 1.300000e+00, ptr [[F1]], align 8
-// WIN-NEXT:    store double -0.000000e+00, ptr [[F2]], align 8
-// WIN-NEXT:    store double -0.000000e+00, ptr [[F3]], align 8
-// WIN-NEXT:    store float 0xFFF8000000000000, ptr [[F4]], align 4
-// WIN-NEXT:    store float -1.000000e+00, ptr [[F5]], align 4
-// WIN-NEXT:    store float 0xFFF0000000000000, ptr [[F6]], align 4
-// WIN-NEXT:    store float 0.000000e+00, ptr [[F7]], align 4
-// WIN-NEXT:    store x86_fp80 0xK4005F6E978D4FDF3B646, ptr [[F8]], align 16
-// WIN-NEXT:    store double 0x3FEEDCCCCCCCCCCD, ptr [[F9]], align 8
-// WIN-NEXT:    store double 0.000000e+00, ptr [[F10]], align 8
-// WIN-NEXT:    store double -0.000000e+00, ptr [[F11]], align 8
-// WIN-NEXT:    store float 0xFFF8000000000000, ptr [[F12]], align 4
-// WIN-NEXT:    store float 0x7FF8000000000000, ptr [[F13]], align 4
-// WIN-NEXT:    store float 0x7FF0000000000000, ptr [[F14]], align 4
-// WIN-NEXT:    store float 0x7FF0000000000000, ptr [[F15]], align 4
-// WIN-NEXT:    store x86_fp80 0xK3FFE81A9FBE76C8B4396, ptr [[F16]], align 16
+// WIN-NEXT:    store double 1.300000e+00, ptr [[MIN1]], align 8
+// WIN-NEXT:    store double -0.000000e+00, ptr [[MIN2]], align 8
+// WIN-NEXT:    store double -0.000000e+00, ptr [[MIN3]], align 8
+// WIN-NEXT:    store float 0xFFF8000000000000, ptr [[MIN4]], align 4
+// WIN-NEXT:    store float -1.000000e+00, ptr [[MIN5]], align 4
+// WIN-NEXT:    store float 0xFFF0000000000000, ptr [[MIN6]], align 4
+// WIN-NEXT:    store float 0.000000e+00, ptr [[MIN7]], align 4
+// WIN-NEXT:    store x86_fp80 0xK4005F6E978D4FDF3B646, ptr [[MIN8]], align 16
+// WIN-NEXT:    store double 1.524000e+01, ptr [[MAX1]], align 8
+// WIN-NEXT:    store double 0.000000e+00, ptr [[MAX2]], align 8
+// WIN-NEXT:    store double 0.000000e+00, ptr [[MAX3]], align 8
+// WIN-NEXT:    store float -1.000000e+00, ptr [[MAX4]], align 4
+// WIN-NEXT:    store float 0x7FF0000000000000, ptr [[MAX5]], align 4
+// WIN-NEXT:    store float 0.000000e+00, ptr [[MAX6]], align 4
+// WIN-NEXT:    store float 0xFFF8000000000000, ptr [[MAX7]], align 4
+// WIN-NEXT:    store x86_fp80 0xK4008C540C49BA5E353F8, ptr [[MAX8]], align 16
+// WIN-NEXT:    store double 0x3FEEDCCCCCCCCCCD, ptr [[FREXP1]], align 8
+// WIN-NEXT:    store double 0.000000e+00, ptr [[FREXP2]], align 8
+// WIN-NEXT:    store double -0.000000e+00, ptr [[FREXP3]], align 8
+// WIN-NEXT:    store float 0xFFF8000000000000, ptr [[FREXP4]], align 4
+// WIN-NEXT:    store float 0x7FF8000000000000, ptr [[FREXP5]], align 4
+// WIN-NEXT:    store float 0x7FF0000000000000, ptr [[FREXP6]], align 4
+// WIN-NEXT:    store float 0x7FF0000000000000, ptr [[FREXP7]], align 4
+// WIN-NEXT:    store x86_fp80 0xK3FFE81A9FBE76C8B4396, ptr [[FREXP8]], align 16
 // WIN-NEXT:    ret i32 0
 //
 // LNX-LABEL: define dso_local noundef i32 @_Z4funcv(
 // LNX-SAME: ) #[[ATTR0:[0-9]+]] {
 // LNX-NEXT:  entry:
 // LNX-NEXT:    [[I:%.*]] = alloca i32, align 4
-// LNX-NEXT:    [[F1:%.*]] = alloca double, align 8
-// LNX-NEXT:    [[F2:%.*]] = alloca double, align 8
-// LNX-NEXT:    [[F3:%.*]] = alloca double, align 8
-// LNX-NEXT:    [[F4:%.*]] = alloca float, align 4
-// LNX-NEXT:    [[F5:%.*]] = alloca float, align 4
-// LNX-NEXT:    [[F6:%.*]] = alloca float, align 4
-// LNX-NEXT:    [[F7:%.*]] = alloca float, align 4
-// LNX-NEXT:    [[F8:%.*]] = alloca x86_fp80, align 16
-// LNX-NEXT:    [[F9:%.*]] = alloca double, align 8
-// LNX-NEXT:    [[F10:%.*]] = alloca double, align 8
-// LNX-NEXT:    [[F11:%.*]] = alloca double, align 8
-// LNX-NEXT:    [[F12:%.*]] = alloca float, align 4
-// LNX-NEXT:    [[F13:%.*]] = alloca float, align 4
-// LNX-NEXT:    [[F14:%.*]] = alloca float, align 4
-// LNX-NEXT:    [[F15:%.*]] = alloca float, align 4
-// LNX-NEXT:    [[F16:%.*]] = alloca x86_fp80, align 16
+// LNX-NEXT:    [[MIN1:%.*]] = alloca double, align 8
+// LNX-NEXT:    [[MIN2:%.*]] = alloca double, align 8
+// LNX-NEXT:    [[MIN3:%.*]] = alloca double, align 8
+// LNX-NEXT:    [[MIN4:%.*]] = alloca float, align 4
+// LNX-NEXT:    [[MIN5:%.*]] = alloca float, align 4
+// LNX-NEXT:    [[MIN6:%.*]] = alloca float, align 4
+// LNX-NEXT:    [[MIN7:%.*]] = alloca float, align 4
+// LNX-NEXT:    [[MIN8:%.*]] = alloca x86_fp80, align 16
+// LNX-NEXT:    [[MAX1:%.*]] = alloca double, align 8
+// LNX-NEXT:    [[MAX2:%.*]] = alloca double, align 8
+// LNX-NEXT:    [[MAX3:%.*]] = alloca double, align 8
+// LNX-NEXT:    [[MAX4:%.*]] = alloca float, align 4
+// LNX-NEXT:    [[MAX5:%.*]] = alloca float, align 4
+// LNX-NEXT:    [[MAX6:%.*]] = alloca float, align 4
+// LNX-NEXT:    [[MAX7:%.*]] = alloca float, align 4
+// LNX-NEXT:    [[MAX8:%.*]] = alloca x86_fp80, align 16
+// LNX-NEXT:    [[FREXP1:%.*]] = alloca double, align 8
+// LNX-NEXT:    [[FREXP2:%.*]] = alloca double, align 8
+// LNX-NEXT:    [[FREXP3:%.*]] = alloca double, align 8
+// LNX-NEXT:    [[FREXP4:%.*]] = alloca float, align 4
+// LNX-NEXT:    [[FREXP5:%.*]] = alloca float, align 4
+// LNX-NEXT:    [[FREXP6:%.*]] = alloca float, align 4
+// LNX-NEXT:    [[FREXP7:%.*]] = alloca float, align 4
+// LNX-NEXT:    [[FREXP8:%.*]] = alloca x86_fp80, align 16
 // LNX-NEXT:    store i32 0, ptr [[I]], align 4
-// LNX-NEXT:    store double 1.300000e+00, ptr [[F1]], align 8
-// LNX-NEXT:    store double -0.000000e+00, ptr [[F2]], align 8
-// LNX-NEXT:    store double -0.000000e+00, ptr [[F3]], align 8
-// LNX-NEXT:    store float 0x7FF8000000000000, ptr [[F4]], align 4
-// LNX-NEXT:    store float -1.000000e+00, ptr [[F5]], align 4
-// LNX-NEXT:    store float 0xFFF0000000000000, ptr [[F6]], align 4
-// LNX-NEXT:    store float 0.000000e+00, ptr [[F7]], align 4
-// LNX-NEXT:    store x86_fp80 0xK4005F6E978D4FDF3B646, ptr [[F8]], align 16
-// LNX-NEXT:    store double 0x3FEEDCCCCCCCCCCD, ptr [[F9]], align 8
-// LNX-NEXT:    store double 0.000000e+00, ptr [[F10]], align 8
-// LNX-NEXT:    store double -0.000000e+00, ptr [[F11]], align 8
-// LNX-NEXT:    store float 0x7FF8000000000000, ptr [[F12]], align 4
-// LNX-NEXT:    store float 0xFFF8000000000000, ptr [[F13]], align 4
-// LNX-NEXT:    store float 0x7FF0000000000000, ptr [[F14]], align 4
-// LNX-NEXT:    store float 0x7FF0000000000000, ptr [[F15]], align 4
-// LNX-NEXT:    store x86_fp80 0xK3FFE81A9FBE76C8B4396, ptr [[F16]], align 16
+// LNX-NEXT:    store double 1.300000e+00, ptr [[MIN1]], align 8
+// LNX-NEXT:    store double -0.000000e+00, ptr [[MIN2]], align 8
+// LNX-NEXT:    store double -0.000000e+00, ptr [[MIN3]], align 8
+// LNX-NEXT:    store float 0x7FF8000000000000, ptr [[MIN4]], align 4
+// LNX-NEXT:    store float -1.000000e+00, ptr [[MIN5]], align 4
+// LNX-NEXT:    store float 0xFFF0000000000000, ptr [[MIN6]], align 4
+// LNX-NEXT:    store float 0.000000e+00, ptr [[MIN7]], align 4
+// LNX-NEXT:    store x86_fp80 0xK4005F6E978D4FDF3B646, ptr [[MIN8]], align 16
+// LNX-NEXT:    store double 1.524000e+01, ptr [[MAX1]], align 8
+// LNX-NEXT:    store double 0.000000e+00, ptr [[MAX2]], align 8
+// LNX-NEXT:    store double 0.000000e+00, ptr [[MAX3]], align 8
+// LNX-NEXT:    store float -1.000000e+00, ptr [[MAX4]], align 4
+// LNX-NEXT:    store float 0x7FF0000000000000, ptr [[MAX5]], align 4
+// LNX-NEXT:    store float 0.000000e+00, ptr [[MAX6]], align 4
+// LNX-NEXT:    store float 0x7FF8000000000000, ptr [[MAX7]], align 4
+// LNX-NEXT:    store x86_fp80 0xK4008C540C49BA5E353F8, ptr [[MAX8]], align 16
+// LNX-NEXT:    store double 0x3FEEDCCCCCCCCCCD, ptr [[FREXP1]], align 8
+// LNX-NEXT:    store double 0.000000e+00, ptr [[FREXP2]], align 8
+// LNX-NEXT:    store double -0.000000e+00, ptr [[FREXP3]], align 8
+// LNX-NEXT:    store float 0x7FF8000000000000, ptr [[FREXP4]], align 4
+// LNX-NEXT:    store float 0xFFF8000000000000, ptr [[FREXP5]], align 4
+// LNX-NEXT:    store float 0x7FF0000000000000, ptr [[FREXP6]], align 4
+// LNX-NEXT:    store float 0x7FF0000000000000, ptr [[FREXP7]], align 4
+// LNX-NEXT:    store x86_fp80 0xK3FFE81A9FBE76C8B4396, ptr [[FREXP8]], align 16
 // LNX-NEXT:    ret i32 0
 //
 int func()
@@ -96,24 +128,34 @@ int func()
   int i;
 
   // fmin
-  constexpr double f1 = __builtin_fmin(15.24, 1.3);
-  constexpr double f2 = __builtin_fmin(-0.0, +0.0);
-  constexpr double f3 = __builtin_fmin(+0.0, -0.0);
-  constexpr float f4 = __builtin_fminf(NAN, NAN);
-  constexpr float f5 = __builtin_fminf(NAN, -1);
-  constexpr float f6 = __builtin_fminf(-INFINITY, 0);
-  constexpr float f7 = __builtin_fminf(INFINITY, 0);
-  constexpr long double f8 = __builtin_fminl(123.456L, 789.012L);
+  constexpr double min1 = __builtin_fmin(15.24, 1.3);
+  constexpr double min2 = __builtin_fmin(-0.0, +0.0);
+  constexpr double min3 = __builtin_fmin(+0.0, -0.0);
+  constexpr float min4 = __builtin_fminf(NAN, NAN);
+  constexpr float min5 = __builtin_fminf(NAN, -1);
+  constexpr float min6 = __builtin_fminf(-INFINITY, 0);
+  constexpr float min7 = __builtin_fminf(INFINITY, 0);
+  constexpr long double min8 = __builtin_fminl(123.456L, 789.012L);
+
+  // fmax
+  constexpr double max1 =  __builtin_fmax(15.24, 1.3);
+  constexpr double max2 = __builtin_fmax(-0.0, +0.0);
+  constexpr double max3 = __builtin_fmax(+0.0, -0.0);
+  constexpr float max4 = __builtin_fmaxf(NAN, -1);
+  constexpr float max5 = __builtin_fmaxf(+INFINITY, 0);
+  constexpr float max6 = __builtin_fmaxf(-INFINITY, 0);
+  constexpr float max7 = __builtin_fmaxf(NAN, NAN);
+  constexpr long double max8 = __builtin_fmaxl(123.456L, 789.012L);
 
   // frexp
-  constexpr double f9 = __builtin_frexp(123.45, &i);
-  constexpr double f10 = __builtin_frexp(0.0, &i);
-  constexpr double f11 = __builtin_frexp(-0.0, &i);
-  constexpr float f12 = __builtin_frexpf(NAN, &i);
-  constexpr float f13 = __builtin_frexpf(-NAN, &i);
-  constexpr float f14 = __builtin_frexpf(INFINITY, &i);
-  constexpr float f15 = __builtin_frexpf(INFINITY, &i);
-  constexpr long double f16 = __builtin_frexpl(259.328L, &i);
+  constexpr double frexp1 = __builtin_frexp(123.45, &i);
+  constexpr double frexp2 = __builtin_frexp(0.0, &i);
+  constexpr double frexp3 = __builtin_frexp(-0.0, &i);
+  constexpr float frexp4 = __builtin_frexpf(NAN, &i);
+  constexpr float frexp5 = __builtin_frexpf(-NAN, &i);
+  constexpr float frexp6 = __builtin_frexpf(INFINITY, &i);
+  constexpr float frexp7 = __builtin_frexpf(INFINITY, &i);
+  constexpr long double frexp8 = __builtin_frexpl(259.328L, &i);
 
   return 0;
 }
