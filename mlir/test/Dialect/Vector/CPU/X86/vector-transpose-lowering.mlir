@@ -1,7 +1,8 @@
 // RUN: mlir-opt %s --transform-interpreter --split-input-file | FileCheck %s
 
-// NOTE: This file tests lowering from the X86 dialect. Since X86 does not
-// support scalable vectors, all examples in this file use fixed-width vectors.
+// NOTE: This file tests lowerings that are implemented in the X86Vector
+// dialect. Since X86 does not support scalable vectors, all examples in this
+// file use fixed-width vectors.
 
 // CHECK-LABEL: func @transpose4x8
 func.func @transpose4x8xf32(%arg0: vector<4x8xf32>) -> vector<8x4xf32> {
