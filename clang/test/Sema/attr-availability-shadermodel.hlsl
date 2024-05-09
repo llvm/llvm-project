@@ -75,6 +75,7 @@ __attribute__((availability(shadermodel, introduced = 5.0, environment = compute
 __attribute__((availability(shadermodel, introduced = 6.0, environment = mesh)))
 unsigned fn5_0_stages_s();
 
+[numthreads(4,1,1)]
 int main() {
     // expected-warning@#fn6_0_call {{'fn6_0' is only available on Shader Model 6.0 or newer}}
     // expected-note@#fn6_0 {{'fn6_0' has been marked as being introduced in Shader Model 6.0 here, but the deployment target is Shader Model 5.0}}
