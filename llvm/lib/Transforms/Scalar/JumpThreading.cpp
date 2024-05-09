@@ -1281,7 +1281,7 @@ bool JumpThreadingPass::simplifyPartiallyRedundantLoad(LoadInst *LoadI) {
     if (AvailableVal->getType() != LoadI->getType()) {
       AvailableVal = CastInst::CreateBitOrPointerCast(
           AvailableVal, LoadI->getType(), "", LoadI->getIterator());
-      if (Instruction * CI = dyn_cast<Instruction>(AvailableVal))
+      if (Instruction *CI = dyn_cast<Instruction>(AvailableVal))
         CI->setDebugLoc(LoadI->getDebugLoc());
     }
     LoadI->replaceAllUsesWith(AvailableVal);
@@ -2986,7 +2986,7 @@ bool JumpThreadingPass::tryToUnfoldSelectInCurrBB(BasicBlock *BB) {
     PHINode *NewPN = PHINode::Create(SI->getType(), 2, "", SI->getIterator());
     NewPN->addIncoming(SI->getTrueValue(), Term->getParent());
     NewPN->addIncoming(SI->getFalseValue(), BB);
-    NewBB->setDebugLoc(SI->getDebugLoc());
+    NewPN->setDebugLoc(SI->getDebugLoc());
     SI->replaceAllUsesWith(NewPN);
     SI->eraseFromParent();
     // NewBB and SplitBB are newly created blocks which require insertion.
