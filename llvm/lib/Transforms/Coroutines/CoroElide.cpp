@@ -33,19 +33,20 @@ static cl::opt<std::string> CoroElideInfoOutputFilename(
 
 namespace {
 // Created on demand if the coro-elide pass has work to do.
-class FunctionElideManager {
+class FunctionElideInfo {
 public:
-  FunctionElideManager(Function *F) : ContainingFunction(F) {
+  FunctionElideInfo(Function *F) : ContainingFunction(F) {
     this->collectPostSplitCoroIds();
   }
 
-  bool isElideNecessary() const { return !CoroIds.empty(); }
+  bool hasCoroIds() const { return !CoroIds.empty(); }
 
   const SmallVectorImpl<CoroIdInst *> &getCoroIds() const { return CoroIds; }
 
 private:
   Function *ContainingFunction;
   SmallVector<CoroIdInst *, 4> CoroIds;
+  // Used in canCoroBeginEscape to distinguish coro.suspend switchs.
   SmallPtrSet<const SwitchInst *, 4> CoroSuspendSwitches;
 
   void collectPostSplitCoroIds();
@@ -54,17 +55,17 @@ private:
 
 class CoroIdElider {
 public:
-  CoroIdElider(CoroIdInst *CoroId, FunctionElideManager &FEM, AAResults &AA,
+  CoroIdElider(CoroIdInst *CoroId, FunctionElideInfo &FEI, AAResults &AA,
                DominatorTree &DT, OptimizationRemarkEmitter &ORE);
   void elideHeapAllocations(uint64_t FrameSize, Align FrameAlign);
   bool lifetimeEligibleForElide() const;
   bool attemptElide();
-  bool CoroBeginCanEscape(const CoroBeginInst *,
+  bool canCoroBeginEscape(const CoroBeginInst *,
                           const SmallPtrSetImpl<BasicBlock *> &) const;
 
 private:
   CoroIdInst *CoroId;
-  FunctionElideManager &FEM;
+  FunctionElideInfo &FEI;
   AAResults &AA;
   DominatorTree &DT;
   OptimizationRemarkEmitter &ORE;
@@ -158,7 +159,7 @@ static std::unique_ptr<raw_fd_ostream> getOrCreateLogFile() {
 }
 #endif
 
-void FunctionElideManager::collectPostSplitCoroIds() {
+void FunctionElideInfo::collectPostSplitCoroIds() {
   for (auto &I : instructions(this->ContainingFunction)) {
     if (auto *CII = dyn_cast<CoroIdInst>(&I))
       if (CII->getInfo().isPostSplit())
@@ -180,10 +181,10 @@ void FunctionElideManager::collectPostSplitCoroIds() {
   }
 }
 
-CoroIdElider::CoroIdElider(CoroIdInst *CoroId, FunctionElideManager &FEM,
+CoroIdElider::CoroIdElider(CoroIdInst *CoroId, FunctionElideInfo &FEI,
                            AAResults &AA, DominatorTree &DT,
                            OptimizationRemarkEmitter &ORE)
-    : CoroId(CoroId), FEM(FEM), AA(AA), DT(DT), ORE(ORE) {
+    : CoroId(CoroId), FEI(FEI), AA(AA), DT(DT), ORE(ORE) {
   // Collect all coro.begin and coro.allocs associated with this coro.id.
   for (User *U : CoroId->users()) {
     if (auto *CB = dyn_cast<CoroBeginInst>(U))
@@ -215,9 +216,9 @@ CoroIdElider::CoroIdElider(CoroIdInst *CoroId, FunctionElideManager &FEM,
 // To elide heap allocations we need to suppress code blocks guarded by
 // llvm.coro.alloc and llvm.coro.free instructions.
 void CoroIdElider::elideHeapAllocations(uint64_t FrameSize, Align FrameAlign) {
-  LLVMContext &C = FEM.ContainingFunction->getContext();
+  LLVMContext &C = FEI.ContainingFunction->getContext();
   BasicBlock::iterator InsertPt =
-      getFirstNonAllocaInTheEntryBlock(FEM.ContainingFunction)->getIterator();
+      getFirstNonAllocaInTheEntryBlock(FEI.ContainingFunction)->getIterator();
 
   // Replacing llvm.coro.alloc with false will suppress dynamic
   // allocation as it is expected for the frontend to generate the code that
@@ -235,7 +236,7 @@ void CoroIdElider::elideHeapAllocations(uint64_t FrameSize, Align FrameAlign) {
   // is spilled into the coroutine frame and recreate the alignment information
   // here. Possibly we will need to do a mini SROA here and break the coroutine
   // frame into individual AllocaInst recreating the original alignment.
-  const DataLayout &DL = FEM.ContainingFunction->getParent()->getDataLayout();
+  const DataLayout &DL = FEI.ContainingFunction->getParent()->getDataLayout();
   auto FrameTy = ArrayType::get(Type::getInt8Ty(C), FrameSize);
   auto *Frame = new AllocaInst(FrameTy, DL.getAllocaAddrSpace(), "", InsertPt);
   Frame->setAlignment(FrameAlign);
@@ -252,7 +253,7 @@ void CoroIdElider::elideHeapAllocations(uint64_t FrameSize, Align FrameAlign) {
   removeTailCallAttribute(Frame, AA);
 }
 
-bool CoroIdElider::CoroBeginCanEscape(
+bool CoroIdElider::canCoroBeginEscape(
     const CoroBeginInst *CB, const SmallPtrSetImpl<BasicBlock *> &TIs) const {
   const auto &It = DestroyAddr.find(CB);
   assert(It != DestroyAddr.end());
@@ -322,7 +323,7 @@ bool CoroIdElider::CoroBeginCanEscape(
     // which means a escape path to normal terminator, it is reasonable to skip
     // it since coroutine frame doesn't change outside the coroutine body.
     if (isa<SwitchInst>(TI) &&
-        FEM.CoroSuspendSwitches.count(cast<SwitchInst>(TI))) {
+        FEI.CoroSuspendSwitches.count(cast<SwitchInst>(TI))) {
       Worklist.push_back(cast<SwitchInst>(TI)->getSuccessor(1));
       Worklist.push_back(cast<SwitchInst>(TI)->getSuccessor(2));
     } else
@@ -352,7 +353,7 @@ bool CoroIdElider::lifetimeEligibleForElide() const {
   // First gather all of the terminators for the function.
   // Consider the final coro.suspend as the real terminator when the current
   // function is a coroutine.
-  for (BasicBlock &B : *FEM.ContainingFunction) {
+  for (BasicBlock &B : *FEI.ContainingFunction) {
     auto *TI = B.getTerminator();
 
     if (TI->getNumSuccessors() != 0 || isa<UnreachableInst>(TI))
@@ -383,13 +384,13 @@ bool CoroIdElider::lifetimeEligibleForElide() const {
     if (llvm::all_of(Terminators, DominatesTerminator))
       continue;
 
-    // Otherwise CoroBeginCanEscape would decide whether there is any paths from
+    // Otherwise canCoroBeginEscape would decide whether there is any paths from
     // coro.begin to Terminators which not pass through any of the
     // coro.destroys. This is a slower analysis.
     //
-    // CoroBeginCanEscape is relatively slow, so we avoid to run it as much as
+    // canCoroBeginEscape is relatively slow, so we avoid to run it as much as
     // possible.
-    if (CoroBeginCanEscape(CB, Terminators))
+    if (canCoroBeginEscape(CB, Terminators))
       return false;
   }
 
@@ -420,7 +421,7 @@ bool CoroIdElider::attemptElide() {
 
   auto FrameSizeAndAlign = getFrameLayout(cast<Function>(ResumeAddrConstant));
 
-  auto CallerFunctionName = FEM.ContainingFunction->getName();
+  auto CallerFunctionName = FEI.ContainingFunction->getName();
   auto CalleeCoroutineName = CoroId->getCoroutine()->getName();
 
   if (EligibleForElide && FrameSizeAndAlign) {
@@ -431,7 +432,7 @@ bool CoroIdElider::attemptElide() {
 #ifndef NDEBUG
       if (!CoroElideInfoOutputFilename.empty())
         *getOrCreateLogFile() << "Elide " << CalleeCoroutineName << " in "
-                              << FEM.ContainingFunction->getName() << "\n";
+                              << FEI.ContainingFunction->getName() << "\n";
 #endif
 
       ORE.emit([&]() {
@@ -472,9 +473,9 @@ PreservedAnalyses CoroElidePass::run(Function &F, FunctionAnalysisManager &AM) {
   if (!declaresCoroElideIntrinsics(M))
     return PreservedAnalyses::all();
 
-  FunctionElideManager FEM{&F};
+  FunctionElideInfo FEI{&F};
   // Elide is not necessary if there's no coro.id within the function.
-  if (!FEM.isElideNecessary())
+  if (!FEI.hasCoroIds())
     return PreservedAnalyses::all();
 
   AAResults &AA = AM.getResult<AAManager>(F);
@@ -482,8 +483,8 @@ PreservedAnalyses CoroElidePass::run(Function &F, FunctionAnalysisManager &AM) {
   auto &ORE = AM.getResult<OptimizationRemarkEmitterAnalysis>(F);
 
   bool Changed = false;
-  for (auto *CII : FEM.getCoroIds()) {
-    CoroIdElider CIE(CII, FEM, AA, DT, ORE);
+  for (auto *CII : FEI.getCoroIds()) {
+    CoroIdElider CIE(CII, FEI, AA, DT, ORE);
     Changed |= CIE.attemptElide();
   }
 
