@@ -1014,7 +1014,7 @@ static bool matchesSquareSum(BinaryOperator &I, Mul2Rhs M2Rhs, Value *&A,
   // (a * a) + (((a * 2) + b) * b)
   if (match(&I, m_c_BinOp(
                     AddOp, m_OneUse(m_BinOp(MulOp, m_Value(A), m_Deferred(A))),
-                    m_OneUse(m_BinOp(
+                    m_OneUse(m_c_BinOp(
                         MulOp,
                         m_c_BinOp(AddOp, m_BinOp(Mul2Op, m_Deferred(A), M2Rhs),
                                   m_Value(B)),
@@ -1025,16 +1025,16 @@ static bool matchesSquareSum(BinaryOperator &I, Mul2Rhs M2Rhs, Value *&A,
   // +
   // (a * a + b * b) or (b * b + a * a)
   return match(
-      &I,
-      m_c_BinOp(AddOp,
-                m_CombineOr(
-                    m_OneUse(m_BinOp(
-                        Mul2Op, m_BinOp(MulOp, m_Value(A), m_Value(B)), M2Rhs)),
-                    m_OneUse(m_BinOp(MulOp, m_BinOp(Mul2Op, m_Value(A), M2Rhs),
+      &I, m_c_BinOp(
+              AddOp,
+              m_CombineOr(
+                  m_OneUse(m_BinOp(
+                      Mul2Op, m_BinOp(MulOp, m_Value(A), m_Value(B)), M2Rhs)),
+                  m_OneUse(m_c_BinOp(MulOp, m_BinOp(Mul2Op, m_Value(A), M2Rhs),
                                      m_Value(B)))),
-                m_OneUse(m_c_BinOp(
-                    AddOp, m_BinOp(MulOp, m_Deferred(A), m_Deferred(A)),
-                    m_BinOp(MulOp, m_Deferred(B), m_Deferred(B))))));
+              m_OneUse(
+                  m_c_BinOp(AddOp, m_BinOp(MulOp, m_Deferred(A), m_Deferred(A)),
+                            m_BinOp(MulOp, m_Deferred(B), m_Deferred(B))))));
 }
 
 // Fold integer variations of a^2 + 2*a*b + b^2 -> (a + b)^2
