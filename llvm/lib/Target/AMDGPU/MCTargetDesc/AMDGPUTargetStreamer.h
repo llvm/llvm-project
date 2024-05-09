@@ -53,7 +53,7 @@ public:
     CodeObjectVersion = COV;
   }
 
-  virtual void EmitAMDKernelCodeT(AMDGPU::AMDGPUMCKernelCodeT &Header){};
+  virtual void EmitAMDKernelCodeT(AMDGPU::AMDGPUMCKernelCodeT &Header) {};
 
   virtual void EmitAMDGPUSymbolType(StringRef SymbolName, unsigned Type){};
 
