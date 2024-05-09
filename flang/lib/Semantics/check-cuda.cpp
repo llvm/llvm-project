@@ -83,6 +83,7 @@ struct DeviceExprChecker
         }
       }
       if (sym->owner().IsModule() &&
+          sym->owner().parent().IsIntrinsicModules() &&
           DEREF(sym->owner().symbol()).name() == "__cuda_device_builtins") {
         return {};
       }
