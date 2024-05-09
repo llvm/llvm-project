@@ -82,8 +82,8 @@ void StringConstructorCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       cxxConstructExpr(
           hasDeclaration(cxxMethodDecl(hasName("basic_string"))),
-          hasArgument(0, hasType(qualType(isInteger()))),
-          hasArgument(1, hasType(qualType(isInteger()))),
+          hasArgument(0, ignoringParenImpCasts(hasType(qualType(isInteger())))),
+          hasArgument(1, ignoringParenImpCasts(hasType(qualType(isInteger())))),
           anyOf(
               // Detect the expression: string('x', 40);
               hasArgument(0, CharExpr.bind("swapped-parameter")),
@@ -92,7 +92,8 @@ void StringConstructorCheck::registerMatchers(MatchFinder *Finder) {
               // Detect the expression: string(-4, ...);
               hasArgument(0, NegativeExpr.bind("negative-length")),
               // Detect the expression: string(0x1234567, ...);
-              hasArgument(0, LargeLengthExpr.bind("large-length"))))
+              hasArgument(0, ignoringParenImpCasts(
+                                 LargeLengthExpr.bind("large-length")))))
           .bind("constructor"),
       this);
 
@@ -102,8 +103,8 @@ void StringConstructorCheck::registerMatchers(MatchFinder *Finder) {
       cxxConstructExpr(
           hasDeclaration(cxxConstructorDecl(ofClass(
               cxxRecordDecl(hasAnyName(removeNamespaces(StringNames)))))),
-          hasArgument(0, hasType(CharPtrType)),
-          hasArgument(1, hasType(isInteger())),
+          hasArgument(0, ignoringParenImpCasts(hasType(CharPtrType))),
+          hasArgument(1, ignoringParenImpCasts(hasType(isInteger()))),
           anyOf(
               // Detect the expression: string("...", 0);
               hasArgument(1, ZeroExpr.bind("empty-string")),
@@ -112,7 +113,8 @@ void StringConstructorCheck::registerMatchers(MatchFinder *Finder) {
               // Detect the expression: string("lit", 0x1234567);
               hasArgument(1, LargeLengthExpr.bind("large-length")),
               // Detect the expression: string("lit", 5)
-              allOf(hasArgument(0, ConstStrLiteral.bind("literal-with-length")),
+              allOf(hasArgument(0, ignoringParenImpCasts(ConstStrLiteral.bind(
+                                       "literal-with-length"))),
                     hasArgument(1, ignoringParenImpCasts(
                                        integerLiteral().bind("int"))))))
           .bind("constructor"),
@@ -128,11 +130,12 @@ void StringConstructorCheck::registerMatchers(MatchFinder *Finder) {
                   cxxRecordDecl(hasName("basic_string_view"))
                       .bind("basic_string_view_decl"),
                   cxxRecordDecl(hasAnyName(removeNamespaces(StringNames))))))),
-              hasArgument(0, expr().bind("from-ptr")),
+              hasArgument(0, ignoringParenImpCasts(expr().bind("from-ptr"))),
               // do not match std::string(ptr, int)
               // match std::string(ptr, alloc)
               // match std::string(ptr)
-              anyOf(hasArgument(1, unless(hasType(isInteger()))),
+              anyOf(hasArgument(
+                        1, ignoringParenImpCasts(unless(hasType(isInteger())))),
                     argumentCountIs(1)))
               .bind("constructor")),
       this);

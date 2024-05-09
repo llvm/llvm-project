@@ -44,7 +44,9 @@ void PreferIsaOrDynCastInConditionalsCheck::registerMatchers(
           callee(namedDecl(hasAnyName("isa", "cast", "cast_or_null", "dyn_cast",
                                       "dyn_cast_or_null"))
                      .bind("func")),
-          hasArgument(0, mapAnyOf(declRefExpr, cxxMemberCallExpr).bind("arg")))
+          hasArgument(
+              0, ignoringParenImpCasts(
+                     mapAnyOf(declRefExpr, cxxMemberCallExpr).bind("arg"))))
           .bind("rhs");
 
   Finder->addMatcher(

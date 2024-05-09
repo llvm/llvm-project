@@ -265,11 +265,12 @@ void UseAfterMoveFinder::getDeclRefs(
 
     AddDeclRefs(match(traverse(TK_AsIs, findAll(DeclRefMatcher)), *S->getStmt(),
                       *Context));
-    AddDeclRefs(match(findAll(cxxOperatorCallExpr(
-                                  hasAnyOverloadedOperatorName("*", "->", "[]"),
-                                  hasArgument(0, DeclRefMatcher))
-                                  .bind("operator")),
-                      *S->getStmt(), *Context));
+    AddDeclRefs(
+        match(findAll(cxxOperatorCallExpr(
+                          hasAnyOverloadedOperatorName("*", "->", "[]"),
+                          hasArgument(0, ignoringParenImpCasts(DeclRefMatcher)))
+                          .bind("operator")),
+              *S->getStmt(), *Context));
   }
 }
 
@@ -414,7 +415,7 @@ void UseAfterMoveCheck::registerMatchers(MatchFinder *Finder) {
       callExpr(argumentCountIs(1),
                callee(functionDecl(hasAnyName("::std::move", "::std::forward"))
                           .bind("move-decl")),
-               hasArgument(0, declRefExpr().bind("arg")),
+               hasArgument(0, ignoringParenImpCasts(declRefExpr().bind("arg"))),
                unless(inDecltypeOrTemplateArg()),
                unless(hasParent(TryEmplaceMatcher)), expr().bind("call-move"),
                anyOf(hasAncestor(compoundStmt(

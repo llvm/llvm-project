@@ -44,9 +44,10 @@ void StringFindStartswithCheck::registerMatchers(MatchFinder *Finder) {
       callee(cxxMethodDecl(hasName("find")).bind("findfun")),
       on(hasType(StringType)),
       // ... with some search expression ...
-      hasArgument(0, expr().bind("needle")),
+      hasArgument(0, expr().ignoringParenImpCasts().bind("needle")),
       // ... and either "0" as second argument or the default argument (also 0).
-      anyOf(hasArgument(1, ZeroLiteral), hasArgument(1, cxxDefaultArgExpr())));
+      anyOf(hasArgument(1, ignoringParenImpCasts(ZeroLiteral)),
+            hasArgument(1, ignoringParenImpCasts(cxxDefaultArgExpr()))));
 
   Finder->addMatcher(
       // Match [=!]= with a zero on one side and a string.find on the other.
@@ -62,9 +63,9 @@ void StringFindStartswithCheck::registerMatchers(MatchFinder *Finder) {
       callee(cxxMethodDecl(hasName("rfind")).bind("findfun")),
       on(hasType(StringType)),
       // ... with some search expression ...
-      hasArgument(0, expr().bind("needle")),
+      hasArgument(0, expr().ignoringParenImpCasts().bind("needle")),
       // ... and "0" as second argument.
-      hasArgument(1, ZeroLiteral));
+      hasArgument(1, ignoringParenImpCasts(ZeroLiteral)));
 
   Finder->addMatcher(
       // Match [=!]= with either a zero or npos on one side and a string.rfind

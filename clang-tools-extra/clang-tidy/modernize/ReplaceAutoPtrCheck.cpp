@@ -82,14 +82,16 @@ void ReplaceAutoPtrCheck::registerMatchers(MatchFinder *Finder) {
       expr(isLValue(), hasType(AutoPtrType)).bind(AutoPtrOwnershipTransferId);
 
   Finder->addMatcher(
-      cxxOperatorCallExpr(hasOverloadedOperatorName("="),
-                          callee(cxxMethodDecl(ofClass(AutoPtrDecl))),
-                          hasArgument(1, MovableArgumentMatcher)),
+      cxxOperatorCallExpr(
+          hasOverloadedOperatorName("="),
+          callee(cxxMethodDecl(ofClass(AutoPtrDecl))),
+          hasArgument(1, ignoringParenImpCasts(MovableArgumentMatcher))),
       this);
   Finder->addMatcher(
       traverse(TK_AsIs,
                cxxConstructExpr(hasType(AutoPtrType), argumentCountIs(1),
-                                hasArgument(0, MovableArgumentMatcher))),
+                                hasArgument(0, ignoringParenImpCasts(
+                                                   MovableArgumentMatcher)))),
       this);
 }
 
@@ -141,8 +143,7 @@ void ReplaceAutoPtrCheck::check(const MatchFinder::MatchResult &Result) {
       "auto_ptr")
     return;
 
-  SourceLocation EndLoc =
-      AutoPtrLoc.getLocWithOffset(strlen("auto_ptr") - 1);
+  SourceLocation EndLoc = AutoPtrLoc.getLocWithOffset(strlen("auto_ptr") - 1);
   diag(AutoPtrLoc, "auto_ptr is deprecated, use unique_ptr instead")
       << FixItHint::CreateReplacement(SourceRange(AutoPtrLoc, EndLoc),
                                       "unique_ptr");

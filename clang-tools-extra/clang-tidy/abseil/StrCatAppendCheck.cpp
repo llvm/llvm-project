@@ -34,15 +34,15 @@ AST_MATCHER_P(Stmt, IgnoringTemporaries, ast_matchers::internal::Matcher<Stmt>,
   return InnerMatcher.matches(*E, Finder, Builder);
 }
 
-}  // namespace
+} // namespace
 
 // TODO: str += StrCat(...)
 //       str.append(StrCat(...))
 
 void StrCatAppendCheck::registerMatchers(MatchFinder *Finder) {
   const auto StrCat = functionDecl(hasName("::absl::StrCat"));
-  // The arguments of absl::StrCat are implicitly converted to AlphaNum. This 
-  // matches to the arguments because of that behavior. 
+  // The arguments of absl::StrCat are implicitly converted to AlphaNum. This
+  // matches to the arguments because of that behavior.
   const auto AlphaNum = IgnoringTemporaries(cxxConstructExpr(
       argumentCountIs(1), hasType(cxxRecordDecl(hasName("::absl::AlphaNum"))),
       hasArgument(0, ignoringImpCasts(declRefExpr(to(equalsBoundNode("LHS")),
@@ -56,24 +56,28 @@ void StrCatAppendCheck::registerMatchers(MatchFinder *Finder) {
   // StrCat on the RHS. The first argument of the StrCat call should be the same
   // as the LHS. Ignore calls from template instantiations.
   Finder->addMatcher(
-      traverse(TK_AsIs,
-               cxxOperatorCallExpr(
-                   unless(isInTemplateInstantiation()),
-                   hasOverloadedOperatorName("="),
-                   hasArgument(0, declRefExpr(to(decl().bind("LHS")))),
-                   hasArgument(
-                       1, IgnoringTemporaries(
-                              callExpr(callee(StrCat), hasArgument(0, AlphaNum),
-                                       unless(HasAnotherReferenceToLhs))
-                                  .bind("Call"))))
-                   .bind("Op")),
+      traverse(
+          TK_AsIs,
+          cxxOperatorCallExpr(
+              unless(isInTemplateInstantiation()),
+              hasOverloadedOperatorName("="),
+              hasArgument(0, ignoringParenImpCasts(
+                                 declRefExpr(to(decl().bind("LHS"))))),
+              hasArgument(1, IgnoringTemporaries(
+                                 callExpr(callee(StrCat),
+                                          hasArgument(0, ignoringParenImpCasts(
+                                                             AlphaNum)),
+                                          unless(HasAnotherReferenceToLhs))
+                                     .bind("Call"))))
+              .bind("Op")),
       this);
 }
 
 void StrCatAppendCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *Op = Result.Nodes.getNodeAs<CXXOperatorCallExpr>("Op");
   const auto *Call = Result.Nodes.getNodeAs<CallExpr>("Call");
-  assert(Op != nullptr && Call != nullptr && "Matcher does not work as expected");
+  assert(Op != nullptr && Call != nullptr &&
+         "Matcher does not work as expected");
 
   // Handles the case 'x = absl::StrCat(x)', which has no effect.
   if (Call->getNumArgs() == 1) {

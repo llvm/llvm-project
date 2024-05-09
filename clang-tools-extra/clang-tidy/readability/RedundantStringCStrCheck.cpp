@@ -57,7 +57,7 @@ void RedundantStringCStrCheck::registerMatchers(
           hasDeclaration(cxxMethodDecl(hasName("basic_string"))),
           // If present, the second argument is the alloc object which must not
           // be present explicitly.
-          hasArgument(1, cxxDefaultArgExpr()))));
+          hasArgument(1, ignoringParenImpCasts(cxxDefaultArgExpr())))));
 
   // Match string constructor.
   const auto StringViewConstructorExpr = cxxConstructExpr(
@@ -80,7 +80,7 @@ void RedundantStringCStrCheck::registerMatchers(
           TK_AsIs,
           cxxConstructExpr(
               anyOf(StringConstructorExpr, StringViewConstructorExpr),
-              hasArgument(0, StringCStrCallExpr),
+              hasArgument(0, ignoringParenImpCasts(StringCStrCallExpr)),
               unless(anyOf(HasRValueTempParent, hasParent(cxxBindTemporaryExpr(
                                                     HasRValueTempParent)))))),
       this);
@@ -89,49 +89,57 @@ void RedundantStringCStrCheck::registerMatchers(
   Finder->addMatcher(
       cxxOperatorCallExpr(
           hasAnyOverloadedOperatorName("<", ">", ">=", "<=", "!=", "==", "+"),
-          anyOf(allOf(hasArgument(0, StringExpr),
-                      hasArgument(1, StringCStrCallExpr)),
-                allOf(hasArgument(0, StringCStrCallExpr),
-                      hasArgument(1, StringExpr)))),
+          anyOf(
+              allOf(hasArgument(0, ignoringParenImpCasts(StringExpr)),
+                    hasArgument(1, ignoringParenImpCasts(StringCStrCallExpr))),
+              allOf(hasArgument(0, ignoringParenImpCasts(StringCStrCallExpr)),
+                    hasArgument(1, ignoringParenImpCasts(StringExpr))))),
       this);
 
   // Detect: 'dst += str.c_str()'  ->  'dst += str'
   // Detect: 's = str.c_str()'  ->  's = str'
   Finder->addMatcher(
-      cxxOperatorCallExpr(hasAnyOverloadedOperatorName("=", "+="),
-                          hasArgument(0, StringExpr),
-                          hasArgument(1, StringCStrCallExpr)),
+      cxxOperatorCallExpr(
+          hasAnyOverloadedOperatorName("=", "+="),
+          hasArgument(0, ignoringParenImpCasts(StringExpr)),
+          hasArgument(1, ignoringParenImpCasts(StringCStrCallExpr))),
       this);
 
   // Detect: 'dst.append(str.c_str())'  ->  'dst.append(str)'
   Finder->addMatcher(
-      cxxMemberCallExpr(on(StringExpr), callee(decl(cxxMethodDecl(hasAnyName(
-                                            "append", "assign", "compare")))),
-                        argumentCountIs(1), hasArgument(0, StringCStrCallExpr)),
+      cxxMemberCallExpr(
+          on(StringExpr),
+          callee(
+              decl(cxxMethodDecl(hasAnyName("append", "assign", "compare")))),
+          argumentCountIs(1),
+          hasArgument(0, ignoringParenImpCasts(StringCStrCallExpr))),
       this);
 
   // Detect: 'dst.compare(p, n, str.c_str())'  ->  'dst.compare(p, n, str)'
   Finder->addMatcher(
-      cxxMemberCallExpr(on(StringExpr),
-                        callee(decl(cxxMethodDecl(hasName("compare")))),
-                        argumentCountIs(3), hasArgument(2, StringCStrCallExpr)),
+      cxxMemberCallExpr(
+          on(StringExpr), callee(decl(cxxMethodDecl(hasName("compare")))),
+          argumentCountIs(3),
+          hasArgument(2, ignoringParenImpCasts(StringCStrCallExpr))),
       this);
 
   // Detect: 'dst.find(str.c_str())'  ->  'dst.find(str)'
   Finder->addMatcher(
-      cxxMemberCallExpr(on(StringExpr),
-                        callee(decl(cxxMethodDecl(hasAnyName(
-                            "find", "find_first_not_of", "find_first_of",
-                            "find_last_not_of", "find_last_of", "rfind")))),
-                        anyOf(argumentCountIs(1), argumentCountIs(2)),
-                        hasArgument(0, StringCStrCallExpr)),
+      cxxMemberCallExpr(
+          on(StringExpr),
+          callee(decl(cxxMethodDecl(
+              hasAnyName("find", "find_first_not_of", "find_first_of",
+                         "find_last_not_of", "find_last_of", "rfind")))),
+          anyOf(argumentCountIs(1), argumentCountIs(2)),
+          hasArgument(0, ignoringParenImpCasts(StringCStrCallExpr))),
       this);
 
   // Detect: 'dst.insert(pos, str.c_str())'  ->  'dst.insert(pos, str)'
   Finder->addMatcher(
-      cxxMemberCallExpr(on(StringExpr),
-                        callee(decl(cxxMethodDecl(hasName("insert")))),
-                        argumentCountIs(2), hasArgument(1, StringCStrCallExpr)),
+      cxxMemberCallExpr(
+          on(StringExpr), callee(decl(cxxMethodDecl(hasName("insert")))),
+          argumentCountIs(2),
+          hasArgument(1, ignoringParenImpCasts(StringCStrCallExpr))),
       this);
 
   // Detect redundant 'c_str()' calls through a StringRef constructor.
@@ -151,7 +159,7 @@ void RedundantStringCStrCheck::registerMatchers(
               // a constructor from string which is more efficient (avoids
               // strlen), so we can construct StringRef from the string
               // directly.
-              hasArgument(0, StringCStrCallExpr))),
+              hasArgument(0, ignoringParenImpCasts(StringCStrCallExpr)))),
       this);
 
   if (!StringParameterFunctions.empty()) {

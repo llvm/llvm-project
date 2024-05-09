@@ -15,14 +15,16 @@ using namespace clang::ast_matchers;
 namespace clang::tidy::bugprone {
 
 void NoEscapeCheck::registerMatchers(MatchFinder *Finder) {
-  Finder->addMatcher(callExpr(callee(functionDecl(hasName("::dispatch_async"))),
-                              argumentCountIs(2),
-                              hasArgument(1, blockExpr().bind("arg-block"))),
-                     this);
-  Finder->addMatcher(callExpr(callee(functionDecl(hasName("::dispatch_after"))),
-                              argumentCountIs(3),
-                              hasArgument(2, blockExpr().bind("arg-block"))),
-                     this);
+  Finder->addMatcher(
+      callExpr(
+          callee(functionDecl(hasName("::dispatch_async"))), argumentCountIs(2),
+          hasArgument(1, ignoringParenImpCasts(blockExpr().bind("arg-block")))),
+      this);
+  Finder->addMatcher(
+      callExpr(
+          callee(functionDecl(hasName("::dispatch_after"))), argumentCountIs(3),
+          hasArgument(2, ignoringParenImpCasts(blockExpr().bind("arg-block")))),
+      this);
 }
 
 void NoEscapeCheck::check(const MatchFinder::MatchResult &Result) {

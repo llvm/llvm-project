@@ -208,11 +208,13 @@ static RewriteRuleWith<std::string> ruleStrlenSize() {
   StringRef StringExpr = "strexpr";
   auto StringType = namedDecl(hasAnyName("::basic_string", "::string"));
   auto R = makeRule(
-      callExpr(callee(functionDecl(hasName("strlen"))),
-               hasArgument(0, cxxMemberCallExpr(
-                                  on(expr(hasType(isOrPointsTo(StringType)))
-                                         .bind(StringExpr)),
-                                  callee(cxxMethodDecl(hasName("c_str")))))),
+      callExpr(
+          callee(functionDecl(hasName("strlen"))),
+          hasArgument(
+              0,
+              ignoringParenImpCasts(cxxMemberCallExpr(
+                  on(expr(hasType(isOrPointsTo(StringType))).bind(StringExpr)),
+                  callee(cxxMethodDecl(hasName("c_str"))))))),
       changeTo(cat("REPLACED")), cat("Use size() method directly on string."));
   return R;
 }

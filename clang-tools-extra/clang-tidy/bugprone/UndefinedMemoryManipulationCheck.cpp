@@ -33,17 +33,19 @@ void UndefinedMemoryManipulationCheck::registerMatchers(MatchFinder *Finder) {
 
   // Check whether destination object is not TriviallyCopyable.
   // Applicable to all three memory manipulation functions.
-  Finder->addMatcher(callExpr(callee(functionDecl(hasAnyName(
-                                  "::memset", "::memcpy", "::memmove"))),
-                              hasArgument(0, NotTriviallyCopyableObject))
-                         .bind("dest"),
-                     this);
+  Finder->addMatcher(
+      callExpr(
+          callee(functionDecl(hasAnyName("::memset", "::memcpy", "::memmove"))),
+          hasArgument(0, ignoringParenImpCasts(NotTriviallyCopyableObject)))
+          .bind("dest"),
+      this);
 
   // Check whether source object is not TriviallyCopyable.
   // Only applicable to memcpy() and memmove().
   Finder->addMatcher(
-      callExpr(callee(functionDecl(hasAnyName("::memcpy", "::memmove"))),
-               hasArgument(1, NotTriviallyCopyableObject))
+      callExpr(
+          callee(functionDecl(hasAnyName("::memcpy", "::memmove"))),
+          hasArgument(1, ignoringParenImpCasts(NotTriviallyCopyableObject)))
           .bind("src"),
       this);
 }

@@ -22,9 +22,10 @@ void DurationDivisionCheck::registerMatchers(MatchFinder *Finder) {
       traverse(TK_AsIs,
                implicitCastExpr(
                    hasSourceExpression(ignoringParenCasts(
-                       cxxOperatorCallExpr(hasOverloadedOperatorName("/"),
-                                           hasArgument(0, DurationExpr),
-                                           hasArgument(1, DurationExpr))
+                       cxxOperatorCallExpr(
+                           hasOverloadedOperatorName("/"),
+                           hasArgument(0, ignoringParenImpCasts(DurationExpr)),
+                           hasArgument(1, ignoringParenImpCasts(DurationExpr)))
                            .bind("OpCall"))),
                    hasImplicitDestinationType(qualType(unless(isInteger()))),
                    unless(hasParent(cxxStaticCastExpr())),

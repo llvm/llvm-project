@@ -74,7 +74,7 @@ void FasterStringFindCheck::registerMatchers(MatchFinder *Finder) {
       cxxMemberCallExpr(
           callee(functionDecl(StringFindFunctions).bind("func")),
           anyOf(argumentCountIs(1), argumentCountIs(2)),
-          hasArgument(0, SingleChar),
+          hasArgument(0, ignoringParenImpCasts(SingleChar)),
           on(expr(hasType(hasUnqualifiedDesugaredType(recordType(hasDeclaration(
                       recordDecl(hasAnyName(StringLikeClasses)))))),
                   unless(hasSubstitutedType())))),

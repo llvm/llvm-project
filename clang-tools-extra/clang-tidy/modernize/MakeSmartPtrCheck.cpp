@@ -87,10 +87,12 @@ void MakeSmartPtrCheck::registerMatchers(ast_matchers::MatchFinder *Finder) {
               cxxConstructExpr(
                   hasType(getSmartPointerTypeMatcher()), argumentCountIs(1),
                   hasArgument(
-                      0, cxxNewExpr(hasType(pointsTo(qualType(hasCanonicalType(
-                                        equalsBoundNode(PointerType))))),
-                                    CanCallCtor, unless(IsPlacement))
-                             .bind(NewExpression)),
+                      0,
+                      ignoringParenImpCasts(
+                          cxxNewExpr(hasType(pointsTo(qualType(hasCanonicalType(
+                                         equalsBoundNode(PointerType))))),
+                                     CanCallCtor, unless(IsPlacement)))
+                          .bind(NewExpression)),
                   unless(isInTemplateInstantiation()))
                   .bind(ConstructorCall))))),
       this);
@@ -100,7 +102,8 @@ void MakeSmartPtrCheck::registerMatchers(ast_matchers::MatchFinder *Finder) {
           TK_AsIs,
           cxxMemberCallExpr(
               unless(isInTemplateInstantiation()),
-              hasArgument(0, cxxNewExpr(CanCallCtor, unless(IsPlacement))
+              hasArgument(0, ignoringParenImpCasts(
+                                 cxxNewExpr(CanCallCtor, unless(IsPlacement)))
                                  .bind(NewExpression)),
               callee(cxxMethodDecl(hasName("reset"))),
               anyOf(thisPointerType(getSmartPointerTypeMatcher()),
@@ -361,8 +364,7 @@ bool MakeSmartPtrCheck::replaceNew(DiagnosticBuilder &Diag,
       Diag << FixItHint::CreateRemoval(
           SourceRange(NewStart, InitRange.getBegin()));
       Diag << FixItHint::CreateRemoval(SourceRange(InitRange.getEnd(), NewEnd));
-    }
-    else {
+    } else {
       // New array expression with default/value initialization:
       //   smart_ptr<Foo[]>(new int[5]());
       //   smart_ptr<Foo[]>(new Foo[5]());

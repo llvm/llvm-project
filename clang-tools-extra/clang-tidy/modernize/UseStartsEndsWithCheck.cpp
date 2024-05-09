@@ -38,37 +38,42 @@ void UseStartsEndsWithCheck::registerMatchers(MatchFinder *Finder) {
 
   const auto FindExpr = cxxMemberCallExpr(
       // A method call with no second argument or the second argument is zero...
-      anyOf(argumentCountIs(1), hasArgument(1, ZeroLiteral)),
+      anyOf(argumentCountIs(1),
+            hasArgument(1, ignoringParenImpCasts(ZeroLiteral))),
       // ... named find...
       callee(cxxMethodDecl(hasName("find")).bind("find_fun")),
       // ... on a class with a starts_with function.
       on(hasType(
           hasCanonicalType(hasDeclaration(ClassWithStartsWithFunction)))),
       // Bind search expression.
-      hasArgument(0, expr().bind("search_expr")));
+      hasArgument(0, ignoringParenImpCasts(expr().bind("search_expr"))));
 
   const auto RFindExpr = cxxMemberCallExpr(
       // A method call with a second argument of zero...
-      hasArgument(1, ZeroLiteral),
+      hasArgument(1, ignoringParenImpCasts(ZeroLiteral)),
       // ... named rfind...
       callee(cxxMethodDecl(hasName("rfind")).bind("find_fun")),
       // ... on a class with a starts_with function.
       on(hasType(
           hasCanonicalType(hasDeclaration(ClassWithStartsWithFunction)))),
       // Bind search expression.
-      hasArgument(0, expr().bind("search_expr")));
+      hasArgument(0, ignoringParenImpCasts(expr().bind("search_expr"))));
 
   // Match a string literal and an integer or strlen() call matching the length.
   const auto HasStringLiteralAndLengthArgs = [](const auto StringArgIndex,
                                                 const auto LengthArgIndex) {
     return allOf(
-        hasArgument(StringArgIndex, stringLiteral().bind("string_literal_arg")),
-        hasArgument(LengthArgIndex,
-                    anyOf(integerLiteral().bind("integer_literal_size_arg"),
-                          callExpr(callee(functionDecl(parameterCountIs(1),
-                                                       hasName("strlen"))),
-                                   hasArgument(0, stringLiteral().bind(
-                                                      "strlen_arg"))))));
+        hasArgument(StringArgIndex, ignoringParenImpCasts(stringLiteral().bind(
+                                        "string_literal_arg"))),
+        hasArgument(
+            LengthArgIndex,
+            anyOf(ignoringParenImpCasts(
+                      integerLiteral().bind("integer_literal_size_arg")),
+                  ignoringParenImpCasts(callExpr(
+                      callee(
+                          functionDecl(parameterCountIs(1), hasName("strlen"))),
+                      hasArgument(0, ignoringParenImpCasts(stringLiteral().bind(
+                                         "strlen_arg"))))))));
   };
 
   // Match a string variable and a call to length() or size().

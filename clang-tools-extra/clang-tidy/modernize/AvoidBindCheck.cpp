@@ -647,9 +647,10 @@ void AvoidBindCheck::registerMatchers(MatchFinder *Finder) {
       callExpr(
           callee(namedDecl(hasAnyName("::boost::bind", "::std::bind"))),
           hasArgument(
-              0, anyOf(expr(hasType(memberPointerType())).bind("ref"),
-                       expr(hasParent(materializeTemporaryExpr().bind("ref"))),
-                       expr().bind("ref"))))
+              0, ignoringParenImpCasts(anyOf(
+                     expr(hasType(memberPointerType())).bind("ref"),
+                     expr(hasParent(materializeTemporaryExpr().bind("ref"))),
+                     expr().bind("ref")))))
           .bind("bind"),
       this);
 }

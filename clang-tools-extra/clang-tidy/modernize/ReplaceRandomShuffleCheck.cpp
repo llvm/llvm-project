@@ -26,9 +26,10 @@ ReplaceRandomShuffleCheck::ReplaceRandomShuffleCheck(StringRef Name,
                       areDiagsSelfContained()) {}
 
 void ReplaceRandomShuffleCheck::registerMatchers(MatchFinder *Finder) {
-  const auto Begin = hasArgument(0, expr());
-  const auto End = hasArgument(1, expr());
-  const auto RandomFunc = hasArgument(2, expr().bind("randomFunc"));
+  const auto Begin = hasArgument(0, ignoringParenImpCasts(expr()));
+  const auto End = hasArgument(1, ignoringParenImpCasts(expr()));
+  const auto RandomFunc =
+      hasArgument(2, ignoringParenImpCasts(expr().bind("randomFunc")));
   Finder->addMatcher(
       traverse(
           TK_AsIs,

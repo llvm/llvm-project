@@ -74,19 +74,20 @@ static bool isCopyConstructorAndCanBeDefaulted(ASTContext *Context,
   for (const auto *Base : BasesToInit) {
     // The initialization of a base class should be a call to a copy
     // constructor of the base.
-    if (match(
-            traverse(TK_AsIs,
-                     cxxConstructorDecl(
-                         forEachConstructorInitializer(cxxCtorInitializer(
-                             isBaseInitializer(),
-                             withInitializer(cxxConstructExpr(
-                                 hasType(equalsNode(Base)),
-                                 hasDeclaration(
-                                     cxxConstructorDecl(isCopyConstructor())),
-                                 argumentCountIs(1),
-                                 hasArgument(0, declRefExpr(to(varDecl(
-                                                    equalsNode(Param))))))))))),
-            *Ctor, *Context)
+    if (match(traverse(
+                  TK_AsIs,
+                  cxxConstructorDecl(
+                      forEachConstructorInitializer(cxxCtorInitializer(
+                          isBaseInitializer(),
+                          withInitializer(cxxConstructExpr(
+                              hasType(equalsNode(Base)),
+                              hasDeclaration(
+                                  cxxConstructorDecl(isCopyConstructor())),
+                              argumentCountIs(1),
+                              hasArgument(
+                                  0, ignoringParenImpCasts(declRefExpr(to(
+                                         varDecl(equalsNode(Param)))))))))))),
+              *Ctor, *Context)
             .empty())
       return false;
   }
@@ -107,7 +108,9 @@ static bool isCopyConstructorAndCanBeDefaulted(ASTContext *Context,
                                   hasDeclaration(
                                       cxxConstructorDecl(isCopyConstructor())),
                                   argumentCountIs(1),
-                                  hasArgument(0, AccessToFieldInParam)))))))),
+                                  hasArgument(0,
+                                              ignoringParenImpCasts(
+                                                  AccessToFieldInParam))))))))),
               *Ctor, *Context)
             .empty())
       return false;
@@ -169,8 +172,8 @@ static bool isCopyAssignmentAndCanBeDefaulted(ASTContext *Context,
                       // - The argument is (an implicit cast to a Base of)
                       // the argument taken by "Operator".
                       argumentCountIs(1),
-                      hasArgument(
-                          0, declRefExpr(to(varDecl(equalsNode(Param)))))))))),
+                      hasArgument(0, ignoringParenImpCasts(declRefExpr(
+                                         to(varDecl(equalsNode(Param))))))))))),
               *Compound, *Context)
             .empty())
       return false;

@@ -54,7 +54,8 @@ void TypePromotionInMathFnCheck::registerMatchers(MatchFinder *Finder) {
     return hasParameter(Pos, hasType(isBuiltinType(Kind)));
   };
   auto HasBuiltinTyArg = [](int Pos, BuiltinType::Kind Kind) {
-    return hasArgument(Pos, hasType(isBuiltinType(Kind)));
+    return hasArgument(Pos,
+                       ignoringParenImpCasts(hasType(isBuiltinType(Kind))));
   };
 
   // Match calls to foo(double) with a float argument.

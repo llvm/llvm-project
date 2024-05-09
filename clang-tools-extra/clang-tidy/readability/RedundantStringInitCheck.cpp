@@ -68,14 +68,14 @@ void RedundantStringInitCheck::registerMatchers(MatchFinder *Finder) {
   const auto HasStringCtorName = hasAnyName(removeNamespaces(StringNames));
 
   // Match string constructor.
-  const auto StringConstructorExpr = expr(
-      anyOf(cxxConstructExpr(argumentCountIs(1),
-                             hasDeclaration(cxxMethodDecl(HasStringCtorName))),
-            // If present, the second argument is the alloc object which must
-            // not be present explicitly.
-            cxxConstructExpr(argumentCountIs(2),
-                             hasDeclaration(cxxMethodDecl(HasStringCtorName)),
-                             hasArgument(1, cxxDefaultArgExpr()))));
+  const auto StringConstructorExpr = expr(anyOf(
+      cxxConstructExpr(argumentCountIs(1),
+                       hasDeclaration(cxxMethodDecl(HasStringCtorName))),
+      // If present, the second argument is the alloc object which must
+      // not be present explicitly.
+      cxxConstructExpr(
+          argumentCountIs(2), hasDeclaration(cxxMethodDecl(HasStringCtorName)),
+          hasArgument(1, ignoringParenImpCasts(cxxDefaultArgExpr())))));
 
   // Match a string constructor expression with an empty string literal.
   const auto EmptyStringCtorExpr = cxxConstructExpr(

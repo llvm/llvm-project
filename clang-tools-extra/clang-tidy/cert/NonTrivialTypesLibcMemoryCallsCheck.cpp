@@ -80,8 +80,10 @@ void NonTrivialTypesLibcMemoryCallsCheck::registerMatchers(
   auto ArgChecker = [&](Matcher<CXXRecordDecl> RecordConstraint,
                         BindableMatcher<Stmt> SecondArg = expr()) {
     return allOf(argumentCountIs(3),
-                 hasArgument(0, IsStructPointer(RecordConstraint, true)),
-                 hasArgument(1, SecondArg), hasArgument(2, IsRecordSizeOf));
+                 hasArgument(0, ignoringParenImpCasts(
+                                    IsStructPointer(RecordConstraint, true))),
+                 hasArgument(1, ignoringParenImpCasts(SecondArg)),
+                 hasArgument(2, ignoringParenImpCasts(IsRecordSizeOf)));
   };
 
   Finder->addMatcher(

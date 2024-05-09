@@ -29,14 +29,16 @@ void ShrinkToFitCheck::registerMatchers(MatchFinder *Finder) {
       cxxMemberCallExpr(
           callee(cxxMethodDecl(hasName("swap"))),
           hasArgument(
-              0, anyOf(Shrinkable, unaryOperator(hasUnaryOperand(Shrinkable)))),
+              0, ignoringParenImpCasts(anyOf(
+                     Shrinkable, unaryOperator(hasUnaryOperand(Shrinkable))))),
           on(cxxConstructExpr(hasArgument(
-              0,
-              expr(anyOf(BoundShrinkable,
-                         unaryOperator(hasUnaryOperand(BoundShrinkable))),
-                   hasType(hasCanonicalType(hasDeclaration(namedDecl(hasAnyName(
-                       "std::basic_string", "std::deque", "std::vector"))))))
-                  .bind("ContainerToShrink")))))
+              0, ignoringParenImpCasts(
+                     expr(anyOf(BoundShrinkable, unaryOperator(hasUnaryOperand(
+                                                     BoundShrinkable))),
+                          hasType(hasCanonicalType(hasDeclaration(namedDecl(
+                              hasAnyName("std::basic_string", "std::deque",
+                                         "std::vector"))))))
+                         .bind("ContainerToShrink"))))))
           .bind("CopyAndSwapTrick"),
       this);
 }

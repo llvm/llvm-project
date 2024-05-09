@@ -65,11 +65,12 @@ void SmartPtrArrayMismatchCheck::registerMatchers(MatchFinder *Finder) {
   auto FindConstructExpr =
       cxxConstructExpr(
           hasDeclaration(FindConstructor), argumentCountIs(1),
-          hasArgument(0,
-                      cxxNewExpr(isArray(),
-                                 hasType(hasCanonicalType(pointerType(
-                                     pointee(equalsBoundNode(PointerTypeN))))))
-                          .bind(NewExprN)))
+          hasArgument(
+              0, ignoringParenImpCasts(
+                     cxxNewExpr(isArray(),
+                                hasType(hasCanonicalType(pointerType(
+                                    pointee(equalsBoundNode(PointerTypeN)))))))
+                     .bind(NewExprN)))
           .bind(ConstructExprN);
   Finder->addMatcher(FindConstructExpr, this);
 }

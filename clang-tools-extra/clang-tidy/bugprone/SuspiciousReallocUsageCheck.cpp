@@ -114,7 +114,8 @@ void SuspiciousReallocUsageCheck::registerMatchers(MatchFinder *Finder) {
           .bind("realloc");
 
   auto ReallocCall =
-      callExpr(callee(ReallocDecl), hasArgument(0, expr().bind("ptr_input")),
+      callExpr(callee(ReallocDecl),
+               hasArgument(0, ignoringParenImpCasts(expr().bind("ptr_input"))),
                hasAncestor(functionDecl().bind("parent_function")))
           .bind("call");
   Finder->addMatcher(binaryOperator(hasOperatorName("="),

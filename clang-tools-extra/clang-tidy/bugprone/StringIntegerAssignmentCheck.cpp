@@ -25,7 +25,7 @@ void StringIntegerAssignmentCheck::registerMatchers(MatchFinder *Finder) {
                                          qualType().bind("type")))))))),
           hasArgument(
               1,
-              ignoringImpCasts(
+              ignoringParenImpCasts(
                   expr(hasType(isInteger()), unless(hasType(isAnyCharacter())),
                        // Ignore calls to tolower/toupper (see PR27723).
                        unless(callExpr(callee(functionDecl(

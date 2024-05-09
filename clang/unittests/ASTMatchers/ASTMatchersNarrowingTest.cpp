@@ -164,26 +164,32 @@ TEST_P(ASTMatchersTest, AllOf) {
                          "void g(int x) { struct T t; f(x, &t, 3, 4); }";
   EXPECT_TRUE(matches(
       Program, callExpr(allOf(callee(functionDecl(hasName("f"))),
-                              hasArgument(0, declRefExpr(to(varDecl())))))));
+                              hasArgument(0, ignoringParenImpCasts(declRefExpr(
+                                                 to(varDecl()))))))));
   EXPECT_TRUE(matches(
       Program,
-      callExpr(
-          allOf(callee(functionDecl(hasName("f"))),
-                hasArgument(0, declRefExpr(to(varDecl()))),
-                hasArgument(1, hasType(pointsTo(recordDecl(hasName("T")))))))));
+      callExpr(allOf(
+          callee(functionDecl(hasName("f"))),
+          hasArgument(0, ignoringParenImpCasts(declRefExpr(to(varDecl())))),
+          hasArgument(1, ignoringParenImpCasts(
+                             hasType(pointsTo(recordDecl(hasName("T"))))))))));
   EXPECT_TRUE(matches(
-      Program, callExpr(allOf(
-                   callee(functionDecl(hasName("f"))),
-                   hasArgument(0, declRefExpr(to(varDecl()))),
-                   hasArgument(1, hasType(pointsTo(recordDecl(hasName("T"))))),
-                   hasArgument(2, integerLiteral(equals(3)))))));
+      Program,
+      callExpr(allOf(
+          callee(functionDecl(hasName("f"))),
+          hasArgument(0, ignoringParenImpCasts(declRefExpr(to(varDecl())))),
+          hasArgument(1, ignoringParenImpCasts(
+                             hasType(pointsTo(recordDecl(hasName("T")))))),
+          hasArgument(2, ignoringParenImpCasts(integerLiteral(equals(3))))))));
   EXPECT_TRUE(matches(
-      Program, callExpr(allOf(
-                   callee(functionDecl(hasName("f"))),
-                   hasArgument(0, declRefExpr(to(varDecl()))),
-                   hasArgument(1, hasType(pointsTo(recordDecl(hasName("T"))))),
-                   hasArgument(2, integerLiteral(equals(3))),
-                   hasArgument(3, integerLiteral(equals(4)))))));
+      Program,
+      callExpr(allOf(
+          callee(functionDecl(hasName("f"))),
+          hasArgument(0, ignoringParenImpCasts(declRefExpr(to(varDecl())))),
+          hasArgument(1, ignoringParenImpCasts(
+                             hasType(pointsTo(recordDecl(hasName("T")))))),
+          hasArgument(2, ignoringParenImpCasts(integerLiteral(equals(3)))),
+          hasArgument(3, ignoringParenImpCasts(integerLiteral(equals(4))))))));
 }
 
 TEST_P(ASTMatchersTest, Has) {
@@ -512,18 +518,22 @@ void F() {
   S s(true);
 }
 )cpp";
-  EXPECT_TRUE(matches(Code, traverse(TK_IgnoreUnlessSpelledInSource,
-                                     mapAnyOf(callExpr, cxxConstructExpr)
-                                         .with(hasArgument(0, trueExpr)))));
-  EXPECT_TRUE(matches(Code, traverse(TK_IgnoreUnlessSpelledInSource,
-                                     mapAnyOf(callExpr, cxxConstructExpr)
-                                         .with(hasArgument(0, falseExpr)))));
+  EXPECT_TRUE(matches(
+      Code,
+      traverse(TK_IgnoreUnlessSpelledInSource,
+               mapAnyOf(callExpr, cxxConstructExpr)
+                   .with(hasArgument(0, ignoringParenImpCasts(trueExpr))))));
+  EXPECT_TRUE(matches(
+      Code,
+      traverse(TK_IgnoreUnlessSpelledInSource,
+               mapAnyOf(callExpr, cxxConstructExpr)
+                   .with(hasArgument(0, ignoringParenImpCasts(falseExpr))))));
 
-  EXPECT_TRUE(
-      matches(Code, traverse(TK_IgnoreUnlessSpelledInSource,
-                             mapAnyOf(callExpr, cxxConstructExpr)
-                                 .with(hasArgument(0, expr()),
-                                       hasDeclaration(functionDecl())))));
+  EXPECT_TRUE(matches(
+      Code, traverse(TK_IgnoreUnlessSpelledInSource,
+                     mapAnyOf(callExpr, cxxConstructExpr)
+                         .with(hasArgument(0, ignoringParenImpCasts(expr())),
+                               hasDeclaration(functionDecl())))));
 
   EXPECT_TRUE(matches(Code, traverse(TK_IgnoreUnlessSpelledInSource,
                                      mapAnyOf(callExpr, cxxConstructExpr))));
@@ -887,23 +897,26 @@ void doConstruct()
 )cpp";
 
   EXPECT_TRUE(matches(
-      Code, traverse(TK_IgnoreUnlessSpelledInSource,
-                     invocation(forFunction(functionDecl(hasName("doCall"))),
-                                hasArgument(0, integerLiteral(equals(42))),
-                                hasAnyArgument(integerLiteral(equals(42))),
-                                forEachArgumentWithParam(
-                                    integerLiteral(equals(42)),
-                                    parmVarDecl(hasName("i")))))));
+      Code,
+      traverse(
+          TK_IgnoreUnlessSpelledInSource,
+          invocation(
+              forFunction(functionDecl(hasName("doCall"))),
+              hasArgument(0, ignoringParenImpCasts(integerLiteral(equals(42)))),
+              hasAnyArgument(integerLiteral(equals(42))),
+              forEachArgumentWithParam(integerLiteral(equals(42)),
+                                       parmVarDecl(hasName("i")))))));
 
   EXPECT_TRUE(matches(
       Code,
       traverse(
           TK_IgnoreUnlessSpelledInSource,
-          invocation(forFunction(functionDecl(hasName("doConstruct"))),
-                     hasArgument(0, integerLiteral(equals(42))),
-                     hasAnyArgument(integerLiteral(equals(42))),
-                     forEachArgumentWithParam(integerLiteral(equals(42)),
-                                              parmVarDecl(hasName("i")))))));
+          invocation(
+              forFunction(functionDecl(hasName("doConstruct"))),
+              hasArgument(0, ignoringParenImpCasts(integerLiteral(equals(42)))),
+              hasAnyArgument(integerLiteral(equals(42))),
+              forEachArgumentWithParam(integerLiteral(equals(42)),
+                                       parmVarDecl(hasName("i")))))));
 }
 
 TEST_P(ASTMatchersTest, IsDerivedFrom) {
@@ -1497,8 +1510,8 @@ TEST_P(ASTMatchersTest, IsInteger_MatchesIntegers) {
   EXPECT_TRUE(matches("int i = 0;", varDecl(hasType(isInteger()))));
   EXPECT_TRUE(
       matches("long long i = 0; void f(long long) { }; void g() {f(i);}",
-              callExpr(hasArgument(
-                  0, declRefExpr(to(varDecl(hasType(isInteger()))))))));
+              callExpr(hasArgument(0, ignoringParenImpCasts(declRefExpr(to(
+                                          varDecl(hasType(isInteger())))))))));
 }
 
 TEST_P(ASTMatchersTest, IsInteger_ReportsNoFalsePositives) {
@@ -1509,10 +1522,10 @@ TEST_P(ASTMatchersTest, IsInteger_ReportsNoFalsePositives) {
   }
 
   EXPECT_TRUE(notMatches("int *i;", varDecl(hasType(isInteger()))));
-  EXPECT_TRUE(
-      notMatches("struct T {}; T t; void f(T *) { }; void g() {f(&t);}",
-                 callExpr(hasArgument(
-                     0, declRefExpr(to(varDecl(hasType(isInteger()))))))));
+  EXPECT_TRUE(notMatches(
+      "struct T {}; T t; void f(T *) { }; void g() {f(&t);}",
+      callExpr(hasArgument(0, ignoringParenImpCasts(declRefExpr(
+                                  to(varDecl(hasType(isInteger())))))))));
 }
 
 TEST_P(ASTMatchersTest, IsSignedInteger_MatchesSignedIntegers) {
@@ -2196,7 +2209,8 @@ TEST_P(ASTMatchersTest, HasArgument_CXXConstructorDecl) {
 
   auto Constructor = traverse(
       TK_AsIs,
-      cxxConstructExpr(hasArgument(0, declRefExpr(to(varDecl(hasName("y")))))));
+      cxxConstructExpr(hasArgument(
+          0, ignoringParenImpCasts(declRefExpr(to(varDecl(hasName("y"))))))));
 
   EXPECT_TRUE(matches(
       "class X { public: X(int); }; void x() { int y; X x(y); }", Constructor));
@@ -2209,9 +2223,10 @@ TEST_P(ASTMatchersTest, HasArgument_CXXConstructorDecl) {
   EXPECT_TRUE(notMatches(
       "class X { public: X(int); }; void x() { int z; X x(z); }", Constructor));
 
-  StatementMatcher WrongIndex =
-      traverse(TK_AsIs, cxxConstructExpr(hasArgument(
-                            42, declRefExpr(to(varDecl(hasName("y")))))));
+  StatementMatcher WrongIndex = traverse(
+      TK_AsIs,
+      cxxConstructExpr(hasArgument(
+          42, ignoringParenImpCasts(declRefExpr(to(varDecl(hasName("y"))))))));
   EXPECT_TRUE(notMatches(
       "class X { public: X(int); }; void x() { int y; X x(y); }", WrongIndex));
 }
@@ -2340,11 +2355,14 @@ TEST(ASTMatchersTest, HasArgument_CXXUnresolvedConstructExpr) {
   const auto *Code =
       "template <typename T> struct S{ S(int){} }; template <typename "
       "T> void x() { int y; auto s = S<T>(y); }";
-  EXPECT_TRUE(matches(Code, cxxUnresolvedConstructExpr(hasArgument(
-                                0, declRefExpr(to(varDecl(hasName("y"))))))));
-  EXPECT_TRUE(
-      notMatches(Code, cxxUnresolvedConstructExpr(hasArgument(
-                           0, declRefExpr(to(varDecl(hasName("x"))))))));
+  EXPECT_TRUE(matches(
+      Code,
+      cxxUnresolvedConstructExpr(hasArgument(
+          0, ignoringParenImpCasts(declRefExpr(to(varDecl(hasName("y")))))))));
+  EXPECT_TRUE(notMatches(
+      Code,
+      cxxUnresolvedConstructExpr(hasArgument(
+          0, ignoringParenImpCasts(declRefExpr(to(varDecl(hasName("x")))))))));
 }
 
 TEST_P(ASTMatchersTest, IsListInitialization) {

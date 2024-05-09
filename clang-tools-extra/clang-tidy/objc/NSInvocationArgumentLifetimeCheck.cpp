@@ -105,17 +105,18 @@ void NSInvocationArgumentLifetimeCheck::registerMatchers(MatchFinder *Finder) {
                     hasSelector("getReturnValue:")),
               hasArgument(
                   0,
-                  anyOf(hasDescendant(memberExpr(isObjCManagedLifetime())),
-                        hasDescendant(objcIvarRefExpr(isObjCManagedLifetime())),
-                        hasDescendant(
-                            // Reference to variables, but when dereferencing
-                            // to ivars/fields a more-descendent variable
-                            // reference (e.g. self) may match with strong
-                            // object lifetime, leading to an incorrect match.
-                            // Exclude these conditions.
-                            declRefExpr(to(varDecl().bind("var")),
-                                        unless(hasParent(implicitCastExpr())),
-                                        isObjCManagedLifetime())))))
+                  ignoringParenImpCasts(anyOf(
+                      hasDescendant(memberExpr(isObjCManagedLifetime())),
+                      hasDescendant(objcIvarRefExpr(isObjCManagedLifetime())),
+                      hasDescendant(
+                          // Reference to variables, but when dereferencing
+                          // to ivars/fields a more-descendent variable
+                          // reference (e.g. self) may match with strong
+                          // object lifetime, leading to an incorrect match.
+                          // Exclude these conditions.
+                          declRefExpr(to(varDecl().bind("var")),
+                                      unless(hasParent(implicitCastExpr())),
+                                      isObjCManagedLifetime()))))))
               .bind("call")),
       this);
 }

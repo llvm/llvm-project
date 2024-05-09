@@ -36,19 +36,21 @@ void DurationUnnecessaryConversionCheck::registerMatchers(MatchFinder *Finder) {
     // e.g. `absl::ToDoubleSeconds(dur)`.
     auto InverseFunctionMatcher = callExpr(
         callee(functionDecl(hasAnyName(FloatConversion, IntegerConversion))),
-        hasArgument(0, expr().bind("arg")));
+        hasArgument(0, ignoringParenImpCasts(expr().bind("arg"))));
 
     // Matcher which matches a duration divided by the factory_matcher above,
     // e.g. `dur / absl::Seconds(1)`.
     auto DivisionOperatorMatcher = cxxOperatorCallExpr(
-        hasOverloadedOperatorName("/"), hasArgument(0, expr().bind("arg")),
-        hasArgument(1, FactoryMatcher));
+        hasOverloadedOperatorName("/"),
+        hasArgument(0, ignoringParenImpCasts(expr().bind("arg"))),
+        hasArgument(1, ignoringParenImpCasts(FactoryMatcher)));
 
     // Matcher which matches a duration argument to `FDivDuration`,
     // e.g. `absl::FDivDuration(dur, absl::Seconds(1))`
-    auto FdivMatcher = callExpr(
-        callee(functionDecl(hasName("::absl::FDivDuration"))),
-        hasArgument(0, expr().bind("arg")), hasArgument(1, FactoryMatcher));
+    auto FdivMatcher =
+        callExpr(callee(functionDecl(hasName("::absl::FDivDuration"))),
+                 hasArgument(0, ignoringParenImpCasts(expr().bind("arg"))),
+                 hasArgument(1, ignoringParenImpCasts(FactoryMatcher)));
 
     // Matcher which matches a duration argument being scaled,
     // e.g. `absl::ToDoubleSeconds(dur) * 2`
@@ -57,15 +59,17 @@ void DurationUnnecessaryConversionCheck::registerMatchers(MatchFinder *Finder) {
                        hasEitherOperand(expr(ignoringParenImpCasts(
                            callExpr(callee(functionDecl(hasAnyName(
                                         FloatConversion, IntegerConversion))),
-                                    hasArgument(0, expr().bind("arg")))
+                                    hasArgument(0, ignoringParenImpCasts(
+                                                       expr().bind("arg"))))
                                .bind("inner_call")))))
             .bind("binop"));
 
     Finder->addMatcher(
-        callExpr(callee(functionDecl(hasName(DurationFactory))),
-                 hasArgument(0, anyOf(InverseFunctionMatcher,
-                                      DivisionOperatorMatcher, FdivMatcher,
-                                      ScalarMatcher)))
+        callExpr(
+            callee(functionDecl(hasName(DurationFactory))),
+            hasArgument(0, ignoringParenImpCasts(anyOf(
+                               InverseFunctionMatcher, DivisionOperatorMatcher,
+                               FdivMatcher, ScalarMatcher))))
             .bind("call"),
         this);
   }

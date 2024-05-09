@@ -76,13 +76,15 @@ void ContainerDataPointerCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       unaryOperator(
           unless(isExpansionInSystemHeader()), hasOperatorName("&"),
-          hasUnaryOperand(expr(
-              anyOf(cxxOperatorCallExpr(SubscriptOperator, argumentCountIs(2),
-                                        hasArgument(0, ContainerExpr),
-                                        hasArgument(1, Zero)),
-                    cxxMemberCallExpr(SubscriptOperator, on(ContainerExpr),
-                                      argumentCountIs(1), hasArgument(0, Zero)),
-                    arraySubscriptExpr(hasLHS(ContainerExpr), hasRHS(Zero))))))
+          hasUnaryOperand(expr(anyOf(
+              cxxOperatorCallExpr(
+                  SubscriptOperator, argumentCountIs(2),
+                  hasArgument(0, ignoringParenImpCasts(ContainerExpr)),
+                  hasArgument(1, ignoringParenImpCasts(Zero))),
+              cxxMemberCallExpr(SubscriptOperator, on(ContainerExpr),
+                                argumentCountIs(1),
+                                hasArgument(0, ignoringParenImpCasts(Zero))),
+              arraySubscriptExpr(hasLHS(ContainerExpr), hasRHS(Zero))))))
           .bind(AddressOfName),
       this);
 }

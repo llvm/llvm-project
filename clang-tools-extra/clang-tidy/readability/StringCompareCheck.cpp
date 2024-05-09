@@ -25,8 +25,8 @@ void StringCompareCheck::registerMatchers(MatchFinder *Finder) {
       callee(cxxMethodDecl(hasName("compare"),
                            ofClass(classTemplateSpecializationDecl(
                                hasName("::std::basic_string"))))),
-      hasArgument(0, expr().bind("str2")), argumentCountIs(1),
-      callee(memberExpr().bind("str1")));
+      hasArgument(0, ignoringParenImpCasts(expr().bind("str2"))),
+      argumentCountIs(1), callee(memberExpr().bind("str1")));
 
   // First and second case: cast str.compare(str) to boolean.
   Finder->addMatcher(

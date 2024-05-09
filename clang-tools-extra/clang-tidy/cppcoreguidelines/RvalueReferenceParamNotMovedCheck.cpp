@@ -46,9 +46,9 @@ void RvalueReferenceParamNotMovedCheck::registerMatchers(MatchFinder *Finder) {
                 callee(unresolvedLookupExpr(hasAnyDeclaration(
                     namedDecl(hasUnderlyingDecl(hasName("::std::move"))))))),
           hasArgument(
-              0, argumentOf(
+              0, ignoringParenImpCasts(argumentOf(
                      AllowPartialMove,
-                     declRefExpr(to(equalsBoundNode("param"))).bind("ref"))),
+                     declRefExpr(to(equalsBoundNode("param"))).bind("ref")))),
           unless(hasAncestor(
               lambdaExpr(valueCapturesVar(equalsBoundNode("param"))))),
           unless(anyOf(hasAncestor(typeLoc()),

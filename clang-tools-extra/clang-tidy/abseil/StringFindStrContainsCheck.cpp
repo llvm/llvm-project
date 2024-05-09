@@ -54,9 +54,10 @@ makeRewriteRule(ArrayRef<StringRef> StringLikeClassNames,
           hasParameter(
               0, parmVarDecl(anyOf(hasType(StringType), hasType(CharStarType),
                                    hasType(CharType)))))),
-      on(hasType(StringType)), hasArgument(0, expr().bind("parameter_to_find")),
-      anyOf(hasArgument(1, integerLiteral(equals(0))),
-            hasArgument(1, cxxDefaultArgExpr())),
+      on(hasType(StringType)),
+      hasArgument(0, ignoringParenImpCasts(expr().bind("parameter_to_find"))),
+      anyOf(hasArgument(1, ignoringParenImpCasts(integerLiteral(equals(0)))),
+            hasArgument(1, ignoringParenImpCasts(cxxDefaultArgExpr()))),
       onImplicitObjectArgument(expr().bind("string_being_searched")));
 
   RewriteRuleWith<std::string> Rule = applyFirst(

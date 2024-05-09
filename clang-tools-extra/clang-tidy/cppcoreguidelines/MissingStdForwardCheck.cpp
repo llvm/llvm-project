@@ -117,7 +117,8 @@ void MissingStdForwardCheck::registerMatchers(MatchFinder *Finder) {
 
   auto ForwardCallMatcher = callExpr(
       callExpr().bind("call"), argumentCountIs(1),
-      hasArgument(0, declRefExpr(to(varDecl().bind("var")))),
+      hasArgument(
+          0, ignoringParenImpCasts(declRefExpr(to(varDecl().bind("var"))))),
       forCallable(
           anyOf(allOf(equalsBoundNode("func"),
                       functionDecl(hasAnyParameter(parmVarDecl(allOf(

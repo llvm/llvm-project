@@ -238,9 +238,9 @@ StatementMatcher makeIteratorLoopMatcher(bool IsReverse) {
                                    to(varDecl(equalsBoundNode(InitVarName)))))),
                  cxxOperatorCallExpr(
                      hasOverloadedOperatorName("++"),
-                     hasArgument(0, declRefExpr(to(
+                     hasArgument(0, ignoringParenImpCasts(declRefExpr(to(
                                         varDecl(equalsBoundNode(InitVarName),
-                                                TestDerefReturnsByValue))))))))
+                                                TestDerefReturnsByValue)))))))))
       .bind(IsReverse ? LoopNameReverseIterator : LoopNameIterator);
 }
 

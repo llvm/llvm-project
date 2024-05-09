@@ -30,13 +30,14 @@ static bool insideMacroDefinition(const MatchFinder::MatchResult &Result,
 void DurationFactoryFloatCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       callExpr(callee(functionDecl(DurationFactoryFunction())),
-               hasArgument(0, anyOf(cxxStaticCastExpr(hasDestinationType(
-                                        realFloatingPointType())),
-                                    cStyleCastExpr(hasDestinationType(
-                                        realFloatingPointType())),
-                                    cxxFunctionalCastExpr(hasDestinationType(
-                                        realFloatingPointType())),
-                                    floatLiteral())))
+               hasArgument(0, ignoringParenImpCasts(anyOf(
+                                  cxxStaticCastExpr(hasDestinationType(
+                                      realFloatingPointType())),
+                                  cStyleCastExpr(hasDestinationType(
+                                      realFloatingPointType())),
+                                  cxxFunctionalCastExpr(hasDestinationType(
+                                      realFloatingPointType())),
+                                  floatLiteral()))))
           .bind("call"),
       this);
 }
