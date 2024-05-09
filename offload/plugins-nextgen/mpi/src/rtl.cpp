@@ -16,6 +16,7 @@
 #include <cstring>
 #include <optional>
 #include <string>
+#include <list>
 
 #include "GlobalHandler.h"
 #include "OpenMP/OMPT/Callback.h"
@@ -40,7 +41,7 @@ struct MPIKernelTy;
 class MPIGlobalHandlerTy;
 
 // TODO: Should this be defined inside the EventSystem?
-using MPIEventQueue = SmallVector<EventTy>;
+using MPIEventQueue = std::list<EventTy>;
 using MPIEventQueuePtr = MPIEventQueue *;
 
 /// Class implementing the MPI device images properties.
@@ -489,9 +490,22 @@ struct MPIDeviceTy : public GenericDeviceTy {
   Error queryAsyncImpl(__tgt_async_info &AsyncInfo) override {
     auto *Queue = reinterpret_cast<MPIEventQueue *>(AsyncInfo.Queue);
 
-    // Returns success when there are pending operations in the AsyncInfo.
-    if (!Queue->empty() && !Queue->back().done())
-      return Plugin::success();
+    // Returns success when there are pending operations in AsyncInfo, moving
+    // forward through the events on the queue until it is fully completed.
+    while (!Queue->empty()) {
+      auto &Event = Queue->front();
+
+      Event.resume();
+
+      if (!Event.done())
+        return Plugin::success();
+
+      if (auto Error = Event.getError(); Error)
+        return Plugin::error("Event failed during query. %s\n",
+                             toString(std::move(Error)).c_str());
+
+      Queue->pop_front();
+    }
 
     // Once the queue is synchronized, return it to the pool and reset the
     // AsyncInfo. This is to make sure that the synchronization only works

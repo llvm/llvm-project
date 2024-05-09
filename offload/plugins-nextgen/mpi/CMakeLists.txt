@@ -13,18 +13,6 @@
 # Looking for MPI...
 find_package(MPI QUIET)
 
-set(LIBOMPTARGET_DEP_MPI_FOUND ${MPI_CXX_FOUND})
-set(LIBOMPTARGET_DEP_MPI_LIBRARIES ${MPI_CXX_LIBRARIES})
-set(LIBOMPTARGET_DEP_MPI_INCLUDE_DIRS ${MPI_CXX_INCLUDE_DIRS})
-set(LIBOMPTARGET_DEP_MPI_COMPILE_FLAGS ${MPI_CXX_COMPILE_FLAGS})
-set(LIBOMPTARGET_DEP_MPI_LINK_FLAGS ${MPI_CXX_LINK_FLAGS})
-
-mark_as_advanced(
-  LIBOMPTARGET_DEP_MPI_FOUND
-  LIBOMPTARGET_DEP_MPI_LIBRARIES
-  LIBOMPTARGET_DEP_MPI_INCLUDE_DIRS
-  LIBOMPTARGET_DEP_MPI_COMPILE_FLAGS
-  LIBOMPTARGET_DEP_MPI_LINK_FLAGS)
 
 if(NOT(CMAKE_SYSTEM_PROCESSOR MATCHES "(x86_64)|(ppc64le)$" AND CMAKE_SYSTEM_NAME MATCHES "Linux"))
   libomptarget_say("Not building MPI offloading plugin: only support MPI in Linux x86_64 or ppc64le hosts.")
@@ -32,7 +20,7 @@ if(NOT(CMAKE_SYSTEM_PROCESSOR MATCHES "(x86_64)|(ppc64le)$" AND CMAKE_SYSTEM_NAM
 elseif(NOT LIBOMPTARGET_DEP_LIBFFI_FOUND)
   libomptarget_say("Not building MPI offloading plugin: libffi dependency not found.")
   return()
-elseif(NOT LIBOMPTARGET_DEP_MPI_FOUND)
+elseif(NOT MPI_CXX_FOUND)
   libomptarget_say("Not building MPI offloading plugin: MPI not found in system.")
   return()
 endif()
@@ -53,9 +41,8 @@ else()
   target_link_libraries(omptarget.rtl.mpi PRIVATE FFI::ffi)
 endif()
 
-target_link_libraries(omptarget.rtl.mpi PRIVATE 
-  ${LIBOMPTARGET_DEP_MPI_LIBRARIES}
-  ${LIBOMPTARGET_DEP_MPI_LINK_FLAGS}
+target_link_libraries(omptarget.rtl.mpi PRIVATE
+  MPI::MPI_CXX
 )
 
 # Add include directories
@@ -65,13 +52,9 @@ target_include_directories(omptarget.rtl.mpi PRIVATE
 # Install plugin under the lib destination folder.
 install(TARGETS omptarget.rtl.mpi
         LIBRARY DESTINATION "${OFFLOAD_INSTALL_LIBDIR}")
-set_target_properties(omptarget.rtl.mpi PROPERTIES 
+set_target_properties(omptarget.rtl.mpi PROPERTIES
   INSTALL_RPATH "$ORIGIN" BUILD_RPATH "$ORIGIN:${CMAKE_CURRENT_BINARY_DIR}/..")
 
-if(LIBOMPTARGET_DEP_MPI_COMPILE_FLAGS)
-  set_target_properties(omptarget.rtl.mpi PROPERTIES
-                        COMPILE_FLAGS "${LIBOMPTARGET_DEP_MPI_COMPILE_FLAGS}")
-endif()
 
 # Set C++20 as the target standard for this plugin.
 set_target_properties(omptarget.rtl.mpi
@@ -94,8 +77,7 @@ llvm_add_tool(OPENMP llvm-offload-mpi-device src/EventSystem.cpp src/MPIDeviceMa
 llvm_update_compile_flags(llvm-offload-mpi-device)
 
 target_link_libraries(llvm-offload-mpi-device PRIVATE
-  ${LIBOMPTARGET_DEP_MPI_LIBRARIES}
-  ${LIBOMPTARGET_DEP_MPI_LINK_FLAGS}
+  MPI::MPI_CXX
   LLVMSupport
   omp
 )
@@ -108,14 +90,8 @@ endif()
 
 target_include_directories(llvm-offload-mpi-device PRIVATE
   ${LIBOMPTARGET_INCLUDE_DIR}
-  ${LIBOMPTARGET_DEP_MPI_INCLUDE_DIRS}
 )
 
-if(LIBOMPTARGET_DEP_MPI_COMPILE_FLAGS)
-  set_target_properties(llvm-offload-mpi-device PROPERTIES
-    COMPILE_FLAGS "${LIBOMPTARGET_DEP_MPI_COMPILE_FLAGS}"
-  )
-endif()
 
 set_target_properties(llvm-offload-mpi-device
   PROPERTIES
@@ -123,5 +99,5 @@ set_target_properties(llvm-offload-mpi-device
   CXX_STANDARD_REQUIRED ON
 )
 
-target_compile_definitions(llvm-offload-mpi-device PRIVATE 
+target_compile_definitions(llvm-offload-mpi-device PRIVATE
                            DEBUG_PREFIX="OFFLOAD MPI DEVICE")
