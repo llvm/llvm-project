@@ -12,7 +12,7 @@
 #include "FPBits.h"
 #include "multiply_add.h"
 #include "src/__support/CPP/type_traits.h"
-#include "src/__support/UInt.h"
+#include "src/__support/big_int.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 
 #include <stddef.h>
@@ -58,9 +58,9 @@ template <size_t Bits> struct DyadicFloat {
   // significant bit.
   LIBC_INLINE constexpr DyadicFloat &normalize() {
     if (!mantissa.is_zero()) {
-      int shift_length = static_cast<int>(mantissa.clz());
+      int shift_length = cpp::countl_zero(mantissa);
       exponent -= shift_length;
-      mantissa.shift_left(static_cast<size_t>(shift_length));
+      mantissa <<= static_cast<size_t>(shift_length);
     }
     return *this;
   }
@@ -122,7 +122,8 @@ template <size_t Bits> struct DyadicFloat {
 
     int exp_lo = exp_hi - static_cast<int>(PRECISION) - 1;
 
-    MantissaType m_hi(mantissa >> shift);
+    MantissaType m_hi =
+        shift >= MantissaType::BITS ? MantissaType(0) : mantissa >> shift;
 
     T d_hi = FPBits<T>::create_value(
                  sign, exp_hi,
@@ -130,7 +131,8 @@ template <size_t Bits> struct DyadicFloat {
                      IMPLICIT_MASK)
                  .get_val();
 
-    MantissaType round_mask = MantissaType(1) << (shift - 1);
+    MantissaType round_mask =
+        shift > MantissaType::BITS ? 0 : MantissaType(1) << (shift - 1);
     MantissaType sticky_mask = round_mask - MantissaType(1);
 
     bool round_bit = !(mantissa & round_mask).is_zero();
@@ -233,7 +235,7 @@ LIBC_INLINE constexpr DyadicFloat<Bits> quick_add(DyadicFloat<Bits> a,
     result.sign = a.sign;
     result.exponent = a.exponent;
     result.mantissa = a.mantissa;
-    if (result.mantissa.add(b.mantissa)) {
+    if (result.mantissa.add_overflow(b.mantissa)) {
       // Mantissa addition overflow.
       result.shift_right(1);
       result.mantissa.val[DyadicFloat<Bits>::MantissaType::WORD_COUNT - 1] |=

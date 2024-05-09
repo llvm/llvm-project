@@ -99,6 +99,7 @@ on support follow.
      ``Shvstvecd``     Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
      ``Smaia``         Supported
      ``Smepmp``        Supported
+     ``Smstateen``     Assembly Support
      ``Ssaia``         Supported
      ``Ssccptr``       Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
      ``Sscofpmf``      Assembly Support
@@ -119,6 +120,7 @@ on support follow.
      ``Za128rs``       Supported (`See note <#riscv-profiles-extensions-note>`__)
      ``Za64rs``        Supported (`See note <#riscv-profiles-extensions-note>`__)
      ``Zacas``         Supported (`See note <#riscv-zacas-note>`__)
+     ``Zama16b``       Supported (`See note <#riscv-profiles-extensions-note>`__)
      ``Zawrs``         Assembly Support
      ``Zba``           Supported
      ``Zbb``           Supported
@@ -131,6 +133,7 @@ on support follow.
      ``Zcb``           Supported
      ``Zcd``           Supported
      ``Zcf``           Supported
+     ``Zcmop``         Supported
      ``Zcmp``          Supported
      ``Zcmt``          Assembly Support
      ``Zdinx``         Supported
@@ -155,6 +158,7 @@ on support follow.
      ``Zihintntl``     Supported
      ``Zihintpause``   Assembly Support
      ``Zihpm``         (`See Note <#riscv-i2p1-note>`__)
+     ``Zimop``         Supported
      ``Zkn``           Supported
      ``Zknd``          Supported (`See note <#riscv-scalar-crypto-note2>`__)
      ``Zkne``          Supported (`See note <#riscv-scalar-crypto-note2>`__)
@@ -235,7 +239,7 @@ Supported
 
 .. _riscv-profiles-extensions-note:
 
-``Za128rs``, ``Za64rs``, ``Zic64b``, ``Ziccamoa``, ``Ziccif``, ``Zicclsm``, ``Ziccrse``, ``Shcounterenvw``, ``Shgatpa``, ``Shtvala``, ``Shvsatpa``, ``Shvstvala``, ``Shvstvecd``, ``Ssccptr``, ``Sscounterenw``, ``Ssstateen``, ``Ssstrict``, ``Sstvala``, ``Sstvecd``, ``Ssu64xl``, ``Svade``, ``Svbare``
+``Za128rs``, ``Za64rs``, ``Zama16b``, ``Zic64b``, ``Ziccamoa``, ``Ziccif``, ``Zicclsm``, ``Ziccrse``, ``Shcounterenvw``, ``Shgatpa``, ``Shtvala``, ``Shvsatpa``, ``Shvstvala``, ``Shvstvecd``, ``Ssccptr``, ``Sscounterenw``, ``Ssstateen``, ``Ssstrict``, ``Sstvala``, ``Sstvecd``, ``Ssu64xl``, ``Svade``, ``Svbare``
   These extensions are defined as part of the `RISC-V Profiles specification <https://github.com/riscv/riscv-profiles/releases/tag/v1.0>`__.  They do not introduce any new features themselves, but instead describe existing hardware features.
 
   .. _riscv-zacas-note:
@@ -270,12 +274,6 @@ The primary goal of experimental support is to assist in the process of ratifica
 
 ``experimental-ztso``
   LLVM implements the `v0.1 proposed specification <https://github.com/riscv/riscv-isa-manual/releases/download/draft-20220723-10eea63/riscv-spec.pdf>`__ (see Chapter 25).  The mapping from the C/C++ memory model to Ztso has not yet been ratified in any standards document.  There are multiple possible mappings, and they are *not* mutually ABI compatible.  The mapping LLVM implements is ABI compatible with the default WMO mapping.  This mapping may change and there is *explicitly* no ABI stability offered while the extension remains in experimental status.  User beware.
-
-``experimental-zimop``
-  LLVM implements the `v0.1 proposed specification <https://github.com/riscv/riscv-isa-manual/blob/main/src/zimop.adoc>`__.
-
-``experimental-zcmop``
-  LLVM implements the `v0.2 proposed specification <https://github.com/riscv/riscv-isa-manual/blob/main/src/zimop.adoc>`__.
 
 ``experimental-zaamo``, ``experimental-zalrsc``
   LLVM implements the `v0.2 proposed specification <https://github.com/riscv/riscv-zaamo-zalrsc/releases/tag/v0.2>`__.

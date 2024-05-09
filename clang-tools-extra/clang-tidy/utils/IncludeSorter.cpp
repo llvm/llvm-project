@@ -108,7 +108,7 @@ int compareHeaders(StringRef LHS, StringRef RHS,
                    IncludeSorter::IncludeStyle Style) {
   if (Style == IncludeSorter::IncludeStyle::IS_Google_ObjC) {
     const std::pair<const char *, const char *> &Mismatch =
-        std::mismatch(LHS.begin(), LHS.end(), RHS.begin());
+        std::mismatch(LHS.begin(), LHS.end(), RHS.begin(), RHS.end());
     if ((Mismatch.first != LHS.end()) && (Mismatch.second != RHS.end())) {
       if ((*Mismatch.first == '.') && (*Mismatch.second == '+')) {
         return -1;

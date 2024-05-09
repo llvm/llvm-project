@@ -1,3 +1,5 @@
+include(MLIRCheckHardwareFeatures)
+
 add_subdirectory(CAPI)
 add_subdirectory(lib)
 
@@ -39,6 +41,10 @@ if (MLIR_INCLUDE_INTEGRATION_TESTS)
   option(MLIR_RUN_ARM_SVE_TESTS "Run Arm SVE tests.")
   option(MLIR_RUN_ARM_SME_TESTS "Run Arm SME tests.")
 
+  # Check whether an emulator is required - if yes then make sure that it's
+  # been set.
+  check_emulator(MLIR_RUN_ARM_SVE_TESTS "HWCAP_SVE" ARM_EMULATOR_EXECUTABLE)
+  check_emulator(MLIR_RUN_ARM_SME_TESTS "HWCAP2_SME" ARM_EMULATOR_EXECUTABLE)
 
   # The native target may not be enabled when cross compiling, raise an error.
   if(NOT MLIR_ENABLE_EXECUTION_ENGINE)

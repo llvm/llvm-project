@@ -120,6 +120,7 @@ Clang-Tidy Checks
    :doc:`bugprone-posix-return <bugprone/posix-return>`, "Yes"
    :doc:`bugprone-redundant-branch-condition <bugprone/redundant-branch-condition>`, "Yes"
    :doc:`bugprone-reserved-identifier <bugprone/reserved-identifier>`, "Yes"
+   :doc:`bugprone-return-const-ref-from-parameter <bugprone/return-const-ref-from-parameter>`,
    :doc:`bugprone-shared-ptr-array-mismatch <bugprone/shared-ptr-array-mismatch>`, "Yes"
    :doc:`bugprone-signal-handler <bugprone/signal-handler>`,
    :doc:`bugprone-signed-char-misuse <bugprone/signed-char-misuse>`,
@@ -233,7 +234,7 @@ Clang-Tidy Checks
    :doc:`hicpp-multiway-paths-covered <hicpp/multiway-paths-covered>`,
    :doc:`hicpp-no-assembler <hicpp/no-assembler>`,
    :doc:`hicpp-signed-bitwise <hicpp/signed-bitwise>`,
-   :doc:`linuxkernel-must-use-errs <linuxkernel/must-use-errs>`,
+   :doc:`linuxkernel-must-check-errs <linuxkernel/must-check-errs>`,
    :doc:`llvm-header-guard <llvm/header-guard>`,
    :doc:`llvm-include-order <llvm/include-order>`, "Yes"
    :doc:`llvm-namespace-comment <llvm/namespace-comment>`,
@@ -275,6 +276,7 @@ Clang-Tidy Checks
    :doc:`modernize-macro-to-enum <modernize/macro-to-enum>`, "Yes"
    :doc:`modernize-make-shared <modernize/make-shared>`, "Yes"
    :doc:`modernize-make-unique <modernize/make-unique>`, "Yes"
+   :doc:`modernize-min-max-use-initializer-list <modernize/min-max-use-initializer-list>`, "Yes"
    :doc:`modernize-pass-by-value <modernize/pass-by-value>`, "Yes"
    :doc:`modernize-raw-string-literal <modernize/raw-string-literal>`, "Yes"
    :doc:`modernize-redundant-void-arg <modernize/redundant-void-arg>`, "Yes"
@@ -341,9 +343,9 @@ Clang-Tidy Checks
    :doc:`portability-std-allocator-const <portability/std-allocator-const>`,
    :doc:`readability-avoid-const-params-in-decls <readability/avoid-const-params-in-decls>`, "Yes"
    :doc:`readability-avoid-nested-conditional-operator <readability/avoid-nested-conditional-operator>`,
-   :doc:`readability-avoid-return-with-void-value <readability/avoid-return-with-void-value>`,
+   :doc:`readability-avoid-return-with-void-value <readability/avoid-return-with-void-value>`, "Yes"
    :doc:`readability-avoid-unconditional-preprocessor-if <readability/avoid-unconditional-preprocessor-if>`,
-   :doc:`readability-braces-around-statements <readability/braces-around-statements>`, "Yes"
+   :doc:`readability-braces-around-statements <readability/braces-around-statements>`,
    :doc:`readability-const-return-type <readability/const-return-type>`, "Yes"
    :doc:`readability-container-contains <readability/container-contains>`, "Yes"
    :doc:`readability-container-data-pointer <readability/container-data-pointer>`, "Yes"
@@ -352,6 +354,7 @@ Clang-Tidy Checks
    :doc:`readability-delete-null-pointer <readability/delete-null-pointer>`, "Yes"
    :doc:`readability-duplicate-include <readability/duplicate-include>`, "Yes"
    :doc:`readability-else-after-return <readability/else-after-return>`, "Yes"
+   :doc:`readability-enum-initial-value <readability/enum-initial-value>`, "Yes"
    :doc:`readability-function-cognitive-complexity <readability/function-cognitive-complexity>`,
    :doc:`readability-function-size <readability/function-size>`,
    :doc:`readability-identifier-length <readability/identifier-length>`,
@@ -361,6 +364,7 @@ Clang-Tidy Checks
    :doc:`readability-isolate-declaration <readability/isolate-declaration>`, "Yes"
    :doc:`readability-magic-numbers <readability/magic-numbers>`,
    :doc:`readability-make-member-function-const <readability/make-member-function-const>`, "Yes"
+   :doc:`readability-math-missing-parentheses <readability/math-missing-parentheses>`, "Yes"
    :doc:`readability-misleading-indentation <readability/misleading-indentation>`,
    :doc:`readability-misplaced-array-index <readability/misplaced-array-index>`, "Yes"
    :doc:`readability-named-parameter <readability/named-parameter>`, "Yes"
@@ -391,8 +395,10 @@ Clang-Tidy Checks
    :doc:`readability-use-std-min-max <readability/use-std-min-max>`, "Yes"
    :doc:`zircon-temporary-objects <zircon/temporary-objects>`,
 
+Check aliases
+-------------
 
-.. csv-table:: Aliases..
+.. csv-table::
    :header: "Name", "Redirect", "Offers fixes"
 
    :doc:`bugprone-narrowing-conversions <bugprone/narrowing-conversions>`, :doc:`cppcoreguidelines-narrowing-conversions <cppcoreguidelines/narrowing-conversions>`,
@@ -409,6 +415,7 @@ Clang-Tidy Checks
    :doc:`cert-exp42-c <cert/exp42-c>`, :doc:`bugprone-suspicious-memory-comparison <bugprone/suspicious-memory-comparison>`,
    :doc:`cert-fio38-c <cert/fio38-c>`, :doc:`misc-non-copyable-objects <misc/non-copyable-objects>`,
    :doc:`cert-flp37-c <cert/flp37-c>`, :doc:`bugprone-suspicious-memory-comparison <bugprone/suspicious-memory-comparison>`,
+   :doc:`cert-int09-c <cert/int09-c>`, :doc:`readability-enum-initial-value <readability/enum-initial-value>`, "Yes"
    :doc:`cert-msc24-c <cert/msc24-c>`, :doc:`bugprone-unsafe-functions <bugprone/unsafe-functions>`,
    :doc:`cert-msc30-c <cert/msc30-c>`, :doc:`cert-msc50-cpp <cert/msc50-cpp>`,
    :doc:`cert-msc32-c <cert/msc32-c>`, :doc:`cert-msc51-cpp <cert/msc51-cpp>`,
@@ -528,12 +535,12 @@ Clang-Tidy Checks
    :doc:`cppcoreguidelines-non-private-member-variables-in-classes <cppcoreguidelines/non-private-member-variables-in-classes>`, :doc:`misc-non-private-member-variables-in-classes <misc/non-private-member-variables-in-classes>`,
    :doc:`cppcoreguidelines-use-default-member-init <cppcoreguidelines/use-default-member-init>`, :doc:`modernize-use-default-member-init <modernize/use-default-member-init>`, "Yes"
    :doc:`fuchsia-header-anon-namespaces <fuchsia/header-anon-namespaces>`, :doc:`google-build-namespaces <google/build-namespaces>`,
-   :doc:`google-readability-braces-around-statements <google/readability-braces-around-statements>`, :doc:`readability-braces-around-statements <readability/braces-around-statements>`, "Yes"
+   :doc:`google-readability-braces-around-statements <google/readability-braces-around-statements>`, :doc:`readability-braces-around-statements <readability/braces-around-statements>`,
    :doc:`google-readability-function-size <google/readability-function-size>`, :doc:`readability-function-size <readability/function-size>`,
    :doc:`google-readability-namespace-comments <google/readability-namespace-comments>`, :doc:`llvm-namespace-comment <llvm/namespace-comment>`,
    :doc:`hicpp-avoid-c-arrays <hicpp/avoid-c-arrays>`, :doc:`modernize-avoid-c-arrays <modernize/avoid-c-arrays>`,
    :doc:`hicpp-avoid-goto <hicpp/avoid-goto>`, :doc:`cppcoreguidelines-avoid-goto <cppcoreguidelines/avoid-goto>`,
-   :doc:`hicpp-braces-around-statements <hicpp/braces-around-statements>`, :doc:`readability-braces-around-statements <readability/braces-around-statements>`, "Yes"
+   :doc:`hicpp-braces-around-statements <hicpp/braces-around-statements>`, :doc:`readability-braces-around-statements <readability/braces-around-statements>`,
    :doc:`hicpp-deprecated-headers <hicpp/deprecated-headers>`, :doc:`modernize-deprecated-headers <modernize/deprecated-headers>`, "Yes"
    :doc:`hicpp-explicit-conversions <hicpp/explicit-conversions>`, :doc:`google-explicit-constructor <google/explicit-constructor>`, "Yes"
    :doc:`hicpp-function-size <hicpp/function-size>`, :doc:`readability-function-size <readability/function-size>`,

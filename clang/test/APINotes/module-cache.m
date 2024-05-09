@@ -27,6 +27,7 @@
 // RUN: FileCheck -check-prefix=CHECK-ONE-ERROR %s < %t/before.log
 
 // Change the API notes file, after the module has rebuilt once.
+// RUN: chmod u+w %t/APINotes/SomeOtherKit.apinotes
 // RUN: echo '      - Selector: "methodA"' >> %t/APINotes/SomeOtherKit.apinotes
 // RUN: echo '        MethodKind: Instance' >> %t/APINotes/SomeOtherKit.apinotes
 // RUN: echo '        Availability: none' >> %t/APINotes/SomeOtherKit.apinotes

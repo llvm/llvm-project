@@ -168,6 +168,10 @@ def FeatureCuMode : SubtargetFeature<"cumode",
   "Enable CU wavefront execution mode"
 >;
 
+def FeaturePreciseMemory
+    : SubtargetFeature<"precise-memory", "EnablePreciseMemory",
+                       "true", "Enable precise memory mode">;
+
 def FeatureSGPRInitBug : SubtargetFeature<"sgpr-init-bug",
   "SGPRInitBug",
   "true",
@@ -301,6 +305,12 @@ def FeatureMSAALoadDstSelBug : SubtargetFeature<"msaa-load-dst-sel-bug",
   "HasMSAALoadDstSelBug",
   "true",
   "MSAA loads not honoring dst_sel bug"
+>;
+
+def FeaturePrivEnabledTrap2NopBug : SubtargetFeature<"priv-enabled-trap2-nop-bug",
+  "HasPrivEnabledTrap2NopBug",
+  "true",
+  "Hardware that runs with PRIV=1 interpreting 's_trap 2' as a nop bug"
 >;
 
 class SubtargetFeatureLDSBankCount <int Value> : SubtargetFeature <
@@ -1483,13 +1493,16 @@ def FeatureISAVersion11_Generic: FeatureSet<
     [FeatureMSAALoadDstSelBug,
      FeatureVALUTransUseHazard,
      FeatureUserSGPRInit16Bug,
+     FeatureMADIntraFwdBug,
+     FeaturePrivEnabledTrap2NopBug,
      FeatureRequiresCOV6])>;
 
 def FeatureISAVersion11_0_Common : FeatureSet<
   !listconcat(FeatureISAVersion11_Common.Features,
     [FeatureMSAALoadDstSelBug,
      FeatureVALUTransUseHazard,
-     FeatureMADIntraFwdBug])>;
+     FeatureMADIntraFwdBug,
+     FeaturePrivEnabledTrap2NopBug])>;
 
 def FeatureISAVersion11_0_0 : FeatureSet<
   !listconcat(FeatureISAVersion11_0_Common.Features,
@@ -1892,7 +1905,7 @@ def HasVINTERPEncoding : Predicate<"Subtarget->hasVINTERPEncoding()">,
 def HasDSAddTid : Predicate<"Subtarget->getGeneration() >= AMDGPUSubtarget::GFX9">,
   AssemblerPredicate<(all_of FeatureGFX9Insts)>;
 
-def HasLDSFPAtomicAdd : Predicate<"Subtarget->hasLDSFPAtomicAdd()">,
+def HasLDSFPAtomicAddF32 : Predicate<"Subtarget->hasLDSFPAtomicAddF32()">,
   AssemblerPredicate<(all_of FeatureGFX8Insts)>;
 
 def HasAddNoCarryInsts : Predicate<"Subtarget->hasAddNoCarry()">,

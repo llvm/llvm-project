@@ -74,6 +74,36 @@ entry:
   ret void
 }
 
+; CHECK: Alias sets for function 'test_runtime':
+; CHECK: Alias Set Tracker: 2 alias sets for 2 pointer values.
+; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 1] must alias, Mod       Memory locations: (ptr %a, LocationSize::precise(1))
+; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 1] must alias, Mod       Memory locations: (ptr %b, LocationSize::precise(1))
+define i1 @test_runtime() local_unnamed_addr {
+entry:
+  %a = alloca i8, align 1
+  %b = alloca i8, align 1
+  store i8 1, ptr %a, align 1
+  %allow = call i1 @llvm.allow.runtime.check(metadata !"test_check")
+  store i8 1, ptr %b, align 1
+  ret i1 %allow
+}
+
+; CHECK: Alias sets for function 'test_ubsan':
+; CHECK: Alias Set Tracker: 2 alias sets for 2 pointer values.
+; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 1] must alias, Mod       Memory locations: (ptr %a, LocationSize::precise(1))
+; CHECK:   AliasSet[0x{{[0-9a-f]+}}, 1] must alias, Mod       Memory locations: (ptr %b, LocationSize::precise(1))
+define i1 @test_ubsan() local_unnamed_addr {
+entry:
+  %a = alloca i8, align 1
+  %b = alloca i8, align 1
+  store i8 1, ptr %a, align 1
+  %allow = call i1 @llvm.allow.ubsan.check(i8 7)
+  store i8 1, ptr %b, align 1
+  ret i1 %allow
+}
+
+declare i1 @llvm.allow.ubsan.check(i8)
+declare i1 @llvm.allow.runtime.check(metadata)
 declare void @llvm.assume(i1)
 declare void @llvm.experimental.guard(i1, ...)
 declare void @llvm.experimental.noalias.scope.decl(metadata)

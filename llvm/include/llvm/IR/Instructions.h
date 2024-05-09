@@ -2631,6 +2631,16 @@ public:
     return isInterleaveMask(Mask, Factor, NumInputElts, StartIndexes);
   }
 
+  /// Check if the mask is a DE-interleave mask of the given factor
+  /// \p Factor like:
+  ///     <Index, Index+Factor, ..., Index+(NumElts-1)*Factor>
+  static bool isDeInterleaveMaskOfFactor(ArrayRef<int> Mask, unsigned Factor,
+                                         unsigned &Index);
+  static bool isDeInterleaveMaskOfFactor(ArrayRef<int> Mask, unsigned Factor) {
+    unsigned Unused;
+    return isDeInterleaveMaskOfFactor(Mask, Factor, Unused);
+  }
+
   /// Checks if the shuffle is a bit rotation of the first operand across
   /// multiple subelements, e.g:
   ///
@@ -4360,6 +4370,9 @@ public:
 
   unsigned getNumSuccessors() const { return 2; }
 
+  /// Updates profile metadata by scaling it by \p S / \p T.
+  void updateProfWeight(uint64_t S, uint64_t T);
+
   // Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const Instruction *I) {
     return (I->getOpcode() == Instruction::Invoke);
@@ -5345,6 +5358,8 @@ protected:
   TruncInst *cloneImpl() const;
 
 public:
+  enum { AnyWrap = 0, NoUnsignedWrap = (1 << 0), NoSignedWrap = (1 << 1) };
+
   /// Constructor with insert-before-instruction semantics
   TruncInst(
     Value *S,                           ///< The value to be truncated
@@ -5375,6 +5390,39 @@ public:
   }
   static bool classof(const Value *V) {
     return isa<Instruction>(V) && classof(cast<Instruction>(V));
+  }
+
+  void setHasNoUnsignedWrap(bool B) {
+    SubclassOptionalData =
+        (SubclassOptionalData & ~NoUnsignedWrap) | (B * NoUnsignedWrap);
+  }
+  void setHasNoSignedWrap(bool B) {
+    SubclassOptionalData =
+        (SubclassOptionalData & ~NoSignedWrap) | (B * NoSignedWrap);
+  }
+
+  /// Test whether this operation is known to never
+  /// undergo unsigned overflow, aka the nuw property.
+  bool hasNoUnsignedWrap() const {
+    return SubclassOptionalData & NoUnsignedWrap;
+  }
+
+  /// Test whether this operation is known to never
+  /// undergo signed overflow, aka the nsw property.
+  bool hasNoSignedWrap() const {
+    return (SubclassOptionalData & NoSignedWrap) != 0;
+  }
+
+  /// Returns the no-wrap kind of the operation.
+  unsigned getNoWrapKind() const {
+    unsigned NoWrapKind = 0;
+    if (hasNoUnsignedWrap())
+      NoWrapKind |= NoUnsignedWrap;
+
+    if (hasNoSignedWrap())
+      NoWrapKind |= NoSignedWrap;
+
+    return NoWrapKind;
   }
 };
 

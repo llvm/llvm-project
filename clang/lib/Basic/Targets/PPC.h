@@ -61,6 +61,7 @@ class LLVM_LIBRARY_VISIBILITY PPCTargetInfo : public TargetInfo {
   bool HasROPProtect = false;
   bool HasPrivileged = false;
   bool HasAIXSmallLocalExecTLS = false;
+  bool HasAIXSmallLocalDynamicTLS = false;
   bool HasVSX = false;
   bool UseCRBits = false;
   bool HasP8Vector = false;
@@ -80,6 +81,7 @@ class LLVM_LIBRARY_VISIBILITY PPCTargetInfo : public TargetInfo {
   bool IsISA3_0 = false;
   bool IsISA3_1 = false;
   bool HasQuadwordAtomics = false;
+  bool HasAIXShLibTLSModelOpt = false;
 
 protected:
   std::string ABI;
@@ -92,6 +94,7 @@ public:
     LongDoubleFormat = &llvm::APFloat::PPCDoubleDouble();
     HasStrictFP = true;
     HasIbm128 = true;
+    HasUnalignedAccess = true;
   }
 
   // Set the language option for altivec based on our value.
@@ -364,7 +367,14 @@ public:
   // have Glibc since it is Glibc that provides the HWCAP[2] in the auxv.
   static constexpr int MINIMUM_AIX_OS_MAJOR = 7;
   static constexpr int MINIMUM_AIX_OS_MINOR = 2;
-  bool supportsCpuSupports() const override { return getTriple().isOSGlibc(); }
+  bool supportsCpuSupports() const override {
+    llvm::Triple Triple = getTriple();
+    // AIX 7.2 is the minimum requirement to support __builtin_cpu_supports().
+    return Triple.isOSGlibc() ||
+           (Triple.isOSAIX() &&
+            !Triple.isOSVersionLT(MINIMUM_AIX_OS_MAJOR, MINIMUM_AIX_OS_MINOR));
+  }
+
   bool supportsCpuIs() const override {
     llvm::Triple Triple = getTriple();
     // AIX 7.2 is the minimum requirement to support __builtin_cpu_is().
@@ -420,6 +430,10 @@ public:
   BuiltinVaListKind getBuiltinVaListKind() const override {
     // This is the ELF definition
     return TargetInfo::PowerABIBuiltinVaList;
+  }
+
+  std::pair<unsigned, unsigned> hardwareInterferenceSizes() const override {
+    return std::make_pair(32, 32);
   }
 };
 
@@ -500,6 +514,10 @@ public:
     default:
       return CCCR_Warning;
     }
+  }
+
+  std::pair<unsigned, unsigned> hardwareInterferenceSizes() const override {
+    return std::make_pair(128, 128);
   }
 };
 

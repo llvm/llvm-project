@@ -2,6 +2,16 @@ module ExternCtx {
   header "ExternCtx.h"
 }
 
+module ExportAsCore {
+  header "ExportAsCore.h"
+  export_as ExportAs
+}
+
+module ExportAs {
+  header "ExportAs.h"
+  export *
+}
+
 module HeaderLib {
   header "HeaderLib.h"
 }
@@ -24,6 +34,10 @@ module ModuleWithWrongCasePrivate {
 
 module Namespaces {
   header "Namespaces.h"
+}
+
+module Templates {
+  header "Templates.h"
 }
 
 module SwiftImportAs {

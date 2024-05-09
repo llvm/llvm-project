@@ -40,6 +40,7 @@
 #include <cassert>
 #include <optional>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace llvm {
@@ -266,6 +267,9 @@ protected:
 
   LLVM_PREFERRED_TYPE(bool)
   unsigned AllowAMDGPUUnsafeFPAtomics : 1;
+
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned HasUnalignedAccess : 1;
 
   unsigned ARMCDECoprocMask : 8;
 
@@ -857,6 +861,18 @@ public:
     // width, we can introduce a new variable for this if/when some target wants
     // it.
     return PointerWidth;
+  }
+
+  /// Return true iff unaligned accesses are a single instruction (rather than
+  /// a synthesized sequence).
+  bool hasUnalignedAccess() const { return HasUnalignedAccess; }
+
+  /// Return true iff unaligned accesses are cheap. This affects placement and
+  /// size of bitfield loads/stores. (Not the ABI-mandated placement of
+  /// the bitfields themselves.)
+  bool hasCheapUnalignedBitFieldAccess() const {
+    // Simply forward to the unaligned access getter.
+    return hasUnalignedAccess();
   }
 
   /// \brief Returns the default value of the __USER_LABEL_PREFIX__ macro,
@@ -1776,6 +1792,15 @@ public:
 
   /// Whether to support HIP image/texture API's.
   virtual bool hasHIPImageSupport() const { return true; }
+
+  /// The first value in the pair is the minimum offset between two objects to
+  /// avoid false sharing (destructive interference). The second value in the
+  /// pair is maximum size of contiguous memory to promote true sharing
+  /// (constructive interference). Neither of these values are considered part
+  /// of the ABI and can be changed by targets at any time.
+  virtual std::pair<unsigned, unsigned> hardwareInterferenceSizes() const {
+    return std::make_pair(64, 64);
+  }
 
 protected:
   /// Copy type and layout related info.

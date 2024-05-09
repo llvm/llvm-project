@@ -799,7 +799,7 @@ ASTContext::getCanonicalTemplateTemplateParmDecl(
 
   TemplateTemplateParmDecl *CanonTTP = TemplateTemplateParmDecl::Create(
       *this, getTranslationUnitDecl(), SourceLocation(), TTP->getDepth(),
-      TTP->getPosition(), TTP->isParameterPack(), nullptr,
+      TTP->getPosition(), TTP->isParameterPack(), nullptr, /*Typename=*/false,
       TemplateParameterList::Create(*this, SourceLocation(), SourceLocation(),
                                     CanonParams, SourceLocation(),
                                     /*RequiresClause=*/nullptr));
@@ -879,7 +879,8 @@ ASTContext::ASTContext(LangOptions &LOpts, SourceManager &SM,
       TemplateSpecializationTypes(this_()),
       DependentTemplateSpecializationTypes(this_()), AutoTypes(this_()),
       DependentBitIntTypes(this_()), SubstTemplateTemplateParmPacks(this_()),
-      CanonTemplateTemplateParms(this_()), SourceMgr(SM), LangOpts(LOpts),
+      ArrayParameterTypes(this_()), CanonTemplateTemplateParms(this_()),
+      SourceMgr(SM), LangOpts(LOpts),
       NoSanitizeL(new NoSanitizeList(LangOpts.NoSanitizeFiles, SM)),
       XRayFilter(new XRayFunctionFilter(LangOpts.XRayAlwaysInstrumentFiles,
                                         LangOpts.XRayNeverInstrumentFiles,
@@ -1082,7 +1083,8 @@ void ASTContext::addModuleInitializer(Module *M, Decl *D) {
   Inits->Initializers.push_back(D);
 }
 
-void ASTContext::addLazyModuleInitializers(Module *M, ArrayRef<uint32_t> IDs) {
+void ASTContext::addLazyModuleInitializers(Module *M,
+                                           ArrayRef<GlobalDeclID> IDs) {
   auto *&Inits = ModuleInitializers[M];
   if (!Inits)
     Inits = new (*this) PerModuleInitializers;
@@ -1305,6 +1307,9 @@ void ASTContext::InitBuiltinTypes(const TargetInfo &Target,
   // Placeholder type for bound members.
   InitBuiltinType(BoundMemberTy,       BuiltinType::BoundMember);
 
+  // Placeholder type for unresolved templates.
+  InitBuiltinType(UnresolvedTemplateTy, BuiltinType::UnresolvedTemplate);
+
   // Placeholder type for pseudo-objects.
   InitBuiltinType(PseudoObjectTy,      BuiltinType::PseudoObject);
 
@@ -1319,16 +1324,14 @@ void ASTContext::InitBuiltinTypes(const TargetInfo &Target,
 
   // Placeholder type for OMP array sections.
   if (LangOpts.OpenMP) {
-    InitBuiltinType(OMPArraySectionTy, BuiltinType::OMPArraySection);
+    InitBuiltinType(ArraySectionTy, BuiltinType::ArraySection);
     InitBuiltinType(OMPArrayShapingTy, BuiltinType::OMPArrayShaping);
     InitBuiltinType(OMPIteratorTy, BuiltinType::OMPIterator);
   }
-  // Placeholder type for OpenACC array sections.
-  if (LangOpts.OpenACC) {
-    // FIXME: Once we implement OpenACC array sections in Sema, this will either
-    // be combined with the OpenMP type, or given its own type. In the meantime,
-    // just use the OpenMP type so that parsing can work.
-    InitBuiltinType(OMPArraySectionTy, BuiltinType::OMPArraySection);
+  // Placeholder type for OpenACC array sections, if we are ALSO in OMP mode,
+  // don't bother, as we're just using the same type as OMP.
+  if (LangOpts.OpenACC && !LangOpts.OpenMP) {
+    InitBuiltinType(ArraySectionTy, BuiltinType::ArraySection);
   }
   if (LangOpts.MatrixTypes)
     InitBuiltinType(IncompleteMatrixIdxTy, BuiltinType::IncompleteMatrixIdx);
@@ -1612,15 +1615,7 @@ const llvm::fltSemantics &ASTContext::getFloatTypeSemantics(QualType T) const {
   case BuiltinType::Float16:
     return Target->getHalfFormat();
   case BuiltinType::Half:
-    // For HLSL, when the native half type is disabled, half will be treat as
-    // float.
-    if (getLangOpts().HLSL)
-      if (getLangOpts().NativeHalfType)
-        return Target->getHalfFormat();
-      else
-        return Target->getFloatFormat();
-    else
-      return Target->getHalfFormat();
+    return Target->getHalfFormat();
   case BuiltinType::Float:      return Target->getFloatFormat();
   case BuiltinType::Double:     return Target->getDoubleFormat();
   case BuiltinType::Ibm128:
@@ -1906,7 +1901,8 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
 
   case Type::IncompleteArray:
   case Type::VariableArray:
-  case Type::ConstantArray: {
+  case Type::ConstantArray:
+  case Type::ArrayParameter: {
     // Model non-constant sized arrays as size zero, but track the alignment.
     uint64_t Size = 0;
     if (const auto *CAT = dyn_cast<ConstantArrayType>(T))
@@ -2682,7 +2678,7 @@ getSubobjectSizeInBits(const FieldDecl *Field, const ASTContext &Context,
   if (Field->isBitField()) {
     // If we have explicit padding bits, they don't contribute bits
     // to the actual object representation, so return 0.
-    if (Field->isUnnamedBitfield())
+    if (Field->isUnnamedBitField())
       return 0;
 
     int64_t BitfieldSize = Field->getBitWidthValue(Context);
@@ -3396,6 +3392,37 @@ QualType ASTContext::getDecayedType(QualType T) const {
   return getDecayedType(T, Decayed);
 }
 
+QualType ASTContext::getArrayParameterType(QualType Ty) const {
+  if (Ty->isArrayParameterType())
+    return Ty;
+  assert(Ty->isConstantArrayType() && "Ty must be an array type.");
+  const auto *ATy = cast<ConstantArrayType>(Ty);
+  llvm::FoldingSetNodeID ID;
+  ATy->Profile(ID, *this, ATy->getElementType(), ATy->getZExtSize(),
+               ATy->getSizeExpr(), ATy->getSizeModifier(),
+               ATy->getIndexTypeQualifiers().getAsOpaqueValue());
+  void *InsertPos = nullptr;
+  ArrayParameterType *AT =
+      ArrayParameterTypes.FindNodeOrInsertPos(ID, InsertPos);
+  if (AT)
+    return QualType(AT, 0);
+
+  QualType Canonical;
+  if (!Ty.isCanonical()) {
+    Canonical = getArrayParameterType(getCanonicalType(Ty));
+
+    // Get the new insert position for the node we care about.
+    AT = ArrayParameterTypes.FindNodeOrInsertPos(ID, InsertPos);
+    assert(!AT && "Shouldn't be in the map!");
+  }
+
+  AT = new (*this, alignof(ArrayParameterType))
+      ArrayParameterType(ATy, Canonical);
+  Types.push_back(AT);
+  ArrayParameterTypes.InsertNode(AT, InsertPos);
+  return QualType(AT, 0);
+}
+
 /// getBlockPointerType - Return the uniqued reference to the type for
 /// a pointer to the specified block.
 QualType ASTContext::getBlockPointerType(QualType T) const {
@@ -3642,6 +3669,7 @@ QualType ASTContext::getVariableArrayDecayedType(QualType type) const {
   case Type::PackIndexing:
   case Type::BitInt:
   case Type::DependentBitInt:
+  case Type::ArrayParameter:
     llvm_unreachable("type should never be variably-modified");
 
   // These types can be variably-modified but should never need to
@@ -3769,32 +3797,32 @@ QualType ASTContext::getDependentSizedArrayType(QualType elementType,
           numElements->isValueDependent()) &&
          "Size must be type- or value-dependent!");
 
-  // Dependently-sized array types that do not have a specified number
-  // of elements will have their sizes deduced from a dependent
-  // initializer.  We do no canonicalization here at all, which is okay
-  // because they can't be used in most locations.
-  if (!numElements) {
-    auto *newType = new (*this, alignof(DependentSizedArrayType))
-        DependentSizedArrayType(elementType, QualType(), numElements, ASM,
-                                elementTypeQuals, brackets);
-    Types.push_back(newType);
-    return QualType(newType, 0);
-  }
-
-  // Otherwise, we actually build a new type every time, but we
-  // also build a canonical type.
-
   SplitQualType canonElementType = getCanonicalType(elementType).split();
 
   void *insertPos = nullptr;
   llvm::FoldingSetNodeID ID;
-  DependentSizedArrayType::Profile(ID, *this,
-                                   QualType(canonElementType.Ty, 0),
-                                   ASM, elementTypeQuals, numElements);
+  DependentSizedArrayType::Profile(
+      ID, *this, numElements ? QualType(canonElementType.Ty, 0) : elementType,
+      ASM, elementTypeQuals, numElements);
 
   // Look for an existing type with these properties.
   DependentSizedArrayType *canonTy =
     DependentSizedArrayTypes.FindNodeOrInsertPos(ID, insertPos);
+
+  // Dependently-sized array types that do not have a specified number
+  // of elements will have their sizes deduced from a dependent
+  // initializer.
+  if (!numElements) {
+    if (canonTy)
+      return QualType(canonTy, 0);
+
+    auto *newType = new (*this, alignof(DependentSizedArrayType))
+        DependentSizedArrayType(elementType, QualType(), numElements, ASM,
+                                elementTypeQuals, brackets);
+    DependentSizedArrayTypes.InsertNode(newType, insertPos);
+    Types.push_back(newType);
+    return QualType(newType, 0);
+  }
 
   // If we don't have one, build one.
   if (!canonTy) {
@@ -6051,7 +6079,9 @@ CanQualType ASTContext::getCanonicalParamType(QualType T) const {
   T = getVariableArrayDecayedType(T);
   const Type *Ty = T.getTypePtr();
   QualType Result;
-  if (isa<ArrayType>(Ty)) {
+  if (getLangOpts().HLSL && isa<ConstantArrayType>(Ty)) {
+    Result = getArrayParameterType(QualType(Ty, 0));
+  } else if (isa<ArrayType>(Ty)) {
     Result = getArrayDecayedType(QualType(Ty,0));
   } else if (isa<FunctionType>(Ty)) {
     Result = getPointerType(QualType(Ty, 0));
@@ -6893,16 +6923,13 @@ ASTContext::getCanonicalNestedNameSpecifier(NestedNameSpecifier *NNS) const {
     //   typedef typename T::type T1;
     //   typedef typename T1::type T2;
     if (const auto *DNT = T->getAs<DependentNameType>())
-      return NestedNameSpecifier::Create(
-          *this, DNT->getQualifier(),
-          const_cast<IdentifierInfo *>(DNT->getIdentifier()));
+      return NestedNameSpecifier::Create(*this, DNT->getQualifier(),
+                                         DNT->getIdentifier());
     if (const auto *DTST = T->getAs<DependentTemplateSpecializationType>())
-      return NestedNameSpecifier::Create(*this, DTST->getQualifier(), true,
-                                         const_cast<Type *>(T));
+      return NestedNameSpecifier::Create(*this, DTST->getQualifier(), true, T);
 
     // TODO: Set 'Template' parameter to true for other template types.
-    return NestedNameSpecifier::Create(*this, nullptr, false,
-                                       const_cast<Type *>(T));
+    return NestedNameSpecifier::Create(*this, nullptr, false, T);
   }
 
   case NestedNameSpecifier::Global:
@@ -6973,6 +7000,8 @@ const ArrayType *ASTContext::getAsArrayType(QualType T) const {
 }
 
 QualType ASTContext::getAdjustedParameterType(QualType T) const {
+  if (getLangOpts().HLSL && T->isConstantArrayType())
+    return getArrayParameterType(T);
   if (T->isArrayType() || T->isFunctionType())
     return getDecayedType(T);
   return T;
@@ -7206,6 +7235,14 @@ QualType ASTContext::isPromotableBitField(Expr *E) const {
   //        We perform that promotion here to match GCC and C++.
   // FIXME: C does not permit promotion of an enum bit-field whose rank is
   //        greater than that of 'int'. We perform that promotion to match GCC.
+  //
+  // C23 6.3.1.1p2:
+  //   The value from a bit-field of a bit-precise integer type is converted to
+  //   the corresponding bit-precise integer type. (The rest is the same as in
+  //   C11.)
+  if (QualType QT = Field->getType(); QT->isBitIntType())
+    return QT;
+
   if (BitWidth < IntSize)
     return IntTy;
 
@@ -8583,6 +8620,7 @@ void ASTContext::getObjCEncodingForTypeImpl(QualType T, std::string &S,
   case Type::DeducedTemplateSpecialization:
     return;
 
+  case Type::ArrayParameter:
   case Type::Pipe:
 #define ABSTRACT_TYPE(KIND, BASE)
 #define TYPE(KIND, BASE)
@@ -9511,11 +9549,6 @@ static uint64_t getSVETypeSize(ASTContext &Context, const BuiltinType *Ty) {
 
 bool ASTContext::areCompatibleSveTypes(QualType FirstType,
                                        QualType SecondType) {
-  assert(
-      ((FirstType->isSVESizelessBuiltinType() && SecondType->isVectorType()) ||
-       (FirstType->isVectorType() && SecondType->isSVESizelessBuiltinType())) &&
-      "Expected SVE builtin type and vector type!");
-
   auto IsValidCast = [this](QualType FirstType, QualType SecondType) {
     if (const auto *BT = FirstType->getAs<BuiltinType>()) {
       if (const auto *VT = SecondType->getAs<VectorType>()) {
@@ -9541,11 +9574,6 @@ bool ASTContext::areCompatibleSveTypes(QualType FirstType,
 
 bool ASTContext::areLaxCompatibleSveTypes(QualType FirstType,
                                           QualType SecondType) {
-  assert(
-      ((FirstType->isSVESizelessBuiltinType() && SecondType->isVectorType()) ||
-       (FirstType->isVectorType() && SecondType->isSVESizelessBuiltinType())) &&
-      "Expected SVE builtin type and vector type!");
-
   auto IsLaxCompatible = [this](QualType FirstType, QualType SecondType) {
     const auto *BT = FirstType->getAs<BuiltinType>();
     if (!BT)
@@ -9600,11 +9628,11 @@ static uint64_t getRVVTypeSize(ASTContext &Context, const BuiltinType *Ty) {
 
   ASTContext::BuiltinVectorTypeInfo Info = Context.getBuiltinVectorTypeInfo(Ty);
 
-  unsigned EltSize = Context.getTypeSize(Info.ElementType);
+  uint64_t EltSize = Context.getTypeSize(Info.ElementType);
   if (Info.ElementType == Context.BoolTy)
     EltSize = 1;
 
-  unsigned MinElts = Info.EC.getKnownMinValue();
+  uint64_t MinElts = Info.EC.getKnownMinValue();
   return VScale->first * MinElts * EltSize;
 }
 
@@ -10926,6 +10954,10 @@ QualType ASTContext::mergeTypes(QualType LHS, QualType RHS, bool OfBlockPointer,
     assert(LHS != RHS &&
            "Equivalent pipe types should have already been handled!");
     return {};
+  case Type::ArrayParameter:
+    assert(LHS != RHS &&
+           "Equivalent ArrayParameter types should have already been handled!");
+    return {};
   case Type::BitInt: {
     // Merge two bit-precise int types, while trying to preserve typedef info.
     bool LHSUnsigned = LHS->castAs<BitIntType>()->isUnsigned();
@@ -12205,8 +12237,13 @@ QualType ASTContext::getRealTypeForBitwidth(unsigned DestWidth,
 }
 
 void ASTContext::setManglingNumber(const NamedDecl *ND, unsigned Number) {
-  if (Number > 1)
-    MangleNumbers[ND] = Number;
+  if (Number <= 1)
+    return;
+
+  MangleNumbers[ND] = Number;
+
+  if (Listener)
+    Listener->AddedManglingNumber(ND, Number);
 }
 
 unsigned ASTContext::getManglingNumber(const NamedDecl *ND,
@@ -12225,8 +12262,13 @@ unsigned ASTContext::getManglingNumber(const NamedDecl *ND,
 }
 
 void ASTContext::setStaticLocalNumber(const VarDecl *VD, unsigned Number) {
-  if (Number > 1)
-    StaticLocalNumbers[VD] = Number;
+  if (Number <= 1)
+    return;
+
+  StaticLocalNumbers[VD] = Number;
+
+  if (Listener)
+    Listener->AddedStaticLocalNumbers(VD, Number);
 }
 
 unsigned ASTContext::getStaticLocalNumber(const VarDecl *VD) const {
@@ -12817,6 +12859,18 @@ static QualType getCommonNonSugarTypeNode(ASTContext &Ctx, const Type *X,
         getCommonArrayElementType(Ctx, AX, QX, AY, QY), AX->getSize(), SizeExpr,
         getCommonSizeModifier(AX, AY), getCommonIndexTypeCVRQualifiers(AX, AY));
   }
+  case Type::ArrayParameter: {
+    const auto *AX = cast<ArrayParameterType>(X),
+               *AY = cast<ArrayParameterType>(Y);
+    assert(AX->getSize() == AY->getSize());
+    const Expr *SizeExpr = Ctx.hasSameExpr(AX->getSizeExpr(), AY->getSizeExpr())
+                               ? AX->getSizeExpr()
+                               : nullptr;
+    auto ArrayTy = Ctx.getConstantArrayType(
+        getCommonArrayElementType(Ctx, AX, QX, AY, QY), AX->getSize(), SizeExpr,
+        getCommonSizeModifier(AX, AY), getCommonIndexTypeCVRQualifiers(AX, AY));
+    return Ctx.getArrayParameterType(ArrayTy);
+  }
   case Type::Atomic: {
     const auto *AX = cast<AtomicType>(X), *AY = cast<AtomicType>(Y);
     return Ctx.getAtomicType(
@@ -13078,6 +13132,7 @@ static QualType getCommonSugarTypeNode(ASTContext &Ctx, const Type *X,
     CANONICAL_TYPE(Builtin)
     CANONICAL_TYPE(Complex)
     CANONICAL_TYPE(ConstantArray)
+    CANONICAL_TYPE(ArrayParameter)
     CANONICAL_TYPE(ConstantMatrix)
     CANONICAL_TYPE(Enum)
     CANONICAL_TYPE(ExtVector)

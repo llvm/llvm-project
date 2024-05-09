@@ -129,6 +129,7 @@ TEST(ScudoStringsTest, Padding) {
 }
 
 #if defined(__linux__)
+
 #include <sys/resource.h>
 
 TEST(ScudoStringsTest, CapacityIncreaseFails) {
@@ -136,12 +137,22 @@ TEST(ScudoStringsTest, CapacityIncreaseFails) {
 
   rlimit Limit = {};
   EXPECT_EQ(0, getrlimit(RLIMIT_AS, &Limit));
-  rlimit EmptyLimit = {.rlim_max = Limit.rlim_max};
+
+  rlimit EmptyLimit = {.rlim_cur = 0, .rlim_max = Limit.rlim_max};
   EXPECT_EQ(0, setrlimit(RLIMIT_AS, &EmptyLimit));
+
+  // qemu does not honor the setrlimit, so verify before proceeding.
+  scudo::MemMapT MemMap;
+  if (MemMap.map(/*Addr=*/0U, scudo::getPageSizeCached(), "scudo:test",
+                 MAP_ALLOWNOMEM)) {
+    MemMap.unmap(MemMap.getBase(), MemMap.getCapacity());
+    setrlimit(RLIMIT_AS, &Limit);
+    GTEST_SKIP() << "Limiting address space does not prevent mmap.";
+  }
 
   // Test requires that the default length is at least 6 characters.
   scudo::uptr MaxSize = Str.capacity();
-  EXPECT_LE(6, MaxSize);
+  EXPECT_LE(6u, MaxSize);
 
   for (size_t i = 0; i < MaxSize - 5; i++) {
     Str.append("B");

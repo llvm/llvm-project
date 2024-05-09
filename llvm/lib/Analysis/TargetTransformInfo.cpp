@@ -916,9 +916,9 @@ InstructionCost TargetTransformInfo::getAltInstrCost(
 InstructionCost TargetTransformInfo::getShuffleCost(
     ShuffleKind Kind, VectorType *Ty, ArrayRef<int> Mask,
     TTI::TargetCostKind CostKind, int Index, VectorType *SubTp,
-    ArrayRef<const Value *> Args) const {
-  InstructionCost Cost =
-      TTIImpl->getShuffleCost(Kind, Ty, Mask, CostKind, Index, SubTp, Args);
+    ArrayRef<const Value *> Args, const Instruction *CxtI) const {
+  InstructionCost Cost = TTIImpl->getShuffleCost(Kind, Ty, Mask, CostKind,
+                                                 Index, SubTp, Args, CxtI);
   assert(Cost >= 0 && "TTI should not produce negative costs!");
   return Cost;
 }

@@ -20,6 +20,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/FMF.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Intrinsics.h"
 #include <cassert>
@@ -116,6 +117,8 @@ bool isKnownToBeAPowerOfTwo(const Value *V, const DataLayout &DL,
                             const DominatorTree *DT = nullptr,
                             bool UseInstrInfo = true);
 
+bool isOnlyUsedInZeroComparison(const Instruction *CxtI);
+
 bool isOnlyUsedInZeroEqualityComparison(const Instruction *CxtI);
 
 /// Return true if the given value is known to be non-zero when defined. For
@@ -124,17 +127,14 @@ bool isOnlyUsedInZeroEqualityComparison(const Instruction *CxtI);
 /// specified, perform context-sensitive analysis and return true if the
 /// pointer couldn't possibly be null at the specified instruction.
 /// Supports values with integer or pointer type and vectors of integers.
-bool isKnownNonZero(const Value *V, const DataLayout &DL, unsigned Depth = 0,
-                    AssumptionCache *AC = nullptr,
-                    const Instruction *CxtI = nullptr,
-                    const DominatorTree *DT = nullptr,
-                    bool UseInstrInfo = true);
+bool isKnownNonZero(const Value *V, const SimplifyQuery &Q, unsigned Depth = 0);
 
 /// Return true if the two given values are negation.
 /// Currently can recoginze Value pair:
 /// 1: <X, Y> if X = sub (0, Y) or Y = sub (0, X)
 /// 2: <X, Y> if X = sub (A, B) and Y = sub (B, A)
-bool isKnownNegation(const Value *X, const Value *Y, bool NeedNSW = false);
+bool isKnownNegation(const Value *X, const Value *Y, bool NeedNSW = false,
+                     bool AllowPoison = true);
 
 /// Returns true if the give value is known to be non-negative.
 bool isKnownNonNegative(const Value *V, const SimplifyQuery &SQ,
@@ -694,11 +694,11 @@ inline Value *getArgumentAliasingToReturnedPointer(CallBase *Call,
 bool isIntrinsicReturningPointerAliasingArgumentWithoutCapturing(
     const CallBase *Call, bool MustPreserveNullness);
 
-/// This method strips off any GEP address adjustments and pointer casts from
-/// the specified value, returning the original object being addressed. Note
-/// that the returned value has pointer type if the specified value does. If
-/// the MaxLookup value is non-zero, it limits the number of instructions to
-/// be stripped off.
+/// This method strips off any GEP address adjustments, pointer casts
+/// or `llvm.threadlocal.address` from the specified value \p V, returning the
+/// original object being addressed. Note that the returned value has pointer
+/// type if the specified value does. If the \p MaxLookup value is non-zero, it
+/// limits the number of instructions to be stripped off.
 const Value *getUnderlyingObject(const Value *V, unsigned MaxLookup = 6);
 inline Value *getUnderlyingObject(Value *V, unsigned MaxLookup = 6) {
   // Force const to avoid infinite recursion.
@@ -862,7 +862,8 @@ enum class OverflowResult {
 };
 
 OverflowResult computeOverflowForUnsignedMul(const Value *LHS, const Value *RHS,
-                                             const SimplifyQuery &SQ);
+                                             const SimplifyQuery &SQ,
+                                             bool IsNSW = false);
 OverflowResult computeOverflowForSignedMul(const Value *LHS, const Value *RHS,
                                            const SimplifyQuery &SQ);
 OverflowResult

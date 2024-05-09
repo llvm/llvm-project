@@ -37,6 +37,7 @@
 #include "clang/Sema/TemplateDeduction.h"
 #include "clang/Sema/TypoCorrection.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/TinyPtrVector.h"
 #include "llvm/ADT/edit_distance.h"
@@ -1266,6 +1267,20 @@ struct FindLocalExternScope {
   LookupResult &R;
   bool OldFindLocalExtern;
 };
+
+/// Returns true if 'operator=' should be treated as a dependent name.
+bool isDependentAssignmentOperator(DeclarationName Name,
+                                   DeclContext *LookupContext) {
+  const auto *LookupRecord = dyn_cast_if_present<CXXRecordDecl>(LookupContext);
+  // If the lookup context is the current instantiation but we are outside a
+  // complete-class context, we will never find the implicitly declared
+  // copy/move assignment operators because they are declared at the closing '}'
+  // of the class specifier. In such cases, we treat 'operator=' like any other
+  // unqualified name because the results of name lookup in the template
+  // definition/instantiation context will always be the same.
+  return Name.getCXXOverloadedOperator() == OO_Equal && LookupRecord &&
+         !LookupRecord->isBeingDefined() && LookupRecord->isDependentContext();
+}
 } // end anonymous namespace
 
 bool Sema::CppLookupName(LookupResult &R, Scope *S) {
@@ -1274,12 +1289,30 @@ bool Sema::CppLookupName(LookupResult &R, Scope *S) {
   DeclarationName Name = R.getLookupName();
   Sema::LookupNameKind NameKind = R.getLookupKind();
 
+  // C++23 [temp.dep.general]p2:
+  //   The component name of an unqualified-id is dependent if
+  //   - it is a conversion-function-id whose conversion-type-id
+  //     is dependent, or
+  //   - it is operator= and the current class is a templated entity, or
+  //   - the unqualified-id is the postfix-expression in a dependent call.
+  if (Name.getNameKind() == DeclarationName::CXXConversionFunctionName &&
+      Name.getCXXNameType()->isDependentType()) {
+    R.setNotFoundInCurrentInstantiation();
+    return false;
+  }
+
   // If this is the name of an implicitly-declared special member function,
   // go through the scope stack to implicitly declare
   if (isImplicitlyDeclaredMemberFunctionName(Name)) {
     for (Scope *PreS = S; PreS; PreS = PreS->getParent())
-      if (DeclContext *DC = PreS->getEntity())
+      if (DeclContext *DC = PreS->getEntity()) {
+        if (!R.isTemplateNameLookup() &&
+            isDependentAssignmentOperator(Name, DC)) {
+          R.setNotFoundInCurrentInstantiation();
+          return false;
+        }
         DeclareImplicitMemberFunctionsWithName(*this, Name, R.getNameLoc(), DC);
+      }
   }
 
   // Implicitly declare member functions with the name we're looking for, if in
@@ -2445,10 +2478,30 @@ bool Sema::LookupQualifiedName(LookupResult &R, DeclContext *LookupCtx,
     }
   } QL(LookupCtx);
 
+  if (!InUnqualifiedLookup && !R.isForRedeclaration()) {
+    // C++23 [temp.dep.type]p5:
+    //   A qualified name is dependent if
+    //   - it is a conversion-function-id whose conversion-type-id
+    //     is dependent, or
+    //   - [...]
+    //   - its lookup context is the current instantiation and it
+    //     is operator=, or
+    //   - [...]
+    if (DeclarationName Name = R.getLookupName();
+        (Name.getNameKind() == DeclarationName::CXXConversionFunctionName &&
+         Name.getCXXNameType()->isDependentType()) ||
+        (!R.isTemplateNameLookup() &&
+         isDependentAssignmentOperator(Name, LookupCtx))) {
+      R.setNotFoundInCurrentInstantiation();
+      return false;
+    }
+  }
+
+  CXXRecordDecl *LookupRec = dyn_cast<CXXRecordDecl>(LookupCtx);
   if (LookupDirect(*this, R, LookupCtx)) {
     R.resolveKind();
-    if (isa<CXXRecordDecl>(LookupCtx))
-      R.setNamingClass(cast<CXXRecordDecl>(LookupCtx));
+    if (LookupRec)
+      R.setNamingClass(LookupRec);
     return true;
   }
 
@@ -2470,7 +2523,6 @@ bool Sema::LookupQualifiedName(LookupResult &R, DeclContext *LookupCtx,
 
   // If this isn't a C++ class, we aren't allowed to look into base
   // classes, we're done.
-  CXXRecordDecl *LookupRec = dyn_cast<CXXRecordDecl>(LookupCtx);
   if (!LookupRec || !LookupRec->getDefinition())
     return false;
 
@@ -2536,8 +2588,6 @@ bool Sema::LookupQualifiedName(LookupResult &R, DeclContext *LookupCtx,
     return true;
   };
 
-  bool TemplateNameLookup = R.isTemplateNameLookup();
-
   // Determine whether two sets of members contain the same members, as
   // required by C++ [class.member.lookup]p6.
   auto HasSameDeclarations = [&](DeclContext::lookup_iterator A,
@@ -2559,7 +2609,7 @@ bool Sema::LookupQualifiedName(LookupResult &R, DeclContext *LookupCtx,
         //   template, and if the name is used as a template-name, the
         //   reference refers to the class template itself and not a
         //   specialization thereof, and is not ambiguous.
-        if (TemplateNameLookup)
+        if (R.isTemplateNameLookup())
           if (auto *TD = getAsTemplateNameDecl(ND))
             ND = TD;
 
@@ -2717,38 +2767,54 @@ bool Sema::LookupQualifiedName(LookupResult &R, DeclContext *LookupCtx,
 ///
 /// @returns True if any decls were found (but possibly ambiguous)
 bool Sema::LookupParsedName(LookupResult &R, Scope *S, CXXScopeSpec *SS,
-                            bool AllowBuiltinCreation, bool EnteringContext) {
-  if (SS && SS->isInvalid()) {
-    // When the scope specifier is invalid, don't even look for
-    // anything.
+                            QualType ObjectType, bool AllowBuiltinCreation,
+                            bool EnteringContext) {
+  // When the scope specifier is invalid, don't even look for anything.
+  if (SS && SS->isInvalid())
     return false;
-  }
 
-  if (SS && SS->isSet()) {
-    NestedNameSpecifier *NNS = SS->getScopeRep();
-    if (NNS->getKind() == NestedNameSpecifier::Super)
+  // Determine where to perform name lookup
+  DeclContext *DC = nullptr;
+  bool IsDependent = false;
+  if (!ObjectType.isNull()) {
+    // This nested-name-specifier occurs in a member access expression, e.g.,
+    // x->B::f, and we are looking into the type of the object.
+    assert((!SS || SS->isEmpty()) &&
+           "ObjectType and scope specifier cannot coexist");
+    DC = computeDeclContext(ObjectType);
+    IsDependent = !DC && ObjectType->isDependentType();
+    assert(((!DC && ObjectType->isDependentType()) ||
+            !ObjectType->isIncompleteType() || !ObjectType->getAs<TagType>() ||
+            ObjectType->castAs<TagType>()->isBeingDefined()) &&
+           "Caller should have completed object type");
+  } else if (SS && SS->isNotEmpty()) {
+    if (NestedNameSpecifier *NNS = SS->getScopeRep();
+        NNS->getKind() == NestedNameSpecifier::Super)
       return LookupInSuper(R, NNS->getAsRecordDecl());
-
-    if (DeclContext *DC = computeDeclContext(*SS, EnteringContext)) {
-      // We have resolved the scope specifier to a particular declaration
-      // contex, and will perform name lookup in that context.
+    // This nested-name-specifier occurs after another nested-name-specifier,
+    // so long into the context associated with the prior nested-name-specifier.
+    if ((DC = computeDeclContext(*SS, EnteringContext))) {
+      // The declaration context must be complete.
       if (!DC->isDependentContext() && RequireCompleteDeclContext(*SS, DC))
         return false;
-
       R.setContextRange(SS->getRange());
-      return LookupQualifiedName(R, DC);
     }
+    IsDependent = !DC && isDependentScopeSpecifier(*SS);
+  } else {
+    // Perform unqualified name lookup starting in the given scope.
+    return LookupName(R, S, AllowBuiltinCreation);
+  }
 
+  // If we were able to compute a declaration context, perform qualified name
+  // lookup in that context.
+  if (DC)
+    return LookupQualifiedName(R, DC);
+  else if (IsDependent)
     // We could not resolve the scope specified to a specific declaration
     // context, which means that SS refers to an unknown specialization.
     // Name lookup can't find anything in this case.
     R.setNotFoundInCurrentInstantiation();
-    R.setContextRange(SS->getRange());
-    return false;
-  }
-
-  // Perform unqualified name lookup starting in the given scope.
-  return LookupName(R, S, AllowBuiltinCreation);
+  return false;
 }
 
 /// Perform qualified name lookup into all base classes of the given
@@ -3243,6 +3309,10 @@ addAssociatedClassesAndNamespaces(AssociatedLookup &Result, QualType Ty) {
     case Type::Pipe:
       T = cast<PipeType>(T)->getElementType().getTypePtr();
       continue;
+
+    // Array parameter types are treated as fundamental types.
+    case Type::ArrayParameter:
+      break;
     }
 
     if (Queue.empty())
@@ -3337,21 +3407,20 @@ void Sema::LookupOverloadedOperatorName(OverloadedOperatorKind Op, Scope *S,
   Functions.append(Operators.begin(), Operators.end());
 }
 
-Sema::SpecialMemberOverloadResult Sema::LookupSpecialMember(CXXRecordDecl *RD,
-                                                           CXXSpecialMember SM,
-                                                           bool ConstArg,
-                                                           bool VolatileArg,
-                                                           bool RValueThis,
-                                                           bool ConstThis,
-                                                           bool VolatileThis) {
+Sema::SpecialMemberOverloadResult
+Sema::LookupSpecialMember(CXXRecordDecl *RD, CXXSpecialMemberKind SM,
+                          bool ConstArg, bool VolatileArg, bool RValueThis,
+                          bool ConstThis, bool VolatileThis) {
   assert(CanDeclareSpecialMemberFunction(RD) &&
          "doing special member lookup into record that isn't fully complete");
   RD = RD->getDefinition();
   if (RValueThis || ConstThis || VolatileThis)
-    assert((SM == CXXCopyAssignment || SM == CXXMoveAssignment) &&
+    assert((SM == CXXSpecialMemberKind::CopyAssignment ||
+            SM == CXXSpecialMemberKind::MoveAssignment) &&
            "constructors and destructors always have unqualified lvalue this");
   if (ConstArg || VolatileArg)
-    assert((SM != CXXDefaultConstructor && SM != CXXDestructor) &&
+    assert((SM != CXXSpecialMemberKind::DefaultConstructor &&
+            SM != CXXSpecialMemberKind::Destructor) &&
            "parameter-less special members can't have qualified arguments");
 
   // FIXME: Get the caller to pass in a location for the lookup.
@@ -3359,7 +3428,7 @@ Sema::SpecialMemberOverloadResult Sema::LookupSpecialMember(CXXRecordDecl *RD,
 
   llvm::FoldingSetNodeID ID;
   ID.AddPointer(RD);
-  ID.AddInteger(SM);
+  ID.AddInteger(llvm::to_underlying(SM));
   ID.AddInteger(ConstArg);
   ID.AddInteger(VolatileArg);
   ID.AddInteger(RValueThis);
@@ -3378,7 +3447,7 @@ Sema::SpecialMemberOverloadResult Sema::LookupSpecialMember(CXXRecordDecl *RD,
   Result = new (Result) SpecialMemberOverloadResultEntry(ID);
   SpecialMemberCache.InsertNode(Result, InsertPoint);
 
-  if (SM == CXXDestructor) {
+  if (SM == CXXSpecialMemberKind::Destructor) {
     if (RD->needsImplicitDestructor()) {
       runWithSufficientStackSpace(RD->getLocation(), [&] {
         DeclareImplicitDestructor(RD);
@@ -3402,7 +3471,7 @@ Sema::SpecialMemberOverloadResult Sema::LookupSpecialMember(CXXRecordDecl *RD,
   QualType ArgType = CanTy;
   ExprValueKind VK = VK_LValue;
 
-  if (SM == CXXDefaultConstructor) {
+  if (SM == CXXSpecialMemberKind::DefaultConstructor) {
     Name = Context.DeclarationNames.getCXXConstructorName(CanTy);
     NumArgs = 0;
     if (RD->needsImplicitDefaultConstructor()) {
@@ -3411,7 +3480,8 @@ Sema::SpecialMemberOverloadResult Sema::LookupSpecialMember(CXXRecordDecl *RD,
       });
     }
   } else {
-    if (SM == CXXCopyConstructor || SM == CXXMoveConstructor) {
+    if (SM == CXXSpecialMemberKind::CopyConstructor ||
+        SM == CXXSpecialMemberKind::MoveConstructor) {
       Name = Context.DeclarationNames.getCXXConstructorName(CanTy);
       if (RD->needsImplicitCopyConstructor()) {
         runWithSufficientStackSpace(RD->getLocation(), [&] {
@@ -3449,7 +3519,8 @@ Sema::SpecialMemberOverloadResult Sema::LookupSpecialMember(CXXRecordDecl *RD,
     // Possibly an XValue is actually correct in the case of move, but
     // there is no semantic difference for class types in this restricted
     // case.
-    if (SM == CXXCopyConstructor || SM == CXXCopyAssignment)
+    if (SM == CXXSpecialMemberKind::CopyConstructor ||
+        SM == CXXSpecialMemberKind::CopyAssignment)
       VK = VK_LValue;
     else
       VK = VK_PRValue;
@@ -3457,7 +3528,7 @@ Sema::SpecialMemberOverloadResult Sema::LookupSpecialMember(CXXRecordDecl *RD,
 
   OpaqueValueExpr FakeArg(LookupLoc, ArgType, VK);
 
-  if (SM != CXXDefaultConstructor) {
+  if (SM != CXXSpecialMemberKind::DefaultConstructor) {
     NumArgs = 1;
     Arg = &FakeArg;
   }
@@ -3483,7 +3554,7 @@ Sema::SpecialMemberOverloadResult Sema::LookupSpecialMember(CXXRecordDecl *RD,
     // type, rather than because there's some other declared constructor.
     // Every class has a copy/move constructor, copy/move assignment, and
     // destructor.
-    assert(SM == CXXDefaultConstructor &&
+    assert(SM == CXXSpecialMemberKind::DefaultConstructor &&
            "lookup for a constructor or assignment operator was empty");
     Result->setMethod(nullptr);
     Result->setKind(SpecialMemberOverloadResult::NoMemberOrDeleted);
@@ -3501,7 +3572,8 @@ Sema::SpecialMemberOverloadResult Sema::LookupSpecialMember(CXXRecordDecl *RD,
     DeclAccessPair Cand = DeclAccessPair::make(CandDecl, AS_public);
     auto CtorInfo = getConstructorInfo(Cand);
     if (CXXMethodDecl *M = dyn_cast<CXXMethodDecl>(Cand->getUnderlyingDecl())) {
-      if (SM == CXXCopyAssignment || SM == CXXMoveAssignment)
+      if (SM == CXXSpecialMemberKind::CopyAssignment ||
+          SM == CXXSpecialMemberKind::MoveAssignment)
         AddMethodCandidate(M, Cand, RD, ThisTy, Classification,
                            llvm::ArrayRef(&Arg, NumArgs), OCS, true);
       else if (CtorInfo)
@@ -3513,7 +3585,8 @@ Sema::SpecialMemberOverloadResult Sema::LookupSpecialMember(CXXRecordDecl *RD,
                              /*SuppressUserConversions*/ true);
     } else if (FunctionTemplateDecl *Tmpl =
                  dyn_cast<FunctionTemplateDecl>(Cand->getUnderlyingDecl())) {
-      if (SM == CXXCopyAssignment || SM == CXXMoveAssignment)
+      if (SM == CXXSpecialMemberKind::CopyAssignment ||
+          SM == CXXSpecialMemberKind::MoveAssignment)
         AddMethodTemplateCandidate(Tmpl, Cand, RD, nullptr, ThisTy,
                                    Classification,
                                    llvm::ArrayRef(&Arg, NumArgs), OCS, true);
@@ -3559,8 +3632,8 @@ Sema::SpecialMemberOverloadResult Sema::LookupSpecialMember(CXXRecordDecl *RD,
 /// Look up the default constructor for the given class.
 CXXConstructorDecl *Sema::LookupDefaultConstructor(CXXRecordDecl *Class) {
   SpecialMemberOverloadResult Result =
-    LookupSpecialMember(Class, CXXDefaultConstructor, false, false, false,
-                        false, false);
+      LookupSpecialMember(Class, CXXSpecialMemberKind::DefaultConstructor,
+                          false, false, false, false, false);
 
   return cast_or_null<CXXConstructorDecl>(Result.getMethod());
 }
@@ -3570,9 +3643,9 @@ CXXConstructorDecl *Sema::LookupCopyingConstructor(CXXRecordDecl *Class,
                                                    unsigned Quals) {
   assert(!(Quals & ~(Qualifiers::Const | Qualifiers::Volatile)) &&
          "non-const, non-volatile qualifiers for copy ctor arg");
-  SpecialMemberOverloadResult Result =
-    LookupSpecialMember(Class, CXXCopyConstructor, Quals & Qualifiers::Const,
-                        Quals & Qualifiers::Volatile, false, false, false);
+  SpecialMemberOverloadResult Result = LookupSpecialMember(
+      Class, CXXSpecialMemberKind::CopyConstructor, Quals & Qualifiers::Const,
+      Quals & Qualifiers::Volatile, false, false, false);
 
   return cast_or_null<CXXConstructorDecl>(Result.getMethod());
 }
@@ -3580,9 +3653,9 @@ CXXConstructorDecl *Sema::LookupCopyingConstructor(CXXRecordDecl *Class,
 /// Look up the moving constructor for the given class.
 CXXConstructorDecl *Sema::LookupMovingConstructor(CXXRecordDecl *Class,
                                                   unsigned Quals) {
-  SpecialMemberOverloadResult Result =
-    LookupSpecialMember(Class, CXXMoveConstructor, Quals & Qualifiers::Const,
-                        Quals & Qualifiers::Volatile, false, false, false);
+  SpecialMemberOverloadResult Result = LookupSpecialMember(
+      Class, CXXSpecialMemberKind::MoveConstructor, Quals & Qualifiers::Const,
+      Quals & Qualifiers::Volatile, false, false, false);
 
   return cast_or_null<CXXConstructorDecl>(Result.getMethod());
 }
@@ -3614,11 +3687,10 @@ CXXMethodDecl *Sema::LookupCopyingAssignment(CXXRecordDecl *Class,
          "non-const, non-volatile qualifiers for copy assignment arg");
   assert(!(ThisQuals & ~(Qualifiers::Const | Qualifiers::Volatile)) &&
          "non-const, non-volatile qualifiers for copy assignment this");
-  SpecialMemberOverloadResult Result =
-    LookupSpecialMember(Class, CXXCopyAssignment, Quals & Qualifiers::Const,
-                        Quals & Qualifiers::Volatile, RValueThis,
-                        ThisQuals & Qualifiers::Const,
-                        ThisQuals & Qualifiers::Volatile);
+  SpecialMemberOverloadResult Result = LookupSpecialMember(
+      Class, CXXSpecialMemberKind::CopyAssignment, Quals & Qualifiers::Const,
+      Quals & Qualifiers::Volatile, RValueThis, ThisQuals & Qualifiers::Const,
+      ThisQuals & Qualifiers::Volatile);
 
   return Result.getMethod();
 }
@@ -3630,11 +3702,10 @@ CXXMethodDecl *Sema::LookupMovingAssignment(CXXRecordDecl *Class,
                                             unsigned ThisQuals) {
   assert(!(ThisQuals & ~(Qualifiers::Const | Qualifiers::Volatile)) &&
          "non-const, non-volatile qualifiers for copy assignment this");
-  SpecialMemberOverloadResult Result =
-    LookupSpecialMember(Class, CXXMoveAssignment, Quals & Qualifiers::Const,
-                        Quals & Qualifiers::Volatile, RValueThis,
-                        ThisQuals & Qualifiers::Const,
-                        ThisQuals & Qualifiers::Volatile);
+  SpecialMemberOverloadResult Result = LookupSpecialMember(
+      Class, CXXSpecialMemberKind::MoveAssignment, Quals & Qualifiers::Const,
+      Quals & Qualifiers::Volatile, RValueThis, ThisQuals & Qualifiers::Const,
+      ThisQuals & Qualifiers::Volatile);
 
   return Result.getMethod();
 }
@@ -3647,8 +3718,8 @@ CXXMethodDecl *Sema::LookupMovingAssignment(CXXRecordDecl *Class,
 /// \returns The destructor for this class.
 CXXDestructorDecl *Sema::LookupDestructor(CXXRecordDecl *Class) {
   return cast_or_null<CXXDestructorDecl>(
-      LookupSpecialMember(Class, CXXDestructor, false, false, false, false,
-                          false)
+      LookupSpecialMember(Class, CXXSpecialMemberKind::Destructor, false, false,
+                          false, false, false)
           .getMethod());
 }
 
@@ -4443,7 +4514,8 @@ LabelDecl *Sema::LookupOrCreateLabel(IdentifierInfo *II, SourceLocation Loc,
   }
 
   // Not a GNU local label.
-  Res = LookupSingleName(CurScope, II, Loc, LookupLabel, NotForRedeclaration);
+  Res = LookupSingleName(CurScope, II, Loc, LookupLabel,
+                         RedeclarationKind::NotForRedeclaration);
   // If we found a label, check to see if it is in the same context as us.
   // When in a Block, we don't want to reuse a label in an enclosing function.
   if (Res && Res->getDeclContext() != CurContext)
@@ -5011,8 +5083,9 @@ static void LookupPotentialTypoResult(Sema &SemaRef,
     return;
   }
 
-  SemaRef.LookupParsedName(Res, S, SS, /*AllowBuiltinCreation=*/false,
-                           EnteringContext);
+  SemaRef.LookupParsedName(Res, S, SS,
+                           /*ObjectType=*/QualType(),
+                           /*AllowBuiltinCreation=*/false, EnteringContext);
 
   // Fake ivar lookup; this should really be part of
   // LookupParsedName.
@@ -5883,7 +5956,8 @@ void Sema::clearDelayedTypo(TypoExpr *TE) {
 
 void Sema::ActOnPragmaDump(Scope *S, SourceLocation IILoc, IdentifierInfo *II) {
   DeclarationNameInfo Name(II, IILoc);
-  LookupResult R(*this, Name, LookupAnyName, Sema::NotForRedeclaration);
+  LookupResult R(*this, Name, LookupAnyName,
+                 RedeclarationKind::NotForRedeclaration);
   R.suppressDiagnostics();
   R.setHideTags(false);
   LookupName(R, S);
@@ -5892,4 +5966,14 @@ void Sema::ActOnPragmaDump(Scope *S, SourceLocation IILoc, IdentifierInfo *II) {
 
 void Sema::ActOnPragmaDump(Expr *E) {
   E->dump();
+}
+
+RedeclarationKind Sema::forRedeclarationInCurContext() const {
+  // A declaration with an owning module for linkage can never link against
+  // anything that is not visible. We don't need to check linkage here; if
+  // the context has internal linkage, redeclaration lookup won't find things
+  // from other TUs, and we can't safely compute linkage yet in general.
+  if (cast<Decl>(CurContext)->getOwningModuleForLinkage(/*IgnoreLinkage*/ true))
+    return RedeclarationKind::ForVisibleRedeclaration;
+  return RedeclarationKind::ForExternalRedeclaration;
 }

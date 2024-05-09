@@ -1,10 +1,10 @@
-; RUN: llc --amdgpu-disable-structurizer -stop-after=amdgpu-isel -mtriple=amdgcn-- -mcpu=gfx900 -verify-machineinstrs -o - %s | FileCheck --check-prefixes=CHECK,ISEL %s
-; RUN: llc --amdgpu-disable-structurizer -stop-after=dead-mi-elimination -mtriple=amdgcn-- -mcpu=gfx900 -verify-machineinstrs -o - %s | FileCheck --check-prefixes=CHECK,DEADMI %s
-; RUN: llc --amdgpu-disable-structurizer -global-isel -stop-after=irtranslator -mtriple=amdgcn-- -mcpu=gfx900 -verify-machineinstrs -o - %s | FileCheck %s --check-prefixes=CHECK,GISEL
+; RUN: llc -stop-after=amdgpu-isel -mtriple=amdgcn-- -mcpu=gfx900 -verify-machineinstrs -o - %s | FileCheck --check-prefixes=CHECK,ISEL %s
+; RUN: llc -stop-after=dead-mi-elimination -mtriple=amdgcn-- -mcpu=gfx900 -verify-machineinstrs -o - %s | FileCheck --check-prefixes=CHECK,DEADMI %s
+; RUN: llc -global-isel -stop-after=irtranslator -mtriple=amdgcn-- -mcpu=gfx900 -verify-machineinstrs -o - %s | FileCheck %s --check-prefixes=CHECK,GISEL
 
 ; CHECK-LABEL: name:            basic_call
 ;       CHECK:    [[TOKEN:%[0-9]+]]{{[^ ]*}} = CONVERGENCECTRL_ENTRY
-;        ISEL:    {{.*}} SI_CALL_ISEL {{.*}}, @foo, [[TOKEN]], csr_amdgpu, {{.*}}
+;        ISEL:    {{.*}} SI_CALL_ISEL {{.*}}, @foo, csr_amdgpu, {{.*}}, implicit [[TOKEN]]
 ;      DEADMI:    {{.*}} SI_CALL {{.*}}, @foo, csr_amdgpu, {{.*}}, implicit [[TOKEN]]
 ;       GISEL:    {{.*}} G_SI_CALL {{.*}}, @foo, csr_amdgpu, {{.*}}, implicit [[TOKEN]]
 define i32 @basic_call(i32 %src) #0 {
@@ -92,15 +92,9 @@ define i32 @nested(i32 %src) #0 {
   ret i32 %sum
 }
 
-; COM: FIXME: Tokens on tail-call have not been implemented for SelectionDAG
-; COM:        yet; the corresponding checks have been commented out.
-;
 ; CHECK-LABEL: name:            tail_call_void_func_void
-;       GISEL:    [[TOKEN:%[0-9]+]]{{[^ ]*}} = CONVERGENCECTRL_ENTRY
-; COM:  CHECK:    [[TOKEN:%[0-9]+]]{{[^ ]*}} = CONVERGENCECTRL_ENTRY
-; COM:   ISEL:    {{.*}} SI_CALL_ISEL {{.*}}, @external_void_func_void, [[TOKEN]], csr_amdgpu, {{.*}}
-; COM: DEADMI:    {{.*}} SI_CALL {{.*}}, @external_void_func_void, csr_amdgpu, {{.*}}, implicit [[TOKEN]]
-;       GISEL:    {{.*}} SI_TCRETURN {{.*}}, @external_void_func_void, 0, csr_amdgpu, implicit [[TOKEN]]
+;       CHECK:    [[TOKEN:%[0-9]+]]{{[^ ]*}} = CONVERGENCECTRL_ENTRY
+;       CHECK:    {{.*}} SI_TCRETURN {{.*}}, @external_void_func_void, 0, csr_amdgpu, {{.*}}implicit [[TOKEN]]
 define void @tail_call_void_func_void() #0 {
   %t1 = call token @llvm.experimental.convergence.entry()
   tail call void @external_void_func_void() [ "convergencectrl"(token %t1) ]

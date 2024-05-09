@@ -68,11 +68,12 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/RISCVISAInfo.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/xxhash.h"
+#include "llvm/TargetParser/RISCVISAInfo.h"
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/TargetParser/X86TargetParser.h"
+#include "llvm/Transforms/Utils/BuildLibCalls.h"
 #include <optional>
 
 using namespace clang;
@@ -442,6 +443,11 @@ CodeGenModule::CodeGenModule(ASTContext &C,
       }
     ModuleNameHash = llvm::getUniqueInternalLinkagePostfix(Path);
   }
+
+  // Record mregparm value now so it is visible through all of codegen.
+  if (Context.getTargetInfo().getTriple().getArch() == llvm::Triple::x86)
+    getModule().addModuleFlag(llvm::Module::Error, "NumRegisterParameters",
+                              CodeGenOpts.NumRegisterParameters);
 }
 
 CodeGenModule::~CodeGenModule() {}
@@ -979,11 +985,6 @@ void CodeGenModule::Release() {
     for (auto *MD : ELFDependentLibraries)
       NMD->addOperand(MD);
   }
-
-  // Record mregparm value now so it is visible through rest of codegen.
-  if (Context.getTargetInfo().getTriple().getArch() == llvm::Triple::x86)
-    getModule().addModuleFlag(llvm::Module::Error, "NumRegisterParameters",
-                              CodeGenOpts.NumRegisterParameters);
 
   if (CodeGenOpts.DwarfVersion) {
     getModule().addModuleFlag(llvm::Module::Max, "Dwarf Version",
@@ -2087,6 +2088,14 @@ void CodeGenModule::SetLLVMFunctionAttributes(GlobalDecl GD,
   llvm::AttributeList PAL;
   ConstructAttributeList(F->getName(), Info, GD, PAL, CallingConv,
                          /*AttrOnCallSite=*/false, IsThunk);
+  if (CallingConv == llvm::CallingConv::X86_VectorCall &&
+      getTarget().getTriple().isWindowsArm64EC()) {
+    SourceLocation Loc;
+    if (const Decl *D = GD.getDecl())
+      Loc = D->getLocation();
+
+    Error(Loc, "__vectorcall calling convention is not currently supported");
+  }
   F->setAttributes(PAL);
   F->setCallingConv(static_cast<llvm::CallingConv::ID>(CallingConv));
 }
@@ -2627,7 +2636,7 @@ void CodeGenModule::setNonAliasAttributes(GlobalDecl GD,
         addUsedGlobal(F);
       if (auto *SA = D->getAttr<PragmaClangTextSectionAttr>())
         if (!D->getAttr<SectionAttr>())
-          F->addFnAttr("implicit-section-name", SA->getName());
+          F->setSection(SA->getName());
 
       llvm::AttrBuilder Attrs(F->getContext());
       if (GetCPUAndFeaturesAttributes(GD, Attrs)) {
@@ -3944,8 +3953,20 @@ bool CodeGenModule::shouldEmitFunction(GlobalDecl GD) {
   // behavior may break ABI compatibility of the current unit.
   if (const Module *M = F->getOwningModule();
       M && M->getTopLevelModule()->isNamedModule() &&
-      getContext().getCurrentNamedModule() != M->getTopLevelModule())
-    return false;
+      getContext().getCurrentNamedModule() != M->getTopLevelModule()) {
+    // There are practices to mark template member function as always-inline
+    // and mark the template as extern explicit instantiation but not give
+    // the definition for member function. So we have to emit the function
+    // from explicitly instantiation with always-inline.
+    //
+    // See https://github.com/llvm/llvm-project/issues/86893 for details.
+    //
+    // TODO: Maybe it is better to give it a warning if we call a non-inline
+    // function from other module units which is marked as always-inline.
+    if (!F->isTemplateInstantiation() || !F->hasAttr<AlwaysInlineAttr>()) {
+      return false;
+    }
+  }
 
   if (F->hasAttr<NoInlineAttr>())
     return false;
@@ -4761,6 +4782,10 @@ CodeGenModule::CreateRuntimeFunction(llvm::FunctionType *FTy, StringRef Name,
         }
       }
       setDSOLocal(F);
+      // FIXME: We should use CodeGenModule::SetLLVMFunctionAttributes() instead
+      // of trying to approximate the attributes using the LLVM function
+      // signature. This requires revising the API of CreateRuntimeFunction().
+      markRegisterParameterAttributes(F);
     }
   }
 
@@ -6618,7 +6643,7 @@ static bool AllTrivialInitializers(CodeGenModule &CGM,
 void CodeGenModule::EmitObjCIvarInitializations(ObjCImplementationDecl *D) {
   // We might need a .cxx_destruct even if we don't have any ivar initializers.
   if (needsDestructMethod(D)) {
-    IdentifierInfo *II = &getContext().Idents.get(".cxx_destruct");
+    const IdentifierInfo *II = &getContext().Idents.get(".cxx_destruct");
     Selector cxxSelector = getContext().Selectors.getSelector(0, &II);
     ObjCMethodDecl *DTORMethod = ObjCMethodDecl::Create(
         getContext(), D->getLocation(), D->getLocation(), cxxSelector,
@@ -6638,7 +6663,7 @@ void CodeGenModule::EmitObjCIvarInitializations(ObjCImplementationDecl *D) {
       AllTrivialInitializers(*this, D))
     return;
 
-  IdentifierInfo *II = &getContext().Idents.get(".cxx_construct");
+  const IdentifierInfo *II = &getContext().Idents.get(".cxx_construct");
   Selector cxxSelector = getContext().Selectors.getSelector(0, &II);
   // The constructor returns 'self'.
   ObjCMethodDecl *CTORMethod = ObjCMethodDecl::Create(
@@ -7206,7 +7231,7 @@ void CodeGenModule::EmitStaticExternCAliases() {
   if (!getTargetCodeGenInfo().shouldEmitStaticExternCAliases())
     return;
   for (auto &I : StaticExternCValues) {
-    IdentifierInfo *Name = I.first;
+    const IdentifierInfo *Name = I.first;
     llvm::GlobalValue *Val = I.second;
 
     // If Val is null, that implies there were multiple declarations that each
@@ -7267,7 +7292,7 @@ void CodeGenFunction::EmitDeclMetadata() {
 
   for (auto &I : LocalDeclMap) {
     const Decl *D = I.first;
-    llvm::Value *Addr = I.second.getPointer();
+    llvm::Value *Addr = I.second.emitRawPointer(*this);
     if (auto *Alloca = dyn_cast<llvm::AllocaInst>(Addr)) {
       llvm::Value *DAddr = GetPointerConstant(getLLVMContext(), D);
       Alloca->setMetadata(

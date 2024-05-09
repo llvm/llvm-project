@@ -60,9 +60,7 @@ define <vscale x 1 x i8> @strided_vpload_nxv1i8_i64_allones_mask(ptr %ptr, i64 s
 ; CHECK-RV64-NEXT:    vsetvli zero, a2, e8, mf8, ta, ma
 ; CHECK-RV64-NEXT:    vlse8.v v8, (a0), a1
 ; CHECK-RV64-NEXT:    ret
-  %a = insertelement <vscale x 1 x i1> poison, i1 true, i32 0
-  %b = shufflevector <vscale x 1 x i1> %a, <vscale x 1 x i1> poison, <vscale x 1 x i32> zeroinitializer
-  %load = call <vscale x 1 x i8> @llvm.experimental.vp.strided.load.nxv1i8.p0.i64(ptr %ptr, i64 %stride, <vscale x 1 x i1> %b, i32 %evl)
+  %load = call <vscale x 1 x i8> @llvm.experimental.vp.strided.load.nxv1i8.p0.i64(ptr %ptr, i64 %stride, <vscale x 1 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 1 x i8> %load
 }
 
@@ -84,9 +82,7 @@ define <vscale x 1 x i8> @strided_vpload_nxv1i8_allones_mask(ptr %ptr, i32 signe
 ; CHECK-NEXT:    vsetvli zero, a2, e8, mf8, ta, ma
 ; CHECK-NEXT:    vlse8.v v8, (a0), a1
 ; CHECK-NEXT:    ret
-  %a = insertelement <vscale x 1 x i1> poison, i1 true, i32 0
-  %b = shufflevector <vscale x 1 x i1> %a, <vscale x 1 x i1> poison, <vscale x 1 x i32> zeroinitializer
-  %load = call <vscale x 1 x i8> @llvm.experimental.vp.strided.load.nxv1i8.p0.i32(ptr %ptr, i32 signext %stride, <vscale x 1 x i1> %b, i32 %evl)
+  %load = call <vscale x 1 x i8> @llvm.experimental.vp.strided.load.nxv1i8.p0.i32(ptr %ptr, i32 signext %stride, <vscale x 1 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 1 x i8> %load
 }
 
@@ -142,9 +138,7 @@ define <vscale x 8 x i8> @strided_vpload_nxv8i8_allones_mask(ptr %ptr, i32 signe
 ; CHECK-NEXT:    vsetvli zero, a2, e8, m1, ta, ma
 ; CHECK-NEXT:    vlse8.v v8, (a0), a1
 ; CHECK-NEXT:    ret
-  %a = insertelement <vscale x 8 x i1> poison, i1 true, i32 0
-  %b = shufflevector <vscale x 8 x i1> %a, <vscale x 8 x i1> poison, <vscale x 8 x i32> zeroinitializer
-  %load = call <vscale x 8 x i8> @llvm.experimental.vp.strided.load.nxv8i8.p0.i32(ptr %ptr, i32 signext %stride, <vscale x 8 x i1> %b, i32 %evl)
+  %load = call <vscale x 8 x i8> @llvm.experimental.vp.strided.load.nxv8i8.p0.i32(ptr %ptr, i32 signext %stride, <vscale x 8 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 8 x i8> %load
 }
 
@@ -178,9 +172,7 @@ define <vscale x 2 x i16> @strided_vpload_nxv2i16_allones_mask(ptr %ptr, i32 sig
 ; CHECK-NEXT:    vsetvli zero, a2, e16, mf2, ta, ma
 ; CHECK-NEXT:    vlse16.v v8, (a0), a1
 ; CHECK-NEXT:    ret
-  %a = insertelement <vscale x 2 x i1> poison, i1 true, i32 0
-  %b = shufflevector <vscale x 2 x i1> %a, <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer
-  %load = call <vscale x 2 x i16> @llvm.experimental.vp.strided.load.nxv2i16.p0.i32(ptr %ptr, i32 signext %stride, <vscale x 2 x i1> %b, i32 %evl)
+  %load = call <vscale x 2 x i16> @llvm.experimental.vp.strided.load.nxv2i16.p0.i32(ptr %ptr, i32 signext %stride, <vscale x 2 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 2 x i16> %load
 }
 
@@ -270,9 +262,7 @@ define <vscale x 4 x i32> @strided_vpload_nxv4i32_allones_mask(ptr %ptr, i32 sig
 ; CHECK-NEXT:    vsetvli zero, a2, e32, m2, ta, ma
 ; CHECK-NEXT:    vlse32.v v8, (a0), a1
 ; CHECK-NEXT:    ret
-  %a = insertelement <vscale x 4 x i1> poison, i1 true, i32 0
-  %b = shufflevector <vscale x 4 x i1> %a, <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer
-  %load = call <vscale x 4 x i32> @llvm.experimental.vp.strided.load.nxv4i32.p0.i32(ptr %ptr, i32 signext %stride, <vscale x 4 x i1> %b, i32 %evl)
+  %load = call <vscale x 4 x i32> @llvm.experimental.vp.strided.load.nxv4i32.p0.i32(ptr %ptr, i32 signext %stride, <vscale x 4 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 4 x i32> %load
 }
 
@@ -316,9 +306,7 @@ define <vscale x 1 x i64> @strided_vpload_nxv1i64_allones_mask(ptr %ptr, i32 sig
 ; CHECK-NEXT:    vsetvli zero, a2, e64, m1, ta, ma
 ; CHECK-NEXT:    vlse64.v v8, (a0), a1
 ; CHECK-NEXT:    ret
-  %a = insertelement <vscale x 1 x i1> poison, i1 true, i32 0
-  %b = shufflevector <vscale x 1 x i1> %a, <vscale x 1 x i1> poison, <vscale x 1 x i32> zeroinitializer
-  %load = call <vscale x 1 x i64> @llvm.experimental.vp.strided.load.nxv1i64.p0.i32(ptr %ptr, i32 signext %stride, <vscale x 1 x i1> %b, i32 %evl)
+  %load = call <vscale x 1 x i64> @llvm.experimental.vp.strided.load.nxv1i64.p0.i32(ptr %ptr, i32 signext %stride, <vscale x 1 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 1 x i64> %load
 }
 
@@ -388,9 +376,7 @@ define <vscale x 2 x half> @strided_vpload_nxv2f16_allones_mask(ptr %ptr, i32 si
 ; CHECK-NEXT:    vsetvli zero, a2, e16, mf2, ta, ma
 ; CHECK-NEXT:    vlse16.v v8, (a0), a1
 ; CHECK-NEXT:    ret
-  %a = insertelement <vscale x 2 x i1> poison, i1 true, i32 0
-  %b = shufflevector <vscale x 2 x i1> %a, <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer
-  %load = call <vscale x 2 x half> @llvm.experimental.vp.strided.load.nxv2f16.p0.i32(ptr %ptr, i32 signext %stride, <vscale x 2 x i1> %b, i32 %evl)
+  %load = call <vscale x 2 x half> @llvm.experimental.vp.strided.load.nxv2f16.p0.i32(ptr %ptr, i32 signext %stride, <vscale x 2 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 2 x half> %load
 }
 
@@ -492,9 +478,7 @@ define <vscale x 8 x float> @strided_vpload_nxv8f32_allones_mask(ptr %ptr, i32 s
 ; CHECK-NEXT:    vsetvli zero, a2, e32, m4, ta, ma
 ; CHECK-NEXT:    vlse32.v v8, (a0), a1
 ; CHECK-NEXT:    ret
-  %a = insertelement <vscale x 8 x i1> poison, i1 true, i32 0
-  %b = shufflevector <vscale x 8 x i1> %a, <vscale x 8 x i1> poison, <vscale x 8 x i32> zeroinitializer
-  %load = call <vscale x 8 x float> @llvm.experimental.vp.strided.load.nxv8f32.p0.i32(ptr %ptr, i32 signext %stride, <vscale x 8 x i1> %b, i32 %evl)
+  %load = call <vscale x 8 x float> @llvm.experimental.vp.strided.load.nxv8f32.p0.i32(ptr %ptr, i32 signext %stride, <vscale x 8 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 8 x float> %load
 }
 
@@ -550,9 +534,7 @@ define <vscale x 4 x double> @strided_vpload_nxv4f64_allones_mask(ptr %ptr, i32 
 ; CHECK-NEXT:    vsetvli zero, a2, e64, m4, ta, ma
 ; CHECK-NEXT:    vlse64.v v8, (a0), a1
 ; CHECK-NEXT:    ret
-  %a = insertelement <vscale x 4 x i1> poison, i1 true, i32 0
-  %b = shufflevector <vscale x 4 x i1> %a, <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer
-  %load = call <vscale x 4 x double> @llvm.experimental.vp.strided.load.nxv4f64.p0.i32(ptr %ptr, i32 signext %stride, <vscale x 4 x i1> %b, i32 %evl)
+  %load = call <vscale x 4 x double> @llvm.experimental.vp.strided.load.nxv4f64.p0.i32(ptr %ptr, i32 signext %stride, <vscale x 4 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 4 x double> %load
 }
 
@@ -585,9 +567,7 @@ define <vscale x 3 x double> @strided_vpload_nxv3f64_allones_mask(ptr %ptr, i32 
 ; CHECK-NEXT:    vsetvli zero, a2, e64, m4, ta, ma
 ; CHECK-NEXT:    vlse64.v v8, (a0), a1
 ; CHECK-NEXT:    ret
-  %one = insertelement <vscale x 3 x i1> poison, i1 true, i32 0
-  %allones = shufflevector <vscale x 3 x i1> %one, <vscale x 3 x i1> poison, <vscale x 3 x i32> zeroinitializer
-  %v = call <vscale x 3 x double> @llvm.experimental.vp.strided.load.nxv3f64.p0.i32(ptr %ptr, i32 %stride, <vscale x 3 x i1> %allones, i32 %evl)
+  %v = call <vscale x 3 x double> @llvm.experimental.vp.strided.load.nxv3f64.p0.i32(ptr %ptr, i32 %stride, <vscale x 3 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 3 x double> %v
 }
 
@@ -686,9 +666,7 @@ define <vscale x 16 x double> @strided_load_nxv16f64_allones_mask(ptr %ptr, i64 
 ; CHECK-RV64-NEXT:    vsetvli zero, a2, e64, m8, ta, ma
 ; CHECK-RV64-NEXT:    vlse64.v v8, (a0), a1
 ; CHECK-RV64-NEXT:    ret
-  %one = insertelement <vscale x 16 x i1> poison, i1 true, i32 0
-  %allones = shufflevector <vscale x 16 x i1> %one, <vscale x 16 x i1> poison, <vscale x 16 x i32> zeroinitializer
-  %v = call <vscale x 16 x double> @llvm.experimental.vp.strided.load.nxv16f64.p0.i64(ptr %ptr, i64 %stride, <vscale x 16 x i1> %allones, i32 %evl)
+  %v = call <vscale x 16 x double> @llvm.experimental.vp.strided.load.nxv16f64.p0.i64(ptr %ptr, i64 %stride, <vscale x 16 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 16 x double> %v
 }
 

@@ -531,14 +531,6 @@ class VALUVs2<bits<6> funct6, bits<5> vs1, RISCVVFormat opv, string opcodestr>
     : RVInstV<funct6, vs1, opv, (outs VR:$vd),
                (ins VR:$vs2, VMaskOp:$vm),
                opcodestr, "$vd, $vs2$vm">;
-
-// op vd, vs2 (use vs1 as instruction encoding)
-class VALUVs2NoVm<bits<6> funct6, bits<5> vs1, RISCVVFormat opv, string opcodestr>
-    : RVInstV<funct6, vs1, opv, (outs VR:$vd),
-              (ins VR:$vs2), opcodestr,
-              "$vd, $vs2"> {
-  let vm = 1;
-}
 } // hasSideEffects = 0, mayLoad = 0, mayStore = 0
 
 //===----------------------------------------------------------------------===//

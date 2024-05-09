@@ -1212,7 +1212,8 @@ InstructionCost ARMTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
                                            VectorType *Tp, ArrayRef<int> Mask,
                                            TTI::TargetCostKind CostKind,
                                            int Index, VectorType *SubTp,
-                                           ArrayRef<const Value *> Args) {
+                                           ArrayRef<const Value *> Args,
+                                           const Instruction *CxtI) {
   Kind = improveShuffleKindFromMask(Kind, Mask, Tp, Index, SubTp);
   // Treat extractsubvector as single op permutation.
   bool IsExtractSubvector = Kind == TTI::SK_ExtractSubvector;

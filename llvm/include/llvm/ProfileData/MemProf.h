@@ -2,6 +2,7 @@
 #define LLVM_PROFILEDATA_MEMPROF_H_
 
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/GlobalValue.h"
@@ -10,11 +11,30 @@
 #include "llvm/Support/EndianStream.h"
 #include "llvm/Support/raw_ostream.h"
 
+#include <bitset>
 #include <cstdint>
 #include <optional>
 
 namespace llvm {
 namespace memprof {
+
+struct MemProfRecord;
+
+// The versions of the indexed MemProf format
+enum IndexedVersion : uint64_t {
+  // Version 0: This version didn't have a version field.
+  Version0 = 0,
+  // Version 1: Added a version field to the header.
+  Version1 = 1,
+  // Version 2: Added a call stack table.
+  Version2 = 2,
+};
+
+constexpr uint64_t MinimumSupportedVersion = Version0;
+constexpr uint64_t MaximumSupportedVersion = Version2;
+
+// Verify that the minimum and maximum satisfy the obvious constraint.
+static_assert(MinimumSupportedVersion <= MaximumSupportedVersion);
 
 enum class Meta : uint64_t {
   Start = 0,
@@ -26,12 +46,21 @@ enum class Meta : uint64_t {
 
 using MemProfSchema = llvm::SmallVector<Meta, static_cast<int>(Meta::Size)>;
 
+// Returns the full schema currently in use.
+MemProfSchema getFullSchema();
+
+// Returns the schema consisting of the fields used for hot cold memory hinting.
+MemProfSchema getHotColdSchema();
+
 // Holds the actual MemInfoBlock data with all fields. Contents may be read or
 // written partially by providing an appropriate schema to the serialize and
 // deserialize methods.
 struct PortableMemInfoBlock {
   PortableMemInfoBlock() = default;
-  explicit PortableMemInfoBlock(const MemInfoBlock &Block) {
+  explicit PortableMemInfoBlock(const MemInfoBlock &Block,
+                                const MemProfSchema &IncomingSchema) {
+    for (const Meta Id : IncomingSchema)
+      Schema.set(llvm::to_underlying(Id));
 #define MIBEntryDef(NameTag, Name, Type) Name = Block.Name;
 #include "llvm/ProfileData/MIBEntryDef.inc"
 #undef MIBEntryDef
@@ -43,14 +72,16 @@ struct PortableMemInfoBlock {
 
   // Read the contents of \p Ptr based on the \p Schema to populate the
   // MemInfoBlock member.
-  void deserialize(const MemProfSchema &Schema, const unsigned char *Ptr) {
+  void deserialize(const MemProfSchema &IncomingSchema,
+                   const unsigned char *Ptr) {
     using namespace support;
 
-    for (const Meta Id : Schema) {
+    Schema.reset();
+    for (const Meta Id : IncomingSchema) {
       switch (Id) {
 #define MIBEntryDef(NameTag, Name, Type)                                       \
   case Meta::Name: {                                                           \
-    Name = endian::readNext<Type, llvm::endianness::little, unaligned>(Ptr);   \
+    Name = endian::readNext<Type, llvm::endianness::little>(Ptr);              \
   } break;
 #include "llvm/ProfileData/MIBEntryDef.inc"
 #undef MIBEntryDef
@@ -58,6 +89,8 @@ struct PortableMemInfoBlock {
         llvm_unreachable("Unknown meta type id, is the profile collected from "
                          "a newer version of the runtime?");
       }
+
+      Schema.set(llvm::to_underlying(Id));
     }
   }
 
@@ -90,26 +123,29 @@ struct PortableMemInfoBlock {
 #undef MIBEntryDef
   }
 
+  // Return the schema, only for unit tests.
+  std::bitset<llvm::to_underlying(Meta::Size)> getSchema() const {
+    return Schema;
+  }
+
   // Define getters for each type which can be called by analyses.
 #define MIBEntryDef(NameTag, Name, Type)                                       \
-  Type get##Name() const { return Name; }
+  Type get##Name() const {                                                     \
+    assert(Schema[llvm::to_underlying(Meta::Name)]);                           \
+    return Name;                                                               \
+  }
 #include "llvm/ProfileData/MIBEntryDef.inc"
 #undef MIBEntryDef
 
   void clear() { *this = PortableMemInfoBlock(); }
 
-  // Returns the full schema currently in use.
-  static MemProfSchema getSchema() {
-    MemProfSchema List;
-#define MIBEntryDef(NameTag, Name, Type) List.push_back(Meta::Name);
-#include "llvm/ProfileData/MIBEntryDef.inc"
-#undef MIBEntryDef
-    return List;
-  }
-
   bool operator==(const PortableMemInfoBlock &Other) const {
+    if (Other.Schema != Schema)
+      return false;
+
 #define MIBEntryDef(NameTag, Name, Type)                                       \
-  if (Other.get##Name() != get##Name())                                        \
+  if (Schema[llvm::to_underlying(Meta::Name)] &&                               \
+      Other.get##Name() != get##Name())                                        \
     return false;
 #include "llvm/ProfileData/MIBEntryDef.inc"
 #undef MIBEntryDef
@@ -120,15 +156,29 @@ struct PortableMemInfoBlock {
     return !operator==(Other);
   }
 
-  static constexpr size_t serializedSize() {
+  static size_t serializedSize(const MemProfSchema &Schema) {
     size_t Result = 0;
-#define MIBEntryDef(NameTag, Name, Type) Result += sizeof(Type);
+
+    for (const Meta Id : Schema) {
+      switch (Id) {
+#define MIBEntryDef(NameTag, Name, Type)                                       \
+  case Meta::Name: {                                                           \
+    Result += sizeof(Type);                                                    \
+  } break;
 #include "llvm/ProfileData/MIBEntryDef.inc"
 #undef MIBEntryDef
+      default:
+        llvm_unreachable("Unknown meta type id, invalid input?");
+      }
+    }
+
     return Result;
   }
 
 private:
+  // The set of available fields, indexed by Meta::Name.
+  std::bitset<llvm::to_underlying(Meta::Size)> Schema;
+
 #define MIBEntryDef(NameTag, Name, Type) Type Name = Type();
 #include "llvm/ProfileData/MIBEntryDef.inc"
 #undef MIBEntryDef
@@ -205,13 +255,12 @@ struct Frame {
     using namespace support;
 
     const uint64_t F =
-        endian::readNext<uint64_t, llvm::endianness::little, unaligned>(Ptr);
+        endian::readNext<uint64_t, llvm::endianness::little>(Ptr);
     const uint32_t L =
-        endian::readNext<uint32_t, llvm::endianness::little, unaligned>(Ptr);
+        endian::readNext<uint32_t, llvm::endianness::little>(Ptr);
     const uint32_t C =
-        endian::readNext<uint32_t, llvm::endianness::little, unaligned>(Ptr);
-    const bool I =
-        endian::readNext<bool, llvm::endianness::little, unaligned>(Ptr);
+        endian::readNext<uint32_t, llvm::endianness::little>(Ptr);
+    const bool I = endian::readNext<bool, llvm::endianness::little>(Ptr);
     return Frame(/*Function=*/F, /*LineOffset=*/L, /*Column=*/C,
                  /*IsInlineFrame=*/I);
   }
@@ -271,27 +320,20 @@ struct IndexedAllocationInfo {
 
   IndexedAllocationInfo() = default;
   IndexedAllocationInfo(ArrayRef<FrameId> CS, CallStackId CSId,
-                        const MemInfoBlock &MB)
-      : CallStack(CS.begin(), CS.end()), CSId(CSId), Info(MB) {}
+                        const MemInfoBlock &MB,
+                        const MemProfSchema &Schema = getFullSchema())
+      : CallStack(CS.begin(), CS.end()), CSId(CSId), Info(MB, Schema) {}
 
   // Returns the size in bytes when this allocation info struct is serialized.
-  size_t serializedSize() const {
-    return sizeof(uint64_t) + // The number of frames to serialize.
-           sizeof(FrameId) * CallStack.size() +    // The callstack frame ids.
-           PortableMemInfoBlock::serializedSize(); // The size of the payload.
-  }
+  size_t serializedSize(const MemProfSchema &Schema,
+                        IndexedVersion Version) const;
 
   bool operator==(const IndexedAllocationInfo &Other) const {
     if (Other.Info != Info)
       return false;
 
-    if (Other.CallStack.size() != CallStack.size())
+    if (Other.CSId != CSId)
       return false;
-
-    for (size_t J = 0; J < Other.CallStack.size(); J++) {
-      if (Other.CallStack[J] != CallStack[J])
-        return false;
-    }
     return true;
   }
 
@@ -343,6 +385,9 @@ struct IndexedMemProfRecord {
   // inline location list may include additional entries, users should pick
   // the last entry in the list with the same function GUID.
   llvm::SmallVector<llvm::SmallVector<FrameId>> CallSites;
+  // Conceptually the same as above.  We are going to keep both CallSites and
+  // CallSiteIds while we are transitioning from CallSites to CallSiteIds.
+  llvm::SmallVector<CallStackId> CallSiteIds;
 
   void clear() {
     AllocSites.clear();
@@ -356,47 +401,33 @@ struct IndexedMemProfRecord {
     CallSites.append(Other.CallSites);
   }
 
-  size_t serializedSize() const {
-    size_t Result = sizeof(GlobalValue::GUID);
-    for (const IndexedAllocationInfo &N : AllocSites)
-      Result += N.serializedSize();
-
-    // The number of callsites we have information for.
-    Result += sizeof(uint64_t);
-    for (const auto &Frames : CallSites) {
-      // The number of frame ids to serialize.
-      Result += sizeof(uint64_t);
-      Result += Frames.size() * sizeof(FrameId);
-    }
-    return Result;
-  }
+  size_t serializedSize(const MemProfSchema &Schema,
+                        IndexedVersion Version) const;
 
   bool operator==(const IndexedMemProfRecord &Other) const {
-    if (Other.AllocSites.size() != AllocSites.size())
+    if (Other.AllocSites != AllocSites)
       return false;
 
-    if (Other.CallSites.size() != CallSites.size())
+    if (Other.CallSiteIds != CallSiteIds)
       return false;
-
-    for (size_t I = 0; I < AllocSites.size(); I++) {
-      if (AllocSites[I] != Other.AllocSites[I])
-        return false;
-    }
-
-    for (size_t I = 0; I < CallSites.size(); I++) {
-      if (CallSites[I] != Other.CallSites[I])
-        return false;
-    }
     return true;
   }
 
   // Serializes the memprof records in \p Records to the ostream \p OS based
   // on the schema provided in \p Schema.
-  void serialize(const MemProfSchema &Schema, raw_ostream &OS);
+  void serialize(const MemProfSchema &Schema, raw_ostream &OS,
+                 IndexedVersion Version);
 
   // Deserializes memprof records from the Buffer.
   static IndexedMemProfRecord deserialize(const MemProfSchema &Schema,
-                                          const unsigned char *Buffer);
+                                          const unsigned char *Buffer,
+                                          IndexedVersion Version);
+
+  // Convert IndexedMemProfRecord to MemProfRecord.  Callback is used to
+  // translate CallStackId to call stacks with frames inline.
+  MemProfRecord toMemProfRecord(
+      std::function<const llvm::SmallVector<Frame>(const CallStackId)> Callback)
+      const;
 
   // Returns the GUID for the function name after canonicalization. For
   // memprof, we remove any .llvm suffix added by LTO. MemProfRecords are
@@ -466,7 +497,8 @@ public:
   using offset_type = uint64_t;
 
   RecordLookupTrait() = delete;
-  RecordLookupTrait(const MemProfSchema &S) : Schema(S) {}
+  RecordLookupTrait(IndexedVersion V, const MemProfSchema &S)
+      : Version(V), Schema(S) {}
 
   static bool EqualKey(uint64_t A, uint64_t B) { return A == B; }
   static uint64_t GetInternalKey(uint64_t K) { return K; }
@@ -479,25 +511,26 @@ public:
     using namespace support;
 
     offset_type KeyLen =
-        endian::readNext<offset_type, llvm::endianness::little, unaligned>(D);
+        endian::readNext<offset_type, llvm::endianness::little>(D);
     offset_type DataLen =
-        endian::readNext<offset_type, llvm::endianness::little, unaligned>(D);
+        endian::readNext<offset_type, llvm::endianness::little>(D);
     return std::make_pair(KeyLen, DataLen);
   }
 
   uint64_t ReadKey(const unsigned char *D, offset_type /*Unused*/) {
     using namespace support;
-    return endian::readNext<external_key_type, llvm::endianness::little,
-                            unaligned>(D);
+    return endian::readNext<external_key_type, llvm::endianness::little>(D);
   }
 
   data_type ReadData(uint64_t K, const unsigned char *D,
                      offset_type /*Unused*/) {
-    Record = IndexedMemProfRecord::deserialize(Schema, D);
+    Record = IndexedMemProfRecord::deserialize(Schema, D, Version);
     return Record;
   }
 
 private:
+  // Holds the MemProf version.
+  IndexedVersion Version;
   // Holds the memprof schema used to deserialize records.
   MemProfSchema Schema;
   // Holds the records from one function deserialized from the indexed format.
@@ -516,23 +549,28 @@ public:
   using hash_value_type = uint64_t;
   using offset_type = uint64_t;
 
-  // Pointer to the memprof schema to use for the generator. Unlike the reader
-  // we must use a default constructor with no params for the writer trait so we
-  // have a public member which must be initialized by the user.
-  MemProfSchema *Schema = nullptr;
+private:
+  // Pointer to the memprof schema to use for the generator.
+  const MemProfSchema *Schema;
+  // The MemProf version to use for the serialization.
+  IndexedVersion Version;
 
-  RecordWriterTrait() = default;
+public:
+  // We do not support the default constructor, which does not set Version.
+  RecordWriterTrait() = delete;
+  RecordWriterTrait(const MemProfSchema *Schema, IndexedVersion V)
+      : Schema(Schema), Version(V) {}
 
   static hash_value_type ComputeHash(key_type_ref K) { return K; }
 
-  static std::pair<offset_type, offset_type>
+  std::pair<offset_type, offset_type>
   EmitKeyDataLength(raw_ostream &Out, key_type_ref K, data_type_ref V) {
     using namespace support;
 
     endian::Writer LE(Out, llvm::endianness::little);
     offset_type N = sizeof(K);
     LE.write<offset_type>(N);
-    offset_type M = V.serializedSize();
+    offset_type M = V.serializedSize(*Schema, Version);
     LE.write<offset_type>(M);
     return std::make_pair(N, M);
   }
@@ -546,7 +584,7 @@ public:
   void EmitData(raw_ostream &Out, key_type_ref /*Unused*/, data_type_ref V,
                 offset_type /*Unused*/) {
     assert(Schema != nullptr && "MemProf schema is not initialized!");
-    V.serialize(*Schema, Out);
+    V.serialize(*Schema, Out, Version);
     // Clear the IndexedMemProfRecord which results in clearing/freeing its
     // vectors of allocs and callsites. This is owned by the associated on-disk
     // hash table, but unused after this point. See also the comment added to
@@ -614,16 +652,15 @@ public:
     using namespace support;
 
     offset_type KeyLen =
-        endian::readNext<offset_type, llvm::endianness::little, unaligned>(D);
+        endian::readNext<offset_type, llvm::endianness::little>(D);
     offset_type DataLen =
-        endian::readNext<offset_type, llvm::endianness::little, unaligned>(D);
+        endian::readNext<offset_type, llvm::endianness::little>(D);
     return std::make_pair(KeyLen, DataLen);
   }
 
   uint64_t ReadKey(const unsigned char *D, offset_type /*Unused*/) {
     using namespace support;
-    return endian::readNext<external_key_type, llvm::endianness::little,
-                            unaligned>(D);
+    return endian::readNext<external_key_type, llvm::endianness::little>(D);
   }
 
   data_type ReadData(uint64_t K, const unsigned char *D,
@@ -632,8 +669,156 @@ public:
   }
 };
 
+// Trait for writing call stacks to the on-disk hash table.
+class CallStackWriterTrait {
+public:
+  using key_type = CallStackId;
+  using key_type_ref = CallStackId;
+
+  using data_type = llvm::SmallVector<FrameId>;
+  using data_type_ref = llvm::SmallVector<FrameId> &;
+
+  using hash_value_type = CallStackId;
+  using offset_type = uint64_t;
+
+  static hash_value_type ComputeHash(key_type_ref K) { return K; }
+
+  static std::pair<offset_type, offset_type>
+  EmitKeyDataLength(raw_ostream &Out, key_type_ref K, data_type_ref V) {
+    using namespace support;
+    endian::Writer LE(Out, llvm::endianness::little);
+    // We do not explicitly emit the key length because it is a constant.
+    offset_type N = sizeof(K);
+    offset_type M = sizeof(FrameId) * V.size();
+    LE.write<offset_type>(M);
+    return std::make_pair(N, M);
+  }
+
+  void EmitKey(raw_ostream &Out, key_type_ref K, offset_type /*Unused*/) {
+    using namespace support;
+    endian::Writer LE(Out, llvm::endianness::little);
+    LE.write<key_type>(K);
+  }
+
+  void EmitData(raw_ostream &Out, key_type_ref /*Unused*/, data_type_ref V,
+                offset_type /*Unused*/) {
+    using namespace support;
+    endian::Writer LE(Out, llvm::endianness::little);
+    // Emit the frames.  We do not explicitly emit the length of the vector
+    // because it can be inferred from the data length.
+    for (FrameId F : V)
+      LE.write<FrameId>(F);
+  }
+};
+
+// Trait for reading call stack mappings from the on-disk hash table.
+class CallStackLookupTrait {
+public:
+  using data_type = const llvm::SmallVector<FrameId>;
+  using internal_key_type = CallStackId;
+  using external_key_type = CallStackId;
+  using hash_value_type = CallStackId;
+  using offset_type = uint64_t;
+
+  static bool EqualKey(internal_key_type A, internal_key_type B) {
+    return A == B;
+  }
+  static uint64_t GetInternalKey(internal_key_type K) { return K; }
+  static uint64_t GetExternalKey(external_key_type K) { return K; }
+
+  hash_value_type ComputeHash(internal_key_type K) { return K; }
+
+  static std::pair<offset_type, offset_type>
+  ReadKeyDataLength(const unsigned char *&D) {
+    using namespace support;
+
+    // We do not explicitly read the key length because it is a constant.
+    offset_type KeyLen = sizeof(external_key_type);
+    offset_type DataLen =
+        endian::readNext<offset_type, llvm::endianness::little>(D);
+    return std::make_pair(KeyLen, DataLen);
+  }
+
+  uint64_t ReadKey(const unsigned char *D, offset_type /*Unused*/) {
+    using namespace support;
+    return endian::readNext<external_key_type, llvm::endianness::little>(D);
+  }
+
+  data_type ReadData(uint64_t K, const unsigned char *D, offset_type Length) {
+    using namespace support;
+    llvm::SmallVector<FrameId> CS;
+    // Derive the number of frames from the data length.
+    uint64_t NumFrames = Length / sizeof(FrameId);
+    assert(Length % sizeof(FrameId) == 0);
+    CS.reserve(NumFrames);
+    for (size_t I = 0; I != NumFrames; ++I) {
+      FrameId F = endian::readNext<FrameId, llvm::endianness::little>(D);
+      CS.push_back(F);
+    }
+    return CS;
+  }
+};
+
 // Compute a CallStackId for a given call stack.
 CallStackId hashCallStack(ArrayRef<FrameId> CS);
+
+namespace detail {
+// "Dereference" the iterator from DenseMap or OnDiskChainedHashTable.  We have
+// to do so in one of two different ways depending on the type of the hash
+// table.
+template <typename value_type, typename IterTy>
+value_type DerefIterator(IterTy Iter) {
+  using deref_type = llvm::remove_cvref_t<decltype(*Iter)>;
+  if constexpr (std::is_same_v<deref_type, value_type>)
+    return *Iter;
+  else
+    return Iter->second;
+}
+} // namespace detail
+
+// A function object that returns a frame for a given FrameId.
+template <typename MapTy> struct FrameIdConverter {
+  std::optional<FrameId> LastUnmappedId;
+  MapTy &Map;
+
+  FrameIdConverter() = delete;
+  FrameIdConverter(MapTy &Map) : Map(Map) {}
+
+  Frame operator()(FrameId Id) {
+    auto Iter = Map.find(Id);
+    if (Iter == Map.end()) {
+      LastUnmappedId = Id;
+      return Frame(0, 0, 0, false);
+    }
+    return detail::DerefIterator<Frame>(Iter);
+  }
+};
+
+// A function object that returns a call stack for a given CallStackId.
+template <typename MapTy> struct CallStackIdConverter {
+  std::optional<CallStackId> LastUnmappedId;
+  MapTy &Map;
+  std::function<Frame(FrameId)> FrameIdToFrame;
+
+  CallStackIdConverter() = delete;
+  CallStackIdConverter(MapTy &Map, std::function<Frame(FrameId)> FrameIdToFrame)
+      : Map(Map), FrameIdToFrame(FrameIdToFrame) {}
+
+  llvm::SmallVector<Frame> operator()(CallStackId CSId) {
+    llvm::SmallVector<Frame> Frames;
+    auto CSIter = Map.find(CSId);
+    if (CSIter == Map.end()) {
+      LastUnmappedId = CSId;
+    } else {
+      llvm::SmallVector<FrameId> CS =
+          detail::DerefIterator<llvm::SmallVector<FrameId>>(CSIter);
+      Frames.reserve(CS.size());
+      for (FrameId Id : CS)
+        Frames.push_back(FrameIdToFrame(Id));
+    }
+    return Frames;
+  }
+};
 
 // Verify that each CallStackId is computed with hashCallStack.  This function
 // is intended to help transition from CallStack to CSId in

@@ -27,7 +27,7 @@
 #include "PPCTargetStreamer.h"
 #include "TargetInfo/PowerPCTargetInfo.h"
 #include "llvm/ADT/MapVector.h"
-#include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -205,8 +205,8 @@ public:
   void LowerPATCHPOINT(StackMaps &SM, const MachineInstr &MI);
   void EmitTlsCall(const MachineInstr *MI, MCSymbolRefExpr::VariantKind VK);
   void EmitAIXTlsCallHelper(const MachineInstr *MI);
-  const MCExpr *getAdjustedLocalExecExpr(const MachineOperand &MO,
-                                         int64_t Offset);
+  const MCExpr *getAdjustedFasterLocalExpr(const MachineOperand &MO,
+                                           int64_t Offset);
   bool runOnMachineFunction(MachineFunction &MF) override {
     Subtarget = &MF.getSubtarget<PPCSubtarget>();
     bool Changed = AsmPrinter::runOnMachineFunction(MF);
@@ -242,7 +242,7 @@ class PPCAIXAsmPrinter : public PPCAsmPrinter {
 private:
   /// Symbols lowered from ExternalSymbolSDNodes, we will need to emit extern
   /// linkage for them in AIX.
-  SmallPtrSet<MCSymbol *, 8> ExtSymSDNodeSymbols;
+  SmallSetVector<MCSymbol *, 8> ExtSymSDNodeSymbols;
 
   /// A format indicator and unique trailing identifier to form part of the
   /// sinit/sterm function names.
@@ -803,7 +803,8 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
   MCInst TmpInst;
   const bool IsPPC64 = Subtarget->isPPC64();
   const bool IsAIX = Subtarget->isAIXABI();
-  const bool HasAIXSmallLocalExecTLS = Subtarget->hasAIXSmallLocalExecTLS();
+  const bool HasAIXSmallLocalTLS = Subtarget->hasAIXSmallLocalExecTLS() ||
+                                   Subtarget->hasAIXSmallLocalDynamicTLS();
   const Module *M = MF->getFunction().getParent();
   PICLevel::Level PL = M->getPICLevel();
 
@@ -877,6 +878,15 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
         return MCSymbolRefExpr::VariantKind::VK_PPC_AIX_TLSLE;
       if (Model == TLSModel::InitialExec)
         return MCSymbolRefExpr::VariantKind::VK_PPC_AIX_TLSIE;
+      // On AIX, TLS model opt may have turned local-dynamic accesses into
+      // initial-exec accesses.
+      PPCFunctionInfo *FuncInfo = MF->getInfo<PPCFunctionInfo>();
+      if (Model == TLSModel::LocalDynamic &&
+          FuncInfo->isAIXFuncUseTLSIEForLD()) {
+        LLVM_DEBUG(
+            dbgs() << "Current function uses IE access for default LD vars.\n");
+        return MCSymbolRefExpr::VariantKind::VK_PPC_AIX_TLSIE;
+      }
       llvm_unreachable("Only expecting local-exec or initial-exec accesses!");
     }
     // For GD TLS access on AIX, we have two TOC entries for the symbol (one for
@@ -1147,15 +1157,27 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
 
     MCSymbolRefExpr::VariantKind VK = GetVKForMO(MO);
 
-    // Always use TOC on AIX. Map the global address operand to be a reference
-    // to the TOC entry we will synthesize later. 'TOCEntry' is a label used to
-    // reference the storage allocated in the TOC which contains the address of
-    // 'MOSymbol'.
-    MCSymbol *TOCEntry =
-        lookUpOrCreateTOCEntry(MOSymbol, getTOCEntryTypeForMO(MO), VK);
-    const MCExpr *Exp = MCSymbolRefExpr::create(TOCEntry,
-                                                MCSymbolRefExpr::VK_PPC_U,
-                                                OutContext);
+    // If the symbol isn't toc-data then use the TOC on AIX.
+    // Map the global address operand to be a reference to the TOC entry we
+    // will synthesize later. 'TOCEntry' is a label used to reference the
+    // storage allocated in the TOC which contains the address of 'MOSymbol'.
+    // If the toc-data attribute is used, the TOC entry contains the data
+    // rather than the address of the MOSymbol.
+    if (![](const MachineOperand &MO) {
+          if (!MO.isGlobal())
+            return false;
+
+          const GlobalVariable *GV = dyn_cast<GlobalVariable>(MO.getGlobal());
+          if (!GV)
+            return false;
+
+          return GV->hasAttribute("toc-data");
+        }(MO)) {
+      MOSymbol = lookUpOrCreateTOCEntry(MOSymbol, getTOCEntryTypeForMO(MO), VK);
+    }
+
+    const MCExpr *Exp = MCSymbolRefExpr::create(
+        MOSymbol, MCSymbolRefExpr::VK_PPC_U, OutContext);
     TmpInst.getOperand(2) = MCOperand::createExpr(Exp);
     EmitToStreamer(*OutStreamer, TmpInst);
     return;
@@ -1272,25 +1294,32 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
     EmitToStreamer(*OutStreamer, TmpInst);
     return;
   }
+  case PPC::ADDItocL:
   case PPC::ADDItocL8: {
-    // Transform %xd = ADDItocL8 %xs, @sym
+    // Transform %xd = ADDItocL %xs, @sym
     LowerPPCMachineInstrToMCInst(MI, TmpInst, *this);
 
-    // Change the opcode to ADDI8. If the global address is external, then
-    // generate a TOC entry and reference that. Otherwise, reference the
-    // symbol directly.
-    TmpInst.setOpcode(PPC::ADDI8);
+    unsigned Op = MI->getOpcode();
+
+    // Change the opcode to load address for tocdata
+    TmpInst.setOpcode(Op == PPC::ADDItocL8 ? PPC::ADDI8 : PPC::LA);
 
     const MachineOperand &MO = MI->getOperand(2);
-    assert((MO.isGlobal() || MO.isCPI()) && "Invalid operand for ADDItocL8.");
+    assert((Op == PPC::ADDItocL8)
+               ? (MO.isGlobal() || MO.isCPI())
+               : MO.isGlobal() && "Invalid operand for ADDItocL8.");
+    assert(!(MO.isGlobal() && Subtarget->isGVIndirectSymbol(MO.getGlobal())) &&
+           "Interposable definitions must use indirect accesses.");
 
-    LLVM_DEBUG(assert(
-        !(MO.isGlobal() && Subtarget->isGVIndirectSymbol(MO.getGlobal())) &&
-        "Interposable definitions must use indirect access."));
+    // Map the operand to its corresponding MCSymbol.
+    const MCSymbol *const MOSymbol = getMCSymbolForTOCPseudoMO(MO, *this);
 
-    const MCExpr *Exp =
-        MCSymbolRefExpr::create(getMCSymbolForTOCPseudoMO(MO, *this),
-                                MCSymbolRefExpr::VK_PPC_TOC_LO, OutContext);
+    const MCExpr *Exp = MCSymbolRefExpr::create(
+        MOSymbol,
+        Op == PPC::ADDItocL8 ? MCSymbolRefExpr::VK_PPC_TOC_LO
+                             : MCSymbolRefExpr::VK_PPC_L,
+        OutContext);
+
     TmpInst.getOperand(2) = MCOperand::createExpr(Exp);
     EmitToStreamer(*OutStreamer, TmpInst);
     return;
@@ -1578,7 +1607,8 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
     // machine operand (which is a TargetGlobalTLSAddress) is expected to be
     // the same operand for both loads and stores.
     for (const MachineOperand &TempMO : MI->operands()) {
-      if (((TempMO.getTargetFlags() == PPCII::MO_TPREL_FLAG)) &&
+      if (((TempMO.getTargetFlags() == PPCII::MO_TPREL_FLAG ||
+            TempMO.getTargetFlags() == PPCII::MO_TLSLD_FLAG)) &&
           TempMO.getOperandNo() == 1)
         OpNum = 1;
     }
@@ -1612,11 +1642,11 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
   case PPC::LFD:
   case PPC::STFD:
   case PPC::ADDI8: {
-    // A faster non-TOC-based local-exec sequence is represented by `addi`
-    // or a load/store instruction (that directly loads or stores off of the
-    // thread pointer) with an immediate operand having the MO_TPREL_FLAG.
-    // Such instructions do not otherwise arise.
-    if (!HasAIXSmallLocalExecTLS)
+    // A faster non-TOC-based local-[exec|dynamic] sequence is represented by
+    // `addi` or a load/store instruction (that directly loads or stores off of
+    // the thread pointer) with an immediate operand having the
+    // [MO_TPREL_FLAG|MO_TLSLD_FLAG]. Such instructions do not otherwise arise.
+    if (!HasAIXSmallLocalTLS)
       break;
     bool IsMIADDI8 = MI->getOpcode() == PPC::ADDI8;
     unsigned OpNum = IsMIADDI8 ? 2 : 1;
@@ -1624,10 +1654,10 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
     unsigned Flag = MO.getTargetFlags();
     if (Flag == PPCII::MO_TPREL_FLAG ||
         Flag == PPCII::MO_GOT_TPREL_PCREL_FLAG ||
-        Flag == PPCII::MO_TPREL_PCREL_FLAG) {
+        Flag == PPCII::MO_TPREL_PCREL_FLAG || Flag == PPCII::MO_TLSLD_FLAG) {
       LowerPPCMachineInstrToMCInst(MI, TmpInst, *this);
 
-      const MCExpr *Expr = getAdjustedLocalExecExpr(MO, MO.getOffset());
+      const MCExpr *Expr = getAdjustedFasterLocalExpr(MO, MO.getOffset());
       if (Expr)
         TmpInst.getOperand(OpNum) = MCOperand::createExpr(Expr);
 
@@ -1657,14 +1687,15 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
   EmitToStreamer(*OutStreamer, TmpInst);
 }
 
-// For non-TOC-based local-exec variables that have a non-zero offset,
+// For non-TOC-based local-[exec|dynamic] variables that have a non-zero offset,
 // we need to create a new MCExpr that adds the non-zero offset to the address
-// of the local-exec variable that will be used in either an addi, load or
-// store. However, the final displacement for these instructions must be
+// of the local-[exec|dynamic] variable that will be used in either an addi,
+// load or store. However, the final displacement for these instructions must be
 // between [-32768, 32768), so if the TLS address + its non-zero offset is
 // greater than 32KB, a new MCExpr is produced to accommodate this situation.
-const MCExpr *PPCAsmPrinter::getAdjustedLocalExecExpr(const MachineOperand &MO,
-                                                      int64_t Offset) {
+const MCExpr *
+PPCAsmPrinter::getAdjustedFasterLocalExpr(const MachineOperand &MO,
+                                          int64_t Offset) {
   // Non-zero offsets (for loads, stores or `addi`) require additional handling.
   // When the offset is zero, there is no need to create an adjusted MCExpr.
   if (!Offset)
@@ -1672,8 +1703,9 @@ const MCExpr *PPCAsmPrinter::getAdjustedLocalExecExpr(const MachineOperand &MO,
 
   assert(MO.isGlobal() && "Only expecting a global MachineOperand here!");
   const GlobalValue *GValue = MO.getGlobal();
-  assert(TM.getTLSModel(GValue) == TLSModel::LocalExec &&
-         "Only local-exec accesses are handled!");
+  TLSModel::Model Model = TM.getTLSModel(GValue);
+  assert((Model == TLSModel::LocalExec || Model == TLSModel::LocalDynamic) &&
+         "Only local-[exec|dynamic] accesses are handled!");
 
   bool IsGlobalADeclaration = GValue->isDeclarationForLinker();
   // Find the GlobalVariable that corresponds to the particular TLS variable
@@ -1694,7 +1726,10 @@ const MCExpr *PPCAsmPrinter::getAdjustedLocalExecExpr(const MachineOperand &MO,
   // For when TLS variables are extern, this is safe to do because we can
   // assume that the address of extern TLS variables are zero.
   const MCExpr *Expr = MCSymbolRefExpr::create(
-      getSymbol(GValue), MCSymbolRefExpr::VK_PPC_AIX_TLSLE, OutContext);
+      getSymbol(GValue),
+      Model == TLSModel::LocalExec ? MCSymbolRefExpr::VK_PPC_AIX_TLSLE
+                                   : MCSymbolRefExpr::VK_PPC_AIX_TLSLD,
+      OutContext);
   Expr = MCBinaryExpr::createAdd(
       Expr, MCConstantExpr::create(Offset, OutContext), OutContext);
   if (FinalAddress >= 32768) {
@@ -1707,10 +1742,10 @@ const MCExpr *PPCAsmPrinter::getAdjustedLocalExecExpr(const MachineOperand &MO,
     ptrdiff_t Delta = ((FinalAddress + 32768) & ~0xFFFF);
     // Check that the total instruction displacement fits within [-32768,32768).
     [[maybe_unused]] ptrdiff_t InstDisp = TLSVarAddress + Offset - Delta;
-    assert(((InstDisp < 32768) &&
-            (InstDisp >= -32768)) &&
-               "Expecting the instruction displacement for local-exec TLS "
-               "variables to be between [-32768, 32768)!");
+    assert(
+        ((InstDisp < 32768) && (InstDisp >= -32768)) &&
+        "Expecting the instruction displacement for local-[exec|dynamic] TLS "
+        "variables to be between [-32768, 32768)!");
     Expr = MCBinaryExpr::createAdd(
         Expr, MCConstantExpr::create(-Delta, OutContext), OutContext);
   }
@@ -2871,7 +2906,7 @@ void PPCAIXAsmPrinter::emitPGORefs(Module &M) {
   bool HasNonZeroLengthPrfCntsSection = false;
   const DataLayout &DL = M.getDataLayout();
   for (GlobalVariable &GV : M.globals())
-    if (GV.hasSection() && GV.getSection().equals("__llvm_prf_cnts") &&
+    if (GV.hasSection() && GV.getSection() == "__llvm_prf_cnts" &&
         DL.getTypeAllocSize(GV.getValueType()) > 0) {
       HasNonZeroLengthPrfCntsSection = true;
       break;
@@ -2924,7 +2959,11 @@ void PPCAIXAsmPrinter::emitEndOfAsmFile(Module &M) {
     // Setup the csect for the current TC entry. If the variant kind is
     // VK_PPC_AIX_TLSGDM the entry represents the region handle, we create a
     // new symbol to prefix the name with a dot.
-    if (I.first.second == MCSymbolRefExpr::VariantKind::VK_PPC_AIX_TLSGDM) {
+    // If TLS model opt is turned on, create a new symbol to prefix the name
+    // with a dot.
+    if (I.first.second == MCSymbolRefExpr::VariantKind::VK_PPC_AIX_TLSGDM ||
+        (Subtarget->hasAIXShLibTLSModelOpt() &&
+         I.first.second == MCSymbolRefExpr::VariantKind::VK_PPC_AIX_TLSLD)) {
       SmallString<128> Name;
       StringRef Prefix = ".";
       Name += Prefix;

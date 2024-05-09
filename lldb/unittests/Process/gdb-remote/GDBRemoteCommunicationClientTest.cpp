@@ -592,3 +592,26 @@ TEST_F(GDBRemoteCommunicationClientTest, WriteMemoryTags) {
                  std::vector<uint8_t>{0x99}, "QMemTags:456789,0:80000000:99",
                  "E03", false);
 }
+
+TEST_F(GDBRemoteCommunicationClientTest, CalculateMD5) {
+  FileSpec file_spec("/foo/bar", FileSpec::Style::posix);
+  uint64_t low, high;
+  std::future<bool> async_result = std::async(std::launch::async, [&] {
+    return client.CalculateMD5(file_spec, low, high);
+  });
+
+  lldb_private::StreamString stream;
+  stream.PutCString("vFile:MD5:");
+  stream.PutStringAsRawHex8(file_spec.GetPath(false));
+  HandlePacket(server, stream.GetString().str(),
+               "F,"
+               "deadbeef01020304"
+               "05060708deadbeef");
+  ASSERT_TRUE(async_result.get());
+
+  // Server and client puts/parses low, and then high
+  const uint64_t expected_low = 0xdeadbeef01020304;
+  const uint64_t expected_high = 0x05060708deadbeef;
+  EXPECT_EQ(expected_low, low);
+  EXPECT_EQ(expected_high, high);
+}

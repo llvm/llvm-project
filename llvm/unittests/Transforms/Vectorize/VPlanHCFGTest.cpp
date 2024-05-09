@@ -96,7 +96,7 @@ TEST_F(VPlanHCFGTest, testBuildHCFGInnerLoop) {
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   // Add an external value to check we do not print the list of external values,
   // as this is not required with the new printing.
-  Plan->getVPValueOrAddLiveIn(&*F->arg_begin());
+  Plan->getOrAddLiveIn(&*F->arg_begin());
   std::string FullDump;
   raw_string_ostream OS(FullDump);
   Plan->printDOT(OS);
@@ -192,9 +192,9 @@ TEST_F(VPlanHCFGTest, testVPInstructionToVPRecipesInner) {
   auto Iter = VecBB->begin();
   EXPECT_NE(nullptr, dyn_cast<VPWidenPHIRecipe>(&*Iter++));
   EXPECT_NE(nullptr, dyn_cast<VPWidenGEPRecipe>(&*Iter++));
-  EXPECT_NE(nullptr, dyn_cast<VPWidenMemoryInstructionRecipe>(&*Iter++));
+  EXPECT_NE(nullptr, dyn_cast<VPWidenMemoryRecipe>(&*Iter++));
   EXPECT_NE(nullptr, dyn_cast<VPWidenRecipe>(&*Iter++));
-  EXPECT_NE(nullptr, dyn_cast<VPWidenMemoryInstructionRecipe>(&*Iter++));
+  EXPECT_NE(nullptr, dyn_cast<VPWidenMemoryRecipe>(&*Iter++));
   EXPECT_NE(nullptr, dyn_cast<VPWidenRecipe>(&*Iter++));
   EXPECT_NE(nullptr, dyn_cast<VPWidenRecipe>(&*Iter++));
   EXPECT_NE(nullptr, dyn_cast<VPInstruction>(&*Iter++));

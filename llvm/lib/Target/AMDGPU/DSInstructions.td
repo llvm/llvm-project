@@ -443,7 +443,7 @@ defm DS_AND_B32       : DS_1A1D_NORET_mc<"ds_and_b32">;
 defm DS_OR_B32        : DS_1A1D_NORET_mc<"ds_or_b32">;
 defm DS_XOR_B32       : DS_1A1D_NORET_mc<"ds_xor_b32">;
 
-let SubtargetPredicate = HasLDSFPAtomicAdd in {
+let SubtargetPredicate = HasLDSFPAtomicAddF32 in {
 defm DS_ADD_F32       : DS_1A1D_NORET_mc<"ds_add_f32">;
 }
 
@@ -523,7 +523,7 @@ defm DS_MAX_F64       : DS_1A1D_NORET_mc<"ds_max_f64", VReg_64>;
 
 defm DS_ADD_RTN_U32   : DS_1A1D_RET_mc<"ds_add_rtn_u32", VGPR_32>;
 
-let SubtargetPredicate = HasLDSFPAtomicAdd in {
+let SubtargetPredicate = HasLDSFPAtomicAddF32 in {
 defm DS_ADD_RTN_F32   : DS_1A1D_RET_mc<"ds_add_rtn_f32", VGPR_32>;
 }
 defm DS_SUB_RTN_U32   : DS_1A1D_RET_mc<"ds_sub_rtn_u32", VGPR_32>;
@@ -697,7 +697,7 @@ def DS_BPERMUTE_B32 : DS_1A1D_PERMUTE <"ds_bpermute_b32",
 
 } // let SubtargetPredicate = isGFX8Plus
 
-let SubtargetPredicate = HasLDSFPAtomicAdd, OtherPredicates = [HasDsSrc2Insts] in {
+let SubtargetPredicate = HasLDSFPAtomicAddF32, OtherPredicates = [HasDsSrc2Insts] in {
 def DS_ADD_SRC2_F32 : DS_1A<"ds_add_src2_f32">;
 }
 
@@ -1088,7 +1088,7 @@ let SubtargetPredicate = isGFX11Plus in {
 defm : DSAtomicCmpXChg_mc<DS_CMPSTORE_RTN_B32, DS_CMPSTORE_B32, i32, "atomic_cmp_swap">;
 }
 
-let SubtargetPredicate = HasLDSFPAtomicAdd in {
+let SubtargetPredicate = HasLDSFPAtomicAddF32 in {
 defm : DSAtomicRetNoRetPat_mc<DS_ADD_RTN_F32, DS_ADD_F32, f32, "atomic_load_fadd">;
 }
 
@@ -1192,7 +1192,7 @@ def : GCNPat <
 class Base_DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<bits<8> op, DS_Pseudo ps, int ef,
                                                string opName = ps.Mnemonic,
                                                bit hasGDS = true>
-    : DS_Real<ps, opName>, SIMCInstr <ps.Mnemonic, ef> {
+    : DS_Real<ps, opName>, SIMCInstr <ps.PseudoInstr, ef> {
 
   let Inst{7-0}   = !if(ps.has_offset0, offset0, 0);
   let Inst{15-8}  = !if(ps.has_offset1, offset1, 0);
@@ -1557,7 +1557,7 @@ defm DS_MAX_SRC2_F64        : DS_Real_gfx6_gfx7_gfx10<0x0d3>;
 
 class DS_Real_vi <bits<8> op, DS_Pseudo ps> :
   DS_Real <ps>,
-  SIMCInstr <ps.Mnemonic, SIEncodingFamily.VI> {
+  SIMCInstr <ps.PseudoInstr, SIEncodingFamily.VI> {
   let AssemblerPredicate = isGFX8GFX9;
   let DecoderNamespace = "GFX8";
 

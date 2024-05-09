@@ -237,6 +237,24 @@ namespace Templates {
     int (S::*(*p)())(double) = f;
     int (S::*(*q)())(double) = f<S, double>;
   }
+
+  template<typename T>
+  struct MemberSpecialization {
+    auto f();
+    template<typename U> auto f(U);
+    template<typename U> auto *f(U);
+  };
+
+  template<>
+  auto MemberSpecialization<int>::f();
+
+  template<>
+  template<typename U>
+  auto MemberSpecialization<int>::f(U);
+
+  template<>
+  template<typename U>
+  auto *MemberSpecialization<int>::f(U);
 }
 
 auto fwd_decl_using();

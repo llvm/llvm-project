@@ -2290,8 +2290,8 @@ def SPRWriteResGroup218 : SchedWriteRes<[SPRPort00_01, SPRPort02_03_11]> {
   let Latency = 15;
   let NumMicroOps = 3;
 }
-def : InstRW<[SPRWriteResGroup218], (instregex "^(V?)ROUNDP(D|S)m$")>;
-def : InstRW<[SPRWriteResGroup218, ReadAfterVecXLd], (instregex "^(V?)ROUNDS(D|S)m((_Int)?)$",
+def : InstRW<[SPRWriteResGroup218], (instregex "^(V?)ROUNDP(D|S)mi$")>;
+def : InstRW<[SPRWriteResGroup218, ReadAfterVecXLd], (instregex "^(V?)ROUNDS(D|S)mi((_Int)?)$",
                                                                 "^VRNDSCALEP(D|S)Z128rm(bi|ik)$",
                                                                 "^VRNDSCALEP(D|S)Z128rmbik(z?)$",
                                                                 "^VRNDSCALEP(D|S)Z128rmi((kz)?)$",
@@ -2303,13 +2303,13 @@ def SPRWriteResGroup219 : SchedWriteRes<[SPRPort00_01]> {
   let Latency = 8;
   let NumMicroOps = 2;
 }
-def : InstRW<[SPRWriteResGroup219], (instregex "^(V?)ROUND(PD|SS)r$",
-                                               "^(V?)ROUND(PS|SD)r$",
-                                               "^(V?)ROUNDS(D|S)r_Int$",
+def : InstRW<[SPRWriteResGroup219], (instregex "^(V?)ROUND(PD|SS)ri$",
+                                               "^(V?)ROUND(PS|SD)ri$",
+                                               "^(V?)ROUNDS(D|S)ri_Int$",
                                                "^VRNDSCALEP(D|S)Z(128|256)rri((k|kz)?)$",
                                                "^VRNDSCALES(D|S)Zr$",
                                                "^VRNDSCALES(D|S)Zr(b?)_Int((k|kz)?)$",
-                                               "^VROUNDP(D|S)Yr$")>;
+                                               "^VROUNDP(D|S)Yri$")>;
 
 def SPRWriteResGroup220 : SchedWriteRes<[SPRPort00_06]> {
   let ReleaseAtCycles = [2];
@@ -3737,7 +3737,7 @@ def SPRWriteResGroup390 : SchedWriteRes<[SPRPort00_01, SPRPort02_03_11]> {
   let NumMicroOps = 3;
 }
 def : InstRW<[SPRWriteResGroup390], (instregex "^VF(C?)MADDCPHZ(128|256)m(b?)$",
-                                               "^VROUNDP(D|S)Ym$")>;
+                                               "^VROUNDP(D|S)Ymi$")>;
 def : InstRW<[SPRWriteResGroup390, ReadAfterVecXLd], (instregex "^VF(C?)MADDCSHZm$",
                                                                 "^VF(C?)MULCPHZ128rm(b?)$",
                                                                 "^VF(C?)MULCSHZrm$",

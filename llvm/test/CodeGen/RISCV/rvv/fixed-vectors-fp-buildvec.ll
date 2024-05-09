@@ -1407,8 +1407,8 @@ define <8 x float> @buildvec_v8f32_zvl256(float %e0, float %e1, float %e2, float
 ; CHECK-NEXT:    vfmv.v.f v8, fa4
 ; CHECK-NEXT:    vfslide1down.vf v8, v8, fa5
 ; CHECK-NEXT:    vfslide1down.vf v8, v8, fa6
-; CHECK-NEXT:    vmv.v.i v0, 15
 ; CHECK-NEXT:    vfslide1down.vf v8, v8, fa7
+; CHECK-NEXT:    vmv.v.i v0, 15
 ; CHECK-NEXT:    vslidedown.vi v8, v9, 4, v0.t
 ; CHECK-NEXT:    ret
   %v0 = insertelement <8 x float> poison, float %e0, i64 0
@@ -1458,8 +1458,8 @@ define <8 x double> @buildvec_v8f64_zvl512(double %e0, double %e1, double %e2, d
 ; CHECK-NEXT:    vfmv.v.f v8, fa4
 ; CHECK-NEXT:    vfslide1down.vf v8, v8, fa5
 ; CHECK-NEXT:    vfslide1down.vf v8, v8, fa6
-; CHECK-NEXT:    vmv.v.i v0, 15
 ; CHECK-NEXT:    vfslide1down.vf v8, v8, fa7
+; CHECK-NEXT:    vmv.v.i v0, 15
 ; CHECK-NEXT:    vslidedown.vi v8, v9, 4, v0.t
 ; CHECK-NEXT:    ret
   %v0 = insertelement <8 x double> poison, double %e0, i64 0

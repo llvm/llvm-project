@@ -521,16 +521,32 @@ The return value of (FMAXNUM 0.0, -0.0) could be either 0.0 or -0.0.
 G_FMINNUM_IEEE
 ^^^^^^^^^^^^^^
 
-Perform floating-point minimum on two values, following the IEEE-754 2008
-definition. This differs from FMINNUM in the handling of signaling NaNs. If one
-input is a signaling NaN, returns a quiet NaN.
+Perform floating-point minimum on two values, following IEEE-754
+definitions. This differs from FMINNUM in the handling of signaling
+NaNs.
+
+If one input is a signaling NaN, returns a quiet NaN. This matches
+IEEE-754 2008's minnum/maxnum for signaling NaNs (which differs from
+2019).
+
+These treat -0 as ordered less than +0, matching the behavior of
+IEEE-754 2019's minimumNumber/maximumNumber (which was unspecified in
+2008).
 
 G_FMAXNUM_IEEE
 ^^^^^^^^^^^^^^
 
-Perform floating-point maximum on two values, following the IEEE-754 2008
-definition. This differs from FMAXNUM in the handling of signaling NaNs. If one
-input is a signaling NaN, returns a quiet NaN.
+Perform floating-point maximum on two values, following IEEE-754
+definitions. This differs from FMAXNUM in the handling of signaling
+NaNs.
+
+If one input is a signaling NaN, returns a quiet NaN. This matches
+IEEE-754 2008's minnum/maxnum for signaling NaNs (which differs from
+2019).
+
+These treat -0 as ordered less than +0, matching the behavior of
+IEEE-754 2019's minimumNumber/maximumNumber (which was unspecified in
+2008).
 
 G_FMINIMUM
 ^^^^^^^^^^
@@ -576,8 +592,8 @@ G_FLOG, G_FLOG2, G_FLOG10
 
 Calculate the base-e, base-2, or base-10 respectively.
 
-G_FCEIL, G_FCOS, G_FSIN, G_FSQRT, G_FFLOOR, G_FRINT, G_FNEARBYINT
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+G_FCEIL, G_FCOS, G_FSIN, G_FTAN, G_FSQRT, G_FFLOOR, G_FRINT, G_FNEARBYINT
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 These correspond to the standard C functions of the same name.
 
@@ -689,6 +705,10 @@ G_SPLAT_VECTOR
 ^^^^^^^^^^^^^^^^
 
 Create a vector where all elements are the scalar from the source operand.
+
+The type of the operand must be equal to or larger than the vector element
+type. If the operand is larger than the vector element type, the scalar is
+implicitly truncated to the vector element type.
 
 Vector Reduction Operations
 ---------------------------

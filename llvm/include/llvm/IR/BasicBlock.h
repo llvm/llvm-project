@@ -92,6 +92,7 @@ public:
   /// in the new format (\p NewFlag == true), converting to the desired format
   /// if necessary.
   void setIsNewDbgInfoFormat(bool NewFlag);
+  void setNewDbgInfoFormatFlag(bool NewFlag);
 
   /// Record that the collection of DbgRecords in \p M "trails" after the last
   /// instruction of this block. These are equivalent to dbg.value intrinsics

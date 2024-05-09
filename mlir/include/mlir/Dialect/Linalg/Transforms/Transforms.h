@@ -1244,6 +1244,14 @@ FailureOr<Operation *> transposeConv2D(RewriterBase &rewriter,
 FailureOr<Operation *> transposeConv2D(RewriterBase &rewriter,
                                        linalg::Conv2DNhwcFhwcQOp op);
 
+/// Convert Linalg matmul ops to transposed variants.
+FailureOr<Operation *> transposeMatmul(RewriterBase &rewriter,
+                                       linalg::MatmulOp op,
+                                       bool transposeLHS = true);
+FailureOr<Operation *> transposeBatchMatmul(RewriterBase &rewriter,
+                                            linalg::BatchMatmulOp op,
+                                            bool transposeLHS = true);
+
 //===----------------------------------------------------------------------===//
 // Rewrite patterns wrapping transformations.
 // TODO: every single such pattern should be a close to noop wrapper around a
@@ -1615,6 +1623,10 @@ void populateSplitReductionPattern(
     RewritePatternSet &patterns,
     const ControlSplitReductionFn &controlSplitReductionFn,
     bool useAlloc = false);
+
+/// Patterns to convert Linalg matmul ops to transposed variants.
+void populateTransposeMatmulPatterns(RewritePatternSet &patterns,
+                                     bool transposeLHS = true);
 
 } // namespace linalg
 } // namespace mlir

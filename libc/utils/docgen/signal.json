@@ -1,0 +1,47 @@
+{
+  "macros": {
+    "SIG_DFL": {
+      "defined": "7.14.3"
+    },
+    "SIG_ERR": {
+      "defined": "7.14.3"
+    },
+    "SIG_IGN": {
+      "defined": "7.14.3"
+    },
+    "SIGABRT": {
+      "defined": "7.14.3"
+    },
+    "SIGFPE": {
+      "defined": "7.14.3"
+    },
+    "SIGILL": {
+      "defined": "7.14.3"
+    },
+    "SIGINT": {
+      "defined": "7.14.3"
+    },
+    "SIGSEGV": {
+      "defined": "7.14.3"
+    },
+    "SIGTERM": {
+      "defined": "7.14.3"
+    }
+  },
+  "functions": {
+    "signal": {
+      "defined": "7.14.1.1"
+    },
+    "raise": {
+      "defined": "7.14.2.1"
+    },
+    "kill": null,
+    "sigaction": null,
+    "sigaddset": null,
+    "sigaltstack": null,
+    "sigdelset": null,
+    "sigemptyset": null,
+    "sigfillset": null,
+    "sigprocmask": null
+  }
+}

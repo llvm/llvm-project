@@ -23,21 +23,21 @@ Merge:
 ; JT-LABEL-NO: T
 ; JT-LABEL-NO: F
 ; JT-LABEL: Merge
+; JT-NOT: call void @llvm.pseudoprobe(i64 [[#GUID:]], i64 4
 ; JT-NOT: call void @llvm.pseudoprobe(i64 [[#GUID:]], i64 3
-; JT-NOT: call void @llvm.pseudoprobe(i64 [[#GUID:]], i64 2
-; JT: call void @llvm.pseudoprobe(i64 [[#GUID:]], i64 4, i32 0, i64 -1)
+; JT: call void @llvm.pseudoprobe(i64 [[#GUID:]], i64 5, i32 0, i64 -1)
+; ASM-NOT: .pseudoprobe	6699318081062747564 4
 ; ASM-NOT: .pseudoprobe	6699318081062747564 3
-; ASM-NOT: .pseudoprobe	6699318081062747564 2
-; ASM: .pseudoprobe	6699318081062747564 4 0 0
+; ASM: .pseudoprobe	6699318081062747564 5 0 0
 	ret i32 %call
 }
 
 ;; Check block T and F are gone, and their probes (probe 2 and 3) are gone too.
 ; MIR-tail: bb.0
 ; MIR-tail: PSEUDO_PROBE [[#GUID:]], 1, 0, 0
-; MIR-tail-NOT: PSEUDO_PROBE [[#GUID:]], 2
 ; MIR-tail-NOT: PSEUDO_PROBE [[#GUID:]], 3
-; MIR-tail: PSEUDO_PROBE [[#GUID:]], 4, 0, 0
+; MIR-tail-NOT: PSEUDO_PROBE [[#GUID:]], 4
+; MIR-tail: PSEUDO_PROBE [[#GUID:]], 5, 0, 0
 
 
 define i32 @test(i32 %a, i32 %b, i32 %c) {
