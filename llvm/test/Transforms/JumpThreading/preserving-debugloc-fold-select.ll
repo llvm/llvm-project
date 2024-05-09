@@ -5,29 +5,8 @@
 ; which replaces the select instruction in .exit block.
 
 define i32 @unfold3(i32 %u, i32 %v, i32 %w, i32 %x, i32 %y, i32 %z, i32 %j) !dbg !5 {
-; CHECK-LABEL: define i32 @unfold3(
-; CHECK-SAME: i32 [[U:%.*]], i32 [[V:%.*]], i32 [[W:%.*]], i32 [[X:%.*]], i32 [[Y:%.*]], i32 [[Z:%.*]], i32 [[J:%.*]]) !dbg [[DBG5:![0-9]+]] {
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[ADD3:%.*]] = add nsw i32 [[J]], 2, !dbg [[DBG19:![0-9]+]]
-; CHECK-NEXT:    [[CMP_I:%.*]] = icmp slt i32 [[U]], [[V]], !dbg [[DBG20:![0-9]+]]
-; CHECK-NEXT:    br i1 [[CMP_I]], label [[DOTEXIT_THREAD4:%.*]], label [[COND_FALSE_I:%.*]], !dbg [[DBG21:![0-9]+]]
-; CHECK:       cond.false.i:
-; CHECK-NEXT:    [[CMP4_I:%.*]] = icmp sgt i32 [[U]], [[V]], !dbg [[DBG22:![0-9]+]]
-; CHECK-NEXT:    br i1 [[CMP4_I]], label [[DOTEXIT_THREAD:%.*]], label [[COND_FALSE_6_I:%.*]], !dbg [[DBG23:![0-9]+]]
-; CHECK:       cond.false.6.i:
-; CHECK-NEXT:    [[CMP8_I:%.*]] = icmp slt i32 [[W]], [[X]], !dbg [[DBG24:![0-9]+]]
-; CHECK-NEXT:    br i1 [[CMP8_I]], label [[DOTEXIT_THREAD4]], label [[COND_FALSE_10_I:%.*]], !dbg [[DBG25:![0-9]+]]
-; CHECK:       cond.false.10.i:
-; CHECK-NEXT:    [[CMP13_I:%.*]] = icmp sgt i32 [[W]], [[X]], !dbg [[DBG26:![0-9]+]]
-; CHECK-NEXT:    br i1 [[CMP13_I]], label [[DOTEXIT_THREAD]], label [[DOTEXIT:%.*]], !dbg [[DBG27:![0-9]+]]
-; CHECK:       .exit:
-; CHECK-NEXT:    [[PHITMP:%.*]] = icmp sge i32 [[Y]], [[Z]], !dbg [[DBG28:![0-9]+]]
-; CHECK-NEXT:    [[COND_FR:%.*]] = freeze i1 [[PHITMP]]
-; CHECK-NEXT:    br i1 [[COND_FR]], label [[DOTEXIT_THREAD]], label [[DOTEXIT_THREAD4]], !dbg [[DBG29:![0-9]+]]
-; CHECK:       .exit.thread:
-; CHECK-NEXT:    br label [[DOTEXIT_THREAD4]], !dbg [[DBG29]]
 ; CHECK:       .exit.thread4:
-; CHECK-NEXT:    [[TMP0:%.*]] = phi i32 [ [[J]], [[DOTEXIT_THREAD]] ], [ [[ADD3]], [[DOTEXIT]] ], [ [[ADD3]], [[ENTRY:%.*]] ], [ [[ADD3]], [[COND_FALSE_6_I]] ], !dbg [[DBG29]]
+; CHECK-NEXT:    [[TMP0:%.*]] = phi i32 {{.*}}, !dbg [[DBG29]]
 ; CHECK-NEXT:    ret i32 [[TMP0]], !dbg [[DBG30:![0-9]+]]
 ;
 ; CHECK: [[DBG29]] = !DILocation(line: 13,

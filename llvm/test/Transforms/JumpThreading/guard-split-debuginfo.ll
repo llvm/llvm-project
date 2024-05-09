@@ -7,8 +7,8 @@
 ; parent blocks. And that ino jump-threading, the old dbg.value gets
 ; deleted.
 
-; Test debug location preserving in function threadGuard, which replaces
-; instructions with PHINodes at the end of the function. [[TMP1]]
+; Test that JumpThreading's threadGuard() propagates the debug location
+; to the `phi` from the instruction it replaces (`%retval`)
 
 declare void @llvm.experimental.guard(i1, ...)
 
