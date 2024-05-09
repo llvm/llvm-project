@@ -625,14 +625,14 @@ LogicalResult ExpansionInfo::compute(LinalgOp linalgOp,
   return success();
 }
 
-/// Epanding the body of a linalg operation requires adaptations of the accessed
-/// loop indices. Specifically, access of indices in the original operation need
-/// to be replaced with linearizations of indices in the expanded op. That
-/// requires the shape of the expanded dimensions to be static (at least all but
-/// the most significant). For now check that these are all statically sized.
-/// Note that this could be extended to handle dynamic case, but the
-/// implementation below uses `affine.apply` which seems to have issues when the
-/// shapes are not static.
+/// Expanding the body of a linalg operation requires adaptations of the
+/// accessed loop indices. Specifically, access of indices in the original
+/// operation need to be replaced with linearizations of indices in the expanded
+/// op. That requires the shape of the expanded dimensions to be static (at
+/// least all but the most significant). For now check that these are all
+/// statically sized. Note that this could be extended to handle dynamic case,
+/// but the implementation below uses `affine.apply` which seems to have issues
+/// when the shapes are not static.
 static LogicalResult isLinalgOpExpandable(LinalgOp linalgOp,
                                           const ExpansionInfo &expansionInfo,
                                           PatternRewriter &rewriter) {
@@ -750,6 +750,31 @@ static void updateExpandedGenericOpRegion(PatternRewriter &rewriter,
   }
 }
 
+/// Checks if a single dynamic dimension expanded into multiple dynamic
+/// dimensions.
+static LogicalResult
+validateDynamicDimExpansion(LinalgOp linalgOp,
+                            const ExpansionInfo &expansionInfo,
+                            PatternRewriter &rewriter) {
+  for (unsigned i : llvm::seq<unsigned>(0, expansionInfo.getOrigOpNumDims())) {
+    ArrayRef<int64_t> expandedShape = expansionInfo.getExpandedShapeOfDim(i);
+    if (expandedShape.size() == 1)
+      continue;
+    bool foundDynamic = false;
+    for (int64_t shape : expandedShape) {
+      if (!ShapedType::isDynamic(shape))
+        continue;
+      if (foundDynamic) {
+        return rewriter.notifyMatchFailure(
+            linalgOp, "cannot infer expanded shape with multiple dynamic "
+                      "dims in the same reassociation group");
+      }
+      foundDynamic = true;
+    }
+  }
+  return success();
+}
+
 /// Implements the fusion of a tensor.collapse_shape or a tensor.expand_shape op
 /// and a generic op as explained in `isFusableWithReshapeByExpansion`. Assumes
 /// that those conditions have been satisfied.
@@ -759,6 +784,8 @@ fuseWithReshapeByExpansion(LinalgOp linalgOp, Operation *reshapeOp,
                            PatternRewriter &rewriter) {
   assert(isFusableWithReshapeByDimExpansion(linalgOp, fusableOpOperand) &&
          "preconditions for fuse operation failed");
+
+  Location loc = linalgOp.getLoc();
   // Check if reshape is expanding or collapsing.
   auto expandingReshapeOp = dyn_cast<tensor::ExpandShapeOp>(*reshapeOp);
   auto collapsingReshapeOp = dyn_cast<tensor::CollapseShapeOp>(*reshapeOp);
@@ -776,6 +803,11 @@ fuseWithReshapeByExpansion(LinalgOp linalgOp, Operation *reshapeOp,
           isExpanding ? expandingReshapeOp.getReassociationMaps()
                       : collapsingReshapeOp.getReassociationMaps(),
           expandedType.getShape(), collapsedType.getShape(), rewriter)))
+    return std::nullopt;
+
+  // TODO: With the support of multiple dynamic dims expansion in
+  // tensor.expand_shape op, this case can be handled.
+  if (failed(validateDynamicDimExpansion(linalgOp, expansionInfo, rewriter)))
     return std::nullopt;
 
   if (failed(isLinalgOpExpandable(linalgOp, expansionInfo, rewriter)))
@@ -816,15 +848,13 @@ fuseWithReshapeByExpansion(LinalgOp linalgOp, Operation *reshapeOp,
                 /*isExpandingReshape=*/true)))
           return std::nullopt;
         expandedOpOperands.push_back(rewriter.create<tensor::ExpandShapeOp>(
-            linalgOp.getLoc(), expandedOperandType, opOperand->get(),
-            reassociation));
+            loc, expandedOperandType, opOperand->get(), reassociation));
         continue;
       }
     }
     expandedOpOperands.push_back(opOperand->get());
   }
 
-  Location loc = linalgOp.getLoc();
   SmallVector<Value> outputs;
   for (OpOperand &opOperand : linalgOp.getDpsInitsMutable()) {
     AffineMap indexingMap = linalgOp.getMatchingIndexingMap(&opOperand);
@@ -843,8 +873,7 @@ fuseWithReshapeByExpansion(LinalgOp linalgOp, Operation *reshapeOp,
               /*isExpandingReshape=*/true)))
         return std::nullopt;
       outputs.push_back(rewriter.create<tensor::ExpandShapeOp>(
-          linalgOp.getLoc(), expandedOutputType, opOperand.get(),
-          reassociation));
+          loc, expandedOutputType, opOperand.get(), reassociation));
     } else {
       outputs.push_back(opOperand.get());
     }
@@ -1615,15 +1644,17 @@ FailureOr<CollapseResult> mlir::linalg::collapseOpIterationDims(
           op.getIndexingMapMatchingResult(originalResult.value());
       SmallVector<ReassociationIndices> reassociation =
           getOperandReassociation(indexingMap, collapsingInfo);
+      Value result;
       if (isa<MemRefType>(collapsedOpResult.getType())) {
-        Value result = rewriter.create<memref::ExpandShapeOp>(
-            loc, originalResultType, collapsedOpResult, reassociation);
-        results.push_back(result);
+        MemRefType expandShapeResultType = MemRefType::get(
+            originalResultType.getShape(), originalResultType.getElementType());
+        result = rewriter.create<memref::ExpandShapeOp>(
+            loc, expandShapeResultType, collapsedOpResult, reassociation);
       } else {
-        Value result = rewriter.create<tensor::ExpandShapeOp>(
+        result = rewriter.create<tensor::ExpandShapeOp>(
             loc, originalResultType, collapsedOpResult, reassociation);
-        results.push_back(result);
       }
+      results.push_back(result);
     } else {
       results.push_back(collapsedOpResult);
     }

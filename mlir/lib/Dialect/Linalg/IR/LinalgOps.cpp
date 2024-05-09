@@ -607,12 +607,20 @@ struct FoldFillWithTensorReshape : OpRewritePattern<TensorReshapeOp> {
       return failure();
 
     Location loc = oldFill.getLoc();
-    auto newInit = rewriter.create<TensorReshapeOp>(
-        loc, reshapeOp.getResultType(), oldFill.output(),
-        reshapeOp.getReassociation());
+    TensorReshapeOp newInit;
+    if constexpr (std::is_same<TensorReshapeOp, tensor::ExpandShapeOp>::value) {
+
+      newInit = rewriter.create<TensorReshapeOp>(
+          loc, reshapeOp.getResultType(), oldFill.output(),
+          reshapeOp.getReassociation(), reshapeOp.getOutputShape(),
+          reshapeOp.getStaticOutputShape());
+    } else {
+      newInit = rewriter.create<TensorReshapeOp>(loc, reshapeOp.getResultType(),
+                                                 oldFill.output(),
+                                                 reshapeOp.getReassociation());
+    }
     rewriter.replaceOpWithNewOp<FillOp>(reshapeOp, ValueRange{oldFill.value()},
                                         ValueRange{newInit});
-
     return success();
   }
 };
