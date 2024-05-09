@@ -1044,7 +1044,6 @@ feature_test_macros = [
             "name": "__cpp_lib_reference_wrapper",
             "values": {"c++26": 202403}, # P2944R3: Comparisons for reference_wrapper
             "headers": ["functional"],
-            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_remove_cvref",
