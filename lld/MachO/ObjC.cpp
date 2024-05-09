@@ -437,7 +437,7 @@ private:
   void eraseMergedCategories();
 
   void generateCatListForNonErasedCategories(
-      std::map<ConcatInputSection *, std::set<uint64_t>>
+      MapVector<ConcatInputSection *, std::set<uint64_t>>
           catListToErasedOffsets);
   void collectSectionWriteInfoFromIsec(const InputSection *isec,
                                        InfoWriteSection &catWriteInfo);
@@ -491,7 +491,7 @@ private:
   InfoCategoryWriter infoCategoryWriter;
   std::vector<ConcatInputSection *> &allInputSections;
   // Map of base class Symbol to list of InfoInputCategory's for it
-  DenseMap<const Symbol *, std::vector<InfoInputCategory>> categoryMap;
+  MapVector<const Symbol *, std::vector<InfoInputCategory>> categoryMap;
   // Set for tracking InputSection erased via eraseISec
   DenseSet<InputSection *> erasedIsecs;
 
@@ -1104,7 +1104,7 @@ void ObjcCategoryMerger::collectAndValidateCategoriesData() {
 // (not erased). For these not erased categories, we generate new __objc_catlist
 // entries since the parent __objc_catlist entry will be erased
 void ObjcCategoryMerger::generateCatListForNonErasedCategories(
-    const std::map<ConcatInputSection *, std::set<uint64_t>>
+    const MapVector<ConcatInputSection *, std::set<uint64_t>>
         catListToErasedOffsets) {
 
   // Go through all offsets of all __objc_catlist's that we process and if there
@@ -1171,7 +1171,7 @@ void ObjcCategoryMerger::eraseISec(ConcatInputSection *isec) {
 // them.
 void ObjcCategoryMerger::eraseMergedCategories() {
   // Map of InputSection to a set of offsets of the categories that were merged
-  std::map<ConcatInputSection *, std::set<uint64_t>> catListToErasedOffsets;
+  MapVector<ConcatInputSection *, std::set<uint64_t>> catListToErasedOffsets;
 
   for (auto &mapEntry : categoryMap) {
     for (InfoInputCategory &catInfo : mapEntry.second) {

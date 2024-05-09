@@ -2573,6 +2573,11 @@ void OpenACCClauseProfiler::VisitVectorLengthClause(
          "vector_length clause requires a valid int expr");
   Profiler.VisitStmt(Clause.getIntExpr());
 }
+
+void OpenACCClauseProfiler::VisitAsyncClause(const OpenACCAsyncClause &Clause) {
+  if (Clause.hasIntExpr())
+    Profiler.VisitStmt(Clause.getIntExpr());
+}
 } // namespace
 
 void StmtProfiler::VisitOpenACCComputeConstruct(

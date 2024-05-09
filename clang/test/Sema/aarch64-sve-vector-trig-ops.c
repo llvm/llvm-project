@@ -16,3 +16,9 @@ svfloat32_t test_cos_vv_i8mf8(svfloat32_t v) {
   return __builtin_elementwise_cos(v);
   // expected-error@-1 {{1st argument must be a vector, integer or floating point type}}
 }
+
+svfloat32_t test_tan_vv_i8mf8(svfloat32_t v) {
+
+  return __builtin_elementwise_tan(v);
+  // expected-error@-1 {{1st argument must be a vector, integer or floating point type}}
+}

@@ -1397,7 +1397,7 @@ def CastValueChecker : Checker<"CastValue">,
   Documentation<NotDocumented>;
 
 def ReturnValueChecker : Checker<"ReturnValue">,
-  HelpText<"Model the guaranteed boolean return value of function calls">,
+  HelpText<"Model certain Error() methods that always return true by convention">,
   Documentation<NotDocumented>;
 
 } // end "apiModeling.llvm"

@@ -4159,6 +4159,11 @@ defm unique_section_names : BoolFOption<"unique-section-names",
   NegFlag<SetFalse, [], [ClangOption, CC1Option],
           "Don't use unique names for text and data sections">,
   PosFlag<SetTrue>>;
+defm separate_named_sections : BoolFOption<"separate-named-sections",
+  CodeGenOpts<"SeparateNamedSections">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option],
+          "Use separate unique sections for named sections (ELF Only)">,
+  NegFlag<SetFalse>>;
 
 defm split_machine_functions: BoolFOption<"split-machine-functions",
   CodeGenOpts<"SplitMachineFunctions">, DefaultFalse,
@@ -5080,6 +5085,10 @@ def maix_small_local_dynamic_tls : Flag<["-"], "maix-small-local-dynamic-tls">,
            "where the offset from the TLS base is encoded as an "
            "immediate operand (AIX 64-bit only). "
            "This access sequence is not used for variables larger than 32KB.">;
+def maix_shared_lib_tls_model_opt : Flag<["-"], "maix-shared-lib-tls-model-opt">,
+  Group<m_ppc_Features_Group>,
+  HelpText<"For shared library loaded with the main program, change local-dynamic access(es) "
+           "to initial-exec access(es) at the function level (AIX 64-bit only).">;
 def maix_struct_return : Flag<["-"], "maix-struct-return">,
   Group<m_Group>, Visibility<[ClangOption, CC1Option]>,
   HelpText<"Return all structs in memory (PPC32 only)">,
@@ -5706,7 +5715,7 @@ def whatsloaded : Flag<["-"], "whatsloaded">;
 def why_load : Flag<["-"], "why_load">;
 def whyload : Flag<["-"], "whyload">, Alias<why_load>;
 def w : Flag<["-"], "w">, HelpText<"Suppress all warnings">,
-  Visibility<[ClangOption, CC1Option]>,
+  Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
   MarshallingInfoFlag<DiagnosticOpts<"IgnoreWarnings">>;
 def x : JoinedOrSeparate<["-"], "x">,
 Flags<[NoXarchOption]>,
@@ -7095,6 +7104,11 @@ def mlink_bitcode_file : Separate<["-"], "mlink-bitcode-file">,
 def mlink_builtin_bitcode : Separate<["-"], "mlink-builtin-bitcode">,
   HelpText<"Link and internalize needed symbols from the given bitcode file "
            "before performing optimizations.">;
+defm link_builtin_bitcode_postopt: BoolMOption<"link-builtin-bitcode-postopt",
+  CodeGenOpts<"LinkBitcodePostopt">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption], "Link builtin bitcodes after the "
+  "optimization pipeline">,
+  NegFlag<SetFalse, [], [ClangOption]>>;
 def vectorize_loops : Flag<["-"], "vectorize-loops">,
   HelpText<"Run the Loop vectorization passes">,
   MarshallingInfoFlag<CodeGenOpts<"VectorizeLoop">>;
