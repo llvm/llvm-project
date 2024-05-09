@@ -13,12 +13,10 @@
 using namespace lldb_private::dwarf;
 using namespace lldb_private::plugin::dwarf;
 
-bool UniqueDWARFASTTypeList::Find(const DWARFDIE &die,
-                                  const lldb_private::Declaration &decl,
-                                  const int32_t byte_size,
-                                  bool is_forward_declaration,
-                                  UniqueDWARFASTType &entry) const {
-  for (const UniqueDWARFASTType &udt : m_collection) {
+UniqueDWARFASTType *UniqueDWARFASTTypeList::Find(
+    const DWARFDIE &die, const lldb_private::Declaration &decl,
+    const int32_t byte_size, bool is_forward_declaration) {
+  for (UniqueDWARFASTType &udt : m_collection) {
     // Make sure the tags match
     if (udt.m_die.Tag() == die.Tag()) {
       // If they are not both definition DIEs or both declaration DIEs, then
@@ -73,10 +71,9 @@ bool UniqueDWARFASTTypeList::Find(const DWARFDIE &die,
       }
 
       if (match) {
-        entry = udt;
-        return true;
+        return &udt;
       }
     }
   }
-  return false;
+  return nullptr;
 }

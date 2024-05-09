@@ -1767,12 +1767,6 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
   LanguageType cu_language = SymbolFileDWARF::GetLanguage(*die.GetCU());
   Log *log = GetLog(DWARFLog::TypeCompletion | DWARFLog::Lookups);
 
-  // UniqueDWARFASTType is large, so don't create a local variables on the
-  // stack, put it on the heap. This function is often called recursively and
-  // clang isn't good at sharing the stack space for variables in different
-  // blocks.
-  auto unique_ast_entry_up = std::make_unique<UniqueDWARFASTType>();
-
   ConstString unique_typename(attrs.name);
   Declaration unique_decl(attrs.decl);
   uint64_t byte_size = attrs.byte_size.value_or(0);
@@ -1789,23 +1783,24 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
       unique_decl.Clear();
     }
 
-    if (dwarf->GetUniqueDWARFASTTypeMap().Find(
-            unique_typename, die, unique_decl, byte_size,
-            attrs.is_forward_declaration, *unique_ast_entry_up)) {
-      type_sp = unique_ast_entry_up->m_type_sp;
+    if (UniqueDWARFASTType *unique_ast_entry_type =
+            dwarf->GetUniqueDWARFASTTypeMap().Find(
+                unique_typename, die, unique_decl, byte_size,
+                attrs.is_forward_declaration)) {
+      type_sp = unique_ast_entry_type->m_type_sp;
       if (type_sp) {
         dwarf->GetDIEToType()[die.GetDIE()] = type_sp.get();
         LinkDeclContextToDIE(
-            GetCachedClangDeclContextForDIE(unique_ast_entry_up->m_die), die);
+            GetCachedClangDeclContextForDIE(unique_ast_entry_type->m_die), die);
         if (!attrs.is_forward_declaration) {
           // If the DIE being parsed in this function is a definition and the
           // entry in the map is a declaration, then we need to update the entry
           // to point to the definition DIE.
-          if (unique_ast_entry_up->m_is_forward_declaration) {
-            unique_ast_entry_up->m_die = die;
-            unique_ast_entry_up->m_byte_size = byte_size;
-            unique_ast_entry_up->m_declaration = unique_decl;
-            unique_ast_entry_up->m_is_forward_declaration = false;
+          if (unique_ast_entry_type->m_is_forward_declaration) {
+            unique_ast_entry_type->m_die = die;
+            unique_ast_entry_type->m_byte_size = byte_size;
+            unique_ast_entry_type->m_declaration = unique_decl;
+            unique_ast_entry_type->m_is_forward_declaration = false;
             // Need to update Type ID to refer to the definition DIE. because
             // it's used in ParseSubroutine to determine if we need to copy cxx
             // method types from a declaration DIE to this definition DIE.
@@ -1919,6 +1914,11 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
       Type::ResolveState::Forward,
       TypePayloadClang(OptionalClangModuleID(), attrs.is_complete_objc_class));
 
+  // UniqueDWARFASTType is large, so don't create a local variables on the
+  // stack, put it on the heap. This function is often called recursively and
+  // clang isn't good at sharing the stack space for variables in different
+  // blocks.
+  auto unique_ast_entry_up = std::make_unique<UniqueDWARFASTType>();
   // Add our type to the unique type map so we don't end up creating many
   // copies of the same type over and over in the ASTContext for our
   // module

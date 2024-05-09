@@ -30,17 +30,6 @@ public:
 
   ~UniqueDWARFASTType() = default;
 
-  UniqueDWARFASTType &operator=(const UniqueDWARFASTType &rhs) {
-    if (this != &rhs) {
-      m_type_sp = rhs.m_type_sp;
-      m_die = rhs.m_die;
-      m_declaration = rhs.m_declaration;
-      m_byte_size = rhs.m_byte_size;
-      m_is_forward_declaration = rhs.m_is_forward_declaration;
-    }
-    return *this;
-  }
-
   lldb::TypeSP m_type_sp;
   DWARFDIE m_die;
   Declaration m_declaration;
@@ -61,9 +50,9 @@ public:
     m_collection.push_back(entry);
   }
 
-  bool Find(const DWARFDIE &die, const Declaration &decl,
-            const int32_t byte_size, bool is_forward_declaration,
-            UniqueDWARFASTType &entry) const;
+  UniqueDWARFASTType *Find(const DWARFDIE &die, const Declaration &decl,
+                           const int32_t byte_size,
+                           bool is_forward_declaration);
 
 protected:
   typedef std::vector<UniqueDWARFASTType> collection;
@@ -80,16 +69,15 @@ public:
     m_collection[name.GetCString()].Append(entry);
   }
 
-  bool Find(ConstString name, const DWARFDIE &die, const Declaration &decl,
-            const int32_t byte_size, bool is_forward_declaration,
-            UniqueDWARFASTType &entry) const {
+  UniqueDWARFASTType *Find(ConstString name, const DWARFDIE &die,
+                           const Declaration &decl, const int32_t byte_size,
+                           bool is_forward_declaration) {
     const char *unique_name_cstr = name.GetCString();
-    collection::const_iterator pos = m_collection.find(unique_name_cstr);
+    collection::iterator pos = m_collection.find(unique_name_cstr);
     if (pos != m_collection.end()) {
-      return pos->second.Find(die, decl, byte_size, is_forward_declaration,
-                              entry);
+      return pos->second.Find(die, decl, byte_size, is_forward_declaration);
     }
-    return false;
+    return nullptr;
   }
 
 protected:
