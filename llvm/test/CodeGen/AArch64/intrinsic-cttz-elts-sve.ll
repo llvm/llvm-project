@@ -137,7 +137,7 @@ define i64 @vscale_4096_poison(<vscale x 16 x i8> %a) #1 {
   ret i64 %res
 }
 
-; MATCH WITH BRKB + CNTP
+; EFFICIENT LOWERING USING BRKB
 
 define i32 @ctz_nxv2i1(<vscale x 2 x i1> %a) {
 ; CHECK-LABEL: ctz_nxv2i1:

@@ -1852,7 +1852,6 @@ bool AArch64TargetLowering::shouldExpandGetActiveLaneMask(EVT ResVT,
 }
 
 bool AArch64TargetLowering::shouldExpandCttzElements(EVT VT) const {
-  // Only SVE and SME architectures support BRKB and CNTP instructions.
   if (!Subtarget->hasSVEorSME())
     return true;
 
