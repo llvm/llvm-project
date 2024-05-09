@@ -6555,6 +6555,7 @@ Symbol *DeclarationVisitor::DeclareStatementEntity(
       return nullptr;
     }
     name.symbol = nullptr;
+    // F'2023 19.4 p5 ambiguous rule about outer declarations
     declTypeSpec = prev->GetType();
   }
   Symbol &symbol{DeclareEntity<ObjectEntityDetails>(name, {})};
@@ -6573,9 +6574,7 @@ Symbol *DeclarationVisitor::DeclareStatementEntity(
   } else {
     ApplyImplicitRules(symbol);
   }
-  Symbol *result{Resolve(name, &symbol)};
-  AnalyzeExpr(context(), doVar); // enforce INTEGER type
-  return result;
+  return Resolve(name, &symbol);
 }
 
 // Set the type of an entity or report an error.
