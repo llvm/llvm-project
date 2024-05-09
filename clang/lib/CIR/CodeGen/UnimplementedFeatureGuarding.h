@@ -124,6 +124,7 @@ struct UnimplementedFeature {
   static bool tryEmitAsConstant() { return false; }
   static bool incrementProfileCounter() { return false; }
   static bool createProfileWeightsForLoop() { return false; }
+  static bool getProfileCount() { return false; }
   static bool emitCondLikelihoodViaExpectIntrinsic() { return false; }
   static bool requiresReturnValueCheck() { return false; }
   static bool shouldEmitLifetimeMarkers() { return false; }
