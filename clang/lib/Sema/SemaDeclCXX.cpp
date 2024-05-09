@@ -4519,7 +4519,7 @@ Sema::BuildMemInitializer(Decl *ConstructorD,
                               DS.getBeginLoc(), DS.getEllipsisLoc());
   } else {
     LookupResult R(*this, MemberOrBase, IdLoc, LookupOrdinaryName);
-    LookupParsedName(R, S, &SS);
+    LookupParsedName(R, S, &SS, /*ObjectType=*/QualType());
 
     TypeDecl *TyD = R.getAsSingle<TypeDecl>();
     if (!TyD) {
@@ -12270,7 +12270,7 @@ Decl *Sema::ActOnUsingDirective(Scope *S, SourceLocation UsingLoc,
 
   // Lookup namespace name.
   LookupResult R(*this, NamespcName, IdentLoc, LookupNamespaceName);
-  LookupParsedName(R, S, &SS);
+  LookupParsedName(R, S, &SS, /*ObjectType=*/QualType());
   if (R.isAmbiguous())
     return nullptr;
 
@@ -13729,7 +13729,7 @@ Decl *Sema::ActOnNamespaceAliasDef(Scope *S, SourceLocation NamespaceLoc,
 
   // Lookup the namespace name.
   LookupResult R(*this, Ident, IdentLoc, LookupNamespaceName);
-  LookupParsedName(R, S, &SS);
+  LookupParsedName(R, S, &SS, /*ObjectType=*/QualType());
 
   if (R.isAmbiguous())
     return nullptr;
@@ -19172,40 +19172,40 @@ void Sema::checkExceptionSpecification(
   }
 }
 
-void Sema::actOnDelayedExceptionSpecification(Decl *MethodD,
-             ExceptionSpecificationType EST,
-             SourceRange SpecificationRange,
-             ArrayRef<ParsedType> DynamicExceptions,
-             ArrayRef<SourceRange> DynamicExceptionRanges,
-             Expr *NoexceptExpr) {
-  if (!MethodD)
+void Sema::actOnDelayedExceptionSpecification(
+    Decl *D, ExceptionSpecificationType EST, SourceRange SpecificationRange,
+    ArrayRef<ParsedType> DynamicExceptions,
+    ArrayRef<SourceRange> DynamicExceptionRanges, Expr *NoexceptExpr) {
+  if (!D)
     return;
 
-  // Dig out the method we're referring to.
-  if (FunctionTemplateDecl *FunTmpl = dyn_cast<FunctionTemplateDecl>(MethodD))
-    MethodD = FunTmpl->getTemplatedDecl();
+  // Dig out the function we're referring to.
+  if (FunctionTemplateDecl *FTD = dyn_cast<FunctionTemplateDecl>(D))
+    D = FTD->getTemplatedDecl();
 
-  CXXMethodDecl *Method = dyn_cast<CXXMethodDecl>(MethodD);
-  if (!Method)
+  FunctionDecl *FD = dyn_cast<FunctionDecl>(D);
+  if (!FD)
     return;
 
   // Check the exception specification.
   llvm::SmallVector<QualType, 4> Exceptions;
   FunctionProtoType::ExceptionSpecInfo ESI;
-  checkExceptionSpecification(/*IsTopLevel*/true, EST, DynamicExceptions,
+  checkExceptionSpecification(/*IsTopLevel=*/true, EST, DynamicExceptions,
                               DynamicExceptionRanges, NoexceptExpr, Exceptions,
                               ESI);
 
   // Update the exception specification on the function type.
-  Context.adjustExceptionSpec(Method, ESI, /*AsWritten*/true);
+  Context.adjustExceptionSpec(FD, ESI, /*AsWritten=*/true);
 
-  if (Method->isStatic())
-    checkThisInStaticMemberFunctionExceptionSpec(Method);
+  if (CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(D)) {
+    if (MD->isStatic())
+      checkThisInStaticMemberFunctionExceptionSpec(MD);
 
-  if (Method->isVirtual()) {
-    // Check overrides, which we previously had to delay.
-    for (const CXXMethodDecl *O : Method->overridden_methods())
-      CheckOverridingFunctionExceptionSpec(Method, O);
+    if (MD->isVirtual()) {
+      // Check overrides, which we previously had to delay.
+      for (const CXXMethodDecl *O : MD->overridden_methods())
+        CheckOverridingFunctionExceptionSpec(MD, O);
+    }
   }
 }
 

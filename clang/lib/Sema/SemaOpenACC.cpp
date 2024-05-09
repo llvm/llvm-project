@@ -103,6 +103,18 @@ bool doesClauseApplyToDirective(OpenACCDirectiveKind DirectiveKind,
     default:
       return false;
     }
+  case OpenACCClauseKind::Private:
+    switch (DirectiveKind) {
+    case OpenACCDirectiveKind::Parallel:
+    case OpenACCDirectiveKind::Serial:
+    case OpenACCDirectiveKind::Loop:
+    case OpenACCDirectiveKind::ParallelLoop:
+    case OpenACCDirectiveKind::SerialLoop:
+    case OpenACCDirectiveKind::KernelsLoop:
+      return true;
+    default:
+      return false;
+    }
   default:
     // Do nothing so we can go to the 'unimplemented' diagnostic instead.
     return true;
@@ -303,6 +315,21 @@ SemaOpenACC::ActOnClause(ArrayRef<const OpenACCClause *> ExistingClauses,
         getASTContext(), Clause.getBeginLoc(), Clause.getLParenLoc(),
         Clause.getIntExprs()[0], Clause.getEndLoc());
   }
+  case OpenACCClauseKind::Private: {
+    // Restrictions only properly implemented on 'compute' constructs, and
+    // 'compute' constructs are the only construct that can do anything with
+    // this yet, so skip/treat as unimplemented in this case.
+    if (!isOpenACCComputeDirectiveKind(Clause.getDirectiveKind()))
+      break;
+
+    // ActOnVar ensured that everything is a valid variable reference, so there
+    // really isn't anything to do here. GCC does some duplicate-finding, though
+    // it isn't apparent in the standard where this is justified.
+
+    return OpenACCPrivateClause::Create(
+        getASTContext(), Clause.getBeginLoc(), Clause.getLParenLoc(),
+        Clause.getVarList(), Clause.getEndLoc());
+  }
   default:
     break;
   }
@@ -421,6 +448,52 @@ ExprResult SemaOpenACC::ActOnIntExpr(OpenACCDirectiveKind DK,
   // TODO OpenACC: Do we want to perform usual unary conversions here? When
   // doing codegen we might find that is necessary, but skip it for now.
   return IntExpr;
+}
+
+ExprResult SemaOpenACC::ActOnVar(Expr *VarExpr) {
+  // We still need to retain the array subscript/subarray exprs, so work on a
+  // copy.
+  Expr *CurVarExpr = VarExpr->IgnoreParenImpCasts();
+
+  // Sub-arrays/subscript-exprs are fine as long as the base is a
+  // VarExpr/MemberExpr. So strip all of those off.
+  while (isa<ArraySectionExpr, ArraySubscriptExpr>(CurVarExpr)) {
+    if (auto *SubScrpt = dyn_cast<ArraySubscriptExpr>(CurVarExpr))
+      CurVarExpr = SubScrpt->getBase()->IgnoreParenImpCasts();
+    else
+      CurVarExpr =
+          cast<ArraySectionExpr>(CurVarExpr)->getBase()->IgnoreParenImpCasts();
+  }
+
+  // References to a VarDecl are fine.
+  if (const auto *DRE = dyn_cast<DeclRefExpr>(CurVarExpr)) {
+    if (isa<VarDecl, NonTypeTemplateParmDecl>(
+            DRE->getDecl()->getCanonicalDecl()))
+      return VarExpr;
+  }
+
+  // A MemberExpr that references a Field is valid.
+  if (const auto *ME = dyn_cast<MemberExpr>(CurVarExpr)) {
+    if (isa<FieldDecl>(ME->getMemberDecl()->getCanonicalDecl()))
+      return VarExpr;
+  }
+
+  // Referring to 'this' is always OK.
+  if (isa<CXXThisExpr>(CurVarExpr))
+    return VarExpr;
+
+  // Nothing really we can do here, as these are dependent.  So just return they
+  // are valid.
+  if (isa<DependentScopeDeclRefExpr, CXXDependentScopeMemberExpr>(CurVarExpr))
+    return VarExpr;
+
+  // There isn't really anything we can do in the case of a recovery expr, so
+  // skip the diagnostic rather than produce a confusing diagnostic.
+  if (isa<RecoveryExpr>(CurVarExpr))
+    return ExprError();
+
+  Diag(VarExpr->getExprLoc(), diag::err_acc_not_a_var_ref);
+  return ExprError();
 }
 
 ExprResult SemaOpenACC::ActOnArraySectionExpr(Expr *Base, SourceLocation LBLoc,
