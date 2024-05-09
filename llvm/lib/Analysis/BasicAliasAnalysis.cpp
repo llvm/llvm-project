@@ -44,6 +44,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Operator.h"
+#include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
@@ -1283,8 +1284,7 @@ AliasResult BasicAAResult::aliasGEP(
     // VarIndex = Scale*V.
     const VariableGEPIndex &Var = DecompGEP1.VarIndices[0];
     if (Var.Val.TruncBits == 0 &&
-        isKnownNonZero(Var.Val.V, /*Depth=*/0,
-                       SimplifyQuery(DL, DT, &AC, Var.CxtI))) {
+        isKnownNonZero(Var.Val.V, SimplifyQuery(DL, DT, &AC, Var.CxtI))) {
       // Check if abs(V*Scale) >= abs(Scale) holds in the presence of
       // potentially wrapping math.
       auto MultiplyByScaleNoWrap = [](const VariableGEPIndex &Var) {

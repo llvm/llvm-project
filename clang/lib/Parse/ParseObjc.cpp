@@ -375,7 +375,7 @@ Decl *Parser::ParseObjCAtInterfaceDeclaration(SourceLocation AtLoc,
     Actions.ActOnTypedefedProtocols(protocols, protocolLocs,
                                     superClassId, superClassLoc);
 
-  Sema::SkipBodyInfo SkipBody;
+  SkipBodyInfo SkipBody;
   ObjCInterfaceDecl *ClsType = Actions.ActOnStartClassInterface(
       getCurScope(), AtLoc, nameId, nameLoc, typeParameterList, superClassId,
       superClassLoc, typeArgs,
@@ -2133,7 +2133,7 @@ Parser::ParseObjCAtProtocolDeclaration(SourceLocation AtLoc,
                                   /*consumeLastToken=*/true))
     return nullptr;
 
-  Sema::SkipBodyInfo SkipBody;
+  SkipBodyInfo SkipBody;
   ObjCProtocolDecl *ProtoType = Actions.ActOnStartProtocolInterface(
       AtLoc, protocolName, nameLoc, ProtocolRefs.data(), ProtocolRefs.size(),
       ProtocolLocs.data(), EndProtoLoc, attrs, &SkipBody);
@@ -3736,6 +3736,7 @@ void Parser::ParseLexedObjCMethodDefs(LexedMethod &LM, bool parseMethod) {
   ParseScope BodyScope(this, (parseMethod ? Scope::ObjCMethodScope : 0) |
                                  Scope::FnScope | Scope::DeclScope |
                                  Scope::CompoundStmtScope);
+  Sema::FPFeaturesStateRAII SaveFPFeatures(Actions);
 
   // Tell the actions module that we have entered a method or c-function definition
   // with the specified Declarator for the method/function.

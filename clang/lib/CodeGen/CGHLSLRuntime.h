@@ -73,6 +73,8 @@ public:
   //===----------------------------------------------------------------------===//
 
   GENERATE_HLSL_INTRINSIC_FUNCTION(All, all)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(Any, any)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(Lerp, lerp)
   GENERATE_HLSL_INTRINSIC_FUNCTION(ThreadId, thread_id)
 
   //===----------------------------------------------------------------------===//

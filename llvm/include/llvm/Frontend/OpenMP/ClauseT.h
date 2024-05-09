@@ -949,7 +949,7 @@ struct ReductionT {
   using ReductionIdentifiers = ListT<type::ReductionIdentifierT<I, E>>;
   ENUM(ReductionModifier, Default, Inscan, Task);
   using TupleTrait = std::true_type;
-  std::tuple<ReductionIdentifiers, OPT(ReductionModifier), List> t;
+  std::tuple<OPT(ReductionModifier), ReductionIdentifiers, List> t;
 };
 
 // V5.2: [15.8.1] `memory-order` clauses

@@ -5,6 +5,17 @@
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx11,since-cxx17 -fexceptions -fcxx-exceptions -pedantic-errors
 // RUN: %clang_cc1 -std=c++23 -triple x86_64-unknown-unknown %s -verify=expected,since-cxx11,since-cxx17 -fexceptions -fcxx-exceptions -pedantic-errors
 
+#if __cplusplus == 199711L
+#define static_assert(...) __extension__ _Static_assert(__VA_ARGS__)
+// cxx98-error@-1 {{variadic macros are a C99 feature}}
+#endif
+
+#if __cplusplus == 199711L
+#define __enable_constant_folding(x) (__builtin_constant_p(x) ? (x) : (x))
+#else
+#define __enable_constant_folding
+#endif
+
 namespace cwg100 { // cwg100: yes
   template<const char (*)[4]> struct A {}; // #cwg100-A
   template<const char (&)[4]> struct B {}; // #cwg100-B
@@ -736,8 +747,8 @@ namespace cwg147 { // cwg147: yes
 
 namespace cwg148 { // cwg148: yes
   struct A { int A::*p; };
-  int check1[__is_pod(int(A::*)) ? 1 : -1];
-  int check2[__is_pod(A) ? 1 : -1];
+  static_assert(__is_pod(int(A::*)), "");
+  static_assert(__is_pod(A), "");
 }
 
 // cwg149: na
@@ -745,13 +756,7 @@ namespace cwg148 { // cwg148: yes
 namespace cwg151 { // cwg151: 3.1
   struct X {};
   typedef int X::*p;
-#if __cplusplus < 201103L
-#define fold(x) (__builtin_constant_p(0) ? (x) : (x))
-#else
-#define fold
-#endif
-  int check[fold(p() == 0) ? 1 : -1];
-#undef fold
+  static_assert(__enable_constant_folding(p() == 0), "");
 }
 
 namespace cwg152 { // cwg152: yes
@@ -956,42 +961,42 @@ namespace cwg171 {
 
 namespace cwg172 { // cwg172: yes
   enum { zero };
-  int check1[-1 < zero ? 1 : -1];
+  static_assert(-1 < zero, "");
 
   enum { x = -1, y = (unsigned int)-1 };
-  int check2[sizeof(x) > sizeof(int) ? 1 : -1];
+  static_assert(sizeof(x) > sizeof(int), "");
 
   enum { a = (unsigned int)-1 / 2 };
-  int check3a[sizeof(a) == sizeof(int) ? 1 : -1];
-  int check3b[-a < 0 ? 1 : -1];
+  static_assert(sizeof(a) == sizeof(int), "");
+  static_assert(-a < 0, "");
 
   enum { b = (unsigned int)-1 / 2 + 1 };
-  int check4a[sizeof(b) == sizeof(unsigned int) ? 1 : -1];
-  int check4b[-b > 0 ? 1 : -1];
+  static_assert(sizeof(b) == sizeof(unsigned int), "");
+  static_assert(-b > 0, "");
 
   enum { c = (unsigned long)-1 / 2 };
-  int check5a[sizeof(c) == sizeof(long) ? 1 : -1];
-  int check5b[-c < 0 ? 1 : -1];
+  static_assert(sizeof(c) == sizeof(long), "");
+  static_assert(-c < 0, "");
 
   enum { d = (unsigned long)-1 / 2 + 1 };
-  int check6a[sizeof(d) == sizeof(unsigned long) ? 1 : -1];
-  int check6b[-d > 0 ? 1 : -1];
+  static_assert(sizeof(d) == sizeof(unsigned long), "");
+  static_assert(-d > 0, "");
 
   enum { e = (unsigned long long)-1 / 2 };
   // cxx98-error@-1 {{'long long' is a C++11 extension}}
-  int check7a[sizeof(e) == sizeof(long) ? 1 : -1];
-  int check7b[-e < 0 ? 1 : -1];
+  static_assert(sizeof(e) == sizeof(long), "");
+  static_assert(-e < 0, "");
 
   enum { f = (unsigned long long)-1 / 2 + 1 };
   // cxx98-error@-1 {{'long long' is a C++11 extension}}
-  int check8a[sizeof(f) == sizeof(unsigned long) ? 1 : -1];
-  int check8b[-f > 0 ? 1 : -1];
+  static_assert(sizeof(f) == sizeof(unsigned long), "");
+  static_assert(-f > 0, "");
 }
 
 namespace cwg173 { // cwg173: yes
-  int check[('0' + 1 == '1' && '0' + 2 == '2' && '0' + 3 == '3' &&
-             '0' + 4 == '4' && '0' + 5 == '5' && '0' + 6 == '6' &&
-             '0' + 7 == '7' && '0' + 8 == '8' && '0' + 9 == '9') ? 1 : -1];
+  static_assert('0' + 1 == '1' && '0' + 2 == '2' && '0' + 3 == '3' &&
+                '0' + 4 == '4' && '0' + 5 == '5' && '0' + 6 == '6' &&
+                '0' + 7 == '7' && '0' + 8 == '8' && '0' + 9 == '9', "");
 }
 
 // cwg174: sup 1012
@@ -1070,7 +1075,7 @@ namespace cwg177 { // cwg177: yes
 }
 
 namespace cwg178 { // cwg178: yes
-  int check[int() == 0 ? 1 : -1];
+  static_assert(int() == 0, "");
 #if __cplusplus >= 201103L
   static_assert(int{} == 0, "");
   struct S { int a, b; };
@@ -1180,7 +1185,7 @@ namespace cwg187 { // cwg187: sup 481
 
 namespace cwg188 { // cwg188: yes
   char c[10];
-  int check[sizeof(0, c) == 10 ? 1 : -1];
+  static_assert(sizeof(0, c) == 10, "");
 }
 
 // cwg190 FIXME: add codegen test for tbaa

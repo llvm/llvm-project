@@ -5,6 +5,17 @@
 // RUN: %clang_cc1 -std=c++11 -verify=expected,cxx98-14,cxx98-17,cxx98-20,cxx11-14,since-cxx11 -triple %itanium_abi_triple %s -fexceptions -fcxx-exceptions -pedantic-errors
 // RUN: %clang_cc1 -std=c++98 -verify=expected,cxx98-14,cxx98-17,cxx98-20,cxx98 -triple %itanium_abi_triple %s -fexceptions -fcxx-exceptions -pedantic-errors
 
+#if __cplusplus == 199711L
+#define static_assert(...) __extension__ _Static_assert(__VA_ARGS__)
+// cxx98-error@-1 {{variadic macros are a C99 feature}}
+#endif
+
+#if __cplusplus == 199711L
+#define __enable_constant_folding(x) (__builtin_constant_p(x) ? (x) : (x))
+#else
+#define __enable_constant_folding
+#endif
+
 namespace cwg300 { // cwg300: yes
   template<typename R, typename A> void f(R (&)(A)) {}
   int g(int);
@@ -23,7 +34,7 @@ namespace cwg301 { // cwg301: 3.5
     bool b = (void(*)(S, S))operator- < (void(*)(S, S))operator-;
     // cxx98-17-warning@-1 {{ordered comparison of function pointers ('void (*)(S, S)' and 'void (*)(S, S)')}}
     // cxx20-23-error@-2 {{expected '>'}}
-    //   cxx20-23-note@-3 {{to match this '<'}} 
+    //   cxx20-23-note@-3 {{to match this '<'}}
     bool c = (void(*)(S, S))operator+ < (void(*)(S, S))operator-;
     // expected-error@-1 {{expected '>'}}
     //   expected-note@-2 {{to match this '<'}}
@@ -396,7 +407,7 @@ namespace cwg324 { // cwg324: 3.6
 
 namespace cwg326 { // cwg326: 3.1
   struct S {};
-  int test[__is_trivially_constructible(S, const S&) ? 1 : -1];
+  static_assert(__is_trivially_constructible(S, const S&), "");
 }
 
 namespace cwg327 { // cwg327: dup 538
@@ -631,7 +642,7 @@ namespace cwg339 { // cwg339: 2.8
   char xxx(int);
   char (&xxx(float))[2];
 
-  template<class T> A<sizeof(xxx((T)0))> f(T) {} // #cwg339-f 
+  template<class T> A<sizeof(xxx((T)0))> f(T) {} // #cwg339-f
 
   void test() {
     A<1> a = f(0);
@@ -653,7 +664,7 @@ namespace cwg339 { // cwg339: 2.8
 
   template<typename T> A<sizeof(f(T()))> make_A();
 
-  int a[conv_int<char>::value ? 1 : -1];
+  static_assert(conv_int<char>::value, "");
   bool b = conv_int2<char>(A<1>());
   A<1> c = make_A<char>();
 }
@@ -817,7 +828,7 @@ namespace cwg352 { // cwg352: 2.8
     void g(A::E e) {
       foo(e, &arg);
       // expected-error@-1 {{no matching function for call to 'foo'}}
-      //   expected-note@#cwg352-foo {{candidate template ignored: couldn't infer template argument 'R'}} 
+      //   expected-note@#cwg352-foo {{candidate template ignored: couldn't infer template argument 'R'}}
 
       using A::foo;
       foo<int, int>(e, &arg); // ok, uses non-template
@@ -918,7 +929,7 @@ namespace cwg352 { // cwg352: 2.8
 
   namespace example5 {
     template<int I> class A {};
-    template<int I> void g(A<I+1>); // #cwg352-g 
+    template<int I> void g(A<I+1>); // #cwg352-g
     template<int I> void f(A<I>, A<I+1>);
     void h(A<1> a1, A<2> a2) {
       g(a1);
@@ -1099,21 +1110,14 @@ namespace cwg364 { // cwg364: yes
 #endif
 
 namespace cwg367 { // cwg367: yes
-  // FIXME: These diagnostics are terrible. Don't diagnose an ill-formed global
-  // array as being a VLA!
-  int a[true ? throw 0 : 4];
-  // expected-error@-1 {{variable length arrays in C++ are a Clang extension}}
-  // expected-error@-2 {{variable length array declaration not allowed at file scope}}
-  int b[true ? 4 : throw 0];
-  // cxx98-error@-1 {{variable length arrays in C++ are a Clang extension}}
-  // cxx98-error@-2 {{variable length array folded to constant array as an extension}}
-  int c[true ? *new int : 4];
-  // expected-error@-1 {{variable length arrays in C++ are a Clang extension}}
+  static_assert(__enable_constant_folding(true ? throw 0 : 4), "");
+  // expected-error@-1 {{expression is not an integral constant expression}}
+  static_assert(__enable_constant_folding(true ? 4 : throw 0), "");
+  static_assert(__enable_constant_folding(true ? *new int : 4), "");
+  // expected-error@-1 {{expression is not an integral constant expression}}
   //   expected-note@-2 {{read of uninitialized object is not allowed in a constant expression}}
-  // expected-error@-3 {{variable length array declaration not allowed at file scope}}
-  int d[true ? 4 : *new int];
-  // cxx98-error@-1 {{variable length arrays in C++ are a Clang extension}}
-  // cxx98-error@-2 {{variable length array folded to constant array as an extension}}
+  static_assert(__enable_constant_folding(true ? 4 : *new int), "");
+
 }
 
 namespace cwg368 { // cwg368: 3.6
@@ -1252,7 +1256,7 @@ namespace cwg373 { // cwg373: 5
     }
   };
 
-  struct A { struct B {}; }; // #cwg373-A 
+  struct A { struct B {}; }; // #cwg373-A
   namespace X = A::B;
   // expected-error@-1 {{expected namespace name}}
   //   expected-note@#cwg373-A {{'A' declared here}}
@@ -1325,7 +1329,7 @@ namespace cwg383 { // cwg383: yes
   struct B { ~B(); };
   union C { C &operator=(const C&); };
   union D { ~D(); };
-  int check[(__is_pod(A) || __is_pod(B) || __is_pod(C) || __is_pod(D)) ? -1 : 1];
+  static_assert(!__is_pod(A) && !__is_pod(B) && !__is_pod(C) && !__is_pod(D), "");
 }
 
 namespace cwg384 { // cwg384: yes
@@ -1604,7 +1608,7 @@ namespace cwg395 { // cwg395: 3.0
     // expected-error@-2 {{conversion function cannot have any parameters}}
     // expected-error@-3 {{cannot specify any part of a return type in the declaration of a conversion function}}
     // expected-error@-4 {{conversion function cannot convert to a function type}}
-  
+
   };
 
   struct null1_t {
@@ -1717,9 +1721,9 @@ namespace cwg399 { // cwg399: 11
     B_ptr->B_alias::~B();
     B_ptr->B_alias::~B_alias();
     B_ptr->cwg399::~B();
-    // expected-error@-1 {{qualified member access refers to a member in namespace 'cwg399'}}
+    // expected-error@-1 {{no member named '~B' in namespace 'cwg399'}}
     B_ptr->cwg399::~B_alias();
-    // expected-error@-1 {{qualified member access refers to a member in namespace 'cwg399'}}
+    // expected-error@-1 {{no member named '~B' in namespace 'cwg399'}}
   }
 
   template<typename T, typename U>

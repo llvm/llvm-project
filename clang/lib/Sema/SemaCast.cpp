@@ -155,7 +155,7 @@ namespace {
       Self.CheckCastAlign(SrcExpr.get(), DestType, OpRange);
     }
 
-    void checkObjCConversion(Sema::CheckedConversionKind CCK) {
+    void checkObjCConversion(CheckedConversionKind CCK) {
       assert(Self.getLangOpts().allowsNonTrivialObjCLifetimeQualifiers());
 
       Expr *src = SrcExpr.get();
@@ -248,18 +248,14 @@ static TryCastResult TryStaticMemberPointerUpcast(Sema &Self, ExprResult &SrcExp
                                                CastKind &Kind,
                                                CXXCastPath &BasePath);
 
-static TryCastResult TryStaticImplicitCast(Sema &Self, ExprResult &SrcExpr,
-                                           QualType DestType,
-                                           Sema::CheckedConversionKind CCK,
-                                           SourceRange OpRange,
-                                           unsigned &msg, CastKind &Kind,
-                                           bool ListInitialization);
+static TryCastResult
+TryStaticImplicitCast(Sema &Self, ExprResult &SrcExpr, QualType DestType,
+                      CheckedConversionKind CCK, SourceRange OpRange,
+                      unsigned &msg, CastKind &Kind, bool ListInitialization);
 static TryCastResult TryStaticCast(Sema &Self, ExprResult &SrcExpr,
-                                   QualType DestType,
-                                   Sema::CheckedConversionKind CCK,
-                                   SourceRange OpRange,
-                                   unsigned &msg, CastKind &Kind,
-                                   CXXCastPath &BasePath,
+                                   QualType DestType, CheckedConversionKind CCK,
+                                   SourceRange OpRange, unsigned &msg,
+                                   CastKind &Kind, CXXCastPath &BasePath,
                                    bool ListInitialization);
 static TryCastResult TryConstCast(Sema &Self, ExprResult &SrcExpr,
                                   QualType DestType, bool CStyle,
@@ -1223,7 +1219,7 @@ void CastOperation::CheckReinterpretCast() {
 
   if (isValidCast(tcr)) {
     if (Self.getLangOpts().allowsNonTrivialObjCLifetimeQualifiers())
-      checkObjCConversion(Sema::CCK_OtherCast);
+      checkObjCConversion(CheckedConversionKind::OtherCast);
     DiagnoseReinterpretUpDownCast(Self, SrcExpr.get(), DestType, OpRange);
 
     if (unsigned DiagID = checkCastFunctionType(Self, SrcExpr, DestType))
@@ -1274,9 +1270,9 @@ void CastOperation::CheckStaticCast() {
   }
 
   unsigned msg = diag::err_bad_cxx_cast_generic;
-  TryCastResult tcr
-    = TryStaticCast(Self, SrcExpr, DestType, Sema::CCK_OtherCast, OpRange, msg,
-                    Kind, BasePath, /*ListInitialization=*/false);
+  TryCastResult tcr =
+      TryStaticCast(Self, SrcExpr, DestType, CheckedConversionKind::OtherCast,
+                    OpRange, msg, Kind, BasePath, /*ListInitialization=*/false);
   if (tcr != TC_Success && msg != 0) {
     if (SrcExpr.isInvalid())
       return;
@@ -1296,7 +1292,7 @@ void CastOperation::CheckStaticCast() {
     if (Kind == CK_BitCast)
       checkCastAlign();
     if (Self.getLangOpts().allowsNonTrivialObjCLifetimeQualifiers())
-      checkObjCConversion(Sema::CCK_OtherCast);
+      checkObjCConversion(CheckedConversionKind::OtherCast);
   } else {
     SrcExpr = ExprError();
   }
@@ -1317,14 +1313,13 @@ static bool IsAddressSpaceConversion(QualType SrcType, QualType DestType) {
 /// possible. If @p CStyle, ignore access restrictions on hierarchy casting
 /// and casting away constness.
 static TryCastResult TryStaticCast(Sema &Self, ExprResult &SrcExpr,
-                                   QualType DestType,
-                                   Sema::CheckedConversionKind CCK,
+                                   QualType DestType, CheckedConversionKind CCK,
                                    SourceRange OpRange, unsigned &msg,
                                    CastKind &Kind, CXXCastPath &BasePath,
                                    bool ListInitialization) {
   // Determine whether we have the semantics of a C-style cast.
-  bool CStyle
-    = (CCK == Sema::CCK_CStyleCast || CCK == Sema::CCK_FunctionalCast);
+  bool CStyle = (CCK == CheckedConversionKind::CStyleCast ||
+                 CCK == CheckedConversionKind::FunctionalCast);
 
   // The order the tests is not entirely arbitrary. There is one conversion
   // that can be handled in two different ways. Given:
@@ -1884,11 +1879,11 @@ TryStaticMemberPointerUpcast(Sema &Self, ExprResult &SrcExpr, QualType SrcType,
 ///
 ///   An expression e can be explicitly converted to a type T using a
 ///   @c static_cast if the declaration "T t(e);" is well-formed [...].
-TryCastResult
-TryStaticImplicitCast(Sema &Self, ExprResult &SrcExpr, QualType DestType,
-                      Sema::CheckedConversionKind CCK,
-                      SourceRange OpRange, unsigned &msg,
-                      CastKind &Kind, bool ListInitialization) {
+TryCastResult TryStaticImplicitCast(Sema &Self, ExprResult &SrcExpr,
+                                    QualType DestType,
+                                    CheckedConversionKind CCK,
+                                    SourceRange OpRange, unsigned &msg,
+                                    CastKind &Kind, bool ListInitialization) {
   if (DestType->isRecordType()) {
     if (Self.RequireCompleteType(OpRange.getBegin(), DestType,
                                  diag::err_bad_cast_incomplete) ||
@@ -1900,13 +1895,14 @@ TryStaticImplicitCast(Sema &Self, ExprResult &SrcExpr, QualType DestType,
   }
 
   InitializedEntity Entity = InitializedEntity::InitializeTemporary(DestType);
-  InitializationKind InitKind
-    = (CCK == Sema::CCK_CStyleCast)
-        ? InitializationKind::CreateCStyleCast(OpRange.getBegin(), OpRange,
-                                               ListInitialization)
-    : (CCK == Sema::CCK_FunctionalCast)
-        ? InitializationKind::CreateFunctionalCast(OpRange, ListInitialization)
-    : InitializationKind::CreateCast(OpRange);
+  InitializationKind InitKind =
+      (CCK == CheckedConversionKind::CStyleCast)
+          ? InitializationKind::CreateCStyleCast(OpRange.getBegin(), OpRange,
+                                                 ListInitialization)
+      : (CCK == CheckedConversionKind::FunctionalCast)
+          ? InitializationKind::CreateFunctionalCast(OpRange,
+                                                     ListInitialization)
+          : InitializationKind::CreateCast(OpRange);
   Expr *SrcExprRaw = SrcExpr.get();
   // FIXME: Per DR242, we should check for an implicit conversion sequence
   // or for a constructor that could be invoked by direct-initialization
@@ -1918,8 +1914,8 @@ TryStaticImplicitCast(Sema &Self, ExprResult &SrcExpr, QualType DestType,
   // There is no other way that works.
   // On the other hand, if we're checking a C-style cast, we've still got
   // the reinterpret_cast way.
-  bool CStyle
-    = (CCK == Sema::CCK_CStyleCast || CCK == Sema::CCK_FunctionalCast);
+  bool CStyle = (CCK == CheckedConversionKind::CStyleCast ||
+                 CCK == CheckedConversionKind::FunctionalCast);
   if (InitSeq.Failed() && (CStyle || !DestType->isReferenceType()))
     return TC_NotApplicable;
 
@@ -2814,8 +2810,9 @@ void CastOperation::CheckCXXCStyleCast(bool FunctionalStyle,
   if (isValidCast(tcr))
     Kind = CK_NoOp;
 
-  Sema::CheckedConversionKind CCK =
-      FunctionalStyle ? Sema::CCK_FunctionalCast : Sema::CCK_CStyleCast;
+  CheckedConversionKind CCK = FunctionalStyle
+                                  ? CheckedConversionKind::FunctionalCast
+                                  : CheckedConversionKind::CStyleCast;
   if (tcr == TC_NotApplicable) {
     tcr = TryAddressSpaceCast(Self, SrcExpr, DestType, /*CStyle*/ true, msg,
                               Kind);
@@ -3201,7 +3198,7 @@ void CastOperation::CheckCStyleCast() {
 
   // ARC imposes extra restrictions on casts.
   if (Self.getLangOpts().allowsNonTrivialObjCLifetimeQualifiers()) {
-    checkObjCConversion(Sema::CCK_CStyleCast);
+    checkObjCConversion(CheckedConversionKind::CStyleCast);
     if (SrcExpr.isInvalid())
       return;
 

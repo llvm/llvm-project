@@ -6,6 +6,11 @@
 // RUN: env ASAN_OPTIONS=detect_stack_use_after_return=0 %clang_cc1 -std=c++23 %s -verify=expected,since-cxx20,since-cxx17,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
 // RUN: env ASAN_OPTIONS=detect_stack_use_after_return=0 %clang_cc1 -std=c++2c %s -verify=expected,since-cxx20,since-cxx17,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
 
+#if __cplusplus == 199711L
+#define static_assert(...) __extension__ _Static_assert(__VA_ARGS__)
+// cxx98-error@-1 {{variadic macros are a C99 feature}}
+#endif
+
 // FIXME: __SIZE_TYPE__ expands to 'long long' on some targets.
 __extension__ typedef __SIZE_TYPE__ size_t;
 
@@ -217,7 +222,7 @@ namespace cwg407 { // cwg407: 3.8
 }
 
 namespace cwg408 { // cwg408: 3.4
-  template<int N> void g() { int arr[N != 1 ? 1 : -1]; }
+  template<int N> void g() { static_assert(N != 1, ""); }
   template<> void g<2>() { }
 
   template<typename T> struct S {
@@ -239,7 +244,7 @@ namespace cwg408 { // cwg408: 3.4
   };
   template<typename T> int R<T>::arr[1];
   template<typename T> void R<T>::f() {
-    int arr[sizeof(arr) != sizeof(int) ? 1 : -1];
+    static_assert(sizeof(arr) != sizeof(int), "");
   }
   template<> int R<int>::arr[2];
   template void R<int>::f();
@@ -842,11 +847,10 @@ namespace cwg451 { // cwg451: yes
   // expected-warning@-1 {{division by zero is undefined}}
   const int b = 1 / 0; // #cwg451-b
   // expected-warning@-1 {{division by zero is undefined}}
-  int arr[b]; // #cwg451-arr
-  // expected-error@-1 {{variable length arrays in C++ are a Clang extension}}
+  static_assert(b, "");
+  // expected-error@-1 {{expression is not an integral constant expression}}
   //   expected-note@-2 {{initializer of 'b' is not a constant expression}}
   //   expected-note@#cwg451-b {{declared here}}
-  // expected-error@#cwg451-arr {{variable length array declaration not allowed at file scope}}
 }
 
 namespace cwg452 { // cwg452: yes
@@ -876,11 +880,10 @@ namespace cwg456 { // cwg456: yes
 namespace cwg457 { // cwg457: yes
   const int a = 1;
   const volatile int b = 1;
-  int ax[a];
-  int bx[b];
-  // expected-error@-1 {{variable length arrays in C++ are a Clang extension}}
+  static_assert(a, "");
+  static_assert(b, "");
+  // expected-error@-1 {{expression is not an integral constant expression}}
   //   expected-note@-2 {{read of volatile-qualified type 'const volatile int' is not allowed in a constant expression}}
-  // expected-error@-3 {{variable length array declaration not allowed at file scope}}
 
   enum E {
     ea = a,
@@ -1276,20 +1279,18 @@ namespace cwg482 { // cwg482: 3.5
 
 namespace cwg483 { // cwg483: yes
   namespace climits {
-    int check1[__SCHAR_MAX__ >= 127 ? 1 : -1];
-    int check2[__SHRT_MAX__ >= 32767 ? 1 : -1];
-    int check3[__INT_MAX__ >= 32767 ? 1 : -1];
-    int check4[__LONG_MAX__ >= 2147483647 ? 1 : -1];
-    int check5[__LONG_LONG_MAX__ >= 9223372036854775807 ? 1 : -1];
-    // cxx98-error@-1 {{'long long' is a C++11 extension}}
-    // cxx98-error@-2 0-1{{'long long' is a C++11 extension}}
+    static_assert(__SCHAR_MAX__ >= 127, "");
+    static_assert(__SHRT_MAX__ >= 32767, "");
+    static_assert(__INT_MAX__ >= 32767, "");
+    static_assert(__LONG_MAX__ >= 2147483647, "");
+    static_assert(__LONG_LONG_MAX__ >= 9223372036854775807, "");
   }
   namespace cstdint {
-    int check1[__PTRDIFF_WIDTH__ >= 16 ? 1 : -1];
-    int check2[__SIG_ATOMIC_WIDTH__ >= 8 ? 1 : -1];
-    int check3[__SIZE_WIDTH__ >= 16 ? 1 : -1];
-    int check4[__WCHAR_WIDTH__ >= 8 ? 1 : -1];
-    int check5[__WINT_WIDTH__ >= 16 ? 1 : -1];
+    static_assert(__PTRDIFF_WIDTH__ >= 16, "");
+    static_assert(__SIG_ATOMIC_WIDTH__ >= 8, "");
+    static_assert(__SIZE_WIDTH__ >= 16, "");
+    static_assert(__WCHAR_WIDTH__ >= 8, "");
+    static_assert(__WINT_WIDTH__ >= 16, "");
   }
 }
 
@@ -1366,11 +1367,10 @@ namespace cwg486 { // cwg486: yes
 namespace cwg487 { // cwg487: yes
   enum E { e };
   int operator+(int, E); // #cwg487-operator-plus
-  int i[4 + e]; // #cwg487-i
-  // expected-error@-1 {{variable length arrays in C++ are a Clang extension}}
+  static_assert(4 + e, "");
+  // expected-error@-1 {{expression is not an integral constant expression}}
   //   since-cxx11-note@-2 {{non-constexpr function 'operator+' cannot be used in a constant expression}}
   //   since-cxx11-note@#cwg487-operator-plus {{declared here}}
-  // expected-error@#cwg487-i {{variable length array declaration not allowed at file scope}}
 }
 
 namespace cwg488 { // cwg488: yes c++11
@@ -1485,13 +1485,13 @@ namespace cwg495 { // cwg495: 3.5
 namespace cwg496 { // cwg496: sup 2094
   struct A { int n; };
   struct B { volatile int n; };
-  int check1[ __is_trivially_copyable(const int) ? 1 : -1];
+  static_assert(__is_trivially_copyable(const int), "");
   // This checks the cwg2094 behavior, not cwg496
-  int check2[ __is_trivially_copyable(volatile int) ? 1 : -1];
-  int check3[ __is_trivially_constructible(A, const A&) ? 1 : -1];
-  int check4[ __is_trivially_constructible(B, const B&) ? 1 : -1];
-  int check5[ __is_trivially_assignable(A, const A&) ? 1 : -1];
-  int check6[ __is_trivially_assignable(B, const B&) ? 1 : -1];
+  static_assert(__is_trivially_copyable(volatile int), "");
+  static_assert(__is_trivially_constructible(A, const A&), "");
+  static_assert(__is_trivially_constructible(B, const B&), "");
+  static_assert(__is_trivially_assignable(A, const A&), "");
+  static_assert(__is_trivially_assignable(B, const B&), "");
 }
 
 namespace cwg497 { // cwg497: sup 253

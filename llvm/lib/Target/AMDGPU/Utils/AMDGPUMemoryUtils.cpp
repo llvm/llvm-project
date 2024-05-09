@@ -32,16 +32,12 @@ Align getAlign(DataLayout const &DL, const GlobalVariable *GV) {
 }
 
 bool isDynamicLDS(const GlobalVariable &GV) {
-  // external zero size addrspace(3) without initializer implies cuda/hip extern
-  // __shared__ the semantics for such a variable appears to be that all extern
-  // __shared__ variables alias one another. This hits different handling.
+  // external zero size addrspace(3) without initializer is dynlds.
   const Module *M = GV.getParent();
   const DataLayout &DL = M->getDataLayout();
-  if (GV.getType()->getPointerAddressSpace() != AMDGPUAS::LOCAL_ADDRESS) {
+  if (GV.getType()->getPointerAddressSpace() != AMDGPUAS::LOCAL_ADDRESS)
     return false;
-  }
-  uint64_t AllocSize = DL.getTypeAllocSize(GV.getValueType());
-  return GV.hasExternalLinkage() && AllocSize == 0;
+  return DL.getTypeAllocSize(GV.getValueType()) == 0;
 }
 
 bool isLDSVariableToLower(const GlobalVariable &GV) {

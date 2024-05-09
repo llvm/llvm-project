@@ -6610,6 +6610,275 @@ public:
 
 };
 
+/// This class represents BOTH the OpenMP Array Section and OpenACC 'subarray',
+/// with a boolean differentiator.
+/// OpenMP 5.0 [2.1.5, Array Sections].
+/// To specify an array section in an OpenMP construct, array subscript
+/// expressions are extended with the following syntax:
+/// \code
+/// [ lower-bound : length : stride ]
+/// [ lower-bound : length : ]
+/// [ lower-bound : length ]
+/// [ lower-bound : : stride ]
+/// [ lower-bound : : ]
+/// [ lower-bound : ]
+/// [ : length : stride ]
+/// [ : length : ]
+/// [ : length ]
+/// [ : : stride ]
+/// [ : : ]
+/// [ : ]
+/// \endcode
+/// The array section must be a subset of the original array.
+/// Array sections are allowed on multidimensional arrays. Base language array
+/// subscript expressions can be used to specify length-one dimensions of
+/// multidimensional array sections.
+/// Each of the lower-bound, length, and stride expressions if specified must be
+/// an integral type expressions of the base language. When evaluated
+/// they represent a set of integer values as follows:
+/// \code
+/// { lower-bound, lower-bound + stride, lower-bound + 2 * stride,... ,
+/// lower-bound + ((length - 1) * stride) }
+/// \endcode
+/// The lower-bound and length must evaluate to non-negative integers.
+/// The stride must evaluate to a positive integer.
+/// When the size of the array dimension is not known, the length must be
+/// specified explicitly.
+/// When the stride is absent it defaults to 1.
+/// When the length is absent it defaults to ⌈(size − lower-bound)/stride⌉,
+/// where size is the size of the array dimension. When the lower-bound is
+/// absent it defaults to 0.
+///
+///
+/// OpenACC 3.3 [2.7.1 Data Specification in Data Clauses]
+/// In C and C++, a subarray is an array name followed by an extended array
+/// range specification in brackets, with start and length, such as
+///
+/// AA[2:n]
+///
+/// If the lower bound is missing, zero is used. If the length is missing and
+/// the array has known size, the size of the array is used; otherwise the
+/// length is required. The subarray AA[2:n] means elements AA[2], AA[3], . . .
+/// , AA[2+n-1]. In C and C++, a two dimensional array may be declared in at
+/// least four ways:
+///
+/// -Statically-sized array: float AA[100][200];
+/// -Pointer to statically sized rows: typedef float row[200]; row* BB;
+/// -Statically-sized array of pointers: float* CC[200];
+/// -Pointer to pointers: float** DD;
+///
+/// Each dimension may be statically sized, or a pointer to dynamically
+/// allocated memory. Each of these may be included in a data clause using
+/// subarray notation to specify a rectangular array:
+///
+/// -AA[2:n][0:200]
+/// -BB[2:n][0:m]
+/// -CC[2:n][0:m]
+/// -DD[2:n][0:m]
+///
+/// Multidimensional rectangular subarrays in C and C++ may be specified for any
+/// array with any combination of statically-sized or dynamically-allocated
+/// dimensions. For statically sized dimensions, all dimensions except the first
+/// must specify the whole extent to preserve the contiguous data restriction,
+/// discussed below. For dynamically allocated dimensions, the implementation
+/// will allocate pointers in device memory corresponding to the pointers in
+/// local memory and will fill in those pointers as appropriate.
+///
+/// In Fortran, a subarray is an array name followed by a comma-separated list
+/// of range specifications in parentheses, with lower and upper bound
+/// subscripts, such as
+///
+/// arr(1:high,low:100)
+///
+/// If either the lower or upper bounds are missing, the declared or allocated
+/// bounds of the array, if known, are used. All dimensions except the last must
+/// specify the whole extent, to preserve the contiguous data restriction,
+/// discussed below.
+///
+/// Restrictions
+///
+/// -In Fortran, the upper bound for the last dimension of an assumed-size dummy
+/// array must be specified.
+///
+/// -In C and C++, the length for dynamically allocated dimensions of an array
+/// must be explicitly specified.
+///
+/// -In C and C++, modifying pointers in pointer arrays during the data
+/// lifetime, either on the host or on the device, may result in undefined
+/// behavior.
+///
+/// -If a subarray  appears in a data clause, the implementation may choose to
+/// allocate memory for only that subarray on the accelerator.
+///
+/// -In Fortran, array pointers may appear, but pointer association is not
+/// preserved in device memory.
+///
+/// -Any array or subarray in a data clause, including Fortran array pointers,
+/// must be a contiguous section of memory, except for dynamic multidimensional
+/// C arrays.
+///
+/// -In C and C++, if a variable or array of composite type appears, all the
+/// data members of the struct or class are allocated and copied, as
+/// appropriate. If a composite member is a pointer type, the data addressed by
+/// that pointer are not implicitly copied.
+///
+/// -In Fortran, if a variable or array of composite type appears, all the
+/// members of that derived type are allocated and copied, as appropriate. If
+/// any member has the allocatable or pointer attribute, the data accessed
+/// through that member are not copied.
+///
+/// -If an expression is used in a subscript or subarray expression in a clause
+/// on a data construct, the same value is used when copying data at the end of
+/// the data region, even if the values of variables in the expression change
+/// during the data region.
+class ArraySectionExpr : public Expr {
+  friend class ASTStmtReader;
+  friend class ASTStmtWriter;
+
+public:
+  enum ArraySectionType { OMPArraySection, OpenACCArraySection };
+
+private:
+  enum {
+    BASE,
+    LOWER_BOUND,
+    LENGTH,
+    STRIDE,
+    END_EXPR,
+    OPENACC_END_EXPR = STRIDE
+  };
+
+  ArraySectionType ASType = OMPArraySection;
+  Stmt *SubExprs[END_EXPR] = {nullptr};
+  SourceLocation ColonLocFirst;
+  SourceLocation ColonLocSecond;
+  SourceLocation RBracketLoc;
+
+public:
+  // Constructor for OMP array sections, which include a 'stride'.
+  ArraySectionExpr(Expr *Base, Expr *LowerBound, Expr *Length, Expr *Stride,
+                   QualType Type, ExprValueKind VK, ExprObjectKind OK,
+                   SourceLocation ColonLocFirst, SourceLocation ColonLocSecond,
+                   SourceLocation RBracketLoc)
+      : Expr(ArraySectionExprClass, Type, VK, OK), ASType(OMPArraySection),
+        ColonLocFirst(ColonLocFirst), ColonLocSecond(ColonLocSecond),
+        RBracketLoc(RBracketLoc) {
+    setBase(Base);
+    setLowerBound(LowerBound);
+    setLength(Length);
+    setStride(Stride);
+    setDependence(computeDependence(this));
+  }
+
+  // Constructor for OpenACC sub-arrays, which do not permit a 'stride'.
+  ArraySectionExpr(Expr *Base, Expr *LowerBound, Expr *Length, QualType Type,
+                   ExprValueKind VK, ExprObjectKind OK, SourceLocation ColonLoc,
+                   SourceLocation RBracketLoc)
+      : Expr(ArraySectionExprClass, Type, VK, OK), ASType(OpenACCArraySection),
+        ColonLocFirst(ColonLoc), RBracketLoc(RBracketLoc) {
+    setBase(Base);
+    setLowerBound(LowerBound);
+    setLength(Length);
+    setDependence(computeDependence(this));
+  }
+
+  /// Create an empty array section expression.
+  explicit ArraySectionExpr(EmptyShell Shell)
+      : Expr(ArraySectionExprClass, Shell) {}
+
+  /// Return original type of the base expression for array section.
+  static QualType getBaseOriginalType(const Expr *Base);
+
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == ArraySectionExprClass;
+  }
+
+  bool isOMPArraySection() const { return ASType == OMPArraySection; }
+  bool isOpenACCArraySection() const { return ASType == OpenACCArraySection; }
+
+  /// Get base of the array section.
+  Expr *getBase() { return cast<Expr>(SubExprs[BASE]); }
+  const Expr *getBase() const { return cast<Expr>(SubExprs[BASE]); }
+
+  /// Get lower bound of array section.
+  Expr *getLowerBound() { return cast_or_null<Expr>(SubExprs[LOWER_BOUND]); }
+  const Expr *getLowerBound() const {
+    return cast_or_null<Expr>(SubExprs[LOWER_BOUND]);
+  }
+
+  /// Get length of array section.
+  Expr *getLength() { return cast_or_null<Expr>(SubExprs[LENGTH]); }
+  const Expr *getLength() const { return cast_or_null<Expr>(SubExprs[LENGTH]); }
+
+  /// Get stride of array section.
+  Expr *getStride() {
+    assert(ASType != OpenACCArraySection &&
+           "Stride not valid in OpenACC subarrays");
+    return cast_or_null<Expr>(SubExprs[STRIDE]);
+  }
+
+  const Expr *getStride() const {
+    assert(ASType != OpenACCArraySection &&
+           "Stride not valid in OpenACC subarrays");
+    return cast_or_null<Expr>(SubExprs[STRIDE]);
+  }
+
+  SourceLocation getBeginLoc() const LLVM_READONLY {
+    return getBase()->getBeginLoc();
+  }
+  SourceLocation getEndLoc() const LLVM_READONLY { return RBracketLoc; }
+
+  SourceLocation getColonLocFirst() const { return ColonLocFirst; }
+  SourceLocation getColonLocSecond() const {
+    assert(ASType != OpenACCArraySection &&
+           "second colon for stride not valid in OpenACC subarrays");
+    return ColonLocSecond;
+  }
+  SourceLocation getRBracketLoc() const { return RBracketLoc; }
+
+  SourceLocation getExprLoc() const LLVM_READONLY {
+    return getBase()->getExprLoc();
+  }
+
+  child_range children() {
+    return child_range(
+        &SubExprs[BASE],
+        &SubExprs[ASType == OMPArraySection ? END_EXPR : OPENACC_END_EXPR]);
+  }
+
+  const_child_range children() const {
+    return const_child_range(
+        &SubExprs[BASE],
+        &SubExprs[ASType == OMPArraySection ? END_EXPR : OPENACC_END_EXPR]);
+  }
+
+private:
+  /// Set base of the array section.
+  void setBase(Expr *E) { SubExprs[BASE] = E; }
+
+  /// Set lower bound of the array section.
+  void setLowerBound(Expr *E) { SubExprs[LOWER_BOUND] = E; }
+
+  /// Set length of the array section.
+  void setLength(Expr *E) { SubExprs[LENGTH] = E; }
+
+  /// Set length of the array section.
+  void setStride(Expr *E) {
+    assert(ASType != OpenACCArraySection &&
+           "Stride not valid in OpenACC subarrays");
+    SubExprs[STRIDE] = E;
+  }
+
+  void setColonLocFirst(SourceLocation L) { ColonLocFirst = L; }
+
+  void setColonLocSecond(SourceLocation L) {
+    assert(ASType != OpenACCArraySection &&
+           "second colon for stride not valid in OpenACC subarrays");
+    ColonLocSecond = L;
+  }
+  void setRBracketLoc(SourceLocation L) { RBracketLoc = L; }
+};
+
 /// Frontend produces RecoveryExprs on semantic errors that prevent creating
 /// other well-formed expressions. E.g. when type-checking of a binary operator
 /// fails, we cannot produce a BinaryOperator expression. Instead, we can choose

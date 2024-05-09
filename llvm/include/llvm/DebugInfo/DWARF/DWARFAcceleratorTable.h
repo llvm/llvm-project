@@ -608,6 +608,9 @@ public:
     /// Returns Hdr field
     Header getHeader() const { return Hdr; }
 
+    /// Returns Offsets field
+    DWARFDebugNamesOffsets getOffsets() const { return Offsets; }
+
     /// Reads offset of compilation unit CU. CU is 0-based.
     uint64_t getCUOffset(uint32_t CU) const;
     uint32_t getCUCount() const { return Hdr.CompUnitCount; }
