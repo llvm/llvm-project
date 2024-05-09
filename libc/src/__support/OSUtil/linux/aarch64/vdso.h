@@ -5,6 +5,8 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+#ifndef LLVM_LIBC_SRC___SUPPORT_OSUTIL_LINUX_AARCH64_VDSO_H
+#define LLVM_LIBC_SRC___SUPPORT_OSUTIL_LINUX_AARCH64_VDSO_H
 #include "src/__support/CPP/string_view.h"
 namespace LIBC_NAMESPACE {
 namespace vdso {
@@ -45,3 +47,4 @@ LIBC_INLINE constexpr cpp::string_view symbol_version(VDSOSym) {
 }
 } // namespace vdso
 } // namespace LIBC_NAMESPACE
+#endif // LLVM_LIBC_SRC___SUPPORT_OSUTIL_LINUX_AARCH64_VDSO_H
