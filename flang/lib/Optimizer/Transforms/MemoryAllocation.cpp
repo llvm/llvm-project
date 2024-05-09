@@ -65,7 +65,7 @@ keepStackAllocation(fir::AllocaOp alloca, mlir::Block *entry,
   // TODO: Generalize the algorithm and placement of the freemem nodes.
   if (alloca->getBlock() != entry)
     return true;
-  if (auto seqTy = alloca.getInType().dyn_cast<fir::SequenceType>()) {
+  if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(alloca.getInType())) {
     if (fir::hasDynamicSize(seqTy)) {
       // Move all arrays with runtime determined size to the heap.
       if (options.dynamicArrayOnHeap)

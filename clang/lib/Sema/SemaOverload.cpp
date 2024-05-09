@@ -1303,6 +1303,8 @@ static bool IsOverloadOrOverrideImpl(Sema &SemaRef, FunctionDecl *New,
   if (New->isMSVCRTEntryPoint())
     return false;
 
+  NamedDecl *OldDecl = Old;
+  NamedDecl *NewDecl = New;
   FunctionTemplateDecl *OldTemplate = Old->getDescribedFunctionTemplate();
   FunctionTemplateDecl *NewTemplate = New->getDescribedFunctionTemplate();
 
@@ -1347,6 +1349,8 @@ static bool IsOverloadOrOverrideImpl(Sema &SemaRef, FunctionDecl *New,
   // references to non-instantiated entities during constraint substitution.
   // GH78101.
   if (NewTemplate) {
+    OldDecl = OldTemplate;
+    NewDecl = NewTemplate;
     // C++ [temp.over.link]p4:
     //   The signature of a function template consists of its function
     //   signature, its return type and its template parameter list. The names
@@ -1506,13 +1510,14 @@ static bool IsOverloadOrOverrideImpl(Sema &SemaRef, FunctionDecl *New,
     }
   }
 
-  if (!UseOverrideRules) {
+  if (!UseOverrideRules &&
+      New->getTemplateSpecializationKind() != TSK_ExplicitSpecialization) {
     Expr *NewRC = New->getTrailingRequiresClause(),
          *OldRC = Old->getTrailingRequiresClause();
     if ((NewRC != nullptr) != (OldRC != nullptr))
       return true;
-
-    if (NewRC && !SemaRef.AreConstraintExpressionsEqual(Old, OldRC, New, NewRC))
+    if (NewRC &&
+        !SemaRef.AreConstraintExpressionsEqual(OldDecl, OldRC, NewDecl, NewRC))
       return true;
   }
 
@@ -2587,7 +2592,8 @@ bool Sema::IsIntegralPromotion(Expr *From, QualType FromType, QualType ToType) {
 
   // In HLSL an rvalue of integral type can be promoted to an rvalue of a larger
   // integral type.
-  if (Context.getLangOpts().HLSL)
+  if (Context.getLangOpts().HLSL && FromType->isIntegerType() &&
+      ToType->isIntegerType())
     return Context.getTypeSize(FromType) < Context.getTypeSize(ToType);
 
   return false;
@@ -2614,6 +2620,13 @@ bool Sema::IsFloatingPointPromotion(QualType FromType, QualType ToType) {
           (ToBuiltin->getKind() == BuiltinType::LongDouble ||
            ToBuiltin->getKind() == BuiltinType::Float128 ||
            ToBuiltin->getKind() == BuiltinType::Ibm128))
+        return true;
+
+      // In HLSL, `half` promotes to `float` or `double`, regardless of whether
+      // or not native half types are enabled.
+      if (getLangOpts().HLSL && FromBuiltin->getKind() == BuiltinType::Half &&
+          (ToBuiltin->getKind() == BuiltinType::Float ||
+           ToBuiltin->getKind() == BuiltinType::Double))
         return true;
 
       // Half can be promoted to float.
@@ -4393,6 +4406,24 @@ getFixedEnumPromtion(Sema &S, const StandardConversionSequence &SCS) {
   return FixedEnumPromotion::ToPromotedUnderlyingType;
 }
 
+static ImplicitConversionSequence::CompareKind
+HLSLCompareFloatingRank(QualType LHS, QualType RHS) {
+  assert(LHS->isVectorType() == RHS->isVectorType() &&
+         "Either both elements should be vectors or neither should.");
+  if (const auto *VT = LHS->getAs<VectorType>())
+    LHS = VT->getElementType();
+
+  if (const auto *VT = RHS->getAs<VectorType>())
+    RHS = VT->getElementType();
+
+  const auto L = LHS->getAs<BuiltinType>()->getKind();
+  const auto R = RHS->getAs<BuiltinType>()->getKind();
+  if (L == R)
+    return ImplicitConversionSequence::Indistinguishable;
+  return L < R ? ImplicitConversionSequence::Better
+               : ImplicitConversionSequence::Worse;
+}
+
 /// CompareStandardConversionSequences - Compare two standard
 /// conversion sequences to determine whether one is better than the
 /// other or if they are indistinguishable (C++ 13.3.3.2p3).
@@ -4632,6 +4663,21 @@ CompareStandardConversionSequences(Sema &S, SourceLocation Loc,
       return SCS1IsCompatibleRVVVectorConversion
                  ? ImplicitConversionSequence::Better
                  : ImplicitConversionSequence::Worse;
+  }
+
+  if (S.getLangOpts().HLSL) {
+    // On a promotion we prefer the lower rank to disambiguate.
+    if ((SCS1.Second == ICK_Floating_Promotion &&
+         SCS2.Second == ICK_Floating_Promotion) ||
+        (SCS1.Element == ICK_Floating_Promotion &&
+         SCS2.Element == ICK_Floating_Promotion))
+      return HLSLCompareFloatingRank(SCS1.getToType(2), SCS2.getToType(2));
+    // On a conversion we prefer the higher rank to disambiguate.
+    if ((SCS1.Second == ICK_Floating_Conversion &&
+         SCS2.Second == ICK_Floating_Conversion) ||
+        (SCS1.Element == ICK_Floating_Conversion &&
+         SCS2.Element == ICK_Floating_Conversion))
+      return HLSLCompareFloatingRank(SCS2.getToType(2), SCS1.getToType(2));
   }
 
   return ImplicitConversionSequence::Indistinguishable;
@@ -10654,29 +10700,10 @@ bool clang::isBetterOverloadCandidate(
   //   -— F1 and F2 are non-template functions with the same
   //      parameter-type-lists, and F1 is more constrained than F2 [...],
   if (!Cand1IsSpecialization && !Cand2IsSpecialization &&
-      sameFunctionParameterTypeLists(S, Cand1, Cand2)) {
-    FunctionDecl *Function1 = Cand1.Function;
-    FunctionDecl *Function2 = Cand2.Function;
-    if (FunctionDecl *MF = Function1->getInstantiatedFromMemberFunction())
-      Function1 = MF;
-    if (FunctionDecl *MF = Function2->getInstantiatedFromMemberFunction())
-      Function2 = MF;
-
-    const Expr *RC1 = Function1->getTrailingRequiresClause();
-    const Expr *RC2 = Function2->getTrailingRequiresClause();
-    if (RC1 && RC2) {
-      bool AtLeastAsConstrained1, AtLeastAsConstrained2;
-      if (S.IsAtLeastAsConstrained(Function1, RC1, Function2, RC2,
-                                   AtLeastAsConstrained1) ||
-          S.IsAtLeastAsConstrained(Function2, RC2, Function1, RC1,
-                                   AtLeastAsConstrained2))
-        return false;
-      if (AtLeastAsConstrained1 != AtLeastAsConstrained2)
-        return AtLeastAsConstrained1;
-    } else if (RC1 || RC2) {
-      return RC1 != nullptr;
-    }
-  }
+      sameFunctionParameterTypeLists(S, Cand1, Cand2) &&
+      S.getMoreConstrainedFunction(Cand1.Function, Cand2.Function) ==
+          Cand1.Function)
+    return true;
 
   //   -- F1 is a constructor for a class D, F2 is a constructor for a base
   //      class B of D, and for all arguments the corresponding parameters of
@@ -13344,25 +13371,6 @@ Sema::resolveAddressOfSingleOverloadCandidate(Expr *E, DeclAccessPair &Pair) {
            static_cast<int>(CUDA().IdentifyPreference(Caller, FD2));
   };
 
-  auto CheckMoreConstrained = [&](FunctionDecl *FD1,
-                                  FunctionDecl *FD2) -> std::optional<bool> {
-    if (FunctionDecl *MF = FD1->getInstantiatedFromMemberFunction())
-      FD1 = MF;
-    if (FunctionDecl *MF = FD2->getInstantiatedFromMemberFunction())
-      FD2 = MF;
-    SmallVector<const Expr *, 1> AC1, AC2;
-    FD1->getAssociatedConstraints(AC1);
-    FD2->getAssociatedConstraints(AC2);
-    bool AtLeastAsConstrained1, AtLeastAsConstrained2;
-    if (IsAtLeastAsConstrained(FD1, AC1, FD2, AC2, AtLeastAsConstrained1))
-      return std::nullopt;
-    if (IsAtLeastAsConstrained(FD2, AC2, FD1, AC1, AtLeastAsConstrained2))
-      return std::nullopt;
-    if (AtLeastAsConstrained1 == AtLeastAsConstrained2)
-      return std::nullopt;
-    return AtLeastAsConstrained1;
-  };
-
   // Don't use the AddressOfResolver because we're specifically looking for
   // cases where we have one overload candidate that lacks
   // enable_if/pass_object_size/...
@@ -13399,15 +13407,14 @@ Sema::resolveAddressOfSingleOverloadCandidate(Expr *E, DeclAccessPair &Pair) {
       }
       // FD has the same CUDA prefernece than Result. Continue check
       // constraints.
-      std::optional<bool> MoreConstrainedThanPrevious =
-          CheckMoreConstrained(FD, Result);
-      if (!MoreConstrainedThanPrevious) {
-        IsResultAmbiguous = true;
-        AmbiguousDecls.push_back(FD);
+      FunctionDecl *MoreConstrained = getMoreConstrainedFunction(FD, Result);
+      if (MoreConstrained != FD) {
+        if (!MoreConstrained) {
+          IsResultAmbiguous = true;
+          AmbiguousDecls.push_back(FD);
+        }
         continue;
       }
-      if (!*MoreConstrainedThanPrevious)
-        continue;
       // FD is more constrained - replace Result with it.
     }
     FoundBetter();
@@ -13426,7 +13433,7 @@ Sema::resolveAddressOfSingleOverloadCandidate(Expr *E, DeclAccessPair &Pair) {
       // constraints.
       if (getLangOpts().CUDA && CheckCUDAPreference(Skipped, Result) != 0)
         continue;
-      if (!CheckMoreConstrained(Skipped, Result))
+      if (!getMoreConstrainedFunction(Skipped, Result))
         return nullptr;
     }
     Pair = DAP;

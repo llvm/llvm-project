@@ -905,26 +905,26 @@ define i1 @parent8(ptr %a, ptr %bogus1, ptr %b) personality ptr @esfp{
 ; FNATTRS-SAME: ptr nonnull [[A:%.*]], ptr nocapture readnone [[BOGUS1:%.*]], ptr nonnull [[B:%.*]]) #[[ATTR7]] personality ptr @esfp {
 ; FNATTRS-NEXT:  entry:
 ; FNATTRS-NEXT:    invoke void @use2nonnull(ptr [[A]], ptr [[B]])
-; FNATTRS-NEXT:    to label [[CONT:%.*]] unwind label [[EXC:%.*]]
+; FNATTRS-NEXT:            to label [[CONT:%.*]] unwind label [[EXC:%.*]]
 ; FNATTRS:       cont:
 ; FNATTRS-NEXT:    [[NULL_CHECK:%.*]] = icmp eq ptr [[B]], null
 ; FNATTRS-NEXT:    ret i1 [[NULL_CHECK]]
 ; FNATTRS:       exc:
 ; FNATTRS-NEXT:    [[LP:%.*]] = landingpad { ptr, i32 }
-; FNATTRS-NEXT:    filter [0 x ptr] zeroinitializer
+; FNATTRS-NEXT:            filter [0 x ptr] zeroinitializer
 ; FNATTRS-NEXT:    unreachable
 ;
 ; ATTRIBUTOR-LABEL: define i1 @parent8(
 ; ATTRIBUTOR-SAME: ptr nonnull [[A:%.*]], ptr nocapture nofree readnone [[BOGUS1:%.*]], ptr nonnull [[B:%.*]]) #[[ATTR8]] personality ptr @esfp {
 ; ATTRIBUTOR-NEXT:  entry:
 ; ATTRIBUTOR-NEXT:    invoke void @use2nonnull(ptr nonnull [[A]], ptr nonnull [[B]])
-; ATTRIBUTOR-NEXT:    to label [[CONT:%.*]] unwind label [[EXC:%.*]]
+; ATTRIBUTOR-NEXT:            to label [[CONT:%.*]] unwind label [[EXC:%.*]]
 ; ATTRIBUTOR:       cont:
 ; ATTRIBUTOR-NEXT:    [[NULL_CHECK:%.*]] = icmp eq ptr [[B]], null
 ; ATTRIBUTOR-NEXT:    ret i1 [[NULL_CHECK]]
 ; ATTRIBUTOR:       exc:
 ; ATTRIBUTOR-NEXT:    [[LP:%.*]] = landingpad { ptr, i32 }
-; ATTRIBUTOR-NEXT:    filter [0 x ptr] zeroinitializer
+; ATTRIBUTOR-NEXT:            filter [0 x ptr] zeroinitializer
 ; ATTRIBUTOR-NEXT:    unreachable
 ;
 
@@ -1413,6 +1413,21 @@ define void @PR43833_simple(ptr %0, i32 %1) {
   %10 = add nuw nsw i32 %9, 1
   %11 = icmp eq i32 %10, %1
   br i1 %11, label %7, label %8
+}
+
+define ptr @pr91177_non_inbounds_gep(ptr nonnull %arg) {
+; FNATTRS-LABEL: define ptr @pr91177_non_inbounds_gep(
+; FNATTRS-SAME: ptr nonnull readnone [[ARG:%.*]]) #[[ATTR0]] {
+; FNATTRS-NEXT:    [[RES:%.*]] = getelementptr i8, ptr [[ARG]], i64 -8
+; FNATTRS-NEXT:    ret ptr [[RES]]
+;
+; ATTRIBUTOR-LABEL: define ptr @pr91177_non_inbounds_gep(
+; ATTRIBUTOR-SAME: ptr nofree nonnull readnone [[ARG:%.*]]) #[[ATTR0]] {
+; ATTRIBUTOR-NEXT:    [[RES:%.*]] = getelementptr i8, ptr [[ARG]], i64 -8
+; ATTRIBUTOR-NEXT:    ret ptr [[RES]]
+;
+  %res = getelementptr i8, ptr %arg, i64 -8
+  ret ptr %res
 }
 
 attributes #0 = { null_pointer_is_valid }

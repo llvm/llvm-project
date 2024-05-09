@@ -21,6 +21,7 @@ module test
 !CHECK-DAG: fir.global @_QMtestEz : !fir.logical<4> {
 
 contains
+!CHECK-LABEL: func.func @_QMtestPsub
   subroutine sub()
 !CHECK-DAG:  %[[T:.*]] = fir.address_of(@_QMtestEt) : !fir.ref<!fir.type<_QMtestTmy_type{t_i:i32,t_arr:!fir.array<5xf32>}>>
 !CHECK-DAG:  %[[T_DECL:.*]]:2 = hlfir.declare %[[T]] {uniq_name = "_QMtestEt"} : (!fir.ref<!fir.type<_QMtestTmy_type{t_i:i32,t_arr:!fir.array<5xf32>}>>) -> (!fir.ref<!fir.type<_QMtestTmy_type{t_i:i32,t_arr:!fir.array<5xf32>}>>, !fir.ref<!fir.type<_QMtestTmy_type{t_i:i32,t_arr:!fir.array<5xf32>}>>)

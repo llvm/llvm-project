@@ -1,18 +1,18 @@
 // RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=50 -ast-print %s | FileCheck %s
 // RUN: %clang_cc1 -fopenmp -fopenmp-version=50 -x c++ -std=c++11 -emit-pch -o %t %s
-// RUN: %clang_cc1 -fopenmp -fopenmp-version=50 -std=c++11 -include-pch %t -fsyntax-only -verify %s -ast-print | FileCheck %s
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=50 -std=c++11 -include-pch %t -verify %s -ast-print | FileCheck %s
 
 // RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=50 -ast-print %s | FileCheck %s
 // RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=50 -x c++ -std=c++11 -emit-pch -o %t %s
-// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=50 -std=c++11 -include-pch %t -fsyntax-only -verify %s -ast-print | FileCheck %s
+// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=50 -std=c++11 -include-pch %t -verify %s -ast-print | FileCheck %s
 
 // RUN: %clang_cc1 -DOMP51 -verify -fopenmp -ast-print %s | FileCheck --check-prefixes=CHECK,CHECK-51 %s
 // RUN: %clang_cc1 -DOMP51 -fopenmp -x c++ -std=c++11 -emit-pch -o %t %s
-// RUN: %clang_cc1 -DOMP51 -fopenmp -std=c++11 -include-pch %t -fsyntax-only -verify %s -ast-print | FileCheck --check-prefixes=CHECK,CHECK-51 %s
+// RUN: %clang_cc1 -DOMP51 -fopenmp -std=c++11 -include-pch %t -verify %s -ast-print | FileCheck --check-prefixes=CHECK,CHECK-51 %s
 
 // RUN: %clang_cc1 -DOMP51 -verify -fopenmp-simd -ast-print %s | FileCheck --check-prefixes=CHECK,CHECK-51 %s
 // RUN: %clang_cc1 -DOMP51 -fopenmp-simd -x c++ -std=c++11 -emit-pch -o %t %s
-// RUN: %clang_cc1 -DOMP51 -fopenmp-simd -std=c++11 -include-pch %t -fsyntax-only -verify %s -ast-print | FileCheck --check-prefixes=CHECK,CHECK-51 %s
+// RUN: %clang_cc1 -DOMP51 -fopenmp-simd -std=c++11 -include-pch %t -verify %s -ast-print | FileCheck --check-prefixes=CHECK,CHECK-51 %s
 // expected-no-diagnostics
 
 #ifndef HEADER

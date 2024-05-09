@@ -600,8 +600,9 @@ define i64 @add_mul_combine_infinite_loop(i64 %x) {
 ; RV32IMB-NEXT:    sh3add a1, a1, a2
 ; RV32IMB-NEXT:    sh1add a0, a0, a0
 ; RV32IMB-NEXT:    slli a2, a0, 3
-; RV32IMB-NEXT:    addi a0, a2, 2047
-; RV32IMB-NEXT:    addi a0, a0, 1
+; RV32IMB-NEXT:    li a3, 1
+; RV32IMB-NEXT:    slli a3, a3, 11
+; RV32IMB-NEXT:    sh3add a0, a0, a3
 ; RV32IMB-NEXT:    sltu a2, a0, a2
 ; RV32IMB-NEXT:    add a1, a1, a2
 ; RV32IMB-NEXT:    ret
@@ -610,8 +611,8 @@ define i64 @add_mul_combine_infinite_loop(i64 %x) {
 ; RV64IMB:       # %bb.0:
 ; RV64IMB-NEXT:    addi a0, a0, 86
 ; RV64IMB-NEXT:    sh1add a0, a0, a0
-; RV64IMB-NEXT:    li a1, -16
-; RV64IMB-NEXT:    sh3add a0, a0, a1
+; RV64IMB-NEXT:    slli a0, a0, 3
+; RV64IMB-NEXT:    addi a0, a0, -16
 ; RV64IMB-NEXT:    ret
   %tmp0 = mul i64 %x, 24
   %tmp1 = add i64 %tmp0, 2048

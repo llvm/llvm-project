@@ -224,7 +224,7 @@ __constexpr_memmove(_Tp* __dest, _Up* __src, __element_count __n) {
         std::__assign_trivially_copyable(__dest[__i], __src[__i]);
     }
   } else if (__count > 0) {
-    ::__builtin_memmove(__dest, __src, (__count - 1) * sizeof(_Tp) + __libcpp_datasizeof<_Tp>::value);
+    ::__builtin_memmove(__dest, __src, (__count - 1) * sizeof(_Tp) + __datasizeof_v<_Tp>);
   }
   return __dest;
 }
