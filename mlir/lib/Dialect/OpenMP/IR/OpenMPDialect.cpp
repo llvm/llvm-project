@@ -1081,6 +1081,7 @@ static void printPrivateList(OpAsmPrinter &p, Operation *op,
                              ValueRange privateVarOperands,
                              TypeRange privateVarTypes,
                              ArrayAttr privatizerSymbols) {
+  // TODO: Remove target-specific logic from this function.
   auto targetOp = mlir::dyn_cast<mlir::omp::TargetOp>(op);
   assert(targetOp);
 
