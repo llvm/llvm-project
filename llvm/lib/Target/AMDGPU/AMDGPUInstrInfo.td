@@ -520,4 +520,4 @@ def AMDGPUreadfirstlane : PatFrags<(ops node:$src),
 def AMDGPUwritelane : PatFrags<(ops node:$src0, node:$src1, node:$src2),
   [(int_amdgcn_writelane node:$src0, node:$src1, node:$src2),
    (AMDGPUwritelane_impl node:$src0, node:$src1, node:$src2)]>;
-   
+

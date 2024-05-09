@@ -5991,7 +5991,7 @@ static SDValue lowerLaneOp(const SITargetLowering &TLI, SDNode *N,
   SDLoc SL(N);
   MVT IntVT = MVT::getIntegerVT(ValSize);
 
-  auto createLaneOp = [&](SDValue &Src0, SDValue &Src1, SDValue &Src2,
+  auto createLaneOp = [&](SDValue Src0, SDValue Src1, SDValue Src2,
                           MVT VT) -> SDValue {
     return (Src2 ? DAG.getNode(AMDGPUISD::WRITELANE, SL, VT, {Src0, Src1, Src2})
             : Src1 ? DAG.getNode(AMDGPUISD::READLANE, SL, VT, {Src0, Src1})

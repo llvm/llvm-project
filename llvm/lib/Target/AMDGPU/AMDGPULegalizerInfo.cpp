@@ -5396,17 +5396,7 @@ bool AMDGPULegalizerInfo::legalizeLaneOp(LegalizerHelper &Helper,
   Register DstReg = MI.getOperand(0).getReg();
   Register Src0 = MI.getOperand(2).getReg();
 
-  auto createLaneOp = [&](Register &Src0, Register &Src1,
-                          Register &Src2) -> Register {
-    auto LaneOpDst = B.buildIntrinsic(IID, {S32}).addUse(Src0);
-    if (Src2.isValid())
-      return (LaneOpDst.addUse(Src1).addUse(Src2)).getReg(0);
-    if (Src1.isValid())
-      return (LaneOpDst.addUse(Src1)).getReg(0);
-    return LaneOpDst.getReg(0);
-  };
-
-  Register Src1, Src2, Src0Valid, Src2Valid;
+  Register Src1, Src2;
   if (IID == Intrinsic::amdgcn_readlane || IID == Intrinsic::amdgcn_writelane) {
     Src1 = MI.getOperand(3).getReg();
     if (IID == Intrinsic::amdgcn_writelane) {
@@ -5423,10 +5413,24 @@ bool AMDGPULegalizerInfo::legalizeLaneOp(LegalizerHelper &Helper,
       return true;
 
     Register Src0Valid = B.buildBitcast(S32, Src0).getReg(0);
-    if (Src2.isValid())
-      Src2Valid = B.buildBitcast(S32, Src2).getReg(0);
-    Register LaneOp = createLaneOp(Src0Valid, Src1, Src2Valid);
-    B.buildBitcast(DstReg, LaneOp);
+    MachineInstrBuilder LaneOpDst;
+    switch (IID) {
+      case Intrinsic::amdgcn_readfirstlane: {
+        LaneOpDst = B.buildIntrinsic(IID, {S32}).addUse(Src0Valid);
+        break;
+      }
+      case Intrinsic::amdgcn_readlane: {
+        LaneOpDst = B.buildIntrinsic(IID, {S32}).addUse(Src0Valid).addUse(Src1);
+        break;
+      }
+      case Intrinsic::amdgcn_writelane: {
+        Register Src2Valid = B.buildBitcast(S32, Src2).getReg(0);
+        LaneOpDst = B.buildIntrinsic(IID, {S32}).addUse(Src0Valid).addUse(Src1).addUse(Src2Valid);
+      }
+    }
+
+    Register LaneOpDstReg = LaneOpDst.getReg(0);
+    B.buildBitcast(DstReg, LaneOpDstReg);
     MI.eraseFromParent();
     return true;
   }
@@ -5435,20 +5439,32 @@ bool AMDGPULegalizerInfo::legalizeLaneOp(LegalizerHelper &Helper,
     Register Src0Cast = MRI.getType(Src0).isScalar()
                             ? Src0
                             : B.buildBitcast(LLT::scalar(Size), Src0).getReg(0);
-    Src0Valid = B.buildAnyExt(S32, Src0Cast).getReg(0);
+    Register Src0Valid = B.buildAnyExt(S32, Src0Cast).getReg(0);
 
-    if (Src2.isValid()) {
-      Register Src2Cast =
-          MRI.getType(Src2).isScalar()
-              ? Src2
-              : B.buildBitcast(LLT::scalar(Size), Src2).getReg(0);
-      Src2Valid = B.buildAnyExt(LLT::scalar(32), Src2Cast).getReg(0);
+    MachineInstrBuilder LaneOpDst;
+    switch (IID) {
+      case Intrinsic::amdgcn_readfirstlane: {
+        LaneOpDst = B.buildIntrinsic(IID, {S32}).addUse(Src0Valid);
+        break;
+      }
+      case Intrinsic::amdgcn_readlane: {
+        LaneOpDst = B.buildIntrinsic(IID, {S32}).addUse(Src0Valid).addUse(Src1);
+        break;
+      }
+      case Intrinsic::amdgcn_writelane: {
+        Register Src2Cast = MRI.getType(Src2).isScalar()
+                            ? Src2
+                            : B.buildBitcast(LLT::scalar(Size), Src2).getReg(0);
+        Register Src2Valid = B.buildAnyExt(LLT::scalar(32), Src2Cast).getReg(0);
+        LaneOpDst = B.buildIntrinsic(IID, {S32}).addUse(Src0Valid).addUse(Src1).addUse(Src2Valid);
+      }
     }
-    Register LaneOp = createLaneOp(Src0Valid, Src1, Src2Valid);
+
+    Register LaneOpDstReg = LaneOpDst.getReg(0);
     if (Ty.isScalar())
-      B.buildTrunc(DstReg, LaneOp);
+      B.buildTrunc(DstReg, LaneOpDstReg);
     else {
-      auto Trunc = B.buildTrunc(LLT::scalar(Size), LaneOp);
+      auto Trunc = B.buildTrunc(LLT::scalar(Size), LaneOpDstReg);
       B.buildBitcast(DstReg, Trunc);
     }
 
