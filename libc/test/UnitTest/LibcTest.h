@@ -192,8 +192,7 @@ protected:
                          const char *LHSStr, const char *RHSStr,
                          internal::Location Loc);
 
-  template <typename Func>
-  testutils::FunctionCaller *createCallable(Func f) {
+  template <typename Func> testutils::FunctionCaller *createCallable(Func f) {
     struct Callable : public testutils::FunctionCaller {
       Func f;
       Callable(Func f) : f(f) {}

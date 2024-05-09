@@ -17,9 +17,8 @@
 
 using LlvmLibcCosfTest = LIBC_NAMESPACE::testing::FPTest<float>;
 
-TEST_F(LlvmLibcCosfTest, SpecialNumbers) {  
-  EXPECT_NO_ERRNO_FP_EXCEPT(
-      EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::cosf(aNaN)));
+TEST_F(LlvmLibcCosfTest, SpecialNumbers) {
+  EXPECT_NO_ERRNO_FP_EXCEPT(EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::cosf(aNaN)));
 
   EXPECT_NO_ERRNO_FP_EXCEPT_ALL_ROUNDING(
       EXPECT_FP_EQ(1.0f, LIBC_NAMESPACE::cosf(0.0f)));

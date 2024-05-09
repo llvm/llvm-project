@@ -12,11 +12,11 @@
 #include "src/__support/CPP/utility.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
-#include "test/UnitTest/ErrnoSafeTest.h" // Test fixture for clearing errno
+#include "test/UnitTest/ErrnoSafeTest.h"      // Test fixture for clearing errno
 #include "test/UnitTest/ErrnoSetterMatcher.h" // Per-assertion clear/check errno
-#include "test/UnitTest/FEnvSafeTest.h" // Test fixture for resetting fenv
+#include "test/UnitTest/FEnvSafeTest.h"       // Test fixture for resetting fenv
 #include "test/UnitTest/FPExceptMatcher.h" // Per-assertion clear/check fp exns
-#include "test/UnitTest/FPMatcher.h" // Matchers/assertions for fp values
+#include "test/UnitTest/FPMatcher.h"       // Matchers/assertions for fp values
 #include "test/UnitTest/Test.h"
 
 #define DECLARE_SPECIAL_CONSTANTS(T)                                           \
