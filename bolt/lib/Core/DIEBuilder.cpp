@@ -42,7 +42,8 @@ extern cl::opt<unsigned> Verbosity;
 namespace llvm {
 namespace bolt {
 
-/// Returns DWO Name to be used. Handles case where user specifies output DWO
+/// Returns DWO Name to be used to update DW_AT_dwo_name/DW_AT_GNU_dwo_name
+/// either in CU or TU unit die. Handles case where user specifies output DWO
 /// directory, and there are duplicate names. Assumes DWO ID is unique.
 static std::string
 getDWOName(llvm::DWARFUnit &CU,
