@@ -5235,20 +5235,15 @@ bool PPCInstrInfo::isTOCSaveMI(const MachineInstr &MI) const {
 // (e.g. AND) to avoid excessive cost.
 const unsigned MAX_BINOP_DEPTH = 1;
 
-// The `PromoteInstr32To64ForEmliEXTSW` function is recursive. The parameter
-// BinOpDepth  does not count all of the recursions. The parameter BinOpDepth is
+// The function will promote the instruction which defines the register `Reg`
+// in the parameter from a 32-bit to a 64-bit instruction if needed. The logic
+// used to check whether an instruction needs to be promoted or not is similar
+// to the logic used to check a defined register whether is isSignOrZeroExtended
+// or not in the function PPCInstrInfo::isSignOrZeroExtended. The
+// `PromoteInstr32To64ForEmliEXTSW` function is recursive. The parameter
+// BinOpDepth does not count all of the recursions. The parameter BinOpDepth is
 // incremented  only when `PromoteInstr32To64ForEmliEXTSW` calls itself more
-// than once. This is done to prevent exponential recursion. The function will
-// promote the instruction which defines the register `Reg` in the parameter
-// from a 32-bit to a 64-bit instruction if needed. Additionally, all the used
-// and defined registers in the instruction may also need to be promoted from
-// 32-bit to 64-bit based on the promoted instruction description. If a used
-// register is promoted to 64-bit, the instruction which defines the promoted
-// register also needs to be promoted. After an instruction is promoted to 64
-// bits, the defined register of the promoted instruction is also 64-bit. A
-// defined register may be used by other instructions; in such cases,
-//  we need to extract the 32-bit register used by other
-//  non-promoted 32-bit instructions from the promoted 64-bit register.
+// than once. This is done to prevent exponential recursion.
 void PPCInstrInfo::PromoteInstr32To64ForEmliEXTSW(const Register &Reg,
                                                   MachineRegisterInfo *MRI,
                                                   unsigned BinOpDepth,
@@ -5258,19 +5253,19 @@ void PPCInstrInfo::PromoteInstr32To64ForEmliEXTSW(const Register &Reg,
     return;
 
   unsigned Opcode = MI->getOpcode();
-  bool IsNonSignedExtInstrPromoted = false;
+  bool IsNonSignedExtInstrNeedPromoted = false;
   int NewOpcode = -1;
 
   auto CheckAndSetNewOpcode = [&](int NewOpc) {
-    if (!IsNonSignedExtInstrPromoted) {
+    if (!IsNonSignedExtInstrNeedPromoted) {
       NewOpcode = NewOpc;
-      IsNonSignedExtInstrPromoted = true;
+      IsNonSignedExtInstrNeedPromoted = true;
     }
   };
 
   auto SetNewOpcode = [&](int NewOpc) {
     NewOpcode = NewOpc;
-    IsNonSignedExtInstrPromoted = true;
+    IsNonSignedExtInstrNeedPromoted = true;
   };
 
   switch (Opcode) {
@@ -5295,22 +5290,31 @@ void PPCInstrInfo::PromoteInstr32To64ForEmliEXTSW(const Register &Reg,
         PromoteInstr32To64ForEmliEXTSW(SrcReg, MRI, BinOpDepth + 1, LV);
       }
 
-      if (!IsNonSignedExtInstrPromoted)
+      if (!IsNonSignedExtInstrNeedPromoted)
         return;
     }
     break;
   case PPC::COPY: {
+    // Refer to the logic of the `case PPC::COPY` statement in the function
+    // PPCInstrInfo::isSignOrZeroExtended().
+
     Register SrcReg = MI->getOperand(1).getReg();
+    // In both ELFv1 and v2 ABI, method parameters and the return value
+    // are sign- or zero-extended.
     const MachineFunction *MF = MI->getMF();
     if (!MF->getSubtarget<PPCSubtarget>().isSVR4ABI()) {
+      // If this is a copy from another register, we recursively promote source.
       PromoteInstr32To64ForEmliEXTSW(SrcReg, MRI, BinOpDepth, LV);
       return;
     }
-    // From here on everything is SVR4ABI
+    // From here on everything is SVR4ABI. COPY will be eliminated in other
+    // pass, we do not need promote COPY pseduo opcode.
+
     if (MI->getParent()->getBasicBlock() == &MF->getFunction().getEntryBlock())
       return;
 
     if (SrcReg != PPC::X3) {
+      // If this is a copy from another register, we recursively promote source.
       PromoteInstr32To64ForEmliEXTSW(SrcReg, MRI, BinOpDepth, LV);
       return;
     }
@@ -5336,7 +5340,7 @@ void PPCInstrInfo::PromoteInstr32To64ForEmliEXTSW(const Register &Reg,
     PromoteInstr32To64ForEmliEXTSW(SrcReg, MRI, BinOpDepth, LV);
     // If Opcode is PPC::ORI8, PPC::XORI8, PPC::ORIS8, or PPC::XORIS8,
     // the instruction does not need to be promoted.
-    if (!IsNonSignedExtInstrPromoted)
+    if (!IsNonSignedExtInstrNeedPromoted)
       return;
     break;
   }
@@ -5350,7 +5354,7 @@ void PPCInstrInfo::PromoteInstr32To64ForEmliEXTSW(const Register &Reg,
       Register SrcReg2 = MI->getOperand(2).getReg();
       PromoteInstr32To64ForEmliEXTSW(SrcReg2, MRI, BinOpDepth, LV);
       // If Opcode is PPC::AND8, the instruction does not need to be promoted.
-      if (!IsNonSignedExtInstrPromoted)
+      if (!IsNonSignedExtInstrNeedPromoted)
         return;
     }
     break;
@@ -5381,14 +5385,17 @@ void PPCInstrInfo::PromoteInstr32To64ForEmliEXTSW(const Register &Reg,
       MI->getMF()->getSubtarget<PPCSubtarget>().getInstrInfo();
   if ((definedBySignExtendingOp(Reg, MRI) && !TII->isZExt32To64(Opcode) &&
        !isOpZeroOfSubwordPreincLoad(Opcode)) ||
-      IsNonSignedExtInstrPromoted) {
+      IsNonSignedExtInstrNeedPromoted) {
 
     const TargetRegisterClass *RC = MRI->getRegClass(Reg);
 
     if (RC == &PPC::G8RCRegClass || RC == &PPC::G8RC_and_G8RC_NOX0RegClass)
       return;
 
-    if (!IsNonSignedExtInstrPromoted)
+    // The TableGen function `get64BitInstrFromSignedExt32BitInstr` is used to
+    // map the 32-bit instruction with the `SExt32To64` flag to the 64-bit
+    // instruction with the same opcode.
+    if (!IsNonSignedExtInstrNeedPromoted)
       NewOpcode = PPC::get64BitInstrFromSignedExt32BitInstr(Opcode);
 
     assert(NewOpcode != -1 &&
@@ -5412,7 +5419,7 @@ void PPCInstrInfo::PromoteInstr32To64ForEmliEXTSW(const Register &Reg,
     auto MBB = MI->getParent();
 
     // Since the pseudo-opcode of the instruction is promoted from 32-bit to
-    // 64-bit, if the operand reg class of the original instruction belongs to
+    // 64-bit, if the source reg class of the original instruction belongs to
     // PPC::GRCRegClass or PPC::GPRC_and_GPRC_NOR0RegClass, we need to promote
     // the operand to PPC::G8CRegClass or PPC::G8RC_and_G8RC_NOR0RegClass,
     // respectively.
@@ -5463,7 +5470,10 @@ void PPCInstrInfo::PromoteInstr32To64ForEmliEXTSW(const Register &Reg,
       LV->recomputeForSingleDefVirtReg(Iter->second);
     MI->eraseFromParent();
 
-    // Demote the 64-bit defined regster to a 32-bit register.
+    // A defined register may be used by other instructions that are 32-bit.
+    // After the defined register is promoted to 64-bit for the promoted
+    // instruction, we need to demote the 64-bit defined register back to a
+    // 32-bit register
     BuildMI(*MBB, ++Iter, DL, TII->get(PPC::COPY), SrcReg)
         .addReg(NewDefinedReg, RegState::Kill, PPC::sub_32);
     LV->recomputeForSingleDefVirtReg(NewDefinedReg);
