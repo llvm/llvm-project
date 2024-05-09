@@ -7,6 +7,7 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // XFAIL: !has-64-bit-atomics
+// XFAIL: !has-1024-bit-atomics
 
 // bool compare_exchange_strong(T&, T, memory_order, memory_order) const noexcept;
 // bool compare_exchange_strong(T&, T, memory_order = memory_order::seq_cst) const noexcept;

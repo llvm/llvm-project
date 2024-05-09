@@ -9,6 +9,7 @@
 // UNSUPPORTED: no-threads
 // XFAIL: availability-synchronization_library-missing
 // XFAIL: !has-64-bit-atomics
+// XFAIL: !has-1024-bit-atomics
 
 // void wait(T, memory_order = memory_order::seq_cst) const noexcept;
 

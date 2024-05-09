@@ -9,6 +9,7 @@
 // UNSUPPORTED: no-threads
 // XFAIL: availability-synchronization_library-missing
 // XFAIL: !has-64-bit-atomics
+// XFAIL: !has-1024-bit-atomics
 
 // void notify_one() const noexcept;
 
