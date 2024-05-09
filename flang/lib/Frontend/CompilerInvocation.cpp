@@ -975,6 +975,11 @@ static bool parseDialectArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
     res.setEnableConformanceChecks();
     res.setEnableUsageChecks();
   }
+
+  // -w
+  if (args.hasArg(clang::driver::options::OPT_w))
+    res.setDisableWarnings();
+
   // -std=f2018
   // TODO: Set proper options when more fortran standards
   // are supported.
@@ -1403,6 +1408,11 @@ void CompilerInvocation::setFortranOpts() {
 
   if (getEnableUsageChecks())
     fortranOptions.features.WarnOnAllUsage();
+
+  if (getDisableWarnings()) {
+    fortranOptions.features.DisableAllNonstandardWarnings();
+    fortranOptions.features.DisableAllUsageWarnings();
+  }
 }
 
 std::unique_ptr<Fortran::semantics::SemanticsContext>

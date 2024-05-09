@@ -1132,6 +1132,71 @@ TEST_F(CoreAPIsStandardTest, SimpleAsynchronousGeneratorTest) {
   EXPECT_TRUE(LookupCompleted);
 }
 
+TEST_F(CoreAPIsStandardTest, ErrorFromSuspendedAsynchronousGeneratorTest) {
+
+  auto &G = JD.addGenerator(std::make_unique<SimpleAsyncGenerator>());
+
+  bool LookupCompleted = false;
+
+  ES.lookup(
+      LookupKind::Static, makeJITDylibSearchOrder(&JD), SymbolLookupSet(Foo),
+      SymbolState::Ready,
+      [&](Expected<SymbolMap> Result) {
+        LookupCompleted = true;
+        EXPECT_THAT_EXPECTED(Result, Failed());
+      },
+      NoDependenciesToRegister);
+
+  EXPECT_FALSE(LookupCompleted);
+
+  G.takeLookup().LS.continueLookup(
+      make_error<StringError>("boom", inconvertibleErrorCode()));
+
+  EXPECT_TRUE(LookupCompleted);
+}
+
+TEST_F(CoreAPIsStandardTest, ErrorFromAutoSuspendedAsynchronousGeneratorTest) {
+
+  auto &G = JD.addGenerator(std::make_unique<SimpleAsyncGenerator>());
+
+  std::atomic_size_t LookupsCompleted = 0;
+
+  ES.lookup(
+      LookupKind::Static, makeJITDylibSearchOrder(&JD), SymbolLookupSet(Foo),
+      SymbolState::Ready,
+      [&](Expected<SymbolMap> Result) {
+        ++LookupsCompleted;
+        EXPECT_THAT_EXPECTED(Result, Failed());
+      },
+      NoDependenciesToRegister);
+
+  EXPECT_EQ(LookupsCompleted, 0);
+
+  // Suspend the first lookup.
+  auto LS1 = std::move(G.takeLookup().LS);
+
+  // Start a second lookup that should be auto-suspended.
+  ES.lookup(
+      LookupKind::Static, makeJITDylibSearchOrder(&JD), SymbolLookupSet(Foo),
+      SymbolState::Ready,
+      [&](Expected<SymbolMap> Result) {
+        ++LookupsCompleted;
+        EXPECT_THAT_EXPECTED(Result, Failed());
+      },
+      NoDependenciesToRegister);
+
+  EXPECT_EQ(LookupsCompleted, 0);
+
+  // Unsuspend the first lookup.
+  LS1.continueLookup(make_error<StringError>("boom", inconvertibleErrorCode()));
+
+  // Unsuspend the second.
+  G.takeLookup().LS.continueLookup(
+      make_error<StringError>("boom", inconvertibleErrorCode()));
+
+  EXPECT_EQ(LookupsCompleted, 2);
+}
+
 TEST_F(CoreAPIsStandardTest, BlockedGeneratorAutoSuspensionTest) {
   // Test that repeated lookups while a generator is in use cause automatic
   // lookup suspension / resumption.

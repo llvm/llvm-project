@@ -3599,12 +3599,16 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
 
   // (A ^ B) | ((B ^ C) ^ A) -> (A ^ B) | C
   if (match(Op0, m_Xor(m_Value(A), m_Value(B))))
-    if (match(Op1, m_Xor(m_Xor(m_Specific(B), m_Value(C)), m_Specific(A))))
+    if (match(Op1,
+              m_c_Xor(m_c_Xor(m_Specific(B), m_Value(C)), m_Specific(A))) ||
+        match(Op1, m_c_Xor(m_c_Xor(m_Specific(A), m_Value(C)), m_Specific(B))))
       return BinaryOperator::CreateOr(Op0, C);
 
-  // ((A ^ C) ^ B) | (B ^ A) -> (B ^ A) | C
-  if (match(Op0, m_Xor(m_Xor(m_Value(A), m_Value(C)), m_Value(B))))
-    if (match(Op1, m_Xor(m_Specific(B), m_Specific(A))))
+  // ((B ^ C) ^ A) | (A ^ B) -> (A ^ B) | C
+  if (match(Op1, m_Xor(m_Value(A), m_Value(B))))
+    if (match(Op0,
+              m_c_Xor(m_c_Xor(m_Specific(B), m_Value(C)), m_Specific(A))) ||
+        match(Op0, m_c_Xor(m_c_Xor(m_Specific(A), m_Value(C)), m_Specific(B))))
       return BinaryOperator::CreateOr(Op1, C);
 
   if (Instruction *DeMorgan = matchDeMorgansLaws(I, *this))
