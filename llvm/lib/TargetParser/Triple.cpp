@@ -1510,7 +1510,7 @@ VersionTuple Triple::getDXILVersion() const {
   if (getArch() != dxil || getOS() != ShaderModel)
     llvm_unreachable("invalid DXIL triple");
   StringRef Arch = getArchName();
-  if (Arch == "dxil")
+  if (getSubArch() == NoSubArch)
     Arch = getDXILArchNameFromShaderModel(getOSName());
   Arch.consume_front("dxilv");
   VersionTuple DXILVersion = parseVersionFromName(Arch);
