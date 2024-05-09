@@ -374,7 +374,7 @@ Expected<NumericVariable *> Pattern::parseNumericVariableDefinition(
 Expected<std::unique_ptr<NumericVariableUse>> Pattern::parseNumericVariableUse(
     StringRef Name, bool IsPseudo, std::optional<size_t> LineNumber,
     FileCheckPatternContext *Context, const SourceMgr &SM) {
-  if (IsPseudo && !Name.equals("@LINE"))
+  if (IsPseudo && Name != "@LINE")
     return ErrorDiagnostic::get(
         SM, Name, "invalid pseudo numeric variable '" + Name + "'");
 

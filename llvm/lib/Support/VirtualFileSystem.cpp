@@ -1745,7 +1745,7 @@ public:
                       RedirectingFileSystem::Entry *ParentEntry = nullptr) {
     if (!ParentEntry) { // Look for a existent root
       for (const auto &Root : FS->Roots) {
-        if (Name.equals(Root->getName())) {
+        if (Name == Root->getName()) {
           ParentEntry = Root.get();
           return ParentEntry;
         }
@@ -1756,7 +1756,7 @@ public:
            llvm::make_range(DE->contents_begin(), DE->contents_end())) {
         auto *DirContent =
             dyn_cast<RedirectingFileSystem::DirectoryEntry>(Content.get());
-        if (DirContent && Name.equals(Content->getName()))
+        if (DirContent && Name == Content->getName())
           return DirContent;
       }
     }
