@@ -699,6 +699,10 @@ Bug Fixes to C++ Support
   performed incorrectly when checking constraints. Fixes (#GH90349).
 - Clang now allows constrained member functions to be explicitly specialized for an implicit instantiation
   of a class template.
+- Fix a C++23 bug in implementation of P2564R3 which evaluates immediate invocations in place
+  within initializers for variables that are usable in constant expressions or are constant
+  initialized, rather than evaluating them as a part of the larger manifestly constant evaluated
+  expression.
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
