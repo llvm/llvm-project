@@ -78,6 +78,14 @@ TEST(ParseNormalizedArchString, RejectsBadX) {
   }
 }
 
+TEST(ParseNormalizedArchString, DuplicateExtension) {
+  for (StringRef Input : {"rv64i2p0_a2p0_a1p0"}) {
+    EXPECT_EQ(
+        toString(RISCVISAInfo::parseNormalizedArchString(Input).takeError()),
+        "duplicate extension 'a'");
+  }
+}
+
 TEST(ParseNormalizedArchString, AcceptsValidBaseISAsAndSetsXLen) {
   auto MaybeRV32I = RISCVISAInfo::parseNormalizedArchString("rv32i2p0");
   ASSERT_THAT_EXPECTED(MaybeRV32I, Succeeded());
@@ -140,6 +148,14 @@ TEST(ParseNormalizedArchString, UpdatesFLenMinVLenMaxELen) {
   EXPECT_EQ(Info.getMinVLen(), 64U);
   EXPECT_EQ(Info.getMaxELen(), 64U);
   EXPECT_EQ(Info.getMaxELenFp(), 64U);
+}
+
+TEST(ParseNormalizedArchString, AcceptsUnknownMultiletter) {
+  auto MaybeISAInfo = RISCVISAInfo::parseNormalizedArchString(
+      "rv64i2p0_f2p0_d2p0_zicsr2p0_ykk1p0");
+  ASSERT_THAT_EXPECTED(MaybeISAInfo, Succeeded());
+  RISCVISAInfo &Info = **MaybeISAInfo;
+  EXPECT_EQ(Info.toString(), "rv64i2p0_f2p0_d2p0_zicsr2p0_ykk1p0");
 }
 
 TEST(ParseArchString, RejectsInvalidChars) {

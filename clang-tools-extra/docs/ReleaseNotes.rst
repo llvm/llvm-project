@@ -259,6 +259,10 @@ Changes in existing checks
 - Improved :doc:`google-runtime-int <clang-tidy/checks/google/runtime-int>`
   check performance through optimizations.
 
+- Improved :doc:`hicpp-signed-bitwise <clang-tidy/checks/hicpp/signed-bitwise>`
+  check by ignoring false positives involving positive integer literals behind
+  implicit casts when `IgnorePositiveIntegerLiterals` is enabled.
+
 - Improved :doc:`hicpp-ignored-remove-result <clang-tidy/checks/hicpp/ignored-remove-result>`
   check by ignoring other functions with same prefixes as the target specific
   functions.
@@ -347,6 +351,11 @@ Changes in existing checks
 - Improved :doc:`readability-redundant-inline-specifier
   <clang-tidy/checks/readability/redundant-inline-specifier>` check to properly
   emit warnings for static data member with an in-class initializer.
+
+- Improved :doc:`readability-static-accessed-through-instance
+  <clang-tidy/checks/readability/static-accessed-through-instance>` check to
+  support calls to overloaded operators as base expression and provide fixes to
+  expressions with side-effects.
 
 - Improved :doc:`readability-static-definition-in-anonymous-namespace
   <clang-tidy/checks/readability/static-definition-in-anonymous-namespace>`
