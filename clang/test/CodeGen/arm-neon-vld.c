@@ -1,8 +1,8 @@
 // RUN: %clang_cc1 -triple arm64-none-linux-gnu -target-feature +neon \
-// RUN:     -S -disable-O0-optnone -emit-llvm -o - %s | opt -S -passes=mem2reg | \
+// RUN:     -disable-O0-optnone -emit-llvm -o - %s | opt -S -passes=mem2reg | \
 // RUN:     FileCheck -check-prefixes=CHECK,CHECK-A64 %s
 // RUN: %clang_cc1 -triple armv8-none-linux-gnueabi -target-feature +neon \
-// RUN:     -target-feature +fp16 -S -disable-O0-optnone -emit-llvm -o - %s | \
+// RUN:     -target-feature +fp16 -disable-O0-optnone -emit-llvm -o - %s | \
 // RUN:     opt -S -passes=mem2reg | FileCheck -check-prefixes=CHECK,CHECK-A32 %s
 
 // REQUIRES: aarch64-registered-target || arm-registered-target
