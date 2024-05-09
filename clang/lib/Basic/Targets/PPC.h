@@ -81,6 +81,7 @@ class LLVM_LIBRARY_VISIBILITY PPCTargetInfo : public TargetInfo {
   bool IsISA3_0 = false;
   bool IsISA3_1 = false;
   bool HasQuadwordAtomics = false;
+  bool HasAIXShLibTLSModelOpt = false;
 
 protected:
   std::string ABI;
