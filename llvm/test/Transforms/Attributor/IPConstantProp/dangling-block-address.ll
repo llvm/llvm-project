@@ -10,11 +10,11 @@
 @bar.l = internal constant [2 x ptr] [ptr blockaddress(@bar, %lab0), ptr blockaddress(@bar, %end)] ; <ptr> [#uses=1]
 
 ;.
-; TUNIT: @[[CODE:[a-zA-Z0-9_$"\\.-]+]] = global [5 x i32] [i32 0, i32 0, i32 0, i32 0, i32 1], align 4
-; TUNIT: @[[BAR_L:[a-zA-Z0-9_$"\\.-]+]] = internal constant [2 x ptr] [ptr inttoptr (i32 1 to ptr), ptr inttoptr (i32 1 to ptr)]
+; TUNIT: @code = global [5 x i32] [i32 0, i32 0, i32 0, i32 0, i32 1], align 4
+; TUNIT: @bar.l = internal constant [2 x ptr] [ptr inttoptr (i32 1 to ptr), ptr inttoptr (i32 1 to ptr)]
 ;.
-; CGSCC: @[[CODE:[a-zA-Z0-9_$"\\.-]+]] = global [5 x i32] [i32 0, i32 0, i32 0, i32 0, i32 1], align 4
-; CGSCC: @[[BAR_L:[a-zA-Z0-9_$"\\.-]+]] = internal constant [2 x ptr] [ptr blockaddress(@bar, [[LAB0:%.*]]), ptr blockaddress(@bar, [[END:%.*]])]
+; CGSCC: @code = global [5 x i32] [i32 0, i32 0, i32 0, i32 0, i32 1], align 4
+; CGSCC: @bar.l = internal constant [2 x ptr] [ptr blockaddress(@bar, %lab0), ptr blockaddress(@bar, %end)]
 ;.
 define internal void @foo(i32 %x) nounwind readnone {
 ; CGSCC: Function Attrs: nounwind memory(none)

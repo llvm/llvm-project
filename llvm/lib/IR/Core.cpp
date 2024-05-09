@@ -14,6 +14,7 @@
 #include "llvm-c/Core.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -33,6 +34,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/ManagedStatic.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/raw_ostream.h"
@@ -44,6 +46,10 @@
 using namespace llvm;
 
 DEFINE_SIMPLE_CONVERSION_FUNCTIONS(OperandBundleDef, LLVMOperandBundleRef)
+
+inline BasicBlock **unwrap(LLVMBasicBlockRef *BBs) {
+  return reinterpret_cast<BasicBlock **>(BBs);
+}
 
 #define DEBUG_TYPE "ir"
 
@@ -176,6 +182,20 @@ LLVMAttributeRef LLVMCreateTypeAttribute(LLVMContextRef C, unsigned KindID,
 LLVMTypeRef LLVMGetTypeAttributeValue(LLVMAttributeRef A) {
   auto Attr = unwrap(A);
   return wrap(Attr.getValueAsType());
+}
+
+LLVMAttributeRef LLVMCreateConstantRangeAttribute(LLVMContextRef C,
+                                                  unsigned KindID,
+                                                  unsigned NumBits,
+                                                  const uint64_t LowerWords[],
+                                                  const uint64_t UpperWords[]) {
+  auto &Ctx = *unwrap(C);
+  auto AttrKind = (Attribute::AttrKind)KindID;
+  unsigned NumWords = divideCeil(NumBits, 64);
+  return wrap(Attribute::get(
+      Ctx, AttrKind,
+      ConstantRange(APInt(NumBits, ArrayRef(LowerWords, NumWords)),
+                    APInt(NumBits, ArrayRef(UpperWords, NumWords)))));
 }
 
 LLVMAttributeRef LLVMCreateStringAttribute(LLVMContextRef C,
@@ -3015,6 +3035,18 @@ void LLVMSetUnwindDest(LLVMValueRef Invoke, LLVMBasicBlockRef B) {
   unwrap<InvokeInst>(Invoke)->setUnwindDest(unwrap(B));
 }
 
+LLVMBasicBlockRef LLVMGetCallBrDefaultDest(LLVMValueRef CallBr) {
+  return wrap(unwrap<CallBrInst>(CallBr)->getDefaultDest());
+}
+
+unsigned LLVMGetCallBrNumIndirectDests(LLVMValueRef CallBr) {
+  return unwrap<CallBrInst>(CallBr)->getNumIndirectDests();
+}
+
+LLVMBasicBlockRef LLVMGetCallBrIndirectDest(LLVMValueRef CallBr, unsigned Idx) {
+  return wrap(unwrap<CallBrInst>(CallBr)->getIndirectDest(Idx));
+}
+
 /*--.. Operations on terminators ...........................................--*/
 
 unsigned LLVMGetNumSuccessors(LLVMValueRef Term) {
@@ -3240,6 +3272,25 @@ LLVMValueRef LLVMBuildSwitch(LLVMBuilderRef B, LLVMValueRef V,
 LLVMValueRef LLVMBuildIndirectBr(LLVMBuilderRef B, LLVMValueRef Addr,
                                  unsigned NumDests) {
   return wrap(unwrap(B)->CreateIndirectBr(unwrap(Addr), NumDests));
+}
+
+LLVMValueRef LLVMBuildCallBr(LLVMBuilderRef B, LLVMTypeRef Ty, LLVMValueRef Fn,
+                             LLVMBasicBlockRef DefaultDest,
+                             LLVMBasicBlockRef *IndirectDests,
+                             unsigned NumIndirectDests, LLVMValueRef *Args,
+                             unsigned NumArgs, LLVMOperandBundleRef *Bundles,
+                             unsigned NumBundles, const char *Name) {
+
+  SmallVector<OperandBundleDef, 8> OBs;
+  for (auto *Bundle : ArrayRef(Bundles, NumBundles)) {
+    OperandBundleDef *OB = unwrap(Bundle);
+    OBs.push_back(*OB);
+  }
+
+  return wrap(unwrap(B)->CreateCallBr(
+      unwrap<FunctionType>(Ty), unwrap(Fn), unwrap(DefaultDest),
+      ArrayRef(unwrap(IndirectDests), NumIndirectDests),
+      ArrayRef<Value *>(unwrap(Args), NumArgs), OBs, Name));
 }
 
 LLVMValueRef LLVMBuildInvoke2(LLVMBuilderRef B, LLVMTypeRef Ty, LLVMValueRef Fn,

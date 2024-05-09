@@ -298,14 +298,13 @@ def AlgebraicSimplification : Pass<"flang-algebraic-simplification"> {
   let constructor = "::fir::createAlgebraicSimplificationPass()";
 }
 
-def PolymorphicOpConversion : Pass<"fir-polymorphic-op", "::mlir::func::FuncOp"> {
+def PolymorphicOpConversion : Pass<"fir-polymorphic-op", "mlir::ModuleOp"> {
   let summary =
     "Simplify operations on polymorphic types";
   let description = [{
     This pass breaks up the lowering of operations on polymorphic types by 
     introducing an intermediate FIR level that simplifies code geneation. 
   }];
-  let constructor = "::fir::createPolymorphicOpConversionPass()";
   let dependentDialects = [
     "fir::FIROpsDialect", "mlir::func::FuncDialect"
   ];
