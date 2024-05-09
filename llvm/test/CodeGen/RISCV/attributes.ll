@@ -112,10 +112,10 @@
 ; RUN: llc -mtriple=riscv32 -mattr=+experimental-zfbfmin %s -o - | FileCheck --check-prefixes=CHECK,RV32ZFBFMIN %s
 ; RUN: llc -mtriple=riscv32 -mattr=+experimental-zvfbfmin %s -o - | FileCheck --check-prefixes=CHECK,RV32ZVFBFMIN %s
 ; RUN: llc -mtriple=riscv32 -mattr=+experimental-zvfbfwma %s -o - | FileCheck --check-prefixes=CHECK,RV32ZVFBFWMA %s
-; RUN: llc -mtriple=riscv32 -mattr=+experimental-zaamo %s -o - | FileCheck --check-prefix=RV32ZAAMO %s
+; RUN: llc -mtriple=riscv32 -mattr=+zaamo %s -o - | FileCheck --check-prefix=RV32ZAAMO %s
 ; RUN: llc -mtriple=riscv32 -mattr=+a,zacas %s -o - | FileCheck --check-prefix=RV32ZACAS %s
 ; RUN: llc -mtriple=riscv32 -mattr=+experimental-zalasr %s -o - | FileCheck --check-prefix=RV32ZALASR %s
-; RUN: llc -mtriple=riscv32 -mattr=+experimental-zalrsc %s -o - | FileCheck --check-prefix=RV32ZALRSC %s
+; RUN: llc -mtriple=riscv32 -mattr=+zalrsc %s -o - | FileCheck --check-prefix=RV32ZALRSC %s
 ; RUN: llc -mtriple=riscv32 -mattr=+zama16b %s -o - | FileCheck --check-prefixes=CHECK,RV32ZAMA16B %s
 ; RUN: llc -mtriple=riscv32 -mattr=+experimental-zicfilp %s -o - | FileCheck --check-prefix=RV32ZICFILP %s
 ; RUN: llc -mtriple=riscv32 -mattr=+a,+experimental-zabha %s -o - | FileCheck --check-prefix=RV32ZABHA %s
@@ -245,10 +245,10 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+experimental-zfbfmin %s -o - | FileCheck --check-prefixes=CHECK,RV64ZFBFMIN %s
 ; RUN: llc -mtriple=riscv64 -mattr=+experimental-zvfbfmin %s -o - | FileCheck --check-prefixes=CHECK,RV64ZVFBFMIN %s
 ; RUN: llc -mtriple=riscv64 -mattr=+experimental-zvfbfwma %s -o - | FileCheck --check-prefixes=CHECK,RV64ZVFBFWMA %s
-; RUN: llc -mtriple=riscv64 -mattr=+experimental-zaamo %s -o - | FileCheck --check-prefix=RV64ZAAMO %s
+; RUN: llc -mtriple=riscv64 -mattr=+zaamo %s -o - | FileCheck --check-prefix=RV64ZAAMO %s
 ; RUN: llc -mtriple=riscv64 -mattr=+a,zacas %s -o - | FileCheck --check-prefix=RV64ZACAS %s
 ; RUN: llc -mtriple=riscv64 -mattr=+experimental-zalasr %s -o - | FileCheck --check-prefix=RV64ZALASR %s
-; RUN: llc -mtriple=riscv64 -mattr=+experimental-zalrsc %s -o - | FileCheck --check-prefix=RV64ZALRSC %s
+; RUN: llc -mtriple=riscv64 -mattr=+zalrsc %s -o - | FileCheck --check-prefix=RV64ZALRSC %s
 ; RUN: llc -mtriple=riscv64 -mattr=+experimental-zicfilp %s -o - | FileCheck --check-prefix=RV64ZICFILP %s
 ; RUN: llc -mtriple=riscv64 -mattr=+a,+experimental-zabha %s -o - | FileCheck --check-prefix=RV64ZABHA %s
 ; RUN: llc -mtriple=riscv64 -mattr=+experimental-ssnpm  %s -o - | FileCheck --check-prefix=RV64SSNPM %s
@@ -384,10 +384,10 @@
 ; RV32ZFBFMIN: .attribute 5, "rv32i2p1_f2p2_zicsr2p0_zfbfmin1p0"
 ; RV32ZVFBFMIN: .attribute 5, "rv32i2p1_f2p2_zicsr2p0_zve32f1p0_zve32x1p0_zvfbfmin1p0_zvl32b1p0"
 ; RV32ZVFBFWMA: .attribute 5, "rv32i2p1_f2p2_zicsr2p0_zfbfmin1p0_zve32f1p0_zve32x1p0_zvfbfmin1p0_zvfbfwma1p0_zvl32b1p0"
-; RV32ZAAMO: .attribute 5, "rv32i2p1_zaamo0p2"
+; RV32ZAAMO: .attribute 5, "rv32i2p1_zaamo1p0"
 ; RV32ZACAS: .attribute 5, "rv32i2p1_a2p1_zacas1p0"
 ; RV32ZALASR: .attribute 5, "rv32i2p1_zalasr0p1"
-; RV32ZALRSC: .attribute 5, "rv32i2p1_zalrsc0p2"
+; RV32ZALRSC: .attribute 5, "rv32i2p1_zalrsc1p0"
 ; RV32ZAMA16B: .attribute 5, "rv32i2p1_zama16b1p0"
 ; RV32ZICFILP: .attribute 5, "rv32i2p1_zicfilp0p4"
 ; RV32ZABHA: .attribute 5, "rv32i2p1_a2p1_zabha1p0"
@@ -516,10 +516,10 @@
 ; RV64ZFBFMIN: .attribute 5, "rv64i2p1_f2p2_zicsr2p0_zfbfmin1p0"
 ; RV64ZVFBFMIN: .attribute 5, "rv64i2p1_f2p2_zicsr2p0_zve32f1p0_zve32x1p0_zvfbfmin1p0_zvl32b1p0"
 ; RV64ZVFBFWMA: .attribute 5, "rv64i2p1_f2p2_zicsr2p0_zfbfmin1p0_zve32f1p0_zve32x1p0_zvfbfmin1p0_zvfbfwma1p0_zvl32b1p0"
-; RV64ZAAMO: .attribute 5, "rv64i2p1_zaamo0p2"
+; RV64ZAAMO: .attribute 5, "rv64i2p1_zaamo1p0"
 ; RV64ZACAS: .attribute 5, "rv64i2p1_a2p1_zacas1p0"
 ; RV64ZALASR: .attribute 5, "rv64i2p1_zalasr0p1"
-; RV64ZALRSC: .attribute 5, "rv64i2p1_zalrsc0p2"
+; RV64ZALRSC: .attribute 5, "rv64i2p1_zalrsc1p0"
 ; RV64ZICFILP: .attribute 5, "rv64i2p1_zicfilp0p4"
 ; RV64ZABHA: .attribute 5, "rv64i2p1_a2p1_zabha1p0"
 ; RV64SSNPM: .attribute 5, "rv64i2p1_ssnpm0p8"
