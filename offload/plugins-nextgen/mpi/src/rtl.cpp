@@ -14,22 +14,34 @@
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
+#include <list>
 #include <optional>
 #include <string>
-#include <list>
 
+#include "Shared/Debug.h"
+#include "Utils/ELF.h"
+
+#include "EventSystem.h"
 #include "GlobalHandler.h"
 #include "OpenMP/OMPT/Callback.h"
 #include "PluginInterface.h"
-#include "Shared/Debug.h"
+#include "omptarget.h"
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Frontend/OpenMP/OMPDeviceConstants.h"
 #include "llvm/Support/Error.h"
-#include "llvm/TargetParser/Triple.h"
 
-#include "EventSystem.h"
+#if !defined(__BYTE_ORDER__) || !defined(__ORDER_LITTLE_ENDIAN__) ||           \
+    !defined(__ORDER_BIG_ENDIAN__)
+#error "Missing preprocessor definitions for endianness detection."
+#endif
+
+#if defined(__BYTE_ORDER__) && (__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__)
+#define LITTLEENDIAN_CPU
+#elif defined(__BYTE_ORDER__) && (__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__)
+#define BIGENDIAN_CPU
+#endif
 
 namespace llvm::omp::target::plugin {
 
@@ -643,53 +655,67 @@ struct MPIPluginTy : GenericPluginTy {
 
   /// Initialize the plugin and return the number of devices.
   Expected<int32_t> initImpl() override {
-#ifdef OMPT_SUPPORT
-    ompt::connectLibrary();
-#endif
-
     EventSystem.initialize();
     return EventSystem.getNumWorkers();
   }
 
+  /// Deinitialize the plugin.
   Error deinitImpl() override {
     EventSystem.deinitialize();
     return Plugin::success();
   }
 
-  /// Create a MPI device.
+  /// Creates a MPI device.
   GenericDeviceTy *createDevice(GenericPluginTy &Plugin, int32_t DeviceId,
                                 int32_t NumDevices) override {
     return new MPIDeviceTy(Plugin, DeviceId, NumDevices, EventSystem);
   }
 
+  /// Creates a MPI global handler.
   GenericGlobalHandlerTy *createGlobalHandler() override {
     return new MPIGlobalHandlerTy();
   }
 
   /// Get the ELF code to recognize the compatible binary images.
-  uint16_t getMagicElfBits() const override { return ELF::EM_X86_64; }
-
-  bool isDataExchangable(int32_t SrcDeviceId, int32_t DstDeviceId) override {
-    return isValidDeviceId(SrcDeviceId) && isValidDeviceId(DstDeviceId);
+  uint16_t getMagicElfBits() const override {
+    return utils::elf::getTargetMachine();
   }
 
   /// All images (ELF-compatible) should be compatible with this plugin.
   Expected<bool> isELFCompatible(StringRef) const override { return true; }
 
-  Triple::ArchType getTripleArch() const override { return Triple::x86_64; }
+  Triple::ArchType getTripleArch() const override {
+#if defined(__x86_64__)
+    return llvm::Triple::x86_64;
+#elif defined(__s390x__)
+    return llvm::Triple::systemz;
+#elif defined(__aarch64__)
+#ifdef LITTLEENDIAN_CPU
+    return llvm::Triple::aarch64;
+#else
+    return llvm::Triple::aarch64_be;
+#endif
+#elif defined(__powerpc64__)
+#ifdef LITTLEENDIAN_CPU
+    return llvm::Triple::ppc64le;
+#else
+    return llvm::Triple::ppc64;
+#endif
+#else
+    return llvm::Triple::UnknownArch;
+#endif
+  }
 
-  // private:
-  // TODO: How to mantain the EventSystem private and still allow the device to
-  // access it?
+  const char *getName() const override { return GETNAME(TARGET_NAME); }
+
+private:
   EventSystemTy EventSystem;
 };
-
-GenericPluginTy *PluginTy::createPlugin() { return new MPIPluginTy(); }
 
 template <typename... ArgsTy>
 static Error Plugin::check(int32_t ErrorCode, const char *ErrFmt,
                            ArgsTy... Args) {
-  if (ErrorCode == 0)
+  if (ErrorCode == OFFLOAD_SUCCESS)
     return Error::success();
 
   return createStringError<ArgsTy..., const char *>(
@@ -698,3 +724,9 @@ static Error Plugin::check(int32_t ErrorCode, const char *ErrFmt,
 }
 
 } // namespace llvm::omp::target::plugin
+
+extern "C" {
+llvm::omp::target::plugin::GenericPluginTy *createPlugin_mpi() {
+  return new llvm::omp::target::plugin::MPIPluginTy();
+}
+}

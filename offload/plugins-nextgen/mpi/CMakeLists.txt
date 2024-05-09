@@ -49,13 +49,6 @@ target_link_libraries(omptarget.rtl.mpi PRIVATE
 target_include_directories(omptarget.rtl.mpi PRIVATE
                            ${LIBOMPTARGET_INCLUDE_DIR})
 
-# Install plugin under the lib destination folder.
-install(TARGETS omptarget.rtl.mpi
-        LIBRARY DESTINATION "${OFFLOAD_INSTALL_LIBDIR}")
-set_target_properties(omptarget.rtl.mpi PROPERTIES
-  INSTALL_RPATH "$ORIGIN" BUILD_RPATH "$ORIGIN:${CMAKE_CURRENT_BINARY_DIR}/..")
-
-
 # Set C++20 as the target standard for this plugin.
 set_target_properties(omptarget.rtl.mpi
                       PROPERTIES
