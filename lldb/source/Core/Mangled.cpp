@@ -354,6 +354,9 @@ ConstString Mangled::GetDisplayDemangledName(
         m_mangled.GetStringRef(), SwiftLanguageRuntime::eSimplified, sc));
 #endif // LLDB_ENABLE_SWIFT
 // END SWIFT
+
+  if (Language *lang = Language::FindPlugin(GuessLanguage()))
+    return lang->GetDisplayDemangledName(*this);
   return GetDemangledName();
 }
 
