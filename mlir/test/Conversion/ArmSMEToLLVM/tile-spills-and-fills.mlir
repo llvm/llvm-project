@@ -74,7 +74,7 @@ func.func @use_too_many_tiles() {
 //  AFTER-LLVM-LOWERING-DAG: %[[SVL_H:.*]] = arith.muli %[[VSCALE]], %[[C8]] : index
 
 ///     0. Create an in-memory-tile
-///        Note: 16 is the mask for the first in-memory tile
+///        Note: 16 is an in-memory tile ID, that is a tile ID >= 16
 
 //  AFTER-LLVM-LOWERING-DAG: %[[TILE_ALLOCA:.*]] = memref.alloca(%[[SVL_H]], %[[SVL_H]])
 // AFTER-LLVM-LOWERING-SAME:   {arm_sme.in_memory_tile_id = 16 : i32} : memref<?x?xi16>
