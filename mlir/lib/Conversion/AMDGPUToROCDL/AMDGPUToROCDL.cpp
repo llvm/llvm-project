@@ -18,7 +18,6 @@
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Pass/Pass.h"
-#include "mlir/Support/SystemDesc.h"
 
 #include "llvm/ADT/STLExtras.h"
 #include <optional>
@@ -115,11 +114,10 @@ struct RawBufferOpLowering : public ConvertOpToLLVMPattern<GpuOp> {
       uint32_t elemBits = dataVector.getElementTypeBitWidth();
       uint32_t totalBits = elemBits * dataVector.getNumElements();
       uint32_t maxVectorOpWidth = 128; // default value
-      if (std::optional<int64_t> v = gpuOp.getContext()
-                                         ->getSystemDesc()
-                                         .getDeviceDesc(1 /* gpuID */)
-                                         .getMaxVectorWidth()) {
-        maxVectorOpWidth = static_cast<uint32_t>(*v);
+      if (std::optional<uint32_t> v =
+              DataLayout(gpuOp->template getParentOfType<mlir::ModuleOp>())
+                  .getMaxVectorOpWidth(1 /* gpu ID*/)) {
+        maxVectorOpWidth = *v;
       }
       LLVM_DEBUG(llvm::dbgs() << "[CostModel] GPU MaxVectorWidth:"
                               << maxVectorOpWidth << "\n");

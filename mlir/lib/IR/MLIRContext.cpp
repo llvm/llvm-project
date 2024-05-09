@@ -26,7 +26,6 @@
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/OperationSupport.h"
 #include "mlir/IR/Types.h"
-#include "mlir/Support/SystemDesc.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallString.h"
@@ -199,9 +198,6 @@ public:
 
   /// A mutex used when accessing operation information.
   llvm::sys::SmartRWMutex<true> operationInfoMutex;
-
-  /// A class to describe hardware properties of a system
-  SystemDesc system_desc;
 
   //===--------------------------------------------------------------------===//
   // Affine uniquing
@@ -705,12 +701,6 @@ ArrayRef<RegisteredOperationName> MLIRContext::getRegisteredOperations() {
 
 bool MLIRContext::isOperationRegistered(StringRef name) {
   return RegisteredOperationName::lookup(name, this).has_value();
-}
-
-SystemDesc &MLIRContext::getSystemDesc() { return impl->system_desc; }
-
-void MLIRContext::setSystemDesc(const SystemDesc &desc) {
-  impl->system_desc = desc;
 }
 
 void Dialect::addType(TypeID typeID, AbstractType &&typeInfo) {
