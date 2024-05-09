@@ -427,7 +427,7 @@ struct GenELF64PluginTy final : public GenericPluginTy {
     return llvm::Triple::systemz;
 #elif defined(__aarch64__)
 #ifdef LITTLEENDIAN_CPU
-    return llvm::Triple::aarch64_le;
+    return llvm::Triple::aarch64;
 #else
     return llvm::Triple::aarch64_be;
 #endif
