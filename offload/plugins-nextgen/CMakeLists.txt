@@ -14,7 +14,7 @@
 set(common_dir ${CMAKE_CURRENT_SOURCE_DIR}/common)
 add_subdirectory(common)
 function(add_target_library target_name lib_name)
-  add_llvm_library(${target_name} STATIC
+  add_llvm_library(${target_name} SHARED
     LINK_COMPONENTS
       ${LLVM_TARGETS_TO_BUILD}
       AggressiveInstCombine
@@ -46,14 +46,27 @@ function(add_target_library target_name lib_name)
   )
 
   llvm_update_compile_flags(${target_name})
-  target_include_directories(${target_name} PUBLIC ${common_dir}/include)
   target_link_libraries(${target_name} PRIVATE
                         PluginCommon ${OPENMP_PTHREAD_LIB})
 
   target_compile_definitions(${target_name} PRIVATE TARGET_NAME=${lib_name})
   target_compile_definitions(${target_name} PRIVATE 
                              DEBUG_PREFIX="TARGET ${lib_name} RTL")
-  set_target_properties(${target_name} PROPERTIES POSITION_INDEPENDENT_CODE ON)
+
+  if(CMAKE_SYSTEM_NAME MATCHES "FreeBSD")
+    # On FreeBSD, the 'environ' symbol is undefined at link time, but resolved by
+    # the dynamic linker at runtime. Therefore, allow the symbol to be undefined
+    # when creating a shared library.
+    target_link_libraries(${target_name} PRIVATE "-Wl,--allow-shlib-undefined")
+  else()
+    target_link_libraries(${target_name} PRIVATE "-Wl,-z,defs")
+  endif()
+
+  if(LIBOMP_HAVE_VERSION_SCRIPT_FLAG)
+    target_link_libraries(${target_name} PRIVATE
+    "-Wl,--version-script=${common_dir}/../exports")
+  endif()
+  set_target_properties(${target_name} PROPERTIES CXX_VISIBILITY_PRESET protected)
 endfunction()
 
 foreach(plugin IN LISTS LIBOMPTARGET_PLUGINS_TO_BUILD)

@@ -56,6 +56,28 @@ bool isImageBitcode(const __tgt_device_image &Image) {
   return identify_magic(Binary) == file_magic::bitcode;
 }
 
+std::once_flag InitFlag;
+
+void init(Triple TT) {
+  codegen::RegisterCodeGenFlags();
+#ifdef LIBOMPTARGET_JIT_NVPTX
+  if (TT.isNVPTX()) {
+    LLVMInitializeNVPTXTargetInfo();
+    LLVMInitializeNVPTXTarget();
+    LLVMInitializeNVPTXTargetMC();
+    LLVMInitializeNVPTXAsmPrinter();
+  }
+#endif
+#ifdef LIBOMPTARGET_JIT_AMDGPU
+  if (TT.isAMDGPU()) {
+    LLVMInitializeAMDGPUTargetInfo();
+    LLVMInitializeAMDGPUTarget();
+    LLVMInitializeAMDGPUTargetMC();
+    LLVMInitializeAMDGPUAsmPrinter();
+  }
+#endif
+}
+
 Expected<std::unique_ptr<Module>>
 createModuleFromMemoryBuffer(std::unique_ptr<MemoryBuffer> &MB,
                              LLVMContext &Context) {
@@ -126,23 +148,7 @@ createTargetMachine(Module &M, std::string CPU, unsigned OptLevel) {
 } // namespace
 
 JITEngine::JITEngine(Triple::ArchType TA) : TT(Triple::getArchTypeName(TA)) {
-  codegen::RegisterCodeGenFlags();
-#ifdef LIBOMPTARGET_JIT_NVPTX
-  if (TT.isNVPTX()) {
-    LLVMInitializeNVPTXTargetInfo();
-    LLVMInitializeNVPTXTarget();
-    LLVMInitializeNVPTXTargetMC();
-    LLVMInitializeNVPTXAsmPrinter();
-  }
-#endif
-#ifdef LIBOMPTARGET_JIT_AMDGPU
-  if (TT.isAMDGPU()) {
-    LLVMInitializeAMDGPUTargetInfo();
-    LLVMInitializeAMDGPUTarget();
-    LLVMInitializeAMDGPUTargetMC();
-    LLVMInitializeAMDGPUAsmPrinter();
-  }
-#endif
+  std::call_once(InitFlag, init, TT);
 }
 
 void JITEngine::opt(TargetMachine *TM, TargetLibraryInfoImpl *TLII, Module &M,
