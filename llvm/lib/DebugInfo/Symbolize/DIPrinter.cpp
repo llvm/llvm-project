@@ -299,7 +299,7 @@ static json::Object toJSON(const Request &Request, StringRef ErrorMsg = "") {
 }
 
 static json::Object toJSON(const DILineInfo &LineInfo) {
-  json::Object obj = json::Object(
+  json::Object Obj = json::Object(
       {{"FunctionName", LineInfo.FunctionName != DILineInfo::BadString
                             ? LineInfo.FunctionName
                             : ""},
@@ -315,8 +315,8 @@ static json::Object toJSON(const DILineInfo &LineInfo) {
        {"Column", LineInfo.Column},
        {"Discriminator", LineInfo.Discriminator}});
   if (LineInfo.IsApproximatedLine)
-    obj.insert({"Approximate", LineInfo.IsApproximatedLine});
-  return obj;
+    Obj.insert({"Approximate", LineInfo.IsApproximatedLine});
+  return Obj;
 }
 
 void JSONPrinter::print(const Request &Request, const DILineInfo &Info) {
