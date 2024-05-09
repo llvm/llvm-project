@@ -407,6 +407,12 @@ def FeatureAshrPkInsts : SubtargetFeature<"ashr-pk-insts",
   "Has Arithmetic Shift Pack instructions"
 >;
 
+def FeatureF16BF16ToFP6BF6ConversionScaleInsts : SubtargetFeature<"f16bf16-to-fp6bf6-cvt-scale-insts",
+  "HasF16BF16ToFP6BF6ConversionScaleInsts",
+  "true",
+  "Has f16bf16 to fp6bf6 conversion scale instructions"
+>;
+
 def FeatureGFX950Insts : SubtargetFeature<"gfx950-insts",
   "GFX950Insts",
   "true",
@@ -417,7 +423,8 @@ def FeatureGFX950Insts : SubtargetFeature<"gfx950-insts",
    FeatureFP8ConversionScaleInsts,
    FeatureBF8ConversionScaleInsts,
    FeatureFP4ConversionScaleInsts,
-   FeatureFP6BF6ConversionScaleInsts]
+   FeatureFP6BF6ConversionScaleInsts,
+   FeatureF16BF16ToFP6BF6ConversionScaleInsts]
 >;
 
 def FeatureGFX10Insts : SubtargetFeature<"gfx10-insts",
@@ -1795,6 +1802,7 @@ def FeatureISAVersion12_10 : FeatureSet<
    FeatureBF16TransInsts,
    FeatureBF16ConversionInsts,
    FeatureBF16PackedInsts,
+   FeatureF16BF16ToFP6BF6ConversionScaleInsts,
    FeatureFmaMixBF16Insts,
    FeaturePrngInst,
    FeaturePermlane16Swap,
@@ -2544,6 +2552,9 @@ def HasFP4ConversionScaleInsts : Predicate<"Subtarget->HasFP4ConversionScaleInst
 
 def HasFP6BF6ConversionScaleInsts : Predicate<"Subtarget->HasFP6BF6ConversionScaleInsts()">,
   AssemblerPredicate<(all_of FeatureFP6BF6ConversionScaleInsts)>;
+
+def HasF16BF16ToFP6BF6ConversionScaleInsts : Predicate<"Subtarget->hasF16BF16ToFP6BF6ConversionScaleInsts()">,
+  AssemblerPredicate<(all_of FeatureF16BF16ToFP6BF6ConversionScaleInsts)>;
 
 def HasGDS : Predicate<"Subtarget->hasGDS()">;
 

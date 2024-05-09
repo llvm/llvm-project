@@ -1640,7 +1640,8 @@ class getSOPSrcForVT<ValueType VT> {
 // Returns the vreg register class to use for source operand given VT
 class getVregSrcForVT<ValueType VT, bit IsTrue16 = 0, bit IsFake16 = 0> {
   RegisterOperand ret =
-  !cond(!eq(VT.Size, 192) : RegisterOperand<VReg_192>,
+  !cond(!eq(VT.Size, 512) : RegisterOperand<VReg_512>,
+        !eq(VT.Size, 192) : RegisterOperand<VReg_192>,
         !eq(VT.Size, 128) : RegisterOperand<VReg_128>,
         !eq(VT.Size, 96)  : RegisterOperand<VReg_96>,
         !eq(VT.Size, 64)  : RegisterOperand<VReg_64>,

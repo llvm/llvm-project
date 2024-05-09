@@ -912,3 +912,20 @@ v_cvt_scalef32_pk32_bf16_fp6 v[10:25], v[20:25], v8
 // NOT-GFX950: :[[@LINE+2]]:{{[0-9]+}}: error:
 // GFX950: v_cvt_scalef32_pk32_f16_fp6 v[10:25], v[20:25], v8 ; encoding: [0x0a,0x00,0x60,0xd2,0x14,0x11,0x02,0x00]
 v_cvt_scalef32_pk32_f16_fp6 v[10:25], v[20:25], v8
+
+// NOT-GFX950: :[[@LINE+2]]:{{[0-9]+}}: error:
+// GFX950: v_cvt_scalef32_pk32_bf6_bf16 v[20:25], v[10:25], v8 ; encoding: [0x14,0x00,0x5b,0xd2,0x0a,0x11,0x02,0x00]
+v_cvt_scalef32_pk32_bf6_bf16 v[20:25], v[10:25], v8
+
+// NOT-GFX950: :[[@LINE+2]]:{{[0-9]+}}: error:
+// GFX950: v_cvt_scalef32_pk32_bf6_f16 v[20:25], v[10:25], v8 ; encoding: [0x14,0x00,0x5a,0xd2,0x0a,0x11,0x02,0x00]
+v_cvt_scalef32_pk32_bf6_f16 v[20:25], v[10:25], v8
+
+// NOT-GFX950: :[[@LINE+2]]:{{[0-9]+}}: error:
+// GFX950: v_cvt_scalef32_pk32_fp6_bf16 v[20:25], v[10:25], v8 ; encoding: [0x14,0x00,0x59,0xd2,0x0a,0x11,0x02,0x00]
+v_cvt_scalef32_pk32_fp6_bf16 v[20:25], v[10:25], v8
+
+// NOT-GFX950: :[[@LINE+2]]:{{[0-9]+}}: error:
+// GFX950: v_cvt_scalef32_pk32_fp6_f16 v[20:25], v[10:25], v8 ; encoding: [0x14,0x00,0x58,0xd2,0x0a,0x11,0x02,0x00]
+v_cvt_scalef32_pk32_fp6_f16 v[20:25], v[10:25], v8
+
