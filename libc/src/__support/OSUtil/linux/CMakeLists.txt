@@ -23,3 +23,19 @@ add_object_library(
     libc.hdr.types.struct_f_owner_ex
     libc.hdr.types.off_t
 )
+
+add_object_library(
+  vdso
+  HDRS
+    vdso.h
+  SRCS
+    vdso.cpp
+  DEPENDS
+    .${LIBC_TARGET_ARCHITECTURE}.vdso
+    libc.src.__support.CPP.array
+    libc.src.__support.CPP.string_view
+    libc.src.__support.threads.callonce
+    libc.src.__support.threads.linux.futex_word_type
+    libc.src.errno.errno
+    libc.src.sys.auxv.getauxval
+)
