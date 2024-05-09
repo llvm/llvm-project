@@ -23,6 +23,7 @@
 #include "llvm/TextAPI/TextAPIWriter.h"
 #include "llvm/TextAPI/Utils.h"
 
+using AliasMap = llvm::MachO::AliasMap;
 using Architecture = llvm::MachO::Architecture;
 using ArchitectureSet = llvm::MachO::ArchitectureSet;
 using SymbolFlags = llvm::MachO::SymbolFlags;

@@ -725,10 +725,9 @@ void Writer::scanSymbols() {
     if (auto *defined = dyn_cast<Defined>(sym)) {
       if (!defined->isLive())
         continue;
-      defined->canonicalize();
       if (defined->overridesWeakDef)
         addNonWeakDefinition(defined);
-      if (!defined->isAbsolute() && isCodeSection(defined->isec))
+      if (!defined->isAbsolute() && isCodeSection(defined->isec()))
         in.unwindInfo->addSymbol(defined);
     } else if (const auto *dysym = dyn_cast<DylibSymbol>(sym)) {
       // This branch intentionally doesn't check isLive().
@@ -756,9 +755,8 @@ void Writer::scanSymbols() {
         if (auto *defined = dyn_cast_or_null<Defined>(sym)) {
           if (!defined->isLive())
             continue;
-          defined->canonicalize();
           if (!defined->isExternal() && !defined->isAbsolute() &&
-              isCodeSection(defined->isec))
+              isCodeSection(defined->isec()))
             in.unwindInfo->addSymbol(defined);
         }
       }

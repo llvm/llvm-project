@@ -895,13 +895,16 @@ TEST(VPRecipeTest, CastVPWidenCallRecipeToVPUserAndVPDef) {
 
   IntegerType *Int32 = IntegerType::get(C, 32);
   FunctionType *FTy = FunctionType::get(Int32, false);
-  auto *Call = CallInst::Create(FTy, UndefValue::get(FTy));
+  Function *Fn = Function::Create(FTy, GlobalValue::ExternalLinkage, 0);
+  auto *Call = CallInst::Create(FTy, Fn);
   VPValue Op1;
   VPValue Op2;
+  VPValue CalledFn(Call->getCalledFunction());
   SmallVector<VPValue *, 2> Args;
   Args.push_back(&Op1);
   Args.push_back(&Op2);
-  VPWidenCallRecipe Recipe(*Call, make_range(Args.begin(), Args.end()), false);
+  Args.push_back(&CalledFn);
+  VPWidenCallRecipe Recipe(Call, make_range(Args.begin(), Args.end()), false);
   EXPECT_TRUE(isa<VPUser>(&Recipe));
   VPRecipeBase *BaseR = &Recipe;
   EXPECT_TRUE(isa<VPUser>(BaseR));
@@ -912,6 +915,7 @@ TEST(VPRecipeTest, CastVPWidenCallRecipeToVPUserAndVPDef) {
   EXPECT_EQ(&Recipe, VPV->getDefiningRecipe());
 
   delete Call;
+  delete Fn;
 }
 
 TEST(VPRecipeTest, CastVPWidenSelectRecipeToVPUserAndVPDef) {
@@ -1029,7 +1033,7 @@ TEST(VPRecipeTest, CastVPBranchOnMaskRecipeToVPUser) {
   EXPECT_EQ(&Recipe, BaseR);
 }
 
-TEST(VPRecipeTest, CastVPWidenMemoryInstructionRecipeToVPUserAndVPDef) {
+TEST(VPRecipeTest, CastVPWidenMemoryRecipeToVPUserAndVPDef) {
   LLVMContext C;
 
   IntegerType *Int32 = IntegerType::get(C, 32);
@@ -1038,7 +1042,7 @@ TEST(VPRecipeTest, CastVPWidenMemoryInstructionRecipeToVPUserAndVPDef) {
       new LoadInst(Int32, UndefValue::get(Int32Ptr), "", false, Align(1));
   VPValue Addr;
   VPValue Mask;
-  VPWidenMemoryInstructionRecipe Recipe(*Load, &Addr, &Mask, true, false, {});
+  VPWidenLoadRecipe Recipe(*Load, &Addr, &Mask, true, false, {});
   EXPECT_TRUE(isa<VPUser>(&Recipe));
   VPRecipeBase *BaseR = &Recipe;
   EXPECT_TRUE(isa<VPUser>(BaseR));
@@ -1133,7 +1137,7 @@ TEST(VPRecipeTest, MayHaveSideEffectsAndMayReadWriteMemory) {
         new LoadInst(Int32, UndefValue::get(Int32Ptr), "", false, Align(1));
     VPValue Addr;
     VPValue Mask;
-    VPWidenMemoryInstructionRecipe Recipe(*Load, &Addr, &Mask, true, false, {});
+    VPWidenLoadRecipe Recipe(*Load, &Addr, &Mask, true, false, {});
     EXPECT_FALSE(Recipe.mayHaveSideEffects());
     EXPECT_TRUE(Recipe.mayReadFromMemory());
     EXPECT_FALSE(Recipe.mayWriteToMemory());
@@ -1147,8 +1151,7 @@ TEST(VPRecipeTest, MayHaveSideEffectsAndMayReadWriteMemory) {
     VPValue Addr;
     VPValue Mask;
     VPValue StoredV;
-    VPWidenMemoryInstructionRecipe Recipe(*Store, &Addr, &StoredV, &Mask, false,
-                                          false, {});
+    VPWidenStoreRecipe Recipe(*Store, &Addr, &StoredV, &Mask, false, false, {});
     EXPECT_TRUE(Recipe.mayHaveSideEffects());
     EXPECT_FALSE(Recipe.mayReadFromMemory());
     EXPECT_TRUE(Recipe.mayWriteToMemory());
@@ -1158,19 +1161,22 @@ TEST(VPRecipeTest, MayHaveSideEffectsAndMayReadWriteMemory) {
 
   {
     FunctionType *FTy = FunctionType::get(Int32, false);
-    auto *Call = CallInst::Create(FTy, UndefValue::get(FTy));
+    Function *Fn = Function::Create(FTy, GlobalValue::ExternalLinkage, 0);
+    auto *Call = CallInst::Create(FTy, Fn);
     VPValue Op1;
     VPValue Op2;
-    SmallVector<VPValue *, 2> Args;
+    VPValue CalledFn(Call->getCalledFunction());
+    SmallVector<VPValue *, 3> Args;
     Args.push_back(&Op1);
     Args.push_back(&Op2);
-    VPWidenCallRecipe Recipe(*Call, make_range(Args.begin(), Args.end()),
-                             false);
+    Args.push_back(&CalledFn);
+    VPWidenCallRecipe Recipe(Call, make_range(Args.begin(), Args.end()), false);
     EXPECT_TRUE(Recipe.mayHaveSideEffects());
     EXPECT_TRUE(Recipe.mayReadFromMemory());
     EXPECT_TRUE(Recipe.mayWriteToMemory());
     EXPECT_TRUE(Recipe.mayReadOrWriteMemory());
     delete Call;
+    delete Fn;
   }
 
   {
@@ -1182,11 +1188,12 @@ TEST(VPRecipeTest, MayHaveSideEffectsAndMayReadWriteMemory) {
     auto *Call = CallInst::Create(TheFn->getFunctionType(), TheFn);
     VPValue Op1;
     VPValue Op2;
-    SmallVector<VPValue *, 2> Args;
+    VPValue CalledFn(TheFn);
+    SmallVector<VPValue *, 3> Args;
     Args.push_back(&Op1);
     Args.push_back(&Op2);
-    VPWidenCallRecipe Recipe(*Call, make_range(Args.begin(), Args.end()),
-                             false);
+    Args.push_back(&CalledFn);
+    VPWidenCallRecipe Recipe(Call, make_range(Args.begin(), Args.end()), false);
     EXPECT_FALSE(Recipe.mayHaveSideEffects());
     EXPECT_FALSE(Recipe.mayReadFromMemory());
     EXPECT_FALSE(Recipe.mayWriteToMemory());

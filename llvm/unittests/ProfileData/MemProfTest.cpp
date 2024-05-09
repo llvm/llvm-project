@@ -1,6 +1,7 @@
 #include "llvm/ProfileData/MemProf.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/DebugInfo/DIContext.h"
 #include "llvm/DebugInfo/Symbolize/SymbolizableModule.h"
 #include "llvm/IR/Value.h"
@@ -122,14 +123,6 @@ MATCHER_P4(FrameContains, FunctionName, LineOffset, Column, Inline, "") {
   return false;
 }
 
-MemProfSchema getFullSchema() {
-  MemProfSchema Schema;
-#define MIBEntryDef(NameTag, Name, Type) Schema.push_back(Meta::Name);
-#include "llvm/ProfileData/MIBEntryDef.inc"
-#undef MIBEntryDef
-  return Schema;
-}
-
 TEST(MemProf, FillsValue) {
   std::unique_ptr<MockSymbolizer> Symbolizer(new MockSymbolizer());
 
@@ -183,13 +176,13 @@ TEST(MemProf, FillsValue) {
   // We expect 4 records. We attach alloc site data to foo and bar, i.e.
   // all frames bottom up until we find a non-inline frame. We attach call site
   // data to bar, xyz and abc.
-  ASSERT_EQ(Records.size(), 4U);
+  ASSERT_THAT(Records, SizeIs(4));
 
   // Check the memprof record for foo.
   const llvm::GlobalValue::GUID FooId = IndexedMemProfRecord::getGUID("foo");
-  ASSERT_EQ(Records.count(FooId), 1U);
+  ASSERT_TRUE(Records.contains(FooId));
   const MemProfRecord &Foo = Records[FooId];
-  ASSERT_EQ(Foo.AllocSites.size(), 1U);
+  ASSERT_THAT(Foo.AllocSites, SizeIs(1));
   EXPECT_EQ(Foo.AllocSites[0].Info.getAllocCount(), 1U);
   EXPECT_THAT(Foo.AllocSites[0].CallStack[0],
               FrameContains("foo", 5U, 30U, true));
@@ -203,9 +196,9 @@ TEST(MemProf, FillsValue) {
 
   // Check the memprof record for bar.
   const llvm::GlobalValue::GUID BarId = IndexedMemProfRecord::getGUID("bar");
-  ASSERT_EQ(Records.count(BarId), 1U);
+  ASSERT_TRUE(Records.contains(BarId));
   const MemProfRecord &Bar = Records[BarId];
-  ASSERT_EQ(Bar.AllocSites.size(), 1U);
+  ASSERT_THAT(Bar.AllocSites, SizeIs(1));
   EXPECT_EQ(Bar.AllocSites[0].Info.getAllocCount(), 1U);
   EXPECT_THAT(Bar.AllocSites[0].CallStack[0],
               FrameContains("foo", 5U, 30U, true));
@@ -216,17 +209,17 @@ TEST(MemProf, FillsValue) {
   EXPECT_THAT(Bar.AllocSites[0].CallStack[3],
               FrameContains("abc", 5U, 30U, false));
 
-  ASSERT_EQ(Bar.CallSites.size(), 1U);
-  ASSERT_EQ(Bar.CallSites[0].size(), 2U);
+  ASSERT_THAT(Bar.CallSites, SizeIs(1));
+  ASSERT_THAT(Bar.CallSites[0], SizeIs(2));
   EXPECT_THAT(Bar.CallSites[0][0], FrameContains("foo", 5U, 30U, true));
   EXPECT_THAT(Bar.CallSites[0][1], FrameContains("bar", 51U, 20U, false));
 
   // Check the memprof record for xyz.
   const llvm::GlobalValue::GUID XyzId = IndexedMemProfRecord::getGUID("xyz");
-  ASSERT_EQ(Records.count(XyzId), 1U);
+  ASSERT_TRUE(Records.contains(XyzId));
   const MemProfRecord &Xyz = Records[XyzId];
-  ASSERT_EQ(Xyz.CallSites.size(), 1U);
-  ASSERT_EQ(Xyz.CallSites[0].size(), 2U);
+  ASSERT_THAT(Xyz.CallSites, SizeIs(1));
+  ASSERT_THAT(Xyz.CallSites[0], SizeIs(2));
   // Expect the entire frame even though in practice we only need the first
   // entry here.
   EXPECT_THAT(Xyz.CallSites[0][0], FrameContains("xyz", 5U, 30U, true));
@@ -234,11 +227,11 @@ TEST(MemProf, FillsValue) {
 
   // Check the memprof record for abc.
   const llvm::GlobalValue::GUID AbcId = IndexedMemProfRecord::getGUID("abc");
-  ASSERT_EQ(Records.count(AbcId), 1U);
+  ASSERT_TRUE(Records.contains(AbcId));
   const MemProfRecord &Abc = Records[AbcId];
   EXPECT_TRUE(Abc.AllocSites.empty());
-  ASSERT_EQ(Abc.CallSites.size(), 1U);
-  ASSERT_EQ(Abc.CallSites[0].size(), 2U);
+  ASSERT_THAT(Abc.CallSites, SizeIs(1));
+  ASSERT_THAT(Abc.CallSites[0], SizeIs(2));
   EXPECT_THAT(Abc.CallSites[0][0], FrameContains("xyz", 5U, 30U, true));
   EXPECT_THAT(Abc.CallSites[0][1], FrameContains("abc", 5U, 30U, false));
 }
@@ -248,8 +241,8 @@ TEST(MemProf, PortableWrapper) {
                     /*dealloc_timestamp=*/2000, /*alloc_cpu=*/3,
                     /*dealloc_cpu=*/4);
 
-  const auto Schema = getFullSchema();
-  PortableMemInfoBlock WriteBlock(Info);
+  const auto Schema = llvm::memprof::getFullSchema();
+  PortableMemInfoBlock WriteBlock(Info, Schema);
 
   std::string Buffer;
   llvm::raw_string_ostream OS(Buffer);
@@ -271,7 +264,7 @@ TEST(MemProf, PortableWrapper) {
 // Version0 and Version1 serialize IndexedMemProfRecord in the same format, so
 // we share one test.
 TEST(MemProf, RecordSerializationRoundTripVersion0And1) {
-  const MemProfSchema Schema = getFullSchema();
+  const auto Schema = llvm::memprof::getFullSchema();
 
   MemInfoBlock Info(/*size=*/16, /*access_count=*/7, /*alloc_timestamp=*/1000,
                     /*dealloc_timestamp=*/2000, /*alloc_cpu=*/3,
@@ -305,7 +298,7 @@ TEST(MemProf, RecordSerializationRoundTripVersion0And1) {
 }
 
 TEST(MemProf, RecordSerializationRoundTripVerion2) {
-  const MemProfSchema Schema = getFullSchema();
+  const auto Schema = llvm::memprof::getFullSchema();
 
   MemInfoBlock Info(/*size=*/16, /*access_count=*/7, /*alloc_timestamp=*/1000,
                     /*dealloc_timestamp=*/2000, /*alloc_cpu=*/3,
@@ -330,6 +323,65 @@ TEST(MemProf, RecordSerializationRoundTripVerion2) {
   const IndexedMemProfRecord GotRecord = IndexedMemProfRecord::deserialize(
       Schema, reinterpret_cast<const unsigned char *>(Buffer.data()),
       llvm::memprof::Version2);
+
+  EXPECT_EQ(Record, GotRecord);
+}
+
+TEST(MemProf, RecordSerializationRoundTripVersion2HotColdSchema) {
+  const auto Schema = llvm::memprof::getHotColdSchema();
+
+  MemInfoBlock Info;
+  Info.AllocCount = 11;
+  Info.TotalSize = 22;
+  Info.TotalLifetime = 33;
+  Info.TotalLifetimeAccessDensity = 44;
+
+  llvm::SmallVector<llvm::memprof::CallStackId> CallStackIds = {0x123, 0x456};
+
+  llvm::SmallVector<llvm::memprof::CallStackId> CallSiteIds = {0x333, 0x444};
+
+  IndexedMemProfRecord Record;
+  for (const auto &CSId : CallStackIds) {
+    // Use the same info block for both allocation sites.
+    Record.AllocSites.emplace_back(llvm::SmallVector<FrameId>(), CSId, Info,
+                                   Schema);
+  }
+  Record.CallSiteIds.assign(CallSiteIds);
+
+  std::bitset<llvm::to_underlying(Meta::Size)> SchemaBitSet;
+  for (auto Id : Schema)
+    SchemaBitSet.set(llvm::to_underlying(Id));
+
+  // Verify that SchemaBitSet has the fields we expect and nothing else, which
+  // we check with count().
+  EXPECT_EQ(SchemaBitSet.count(), 4U);
+  EXPECT_TRUE(SchemaBitSet[llvm::to_underlying(Meta::AllocCount)]);
+  EXPECT_TRUE(SchemaBitSet[llvm::to_underlying(Meta::TotalSize)]);
+  EXPECT_TRUE(SchemaBitSet[llvm::to_underlying(Meta::TotalLifetime)]);
+  EXPECT_TRUE(
+      SchemaBitSet[llvm::to_underlying(Meta::TotalLifetimeAccessDensity)]);
+
+  // Verify that Schema has propagated all the way to the Info field in each
+  // IndexedAllocationInfo.
+  ASSERT_THAT(Record.AllocSites, ::SizeIs(2));
+  EXPECT_EQ(Record.AllocSites[0].Info.getSchema(), SchemaBitSet);
+  EXPECT_EQ(Record.AllocSites[1].Info.getSchema(), SchemaBitSet);
+
+  std::string Buffer;
+  llvm::raw_string_ostream OS(Buffer);
+  Record.serialize(Schema, OS, llvm::memprof::Version2);
+  OS.flush();
+
+  const IndexedMemProfRecord GotRecord = IndexedMemProfRecord::deserialize(
+      Schema, reinterpret_cast<const unsigned char *>(Buffer.data()),
+      llvm::memprof::Version2);
+
+  // Verify that Schema comes back correctly after deserialization. Technically,
+  // the comparison between Record and GotRecord below includes the comparison
+  // of their Schemas, but we'll verify the Schemas on our own.
+  ASSERT_THAT(GotRecord.AllocSites, ::SizeIs(2));
+  EXPECT_EQ(GotRecord.AllocSites[0].Info.getSchema(), SchemaBitSet);
+  EXPECT_EQ(GotRecord.AllocSites[1].Info.getSchema(), SchemaBitSet);
 
   EXPECT_EQ(Record, GotRecord);
 }
@@ -393,9 +445,9 @@ TEST(MemProf, SymbolizationFilter) {
     Records.push_back(KeyRecordPair.second);
   }
 
-  ASSERT_EQ(Records.size(), 1U);
-  ASSERT_EQ(Records[0].AllocSites.size(), 1U);
-  ASSERT_EQ(Records[0].AllocSites[0].CallStack.size(), 1U);
+  ASSERT_THAT(Records, SizeIs(1));
+  ASSERT_THAT(Records[0].AllocSites, SizeIs(1));
+  ASSERT_THAT(Records[0].AllocSites[0].CallStack, SizeIs(1));
   EXPECT_THAT(Records[0].AllocSites[0].CallStack[0],
               FrameContains("foo", 5U, 30U, false));
 }
@@ -427,9 +479,9 @@ TEST(MemProf, BaseMemProfReader) {
     Records.push_back(KeyRecordPair.second);
   }
 
-  ASSERT_EQ(Records.size(), 1U);
-  ASSERT_EQ(Records[0].AllocSites.size(), 1U);
-  ASSERT_EQ(Records[0].AllocSites[0].CallStack.size(), 2U);
+  ASSERT_THAT(Records, SizeIs(1));
+  ASSERT_THAT(Records[0].AllocSites, SizeIs(1));
+  ASSERT_THAT(Records[0].AllocSites[0].CallStack, SizeIs(2));
   EXPECT_THAT(Records[0].AllocSites[0].CallStack[0],
               FrameContains("foo", 20U, 5U, true));
   EXPECT_THAT(Records[0].AllocSites[0].CallStack[1],
@@ -510,37 +562,15 @@ TEST(MemProf, IndexedMemProfRecordToMemProfRecord) {
   IndexedRecord.CallSiteIds.push_back(llvm::memprof::hashCallStack(CS3));
   IndexedRecord.CallSiteIds.push_back(llvm::memprof::hashCallStack(CS4));
 
-  bool CSIdMissing = false;
-  bool FrameIdMissing = false;
+  llvm::memprof::FrameIdConverter<decltype(FrameIdMap)> FrameIdConv(FrameIdMap);
+  llvm::memprof::CallStackIdConverter<decltype(CallStackIdMap)> CSIdConv(
+      CallStackIdMap, FrameIdConv);
 
-  auto Callback = [&](CallStackId CSId) -> llvm::SmallVector<Frame> {
-    llvm::SmallVector<Frame> CallStack;
-    llvm::SmallVector<FrameId> FrameIds;
-
-    auto Iter = CallStackIdMap.find(CSId);
-    if (Iter == CallStackIdMap.end())
-      CSIdMissing = true;
-    else
-      FrameIds = Iter->second;
-
-    for (FrameId Id : FrameIds) {
-      Frame F(0, 0, 0, false);
-      auto Iter = FrameIdMap.find(Id);
-      if (Iter == FrameIdMap.end())
-        FrameIdMissing = true;
-      else
-        F = Iter->second;
-      CallStack.push_back(F);
-    }
-
-    return CallStack;
-  };
-
-  MemProfRecord Record = IndexedRecord.toMemProfRecord(Callback);
+  MemProfRecord Record = IndexedRecord.toMemProfRecord(CSIdConv);
 
   // Make sure that all lookups are successful.
-  ASSERT_FALSE(CSIdMissing);
-  ASSERT_FALSE(FrameIdMissing);
+  ASSERT_EQ(FrameIdConv.LastUnmappedId, std::nullopt);
+  ASSERT_EQ(CSIdConv.LastUnmappedId, std::nullopt);
 
   // Verify the contents of Record.
   ASSERT_THAT(Record.AllocSites, SizeIs(2));

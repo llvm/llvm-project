@@ -828,7 +828,7 @@ void ObjCSelRefsHelper::initialize() {
     auto Reloc = isec->relocs[0];
     if (const auto *sym = Reloc.referent.dyn_cast<Symbol *>()) {
       if (const auto *d = dyn_cast<Defined>(sym)) {
-        auto *cisec = cast<CStringInputSection>(d->isec);
+        auto *cisec = cast<CStringInputSection>(d->isec());
         auto methname = cisec->getStringRefAtOffset(d->value);
         methnameToSelref[CachedHashStringRef(methname)] = isec;
       }
@@ -1127,7 +1127,7 @@ void FunctionStartsSection::finalizeContents() {
     if (auto *objFile = dyn_cast<ObjFile>(file)) {
       for (const Symbol *sym : objFile->symbols) {
         if (const auto *defined = dyn_cast_or_null<Defined>(sym)) {
-          if (!defined->isec || !isCodeSection(defined->isec) ||
+          if (!defined->isec() || !isCodeSection(defined->isec()) ||
               !defined->isLive())
             continue;
           addrs.push_back(defined->getVA());
@@ -1228,7 +1228,7 @@ void SymtabSection::emitStabs() {
       if (!file || !file->compileUnit)
         continue;
 
-      symbolsNeedingStabs.emplace_back(defined, defined->isec->getFile()->id);
+      symbolsNeedingStabs.emplace_back(defined, defined->isec()->getFile()->id);
     }
   }
 
@@ -1243,7 +1243,7 @@ void SymtabSection::emitStabs() {
   InputFile *lastFile = nullptr;
   for (SortingPair &pair : symbolsNeedingStabs) {
     Defined *defined = pair.first;
-    InputSection *isec = defined->isec;
+    InputSection *isec = defined->isec();
     ObjFile *file = cast<ObjFile>(isec->getFile());
 
     if (lastFile == nullptr || lastFile != file) {
@@ -1256,7 +1256,7 @@ void SymtabSection::emitStabs() {
     }
 
     StabsEntry symStab;
-    symStab.sect = defined->isec->parent->index;
+    symStab.sect = defined->isec()->parent->index;
     symStab.strx = stringTableSection.addString(defined->getName());
     symStab.value = defined->getVA();
 
@@ -1407,7 +1407,7 @@ template <class LP> void SymtabSectionImpl<LP>::writeTo(uint8_t *buf) const {
         nList->n_value = defined->value;
       } else {
         nList->n_type = scope | N_SECT;
-        nList->n_sect = defined->isec->parent->index;
+        nList->n_sect = defined->isec()->parent->index;
         // For the N_SECT symbol type, n_value is the address of the symbol
         nList->n_value = defined->getVA();
       }
@@ -2000,7 +2000,7 @@ void ObjCMethListSection::setUp() {
       assert(reloc && "Relocation expected at method list name slot");
       auto *def = dyn_cast_or_null<Defined>(reloc->referent.get<Symbol *>());
       assert(def && "Expected valid Defined at method list name slot");
-      auto *cisec = cast<CStringInputSection>(def->isec);
+      auto *cisec = cast<CStringInputSection>(def->isec());
       assert(cisec && "Expected method name to be in a CStringInputSection");
       auto methname = cisec->getStringRefAtOffset(def->value);
       if (!ObjCSelRefsHelper::getSelRef(methname))
@@ -2107,7 +2107,7 @@ void ObjCMethListSection::writeRelativeOffsetForIsec(
   uint32_t symVA = def->getVA();
 
   if (useSelRef) {
-    auto *cisec = cast<CStringInputSection>(def->isec);
+    auto *cisec = cast<CStringInputSection>(def->isec());
     auto methname = cisec->getStringRefAtOffset(def->value);
     ConcatInputSection *selRef = ObjCSelRefsHelper::getSelRef(methname);
     assert(selRef && "Expected all selector names to already be already be "

@@ -1484,7 +1484,6 @@ define <vscale x 8 x i64> @vwadd_vx_splat_zext(<vscale x 8 x i32> %va, i32 %b) {
 ;
 ; RV64-LABEL: vwadd_vx_splat_zext:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    andi a0, a0, -1
 ; RV64-NEXT:    vsetvli a1, zero, e32, m4, ta, ma
 ; RV64-NEXT:    vwaddu.vx v16, v8, a0
 ; RV64-NEXT:    vmv8r.v v8, v16

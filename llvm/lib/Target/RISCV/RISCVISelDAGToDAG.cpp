@@ -43,7 +43,6 @@ namespace llvm::RISCV {
 #define GET_RISCVVSETable_IMPL
 #define GET_RISCVVLXTable_IMPL
 #define GET_RISCVVSXTable_IMPL
-#define GET_RISCVMaskedPseudosTable_IMPL
 #include "RISCVGenSearchableTables.inc"
 } // namespace llvm::RISCV
 
@@ -2100,8 +2099,14 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     MVT SubVecContainerVT = SubVecVT;
     // Establish the correct scalable-vector types for any fixed-length type.
     if (SubVecVT.isFixedLengthVector()) {
-      assert(Idx == 0 && V.isUndef());
       SubVecContainerVT = TLI.getContainerForFixedLengthVector(SubVecVT);
+      TypeSize VecRegSize = TypeSize::getScalable(RISCV::RVVBitsPerBlock);
+      [[maybe_unused]] bool ExactlyVecRegSized =
+          Subtarget->expandVScale(SubVecVT.getSizeInBits())
+              .isKnownMultipleOf(Subtarget->expandVScale(VecRegSize));
+      assert(isPowerOf2_64(Subtarget->expandVScale(SubVecVT.getSizeInBits())
+                               .getKnownMinValue()));
+      assert(Idx == 0 && (ExactlyVecRegSized || V.isUndef()));
     }
     MVT ContainerVT = VT;
     if (VT.isFixedLengthVector())
@@ -3473,8 +3478,15 @@ static bool usesAllOnesMask(SDNode *N, unsigned MaskOpIdx) {
 }
 
 static bool isImplicitDef(SDValue V) {
-  return V.isMachineOpcode() &&
-         V.getMachineOpcode() == TargetOpcode::IMPLICIT_DEF;
+  if (!V.isMachineOpcode())
+    return false;
+  if (V.getMachineOpcode() == TargetOpcode::REG_SEQUENCE) {
+    for (unsigned I = 1; I < V.getNumOperands(); I += 2)
+      if (!isImplicitDef(V.getOperand(I)))
+        return false;
+    return true;
+  }
+  return V.getMachineOpcode() == TargetOpcode::IMPLICIT_DEF;
 }
 
 // Optimize masked RVV pseudo instructions with a known all-ones mask to their
@@ -3669,7 +3681,6 @@ bool RISCVDAGToDAGISel::performCombineVMergeAndVOps(SDNode *N) {
   }
 
   // Skip if True has side effect.
-  // TODO: Support vleff and vlsegff.
   if (TII->get(TrueOpc).hasUnmodeledSideEffects())
     return false;
 

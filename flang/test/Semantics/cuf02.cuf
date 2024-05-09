@@ -5,14 +5,11 @@ module m
     end
   end interface
  contains
-  !ERROR: A device subprogram may not be RECURSIVE, PURE, or ELEMENTAL
-  recursive attributes(device) subroutine s1
+  recursive attributes(device) subroutine s1 ! ok
   end
-  !ERROR: A device subprogram may not be RECURSIVE, PURE, or ELEMENTAL
-  pure attributes(device) subroutine s2
+  pure attributes(device) subroutine s2 ! ok
   end
-  !ERROR: A device subprogram may not be RECURSIVE, PURE, or ELEMENTAL
-  elemental attributes(device) subroutine s3
+  elemental attributes(device) subroutine s3 ! ok
   end
   subroutine s4
    contains
@@ -32,14 +29,11 @@ module m
   !ERROR: A function may not have ATTRIBUTES(GLOBAL) or ATTRIBUTES(GRID_GLOBAL)
   attributes(global) real function f1
   end
-  !ERROR: A device subprogram may not be RECURSIVE, PURE, or ELEMENTAL
-  recursive attributes(global) subroutine s7
+  recursive attributes(global) subroutine s7 ! ok
   end
-  !ERROR: A device subprogram may not be RECURSIVE, PURE, or ELEMENTAL
-  pure attributes(global) subroutine s8
+  pure attributes(global) subroutine s8 ! ok
   end
-  !ERROR: A device subprogram may not be RECURSIVE, PURE, or ELEMENTAL
-  elemental attributes(global) subroutine s9
+  elemental attributes(global) subroutine s9 ! ok
   end
 end
 

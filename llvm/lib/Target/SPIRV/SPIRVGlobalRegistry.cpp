@@ -653,7 +653,8 @@ Register SPIRVGlobalRegistry::buildGlobalVariable(
   auto MRI = MIRBuilder.getMRI();
   assert(MRI->getType(ResVReg).isPointer() && "Pointer type is expected");
   if (Reg != ResVReg) {
-    LLT RegLLTy = LLT::pointer(MRI->getType(ResVReg).getAddressSpace(), 32);
+    LLT RegLLTy =
+        LLT::pointer(MRI->getType(ResVReg).getAddressSpace(), getPointerSize());
     MRI->setType(Reg, RegLLTy);
     assignSPIRVTypeToVReg(BaseType, Reg, MIRBuilder.getMF());
   } else {

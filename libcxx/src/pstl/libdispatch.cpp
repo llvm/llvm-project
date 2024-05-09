@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include <__algorithm/min.h>
-#include <__algorithm/pstl_backends/cpu_backends/libdispatch.h>
 #include <__config>
+#include <__pstl/backends/libdispatch.h>
 #include <dispatch/dispatch.h>
 
 _LIBCPP_BEGIN_NAMESPACE_STD

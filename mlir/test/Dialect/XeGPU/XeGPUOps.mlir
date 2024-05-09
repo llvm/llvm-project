@@ -80,7 +80,7 @@ gpu.func @test_prefetch_vc(%src: ui64) {
   //CHECK: %[[R0:.*]] = xegpu.create_tdesc %arg0 [0, 8, 16, 24] {chunk_size = 2 : i64} : ui64 -> !xegpu.tensor_desc<4x2xf32, #xegpu.tdesc_attr<scattered = true>>
   %1 = xegpu.create_tdesc %src[0, 8, 16, 24] {chunk_size = 2} : ui64  -> !xegpu.tensor_desc<4x2xf32, #xegpu.tdesc_attr<scattered = true>>
   // CHECK: xegpu.prefetch %[[R0]] <{l1_hint = #xegpu.cache_hint<cached>, l2_hint = #xegpu.cache_hint<uncached>}> : !xegpu.tensor_desc<4x2xf32, #xegpu.tdesc_attr<scattered = true>>
-  xegpu.prefetch %1 <{l1_hint = #xegpu.cache_hint<cached>, l2_hint = #xegpu.cache_hint<uncached>}>: !xegpu.tensor_desc<4x2xf32, #xegpu.tdesc_attr<scattered = true>> 
+  xegpu.prefetch %1 <{l1_hint = #xegpu.cache_hint<cached>, l2_hint = #xegpu.cache_hint<uncached>}>: !xegpu.tensor_desc<4x2xf32, #xegpu.tdesc_attr<scattered = true>>
   gpu.return
 }
 
@@ -118,6 +118,61 @@ gpu.func @test_create_update_tdesc_vc(%src: ui64) {
   %1 = xegpu.create_tdesc %src[0, 8, 16, 24] {chunk_size = 2} : ui64  -> !xegpu.tensor_desc<4x2xf32, #xegpu.tdesc_attr<scattered = true>>
   //CHECK: %[[R1:.*]] = xegpu.update_offset %[[R0]], [32, 32, 32, 32] : !xegpu.tensor_desc<4x2xf32, #xegpu.tdesc_attr<scattered = true>>
   %2 = xegpu.update_offset %1, [32, 32, 32, 32] : !xegpu.tensor_desc<4x2xf32, #xegpu.tdesc_attr<scattered = true>>
+  gpu.return
+}
+
+// CHECK: gpu.func @test_dpas_vc(%[[arg0:.*]]: vector<8x8x2xf16>, %[[arg1:.*]]: vector<8x16x2xf16>)
+gpu.func @test_dpas_vc(%a : vector<8x8x2xf16>, %b: vector<8x16x2xf16>) {
+  // CHECK: %0 = xegpu.dpas %[[arg0]], %[[arg1]] : vector<8x8x2xf16>, vector<8x16x2xf16> -> vector<8x16xf32>
+  %1 = xegpu.dpas %a, %b: vector<8x8x2xf16>, vector<8x16x2xf16> -> vector<8x16xf32>
+  gpu.return
+}
+
+// CHECK: gpu.func @test_atomic_rmw(%[[arg0:.*]]: ui64, %[[arg1:.*]]: vector<16xf32>, %[[arg2:.*]]: vector<16xi1>)
+gpu.func @test_atomic_rmw(%src: ui64, %value : vector<16xf32>, %mask : vector<16xi1>) {
+  //CHECK: %[[R0:.*]] = xegpu.create_tdesc %[[arg0]] [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15] : ui64 -> !xegpu.tensor_desc<16xf32, #xegpu.tdesc_attr<scattered = true>>
+  %1 = xegpu.create_tdesc %src[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]: ui64 -> !xegpu.tensor_desc<16xf32, #xegpu.tdesc_attr<scattered = true>>
+  //CHECK: %[[R1:.*]] = xegpu.atomic_rmw addf %[[R0]], %[[arg2]], %[[arg1]] : <16xf32, #xegpu.tdesc_attr<scattered = true>>, vector<16xi1>, vector<16xf32> -> vector<16xf32>
+  xegpu.atomic_rmw addf %1, %mask, %value: !xegpu.tensor_desc<16xf32, #xegpu.tdesc_attr<scattered = true>>, vector<16xi1>, vector<16xf32> -> vector<16xf32>
+  gpu.return
+}
+
+// CHECK: gpu.func @alloc_nbarrier({{.*}}) {
+gpu.func @alloc_nbarrier() {
+  // CHECK: xegpu.alloc_nbarrier
+  xegpu.alloc_nbarrier 8
+  gpu.return
+}
+
+// CHECK: gpu.func @init_nbarrier({{.*}}) {
+gpu.func @init_nbarrier() {
+  //CHECK: %[[c1:.*]] = arith.constant 1 : i8
+  //CHECK: %[[c16:.*]] = arith.constant 16 : i8
+  %nbarrier_id = arith.constant 1 : i8
+  %threads_count = arith.constant 16 : i8
+  //CHECK: xegpu.init_nbarrier %[[c1]], %[[c16]] : i8, i8 -> !xegpu.nbarrier
+  %nbarrier = xegpu.init_nbarrier %nbarrier_id, %threads_count : i8, i8 -> !xegpu.nbarrier
+  gpu.return
+}
+
+// CHECK: gpu.func @nbarrier_arrive(%[[arg0:.*]]: !xegpu.nbarrier) {
+gpu.func @nbarrier_arrive(%nbarrier : !xegpu.nbarrier) {
+  //CHECK: xegpu.nbarrier_arrive %[[arg0]] : !xegpu.nbarrier
+  xegpu.nbarrier_arrive %nbarrier : !xegpu.nbarrier
+  gpu.return
+}
+
+// CHECK: gpu.func @nbarrier_wait(%[[arg0:.*]]: !xegpu.nbarrier) {
+gpu.func @nbarrier_wait(%nbarrier : !xegpu.nbarrier) {
+  //CHECK: xegpu.nbarrier_wait %[[arg0]] : !xegpu.nbarrier
+  xegpu.nbarrier_wait %nbarrier : !xegpu.nbarrier
+  gpu.return
+}
+
+// CHECK-LABEL: gpu.func @fence({{.*}}) {
+gpu.func @fence() {
+  //CHECK: xegpu.fence memory_kind = global, fence_scope = workgroup
+  xegpu.fence memory_kind = global, fence_scope = workgroup
   gpu.return
 }
 

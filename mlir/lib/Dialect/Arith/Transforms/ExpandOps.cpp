@@ -152,6 +152,22 @@ struct FloorDivSIOpConverter : public OpRewritePattern<arith::FloorDivSIOp> {
   }
 };
 
+template <typename OpTy, arith::CmpIPredicate pred>
+struct MaxMinIOpConverter : public OpRewritePattern<OpTy> {
+public:
+  using OpRewritePattern<OpTy>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(OpTy op,
+                                PatternRewriter &rewriter) const final {
+    Value lhs = op.getLhs();
+    Value rhs = op.getRhs();
+
+    Value cmp = rewriter.create<arith::CmpIOp>(op.getLoc(), pred, lhs, rhs);
+    rewriter.replaceOpWithNewOp<arith::SelectOp>(op, cmp, lhs, rhs);
+    return success();
+  }
+};
+
 template <typename OpTy, arith::CmpFPredicate pred>
 struct MaximumMinimumFOpConverter : public OpRewritePattern<OpTy> {
 public:
@@ -335,6 +351,10 @@ struct ArithExpandOpsPass
       arith::CeilDivSIOp,
       arith::CeilDivUIOp,
       arith::FloorDivSIOp,
+      arith::MaxSIOp,
+      arith::MaxUIOp,
+      arith::MinSIOp,
+      arith::MinUIOp,
       arith::MaximumFOp,
       arith::MinimumFOp,
       arith::MaxNumFOp,
@@ -383,6 +403,10 @@ void mlir::arith::populateArithExpandOpsPatterns(RewritePatternSet &patterns) {
   populateCeilFloorDivExpandOpsPatterns(patterns);
   // clang-format off
   patterns.add<
+    MaxMinIOpConverter<MaxSIOp, arith::CmpIPredicate::sgt>,
+    MaxMinIOpConverter<MaxUIOp, arith::CmpIPredicate::ugt>,
+    MaxMinIOpConverter<MinSIOp, arith::CmpIPredicate::slt>,
+    MaxMinIOpConverter<MinUIOp, arith::CmpIPredicate::ult>,
     MaximumMinimumFOpConverter<MaximumFOp, arith::CmpFPredicate::UGT>,
     MaximumMinimumFOpConverter<MinimumFOp, arith::CmpFPredicate::ULT>,
     MaxNumMinNumFOpConverter<MaxNumFOp, arith::CmpFPredicate::UGT>,

@@ -1204,10 +1204,10 @@ convertElementwiseOp(RewriterBase &rewriter, Operation *op,
       return rewriter.notifyMatchFailure(op, "no mapping");
     matrixOperands.push_back(it->second);
   }
-  auto resultType = matrixOperands[0].getType().cast<gpu::MMAMatrixType>();
+  auto resultType = cast<gpu::MMAMatrixType>(matrixOperands[0].getType());
   if (opType == gpu::MMAElementwiseOp::EXTF) {
     // The floating point extension case has a different result type.
-    auto vectorType = op->getResultTypes()[0].cast<VectorType>();
+    auto vectorType = cast<VectorType>(op->getResultTypes()[0]);
     resultType = gpu::MMAMatrixType::get(resultType.getShape(),
                                          vectorType.getElementType(),
                                          resultType.getOperand());

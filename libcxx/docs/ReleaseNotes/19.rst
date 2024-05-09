@@ -46,9 +46,12 @@ Implemented Papers
 - P2869R4 - Remove Deprecated ``shared_ptr`` Atomic Access APIs from C++26
 - P2872R3 - Remove ``wstring_convert`` From C++26
 - P3142R0 - Printing Blank Lines with ``println`` (as DR against C++23)
+- P2944R3 - Comparisons for ``reference_wrapper`` (comparison operators for ``reference_wrapper`` only)
 - P2302R4 - ``std::ranges::contains``
 - P1659R3 - ``std::ranges::starts_with`` and ``std::ranges::ends_with``
 - P3029R1 - Better ``mdspan``'s CTAD
+- P2387R3 - Pipe support for user-defined range adaptors
+- P2713R1 - Escaping improvements in ``std::format``
 
 Improvements and New Features
 -----------------------------
@@ -78,6 +81,10 @@ Deprecations and Removals
 - The C++20 synchronization library (``<barrier>``, ``<latch>``, ``atomic::wait``, etc.) has been deprecated
   in language modes prior to C++20. If you are using these features prior to C++20, please update to ``-std=c++20``.
   In LLVM 20, the C++20 synchronization library will be removed entirely in language modes prior to C++20.
+
+- ``_LIBCPP_DISABLE_NODISCARD_EXT`` has been removed. ``[[nodiscard]]`` applications are now unconditional.
+  This decision is based on LEWGs discussion on `P3122 <https://wg21.link/P3122>` and `P3162 <https://wg21.link/P3162>`
+  to not use ``[[nodiscard]]`` in the standard.
 
 - TODO: The ``LIBCXX_ENABLE_ASSERTIONS`` CMake variable that was used to enable the safe mode has been deprecated and setting
   it triggers an error; use the ``LIBCXX_HARDENING_MODE`` CMake variable with the value ``extensive`` instead. Similarly,
@@ -112,6 +119,9 @@ Deprecations and Removals
   a ``std::basic_*fstream`` from a ``std::basic_string_view``, a input-iterator or a C-string, instead
   you can construct a temporary ``std::basic_string``. This change has been applied to C++17 and later.
 
+- The ``_LIBCPP_DISABLE_ADDITIONAL_DIAGNOSTICS`` macro has been removed and is not honored anymore. Additional
+  warnings provided by libc++ as a matter of QoI will now be provided unconditionally.
+
 
 Upcoming Deprecations and Removals
 ----------------------------------
@@ -143,3 +153,5 @@ Build System Changes
 
 - The Cmake variable ``LIBCXX_ENABLE_CLANG_TIDY`` has been removed. The build system has been changed
   to automatically detect the presence of ``clang-tidy`` and the required ``Clang`` libraries.
+
+- The CMake options ``LIBCXX_INSTALL_MODULES`` now defaults to ``ON``.

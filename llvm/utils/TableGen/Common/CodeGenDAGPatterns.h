@@ -1057,17 +1057,19 @@ class PatternToMatch {
   TreePatternNodePtr DstPattern; // Resulting pattern.
   std::vector<Record *> Dstregs; // Physical register defs being matched.
   std::string HwModeFeatures;
-  int AddedComplexity; // Add to matching pattern complexity.
-  unsigned ID;         // Unique ID for the record.
+  int AddedComplexity;    // Add to matching pattern complexity.
+  bool GISelShouldIgnore; // Should GlobalISel ignore importing this pattern.
+  unsigned ID;            // Unique ID for the record.
 
 public:
   PatternToMatch(Record *srcrecord, ListInit *preds, TreePatternNodePtr src,
                  TreePatternNodePtr dst, std::vector<Record *> dstregs,
-                 int complexity, unsigned uid, const Twine &hwmodefeatures = "")
+                 int complexity, unsigned uid, bool ignore,
+                 const Twine &hwmodefeatures = "")
       : SrcRecord(srcrecord), Predicates(preds), SrcPattern(src),
         DstPattern(dst), Dstregs(std::move(dstregs)),
         HwModeFeatures(hwmodefeatures.str()), AddedComplexity(complexity),
-        ID(uid) {}
+        GISelShouldIgnore(ignore), ID(uid) {}
 
   Record *getSrcRecord() const { return SrcRecord; }
   ListInit *getPredicates() const { return Predicates; }
@@ -1078,6 +1080,7 @@ public:
   const std::vector<Record *> &getDstRegs() const { return Dstregs; }
   StringRef getHwModeFeatures() const { return HwModeFeatures; }
   int getAddedComplexity() const { return AddedComplexity; }
+  bool getGISelShouldIgnore() const { return GISelShouldIgnore; }
   unsigned getID() const { return ID; }
 
   std::string getPredicateCheck() const;
@@ -1240,7 +1243,8 @@ private:
 
   void ParseOnePattern(Record *TheDef, TreePattern &Pattern,
                        TreePattern &Result,
-                       const std::vector<Record *> &InstImpResults);
+                       const std::vector<Record *> &InstImpResults,
+                       bool ShouldIgnore = false);
   void AddPatternToMatch(TreePattern *Pattern, PatternToMatch &&PTM);
   void FindPatternInputsAndOutputs(
       TreePattern &I, TreePatternNodePtr Pat,

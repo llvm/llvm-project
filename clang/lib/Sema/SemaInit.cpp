@@ -849,7 +849,7 @@ InitListChecker::FillInEmptyInitializations(const InitializedEntity &Entity,
       }
 
       for (auto *Field : RDecl->fields()) {
-        if (Field->isUnnamedBitfield())
+        if (Field->isUnnamedBitField())
           continue;
 
         if (hadError)
@@ -1027,7 +1027,7 @@ int InitListChecker::numStructUnionElements(QualType DeclType) {
   if (auto *CXXRD = dyn_cast<CXXRecordDecl>(structDecl))
     InitializableMembers += CXXRD->getNumBases();
   for (const auto *Field : structDecl->fields())
-    if (!Field->isUnnamedBitfield())
+    if (!Field->isUnnamedBitField())
       ++InitializableMembers;
 
   if (structDecl->isUnion())
@@ -2175,7 +2175,7 @@ void InitListChecker::CheckStructUnionTypes(
     // bitfield.
     for (RecordDecl::field_iterator FieldEnd = RD->field_end();
          Field != FieldEnd; ++Field) {
-      if (!Field->isUnnamedBitfield()) {
+      if (!Field->isUnnamedBitField()) {
         CheckEmptyInitializable(
             InitializedEntity::InitializeMember(*Field, &Entity),
             IList->getEndLoc());
@@ -2338,7 +2338,7 @@ void InitListChecker::CheckStructUnionTypes(
     if (Field->getType()->isIncompleteArrayType())
       break;
 
-    if (Field->isUnnamedBitfield()) {
+    if (Field->isUnnamedBitField()) {
       // Don't initialize unnamed bitfields, e.g. "int : 20;"
       ++Field;
       continue;
@@ -2398,7 +2398,7 @@ void InitListChecker::CheckStructUnionTypes(
       if (HasDesignatedInit && InitializedFields.count(*it))
         continue;
 
-      if (!it->isUnnamedBitfield() && !it->hasInClassInitializer() &&
+      if (!it->isUnnamedBitField() && !it->hasInClassInitializer() &&
           !it->getType()->isIncompleteArrayType()) {
         auto Diag = HasDesignatedInit
                         ? diag::warn_missing_designated_field_initializers
@@ -2414,7 +2414,7 @@ void InitListChecker::CheckStructUnionTypes(
   if (!StructuredList && Field != FieldEnd && !RD->isUnion() &&
       !Field->getType()->isIncompleteArrayType()) {
     for (; Field != FieldEnd && !hadError; ++Field) {
-      if (!Field->isUnnamedBitfield() && !Field->hasInClassInitializer())
+      if (!Field->isUnnamedBitField() && !Field->hasInClassInitializer())
         CheckEmptyInitializable(
             InitializedEntity::InitializeMember(*Field, &Entity),
             IList->getEndLoc());
@@ -2784,7 +2784,7 @@ InitListChecker::CheckDesignatedInitializer(const InitializedEntity &Entity,
     unsigned FieldIndex = NumBases;
 
     for (auto *FI : RD->fields()) {
-      if (FI->isUnnamedBitfield())
+      if (FI->isUnnamedBitField())
         continue;
       if (declaresSameEntity(KnownField, FI)) {
         KnownField = FI;
@@ -2858,7 +2858,7 @@ InitListChecker::CheckDesignatedInitializer(const InitializedEntity &Entity,
       // Find the field that we just initialized.
       FieldDecl *PrevField = nullptr;
       for (auto FI = RD->field_begin(); FI != RD->field_end(); ++FI) {
-        if (FI->isUnnamedBitfield())
+        if (FI->isUnnamedBitField())
           continue;
         if (*NextField != RD->field_end() &&
             declaresSameEntity(*FI, **NextField))
@@ -2976,7 +2976,7 @@ InitListChecker::CheckDesignatedInitializer(const InitializedEntity &Entity,
     // If this the first designator, our caller will continue checking
     // the rest of this struct/class/union subobject.
     if (IsFirstDesignator) {
-      if (Field != RD->field_end() && Field->isUnnamedBitfield())
+      if (Field != RD->field_end() && Field->isUnnamedBitField())
         ++Field;
 
       if (NextField)
@@ -5585,7 +5585,7 @@ static void TryOrBuildParenListInitialization(
     for (FieldDecl *FD : RD->fields()) {
       // Unnamed bitfields should not be initialized at all, either with an arg
       // or by default.
-      if (FD->isUnnamedBitfield())
+      if (FD->isUnnamedBitField())
         continue;
 
       InitializedEntity SubEntity =
@@ -6114,8 +6114,7 @@ InitializationSequence::InitializationSequence(
     Sema &S, const InitializedEntity &Entity, const InitializationKind &Kind,
     MultiExprArg Args, bool TopLevelOfInitList, bool TreatUnavailableAsInvalid)
     : FailedOverloadResult(OR_Success),
-      FailedCandidateSet(new OverloadCandidateSet(
-          Kind.getLocation(), OverloadCandidateSet::CSK_Normal)) {
+      FailedCandidateSet(Kind.getLocation(), OverloadCandidateSet::CSK_Normal) {
   InitializeFrom(S, Entity, Kind, Args, TopLevelOfInitList,
                  TreatUnavailableAsInvalid);
 }
@@ -6577,12 +6576,12 @@ void InitializationSequence::InitializeFrom(Sema &S,
 
     AddPassByIndirectCopyRestoreStep(DestType, ShouldCopy);
   } else if (ICS.isBad()) {
-    DeclAccessPair dap;
-    if (isLibstdcxxPointerReturnFalseHack(S, Entity, Initializer)) {
+    if (isLibstdcxxPointerReturnFalseHack(S, Entity, Initializer))
       AddZeroInitializationStep(Entity.getType());
-    } else if (Initializer->getType() == Context.OverloadTy &&
-               !S.ResolveAddressOfOverloadedFunction(Initializer, DestType,
-                                                     false, dap))
+    else if (DeclAccessPair Found;
+             Initializer->getType() == Context.OverloadTy &&
+             !S.ResolveAddressOfOverloadedFunction(Initializer, DestType,
+                                                   /*Complain=*/false, Found))
       SetFailed(InitializationSequence::FK_AddressOfOverloadFailed);
     else if (Initializer->getType()->isFunctionType() &&
              isExprAnUnaddressableFunction(S, Initializer))
@@ -7754,9 +7753,9 @@ static void visitLocalsRetainedByReferenceBinding(IndirectLocalPath &Path,
     break;
   }
 
-  case Stmt::OMPArraySectionExprClass: {
+  case Stmt::ArraySectionExprClass: {
     visitLocalsRetainedByInitializer(Path,
-                                     cast<OMPArraySectionExpr>(Init)->getBase(),
+                                     cast<ArraySectionExpr>(Init)->getBase(),
                                      Visit, true, EnableLifetimeWarnings);
     break;
   }
@@ -7931,7 +7930,7 @@ static void visitLocalsRetainedByInitializer(IndirectLocalPath &Path,
         for (const auto *I : RD->fields()) {
           if (Index >= ILE->getNumInits())
             break;
-          if (I->isUnnamedBitfield())
+          if (I->isUnnamedBitField())
             continue;
           Expr *SubInit = ILE->getInit(Index);
           if (I->getType()->isReferenceType())
@@ -8341,8 +8340,17 @@ void Sema::checkInitializerLifetime(const InitializedEntity &Entity,
             << Entity.getType()->isReferenceType() << CLE->getInitializer() << 2
             << DiagRange;
       } else {
-        Diag(DiagLoc, diag::warn_ret_local_temp_addr_ref)
-         << Entity.getType()->isReferenceType() << DiagRange;
+        // P2748R5: Disallow Binding a Returned Glvalue to a Temporary.
+        // [stmt.return]/p6: In a function whose return type is a reference,
+        // other than an invented function for std::is_convertible ([meta.rel]),
+        // a return statement that binds the returned reference to a temporary
+        // expression ([class.temporary]) is ill-formed.
+        if (getLangOpts().CPlusPlus26 && Entity.getType()->isReferenceType())
+          Diag(DiagLoc, diag::err_ret_local_temp_ref)
+              << Entity.getType()->isReferenceType() << DiagRange;
+        else
+          Diag(DiagLoc, diag::warn_ret_local_temp_addr_ref)
+              << Entity.getType()->isReferenceType() << DiagRange;
       }
       break;
     }
@@ -9058,11 +9066,11 @@ ExprResult InitializationSequence::Perform(Sema &S,
         }
       }
 
-      Sema::CheckedConversionKind CCK
-        = Kind.isCStyleCast()? Sema::CCK_CStyleCast
-        : Kind.isFunctionalCast()? Sema::CCK_FunctionalCast
-        : Kind.isExplicitCast()? Sema::CCK_OtherCast
-        : Sema::CCK_ImplicitConversion;
+      CheckedConversionKind CCK =
+          Kind.isCStyleCast()       ? CheckedConversionKind::CStyleCast
+          : Kind.isFunctionalCast() ? CheckedConversionKind::FunctionalCast
+          : Kind.isExplicitCast()   ? CheckedConversionKind::OtherCast
+                                    : CheckedConversionKind::Implicit;
       ExprResult CurInitExprRes =
         S.PerformImplicitConversion(CurInit.get(), Step->Type, *Step->ICS,
                                     getAssignmentAction(Entity), CCK);
@@ -9533,7 +9541,7 @@ static bool DiagnoseUninitializedReference(Sema &S, SourceLocation Loc,
     return false;
 
   for (const auto *FI : RD->fields()) {
-    if (FI->isUnnamedBitfield())
+    if (FI->isUnnamedBitField())
       continue;
 
     if (DiagnoseUninitializedReference(S, FI->getLocation(), FI->getType())) {
@@ -9633,6 +9641,8 @@ bool InitializationSequence::Diagnose(Sema &S,
   if (!Failed())
     return false;
 
+  QualType DestType = Entity.getType();
+
   // When we want to diagnose only one element of a braced-init-list,
   // we need to factor it out.
   Expr *OnlyArg;
@@ -9642,11 +9652,21 @@ bool InitializationSequence::Diagnose(Sema &S,
       OnlyArg = List->getInit(0);
     else
       OnlyArg = Args[0];
+
+    if (OnlyArg->getType() == S.Context.OverloadTy) {
+      DeclAccessPair Found;
+      if (FunctionDecl *FD = S.ResolveAddressOfOverloadedFunction(
+              OnlyArg, DestType.getNonReferenceType(), /*Complain=*/false,
+              Found)) {
+        if (Expr *Resolved =
+                S.FixOverloadedFunctionReference(OnlyArg, Found, FD).get())
+          OnlyArg = Resolved;
+      }
+    }
   }
   else
     OnlyArg = nullptr;
 
-  QualType DestType = Entity.getType();
   switch (Failure) {
   case FK_TooManyInitsForReference:
     // FIXME: Customize for the initialized entity?
@@ -9736,7 +9756,7 @@ bool InitializationSequence::Diagnose(Sema &S,
     switch (FailedOverloadResult) {
     case OR_Ambiguous:
 
-      FailedCandidateSet->NoteCandidates(
+      FailedCandidateSet.NoteCandidates(
           PartialDiagnosticAt(
               Kind.getLocation(),
               Failure == FK_UserConversionOverloadFailed
@@ -9750,8 +9770,7 @@ bool InitializationSequence::Diagnose(Sema &S,
       break;
 
     case OR_No_Viable_Function: {
-      auto Cands =
-          FailedCandidateSet->CompleteCandidates(S, OCD_AllCandidates, Args);
+      auto Cands = FailedCandidateSet.CompleteCandidates(S, OCD_AllCandidates, Args);
       if (!S.RequireCompleteType(Kind.getLocation(),
                                  DestType.getNonReferenceType(),
                           diag::err_typecheck_nonviable_condition_incomplete,
@@ -9761,13 +9780,13 @@ bool InitializationSequence::Diagnose(Sema &S,
           << OnlyArg->getType() << Args[0]->getSourceRange()
           << DestType.getNonReferenceType();
 
-      FailedCandidateSet->NoteCandidates(S, Args, Cands);
+      FailedCandidateSet.NoteCandidates(S, Args, Cands);
       break;
     }
     case OR_Deleted: {
       OverloadCandidateSet::iterator Best;
-      OverloadingResult Ovl =
-          FailedCandidateSet->BestViableFunction(S, Kind.getLocation(), Best);
+      OverloadingResult Ovl
+        = FailedCandidateSet.BestViableFunction(S, Kind.getLocation(), Best);
 
       StringLiteral *Msg = Best->Function->getDeletedMessage();
       S.Diag(Kind.getLocation(), diag::err_typecheck_deleted_function)
@@ -9951,7 +9970,7 @@ bool InitializationSequence::Diagnose(Sema &S,
     // bad.
     switch (FailedOverloadResult) {
       case OR_Ambiguous:
-        FailedCandidateSet->NoteCandidates(
+        FailedCandidateSet.NoteCandidates(
             PartialDiagnosticAt(Kind.getLocation(),
                                 S.PDiag(diag::err_ovl_ambiguous_init)
                                     << DestType << ArgsRange),
@@ -10005,7 +10024,7 @@ bool InitializationSequence::Diagnose(Sema &S,
           break;
         }
 
-        FailedCandidateSet->NoteCandidates(
+        FailedCandidateSet.NoteCandidates(
             PartialDiagnosticAt(
                 Kind.getLocation(),
                 S.PDiag(diag::err_ovl_no_viable_function_in_init)
@@ -10015,8 +10034,8 @@ bool InitializationSequence::Diagnose(Sema &S,
 
       case OR_Deleted: {
         OverloadCandidateSet::iterator Best;
-        OverloadingResult Ovl =
-            FailedCandidateSet->BestViableFunction(S, Kind.getLocation(), Best);
+        OverloadingResult Ovl
+          = FailedCandidateSet.BestViableFunction(S, Kind.getLocation(), Best);
         if (Ovl != OR_Deleted) {
           S.Diag(Kind.getLocation(), diag::err_ovl_deleted_init)
               << DestType << ArgsRange;
@@ -10095,8 +10114,8 @@ bool InitializationSequence::Diagnose(Sema &S,
     S.Diag(Kind.getLocation(), diag::err_selected_explicit_constructor)
       << Args[0]->getSourceRange();
     OverloadCandidateSet::iterator Best;
-    OverloadingResult Ovl =
-        FailedCandidateSet->BestViableFunction(S, Kind.getLocation(), Best);
+    OverloadingResult Ovl
+      = FailedCandidateSet.BestViableFunction(S, Kind.getLocation(), Best);
     (void)Ovl;
     assert(Ovl == OR_Success && "Inconsistent overload resolution");
     CXXConstructorDecl *CtorDecl = cast<CXXConstructorDecl>(Best->Function);
@@ -10791,8 +10810,6 @@ QualType Sema::DeduceTemplateSpecializationFromInitializer(
 
   // FIXME: Perform "exact type" matching first, per CWG discussion?
   //        Or implement this via an implied 'T(T) -> T' deduction guide?
-
-  // FIXME: Do we need/want a std::initializer_list<T> special case?
 
   // Look up deduction guides, including those synthesized from constructors.
   //

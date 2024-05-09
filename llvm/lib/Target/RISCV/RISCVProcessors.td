@@ -44,7 +44,7 @@ class RISCVProcessorModel<string n,
                           list<SubtargetFeature> f,
                           list<SubtargetFeature> tunef = [],
                           string default_march = "">
-      :  ProcessorModel<n, m, f, tunef> {
+    :  ProcessorModel<n, m, f, tunef> {
   string DefaultMarch = default_march;
 }
 
@@ -52,7 +52,7 @@ class RISCVTuneProcessorModel<string n,
                               SchedMachineModel m,
                               list<SubtargetFeature> tunef = [],
                               list<SubtargetFeature> f = []>
-      : ProcessorModel<n, m, f,tunef>;
+    : ProcessorModel<n, m, f,tunef>;
 
 def GENERIC_RV32 : RISCVProcessorModel<"generic-rv32",
                                        NoSchedModel,
@@ -66,7 +66,7 @@ def GENERIC_RV64 : RISCVProcessorModel<"generic-rv64",
                    GenericTuneInfo;
 // Support generic for compatibility with other targets. The triple will be used
 // to change to the appropriate rv32/rv64 version.
-def : ProcessorModel<"generic", NoSchedModel, []>, GenericTuneInfo;
+def GENERIC : RISCVTuneProcessorModel<"generic", NoSchedModel>, GenericTuneInfo;
 
 def ROCKET_RV32 : RISCVProcessorModel<"rocket-rv32",
                                       RocketModel,
@@ -257,7 +257,8 @@ def SIFIVE_P450 : RISCVProcessorModel<"sifive-p450", SiFiveP400Model,
                                        FeatureStdExtZbb,
                                        FeatureStdExtZbs,
                                        FeatureStdExtZfhmin,
-                                       FeatureFastUnalignedAccess],
+                                       FeatureUnalignedScalarMem,
+                                       FeatureUnalignedVectorMem],
                                       [TuneNoDefaultUnroll,
                                        TuneConditionalCompressedMoveFusion,
                                        TuneLUIADDIFusion,
@@ -295,7 +296,8 @@ def SIFIVE_P670 : RISCVProcessorModel<"sifive-p670", SiFiveP600Model,
                                        FeatureStdExtZvkng,
                                        FeatureStdExtZvksc,
                                        FeatureStdExtZvksg,
-                                       FeatureFastUnalignedAccess],
+                                       FeatureUnalignedScalarMem,
+                                       FeatureUnalignedVectorMem],
                                       [TuneNoDefaultUnroll,
                                        TuneConditionalCompressedMoveFusion,
                                        TuneLUIADDIFusion,

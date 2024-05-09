@@ -155,12 +155,14 @@ getTopologicallySortedBlocks(ArrayRef<llvm::BasicBlock *> basicBlocks) {
 
 ModuleImport::ModuleImport(ModuleOp mlirModule,
                            std::unique_ptr<llvm::Module> llvmModule,
-                           bool emitExpensiveWarnings)
+                           bool emitExpensiveWarnings,
+                           bool importEmptyDICompositeTypes)
     : builder(mlirModule->getContext()), context(mlirModule->getContext()),
       mlirModule(mlirModule), llvmModule(std::move(llvmModule)),
       iface(mlirModule->getContext()),
       typeTranslator(*mlirModule->getContext()),
-      debugImporter(std::make_unique<DebugImporter>(mlirModule)),
+      debugImporter(std::make_unique<DebugImporter>(
+          mlirModule, importEmptyDICompositeTypes)),
       loopAnnotationImporter(
           std::make_unique<LoopAnnotationImporter>(*this, builder)),
       emitExpensiveWarnings(emitExpensiveWarnings) {
@@ -625,8 +627,8 @@ void ModuleImport::setNonDebugMetadataAttrs(llvm::Instruction *inst,
   }
 }
 
-void ModuleImport::setIntegerOverflowFlagsAttr(llvm::Instruction *inst,
-                                               Operation *op) const {
+void ModuleImport::setIntegerOverflowFlags(llvm::Instruction *inst,
+                                           Operation *op) const {
   auto iface = cast<IntegerOverflowFlagsInterface>(op);
 
   IntegerOverflowFlags value = {};
@@ -634,8 +636,7 @@ void ModuleImport::setIntegerOverflowFlagsAttr(llvm::Instruction *inst,
   value =
       bitEnumSet(value, IntegerOverflowFlags::nuw, inst->hasNoUnsignedWrap());
 
-  auto attr = IntegerOverflowFlagsAttr::get(op->getContext(), value);
-  iface->setAttr(iface.getIntegerOverflowAttrName(), attr);
+  iface.setOverflowFlags(value);
 }
 
 void ModuleImport::setFastmathFlagsAttr(llvm::Instruction *inst,
@@ -2092,8 +2093,8 @@ ModuleImport::translateLoopAnnotationAttr(const llvm::MDNode *node,
 
 OwningOpRef<ModuleOp>
 mlir::translateLLVMIRToModule(std::unique_ptr<llvm::Module> llvmModule,
-                              MLIRContext *context,
-                              bool emitExpensiveWarnings) {
+                              MLIRContext *context, bool emitExpensiveWarnings,
+                              bool dropDICompositeTypeElements) {
   // Preload all registered dialects to allow the import to iterate the
   // registered LLVMImportDialectInterface implementations and query the
   // supported LLVM IR constructs before starting the translation. Assumes the
@@ -2109,7 +2110,7 @@ mlir::translateLLVMIRToModule(std::unique_ptr<llvm::Module> llvmModule,
       /*column=*/0)));
 
   ModuleImport moduleImport(module.get(), std::move(llvmModule),
-                            emitExpensiveWarnings);
+                            emitExpensiveWarnings, dropDICompositeTypeElements);
   if (failed(moduleImport.initializeImportInterface()))
     return {};
   if (failed(moduleImport.convertDataLayout()))
