@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple arm64e-apple-ios -fptrauth-calls %s -verify -emit-llvm -S -o -
+// RUN: %clang_cc1 -triple arm64e-apple-ios -fptrauth-calls %s -verify -emit-llvm -o -
 
 void f(void);
 

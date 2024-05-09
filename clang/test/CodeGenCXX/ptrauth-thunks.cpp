@@ -21,7 +21,7 @@ namespace Test1 {
   }
 }
 
-// CHECK-LABEL: define linkonce_odr void @_ZTv0_n24_N5Test11DD0Ev(ptr noundef %this){{.*}} align 2
+// CHECK-LABEL: define linkonce_odr void @_ZTv0_n24_N5Test11DD0Ev(ptr noundef %this)
 // CHECK: %[[This:.*]] = load ptr
 // CHECK: %[[SignedVTable:.*]] = load ptr, ptr %[[This]], align 8
 // CHECK: %[[SignedVTableAsInt:.*]] = ptrtoint ptr %[[SignedVTable]] to i64
