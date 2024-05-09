@@ -1322,11 +1322,11 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
         }
       }
 
-      // Turn (and (shl x, c2), c1) -> (srli (slli c2+c3), c3) if c1 is a mask
-      // shifted by c2 bits with c3 leading zeros.
       if (LeftShift && isShiftedMask_64(C1)) {
         unsigned Leading = XLen - llvm::bit_width(C1);
 
+        // Turn (and (shl x, c2), c1) -> (srli (slli c2+c3), c3) if c1 is a mask
+        // shifted by c2 bits with c3 leading zeros.
         if (C2 + Leading < XLen &&
             C1 == (maskTrailingOnes<uint64_t>(XLen - (C2 + Leading)) << C2)) {
           // Use slli.uw when possible.
@@ -1349,6 +1349,21 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
             ReplaceNode(Node, SRLI);
             return;
           }
+        }
+
+        // Turn (and (shl x, c2), c1) -> (slli_uw (srli x, c4-c2), c4) where c1
+        // is shifted mask with 32 set bits and c4 trailing zeros.
+        unsigned Trailing = llvm::countr_zero(C1);
+        if (Leading + Trailing == 32 && C2 < Trailing &&
+            Subtarget->hasStdExtZba() && OneUseOrZExtW) {
+          SDNode *SRLI = CurDAG->getMachineNode(
+              RISCV::SRLI, DL, VT, X,
+              CurDAG->getTargetConstant(Trailing - C2, DL, VT));
+          SDNode *SLLI_UW = CurDAG->getMachineNode(
+              RISCV::SLLI_UW, DL, VT, SDValue(SRLI, 0),
+              CurDAG->getTargetConstant(Trailing, DL, VT));
+          ReplaceNode(Node, SLLI_UW);
+          return;
         }
       }
 
