@@ -6018,7 +6018,7 @@ def note_extern_c_global_conflict : Note<
 def note_extern_c_begins_here : Note<
   "extern \"C\" language linkage specification begins here">;
 def warn_weak_import : Warning <
-  "an already-declared variable is made a weak_import declaration %0">;
+  "an already-defined variable is made a weak_import declaration %0">;
 def ext_static_non_static : Extension<
   "redeclaring non-static %0 as static is a Microsoft extension">,
   InGroup<MicrosoftRedeclareStatic>;

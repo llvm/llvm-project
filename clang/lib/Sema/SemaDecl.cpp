@@ -4611,26 +4611,18 @@ void Sema::MergeVarDecl(VarDecl *New, LookupResult &Previous) {
   }
 
   mergeDeclAttributes(New, Old);
-  // Warn if an already-declared variable is made a weak_import in a subsequent
+  // Warn if an already-defined variable is made a weak_import in a subsequent
   // declaration
-  if (New->hasAttr<WeakImportAttr>()) {
-    // We know there's no full definition as the attribute on New would have
-    // been removed otherwise. Just look for the most recent tentative
-    // definition.
-    VarDecl *TentativeDef = nullptr;
-    for (auto *D = Old; D; D = D->getPreviousDecl())
-      if (D->isThisDeclarationADefinition() == VarDecl::TentativeDefinition) {
-        TentativeDef = D;
+  if (New->hasAttr<WeakImportAttr>())
+    for (auto *D = Old; D; D = D->getPreviousDecl()) {
+      if (D->isThisDeclarationADefinition() != VarDecl::DeclarationOnly) {
+        Diag(New->getLocation(), diag::warn_weak_import) << New->getDeclName();
+        Diag(D->getLocation(), diag::note_previous_declaration);
+        // Remove weak_import attribute on new declaration.
+        New->dropAttr<WeakImportAttr>();
         break;
       }
-
-    if (TentativeDef) {
-      Diag(New->getLocation(), diag::warn_weak_import) << New->getDeclName();
-      Diag(TentativeDef->getLocation(), diag::note_previous_declaration);
-      // Remove weak_import attribute on new declaration.
-      New->dropAttr<WeakImportAttr>();
     }
-  }
 
   if (const auto *ILA = New->getAttr<InternalLinkageAttr>())
     if (!Old->hasAttr<InternalLinkageAttr>()) {
