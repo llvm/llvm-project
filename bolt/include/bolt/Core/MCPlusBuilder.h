@@ -58,6 +58,8 @@ enum class IndirectBranchType : char {
   POSSIBLE_PIC_JUMP_TABLE, /// Possibly a jump table for PIC.
   POSSIBLE_GOTO,           /// Possibly a gcc's computed goto.
   POSSIBLE_FIXED_BRANCH,   /// Possibly an indirect branch to a fixed location.
+  POSSIBLE_PIC_FIXED_BRANCH, /// Possibly an indirect jump to a fixed entry in a
+                             /// PIC jump table.
 };
 
 class MCPlusBuilder {
@@ -1472,7 +1474,8 @@ public:
                         InstructionIterator End, const unsigned PtrSize,
                         MCInst *&MemLocInstr, unsigned &BaseRegNum,
                         unsigned &IndexRegNum, int64_t &DispValue,
-                        const MCExpr *&DispExpr, MCInst *&PCRelBaseOut) const {
+                        const MCExpr *&DispExpr, MCInst *&PCRelBaseOut,
+                        MCInst *&FixedEntryLoadInst) const {
     llvm_unreachable("not implemented");
     return IndirectBranchType::UNKNOWN;
   }

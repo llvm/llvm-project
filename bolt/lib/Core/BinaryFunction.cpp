@@ -779,6 +779,9 @@ BinaryFunction::processIndirectBranch(MCInst &Instruction, unsigned Size,
   // setting the value of the register used by the branch.
   MCInst *MemLocInstr;
 
+  // The instruction loading the fixed PIC jump table entry value.
+  MCInst *FixedEntryLoadInstr;
+
   // Address of the table referenced by MemLocInstr. Could be either an
   // array of function pointers, or a jump table.
   uint64_t ArrayStart = 0;
@@ -810,7 +813,7 @@ BinaryFunction::processIndirectBranch(MCInst &Instruction, unsigned Size,
 
   IndirectBranchType BranchType = BC.MIB->analyzeIndirectBranch(
       Instruction, Begin, Instructions.end(), PtrSize, MemLocInstr, BaseRegNum,
-      IndexRegNum, DispValue, DispExpr, PCRelBaseInstr);
+      IndexRegNum, DispValue, DispExpr, PCRelBaseInstr, FixedEntryLoadInstr);
 
   if (BranchType == IndirectBranchType::UNKNOWN && !MemLocInstr)
     return BranchType;
@@ -851,15 +854,19 @@ BinaryFunction::processIndirectBranch(MCInst &Instruction, unsigned Size,
     return IndirectBranchType::UNKNOWN;
   }
 
+  auto getExprValue = [&](const MCExpr *Expr) {
+    const MCSymbol *TargetSym;
+    uint64_t TargetOffset;
+    std::tie(TargetSym, TargetOffset) = BC.MIB->getTargetSymbolInfo(Expr);
+    ErrorOr<uint64_t> SymValueOrError = BC.getSymbolValue(*TargetSym);
+    assert(SymValueOrError && "Global symbol needs a value");
+    return *SymValueOrError + TargetOffset;
+  };
+
   // RIP-relative addressing should be converted to symbol form by now
   // in processed instructions (but not in jump).
   if (DispExpr) {
-    const MCSymbol *TargetSym;
-    uint64_t TargetOffset;
-    std::tie(TargetSym, TargetOffset) = BC.MIB->getTargetSymbolInfo(DispExpr);
-    ErrorOr<uint64_t> SymValueOrError = BC.getSymbolValue(*TargetSym);
-    assert(SymValueOrError && "global symbol needs a value");
-    ArrayStart = *SymValueOrError + TargetOffset;
+    ArrayStart = getExprValue(DispExpr);
     BaseRegNum = BC.MIB->getNoRegister();
     if (BC.isAArch64()) {
       ArrayStart &= ~0xFFFULL;
@@ -871,6 +878,43 @@ BinaryFunction::processIndirectBranch(MCInst &Instruction, unsigned Size,
 
   if (BaseRegNum == BC.MRI->getProgramCounter())
     ArrayStart += getAddress() + Offset + Size;
+
+  if (FixedEntryLoadInstr) {
+    assert(BranchType == IndirectBranchType::POSSIBLE_PIC_FIXED_BRANCH &&
+           "Invalid IndirectBranch type");
+    const MCExpr *FixedEntryDispExpr =
+        BC.MIB->getMemOperandDisp(*FixedEntryLoadInstr)->getExpr();
+    const uint64_t EntryAddress = getExprValue(FixedEntryDispExpr);
+    uint64_t EntrySize = BC.getJumpTableEntrySize(JumpTable::JTT_PIC);
+    ErrorOr<int64_t> Value = BC.getSignedValueAtAddress(EntryAddress, EntrySize);
+    if (!Value)
+      return IndirectBranchType::UNKNOWN;
+
+    BC.outs() << "BOLT-INFO: fixed PIC indirect branch detected in " << *this
+              << " at 0x" << Twine::utohexstr(getAddress() + Offset)
+              << " referencing data at 0x" << Twine::utohexstr(EntryAddress)
+              << " the destination value is 0x"
+              << Twine::utohexstr(ArrayStart + *Value) << '\n';
+
+    TargetAddress = ArrayStart + *Value;
+
+    // Remove spurious JumpTable at EntryAddress caused by PIC reference from
+    // the load instruction.
+    JumpTable *JT = BC.getJumpTableContainingAddress(EntryAddress);
+    assert(JT && "Must have a jump table at fixed entry address");
+    BC.deregisterJumpTable(EntryAddress);
+    JumpTables.erase(EntryAddress);
+    delete JT;
+
+    // Replace FixedEntryDispExpr used in target address calculation with outer
+    // jump table reference.
+    JT = BC.getJumpTableContainingAddress(ArrayStart);
+    assert(JT && "Must have a containing jump table for PIC fixed branch");
+    BC.MIB->replaceMemOperandDisp(*FixedEntryLoadInstr, JT->getFirstLabel(),
+                                  EntryAddress - ArrayStart, &*BC.Ctx);
+
+    return BranchType;
+  }
 
   LLVM_DEBUG(dbgs() << "BOLT-DEBUG: addressed memory is 0x"
                     << Twine::utohexstr(ArrayStart) << '\n');
@@ -1124,6 +1168,7 @@ void BinaryFunction::handleIndirectBranch(MCInst &Instruction, uint64_t Size,
     if (opts::JumpTables == JTS_NONE)
       IsSimple = false;
     break;
+  case IndirectBranchType::POSSIBLE_PIC_FIXED_BRANCH:
   case IndirectBranchType::POSSIBLE_FIXED_BRANCH: {
     if (containsAddress(IndirectTarget)) {
       const MCSymbol *TargetSymbol = getOrCreateLocalLabel(IndirectTarget);
@@ -1693,6 +1738,26 @@ void BinaryFunction::postProcessEntryPoints() {
 }
 
 void BinaryFunction::postProcessJumpTables() {
+  // Set of JTs accessed from this function.
+  std::unordered_set<uint64_t> LiveJTs;
+  for (auto &JTSite : JTSites)
+    LiveJTs.emplace(JTSite.second);
+
+  // Remove dead jump tables (reference removed as a result of
+  // POSSIBLE_PIC_FIXED_BRANCH optimization).
+  for (auto JTI = JumpTables.begin(), JTE = JumpTables.end(); JTI != JTE; ) {
+    const uint64_t Address = JTI->first;
+    JumpTable *JT = JTI->second;
+    bool HasOneParent = JT->Parents.size() == 1;
+    if (LiveJTs.count(Address) == 0 && HasOneParent) {
+      BC.deregisterJumpTable(Address);
+      delete JT;
+      JTI = JumpTables.erase(JTI);
+      continue;
+    }
+    ++JTI;
+  }
+
   // Create labels for all entries.
   for (auto &JTI : JumpTables) {
     JumpTable &JT = *JTI.second;
@@ -1870,9 +1935,11 @@ bool BinaryFunction::postProcessIndirectBranches(
         int64_t DispValue;
         const MCExpr *DispExpr;
         MCInst *PCRelBaseInstr;
+        MCInst *FixedEntryLoadInstr;
         IndirectBranchType Type = BC.MIB->analyzeIndirectBranch(
             Instr, BB.begin(), II, PtrSize, MemLocInstr, BaseRegNum,
-            IndexRegNum, DispValue, DispExpr, PCRelBaseInstr);
+            IndexRegNum, DispValue, DispExpr, PCRelBaseInstr,
+            FixedEntryLoadInstr);
         if (Type != IndirectBranchType::UNKNOWN || MemLocInstr != nullptr)
           continue;
 
