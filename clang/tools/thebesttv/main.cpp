@@ -662,6 +662,19 @@ int main(int argc, const char **argv) {
     }
 
     {
+        // 更新 Global.npeSuspectedSources
+        // 对所有 p = foo()，把函数中没有 return NULL 语句的都删掉
+        for (auto p : Global.npeSuspectedSourcesItMap) {
+            const std::string &signature = p.first;
+            int fid = Global.getIdOfFunction(signature);
+            if (fid == -1 || Global.functionReturnsNull[fid] == false)
+                for (auto it : p.second) {
+                    Global.npeSuspectedSources.erase(it);
+                }
+        }
+    }
+
+    {
         int m = 0;
         for (const auto &edges : Global.icfg.G) {
             m += edges.size();

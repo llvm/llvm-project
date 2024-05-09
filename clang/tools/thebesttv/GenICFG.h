@@ -37,15 +37,30 @@ class GenICFGVisitor : public RecursiveASTVisitor<GenICFGVisitor> {
 class NpeSourceVisitor : public RecursiveASTVisitor<NpeSourceVisitor> {
 
     ASTContext *Context;
+    int fid; // 当前访问函数的 fid
+
+    bool isNullPointerConstant(Expr *expr);
+    FunctionDecl *getDirectCallee(Expr *expr);
 
     std::optional<typename std::set<ordered_json>::iterator>
     saveNpeSuspectedSources(const SourceRange &range);
 
+    /**
+     * source 的保存策略：
+     * 1. p = NULL
+     * 2. p = foo() && foo() = { ...; return NULL; }
+     *    其中第二个判断（foo() 中包含 return NULL）在之后才会做。
+     *    目前放到 main() 里做，在 generateICFG() 之后
+     */
+    void checkSourceAndMaybeSave(const SourceRange &range, Expr *rhs);
+
   public:
-    explicit NpeSourceVisitor(ASTContext *Context) : Context(Context) {}
+    explicit NpeSourceVisitor(ASTContext *Context, int fid)
+        : Context(Context), fid(fid) {}
 
     bool VisitVarDecl(VarDecl *D);
     bool VisitBinaryOperator(BinaryOperator *S);
+    bool VisitReturnStmt(ReturnStmt *S);
 };
 
 class GenICFGConsumer : public clang::ASTConsumer {

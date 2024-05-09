@@ -104,10 +104,10 @@ bool GenICFGVisitor::VisitFunctionDecl(FunctionDecl *D) {
         }
     }
 
-    Global.icfg.addFunction(Global.getIdOfFunction(fullSignature, pLoc->file),
-                            *cfg);
+    int fid = Global.getIdOfFunction(fullSignature, pLoc->file);
+    Global.icfg.addFunction(fid, *cfg);
 
-    NpeSourceVisitor(Context).TraverseDecl(D);
+    NpeSourceVisitor(Context, fid).TraverseDecl(D);
 
     /*
     // traverse CFGBlocks
@@ -142,6 +142,22 @@ bool isPointerType(Expr *E) {
     return type && type->isAnyPointerType();
 }
 
+bool NpeSourceVisitor::isNullPointerConstant(Expr *expr) {
+    if (!expr)
+        return false;
+    const auto &valueDependence =
+        Expr::NullPointerConstantValueDependence::NPC_ValueDependentIsNotNull;
+    auto result = expr->isNullPointerConstant(*Context, valueDependence);
+    return result != Expr::NullPointerConstantKind::NPCK_NotNull;
+}
+
+FunctionDecl *NpeSourceVisitor::getDirectCallee(Expr *E) {
+    if (CallExpr *expr = dyn_cast<CallExpr>(E)) {
+        return expr->getDirectCallee();
+    }
+    return nullptr;
+}
+
 std::optional<typename std::set<ordered_json>::iterator>
 NpeSourceVisitor::saveNpeSuspectedSources(const SourceRange &range) {
     ordered_json loc;
@@ -156,6 +172,25 @@ NpeSourceVisitor::saveNpeSuspectedSources(const SourceRange &range) {
     return reservoirSamplingAddElement(Global.npeSuspectedSources, loc, 100000);
 }
 
+void NpeSourceVisitor::checkSourceAndMaybeSave(const SourceRange &range,
+                                               Expr *rhs) {
+    if (!rhs || !isPointerType(rhs))
+        return;
+
+    if (isNullPointerConstant(rhs)) {
+        // p = NULL
+        saveNpeSuspectedSources(range);
+    } else if (FunctionDecl *calleeDecl = getDirectCallee(rhs)) {
+        // p = foo() && foo() = { ...; return NULL; }
+        auto it = saveNpeSuspectedSources(range);
+        if (it) {
+            // callee 可能还没被处理过，记录 signature，而不是 fid
+            std::string callee = getFullSignature(calleeDecl);
+            Global.npeSuspectedSourcesItMap[callee].push_back(it.value());
+        }
+    }
+}
+
 bool NpeSourceVisitor::VisitVarDecl(VarDecl *D) {
     // 加入 NPE 可疑的 source 中
 
@@ -163,11 +198,7 @@ bool NpeSourceVisitor::VisitVarDecl(VarDecl *D) {
     if (!D->getParentFunctionOrMethod())
         return true;
 
-    Expr *init = D->getInit();
-    if (!init || !isPointerType(init))
-        return true;
-
-    saveNpeSuspectedSources(D->getSourceRange());
+    checkSourceAndMaybeSave(D->getSourceRange(), D->getInit());
 
     return true;
 }
@@ -183,8 +214,16 @@ bool NpeSourceVisitor::VisitBinaryOperator(BinaryOperator *S) {
     if (!isPointerType(S))
         return true;
 
-    saveNpeSuspectedSources(S->getSourceRange());
+    checkSourceAndMaybeSave(S->getSourceRange(), S->getRHS());
 
+    return true;
+}
+
+bool NpeSourceVisitor::VisitReturnStmt(ReturnStmt *S) {
+    Expr *value = S->getRetValue();
+    if (isNullPointerConstant(value)) {
+        Global.functionReturnsNull[fid] = true;
+    }
     return true;
 }
 

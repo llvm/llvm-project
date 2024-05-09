@@ -203,6 +203,12 @@ struct GlobalStat {
     std::string clangPath, clangppPath;
 
     std::set<ordered_json> npeSuspectedSources; // 每个元素是可疑的 source
+    // 对于加入 npeSuspectedSources 的 p = foo()，
+    // 把 foo() map 到集合中的迭代器上，用于之后的删除
+    std::map<std::string, std::vector<std::set<ordered_json>::iterator>>
+        npeSuspectedSourcesItMap;
+    // 判断函数是否包含 return NULL 语句
+    std::map<int, bool> functionReturnsNull; // fid -> whether func returns null
 };
 
 SourceLocation getEndOfMacroExpansion(SourceLocation loc, ASTContext &Context);
