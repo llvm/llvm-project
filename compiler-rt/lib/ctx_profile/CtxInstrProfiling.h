@@ -9,8 +9,11 @@
 #ifndef CTX_PROFILE_CTXINSTRPROFILING_H_
 #define CTX_PROFILE_CTXINSTRPROFILING_H_
 
+#include "CtxInstrContextNode.h"
 #include "sanitizer_common/sanitizer_mutex.h"
 #include <sanitizer/common_interface_defs.h>
+
+using namespace llvm::ctx_profile;
 
 namespace __ctx_profile {
 
@@ -61,8 +64,6 @@ private:
 // The memory available for allocation follows the Arena header, and we expect
 // it to be thus aligned.
 static_assert(alignof(Arena) == ExpectedAlignment);
-
-#include "CtxInstrContextNode.inc"
 
 // Verify maintenance to ContextNode doesn't change this invariant, which makes
 // sure the inlined vectors are appropriately aligned.
@@ -128,8 +129,7 @@ extern "C" {
 extern __thread void *volatile __llvm_ctx_profile_expected_callee[2];
 /// TLS where LLVM stores the pointer inside a caller's subcontexts vector that
 /// corresponds to the callsite being lowered.
-extern __thread __ctx_profile::ContextNode *
-    *volatile __llvm_ctx_profile_callsite[2];
+extern __thread ContextNode **volatile __llvm_ctx_profile_callsite[2];
 
 // __llvm_ctx_profile_current_context_root is exposed for unit testing,
 // othwerise it's only used internally by compiler-rt/ctx_profile.
@@ -138,10 +138,9 @@ extern __thread __ctx_profile::ContextRoot
 
 /// called by LLVM in the entry BB of a "entry point" function. The returned
 /// pointer may be "tainted" - its LSB set to 1 - to indicate it's scratch.
-__ctx_profile::ContextNode *
-__llvm_ctx_profile_start_context(__ctx_profile::ContextRoot *Root,
-                                 __ctx_profile::GUID Guid, uint32_t Counters,
-                                 uint32_t Callsites);
+ContextNode *__llvm_ctx_profile_start_context(__ctx_profile::ContextRoot *Root,
+                                              GUID Guid, uint32_t Counters,
+                                              uint32_t Callsites);
 
 /// paired with __llvm_ctx_profile_start_context, and called at the exit of the
 /// entry point function.
@@ -149,9 +148,9 @@ void __llvm_ctx_profile_release_context(__ctx_profile::ContextRoot *Root);
 
 /// called for any other function than entry points, in the entry BB of such
 /// function. Same consideration about LSB of returned value as .._start_context
-__ctx_profile::ContextNode *
-__llvm_ctx_profile_get_context(void *Callee, __ctx_profile::GUID Guid,
-                               uint32_t NrCounters, uint32_t NrCallsites);
+ContextNode *__llvm_ctx_profile_get_context(void *Callee, GUID Guid,
+                                            uint32_t NrCounters,
+                                            uint32_t NrCallsites);
 
 /// Prepares for collection. Currently this resets counter values but preserves
 /// internal context tree structure.
@@ -166,7 +165,7 @@ void __llvm_ctx_profile_free();
 /// The Writer's first parameter plays the role of closure for Writer, and is
 /// what the caller of __llvm_ctx_profile_fetch passes as the Data parameter.
 /// The second parameter is the root of a context tree.
-bool __llvm_ctx_profile_fetch(
-    void *Data, bool (*Writer)(void *, const __ctx_profile::ContextNode &));
+bool __llvm_ctx_profile_fetch(void *Data,
+                              bool (*Writer)(void *, const ContextNode &));
 }
 #endif // CTX_PROFILE_CTXINSTRPROFILING_H_

@@ -289,7 +289,7 @@ void __llvm_ctx_profile_start_collection() {
 }
 
 bool __llvm_ctx_profile_fetch(
-    void *Data, bool (*Writer)(void *W, const __ctx_profile::ContextNode &)) {
+    void *Data, bool (*Writer)(void *W, const ContextNode &)) {
   assert(Writer);
   __sanitizer::GenericScopedLock<__sanitizer::SpinMutex> Lock(
       &AllContextsMutex);

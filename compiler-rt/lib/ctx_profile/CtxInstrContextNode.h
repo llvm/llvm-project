@@ -1,17 +1,20 @@
-/*===- CtxInstrContextNode.inc- Contextual instrumentation-based PGO  -----===*\
-|*
-|* Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
-|* See https://llvm.org/LICENSE.txt for license information.
-|* SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-|*
-\*===----------------------------------------------------------------------===*/
-
+//===--- CtxInstrContextNode.h - Contextual Profile Node --------*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
 //==============================================================================
 //
 // NOTE!
-// llvm/lib/ProfileData/CtxInstrContextNode.inc and
-//   compiler-rt/lib/ctx_profile/CtxInstrContextNode.inc
+// llvm/lib/ProfileData/CtxInstrContextNode.h and
+//   compiler-rt/lib/ctx_profile/CtxInstrContextNode.h
 // must be exact copies of eachother
+//
+// compiler-rt creates these objects as part of the instrumentation runtime for
+// contextual profiling. LLVM only consumes them to convert a contextual tree
+// to a bitstream.
 //
 //==============================================================================
 
@@ -52,6 +55,14 @@
 /// to be concerned with memory safety. Their subcontexts never get populated,
 /// though. The runtime code here produces and recognizes them.
 
+#ifndef LLVM_LIB_PROFILEDATA_CTXINSTRCONTEXTNODE_H
+#define LLVM_LIB_PROFILEDATA_CTXINSTRCONTEXTNODE_H
+
+#include <stdint.h>
+#include <stdlib.h>
+
+namespace llvm {
+namespace ctx_profile {
 using GUID = uint64_t;
 
 class ContextNode final {
@@ -100,3 +111,6 @@ public:
 
   uint64_t entrycount() const { return counters()[0]; }
 };
+} // namespace ctx_profile
+} // namespace llvm
+#endif
