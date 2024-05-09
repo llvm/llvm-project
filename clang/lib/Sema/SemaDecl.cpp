@@ -4617,7 +4617,7 @@ void Sema::MergeVarDecl(VarDecl *New, LookupResult &Previous) {
     for (auto *D = Old; D; D = D->getPreviousDecl()) {
       if (D->isThisDeclarationADefinition() != VarDecl::DeclarationOnly) {
         Diag(New->getLocation(), diag::warn_weak_import) << New->getDeclName();
-        Diag(D->getLocation(), diag::note_previous_declaration);
+        Diag(D->getLocation(), diag::note_previous_definition);
         // Remove weak_import attribute on new declaration.
         New->dropAttr<WeakImportAttr>();
         break;

@@ -16,10 +16,10 @@ struct __attribute__((weak_import)) s1 {}; // expected-warning {{'weak_import' a
 static int f(void) __attribute__((weak)); // expected-error {{weak declaration cannot have internal linkage}}
 static int x __attribute__((weak)); // expected-error {{weak declaration cannot have internal linkage}}
 
-int C; // expected-note {{previous declaration is here}}
+int C; // expected-note {{previous definition is here}}
 extern int C __attribute__((weak_import)); // expected-warning {{an already-defined variable is made a weak_import declaration}}
 
-int C2; // expected-note {{previous declaration is here}}
+int C2; // expected-note {{previous definition is here}}
 extern int C2;
 extern int C2 __attribute__((weak_import)); // expected-warning {{an already-defined variable is made a weak_import declaration}}
 
