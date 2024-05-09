@@ -78,6 +78,8 @@ private:
 
   void initTargetStreamer(Module &M);
 
+  static uint64_t getMCExprValue(const MCExpr *Value, MCContext &Ctx);
+
 public:
   explicit AMDGPUAsmPrinter(TargetMachine &TM,
                             std::unique_ptr<MCStreamer> Streamer);
