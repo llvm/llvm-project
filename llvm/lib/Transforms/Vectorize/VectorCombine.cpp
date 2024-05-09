@@ -1777,17 +1777,17 @@ bool VectorCombine::foldShuffleToIdentity(Instruction &I) {
       Worklist.push_back(GenerateInstLaneVectorFromOperand(Item, 0));
     } else if (auto *II = dyn_cast<IntrinsicInst>(Item[0].first);
                II && isTriviallyVectorizable(II->getIntrinsicID())) {
-      for (unsigned O = 0; O < II->getNumOperands() - 1; O++) {
-        if (isVectorIntrinsicWithScalarOpAtArg(II->getIntrinsicID(), O)) {
+      for (unsigned Op = 0, E = II->getNumOperands() - 1; Op < E; Op++) {
+        if (isVectorIntrinsicWithScalarOpAtArg(II->getIntrinsicID(), Op)) {
           if (!all_of(drop_begin(Item), [&](InstLane &IL) {
                 return !IL.first ||
-                       (cast<Instruction>(IL.first)->getOperand(O) ==
-                        cast<Instruction>(Item[0].first)->getOperand(O));
+                       (cast<Instruction>(IL.first)->getOperand(Op) ==
+                        cast<Instruction>(Item[0].first)->getOperand(Op));
               }))
             return false;
           continue;
         }
-        Worklist.push_back(GenerateInstLaneVectorFromOperand(Item, O));
+        Worklist.push_back(GenerateInstLaneVectorFromOperand(Item, Op));
       }
     } else {
       return false;
