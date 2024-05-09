@@ -109,6 +109,62 @@ TEST(BasicBlockDbgInfoTest, InsertAfterSelf) {
   UseNewDbgInfoFormat = false;
 }
 
+TEST(BasicBlockDbgInfoTest, SplitBasicBlockBefore) {
+  LLVMContext C;
+  UseNewDbgInfoFormat = true;
+
+  std::unique_ptr<Module> M = parseIR(C, R"---(
+    define dso_local void @func() #0 !dbg !10 {
+      %1 = alloca i32, align 4
+      tail call void @llvm.dbg.declare(metadata ptr %1, metadata !14, metadata !DIExpression()), !dbg !16
+      store i32 2, ptr %1, align 4, !dbg !16
+      ret void, !dbg !17
+    }
+
+    declare void @llvm.dbg.declare(metadata, metadata, metadata) #0
+
+    attributes #0 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
+
+    !llvm.dbg.cu = !{!0}
+    !llvm.module.flags = !{!2, !3, !4, !5, !6, !7, !8}
+    !llvm.ident = !{!9}
+
+    !0 = distinct !DICompileUnit(language: DW_LANG_C11, file: !1, producer: "dummy", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false, nameTableKind: None)
+    !1 = !DIFile(filename: "dummy", directory: "dummy")
+    !2 = !{i32 7, !"Dwarf Version", i32 5}
+    !3 = !{i32 2, !"Debug Info Version", i32 3}
+    !4 = !{i32 1, !"wchar_size", i32 4}
+    !5 = !{i32 8, !"PIC Level", i32 2}
+    !6 = !{i32 7, !"PIE Level", i32 2}
+    !7 = !{i32 7, !"uwtable", i32 2}
+    !8 = !{i32 7, !"frame-pointer", i32 2}
+    !9 = !{!"dummy"}
+    !10 = distinct !DISubprogram(name: "func", scope: !1, file: !1, line: 1, type: !11, scopeLine: 1, spFlags: DISPFlagDefinition, unit: !0, retainedNodes: !13)
+    !11 = !DISubroutineType(types: !12)
+    !12 = !{null}
+    !13 = !{}
+    !14 = !DILocalVariable(name: "a", scope: !10, file: !1, line: 2, type: !15)
+    !15 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+    !16 = !DILocation(line: 2, column: 6, scope: !10)
+    !17 = !DILocation(line: 3, column: 2, scope: !10)
+  )---");
+  ASSERT_TRUE(M);
+
+  M->convertToNewDbgValues();
+
+  Function *F = M->getFunction("func");
+
+  BasicBlock &BB = F->getEntryBlock();
+  auto I = std::prev(BB.end(), 2);
+  BB.splitBasicBlockBefore(I, "before");
+
+  BasicBlock &BBBefore = F->getEntryBlock();
+  auto I2 = std::prev(BBBefore.end(), 2);
+  ASSERT_TRUE(I2->hasDbgRecords());
+
+  UseNewDbgInfoFormat = false;
+}
+
 TEST(BasicBlockDbgInfoTest, MarkerOperations) {
   LLVMContext C;
   UseNewDbgInfoFormat = true;
