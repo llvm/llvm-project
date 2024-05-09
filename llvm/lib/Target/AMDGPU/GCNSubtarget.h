@@ -1414,6 +1414,9 @@ public:
   // \returns true if the target has V_PK_{MIN|MAX}3_{I|U}16 instructions.
   bool hasPkMinMax3Insts() const { return GFX12_10Insts; }
 
+  // \returns true if the target has V_PK_{MINIMUM|MAXIMUM}3_F16 instructions.
+  bool hasPkMinimumMaximum3F16Insts() const { return GFX12_10Insts; }
+
   // \returns true if target has V_CVT_PK_F16_F32 instruction.
   bool hasCvtPkF16Inst() const { return GFX12_10Insts; }
 

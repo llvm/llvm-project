@@ -2328,6 +2328,10 @@ def HasPkMinMax3Insts :
   Predicate<"Subtarget->hasPkMinMax3Insts()">,
   AssemblerPredicate<(any_of FeatureGFX12_10Insts)>;
 
+def HasPkMinimumMaximum3F16Insts :
+  Predicate<"Subtarget->hasPkMinimumMaximum3F16Insts()">,
+  AssemblerPredicate<(any_of FeatureGFX12_10Insts)>;
+
 def HasImageInsts : Predicate<"Subtarget->hasImageInsts()">,
   AssemblerPredicate<(all_of FeatureImageInsts)>;
 
