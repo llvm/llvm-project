@@ -2112,8 +2112,7 @@ CIRGenFunction::buildConditionalBlocks(const AbstractConditionalOperator *E,
   auto *trueExpr = E->getTrueExpr();
   auto *falseExpr = E->getFalseExpr();
 
-  mlir::Value condV =
-      CGF.buildOpOnBoolExpr(E->getCond(), loc, trueExpr, falseExpr);
+  mlir::Value condV = CGF.buildOpOnBoolExpr(loc, E->getCond());
   SmallVector<mlir::OpBuilder::InsertPoint, 2> insertPoints{};
   mlir::Type yieldTy{};
 
@@ -2353,54 +2352,64 @@ bool CIRGenFunction::LValueIsSuitableForInlineAtomic(LValue LV) {
 mlir::LogicalResult CIRGenFunction::buildIfOnBoolExpr(const Expr *cond,
                                                       const Stmt *thenS,
                                                       const Stmt *elseS) {
+  // Attempt to be more accurate as possible with IfOp location, generate
+  // one fused location that has either 2 or 4 total locations, depending
+  // on else's availability.
   auto getStmtLoc = [this](const Stmt &s) {
     return mlir::FusedLoc::get(builder.getContext(),
                                {getLoc(s.getSourceRange().getBegin()),
                                 getLoc(s.getSourceRange().getEnd())});
   };
-
   auto thenLoc = getStmtLoc(*thenS);
   std::optional<mlir::Location> elseLoc;
-  SmallVector<mlir::Location, 2> ifLocs{thenLoc};
-
-  if (elseS) {
+  if (elseS)
     elseLoc = getStmtLoc(*elseS);
-    ifLocs.push_back(*elseLoc);
-  }
 
-  // Attempt to be more accurate as possible with IfOp location, generate
-  // one fused location that has either 2 or 4 total locations, depending
-  // on else's availability.
-  auto loc = mlir::FusedLoc::get(builder.getContext(), ifLocs);
-
-  // Emit the code with the fully general case.
-  mlir::Value condV = buildOpOnBoolExpr(cond, loc, thenS, elseS);
   mlir::LogicalResult resThen = mlir::success(), resElse = mlir::success();
-
-  builder.create<mlir::cir::IfOp>(
-      loc, condV, elseS,
-      /*thenBuilder=*/
+  buildIfOnBoolExpr(
+      cond, /*thenBuilder=*/
       [&](mlir::OpBuilder &, mlir::Location) {
         LexicalScope lexScope{*this, thenLoc, builder.getInsertionBlock()};
         resThen = buildStmt(thenS, /*useCurrentScope=*/true);
       },
+      thenLoc,
       /*elseBuilder=*/
       [&](mlir::OpBuilder &, mlir::Location) {
         assert(elseLoc && "Invalid location for elseS.");
         LexicalScope lexScope{*this, *elseLoc, builder.getInsertionBlock()};
         resElse = buildStmt(elseS, /*useCurrentScope=*/true);
-      });
+      },
+      elseLoc);
 
   return mlir::LogicalResult::success(resThen.succeeded() &&
                                       resElse.succeeded());
 }
 
+/// Emit an `if` on a boolean condition, filling `then` and `else` into
+/// appropriated regions.
+mlir::cir::IfOp CIRGenFunction::buildIfOnBoolExpr(
+    const clang::Expr *cond,
+    llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)> thenBuilder,
+    mlir::Location thenLoc,
+    llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)> elseBuilder,
+    std::optional<mlir::Location> elseLoc) {
+
+  SmallVector<mlir::Location, 2> ifLocs{thenLoc};
+  if (elseLoc)
+    ifLocs.push_back(*elseLoc);
+  auto loc = mlir::FusedLoc::get(builder.getContext(), ifLocs);
+
+  // Emit the code with the fully general case.
+  mlir::Value condV = buildOpOnBoolExpr(loc, cond);
+  return builder.create<mlir::cir::IfOp>(loc, condV, elseLoc.has_value(),
+                                         /*thenBuilder=*/thenBuilder,
+                                         /*elseBuilder=*/elseBuilder);
+}
+
 /// TODO(cir): PGO data
 /// TODO(cir): see EmitBranchOnBoolExpr for extra ideas).
-mlir::Value CIRGenFunction::buildOpOnBoolExpr(const Expr *cond,
-                                              mlir::Location loc,
-                                              const Stmt *thenS,
-                                              const Stmt *elseS) {
+mlir::Value CIRGenFunction::buildOpOnBoolExpr(mlir::Location loc,
+                                              const Expr *cond) {
   // TODO(CIR): scoped ApplyDebugLocation DL(*this, Cond);
   // TODO(CIR): __builtin_unpredictable and profile counts?
   cond = cond->IgnoreParens();
@@ -2414,17 +2423,13 @@ mlir::Value CIRGenFunction::buildOpOnBoolExpr(const Expr *cond,
     // This should be done in CIR prior to LLVM lowering, if we do now
     // we can make CIR based diagnostics misleading.
     //  cir.ternary(!x, t, f) -> cir.ternary(x, f, t)
-    // if (CondUOp->getOpcode() == UO_LNot) {
-    //   buildOpOnBoolExpr(CondUOp->getSubExpr(), loc, elseS, thenS);
-    // }
     assert(!UnimplementedFeature::shouldReverseUnaryCondOnBoolExpr());
   }
 
   if (const ConditionalOperator *CondOp = dyn_cast<ConditionalOperator>(cond)) {
     auto *trueExpr = CondOp->getTrueExpr();
     auto *falseExpr = CondOp->getFalseExpr();
-    mlir::Value condV =
-        buildOpOnBoolExpr(CondOp->getCond(), loc, trueExpr, falseExpr);
+    mlir::Value condV = buildOpOnBoolExpr(loc, CondOp->getCond());
 
     auto ternaryOpRes =
         builder

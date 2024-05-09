@@ -2139,7 +2139,7 @@ mlir::Value ScalarExprEmitter::VisitAbstractConditionalOperator(
         .getResult();
   }
 
-  mlir::Value condV = CGF.buildOpOnBoolExpr(condExpr, loc, lhsExpr, rhsExpr);
+  mlir::Value condV = CGF.buildOpOnBoolExpr(loc, condExpr);
   CIRGenFunction::ConditionalEvaluation eval(CGF);
   SmallVector<mlir::OpBuilder::InsertPoint, 2> insertPoints{};
   mlir::Type yieldTy{};

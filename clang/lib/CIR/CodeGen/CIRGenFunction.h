@@ -1031,13 +1031,17 @@ public:
   mlir::LogicalResult buildIfOnBoolExpr(const clang::Expr *cond,
                                         const clang::Stmt *thenS,
                                         const clang::Stmt *elseS);
+  mlir::cir::IfOp buildIfOnBoolExpr(
+      const clang::Expr *cond,
+      llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)> thenBuilder,
+      mlir::Location thenLoc,
+      llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)> elseBuilder,
+      std::optional<mlir::Location> elseLoc = {});
   mlir::Value buildTernaryOnBoolExpr(const clang::Expr *cond,
                                      mlir::Location loc,
                                      const clang::Stmt *thenS,
                                      const clang::Stmt *elseS);
-  mlir::Value buildOpOnBoolExpr(const clang::Expr *cond, mlir::Location loc,
-                                const clang::Stmt *thenS,
-                                const clang::Stmt *elseS);
+  mlir::Value buildOpOnBoolExpr(mlir::Location loc, const clang::Expr *cond);
 
   class ConstantEmission {
     // Cannot use mlir::TypedAttr directly here because of bit availability.
