@@ -9,6 +9,7 @@ add_llvm_component_library(LLVMLinker
   intrinsics_gen
 
   LINK_COMPONENTS
+  Analysis
   Core
   Object
   Support

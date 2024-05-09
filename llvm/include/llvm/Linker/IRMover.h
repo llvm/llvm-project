@@ -12,11 +12,14 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/FunctionExtras.h"
+#include "llvm/ADT/StringSet.h"
+#include "llvm/IR/GlobalValue.h"
+#include "llvm/Support/StringSaver.h"
+#include "llvm/TargetParser/Triple.h"
 #include <functional>
 
 namespace llvm {
 class Error;
-class GlobalValue;
 class Metadata;
 class Module;
 class StructType;
@@ -60,6 +63,26 @@ public:
     bool hasType(StructType *Ty);
   };
 
+  /// Utility for handling linking of known libcall functions. If a merged
+  /// module contains a recognized library call we can no longer perform any
+  /// libcall related transformations.
+  class LibcallHandler {
+    StringSet<> Libcalls;
+    StringSet<> Triples;
+
+    BumpPtrAllocator Alloc;
+    StringSaver Saver;
+
+  public:
+    LibcallHandler() : Saver(Alloc) {}
+
+    void updateLibcalls(const Triple &TheTriple);
+
+    bool checkLibcalls(GlobalValue &GV);
+
+    bool HasLibcalls = false;
+  };
+
   IRMover(Module &M);
 
   typedef std::function<void(GlobalValue &)> ValueAdder;
@@ -84,6 +107,7 @@ private:
   Module &Composite;
   IdentifiedStructTypeSet IdentifiedStructTypes;
   MDMapT SharedMDs; ///< A Metadata map to use for all calls to \a move().
+  LibcallHandler Libcalls;
 };
 
 } // End llvm namespace
