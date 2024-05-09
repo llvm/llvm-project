@@ -19,6 +19,10 @@ static int x __attribute__((weak)); // expected-error {{weak declaration cannot 
 int C; // expected-note {{previous declaration is here}}
 extern int C __attribute__((weak_import)); // expected-warning {{an already-declared variable is made a weak_import declaration}}
 
+int C2; // expected-note {{previous declaration is here}}
+extern int C2;
+extern int C2 __attribute__((weak_import)); // expected-warning {{an already-declared variable is made a weak_import declaration}}
+
 static int pr14946_x;
 extern int pr14946_x  __attribute__((weak)); // expected-error {{weak declaration cannot have internal linkage}}
 
