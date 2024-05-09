@@ -100,7 +100,8 @@ struct TestFetchSub {
 int main(int, char**) {
   TestEachIntegralType<TestFetchSub>()();
 
-  TestEachFloatingPointType<TestFetchSub>()();
+  TestFetchSub<float>()();
+  TestFetchSub<double>()();
 
   TestEachPointerType<TestFetchSub>()();
 

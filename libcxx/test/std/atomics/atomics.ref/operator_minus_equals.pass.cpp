@@ -66,7 +66,8 @@ struct TestOperatorMinusEquals {
 int main(int, char**) {
   TestEachIntegralType<TestOperatorMinusEquals>()();
 
-  TestEachFloatingPointType<TestOperatorMinusEquals>()();
+  TestOperatorMinusEquals<float>()();
+  TestOperatorMinusEquals<double>()();
 
   TestEachPointerType<TestOperatorMinusEquals>()();
 
