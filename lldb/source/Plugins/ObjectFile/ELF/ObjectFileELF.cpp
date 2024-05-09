@@ -769,17 +769,7 @@ AddressClass ObjectFileELF::GetAddressClass(addr_t file_addr) {
   if (res != AddressClass::eCode)
     return res;
 
-  auto ub = m_address_class_map.upper_bound(file_addr);
-  if (ub == m_address_class_map.begin()) {
-    // No entry in the address class map before the address. Return default
-    // address class for an address in a code section.
-    return AddressClass::eCode;
-  }
-
-  // Move iterator to the address class entry preceding address
-  --ub;
-
-  return ub->second;
+  return symtab->GetAddressClass(file_addr);
 }
 
 size_t ObjectFileELF::SectionIndex(const SectionHeaderCollIter &I) {
@@ -2213,18 +2203,18 @@ unsigned ObjectFileELF::ParseSymbols(Symtab *symtab, user_id_t start_id,
             switch (mapping_symbol) {
             case 'a':
               // $a[.<any>]* - marks an ARM instruction sequence
-              m_address_class_map[symbol.st_value] = AddressClass::eCode;
+              symtab->SetAddressClass(symbol.st_value, AddressClass::eCode);
               break;
             case 'b':
             case 't':
               // $b[.<any>]* - marks a THUMB BL instruction sequence
               // $t[.<any>]* - marks a THUMB instruction sequence
-              m_address_class_map[symbol.st_value] =
-                  AddressClass::eCodeAlternateISA;
+              symtab->SetAddressClass(symbol.st_value,
+                                      AddressClass::eCodeAlternateISA);
               break;
             case 'd':
               // $d[.<any>]* - marks a data item sequence (e.g. lit pool)
-              m_address_class_map[symbol.st_value] = AddressClass::eData;
+              symtab->SetAddressClass(symbol.st_value, AddressClass::eData);
               break;
             }
           }
@@ -2238,11 +2228,11 @@ unsigned ObjectFileELF::ParseSymbols(Symtab *symtab, user_id_t start_id,
             switch (mapping_symbol) {
             case 'x':
               // $x[.<any>]* - marks an A64 instruction sequence
-              m_address_class_map[symbol.st_value] = AddressClass::eCode;
+              symtab->SetAddressClass(symbol.st_value, AddressClass::eCode);
               break;
             case 'd':
               // $d[.<any>]* - marks a data item sequence (e.g. lit pool)
-              m_address_class_map[symbol.st_value] = AddressClass::eData;
+              symtab->SetAddressClass(symbol.st_value, AddressClass::eData);
               break;
             }
           }
@@ -2260,11 +2250,11 @@ unsigned ObjectFileELF::ParseSymbols(Symtab *symtab, user_id_t start_id,
             // conjunction with symbol.st_value to produce the final
             // symbol_value that we store in the symtab.
             symbol_value_offset = -1;
-            m_address_class_map[symbol.st_value ^ 1] =
-                AddressClass::eCodeAlternateISA;
+            symtab->SetAddressClass(symbol.st_value ^ 1,
+                                    AddressClass::eCodeAlternateISA);
           } else {
             // This address is ARM
-            m_address_class_map[symbol.st_value] = AddressClass::eCode;
+            symtab->SetAddressClass(symbol.st_value, AddressClass::eCode);
           }
         }
       }
@@ -2285,17 +2275,19 @@ unsigned ObjectFileELF::ParseSymbols(Symtab *symtab, user_id_t start_id,
       */
       if (arch.IsMIPS()) {
         if (IS_MICROMIPS(symbol.st_other))
-          m_address_class_map[symbol.st_value] = AddressClass::eCodeAlternateISA;
+          symtab->SetAddressClass(symbol.st_value,
+                                  AddressClass::eCodeAlternateISA);
         else if ((symbol.st_value & 1) && (symbol_type == eSymbolTypeCode)) {
           symbol.st_value = symbol.st_value & (~1ull);
-          m_address_class_map[symbol.st_value] = AddressClass::eCodeAlternateISA;
+          symtab->SetAddressClass(symbol.st_value,
+                                  AddressClass::eCodeAlternateISA);
         } else {
           if (symbol_type == eSymbolTypeCode)
-            m_address_class_map[symbol.st_value] = AddressClass::eCode;
+            symtab->SetAddressClass(symbol.st_value, AddressClass::eCode);
           else if (symbol_type == eSymbolTypeData)
-            m_address_class_map[symbol.st_value] = AddressClass::eData;
+            symtab->SetAddressClass(symbol.st_value, AddressClass::eData);
           else
-            m_address_class_map[symbol.st_value] = AddressClass::eUnknown;
+            symtab->SetAddressClass(symbol.st_value, AddressClass::eUnknown);
         }
       }
     }
@@ -3060,10 +3052,10 @@ void ObjectFileELF::ParseSymtab(Symtab &lldb_symtab) {
       if (arch.GetMachine() == llvm::Triple::arm &&
           (entry_point_file_addr & 1)) {
         symbol.GetAddressRef().SetOffset(entry_point_addr.GetOffset() ^ 1);
-        m_address_class_map[entry_point_file_addr ^ 1] =
-            AddressClass::eCodeAlternateISA;
+        lldb_symtab.SetAddressClass(entry_point_file_addr ^ 1,
+                                    AddressClass::eCodeAlternateISA);
       } else {
-        m_address_class_map[entry_point_file_addr] = AddressClass::eCode;
+        lldb_symtab.SetAddressClass(entry_point_file_addr, AddressClass::eCode);
       }
       lldb_symtab.AddSymbol(symbol);
     }

@@ -23,6 +23,8 @@ class Symtab {
 public:
   typedef std::vector<uint32_t> IndexCollection;
   typedef UniqueCStringMap<uint32_t> NameToIndexMap;
+  typedef std::map<lldb::addr_t, lldb_private::AddressClass>
+      FileAddressToAddressClassMap;
 
   enum Debug {
     eDebugNo,  // Not a debug symbol
@@ -239,6 +241,16 @@ public:
   }
   /// \}
 
+  /// Set the address class for the given address.
+  void SetAddressClass(lldb::addr_t addr,
+                       lldb_private::AddressClass addr_class);
+
+  /// Lookup the address class of the given address.
+  ///
+  /// \return
+  ///   The address' class, if it is known, otherwise AddressClass::eCode.
+  lldb_private::AddressClass GetAddressClass(lldb::addr_t addr);
+
 protected:
   typedef std::vector<Symbol> collection;
   typedef collection::iterator iterator;
@@ -273,6 +285,9 @@ protected:
   ObjectFile *m_objfile;
   collection m_symbols;
   FileRangeToIndexMap m_file_addr_to_index;
+
+  /// The address class for each symbol in the elf file
+  FileAddressToAddressClassMap m_address_class_map;
 
   /// Maps function names to symbol indices (grouped by FunctionNameTypes)
   std::map<lldb::FunctionNameType, UniqueCStringMap<uint32_t>>

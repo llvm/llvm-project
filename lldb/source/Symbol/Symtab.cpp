@@ -1372,3 +1372,22 @@ bool Symtab::LoadFromCache() {
     SetWasLoadedFromCache();
   return result;
 }
+
+void Symtab::SetAddressClass(lldb::addr_t addr,
+                             lldb_private::AddressClass addr_class) {
+  m_address_class_map.insert_or_assign(addr, addr_class);
+}
+
+lldb_private::AddressClass Symtab::GetAddressClass(lldb::addr_t addr) {
+  auto ub = m_address_class_map.upper_bound(addr);
+  if (ub == m_address_class_map.begin()) {
+    // No entry in the address class map before the address. Return default
+    // address class for an address in a code section.
+    return AddressClass::eCode;
+  }
+
+  // Move iterator to the address class entry preceding address
+  --ub;
+
+  return ub->second;
+}

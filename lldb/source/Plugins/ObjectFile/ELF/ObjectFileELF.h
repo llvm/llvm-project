@@ -187,9 +187,6 @@ private:
   typedef DynamicSymbolColl::iterator DynamicSymbolCollIter;
   typedef DynamicSymbolColl::const_iterator DynamicSymbolCollConstIter;
 
-  typedef std::map<lldb::addr_t, lldb_private::AddressClass>
-      FileAddressToAddressClassMap;
-
   /// Version of this reader common to all plugins based on this class.
   static const uint32_t m_plugin_version = 1;
   static const uint32_t g_core_uuid_magic;
@@ -226,9 +223,6 @@ private:
 
   /// The architecture detected from parsing elf file contents.
   lldb_private::ArchSpec m_arch_spec;
-
-  /// The address class for each symbol in the elf file
-  FileAddressToAddressClassMap m_address_class_map;
 
   /// Returns the index of the given section header.
   size_t SectionIndex(const SectionHeaderCollIter &I);
