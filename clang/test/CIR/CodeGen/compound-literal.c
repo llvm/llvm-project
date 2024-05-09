@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o %t.cir
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -Wno-unused-value -emit-cir %s -o %t.cir
 // RUN: FileCheck --input-file=%t.cir %s -check-prefix=CIR
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -S -emit-llvm %s -o %t.ll
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -Wno-unused-value -S -emit-llvm %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s -check-prefix=LLVM
 // XFAIL: *
 
@@ -53,7 +53,7 @@ struct G g(int x, int y, int z) {
 }
 
 // CIR:  cir.func @g
-// CIR:    %[[RETVAL:.*]] = cir.alloca !ty_22G22, !cir.ptr<!ty_22G22>, ["__retval"] {alignment = 2 : i64} loc(#loc18)
+// CIR:    %[[RETVAL:.*]] = cir.alloca !ty_22G22, !cir.ptr<!ty_22G22>, ["__retval"] {alignment = 2 : i64}
 // CIR:    %[[X:.*]] = cir.get_member %[[RETVAL]][0] {name = "x"}
 // CIR:    cir.store {{.*}}, %[[X]] : !s16i
 // CIR:    %[[Y:.*]] = cir.get_member %[[RETVAL]][1] {name = "y"}
@@ -66,3 +66,42 @@ struct G g(int x, int y, int z) {
 // Nothing meaningful to test for LLVM codegen here.
 // FIXME: ABI note, LLVM lowering differs from traditional LLVM codegen here,
 // because the former does a memcopy + i48 load.
+
+typedef struct { unsigned long pgprot; } pgprot_t;
+void split_large_page(unsigned long addr, pgprot_t prot)
+{
+  (addr ? prot : ((pgprot_t) { 0x001 } )).pgprot;
+}
+
+// CIR-LABEL: @split_large_page
+// CIR:   %[[VAL_2:.*]] = cir.alloca !u64i, !cir.ptr<!u64i>, ["addr", init] {alignment = 8 : i64}
+// CIR:   %[[VAL_3:.*]] = cir.alloca !ty_22pgprot_t22, !cir.ptr<!ty_22pgprot_t22>, ["prot", init] {alignment = 8 : i64}
+// CIR:   %[[VAL_4:.*]] = cir.alloca !ty_22pgprot_t22, !cir.ptr<!ty_22pgprot_t22>, ["tmp"] {alignment = 8 : i64}
+// CIR:   cir.store {{.*}}, %[[VAL_2]] : !u64i, !cir.ptr<!u64i>
+// CIR:   cir.store {{.*}}, %[[VAL_3]] : !ty_22pgprot_t22, !cir.ptr<!ty_22pgprot_t22>
+// CIR:   %[[VAL_5:.*]] = cir.load %[[VAL_2]] : !cir.ptr<!u64i>, !u64i
+// CIR:   %[[VAL_6:.*]] = cir.cast(int_to_bool, %[[VAL_5]] : !u64i), !cir.bool
+// CIR:   cir.if %[[VAL_6]] {
+// CIR:     cir.copy %[[VAL_3]] to %[[VAL_4]] : !cir.ptr<!ty_22pgprot_t22>
+// CIR:   } else {
+// CIR:     %[[VAL_7:.*]] = cir.get_member %[[VAL_4]][0] {name = "pgprot"} : !cir.ptr<!ty_22pgprot_t22> -> !cir.ptr<!u64i>
+// CIR:     %[[VAL_8:.*]] = cir.const #cir.int<1> : !s32i
+// CIR:     %[[VAL_9:.*]] = cir.cast(integral, %[[VAL_8]] : !s32i), !u64i
+// CIR:     cir.store %[[VAL_9]], %[[VAL_7]] : !u64i, !cir.ptr<!u64i>
+// CIR:   }
+// CIR:   %[[VAL_10:.*]] = cir.get_member %[[VAL_4]][0] {name = "pgprot"} : !cir.ptr<!ty_22pgprot_t22> -> !cir.ptr<!u64i>
+// CIR:   %[[VAL_11:.*]] = cir.load %[[VAL_10]] : !cir.ptr<!u64i>, !u64i
+// CIR:   cir.return
+// CIR: }
+
+// CHECK-LABEL: @split_large_page
+// CHECK:    br i1 {{.*}}, label %[[TRUE:[a-z0-9]+]], label %[[FALSE:[a-z0-9]+]]
+// CHECK:  [[FALSE]]:
+// CHECK:    %[[GEP:.*]] = getelementptr {{.*}}, ptr %[[ADDR:.*]], i32 0, i32 0
+// CHECK:    store i64 1, ptr %[[GEP]], align 8
+// CHECK:    br label %[[EXIT:[a-z0-9]+]]
+// CHECK:  [[TRUE]]:
+// CHECK:    call void @llvm.memcpy.p0.p0.i32(ptr %[[ADDR]], ptr {{.*}}, i32 8, i1 false)
+// CHECK:    br label %[[EXIT]]
+// CHECK:  [[EXIT]]:
+// CHECK:    ret void

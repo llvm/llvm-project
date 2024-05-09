@@ -822,7 +822,7 @@ void AggExprEmitter::VisitCompoundLiteralExpr(CompoundLiteralExpr *E) {
   bool Destruct =
       !CGF.getLangOpts().CPlusPlus && !Slot.isExternallyDestructed();
   if (Destruct)
-    llvm_unreachable("NYI");
+    Slot.setExternallyDestructed();
 
   CGF.buildAggExpr(E->getInitializer(), Slot);
 
