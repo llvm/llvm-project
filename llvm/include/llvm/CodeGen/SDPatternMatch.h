@@ -358,12 +358,34 @@ struct Or<Pred, Preds...> : Or<Preds...> {
   }
 };
 
+template <typename Pred> struct Not {
+  Pred P;
+
+  explicit Not(const Pred &P) : P(P) {}
+
+  template <typename MatchContext>
+  bool match(const MatchContext &Ctx, SDValue N) {
+    return !P.match(Ctx, N);
+  }
+};
+// Explicit deduction guide.
+template <typename Pred> Not(const Pred &P) -> Not<Pred>;
+
+/// Match if the inner pattern does NOT match.
+template <typename Pred> inline Not<Pred> m_Unless(const Pred &P) {
+  return Not{P};
+}
+
 template <typename... Preds> And<Preds...> m_AllOf(Preds &&...preds) {
   return And<Preds...>(std::forward<Preds>(preds)...);
 }
 
 template <typename... Preds> Or<Preds...> m_AnyOf(Preds &&...preds) {
   return Or<Preds...>(std::forward<Preds>(preds)...);
+}
+
+template <typename... Preds> auto m_NoneOf(Preds &&...preds) {
+  return m_Unless(m_AnyOf(std::forward<Preds>(preds)...));
 }
 
 // === Generic node matching ===
@@ -620,8 +642,10 @@ template <typename Opnd> inline UnaryOpc_match<Opnd> m_ZExt(const Opnd &Op) {
   return UnaryOpc_match<Opnd>(ISD::ZERO_EXTEND, Op);
 }
 
-template <typename Opnd> inline UnaryOpc_match<Opnd> m_SExt(const Opnd &Op) {
-  return UnaryOpc_match<Opnd>(ISD::SIGN_EXTEND, Op);
+template <typename Opnd> inline auto m_SExt(Opnd &&Op) {
+  return m_AnyOf(
+      UnaryOpc_match<Opnd>(ISD::SIGN_EXTEND, Op),
+      m_Node(ISD::SIGN_EXTEND_INREG, std::forward<Opnd>(Op), m_Value()));
 }
 
 template <typename Opnd> inline UnaryOpc_match<Opnd> m_AnyExt(const Opnd &Op) {
@@ -634,18 +658,14 @@ template <typename Opnd> inline UnaryOpc_match<Opnd> m_Trunc(const Opnd &Op) {
 
 /// Match a zext or identity
 /// Allows to peek through optional extensions
-template <typename Opnd>
-inline Or<UnaryOpc_match<Opnd>, Opnd> m_ZExtOrSelf(Opnd &&Op) {
-  return Or<UnaryOpc_match<Opnd>, Opnd>(m_ZExt(std::forward<Opnd>(Op)),
-                                        std::forward<Opnd>(Op));
+template <typename Opnd> inline auto m_ZExtOrSelf(Opnd &&Op) {
+  return m_AnyOf(m_ZExt(std::forward<Opnd>(Op)), std::forward<Opnd>(Op));
 }
 
 /// Match a sext or identity
 /// Allows to peek through optional extensions
-template <typename Opnd>
-inline Or<UnaryOpc_match<Opnd>, Opnd> m_SExtOrSelf(Opnd &&Op) {
-  return Or<UnaryOpc_match<Opnd>, Opnd>(m_SExt(std::forward<Opnd>(Op)),
-                                        std::forward<Opnd>(Op));
+template <typename Opnd> inline auto m_SExtOrSelf(Opnd &&Op) {
+  return m_AnyOf(m_SExt(std::forward<Opnd>(Op)), std::forward<Opnd>(Op));
 }
 
 /// Match a aext or identity
@@ -766,6 +786,39 @@ inline auto m_False() {
         return false;
       },
       m_Value()};
+}
+
+struct CondCode_match {
+  std::optional<ISD::CondCode> CCToMatch;
+  ISD::CondCode *BindCC = nullptr;
+
+  explicit CondCode_match(ISD::CondCode CC) : CCToMatch(CC) {}
+
+  explicit CondCode_match(ISD::CondCode *CC) : BindCC(CC) {}
+
+  template <typename MatchContext> bool match(const MatchContext &, SDValue N) {
+    if (auto *CC = dyn_cast<CondCodeSDNode>(N.getNode())) {
+      if (CCToMatch && *CCToMatch != CC->get())
+        return false;
+
+      if (BindCC)
+        *BindCC = CC->get();
+      return true;
+    }
+
+    return false;
+  }
+};
+
+/// Match any conditional code SDNode.
+inline CondCode_match m_CondCode() { return CondCode_match(nullptr); }
+/// Match any conditional code SDNode and return its ISD::CondCode value.
+inline CondCode_match m_CondCode(ISD::CondCode &CC) {
+  return CondCode_match(&CC);
+}
+/// Match a conditional code SDNode with a specific ISD::CondCode.
+inline CondCode_match m_SpecificCondCode(ISD::CondCode CC) {
+  return CondCode_match(CC);
 }
 
 /// Match a negate as a sub(0, v)
