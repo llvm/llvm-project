@@ -1794,7 +1794,7 @@ define <3 x half> @v_maximum_v3f16(<3 x half> %src0, <3 x half> %src1) {
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_pk_maximum_f16 v0, v0, v2
-; GFX12-NEXT:    v_maximum_f16 v1, v1, v3
+; GFX12-NEXT:    v_pk_maximum_f16 v1, v1, v3
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %op = call <3 x half> @llvm.maximum.v3f16(<3 x half> %src0, <3 x half> %src1)
   ret <3 x half> %op
@@ -2013,7 +2013,7 @@ define <3 x half> @v_maximum_v3f16__nnan(<3 x half> %src0, <3 x half> %src1) {
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_pk_maximum_f16 v0, v0, v2
-; GFX12-NEXT:    v_maximum_f16 v1, v1, v3
+; GFX12-NEXT:    v_pk_maximum_f16 v1, v1, v3
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %op = call nnan <3 x half> @llvm.maximum.v3f16(<3 x half> %src0, <3 x half> %src1)
   ret <3 x half> %op
@@ -2163,7 +2163,7 @@ define <3 x half> @v_maximum_v3f16__nsz(<3 x half> %src0, <3 x half> %src1) {
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_pk_maximum_f16 v0, v0, v2
-; GFX12-NEXT:    v_maximum_f16 v1, v1, v3
+; GFX12-NEXT:    v_pk_maximum_f16 v1, v1, v3
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %op = call nsz <3 x half> @llvm.maximum.v3f16(<3 x half> %src0, <3 x half> %src1)
   ret <3 x half> %op
@@ -2260,7 +2260,7 @@ define <3 x half> @v_maximum_v3f16__nnan_nsz(<3 x half> %src0, <3 x half> %src1)
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_pk_maximum_f16 v0, v0, v2
-; GFX12-NEXT:    v_maximum_f16 v1, v1, v3
+; GFX12-NEXT:    v_pk_maximum_f16 v1, v1, v3
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %op = call nnan nsz <3 x half> @llvm.maximum.v3f16(<3 x half> %src0, <3 x half> %src1)
   ret <3 x half> %op

@@ -726,7 +726,7 @@ Sema::ActOnDependentIdExpression(const CXXScopeSpec &SS,
                                  const DeclarationNameInfo &NameInfo,
                                  bool isAddressOfOperand,
                            const TemplateArgumentListInfo *TemplateArgs) {
-  DeclContext *DC = getFunctionLevelDeclContext();
+  QualType ThisType = getCurrentThisType();
 
   // C++11 [expr.prim.general]p12:
   //   An id-expression that denotes a non-static data member or non-static
@@ -748,10 +748,7 @@ Sema::ActOnDependentIdExpression(const CXXScopeSpec &SS,
     IsEnum = isa_and_nonnull<EnumType>(NNS->getAsType());
 
   if (!MightBeCxx11UnevalField && !isAddressOfOperand && !IsEnum &&
-      isa<CXXMethodDecl>(DC) &&
-      cast<CXXMethodDecl>(DC)->isImplicitObjectMemberFunction()) {
-    QualType ThisType = cast<CXXMethodDecl>(DC)->getThisType().getNonReferenceType();
-
+      !ThisType.isNull()) {
     // Since the 'this' expression is synthesized, we don't need to
     // perform the double-lookup check.
     NamedDecl *FirstQualifierInScope = nullptr;
@@ -10339,23 +10336,52 @@ Sema::CheckMemberSpecialization(NamedDecl *Member, LookupResult &Previous) {
   if (Previous.empty()) {
     // Nowhere to look anyway.
   } else if (FunctionDecl *Function = dyn_cast<FunctionDecl>(Member)) {
+    SmallVector<FunctionDecl *> Candidates;
+    bool Ambiguous = false;
     for (LookupResult::iterator I = Previous.begin(), E = Previous.end();
            I != E; ++I) {
-      NamedDecl *D = (*I)->getUnderlyingDecl();
-      if (CXXMethodDecl *Method = dyn_cast<CXXMethodDecl>(D)) {
-        QualType Adjusted = Function->getType();
-        if (!hasExplicitCallingConv(Adjusted))
-          Adjusted = adjustCCAndNoReturn(Adjusted, Method->getType());
-        // This doesn't handle deduced return types, but both function
-        // declarations should be undeduced at this point.
-        if (Context.hasSameType(Adjusted, Method->getType())) {
-          FoundInstantiation = *I;
-          Instantiation = Method;
-          InstantiatedFrom = Method->getInstantiatedFromMemberFunction();
-          MSInfo = Method->getMemberSpecializationInfo();
-          break;
-        }
+      CXXMethodDecl *Method =
+          dyn_cast<CXXMethodDecl>((*I)->getUnderlyingDecl());
+      if (!Method)
+        continue;
+      QualType Adjusted = Function->getType();
+      if (!hasExplicitCallingConv(Adjusted))
+        Adjusted = adjustCCAndNoReturn(Adjusted, Method->getType());
+      // This doesn't handle deduced return types, but both function
+      // declarations should be undeduced at this point.
+      if (!Context.hasSameType(Adjusted, Method->getType()))
+        continue;
+      if (ConstraintSatisfaction Satisfaction;
+          Method->getTrailingRequiresClause() &&
+          (CheckFunctionConstraints(Method, Satisfaction,
+                                    /*UsageLoc=*/Member->getLocation(),
+                                    /*ForOverloadResolution=*/true) ||
+           !Satisfaction.IsSatisfied))
+        continue;
+      Candidates.push_back(Method);
+      FunctionDecl *MoreConstrained =
+          Instantiation ? getMoreConstrainedFunction(
+                              Method, cast<FunctionDecl>(Instantiation))
+                        : Method;
+      if (!MoreConstrained) {
+        Ambiguous = true;
+        continue;
       }
+      if (MoreConstrained == Method) {
+        Ambiguous = false;
+        FoundInstantiation = *I;
+        Instantiation = Method;
+        InstantiatedFrom = Method->getInstantiatedFromMemberFunction();
+        MSInfo = Method->getMemberSpecializationInfo();
+      }
+    }
+    if (Ambiguous) {
+      Diag(Member->getLocation(), diag::err_function_member_spec_ambiguous)
+          << Member << (InstantiatedFrom ? InstantiatedFrom : Instantiation);
+      for (FunctionDecl *Candidate : Candidates)
+        Diag(Candidate->getLocation(), diag::note_function_member_spec_matched)
+            << Candidate;
+      return true;
     }
   } else if (isa<VarDecl>(Member)) {
     VarDecl *PrevVar;

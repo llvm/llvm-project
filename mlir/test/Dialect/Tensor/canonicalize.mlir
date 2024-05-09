@@ -755,6 +755,34 @@ func.func @fold_dim_of_tensor.cast(%arg0 : tensor<4x?xf32>) -> (index, index) {
 
 // -----
 
+// CHECK-LABEL: func @insert_slice_cast
+func.func @insert_slice_cast(%arg0 : tensor<1x?xf32>, %arg1 : tensor<?x?xf32>, %arg2 : index, %arg3 : index, %arg4 : index, %arg5 : index, %arg6 : index, %arg7 : index) -> tensor<?x?xf32> {
+  // CHECK-SAME: %[[ARG0:.*]]: tensor<1x?xf32>
+  %0 = tensor.cast %arg0 : tensor<1x?xf32> to tensor<?x?xf32>
+  // CHECK: %[[RES:.*]] = tensor.insert_slice %[[ARG0]]
+  // CHECK-SAME: [{{.*}}, {{.*}}] [1, {{.*}}] [{{.*}}, {{.*}}]
+  // CHECK-SAME: : tensor<1x?xf32> into tensor<?x?xf32>
+  %1 = tensor.insert_slice %0 into %arg1[%arg2, %arg3] [%arg4, %arg5] [%arg6, %arg7] : tensor<?x?xf32> into tensor<?x?xf32>
+  // CHECK: return %[[RES]] : tensor<?x?xf32>
+  return %1 : tensor<?x?xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @insert_slice_cast_no_fold
+func.func @insert_slice_cast_no_fold(%arg0 : tensor<1x?xf32>, %arg1 : tensor<?x?xf32>, %arg2 : index, %arg3 : index, %arg4 : index, %arg5 : index, %arg6 : index, %arg7 : index) -> tensor<?x?xf32> {
+  %0 = tensor.cast %arg0 : tensor<1x?xf32> to tensor<?x5xf32>
+  // CHECK: %[[CAST:.*]] = tensor.cast
+  // CHECK: %[[RES:.*]] = tensor.insert_slice %[[CAST]]
+  // CHECK-SAME: [{{.*}}, {{.*}}] [{{.*}}, 5] [{{.*}}, {{.*}}]
+  // CHECK-SAME: : tensor<?x5xf32> into tensor<?x?xf32>
+  %1 = tensor.insert_slice %0 into %arg1[%arg2, %arg3] [%arg4, 5] [%arg6, %arg7] : tensor<?x5xf32> into tensor<?x?xf32>
+  // CHECK: return %[[RES]] : tensor<?x?xf32>
+  return %1 : tensor<?x?xf32>
+}
+
+// -----
+
 // CHECK-LABEL: func @insert_tensor_cast_on_insert_slice_src(
 // CHECK-SAME:      %[[arg0:.*]]: tensor<?x5x?xf32>, %[[arg1:.*]]: tensor<?x?x?xf32>
 //      CHECK:    %[[cast:.*]] = tensor.cast %[[arg0]] : tensor<?x5x?xf32> to tensor<64x5x64xf32>
@@ -1886,21 +1914,6 @@ func.func @splat_dynamic_no_fold(%m: index) -> tensor<4x?xf32> {
   // CHECK: tensor.splat %[[F]][%[[M]]] : tensor<4x?xf32>
   %t = tensor.splat %f[%m] : tensor<4x?xf32>
   return %t : tensor<4x?xf32>
-}
-
-// -----
-
-// There was an issue in cast + insert_slice folding generating invalid ir.
-// https://github.com/llvm/llvm-project/issues/53099
-// CHECK-LABEL: func @insert_slice_cast
-func.func @insert_slice_cast(%arg0 : tensor<1x?xf32>, %arg1 : tensor<?x?xf32>, %arg2 : index, %arg3 : index, %arg4 : index, %arg5 : index, %arg6 : index, %arg7 : index) -> tensor<?x?xf32> {
-  // CHECK: %[[CAST:.*]] = tensor.cast %{{.*}} : tensor<1x?xf32> to tensor<?x?xf32>
-  %0 = tensor.cast %arg0 : tensor<1x?xf32> to tensor<?x?xf32>
-  // CHECK: %[[RES:.*]] = tensor.insert_slice %[[CAST]]
-  // CHECK-SAME: : tensor<?x?xf32> into tensor<?x?xf32>
-  %1 = tensor.insert_slice %0 into %arg1[%arg2, %arg3] [%arg4, %arg5] [%arg6, %arg7] : tensor<?x?xf32> into tensor<?x?xf32>
-  // CHECK: return %[[RES]] : tensor<?x?xf32>
-  return %1 : tensor<?x?xf32>
 }
 
 // -----
