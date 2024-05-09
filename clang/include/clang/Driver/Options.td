@@ -5077,6 +5077,10 @@ def maix_small_local_dynamic_tls : Flag<["-"], "maix-small-local-dynamic-tls">,
            "where the offset from the TLS base is encoded as an "
            "immediate operand (AIX 64-bit only). "
            "This access sequence is not used for variables larger than 32KB.">;
+def maix_shared_lib_tls_model_opt : Flag<["-"], "maix-shared-lib-tls-model-opt">,
+  Group<m_ppc_Features_Group>,
+  HelpText<"For shared library loaded with the main program, change local-dynamic access(es) "
+           "to initial-exec access(es) at the function level (AIX 64-bit only).">;
 def maix_struct_return : Flag<["-"], "maix-struct-return">,
   Group<m_Group>, Visibility<[ClangOption, CC1Option]>,
   HelpText<"Return all structs in memory (PPC32 only)">,
