@@ -2866,8 +2866,7 @@ define ptr @gep_lshr_i32(ptr %0, i64 %1) {
 ;
 ; RV64ZBA-LABEL: gep_lshr_i32:
 ; RV64ZBA:       # %bb.0: # %entry
-; RV64ZBA-NEXT:    slli a1, a1, 2
-; RV64ZBA-NEXT:    srli a1, a1, 4
+; RV64ZBA-NEXT:    srli a1, a1, 2
 ; RV64ZBA-NEXT:    slli.uw a1, a1, 4
 ; RV64ZBA-NEXT:    sh2add a1, a1, a1
 ; RV64ZBA-NEXT:    add a0, a0, a1
@@ -2891,8 +2890,7 @@ define i64 @srli_slliw(i64 %1) {
 ;
 ; RV64ZBA-LABEL: srli_slliw:
 ; RV64ZBA:       # %bb.0: # %entry
-; RV64ZBA-NEXT:    slli a0, a0, 2
-; RV64ZBA-NEXT:    srli a0, a0, 4
+; RV64ZBA-NEXT:    srli a0, a0, 2
 ; RV64ZBA-NEXT:    slli.uw a0, a0, 4
 ; RV64ZBA-NEXT:    ret
 entry:
@@ -2900,6 +2898,40 @@ entry:
   %3 = and i64 %2, 4294967295
   %4 = shl i64 %3, 4
   ret i64 %4
+}
+
+define i64 @srli_slliw_canonical(i64 %0) {
+; RV64I-LABEL: srli_slliw_canonical:
+; RV64I:       # %bb.0: # %entry
+; RV64I-NEXT:    slli a0, a0, 2
+; RV64I-NEXT:    li a1, 1
+; RV64I-NEXT:    slli a1, a1, 36
+; RV64I-NEXT:    addi a1, a1, -16
+; RV64I-NEXT:    and a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64ZBA-LABEL: srli_slliw_canonical:
+; RV64ZBA:       # %bb.0: # %entry
+; RV64ZBA-NEXT:    srli a0, a0, 2
+; RV64ZBA-NEXT:    slli.uw a0, a0, 4
+; RV64ZBA-NEXT:    ret
+entry:
+  %1 = shl i64 %0, 2
+  %2 = and i64 %1, 68719476720
+  ret i64 %2
+}
+
+; Make sure we don't accidentally use slli.uw with a shift of 32.
+define i64 @srli_slliuw_negative_test(i64 %0) {
+; CHECK-LABEL: srli_slliuw_negative_test:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    srli a0, a0, 6
+; CHECK-NEXT:    slli a0, a0, 32
+; CHECK-NEXT:    ret
+entry:
+  %1 = lshr i64 %0, 6
+  %2 = shl i64 %1, 32
+  ret i64 %2
 }
 
 define i64 @srli_slli_i16(i64 %1) {
