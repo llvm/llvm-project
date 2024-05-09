@@ -22,7 +22,7 @@ class TestDAP_attachByPortNum(lldbdap_testcase.DAPTestCaseBase):
         server_tool = "lldb-server"
         server_path = self.getBuiltinServerTool(server_tool)
         if server_path:
-            server_path += " g localhost:" +  port + " "
+            server_path += " g localhost:" + port + " "
 
         self.process = subprocess.Popen(
             [server_path + program],
