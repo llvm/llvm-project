@@ -3047,8 +3047,10 @@ bool ARMTargetLowering::IsEligibleForTailCallOptimization(
     for (const CCValAssign &AL : ArgLocs)
       if (AL.isRegLoc())
         AddressRegisters.erase(AL.getLocReg());
-    if (AddressRegisters.empty())
+    if (AddressRegisters.empty()) {
+      LLVM_DEBUG(dbgs() << "false (no reg to hold function pointer)\n");
       return false;
+    }
   }
 
   // Look for obvious safe cases to perform tail call optimization that do not
@@ -3057,18 +3059,26 @@ bool ARMTargetLowering::IsEligibleForTailCallOptimization(
   // Exception-handling functions need a special set of instructions to indicate
   // a return to the hardware. Tail-calling another function would probably
   // break this.
-  if (CallerF.hasFnAttribute("interrupt"))
+  if (CallerF.hasFnAttribute("interrupt")) {
+    LLVM_DEBUG(dbgs() << "false (interrupt attribute)\n");
     return false;
+  }
 
-  if (canGuaranteeTCO(CalleeCC, getTargetMachine().Options.GuaranteedTailCallOpt))
+  if (canGuaranteeTCO(CalleeCC,
+                      getTargetMachine().Options.GuaranteedTailCallOpt)) {
+    LLVM_DEBUG(dbgs() << (CalleeCC == CallerCC ? "true" : "false")
+                      << " (guaranteed tail-call CC)\n");
     return CalleeCC == CallerCC;
+  }
 
   // Also avoid sibcall optimization if either caller or callee uses struct
   // return semantics.
   bool isCalleeStructRet = Outs.empty() ? false : Outs[0].Flags.isSRet();
   bool isCallerStructRet = MF.getFunction().hasStructRetAttr();
-  if (isCalleeStructRet || isCallerStructRet)
+  if (isCalleeStructRet || isCallerStructRet) {
+    LLVM_DEBUG(dbgs() << "false (struct-ret)\n");
     return false;
+  }
 
   // Externally-defined functions with weak linkage should not be
   // tail-called on ARM when the OS does not support dynamic
@@ -3081,8 +3091,11 @@ bool ARMTargetLowering::IsEligibleForTailCallOptimization(
     const GlobalValue *GV = G->getGlobal();
     const Triple &TT = getTargetMachine().getTargetTriple();
     if (GV->hasExternalWeakLinkage() &&
-        (!TT.isOSWindows() || TT.isOSBinFormatELF() || TT.isOSBinFormatMachO()))
+        (!TT.isOSWindows() || TT.isOSBinFormatELF() ||
+         TT.isOSBinFormatMachO())) {
+      LLVM_DEBUG(dbgs() << "false (external weak linkage)\n");
       return false;
+    }
   }
 
   // Check that the call results are passed in the same way.
@@ -3091,23 +3104,29 @@ bool ARMTargetLowering::IsEligibleForTailCallOptimization(
           getEffectiveCallingConv(CalleeCC, isVarArg),
           getEffectiveCallingConv(CallerCC, CallerF.isVarArg()), MF, C, Ins,
           CCAssignFnForReturn(CalleeCC, isVarArg),
-          CCAssignFnForReturn(CallerCC, CallerF.isVarArg())))
+          CCAssignFnForReturn(CallerCC, CallerF.isVarArg()))) {
+    LLVM_DEBUG(dbgs() << "false (incompatible results)\n");
     return false;
+  }
   // The callee has to preserve all registers the caller needs to preserve.
   const ARMBaseRegisterInfo *TRI = Subtarget->getRegisterInfo();
   const uint32_t *CallerPreserved = TRI->getCallPreservedMask(MF, CallerCC);
   if (CalleeCC != CallerCC) {
     const uint32_t *CalleePreserved = TRI->getCallPreservedMask(MF, CalleeCC);
-    if (!TRI->regmaskSubsetEqual(CallerPreserved, CalleePreserved))
+    if (!TRI->regmaskSubsetEqual(CallerPreserved, CalleePreserved)) {
+      LLVM_DEBUG(dbgs() << "false (not all registers preserved)\n");
       return false;
+    }
   }
 
   // If Caller's vararg or byval argument has been split between registers and
   // stack, do not perform tail call, since part of the argument is in caller's
   // local frame.
   const ARMFunctionInfo *AFI_Caller = MF.getInfo<ARMFunctionInfo>();
-  if (AFI_Caller->getArgRegsSaveSize())
+  if (AFI_Caller->getArgRegsSaveSize()) {
+    LLVM_DEBUG(dbgs() << "false (arg reg save area)\n");
     return false;
+  }
 
   // If the callee takes no arguments then go on to check the results of the
   // call.
@@ -3125,36 +3144,51 @@ bool ARMTargetLowering::IsEligibleForTailCallOptimization(
         EVT RegVT = VA.getLocVT();
         SDValue Arg = OutVals[realArgIdx];
         ISD::ArgFlagsTy Flags = Outs[realArgIdx].Flags;
-        if (VA.getLocInfo() == CCValAssign::Indirect)
+        if (VA.getLocInfo() == CCValAssign::Indirect) {
+          LLVM_DEBUG(dbgs() << "false (indirect arg)\n");
           return false;
+        }
         if (VA.needsCustom() && (RegVT == MVT::f64 || RegVT == MVT::v2f64)) {
           // f64 and vector types are split into multiple registers or
           // register/stack-slot combinations.  The types will not match
           // the registers; give up on memory f64 refs until we figure
           // out what to do about this.
-          if (!VA.isRegLoc())
+          if (!VA.isRegLoc()) {
+            LLVM_DEBUG(dbgs() << "false (f64 not in register)\n");
             return false;
-          if (!ArgLocs[++i].isRegLoc())
+          }
+          if (!ArgLocs[++i].isRegLoc()) {
+            LLVM_DEBUG(dbgs() << "false (f64 not in register, second half)\n");
             return false;
+          }
           if (RegVT == MVT::v2f64) {
-            if (!ArgLocs[++i].isRegLoc())
+            if (!ArgLocs[++i].isRegLoc()) {
+              LLVM_DEBUG(dbgs() << "false (v2f64 not in register)\n");
               return false;
-            if (!ArgLocs[++i].isRegLoc())
+            }
+            if (!ArgLocs[++i].isRegLoc()) {
+              LLVM_DEBUG(dbgs() << "false (v2f64 not in register, second half)\n");
               return false;
+            }
           }
         } else if (!VA.isRegLoc()) {
           if (!MatchingStackOffset(Arg, VA.getLocMemOffset(), Flags,
-                                   MFI, MRI, TII))
+                                   MFI, MRI, TII)) {
+            LLVM_DEBUG(dbgs() << "false (non-matching stack offset)\n");
             return false;
+          }
         }
       }
     }
 
     const MachineRegisterInfo &MRI = MF.getRegInfo();
-    if (!parametersInCSRMatch(MRI, CallerPreserved, ArgLocs, OutVals))
+    if (!parametersInCSRMatch(MRI, CallerPreserved, ArgLocs, OutVals)) {
+      LLVM_DEBUG(dbgs() << "false (parameters in CSRs do not match)\n");
       return false;
+    }
   }
 
+  LLVM_DEBUG(dbgs() << "true\n");
   return true;
 }
 
