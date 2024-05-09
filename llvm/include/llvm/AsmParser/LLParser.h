@@ -178,6 +178,9 @@ namespace llvm {
     /// UpgradeDebuginfo so it can generate broken bitcode.
     bool UpgradeDebugInfo;
 
+    bool SeenNewDbgInfoFormat = false;
+    bool SeenOldDbgInfoFormat = false;
+
     std::string SourceFileName;
 
   public:
@@ -298,6 +301,8 @@ namespace llvm {
                               bool &DSOLocal);
     void parseOptionalDSOLocal(bool &DSOLocal);
     void parseOptionalVisibility(unsigned &Res);
+    bool parseOptionalImportType(lltok::Kind Kind,
+                                 GlobalValueSummary::ImportKind &Res);
     void parseOptionalDLLStorageClass(unsigned &Res);
     bool parseOptionalCallingConv(unsigned &CC);
     bool parseOptionalAlignment(MaybeAlign &Alignment,
@@ -366,6 +371,7 @@ namespace llvm {
     bool parseFnAttributeValuePairs(AttrBuilder &B,
                                     std::vector<unsigned> &FwdRefAttrGrps,
                                     bool inAttrGrp, LocTy &BuiltinLoc);
+    bool parseRangeAttr(AttrBuilder &B);
     bool parseRequiredTypeAttr(AttrBuilder &B, lltok::Kind AttrToken,
                                Attribute::AttrKind AttrKind);
 
@@ -559,8 +565,7 @@ namespace llvm {
                     Type *ExpectedTy = nullptr);
     bool parseGlobalValue(Type *Ty, Constant *&C);
     bool parseGlobalTypeAndValue(Constant *&V);
-    bool parseGlobalValueVector(SmallVectorImpl<Constant *> &Elts,
-                                std::optional<unsigned> *InRangeOp = nullptr);
+    bool parseGlobalValueVector(SmallVectorImpl<Constant *> &Elts);
     bool parseOptionalComdat(StringRef GlobalName, Comdat *&C);
     bool parseSanitizer(GlobalVariable *GV);
     bool parseMetadataAsValue(Value *&V, PerFunctionState &PFS);
@@ -573,6 +578,7 @@ namespace llvm {
     bool parseMDNodeTail(MDNode *&N);
     bool parseMDNodeVector(SmallVectorImpl<Metadata *> &Elts);
     bool parseMetadataAttachment(unsigned &Kind, MDNode *&MD);
+    bool parseDebugRecord(DbgRecord *&DR, PerFunctionState &PFS);
     bool parseInstructionMetadata(Instruction &Inst);
     bool parseGlobalObjectMetadataAttachment(GlobalObject &GO);
     bool parseOptionalFunctionMetadata(Function &F);

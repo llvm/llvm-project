@@ -2,6 +2,7 @@
 #
 # Copyright (c) 2013 Victor Oliveira <victormatheus@gmail.com>
 # Copyright (c) 2013 Jesse Towner <jessetowner@lavabit.com>
+# Copyright (c) 2024 Romaric Jodin <rjodin@chromium.org>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -25,6 +26,16 @@
 # OpenCL functions in the form:
 #
 # convert_<destTypen><_sat><_roundingMode>(<sourceTypen>)
+
+import argparse
+
+parser = argparse.ArgumentParser()
+parser.add_argument(
+    "--clspv", action="store_true", help="Generate the clspv variant of the code"
+)
+args = parser.parse_args()
+
+clspv = args.clspv
 
 types = [
     "char",
@@ -251,13 +262,19 @@ def generate_default_conversion(src, dst, mode):
         print("#endif")
 
 
-for src in types:
-    for dst in types:
-        generate_default_conversion(src, dst, "")
+# Do not generate default conversion for clspv as they are handled natively
+if not clspv:
+    for src in types:
+        for dst in types:
+            generate_default_conversion(src, dst, "")
 
 for src in int_types:
     for dst in int_types:
         for mode in rounding_modes:
+            # Do not generate "_rte" conversion for clspv as they are handled
+            # natively
+            if clspv and mode == "_rte":
+                continue
             generate_default_conversion(src, dst, mode)
 
 #
@@ -304,21 +321,38 @@ def generate_saturated_conversion(src, dst, size):
 
     elif src in float_types:
 
-        # Conversion from float to int
-        print(
-            """  {DST}{N} y = convert_{DST}{N}(x);
-  y = select(y, ({DST}{N}){DST_MIN}, {BP}(x < ({SRC}{N}){DST_MIN}){BS});
-  y = select(y, ({DST}{N}){DST_MAX}, {BP}(x > ({SRC}{N}){DST_MAX}){BS});
-  return y;""".format(
-                SRC=src,
-                DST=dst,
-                N=size,
-                DST_MIN=limit_min[dst],
-                DST_MAX=limit_max[dst],
-                BP=bool_prefix,
-                BS=bool_suffix,
+        if clspv:
+            # Conversion from float to int
+            print(
+                """  {DST}{N} y = convert_{DST}{N}(x);
+                y = select(y, ({DST}{N}){DST_MIN}, {BP}(x <= ({SRC}{N}){DST_MIN}){BS});
+                y = select(y, ({DST}{N}){DST_MAX}, {BP}(x >= ({SRC}{N}){DST_MAX}){BS});
+                return y;""".format(
+                    SRC=src,
+                    DST=dst,
+                    N=size,
+                    DST_MIN=limit_min[dst],
+                    DST_MAX=limit_max[dst],
+                    BP=bool_prefix,
+                    BS=bool_suffix,
+                )
             )
-        )
+        else:
+            # Conversion from float to int
+            print(
+                """  {DST}{N} y = convert_{DST}{N}(x);
+                y = select(y, ({DST}{N}){DST_MIN}, {BP}(x < ({SRC}{N}){DST_MIN}){BS});
+                y = select(y, ({DST}{N}){DST_MAX}, {BP}(x > ({SRC}{N}){DST_MAX}){BS});
+                return y;""".format(
+                    SRC=src,
+                    DST=dst,
+                    N=size,
+                    DST_MIN=limit_min[dst],
+                    DST_MAX=limit_max[dst],
+                    BP=bool_prefix,
+                    BS=bool_suffix,
+                )
+            )
 
     else:
 
@@ -432,7 +466,10 @@ def generate_float_conversion(src, dst, size, mode, sat):
         print("  return convert_{DST}{N}(x);".format(DST=dst, N=size))
     else:
         print("  {DST}{N} r = convert_{DST}{N}(x);".format(DST=dst, N=size))
-        print("  {SRC}{N} y = convert_{SRC}{N}(r);".format(SRC=src, N=size))
+        if clspv:
+            print("  {SRC}{N} y = convert_{SRC}{N}_sat(r);".format(SRC=src, N=size))
+        else:
+            print("  {SRC}{N} y = convert_{SRC}{N}(r);".format(SRC=src, N=size))
         if mode == "_rtz":
             if src in int_types:
                 print(
@@ -448,11 +485,29 @@ def generate_float_conversion(src, dst, size, mode, sat):
             else:
                 print("  {SRC}{N} abs_x = fabs(x);".format(SRC=src, N=size))
                 print("  {SRC}{N} abs_y = fabs(y);".format(SRC=src, N=size))
-            print(
-                "  return select(r, nextafter(r, sign(r) * ({DST}{N})-INFINITY), convert_{BOOL}{N}(abs_y > abs_x));".format(
-                    DST=dst, N=size, BOOL=bool_type[dst]
+            if clspv:
+                print(
+                    "  {BOOL}{N} c = convert_{BOOL}{N}(abs_y > abs_x);".format(
+                        BOOL=bool_type[dst], N=size
+                    )
                 )
-            )
+                if sizeof_type[src] >= 4 and src in int_types:
+                    print(
+                        "  c = c || convert_{BOOL}{N}(({SRC}{N}){SRC_MAX} == x);".format(
+                            BOOL=bool_type[dst], N=size, SRC=src, SRC_MAX=limit_max[src]
+                        )
+                    )
+                print(
+                    "  return select(r, nextafter(r, sign(r) * ({DST}{N})-INFINITY), c);".format(
+                        DST=dst, N=size, BOOL=bool_type[dst], SRC=src
+                    )
+                )
+            else:
+                print(
+                    "  return select(r, nextafter(r, sign(r) * ({DST}{N})-INFINITY), convert_{BOOL}{N}(abs_y > abs_x));".format(
+                        DST=dst, N=size, BOOL=bool_type[dst]
+                    )
+                )
         if mode == "_rtp":
             print(
                 "  return select(r, nextafter(r, ({DST}{N})INFINITY), convert_{BOOL}{N}(y < x));".format(
@@ -460,11 +515,29 @@ def generate_float_conversion(src, dst, size, mode, sat):
                 )
             )
         if mode == "_rtn":
-            print(
-                "  return select(r, nextafter(r, ({DST}{N})-INFINITY), convert_{BOOL}{N}(y > x));".format(
-                    DST=dst, N=size, BOOL=bool_type[dst]
+            if clspv:
+                print(
+                    "  {BOOL}{N} c = convert_{BOOL}{N}(y > x);".format(
+                        BOOL=bool_type[dst], N=size
+                    )
                 )
-            )
+                if sizeof_type[src] >= 4 and src in int_types:
+                    print(
+                        "  c = c || convert_{BOOL}{N}(({SRC}{N}){SRC_MAX} == x);".format(
+                            BOOL=bool_type[dst], N=size, SRC=src, SRC_MAX=limit_max[src]
+                        )
+                    )
+                print(
+                    "  return select(r, nextafter(r, ({DST}{N})-INFINITY), c);".format(
+                        DST=dst, N=size, BOOL=bool_type[dst], SRC=src
+                    )
+                )
+            else:
+                print(
+                    "  return select(r, nextafter(r, ({DST}{N})-INFINITY), convert_{BOOL}{N}(y > x));".format(
+                        DST=dst, N=size, BOOL=bool_type[dst]
+                    )
+                )
 
     # Footer
     print("}")
@@ -484,4 +557,8 @@ for src in types:
     for dst in float_types:
         for size in vector_sizes:
             for mode in rounding_modes:
+                # Do not generate "_rte" conversion for clspv as they are
+                # handled natively
+                if clspv and mode == "_rte":
+                    continue
                 generate_float_conversion(src, dst, size, mode, "")

@@ -298,10 +298,11 @@ public:
   /// symlinks. For real file system, this uses `llvm::sys::fs::real_path`.
   /// This returns errc::operation_not_permitted if not implemented by subclass.
   virtual std::error_code getRealPath(const Twine &Path,
-                                      SmallVectorImpl<char> &Output) const;
+                                      SmallVectorImpl<char> &Output);
 
-  /// Check whether a file exists. Provided for convenience.
-  bool exists(const Twine &Path);
+  /// Check whether \p Path exists. By default this uses \c status(), but
+  /// filesystems may provide a more efficient implementation if available.
+  virtual bool exists(const Twine &Path);
 
   /// Is the file mounted on a local filesystem?
   virtual std::error_code isLocal(const Twine &Path, bool &Result);
@@ -318,6 +319,10 @@ public:
   /// \returns success if \a path has been made absolute, otherwise a
   ///          platform-specific error_code.
   virtual std::error_code makeAbsolute(SmallVectorImpl<char> &Path) const;
+
+  /// \returns true if \p A and \p B represent the same file, or an error or
+  /// false if they do not.
+  llvm::ErrorOr<bool> equivalent(const Twine &A, const Twine &B);
 
   enum class PrintType { Summary, Contents, RecursiveContents };
   void print(raw_ostream &OS, PrintType Type = PrintType::Contents,
@@ -386,6 +391,7 @@ public:
   void pushOverlay(IntrusiveRefCntPtr<FileSystem> FS);
 
   llvm::ErrorOr<Status> status(const Twine &Path) override;
+  bool exists(const Twine &Path) override;
   llvm::ErrorOr<std::unique_ptr<File>>
   openFileForRead(const Twine &Path) override;
   directory_iterator dir_begin(const Twine &Dir, std::error_code &EC) override;
@@ -393,7 +399,7 @@ public:
   std::error_code setCurrentWorkingDirectory(const Twine &Path) override;
   std::error_code isLocal(const Twine &Path, bool &Result) override;
   std::error_code getRealPath(const Twine &Path,
-                              SmallVectorImpl<char> &Output) const override;
+                              SmallVectorImpl<char> &Output) override;
 
   using iterator = FileSystemList::reverse_iterator;
   using const_iterator = FileSystemList::const_reverse_iterator;
@@ -439,6 +445,7 @@ public:
   llvm::ErrorOr<Status> status(const Twine &Path) override {
     return FS->status(Path);
   }
+  bool exists(const Twine &Path) override { return FS->exists(Path); }
   llvm::ErrorOr<std::unique_ptr<File>>
   openFileForRead(const Twine &Path) override {
     return FS->openFileForRead(Path);
@@ -453,7 +460,7 @@ public:
     return FS->setCurrentWorkingDirectory(Path);
   }
   std::error_code getRealPath(const Twine &Path,
-                              SmallVectorImpl<char> &Output) const override {
+                              SmallVectorImpl<char> &Output) override {
     return FS->getRealPath(Path, Output);
   }
   std::error_code isLocal(const Twine &Path, bool &Result) override {
@@ -622,7 +629,7 @@ public:
   /// This doesn't resolve symlinks as they are not supported in in-memory file
   /// system.
   std::error_code getRealPath(const Twine &Path,
-                              SmallVectorImpl<char> &Output) const override;
+                              SmallVectorImpl<char> &Output) override;
   std::error_code isLocal(const Twine &Path, bool &Result) override;
   std::error_code setCurrentWorkingDirectory(const Twine &Path) override;
 
@@ -672,7 +679,6 @@ class RedirectingFileSystemParser;
 ///            ]
 /// }
 /// \endverbatim
-///
 /// The roots may be absolute or relative. If relative they will be made
 /// absolute against either current working directory or the directory where
 /// the Overlay YAML file is located, depending on the 'root-relative'
@@ -704,7 +710,6 @@ class RedirectingFileSystemParser;
 ///   'contents': [ <file or directory entries> ]
 /// }
 /// \endverbatim
-///
 /// The default attributes for such virtual directories are:
 /// \verbatim
 /// MTime = now() when created
@@ -713,7 +718,6 @@ class RedirectingFileSystemParser;
 /// Size = 0
 /// UniqueID = unspecified unique value
 /// \endverbatim
-///
 /// When a path prefix matches such a directory, the next component in the path
 /// is matched against the entries in the 'contents' array.
 ///
@@ -726,7 +730,6 @@ class RedirectingFileSystemParser;
 ///   'external-contents': <path to external directory>
 /// }
 /// \endverbatim
-///
 /// and inherit their attributes from the external directory. When a path
 /// prefix matches such an entry, the unmatched components are appended to the
 /// 'external-contents' path, and the resulting path is looked up in the
@@ -741,7 +744,6 @@ class RedirectingFileSystemParser;
 ///   'external-contents': <path to external file>
 /// }
 /// \endverbatim
-///
 /// Their attributes and file contents are determined by looking up the file at
 /// their 'external-contents' path in the external file system.
 ///
@@ -934,12 +936,12 @@ private:
   /// Canonicalize path by removing ".", "..", "./", components. This is
   /// a VFS request, do not bother about symlinks in the path components
   /// but canonicalize in order to perform the correct entry search.
-  std::error_code makeCanonical(SmallVectorImpl<char> &Path) const;
+  std::error_code makeCanonicalForLookup(SmallVectorImpl<char> &Path) const;
 
   /// Get the File status, or error, from the underlying external file system.
   /// This returns the status with the originally requested name, while looking
-  /// up the entry using the canonical path.
-  ErrorOr<Status> getExternalStatus(const Twine &CanonicalPath,
+  /// up the entry using a potentially different path.
+  ErrorOr<Status> getExternalStatus(const Twine &LookupPath,
                                     const Twine &OriginalPath) const;
 
   /// Make \a Path an absolute path.
@@ -963,7 +965,7 @@ private:
   // that, other than the root, path components should not contain slashes or
   // backslashes.
   bool pathComponentMatches(llvm::StringRef lhs, llvm::StringRef rhs) const {
-    if ((CaseSensitive ? lhs.equals(rhs) : lhs.equals_insensitive(rhs)))
+    if ((CaseSensitive ? lhs == rhs : lhs.equals_insensitive(rhs)))
       return true;
     return (lhs == "/" && rhs == "\\") || (lhs == "\\" && rhs == "/");
   }
@@ -1027,7 +1029,7 @@ private:
                  llvm::SmallVectorImpl<Entry *> &Entries) const;
 
   /// Get the status for a path with the provided \c LookupResult.
-  ErrorOr<Status> status(const Twine &CanonicalPath, const Twine &OriginalPath,
+  ErrorOr<Status> status(const Twine &LookupPath, const Twine &OriginalPath,
                          const LookupResult &Result);
 
 public:
@@ -1049,10 +1051,11 @@ public:
          bool UseExternalNames, FileSystem &ExternalFS);
 
   ErrorOr<Status> status(const Twine &Path) override;
+  bool exists(const Twine &Path) override;
   ErrorOr<std::unique_ptr<File>> openFileForRead(const Twine &Path) override;
 
   std::error_code getRealPath(const Twine &Path,
-                              SmallVectorImpl<char> &Output) const override;
+                              SmallVectorImpl<char> &Output) override;
 
   llvm::ErrorOr<std::string> getCurrentWorkingDirectory() const override;
 

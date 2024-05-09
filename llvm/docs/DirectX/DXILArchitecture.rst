@@ -61,6 +61,19 @@ on the utilities described in "Common Code" above in order to share
 logic with both the DirectX backend and with Clang's codegen of HLSL
 support as much as possible.
 
+The DirectX Intrinsic Expansion Pass
+====================================
+There are intrinsics that don't map directly to DXIL Ops. In some cases
+an intrinsic needs to be expanded to a set of LLVM IR instructions. In
+other cases an intrinsic needs modifications to the arguments or return
+values of a DXIL Op. The `DXILIntrinsicExpansion` pass handles all 
+the cases where our intrinsics don't have a one to one mapping. This 
+pass may also be used when the expansion is specific to DXIL to keep 
+implementation details out of CodeGen. Finally, there is an expectation 
+that we maintain vector types through this pass. Therefore, best 
+practice would be to avoid scalarization in this pass.
+
+
 The DirectX Backend
 ===================
 
@@ -88,6 +101,52 @@ version of LLVM's `BitcodeWriter`. At present, this is able to
 leverage LLVM's current bitcode libraries to do a lot of the work, but
 it's possible that at some point in the future it will need to be
 completely separate as modern LLVM bitcode evolves.
+
+DirectX Backend Flow
+--------------------
+
+The code generation flow for DXIL is broken into a series of passes. The passes
+are grouped into two flows:
+
+#. Generating DXIL IR.
+#. Generating DXIL Binary.
+
+The passes to generate DXIL IR follow the flow:
+
+  DXILOpLowering -> DXILPrepare -> DXILTranslateMetadata
+
+Each of these passes has a defined responsibility:
+
+#. DXILOpLowering translates LLVM intrinsic calls to dx.op calls.
+#. DXILPrepare transforms the DXIL IR to be compatible with LLVM 3.7, and
+   inserts bitcasts to allow typed pointers to be inserted.
+#. DXILTranslateMetadata emits the DXIL Metadata structures.
+
+The passes to encode DXIL to binary in the DX Container follow the flow:
+
+  DXILEmbedder -> DXContainerGlobals -> AsmPrinter
+
+Each of these passes have the following defined responsibilities:
+
+#. DXILEmbedder runs the DXIL bitcode writer to generate a bitcode stream and
+   embeds the binary data inside a global in the original module.
+#. DXContainerGlobals generates binary data globals for the other DX Container
+   parts based on computed analysis passes.
+#. AsmPrinter is the standard LLVM infrastructure for emitting object files.
+
+When emitting DXIL into a DX Container file the MC layer is used in a similar
+way to how the Clang ``-fembed-bitcode`` option operates. The DX Container
+object writer knows how to construct the headers and structural fields of the
+container, and reads global variables from the module to fill in the remaining
+part data.
+
+DirectX Container
+-----------------
+
+The DirectX container format is treated in LLVM as an object file format.
+Reading is implemented between the BinaryFormat and Object libraries, and
+writing is implemented in the MC layer. Additional testing and inspection
+support are implemented in the ObjectYAML library and tools.
 
 Testing
 =======

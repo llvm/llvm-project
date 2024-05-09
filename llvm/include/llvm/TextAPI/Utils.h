@@ -14,12 +14,17 @@
 #define LLVM_TEXTAPI_UTILS_H
 
 #include "llvm/ADT/Twine.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/Regex.h"
+#include "llvm/TextAPI/Symbol.h"
+#include <map>
 
 #if !defined(PATH_MAX)
 #define PATH_MAX 1024
-#endif
+#endif // !defined(PATH_MAX)
 
 #define MACCATALYST_PREFIX_PATH "/System/iOSSupport"
 #define DRIVERKIT_PREFIX_PATH "/System/DriverKit"
@@ -67,6 +72,20 @@ std::error_code make_relative(StringRef From, StringRef To,
 /// \param Path File path for library.
 /// \param IsSymLink Whether path points to a symlink.
 bool isPrivateLibrary(StringRef Path, bool IsSymLink = false);
+
+/// Create a regex rule from provided glob string.
+/// \param Glob String that represents glob input.
+/// \return The equivalent regex rule.
+llvm::Expected<llvm::Regex> createRegexFromGlob(llvm::StringRef Glob);
+
+using AliasEntry = std::pair<std::string, EncodeKind>;
+using AliasMap = std::map<AliasEntry, AliasEntry>;
+
+/// Parse input list and capture symbols and their alias.
+///
+/// \param Buffer Data contents of file for the alias list.
+/// \return Lookup table of alias to their base symbol.
+Expected<AliasMap> parseAliasList(std::unique_ptr<llvm::MemoryBuffer> &Buffer);
 
 } // namespace llvm::MachO
 #endif // LLVM_TEXTAPI_UTILS_H

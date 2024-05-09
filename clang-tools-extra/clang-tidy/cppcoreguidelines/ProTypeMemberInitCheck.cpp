@@ -444,7 +444,7 @@ void ProTypeMemberInitCheck::checkMissingMemberInitializer(
     if (!F->hasInClassInitializer() &&
         utils::type_traits::isTriviallyDefaultConstructible(F->getType(),
                                                             Context) &&
-        !isEmpty(Context, F->getType()) && !F->isUnnamedBitfield() &&
+        !isEmpty(Context, F->getType()) && !F->isUnnamedBitField() &&
         !AnyMemberHasInitPerUnion)
       FieldsToInit.insert(F);
   });

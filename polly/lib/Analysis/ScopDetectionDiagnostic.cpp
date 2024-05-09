@@ -45,7 +45,7 @@ using namespace llvm;
 #define DEBUG_TYPE "polly-detect"
 
 #define SCOP_STAT(NAME, DESC)                                                  \
-  { "polly-detect", "NAME", "Number of rejected regions: " DESC }
+  {"polly-detect", "NAME", "Number of rejected regions: " DESC}
 
 static Statistic RejectStatistics[] = {
     SCOP_STAT(CFG, ""),
@@ -122,7 +122,7 @@ void getDebugLocations(const BBPair &P, DebugLoc &Begin, DebugLoc &End) {
       continue;
     Todo.append(succ_begin(BB), succ_end(BB));
     for (const Instruction &Inst : *BB) {
-      DebugLoc DL = Inst.getDebugLoc();
+      DebugLoc DL = Inst.getStableDebugLoc();
       if (!DL)
         continue;
 
@@ -821,7 +821,7 @@ std::string ReportUnprofitable::getEndUserMessage() const {
 const DebugLoc &ReportUnprofitable::getDebugLoc() const {
   for (const BasicBlock *BB : R->blocks())
     for (const Instruction &Inst : *BB)
-      if (const DebugLoc &DL = Inst.getDebugLoc())
+      if (const DebugLoc &DL = Inst.getStableDebugLoc())
         return DL;
 
   return R->getEntry()->getTerminator()->getDebugLoc();

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC___SUPPORT_FPUTIL_FP_BITS_STR_H
-#define LLVM_LIBC_SRC___SUPPORT_FPUTIL_FP_BITS_STR_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_FPUTIL_FPBITS_STR_H
+#define LLVM_LIBC_SRC___SUPPORT_FPUTIL_FPBITS_STR_H
 
 #include "src/__support/CPP/string.h"
 #include "src/__support/CPP/type_traits.h"
@@ -35,7 +35,6 @@ using ZeroPaddedHexFmt = IntegerToString<
 //    floating encoding.
 template <typename T> LIBC_INLINE cpp::string str(fputil::FPBits<T> x) {
   using StorageType = typename fputil::FPBits<T>::StorageType;
-  using Sign = fputil::Sign;
 
   if (x.is_nan())
     return "(NaN)";
@@ -73,4 +72,4 @@ template <typename T> LIBC_INLINE cpp::string str(fputil::FPBits<T> x) {
 
 } // namespace LIBC_NAMESPACE
 
-#endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_FP_BITS_STR_H
+#endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_FPBITS_STR_H

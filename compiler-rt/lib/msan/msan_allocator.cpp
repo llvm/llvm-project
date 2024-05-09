@@ -48,6 +48,9 @@ struct MsanMapUnmapCallback {
   }
 };
 
+// Note: to ensure that the allocator is compatible with the application memory
+// layout (especially with high-entropy ASLR), kSpaceBeg and kSpaceSize must be
+// duplicated as MappingDesc::ALLOCATOR in msan.h.
 #if defined(__mips64)
 static const uptr kMaxAllowedMallocSize = 2UL << 30;
 

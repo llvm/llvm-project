@@ -122,7 +122,7 @@ void dragonfly::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   Args.addAllArgs(CmdArgs, {options::OPT_L, options::OPT_T_Group,
-                            options::OPT_s, options::OPT_t, options::OPT_r});
+                            options::OPT_s, options::OPT_t});
   ToolChain.AddFilePathLibArgs(Args, CmdArgs);
 
   AddLinkerInputs(ToolChain, Inputs, Args, CmdArgs, JA);
@@ -136,7 +136,7 @@ void dragonfly::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
     // Use the static OpenMP runtime with -static-openmp
     bool StaticOpenMP = Args.hasArg(options::OPT_static_openmp) && !Static;
-    addOpenMPRuntime(CmdArgs, ToolChain, Args, StaticOpenMP);
+    addOpenMPRuntime(C, CmdArgs, ToolChain, Args, StaticOpenMP);
 
     if (D.CCCIsCXX()) {
       if (ToolChain.ShouldLinkCXXStdlib(Args))
@@ -205,11 +205,8 @@ void dragonfly::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 DragonFly::DragonFly(const Driver &D, const llvm::Triple &Triple,
                      const ArgList &Args)
     : Generic_ELF(D, Triple, Args) {
-
   // Path mangling to find libexec
-  getProgramPaths().push_back(getDriver().getInstalledDir());
-  if (getDriver().getInstalledDir() != getDriver().Dir)
-    getProgramPaths().push_back(getDriver().Dir);
+  getProgramPaths().push_back(getDriver().Dir);
 
   getFilePaths().push_back(getDriver().Dir + "/../lib");
   getFilePaths().push_back(concat(getDriver().SysRoot, "/usr/lib"));

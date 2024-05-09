@@ -15,8 +15,8 @@
 ///    ADD       [~]   ADDA      [~]   ADDI        [~]   ADDQ [ ]   ADDX [~]
 ///    CLR       [ ]   CMP       [~]   CMPA        [~]   CMPI [~]   CMPM [ ]
 ///    CMP2      [ ]   DIVS/DIVU [~]   DIVSL/DIVUL [ ]   EXT  [~]   EXTB [ ]
-///    MULS/MULU [~]   NEG       [~]   NEGX        [~]   SUB  [~]   SUBA [~]
-///    SUBI      [~]   SUBQ      [ ]   SUBX        [~]
+///    MULS/MULU [~]   NEG       [~]   NEGX        [~]   NOT  [~]   SUB  [~]
+///    SUBA      [~]   SUBI      [~]   SUBQ        [ ]   SUBX [~]
 ///
 ///  Map:
 ///
@@ -769,7 +769,7 @@ def : Pat<(mulhu i16:$dst, Mxi16immSExt16:$opd),
 
 
 //===----------------------------------------------------------------------===//
-// NEG/NEGX
+// NEG/NEGX/NOT
 //===----------------------------------------------------------------------===//
 
 /// ------------+------------+------+---------+---------
@@ -809,12 +809,26 @@ class MxNegX_D<MxType TYPE>
 }
 }
 
+class MxNot_D<MxType TYPE>
+    : MxInst<(outs TYPE.ROp:$dst), (ins TYPE.ROp:$src),
+             "not."#TYPE.Prefix#"\t$dst",
+             [(set TYPE.VT:$dst, (not TYPE.VT:$src))]> {
+  let Inst = (descend 0b01000110,
+    /*SIZE*/!cast<MxEncSize>("MxEncSize"#TYPE.Size).Value,
+    //MODE without last bit
+    0b00,
+    //REGISTER prefixed by D/A bit
+    (operand "$dst", 4)
+  );
+}
+
 } // let Constraints
 } // let Defs = [CCR]
 
 foreach S = [8, 16, 32] in {
   def NEG#S#d  : MxNeg_D<!cast<MxType>("MxType"#S#"d")>;
   def NEGX#S#d : MxNegX_D<!cast<MxType>("MxType"#S#"d")>;
+  def NOT#S#d  : MxNot_D<!cast<MxType>("MxType"#S#"d")>;
 }
 
 def : Pat<(MxSub 0, i8 :$src), (NEG8d  MxDRD8 :$src)>;

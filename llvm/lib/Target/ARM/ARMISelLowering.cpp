@@ -1555,15 +1555,11 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
 
   if (Subtarget->hasNEON()) {
     // vmin and vmax aren't available in a scalar form, so we can use
-    // a NEON instruction with an undef lane instead.  This has a performance
-    // penalty on some cores, so we don't do this unless we have been
-    // asked to by the core tuning model.
-    if (Subtarget->useNEONForSinglePrecisionFP()) {
-      setOperationAction(ISD::FMINIMUM, MVT::f32, Legal);
-      setOperationAction(ISD::FMAXIMUM, MVT::f32, Legal);
-      setOperationAction(ISD::FMINIMUM, MVT::f16, Legal);
-      setOperationAction(ISD::FMAXIMUM, MVT::f16, Legal);
-    }
+    // a NEON instruction with an undef lane instead.
+    setOperationAction(ISD::FMINIMUM, MVT::f32, Legal);
+    setOperationAction(ISD::FMAXIMUM, MVT::f32, Legal);
+    setOperationAction(ISD::FMINIMUM, MVT::f16, Legal);
+    setOperationAction(ISD::FMAXIMUM, MVT::f16, Legal);
     setOperationAction(ISD::FMINIMUM, MVT::v2f32, Legal);
     setOperationAction(ISD::FMAXIMUM, MVT::v2f32, Legal);
     setOperationAction(ISD::FMINIMUM, MVT::v4f32, Legal);
@@ -2370,6 +2366,12 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   bool PreferIndirect = false;
   bool GuardWithBTI = false;
 
+  // Analyze operands of the call, assigning locations to each operand.
+  SmallVector<CCValAssign, 16> ArgLocs;
+  CCState CCInfo(CallConv, isVarArg, DAG.getMachineFunction(), ArgLocs,
+                 *DAG.getContext());
+  CCInfo.AnalyzeCallOperands(Outs, CCAssignFnForCall(CallConv, isVarArg));
+
   // Lower 'returns_twice' calls to a pseudo-instruction.
   if (CLI.CB && CLI.CB->getAttributes().hasFnAttr(Attribute::ReturnsTwice) &&
       !Subtarget->noBTIAtReturnTwice())
@@ -2405,10 +2407,8 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   }
   if (isTailCall) {
     // Check if it's really possible to do a tail call.
-    isTailCall = IsEligibleForTailCallOptimization(
-        Callee, CallConv, isVarArg, isStructRet,
-        MF.getFunction().hasStructRetAttr(), Outs, OutVals, Ins, DAG,
-        PreferIndirect);
+    isTailCall =
+        IsEligibleForTailCallOptimization(CLI, CCInfo, ArgLocs, PreferIndirect);
 
     if (isTailCall && !getTargetMachine().Options.GuaranteedTailCallOpt &&
         CallConv != CallingConv::Tail && CallConv != CallingConv::SwiftTail)
@@ -2423,11 +2423,6 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   if (!isTailCall && CLI.CB && CLI.CB->isMustTailCall())
     report_fatal_error("failed to perform tail call elimination on a call "
                        "site marked musttail");
-  // Analyze operands of the call, assigning locations to each operand.
-  SmallVector<CCValAssign, 16> ArgLocs;
-  CCState CCInfo(CallConv, isVarArg, DAG.getMachineFunction(), ArgLocs,
-                 *DAG.getContext());
-  CCInfo.AnalyzeCallOperands(Outs, CCAssignFnForCall(CallConv, isVarArg));
 
   // Get a count of how many bytes are to be pushed on the stack.
   unsigned NumBytes = CCInfo.getStackSize();
@@ -2571,7 +2566,7 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
       }
       const TargetOptions &Options = DAG.getTarget().Options;
       if (Options.EmitCallSiteInfo)
-        CSInfo.emplace_back(VA.getLocReg(), i);
+        CSInfo.ArgRegPairs.emplace_back(VA.getLocReg(), i);
       RegsToPass.push_back(std::make_pair(VA.getLocReg(), Arg));
     } else if (isByVal) {
       assert(VA.isMemLoc());
@@ -2655,12 +2650,10 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   bool isDirect = false;
 
   const TargetMachine &TM = getTargetMachine();
-  const Module *Mod = MF.getFunction().getParent();
   const GlobalValue *GVal = nullptr;
   if (GlobalAddressSDNode *G = dyn_cast<GlobalAddressSDNode>(Callee))
     GVal = G->getGlobal();
-  bool isStub =
-      !TM.shouldAssumeDSOLocal(*Mod, GVal) && Subtarget->isTargetMachO();
+  bool isStub = !TM.shouldAssumeDSOLocal(GVal) && Subtarget->isTargetMachO();
 
   bool isARMFunc = !Subtarget->isThumb() || (isStub && !Subtarget->isMClass());
   bool isLocalARMFunc = false;
@@ -2737,7 +2730,7 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
         unsigned TargetFlags = ARMII::MO_NO_FLAG;
         if (GVal->hasDLLImportStorageClass())
           TargetFlags = ARMII::MO_DLLIMPORT;
-        else if (!TM.shouldAssumeDSOLocal(*GVal->getParent(), GVal))
+        else if (!TM.shouldAssumeDSOLocal(GVal))
           TargetFlags = ARMII::MO_COFFSTUB;
         Callee = DAG.getTargetGlobalAddress(GVal, dl, PtrVt, /*offset=*/0,
                                             TargetFlags);
@@ -2991,14 +2984,19 @@ bool MatchingStackOffset(SDValue Arg, unsigned Offset, ISD::ArgFlagsTy Flags,
 
 /// IsEligibleForTailCallOptimization - Check whether the call is eligible
 /// for tail call optimization. Targets which want to do tail call
-/// optimization should implement this function.
+/// optimization should implement this function. Note that this function also
+/// processes musttail calls, so when this function returns false on a valid
+/// musttail call, a fatal backend error occurs.
 bool ARMTargetLowering::IsEligibleForTailCallOptimization(
-    SDValue Callee, CallingConv::ID CalleeCC, bool isVarArg,
-    bool isCalleeStructRet, bool isCallerStructRet,
-    const SmallVectorImpl<ISD::OutputArg> &Outs,
-    const SmallVectorImpl<SDValue> &OutVals,
-    const SmallVectorImpl<ISD::InputArg> &Ins, SelectionDAG &DAG,
-    const bool isIndirect) const {
+    TargetLowering::CallLoweringInfo &CLI, CCState &CCInfo,
+    SmallVectorImpl<CCValAssign> &ArgLocs, const bool isIndirect) const {
+  CallingConv::ID CalleeCC = CLI.CallConv;
+  SDValue Callee = CLI.Callee;
+  bool isVarArg = CLI.IsVarArg;
+  const SmallVectorImpl<ISD::OutputArg> &Outs = CLI.Outs;
+  const SmallVectorImpl<SDValue> &OutVals = CLI.OutVals;
+  const SmallVectorImpl<ISD::InputArg> &Ins = CLI.Ins;
+  const SelectionDAG &DAG = CLI.DAG;
   MachineFunction &MF = DAG.getMachineFunction();
   const Function &CallerF = MF.getFunction();
   CallingConv::ID CallerCC = CallerF.getCallingConv();
@@ -3034,6 +3032,8 @@ bool ARMTargetLowering::IsEligibleForTailCallOptimization(
 
   // Also avoid sibcall optimization if either caller or callee uses struct
   // return semantics.
+  bool isCalleeStructRet = Outs.empty() ? false : Outs[0].Flags.isSRet();
+  bool isCallerStructRet = MF.getFunction().hasStructRetAttr();
   if (isCalleeStructRet || isCallerStructRet)
     return false;
 
@@ -3079,11 +3079,6 @@ bool ARMTargetLowering::IsEligibleForTailCallOptimization(
   // If the callee takes no arguments then go on to check the results of the
   // call.
   if (!Outs.empty()) {
-    // Check if stack adjustment is needed. For now, do not do this if any
-    // argument is passed on the stack.
-    SmallVector<CCValAssign, 16> ArgLocs;
-    CCState CCInfo(CalleeCC, isVarArg, MF, ArgLocs, C);
-    CCInfo.AnalyzeCallOperands(Outs, CCAssignFnForCall(CalleeCC, isVarArg));
     if (CCInfo.getStackSize()) {
       // Check if the arguments are already laid out in the right way as
       // the caller's fixed stack objects.
@@ -3921,20 +3916,18 @@ SDValue ARMTargetLowering::LowerGlobalAddressELF(SDValue Op,
   EVT PtrVT = getPointerTy(DAG.getDataLayout());
   SDLoc dl(Op);
   const GlobalValue *GV = cast<GlobalAddressSDNode>(Op)->getGlobal();
-  const TargetMachine &TM = getTargetMachine();
   bool IsRO = isReadOnly(GV);
 
   // promoteToConstantPool only if not generating XO text section
-  if (TM.shouldAssumeDSOLocal(*GV->getParent(), GV) && !Subtarget->genExecuteOnly())
+  if (GV->isDSOLocal() && !Subtarget->genExecuteOnly())
     if (SDValue V = promoteToConstantPool(this, GV, DAG, PtrVT, dl))
       return V;
 
   if (isPositionIndependent()) {
-    bool UseGOT_PREL = !TM.shouldAssumeDSOLocal(*GV->getParent(), GV);
-    SDValue G = DAG.getTargetGlobalAddress(GV, dl, PtrVT, 0,
-                                           UseGOT_PREL ? ARMII::MO_GOT : 0);
+    SDValue G = DAG.getTargetGlobalAddress(
+        GV, dl, PtrVT, 0, GV->isDSOLocal() ? 0 : ARMII::MO_GOT);
     SDValue Result = DAG.getNode(ARMISD::WrapperPIC, dl, PtrVT, G);
-    if (UseGOT_PREL)
+    if (!GV->isDSOLocal())
       Result =
           DAG.getLoad(PtrVT, dl, DAG.getEntryNode(), Result,
                       MachinePointerInfo::getGOT(DAG.getMachineFunction()));
@@ -4023,7 +4016,7 @@ SDValue ARMTargetLowering::LowerGlobalAddressWindows(SDValue Op,
   ARMII::TOF TargetFlags = ARMII::MO_NO_FLAG;
   if (GV->hasDLLImportStorageClass())
     TargetFlags = ARMII::MO_DLLIMPORT;
-  else if (!TM.shouldAssumeDSOLocal(*GV->getParent(), GV))
+  else if (!TM.shouldAssumeDSOLocal(GV))
     TargetFlags = ARMII::MO_COFFSTUB;
   EVT PtrVT = getPointerTy(DAG.getDataLayout());
   SDValue Result;
@@ -6702,8 +6695,8 @@ static SDValue Expand64BitShift(SDNode *N, SelectionDAG &DAG,
 
     // If the shift amount is greater than 32 or has a greater bitwidth than 64
     // then do the default optimisation
-    if (ShAmt->getValueType(0).getSizeInBits() > 64 ||
-        (Con && (Con->getZExtValue() == 0 || Con->getZExtValue() >= 32)))
+    if ((!Con && ShAmt->getValueType(0).getSizeInBits() > 64) ||
+        (Con && (Con->getAPIntValue() == 0 || Con->getAPIntValue().uge(32))))
       return SDValue();
 
     // Extract the lower 32 bits of the shift amount if it's not an i32
@@ -11800,9 +11793,9 @@ static bool checkAndUpdateCPSRKill(MachineBasicBlock::iterator SelectItr,
   MachineBasicBlock::iterator miI(std::next(SelectItr));
   for (MachineBasicBlock::iterator miE = BB->end(); miI != miE; ++miI) {
     const MachineInstr& mi = *miI;
-    if (mi.readsRegister(ARM::CPSR))
+    if (mi.readsRegister(ARM::CPSR, /*TRI=*/nullptr))
       return false;
-    if (mi.definesRegister(ARM::CPSR))
+    if (mi.definesRegister(ARM::CPSR, /*TRI=*/nullptr))
       break; // Should have kill-flag - update below.
   }
 
@@ -12161,7 +12154,7 @@ ARMTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
 
     // Check whether CPSR is live past the tMOVCCr_pseudo.
     const TargetRegisterInfo *TRI = Subtarget->getRegisterInfo();
-    if (!MI.killsRegister(ARM::CPSR) &&
+    if (!MI.killsRegister(ARM::CPSR, /*TRI=*/nullptr) &&
         !checkAndUpdateCPSRKill(MI, thisMBB, TRI)) {
       copy0MBB->addLiveIn(ARM::CPSR);
       sinkMBB->addLiveIn(ARM::CPSR);
@@ -20156,7 +20149,8 @@ void ARMTargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
     // CSNEG: KnownOp0 or KnownOp1 * -1
     if (Op.getOpcode() == ARMISD::CSINC)
       KnownOp1 = KnownBits::computeForAddSub(
-          true, false, KnownOp1, KnownBits::makeConstant(APInt(32, 1)));
+          /*Add=*/true, /*NSW=*/false, /*NUW=*/false, KnownOp1,
+          KnownBits::makeConstant(APInt(32, 1)));
     else if (Op.getOpcode() == ARMISD::CSINV)
       std::swap(KnownOp1.Zero, KnownOp1.One);
     else if (Op.getOpcode() == ARMISD::CSNEG)

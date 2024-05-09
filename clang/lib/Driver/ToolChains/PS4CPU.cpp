@@ -208,9 +208,8 @@ void tools::PScpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       CmdArgs.push_back("--lto=full");
   }
 
-  Args.addAllArgs(CmdArgs,
-                  {options::OPT_L, options::OPT_T_Group, options::OPT_s,
-                   options::OPT_t, options::OPT_r});
+  Args.addAllArgs(CmdArgs, {options::OPT_L, options::OPT_T_Group,
+                            options::OPT_s, options::OPT_t});
 
   if (Args.hasArg(options::OPT_Z_Xlinker__no_demangle))
     CmdArgs.push_back("--no-demangle");

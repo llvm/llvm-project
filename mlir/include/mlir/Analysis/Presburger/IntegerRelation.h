@@ -127,6 +127,12 @@ public:
   /// the variable.
   void setId(VarKind kind, unsigned i, Identifier id);
 
+  void resetIds() { space.resetIds(); }
+
+  /// Get the identifiers for the variables of specified varKind. Calls resetIds
+  /// on the relations space if identifiers are not enabled.
+  ArrayRef<Identifier> getIds(VarKind kind);
+
   /// Returns a copy of the space without locals.
   PresburgerSpace getSpaceWithoutLocals() const {
     return PresburgerSpace::getRelationSpace(space.getNumDomainVars(),
@@ -674,6 +680,11 @@ public:
   /// this for uniformity with `applyDomain`.
   void applyRange(const IntegerRelation &rel);
 
+  /// Given a relation `other: (A -> B)`, this operation merges the symbol and
+  /// local variables and then takes the composition of `other` on `this: (B ->
+  /// C)`. The resulting relation represents tuples of the form: `A -> C`.
+  void mergeAndCompose(const IntegerRelation &other);
+
   /// Compute an equivalent representation of the same set, such that all local
   /// vars in all disjuncts have division representations. This representation
   /// may involve local vars that correspond to divisions, and may also be a
@@ -710,6 +721,17 @@ public:
   /// Return the set difference of this set and the given set, i.e.,
   /// return `this \ set`.
   PresburgerRelation subtract(const PresburgerRelation &set) const;
+
+  // Remove equalities which have only zero coefficients.
+  void removeTrivialEqualities();
+
+  // Verify whether the relation is full-dimensional, i.e.,
+  // no equality holds for the relation.
+  //
+  // If there are no variables, it always returns true.
+  // If there is at least one variable and the relation is empty, it returns
+  // false.
+  bool isFullDim();
 
   void print(raw_ostream &os) const;
   void dump() const;
@@ -870,6 +892,26 @@ public:
       : IntegerPolyhedron(/*numReservedInequalities=*/0,
                           /*numReservedEqualities=*/0,
                           /*numReservedCols=*/space.getNumVars() + 1, space) {}
+
+  /// Constructs a relation with the specified number of dimensions and symbols
+  /// and adds the given inequalities.
+  explicit IntegerPolyhedron(const PresburgerSpace &space,
+                             IntMatrix inequalities)
+      : IntegerPolyhedron(space) {
+    for (unsigned i = 0, e = inequalities.getNumRows(); i < e; i++)
+      addInequality(inequalities.getRow(i));
+  }
+
+  /// Constructs a relation with the specified number of dimensions and symbols
+  /// and adds the given inequalities, after normalizing row-wise to integer
+  /// values.
+  explicit IntegerPolyhedron(const PresburgerSpace &space,
+                             FracMatrix inequalities)
+      : IntegerPolyhedron(space) {
+    IntMatrix ineqsNormalized = inequalities.normalizeRows();
+    for (unsigned i = 0, e = inequalities.getNumRows(); i < e; i++)
+      addInequality(ineqsNormalized.getRow(i));
+  }
 
   /// Construct a set from an IntegerRelation. The relation should have
   /// no domain vars.

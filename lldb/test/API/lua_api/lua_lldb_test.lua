@@ -14,15 +14,15 @@ function assertNotNil(x)
     if x == nil then error('assertNotNil failure') end
 end
 
-function assertEquals(x, y)
+function assertEqual(x, y)
     if type(x) == 'table' and type(y) == 'table' then
         for k, _ in pairs(x) do
-            assertEquals(x[k], y[k])
+            assertEqual(x[k], y[k])
         end
     elseif type(x) ~= type(y) then
-        error('assertEquals failure')
+        error('assertEqual failure')
     elseif x ~= y then
-        error('assertEquals failure')
+        error('assertEqual failure')
     end
 end
 

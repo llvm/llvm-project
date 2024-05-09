@@ -1,6 +1,6 @@
 // REQUIRES: x86-registered-target
 // REQUIRES: asserts
-// UNSUPPORTED: target={{.*}}-darwin{{.*}}, target={{.*}}-aix{{.*}}
+// UNSUPPORTED: target={{.*}}-macosx{{.*}}, target={{.*}}-darwin{{.*}}, target={{.*}}-aix{{.*}}, target={{.*}}-zos{{.*}}
 
 // Generate the file we can bundle.
 // RUN: %clang -O0 -target %itanium_abi_triple %s -c -o %t.o

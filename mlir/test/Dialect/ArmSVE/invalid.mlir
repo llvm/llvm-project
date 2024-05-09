@@ -49,3 +49,18 @@ func.func @arm_sve_convert_to_svbool__bad_mask_scalability(%mask : vector<[4]x[8
 }
 
 
+// -----
+
+func.func @arm_sve_zip_x2_bad_vector_type(%a : vector<[7]xi8>) {
+  // expected-error@+1 {{op operand #0 must be an SVE vector with element size <= 64-bit, but got 'vector<[7]xi8>'}}
+  arm_sve.zip.x2 %a, %a : vector<[7]xi8>
+  return
+}
+
+// -----
+
+func.func @arm_sve_zip_x4_bad_vector_type(%a : vector<[5]xf64>) {
+  // expected-error@+1 {{op operand #0 must be an SVE vector with element size <= 64-bit, but got 'vector<[5]xf64>'}}
+  arm_sve.zip.x4 %a, %a, %a, %a : vector<[5]xf64>
+  return
+}

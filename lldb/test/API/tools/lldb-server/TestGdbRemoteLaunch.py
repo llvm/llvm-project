@@ -101,7 +101,7 @@ class GdbRemoteLaunchTestCase(gdbremote_testcase.GdbRemoteTestCaseBase):
         )
         with open(exe_path, "ab") as exe_for_writing:
             context = self.expect_gdbremote_sequence()
-        self.assertRegexpMatches(
+        self.assertRegex(
             seven.unhexlify(context.get("msg")),
             r"(execve failed: Text file busy|The process cannot access the file because it is being used by another process.)",
         )

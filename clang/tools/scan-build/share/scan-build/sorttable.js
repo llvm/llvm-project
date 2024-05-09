@@ -490,3 +490,23 @@ var forEach = function(object, block, context) {
 		resolve.forEach(object, block, context);
 	}
 };
+
+// filter results by filename
+const searchFiles = () => {
+  const columns = [
+    { name: 'Filename', index: 2, isFilter: true },
+  ]
+  const filterColumns = columns.filter(c => c.isFilter).map(c => c.index)
+  const trs = document.querySelectorAll(`#reports_table tr:not(.header)`)
+  const filter = document.querySelector('#file_input').value
+  const regex = new RegExp(escape(filter), 'i')
+  const isFoundInTds = td => regex.test(td.innerHTML)
+  const isFound = childrenArr => childrenArr.some(isFoundInTds)
+  const setTrStyleDisplay = ({ style, children }) => {
+    style.display = isFound([
+      ...filterColumns.map(c => children[c])
+    ]) ? '' : 'none'
+  }
+
+  trs.forEach(setTrStyleDisplay)
+}

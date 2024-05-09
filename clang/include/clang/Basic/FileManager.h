@@ -114,6 +114,12 @@ class FileManager : public RefCountedBase<FileManager> {
   ///
   unsigned NextFileUID;
 
+  /// Statistics gathered during the lifetime of the FileManager.
+  unsigned NumDirLookups = 0;
+  unsigned NumFileLookups = 0;
+  unsigned NumDirCacheMisses = 0;
+  unsigned NumFileCacheMisses = 0;
+
   // Caching.
   std::unique_ptr<FileSystemStatCache> StatCache;
 
@@ -283,7 +289,7 @@ public:
                    bool RequiresNullTerminator = true);
   llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
   getBufferForFile(StringRef Filename, bool isVolatile = false,
-                   bool RequiresNullTerminator = true) {
+                   bool RequiresNullTerminator = true) const {
     return getBufferForFileImpl(Filename, /*FileSize=*/-1, isVolatile,
                                 RequiresNullTerminator);
   }
@@ -291,7 +297,7 @@ public:
 private:
   llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
   getBufferForFileImpl(StringRef Filename, int64_t FileSize, bool isVolatile,
-                       bool RequiresNullTerminator);
+                       bool RequiresNullTerminator) const;
 
 public:
   /// Get the 'stat' information for the given \p Path.
@@ -341,6 +347,10 @@ private:
 
 public:
   void PrintStats() const;
+
+  /// Import statistics from a child FileManager and add them to this current
+  /// FileManager.
+  void AddStats(const FileManager &Other);
 };
 
 } // end namespace clang

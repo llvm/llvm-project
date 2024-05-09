@@ -46,9 +46,15 @@ if (OPENMP_STANDALONE_BUILD)
   set(CMAKE_CXX_EXTENSIONS NO)
 else()
   set(OPENMP_ENABLE_WERROR ${LLVM_ENABLE_WERROR})
-  # If building in tree, we honor the same install suffix LLVM uses.
-  set(OPENMP_INSTALL_LIBDIR "lib${LLVM_LIBDIR_SUFFIX}" CACHE STRING
-      "Path where built OpenMP libraries should be installed.")
+
+  # When building in tree we install the runtime according to the LLVM settings.
+  if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT APPLE)
+    set(OPENMP_INSTALL_LIBDIR lib${LLVM_LIBDIR_SUFFIX}/${LLVM_DEFAULT_TARGET_TRIPLE} CACHE STRING
+        "Path where built openmp libraries should be installed.")
+  else()
+    set(OPENMP_INSTALL_LIBDIR "lib${LLVM_LIBDIR_SUFFIX}" CACHE STRING
+        "Path where built OpenMP libraries should be installed.")
+  endif()
 
   if (NOT MSVC)
     set(OPENMP_TEST_C_COMPILER ${LLVM_RUNTIME_OUTPUT_INTDIR}/clang)
@@ -117,19 +123,6 @@ endif()
 # to enable time profiling support in the OpenMP runtime.
 add_subdirectory(runtime)
 
-if (OPENMP_ENABLE_LIBOMPTARGET)
-  # Check that the library can actually be built.
-  if (APPLE OR WIN32)
-    message(FATAL_ERROR "libomptarget cannot be built on Windows and MacOS X!")
-  elseif (NOT "cxx_std_17" IN_LIST CMAKE_CXX_COMPILE_FEATURES)
-    message(FATAL_ERROR "Host compiler must support C++17 to build libomptarget!")
-  elseif (NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
-    message(FATAL_ERROR "libomptarget on 32-bit systems are not supported!")
-  endif()
-
-  add_subdirectory(libomptarget)
-endif()
-
 set(ENABLE_OMPT_TOOLS ON)
 # Currently tools are not tested well on Windows or MacOS X.
 if (APPLE OR WIN32)
@@ -141,6 +134,10 @@ option(OPENMP_ENABLE_OMPT_TOOLS "Enable building ompt based tools for OpenMP."
 if (OPENMP_ENABLE_OMPT_TOOLS)
   add_subdirectory(tools)
 endif()
+
+# Propagate OMPT support to offload
+set(LIBOMP_HAVE_OMPT_SUPPORT ${LIBOMP_HAVE_OMPT_SUPPORT} PARENT_SCOPE)
+set(LIBOMP_OMP_TOOLS_INCLUDE_DIR ${LIBOMP_OMP_TOOLS_INCLUDE_DIR} PARENT_SCOPE)
 
 option(OPENMP_MSVC_NAME_SCHEME "Build dll with MSVC naming scheme." OFF)
 

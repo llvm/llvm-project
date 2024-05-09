@@ -1,0 +1,43 @@
+! RUN: bbc -emit-hlfir -fcuda %s -o - | FileCheck %s
+! RUN: bbc -emit-hlfir -fcuda %s -o - | fir-opt -convert-hlfir-to-fir | FileCheck %s
+
+! Test lowering of CUDA attribute on procedures.
+
+attributes(host) subroutine sub_host(); end
+! CHECK: func.func @_QPsub_host() attributes {fir.cuda_attr = #fir.cuda_proc<host>}
+
+attributes(device) subroutine sub_device(); end
+! CHECK: func.func @_QPsub_device() attributes {fir.cuda_attr = #fir.cuda_proc<device>}
+
+attributes(host) attributes(device) subroutine sub_host_device; end
+! CHECK: func.func @_QPsub_host_device() attributes {fir.cuda_attr = #fir.cuda_proc<host_device>}
+
+attributes(device) attributes(host) subroutine sub_device_host; end
+! CHECK: func.func @_QPsub_device_host() attributes {fir.cuda_attr = #fir.cuda_proc<host_device>}
+
+attributes(global) subroutine sub_global(); end
+! CHECK: func.func @_QPsub_global() attributes {fir.cuda_attr = #fir.cuda_proc<global>}
+
+attributes(grid_global) subroutine sub_grid_global(); end
+! CHECK: func.func @_QPsub_grid_global() attributes {fir.cuda_attr = #fir.cuda_proc<grid_global>}
+
+attributes(host) integer function fct_host(); end
+! CHECK: func.func @_QPfct_host() -> i32 attributes {fir.cuda_attr = #fir.cuda_proc<host>}
+
+attributes(device) integer function fct_device(); end
+! CHECK: func.func @_QPfct_device() -> i32 attributes {fir.cuda_attr = #fir.cuda_proc<device>}
+
+attributes(host) attributes(device) integer function fct_host_device; end
+! CHECK: func.func @_QPfct_host_device() -> i32 attributes {fir.cuda_attr = #fir.cuda_proc<host_device>}
+
+attributes(device) attributes(host) integer function fct_device_host; end
+! CHECK: func.func @_QPfct_device_host() -> i32 attributes {fir.cuda_attr = #fir.cuda_proc<host_device>}
+
+attributes(global) launch_bounds(1, 2) subroutine sub_lbounds1(); end
+! CHECK: func.func @_QPsub_lbounds1() attributes {fir.cuda_attr = #fir.cuda_proc<global>, fir.cuda_launch_bounds = #fir.launch_bounds<maxTPB = 1 : i64, minBPM = 2 : i64>}
+
+attributes(global) launch_bounds(1, 2, 3) subroutine sub_lbounds2(); end
+! CHECK: func.func @_QPsub_lbounds2() attributes {fir.cuda_attr = #fir.cuda_proc<global>, fir.cuda_launch_bounds = #fir.launch_bounds<maxTPB = 1 : i64, minBPM = 2 : i64, upperBoundClusterSize = 3 : i64>}
+
+attributes(global) cluster_dims(1, 2, 3) subroutine sub_clusterdims1(); end
+! CHECK: func.func @_QPsub_clusterdims1() attributes {fir.cuda_attr = #fir.cuda_proc<global>, fir.cuda_cluster_dims = #fir.cluster_dims<x = 1 : i64, y = 2 : i64, z = 3 : i64>}

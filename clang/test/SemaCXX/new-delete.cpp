@@ -171,12 +171,7 @@ void good_deletes()
 void bad_deletes()
 {
   delete 0; // expected-error {{cannot delete expression of type 'int'}}
-  delete [0] (int*)0;
-#if __cplusplus <= 199711L
-  // expected-error@-2 {{expected expression}}
-#else
-  // expected-error@-4 {{expected variable name or 'this' in lambda capture list}}
-#endif
+  delete [0] (int*)0; // expected-error {{expected variable name or 'this' in lambda capture list}}
   delete (void*)0; // expected-warning {{cannot delete expression with pointer-to-'void' type 'void *'}}
   delete (T*)0; // expected-warning {{deleting pointer to incomplete type}}
   ::S::delete (int*)0; // expected-error {{expected unqualified-id}}

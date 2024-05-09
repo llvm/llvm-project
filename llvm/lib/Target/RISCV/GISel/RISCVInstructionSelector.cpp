@@ -77,8 +77,6 @@ private:
                     MachineRegisterInfo &MRI) const;
   bool selectFPCompare(MachineInstr &MI, MachineIRBuilder &MIB,
                        MachineRegisterInfo &MRI) const;
-  bool selectIntrinsicWithSideEffects(MachineInstr &MI, MachineIRBuilder &MIB,
-                                      MachineRegisterInfo &MRI) const;
   void emitFence(AtomicOrdering FenceOrdering, SyncScope::ID FenceSSID,
                  MachineIRBuilder &MIB) const;
   bool selectMergeValues(MachineInstr &MI, MachineIRBuilder &MIB,
@@ -179,6 +177,20 @@ RISCVInstructionSelector::selectShiftMask(MachineOperand &Root) const {
 
   APInt AndMask;
   Register AndSrcReg;
+  // Try to combine the following pattern (applicable to other shift
+  // instructions as well as 32-bit ones):
+  //
+  //   %4:gprb(s64) = G_AND %3, %2
+  //   %5:gprb(s64) = G_LSHR %1, %4(s64)
+  //
+  // According to RISC-V's ISA manual, SLL, SRL, and SRA ignore other bits than
+  // the lowest log2(XLEN) bits of register rs2. As for the above pattern, if
+  // the lowest log2(XLEN) bits of register rd and rs2 of G_AND are the same,
+  // then it can be eliminated. Given register rs1 or rs2 holding a constant
+  // (the and mask), there are two cases G_AND can be erased:
+  //
+  // 1. the lowest log2(XLEN) bits of the and mask are all set
+  // 2. the bits of the register being masked are already unset (zero set)
   if (mi_match(ShAmtReg, MRI, m_GAnd(m_Reg(AndSrcReg), m_ICst(AndMask)))) {
     APInt ShMask(AndMask.getBitWidth(), ShiftWidth - 1);
     if (ShMask.isSubsetOf(AndMask)) {
@@ -186,7 +198,7 @@ RISCVInstructionSelector::selectShiftMask(MachineOperand &Root) const {
     } else {
       // SimplifyDemandedBits may have optimized the mask so try restoring any
       // bits that are known zero.
-      KnownBits Known = KB->getKnownBits(ShAmtReg);
+      KnownBits Known = KB->getKnownBits(AndSrcReg);
       if (ShMask.isSubsetOf(AndMask | Known.Zero))
         ShAmtReg = AndSrcReg;
     }
@@ -686,8 +698,6 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
     return selectSelect(MI, MIB, MRI);
   case TargetOpcode::G_FCMP:
     return selectFPCompare(MI, MIB, MRI);
-  case TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS:
-    return selectIntrinsicWithSideEffects(MI, MIB, MRI);
   case TargetOpcode::G_FENCE: {
     AtomicOrdering FenceOrdering =
         static_cast<AtomicOrdering>(MI.getOperand(0).getImm());
@@ -1249,29 +1259,6 @@ bool RISCVInstructionSelector::selectFPCompare(MachineInstr &MI,
     auto Xor = MIB.buildInstr(RISCV::XORI, {DstReg}, {TmpReg}).addImm(1);
     if (!Xor.constrainAllUses(TII, TRI, RBI))
       return false;
-  }
-
-  MI.eraseFromParent();
-  return true;
-}
-
-bool RISCVInstructionSelector::selectIntrinsicWithSideEffects(
-    MachineInstr &MI, MachineIRBuilder &MIB, MachineRegisterInfo &MRI) const {
-  assert(MI.getOpcode() == TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS &&
-         "Unexpected opcode");
-  // Find the intrinsic ID.
-  unsigned IntrinID = cast<GIntrinsic>(MI).getIntrinsicID();
-
-  // Select the instruction.
-  switch (IntrinID) {
-  default:
-    return false;
-  case Intrinsic::trap:
-    MIB.buildInstr(RISCV::UNIMP, {}, {});
-    break;
-  case Intrinsic::debugtrap:
-    MIB.buildInstr(RISCV::EBREAK, {}, {});
-    break;
   }
 
   MI.eraseFromParent();

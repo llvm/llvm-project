@@ -64,8 +64,11 @@ KnownBits GISelKnownBits::getKnownBits(MachineInstr &MI) {
 
 KnownBits GISelKnownBits::getKnownBits(Register R) {
   const LLT Ty = MRI.getType(R);
+  // Since the number of lanes in a scalable vector is unknown at compile time,
+  // we track one bit which is implicitly broadcast to all lanes.  This means
+  // that all lanes in a scalable vector are considered demanded.
   APInt DemandedElts =
-      Ty.isVector() ? APInt::getAllOnes(Ty.getNumElements()) : APInt(1, 1);
+      Ty.isFixedVector() ? APInt::getAllOnes(Ty.getNumElements()) : APInt(1, 1);
   return getKnownBits(R, DemandedElts);
 }
 
@@ -269,8 +272,8 @@ void GISelKnownBits::computeKnownBitsImpl(Register R, KnownBits &Known,
                          Depth + 1);
     computeKnownBitsImpl(MI.getOperand(2).getReg(), Known2, DemandedElts,
                          Depth + 1);
-    Known = KnownBits::computeForAddSub(/*Add*/ false, /*NSW*/ false, Known,
-                                        Known2);
+    Known = KnownBits::computeForAddSub(/*Add=*/false, /*NSW=*/false,
+                                        /* NUW=*/false, Known, Known2);
     break;
   }
   case TargetOpcode::G_XOR: {
@@ -296,8 +299,8 @@ void GISelKnownBits::computeKnownBitsImpl(Register R, KnownBits &Known,
                          Depth + 1);
     computeKnownBitsImpl(MI.getOperand(2).getReg(), Known2, DemandedElts,
                          Depth + 1);
-    Known =
-        KnownBits::computeForAddSub(/*Add*/ true, /*NSW*/ false, Known, Known2);
+    Known = KnownBits::computeForAddSub(/*Add=*/true, /*NSW=*/false,
+                                        /* NUW=*/false, Known, Known2);
     break;
   }
   case TargetOpcode::G_AND: {
@@ -405,17 +408,23 @@ void GISelKnownBits::computeKnownBitsImpl(Register R, KnownBits &Known,
   }
   case TargetOpcode::G_LOAD: {
     const MachineMemOperand *MMO = *MI.memoperands_begin();
-    if (const MDNode *Ranges = MMO->getRanges()) {
-      computeKnownBitsFromRangeMetadata(*Ranges, Known);
-    }
-
+    KnownBits KnownRange(MMO->getMemoryType().getScalarSizeInBits());
+    if (const MDNode *Ranges = MMO->getRanges())
+      computeKnownBitsFromRangeMetadata(*Ranges, KnownRange);
+    Known = KnownRange.anyext(Known.getBitWidth());
     break;
   }
+  case TargetOpcode::G_SEXTLOAD:
   case TargetOpcode::G_ZEXTLOAD: {
     if (DstTy.isVector())
       break;
-    // Everything above the retrieved bits is zero
-    Known.Zero.setBitsFrom((*MI.memoperands_begin())->getSizeInBits());
+    const MachineMemOperand *MMO = *MI.memoperands_begin();
+    KnownBits KnownRange(MMO->getMemoryType().getScalarSizeInBits());
+    if (const MDNode *Ranges = MMO->getRanges())
+      computeKnownBitsFromRangeMetadata(*Ranges, KnownRange);
+    Known = Opcode == TargetOpcode::G_SEXTLOAD
+                ? KnownRange.sext(Known.getBitWidth())
+                : KnownRange.zext(Known.getBitWidth());
     break;
   }
   case TargetOpcode::G_ASHR: {
@@ -564,7 +573,7 @@ void GISelKnownBits::computeKnownBitsImpl(Register R, KnownBits &Known,
     // right.
     KnownBits ExtKnown = KnownBits::makeConstant(APInt(BitWidth, BitWidth));
     KnownBits ShiftKnown = KnownBits::computeForAddSub(
-        /*Add*/ false, /*NSW*/ false, ExtKnown, WidthKnown);
+        /*Add=*/false, /*NSW=*/false, /* NUW=*/false, ExtKnown, WidthKnown);
     Known = KnownBits::ashr(KnownBits::shl(Known, ShiftKnown), ShiftKnown);
     break;
   }
@@ -586,6 +595,17 @@ void GISelKnownBits::computeKnownBitsImpl(Register R, KnownBits &Known,
           BitWidth > 1)
         Known.Zero.setBitsFrom(1);
     }
+    break;
+  }
+  case TargetOpcode::G_CTLZ:
+  case TargetOpcode::G_CTLZ_ZERO_UNDEF: {
+    KnownBits SrcOpKnown;
+    computeKnownBitsImpl(MI.getOperand(1).getReg(), SrcOpKnown, DemandedElts,
+                         Depth + 1);
+    // If we have a known 1, its position is our upper bound.
+    unsigned PossibleLZ = SrcOpKnown.countMaxLeadingZeros();
+    unsigned LowBits = llvm::bit_width(PossibleLZ);
+    Known.Zero.setBitsFrom(LowBits);
     break;
   }
   }
@@ -666,7 +686,7 @@ unsigned GISelKnownBits::computeNumSignBits(Register R,
 
     // e.g. i16->i32 = '17' bits known.
     const MachineMemOperand *MMO = *MI.memoperands_begin();
-    return TyBits - MMO->getSizeInBits() + 1;
+    return TyBits - MMO->getSizeInBits().getValue() + 1;
   }
   case TargetOpcode::G_ZEXTLOAD: {
     // FIXME: We need an in-memory type representation.
@@ -675,7 +695,21 @@ unsigned GISelKnownBits::computeNumSignBits(Register R,
 
     // e.g. i16->i32 = '16' bits known.
     const MachineMemOperand *MMO = *MI.memoperands_begin();
-    return TyBits - MMO->getSizeInBits();
+    return TyBits - MMO->getSizeInBits().getValue();
+  }
+  case TargetOpcode::G_AND:
+  case TargetOpcode::G_OR:
+  case TargetOpcode::G_XOR: {
+    Register Src1 = MI.getOperand(1).getReg();
+    unsigned Src1NumSignBits =
+        computeNumSignBits(Src1, DemandedElts, Depth + 1);
+    if (Src1NumSignBits != 1) {
+      Register Src2 = MI.getOperand(2).getReg();
+      unsigned Src2NumSignBits =
+          computeNumSignBits(Src2, DemandedElts, Depth + 1);
+      FirstAnswer = std::min(Src1NumSignBits, Src2NumSignBits);
+    }
+    break;
   }
   case TargetOpcode::G_TRUNC: {
     Register Src = MI.getOperand(1).getReg();

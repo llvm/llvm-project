@@ -14,7 +14,7 @@ add_flang_library(FIRTransforms
   SimplifyRegionLite.cpp
   AlgebraicSimplification.cpp
   SimplifyIntrinsics.cpp
-  AddDebugFoundation.cpp
+  AddDebugInfo.cpp
   PolymorphicOpConversion.cpp
   LoopVersioning.cpp
   OMPDescriptorMapInfoGen.cpp
@@ -22,6 +22,7 @@ add_flang_library(FIRTransforms
   OMPMarkDeclareTarget.cpp
   VScaleAttr.cpp
   FunctionAttr.cpp
+  DebugTypeGenerator.cpp
 
   DEPENDS
   FIRDialect
@@ -35,6 +36,7 @@ add_flang_library(FIRTransforms
   FIRDialect
   FIRDialectSupport
   FIRSupport
+  FortranCommon
   HLFIRDialect
   MLIRAffineUtils
   MLIRFuncDialect

@@ -108,7 +108,12 @@ enum ArgumentRepetitionType {
                               // optional
 };
 
-enum SortOrder { eSortOrderNone, eSortOrderByAddress, eSortOrderByName };
+enum SortOrder {
+  eSortOrderNone,
+  eSortOrderByAddress,
+  eSortOrderByName,
+  eSortOrderBySize
+};
 
 // LazyBool is for boolean values that need to be calculated lazily. Values
 // start off set to eLazyBoolCalculate, and then they can be calculated once
@@ -233,6 +238,13 @@ enum LoadDependentFiles {
   eLoadDependentsDefault,
   eLoadDependentsYes,
   eLoadDependentsNo,
+};
+
+/// Useful for callbacks whose return type indicates
+/// whether to continue iteration or short-circuit.
+enum class IterationAction {
+  Continue = 0,
+  Stop,
 };
 
 inline std::string GetStatDescription(lldb_private::StatisticKind K) {

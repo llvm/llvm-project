@@ -87,21 +87,26 @@ def hlfir_DeclareOp : hlfir_Op<"declare", [AttrSizedOperandSegments,
     AnyRefOrBox:$memref,
     Optional<AnyShapeOrShiftType>:$shape,
     Variadic<AnyIntegerType>:$typeparams,
+    Optional<fir_DummyScopeType>:$dummy_scope,
     Builtin_StringAttr:$uniq_name,
-    OptionalAttr<fir_FortranVariableFlagsAttr>:$fortran_attrs
+    OptionalAttr<fir_FortranVariableFlagsAttr>:$fortran_attrs,
+    OptionalAttr<fir_CUDADataAttributeAttr>:$cuda_attr
   );
 
   let results = (outs AnyFortranVariable, AnyRefOrBoxLike);
 
   let assemblyFormat = [{
     $memref (`(` $shape^ `)`)? (`typeparams` $typeparams^)?
-     attr-dict `:` functional-type(operands, results)
+    (`dummy_scope` $dummy_scope^)?
+    attr-dict `:` functional-type(operands, results)
   }];
 
   let builders = [
     OpBuilder<(ins "mlir::Value":$memref, "llvm::StringRef":$uniq_name,
       CArg<"mlir::Value", "{}">:$shape, CArg<"mlir::ValueRange", "{}">:$typeparams,
-      CArg<"fir::FortranVariableFlagsAttr", "{}">:$fortran_attrs)>];
+      CArg<"mlir::Value", "{}">:$dummy_scope,
+      CArg<"fir::FortranVariableFlagsAttr", "{}">:$fortran_attrs,
+      CArg<"fir::CUDADataAttributeAttr", "{}">:$cuda_attr)>];
 
   let extraClassDeclaration = [{
     /// Get the variable original base (same as input). It lacks
@@ -1356,7 +1361,9 @@ def hlfir_YieldOp : hlfir_Op<"yield", [Terminator, ParentOneOf<["RegionAssignOp"
   let assemblyFormat = "$entity attr-dict `:` type($entity) custom<YieldOpCleanup>($cleanup)";
 }
 
-def hlfir_ElementalAddrOp : hlfir_Op<"elemental_addr", [Terminator, HasParent<"RegionAssignOp">, RecursiveMemoryEffects, RecursivelySpeculatable, hlfir_ElementalOpInterface]> {
+def hlfir_ElementalAddrOp : hlfir_Op<"elemental_addr", [Terminator, HasParent<"RegionAssignOp">,
+    RecursiveMemoryEffects, RecursivelySpeculatable, hlfir_ElementalOpInterface,
+    AttrSizedOperandSegments]> {
   let summary = "Yield the address of a vector subscripted variable inside an hlfir.region_assign";
   let description = [{
     Special terminator node for the left-hand side region of an hlfir.region_assign
@@ -1396,6 +1403,7 @@ def hlfir_ElementalAddrOp : hlfir_Op<"elemental_addr", [Terminator, HasParent<"R
 
   let arguments = (ins
     fir_ShapeType:$shape,
+    Optional<AnyPolymorphicObject>:$mold,
     Variadic<AnyIntegerType>:$typeparams,
     OptionalAttr<UnitAttr>:$unordered
   );
@@ -1404,11 +1412,15 @@ def hlfir_ElementalAddrOp : hlfir_Op<"elemental_addr", [Terminator, HasParent<"R
                          MaxSizedRegion<1>:$cleanup);
 
   let builders = [
-    OpBuilder<(ins "mlir::Value":$shape, CArg<"bool", "false">:$isUnordered)>
+    OpBuilder<(ins "mlir::Value":$shape,
+          CArg<"mlir::Value", "{}">:$mold,
+      CArg<"mlir::ValueRange", "{}">:$typeparams,
+      CArg<"bool", "false">:$isUnordered)>
   ];
 
   let assemblyFormat = [{
-    $shape (`typeparams` $typeparams^)? (`unordered` $unordered^)?
+    $shape (`mold` $mold^)? (`typeparams` $typeparams^)?
+    (`unordered` $unordered^)?
     attr-dict `:` type(operands) $body
     custom<YieldOpCleanup>($cleanup)}];
 

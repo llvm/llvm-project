@@ -1080,7 +1080,37 @@ struct DimOfMemRefReshape : public OpRewritePattern<DimOp> {
     auto reshape = dim.getSource().getDefiningOp<ReshapeOp>();
 
     if (!reshape)
-      return failure();
+      return rewriter.notifyMatchFailure(
+          dim, "Dim op is not defined by a reshape op.");
+
+    // dim of a memref reshape can be folded if dim.getIndex() dominates the
+    // reshape. Instead of using `DominanceInfo` (which is usually costly) we
+    // cheaply check that either of the following conditions hold:
+    //      1. dim.getIndex() is defined in the same block as reshape but before
+    //      reshape.
+    //      2. dim.getIndex() is defined in a parent block of
+    //      reshape.
+
+    // Check condition 1
+    if (dim.getIndex().getParentBlock() == reshape->getBlock()) {
+      if (auto *definingOp = dim.getIndex().getDefiningOp()) {
+        if (reshape->isBeforeInBlock(definingOp)) {
+          return rewriter.notifyMatchFailure(
+              dim,
+              "dim.getIndex is not defined before reshape in the same block.");
+        }
+      } // else dim.getIndex is a block argument to reshape->getBlock and
+        // dominates reshape
+    }   // Check condition 2
+    else if (dim->getBlock() != reshape->getBlock() &&
+             !dim.getIndex().getParentRegion()->isProperAncestor(
+                 reshape->getParentRegion())) {
+      // If dim and reshape are in the same block but dim.getIndex() isn't, we
+      // already know dim.getIndex() dominates reshape without calling
+      // `isProperAncestor`
+      return rewriter.notifyMatchFailure(
+          dim, "dim.getIndex does not dominate reshape.");
+    }
 
     // Place the load directly after the reshape to ensure that the shape memref
     // was not mutated.
@@ -1420,6 +1450,7 @@ OpFoldResult ExtractStridedMetadataOp::getConstifiedMixedOffset() {
 
 void GenericAtomicRMWOp::build(OpBuilder &builder, OperationState &result,
                                Value memref, ValueRange ivs) {
+  OpBuilder::InsertionGuard g(builder);
   result.addOperands(memref);
   result.addOperands(ivs);
 
@@ -1428,7 +1459,7 @@ void GenericAtomicRMWOp::build(OpBuilder &builder, OperationState &result,
     result.addTypes(elementType);
 
     Region *bodyRegion = result.addRegion();
-    bodyRegion->push_back(new Block());
+    builder.createBlock(bodyRegion);
     bodyRegion->addArgument(elementType, memref.getLoc());
   }
 }
@@ -1711,20 +1742,18 @@ ParseResult PrefetchOp::parse(OpAsmParser &parser, OperationState &result) {
       parser.resolveOperands(indexInfo, indexTy, result.operands))
     return failure();
 
-  if (!readOrWrite.equals("read") && !readOrWrite.equals("write"))
+  if (readOrWrite != "read" && readOrWrite != "write")
     return parser.emitError(parser.getNameLoc(),
                             "rw specifier has to be 'read' or 'write'");
-  result.addAttribute(
-      PrefetchOp::getIsWriteAttrStrName(),
-      parser.getBuilder().getBoolAttr(readOrWrite.equals("write")));
+  result.addAttribute(PrefetchOp::getIsWriteAttrStrName(),
+                      parser.getBuilder().getBoolAttr(readOrWrite == "write"));
 
-  if (!cacheType.equals("data") && !cacheType.equals("instr"))
+  if (cacheType != "data" && cacheType != "instr")
     return parser.emitError(parser.getNameLoc(),
                             "cache type has to be 'data' or 'instr'");
 
-  result.addAttribute(
-      PrefetchOp::getIsDataCacheAttrStrName(),
-      parser.getBuilder().getBoolAttr(cacheType.equals("data")));
+  result.addAttribute(PrefetchOp::getIsDataCacheAttrStrName(),
+                      parser.getBuilder().getBoolAttr(cacheType == "data"));
 
   return success();
 }
@@ -2048,6 +2077,13 @@ void ExpandShapeOp::getAsmResultNames(
   setNameFn(getResult(), "expand_shape");
 }
 
+LogicalResult ExpandShapeOp::reifyResultShapes(
+    OpBuilder &builder, ReifiedRankedShapedTypeDims &reifiedResultShapes) {
+  reifiedResultShapes = {
+      getMixedValues(getStaticOutputShape(), getOutputShape(), builder)};
+  return success();
+}
+
 /// Helper function for verifying the shape of ExpandShapeOp and ResultShapeOp
 /// result and operand. Layout maps are verified separately.
 ///
@@ -2206,6 +2242,44 @@ FailureOr<MemRefType> ExpandShapeOp::computeExpandedType(
                          srcType.getMemorySpace());
 }
 
+FailureOr<SmallVector<OpFoldResult>>
+ExpandShapeOp::inferOutputShape(OpBuilder &b, Location loc,
+                                MemRefType expandedType,
+                                ArrayRef<ReassociationIndices> reassociation,
+                                ArrayRef<OpFoldResult> inputShape) {
+  std::optional<SmallVector<OpFoldResult>> outputShape =
+      inferExpandShapeOutputShape(b, loc, expandedType, reassociation,
+                                  inputShape);
+  if (!outputShape)
+    return failure();
+  return *outputShape;
+}
+
+void ExpandShapeOp::build(OpBuilder &builder, OperationState &result,
+                          Type resultType, Value src,
+                          ArrayRef<ReassociationIndices> reassociation,
+                          ArrayRef<OpFoldResult> outputShape) {
+  auto [staticOutputShape, dynamicOutputShape] =
+      decomposeMixedValues(SmallVector<OpFoldResult>(outputShape));
+  build(builder, result, llvm::cast<MemRefType>(resultType), src,
+        getReassociationIndicesAttribute(builder, reassociation),
+        dynamicOutputShape, staticOutputShape);
+}
+
+void ExpandShapeOp::build(OpBuilder &builder, OperationState &result,
+                          Type resultType, Value src,
+                          ArrayRef<ReassociationIndices> reassociation) {
+  SmallVector<OpFoldResult> inputShape =
+      getMixedSizes(builder, result.location, src);
+  MemRefType memrefResultTy = llvm::cast<MemRefType>(resultType);
+  FailureOr<SmallVector<OpFoldResult>> outputShape = inferOutputShape(
+      builder, result.location, memrefResultTy, reassociation, inputShape);
+  // Failure of this assertion usually indicates presence of multiple
+  // dynamic dimensions in the same reassociation group.
+  assert(succeeded(outputShape) && "unable to infer output shape");
+  build(builder, result, memrefResultTy, src, reassociation, *outputShape);
+}
+
 void ExpandShapeOp::build(OpBuilder &builder, OperationState &result,
                           ArrayRef<int64_t> resultShape, Value src,
                           ArrayRef<ReassociationIndices> reassociation) {
@@ -2219,19 +2293,37 @@ void ExpandShapeOp::build(OpBuilder &builder, OperationState &result,
   build(builder, result, *resultType, src, reassociation);
 }
 
+void ExpandShapeOp::build(OpBuilder &builder, OperationState &result,
+                          ArrayRef<int64_t> resultShape, Value src,
+                          ArrayRef<ReassociationIndices> reassociation,
+                          ArrayRef<OpFoldResult> outputShape) {
+  // Only ranked memref source values are supported.
+  auto srcType = llvm::cast<MemRefType>(src.getType());
+  FailureOr<MemRefType> resultType =
+      ExpandShapeOp::computeExpandedType(srcType, resultShape, reassociation);
+  // Failure of this assertion usually indicates a problem with the source
+  // type, e.g., could not get strides/offset.
+  assert(succeeded(resultType) && "could not compute layout");
+  build(builder, result, *resultType, src, reassociation, outputShape);
+}
+
 LogicalResult ExpandShapeOp::verify() {
   MemRefType srcType = getSrcType();
   MemRefType resultType = getResultType();
 
-  if (srcType.getRank() >= resultType.getRank())
-    return emitOpError("expected rank expansion, but found source rank ")
-           << srcType.getRank() << " >= result rank " << resultType.getRank();
+  if (srcType.getRank() > resultType.getRank()) {
+    auto r0 = srcType.getRank();
+    auto r1 = resultType.getRank();
+    return emitOpError("has source rank ")
+           << r0 << " and result rank " << r1 << ". This is not an expansion ("
+           << r0 << " > " << r1 << ").";
+  }
 
   // Verify result shape.
   if (failed(verifyCollapsedShape(getOperation(), srcType.getShape(),
                                   resultType.getShape(),
                                   getReassociationIndices(),
-                                  /*allowMultipleDynamicDimsPerGroup=*/false)))
+                                  /*allowMultipleDynamicDimsPerGroup=*/true)))
     return failure();
 
   // Compute expected result type (including layout map).
@@ -2245,14 +2337,37 @@ LogicalResult ExpandShapeOp::verify() {
     return emitOpError("expected expanded type to be ")
            << *expectedResultType << " but found " << resultType;
 
+  if ((int64_t)getStaticOutputShape().size() != resultType.getRank())
+    return emitOpError("expected number of static shape bounds to be equal to "
+                       "the output rank (")
+           << resultType.getRank() << ") but found "
+           << getStaticOutputShape().size() << " inputs instead";
+
+  if ((int64_t)getOutputShape().size() !=
+      llvm::count(getStaticOutputShape(), ShapedType::kDynamic))
+    return emitOpError("mismatch in dynamic dims in output_shape and "
+                       "static_output_shape: static_output_shape has ")
+           << llvm::count(getStaticOutputShape(), ShapedType::kDynamic)
+           << " dynamic dims while output_shape has " << getOutputShape().size()
+           << " values";
+
+  // Verify if provided output shapes are in agreement with output type.
+  DenseI64ArrayAttr staticOutputShapes = getStaticOutputShapeAttr();
+  ArrayRef<int64_t> resShape = getResult().getType().getShape();
+  for (auto [pos, shape] : llvm::enumerate(resShape)) {
+    if (!ShapedType::isDynamic(shape) && shape != staticOutputShapes[pos]) {
+      return emitOpError("invalid output shape provided at pos ") << pos;
+    }
+  }
+
   return success();
 }
 
 void ExpandShapeOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                                 MLIRContext *context) {
-  results.add<ComposeReassociativeReshapeOps<ExpandShapeOp>,
-              ComposeExpandOfCollapseOp<ExpandShapeOp, CollapseShapeOp>>(
-      context);
+  results.add<
+      ComposeReassociativeReshapeOps<ExpandShapeOp, ReshapeOpKind::kExpand>,
+      ComposeExpandOfCollapseOp<ExpandShapeOp, CollapseShapeOp>>(context);
 }
 
 /// Compute the layout map after collapsing a given source MemRef type with the
@@ -2377,9 +2492,13 @@ LogicalResult CollapseShapeOp::verify() {
   MemRefType srcType = getSrcType();
   MemRefType resultType = getResultType();
 
-  if (srcType.getRank() <= resultType.getRank())
-    return emitOpError("expected rank reduction, but found source rank ")
-           << srcType.getRank() << " <= result rank " << resultType.getRank();
+  if (srcType.getRank() < resultType.getRank()) {
+    auto r0 = srcType.getRank();
+    auto r1 = resultType.getRank();
+    return emitOpError("has source rank ")
+           << r0 << " and result rank " << r1 << ". This is not a collapse ("
+           << r0 << " < " << r1 << ").";
+  }
 
   // Verify result shape.
   if (failed(verifyCollapsedShape(getOperation(), resultType.getShape(),
@@ -2449,9 +2568,11 @@ public:
 
 void CollapseShapeOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                                   MLIRContext *context) {
-  results.add<ComposeReassociativeReshapeOps<CollapseShapeOp>,
-              ComposeCollapseOfExpandOp<CollapseShapeOp, ExpandShapeOp, CastOp>,
-              CollapseShapeOpMemRefCastFolder>(context);
+  results.add<
+      ComposeReassociativeReshapeOps<CollapseShapeOp, ReshapeOpKind::kCollapse>,
+      ComposeCollapseOfExpandOp<CollapseShapeOp, ExpandShapeOp, CastOp,
+                                memref::DimOp, MemRefType>,
+      CollapseShapeOpMemRefCastFolder>(context);
 }
 
 OpFoldResult ExpandShapeOp::fold(FoldAdaptor adaptor) {
@@ -2760,7 +2881,8 @@ static bool haveCompatibleOffsets(MemRefType t1, MemRefType t2) {
 /// marked as dropped in `droppedDims`.
 static bool haveCompatibleStrides(MemRefType t1, MemRefType t2,
                                   const llvm::SmallBitVector &droppedDims) {
-  assert(size_t(t1.getRank()) == droppedDims.size() && "incorrect number of bits");
+  assert(size_t(t1.getRank()) == droppedDims.size() &&
+         "incorrect number of bits");
   assert(size_t(t1.getRank() - t2.getRank()) == droppedDims.count() &&
          "incorrect number of dropped dims");
   int64_t t1Offset, t2Offset;

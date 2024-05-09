@@ -14,7 +14,6 @@
 #include "bolt/Core/DynoStats.h"
 #include "bolt/Core/ParallelUtilities.h"
 #include "bolt/Rewrite/RewriteInstance.h"
-#include "bolt/Utils/Utils.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
@@ -283,10 +282,9 @@ public:
   DIEStreamer(DIEBuilder *DIEBldr, DWARFRewriter &Rewriter,
               DWARFLinkerBase::OutputFileType OutFileType,
               raw_pwrite_stream &OutFile,
-              std::function<StringRef(StringRef Input)> Translator,
               DWARFLinkerBase::MessageHandlerTy Warning)
-      : DwarfStreamer(OutFileType, OutFile, Translator, Warning),
-        DIEBldr(DIEBldr), Rewriter(Rewriter){};
+      : DwarfStreamer(OutFileType, OutFile, Warning), DIEBldr(DIEBldr),
+        Rewriter(Rewriter){};
 
   using DwarfStreamer::emitCompileUnitHeader;
 
@@ -347,6 +345,12 @@ static cl::opt<bool>
                       "multiple non-relocatable dwarf object files (dwo)."),
              cl::init(false), cl::cat(BoltCategory));
 
+static cl::opt<bool> CreateDebugNames(
+    "create-debug-names-section",
+    cl::desc("Creates .debug_names section, if the input binary doesn't have "
+             "it already, for DWARF5 CU/TUs."),
+    cl::init(false), cl::cat(BoltCategory));
+
 static cl::opt<bool>
     DebugSkeletonCu("debug-skeleton-cu",
                     cl::desc("prints out offsetrs for abbrev and debu_info of "
@@ -370,12 +374,11 @@ static cl::opt<bool> AlwaysConvertToRanges(
 extern cl::opt<std::string> CompDirOverride;
 } // namespace opts
 
-static bool getLowAndHighPC(const DIE &Die, const DWARFUnit &DU,
-                            uint64_t &LowPC, uint64_t &HighPC,
-                            uint64_t &SectionIndex) {
+/// If DW_AT_low_pc exists sets LowPC and returns true.
+static bool getLowPC(const DIE &Die, const DWARFUnit &DU, uint64_t &LowPC,
+                     uint64_t &SectionIndex) {
   DIEValue DvalLowPc = Die.findAttribute(dwarf::DW_AT_low_pc);
-  DIEValue DvalHighPc = Die.findAttribute(dwarf::DW_AT_high_pc);
-  if (!DvalLowPc || !DvalHighPc)
+  if (!DvalLowPc)
     return false;
 
   dwarf::Form Form = DvalLowPc.getForm();
@@ -398,12 +401,37 @@ static bool getLowAndHighPC(const DIE &Die, const DWARFUnit &DU,
     LowPC = LowPcValue;
     SectionIndex = 0;
   }
+  return true;
+}
+
+/// If DW_AT_high_pc exists sets HighPC and returns true.
+static bool getHighPC(const DIE &Die, const uint64_t LowPC, uint64_t &HighPC) {
+  DIEValue DvalHighPc = Die.findAttribute(dwarf::DW_AT_high_pc);
+  if (!DvalHighPc)
+    return false;
   if (DvalHighPc.getForm() == dwarf::DW_FORM_addr)
     HighPC = DvalHighPc.getDIEInteger().getValue();
   else
     HighPC = LowPC + DvalHighPc.getDIEInteger().getValue();
-
   return true;
+}
+
+/// If DW_AT_low_pc and DW_AT_high_pc exist sets LowPC and HighPC and returns
+/// true.
+static bool getLowAndHighPC(const DIE &Die, const DWARFUnit &DU,
+                            uint64_t &LowPC, uint64_t &HighPC,
+                            uint64_t &SectionIndex) {
+  uint64_t TempLowPC = LowPC;
+  uint64_t TempHighPC = HighPC;
+  uint64_t TempSectionIndex = SectionIndex;
+  if (getLowPC(Die, DU, TempLowPC, TempSectionIndex) &&
+      getHighPC(Die, TempLowPC, TempHighPC)) {
+    LowPC = TempLowPC;
+    HighPC = TempHighPC;
+    SectionIndex = TempSectionIndex;
+    return true;
+  }
+  return false;
 }
 
 static Expected<llvm::DWARFAddressRangesVector>
@@ -463,7 +491,6 @@ createDIEStreamer(const Triple &TheTriple, raw_pwrite_stream &OutFile,
 
   std::unique_ptr<DIEStreamer> Streamer = std::make_unique<DIEStreamer>(
       &DIEBldr, Rewriter, DWARFLinkerBase::OutputFileType::Object, OutFile,
-      [](StringRef Input) -> StringRef { return Input; },
       [&](const Twine &Warning, StringRef Context, const DWARFDie *) {});
   Error Err = Streamer->init(TheTriple, Swift5ReflectionSegmentName);
   if (Err)
@@ -555,17 +582,49 @@ static void emitDWOBuilder(const std::string &DWOName,
     Rewriter.writeDWOFiles(CU, OverriddenSections, DWOName, LocWriter);
 }
 
-void DWARFRewriter::addStringHelper(DIEBuilder &DIEBldr, DIE &Die,
-                                    const DWARFUnit &Unit,
-                                    DIEValue &DIEAttrInfo, StringRef Str) {
-  uint32_t NewOffset = StrWriter->addString(Str);
+/// Adds a \p Str to .debug_str section.
+/// Uses \p AttrInfoVal to either update entry in a DIE for legacy DWARF using
+/// \p DebugInfoPatcher, or for DWARF5 update an index in .debug_str_offsets
+/// for this contribution of \p Unit.
+static void addStringHelper(DebugStrOffsetsWriter &StrOffstsWriter,
+                            DebugStrWriter &StrWriter, DIEBuilder &DIEBldr,
+                            DIE &Die, const DWARFUnit &Unit,
+                            DIEValue &DIEAttrInfo, StringRef Str) {
+  uint32_t NewOffset = StrWriter.addString(Str);
   if (Unit.getVersion() >= 5) {
-    StrOffstsWriter->updateAddressMap(DIEAttrInfo.getDIEInteger().getValue(),
-                                      NewOffset);
+    StrOffstsWriter.updateAddressMap(DIEAttrInfo.getDIEInteger().getValue(),
+                                     NewOffset);
     return;
   }
   DIEBldr.replaceValue(&Die, DIEAttrInfo.getAttribute(), DIEAttrInfo.getForm(),
                        DIEInteger(NewOffset));
+}
+
+static std::string
+updateDWONameCompDir(DebugStrOffsetsWriter &StrOffstsWriter,
+                     DebugStrWriter &StrWriter,
+                     std::unordered_map<std::string, uint32_t> &NameToIndexMap,
+                     DWARFUnit &Unit, DIEBuilder &DIEBldr, DIE &UnitDIE) {
+  DIEValue DWONameAttrInfo = UnitDIE.findAttribute(dwarf::DW_AT_dwo_name);
+  if (!DWONameAttrInfo)
+    DWONameAttrInfo = UnitDIE.findAttribute(dwarf::DW_AT_GNU_dwo_name);
+  assert(DWONameAttrInfo && "DW_AT_dwo_name is not in Skeleton CU.");
+  std::string ObjectName;
+
+  ObjectName = getDWOName(Unit, NameToIndexMap);
+  addStringHelper(StrOffstsWriter, StrWriter, DIEBldr, UnitDIE, Unit,
+                  DWONameAttrInfo, ObjectName.c_str());
+
+  DIEValue CompDirAttrInfo = UnitDIE.findAttribute(dwarf::DW_AT_comp_dir);
+  assert(CompDirAttrInfo && "DW_AT_comp_dir is not in Skeleton CU.");
+
+  if (!opts::DwarfOutputPath.empty()) {
+    if (!sys::fs::exists(opts::DwarfOutputPath))
+      sys::fs::create_directory(opts::DwarfOutputPath);
+    addStringHelper(StrOffstsWriter, StrWriter, DIEBldr, UnitDIE, Unit,
+                    CompDirAttrInfo, opts::DwarfOutputPath.c_str());
+  }
+  return ObjectName;
 }
 
 using DWARFUnitVec = std::vector<DWARFUnit *>;
@@ -665,33 +724,8 @@ void DWARFRewriter::updateDebugInfo() {
   // specified.
   std::unordered_map<std::string, uint32_t> NameToIndexMap;
 
-  auto updateDWONameCompDir = [&](DWARFUnit &Unit, DIEBuilder &DIEBldr,
-                                  DIE &UnitDIE) -> std::string {
-    DIEValue DWONameAttrInfo = UnitDIE.findAttribute(dwarf::DW_AT_dwo_name);
-    if (!DWONameAttrInfo)
-      DWONameAttrInfo = UnitDIE.findAttribute(dwarf::DW_AT_GNU_dwo_name);
-    assert(DWONameAttrInfo && "DW_AT_dwo_name is not in Skeleton CU.");
-    std::string ObjectName;
-
-    {
-      std::lock_guard<std::mutex> Lock(AccessMutex);
-      ObjectName = getDWOName(Unit, NameToIndexMap);
-    }
-    addStringHelper(DIEBldr, UnitDIE, Unit, DWONameAttrInfo,
-                    ObjectName.c_str());
-
-    DIEValue CompDirAttrInfo = UnitDIE.findAttribute(dwarf::DW_AT_comp_dir);
-    assert(CompDirAttrInfo && "DW_AT_comp_dir is not in Skeleton CU.");
-
-    if (!opts::DwarfOutputPath.empty()) {
-      if (!sys::fs::exists(opts::DwarfOutputPath))
-        sys::fs::create_directory(opts::DwarfOutputPath);
-      addStringHelper(DIEBldr, UnitDIE, Unit, CompDirAttrInfo,
-                      opts::DwarfOutputPath.c_str());
-    }
-    return ObjectName;
-  };
-
+  DWARF5AcceleratorTable DebugNamesTable(opts::CreateDebugNames, BC,
+                                         *StrWriter);
   DWPState State;
   if (opts::WriteDWP)
     initDWPState(State);
@@ -709,10 +743,16 @@ void DWARFRewriter::updateDebugInfo() {
                                 : LegacyRangesSectionWriter.get();
     // Skipping CUs that failed to load.
     if (SplitCU) {
-      DIEBuilder DWODIEBuilder(&(*SplitCU)->getContext(), true);
+      DIEBuilder DWODIEBuilder(BC, &(*SplitCU)->getContext(), DebugNamesTable,
+                               Unit);
       DWODIEBuilder.buildDWOUnit(**SplitCU);
-      std::string DWOName = updateDWONameCompDir(
-          *Unit, *DIEBlder, *DIEBlder->getUnitDIEbyUnit(*Unit));
+      std::string DWOName = "";
+      {
+        std::lock_guard<std::mutex> Lock(AccessMutex);
+        DWOName = updateDWONameCompDir(*StrOffstsWriter, *StrWriter,
+                                       NameToIndexMap, *Unit, *DIEBlder,
+                                       *DIEBlder->getUnitDIEbyUnit(*Unit));
+      }
 
       DebugLoclistWriter DebugLocDWoWriter(*Unit, Unit->getVersion(), true);
       DebugRangesSectionWriter *TempRangesSectionWriter = RangesSectionWriter;
@@ -720,12 +760,7 @@ void DWARFRewriter::updateDebugInfo() {
         TempRangesSectionWriter = RangeListsWritersByCU[*DWOId].get();
       } else {
         RangesBase = RangesSectionWriter->getSectionOffset();
-        // For DWARF5 there is now .debug_rnglists.dwo, so don't need to
-        // update rnglists base.
-        if (RangesBase) {
-          DwoRangesBase[*DWOId] = *RangesBase;
-          setDwoRangesBase(*DWOId, *RangesBase);
-        }
+        setDwoRangesBase(*DWOId, *RangesBase);
       }
 
       updateUnitDebugInfo(*(*SplitCU), DWODIEBuilder, DebugLocDWoWriter,
@@ -754,7 +789,7 @@ void DWARFRewriter::updateDebugInfo() {
     AddrWriter->update(*DIEBlder, *Unit);
   };
 
-  DIEBuilder DIEBlder(BC.DwCtx.get());
+  DIEBuilder DIEBlder(BC, BC.DwCtx.get(), DebugNamesTable);
   DIEBlder.buildTypeUnits(StrOffstsWriter.get());
   SmallVector<char, 20> OutBuffer;
   std::unique_ptr<raw_svector_ostream> ObjOS =
@@ -780,16 +815,19 @@ void DWARFRewriter::updateDebugInfo() {
     }
   } else {
     // Update unit debug info in parallel
-    ThreadPool &ThreadPool = ParallelUtilities::getThreadPool();
+    ThreadPoolInterface &ThreadPool = ParallelUtilities::getThreadPool();
     for (std::unique_ptr<DWARFUnit> &CU : BC.DwCtx->compile_units())
       ThreadPool.async(processUnitDIE, CU.get(), &DIEBlder);
     ThreadPool.wait();
   }
 
+  DebugNamesTable.emitAccelTable();
+
   if (opts::WriteDWP)
     finalizeDWP(State);
 
-  finalizeDebugSections(DIEBlder, *Streamer, *ObjOS, OffsetMap);
+  finalizeDebugSections(DIEBlder, DebugNamesTable, *Streamer, *ObjOS,
+                        OffsetMap);
   updateGdbIndexSection(OffsetMap, CUIndex);
 }
 
@@ -873,7 +911,9 @@ void DWARFRewriter::updateUnitDebugInfo(
         OutputRanges.push_back({0, 0});
       const uint64_t RangesSectionOffset =
           RangesSectionWriter.addRanges(OutputRanges);
-      if (!Unit.isDWOUnit())
+      // Don't emit the zero low_pc arange.
+      if (!Unit.isDWOUnit() && !OutputRanges.empty() &&
+          OutputRanges.back().LowPC)
         ARangesSectionWriter->addCURanges(Unit.getOffset(),
                                           std::move(OutputRanges));
       updateDWARFObjectAddressRanges(Unit, DIEBldr, *Die, RangesSectionOffset,
@@ -919,15 +959,10 @@ void DWARFRewriter::updateUnitDebugInfo(
       DIEValue LowPCVal = Die->findAttribute(dwarf::DW_AT_low_pc);
       DIEValue HighPCVal = Die->findAttribute(dwarf::DW_AT_high_pc);
       if (FunctionRanges.empty()) {
-        if (LowPCVal && HighPCVal) {
+        if (LowPCVal && HighPCVal)
           FunctionRanges.push_back({0, HighPCVal.getDIEInteger().getValue()});
-        } else {
-          // I haven't seen this case, but who knows what other compilers
-          // generate.
+        else
           FunctionRanges.push_back({0, 1});
-          errs() << "BOLT-WARNING: [internal-dwarf-error]: subprogram got GCed "
-                    "by the linker, DW_AT_ranges is used\n";
-        }
       }
 
       if (FunctionRanges.size() == 1 && !opts::AlwaysConvertToRanges) {
@@ -1246,10 +1281,9 @@ void DWARFRewriter::updateUnitDebugInfo(
           }
         }
       } else if (LowPCAttrInfo) {
-        const std::optional<uint64_t> Result =
-            LowPCAttrInfo.getDIEInteger().getValue();
-        if (Result.has_value()) {
-          const uint64_t Address = Result.value();
+        uint64_t Address = 0;
+        uint64_t SectionIndex = 0;
+        if (getLowPC(*Die, Unit, Address, SectionIndex)) {
           uint64_t NewAddress = 0;
           if (const BinaryFunction *Function =
                   BC.getBinaryFunctionContainingAddress(Address)) {
@@ -1523,10 +1557,9 @@ CUOffsetMap DWARFRewriter::finalizeTypeSections(DIEBuilder &DIEBlder,
   return CUMap;
 }
 
-void DWARFRewriter::finalizeDebugSections(DIEBuilder &DIEBlder,
-                                          DIEStreamer &Streamer,
-                                          raw_svector_ostream &ObjOS,
-                                          CUOffsetMap &CUMap) {
+void DWARFRewriter::finalizeDebugSections(
+    DIEBuilder &DIEBlder, DWARF5AcceleratorTable &DebugNamesTable,
+    DIEStreamer &Streamer, raw_svector_ostream &ObjOS, CUOffsetMap &CUMap) {
   if (StrWriter->isInitialized()) {
     RewriteInstance::addToDebugSectionsToOverwrite(".debug_str");
     std::unique_ptr<DebugStrBufferVector> DebugStrSectionContents =
@@ -1624,6 +1657,15 @@ void DWARFRewriter::finalizeDebugSections(DIEBuilder &DIEBlder,
                                    copyByteArray(ARangesContents),
                                    ARangesContents.size());
   }
+
+  if (DebugNamesTable.isCreated()) {
+    RewriteInstance::addToDebugSectionsToOverwrite(".debug_names");
+    std::unique_ptr<DebugBufferVector> DebugNamesSectionContents =
+        DebugNamesTable.releaseBuffer();
+    BC.registerOrUpdateNoteSection(".debug_names",
+                                   copyByteArray(*DebugNamesSectionContents),
+                                   DebugNamesSectionContents->size());
+  }
 }
 
 void DWARFRewriter::finalizeCompileUnits(DIEBuilder &DIEBlder,
@@ -1652,10 +1694,11 @@ namespace {
 std::unique_ptr<BinaryContext>
 createDwarfOnlyBC(const object::ObjectFile &File) {
   return cantFail(BinaryContext::createBinaryContext(
-      &File, false,
+      File.makeTriple(), File.getFileName(), nullptr, false,
       DWARFContext::create(File, DWARFContext::ProcessDebugRelocations::Ignore,
                            nullptr, "", WithColor::defaultErrorHandler,
-                           WithColor::defaultWarningHandler)));
+                           WithColor::defaultWarningHandler),
+      {llvm::outs(), llvm::errs()}));
 }
 
 StringMap<DWARFRewriter::KnownSectionsEntry>

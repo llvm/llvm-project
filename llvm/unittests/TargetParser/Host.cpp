@@ -122,6 +122,9 @@ TEST(getLinuxHostCPUName, AArch64) {
   EXPECT_EQ(sys::detail::getHostCPUNameForARM("CPU implementer : 0xc0\n"
                                               "CPU part        : 0xac4"),
             "ampere1a");
+  EXPECT_EQ(sys::detail::getHostCPUNameForARM("CPU implementer : 0xc0\n"
+                                              "CPU part        : 0xac5"),
+            "ampere1b");
 
   // MSM8992/4 weirdness
   StringRef MSM8992ProcCpuInfo = R"(

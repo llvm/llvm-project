@@ -65,5 +65,5 @@ class TestDAP_threads(lldbdap_testcase.DAPTestCaseBase):
         self.continue_to_breakpoints(breakpoint_ids)
         # We are stopped at the second thread
         threads = self.dap_server.get_threads()
-        self.assertEquals(threads[0]["name"], "This is thread index #1")
-        self.assertEquals(threads[1]["name"], "This is thread index #2")
+        self.assertEqual(threads[0]["name"], "This is thread index #1")
+        self.assertEqual(threads[1]["name"], "This is thread index #2")

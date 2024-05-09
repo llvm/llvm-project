@@ -179,6 +179,7 @@ public:
   Expected<SymbolRef::Type> getSymbolType(DataRefImpl Symb) const override;
   Expected<section_iterator> getSymbolSection(DataRefImpl Symb) const override;
   uint32_t getSymbolSectionId(SymbolRef Sym) const;
+  uint32_t getSymbolSize(SymbolRef Sym) const;
 
   // Overrides from SectionRef.
   void moveSectionNext(DataRefImpl &Sec) const override;
@@ -238,7 +239,7 @@ private:
   bool isValidSectionSymbol(uint32_t Index) const;
   wasm::WasmFunction &getDefinedFunction(uint32_t Index);
   const wasm::WasmFunction &getDefinedFunction(uint32_t Index) const;
-  wasm::WasmGlobal &getDefinedGlobal(uint32_t Index);
+  const wasm::WasmGlobal &getDefinedGlobal(uint32_t Index) const;
   wasm::WasmTag &getDefinedTag(uint32_t Index);
 
   const WasmSection &getWasmSection(DataRefImpl Ref) const;

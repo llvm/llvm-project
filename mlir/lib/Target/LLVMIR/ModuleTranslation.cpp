@@ -51,10 +51,14 @@
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Verifier.h"
+#include "llvm/Support/Debug.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 #include <optional>
+
+#define DEBUG_TYPE "llvm-dialect-to-llvm-ir"
 
 using namespace mlir;
 using namespace mlir::LLVM;
@@ -270,16 +274,15 @@ translateDataLayout(DataLayoutSpecInterface attribute,
                 layoutStream << ":" << preferred;
               return success();
             })
-            .Case([&](LLVMPointerType ptrType) {
-              layoutStream << "p" << ptrType.getAddressSpace() << ":";
+            .Case([&](LLVMPointerType type) {
+              layoutStream << "p" << type.getAddressSpace() << ":";
               uint64_t size = dataLayout.getTypeSizeInBits(type);
               uint64_t abi = dataLayout.getTypeABIAlignment(type) * 8u;
               uint64_t preferred =
                   dataLayout.getTypePreferredAlignment(type) * 8u;
-              layoutStream << size << ":" << abi << ":" << preferred;
-              if (std::optional<uint64_t> index = extractPointerSpecValue(
-                      entry.getValue(), PtrDLEntryPos::Index))
-                layoutStream << ":" << *index;
+              uint64_t index = *dataLayout.getTypeIndexBitwidth(type);
+              layoutStream << size << ":" << abi << ":" << preferred << ":"
+                           << index;
               return success();
             })
             .Default([loc](Type type) {
@@ -712,6 +715,8 @@ void ModuleTranslation::forgetMapping(Region &region) {
           branchMapping.erase(&op);
         if (isa<LLVM::GlobalOp>(op))
           globalsMapping.erase(&op);
+        if (isa<LLVM::CallOp>(op))
+          callMapping.erase(&op);
         llvm::append_range(
             toProcess,
             llvm::map_range(op.getRegions(), [](Region &r) { return &r; }));
@@ -1042,17 +1047,80 @@ LogicalResult ModuleTranslation::convertGlobals() {
   for (auto op : getModuleBody(mlirModule).getOps<LLVM::GlobalOp>()) {
     if (Block *initializer = op.getInitializerBlock()) {
       llvm::IRBuilder<> builder(llvmModule->getContext());
+
+      [[maybe_unused]] int numConstantsHit = 0;
+      [[maybe_unused]] int numConstantsErased = 0;
+      DenseMap<llvm::ConstantAggregate *, int> constantAggregateUseMap;
+
       for (auto &op : initializer->without_terminator()) {
-        if (failed(convertOperation(op, builder)) ||
-            !isa<llvm::Constant>(lookupValue(op.getResult(0))))
+        if (failed(convertOperation(op, builder)))
+          return emitError(op.getLoc(), "fail to convert global initializer");
+        auto *cst = dyn_cast<llvm::Constant>(lookupValue(op.getResult(0)));
+        if (!cst)
           return emitError(op.getLoc(), "unemittable constant value");
+
+        // When emitting an LLVM constant, a new constant is created and the old
+        // constant may become dangling and take space. We should remove the
+        // dangling constants to avoid memory explosion especially for constant
+        // arrays whose number of elements is large.
+        // Because multiple operations may refer to the same constant, we need
+        // to count the number of uses of each constant array and remove it only
+        // when the count becomes zero.
+        if (auto *agg = dyn_cast<llvm::ConstantAggregate>(cst)) {
+          numConstantsHit++;
+          Value result = op.getResult(0);
+          int numUsers = std::distance(result.use_begin(), result.use_end());
+          auto [iterator, inserted] =
+              constantAggregateUseMap.try_emplace(agg, numUsers);
+          if (!inserted) {
+            // Key already exists, update the value
+            iterator->second += numUsers;
+          }
+        }
+        // Scan the operands of the operation to decrement the use count of
+        // constants. Erase the constant if the use count becomes zero.
+        for (Value v : op.getOperands()) {
+          auto cst = dyn_cast<llvm::ConstantAggregate>(lookupValue(v));
+          if (!cst)
+            continue;
+          auto iter = constantAggregateUseMap.find(cst);
+          assert(iter != constantAggregateUseMap.end() && "constant not found");
+          iter->second--;
+          if (iter->second == 0) {
+            // NOTE: cannot call removeDeadConstantUsers() here because it
+            // may remove the constant which has uses not be converted yet.
+            if (cst->user_empty()) {
+              cst->destroyConstant();
+              numConstantsErased++;
+            }
+            constantAggregateUseMap.erase(iter);
+          }
+        }
       }
+
       ReturnOp ret = cast<ReturnOp>(initializer->getTerminator());
       llvm::Constant *cst =
           cast<llvm::Constant>(lookupValue(ret.getOperand(0)));
       auto *global = cast<llvm::GlobalVariable>(lookupGlobal(op));
       if (!shouldDropGlobalInitializer(global->getLinkage(), cst))
         global->setInitializer(cst);
+
+      // Try to remove the dangling constants again after all operations are
+      // converted.
+      for (auto it : constantAggregateUseMap) {
+        auto cst = it.first;
+        cst->removeDeadConstantUsers();
+        if (cst->user_empty()) {
+          cst->destroyConstant();
+          numConstantsErased++;
+        }
+      }
+
+      LLVM_DEBUG(llvm::dbgs()
+                     << "Convert initializer for " << op.getName() << "\n";
+                 llvm::dbgs() << numConstantsHit << " new constants hit\n";
+                 llvm::dbgs()
+                 << numConstantsErased << " dangling constants erased\n";);
     }
   }
 
@@ -1298,28 +1366,29 @@ static void convertFunctionAttributes(LLVMFuncOp func,
   llvmFunc->setMemoryEffects(newMemEffects);
 }
 
-llvm::AttrBuilder
-ModuleTranslation::convertParameterAttrs(DictionaryAttr paramAttrs) {
+FailureOr<llvm::AttrBuilder>
+ModuleTranslation::convertParameterAttrs(LLVMFuncOp func, int argIdx,
+                                         DictionaryAttr paramAttrs) {
   llvm::AttrBuilder attrBuilder(llvmModule->getContext());
+  auto attrNameToKindMapping = getAttrNameToKindMapping();
 
-  for (auto [llvmKind, mlirName] : getAttrKindToNameMapping()) {
-    Attribute attr = paramAttrs.get(mlirName);
-    // Skip attributes that are not present.
-    if (!attr)
-      continue;
+  for (auto namedAttr : paramAttrs) {
+    auto it = attrNameToKindMapping.find(namedAttr.getName());
+    if (it != attrNameToKindMapping.end()) {
+      llvm::Attribute::AttrKind llvmKind = it->second;
 
-    // NOTE: C++17 does not support capturing structured bindings.
-    llvm::Attribute::AttrKind llvmKindCap = llvmKind;
-
-    llvm::TypeSwitch<Attribute>(attr)
-        .Case<TypeAttr>([&](auto typeAttr) {
-          attrBuilder.addTypeAttr(llvmKindCap,
-                                  convertType(typeAttr.getValue()));
-        })
-        .Case<IntegerAttr>([&](auto intAttr) {
-          attrBuilder.addRawIntAttr(llvmKindCap, intAttr.getInt());
-        })
-        .Case<UnitAttr>([&](auto) { attrBuilder.addAttribute(llvmKindCap); });
+      llvm::TypeSwitch<Attribute>(namedAttr.getValue())
+          .Case<TypeAttr>([&](auto typeAttr) {
+            attrBuilder.addTypeAttr(llvmKind, convertType(typeAttr.getValue()));
+          })
+          .Case<IntegerAttr>([&](auto intAttr) {
+            attrBuilder.addRawIntAttr(llvmKind, intAttr.getInt());
+          })
+          .Case<UnitAttr>([&](auto) { attrBuilder.addAttribute(llvmKind); });
+    } else if (namedAttr.getNameDialect()) {
+      if (failed(iface.convertParameterAttr(func, argIdx, namedAttr, *this)))
+        return failure();
+    }
   }
 
   return attrBuilder;
@@ -1348,14 +1417,21 @@ LogicalResult ModuleTranslation::convertFunctionSignatures() {
     // Convert result attributes.
     if (ArrayAttr allResultAttrs = function.getAllResultAttrs()) {
       DictionaryAttr resultAttrs = cast<DictionaryAttr>(allResultAttrs[0]);
-      llvmFunc->addRetAttrs(convertParameterAttrs(resultAttrs));
+      FailureOr<llvm::AttrBuilder> attrBuilder =
+          convertParameterAttrs(function, -1, resultAttrs);
+      if (failed(attrBuilder))
+        return failure();
+      llvmFunc->addRetAttrs(*attrBuilder);
     }
 
     // Convert argument attributes.
     for (auto [argIdx, llvmArg] : llvm::enumerate(llvmFunc->args())) {
       if (DictionaryAttr argAttrs = function.getArgAttrDict(argIdx)) {
-        llvm::AttrBuilder attrBuilder = convertParameterAttrs(argAttrs);
-        llvmArg.addAttrs(attrBuilder);
+        FailureOr<llvm::AttrBuilder> attrBuilder =
+            convertParameterAttrs(function, argIdx, argAttrs);
+        if (failed(attrBuilder))
+          return failure();
+        llvmArg.addAttrs(*attrBuilder);
       }
     }
 
@@ -1437,13 +1513,14 @@ ModuleTranslation::getOrCreateAliasScope(AliasScopeAttr aliasScopeAttr) {
   if (!scopeInserted)
     return scopeIt->second;
   llvm::LLVMContext &ctx = llvmModule->getContext();
+  auto dummy = llvm::MDNode::getTemporary(ctx, std::nullopt);
   // Convert the domain metadata node if necessary.
   auto [domainIt, insertedDomain] = aliasDomainMetadataMapping.try_emplace(
       aliasScopeAttr.getDomain(), nullptr);
   if (insertedDomain) {
     llvm::SmallVector<llvm::Metadata *, 2> operands;
     // Placeholder for self-reference.
-    operands.push_back({});
+    operands.push_back(dummy.get());
     if (StringAttr description = aliasScopeAttr.getDomain().getDescription())
       operands.push_back(llvm::MDString::get(ctx, description));
     domainIt->second = llvm::MDNode::get(ctx, operands);
@@ -1454,7 +1531,7 @@ ModuleTranslation::getOrCreateAliasScope(AliasScopeAttr aliasScopeAttr) {
   assert(domainIt->second && "Scope's domain should already be valid");
   llvm::SmallVector<llvm::Metadata *, 3> operands;
   // Placeholder for self-reference.
-  operands.push_back({});
+  operands.push_back(dummy.get());
   operands.push_back(domainIt->second);
   if (StringAttr description = aliasScopeAttr.getDescription())
     operands.push_back(llvm::MDString::get(ctx, description));
@@ -1642,6 +1719,16 @@ ModuleTranslation::translateGlobalVariableExpression(
 
 llvm::Metadata *ModuleTranslation::translateDebugInfo(LLVM::DINodeAttr attr) {
   return debugTranslation->translate(attr);
+}
+
+llvm::RoundingMode
+ModuleTranslation::translateRoundingMode(LLVM::RoundingMode rounding) {
+  return convertRoundingModeToLLVM(rounding);
+}
+
+llvm::fp::ExceptionBehavior ModuleTranslation::translateFPExceptionBehavior(
+    LLVM::FPExceptionBehavior exceptionBehavior) {
+  return convertFPExceptionBehaviorToLLVM(exceptionBehavior);
 }
 
 llvm::NamedMDNode *

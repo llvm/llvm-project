@@ -59,17 +59,22 @@ struct InlineDescriptor {
 
   /// Flag indicating if the storage is constant or not.
   /// Relevant for primitive fields.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsConst : 1;
   /// For primitive fields, it indicates if the field was initialized.
   /// Primitive fields in static storage are always initialized.
   /// Arrays are always initialized, even though their elements might not be.
   /// Base classes are initialized after the constructor is invoked.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsInitialized : 1;
   /// Flag indicating if the field is an embedded base class.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsBase : 1;
   /// Flag indicating if the field is the active member of a union.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsActive : 1;
   /// Flag indicating if the field is mutable (if in a record).
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsFieldMutable : 1;
 
   const Descriptor *Desc;
@@ -77,6 +82,9 @@ struct InlineDescriptor {
   InlineDescriptor(const Descriptor *D)
       : Offset(sizeof(InlineDescriptor)), IsConst(false), IsInitialized(false),
         IsBase(false), IsActive(false), IsFieldMutable(false), Desc(D) {}
+
+  void dump() const { dump(llvm::errs()); }
+  void dump(llvm::raw_ostream &OS) const;
 };
 
 /// Describes a memory block created by an allocation site.
@@ -107,6 +115,10 @@ public:
   const Record *const ElemRecord = nullptr;
   /// Descriptor of the array element.
   const Descriptor *const ElemDesc = nullptr;
+  /// The primitive type this descriptor was created for,
+  /// or the primitive element type in case this is
+  /// a primitive array.
+  const std::optional<PrimType> PrimT = std::nullopt;
   /// Flag indicating if the block is mutable.
   const bool IsConst = false;
   /// Flag indicating if a field is mutable.
@@ -147,7 +159,11 @@ public:
   Descriptor(const DeclTy &D, const Record *R, MetadataSize MD, bool IsConst,
              bool IsTemporary, bool IsMutable);
 
-  Descriptor(const DeclTy &D, MetadataSize MD);
+  /// Allocates a dummy descriptor.
+  Descriptor(const DeclTy &D);
+
+  /// Allocates a dummy array descriptor.
+  Descriptor(const DeclTy &D, UnknownSize);
 
   QualType getType() const;
   QualType getElemQualType() const;
@@ -155,9 +171,14 @@ public:
 
   const Decl *asDecl() const { return Source.dyn_cast<const Decl *>(); }
   const Expr *asExpr() const { return Source.dyn_cast<const Expr *>(); }
+  const DeclTy &getSource() const { return Source; }
 
   const ValueDecl *asValueDecl() const {
     return dyn_cast_if_present<ValueDecl>(asDecl());
+  }
+
+  const VarDecl *asVarDecl() const {
+    return dyn_cast_if_present<VarDecl>(asDecl());
   }
 
   const FieldDecl *asFieldDecl() const {
@@ -172,6 +193,11 @@ public:
   unsigned getSize() const {
     assert(!isUnknownSizeArray() && "Array of unknown size");
     return Size;
+  }
+
+  PrimType getPrimType() const {
+    assert(isPrimitiveArray() || isPrimitive());
+    return *PrimT;
   }
 
   /// Returns the allocated size, including metadata.
@@ -204,6 +230,9 @@ public:
   bool isRecord() const { return !IsArray && ElemRecord; }
   /// Checks if this is a dummy descriptor.
   bool isDummy() const { return IsDummy; }
+
+  void dump() const;
+  void dump(llvm::raw_ostream &OS) const;
 };
 
 /// Bitfield tracking the initialisation status of elements of primitive arrays.

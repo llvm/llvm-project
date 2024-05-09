@@ -366,7 +366,7 @@ Note: This driver listens for IR changes via the callbacks provided by
 rewriter and do not bypass the rewriter API by modifying ops directly.
 
 Note: This driver is the one used by the [canonicalization](Canonicalization.md)
-[pass](Passes.md/#-canonicalize-canonicalize-operations) in MLIR.
+[pass](Passes.md/#-canonicalize) in MLIR.
 
 ### Debugging
 

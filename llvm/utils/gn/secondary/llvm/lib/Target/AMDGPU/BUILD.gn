@@ -60,7 +60,9 @@ tablegen("AMDGPUGenMCPseudoLowering") {
 tablegen("AMDGPUGenRegisterBank") {
   visibility = [
     ":LLVMAMDGPUCodeGen",
+    "MCTargetDesc",
     "Utils",
+    "//llvm/unittests/MC/AMDGPU:AMDGPUMCTests",
     "//llvm/unittests/Target/AMDGPU:AMDGPUTests",
   ]
   args = [ "-gen-register-bank" ]
@@ -157,6 +159,7 @@ static_library("LLVMAMDGPUCodeGen") {
     "AMDGPULegalizerInfo.cpp",
     "AMDGPULibCalls.cpp",
     "AMDGPULibFunc.cpp",
+    "AMDGPULowerBufferFatPointers.cpp",
     "AMDGPULowerKernelArguments.cpp",
     "AMDGPULowerKernelAttributes.cpp",
     "AMDGPULowerModuleLDSPass.cpp",

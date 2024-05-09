@@ -106,8 +106,6 @@ bool AMDGPUPreLegalizerCombinerImpl::tryCombineAll(MachineInstr &MI) const {
     return true;
 
   switch (MI.getOpcode()) {
-  case TargetOpcode::G_CONCAT_VECTORS:
-    return Helper.tryCombineConcatVectors(MI);
   case TargetOpcode::G_SHUFFLE_VECTOR:
     return Helper.tryCombineShuffleVector(MI);
   }
@@ -183,8 +181,6 @@ void AMDGPUPreLegalizerCombinerImpl::applyClampI64ToI16(
   assert(MI.getParent()->getParent()->getRegInfo().getType(Src) ==
          LLT::scalar(64));
   const LLT S32 = LLT::scalar(32);
-
-  B.setInstrAndDebugLoc(MI);
 
   auto Unmerge = B.buildUnmerge(S32, Src);
 

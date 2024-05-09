@@ -43,7 +43,6 @@ namespace llvm::RISCV {
 #define GET_RISCVVSETable_IMPL
 #define GET_RISCVVLXTable_IMPL
 #define GET_RISCVVSXTable_IMPL
-#define GET_RISCVMaskedPseudosTable_IMPL
 #include "RISCVGenSearchableTables.inc"
 } // namespace llvm::RISCV
 
@@ -577,9 +576,8 @@ void RISCVDAGToDAGISel::selectVSETVLI(SDNode *Node) {
   SDValue VLOperand;
   unsigned Opcode = RISCV::PseudoVSETVLI;
   if (auto *C = dyn_cast<ConstantSDNode>(Node->getOperand(1))) {
-    const unsigned VLEN = Subtarget->getRealMinVLen();
-    if (VLEN == Subtarget->getRealMaxVLen())
-      if (VLEN / RISCVVType::getSEWLMULRatio(SEW, VLMul) == C->getZExtValue())
+    if (auto VLEN = Subtarget->getRealVLen())
+      if (*VLEN / RISCVVType::getSEWLMULRatio(SEW, VLMul) == C->getZExtValue())
         VLMax = true;
   }
   if (VLMax || isAllOnesConstant(Node->getOperand(1))) {
@@ -1008,7 +1006,44 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     ReplaceNode(Node, Res);
     return;
   }
+  case RISCVISD::BuildPairF64: {
+    if (!Subtarget->hasStdExtZdinx())
+      break;
+
+    assert(!Subtarget->is64Bit() && "Unexpected subtarget");
+
+    SDValue Ops[] = {
+        CurDAG->getTargetConstant(RISCV::GPRPairRegClassID, DL, MVT::i32),
+        Node->getOperand(0),
+        CurDAG->getTargetConstant(RISCV::sub_gpr_even, DL, MVT::i32),
+        Node->getOperand(1),
+        CurDAG->getTargetConstant(RISCV::sub_gpr_odd, DL, MVT::i32)};
+
+    SDNode *N =
+        CurDAG->getMachineNode(TargetOpcode::REG_SEQUENCE, DL, MVT::f64, Ops);
+    ReplaceNode(Node, N);
+    return;
+  }
   case RISCVISD::SplitF64: {
+    if (Subtarget->hasStdExtZdinx()) {
+      assert(!Subtarget->is64Bit() && "Unexpected subtarget");
+
+      if (!SDValue(Node, 0).use_empty()) {
+        SDValue Lo = CurDAG->getTargetExtractSubreg(RISCV::sub_gpr_even, DL, VT,
+                                                    Node->getOperand(0));
+        ReplaceUses(SDValue(Node, 0), Lo);
+      }
+
+      if (!SDValue(Node, 1).use_empty()) {
+        SDValue Hi = CurDAG->getTargetExtractSubreg(RISCV::sub_gpr_odd, DL, VT,
+                                                    Node->getOperand(0));
+        ReplaceUses(SDValue(Node, 1), Hi);
+      }
+
+      CurDAG->RemoveDeadNode(Node);
+      return;
+    }
+
     if (!Subtarget->hasStdExtZfa())
       break;
     assert(Subtarget->hasStdExtD() && !Subtarget->is64Bit() &&
@@ -2063,16 +2098,25 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     const RISCVTargetLowering &TLI = *Subtarget->getTargetLowering();
     MVT SubVecContainerVT = SubVecVT;
     // Establish the correct scalable-vector types for any fixed-length type.
-    if (SubVecVT.isFixedLengthVector())
+    if (SubVecVT.isFixedLengthVector()) {
       SubVecContainerVT = TLI.getContainerForFixedLengthVector(SubVecVT);
+      TypeSize VecRegSize = TypeSize::getScalable(RISCV::RVVBitsPerBlock);
+      [[maybe_unused]] bool ExactlyVecRegSized =
+          Subtarget->expandVScale(SubVecVT.getSizeInBits())
+              .isKnownMultipleOf(Subtarget->expandVScale(VecRegSize));
+      assert(isPowerOf2_64(Subtarget->expandVScale(SubVecVT.getSizeInBits())
+                               .getKnownMinValue()));
+      assert(Idx == 0 && (ExactlyVecRegSized || V.isUndef()));
+    }
+    MVT ContainerVT = VT;
     if (VT.isFixedLengthVector())
-      VT = TLI.getContainerForFixedLengthVector(VT);
+      ContainerVT = TLI.getContainerForFixedLengthVector(VT);
 
     const auto *TRI = Subtarget->getRegisterInfo();
     unsigned SubRegIdx;
     std::tie(SubRegIdx, Idx) =
         RISCVTargetLowering::decomposeSubvectorInsertExtractToSubRegs(
-            VT, SubVecContainerVT, Idx, TRI);
+            ContainerVT, SubVecContainerVT, Idx, TRI);
 
     // If the Idx hasn't been completely eliminated then this is a subvector
     // insert which doesn't naturally align to a vector register. These must
@@ -2092,7 +2136,8 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     // If we haven't set a SubRegIdx, then we must be going between
     // equally-sized LMUL groups (e.g. VR -> VR). This can be done as a copy.
     if (SubRegIdx == RISCV::NoSubRegister) {
-      unsigned InRegClassID = RISCVTargetLowering::getRegClassIDForVecVT(VT);
+      unsigned InRegClassID =
+          RISCVTargetLowering::getRegClassIDForVecVT(ContainerVT);
       assert(RISCVTargetLowering::getRegClassIDForVecVT(SubVecContainerVT) ==
                  InRegClassID &&
              "Unexpected subvector extraction");
@@ -2116,8 +2161,10 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     const RISCVTargetLowering &TLI = *Subtarget->getTargetLowering();
     MVT SubVecContainerVT = VT;
     // Establish the correct scalable-vector types for any fixed-length type.
-    if (VT.isFixedLengthVector())
+    if (VT.isFixedLengthVector()) {
+      assert(Idx == 0);
       SubVecContainerVT = TLI.getContainerForFixedLengthVector(VT);
+    }
     if (InVT.isFixedLengthVector())
       InVT = TLI.getContainerForFixedLengthVector(InVT);
 
@@ -3245,24 +3292,24 @@ bool RISCVDAGToDAGISel::selectVSplatUimm(SDValue N, unsigned Bits,
 }
 
 bool RISCVDAGToDAGISel::selectLow8BitsVSplat(SDValue N, SDValue &SplatVal) {
-  // Truncates are custom lowered during legalization.
-  auto IsTrunc = [this](SDValue N) {
-    if (N->getOpcode() != RISCVISD::TRUNCATE_VECTOR_VL)
+  auto IsExtOrTrunc = [](SDValue N) {
+    switch (N->getOpcode()) {
+    case ISD::SIGN_EXTEND:
+    case ISD::ZERO_EXTEND:
+    // There's no passthru on these _VL nodes so any VL/mask is ok, since any
+    // inactive elements will be undef.
+    case RISCVISD::TRUNCATE_VECTOR_VL:
+    case RISCVISD::VSEXT_VL:
+    case RISCVISD::VZEXT_VL:
+      return true;
+    default:
       return false;
-    SDValue VL;
-    selectVLOp(N->getOperand(2), VL);
-    // Any vmset_vl is ok, since any bits past VL are undefined and we can
-    // assume they are set.
-    return N->getOperand(1).getOpcode() == RISCVISD::VMSET_VL &&
-           isa<ConstantSDNode>(VL) &&
-           cast<ConstantSDNode>(VL)->getSExtValue() == RISCV::VLMaxSentinel;
+    }
   };
 
-  // We can have multiple nested truncates, so unravel them all if needed.
-  while (N->getOpcode() == ISD::SIGN_EXTEND ||
-         N->getOpcode() == ISD::ZERO_EXTEND || IsTrunc(N)) {
-    if (!N.hasOneUse() ||
-        N.getValueType().getSizeInBits().getKnownMinValue() < 8)
+  // We can have multiple nested nodes, so unravel them all if needed.
+  while (IsExtOrTrunc(N)) {
+    if (!N.hasOneUse() || N.getScalarValueSizeInBits() < 8)
       return false;
     N = N->getOperand(0);
   }
@@ -3431,8 +3478,15 @@ static bool usesAllOnesMask(SDNode *N, unsigned MaskOpIdx) {
 }
 
 static bool isImplicitDef(SDValue V) {
-  return V.isMachineOpcode() &&
-         V.getMachineOpcode() == TargetOpcode::IMPLICIT_DEF;
+  if (!V.isMachineOpcode())
+    return false;
+  if (V.getMachineOpcode() == TargetOpcode::REG_SEQUENCE) {
+    for (unsigned I = 1; I < V.getNumOperands(); I += 2)
+      if (!isImplicitDef(V.getOperand(I)))
+        return false;
+    return true;
+  }
+  return V.getMachineOpcode() == TargetOpcode::IMPLICIT_DEF;
 }
 
 // Optimize masked RVV pseudo instructions with a known all-ones mask to their
@@ -3627,7 +3681,6 @@ bool RISCVDAGToDAGISel::performCombineVMergeAndVOps(SDNode *N) {
   }
 
   // Skip if True has side effect.
-  // TODO: Support vleff and vlsegff.
   if (TII->get(TrueOpc).hasUnmodeledSideEffects())
     return false;
 

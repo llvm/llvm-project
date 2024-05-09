@@ -1,0 +1,22 @@
+//===-- Implementation header for RPC functions -----------------*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef LLVM_LIBC_SRC_GPU_RPC_HOST_CALL_H
+#define LLVM_LIBC_SRC_GPU_RPC_HOST_CALL_H
+
+#include <stddef.h>
+#include <stdio.h>
+
+namespace LIBC_NAMESPACE {
+
+int rpc_fprintf(::FILE *__restrict stream, const char *__restrict format,
+                void *argc, size_t size);
+
+} // namespace LIBC_NAMESPACE
+
+#endif // LLVM_LIBC_SRC_GPU_RPC_HOST_CALL_H

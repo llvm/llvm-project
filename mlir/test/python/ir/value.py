@@ -3,7 +3,6 @@
 import gc
 from mlir.ir import *
 from mlir.dialects import func
-from mlir.dialects._ods_common import SubClassValueT
 
 
 def run(f):
@@ -270,7 +269,7 @@ def testValueCasters():
             return super().__str__().replace(Value.__name__, NOPBlockArg.__name__)
 
     @register_value_caster(IntegerType.static_typeid)
-    def cast_int(v) -> SubClassValueT:
+    def cast_int(v) -> Value:
         print("in caster", v.__class__.__name__)
         if isinstance(v, OpResult):
             return NOPResult(v)

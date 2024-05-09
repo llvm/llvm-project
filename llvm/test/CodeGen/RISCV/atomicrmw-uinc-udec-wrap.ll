@@ -127,11 +127,11 @@ define i8 @atomicrmw_uinc_wrap_i8(ptr %ptr, i8 %val) {
 ; RV64IA-LABEL: atomicrmw_uinc_wrap_i8:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a0, -4
-; RV64IA-NEXT:    slli a0, a0, 3
-; RV64IA-NEXT:    li a3, 255
-; RV64IA-NEXT:    sllw a4, a3, a0
+; RV64IA-NEXT:    slli a4, a0, 3
+; RV64IA-NEXT:    andi a0, a4, 24
+; RV64IA-NEXT:    li a5, 255
 ; RV64IA-NEXT:    lw a3, 0(a2)
-; RV64IA-NEXT:    andi a0, a0, 24
+; RV64IA-NEXT:    sllw a4, a5, a4
 ; RV64IA-NEXT:    not a4, a4
 ; RV64IA-NEXT:    andi a1, a1, 255
 ; RV64IA-NEXT:  .LBB0_1: # %atomicrmw.start

@@ -235,7 +235,9 @@ public:
   // and UseOpIdx are the indices of the operands in Def and Use, respectively.
   // Otherwise, either may be -1.
   virtual void adjustSchedDependency(SUnit *Def, int DefOpIdx, SUnit *Use,
-                                     int UseOpIdx, SDep &Dep) const {}
+                                     int UseOpIdx, SDep &Dep,
+                                     const TargetSchedModel *SchedModel) const {
+  }
 
   // For use with PostRAScheduling: get the anti-dependence breaking that should
   // be performed before post-RA scheduling.
@@ -327,6 +329,12 @@ public:
 
   /// Get the list of MacroFusion predicates.
   virtual std::vector<MacroFusionPredTy> getMacroFusions() const { return {}; };
+
+  /// supportsInitUndef is used to determine if an architecture supports
+  /// the Init Undef Pass. By default, it is assumed that it will not support
+  /// the pass, with architecture specific overrides providing the information
+  /// where they are implemented.
+  virtual bool supportsInitUndef() const { return false; }
 };
 
 } // end namespace llvm

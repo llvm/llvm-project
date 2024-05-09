@@ -50,6 +50,9 @@ BUILTIN(__builtin_arm_wfi, "v", "")
 BUILTIN(__builtin_arm_sev, "v", "")
 BUILTIN(__builtin_arm_sevl, "v", "")
 
+// Like __builtin_trap but provide an 16-bit immediate reason code (which goes into `brk #N`).
+BUILTIN(__builtin_arm_trap, "vUIs", "nr")
+
 // CRC32
 TARGET_BUILTIN(__builtin_arm_crc32b, "UiUiUc", "nc", "crc")
 TARGET_BUILTIN(__builtin_arm_crc32cb, "UiUiUc", "nc", "crc")
@@ -139,6 +142,7 @@ TARGET_HEADER_BUILTIN(_BitScanForward64, "UcUNi*ULLi", "nh", INTRIN_H, ALL_MS_LA
 TARGET_HEADER_BUILTIN(_BitScanReverse64, "UcUNi*ULLi", "nh", INTRIN_H, ALL_MS_LANGUAGES, "")
 
 TARGET_HEADER_BUILTIN(_InterlockedAdd,           "NiNiD*Ni",    "nh", INTRIN_H, ALL_MS_LANGUAGES, "")
+TARGET_HEADER_BUILTIN(_InterlockedAdd64,         "LLiLLiD*LLi", "nh", INTRIN_H, ALL_MS_LANGUAGES, "")
 TARGET_HEADER_BUILTIN(_InterlockedAnd64,         "LLiLLiD*LLi", "nh", INTRIN_H, ALL_MS_LANGUAGES, "")
 TARGET_HEADER_BUILTIN(_InterlockedDecrement64,   "LLiLLiD*",    "nh", INTRIN_H, ALL_MS_LANGUAGES, "")
 TARGET_HEADER_BUILTIN(_InterlockedExchange64,    "LLiLLiD*LLi", "nh", INTRIN_H, ALL_MS_LANGUAGES, "")

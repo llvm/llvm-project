@@ -36,7 +36,7 @@ using namespace clang;
 // A check to make sure the ObjCOrBuiltinID has sufficient room to store the
 // largest possible target/aux-target combination. If we exceed this, we likely
 // need to just change the ObjCOrBuiltinIDBits value in IdentifierTable.h.
-static_assert(2 * LargestBuiltinID < (2 << (ObjCOrBuiltinIDBits - 1)),
+static_assert(2 * LargestBuiltinID < (2 << (InterestingIdentifierBits - 1)),
               "Insufficient ObjCOrBuiltinID Bits");
 
 //===----------------------------------------------------------------------===//
@@ -280,13 +280,13 @@ static void AddObjCKeyword(StringRef Name,
   Table.get(Name).setObjCKeywordID(ObjCID);
 }
 
-static void AddInterestingIdentifier(StringRef Name,
-                                     tok::InterestingIdentifierKind BTID,
-                                     IdentifierTable &Table) {
-  // Don't add 'not_interesting' identifier.
-  if (BTID != tok::not_interesting) {
+static void AddNotableIdentifier(StringRef Name,
+                                 tok::NotableIdentifierKind BTID,
+                                 IdentifierTable &Table) {
+  // Don't add 'not_notable' identifier.
+  if (BTID != tok::not_notable) {
     IdentifierInfo &Info = Table.get(Name, tok::identifier);
-    Info.setInterestingIdentifierID(BTID);
+    Info.setNotableIdentifierID(BTID);
   }
 }
 
@@ -306,8 +306,8 @@ void IdentifierTable::AddKeywords(const LangOptions &LangOpts) {
 #define OBJC_AT_KEYWORD(NAME)  \
   if (LangOpts.ObjC)           \
     AddObjCKeyword(StringRef(#NAME), tok::objc_##NAME, *this);
-#define INTERESTING_IDENTIFIER(NAME)                                           \
-  AddInterestingIdentifier(StringRef(#NAME), tok::NAME, *this);
+#define NOTABLE_IDENTIFIER(NAME)                                               \
+  AddNotableIdentifier(StringRef(#NAME), tok::NAME, *this);
 
 #define TESTING_KEYWORD(NAME, FLAGS)
 #include "clang/Basic/TokenKinds.def"
@@ -541,7 +541,8 @@ unsigned Selector::getNumArgs() const {
   return SI->getNumArgs();
 }
 
-IdentifierInfo *Selector::getIdentifierInfoForSlot(unsigned argIndex) const {
+const IdentifierInfo *
+Selector::getIdentifierInfoForSlot(unsigned argIndex) const {
   if (getIdentifierInfoFlag() < MultiArg) {
     assert(argIndex == 0 && "illegal keyword index");
     return getAsIdentifierInfo();
@@ -553,7 +554,7 @@ IdentifierInfo *Selector::getIdentifierInfoForSlot(unsigned argIndex) const {
 }
 
 StringRef Selector::getNameForSlot(unsigned int argIndex) const {
-  IdentifierInfo *II = getIdentifierInfoForSlot(argIndex);
+  const IdentifierInfo *II = getIdentifierInfoForSlot(argIndex);
   return II ? II->getName() : StringRef();
 }
 
@@ -574,7 +575,7 @@ std::string Selector::getAsString() const {
     return "<null selector>";
 
   if (getIdentifierInfoFlag() < MultiArg) {
-    IdentifierInfo *II = getAsIdentifierInfo();
+    const IdentifierInfo *II = getAsIdentifierInfo();
 
     if (getNumArgs() == 0) {
       assert(II && "If the number of arguments is 0 then II is guaranteed to "
@@ -608,7 +609,7 @@ static bool startsWithWord(StringRef name, StringRef word) {
 }
 
 ObjCMethodFamily Selector::getMethodFamilyImpl(Selector sel) {
-  IdentifierInfo *first = sel.getIdentifierInfoForSlot(0);
+  const IdentifierInfo *first = sel.getIdentifierInfoForSlot(0);
   if (!first) return OMF_None;
 
   StringRef name = first->getName();
@@ -655,7 +656,7 @@ ObjCMethodFamily Selector::getMethodFamilyImpl(Selector sel) {
 }
 
 ObjCInstanceTypeFamily Selector::getInstTypeMethodFamily(Selector sel) {
-  IdentifierInfo *first = sel.getIdentifierInfoForSlot(0);
+  const IdentifierInfo *first = sel.getIdentifierInfoForSlot(0);
   if (!first) return OIT_None;
 
   StringRef name = first->getName();
@@ -683,7 +684,7 @@ ObjCInstanceTypeFamily Selector::getInstTypeMethodFamily(Selector sel) {
 }
 
 ObjCStringFormatFamily Selector::getStringFormatFamilyImpl(Selector sel) {
-  IdentifierInfo *first = sel.getIdentifierInfoForSlot(0);
+  const IdentifierInfo *first = sel.getIdentifierInfoForSlot(0);
   if (!first) return SFF_None;
 
   StringRef name = first->getName();
@@ -750,7 +751,8 @@ size_t SelectorTable::getTotalMemory() const {
   return SelTabImpl.Allocator.getTotalMemory();
 }
 
-Selector SelectorTable::getSelector(unsigned nKeys, IdentifierInfo **IIV) {
+Selector SelectorTable::getSelector(unsigned nKeys,
+                                    const IdentifierInfo **IIV) {
   if (nKeys < 2)
     return Selector(IIV[0], nKeys);
 

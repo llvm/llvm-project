@@ -9,7 +9,7 @@
 # Ensure that none of the standard C++ headers implicitly include cassert or
 # assert.h (because assert() is implemented as a macro).
 
-# RUN: %{python} %s %{libcxx}/utils
+# RUN: %{python} %s %{libcxx-dir}/utils
 
 import sys
 sys.path.append(sys.argv[1])

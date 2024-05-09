@@ -2,6 +2,7 @@ set(LLVM_LINK_COMPONENTS
   support
   AllTargetsInfos
   FrontendOpenMP
+  TargetParser
   )
 
 if(CLANG_BUILT_STANDALONE)
@@ -175,6 +176,7 @@ target_link_libraries(ClangdTests
   clangIncludeCleaner
   clangTesting
   clangTidy
+  clangTidyUtils
   clangdSupport
   )
 

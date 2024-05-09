@@ -53,3 +53,28 @@ TEST(ScudoReportDeathTest, CSpecific) {
   EXPECT_DEATH(scudo::reportInvalidAlignedAllocAlignment(123, 456),
                "Scudo ERROR.*123.*456");
 }
+
+#if SCUDO_LINUX || SCUDO_TRUSTY || SCUDO_ANDROID
+#include "report_linux.h"
+
+#include <errno.h>
+#include <sys/mman.h>
+
+TEST(ScudoReportDeathTest, Linux) {
+  errno = ENOMEM;
+  EXPECT_DEATH(scudo::reportMapError(),
+               "Scudo ERROR:.*internal map failure \\(error desc=.*\\)");
+  errno = ENOMEM;
+  EXPECT_DEATH(scudo::reportMapError(1024U),
+               "Scudo ERROR:.*internal map failure \\(error desc=.*\\) "
+               "requesting 1KB");
+  errno = ENOMEM;
+  EXPECT_DEATH(scudo::reportUnmapError(0x1000U, 100U),
+               "Scudo ERROR:.*internal unmap failure \\(error desc=.*\\) Addr "
+               "0x1000 Size 100");
+  errno = ENOMEM;
+  EXPECT_DEATH(scudo::reportProtectError(0x1000U, 100U, PROT_READ),
+               "Scudo ERROR:.*internal protect failure \\(error desc=.*\\) "
+               "Addr 0x1000 Size 100 Prot 1");
+}
+#endif

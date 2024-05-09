@@ -12,10 +12,10 @@ define amdgpu_kernel void @stack_write_fi() {
 ; CHECK-NEXT:    s_mov_b32 s5, 0
 ; CHECK-NEXT:    s_mov_b32 s4, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v0, s5
-; CHECK-NEXT:    buffer_store_dword v0, off, s[0:3], 0 offset:4
+; CHECK-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_mov_b32_e32 v0, s4
-; CHECK-NEXT:    buffer_store_dword v0, off, s[0:3], 0 offset:8
+; CHECK-NEXT:    buffer_store_dword v0, off, s[0:3], 0 offset:4
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    s_endpgm
 entry:
@@ -25,4 +25,4 @@ entry:
 }
 
 !llvm.module.flags = !{!0}
-!0 = !{i32 1, !"amdgpu_code_object_version", i32 500}
+!0 = !{i32 1, !"amdhsa_code_object_version", i32 500}

@@ -21,7 +21,7 @@ define i32 @atomic_or_zero(ptr %addr) {
 ; CHECK-NEXT:    [[RES:%.*]] = atomicrmw or ptr [[ADDR:%.*]], i32 0 monotonic, align 4
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
-  %res = atomicrmw add ptr %addr, i32 0 monotonic
+  %res = atomicrmw or ptr %addr, i32 0 monotonic
   ret i32 %res
 }
 

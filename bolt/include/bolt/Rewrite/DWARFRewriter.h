@@ -11,6 +11,7 @@
 
 #include "bolt/Core/DIEBuilder.h"
 #include "bolt/Core/DebugData.h"
+#include "bolt/Core/DebugNames.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/DIE.h"
 #include "llvm/DWP/DWP.h"
@@ -21,9 +22,7 @@
 #include <memory>
 #include <mutex>
 #include <optional>
-#include <set>
 #include <unordered_map>
-#include <unordered_set>
 #include <vector>
 
 namespace llvm {
@@ -140,8 +139,10 @@ private:
                             const std::list<DWARFUnit *> &CUs);
 
   /// Finalize debug sections in the main binary.
-  void finalizeDebugSections(DIEBuilder &DIEBlder, DIEStreamer &Streamer,
-                             raw_svector_ostream &ObjOS, CUOffsetMap &CUMap);
+  void finalizeDebugSections(DIEBuilder &DIEBlder,
+                             DWARF5AcceleratorTable &DebugNamesTable,
+                             DIEStreamer &Streamer, raw_svector_ostream &ObjOS,
+                             CUOffsetMap &CUMap);
 
   /// Patches the binary for DWARF address ranges (e.g. in functions and lexical
   /// blocks) to be updated.
@@ -175,13 +176,6 @@ private:
       uint64_t RangesSectionOffset, DIEValue &LowPCAttrInfo,
       DIEValue &HighPCAttrInfo,
       std::optional<uint64_t> RangesBase = std::nullopt);
-
-  /// Adds a \p Str to .debug_str section.
-  /// Uses \p AttrInfoVal to either update entry in a DIE for legacy DWARF using
-  /// \p DebugInfoPatcher, or for DWARF5 update an index in .debug_str_offsets
-  /// for this contribution of \p Unit.
-  void addStringHelper(DIEBuilder &DIEBldr, DIE &Die, const DWARFUnit &Unit,
-                       DIEValue &DIEAttrInfo, StringRef Str);
 
 public:
   DWARFRewriter(BinaryContext &BC) : BC(BC) {}

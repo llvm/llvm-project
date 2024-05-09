@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/math_macros.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/math/powf.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
-#include <math.h>
 
 #include <errno.h>
 #include <stdint.h>

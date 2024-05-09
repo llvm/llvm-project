@@ -132,8 +132,7 @@ NVPTXTargetMachine::NVPTXTargetMachine(const Target &T, const Triple &TT,
     : LLVMTargetMachine(T, computeDataLayout(is64bit, UseShortPointersOpt), TT,
                         CPU, FS, Options, Reloc::PIC_,
                         getEffectiveCodeModel(CM, CodeModel::Small), OL),
-      is64bit(is64bit), UseShortPointers(UseShortPointersOpt),
-      TLOF(std::make_unique<NVPTXTargetObjectFile>()),
+      is64bit(is64bit), TLOF(std::make_unique<NVPTXTargetObjectFile>()),
       Subtarget(TT, std::string(CPU), std::string(FS), *this),
       StrPool(StrAlloc) {
   if (TT.getOS() == Triple::NVCL)
@@ -227,45 +226,8 @@ void NVPTXTargetMachine::registerDefaultAliasAnalyses(AAManager &AAM) {
 
 void NVPTXTargetMachine::registerPassBuilderCallbacks(
     PassBuilder &PB, bool PopulateClassToPassNames) {
-  PB.registerPipelineParsingCallback(
-      [](StringRef PassName, FunctionPassManager &PM,
-         ArrayRef<PassBuilder::PipelineElement>) {
-        if (PassName == "nvvm-reflect") {
-          PM.addPass(NVVMReflectPass());
-          return true;
-        }
-        if (PassName == "nvvm-intr-range") {
-          PM.addPass(NVVMIntrRangePass());
-          return true;
-        }
-        return false;
-      });
-
-  PB.registerAnalysisRegistrationCallback([](FunctionAnalysisManager &FAM) {
-    FAM.registerPass([&] { return NVPTXAA(); });
-  });
-
-  PB.registerParseAACallback([](StringRef AAName, AAManager &AAM) {
-    if (AAName == "nvptx-aa") {
-      AAM.registerFunctionAnalysis<NVPTXAA>();
-      return true;
-    }
-    return false;
-  });
-
-  PB.registerPipelineParsingCallback(
-      [](StringRef PassName, ModulePassManager &PM,
-         ArrayRef<PassBuilder::PipelineElement>) {
-        if (PassName == "nvptx-lower-ctor-dtor") {
-          PM.addPass(NVPTXCtorDtorLoweringPass());
-          return true;
-        }
-        if (PassName == "generic-to-nvvm") {
-          PM.addPass(GenericToNVVMPass());
-          return true;
-        }
-        return false;
-      });
+#define GET_PASS_REGISTRY "NVPTXPassRegistry.def"
+#include "llvm/Passes/TargetPassRegistry.inc"
 
   PB.registerPipelineStartEPCallback(
       [this](ModulePassManager &PM, OptimizationLevel Level) {
@@ -380,7 +342,7 @@ void NVPTXPassConfig::addIRPasses() {
     addStraightLineScalarOptimizationPasses();
   }
 
-  addPass(createAtomicExpandPass());
+  addPass(createAtomicExpandLegacyPass());
   addPass(createNVPTXCtorDtorLoweringLegacyPass());
 
   // === LSR and other generic IR passes ===

@@ -16,6 +16,7 @@
 #include <__tuple/tuple_like_ext.h>
 #include <__tuple/tuple_size.h>
 #include <__tuple/tuple_types.h>
+#include <__type_traits/conjunction.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/integral_constant.h>
 #include <__type_traits/is_constructible.h>
@@ -31,12 +32,6 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 #ifndef _LIBCPP_CXX03_LANG
-
-template <bool... _Preds>
-struct __all_dummy;
-
-template <bool... _Pred>
-struct __all : _IsSame<__all_dummy<_Pred...>, __all_dummy<((void)_Pred, true)...>> {};
 
 struct __tuple_sfinae_base {
   template <template <class, class...> class _Trait, class... _LArgs, class... _RArgs>

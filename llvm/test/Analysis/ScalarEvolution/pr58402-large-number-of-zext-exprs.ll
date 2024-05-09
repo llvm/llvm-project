@@ -82,7 +82,6 @@ define i32 @pr58402_large_number_of_zext(ptr %dst) {
 ; CHECK-NEXT:  Loop %header: <multiple exits> Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %header: Unpredictable constant max backedge-taken count.
 ; CHECK-NEXT:  Loop %header: Unpredictable symbolic max backedge-taken count.
-; CHECK-NEXT:  Loop %header: Unpredictable predicated backedge-taken count.
 ;
 entry:
   br label %header

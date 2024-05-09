@@ -27,7 +27,7 @@ include "mlir/IR/BuiltinAttributes.td"
 // Base class for FIR operations.
 // All operations automatically get a prefix of "fir.".
 class fir_Op<string mnemonic, list<Trait> traits>
-  : Op<fir_Dialect, mnemonic, traits>;
+  : Op<FIROpsDialect, mnemonic, traits>;
 
 // Base class for FIR operations that take a single argument
 class fir_SimpleOp<string mnemonic, list<Trait> traits>
@@ -2433,7 +2433,66 @@ def fir_DispatchOp : fir_Op<"dispatch", []> {
     // operand[0] is the object (of class type)
     operand_iterator arg_operand_begin() { return operand_begin() + 1; }
     operand_iterator arg_operand_end() { return operand_end(); }
-    static constexpr llvm::StringRef getMethodAttrNameStr() { return "method"; }
+  }];
+}
+
+def fir_CUDAKernelLaunch : fir_Op<"cuda_kernel_launch", [CallOpInterface,
+    AttrSizedOperandSegments]> {
+  let summary = "call CUDA kernel";
+
+  let description = [{
+    Launch a CUDA kernel from the host.
+
+    ```
+      // launch simple kernel with no arguments. bytes and stream value are
+      // optional in the chevron notation.
+      fir.cuda_kernel_launch @kernel<<<%gx, %gy, %bx, %by, %bz>>>()
+    ```
+  }];
+
+  let arguments = (ins
+    SymbolRefAttr:$callee,
+    I32:$grid_x,
+    I32:$grid_y,
+    I32:$grid_z,
+    I32:$block_x,
+    I32:$block_y,
+    I32:$block_z,
+    Optional<I32>:$bytes,
+    Optional<I32>:$stream,
+    Variadic<AnyType>:$args
+  );
+
+  let assemblyFormat = [{
+    $callee `<` `<` `<` $grid_x `,` $grid_y `,` $grid_z `,`$block_x `,`
+        $block_y `,` $block_z ( `,` $bytes^ ( `,` $stream^ )? )? `>` `>` `>`
+        `` `(` $args `)` ( `:` `(` type($args)^ `)` )? attr-dict
+  }];
+
+  let extraClassDeclaration = [{
+    mlir::CallInterfaceCallable getCallableForCallee() {
+      return getCalleeAttr();
+    }
+
+    void setCalleeFromCallable(mlir::CallInterfaceCallable callee) {
+      (*this)->setAttr(getCalleeAttrName(), callee.get<mlir::SymbolRefAttr>());
+    }
+    mlir::FunctionType getFunctionType();
+
+    unsigned getNbNoArgOperand() {
+      unsigned nbNoArgOperand = 5; // grids and blocks values are always present.
+      if (getBytes()) ++nbNoArgOperand;
+      if (getStream()) ++nbNoArgOperand;
+      return nbNoArgOperand;
+    }
+
+    operand_range getArgOperands() {
+      return {operand_begin() + getNbNoArgOperand(), operand_end()};
+    }
+    mlir::MutableOperandRange getArgOperandsMutable() {
+      return mlir::MutableOperandRange(
+          *this, getNbNoArgOperand(), getArgs().size() - 1);
+    }
   }];
 }
 
@@ -2649,14 +2708,14 @@ def fir_ConvertOp : fir_OneResultOp<"convert", [NoMemoryEffect]> {
   let hasCanonicalizer = 1;
 }
 
-def FortranTypeAttr : Attr<And<[CPred<"$_self.isa<mlir::TypeAttr>()">,
-    Or<[CPred<"$_self.cast<mlir::TypeAttr>().getValue().isa<fir::CharacterType,"
-              "fir::ComplexType, fir::IntegerType, fir::LogicalType,"
-              "fir::RealType, fir::RecordType>()">]>]>,
-    "Fortran surface type"> {
+def FortranTypeAttr : Attr<And<[CPred<"mlir::isa<mlir::TypeAttr>($_self)">,
+    Or<[CPred<"mlir::isa<fir::CharacterType, fir::ComplexType, "
+              "fir::IntegerType, fir::LogicalType, fir::RealType, "
+              "fir::RecordType>(mlir::cast<mlir::TypeAttr>($_self).getValue())"
+    >]>]>, "Fortran surface type"> {
   let storageType = [{ ::mlir::TypeAttr }];
   let returnType = "mlir::Type";
-  let convertFromStorage = "$_self.getValue().cast<mlir::Type>()";
+  let convertFromStorage = "mlir::cast<mlir::Type>($_self.getValue())";
 }
 
 def fir_TypeDescOp : fir_OneResultOp<"type_desc", [NoMemoryEffect]> {
@@ -2737,7 +2796,8 @@ def fir_GlobalOp : fir_Op<"global", [IsolatedFromAbove, Symbol]> {
     OptionalAttr<AnyAttr>:$initVal,
     OptionalAttr<UnitAttr>:$constant,
     OptionalAttr<UnitAttr>:$target,
-    OptionalAttr<StrAttr>:$linkName
+    OptionalAttr<StrAttr>:$linkName,
+    OptionalAttr<fir_CUDADataAttributeAttr>:$cuda_attr
   );
 
   let regions = (region AtMostRegion<1>:$region);
@@ -2768,17 +2828,6 @@ def fir_GlobalOp : fir_Op<"global", [IsolatedFromAbove, Symbol]> {
   ];
 
   let extraClassDeclaration = [{
-    static constexpr llvm::StringRef getSymbolAttrNameStr() { return "symref"; }
-    static constexpr llvm::StringRef getConstantAttrNameStr() {
-      return "constant";
-    }
-    static constexpr llvm::StringRef getLinkageAttrNameStr() {
-      return "linkName";
-    }
-    static constexpr llvm::StringRef getTargetAttrNameStr() {
-      return "target";
-    }
-
     /// The semantic type of the global
     mlir::Type resultType();
 
@@ -2932,7 +2981,6 @@ def fir_DTEntryOp : fir_Op<"dt_entry", [HasParent<"TypeInfoOp">]> {
   let hasCustomAssemblyFormat = 1;
 
   let extraClassDeclaration = [{
-    static constexpr llvm::StringRef getMethodAttrNameStr() { return "method"; }
     static constexpr llvm::StringRef getProcAttrNameStr() { return "proc"; }
   }];
 }
@@ -3026,15 +3074,18 @@ def fir_DeclareOp : fir_Op<"declare", [AttrSizedOperandSegments,
     AnyRefOrBox:$memref,
     Optional<AnyShapeOrShiftType>:$shape,
     Variadic<AnyIntegerType>:$typeparams,
+    Optional<fir_DummyScopeType>:$dummy_scope,
     Builtin_StringAttr:$uniq_name,
-    OptionalAttr<fir_FortranVariableFlagsAttr>:$fortran_attrs
+    OptionalAttr<fir_FortranVariableFlagsAttr>:$fortran_attrs,
+    OptionalAttr<fir_CUDADataAttributeAttr>:$cuda_attr
   );
 
   let results = (outs AnyRefOrBox);
 
   let assemblyFormat = [{
     $memref (`(` $shape^ `)`)? (`typeparams` $typeparams^)?
-     attr-dict `:` functional-type(operands, results)
+    (`dummy_scope` $dummy_scope^)?
+    attr-dict `:` functional-type(operands, results)
   }];
 
   let hasVerifier = 1;
@@ -3077,6 +3128,263 @@ def fir_BoxOffsetOp : fir_Op<"box_offset", [NoMemoryEffect]> {
   let builders = [
     OpBuilder<(ins "mlir::Value":$boxRef, "fir::BoxFieldAttr":$field)>
   ];
+}
+
+def fir_CUDAKernelOp : fir_Op<"cuda_kernel", [AttrSizedOperandSegments,
+    DeclareOpInterfaceMethods<LoopLikeOpInterface>]> {
+
+  let description = [{
+    Represent the CUDA Fortran kernel directive. The operation is a loop like
+    operation that represents the iteration range of the embedded loop nest.
+
+    When grid or block variadic operands are empty, a `*` only syntax was used
+    in the Fortran code.
+    If the `*` is mixed with values for either grid or block, these are
+    represented by a 0 constant value.
+  }];
+
+  let arguments = (ins
+    Variadic<I32>:$grid, // empty means `*`
+    Variadic<I32>:$block, // empty means `*`
+    Optional<I32>:$stream,
+    Variadic<Index>:$lowerbound,
+    Variadic<Index>:$upperbound,
+    Variadic<Index>:$step,
+    OptionalAttr<I64Attr>:$n
+  );
+
+  let regions = (region AnyRegion:$region);
+
+  let assemblyFormat = [{
+    `<` `<` `<` custom<CUFKernelValues>($grid, type($grid)) `,` 
+                custom<CUFKernelValues>($block, type($block))
+        ( `,` `stream` `=` $stream^ )? `>` `>` `>`
+        custom<CUFKernelLoopControl>($region, $lowerbound, type($lowerbound),
+            $upperbound, type($upperbound), $step, type($step))
+        attr-dict
+  }];
+
+  let hasVerifier = 1;
+}
+
+def fir_CUDADataTransferOp : fir_Op<"cuda_data_transfer", []> {
+  let summary = "Represent a data transfer between host and device memory";
+
+  let description = [{
+    CUDA Fortran allows data transfer to be done via intrinsic assignment
+    between a host and a device variable. This operation is used to materialized
+    the data transfer between the lhs and rhs memory references.
+    The kind of transfer is specified in the attribute. 
+
+    ```
+      adev = a ! transfer host to device
+      a = adev ! transfer device to host
+      bdev = adev ! transfer device to device
+    ```
+  }];
+
+  let arguments = (ins Arg<AnyReferenceLike, "", [MemWrite]>:$src,
+                       Arg<AnyReferenceLike, "", [MemRead]>:$dst,
+                       fir_CUDADataTransferKindAttr:$transfer_kind);
+
+  let assemblyFormat = [{
+    $src `to` $dst attr-dict `:` type(operands)
+  }];
+}
+
+def fir_CUDAAllocateOp : fir_Op<"cuda_allocate", [AttrSizedOperandSegments,
+    MemoryEffects<[MemAlloc<DefaultResource>]>]> {
+  let summary = "Perform the device allocation of data of an allocatable";
+
+  let description = [{
+    The fir.cuda_allocate operation performs the allocation on the device
+    of the data of an allocatable. The descriptor passed to the operation
+    is initialized before with the standard flang runtime calls.
+  }];
+
+  let arguments = (ins Arg<fir_ReferenceType, "", [MemRead, MemWrite]>:$box,
+                       Arg<Optional<AnyRefOrBoxType>, "", [MemWrite]>:$errmsg,
+                       Optional<AnyIntegerType>:$stream,
+                       Arg<Optional<AnyRefOrBoxType>, "", [MemWrite]>:$pinned,
+                       Arg<Optional<AnyRefOrBoxType>, "", [MemRead]>:$source,
+                       fir_CUDADataAttributeAttr:$cuda_attr,
+                       UnitAttr:$hasStat);
+
+  let results = (outs AnyIntegerType:$stat);
+
+  let assemblyFormat = [{
+    $box `:` qualified(type($box))
+    ( `source` `(` $source^ `:` qualified(type($source) )`)` )?
+    ( `errmsg` `(` $errmsg^ `:` type($errmsg) `)` )?
+    ( `stream` `(` $stream^ `:` type($stream) `)` )?
+    ( `pinned` `(` $pinned^ `:` type($pinned) `)` )?
+    attr-dict `->` type($stat)
+  }];
+
+  let hasVerifier = 1;
+}
+
+def fir_CUDADeallocateOp : fir_Op<"cuda_deallocate",
+    [MemoryEffects<[MemFree<DefaultResource>]>]> {
+  let summary = "Perform the device deallocation of data of an allocatable";
+
+  let description = [{
+    The fir.cuda_deallocate operation performs the deallocation on the device
+    of the data of an allocatable.
+  }];
+
+  let arguments = (ins Arg<fir_ReferenceType, "", [MemRead, MemWrite]>:$box,
+                       Arg<Optional<AnyRefOrBoxType>, "", [MemWrite]>:$errmsg,
+                       fir_CUDADataAttributeAttr:$cuda_attr,
+                       UnitAttr:$hasStat);
+
+  let results = (outs AnyIntegerType:$stat);
+
+  let assemblyFormat = [{
+    $box `:` qualified(type($box))
+    ( `errmsg` `(` $errmsg^ `:` type($errmsg) `)` )?
+    attr-dict `->` type($stat)
+  }];
+
+  let hasVerifier = 1;
+}
+
+def fir_DummyScopeOp : fir_Op<"dummy_scope",
+    [MemoryEffects<[MemWrite<DebuggingResource>]>]> {
+  let summary = "Define a scope for dummy arguments";
+
+  let description = [{
+    An abstract handle to be used to associate dummy arguments of the same
+    subroutine between each other. By lowering, all [hl]fir.declare
+    operations representing declarations of dummy arguments of a subroutine
+    use the result of this operation. This allows recognizing the references
+    of these dummy arguments as belonging to the same runtime instance
+    of the subroutine even after MLIR inlining. Thus, the Fortran aliasing
+    rules might be applied to those references based on the original
+    declarations of the dummy arguments.
+    For example:
+    ```
+      subroutine test(x, y)
+        real, target :: x, y
+        x = y ! may alias
+        call inner(x, y)
+      contains
+        subroutine inner(x, y)
+          real :: x, y
+          x = y ! may not alias
+        end subroutine inner
+      end subroutine test
+    ```
+    After MLIR inlining this may look like this:
+    ```
+      func.func @_QPtest(
+          %arg0: !fir.ref<f32> {fir.target},
+          %arg1: !fir.ref<f32> {fir.target}) {
+        %0 = fir.declare %arg0 {fortran_attrs = #fir.var_attrs<target>} :
+            (!fir.ref<f32>) -> !fir.ref<f32>
+        %1 = fir.declare %arg1 {fortran_attrs = #fir.var_attrs<target>} :
+            (!fir.ref<f32>) -> !fir.ref<f32>
+        %2 = fir.load %1 : !fir.ref<f32>
+        fir.store %2 to %0 : !fir.ref<f32>
+        %3 = fir.declare %0 : (!fir.ref<f32>) -> !fir.ref<f32>
+        %4 = fir.declare %1 : (!fir.ref<f32>) -> !fir.ref<f32>
+        %5 = fir.load %4 : !fir.ref<f32>
+        fir.store %5 to %3 : !fir.ref<f32>
+        return
+      }
+    ```
+    Without marking %3 and %4 as declaring the dummy arguments
+    of the same runtime instance of `inner` subroutine the FIR
+    AliasAnalysis cannot deduce non-aliasing for the second load/store pair.
+    This information may be preserved by using fir.dummy_scope operation:
+    ```
+      func.func @_QPtest(
+          %arg0: !fir.ref<f32> {fir.target},
+          %arg1: !fir.ref<f32> {fir.target}) {
+        %h1 = fir.dummy_scope : i1
+        %0 = fir.declare %arg0 dummy_scope(%h1)
+            {fortran_attrs = #fir.var_attrs<target>} :
+            (!fir.ref<f32>) -> !fir.ref<f32>
+        %1 = fir.declare %arg1 dummy_scope(%h1)
+            {fortran_attrs = #fir.var_attrs<target>} :
+            (!fir.ref<f32>) -> !fir.ref<f32>
+        %2 = fir.load %1 : !fir.ref<f32>
+        fir.store %2 to %0 : !fir.ref<f32>
+        %h2 = fir.dummy_scope : i1
+        %3 = fir.declare %0 dummy_scope(%h2) : (!fir.ref<f32>) -> !fir.ref<f32>
+        %4 = fir.declare %1 dummy_scope(%h2) : (!fir.ref<f32>) -> !fir.ref<f32>
+        %5 = fir.load %4 : !fir.ref<f32>
+        fir.store %5 to %3 : !fir.ref<f32>
+        return
+      }
+    ```
+    Note that even if `inner` is called and inlined twice inside
+    `test`, the two inlined instances of `inner` must use two different
+    fir.dummy_scope operations for their fir.declare ops. This
+    two distinct fir.dummy_scope must remain distinct during the optimizations.
+    This is guaranteed by the write memory effect on the DebuggingResource.
+  }];
+
+  let results = (outs fir_DummyScopeType);
+  let assemblyFormat = "attr-dict `:` type(results)";
+}
+
+def fir_CUDAAllocOp : fir_Op<"cuda_alloc", [AttrSizedOperandSegments,
+    MemoryEffects<[MemAlloc]>]> {
+  let summary = "Allocate an object on device";
+
+  let description = [{
+    This is a drop in replacement for fir.alloca and fir.allocmem for device
+    object. Any device, managed or unified object declared in an host
+    subprogram needs to be allocated in the device memory through runtime calls.
+    The fir.cuda_alloc is an abstraction to the runtime calls and works together
+    with fir.cuda_free.
+  }];
+
+  let arguments = (ins
+    TypeAttr:$in_type,
+    OptionalAttr<StrAttr>:$uniq_name,
+    OptionalAttr<StrAttr>:$bindc_name,
+    Variadic<AnyIntegerType>:$typeparams,
+    Variadic<AnyIntegerType>:$shape,
+    fir_CUDADataAttributeAttr:$cuda_attr
+  );
+
+  let results = (outs fir_ReferenceType:$ptr);
+
+  let assemblyFormat = [{
+    $in_type (`(` $typeparams^ `:` type($typeparams) `)`)?
+        (`,` $shape^ `:` type($shape) )?  attr-dict `->` qualified(type($ptr))
+  }];
+
+  let builders = [
+    OpBuilder<(ins "mlir::Type":$inType, "llvm::StringRef":$uniqName,
+      "llvm::StringRef":$bindcName,
+      "fir::CUDADataAttributeAttr":$cudaAttr,
+      CArg<"mlir::ValueRange", "{}">:$typeparams,
+      CArg<"mlir::ValueRange", "{}">:$shape,
+      CArg<"llvm::ArrayRef<mlir::NamedAttribute>", "{}">:$attributes)>];
+
+  let hasVerifier = 1;
+}
+
+def fir_CUDAFreeOp : fir_Op<"cuda_free", [MemoryEffects<[MemFree]>]> {
+  let summary = "Free a device allocated object";
+
+  let description = [{
+    The fir.cuda_free operation frees the memory allocated by fir.cuda_alloc.
+    This is used for non-allocatable device, managed and unified device
+    variables declare in host subprogram.
+  }];
+
+  let arguments = (ins
+    Arg<AnyReferenceLike, "", [MemFree]>:$devptr,
+    fir_CUDADataAttributeAttr:$cuda_attr
+  );
+
+  let assemblyFormat = "$devptr `:` qualified(type($devptr)) attr-dict";
+
+  let hasVerifier = 1;
 }
 
 #endif

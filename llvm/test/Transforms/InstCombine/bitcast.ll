@@ -577,7 +577,7 @@ define <vscale x 1 x i32> @ScalableAll111(<vscale x 1 x i32> %in) {
 ; CHECK-LABEL: @ScalableAll111(
 ; CHECK-NEXT:    ret <vscale x 1 x i32> [[IN:%.*]]
 ;
-  %out = and <vscale x 1 x i32> %in, bitcast (<vscale x 2 x i16> shufflevector (<vscale x 2 x i16> insertelement (<vscale x 2 x i16> undef, i16 -1, i32 0), <vscale x 2 x i16> undef, <vscale x 2 x i32> zeroinitializer) to <vscale x 1 x i32>)
+  %out = and <vscale x 1 x i32> %in, bitcast (<vscale x 2 x i16> splat (i16 -1) to <vscale x 1 x i32>)
   ret <vscale x 1 x i32> %out
 }
 
@@ -684,6 +684,21 @@ define ptr @bitcast_from_single_element_pointer_vector_to_pointer(<1 x ptr> %ptr
 ;
   %ptr = bitcast <1 x ptr> %ptrvec to ptr
   ret ptr %ptr
+}
+
+; Sure that we calculate the correct shift.
+define <4 x i32> @bitcast_shl(i32 %arg) {
+; CHECK-LABEL: @bitcast_shl(
+; CHECK-NEXT:    [[I5:%.*]] = insertelement <4 x i32> <i32 0, i32 0, i32 65, i32 poison>, i32 [[ARG:%.*]], i64 3
+; CHECK-NEXT:    ret <4 x i32> [[I5]]
+;
+  %i = zext i32 %arg to i64
+  %i1 = shl i64 %i, 32
+  %i2 = or i64 %i1, 65
+  %i3 = zext i64 %i2 to i128
+  %i4 = shl i128 %i3, 64
+  %i5 = bitcast i128 %i4 to <4 x i32>
+  ret <4 x i32> %i5
 }
 
 declare void @f1()

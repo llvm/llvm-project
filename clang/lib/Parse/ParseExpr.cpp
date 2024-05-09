@@ -30,6 +30,10 @@
 #include "clang/Sema/EnterExpressionEvaluationContext.h"
 #include "clang/Sema/ParsedTemplate.h"
 #include "clang/Sema/Scope.h"
+#include "clang/Sema/SemaCUDA.h"
+#include "clang/Sema/SemaOpenACC.h"
+#include "clang/Sema/SemaOpenMP.h"
+#include "clang/Sema/SemaSYCL.h"
 #include "clang/Sema/TypoCorrection.h"
 #include "llvm/ADT/SmallVector.h"
 #include <optional>
@@ -177,6 +181,19 @@ ExprResult Parser::ParseAssignmentExpression(TypeCastState isTypeCast) {
                                        /*isAddressOfOperand=*/false,
                                        isTypeCast);
   return ParseRHSOfBinaryExpression(LHS, prec::Assignment);
+}
+
+ExprResult Parser::ParseConditionalExpression() {
+  if (Tok.is(tok::code_completion)) {
+    cutOffParsing();
+    Actions.CodeCompleteExpression(getCurScope(),
+                                   PreferredType.get(Tok.getLocation()));
+    return ExprError();
+  }
+
+  ExprResult LHS = ParseCastExpression(
+      AnyCastExpr, /*isAddressOfOperand=*/false, NotTypeCast);
+  return ParseRHSOfBinaryExpression(LHS, prec::Conditional);
 }
 
 /// Parse an assignment expression where part of an Objective-C message
@@ -1114,6 +1131,7 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
           REVERTIBLE_TYPE_TRAIT(__is_fundamental);
           REVERTIBLE_TYPE_TRAIT(__is_integral);
           REVERTIBLE_TYPE_TRAIT(__is_interface_class);
+          REVERTIBLE_TYPE_TRAIT(__is_layout_compatible);
           REVERTIBLE_TYPE_TRAIT(__is_literal);
           REVERTIBLE_TYPE_TRAIT(__is_lvalue_expr);
           REVERTIBLE_TYPE_TRAIT(__is_lvalue_reference);
@@ -1462,8 +1480,7 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
     return Res;
   }
   case tok::kw__Alignof:   // unary-expression: '_Alignof' '(' type-name ')'
-    if (!getLangOpts().C11)
-      Diag(Tok, diag::ext_c11_feature) << Tok.getName();
+    diagnoseUseOfC11Keyword(Tok);
     [[fallthrough]];
   case tok::kw_alignof:    // unary-expression: 'alignof' '(' type-id ')'
   case tok::kw___alignof:  // unary-expression: '__alignof' unary-expression
@@ -1810,7 +1827,7 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
     }
     goto ExpectedExpression;
   case tok::l_square:
-    if (getLangOpts().CPlusPlus11) {
+    if (getLangOpts().CPlusPlus) {
       if (getLangOpts().ObjC) {
         // C++11 lambda expressions and Objective-C message sends both start with a
         // square bracket.  There are three possibilities here:
@@ -2022,7 +2039,8 @@ Parser::ParsePostfixExpressionSuffix(ExprResult LHS) {
         if (Tok.is(tok::colon)) {
           // Consume ':'
           ColonLocFirst = ConsumeToken();
-          Length = Actions.CorrectDelayedTyposInExpr(ParseExpression());
+          if (Tok.isNot(tok::r_square))
+            Length = Actions.CorrectDelayedTyposInExpr(ParseExpression());
         }
       } else if (ArgExprs.size() <= 1 && getLangOpts().OpenMP) {
         ColonProtectionRAIIObject RAII(*this);
@@ -2054,15 +2072,22 @@ Parser::ParsePostfixExpressionSuffix(ExprResult LHS) {
       if (!LHS.isInvalid() && !HasError && !Length.isInvalid() &&
           !Stride.isInvalid() && Tok.is(tok::r_square)) {
         if (ColonLocFirst.isValid() || ColonLocSecond.isValid()) {
-          // FIXME: OpenACC hasn't implemented Sema/Array section handling at a
-          // semantic level yet. For now, just reuse the OpenMP implementation
-          // as it gets the parsing/type management mostly right, and we can
-          // replace this call to ActOnOpenACCArraySectionExpr in the future.
-          // Eventually we'll genericize the OPenMPArraySectionExpr type as
-          // well.
-          LHS = Actions.ActOnOMPArraySectionExpr(
-              LHS.get(), Loc, ArgExprs.empty() ? nullptr : ArgExprs[0],
-              ColonLocFirst, ColonLocSecond, Length.get(), Stride.get(), RLoc);
+          // Like above, AllowOpenACCArraySections is 'more specific' and only
+          // enabled when actively parsing a 'var' in a 'var-list' during
+          // clause/'cache' construct parsing, so it is more specific. So we
+          // should do it first, so that the correct node gets created.
+          if (AllowOpenACCArraySections) {
+            assert(!Stride.isUsable() && !ColonLocSecond.isValid() &&
+                   "Stride/second colon not allowed for OpenACC");
+            LHS = Actions.OpenACC().ActOnArraySectionExpr(
+                LHS.get(), Loc, ArgExprs.empty() ? nullptr : ArgExprs[0],
+                ColonLocFirst, Length.get(), RLoc);
+          } else {
+            LHS = Actions.OpenMP().ActOnOMPArraySectionExpr(
+                LHS.get(), Loc, ArgExprs.empty() ? nullptr : ArgExprs[0],
+                ColonLocFirst, ColonLocSecond, Length.get(), Stride.get(),
+                RLoc);
+          }
         } else {
           LHS = Actions.ActOnArraySubscriptExpr(getCurScope(), LHS.get(), Loc,
                                                 ArgExprs, RLoc);
@@ -2115,10 +2140,8 @@ Parser::ParsePostfixExpressionSuffix(ExprResult LHS) {
         }
 
         if (!LHS.isInvalid()) {
-          ExprResult ECResult = Actions.ActOnCUDAExecConfigExpr(getCurScope(),
-                                    OpenLoc,
-                                    ExecConfigExprs,
-                                    CloseLoc);
+          ExprResult ECResult = Actions.CUDA().ActOnExecConfigExpr(
+              getCurScope(), OpenLoc, ExecConfigExprs, CloseLoc);
           if (ECResult.isInvalid())
             LHS = ExprError();
           else
@@ -2477,8 +2500,8 @@ ExprResult Parser::ParseSYCLUniqueStableNameExpression() {
   if (T.consumeClose())
     return ExprError();
 
-  return Actions.ActOnSYCLUniqueStableNameExpr(OpLoc, T.getOpenLocation(),
-                                               T.getCloseLocation(), Ty.get());
+  return Actions.SYCL().ActOnUniqueStableNameExpr(
+      OpLoc, T.getOpenLocation(), T.getCloseLocation(), Ty.get());
 }
 
 /// Parse a sizeof or alignof expression.
@@ -3264,7 +3287,7 @@ Parser::ParseParenExpression(ParenParseOption &ExprType, bool stopIfCastExpr,
     if (ErrorFound) {
       Result = ExprError();
     } else if (!Result.isInvalid()) {
-      Result = Actions.ActOnOMPArrayShapingExpr(
+      Result = Actions.OpenMP().ActOnOMPArrayShapingExpr(
           Result.get(), OpenLoc, RParenLoc, OMPDimensions, OMPBracketsRanges);
     }
     return Result;
@@ -3389,8 +3412,8 @@ ExprResult Parser::ParseStringLiteralExpression(bool AllowUserDefinedLiteral,
 /// \endverbatim
 ExprResult Parser::ParseGenericSelectionExpression() {
   assert(Tok.is(tok::kw__Generic) && "_Generic keyword expected");
-  if (!getLangOpts().C11)
-    Diag(Tok, diag::ext_c11_feature) << Tok.getName();
+
+  diagnoseUseOfC11Keyword(Tok);
 
   SourceLocation KeyLoc = ConsumeToken();
   BalancedDelimiterTracker T(*this, tok::l_paren);
@@ -3863,7 +3886,8 @@ std::optional<AvailabilitySpec> Parser::ParseAvailabilitySpec() {
     StringRef Platform =
         AvailabilityAttr::canonicalizePlatformName(GivenPlatform);
 
-    if (AvailabilityAttr::getPrettyPlatformName(Platform).empty()) {
+    if (AvailabilityAttr::getPrettyPlatformName(Platform).empty() ||
+        (GivenPlatform.contains("xros") || GivenPlatform.contains("xrOS"))) {
       Diag(PlatformIdentifier->Loc,
            diag::err_avail_query_unrecognized_platform_name)
           << GivenPlatform;

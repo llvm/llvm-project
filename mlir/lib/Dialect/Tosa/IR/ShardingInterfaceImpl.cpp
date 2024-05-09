@@ -31,19 +31,24 @@ namespace {
 // (d0, d1, d2, d3) -> (d0, d1, d2)
 struct MatMulOpSharding
     : public ShardingInterface::ExternalModel<MatMulOpSharding, MatMulOp> {
-  SmallVector<IteratorType> getLoopIteratorTypes(Operation *op) const {
-    auto tensorType = op->getResult(0).getType().dyn_cast<RankedTensorType>();
+  SmallVector<utils::IteratorType> getLoopIteratorTypes(Operation *op) const {
+    auto tensorType = dyn_cast<RankedTensorType>(op->getResult(0).getType());
     if (!tensorType)
       return {};
 
-    SmallVector<IteratorType> types(tensorType.getRank() + 1,
-                                    IteratorType::Parallel);
-    types[tensorType.getRank()] = IteratorType::ReductionSum;
+    SmallVector<utils::IteratorType> types(tensorType.getRank() + 1,
+                                           utils::IteratorType::parallel);
+    types[tensorType.getRank()] = utils::IteratorType::reduction;
     return types;
   }
 
+  SmallVector<ReductionKind>
+  getReductionLoopIteratorKinds(Operation *op) const {
+    return SmallVector<ReductionKind>(1, ReductionKind::Sum);
+  }
+
   SmallVector<AffineMap> getIndexingMaps(Operation *op) const {
-    auto tensorType = op->getResult(0).getType().dyn_cast<RankedTensorType>();
+    auto tensorType = dyn_cast<RankedTensorType>(op->getResult(0).getType());
     if (!tensorType)
       return {};
     MLIRContext *ctx = op->getContext();
@@ -74,7 +79,7 @@ void mlir::tosa::registerShardingInterfaceExternalModels(
   registry.addExtension(+[](MLIRContext *ctx, TosaDialect *dialect) {
     registerElemwiseAll<
         ClampOp, SigmoidOp, TanhOp, AddOp, ArithmeticRightShiftOp, BitwiseAndOp,
-        BitwiseOrOp, BitwiseXorOp, DivOp, LogicalAndOp, LogicalLeftShiftOp,
+        BitwiseOrOp, BitwiseXorOp, IntDivOp, LogicalAndOp, LogicalLeftShiftOp,
         LogicalRightShiftOp, LogicalOrOp, LogicalXorOp, MaximumOp, MinimumOp,
         MulOp, PowOp, SubOp, AbsOp, BitwiseNotOp, CeilOp, ClzOp, ExpOp, FloorOp,
         LogOp, LogicalNotOp, NegateOp, ReciprocalOp, RsqrtOp, SelectOp, EqualOp,

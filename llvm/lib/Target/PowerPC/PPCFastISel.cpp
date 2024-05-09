@@ -2094,7 +2094,7 @@ unsigned PPCFastISel::PPCMaterializeGV(const GlobalValue *GV, MVT VT) {
     // for large code model, we generate:
     //       LDtocL(GV, ADDIStocHA8(%x2, GV))
     // Otherwise we generate:
-    //       ADDItocL(ADDIStocHA8(%x2, GV), GV)
+    //       ADDItocL8(ADDIStocHA8(%x2, GV), GV)
     // Either way, start with the ADDIStocHA8:
     Register HighPartReg = createResultReg(RC);
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(PPC::ADDIStocHA8),
@@ -2104,9 +2104,11 @@ unsigned PPCFastISel::PPCMaterializeGV(const GlobalValue *GV, MVT VT) {
       BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(PPC::LDtocL),
               DestReg).addGlobalAddress(GV).addReg(HighPartReg);
     } else {
-      // Otherwise generate the ADDItocL.
-      BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(PPC::ADDItocL),
-              DestReg).addReg(HighPartReg).addGlobalAddress(GV);
+      // Otherwise generate the ADDItocL8.
+      BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(PPC::ADDItocL8),
+              DestReg)
+          .addReg(HighPartReg)
+          .addGlobalAddress(GV);
     }
   }
 

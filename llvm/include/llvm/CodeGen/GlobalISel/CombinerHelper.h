@@ -224,22 +224,23 @@ public:
   /// - concat_vector(undef, undef) => undef
   /// - concat_vector(build_vector(A, B), build_vector(C, D)) =>
   ///   build_vector(A, B, C, D)
-  ///
-  /// \pre MI.getOpcode() == G_CONCAT_VECTORS.
-  bool tryCombineConcatVectors(MachineInstr &MI);
+  /// ==========================================================
   /// Check if the G_CONCAT_VECTORS \p MI is undef or if it
   /// can be flattened into a build_vector.
-  /// In the first case \p IsUndef will be true.
-  /// In the second case \p Ops will contain the operands needed
-  /// to produce the flattened build_vector.
+  /// In the first case \p Ops will be empty
+  /// In the second case \p Ops will contain the operands
+  /// needed to produce the flattened build_vector.
   ///
   /// \pre MI.getOpcode() == G_CONCAT_VECTORS.
-  bool matchCombineConcatVectors(MachineInstr &MI, bool &IsUndef,
-                                 SmallVectorImpl<Register> &Ops);
-  /// Replace \p MI with a flattened build_vector with \p Ops or an
-  /// implicit_def if IsUndef is true.
-  void applyCombineConcatVectors(MachineInstr &MI, bool IsUndef,
-                                 const ArrayRef<Register> Ops);
+  bool matchCombineConcatVectors(MachineInstr &MI, SmallVector<Register> &Ops);
+  /// Replace \p MI with a flattened build_vector with \p Ops
+  /// or an implicit_def if \p Ops is empty.
+  void applyCombineConcatVectors(MachineInstr &MI, SmallVector<Register> &Ops);
+
+  bool matchCombineShuffleConcat(MachineInstr &MI, SmallVector<Register> &Ops);
+  /// Replace \p MI with a flattened build_vector with \p Ops
+  /// or an implicit_def if \p Ops is empty.
+  void applyCombineShuffleConcat(MachineInstr &MI, SmallVector<Register> &Ops);
 
   /// Try to combine G_SHUFFLE_VECTOR into G_CONCAT_VECTORS.
   /// Returns true if MI changed.
@@ -677,6 +678,14 @@ public:
   bool matchSDivByConst(MachineInstr &MI);
   void applySDivByConst(MachineInstr &MI);
 
+  /// Given an G_SDIV \p MI expressing a signed divided by a pow2 constant,
+  /// return expressions that implements it by shifting.
+  bool matchDivByPow2(MachineInstr &MI, bool IsSigned);
+  void applySDivByPow2(MachineInstr &MI);
+  /// Given an G_UDIV \p MI expressing an unsigned divided by a pow2 constant,
+  /// return expressions that implements it by shifting.
+  void applyUDivByPow2(MachineInstr &MI);
+
   // G_UMULH x, (1 << c)) -> x >> (bitwidth - c)
   bool matchUMulHToLShr(MachineInstr &MI);
   void applyUMulHToLShr(MachineInstr &MI);
@@ -699,10 +708,6 @@ public:
   /// Match:
   /// (G_*MULO x, 0) -> 0 + no carry out
   bool matchMulOBy0(MachineInstr &MI, BuildFnTy &MatchInfo);
-
-  /// Match:
-  /// (G_*ADDO x, 0) -> x + no carry out
-  bool matchAddOBy0(MachineInstr &MI, BuildFnTy &MatchInfo);
 
   /// Match:
   /// (G_*ADDE x, y, 0) -> (G_*ADDO x, y)
@@ -805,6 +810,12 @@ public:
   /// Match constant LHS ops that should be commuted.
   bool matchCommuteConstantToRHS(MachineInstr &MI);
 
+  /// Combine sext of trunc.
+  bool matchSextOfTrunc(const MachineOperand &MO, BuildFnTy &MatchInfo);
+
+  /// Combine zext of trunc.
+  bool matchZextOfTrunc(const MachineOperand &MO, BuildFnTy &MatchInfo);
+
   /// Match constant LHS FP ops that should be commuted.
   bool matchCommuteFPConstantToRHS(MachineInstr &MI);
 
@@ -814,11 +825,46 @@ public:
   /// Combine selects.
   bool matchSelect(MachineInstr &MI, BuildFnTy &MatchInfo);
 
-  /// Combine ands,
+  /// Combine ands.
   bool matchAnd(MachineInstr &MI, BuildFnTy &MatchInfo);
 
-  /// Combine ors,
+  /// Combine ors.
   bool matchOr(MachineInstr &MI, BuildFnTy &MatchInfo);
+
+  /// Combine addos.
+  bool matchAddOverflow(MachineInstr &MI, BuildFnTy &MatchInfo);
+
+  /// Combine extract vector element.
+  bool matchExtractVectorElement(MachineInstr &MI, BuildFnTy &MatchInfo);
+
+  /// Combine extract vector element with freeze on the vector register.
+  bool matchExtractVectorElementWithFreeze(const MachineOperand &MO,
+                                           BuildFnTy &MatchInfo);
+
+  /// Combine extract vector element with a build vector on the vector register.
+  bool matchExtractVectorElementWithBuildVector(const MachineOperand &MO,
+                                                BuildFnTy &MatchInfo);
+
+  /// Combine extract vector element with a build vector trunc on the vector
+  /// register.
+  bool matchExtractVectorElementWithBuildVectorTrunc(const MachineOperand &MO,
+                                                     BuildFnTy &MatchInfo);
+
+  /// Combine extract vector element with a shuffle vector on the vector
+  /// register.
+  bool matchExtractVectorElementWithShuffleVector(const MachineOperand &MO,
+                                                  BuildFnTy &MatchInfo);
+
+  /// Combine extract vector element with a insert vector element on the vector
+  /// register and different indices.
+  bool matchExtractVectorElementWithDifferentIndices(const MachineOperand &MO,
+                                                     BuildFnTy &MatchInfo);
+  /// Use a function which takes in a MachineIRBuilder to perform a combine.
+  /// By default, it erases the instruction def'd on \p MO from the function.
+  void applyBuildFnMO(const MachineOperand &MO, BuildFnTy &MatchInfo);
+
+  /// Combine insert vector element OOB.
+  bool matchInsertVectorElementOOB(MachineInstr &MI, BuildFnTy &MatchInfo);
 
 private:
   /// Checks for legality of an indexed variant of \p LdSt.
@@ -923,6 +969,7 @@ private:
   bool isZeroOrZeroSplat(Register Src, bool AllowUndefs);
   bool isConstantSplatVector(Register Src, int64_t SplatValue,
                              bool AllowUndefs);
+  bool isConstantOrConstantVectorI(Register Src) const;
 
   std::optional<APInt> getConstantOrConstantSplatVector(Register Src);
 
@@ -931,6 +978,9 @@ private:
   /// into a single comparison using range-based reasoning.
   bool tryFoldAndOrOrICmpsUsingRanges(GLogicalBinOp *Logic,
                                       BuildFnTy &MatchInfo);
+
+  // Simplify (cmp cc0 x, y) (&& or ||) (cmp cc1 x, y) -> cmp cc2 x, y.
+  bool tryFoldLogicOfFCmps(GLogicalBinOp *Logic, BuildFnTy &MatchInfo);
 };
 } // namespace llvm
 

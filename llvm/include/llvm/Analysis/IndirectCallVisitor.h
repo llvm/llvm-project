@@ -12,7 +12,6 @@
 #ifndef LLVM_ANALYSIS_INDIRECTCALLVISITOR_H
 #define LLVM_ANALYSIS_INDIRECTCALLVISITOR_H
 
-#include "llvm/ADT/SetVector.h"
 #include "llvm/IR/InstVisitor.h"
 #include <vector>
 
@@ -53,9 +52,8 @@ struct PGOIndirectCallVisitor : public InstVisitor<PGOIndirectCallVisitor> {
       // of symbols). So the performance overhead from non-vtable profiled
       // address is negligible if exists at all. Comparing loaded address
       // with symbol address guarantees correctness.
-      if (VTablePtr != nullptr && isa<Instruction>(VTablePtr)) {
+      if (VTablePtr != nullptr && isa<Instruction>(VTablePtr))
         return cast<Instruction>(VTablePtr);
-      }
     }
     return nullptr;
   }
@@ -69,9 +67,8 @@ struct PGOIndirectCallVisitor : public InstVisitor<PGOIndirectCallVisitor> {
 
       Instruction *VPtr =
           PGOIndirectCallVisitor::tryGetVTableInstruction(&Call);
-      if (VPtr) {
+      if (VPtr)
         ProfiledAddresses.push_back(VPtr);
-      }
     }
   }
 

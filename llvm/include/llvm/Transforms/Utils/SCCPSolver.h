@@ -151,6 +151,10 @@ public:
   /// works with both scalars and structs.
   void markOverdefined(Value *V);
 
+  /// trackValueOfArgument - Mark the specified argument overdefined unless it
+  /// have range attribute.  This works with both scalars and structs.
+  void trackValueOfArgument(Argument *V);
+
   // isStructLatticeConstant - Return true if all the lattice values
   // corresponding to elements of the structure are constants,
   // false otherwise.

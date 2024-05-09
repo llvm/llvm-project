@@ -94,7 +94,7 @@ public:
       unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
       TTI::OperandValueInfo Op1Info = {TTI::OK_AnyValue, TTI::OP_None},
       TTI::OperandValueInfo Op2Info = {TTI::OK_AnyValue, TTI::OP_None},
-      ArrayRef<const Value *> Args = ArrayRef<const Value *>(),
+      ArrayRef<const Value *> Args = std::nullopt,
       const Instruction *CxtI = nullptr) {
     int ISD = TLI->InstructionOpcodeToISD(Opcode);
 

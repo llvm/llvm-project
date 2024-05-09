@@ -81,42 +81,39 @@ define <4 x i1> @vec_4xi32_lshr_and_negC_eq(<4 x i32> %x, <4 x i32> %y) {
   ret <4 x i1> %r
 }
 
-define <4 x i1> @vec_lshr_and_negC_eq_undef1(<4 x i32> %x, <4 x i32> %y) {
-; CHECK-LABEL: @vec_lshr_and_negC_eq_undef1(
+define <4 x i1> @vec_lshr_and_negC_eq_poison1(<4 x i32> %x, <4 x i32> %y) {
+; CHECK-LABEL: @vec_lshr_and_negC_eq_poison1(
 ; CHECK-NEXT:    [[LSHR:%.*]] = lshr <4 x i32> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[AND:%.*]] = and <4 x i32> [[LSHR]], <i32 -8, i32 undef, i32 -8, i32 -8>
-; CHECK-NEXT:    [[R:%.*]] = icmp eq <4 x i32> [[AND]], zeroinitializer
+; CHECK-NEXT:    [[R:%.*]] = icmp ult <4 x i32> [[LSHR]], <i32 8, i32 8, i32 8, i32 8>
 ; CHECK-NEXT:    ret <4 x i1> [[R]]
 ;
   %lshr = lshr <4 x i32> %x, %y
-  %and = and <4 x i32> %lshr, <i32 4294967288, i32 undef, i32 4294967288, i32 4294967288>  ; ~7
+  %and = and <4 x i32> %lshr, <i32 4294967288, i32 poison, i32 4294967288, i32 4294967288>  ; ~7
   %r = icmp eq <4 x i32> %and, <i32 0, i32 0, i32 0, i32 0>
   ret <4 x i1> %r
 }
 
-define <4 x i1> @vec_lshr_and_negC_eq_undef2(<4 x i32> %x, <4 x i32> %y) {
-; CHECK-LABEL: @vec_lshr_and_negC_eq_undef2(
+define <4 x i1> @vec_lshr_and_negC_eq_poison2(<4 x i32> %x, <4 x i32> %y) {
+; CHECK-LABEL: @vec_lshr_and_negC_eq_poison2(
 ; CHECK-NEXT:    [[LSHR:%.*]] = lshr <4 x i32> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[AND:%.*]] = and <4 x i32> [[LSHR]], <i32 -8, i32 -8, i32 -8, i32 -8>
-; CHECK-NEXT:    [[R:%.*]] = icmp eq <4 x i32> [[AND]], <i32 0, i32 0, i32 0, i32 undef>
+; CHECK-NEXT:    [[R:%.*]] = icmp ult <4 x i32> [[LSHR]], <i32 8, i32 8, i32 8, i32 8>
 ; CHECK-NEXT:    ret <4 x i1> [[R]]
 ;
   %lshr = lshr <4 x i32> %x, %y
   %and = and <4 x i32> %lshr, <i32 4294967288, i32 4294967288, i32 4294967288, i32 4294967288>  ; ~7
-  %r = icmp eq <4 x i32> %and, <i32 0, i32 0, i32 0, i32 undef>
+  %r = icmp eq <4 x i32> %and, <i32 0, i32 0, i32 0, i32 poison>
   ret <4 x i1> %r
 }
 
-define <4 x i1> @vec_lshr_and_negC_eq_undef3(<4 x i32> %x, <4 x i32> %y) {
-; CHECK-LABEL: @vec_lshr_and_negC_eq_undef3(
+define <4 x i1> @vec_lshr_and_negC_eq_poison3(<4 x i32> %x, <4 x i32> %y) {
+; CHECK-LABEL: @vec_lshr_and_negC_eq_poison3(
 ; CHECK-NEXT:    [[LSHR:%.*]] = lshr <4 x i32> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[AND:%.*]] = and <4 x i32> [[LSHR]], <i32 -8, i32 -8, i32 undef, i32 -8>
-; CHECK-NEXT:    [[R:%.*]] = icmp eq <4 x i32> [[AND]], <i32 0, i32 0, i32 0, i32 undef>
+; CHECK-NEXT:    [[R:%.*]] = icmp ult <4 x i32> [[LSHR]], <i32 8, i32 8, i32 8, i32 8>
 ; CHECK-NEXT:    ret <4 x i1> [[R]]
 ;
   %lshr = lshr <4 x i32> %x, %y
-  %and = and <4 x i32> %lshr, <i32 4294967288, i32 4294967288, i32 undef, i32 4294967288>  ; ~7
-  %r = icmp eq <4 x i32> %and, <i32 0, i32 0, i32 0, i32 undef>
+  %and = and <4 x i32> %lshr, <i32 4294967288, i32 4294967288, i32 poison, i32 4294967288>  ; ~7
+  %r = icmp eq <4 x i32> %and, <i32 0, i32 0, i32 0, i32 poison>
   ret <4 x i1> %r
 }
 

@@ -11,7 +11,7 @@
 #ifndef FORTRAN_RUNTIME_TERMINATOR_H_
 #define FORTRAN_RUNTIME_TERMINATOR_H_
 
-#include "flang/Runtime/api-attrs.h"
+#include "flang/Common/api-attrs.h"
 #include <cstdarg>
 #include <cstdio>
 #include <cstdlib>
@@ -67,7 +67,7 @@ public:
 
   template <typename... Args>
   RT_API_ATTRS void PrintCrashArgs(const char *message, Args... args) const {
-#if RT_DEVICE_COMPILATION
+#if defined(RT_DEVICE_COMPILATION)
     std::printf(message, args...);
 #else
     std::fprintf(stderr, message, args...);

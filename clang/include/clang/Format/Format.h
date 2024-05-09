@@ -154,9 +154,9 @@ struct FormatStyle {
   /// For example, to align across empty lines and not across comments, either
   /// of these work.
   /// \code
-  ///   AlignConsecutiveMacros: AcrossEmptyLines
+  ///   <option-name>: AcrossEmptyLines
   ///
-  ///   AlignConsecutiveMacros:
+  ///   <option-name>:
   ///     Enabled: true
   ///     AcrossEmptyLines: true
   ///     AcrossComments: false
@@ -375,8 +375,25 @@ struct FormatStyle {
     ///   }
     /// \endcode
     bool AcrossComments;
-    /// Whether aligned case labels are aligned on the colon, or on the
-    /// , or on the tokens after the colon.
+    /// Whether to align the case arrows when aligning short case expressions.
+    /// \code{.java}
+    ///   true:
+    ///   i = switch (day) {
+    ///     case THURSDAY, SATURDAY -> 8;
+    ///     case WEDNESDAY          -> 9;
+    ///     default                 -> 0;
+    ///   };
+    ///
+    ///   false:
+    ///   i = switch (day) {
+    ///     case THURSDAY, SATURDAY -> 8;
+    ///     case WEDNESDAY ->          9;
+    ///     default ->                 0;
+    ///   };
+    /// \endcode
+    bool AlignCaseArrows;
+    /// Whether aligned case labels are aligned on the colon, or on the tokens
+    /// after the colon.
     /// \code
     ///   true:
     ///   switch (level) {
@@ -396,12 +413,14 @@ struct FormatStyle {
     bool operator==(const ShortCaseStatementsAlignmentStyle &R) const {
       return Enabled == R.Enabled && AcrossEmptyLines == R.AcrossEmptyLines &&
              AcrossComments == R.AcrossComments &&
+             AlignCaseArrows == R.AlignCaseArrows &&
              AlignCaseColons == R.AlignCaseColons;
     }
   };
 
   /// Style of aligning consecutive short case labels.
-  /// Only applies if ``AllowShortCaseLabelsOnASingleLine`` is ``true``.
+  /// Only applies if ``AllowShortCaseExpressionOnASingleLine`` or
+  /// ``AllowShortCaseLabelsOnASingleLine`` is ``true``.
   ///
   /// \code{.yaml}
   ///   # Example of usage:
@@ -413,6 +432,41 @@ struct FormatStyle {
   /// \endcode
   /// \version 17
   ShortCaseStatementsAlignmentStyle AlignConsecutiveShortCaseStatements;
+
+  /// Style of aligning consecutive TableGen DAGArg operator colons.
+  /// If enabled, align the colon inside DAGArg which have line break inside.
+  /// This works only when TableGenBreakInsideDAGArg is BreakElements or
+  /// BreakAll and the DAGArg is not excepted by
+  /// TableGenBreakingDAGArgOperators's effect.
+  /// \code
+  ///   let dagarg = (ins
+  ///       a  :$src1,
+  ///       aa :$src2,
+  ///       aaa:$src3
+  ///   )
+  /// \endcode
+  /// \version 19
+  AlignConsecutiveStyle AlignConsecutiveTableGenBreakingDAGArgColons;
+
+  /// Style of aligning consecutive TableGen cond operator colons.
+  /// Align the colons of cases inside !cond operators.
+  /// \code
+  ///   !cond(!eq(size, 1) : 1,
+  ///         !eq(size, 16): 1,
+  ///         true         : 0)
+  /// \endcode
+  /// \version 19
+  AlignConsecutiveStyle AlignConsecutiveTableGenCondOperatorColons;
+
+  /// Style of aligning consecutive TableGen definition colons.
+  /// This aligns the inheritance colons of consecutive definitions.
+  /// \code
+  ///   def Def       : Parent {}
+  ///   def DefDef    : Parent {}
+  ///   def DefDefDef : Parent {}
+  /// \endcode
+  /// \version 19
+  AlignConsecutiveStyle AlignConsecutiveTableGenDefinitionColons;
 
   /// Different styles for aligning escaped newlines.
   enum EscapedNewlineAlignmentStyle : int8_t {
@@ -688,6 +742,19 @@ struct FormatStyle {
   /// single line.
   /// \version 3.5
   ShortBlockStyle AllowShortBlocksOnASingleLine;
+
+  /// Whether to merge a short switch labeled rule into a single line.
+  /// \code{.java}
+  ///   true:                               false:
+  ///   switch (a) {           vs.          switch (a) {
+  ///   case 1 -> 1;                        case 1 ->
+  ///   default -> 0;                         1;
+  ///   };                                  default ->
+  ///                                         0;
+  ///                                       };
+  /// \endcode
+  /// \version 19
+  bool AllowShortCaseExpressionOnASingleLine;
 
   /// If ``true``, short case labels will be contracted to a single line.
   /// \code
@@ -1010,9 +1077,10 @@ struct FormatStyle {
   /// \version 3.7
   DefinitionReturnTypeBreakingStyle AlwaysBreakAfterDefinitionReturnType;
 
-  /// The function declaration return type breaking style to use.
+  /// This option is renamed to ``BreakAfterReturnType``.
   /// \version 3.8
-  ReturnTypeBreakingStyle AlwaysBreakAfterReturnType;
+  /// @deprecated
+  // ReturnTypeBreakingStyle AlwaysBreakAfterReturnType;
 
   /// If ``true``, always break before multiline string literals.
   ///
@@ -1075,9 +1143,10 @@ struct FormatStyle {
     BTDS_Yes
   };
 
-  /// The template declaration breaking style to use.
+  /// This option is renamed to ``BreakTemplateDeclarations``.
   /// \version 3.4
-  BreakTemplateDeclarationsStyle AlwaysBreakTemplateDeclarations;
+  /// @deprecated
+  // BreakTemplateDeclarationsStyle AlwaysBreakTemplateDeclarations;
 
   /// A vector of strings that should be interpreted as attributes/qualifiers
   /// instead of identifiers. This can be useful for language extensions or
@@ -1574,6 +1643,10 @@ struct FormatStyle {
   /// ``default`` labels), ``for``, and ``while`` statements.
   /// \version 16
   AttributeBreakingStyle BreakAfterAttributes;
+
+  /// The function declaration return type breaking style to use.
+  /// \version 19
+  ReturnTypeBreakingStyle BreakAfterReturnType;
 
   /// If ``true``, clang-format will always break after a Json array ``[``
   /// otherwise it will scan until the closing ``]`` to determine if it should
@@ -2182,6 +2255,20 @@ struct FormatStyle {
   /// \version 5
   BreakConstructorInitializersStyle BreakConstructorInitializers;
 
+  /// If ``true``, clang-format will always break before function definition
+  /// parameters.
+  /// \code
+  ///    true:
+  ///    void functionDefinition(
+  ///             int A, int B) {}
+  ///
+  ///    false:
+  ///    void functionDefinition(int A, int B) {}
+  ///
+  /// \endcode
+  /// \version 19
+  bool BreakFunctionDefinitionParameters;
+
   /// Break after each annotation on a field in Java files.
   /// \code{.java}
   ///    true:                                  false:
@@ -2292,6 +2379,10 @@ struct FormatStyle {
   /// The inheritance list style to use.
   /// \version 7
   BreakInheritanceListStyle BreakInheritanceList;
+
+  /// The template declaration breaking style to use.
+  /// \version 19
+  BreakTemplateDeclarationsStyle BreakTemplateDeclarations;
 
   /// If ``true``, consecutive namespace declarations will be on the same
   /// line. If ``false``, each namespace is declared on a new line.
@@ -3761,7 +3852,8 @@ struct FormatStyle {
   /// \version 17
   RemoveParenthesesStyle RemoveParentheses;
 
-  /// Remove semicolons after the closing brace of a non-empty function.
+  /// Remove semicolons after the closing braces of functions and
+  /// constructors/destructors.
   /// \warning
   ///  Setting this option to ``true`` could lead to incorrect code formatting
   ///  due to clang-format's lack of complete semantic information. As such,
@@ -4697,6 +4789,60 @@ struct FormatStyle {
   /// \version 8
   std::vector<std::string> StatementMacros;
 
+  /// Works only when TableGenBreakInsideDAGArg is not DontBreak.
+  /// The string list needs to consist of identifiers in TableGen.
+  /// If any identifier is specified, this limits the line breaks by
+  /// TableGenBreakInsideDAGArg option only on DAGArg values beginning with
+  /// the specified identifiers.
+  ///
+  /// For example the configuration,
+  /// \code{.yaml}
+  ///   TableGenBreakInsideDAGArg: BreakAll
+  ///   TableGenBreakingDAGArgOperators: ['ins', 'outs']
+  /// \endcode
+  ///
+  /// makes the line break only occurs inside DAGArgs beginning with the
+  /// specified identifiers 'ins' and 'outs'.
+  ///
+  /// \code
+  ///   let DAGArgIns = (ins
+  ///       i32:$src1,
+  ///       i32:$src2
+  ///   );
+  ///   let DAGArgOtherID = (other i32:$other1, i32:$other2);
+  ///   let DAGArgBang = (!cast<SomeType>("Some") i32:$src1, i32:$src2)
+  /// \endcode
+  /// \version 19
+  std::vector<std::string> TableGenBreakingDAGArgOperators;
+
+  /// Different ways to control the format inside TableGen DAGArg.
+  enum DAGArgStyle : int8_t {
+    /// Never break inside DAGArg.
+    /// \code
+    ///   let DAGArgIns = (ins i32:$src1, i32:$src2);
+    /// \endcode
+    DAS_DontBreak,
+    /// Break inside DAGArg after each list element but for the last.
+    /// This aligns to the first element.
+    /// \code
+    ///   let DAGArgIns = (ins i32:$src1,
+    ///                        i32:$src2);
+    /// \endcode
+    DAS_BreakElements,
+    /// Break inside DAGArg after the operator and the all elements.
+    /// \code
+    ///   let DAGArgIns = (ins
+    ///       i32:$src1,
+    ///       i32:$src2
+    ///   );
+    /// \endcode
+    DAS_BreakAll,
+  };
+
+  /// The styles of the line break inside the DAGArg in TableGen.
+  /// \version 19
+  DAGArgStyle TableGenBreakInsideDAGArg;
+
   /// The number of columns used for tab stops.
   /// \version 3.7
   unsigned TabWidth;
@@ -4794,6 +4940,12 @@ struct FormatStyle {
            AlignConsecutiveMacros == R.AlignConsecutiveMacros &&
            AlignConsecutiveShortCaseStatements ==
                R.AlignConsecutiveShortCaseStatements &&
+           AlignConsecutiveTableGenBreakingDAGArgColons ==
+               R.AlignConsecutiveTableGenBreakingDAGArgColons &&
+           AlignConsecutiveTableGenCondOperatorColons ==
+               R.AlignConsecutiveTableGenCondOperatorColons &&
+           AlignConsecutiveTableGenDefinitionColons ==
+               R.AlignConsecutiveTableGenDefinitionColons &&
            AlignEscapedNewlines == R.AlignEscapedNewlines &&
            AlignOperands == R.AlignOperands &&
            AlignTrailingComments == R.AlignTrailingComments &&
@@ -4803,6 +4955,8 @@ struct FormatStyle {
            AllowBreakBeforeNoexceptSpecifier ==
                R.AllowBreakBeforeNoexceptSpecifier &&
            AllowShortBlocksOnASingleLine == R.AllowShortBlocksOnASingleLine &&
+           AllowShortCaseExpressionOnASingleLine ==
+               R.AllowShortCaseExpressionOnASingleLine &&
            AllowShortCaseLabelsOnASingleLine ==
                R.AllowShortCaseLabelsOnASingleLine &&
            AllowShortCompoundRequirementOnASingleLine ==
@@ -4814,11 +4968,8 @@ struct FormatStyle {
                R.AllowShortIfStatementsOnASingleLine &&
            AllowShortLambdasOnASingleLine == R.AllowShortLambdasOnASingleLine &&
            AllowShortLoopsOnASingleLine == R.AllowShortLoopsOnASingleLine &&
-           AlwaysBreakAfterReturnType == R.AlwaysBreakAfterReturnType &&
            AlwaysBreakBeforeMultilineStrings ==
                R.AlwaysBreakBeforeMultilineStrings &&
-           AlwaysBreakTemplateDeclarations ==
-               R.AlwaysBreakTemplateDeclarations &&
            AttributeMacros == R.AttributeMacros &&
            BinPackArguments == R.BinPackArguments &&
            BinPackParameters == R.BinPackParameters &&
@@ -4827,6 +4978,7 @@ struct FormatStyle {
            BreakAdjacentStringLiterals == R.BreakAdjacentStringLiterals &&
            BreakAfterAttributes == R.BreakAfterAttributes &&
            BreakAfterJavaFieldAnnotations == R.BreakAfterJavaFieldAnnotations &&
+           BreakAfterReturnType == R.BreakAfterReturnType &&
            BreakArrays == R.BreakArrays &&
            BreakBeforeBinaryOperators == R.BreakBeforeBinaryOperators &&
            BreakBeforeBraces == R.BreakBeforeBraces &&
@@ -4834,8 +4986,11 @@ struct FormatStyle {
            BreakBeforeInlineASMColon == R.BreakBeforeInlineASMColon &&
            BreakBeforeTernaryOperators == R.BreakBeforeTernaryOperators &&
            BreakConstructorInitializers == R.BreakConstructorInitializers &&
+           BreakFunctionDefinitionParameters ==
+               R.BreakFunctionDefinitionParameters &&
            BreakInheritanceList == R.BreakInheritanceList &&
            BreakStringLiterals == R.BreakStringLiterals &&
+           BreakTemplateDeclarations == R.BreakTemplateDeclarations &&
            ColumnLimit == R.ColumnLimit && CommentPragmas == R.CommentPragmas &&
            CompactNamespaces == R.CompactNamespaces &&
            ConstructorInitializerIndentWidth ==
@@ -4946,9 +5101,12 @@ struct FormatStyle {
            SpacesInSquareBrackets == R.SpacesInSquareBrackets &&
            Standard == R.Standard &&
            StatementAttributeLikeMacros == R.StatementAttributeLikeMacros &&
-           StatementMacros == R.StatementMacros && TabWidth == R.TabWidth &&
-           TypeNames == R.TypeNames && TypenameMacros == R.TypenameMacros &&
-           UseTab == R.UseTab &&
+           StatementMacros == R.StatementMacros &&
+           TableGenBreakingDAGArgOperators ==
+               R.TableGenBreakingDAGArgOperators &&
+           TableGenBreakInsideDAGArg == R.TableGenBreakInsideDAGArg &&
+           TabWidth == R.TabWidth && TypeNames == R.TypeNames &&
+           TypenameMacros == R.TypenameMacros && UseTab == R.UseTab &&
            VerilogBreakBetweenInstancePorts ==
                R.VerilogBreakBetweenInstancePorts &&
            WhitespaceSensitiveMacros == R.WhitespaceSensitiveMacros;

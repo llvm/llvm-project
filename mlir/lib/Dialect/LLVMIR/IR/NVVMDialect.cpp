@@ -214,8 +214,7 @@ void MmaOp::print(OpAsmPrinter &p) {
   p.printOptionalAttrDict(this->getOperation()->getAttrs(), ignoreAttrNames);
 
   // Print the types of the operands and result.
-  p << " : "
-    << "(";
+  p << " : " << "(";
   llvm::interleaveComma(SmallVector<Type, 3>{frags[0].regs[0].getType(),
                                              frags[1].regs[0].getType(),
                                              frags[2].regs[0].getType()},
@@ -956,9 +955,7 @@ std::string NVVM::WgmmaMmaAsyncOp::getPtx() {
   ss << "},";
   // Need to map read/write registers correctly.
   regCnt = (regCnt * 2);
-  ss << " $" << (regCnt) << ","
-     << " $" << (regCnt + 1) << ","
-     << " p";
+  ss << " $" << (regCnt) << "," << " $" << (regCnt + 1) << "," << " p";
   if (getTypeD() != WGMMATypes::s32) {
     ss << ", $" << (regCnt + 3) << ",  $" << (regCnt + 4);
   }
@@ -1022,6 +1019,13 @@ LogicalResult NVVM::SetMaxRegisterOp::verify() {
   return success();
 }
 
+LogicalResult NVVM::BarrierOp::verify() {
+  if (getNumberOfThreads() && !getBarrierId())
+    return emitOpError(
+        "barrier id is missing, it should be set between 0 to 15");
+  return success();
+}
+
 //===----------------------------------------------------------------------===//
 // NVVMDialect initialization, type parsing, and registration.
 //===----------------------------------------------------------------------===//
@@ -1040,8 +1044,8 @@ void NVVMDialect::initialize() {
   // Support unknown operations because not all NVVM operations are
   // registered.
   allowUnknownOperations();
-  declarePromisedInterface<NVVMDialect, ConvertToLLVMPatternInterface>();
-  declarePromisedInterface<NVVMTargetAttr, gpu::TargetAttrInterface>();
+  declarePromisedInterface<ConvertToLLVMPatternInterface, NVVMDialect>();
+  declarePromisedInterface<gpu::TargetAttrInterface, NVVMTargetAttr>();
 }
 
 LogicalResult NVVMDialect::verifyOperationAttribute(Operation *op,
@@ -1069,6 +1073,35 @@ LogicalResult NVVMDialect::verifyOperationAttribute(Operation *op,
     if (!llvm::dyn_cast<IntegerAttr>(attr.getValue()))
       return op->emitError()
              << "'" << attrName << "' attribute must be integer constant";
+  }
+
+  return success();
+}
+
+LogicalResult NVVMDialect::verifyRegionArgAttribute(Operation *op,
+                                                    unsigned regionIndex,
+                                                    unsigned argIndex,
+                                                    NamedAttribute argAttr) {
+  auto funcOp = dyn_cast<FunctionOpInterface>(op);
+  if (!funcOp)
+    return success();
+
+  bool isKernel = op->hasAttr(NVVMDialect::getKernelFuncAttrName());
+  StringAttr attrName = argAttr.getName();
+  if (attrName == NVVM::NVVMDialect::getGridConstantAttrName()) {
+    if (!isKernel) {
+      return op->emitError()
+             << "'" << attrName
+             << "' attribute must be present only on kernel arguments";
+    }
+    if (!isa<UnitAttr>(argAttr.getValue()))
+      return op->emitError() << "'" << attrName << "' must be a unit attribute";
+    if (!funcOp.getArgAttr(argIndex, LLVM::LLVMDialect::getByValAttrName())) {
+      return op->emitError()
+             << "'" << attrName
+             << "' attribute requires the argument to also have attribute '"
+             << LLVM::LLVMDialect::getByValAttrName() << "'";
+    }
   }
 
   return success();

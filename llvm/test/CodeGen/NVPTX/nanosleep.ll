@@ -1,5 +1,5 @@
 ; RUN: llc < %s -march=nvptx64 -O2 -mcpu=sm_70 -mattr=+ptx63 | FileCheck %s
-; RUN: %if ptxas %{ llc < %s -march=nvptx64 -mcpu=sm_70 -mattr=+ptx63 | %ptxas-verify %}
+; RUN: %if ptxas %{ llc < %s -march=nvptx64 -mcpu=sm_70 -mattr=+ptx63 | %ptxas-verify -arch=sm_70 %}
 
 declare void @llvm.nvvm.nanosleep(i32)
 

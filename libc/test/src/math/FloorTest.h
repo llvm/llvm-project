@@ -6,15 +6,20 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef LLVM_LIBC_TEST_SRC_MATH_FLOORTEST_H
+#define LLVM_LIBC_TEST_SRC_MATH_FLOORTEST_H
+
+#include "test/UnitTest/FEnvSafeTest.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
 
-#include <math.h>
+#include "hdr/math_macros.h"
 
 namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
-template <typename T> class FloorTest : public LIBC_NAMESPACE::testing::Test {
+template <typename T>
+class FloorTest : public LIBC_NAMESPACE::testing::FEnvSafeTest {
 
   DECLARE_SPECIAL_CONSTANTS(T)
 
@@ -82,3 +87,5 @@ public:
   TEST_F(LlvmLibcFloorTest, RoundedNubmers) { testRoundedNumbers(&func); }     \
   TEST_F(LlvmLibcFloorTest, Fractions) { testFractions(&func); }               \
   TEST_F(LlvmLibcFloorTest, Range) { testRange(&func); }
+
+#endif // LLVM_LIBC_TEST_SRC_MATH_FLOORTEST_H

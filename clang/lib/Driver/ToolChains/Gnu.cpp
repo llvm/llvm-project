@@ -30,8 +30,8 @@
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Support/RISCVISAInfo.h"
 #include "llvm/Support/VirtualFileSystem.h"
+#include "llvm/TargetParser/RISCVISAInfo.h"
 #include "llvm/TargetParser/TargetParser.h"
 #include <system_error>
 
@@ -598,7 +598,7 @@ void tools::gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
       // FIXME: Only pass GompNeedsRT = true for platforms with libgomp that
       // require librt. Most modern Linux platforms do, but some may not.
-      if (addOpenMPRuntime(CmdArgs, ToolChain, Args, StaticOpenMP,
+      if (addOpenMPRuntime(C, CmdArgs, ToolChain, Args, StaticOpenMP,
                            JA.isHostOffloading(Action::OFK_OpenMP),
                            /* GompNeedsRT= */ true))
         // OpenMP runtimes implies pthreads when using the GNU toolchain.
@@ -1796,9 +1796,7 @@ selectRISCVMultilib(const MultilibSet &RISCVMultilibSet, StringRef Arch,
       }
       auto &MLConfigISAInfo = *MLConfigParseResult;
 
-      const llvm::RISCVISAInfo::OrderedExtensionMap &MLConfigArchExts =
-          MLConfigISAInfo->getExtensions();
-      for (auto MLConfigArchExt : MLConfigArchExts) {
+      for (auto &MLConfigArchExt : MLConfigISAInfo->getExtensions()) {
         auto ExtName = MLConfigArchExt.first;
         NewMultilib.flag(Twine("-", ExtName).str());
 
@@ -2285,7 +2283,7 @@ void Generic_GCC::GCCInstallationDetector::init(
     }
 
     // Then look for gcc installed alongside clang.
-    Prefixes.push_back(D.InstalledDir + "/..");
+    Prefixes.push_back(D.Dir + "/..");
 
     // Next, look for prefix(es) that correspond to distribution-supplied gcc
     // installations.
@@ -3054,9 +3052,7 @@ Generic_GCC::Generic_GCC(const Driver &D, const llvm::Triple &Triple,
                          const ArgList &Args)
     : ToolChain(D, Triple, Args), GCCInstallation(D),
       CudaInstallation(D, Triple, Args), RocmInstallation(D, Triple, Args) {
-  getProgramPaths().push_back(getDriver().getInstalledDir());
-  if (getDriver().getInstalledDir() != getDriver().Dir)
-    getProgramPaths().push_back(getDriver().Dir);
+  getProgramPaths().push_back(getDriver().Dir);
 }
 
 Generic_GCC::~Generic_GCC() {}

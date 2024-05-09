@@ -13,6 +13,7 @@ Clang Language Extensions
    BlockLanguageSpec
    Block-ABI-Apple
    AutomaticReferenceCounting
+   PointerAuthentication
    MatrixTypes
 
 Introduction
@@ -655,6 +656,7 @@ Unless specified otherwise operation(±0) = ±0 and operation(±infinity) = ±in
  T __builtin_elementwise_ceil(T x)           return the smallest integral value greater than or equal to x    floating point types
  T __builtin_elementwise_sin(T x)            return the sine of x interpreted as an angle in radians          floating point types
  T __builtin_elementwise_cos(T x)            return the cosine of x interpreted as an angle in radians        floating point types
+ T __builtin_elementwise_tan(T x)            return the tangent of x interpreted as an angle in radians       floating point types
  T __builtin_elementwise_floor(T x)          return the largest integral value less than or equal to x        floating point types
  T __builtin_elementwise_log(T x)            return the natural logarithm of x                                floating point types
  T __builtin_elementwise_log2(T x)           return the base 2 logarithm of x                                 floating point types
@@ -709,6 +711,8 @@ even-odd element pair with indices ``i * 2`` and ``i * 2 + 1`` with
 ``i in [0, Number of elements / 2)``. If the numbers of elements is not a
 power of 2, the vector is widened with neutral elements for the reduction
 at the end to the next power of 2.
+
+These reductions support both fixed-sized and scalable vector types.
 
 Example:
 
@@ -833,6 +837,7 @@ to ``float``; see below for more information on this emulation.
   * 32-bit ARM (natively on some architecture versions)
   * 64-bit ARM (AArch64) (natively on ARMv8.2a and above)
   * AMDGPU (natively)
+  * NVPTX (natively)
   * SPIR (natively)
   * X86 (if SSE2 is available; natively if AVX512-FP16 is also available)
   * RISC-V (natively if Zfh or Zhinx is available)
@@ -1457,40 +1462,47 @@ More information could be found `here <https://clang.llvm.org/docs/Modules.html>
 Language Extensions Back-ported to Previous Standards
 =====================================================
 
-====================================== ================================ ============= =============
-Feature                                Feature Test Macro               Introduced In Backported To
-====================================== ================================ ============= =============
-variadic templates                     __cpp_variadic_templates         C++11         C++03
-Alias templates                        __cpp_alias_templates            C++11         C++03
-Non-static data member initializers    __cpp_nsdmi                      C++11         C++03
-Range-based ``for`` loop               __cpp_range_based_for            C++11         C++03
-RValue references                      __cpp_rvalue_references          C++11         C++03
-Attributes                             __cpp_attributes                 C++11         C++03
-variable templates                     __cpp_variable_templates         C++14         C++03
-Binary literals                        __cpp_binary_literals            C++14         C++03
-Relaxed constexpr                      __cpp_constexpr                  C++14         C++11
-``if constexpr``                       __cpp_if_constexpr               C++17         C++11
-fold expressions                       __cpp_fold_expressions           C++17         C++03
-Lambda capture of \*this by value      __cpp_capture_star_this          C++17         C++11
-Attributes on enums                    __cpp_enumerator_attributes      C++17         C++03
-Guaranteed copy elision                __cpp_guaranteed_copy_elision    C++17         C++03
-Hexadecimal floating literals          __cpp_hex_float                  C++17         C++03
-``inline`` variables                   __cpp_inline_variables           C++17         C++03
-Attributes on namespaces               __cpp_namespace_attributes       C++17         C++11
-Structured bindings                    __cpp_structured_bindings        C++17         C++03
-template template arguments            __cpp_template_template_args     C++17         C++03
-``static operator[]``                  __cpp_multidimensional_subscript C++20         C++03
-Designated initializers                __cpp_designated_initializers    C++20         C++03
-Conditional ``explicit``               __cpp_conditional_explicit       C++20         C++03
-``using enum``                         __cpp_using_enum                 C++20         C++03
-``if consteval``                       __cpp_if_consteval               C++23         C++20
-``static operator()``                  __cpp_static_call_operator       C++23         C++03
-Attributes on Lambda-Expressions                                        C++23         C++11
--------------------------------------- -------------------------------- ------------- -------------
-Designated initializers (N494)                                          C99           C89
-Array & element qualification (N2607)                                   C23           C89
-Attributes (N2335)                                                      C23           C89
-====================================== ================================ ============= =============
+============================================ ================================ ============= =============
+Feature                                      Feature Test Macro               Introduced In Backported To
+============================================ ================================ ============= =============
+variadic templates                           __cpp_variadic_templates         C++11         C++03
+Alias templates                              __cpp_alias_templates            C++11         C++03
+Non-static data member initializers          __cpp_nsdmi                      C++11         C++03
+Range-based ``for`` loop                     __cpp_range_based_for            C++11         C++03
+RValue references                            __cpp_rvalue_references          C++11         C++03
+Attributes                                   __cpp_attributes                 C++11         C++03
+Lambdas                                      __cpp_lambdas                    C++11         C++03
+Generalized lambda captures                  __cpp_init_captures              C++14         C++03
+Generic lambda expressions                   __cpp_generic_lambdas            C++14         C++03
+variable templates                           __cpp_variable_templates         C++14         C++03
+Binary literals                              __cpp_binary_literals            C++14         C++03
+Relaxed constexpr                            __cpp_constexpr                  C++14         C++11
+Pack expansion in generalized lambda-capture __cpp_init_captures              C++17         C++03
+``if constexpr``                             __cpp_if_constexpr               C++17         C++11
+fold expressions                             __cpp_fold_expressions           C++17         C++03
+Lambda capture of \*this by value            __cpp_capture_star_this          C++17         C++03
+Attributes on enums                          __cpp_enumerator_attributes      C++17         C++03
+Guaranteed copy elision                      __cpp_guaranteed_copy_elision    C++17         C++03
+Hexadecimal floating literals                __cpp_hex_float                  C++17         C++03
+``inline`` variables                         __cpp_inline_variables           C++17         C++03
+Attributes on namespaces                     __cpp_namespace_attributes       C++17         C++11
+Structured bindings                          __cpp_structured_bindings        C++17         C++03
+template template arguments                  __cpp_template_template_args     C++17         C++03
+Familiar template syntax for generic lambdas __cpp_generic_lambdas            C++20         C++03
+``static operator[]``                        __cpp_multidimensional_subscript C++20         C++03
+Designated initializers                      __cpp_designated_initializers    C++20         C++03
+Conditional ``explicit``                     __cpp_conditional_explicit       C++20         C++03
+``using enum``                               __cpp_using_enum                 C++20         C++03
+``if consteval``                             __cpp_if_consteval               C++23         C++20
+``static operator()``                        __cpp_static_call_operator       C++23         C++03
+Attributes on Lambda-Expressions                                              C++23         C++11
+Attributes on Structured Bindings            __cpp_structured_bindings        C++26         C++03
+``= delete ("should have a reason");``       __cpp_deleted_function           C++26         C++03
+-------------------------------------------- -------------------------------- ------------- -------------
+Designated initializers (N494)                                                C99           C89
+Array & element qualification (N2607)                                         C23           C89
+Attributes (N2335)                                                            C23           C89
+============================================ ================================ ============= =============
 
 Type Trait Primitives
 =====================
@@ -1582,6 +1594,7 @@ The following type trait primitives are supported by Clang. Those traits marked
 * ``__is_integral`` (C++, Embarcadero)
 * ``__is_interface_class`` (Microsoft):
   Returns ``false``, even for types defined with ``__interface``.
+* ``__is_layout_compatible`` (C++, GNU, Microsoft)
 * ``__is_literal`` (Clang):
   Synonym for ``__is_literal_type``.
 * ``__is_literal_type`` (C++, GNU, Microsoft):
@@ -1602,6 +1615,7 @@ The following type trait primitives are supported by Clang. Those traits marked
 * ``__is_pod`` (C++, GNU, Microsoft, Embarcadero):
   Note, the corresponding standard trait was deprecated in C++20.
 * ``__is_pointer`` (C++, Embarcadero)
+* ``__is_pointer_interconvertible_base_of`` (C++, GNU, Microsoft)
 * ``__is_polymorphic`` (C++, GNU, Microsoft, Embarcadero)
 * ``__is_reference`` (C++, Embarcadero)
 * ``__is_referenceable`` (C++, GNU, Microsoft, Embarcadero):
@@ -1632,7 +1646,8 @@ The following type trait primitives are supported by Clang. Those traits marked
   were made trivially relocatable via the ``clang::trivial_abi`` attribute.
 * ``__is_trivially_equality_comparable`` (Clang): Returns true if comparing two
   objects of the provided type is known to be equivalent to comparing their
-  value representations.
+  object representations. Note that types containing padding bytes are never
+  trivially equality comparable.
 * ``__is_unbounded_array`` (C++, GNU, Microsoft, Embarcadero)
 * ``__is_union`` (C++, GNU, Microsoft, Embarcadero)
 * ``__is_unsigned`` (C++, Embarcadero):
@@ -2764,6 +2779,67 @@ Query for this feature with ``__has_builtin(__builtin_readcyclecounter)``. Note
 that even if present, its use may depend on run-time privilege or other OS
 controlled state.
 
+``__builtin_readsteadycounter``
+-------------------------------
+
+``__builtin_readsteadycounter`` is used to access the fixed frequency counter
+register (or a similar steady-rate clock) on those targets that support it.
+The function is similar to ``__builtin_readcyclecounter`` above except that the
+frequency is fixed, making it suitable for measuring elapsed time.
+
+**Syntax**:
+
+.. code-block:: c++
+
+  __builtin_readsteadycounter()
+
+**Example of Use**:
+
+.. code-block:: c++
+
+  unsigned long long t0 = __builtin_readsteadycounter();
+  do_something();
+  unsigned long long t1 = __builtin_readsteadycounter();
+  unsigned long long secs_to_do_something = (t1 - t0) / tick_rate;
+
+**Description**:
+
+The ``__builtin_readsteadycounter()`` builtin returns the frequency counter value.
+When not supported by the target, the return value is always zero. This builtin
+takes no arguments and produces an unsigned long long result. The builtin does
+not guarantee any particular frequency, only that it is stable. Knowledge of the
+counter's true frequency will need to be provided by the user.
+
+Query for this feature with ``__has_builtin(__builtin_readsteadycounter)``.
+
+``__builtin_cpu_supports``
+--------------------------
+
+**Syntax**:
+
+.. code-block:: c++
+
+  int __builtin_cpu_supports(const char *features);
+
+**Example of Use:**:
+
+.. code-block:: c++
+
+  if (__builtin_cpu_supports("sve"))
+    sve_code();
+
+**Description**:
+
+The ``__builtin_cpu_supports`` function detects if the run-time CPU supports
+features specified in string argument. It returns a positive integer if all
+features are supported and 0 otherwise. Feature names are target specific. On
+AArch64 features are combined using ``+`` like this
+``__builtin_cpu_supports("flagm+sha3+lse+rcpc2+fcma+memtag+bti+sme2")``.
+If a feature name is not supported, Clang will issue a warning and replace
+builtin by the constant 0.
+
+Query for this feature with ``__has_builtin(__builtin_cpu_supports)``.
+
 ``__builtin_dump_struct``
 -------------------------
 
@@ -2856,7 +2932,7 @@ Query for this feature with ``__has_builtin(__builtin_dump_struct)``
 ``__builtin_shufflevector`` is used to express generic vector
 permutation/shuffle/swizzle operations.  This builtin is also very important
 for the implementation of various target-specific header files like
-``<xmmintrin.h>``.
+``<xmmintrin.h>``. This builtin can be used within constant expressions.
 
 **Syntax**:
 
@@ -2883,7 +2959,7 @@ for the implementation of various target-specific header files like
   // Concatenate every other element of 8-element vectors V1 and V2.
   __builtin_shufflevector(V1, V2, 0, 2, 4, 6, 8, 10, 12, 14)
 
-  // Shuffle v1 with some elements being undefined
+  // Shuffle v1 with some elements being undefined. Not allowed in constexpr.
   __builtin_shufflevector(v1, v1, 3, -1, 1, -1)
 
 **Description**:
@@ -2896,6 +2972,7 @@ starting with the first vector, continuing into the second vector.  Thus, if
 ``vec1`` is a 4-element vector, index 5 would refer to the second element of
 ``vec2``. An index of -1 can be used to indicate that the corresponding element
 in the returned vector is a don't care and can be optimized by the backend.
+Values of -1 are not supported in constant expressions.
 
 The result of ``__builtin_shufflevector`` is a vector with the same element
 type as ``vec1``/``vec2`` but that has an element count equal to the number of
@@ -2910,7 +2987,8 @@ Query for this feature with ``__has_builtin(__builtin_shufflevector)``.
 
 ``__builtin_convertvector`` is used to express generic vector
 type-conversion operations. The input vector and the output vector
-type must have the same number of elements.
+type must have the same number of elements. This builtin can be used within
+constant expressions.
 
 **Syntax**:
 
@@ -3380,6 +3458,69 @@ Query for this feature with ``__has_builtin(__builtin_debugtrap)``.
 
 Query for this feature with ``__has_builtin(__builtin_trap)``.
 
+``__builtin_arm_trap``
+----------------------
+
+``__builtin_arm_trap`` is an AArch64 extension to ``__builtin_trap`` which also accepts a compile-time constant value, encoded directly into the trap instruction for later inspection.
+
+**Syntax**:
+
+.. code-block:: c++
+
+    __builtin_arm_trap(const unsigned short payload)
+
+**Description**
+
+``__builtin_arm_trap`` is lowered to the ``llvm.aarch64.break`` builtin, and then to ``brk #payload``.
+
+``__builtin_allow_runtime_check``
+---------------------------------
+
+``__builtin_allow_runtime_check`` return true if the check at the current
+program location should be executed. It is expected to be used to implement
+``assert`` like checks which can be safely removed by optimizer.
+
+**Syntax**:
+
+.. code-block:: c++
+
+    bool __builtin_allow_runtime_check(const char* kind)
+
+**Example of use**:
+
+.. code-block:: c++
+
+  if (__builtin_allow_runtime_check("mycheck") && !ExpensiveCheck()) {
+     abort();
+  }
+
+**Description**
+
+``__builtin_allow_runtime_check`` is lowered to ` ``llvm.allow.runtime.check``
+<https://llvm.org/docs/LangRef.html#llvm-allow-runtime-check-intrinsic>`_
+builtin.
+
+The ``__builtin_allow_runtime_check()`` is expected to be used with control
+flow conditions such as in ``if`` to guard expensive runtime checks. The
+specific rules for selecting permitted checks can differ and are controlled by
+the compiler options.
+
+Flags to control checks:
+* ``-mllvm -lower-allow-check-percentile-cutoff-hot=N`` where N is PGO hotness
+cutoff in range ``[0, 999999]`` to disallow checks in hot code.
+* ``-mllvm -lower-allow-check-random-rate=P`` where P is number in range
+``[0.0, 1.0]`` representation probability of keeping a check.
+* If both flags are specified, ``-lower-allow-check-random-rate`` takes
+precedence.
+* If none is specified, ``__builtin_allow_runtime_check`` is lowered as
+``true``, allowing all checks.
+
+Parameter ``kind`` is a string literal representing a user selected kind for
+guarded check. It's unused now. It will enable kind-specific lowering in future.
+E.g. a higher hotness cutoff can be used for more expensive kind of check.
+
+Query for this feature with ``__has_builtin(__builtin_allow_runtime_check)``.
+
 ``__builtin_nondeterministic_value``
 ------------------------------------
 
@@ -3437,6 +3578,78 @@ builtin, the mangler emits their usual pattern without any special treatment.
 
   // Computes a unique stable name for the given type.
   constexpr const char * __builtin_sycl_unique_stable_name( type-id );
+
+``__builtin_popcountg``
+-----------------------
+
+``__builtin_popcountg`` returns the number of 1 bits in the argument. The
+argument can be of any unsigned integer type.
+
+**Syntax**:
+
+.. code-block:: c++
+
+  int __builtin_popcountg(type x)
+
+**Examples**:
+
+.. code-block:: c++
+
+  unsigned int x = 1;
+  int x_pop = __builtin_popcountg(x);
+
+  unsigned long y = 3;
+  int y_pop = __builtin_popcountg(y);
+
+  unsigned _BitInt(128) z = 7;
+  int z_pop = __builtin_popcountg(z);
+
+**Description**:
+
+``__builtin_popcountg`` is meant to be a type-generic alternative to the
+``__builtin_popcount{,l,ll}`` builtins, with support for other integer types,
+such as ``unsigned __int128`` and C23 ``unsigned _BitInt(N)``.
+
+``__builtin_clzg`` and ``__builtin_ctzg``
+-----------------------------------------
+
+``__builtin_clzg`` (respectively ``__builtin_ctzg``) returns the number of
+leading (respectively trailing) 0 bits in the first argument. The first argument
+can be of any unsigned integer type.
+
+If the first argument is 0 and an optional second argument of ``int`` type is
+provided, then the second argument is returned. If the first argument is 0, but
+only one argument is provided, then the behavior is undefined.
+
+**Syntax**:
+
+.. code-block:: c++
+
+  int __builtin_clzg(type x[, int fallback])
+  int __builtin_ctzg(type x[, int fallback])
+
+**Examples**:
+
+.. code-block:: c++
+
+  unsigned int x = 1;
+  int x_lz = __builtin_clzg(x);
+  int x_tz = __builtin_ctzg(x);
+
+  unsigned long y = 2;
+  int y_lz = __builtin_clzg(y);
+  int y_tz = __builtin_ctzg(y);
+
+  unsigned _BitInt(128) z = 4;
+  int z_lz = __builtin_clzg(z);
+  int z_tz = __builtin_ctzg(z);
+
+**Description**:
+
+``__builtin_clzg`` (respectively ``__builtin_ctzg``) is meant to be a
+type-generic alternative to the ``__builtin_clz{,l,ll}`` (respectively
+``__builtin_ctz{,l,ll}``) builtins, with support for other integer types, such
+as ``unsigned __int128`` and C23 ``unsigned _BitInt(N)``.
 
 Multiprecision Arithmetic Builtins
 ----------------------------------
@@ -4208,6 +4421,10 @@ Note that these intrinsics are implemented as motion barriers that block
 reordering of memory accesses and side effect instructions. Other instructions
 like simple arithmetic may be reordered around the intrinsic. If you expect to
 have no reordering at all, use inline assembly instead.
+
+Pointer Authentication
+^^^^^^^^^^^^^^^^^^^^^^
+See :doc:`PointerAuthentication`.
 
 X86/X86-64 Language Extensions
 ------------------------------
@@ -5241,6 +5458,11 @@ Intrinsics Support within Constant Expressions
 
 The following builtin intrinsics can be used in constant expressions:
 
+* ``__builtin_addcb``
+* ``__builtin_addcs``
+* ``__builtin_addc``
+* ``__builtin_addcl``
+* ``__builtin_addcll``
 * ``__builtin_bitreverse8``
 * ``__builtin_bitreverse16``
 * ``__builtin_bitreverse32``
@@ -5255,10 +5477,12 @@ The following builtin intrinsics can be used in constant expressions:
 * ``__builtin_clzl``
 * ``__builtin_clzll``
 * ``__builtin_clzs``
+* ``__builtin_clzg``
 * ``__builtin_ctz``
 * ``__builtin_ctzl``
 * ``__builtin_ctzll``
 * ``__builtin_ctzs``
+* ``__builtin_ctzg``
 * ``__builtin_ffs``
 * ``__builtin_ffsl``
 * ``__builtin_ffsll``
@@ -5279,6 +5503,7 @@ The following builtin intrinsics can be used in constant expressions:
 * ``__builtin_popcount``
 * ``__builtin_popcountl``
 * ``__builtin_popcountll``
+* ``__builtin_popcountg``
 * ``__builtin_rotateleft8``
 * ``__builtin_rotateleft16``
 * ``__builtin_rotateleft32``
@@ -5287,6 +5512,11 @@ The following builtin intrinsics can be used in constant expressions:
 * ``__builtin_rotateright16``
 * ``__builtin_rotateright32``
 * ``__builtin_rotateright64``
+* ``__builtin_subcb``
+* ``__builtin_subcs``
+* ``__builtin_subc``
+* ``__builtin_subcl``
+* ``__builtin_subcll``
 
 The following x86-specific intrinsics can be used in constant expressions:
 
@@ -5348,3 +5578,25 @@ but the expression has no runtime effects.
 Type- and value-dependent expressions are not supported yet.
 
 This facility is designed to aid with testing name lookup machinery.
+
+Predefined Macros
+=================
+
+`__GCC_DESTRUCTIVE_SIZE` and `__GCC_CONSTRUCTIVE_SIZE`
+------------------------------------------------------
+Specify the mimum offset between two objects to avoid false sharing and the
+maximum size of contiguous memory to promote true sharing, respectively. These
+macros are predefined in all C and C++ language modes, but can be redefined on
+the command line with ``-D`` to specify different values as needed or can be
+undefined on the command line with ``-U`` to disable support for the feature.
+
+**Note: the values the macros expand to are not guaranteed to be stable. They
+are are affected by architectures and CPU tuning flags, can change between
+releases of Clang and will not match the values defined by other compilers such
+as GCC.**
+
+Compiling different TUs depending on these flags (including use of
+``std::hardware_constructive_interference`` or
+``std::hardware_destructive_interference``)  with different compilers, macro
+definitions, or architecture flags will lead to ODR violations and should be
+avoided.

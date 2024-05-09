@@ -49,6 +49,7 @@
 #include "ToolChains/WebAssembly.h"
 #include "ToolChains/XCore.h"
 #include "ToolChains/ZOS.h"
+#include "clang/Basic/DiagnosticDriver.h"
 #include "clang/Basic/TargetID.h"
 #include "clang/Basic/Version.h"
 #include "clang/Config/config.h"
@@ -86,11 +87,12 @@
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Program.h"
-#include "llvm/Support/RISCVISAInfo.h"
+#include "llvm/Support/Regex.h"
 #include "llvm/Support/StringSaver.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Host.h"
+#include "llvm/TargetParser/RISCVISAInfo.h"
 #include <cstdlib> // ::getenv
 #include <map>
 #include <memory>
@@ -209,11 +211,10 @@ Driver::Driver(StringRef ClangExecutable, StringRef TargetTriple,
 
   Name = std::string(llvm::sys::path::filename(ClangExecutable));
   Dir = std::string(llvm::sys::path::parent_path(ClangExecutable));
-  InstalledDir = Dir; // Provide a sensible default installed dir.
 
   if ((!SysRoot.empty()) && llvm::sys::path::is_relative(SysRoot)) {
     // Prepend InstalledDir if SysRoot is relative
-    SmallString<128> P(InstalledDir);
+    SmallString<128> P(Dir);
     llvm::sys::path::append(P, SysRoot);
     SysRoot = std::string(P);
   }
@@ -360,6 +361,7 @@ phases::ID Driver::getFinalPhase(const DerivedArgList &DAL,
              (PhaseArg = DAL.getLastArg(options::OPT_rewrite_legacy_objc)) ||
              (PhaseArg = DAL.getLastArg(options::OPT__migrate)) ||
              (PhaseArg = DAL.getLastArg(options::OPT__analyze)) ||
+             (PhaseArg = DAL.getLastArg(options::OPT_emit_cir)) ||
              (PhaseArg = DAL.getLastArg(options::OPT_emit_ast))) {
     FinalPhase = phases::Compile;
 
@@ -1337,7 +1339,7 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
   if (const Arg *A = Args.getLastArg(options::OPT_target))
     TargetTriple = A->getValue();
   if (const Arg *A = Args.getLastArg(options::OPT_ccc_install_dir))
-    Dir = InstalledDir = A->getValue();
+    Dir = Dir = A->getValue();
   for (const Arg *A : Args.filtered(options::OPT_B)) {
     A->claim();
     PrefixDirs.push_back(A->getValue(0));
@@ -2000,7 +2002,13 @@ void Driver::PrintVersion(const Compilation &C, raw_ostream &OS) const {
   OS << '\n';
 
   // Print out the install directory.
-  OS << "InstalledDir: " << InstalledDir << '\n';
+  OS << "InstalledDir: " << Dir << '\n';
+
+  // Print the build config if it's non-default.
+  // Intended to help LLVM developers understand the configs of compilers
+  // they're investigating.
+  if (!llvm::cl::getCompilerBuildConfig().empty())
+    llvm::cl::printBuildConfig(OS);
 
   // If configuration files were used, print their paths.
   for (auto ConfigFile : ConfigFiles)
@@ -2194,6 +2202,12 @@ bool Driver::HandleImmediateArgs(const Compilation &C) {
         llvm::outs() << Path;
     }
     llvm::outs() << "\n";
+    return false;
+  }
+
+  if (C.getArgs().hasArg(options::OPT_print_std_module_manifest_path)) {
+    llvm::outs() << GetStdModuleManifestPath(C, C.getDefaultToolChain())
+                 << '\n';
     return false;
   }
 
@@ -3235,7 +3249,7 @@ class OffloadingActionBuilder final {
     CudaActionBuilder(Compilation &C, DerivedArgList &Args,
                       const Driver::InputList &Inputs)
         : CudaActionBuilderBase(C, Args, Inputs, Action::OFK_Cuda) {
-      DefaultCudaArch = CudaArch::SM_35;
+      DefaultCudaArch = CudaArch::CudaDefault;
     }
 
     StringRef getCanonicalOffloadArch(StringRef ArchStr) override {
@@ -3374,7 +3388,7 @@ class OffloadingActionBuilder final {
                      const Driver::InputList &Inputs)
         : CudaActionBuilderBase(C, Args, Inputs, Action::OFK_HIP) {
 
-      DefaultCudaArch = CudaArch::GFX906;
+      DefaultCudaArch = CudaArch::HIPDefault;
 
       if (Args.hasArg(options::OPT_fhip_emit_relocatable,
                       options::OPT_fno_hip_emit_relocatable)) {
@@ -4626,12 +4640,30 @@ Action *Driver::BuildOffloadingActions(Compilation &C,
       DDeps.add(*A, *TCAndArch->first, TCAndArch->second.data(), Kind);
       OffloadAction::DeviceDependences DDep;
       DDep.add(*A, *TCAndArch->first, TCAndArch->second.data(), Kind);
+
+      // Compiling CUDA in non-RDC mode uses the PTX output if available.
+      for (Action *Input : A->getInputs())
+        if (Kind == Action::OFK_Cuda && A->getType() == types::TY_Object &&
+            !Args.hasFlag(options::OPT_fgpu_rdc, options::OPT_fno_gpu_rdc,
+                          false))
+          DDep.add(*Input, *TCAndArch->first, TCAndArch->second.data(), Kind);
       OffloadActions.push_back(C.MakeAction<OffloadAction>(DDep, A->getType()));
+
       ++TCAndArch;
     }
   }
 
-  if (offloadDeviceOnly())
+  // HIP code in non-RDC mode will bundle the output if it invoked the linker.
+  bool ShouldBundleHIP =
+      C.isOffloadingHostKind(Action::OFK_HIP) &&
+      Args.hasFlag(options::OPT_gpu_bundle_output,
+                   options::OPT_no_gpu_bundle_output, true) &&
+      !Args.hasFlag(options::OPT_fgpu_rdc, options::OPT_fno_gpu_rdc, false) &&
+      !llvm::any_of(OffloadActions,
+                    [](Action *A) { return A->getType() != types::TY_Image; });
+
+  // All kinds exit now in device-only mode except for non-RDC mode HIP.
+  if (offloadDeviceOnly() && !ShouldBundleHIP)
     return C.MakeAction<OffloadAction>(DDeps, types::TY_Nothing);
 
   if (OffloadActions.empty())
@@ -4663,6 +4695,10 @@ Action *Driver::BuildOffloadingActions(Compilation &C,
     DDep.add(*PackagerAction, *C.getSingleOffloadToolChain<Action::OFK_Host>(),
              nullptr, C.getActiveOffloadKinds());
   }
+
+  // HIP wants '--offload-device-only' to create a fatbinary by default.
+  if (offloadDeviceOnly())
+    return C.MakeAction<OffloadAction>(DDep, types::TY_Nothing);
 
   // If we are unable to embed a single device output into the host, we need to
   // add each device output as a host dependency to ensure they are still built.
@@ -4721,6 +4757,14 @@ Action *Driver::ConstructPhaseAction(
     if (Args.hasArg(options::OPT_extract_api))
       return C.MakeAction<ExtractAPIJobAction>(Input, types::TY_API_INFO);
 
+    // With 'fexperimental-modules-reduced-bmi', we don't want to run the
+    // precompile phase unless the user specified '--precompile'. In the case
+    // the '--precompile' flag is enabled, we will try to emit the reduced BMI
+    // as a by product in GenerateModuleInterfaceAction.
+    if (Args.hasArg(options::OPT_modules_reduced_bmi) &&
+        !Args.getLastArg(options::OPT__precompile))
+      return Input;
+
     types::ID OutputTy = getPrecompiledType(Input->getType());
     assert(OutputTy != types::TY_INVALID &&
            "Cannot precompile this input type!");
@@ -4756,6 +4800,8 @@ Action *Driver::ConstructPhaseAction(
       return C.MakeAction<MigrateJobAction>(Input, types::TY_Remap);
     if (Args.hasArg(options::OPT_emit_ast))
       return C.MakeAction<CompileJobAction>(Input, types::TY_AST);
+    if (Args.hasArg(options::OPT_emit_cir))
+      return C.MakeAction<CompileJobAction>(Input, types::TY_CIR);
     if (Args.hasArg(options::OPT_module_file_info))
       return C.MakeAction<CompileJobAction>(Input, types::TY_ModuleFile);
     if (Args.hasArg(options::OPT_verify_pch))
@@ -5786,19 +5832,9 @@ static const char *GetModuleOutputPath(Compilation &C, const JobAction &JA,
          (C.getArgs().hasArg(options::OPT_fmodule_output) ||
           C.getArgs().hasArg(options::OPT_fmodule_output_EQ)));
 
-  if (Arg *ModuleOutputEQ =
-          C.getArgs().getLastArg(options::OPT_fmodule_output_EQ))
-    return C.addResultFile(ModuleOutputEQ->getValue(), &JA);
+  SmallString<256> OutputPath =
+      tools::getCXX20NamedModuleOutputPath(C.getArgs(), BaseInput);
 
-  SmallString<64> OutputPath;
-  Arg *FinalOutput = C.getArgs().getLastArg(options::OPT_o);
-  if (FinalOutput && C.getArgs().hasArg(options::OPT_c))
-    OutputPath = FinalOutput->getValue();
-  else
-    OutputPath = BaseInput;
-
-  const char *Extension = types::getTypeTempSuffix(JA.getType());
-  llvm::sys::path::replace_extension(OutputPath, Extension);
   return C.addResultFile(C.getArgs().MakeArgString(OutputPath.c_str()), &JA);
 }
 
@@ -5871,6 +5907,12 @@ const char *Driver::GetNamedOutputPath(Compilation &C, const JobAction &JA,
         &JA);
   }
 
+  if (JA.getType() == types::TY_API_INFO &&
+      C.getArgs().hasArg(options::OPT_emit_extension_symbol_graphs) &&
+      C.getArgs().hasArg(options::OPT_o))
+    Diag(clang::diag::err_drv_unexpected_symbol_graph_output)
+        << C.getArgs().getLastArgValue(options::OPT_o);
+
   // DXC defaults to standard out when generating assembly. We check this after
   // any DXC flags that might specify a file.
   if (AtTopLevel && JA.getType() == types::TY_PP_Asm && IsDXCMode())
@@ -5885,8 +5927,10 @@ const char *Driver::GetNamedOutputPath(Compilation &C, const JobAction &JA,
   // If we're emitting a module output with the specified option
   // `-fmodule-output`.
   if (!AtTopLevel && isa<PrecompileJobAction>(JA) &&
-      JA.getType() == types::TY_ModuleFile && SpecifiedModuleOutput)
+      JA.getType() == types::TY_ModuleFile && SpecifiedModuleOutput) {
+    assert(!C.getArgs().hasArg(options::OPT_modules_reduced_bmi));
     return GetModuleOutputPath(C, JA, BaseInput);
+  }
 
   // Output to a temporary file?
   if ((!AtTopLevel && !isSaveTempsEnabled() &&
@@ -6167,6 +6211,51 @@ std::string Driver::GetProgramPath(StringRef Name, const ToolChain &TC) const {
   }
 
   return std::string(Name);
+}
+
+std::string Driver::GetStdModuleManifestPath(const Compilation &C,
+                                             const ToolChain &TC) const {
+  std::string error = "<NOT PRESENT>";
+
+  switch (TC.GetCXXStdlibType(C.getArgs())) {
+  case ToolChain::CST_Libcxx: {
+    auto evaluate = [&](const char *library) -> std::optional<std::string> {
+      std::string lib = GetFilePath(library, TC);
+
+      // Note when there are multiple flavours of libc++ the module json needs
+      // to look at the command-line arguments for the proper json. These
+      // flavours do not exist at the moment, but there are plans to provide a
+      // variant that is built with sanitizer instrumentation enabled.
+
+      // For example
+      //  StringRef modules = [&] {
+      //    const SanitizerArgs &Sanitize = TC.getSanitizerArgs(C.getArgs());
+      //    if (Sanitize.needsAsanRt())
+      //      return "libc++.modules-asan.json";
+      //    return "libc++.modules.json";
+      //  }();
+
+      SmallString<128> path(lib.begin(), lib.end());
+      llvm::sys::path::remove_filename(path);
+      llvm::sys::path::append(path, "libc++.modules.json");
+      if (TC.getVFS().exists(path))
+        return static_cast<std::string>(path);
+
+      return {};
+    };
+
+    if (std::optional<std::string> result = evaluate("libc++.so"); result)
+      return *result;
+
+    return evaluate("libc++.a").value_or(error);
+  }
+
+  case ToolChain::CST_Libstdcxx:
+    // libstdc++ does not provide Standard library modules yet.
+    return error;
+  }
+
+  return error;
 }
 
 std::string Driver::GetTemporaryPath(StringRef Prefix, StringRef Suffix) const {
@@ -6660,4 +6749,132 @@ llvm::Error driver::expandResponseFiles(SmallVectorImpl<const char *> &Args,
   }
 
   return llvm::Error::success();
+}
+
+static const char *GetStableCStr(llvm::StringSet<> &SavedStrings, StringRef S) {
+  return SavedStrings.insert(S).first->getKeyData();
+}
+
+/// Apply a list of edits to the input argument lists.
+///
+/// The input string is a space separated list of edits to perform,
+/// they are applied in order to the input argument lists. Edits
+/// should be one of the following forms:
+///
+///  '#': Silence information about the changes to the command line arguments.
+///
+///  '^': Add FOO as a new argument at the beginning of the command line.
+///
+///  '+': Add FOO as a new argument at the end of the command line.
+///
+///  's/XXX/YYY/': Substitute the regular expression XXX with YYY in the command
+///  line.
+///
+///  'xOPTION': Removes all instances of the literal argument OPTION.
+///
+///  'XOPTION': Removes all instances of the literal argument OPTION,
+///  and the following argument.
+///
+///  'Ox': Removes all flags matching 'O' or 'O[sz0-9]' and adds 'Ox'
+///  at the end of the command line.
+///
+/// \param OS - The stream to write edit information to.
+/// \param Args - The vector of command line arguments.
+/// \param Edit - The override command to perform.
+/// \param SavedStrings - Set to use for storing string representations.
+static void applyOneOverrideOption(raw_ostream &OS,
+                                   SmallVectorImpl<const char *> &Args,
+                                   StringRef Edit,
+                                   llvm::StringSet<> &SavedStrings) {
+  // This does not need to be efficient.
+
+  if (Edit[0] == '^') {
+    const char *Str = GetStableCStr(SavedStrings, Edit.substr(1));
+    OS << "### Adding argument " << Str << " at beginning\n";
+    Args.insert(Args.begin() + 1, Str);
+  } else if (Edit[0] == '+') {
+    const char *Str = GetStableCStr(SavedStrings, Edit.substr(1));
+    OS << "### Adding argument " << Str << " at end\n";
+    Args.push_back(Str);
+  } else if (Edit[0] == 's' && Edit[1] == '/' && Edit.ends_with("/") &&
+             Edit.slice(2, Edit.size() - 1).contains('/')) {
+    StringRef MatchPattern = Edit.substr(2).split('/').first;
+    StringRef ReplPattern = Edit.substr(2).split('/').second;
+    ReplPattern = ReplPattern.slice(0, ReplPattern.size() - 1);
+
+    for (unsigned i = 1, e = Args.size(); i != e; ++i) {
+      // Ignore end-of-line response file markers
+      if (Args[i] == nullptr)
+        continue;
+      std::string Repl = llvm::Regex(MatchPattern).sub(ReplPattern, Args[i]);
+
+      if (Repl != Args[i]) {
+        OS << "### Replacing '" << Args[i] << "' with '" << Repl << "'\n";
+        Args[i] = GetStableCStr(SavedStrings, Repl);
+      }
+    }
+  } else if (Edit[0] == 'x' || Edit[0] == 'X') {
+    auto Option = Edit.substr(1);
+    for (unsigned i = 1; i < Args.size();) {
+      if (Option == Args[i]) {
+        OS << "### Deleting argument " << Args[i] << '\n';
+        Args.erase(Args.begin() + i);
+        if (Edit[0] == 'X') {
+          if (i < Args.size()) {
+            OS << "### Deleting argument " << Args[i] << '\n';
+            Args.erase(Args.begin() + i);
+          } else
+            OS << "### Invalid X edit, end of command line!\n";
+        }
+      } else
+        ++i;
+    }
+  } else if (Edit[0] == 'O') {
+    for (unsigned i = 1; i < Args.size();) {
+      const char *A = Args[i];
+      // Ignore end-of-line response file markers
+      if (A == nullptr)
+        continue;
+      if (A[0] == '-' && A[1] == 'O' &&
+          (A[2] == '\0' || (A[3] == '\0' && (A[2] == 's' || A[2] == 'z' ||
+                                             ('0' <= A[2] && A[2] <= '9'))))) {
+        OS << "### Deleting argument " << Args[i] << '\n';
+        Args.erase(Args.begin() + i);
+      } else
+        ++i;
+    }
+    OS << "### Adding argument " << Edit << " at end\n";
+    Args.push_back(GetStableCStr(SavedStrings, '-' + Edit.str()));
+  } else {
+    OS << "### Unrecognized edit: " << Edit << "\n";
+  }
+}
+
+void driver::applyOverrideOptions(SmallVectorImpl<const char *> &Args,
+                                  const char *OverrideStr,
+                                  llvm::StringSet<> &SavedStrings,
+                                  raw_ostream *OS) {
+  if (!OS)
+    OS = &llvm::nulls();
+
+  if (OverrideStr[0] == '#') {
+    ++OverrideStr;
+    OS = &llvm::nulls();
+  }
+
+  *OS << "### CCC_OVERRIDE_OPTIONS: " << OverrideStr << "\n";
+
+  // This does not need to be efficient.
+
+  const char *S = OverrideStr;
+  while (*S) {
+    const char *End = ::strchr(S, ' ');
+    if (!End)
+      End = S + strlen(S);
+    if (End != S)
+      applyOneOverrideOption(*OS, Args, std::string(S, End), SavedStrings);
+    S = End;
+    if (*S != '\0')
+      ++S;
+  }
 }

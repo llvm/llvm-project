@@ -205,6 +205,10 @@ static cl::opt<bool> MISchedPostRA(
 static cl::opt<bool> EarlyLiveIntervals("early-live-intervals", cl::Hidden,
     cl::desc("Run live interval analysis earlier in the pipeline"));
 
+static cl::opt<bool> DisableReplaceWithVecLib(
+    "disable-replace-with-vec-lib", cl::Hidden,
+    cl::desc("Disable replace with vector math call pass"));
+
 /// Option names for limiting the codegen pipeline.
 /// Those are used in error reporting and we didn't want
 /// to duplicate their names all over the place.
@@ -856,7 +860,7 @@ void TargetPassConfig::addIRPasses() {
   if (getOptLevel() != CodeGenOptLevel::None && !DisableConstantHoisting)
     addPass(createConstantHoistingPass());
 
-  if (getOptLevel() != CodeGenOptLevel::None)
+  if (getOptLevel() != CodeGenOptLevel::None && !DisableReplaceWithVecLib)
     addPass(createReplaceWithVeclibLegacyPass());
 
   if (getOptLevel() != CodeGenOptLevel::None && !DisablePartialLibcallInlining)
@@ -918,7 +922,7 @@ void TargetPassConfig::addPassesToHandleExceptions() {
     // on catchpads and cleanuppads because it does not outline them into
     // funclets. Catchswitch blocks are not lowered in SelectionDAG, so we
     // should remove PHIs there.
-    addPass(createWinEHPass(/*DemoteCatchSwitchPHIOnly=*/false));
+    addPass(createWinEHPass(/*DemoteCatchSwitchPHIOnly=*/true));
     addPass(createWasmEHPass());
     break;
   case ExceptionHandling::None:
@@ -1426,6 +1430,8 @@ void TargetPassConfig::addFastRegAlloc() {
 /// scheduling, and register allocation itself.
 void TargetPassConfig::addOptimizedRegAlloc() {
   addPass(&DetectDeadLanesID);
+
+  addPass(&InitUndefID);
 
   addPass(&ProcessImplicitDefsID);
 

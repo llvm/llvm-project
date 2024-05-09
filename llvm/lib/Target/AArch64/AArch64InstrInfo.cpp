@@ -643,7 +643,8 @@ static unsigned canFoldIntoCSel(const MachineRegisterInfo &MRI, unsigned VReg,
   case AArch64::ADDSXri:
   case AArch64::ADDSWri:
     // if NZCV is used, do not fold.
-    if (DefMI->findRegisterDefOperandIdx(AArch64::NZCV, true) == -1)
+    if (DefMI->findRegisterDefOperandIdx(AArch64::NZCV, /*TRI=*/nullptr,
+                                         true) == -1)
       return 0;
     // fall-through to ADDXri and ADDWri.
     [[fallthrough]];
@@ -671,7 +672,8 @@ static unsigned canFoldIntoCSel(const MachineRegisterInfo &MRI, unsigned VReg,
   case AArch64::SUBSXrr:
   case AArch64::SUBSWrr:
     // if NZCV is used, do not fold.
-    if (DefMI->findRegisterDefOperandIdx(AArch64::NZCV, true) == -1)
+    if (DefMI->findRegisterDefOperandIdx(AArch64::NZCV, /*TRI=*/nullptr,
+                                         true) == -1)
       return 0;
     // fall-through to SUBXrr and SUBWrr.
     [[fallthrough]];
@@ -1275,7 +1277,8 @@ static unsigned convertToNonFlagSettingOpc(const MachineInstr &MI) {
   // Don't convert all compare instructions, because for some the zero register
   // encoding becomes the sp register.
   bool MIDefinesZeroReg = false;
-  if (MI.definesRegister(AArch64::WZR) || MI.definesRegister(AArch64::XZR))
+  if (MI.definesRegister(AArch64::WZR, /*TRI=*/nullptr) ||
+      MI.definesRegister(AArch64::XZR, /*TRI=*/nullptr))
     MIDefinesZeroReg = true;
 
   switch (MI.getOpcode()) {
@@ -1519,10 +1522,11 @@ bool AArch64InstrInfo::optimizeCompareInstr(
   assert(MRI);
 
   // Replace SUBSWrr with SUBWrr if NZCV is not used.
-  int DeadNZCVIdx = CmpInstr.findRegisterDefOperandIdx(AArch64::NZCV, true);
+  int DeadNZCVIdx =
+      CmpInstr.findRegisterDefOperandIdx(AArch64::NZCV, /*TRI=*/nullptr, true);
   if (DeadNZCVIdx != -1) {
-    if (CmpInstr.definesRegister(AArch64::WZR) ||
-        CmpInstr.definesRegister(AArch64::XZR)) {
+    if (CmpInstr.definesRegister(AArch64::WZR, /*TRI=*/nullptr) ||
+        CmpInstr.definesRegister(AArch64::XZR, /*TRI=*/nullptr)) {
       CmpInstr.eraseFromParent();
       return true;
     }
@@ -1623,7 +1627,7 @@ findCondCodeUseOperandIdxForBranchOrSelect(const MachineInstr &Instr) {
     return -1;
 
   case AArch64::Bcc: {
-    int Idx = Instr.findRegisterUseOperandIdx(AArch64::NZCV);
+    int Idx = Instr.findRegisterUseOperandIdx(AArch64::NZCV, /*TRI=*/nullptr);
     assert(Idx >= 2);
     return Idx - 2;
   }
@@ -1638,7 +1642,7 @@ findCondCodeUseOperandIdxForBranchOrSelect(const MachineInstr &Instr) {
   case AArch64::CSNEGXr:
   case AArch64::FCSELSrrr:
   case AArch64::FCSELDrrr: {
-    int Idx = Instr.findRegisterUseOperandIdx(AArch64::NZCV);
+    int Idx = Instr.findRegisterUseOperandIdx(AArch64::NZCV, /*TRI=*/nullptr);
     assert(Idx >= 1);
     return Idx - 1;
   }
@@ -1846,7 +1850,7 @@ static bool canCmpInstrBeRemoved(MachineInstr &MI, MachineInstr &CmpInstr,
     return false;
 
   // NZCV needs to be defined
-  if (MI.findRegisterDefOperandIdx(AArch64::NZCV, true) != -1)
+  if (MI.findRegisterDefOperandIdx(AArch64::NZCV, /*TRI=*/nullptr, true) != -1)
     return false;
 
   // CmpInstr is 'ADDS %vreg, 0' or 'SUBS %vreg, 0' or 'SUBS %vreg, 1'
@@ -2503,7 +2507,9 @@ bool AArch64InstrInfo::isTailCallReturnInst(const MachineInstr &MI) {
     return false;
   case AArch64::TCRETURNdi:
   case AArch64::TCRETURNri:
-  case AArch64::TCRETURNriBTI:
+  case AArch64::TCRETURNrix16x17:
+  case AArch64::TCRETURNrix17:
+  case AArch64::TCRETURNrinotx16:
   case AArch64::TCRETURNriALL:
     return true;
   }
@@ -2673,7 +2679,7 @@ bool AArch64InstrInfo::isCandidateToMergeOrPair(const MachineInstr &MI) const {
 
 bool AArch64InstrInfo::getMemOperandsWithOffsetWidth(
     const MachineInstr &LdSt, SmallVectorImpl<const MachineOperand *> &BaseOps,
-    int64_t &Offset, bool &OffsetIsScalable, unsigned &Width,
+    int64_t &Offset, bool &OffsetIsScalable, LocationSize &Width,
     const TargetRegisterInfo *TRI) const {
   if (!LdSt.mayLoadOrStore())
     return false;
@@ -2685,10 +2691,7 @@ bool AArch64InstrInfo::getMemOperandsWithOffsetWidth(
     return false;
   // The maximum vscale is 16 under AArch64, return the maximal extent for the
   // vector.
-  Width = WidthN.isScalable()
-              ? WidthN.getKnownMinValue() * AArch64::SVEMaxBitsPerVector /
-                    AArch64::SVEBitsPerBlock
-              : WidthN.getKnownMinValue();
+  Width = LocationSize::precise(WidthN);
   BaseOps.push_back(BaseOp);
   return true;
 }
@@ -2994,7 +2997,7 @@ bool AArch64InstrInfo::canFoldIntoAddrMode(const MachineInstr &MemI,
       return false;
     Shift = AArch64_AM::getShiftValue(Shift);
     if (!OptSize) {
-      if ((Shift != 2 && Shift != 3) || !Subtarget.hasAddrLSLFast())
+      if (Shift != 2 && Shift != 3 && Subtarget.hasAddrLSLSlow14())
         return false;
       if (avoidSlowSTRQ(MemI))
         return false;
@@ -4808,29 +4811,20 @@ void AArch64InstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
     if (AArch64::FPR8RegClass.hasSubClassEq(RC))
       Opc = AArch64::STRBui;
     break;
-  case 2:
+  case 2: {
+    bool IsPNR = AArch64::PNRRegClass.hasSubClassEq(RC);
     if (AArch64::FPR16RegClass.hasSubClassEq(RC))
       Opc = AArch64::STRHui;
-    else if (AArch64::PPRRegClass.hasSubClassEq(RC)) {
+    else if (IsPNR || AArch64::PPRRegClass.hasSubClassEq(RC)) {
       assert(Subtarget.hasSVEorSME() &&
              "Unexpected register store without SVE store instructions");
-      Opc = AArch64::STR_PXI;
-      StackID = TargetStackID::ScalableVector;
-    } else if (AArch64::PNRRegClass.hasSubClassEq(RC)) {
-      assert((Subtarget.hasSVE2p1() || Subtarget.hasSME2()) &&
+      assert((!IsPNR || Subtarget.hasSVE2p1() || Subtarget.hasSME2()) &&
              "Unexpected register store without SVE2p1 or SME2");
-      if (SrcReg.isVirtual()) {
-        auto NewSrcReg =
-            MF.getRegInfo().createVirtualRegister(&AArch64::PPRRegClass);
-        BuildMI(MBB, MBBI, DebugLoc(), get(TargetOpcode::COPY), NewSrcReg)
-            .addReg(SrcReg);
-        SrcReg = NewSrcReg;
-      } else
-        SrcReg = (SrcReg - AArch64::PN0) + AArch64::P0;
       Opc = AArch64::STR_PXI;
       StackID = TargetStackID::ScalableVector;
     }
     break;
+  }
   case 4:
     if (AArch64::GPR32allRegClass.hasSubClassEq(RC)) {
       Opc = AArch64::STRWui;
@@ -4991,26 +4985,22 @@ void AArch64InstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
     if (AArch64::FPR8RegClass.hasSubClassEq(RC))
       Opc = AArch64::LDRBui;
     break;
-  case 2:
+  case 2: {
+    bool IsPNR = AArch64::PNRRegClass.hasSubClassEq(RC);
     if (AArch64::FPR16RegClass.hasSubClassEq(RC))
       Opc = AArch64::LDRHui;
-    else if (AArch64::PPRRegClass.hasSubClassEq(RC)) {
+    else if (IsPNR || AArch64::PPRRegClass.hasSubClassEq(RC)) {
       assert(Subtarget.hasSVEorSME() &&
              "Unexpected register load without SVE load instructions");
-      Opc = AArch64::LDR_PXI;
-      StackID = TargetStackID::ScalableVector;
-    } else if (AArch64::PNRRegClass.hasSubClassEq(RC)) {
-      assert((Subtarget.hasSVE2p1() || Subtarget.hasSME2()) &&
+      assert((!IsPNR || Subtarget.hasSVE2p1() || Subtarget.hasSME2()) &&
              "Unexpected register load without SVE2p1 or SME2");
-      PNRReg = DestReg;
-      if (DestReg.isVirtual())
-        DestReg = MF.getRegInfo().createVirtualRegister(&AArch64::PPRRegClass);
-      else
-        DestReg = (DestReg - AArch64::PN0) + AArch64::P0;
+      if (IsPNR)
+        PNRReg = DestReg;
       Opc = AArch64::LDR_PXI;
       StackID = TargetStackID::ScalableVector;
     }
     break;
+  }
   case 4:
     if (AArch64::GPR32allRegClass.hasSubClassEq(RC)) {
       Opc = AArch64::LDRWui;
@@ -5927,7 +5917,7 @@ static bool canCombine(MachineBasicBlock &MBB, MachineOperand &MO,
   }
 
   if (isCombineInstrSettingFlag(CombineOpc) &&
-      MI->findRegisterDefOperandIdx(AArch64::NZCV, true) == -1)
+      MI->findRegisterDefOperandIdx(AArch64::NZCV, /*TRI=*/nullptr, true) == -1)
     return false;
 
   return true;
@@ -6057,7 +6047,7 @@ bool AArch64InstrInfo::isAssociativeAndCommutative(const MachineInstr &Inst,
 
 /// Find instructions that can be turned into madd.
 static bool getMaddPatterns(MachineInstr &Root,
-                            SmallVectorImpl<MachineCombinerPattern> &Patterns) {
+                            SmallVectorImpl<unsigned> &Patterns) {
   unsigned Opc = Root.getOpcode();
   MachineBasicBlock &MBB = *Root.getParent();
   bool Found = false;
@@ -6065,7 +6055,8 @@ static bool getMaddPatterns(MachineInstr &Root,
   if (!isCombineInstrCandidate(Opc))
     return false;
   if (isCombineInstrSettingFlag(Opc)) {
-    int Cmp_NZCV = Root.findRegisterDefOperandIdx(AArch64::NZCV, true);
+    int Cmp_NZCV =
+        Root.findRegisterDefOperandIdx(AArch64::NZCV, /*TRI=*/nullptr, true);
     // When NZCV is live bail out.
     if (Cmp_NZCV == -1)
       return false;
@@ -6078,21 +6069,21 @@ static bool getMaddPatterns(MachineInstr &Root,
   }
 
   auto setFound = [&](int Opcode, int Operand, unsigned ZeroReg,
-                      MachineCombinerPattern Pattern) {
+                      unsigned Pattern) {
     if (canCombineWithMUL(MBB, Root.getOperand(Operand), Opcode, ZeroReg)) {
       Patterns.push_back(Pattern);
       Found = true;
     }
   };
 
-  auto setVFound = [&](int Opcode, int Operand, MachineCombinerPattern Pattern) {
+  auto setVFound = [&](int Opcode, int Operand, unsigned Pattern) {
     if (canCombine(MBB, Root.getOperand(Operand), Opcode)) {
       Patterns.push_back(Pattern);
       Found = true;
     }
   };
 
-  typedef MachineCombinerPattern MCP;
+  typedef AArch64MachineCombinerPattern MCP;
 
   switch (Opc) {
   default:
@@ -6108,12 +6099,12 @@ static bool getMaddPatterns(MachineInstr &Root,
     setFound(AArch64::MADDXrrr, 2, AArch64::XZR, MCP::MULADDX_OP2);
     break;
   case AArch64::SUBWrr:
-    setFound(AArch64::MADDWrrr, 1, AArch64::WZR, MCP::MULSUBW_OP1);
     setFound(AArch64::MADDWrrr, 2, AArch64::WZR, MCP::MULSUBW_OP2);
+    setFound(AArch64::MADDWrrr, 1, AArch64::WZR, MCP::MULSUBW_OP1);
     break;
   case AArch64::SUBXrr:
-    setFound(AArch64::MADDXrrr, 1, AArch64::XZR, MCP::MULSUBX_OP1);
     setFound(AArch64::MADDXrrr, 2, AArch64::XZR, MCP::MULSUBX_OP2);
+    setFound(AArch64::MADDXrrr, 1, AArch64::XZR, MCP::MULSUBX_OP1);
     break;
   case AArch64::ADDWri:
     setFound(AArch64::MADDWrrr, 1, AArch64::WZR, MCP::MULADDWI_OP1);
@@ -6198,7 +6189,7 @@ static bool getMaddPatterns(MachineInstr &Root,
 
 /// Find instructions that can be turned into madd.
 static bool getFMAPatterns(MachineInstr &Root,
-                           SmallVectorImpl<MachineCombinerPattern> &Patterns) {
+                           SmallVectorImpl<unsigned> &Patterns) {
 
   if (!isCombineInstrCandidateFP(Root))
     return false;
@@ -6206,8 +6197,7 @@ static bool getFMAPatterns(MachineInstr &Root,
   MachineBasicBlock &MBB = *Root.getParent();
   bool Found = false;
 
-  auto Match = [&](int Opcode, int Operand,
-                   MachineCombinerPattern Pattern) -> bool {
+  auto Match = [&](int Opcode, int Operand, unsigned Pattern) -> bool {
     if (canCombineWithFMUL(MBB, Root.getOperand(Operand), Opcode)) {
       Patterns.push_back(Pattern);
       return true;
@@ -6215,7 +6205,7 @@ static bool getFMAPatterns(MachineInstr &Root,
     return false;
   };
 
-  typedef MachineCombinerPattern MCP;
+  typedef AArch64MachineCombinerPattern MCP;
 
   switch (Root.getOpcode()) {
   default:
@@ -6341,12 +6331,11 @@ static bool getFMAPatterns(MachineInstr &Root,
 }
 
 static bool getFMULPatterns(MachineInstr &Root,
-                            SmallVectorImpl<MachineCombinerPattern> &Patterns) {
+                            SmallVectorImpl<unsigned> &Patterns) {
   MachineBasicBlock &MBB = *Root.getParent();
   bool Found = false;
 
-  auto Match = [&](unsigned Opcode, int Operand,
-                   MachineCombinerPattern Pattern) -> bool {
+  auto Match = [&](unsigned Opcode, int Operand, unsigned Pattern) -> bool {
     MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
     MachineOperand &MO = Root.getOperand(Operand);
     MachineInstr *MI = nullptr;
@@ -6363,7 +6352,7 @@ static bool getFMULPatterns(MachineInstr &Root,
     return false;
   };
 
-  typedef MachineCombinerPattern MCP;
+  typedef AArch64MachineCombinerPattern MCP;
 
   switch (Root.getOpcode()) {
   default:
@@ -6394,12 +6383,12 @@ static bool getFMULPatterns(MachineInstr &Root,
 }
 
 static bool getFNEGPatterns(MachineInstr &Root,
-                            SmallVectorImpl<MachineCombinerPattern> &Patterns) {
+                            SmallVectorImpl<unsigned> &Patterns) {
   unsigned Opc = Root.getOpcode();
   MachineBasicBlock &MBB = *Root.getParent();
   MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
 
-  auto Match = [&](unsigned Opcode, MachineCombinerPattern Pattern) -> bool {
+  auto Match = [&](unsigned Opcode, unsigned Pattern) -> bool {
     MachineOperand &MO = Root.getOperand(1);
     MachineInstr *MI = MRI.getUniqueVRegDef(MO.getReg());
     if (MI != nullptr && (MI->getOpcode() == Opcode) &&
@@ -6418,9 +6407,9 @@ static bool getFNEGPatterns(MachineInstr &Root,
   default:
     break;
   case AArch64::FNEGDr:
-    return Match(AArch64::FMADDDrrr, MachineCombinerPattern::FNMADD);
+    return Match(AArch64::FMADDDrrr, AArch64MachineCombinerPattern::FNMADD);
   case AArch64::FNEGSr:
-    return Match(AArch64::FMADDSrrr, MachineCombinerPattern::FNMADD);
+    return Match(AArch64::FMADDSrrr, AArch64MachineCombinerPattern::FNMADD);
   }
 
   return false;
@@ -6429,116 +6418,115 @@ static bool getFNEGPatterns(MachineInstr &Root,
 /// Return true when a code sequence can improve throughput. It
 /// should be called only for instructions in loops.
 /// \param Pattern - combiner pattern
-bool AArch64InstrInfo::isThroughputPattern(
-    MachineCombinerPattern Pattern) const {
+bool AArch64InstrInfo::isThroughputPattern(unsigned Pattern) const {
   switch (Pattern) {
   default:
     break;
-  case MachineCombinerPattern::FMULADDH_OP1:
-  case MachineCombinerPattern::FMULADDH_OP2:
-  case MachineCombinerPattern::FMULSUBH_OP1:
-  case MachineCombinerPattern::FMULSUBH_OP2:
-  case MachineCombinerPattern::FMULADDS_OP1:
-  case MachineCombinerPattern::FMULADDS_OP2:
-  case MachineCombinerPattern::FMULSUBS_OP1:
-  case MachineCombinerPattern::FMULSUBS_OP2:
-  case MachineCombinerPattern::FMULADDD_OP1:
-  case MachineCombinerPattern::FMULADDD_OP2:
-  case MachineCombinerPattern::FMULSUBD_OP1:
-  case MachineCombinerPattern::FMULSUBD_OP2:
-  case MachineCombinerPattern::FNMULSUBH_OP1:
-  case MachineCombinerPattern::FNMULSUBS_OP1:
-  case MachineCombinerPattern::FNMULSUBD_OP1:
-  case MachineCombinerPattern::FMLAv4i16_indexed_OP1:
-  case MachineCombinerPattern::FMLAv4i16_indexed_OP2:
-  case MachineCombinerPattern::FMLAv8i16_indexed_OP1:
-  case MachineCombinerPattern::FMLAv8i16_indexed_OP2:
-  case MachineCombinerPattern::FMLAv1i32_indexed_OP1:
-  case MachineCombinerPattern::FMLAv1i32_indexed_OP2:
-  case MachineCombinerPattern::FMLAv1i64_indexed_OP1:
-  case MachineCombinerPattern::FMLAv1i64_indexed_OP2:
-  case MachineCombinerPattern::FMLAv4f16_OP2:
-  case MachineCombinerPattern::FMLAv4f16_OP1:
-  case MachineCombinerPattern::FMLAv8f16_OP1:
-  case MachineCombinerPattern::FMLAv8f16_OP2:
-  case MachineCombinerPattern::FMLAv2f32_OP2:
-  case MachineCombinerPattern::FMLAv2f32_OP1:
-  case MachineCombinerPattern::FMLAv2f64_OP1:
-  case MachineCombinerPattern::FMLAv2f64_OP2:
-  case MachineCombinerPattern::FMLAv2i32_indexed_OP1:
-  case MachineCombinerPattern::FMLAv2i32_indexed_OP2:
-  case MachineCombinerPattern::FMLAv2i64_indexed_OP1:
-  case MachineCombinerPattern::FMLAv2i64_indexed_OP2:
-  case MachineCombinerPattern::FMLAv4f32_OP1:
-  case MachineCombinerPattern::FMLAv4f32_OP2:
-  case MachineCombinerPattern::FMLAv4i32_indexed_OP1:
-  case MachineCombinerPattern::FMLAv4i32_indexed_OP2:
-  case MachineCombinerPattern::FMLSv4i16_indexed_OP1:
-  case MachineCombinerPattern::FMLSv4i16_indexed_OP2:
-  case MachineCombinerPattern::FMLSv8i16_indexed_OP1:
-  case MachineCombinerPattern::FMLSv8i16_indexed_OP2:
-  case MachineCombinerPattern::FMLSv1i32_indexed_OP2:
-  case MachineCombinerPattern::FMLSv1i64_indexed_OP2:
-  case MachineCombinerPattern::FMLSv2i32_indexed_OP2:
-  case MachineCombinerPattern::FMLSv2i64_indexed_OP2:
-  case MachineCombinerPattern::FMLSv4f16_OP1:
-  case MachineCombinerPattern::FMLSv4f16_OP2:
-  case MachineCombinerPattern::FMLSv8f16_OP1:
-  case MachineCombinerPattern::FMLSv8f16_OP2:
-  case MachineCombinerPattern::FMLSv2f32_OP2:
-  case MachineCombinerPattern::FMLSv2f64_OP2:
-  case MachineCombinerPattern::FMLSv4i32_indexed_OP2:
-  case MachineCombinerPattern::FMLSv4f32_OP2:
-  case MachineCombinerPattern::FMULv2i32_indexed_OP1:
-  case MachineCombinerPattern::FMULv2i32_indexed_OP2:
-  case MachineCombinerPattern::FMULv2i64_indexed_OP1:
-  case MachineCombinerPattern::FMULv2i64_indexed_OP2:
-  case MachineCombinerPattern::FMULv4i16_indexed_OP1:
-  case MachineCombinerPattern::FMULv4i16_indexed_OP2:
-  case MachineCombinerPattern::FMULv4i32_indexed_OP1:
-  case MachineCombinerPattern::FMULv4i32_indexed_OP2:
-  case MachineCombinerPattern::FMULv8i16_indexed_OP1:
-  case MachineCombinerPattern::FMULv8i16_indexed_OP2:
-  case MachineCombinerPattern::MULADDv8i8_OP1:
-  case MachineCombinerPattern::MULADDv8i8_OP2:
-  case MachineCombinerPattern::MULADDv16i8_OP1:
-  case MachineCombinerPattern::MULADDv16i8_OP2:
-  case MachineCombinerPattern::MULADDv4i16_OP1:
-  case MachineCombinerPattern::MULADDv4i16_OP2:
-  case MachineCombinerPattern::MULADDv8i16_OP1:
-  case MachineCombinerPattern::MULADDv8i16_OP2:
-  case MachineCombinerPattern::MULADDv2i32_OP1:
-  case MachineCombinerPattern::MULADDv2i32_OP2:
-  case MachineCombinerPattern::MULADDv4i32_OP1:
-  case MachineCombinerPattern::MULADDv4i32_OP2:
-  case MachineCombinerPattern::MULSUBv8i8_OP1:
-  case MachineCombinerPattern::MULSUBv8i8_OP2:
-  case MachineCombinerPattern::MULSUBv16i8_OP1:
-  case MachineCombinerPattern::MULSUBv16i8_OP2:
-  case MachineCombinerPattern::MULSUBv4i16_OP1:
-  case MachineCombinerPattern::MULSUBv4i16_OP2:
-  case MachineCombinerPattern::MULSUBv8i16_OP1:
-  case MachineCombinerPattern::MULSUBv8i16_OP2:
-  case MachineCombinerPattern::MULSUBv2i32_OP1:
-  case MachineCombinerPattern::MULSUBv2i32_OP2:
-  case MachineCombinerPattern::MULSUBv4i32_OP1:
-  case MachineCombinerPattern::MULSUBv4i32_OP2:
-  case MachineCombinerPattern::MULADDv4i16_indexed_OP1:
-  case MachineCombinerPattern::MULADDv4i16_indexed_OP2:
-  case MachineCombinerPattern::MULADDv8i16_indexed_OP1:
-  case MachineCombinerPattern::MULADDv8i16_indexed_OP2:
-  case MachineCombinerPattern::MULADDv2i32_indexed_OP1:
-  case MachineCombinerPattern::MULADDv2i32_indexed_OP2:
-  case MachineCombinerPattern::MULADDv4i32_indexed_OP1:
-  case MachineCombinerPattern::MULADDv4i32_indexed_OP2:
-  case MachineCombinerPattern::MULSUBv4i16_indexed_OP1:
-  case MachineCombinerPattern::MULSUBv4i16_indexed_OP2:
-  case MachineCombinerPattern::MULSUBv8i16_indexed_OP1:
-  case MachineCombinerPattern::MULSUBv8i16_indexed_OP2:
-  case MachineCombinerPattern::MULSUBv2i32_indexed_OP1:
-  case MachineCombinerPattern::MULSUBv2i32_indexed_OP2:
-  case MachineCombinerPattern::MULSUBv4i32_indexed_OP1:
-  case MachineCombinerPattern::MULSUBv4i32_indexed_OP2:
+  case AArch64MachineCombinerPattern::FMULADDH_OP1:
+  case AArch64MachineCombinerPattern::FMULADDH_OP2:
+  case AArch64MachineCombinerPattern::FMULSUBH_OP1:
+  case AArch64MachineCombinerPattern::FMULSUBH_OP2:
+  case AArch64MachineCombinerPattern::FMULADDS_OP1:
+  case AArch64MachineCombinerPattern::FMULADDS_OP2:
+  case AArch64MachineCombinerPattern::FMULSUBS_OP1:
+  case AArch64MachineCombinerPattern::FMULSUBS_OP2:
+  case AArch64MachineCombinerPattern::FMULADDD_OP1:
+  case AArch64MachineCombinerPattern::FMULADDD_OP2:
+  case AArch64MachineCombinerPattern::FMULSUBD_OP1:
+  case AArch64MachineCombinerPattern::FMULSUBD_OP2:
+  case AArch64MachineCombinerPattern::FNMULSUBH_OP1:
+  case AArch64MachineCombinerPattern::FNMULSUBS_OP1:
+  case AArch64MachineCombinerPattern::FNMULSUBD_OP1:
+  case AArch64MachineCombinerPattern::FMLAv4i16_indexed_OP1:
+  case AArch64MachineCombinerPattern::FMLAv4i16_indexed_OP2:
+  case AArch64MachineCombinerPattern::FMLAv8i16_indexed_OP1:
+  case AArch64MachineCombinerPattern::FMLAv8i16_indexed_OP2:
+  case AArch64MachineCombinerPattern::FMLAv1i32_indexed_OP1:
+  case AArch64MachineCombinerPattern::FMLAv1i32_indexed_OP2:
+  case AArch64MachineCombinerPattern::FMLAv1i64_indexed_OP1:
+  case AArch64MachineCombinerPattern::FMLAv1i64_indexed_OP2:
+  case AArch64MachineCombinerPattern::FMLAv4f16_OP2:
+  case AArch64MachineCombinerPattern::FMLAv4f16_OP1:
+  case AArch64MachineCombinerPattern::FMLAv8f16_OP1:
+  case AArch64MachineCombinerPattern::FMLAv8f16_OP2:
+  case AArch64MachineCombinerPattern::FMLAv2f32_OP2:
+  case AArch64MachineCombinerPattern::FMLAv2f32_OP1:
+  case AArch64MachineCombinerPattern::FMLAv2f64_OP1:
+  case AArch64MachineCombinerPattern::FMLAv2f64_OP2:
+  case AArch64MachineCombinerPattern::FMLAv2i32_indexed_OP1:
+  case AArch64MachineCombinerPattern::FMLAv2i32_indexed_OP2:
+  case AArch64MachineCombinerPattern::FMLAv2i64_indexed_OP1:
+  case AArch64MachineCombinerPattern::FMLAv2i64_indexed_OP2:
+  case AArch64MachineCombinerPattern::FMLAv4f32_OP1:
+  case AArch64MachineCombinerPattern::FMLAv4f32_OP2:
+  case AArch64MachineCombinerPattern::FMLAv4i32_indexed_OP1:
+  case AArch64MachineCombinerPattern::FMLAv4i32_indexed_OP2:
+  case AArch64MachineCombinerPattern::FMLSv4i16_indexed_OP1:
+  case AArch64MachineCombinerPattern::FMLSv4i16_indexed_OP2:
+  case AArch64MachineCombinerPattern::FMLSv8i16_indexed_OP1:
+  case AArch64MachineCombinerPattern::FMLSv8i16_indexed_OP2:
+  case AArch64MachineCombinerPattern::FMLSv1i32_indexed_OP2:
+  case AArch64MachineCombinerPattern::FMLSv1i64_indexed_OP2:
+  case AArch64MachineCombinerPattern::FMLSv2i32_indexed_OP2:
+  case AArch64MachineCombinerPattern::FMLSv2i64_indexed_OP2:
+  case AArch64MachineCombinerPattern::FMLSv4f16_OP1:
+  case AArch64MachineCombinerPattern::FMLSv4f16_OP2:
+  case AArch64MachineCombinerPattern::FMLSv8f16_OP1:
+  case AArch64MachineCombinerPattern::FMLSv8f16_OP2:
+  case AArch64MachineCombinerPattern::FMLSv2f32_OP2:
+  case AArch64MachineCombinerPattern::FMLSv2f64_OP2:
+  case AArch64MachineCombinerPattern::FMLSv4i32_indexed_OP2:
+  case AArch64MachineCombinerPattern::FMLSv4f32_OP2:
+  case AArch64MachineCombinerPattern::FMULv2i32_indexed_OP1:
+  case AArch64MachineCombinerPattern::FMULv2i32_indexed_OP2:
+  case AArch64MachineCombinerPattern::FMULv2i64_indexed_OP1:
+  case AArch64MachineCombinerPattern::FMULv2i64_indexed_OP2:
+  case AArch64MachineCombinerPattern::FMULv4i16_indexed_OP1:
+  case AArch64MachineCombinerPattern::FMULv4i16_indexed_OP2:
+  case AArch64MachineCombinerPattern::FMULv4i32_indexed_OP1:
+  case AArch64MachineCombinerPattern::FMULv4i32_indexed_OP2:
+  case AArch64MachineCombinerPattern::FMULv8i16_indexed_OP1:
+  case AArch64MachineCombinerPattern::FMULv8i16_indexed_OP2:
+  case AArch64MachineCombinerPattern::MULADDv8i8_OP1:
+  case AArch64MachineCombinerPattern::MULADDv8i8_OP2:
+  case AArch64MachineCombinerPattern::MULADDv16i8_OP1:
+  case AArch64MachineCombinerPattern::MULADDv16i8_OP2:
+  case AArch64MachineCombinerPattern::MULADDv4i16_OP1:
+  case AArch64MachineCombinerPattern::MULADDv4i16_OP2:
+  case AArch64MachineCombinerPattern::MULADDv8i16_OP1:
+  case AArch64MachineCombinerPattern::MULADDv8i16_OP2:
+  case AArch64MachineCombinerPattern::MULADDv2i32_OP1:
+  case AArch64MachineCombinerPattern::MULADDv2i32_OP2:
+  case AArch64MachineCombinerPattern::MULADDv4i32_OP1:
+  case AArch64MachineCombinerPattern::MULADDv4i32_OP2:
+  case AArch64MachineCombinerPattern::MULSUBv8i8_OP1:
+  case AArch64MachineCombinerPattern::MULSUBv8i8_OP2:
+  case AArch64MachineCombinerPattern::MULSUBv16i8_OP1:
+  case AArch64MachineCombinerPattern::MULSUBv16i8_OP2:
+  case AArch64MachineCombinerPattern::MULSUBv4i16_OP1:
+  case AArch64MachineCombinerPattern::MULSUBv4i16_OP2:
+  case AArch64MachineCombinerPattern::MULSUBv8i16_OP1:
+  case AArch64MachineCombinerPattern::MULSUBv8i16_OP2:
+  case AArch64MachineCombinerPattern::MULSUBv2i32_OP1:
+  case AArch64MachineCombinerPattern::MULSUBv2i32_OP2:
+  case AArch64MachineCombinerPattern::MULSUBv4i32_OP1:
+  case AArch64MachineCombinerPattern::MULSUBv4i32_OP2:
+  case AArch64MachineCombinerPattern::MULADDv4i16_indexed_OP1:
+  case AArch64MachineCombinerPattern::MULADDv4i16_indexed_OP2:
+  case AArch64MachineCombinerPattern::MULADDv8i16_indexed_OP1:
+  case AArch64MachineCombinerPattern::MULADDv8i16_indexed_OP2:
+  case AArch64MachineCombinerPattern::MULADDv2i32_indexed_OP1:
+  case AArch64MachineCombinerPattern::MULADDv2i32_indexed_OP2:
+  case AArch64MachineCombinerPattern::MULADDv4i32_indexed_OP1:
+  case AArch64MachineCombinerPattern::MULADDv4i32_indexed_OP2:
+  case AArch64MachineCombinerPattern::MULSUBv4i16_indexed_OP1:
+  case AArch64MachineCombinerPattern::MULSUBv4i16_indexed_OP2:
+  case AArch64MachineCombinerPattern::MULSUBv8i16_indexed_OP1:
+  case AArch64MachineCombinerPattern::MULSUBv8i16_indexed_OP2:
+  case AArch64MachineCombinerPattern::MULSUBv2i32_indexed_OP1:
+  case AArch64MachineCombinerPattern::MULSUBv2i32_indexed_OP2:
+  case AArch64MachineCombinerPattern::MULSUBv4i32_indexed_OP1:
+  case AArch64MachineCombinerPattern::MULSUBv4i32_indexed_OP2:
     return true;
   } // end switch (Pattern)
   return false;
@@ -6546,8 +6534,7 @@ bool AArch64InstrInfo::isThroughputPattern(
 
 /// Find other MI combine patterns.
 static bool getMiscPatterns(MachineInstr &Root,
-                            SmallVectorImpl<MachineCombinerPattern> &Patterns)
-{
+                            SmallVectorImpl<unsigned> &Patterns) {
   // A - (B + C)  ==>   (A - B) - C  or  (A - C) - B
   unsigned Opc = Root.getOpcode();
   MachineBasicBlock &MBB = *Root.getParent();
@@ -6564,19 +6551,31 @@ static bool getMiscPatterns(MachineInstr &Root,
   }
 
   if (isCombineInstrSettingFlag(Opc) &&
-      Root.findRegisterDefOperandIdx(AArch64::NZCV, true) == -1)
+      Root.findRegisterDefOperandIdx(AArch64::NZCV, /*TRI=*/nullptr, true) ==
+          -1)
     return false;
 
   if (canCombine(MBB, Root.getOperand(2), AArch64::ADDWrr) ||
       canCombine(MBB, Root.getOperand(2), AArch64::ADDSWrr) ||
       canCombine(MBB, Root.getOperand(2), AArch64::ADDXrr) ||
       canCombine(MBB, Root.getOperand(2), AArch64::ADDSXrr)) {
-    Patterns.push_back(MachineCombinerPattern::SUBADD_OP1);
-    Patterns.push_back(MachineCombinerPattern::SUBADD_OP2);
+    Patterns.push_back(AArch64MachineCombinerPattern::SUBADD_OP1);
+    Patterns.push_back(AArch64MachineCombinerPattern::SUBADD_OP2);
     return true;
   }
 
   return false;
+}
+
+CombinerObjective
+AArch64InstrInfo::getCombinerObjective(unsigned Pattern) const {
+  switch (Pattern) {
+  case AArch64MachineCombinerPattern::SUBADD_OP1:
+  case AArch64MachineCombinerPattern::SUBADD_OP2:
+    return CombinerObjective::MustReduceDepth;
+  default:
+    return TargetInstrInfo::getCombinerObjective(Pattern);
+  }
 }
 
 /// Return true when there is potentially a faster code sequence for an
@@ -6585,7 +6584,7 @@ static bool getMiscPatterns(MachineInstr &Root,
 /// pattern evaluator stops checking as soon as it finds a faster sequence.
 
 bool AArch64InstrInfo::getMachineCombinerPatterns(
-    MachineInstr &Root, SmallVectorImpl<MachineCombinerPattern> &Patterns,
+    MachineInstr &Root, SmallVectorImpl<unsigned> &Patterns,
     bool DoRegPressureReduce) const {
   // Integer patterns
   if (getMaddPatterns(Root, Patterns))
@@ -6925,26 +6924,33 @@ genSubAdd2SubSub(MachineFunction &MF, MachineRegisterInfo &MRI,
     assert((Opcode == AArch64::SUBWrr || Opcode == AArch64::SUBXrr) &&
            "Unexpected instruction opcode.");
 
+  uint32_t Flags = Root.mergeFlagsWith(*AddMI);
+  Flags &= ~MachineInstr::NoSWrap;
+  Flags &= ~MachineInstr::NoUWrap;
+
   MachineInstrBuilder MIB1 =
       BuildMI(MF, MIMetadata(Root), TII->get(Opcode), NewVR)
           .addReg(RegA, getKillRegState(RegAIsKill))
-          .addReg(RegB, getKillRegState(RegBIsKill));
+          .addReg(RegB, getKillRegState(RegBIsKill))
+          .setMIFlags(Flags);
   MachineInstrBuilder MIB2 =
       BuildMI(MF, MIMetadata(Root), TII->get(Opcode), ResultReg)
           .addReg(NewVR, getKillRegState(true))
-          .addReg(RegC, getKillRegState(RegCIsKill));
+          .addReg(RegC, getKillRegState(RegCIsKill))
+          .setMIFlags(Flags);
 
   InstrIdxForVirtReg.insert(std::make_pair(NewVR, 0));
   InsInstrs.push_back(MIB1);
   InsInstrs.push_back(MIB2);
   DelInstrs.push_back(AddMI);
+  DelInstrs.push_back(&Root);
 }
 
 /// When getMachineCombinerPatterns() finds potential patterns,
 /// this function generates the instructions that could replace the
 /// original code sequence
 void AArch64InstrInfo::genAlternativeCodeSequence(
-    MachineInstr &Root, MachineCombinerPattern Pattern,
+    MachineInstr &Root, unsigned Pattern,
     SmallVectorImpl<MachineInstr *> &InsInstrs,
     SmallVectorImpl<MachineInstr *> &DelInstrs,
     DenseMap<unsigned, unsigned> &InstrIdxForVirtReg) const {
@@ -6962,25 +6968,25 @@ void AArch64InstrInfo::genAlternativeCodeSequence(
     TargetInstrInfo::genAlternativeCodeSequence(Root, Pattern, InsInstrs,
                                                 DelInstrs, InstrIdxForVirtReg);
     return;
-  case MachineCombinerPattern::SUBADD_OP1:
+  case AArch64MachineCombinerPattern::SUBADD_OP1:
     // A - (B + C)
     // ==> (A - B) - C
     genSubAdd2SubSub(MF, MRI, TII, Root, InsInstrs, DelInstrs, 1,
                      InstrIdxForVirtReg);
-    break;
-  case MachineCombinerPattern::SUBADD_OP2:
+    return;
+  case AArch64MachineCombinerPattern::SUBADD_OP2:
     // A - (B + C)
     // ==> (A - C) - B
     genSubAdd2SubSub(MF, MRI, TII, Root, InsInstrs, DelInstrs, 2,
                      InstrIdxForVirtReg);
-    break;
-  case MachineCombinerPattern::MULADDW_OP1:
-  case MachineCombinerPattern::MULADDX_OP1:
+    return;
+  case AArch64MachineCombinerPattern::MULADDW_OP1:
+  case AArch64MachineCombinerPattern::MULADDX_OP1:
     // MUL I=A,B,0
     // ADD R,I,C
     // ==> MADD R,A,B,C
     // --- Create(MADD);
-    if (Pattern == MachineCombinerPattern::MULADDW_OP1) {
+    if (Pattern == AArch64MachineCombinerPattern::MULADDW_OP1) {
       Opc = AArch64::MADDWrrr;
       RC = &AArch64::GPR32RegClass;
     } else {
@@ -6989,13 +6995,13 @@ void AArch64InstrInfo::genAlternativeCodeSequence(
     }
     MUL = genFusedMultiply(MF, MRI, TII, Root, InsInstrs, 1, Opc, RC);
     break;
-  case MachineCombinerPattern::MULADDW_OP2:
-  case MachineCombinerPattern::MULADDX_OP2:
+  case AArch64MachineCombinerPattern::MULADDW_OP2:
+  case AArch64MachineCombinerPattern::MULADDX_OP2:
     // MUL I=A,B,0
     // ADD R,C,I
     // ==> MADD R,A,B,C
     // --- Create(MADD);
-    if (Pattern == MachineCombinerPattern::MULADDW_OP2) {
+    if (Pattern == AArch64MachineCombinerPattern::MULADDW_OP2) {
       Opc = AArch64::MADDWrrr;
       RC = &AArch64::GPR32RegClass;
     } else {
@@ -7004,8 +7010,8 @@ void AArch64InstrInfo::genAlternativeCodeSequence(
     }
     MUL = genFusedMultiply(MF, MRI, TII, Root, InsInstrs, 2, Opc, RC);
     break;
-  case MachineCombinerPattern::MULADDWI_OP1:
-  case MachineCombinerPattern::MULADDXI_OP1: {
+  case AArch64MachineCombinerPattern::MULADDWI_OP1:
+  case AArch64MachineCombinerPattern::MULADDXI_OP1: {
     // MUL I=A,B,0
     // ADD R,I,Imm
     // ==> MOV V, Imm
@@ -7013,7 +7019,7 @@ void AArch64InstrInfo::genAlternativeCodeSequence(
     // --- Create(MADD);
     const TargetRegisterClass *OrrRC;
     unsigned BitSize, OrrOpc, ZeroReg;
-    if (Pattern == MachineCombinerPattern::MULADDWI_OP1) {
+    if (Pattern == AArch64MachineCombinerPattern::MULADDWI_OP1) {
       OrrOpc = AArch64::ORRWri;
       OrrRC = &AArch64::GPR32spRegClass;
       BitSize = 32;
@@ -7066,8 +7072,8 @@ void AArch64InstrInfo::genAlternativeCodeSequence(
     MUL = genMaddR(MF, MRI, TII, Root, InsInstrs, 1, Opc, NewVR, RC);
     break;
   }
-  case MachineCombinerPattern::MULSUBW_OP1:
-  case MachineCombinerPattern::MULSUBX_OP1: {
+  case AArch64MachineCombinerPattern::MULSUBW_OP1:
+  case AArch64MachineCombinerPattern::MULSUBX_OP1: {
     // MUL I=A,B,0
     // SUB R,I, C
     // ==> SUB  V, 0, C
@@ -7075,7 +7081,7 @@ void AArch64InstrInfo::genAlternativeCodeSequence(
     // --- Create(MADD);
     const TargetRegisterClass *SubRC;
     unsigned SubOpc, ZeroReg;
-    if (Pattern == MachineCombinerPattern::MULSUBW_OP1) {
+    if (Pattern == AArch64MachineCombinerPattern::MULSUBW_OP1) {
       SubOpc = AArch64::SUBWrr;
       SubRC = &AArch64::GPR32spRegClass;
       ZeroReg = AArch64::WZR;
@@ -7099,13 +7105,13 @@ void AArch64InstrInfo::genAlternativeCodeSequence(
     MUL = genMaddR(MF, MRI, TII, Root, InsInstrs, 1, Opc, NewVR, RC);
     break;
   }
-  case MachineCombinerPattern::MULSUBW_OP2:
-  case MachineCombinerPattern::MULSUBX_OP2:
+  case AArch64MachineCombinerPattern::MULSUBW_OP2:
+  case AArch64MachineCombinerPattern::MULSUBX_OP2:
     // MUL I=A,B,0
     // SUB R,C,I
     // ==> MSUB R,A,B,C (computes C - A*B)
     // --- Create(MSUB);
-    if (Pattern == MachineCombinerPattern::MULSUBW_OP2) {
+    if (Pattern == AArch64MachineCombinerPattern::MULSUBW_OP2) {
       Opc = AArch64::MSUBWrrr;
       RC = &AArch64::GPR32RegClass;
     } else {
@@ -7114,8 +7120,8 @@ void AArch64InstrInfo::genAlternativeCodeSequence(
     }
     MUL = genFusedMultiply(MF, MRI, TII, Root, InsInstrs, 2, Opc, RC);
     break;
-  case MachineCombinerPattern::MULSUBWI_OP1:
-  case MachineCombinerPattern::MULSUBXI_OP1: {
+  case AArch64MachineCombinerPattern::MULSUBWI_OP1:
+  case AArch64MachineCombinerPattern::MULSUBXI_OP1: {
     // MUL I=A,B,0
     // SUB R,I, Imm
     // ==> MOV  V, -Imm
@@ -7123,7 +7129,7 @@ void AArch64InstrInfo::genAlternativeCodeSequence(
     // --- Create(MADD);
     const TargetRegisterClass *OrrRC;
     unsigned BitSize, OrrOpc, ZeroReg;
-    if (Pattern == MachineCombinerPattern::MULSUBWI_OP1) {
+    if (Pattern == AArch64MachineCombinerPattern::MULSUBWI_OP1) {
       OrrOpc = AArch64::ORRWri;
       OrrRC = &AArch64::GPR32spRegClass;
       BitSize = 32;
@@ -7176,318 +7182,318 @@ void AArch64InstrInfo::genAlternativeCodeSequence(
     break;
   }
 
-  case MachineCombinerPattern::MULADDv8i8_OP1:
+  case AArch64MachineCombinerPattern::MULADDv8i8_OP1:
     Opc = AArch64::MLAv8i8;
     RC = &AArch64::FPR64RegClass;
     MUL = genFusedMultiplyAcc(MF, MRI, TII, Root, InsInstrs, 1, Opc, RC);
     break;
-  case MachineCombinerPattern::MULADDv8i8_OP2:
+  case AArch64MachineCombinerPattern::MULADDv8i8_OP2:
     Opc = AArch64::MLAv8i8;
     RC = &AArch64::FPR64RegClass;
     MUL = genFusedMultiplyAcc(MF, MRI, TII, Root, InsInstrs, 2, Opc, RC);
     break;
-  case MachineCombinerPattern::MULADDv16i8_OP1:
+  case AArch64MachineCombinerPattern::MULADDv16i8_OP1:
     Opc = AArch64::MLAv16i8;
     RC = &AArch64::FPR128RegClass;
     MUL = genFusedMultiplyAcc(MF, MRI, TII, Root, InsInstrs, 1, Opc, RC);
     break;
-  case MachineCombinerPattern::MULADDv16i8_OP2:
+  case AArch64MachineCombinerPattern::MULADDv16i8_OP2:
     Opc = AArch64::MLAv16i8;
     RC = &AArch64::FPR128RegClass;
     MUL = genFusedMultiplyAcc(MF, MRI, TII, Root, InsInstrs, 2, Opc, RC);
     break;
-  case MachineCombinerPattern::MULADDv4i16_OP1:
+  case AArch64MachineCombinerPattern::MULADDv4i16_OP1:
     Opc = AArch64::MLAv4i16;
     RC = &AArch64::FPR64RegClass;
     MUL = genFusedMultiplyAcc(MF, MRI, TII, Root, InsInstrs, 1, Opc, RC);
     break;
-  case MachineCombinerPattern::MULADDv4i16_OP2:
+  case AArch64MachineCombinerPattern::MULADDv4i16_OP2:
     Opc = AArch64::MLAv4i16;
     RC = &AArch64::FPR64RegClass;
     MUL = genFusedMultiplyAcc(MF, MRI, TII, Root, InsInstrs, 2, Opc, RC);
     break;
-  case MachineCombinerPattern::MULADDv8i16_OP1:
+  case AArch64MachineCombinerPattern::MULADDv8i16_OP1:
     Opc = AArch64::MLAv8i16;
     RC = &AArch64::FPR128RegClass;
     MUL = genFusedMultiplyAcc(MF, MRI, TII, Root, InsInstrs, 1, Opc, RC);
     break;
-  case MachineCombinerPattern::MULADDv8i16_OP2:
+  case AArch64MachineCombinerPattern::MULADDv8i16_OP2:
     Opc = AArch64::MLAv8i16;
     RC = &AArch64::FPR128RegClass;
     MUL = genFusedMultiplyAcc(MF, MRI, TII, Root, InsInstrs, 2, Opc, RC);
     break;
-  case MachineCombinerPattern::MULADDv2i32_OP1:
+  case AArch64MachineCombinerPattern::MULADDv2i32_OP1:
     Opc = AArch64::MLAv2i32;
     RC = &AArch64::FPR64RegClass;
     MUL = genFusedMultiplyAcc(MF, MRI, TII, Root, InsInstrs, 1, Opc, RC);
     break;
-  case MachineCombinerPattern::MULADDv2i32_OP2:
+  case AArch64MachineCombinerPattern::MULADDv2i32_OP2:
     Opc = AArch64::MLAv2i32;
     RC = &AArch64::FPR64RegClass;
     MUL = genFusedMultiplyAcc(MF, MRI, TII, Root, InsInstrs, 2, Opc, RC);
     break;
-  case MachineCombinerPattern::MULADDv4i32_OP1:
+  case AArch64MachineCombinerPattern::MULADDv4i32_OP1:
     Opc = AArch64::MLAv4i32;
     RC = &AArch64::FPR128RegClass;
     MUL = genFusedMultiplyAcc(MF, MRI, TII, Root, InsInstrs, 1, Opc, RC);
     break;
-  case MachineCombinerPattern::MULADDv4i32_OP2:
+  case AArch64MachineCombinerPattern::MULADDv4i32_OP2:
     Opc = AArch64::MLAv4i32;
     RC = &AArch64::FPR128RegClass;
     MUL = genFusedMultiplyAcc(MF, MRI, TII, Root, InsInstrs, 2, Opc, RC);
     break;
 
-  case MachineCombinerPattern::MULSUBv8i8_OP1:
+  case AArch64MachineCombinerPattern::MULSUBv8i8_OP1:
     Opc = AArch64::MLAv8i8;
     RC = &AArch64::FPR64RegClass;
     MUL = genFusedMultiplyAccNeg(MF, MRI, TII, Root, InsInstrs,
                                  InstrIdxForVirtReg, 1, Opc, AArch64::NEGv8i8,
                                  RC);
     break;
-  case MachineCombinerPattern::MULSUBv8i8_OP2:
+  case AArch64MachineCombinerPattern::MULSUBv8i8_OP2:
     Opc = AArch64::MLSv8i8;
     RC = &AArch64::FPR64RegClass;
     MUL = genFusedMultiplyAcc(MF, MRI, TII, Root, InsInstrs, 2, Opc, RC);
     break;
-  case MachineCombinerPattern::MULSUBv16i8_OP1:
+  case AArch64MachineCombinerPattern::MULSUBv16i8_OP1:
     Opc = AArch64::MLAv16i8;
     RC = &AArch64::FPR128RegClass;
     MUL = genFusedMultiplyAccNeg(MF, MRI, TII, Root, InsInstrs,
                                  InstrIdxForVirtReg, 1, Opc, AArch64::NEGv16i8,
                                  RC);
     break;
-  case MachineCombinerPattern::MULSUBv16i8_OP2:
+  case AArch64MachineCombinerPattern::MULSUBv16i8_OP2:
     Opc = AArch64::MLSv16i8;
     RC = &AArch64::FPR128RegClass;
     MUL = genFusedMultiplyAcc(MF, MRI, TII, Root, InsInstrs, 2, Opc, RC);
     break;
-  case MachineCombinerPattern::MULSUBv4i16_OP1:
+  case AArch64MachineCombinerPattern::MULSUBv4i16_OP1:
     Opc = AArch64::MLAv4i16;
     RC = &AArch64::FPR64RegClass;
     MUL = genFusedMultiplyAccNeg(MF, MRI, TII, Root, InsInstrs,
                                  InstrIdxForVirtReg, 1, Opc, AArch64::NEGv4i16,
                                  RC);
     break;
-  case MachineCombinerPattern::MULSUBv4i16_OP2:
+  case AArch64MachineCombinerPattern::MULSUBv4i16_OP2:
     Opc = AArch64::MLSv4i16;
     RC = &AArch64::FPR64RegClass;
     MUL = genFusedMultiplyAcc(MF, MRI, TII, Root, InsInstrs, 2, Opc, RC);
     break;
-  case MachineCombinerPattern::MULSUBv8i16_OP1:
+  case AArch64MachineCombinerPattern::MULSUBv8i16_OP1:
     Opc = AArch64::MLAv8i16;
     RC = &AArch64::FPR128RegClass;
     MUL = genFusedMultiplyAccNeg(MF, MRI, TII, Root, InsInstrs,
                                  InstrIdxForVirtReg, 1, Opc, AArch64::NEGv8i16,
                                  RC);
     break;
-  case MachineCombinerPattern::MULSUBv8i16_OP2:
+  case AArch64MachineCombinerPattern::MULSUBv8i16_OP2:
     Opc = AArch64::MLSv8i16;
     RC = &AArch64::FPR128RegClass;
     MUL = genFusedMultiplyAcc(MF, MRI, TII, Root, InsInstrs, 2, Opc, RC);
     break;
-  case MachineCombinerPattern::MULSUBv2i32_OP1:
+  case AArch64MachineCombinerPattern::MULSUBv2i32_OP1:
     Opc = AArch64::MLAv2i32;
     RC = &AArch64::FPR64RegClass;
     MUL = genFusedMultiplyAccNeg(MF, MRI, TII, Root, InsInstrs,
                                  InstrIdxForVirtReg, 1, Opc, AArch64::NEGv2i32,
                                  RC);
     break;
-  case MachineCombinerPattern::MULSUBv2i32_OP2:
+  case AArch64MachineCombinerPattern::MULSUBv2i32_OP2:
     Opc = AArch64::MLSv2i32;
     RC = &AArch64::FPR64RegClass;
     MUL = genFusedMultiplyAcc(MF, MRI, TII, Root, InsInstrs, 2, Opc, RC);
     break;
-  case MachineCombinerPattern::MULSUBv4i32_OP1:
+  case AArch64MachineCombinerPattern::MULSUBv4i32_OP1:
     Opc = AArch64::MLAv4i32;
     RC = &AArch64::FPR128RegClass;
     MUL = genFusedMultiplyAccNeg(MF, MRI, TII, Root, InsInstrs,
                                  InstrIdxForVirtReg, 1, Opc, AArch64::NEGv4i32,
                                  RC);
     break;
-  case MachineCombinerPattern::MULSUBv4i32_OP2:
+  case AArch64MachineCombinerPattern::MULSUBv4i32_OP2:
     Opc = AArch64::MLSv4i32;
     RC = &AArch64::FPR128RegClass;
     MUL = genFusedMultiplyAcc(MF, MRI, TII, Root, InsInstrs, 2, Opc, RC);
     break;
 
-  case MachineCombinerPattern::MULADDv4i16_indexed_OP1:
+  case AArch64MachineCombinerPattern::MULADDv4i16_indexed_OP1:
     Opc = AArch64::MLAv4i16_indexed;
     RC = &AArch64::FPR64RegClass;
     MUL = genFusedMultiplyIdx(MF, MRI, TII, Root, InsInstrs, 1, Opc, RC);
     break;
-  case MachineCombinerPattern::MULADDv4i16_indexed_OP2:
+  case AArch64MachineCombinerPattern::MULADDv4i16_indexed_OP2:
     Opc = AArch64::MLAv4i16_indexed;
     RC = &AArch64::FPR64RegClass;
     MUL = genFusedMultiplyIdx(MF, MRI, TII, Root, InsInstrs, 2, Opc, RC);
     break;
-  case MachineCombinerPattern::MULADDv8i16_indexed_OP1:
+  case AArch64MachineCombinerPattern::MULADDv8i16_indexed_OP1:
     Opc = AArch64::MLAv8i16_indexed;
     RC = &AArch64::FPR128RegClass;
     MUL = genFusedMultiplyIdx(MF, MRI, TII, Root, InsInstrs, 1, Opc, RC);
     break;
-  case MachineCombinerPattern::MULADDv8i16_indexed_OP2:
+  case AArch64MachineCombinerPattern::MULADDv8i16_indexed_OP2:
     Opc = AArch64::MLAv8i16_indexed;
     RC = &AArch64::FPR128RegClass;
     MUL = genFusedMultiplyIdx(MF, MRI, TII, Root, InsInstrs, 2, Opc, RC);
     break;
-  case MachineCombinerPattern::MULADDv2i32_indexed_OP1:
+  case AArch64MachineCombinerPattern::MULADDv2i32_indexed_OP1:
     Opc = AArch64::MLAv2i32_indexed;
     RC = &AArch64::FPR64RegClass;
     MUL = genFusedMultiplyIdx(MF, MRI, TII, Root, InsInstrs, 1, Opc, RC);
     break;
-  case MachineCombinerPattern::MULADDv2i32_indexed_OP2:
+  case AArch64MachineCombinerPattern::MULADDv2i32_indexed_OP2:
     Opc = AArch64::MLAv2i32_indexed;
     RC = &AArch64::FPR64RegClass;
     MUL = genFusedMultiplyIdx(MF, MRI, TII, Root, InsInstrs, 2, Opc, RC);
     break;
-  case MachineCombinerPattern::MULADDv4i32_indexed_OP1:
+  case AArch64MachineCombinerPattern::MULADDv4i32_indexed_OP1:
     Opc = AArch64::MLAv4i32_indexed;
     RC = &AArch64::FPR128RegClass;
     MUL = genFusedMultiplyIdx(MF, MRI, TII, Root, InsInstrs, 1, Opc, RC);
     break;
-  case MachineCombinerPattern::MULADDv4i32_indexed_OP2:
+  case AArch64MachineCombinerPattern::MULADDv4i32_indexed_OP2:
     Opc = AArch64::MLAv4i32_indexed;
     RC = &AArch64::FPR128RegClass;
     MUL = genFusedMultiplyIdx(MF, MRI, TII, Root, InsInstrs, 2, Opc, RC);
     break;
 
-  case MachineCombinerPattern::MULSUBv4i16_indexed_OP1:
+  case AArch64MachineCombinerPattern::MULSUBv4i16_indexed_OP1:
     Opc = AArch64::MLAv4i16_indexed;
     RC = &AArch64::FPR64RegClass;
     MUL = genFusedMultiplyIdxNeg(MF, MRI, TII, Root, InsInstrs,
                                  InstrIdxForVirtReg, 1, Opc, AArch64::NEGv4i16,
                                  RC);
     break;
-  case MachineCombinerPattern::MULSUBv4i16_indexed_OP2:
+  case AArch64MachineCombinerPattern::MULSUBv4i16_indexed_OP2:
     Opc = AArch64::MLSv4i16_indexed;
     RC = &AArch64::FPR64RegClass;
     MUL = genFusedMultiplyIdx(MF, MRI, TII, Root, InsInstrs, 2, Opc, RC);
     break;
-  case MachineCombinerPattern::MULSUBv8i16_indexed_OP1:
+  case AArch64MachineCombinerPattern::MULSUBv8i16_indexed_OP1:
     Opc = AArch64::MLAv8i16_indexed;
     RC = &AArch64::FPR128RegClass;
     MUL = genFusedMultiplyIdxNeg(MF, MRI, TII, Root, InsInstrs,
                                  InstrIdxForVirtReg, 1, Opc, AArch64::NEGv8i16,
                                  RC);
     break;
-  case MachineCombinerPattern::MULSUBv8i16_indexed_OP2:
+  case AArch64MachineCombinerPattern::MULSUBv8i16_indexed_OP2:
     Opc = AArch64::MLSv8i16_indexed;
     RC = &AArch64::FPR128RegClass;
     MUL = genFusedMultiplyIdx(MF, MRI, TII, Root, InsInstrs, 2, Opc, RC);
     break;
-  case MachineCombinerPattern::MULSUBv2i32_indexed_OP1:
+  case AArch64MachineCombinerPattern::MULSUBv2i32_indexed_OP1:
     Opc = AArch64::MLAv2i32_indexed;
     RC = &AArch64::FPR64RegClass;
     MUL = genFusedMultiplyIdxNeg(MF, MRI, TII, Root, InsInstrs,
                                  InstrIdxForVirtReg, 1, Opc, AArch64::NEGv2i32,
                                  RC);
     break;
-  case MachineCombinerPattern::MULSUBv2i32_indexed_OP2:
+  case AArch64MachineCombinerPattern::MULSUBv2i32_indexed_OP2:
     Opc = AArch64::MLSv2i32_indexed;
     RC = &AArch64::FPR64RegClass;
     MUL = genFusedMultiplyIdx(MF, MRI, TII, Root, InsInstrs, 2, Opc, RC);
     break;
-  case MachineCombinerPattern::MULSUBv4i32_indexed_OP1:
+  case AArch64MachineCombinerPattern::MULSUBv4i32_indexed_OP1:
     Opc = AArch64::MLAv4i32_indexed;
     RC = &AArch64::FPR128RegClass;
     MUL = genFusedMultiplyIdxNeg(MF, MRI, TII, Root, InsInstrs,
                                  InstrIdxForVirtReg, 1, Opc, AArch64::NEGv4i32,
                                  RC);
     break;
-  case MachineCombinerPattern::MULSUBv4i32_indexed_OP2:
+  case AArch64MachineCombinerPattern::MULSUBv4i32_indexed_OP2:
     Opc = AArch64::MLSv4i32_indexed;
     RC = &AArch64::FPR128RegClass;
     MUL = genFusedMultiplyIdx(MF, MRI, TII, Root, InsInstrs, 2, Opc, RC);
     break;
 
   // Floating Point Support
-  case MachineCombinerPattern::FMULADDH_OP1:
+  case AArch64MachineCombinerPattern::FMULADDH_OP1:
     Opc = AArch64::FMADDHrrr;
     RC = &AArch64::FPR16RegClass;
     MUL = genFusedMultiply(MF, MRI, TII, Root, InsInstrs, 1, Opc, RC);
     break;
-  case MachineCombinerPattern::FMULADDS_OP1:
+  case AArch64MachineCombinerPattern::FMULADDS_OP1:
     Opc = AArch64::FMADDSrrr;
     RC = &AArch64::FPR32RegClass;
     MUL = genFusedMultiply(MF, MRI, TII, Root, InsInstrs, 1, Opc, RC);
     break;
-  case MachineCombinerPattern::FMULADDD_OP1:
+  case AArch64MachineCombinerPattern::FMULADDD_OP1:
     Opc = AArch64::FMADDDrrr;
     RC = &AArch64::FPR64RegClass;
     MUL = genFusedMultiply(MF, MRI, TII, Root, InsInstrs, 1, Opc, RC);
     break;
 
-  case MachineCombinerPattern::FMULADDH_OP2:
+  case AArch64MachineCombinerPattern::FMULADDH_OP2:
     Opc = AArch64::FMADDHrrr;
     RC = &AArch64::FPR16RegClass;
     MUL = genFusedMultiply(MF, MRI, TII, Root, InsInstrs, 2, Opc, RC);
     break;
-  case MachineCombinerPattern::FMULADDS_OP2:
+  case AArch64MachineCombinerPattern::FMULADDS_OP2:
     Opc = AArch64::FMADDSrrr;
     RC = &AArch64::FPR32RegClass;
     MUL = genFusedMultiply(MF, MRI, TII, Root, InsInstrs, 2, Opc, RC);
     break;
-  case MachineCombinerPattern::FMULADDD_OP2:
+  case AArch64MachineCombinerPattern::FMULADDD_OP2:
     Opc = AArch64::FMADDDrrr;
     RC = &AArch64::FPR64RegClass;
     MUL = genFusedMultiply(MF, MRI, TII, Root, InsInstrs, 2, Opc, RC);
     break;
 
-  case MachineCombinerPattern::FMLAv1i32_indexed_OP1:
+  case AArch64MachineCombinerPattern::FMLAv1i32_indexed_OP1:
     Opc = AArch64::FMLAv1i32_indexed;
     RC = &AArch64::FPR32RegClass;
     MUL = genFusedMultiply(MF, MRI, TII, Root, InsInstrs, 1, Opc, RC,
                            FMAInstKind::Indexed);
     break;
-  case MachineCombinerPattern::FMLAv1i32_indexed_OP2:
+  case AArch64MachineCombinerPattern::FMLAv1i32_indexed_OP2:
     Opc = AArch64::FMLAv1i32_indexed;
     RC = &AArch64::FPR32RegClass;
     MUL = genFusedMultiply(MF, MRI, TII, Root, InsInstrs, 2, Opc, RC,
                            FMAInstKind::Indexed);
     break;
 
-  case MachineCombinerPattern::FMLAv1i64_indexed_OP1:
+  case AArch64MachineCombinerPattern::FMLAv1i64_indexed_OP1:
     Opc = AArch64::FMLAv1i64_indexed;
     RC = &AArch64::FPR64RegClass;
     MUL = genFusedMultiply(MF, MRI, TII, Root, InsInstrs, 1, Opc, RC,
                            FMAInstKind::Indexed);
     break;
-  case MachineCombinerPattern::FMLAv1i64_indexed_OP2:
+  case AArch64MachineCombinerPattern::FMLAv1i64_indexed_OP2:
     Opc = AArch64::FMLAv1i64_indexed;
     RC = &AArch64::FPR64RegClass;
     MUL = genFusedMultiply(MF, MRI, TII, Root, InsInstrs, 2, Opc, RC,
                            FMAInstKind::Indexed);
     break;
 
-  case MachineCombinerPattern::FMLAv4i16_indexed_OP1:
+  case AArch64MachineCombinerPattern::FMLAv4i16_indexed_OP1:
     RC = &AArch64::FPR64RegClass;
     Opc = AArch64::FMLAv4i16_indexed;
     MUL = genFusedMultiply(MF, MRI, TII, Root, InsInstrs, 1, Opc, RC,
                            FMAInstKind::Indexed);
     break;
-  case MachineCombinerPattern::FMLAv4f16_OP1:
+  case AArch64MachineCombinerPattern::FMLAv4f16_OP1:
     RC = &AArch64::FPR64RegClass;
     Opc = AArch64::FMLAv4f16;
     MUL = genFusedMultiply(MF, MRI, TII, Root, InsInstrs, 1, Opc, RC,
                            FMAInstKind::Accumulator);
     break;
-  case MachineCombinerPattern::FMLAv4i16_indexed_OP2:
+  case AArch64MachineCombinerPattern::FMLAv4i16_indexed_OP2:
     RC = &AArch64::FPR64RegClass;
     Opc = AArch64::FMLAv4i16_indexed;
     MUL = genFusedMultiply(MF, MRI, TII, Root, InsInstrs, 2, Opc, RC,
                            FMAInstKind::Indexed);
     break;
-  case MachineCombinerPattern::FMLAv4f16_OP2:
+  case AArch64MachineCombinerPattern::FMLAv4f16_OP2:
     RC = &AArch64::FPR64RegClass;
     Opc = AArch64::FMLAv4f16;
     MUL = genFusedMultiply(MF, MRI, TII, Root, InsInstrs, 2, Opc, RC,
                            FMAInstKind::Accumulator);
     break;
 
-  case MachineCombinerPattern::FMLAv2i32_indexed_OP1:
-  case MachineCombinerPattern::FMLAv2f32_OP1:
+  case AArch64MachineCombinerPattern::FMLAv2i32_indexed_OP1:
+  case AArch64MachineCombinerPattern::FMLAv2f32_OP1:
     RC = &AArch64::FPR64RegClass;
-    if (Pattern == MachineCombinerPattern::FMLAv2i32_indexed_OP1) {
+    if (Pattern == AArch64MachineCombinerPattern::FMLAv2i32_indexed_OP1) {
       Opc = AArch64::FMLAv2i32_indexed;
       MUL = genFusedMultiply(MF, MRI, TII, Root, InsInstrs, 1, Opc, RC,
                              FMAInstKind::Indexed);
@@ -7497,10 +7503,10 @@ void AArch64InstrInfo::genAlternativeCodeSequence(
                              FMAInstKind::Accumulator);
     }
     break;
-  case MachineCombinerPattern::FMLAv2i32_indexed_OP2:
-  case MachineCombinerPattern::FMLAv2f32_OP2:
+  case AArch64MachineCombinerPattern::FMLAv2i32_indexed_OP2:
+  case AArch64MachineCombinerPattern::FMLAv2f32_OP2:
     RC = &AArch64::FPR64RegClass;
-    if (Pattern == MachineCombinerPattern::FMLAv2i32_indexed_OP2) {
+    if (Pattern == AArch64MachineCombinerPattern::FMLAv2i32_indexed_OP2) {
       Opc = AArch64::FMLAv2i32_indexed;
       MUL = genFusedMultiply(MF, MRI, TII, Root, InsInstrs, 2, Opc, RC,
                              FMAInstKind::Indexed);
@@ -7511,35 +7517,35 @@ void AArch64InstrInfo::genAlternativeCodeSequence(
     }
     break;
 
-  case MachineCombinerPattern::FMLAv8i16_indexed_OP1:
+  case AArch64MachineCombinerPattern::FMLAv8i16_indexed_OP1:
     RC = &AArch64::FPR128RegClass;
     Opc = AArch64::FMLAv8i16_indexed;
     MUL = genFusedMultiply(MF, MRI, TII, Root, InsInstrs, 1, Opc, RC,
                            FMAInstKind::Indexed);
     break;
-  case MachineCombinerPattern::FMLAv8f16_OP1:
+  case AArch64MachineCombinerPattern::FMLAv8f16_OP1:
     RC = &AArch64::FPR128RegClass;
     Opc = AArch64::FMLAv8f16;
     MUL = genFusedMultiply(MF, MRI, TII, Root, InsInstrs, 1, Opc, RC,
                            FMAInstKind::Accumulator);
     break;
-  case MachineCombinerPattern::FMLAv8i16_indexed_OP2:
+  case AArch64MachineCombinerPattern::FMLAv8i16_indexed_OP2:
     RC = &AArch64::FPR128RegClass;
     Opc = AArch64::FMLAv8i16_indexed;
     MUL = genFusedMultiply(MF, MRI, TII, Root, InsInstrs, 2, Opc, RC,
                            FMAInstKind::Indexed);
     break;
-  case MachineCombinerPattern::FMLAv8f16_OP2:
+  case AArch64MachineCombinerPattern::FMLAv8f16_OP2:
     RC = &AArch64::FPR128RegClass;
     Opc = AArch64::FMLAv8f16;
     MUL = genFusedMultiply(MF, MRI, TII, Root, InsInstrs, 2, Opc, RC,
                            FMAInstKind::Accumulator);
     break;
 
-  case MachineCombinerPattern::FMLAv2i64_indexed_OP1:
-  case MachineCombinerPattern::FMLAv2f64_OP1:
+  case AArch64MachineCombinerPattern::FMLAv2i64_indexed_OP1:
+  case AArch64MachineCombinerPattern::FMLAv2f64_OP1:
     RC = &AArch64::FPR128RegClass;
-    if (Pattern == MachineCombinerPattern::FMLAv2i64_indexed_OP1) {
+    if (Pattern == AArch64MachineCombinerPattern::FMLAv2i64_indexed_OP1) {
       Opc = AArch64::FMLAv2i64_indexed;
       MUL = genFusedMultiply(MF, MRI, TII, Root, InsInstrs, 1, Opc, RC,
                              FMAInstKind::Indexed);
@@ -7549,10 +7555,10 @@ void AArch64InstrInfo::genAlternativeCodeSequence(
                              FMAInstKind::Accumulator);
     }
     break;
-  case MachineCombinerPattern::FMLAv2i64_indexed_OP2:
-  case MachineCombinerPattern::FMLAv2f64_OP2:
+  case AArch64MachineCombinerPattern::FMLAv2i64_indexed_OP2:
+  case AArch64MachineCombinerPattern::FMLAv2f64_OP2:
     RC = &AArch64::FPR128RegClass;
-    if (Pattern == MachineCombinerPattern::FMLAv2i64_indexed_OP2) {
+    if (Pattern == AArch64MachineCombinerPattern::FMLAv2i64_indexed_OP2) {
       Opc = AArch64::FMLAv2i64_indexed;
       MUL = genFusedMultiply(MF, MRI, TII, Root, InsInstrs, 2, Opc, RC,
                              FMAInstKind::Indexed);
@@ -7563,10 +7569,10 @@ void AArch64InstrInfo::genAlternativeCodeSequence(
     }
     break;
 
-  case MachineCombinerPattern::FMLAv4i32_indexed_OP1:
-  case MachineCombinerPattern::FMLAv4f32_OP1:
+  case AArch64MachineCombinerPattern::FMLAv4i32_indexed_OP1:
+  case AArch64MachineCombinerPattern::FMLAv4f32_OP1:
     RC = &AArch64::FPR128RegClass;
-    if (Pattern == MachineCombinerPattern::FMLAv4i32_indexed_OP1) {
+    if (Pattern == AArch64MachineCombinerPattern::FMLAv4i32_indexed_OP1) {
       Opc = AArch64::FMLAv4i32_indexed;
       MUL = genFusedMultiply(MF, MRI, TII, Root, InsInstrs, 1, Opc, RC,
                              FMAInstKind::Indexed);
@@ -7577,10 +7583,10 @@ void AArch64InstrInfo::genAlternativeCodeSequence(
     }
     break;
 
-  case MachineCombinerPattern::FMLAv4i32_indexed_OP2:
-  case MachineCombinerPattern::FMLAv4f32_OP2:
+  case AArch64MachineCombinerPattern::FMLAv4i32_indexed_OP2:
+  case AArch64MachineCombinerPattern::FMLAv4f32_OP2:
     RC = &AArch64::FPR128RegClass;
-    if (Pattern == MachineCombinerPattern::FMLAv4i32_indexed_OP2) {
+    if (Pattern == AArch64MachineCombinerPattern::FMLAv4i32_indexed_OP2) {
       Opc = AArch64::FMLAv4i32_indexed;
       MUL = genFusedMultiply(MF, MRI, TII, Root, InsInstrs, 2, Opc, RC,
                              FMAInstKind::Indexed);
@@ -7591,70 +7597,70 @@ void AArch64InstrInfo::genAlternativeCodeSequence(
     }
     break;
 
-  case MachineCombinerPattern::FMULSUBH_OP1:
+  case AArch64MachineCombinerPattern::FMULSUBH_OP1:
     Opc = AArch64::FNMSUBHrrr;
     RC = &AArch64::FPR16RegClass;
     MUL = genFusedMultiply(MF, MRI, TII, Root, InsInstrs, 1, Opc, RC);
     break;
-  case MachineCombinerPattern::FMULSUBS_OP1:
+  case AArch64MachineCombinerPattern::FMULSUBS_OP1:
     Opc = AArch64::FNMSUBSrrr;
     RC = &AArch64::FPR32RegClass;
     MUL = genFusedMultiply(MF, MRI, TII, Root, InsInstrs, 1, Opc, RC);
     break;
-  case MachineCombinerPattern::FMULSUBD_OP1:
+  case AArch64MachineCombinerPattern::FMULSUBD_OP1:
     Opc = AArch64::FNMSUBDrrr;
     RC = &AArch64::FPR64RegClass;
     MUL = genFusedMultiply(MF, MRI, TII, Root, InsInstrs, 1, Opc, RC);
     break;
 
-  case MachineCombinerPattern::FNMULSUBH_OP1:
+  case AArch64MachineCombinerPattern::FNMULSUBH_OP1:
     Opc = AArch64::FNMADDHrrr;
     RC = &AArch64::FPR16RegClass;
     MUL = genFusedMultiply(MF, MRI, TII, Root, InsInstrs, 1, Opc, RC);
     break;
-  case MachineCombinerPattern::FNMULSUBS_OP1:
+  case AArch64MachineCombinerPattern::FNMULSUBS_OP1:
     Opc = AArch64::FNMADDSrrr;
     RC = &AArch64::FPR32RegClass;
     MUL = genFusedMultiply(MF, MRI, TII, Root, InsInstrs, 1, Opc, RC);
     break;
-  case MachineCombinerPattern::FNMULSUBD_OP1:
+  case AArch64MachineCombinerPattern::FNMULSUBD_OP1:
     Opc = AArch64::FNMADDDrrr;
     RC = &AArch64::FPR64RegClass;
     MUL = genFusedMultiply(MF, MRI, TII, Root, InsInstrs, 1, Opc, RC);
     break;
 
-  case MachineCombinerPattern::FMULSUBH_OP2:
+  case AArch64MachineCombinerPattern::FMULSUBH_OP2:
     Opc = AArch64::FMSUBHrrr;
     RC = &AArch64::FPR16RegClass;
     MUL = genFusedMultiply(MF, MRI, TII, Root, InsInstrs, 2, Opc, RC);
     break;
-  case MachineCombinerPattern::FMULSUBS_OP2:
+  case AArch64MachineCombinerPattern::FMULSUBS_OP2:
     Opc = AArch64::FMSUBSrrr;
     RC = &AArch64::FPR32RegClass;
     MUL = genFusedMultiply(MF, MRI, TII, Root, InsInstrs, 2, Opc, RC);
     break;
-  case MachineCombinerPattern::FMULSUBD_OP2:
+  case AArch64MachineCombinerPattern::FMULSUBD_OP2:
     Opc = AArch64::FMSUBDrrr;
     RC = &AArch64::FPR64RegClass;
     MUL = genFusedMultiply(MF, MRI, TII, Root, InsInstrs, 2, Opc, RC);
     break;
 
-  case MachineCombinerPattern::FMLSv1i32_indexed_OP2:
+  case AArch64MachineCombinerPattern::FMLSv1i32_indexed_OP2:
     Opc = AArch64::FMLSv1i32_indexed;
     RC = &AArch64::FPR32RegClass;
     MUL = genFusedMultiply(MF, MRI, TII, Root, InsInstrs, 2, Opc, RC,
                            FMAInstKind::Indexed);
     break;
 
-  case MachineCombinerPattern::FMLSv1i64_indexed_OP2:
+  case AArch64MachineCombinerPattern::FMLSv1i64_indexed_OP2:
     Opc = AArch64::FMLSv1i64_indexed;
     RC = &AArch64::FPR64RegClass;
     MUL = genFusedMultiply(MF, MRI, TII, Root, InsInstrs, 2, Opc, RC,
                            FMAInstKind::Indexed);
     break;
 
-  case MachineCombinerPattern::FMLSv4f16_OP1:
-  case MachineCombinerPattern::FMLSv4i16_indexed_OP1: {
+  case AArch64MachineCombinerPattern::FMLSv4f16_OP1:
+  case AArch64MachineCombinerPattern::FMLSv4i16_indexed_OP1: {
     RC = &AArch64::FPR64RegClass;
     Register NewVR = MRI.createVirtualRegister(RC);
     MachineInstrBuilder MIB1 =
@@ -7662,7 +7668,7 @@ void AArch64InstrInfo::genAlternativeCodeSequence(
             .add(Root.getOperand(2));
     InsInstrs.push_back(MIB1);
     InstrIdxForVirtReg.insert(std::make_pair(NewVR, 0));
-    if (Pattern == MachineCombinerPattern::FMLSv4f16_OP1) {
+    if (Pattern == AArch64MachineCombinerPattern::FMLSv4f16_OP1) {
       Opc = AArch64::FMLAv4f16;
       MUL = genFusedMultiply(MF, MRI, TII, Root, InsInstrs, 1, Opc, RC,
                              FMAInstKind::Accumulator, &NewVR);
@@ -7673,23 +7679,23 @@ void AArch64InstrInfo::genAlternativeCodeSequence(
     }
     break;
   }
-  case MachineCombinerPattern::FMLSv4f16_OP2:
+  case AArch64MachineCombinerPattern::FMLSv4f16_OP2:
     RC = &AArch64::FPR64RegClass;
     Opc = AArch64::FMLSv4f16;
     MUL = genFusedMultiply(MF, MRI, TII, Root, InsInstrs, 2, Opc, RC,
                            FMAInstKind::Accumulator);
     break;
-  case MachineCombinerPattern::FMLSv4i16_indexed_OP2:
+  case AArch64MachineCombinerPattern::FMLSv4i16_indexed_OP2:
     RC = &AArch64::FPR64RegClass;
     Opc = AArch64::FMLSv4i16_indexed;
     MUL = genFusedMultiply(MF, MRI, TII, Root, InsInstrs, 2, Opc, RC,
                            FMAInstKind::Indexed);
     break;
 
-  case MachineCombinerPattern::FMLSv2f32_OP2:
-  case MachineCombinerPattern::FMLSv2i32_indexed_OP2:
+  case AArch64MachineCombinerPattern::FMLSv2f32_OP2:
+  case AArch64MachineCombinerPattern::FMLSv2i32_indexed_OP2:
     RC = &AArch64::FPR64RegClass;
-    if (Pattern == MachineCombinerPattern::FMLSv2i32_indexed_OP2) {
+    if (Pattern == AArch64MachineCombinerPattern::FMLSv2i32_indexed_OP2) {
       Opc = AArch64::FMLSv2i32_indexed;
       MUL = genFusedMultiply(MF, MRI, TII, Root, InsInstrs, 2, Opc, RC,
                              FMAInstKind::Indexed);
@@ -7700,8 +7706,8 @@ void AArch64InstrInfo::genAlternativeCodeSequence(
     }
     break;
 
-  case MachineCombinerPattern::FMLSv8f16_OP1:
-  case MachineCombinerPattern::FMLSv8i16_indexed_OP1: {
+  case AArch64MachineCombinerPattern::FMLSv8f16_OP1:
+  case AArch64MachineCombinerPattern::FMLSv8i16_indexed_OP1: {
     RC = &AArch64::FPR128RegClass;
     Register NewVR = MRI.createVirtualRegister(RC);
     MachineInstrBuilder MIB1 =
@@ -7709,7 +7715,7 @@ void AArch64InstrInfo::genAlternativeCodeSequence(
             .add(Root.getOperand(2));
     InsInstrs.push_back(MIB1);
     InstrIdxForVirtReg.insert(std::make_pair(NewVR, 0));
-    if (Pattern == MachineCombinerPattern::FMLSv8f16_OP1) {
+    if (Pattern == AArch64MachineCombinerPattern::FMLSv8f16_OP1) {
       Opc = AArch64::FMLAv8f16;
       MUL = genFusedMultiply(MF, MRI, TII, Root, InsInstrs, 1, Opc, RC,
                              FMAInstKind::Accumulator, &NewVR);
@@ -7720,23 +7726,23 @@ void AArch64InstrInfo::genAlternativeCodeSequence(
     }
     break;
   }
-  case MachineCombinerPattern::FMLSv8f16_OP2:
+  case AArch64MachineCombinerPattern::FMLSv8f16_OP2:
     RC = &AArch64::FPR128RegClass;
     Opc = AArch64::FMLSv8f16;
     MUL = genFusedMultiply(MF, MRI, TII, Root, InsInstrs, 2, Opc, RC,
                            FMAInstKind::Accumulator);
     break;
-  case MachineCombinerPattern::FMLSv8i16_indexed_OP2:
+  case AArch64MachineCombinerPattern::FMLSv8i16_indexed_OP2:
     RC = &AArch64::FPR128RegClass;
     Opc = AArch64::FMLSv8i16_indexed;
     MUL = genFusedMultiply(MF, MRI, TII, Root, InsInstrs, 2, Opc, RC,
                            FMAInstKind::Indexed);
     break;
 
-  case MachineCombinerPattern::FMLSv2f64_OP2:
-  case MachineCombinerPattern::FMLSv2i64_indexed_OP2:
+  case AArch64MachineCombinerPattern::FMLSv2f64_OP2:
+  case AArch64MachineCombinerPattern::FMLSv2i64_indexed_OP2:
     RC = &AArch64::FPR128RegClass;
-    if (Pattern == MachineCombinerPattern::FMLSv2i64_indexed_OP2) {
+    if (Pattern == AArch64MachineCombinerPattern::FMLSv2i64_indexed_OP2) {
       Opc = AArch64::FMLSv2i64_indexed;
       MUL = genFusedMultiply(MF, MRI, TII, Root, InsInstrs, 2, Opc, RC,
                              FMAInstKind::Indexed);
@@ -7747,10 +7753,10 @@ void AArch64InstrInfo::genAlternativeCodeSequence(
     }
     break;
 
-  case MachineCombinerPattern::FMLSv4f32_OP2:
-  case MachineCombinerPattern::FMLSv4i32_indexed_OP2:
+  case AArch64MachineCombinerPattern::FMLSv4f32_OP2:
+  case AArch64MachineCombinerPattern::FMLSv4i32_indexed_OP2:
     RC = &AArch64::FPR128RegClass;
-    if (Pattern == MachineCombinerPattern::FMLSv4i32_indexed_OP2) {
+    if (Pattern == AArch64MachineCombinerPattern::FMLSv4i32_indexed_OP2) {
       Opc = AArch64::FMLSv4i32_indexed;
       MUL = genFusedMultiply(MF, MRI, TII, Root, InsInstrs, 2, Opc, RC,
                              FMAInstKind::Indexed);
@@ -7760,8 +7766,8 @@ void AArch64InstrInfo::genAlternativeCodeSequence(
                              FMAInstKind::Accumulator);
     }
     break;
-  case MachineCombinerPattern::FMLSv2f32_OP1:
-  case MachineCombinerPattern::FMLSv2i32_indexed_OP1: {
+  case AArch64MachineCombinerPattern::FMLSv2f32_OP1:
+  case AArch64MachineCombinerPattern::FMLSv2i32_indexed_OP1: {
     RC = &AArch64::FPR64RegClass;
     Register NewVR = MRI.createVirtualRegister(RC);
     MachineInstrBuilder MIB1 =
@@ -7769,7 +7775,7 @@ void AArch64InstrInfo::genAlternativeCodeSequence(
             .add(Root.getOperand(2));
     InsInstrs.push_back(MIB1);
     InstrIdxForVirtReg.insert(std::make_pair(NewVR, 0));
-    if (Pattern == MachineCombinerPattern::FMLSv2i32_indexed_OP1) {
+    if (Pattern == AArch64MachineCombinerPattern::FMLSv2i32_indexed_OP1) {
       Opc = AArch64::FMLAv2i32_indexed;
       MUL = genFusedMultiply(MF, MRI, TII, Root, InsInstrs, 1, Opc, RC,
                              FMAInstKind::Indexed, &NewVR);
@@ -7780,8 +7786,8 @@ void AArch64InstrInfo::genAlternativeCodeSequence(
     }
     break;
   }
-  case MachineCombinerPattern::FMLSv4f32_OP1:
-  case MachineCombinerPattern::FMLSv4i32_indexed_OP1: {
+  case AArch64MachineCombinerPattern::FMLSv4f32_OP1:
+  case AArch64MachineCombinerPattern::FMLSv4i32_indexed_OP1: {
     RC = &AArch64::FPR128RegClass;
     Register NewVR = MRI.createVirtualRegister(RC);
     MachineInstrBuilder MIB1 =
@@ -7789,7 +7795,7 @@ void AArch64InstrInfo::genAlternativeCodeSequence(
             .add(Root.getOperand(2));
     InsInstrs.push_back(MIB1);
     InstrIdxForVirtReg.insert(std::make_pair(NewVR, 0));
-    if (Pattern == MachineCombinerPattern::FMLSv4i32_indexed_OP1) {
+    if (Pattern == AArch64MachineCombinerPattern::FMLSv4i32_indexed_OP1) {
       Opc = AArch64::FMLAv4i32_indexed;
       MUL = genFusedMultiply(MF, MRI, TII, Root, InsInstrs, 1, Opc, RC,
                              FMAInstKind::Indexed, &NewVR);
@@ -7800,8 +7806,8 @@ void AArch64InstrInfo::genAlternativeCodeSequence(
     }
     break;
   }
-  case MachineCombinerPattern::FMLSv2f64_OP1:
-  case MachineCombinerPattern::FMLSv2i64_indexed_OP1: {
+  case AArch64MachineCombinerPattern::FMLSv2f64_OP1:
+  case AArch64MachineCombinerPattern::FMLSv2i64_indexed_OP1: {
     RC = &AArch64::FPR128RegClass;
     Register NewVR = MRI.createVirtualRegister(RC);
     MachineInstrBuilder MIB1 =
@@ -7809,7 +7815,7 @@ void AArch64InstrInfo::genAlternativeCodeSequence(
             .add(Root.getOperand(2));
     InsInstrs.push_back(MIB1);
     InstrIdxForVirtReg.insert(std::make_pair(NewVR, 0));
-    if (Pattern == MachineCombinerPattern::FMLSv2i64_indexed_OP1) {
+    if (Pattern == AArch64MachineCombinerPattern::FMLSv2i64_indexed_OP1) {
       Opc = AArch64::FMLAv2i64_indexed;
       MUL = genFusedMultiply(MF, MRI, TII, Root, InsInstrs, 1, Opc, RC,
                              FMAInstKind::Indexed, &NewVR);
@@ -7820,47 +7826,52 @@ void AArch64InstrInfo::genAlternativeCodeSequence(
     }
     break;
   }
-  case MachineCombinerPattern::FMULv2i32_indexed_OP1:
-  case MachineCombinerPattern::FMULv2i32_indexed_OP2: {
+  case AArch64MachineCombinerPattern::FMULv2i32_indexed_OP1:
+  case AArch64MachineCombinerPattern::FMULv2i32_indexed_OP2: {
     unsigned IdxDupOp =
-        (Pattern == MachineCombinerPattern::FMULv2i32_indexed_OP1) ? 1 : 2;
+        (Pattern == AArch64MachineCombinerPattern::FMULv2i32_indexed_OP1) ? 1
+                                                                          : 2;
     genIndexedMultiply(Root, InsInstrs, IdxDupOp, AArch64::FMULv2i32_indexed,
                        &AArch64::FPR128RegClass, MRI);
     break;
   }
-  case MachineCombinerPattern::FMULv2i64_indexed_OP1:
-  case MachineCombinerPattern::FMULv2i64_indexed_OP2: {
+  case AArch64MachineCombinerPattern::FMULv2i64_indexed_OP1:
+  case AArch64MachineCombinerPattern::FMULv2i64_indexed_OP2: {
     unsigned IdxDupOp =
-        (Pattern == MachineCombinerPattern::FMULv2i64_indexed_OP1) ? 1 : 2;
+        (Pattern == AArch64MachineCombinerPattern::FMULv2i64_indexed_OP1) ? 1
+                                                                          : 2;
     genIndexedMultiply(Root, InsInstrs, IdxDupOp, AArch64::FMULv2i64_indexed,
                        &AArch64::FPR128RegClass, MRI);
     break;
   }
-  case MachineCombinerPattern::FMULv4i16_indexed_OP1:
-  case MachineCombinerPattern::FMULv4i16_indexed_OP2: {
+  case AArch64MachineCombinerPattern::FMULv4i16_indexed_OP1:
+  case AArch64MachineCombinerPattern::FMULv4i16_indexed_OP2: {
     unsigned IdxDupOp =
-        (Pattern == MachineCombinerPattern::FMULv4i16_indexed_OP1) ? 1 : 2;
+        (Pattern == AArch64MachineCombinerPattern::FMULv4i16_indexed_OP1) ? 1
+                                                                          : 2;
     genIndexedMultiply(Root, InsInstrs, IdxDupOp, AArch64::FMULv4i16_indexed,
                        &AArch64::FPR128_loRegClass, MRI);
     break;
   }
-  case MachineCombinerPattern::FMULv4i32_indexed_OP1:
-  case MachineCombinerPattern::FMULv4i32_indexed_OP2: {
+  case AArch64MachineCombinerPattern::FMULv4i32_indexed_OP1:
+  case AArch64MachineCombinerPattern::FMULv4i32_indexed_OP2: {
     unsigned IdxDupOp =
-        (Pattern == MachineCombinerPattern::FMULv4i32_indexed_OP1) ? 1 : 2;
+        (Pattern == AArch64MachineCombinerPattern::FMULv4i32_indexed_OP1) ? 1
+                                                                          : 2;
     genIndexedMultiply(Root, InsInstrs, IdxDupOp, AArch64::FMULv4i32_indexed,
                        &AArch64::FPR128RegClass, MRI);
     break;
   }
-  case MachineCombinerPattern::FMULv8i16_indexed_OP1:
-  case MachineCombinerPattern::FMULv8i16_indexed_OP2: {
+  case AArch64MachineCombinerPattern::FMULv8i16_indexed_OP1:
+  case AArch64MachineCombinerPattern::FMULv8i16_indexed_OP2: {
     unsigned IdxDupOp =
-        (Pattern == MachineCombinerPattern::FMULv8i16_indexed_OP1) ? 1 : 2;
+        (Pattern == AArch64MachineCombinerPattern::FMULv8i16_indexed_OP1) ? 1
+                                                                          : 2;
     genIndexedMultiply(Root, InsInstrs, IdxDupOp, AArch64::FMULv8i16_indexed,
                        &AArch64::FPR128_loRegClass, MRI);
     break;
   }
-  case MachineCombinerPattern::FNMADD: {
+  case AArch64MachineCombinerPattern::FNMADD: {
     MUL = genFNegatedMAD(MF, MRI, TII, Root, InsInstrs);
     break;
   }
@@ -8033,7 +8044,8 @@ bool AArch64InstrInfo::optimizeCondBranch(MachineInstr &MI) const {
           DefMI->getOperand(2).getReg() == AArch64::XZR))
       return false;
 
-    if (DefMI->findRegisterDefOperandIdx(AArch64::NZCV, true) != -1)
+    if (DefMI->findRegisterDefOperandIdx(AArch64::NZCV, /*TRI=*/nullptr,
+                                         true) != -1)
       return false;
 
     AArch64CC::CondCode CC = (AArch64CC::CondCode)DefMI->getOperand(3).getImm();
@@ -9240,7 +9252,8 @@ AArch64InstrInfo::isCopyInstrImpl(const MachineInstr &MI) const {
        MI.getOperand(0).getSubReg() == 0) &&
       (!MI.getOperand(0).getReg().isPhysical() ||
        MI.findRegisterDefOperandIdx(MI.getOperand(0).getReg() - AArch64::W0 +
-                                    AArch64::X0) == -1))
+                                        AArch64::X0,
+                                    /*TRI=*/nullptr) == -1))
     return DestSourcePair{MI.getOperand(0), MI.getOperand(2)};
 
   if (MI.getOpcode() == AArch64::ORRXrs &&
@@ -9479,58 +9492,6 @@ unsigned llvm::getBLRCallOpcode(const MachineFunction &MF) {
     return AArch64::BLR;
 }
 
-bool AArch64InstrInfo::isReallyTriviallyReMaterializable(
-    const MachineInstr &MI) const {
-  const MachineFunction &MF = *MI.getMF();
-  const AArch64FunctionInfo &AFI = *MF.getInfo<AArch64FunctionInfo>();
-
-  // If the function contains changes to streaming mode, then there
-  // is a danger that rematerialised instructions end up between
-  // instruction sequences (e.g. call sequences, or prolog/epilogue)
-  // where the streaming-SVE mode is temporarily changed.
-  if (AFI.hasStreamingModeChanges()) {
-    // Avoid rematerializing rematerializable instructions that use/define
-    // scalable values, such as 'pfalse' or 'ptrue', which result in different
-    // results when the runtime vector length is different.
-    const MachineRegisterInfo &MRI = MF.getRegInfo();
-    const MachineFrameInfo &MFI = MF.getFrameInfo();
-    if (any_of(MI.operands(), [&MRI, &MFI](const MachineOperand &MO) {
-          if (MO.isFI() &&
-              MFI.getStackID(MO.getIndex()) == TargetStackID::ScalableVector)
-            return true;
-          if (!MO.isReg())
-            return false;
-
-          if (MO.getReg().isVirtual()) {
-            const TargetRegisterClass *RC = MRI.getRegClass(MO.getReg());
-            return AArch64::ZPRRegClass.hasSubClassEq(RC) ||
-                   AArch64::PPRRegClass.hasSubClassEq(RC);
-          }
-          return AArch64::ZPRRegClass.contains(MO.getReg()) ||
-                 AArch64::PPRRegClass.contains(MO.getReg());
-        }))
-      return false;
-
-    // Avoid rematerializing instructions that return a value that is
-    // different depending on vector length, even when it is not returned
-    // in a scalable vector/predicate register.
-    switch (MI.getOpcode()) {
-    default:
-      break;
-    case AArch64::RDVLI_XI:
-    case AArch64::ADDVL_XXI:
-    case AArch64::ADDPL_XXI:
-    case AArch64::CNTB_XPiI:
-    case AArch64::CNTH_XPiI:
-    case AArch64::CNTW_XPiI:
-    case AArch64::CNTD_XPiI:
-      return false;
-    }
-  }
-
-  return TargetInstrInfo::isReallyTriviallyReMaterializable(MI);
-}
-
 MachineBasicBlock::iterator
 AArch64InstrInfo::probedStackAlloc(MachineBasicBlock::iterator MBBI,
                                    Register TargetReg, bool FrameSetup) const {
@@ -9610,15 +9571,8 @@ AArch64InstrInfo::probedStackAlloc(MachineBasicBlock::iterator MBBI,
   MBB.addSuccessor(LoopTestMBB);
 
   // Update liveins.
-  if (MF.getRegInfo().reservedRegsFrozen()) {
-    bool anyChange = false;
-    do {
-      anyChange = recomputeLiveIns(*ExitMBB) ||
-                  recomputeLiveIns(*LoopBodyMBB) ||
-                  recomputeLiveIns(*LoopTestMBB);
-    } while (anyChange);
-    ;
-  }
+  if (MF.getRegInfo().reservedRegsFrozen())
+    fullyRecomputeLiveIns({ExitMBB, LoopBodyMBB, LoopTestMBB});
 
   return ExitMBB->begin();
 }

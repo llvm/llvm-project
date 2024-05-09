@@ -67,7 +67,7 @@ class UbsanBasicTestCase(TestBase):
         backtraces = thread.GetStopReasonExtendedBacktraces(
             lldb.eInstrumentationRuntimeTypeUndefinedBehaviorSanitizer
         )
-        self.assertEquals(backtraces.GetSize(), 1)
+        self.assertEqual(backtraces.GetSize(), 1)
 
         self.expect(
             "thread info -s",

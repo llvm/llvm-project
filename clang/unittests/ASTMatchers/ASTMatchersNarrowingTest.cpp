@@ -1569,8 +1569,9 @@ TEST_P(ASTMatchersTest, IsArrow_MatchesMemberVariablesViaArrow) {
       matches("class Y { void x() { y; } int y; };", memberExpr(isArrow())));
   EXPECT_TRUE(notMatches("class Y { void x() { (*this).y; } int y; };",
                          memberExpr(isArrow())));
-  EXPECT_TRUE(matches("template <class T> class Y { void x() { this->m; } };",
-                      cxxDependentScopeMemberExpr(isArrow())));
+  EXPECT_TRUE(
+      matches("template <class T> class Y { void x() { this->m; } int m; };",
+              memberExpr(isArrow())));
   EXPECT_TRUE(
       notMatches("template <class T> class Y { void x() { (*this).m; } };",
                  cxxDependentScopeMemberExpr(isArrow())));
@@ -2105,6 +2106,20 @@ TEST_P(ASTMatchersTest, IsPure) {
   EXPECT_TRUE(matches("class X { virtual int f() = 0; };",
                       cxxMethodDecl(isPure(), hasName("::X::f"))));
   EXPECT_TRUE(notMatches("class X { int f(); };", cxxMethodDecl(isPure())));
+}
+
+TEST_P(ASTMatchersTest, IsExplicitObjectMemberFunction) {
+  if (!GetParam().isCXX23OrLater()) {
+    return;
+  }
+
+  auto ExpObjParamFn = cxxMethodDecl(isExplicitObjectMemberFunction());
+  EXPECT_TRUE(
+      notMatches("struct A { static int operator()(int); };", ExpObjParamFn));
+  EXPECT_TRUE(notMatches("struct A { int operator+(int); };", ExpObjParamFn));
+  EXPECT_TRUE(
+      matches("struct A { int operator-(this A, int); };", ExpObjParamFn));
+  EXPECT_TRUE(matches("struct A { void fun(this A &&self); };", ExpObjParamFn));
 }
 
 TEST_P(ASTMatchersTest, IsCopyAssignmentOperator) {
@@ -3635,6 +3650,11 @@ TEST_P(ASTMatchersTest, InStdNamespace) {
 
   EXPECT_TRUE(matches("namespace std {"
                       "  class vector {};"
+                      "}",
+                      cxxRecordDecl(hasName("vector"), isInStdNamespace())));
+
+  EXPECT_TRUE(matches("namespace std {"
+                      "  extern \"C++\" class vector {};"
                       "}",
                       cxxRecordDecl(hasName("vector"), isInStdNamespace())));
 }

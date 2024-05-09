@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple powerpc64le < %s | FileCheck %s
 
 ; Check constrained ops converted to call
-define void @test(ptr %cast) {
+define void @test(ptr %cast) strictfp {
 ; CHECK-LABEL: test:
 ; CHECK:       # %bb.0: # %root
 ; CHECK-NEXT:    mflr 0
@@ -51,7 +51,7 @@ for.body:
 }
 
 ; Check constrained ops converted to native instruction
-define void @test2(ptr %cast) {
+define void @test2(ptr %cast) strictfp {
 ; CHECK-LABEL: test2:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    li 4, 255
