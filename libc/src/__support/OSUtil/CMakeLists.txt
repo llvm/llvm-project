@@ -15,3 +15,11 @@ add_object_library(
   DEPENDS
     ${target_os_util}
 )
+
+add_header_library(
+  vdso
+  HDRS
+    vdso.h
+  DEPENDS
+    .${LIBC_TARGET_OS}.vdso
+)
