@@ -1982,7 +1982,8 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       if (ModuloC != ShAmtC)
         return replaceOperand(*II, 2, ModuloC);
 
-      assert(match(ConstantExpr::getICmp(ICmpInst::ICMP_UGT, WidthC, ShAmtC),
+      assert(match(ConstantFoldCompareInstruction(ICmpInst::ICMP_UGT, WidthC,
+                                                  ShAmtC),
                    m_One()) &&
              "Shift amount expected to be modulo bitwidth");
 

@@ -29,8 +29,9 @@ using namespace llvm;
 static Constant *getNegativeIsTrueBoolVec(Constant *V) {
   VectorType *IntTy = VectorType::getInteger(cast<VectorType>(V->getType()));
   V = ConstantExpr::getBitCast(V, IntTy);
-  V = ConstantExpr::getICmp(CmpInst::ICMP_SGT, Constant::getNullValue(IntTy),
-                            V);
+  V = ConstantFoldCompareInstruction(CmpInst::ICMP_SGT,
+                                     Constant::getNullValue(IntTy), V);
+  assert(V && "Vector must be foldable");
   return V;
 }
 
