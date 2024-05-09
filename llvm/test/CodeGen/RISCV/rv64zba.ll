@@ -2921,6 +2921,19 @@ entry:
   ret i64 %2
 }
 
+; Make sure we don't accidentally use slli.uw with a shift of 32.
+define i64 @srli_slliuw_negative_test(i64 %0) {
+; CHECK-LABEL: srli_slliuw_negative_test:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    srli a0, a0, 6
+; CHECK-NEXT:    slli a0, a0, 32
+; CHECK-NEXT:    ret
+entry:
+  %1 = lshr i64 %0, 6
+  %2 = shl i64 %1, 32
+  ret i64 %2
+}
+
 define i64 @srli_slli_i16(i64 %1) {
 ; CHECK-LABEL: srli_slli_i16:
 ; CHECK:       # %bb.0: # %entry
