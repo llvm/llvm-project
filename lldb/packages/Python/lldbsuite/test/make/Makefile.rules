@@ -39,6 +39,8 @@ MAKEFILE_RULES := $(lastword $(MAKEFILE_LIST))
 THIS_FILE_DIR := $(shell dirname $(MAKEFILE_RULES))
 LLDB_BASE_DIR := $(THIS_FILE_DIR)/../../../../../
 
+STRIP ?= strip
+
 # The test harness invokes the test Makefiles with an explicit 'all'
 # target, but its handy to be able to recursively call this Makefile
 # without specifying a goal. You almost certainly want to build 'all',
