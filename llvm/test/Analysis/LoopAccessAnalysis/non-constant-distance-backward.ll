@@ -134,64 +134,38 @@ exit:
 }
 
 define void @backward_min_distance_128(ptr %A, i64 %N) {
-; MAXLEN-LABEL: 'backward_min_distance_128'
-; MAXLEN-NEXT:    loop:
-; MAXLEN-NEXT:      Memory dependences are safe with run-time checks
-; MAXLEN-NEXT:      Dependences:
-; MAXLEN-NEXT:      Run-time memory checks:
-; MAXLEN-NEXT:      Check 0:
-; MAXLEN-NEXT:        Comparing group ([[GRP13:0x[0-9a-f]+]]):
-; MAXLEN-NEXT:          %gep.off.iv = getelementptr inbounds i8, ptr %gep.off, i64 %iv
-; MAXLEN-NEXT:        Against group ([[GRP14:0x[0-9a-f]+]]):
-; MAXLEN-NEXT:          %gep = getelementptr inbounds i8, ptr %A, i64 %iv
-; MAXLEN-NEXT:      Grouped accesses:
-; MAXLEN-NEXT:        Group [[GRP13]]:
-; MAXLEN-NEXT:          (Low: {(16 + %A)<nuw>,+,1}<nuw><%outer.header> High: {(272 + %A),+,1}<nw><%outer.header>)
-; MAXLEN-NEXT:            Member: {{\{\{}}(16 + %A)<nuw>,+,1}<nuw><%outer.header>,+,1}<nuw><%loop>
-; MAXLEN-NEXT:        Group [[GRP14]]:
-; MAXLEN-NEXT:          (Low: %A High: (256 + %A))
-; MAXLEN-NEXT:            Member: {%A,+,1}<nuw><%loop>
-; MAXLEN-EMPTY:
-; MAXLEN-NEXT:      Non vectorizable stores to invariant address were not found in loop.
-; MAXLEN-NEXT:      SCEV assumptions:
-; MAXLEN-EMPTY:
-; MAXLEN-NEXT:      Expressions re-written:
-; MAXLEN-NEXT:    outer.header:
-; MAXLEN-NEXT:      Report: loop is not the innermost loop
-; MAXLEN-NEXT:      Dependences:
-; MAXLEN-NEXT:      Run-time memory checks:
-; MAXLEN-NEXT:      Grouped accesses:
-; MAXLEN-EMPTY:
-; MAXLEN-NEXT:      Non vectorizable stores to invariant address were not found in loop.
-; MAXLEN-NEXT:      SCEV assumptions:
-; MAXLEN-EMPTY:
-; MAXLEN-NEXT:      Expressions re-written:
-;
-; VW128-LABEL: 'backward_min_distance_128'
-; VW128-NEXT:    loop:
-; VW128-NEXT:      Memory dependences are safe with a maximum safe vector width of 128 bits
-; VW128-NEXT:      Dependences:
-; VW128-NEXT:        BackwardVectorizable:
-; VW128-NEXT:            %l = load i8, ptr %gep, align 4 ->
-; VW128-NEXT:            store i8 %add, ptr %gep.off.iv, align 4
-; VW128-EMPTY:
-; VW128-NEXT:      Run-time memory checks:
-; VW128-NEXT:      Grouped accesses:
-; VW128-EMPTY:
-; VW128-NEXT:      Non vectorizable stores to invariant address were not found in loop.
-; VW128-NEXT:      SCEV assumptions:
-; VW128-EMPTY:
-; VW128-NEXT:      Expressions re-written:
-; VW128-NEXT:    outer.header:
-; VW128-NEXT:      Report: loop is not the innermost loop
-; VW128-NEXT:      Dependences:
-; VW128-NEXT:      Run-time memory checks:
-; VW128-NEXT:      Grouped accesses:
-; VW128-EMPTY:
-; VW128-NEXT:      Non vectorizable stores to invariant address were not found in loop.
-; VW128-NEXT:      SCEV assumptions:
-; VW128-EMPTY:
-; VW128-NEXT:      Expressions re-written:
+; COMMON-LABEL: 'backward_min_distance_128'
+; COMMON-NEXT:    loop:
+; COMMON-NEXT:      Memory dependences are safe with run-time checks
+; COMMON-NEXT:      Dependences:
+; COMMON-NEXT:      Run-time memory checks:
+; COMMON-NEXT:      Check 0:
+; COMMON-NEXT:        Comparing group ([[GRP13:0x[0-9a-f]+]]):
+; COMMON-NEXT:          %gep.off.iv = getelementptr inbounds i8, ptr %gep.off, i64 %iv
+; COMMON-NEXT:        Against group ([[GRP14:0x[0-9a-f]+]]):
+; COMMON-NEXT:          %gep = getelementptr inbounds i8, ptr %A, i64 %iv
+; COMMON-NEXT:      Grouped accesses:
+; COMMON-NEXT:        Group [[GRP13]]:
+; COMMON-NEXT:          (Low: {(16 + %A)<nuw>,+,1}<nuw><%outer.header> High: {(272 + %A),+,1}<nw><%outer.header>)
+; COMMON-NEXT:            Member: {{\{\{}}(16 + %A)<nuw>,+,1}<nuw><%outer.header>,+,1}<nuw><%loop>
+; COMMON-NEXT:        Group [[GRP14]]:
+; COMMON-NEXT:          (Low: %A High: (256 + %A))
+; COMMON-NEXT:            Member: {%A,+,1}<nuw><%loop>
+; COMMON-EMPTY:
+; COMMON-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; COMMON-NEXT:      SCEV assumptions:
+; COMMON-EMPTY:
+; COMMON-NEXT:      Expressions re-written:
+; COMMON-NEXT:    outer.header:
+; COMMON-NEXT:      Report: loop is not the innermost loop
+; COMMON-NEXT:      Dependences:
+; COMMON-NEXT:      Run-time memory checks:
+; COMMON-NEXT:      Grouped accesses:
+; COMMON-EMPTY:
+; COMMON-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; COMMON-NEXT:      SCEV assumptions:
+; COMMON-EMPTY:
+; COMMON-NEXT:      Expressions re-written:
 ;
 entry:
   br label %outer.header

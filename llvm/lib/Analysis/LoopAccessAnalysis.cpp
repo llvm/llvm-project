@@ -2120,7 +2120,9 @@ MemoryDepChecker::Dependence::DepType MemoryDepChecker::isDependent(
     return Dependence::Forward;
   }
 
-  if (!SE.isKnownPositive(Dist)) {
+  int64_t MinDistance = SE.getSignedRangeMin(Dist).getSExtValue();
+  // Below we only handle strictly positive distances.
+  if (MinDistance <= 0) {
     FoundNonConstantDistanceDependence |= CommonStride.has_value();
     return Dependence::Unknown;
   }
@@ -2184,7 +2186,6 @@ MemoryDepChecker::Dependence::DepType MemoryDepChecker::isDependent(
   // We know that Dist is positive, but it may not be constant. Use the signed
   // minimum for computations below, as this ensures we compute the closest
   // possible dependence distance.
-  int64_t MinDistance = SE.getSignedRangeMin(Dist).getSExtValue();
   uint64_t MinDistanceNeeded =
       TypeByteSize * *CommonStride * (MinNumIter - 1) + TypeByteSize;
   if (MinDistanceNeeded > static_cast<uint64_t>(MinDistance)) {
@@ -3046,8 +3047,10 @@ LoopAccessInfo::LoopAccessInfo(Loop *L, ScalarEvolution *SE,
   if (TTI) {
     TypeSize FixedWidth =
         TTI->getRegisterBitWidth(TargetTransformInfo::RGK_FixedWidthVector);
-    if (FixedWidth.isNonZero())
-      MaxTargetVectorWidthInBits = FixedWidth.getFixedValue();
+    if (FixedWidth.isNonZero()) {
+      // Scale the vector width by 2 as rough estimate to also consider interleaving.
+      MaxTargetVectorWidthInBits = FixedWidth.getFixedValue() * 2;
+    }
 
     TypeSize ScalableWidth =
         TTI->getRegisterBitWidth(TargetTransformInfo::RGK_ScalableVector);
