@@ -233,6 +233,7 @@ void splitCondBranches(IRRewriter &rewriter, FunctionOpInterface function) {
 ///  AFTER:
 ///  ```mlir
 ///  %copy = arm_sme.copy_tile %tile : vector<[4]x[4]xf32>
+///  cf.br ^bb1(%copy: vector<[4]x[4]xf32>)
 ///  ```
 void insertCopiesAtBranches(IRRewriter &rewriter,
                             FunctionOpInterface function) {
@@ -258,7 +259,7 @@ void insertCopiesAtBranches(IRRewriter &rewriter,
 /// branch (see `tile-allocation-copies.mlir` and
 /// `tile-allocation-liveness.mlir` for examples). The copies break up live
 /// ranges and ensure when moving out of SSA the semantics of the program are
-/// persevered.
+/// preserved.
 void preprocessForTileAllocation(IRRewriter &rewriter,
                                  FunctionOpInterface function) {
   splitCondBranches(rewriter, function);
@@ -266,8 +267,10 @@ void preprocessForTileAllocation(IRRewriter &rewriter,
 }
 
 /// A live range for a (collection of) tile values. A live range is built up of
-/// intervals [start, end) which represent parts of the program where the value
-/// needs to be live (i.e. in an SME virtual tile).
+/// non-overlapping intervals [start, end) which represent parts of the program
+/// where a value in the range needs to be live (i.e. in an SME virtual tile).
+/// Note that as the intervals are non-overlapping all values within a live
+/// range can be allocated to the same SME virtual tile.
 struct LiveRange {
   using RangeSet = llvm::IntervalMap<uint64_t, uint8_t, 16,
                                      llvm::IntervalMapHalfOpenInfo<unsigned>>;
@@ -310,8 +313,14 @@ struct LiveRange {
     return *getSMETileType(cast<VectorType>(values[0].getType()));
   }
 
-  std::unique_ptr<RangeSet> ranges;
+  /// The values contained in this live range.
   SetVector<Value> values;
+
+  /// A set of (non-overlapping) intervals that mark where any value in `values`
+  /// is live.
+  std::unique_ptr<RangeSet> ranges;
+
+  /// The tile ID (or none) assigned to this live range.
   std::optional<unsigned> tileId;
 };
 
@@ -345,6 +354,7 @@ DenseMap<Value, LiveRange>
 gatherTileLiveRanges(DenseMap<Operation *, unsigned> const &operationToIndexMap,
                      LiveRange::Allocator &liveRangeAllocator,
                      Liveness &liveness, FunctionOpInterface function) {
+  assert(!operationToIndexMap.empty() && "expected operation numbering");
   DenseMap<Value, LiveRange> liveRanges;
   /// Defines or updates a live range for an SME tile value. Live-ins may update
   /// an existing live range (rather than define a new one). Note: If
@@ -420,6 +430,9 @@ coalesceTileLiveRanges(DenseMap<Value, LiveRange> &initialLiveRanges) {
     liveRanges.insert({value, &liveRange});
   }
 
+  // Merge the live ranges of values `a` and `b` into one (if they do not
+  // overlap). After this, the values `a` and `b` will both point to the same
+  // live range (which will contain multiple values).
   auto mergeValuesIfNonOverlapping = [&](Value a, Value b) {
     LiveRange *aLiveRange = liveRanges.at(a);
     LiveRange *bLiveRange = liveRanges.at(b);
@@ -695,6 +708,11 @@ struct TestTileAllocationPass
 
 LogicalResult mlir::arm_sme::allocateSMETiles(FunctionOpInterface function,
                                               bool dumpRanges) {
+  if (function.empty()) {
+    // TODO: Also return early if the function contains no ArmSME ops?
+    return success();
+  }
+
   LiveRange::Allocator liveRangeAllocator;
   IRRewriter rewriter(function.getContext());
 
