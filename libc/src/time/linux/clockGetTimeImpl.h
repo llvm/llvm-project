@@ -1,4 +1,4 @@
-//===--- clock_gettime linux implementation ---------------------*- C++ -*-===//
+//===- Linux implementation of the POSIX clock_gettime function -*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,14 +6,23 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC___SUPPORT_TIME_LINUX_CLOCK_GETTIME_H
-#define LLVM_LIBC_SRC___SUPPORT_TIME_LINUX_CLOCK_GETTIME_H
-#include "src/__support/time/clock_gettime.h"
-#include "src/__support/OSUtil/syscall.h"
-#include <sys/syscall.h>
+#ifndef LLVM_LIBC_SRC_TIME_LINUX_CLOCKGETTIMEIMPL_H
+#define LLVM_LIBC_SRC_TIME_LINUX_CLOCKGETTIMEIMPL_H
+
+#include "src/__support/OSUtil/syscall.h" // For internal syscall function.
+#include "src/__support/common.h"
+#include "src/__support/error_or.h"
+#include "src/errno/libc_errno.h"
+
+#include <stdint.h>      // For int64_t.
+#include <sys/syscall.h> // For syscall numbers.
+#include <time.h>
+
 namespace LIBC_NAMESPACE {
 namespace internal {
-ErrorOr<int> clock_gettime(clockid_t clockid, timespec *ts) {
+
+LIBC_INLINE ErrorOr<int> clock_gettimeimpl(clockid_t clockid,
+                                           struct timespec *ts) {
 #if SYS_clock_gettime
   int ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_clock_gettime,
                                               static_cast<long>(clockid),
@@ -36,4 +45,4 @@ ErrorOr<int> clock_gettime(clockid_t clockid, timespec *ts) {
 } // namespace internal
 } // namespace LIBC_NAMESPACE
 
-#endif // LLVM_LIBC_SRC___SUPPORT_TIME_LINUX_CLOCK_GETTIME_H
+#endif // LLVM_LIBC_SRC_TIME_LINUX_CLOCKGETTIMEIMPL_H
