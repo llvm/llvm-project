@@ -1763,6 +1763,20 @@ void Clang::AddAArch64TargetArgs(const ArgList &Args,
 
   Args.addOptInFlag(CmdArgs, options::OPT_fptrauth_intrinsics,
                     options::OPT_fno_ptrauth_intrinsics);
+  Args.addOptInFlag(CmdArgs, options::OPT_fptrauth_calls,
+                    options::OPT_fno_ptrauth_calls);
+  Args.addOptInFlag(CmdArgs, options::OPT_fptrauth_returns,
+                    options::OPT_fno_ptrauth_returns);
+  Args.addOptInFlag(CmdArgs, options::OPT_fptrauth_auth_traps,
+                    options::OPT_fno_ptrauth_auth_traps);
+  Args.addOptInFlag(
+      CmdArgs, options::OPT_fptrauth_vtable_pointer_address_discrimination,
+      options::OPT_fno_ptrauth_vtable_pointer_address_discrimination);
+  Args.addOptInFlag(
+      CmdArgs, options::OPT_fptrauth_vtable_pointer_type_discrimination,
+      options::OPT_fno_ptrauth_vtable_pointer_type_discrimination);
+  Args.addOptInFlag(CmdArgs, options::OPT_fptrauth_init_fini,
+                    options::OPT_fno_ptrauth_init_fini);
 }
 
 void Clang::AddLoongArchTargetArgs(const ArgList &Args,
@@ -7473,21 +7487,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &Job,
   // -fno-common is the default, set -fcommon only when that flag is set.
   Args.addOptInFlag(CmdArgs, options::OPT_fcommon, options::OPT_fno_common);
 
-  if (Args.hasFlag(options::OPT_fptrauth_calls,
-                   options::OPT_fno_ptrauth_calls, false))
-    CmdArgs.push_back("-fptrauth-calls");
-
-  if (Args.hasFlag(options::OPT_fptrauth_returns,
-                   options::OPT_fno_ptrauth_returns, false))
-    CmdArgs.push_back("-fptrauth-returns");
-
   if (Args.hasFlag(options::OPT_fptrauth_indirect_gotos,
                    options::OPT_fno_ptrauth_indirect_gotos, false))
     CmdArgs.push_back("-fptrauth-indirect-gotos");
-
-  if (Args.hasFlag(options::OPT_fptrauth_auth_traps,
-                   options::OPT_fno_ptrauth_auth_traps, false))
-    CmdArgs.push_back("-fptrauth-auth-traps");
 
   if (Args.hasFlag(options::OPT_fptrauth_soft,
                    options::OPT_fno_ptrauth_soft, false))

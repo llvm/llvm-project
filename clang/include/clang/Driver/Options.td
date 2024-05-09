@@ -4213,21 +4213,12 @@ defm strict_return : BoolFOption<"strict-return",
 
 let Group = f_Group in {
   let Visibility = [ClangOption, CC1Option] in {
-    def fptrauth_calls : Flag<["-"], "fptrauth-calls">,
-      HelpText<"Enable signing and authentication of all indirect calls">;
-    def fptrauth_returns : Flag<["-"], "fptrauth-returns">,
-      HelpText<"Enable signing and authentication of return addresses">;
     def fptrauth_indirect_gotos : Flag<["-"], "fptrauth-indirect-gotos">,
       HelpText<"Enable signing and authentication of indirect goto targets">;
-    def fptrauth_auth_traps : Flag<["-"], "fptrauth-auth-traps">,
-      HelpText<"Enable traps on authentication failures">;
     def fptrauth_soft : Flag<["-"], "fptrauth-soft">,
       HelpText<"Enable software lowering of pointer authentication">;
   }
-  def fno_ptrauth_calls : Flag<["-"], "fno-ptrauth-calls">;
-  def fno_ptrauth_returns : Flag<["-"], "fno-ptrauth-returns">;
   def fno_ptrauth_indirect_gotos : Flag<["-"], "fno-ptrauth-indirect-gotos">;
-  def fno_ptrauth_auth_traps : Flag<["-"], "fno-ptrauth-auth-traps">;
   def fno_ptrauth_soft : Flag<["-"], "fno-ptrauth-soft">;
 }
 
@@ -4247,6 +4238,14 @@ let Group = f_Group in {
 
 let Flags = [TargetSpecific] in {
 defm ptrauth_intrinsics : OptInCC1FFlag<"ptrauth-intrinsics", "Enable pointer authentication intrinsics">;
+defm ptrauth_calls : OptInCC1FFlag<"ptrauth-calls", "Enable signing and authentication of all indirect calls">;
+defm ptrauth_returns : OptInCC1FFlag<"ptrauth-returns", "Enable signing and authentication of return addresses">;
+defm ptrauth_auth_traps : OptInCC1FFlag<"ptrauth-auth-traps", "Enable traps on authentication failures">;
+defm ptrauth_vtable_pointer_address_discrimination :
+  OptInCC1FFlag<"ptrauth-vtable-pointer-address-discrimination", "Enable address discrimination of vtable pointers">;
+defm ptrauth_vtable_pointer_type_discrimination :
+  OptInCC1FFlag<"ptrauth-vtable-pointer-type-discrimination", "Enable type discrimination of vtable pointers">;
+defm ptrauth_init_fini : OptInCC1FFlag<"ptrauth-init-fini", "Enable signing of function pointers in init/fini arrays">;
 }
 
 def fenable_matrix : Flag<["-"], "fenable-matrix">, Group<f_Group>,
