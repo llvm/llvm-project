@@ -2297,16 +2297,16 @@ def HasBitOp3Insts : Predicate<"Subtarget->hasBitOp3Insts()">,
 def HasPrngInst : Predicate<"Subtarget->hasPrngInst()">,
   AssemblerPredicate<(all_of FeaturePrngInst)>;
 
-def HasFP8ConversionScaleInsts : Predicate<"Subtarget->HasFP8ConversionScaleInsts()">,
+def HasFP8ConversionScaleInsts : Predicate<"Subtarget->hasFP8ConversionScaleInsts()">,
   AssemblerPredicate<(all_of FeatureFP8ConversionScaleInsts)>;
 
-def HasBF8ConversionScaleInsts : Predicate<"Subtarget->HasBF8ConversionScaleInsts()">,
+def HasBF8ConversionScaleInsts : Predicate<"Subtarget->hasBF8ConversionScaleInsts()">,
   AssemblerPredicate<(all_of FeatureBF8ConversionScaleInsts)>;
 
-def HasFP4ConversionScaleInsts : Predicate<"Subtarget->HasFP4ConversionScaleInsts()">,
+def HasFP4ConversionScaleInsts : Predicate<"Subtarget->hasFP4ConversionScaleInsts()">,
   AssemblerPredicate<(all_of FeatureFP4ConversionScaleInsts)>;
 
-def HasFP6BF6ConversionScaleInsts : Predicate<"Subtarget->HasFP6BF6ConversionScaleInsts()">,
+def HasFP6BF6ConversionScaleInsts : Predicate<"Subtarget->hasFP6BF6ConversionScaleInsts()">,
   AssemblerPredicate<(all_of FeatureFP6BF6ConversionScaleInsts)>;
 
 def HasF16BF16ToFP6BF6ConversionScaleInsts : Predicate<"Subtarget->hasF16BF16ToFP6BF6ConversionScaleInsts()">,
