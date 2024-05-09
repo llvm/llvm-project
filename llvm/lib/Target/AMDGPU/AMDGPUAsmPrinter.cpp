@@ -730,7 +730,7 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
     return MCConstantExpr::create(Value, Ctx);
   };
 
-  auto TryGetMCExprValue = [&Ctx](const MCExpr *Value, uint64_t &Res) -> bool {
+  auto TryGetMCExprValue = [](const MCExpr *Value, uint64_t &Res) -> bool {
     int64_t Val;
     if (Value->evaluateAsAbsolute(Val)) {
       Res = Val;
