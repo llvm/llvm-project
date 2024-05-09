@@ -401,7 +401,6 @@ public:
   }
 
   bool isOModSI() const { return isImmTy(ImmTyOModSI); }
-  bool isDMask() const { return isImmTy(ImmTyDMask); }
   bool isDim() const { return isImmTy(ImmTyDim); }
   bool isR128A16() const { return isImmTy(ImmTyR128A16); }
   bool isOff() const { return isImmTy(ImmTyOff); }
@@ -409,9 +408,6 @@ public:
   bool isOffen() const { return isImmTy(ImmTyOffen); }
   bool isIdxen() const { return isImmTy(ImmTyIdxen); }
   bool isAddr64() const { return isImmTy(ImmTyAddr64); }
-  bool isOffset() const { return isImmTy(ImmTyOffset); }
-  bool isOffset0() const { return isImmTy(ImmTyOffset0); }
-  bool isOffset1() const { return isImmTy(ImmTyOffset1); }
   bool isSMEMOffsetMod() const { return isImmTy(ImmTySMEMOffsetMod); }
   bool isFlatOffset() const { return isImmTy(ImmTyOffset) || isImmTy(ImmTyInstOffset); }
   bool isGDS() const { return isImmTy(ImmTyGDS); }
@@ -425,9 +421,6 @@ public:
   bool isMatrixBScale() const { return isImmTy(ImmTyMatrixBScale); }
   bool isTFE() const { return isImmTy(ImmTyTFE); }
   bool isFORMAT() const { return isImmTy(ImmTyFORMAT) && isUInt<7>(getImm()); }
-  bool isDppBankMask() const { return isImmTy(ImmTyDppBankMask); }
-  bool isDppRowMask() const { return isImmTy(ImmTyDppRowMask); }
-  bool isDppBoundCtrl() const { return isImmTy(ImmTyDppBoundCtrl); }
   bool isDppFI() const { return isImmTy(ImmTyDppFI); }
   bool isSDWADstSel() const { return isImmTy(ImmTySDWADstSel); }
   bool isSDWASrc0Sel() const { return isImmTy(ImmTySDWASrc0Sel); }
@@ -442,11 +435,7 @@ public:
   bool isNegHi() const { return isImmTy(ImmTyNegHi); }
   bool isGlobalSReg32() const { return isImmTy(ImmTyGlobalSReg32); }
   bool isGlobalSReg64() const { return isImmTy(ImmTyGlobalSReg64); }
-  bool isByteSel() const { return isImmTy(ImmTyByteSel); }
   bool isBitOp3() const { return isImmTy(ImmTyBitOp3) && isUInt<8>(getImm()); }
-  bool isScaleSel() const {
-    return isImmTy(ImmTyScaleSel) && isUInt<3>(getImm());
-  }
 
   bool isRegOrImm() const {
     return isReg() || isImm();
@@ -999,16 +988,10 @@ public:
   bool isDPP8() const;
   bool isDPPCtrl() const;
   bool isBLGP() const;
-  bool isCBSZ() const;
-  bool isABID() const;
   bool isGPRIdxMode() const;
   bool isS16Imm() const;
   bool isU16Imm() const;
   bool isEndpgm() const;
-  bool isWaitVDST() const;
-  bool isWaitEXP() const;
-  bool isWaitVAVDst() const;
-  bool isWaitVMVSrc() const;
 
   auto getPredicate(std::function<bool(const AMDGPUOperand &Op)> P) const {
     return std::bind(P, *this);
@@ -9466,14 +9449,6 @@ bool AMDGPUOperand::isBLGP() const {
   return isImm() && getImmTy() == ImmTyBLGP && isUInt<3>(getImm());
 }
 
-bool AMDGPUOperand::isCBSZ() const {
-  return isImm() && getImmTy() == ImmTyCBSZ;
-}
-
-bool AMDGPUOperand::isABID() const {
-  return isImm() && getImmTy() == ImmTyABID;
-}
-
 bool AMDGPUOperand::isS16Imm() const {
   return isImmLiteral() && (isInt<16>(getImm()) || isUInt<16>(getImm()));
 }
@@ -10193,22 +10168,6 @@ ParseStatus AMDGPUAsmParser::parseEndpgm(OperandVector &Operands) {
 }
 
 bool AMDGPUOperand::isEndpgm() const { return isImmTy(ImmTyEndpgm); }
-
-//===----------------------------------------------------------------------===//
-// LDSDIR
-//===----------------------------------------------------------------------===//
-
-bool AMDGPUOperand::isWaitVDST() const { return isImmTy(ImmTyWaitVDST); }
-
-bool AMDGPUOperand::isWaitVAVDst() const { return isImmTy(ImmTyWaitVAVDst); }
-
-bool AMDGPUOperand::isWaitVMVSrc() const { return isImmTy(ImmTyWaitVMVSrc); }
-
-//===----------------------------------------------------------------------===//
-// VINTERP
-//===----------------------------------------------------------------------===//
-
-bool AMDGPUOperand::isWaitEXP() const { return isImmTy(ImmTyWaitEXP); }
 
 //===----------------------------------------------------------------------===//
 // Split Barrier

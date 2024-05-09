@@ -1041,6 +1041,9 @@ def SDWAVopcDst : BoolRC {
 class NamedIntOperand<ValueType Type, string Prefix, bit Optional = 1,
                       string name = NAME>
     : CustomOperand<Type, Optional, name> {
+  let PredicateMethod =
+    "getPredicate([](const AMDGPUOperand &Op) -> bool { "#
+    "return Op.isImmTy(AMDGPUOperand::"#ImmTy#"); })";
   string Validator = "[](int64_t V) { return true; }";
   string ConvertMethod = "[](int64_t &V) { return "#Validator#"(V); }";
   let ParserMethod =
@@ -1191,7 +1194,9 @@ def MatrixBFMT : CustomOperand<i32, 1, "MatrixBFMT">;
 def MatrixAScale : CustomOperand<i32, 1, "MatrixAScale">;
 def MatrixBScale : CustomOperand<i32, 1, "MatrixBScale">;
 
-def ScaleSel : NamedIntOperand<i8, "scale_sel">;
+def ScaleSel : NamedIntOperand<i8, "scale_sel"> {
+  let Validator = "isUInt<3>";
+}
 
 class KImmFPOperand<ValueType vt> : ImmOperand<vt> {
   let OperandNamespace = "AMDGPU";
