@@ -830,11 +830,17 @@ private:
                                          vector::PrintPunctuation::Comma);
         rewriter.create<vector::PrintOp>(loc, imag,
                                          vector::PrintPunctuation::Close);
-        rewriter.create<vector::PrintOp>(loc, vector::PrintPunctuation::Comma);
       } else {
-        rewriter.create<vector::PrintOp>(loc, val,
-                                         vector::PrintPunctuation::Comma);
+        rewriter.create<vector::PrintOp>(
+            loc, val, vector::PrintPunctuation::NoPunctuation);
       }
+      // Terminating comma (except at end).
+      auto bound = rewriter.create<arith::AddIOp>(loc, idxs.back(), step);
+      Value cond = rewriter.create<arith::CmpIOp>(loc, arith::CmpIPredicate::ne,
+                                                  bound, size);
+      scf::IfOp ifOp = rewriter.create<scf::IfOp>(loc, cond, /*else*/ false);
+      rewriter.setInsertionPointToStart(&ifOp.getThenRegion().front());
+      rewriter.create<vector::PrintOp>(loc, vector::PrintPunctuation::Comma);
     }
     idxs.pop_back();
     rewriter.setInsertionPointAfter(forOp);
