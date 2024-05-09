@@ -21,7 +21,7 @@ class formatted_raw_ostream;
 
 namespace AMDGPU {
 
-struct MCKernelCodeT;
+struct AMDGPUMCKernelCodeT;
 struct MCKernelDescriptor;
 namespace HSAMD {
 struct Metadata;
@@ -53,7 +53,7 @@ public:
     CodeObjectVersion = COV;
   }
 
-  virtual void EmitAMDKernelCodeT(AMDGPU::MCKernelCodeT &Header){};
+  virtual void EmitAMDKernelCodeT(AMDGPU::AMDGPUMCKernelCodeT &Header){};
 
   virtual void EmitAMDGPUSymbolType(StringRef SymbolName, unsigned Type){};
 
@@ -129,7 +129,7 @@ public:
 
   void EmitDirectiveAMDHSACodeObjectVersion(unsigned COV) override;
 
-  void EmitAMDKernelCodeT(AMDGPU::MCKernelCodeT &Header) override;
+  void EmitAMDKernelCodeT(AMDGPU::AMDGPUMCKernelCodeT &Header) override;
 
   void EmitAMDGPUSymbolType(StringRef SymbolName, unsigned Type) override;
 
@@ -185,7 +185,7 @@ public:
 
   void EmitDirectiveAMDGCNTarget() override;
 
-  void EmitAMDKernelCodeT(AMDGPU::MCKernelCodeT &Header) override;
+  void EmitAMDKernelCodeT(AMDGPU::AMDGPUMCKernelCodeT &Header) override;
 
   void EmitAMDGPUSymbolType(StringRef SymbolName, unsigned Type) override;
 

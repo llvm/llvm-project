@@ -240,7 +240,7 @@ void AMDGPUTargetAsmStreamer::EmitDirectiveAMDHSACodeObjectVersion(
   OS << "\t.amdhsa_code_object_version " << COV << '\n';
 }
 
-void AMDGPUTargetAsmStreamer::EmitAMDKernelCodeT(MCKernelCodeT &Header) {
+void AMDGPUTargetAsmStreamer::EmitAMDKernelCodeT(AMDGPUMCKernelCodeT &Header) {
   OS << "\t.amd_kernel_code_t\n";
   Header.EmitKernelCodeT(OS, "\t\t", getContext());
   OS << "\t.end_amd_kernel_code_t\n";
@@ -788,7 +788,7 @@ unsigned AMDGPUTargetELFStreamer::getEFlagsV6() {
 
 void AMDGPUTargetELFStreamer::EmitDirectiveAMDGCNTarget() {}
 
-void AMDGPUTargetELFStreamer::EmitAMDKernelCodeT(MCKernelCodeT &Header) {
+void AMDGPUTargetELFStreamer::EmitAMDKernelCodeT(AMDGPUMCKernelCodeT &Header) {
   MCStreamer &OS = getStreamer();
   OS.pushSection();
   Header.EmitKernelCodeT(OS, getContext());

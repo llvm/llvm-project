@@ -1341,7 +1341,7 @@ private:
   bool ParseDirectiveAMDGCNTarget();
   bool ParseDirectiveAMDHSACodeObjectVersion();
   bool ParseDirectiveAMDHSAKernel();
-  bool ParseAMDKernelCodeTValue(StringRef ID, MCKernelCodeT &Header);
+  bool ParseAMDKernelCodeTValue(StringRef ID, AMDGPUMCKernelCodeT &Header);
   bool ParseDirectiveAMDKernelCodeT();
   // TODO: Possibly make subtargetHasRegister const.
   bool subtargetHasRegister(const MCRegisterInfo &MRI, unsigned RegNo);
@@ -5873,7 +5873,8 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSACodeObjectVersion() {
   return false;
 }
 
-bool AMDGPUAsmParser::ParseAMDKernelCodeTValue(StringRef ID, MCKernelCodeT &C) {
+bool AMDGPUAsmParser::ParseAMDKernelCodeTValue(StringRef ID,
+                                               AMDGPUMCKernelCodeT &C) {
   // max_scratch_backing_memory_byte_size is deprecated. Ignore it while parsing
   // assembly for backwards compatibility.
   if (ID == "max_scratch_backing_memory_byte_size") {
@@ -5917,7 +5918,7 @@ bool AMDGPUAsmParser::ParseAMDKernelCodeTValue(StringRef ID, MCKernelCodeT &C) {
 }
 
 bool AMDGPUAsmParser::ParseDirectiveAMDKernelCodeT() {
-  MCKernelCodeT KernelCode;
+  AMDGPUMCKernelCodeT KernelCode;
   KernelCode.initDefault(&getSTI(), getContext());
 
   while (true) {

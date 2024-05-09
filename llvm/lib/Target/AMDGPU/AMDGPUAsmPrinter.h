@@ -27,7 +27,7 @@ class MCOperand;
 
 namespace AMDGPU {
 struct MCKernelDescriptor;
-struct MCKernelCodeT;
+struct AMDGPUMCKernelCodeT;
 namespace HSAMD {
 class MetadataStreamer;
 }
@@ -49,7 +49,8 @@ private:
   uint64_t getFunctionCodeSize(const MachineFunction &MF) const;
 
   void getSIProgramInfo(SIProgramInfo &Out, const MachineFunction &MF);
-  void getAmdKernelCode(AMDGPU::MCKernelCodeT &Out, const SIProgramInfo &KernelInfo,
+  void getAmdKernelCode(AMDGPU::AMDGPUMCKernelCodeT &Out,
+                        const SIProgramInfo &KernelInfo,
                         const MachineFunction &MF) const;
 
   /// Emit register usage information so that the GPU driver

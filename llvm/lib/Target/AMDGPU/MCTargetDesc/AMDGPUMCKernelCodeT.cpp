@@ -22,11 +22,11 @@
 using namespace llvm;
 using namespace llvm::AMDGPU;
 
-// Generates the following for MCKernelCodeT struct members:
+// Generates the following for AMDGPUMCKernelCodeT struct members:
 //   - HasMemberXXXXX class
-//     A check to see if MCKernelCodeT has a specific member so it can determine
-//     which of the original amd_kernel_code_t members are duplicated (if the
-//     names don't match, the table driven strategy won't work).
+//     A check to see if AMDGPUMCKernelCodeT has a specific member so it can
+//     determine which of the original amd_kernel_code_t members are duplicated
+//     (if the names don't match, the table driven strategy won't work).
 //   - GetMemberXXXXX class
 //     A retrieval helper for said member (of type const MCExpr *&). Will return
 //     a `Phony` const MCExpr * initialized to nullptr to preserve reference
@@ -37,7 +37,8 @@ using namespace llvm::AMDGPU;
     struct KnownWithMember {                                                   \
       int member;                                                              \
     };                                                                         \
-    class AmbiguousDerived : public MCKernelCodeT, public KnownWithMember {};  \
+    class AmbiguousDerived : public AMDGPUMCKernelCodeT,                       \
+                             public KnownWithMember {};                        \
     template <typename U>                                                      \
     static constexpr std::false_type Test(decltype(U::member) *);              \
     template <typename U> static constexpr std::true_type Test(...);           \
@@ -143,7 +144,7 @@ GEN_HAS_MEMBER(runtime_loader_kernel_symbol)
 
 static ArrayRef<StringRef> get_amd_kernel_code_t_FldNames() {
   static StringRef const Table[] = {
-    "", // not found placeholder
+      "", // not found placeholder
 #define RECORD(name, altName, print, parse) #name
 #include "Utils/AMDKernelCodeTInfo.h"
 #undef RECORD
@@ -153,7 +154,7 @@ static ArrayRef<StringRef> get_amd_kernel_code_t_FldNames() {
 
 static ArrayRef<StringRef> get_amd_kernel_code_t_FldAltNames() {
   static StringRef const Table[] = {
-    "", // not found placeholder
+      "", // not found placeholder
 #define RECORD(name, altName, print, parse) #altName
 #include "Utils/AMDKernelCodeTInfo.h"
 #undef RECORD
@@ -171,7 +172,7 @@ static ArrayRef<bool> hasMCExprVersionTable() {
 }
 
 static ArrayRef<std::reference_wrapper<const MCExpr *>>
-getMCExprIndexTable(MCKernelCodeT &C) {
+getMCExprIndexTable(AMDGPUMCKernelCodeT &C) {
   static std::reference_wrapper<const MCExpr *> Table[] = {
 #define RECORD(name, altName, print, parse) GetMember##name::Get(C)
 #include "Utils/AMDKernelCodeTInfo.h"
@@ -235,23 +236,19 @@ static const MCExpr *MaskShiftGet(const MCExpr *Val, uint32_t Mask,
 }
 
 template <typename T, T amd_kernel_code_t::*ptr>
-static void printField(StringRef Name, const MCKernelCodeT &C, raw_ostream &OS,
-                       MCContext &Ctx) {
-  (void)Ctx;
-  OS << Name << " = ";
-  OS << (int)(C.KernelCode.*ptr);
+static void printField(StringRef Name, const AMDGPUMCKernelCodeT &C,
+                       raw_ostream &OS, MCContext &) {
+  OS << Name << " = " << (int)(C.KernelCode.*ptr);
 }
 
 template <typename T, T amd_kernel_code_t::*ptr, int shift, int width = 1>
-static void printBitField(StringRef Name, const MCKernelCodeT &C,
-                          raw_ostream &OS, MCContext &Ctx) {
-  (void)Ctx;
+static void printBitField(StringRef Name, const AMDGPUMCKernelCodeT &C,
+                          raw_ostream &OS, MCContext &) {
   const auto Mask = (static_cast<T>(1) << width) - 1;
-  OS << Name << " = ";
-  OS << (int)((C.KernelCode.*ptr >> shift) & Mask);
+  OS << Name << " = " << (int)((C.KernelCode.*ptr >> shift) & Mask);
 }
 
-using PrintFx = void (*)(StringRef, const MCKernelCodeT &, raw_ostream &,
+using PrintFx = void (*)(StringRef, const AMDGPUMCKernelCodeT &, raw_ostream &,
                          MCContext &);
 
 static ArrayRef<PrintFx> getPrinterTable() {
@@ -261,7 +258,7 @@ static ArrayRef<PrintFx> getPrinterTable() {
 #define COMPPGM2(name, aname, AccMacro)                                        \
   COMPPGM(name, aname, C_00B84C_##AccMacro, S_00B84C_##AccMacro, 32)
 #define PRINTCOMP(Complement, PGMType)                                         \
-  [](StringRef Name, const MCKernelCodeT &C, raw_ostream &OS,                  \
+  [](StringRef Name, const AMDGPUMCKernelCodeT &C, raw_ostream &OS,            \
      MCContext &Ctx) {                                                         \
     OS << Name << " = ";                                                       \
     auto [Shift, Mask] = getShiftMask(Complement);                             \
@@ -303,7 +300,7 @@ static bool expectAbsExpression(MCAsmParser &MCParser, int64_t &Value,
 }
 
 template <typename T, T amd_kernel_code_t::*ptr>
-static bool parseField(MCKernelCodeT &C, MCAsmParser &MCParser,
+static bool parseField(AMDGPUMCKernelCodeT &C, MCAsmParser &MCParser,
                        raw_ostream &Err) {
   int64_t Value = 0;
   if (!expectAbsExpression(MCParser, Value, Err))
@@ -313,7 +310,7 @@ static bool parseField(MCKernelCodeT &C, MCAsmParser &MCParser,
 }
 
 template <typename T, T amd_kernel_code_t::*ptr, int shift, int width = 1>
-static bool parseBitField(MCKernelCodeT &C, MCAsmParser &MCParser,
+static bool parseBitField(AMDGPUMCKernelCodeT &C, MCAsmParser &MCParser,
                           raw_ostream &Err) {
   int64_t Value = 0;
   if (!expectAbsExpression(MCParser, Value, Err))
@@ -339,7 +336,7 @@ static bool parseExpr(MCAsmParser &MCParser, const MCExpr *&Value,
   return true;
 }
 
-using ParseFx = bool (*)(MCKernelCodeT &, MCAsmParser &, raw_ostream &);
+using ParseFx = bool (*)(AMDGPUMCKernelCodeT &, MCAsmParser &, raw_ostream &);
 
 static ArrayRef<ParseFx> getParserTable() {
   static const ParseFx Table[] = {
@@ -348,7 +345,8 @@ static ArrayRef<ParseFx> getParserTable() {
 #define COMPPGM2(name, aname, AccMacro)                                        \
   COMPPGM(name, aname, G_00B84C_##AccMacro, C_00B84C_##AccMacro, 32)
 #define PARSECOMP(Complement, PGMType)                                         \
-  [](MCKernelCodeT &C, MCAsmParser &MCParser, raw_ostream &Err) -> bool {      \
+  [](AMDGPUMCKernelCodeT &C, MCAsmParser &MCParser,                            \
+     raw_ostream &Err) -> bool {                                               \
     MCContext &Ctx = MCParser.getContext();                                    \
     const MCExpr *Value;                                                       \
     if (!parseExpr(MCParser, Value, Err))                                      \
@@ -376,14 +374,15 @@ static ArrayRef<ParseFx> getParserTable() {
   return ArrayRef(Table);
 }
 
-static void printAmdKernelCodeField(const MCKernelCodeT &C, int FldIndex,
+static void printAmdKernelCodeField(const AMDGPUMCKernelCodeT &C, int FldIndex,
                                     raw_ostream &OS, MCContext &Ctx) {
   auto Printer = getPrinterTable()[FldIndex];
   if (Printer)
     Printer(get_amd_kernel_code_t_FldNames()[FldIndex + 1], C, OS, Ctx);
 }
 
-void MCKernelCodeT::initDefault(const MCSubtargetInfo *STI, MCContext &Ctx) {
+void AMDGPUMCKernelCodeT::initDefault(const MCSubtargetInfo *STI,
+                                      MCContext &Ctx) {
   AMDGPU::initDefaultAMDKernelCodeT(KernelCode, STI);
   const MCExpr *ZeroExpr = MCConstantExpr::create(0, Ctx);
   compute_pgm_resource1_registers = MCConstantExpr::create(
@@ -396,7 +395,7 @@ void MCKernelCodeT::initDefault(const MCSubtargetInfo *STI, MCContext &Ctx) {
   workitem_private_segment_byte_size = ZeroExpr;
 }
 
-void MCKernelCodeT::validate(const MCSubtargetInfo *STI, MCContext &Ctx) {
+void AMDGPUMCKernelCodeT::validate(const MCSubtargetInfo *STI, MCContext &Ctx) {
   int64_t Value;
   if (!compute_pgm_resource1_registers->evaluateAsAbsolute(Value))
     return;
@@ -427,13 +426,13 @@ void MCKernelCodeT::validate(const MCSubtargetInfo *STI, MCContext &Ctx) {
   }
 }
 
-const MCExpr *&MCKernelCodeT::getMCExprForIndex(int Index) {
+const MCExpr *&AMDGPUMCKernelCodeT::getMCExprForIndex(int Index) {
   auto IndexTable = getMCExprIndexTable(*this);
   return IndexTable[Index].get();
 }
 
-bool MCKernelCodeT::ParseKernelCodeT(StringRef ID, MCAsmParser &MCParser,
-                                     raw_ostream &Err) {
+bool AMDGPUMCKernelCodeT::ParseKernelCodeT(StringRef ID, MCAsmParser &MCParser,
+                                           raw_ostream &Err) {
   const int Idx = get_amd_kernel_code_t_FieldIndex(ID);
   if (Idx < 0) {
     Err << "unexpected amd_kernel_code_t field name " << ID;
@@ -451,8 +450,8 @@ bool MCKernelCodeT::ParseKernelCodeT(StringRef ID, MCAsmParser &MCParser,
   return Parser ? Parser(*this, MCParser, Err) : false;
 }
 
-void MCKernelCodeT::EmitKernelCodeT(raw_ostream &OS, const char *tab,
-                                    MCContext &Ctx) {
+void AMDGPUMCKernelCodeT::EmitKernelCodeT(raw_ostream &OS, const char *tab,
+                                          MCContext &Ctx) {
   const int Size = hasMCExprVersionTable().size();
   for (int i = 0; i < Size; ++i) {
     OS << tab;
@@ -471,7 +470,7 @@ void MCKernelCodeT::EmitKernelCodeT(raw_ostream &OS, const char *tab,
   }
 }
 
-void MCKernelCodeT::EmitKernelCodeT(MCStreamer &OS, MCContext &Ctx) {
+void AMDGPUMCKernelCodeT::EmitKernelCodeT(MCStreamer &OS, MCContext &Ctx) {
   OS.emitIntValue(KernelCode.amd_kernel_code_version_major, /*Size=*/4);
   OS.emitIntValue(KernelCode.amd_kernel_code_version_minor, /*Size=*/4);
   OS.emitIntValue(KernelCode.amd_machine_kind, /*Size=*/2);

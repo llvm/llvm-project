@@ -17,8 +17,8 @@
 #define LLVM_LIB_TARGET_AMDGPU_MCTARGETDESC_AMDGPUMCKERNELCODET_H
 
 #include "AMDKernelCodeT.h"
-#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/StringRef.h"
 
 namespace llvm {
 class MCAsmParser;
@@ -29,8 +29,8 @@ class MCSubtargetInfo;
 class raw_ostream;
 namespace AMDGPU {
 
-struct MCKernelCodeT {
-  MCKernelCodeT() = default;
+struct AMDGPUMCKernelCodeT {
+  AMDGPUMCKernelCodeT() = default;
 
   amd_kernel_code_t KernelCode;
   const MCExpr *compute_pgm_resource1_registers = nullptr;
