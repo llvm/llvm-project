@@ -7106,6 +7106,8 @@ TypeSystemClang::GetDirectNestedTypeWithName(lldb::opaque_compiler_type_t type,
     for (NamedDecl *decl : record_decl->lookup(decl_name)) {
       if (auto *tag_decl = dyn_cast<clang::TagDecl>(decl))
         return GetType(getASTContext().getTagDeclType(tag_decl));
+      if (auto *typedef_decl = dyn_cast<clang::TypedefNameDecl>(decl))
+        return GetType(getASTContext().getTypedefType(typedef_decl));
     }
     break;
   }

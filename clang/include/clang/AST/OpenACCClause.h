@@ -227,7 +227,8 @@ protected:
                                  SourceLocation EndLoc)
       : OpenACCClauseWithExprs(K, BeginLoc, LParenLoc, EndLoc),
         IntExpr(IntExpr) {
-    setExprs(MutableArrayRef<Expr *>{&this->IntExpr, 1});
+    if (IntExpr)
+      setExprs(MutableArrayRef<Expr *>{&this->IntExpr, 1});
   }
 
 public:
@@ -258,6 +259,17 @@ public:
   static OpenACCVectorLengthClause *
   Create(const ASTContext &C, SourceLocation BeginLoc, SourceLocation LParenLoc,
          Expr *IntExpr, SourceLocation EndLoc);
+};
+
+class OpenACCAsyncClause : public OpenACCClauseWithSingleIntExpr {
+  OpenACCAsyncClause(SourceLocation BeginLoc, SourceLocation LParenLoc,
+                     Expr *IntExpr, SourceLocation EndLoc);
+
+public:
+  static OpenACCAsyncClause *Create(const ASTContext &C,
+                                    SourceLocation BeginLoc,
+                                    SourceLocation LParenLoc, Expr *IntExpr,
+                                    SourceLocation EndLoc);
 };
 
 /// Represents a clause with one or more 'var' objects, represented as an expr,
