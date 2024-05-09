@@ -2908,6 +2908,12 @@ struct ConvertsToRef {
   operator RefType() const { return static_cast<RefType>(obj); }
   mutable T obj = 42;
 };
+template <class T, class RefType = T &>
+class ConvertsToRefPrivate {
+  operator RefType() const { return static_cast<RefType>(obj); }
+  mutable T obj = 42;
+};
+
 
 void reference_binds_to_temporary_checks() {
   static_assert(!(__reference_binds_to_temporary(int &, int &)));
@@ -2937,6 +2943,8 @@ void reference_binds_to_temporary_checks() {
 
   static_assert((__is_constructible(int const &, LongRef)));
   static_assert((__reference_binds_to_temporary(int const &, LongRef)));
+  static_assert(!__reference_binds_to_temporary(int const &, ConvertsToRefPrivate<long, long &>));
+
 
   // Test that it doesn't accept non-reference types as input.
   static_assert(!(__reference_binds_to_temporary(int, long)));
@@ -2984,6 +2992,8 @@ void reference_constructs_from_temporary_checks() {
 
   static_assert(__is_constructible(int const &, LongRef));
   static_assert(__reference_constructs_from_temporary(int const &, LongRef));
+  static_assert(!__reference_constructs_from_temporary(int const &, ConvertsToRefPrivate<long, long &>));
+
 
   // Test that it doesn't accept non-reference types as input.
   static_assert(!__reference_constructs_from_temporary(int, long));
@@ -3036,6 +3046,8 @@ void reference_converts_from_temporary_checks() {
 
   static_assert(__is_constructible(int const &, LongRef));
   static_assert(__reference_converts_from_temporary(int const &, LongRef));
+  static_assert(!__reference_converts_from_temporary(int const &, ConvertsToRefPrivate<long, long &>));
+
 
   // Test that it doesn't accept non-reference types as input.
   static_assert(!__reference_converts_from_temporary(int, long));
