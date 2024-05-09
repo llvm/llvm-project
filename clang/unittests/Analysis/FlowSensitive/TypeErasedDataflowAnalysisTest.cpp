@@ -146,6 +146,30 @@ TEST_F(DataflowAnalysisTest, DiagnoseFunctionDiagnoserCalledOnEachElement) {
                                    " (Lifetime ends)\n")));
 }
 
+TEST_F(DataflowAnalysisTest, CanAnalyzeStmt) {
+  std::string Code = R"cc(
+      struct S {int i;};
+      S getAnS() {return S{1};};
+      void foo() {
+        S AnS = getAnS();
+      }
+    )cc";
+  AST = tooling::buildASTFromCodeWithArgs(Code, {"-std=c++11"});
+  const auto &DeclStatement = matchNode<DeclStmt>(declStmt());
+  const auto &Func = matchNode<FunctionDecl>(functionDecl(hasName("foo")));
+
+  ACFG = std::make_unique<AdornedCFG>(llvm::cantFail(AdornedCFG::build(
+      Func, const_cast<DeclStmt &>(DeclStatement), AST->getASTContext())));
+
+  NoopAnalysis Analysis = NoopAnalysis(AST->getASTContext());
+  DACtx = std::make_unique<DataflowAnalysisContext>(
+      std::make_unique<WatchedLiteralsSolver>());
+  Environment Env(*DACtx, const_cast<DeclStmt &>(DeclStatement));
+
+  ASSERT_THAT_ERROR(runDataflowAnalysis(*ACFG, Analysis, Env).takeError(),
+                    llvm::Succeeded());
+}
+
 // Tests for the statement-to-block map.
 using StmtToBlockTest = DataflowAnalysisTest;
 

@@ -773,14 +773,12 @@ Environment Environment::join(const Environment &EnvA, const Environment &EnvB,
   JoinedEnv.LocForRecordReturnVal = EnvA.LocForRecordReturnVal;
   JoinedEnv.ThisPointeeLoc = EnvA.ThisPointeeLoc;
 
-  if (EnvA.TargetStack.empty()) {
+  if (EnvA.TargetStack.empty() || !EnvA.getCurrentFunc()) {
     JoinedEnv.ReturnVal = nullptr;
   } else {
-    auto *Func = EnvA.getCurrentFunc();
-    assert(Func != nullptr);
     JoinedEnv.ReturnVal =
-        joinValues(Func->getReturnType(), EnvA.ReturnVal, EnvA, EnvB.ReturnVal,
-                   EnvB, JoinedEnv, Model);
+        joinValues(EnvA.getCurrentFunc()->getReturnType(), EnvA.ReturnVal, EnvA,
+                   EnvB.ReturnVal, EnvB, JoinedEnv, Model);
   }
 
   if (EnvA.ReturnLoc == EnvB.ReturnLoc)
