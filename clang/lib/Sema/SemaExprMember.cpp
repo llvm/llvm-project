@@ -996,7 +996,10 @@ Sema::BuildMemberReferenceExpr(Expr *BaseExpr, QualType BaseExprType,
   // build a CXXDependentScopeMemberExpr.
   if (R.wasNotFoundInCurrentInstantiation() ||
       (IsArrow && !BaseExprType->isPointerType() &&
-       BaseExprType->isDependentType()))
+       BaseExprType->isDependentType()) ||
+      (R.getLookupName().getCXXOverloadedOperator() == OO_Equal &&
+       (SS.isSet() ? SS.getScopeRep()->isDependent()
+                   : BaseExprType->isDependentType())))
     return ActOnDependentMemberExpr(BaseExpr, BaseExprType, IsArrow, OpLoc, SS,
                                     TemplateKWLoc, FirstQualifierInScope,
                                     R.getLookupNameInfo(), TemplateArgs);

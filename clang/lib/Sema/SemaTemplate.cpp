@@ -726,7 +726,7 @@ Sema::ActOnDependentIdExpression(const CXXScopeSpec &SS,
                                  const DeclarationNameInfo &NameInfo,
                                  bool isAddressOfOperand,
                            const TemplateArgumentListInfo *TemplateArgs) {
-  QualType ThisType = getCurrentThisType();
+  DeclContext *DC = getFunctionLevelDeclContext();
 
   // C++11 [expr.prim.general]p12:
   //   An id-expression that denotes a non-static data member or non-static
@@ -748,7 +748,11 @@ Sema::ActOnDependentIdExpression(const CXXScopeSpec &SS,
     IsEnum = isa_and_nonnull<EnumType>(NNS->getAsType());
 
   if (!MightBeCxx11UnevalField && !isAddressOfOperand && !IsEnum &&
-      !ThisType.isNull()) {
+      isa<CXXMethodDecl>(DC) &&
+      cast<CXXMethodDecl>(DC)->isImplicitObjectMemberFunction()) {
+    QualType ThisType =
+        cast<CXXMethodDecl>(DC)->getThisType().getNonReferenceType();
+
     // Since the 'this' expression is synthesized, we don't need to
     // perform the double-lookup check.
     NamedDecl *FirstQualifierInScope = nullptr;
