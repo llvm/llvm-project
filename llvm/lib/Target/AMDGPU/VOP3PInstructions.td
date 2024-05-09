@@ -299,6 +299,22 @@ defm V_FMA_MIXHI_F16 : VOP3_VOP3PInst<"v_fma_mixhi_f16", VOP3P_Mix_Profile<VOP_F
 defm : MadFmaMixPats<fma, V_FMA_MIX_F32, V_FMA_MIXLO_F16, V_FMA_MIXHI_F16>;
 }
 
+let SubtargetPredicate = HasFmaMixBF16Insts in {
+let isCommutable = 1 in {
+
+let isReMaterializable = 1 in
+defm V_FMA_MIX_F32_BF16 : VOP3_VOP3PInst<"v_fma_mix_f32_bf16", VOP3P_Mix_Profile<VOP_F32_BF16_BF16_BF16, VOP3_OPSEL>>;
+
+let FPDPRounding = 1 in {
+defm V_FMA_MIXLO_BF16 : VOP3_VOP3PInst<"v_fma_mixlo_bf16", VOP3P_Mix_Profile<VOP_BF16_BF16_BF16_BF16, VOP3_OPSEL, 1>>;
+
+let ClampLo = 0, ClampHi = 1 in {
+defm V_FMA_MIXHI_BF16 : VOP3_VOP3PInst<"v_fma_mixhi_bf16", VOP3P_Mix_Profile<VOP_BF16_BF16_BF16_BF16, VOP3_OPSEL, 1>>;
+}
+} // End FPDPRounding = 1
+} // End isCommutable = 1
+} // End SubtargetPredicate = HasFmaMixBF16Insts
+
 def PK_ADD_MINMAX_Profile : VOP3P_Profile<VOP_V2I16_V2I16_V2I16_V2I16, VOP3_PACKED> {
   let HasModifiers = 0;
 }
@@ -2080,6 +2096,10 @@ defm V_PK_MIN_NUM_BF16 : VOP3P_Real_gfx1210_gfx13<0x2b>;
 defm V_PK_MAX_NUM_BF16 : VOP3P_Real_gfx1210_gfx13<0x2c>;
 defm V_PK_MINIMUM3_F16 : VOP3P_Real_gfx1210_gfx13<0x36>;
 defm V_PK_MAXIMUM3_F16 : VOP3P_Real_gfx1210_gfx13<0x37>;
+
+defm V_FMA_MIX_F32_BF16 : VOP3P_Realtriple<GFX12_10Gen, 0x3d>;
+defm V_FMA_MIXLO_BF16   : VOP3P_Realtriple<GFX12_10Gen, 0x3e>;
+defm V_FMA_MIXHI_BF16   : VOP3P_Realtriple<GFX12_10Gen, 0x3f>;
 
 defm V_WMMA_LD_SCALE_PAIRED_B32 : VOP3P_Real_gfx1210<0x35>;
 

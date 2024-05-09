@@ -121,6 +121,7 @@ protected:
   bool HasSMemRealTime = false;
   bool HasIntClamp = false;
   bool HasFmaMixInsts = false;
+  bool HasFmaMixBF16Insts = false;
   bool HasMovrel = false;
   bool HasVGPRIndexMode = false;
   bool HasScalarDwordx3Loads = false;
@@ -435,6 +436,10 @@ public:
 
   bool hasFmaMixInsts() const {
     return HasFmaMixInsts;
+  }
+
+  bool hasFmaMixBF16Insts() const {
+    return HasFmaMixBF16Insts;
   }
 
   bool hasCARRY() const {
