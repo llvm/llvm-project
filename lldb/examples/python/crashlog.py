@@ -1494,6 +1494,7 @@ def load_crashlog_in_scripted_process(debugger, crashlog_path, options, result):
             raise InteractiveCrashLogException(
                 "couldn't create target provided by the user (%s)" % options.target_path
             )
+        crashlog.target = target
 
     # 2. If the user didn't provide a target, try to create a target using the symbolicator
     if not target or not target.IsValid():
