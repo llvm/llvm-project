@@ -444,6 +444,19 @@ void TextNodeDumper::Visit(const OpenACCClause *C) {
       if (cast<OpenACCWaitClause>(C)->hasQueuesTag())
         OS << " has queues tag";
       break;
+    case OpenACCClauseKind::DeviceType:
+    case OpenACCClauseKind::DType:
+      OS << "(";
+      llvm::interleaveComma(
+          cast<OpenACCDeviceTypeClause>(C)->getArchitectures(), OS,
+          [&](const DeviceTypeArgument &Arch) {
+            if (Arch.first == nullptr)
+              OS << "*";
+            else
+              OS << Arch.first->getName();
+          });
+      OS << ")";
+      break;
     default:
       // Nothing to do here.
       break;
