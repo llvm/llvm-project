@@ -11,7 +11,6 @@
 #include "src/__support/threads/callonce.h"
 #include "src/__support/threads/linux/futex_word.h"
 #include "src/errno/libc_errno.h"
-#include "src/sys/auxv/getauxval.h"
 #include <linux/auxvec.h>
 #include <linux/elf.h>
 
@@ -24,6 +23,12 @@
 #endif
 
 namespace LIBC_NAMESPACE {
+
+// we don't include getauxval.h as it may forcibly pull in elf.h (via
+// sys/auxv.h) in overlay mode instead, we provide a separate declaration for
+// getauxval
+unsigned long getauxval(unsigned long id);
+
 namespace vdso {
 
 // See https://refspecs.linuxfoundation.org/LSB_1.3.0/gLSB/gLSB/symverdefs.html

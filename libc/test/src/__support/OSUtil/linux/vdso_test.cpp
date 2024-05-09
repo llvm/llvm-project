@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm-libc-types/struct_timeval.h"
+#include "hdr/types/struct_timeval.h"
 #include "src/__support/OSUtil/vdso.h"
 #include "test/UnitTest/Test.h"
 
