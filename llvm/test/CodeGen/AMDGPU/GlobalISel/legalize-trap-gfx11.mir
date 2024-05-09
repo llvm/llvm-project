@@ -8,7 +8,7 @@ name: test_trap
 body: |
   bb.0:
     ; GFX1100-LABEL: name: test_trap
-    ; GFX1100: successors: %bb.2(0x80000000)
+    ; GFX1100: successors: %bb.1(0x40000000), %bb.2(0x40000000)
     ; GFX1100-NEXT: {{  $}}
     ; GFX1100-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
     ; GFX1100-NEXT: [[C1:%[0-9]+]]:_(p1) = G_CONSTANT i64 0
@@ -21,7 +21,8 @@ body: |
     ; GFX1100-NEXT: $m0 = S_MOV_B32 [[S_OR_B32_]]
     ; GFX1100-NEXT: S_SENDMSG 1, implicit $exec, implicit $m0
     ; GFX1100-NEXT: $m0 = S_MOV_B32 $ttmp2
-    ; GFX1100-NEXT: S_BRANCH %bb.2
+    ; GFX1100-NEXT: S_CMP_EQ_U32 [[S_OR_B32_]], [[S_OR_B32_]], implicit-def $scc
+    ; GFX1100-NEXT: S_CBRANCH_SCC1 %bb.2, implicit $scc
     ; GFX1100-NEXT: {{  $}}
     ; GFX1100-NEXT: .1:
     ; GFX1100-NEXT: successors:
@@ -45,5 +46,59 @@ body: |
     G_STORE %0, %1 :: (store 1, addrspace 1)
     G_TRAP
     G_STORE %0, %1 :: (store 1, addrspace 1)
+...
 
+---
+name: test_fallthrough_trap
+body: |
+  ; GFX1100-LABEL: name: test_fallthrough_trap
+  ; GFX1100: bb.0:
+  ; GFX1100-NEXT:   successors: %bb.1(0x80000000), %bb.2(0x00000000)
+  ; GFX1100-NEXT: {{  $}}
+  ; GFX1100-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+  ; GFX1100-NEXT:   [[C1:%[0-9]+]]:_(p1) = G_CONSTANT i64 0
+  ; GFX1100-NEXT:   G_STORE [[C]](s32), [[C1]](p1) :: (store (s8), addrspace 1)
+  ; GFX1100-NEXT:   S_TRAP 2
+  ; GFX1100-NEXT:   [[S_SENDMSG_RTN_B32_:%[0-9]+]]:sreg_32 = S_SENDMSG_RTN_B32 128
+  ; GFX1100-NEXT:   $ttmp2 = S_MOV_B32 $m0
+  ; GFX1100-NEXT:   [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 [[S_SENDMSG_RTN_B32_]], 1023, implicit-def $scc
+  ; GFX1100-NEXT:   [[S_OR_B32_:%[0-9]+]]:sreg_32 = S_OR_B32 [[S_AND_B32_]], 1024, implicit-def $scc
+  ; GFX1100-NEXT:   $m0 = S_MOV_B32 [[S_OR_B32_]]
+  ; GFX1100-NEXT:   S_SENDMSG 1, implicit $exec, implicit $m0
+  ; GFX1100-NEXT:   $m0 = S_MOV_B32 $ttmp2
+  ; GFX1100-NEXT:   S_CMP_EQ_U32 [[S_OR_B32_]], [[S_OR_B32_]], implicit-def $scc
+  ; GFX1100-NEXT:   S_CBRANCH_SCC1 %bb.2, implicit $scc
+  ; GFX1100-NEXT: {{  $}}
+  ; GFX1100-NEXT: bb.1:
+  ; GFX1100-NEXT:   successors:
+  ; GFX1100-NEXT: {{  $}}
+  ; GFX1100-NEXT:   G_STORE [[C]](s32), [[C1]](p1) :: (store (s8), addrspace 1)
+  ; GFX1100-NEXT: {{  $}}
+  ; GFX1100-NEXT: bb.2:
+  ; GFX1100-NEXT:   successors: %bb.2(0x80000000)
+  ; GFX1100-NEXT: {{  $}}
+  ; GFX1100-NEXT:   S_SETHALT 5
+  ; GFX1100-NEXT:   S_BRANCH %bb.2
+  ;
+  ; GFX1150-LABEL: name: test_fallthrough_trap
+  ; GFX1150: bb.0:
+  ; GFX1150-NEXT:   successors: %bb.1(0x80000000)
+  ; GFX1150-NEXT: {{  $}}
+  ; GFX1150-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+  ; GFX1150-NEXT:   [[C1:%[0-9]+]]:_(p1) = G_CONSTANT i64 0
+  ; GFX1150-NEXT:   G_STORE [[C]](s32), [[C1]](p1) :: (store (s8), addrspace 1)
+  ; GFX1150-NEXT:   S_TRAP 2
+  ; GFX1150-NEXT: {{  $}}
+  ; GFX1150-NEXT: bb.1:
+  ; GFX1150-NEXT:   G_STORE [[C]](s32), [[C1]](p1) :: (store (s8), addrspace 1)
+  bb.0:
+    successors: %bb.1
+
+    %0:_(s8) = G_CONSTANT i8 0
+    %1:_(p1) = G_CONSTANT i64 0
+    G_STORE %0, %1 :: (store 1, addrspace 1)
+    G_TRAP
+
+  bb.1:
+    G_STORE %0, %1 :: (store 1, addrspace 1)
 ...

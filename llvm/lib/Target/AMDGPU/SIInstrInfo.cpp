@@ -2065,14 +2065,26 @@ MachineBasicBlock *SIInstrInfo::insertSimulatedTrap(MachineRegisterInfo &MRI,
       .addImm(AMDGPU::SendMsg::ID_INTERRUPT);
   BuildMI(MBB, MI, DL, get(AMDGPU::S_MOV_B32), AMDGPU::M0)
       .addUse(AMDGPU::TTMP2);
-  BuildMI(MBB, MI, DL, get(AMDGPU::S_BRANCH)).addMBB(HaltLoop);
+
+  if (MBB.succ_empty()) {
+    BuildMI(MBB, MI, DL, get(AMDGPU::S_BRANCH)).addMBB(HaltLoop);
+  } else {
+    // HACK: There are some instructions following the trap. Since uses of
+    // virtual registers in SplitBB (or beyond) that were defined before the
+    // trap must be dominated by their definitions, we need SplitBB to be a
+    // successor (even though it's unreachable in practice). This needs to be
+    // represented by a dummy cmp_eq and cbranch to convince analyzeBranch that
+    // SplitBB should indeed be considered a successor.
+    BuildMI(MBB, MI, DL, get(AMDGPU::S_CMP_EQ_U32))
+        .addUse(SetWaveAbortBit)
+        .addUse(SetWaveAbortBit);
+    BuildMI(MBB, MI, DL, get(AMDGPU::S_CBRANCH_SCC1)).addMBB(HaltLoop);
+  }
 
   BuildMI(*HaltLoop, HaltLoop->end(), DL, get(AMDGPU::S_SETHALT)).addImm(5);
   BuildMI(*HaltLoop, HaltLoop->end(), DL, get(AMDGPU::S_BRANCH))
       .addMBB(HaltLoop);
 
-  if (SplitBB != &MBB)
-    MBB.removeSuccessor(SplitBB);
   MBB.addSuccessor(HaltLoop);
   HaltLoop->addSuccessor(HaltLoop);
 
