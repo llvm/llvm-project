@@ -2003,11 +2003,12 @@ public:
                           MemLocInstr);
   }
 
-  IndirectBranchType analyzeIndirectBranch(
-      MCInst &Instruction, InstructionIterator Begin, InstructionIterator End,
-      const unsigned PtrSize, MCInst *&MemLocInstrOut, unsigned &BaseRegNumOut,
-      unsigned &IndexRegNumOut, int64_t &DispValueOut,
-      const MCExpr *&DispExprOut, MCInst *&PCRelBaseOut) const override {
+  IndirectBranchType
+  analyzeIndirectBranch(MCInst &Instruction, InstructionIterator Begin,
+                        InstructionIterator End, const unsigned PtrSize,
+                        MCInst *&MemLocInstrOut, unsigned &BaseRegNumOut,
+                        unsigned &IndexRegNumOut, int64_t &DispValueOut,
+                        const MCExpr *&JTBaseDispExpr, MCInst *&PCRelBaseOut) const override {
     // Try to find a (base) memory location from where the address for
     // the indirect branch is loaded. For X86-64 the memory will be specified
     // in the following format:
@@ -2033,7 +2034,7 @@ public:
     BaseRegNumOut = X86::NoRegister;
     IndexRegNumOut = X86::NoRegister;
     DispValueOut = 0;
-    DispExprOut = nullptr;
+    JTBaseDispExpr = nullptr;
 
     std::reverse_iterator<InstructionIterator> II(End);
     std::reverse_iterator<InstructionIterator> IE(Begin);
@@ -2093,7 +2094,7 @@ public:
     BaseRegNumOut = MO->BaseRegNum;
     IndexRegNumOut = MO->IndexRegNum;
     DispValueOut = MO->DispImm;
-    DispExprOut = MO->DispExpr;
+    JTBaseDispExpr = MO->DispExpr;
 
     if ((MO->BaseRegNum != X86::NoRegister && MO->BaseRegNum != RIPRegister) ||
         MO->SegRegNum != X86::NoRegister)

@@ -388,11 +388,11 @@ IndirectCallPromotion::maybeGetHotJumpTableTargets(BinaryBasicBlock &BB,
   MCInst *PCRelBaseOut;
   unsigned BaseReg, IndexReg;
   int64_t DispValue;
-  const MCExpr *DispExpr;
+  const MCExpr *JTBaseDispExpr;
   MutableArrayRef<MCInst> Insts(&BB.front(), &CallInst);
   const IndirectBranchType Type = BC.MIB->analyzeIndirectBranch(
       CallInst, Insts.begin(), Insts.end(), BC.AsmInfo->getCodePointerSize(),
-      MemLocInstr, BaseReg, IndexReg, DispValue, DispExpr, PCRelBaseOut);
+      MemLocInstr, BaseReg, IndexReg, DispValue, JTBaseDispExpr, PCRelBaseOut);
 
   assert(MemLocInstr && "There should always be a load for jump tables");
   if (!MemLocInstr)
@@ -413,7 +413,7 @@ IndirectCallPromotion::maybeGetHotJumpTableTargets(BinaryBasicBlock &BB,
            << "BaseReg = " << BC.MRI->getName(BaseReg) << ", "
            << "IndexReg = " << BC.MRI->getName(IndexReg) << ", "
            << "DispValue = " << Twine::utohexstr(DispValue) << ", "
-           << "DispExpr = " << DispExpr << ", "
+           << "DispExpr = " << JTBaseDispExpr << ", "
            << "MemLocInstr = ";
     BC.printInstruction(dbgs(), *MemLocInstr, 0, &Function);
     dbgs() << "\n";
@@ -432,9 +432,9 @@ IndirectCallPromotion::maybeGetHotJumpTableTargets(BinaryBasicBlock &BB,
   MemoryAccessProfile &MemAccessProfile = ErrorOrMemAccessProfile.get();
 
   uint64_t ArrayStart;
-  if (DispExpr) {
+  if (JTBaseDispExpr) {
     ErrorOr<uint64_t> DispValueOrError =
-        BC.getSymbolValue(*BC.MIB->getTargetSymbol(DispExpr));
+        BC.getSymbolValue(*BC.MIB->getTargetSymbol(JTBaseDispExpr));
     assert(DispValueOrError && "global symbol needs a value");
     ArrayStart = *DispValueOrError;
   } else {

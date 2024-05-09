@@ -785,7 +785,7 @@ BinaryFunction::processIndirectBranch(MCInst &Instruction, unsigned Size,
 
   unsigned BaseRegNum, IndexRegNum;
   int64_t DispValue;
-  const MCExpr *DispExpr;
+  const MCExpr *JTBaseDispExpr;
 
   // In AArch, identify the instruction adding the PC-relative offset to
   // jump table entries to correctly decode it.
@@ -810,7 +810,7 @@ BinaryFunction::processIndirectBranch(MCInst &Instruction, unsigned Size,
 
   IndirectBranchType BranchType = BC.MIB->analyzeIndirectBranch(
       Instruction, Begin, Instructions.end(), PtrSize, MemLocInstr, BaseRegNum,
-      IndexRegNum, DispValue, DispExpr, PCRelBaseInstr);
+      IndexRegNum, DispValue, JTBaseDispExpr, PCRelBaseInstr);
 
   if (BranchType == IndirectBranchType::UNKNOWN && !MemLocInstr)
     return BranchType;
@@ -853,10 +853,10 @@ BinaryFunction::processIndirectBranch(MCInst &Instruction, unsigned Size,
 
   // RIP-relative addressing should be converted to symbol form by now
   // in processed instructions (but not in jump).
-  if (DispExpr) {
+  if (JTBaseDispExpr) {
     const MCSymbol *TargetSym;
     uint64_t TargetOffset;
-    std::tie(TargetSym, TargetOffset) = BC.MIB->getTargetSymbolInfo(DispExpr);
+    std::tie(TargetSym, TargetOffset) = BC.MIB->getTargetSymbolInfo(JTBaseDispExpr);
     ErrorOr<uint64_t> SymValueOrError = BC.getSymbolValue(*TargetSym);
     assert(SymValueOrError && "global symbol needs a value");
     ArrayStart = *SymValueOrError + TargetOffset;
@@ -1868,11 +1868,11 @@ bool BinaryFunction::postProcessIndirectBranches(
         MCInst *MemLocInstr;
         unsigned BaseRegNum, IndexRegNum;
         int64_t DispValue;
-        const MCExpr *DispExpr;
+        const MCExpr *JTBaseDispExpr;
         MCInst *PCRelBaseInstr;
         IndirectBranchType Type = BC.MIB->analyzeIndirectBranch(
             Instr, BB.begin(), II, PtrSize, MemLocInstr, BaseRegNum,
-            IndexRegNum, DispValue, DispExpr, PCRelBaseInstr);
+            IndexRegNum, DispValue, JTBaseDispExpr, PCRelBaseInstr);
         if (Type != IndirectBranchType::UNKNOWN || MemLocInstr != nullptr)
           continue;
 

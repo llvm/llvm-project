@@ -832,16 +832,17 @@ public:
     return Uses;
   }
 
-  IndirectBranchType analyzeIndirectBranch(
-      MCInst &Instruction, InstructionIterator Begin, InstructionIterator End,
-      const unsigned PtrSize, MCInst *&MemLocInstrOut, unsigned &BaseRegNumOut,
-      unsigned &IndexRegNumOut, int64_t &DispValueOut,
-      const MCExpr *&DispExprOut, MCInst *&PCRelBaseOut) const override {
+  IndirectBranchType
+  analyzeIndirectBranch(MCInst &Instruction, InstructionIterator Begin,
+                        InstructionIterator End, const unsigned PtrSize,
+                        MCInst *&MemLocInstrOut, unsigned &BaseRegNumOut,
+                        unsigned &IndexRegNumOut, int64_t &DispValueOut,
+                        const MCExpr *&JTBaseDispExprOut, MCInst *&PCRelBaseOut) const override {
     MemLocInstrOut = nullptr;
     BaseRegNumOut = AArch64::NoRegister;
     IndexRegNumOut = AArch64::NoRegister;
     DispValueOut = 0;
-    DispExprOut = nullptr;
+    JTBaseDispExprOut = nullptr;
 
     // An instruction referencing memory used by jump instruction (directly or
     // via register). This location could be an array of function pointers
@@ -861,7 +862,7 @@ public:
 
     MemLocInstrOut = MemLocInstr;
     DispValueOut = DispValue;
-    DispExprOut = DispExpr;
+    JTBaseDispExprOut = DispExpr;
     PCRelBaseOut = PCRelBase;
     return IndirectBranchType::POSSIBLE_PIC_JUMP_TABLE;
   }

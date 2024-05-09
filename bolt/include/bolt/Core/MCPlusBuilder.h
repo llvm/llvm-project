@@ -1472,7 +1472,7 @@ public:
                         InstructionIterator End, const unsigned PtrSize,
                         MCInst *&MemLocInstr, unsigned &BaseRegNum,
                         unsigned &IndexRegNum, int64_t &DispValue,
-                        const MCExpr *&DispExpr, MCInst *&PCRelBaseOut) const {
+                        const MCExpr *&JTBaseDispExpr, MCInst *&PCRelBaseOut) const {
     llvm_unreachable("not implemented");
     return IndirectBranchType::UNKNOWN;
   }
