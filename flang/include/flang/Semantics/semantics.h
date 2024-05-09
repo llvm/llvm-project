@@ -214,7 +214,7 @@ public:
   // Defines builtinsScope_ from the __Fortran_builtins module
   void UseFortranBuiltinsModule();
   const Scope *GetBuiltinsScope() const { return builtinsScope_; }
-  
+
   const Scope &GetCUDABuiltinsScope();
   const Scope &GetCUDADeviceScope();
 
