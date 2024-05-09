@@ -9,9 +9,9 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_FPUTIL_FMA_H
 #define LLVM_LIBC_SRC___SUPPORT_FPUTIL_FMA_H
 
+#include "src/__support/CPP/type_traits.h"
 #include "src/__support/macros/properties/architectures.h"
 #include "src/__support/macros/properties/cpu_features.h" // LIBC_TARGET_CPU_HAS_FMA
-#include "src/__support/CPP/type_traits.h"
 
 #if defined(LIBC_TARGET_CPU_HAS_FMA)
 
