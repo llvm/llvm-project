@@ -1192,7 +1192,8 @@ void CodeGenModule::Release() {
       getModule().addModuleFlag(llvm::Module::Min,
                                 "sign-return-address-with-bkey", 1);
 
-    if (getTriple().isOSLinux() && getTriple().isOSBinFormatELF()) {
+    if (getTriple().isOSLinux()) {
+      assert(getTriple().isOSBinFormatELF());
       using namespace llvm::ELF;
       uint64_t PAuthABIVersion =
           (LangOpts.PointerAuthIntrinsics

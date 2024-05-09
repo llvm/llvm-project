@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple aarch64-linux -S -emit-llvm -o - \
+// RUN: %clang_cc1 -triple aarch64-linux -emit-llvm -o - \
 // RUN:   -fptrauth-intrinsics \
 // RUN:   -fptrauth-calls \
 // RUN:   -fptrauth-returns \
@@ -8,27 +8,27 @@
 // RUN:   -fptrauth-init-fini %s | \
 // RUN:   FileCheck %s --check-prefix=ALL
 
-// RUN: %clang_cc1 -triple aarch64-linux -S -emit-llvm -o - \
+// RUN: %clang_cc1 -triple aarch64-linux -emit-llvm -o - \
 // RUN:   -fptrauth-intrinsics %s | FileCheck %s --check-prefix=INTRIN
 
-// RUN: %clang_cc1 -triple aarch64-linux -S -emit-llvm -o - \
+// RUN: %clang_cc1 -triple aarch64-linux -emit-llvm -o - \
 // RUN:   -fptrauth-calls %s | FileCheck %s --check-prefix=CALL
 
-// RUN: %clang_cc1 -triple aarch64-linux -S -emit-llvm -o - \
+// RUN: %clang_cc1 -triple aarch64-linux -emit-llvm -o - \
 // RUN:   -fptrauth-returns %s | FileCheck %s --check-prefix=RET
 
-// RUN: %clang_cc1 -triple aarch64-linux -S -emit-llvm -o - \
+// RUN: %clang_cc1 -triple aarch64-linux -emit-llvm -o - \
 // RUN:   -fptrauth-auth-traps %s | FileCheck %s --check-prefix=TRAP
 
-// RUN: %clang_cc1 -triple aarch64-linux -S -emit-llvm -o - \
+// RUN: %clang_cc1 -triple aarch64-linux -emit-llvm -o - \
 // RUN:   -fptrauth-calls -fptrauth-vtable-pointer-address-discrimination %s | \
 // RUN:   FileCheck %s --check-prefix=VPTRADDR
 
-// RUN: %clang_cc1 -triple aarch64-linux -S -emit-llvm -o - \
+// RUN: %clang_cc1 -triple aarch64-linux -emit-llvm -o - \
 // RUN:   -fptrauth-calls -fptrauth-vtable-pointer-type-discrimination %s | \
 // RUN:   FileCheck %s --check-prefix=VPTRTYPE
 
-// RUN: %clang_cc1 -triple aarch64-linux -S -emit-llvm -o - \
+// RUN: %clang_cc1 -triple aarch64-linux -emit-llvm -o - \
 // RUN:   -fptrauth-calls -fptrauth-init-fini %s | \
 // RUN:   FileCheck %s --check-prefix=INITFINI
 
