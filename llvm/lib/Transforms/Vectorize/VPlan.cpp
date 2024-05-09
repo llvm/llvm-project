@@ -1472,3 +1472,16 @@ VPValue *vputils::getOrCreateVPValueForSCEVExpr(VPlan &Plan, const SCEV *Expr,
   Plan.addSCEVExpansion(Expr, Expanded);
   return Expanded;
 }
+
+bool vputils::isUniformCompare(VPValue *Cond) {
+  if (match(Cond, m_Not(m_VPValue())))
+    Cond = Cond->getDefiningRecipe()->getOperand(0);
+  auto *R = Cond->getDefiningRecipe();
+  if (!R)
+    return true;
+  if (!match(R, m_Binary<Instruction::ICmp>(m_VPValue(), m_VPValue())))
+    return false;
+  return all_of(R->operands(), [](VPValue *Op) {
+    return vputils::isUniformAfterVectorization(Op);
+  });
+}

@@ -700,6 +700,7 @@ public:
 #endif
 };
 
+/// Struct to hold various analysis needed for cost computations.
 struct VPCostContext {
   const TargetTransformInfo &TTI;
   VPTypeAnalysis Types;
@@ -747,6 +748,12 @@ public:
   /// this VPRecipe, thereby "executing" the VPlan.
   virtual void execute(VPTransformState &State) = 0;
 
+  /// Compute the cost for the recipe. Returns an invalid cost if the recipe
+  /// does not yet implement computing the cost.
+  virtual InstructionCost computeCost(ElementCount VF, VPCostContext &Ctx) {
+    return InstructionCost::getInvalid();
+  }
+
   /// Insert an unlinked recipe into a basic block immediately before
   /// the specified recipe.
   void insertBefore(VPRecipeBase *InsertPos);
@@ -775,10 +782,6 @@ public:
   ///
   /// \returns an iterator pointing to the element after the erased one
   iplist<VPRecipeBase>::iterator eraseFromParent();
-
-  virtual InstructionCost computeCost(ElementCount VF, VPCostContext &Ctx) {
-    return InstructionCost::getInvalid();
-  }
 
   /// Method to support type inquiry through isa, cast, and dyn_cast.
   static inline bool classof(const VPDef *D) {
@@ -1361,9 +1364,9 @@ public:
   /// Produce widened copies of all Ingredients.
   void execute(VPTransformState &State) override;
 
-  unsigned getOpcode() const { return Opcode; }
-
   InstructionCost computeCost(ElementCount VF, VPCostContext &Ctx) override;
+
+  unsigned getOpcode() const { return Opcode; }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
@@ -3208,7 +3211,8 @@ public:
     return any_of(VFs, [](ElementCount VF) { return VF.isScalable(); });
   }
 
-  iterator_range<SmallSetVector<ElementCount, 2>::iterator> vectorFactors() {
+  iterator_range<SmallSetVector<ElementCount, 2>::iterator>
+  vectorFactors() const {
     return {VFs.begin(), VFs.end()};
   }
 
@@ -3638,6 +3642,10 @@ inline bool isUniformAfterVectorization(VPValue *VPV) {
     return VPI->getOpcode() == VPInstruction::ComputeReductionResult;
   return false;
 }
+
+/// Return true if \p Cond is an uniform compare.
+bool isUniformCompare(VPValue *Cond);
+
 } // end namespace vputils
 
 } // end namespace llvm

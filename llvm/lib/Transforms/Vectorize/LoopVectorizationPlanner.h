@@ -339,7 +339,13 @@ class LoopVectorizationPlanner {
   VPBuilder Builder;
 
   /// Computes the cost of \p Plan for vectorization factor \p VF.
-  InstructionCost computeCost(VPlan &Plan, ElementCount VF);
+  ///
+  /// The current implementation requires access to the legacy cost model which
+  /// is why it is kept separate from the VPlan-only cost infrastructure.
+  ///
+  /// TODO: Move to VPlan::computeCost once the use of the legacy cost model
+  /// has been retired.
+  InstructionCost computeCost(VPlan &Plan, ElementCount VF) const;
 
 public:
   LoopVectorizationPlanner(
@@ -363,7 +369,7 @@ public:
   VPlan &getBestPlanFor(ElementCount VF) const;
 
   /// Return the most profitable plan.
-  std::pair<VPlan &, ElementCount> getBestPlan();
+  VPlan &getBestPlan() const;
 
   /// Generate the IR code for the vectorized loop captured in VPlan \p BestPlan
   /// according to the best selected \p VF and  \p UF.
