@@ -21048,6 +21048,11 @@ bool RISCVTargetLowering::isLegalInterleavedAccessType(
       return false;
 
     ContainerVT = getContainerForFixedLengthVector(VT.getSimpleVT());
+  } else {
+    // The intrinsics for scalable vectors are not overloaded on pointer type
+    // and can only handle the default address space.
+    if (AddrSpace)
+      return false;
   }
 
   // Need to make sure that EMUL * NFIELDS ≤ 8
