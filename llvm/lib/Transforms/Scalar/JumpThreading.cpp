@@ -1281,7 +1281,7 @@ bool JumpThreadingPass::simplifyPartiallyRedundantLoad(LoadInst *LoadI) {
     if (AvailableVal->getType() != LoadI->getType()) {
       AvailableVal = CastInst::CreateBitOrPointerCast(
           AvailableVal, LoadI->getType(), "", LoadI->getIterator());
-          cast<Instruction>(AvailableVal)->setDebugLoc(LoadI->getDebugLoc());
+      cast<Instruction>(AvailableVal)->setDebugLoc(LoadI->getDebugLoc());
     }
     LoadI->replaceAllUsesWith(AvailableVal);
     LoadI->eraseFromParent();
