@@ -13,6 +13,8 @@
 
 #include "omptarget.h"
 
+#include "Shared/PluginAPI.h"
+
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/MemoryBuffer.h"

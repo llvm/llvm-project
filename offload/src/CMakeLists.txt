@@ -65,10 +65,6 @@ target_compile_definitions(omptarget PRIVATE
   DEBUG_PREFIX="omptarget"
 )
 
-foreach(plugin IN LISTS LIBOMPTARGET_PLUGINS_TO_BUILD)
-  target_link_libraries(omptarget PRIVATE omptarget.rtl.${plugin})
-endforeach()
-
 target_compile_options(omptarget PUBLIC ${offload_compile_flags})
 target_link_options(omptarget PUBLIC ${offload_link_flags})
 

@@ -1342,6 +1342,10 @@ struct CUDAPluginTy final : public GenericPluginTy {
       return 0;
     }
 
+#ifdef OMPT_SUPPORT
+    ompt::connectLibrary();
+#endif
+
     if (Res == CUDA_ERROR_NO_DEVICE) {
       // Do not initialize if there are no devices.
       DP("There are no devices supporting CUDA.\n");
@@ -1385,8 +1389,6 @@ struct CUDAPluginTy final : public GenericPluginTy {
     // TODO: I think we can drop the support for 32-bit NVPTX devices.
     return Triple::nvptx64;
   }
-
-  const char *getName() const override { return GETNAME(TARGET_NAME); }
 
   /// Check whether the image is compatible with the available CUDA devices.
   Expected<bool> isELFCompatible(StringRef Image) const override {
@@ -1493,6 +1495,8 @@ Error CUDADeviceTy::dataExchangeImpl(const void *SrcPtr,
   return Plugin::check(Res, "Error in cuMemcpyDtoDAsync: %s");
 }
 
+GenericPluginTy *PluginTy::createPlugin() { return new CUDAPluginTy(); }
+
 template <typename... ArgsTy>
 static Error Plugin::check(int32_t Code, const char *ErrFmt, ArgsTy... Args) {
   CUresult ResultCode = static_cast<CUresult>(Code);
@@ -1512,9 +1516,3 @@ static Error Plugin::check(int32_t Code, const char *ErrFmt, ArgsTy... Args) {
 } // namespace target
 } // namespace omp
 } // namespace llvm
-
-extern "C" {
-llvm::omp::target::plugin::GenericPluginTy *createPlugin_cuda() {
-  return new llvm::omp::target::plugin::CUDAPluginTy();
-}
-}
