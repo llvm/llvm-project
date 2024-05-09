@@ -792,6 +792,59 @@ public:
   }
 };
 
+/// Represents a cast operation.
+/// It models the llvm::CastInst concept.
+/// The exception is bitcast.
+class GCastOp : public GenericMachineInstr {
+public:
+  Register getSrcReg() const { return getOperand(1).getReg(); }
+
+  static bool classof(const MachineInstr *MI) {
+    switch (MI->getOpcode()) {
+    case TargetOpcode::G_ADDRSPACE_CAST:
+    case TargetOpcode::G_FPEXT:
+    case TargetOpcode::G_FPTOSI:
+    case TargetOpcode::G_FPTOUI:
+    case TargetOpcode::G_FPTRUNC:
+    case TargetOpcode::G_INTTOPTR:
+    case TargetOpcode::G_PTRTOINT:
+    case TargetOpcode::G_SEXT:
+    case TargetOpcode::G_SITOFP:
+    case TargetOpcode::G_TRUNC:
+    case TargetOpcode::G_UITOFP:
+    case TargetOpcode::G_ZEXT:
+    case TargetOpcode::G_ANYEXT:
+      return true;
+    default:
+      return false;
+    }
+  };
+};
+
+/// Represents a sext.
+class GSext : public GCastOp {
+public:
+  static bool classof(const MachineInstr *MI) {
+    return MI->getOpcode() == TargetOpcode::G_SEXT;
+  };
+};
+
+/// Represents a zext.
+class GZext : public GCastOp {
+public:
+  static bool classof(const MachineInstr *MI) {
+    return MI->getOpcode() == TargetOpcode::G_ZEXT;
+  };
+};
+
+/// Represents a trunc.
+class GTrunc : public GCastOp {
+public:
+  static bool classof(const MachineInstr *MI) {
+    return MI->getOpcode() == TargetOpcode::G_TRUNC;
+  };
+};
+
 } // namespace llvm
 
 #endif // LLVM_CODEGEN_GLOBALISEL_GENERICMACHINEINSTRS_H

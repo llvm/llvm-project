@@ -26,7 +26,7 @@ enum IndexedVersion : uint64_t {
   Version0 = 0,
   // Version 1: Added a version field to the header.
   Version1 = 1,
-  // Version 2: Added a call stack table.  Under development.
+  // Version 2: Added a call stack table.
   Version2 = 2,
 };
 
