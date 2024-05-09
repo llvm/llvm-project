@@ -316,7 +316,10 @@ private:
   /// RecordDependences is true.
   SmallVector<Dependence, 8> Dependences;
 
-  /// The maximum width of a target's vector registers multiplied by 2 to also roughly account for additional interleaving. Is used to decide if a backwards dependence with non-constant stride should be classified as backwards-vectorizable or unknown (triggering a runtime check).
+  /// The maximum width of a target's vector registers multiplied by 2 to also
+  /// roughly account for additional interleaving. Is used to decide if a
+  /// backwards dependence with non-constant stride should be classified as
+  /// backwards-vectorizable or unknown (triggering a runtime check).
   unsigned MaxTargetVectorWidthInBits = 0;
 
   /// Check whether there is a plausible dependence between the two

@@ -3048,7 +3048,8 @@ LoopAccessInfo::LoopAccessInfo(Loop *L, ScalarEvolution *SE,
     TypeSize FixedWidth =
         TTI->getRegisterBitWidth(TargetTransformInfo::RGK_FixedWidthVector);
     if (FixedWidth.isNonZero()) {
-      // Scale the vector width by 2 as rough estimate to also consider interleaving.
+      // Scale the vector width by 2 as rough estimate to also consider
+      // interleaving.
       MaxTargetVectorWidthInBits = FixedWidth.getFixedValue() * 2;
     }
 
