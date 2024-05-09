@@ -16,8 +16,8 @@ import threading
 import time
 import sys
 
-class TestDAP_attachByPortNum(lldbdap_testcase.DAPTestCaseBase):
 
+class TestDAP_attachByPortNum(lldbdap_testcase.DAPTestCaseBase):
     def runTargetProgramOnPort(self, port=None, program=None):
         server_tool = "lldb-server"
         server_path = self.getBuiltinServerTool(server_tool)
