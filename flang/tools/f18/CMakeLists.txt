@@ -12,6 +12,8 @@ set(MODULES
   "__ppc_intrinsics"
   "mma"
   "__cuda_builtins"
+  "__cuda_device_builtins"
+  "cudadevice"
   "ieee_arithmetic"
   "ieee_exceptions"
   "ieee_features"
