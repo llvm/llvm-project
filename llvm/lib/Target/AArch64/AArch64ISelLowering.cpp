@@ -1304,6 +1304,12 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
           setOperationAction(Op, Ty, Legal);
     }
 
+    // LRINT and LLRINT.
+    for (auto VT : MVT::fp_fixedlen_vector_valuetypes()) {
+      setOperationAction(ISD::LRINT, VT, Custom);
+      setOperationAction(ISD::LLRINT, VT, Custom);
+    }
+
     setTruncStoreAction(MVT::v4i16, MVT::v4i8, Custom);
 
     setOperationAction(ISD::BITCAST, MVT::i2, Custom);
@@ -1419,6 +1425,12 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
         setOperationAction(ISD::OR, VT, Custom);
     }
 
+    // LRINT and LLRINT.
+    for (auto VT : MVT::fp_scalable_vector_valuetypes()) {
+      setOperationAction(ISD::LRINT, VT, Custom);
+      setOperationAction(ISD::LLRINT, VT, Custom);
+    }
+
     // Illegal unpacked integer vector types.
     for (auto VT : {MVT::nxv8i8, MVT::nxv4i16, MVT::nxv2i32}) {
       setOperationAction(ISD::EXTRACT_SUBVECTOR, VT, Custom);
@@ -1526,8 +1538,6 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::FNEARBYINT, VT, Custom);
       setOperationAction(ISD::FRINT, VT, Custom);
       setOperationAction(ISD::FROUND, VT, Custom);
-      setOperationAction(ISD::LRINT, VT, Custom);
-      setOperationAction(ISD::LLRINT, VT, Custom);
       setOperationAction(ISD::FROUNDEVEN, VT, Custom);
       setOperationAction(ISD::FTRUNC, VT, Custom);
       setOperationAction(ISD::FSQRT, VT, Custom);
@@ -1667,6 +1677,11 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
         setOperationAction(ISD::MULHU, VT, Custom);
       }
 
+      // LRINT and LLRINT.
+      for (auto VT : MVT::fp_fixedlen_vector_valuetypes()) {
+        setOperationAction(ISD::LRINT, VT, Custom);
+        setOperationAction(ISD::LLRINT, VT, Custom);
+      }
 
       // Use SVE for vectors with more than 2 elements.
       for (auto VT : {MVT::v4f16, MVT::v8f16, MVT::v4f32})
@@ -1942,8 +1957,6 @@ void AArch64TargetLowering::addTypeForFixedLengthSVE(MVT VT) {
   setOperationAction(ISD::FP_TO_UINT, VT, Default);
   setOperationAction(ISD::FRINT, VT, Default);
   setOperationAction(ISD::FROUND, VT, Default);
-  setOperationAction(ISD::LRINT, VT, Default);
-  setOperationAction(ISD::LLRINT, VT, Default);
   setOperationAction(ISD::FROUNDEVEN, VT, Default);
   setOperationAction(ISD::FSQRT, VT, Default);
   setOperationAction(ISD::FSUB, VT, Default);
@@ -4374,30 +4387,15 @@ SDValue AArch64TargetLowering::LowerVectorXRINT(SDValue Op,
 
   assert(VT.isVector() && "Expected vector type");
 
-  EVT ContainerVT = VT;
-  EVT SrcVT = Src.getValueType();
   EVT CastVT =
-      ContainerVT.changeVectorElementType(SrcVT.getVectorElementType());
+      VT.changeVectorElementType(Src.getValueType().getVectorElementType());
 
-  if (VT.isFixedLengthVector()) {
-    ContainerVT = getContainerForFixedLengthVector(DAG, VT);
-    CastVT = ContainerVT.changeVectorElementType(SrcVT.getVectorElementType());
-    Src = convertToScalableVector(DAG, CastVT, Src);
-  }
-
-  // First, round the floating-point value into a floating-point register with
-  // the current rounding mode.
+  // Round the floating-point value into a floating-point register with the
+  // current rounding mode.
   SDValue FOp = DAG.getNode(ISD::FRINT, DL, CastVT, Src);
 
-  // Finally, truncate the rounded floating point to an integer, rounding to
-  // zero.
-  SDValue Truncated =
-      DAG.getNode(ISD::FP_TO_SINT, DL, ContainerVT, FOp.getOperand(0));
-
-  if (VT.isScalableVector())
-    return Truncated;
-
-  return convertFromScalableVector(DAG, VT, Truncated);
+  // Truncate the rounded floating point to an integer, rounding to zero.
+  return DAG.getNode(ISD::FP_TO_SINT, DL, VT, FOp);
 }
 
 SDValue AArch64TargetLowering::LowerVectorINT_TO_FP(SDValue Op,
