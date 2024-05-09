@@ -7,14 +7,14 @@ define protected amdgpu_kernel void @sink_addr(ptr %in.ptr, i64 %in.idx0, i64 %i
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[IDX0:%.*]] = getelementptr [8192 x i64], ptr [[IN_PTR]], i64 [[IN_IDX0]], i64 [[IN_IDX1]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr [8192 x i64], ptr [[IN_PTR]], i64 [[IN_IDX0]], i64 0
-; CHECK-NEXT:    [[CONST11:%.*]] = getelementptr i8, ptr [[TMP0]], i64 2048
-; CHECK-NEXT:    [[IDX1:%.*]] = getelementptr i64, ptr [[CONST11]], i64 [[IN_IDX1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i64, ptr [[TMP0]], i64 [[IN_IDX1]]
+; CHECK-NEXT:    [[IDX1:%.*]] = getelementptr i8, ptr [[TMP3]], i64 2048
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr [8192 x i64], ptr [[IN_PTR]], i64 [[IN_IDX0]], i64 0
-; CHECK-NEXT:    [[CONST22:%.*]] = getelementptr i8, ptr [[TMP1]], i64 4096
-; CHECK-NEXT:    [[IDX2:%.*]] = getelementptr i64, ptr [[CONST22]], i64 [[IN_IDX1]]
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i64, ptr [[TMP1]], i64 [[IN_IDX1]]
+; CHECK-NEXT:    [[IDX2:%.*]] = getelementptr i8, ptr [[TMP4]], i64 4096
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr [8192 x i64], ptr [[IN_PTR]], i64 [[IN_IDX0]], i64 0
-; CHECK-NEXT:    [[CONST33:%.*]] = getelementptr i8, ptr [[TMP2]], i64 6144
-; CHECK-NEXT:    [[IDX3:%.*]] = getelementptr i64, ptr [[CONST33]], i64 [[IN_IDX1]]
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i64, ptr [[TMP2]], i64 [[IN_IDX1]]
+; CHECK-NEXT:    [[IDX3:%.*]] = getelementptr i8, ptr [[TMP7]], i64 6144
 ; CHECK-NEXT:    [[CMP0:%.*]] = icmp eq i64 [[IN_IDX0]], 0
 ; CHECK-NEXT:    br i1 [[CMP0]], label [[BB_1:%.*]], label [[END:%.*]]
 ; CHECK:       bb.1:
