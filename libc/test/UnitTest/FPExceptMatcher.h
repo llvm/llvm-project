@@ -51,7 +51,7 @@ private:
     bool firstPrinted = false;
     auto printWithPipe = [&](const char *name) {
       if (firstPrinted)
-        tlog << "| ";
+        tlog << " | ";
 
       tlog << name;
 
