@@ -2540,6 +2540,8 @@ def fsanitize_undefined_strip_path_components_EQ : Joined<["-"], "fsanitize-unde
 
 } // end -f[no-]sanitize* flags
 
+def fallow_argument_mismatch : Flag<["-"], "fallow-argument-mismatch">, Visibility<[FlangOption, FC1Option]>;
+
 def funsafe_math_optimizations : Flag<["-"], "funsafe-math-optimizations">,
   Group<f_Group>, Visibility<[ClangOption, CC1Option]>,
   HelpText<"Allow unsafe floating-point math optimizations which may decrease precision">,
