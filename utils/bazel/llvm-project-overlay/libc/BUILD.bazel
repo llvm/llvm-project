@@ -913,17 +913,9 @@ fma_common_hdrs = [
     "src/__support/FPUtil/generic/FMA.h",
 ]
 
-fma_platform_hdrs = [
-    "src/__support/FPUtil/x86_64/FMA.h",
-    "src/__support/FPUtil/aarch64/FMA.h",
-]
-
 libc_support_library(
     name = "__support_fputil_fma",
     hdrs = fma_common_hdrs,
-    # These are conditionally included and will #error out if the platform
-    # doesn't support FMA, so they can't be compiled on their own.
-    textual_hdrs = fma_platform_hdrs,
     deps = [
         ":__support_cpp_bit",
         ":__support_cpp_type_traits",
