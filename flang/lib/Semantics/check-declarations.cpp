@@ -116,11 +116,16 @@ private:
     }
     return msg;
   }
+  bool InModuleFile() const {
+    return FindModuleFileContaining(context_.FindScope(messages_.at())) !=
+        nullptr;
+  }
   template <typename... A> parser::Message *WarnIfNotInModuleFile(A &&...x) {
-    if (FindModuleFileContaining(context_.FindScope(messages_.at()))) {
+    if (InModuleFile()) {
       return nullptr;
+    } else {
+      return messages_.Say(std::forward<A>(x)...);
     }
-    return messages_.Say(std::forward<A>(x)...);
   }
   template <typename... A>
   parser::Message *WarnIfNotInModuleFile(parser::CharBlock source, A &&...x) {
@@ -133,6 +138,7 @@ private:
   void CheckGlobalName(const Symbol &);
   void CheckProcedureAssemblyName(const Symbol &symbol);
   void CheckExplicitSave(const Symbol &);
+  parser::Messages WhyNotInteroperableDerivedType(const Symbol &, bool isError);
   void CheckBindC(const Symbol &);
   void CheckBindCFunctionResult(const Symbol &);
   // Check functions for defined I/O procedures
@@ -183,6 +189,8 @@ private:
   // Collection of target dependent assembly names of external and BIND(C)
   // procedures.
   std::map<std::string, SymbolRef> procedureAssemblyNames_;
+  // Derived types that have been examined by WhyNotInteroperableDerivedType
+  UnorderedSymbolSet examinedByWhyNotInteroperableDerivedType_;
 };
 
 class DistinguishabilityHelper {
@@ -2822,11 +2830,129 @@ void CheckHelper::CheckProcedureAssemblyName(const Symbol &symbol) {
   }
 }
 
+parser::Messages CheckHelper::WhyNotInteroperableDerivedType(
+    const Symbol &symbol, bool isError) {
+  parser::Messages msgs;
+  if (examinedByWhyNotInteroperableDerivedType_.find(symbol) !=
+      examinedByWhyNotInteroperableDerivedType_.end()) {
+    return msgs;
+  }
+  isError |= symbol.attrs().test(Attr::BIND_C);
+  examinedByWhyNotInteroperableDerivedType_.insert(symbol);
+  if (const auto *derived{symbol.detailsIf<DerivedTypeDetails>()}) {
+    if (derived->sequence()) { // C1801
+      msgs.Say(symbol.name(),
+          "An interoperable derived type cannot have the SEQUENCE attribute"_err_en_US);
+    } else if (!derived->paramDecls().empty()) { // C1802
+      msgs.Say(symbol.name(),
+          "An interoperable derived type cannot have a type parameter"_err_en_US);
+    } else if (const auto *parent{
+                   symbol.scope()->GetDerivedTypeParent()}) { // C1803
+      if (isError) {
+        msgs.Say(symbol.name(),
+            "A derived type with the BIND attribute cannot be an extended derived type"_err_en_US);
+      } else {
+        bool interoperableParent{true};
+        if (parent->symbol()) {
+          auto bad{WhyNotInteroperableDerivedType(*parent->symbol(), false)};
+          if (bad.AnyFatalError()) {
+            auto &msg{msgs.Say(symbol.name(),
+                "The parent of an interoperable type is not interoperable"_err_en_US)};
+            bad.AttachTo(msg, parser::Severity::None);
+            interoperableParent = false;
+          }
+        }
+        if (interoperableParent) {
+          msgs.Say(symbol.name(),
+              "An interoperable type should not be an extended derived type"_warn_en_US);
+        }
+      }
+    }
+    const Symbol *parentComponent{symbol.scope()
+            ? derived->GetParentComponent(*symbol.scope())
+            : nullptr};
+    for (const auto &pair : *symbol.scope()) {
+      const Symbol &component{*pair.second};
+      if (&component == parentComponent) {
+        continue; // was checked above
+      }
+      if (IsProcedure(component)) { // C1804
+        msgs.Say(component.name(),
+            "An interoperable derived type cannot have a type bound procedure"_err_en_US);
+      } else if (IsAllocatableOrPointer(component)) { // C1806
+        msgs.Say(component.name(),
+            "An interoperable derived type cannot have a pointer or allocatable component"_err_en_US);
+      } else if (const auto *type{component.GetType()}) {
+        if (const auto *derived{type->AsDerived()}) {
+          auto bad{
+              WhyNotInteroperableDerivedType(derived->typeSymbol(), isError)};
+          if (bad.AnyFatalError()) {
+            auto &msg{msgs.Say(component.name(),
+                "Component '%s' of an interoperable derived type must have an interoperable type but does not"_err_en_US,
+                component.name())};
+            bad.AttachTo(msg, parser::Severity::None);
+          } else if (!derived->typeSymbol().GetUltimate().attrs().test(
+                         Attr::BIND_C)) {
+            auto &msg{
+                msgs.Say(component.name(),
+                        "Derived type of component '%s' of an interoperable derived type should have the BIND attribute"_warn_en_US,
+                        component.name())
+                    .Attach(derived->typeSymbol().name(),
+                        "Non-BIND(C) component type"_en_US)};
+            bad.AttachTo(msg, parser::Severity::None);
+          } else {
+            msgs.Annex(std::move(bad));
+          }
+        } else if (!IsInteroperableIntrinsicType(
+                       *type, context_.languageFeatures())) {
+          auto maybeDyType{evaluate::DynamicType::From(*type)};
+          if (type->category() == DeclTypeSpec::Logical) {
+            if (context_.ShouldWarn(common::UsageWarning::LogicalVsCBool)) {
+              msgs.Say(component.name(),
+                  "A LOGICAL component of an interoperable type should have the interoperable KIND=C_BOOL"_port_en_US);
+            }
+          } else if (type->category() == DeclTypeSpec::Character &&
+              maybeDyType && maybeDyType->kind() == 1) {
+            if (context_.ShouldWarn(common::UsageWarning::BindCCharLength)) {
+              msgs.Say(component.name(),
+                  "A CHARACTER component of an interoperable type should have length 1"_port_en_US);
+            }
+          } else {
+            msgs.Say(component.name(),
+                "Each component of an interoperable derived type must have an interoperable type"_err_en_US);
+          }
+        }
+      }
+      if (auto extents{
+              evaluate::GetConstantExtents(foldingContext_, &component)};
+          extents && evaluate::GetSize(*extents) == 0) {
+        msgs.Say(component.name(),
+            "An array component of an interoperable type must have at least one element"_err_en_US);
+      }
+    }
+    if (derived->componentNames().empty()) { // F'2023 C1805
+      if (context_.ShouldWarn(common::LanguageFeature::EmptyBindCDerivedType)) {
+        msgs.Say(symbol.name(),
+            "A derived type with the BIND attribute should not be empty"_port_en_US);
+      }
+    }
+  }
+  if (isError) {
+    for (auto &m : msgs.messages()) {
+      if (!m.IsFatal()) {
+        m.set_severity(parser::Severity::Error);
+      }
+    }
+  }
+  return msgs;
+}
+
 void CheckHelper::CheckBindC(const Symbol &symbol) {
   bool isExplicitBindC{symbol.attrs().test(Attr::BIND_C)};
   if (isExplicitBindC) {
-    CheckConflicting(symbol, Attr::BIND_C, Attr::PARAMETER);
     CheckConflicting(symbol, Attr::BIND_C, Attr::ELEMENTAL);
+    CheckConflicting(symbol, Attr::BIND_C, Attr::INTRINSIC);
+    CheckConflicting(symbol, Attr::BIND_C, Attr::PARAMETER);
   } else {
     // symbol must be interoperable (e.g., dummy argument of interoperable
     // procedure interface) but is not itself BIND(C).
@@ -2896,13 +3022,30 @@ void CheckHelper::CheckBindC(const Symbol &symbol) {
     }
     if (const auto *type{symbol.GetType()}) {
       const auto *derived{type->AsDerived()};
-      if (derived && !derived->typeSymbol().attrs().test(Attr::BIND_C)) {
-        if (auto *msg{messages_.Say(symbol.name(),
-                "The derived type of a BIND(C) object must also be BIND(C)"_err_en_US)}) {
-          msg->Attach(
-              derived->typeSymbol().name(), "Non-interoperable type"_en_US);
+      if (derived) {
+        if (derived->typeSymbol().attrs().test(Attr::BIND_C)) {
+        } else if (isExplicitBindC) {
+          if (auto *msg{messages_.Say(symbol.name(),
+                  "The derived type of a BIND(C) object must also be BIND(C)"_err_en_US)}) {
+            msg->Attach(derived->typeSymbol().name(), "Non-BIND(C) type"_en_US);
+          }
+          context_.SetError(symbol);
+        } else if (auto bad{WhyNotInteroperableDerivedType(
+                       derived->typeSymbol(), false)};
+                   !bad.empty()) {
+          if (auto *msg{messages_.Say(symbol.name(),
+                  "The derived type of an interoperable object must be interoperable, but is not"_err_en_US)}) {
+            msg->Attach(
+                derived->typeSymbol().name(), "Non-interoperable type"_en_US);
+            bad.AttachTo(*msg, parser::Severity::None);
+          }
+          context_.SetError(symbol);
+        } else {
+          if (auto *msg{messages_.Say(symbol.name(),
+                  "The derived type of an interoperable object should be BIND(C)"_warn_en_US)}) {
+            msg->Attach(derived->typeSymbol().name(), "Non-BIND(C) type"_en_US);
+          }
         }
-        context_.SetError(symbol);
       }
       if (type->IsAssumedType() || IsAssumedLengthCharacter(symbol)) {
         // ok
@@ -2945,17 +3088,20 @@ void CheckHelper::CheckBindC(const Symbol &symbol) {
           "An interoperable pointer must not be CONTIGUOUS"_err_en_US);
     }
   } else if (const auto *proc{symbol.detailsIf<ProcEntityDetails>()}) {
-    if (!proc->procInterface() ||
-        !proc->procInterface()->attrs().test(Attr::BIND_C)) {
-      if (proc->isDummy()) {
-        messages_.Say(symbol.name(),
-            "A dummy procedure to an interoperable procedure must also be interoperable"_err_en_US);
-        context_.SetError(symbol);
-      } else {
-        messages_.Say(symbol.name(),
-            "An interface name with BIND attribute must be specified if the BIND attribute is specified in a procedure declaration statement"_err_en_US);
-        context_.SetError(symbol);
+    if (!IsBindCProcedure(symbol) && proc->isDummy()) {
+      messages_.Say(symbol.name(),
+          "A dummy procedure to an interoperable procedure must also be interoperable"_err_en_US);
+      context_.SetError(symbol);
+    } else if (!proc->procInterface()) {
+      if (context_.ShouldWarn(
+              common::LanguageFeature::NonBindCInteroperability)) {
+        WarnIfNotInModuleFile(symbol.name(),
+            "An interface name with BIND attribute should be specified if the BIND attribute is specified in a procedure declaration statement"_warn_en_US);
       }
+    } else if (!proc->procInterface()->attrs().test(Attr::BIND_C)) {
+      messages_.Say(symbol.name(),
+          "An interface name with BIND attribute must be specified if the BIND attribute is specified in a procedure declaration statement"_err_en_US);
+      context_.SetError(symbol);
     }
   } else if (const auto *subp{symbol.detailsIf<SubprogramDetails>()}) {
     for (const Symbol *dummy : subp->dummyArgs()) {
@@ -2967,77 +3113,18 @@ void CheckHelper::CheckBindC(const Symbol &symbol) {
         context_.SetError(symbol);
       }
     }
-  } else if (const auto *derived{symbol.detailsIf<DerivedTypeDetails>()}) {
-    if (derived->sequence()) { // C1801
-      messages_.Say(symbol.name(),
-          "A derived type with the BIND attribute cannot have the SEQUENCE attribute"_err_en_US);
-      context_.SetError(symbol);
-    } else if (!derived->paramDecls().empty()) { // C1802
-      messages_.Say(symbol.name(),
-          "A derived type with the BIND attribute has type parameter(s)"_err_en_US);
-      context_.SetError(symbol);
-    } else if (symbol.scope()->GetDerivedTypeParent()) { // C1803
-      messages_.Say(symbol.name(),
-          "A derived type with the BIND attribute cannot extend from another derived type"_err_en_US);
-      context_.SetError(symbol);
-    } else {
-      for (const auto &pair : *symbol.scope()) {
-        const Symbol *component{&*pair.second};
-        if (IsProcedure(*component)) { // C1804
-          messages_.Say(component->name(),
-              "A derived type with the BIND attribute cannot have a type bound procedure"_err_en_US);
-          context_.SetError(symbol);
-        }
-        if (IsAllocatableOrPointer(*component)) { // C1806
-          messages_.Say(component->name(),
-              "A derived type with the BIND attribute cannot have a pointer or allocatable component"_err_en_US);
-          context_.SetError(symbol);
-        }
-        if (const auto *type{component->GetType()}) {
-          if (const auto *derived{type->AsDerived()}) {
-            if (!derived->typeSymbol().attrs().test(Attr::BIND_C)) {
-              if (auto *msg{messages_.Say(component->name(),
-                      "Component '%s' of an interoperable derived type must have the BIND attribute"_err_en_US,
-                      component->name())}) {
-                msg->Attach(derived->typeSymbol().name(),
-                    "Non-interoperable component type"_en_US);
-              }
-              context_.SetError(symbol);
-            }
-          } else if (!IsInteroperableIntrinsicType(
-                         *type, context_.languageFeatures())) {
-            auto maybeDyType{evaluate::DynamicType::From(*type)};
-            if (type->category() == DeclTypeSpec::Logical) {
-              if (context_.ShouldWarn(common::UsageWarning::LogicalVsCBool)) {
-                WarnIfNotInModuleFile(component->name(),
-                    "A LOGICAL component of a BIND(C) type should have the interoperable KIND=C_BOOL"_port_en_US);
-              }
-            } else if (type->category() == DeclTypeSpec::Character &&
-                maybeDyType && maybeDyType->kind() == 1) {
-              if (context_.ShouldWarn(common::UsageWarning::BindCCharLength)) {
-                WarnIfNotInModuleFile(component->name(),
-                    "A CHARACTER component of a BIND(C) type should have length 1"_port_en_US);
-              }
-            } else {
-              messages_.Say(component->name(),
-                  "Each component of an interoperable derived type must have an interoperable type"_err_en_US);
-              context_.SetError(symbol);
-            }
-          }
-        }
-        if (auto extents{
-                evaluate::GetConstantExtents(foldingContext_, component)};
-            extents && evaluate::GetSize(*extents) == 0) {
-          messages_.Say(component->name(),
-              "An array component of an interoperable type must have at least one element"_err_en_US);
-          context_.SetError(symbol);
-        }
+  } else if (symbol.has<DerivedTypeDetails>()) {
+    if (auto msgs{WhyNotInteroperableDerivedType(symbol, false)};
+        !msgs.empty()) {
+      bool anyFatal{msgs.AnyFatalError()};
+      if (msgs.AnyFatalError() ||
+          (!InModuleFile() &&
+              context_.ShouldWarn(
+                  common::LanguageFeature::NonBindCInteroperability))) {
+        context_.messages().Annex(std::move(msgs));
       }
-    }
-    if (derived->componentNames().empty()) { // F'2023 C1805
-      if (context_.ShouldWarn(common::LanguageFeature::EmptyBindCDerivedType)) {
-        WarnIfNotInModuleFile(symbol.name(),
-            "A derived type with the BIND attribute is empty"_port_en_US);
+      if (anyFatal) {
+        context_.SetError(symbol);
       }
     }
   }

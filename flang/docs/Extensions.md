@@ -114,6 +114,10 @@ end
   appear in real applications, but are still non-conforming under the
   incomplete tests in F'2023 15.4.3.4.5.
   These cases are compiled with optional portability warnings.
+* `PROCEDURE(), BIND(C) :: PROC` is not conforming, as there is no
+  procedure interface.  This compiler accepts it, since there is otherwise
+  no way to declare an interoperable dummy procedure with an arbitrary
+  interface like `void (*)()`.
 
 ## Extensions, deletions, and legacy features supported by default
 
@@ -345,6 +349,9 @@ end
   when necessary to the type of the result.
   An `OPTIONAL`, `POINTER`, or `ALLOCATABLE` argument after
   the first two cannot be converted, as it may not be present.
+* A derived type that meets (most of) the requirements of an interoperable
+  derived type can be used as such where an interoperable type is
+  required, with warnings, even if it lacks the BIND(C) attribute.
 
 ### Extensions supported when enabled by options
 

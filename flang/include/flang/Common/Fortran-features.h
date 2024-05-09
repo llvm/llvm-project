@@ -48,7 +48,8 @@ ENUM_CLASS(LanguageFeature, BackslashEscapes, OldDebugLines,
     ImpliedDoIndexScope, DistinctCommonSizes, OddIndexVariableRestrictions,
     IndistinguishableSpecifics, SubroutineAndFunctionSpecifics,
     EmptySequenceType, NonSequenceCrayPointee, BranchIntoConstruct,
-    BadBranchTarget, ConvertedArgument, HollerithPolymorphic, ListDirectedSize)
+    BadBranchTarget, ConvertedArgument, HollerithPolymorphic, ListDirectedSize,
+    NonBindCInteroperability)
 
 // Portability and suspicious usage warnings
 ENUM_CLASS(UsageWarning, Portability, PointerToUndefinable,
