@@ -460,7 +460,6 @@ public:
     StrOffsets.clear();
   }
 
-  /// Returns True if StrOffsets Section was modified.
   bool isStrOffsetsSectionModified() const {
     return StrOffsetSectionWasModified;
   }

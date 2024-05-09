@@ -129,7 +129,7 @@ private:
   uint64_t UnitSize{0};
   llvm::DenseSet<uint64_t> AllProcessed;
   DWARF5AcceleratorTable &DebugNamesTable;
-  // Unordered maps to handle name collision if output DWO directory is
+  // Unordered map to handle name collision if output DWO directory is
   // specified.
   std::unordered_map<std::string, uint32_t> NameToIndexMap;
 
@@ -387,13 +387,13 @@ public:
   bool deleteValue(DIEValueList *Die, dwarf::Attribute Attribute) {
     return Die->deleteValue(Attribute);
   }
-  /// Updates DWO Name and Compilation direcotry for Skeleton CU \p Unit.
+  /// Updates DWO Name and Compilation directory for Skeleton CU \p Unit.
   std::string updateDWONameCompDir(DebugStrOffsetsWriter &StrOffstsWriter,
                                    DebugStrWriter &StrWriter,
                                    DWARFUnit &SkeletonCU,
                                    std::optional<StringRef> DwarfOutputPath,
                                    std::optional<StringRef> DWONameToUse);
-  /// Updates DWO Name and Compilation direcotry for Type Units.
+  /// Updates DWO Name and Compilation directory for Type Units.
   void updateDWONameCompDirForTypes(DebugStrOffsetsWriter &StrOffstsWriter,
                                     DebugStrWriter &StrWriter, DWARFUnit &Unit,
                                     std::optional<StringRef> DwarfOutputPath,

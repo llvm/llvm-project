@@ -48,15 +48,12 @@ static std::string
 getDWOName(llvm::DWARFUnit &CU,
            std::unordered_map<std::string, uint32_t> &NameToIndexMap,
            std::optional<StringRef> &DwarfOutputPath) {
-  std::optional<uint64_t> DWOId = CU.getDWOId();
-  assert(DWOId && "DWO ID not found.");
-  (void)DWOId;
-
+  assert(CU.getDWOId() && "DWO ID not found.");
   std::string DWOName = dwarf::toString(
       CU.getUnitDIE().find({dwarf::DW_AT_dwo_name, dwarf::DW_AT_GNU_dwo_name}),
       "");
   assert(!DWOName.empty() &&
-         "DW_AT_dwo_name/DW_AT_GNU_dwo_name does not exists.");
+         "DW_AT_dwo_name/DW_AT_GNU_dwo_name does not exist.");
   if (DwarfOutputPath) {
     DWOName = std::string(sys::path::filename(DWOName));
     auto Iter = NameToIndexMap.find(DWOName);

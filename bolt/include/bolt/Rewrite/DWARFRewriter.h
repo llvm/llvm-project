@@ -211,8 +211,7 @@ public:
     std::unique_ptr<BinaryContext> TmpBC;
     std::unique_ptr<MCStreamer> Streamer;
     std::unique_ptr<DWPStringPool> Strings;
-    /// This is used to store String sections for .dwo files if they are being
-    /// modified.
+    /// Used to store String sections for .dwo files if they are being modified.
     std::vector<std::unique_ptr<DebugBufferVector>> StrSections;
     const MCObjectFileInfo *MCOFI = nullptr;
     const DWARFUnitIndex *CUIndex = nullptr;
