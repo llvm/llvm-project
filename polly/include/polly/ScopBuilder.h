@@ -602,7 +602,7 @@ class ScopBuilder final {
   /// results will escape during execution of the loop nest. We basically check
   /// here that no other memory access can access the same memory as the
   /// potential reduction.
-  void checkForReductions(ScopStmt &Stmt, BasicBlock *Block);
+  void checkForReductions(ScopStmt &Stmt);
 
   /// Verify that all required invariant loads have been hoisted.
   ///
@@ -662,19 +662,6 @@ class ScopBuilder final {
   /// @return Return the context under which the access cannot be hoisted or a
   ///         nullptr if it cannot be hoisted at all.
   isl::set getNonHoistableCtx(MemoryAccess *Access, isl::union_map Writes);
-
-  /// Collect loads which might form a reduction chain with @p StoreMA.
-  ///
-  /// Check if the stored value for @p StoreMA is a binary operator with one or
-  /// two loads as operands. If the binary operand is commutative & associative,
-  /// used only once (by @p StoreMA) and its load operands are also used only
-  /// once, we have found a possible reduction chain. It starts at an operand
-  /// load and includes the binary operator and @p StoreMA.
-  ///
-  /// Note: We allow only one use to ensure the load and binary operator cannot
-  ///       escape this block or into any other store except @p StoreMA.
-  void collectCandidateReductionLoads(MemoryAccess *StoreMA,
-                                      SmallVectorImpl<MemoryAccess *> &Loads);
 
   /// Build the access relation of all memory accesses of @p Stmt.
   void buildAccessRelations(ScopStmt &Stmt);
