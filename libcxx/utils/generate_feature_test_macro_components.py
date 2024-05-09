@@ -398,6 +398,23 @@ feature_test_macros = [
             "unimplemented": True,
         },
         {
+            "name": "__cpp_lib_containers_ranges",
+            "values": {"c++23": 202202},
+            "headers": [
+                "deque",
+                "forward_list",
+                "list",
+                "map",
+                "queue",
+                "set",
+                "stack",
+                "string",
+                "unordered_map",
+                "unordered_set",
+                "vector",
+            ],
+        },
+        {
             "name": "__cpp_lib_copyable_function",
             "values": {"c++26": 202306},  # P2548R6 copyable_function
             "headers": ["functional"],
@@ -992,20 +1009,7 @@ feature_test_macros = [
         {
             "name": "__cpp_lib_ranges_to_container",
             "values": {"c++23": 202202},
-            "headers": [
-                "deque",
-                "forward_list",
-                "list",
-                "map",
-                "queue",
-                "ranges",
-                "set",
-                "stack",
-                "string",
-                "unordered_map",
-                "unordered_set",
-                "vector",
-            ],
+            "headers": ["ranges"],
         },
         {
             "name": "__cpp_lib_ranges_zip",
@@ -1041,7 +1045,6 @@ feature_test_macros = [
             "name": "__cpp_lib_reference_wrapper",
             "values": {"c++26": 202403}, # P2944R3: Comparisons for reference_wrapper
             "headers": ["functional"],
-            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_remove_cvref",

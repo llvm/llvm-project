@@ -12,6 +12,7 @@ set(core_files
   stdarg.h
   __stdarg___gnuc_va_list.h
   __stdarg___va_copy.h
+  __stdarg_header_macro.h
   __stdarg_va_arg.h
   __stdarg_va_copy.h
   __stdarg_va_list.h
@@ -19,6 +20,7 @@ set(core_files
   stdbool.h
   stdckdint.h
   stddef.h
+  __stddef_header_macro.h
   __stddef_max_align_t.h
   __stddef_null.h
   __stddef_nullptr_t.h

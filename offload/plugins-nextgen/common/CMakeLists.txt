@@ -46,7 +46,6 @@ endif()
 
 # If we have OMPT enabled include it in the list of sources.
 if (OMPT_TARGET_DEFAULT AND LIBOMPTARGET_OMPT_SUPPORT)
-  target_sources(PluginCommon PRIVATE OMPT/OmptCallback.cpp)
   target_include_directories(PluginCommon PRIVATE OMPT)
 endif()
 
@@ -66,6 +65,4 @@ target_include_directories(PluginCommon PUBLIC
   ${LIBOMPTARGET_INCLUDE_DIR}
 )
 
-set_target_properties(PluginCommon PROPERTIES
-  POSITION_INDEPENDENT_CODE ON
-  CXX_VISIBILITY_PRESET protected)
+set_target_properties(PluginCommon PROPERTIES POSITION_INDEPENDENT_CODE ON)

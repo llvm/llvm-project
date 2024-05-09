@@ -25,6 +25,7 @@
 #include "llvm/CodeGen/GlobalISel/InlineAsmLowering.h"
 #include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/IntrinsicsR600.h"
 #include "llvm/IR/MDBuilder.h"
@@ -163,6 +164,15 @@ GCNSubtarget::initializeSubtargetDependencies(const Triple &TT,
                     << TargetID.getSramEccSetting() << '\n');
 
   return *this;
+}
+
+void GCNSubtarget::checkSubtargetFeatures(const Function &F) const {
+  LLVMContext &Ctx = F.getContext();
+  if (hasFeature(AMDGPU::FeatureWavefrontSize32) ==
+      hasFeature(AMDGPU::FeatureWavefrontSize64)) {
+    Ctx.diagnose(DiagnosticInfoUnsupported(
+        F, "must specify exactly one of wavefrontsize32 and wavefrontsize64"));
+  }
 }
 
 AMDGPUSubtarget::AMDGPUSubtarget(const Triple &TT) : TargetTriple(TT) {}

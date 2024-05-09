@@ -2543,6 +2543,18 @@ void OpenACCClauseProfiler::VisitFirstPrivateClause(
     Profiler.VisitStmt(E);
 }
 
+void OpenACCClauseProfiler::VisitAttachClause(
+    const OpenACCAttachClause &Clause) {
+  for (auto *E : Clause.getVarList())
+    Profiler.VisitStmt(E);
+}
+
+void OpenACCClauseProfiler::VisitDevicePtrClause(
+    const OpenACCDevicePtrClause &Clause) {
+  for (auto *E : Clause.getVarList())
+    Profiler.VisitStmt(E);
+}
+
 void OpenACCClauseProfiler::VisitNoCreateClause(
     const OpenACCNoCreateClause &Clause) {
   for (auto *E : Clause.getVarList())
@@ -2560,6 +2572,11 @@ void OpenACCClauseProfiler::VisitVectorLengthClause(
   assert(Clause.hasIntExpr() &&
          "vector_length clause requires a valid int expr");
   Profiler.VisitStmt(Clause.getIntExpr());
+}
+
+void OpenACCClauseProfiler::VisitAsyncClause(const OpenACCAsyncClause &Clause) {
+  if (Clause.hasIntExpr())
+    Profiler.VisitStmt(Clause.getIntExpr());
 }
 } // namespace
 
