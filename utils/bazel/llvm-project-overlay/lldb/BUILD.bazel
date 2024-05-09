@@ -749,6 +749,10 @@ genrule(
     cmd = "sed 's/^/_/g' $(SRCS) > $(OUTS)",
 )
 
+# Create a shared library using linkshared=True for liblldb. This uses
+# cc_binary instead of cc_shared_library since the latter expects you to
+# re-export all transitive dependencies vs them being relinked into other
+# binaries.
 cc_binary(
     name = "lldb{}".format(PACKAGE_VERSION),
     additional_linker_inputs = select({
@@ -776,8 +780,11 @@ cc_binary(
     ],
 )
 
+# cc_binary targets using linkshared=True to build a shared library cannot be
+# imported directly and instead need to be referenced indirectly through
+# cc_import
 cc_import(
-    name = "liblldb_wrapper",
+    name = "liblldb.wrapper",
     shared_library = "lldb{}".format(PACKAGE_VERSION),
 )
 
@@ -814,7 +821,7 @@ cc_binary(
     deps = [
         ":APIHeaders",
         ":Host",
-        ":liblldb_wrapper",
+        ":liblldb.wrapper",
         ":lldb_options_inc_gen",
         "//llvm:Option",
         "//llvm:Support",
