@@ -2962,50 +2962,6 @@ void ARMTargetLowering::HandleByVal(CCState *State, unsigned &Size,
   Size = std::max<int>(Size - Excess, 0);
 }
 
-/// MatchingStackOffset - Return true if the given stack call argument is
-/// already available in the same position (relatively) of the caller's
-/// incoming argument stack.
-static
-bool MatchingStackOffset(SDValue Arg, unsigned Offset, ISD::ArgFlagsTy Flags,
-                         MachineFrameInfo &MFI, const MachineRegisterInfo *MRI,
-                         const TargetInstrInfo *TII) {
-  unsigned Bytes = Arg.getValueSizeInBits() / 8;
-  int FI = std::numeric_limits<int>::max();
-  if (Arg.getOpcode() == ISD::CopyFromReg) {
-    Register VR = cast<RegisterSDNode>(Arg.getOperand(1))->getReg();
-    if (!VR.isVirtual())
-      return false;
-    MachineInstr *Def = MRI->getVRegDef(VR);
-    if (!Def)
-      return false;
-    if (!Flags.isByVal()) {
-      if (!TII->isLoadFromStackSlot(*Def, FI))
-        return false;
-    } else {
-      return false;
-    }
-  } else if (LoadSDNode *Ld = dyn_cast<LoadSDNode>(Arg)) {
-    if (Flags.isByVal())
-      // ByVal argument is passed in as a pointer but it's now being
-      // dereferenced. e.g.
-      // define @foo(%struct.X* %A) {
-      //   tail call @bar(%struct.X* byval %A)
-      // }
-      return false;
-    SDValue Ptr = Ld->getBasePtr();
-    FrameIndexSDNode *FINode = dyn_cast<FrameIndexSDNode>(Ptr);
-    if (!FINode)
-      return false;
-    FI = FINode->getIndex();
-  } else
-    return false;
-
-  assert(FI != std::numeric_limits<int>::max());
-  if (!MFI.isFixedObjectIndex(FI))
-    return false;
-  return Offset == MFI.getObjectOffset(FI) && Bytes == MFI.getObjectSize(FI);
-}
-
 /// IsEligibleForTailCallOptimization - Check whether the call is eligible
 /// for tail call optimization. Targets which want to do tail call
 /// optimization should implement this function. Note that this function also
@@ -3130,63 +3086,16 @@ bool ARMTargetLowering::IsEligibleForTailCallOptimization(
 
   // If the callee takes no arguments then go on to check the results of the
   // call.
-  if (!Outs.empty()) {
-    if (CCInfo.getStackSize()) {
-      // Check if the arguments are already laid out in the right way as
-      // the caller's fixed stack objects.
-      MachineFrameInfo &MFI = MF.getFrameInfo();
-      const MachineRegisterInfo *MRI = &MF.getRegInfo();
-      const TargetInstrInfo *TII = Subtarget->getInstrInfo();
-      for (unsigned i = 0, realArgIdx = 0, e = ArgLocs.size();
-           i != e;
-           ++i, ++realArgIdx) {
-        CCValAssign &VA = ArgLocs[i];
-        EVT RegVT = VA.getLocVT();
-        SDValue Arg = OutVals[realArgIdx];
-        ISD::ArgFlagsTy Flags = Outs[realArgIdx].Flags;
-        if (VA.getLocInfo() == CCValAssign::Indirect) {
-          LLVM_DEBUG(dbgs() << "false (indirect arg)\n");
-          return false;
-        }
-        if (VA.needsCustom() && (RegVT == MVT::f64 || RegVT == MVT::v2f64)) {
-          // f64 and vector types are split into multiple registers or
-          // register/stack-slot combinations.  The types will not match
-          // the registers; give up on memory f64 refs until we figure
-          // out what to do about this.
-          if (!VA.isRegLoc()) {
-            LLVM_DEBUG(dbgs() << "false (f64 not in register)\n");
-            return false;
-          }
-          if (!ArgLocs[++i].isRegLoc()) {
-            LLVM_DEBUG(dbgs() << "false (f64 not in register, second half)\n");
-            return false;
-          }
-          if (RegVT == MVT::v2f64) {
-            if (!ArgLocs[++i].isRegLoc()) {
-              LLVM_DEBUG(dbgs() << "false (v2f64 not in register)\n");
-              return false;
-            }
-            if (!ArgLocs[++i].isRegLoc()) {
-              LLVM_DEBUG(dbgs() << "false (v2f64 not in register, second half)\n");
-              return false;
-            }
-          }
-        } else if (!VA.isRegLoc()) {
-          if (!MatchingStackOffset(Arg, VA.getLocMemOffset(), Flags,
-                                   MFI, MRI, TII)) {
-            LLVM_DEBUG(dbgs() << "false (non-matching stack offset)\n");
-            return false;
-          }
-        }
-      }
-    }
-
-    const MachineRegisterInfo &MRI = MF.getRegInfo();
-    if (!parametersInCSRMatch(MRI, CallerPreserved, ArgLocs, OutVals)) {
-      LLVM_DEBUG(dbgs() << "false (parameters in CSRs do not match)\n");
-      return false;
-    }
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
+  if (!parametersInCSRMatch(MRI, CallerPreserved, ArgLocs, OutVals)) {
+    LLVM_DEBUG(dbgs() << "false (parameters in CSRs do not match)\n");
+    return false;
   }
+
+  // If the stack arguments for this call do not fit into our own save area then
+  // the call cannot be made tail.
+  if (CCInfo.getStackSize() > AFI_Caller->getArgumentStackSize())
+    return false;
 
   LLVM_DEBUG(dbgs() << "true\n");
   return true;
