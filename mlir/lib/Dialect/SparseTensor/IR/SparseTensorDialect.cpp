@@ -17,6 +17,7 @@
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
+#include "mlir/Dialect/Complex/IR/Complex.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/DialectImplementation.h"
@@ -663,6 +664,8 @@ Attribute SparseTensorEncodingAttr::parse(AsmParser &parser, Type type) {
         explicitVal = result;
       } else if (auto result = llvm::dyn_cast<IntegerAttr>(attr)) {
         explicitVal = result;
+      } else if (auto result = llvm::dyn_cast<complex::NumberAttr>(attr)) {
+        explicitVal = result;
       } else {
         parser.emitError(parser.getNameLoc(),
                          "expected a numeric value for explicitVal");
@@ -677,6 +680,8 @@ Attribute SparseTensorEncodingAttr::parse(AsmParser &parser, Type type) {
       if (auto result = llvm::dyn_cast<FloatAttr>(attr)) {
         implicitVal = result;
       } else if (auto result = llvm::dyn_cast<IntegerAttr>(attr)) {
+        implicitVal = result;
+      } else if (auto result = llvm::dyn_cast<complex::NumberAttr>(attr)) {
         implicitVal = result;
       } else {
         parser.emitError(parser.getNameLoc(),
