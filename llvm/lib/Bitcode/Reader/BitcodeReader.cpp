@@ -2344,13 +2344,14 @@ Error BitcodeReader::parseAttributeGroupBlock() {
 
           SmallVector<ConstantRange, 2> Val;
           unsigned RangeSize = Record[++i];
+          unsigned BitWidth = Record[++i];
           if (i + 2 * RangeSize >= e)
             return error("Incomplete constant range list");
           for (unsigned Idx = 0; Idx < RangeSize; ++Idx) {
             int64_t Start = BitcodeReader::decodeSignRotatedValue(Record[++i]);
             int64_t End = BitcodeReader::decodeSignRotatedValue(Record[++i]);
-            Val.push_back(
-                ConstantRange(APInt(64, Start, true), APInt(64, End, true)));
+            Val.push_back(ConstantRange(APInt(BitWidth, Start, true),
+                                        APInt(BitWidth, End, true)));
           }
           B.addConstantRangeListAttr(Kind, Val);
         } else {
