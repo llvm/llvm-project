@@ -244,3 +244,61 @@ define <2 x i32> @insertelt_extra_use2(<2 x i32> %x, ptr %p) {
   %r = ptrtoint <2 x ptr> %i to <2 x i32>
   ret <2 x i32> %r
 }
+
+define i32 @ptr_add_in_int(i32 %x, i32 %y) {
+; CHECK-LABEL: @ptr_add_in_int(
+; CHECK-NEXT:    [[PTR:%.*]] = inttoptr i32 [[X:%.*]] to ptr
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds i8, ptr [[PTR]], i32 [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = ptrtoint ptr [[P2]] to i32
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %ptr = inttoptr i32 %x to ptr
+  %p2 = getelementptr inbounds i8, ptr %ptr, i32 %y
+  %r = ptrtoint ptr %p2 to i32
+  ret i32 %r
+}
+
+define i32 @ptr_add_in_int_const(i32 %x) {
+; CHECK-LABEL: @ptr_add_in_int_const(
+; CHECK-NEXT:    [[PTR:%.*]] = inttoptr i32 [[X:%.*]] to ptr
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds i8, ptr [[PTR]], i32 4096
+; CHECK-NEXT:    [[R:%.*]] = ptrtoint ptr [[P2]] to i32
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %ptr = inttoptr i32 %x to ptr
+  %p2 = getelementptr inbounds i8, ptr %ptr, i32 4096
+  %r = ptrtoint ptr %p2 to i32
+  ret i32 %r
+}
+
+declare void @use_ptr(ptr)
+
+define i32 @ptr_add_in_int_extra_use1(i32 %x) {
+; CHECK-LABEL: @ptr_add_in_int_extra_use1(
+; CHECK-NEXT:    [[PTR:%.*]] = inttoptr i32 [[X:%.*]] to ptr
+; CHECK-NEXT:    call void @use_ptr(ptr [[PTR]])
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds i8, ptr [[PTR]], i32 4096
+; CHECK-NEXT:    [[R:%.*]] = ptrtoint ptr [[P2]] to i32
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %ptr = inttoptr i32 %x to ptr
+  call void @use_ptr(ptr %ptr)
+  %p2 = getelementptr inbounds i8, ptr %ptr, i32 4096
+  %r = ptrtoint ptr %p2 to i32
+  ret i32 %r
+}
+
+define i32 @ptr_add_in_int_extra_use2(i32 %x) {
+; CHECK-LABEL: @ptr_add_in_int_extra_use2(
+; CHECK-NEXT:    [[PTR:%.*]] = inttoptr i32 [[X:%.*]] to ptr
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds i8, ptr [[PTR]], i32 4096
+; CHECK-NEXT:    call void @use_ptr(ptr nonnull [[P2]])
+; CHECK-NEXT:    [[R:%.*]] = ptrtoint ptr [[P2]] to i32
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %ptr = inttoptr i32 %x to ptr
+  %p2 = getelementptr inbounds i8, ptr %ptr, i32 4096
+  call void @use_ptr(ptr %p2)
+  %r = ptrtoint ptr %p2 to i32
+  ret i32 %r
+}
