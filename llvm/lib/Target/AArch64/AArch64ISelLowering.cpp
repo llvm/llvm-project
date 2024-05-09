@@ -1871,9 +1871,11 @@ bool AArch64TargetLowering::shouldExpandCttzElements(EVT VT) const {
   if (!Subtarget->hasSVEorSME())
     return true;
 
-  // We can only use the BRKB + CNTP sequence with legal predicate types.
+  // We can only use the BRKB + CNTP sequence with legal predicate types. We can
+  // also support fixed-width predicates.
   return VT != MVT::nxv16i1 && VT != MVT::nxv8i1 && VT != MVT::nxv4i1 &&
-         VT != MVT::nxv2i1;
+         VT != MVT::nxv2i1 && VT != MVT::v16i1 && VT != MVT::v8i1 &&
+         VT != MVT::v4i1 && VT != MVT::v2i1;
 }
 
 void AArch64TargetLowering::addTypeForFixedLengthSVE(MVT VT) {
@@ -5838,9 +5840,21 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     return SDValue();
   }
   case Intrinsic::experimental_cttz_elts: {
-    SDValue NewCttzElts =
-        DAG.getNode(AArch64ISD::CTTZ_ELTS, dl, MVT::i64, Op.getOperand(1));
+    SDValue CttzOp = Op.getOperand(1);
+    EVT VT = CttzOp.getValueType();
 
+    if (!VT.isScalableVector()) {
+      // Retrieve original fixed-width vector from ISD::TRUNCATE Node.
+      assert(CttzOp.getOpcode() == ISD::TRUNCATE && "Expected ISD::TRUNCATE!");
+      SDValue FixedWidthVec = CttzOp.getOperand(0);
+
+      // We can use SVE instructions to lower this intrinsic by first creating
+      // an SVE predicate register mask from the fixed-width vector.
+      CttzOp = convertFixedMaskToScalableVector(FixedWidthVec, DAG);
+    }
+
+    SDValue NewCttzElts =
+        DAG.getNode(AArch64ISD::CTTZ_ELTS, dl, MVT::i64, CttzOp);
     return DAG.getZExtOrTrunc(NewCttzElts, dl, Op.getValueType());
   }
   }
