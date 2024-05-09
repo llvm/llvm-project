@@ -5550,8 +5550,7 @@ void DeclarationVisitor::Post(const parser::TypeParamDefStmt &x) {
       SetType(name, *type);
       if (auto &init{
               std::get<std::optional<parser::ScalarIntConstantExpr>>(decl.t)}) {
-        if (auto maybeExpr{EvaluateNonPointerInitializer(
-                *symbol, *init, init->thing.thing.thing.value().source)}) {
+        if (auto maybeExpr{AnalyzeExpr(context(), *init)}) {
           if (auto *intExpr{std::get_if<SomeIntExpr>(&maybeExpr->u)}) {
             symbol->get<TypeParamDetails>().set_init(std::move(*intExpr));
           }
