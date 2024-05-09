@@ -461,7 +461,9 @@ void targetFreeExplicit(void *DevicePtr, int DeviceNum, int Kind,
   if (!DeviceOrErr)
     FATAL_MESSAGE(DeviceNum, "%s", toString(DeviceOrErr.takeError()).c_str());
 
-  DeviceOrErr->deleteData(DevicePtr, Kind);
+  if (DeviceOrErr->deleteData(DevicePtr, Kind) == OFFLOAD_FAIL)
+    FATAL_MESSAGE(DeviceNum, "%s", "Failed to deallocate device ptr");
+
   DP("omp_target_free deallocated device ptr\n");
 }
 

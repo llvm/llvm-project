@@ -115,6 +115,11 @@ LLVMTypeConverter::LLVMTypeConverter(mlir::ModuleOp module, bool applyTBAA,
     return mlir::LLVM::LLVMStructType::getLiteral(
         none.getContext(), std::nullopt, /*isPacked=*/false);
   });
+  addConversion([&](fir::DummyScopeType dscope) {
+    // DummyScopeType values must not have any uses after PreCGRewrite.
+    // Convert it here to i1 just in case it survives.
+    return mlir::IntegerType::get(&getContext(), 1);
+  });
   // FIXME: https://reviews.llvm.org/D82831 introduced an automatic
   // materialization of conversion around function calls that is not working
   // well with fir lowering to llvm (incorrect llvm.mlir.cast are inserted).

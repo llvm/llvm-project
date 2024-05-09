@@ -480,7 +480,7 @@ public:
   }
   void removeCVRQualifiers(unsigned mask) {
     assert(!(mask & ~CVRMask) && "bitmask contains non-CVR bits");
-    Mask &= ~mask;
+    Mask &= ~static_cast<uint64_t>(mask);
   }
   void removeCVRQualifiers() {
     removeCVRQualifiers(CVRMask);
@@ -609,7 +609,7 @@ public:
   }
   void removeFastQualifiers(unsigned mask) {
     assert(!(mask & ~FastMask) && "bitmask contains non-fast qualifier bits");
-    Mask &= ~mask;
+    Mask &= ~static_cast<uint64_t>(mask);
   }
   void removeFastQualifiers() {
     removeFastQualifiers(FastMask);
@@ -2377,6 +2377,10 @@ public:
   /// This is used to represent fixed-length RVV vectors created with the
   /// 'riscv_rvv_vector_bits' type attribute as VectorType.
   QualType getRVVEltType(const ASTContext &Ctx) const;
+
+  /// Returns the representative type for the element of a sizeless vector
+  /// builtin type.
+  QualType getSizelessVectorEltType(const ASTContext &Ctx) const;
 
   /// Types are partitioned into 3 broad categories (C99 6.2.5p1):
   /// object types, function types, and incomplete types.

@@ -262,3 +262,51 @@ func.func @truncf_vector_f32(%arg0 : vector<4xf32>) -> vector<4xbf16> {
 
 // CHECK-LABEL: @truncf_vector_f32
 // CHECK-NOT: arith.truncf
+
+// -----
+
+func.func @maxsi(%a: i32, %b: i32) -> i32 {
+  %result = arith.maxsi %a, %b : i32
+  return %result : i32
+}
+// CHECK-LABEL: func @maxsi
+// CHECK-SAME: %[[LHS:.*]]: i32, %[[RHS:.*]]: i32
+// CHECK-NEXT: %[[CMP:.*]] = arith.cmpi sgt, %[[LHS]], %[[RHS]] : i32
+// CHECK-NEXT: %[[RESULT:.*]] = arith.select %[[CMP]], %[[LHS]], %[[RHS]] : i32
+// CHECK-NEXT: return %[[RESULT]] : i32
+
+// -----
+
+func.func @minsi(%a: i32, %b: i32) -> i32 {
+  %result = arith.minsi %a, %b : i32
+  return %result : i32
+}
+// CHECK-LABEL: func @minsi
+// CHECK-SAME: %[[LHS:.*]]: i32, %[[RHS:.*]]: i32
+// CHECK-NEXT: %[[CMP:.*]] = arith.cmpi slt, %[[LHS]], %[[RHS]] : i32
+// CHECK-NEXT: %[[RESULT:.*]] = arith.select %[[CMP]], %[[LHS]], %[[RHS]] : i32
+// CHECK-NEXT: return %[[RESULT]] : i32
+
+// -----
+
+func.func @maxui(%a: i32, %b: i32) -> i32 {
+  %result = arith.maxui %a, %b : i32
+  return %result : i32
+}
+// CHECK-LABEL: func @maxui
+// CHECK-SAME: %[[LHS:.*]]: i32, %[[RHS:.*]]: i32
+// CHECK-NEXT: %[[CMP:.*]] = arith.cmpi ugt, %[[LHS]], %[[RHS]] : i32
+// CHECK-NEXT: %[[RESULT:.*]] = arith.select %[[CMP]], %[[LHS]], %[[RHS]] : i32
+// CHECK-NEXT: return %[[RESULT]] : i32
+
+// -----
+
+func.func @minui(%a: i32, %b: i32) -> i32 {
+  %result = arith.minui %a, %b : i32
+  return %result : i32
+}
+// CHECK-LABEL: func @minui
+// CHECK-SAME: %[[LHS:.*]]: i32, %[[RHS:.*]]: i32
+// CHECK-NEXT: %[[CMP:.*]] = arith.cmpi ult, %[[LHS]], %[[RHS]] : i32
+// CHECK-NEXT: %[[RESULT:.*]] = arith.select %[[CMP]], %[[LHS]], %[[RHS]] : i32
+// CHECK-NEXT: return %[[RESULT]] : i32

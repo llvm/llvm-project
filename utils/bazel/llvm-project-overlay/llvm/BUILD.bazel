@@ -22,6 +22,7 @@ licenses(["notice"])
 exports_files([
     "LICENSE.TXT",
     "cmake/modules/llvm-driver-template.cpp.in",
+    "include/llvm/BinaryFormat/Dwarf.def",
     "include/llvm/CodeGen/SDNodeProperties.td",
     "include/llvm/CodeGen/ValueTypes.td",
     "include/llvm/Frontend/Directive/DirectiveBase.td",

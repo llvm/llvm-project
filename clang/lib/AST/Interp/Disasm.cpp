@@ -200,7 +200,7 @@ LLVM_DUMP_METHOD void Descriptor::dump(llvm::raw_ostream &OS) const {
     OS << " primitive";
 
   if (isZeroSizeArray())
-    OS << " zero-size-arrary";
+    OS << " zero-size-array";
   else if (isUnknownSizeArray())
     OS << " unknown-size-array";
 

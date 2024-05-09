@@ -1485,45 +1485,45 @@ const Symbol *IsFunctionResultWithSameNameAsFunction(const Symbol &symbol) {
 }
 
 void LabelEnforce::Post(const parser::GotoStmt &gotoStmt) {
-  checkLabelUse(gotoStmt.v);
+  CheckLabelUse(gotoStmt.v);
 }
 void LabelEnforce::Post(const parser::ComputedGotoStmt &computedGotoStmt) {
   for (auto &i : std::get<std::list<parser::Label>>(computedGotoStmt.t)) {
-    checkLabelUse(i);
+    CheckLabelUse(i);
   }
 }
 
 void LabelEnforce::Post(const parser::ArithmeticIfStmt &arithmeticIfStmt) {
-  checkLabelUse(std::get<1>(arithmeticIfStmt.t));
-  checkLabelUse(std::get<2>(arithmeticIfStmt.t));
-  checkLabelUse(std::get<3>(arithmeticIfStmt.t));
+  CheckLabelUse(std::get<1>(arithmeticIfStmt.t));
+  CheckLabelUse(std::get<2>(arithmeticIfStmt.t));
+  CheckLabelUse(std::get<3>(arithmeticIfStmt.t));
 }
 
 void LabelEnforce::Post(const parser::AssignStmt &assignStmt) {
-  checkLabelUse(std::get<parser::Label>(assignStmt.t));
+  CheckLabelUse(std::get<parser::Label>(assignStmt.t));
 }
 
 void LabelEnforce::Post(const parser::AssignedGotoStmt &assignedGotoStmt) {
   for (auto &i : std::get<std::list<parser::Label>>(assignedGotoStmt.t)) {
-    checkLabelUse(i);
+    CheckLabelUse(i);
   }
 }
 
 void LabelEnforce::Post(const parser::AltReturnSpec &altReturnSpec) {
-  checkLabelUse(altReturnSpec.v);
+  CheckLabelUse(altReturnSpec.v);
 }
 
 void LabelEnforce::Post(const parser::ErrLabel &errLabel) {
-  checkLabelUse(errLabel.v);
+  CheckLabelUse(errLabel.v);
 }
 void LabelEnforce::Post(const parser::EndLabel &endLabel) {
-  checkLabelUse(endLabel.v);
+  CheckLabelUse(endLabel.v);
 }
 void LabelEnforce::Post(const parser::EorLabel &eorLabel) {
-  checkLabelUse(eorLabel.v);
+  CheckLabelUse(eorLabel.v);
 }
 
-void LabelEnforce::checkLabelUse(const parser::Label &labelUsed) {
+void LabelEnforce::CheckLabelUse(const parser::Label &labelUsed) {
   if (labels_.find(labelUsed) == labels_.end()) {
     SayWithConstruct(context_, currentStatementSourcePosition_,
         parser::MessageFormattedText{

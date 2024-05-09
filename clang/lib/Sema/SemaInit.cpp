@@ -6576,12 +6576,12 @@ void InitializationSequence::InitializeFrom(Sema &S,
 
     AddPassByIndirectCopyRestoreStep(DestType, ShouldCopy);
   } else if (ICS.isBad()) {
-    DeclAccessPair dap;
-    if (isLibstdcxxPointerReturnFalseHack(S, Entity, Initializer)) {
+    if (isLibstdcxxPointerReturnFalseHack(S, Entity, Initializer))
       AddZeroInitializationStep(Entity.getType());
-    } else if (Initializer->getType() == Context.OverloadTy &&
-               !S.ResolveAddressOfOverloadedFunction(Initializer, DestType,
-                                                     false, dap))
+    else if (DeclAccessPair Found;
+             Initializer->getType() == Context.OverloadTy &&
+             !S.ResolveAddressOfOverloadedFunction(Initializer, DestType,
+                                                   /*Complain=*/false, Found))
       SetFailed(InitializationSequence::FK_AddressOfOverloadFailed);
     else if (Initializer->getType()->isFunctionType() &&
              isExprAnUnaddressableFunction(S, Initializer))
@@ -8340,8 +8340,17 @@ void Sema::checkInitializerLifetime(const InitializedEntity &Entity,
             << Entity.getType()->isReferenceType() << CLE->getInitializer() << 2
             << DiagRange;
       } else {
-        Diag(DiagLoc, diag::warn_ret_local_temp_addr_ref)
-         << Entity.getType()->isReferenceType() << DiagRange;
+        // P2748R5: Disallow Binding a Returned Glvalue to a Temporary.
+        // [stmt.return]/p6: In a function whose return type is a reference,
+        // other than an invented function for std::is_convertible ([meta.rel]),
+        // a return statement that binds the returned reference to a temporary
+        // expression ([class.temporary]) is ill-formed.
+        if (getLangOpts().CPlusPlus26 && Entity.getType()->isReferenceType())
+          Diag(DiagLoc, diag::err_ret_local_temp_ref)
+              << Entity.getType()->isReferenceType() << DiagRange;
+        else
+          Diag(DiagLoc, diag::warn_ret_local_temp_addr_ref)
+              << Entity.getType()->isReferenceType() << DiagRange;
       }
       break;
     }
@@ -9632,6 +9641,8 @@ bool InitializationSequence::Diagnose(Sema &S,
   if (!Failed())
     return false;
 
+  QualType DestType = Entity.getType();
+
   // When we want to diagnose only one element of a braced-init-list,
   // we need to factor it out.
   Expr *OnlyArg;
@@ -9641,11 +9652,21 @@ bool InitializationSequence::Diagnose(Sema &S,
       OnlyArg = List->getInit(0);
     else
       OnlyArg = Args[0];
+
+    if (OnlyArg->getType() == S.Context.OverloadTy) {
+      DeclAccessPair Found;
+      if (FunctionDecl *FD = S.ResolveAddressOfOverloadedFunction(
+              OnlyArg, DestType.getNonReferenceType(), /*Complain=*/false,
+              Found)) {
+        if (Expr *Resolved =
+                S.FixOverloadedFunctionReference(OnlyArg, Found, FD).get())
+          OnlyArg = Resolved;
+      }
+    }
   }
   else
     OnlyArg = nullptr;
 
-  QualType DestType = Entity.getType();
   switch (Failure) {
   case FK_TooManyInitsForReference:
     // FIXME: Customize for the initialized entity?

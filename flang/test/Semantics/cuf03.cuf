@@ -89,3 +89,7 @@ module m
 
 
 end module
+
+program p
+  real, unified :: um ! ok
+end program

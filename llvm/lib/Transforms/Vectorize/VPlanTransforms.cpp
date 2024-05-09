@@ -75,8 +75,8 @@ void VPlanTransforms::VPInstructionsToVPRecipes(
           NewRecipe = new VPWidenGEPRecipe(GEP, Ingredient.operands());
         } else if (CallInst *CI = dyn_cast<CallInst>(Inst)) {
           NewRecipe = new VPWidenCallRecipe(
-              *CI, drop_end(Ingredient.operands()),
-              getVectorIntrinsicIDForCall(CI, &TLI), CI->getDebugLoc());
+              CI, Ingredient.operands(), getVectorIntrinsicIDForCall(CI, &TLI),
+              CI->getDebugLoc());
         } else if (SelectInst *SI = dyn_cast<SelectInst>(Inst)) {
           NewRecipe = new VPWidenSelectRecipe(*SI, Ingredient.operands());
         } else if (auto *CI = dyn_cast<CastInst>(Inst)) {
@@ -452,8 +452,7 @@ static void removeRedundantCanonicalIVs(VPlan &Plan) {
   for (VPRecipeBase &Phi : HeaderVPBB->phis()) {
     auto *WidenOriginalIV = dyn_cast<VPWidenIntOrFpInductionRecipe>(&Phi);
 
-    if (!WidenOriginalIV || !WidenOriginalIV->isCanonical() ||
-        WidenOriginalIV->getScalarType() != WidenNewIV->getScalarType())
+    if (!WidenOriginalIV || !WidenOriginalIV->isCanonical())
       continue;
 
     // Replace WidenNewIV with WidenOriginalIV if WidenOriginalIV provides
@@ -1341,8 +1340,6 @@ void VPlanTransforms::addExplicitVectorLength(VPlan &Plan) {
       auto *MemR = dyn_cast<VPWidenMemoryRecipe>(U);
       if (!MemR)
         continue;
-      assert(!MemR->isReverse() &&
-             "Reversed memory operations not supported yet.");
       VPValue *OrigMask = MemR->getMask();
       assert(OrigMask && "Unmasked widen memory recipe when folding tail");
       VPValue *NewMask = HeaderMask == OrigMask ? nullptr : OrigMask;
