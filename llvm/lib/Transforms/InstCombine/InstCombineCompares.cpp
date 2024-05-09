@@ -8075,6 +8075,7 @@ Instruction *InstCombinerImpl::visitFCmpInst(FCmpInst &I) {
         return replaceOperand(I, 0, X);
       if (Instruction *NV = FoldOpIntoSelect(I, cast<SelectInst>(LHSI)))
         return NV;
+      break;
     case Instruction::FSub:
       switch (Pred) {
       default:
@@ -8084,21 +8085,23 @@ Instruction *InstCombinerImpl::visitFCmpInst(FCmpInst &I) {
       case FCmpInst::FCMP_UNE:
       case FCmpInst::FCMP_OEQ:
       case FCmpInst::FCMP_OGE:
-      case FCmpInst::FCMP_OLE: {
+      case FCmpInst::FCMP_OLE:
+        // fsub x, y --> isnnan(x, y) && isninf(x, y)
         if (!LHSI->hasNoNaNs() && !LHSI->hasNoInfs() &&
             !isKnownNeverInfinity(LHSI->getOperand(1), /*Depth=*/0,
                                   getSimplifyQuery().getWithInstruction(&I)) &&
             !isKnownNeverInfinity(LHSI->getOperand(0), /*Depth=*/0,
                                   getSimplifyQuery().getWithInstruction(&I)))
           break;
-      }
-        LLVM_FALLTHROUGH;
+
+        [[fallthrough]];
       case FCmpInst::FCMP_OGT:
       case FCmpInst::FCMP_OLT:
       case FCmpInst::FCMP_ONE:
       case FCmpInst::FCMP_UEQ:
       case FCmpInst::FCMP_UGE:
       case FCmpInst::FCMP_ULE:
+        // fcmp pred (x - y), 0 --> fcmp pred x, y
         if (match(RHSC, m_AnyZeroFP()) &&
             match(LHSI, m_FSub(m_Value(X), m_Value(Y))) &&
             I.getFunction()->getDenormalMode(

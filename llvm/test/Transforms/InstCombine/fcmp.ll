@@ -2055,7 +2055,7 @@ define <8 x i1> @fcmp_une_fsub_const_nnan_vec(<8 x float> %x, <8 x float> %y) {
   ret <8 x i1> %cmp
 }
 
-define <8 x i1> @fcmp_ugt_fsub_const_vec_denormal_positive-zero(<8 x float> %x, <8 x float> %y) "denormal-fp-math"="positive-zero" {
+define <8 x i1> @fcmp_ugt_fsub_const_vec_denormal_positive-zero(<8 x float> %x, <8 x float> %y) "denormal-fp-math"="positive-zero,positive-zero" {
 ; CHECK-LABEL: @fcmp_ugt_fsub_const_vec_denormal_positive-zero(
 ; CHECK-NEXT:    [[FS:%.*]] = fsub <8 x float> [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    [[CMP:%.*]] = fcmp ogt <8 x float> [[FS]], zeroinitializer
@@ -2077,7 +2077,7 @@ define <8 x i1> @fcmp_ogt_fsub_const_vec_denormal_dynamic(<8 x float> %x, <8 x f
   ret <8 x i1> %cmp
 }
 
-define <8 x i1> @fcmp_ogt_fsub_const_vec_denormal_preserve-sign(<8 x float> %x, <8 x float> %y) "denormal-fp-math"="preserve-sign" {
+define <8 x i1> @fcmp_ogt_fsub_const_vec_denormal_preserve-sign(<8 x float> %x, <8 x float> %y) "denormal-fp-math"="preserve-sign,preserve-sign" {
 ; CHECK-LABEL: @fcmp_ogt_fsub_const_vec_denormal_preserve-sign(
 ; CHECK-NEXT:    [[FS:%.*]] = fsub <8 x float> [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    [[CMP:%.*]] = fcmp ogt <8 x float> [[FS]], zeroinitializer
