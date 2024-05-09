@@ -16,7 +16,7 @@
 
 // RUN: %{cxx} %{flags} %s -o %t.exe %{compile_flags} -g %{link_flags}
 // RUN: "%{lldb}" %t.exe -o "command source %S/breakpoint__lldb.cmd" \
-// RUN:   | grep -qFf %S/breakpoint__lldb.grep
+// RUN:   | grep -qEf %S/breakpoint__lldb.grep
 
 // <debugging>
 

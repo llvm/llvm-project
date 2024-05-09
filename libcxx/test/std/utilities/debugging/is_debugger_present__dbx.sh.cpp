@@ -8,16 +8,11 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20, c++23
 // UNSUPPORTED: libcpp-has-no-incomplete-debugging
-// REQUIRES: host-has-gdb-with-python
-// The Android libc++ tests are run on a non-Android host, connected to an
-// Android device over adb. gdb needs special support to make this work (e.g.
-// gdbclient.py, ndk-gdb.py, gdbserver), and the Android organization doesn't
-// support gdb anymore, favoring lldb instead.
-// UNSUPPORTED: android
-// XFAIL: LIBCXX-PICOLIBC-FIXME
+// REQUIRES: host-has-dbx
 
 // RUN: %{cxx} %{flags} %s -o %t.exe %{compile_flags} -g %{link_flags}
-// RUN: "%{gdb}" %t.exe -ex "source %S/is_debugger_present_with_debugger_gdb.py" --silent
+// RUN: "%{dbx}" -c %S/is_debugger_present__dbx.cmd %t.exe \
+// RUN:   | grep -qFf %S/is_debugger_present__dbx.grep
 
 // <debugging>
 
@@ -44,18 +39,11 @@ void MarkAsLive(Type&&) {}
 void StopForDebugger(void*) OPT_NONE;
 void StopForDebugger(void*) {}
 
-// Test with debugger attached:
-//   GDB command: `gdb is_debugger_present_with_debugger_gdb.sh -ex run -ex detach -ex quit --silent`
-
 void test() {
   static_assert(noexcept(std::is_debugger_present()));
 
   std::same_as<bool> decltype(auto) isDebuggerPresent = std::is_debugger_present();
-#if defined(TEST_HAS_NO_FILESYSTEM)
-  MarkAsLive(!isDebuggerPresent);
-#else
   MarkAsLive(isDebuggerPresent);
-#endif
   StopForDebugger(&isDebuggerPresent);
 }
 

@@ -8,7 +8,11 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20, c++23
 // UNSUPPORTED: libcpp-has-no-incomplete-debugging
-// XFAIL: LIBCXX-PICOLIBC-FIXME
+// REQUIRES: host-has-dbx
+
+// RUN: %{cxx} %{flags} %s -o %t.exe %{compile_flags} -g %{link_flags}
+// RUN: "%{dbx}" %t.exe -c %S/breakpoint_if_debugging__gdb.cmd \
+// RUN:   | grep -qEf %S/breakpoint_if_debugging__gdb.grep
 
 // <debugging>
 
@@ -16,6 +20,14 @@
 
 #include <debugging>
 
-// Test without debugger.
+void test() {
+  static_assert(noexcept(std::breakpoint_if_debugging()));
 
-static_assert(noexcept(std::breakpoint()));
+  std::breakpoint_if_debugging();
+}
+
+int main(int, char**) {
+  test();
+
+  return 0;
+}

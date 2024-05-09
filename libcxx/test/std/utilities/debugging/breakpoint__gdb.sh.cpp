@@ -16,7 +16,7 @@
 
 // RUN: %{cxx} %{flags} %s -o %t.exe %{compile_flags} -g %{link_flags}
 // RUN: "%{gdb}" %t.exe -ex "source %S/breakpoint__gdb.cmd" \
-// RUN:   | grep -qFf %S/breakpoint__gdb.grep
+// RUN:   | grep -qEf %S/breakpoint__gdb.grep
 
 // <debugging>
 

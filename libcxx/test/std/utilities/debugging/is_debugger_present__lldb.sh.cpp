@@ -8,11 +8,14 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20, c++23
 // UNSUPPORTED: libcpp-has-no-incomplete-debugging
-// REQUIRES: host-has-dbx
+// REQUIRES: host-has-lldb-with-python
+// The Android libc++ tests are run on a non-Android host, connected to an
+// Android device over adb.
+// UNSUPPORTED: android
+// XFAIL: LIBCXX-PICOLIBC-FIXME
 
 // RUN: %{cxx} %{flags} %s -o %t.exe %{compile_flags} -g %{link_flags}
-// RUN: "%{dbx}" -c %S/is_debugger_present_with_debugger_dbx.cmd %t.exe \
-// RUN:   | grep -qFf %S/is_debugger_present_with_debugger_dbx.grep
+// RUN: "%{lldb}" %t.exe -o "command script import %S/is_debugger_present__lldb.py"
 
 // <debugging>
 
@@ -39,11 +42,18 @@ void MarkAsLive(Type&&) {}
 void StopForDebugger(void*) OPT_NONE;
 void StopForDebugger(void*) {}
 
+// Test with debugger attached:
+//   LLDB command: `lldb "is_debugger_present_with_debugger__lldb.sh" -o run -o detach -o quit`
+
 void test() {
   static_assert(noexcept(std::is_debugger_present()));
 
   std::same_as<bool> decltype(auto) isDebuggerPresent = std::is_debugger_present();
+#if defined(TEST_HAS_NO_FILESYSTEM)
+  MarkAsLive(!isDebuggerPresent);
+#else
   MarkAsLive(isDebuggerPresent);
+#endif
   StopForDebugger(&isDebuggerPresent);
 }
 
