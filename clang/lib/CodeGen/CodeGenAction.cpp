@@ -116,7 +116,6 @@ BackendConsumer::BackendConsumer(BackendAction Action, DiagnosticsEngine &Diags,
                                  const TargetOptions &TargetOpts,
                                  const LangOptions &LangOpts,
                                  const CASOptions &CASOpts,
-				 const FileManager &FileMgr,
                                  const std::string &InFile,
                                  SmallVector<LinkModule, 4> LinkModules,
                                  std::unique_ptr<raw_pwrite_stream> OS,
@@ -125,7 +124,7 @@ BackendConsumer::BackendConsumer(BackendAction Action, DiagnosticsEngine &Diags,
                                  std::unique_ptr<raw_pwrite_stream> CasIDOS)
   : Diags(Diags), Action(Action), HeaderSearchOpts(HeaderSearchOpts),
   CodeGenOpts(CodeGenOpts), TargetOpts(TargetOpts), LangOpts(LangOpts),
-  CASOpts(CASOpts), FileMgr(FileMgr), AsmOutStream(std::move(OS)),
+  CASOpts(CASOpts), AsmOutStream(std::move(OS)),
   CasIDStream(std::move(CasIDOS)), Context(nullptr), FS(VFS),
   LLVMIRGeneration("irgen", "LLVM IR Generation Time"),
   LLVMIRGenerationRefCount(0),
@@ -148,14 +147,13 @@ BackendConsumer::BackendConsumer(BackendAction Action, DiagnosticsEngine &Diags,
                                  const TargetOptions &TargetOpts,
                                  const LangOptions &LangOpts,
                                  const CASOptions &CASOpts,
-				 const FileManager &FileMgr,
                                  llvm::Module *Module,
                                  SmallVector<LinkModule, 4> LinkModules,
                                  LLVMContext &C,
                                  CoverageSourceInfo *CoverageInfo)
   : Diags(Diags), Action(Action), HeaderSearchOpts(HeaderSearchOpts),
   CodeGenOpts(CodeGenOpts), TargetOpts(TargetOpts), LangOpts(LangOpts),
-  CASOpts(CASOpts), FileMgr(FileMgr), Context(nullptr), FS(VFS),
+  CASOpts(CASOpts), Context(nullptr), FS(VFS),
   LLVMIRGeneration("irgen", "LLVM IR Generation Time"),
   LLVMIRGenerationRefCount(0),
   Gen(CreateLLVMCodeGen(Diags, "", std::move(VFS), HeaderSearchOpts,
@@ -1050,7 +1048,6 @@ CodeGenAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
       CI.getHeaderSearchOpts(), CI.getPreprocessorOpts(), CI.getCodeGenOpts(),
       CI.getTargetOpts(), CI.getLangOpts(),
       CI.getCASOpts(), // MCCAS
-      CI.getFileManager(),
       std::string(InFile), std::move(LinkModules), std::move(OS), *VMContext,
       CoverageInfo, std::move(CasIDOS)));
 
@@ -1226,10 +1223,9 @@ void CodeGenAction::ExecuteAction() {
                          CI.getCodeGenOpts(), CI.getTargetOpts(),
                          CI.getLangOpts(),
                          CI.getCASOpts(),
-			 CI.getFileManager(),
                          TheModule.get(), std::move(LinkModules), *VMContext,
                          nullptr);
-  
+
   // Link in each pending link module.
   if (!CodeGenOpts.LinkBitcodePostopt && Result.LinkInModules(&*TheModule))
     return;
