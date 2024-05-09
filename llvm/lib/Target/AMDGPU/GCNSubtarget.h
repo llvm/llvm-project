@@ -121,6 +121,7 @@ protected:
   bool HasSMemRealTime = false;
   bool HasIntClamp = false;
   bool HasFmaMixInsts = false;
+  bool HasFmaMixBF16Insts = false;
   bool HasMovrel = false;
   bool HasVGPRIndexMode = false;
   bool HasScalarDwordx3Loads = false;
@@ -242,6 +243,7 @@ protected:
   bool HasVALUTransUseHazard = false;
   bool HasForceStoreSC0SC1 = false;
   bool HasForceVALUThrottle = false;
+  bool HasAshrPkInsts = false;
   bool HasMLMathInsts = false;
 
   bool RequiresCOV6 = false;
@@ -434,6 +436,10 @@ public:
 
   bool hasFmaMixInsts() const {
     return HasFmaMixInsts;
+  }
+
+  bool hasFmaMixBF16Insts() const {
+    return HasFmaMixBF16Insts;
   }
 
   bool hasCARRY() const {
@@ -1303,6 +1309,7 @@ public:
   bool hasPrngInst() const { return HasPrngInst; }
   bool hasPermlane16Swap() const { return HasPermlane16Swap; }
   bool hasPermlane32Swap() const { return HasPermlane32Swap; }
+  bool hasAshrPkInsts() const { return HasAshrPkInsts; }
 
   bool hasAddPC64Inst() const { return GFX12_10Insts; }
 
@@ -1413,6 +1420,9 @@ public:
 
   // \returns true if the target has V_PK_{MIN|MAX}3_{I|U}16 instructions.
   bool hasPkMinMax3Insts() const { return GFX12_10Insts; }
+
+  // \returns true if the target has V_PK_{MINIMUM|MAXIMUM}3_F16 instructions.
+  bool hasPkMinimumMaximum3F16Insts() const { return GFX12_10Insts; }
 
   // \returns true if target has V_CVT_PK_F16_F32 instruction.
   bool hasCvtPkF16Inst() const { return GFX12_10Insts; }

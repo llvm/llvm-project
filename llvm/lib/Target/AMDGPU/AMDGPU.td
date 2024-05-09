@@ -137,6 +137,12 @@ def FeatureFmaMixInsts : SubtargetFeature<"fma-mix-insts",
   "Has v_fma_mix_f32, v_fma_mixlo_f16, v_fma_mixhi_f16 instructions"
 >;
 
+def FeatureFmaMixBF16Insts : SubtargetFeature<"fma-mix-bf16-insts",
+  "HasFmaMixBF16Insts",
+  "true",
+  "Has v_fma_mix_f32_bf16, v_fma_mixlo_bf16, v_fma_mixhi_bf16 instructions"
+>;
+
 def FeatureSupportsXNACK : SubtargetFeature<"xnack-support",
   "SupportsXNACK",
   "true",
@@ -395,11 +401,30 @@ def FeatureFP6BF6ConversionScaleInsts : SubtargetFeature<"fp6bf6-cvt-scale-insts
   "Has fp6 and bf6 conversion scale instructions"
 >;
 
+def FeatureAshrPkInsts : SubtargetFeature<"ashr-pk-insts",
+  "HasAshrPkInsts",
+  "true",
+  "Has Arithmetic Shift Pack instructions"
+>;
+
+def FeatureF16BF16ToFP6BF6ConversionScaleInsts : SubtargetFeature<"f16bf16-to-fp6bf6-cvt-scale-insts",
+  "HasF16BF16ToFP6BF6ConversionScaleInsts",
+  "true",
+  "Has f16bf16 to fp6bf6 conversion scale instructions"
+>;
+
 def FeatureGFX950Insts : SubtargetFeature<"gfx950-insts",
   "GFX950Insts",
   "true",
   "Additional instructions for GFX950+",
-  [FeaturePermlane16Swap, FeaturePermlane32Swap, FeatureFP8ConversionScaleInsts, FeatureBF8ConversionScaleInsts, FeatureFP4ConversionScaleInsts, FeatureFP6BF6ConversionScaleInsts]
+  [FeaturePermlane16Swap,
+   FeaturePermlane32Swap,
+   FeatureAshrPkInsts,
+   FeatureFP8ConversionScaleInsts,
+   FeatureBF8ConversionScaleInsts,
+   FeatureFP4ConversionScaleInsts,
+   FeatureFP6BF6ConversionScaleInsts,
+   FeatureF16BF16ToFP6BF6ConversionScaleInsts]
 >;
 
 def FeatureGFX10Insts : SubtargetFeature<"gfx10-insts",
@@ -1776,8 +1801,11 @@ def FeatureISAVersion12_10 : FeatureSet<
    FeatureBF16TransInsts,
    FeatureBF16ConversionInsts,
    FeatureBF16PackedInsts,
+   FeatureF16BF16ToFP6BF6ConversionScaleInsts,
+   FeatureFmaMixBF16Insts,
    FeaturePrngInst,
    FeaturePermlane16Swap,
+   FeatureAshrPkInsts,
    FeatureSupportsSRAMECC,
    FeatureMaxHardClauseLength63
 ]>;
@@ -1823,6 +1851,7 @@ def FeatureISAVersion13 : FeatureSet<
    FeatureBF16PackedInsts,
    FeaturePrngInst,
    FeaturePermlane16Swap,
+   FeatureAshrPkInsts,
    FeatureSupportsSRAMECC,
    FeatureMLMathInsts]>;
 
@@ -2313,6 +2342,10 @@ def HasPkMinMax3Insts :
   Predicate<"Subtarget->hasPkMinMax3Insts()">,
   AssemblerPredicate<(any_of FeatureGFX12_10Insts)>;
 
+def HasPkMinimumMaximum3F16Insts :
+  Predicate<"Subtarget->hasPkMinimumMaximum3F16Insts()">,
+  AssemblerPredicate<(any_of FeatureGFX12_10Insts)>;
+
 def HasImageInsts : Predicate<"Subtarget->hasImageInsts()">,
   AssemblerPredicate<(all_of FeatureImageInsts)>;
 
@@ -2358,6 +2391,9 @@ def HasMovrel : Predicate<"Subtarget->hasMovrel()">,
 
 def HasFmaMixInsts : Predicate<"Subtarget->hasFmaMixInsts()">,
   AssemblerPredicate<(all_of FeatureFmaMixInsts)>;
+
+def HasFmaMixBF16Insts : Predicate<"Subtarget->hasFmaMixBF16Insts()">,
+  AssemblerPredicate<(all_of FeatureFmaMixBF16Insts)>;
 
 def HasDLInsts : Predicate<"Subtarget->hasDLInsts()">,
   AssemblerPredicate<(all_of FeatureDLInsts)>;
@@ -2516,6 +2552,9 @@ def HasFP4ConversionScaleInsts : Predicate<"Subtarget->HasFP4ConversionScaleInst
 def HasFP6BF6ConversionScaleInsts : Predicate<"Subtarget->HasFP6BF6ConversionScaleInsts()">,
   AssemblerPredicate<(all_of FeatureFP6BF6ConversionScaleInsts)>;
 
+def HasF16BF16ToFP6BF6ConversionScaleInsts : Predicate<"Subtarget->hasF16BF16ToFP6BF6ConversionScaleInsts()">,
+  AssemblerPredicate<(all_of FeatureF16BF16ToFP6BF6ConversionScaleInsts)>;
+
 def HasGDS : Predicate<"Subtarget->hasGDS()">;
 
 def HasGWS : Predicate<"Subtarget->hasGWS()">;
@@ -2530,6 +2569,9 @@ def HasScalarDwordx3Loads : Predicate<"Subtarget->hasScalarDwordx3Loads()">;
 def HasVectorPrefetch :
   Predicate<"Subtarget->hasVectorPrefetch()">,
   AssemblerPredicate<(any_of FeatureGFX12_10Insts)>;
+
+def HasAshrPkInsts : Predicate<"Subtarget->hasAshrPkInsts()">,
+  AssemblerPredicate<(all_of FeatureAshrPkInsts)>;
 
 // Include AMDGPU TD files
 include "SISchedule.td"

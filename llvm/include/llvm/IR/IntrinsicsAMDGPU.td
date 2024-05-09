@@ -3579,6 +3579,16 @@ def int_amdgcn_permlane32_swap : ClangBuiltin<"__builtin_amdgcn_permlane32_swap"
             [IntrNoMem, IntrConvergent, IntrWillReturn,
              ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<3>>, IntrNoCallback, IntrNoFree]>;
 
+// llvm.amdgcn.ashr_pk_i8_i32 int vdst, int src0, int src1 int src2
+def int_amdgcn_ashr_pk_i8_i32 : ClangBuiltin<"__builtin_amdgcn_ashr_pk_i8_i32">,
+  DefaultAttrsIntrinsic<[llvm_i16_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+            [IntrNoMem, IntrSpeculatable]>;
+
+// llvm.amdgcn.ashr_pk_u8_i32 int vdst, int src0, int src1 int src2
+def int_amdgcn_ashr_pk_u8_i32 : ClangBuiltin<"__builtin_amdgcn_ashr_pk_u8_i32">,
+  DefaultAttrsIntrinsic<[llvm_i16_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+            [IntrNoMem, IntrSpeculatable]>;
+
 //===----------------------------------------------------------------------===//
 // gfx1210 intrinsics
 // ===----------------------------------------------------------------------===//

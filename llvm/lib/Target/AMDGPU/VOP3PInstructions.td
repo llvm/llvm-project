@@ -114,10 +114,17 @@ defm V_PK_MIN_U16 : VOP3PInst<"v_pk_min_u16", VOP3P_Profile<VOP_V2I16_V2I16_V2I1
 defm V_PK_MAX_I16 : VOP3PInst<"v_pk_max_i16", VOP3P_Profile<VOP_V2I16_V2I16_V2I16>, smax>;
 defm V_PK_MAX_U16 : VOP3PInst<"v_pk_max_u16", VOP3P_Profile<VOP_V2I16_V2I16_V2I16>, umax>;
 
-let SubtargetPredicate = isGFX12Plus, ReadsModeReg = 0 in {
-defm V_PK_MAXIMUM_F16 : VOP3PInst<"v_pk_maximum_f16", VOP3P_Profile<VOP_V2F16_V2F16_V2F16>, fmaximum>;
-defm V_PK_MINIMUM_F16 : VOP3PInst<"v_pk_minimum_f16", VOP3P_Profile<VOP_V2F16_V2F16_V2F16>, fminimum>;
-} // End SubtargetPredicate = isGFX12Plus, ReadsModeReg = 0
+let ReadsModeReg = 0 in {
+let SubtargetPredicate = isGFX12Plus in {
+  defm V_PK_MAXIMUM_F16 : VOP3PInst<"v_pk_maximum_f16", VOP3P_Profile<VOP_V2F16_V2F16_V2F16>, fmaximum>;
+  defm V_PK_MINIMUM_F16 : VOP3PInst<"v_pk_minimum_f16", VOP3P_Profile<VOP_V2F16_V2F16_V2F16>, fminimum>;
+} // End SubtargetPredicate = isGFX12Plus
+
+let SubtargetPredicate = HasPkMinimumMaximum3F16Insts in {
+  defm V_PK_MAXIMUM3_F16 : VOP3PInst <"v_pk_maximum3_f16", VOP3_Profile<VOP_V2F16_V2F16_V2F16_V2F16, VOP3_PACKED>>;
+  defm V_PK_MINIMUM3_F16 : VOP3PInst <"v_pk_minimum3_f16", VOP3_Profile<VOP_V2F16_V2F16_V2F16_V2F16, VOP3_PACKED>>;
+} // End SubtargetPredicate = HasPkMinimumMaximum3F16Insts
+} // End ReadsModeReg = 0
 }
 
 defm V_PK_SUB_U16 : VOP3PInst<"v_pk_sub_u16", VOP3P_Profile<VOP_V2I16_V2I16_V2I16>>;
@@ -292,6 +299,22 @@ defm V_FMA_MIXHI_F16 : VOP3_VOP3PInst<"v_fma_mixhi_f16", VOP3P_Mix_Profile<VOP_F
 defm : MadFmaMixPats<fma, V_FMA_MIX_F32, V_FMA_MIXLO_F16, V_FMA_MIXHI_F16>;
 }
 
+let SubtargetPredicate = HasFmaMixBF16Insts in {
+let isCommutable = 1 in {
+
+let isReMaterializable = 1 in
+defm V_FMA_MIX_F32_BF16 : VOP3_VOP3PInst<"v_fma_mix_f32_bf16", VOP3P_Mix_Profile<VOP_F32_BF16_BF16_BF16, VOP3_OPSEL>>;
+
+let FPDPRounding = 1 in {
+defm V_FMA_MIXLO_BF16 : VOP3_VOP3PInst<"v_fma_mixlo_bf16", VOP3P_Mix_Profile<VOP_BF16_BF16_BF16_BF16, VOP3_OPSEL, 1>>;
+
+let ClampLo = 0, ClampHi = 1 in {
+defm V_FMA_MIXHI_BF16 : VOP3_VOP3PInst<"v_fma_mixhi_bf16", VOP3P_Mix_Profile<VOP_BF16_BF16_BF16_BF16, VOP3_OPSEL, 1>>;
+}
+} // End FPDPRounding = 1
+} // End isCommutable = 1
+} // End SubtargetPredicate = HasFmaMixBF16Insts
+
 def PK_ADD_MINMAX_Profile : VOP3P_Profile<VOP_V2I16_V2I16_V2I16_V2I16, VOP3_PACKED> {
   let HasModifiers = 0;
 }
@@ -312,25 +335,32 @@ defm V_PK_MIN3_U16 : VOP3PInst<"v_pk_min3_u16", PK_ADD_MINMAX_Profile>;
 } // End isCommutable = 1, isReMaterializable = 1
 
 // TODO: Extend pattern to select op_sel and op_sel_hi.
-class ThreeOp_v2i16_OpSelClampPats <SDPatternOperator op1, SDPatternOperator op2,
-                                    Instruction inst> : GCNPat <
-  (ThreeOpFrag<op1, op2> v2i16:$src0, v2i16:$src1, v2i16:$src2),
-  (inst SRCMODS.OP_SEL_1, VSrc_v2b16:$src0, SRCMODS.OP_SEL_1, VSrc_v2b16:$src1,
-        SRCMODS.OP_SEL_1, VSrc_v2b16:$src2, DSTCLAMP.NONE, 0)
+class ThreeOp_OpSelClampPats <SDPatternOperator op1, SDPatternOperator op2,
+                              VOP3P_Pseudo inst,
+                              ValueType vt = inst.Pfl.Src0VT,
+                              RegisterOperand RC = getVCSrcForVT<vt>.ret> : GCNPat <
+  (ThreeOpFrag<op1, op2> vt:$src0, vt:$src1, vt:$src2),
+  (inst SRCMODS.OP_SEL_1, RC:$src0, SRCMODS.OP_SEL_1, RC:$src1,
+        SRCMODS.OP_SEL_1, RC:$src2, DSTCLAMP.NONE, 0)
 >;
 
 let SubtargetPredicate = HasPkAddMinMaxInsts in {
-def : ThreeOp_v2i16_OpSelClampPats<add, smax, V_PK_ADD_MAX_I16>;
-def : ThreeOp_v2i16_OpSelClampPats<add, umax, V_PK_ADD_MAX_U16>;
-def : ThreeOp_v2i16_OpSelClampPats<add, smin, V_PK_ADD_MIN_I16>;
-def : ThreeOp_v2i16_OpSelClampPats<add, umin, V_PK_ADD_MIN_U16>;
+def : ThreeOp_OpSelClampPats<add, smax, V_PK_ADD_MAX_I16>;
+def : ThreeOp_OpSelClampPats<add, umax, V_PK_ADD_MAX_U16>;
+def : ThreeOp_OpSelClampPats<add, smin, V_PK_ADD_MIN_I16>;
+def : ThreeOp_OpSelClampPats<add, umin, V_PK_ADD_MIN_U16>;
 }
 
 let SubtargetPredicate = HasPkMinMax3Insts in {
-def : ThreeOp_v2i16_OpSelClampPats<smax, smax, V_PK_MAX3_I16>;
-def : ThreeOp_v2i16_OpSelClampPats<umax, umax, V_PK_MAX3_U16>;
-def : ThreeOp_v2i16_OpSelClampPats<smin, smin, V_PK_MIN3_I16>;
-def : ThreeOp_v2i16_OpSelClampPats<umin, umin, V_PK_MIN3_U16>;
+def : ThreeOp_OpSelClampPats<smax, smax, V_PK_MAX3_I16>;
+def : ThreeOp_OpSelClampPats<umax, umax, V_PK_MAX3_U16>;
+def : ThreeOp_OpSelClampPats<smin, smin, V_PK_MIN3_I16>;
+def : ThreeOp_OpSelClampPats<umin, umin, V_PK_MIN3_U16>;
+}
+
+let SubtargetPredicate = HasPkMinimumMaximum3F16Insts in {
+def : ThreeOp_OpSelClampPats<fmaximum, fmaximum, V_PK_MAXIMUM3_F16>;
+def : ThreeOp_OpSelClampPats<fminimum, fminimum, V_PK_MINIMUM3_F16>;
 }
 
 // Defines patterns that extract signed 4bit from each Idx[0].
@@ -2064,6 +2094,12 @@ defm V_PK_ADD_BF16     : VOP3P_Real_gfx1210_gfx13<0x23>;
 defm V_PK_MUL_BF16     : VOP3P_Real_gfx1210_gfx13<0x2a>;
 defm V_PK_MIN_NUM_BF16 : VOP3P_Real_gfx1210_gfx13<0x2b>;
 defm V_PK_MAX_NUM_BF16 : VOP3P_Real_gfx1210_gfx13<0x2c>;
+defm V_PK_MINIMUM3_F16 : VOP3P_Real_gfx1210_gfx13<0x36>;
+defm V_PK_MAXIMUM3_F16 : VOP3P_Real_gfx1210_gfx13<0x37>;
+
+defm V_FMA_MIX_F32_BF16 : VOP3P_Realtriple<GFX12_10Gen, 0x3d>;
+defm V_FMA_MIXLO_BF16   : VOP3P_Realtriple<GFX12_10Gen, 0x3e>;
+defm V_FMA_MIXHI_BF16   : VOP3P_Realtriple<GFX12_10Gen, 0x3f>;
 
 defm V_WMMA_LD_SCALE_PAIRED_B32 : VOP3P_Real_gfx1210<0x35>;
 
