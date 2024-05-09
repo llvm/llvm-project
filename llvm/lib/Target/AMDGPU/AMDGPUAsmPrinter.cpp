@@ -1057,6 +1057,15 @@ static void EmitPALMetadataCommon(AMDGPUPALMetadata *MD,
     MD->setHwStage(CC, ".trap_present",
                    (bool)CurrentProgramInfo.TrapHandlerEnable);
     MD->setHwStage(CC, ".excp_en", CurrentProgramInfo.EXCPEnable);
+#ifdef LLPC_BUILD_GFX12
+
+    if (ST.isDynamicVGPREnabled())
+      MD->setComputeRegisters(".dynamic_vgpr_en", true);
+
+    MD->setHwStage(CC, ".lds_size",
+                   (unsigned)(CurrentProgramInfo.LdsSize *
+                              getLdsDwGranularity(ST) * sizeof(uint32_t)));
+#endif /* LLPC_BUILD_GFX12 */
   }
 
   MD->setHwStage(CC, ".lds_size",

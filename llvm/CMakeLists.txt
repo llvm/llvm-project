@@ -6,6 +6,14 @@ set(LLVM_COMMON_CMAKE_UTILS ${CMAKE_CURRENT_SOURCE_DIR}/../cmake)
 include(${LLVM_COMMON_CMAKE_UTILS}/Modules/CMakePolicy.cmake
   NO_POLICY_SCOPE)
 
+if (LLPC_BUILD_GFX12)
+  set(AMDGPU_TABLEGEN_FLAGS -DLLPC_BUILD_GFX12)
+  add_compile_definitions(LLPC_BUILD_GFX12)
+else()
+  set(AMDGPU_TABLEGEN_FLAGS "")
+endif()
+
+
 # Builds with custom install names and installation rpath setups may not work
 # in the build tree. Allow these cases to use CMake's default build tree
 # behavior by setting `LLVM_NO_INSTALL_NAME_DIR_FOR_BUILD_TREE` to do this.

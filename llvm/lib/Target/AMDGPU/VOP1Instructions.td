@@ -902,7 +902,10 @@ multiclass VOP1_Real_NO_DPP_OP_SEL_with_name<GFXGen Gen, bits<9> op,
   VOP1_Real_e32_with_name<Gen, op, opName, asmName>,
   VOP3_Real_with_name<Gen, {0, 1, 1, op{6-0}}, opName, asmName>;
 
+#ifdef LLPC_BUILD_GFX12
+#else /* LLPC_BUILD_GFX12 */
 
+#endif /* LLPC_BUILD_GFX12 */
 defm V_CVT_F32_FP8      : VOP1_Real_FULL_with_name<GFX12Gen, 0x06c, "V_CVT_F32_FP8_OP_SEL", "v_cvt_f32_fp8">;
 defm V_CVT_F32_BF8      : VOP1_Real_FULL_with_name<GFX12Gen, 0x06d, "V_CVT_F32_BF8_OP_SEL", "v_cvt_f32_bf8">;
 

@@ -119,6 +119,9 @@ enum class CudaArch {
   GFX1103,
   GFX1150,
   GFX1151,
+#ifdef LLPC_BUILD_GFX12
+  GFX1152,
+#endif /* LLPC_BUILD_GFX12 */
   GFX1200,
   GFX1201,
   Generic, // A processor model named 'generic' if the target backend defines a

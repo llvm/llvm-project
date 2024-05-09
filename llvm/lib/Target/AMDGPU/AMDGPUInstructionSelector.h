@@ -145,7 +145,11 @@ private:
   bool selectG_INSERT_VECTOR_ELT(MachineInstr &I) const;
   bool selectBufferLoadLds(MachineInstr &MI) const;
   bool selectGlobalLoadLds(MachineInstr &MI) const;
+#ifdef LLPC_BUILD_GFX12
+  bool selectBVHIntersectRayIntrinsic(MachineInstr &I) const;
+#else /* LLPC_BUILD_GFX12 */
   bool selectBVHIntrinsic(MachineInstr &I) const;
+#endif /* LLPC_BUILD_GFX12 */
   bool selectSMFMACIntrin(MachineInstr &I) const;
   bool selectWaveAddress(MachineInstr &I) const;
   bool selectStackRestore(MachineInstr &MI) const;

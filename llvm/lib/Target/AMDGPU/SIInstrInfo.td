@@ -921,6 +921,14 @@ def DepCtr : CustomOperand<i32>;
 
 def SDelayALU : CustomOperand<i32>;
 
+#ifdef LLPC_BUILD_GFX12
+// Global register references are represented as immediate operands but printed
+// and parsed like registers.
+def GlobalSReg32 : CustomOperand<i16>;
+
+def GlobalSReg64 : CustomOperand<i16>;
+
+#endif /* LLPC_BUILD_GFX12 */
 include "SIInstrFormats.td"
 include "VIInstrFormats.td"
 
@@ -2230,8 +2238,14 @@ class getLdStRegisterOperand<RegisterClass RC> {
         !if(!eq(RC.Size, 96), AVLdSt_96,
           !if(!eq(RC.Size, 128), AVLdSt_128,
             !if(!eq(RC.Size, 160), AVLdSt_160,
+#ifdef LLPC_BUILD_GFX12
+              !if(!eq(RC.Size, 1024), AVLdSt_1024,
+                RegisterOperand<VReg_1> // invalid register
+    ))))));
+#else /* LLPC_BUILD_GFX12 */
               RegisterOperand<VReg_1> // invalid register
     )))));
+#endif /* LLPC_BUILD_GFX12 */
 }
 
 class getHasVOP3DPP <ValueType DstVT = i32, ValueType Src0VT = i32,
