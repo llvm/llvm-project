@@ -181,6 +181,7 @@ defm : StorePat<i64, truncstorei8, "STORE8_I64">;
 defm : StorePat<i64, truncstorei16, "STORE16_I64">;
 defm : StorePat<i64, truncstorei32, "STORE32_I64">;
 
+// Half-precision store.
 defm : StorePat<f32, int_wasm_storef16_f32, "STORE_F16_F32">;
 
 multiclass MemoryOps<WebAssemblyRegClass rc, string B> {
