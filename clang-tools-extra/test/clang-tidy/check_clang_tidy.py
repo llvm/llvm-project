@@ -99,7 +99,7 @@ class CheckRunner:
         self.has_check_fixes = False
         self.has_check_messages = False
         self.has_check_notes = False
-        self.expect_no_diagnosis = args.expect_no_diagnosis
+        self.expect_no_diagnosis = False
         self.export_fixes = args.export_fixes
         self.fixes = MessagePrefix("CHECK-FIXES")
         self.messages = MessagePrefix("CHECK-MESSAGES")
@@ -173,12 +173,11 @@ class CheckRunner:
                 )
 
             if not has_check_fix and not has_check_message and not has_check_note:
-                sys.exit(
-                    "%s, %s or %s not found in the input"
-                    % (self.fixes.prefix, self.messages.prefix, self.notes.prefix)
-                )
+                self.expect_no_diagnosis = True
 
-        assert self.has_check_fixes or self.has_check_messages or self.has_check_notes
+        assert self.expect_no_diagnosis != (
+            self.has_check_fixes or self.has_check_messages or self.has_check_notes
+        )
 
     def prepare_test_inputs(self):
         # Remove the contents of the CHECK lines to avoid CHECKs matching on
@@ -279,7 +278,7 @@ class CheckRunner:
 
     def run(self):
         self.read_input()
-        if self.export_fixes is None and not self.expect_no_diagnosis:
+        if self.export_fixes is None:
             self.get_prefixes()
         self.prepare_test_inputs()
         clang_tidy_output = self.run_clang_tidy()
@@ -318,7 +317,6 @@ def parse_arguments():
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument("-expect-clang-tidy-error", action="store_true")
-    parser.add_argument("-expect-no-diagnosis", action="store_true")
     parser.add_argument("-resource-dir")
     parser.add_argument("-assume-filename")
     parser.add_argument("input_file_name")
