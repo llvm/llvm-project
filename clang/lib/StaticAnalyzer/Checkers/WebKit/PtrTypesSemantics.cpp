@@ -309,21 +309,8 @@ public:
   bool VisitDefaultStmt(const DefaultStmt *DS) { return VisitChildren(DS); }
 
   bool VisitUnaryOperator(const UnaryOperator *UO) {
-    // Operator '*' and '!' are allowed as long as the operand is trivial.
-    auto op = UO->getOpcode();
-    if (op == UO_Deref || op == UO_AddrOf || op == UO_LNot || op == UO_Not)
-      return Visit(UO->getSubExpr());
-
-    if (UO->isIncrementOp() || UO->isDecrementOp()) {
-      // Allow increment or decrement of a POD type.
-      if (auto *RefExpr = dyn_cast<DeclRefExpr>(UO->getSubExpr())) {
-        if (auto *Decl = dyn_cast<VarDecl>(RefExpr->getDecl()))
-          return Decl->isLocalVarDeclOrParm() &&
-                 Decl->getType().isPODType(Decl->getASTContext());
-      }
-    }
-    // Other operators are non-trivial.
-    return false;
+    // Unary operators are trivial if its operand is trivial except co_await.
+    return UO->getOpcode() != UO_Coawait && Visit(UO->getSubExpr());
   }
 
   bool VisitBinaryOperator(const BinaryOperator *BO) {
@@ -364,7 +351,7 @@ public:
 
     if (Name == "WTFCrashWithInfo" || Name == "WTFBreakpointTrap" ||
         Name == "WTFReportAssertionFailure" ||
-        Name == "compilerFenceForCrash" || Name == "__builtin_unreachable")
+        Name == "compilerFenceForCrash" || Name.find("__builtin") == 0)
       return true;
 
     return TrivialFunctionAnalysis::isTrivialImpl(Callee, Cache);
@@ -401,6 +388,16 @@ public:
     if (IsGetterOfRefCounted && *IsGetterOfRefCounted)
       return true;
 
+    // Recursively descend into the callee to confirm that it's trivial as well.
+    return TrivialFunctionAnalysis::isTrivialImpl(Callee, Cache);
+  }
+
+  bool VisitCXXOperatorCallExpr(const CXXOperatorCallExpr *OCE) {
+    if (!checkArguments(OCE))
+      return false;
+    auto *Callee = OCE->getCalleeDecl();
+    if (!Callee)
+      return false;
     // Recursively descend into the callee to confirm that it's trivial as well.
     return TrivialFunctionAnalysis::isTrivialImpl(Callee, Cache);
   }
