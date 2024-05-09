@@ -22,7 +22,7 @@ class TestDAP_attachByPortNum(lldbdap_testcase.DAPTestCaseBase):
         server_tool = "lldb-server"
         server_path = self.getBuiltinServerTool(server_tool)
         if server_path:
-            server_path +=" g localhost:" +  port + " " 
+            server_path += " g localhost:" +  port + " "
 
         self.process = subprocess.Popen(
             [server_path + program],
@@ -31,7 +31,7 @@ class TestDAP_attachByPortNum(lldbdap_testcase.DAPTestCaseBase):
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
         )
-        
+
         return self.process
 
     def set_and_hit_breakpoint(self, continueToExit=True):
@@ -43,7 +43,7 @@ class TestDAP_attachByPortNum(lldbdap_testcase.DAPTestCaseBase):
         breakpoint_ids = self.set_source_breakpoints(main_source_path, lines)
         self.assertEqual(
             len(breakpoint_ids), len(lines), "expect correct number of breakpoints"
-        )        
+        )
         self.continue_to_breakpoints(breakpoint_ids)
         if continueToExit:
             self.continue_to_exit()
