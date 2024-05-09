@@ -72,8 +72,9 @@ defm LOAD16_U_I64 : WebAssemblyLoad<I64, "i64.load16_u", 0x33, []>;
 defm LOAD32_S_I64 : WebAssemblyLoad<I64, "i64.load32_s", 0x34, []>;
 defm LOAD32_U_I64 : WebAssemblyLoad<I64, "i64.load32_u", 0x35, []>;
 
-// Half Precision
-defm LOAD_F16_F32 : WebAssemblyLoad<F32, "f32.load_f16", 0xfc30, [HasHalfPrecision]>;
+// Half-precision load.
+defm LOAD_F16_F32 :
+  WebAssemblyLoad<F32, "f32.load_f16", 0xfc30, [HasHalfPrecision]>;
 
 // Pattern matching
 
@@ -181,7 +182,6 @@ defm : StorePat<i64, truncstorei8, "STORE8_I64">;
 defm : StorePat<i64, truncstorei16, "STORE16_I64">;
 defm : StorePat<i64, truncstorei32, "STORE32_I64">;
 
-// Half-precision store.
 defm : StorePat<f32, int_wasm_storef16_f32, "STORE_F16_F32">;
 
 multiclass MemoryOps<WebAssemblyRegClass rc, string B> {
