@@ -191,9 +191,7 @@ public:
   bool isBranch() const { return FalseCount.has_value(); }
 
   bool isMCDCBranch() const {
-    const auto *BranchParams = std::get_if<mcdc::BranchParameters>(&MCDCParams);
-    assert(BranchParams == nullptr || BranchParams->ID >= 0);
-    return (BranchParams != nullptr);
+    return std::holds_alternative<mcdc::BranchParameters>(MCDCParams);
   }
 
   const auto &getMCDCBranchParams() const {
