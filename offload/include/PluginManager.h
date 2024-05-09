@@ -13,10 +13,11 @@
 #ifndef OMPTARGET_PLUGIN_MANAGER_H
 #define OMPTARGET_PLUGIN_MANAGER_H
 
+#include "PluginInterface.h"
+
 #include "DeviceImage.h"
 #include "ExclusiveAccess.h"
 #include "Shared/APITypes.h"
-#include "Shared/PluginAPI.h"
 #include "Shared/Requirements.h"
 
 #include "device.h"
@@ -34,38 +35,7 @@
 #include <mutex>
 #include <string>
 
-struct PluginManager;
-
-/// Plugin adaptors should be created via `PluginAdaptorTy::create` which will
-/// invoke the constructor and call `PluginAdaptorTy::init`. Eventual errors are
-/// reported back to the caller, otherwise a valid and initialized adaptor is
-/// returned.
-struct PluginAdaptorTy {
-  /// Try to create a plugin adaptor from a filename.
-  static llvm::Expected<std::unique_ptr<PluginAdaptorTy>>
-  create(const std::string &Name);
-
-  /// Name of the shared object file representing the plugin.
-  std::string Name;
-
-  /// Access to the shared object file representing the plugin.
-  std::unique_ptr<llvm::sys::DynamicLibrary> LibraryHandler;
-
-#define PLUGIN_API_HANDLE(NAME)                                                \
-  using NAME##_ty = decltype(__tgt_rtl_##NAME);                                \
-  NAME##_ty *NAME = nullptr;
-
-#include "Shared/PluginAPI.inc"
-#undef PLUGIN_API_HANDLE
-
-  /// Create a plugin adaptor for filename \p Name with a dynamic library \p DL.
-  PluginAdaptorTy(const std::string &Name,
-                  std::unique_ptr<llvm::sys::DynamicLibrary> DL);
-
-  /// Initialize the plugin adaptor, this can fail in which case the adaptor is
-  /// useless.
-  llvm::Error init();
-};
+using GenericPluginTy = llvm::omp::target::plugin::GenericPluginTy;
 
 /// Struct for the data required to handle plugins
 struct PluginManager {
@@ -80,6 +50,8 @@ struct PluginManager {
 
   void init();
 
+  void deinit();
+
   // Register a shared library with all (compatible) RTLs.
   void registerLib(__tgt_bin_desc *Desc);
 
@@ -92,10 +64,9 @@ struct PluginManager {
         std::make_unique<DeviceImageTy>(TgtBinDesc, TgtDeviceImage));
   }
 
-  /// Initialize as many devices as possible for this plugin adaptor. Devices
-  /// that fail to initialize are ignored. Returns the offset the devices were
-  /// registered at.
-  void initDevices(PluginAdaptorTy &RTL);
+  /// Initialize as many devices as possible for this plugin. Devices that fail
+  /// to initialize are ignored.
+  void initDevices(GenericPluginTy &RTL);
 
   /// Return the device presented to the user as device \p DeviceNo if it is
   /// initialized and ready. Otherwise return an error explaining the problem.
@@ -151,8 +122,8 @@ struct PluginManager {
   // Initialize all plugins.
   void initAllPlugins();
 
-  /// Iterator range for all plugin adaptors (in use or not, but always valid).
-  auto pluginAdaptors() { return llvm::make_pointee_range(PluginAdaptors); }
+  /// Iterator range for all plugins (in use or not, but always valid).
+  auto plugins() { return llvm::make_pointee_range(Plugins); }
 
   /// Return the user provided requirements.
   int64_t getRequirements() const { return Requirements.getRequirements(); }
@@ -164,14 +135,14 @@ private:
   bool RTLsLoaded = false;
   llvm::SmallVector<__tgt_bin_desc *> DelayedBinDesc;
 
-  // List of all plugin adaptors, in use or not.
-  llvm::SmallVector<std::unique_ptr<PluginAdaptorTy>> PluginAdaptors;
+  // List of all plugins, in use or not.
+  llvm::SmallVector<std::unique_ptr<GenericPluginTy>> Plugins;
 
-  // Mapping of plugin adaptors to offsets in the device table.
-  llvm::DenseMap<const PluginAdaptorTy *, int32_t> DeviceOffsets;
+  // Mapping of plugins to offsets in the device table.
+  llvm::DenseMap<const GenericPluginTy *, int32_t> DeviceOffsets;
 
-  // Mapping of plugin adaptors to the number of used devices.
-  llvm::DenseMap<const PluginAdaptorTy *, int32_t> DeviceUsed;
+  // Mapping of plugins to the number of used devices.
+  llvm::DenseMap<const GenericPluginTy *, int32_t> DeviceUsed;
 
   // Set of all device images currently in use.
   llvm::DenseSet<const __tgt_device_image *> UsedImages;
