@@ -956,7 +956,6 @@ Parser::OpenACCClauseParseResult Parser::ParseOpenACCClauseParams(
       break;
     case OpenACCClauseKind::Attach:
     case OpenACCClauseKind::DevicePtr:
-      // TODO: ERICH: Figure out how to limit to just ptrs?
       ParsedClause.setVarListDetails(ParseOpenACCVarList(),
                                      /*IsReadOnly=*/false, /*IsZero=*/false);
       break;
