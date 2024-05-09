@@ -10,6 +10,7 @@
 #define LLVM_LIBC_SRC_THREADS_LINUX_CNDVAR_H
 
 #include "src/__support/CPP/atomic.h"
+#include "src/__support/CPP/mutex.h" // lock_guard
 #include "src/__support/CPP/optional.h"
 #include "src/__support/OSUtil/syscall.h" // For syscall functions.
 #include "src/__support/threads/linux/futex_utils.h"
@@ -59,7 +60,7 @@ struct CndVar {
 
     CndWaiter waiter;
     {
-      MutexLock ml(&qmtx);
+      cpp::lock_guard ml(qmtx);
       CndWaiter *old_back = nullptr;
       if (waitq_front == nullptr) {
         waitq_front = waitq_back = &waiter;
@@ -118,7 +119,7 @@ struct CndVar {
   }
 
   int broadcast() {
-    MutexLock ml(&qmtx);
+    cpp::lock_guard ml(qmtx);
     uint32_t dummy_futex_word;
     CndWaiter *waiter = waitq_front;
     waitq_front = waitq_back = nullptr;
