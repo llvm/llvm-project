@@ -9,14 +9,14 @@
 // RUN: %clang_cc1 %t/t1.c -include-pch %t/prefix1.pch -emit-llvm -o %t/source.ll -I %t/inc -DCMD_MACRO=1
 
 // RUN: %clang -cc1depscan -o %t/pch.rsp -fdepscan=inline -fdepscan-include-tree -cc1-args \
-// RUN:     -cc1 -x c-header %t/prefix.h -I %t/inc -DCMD_MACRO=1 -fcas-path %t/cas
-// RUN: %clang @%t/pch.rsp -emit-pch -o %t/prefix2.pch
+// RUN:     -cc1 -emit-pch -x c-header %t/prefix.h -I %t/inc -DCMD_MACRO=1 -fcas-path %t/cas
+// RUN: %clang @%t/pch.rsp -o %t/prefix2.pch
 
 // RUN: %clang -cc1depscan -o %t/tu.rsp -fdepscan=inline -fdepscan-include-tree -cc1-args \
-// RUN:     -cc1 %t/t1.c -include-pch %t/prefix2.pch -I %t/inc -DCMD_MACRO=1 -fcas-path %t/cas
+// RUN:     -cc1 -emit-llvm %t/t1.c -include-pch %t/prefix2.pch -I %t/inc -DCMD_MACRO=1 -fcas-path %t/cas
 // RUN: rm %t/prefix2.pch
 
-// RUN: %clang @%t/tu.rsp -emit-llvm -o %t/tree.ll
+// RUN: %clang @%t/tu.rsp -o %t/tree.ll
 // RUN: diff -u %t/source.ll %t/tree.ll
 
 // Check again with relative paths.
@@ -27,14 +27,14 @@
 // RUN: %clang_cc1 t1.c -include-pch prefix3.pch -emit-llvm -o source-rel.ll -I inc -DCMD_MACRO=1
 
 // RUN: %clang -cc1depscan -o pch2.rsp -fdepscan=inline -fdepscan-include-tree -cc1-args \
-// RUN:     -cc1 -x c-header prefix.h -I %t/inc -DCMD_MACRO=1 -fcas-path %t/cas
-// RUN: %clang @pch2.rsp -emit-pch -o prefix4.pch
+// RUN:     -cc1 -emit-pch -x c-header prefix.h -I %t/inc -DCMD_MACRO=1 -fcas-path %t/cas
+// RUN: %clang @pch2.rsp -o prefix4.pch
 
 // RUN: %clang -cc1depscan -o tu2.rsp -fdepscan=inline -fdepscan-include-tree -cc1-args \
-// RUN:     -cc1 t1.c -include-pch prefix4.pch -I inc -DCMD_MACRO=1 -fcas-path %t/cas
+// RUN:     -cc1 -emit-llvm t1.c -include-pch prefix4.pch -I inc -DCMD_MACRO=1 -fcas-path %t/cas
 // RUN: rm %t/prefix4.pch
 
-// RUN: %clang @tu2.rsp -emit-llvm -o tree-rel.ll
+// RUN: %clang @tu2.rsp -o tree-rel.ll
 // RUN: diff -u source-rel.ll tree-rel.ll
 
 // Check that -coverage-notes-file and -coverage-data-file are stripped

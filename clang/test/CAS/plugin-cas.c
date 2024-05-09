@@ -3,31 +3,31 @@
 // RUN: rm -rf %t && mkdir -p %t
 
 // RUN: %clang -cc1depscan -o %t/t1.rsp -fdepscan=inline -cc1-args \
-// RUN:   -cc1 %s -fcas-path %t/cas \
+// RUN:   -cc1 -emit-obj %s -fcas-path %t/cas \
 // RUN:   -fcas-plugin-path %llvmshlibdir/libCASPluginTest%pluginext \
 // RUN:   -fcas-plugin-option first-prefix=myfirst- -fcas-plugin-option second-prefix=mysecond- \
 // RUN:   -fcas-plugin-option upstream-path=%t/cas-upstream
-// RUN: %clang @%t/t1.rsp -emit-obj -o %t/t1.o -Rcompile-job-cache 2>&1 | FileCheck %s --check-prefix=CACHE-MISS
+// RUN: %clang @%t/t1.rsp -o %t/t1.o -Rcompile-job-cache 2>&1 | FileCheck %s --check-prefix=CACHE-MISS
 
 // Clear the CAS and check the outputs can still be "downloaded" from upstream.
 // RUN: rm -rf %t/cas
 // RUN: %clang -cc1depscan -o %t/t2.rsp -fdepscan=inline -cc1-args \
-// RUN:   -cc1 %s -fcas-path %t/cas \
+// RUN:   -cc1 -emit-obj %s -fcas-path %t/cas \
 // RUN:   -fcas-plugin-path %llvmshlibdir/libCASPluginTest%pluginext \
 // RUN:   -fcas-plugin-option first-prefix=myfirst- -fcas-plugin-option second-prefix=mysecond- \
 // RUN:   -fcas-plugin-option upstream-path=%t/cas-upstream
-// RUN: %clang @%t/t2.rsp -emit-obj -o %t/t2.o -Rcompile-job-cache 2>&1 | FileCheck %s --check-prefix=CACHE-HIT
+// RUN: %clang @%t/t2.rsp -o %t/t2.o -Rcompile-job-cache 2>&1 | FileCheck %s --check-prefix=CACHE-HIT
 // RUN: diff %t/t1.o %t/t2.o
 
 // Check that it's a cache miss if outputs are not found in the upstream CAS.
 // RUN: rm -rf %t/cas
 // RUN: %clang -cc1depscan -o %t/t3.rsp -fdepscan=inline -cc1-args \
-// RUN:   -cc1 %s -fcas-path %t/cas \
+// RUN:   -cc1 -emit-obj %s -fcas-path %t/cas \
 // RUN:   -fcas-plugin-path %llvmshlibdir/libCASPluginTest%pluginext \
 // RUN:   -fcas-plugin-option first-prefix=myfirst- -fcas-plugin-option second-prefix=mysecond- \
 // RUN:   -fcas-plugin-option upstream-path=%t/cas-upstream \
 // RUN:   -fcas-plugin-option simulate-missing-objects
-// RUN: %clang @%t/t3.rsp -emit-obj -o %t/t.o -Rcompile-job-cache 2>&1 | FileCheck %s --check-prefix=CACHE-NOTFOUND
+// RUN: %clang @%t/t3.rsp -o %t/t.o -Rcompile-job-cache 2>&1 | FileCheck %s --check-prefix=CACHE-NOTFOUND
 
 // CACHE-MISS: remark: compile job cache miss for 'myfirst-mysecond-
 // CACHE-MISS: warning: some warning

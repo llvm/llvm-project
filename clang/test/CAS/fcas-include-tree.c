@@ -5,10 +5,12 @@
 // RUN: %clang_cc1 %t/t1.c -emit-llvm -o %t/source.ll -isystem %t -DCMD_MACRO=1 -Werror -dependency-file %t/t1-source.d -MT deps
 
 // RUN: %clang -cc1depscan -o %t/inline.rsp -fdepscan=inline -fdepscan-include-tree -cc1-args \
-// RUN:     -cc1 %t/t1.c -isystem %t -DCMD_MACRO=1 -fcas-path %t/cas
-// RUN: %clang @%t/inline.rsp -E -P -o %t/tree.i -Werror
+// RUN:     -cc1 -E -P %t/t1.c -isystem %t -DCMD_MACRO=1 -fcas-path %t/cas -Werror
+// RUN: %clang @%t/inline.rsp -o %t/tree.i
 // RUN: diff -u %t/source.i %t/tree.i
-// RUN: %clang @%t/inline.rsp -emit-llvm -o %t/tree.ll -Werror -dependency-file %t/t1-tree.d -MT deps
+// RUN: %clang -cc1depscan -o %t/inline2.rsp -fdepscan=inline -fdepscan-include-tree -cc1-args \
+// RUN:     -cc1 -emit-llvm %t/t1.c -isystem %t -DCMD_MACRO=1 -fcas-path %t/cas -Werror -dependency-file %t/t1-tree.d -MT deps
+// RUN: %clang @%t/inline2.rsp -o %t/tree.ll
 // RUN: diff -u %t/source.ll %t/tree.ll
 // RUN: diff -u %t/t1-source.d %t/t1-tree.d
 
