@@ -229,7 +229,7 @@ class CheckRunner:
     def check_no_diagnosis(self, clang_tidy_output):
         print(clang_tidy_output)
         if clang_tidy_output != "":
-            sys.exit("expect no diagnosis")
+            sys.exit("No diagnostics were expected, but found the ones above")
 
     def check_fixes(self):
         if self.has_check_fixes:
