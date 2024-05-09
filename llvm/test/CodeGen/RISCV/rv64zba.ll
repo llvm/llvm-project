@@ -2853,3 +2853,66 @@ entry:
   ret i64 %6
 }
 
+define ptr @gep_lshr_i32(ptr %0, i64 %1) {
+; RV64I-LABEL: gep_lshr_i32:
+; RV64I:       # %bb.0: # %entry
+; RV64I-NEXT:    srli a1, a1, 2
+; RV64I-NEXT:    li a2, 5
+; RV64I-NEXT:    slli a2, a2, 36
+; RV64I-NEXT:    slli a1, a1, 32
+; RV64I-NEXT:    mulhu a1, a1, a2
+; RV64I-NEXT:    add a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64ZBA-LABEL: gep_lshr_i32:
+; RV64ZBA:       # %bb.0: # %entry
+; RV64ZBA-NEXT:    slli a1, a1, 2
+; RV64ZBA-NEXT:    srli a1, a1, 4
+; RV64ZBA-NEXT:    slli.uw a1, a1, 4
+; RV64ZBA-NEXT:    sh2add a1, a1, a1
+; RV64ZBA-NEXT:    add a0, a0, a1
+; RV64ZBA-NEXT:    ret
+entry:
+  %2 = lshr exact i64 %1, 2
+  %3 = and i64 %2, 4294967295
+  %5 = getelementptr [80 x i8], ptr %0, i64 %3
+  ret ptr %5
+}
+
+define i64 @srli_slliw(i64 %1) {
+; RV64I-LABEL: srli_slliw:
+; RV64I:       # %bb.0: # %entry
+; RV64I-NEXT:    slli a0, a0, 2
+; RV64I-NEXT:    li a1, 1
+; RV64I-NEXT:    slli a1, a1, 36
+; RV64I-NEXT:    addi a1, a1, -16
+; RV64I-NEXT:    and a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64ZBA-LABEL: srli_slliw:
+; RV64ZBA:       # %bb.0: # %entry
+; RV64ZBA-NEXT:    slli a0, a0, 2
+; RV64ZBA-NEXT:    srli a0, a0, 4
+; RV64ZBA-NEXT:    slli.uw a0, a0, 4
+; RV64ZBA-NEXT:    ret
+entry:
+  %2 = lshr exact i64 %1, 2
+  %3 = and i64 %2, 4294967295
+  %4 = shl i64 %3, 4
+  ret i64 %4
+}
+
+define i64 @srli_slli_i16(i64 %1) {
+; CHECK-LABEL: srli_slli_i16:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    slli a0, a0, 2
+; CHECK-NEXT:    lui a1, 256
+; CHECK-NEXT:    addiw a1, a1, -16
+; CHECK-NEXT:    and a0, a0, a1
+; CHECK-NEXT:    ret
+entry:
+  %2 = lshr exact i64 %1, 2
+  %3 = and i64 %2, 65535
+  %4 = shl i64 %3, 4
+  ret i64 %4
+}
