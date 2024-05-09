@@ -7,6 +7,9 @@
 ; parent blocks. And that ino jump-threading, the old dbg.value gets
 ; deleted.
 
+; Test debug location preserving in function threadGuard, which replaces
+; instructions with PHINodes at the end of the function. [[TMP1]]
+
 declare void @llvm.experimental.guard(i1, ...)
 
 declare i32 @f1()
@@ -33,8 +36,9 @@ define i32 @branch_implies_guard(i32 %a) !dbg !7 {
 ; CHECK-NEXT:    br label [[MERGE]]
 ; CHECK:       Merge:
 ; CHECK-NEXT:    [[RETPHI:%.*]] = phi i32 [ [[V1]], [[T1_SPLIT]] ], [ [[V2]], [[F1_SPLIT]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = phi i32 [ [[RETVAL3]], [[T1_SPLIT]] ], [ [[RETVAL1]], [[F1_SPLIT]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = phi i32 [ [[RETVAL3]], [[T1_SPLIT]] ], [ [[RETVAL1]], [[F1_SPLIT]] ], !dbg [[DBG12]]
 ; CHECK-NEXT:    ret i32 [[TMP1]], !dbg [[DBG12]]
+; CHECK: [[DBG12]] = !DILocation(line: 13,
 ;
   %cond = icmp slt i32 %a, 10
   br i1 %cond, label %T1, label %F1, !dbg !26

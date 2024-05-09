@@ -1278,9 +1278,12 @@ bool JumpThreadingPass::simplifyPartiallyRedundantLoad(LoadInst *LoadI) {
     // only happen in dead loops.
     if (AvailableVal == LoadI)
       AvailableVal = PoisonValue::get(LoadI->getType());
-    if (AvailableVal->getType() != LoadI->getType())
+    if (AvailableVal->getType() != LoadI->getType()) {
       AvailableVal = CastInst::CreateBitOrPointerCast(
           AvailableVal, LoadI->getType(), "", LoadI->getIterator());
+      if (Instruction * CI = dyn_cast<Instruction>(AvailableVal))
+        CI->setDebugLoc(LoadI->getDebugLoc());
+    }
     LoadI->replaceAllUsesWith(AvailableVal);
     LoadI->eraseFromParent();
     return true;
@@ -2983,6 +2986,7 @@ bool JumpThreadingPass::tryToUnfoldSelectInCurrBB(BasicBlock *BB) {
     PHINode *NewPN = PHINode::Create(SI->getType(), 2, "", SI->getIterator());
     NewPN->addIncoming(SI->getTrueValue(), Term->getParent());
     NewPN->addIncoming(SI->getFalseValue(), BB);
+    NewBB->setDebugLoc(SI->getDebugLoc());
     SI->replaceAllUsesWith(NewPN);
     SI->eraseFromParent();
     // NewBB and SplitBB are newly created blocks which require insertion.
@@ -3120,6 +3124,7 @@ bool JumpThreadingPass::threadGuard(BasicBlock *BB, IntrinsicInst *Guard,
       PHINode *NewPN = PHINode::Create(Inst->getType(), 2);
       NewPN->addIncoming(UnguardedMapping[Inst], UnguardedBlock);
       NewPN->addIncoming(GuardedMapping[Inst], GuardedBlock);
+      NewPN->setDebugLoc(Inst->getDebugLoc());
       NewPN->insertBefore(InsertionPoint);
       Inst->replaceAllUsesWith(NewPN);
     }
