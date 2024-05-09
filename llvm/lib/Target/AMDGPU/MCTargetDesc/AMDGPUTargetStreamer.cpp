@@ -11,9 +11,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPUTargetStreamer.h"
+#include "AMDGPUMCKernelCodeT.h"
 #include "AMDGPUMCKernelDescriptor.h"
 #include "AMDGPUPTNote.h"
-#include "AMDKernelCodeT.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "Utils/AMDKernelCodeTUtils.h"
 #include "llvm/BinaryFormat/AMDGPUMetadataVerifier.h"
@@ -240,10 +240,9 @@ void AMDGPUTargetAsmStreamer::EmitDirectiveAMDHSACodeObjectVersion(
   OS << "\t.amdhsa_code_object_version " << COV << '\n';
 }
 
-void
-AMDGPUTargetAsmStreamer::EmitAMDKernelCodeT(const amd_kernel_code_t &Header) {
+void AMDGPUTargetAsmStreamer::EmitAMDKernelCodeT(MCKernelCodeT &Header) {
   OS << "\t.amd_kernel_code_t\n";
-  dumpAmdKernelCode(&Header, OS, "\t\t");
+  Header.EmitKernelCodeT(OS, "\t\t", getContext());
   OS << "\t.end_amd_kernel_code_t\n";
 }
 
@@ -789,12 +788,10 @@ unsigned AMDGPUTargetELFStreamer::getEFlagsV6() {
 
 void AMDGPUTargetELFStreamer::EmitDirectiveAMDGCNTarget() {}
 
-void
-AMDGPUTargetELFStreamer::EmitAMDKernelCodeT(const amd_kernel_code_t &Header) {
-
+void AMDGPUTargetELFStreamer::EmitAMDKernelCodeT(MCKernelCodeT &Header) {
   MCStreamer &OS = getStreamer();
   OS.pushSection();
-  OS.emitBytes(StringRef((const char*)&Header, sizeof(Header)));
+  Header.EmitKernelCodeT(OS, getContext());
   OS.popSection();
 }
 
