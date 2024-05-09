@@ -7,7 +7,7 @@ int __attribute__((naked)) signal_generating_add(int a, int b) {
       "ret");
 }
 
-void sigill_handler(int) { _exit(0); }
+void sigill_handler(int signo) { _exit(0); }
 
 int main() {
   signal(SIGILL, sigill_handler);
