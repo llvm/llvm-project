@@ -61,10 +61,16 @@ static bool finishStackBlock(SmallVectorImpl<CCValAssign> &PendingMembers,
     // CCAssignFn again we want it to behave as if all remaining registers are
     // allocated. This will force the code to pass the tuple indirectly in
     // accordance with the PCS.
-    bool RegsAllocated[8];
+    bool ZRegsAllocated[8];
     for (int I = 0; I < 8; I++) {
-      RegsAllocated[I] = State.isAllocated(ZRegList[I]);
+      ZRegsAllocated[I] = State.isAllocated(ZRegList[I]);
       State.AllocateReg(ZRegList[I]);
+    }
+    // The same applies to P registers.
+    bool PRegsAllocated[4];
+    for (int I = 0; I < 4; I++) {
+      PRegsAllocated[I] = State.isAllocated(PRegList[I]);
+      State.AllocateReg(PRegList[I]);
     }
 
     auto &It = PendingMembers[0];
@@ -81,8 +87,11 @@ static bool finishStackBlock(SmallVectorImpl<CCValAssign> &PendingMembers,
     // Return the register state back to how it was before, leaving any
     // unallocated registers available for other smaller types.
     for (int I = 0; I < 8; I++)
-      if (!RegsAllocated[I])
+      if (!ZRegsAllocated[I])
         State.DeallocateReg(ZRegList[I]);
+    for (int I = 0; I < 4; I++)
+      if (!PRegsAllocated[I])
+        State.DeallocateReg(PRegList[I]);
 
     // All pending members have now been allocated
     PendingMembers.clear();

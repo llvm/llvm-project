@@ -72,6 +72,66 @@ define aarch64_sve_vector_pcs <vscale x 16 x i1> @caller_with_many_svepred_arg(<
   ret <vscale x 16 x i1> %ret
 }
 
+; Test that arg2 is passed through x0, i.e., x0 = &%arg2; and return values are loaded from x0:
+;     P0 = ldr [x0]
+;     P1 = ldr [x0 +   sizeof(Px)]
+;     P2 = ldr [x0 + 2*sizeof(Px)]
+;     P3 = ldr [x0 + 3*sizeof(Px)]
+define aarch64_sve_vector_pcs [4 x <vscale x 16 x i1>] @callee_with_svepred_arg_2d_4x([4 x <vscale x 16 x i1>] %arg1, [4 x <vscale x 16 x i1>] %arg2) {
+; CHECK: name: callee_with_svepred_arg_2d_4x
+; CHECK:    [[BASE:%[0-9]+]]:gpr64common = COPY $x0
+; CHECK:    [[OFFSET1:%[0-9]+]]:gpr64 = CNTD_XPiI 31, 1, implicit $vg
+; CHECK:    [[ADDR1:%[0-9]+]]:gpr64common = nuw ADDXrr [[BASE]], killed [[OFFSET1]]
+; CHECK:    [[PRED1:%[0-9]+]]:ppr = LDR_PXI killed [[ADDR1]], 0 :: (load (<vscale x 1 x s16>))
+; CHECK:    [[OFFSET2:%[0-9]+]]:gpr64 = CNTW_XPiI 31, 1, implicit $vg
+; CHECK:    [[ADDR2:%[0-9]+]]:gpr64common = ADDXrr [[BASE]], killed [[OFFSET2]]
+; CHECK:    [[PRED2:%[0-9]+]]:ppr = LDR_PXI killed [[ADDR2]], 0 :: (load (<vscale x 1 x s16>))
+; CHECK:    [[OFFSET3:%[0-9]+]]:gpr64 = CNTD_XPiI 31, 3, implicit $vg
+; CHECK:    [[ADDR3:%[0-9]+]]:gpr64common = ADDXrr [[BASE]], killed [[OFFSET3]]
+; CHECK:    [[PRED3:%[0-9]+]]:ppr = LDR_PXI killed [[ADDR3]], 0 :: (load (<vscale x 1 x s16>))
+; CHECK:    [[PRED0:%[0-9]+]]:ppr = LDR_PXI [[BASE]], 0 :: (load (<vscale x 1 x s16>))
+; CHECK:    $p0 = COPY [[PRED0]]
+; CHECK:    $p1 = COPY [[PRED1]]
+; CHECK:    $p2 = COPY [[PRED2]]
+; CHECK:    $p3 = COPY [[PRED3]]
+; CHECK:    RET_ReallyLR implicit $p0, implicit $p1, implicit $p2, implicit $p3
+  ret [4 x <vscale x 16 x i1>] %arg2
+}
+
+; Test that arg1 is stored to the stack from p0~p3; and the stack location is passed throuch x0 to setup the call:
+;     str P0, [stack_loc_for_args]
+;     str P1, [stack_loc_for_args +   sizeof(Px)]
+;     str P2, [stack_loc_for_args + 2*sizeof(Px)]
+;     str P3, [stack_loc_for_args + 3*sizeof(Px)]
+;     x0 = stack_loc_for_args
+define [4 x <vscale x 16 x i1>] @caller_with_svepred_arg_2d_4x([4 x <vscale x 16 x i1>] %arg1, [4 x <vscale x 16 x i1>] %arg2) {
+; CHECK: name: caller_with_svepred_arg_2d_4x
+; CHECK: stack:
+; CHECK:      - { id: 0, name: '', type: default, offset: 0, size: 8, alignment: 2,
+; CHECK-NEXT:     stack-id: scalable-vector,
+; CHECK:    [[PRED3:%[0-9]+]]:ppr = COPY $p3
+; CHECK:    [[PRED2:%[0-9]+]]:ppr = COPY $p2
+; CHECK:    [[PRED1:%[0-9]+]]:ppr = COPY $p1
+; CHECK:    [[PRED0:%[0-9]+]]:ppr = COPY $p0
+; CHECK:    [[OFFSET1:%[0-9]+]]:gpr64 = CNTD_XPiI 31, 1, implicit $vg
+; CHECK:    [[OFFSET2:%[0-9]+]]:gpr64 = CNTW_XPiI 31, 1, implicit $vg
+; CHECK:    [[OFFSET3:%[0-9]+]]:gpr64 = CNTD_XPiI 31, 3, implicit $vg
+; CHECK:    [[STACK:%[0-9]+]]:gpr64common = ADDXri %stack.0, 0, 0
+; CHECK:    [[ADDR3:%[0-9]+]]:gpr64common = ADDXrr [[STACK]], [[OFFSET3]]
+; CHECK:    ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
+; CHECK:    STR_PXI [[PRED3]], killed [[ADDR3]], 0 :: (store (<vscale x 1 x s16>))
+; CHECK:    [[ADDR2:%[0-9]+]]:gpr64common = ADDXrr [[STACK]], [[OFFSET2]]
+; CHECK:    STR_PXI [[PRED2]], killed [[ADDR2]], 0 :: (store (<vscale x 1 x s16>))
+; CHECK:    [[ADDR1:%[0-9]+]]:gpr64common = nuw ADDXrr [[STACK]], [[OFFSET1]]
+; CHECK:    STR_PXI [[PRED1]], killed [[ADDR1]], 0 :: (store (<vscale x 1 x s16>))
+; CHECK:    STR_PXI [[PRED0]], %stack.0, 0 :: (store (<vscale x 1 x s16>) into %stack.0)
+; CHECK:    $x0 = COPY [[STACK]]
+; CHECK:    BL @callee_with_svepred_arg_2d_4x, csr_aarch64_sve_aapcs, implicit-def dead $lr, implicit $sp, implicit $p0, implicit $p1, implicit $p2, implicit $p3, implicit $x0, implicit-def $sp, implicit-def $p0, implicit-def $p1, implicit-def $p2, implicit-def $p3
+; CHECK:    ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
+  %res = call [4 x <vscale x 16 x i1>] @callee_with_svepred_arg_2d_4x([4 x <vscale x 16 x i1>] %arg2, [4 x <vscale x 16 x i1>] %arg1)
+  ret [4 x <vscale x 16 x i1>] %res
+}
+
 ; Test that z8 and z9, passed by reference, are loaded from a location that is passed on the stack.
 ; i.e.     x0 =   %x0
 ;             :
