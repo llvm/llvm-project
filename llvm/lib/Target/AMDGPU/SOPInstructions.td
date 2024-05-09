@@ -89,9 +89,9 @@ class SOP1_32R <string opName, list<dag> pattern=[]> : SOP1_Pseudo <
   opName, (outs SReg_32:$sdst), (ins SReg_32:$src0),
   "$sdst, $src0", pattern>;
 
-// IDX_REG output and SReg_32 input
-class SOP1_IDX_32R <string opName, list<dag> pattern=[]> : SOP1_Pseudo <
-  opName, (outs IDX_REG_32:$sdst), (ins SReg_32:$src0),
+// only IDX_REG output allowed
+class SOP1_IDX_32 <string opName, list<dag> pattern=[]> : SOP1_Pseudo <
+  opName, (outs IDX_REG_32:$sdst), (ins SSrc_b32:$src0),
   "$sdst, $src0", pattern>;
 
 // 32-bit input, no output.
@@ -588,7 +588,7 @@ def S_GET_BARRIER_STATE_M0 : SOP1_Pseudo <"s_get_barrier_state $sdst, m0", (outs
 let SubtargetPredicate = isGFX13Plus in {
   def S_GET_SHADER_CYCLES_U64 : SOP1_64_0<"s_get_shader_cycles_u64">;
   let hasSideEffects = 1 in {
-    def S_SET_GPR_IDX_U32 : SOP1_IDX_32R<"s_set_gpr_idx_u32">;
+    def S_SET_GPR_IDX_U32 : SOP1_IDX_32<"s_set_gpr_idx_u32">;
   }
 } // End SubtargetPredicate = isGFX13Plus
 
@@ -1868,6 +1868,13 @@ let SubtargetPredicate = Has1024AddressableVGPRs in {
   }
 }
 
+let SubtargetPredicate = isGFX13Plus in {
+  def S_SET_VGPR_FRAMES : SOPP_Pseudo<"s_set_vgpr_frames" , (ins i16imm:$simm16), "$simm16"> {
+    let hasSideEffects = 1;
+    let Defs = [MODE];
+  }
+}
+
 //===----------------------------------------------------------------------===//
 // SOP1 Patterns
 //===----------------------------------------------------------------------===//
@@ -2749,7 +2756,7 @@ multiclass SOPP_Real_32_gfx13<bits<7> op, string name = !tolower(NAME)> {
 
 defm S_BARRIER_WAIT           : SOPP_Real_32_gfx13<0x2b>;
 defm S_MONITOR_SLEEP          : SOPP_Real_32_gfx13<0x2c>;
-defm S_SET_VGPR_MSB           : SOPP_Real_32_gfx13<0x2d>;
+defm S_SET_VGPR_FRAMES        : SOPP_Real_32_gfx13<0x1c>;
 defm S_DELAY_ALU              : SOPP_Real_32_gfx13<0x2e>;
 defm S_WAIT_EVENT             : SOPP_Real_32_gfx13<0x2f>;
 defm S_SINGLEUSE_VDST         : SOPP_Real_32_gfx13<0x30>;
