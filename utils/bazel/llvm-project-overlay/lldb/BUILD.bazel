@@ -815,10 +815,6 @@ cc_binary(
         "tools/driver/*.cpp",
         "tools/driver/*.h",
     ]),
-    data = [
-        ":gdb-server",
-        ":lldb-argdumper",
-    ],
     deps = [
         ":APIHeaders",
         ":Host",
