@@ -27,7 +27,7 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 %struct.ST = type { i32, double, %struct.RT }
 
 ;.
-; CHECK: @[[A:[a-zA-Z0-9_$"\\.-]+]] = common global i32 0, align 4
+; CHECK: @a = common global i32 0, align 4
 ;.
 define ptr @foo(ptr %s) nounwind optsize ssp memory(none) uwtable {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind optsize ssp willreturn memory(none) uwtable
@@ -164,7 +164,6 @@ define i32 @volatile_load(ptr %arg) norecurse nounwind uwtable {
 ; TEST 9
 
 ; CHECK: Function Attrs: noinline nosync nounwind uwtable
-; CHECK-NEXT: declare void @nosync_function()
 declare void @nosync_function() noinline nounwind uwtable nosync
 
 define void @call_nosync_function() noinline nounwind uwtable {
@@ -181,7 +180,6 @@ define void @call_nosync_function() noinline nounwind uwtable {
 ; TEST 10 - negative, should not deduce nosync
 
 ; CHECK: Function Attrs: noinline nounwind uwtable
-; CHECK-NEXT: declare void @might_sync()
 declare void @might_sync() noinline nounwind uwtable
 
 define void @call_might_sync() noinline nounwind uwtable {
@@ -386,7 +384,6 @@ define void @convergent_readnone() {
 }
 
 ; CHECK: Function Attrs: nounwind
-; CHECK-NEXT: declare void @llvm.x86.sse2.clflush(ptr)
 declare void @llvm.x86.sse2.clflush(ptr)
 @a = common global i32 0, align 4
 

@@ -456,7 +456,7 @@ const IndirectFieldDecl *findIndirectFieldDecl(ASTContext &ASTCtx,
 /// Requirements:
 ///
 ///   `Name` must be unique in `ASTCtx`.
-template <class LocT>
+template <class LocT = StorageLocation>
 LocT &getLocForDecl(ASTContext &ASTCtx, const Environment &Env,
                     llvm::StringRef Name) {
   const ValueDecl *VD = findValueDecl(ASTCtx, Name);
@@ -470,7 +470,7 @@ LocT &getLocForDecl(ASTContext &ASTCtx, const Environment &Env,
 /// Requirements:
 ///
 ///   `Name` must be unique in `ASTCtx`.
-template <class ValueT>
+template <class ValueT = Value>
 ValueT &getValueForDecl(ASTContext &ASTCtx, const Environment &Env,
                         llvm::StringRef Name) {
   const ValueDecl *VD = findValueDecl(ASTCtx, Name);

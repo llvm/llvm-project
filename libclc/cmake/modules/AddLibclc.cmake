@@ -39,6 +39,10 @@ function(compile_to_bc)
     set( TARGET_ARG "-target" ${ARG_TRIPLE} )
   endif()
 
+  # Ensure the directory we are told to output to exists
+  get_filename_component( ARG_OUTPUT_DIR ${ARG_OUTPUT} DIRECTORY )
+  file( MAKE_DIRECTORY ${ARG_OUTPUT_DIR} )
+
   add_custom_command(
     OUTPUT ${ARG_OUTPUT}${TMP_SUFFIX}
     COMMAND libclc::clang
@@ -84,10 +88,25 @@ function(link_bc)
     ${ARGN}
   )
 
+  set( LINK_INPUT_ARG ${ARG_INPUTS} )
+  if( WIN32 OR CYGWIN )
+    # Create a response file in case the number of inputs exceeds command-line
+    # character limits on certain platforms.
+    file( TO_CMAKE_PATH ${LIBCLC_ARCH_OBJFILE_DIR}/${ARG_TARGET}.rsp RSP_FILE )
+    # Turn it into a space-separate list of input files
+    list( JOIN ARG_INPUTS " " RSP_INPUT )
+    file( WRITE ${RSP_FILE} ${RSP_INPUT} )
+    # Ensure that if this file is removed, we re-run CMake
+    set_property( DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
+      ${RSP_FILE}
+    )
+    set( LINK_INPUT_ARG "@${RSP_FILE}" )
+  endif()
+
   add_custom_command(
     OUTPUT ${ARG_TARGET}.bc
-    COMMAND libclc::llvm-link -o ${ARG_TARGET}.bc ${ARG_INPUTS}
-    DEPENDS libclc::llvm-link ${ARG_INPUTS}
+    COMMAND libclc::llvm-link -o ${ARG_TARGET}.bc ${LINK_INPUT_ARG}
+    DEPENDS libclc::llvm-link ${ARG_INPUTS} ${RSP_FILE}
   )
 
   add_custom_target( ${ARG_TARGET} ALL DEPENDS ${ARG_TARGET}.bc )

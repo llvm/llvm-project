@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -std=c++2b %s -verify
+// RUN: %clang_cc1 -fsyntax-only -std=c++2b %s -verify -fexperimental-new-constant-interpreter
 // expected-no-diagnostics
 
 template <typename Base>

@@ -9,6 +9,8 @@ add_libc_unittest(
   DEPENDS
     libc.src.fenv.fegetround
     libc.src.fenv.fesetround
+  LINK_LIBRARIES
+    LibcFPTestHelpers
 )
 
 add_libc_unittest(
@@ -23,6 +25,8 @@ add_libc_unittest(
     libc.src.fenv.fesetexcept
     libc.src.fenv.fetestexcept
     libc.src.__support.FPUtil.fenv_impl
+  LINK_LIBRARIES
+    LibcFPTestHelpers
 )
 
 add_libc_unittest(
@@ -37,6 +41,8 @@ add_libc_unittest(
     libc.src.fenv.fesetenv
     libc.src.fenv.fesetround
     libc.src.__support.FPUtil.fenv_impl
+  LINK_LIBRARIES
+    LibcFPTestHelpers
 )
 
 add_libc_unittest(
@@ -48,7 +54,10 @@ add_libc_unittest(
   DEPENDS
     libc.src.fenv.fegetexceptflag
     libc.src.fenv.fesetexceptflag
+    libc.src.fenv.fetestexceptflag
     libc.src.__support.FPUtil.fenv_impl
+  LINK_LIBRARIES
+    LibcFPTestHelpers
 )
 
 add_libc_unittest(
@@ -61,6 +70,8 @@ add_libc_unittest(
     libc.include.signal
     libc.src.fenv.feupdateenv
     libc.src.__support.FPUtil.fenv_impl
+  LINK_LIBRARIES
+    LibcFPTestHelpers
 )
 
 add_libc_unittest(
@@ -72,6 +83,8 @@ add_libc_unittest(
   DEPENDS
     libc.src.fenv.feclearexcept
     libc.src.__support.FPUtil.fenv_impl
+  LINK_LIBRARIES
+    LibcFPTestHelpers
 )
 
 add_libc_unittest(
@@ -84,6 +97,8 @@ add_libc_unittest(
     libc.src.fenv.fedisableexcept
     libc.src.fenv.feenableexcept
     libc.src.fenv.fegetexcept
+  LINK_LIBRARIES
+    LibcFPTestHelpers
 )
 
 if (NOT (LLVM_USE_SANITIZER OR (${LIBC_TARGET_OS} STREQUAL "windows")
@@ -108,6 +123,7 @@ if (NOT (LLVM_USE_SANITIZER OR (${LIBC_TARGET_OS} STREQUAL "windows")
       libc.src.__support.FPUtil.fenv_impl
     LINK_LIBRARIES
       LibcFPExceptionHelpers
+      LibcFPTestHelpers
   )
 
   add_fp_unittest(
@@ -123,5 +139,6 @@ if (NOT (LLVM_USE_SANITIZER OR (${LIBC_TARGET_OS} STREQUAL "windows")
       libc.src.__support.FPUtil.fenv_impl
     LINK_LIBRARIES
       LibcFPExceptionHelpers
+      LibcFPTestHelpers
   )
 endif()

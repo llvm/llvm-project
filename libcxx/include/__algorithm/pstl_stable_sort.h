@@ -9,10 +9,10 @@
 #ifndef _LIBCPP___ALGORITHM_PSTL_STABLE_SORT_H
 #define _LIBCPP___ALGORITHM_PSTL_STABLE_SORT_H
 
-#include <__algorithm/pstl_backend.h>
 #include <__config>
 #include <__functional/operations.h>
 #include <__iterator/cpp17_iterator_concepts.h>
+#include <__pstl/configuration.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/is_execution_policy.h>
 #include <__type_traits/remove_cvref.h>

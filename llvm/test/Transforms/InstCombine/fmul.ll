@@ -633,11 +633,11 @@ define float @log2half(float %x, float %y) {
 
 define float @log2half_commute(float %x1, float %y) {
 ; CHECK-LABEL: @log2half_commute(
-; CHECK-NEXT:    [[X1:%.*]] = fmul fast float [[X2:%.*]], 0x3FC24924A0000000
+; CHECK-NEXT:    [[X:%.*]] = fmul fast float [[X1:%.*]], 0x3FC24924A0000000
 ; CHECK-NEXT:    [[TMP1:%.*]] = call fast float @llvm.log2.f32(float [[Y:%.*]])
-; CHECK-NEXT:    [[TMP2:%.*]] = fmul fast float [[TMP1]], [[X1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = fsub fast float [[TMP2]], [[X1]]
-; CHECK-NEXT:    ret float [[TMP3]]
+; CHECK-NEXT:    [[TMP2:%.*]] = fmul fast float [[TMP1]], [[X]]
+; CHECK-NEXT:    [[MUL:%.*]] = fsub fast float [[TMP2]], [[X]]
+; CHECK-NEXT:    ret float [[MUL]]
 ;
   %x = fdiv fast float %x1, 7.0 ; thwart complexity-based canonicalization
   %halfy = fmul fast float %y, 0.5
@@ -687,8 +687,8 @@ define float @fdiv_constant_numerator_fmul_fast(float %x) {
 define float @fdiv_constant_numerator_fmul_precdiv(float %x) {
 ; CHECK-LABEL: @fdiv_constant_numerator_fmul_precdiv(
 ; CHECK-NEXT:    [[T1:%.*]] = fdiv float 2.000000e+03, [[X:%.*]]
-; CHECK-NEXT:    [[T4:%.*]] = fmul reassoc float [[T1]], 6.000000e+03
-; CHECK-NEXT:    ret float [[T4]]
+; CHECK-NEXT:    [[T3:%.*]] = fmul reassoc float [[T1]], 6.000000e+03
+; CHECK-NEXT:    ret float [[T3]]
 ;
   %t1 = fdiv float 2.0e+3, %x
   %t3 = fmul reassoc float %t1, 6.0e+3
@@ -1288,7 +1288,7 @@ define half @mul_zero_nnan(half %x) {
 
 define <2 x float> @mul_zero_nnan_vec_poison(<2 x float> %x) {
 ; CHECK-LABEL: @mul_zero_nnan_vec_poison(
-; CHECK-NEXT:    [[R:%.*]] = call nnan <2 x float> @llvm.copysign.v2f32(<2 x float> zeroinitializer, <2 x float> [[X:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = call nnan <2 x float> @llvm.copysign.v2f32(<2 x float> <float 0.000000e+00, float poison>, <2 x float> [[X:%.*]])
 ; CHECK-NEXT:    ret <2 x float> [[R]]
 ;
   %r = fmul nnan <2 x float> %x, <float 0.0, float poison>
@@ -1389,7 +1389,7 @@ define <3 x float> @mul_neg_zero_nnan_ninf_vec(<3 x float> nofpclass(inf nan) %a
 ; CHECK-LABEL: @mul_neg_zero_nnan_ninf_vec(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = fneg <3 x float> [[A:%.*]]
-; CHECK-NEXT:    [[RET:%.*]] = call <3 x float> @llvm.copysign.v3f32(<3 x float> zeroinitializer, <3 x float> [[TMP0]])
+; CHECK-NEXT:    [[RET:%.*]] = call <3 x float> @llvm.copysign.v3f32(<3 x float> <float -0.000000e+00, float poison, float poison>, <3 x float> [[TMP0]])
 ; CHECK-NEXT:    ret <3 x float> [[RET]]
 ;
 entry:

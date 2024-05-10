@@ -59,6 +59,19 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  fetestexceptflag
+  SRCS
+    fetestexceptflag.cpp
+  HDRS
+    fetestexceptflag.h
+  DEPENDS
+    libc.hdr.types.fexcept_t
+    libc.src.__support.FPUtil.fenv_impl
+  COMPILE_OPTIONS
+    -O2
+)
+
+add_entrypoint_object(
   fegetenv
   SRCS
     fegetenv.cpp

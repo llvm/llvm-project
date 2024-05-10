@@ -668,7 +668,7 @@ static int32_t getCuSparseLtDataTypeFrom(Type type) {
 static int32_t getCuSparseDataTypeFrom(Type type) {
   if (llvm::isa<ComplexType>(type)) {
     // get the element type
-    auto elementType = type.cast<ComplexType>().getElementType();
+    auto elementType = cast<ComplexType>(type).getElementType();
     if (elementType.isBF16())
       return 15; // CUDA_C_16BF
     if (elementType.isF16())
@@ -926,7 +926,7 @@ LogicalResult ConvertAsyncYieldToGpuRuntimeCallPattern::matchAndRewrite(
 static bool isDefinedByCallTo(Value value, StringRef functionName) {
   assert(isa<LLVM::LLVMPointerType>(value.getType()));
   if (auto defOp = value.getDefiningOp<LLVM::CallOp>())
-    return defOp.getCallee()->equals(functionName);
+    return *defOp.getCallee() == functionName;
   return false;
 }
 

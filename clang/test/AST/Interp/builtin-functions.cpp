@@ -633,3 +633,9 @@ void test7(void) {
   X = CFSTR("foo", "bar"); // both-error {{too many arguments to function call}}
 #endif
 }
+
+/// The actual value on my machine is 22, but I have a feeling this will be different
+/// on other targets, so just checking for != 0 here. Light testing is fine since
+/// the actual implementation uses analyze_os_log::computeOSLogBufferLayout(), which
+/// is tested elsewhere.
+static_assert(__builtin_os_log_format_buffer_size("%{mask.xyz}s", "abc") != 0, "");

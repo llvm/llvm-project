@@ -55,7 +55,7 @@ struct Export {
   StringRef name;       // N in /export:N or /export:E=N
   StringRef extName;    // E in /export:E=N
   StringRef exportAs;   // E in /export:N,EXPORTAS,E
-  StringRef aliasTarget; // GNU specific: N in "alias == N"
+  StringRef importName; // GNU specific: N in "othername == N"
   Symbol *sym = nullptr;
   uint16_t ordinal = 0;
   bool noname = false;
@@ -75,7 +75,7 @@ struct Export {
 
   bool operator==(const Export &e) const {
     return (name == e.name && extName == e.extName && exportAs == e.exportAs &&
-            aliasTarget == e.aliasTarget && ordinal == e.ordinal &&
+            importName == e.importName && ordinal == e.ordinal &&
             noname == e.noname && data == e.data && isPrivate == e.isPrivate);
   }
 };

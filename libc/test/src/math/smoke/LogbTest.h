@@ -7,10 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/FPUtil/ManipulationFunctions.h"
+#include "test/UnitTest/FEnvSafeTest.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 
-template <typename T> class LogbTest : public LIBC_NAMESPACE::testing::Test {
+template <typename T>
+class LogbTest : public LIBC_NAMESPACE::testing::FEnvSafeTest {
 
   DECLARE_SPECIAL_CONSTANTS(T)
 

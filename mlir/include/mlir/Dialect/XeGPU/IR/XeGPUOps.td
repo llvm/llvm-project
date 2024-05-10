@@ -9,7 +9,7 @@
 #ifndef MLIR_DIALECT_XEGPU_IR_XEGPUOPS_TD
 #define MLIR_DIALECT_XEGPU_IR_XEGPUOPS_TD
 
-include "mlir/IR/AttrTypeBase.td"
+include "mlir/Dialect/Arith/IR/ArithBase.td"
 include "mlir/Dialect/XeGPU/IR/XeGPUAttrs.td"
 include "mlir/Dialect/XeGPU/IR/XeGPUDialect.td"
 include "mlir/Dialect/XeGPU/IR/XeGPUTypes.td"
@@ -36,7 +36,7 @@ class XeGPU_Op<string mnemonic, list<Trait> traits = []>:
 
     static ::mlir::ParseResult parseProperties(::mlir::OpAsmParser &parser,
                                      ::mlir::OperationState &result) {
-      if (mlir::succeeded(parser.parseLess())) {
+      if (mlir::succeeded(parser.parseOptionalLess())) {
         if (parser.parseAttribute(result.propertiesAttr) || parser.parseGreater())
           return failure();
       }
@@ -164,10 +164,10 @@ def XeGPU_CreateNdDescOp: XeGPU_Op<"create_nd_tdesc", [Pure, ViewLikeOpInterface
     /// source operand. They overide static shape from source memref type.
     ArrayRef<int64_t> getStaticSizes() {
       auto attr = getConstShapeAttr();
-      if (getSourceType().isa<IntegerType>() || attr)
+      if (llvm::isa<IntegerType>(getSourceType()) || attr)
         return attr;
 
-      auto memrefType = getSourceType().dyn_cast<MemRefType>();
+      auto memrefType = llvm::dyn_cast<MemRefType>(getSourceType());
       assert(memrefType && "Incorrect use of getStaticSizes");
       return memrefType.getShape();
     }
@@ -179,10 +179,10 @@ def XeGPU_CreateNdDescOp: XeGPU_Op<"create_nd_tdesc", [Pure, ViewLikeOpInterface
     /// source operand. They overide static strides from source memref type.
     ArrayRef<int64_t> getStaticStrides() {
       auto attr = getConstStridesAttr();
-      if (getSourceType().isa<IntegerType>() || attr)
+      if (llvm::isa<IntegerType>(getSourceType()) || attr)
         return attr;
 
-      auto memrefType = getSourceType().dyn_cast<MemRefType>();
+      auto memrefType = llvm::dyn_cast<MemRefType>(getSourceType());
       assert(memrefType && "Incorrect use of getStaticStrides");
       auto [strides, offset] = getStridesAndOffset(memrefType);
       // reuse the storage of ConstStridesAttr since strides from
@@ -196,7 +196,7 @@ def XeGPU_CreateNdDescOp: XeGPU_Op<"create_nd_tdesc", [Pure, ViewLikeOpInterface
     /// `static_shape` and `static_strides` attributes.
     std::array<unsigned, 3> getArrayAttrMaxRanks() {
       unsigned rank;
-      if (auto ty = getSourceType().dyn_cast<MemRefType>()) {
+      if (auto ty = llvm::dyn_cast<MemRefType>(getSourceType())) {
         rank = ty.getRank();
       } else {
         rank = (unsigned)getMixedOffsets().size();
@@ -254,7 +254,7 @@ def XeGPU_LoadNdOp : XeGPU_Op<"load_nd", [AllElementTypesMatch<["value", "Tensor
     a block of data from memory to register. It takes a set of optional cache
     hints for each level of cache, L1, L2 and L3. If hardware does not have a
     correspoding cache, Corresponding cache hint attribute will be masked.
-    vnni transform is an hardware feature for Intel GPU, which is used to
+    VNNI transformation is an hardware feature for Intel GPU, which is used to
     do data packing during the load for B operand of matrix operation, if
     the bit width of the data type is less then 32 bits, e.g., fp16. And
     transpose is another Intel hardware feature, which will do transpose
@@ -425,10 +425,6 @@ def XeGPU_CreateDescOp: XeGPU_Op<"create_tdesc", [Pure, ViewLikeOpInterface]> {
     %0 = memref.alloc() : memref<1024xf32>
     %1 = xegpu.create_tdesc %0[0, 4, 8, 12] {chunk_size = 8}: memref<1024xf32> -> TensorDesc<4x8xf32>
     ```
-
-
-
-
   }];
 
   let arguments = (ins XeGPU_BaseAddrType: $source,
@@ -661,6 +657,155 @@ def XeGPU_UpdateOffsetOp: XeGPU_Op<"update_offset",
     custom<DynamicIndexList>($offsets, $const_offsets)
     attr-dict `:` qualified(type($TensorDesc))
   }];
+}
+
+def XeGPU_DpasOp : XeGPU_Op<"dpas", [Pure, AllElementTypesMatch<["lhs", "rhs"]>]> {
+  let summary = "It performs mma computation";
+
+  let description = [{DPAS performs matrix multiplication on matrix A of `mxk`
+    size, B of `kxn` size, and accumulate on matrix C of `mxn` to the same size
+    matrix , `m=8`, `n=16` and `k=8 * 32/bit_width_of_elem_type`. So for fp16
+    data type, the matrices are `A: vector<8x16xf16>`, `B: vector<16x16xf16>`,
+    and `C/D: vector<8x16xf32>`. Besides the matrix size requirements, DPAS
+    also requires A and B to be loaded with the required data layout. Specially,
+    VNNI layout is required for B operand. It is achieved via setting `vnni_axis = 0`
+    of the corresponding `load_nd` operator. To keep both operands as 3D vector,
+    operand A is loaded via setting `vnni_axis = 1` without impacting the
+    physical layouts change in register. Due to the VNNI transformation, A and B operands
+    are represented as 3D vector, with the last dimension representing the VNNI factor,
+    which is computed as `32/bit_width_of_elem_type`. Therefore, `A: vector<8x16xf16>`
+    is represented as `A: vector<8x8x2xf16>`, and `B: vector<16x16xf16>` is
+    represented as `B: vector<8x16x2xf16>`.
+
+    Note: on PVC, the hardware can perform load with VNNI transformation when data
+          element type is 16-bit or lower precision, taking 2 or 4 elements from
+          the first dimension and inserted into the newly added innermost dimension.
+  }];
+
+  let arguments = (ins
+    XeGPU_DpasOpType : $lhs,
+    XeGPU_DpasOpType : $rhs,
+    Optional<XeGPU_Vector2DType>: $acc);
+  let results = (outs XeGPU_Vector2DType: $result);
+
+  let extraClassDeclaration = [{
+    VectorType getLhsType() {
+      return getLhs().getType();
+    }
+
+    VectorType getRhsType() {
+      return getRhs().getType();
+    }
+
+    VectorType getAccType() {
+      if (getAcc())
+        return getAcc().getType();
+      return {};
+    }
+
+    VectorType getResultType() {
+      return getResult().getType();
+    }
+  }];
+
+  let assemblyFormat = [{
+    $lhs `,` $rhs (`,` $acc^)? attr-dict `:` type($lhs)`,` type($rhs) (`,` type($acc)^)?  `->` type($result)
+  }];
+
+  let hasVerifier = 1;
+}
+
+def XeGPU_AtomicRMWOp: XeGPU_Op<"atomic_rmw", [Pure,
+      AllElementTypesMatch<["tensorDesc", "value", "result"]>,
+      AllShapesMatch<["tensorDesc", "mask", "value", "result"]>]> {
+  let summary = "Atomic ready-modify-write operation on the TensorDesc. ";
+
+  let description = [{
+    The `xegpu.atomic_rmw` operation provides a way to perform a read-modify-write
+    operation on the region described by the `TensorDesc` free from data races. The
+    `kind` enumeration specifies the modification to be performed, The `mask` operand
+    has the same shape with `TensorDesc`, and is used to enable or disable specific
+    data points of the `TensorDesc`. The `value` operand represents the new value to
+    be applied during the modification.
+  }];
+
+  let arguments = (ins
+    AtomicRMWKindAttr:$kind,
+    XeGPU_TensorDesc:$tensorDesc,
+    XeGPU_MaskType:$mask,
+    XeGPU_ValueType:$value);
+
+  let results = (outs XeGPU_ValueType:$result);
+
+  let assemblyFormat = [{
+    $kind $tensorDesc `,` $mask `,` $value attr-dict `:`
+    type($tensorDesc) `,` type($mask) `,` type($value) `->` type($result)
+  }];
+}
+
+def XeGPU_AllocNbarrierOp: XeGPU_Op<"alloc_nbarrier", []> {
+  let summary = "It allocates a set of named barriers.";
+  let description = [{AllocNbarrier is to create a set of named barriers as
+  specified by `nbarrier_num`. Named barriers are workgroup level resources,
+    and are shared by all threads in the workgroup. For example, there are
+    up to 32 barriers (range 0-31) for each XeCore on PVC. A typical use case
+    is that a workgroup is partitioned into N subgroups of threads (N <= 32),
+    and each subgroup coordinating their work with a separate barrier with id
+    range from 0 to N respectively.}];
+  let arguments = (ins I64Attr: $nbarrier_num);
+  let assemblyFormat = "$nbarrier_num attr-dict";
+}
+
+def XeGPU_InitNbarrierOp: XeGPU_Op<"init_nbarrier", []> {
+  let summary = "It assigns a named barrier to the current thread.";
+  let description = [{InitNbarrierOp assigns the named barrier with the specified
+      barrier ID (0~31) to the current thread. Multiple threads may bind to the
+      same named barrier, and the `participant_thread_num` specifies the total
+      number of threads associated with the nbarrier. It returns an object of
+      NbarrierType representing the barrier}];
+
+  let arguments = (ins I8: $nbarrier_id,
+                       I8: $participant_thread_num);
+  let results = (outs XeGPU_Nbarrier: $result);
+  let assemblyFormat = [{
+    $nbarrier_id `,` $participant_thread_num attr-dict `:`
+    type($nbarrier_id) `,` type($participant_thread_num) `->` qualified(type($result))
+  }];
+}
+
+def XeGPU_NbarrierArriveOp: XeGPU_Op<"nbarrier_arrive", []> {
+  let summary = "It signals the arrival at the named barrier.";
+  let description = [{NbarrierArriveOp signals the hardware (or other threads)
+    that the current thread has produced its data for the consumer threads. When
+    the hardware signalled by `participant_thread_num` threads for the named barrier,
+    it will notify the threads waiting for the named barrier to continue their work.}];
+
+  let arguments = (ins XeGPU_Nbarrier: $nbarrier);
+  let assemblyFormat = [{ $nbarrier attr-dict `:` qualified(type($nbarrier))}];
+}
+
+def XeGPU_NbarrierWaitOp: XeGPU_Op<"nbarrier_wait", []> {
+  let summary = "It waits for a named barrier.";
+  let description = [{NbarrierWaitOp signals the hardware which named barrier
+    the current thread is waiting for, such that it can get notified when the
+    named barrier is completed.}];
+  let arguments = (ins XeGPU_Nbarrier: $nbarrier);
+  let assemblyFormat = [{ $nbarrier attr-dict `:` qualified(type($nbarrier)) }];
+}
+
+def XeGPU_FenceOp: XeGPU_Op<"fence", []> {
+  let summary = "It synchronizes memory accesses.";
+  let description = [{It synchronizes the memory access between
+    write and following read or write.
+    1. `Memory_kind` describes the memory kind. "global" means the global memory,
+        "slm" means the share local memory.
+    2. `Fence_scope` describes the scope of fence. "Workgroup" means that the scope would be
+        within each workgroup. "GPU" means the scope would be across workgroups within the GPU.
+  }];
+  let arguments = (ins XeGPU_MemoryScopeAttr: $memory_kind,
+                       XeGPU_FenceScopeAttr: $fence_scope);
+  let assemblyFormat = [{`memory_kind` `=` `` $memory_kind `,` `fence_scope` `=` `` $fence_scope attr-dict}];
+  let extraClassDeclaration = extraBaseClassDeclaration;
 }
 
 #endif // MLIR_DIALECT_XEGPU_IR_XEGPUOPS_TD

@@ -4280,7 +4280,8 @@ static bool shouldHaveNullability(QualType T) {
          // It's unclear whether the pragma's behavior is useful for C++.
          // e.g. treating type-aliases and template-type-parameters differently
          // from types of declarations can be surprising.
-         !isa<RecordType>(T->getCanonicalTypeInternal());
+         !isa<RecordType, TemplateSpecializationType>(
+             T->getCanonicalTypeInternal());
 }
 
 static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,

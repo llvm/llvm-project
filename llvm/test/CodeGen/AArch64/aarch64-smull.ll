@@ -257,8 +257,8 @@ define <2 x i64> @smull_zext_v2i32_v2i64(ptr %A, ptr %B) nounwind {
 ; CHECK-SVE-LABEL: smull_zext_v2i32_v2i64:
 ; CHECK-SVE:       // %bb.0:
 ; CHECK-SVE-NEXT:    ldrh w8, [x0]
-; CHECK-SVE-NEXT:    ptrue p0.d, vl2
 ; CHECK-SVE-NEXT:    ldrh w9, [x0, #2]
+; CHECK-SVE-NEXT:    ptrue p0.d, vl2
 ; CHECK-SVE-NEXT:    ldr d0, [x1]
 ; CHECK-SVE-NEXT:    fmov d1, x8
 ; CHECK-SVE-NEXT:    sshll v0.2d, v0.2s, #0

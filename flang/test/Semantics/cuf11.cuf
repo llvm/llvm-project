@@ -22,3 +22,15 @@ subroutine sub1()
   ahost = adev + adev
 
 end subroutine
+
+logical function compare_h(a,b)
+!ERROR: Derived type 'h' not found
+  type(h) :: a, b
+!ERROR: 'a' is not an object of derived type; it is implicitly typed
+!ERROR: 'b' is not an object of derived type; it is implicitly typed
+  compare_h = (a%h .eq. b%h)
+end
+
+attributes(global) subroutine sub2()
+  if (threadIdx%x == 1) print *, "I'm number one"
+end subroutine

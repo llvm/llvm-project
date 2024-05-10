@@ -611,6 +611,134 @@ TEST_F(PatternMatchTest, BitCast) {
   EXPECT_FALSE(m_ElementWiseBitCast(m_Value()).match(NXV2I64ToNXV4I32));
 }
 
+TEST_F(PatternMatchTest, CheckedInt) {
+  Type *I8Ty = IRB.getInt8Ty();
+  const APInt *Res = nullptr;
+
+  auto CheckUgt1 = [](const APInt &C) { return C.ugt(1); };
+  auto CheckTrue = [](const APInt &) { return true; };
+  auto CheckFalse = [](const APInt &) { return false; };
+  auto CheckNonZero = [](const APInt &C) { return !C.isZero(); };
+  auto CheckPow2 = [](const APInt &C) { return C.isPowerOf2(); };
+
+  auto DoScalarCheck = [&](int8_t Val) {
+    APInt APVal(8, Val);
+    Constant *C = ConstantInt::get(I8Ty, Val);
+
+    Res = nullptr;
+    EXPECT_TRUE(m_CheckedInt(CheckTrue).match(C));
+    EXPECT_TRUE(m_CheckedInt(Res, CheckTrue).match(C));
+    EXPECT_EQ(*Res, APVal);
+
+    Res = nullptr;
+    EXPECT_FALSE(m_CheckedInt(CheckFalse).match(C));
+    EXPECT_FALSE(m_CheckedInt(Res, CheckFalse).match(C));
+
+    Res = nullptr;
+    EXPECT_EQ(CheckUgt1(APVal), m_CheckedInt(CheckUgt1).match(C));
+    EXPECT_EQ(CheckUgt1(APVal), m_CheckedInt(Res, CheckUgt1).match(C));
+    if (CheckUgt1(APVal)) {
+      EXPECT_NE(Res, nullptr);
+      EXPECT_EQ(*Res, APVal);
+    }
+
+    Res = nullptr;
+    EXPECT_EQ(CheckNonZero(APVal), m_CheckedInt(CheckNonZero).match(C));
+    EXPECT_EQ(CheckNonZero(APVal), m_CheckedInt(Res, CheckNonZero).match(C));
+    if (CheckNonZero(APVal)) {
+      EXPECT_NE(Res, nullptr);
+      EXPECT_EQ(*Res, APVal);
+    }
+
+    Res = nullptr;
+    EXPECT_EQ(CheckPow2(APVal), m_CheckedInt(CheckPow2).match(C));
+    EXPECT_EQ(CheckPow2(APVal), m_CheckedInt(Res, CheckPow2).match(C));
+    if (CheckPow2(APVal)) {
+      EXPECT_NE(Res, nullptr);
+      EXPECT_EQ(*Res, APVal);
+    }
+
+  };
+
+  DoScalarCheck(0);
+  DoScalarCheck(1);
+  DoScalarCheck(2);
+  DoScalarCheck(3);
+
+  EXPECT_FALSE(m_CheckedInt(CheckTrue).match(UndefValue::get(I8Ty)));
+  EXPECT_FALSE(m_CheckedInt(Res, CheckTrue).match(UndefValue::get(I8Ty)));
+  EXPECT_EQ(Res, nullptr);
+
+  EXPECT_FALSE(m_CheckedInt(CheckFalse).match(UndefValue::get(I8Ty)));
+  EXPECT_FALSE(m_CheckedInt(Res, CheckFalse).match(UndefValue::get(I8Ty)));
+  EXPECT_EQ(Res, nullptr);
+
+  EXPECT_FALSE(m_CheckedInt(CheckTrue).match(PoisonValue::get(I8Ty)));
+  EXPECT_FALSE(m_CheckedInt(Res, CheckTrue).match(PoisonValue::get(I8Ty)));
+  EXPECT_EQ(Res, nullptr);
+
+  EXPECT_FALSE(m_CheckedInt(CheckFalse).match(PoisonValue::get(I8Ty)));
+  EXPECT_FALSE(m_CheckedInt(Res, CheckFalse).match(PoisonValue::get(I8Ty)));
+  EXPECT_EQ(Res, nullptr);
+
+  auto DoVecCheckImpl = [&](ArrayRef<std::optional<int8_t>> Vals,
+                            function_ref<bool(const APInt &)> CheckFn,
+                            bool UndefAsPoison) {
+    SmallVector<Constant *> VecElems;
+    std::optional<bool> Okay;
+    bool AllSame = true;
+    bool HasUndef = false;
+    std::optional<APInt> First;
+    for (const std::optional<int8_t> &Val : Vals) {
+      if (!Val.has_value()) {
+        VecElems.push_back(UndefAsPoison ? PoisonValue::get(I8Ty)
+                                         : UndefValue::get(I8Ty));
+        HasUndef = true;
+      } else {
+        if (!Okay.has_value())
+          Okay = true;
+        APInt APVal(8, *Val);
+        if (!First.has_value())
+          First = APVal;
+        else
+          AllSame &= First->eq(APVal);
+        Okay = *Okay && CheckFn(APVal);
+        VecElems.push_back(ConstantInt::get(I8Ty, *Val));
+      }
+    }
+
+    Constant *C = ConstantVector::get(VecElems);
+    EXPECT_EQ(!(HasUndef && !UndefAsPoison) && Okay.value_or(false),
+              m_CheckedInt(CheckFn).match(C));
+
+    Res = nullptr;
+    bool Expec =
+        !(HasUndef && !UndefAsPoison) && AllSame && Okay.value_or(false);
+    EXPECT_EQ(Expec, m_CheckedInt(Res, CheckFn).match(C));
+    if (Expec) {
+      EXPECT_NE(Res, nullptr);
+      EXPECT_EQ(*Res, *First);
+    }
+  };
+  auto DoVecCheck = [&](ArrayRef<std::optional<int8_t>> Vals) {
+    DoVecCheckImpl(Vals, CheckTrue, /*UndefAsPoison=*/false);
+    DoVecCheckImpl(Vals, CheckFalse, /*UndefAsPoison=*/false);
+    DoVecCheckImpl(Vals, CheckTrue, /*UndefAsPoison=*/true);
+    DoVecCheckImpl(Vals, CheckFalse, /*UndefAsPoison=*/true);
+    DoVecCheckImpl(Vals, CheckUgt1, /*UndefAsPoison=*/false);
+    DoVecCheckImpl(Vals, CheckNonZero, /*UndefAsPoison=*/false);
+    DoVecCheckImpl(Vals, CheckPow2, /*UndefAsPoison=*/false);
+  };
+
+  DoVecCheck({0, 1});
+  DoVecCheck({1, 1});
+  DoVecCheck({1, 2});
+  DoVecCheck({1, std::nullopt});
+  DoVecCheck({1, std::nullopt, 1});
+  DoVecCheck({1, std::nullopt, 2});
+  DoVecCheck({std::nullopt, std::nullopt, std::nullopt});
+}
+
 TEST_F(PatternMatchTest, Power2) {
   Value *C128 = IRB.getInt32(128);
   Value *CNeg128 = ConstantExpr::getNeg(cast<Constant>(C128));
@@ -1222,40 +1350,51 @@ TEST_F(PatternMatchTest, VectorUndefInt) {
   EXPECT_TRUE(match(VectorZeroPoison, m_Zero()));
 
   const APInt *C;
-  // Regardless of whether undefs are allowed,
-  // a fully undef constant does not match.
+  // Regardless of whether poison is allowed,
+  // a fully undef/poison constant does not match.
   EXPECT_FALSE(match(ScalarUndef, m_APInt(C)));
-  EXPECT_FALSE(match(ScalarUndef, m_APIntForbidUndef(C)));
-  EXPECT_FALSE(match(ScalarUndef, m_APIntAllowUndef(C)));
+  EXPECT_FALSE(match(ScalarUndef, m_APIntForbidPoison(C)));
+  EXPECT_FALSE(match(ScalarUndef, m_APIntAllowPoison(C)));
   EXPECT_FALSE(match(VectorUndef, m_APInt(C)));
-  EXPECT_FALSE(match(VectorUndef, m_APIntForbidUndef(C)));
-  EXPECT_FALSE(match(VectorUndef, m_APIntAllowUndef(C)));
+  EXPECT_FALSE(match(VectorUndef, m_APIntForbidPoison(C)));
+  EXPECT_FALSE(match(VectorUndef, m_APIntAllowPoison(C)));
+  EXPECT_FALSE(match(ScalarPoison, m_APInt(C)));
+  EXPECT_FALSE(match(ScalarPoison, m_APIntForbidPoison(C)));
+  EXPECT_FALSE(match(ScalarPoison, m_APIntAllowPoison(C)));
+  EXPECT_FALSE(match(VectorPoison, m_APInt(C)));
+  EXPECT_FALSE(match(VectorPoison, m_APIntForbidPoison(C)));
+  EXPECT_FALSE(match(VectorPoison, m_APIntAllowPoison(C)));
 
   // We can always match simple constants and simple splats.
   C = nullptr;
   EXPECT_TRUE(match(ScalarZero, m_APInt(C)));
   EXPECT_TRUE(C->isZero());
   C = nullptr;
-  EXPECT_TRUE(match(ScalarZero, m_APIntForbidUndef(C)));
+  EXPECT_TRUE(match(ScalarZero, m_APIntForbidPoison(C)));
   EXPECT_TRUE(C->isZero());
   C = nullptr;
-  EXPECT_TRUE(match(ScalarZero, m_APIntAllowUndef(C)));
+  EXPECT_TRUE(match(ScalarZero, m_APIntAllowPoison(C)));
   EXPECT_TRUE(C->isZero());
   C = nullptr;
   EXPECT_TRUE(match(VectorZero, m_APInt(C)));
   EXPECT_TRUE(C->isZero());
   C = nullptr;
-  EXPECT_TRUE(match(VectorZero, m_APIntForbidUndef(C)));
+  EXPECT_TRUE(match(VectorZero, m_APIntForbidPoison(C)));
   EXPECT_TRUE(C->isZero());
   C = nullptr;
-  EXPECT_TRUE(match(VectorZero, m_APIntAllowUndef(C)));
+  EXPECT_TRUE(match(VectorZero, m_APIntAllowPoison(C)));
   EXPECT_TRUE(C->isZero());
 
-  // Whether splats with undef can be matched depends on the matcher.
+  // Splats with undef are never allowed.
+  // Whether splats with poison can be matched depends on the matcher.
   EXPECT_FALSE(match(VectorZeroUndef, m_APInt(C)));
-  EXPECT_FALSE(match(VectorZeroUndef, m_APIntForbidUndef(C)));
+  EXPECT_FALSE(match(VectorZeroUndef, m_APIntForbidPoison(C)));
+  EXPECT_FALSE(match(VectorZeroUndef, m_APIntAllowPoison(C)));
+
+  EXPECT_FALSE(match(VectorZeroPoison, m_APInt(C)));
+  EXPECT_FALSE(match(VectorZeroPoison, m_APIntForbidPoison(C)));
   C = nullptr;
-  EXPECT_TRUE(match(VectorZeroUndef, m_APIntAllowUndef(C)));
+  EXPECT_TRUE(match(VectorZeroPoison, m_APIntAllowPoison(C)));
   EXPECT_TRUE(C->isZero());
 }
 
@@ -1386,44 +1525,113 @@ TEST_F(PatternMatchTest, VectorUndefFloat) {
   EXPECT_FALSE(match(VectorInfPoison, m_Finite()));
   EXPECT_FALSE(match(VectorNaNPoison, m_Finite()));
 
+  auto CheckTrue = [](const APFloat &) { return true; };
+  EXPECT_FALSE(match(VectorZeroUndef, m_CheckedFp(CheckTrue)));
+  EXPECT_TRUE(match(VectorZeroPoison, m_CheckedFp(CheckTrue)));
+  EXPECT_TRUE(match(ScalarPosInf, m_CheckedFp(CheckTrue)));
+  EXPECT_TRUE(match(ScalarNegInf, m_CheckedFp(CheckTrue)));
+  EXPECT_TRUE(match(ScalarNaN, m_CheckedFp(CheckTrue)));
+  EXPECT_FALSE(match(VectorInfUndef, m_CheckedFp(CheckTrue)));
+  EXPECT_TRUE(match(VectorInfPoison, m_CheckedFp(CheckTrue)));
+  EXPECT_FALSE(match(VectorNaNUndef, m_CheckedFp(CheckTrue)));
+  EXPECT_TRUE(match(VectorNaNPoison, m_CheckedFp(CheckTrue)));
+
+  auto CheckFalse = [](const APFloat &) { return false; };
+  EXPECT_FALSE(match(VectorZeroUndef, m_CheckedFp(CheckFalse)));
+  EXPECT_FALSE(match(VectorZeroPoison, m_CheckedFp(CheckFalse)));
+  EXPECT_FALSE(match(ScalarPosInf, m_CheckedFp(CheckFalse)));
+  EXPECT_FALSE(match(ScalarNegInf, m_CheckedFp(CheckFalse)));
+  EXPECT_FALSE(match(ScalarNaN, m_CheckedFp(CheckFalse)));
+  EXPECT_FALSE(match(VectorInfUndef, m_CheckedFp(CheckFalse)));
+  EXPECT_FALSE(match(VectorInfPoison, m_CheckedFp(CheckFalse)));
+  EXPECT_FALSE(match(VectorNaNUndef, m_CheckedFp(CheckFalse)));
+  EXPECT_FALSE(match(VectorNaNPoison, m_CheckedFp(CheckFalse)));
+
+  auto CheckNonNaN = [](const APFloat &C) { return !C.isNaN(); };
+  EXPECT_FALSE(match(VectorZeroUndef, m_CheckedFp(CheckNonNaN)));
+  EXPECT_TRUE(match(VectorZeroPoison, m_CheckedFp(CheckNonNaN)));
+  EXPECT_TRUE(match(ScalarPosInf, m_CheckedFp(CheckNonNaN)));
+  EXPECT_TRUE(match(ScalarNegInf, m_CheckedFp(CheckNonNaN)));
+  EXPECT_FALSE(match(ScalarNaN, m_CheckedFp(CheckNonNaN)));
+  EXPECT_FALSE(match(VectorInfUndef, m_CheckedFp(CheckNonNaN)));
+  EXPECT_TRUE(match(VectorInfPoison, m_CheckedFp(CheckNonNaN)));
+  EXPECT_FALSE(match(VectorNaNUndef, m_CheckedFp(CheckNonNaN)));
+  EXPECT_FALSE(match(VectorNaNPoison, m_CheckedFp(CheckNonNaN)));
+
   const APFloat *C;
-  // Regardless of whether undefs are allowed,
-  // a fully undef constant does not match.
+  // Regardless of whether poison is allowed,
+  // a fully undef/poison constant does not match.
   EXPECT_FALSE(match(ScalarUndef, m_APFloat(C)));
-  EXPECT_FALSE(match(ScalarUndef, m_APFloatForbidUndef(C)));
-  EXPECT_FALSE(match(ScalarUndef, m_APFloatAllowUndef(C)));
+  EXPECT_FALSE(match(ScalarUndef, m_APFloatForbidPoison(C)));
+  EXPECT_FALSE(match(ScalarUndef, m_APFloatAllowPoison(C)));
+  EXPECT_FALSE(match(ScalarUndef, m_CheckedFp(C, CheckTrue)));
   EXPECT_FALSE(match(VectorUndef, m_APFloat(C)));
-  EXPECT_FALSE(match(VectorUndef, m_APFloatForbidUndef(C)));
-  EXPECT_FALSE(match(VectorUndef, m_APFloatAllowUndef(C)));
+  EXPECT_FALSE(match(VectorUndef, m_APFloatForbidPoison(C)));
+  EXPECT_FALSE(match(VectorUndef, m_APFloatAllowPoison(C)));
+  EXPECT_FALSE(match(VectorUndef, m_CheckedFp(C, CheckTrue)));
+  EXPECT_FALSE(match(ScalarPoison, m_APFloat(C)));
+  EXPECT_FALSE(match(ScalarPoison, m_APFloatForbidPoison(C)));
+  EXPECT_FALSE(match(ScalarPoison, m_APFloatAllowPoison(C)));
+  EXPECT_FALSE(match(ScalarPoison, m_CheckedFp(C, CheckTrue)));
+  EXPECT_FALSE(match(VectorPoison, m_APFloat(C)));
+  EXPECT_FALSE(match(VectorPoison, m_APFloatForbidPoison(C)));
+  EXPECT_FALSE(match(VectorPoison, m_APFloatAllowPoison(C)));
+  EXPECT_FALSE(match(VectorPoison, m_CheckedFp(C, CheckTrue)));
 
   // We can always match simple constants and simple splats.
   C = nullptr;
   EXPECT_TRUE(match(ScalarZero, m_APFloat(C)));
   EXPECT_TRUE(C->isZero());
   C = nullptr;
-  EXPECT_TRUE(match(ScalarZero, m_APFloatForbidUndef(C)));
+  EXPECT_TRUE(match(ScalarZero, m_APFloatForbidPoison(C)));
   EXPECT_TRUE(C->isZero());
   C = nullptr;
-  EXPECT_TRUE(match(ScalarZero, m_APFloatAllowUndef(C)));
+  EXPECT_TRUE(match(ScalarZero, m_APFloatAllowPoison(C)));
   EXPECT_TRUE(C->isZero());
   C = nullptr;
   EXPECT_TRUE(match(VectorZero, m_APFloat(C)));
   EXPECT_TRUE(C->isZero());
   C = nullptr;
-  EXPECT_TRUE(match(VectorZero, m_APFloatForbidUndef(C)));
+  EXPECT_TRUE(match(VectorZero, m_APFloatForbidPoison(C)));
   EXPECT_TRUE(C->isZero());
   C = nullptr;
-  EXPECT_TRUE(match(VectorZero, m_APFloatAllowUndef(C)));
+  EXPECT_TRUE(match(VectorZero, m_APFloatAllowPoison(C)));
+  EXPECT_TRUE(C->isZero());
+  C = nullptr;
+  EXPECT_TRUE(match(VectorZero, m_CheckedFp(C, CheckTrue)));
+  EXPECT_TRUE(C->isZero());
+  C = nullptr;
+  EXPECT_TRUE(match(VectorZero, m_CheckedFp(C, CheckNonNaN)));
   EXPECT_TRUE(C->isZero());
 
-  // Whether splats with undef can be matched depends on the matcher.
+  // Splats with undef are never allowed.
+  // Whether splats with poison can be matched depends on the matcher.
   EXPECT_FALSE(match(VectorZeroUndef, m_APFloat(C)));
-  EXPECT_FALSE(match(VectorZeroUndef, m_APFloatForbidUndef(C)));
+  EXPECT_FALSE(match(VectorZeroUndef, m_APFloatForbidPoison(C)));
+  EXPECT_FALSE(match(VectorZeroUndef, m_APFloatAllowPoison(C)));
+  EXPECT_FALSE(match(VectorZeroUndef, m_Finite(C)));
+
+  EXPECT_FALSE(match(VectorZeroPoison, m_APFloat(C)));
+  EXPECT_FALSE(match(VectorZeroPoison, m_APFloatForbidPoison(C)));
   C = nullptr;
-  EXPECT_TRUE(match(VectorZeroUndef, m_APFloatAllowUndef(C)));
+  EXPECT_TRUE(match(VectorZeroPoison, m_APFloatAllowPoison(C)));
   EXPECT_TRUE(C->isZero());
   C = nullptr;
-  EXPECT_TRUE(match(VectorZeroUndef, m_Finite(C)));
+  EXPECT_TRUE(match(VectorZeroPoison, m_Finite(C)));
+  EXPECT_TRUE(C->isZero());
+  EXPECT_FALSE(match(VectorZeroPoison, m_APFloat(C)));
+  EXPECT_FALSE(match(VectorZeroPoison, m_APFloatForbidPoison(C)));
+  C = nullptr;
+  EXPECT_TRUE(match(VectorZeroPoison, m_APFloatAllowPoison(C)));
+  EXPECT_TRUE(C->isZero());
+  C = nullptr;
+  EXPECT_TRUE(match(VectorZeroPoison, m_Finite(C)));
+  EXPECT_TRUE(C->isZero());
+  C = nullptr;
+  EXPECT_TRUE(match(VectorZeroPoison, m_CheckedFp(C, CheckTrue)));
+  EXPECT_TRUE(C->isZero());
+  C = nullptr;
+  EXPECT_TRUE(match(VectorZeroPoison, m_CheckedFp(C, CheckNonNaN)));
   EXPECT_TRUE(C->isZero());
 }
 
@@ -1964,7 +2172,7 @@ TEST_F(PatternMatchTest, VScale) {
   EXPECT_TRUE(match(PtrToInt2, m_VScale()));
 }
 
-TEST_F(PatternMatchTest, NotForbidUndef) {
+TEST_F(PatternMatchTest, NotForbidPoison) {
   Type *ScalarTy = IRB.getInt8Ty();
   Type *VectorTy = FixedVectorType::get(ScalarTy, 3);
   Constant *ScalarUndef = UndefValue::get(ScalarTy);
@@ -1989,23 +2197,33 @@ TEST_F(PatternMatchTest, NotForbidUndef) {
   Value *X;
   EXPECT_TRUE(match(Not, m_Not(m_Value(X))));
   EXPECT_TRUE(match(X, m_Zero()));
+  X = nullptr;
+  EXPECT_TRUE(match(Not, m_NotForbidPoison(m_Value(X))));
+  EXPECT_TRUE(match(X, m_Zero()));
 
   Value *NotCommute = IRB.CreateXor(VectorOnes, VectorZero);
   Value *Y;
   EXPECT_TRUE(match(NotCommute, m_Not(m_Value(Y))));
   EXPECT_TRUE(match(Y, m_Zero()));
+  Y = nullptr;
+  EXPECT_TRUE(match(NotCommute, m_NotForbidPoison(m_Value(Y))));
+  EXPECT_TRUE(match(Y, m_Zero()));
 
   Value *NotWithUndefs = IRB.CreateXor(VectorZero, VectorMixedUndef);
   EXPECT_FALSE(match(NotWithUndefs, m_Not(m_Value())));
+  EXPECT_FALSE(match(NotWithUndefs, m_NotForbidPoison(m_Value())));
 
   Value *NotWithPoisons = IRB.CreateXor(VectorZero, VectorMixedPoison);
   EXPECT_TRUE(match(NotWithPoisons, m_Not(m_Value())));
+  EXPECT_FALSE(match(NotWithPoisons, m_NotForbidPoison(m_Value())));
 
   Value *NotWithUndefsCommute = IRB.CreateXor(VectorMixedUndef, VectorZero);
   EXPECT_FALSE(match(NotWithUndefsCommute, m_Not(m_Value())));
+  EXPECT_FALSE(match(NotWithUndefsCommute, m_NotForbidPoison(m_Value())));
 
   Value *NotWithPoisonsCommute = IRB.CreateXor(VectorMixedPoison, VectorZero);
   EXPECT_TRUE(match(NotWithPoisonsCommute, m_Not(m_Value())));
+  EXPECT_FALSE(match(NotWithPoisonsCommute, m_NotForbidPoison(m_Value())));
 }
 
 template <typename T> struct MutableConstTest : PatternMatchTest { };
