@@ -8,7 +8,7 @@
 
 #include "hdr/time_macros.h"
 #include "src/__support/common.h"
-#include "src/__support/time/clock_gettime.h"
+#include "src/__support/time/linux/clock_gettime.h"
 #include "src/errno/libc_errno.h"
 #include "src/time/time_func.h"
 
