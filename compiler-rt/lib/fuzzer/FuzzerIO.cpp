@@ -8,10 +8,9 @@
 // IO functions.
 //===----------------------------------------------------------------------===//
 
-#include "FuzzerIO.h"
 #include "FuzzerDefs.h"
 #include "FuzzerExtFunctions.h"
-#include "FuzzerInternal.h"
+#include "FuzzerIO.h"
 #include "FuzzerUtil.h"
 #include <algorithm>
 #include <cstdarg>
@@ -66,7 +65,6 @@ std::string FileToString(const std::string &Path) {
 }
 
 void CopyFileToErr(const std::string &Path) {
-  ScopedDisableMsanInterceptorChecks S;
   Puts(FileToString(Path).c_str());
 }
 
