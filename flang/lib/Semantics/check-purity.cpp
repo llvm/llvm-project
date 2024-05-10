@@ -39,12 +39,16 @@ bool PurityChecker::InPureSubprogram() const {
 
 bool PurityChecker::HasPurePrefix(
     const std::list<parser::PrefixSpec> &prefixes) const {
+  bool result{false};
   for (const parser::PrefixSpec &prefix : prefixes) {
-    if (std::holds_alternative<parser::PrefixSpec::Pure>(prefix.u)) {
-      return true;
+    if (std::holds_alternative<parser::PrefixSpec::Impure>(prefix.u)) {
+      return false;
+    } else if (std::holds_alternative<parser::PrefixSpec::Pure>(prefix.u) ||
+        std::holds_alternative<parser::PrefixSpec::Elemental>(prefix.u)) {
+      result = true;
     }
   }
-  return false;
+  return result;
 }
 
 void PurityChecker::Entered(
