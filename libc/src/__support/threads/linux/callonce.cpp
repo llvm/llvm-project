@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/threads/callonce.h"
+#include "src/__support/macros/optimization.h"
 #include "src/__support/threads/linux/futex_utils.h"
 
 namespace LIBC_NAMESPACE {
@@ -20,6 +21,12 @@ int callonce(CallOnceFlag *flag, CallOnceCallback *func) {
   auto *futex_word = reinterpret_cast<Futex *>(flag);
 
   FutexWordType not_called = NOT_CALLED;
+
+  // Avoid cmpxchg operation if the function has already been called.
+  // The destination operand of cmpxchg may receive a write cycle without
+  // regard to the result of the comparison
+  if (LIBC_LIKELY(futex_word->load(cpp::MemoryOrder::RELAXED) == FINISH))
+    return 0;
 
   // The call_once call can return only after the called function |func|
   // returns. So, we use futexes to synchronize calls with the same flag value.
