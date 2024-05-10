@@ -409,7 +409,7 @@ as follows:
   $ clang -Xclang -fverify-debuginfo-preserve -Xclang -fverify-debuginfo-preserve-export=sample.json -g -O2 sample.c
 
 Please do note that there are some known false positives, for source locations
-and debug reecord checking, so that will be addressed as a future work.
+and debug record checking, so that will be addressed as a future work.
 
 Mutation testing for MIR-level transformations
 ----------------------------------------------
