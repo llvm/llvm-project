@@ -195,7 +195,7 @@ bool WindowScheduler::initialize() {
   SmallVector<Register, 8> PhiDefs;
   auto PLI = TII->analyzeLoopForPipelining(MBB);
   for (auto &MI : *MBB) {
-    if (MI.isDebugInstr() || MI.isTerminator())
+    if (MI.isMetaInstruction() || MI.isTerminator())
       continue;
     if (MI.isPHI()) {
       for (auto Def : PhiDefs)
@@ -222,7 +222,7 @@ bool WindowScheduler::initialize() {
                            "window scheduling!\n");
       return false;
     }
-    for (auto &Def : MI.defs())
+    for (auto &Def : MI.all_defs())
       if (Def.isReg() && Def.getReg().isPhysical())
         return false;
   }
@@ -285,7 +285,7 @@ void WindowScheduler::generateTripleMBB() {
   // DefPairs hold the old and new define register pairs.
   DenseMap<Register, Register> DefPairs;
   for (auto *MI : OriMIs) {
-    if (MI->isDebugInstr() || MI->isTerminator())
+    if (MI->isMetaInstruction() || MI->isTerminator())
       continue;
     if (MI->isPHI())
       if (Register AntiReg = getAntiRegister(MI))
@@ -300,13 +300,13 @@ void WindowScheduler::generateTripleMBB() {
   // are updated accordingly.
   for (size_t Cnt = 1; Cnt < DuplicateNum; ++Cnt) {
     for (auto *MI : OriMIs) {
-      if (MI->isPHI() || MI->isDebugInstr() ||
+      if (MI->isPHI() || MI->isMetaInstruction() ||
           (MI->isTerminator() && Cnt < DuplicateNum - 1))
         continue;
       auto *NewMI = MF->CloneMachineInstr(MI);
       DenseMap<Register, Register> NewDefs;
       // New defines are updated.
-      for (auto MO : NewMI->defs())
+      for (auto MO : NewMI->all_defs())
         if (MO.isReg() && MO.getReg().isVirtual()) {
           Register NewDef =
               MRI->createVirtualRegister(MRI->getRegClass(MO.getReg()));
@@ -666,7 +666,7 @@ unsigned WindowScheduler::getOriStage(MachineInstr *OriMI, unsigned Offset) {
   // while the rest are set to 1.
   unsigned Id = 0;
   for (auto *MI : OriMIs) {
-    if (MI->isDebugInstr())
+    if (MI->isMetaInstruction())
       continue;
     if (MI == OriMI)
       break;
