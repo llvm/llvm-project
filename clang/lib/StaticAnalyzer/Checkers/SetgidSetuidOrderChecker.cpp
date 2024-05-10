@@ -31,8 +31,8 @@ class SetgidSetuidOrderChecker
   const BugType BT_WrongRevocationOrder{
       this, "Possible wrong order of privilege revocation"};
 
-  const CallDescription SetuidDesc{{"setuid"}, 1};
-  const CallDescription SetgidDesc{{"setgid"}, 1};
+  const CallDescription SetuidDesc{CDM::CLibrary, {"setuid"}, 1};
+  const CallDescription SetgidDesc{CDM::CLibrary, {"setgid"}, 1};
 
   CallDescriptionSet OtherSetPrivilegeDesc{
       {CDM::CLibrary, {"seteuid"}, 1},   {CDM::CLibrary, {"setegid"}, 1},
