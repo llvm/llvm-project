@@ -20,10 +20,9 @@ namespace bolt {
 
 const char *BoltAddressTranslation::SECTION_NAME = ".note.bolt_bat";
 
-void BoltAddressTranslation::writeEntriesForBB(MapTy &Map,
-                                               const BinaryBasicBlock &BB,
-                                               uint64_t FuncInputAddress,
-                                               uint64_t FuncOutputAddress) {
+void BoltAddressTranslation::writeEntriesForBB(
+    MapTy &Map, const BinaryBasicBlock &BB, uint64_t FuncInputAddress,
+    uint64_t FuncOutputAddress) const {
   const uint64_t BBOutputOffset =
       BB.getOutputAddressRange().first - FuncOutputAddress;
   const uint32_t BBInputOffset = BB.getInputOffset();
@@ -138,8 +137,8 @@ void BoltAddressTranslation::write(const BinaryContext &BC, raw_ostream &OS) {
             << " basic block hashes\n";
 }
 
-APInt BoltAddressTranslation::calculateBranchEntriesBitMask(MapTy &Map,
-                                                            size_t EqualElems) {
+APInt BoltAddressTranslation::calculateBranchEntriesBitMask(
+    MapTy &Map, size_t EqualElems) const {
   APInt BitMask(alignTo(EqualElems, 8), 0);
   size_t Index = 0;
   for (std::pair<const uint32_t, uint32_t> &KeyVal : Map) {
@@ -422,7 +421,7 @@ void BoltAddressTranslation::parseMaps(std::vector<uint64_t> &HotFuncs,
   }
 }
 
-void BoltAddressTranslation::dump(raw_ostream &OS) {
+void BoltAddressTranslation::dump(raw_ostream &OS) const {
   const size_t NumTables = Maps.size();
   OS << "BAT tables for " << NumTables << " functions:\n";
   for (const auto &MapEntry : Maps) {
@@ -447,11 +446,15 @@ void BoltAddressTranslation::dump(raw_ostream &OS) {
         OS << formatv(" hash: {0:x}", BBHashMap.getBBHash(Val));
       OS << "\n";
     }
-    if (IsHotFunction)
-      OS << "NumBlocks: " << NumBasicBlocksMap[Address] << '\n';
-    if (SecondaryEntryPointsMap.count(Address)) {
+    if (IsHotFunction) {
+      auto NumBasicBlocksIt = NumBasicBlocksMap.find(Address);
+      assert(NumBasicBlocksIt != NumBasicBlocksMap.end());
+      OS << "NumBlocks: " << NumBasicBlocksIt->second << '\n';
+    }
+    auto SecondaryEntryPointsIt = SecondaryEntryPointsMap.find(Address);
+    if (SecondaryEntryPointsIt != SecondaryEntryPointsMap.end()) {
       const std::vector<uint32_t> &SecondaryEntryPoints =
-          SecondaryEntryPointsMap[Address];
+          SecondaryEntryPointsIt->second;
       OS << SecondaryEntryPoints.size() << " secondary entry points:\n";
       for (uint32_t EntryPointOffset : SecondaryEntryPoints)
         OS << formatv("{0:x}\n", EntryPointOffset);

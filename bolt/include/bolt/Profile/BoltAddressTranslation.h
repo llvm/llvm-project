@@ -90,7 +90,7 @@ public:
   std::error_code parse(raw_ostream &OS, StringRef Buf);
 
   /// Dump the parsed address translation tables
-  void dump(raw_ostream &OS);
+  void dump(raw_ostream &OS) const;
 
   /// If the maps are loaded in memory, perform the lookup to translate LBR
   /// addresses in function located at \p FuncAddress.
@@ -132,7 +132,8 @@ private:
   /// emitted for the start of the BB. More entries may be emitted to cover
   /// the location of calls or any instruction that may change control flow.
   void writeEntriesForBB(MapTy &Map, const BinaryBasicBlock &BB,
-                         uint64_t FuncInputAddress, uint64_t FuncOutputAddress);
+                         uint64_t FuncInputAddress,
+                         uint64_t FuncOutputAddress) const;
 
   /// Write the serialized address translation table for a function.
   template <bool Cold>
@@ -147,7 +148,7 @@ private:
 
   /// Returns the bitmask with set bits corresponding to indices of BRANCHENTRY
   /// entries in function address translation map.
-  APInt calculateBranchEntriesBitMask(MapTy &Map, size_t EqualElems);
+  APInt calculateBranchEntriesBitMask(MapTy &Map, size_t EqualElems) const;
 
   /// Calculate the number of equal offsets (output = input - skew) in the
   /// beginning of the function.
