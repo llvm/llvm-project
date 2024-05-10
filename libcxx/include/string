@@ -717,10 +717,6 @@ _LIBCPP_HIDE_FROM_ABI constexpr basic_string<_CharT, _Traits, _Allocator>
 operator+(type_identity_t<basic_string_view<_CharT, _Traits>> __lhs,
           const basic_string<_CharT, _Traits, _Allocator>& __rhs);
 
-template <class _CharT, class _Traits, class _Allocator>
-_LIBCPP_HIDE_FROM_ABI constexpr basic_string<_CharT, _Traits, _Allocator>
-operator+(type_identity_t<basic_string_view<_CharT, _Traits>> __lhs, basic_string<_CharT, _Traits, _Allocator>&& __rhs);
-
 #endif
 
 extern template _LIBCPP_EXPORTED_FROM_ABI string operator+
@@ -2205,7 +2201,6 @@ private:
 #if _LIBCPP_STD_VER >= 26
   friend constexpr basic_string operator+ <>(const basic_string&, type_identity_t<__self_view>);
   friend constexpr basic_string operator+ <>(type_identity_t<__self_view>, const basic_string&);
-  friend constexpr basic_string operator+ <>(type_identity_t<__self_view>, basic_string&&);
 #endif
 };
 
