@@ -198,14 +198,11 @@ private:
   llvm::Expected<ParsedExpression>
   ParseAndImport(SwiftASTContext::ScopedDiagnostics &expr_diagnostics,
                  SwiftExpressionParser::SILVariableMap &variable_map,
-                 unsigned &buffer_id, DiagnosticManager &diagnostic_manager,
-                 bool repl, bool playground);
+                 unsigned &buffer_id, DiagnosticManager &diagnostic_manager);
 
   /// Initialize the SwiftASTContext and return the wrapped
   /// ThreadSafeASTContext when successful.
-  ThreadSafeASTContext GetASTContext(DiagnosticManager &diagnostic_manager,
-                                     std::function<bool()> disable_objc_runtime,
-                                     bool repl, bool playground);
+  ThreadSafeASTContext GetASTContext(DiagnosticManager &diagnostic_manager);
 
   /// The expression to be parsed.
   Expression &m_expr;
