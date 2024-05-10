@@ -912,7 +912,7 @@ cc_binary(
 )
 
 apple_genrule(
-    name = "signed_debugserver",
+    name = "debugserver_signed",
     srcs = [":debugserver_unsigned"],
     outs = ["debugserver"],
     cmd = "cp $(SRCS) $(OUTS) && xcrun codesign -f -s - --entitlements $(location tools/debugserver/resources/debugserver-macosx-entitlements.plist) $(OUTS)",
