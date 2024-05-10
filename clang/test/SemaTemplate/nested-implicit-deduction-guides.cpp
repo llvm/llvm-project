@@ -85,7 +85,7 @@ nested_init_list<int>::concept_fail nil_invalid{1, ""};
 // expected-note@#INIT_LIST_INNER_INVALID {{candidate function template not viable: requires 1 argument, but 2 were provided}}
 // expected-note@#INIT_LIST_INNER_INVALID {{candidate function template not viable: requires 0 arguments, but 2 were provided}}
 
-namespace PR88142 {
+namespace GH88142 {
 
 template <typename, typename...> struct X {
   template <typename> struct Y {
