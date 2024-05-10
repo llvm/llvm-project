@@ -78,15 +78,6 @@ class Debugger : public std::enable_shared_from_this<Debugger>,
                  public UserID,
                  public Properties {
 public:
-  /// Broadcaster event bits definitions.
-  enum {
-    eBroadcastBitProgress = (1 << 0),
-    eBroadcastBitWarning = (1 << 1),
-    eBroadcastBitError = (1 << 2),
-    eBroadcastSymbolChange = (1 << 3),
-    eBroadcastBitProgressCategory = (1 << 4),
-  };
-
   using DebuggerList = std::vector<lldb::DebuggerSP>;
 
   static llvm::StringRef GetStaticBroadcasterClass();
@@ -628,7 +619,7 @@ protected:
   ReportProgress(uint64_t progress_id, std::string title, std::string details,
                  uint64_t completed, uint64_t total,
                  std::optional<lldb::user_id_t> debugger_id,
-                 uint32_t progress_category_bit = eBroadcastBitProgress);
+                 uint32_t progress_category_bit = lldb::eBroadcastBitProgress);
 
   static void ReportDiagnosticImpl(lldb::Severity severity, std::string message,
                                    std::optional<lldb::user_id_t> debugger_id,
