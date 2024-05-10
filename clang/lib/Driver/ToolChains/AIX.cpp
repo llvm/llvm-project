@@ -481,8 +481,8 @@ static void addTocDataOptions(const llvm::opt::ArgList &Args,
 
   // Currently only supported for small code model.
   if (TOCDataGloballyinEffect &&
-      (Args.getLastArgValue(options::OPT_mcmodel_EQ).equals("large") ||
-       Args.getLastArgValue(options::OPT_mcmodel_EQ).equals("medium"))) {
+      (Args.getLastArgValue(options::OPT_mcmodel_EQ) == "large" ||
+       Args.getLastArgValue(options::OPT_mcmodel_EQ) == "medium")) {
     D.Diag(clang::diag::warn_drv_unsupported_tocdata);
     return;
   }
