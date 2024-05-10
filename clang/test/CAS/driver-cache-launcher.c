@@ -74,8 +74,7 @@
 
 // DISABLE-MCCAS-NOT: "-fcas-backend"
 // DISABLE-MCCAS-NOT: "-fcas-backend-mode=verify"
-// DISABLE-MCCAS-NOT: "-mllvm"
-// DISABLE-MCCAS-NOT: "-cas-friendly-debug-info"
+// DISABLE-MCCAS-NOT: "-mllvm" "-cas-friendly-debug-info"
 
 
 
