@@ -348,6 +348,20 @@ void ErrorBadParamsToAnnotateDoubleEndedContiguousContainer::Print() {
   ReportErrorSummary(scariness.GetDescription(), stack);
 }
 
+void ErrorBadParamsToMoveContiguousContainerAnnotations::Print() {
+  Report(
+      "ERROR: AddressSanitizer: bad parameters to "
+      "__sanitizer_move_contiguous_container_annotations:\n"
+      "      old_storage_beg : %p\n"
+      "      old_storage_end : %p\n"
+      "      new_storage_beg : %p\n"
+      "      new_storage_end : %p\n",
+      (void *)old_storage_beg, (void *)old_storage_end, (void *)new_storage_beg,
+      (void *)new_storage_end);
+  stack->Print();
+  ReportErrorSummary(scariness.GetDescription(), stack);
+}
+
 void ErrorODRViolation::Print() {
   Decorator d;
   Printf("%s", d.Error());
