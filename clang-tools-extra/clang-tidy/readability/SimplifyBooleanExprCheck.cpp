@@ -513,14 +513,12 @@ public:
     return true;
   }
 
-  static bool isExpectedUnaryLNot(SimplifyBooleanExprCheck *Check,
-                                  const Expr *E) {
+  bool isExpectedUnaryLNot(const Expr *E) {
     return !Check->canBeBypassed(E) && isa<UnaryOperator>(E) &&
            cast<UnaryOperator>(E)->getOpcode() == UO_LNot;
   }
 
-  static bool isExpectedBinaryOp(SimplifyBooleanExprCheck *Check,
-                                 const Expr *E) {
+  bool isExpectedBinaryOp(const Expr *E) {
     const auto *BinaryOp = dyn_cast<BinaryOperator>(E);
     return !Check->canBeBypassed(E) && BinaryOp && BinaryOp->isLogicalOp() &&
            BinaryOp->getType()->isBooleanType();
@@ -547,10 +545,9 @@ public:
       return true;
     case BO_LAnd:
     case BO_LOr:
-      return checkEitherSide(BO,
-                             [this](const Expr *E) {
-                               return isExpectedUnaryLNot(Check, E);
-                             }) ||
+      return checkEitherSide(
+                 BO,
+                 [this](const Expr *E) { return isExpectedUnaryLNot(E); }) ||
              (NestingLevel &&
               checkEitherSide(BO, [this, NestingLevel](const Expr *E) {
                 return nestedDemorgan(E, NestingLevel - 1);
@@ -567,13 +564,13 @@ public:
     const auto *Parens = dyn_cast<ParenExpr>(SubImp);
     const Expr *SubExpr =
         Parens ? Parens->getSubExpr()->IgnoreImplicit() : SubImp;
-    if (!isExpectedBinaryOp(Check, SubExpr))
+    if (!isExpectedBinaryOp(SubExpr))
       return Base::TraverseUnaryOperator(Op);
     const auto *BinaryOp = cast<BinaryOperator>(SubExpr);
     if (Check->SimplifyDeMorganRelaxed ||
         checkEitherSide(
             BinaryOp,
-            [this](const Expr *E) { return isExpectedUnaryLNot(Check, E); }) ||
+            [this](const Expr *E) { return isExpectedUnaryLNot(E); }) ||
         checkEitherSide(
             BinaryOp, [this](const Expr *E) { return nestedDemorgan(E, 1); })) {
       if (Check->reportDeMorgan(Context, Op, BinaryOp, !IsProcessing, parent(),
