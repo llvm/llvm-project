@@ -5006,7 +5006,8 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
       Node->getOpcode() == ISD::INSERT_VECTOR_ELT) {
     OVT = Node->getOperand(0).getSimpleValueType();
   }
-  if (Node->getOpcode() == ISD::STRICT_UINT_TO_FP ||
+  if (Node->getOpcode() == ISD::ATOMIC_STORE ||
+      Node->getOpcode() == ISD::STRICT_UINT_TO_FP ||
       Node->getOpcode() == ISD::STRICT_SINT_TO_FP ||
       Node->getOpcode() == ISD::STRICT_FSETCC ||
       Node->getOpcode() == ISD::STRICT_FSETCCS ||
@@ -5622,7 +5623,8 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
     Results.push_back(CvtVec);
     break;
   }
-  case ISD::ATOMIC_SWAP: {
+  case ISD::ATOMIC_SWAP:
+  case ISD::ATOMIC_STORE: {
     AtomicSDNode *AM = cast<AtomicSDNode>(Node);
     SDLoc SL(Node);
     SDValue CastVal = DAG.getNode(ISD::BITCAST, SL, NVT, AM->getVal());
@@ -5631,13 +5633,22 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
     assert(AM->getMemoryVT().getSizeInBits() == NVT.getSizeInBits() &&
            "unexpected atomic_swap with illegal type");
 
-    SDValue NewAtomic
-      = DAG.getAtomic(ISD::ATOMIC_SWAP, SL, NVT,
-                      DAG.getVTList(NVT, MVT::Other),
-                      { AM->getChain(), AM->getBasePtr(), CastVal },
-                      AM->getMemOperand());
-    Results.push_back(DAG.getNode(ISD::BITCAST, SL, OVT, NewAtomic));
-    Results.push_back(NewAtomic.getValue(1));
+    SDValue Op0 = AM->getBasePtr();
+    SDValue Op1 = CastVal;
+
+    // ATOMIC_STORE uses a swapped operand order from every other AtomicSDNode,
+    // but really it should merge with ISD::STORE.
+    if (AM->getOpcode() == ISD::ATOMIC_STORE)
+      std::swap(Op0, Op1);
+
+    SDValue NewAtomic = DAG.getAtomic(AM->getOpcode(), SL, NVT, AM->getChain(),
+                                      Op0, Op1, AM->getMemOperand());
+
+    if (AM->getOpcode() != ISD::ATOMIC_STORE) {
+      Results.push_back(DAG.getNode(ISD::BITCAST, SL, OVT, NewAtomic));
+      Results.push_back(NewAtomic.getValue(1));
+    } else
+      Results.push_back(NewAtomic);
     break;
   }
   case ISD::ATOMIC_LOAD: {
