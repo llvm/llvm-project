@@ -585,11 +585,11 @@ public:
     return Flags.ImportType == GlobalValueSummary::ImportKind::Declaration;
   }
 
+  void setImportKind(ImportKind IK) { Flags.ImportType = IK; }
+
   GlobalValueSummary::ImportKind importType() const {
     return static_cast<ImportKind>(Flags.ImportType);
   }
-
-  void setImportType(ImportKind IK) { Flags.ImportType = IK; }
 
   GlobalValue::VisibilityTypes getVisibility() const {
     return (GlobalValue::VisibilityTypes)Flags.Visibility;

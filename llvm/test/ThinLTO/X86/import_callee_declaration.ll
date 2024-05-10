@@ -23,7 +23,7 @@
 ; nothing to test more than the summary content.
 ;
 ; TODO: Extend this test case to test IR once postlink optimizer makes use of
-; the import type for declarations, and add test coverage for in-process thinlto.
+; the import type for declarations.
 ;
 ; RUN: llvm-lto2 run \
 ; RUN:   -debug-only=function-import \
@@ -42,36 +42,34 @@
 ;
 ; RUN: llvm-lto -thinlto-action=thinlink -import-declaration -import-instr-limit=7  -o combined.index.bc main.bc lib.bc
 ; RUN: llvm-lto -thinlto-action=distributedindexes -debug-only=function-import -import-declaration -import-instr-limit=7 -thinlto-index combined.index.bc main.bc lib.bc 2>&1 | FileCheck %s --check-prefix=DUMP
-; RUN: llvm-dis main.bc.thinlto.bc -o - | FileCheck %s --check-prefix=MAIN-DIS
 
 ; DUMP: - 2 function definitions and 3 function declarations imported from lib.bc
 
-; main.ll should import {large_func, large_indirect_callee} as declarations.
-; 
 ; First disassemble per-module summary and find out the GUID for {large_func, large_indirect_callee}.
 ;
 ; RUN: llvm-dis lib.bc -o - | FileCheck %s --check-prefix=LIB-DIS
-; LIB-DIS: [[LIBMOD:\^[0-9]+]] = module: (path: "lib.bc", hash: (0, 0, 0, 0, 0))
 ; LIB-DIS: [[LARGEFUNC:\^[0-9]+]] = gv: (name: "large_func", summaries: {{.*}}) ; guid = 2418497564662708935
 ; LIB-DIS: [[LARGEINDIRECT:\^[0-9]+]] = gv: (name: "large_indirect_callee", summaries: {{.*}}) ; guid = 14343440786664691134
+; LIB-DIS: [[LARGEINDIRECTALIAS:\^[0-9]+]] = gv: (name: "large_indirect_callee_alias", summaries: {{.*}}, aliasee: [[LARGEINDIRECT]]
 ;
-; Secondly disassemble main's combined summary and verify the import type of
-; these two GUIDs are declaration.
+; Secondly disassemble main's combined summary and test that large callees are
+; not imported as declarations yet.
+; TODO: Serialize declaration bit and test declaration bits are correctly set.
 ;
 ; RUN: llvm-dis main.bc.thinlto.bc -o - | FileCheck %s --check-prefix=MAIN-DIS
 ;
 ; MAIN-DIS: [[LIBMOD:\^[0-9]+]] = module: (path: "lib.bc", hash: (0, 0, 0, 0, 0))
-; MAIN-DIS: [[LARGEFUNC:\^[0-9]+]] = gv: (guid: 2418497564662708935, summaries: (function: (module: [[LIBMOD]], flags: ({{.*}} importType: declaration), insts: 8, {{.*}})))
-; MAIN-DIS: [[LARGEINDIRECT:\^[0-9]+]] = gv: (guid: 14343440786664691134, summaries: (function: (module: [[LIBMOD]], flags: ({{.*}} importType: declaration), insts: 8, {{.*}})))
-; MAIN-DIS: [[LARGEINDIRECTALIAS:\^[0-9]+]] = gv: (guid: 16730173943625350469, summaries: (alias: (module: [[LIBMOD]], flags: ({{.*}} importType: declaration), aliasee: [[LARGEINDIRECT]])))
+; MAIN-DIS-NOT: [[LARGEFUNC:\^[0-9]+]] = gv: (guid: 2418497564662708935, summaries: (function: (module: [[LIBMOD]], flags: ({{.*}} importType: declaration), insts: 8, {{.*}})))
+; MAIN-DIS-NOT: [[LARGEINDIRECT:\^[0-9]+]] = gv: (guid: 14343440786664691134, summaries: (function: (module: [[LIBMOD]], flags: ({{.*}} importType: declaration), insts: 8, {{.*}})))
+; MAIN-DIS-NOT: [[LARGEINDIRECTALIAS:\^[0-9]+]] = gv: (guid: 16730173943625350469, summaries: (alias: (module: [[LIBMOD]], flags: ({{.*}} importType: declaration)
 
-; TODO: add test coverage for lto indexing stats (-debug-only=function-import, and 'reqasserts').
-
-; Run in-process ThinLTO and tests that `callee` remains internalized even if
-; the symbols of its callers (large_func and large_indirect_callee) are exported
-; and visible to main module.
+; Run in-process ThinLTO and tests that
+; 1. `callee` remains internalized even if the symbols of its callers
+; (large_func and large_indirect_callee) are exported as declarations and visible to main module.
+; 2. the debugging logs from `function-import` pass are expected.
 
 ; RUN: llvm-lto2 run \
+; RUN:   -debug-only=function-import \
 ; RUN:   -save-temps \
 ; RUN:   -import-instr-limit=7 \
 ; RUN:   -import-declaration \
@@ -83,9 +81,26 @@
 ; RUN:   -r=lib.bc,small_func,px \
 ; RUN:   -r=lib.bc,large_func,px \
 ; RUN:   -r=lib.bc,large_indirect_callee_alias,px \
-; RUN:   -r=lib.bc,calleeAddrs,px -o in-process main.bc lib.bc
+; RUN:   -r=lib.bc,calleeAddrs,px -o in-process main.bc lib.bc 2>&1 | FileCheck %s --check-prefix=IMPORTDUMP
+
+; IMPORTDUMP: Not importing function 11825436545918268459 callee from lib.cc
+; IMPORTDUMP: Is importing function declaration 14343440786664691134 large_indirect_callee from lib.cc
+; IMPORTDUMP: Is importing function definition 13568239288960714650 small_indirect_callee from lib.cc
+; IMPORTDUMP: Is importing function definition 6976996067367342685 small_func from lib.cc
+; IMPORTDUMP: Is importing function declaration 2418497564662708935 large_func from lib.cc
+; IMPORTDUMP: Not importing global 7680325410415171624 calleeAddrs from lib.cc
+; IMPORTDUMP: Is importing alias declaration 16730173943625350469 large_indirect_callee_alias from lib.cc
+
+; RUN: llvm-dis in-process.1.3.import.bc -o - | FileCheck %s --check-prefix=IMPORT
 
 ; RUN: llvm-dis in-process.2.2.internalize.bc -o - | FileCheck %s --check-prefix=INTERNALIZE
+
+; IMPORT-DAG: define available_externally void @small_func
+; IMPORT-DAG: define available_externally hidden void @small_indirect_callee
+; IMPORT-DAG: declare void @large_func
+; IMPORT-NOT: large_indirect_callee
+; IMPORT-NOT: large_indirect_callee_alias
+
 ; INTERNALIZE: define internal void @callee()
 
 ;--- main.ll

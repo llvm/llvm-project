@@ -258,8 +258,10 @@ static auto qualifyCalleeCandidates(
 /// Given a list of possible callee implementation for a call site, select one
 /// that fits the \p Threshold for function definition import. If none are
 /// found, the Reason will give the last reason for the failure (last, in the
-/// order of CalleeSummaryList entries). If caller wants to select eligible
-/// summary
+/// order of CalleeSummaryList entries). While looking for a callee definition,
+/// sets \p TooLargeOrNoInlineSummary to the last seen too-large or noinline
+/// candidate; other modules may want to know the function summary or
+/// declaration even if a definition is not needed.
 ///
 /// FIXME: select "best" instead of first that fits. But what is "best"?
 /// - The smallest: more likely to be inlined.
@@ -843,7 +845,6 @@ static void computeImportForFunction(
           FailureInfo = std::make_unique<FunctionImporter::ImportFailureInfo>(
               VI, Edge.second.getHotness(), Reason, 1);
         }
-
         if (ForceImportAll) {
           std::string Msg = std::string("Failed to import function ") +
                             VI.name().str() + " due to " +
@@ -1435,15 +1436,13 @@ void llvm::gatherImportedSummariesForModule(
     StringRef ModulePath,
     const DenseMap<StringRef, GVSummaryMapTy> &ModuleToDefinedGVSummaries,
     const FunctionImporter::ImportMapTy &ImportList,
-    std::map<std::string, GVSummaryMapTy> &ModuleToSummariesForIndex,
-    GVSummaryPtrSet &DecSummaries) {
+    std::map<std::string, GVSummaryMapTy> &ModuleToSummariesForIndex) {
   // Include all summaries from the importing module.
   ModuleToSummariesForIndex[std::string(ModulePath)] =
       ModuleToDefinedGVSummaries.lookup(ModulePath);
   // Include summaries for imports.
   for (const auto &ILI : ImportList) {
-    std::string ModulePath(ILI.first);
-    auto &SummariesForIndex = ModuleToSummariesForIndex[ModulePath];
+    auto &SummariesForIndex = ModuleToSummariesForIndex[std::string(ILI.first)];
 
     const auto &DefinedGVSummaries =
         ModuleToDefinedGVSummaries.lookup(ILI.first);
@@ -1451,9 +1450,10 @@ void llvm::gatherImportedSummariesForModule(
       const auto &DS = DefinedGVSummaries.find(GUID);
       assert(DS != DefinedGVSummaries.end() &&
              "Expected a defined summary for imported global value");
-      SummariesForIndex[GUID] = DS->second;
       if (Type == GlobalValueSummary::Declaration)
-        DecSummaries.insert(DS->second);
+        continue;
+
+      SummariesForIndex[GUID] = DS->second;
     }
   }
 }
@@ -1726,8 +1726,8 @@ Expected<bool> FunctionImporter::importFunctions(
     ModuleNameOrderedList.insert(FunctionsToImportPerModule.first);
   }
 
-  auto maybeGetImportType = [&](const FunctionsToImportTy &GUIDToImportType,
-                                GlobalValue::GUID GUID)
+  auto getImportType = [&](const FunctionsToImportTy &GUIDToImportType,
+                           GlobalValue::GUID GUID)
       -> std::optional<GlobalValueSummary::ImportKind> {
     auto Iter = GUIDToImportType.find(GUID);
     if (Iter == GUIDToImportType.end())
@@ -1759,19 +1759,19 @@ Expected<bool> FunctionImporter::importFunctions(
       if (!F.hasName())
         continue;
       auto GUID = F.getGUID();
-      auto ImportType = maybeGetImportType(ImportGUIDs, GUID);
+      auto MaybeImportType = getImportType(ImportGUIDs, GUID);
 
-      if (!ImportType) {
-        LLVM_DEBUG(dbgs() << "Not importing function " << GUID << " "
-                          << F.getName() << " from "
-                          << SrcModule->getSourceFileName() << "\n");
-        continue;
-      }
-      const bool ImportDefinition =
-          *ImportType == GlobalValueSummary::Definition;
-      LLVM_DEBUG(dbgs() << (ImportDefinition ? "Is" : "Not")
-                        << " importing function " << GUID << " " << F.getName()
-                        << " from " << SrcModule->getSourceFileName() << "\n");
+      bool ImportDefinition =
+          (MaybeImportType &&
+           (*MaybeImportType == GlobalValueSummary::Definition));
+
+      LLVM_DEBUG(dbgs() << (MaybeImportType ? "Is" : "Not")
+                        << " importing function"
+                        << (ImportDefinition
+                                ? " definition "
+                                : (MaybeImportType ? " declaration " : " "))
+                        << GUID << " " << F.getName() << " from "
+                        << SrcModule->getSourceFileName() << "\n");
       if (ImportDefinition) {
         if (Error Err = F.materialize())
           return std::move(Err);
@@ -1798,14 +1798,19 @@ Expected<bool> FunctionImporter::importFunctions(
       if (!GV.hasName())
         continue;
       auto GUID = GV.getGUID();
-      auto ImportType = maybeGetImportType(ImportGUIDs, GUID);
-      if (!ImportType)
-        continue;
-      const bool ImportDefinition =
-          (*ImportType == GlobalValueSummary::Definition);
-      LLVM_DEBUG(dbgs() << (ImportDefinition ? "Is" : "Not")
-                        << " importing global " << GUID << " " << GV.getName()
-                        << " from " << SrcModule->getSourceFileName() << "\n");
+      auto MaybeImportType = getImportType(ImportGUIDs, GUID);
+
+      bool ImportDefinition =
+          (MaybeImportType &&
+           (*MaybeImportType == GlobalValueSummary::Definition));
+
+      LLVM_DEBUG(dbgs() << (MaybeImportType ? "Is" : "Not")
+                        << " importing global"
+                        << (ImportDefinition
+                                ? " definition "
+                                : (MaybeImportType ? " declaration " : " "))
+                        << GUID << " " << GV.getName() << " from "
+                        << SrcModule->getSourceFileName() << "\n");
       if (ImportDefinition) {
         if (Error Err = GV.materialize())
           return std::move(Err);
@@ -1816,15 +1821,19 @@ Expected<bool> FunctionImporter::importFunctions(
       if (!GA.hasName() || isa<GlobalIFunc>(GA.getAliaseeObject()))
         continue;
       auto GUID = GA.getGUID();
-      auto ImportType = maybeGetImportType(ImportGUIDs, GUID);
-      if (!ImportType)
-        continue;
+      auto MaybeImportType = getImportType(ImportGUIDs, GUID);
 
-      const bool ImportDefinition =
-          (*ImportType == GlobalValueSummary::Definition);
-      LLVM_DEBUG(dbgs() << (ImportDefinition ? "Is" : "Not")
-                        << " importing alias " << GUID << " " << GA.getName()
-                        << " from " << SrcModule->getSourceFileName() << "\n");
+      bool ImportDefinition =
+          (MaybeImportType &&
+           (*MaybeImportType == GlobalValueSummary::Definition));
+
+      LLVM_DEBUG(dbgs() << (MaybeImportType ? "Is" : "Not")
+                        << " importing alias"
+                        << (ImportDefinition
+                                ? " definition "
+                                : (MaybeImportType ? " declaration " : " "))
+                        << GUID << " " << GA.getName() << " from "
+                        << SrcModule->getSourceFileName() << "\n");
       if (ImportDefinition) {
         if (Error Err = GA.materialize())
           return std::move(Err);

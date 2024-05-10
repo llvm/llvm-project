@@ -121,6 +121,9 @@ void llvm::computeLTOCacheKey(
     support::endian::write64le(Data, I);
     Hasher.update(Data);
   };
+  auto AddUint8 = [&](const uint8_t &I) {
+    Hasher.update(ArrayRef<uint8_t>((const uint8_t *)&I, 1));
+  };
   AddString(Conf.CPU);
   // FIXME: Hash more of Options. For now all clients initialize Options from
   // command-line flags (which is unsupported in production), but may set
@@ -156,18 +159,23 @@ void llvm::computeLTOCacheKey(
   auto ModHash = Index.getModuleHash(ModuleID);
   Hasher.update(ArrayRef<uint8_t>((uint8_t *)&ModHash[0], sizeof(ModHash)));
 
-  std::vector<uint64_t> ExportsGUID;
+  std::vector<std::pair<uint64_t, uint8_t>> ExportsGUID;
   ExportsGUID.reserve(ExportList.size());
-  for (const auto &[VI, UnusedImportType] : ExportList) {
-    auto GUID = VI.getGUID();
-    ExportsGUID.push_back(GUID);
-  }
+  for (const auto &[VI, ExportType] : ExportList)
+    ExportsGUID.push_back(
+        std::make_pair(VI.getGUID(), static_cast<uint8_t>(ExportType)));
 
   // Sort the export list elements GUIDs.
-  llvm::sort(ExportsGUID);
-  for (uint64_t GUID : ExportsGUID) {
+  llvm::sort(ExportsGUID, [](const std::pair<uint64_t, uint8_t> &LHS,
+                             const std::pair<uint64_t, uint8_t> &RHS) {
+    if (LHS.first != RHS.first)
+      return LHS.first < RHS.first;
+    return LHS.second < RHS.second;
+  });
+  for (auto [GUID, ExportType] : ExportsGUID) {
     // The export list can impact the internalization, be conservative here
     Hasher.update(ArrayRef<uint8_t>((uint8_t *)&GUID, sizeof(GUID)));
+    AddUint8(ExportType);
   }
 
   // Include the hash for every module we import functions from. The set of
@@ -204,8 +212,10 @@ void llvm::computeLTOCacheKey(
     Hasher.update(ArrayRef<uint8_t>((uint8_t *)&ModHash[0], sizeof(ModHash)));
 
     AddUint64(Entry.getFunctions().size());
-    for (auto &[GUID, UnusedImportType] : Entry.getFunctions())
+    for (auto &[GUID, ImportType] : Entry.getFunctions()) {
       AddUint64(GUID);
+      AddUint8(ImportType);
+    }
   }
 
   // Include the hash for the resolved ODR.
@@ -1389,19 +1399,18 @@ public:
                   llvm::StringRef ModulePath,
                   const std::string &NewModulePath) {
     std::map<std::string, GVSummaryMapTy> ModuleToSummariesForIndex;
-    GVSummaryPtrSet DeclarationSummaries;
+
     std::error_code EC;
     gatherImportedSummariesForModule(ModulePath, ModuleToDefinedGVSummaries,
-                                     ImportList, ModuleToSummariesForIndex,
-                                     DeclarationSummaries);
+                                     ImportList, ModuleToSummariesForIndex);
 
     raw_fd_ostream OS(NewModulePath + ".thinlto.bc", EC,
                       sys::fs::OpenFlags::OF_None);
     if (EC)
       return errorCodeToError(EC);
 
-    writeIndexToFile(CombinedIndex, OS, &ModuleToSummariesForIndex,
-                     &DeclarationSummaries);
+    // TODO: Serialize declaration bits to bitcode.
+    writeIndexToFile(CombinedIndex, OS, &ModuleToSummariesForIndex);
 
     if (ShouldEmitImportsFiles) {
       EC = EmitImportsFiles(ModulePath, NewModulePath + ".imports",
