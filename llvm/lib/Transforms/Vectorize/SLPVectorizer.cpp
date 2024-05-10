@@ -11419,8 +11419,16 @@ Value *BoUpSLP::gather(ArrayRef<Value *> VL, Value *Root, Type *ScalarTy) {
     if (Scalar->getType() != Ty) {
       assert(Scalar->getType()->isIntegerTy() && Ty->isIntegerTy() &&
              "Expected integer types only.");
+      Value *V = Scalar;
+      if (auto *CI = dyn_cast<CastInst>(Scalar);
+          isa_and_nonnull<SExtInst, ZExtInst>(CI)) {
+        Value *Op = CI->getOperand(0);
+        if (auto *IOp = dyn_cast<Instruction>(Op);
+            !IOp || !(isDeleted(IOp) || getTreeEntry(IOp)))
+          V = Op;
+      }
       Scalar = Builder.CreateIntCast(
-          Scalar, Ty, !isKnownNonNegative(Scalar, SimplifyQuery(*DL)));
+          V, Ty, !isKnownNonNegative(Scalar, SimplifyQuery(*DL)));
     }
 
     Vec = Builder.CreateInsertElement(Vec, Scalar, Builder.getInt32(Pos));
@@ -11647,7 +11655,7 @@ class BoUpSLP::ShuffleInstructionBuilder final : public BaseShuffleAnalysis {
       return V;
     return Builder.CreateIntCast(
         V, VectorType::get(ScalarTy, VecTy->getElementCount()),
-        IsSigned ? *IsSigned : !isKnownNonNegative(V, SimplifyQuery(*R.DL)));
+        IsSigned.value_or(!isKnownNonNegative(V, SimplifyQuery(*R.DL))));
   }
 
 public:
@@ -13169,6 +13177,10 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
       } else {
         assert(E->State == TreeEntry::StridedVectorize &&
                "Expected either strided or conseutive stores.");
+        if (!E->ReorderIndices.empty()) {
+          SI = cast<StoreInst>(E->Scalars[E->ReorderIndices.front()]);
+          Ptr = SI->getPointerOperand();
+        }
         Align CommonAlignment = computeCommonAlignment<StoreInst>(E->Scalars);
         Type *StrideTy = DL->getIndexType(SI->getPointerOperandType());
         auto *Inst = Builder.CreateIntrinsic(
@@ -15163,14 +15175,18 @@ bool BoUpSLP::collectValuesToDemote(
                "Expected min/max intrinsics only.");
         unsigned SignBits = OrigBitWidth - BitWidth;
         APInt Mask = APInt::getBitsSetFrom(OrigBitWidth, BitWidth - 1);
-        return SignBits <= ComputeNumSignBits(I->getOperand(0), *DL, 0, AC,
-                                              nullptr, DT) &&
-               (!isKnownNonNegative(I->getOperand(0), SimplifyQuery(*DL)) ||
+        unsigned Op0SignBits = ComputeNumSignBits(I->getOperand(0), *DL, 0, AC,
+                                              nullptr, DT);
+        unsigned Op1SignBits = ComputeNumSignBits(I->getOperand(1), *DL, 0, AC,
+                                              nullptr, DT);
+        return SignBits <= Op0SignBits &&
+               ((SignBits != Op0SignBits &&
+                 !isKnownNonNegative(I->getOperand(0), SimplifyQuery(*DL))) ||
                 MaskedValueIsZero(I->getOperand(0), Mask,
                                   SimplifyQuery(*DL))) &&
-               SignBits <= ComputeNumSignBits(I->getOperand(1), *DL, 0, AC,
-                                              nullptr, DT) &&
-               (!isKnownNonNegative(I->getOperand(1), SimplifyQuery(*DL)) ||
+               SignBits <= Op1SignBits &&
+               ((SignBits != Op1SignBits &&
+                 !isKnownNonNegative(I->getOperand(1), SimplifyQuery(*DL))) ||
                 MaskedValueIsZero(I->getOperand(1), Mask, SimplifyQuery(*DL)));
       });
     };
@@ -15479,8 +15495,7 @@ void BoUpSLP::computeMinimumValueSizes() {
       TreeEntry *TE = VectorizableTree[Idx].get();
       if (MinBWs.contains(TE))
         continue;
-      bool IsSigned = TE->getOpcode() == Instruction::SExt ||
-                      any_of(TE->Scalars, [&](Value *R) {
+      bool IsSigned = any_of(TE->Scalars, [&](Value *R) {
                         return !isKnownNonNegative(R, SimplifyQuery(*DL));
                       });
       MinBWs.try_emplace(TE, MaxBitWidth, IsSigned);

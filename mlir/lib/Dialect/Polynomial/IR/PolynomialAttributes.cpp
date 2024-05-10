@@ -202,11 +202,27 @@ Attribute RingAttr::parse(AsmParser &parser, Type type) {
     polyAttr = attr;
   }
 
+  Polynomial poly = polyAttr.getPolynomial();
+  APInt root(coefficientModulusAttr.getValue().getBitWidth(), 0);
+  IntegerAttr rootAttr = nullptr;
+  if (succeeded(parser.parseOptionalComma())) {
+    if (failed(parser.parseKeyword("primitiveRoot")) ||
+        failed(parser.parseEqual()))
+      return {};
+
+    ParseResult result = parser.parseInteger(root);
+    if (failed(result)) {
+      parser.emitError(parser.getCurrentLocation(), "invalid primitiveRoot");
+      return {};
+    }
+    rootAttr = IntegerAttr::get(coefficientModulusAttr.getType(), root);
+  }
+
   if (failed(parser.parseGreater()))
     return {};
 
   return RingAttr::get(parser.getContext(), ty, coefficientModulusAttr,
-                       polyAttr);
+                       polyAttr, rootAttr);
 }
 
 } // namespace polynomial
