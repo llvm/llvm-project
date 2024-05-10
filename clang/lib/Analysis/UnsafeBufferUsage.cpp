@@ -3068,7 +3068,6 @@ void clang::checkUnsafeBufferUsage(const Decl *D,
     // every problematic operation and consider it done. No need to deal
     // with fixable gadgets, no need to group operations by variable.
     for (const auto &G : WarningGadgets) {
-      llvm::errs() << "Warnings not EmitSuggestions\n";
       G->handleUnsafeOperation(Handler, /*IsRelatedToDecl=*/false,
                                D->getASTContext());
     }
