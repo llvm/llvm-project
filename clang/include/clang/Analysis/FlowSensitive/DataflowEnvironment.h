@@ -734,35 +734,8 @@ private:
   // the implementation of sound analyses.
 
   /// Assigns storage locations and values to all global variables, fields
-  /// and functions referenced in `Source`.
-  template <typename FuncOrStmt>
-  void initFieldsGlobalsAndFuncs(const FuncOrStmt *Source) {
-
-    ReferencedDecls Referenced = getReferencedDecls(*Source);
-
-    // These have to be added before the lines that follow to ensure that
-    // `create*` work correctly for structs.
-    DACtx->addModeledFields(Referenced.Fields);
-
-    for (const VarDecl *D : Referenced.Globals) {
-      if (getStorageLocation(*D) != nullptr)
-        continue;
-
-      // We don't run transfer functions on the initializers of global
-      // variables, so they won't be associated with a value or storage
-      // location. We therefore intentionally don't pass an initializer to
-      // `createObject()`; in particular, this ensures that `createObject()`
-      // will initialize the fields of record-type variables with values.
-      setStorageLocation(*D, createObject(*D, nullptr));
-    }
-
-    for (const FunctionDecl *FD : Referenced.Functions) {
-      if (getStorageLocation(*FD) != nullptr)
-        continue;
-      auto &Loc = createStorageLocation(*FD);
-      setStorageLocation(*FD, Loc);
-    }
-  }
+  /// and functions in `Referenced`.
+  void initFieldsGlobalsAndFuncs(const ReferencedDecls &Referenced);
 
   static PrValueToResultObject
   buildResultObjectMap(DataflowAnalysisContext *DACtx,

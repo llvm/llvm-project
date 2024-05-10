@@ -295,15 +295,15 @@ widenKeyToValueMap(const llvm::MapVector<Key, Value *> &CurMap,
 namespace {
 
 // Visitor that builds a map from record prvalues to result objects.
-// This traverses the statement to be analyzed; for each result object that it
-// encounters, it propagates the storage location of the result object to all
+// This traverses the AST sub-tree to be visited; for each result object that
+// it encounters, it propagates the storage location of the result object to all
 // record prvalues that can initialize it.
 class ResultObjectVisitor : public RecursiveASTVisitor<ResultObjectVisitor> {
 public:
   // `ResultObjectMap` will be filled with a map from record prvalues to result
-  // object. If the statement being analyzed is a function body and returns a
-  // record by value, `LocForRecordReturnVal` is the location to which this
-  // record should be written; otherwise, it is null.
+  // object. If the sub-tree to be visited returns a record by value,
+  // `LocForRecordReturnVal` is the location to which this record should be
+  // written; otherwise, it is null.
   explicit ResultObjectVisitor(
       llvm::DenseMap<const Expr *, RecordStorageLocation *> &ResultObjectMap,
       RecordStorageLocation *LocForRecordReturnVal,
@@ -524,15 +524,15 @@ void Environment::initialize() {
     return;
 
   if (InitialTargetFunc == nullptr) {
-    initFieldsGlobalsAndFuncs(InitialTargetStmt);
+    initFieldsGlobalsAndFuncs(getReferencedDecls(*InitialTargetStmt));
     ResultObjectMap =
         std::make_shared<PrValueToResultObject>(buildResultObjectMap(
             DACtx, InitialTargetStmt, getThisPointeeStorageLocation(),
-            LocForRecordReturnVal));
+            /*LocForRecordReturnValue=*/nullptr));
     return;
   }
 
-  initFieldsGlobalsAndFuncs(InitialTargetFunc);
+  initFieldsGlobalsAndFuncs(getReferencedDecls(*InitialTargetFunc));
 
   for (const auto *ParamDecl : InitialTargetFunc->parameters()) {
     assert(ParamDecl != nullptr);
@@ -581,6 +581,31 @@ void Environment::initialize() {
       std::make_shared<PrValueToResultObject>(buildResultObjectMap(
           DACtx, InitialTargetFunc, getThisPointeeStorageLocation(),
           LocForRecordReturnVal));
+}
+
+void Environment::initFieldsGlobalsAndFuncs(const ReferencedDecls &Referenced) {
+  // These have to be added before the lines that follow to ensure that
+  // `create*` work correctly for structs.
+  DACtx->addModeledFields(Referenced.Fields);
+
+  for (const VarDecl *D : Referenced.Globals) {
+    if (getStorageLocation(*D) != nullptr)
+      continue;
+
+    // We don't run transfer functions on the initializers of global variables,
+    // so they won't be associated with a value or storage location. We
+    // therefore intentionally don't pass an initializer to `createObject()`; in
+    // particular, this ensures that `createObject()` will initialize the fields
+    // of record-type variables with values.
+    setStorageLocation(*D, createObject(*D, nullptr));
+  }
+
+  for (const FunctionDecl *FD : Referenced.Functions) {
+    if (getStorageLocation(*FD) != nullptr)
+      continue;
+    auto &Loc = createStorageLocation(*FD);
+    setStorageLocation(*FD, Loc);
+  }
 }
 
 Environment Environment::fork() const {
@@ -638,7 +663,7 @@ void Environment::pushCallInternal(const FunctionDecl *FuncDecl,
 
   CallStack.push_back(FuncDecl);
 
-  initFieldsGlobalsAndFuncs(FuncDecl);
+  initFieldsGlobalsAndFuncs(getReferencedDecls(*FuncDecl));
 
   const auto *ParamIt = FuncDecl->param_begin();
 
