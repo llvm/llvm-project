@@ -19612,7 +19612,39 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
   case AMDGPU::BI__builtin_amdgcn_scale_bias_activate_scatter4_f16:
   case AMDGPU::BI__builtin_amdgcn_scale_bias_activate_scatter4_bf16:
   case AMDGPU::BI__builtin_amdgcn_uniform_scale_activate_scatter4_f16:
-  case AMDGPU::BI__builtin_amdgcn_uniform_scale_activate_scatter4_bf16: {
+  case AMDGPU::BI__builtin_amdgcn_uniform_scale_activate_scatter4_bf16:
+
+  case AMDGPU::BI__builtin_amdgcn_cvt_to_tensor_bf16_bf16_scatter2:
+  case AMDGPU::BI__builtin_amdgcn_cvt_to_tensor_bf16_fp16_scatter2:
+  case AMDGPU::BI__builtin_amdgcn_cvt_to_tensor_bf16_fp32_scatter2:
+  case AMDGPU::BI__builtin_amdgcn_cvt_to_tensor_bf8_bf16_scatter2:
+  case AMDGPU::BI__builtin_amdgcn_cvt_to_tensor_bf8_fp16_scatter2:
+  case AMDGPU::BI__builtin_amdgcn_cvt_to_tensor_bf8_fp32_scatter2:
+  case AMDGPU::BI__builtin_amdgcn_cvt_to_tensor_fp16_bf16_scatter2:
+  case AMDGPU::BI__builtin_amdgcn_cvt_to_tensor_fp16_fp16_scatter2:
+  case AMDGPU::BI__builtin_amdgcn_cvt_to_tensor_fp16_fp32_scatter2:
+  case AMDGPU::BI__builtin_amdgcn_cvt_to_tensor_fp8_bf16_scatter2:
+  case AMDGPU::BI__builtin_amdgcn_cvt_to_tensor_fp8_fp16_scatter2:
+  case AMDGPU::BI__builtin_amdgcn_cvt_to_tensor_fp8_fp32_scatter2:
+  case AMDGPU::BI__builtin_amdgcn_cvt_to_tensor_i4_bf16_scatter2:
+  case AMDGPU::BI__builtin_amdgcn_cvt_to_tensor_i4_fp16_scatter2:
+  case AMDGPU::BI__builtin_amdgcn_cvt_to_tensor_i4_fp32_scatter2:
+  case AMDGPU::BI__builtin_amdgcn_cvt_to_tensor_i8_bf16_scatter2:
+  case AMDGPU::BI__builtin_amdgcn_cvt_to_tensor_i8_fp16_scatter2:
+  case AMDGPU::BI__builtin_amdgcn_cvt_to_tensor_i8_fp32_scatter2:
+  case AMDGPU::BI__builtin_amdgcn_cvt_to_tensor_u4_bf16_scatter2:
+  case AMDGPU::BI__builtin_amdgcn_cvt_to_tensor_u4_fp16_scatter2:
+  case AMDGPU::BI__builtin_amdgcn_cvt_to_tensor_u4_fp32_scatter2:
+  case AMDGPU::BI__builtin_amdgcn_cvt_to_tensor_u8_bf16_scatter2:
+  case AMDGPU::BI__builtin_amdgcn_cvt_to_tensor_u8_fp16_scatter2:
+  case AMDGPU::BI__builtin_amdgcn_cvt_to_tensor_u8_fp32_scatter2:
+
+  case AMDGPU::BI__builtin_amdgcn_cvt_to_tensor_bf16_bf16_scatter4:
+  case AMDGPU::BI__builtin_amdgcn_cvt_to_tensor_bf16_fp16_scatter4:
+  case AMDGPU::BI__builtin_amdgcn_cvt_to_tensor_bf16_fp32_scatter4:
+  case AMDGPU::BI__builtin_amdgcn_cvt_to_tensor_fp16_bf16_scatter4:
+  case AMDGPU::BI__builtin_amdgcn_cvt_to_tensor_fp16_fp16_scatter4:
+  case AMDGPU::BI__builtin_amdgcn_cvt_to_tensor_fp16_fp32_scatter4: {
     unsigned IntrinsicID;
     unsigned Scatter;
     switch (BuiltinID) {
@@ -19646,6 +19678,126 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
       break;
     case AMDGPU::BI__builtin_amdgcn_uniform_scale_activate_scatter4_bf16:
       IntrinsicID = Intrinsic::amdgcn_uniform_scale_activate_scatter4_bf16;
+      Scatter = 4;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_cvt_to_tensor_bf16_bf16_scatter2:
+      IntrinsicID = Intrinsic::amdgcn_cvt_to_tensor_bf16_bf16_scatter2;
+      Scatter = 2;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_cvt_to_tensor_bf16_fp16_scatter2:
+      IntrinsicID = Intrinsic::amdgcn_cvt_to_tensor_bf16_fp16_scatter2;
+      Scatter = 2;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_cvt_to_tensor_bf16_fp32_scatter2:
+      IntrinsicID = Intrinsic::amdgcn_cvt_to_tensor_bf16_fp32_scatter2;
+      Scatter = 2;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_cvt_to_tensor_bf8_bf16_scatter2:
+      IntrinsicID = Intrinsic::amdgcn_cvt_to_tensor_bf8_bf16_scatter2;
+      Scatter = 2;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_cvt_to_tensor_bf8_fp16_scatter2:
+      IntrinsicID = Intrinsic::amdgcn_cvt_to_tensor_bf8_fp16_scatter2;
+      Scatter = 2;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_cvt_to_tensor_bf8_fp32_scatter2:
+      IntrinsicID = Intrinsic::amdgcn_cvt_to_tensor_bf8_fp32_scatter2;
+      Scatter = 2;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_cvt_to_tensor_fp16_bf16_scatter2:
+      IntrinsicID = Intrinsic::amdgcn_cvt_to_tensor_fp16_bf16_scatter2;
+      Scatter = 2;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_cvt_to_tensor_fp16_fp16_scatter2:
+      IntrinsicID = Intrinsic::amdgcn_cvt_to_tensor_fp16_fp16_scatter2;
+      Scatter = 2;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_cvt_to_tensor_fp16_fp32_scatter2:
+      IntrinsicID = Intrinsic::amdgcn_cvt_to_tensor_fp16_fp32_scatter2;
+      Scatter = 2;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_cvt_to_tensor_fp8_bf16_scatter2:
+      IntrinsicID = Intrinsic::amdgcn_cvt_to_tensor_fp8_bf16_scatter2;
+      Scatter = 2;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_cvt_to_tensor_fp8_fp16_scatter2:
+      IntrinsicID = Intrinsic::amdgcn_cvt_to_tensor_fp8_fp16_scatter2;
+      Scatter = 2;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_cvt_to_tensor_fp8_fp32_scatter2:
+      IntrinsicID = Intrinsic::amdgcn_cvt_to_tensor_fp8_fp32_scatter2;
+      Scatter = 2;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_cvt_to_tensor_i4_bf16_scatter2:
+      IntrinsicID = Intrinsic::amdgcn_cvt_to_tensor_i4_bf16_scatter2;
+      Scatter = 2;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_cvt_to_tensor_i4_fp16_scatter2:
+      IntrinsicID = Intrinsic::amdgcn_cvt_to_tensor_i4_fp16_scatter2;
+      Scatter = 2;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_cvt_to_tensor_i4_fp32_scatter2:
+      IntrinsicID = Intrinsic::amdgcn_cvt_to_tensor_i4_fp32_scatter2;
+      Scatter = 2;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_cvt_to_tensor_i8_bf16_scatter2:
+      IntrinsicID = Intrinsic::amdgcn_cvt_to_tensor_i8_bf16_scatter2;
+      Scatter = 2;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_cvt_to_tensor_i8_fp16_scatter2:
+      IntrinsicID = Intrinsic::amdgcn_cvt_to_tensor_i8_fp16_scatter2;
+      Scatter = 2;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_cvt_to_tensor_i8_fp32_scatter2:
+      IntrinsicID = Intrinsic::amdgcn_cvt_to_tensor_i8_fp32_scatter2;
+      Scatter = 2;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_cvt_to_tensor_u4_bf16_scatter2:
+      IntrinsicID = Intrinsic::amdgcn_cvt_to_tensor_u4_bf16_scatter2;
+      Scatter = 2;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_cvt_to_tensor_u4_fp16_scatter2:
+      IntrinsicID = Intrinsic::amdgcn_cvt_to_tensor_u4_fp16_scatter2;
+      Scatter = 2;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_cvt_to_tensor_u4_fp32_scatter2:
+      IntrinsicID = Intrinsic::amdgcn_cvt_to_tensor_u4_fp32_scatter2;
+      Scatter = 2;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_cvt_to_tensor_u8_bf16_scatter2:
+      IntrinsicID = Intrinsic::amdgcn_cvt_to_tensor_u8_bf16_scatter2;
+      Scatter = 2;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_cvt_to_tensor_u8_fp16_scatter2:
+      IntrinsicID = Intrinsic::amdgcn_cvt_to_tensor_u8_fp16_scatter2;
+      Scatter = 2;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_cvt_to_tensor_u8_fp32_scatter2:
+      IntrinsicID = Intrinsic::amdgcn_cvt_to_tensor_u8_fp32_scatter2;
+      Scatter = 2;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_cvt_to_tensor_bf16_bf16_scatter4:
+      IntrinsicID = Intrinsic::amdgcn_cvt_to_tensor_bf16_bf16_scatter4;
+      Scatter = 4;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_cvt_to_tensor_bf16_fp16_scatter4:
+      IntrinsicID = Intrinsic::amdgcn_cvt_to_tensor_bf16_fp16_scatter4;
+      Scatter = 4;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_cvt_to_tensor_bf16_fp32_scatter4:
+      IntrinsicID = Intrinsic::amdgcn_cvt_to_tensor_bf16_fp32_scatter4;
+      Scatter = 4;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_cvt_to_tensor_fp16_bf16_scatter4:
+      IntrinsicID = Intrinsic::amdgcn_cvt_to_tensor_fp16_bf16_scatter4;
+      Scatter = 4;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_cvt_to_tensor_fp16_fp16_scatter4:
+      IntrinsicID = Intrinsic::amdgcn_cvt_to_tensor_fp16_fp16_scatter4;
+      Scatter = 4;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_cvt_to_tensor_fp16_fp32_scatter4:
+      IntrinsicID = Intrinsic::amdgcn_cvt_to_tensor_fp16_fp32_scatter4;
       Scatter = 4;
       break;
     }
@@ -19886,6 +20038,41 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
 
     Function *F = CGM.getIntrinsic(IntrinsicID, ArgTypes);
 
+    return Builder.CreateCall(F, Args);
+  }
+  case AMDGPU::BI__builtin_amdgcn_cvt_to_tensor_i4_bf16_acc_compact:
+  case AMDGPU::BI__builtin_amdgcn_cvt_to_tensor_i4_fp16_acc_compact:
+  case AMDGPU::BI__builtin_amdgcn_cvt_to_tensor_u4_bf16_acc_compact:
+  case AMDGPU::BI__builtin_amdgcn_cvt_to_tensor_u4_fp16_acc_compact:
+  case AMDGPU::BI__builtin_amdgcn_cvt_to_tensor_i4_bf16_acc_regular:
+  case AMDGPU::BI__builtin_amdgcn_cvt_to_tensor_i4_fp16_acc_regular:
+  case AMDGPU::BI__builtin_amdgcn_cvt_to_tensor_u4_bf16_acc_regular:
+  case AMDGPU::BI__builtin_amdgcn_cvt_to_tensor_u4_fp16_acc_regular: {
+    unsigned IntrinsicID;
+    switch (BuiltinID) {
+    case AMDGPU::BI__builtin_amdgcn_cvt_to_tensor_i4_bf16_acc_compact:
+    case AMDGPU::BI__builtin_amdgcn_cvt_to_tensor_i4_bf16_acc_regular:
+      IntrinsicID = Intrinsic::amdgcn_cvt_to_tensor_i4_bf16;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_cvt_to_tensor_i4_fp16_acc_compact:
+    case AMDGPU::BI__builtin_amdgcn_cvt_to_tensor_i4_fp16_acc_regular:
+      IntrinsicID = Intrinsic::amdgcn_cvt_to_tensor_i4_fp16;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_cvt_to_tensor_u4_bf16_acc_compact:
+    case AMDGPU::BI__builtin_amdgcn_cvt_to_tensor_u4_bf16_acc_regular:
+      IntrinsicID = Intrinsic::amdgcn_cvt_to_tensor_u4_bf16;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_cvt_to_tensor_u4_fp16_acc_compact:
+    case AMDGPU::BI__builtin_amdgcn_cvt_to_tensor_u4_fp16_acc_regular:
+      IntrinsicID = Intrinsic::amdgcn_cvt_to_tensor_u4_fp16;
+      break;
+    }
+
+    SmallVector<Value *, 4> Args;
+    for (int i = 0, e = E->getNumArgs(); i != e; ++i)
+      Args.push_back(EmitScalarExpr(E->getArg(i)));
+
+    Function *F = CGM.getIntrinsic(IntrinsicID, Args[0]->getType());
     return Builder.CreateCall(F, Args);
   }
 

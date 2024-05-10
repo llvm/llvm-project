@@ -3485,6 +3485,88 @@ def int_amdgcn_fma_from_tensor_bf16_bf8 : FmaFromTensor<llvm_anyfloat_ty, llvm_i
 def int_amdgcn_fma_from_tensor_bf16_f16 : FmaFromTensor<llvm_anyfloat_ty, llvm_v2f16_ty, llvm_v2bf16_ty>;
 def int_amdgcn_fma_from_tensor_bf16_bf16 : FmaFromTensor<llvm_anyfloat_ty, llvm_v2bf16_ty, llvm_v2bf16_ty>;
 
+class AMDGPUCvtTensorSingle<LLVMType out_data_ty, LLVMType acc_in_ty> :
+  ClangBuiltin<!subst("int", "__builtin", NAME)>,
+  DefaultAttrsIntrinsic<
+    [
+      out_data_ty,      // %out0
+    ],
+    [
+      acc_in_ty,        // %acc_in
+      llvm_i32_ty,      // %aux_data
+      llvm_i1_ty,       // %clamp
+    ],
+    [IntrNoMem, IntrConvergent, ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<2>>]
+  >;
+
+class AMDGPUCvtTensorScatter2<LLVMType out_data_ty, LLVMType acc_in_ty> :
+  DefaultAttrsIntrinsic<
+    [
+      out_data_ty,      // %out0
+      out_data_ty,      // %out1
+    ],
+    [
+      acc_in_ty,        // %acc_in
+      llvm_i32_ty,      // %aux_data
+      llvm_i1_ty,       // %clamp
+    ],
+    [IntrNoMem, IntrConvergent, ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<2>>]
+  >;
+
+class AMDGPUCvtTensorScatter4<LLVMType out_data_ty, LLVMType acc_in_ty> :
+  DefaultAttrsIntrinsic<
+    [
+      out_data_ty,      // %out0
+      out_data_ty,      // %out1
+      out_data_ty,      // %out2
+      out_data_ty,      // %out3
+    ],
+    [
+      acc_in_ty,        // %acc_in
+      llvm_i32_ty,      // %aux_data
+      llvm_i1_ty,       // %clamp
+    ],
+    [IntrNoMem, IntrConvergent, ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<2>>]
+  >;
+
+multiclass AMDGPUCvtTensor<LLVMType out_data_ty, LLVMType acc_single_ty,
+                                                 LLVMType acc_scatter2_ty = acc_single_ty,
+                                                 LLVMType acc_scatter4_ty = acc_single_ty> {
+  def NAME : AMDGPUCvtTensorSingle<out_data_ty, acc_single_ty>;
+  def _scatter2 : AMDGPUCvtTensorScatter2<out_data_ty, acc_scatter2_ty>;
+  def _scatter4 : AMDGPUCvtTensorScatter4<out_data_ty, acc_scatter4_ty>;
+}
+
+// 4-bit tensor data type.
+defm int_amdgcn_cvt_to_tensor_i4_fp32 : AMDGPUCvtTensor<llvm_i32_ty, llvm_v4f32_ty>;
+defm int_amdgcn_cvt_to_tensor_i4_fp16 : AMDGPUCvtTensor<llvm_i32_ty, llvm_anyfloat_ty, llvm_v8f16_ty, llvm_v8f16_ty>;
+defm int_amdgcn_cvt_to_tensor_i4_bf16 : AMDGPUCvtTensor<llvm_i32_ty, llvm_anyfloat_ty, llvm_v8bf16_ty, llvm_v8bf16_ty>;
+defm int_amdgcn_cvt_to_tensor_u4_fp32 : AMDGPUCvtTensor<llvm_i32_ty, llvm_v4f32_ty>;
+defm int_amdgcn_cvt_to_tensor_u4_fp16 : AMDGPUCvtTensor<llvm_i32_ty, llvm_anyfloat_ty, llvm_v8f16_ty, llvm_v8f16_ty>;
+defm int_amdgcn_cvt_to_tensor_u4_bf16 : AMDGPUCvtTensor<llvm_i32_ty, llvm_anyfloat_ty, llvm_v8bf16_ty, llvm_v8bf16_ty>;
+
+// 8-bit tensor data type.
+defm int_amdgcn_cvt_to_tensor_i8_fp32 : AMDGPUCvtTensor<llvm_i32_ty, llvm_v4f32_ty>;
+defm int_amdgcn_cvt_to_tensor_i8_fp16 : AMDGPUCvtTensor<llvm_i32_ty, llvm_v4f16_ty, llvm_v8f16_ty, llvm_v8f16_ty>;
+defm int_amdgcn_cvt_to_tensor_i8_bf16 : AMDGPUCvtTensor<llvm_i32_ty, llvm_v4bf16_ty, llvm_v8bf16_ty, llvm_v8bf16_ty>;
+defm int_amdgcn_cvt_to_tensor_u8_fp32 : AMDGPUCvtTensor<llvm_i32_ty, llvm_v4f32_ty>;
+defm int_amdgcn_cvt_to_tensor_u8_fp16 : AMDGPUCvtTensor<llvm_i32_ty, llvm_v4f16_ty, llvm_v8f16_ty, llvm_v8f16_ty>;
+defm int_amdgcn_cvt_to_tensor_u8_bf16 : AMDGPUCvtTensor<llvm_i32_ty, llvm_v4bf16_ty, llvm_v8bf16_ty, llvm_v8bf16_ty>;
+defm int_amdgcn_cvt_to_tensor_fp8_fp32 : AMDGPUCvtTensor<llvm_i32_ty, llvm_v4f32_ty>;
+defm int_amdgcn_cvt_to_tensor_fp8_fp16 : AMDGPUCvtTensor<llvm_i32_ty, llvm_v4f16_ty, llvm_v8f16_ty, llvm_v8f16_ty>;
+defm int_amdgcn_cvt_to_tensor_fp8_bf16 : AMDGPUCvtTensor<llvm_i32_ty, llvm_v4bf16_ty, llvm_v8bf16_ty, llvm_v8bf16_ty>;
+defm int_amdgcn_cvt_to_tensor_bf8_fp32 : AMDGPUCvtTensor<llvm_i32_ty, llvm_v4f32_ty>;
+defm int_amdgcn_cvt_to_tensor_bf8_fp16 : AMDGPUCvtTensor<llvm_i32_ty, llvm_v4f16_ty, llvm_v8f16_ty, llvm_v8f16_ty>;
+defm int_amdgcn_cvt_to_tensor_bf8_bf16 : AMDGPUCvtTensor<llvm_i32_ty, llvm_v4bf16_ty, llvm_v8bf16_ty, llvm_v8bf16_ty>;
+
+// 16-bit tensor data type.
+defm int_amdgcn_cvt_to_tensor_fp16_fp32 : AMDGPUCvtTensor<llvm_v2f16_ty, llvm_v4f32_ty>;
+defm int_amdgcn_cvt_to_tensor_fp16_fp16 : AMDGPUCvtTensor<llvm_v2f16_ty, llvm_v8f16_ty, llvm_v4f16_ty, llvm_v8f16_ty>;
+defm int_amdgcn_cvt_to_tensor_fp16_bf16 : AMDGPUCvtTensor<llvm_v2f16_ty, llvm_v8bf16_ty, llvm_v4bf16_ty, llvm_v8bf16_ty>;
+defm int_amdgcn_cvt_to_tensor_bf16_fp32 : AMDGPUCvtTensor<llvm_v2bf16_ty, llvm_v4f32_ty>;
+defm int_amdgcn_cvt_to_tensor_bf16_fp16 : AMDGPUCvtTensor<llvm_v2bf16_ty, llvm_v8f16_ty, llvm_v4f16_ty, llvm_v8f16_ty>;
+defm int_amdgcn_cvt_to_tensor_bf16_bf16 : AMDGPUCvtTensor<llvm_v2bf16_ty, llvm_v8bf16_ty, llvm_v4bf16_ty, llvm_v8bf16_ty>;
+
 //===----------------------------------------------------------------------===//
 // Deep learning intrinsics.
 //===----------------------------------------------------------------------===//
