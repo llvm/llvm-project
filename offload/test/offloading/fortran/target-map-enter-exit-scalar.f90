@@ -14,6 +14,7 @@ program main
     scalar = 10
 
     !$omp target enter data map(to: scalar)
+
     !ignored, as we've already attached
     scalar = 20
 
