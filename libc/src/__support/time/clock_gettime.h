@@ -8,16 +8,11 @@
 
 #ifndef LLVM_LIBC_SRC___SUPPORT_TIME_CLOCK_GETTIME_H
 #define LLVM_LIBC_SRC___SUPPORT_TIME_CLOCK_GETTIME_H
-#include "hdr/types/clockid_t.h"
-#include "hdr/types/struct_timespec.h"
-#include "src/__support/common.h"
 
-#include "src/__support/error_or.h"
-
-namespace LIBC_NAMESPACE {
-namespace internal {
-ErrorOr<int> clock_gettime(clockid_t clockid, timespec *ts);
-}
-} // namespace LIBC_NAMESPACE
+#ifdef __linux__
+#include "src/__support/time/linux/clock_gettime.h"
+#else
+#error "clock_gettime is not supported on this platform"
+#endif
 
 #endif // LLVM_LIBC_SRC___SUPPORT_TIME_CLOCK_GETTIME_H

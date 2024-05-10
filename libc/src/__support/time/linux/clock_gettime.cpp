@@ -6,9 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC___SUPPORT_TIME_LINUX_CLOCK_GETTIME_H
-#define LLVM_LIBC_SRC___SUPPORT_TIME_LINUX_CLOCK_GETTIME_H
-#include "src/__support/time/clock_gettime.h"
+#include "src/__support/time/linux/clock_gettime.h"
 #include "src/__support/OSUtil/syscall.h"
 #include <sys/syscall.h>
 namespace LIBC_NAMESPACE {
@@ -35,5 +33,3 @@ ErrorOr<int> clock_gettime(clockid_t clockid, timespec *ts) {
 
 } // namespace internal
 } // namespace LIBC_NAMESPACE
-
-#endif // LLVM_LIBC_SRC___SUPPORT_TIME_LINUX_CLOCK_GETTIME_H

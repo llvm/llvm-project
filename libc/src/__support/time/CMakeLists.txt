@@ -2,9 +2,10 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
   add_subdirectory(${LIBC_TARGET_OS})
 endif()
 
-add_object_library(
+add_header_library(
   clock_gettime
-  ALIAS
+  HDRS
+    clock_gettime.h
   DEPENDS
     .${LIBC_TARGET_OS}.clock_gettime
 )
