@@ -272,13 +272,10 @@ bool GenerateModuleInterfaceAction::BeginSourceFileAction(
 std::unique_ptr<ASTConsumer>
 GenerateModuleInterfaceAction::CreateASTConsumer(CompilerInstance &CI,
                                                  StringRef InFile) {
-  CI.getHeaderSearchOpts().ModulesSkipDiagnosticOptions = true;
-  CI.getHeaderSearchOpts().ModulesSkipHeaderSearchPaths = true;
-
-  std::vector<std::unique_ptr<ASTConsumer>> Consumers =
-      CreateMultiplexConsumer(CI, InFile);
-  if (Consumers.empty())
-    return nullptr;
+  std::vector<std::unique_ptr<ASTConsumer>> Consumers;
+  Consumers.push_back(std::make_unique<CXX20ModulesGenerator>(
+      CI.getPreprocessor(), CI.getModuleCache(),
+      CI.getFrontendOpts().OutputFile));
 
   if (CI.getFrontendOpts().GenReducedBMI &&
       !CI.getFrontendOpts().ModuleOutputPath.empty()) {

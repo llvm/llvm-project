@@ -144,15 +144,15 @@ namespace llvm {
           DisableIntegratedAS(false), FunctionSections(false),
           DataSections(false), IgnoreXCOFFVisibility(false),
           XCOFFTracebackTable(true), UniqueSectionNames(true),
-          UniqueBasicBlockSectionNames(false), TrapUnreachable(false),
-          NoTrapAfterNoreturn(false), TLSSize(0), EmulatedTLS(false),
-          EnableTLSDESC(false), EnableIPRA(false), EmitStackSizeSection(false),
-          EnableMachineOutliner(false), EnableMachineFunctionSplitter(false),
-          SupportsDefaultOutlining(false), EmitAddrsig(false), BBAddrMap(false),
-          EmitCallSiteInfo(false), SupportsDebugEntryValues(false),
-          EnableDebugEntryValues(false), ValueTrackingVariableLocations(false),
-          ForceDwarfFrameSection(false), XRayFunctionIndex(true),
-          DebugStrictDwarf(false), Hotpatch(false),
+          UniqueBasicBlockSectionNames(false), SeparateNamedSections(false),
+          TrapUnreachable(false), NoTrapAfterNoreturn(false), TLSSize(0),
+          EmulatedTLS(false), EnableTLSDESC(false), EnableIPRA(false),
+          EmitStackSizeSection(false), EnableMachineOutliner(false),
+          EnableMachineFunctionSplitter(false), SupportsDefaultOutlining(false),
+          EmitAddrsig(false), BBAddrMap(false), EmitCallSiteInfo(false),
+          SupportsDebugEntryValues(false), EnableDebugEntryValues(false),
+          ValueTrackingVariableLocations(false), ForceDwarfFrameSection(false),
+          XRayFunctionIndex(true), DebugStrictDwarf(false), Hotpatch(false),
           PPCGenScalarMASSEntries(false), JMCInstrument(false),
           EnableCFIFixup(false), MisExpect(false), XCOFFReadOnlyPointers(false),
           FPDenormalMode(DenormalMode::IEEE, DenormalMode::IEEE) {}
@@ -276,6 +276,9 @@ namespace llvm {
 
     /// Use unique names for basic block sections.
     unsigned UniqueBasicBlockSectionNames : 1;
+
+    /// Emit named sections with the same name into different sections.
+    unsigned SeparateNamedSections : 1;
 
     /// Emit target-specific trap instruction for 'unreachable' IR instructions.
     unsigned TrapUnreachable : 1;

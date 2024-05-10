@@ -185,7 +185,7 @@ private:
   /// All vector operands are promoted to a vector type with larger element
   /// type, and the start value is promoted to a larger scalar type. Then the
   /// result is truncated back to the original scalar type.
-  void PromoteReduction(SDNode *Node, SmallVectorImpl<SDValue> &Results);
+  SDValue PromoteReduction(SDNode *Node);
 
   SDValue ExpandPARITY(SDValue Op, const SDLoc &dl);
 
@@ -1226,6 +1226,11 @@ void SelectionDAGLegalize::LegalizeOp(SDNode *Node) {
   case ISD::VP_REDUCE_SEQ_FMUL:
     Action = TLI.getOperationAction(
         Node->getOpcode(), Node->getOperand(1).getValueType());
+    break;
+  case ISD::VP_CTTZ_ELTS:
+  case ISD::VP_CTTZ_ELTS_ZERO_UNDEF:
+    Action = TLI.getOperationAction(Node->getOpcode(),
+                                    Node->getOperand(0).getValueType());
     break;
   default:
     if (Node->getOpcode() >= ISD::BUILTIN_OP_END) {
@@ -2986,8 +2991,7 @@ SDValue SelectionDAGLegalize::ExpandPARITY(SDValue Op, const SDLoc &dl) {
   return DAG.getNode(ISD::AND, dl, VT, Result, DAG.getConstant(1, dl, VT));
 }
 
-void SelectionDAGLegalize::PromoteReduction(SDNode *Node,
-                                            SmallVectorImpl<SDValue> &Results) {
+SDValue SelectionDAGLegalize::PromoteReduction(SDNode *Node) {
   MVT VecVT = Node->getOperand(1).getSimpleValueType();
   MVT NewVecVT = TLI.getTypeToPromoteTo(Node->getOpcode(), VecVT);
   MVT ScalarVT = Node->getSimpleValueType(0);
@@ -3021,10 +3025,8 @@ void SelectionDAGLegalize::PromoteReduction(SDNode *Node,
                             Node->getFlags());
 
   assert(ScalarVT.isFloatingPoint() && "Only FP promotion is supported");
-  Res = DAG.getNode(ISD::FP_ROUND, DL, ScalarVT, Res,
-                    DAG.getIntPtrConstant(0, DL, /*isTarget=*/true));
-
-  Results.push_back(Res);
+  return DAG.getNode(ISD::FP_ROUND, DL, ScalarVT, Res,
+                     DAG.getIntPtrConstant(0, DL, /*isTarget=*/true));
 }
 
 bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
@@ -4282,6 +4284,10 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
   case ISD::VECREDUCE_FMINIMUM:
     Results.push_back(TLI.expandVecReduce(Node, DAG));
     break;
+  case ISD::VP_CTTZ_ELTS:
+  case ISD::VP_CTTZ_ELTS_ZERO_UNDEF:
+    Results.push_back(TLI.expandVPCTTZElements(Node, DAG));
+    break;
   case ISD::GLOBAL_OFFSET_TABLE:
   case ISD::GlobalAddress:
   case ISD::GlobalTLSAddress:
@@ -5000,7 +5006,8 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
       Node->getOpcode() == ISD::INSERT_VECTOR_ELT) {
     OVT = Node->getOperand(0).getSimpleValueType();
   }
-  if (Node->getOpcode() == ISD::STRICT_UINT_TO_FP ||
+  if (Node->getOpcode() == ISD::ATOMIC_STORE ||
+      Node->getOpcode() == ISD::STRICT_UINT_TO_FP ||
       Node->getOpcode() == ISD::STRICT_SINT_TO_FP ||
       Node->getOpcode() == ISD::STRICT_FSETCC ||
       Node->getOpcode() == ISD::STRICT_FSETCCS ||
@@ -5616,7 +5623,8 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
     Results.push_back(CvtVec);
     break;
   }
-  case ISD::ATOMIC_SWAP: {
+  case ISD::ATOMIC_SWAP:
+  case ISD::ATOMIC_STORE: {
     AtomicSDNode *AM = cast<AtomicSDNode>(Node);
     SDLoc SL(Node);
     SDValue CastVal = DAG.getNode(ISD::BITCAST, SL, NVT, AM->getVal());
@@ -5625,13 +5633,22 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
     assert(AM->getMemoryVT().getSizeInBits() == NVT.getSizeInBits() &&
            "unexpected atomic_swap with illegal type");
 
-    SDValue NewAtomic
-      = DAG.getAtomic(ISD::ATOMIC_SWAP, SL, NVT,
-                      DAG.getVTList(NVT, MVT::Other),
-                      { AM->getChain(), AM->getBasePtr(), CastVal },
-                      AM->getMemOperand());
-    Results.push_back(DAG.getNode(ISD::BITCAST, SL, OVT, NewAtomic));
-    Results.push_back(NewAtomic.getValue(1));
+    SDValue Op0 = AM->getBasePtr();
+    SDValue Op1 = CastVal;
+
+    // ATOMIC_STORE uses a swapped operand order from every other AtomicSDNode,
+    // but really it should merge with ISD::STORE.
+    if (AM->getOpcode() == ISD::ATOMIC_STORE)
+      std::swap(Op0, Op1);
+
+    SDValue NewAtomic = DAG.getAtomic(AM->getOpcode(), SL, NVT, AM->getChain(),
+                                      Op0, Op1, AM->getMemOperand());
+
+    if (AM->getOpcode() != ISD::ATOMIC_STORE) {
+      Results.push_back(DAG.getNode(ISD::BITCAST, SL, OVT, NewAtomic));
+      Results.push_back(NewAtomic.getValue(1));
+    } else
+      Results.push_back(NewAtomic);
     break;
   }
   case ISD::ATOMIC_LOAD: {
@@ -5671,7 +5688,7 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
   case ISD::VP_REDUCE_FMAX:
   case ISD::VP_REDUCE_FMIN:
   case ISD::VP_REDUCE_SEQ_FADD:
-    PromoteReduction(Node, Results);
+    Results.push_back(PromoteReduction(Node));
     break;
   }
 

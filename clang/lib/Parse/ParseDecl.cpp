@@ -2587,25 +2587,30 @@ Decl *Parser::ParseDeclarationAfterDeclaratorAndAttributes(
     Parser &P;
     Declarator &D;
     Decl *ThisDecl;
+    bool Entered;
 
     InitializerScopeRAII(Parser &P, Declarator &D, Decl *ThisDecl)
-        : P(P), D(D), ThisDecl(ThisDecl) {
+        : P(P), D(D), ThisDecl(ThisDecl), Entered(false) {
       if (ThisDecl && P.getLangOpts().CPlusPlus) {
         Scope *S = nullptr;
         if (D.getCXXScopeSpec().isSet()) {
           P.EnterScope(0);
           S = P.getCurScope();
         }
-        P.Actions.ActOnCXXEnterDeclInitializer(S, ThisDecl);
+        if (ThisDecl && !ThisDecl->isInvalidDecl()) {
+          P.Actions.ActOnCXXEnterDeclInitializer(S, ThisDecl);
+          Entered = true;
+        }
       }
     }
-    ~InitializerScopeRAII() { pop(); }
-    void pop() {
+    ~InitializerScopeRAII() {
       if (ThisDecl && P.getLangOpts().CPlusPlus) {
         Scope *S = nullptr;
         if (D.getCXXScopeSpec().isSet())
           S = P.getCurScope();
-        P.Actions.ActOnCXXExitDeclInitializer(S, ThisDecl);
+
+        if (Entered)
+          P.Actions.ActOnCXXExitDeclInitializer(S, ThisDecl);
         if (S)
           P.ExitScope();
       }
@@ -2736,8 +2741,6 @@ Decl *Parser::ParseDeclarationAfterDeclaratorAndAttributes(
         FRI->RangeExpr = Init;
       }
 
-      InitScope.pop();
-
       if (Init.isInvalid()) {
         SmallVector<tok::TokenKind, 2> StopTokens;
         StopTokens.push_back(tok::comma);
@@ -2785,8 +2788,6 @@ Decl *Parser::ParseDeclarationAfterDeclaratorAndAttributes(
 
     bool SawError = ParseExpressionList(Exprs, ExpressionStarts);
 
-    InitScope.pop();
-
     if (SawError) {
       if (ThisVarDecl && PP.isCodeCompletionReached() && !CalledSignatureHelp) {
         Actions.ProduceConstructorSignatureHelp(
@@ -2817,8 +2818,6 @@ Decl *Parser::ParseDeclarationAfterDeclaratorAndAttributes(
 
     PreferredType.enterVariableInit(Tok.getLocation(), ThisDecl);
     ExprResult Init(ParseBraceInitializer());
-
-    InitScope.pop();
 
     if (Init.isInvalid()) {
       Actions.ActOnInitializerError(ThisDecl);
@@ -3026,7 +3025,7 @@ bool Parser::ParseImplicitInt(DeclSpec &DS, CXXScopeSpec *SS,
         << TokenName << TagName << getLangOpts().CPlusPlus
         << FixItHint::CreateInsertion(Tok.getLocation(), FixitTagName);
 
-      if (Actions.LookupParsedName(R, getCurScope(), SS)) {
+      if (Actions.LookupName(R, getCurScope())) {
         for (LookupResult::iterator I = R.begin(), IEnd = R.end();
              I != IEnd; ++I)
           Diag((*I)->getLocation(), diag::note_decl_hiding_tag_type)
@@ -4332,9 +4331,12 @@ void Parser::ParseDeclarationSpecifiers(
 
     // friend
     case tok::kw_friend:
-      if (DSContext == DeclSpecContext::DSC_class)
+      if (DSContext == DeclSpecContext::DSC_class) {
         isInvalid = DS.SetFriendSpec(Loc, PrevSpec, DiagID);
-      else {
+        Scope *CurS = getCurScope();
+        if (!isInvalid && CurS)
+          CurS->setFlags(CurS->getFlags() | Scope::FriendScope);
+      } else {
         PrevSpec = ""; // not actually used by the diagnostic
         DiagID = diag::err_friend_invalid_in_context;
         isInvalid = true;
@@ -7416,12 +7418,20 @@ void Parser::ParseFunctionDeclarator(Declarator &D,
       std::optional<Sema::CXXThisScopeRAII> ThisScope;
       InitCXXThisScopeForDeclaratorIfRelevant(D, DS, ThisScope);
 
-      // Parse exception-specification[opt].
-      // FIXME: Per [class.mem]p6, all exception-specifications at class scope
-      // should be delayed, including those for non-members (eg, friend
-      // declarations). But only applying this to member declarations is
-      // consistent with what other implementations do.
-      bool Delayed = D.isFirstDeclarationOfMember() &&
+      // C++ [class.mem.general]p8:
+      //   A complete-class context of a class (template) is a
+      //     - function body,
+      //     - default argument,
+      //     - default template argument,
+      //     - noexcept-specifier, or
+      //     - default member initializer
+      //   within the member-specification of the class or class template.
+      //
+      // Parse exception-specification[opt]. If we are in the
+      // member-specification of a class or class template, this is a
+      // complete-class context and parsing of the noexcept-specifier should be
+      // delayed (even if this is a friend declaration).
+      bool Delayed = D.getContext() == DeclaratorContext::Member &&
                      D.isFunctionDeclaratorAFunctionDeclaration();
       if (Delayed && Actions.isLibstdcxxEagerExceptionSpecHack(D) &&
           GetLookAheadToken(0).is(tok::kw_noexcept) &&

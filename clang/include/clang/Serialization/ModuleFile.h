@@ -491,7 +491,7 @@ public:
 
   /// Offset of each type within the bitstream, indexed by the
   /// type ID, or the representation of a Type*.
-  const UnderalignedInt64 *TypeOffsets = nullptr;
+  const UnalignedUInt64 *TypeOffsets = nullptr;
 
   /// Base type ID for types local to this module as represented in
   /// the global type ID space.

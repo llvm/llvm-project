@@ -829,36 +829,37 @@ bool SimpleASTReaderListener::ReadPreprocessorOptions(
                                   OptionValidateNone);
 }
 
-/// Check the header search options deserialized from the control block
-/// against the header search options in an existing preprocessor.
+/// Check that the specified and the existing module cache paths are equivalent.
 ///
 /// \param Diags If non-null, produce diagnostics for any mismatches incurred.
-static bool checkHeaderSearchOptions(const HeaderSearchOptions &HSOpts,
-                                     StringRef SpecificModuleCachePath,
-                                     StringRef ExistingModuleCachePath,
-                                     DiagnosticsEngine *Diags,
-                                     const LangOptions &LangOpts,
-                                     const PreprocessorOptions &PPOpts) {
-  if (LangOpts.Modules) {
-    if (SpecificModuleCachePath != ExistingModuleCachePath &&
-        !PPOpts.AllowPCHWithDifferentModulesCachePath) {
-      if (Diags)
-        Diags->Report(diag::err_pch_modulecache_mismatch)
-          << SpecificModuleCachePath << ExistingModuleCachePath;
-      return true;
-    }
-  }
-
-  return false;
+/// \returns true when the module cache paths differ.
+static bool checkModuleCachePath(llvm::vfs::FileSystem &VFS,
+                                 StringRef SpecificModuleCachePath,
+                                 StringRef ExistingModuleCachePath,
+                                 DiagnosticsEngine *Diags,
+                                 const LangOptions &LangOpts,
+                                 const PreprocessorOptions &PPOpts) {
+  if (!LangOpts.Modules || PPOpts.AllowPCHWithDifferentModulesCachePath ||
+      SpecificModuleCachePath == ExistingModuleCachePath)
+    return false;
+  auto EqualOrErr =
+      VFS.equivalent(SpecificModuleCachePath, ExistingModuleCachePath);
+  if (EqualOrErr && *EqualOrErr)
+    return false;
+  if (Diags)
+    Diags->Report(diag::err_pch_modulecache_mismatch)
+        << SpecificModuleCachePath << ExistingModuleCachePath;
+  return true;
 }
 
 bool PCHValidator::ReadHeaderSearchOptions(const HeaderSearchOptions &HSOpts,
                                            StringRef SpecificModuleCachePath,
                                            bool Complain) {
-  return checkHeaderSearchOptions(HSOpts, SpecificModuleCachePath,
-                                  PP.getHeaderSearchInfo().getModuleCachePath(),
-                                  Complain ? &Reader.Diags : nullptr,
-                                  PP.getLangOpts(), PP.getPreprocessorOpts());
+  return checkModuleCachePath(Reader.getFileManager().getVirtualFileSystem(),
+                              SpecificModuleCachePath,
+                              PP.getHeaderSearchInfo().getModuleCachePath(),
+                              Complain ? &Reader.Diags : nullptr,
+                              PP.getLangOpts(), PP.getPreprocessorOpts());
 }
 
 void PCHValidator::ReadCounter(const ModuleFile &M, unsigned Value) {
@@ -2630,6 +2631,14 @@ InputFile ASTReader::getInputFile(ModuleFile &F, unsigned ID, bool Complain) {
       F.StandardCXXModule && FileChange.Kind == Change::None)
     FileChange = HasInputContentChanged(FileChange);
 
+  // When we have StoredTime equal to zero and ValidateASTInputFilesContent,
+  // it is better to check the content of the input files because we cannot rely
+  // on the file modification time, which will be the same (zero) for these
+  // files.
+  if (!StoredTime && ValidateASTInputFilesContent &&
+      FileChange.Kind == Change::None)
+    FileChange = HasInputContentChanged(FileChange);
+
   // For an overridden file, there is nothing to validate.
   if (!Overridden && FileChange.Kind != Change::None) {
     if (Complain && !Diags.isDiagnosticInFlight()) {
@@ -3341,7 +3350,7 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
         return llvm::createStringError(
             std::errc::illegal_byte_sequence,
             "duplicate TYPE_OFFSET record in AST file");
-      F.TypeOffsets = reinterpret_cast<const UnderalignedInt64 *>(Blob.data());
+      F.TypeOffsets = reinterpret_cast<const UnalignedUInt64 *>(Blob.data());
       F.LocalNumTypes = Record[0];
       unsigned LocalBaseTypeIndex = Record[1];
       F.BaseTypeIndex = getTotalNumTypes();
@@ -5368,9 +5377,9 @@ namespace {
     bool ReadHeaderSearchOptions(const HeaderSearchOptions &HSOpts,
                                  StringRef SpecificModuleCachePath,
                                  bool Complain) override {
-      return checkHeaderSearchOptions(HSOpts, SpecificModuleCachePath,
-                                      ExistingModuleCachePath, nullptr,
-                                      ExistingLangOpts, ExistingPPOpts);
+      return checkModuleCachePath(
+          FileMgr.getVirtualFileSystem(), SpecificModuleCachePath,
+          ExistingModuleCachePath, nullptr, ExistingLangOpts, ExistingPPOpts);
     }
 
     bool ReadPreprocessorOptions(const PreprocessorOptions &PPOpts,
@@ -6255,7 +6264,7 @@ PreprocessedEntity *ASTReader::ReadPreprocessedEntity(unsigned Index) {
 
   SavedStreamPosition SavedPosition(M.PreprocessorDetailCursor);
   if (llvm::Error Err = M.PreprocessorDetailCursor.JumpToBit(
-          M.MacroOffsetsBase + PPOffs.BitOffset)) {
+          M.MacroOffsetsBase + PPOffs.getOffset())) {
     Error(std::move(Err));
     return nullptr;
   }
@@ -6661,9 +6670,8 @@ ASTReader::RecordLocation ASTReader::TypeCursorForIndex(unsigned Index) {
   GlobalTypeMapType::iterator I = GlobalTypeMap.find(Index);
   assert(I != GlobalTypeMap.end() && "Corrupted global type map");
   ModuleFile *M = I->second;
-  return RecordLocation(
-      M, M->TypeOffsets[Index - M->BaseTypeIndex].getBitOffset() +
-             M->DeclsBlockStartOffset);
+  return RecordLocation(M, M->TypeOffsets[Index - M->BaseTypeIndex].get() +
+                               M->DeclsBlockStartOffset);
 }
 
 static std::optional<Type::TypeClass> getTypeClassForCode(TypeCode code) {
@@ -7290,6 +7298,9 @@ QualType ASTReader::GetType(TypeID ID) {
       break;
     case PREDEF_TYPE_OVERLOAD_ID:
       T = Context.OverloadTy;
+      break;
+    case PREDEF_TYPE_UNRESOLVED_TEMPLATE:
+      T = Context.UnresolvedTemplateTy;
       break;
     case PREDEF_TYPE_BOUND_MEMBER:
       T = Context.BoundMemberTy;
@@ -11747,6 +11758,22 @@ void ASTRecordReader::readOMPChildren(OMPChildren *Data) {
     Data->getChildren()[I] = readStmt();
 }
 
+SmallVector<Expr *> ASTRecordReader::readOpenACCVarList() {
+  unsigned NumVars = readInt();
+  llvm::SmallVector<Expr *> VarList;
+  for (unsigned I = 0; I < NumVars; ++I)
+    VarList.push_back(readSubExpr());
+  return VarList;
+}
+
+SmallVector<Expr *> ASTRecordReader::readOpenACCIntExprList() {
+  unsigned NumExprs = readInt();
+  llvm::SmallVector<Expr *> ExprList;
+  for (unsigned I = 0; I < NumExprs; ++I)
+    ExprList.push_back(readSubExpr());
+  return ExprList;
+}
+
 OpenACCClause *ASTRecordReader::readOpenACCClause() {
   OpenACCClauseKind ClauseKind = readEnum<OpenACCClauseKind>();
   SourceLocation BeginLoc = readSourceLocation();
@@ -11792,6 +11819,93 @@ OpenACCClause *ASTRecordReader::readOpenACCClause() {
     return OpenACCVectorLengthClause::Create(getContext(), BeginLoc, LParenLoc,
                                              IntExpr, EndLoc);
   }
+  case OpenACCClauseKind::Private: {
+    SourceLocation LParenLoc = readSourceLocation();
+    llvm::SmallVector<Expr *> VarList = readOpenACCVarList();
+    return OpenACCPrivateClause::Create(getContext(), BeginLoc, LParenLoc,
+                                        VarList, EndLoc);
+  }
+  case OpenACCClauseKind::FirstPrivate: {
+    SourceLocation LParenLoc = readSourceLocation();
+    llvm::SmallVector<Expr *> VarList = readOpenACCVarList();
+    return OpenACCFirstPrivateClause::Create(getContext(), BeginLoc, LParenLoc,
+                                             VarList, EndLoc);
+  }
+  case OpenACCClauseKind::Attach: {
+    SourceLocation LParenLoc = readSourceLocation();
+    llvm::SmallVector<Expr *> VarList = readOpenACCVarList();
+    return OpenACCAttachClause::Create(getContext(), BeginLoc, LParenLoc,
+                                       VarList, EndLoc);
+  }
+  case OpenACCClauseKind::DevicePtr: {
+    SourceLocation LParenLoc = readSourceLocation();
+    llvm::SmallVector<Expr *> VarList = readOpenACCVarList();
+    return OpenACCDevicePtrClause::Create(getContext(), BeginLoc, LParenLoc,
+                                          VarList, EndLoc);
+  }
+  case OpenACCClauseKind::NoCreate: {
+    SourceLocation LParenLoc = readSourceLocation();
+    llvm::SmallVector<Expr *> VarList = readOpenACCVarList();
+    return OpenACCNoCreateClause::Create(getContext(), BeginLoc, LParenLoc,
+                                         VarList, EndLoc);
+  }
+  case OpenACCClauseKind::Present: {
+    SourceLocation LParenLoc = readSourceLocation();
+    llvm::SmallVector<Expr *> VarList = readOpenACCVarList();
+    return OpenACCPresentClause::Create(getContext(), BeginLoc, LParenLoc,
+                                        VarList, EndLoc);
+  }
+  case OpenACCClauseKind::PCopy:
+  case OpenACCClauseKind::PresentOrCopy:
+  case OpenACCClauseKind::Copy: {
+    SourceLocation LParenLoc = readSourceLocation();
+    llvm::SmallVector<Expr *> VarList = readOpenACCVarList();
+    return OpenACCCopyClause::Create(getContext(), ClauseKind, BeginLoc,
+                                     LParenLoc, VarList, EndLoc);
+  }
+  case OpenACCClauseKind::CopyIn:
+  case OpenACCClauseKind::PCopyIn:
+  case OpenACCClauseKind::PresentOrCopyIn: {
+    SourceLocation LParenLoc = readSourceLocation();
+    bool IsReadOnly = readBool();
+    llvm::SmallVector<Expr *> VarList = readOpenACCVarList();
+    return OpenACCCopyInClause::Create(getContext(), ClauseKind, BeginLoc,
+                                       LParenLoc, IsReadOnly, VarList, EndLoc);
+  }
+  case OpenACCClauseKind::CopyOut:
+  case OpenACCClauseKind::PCopyOut:
+  case OpenACCClauseKind::PresentOrCopyOut: {
+    SourceLocation LParenLoc = readSourceLocation();
+    bool IsZero = readBool();
+    llvm::SmallVector<Expr *> VarList = readOpenACCVarList();
+    return OpenACCCopyOutClause::Create(getContext(), ClauseKind, BeginLoc,
+                                        LParenLoc, IsZero, VarList, EndLoc);
+  }
+  case OpenACCClauseKind::Create:
+  case OpenACCClauseKind::PCreate:
+  case OpenACCClauseKind::PresentOrCreate: {
+    SourceLocation LParenLoc = readSourceLocation();
+    bool IsZero = readBool();
+    llvm::SmallVector<Expr *> VarList = readOpenACCVarList();
+    return OpenACCCreateClause::Create(getContext(), ClauseKind, BeginLoc,
+                                       LParenLoc, IsZero, VarList, EndLoc);
+  }
+  case OpenACCClauseKind::Async: {
+    SourceLocation LParenLoc = readSourceLocation();
+    Expr *AsyncExpr = readBool() ? readSubExpr() : nullptr;
+    return OpenACCAsyncClause::Create(getContext(), BeginLoc, LParenLoc,
+                                      AsyncExpr, EndLoc);
+  }
+  case OpenACCClauseKind::Wait: {
+    SourceLocation LParenLoc = readSourceLocation();
+    Expr *DevNumExpr = readBool() ? readSubExpr() : nullptr;
+    SourceLocation QueuesLoc = readSourceLocation();
+    llvm::SmallVector<Expr *> QueueIdExprs = readOpenACCIntExprList();
+    return OpenACCWaitClause::Create(getContext(), BeginLoc, LParenLoc,
+                                     DevNumExpr, QueuesLoc, QueueIdExprs,
+                                     EndLoc);
+  }
+
   case OpenACCClauseKind::Finalize:
   case OpenACCClauseKind::IfPresent:
   case OpenACCClauseKind::Seq:
@@ -11800,23 +11914,13 @@ OpenACCClause *ASTRecordReader::readOpenACCClause() {
   case OpenACCClauseKind::Worker:
   case OpenACCClauseKind::Vector:
   case OpenACCClauseKind::NoHost:
-  case OpenACCClauseKind::Copy:
   case OpenACCClauseKind::UseDevice:
-  case OpenACCClauseKind::Attach:
   case OpenACCClauseKind::Delete:
   case OpenACCClauseKind::Detach:
   case OpenACCClauseKind::Device:
-  case OpenACCClauseKind::DevicePtr:
   case OpenACCClauseKind::DeviceResident:
-  case OpenACCClauseKind::FirstPrivate:
   case OpenACCClauseKind::Host:
   case OpenACCClauseKind::Link:
-  case OpenACCClauseKind::NoCreate:
-  case OpenACCClauseKind::Present:
-  case OpenACCClauseKind::Private:
-  case OpenACCClauseKind::CopyOut:
-  case OpenACCClauseKind::CopyIn:
-  case OpenACCClauseKind::Create:
   case OpenACCClauseKind::Reduction:
   case OpenACCClauseKind::Collapse:
   case OpenACCClauseKind::Bind:
@@ -11824,10 +11928,8 @@ OpenACCClause *ASTRecordReader::readOpenACCClause() {
   case OpenACCClauseKind::DefaultAsync:
   case OpenACCClauseKind::DeviceType:
   case OpenACCClauseKind::DType:
-  case OpenACCClauseKind::Async:
   case OpenACCClauseKind::Tile:
   case OpenACCClauseKind::Gang:
-  case OpenACCClauseKind::Wait:
   case OpenACCClauseKind::Invalid:
     llvm_unreachable("Clause serialization not yet implemented");
   }

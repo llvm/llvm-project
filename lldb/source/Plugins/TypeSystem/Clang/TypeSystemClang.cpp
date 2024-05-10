@@ -2923,6 +2923,35 @@ bool TypeSystemClang::IsCStringType(lldb::opaque_compiler_type_t type,
   return false;
 }
 
+unsigned TypeSystemClang::GetPtrAuthKey(lldb::opaque_compiler_type_t type) {
+  if (type) {
+    clang::QualType qual_type(GetCanonicalQualType(type));
+    if (auto pointer_auth = qual_type.getPointerAuth())
+      return pointer_auth.getKey();
+  }
+  return 0;
+}
+
+unsigned
+TypeSystemClang::GetPtrAuthDiscriminator(lldb::opaque_compiler_type_t type) {
+  if (type) {
+    clang::QualType qual_type(GetCanonicalQualType(type));
+    if (auto pointer_auth = qual_type.getPointerAuth())
+      return pointer_auth.getExtraDiscriminator();
+  }
+  return 0;
+}
+
+bool TypeSystemClang::GetPtrAuthAddressDiversity(
+    lldb::opaque_compiler_type_t type) {
+  if (type) {
+    clang::QualType qual_type(GetCanonicalQualType(type));
+    if (auto pointer_auth = qual_type.getPointerAuth())
+      return pointer_auth.isAddressDiscriminated();
+  }
+  return false;
+}
+
 bool TypeSystemClang::IsFunctionType(lldb::opaque_compiler_type_t type) {
   auto isFunctionType = [&](clang::QualType qual_type) {
     return qual_type->isFunctionType();
@@ -4512,6 +4541,19 @@ TypeSystemClang::AddConstModifier(lldb::opaque_compiler_type_t type) {
 }
 
 CompilerType
+TypeSystemClang::AddPtrAuthModifier(lldb::opaque_compiler_type_t type,
+                                    uint32_t payload) {
+  if (type) {
+    clang::ASTContext &clang_ast = getASTContext();
+    auto pauth = PointerAuthQualifier::fromOpaqueValue(payload);
+    clang::QualType result =
+        clang_ast.getPointerAuthType(GetQualType(type), pauth);
+    return GetType(result);
+  }
+  return CompilerType();
+}
+
+CompilerType
 TypeSystemClang::AddVolatileModifier(lldb::opaque_compiler_type_t type) {
   if (type) {
     clang::QualType result(GetQualType(type));
@@ -4953,6 +4995,9 @@ lldb::Encoding TypeSystemClang::GetEncoding(lldb::opaque_compiler_type_t type,
       break;
 
     case clang::BuiltinType::IncompleteMatrixIdx:
+      break;
+
+    case clang::BuiltinType::UnresolvedTemplate:
       break;
     }
     break;
@@ -7061,6 +7106,8 @@ TypeSystemClang::GetDirectNestedTypeWithName(lldb::opaque_compiler_type_t type,
     for (NamedDecl *decl : record_decl->lookup(decl_name)) {
       if (auto *tag_decl = dyn_cast<clang::TagDecl>(decl))
         return GetType(getASTContext().getTagDeclType(tag_decl));
+      if (auto *typedef_decl = dyn_cast<clang::TypedefNameDecl>(decl))
+        return GetType(getASTContext().getTypedefType(typedef_decl));
     }
     break;
   }

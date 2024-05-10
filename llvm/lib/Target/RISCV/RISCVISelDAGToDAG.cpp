@@ -1416,6 +1416,19 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
           ReplaceNode(Node, SLLI);
           return;
         }
+
+        // If we have 32 bits in the mask, we can use SLLI_UW instead of SLLI.
+        if (C2 < Trailing && Leading + Trailing == 32 && OneUseOrZExtW &&
+            Subtarget->hasStdExtZba()) {
+          SDNode *SRLI = CurDAG->getMachineNode(
+              RISCV::SRLI, DL, VT, X,
+              CurDAG->getTargetConstant(Trailing - C2, DL, VT));
+          SDNode *SLLI_UW = CurDAG->getMachineNode(
+              RISCV::SLLI_UW, DL, VT, SDValue(SRLI, 0),
+              CurDAG->getTargetConstant(Trailing, DL, VT));
+          ReplaceNode(Node, SLLI_UW);
+          return;
+        }
       }
     }
 
@@ -2099,8 +2112,14 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     MVT SubVecContainerVT = SubVecVT;
     // Establish the correct scalable-vector types for any fixed-length type.
     if (SubVecVT.isFixedLengthVector()) {
-      assert(Idx == 0 && V.isUndef());
       SubVecContainerVT = TLI.getContainerForFixedLengthVector(SubVecVT);
+      TypeSize VecRegSize = TypeSize::getScalable(RISCV::RVVBitsPerBlock);
+      [[maybe_unused]] bool ExactlyVecRegSized =
+          Subtarget->expandVScale(SubVecVT.getSizeInBits())
+              .isKnownMultipleOf(Subtarget->expandVScale(VecRegSize));
+      assert(isPowerOf2_64(Subtarget->expandVScale(SubVecVT.getSizeInBits())
+                               .getKnownMinValue()));
+      assert(Idx == 0 && (ExactlyVecRegSized || V.isUndef()));
     }
     MVT ContainerVT = VT;
     if (VT.isFixedLengthVector())
@@ -3472,8 +3491,15 @@ static bool usesAllOnesMask(SDNode *N, unsigned MaskOpIdx) {
 }
 
 static bool isImplicitDef(SDValue V) {
-  return V.isMachineOpcode() &&
-         V.getMachineOpcode() == TargetOpcode::IMPLICIT_DEF;
+  if (!V.isMachineOpcode())
+    return false;
+  if (V.getMachineOpcode() == TargetOpcode::REG_SEQUENCE) {
+    for (unsigned I = 1; I < V.getNumOperands(); I += 2)
+      if (!isImplicitDef(V.getOperand(I)))
+        return false;
+    return true;
+  }
+  return V.getMachineOpcode() == TargetOpcode::IMPLICIT_DEF;
 }
 
 // Optimize masked RVV pseudo instructions with a known all-ones mask to their

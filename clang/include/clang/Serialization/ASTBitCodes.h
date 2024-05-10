@@ -166,75 +166,78 @@ using SubmoduleID = uint32_t;
 /// The number of predefined submodule IDs.
 const unsigned int NUM_PREDEF_SUBMODULE_IDS = 1;
 
+/// 32 aligned uint64_t in the AST file. Use splitted 64-bit integer into
+/// low/high parts to keep structure alignment 32-bit (it is important
+/// because blobs in bitstream are 32-bit aligned). This structure is
+/// serialized "as is" to the AST file.
+class UnalignedUInt64 {
+  uint32_t BitLow = 0;
+  uint32_t BitHigh = 0;
+
+public:
+  UnalignedUInt64() = default;
+  UnalignedUInt64(uint64_t BitOffset) { set(BitOffset); }
+
+  void set(uint64_t Offset) {
+    BitLow = Offset;
+    BitHigh = Offset >> 32;
+  }
+
+  uint64_t get() const { return BitLow | (uint64_t(BitHigh) << 32); }
+};
+
 /// Source range/offset of a preprocessed entity.
-struct PPEntityOffset {
+class PPEntityOffset {
   using RawLocEncoding = SourceLocationEncoding::RawLocEncoding;
 
   /// Raw source location of beginning of range.
-  RawLocEncoding Begin;
+  UnalignedUInt64 Begin;
 
   /// Raw source location of end of range.
-  RawLocEncoding End;
+  UnalignedUInt64 End;
 
   /// Offset in the AST file relative to ModuleFile::MacroOffsetsBase.
   uint32_t BitOffset;
 
+public:
   PPEntityOffset(RawLocEncoding Begin, RawLocEncoding End, uint32_t BitOffset)
       : Begin(Begin), End(End), BitOffset(BitOffset) {}
 
-  RawLocEncoding getBegin() const { return Begin; }
-  RawLocEncoding getEnd() const { return End; }
+  RawLocEncoding getBegin() const { return Begin.get(); }
+  RawLocEncoding getEnd() const { return End.get(); }
+
+  uint32_t getOffset() const { return BitOffset; }
 };
 
 /// Source range of a skipped preprocessor region
-struct PPSkippedRange {
+class PPSkippedRange {
   using RawLocEncoding = SourceLocationEncoding::RawLocEncoding;
 
   /// Raw source location of beginning of range.
-  RawLocEncoding Begin;
+  UnalignedUInt64 Begin;
   /// Raw source location of end of range.
-  RawLocEncoding End;
+  UnalignedUInt64 End;
 
+public:
   PPSkippedRange(RawLocEncoding Begin, RawLocEncoding End)
       : Begin(Begin), End(End) {}
 
-  RawLocEncoding getBegin() const { return Begin; }
-  RawLocEncoding getEnd() const { return End; }
+  RawLocEncoding getBegin() const { return Begin.get(); }
+  RawLocEncoding getEnd() const { return End.get(); }
 };
 
-/// Offset in the AST file. Use splitted 64-bit integer into low/high
-/// parts to keep structure alignment 32-bit (it is important because
-/// blobs in bitstream are 32-bit aligned). This structure is serialized
-/// "as is" to the AST file.
-struct UnderalignedInt64 {
-  uint32_t BitOffsetLow = 0;
-  uint32_t BitOffsetHigh = 0;
-
-  UnderalignedInt64() = default;
-  UnderalignedInt64(uint64_t BitOffset) { setBitOffset(BitOffset); }
-
-  void setBitOffset(uint64_t Offset) {
-    BitOffsetLow = Offset;
-    BitOffsetHigh = Offset >> 32;
-  }
-
-  uint64_t getBitOffset() const {
-    return BitOffsetLow | (uint64_t(BitOffsetHigh) << 32);
-  }
-};
-
-/// Source location and bit offset of a declaration.
-struct DeclOffset {
+/// Source location and bit offset of a declaration. Keep
+/// structure alignment 32-bit since the blob is assumed as 32-bit aligned.
+class DeclOffset {
   using RawLocEncoding = SourceLocationEncoding::RawLocEncoding;
 
   /// Raw source location.
-  RawLocEncoding RawLoc = 0;
+  UnalignedUInt64 RawLoc;
 
-  /// Offset relative to the start of the DECLTYPES_BLOCK block. Keep
-  /// structure alignment 32-bit and avoid padding gap because undefined
-  /// value in the padding affects AST hash.
-  UnderalignedInt64 BitOffset;
+  /// Offset relative to the start of the DECLTYPES_BLOCK block.
+  UnalignedUInt64 BitOffset;
 
+public:
   DeclOffset() = default;
   DeclOffset(RawLocEncoding RawLoc, uint64_t BitOffset,
              uint64_t DeclTypesBlockStartOffset)
@@ -244,14 +247,14 @@ struct DeclOffset {
 
   void setRawLoc(RawLocEncoding Loc) { RawLoc = Loc; }
 
-  RawLocEncoding getRawLoc() const { return RawLoc; }
+  RawLocEncoding getRawLoc() const { return RawLoc.get(); }
 
   void setBitOffset(uint64_t Offset, const uint64_t DeclTypesBlockStartOffset) {
-    BitOffset.setBitOffset(Offset - DeclTypesBlockStartOffset);
+    BitOffset.set(Offset - DeclTypesBlockStartOffset);
   }
 
   uint64_t getBitOffset(const uint64_t DeclTypesBlockStartOffset) const {
-    return BitOffset.getBitOffset() + DeclTypesBlockStartOffset;
+    return BitOffset.get() + DeclTypesBlockStartOffset;
   }
 };
 
@@ -1085,6 +1088,9 @@ enum PredefinedTypeIDs {
 // \brief WebAssembly reference types with auto numeration
 #define WASM_TYPE(Name, Id, SingletonId) PREDEF_TYPE_##Id##_ID,
 #include "clang/Basic/WebAssemblyReferenceTypes.def"
+
+  /// The placeholder type for unresolved templates.
+  PREDEF_TYPE_UNRESOLVED_TEMPLATE,
   // Sentinel value. Considered a predefined type but not useable as one.
   PREDEF_TYPE_LAST_ID
 };
@@ -1094,7 +1100,7 @@ enum PredefinedTypeIDs {
 ///
 /// Type IDs for non-predefined types will start at
 /// NUM_PREDEF_TYPE_IDs.
-const unsigned NUM_PREDEF_TYPE_IDS = 502;
+const unsigned NUM_PREDEF_TYPE_IDS = 503;
 
 // Ensure we do not overrun the predefined types we reserved
 // in the enum PredefinedTypeIDs above.

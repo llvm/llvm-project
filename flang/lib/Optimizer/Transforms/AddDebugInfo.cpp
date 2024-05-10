@@ -145,7 +145,7 @@ void AddDebugInfoPass::runOnOperation() {
           subprogramFlags | mlir::LLVM::DISubprogramFlags::Definition;
     }
     unsigned line = 1;
-    if (auto funcLoc = l.dyn_cast<mlir::FileLineColLoc>())
+    if (auto funcLoc = mlir::dyn_cast<mlir::FileLineColLoc>(l))
       line = funcLoc.getLine();
 
     auto spAttr = mlir::LLVM::DISubprogramAttr::get(

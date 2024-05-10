@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -fsyntax-only -verify=ref,both %s
-// RUN: %clang_cc1 -fsyntax-only -verify=expected,both %s -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -fsyntax-only -cl-std=CL2.0 -verify=ref,both %s
+// RUN: %clang_cc1 -fsyntax-only -cl-std=CL2.0 -verify=expected,both %s -fexperimental-new-constant-interpreter
 
 // both-no-diagnostics
 
@@ -30,3 +30,9 @@ void foo(int3 arg1, int8 arg2) {
   int res12[vec_step(void) == 1 ? 1 : -1];
 }
 
+void negativeShift32(int a,int b) {
+  char array0[((int)1)<<40];
+}
+
+int2 A = {1,2};
+int4 B = {(int2)(1,2), (int2)(3,4)};

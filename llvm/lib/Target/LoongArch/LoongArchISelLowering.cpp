@@ -1671,10 +1671,9 @@ static LoongArchISD::NodeType getLoongArchWOpcode(unsigned Opcode) {
     return LoongArchISD::SRA_W;
   case ISD::SRL:
     return LoongArchISD::SRL_W;
+  case ISD::ROTL:
   case ISD::ROTR:
     return LoongArchISD::ROTR_W;
-  case ISD::ROTL:
-    return LoongArchISD::ROTL_W;
   case ISD::CTTZ:
     return LoongArchISD::CTZ_W;
   case ISD::CTLZ:
@@ -1704,6 +1703,10 @@ static SDValue customLegalizeToWOp(SDNode *N, SelectionDAG &DAG, int NumOp,
   case 2: {
     NewOp0 = DAG.getNode(ExtOpc, DL, MVT::i64, N->getOperand(0));
     SDValue NewOp1 = DAG.getNode(ExtOpc, DL, MVT::i64, N->getOperand(1));
+    if (N->getOpcode() == ISD::ROTL) {
+      SDValue TmpOp = DAG.getConstant(32, DL, MVT::i64);
+      NewOp1 = DAG.getNode(ISD::SUB, DL, MVT::i64, TmpOp, NewOp1);
+    }
     NewRes = DAG.getNode(WOpcode, DL, MVT::i64, NewOp0, NewOp1);
     break;
   }
@@ -1841,7 +1844,6 @@ void LoongArchTargetLowering::ReplaceNodeResults(
   case ISD::SHL:
   case ISD::SRA:
   case ISD::SRL:
-  case ISD::ROTR:
     assert(VT == MVT::i32 && Subtarget.is64Bit() &&
            "Unexpected custom legalisation");
     if (N->getOperand(1).getOpcode() != ISD::Constant) {
@@ -1850,11 +1852,10 @@ void LoongArchTargetLowering::ReplaceNodeResults(
     }
     break;
   case ISD::ROTL:
-    ConstantSDNode *CN;
-    if ((CN = dyn_cast<ConstantSDNode>(N->getOperand(1)))) {
-      Results.push_back(customLegalizeToWOp(N, DAG, 2));
-      break;
-    }
+  case ISD::ROTR:
+    assert(VT == MVT::i32 && Subtarget.is64Bit() &&
+           "Unexpected custom legalisation");
+    Results.push_back(customLegalizeToWOp(N, DAG, 2));
     break;
   case ISD::FP_TO_SINT: {
     assert(VT == MVT::i32 && Subtarget.is64Bit() &&
@@ -3768,6 +3769,7 @@ static SDValue convertLocVTToValVT(SelectionDAG &DAG, SDValue Val,
 
 static SDValue unpackFromRegLoc(SelectionDAG &DAG, SDValue Chain,
                                 const CCValAssign &VA, const SDLoc &DL,
+                                const ISD::InputArg &In,
                                 const LoongArchTargetLowering &TLI) {
   MachineFunction &MF = DAG.getMachineFunction();
   MachineRegisterInfo &RegInfo = MF.getRegInfo();
@@ -3777,6 +3779,21 @@ static SDValue unpackFromRegLoc(SelectionDAG &DAG, SDValue Chain,
   Register VReg = RegInfo.createVirtualRegister(RC);
   RegInfo.addLiveIn(VA.getLocReg(), VReg);
   Val = DAG.getCopyFromReg(Chain, DL, VReg, LocVT);
+
+  // If input is sign extended from 32 bits, note it for the OptW pass.
+  if (In.isOrigArg()) {
+    Argument *OrigArg = MF.getFunction().getArg(In.getOrigArgIndex());
+    if (OrigArg->getType()->isIntegerTy()) {
+      unsigned BitWidth = OrigArg->getType()->getIntegerBitWidth();
+      // An input zero extended from i31 can also be considered sign extended.
+      if ((BitWidth <= 32 && In.Flags.isSExt()) ||
+          (BitWidth < 32 && In.Flags.isZExt())) {
+        LoongArchMachineFunctionInfo *LAFI =
+            MF.getInfo<LoongArchMachineFunctionInfo>();
+        LAFI->addSExt32Register(VReg);
+      }
+    }
+  }
 
   return convertLocVTToValVT(DAG, Val, VA, DL);
 }
@@ -3909,7 +3926,7 @@ SDValue LoongArchTargetLowering::LowerFormalArguments(
     CCValAssign &VA = ArgLocs[i];
     SDValue ArgValue;
     if (VA.isRegLoc())
-      ArgValue = unpackFromRegLoc(DAG, Chain, VA, DL, *this);
+      ArgValue = unpackFromRegLoc(DAG, Chain, VA, DL, Ins[i], *this);
     else
       ArgValue = unpackFromMemLoc(DAG, Chain, VA, DL);
     if (VA.getLocInfo() == CCValAssign::Indirect) {
@@ -4950,7 +4967,8 @@ bool LoongArchTargetLowering::isZExtFree(SDValue Val, EVT VT2) const {
   return TargetLowering::isZExtFree(Val, VT2);
 }
 
-bool LoongArchTargetLowering::isSExtCheaperThanZExt(EVT SrcVT, EVT DstVT) const {
+bool LoongArchTargetLowering::isSExtCheaperThanZExt(EVT SrcVT,
+                                                    EVT DstVT) const {
   return Subtarget.is64Bit() && SrcVT == MVT::i32 && DstVT == MVT::i64;
 }
 
