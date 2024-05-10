@@ -548,6 +548,18 @@ mlir::intrange::inferShl(ArrayRef<ConstantIntRanges> argRanges) {
                         const APInt &r) -> std::optional<APInt> {
     return r.uge(r.getBitWidth()) ? std::optional<APInt>() : l.shl(r);
   };
+
+  // The minMax inference does not work when there is danger of overflow. In the
+  // signed case, this leads to the obvious problem that the sign bit might
+  // change. In the unsigned case, it also leads to problems because the largest
+  // LHS shifted by the largest RHS does not necessarily result in the largest
+  // result anymore.
+  bool signbitSafe =
+      (lhs.smin().getNumSignBits() > rhs.umax().getZExtValue()) &&
+      (lhs.smax().getNumSignBits() > rhs.umax().getZExtValue());
+  if (!signbitSafe)
+    return ConstantIntRanges::maxRange(lhs.umax().getBitWidth());
+
   ConstantIntRanges urange =
       minMaxBy(shl, {lhs.umin(), lhs.umax()}, {rhs.umin(), rhs.umax()},
                /*isSigned=*/false);
