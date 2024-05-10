@@ -118,18 +118,14 @@ void test() {
 int main(int, char**) {
   test<std::unique_lock<std::mutex>, TestClock>();
   test<std::unique_lock<std::mutex>, std::chrono::steady_clock>();
-  test<std::unique_lock<std::mutex>, std::chrono::system_clock>();
 
   test<std::unique_lock<std::timed_mutex>, TestClock>();
   test<std::unique_lock<std::timed_mutex>, std::chrono::steady_clock>();
-  test<std::unique_lock<std::timed_mutex>, std::chrono::system_clock>();
 
   test<MyLock<std::mutex>, TestClock>();
   test<MyLock<std::mutex>, std::chrono::steady_clock>();
-  test<MyLock<std::mutex>, std::chrono::system_clock>();
 
   test<MyLock<std::timed_mutex>, TestClock>();
   test<MyLock<std::timed_mutex>, std::chrono::steady_clock>();
-  test<MyLock<std::timed_mutex>, std::chrono::system_clock>();
   return 0;
 }

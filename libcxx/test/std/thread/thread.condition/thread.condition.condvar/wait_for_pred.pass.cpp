@@ -65,12 +65,11 @@ int main(int, char**) {
       }
 
       // Acquire the same mutex as t1. This ensures that the condition variable has started
-      // waiting (and hence released that mutex). We don't actually need to hold the lock, we
-      // simply use it as a signal that the condition variable has started waiting.
+      // waiting (and hence released that mutex).
       std::unique_lock<std::mutex> lock(mutex);
-      lock.unlock();
 
       likely_spurious = false;
+      lock.unlock();
       cv.notify_one();
     });
 
@@ -134,8 +133,7 @@ int main(int, char**) {
       }
 
       // Acquire the same mutex as t1. This ensures that the condition variable has started
-      // waiting (and hence released that mutex). We don't actually need to hold the lock, we
-      // simply use it as a signal that the condition variable has started waiting.
+      // waiting (and hence released that mutex).
       std::unique_lock<std::mutex> lock(mutex);
       lock.unlock();
 
@@ -145,7 +143,8 @@ int main(int, char**) {
       // We would want to assert that the thread has been awoken after this time,
       // however nothing guarantees us that it ever gets spuriously awoken, so
       // we can't really check anything. This is still left here as documentation.
-      assert(awoken || !awoken);
+      bool woke = awoken.load();
+      assert(woke || !woke);
 
       // Whatever happened, actually awaken the condition variable to ensure the test
       // doesn't keep running until the timeout.

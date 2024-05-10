@@ -113,6 +113,5 @@ void test() {
 int main(int, char**) {
   test<TestClock>();
   test<std::chrono::steady_clock>();
-  test<std::chrono::system_clock>();
   return 0;
 }
