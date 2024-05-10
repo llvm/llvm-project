@@ -157,7 +157,7 @@ std::optional<FileSpec> SymbolLocatorDefault::LocateExecutableSymbolFile(
       mib[1] = USER_LOCALBASE;
       if (::sysctl(mib, 2, buf, &len, NULL, 0) == 0) {
         FileSpec file_spec("/lib/debug");
-        file_spec.PrependPathComponent(StringRef(buf));
+        file_spec.PrependPathComponent(llvm::StringRef(buf));
         FileSystem::Instance().Resolve(file_spec);
         debug_file_search_paths.AppendIfUnique(file_spec);
       }
