@@ -3098,6 +3098,15 @@ bool isKnownNonZero(const Value *V, const APInt &DemandedElts,
   // Check for pointer simplifications.
 
   if (PointerType *PtrTy = dyn_cast<PointerType>(Ty)) {
+    const DataLayout &DL = Q.DL;
+    if (DL.isSentinelValueDefined() && PtrTy) {
+      unsigned AddrSpace = PtrTy->getPointerAddressSpace();
+
+      if (DL.getSentinelPointerValue(AddrSpace) == 0)
+        return false;
+      return true;
+    }
+
     // A byval, inalloca may not be null in a non-default addres space. A
     // nonnull argument is assumed never 0.
     if (const Argument *A = dyn_cast<Argument>(V)) {
