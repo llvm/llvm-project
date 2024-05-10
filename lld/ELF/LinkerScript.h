@@ -327,7 +327,6 @@ public:
   void addOrphanSections();
   void diagnoseOrphanHandling() const;
   void diagnoseMissingSGSectionAddress() const;
-  void copyPotentialSpillList(InputSectionBase *dst, InputSectionBase *src);
   void adjustOutputSections();
   void adjustSectionsAfterSorting();
 

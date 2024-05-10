@@ -1125,11 +1125,8 @@ void LinkerScript::assignOffsets(OutputSection *sec) {
     auto &sections = cast<InputSectionDescription>(cmd)->sections;
     for (InputSection *isec : sections) {
       assert(isec->getParent() == sec);
-
-      // Skip all potential spill locations.
       if (isa<PotentialSpillSection>(isec))
         continue;
-
       const uint64_t pos = dot;
       dot = alignToPowerOf2(dot, isec->addralign);
       isec->outSecOff = dot - sec->addr;
