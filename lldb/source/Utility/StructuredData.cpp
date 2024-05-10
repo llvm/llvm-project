@@ -10,7 +10,6 @@
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Status.h"
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include <cerrno>
 #include <cinttypes>

@@ -12,7 +12,6 @@
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/StructuredData.h"
-#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Path.h"
 
 using namespace lldb;
@@ -113,11 +112,3 @@ TEST(StructuredDataTest, ParseJSONFromFile) {
   object_sp->Dump(S, false);
   EXPECT_EQ("[1,2,3]", S.GetString());
 }
-
-struct ArraySplitStringTestCase {
-  llvm::StringRef s;
-  char separator;
-  int maxSplit;
-  bool keepEmpty;
-  std::vector<std::string> expected;
-};
