@@ -233,8 +233,8 @@ private:
 
     // The cost of the scalar loads/stores.
     InstructionCost MemoryOpCost =
-        VF * getMemoryOpCost(Opcode, VT->getElementType(), Alignment,
-                             AddressSpace, CostKind);
+        VF * thisT()->getMemoryOpCost(Opcode, VT->getElementType(), Alignment,
+                                      AddressSpace, CostKind);
 
     // Next, compute the cost of packing the result in a vector.
     InstructionCost PackingCost =
@@ -253,8 +253,8 @@ private:
           getScalarizationOverhead(
               FixedVectorType::get(Type::getInt1Ty(DataTy->getContext()), VF),
               /*Insert=*/false, /*Extract=*/true, CostKind) +
-          VF * (getCFInstrCost(Instruction::Br, CostKind) +
-                getCFInstrCost(Instruction::PHI, CostKind));
+          VF * (thisT()->getCFInstrCost(Instruction::Br, CostKind) +
+                thisT()->getCFInstrCost(Instruction::PHI, CostKind));
     }
 
     return AddrExtractCost + MemoryOpCost + PackingCost + ConditionalCost;
