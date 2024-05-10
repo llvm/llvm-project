@@ -153,18 +153,18 @@ constexpr bool test() {
 int main(int, char**) {
   test<char>();
   static_assert(test<char>());
-  #ifndef TEST_HAS_NO_WIDE_CHARACTERS
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
   test<wchar_t>();
-    static_assert(test<wchar_t>());
-  #endif
-  #ifndef TEST_HAS_NO_CHAR8_T
+  static_assert(test<wchar_t>());
+#endif
+#ifndef TEST_HAS_NO_CHAR8_T
   test<char8_t>();
-    static_assert(test<char8_t>());
-  #endif
+  static_assert(test<char8_t>());
+#endif
   test<char16_t>();
-    static_assert(test<char16_t>());
+  static_assert(test<char16_t>());
   test<char32_t>();
-    static_assert(test<char32_t>());
+  static_assert(test<char32_t>());
 
   return 0;
 }
