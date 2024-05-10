@@ -9739,6 +9739,9 @@ public:
                      const PartialDiagnostic &CandidateDiag,
                      bool Complain = true, QualType TargetType = QualType());
 
+  FunctionDecl *getMoreConstrainedFunction(FunctionDecl *FD1,
+                                           FunctionDecl *FD2);
+
   ///@}
 
   //
@@ -10199,7 +10202,9 @@ public:
         S.ExprEvalContexts.back().InImmediateFunctionContext =
             FD->isImmediateFunction() ||
             S.ExprEvalContexts[S.ExprEvalContexts.size() - 2]
-                .isConstantEvaluated();
+                .isConstantEvaluated() ||
+            S.ExprEvalContexts[S.ExprEvalContexts.size() - 2]
+                .isImmediateFunctionContext();
         S.ExprEvalContexts.back().InImmediateEscalatingFunctionContext =
             S.getLangOpts().CPlusPlus20 && FD->isImmediateEscalating();
       } else

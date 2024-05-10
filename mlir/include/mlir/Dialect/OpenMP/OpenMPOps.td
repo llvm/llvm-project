@@ -1787,7 +1787,10 @@ def TargetOp : OpenMP_Op<"target", [IsolatedFromAbove, MapClauseOwningOpInterfac
                        UnitAttr:$nowait,
                        Variadic<OpenMP_PointerLikeType>:$is_device_ptr,
                        Variadic<OpenMP_PointerLikeType>:$has_device_addr,
-                       Variadic<AnyType>:$map_operands);
+                       Variadic<AnyType>:$map_operands,
+                       Variadic<AnyType>:$private_vars,
+                       OptionalAttr<SymbolRefArrayAttr>:$privatizers);
+
   let regions = (region AnyRegion:$region);
 
   let builders = [
@@ -1802,6 +1805,7 @@ def TargetOp : OpenMP_Op<"target", [IsolatedFromAbove, MapClauseOwningOpInterfac
     | `is_device_ptr` `(` $is_device_ptr `:` type($is_device_ptr) `)`
     | `has_device_addr` `(` $has_device_addr `:` type($has_device_addr) `)`
     | `map_entries` `(` custom<MapEntries>($map_operands, type($map_operands)) `)`
+    | `private` `(` custom<PrivateList>($private_vars, type($private_vars), $privatizers) `)`
     | `depend` `(` custom<DependVarList>($depend_vars, type($depend_vars), $depends) `)`
     ) $region attr-dict
   }];

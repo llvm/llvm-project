@@ -5,8 +5,8 @@
 define <8 x i8> @vaaddu_vv_v8i8_floor(<8 x i8> %x, <8 x i8> %y) {
 ; CHECK-LABEL: vaaddu_vv_v8i8_floor:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    csrwi vxrm, 2
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vaaddu.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %xzv = zext <8 x i8> %x to <8 x i16>
@@ -20,8 +20,8 @@ define <8 x i8> @vaaddu_vv_v8i8_floor(<8 x i8> %x, <8 x i8> %y) {
 define <8 x i8> @vaaddu_vx_v8i8_floor(<8 x i8> %x, i8 %y) {
 ; CHECK-LABEL: vaaddu_vx_v8i8_floor:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    csrwi vxrm, 2
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vaaddu.vx v8, v8, a0
 ; CHECK-NEXT:    ret
   %xzv = zext <8 x i8> %x to <8 x i16>
@@ -53,8 +53,8 @@ define <8 x i8> @vaaddu_vv_v8i8_floor_sexti16(<8 x i8> %x, <8 x i8> %y) {
 define <8 x i8> @vaaddu_vv_v8i8_floor_zexti32(<8 x i8> %x, <8 x i8> %y) {
 ; CHECK-LABEL: vaaddu_vv_v8i8_floor_zexti32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    csrwi vxrm, 2
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vaaddu.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %xzv = zext <8 x i8> %x to <8 x i32>
@@ -83,8 +83,8 @@ define <8 x i8> @vaaddu_vv_v8i8_floor_lshr2(<8 x i8> %x, <8 x i8> %y) {
 define <8 x i16> @vaaddu_vv_v8i16_floor(<8 x i16> %x, <8 x i16> %y) {
 ; CHECK-LABEL: vaaddu_vv_v8i16_floor:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NEXT:    csrwi vxrm, 2
+; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NEXT:    vaaddu.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %xzv = zext <8 x i16> %x to <8 x i32>
@@ -98,8 +98,8 @@ define <8 x i16> @vaaddu_vv_v8i16_floor(<8 x i16> %x, <8 x i16> %y) {
 define <8 x i16> @vaaddu_vx_v8i16_floor(<8 x i16> %x, i16 %y) {
 ; CHECK-LABEL: vaaddu_vx_v8i16_floor:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NEXT:    csrwi vxrm, 2
+; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NEXT:    vaaddu.vx v8, v8, a0
 ; CHECK-NEXT:    ret
   %xzv = zext <8 x i16> %x to <8 x i32>
@@ -115,8 +115,8 @@ define <8 x i16> @vaaddu_vx_v8i16_floor(<8 x i16> %x, i16 %y) {
 define <8 x i32> @vaaddu_vv_v8i32_floor(<8 x i32> %x, <8 x i32> %y) {
 ; CHECK-LABEL: vaaddu_vv_v8i32_floor:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; CHECK-NEXT:    csrwi vxrm, 2
+; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; CHECK-NEXT:    vaaddu.vv v8, v8, v10
 ; CHECK-NEXT:    ret
   %xzv = zext <8 x i32> %x to <8 x i64>
@@ -130,8 +130,8 @@ define <8 x i32> @vaaddu_vv_v8i32_floor(<8 x i32> %x, <8 x i32> %y) {
 define <8 x i32> @vaaddu_vx_v8i32_floor(<8 x i32> %x, i32 %y) {
 ; CHECK-LABEL: vaaddu_vx_v8i32_floor:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; CHECK-NEXT:    csrwi vxrm, 2
+; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; CHECK-NEXT:    vaaddu.vx v8, v8, a0
 ; CHECK-NEXT:    ret
   %xzv = zext <8 x i32> %x to <8 x i64>
@@ -147,8 +147,8 @@ define <8 x i32> @vaaddu_vx_v8i32_floor(<8 x i32> %x, i32 %y) {
 define <8 x i64> @vaaddu_vv_v8i64_floor(<8 x i64> %x, <8 x i64> %y) {
 ; CHECK-LABEL: vaaddu_vv_v8i64_floor:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; CHECK-NEXT:    csrwi vxrm, 2
+; CHECK-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; CHECK-NEXT:    vaaddu.vv v8, v8, v12
 ; CHECK-NEXT:    ret
   %xzv = zext <8 x i64> %x to <8 x i128>
@@ -197,8 +197,8 @@ define <8 x i64> @vaaddu_vx_v8i64_floor(<8 x i64> %x, i64 %y) {
 ;
 ; RV64-LABEL: vaaddu_vx_v8i64_floor:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; RV64-NEXT:    csrwi vxrm, 2
+; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; RV64-NEXT:    vaaddu.vx v8, v8, a0
 ; RV64-NEXT:    ret
   %xzv = zext <8 x i64> %x to <8 x i128>
@@ -214,8 +214,8 @@ define <8 x i64> @vaaddu_vx_v8i64_floor(<8 x i64> %x, i64 %y) {
 define <8 x i8> @vaaddu_vv_v8i8_ceil(<8 x i8> %x, <8 x i8> %y) {
 ; CHECK-LABEL: vaaddu_vv_v8i8_ceil:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    csrwi vxrm, 0
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vaaddu.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %xzv = zext <8 x i8> %x to <8 x i16>
@@ -230,8 +230,8 @@ define <8 x i8> @vaaddu_vv_v8i8_ceil(<8 x i8> %x, <8 x i8> %y) {
 define <8 x i8> @vaaddu_vx_v8i8_ceil(<8 x i8> %x, i8 %y) {
 ; CHECK-LABEL: vaaddu_vx_v8i8_ceil:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    csrwi vxrm, 0
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vaaddu.vx v8, v8, a0
 ; CHECK-NEXT:    ret
   %xzv = zext <8 x i8> %x to <8 x i16>
@@ -267,8 +267,8 @@ define <8 x i8> @vaaddu_vv_v8i8_ceil_sexti16(<8 x i8> %x, <8 x i8> %y) {
 define <8 x i8> @vaaddu_vv_v8i8_ceil_zexti32(<8 x i8> %x, <8 x i8> %y) {
 ; CHECK-LABEL: vaaddu_vv_v8i8_ceil_zexti32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    csrwi vxrm, 0
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vaaddu.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %xzv = zext <8 x i8> %x to <8 x i32>
@@ -305,8 +305,8 @@ define <8 x i8> @vaaddu_vv_v8i8_ceil_add2(<8 x i8> %x, <8 x i8> %y) {
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vwaddu.vv v10, v8, v9
 ; CHECK-NEXT:    li a0, 2
-; CHECK-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
 ; CHECK-NEXT:    csrwi vxrm, 2
+; CHECK-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
 ; CHECK-NEXT:    vaaddu.vx v8, v10, a0
 ; CHECK-NEXT:    vsetvli zero, zero, e8, mf2, ta, ma
 ; CHECK-NEXT:    vnsrl.wi v8, v8, 0
@@ -323,8 +323,8 @@ define <8 x i8> @vaaddu_vv_v8i8_ceil_add2(<8 x i8> %x, <8 x i8> %y) {
 define <8 x i16> @vaaddu_vv_v8i16_ceil(<8 x i16> %x, <8 x i16> %y) {
 ; CHECK-LABEL: vaaddu_vv_v8i16_ceil:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NEXT:    csrwi vxrm, 0
+; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NEXT:    vaaddu.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %xzv = zext <8 x i16> %x to <8 x i32>
@@ -339,8 +339,8 @@ define <8 x i16> @vaaddu_vv_v8i16_ceil(<8 x i16> %x, <8 x i16> %y) {
 define <8 x i16> @vaaddu_vx_v8i16_ceil(<8 x i16> %x, i16 %y) {
 ; CHECK-LABEL: vaaddu_vx_v8i16_ceil:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NEXT:    csrwi vxrm, 0
+; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NEXT:    vaaddu.vx v8, v8, a0
 ; CHECK-NEXT:    ret
   %xzv = zext <8 x i16> %x to <8 x i32>
@@ -357,8 +357,8 @@ define <8 x i16> @vaaddu_vx_v8i16_ceil(<8 x i16> %x, i16 %y) {
 define <8 x i32> @vaaddu_vv_v8i32_ceil(<8 x i32> %x, <8 x i32> %y) {
 ; CHECK-LABEL: vaaddu_vv_v8i32_ceil:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; CHECK-NEXT:    csrwi vxrm, 0
+; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; CHECK-NEXT:    vaaddu.vv v8, v8, v10
 ; CHECK-NEXT:    ret
   %xzv = zext <8 x i32> %x to <8 x i64>
@@ -373,8 +373,8 @@ define <8 x i32> @vaaddu_vv_v8i32_ceil(<8 x i32> %x, <8 x i32> %y) {
 define <8 x i32> @vaaddu_vx_v8i32_ceil(<8 x i32> %x, i32 %y) {
 ; CHECK-LABEL: vaaddu_vx_v8i32_ceil:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; CHECK-NEXT:    csrwi vxrm, 0
+; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; CHECK-NEXT:    vaaddu.vx v8, v8, a0
 ; CHECK-NEXT:    ret
   %xzv = zext <8 x i32> %x to <8 x i64>
@@ -391,8 +391,8 @@ define <8 x i32> @vaaddu_vx_v8i32_ceil(<8 x i32> %x, i32 %y) {
 define <8 x i64> @vaaddu_vv_v8i64_ceil(<8 x i64> %x, <8 x i64> %y) {
 ; CHECK-LABEL: vaaddu_vv_v8i64_ceil:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; CHECK-NEXT:    csrwi vxrm, 0
+; CHECK-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; CHECK-NEXT:    vaaddu.vv v8, v8, v12
 ; CHECK-NEXT:    ret
   %xzv = zext <8 x i64> %x to <8 x i128>
@@ -443,8 +443,8 @@ define <8 x i64> @vaaddu_vx_v8i64_ceil(<8 x i64> %x, i64 %y) {
 ;
 ; RV64-LABEL: vaaddu_vx_v8i64_ceil:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; RV64-NEXT:    csrwi vxrm, 0
+; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; RV64-NEXT:    vaaddu.vx v8, v8, a0
 ; RV64-NEXT:    ret
   %xzv = zext <8 x i64> %x to <8 x i128>

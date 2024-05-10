@@ -197,7 +197,7 @@ static constexpr uint64_t encodeFltRoundsToHWTable(uint32_t HWF32Val,
          << (FltRoundsVal << 2);
 }
 
-constexpr uint64_t AMDGPU::FltRoundToHWConversionTable =
+const uint64_t AMDGPU::FltRoundToHWConversionTable =
     encodeFltRoundsToHWTableSame(HWTowardZero, TowardZeroF32_TowardZeroF64) |
     encodeFltRoundsToHWTableSame(HWNearestTiesToEven,
                                  NearestTiesToEvenF32_NearestTiesToEvenF64) |

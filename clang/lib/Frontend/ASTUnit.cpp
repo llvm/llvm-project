@@ -2374,8 +2374,6 @@ bool ASTUnit::serialize(raw_ostream &OS) {
   return serializeUnit(Writer, Buffer, getSema(), OS);
 }
 
-using SLocRemap = ContinuousRangeMap<unsigned, int, 2>;
-
 void ASTUnit::TranslateStoredDiagnostics(
                           FileManager &FileMgr,
                           SourceManager &SrcMgr,

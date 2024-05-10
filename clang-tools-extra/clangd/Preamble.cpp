@@ -918,7 +918,9 @@ void PreamblePatch::apply(CompilerInvocation &CI) const {
   // no guarantees around using arbitrary options when reusing PCHs, and
   // different target opts can result in crashes, see
   // ParsedASTTest.PreambleWithDifferentTarget.
-  CI.TargetOpts = Baseline->TargetOpts;
+  // Make sure this is a deep copy, as the same Baseline might be used
+  // concurrently.
+  *CI.TargetOpts = *Baseline->TargetOpts;
 
   // No need to map an empty file.
   if (PatchContents.empty())

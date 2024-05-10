@@ -665,20 +665,17 @@ bool SystemZInstrInfo::foldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
       Register TmpReg = MRI->createVirtualRegister(&SystemZ::GR64BitRegClass);
       MachineBasicBlock &MBB = *UseMI.getParent();
 
-      // FIXME: probably should be DefMI's DebugLoc but this matches
-      // loadImmediate's guessing
-      const DebugLoc &DL = UseMI.getDebugLoc();
-
       loadImmediate(MBB, UseMI.getIterator(), TmpReg, ImmVal);
 
-      BuildMI(MBB, UseMI.getIterator(), DL, get(SystemZ::REG_SEQUENCE),
-              CopyDstReg)
-          .addReg(TmpReg)
+      UseMI.setDesc(get(SystemZ::REG_SEQUENCE));
+      UseMI.getOperand(1).setReg(TmpReg);
+      MachineInstrBuilder(*MBB.getParent(), &UseMI)
           .addImm(SystemZ::subreg_h64)
           .addReg(TmpReg)
           .addImm(SystemZ::subreg_l64);
 
-      UseMI.eraseFromParent();
+      if (MRI->use_nodbg_empty(Reg))
+        DefMI.eraseFromParent();
       return true;
     }
 
@@ -2146,8 +2143,8 @@ prepareCompareSwapOperands(MachineBasicBlock::iterator const MBBI) const {
 
 unsigned SystemZ::reverseCCMask(unsigned CCMask) {
   return ((CCMask & SystemZ::CCMASK_CMP_EQ) |
-          (CCMask & SystemZ::CCMASK_CMP_GT ? SystemZ::CCMASK_CMP_LT : 0) |
-          (CCMask & SystemZ::CCMASK_CMP_LT ? SystemZ::CCMASK_CMP_GT : 0) |
+          ((CCMask & SystemZ::CCMASK_CMP_GT) ? SystemZ::CCMASK_CMP_LT : 0) |
+          ((CCMask & SystemZ::CCMASK_CMP_LT) ? SystemZ::CCMASK_CMP_GT : 0) |
           (CCMask & SystemZ::CCMASK_CMP_UO));
 }
 
