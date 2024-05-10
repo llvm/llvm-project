@@ -45,9 +45,13 @@ DebugTypeGenerator::convertType(mlir::Type Ty, mlir::LLVM::DIFileAttr fileAttr,
   if (Ty.isInteger()) {
     return genBasicType(context, mlir::StringAttr::get(context, "integer"),
                         Ty.getIntOrFloatBitWidth(), llvm::dwarf::DW_ATE_signed);
-  } else if (mlir::isa<mlir::FloatType>(Ty) || mlir::isa<fir::RealType>(Ty)) {
+  } else if (mlir::isa<mlir::FloatType>(Ty)) {
     return genBasicType(context, mlir::StringAttr::get(context, "real"),
                         Ty.getIntOrFloatBitWidth(), llvm::dwarf::DW_ATE_float);
+  } else if (auto realTy = mlir::dyn_cast_or_null<fir::RealType>(Ty)) {
+    return genBasicType(context, mlir::StringAttr::get(context, "real"),
+                        kindMapping.getRealBitsize(realTy.getFKind()),
+                        llvm::dwarf::DW_ATE_float);
   } else if (auto logTy = mlir::dyn_cast_or_null<fir::LogicalType>(Ty)) {
     return genBasicType(context,
                         mlir::StringAttr::get(context, logTy.getMnemonic()),
