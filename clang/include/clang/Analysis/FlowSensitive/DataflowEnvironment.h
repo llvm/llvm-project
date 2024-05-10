@@ -751,7 +751,7 @@ private:
   // `DACtx` is not null and not owned by this object.
   DataflowAnalysisContext *DACtx;
 
-  // FIXME: move the fields `TargetStack`, `ResultObjectMap`, `ReturnVal`,
+  // FIXME: move the fields `CallStack`, `ResultObjectMap`, `ReturnVal`,
   // `ReturnLoc` and `ThisPointeeLoc` into a separate call-context object,
   // shared between environments in the same call.
   // https://github.com/llvm/llvm-project/issues/59005
