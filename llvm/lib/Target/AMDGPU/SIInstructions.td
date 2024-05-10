@@ -1908,20 +1908,22 @@ def : GCNPat <
   (S_XOR_B32 SReg_32:$src, (S_MOV_B32 (i32 0x80000000)))
 >;
 
+foreach fp16vt = [f16, bf16] in {
 def : GCNPat <
-  (UniformUnaryFrag<fneg> (f16 SReg_32:$src)),
+  (UniformUnaryFrag<fneg> (fp16vt SReg_32:$src)),
   (S_XOR_B32 SReg_32:$src, (S_MOV_B32 (i32 0x00008000)))
 >;
 
 def : GCNPat <
-  (UniformUnaryFrag<fabs> (f16 SReg_32:$src)),
+  (UniformUnaryFrag<fabs> (fp16vt SReg_32:$src)),
   (S_AND_B32 SReg_32:$src, (S_MOV_B32 (i32 0x00007fff)))
 >;
 
 def : GCNPat <
-  (UniformUnaryFrag<fneg> (fabs (f16 SReg_32:$src))),
+  (UniformUnaryFrag<fneg> (fabs (fp16vt SReg_32:$src))),
   (S_OR_B32 SReg_32:$src, (S_MOV_B32 (i32 0x00008000))) // Set sign bit
 >;
+} // End foreach fp16vt = ...
 
 def : GCNPat <
   (UniformUnaryFrag<fneg> (v2f16 SReg_32:$src)),
@@ -1947,20 +1949,6 @@ def : GCNPat <
   (S_OR_B32 SReg_32:$src, (S_MOV_B32 (i32 0x80008000))) // Set sign bit
 >;
 
-def : GCNPat <
-  (UniformUnaryFrag<fneg> (bf16 SReg_32:$src)),
-  (S_XOR_B32 SReg_32:$src, (S_MOV_B32 (i32 0x00008000)))
->;
-
-def : GCNPat <
-  (UniformUnaryFrag<fabs> (bf16 SReg_32:$src)),
-  (S_AND_B32 SReg_32:$src, (S_MOV_B32 (i32 0x00007fff)))
->;
-
-def : GCNPat <
-  (UniformUnaryFrag<fneg> (fabs (bf16 SReg_32:$src))),
-  (S_OR_B32 SReg_32:$src, (S_MOV_B32 (i32 0x00008000))) // Set sign bit
->;
 
 // COPY_TO_REGCLASS is needed to avoid using SCC from S_XOR_B32 instead
 // of the real value.
