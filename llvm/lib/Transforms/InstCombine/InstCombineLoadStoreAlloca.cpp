@@ -382,8 +382,7 @@ void PointerReplacer::replace(Instruction *I) {
   } else if (auto *GEP = dyn_cast<GetElementPtrInst>(I)) {
     auto *V = getReplacement(GEP->getPointerOperand());
     assert(V && "Operand not replaced");
-    SmallVector<Value *, 8> Indices;
-    Indices.append(GEP->idx_begin(), GEP->idx_end());
+    SmallVector<Value *, 8> Indices(GEP->indices());
     auto *NewI =
         GetElementPtrInst::Create(GEP->getSourceElementType(), V, Indices);
     IC.InsertNewInstWith(NewI, GEP->getIterator());
