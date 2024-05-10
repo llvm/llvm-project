@@ -1095,12 +1095,12 @@ bool DAGCombiner::reassociationCanBreakAddressingModePattern(unsigned Opc,
         N1.getOperand(0).getOpcode() == ISD::VSCALE &&
         isa<ConstantSDNode>(N1.getOperand(1)))) &&
       N1.getValueType().getFixedSizeInBits() <= 64) {
-    int64_t ScalableOffset =
-        N1.getOpcode() == ISD::VSCALE
-            ? N1.getConstantOperandVal(0)
-            : (N1.getOperand(0).getConstantOperandVal(0) *
-               (N1.getOpcode() == ISD::SHL ? (1 << N1.getConstantOperandVal(1))
-                                           : N1.getConstantOperandVal(1)));
+    int64_t ScalableOffset = N1.getOpcode() == ISD::VSCALE
+                                 ? N1.getConstantOperandVal(0)
+                                 : (N1.getOperand(0).getConstantOperandVal(0) *
+                                    (N1.getOpcode() == ISD::SHL
+                                         ? (1LL << N1.getConstantOperandVal(1))
+                                         : N1.getConstantOperandVal(1)));
     if (Opc == ISD::SUB)
       ScalableOffset = -ScalableOffset;
     if (all_of(N->uses(), [&](SDNode *Node) {
