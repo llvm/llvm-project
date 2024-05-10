@@ -83,6 +83,10 @@ bool DebugNamesDWARFIndex::ProcessEntry(
   DWARFDIE die = dwarf.GetDIE(*ref);
   if (!die)
     return true;
+  // Watch out for forward declarations that appear in the .debug_names tables
+  // only due to being there for a DW_IDX_parent.
+  if (die.GetAttributeValueAsUnsigned(DW_AT_declaration, 0))
+    return true;
   return callback(die);
 }
 
