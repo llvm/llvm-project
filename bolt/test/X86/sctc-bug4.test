@@ -3,12 +3,15 @@
 RUN: %clang %cflags %S/Inputs/sctc_bug4.s -o %t
 RUN: llvm-bolt %t -o %t.null \
 RUN:   -funcs=test_func -print-sctc -sequential-disassembly 2>&1 | FileCheck %s
+RUN: llvm-bolt %t -o %t.null --enable-bat -funcs=test_func -print-sctc \
+RUN:   -sequential-disassembly 2>&1 | FileCheck %s --check-prefix=CHECK-BAT
 
 CHECK:      .Ltmp2 (3 instructions, align : 1)
 CHECK-NEXT:   CFI State : 0
 CHECK-NEXT:   Predecessors: .LFT1
 CHECK-NEXT:     00000024: 	cmpq	$0x20, %rsi
 CHECK-NEXT:     00000028: 	ja	dummy # TAILCALL {{.*}}# CTCTakenCount: 0
+CHECK-BAT:      00000028: 	ja	dummy # TAILCALL # Offset: 53
 CHECK-NEXT:     0000002a: 	jmp .Ltmp4
 CHECK-NEXT:   Successors: .Ltmp4
 CHECK-NEXT:   CFI State: 0
