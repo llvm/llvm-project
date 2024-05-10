@@ -218,7 +218,7 @@ public:
   ArrayRef<TargetInfo::AddlRegName> getGCCAddlRegNames() const override;
 
   bool isSPRegName(StringRef RegName) const override {
-    return RegName.equals("esp") || RegName.equals("rsp");
+    return RegName == "esp" || RegName == "rsp";
   }
 
   bool supportsCpuSupports() const override { return true; }
@@ -246,7 +246,7 @@ public:
                                       bool &HasSizeMismatch) const override {
     // esp and ebp are the only 32-bit registers the x86 backend can currently
     // handle.
-    if (RegName.equals("esp") || RegName.equals("ebp")) {
+    if (RegName == "esp" || RegName == "ebp") {
       // Check that the register size is 32-bit.
       HasSizeMismatch = RegSize != 32;
       return true;
@@ -802,7 +802,7 @@ public:
                                       bool &HasSizeMismatch) const override {
     // rsp and rbp are the only 64-bit registers the x86 backend can currently
     // handle.
-    if (RegName.equals("rsp") || RegName.equals("rbp")) {
+    if (RegName == "rsp" || RegName == "rbp") {
       // Check that the register size is 64-bit.
       HasSizeMismatch = RegSize != 64;
       return true;
