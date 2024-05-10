@@ -201,10 +201,11 @@ private:
                  unsigned &buffer_id, DiagnosticManager &diagnostic_manager,
                  bool repl, bool playground);
 
-  ThreadSafeASTContext
-  SetupASTContext(DiagnosticManager &diagnostic_manager,
-                  std::function<bool()> disable_objc_runtime, bool repl,
-                  bool playground);
+  /// Initialize the SwiftASTContext and return the wrapped
+  /// ThreadSafeASTContext when successful.
+  ThreadSafeASTContext GetASTContext(DiagnosticManager &diagnostic_manager,
+                                     std::function<bool()> disable_objc_runtime,
+                                     bool repl, bool playground);
 
   /// The expression to be parsed.
   Expression &m_expr;
@@ -234,6 +235,12 @@ private:
 
   /// Indicates whether the call to Parse of this type is cacheable.
   bool m_is_cacheable;
+
+  /// Once token to initialize the swift::ASTContext.
+  llvm::once_flag m_ast_init_once_flag;
+
+  /// Indicates if the ThreadSafeASTContext was initialized correctly.
+  bool m_ast_init_successful;
 };
 
 class LLDBNameLookup : public swift::SILDebuggerClient {

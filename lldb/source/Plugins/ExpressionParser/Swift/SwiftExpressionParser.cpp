@@ -762,76 +762,79 @@ static void ResolveSpecialNames(
   }
 }
 
-/// Initialize the SwiftASTContext and return the wrapped
-/// swift::ASTContext when successful.
-ThreadSafeASTContext SwiftExpressionParser::SetupASTContext(
+ThreadSafeASTContext SwiftExpressionParser::GetASTContext(
     DiagnosticManager &diagnostic_manager,
     std::function<bool()> disable_objc_runtime, bool repl, bool playground) {
-  // Lazily get the clang importer if we can to make sure it exists in
-  // case we need it.
-  if (!m_swift_ast_ctx.GetClangImporter()) {
-    std::string swift_error =
-        m_swift_ast_ctx.GetFatalErrors().AsCString("error: unknown error.");
-    diagnostic_manager.PutString(eSeverityError, swift_error);
-    diagnostic_manager.PutString(eSeverityInfo,
-                                 "Couldn't initialize Swift expression "
-                                 "evaluator due to previous errors.");
-    return ThreadSafeASTContext();
-  }
+  llvm::call_once(m_ast_init_once_flag, [&] {
+    // Lazily get the clang importer if we can to make sure it exists in
+    // case we need it.
+    if (!m_swift_ast_ctx.GetClangImporter()) {
+      std::string swift_error =
+          m_swift_ast_ctx.GetFatalErrors().AsCString("error: unknown error.");
+      diagnostic_manager.PutString(eSeverityError, swift_error);
+      diagnostic_manager.PutString(eSeverityInfo,
+                                   "Couldn't initialize Swift expression "
+                                   "evaluator due to previous errors.");
+      return;
+    }
 
-  if (m_swift_ast_ctx.HasFatalErrors()) {
-    diagnostic_manager.PutString(eSeverityError,
-                                 "The AST context is in a fatal error state.");
-    return ThreadSafeASTContext();
-  }
+    if (m_swift_ast_ctx.HasFatalErrors()) {
+      diagnostic_manager.PutString(
+          eSeverityError, "The AST context is in a fatal error state.");
+      return;
+    }
 
-  ThreadSafeASTContext ast_context = m_swift_ast_ctx.GetASTContext();
-  if (!ast_context) {
-    diagnostic_manager.PutString(
-        eSeverityError,
-        "Couldn't initialize the AST context.  Please check your settings.");
-    return ThreadSafeASTContext();
-  }
+    ThreadSafeASTContext ast_context = m_swift_ast_ctx.GetASTContext();
+    if (!ast_context) {
+      diagnostic_manager.PutString(
+          eSeverityError,
+          "Couldn't initialize the AST context.  Please check your settings.");
+      return;
+    }
 
-  if (m_swift_ast_ctx.HasFatalErrors()) {
-    diagnostic_manager.PutString(eSeverityError,
-                                 "The AST context is in a fatal error state.");
-    return ThreadSafeASTContext();
-  }
+    if (m_swift_ast_ctx.HasFatalErrors()) {
+      diagnostic_manager.PutString(
+          eSeverityError, "The AST context is in a fatal error state.");
+      return;
+    }
 
-  // TODO: Find a way to get contraint-solver output sent to a stream
-  //       so we can log it.
-  // swift_ast_context.GetLanguageOptions().DebugConstraintSolver = true;
+    // TODO: Find a way to get contraint-solver output sent to a stream
+    //       so we can log it.
+    // swift_ast_context.GetLanguageOptions().DebugConstraintSolver = true;
 
-  // No longer part of debugger support, set it separately.
-  m_swift_ast_ctx.GetLanguageOptions().EnableDollarIdentifiers = true;
-  m_swift_ast_ctx.GetLanguageOptions().EnableAccessControl =
-      (repl || playground);
-  m_swift_ast_ctx.GetLanguageOptions().EnableTargetOSChecking = false;
+    // No longer part of debugger support, set it separately.
+    m_swift_ast_ctx.GetLanguageOptions().EnableDollarIdentifiers = true;
+    m_swift_ast_ctx.GetLanguageOptions().EnableAccessControl =
+        (repl || playground);
+    m_swift_ast_ctx.GetLanguageOptions().EnableTargetOSChecking = false;
 
-  if (disable_objc_runtime())
-    m_swift_ast_ctx.GetLanguageOptions().EnableObjCInterop = false;
+    if (disable_objc_runtime())
+      m_swift_ast_ctx.GetLanguageOptions().EnableObjCInterop = false;
 
-  m_swift_ast_ctx.GetLanguageOptions().Playground = repl || playground;
-  m_swift_ast_ctx.GetIRGenOptions().Playground = repl || playground;
+    m_swift_ast_ctx.GetLanguageOptions().Playground = repl || playground;
+    m_swift_ast_ctx.GetIRGenOptions().Playground = repl || playground;
 
-  // For the expression parser and REPL we want to relax the
-  // requirement that you put "try" in front of every expression that
-  // might throw.
-  if (repl || !playground)
-    m_swift_ast_ctx.GetLanguageOptions().EnableThrowWithoutTry = true;
+    // For the expression parser and REPL we want to relax the
+    // requirement that you put "try" in front of every expression that
+    // might throw.
+    if (repl || !playground)
+      m_swift_ast_ctx.GetLanguageOptions().EnableThrowWithoutTry = true;
 
-  m_swift_ast_ctx.GetIRGenOptions().OutputKind =
-      swift::IRGenOutputKind::Module;
-  m_swift_ast_ctx.GetIRGenOptions().OptMode =
-      swift::OptimizationMode::NoOptimization;
-  // Normally we'd like to verify, but unfortunately the verifier's
-  // error mode is abort().
-  m_swift_ast_ctx.GetIRGenOptions().Verify = false;
-  m_swift_ast_ctx.GetIRGenOptions().ForcePublicLinkage = true;
+    m_swift_ast_ctx.GetIRGenOptions().OutputKind =
+        swift::IRGenOutputKind::Module;
+    m_swift_ast_ctx.GetIRGenOptions().OptMode =
+        swift::OptimizationMode::NoOptimization;
+    // Normally we'd like to verify, but unfortunately the verifier's
+    // error mode is abort().
+    m_swift_ast_ctx.GetIRGenOptions().Verify = false;
+    m_swift_ast_ctx.GetIRGenOptions().ForcePublicLinkage = true;
 
-  m_swift_ast_ctx.GetIRGenOptions().DisableRoundTripDebugTypes = true;
-  return ast_context;
+    m_swift_ast_ctx.GetIRGenOptions().DisableRoundTripDebugTypes = true;
+    m_ast_init_successful = true;
+  });
+  if (m_ast_init_successful)
+    return m_swift_ast_ctx.GetASTContext();
+  return ThreadSafeASTContext();
 }
 
 /// Returns the buffer_id for the expression's source code.
@@ -1241,7 +1244,7 @@ SwiftExpressionParser::ParseAndImport(
     return !ObjCLanguageRuntime::Get(*process_sp);
   };
 
-  ThreadSafeASTContext ast_context = SetupASTContext(
+  ThreadSafeASTContext ast_context = GetASTContext(
       diagnostic_manager, should_disable_objc_runtime, repl, playground);
   if (!ast_context)
     return make_error<SwiftASTContextError>();
