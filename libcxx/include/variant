@@ -780,14 +780,14 @@ class _LIBCPP_TEMPLATE_VIS __dtor;
 _LIBCPP_VARIANT_DESTRUCTOR(
     _Trait::_TriviallyAvailable,
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 ~__dtor() = default,
-    inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __destroy() noexcept {
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __destroy() noexcept {
       this->__index = __variant_npos<__index_t>;
     } _LIBCPP_EAT_SEMICOLON);
 
 _LIBCPP_VARIANT_DESTRUCTOR(
     _Trait::_Available,
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 ~__dtor() { __destroy(); } _LIBCPP_EAT_SEMICOLON,
-    inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __destroy() noexcept {
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __destroy() noexcept {
       if (!this->valueless_by_exception()) {
         __visitation::__base::__visit_alt(
             [](auto& __alt) noexcept {
