@@ -26,6 +26,8 @@ using namespace ento;
 
 namespace {
 
+enum SetPrivilegeFunctionKind { Irrelevant, Setuid, Setgid };
+
 class SetgidSetuidOrderChecker
     : public Checker<check::PostCall, check::DeadSymbols, eval::Assume> {
   const BugType BT_WrongRevocationOrder{
@@ -33,6 +35,9 @@ class SetgidSetuidOrderChecker
 
   const CallDescription SetuidDesc{CDM::CLibrary, {"setuid"}, 1};
   const CallDescription SetgidDesc{CDM::CLibrary, {"setgid"}, 1};
+
+  const CallDescription GetuidDesc{CDM::CLibrary, {"getuid"}, 0};
+  const CallDescription GetgidDesc{CDM::CLibrary, {"getgid"}, 0};
 
   CallDescriptionSet OtherSetPrivilegeDesc{
       {CDM::CLibrary, {"seteuid"}, 1},   {CDM::CLibrary, {"setegid"}, 1},
@@ -56,12 +61,10 @@ private:
                                CheckerContext &C) const;
   /// Check if a function like \c getuid or \c getgid is called directly from
   /// the first argument of function called from \a Call.
-  bool isFunctionCalledInArg(llvm::StringRef FnName,
+  bool isFunctionCalledInArg(const CallDescription &Desc,
                              const CallEvent &Call) const;
   void emitReport(ProgramStateRef State, CheckerContext &C) const;
 };
-
-enum SetPrivilegeFunctionKind { Irrelevant, Setuid, Setgid };
 
 } // end anonymous namespace
 
@@ -132,7 +135,7 @@ ProgramStateRef SetgidSetuidOrderChecker::evalAssume(ProgramStateRef State,
 
 ProgramStateRef SetgidSetuidOrderChecker::processSetuid(
     ProgramStateRef State, const CallEvent &Call, CheckerContext &C) const {
-  bool IsSetuidWithGetuid = isFunctionCalledInArg("getuid", Call);
+  bool IsSetuidWithGetuid = isFunctionCalledInArg(GetuidDesc, Call);
   if (State->get<LastSetPrivilegeCall>() != Setgid && IsSetuidWithGetuid) {
     State = State->set<LastSetuidCallSVal>(Call.getReturnValue().getAsSymbol());
     return State->set<LastSetPrivilegeCall>(Setuid);
@@ -143,7 +146,7 @@ ProgramStateRef SetgidSetuidOrderChecker::processSetuid(
 
 ProgramStateRef SetgidSetuidOrderChecker::processSetgid(
     ProgramStateRef State, const CallEvent &Call, CheckerContext &C) const {
-  bool IsSetgidWithGetgid = isFunctionCalledInArg("getgid", Call);
+  bool IsSetgidWithGetgid = isFunctionCalledInArg(GetgidDesc, Call);
   State = State->set<LastSetuidCallSVal>(SymbolRef{});
   if (State->get<LastSetPrivilegeCall>() == Setuid) {
     if (IsSetgidWithGetgid) {
@@ -165,13 +168,10 @@ ProgramStateRef SetgidSetuidOrderChecker::processOther(
 }
 
 bool SetgidSetuidOrderChecker::isFunctionCalledInArg(
-    llvm::StringRef FnName, const CallEvent &Call) const {
-  if (const auto *CE = dyn_cast<CallExpr>(Call.getArgExpr(0)))
-    if (const FunctionDecl *FuncD = CE->getDirectCallee())
-      return FuncD->isGlobal() &&
-             FuncD->getASTContext().getSourceManager().isInSystemHeader(
-                 FuncD->getCanonicalDecl()->getLocation()) &&
-             FuncD->getNumParams() == 0 && FuncD->getNameAsString() == FnName;
+    const CallDescription &Desc, const CallEvent &Call) const {
+  if (const auto *CE =
+          dyn_cast<CallExpr>(Call.getArgExpr(0)->IgnoreParenImpCasts()))
+    return Desc.matchesAsWritten(*CE);
   return false;
 }
 
