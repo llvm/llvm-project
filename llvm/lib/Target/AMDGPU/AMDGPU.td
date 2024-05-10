@@ -401,16 +401,16 @@ def FeatureFP6BF6ConversionScaleInsts : SubtargetFeature<"fp6bf6-cvt-scale-insts
   "Has fp6 and bf6 conversion scale instructions"
 >;
 
-def FeatureAshrPkInsts : SubtargetFeature<"ashr-pk-insts",
-  "HasAshrPkInsts",
-  "true",
-  "Has Arithmetic Shift Pack instructions"
->;
-
 def FeatureF16BF16ToFP6BF6ConversionScaleInsts : SubtargetFeature<"f16bf16-to-fp6bf6-cvt-scale-insts",
   "HasF16BF16ToFP6BF6ConversionScaleInsts",
   "true",
   "Has f16bf16 to fp6bf6 conversion scale instructions"
+>;
+
+def FeatureAshrPkInsts : SubtargetFeature<"ashr-pk-insts",
+  "HasAshrPkInsts",
+  "true",
+  "Has Arithmetic Shift Pack instructions"
 >;
 
 def FeatureGFX950Insts : SubtargetFeature<"gfx950-insts",
