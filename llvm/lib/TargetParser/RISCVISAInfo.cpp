@@ -98,6 +98,10 @@ void llvm::riscvExtensionsHelp(StringMap<StringRef> DescMap) {
     PrintExtension(E.first, Version, DescMap["experimental-" + E.first]);
   }
 
+  outs() << "\nSupported Profiles\n";
+  for (const auto &P : SupportedProfiles)
+    outs().indent(4) << P.Name << "\n";
+
   outs() << "\nUse -march to specify the target's extension.\n"
             "For example, clang -march=rv32i_v1p0\n";
 }
