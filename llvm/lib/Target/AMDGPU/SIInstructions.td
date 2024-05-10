@@ -3162,10 +3162,9 @@ def : GCNPat <
   (v2f16 (V_AND_B32_e64 (i32 (V_MOV_B32_e32 (i32 0xffff))), VGPR_32:$src1))
 >;
 
-foreach Ty = [i16, f16] in {
+foreach vecTy = [v2i16, v2f16] in {
 
-defvar vecTy = !cond(!eq(Ty, i16)  : v2i16,
-                     !eq(Ty, f16)  : v2f16);
+defvar Ty = vecTy.ElementType;
 
 def : GCNPat <
   (vecTy (UniformBinFrag<build_vector> (Ty SReg_32:$src0), (Ty undef))),
@@ -3209,9 +3208,9 @@ def : GCNPat <
 >;
 
 
-foreach Ty = [i16, f16] in {
+foreach vecTy = [v2i16, v2f16] in {
 
-defvar vecTy = !if(!eq(Ty, i16), v2i16, v2f16);
+defvar Ty = vecTy.ElementType;
 defvar immzeroTy = !if(!eq(Ty, i16), immzero, fpimmzero);
 
 def : GCNPat <
