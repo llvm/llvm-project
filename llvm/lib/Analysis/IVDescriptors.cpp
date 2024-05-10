@@ -738,8 +738,8 @@ RecurrenceDescriptor::isFindLastIVPattern(PHINode *OrigPhi, Instruction *I,
   };
 
   // We are looking for selects of the form:
-  //   select(cmp(), phi, loop_induction) or
-  //   select(cmp(), loop_induction, phi)
+  //   select(cmp(), phi, increasing_loop_induction) or
+  //   select(cmp(), increasing_loop_induction, phi)
   // TODO: Support for monotonically decreasing induction variable
   if (!IsIncreasingLoopInduction(NonRdxPhi))
     return InstDesc(false, I);
