@@ -256,7 +256,7 @@ v_cvt_sr_fp8_f16 v1, v2, v3 mul:2
 // GFX1210-ERR-NEXT:{{^}}                            ^
 
 v_cvt_scale_pk8_f32_fp8 v[10:17], v[20:21], v8 scale_sel:8
-// GFX1210-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// GFX1210-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid scale_sel value.
 // GFX1210-ERR-NEXT:{{^}}v_cvt_scale_pk8_f32_fp8 v[10:17], v[20:21], v8 scale_sel:8
 // GFX1210-ERR-NEXT:{{^}}                                               ^
 
