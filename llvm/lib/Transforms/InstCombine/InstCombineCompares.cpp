@@ -38,6 +38,11 @@ using namespace PatternMatch;
 // How many times is a select replaced by one of its operands?
 STATISTIC(NumSel, "Number of select opts");
 
+static cl::opt<bool> ReplaceSqrtInIfCondition(
+    "replace-sqrt-compare-by-square", cl::init(false), cl::Hidden,
+    cl::desc(
+        "Try to replcae the sqrt, in the comparison condition, by the square."
+        "Like that fcmp sqrt(X), Y => fcmp X, copysing(Y*Y, Y)"));
 
 /// Compute Result = In1+In2, returning true if the result overflowed for this
 /// type.
@@ -8066,6 +8071,50 @@ Instruction *InstCombinerImpl::visitFCmpInst(FCmpInst &I) {
     if (match(Op1, m_Constant(C)))
       if (Constant *NegC = ConstantFoldUnaryOpOperand(Instruction::FNeg, C, DL))
         return new FCmpInst(I.getSwappedPredicate(), X, NegC, "", &I);
+  }
+
+  /// Try to sink the sqrt in this following case:
+  /// \code
+  /// tmp = sqrt(input)
+  /// if (tmp > cond)
+  ///   branch_without_tmp
+  /// else
+  ///   branch_with_tmp
+  /// ...
+  /// \endcode
+  /// Is optimized to:
+  /// \code
+  /// if (input > copysign(cond*cond, cond))
+  ///   branch_without_tmp
+  /// else
+  ///   tmp = sqrt(input)
+  ///   branch_with_tmp
+  /// ...
+  /// \endcode
+  /// Only call sqrt in the branch that needs the sqrt result,
+  /// not if it is not needed, reducing the number of calls to sqrt.
+  if (I.isFast() && ReplaceSqrtInIfCondition) {
+    // fcmp sqrt(X), sqrt(Y) => fcmp X, Y
+    if (match(Op0, m_Intrinsic<Intrinsic::sqrt>(m_Value(X))) &&
+        match(Op1, m_Intrinsic<Intrinsic::sqrt>(m_Value(Y)))) {
+      auto CIX = cast<CallInst>(Op0);
+      auto CIY = cast<CallInst>(Op1);
+      return new FCmpInst(Pred, CIX->getOperand(0), CIY->getOperand(0), "", &I);
+    } else if (match(Op0, m_Intrinsic<Intrinsic::sqrt>(m_Value(X)))) {
+      // fcmp sqrt(X), Y => fcmp X, copysing(Y*Y, Y)
+      auto CI = cast<CallInst>(Op0);
+      Value *YY = Builder.CreateFMulFMF(Op1, Op1, &I);
+      Value *SYY =
+          Builder.CreateBinaryIntrinsic(Intrinsic::copysign, YY, Op1, &I);
+      return new FCmpInst(Pred, CI->getOperand(0), SYY, "", &I);
+    } else if (match(Op1, m_Intrinsic<Intrinsic::sqrt>(m_Value(Y)))) {
+      // fcmp X, sqrt(Y) => fcmp copysign(X*X, X), Y
+      auto CI = cast<CallInst>(Op1);
+      Value *XX = Builder.CreateFMulFMF(Op0, Op0, &I);
+      Value *SXX =
+          Builder.CreateBinaryIntrinsic(Intrinsic::copysign, XX, Op0, &I);
+      return new FCmpInst(Pred, SXX, CI->getOperand(0), "", &I);
+    }
   }
 
   // fcmp (fadd X, 0.0), Y --> fcmp X, Y
