@@ -623,3 +623,9 @@
 // RUN: %clang -### --target=aarch64-windows-msvc -fno-ms-volatile %s 2>&1 | FileCheck -check-prefix=CHECK-NO-MS-VOLATILE %s
 // CHECK-MS-VOLATILE: -fms-volatile
 // CHECK-NO-MS-VOLATILE-NOT: -fms-volatile
+
+// RUN: %clang -### --target=x86_64-pc-windows-msvc %s 2>&1 | FileCheck -check-prefix=CHECK-NO-STRICT-ALIASING %s
+// RUN: %clang -### --target=x86_64-pc-windows-msvc -fstrict-aliasing %s 2>&1 | FileCheck -check-prefix=CHECK-STRICT-ALIASING %s
+// RUN: %clang -### --target=x86_64-pc-windows-msvc -fno-strict-aliasing %s 2>&1 | FileCheck -check-prefix=CHECK-NO-STRICT-ALIASING %s
+// CHECK-STRICT-ALIASING-NOT: -relaxed-aliasing
+// CHECK-NO-STRICT-ALIASING: -relaxed-aliasing
