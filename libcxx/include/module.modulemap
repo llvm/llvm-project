@@ -1860,11 +1860,6 @@ module std_private_type_traits_add_volatile                              [system
 module std_private_type_traits_aligned_storage                           [system] { header "__type_traits/aligned_storage.h" }
 module std_private_type_traits_aligned_union                             [system] { header "__type_traits/aligned_union.h" }
 module std_private_type_traits_alignment_of                              [system] { header "__type_traits/alignment_of.h" }
-module std_private_type_traits_apply_cv                                  [system] {
-  header "__type_traits/apply_cv.h"
-  export std_private_type_traits_is_const
-  export std_private_type_traits_is_volatile
-}
 module std_private_type_traits_can_extract_key                           [system] { header "__type_traits/can_extract_key.h" }
 module std_private_type_traits_common_reference                          [system] {
   header "__type_traits/common_reference.h"
