@@ -157,7 +157,13 @@ static WidenResult widenDistinctValues(QualType Type, Value &Prev,
                                        Value &Current, Environment &CurrentEnv,
                                        Environment::ValueModel &Model) {
   // Boolean-model widening.
-  if (auto *PrevBool = dyn_cast<BoolValue>(&Prev)) {
+  if (isa<BoolValue>(Prev) && isa<BoolValue>(Current)) {
+    // FIXME: Checking both values should be unnecessary, but we can currently
+    // end up with `BoolValue`s in integer-typed variables. See comment in
+    // `joinDistinctValues()` for details.
+    auto &PrevBool = cast<BoolValue>(Prev);
+    auto &CurBool = cast<BoolValue>(Current);
+
     if (isa<TopBoolValue>(Prev))
       // Safe to return `Prev` here, because Top is never dependent on the
       // environment.
@@ -166,13 +172,12 @@ static WidenResult widenDistinctValues(QualType Type, Value &Prev,
     // We may need to widen to Top, but before we do so, check whether both
     // values are implied to be either true or false in the current environment.
     // In that case, we can simply return a literal instead.
-    auto &CurBool = cast<BoolValue>(Current);
-    bool TruePrev = PrevEnv.proves(PrevBool->formula());
+    bool TruePrev = PrevEnv.proves(PrevBool.formula());
     bool TrueCur = CurrentEnv.proves(CurBool.formula());
     if (TruePrev && TrueCur)
       return {&CurrentEnv.getBoolLiteralValue(true), LatticeEffect::Unchanged};
     if (!TruePrev && !TrueCur &&
-        PrevEnv.proves(PrevEnv.arena().makeNot(PrevBool->formula())) &&
+        PrevEnv.proves(PrevEnv.arena().makeNot(PrevBool.formula())) &&
         CurrentEnv.proves(CurrentEnv.arena().makeNot(CurBool.formula())))
       return {&CurrentEnv.getBoolLiteralValue(false), LatticeEffect::Unchanged};
 
@@ -237,13 +242,8 @@ joinLocToVal(const llvm::MapVector<const StorageLocation *, Value *> &LocToVal,
       continue;
     assert(It->second != nullptr);
 
-    if (areEquivalentValues(*Val, *It->second)) {
-      Result.insert({Loc, Val});
-      continue;
-    }
-
-    if (Value *JoinedVal = joinDistinctValues(
-            Loc->getType(), *Val, Env1, *It->second, Env2, JoinedEnv, Model)) {
+    if (Value *JoinedVal = Environment::joinValues(
+            Loc->getType(), Val, Env1, It->second, Env2, JoinedEnv, Model)) {
       Result.insert({Loc, JoinedVal});
     }
   }
@@ -336,6 +336,29 @@ public:
       if (auto *DefaultInit = dyn_cast<CXXDefaultInitExpr>(InitExpr))
         TraverseStmt(DefaultInit->getExpr());
     }
+  }
+
+  bool TraverseDecl(Decl *D) {
+    // Don't traverse nested record or function declarations.
+    // - We won't be analyzing code contained in these anyway
+    // - We don't model fields that are used only in these nested declaration,
+    //   so trying to propagate a result object to initializers of such fields
+    //   would cause an error.
+    if (isa_and_nonnull<RecordDecl>(D) || isa_and_nonnull<FunctionDecl>(D))
+      return true;
+
+    return RecursiveASTVisitor<ResultObjectVisitor>::TraverseDecl(D);
+  }
+
+  // Don't traverse expressions in unevaluated contexts, as we don't model
+  // fields that are only used in these.
+  // Note: The operand of the `noexcept` operator is an unevaluated operand, but
+  // nevertheless it appears in the Clang CFG, so we don't exclude it here.
+  bool TraverseDecltypeTypeLoc(DecltypeTypeLoc) { return true; }
+  bool TraverseTypeOfExprTypeLoc(TypeOfExprTypeLoc) { return true; }
+  bool TraverseCXXTypeidExpr(CXXTypeidExpr *) { return true; }
+  bool TraverseUnaryExprOrTypeTraitExpr(UnaryExprOrTypeTraitExpr *) {
+    return true;
   }
 
   bool TraverseBindingDecl(BindingDecl *BD) {
@@ -775,27 +798,16 @@ Environment Environment::join(const Environment &EnvA, const Environment &EnvB,
   JoinedEnv.LocForRecordReturnVal = EnvA.LocForRecordReturnVal;
   JoinedEnv.ThisPointeeLoc = EnvA.ThisPointeeLoc;
 
-  if (EnvA.ReturnVal == nullptr || EnvB.ReturnVal == nullptr) {
-    // `ReturnVal` might not always get set -- for example if we have a return
-    // statement of the form `return some_other_func()` and we decide not to
-    // analyze `some_other_func()`.
-    // In this case, we can't say anything about the joined return value -- we
-    // don't simply want to propagate the return value that we do have, because
-    // it might not be the correct one.
-    // This occurs for example in the test `ContextSensitiveMutualRecursion`.
+  if (EnvA.CallStack.empty()) {
     JoinedEnv.ReturnVal = nullptr;
-  } else if (areEquivalentValues(*EnvA.ReturnVal, *EnvB.ReturnVal)) {
-    JoinedEnv.ReturnVal = EnvA.ReturnVal;
   } else {
-    assert(!EnvA.CallStack.empty());
     // FIXME: Make `CallStack` a vector of `FunctionDecl` so we don't need this
     // cast.
     auto *Func = dyn_cast<FunctionDecl>(EnvA.CallStack.back());
     assert(Func != nullptr);
-    if (Value *JoinedVal =
-            joinDistinctValues(Func->getReturnType(), *EnvA.ReturnVal, EnvA,
-                               *EnvB.ReturnVal, EnvB, JoinedEnv, Model))
-      JoinedEnv.ReturnVal = JoinedVal;
+    JoinedEnv.ReturnVal =
+        joinValues(Func->getReturnType(), EnvA.ReturnVal, EnvA, EnvB.ReturnVal,
+                   EnvB, JoinedEnv, Model);
   }
 
   if (EnvA.ReturnLoc == EnvB.ReturnLoc)
@@ -819,6 +831,24 @@ Environment Environment::join(const Environment &EnvA, const Environment &EnvB,
   }
 
   return JoinedEnv;
+}
+
+Value *Environment::joinValues(QualType Ty, Value *Val1,
+                               const Environment &Env1, Value *Val2,
+                               const Environment &Env2, Environment &JoinedEnv,
+                               Environment::ValueModel &Model) {
+  if (Val1 == nullptr || Val2 == nullptr)
+    // We can't say anything about the joined value -- even if one of the values
+    // is non-null, we don't want to simply propagate it, because it would be
+    // too specific: Because the other value is null, that means we have no
+    // information at all about the value (i.e. the value is unconstrained).
+    return nullptr;
+
+  if (areEquivalentValues(*Val1, *Val2))
+    // Arbitrarily return one of the two values.
+    return Val1;
+
+  return joinDistinctValues(Ty, *Val1, Env1, *Val2, Env2, JoinedEnv, Model);
 }
 
 StorageLocation &Environment::createStorageLocation(QualType Type) {

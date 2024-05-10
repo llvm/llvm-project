@@ -285,7 +285,6 @@ protected:
 
   virtual void printRelRelaReloc(const Relocation<ELFT> &R,
                                  const RelSymbol<ELFT> &RelSym) = 0;
-  virtual void printRelrReloc(const Elf_Relr &R) = 0;
   virtual void printDynamicRelocHeader(unsigned Type, StringRef Name,
                                        const DynRegionInfo &Reg) {}
   void printReloc(const Relocation<ELFT> &R, unsigned RelIndex,
@@ -294,11 +293,10 @@ protected:
   void printDynamicRelocationsHelper();
   void printRelocationsHelper(const Elf_Shdr &Sec);
   void forEachRelocationDo(
-      const Elf_Shdr &Sec, bool RawRelr,
+      const Elf_Shdr &Sec,
       llvm::function_ref<void(const Relocation<ELFT> &, unsigned,
                               const Elf_Shdr &, const Elf_Shdr *)>
-          RelRelaFn,
-      llvm::function_ref<void(const Elf_Relr &)> RelrFn);
+          RelRelaFn);
 
   virtual void printSymtabMessage(const Elf_Shdr *Symtab, size_t Offset,
                                   bool NonVisibilityBitsUsed,
@@ -669,7 +667,6 @@ private:
                          DataRegion<Elf_Word> ShndxTable, StringRef StrTable,
                          uint32_t Bucket);
   void printRelr(const Elf_Shdr &Sec);
-  void printRelrReloc(const Elf_Relr &R) override;
   void printRelRelaReloc(const Relocation<ELFT> &R,
                          const RelSymbol<ELFT> &RelSym) override;
   void printSymbol(const Elf_Sym &Symbol, unsigned SymIndex,
@@ -734,7 +731,6 @@ public:
                                bool IsGnu) const override;
 
 private:
-  void printRelrReloc(const Elf_Relr &R) override;
   void printRelRelaReloc(const Relocation<ELFT> &R,
                          const RelSymbol<ELFT> &RelSym) override;
 
@@ -3801,11 +3797,6 @@ template <class ELFT> void GNUELFDumper<ELFT>::printGroupSections() {
 }
 
 template <class ELFT>
-void GNUELFDumper<ELFT>::printRelrReloc(const Elf_Relr &R) {
-  OS << to_string(format_hex_no_prefix(R, ELFT::Is64Bits ? 16 : 8)) << "\n";
-}
-
-template <class ELFT>
 void GNUELFDumper<ELFT>::printRelRelaReloc(const Relocation<ELFT> &R,
                                            const RelSymbol<ELFT> &RelSym) {
   // First two fields are bit width dependent. The rest of them are fixed width.
@@ -3851,22 +3842,11 @@ template <class ELFT>
 static void printRelocHeaderFields(formatted_raw_ostream &OS, unsigned SType,
                                    const typename ELFT::Ehdr &EHeader) {
   bool IsRela = SType == ELF::SHT_RELA || SType == ELF::SHT_ANDROID_RELA;
-  bool IsRelr =
-      SType == ELF::SHT_RELR || SType == ELF::SHT_ANDROID_RELR ||
-      (EHeader.e_machine == EM_AARCH64 && SType == ELF::SHT_AARCH64_AUTH_RELR);
   if (ELFT::Is64Bits)
-    OS << "    ";
+    OS << "    Offset             Info             Type               Symbol's "
+          "Value  Symbol's Name";
   else
-    OS << " ";
-  if (IsRelr && opts::RawRelr)
-    OS << "Data  ";
-  else
-    OS << "Offset";
-  if (ELFT::Is64Bits)
-    OS << "             Info             Type"
-       << "               Symbol's Value  Symbol's Name";
-  else
-    OS << "     Info    Type                Sym. Value  Symbol's Name";
+    OS << " Offset     Info    Type                Sym. Value  Symbol's Name";
   if (IsRela)
     OS << " + Addend";
   OS << "\n";
@@ -3894,10 +3874,10 @@ static bool isRelocationSec(const typename ELFT::Shdr &Sec,
 
 template <class ELFT> void GNUELFDumper<ELFT>::printRelocations() {
   auto PrintAsRelr = [&](const Elf_Shdr &Sec) {
-    return !opts::RawRelr && (Sec.sh_type == ELF::SHT_RELR ||
-                              Sec.sh_type == ELF::SHT_ANDROID_RELR ||
-                              (this->Obj.getHeader().e_machine == EM_AARCH64 &&
-                               Sec.sh_type == ELF::SHT_AARCH64_AUTH_RELR));
+    return Sec.sh_type == ELF::SHT_RELR ||
+           Sec.sh_type == ELF::SHT_ANDROID_RELR ||
+           (this->Obj.getHeader().e_machine == EM_AARCH64 &&
+            Sec.sh_type == ELF::SHT_AARCH64_AUTH_RELR);
   };
   auto GetEntriesNum = [&](const Elf_Shdr &Sec) -> Expected<size_t> {
     // Android's packed relocation section needs to be unpacked first
@@ -4902,10 +4882,8 @@ void ELFDumper<ELFT>::printDynamicReloc(const Relocation<ELFT> &R) {
 template <class ELFT>
 void ELFDumper<ELFT>::printRelocationsHelper(const Elf_Shdr &Sec) {
   this->forEachRelocationDo(
-      Sec, opts::RawRelr,
-      [&](const Relocation<ELFT> &R, unsigned Ndx, const Elf_Shdr &Sec,
-          const Elf_Shdr *SymTab) { printReloc(R, Ndx, Sec, SymTab); },
-      [&](const Elf_Relr &R) { printRelrReloc(R); });
+      Sec, [&](const Relocation<ELFT> &R, unsigned Ndx, const Elf_Shdr &Sec,
+               const Elf_Shdr *SymTab) { printReloc(R, Ndx, Sec, SymTab); });
 }
 
 template <class ELFT> void ELFDumper<ELFT>::printDynamicRelocationsHelper() {
@@ -6371,11 +6349,10 @@ void ELFDumper<ELFT>::printDependentLibsHelper(
 
 template <class ELFT>
 void ELFDumper<ELFT>::forEachRelocationDo(
-    const Elf_Shdr &Sec, bool RawRelr,
+    const Elf_Shdr &Sec,
     llvm::function_ref<void(const Relocation<ELFT> &, unsigned,
                             const Elf_Shdr &, const Elf_Shdr *)>
-        RelRelaFn,
-    llvm::function_ref<void(const Elf_Relr &)> RelrFn) {
+        RelRelaFn) {
   auto Warn = [&](Error &&E,
                   const Twine &Prefix = "unable to read relocations from") {
     this->reportUniqueWarning(Prefix + " " + describe(Sec) + ": " +
@@ -6425,11 +6402,6 @@ void ELFDumper<ELFT>::forEachRelocationDo(
     Expected<Elf_Relr_Range> RangeOrErr = Obj.relrs(Sec);
     if (!RangeOrErr) {
       Warn(RangeOrErr.takeError());
-      break;
-    }
-    if (RawRelr) {
-      for (const Elf_Relr &R : *RangeOrErr)
-        RelrFn(R);
       break;
     }
 
@@ -6741,9 +6713,8 @@ void ELFDumper<ELFT>::printRelocatableStackSizes(
     DataExtractor Data(Contents, Obj.isLE(), sizeof(Elf_Addr));
 
     forEachRelocationDo(
-        *RelocSec, /*RawRelr=*/false,
-        [&](const Relocation<ELFT> &R, unsigned Ndx, const Elf_Shdr &Sec,
-            const Elf_Shdr *SymTab) {
+        *RelocSec, [&](const Relocation<ELFT> &R, unsigned Ndx,
+                       const Elf_Shdr &Sec, const Elf_Shdr *SymTab) {
           if (!IsSupportedFn || !IsSupportedFn(R.Type)) {
             reportUniqueWarning(
                 describe(*RelocSec) +
@@ -6754,10 +6725,6 @@ void ELFDumper<ELFT>::printRelocatableStackSizes(
 
           this->printStackSize(R, *RelocSec, Ndx, SymTab, FunctionSec,
                                *StackSizesELFSec, Resolver, Data);
-        },
-        [](const Elf_Relr &) {
-          llvm_unreachable("can't get here, because we only support "
-                           "SHT_REL/SHT_RELA sections");
         });
   }
 }
@@ -7145,11 +7112,6 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printRelocations() {
     unsigned SecNdx = &Sec - &cantFail(this->Obj.sections()).front();
     printRelocationSectionInfo(Sec, Name, SecNdx);
   }
-}
-
-template <class ELFT>
-void LLVMELFDumper<ELFT>::printRelrReloc(const Elf_Relr &R) {
-  W.startLine() << W.hex(R) << "\n";
 }
 
 template <class ELFT>

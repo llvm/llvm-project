@@ -1785,7 +1785,7 @@ LogicalResult ReturnOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
-// Verifier for LLVM::AddressOfOp.
+// LLVM::AddressOfOp.
 //===----------------------------------------------------------------------===//
 
 static Operation *parentLLVMModule(Operation *op) {
@@ -1824,6 +1824,11 @@ AddressOfOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
                        "referenced global");
 
   return success();
+}
+
+// AddressOfOp constant-folds to the global symbol name.
+OpFoldResult LLVM::AddressOfOp::fold(FoldAdaptor) {
+  return getGlobalNameAttr();
 }
 
 //===----------------------------------------------------------------------===//
@@ -2831,7 +2836,8 @@ LogicalResult SExtOp::verify() { return verifyExtOp<SExtOp>(*this); }
 
 /// Folds a cast op that can be chained.
 template <typename T>
-static Value foldChainableCast(T castOp, typename T::FoldAdaptor adaptor) {
+static OpFoldResult foldChainableCast(T castOp,
+                                      typename T::FoldAdaptor adaptor) {
   // cast(x : T0, T0) -> x
   if (castOp.getArg().getType() == castOp.getType())
     return castOp.getArg();
@@ -3026,6 +3032,19 @@ LogicalResult LinkerOptionsOp::verify() {
       parentOp && !satisfiesLLVMModule(parentOp))
     return emitOpError("must appear at the module level");
   return success();
+}
+
+//===----------------------------------------------------------------------===//
+// InlineAsmOp
+//===----------------------------------------------------------------------===//
+
+void InlineAsmOp::getEffects(
+    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+        &effects) {
+  if (getHasSideEffects()) {
+    effects.emplace_back(MemoryEffects::Write::get());
+    effects.emplace_back(MemoryEffects::Read::get());
+  }
 }
 
 //===----------------------------------------------------------------------===//
@@ -3257,6 +3276,12 @@ LogicalResult LLVMDialect::verifyRegionResultAttribute(Operation *op,
 
 Operation *LLVMDialect::materializeConstant(OpBuilder &builder, Attribute value,
                                             Type type, Location loc) {
+  // If this was folded from an llvm.mlir.addressof operation, it should be
+  // materialized as such.
+  if (auto symbol = dyn_cast<FlatSymbolRefAttr>(value))
+    if (isa<LLVM::LLVMPointerType>(type))
+      return builder.create<LLVM::AddressOfOp>(loc, type, symbol);
+  // Otherwise try materializing it as a regular llvm.mlir.constant op.
   return LLVM::ConstantOp::materialize(builder, value, type, loc);
 }
 

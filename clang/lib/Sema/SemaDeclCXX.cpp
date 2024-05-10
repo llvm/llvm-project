@@ -910,6 +910,8 @@ Sema::ActOnDecompositionDeclarator(Scope *S, Declarator &D,
 
     auto *BD = BindingDecl::Create(Context, DC, B.NameLoc, VarName);
 
+    ProcessDeclAttributeList(S, BD, *B.Attrs);
+
     // Find the shadowed declaration before filtering for scope.
     NamedDecl *ShadowedDecl = D.getCXXScopeSpec().isEmpty()
                                   ? getShadowedDeclaration(BD, Previous)
@@ -1302,7 +1304,7 @@ static bool checkTupleLikeDecomposition(Sema &S,
       //   in the associated namespaces.
       Expr *Get = UnresolvedLookupExpr::Create(
           S.Context, nullptr, NestedNameSpecifierLoc(), SourceLocation(),
-          DeclarationNameInfo(GetDN, Loc), /*RequiresADL*/ true, &Args,
+          DeclarationNameInfo(GetDN, Loc), /*RequiresADL=*/true, &Args,
           UnresolvedSetIterator(), UnresolvedSetIterator(),
           /*KnownDependent=*/false);
 
@@ -4517,7 +4519,7 @@ Sema::BuildMemInitializer(Decl *ConstructorD,
                               DS.getBeginLoc(), DS.getEllipsisLoc());
   } else {
     LookupResult R(*this, MemberOrBase, IdLoc, LookupOrdinaryName);
-    LookupParsedName(R, S, &SS);
+    LookupParsedName(R, S, &SS, /*ObjectType=*/QualType());
 
     TypeDecl *TyD = R.getAsSingle<TypeDecl>();
     if (!TyD) {
@@ -12052,11 +12054,17 @@ bool Sema::isStdInitializerList(QualType Ty, QualType *Element) {
 
     Template = Specialization->getSpecializedTemplate();
     Arguments = Specialization->getTemplateArgs().data();
-  } else if (const TemplateSpecializationType *TST =
-                 Ty->getAs<TemplateSpecializationType>()) {
-    Template = dyn_cast_or_null<ClassTemplateDecl>(
-        TST->getTemplateName().getAsTemplateDecl());
-    Arguments = TST->template_arguments().begin();
+  } else {
+    const TemplateSpecializationType *TST = nullptr;
+    if (auto *ICN = Ty->getAs<InjectedClassNameType>())
+      TST = ICN->getInjectedTST();
+    else
+      TST = Ty->getAs<TemplateSpecializationType>();
+    if (TST) {
+      Template = dyn_cast_or_null<ClassTemplateDecl>(
+          TST->getTemplateName().getAsTemplateDecl());
+      Arguments = TST->template_arguments().begin();
+    }
   }
   if (!Template)
     return false;
@@ -12262,7 +12270,7 @@ Decl *Sema::ActOnUsingDirective(Scope *S, SourceLocation UsingLoc,
 
   // Lookup namespace name.
   LookupResult R(*this, NamespcName, IdentLoc, LookupNamespaceName);
-  LookupParsedName(R, S, &SS);
+  LookupParsedName(R, S, &SS, /*ObjectType=*/QualType());
   if (R.isAmbiguous())
     return nullptr;
 
@@ -13721,7 +13729,7 @@ Decl *Sema::ActOnNamespaceAliasDef(Scope *S, SourceLocation NamespaceLoc,
 
   // Lookup the namespace name.
   LookupResult R(*this, Ident, IdentLoc, LookupNamespaceName);
-  LookupParsedName(R, S, &SS);
+  LookupParsedName(R, S, &SS, /*ObjectType=*/QualType());
 
   if (R.isAmbiguous())
     return nullptr;
@@ -18545,15 +18553,6 @@ void Sema::ActOnPureSpecifier(Decl *D, SourceLocation ZeroLoc) {
     Diag(D->getLocation(), diag::err_illegal_initializer);
 }
 
-/// Determine whether the given declaration is a global variable or
-/// static data member.
-static bool isNonlocalVariable(const Decl *D) {
-  if (const VarDecl *Var = dyn_cast_or_null<VarDecl>(D))
-    return Var->hasGlobalStorage();
-
-  return false;
-}
-
 /// Invoked when we are about to parse an initializer for the declaration
 /// 'Dcl'.
 ///
@@ -18562,9 +18561,7 @@ static bool isNonlocalVariable(const Decl *D) {
 /// class X. If the declaration had a scope specifier, a scope will have
 /// been created and passed in for this purpose. Otherwise, S will be null.
 void Sema::ActOnCXXEnterDeclInitializer(Scope *S, Decl *D) {
-  // If there is no declaration, there was an error parsing it.
-  if (!D || D->isInvalidDecl())
-    return;
+  assert(D && !D->isInvalidDecl());
 
   // We will always have a nested name specifier here, but this declaration
   // might not be out of line if the specifier names the current namespace:
@@ -18573,25 +18570,41 @@ void Sema::ActOnCXXEnterDeclInitializer(Scope *S, Decl *D) {
   if (S && D->isOutOfLine())
     EnterDeclaratorContext(S, D->getDeclContext());
 
-  // If we are parsing the initializer for a static data member, push a
-  // new expression evaluation context that is associated with this static
-  // data member.
-  if (isNonlocalVariable(D))
-    PushExpressionEvaluationContext(
-        ExpressionEvaluationContext::PotentiallyEvaluated, D);
+  PushExpressionEvaluationContext(
+      ExpressionEvaluationContext::PotentiallyEvaluated, D);
 }
 
 /// Invoked after we are finished parsing an initializer for the declaration D.
 void Sema::ActOnCXXExitDeclInitializer(Scope *S, Decl *D) {
-  // If there is no declaration, there was an error parsing it.
-  if (!D || D->isInvalidDecl())
-    return;
-
-  if (isNonlocalVariable(D))
-    PopExpressionEvaluationContext();
+  assert(D);
 
   if (S && D->isOutOfLine())
     ExitDeclaratorContext(S);
+
+  if (getLangOpts().CPlusPlus23) {
+    // An expression or conversion is 'manifestly constant-evaluated' if it is:
+    // [...]
+    // - the initializer of a variable that is usable in constant expressions or
+    //   has constant initialization.
+    if (auto *VD = dyn_cast<VarDecl>(D);
+        VD && (VD->isUsableInConstantExpressions(Context) ||
+               VD->hasConstantInitialization())) {
+      // An expression or conversion is in an 'immediate function context' if it
+      // is potentially evaluated and either:
+      // [...]
+      // - it is a subexpression of a manifestly constant-evaluated expression
+      //   or conversion.
+      ExprEvalContexts.back().InImmediateFunctionContext = true;
+    }
+  }
+
+  // Unless the initializer is in an immediate function context (as determined
+  // above), this will evaluate all contained immediate function calls as
+  // constant expressions. If the initializer IS an immediate function context,
+  // the initializer has been determined to be a constant expression, and all
+  // such evaluations will be elided (i.e., as if we "knew the whole time" that
+  // it was a constant expression).
+  PopExpressionEvaluationContext();
 }
 
 /// ActOnCXXConditionDeclarationExpr - Parsed a condition declaration of a
@@ -19164,40 +19177,40 @@ void Sema::checkExceptionSpecification(
   }
 }
 
-void Sema::actOnDelayedExceptionSpecification(Decl *MethodD,
-             ExceptionSpecificationType EST,
-             SourceRange SpecificationRange,
-             ArrayRef<ParsedType> DynamicExceptions,
-             ArrayRef<SourceRange> DynamicExceptionRanges,
-             Expr *NoexceptExpr) {
-  if (!MethodD)
+void Sema::actOnDelayedExceptionSpecification(
+    Decl *D, ExceptionSpecificationType EST, SourceRange SpecificationRange,
+    ArrayRef<ParsedType> DynamicExceptions,
+    ArrayRef<SourceRange> DynamicExceptionRanges, Expr *NoexceptExpr) {
+  if (!D)
     return;
 
-  // Dig out the method we're referring to.
-  if (FunctionTemplateDecl *FunTmpl = dyn_cast<FunctionTemplateDecl>(MethodD))
-    MethodD = FunTmpl->getTemplatedDecl();
+  // Dig out the function we're referring to.
+  if (FunctionTemplateDecl *FTD = dyn_cast<FunctionTemplateDecl>(D))
+    D = FTD->getTemplatedDecl();
 
-  CXXMethodDecl *Method = dyn_cast<CXXMethodDecl>(MethodD);
-  if (!Method)
+  FunctionDecl *FD = dyn_cast<FunctionDecl>(D);
+  if (!FD)
     return;
 
   // Check the exception specification.
   llvm::SmallVector<QualType, 4> Exceptions;
   FunctionProtoType::ExceptionSpecInfo ESI;
-  checkExceptionSpecification(/*IsTopLevel*/true, EST, DynamicExceptions,
+  checkExceptionSpecification(/*IsTopLevel=*/true, EST, DynamicExceptions,
                               DynamicExceptionRanges, NoexceptExpr, Exceptions,
                               ESI);
 
   // Update the exception specification on the function type.
-  Context.adjustExceptionSpec(Method, ESI, /*AsWritten*/true);
+  Context.adjustExceptionSpec(FD, ESI, /*AsWritten=*/true);
 
-  if (Method->isStatic())
-    checkThisInStaticMemberFunctionExceptionSpec(Method);
+  if (CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(D)) {
+    if (MD->isStatic())
+      checkThisInStaticMemberFunctionExceptionSpec(MD);
 
-  if (Method->isVirtual()) {
-    // Check overrides, which we previously had to delay.
-    for (const CXXMethodDecl *O : Method->overridden_methods())
-      CheckOverridingFunctionExceptionSpec(Method, O);
+    if (MD->isVirtual()) {
+      // Check overrides, which we previously had to delay.
+      for (const CXXMethodDecl *O : MD->overridden_methods())
+        CheckOverridingFunctionExceptionSpec(MD, O);
+    }
   }
 }
 

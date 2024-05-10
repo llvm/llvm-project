@@ -12,10 +12,11 @@
 #include "src/__support/CPP/limits.h" // INT_MAX
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/ManipulationFunctions.h"
+#include "test/UnitTest/FEnvSafeTest.h"
 #include "test/UnitTest/Test.h"
 
 template <typename OutType, typename InType>
-class LlvmLibcILogbTest : public LIBC_NAMESPACE::testing::Test {
+class LlvmLibcILogbTest : public LIBC_NAMESPACE::testing::FEnvSafeTest {
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<InType>;
   using StorageType = typename FPBits::StorageType;
 

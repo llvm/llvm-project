@@ -108,8 +108,8 @@ define dso_local i32 @bpf_prog(ptr) local_unnamed_addr #0 !dbg !15 {
 ; CHECK-NEXT:        .long   0
 ; CHECK-NEXT:        .long   20
 ; CHECK-NEXT:        .long   20
-; CHECK-NEXT:        .long   124
-; CHECK-NEXT:        .long   144
+; CHECK-NEXT:        .long   108
+; CHECK-NEXT:        .long   128
 ; CHECK-NEXT:        .long   28
 ; CHECK-NEXT:        .long   8                       # FuncInfo
 

@@ -144,7 +144,6 @@ define float @fadda_v8f32(float %start, ptr %a) {
 define double @fadda_v1f64(double %start, <1 x double> %a) {
 ; CHECK-LABEL: fadda_v1f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
 ; CHECK-NEXT:    fadd d0, d0, d1
 ; CHECK-NEXT:    ret
   %res = call double @llvm.vector.reduce.fadd.v1f64(double %start, <1 x double> %a)
@@ -263,7 +262,6 @@ define float @faddv_v8f32(float %start, ptr %a) {
 define double @faddv_v1f64(double %start, <1 x double> %a) {
 ; CHECK-LABEL: faddv_v1f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
 ; CHECK-NEXT:    fadd d0, d0, d1
 ; CHECK-NEXT:    ret
   %res = call fast double @llvm.vector.reduce.fadd.v1f64(double %start, <1 x double> %a)
@@ -379,8 +377,6 @@ define float @fmaxv_v8f32(ptr %a) {
 define double @fmaxv_v1f64(<1 x double> %a) {
 ; CHECK-LABEL: fmaxv_v1f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %res = call double @llvm.vector.reduce.fmax.v1f64(<1 x double> %a)
   ret double %res
@@ -495,8 +491,6 @@ define float @fminv_v8f32(ptr %a) {
 define double @fminv_v1f64(<1 x double> %a) {
 ; CHECK-LABEL: fminv_v1f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %res = call double @llvm.vector.reduce.fmin.v1f64(<1 x double> %a)
   ret double %res
@@ -611,8 +605,6 @@ define float @fmaximumv_v8f32(ptr %a) {
 define double @fmaximumv_v1f64(<1 x double> %a) {
 ; CHECK-LABEL: fmaximumv_v1f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %res = call double @llvm.vector.reduce.fmaximum.v1f64(<1 x double> %a)
   ret double %res
@@ -727,8 +719,6 @@ define float @fminimumv_v8f32(ptr %a) {
 define double @fminimumv_v1f64(<1 x double> %a) {
 ; CHECK-LABEL: fminimumv_v1f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %res = call double @llvm.vector.reduce.fminimum.v1f64(<1 x double> %a)
   ret double %res

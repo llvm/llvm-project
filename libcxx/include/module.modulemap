@@ -1536,7 +1536,10 @@ module std_private_memory_shared_ptr                      [system] {
 }
 module std_private_memory_swap_allocator                  [system] { header "__memory/swap_allocator.h" }
 module std_private_memory_temp_value                      [system] { header "__memory/temp_value.h" }
-module std_private_memory_temporary_buffer                [system] { header "__memory/temporary_buffer.h" }
+module std_private_memory_temporary_buffer                [system] {
+  header "__memory/temporary_buffer.h"
+  export std_private_utility_pair
+}
 module std_private_memory_uninitialized_algorithms        [system] {
   header "__memory/uninitialized_algorithms.h"
   export std_private_algorithm_copy
@@ -1610,6 +1613,15 @@ module std_private_pstl_configuration              [system] {
 }
 
 module std_private_queue_fwd [system] { header "__fwd/queue.h" }
+
+module std_private_ostream_basic_ostream [system] {
+  header "__ostream/basic_ostream.h"
+  export std_streambuf
+}
+module std_private_ostream_print         [system] {
+  header "__ostream/print.h"
+  export std_print
+}
 
 module std_private_random_bernoulli_distribution          [system] { header "__random/bernoulli_distribution.h" }
 module std_private_random_binomial_distribution           [system] { header "__random/binomial_distribution.h" }

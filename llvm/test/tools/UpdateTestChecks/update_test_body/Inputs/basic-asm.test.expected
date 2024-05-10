@@ -1,0 +1,13 @@
+# RUN: cp %s %t && %update_test_body %t 2>&1 | count 0
+# RUN: diff -u %S/Inputs/basic-asm.test.expected %t
+
+.ifdef GEN
+#--- a.txt
+.long 0
+#--- b.txt
+.long 1
+#--- gen
+cat a.txt b.txt
+.endif
+.long 0
+.long 1

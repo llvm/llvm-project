@@ -173,7 +173,7 @@ _LIBCPP_HIDE_FROM_ABI _Tm __convert_to_tm(const _ChronoT& __value) {
       if (__value.hours().count() > std::numeric_limits<decltype(__result.tm_hour)>::max())
         std::__throw_format_error("Formatting hh_mm_ss, encountered an hour overflow");
     __result.tm_hour = __value.hours().count();
-#  if !defined(_LIBCPP_HAS_NO_INCOMPLETE_TZDB)
+#  if !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_TZDB)
   } else if constexpr (same_as<_ChronoT, chrono::sys_info>) {
     // Has no time information.
   } else if constexpr (same_as<_ChronoT, chrono::local_info>) {

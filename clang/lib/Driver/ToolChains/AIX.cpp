@@ -376,9 +376,7 @@ void AIX::AddOpenMPIncludeArgs(const ArgList &DriverArgs,
       addSystemInclude(DriverArgs, CC1Args, PathOpenMP.str());
       break;
     case Driver::OMPRT_IOMP5:
-      LLVM_FALLTHROUGH;
     case Driver::OMPRT_GOMP:
-      LLVM_FALLTHROUGH;
     case Driver::OMPRT_Unknown:
       // Unknown / unsupported include paths.
       break;

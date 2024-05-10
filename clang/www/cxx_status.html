@@ -167,7 +167,7 @@ C++23, informally referred to as C++26.</p>
  <tr>
   <td>Disallow Binding a Returned Glvalue to a Temporary</td>
   <td><a href="https://wg21.link/P2748R5">P2748R5</a></td>
-  <td class="none" align="center">No</td>
+  <td class="unreleased" align="center">Clang 19</td>
  </tr>
  <tr>
   <td>Clarifying rules for brace elision in aggregate initialization</td>
@@ -177,7 +177,7 @@ C++23, informally referred to as C++26.</p>
  <tr>
   <td>Attributes for Structured Bindings</td>
   <td><a href="https://wg21.link/P0609R3">P0609R3</a></td>
-  <td class="none" align="center">No</td>
+  <td class="unreleased" align="center">Clang 19</td>
  </tr>
  <tr>
   <td>Module Declarations Shouldn’t be Macros</td>
@@ -187,7 +187,7 @@ C++23, informally referred to as C++26.</p>
  <tr>
   <td>Trivial infinite loops are not Undefined Behavior</td>
   <td><a href="https://wg21.link/P2809R3">P2809R3</a> (<a href="#dr">DR</a>)</td>
-  <td class="none" align="center">No</td>
+  <td class="unreleased" align="center">Clang 19</td>
  </tr>
  <tr>
   <td>Erroneous behaviour for uninitialized reads</td>
@@ -462,7 +462,14 @@ C++23, informally referred to as C++26.</p>
     <tr>
       <td>Lifetime extension in range-based for loops</td>
       <td><a href="https://wg21.link/P2718R0">P2718R0</a></td>
-      <td class="unreleased" align="center">Clang 19</td>
+      <td class="partial" align="center">
+        <details>
+          <summary>Clang 19 (Partial)</summary>
+            The lifetime extension of temporaries bound to member references
+            by default member initializers in aggregate initialization was
+            not supported now.
+        </details>
+      </td>
     </tr>
     <!--Issaquah 2023 papers-->
     <tr>
@@ -916,7 +923,7 @@ C++23, informally referred to as C++26.</p>
 You can use Clang in C++17 mode with the <code>-std=c++17</code> option
 (use <code>-std=c++1z</code> in Clang 4 and earlier).</p>
 
-<details open>
+<details>
 <summary>List of features and minimum Clang version with support</summary>
 
 <table width="689" border="1" cellspacing="0">
@@ -1133,8 +1140,8 @@ You can use Clang in C++17 mode with the <code>-std=c++17</code> option
     <!-- Issaquah 2016 papers -->
     <tr>
       <td>Matching template template parameters to compatible arguments</td>
-      <td><a href="https://wg21.link/p0522r0">P0522R0</a></td>
-      <td class="partial" align="center">Partial <a href="#p0522">(10)</a></td>
+      <td><a href="https://wg21.link/p0522r0">P0522R0</a> (<a href="#dr">DR</a>)</td>
+      <td class="unreleased" align="center">Clang 19 <a href="#p0522">(10)</a></td>
     </tr>
     <tr>
       <td>Removing deprecated dynamic exception specifications</td>
@@ -1162,13 +1169,11 @@ functions using expression syntax are no longer guaranteed to be destroyed in
 reverse construction order in that ABI.
 This is not fully supported during constant expression evaluation until Clang 12.
 </span><br>
-<span id="p0522">(10): Despite being the resolution to a Defect Report, this
-feature is disabled by default in all language versions, and can be enabled
-explicitly with the flag <tt>-frelaxed-template-template-args</tt> in Clang 4
-onwards.
-The change to the standard lacks a corresponding change for template partial
-ordering, resulting in ambiguity errors for reasonable and previously-valid
-code. This issue is expected to be rectified soon.
+<span id="p0522">(10): While this feature was initially implemented in Clang 4,
+it was not enabled by default prior to clang 19, but could be enabled with
+<tt>-frelaxed-template-template-args</tt>.
+Starting from Clang 19, the flag is deprecated and will be removed in a future
+version.
 </span>
 </p>
 </details>

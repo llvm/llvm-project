@@ -262,3 +262,36 @@ const Function *Context::getOrCreateFunction(const FunctionDecl *FD) {
 
   return Func;
 }
+
+unsigned Context::collectBaseOffset(const RecordDecl *BaseDecl,
+                                    const RecordDecl *DerivedDecl) const {
+  assert(BaseDecl);
+  assert(DerivedDecl);
+  const auto *FinalDecl = cast<CXXRecordDecl>(BaseDecl);
+  const RecordDecl *CurDecl = DerivedDecl;
+  const Record *CurRecord = P->getOrCreateRecord(CurDecl);
+  assert(CurDecl && FinalDecl);
+
+  unsigned OffsetSum = 0;
+  for (;;) {
+    assert(CurRecord->getNumBases() > 0);
+    // One level up
+    for (const Record::Base &B : CurRecord->bases()) {
+      const auto *BaseDecl = cast<CXXRecordDecl>(B.Decl);
+
+      if (BaseDecl == FinalDecl || BaseDecl->isDerivedFrom(FinalDecl)) {
+        OffsetSum += B.Offset;
+        CurRecord = B.R;
+        CurDecl = BaseDecl;
+        break;
+      }
+    }
+    if (CurDecl == FinalDecl)
+      break;
+
+    // break;
+  }
+
+  assert(OffsetSum > 0);
+  return OffsetSum;
+}

@@ -35,18 +35,18 @@ def Polynomial_Dialect : Dialect {
 
     ```mlir
     // A constant polynomial in a ring with i32 coefficients and no polynomial modulus
-    #ring = #polynomial.ring<ctype=i32>
+    #ring = #polynomial.ring<coefficientType=i32>
     %a = polynomial.constant <1 + x**2 - 3x**3> : polynomial.polynomial<#ring>
 
     // A constant polynomial in a ring with i32 coefficients, modulo (x^1024 + 1)
     #modulus = #polynomial.polynomial<1 + x**1024>
-    #ring = #polynomial.ring<ctype=i32, ideal=#modulus>
+    #ring = #polynomial.ring<coefficientType=i32, polynomialModulus=#modulus>
     %a = polynomial.constant <1 + x**2 - 3x**3> : polynomial.polynomial<#ring>
 
     // A constant polynomial in a ring with i32 coefficients, with a polynomial
     // modulus of (x^1024 + 1) and a coefficient modulus of 17.
     #modulus = #polynomial.polynomial<1 + x**1024>
-    #ring = #polynomial.ring<ctype=i32, cmod=17, ideal=#modulus>
+    #ring = #polynomial.ring<coefficientType=i32, coefficientModulus=17, polynomialModulus=#modulus>
     %a = polynomial.constant <1 + x**2 - 3x**3> : polynomial.polynomial<#ring>
     ```
   }];
@@ -63,9 +63,23 @@ class Polynomial_Attr<string name, string attrMnemonic, list<Trait> traits = []>
 def Polynomial_PolynomialAttr : Polynomial_Attr<"Polynomial", "polynomial"> {
   let summary = "An attribute containing a single-variable polynomial.";
   let description = [{
-     #poly = #polynomial.poly<x**1024 + 1>
+    A polynomial attribute represents a single-variable polynomial, which
+    is used to define the modulus of a `RingAttr`, as well as to define constants
+    and perform constant folding for `polynomial` ops.
+
+    The polynomial must be expressed as a list of monomial terms, with addition
+    or subtraction between them. The choice of variable name is arbitrary, but
+    must be consistent across all the monomials used to define a single
+    attribute. The order of monomial terms is arbitrary, each monomial degree
+    must occur at most once.
+
+    Example:
+
+    ```mlir
+    #poly = #polynomial.polynomial<x**1024 + 1>
+    ```
   }];
-  let parameters = (ins "Polynomial":$polynomial);
+  let parameters = (ins "::mlir::polynomial::Polynomial":$polynomial);
   let hasCustomAssemblyFormat = 1;
 }
 
@@ -79,10 +93,10 @@ def Polynomial_RingAttr : Polynomial_Attr<"Ring", "ring"> {
     integral, whose coefficients are taken modulo some statically known modulus
     (`coefficientModulus`).
 
-    Additionally, a polynomial ring can specify an _ideal_, which converts
+    Additionally, a polynomial ring can specify a _polynomialModulus_, which converts
     polynomial arithmetic to the analogue of modular integer arithmetic, where
     each polynomial is represented as its remainder when dividing by the
-    modulus. For single-variable polynomials, an "ideal" is always specificed
+    modulus. For single-variable polynomials, an "polynomialModulus" is always specificed
     via a single polynomial, which we call `polynomialModulus`.
 
     An expressive example is polynomials with i32 coefficients, whose
@@ -108,10 +122,19 @@ def Polynomial_RingAttr : Polynomial_Attr<"Ring", "ring"> {
 
   let parameters = (ins
     "Type": $coefficientType,
-    OptionalParameter<"IntegerAttr">: $coefficientModulus,
-    OptionalParameter<"PolynomialAttr">: $polynomialModulus
+    OptionalParameter<"::mlir::IntegerAttr">: $coefficientModulus,
+    OptionalParameter<"::mlir::polynomial::PolynomialAttr">: $polynomialModulus,
+    OptionalParameter<"::mlir::IntegerAttr">: $primitiveRoot
   );
 
+  let builders = [
+    AttrBuilder<
+        (ins "::mlir::Type":$coefficientTy,
+             "::mlir::IntegerAttr":$coefficientModulusAttr,
+             "::mlir::polynomial::PolynomialAttr":$polynomialModulusAttr), [{
+      return $_get($_ctxt, coefficientTy, coefficientModulusAttr, polynomialModulusAttr, nullptr);
+    }]>
+  ];
   let hasCustomAssemblyFormat = 1;
 }
 
@@ -122,32 +145,325 @@ class Polynomial_Type<string name, string typeMnemonic>
 
 def Polynomial_PolynomialType : Polynomial_Type<"Polynomial", "polynomial"> {
   let summary = "An element of a polynomial ring.";
-
   let description = [{
     A type for polynomials in a polynomial quotient ring.
   }];
-
   let parameters = (ins Polynomial_RingAttr:$ring);
   let assemblyFormat = "`<` $ring `>`";
 }
 
+def PolynomialLike: TypeOrContainer<Polynomial_PolynomialType, "polynomial-like">;
+
 class Polynomial_Op<string mnemonic, list<Trait> traits = []> :
-    Op<Polynomial_Dialect, mnemonic, traits # [Pure]>;
+    Op<Polynomial_Dialect, mnemonic, traits # [Pure]> {
+  let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
+}
 
 class Polynomial_UnaryOp<string mnemonic, list<Trait> traits = []> :
     Polynomial_Op<mnemonic, traits # [SameOperandsAndResultType]> {
   let arguments = (ins Polynomial_PolynomialType:$operand);
   let results = (outs Polynomial_PolynomialType:$result);
-
-  let assemblyFormat = "$operand attr-dict `:` qualified(type($result))";
 }
 
 class Polynomial_BinaryOp<string mnemonic, list<Trait> traits = []> :
-    Polynomial_Op<mnemonic, traits # [SameOperandsAndResultType]> {
-  let arguments = (ins Polynomial_PolynomialType:$lhs, Polynomial_PolynomialType:$rhs);
-  let results = (outs Polynomial_PolynomialType:$result);
+    Polynomial_Op<mnemonic, !listconcat(traits, [Pure, SameOperandsAndResultType, ElementwiseMappable])> {
+  let arguments = (ins PolynomialLike:$lhs, PolynomialLike:$rhs);
+  let results = (outs PolynomialLike:$result);
+  let assemblyFormat = "operands attr-dict `:` type($result)";
+}
 
-  let assemblyFormat = "$lhs `,` $rhs attr-dict `:` qualified(type($result))";
+def Polynomial_AddOp : Polynomial_BinaryOp<"add", [Commutative]> {
+  let summary = "Addition operation between polynomials.";
+  let description = [{
+    Performs polynomial addition on the operands. The operands may be single
+    polynomials or containers of identically-typed polynomials, i.e., polynomials
+    from the same underlying ring with the same coefficient types.
+
+    Addition is defined to occur in the ring defined by the ring attribute of
+    the two operands, meaning the addition is taken modulo the coefficientModulus
+    and the polynomialModulus of the ring.
+
+    Example:
+
+    ```mlir
+    // add two polynomials modulo x^1024 - 1
+    #poly = #polynomial.polynomial<x**1024 - 1>
+    #ring = #polynomial.ring<coefficientType=i32, coefficientModulus=65536, polynomialModulus=#poly>
+    %0 = polynomial.constant #polynomial.polynomial<1 + x**2> : !polynomial.polynomial<#ring>
+    %1 = polynomial.constant #polynomial.polynomial<x**5 - x + 1> : !polynomial.polynomial<#ring>
+    %2 = polynomial.add %0, %1 : !polynomial.polynomial<#ring>
+    ```
+  }];
+}
+
+def Polynomial_SubOp : Polynomial_BinaryOp<"sub"> {
+  let summary = "Subtraction operation between polynomials.";
+  let description = [{
+    Performs polynomial subtraction on the operands. The operands may be single
+    polynomials or containers of identically-typed polynomials, i.e., polynomials
+    from the same underlying ring with the same coefficient types.
+
+    Subtraction is defined to occur in the ring defined by the ring attribute of
+    the two operands, meaning the subtraction is taken modulo the coefficientModulus
+    and the polynomialModulus of the ring.
+
+    Example:
+
+    ```mlir
+    // subtract two polynomials modulo x^1024 - 1
+    #poly = #polynomial.polynomial<x**1024 - 1>
+    #ring = #polynomial.ring<coefficientType=i32, coefficientModulus=65536, polynomialModulus=#poly>
+    %0 = polynomial.constant #polynomial.polynomial<1 + x**2> : !polynomial.polynomial<#ring>
+    %1 = polynomial.constant #polynomial.polynomial<x**5 - x + 1> : !polynomial.polynomial<#ring>
+    %2 = polynomial.sub %0, %1 : !polynomial.polynomial<#ring>
+    ```
+  }];
+}
+
+def Polynomial_MulOp : Polynomial_BinaryOp<"mul", [Commutative]> {
+  let summary = "Multiplication operation between polynomials.";
+  let description = [{
+    Performs polynomial multiplication on the operands. The operands may be single
+    polynomials or containers of identically-typed polynomials, i.e., polynomials
+    from the same underlying ring with the same coefficient types.
+
+    Multiplication is defined to occur in the ring defined by the ring attribute of
+    the two operands, meaning the multiplication is taken modulo the coefficientModulus
+    and the polynomialModulus of the ring.
+
+    Example:
+
+    ```mlir
+    // multiply two polynomials modulo x^1024 - 1
+    #poly = #polynomial.polynomial<x**1024 - 1>
+    #ring = #polynomial.ring<coefficientType=i32, coefficientModulus=65536, polynomialModulus=#poly>
+    %0 = polynomial.constant #polynomial.polynomial<1 + x**2> : !polynomial.polynomial<#ring>
+    %1 = polynomial.constant #polynomial.polynomial<x**5 - x + 1> : !polynomial.polynomial<#ring>
+    %2 = polynomial.mul %0, %1 : !polynomial.polynomial<#ring>
+    ```
+  }];
+}
+
+def Polynomial_MulScalarOp : Polynomial_Op<"mul_scalar", [
+      ElementwiseMappable, AllTypesMatch<["polynomial", "output"]>]> {
+  let summary = "Multiplication by a scalar of the field.";
+  let description = [{
+    Multiplies the polynomial operand's coefficients by a given scalar value.
+    The operation is defined to occur in the ring defined by the ring attribute
+    of the two operands, meaning the multiplication is taken modulo the
+    coefficientModulus of the ring.
+
+    The `scalar` input must have the same type as the polynomial ring's
+    coefficientType.
+
+    Example:
+
+    ```mlir
+    // multiply two polynomials modulo x^1024 - 1
+    #poly = #polynomial.polynomial<x**1024 - 1>
+    #ring = #polynomial.ring<coefficientType=i32, coefficientModulus=65536, polynomialModulus=#poly>
+    %0 = polynomial.constant #polynomial.polynomial<1 + x**2> : !polynomial.polynomial<#ring>
+    %1 = arith.constant 3 : i32
+    %2 = polynomial.mul_scalar %0, %1 : !polynomial.polynomial<#ring>, i32
+    ```
+  }];
+
+  let arguments = (ins
+    PolynomialLike:$polynomial,
+    AnyInteger:$scalar
+  );
+  let results = (outs
+    PolynomialLike:$output
+  );
+  let assemblyFormat = "operands attr-dict `:` type($polynomial) `,` type($scalar)";
+  let hasVerifier = 1;
+}
+
+def Polynomial_LeadingTermOp: Polynomial_Op<"leading_term"> {
+  let summary = "Compute the leading term of the polynomial.";
+  let description = [{
+    The degree of a polynomial is the largest $k$ for which the coefficient
+    `a_k` of `x^k` is nonzero. The leading term is the term `a_k * x^k`, which
+    this op represents as a pair of results. The first is the degree `k` as an
+    index, and the second is the coefficient, whose type matches the
+    coefficient type of the polynomial's ring attribute.
+
+    Example:
+
+    ```mlir
+    #poly = #polynomial.polynomial<x**1024 - 1>
+    #ring = #polynomial.ring<coefficientType=i32, coefficientModulus=65536, polynomialModulus=#poly>
+    %0 = polynomial.constant #polynomial.polynomial<1 + x**2> : !polynomial.polynomial<#ring>
+    %1, %2 = polynomial.leading_term %0 : !polynomial.polynomial<#ring> -> (index, i32)
+    ```
+  }];
+  let arguments = (ins Polynomial_PolynomialType:$input);
+  let results = (outs Index:$degree, AnyInteger:$coefficient);
+  let assemblyFormat = "operands attr-dict `:` type($input) `->` `(` type($degree) `,` type($coefficient) `)`";
+}
+
+def Polynomial_MonomialOp: Polynomial_Op<"monomial"> {
+  let summary = "Create a polynomial that consists of a single monomial.";
+  let description = [{
+    Construct a polynomial that consists of a single monomial term, from its
+    degree and coefficient as dynamic inputs.
+
+    The coefficient type of the output polynomial's ring attribute must match
+    the `coefficient` input type.
+
+    Example:
+
+    ```mlir
+    #poly = #polynomial.polynomial<x**1024 - 1>
+    #ring = #polynomial.ring<coefficientType=i32, coefficientModulus=65536, polynomialModulus=#poly>
+    %deg = arith.constant 1023 : index
+    %five = arith.constant 5 : i32
+    %0 = polynomial.monomial %five, %deg : (i32, index) -> !polynomial.polynomial<#ring>
+    ```
+  }];
+  let arguments = (ins AnyInteger:$coefficient, Index:$degree);
+  let results = (outs Polynomial_PolynomialType:$output);
+}
+
+def Polynomial_MonicMonomialMulOp: Polynomial_Op<"monic_monomial_mul", [AllTypesMatch<["input", "output"]>]> {
+  let summary = "Multiply a polynomial by a monic monomial.";
+  let description = [{
+    Multiply a polynomial by a monic monomial, meaning a polynomial of the form
+    `1 * x^k` for an index operand `k`.
+
+    In some special rings of polynomials, such as a ring of polynomials
+    modulo `x^n - 1`, `monomial_mul` can be interpreted as a cyclic shift of
+    the coefficients of the polynomial. For some rings, this results in
+    optimized lowerings that involve rotations and rescaling of the
+    coefficients of the input.
+  }];
+  let arguments = (ins PolynomialLike:$input, Index:$monomialDegree);
+  let results = (outs PolynomialLike:$output);
+}
+
+def Polynomial_FromTensorOp : Polynomial_Op<"from_tensor", [Pure]> {
+  let summary = "Creates a polynomial from integer coefficients stored in a tensor.";
+  let description = [{
+    `polynomial.from_tensor` creates a polynomial value from a tensor of coefficients.
+    The input tensor must list the coefficients in degree-increasing order.
+
+    The input one-dimensional tensor may have size at most the degree of the
+    ring's polynomialModulus generator polynomial, with smaller dimension implying that
+    all higher-degree terms have coefficient zero.
+
+    Example:
+
+    ```mlir
+    #poly = #polynomial.polynomial<x**1024 - 1>
+    #ring = #polynomial.ring<coefficientType=i32, coefficientModulus=65536, polynomialModulus=#poly>
+    %two = arith.constant 2 : i32
+    %five = arith.constant 5 : i32
+    %coeffs = tensor.from_elements %two, %two, %five : tensor<3xi32>
+    %poly = polynomial.from_tensor %coeffs : tensor<3xi32> -> !polynomial.polynomial<#ring>
+    ```
+  }];
+  let arguments = (ins RankedTensorOf<[AnyInteger]>:$input);
+  let results = (outs Polynomial_PolynomialType:$output);
+
+  let assemblyFormat = "$input attr-dict `:` type($input) `->` type($output)";
+
+  let builders = [
+    // Builder that infers coefficient modulus from tensor bit width,
+    // and uses whatever input ring is provided by the caller.
+    OpBuilder<(ins "::mlir::Value":$input, "::mlir::polynomial::RingAttr":$ring)>
+  ];
+  let hasVerifier = 1;
+}
+
+def Polynomial_ToTensorOp : Polynomial_Op<"to_tensor", [Pure]> {
+  let summary = "Creates a tensor containing the coefficients of a polynomial.";
+  let description = [{
+    `polynomial.to_tensor` creates a dense tensor value containing the
+    coefficients of the input polynomial. The output tensor contains the
+    coefficients in degree-increasing order.
+
+    Operations that act on the coefficients of a polynomial, such as extracting
+    a specific coefficient or extracting a range of coefficients, should be
+    implemented by composing `to_tensor` with the relevant `tensor` dialect
+    ops.
+
+    The output tensor has shape equal to the degree of the polynomial ring
+    attribute's polynomialModulus, including zeroes.
+
+    Example:
+
+    ```mlir
+    #poly = #polynomial.polynomial<x**1024 - 1>
+    #ring = #polynomial.ring<coefficientType=i32, coefficientModulus=65536, polynomialModulus=#poly>
+    %two = arith.constant 2 : i32
+    %five = arith.constant 5 : i32
+    %coeffs = tensor.from_elements %two, %two, %five : tensor<3xi32>
+    %poly = polynomial.from_tensor %coeffs : tensor<3xi32> -> !polynomial.polynomial<#ring>
+    %tensor = polynomial.to_tensor %poly : !polynomial.polynomial<#ring> -> tensor<1024xi32>
+    ```
+  }];
+  let arguments = (ins Polynomial_PolynomialType:$input);
+  let results = (outs RankedTensorOf<[AnyInteger]>:$output);
+  let assemblyFormat = "$input attr-dict `:` type($input) `->` type($output)";
+
+  let hasVerifier = 1;
+}
+
+def Polynomial_ConstantOp : Polynomial_Op<"constant", [Pure]> {
+  let summary = "Define a constant polynomial via an attribute.";
+  let description = [{
+    Example:
+
+    ```mlir
+    #poly = #polynomial.polynomial<x**1024 - 1>
+    #ring = #polynomial.ring<coefficientType=i32, coefficientModulus=65536, polynomialModulus=#poly>
+    %0 = polynomial.constant #polynomial.polynomial<1 + x**2> : !polynomial.polynomial<#ring>
+    ```
+  }];
+  let arguments = (ins Polynomial_PolynomialAttr:$input);
+  let results = (outs Polynomial_PolynomialType:$output);
+  let assemblyFormat = "$input attr-dict `:` type($output)";
+}
+
+def Polynomial_NTTOp : Polynomial_Op<"ntt", [Pure]> {
+  let summary = "Computes point-value tensor representation of a polynomial.";
+  let description = [{
+    `polynomial.ntt` computes the forward integer Number Theoretic Transform
+    (NTT) on the input polynomial. It returns a tensor containing a point-value
+    representation of the input polynomial. The output tensor has shape equal
+    to the degree of the ring's `polynomialModulus`. The polynomial's RingAttr
+    is embedded as the encoding attribute of the output tensor.
+
+    Given an input polynomial `F(x)` over a ring whose `polynomialModulus` has
+    degree `n`, and a primitive `n`-th root of unity `omega_n`, the output is
+    the list of $n$ evaluations
+
+      `f[k] = F(omega[n]^k) ; k = {0, ..., n-1}`
+
+    The choice of primitive root is determined by subsequent lowerings.
+  }];
+  let arguments = (ins Polynomial_PolynomialType:$input);
+  let results = (outs RankedTensorOf<[AnyInteger]>:$output);
+  let assemblyFormat = "$input attr-dict `:` qualified(type($input)) `->` type($output)";
+  let hasVerifier = 1;
+}
+
+def Polynomial_INTTOp : Polynomial_Op<"intt", [Pure]> {
+  let summary = "Computes the reverse integer Number Theoretic Transform (NTT).";
+  let description = [{
+    `polynomial.intt` computes the reverse integer Number Theoretic Transform
+    (INTT) on the input tensor. This is the inverse operation of the
+    `polynomial.ntt` operation.
+
+    The input tensor is interpreted as a point-value representation of the
+    output polynomial at powers of a primitive `n`-th root of unity (see
+    `polynomial.ntt`). The ring of the polynomial is taken from the required
+    encoding attribute of the tensor.
+  }];
+  let arguments = (ins RankedTensorOf<[AnyInteger]>:$input);
+  let results = (outs Polynomial_PolynomialType:$output);
+  let assemblyFormat = "$input attr-dict `:` qualified(type($input)) `->` type($output)";
+  let hasVerifier = 1;
 }
 
 #endif // POLYNOMIAL_OPS

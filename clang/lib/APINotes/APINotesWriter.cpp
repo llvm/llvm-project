@@ -1128,7 +1128,7 @@ public:
     return 2 + (TI.SwiftImportAs ? TI.SwiftImportAs->size() : 0) +
            2 + (TI.SwiftRetainOp ? TI.SwiftRetainOp->size() : 0) +
            2 + (TI.SwiftReleaseOp ? TI.SwiftReleaseOp->size() : 0) +
-           1 + getCommonTypeInfoSize(TI);
+           2 + getCommonTypeInfoSize(TI);
   }
 
   void emitUnversionedInfo(raw_ostream &OS, const TagInfo &TI) {
@@ -1145,6 +1145,11 @@ public:
       Flags |= (value.value() << 1 | 1 << 0);
 
     writer.write<uint8_t>(Flags);
+
+    if (auto Copyable = TI.isSwiftCopyable())
+      writer.write<uint8_t>(*Copyable ? kSwiftCopyable : kSwiftNonCopyable);
+    else
+      writer.write<uint8_t>(0);
 
     if (auto ImportAs = TI.SwiftImportAs) {
       writer.write<uint16_t>(ImportAs->size() + 1);

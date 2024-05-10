@@ -1,7 +1,9 @@
 ! This test checks lowering of OpenMP IF clauses.
 
-! RUN: bbc -fopenmp -emit-hlfir %s -o - | FileCheck %s
-! RUN: %flang_fc1 -fopenmp -emit-hlfir %s -o - | FileCheck %s
+! The "if" clause was added to the "simd" directive in OpenMP 5.0, and
+! to the "teams" directive in OpenMP 5.2.
+! RUN: bbc -fopenmp -fopenmp-version=52 -emit-hlfir %s -o - | FileCheck %s
+! RUN: %flang_fc1 -fopenmp -fopenmp-version=52 -emit-hlfir %s -o - | FileCheck %s
 
 program main
   integer :: i
