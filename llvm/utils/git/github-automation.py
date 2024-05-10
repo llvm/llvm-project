@@ -641,16 +641,16 @@ def request_release_note(token:str, repo_name:str, pr_number:int):
     repo = github.Github(token).get_repo(repo_name)
     pr = repo.get_issue(pr_number).as_pull_request()
     submitter = pr.user.login
-    if submitter == 'llvmbot':
+    if submitter == "llvmbot":
         m = re.search("Requested by: @(.+)$", pr.body)
         if not m:
             submitter = None
             print("Warning could not determine user who requested backport.")
         submitter = m.group(1)
 
-    mention = ''
+    mention = ""
     if submitter:
-        mention = f'@{submitter}'
+        mention = f"@{submitter}"
 
     comment = f"{mention} (or anyone else). If you would like to add a note about this fix in the release notes (completely optional). Please reply to this comment with a one or two sentence description of the fix.  When you are done, please add the release:note label to this PR. "
     pr.as_issue().create_comment(comment)
