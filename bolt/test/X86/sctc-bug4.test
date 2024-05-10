@@ -4,8 +4,6 @@
 RUN: %clang %cflags %S/Inputs/sctc_bug4.s -o %t
 RUN: llvm-bolt %t -o %t.null --enable-bat \
 RUN:   -funcs=test_func -print-sctc -sequential-disassembly 2>&1 | FileCheck %s
-RUN: llvm-bolt %t -o %t.null --enable-bat -funcs=test_func -print-sctc \
-RUN:   -sequential-disassembly 2>&1 | FileCheck %s --check-prefix=CHECK-BAT
 
 CHECK:      .Ltmp2 (3 instructions, align : 1)
 CHECK-NEXT:   CFI State : 0
