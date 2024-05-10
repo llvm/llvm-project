@@ -493,8 +493,10 @@ public:
   /// return true if it is not already present. Otherwise, return false.
   bool bindIfNewSymbol(Fortran::lower::SymbolRef sym,
                        const fir::ExtendedValue &exval) {
-    if (shallowLookupSymbol(sym))
+    if (shallowLookupSymbol(sym)) {
+      //llvm::errs() << ">>>> " << sym << " symbol already bound.\n";
       return false;
+    }
     bindSymbol(sym, exval);
     return true;
   }
@@ -1028,8 +1030,13 @@ private:
   /// Find the symbol in the inner-most level of the local map or return null.
   Fortran::lower::SymbolBox
   shallowLookupSymbol(const Fortran::semantics::Symbol &sym) {
-    if (Fortran::lower::SymbolBox v = localSymbols.shallowLookupSymbol(sym))
+    if (Fortran::lower::SymbolBox v = localSymbols.shallowLookupSymbol(sym)) {
+      //llvm::errs() << ">>>> v: \n";
+      //v.getAddr().print(llvm::errs(), mlir::OpPrintingFlags().assumeVerified());
+      //llvm::errs() << ">>>>>>>>>>>>\n";
+
       return v;
+    }
     return {};
   }
 
@@ -1171,6 +1178,7 @@ private:
     if (isUnordered || sym.has<Fortran::semantics::HostAssocDetails>() ||
         sym.has<Fortran::semantics::UseDetails>()) {
       if (!shallowLookupSymbol(sym)) {
+        //llvm::errs() << ">>>> genLoopVariableAddress: " << sym << "\n";
         // Do concurrent loop variables are not mapped yet since they are local
         // to the Do concurrent scope (same for OpenMP loops).
         mlir::OpBuilder::InsertPoint insPt = builder->saveInsertionPoint();

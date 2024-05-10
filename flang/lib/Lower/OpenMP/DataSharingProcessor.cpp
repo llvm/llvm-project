@@ -26,9 +26,23 @@ namespace omp {
 void DataSharingProcessor::processStep1(
     mlir::omp::PrivateClauseOps *clauseOps,
     llvm::SmallVectorImpl<const Fortran::semantics::Symbol *> *privateSyms) {
+  //llvm::errs() << ">>>> DataSharingProcessor::processStep1\n";
   collectSymbolsForPrivatization();
   collectDefaultSymbols();
   collectImplicitSymbols();
+  collectPreDeterminedSymbols();
+
+  //llvm::SetVector<const Fortran::semantics::Symbol *> allSymbols;
+  //converter.collectSymbolSet(eval, allSymbols,
+  //                           Fortran::semantics::Symbol::Flag::OmpPreDetermined,
+  //                           [>collectSymbols=<]true,
+  //                           [>collectHostAssociatedSymbols=<]true);
+  //llvm::errs() << ">>>> all pre-determined symbols:\n";
+
+  //for (auto *sym : allSymbols) {
+  //  llvm::errs() << "    " << *sym << "\n";
+  //}
+
 
   privatize(clauseOps, privateSyms);
 
@@ -92,8 +106,28 @@ void DataSharingProcessor::insertDeallocs() {
 }
 
 void DataSharingProcessor::cloneSymbol(const Fortran::semantics::Symbol *sym) {
+  auto op = firOpBuilder.getInsertionBlock()->getParentOp();
+  auto module = firOpBuilder.getInsertionBlock()
+                    ->getParentOp()
+                    ->getParentOfType<mlir::ModuleOp>();
+
+  //llvm::errs() << ">>>> before:\n";
+  //llvm::errs() << ">>>> op:\n";
+  //op->print(llvm::errs(), mlir::OpPrintingFlags().assumeVerified());
+  //llvm::errs() << "\n>>>> module:\n";
+  //module.print(llvm::errs(), mlir::OpPrintingFlags().assumeVerified());
+  //llvm::errs() << ">>>>>>>>>>>>\n";
+
   bool success = converter.createHostAssociateVarClone(*sym);
   (void)success;
+
+  //llvm::errs() << ">>>> after:\n";
+  //llvm::errs() << ">>>> op:\n";
+  //op->print(llvm::errs(), mlir::OpPrintingFlags().assumeVerified());
+  //llvm::errs() << "\n>>>> module:\n";
+  //module.print(llvm::errs(), mlir::OpPrintingFlags().assumeVerified());
+  //llvm::errs() << ">>>>>>>>>>>>\n";
+
   assert(success && "Privatization failed due to existing binding");
 }
 
@@ -330,27 +364,61 @@ void DataSharingProcessor::collectSymbols(
   converter.collectSymbolSet(eval, allSymbols, flag,
                              /*collectSymbols=*/true,
                              /*collectHostAssociatedSymbols=*/true);
+
+
   llvm::SetVector<const Fortran::semantics::Symbol *> symbolsInNestedRegions;
   collectSymbolsInNestedRegions(eval, flag, symbolsInNestedRegions);
   // Filter-out symbols that must not be privatized.
   bool collectImplicit = flag == Fortran::semantics::Symbol::Flag::OmpImplicit;
+  bool collectPreDetermined =
+      flag == Fortran::semantics::Symbol::Flag::OmpPreDetermined;
+
+  //llvm::errs() << ">>>> collecting symbols: implicit? " << collectImplicit
+               //<< ", pre-determined? " << collectPreDetermined << "\n";
+  //llvm::errs() << ">>>> all symbols:\n";
+  for (auto *sym : allSymbols) {
+    //llvm::errs() << "    " << *sym << "\n";
+  }
+
   auto isPrivatizable = [](const Fortran::semantics::Symbol &sym) -> bool {
     return !Fortran::semantics::IsProcedure(sym) &&
            !sym.GetUltimate().has<Fortran::semantics::DerivedTypeDetails>() &&
            !sym.GetUltimate().has<Fortran::semantics::NamelistDetails>() &&
            !Fortran::semantics::IsImpliedDoIndex(sym.GetUltimate());
   };
+
+  auto shouldCollectSymbol = [&](const Fortran::semantics::Symbol *sym) {
+    //llvm::errs() << ">>>> shouldCollectSymbol: " << *sym << "\n";
+    if (collectImplicit &&
+        sym->test(Fortran::semantics::Symbol::Flag::Implicit) &&
+        !sym->test(Fortran::semantics::Symbol::Flag::OmpPreDetermined)) {
+        //llvm::errs() << ">>>> true 1\n";
+      return true;
+    }
+
+    if (collectPreDetermined &&
+        sym->test(Fortran::semantics::Symbol::Flag::OmpPreDetermined)) {
+        //llvm::errs() << ">>>> true 2\n";
+      return true;
+    }
+
+    if (!sym->test(Fortran::semantics::Symbol::Flag::OmpImplicit) &&
+        !sym->test(Fortran::semantics::Symbol::Flag::OmpPreDetermined)) {
+        //llvm::errs() << ">>>> true 3\n";
+      return true;
+    }
+
+        //llvm::errs() << ">>>> false\n";
+    return false;
+  };
+
   for (const auto *sym : allSymbols) {
     assert(curScope && "couldn't find current scope");
     if (isPrivatizable(*sym) && !symbolsInNestedRegions.contains(sym) &&
         !explicitlyPrivatizedSymbols.contains(sym) &&
-        (collectImplicit ||
-         !sym->test(Fortran::semantics::Symbol::Flag::OmpImplicit)) &&
-        clauseScopes.contains(&sym->owner())) {
+        shouldCollectSymbol(sym) && clauseScopes.contains(&sym->owner())) {
       allPrivatizedSymbols.insert(sym);
-
-      if (!sym->test(Fortran::semantics::Symbol::Flag::OmpPreDetermined))
-        symbols.insert(sym);
+      symbols.insert(sym);
     }
   }
 }
@@ -360,6 +428,7 @@ void DataSharingProcessor::collectDefaultSymbols() {
   for (const omp::Clause &clause : clauses) {
     if (const auto *defaultClause =
             std::get_if<omp::clause::Default>(&clause.u)) {
+    //llvm::errs() << ">>>> DataSharingProcessor::collectDefaultSymbols\n";
       if (defaultClause->v == DataSharingAttribute::Private)
         collectSymbols(Fortran::semantics::Symbol::Flag::OmpPrivate,
                        defaultSymbols);
@@ -375,9 +444,20 @@ void DataSharingProcessor::collectDefaultSymbols() {
 
 void DataSharingProcessor::collectImplicitSymbols() {
   // There will be no implicit symbols when a default clause is present.
-  if (defaultSymbols.empty())
+  if (defaultSymbols.empty()) {
+    //llvm::errs() << ">>>> DataSharingProcessor::collectImplicitSymbols\n";
     collectSymbols(Fortran::semantics::Symbol::Flag::OmpImplicit,
                    implicitSymbols);
+  }
+}
+
+
+void DataSharingProcessor::collectPreDeterminedSymbols() {
+  //if (defaultSymbols.empty()) {
+    //llvm::errs() << ">>>> DataSharingProcessor::collectPreDeterminedSymbols\n";
+    collectSymbols(Fortran::semantics::Symbol::Flag::OmpPreDetermined,
+                   preDeterminedSymbols);
+  //}
 }
 
 void DataSharingProcessor::privatize(
@@ -410,6 +490,7 @@ void DataSharingProcessor::doPrivatize(
     const Fortran::semantics::Symbol *sym,
     mlir::omp::PrivateClauseOps *clauseOps,
     llvm::SmallVectorImpl<const Fortran::semantics::Symbol *> *privateSyms) {
+  //llvm::errs() << ">>>> doPrivatize: " << *sym << "\n";
   if (!useDelayedPrivatization) {
     cloneSymbol(sym);
     copyFirstPrivateSymbol(sym);

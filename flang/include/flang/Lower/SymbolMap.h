@@ -150,8 +150,12 @@ public:
   SymMap() { pushScope(); }
   SymMap(const SymMap &) = delete;
 
-  void pushScope() { symbolMapStack.emplace_back(); }
+  void pushScope() {
+    //llvm::errs() << ">>>> pushScope\n";
+    symbolMapStack.emplace_back();
+  }
   void popScope() {
+    //llvm::errs() << ">>>> popScope\n";
     symbolMapStack.pop_back();
     assert(symbolMapStack.size() >= 1);
   }

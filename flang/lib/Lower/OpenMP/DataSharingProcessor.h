@@ -41,6 +41,7 @@ private:
       explicitlyPrivatizedSymbols;
   llvm::SetVector<const Fortran::semantics::Symbol *> defaultSymbols;
   llvm::SetVector<const Fortran::semantics::Symbol *> implicitSymbols;
+  llvm::SetVector<const Fortran::semantics::Symbol *> preDeterminedSymbols;
   llvm::SetVector<const Fortran::semantics::Symbol *> allPrivatizedSymbols;
 
   llvm::DenseMap<const Fortran::semantics::Symbol *, mlir::omp::PrivateClauseOp>
@@ -69,6 +70,7 @@ private:
   void insertBarrier();
   void collectDefaultSymbols();
   void collectImplicitSymbols();
+  void collectPreDeterminedSymbols();
   void privatize(
       mlir::omp::PrivateClauseOps *clauseOps,
       llvm::SmallVectorImpl<const Fortran::semantics::Symbol *> *privateSyms);
