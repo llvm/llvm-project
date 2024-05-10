@@ -70,9 +70,10 @@ public:
   };
 
   // TODO: Make sure fmin_legacy/fmax_legacy don't canonicalize
-  bool matchFMinFMaxLegacy(MachineInstr &MI, FMinFMaxLegacyInfo &Info) const;
-  void applySelectFCmpToFMinToFMaxLegacy(MachineInstr &MI,
-                                         const FMinFMaxLegacyInfo &Info) const;
+  bool matchFMinFMaxLegacy(MachineInstr &MI, MachineInstr &FCmp,
+                           FMinFMaxLegacyInfo &Info) const;
+  void applySelectFCmpToFMinFMaxLegacy(MachineInstr &MI,
+                                       const FMinFMaxLegacyInfo &Info) const;
 
   bool matchUCharToFloat(MachineInstr &MI) const;
   void applyUCharToFloat(MachineInstr &MI) const;
@@ -107,11 +108,10 @@ public:
 
   // Find the s_mul_u64 instructions where the higher bits are either
   // zero-extended or sign-extended.
-  bool matchCombine_s_mul_u64(MachineInstr &MI, unsigned &NewOpcode) const;
   // Replace the s_mul_u64 instructions with S_MUL_I64_I32_PSEUDO if the higher
   // 33 bits are sign extended and with S_MUL_U64_U32_PSEUDO if the higher 32
   // bits are zero extended.
-  void applyCombine_s_mul_u64(MachineInstr &MI, unsigned &NewOpcode) const;
+  bool matchCombine_s_mul_u64(MachineInstr &MI, unsigned &NewOpcode) const;
 
 private:
 #define GET_GICOMBINER_CLASS_MEMBERS
@@ -159,17 +159,14 @@ bool AMDGPUPostLegalizerCombinerImpl::tryCombineAll(MachineInstr &MI) const {
 }
 
 bool AMDGPUPostLegalizerCombinerImpl::matchFMinFMaxLegacy(
-    MachineInstr &MI, FMinFMaxLegacyInfo &Info) const {
-  // FIXME: Type predicate on pattern
-  if (MRI.getType(MI.getOperand(0).getReg()) != LLT::scalar(32))
+    MachineInstr &MI, MachineInstr &FCmp, FMinFMaxLegacyInfo &Info) const {
+  if (!MRI.hasOneNonDBGUse(FCmp.getOperand(0).getReg()))
     return false;
 
-  Register Cond = MI.getOperand(1).getReg();
-  if (!MRI.hasOneNonDBGUse(Cond) ||
-      !mi_match(Cond, MRI,
-                m_GFCmp(m_Pred(Info.Pred), m_Reg(Info.LHS), m_Reg(Info.RHS))))
-    return false;
-
+  Info.Pred =
+      static_cast<CmpInst::Predicate>(FCmp.getOperand(1).getPredicate());
+  Info.LHS = FCmp.getOperand(2).getReg();
+  Info.RHS = FCmp.getOperand(3).getReg();
   Register True = MI.getOperand(2).getReg();
   Register False = MI.getOperand(3).getReg();
 
@@ -189,7 +186,7 @@ bool AMDGPUPostLegalizerCombinerImpl::matchFMinFMaxLegacy(
   return Info.Pred != CmpInst::getSwappedPredicate(Info.Pred);
 }
 
-void AMDGPUPostLegalizerCombinerImpl::applySelectFCmpToFMinToFMaxLegacy(
+void AMDGPUPostLegalizerCombinerImpl::applySelectFCmpToFMinFMaxLegacy(
     MachineInstr &MI, const FMinFMaxLegacyInfo &Info) const {
   unsigned Opc = (Info.Pred & CmpInst::FCMP_OGT) ? AMDGPU::G_AMDGPU_FMAX_LEGACY
                                                  : AMDGPU::G_AMDGPU_FMIN_LEGACY;
@@ -436,11 +433,6 @@ bool AMDGPUPostLegalizerCombinerImpl::matchCombine_s_mul_u64(
     return true;
   }
   return false;
-}
-
-void AMDGPUPostLegalizerCombinerImpl::applyCombine_s_mul_u64(
-    MachineInstr &MI, unsigned &NewOpcode) const {
-  Helper.replaceOpcodeWith(MI, NewOpcode);
 }
 
 // Pass boilerplate

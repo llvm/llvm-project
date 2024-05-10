@@ -1124,9 +1124,8 @@ static void CloneInstructionsIntoPredecessorBlockAndUpdateSSAUses(
 
     NewBonusInst->insertInto(PredBlock, PTI->getIterator());
     auto Range = NewBonusInst->cloneDebugInfoFrom(&BonusInst);
-    RemapDbgVariableRecordRange(NewBonusInst->getModule(), Range, VMap,
-                                RF_NoModuleLevelChanges |
-                                    RF_IgnoreMissingLocals);
+    RemapDbgRecordRange(NewBonusInst->getModule(), Range, VMap,
+                        RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
 
     if (isa<DbgInfoIntrinsic>(BonusInst))
       continue;
@@ -3860,8 +3859,8 @@ static bool performBranchToCommonDestFolding(BranchInst *BI, BranchInst *PBI,
     PredBlock->getTerminator()->cloneDebugInfoFrom(BB->getTerminator());
     for (DbgVariableRecord &DVR :
          filterDbgVars(PredBlock->getTerminator()->getDbgRecordRange())) {
-      RemapDbgVariableRecord(M, &DVR, VMap,
-                             RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
+      RemapDbgRecord(M, &DVR, VMap,
+                     RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
     }
   }
 
@@ -6581,16 +6580,17 @@ static void reuseTableCompare(
   Constant *FalseConst = ConstantInt::getFalse(RangeCmp->getType());
 
   // Check if the compare with the default value is constant true or false.
-  Constant *DefaultConst = ConstantExpr::getICmp(CmpInst->getPredicate(),
-                                                 DefaultValue, CmpOp1, true);
+  const DataLayout &DL = PhiBlock->getModule()->getDataLayout();
+  Constant *DefaultConst = ConstantFoldCompareInstOperands(
+      CmpInst->getPredicate(), DefaultValue, CmpOp1, DL);
   if (DefaultConst != TrueConst && DefaultConst != FalseConst)
     return;
 
   // Check if the compare with the case values is distinct from the default
   // compare result.
   for (auto ValuePair : Values) {
-    Constant *CaseConst = ConstantExpr::getICmp(CmpInst->getPredicate(),
-                                                ValuePair.second, CmpOp1, true);
+    Constant *CaseConst = ConstantFoldCompareInstOperands(
+        CmpInst->getPredicate(), ValuePair.second, CmpOp1, DL);
     if (!CaseConst || CaseConst == DefaultConst ||
         (CaseConst != TrueConst && CaseConst != FalseConst))
       return;
