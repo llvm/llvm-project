@@ -1244,9 +1244,6 @@ SwiftExpressionParser::ParseAndImport(
   Log *log = GetLog(LLDBLog::Expressions);
   LLDB_SCOPED_TIMER();
 
-  ThreadSafeASTContext ast_context = GetASTContext(diagnostic_manager);
-  if (!ast_context)
-    return make_error<SwiftASTContextError>();
 
   bool repl = m_options.GetREPLEnabled();
   bool playground = m_options.GetPlaygroundTransformEnabled();
@@ -1302,22 +1299,28 @@ SwiftExpressionParser::ParseAndImport(
   for (auto &attributed_import : additional_imports)
     importInfo.AdditionalImports.emplace_back(attributed_import);
 
-  auto module_id = ast_context->getIdentifier(expr_name_buf);
-  auto &module =
-      *swift::ModuleDecl::create(module_id, **ast_context, importInfo);
+  swift::ModuleDecl *module = nullptr;
+  swift::SourceFile *source_file = nullptr;
+  {
+    ThreadSafeASTContext ast_context = GetASTContext(diagnostic_manager);
+    if (!ast_context)
+      return make_error<SwiftASTContextError>();
 
-  swift::SourceFileKind source_file_kind = swift::SourceFileKind::Library;
-  if (playground || repl) {
-    source_file_kind = swift::SourceFileKind::Main;
+    auto module_id = ast_context->getIdentifier(expr_name_buf);
+    module = swift::ModuleDecl::create(module_id, **ast_context, importInfo);
+
+    swift::SourceFileKind source_file_kind = swift::SourceFileKind::Library;
+    if (playground || repl) {
+      source_file_kind = swift::SourceFileKind::Main;
+    }
+
+    // Create the source file. Note, we disable delayed parsing for the
+    // swift expression parser.
+    source_file = new (**ast_context) swift::SourceFile(
+        *module, source_file_kind, buffer_id,
+        swift::SourceFile::ParsingFlags::DisableDelayedBodies);
+    module->addFile(*source_file);
   }
-
-  // Create the source file. Note, we disable delayed parsing for the
-  // swift expression parser.
-  swift::SourceFile *source_file = new (**ast_context)
-      swift::SourceFile(module, source_file_kind, buffer_id,
-                        swift::SourceFile::ParsingFlags::DisableDelayedBodies);
-  module.addFile(*source_file);
-
   // Swift Modules that rely on shared libraries (not frameworks)
   // don't record the link information in the swiftmodule file, so we
   // can't really make them work without outside information.
@@ -1472,8 +1475,7 @@ SwiftExpressionParser::ParseAndImport(
 
   ParsedExpression result = {
       std::move(code_manipulator),
-      std::move(ast_context),
-      module,
+      *module,
       *external_lookup,
       *source_file,
       std::move(main_filename),
@@ -2094,7 +2096,10 @@ SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
   // part of the parse from the staging area in the external lookup
   // object into the SwiftPersistentExpressionState.
   swift::ModuleDecl *module = &parsed_expr->module;
-  parsed_expr->ast_context->addLoadedModule(module);
+  {
+    ThreadSafeASTContext ast_context = GetASTContext(diagnostic_manager);
+    ast_context->addLoadedModule(module);
+  }
   m_swift_ast_ctx.CacheModule(module);
   if (m_sc.target_sp) {
     auto *persistent_state =

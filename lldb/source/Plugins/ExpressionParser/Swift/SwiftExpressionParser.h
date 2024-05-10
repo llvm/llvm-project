@@ -185,7 +185,6 @@ private:
   /// This holds the result of ParseAndImport.
   struct ParsedExpression {
     std::unique_ptr<SwiftASTManipulator> code_manipulator;
-    ThreadSafeASTContext ast_context;
     swift::ModuleDecl &module;
     LLDBNameLookup &external_lookup;
     swift::SourceFile &source_file;
