@@ -4847,8 +4847,7 @@ CompilerType SwiftASTContext::GetAnyObjectType() {
   return ToCompilerType({ast->getAnyObjectType()});
 }
 
-static CompilerType ValueDeclToType(swift::ValueDecl *decl,
-                                    swift::ASTContext *ast) {
+static CompilerType ValueDeclToType(swift::ValueDecl *decl) {
   if (decl) {
     switch (decl->getKind()) {
     case swift::DeclKind::TypeAlias: {
@@ -4877,15 +4876,14 @@ static CompilerType ValueDeclToType(swift::ValueDecl *decl,
   return CompilerType();
 }
 
-static CompilerType DeclToType(swift::Decl *decl, swift::ASTContext *ast) {
+static CompilerType DeclToType(swift::Decl *decl) {
   if (swift::ValueDecl *value_decl =
           swift::dyn_cast_or_null<swift::ValueDecl>(decl))
-    return ValueDeclToType(value_decl, ast);
+    return ValueDeclToType(value_decl);
   return {};
 }
 
-static SwiftASTContext::TypeOrDecl DeclToTypeOrDecl(swift::ASTContext *ast,
-                                                    swift::Decl *decl) {
+static SwiftASTContext::TypeOrDecl DeclToTypeOrDecl(swift::Decl *decl) {
   if (decl) {
     switch (decl->getKind()) {
     case swift::DeclKind::BuiltinTuple:
@@ -4965,12 +4963,10 @@ SwiftASTContext::FindContainedTypeOrDecl(llvm::StringRef name,
 
   CompilerType container_type = container_type_or_decl.Apply<CompilerType>(
       [](CompilerType type) -> CompilerType { return type; },
-      [this](swift::Decl *decl) -> CompilerType {
-        ThreadSafeASTContext ast_ctx = GetASTContext();
-        return DeclToType(decl, *ast_ctx);
+      [](swift::Decl *decl) -> CompilerType {
+        return DeclToType(decl);
       });
 
-  ThreadSafeASTContext ast_ctx = GetASTContext();
   if (!name.empty() &&
       container_type.GetTypeSystem().isa_and_nonnull<TypeSystemSwift>()) {
     swift::Type swift_type = GetSwiftTypeIgnoringErrors(container_type);
@@ -4985,7 +4981,7 @@ SwiftASTContext::FindContainedTypeOrDecl(llvm::StringRef name,
     llvm::ArrayRef<swift::ValueDecl *> decls = nominal_decl->lookupDirect(
         swift::DeclName(m_ast_context_ap->getIdentifier(name)));
     for (auto *decl : decls)
-      results.emplace(DeclToTypeOrDecl(*ast_ctx, decl));
+      results.emplace(DeclToTypeOrDecl(decl));
   }
   return results.size() - size_before;
 }
@@ -5062,7 +5058,6 @@ size_t SwiftASTContext::FindTypesOrDecls(const char *name,
 
   size_t before = results.size();
 
-  ThreadSafeASTContext ast_ctx = GetASTContext();
   if (name && name[0] && swift_module) {
     llvm::SmallVector<swift::ValueDecl *, 4> value_decls;
     swift::Identifier identifier(GetIdentifier(llvm::StringRef(name)));
@@ -5074,19 +5069,19 @@ size_t SwiftASTContext::FindTypesOrDecls(const char *name,
                                 value_decls);
     if (identifier.isOperator()) {
       if (auto *op = swift_module->lookupPrefixOperator(identifier))
-        results.emplace(DeclToTypeOrDecl(*ast_ctx, op));
+        results.emplace(DeclToTypeOrDecl(op));
 
       if (auto *op = swift_module->lookupInfixOperator(identifier).getSingle())
-        results.emplace(DeclToTypeOrDecl(*ast_ctx, op));
+        results.emplace(DeclToTypeOrDecl(op));
 
       if (auto *op = swift_module->lookupPostfixOperator(identifier))
-        results.emplace(DeclToTypeOrDecl(*ast_ctx, op));
+        results.emplace(DeclToTypeOrDecl(op));
     }
     if (auto *pg = swift_module->lookupPrecedenceGroup(identifier).getSingle())
-      results.emplace(DeclToTypeOrDecl(*ast_ctx, pg));
+      results.emplace(DeclToTypeOrDecl(pg));
 
     for (auto *decl : value_decls)
-      results.emplace(DeclToTypeOrDecl(*ast_ctx, decl));
+      results.emplace(DeclToTypeOrDecl(decl));
   }
 
   return results.size() - before;
