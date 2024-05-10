@@ -3857,8 +3857,8 @@ thread_result_t Process::RunPrivateStateThread(bool is_secondary_thread) {
         // case we should tell it to stop doing that.  Normally, we don't NEED
         // to do that because we will next close the communication to the stub
         // and that will get it to shut down.  But there are remote debugging
-        // cases where relying on that side-effect causes the shutdown to be 
-        // flakey, so we should send a positive signal to interrupt the wait. 
+        // cases where relying on that side-effect causes the shutdown to be
+        // flakey, so we should send a positive signal to interrupt the wait.
         Status error = HaltPrivate();
         BroadcastEvent(eBroadcastBitInterrupt, nullptr);
       } else if (StateIsRunningState(m_last_broadcast_state)) {
@@ -6410,12 +6410,20 @@ GetCoreFileSaveRangesStackOnly(Process &process,
     if (!reg_ctx_sp)
       continue;
     const addr_t sp = reg_ctx_sp->GetSP();
+    const size_t red_zone = process.GetABI()->GetRedZoneSize();
     lldb_private::MemoryRegionInfo sp_region;
     if (process.GetMemoryRegionInfo(sp, sp_region).Success()) {
       // Only add this region if not already added above. If our stack pointer
       // is pointing off in the weeds, we will want this range.
-      if (stack_bases.count(sp_region.GetRange().GetRangeBase()) == 0)
+      if (stack_bases.count(sp_region.GetRange().GetRangeBase()) == 0) {
+        // Take only the start of the stack to the stack pointer and include the redzone.
+        // Because stacks grow 'down' to include the red_zone we have to subtract it from the sp.
+        const size_t stack_head = (sp - red_zone);
+        const size_t stack_size = sp_region.GetRange().GetRangeEnd() - (stack_head);
+        sp_region.GetRange().SetRangeBase(stack_head);
+        sp_region.GetRange().SetByteSize(stack_size);
         AddRegion(sp_region, try_dirty_pages, ranges);
+      }
     }
   }
 }

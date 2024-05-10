@@ -14,6 +14,7 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
     def verify_core_file(
         self, core_path, expected_pid, expected_modules, expected_threads
     ):
+        breakpoint()
         # To verify, we'll launch with the mini dump
         target = self.dbg.CreateTarget(None)
         process = target.LoadCore(core_path)
@@ -36,11 +37,22 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
             self.assertEqual(module_file_name, expected_file_name)
             self.assertEqual(module.GetUUIDString(), expected.GetUUIDString())
 
+        red_zone = process.GetTarget().GetStackRedZoneSize()
         for thread_idx in range(process.GetNumThreads()):
             thread = process.GetThreadAtIndex(thread_idx)
             self.assertTrue(thread.IsValid())
             thread_id = thread.GetThreadID()
             self.assertIn(thread_id, expected_threads)
+            oldest_frame = thread.GetFrameAtIndex(thread.GetNumFrames() - 1)
+            stack_start = oldest_frame.GetSymbol().GetStartAddress().GetFileAddress()
+            frame = thread.GetFrameAtIndex(0)
+            sp = frame.GetSP()
+            stack_size = stack_start - (sp - red_zone)
+            byte_array = process.ReadMemory(sp - red_zone + 1, stack_size, error)
+            self.assertTrue(error.Success(), "Failed to read stack")
+            self.assertEqual(stack_size - 1, len(byte_array), "Incorrect stack size read"),
+
+
         self.dbg.DeleteTarget(target)
 
     @skipUnlessArch("x86_64")
