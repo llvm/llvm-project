@@ -23,7 +23,7 @@
 
 ; CHECK: function 'Test':
 ; CHECK:   .inner:
-; CHECK-NEXT:     Memory dependences are safe with run-time checks
+; CHECK-NEXT:     Memory dependences are safe with a maximum safe vector width of 2048 bits with run-time checks
 ; CHECK-NEXT:     Dependences:
 ; CHECK-NEXT:     Run-time memory checks:
 ; CHECK:          Check 0:
