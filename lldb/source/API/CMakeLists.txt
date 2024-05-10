@@ -20,9 +20,19 @@ if(LLDB_ENABLE_LUA)
   set(lldb_lua_wrapper ${lua_bindings_dir}/LLDBWrapLua.cpp)
 endif()
 
-lldb_tablegen(../../include/lldb/API/SBLanguages.h -gen-lldb-sbapi-dwarf-enum
-  SOURCE ${LLVM_MAIN_INCLUDE_DIR}/llvm/BinaryFormat/Dwarf.def
-  TARGET lldb-sbapi-dwarf-enums)
+# Target to generate SBLanguages.h from Dwarf.def.
+set(sb_languages_file
+  ${CMAKE_CURRENT_BINARY_DIR}/../../include/lldb/API/SBLanguages.h)
+add_custom_target(
+  lldb-sbapi-dwarf-enums
+  "${Python3_EXECUTABLE}"
+      ${LLDB_SOURCE_DIR}/scripts/generate-sbapi-dwarf-enum.py
+      ${LLVM_MAIN_INCLUDE_DIR}/llvm/BinaryFormat/Dwarf.def
+      -o ${sb_languages_file}
+  BYPRODUCTS ${sb_languages_file}
+  DEPENDS ${LLVM_MAIN_INCLUDE_DIR}/llvm/BinaryFormat/Dwarf.def
+  WORKING_DIRECTORY ${LLVM_LIBRARY_OUTPUT_INTDIR}
+)
 
 add_lldb_library(liblldb SHARED ${option_framework}
   SBAddress.cpp
@@ -106,7 +116,7 @@ add_lldb_library(liblldb SHARED ${option_framework}
 
   DEPENDS
     lldb-sbapi-dwarf-enums
-  
+
   LINK_LIBS
     lldbBreakpoint
     lldbCore

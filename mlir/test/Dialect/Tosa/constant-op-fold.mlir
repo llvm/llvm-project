@@ -213,7 +213,7 @@ func.func @fold_add_splat_f32() -> tensor<10xf32> {
 func.func @fold_div_zero_lhs_i32(%arg0: tensor<i32>) -> tensor<i32> {
   %zero = "tosa.const"() {value = dense<0> : tensor<i32>} : () -> tensor<i32>
   // CHECK: %[[ZERO:.+]] = "tosa.const"() <{value = dense<0>
-  %div = tosa.div %zero, %arg0 : (tensor<i32>, tensor<i32>) -> tensor<i32>
+  %div = tosa.int_div %zero, %arg0 : (tensor<i32>, tensor<i32>) -> tensor<i32>
   // CHECK: return %[[ZERO]]
   return %div : tensor<i32>
 }
@@ -223,7 +223,7 @@ func.func @fold_div_zero_lhs_i32(%arg0: tensor<i32>) -> tensor<i32> {
 // CHECK-LABEL: @fold_div_one_rhs_i32
 func.func @fold_div_one_rhs_i32(%arg0: tensor<i32>) -> tensor<i32> {
   %one = "tosa.const"() {value = dense<1> : tensor<i32>} : () -> tensor<i32>
-  %div = tosa.div %arg0, %one : (tensor<i32>, tensor<i32>) -> tensor<i32>
+  %div = tosa.int_div %arg0, %one : (tensor<i32>, tensor<i32>) -> tensor<i32>
   // CHECK: return %arg0
   return %div : tensor<i32>
 }
@@ -235,7 +235,7 @@ func.func @fold_div_splat_i32() -> tensor<i32> {
   %lhs = "tosa.const"() {value = dense<10> : tensor<i32>} : () -> tensor<i32>
   %rhs = "tosa.const"() {value = dense<-3> : tensor<i32>} : () -> tensor<i32>
   // CHECK: %[[SPLAT:.+]] = "tosa.const"() <{value = dense<-3>
-  %div = tosa.div %lhs, %rhs : (tensor<i32>, tensor<i32>) -> tensor<i32>
+  %div = tosa.int_div %lhs, %rhs : (tensor<i32>, tensor<i32>) -> tensor<i32>
   // CHECK: return %[[SPLAT]]
   return %div : tensor<i32>
 }
@@ -1092,7 +1092,7 @@ func.func @reduce_sum_constant_aggressive() -> tensor<1x3xi32> {
   // AGGRESIVE-LABEL: func.func @reduce_sum_constant_aggressive() -> tensor<1x3xi32> {
   // AGGRESIVE:       %[[VAL_0:.*]] = "tosa.const"() <{value = dense<4> : tensor<1x3xi32>}> : () -> tensor<1x3xi32>
   // AGGRESIVE:       return %[[VAL_0:.*]] : tensor<1x3xi32>
-  
+
   // CHECK-LABEL:     func.func @reduce_sum_constant_aggressive() -> tensor<1x3xi32> {
   // CHECK:           %[[VAL_0:.*]] = "tosa.const"() <{value = dense<1> : tensor<2x3xi32>}> : () -> tensor<2x3xi32>
   // CHECK:           %[[VAL_1:.*]] = tosa.reduce_sum %[[VAL_0]] {axis = 0 : i32} : (tensor<2x3xi32>) -> tensor<1x3xi32>

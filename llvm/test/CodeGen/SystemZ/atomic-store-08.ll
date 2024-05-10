@@ -2,7 +2,7 @@
 ; the AtomicExpand pass.
 ;
 ; RUN: llc < %s -mtriple=s390x-linux-gnu | FileCheck -check-prefixes=CHECK,BASE %s
-; xUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=z13 | FileCheck -check-prefixes=CHECK,Z13 %s
+; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=z13 | FileCheck -check-prefixes=CHECK,Z13 %s
 
 define void @f1(ptr %dst, ptr %src) {
 ; CHECK-LABEL: f1:
@@ -32,7 +32,7 @@ define void @f1_fpsrc(ptr %dst, ptr %src) {
 ; Z13-NEXT: vlgvg	%r0, %v0, 0
 
 ; CHECK-NEXT: stpq	%r0, 0(%r2)
-; CHECK-NEXT: bcr	15, %r0
+; CHECK-NEXT: bcr	1{{[45]}}, %r0
 ; CHECK-NEXT: br	%r14
   %val = load fp128, ptr %src, align 8
   %add = fadd fp128 %val, %val
@@ -58,8 +58,13 @@ define void @f2_fpuse(ptr %dst, ptr %src) {
 ; CHECK-NEXT:	.cfi_def_cfa_offset 336
 ; CHECK-NEXT:	ld	%f0, 0(%r3)
 ; CHECK-NEXT:	ld	%f2, 8(%r3)
-; CHECK-NEXT:	lgr	%r3, %r2
-; CHECK-NEXT:	axbr	%f0, %f0
+
+; BASE-NEXT:	lgr	%r3, %r2
+; BASE-NEXT:	axbr	%f0, %f0
+
+; Z13-NEXT:	axbr	%f0, %f0
+; Z13-NEXT:	lgr	%r3, %r2
+
 ; CHECK-NEXT:	la	%r4, 160(%r15)
 ; CHECK-NEXT:	lghi	%r2, 16
 ; CHECK-NEXT:	lhi	%r5, 5
