@@ -706,6 +706,7 @@ Bug Fixes to C++ Support
   within initializers for variables that are usable in constant expressions or are constant
   initialized, rather than evaluating them as a part of the larger manifestly constant evaluated
   expression.
+- Fix a bug in access control checking due to dealyed checking of friend declaration. Fixes (#GH12361).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
