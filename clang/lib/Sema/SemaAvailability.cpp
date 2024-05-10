@@ -928,11 +928,6 @@ void Sema::DiagnoseUnguardedAvailabilityViolations(Decl *D) {
   Stmt *Body = nullptr;
 
   if (auto *FD = D->getAsFunction()) {
-    // FIXME: We only examine the pattern decl for availability violations now,
-    // but we should also examine instantiated templates.
-    if (FD->isTemplateInstantiation())
-      return;
-
     Body = FD->getBody();
 
     if (auto *CD = dyn_cast<CXXConstructorDecl>(FD))
