@@ -103,6 +103,9 @@ bool AreCompatibleCUDADataAttrs(std::optional<CUDADataAttr> x,
     return true;
   } else if (x && y && *x == *y) {
     return true;
+  } else if ((!x && y && *y == CUDADataAttr::Pinned) ||
+      (x && *x == CUDADataAttr::Pinned && !y)) {
+    return true;
   } else if (ignoreTKR.test(IgnoreTKR::Device) &&
       x.value_or(CUDADataAttr::Device) == CUDADataAttr::Device &&
       y.value_or(CUDADataAttr::Device) == CUDADataAttr::Device) {

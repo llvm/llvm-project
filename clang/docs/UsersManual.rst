@@ -1696,7 +1696,6 @@ for more details.
    * ``-fno-associative-math``
    * ``-fno-reciprocal-math``
    * ``-fsigned-zeros``
-   * ``-ftrapping-math``
    * ``-ffp-contract=on``
 
    There is ambiguity about how ``-ffp-contract``,
