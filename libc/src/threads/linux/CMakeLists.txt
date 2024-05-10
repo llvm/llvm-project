@@ -7,6 +7,7 @@ add_header_library(
     libc.include.sys_syscall
     libc.include.threads
     libc.src.__support.CPP.atomic
+    libc.src.__support.CPP.mutex
     libc.src.__support.OSUtil.osutil
     libc.src.__support.threads.mutex
     libc.src.__support.threads.linux.futex_utils
