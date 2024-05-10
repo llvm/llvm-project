@@ -91,7 +91,8 @@ constexpr void test(const CharT* x, const CharT* y, const CharT* expected) {
   }
   // string_view + const string&
   {
-    std::basic_string_view<CharT, TraitsT> sv{x};
+    std::basic_string<CharT, TraitsT, AllocT> st_{x, allocator};
+    std::basic_string_view<CharT, TraitsT> sv{st_};
     const std::basic_string<CharT, TraitsT, AllocT> st{y, allocator};
 
     std::same_as<std::basic_string<CharT, TraitsT, AllocT>> decltype(auto) result = sv + st;
@@ -101,7 +102,8 @@ constexpr void test(const CharT* x, const CharT* y, const CharT* expected) {
   }
   // string_view + string&&
   {
-    std::basic_string_view<CharT, TraitsT> sv{x};
+    std::basic_string<CharT, TraitsT, AllocT> st_{x, allocator};
+    std::basic_string_view<CharT, TraitsT> sv{st_};
     std::basic_string<CharT, TraitsT, AllocT> st{y, allocator};
 
     std::same_as<std::basic_string<CharT, TraitsT, AllocT>> decltype(auto) result = sv + std::move(st);
@@ -152,18 +154,18 @@ constexpr bool test() {
 int main(int, char**) {
   test<char>();
   static_assert(test<char>());
-#ifndef TEST_HAS_NO_WIDE_CHARACTERS
+  #ifndef TEST_HAS_NO_WIDE_CHARACTERS
   test<wchar_t>();
-  static_assert(test<wchar_t>());
-#endif
-#ifndef TEST_HAS_NO_CHAR8_T
+    static_assert(test<wchar_t>());
+  #endif
+  #ifndef TEST_HAS_NO_CHAR8_T
   test<char8_t>();
-  static_assert(test<char8_t>());
-#endif
+    static_assert(test<char8_t>());
+  #endif
   test<char16_t>();
-  static_assert(test<char16_t>());
+    static_assert(test<char16_t>());
   test<char32_t>();
-  static_assert(test<char32_t>());
+    static_assert(test<char32_t>());
 
   return 0;
 }
