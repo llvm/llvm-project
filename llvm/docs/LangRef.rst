@@ -22185,7 +22185,7 @@ Examples:
 .. _int_vp_reduce_fmaximum:
 
 '``llvm.vp.reduce.fmaximum.*``' Intrinsics
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax:
 """""""
@@ -22252,10 +22252,10 @@ Examples:
       %also.r = call float @llvm.maximum.f32(float %reduction, float %start)
 
 
-.. _int_vp_reduce_fmin:
+.. _int_vp_reduce_fminimum:
 
 '``llvm.vp.reduce.fminimum.*``' Intrinsics
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax:
 """""""
