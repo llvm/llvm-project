@@ -285,18 +285,19 @@ private:
 
   /// Populates the symbol table with all non-dynamic linker symbols.  This
   /// method will parse the symbols only once.  Returns the number of symbols
-  /// parsed.
-  unsigned ParseSymbolTable(lldb_private::Symtab *symbol_table,
-                            lldb::user_id_t start_id,
-                            lldb_private::Section *symtab);
+  /// parsed and a map of address types (used by targets like Arm that have
+  /// an alternative ISA mode like Thumb).
+  std::pair<unsigned, FileAddressToAddressClassMap>
+  ParseSymbolTable(lldb_private::Symtab *symbol_table, lldb::user_id_t start_id,
+                   lldb_private::Section *symtab);
 
   /// Helper routine for ParseSymbolTable().
-  unsigned ParseSymbols(lldb_private::Symtab *symbol_table,
-                        lldb::user_id_t start_id,
-                        lldb_private::SectionList *section_list,
-                        const size_t num_symbols,
-                        const lldb_private::DataExtractor &symtab_data,
-                        const lldb_private::DataExtractor &strtab_data);
+  std::pair<unsigned, FileAddressToAddressClassMap>
+  ParseSymbols(lldb_private::Symtab *symbol_table, lldb::user_id_t start_id,
+               lldb_private::SectionList *section_list,
+               const size_t num_symbols,
+               const lldb_private::DataExtractor &symtab_data,
+               const lldb_private::DataExtractor &strtab_data);
 
   /// Scans the relocation entries and adds a set of artificial symbols to the
   /// given symbol table for each PLT slot.  Returns the number of symbols
