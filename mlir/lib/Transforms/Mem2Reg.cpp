@@ -647,6 +647,7 @@ LogicalResult mlir::tryToPromoteMemorySlots(
   while (true) {
     bool changesInThisRound = false;
     for (PromotableAllocationOpInterface allocator : workList) {
+      bool changedAllocator = false;
       for (MemorySlot slot : allocator.getPromotableSlots()) {
         if (slot.ptr.use_empty())
           continue;
@@ -659,18 +660,20 @@ LogicalResult mlir::tryToPromoteMemorySlots(
                                  dataLayout, std::move(*info), statistics,
                                  blockIndexCache)
                   .promoteSlot();
-          changesInThisRound = true;
+          changedAllocator = true;
           // Add newly created allocators to the worklist for further
           // processing.
           if (newAllocator)
             newWorkList.push_back(*newAllocator);
 
-          // Breaking is required, as a modification to an allocator might have
-          // removed it, making the other slots invalid.
+          // A break is required, since promoting a slot may invalidate the
+          // remaining slots of an allocator.
           break;
         }
-        newWorkList.push_back(allocator);
       }
+      if (!changedAllocator)
+        newWorkList.push_back(allocator);
+      changesInThisRound |= changedAllocator;
     }
     if (!changesInThisRound)
       break;

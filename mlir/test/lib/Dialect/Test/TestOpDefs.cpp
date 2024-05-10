@@ -1221,6 +1221,8 @@ TestMultiSlotAlloca::handlePromotionComplete(const MemorySlot &slot,
     newTypes.push_back(oldResult.getType());
   }
 
+  OpBuilder::InsertionGuard guard(builder);
+  builder.setInsertionPoint(*this);
   auto replacement = builder.create<TestMultiSlotAlloca>(getLoc(), newTypes);
   for (auto [oldResult, newResult] :
        llvm::zip_equal(remainingValues, replacement.getResults()))

@@ -72,7 +72,7 @@ def PromotableAllocationOpInterface
         Must return a new promotable allocation op if this operation produced
         multiple promotable slots, nullopt otherwise.
       }],
-      "std::optional<::mlir::PromotableAllocationOpInterface>",
+      "::std::optional<::mlir::PromotableAllocationOpInterface>",
         "handlePromotionComplete",
       (ins
         "const ::mlir::MemorySlot &":$slot, 
