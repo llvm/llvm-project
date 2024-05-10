@@ -357,11 +357,12 @@ subroutine scalar_dim1(a, d, m, b, s)
 end subroutine
 ! CHECK-LABEL:  func.func @_QPscalar_dim1(
 ! CHECK:            %[[ARG0:.*]]: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "a"}, %[[ARG1:.*]]: !fir.ref<i32> {fir.bindc_name = "d"}, %[[ARG2:.*]]: !fir.box<!fir.array<?x!fir.logical<4>>> {fir.bindc_name = "m"}, %[[ARG3:.*]]: !fir.ref<!fir.logical<4>> {fir.bindc_name = "b"}, %[[ARG4:.*]]: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "s"}) {
-! CHECK-NEXT:    %[[V0:.*]]:2 = hlfir.declare %[[ARG0]]
-! CHECK-NEXT:    %[[V1:.*]]:2 = hlfir.declare %[[ARG3]]
-! CHECK-NEXT:    %[[V2:.*]]:2 = hlfir.declare %[[ARG1]]
-! CHECK-NEXT:    %[[V3:.*]]:2 = hlfir.declare %[[ARG2]]
-! CHECK-NEXT:    %[[V4:.*]]:2 = hlfir.declare %[[ARG4]]
+! CHECK-NEXT:    %[[DSCOPE:.*]] = fir.dummy_scope : !fir.dscope
+! CHECK-NEXT:    %[[V0:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %[[DSCOPE]]
+! CHECK-NEXT:    %[[V1:.*]]:2 = hlfir.declare %[[ARG3]] dummy_scope %[[DSCOPE]]
+! CHECK-NEXT:    %[[V2:.*]]:2 = hlfir.declare %[[ARG1]] dummy_scope %[[DSCOPE]]
+! CHECK-NEXT:    %[[V3:.*]]:2 = hlfir.declare %[[ARG2]] dummy_scope %[[DSCOPE]]
+! CHECK-NEXT:    %[[V4:.*]]:2 = hlfir.declare %[[ARG4]] dummy_scope %[[DSCOPE]]
 ! CHECK-NEXT:    %[[V5:.*]] = fir.load %[[V1]]#0 : !fir.ref<!fir.logical<4>>
 ! CHECK-NEXT:    %[[V6:.*]] = fir.load %[[V2]]#0 : !fir.ref<i32>
 ! CHECK-NEXT:    %[[V7:.*]] = hlfir.minloc %[[V0]]#0 dim %[[V6]] mask %[[V3]]#0 back %[[V5]] {fastmath = #arith.fastmath<contract>} : (!fir.box<!fir.array<?xi32>>, i32, !fir.box<!fir.array<?x!fir.logical<4>>>, !fir.logical<4>) -> i16

@@ -1755,10 +1755,13 @@ bool VectorCombine::foldShuffleToIdentity(Instruction &I) {
             return false;
           if (IL.first->getValueID() != Item[0].first->getValueID())
             return false;
+          if (isa<CallInst>(IL.first) && !isa<IntrinsicInst>(IL.first))
+            return false;
           auto *II = dyn_cast<IntrinsicInst>(IL.first);
           return !II ||
-                 II->getIntrinsicID() ==
-                     cast<IntrinsicInst>(Item[0].first)->getIntrinsicID();
+                 (isa<IntrinsicInst>(Item[0].first) &&
+                  II->getIntrinsicID() ==
+                      cast<IntrinsicInst>(Item[0].first)->getIntrinsicID());
         }))
       return false;
 
@@ -1958,17 +1961,17 @@ bool VectorCombine::foldTruncFromReductions(Instruction &I) {
   if (!match(ReductionSrc, m_OneUse(m_Trunc(m_Value(TruncSrc)))))
     return false;
 
-  auto *Trunc = cast<CastInst>(ReductionSrc);
   auto *TruncSrcTy = cast<VectorType>(TruncSrc->getType());
   auto *ReductionSrcTy = cast<VectorType>(ReductionSrc->getType());
   Type *ResultTy = I.getType();
 
   TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
-  InstructionCost OldCost =
-      TTI.getCastInstrCost(Instruction::Trunc, ReductionSrcTy, TruncSrcTy,
-                           TTI::CastContextHint::None, CostKind, Trunc) +
-      TTI.getArithmeticReductionCost(ReductionOpc, ReductionSrcTy, std::nullopt,
-                                     CostKind);
+  InstructionCost OldCost = TTI.getArithmeticReductionCost(
+      ReductionOpc, ReductionSrcTy, std::nullopt, CostKind);
+  if (auto *Trunc = dyn_cast<CastInst>(ReductionSrc))
+    OldCost +=
+        TTI.getCastInstrCost(Instruction::Trunc, ReductionSrcTy, TruncSrcTy,
+                             TTI::CastContextHint::None, CostKind, Trunc);
   InstructionCost NewCost =
       TTI.getArithmeticReductionCost(ReductionOpc, TruncSrcTy, std::nullopt,
                                      CostKind) +

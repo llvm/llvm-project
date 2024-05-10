@@ -2143,16 +2143,17 @@ getFirstOrLastMappedMemberPtr(mlir::omp::MapInfoOp mapInfo, bool first) {
       return mapOp;
 
   llvm::ArrayRef<int64_t> shape = indexAttr.getShapedType().getShape();
-  std::vector<size_t> indices(shape[0]);
+  llvm::SmallVector<size_t> indices(shape[0]);
   std::iota(indices.begin(), indices.end(), 0);
 
   llvm::sort(
       indices.begin(), indices.end(), [&](const size_t a, const size_t b) {
+        auto indexValues = indexAttr.getValues<int32_t>();
         for (int i = 0;
              i < shape[1];
              ++i) {
-          int aIndex = indexAttr.getValues<int32_t>()[a * shape[1] + i];
-          int bIndex = indexAttr.getValues<int32_t>()[b * shape[1] + i];
+          int aIndex = indexValues[a * shape[1] + i];
+          int bIndex = indexValues[b * shape[1] + i];
 
           if (aIndex != -1 && bIndex == -1)
             return false;

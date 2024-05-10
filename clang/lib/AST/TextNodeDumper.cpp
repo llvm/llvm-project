@@ -397,10 +397,13 @@ void TextNodeDumper::Visit(const OpenACCClause *C) {
     case OpenACCClauseKind::Default:
       OS << '(' << cast<OpenACCDefaultClause>(C)->getDefaultClauseKind() << ')';
       break;
+    case OpenACCClauseKind::Async:
+    case OpenACCClauseKind::Attach:
     case OpenACCClauseKind::Copy:
     case OpenACCClauseKind::PCopy:
     case OpenACCClauseKind::PresentOrCopy:
     case OpenACCClauseKind::If:
+    case OpenACCClauseKind::DevicePtr:
     case OpenACCClauseKind::FirstPrivate:
     case OpenACCClauseKind::NoCreate:
     case OpenACCClauseKind::NumGangs:
@@ -433,6 +436,13 @@ void TextNodeDumper::Visit(const OpenACCClause *C) {
       OS << " clause";
       if (cast<OpenACCCreateClause>(C)->isZero())
         OS << " : zero";
+      break;
+    case OpenACCClauseKind::Wait:
+      OS << " clause";
+      if (cast<OpenACCWaitClause>(C)->hasDevNumExpr())
+        OS << " has devnum";
+      if (cast<OpenACCWaitClause>(C)->hasQueuesTag())
+        OS << " has queues tag";
       break;
     default:
       // Nothing to do here.

@@ -1073,7 +1073,8 @@ void StrNCmpInliner::inlineCompare(Value *LHS, StringRef RHS, uint64_t N,
         B.CreateZExt(B.CreateLoad(B.getInt8Ty(),
                                   B.CreateInBoundsPtrAdd(Base, B.getInt64(i))),
                      CI->getType());
-    Value *VR = ConstantInt::get(CI->getType(), RHS[i]);
+    Value *VR =
+        ConstantInt::get(CI->getType(), static_cast<unsigned char>(RHS[i]));
     Value *Sub = Swapped ? B.CreateSub(VR, VL) : B.CreateSub(VL, VR);
     if (i < N - 1)
       B.CreateCondBr(B.CreateICmpNE(Sub, ConstantInt::get(CI->getType(), 0)),

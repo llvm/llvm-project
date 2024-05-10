@@ -55,9 +55,8 @@ llvm.func @_QQmain() {
 // CHECK: store ptr %[[ALLOCA]], ptr %[[BASE_PTR_ARR_2]], align 8
 // CHECK: %[[PTR_ARR_2:.*]] = getelementptr inbounds [3 x ptr], ptr %.offload_ptrs, i32 0, i32 1
 // CHECK: store ptr %[[MEMBER_ACCESS_1]], ptr %[[PTR_ARR_2]], align 8
-  
+
 // CHECK: %[[BASE_PTR_ARR_3:.*]] = getelementptr inbounds [3 x ptr], ptr %.offload_baseptrs, i32 0, i32 2
 // CHECK: store ptr %[[ALLOCA]], ptr %[[BASE_PTR_ARR_3]], align 8
 // CHECK: %[[PTR_ARR_3:.*]] = getelementptr inbounds [3 x ptr], ptr %.offload_ptrs, i32 0, i32 2
 // CHECK: store ptr %[[LAST_MEMBER]], ptr %[[PTR_ARR_3]], align 8
- 
