@@ -805,7 +805,7 @@ alias(
     name = "gdb-server",
     actual = select({
         "@platforms//os:macos": ":debugserver",
-        "@platforms//os:linux": ":lldb-server",
+        "//conditions:default": ":lldb-server",
     }),
 )
 
