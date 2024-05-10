@@ -518,7 +518,7 @@ LiveRange *chooseSpillUsingHeuristics(ArrayRef<LiveRange *> activeRanges,
 }
 
 /// Greedily allocate tile IDs to live ranges. Spill using simple heuristics.
-/// Note: This does not attempt to fill holes in live/allocated ranges.
+/// Note: This does not attempt to fill holes in active live ranges.
 void allocateTilesToLiveRanges(
     ArrayRef<LiveRange *> liveRangesSortedByStartPoint) {
   TileAllocator tileAllocator;
