@@ -31,8 +31,8 @@ int main(int, char**) {
   // spurious wakeup by updating the likely_spurious flag only immediately
   // before we perform the notification.
   {
-    std::atomic<bool> ready           = false;
-    std::atomic<bool> likely_spurious = true;
+    std::atomic<bool> ready(false);
+    std::atomic<bool> likely_spurious(true);
     std::condition_variable cv;
     std::mutex mutex;
 
@@ -70,8 +70,8 @@ int main(int, char**) {
   // taken. In particular, we do need to eventually ensure we get out of the wait
   // by standard means, so we actually wake up the thread at the end.
   {
-    std::atomic<bool> ready  = false;
-    std::atomic<bool> awoken = false;
+    std::atomic<bool> ready(false);
+    std::atomic<bool> awoken(false);
     std::condition_variable cv;
     std::mutex mutex;
 

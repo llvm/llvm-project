@@ -49,9 +49,9 @@ void test() {
   // happen that we get awoken spuriously and fail to recognize it
   // (making this test useless), but the likelihood should be small.
   {
-    std::atomic<bool> ready           = false;
-    std::atomic<bool> likely_spurious = true;
-    auto timeout                      = Clock::now() + std::chrono::seconds(3600);
+    std::atomic<bool> ready(false);
+    std::atomic<bool> likely_spurious(true);
+    auto timeout = Clock::now() + std::chrono::seconds(3600);
     std::condition_variable cv;
     std::mutex mutex;
 

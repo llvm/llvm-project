@@ -49,9 +49,9 @@ void test() {
   // the likelihood that we got awoken by a spurious wakeup by updating the
   // likely_spurious flag only immediately before we perform the notification.
   {
-    std::atomic<bool> ready           = false;
-    std::atomic<bool> likely_spurious = true;
-    auto timeout                      = std::chrono::seconds(3600);
+    std::atomic<bool> ready(false);
+    std::atomic<bool> likely_spurious(true);
+    auto timeout = std::chrono::seconds(3600);
     std::condition_variable_any cv;
     Mutex mutex;
 
@@ -116,9 +116,9 @@ void test() {
   // taken. In particular, we do need to eventually ensure we get out of the wait
   // by standard means, so we actually wake up the thread at the end.
   {
-    std::atomic<bool> ready  = false;
-    std::atomic<bool> awoken = false;
-    auto timeout             = std::chrono::seconds(3600);
+    std::atomic<bool> ready(false);
+    std::atomic<bool> awoken(false);
+    auto timeout = std::chrono::seconds(3600);
     std::condition_variable_any cv;
     Mutex mutex;
 
