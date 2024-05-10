@@ -44,7 +44,11 @@ def MathCanonicalizeF32Promotion : Pass<"math-canonicalize-f32-promotion"> {
     will insert redundant `arith.truncf` and `arith.extf` pairs between the illegal
     ops.
     
-    This pass is to eliminate the redundant truncf/extf pairs.
+    This pass is to eliminate the redundant truncf/extf pairs to improve
+    performance.
+
+    However, this pass may introduce numerical difference as the `f32->bf16` rounding
+    is eliminated.
 
     Example:
 
