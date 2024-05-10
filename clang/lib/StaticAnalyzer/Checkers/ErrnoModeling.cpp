@@ -78,7 +78,7 @@ void ErrnoModeling::checkASTDecl(const TranslationUnitDecl *D,
   // Try to find the declaration of the external variable `int errno;`.
   // There are also C library implementations, where the `errno` location is
   // accessed via a function that returns its address; in those environments
-  // this callback does nothing.
+  // this callback has no effect.
   ASTContext &ACtx = Mgr.getASTContext();
   IdentifierInfo &II = ACtx.Idents.get(ErrnoVarName);
   auto LookupRes = ACtx.getTranslationUnitDecl()->lookup(&II);
