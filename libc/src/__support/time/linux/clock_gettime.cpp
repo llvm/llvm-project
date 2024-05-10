@@ -8,24 +8,37 @@
 
 #include "src/__support/time/linux/clock_gettime.h"
 #include "src/__support/OSUtil/syscall.h"
+#include "src/__support/OSUtil/vdso.h"
 #include <sys/syscall.h>
 namespace LIBC_NAMESPACE {
 namespace internal {
 ErrorOr<int> clock_gettime(clockid_t clockid, timespec *ts) {
+  int ret;
+  do {
+#ifdef LIBC_VDSO_HAS_CLOCK_GETTIME
+    if (void *symbol = vdso::get_symbol(vdso::VDSOSym::ClockGetTime)) {
+      using FuncTy = int (*)(clockid_t, timespec *);
+      auto func = reinterpret_cast<FuncTy>(symbol);
+      ret = func(clockid, ts);
+      break;
+    }
+#endif
 #if SYS_clock_gettime
-  int ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_clock_gettime,
-                                              static_cast<long>(clockid),
-                                              reinterpret_cast<long>(ts));
+    ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_clock_gettime,
+                                            static_cast<long>(clockid),
+                                            reinterpret_cast<long>(ts));
 #elif defined(SYS_clock_gettime64)
-  static_assert(
-      sizeof(time_t) == sizeof(int64_t),
-      "SYS_clock_gettime64 requires struct timespec with 64-bit members.");
-  int ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_clock_gettime64,
-                                              static_cast<long>(clockid),
-                                              reinterpret_cast<long>(ts));
+    static_assert(
+        sizeof(time_t) == sizeof(int64_t),
+        "SYS_clock_gettime64 requires struct timespec with 64-bit members.");
+    ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_clock_gettime64,
+                                            static_cast<long>(clockid),
+                                            reinterpret_cast<long>(ts));
 #else
 #error "SYS_clock_gettime and SYS_clock_gettime64 syscalls not available."
 #endif
+  } while (0);
+
   if (ret < 0)
     return Error(-ret);
   return ret;

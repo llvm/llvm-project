@@ -15,7 +15,6 @@
 namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(time_t, time, (time_t * tp)) {
-  // TODO: Use the Linux VDSO to fetch the time and avoid the syscall.
   struct timespec ts;
   auto result = internal::clock_gettime(CLOCK_REALTIME, &ts);
   if (!result.has_value()) {
