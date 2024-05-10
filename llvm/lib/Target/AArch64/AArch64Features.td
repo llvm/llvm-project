@@ -597,7 +597,7 @@ def FeatureXS : SubtargetFeature<"xs", "HasXS",
 
 def FeatureWFxT : Extension<"wfxt", "WFxT",
     "Enable Armv8.7-A WFET and WFIT instruction (FEAT_WFxT)", [],
-    "FEAT_WFXT", "", 550>;
+    "FEAT_WFXT", "+wfxt", 550>;
 
 def FeatureHCX : SubtargetFeature<
     "hcx", "HasHCX", "true", "Enable Armv8.7-A HCRX_EL2 system register (FEAT_HCX)">;
