@@ -1792,7 +1792,7 @@ void BinaryFunction::postProcessJumpTables() {
 
   // Remove dead jump tables (reference removed as a result of
   // POSSIBLE_PIC_FIXED_BRANCH optimization).
-  for (auto JTI = JumpTables.begin(), JTE = JumpTables.end(); JTI != JTE; ) {
+  for (auto JTI = JumpTables.begin(), JTE = JumpTables.end(); JTI != JTE;) {
     const uint64_t Address = JTI->first;
     JumpTable *JT = JTI->second;
     bool HasOneParent = JT->Parents.size() == 1;
@@ -1804,7 +1804,6 @@ void BinaryFunction::postProcessJumpTables() {
     }
     ++JTI;
   }
-
 }
 
 bool BinaryFunction::validateExternallyReferencedOffsets() {
