@@ -299,6 +299,9 @@ public:
 class OpenACCClausePrinter final
     : public OpenACCClauseVisitor<OpenACCClausePrinter> {
   raw_ostream &OS;
+  const PrintingPolicy &Policy;
+
+  void printExpr(const Expr *E);
 
 public:
   void VisitClauseList(ArrayRef<const OpenACCClause *> List) {
@@ -309,7 +312,8 @@ public:
         OS << ' ';
     }
   }
-  OpenACCClausePrinter(raw_ostream &OS) : OS(OS) {}
+  OpenACCClausePrinter(raw_ostream &OS, const PrintingPolicy &Policy)
+      : OS(OS), Policy(Policy) {}
 
 #define VISIT_CLAUSE(CLAUSE_NAME)                                              \
   void Visit##CLAUSE_NAME##Clause(const OpenACC##CLAUSE_NAME##Clause &Clause);

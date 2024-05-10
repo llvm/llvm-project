@@ -430,17 +430,17 @@ RISCVISAInfo::parseNormalizedArchString(StringRef Arch) {
                              "string must be lowercase");
   }
   // Must start with a valid base ISA name.
-  unsigned XLen;
-  if (Arch.starts_with("rv32i") || Arch.starts_with("rv32e"))
+  unsigned XLen = 0;
+  if (Arch.consume_front("rv32"))
     XLen = 32;
-  else if (Arch.starts_with("rv64i") || Arch.starts_with("rv64e"))
+  else if (Arch.consume_front("rv64"))
     XLen = 64;
-  else
+
+  if (XLen == 0 || Arch.empty() || (Arch[0] != 'i' && Arch[0] != 'e'))
     return createStringError(errc::invalid_argument,
                              "arch string must begin with valid base ISA");
+
   std::unique_ptr<RISCVISAInfo> ISAInfo(new RISCVISAInfo(XLen));
-  // Discard rv32/rv64 prefix.
-  Arch = Arch.substr(4);
 
   // Each extension is of the form ${name}${major_version}p${minor_version}
   // and separated by _. Split by _ and then extract the name and version
@@ -616,15 +616,18 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
                            ExperimentalExtensionVersionCheck, IgnoreUnknown);
   }
 
-  bool HasRV64 = Arch.starts_with("rv64");
   // ISA string must begin with rv32 or rv64.
-  if (!(Arch.starts_with("rv32") || HasRV64) || (Arch.size() < 5)) {
+  unsigned XLen = 0;
+  if (Arch.consume_front("rv32"))
+    XLen = 32;
+  else if (Arch.consume_front("rv64"))
+    XLen = 64;
+
+  if (XLen == 0 || Arch.empty())
     return createStringError(
         errc::invalid_argument,
         "string must begin with rv32{i,e,g} or rv64{i,e,g}");
-  }
 
-  unsigned XLen = HasRV64 ? 64 : 32;
   std::unique_ptr<RISCVISAInfo> ISAInfo(new RISCVISAInfo(XLen));
   MapVector<std::string, RISCVISAUtils::ExtensionVersion,
             std::map<std::string, unsigned>>
@@ -632,20 +635,20 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
 
   // The canonical order specified in ISA manual.
   // Ref: Table 22.1 in RISC-V User-Level ISA V2.2
-  char Baseline = Arch[4];
+  char Baseline = Arch.front();
 
   // First letter should be 'e', 'i' or 'g'.
   switch (Baseline) {
   default:
     return createStringError(errc::invalid_argument,
-                             "first letter after \'" + Arch.slice(0, 4) +
+                             "first letter after \'rv" + Twine(XLen) +
                                  "\' should be 'e', 'i' or 'g'");
   case 'e':
   case 'i':
     break;
   case 'g':
     // g expands to extensions in RISCVGImplications.
-    if (Arch.size() > 5 && isDigit(Arch[5]))
+    if (Arch.size() > 1 && isDigit(Arch[1]))
       return createStringError(errc::invalid_argument,
                                "version not supported for 'g'");
     break;
@@ -655,8 +658,8 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
     return createStringError(errc::invalid_argument,
                              "extension name missing after separator '_'");
 
-  // Skip rvxxx
-  StringRef Exts = Arch.substr(5);
+  // Skip baseline.
+  StringRef Exts = Arch.drop_front(1);
 
   unsigned Major, Minor, ConsumeLength;
   if (Baseline == 'g') {
