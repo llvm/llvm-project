@@ -71,7 +71,7 @@ ProgramStateRef setErrnoState(ProgramStateRef State, ErrnoCheckState EState);
 /// Clear state of errno (make it irrelevant).
 ProgramStateRef clearErrnoState(ProgramStateRef State);
 
-/// Determine if `Call` is a call to a "magical" function that returns the
+/// Determine if `Call` is a call to an internal function that returns the
 /// location of `errno` (in environments where errno is accessed this way).
 bool isErrnoLocationCall(const CallEvent &Call);
 

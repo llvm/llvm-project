@@ -43,11 +43,11 @@ const char *ErrnoVarName = "errno";
 // Names of functions that return a location of the "errno" value.
 // FIXME: Are there other similar function names?
 CallDescriptionSet ErrnoLocationCalls{
-    {CDM::SimpleFunc, {"__errno_location"}, 0, 0},
-    {CDM::SimpleFunc, {"___errno"}, 0, 0},
-    {CDM::SimpleFunc, {"__errno"}, 0, 0},
-    {CDM::SimpleFunc, {"_errno"}, 0, 0},
-    {CDM::SimpleFunc, {"__error"}, 0, 0}};
+    {CDM::CLibrary, {"__errno_location"}, 0, 0},
+    {CDM::CLibrary, {"___errno"}, 0, 0},
+    {CDM::CLibrary, {"__errno"}, 0, 0},
+    {CDM::CLibrary, {"_errno"}, 0, 0},
+    {CDM::CLibrary, {"__error"}, 0, 0}};
 
 class ErrnoModeling
     : public Checker<check::ASTDecl<TranslationUnitDecl>, check::BeginFunction,
@@ -62,7 +62,7 @@ public:
 private:
   // The declaration of an "errno" variable on systems where errno is
   // represented by a variable (and not a function that queries its location).
-  mutable const Decl *ErrnoDecl = nullptr;
+  mutable const VarDecl *ErrnoDecl = nullptr;
 };
 
 } // namespace
@@ -102,13 +102,13 @@ void ErrnoModeling::checkBeginFunction(CheckerContext &C) const {
 
   const MemRegion *ErrnoR;
 
-  if (const auto *ErrnoVar = dyn_cast_or_null<VarDecl>(ErrnoDecl)) {
+  if (ErrnoDecl) {
     // There is an external 'errno' variable, so we can simply use the memory
     // region that's associated with it.
-    ErrnoR = State->getRegion(ErrnoVar, C.getLocationContext());
+    ErrnoR = State->getRegion(ErrnoDecl, C.getLocationContext());
     assert(ErrnoR && "Memory region should exist for the 'errno' variable.");
   } else {
-    // The 'errno' location is accessed via a "magical" getter function, so
+    // The 'errno' location is accessed via an internal getter function, so
     // create a new symbolic memory region that can be used as the return value
     // of that function.
     SValBuilder &SVB = C.getSValBuilder();
