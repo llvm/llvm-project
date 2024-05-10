@@ -53,12 +53,12 @@ def nm_get_symbols(tool, lib):
         # The -P flag displays the size field for symbols only when applicable,
         # so the last field is optional. There's no space after the value field,
         # but \s+ match newline also, so \s+\S* will match the optional size field.
-        match = re.match("^(\S+)\s+[BDGRSTuVW]\s+\S+\s+\S*$", line)
+        match = re.match(r"^(\S+)\s+[BDGRSTuVW]\s+\S+\s+\S*$", line)
         if match:
             yield (match.group(1), True)
         # Look for undefined symbols, which have type U and may or may not
         # (depending on which nm is being used) have value and size.
-        match = re.match("^(\S+)\s+U\s+(\S+\s+\S*)?$", line)
+        match = re.match(r"^(\S+)\s+U\s+(\S+\s+\S*)?$", line)
         if match:
             yield (match.group(1), False)
     process.wait()
@@ -71,7 +71,7 @@ def readobj_is_32bit_windows(tool, lib):
         [tool, "--file-header", lib], universal_newlines=True
     )
     for line in output.splitlines():
-        match = re.match("Format: (\S+)", line)
+        match = re.match(r"Format: (\S+)", line)
         if match:
             return match.group(1) == "COFF-i386"
     return False
@@ -100,10 +100,10 @@ def should_keep_microsoft_symbol(symbol, calling_convention_decoration):
     # An anonymous namespace is mangled as ?A(maybe hex number)@. Any symbol
     # that mentions an anonymous namespace can be discarded, as the anonymous
     # namespace doesn't exist outside of that translation unit.
-    elif re.search("\?A(0x\w+)?@", symbol):
+    elif re.search(r"\?A(0x\w+)?@", symbol):
         return None
     # Skip X86GenMnemonicTables functions, they are not exposed from llvm/include/.
-    elif re.match("\?is[A-Z0-9]*@X86@llvm", symbol):
+    elif re.match(r"\?is[A-Z0-9]*@X86@llvm", symbol):
         return None
     # Keep mangled llvm:: and clang:: function symbols. How we detect these is a
     # bit of a mess and imprecise, but that avoids having to completely demangle
@@ -169,7 +169,7 @@ class TooComplexName(Exception):
 # (name, rest of string) pair.
 def parse_itanium_name(arg):
     # Check for a normal name
-    match = re.match("(\d+)(.+)", arg)
+    match = re.match(r"(\d+)(.+)", arg)
     if match:
         n = int(match.group(1))
         name = match.group(1) + match.group(2)[:n]
@@ -196,7 +196,7 @@ def skip_itanium_template(arg):
     tmp = arg[1:]
     while tmp:
         # Check for names
-        match = re.match("(\d+)(.+)", tmp)
+        match = re.match(r"(\d+)(.+)", tmp)
         if match:
             n = int(match.group(1))
             tmp = match.group(2)[n:]
@@ -280,19 +280,19 @@ def parse_microsoft_mangling(arg):
         if arg.startswith("@"):
             return components
         # Check for a simple name
-        match = re.match("(\w+)@(.+)", arg)
+        match = re.match(r"(\w+)@(.+)", arg)
         if match:
             components.append((match.group(1), False))
             arg = match.group(2)
             continue
         # Check for a special function name
-        match = re.match("(\?_?\w)(.+)", arg)
+        match = re.match(r"(\?_?\w)(.+)", arg)
         if match:
             components.append((match.group(1), False))
             arg = match.group(2)
             continue
         # Check for a template name
-        match = re.match("\?\$(\w+)@[^@]+@(.+)", arg)
+        match = re.match(r"\?\$(\w+)@[^@]+@(.+)", arg)
         if match:
             components.append((match.group(1), True))
             arg = match.group(2)

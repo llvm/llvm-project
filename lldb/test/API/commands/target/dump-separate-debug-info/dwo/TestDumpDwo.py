@@ -94,11 +94,11 @@ class TestDumpDWO(lldbtest.TestBase):
         self.expect(
             "target modules dump separate-debug-info",
             patterns=[
-                "Symbol file: .*?a\.out",
+                r"Symbol file: .*?a\.out",
                 'Type: "dwo"',
-                "Dwo ID\s+Err\s+Dwo Path",
-                "0x[a-zA-Z0-9]{16}\s+.*main\.dwo",
-                "0x[a-zA-Z0-9]{16}\s+.*foo\.dwo",
+                r"Dwo ID\s+Err\s+Dwo Path",
+                r"0x[a-zA-Z0-9]{16}\s+.*main\.dwo",
+                r"0x[a-zA-Z0-9]{16}\s+.*foo\.dwo",
             ],
         )
 
@@ -118,11 +118,11 @@ class TestDumpDWO(lldbtest.TestBase):
         self.expect(
             "target modules dump separate-debug-info",
             patterns=[
-                "Symbol file: .*?a\.out",
+                r"Symbol file: .*?a\.out",
                 'Type: "dwo"',
-                "Dwo ID\s+Err\s+Dwo Path",
-                "0x[a-zA-Z0-9]{16}\s+E\s+.*main\.dwo",
-                "0x[a-zA-Z0-9]{16}\s+E\s+.*foo\.dwo",
+                r"Dwo ID\s+Err\s+Dwo Path",
+                r"0x[a-zA-Z0-9]{16}\s+E\s+.*main\.dwo",
+                r"0x[a-zA-Z0-9]{16}\s+E\s+.*foo\.dwo",
             ],
         )
 

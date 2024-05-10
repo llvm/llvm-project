@@ -6,7 +6,7 @@ import sys
 
 
 def get_version_from_tag(tag):
-    m = re.match("llvmorg-([0-9]+)\.([0-9]+)\.([0-9]+)(-rc[0-9]+)?$", tag)
+    m = re.match(r"llvmorg-([0-9]+)\.([0-9]+)\.([0-9]+)(-rc[0-9]+)?$", tag)
     if m:
         if m.lastindex == 4:
             # We have an rc tag.

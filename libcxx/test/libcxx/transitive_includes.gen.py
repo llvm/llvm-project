@@ -59,7 +59,7 @@ else:
       continue
 
     # Escape slashes for the awk command below
-    escaped_header = header.replace('/', '\/')
+    escaped_header = header.replace('/', r'\/')
 
     print(f"""\
 //--- {header}.sh.cpp

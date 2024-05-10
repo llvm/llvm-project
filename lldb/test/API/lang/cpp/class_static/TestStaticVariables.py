@@ -39,7 +39,7 @@ class StaticVariableTestCase(TestBase):
         self.expect(
             "target variable A::g_points",
             VARIABLES_DISPLAYED_CORRECTLY,
-            patterns=["\(PointType\[[1-9]*\]\) A::g_points = {"],
+            patterns=[r"\(PointType\[[1-9]*\]\) A::g_points = {"],
         )
         self.expect(
             "target variable g_points",
@@ -77,7 +77,7 @@ class StaticVariableTestCase(TestBase):
             "target variable A::g_points",
             VARIABLES_DISPLAYED_CORRECTLY,
             patterns=[
-                "\(PointType\[[1-9]*\]\) A::g_points = {",
+                r"\(PointType\[[1-9]*\]\) A::g_points = {",
                 "(x = 1, y = 2)",
                 "(x = 11, y = 22)",
             ],

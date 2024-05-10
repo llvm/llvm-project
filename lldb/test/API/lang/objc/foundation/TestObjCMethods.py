@@ -166,7 +166,7 @@ class FoundationTestCase(TestBase):
             "frame variable --show-types --scope",
             VARIABLES_DISPLAYED_CORRECTLY,
             substrs=["ARG: (MyString *) self"],
-            patterns=["ARG: \(.*\) _cmd", "(objc_selector *)|(SEL)"],
+            patterns=[r"ARG: \(.*\) _cmd", "(objc_selector *)|(SEL)"],
         )
 
         # rdar://problem/8651752

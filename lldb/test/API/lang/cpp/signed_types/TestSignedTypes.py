@@ -57,8 +57,8 @@ class SignedTypesTestCase(TestBase):
             "frame variable --show-types --no-args",
             VARIABLES_DISPLAYED_CORRECTLY,
             patterns=[
-                "\((short int|short)\) the_signed_short = 99",
-                "\((signed char|char)\) the_signed_char = 'c'",
+                r"\((short int|short)\) the_signed_short = 99",
+                r"\((signed char|char)\) the_signed_char = 'c'",
             ],
             substrs=[
                 "(int) the_signed_int = 99",
