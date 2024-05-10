@@ -44,9 +44,16 @@ QuantizedType::verify(function_ref<InFlightDiagnostic()> emitError,
   if (integralWidth == 0 || integralWidth > MaxStorageBits)
     return emitError() << "illegal storage type size: " << integralWidth;
 
-  // Verify storageTypeMin and storageTypeMax.
   bool isSigned =
       (flags & QuantizationFlags::Signed) == QuantizationFlags::Signed;
+  // u64 is not yet supproted because its full range cannot be represented
+  // by the type of `storageTypeMax`, making it difficult to verify the
+  // storage type.
+  if (!isSigned && integralWidth == 64)
+    return emitError()
+           << "illegal storage type; u64 storage type is not supported";
+
+  // Verify storageTypeMin and storageTypeMax.
   int64_t defaultIntegerMin =
       getDefaultMinimumForInteger(isSigned, integralWidth);
   int64_t defaultIntegerMax =

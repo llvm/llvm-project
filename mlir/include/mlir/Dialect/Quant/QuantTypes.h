@@ -52,7 +52,8 @@ public:
   using Type::Type;
 
   /// The maximum number of bits supported for storage types.
-  static constexpr unsigned MaxStorageBits = 32;
+  /// NOTE: u64 storage type is not yet supported.
+  static constexpr unsigned MaxStorageBits = 64;
 
   static LogicalResult verify(function_ref<InFlightDiagnostic()> emitError,
                               unsigned flags, Type storageType,

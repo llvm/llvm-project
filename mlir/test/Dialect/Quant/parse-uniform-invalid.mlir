@@ -46,9 +46,9 @@
 !qalias = !quant.uniform<i<-4:3>:f32, 0.99872:127>
 
 // -----
-// Unrecognized storage type: storage size > 32
-// expected-error@+1 {{illegal storage type size: 33}}
-!qalias = !quant.uniform<i33:f32, 0.99872:127>
+// Unrecognized storage type: storage size > 64
+// expected-error@+1 {{illegal storage type size: 65}}
+!qalias = !quant.uniform<i65:f32, 0.99872:127>
 
 // -----
 // Unrecognized storage type: storage size < 0
@@ -59,6 +59,11 @@
 // Unrecognized storage type: storage size
 // expected-error@+1 {{invalid integer width}}
 !qalias = !quant.uniform<i123123123120<-4:3>:f32, 0.99872:127>
+
+// -----
+// Illegal storage type: u64
+// expected-error@+1 {{illegal storage type; u64 storage type is not supported}}
+!qalias = !quant.uniform<u64:f32, 0.99782:127>
 
 // -----
 // Illegal storage min/max: max - min < 0

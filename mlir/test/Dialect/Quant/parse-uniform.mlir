@@ -84,6 +84,15 @@ func.func @parse() -> !qalias {
 }
 
 // -----
+// Storage type: i64
+// CHECK: !quant.uniform<i64:f32, 2.000000e+02>
+!qalias = !quant.uniform<i64:f32, 2.0e+2>
+func.func @parse() -> !qalias {
+  %0 = "foo"() : () -> !qalias
+  return %0 : !qalias
+}
+
+// -----
 // Expressed type: f32
 // CHECK: !quant.uniform<u8:f32, 2.000000e+02>
 !qalias = !quant.uniform<u8:f32, 2.0e+2>

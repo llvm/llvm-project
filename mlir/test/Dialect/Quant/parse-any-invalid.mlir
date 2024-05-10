@@ -26,12 +26,12 @@
 !qalias = !quant.any<i<-4:3>:f32>
 
 // -----
-// Unrecognized storage type: storage size > 32
-// expected-error@+1 {{illegal storage type size: 33}}
-!qalias = !quant.any<i33:f32>
+// Unrecognized storage type: storage size > 64
+// expected-error@+1 {{illegal storage type size: 65}}
+!qalias = !quant.any<i65:f32>
 
 // -----
-// Unrecognized storage type: storage size < 0
+// Unrecognized storage type: storage size > 64
 // expected-error@+1 {{illegal storage type size: 1024}}
 !qalias = !quant.any<i1024<-4:3>:f32>
 
