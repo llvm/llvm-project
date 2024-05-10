@@ -2,6 +2,7 @@
 ! nested derived type member map with the 
 ! inclusion of an entire nested derived 
 ! type being mapped
+! REQUIRES: flang, amdgcn-amd-amdhsa
 ! UNSUPPORTED: nvptx64-nvidia-cuda
 ! UNSUPPORTED: nvptx64-nvidia-cuda-LTO
 ! UNSUPPORTED: aarch64-unknown-linux-gnu
