@@ -838,7 +838,6 @@ public:
                         MCInst *&MemLocInstrOut, unsigned &BaseRegNumOut,
                         unsigned &IndexRegNumOut, int64_t &DispValueOut,
                         const MCExpr *&DispExprOut, MCInst *&PCRelBaseOut,
-                        const MCExpr *&JTBaseDispExprOut, MCInst *&PCRelBaseOut,
                         MCInst *&FixedEntryLoadInstr) const override {
     MemLocInstrOut = nullptr;
     BaseRegNumOut = AArch64::NoRegister;
