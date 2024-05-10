@@ -2343,10 +2343,12 @@ bool DWARFASTParserClang::CompleteTypeFromDWARF(const DWARFDIE &die,
   // clang::ExternalASTSource queries for this type.
   m_ast.SetHasExternalStorage(clang_type.GetOpaqueQualType(), false);
 
+  if (!die)
+    return false;
   ParsedDWARFTypeAttributes attrs(die);
   bool is_forward_declaration = IsForwardDeclaration(
       die, attrs, SymbolFileDWARF::GetLanguage(*die.GetCU()));
-  if (!die || is_forward_declaration)
+  if (is_forward_declaration)
     return false;
 
   const dw_tag_t tag = die.Tag();
