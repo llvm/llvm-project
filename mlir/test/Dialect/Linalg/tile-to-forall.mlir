@@ -130,8 +130,8 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
     %sz = transform.structured.match ops{["test.dummy"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    %1:2 = transform.structured.tile_using_forall %0 tile_sizes *(%sz : !transform.any_op)
-           : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+    %1:2 = transform.structured.tile_using_forall %0 tile_sizes *(%sz)
+           : (!transform.any_op, !transform.any_op) -> (!transform.any_op, !transform.any_op)
     transform.yield
   }
 }
@@ -333,8 +333,8 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
     %sz = transform.structured.match ops{["test.dummy"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    %1:2 = transform.structured.tile_using_forall %0 tile_sizes [%sz : !transform.any_op, 20]
-           : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+    %1:2 = transform.structured.tile_using_forall %0 tile_sizes [%sz, 20]
+           : (!transform.any_op, !transform.any_op) -> (!transform.any_op, !transform.any_op)
     transform.yield
   }
 }
@@ -492,8 +492,8 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
     %sz = transform.param.constant 10 : i64 -> !transform.param<i64>
-    %1:2 = transform.structured.tile_using_forall %0 tile_sizes [%sz : !transform.param<i64>, 20]
-           : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+    %1:2 = transform.structured.tile_using_forall %0 tile_sizes [%sz, 20]
+           : (!transform.any_op, !transform.param<i64>) -> (!transform.any_op, !transform.any_op)
     transform.yield
   }
 }
@@ -513,8 +513,8 @@ module attributes {transform.with_named_sequence} {
     %c20 = transform.param.constant 20 : i64 -> !transform.param<i64>
     %sz = transform.merge_handles %c10, %c20 : !transform.param<i64>
     // expected-error @below {{requires exactly one parameter associated}}
-    %1:2 = transform.structured.tile_using_forall %0 tile_sizes [%sz : !transform.param<i64>, 20]
-           : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+    %1:2 = transform.structured.tile_using_forall %0 tile_sizes [%sz, 20]
+           : (!transform.any_op, !transform.param<i64>) -> (!transform.any_op, !transform.any_op)
     transform.yield
   }
 }
@@ -562,8 +562,8 @@ module attributes {transform.with_named_sequence} {
     %c10 = transform.param.constant 10 : i64 -> !transform.any_param
     %c20 = transform.param.constant 20 : i64 -> !transform.any_param
     %sz = transform.merge_handles %c10, %c20 : !transform.any_param
-    %1:2 = transform.structured.tile_using_forall %0 tile_sizes *(%sz : !transform.any_param)
-           : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+    %1:2 = transform.structured.tile_using_forall %0 tile_sizes *(%sz)
+           : (!transform.any_op, !transform.any_param) -> (!transform.any_op, !transform.any_op)
     transform.yield
   }
 }
@@ -581,8 +581,8 @@ module attributes {transform.with_named_sequence} {
     %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
     %sz = transform.param.constant "[10 : i64, 20 : i64]" -> !transform.any_param
     // expected-error @below {{expected the parameter to be associated with an integer attribute}}
-    %1:2 = transform.structured.tile_using_forall %0 tile_sizes *(%sz : !transform.any_param)
-           : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+    %1:2 = transform.structured.tile_using_forall %0 tile_sizes *(%sz)
+           : (!transform.any_op, !transform.any_param) -> (!transform.any_op, !transform.any_op)
     transform.yield
   }
 }

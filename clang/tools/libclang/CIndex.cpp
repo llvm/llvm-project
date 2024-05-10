@@ -2840,6 +2840,23 @@ void OpenACCClauseEnqueue::VisitCopyOutClause(const OpenACCCopyOutClause &C) {
 void OpenACCClauseEnqueue::VisitCreateClause(const OpenACCCreateClause &C) {
   VisitVarList(C);
 }
+void OpenACCClauseEnqueue::VisitAttachClause(const OpenACCAttachClause &C) {
+  VisitVarList(C);
+}
+void OpenACCClauseEnqueue::VisitDevicePtrClause(
+    const OpenACCDevicePtrClause &C) {
+  VisitVarList(C);
+}
+void OpenACCClauseEnqueue::VisitAsyncClause(const OpenACCAsyncClause &C) {
+  if (C.hasIntExpr())
+    Visitor.AddStmt(C.getIntExpr());
+}
+void OpenACCClauseEnqueue::VisitWaitClause(const OpenACCWaitClause &C) {
+  if (const Expr *DevNumExpr = C.getDevNumExpr())
+    Visitor.AddStmt(DevNumExpr);
+  for (Expr *QE : C.getQueueIdExprs())
+    Visitor.AddStmt(QE);
+}
 } // namespace
 
 void EnqueueVisitor::EnqueueChildren(const OpenACCClause *C) {
