@@ -344,3 +344,17 @@ namespace cxx_member_operator_call {
     // expected-warning@-1{{Call argument for parameter 'bad' is uncounted and unsafe}}
   }
 }
+
+namespace call_with_ptr_on_ref {
+  Ref<RefCountable> provideProtected();
+  void bar(RefCountable* bad);
+  bool baz();
+  void foo(bool v) {
+    bar(v ? nullptr : provideProtected().ptr());
+    bar(baz() ? provideProtected().ptr() : nullptr);
+    bar(v ? provide() : provideProtected().ptr());
+    // expected-warning@-1{{Call argument for parameter 'bad' is uncounted and unsafe}}
+    bar(v ? provideProtected().ptr() : provide());
+    // expected-warning@-1{{Call argument for parameter 'bad' is uncounted and unsafe}}
+  }
+}

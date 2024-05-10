@@ -188,38 +188,49 @@ public:
       if (!InitExpr)
         return; // FIXME: later on we might warn on uninitialized vars too
 
-      const clang::Expr *const InitArgOrigin =
-          tryToFindPtrOrigin(InitExpr, /*StopAtFirstRefCountedObj=*/false)
-              .first;
-      if (!InitArgOrigin)
+      if (tryToFindPtrOrigin(
+              InitExpr, /*StopAtFirstRefCountedObj=*/false,
+              [&](const clang::Expr *InitArgOrigin, bool IsSafe) {
+                if (!InitArgOrigin)
+                  return true;
+
+                if (isa<CXXThisExpr>(InitArgOrigin))
+                  return true;
+
+                if (isa<CXXNullPtrLiteralExpr>(InitArgOrigin))
+                  return true;
+
+                if (isa<IntegerLiteral>(InitArgOrigin))
+                  return true;
+
+                if (auto *Ref = llvm::dyn_cast<DeclRefExpr>(InitArgOrigin)) {
+                  if (auto *MaybeGuardian =
+                          dyn_cast_or_null<VarDecl>(Ref->getFoundDecl())) {
+                    const auto *MaybeGuardianArgType =
+                        MaybeGuardian->getType().getTypePtr();
+                    if (MaybeGuardianArgType) {
+                      const CXXRecordDecl *const MaybeGuardianArgCXXRecord =
+                          MaybeGuardianArgType->getAsCXXRecordDecl();
+                      if (MaybeGuardianArgCXXRecord) {
+                        if (MaybeGuardian->isLocalVarDecl() &&
+                            (isRefCounted(MaybeGuardianArgCXXRecord) ||
+                             isRefcountedStringsHack(MaybeGuardian)) &&
+                            isGuardedScopeEmbeddedInGuardianScope(
+                                V, MaybeGuardian))
+                          return true;
+                      }
+                    }
+
+                    // Parameters are guaranteed to be safe for the duration of
+                    // the call by another checker.
+                    if (isa<ParmVarDecl>(MaybeGuardian))
+                      return true;
+                  }
+                }
+
+                return false;
+              }))
         return;
-
-      if (isa<CXXThisExpr>(InitArgOrigin))
-        return;
-
-      if (auto *Ref = llvm::dyn_cast<DeclRefExpr>(InitArgOrigin)) {
-        if (auto *MaybeGuardian =
-                dyn_cast_or_null<VarDecl>(Ref->getFoundDecl())) {
-          const auto *MaybeGuardianArgType =
-              MaybeGuardian->getType().getTypePtr();
-          if (MaybeGuardianArgType) {
-            const CXXRecordDecl *const MaybeGuardianArgCXXRecord =
-                MaybeGuardianArgType->getAsCXXRecordDecl();
-            if (MaybeGuardianArgCXXRecord) {
-              if (MaybeGuardian->isLocalVarDecl() &&
-                  (isRefCounted(MaybeGuardianArgCXXRecord) ||
-                   isRefcountedStringsHack(MaybeGuardian)) &&
-                  isGuardedScopeEmbeddedInGuardianScope(V, MaybeGuardian))
-                return;
-            }
-          }
-
-          // Parameters are guaranteed to be safe for the duration of the call
-          // by another checker.
-          if (isa<ParmVarDecl>(MaybeGuardian))
-            return;
-        }
-      }
 
       reportBug(V);
     }
