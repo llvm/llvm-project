@@ -3738,11 +3738,6 @@ static bool scaleShuffleElements(ArrayRef<int> Mask, unsigned NumDstElts,
   return false;
 }
 
-static bool canScaleShuffleElements(ArrayRef<int> Mask, unsigned NumDstElts) {
-  SmallVector<int, 32> ScaledMask;
-  return scaleShuffleElements(Mask, NumDstElts, ScaledMask);
-}
-
 /// Returns true if Elt is a constant zero or a floating point constant +0.0.
 bool X86::isZeroNode(SDValue Elt) {
   return isNullConstant(Elt) || isNullFPConstant(Elt);
@@ -40083,10 +40078,10 @@ static SDValue combineCommutableSHUFP(SDValue N, MVT VT, const SDLoc &DL,
 
 // Attempt to fold BLEND(PERMUTE(X),PERMUTE(Y)) -> PERMUTE(BLEND(X,Y))
 // iff we don't demand the same element index for both X and Y.
-static SDValue
-combineBlendOfPermutes(MVT VT, SDValue N0, SDValue N1, ArrayRef<int> BlendMask,
-                       const APInt &DemandedElts, SelectionDAG &DAG,
-                       const X86Subtarget &Subtarget, const SDLoc &DL) {
+static SDValue combineBlendOfPermutes(MVT VT, SDValue N0, SDValue N1,
+                                      ArrayRef<int> BlendMask,
+                                      const APInt &DemandedElts,
+                                      SelectionDAG &DAG, const SDLoc &DL) {
   assert(isBlendOrUndef(BlendMask) && "Blend shuffle expected");
   if (!N0.hasOneUse() || !N1.hasOneUse())
     return SDValue();
@@ -40160,14 +40155,6 @@ combineBlendOfPermutes(MVT VT, SDValue N0, SDValue N1, ArrayRef<int> BlendMask,
     if (!canWidenShuffleElements(NewPermuteMask))
       return SDValue();
   }
-
-  // Don't introduce lane-crossing permutes without AVX2, unless it can be
-  // widened to a lane permute (vperm2f128).
-  if (VT.is256BitVector() && !Subtarget.hasAVX2() &&
-      isLaneCrossingShuffleMask(128, VT.getScalarSizeInBits(),
-                                NewPermuteMask) &&
-      !canScaleShuffleElements(NewPermuteMask, 2))
-    return SDValue();
 
   SDValue NewBlend =
       DAG.getVectorShuffle(VT, DL, DAG.getBitcast(VT, Ops0[0]),
@@ -41931,9 +41918,9 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
   case X86ISD::BLENDI: {
     SmallVector<int, 16> BlendMask;
     DecodeBLENDMask(NumElts, Op.getConstantOperandVal(2), BlendMask);
-    if (SDValue R = combineBlendOfPermutes(
-            VT.getSimpleVT(), Op.getOperand(0), Op.getOperand(1), BlendMask,
-            DemandedElts, TLO.DAG, Subtarget, SDLoc(Op)))
+    if (SDValue R = combineBlendOfPermutes(VT.getSimpleVT(), Op.getOperand(0),
+                                           Op.getOperand(1), BlendMask,
+                                           DemandedElts, TLO.DAG, SDLoc(Op)))
       return TLO.CombineTo(Op, R);
     break;
   }
@@ -46692,14 +46679,14 @@ static SDValue combineSetCCMOVMSK(SDValue EFLAGS, X86::CondCode &CC,
   // To address this, we check that we can scale the shuffle mask to MOVMSK
   // element width (this will ensure "high" elements match). Its slightly overly
   // conservative, but fine for an edge case fold.
-  SmallVector<int, 32> ShuffleMask;
+  SmallVector<int, 32> ShuffleMask, ScaledMaskUnused;
   SmallVector<SDValue, 2> ShuffleInputs;
   if (NumElts <= CmpBits &&
       getTargetShuffleInputs(peekThroughBitcasts(Vec), ShuffleInputs,
                              ShuffleMask, DAG) &&
       ShuffleInputs.size() == 1 && isCompletePermute(ShuffleMask) &&
       ShuffleInputs[0].getValueSizeInBits() == VecVT.getSizeInBits() &&
-      canScaleShuffleElements(ShuffleMask, NumElts)) {
+      scaleShuffleElements(ShuffleMask, NumElts, ScaledMaskUnused)) {
     SDLoc DL(EFLAGS);
     SDValue Result = DAG.getBitcast(VecVT, ShuffleInputs[0]);
     Result = DAG.getNode(X86ISD::MOVMSK, DL, MVT::i32, Result);

@@ -1,3 +1,4 @@
+// FIXME: Actually, "perl".
 REQUIRES: shell
 
 RUN: rm -rf %t.output_dir && mkdir %t.output_dir

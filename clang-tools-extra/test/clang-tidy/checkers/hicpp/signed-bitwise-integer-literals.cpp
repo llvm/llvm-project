@@ -11,7 +11,6 @@ void examples() {
   // CHECK-MESSAGES: :[[@LINE-1]]:19: warning: use of a signed integer operand with a binary bitwise operator
 
   unsigned URes2 = URes << 1; //Ok
-  unsigned URes3 = URes & 1; //Ok
 
   int IResult;
   IResult = 10 & 2; //Ok
@@ -22,8 +21,6 @@ void examples() {
   IResult = Int << 1;
   // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: use of a signed integer operand with a binary bitwise operator
   IResult = ~0; //Ok
-  IResult = -1 & 1;
-  // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: use of a signed integer operand with a binary bitwise operator [hicpp-signed-bitwise]
 }
 
 enum EnumConstruction {

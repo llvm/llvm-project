@@ -200,24 +200,18 @@ inline int64_t decodeSLEB128(const uint8_t *p, unsigned *n = nullptr,
   return Value;
 }
 
-inline uint64_t decodeULEB128AndInc(const uint8_t *&p, const uint8_t *end,
-                                    const char **error = nullptr) {
+inline uint64_t decodeULEB128AndInc(const uint8_t *&p) {
   unsigned n;
-  auto ret = decodeULEB128(p, &n, end, error);
+  auto ret = decodeULEB128(p, &n);
   p += n;
   return ret;
 }
 
-inline int64_t decodeSLEB128AndInc(const uint8_t *&p, const uint8_t *end,
-                                   const char **error = nullptr) {
+inline int64_t decodeSLEB128AndInc(const uint8_t *&p) {
   unsigned n;
-  auto ret = decodeSLEB128(p, &n, end, error);
+  auto ret = decodeSLEB128(p, &n);
   p += n;
   return ret;
-}
-
-inline uint64_t decodeULEB128AndIncUnsafe(const uint8_t *&p) {
-  return decodeULEB128AndInc(p, nullptr);
 }
 
 /// Utility function to get the size of the ULEB128-encoded value.

@@ -2851,7 +2851,7 @@ bool IRTranslator::translateInvoke(const User &U,
     return false;
 
   // FIXME: support whatever these are.
-  if (I.hasDeoptState())
+  if (I.countOperandBundlesOfType(LLVMContext::OB_deopt))
     return false;
 
   // FIXME: support control flow guard targets.

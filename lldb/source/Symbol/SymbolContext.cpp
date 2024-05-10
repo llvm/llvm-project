@@ -73,7 +73,6 @@ bool SymbolContext::DumpStopContext(
     Stream *s, ExecutionContextScope *exe_scope, const Address &addr,
     bool show_fullpaths, bool show_module, bool show_inlined_frames,
     bool show_function_arguments, bool show_function_name,
-    bool show_function_display_name,
     std::optional<Stream::HighlightSettings> settings) const {
   bool dumped_something = false;
   if (show_module && module_sp) {
@@ -94,8 +93,6 @@ bool SymbolContext::DumpStopContext(
       ConstString name;
       if (!show_function_arguments)
         name = function->GetNameNoArguments();
-      if (!name && show_function_display_name)
-        name = function->GetDisplayName();
       if (!name)
         name = function->GetName();
       if (name)
@@ -149,8 +146,7 @@ bool SymbolContext::DumpStopContext(
         const bool show_function_name = true;
         return inline_parent_sc.DumpStopContext(
             s, exe_scope, inline_parent_addr, show_fullpaths, show_module,
-            show_inlined_frames, show_function_arguments, show_function_name,
-            show_function_display_name);
+            show_inlined_frames, show_function_arguments, show_function_name);
       }
     } else {
       if (line_entry.IsValid()) {
@@ -168,12 +164,7 @@ bool SymbolContext::DumpStopContext(
       dumped_something = true;
       if (symbol->GetType() == eSymbolTypeTrampoline)
         s->PutCString("symbol stub for: ");
-      ConstString name;
-      if (show_function_display_name)
-        name = symbol->GetDisplayName();
-      if (!name)
-        name = symbol->GetName();
-      s->PutCStringColorHighlighted(name.GetStringRef(), settings);
+      s->PutCStringColorHighlighted(symbol->GetName().GetStringRef(), settings);
     }
 
     if (addr.IsValid() && symbol->ValueIsAddress()) {

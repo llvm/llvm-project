@@ -500,6 +500,24 @@ RISCVISAInfo::parseNormalizedArchString(StringRef Arch) {
   return std::move(ISAInfo);
 }
 
+static Error splitExtsByUnderscore(StringRef Exts,
+                                   std::vector<std::string> &SplitExts) {
+  SmallVector<StringRef, 8> Split;
+  if (Exts.empty())
+    return Error::success();
+
+  Exts.split(Split, "_");
+
+  for (auto Ext : Split) {
+    if (Ext.empty())
+      return createStringError(errc::invalid_argument,
+                               "extension name missing after separator '_'");
+
+    SplitExts.push_back(Ext.str());
+  }
+  return Error::success();
+}
+
 static Error processMultiLetterExtension(
     StringRef RawExt,
     MapVector<std::string, RISCVISAUtils::ExtensionVersion,
@@ -696,25 +714,20 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
   Exts = Exts.drop_front(ConsumeLength);
   Exts.consume_front("_");
 
-  SmallVector<StringRef, 8> SplitExts;
-  // Only split if the string is not empty. Otherwise the split will push an
-  // empty string into the vector.
-  if (!Exts.empty())
-    Exts.split(SplitExts, '_');
+  std::vector<std::string> SplitExts;
+  if (auto E = splitExtsByUnderscore(Exts, SplitExts))
+    return std::move(E);
 
-  for (auto Ext : SplitExts) {
-    if (Ext.empty())
-      return createStringError(errc::invalid_argument,
-                               "extension name missing after separator '_'");
-
-    do {
-      if (RISCVISAUtils::AllStdExts.contains(Ext.front())) {
+  for (auto &Ext : SplitExts) {
+    StringRef CurrExt = Ext;
+    while (!CurrExt.empty()) {
+      if (RISCVISAUtils::AllStdExts.contains(CurrExt.front())) {
         if (auto E = processSingleLetterExtension(
-                Ext, SeenExtMap, IgnoreUnknown, EnableExperimentalExtension,
+                CurrExt, SeenExtMap, IgnoreUnknown, EnableExperimentalExtension,
                 ExperimentalExtensionVersionCheck))
           return std::move(E);
-      } else if (Ext.front() == 'z' || Ext.front() == 's' ||
-                 Ext.front() == 'x') {
+      } else if (CurrExt.front() == 'z' || CurrExt.front() == 's' ||
+                 CurrExt.front() == 'x') {
         // Handle other types of extensions other than the standard
         // general purpose and standard user-level extensions.
         // Parse the ISA string containing non-standard user-level
@@ -724,7 +737,7 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
         // version number (major, minor) and are separated by a single
         // underscore '_'. We do not enforce a canonical order for them.
         if (auto E = processMultiLetterExtension(
-                Ext, SeenExtMap, IgnoreUnknown, EnableExperimentalExtension,
+                CurrExt, SeenExtMap, IgnoreUnknown, EnableExperimentalExtension,
                 ExperimentalExtensionVersionCheck))
           return std::move(E);
         // Multi-letter extension must be seperate following extension with
@@ -734,9 +747,9 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
         // FIXME: Could it be ignored by IgnoreUnknown?
         return createStringError(errc::invalid_argument,
                                  "invalid standard user-level extension '" +
-                                     Twine(Ext.front()) + "'");
+                                     Twine(CurrExt.front()) + "'");
       }
-    } while (!Ext.empty());
+    }
   }
 
   // Check all Extensions are supported.

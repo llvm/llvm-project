@@ -822,7 +822,8 @@ PrintIRInstrumentation::PassRunDescriptor
 PrintIRInstrumentation::popPassRunDescriptor(StringRef PassID) {
   assert(!PassRunDescriptorStack.empty() && "empty PassRunDescriptorStack");
   PassRunDescriptor Descriptor = PassRunDescriptorStack.pop_back_val();
-  assert(Descriptor.PassID == PassID && "malformed PassRunDescriptorStack");
+  assert(Descriptor.PassID.equals(PassID) &&
+         "malformed PassRunDescriptorStack");
   return Descriptor;
 }
 

@@ -34,7 +34,6 @@ public:
 };
 
 void createShaderModelMD(Module &M);
-void createDXILVersionMD(Module &M);
 void createEntryMD(Module &M, const uint64_t ShaderFlags);
 
 } // namespace dxil

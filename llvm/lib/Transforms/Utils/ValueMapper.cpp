@@ -538,20 +538,17 @@ Value *Mapper::mapValue(const Value *V) {
 }
 
 void Mapper::remapDbgRecord(DbgRecord &DR) {
-  // Remap DILocations.
-  auto *MappedDILoc = mapMetadata(DR.getDebugLoc());
-  DR.setDebugLoc(DebugLoc(cast<DILocation>(MappedDILoc)));
-
   if (DbgLabelRecord *DLR = dyn_cast<DbgLabelRecord>(&DR)) {
-    // Remap labels.
     DLR->setLabel(cast<DILabel>(mapMetadata(DLR->getLabel())));
     return;
   }
 
   DbgVariableRecord &V = cast<DbgVariableRecord>(DR);
-  // Remap variables.
+  // Remap variables and DILocations.
   auto *MappedVar = mapMetadata(V.getVariable());
+  auto *MappedDILoc = mapMetadata(V.getDebugLoc());
   V.setVariable(cast<DILocalVariable>(MappedVar));
+  V.setDebugLoc(DebugLoc(cast<DILocation>(MappedDILoc)));
 
   bool IgnoreMissingLocals = Flags & RF_IgnoreMissingLocals;
 
@@ -1236,14 +1233,14 @@ void ValueMapper::remapInstruction(Instruction &I) {
   FlushingMapper(pImpl)->remapInstruction(&I);
 }
 
-void ValueMapper::remapDbgRecord(Module *M, DbgRecord &DR) {
-  FlushingMapper(pImpl)->remapDbgRecord(DR);
+void ValueMapper::remapDbgVariableRecord(Module *M, DbgVariableRecord &V) {
+  FlushingMapper(pImpl)->remapDbgRecord(V);
 }
 
-void ValueMapper::remapDbgRecordRange(
+void ValueMapper::remapDbgVariableRecordRange(
     Module *M, iterator_range<DbgRecord::self_iterator> Range) {
-  for (DbgRecord &DR : Range) {
-    remapDbgRecord(M, DR);
+  for (DbgVariableRecord &DVR : filterDbgVars(Range)) {
+    remapDbgVariableRecord(M, DVR);
   }
 }
 

@@ -281,10 +281,6 @@ public:
     return mangled.GetMangledName();
   }
 
-  virtual ConstString GetDisplayDemangledName(Mangled mangled) const {
-    return mangled.GetDemangledName();
-  }
-
   virtual void GetExceptionResolverDescription(bool catch_on, bool throw_on,
                                                Stream &s);
 

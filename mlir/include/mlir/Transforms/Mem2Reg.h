@@ -28,7 +28,6 @@ struct Mem2RegStatistics {
 LogicalResult
 tryToPromoteMemorySlots(ArrayRef<PromotableAllocationOpInterface> allocators,
                         OpBuilder &builder, const DataLayout &dataLayout,
-                        DominanceInfo &dominance,
                         Mem2RegStatistics statistics = {});
 
 } // namespace mlir

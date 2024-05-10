@@ -59,6 +59,10 @@ void StaticAccessedThroughInstanceCheck::check(
 
   const Expr *BaseExpr = MemberExpression->getBase();
 
+  // Do not warn for overloaded -> operators.
+  if (isa<CXXOperatorCallExpr>(BaseExpr))
+    return;
+
   const QualType BaseType =
       BaseExpr->getType()->isPointerType()
           ? BaseExpr->getType()->getPointeeType().getUnqualifiedType()
@@ -85,30 +89,17 @@ void StaticAccessedThroughInstanceCheck::check(
     return;
 
   SourceLocation MemberExprStartLoc = MemberExpression->getBeginLoc();
-  auto CreateFix = [&] {
-    return FixItHint::CreateReplacement(
-        CharSourceRange::getCharRange(MemberExprStartLoc,
-                                      MemberExpression->getMemberLoc()),
-        BaseTypeName + "::");
-  };
+  auto Diag =
+      diag(MemberExprStartLoc, "static member accessed through instance");
 
-  {
-    auto Diag =
-        diag(MemberExprStartLoc, "static member accessed through instance");
+  if (BaseExpr->HasSideEffects(*AstContext) ||
+      getNameSpecifierNestingLevel(BaseType) > NameSpecifierNestingThreshold)
+    return;
 
-    if (getNameSpecifierNestingLevel(BaseType) > NameSpecifierNestingThreshold)
-      return;
-
-    if (!BaseExpr->HasSideEffects(*AstContext,
-                                  /* IncludePossibleEffects =*/true)) {
-      Diag << CreateFix();
-      return;
-    }
-  }
-
-  diag(MemberExprStartLoc, "member base expression may carry some side effects",
-       DiagnosticIDs::Level::Note)
-      << BaseExpr->getSourceRange() << CreateFix();
+  Diag << FixItHint::CreateReplacement(
+      CharSourceRange::getCharRange(MemberExprStartLoc,
+                                    MemberExpression->getMemberLoc()),
+      BaseTypeName + "::");
 }
 
 } // namespace clang::tidy::readability
