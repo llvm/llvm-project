@@ -77,7 +77,7 @@ constexpr void test(const CharT* x, const CharT* y, const CharT* expected) {
     std::same_as<std::basic_string<CharT, TraitsT, AllocT>> decltype(auto) result = std::move(st) + sv;
     assert(result == expected);
     assert(result.get_allocator() == allocator);
-    LIBCPP_ASSERT(is_string_asan_correct(st + sv));
+    LIBCPP_ASSERT(is_string_asan_correct(std::move(st) + sv));
   }
   // string_view + string&
   {
@@ -108,7 +108,7 @@ constexpr void test(const CharT* x, const CharT* y, const CharT* expected) {
     std::same_as<std::basic_string<CharT, TraitsT, AllocT>> decltype(auto) result = sv + std::move(st);
     assert(result == expected);
     assert(result.get_allocator() == allocator);
-    LIBCPP_ASSERT(is_string_asan_correct(sv + st));
+    LIBCPP_ASSERT(is_string_asan_correct(sv + std::move(st)));
   }
 }
 
