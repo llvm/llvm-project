@@ -127,7 +127,7 @@ createMapInfoOp(fir::FirOpBuilder &builder, mlir::Location loc,
                 mlir::DenseIntElementsAttr membersIndex, uint64_t mapType,
                 mlir::omp::VariableCaptureKind mapCaptureType, mlir::Type retTy,
                 bool partialMap) {
-  if (auto boxTy = baseAddr.getType().dyn_cast<fir::BaseBoxType>()) {
+  if (auto boxTy = llvm::dyn_cast<fir::BaseBoxType>(baseAddr.getType())) {
     baseAddr = builder.create<fir::BoxAddrOp>(loc, baseAddr);
     retTy = baseAddr.getType();
   }
