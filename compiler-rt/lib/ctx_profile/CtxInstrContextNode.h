@@ -55,8 +55,8 @@
 /// to be concerned with memory safety. Their subcontexts never get populated,
 /// though. The runtime code here produces and recognizes them.
 
-#ifndef LLVM_LIB_PROFILEDATA_CTXINSTRCONTEXTNODE_H
-#define LLVM_LIB_PROFILEDATA_CTXINSTRCONTEXTNODE_H
+#ifndef LLVM_PROFILEDATA_CTXINSTRCONTEXTNODE_H
+#define LLVM_PROFILEDATA_CTXINSTRCONTEXTNODE_H
 
 #include <stdint.h>
 #include <stdlib.h>
