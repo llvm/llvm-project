@@ -2448,9 +2448,29 @@ multiclass sme2_multi_vec_array_vg2_index_32b<string mnemonic, bits<2> sz, bits<
 }
 
 // SME2.1 multi-vec ternary indexed two registers 16-bit
-// SME2 multi-vec indexed FP8 two-way dot product to FP16 two registers
 multiclass sme2p1_multi_vec_array_vg2_index_16b<string mnemonic, bits<2> sz, bits<3> op,
-                                                RegisterOperand multi_vector_ty, ZPRRegOp zpr_ty> {
+                                                RegisterOperand multi_vector_ty, ZPRRegOp vector_ty,
+                                                ValueType vt, SDPatternOperator intrinsic> {
+  def NAME : sme2_multi_vec_array_vg2_index<sz, {op{2},?,?,op{1-0},?}, MatrixOp16,
+                                            multi_vector_ty, vector_ty,
+                                            VectorIndexH, mnemonic>, SMEPseudo2Instr<NAME, 1> {
+    bits<3> i;
+    let Inst{11-10} = i{2-1};
+    let Inst{3}     = i{0};
+  }
+
+  def _PSEUDO : sme2_za_array_2op_multi_index_pseudo<NAME, sme_elm_idx0_7, multi_vector_ty, vector_ty, VectorIndexH32b, SMEMatrixArray>;
+
+  def : SME2_ZA_TwoOp_VG2_Multi_Index_Pat<NAME, intrinsic, sme_elm_idx0_7, vector_ty, vt, VectorIndexH32b_timm, tileslice16>;
+
+  def : InstAlias<mnemonic # "\t$ZAda[$Rv, $imm3], $Zn, $Zm$i",
+        (!cast<Instruction>(NAME) MatrixOp16:$ZAda,  MatrixIndexGPR32Op8_11:$Rv, sme_elm_idx0_7:$imm3,
+        multi_vector_ty:$Zn, vector_ty:$Zm, VectorIndexH:$i), 0>;
+}
+
+// SME2 multi-vec indexed FP8 two-way dot product to FP16 two registers
+multiclass sme2p1_multi_vec_array_vg2_index_f8f16<string mnemonic, bits<2> sz, bits<3> op,
+                                                  RegisterOperand multi_vector_ty, ZPRRegOp zpr_ty> {
   def NAME : sme2_multi_vec_array_vg2_index<sz, {op{2},?,?,op{1-0},?}, MatrixOp16,
                                             multi_vector_ty, zpr_ty,
                                             VectorIndexH, mnemonic> {
@@ -2569,10 +2589,10 @@ multiclass sme2_multi_vec_array_vg4_index_32b<string mnemonic, bits<4> op,
         multi_vector_ty:$Zn, vector_ty:$Zm, VectorIndexS32b_timm:$i), 0>;
 }
 
-// SME2.1 multi-vec ternary indexed four registers 16-bit
-multiclass sme2p1_multi_vec_array_vg4_index_16b<string mnemonic, bits<3> op,
-                                                RegisterOperand multi_vector_ty,
-                                                ZPRRegOp zpr_ty> {
+// SME2.1 multi-vec ternary indexed four registers 16-bit (FP8)
+multiclass sme2p1_multi_vec_array_vg4_index_f8f16<string mnemonic, bits<3> op,
+                                                  RegisterOperand multi_vector_ty,
+                                                  ZPRRegOp zpr_ty> {
   def NAME : sme2_multi_vec_array_vg4_index<0b0,{0b1,?,?,op,?}, MatrixOp16,
                                             multi_vector_ty, zpr_ty,
                                             VectorIndexH, mnemonic>{
@@ -2584,6 +2604,28 @@ multiclass sme2p1_multi_vec_array_vg4_index_16b<string mnemonic, bits<3> op,
   def : InstAlias<mnemonic # "\t$ZAda[$Rv, $imm3], $Zn, $Zm$i",
         (!cast<Instruction>(NAME) MatrixOp16:$ZAda,  MatrixIndexGPR32Op8_11:$Rv,
         sme_elm_idx0_7:$imm3, multi_vector_ty:$Zn, zpr_ty:$Zm, VectorIndexH:$i), 0>;
+}
+
+// SME2.1 multi-vec ternary indexed four registers 16-bit
+multiclass sme2p1_multi_vec_array_vg4_index_16b<string mnemonic, bits<3> op,
+                                                RegisterOperand multi_vector_ty,
+                                                ZPRRegOp vector_ty, ValueType vt,
+                                                SDPatternOperator intrinsic> {
+  def NAME : sme2_multi_vec_array_vg4_index<0b0,{0b1,?,?,op,?}, MatrixOp16,
+                                            multi_vector_ty, vector_ty,
+                                            VectorIndexH, mnemonic>, SMEPseudo2Instr<NAME, 1> {
+    bits<3> i;
+    let Inst{11-10} = i{2-1};
+    let Inst{3}     = i{0};
+  }
+
+  def _PSEUDO : sme2_za_array_2op_multi_index_pseudo<NAME, sme_elm_idx0_7, multi_vector_ty, vector_ty, VectorIndexH32b_timm, SMEMatrixArray>;
+
+  def : SME2_ZA_TwoOp_VG4_Multi_Index_Pat<NAME, intrinsic, sme_elm_idx0_7, vector_ty, vt, VectorIndexH32b_timm, tileslice16>;
+
+  def : InstAlias<mnemonic # "\t$ZAda[$Rv, $imm3], $Zn, $Zm$i",
+        (!cast<Instruction>(NAME) MatrixOp16:$ZAda,  MatrixIndexGPR32Op8_11:$Rv,
+        sme_elm_idx0_7:$imm3, multi_vector_ty:$Zn, vector_ty:$Zm, VectorIndexH:$i), 0>;
 }
 
 // SME2 multi-vec ternary indexed four registers 64-bit
