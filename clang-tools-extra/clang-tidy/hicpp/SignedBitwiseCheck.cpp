@@ -9,7 +9,6 @@
 #include "SignedBitwiseCheck.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
-#include "clang/ASTMatchers/ASTMatchers.h"
 
 using namespace clang::ast_matchers;
 using namespace clang::ast_matchers::internal;
@@ -30,8 +29,8 @@ void SignedBitwiseCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 void SignedBitwiseCheck::registerMatchers(MatchFinder *Finder) {
   const auto SignedIntegerOperand =
       (IgnorePositiveIntegerLiterals
-           ? expr(ignoringImpCasts(
-                 allOf(hasType(isSignedInteger()), unless(integerLiteral()))))
+           ? expr(ignoringImpCasts(hasType(isSignedInteger())),
+                  unless(integerLiteral()))
            : expr(ignoringImpCasts(hasType(isSignedInteger()))))
           .bind("signed-operand");
 

@@ -20,7 +20,7 @@ typedef enum memory_order {
   memory_order_seq_cst = __ATOMIC_SEQ_CST
 } memory_order;
 
-class RawObj {
+class Obj {
   int RefCnt;
 
 public:
@@ -37,27 +37,11 @@ public:
   void foo();
 };
 
-class StdAtomicObj {
-  std::atomic<int> RefCnt;
-
-public:
-  int incRef() {
-    return ++RefCnt;
-  }
-
-  int decRef() {
-    return --RefCnt;
-  }
-
-  void foo();
-};
-
-template <typename T>
 class IntrusivePtr {
-  T *Ptr;
+  Obj *Ptr;
 
 public:
-  IntrusivePtr(T *Ptr) : Ptr(Ptr) {
+  IntrusivePtr(Obj *Ptr) : Ptr(Ptr) {
     Ptr->incRef();
   }
 
@@ -71,106 +55,22 @@ public:
       delete Ptr;
   }
 
-  T *getPtr() const { return Ptr; } // no-warning
-};
-
-// Also IntrusivePtr but let's dodge name-based heuristics.
-template <typename T>
-class DifferentlyNamed {
-  T *Ptr;
-
-public:
-  DifferentlyNamed(T *Ptr) : Ptr(Ptr) {
-    Ptr->incRef();
-  }
-
-  DifferentlyNamed(const DifferentlyNamed &Other) : Ptr(Other.Ptr) {
-    Ptr->incRef();
-  }
-
-  ~DifferentlyNamed() {
-  // We should not take the path on which the object is deleted.
-    if (Ptr->decRef() == 1)
-      delete Ptr;
-  }
-
-  T *getPtr() const { return Ptr; } // no-warning
+  Obj *getPtr() const { return Ptr; } // no-warning
 };
 
 void testDestroyLocalRefPtr() {
-  IntrusivePtr<RawObj> p1(new RawObj());
+  IntrusivePtr p1(new Obj());
   {
-    IntrusivePtr<RawObj> p2(p1);
+    IntrusivePtr p2(p1);
   }
 
   // p1 still maintains ownership. The object is not deleted.
   p1.getPtr()->foo(); // no-warning
 }
 
-void testDestroySymbolicRefPtr(const IntrusivePtr<RawObj> &p1) {
+void testDestroySymbolicRefPtr(const IntrusivePtr &p1) {
   {
-    IntrusivePtr<RawObj> p2(p1);
-  }
-
-  // p1 still maintains ownership. The object is not deleted.
-  p1.getPtr()->foo(); // no-warning
-}
-
-void testDestroyLocalRefPtrWithAtomics() {
-  IntrusivePtr<StdAtomicObj> p1(new StdAtomicObj());
-  {
-    IntrusivePtr<StdAtomicObj> p2(p1);
-  }
-
-  // p1 still maintains ownership. The object is not deleted.
-  p1.getPtr()->foo(); // no-warning
-}
-
-
-void testDestroyLocalRefPtrWithAtomics(const IntrusivePtr<StdAtomicObj> &p1) {
-  {
-    IntrusivePtr<StdAtomicObj> p2(p1);
-  }
-
-  // p1 still maintains ownership. The object is not deleted.
-  p1.getPtr()->foo(); // no-warning
-}
-
-void testDestroyLocalRefPtrDifferentlyNamed() {
-  DifferentlyNamed<RawObj> p1(new RawObj());
-  {
-    DifferentlyNamed<RawObj> p2(p1);
-  }
-
-  // p1 still maintains ownership. The object is not deleted.
-  p1.getPtr()->foo(); // no-warning
-}
-
-void testDestroySymbolicRefPtrDifferentlyNamed(
-    const DifferentlyNamed<RawObj> &p1) {
-  {
-    DifferentlyNamed<RawObj> p2(p1);
-  }
-
-  // p1 still maintains ownership. The object is not deleted.
-  p1.getPtr()->foo(); // no-warning
-}
-
-void testDestroyLocalRefPtrWithAtomicsDifferentlyNamed() {
-  DifferentlyNamed<StdAtomicObj> p1(new StdAtomicObj());
-  {
-    DifferentlyNamed<StdAtomicObj> p2(p1);
-  }
-
-  // p1 still maintains ownership. The object is not deleted.
-  p1.getPtr()->foo(); // no-warning
-}
-
-
-void testDestroyLocalRefPtrWithAtomicsDifferentlyNamed(
-    const DifferentlyNamed<StdAtomicObj> &p1) {
-  {
-    DifferentlyNamed<StdAtomicObj> p2(p1);
+    IntrusivePtr p2(p1);
   }
 
   // p1 still maintains ownership. The object is not deleted.

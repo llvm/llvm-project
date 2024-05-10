@@ -20,11 +20,7 @@ void mlir::transform::printPackedOrDynamicIndexList(
   if (packed) {
     assert(values.empty() && (!integers || integers.empty()) &&
            "expected no values/integers");
-    printer << "*(" << packed;
-    if (packedType) {
-      printer << " : " << packedType;
-    }
-    printer << ")";
+    printer << "*(" << packed << " : " << packedType << ")";
     return;
   }
   printDynamicIndexList(printer, op, values, integers, valueTypes);
@@ -33,20 +29,19 @@ void mlir::transform::printPackedOrDynamicIndexList(
 ParseResult mlir::transform::parsePackedOrDynamicIndexList(
     OpAsmParser &parser, std::optional<OpAsmParser::UnresolvedOperand> &packed,
     Type &packedType, SmallVectorImpl<OpAsmParser::UnresolvedOperand> &values,
-    SmallVectorImpl<Type> *valueTypes, DenseI64ArrayAttr &integers) {
+    SmallVectorImpl<Type> &valueTypes, DenseI64ArrayAttr &integers) {
   OpAsmParser::UnresolvedOperand packedOperand;
   if (parser.parseOptionalStar().succeeded()) {
     if (parser.parseLParen().failed() ||
-        parser.parseOperand(packedOperand).failed())
+        parser.parseOperand(packedOperand).failed() ||
+        parser.parseColonType(packedType).failed() ||
+        parser.parseRParen().failed()) {
       return failure();
-    if (packedType && (parser.parseColonType(packedType).failed()))
-      return failure();
-    if (parser.parseRParen().failed())
-      return failure();
+    }
     packed.emplace(packedOperand);
     integers = parser.getBuilder().getDenseI64ArrayAttr({});
     return success();
   }
 
-  return parseDynamicIndexList(parser, values, integers, valueTypes);
+  return parseDynamicIndexList(parser, values, integers, &valueTypes);
 }

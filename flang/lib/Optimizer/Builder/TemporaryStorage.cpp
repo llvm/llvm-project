@@ -83,8 +83,7 @@ fir::factory::HomogeneousScalarStack::HomogeneousScalarStack(
   mlir::Value shape = builder.genShape(loc, extents);
   temp = builder
              .create<hlfir::DeclareOp>(loc, tempStorage, tempName, shape,
-                                       lengths, /*dummy_scope=*/nullptr,
-                                       fir::FortranVariableFlagsAttr{})
+                                       lengths, fir::FortranVariableFlagsAttr{})
              .getBase();
 }
 

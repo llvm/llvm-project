@@ -3046,7 +3046,8 @@ bool RewriteStatepointsForGC::runOnFunction(Function &F, DominatorTree &DT,
       // which doesn't know how to produce a proper deopt state. So if we see a
       // non-leaf memcpy/memmove without deopt state just treat it as a leaf
       // copy and don't produce a statepoint.
-      if (!AllowStatepointWithNoDeoptInfo && !Call->hasDeoptState()) {
+      if (!AllowStatepointWithNoDeoptInfo &&
+          !Call->getOperandBundle(LLVMContext::OB_deopt)) {
         assert((isa<AtomicMemCpyInst>(Call) || isa<AtomicMemMoveInst>(Call)) &&
                "Don't expect any other calls here!");
         return false;

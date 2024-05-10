@@ -122,10 +122,9 @@ createArrayTemp(mlir::Location loc, fir::FirOpBuilder &builder,
         fir::FortranVariableFlagsAttr::get(
             builder.getContext(), fir::FortranVariableFlagsEnum::allocatable);
 
-    auto declareOp =
-        builder.create<hlfir::DeclareOp>(loc, alloc, tmpName,
-                                         /*shape=*/nullptr, lenParams,
-                                         /*dummy_scope=*/nullptr, declAttrs);
+    auto declareOp = builder.create<hlfir::DeclareOp>(loc, alloc, tmpName,
+                                                      /*shape=*/nullptr,
+                                                      lenParams, declAttrs);
 
     int rank = extents.size();
     fir::runtime::genAllocatableApplyMold(builder, loc, alloc,
@@ -153,9 +152,9 @@ createArrayTemp(mlir::Location loc, fir::FirOpBuilder &builder,
 
   mlir::Value allocmem = builder.createHeapTemporary(loc, sequenceType, tmpName,
                                                      extents, lenParams);
-  auto declareOp = builder.create<hlfir::DeclareOp>(
-      loc, allocmem, tmpName, shape, lenParams,
-      /*dummy_scope=*/nullptr, fir::FortranVariableFlagsAttr{});
+  auto declareOp =
+      builder.create<hlfir::DeclareOp>(loc, allocmem, tmpName, shape, lenParams,
+                                       fir::FortranVariableFlagsAttr{});
   mlir::Value trueVal = builder.createBool(loc, true);
   return {hlfir::Entity{declareOp.getBase()}, trueVal};
 }
@@ -332,7 +331,7 @@ struct SetLengthOpConversion
                                           /*shape=*/std::nullopt, lenParams);
     auto declareOp = builder.create<hlfir::DeclareOp>(
         loc, alloca, tmpName, /*shape=*/mlir::Value{}, lenParams,
-        /*dummy_scope=*/nullptr, fir::FortranVariableFlagsAttr{});
+        fir::FortranVariableFlagsAttr{});
     hlfir::Entity temp{declareOp.getBase()};
     // Assign string value to the created temp.
     builder.create<hlfir::AssignOp>(loc, string, temp,

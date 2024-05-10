@@ -851,19 +851,15 @@ BinaryFunction::processIndirectBranch(MCInst &Instruction, unsigned Size,
     return IndirectBranchType::UNKNOWN;
   }
 
-  auto getExprValue = [&](const MCExpr *Expr) {
-    const MCSymbol *TargetSym;
-    uint64_t TargetOffset;
-    std::tie(TargetSym, TargetOffset) = BC.MIB->getTargetSymbolInfo(Expr);
-    ErrorOr<uint64_t> SymValueOrError = BC.getSymbolValue(*TargetSym);
-    assert(SymValueOrError && "Global symbol needs a value");
-    return *SymValueOrError + TargetOffset;
-  };
-
   // RIP-relative addressing should be converted to symbol form by now
   // in processed instructions (but not in jump).
   if (DispExpr) {
-    ArrayStart = getExprValue(DispExpr);
+    const MCSymbol *TargetSym;
+    uint64_t TargetOffset;
+    std::tie(TargetSym, TargetOffset) = BC.MIB->getTargetSymbolInfo(DispExpr);
+    ErrorOr<uint64_t> SymValueOrError = BC.getSymbolValue(*TargetSym);
+    assert(SymValueOrError && "global symbol needs a value");
+    ArrayStart = *SymValueOrError + TargetOffset;
     BaseRegNum = BC.MIB->getNoRegister();
     if (BC.isAArch64()) {
       ArrayStart &= ~0xFFFULL;
@@ -1697,26 +1693,6 @@ void BinaryFunction::postProcessEntryPoints() {
 }
 
 void BinaryFunction::postProcessJumpTables() {
-  // Set of JTs accessed from this function.
-  std::unordered_set<uint64_t> LiveJTs;
-  for (auto &JTSite : JTSites)
-    LiveJTs.emplace(JTSite.second);
-
-  // Remove dead jump tables (reference removed as a result of
-  // POSSIBLE_PIC_FIXED_BRANCH optimization).
-  for (auto JTI = JumpTables.begin(), JTE = JumpTables.end(); JTI != JTE; ) {
-    const uint64_t Address = JTI->first;
-    JumpTable *JT = JTI->second;
-    bool HasOneParent = JT->Parents.size() == 1;
-    if (LiveJTs.count(Address) == 0 && HasOneParent) {
-      BC.deregisterJumpTable(Address);
-      delete JT;
-      JTI = JumpTables.erase(JTI);
-      continue;
-    }
-    ++JTI;
-  }
-
   // Create labels for all entries.
   for (auto &JTI : JumpTables) {
     JumpTable &JT = *JTI.second;
@@ -1767,6 +1743,9 @@ void BinaryFunction::postProcessJumpTables() {
     }
   }
 
+  // Set of JTs accessed from this function.
+  std::unordered_set<uint64_t> LiveJTs;
+
   // Add TakenBranches from JumpTables.
   //
   // We want to do it after initial processing since we don't know jump tables'
@@ -1774,6 +1753,7 @@ void BinaryFunction::postProcessJumpTables() {
   for (auto &JTSite : JTSites) {
     const uint64_t JTSiteOffset = JTSite.first;
     const uint64_t JTAddress = JTSite.second;
+    LiveJTs.emplace(JTAddress);
     const JumpTable *JT = getJumpTableContainingAddress(JTAddress);
     assert(JT && "cannot find jump table for address");
 
@@ -1809,6 +1789,22 @@ void BinaryFunction::postProcessJumpTables() {
       }
     }
   }
+
+  // Remove dead jump tables (reference removed as a result of
+  // POSSIBLE_PIC_FIXED_BRANCH optimization).
+  for (auto JTI = JumpTables.begin(), JTE = JumpTables.end(); JTI != JTE; ) {
+    const uint64_t Address = JTI->first;
+    JumpTable *JT = JTI->second;
+    bool HasOneParent = JT->Parents.size() == 1;
+    if (LiveJTs.count(Address) == 0 && HasOneParent) {
+      BC.deregisterJumpTable(Address);
+      delete JT;
+      JTI = JumpTables.erase(JTI);
+      continue;
+    }
+    ++JTI;
+  }
+
 }
 
 bool BinaryFunction::validateExternallyReferencedOffsets() {

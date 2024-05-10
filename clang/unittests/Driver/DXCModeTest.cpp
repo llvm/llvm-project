@@ -68,27 +68,25 @@ TEST(DxcModeTest, TargetProfileValidation) {
   IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts = new DiagnosticOptions();
   DiagnosticsEngine Diags(DiagID, &*DiagOpts, DiagConsumer);
 
-  validateTargetProfile("-Tvs_6_0", "dxilv1.0--shadermodel6.0-vertex",
+  validateTargetProfile("-Tvs_6_0", "dxil--shadermodel6.0-vertex",
                         InMemoryFileSystem, Diags);
-  validateTargetProfile("-Ths_6_1", "dxilv1.1--shadermodel6.1-hull",
+  validateTargetProfile("-Ths_6_1", "dxil--shadermodel6.1-hull",
                         InMemoryFileSystem, Diags);
-  validateTargetProfile("-Tds_6_2", "dxilv1.2--shadermodel6.2-domain",
+  validateTargetProfile("-Tds_6_2", "dxil--shadermodel6.2-domain",
                         InMemoryFileSystem, Diags);
-  validateTargetProfile("-Tds_6_2", "dxilv1.2--shadermodel6.2-domain",
+  validateTargetProfile("-Tds_6_2", "dxil--shadermodel6.2-domain",
                         InMemoryFileSystem, Diags);
-  validateTargetProfile("-Tgs_6_3", "dxilv1.3--shadermodel6.3-geometry",
+  validateTargetProfile("-Tgs_6_3", "dxil--shadermodel6.3-geometry",
                         InMemoryFileSystem, Diags);
-  validateTargetProfile("-Tps_6_4", "dxilv1.4--shadermodel6.4-pixel",
+  validateTargetProfile("-Tps_6_4", "dxil--shadermodel6.4-pixel",
                         InMemoryFileSystem, Diags);
-  validateTargetProfile("-Tcs_6_5", "dxilv1.5--shadermodel6.5-compute",
+  validateTargetProfile("-Tcs_6_5", "dxil--shadermodel6.5-compute",
                         InMemoryFileSystem, Diags);
-  validateTargetProfile("-Tms_6_6", "dxilv1.6--shadermodel6.6-mesh",
+  validateTargetProfile("-Tms_6_6", "dxil--shadermodel6.6-mesh",
                         InMemoryFileSystem, Diags);
-  validateTargetProfile("-Tas_6_7", "dxilv1.7--shadermodel6.7-amplification",
+  validateTargetProfile("-Tas_6_7", "dxil--shadermodel6.7-amplification",
                         InMemoryFileSystem, Diags);
-  validateTargetProfile("-Tcs_6_8", "dxilv1.8--shadermodel6.8-compute",
-                        InMemoryFileSystem, Diags);
-  validateTargetProfile("-Tlib_6_x", "dxilv1.8--shadermodel6.15-library",
+  validateTargetProfile("-Tlib_6_x", "dxil--shadermodel6.15-library",
                         InMemoryFileSystem, Diags);
 
   // Invalid tests.

@@ -1124,8 +1124,9 @@ static void CloneInstructionsIntoPredecessorBlockAndUpdateSSAUses(
 
     NewBonusInst->insertInto(PredBlock, PTI->getIterator());
     auto Range = NewBonusInst->cloneDebugInfoFrom(&BonusInst);
-    RemapDbgRecordRange(NewBonusInst->getModule(), Range, VMap,
-                        RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
+    RemapDbgVariableRecordRange(NewBonusInst->getModule(), Range, VMap,
+                                RF_NoModuleLevelChanges |
+                                    RF_IgnoreMissingLocals);
 
     if (isa<DbgInfoIntrinsic>(BonusInst))
       continue;
@@ -3859,8 +3860,8 @@ static bool performBranchToCommonDestFolding(BranchInst *BI, BranchInst *PBI,
     PredBlock->getTerminator()->cloneDebugInfoFrom(BB->getTerminator());
     for (DbgVariableRecord &DVR :
          filterDbgVars(PredBlock->getTerminator()->getDbgRecordRange())) {
-      RemapDbgRecord(M, &DVR, VMap,
-                     RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
+      RemapDbgVariableRecord(M, &DVR, VMap,
+                             RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
     }
   }
 

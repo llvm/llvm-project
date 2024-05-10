@@ -1260,13 +1260,6 @@ template<
     iterator end() const { return iterator(val + 1); }
 };
 
-template <typename T>
-class atomic {
-public:
-  T operator++();
-  T operator--();
-};
-
 namespace execution {
 class sequenced_policy {};
 }

@@ -114,10 +114,8 @@ class CompilerInvocation : public CompilerInvocationBase {
   // Fortran Dialect options
   Fortran::common::IntrinsicTypeDefaultKinds defaultKinds;
 
-  // Fortran Warning options
   bool enableConformanceChecks = false;
   bool enableUsageChecks = false;
-  bool disableWarnings = false;
 
   /// Used in e.g. unparsing to dump the analyzed rather than the original
   /// parse-tree objects.
@@ -199,9 +197,6 @@ public:
   bool &getEnableUsageChecks() { return enableUsageChecks; }
   const bool &getEnableUsageChecks() const { return enableUsageChecks; }
 
-  bool &getDisableWarnings() { return disableWarnings; }
-  const bool &getDisableWarnings() const { return disableWarnings; }
-
   Fortran::parser::AnalyzedObjectsAsFortran &getAsFortran() {
     return asFortran;
   }
@@ -230,9 +225,6 @@ public:
 
   // Enables the usage checks
   void setEnableUsageChecks() { enableUsageChecks = true; }
-
-  // Disables all Warnings
-  void setDisableWarnings() { disableWarnings = true; }
 
   /// Useful setters
   void setArgv0(const char *dir) { argv0 = dir; }

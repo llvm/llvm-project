@@ -35,6 +35,3 @@ is changed to:
   C::E1;
   C::E2;
 
-The `--fix` commandline option provides default support for safe fixes, whereas
-`--fix-notes` enables fixes that may replace expressions with side effects,
-potentially altering the program's behavior.

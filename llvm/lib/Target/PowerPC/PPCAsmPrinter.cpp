@@ -205,8 +205,8 @@ public:
   void LowerPATCHPOINT(StackMaps &SM, const MachineInstr &MI);
   void EmitTlsCall(const MachineInstr *MI, MCSymbolRefExpr::VariantKind VK);
   void EmitAIXTlsCallHelper(const MachineInstr *MI);
-  const MCExpr *getAdjustedFasterLocalExpr(const MachineOperand &MO,
-                                           int64_t Offset);
+  const MCExpr *getAdjustedLocalExecExpr(const MachineOperand &MO,
+                                         int64_t Offset);
   bool runOnMachineFunction(MachineFunction &MF) override {
     Subtarget = &MF.getSubtarget<PPCSubtarget>();
     bool Changed = AsmPrinter::runOnMachineFunction(MF);
@@ -878,15 +878,6 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
         return MCSymbolRefExpr::VariantKind::VK_PPC_AIX_TLSLE;
       if (Model == TLSModel::InitialExec)
         return MCSymbolRefExpr::VariantKind::VK_PPC_AIX_TLSIE;
-      // On AIX, TLS model opt may have turned local-dynamic accesses into
-      // initial-exec accesses.
-      PPCFunctionInfo *FuncInfo = MF->getInfo<PPCFunctionInfo>();
-      if (Model == TLSModel::LocalDynamic &&
-          FuncInfo->isAIXFuncUseTLSIEForLD()) {
-        LLVM_DEBUG(
-            dbgs() << "Current function uses IE access for default LD vars.\n");
-        return MCSymbolRefExpr::VariantKind::VK_PPC_AIX_TLSIE;
-      }
       llvm_unreachable("Only expecting local-exec or initial-exec accesses!");
     }
     // For GD TLS access on AIX, we have two TOC entries for the symbol (one for
@@ -1607,8 +1598,7 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
     // machine operand (which is a TargetGlobalTLSAddress) is expected to be
     // the same operand for both loads and stores.
     for (const MachineOperand &TempMO : MI->operands()) {
-      if (((TempMO.getTargetFlags() == PPCII::MO_TPREL_FLAG ||
-            TempMO.getTargetFlags() == PPCII::MO_TLSLD_FLAG)) &&
+      if (((TempMO.getTargetFlags() == PPCII::MO_TPREL_FLAG)) &&
           TempMO.getOperandNo() == 1)
         OpNum = 1;
     }
@@ -1644,8 +1634,8 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
   case PPC::ADDI8: {
     // A faster non-TOC-based local-[exec|dynamic] sequence is represented by
     // `addi` or a load/store instruction (that directly loads or stores off of
-    // the thread pointer) with an immediate operand having the
-    // [MO_TPREL_FLAG|MO_TLSLD_FLAG]. Such instructions do not otherwise arise.
+    // the thread pointer) with an immediate operand having the MO_TPREL_FLAG.
+    // Such instructions do not otherwise arise.
     if (!HasAIXSmallLocalTLS)
       break;
     bool IsMIADDI8 = MI->getOpcode() == PPC::ADDI8;
@@ -1657,7 +1647,7 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
         Flag == PPCII::MO_TPREL_PCREL_FLAG || Flag == PPCII::MO_TLSLD_FLAG) {
       LowerPPCMachineInstrToMCInst(MI, TmpInst, *this);
 
-      const MCExpr *Expr = getAdjustedFasterLocalExpr(MO, MO.getOffset());
+      const MCExpr *Expr = getAdjustedLocalExecExpr(MO, MO.getOffset());
       if (Expr)
         TmpInst.getOperand(OpNum) = MCOperand::createExpr(Expr);
 
@@ -1687,15 +1677,14 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
   EmitToStreamer(*OutStreamer, TmpInst);
 }
 
-// For non-TOC-based local-[exec|dynamic] variables that have a non-zero offset,
+// For non-TOC-based local-exec variables that have a non-zero offset,
 // we need to create a new MCExpr that adds the non-zero offset to the address
-// of the local-[exec|dynamic] variable that will be used in either an addi,
-// load or store. However, the final displacement for these instructions must be
+// of the local-exec variable that will be used in either an addi, load or
+// store. However, the final displacement for these instructions must be
 // between [-32768, 32768), so if the TLS address + its non-zero offset is
 // greater than 32KB, a new MCExpr is produced to accommodate this situation.
-const MCExpr *
-PPCAsmPrinter::getAdjustedFasterLocalExpr(const MachineOperand &MO,
-                                          int64_t Offset) {
+const MCExpr *PPCAsmPrinter::getAdjustedLocalExecExpr(const MachineOperand &MO,
+                                                      int64_t Offset) {
   // Non-zero offsets (for loads, stores or `addi`) require additional handling.
   // When the offset is zero, there is no need to create an adjusted MCExpr.
   if (!Offset)
@@ -1703,9 +1692,13 @@ PPCAsmPrinter::getAdjustedFasterLocalExpr(const MachineOperand &MO,
 
   assert(MO.isGlobal() && "Only expecting a global MachineOperand here!");
   const GlobalValue *GValue = MO.getGlobal();
+  // TODO: Handle the aix-small-local-dynamic-tls non-zero offset case.
   TLSModel::Model Model = TM.getTLSModel(GValue);
-  assert((Model == TLSModel::LocalExec || Model == TLSModel::LocalDynamic) &&
-         "Only local-[exec|dynamic] accesses are handled!");
+  if (Model == TLSModel::LocalDynamic) {
+    return nullptr;
+  }
+  assert(Model == TLSModel::LocalExec &&
+         "Only local-exec accesses are handled!");
 
   bool IsGlobalADeclaration = GValue->isDeclarationForLinker();
   // Find the GlobalVariable that corresponds to the particular TLS variable
@@ -1726,10 +1719,7 @@ PPCAsmPrinter::getAdjustedFasterLocalExpr(const MachineOperand &MO,
   // For when TLS variables are extern, this is safe to do because we can
   // assume that the address of extern TLS variables are zero.
   const MCExpr *Expr = MCSymbolRefExpr::create(
-      getSymbol(GValue),
-      Model == TLSModel::LocalExec ? MCSymbolRefExpr::VK_PPC_AIX_TLSLE
-                                   : MCSymbolRefExpr::VK_PPC_AIX_TLSLD,
-      OutContext);
+      getSymbol(GValue), MCSymbolRefExpr::VK_PPC_AIX_TLSLE, OutContext);
   Expr = MCBinaryExpr::createAdd(
       Expr, MCConstantExpr::create(Offset, OutContext), OutContext);
   if (FinalAddress >= 32768) {
@@ -1742,10 +1732,10 @@ PPCAsmPrinter::getAdjustedFasterLocalExpr(const MachineOperand &MO,
     ptrdiff_t Delta = ((FinalAddress + 32768) & ~0xFFFF);
     // Check that the total instruction displacement fits within [-32768,32768).
     [[maybe_unused]] ptrdiff_t InstDisp = TLSVarAddress + Offset - Delta;
-    assert(
-        ((InstDisp < 32768) && (InstDisp >= -32768)) &&
-        "Expecting the instruction displacement for local-[exec|dynamic] TLS "
-        "variables to be between [-32768, 32768)!");
+    assert(((InstDisp < 32768) &&
+            (InstDisp >= -32768)) &&
+               "Expecting the instruction displacement for local-exec TLS "
+               "variables to be between [-32768, 32768)!");
     Expr = MCBinaryExpr::createAdd(
         Expr, MCConstantExpr::create(-Delta, OutContext), OutContext);
   }
@@ -2959,11 +2949,7 @@ void PPCAIXAsmPrinter::emitEndOfAsmFile(Module &M) {
     // Setup the csect for the current TC entry. If the variant kind is
     // VK_PPC_AIX_TLSGDM the entry represents the region handle, we create a
     // new symbol to prefix the name with a dot.
-    // If TLS model opt is turned on, create a new symbol to prefix the name
-    // with a dot.
-    if (I.first.second == MCSymbolRefExpr::VariantKind::VK_PPC_AIX_TLSGDM ||
-        (Subtarget->hasAIXShLibTLSModelOpt() &&
-         I.first.second == MCSymbolRefExpr::VariantKind::VK_PPC_AIX_TLSLD)) {
+    if (I.first.second == MCSymbolRefExpr::VariantKind::VK_PPC_AIX_TLSGDM) {
       SmallString<128> Name;
       StringRef Prefix = ".";
       Name += Prefix;

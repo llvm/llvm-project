@@ -2,7 +2,6 @@
 
 import argparse
 import re
-import os
 
 HEADER = """\
 //===-- SBLanguages.h -----------------------------------------*- C++ -*-===//
@@ -37,9 +36,6 @@ def emit_enum(input, output):
     lines = []
     with open(input, "r") as f:
         lines = f.readlines()
-
-    # Create output folder if it does not exist
-    os.makedirs(os.path.dirname(output), exist_ok=True)
 
     # Write the output.
     with open(output, "w") as f:
