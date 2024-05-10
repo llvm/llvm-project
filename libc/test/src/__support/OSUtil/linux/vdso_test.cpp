@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "hdr/types/struct_timeval.h"
-#include "src/__support/OSUtil/vdso.h"
+#include "src/__support/OSUtil/linux/vdso.h"
 #include "test/UnitTest/Test.h"
 
 namespace LIBC_NAMESPACE {

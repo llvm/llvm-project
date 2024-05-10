@@ -7,6 +7,6 @@ add_libc_test(
   SUITE libc-osutil-tests
   SRCS vdso_test.cpp
   DEPENDS
-    libc.src.__support.OSUtil.vdso
+    libc.src.__support.OSUtil.linux.vdso
     libc.hdr.types.struct_timeval
 )
