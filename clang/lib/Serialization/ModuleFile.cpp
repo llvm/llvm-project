@@ -87,7 +87,6 @@ LLVM_DUMP_METHOD void ModuleFile::dump() {
                << "  Number of types: " << LocalNumTypes << '\n';
   dumpLocalRemap("Type index local -> global map", TypeRemap);
 
-  llvm::errs() << "  Base decl ID: " << BaseDeclID << '\n'
+  llvm::errs() << "  Base decl index: " << BaseDeclIndex << '\n'
                << "  Number of decls: " << LocalNumDecls << '\n';
-  dumpLocalRemap("Decl ID local -> global map", DeclRemap);
 }
