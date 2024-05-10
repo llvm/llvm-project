@@ -88,11 +88,11 @@ def extract_result_types(comment):
     parsed.
     """
     result_types = []
-    m = re.search(r"Usable as: Any Matcher[\s\n]*$", comment, re.S)
+    m = re.search("Usable as: Any Matcher[\\s\n]*$", comment, re.S)
     if m:
         return ["*"]
     while True:
-        m = re.match(r"^(.*)Matcher<([^>]+)>\s*,?[\s\n]*$", comment, re.S)
+        m = re.match("^(.*)Matcher<([^>]+)>\\s*,?[\\s\n]*$", comment, re.S)
         if not m:
             if re.search(r"Usable as:\s*$", comment):
                 return result_types
@@ -105,7 +105,7 @@ def extract_result_types(comment):
 def strip_doxygen(comment):
     """Returns the given comment without -escaped words."""
     # If there is only a doxygen keyword in the line, delete the whole line.
-    comment = re.sub(r"^\\[^\s]+\n", r"", comment, flags=re.M)
+    comment = re.sub("^\\\\[^\\s]+\n", r"", comment, flags=re.M)
 
     # If there is a doxygen \see command, change the \see prefix into "See also:".
     # FIXME: it would be better to turn this into a link to the target instead.

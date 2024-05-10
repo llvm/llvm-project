@@ -55,7 +55,7 @@ def run_test_once(args, extra_args):
     # themselves.  We need to keep the comments to preserve line numbers while
     # avoiding empty lines which could potentially trigger formatting-related
     # checks.
-    cleaned_test = re.sub("// *CHECK-[A-Z0-9\-]*:[^\r\n]*", "//", input_text)
+    cleaned_test = re.sub("// *CHECK-[A-Z0-9\\-]*:[^\r\n]*", "//", input_text)
     write_file(temp_file_name, cleaned_test)
 
     original_file_name = temp_file_name + ".orig"
