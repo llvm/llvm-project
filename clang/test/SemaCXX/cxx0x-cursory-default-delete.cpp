@@ -1,4 +1,11 @@
 // RUN: %clang_cc1 -std=c++11 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -std=c++03 -Wno-c++11-extensions -fsyntax-only -verify %s
+
+#if __cplusplus < 201103L
+#define static_assert __extension__ _Static_assert
+#define nullptr 0
+#define noexcept throw()
+#endif
 
 struct non_copiable {
   non_copiable(const non_copiable&) = delete; // expected-note {{marked deleted here}}
@@ -25,10 +32,12 @@ void fn1 () {
   non_const_copy ncc;
   non_const_copy ncc2 = ncc;
   ncc = ncc2;
+#if __cplusplus >= 201103L
   const non_const_copy cncc{};
+#endif
   const non_const_copy cncc1; // expected-error {{default initialization of an object of const type 'const non_const_copy' without a user-provided default constructor}}
-  non_const_copy ncc3 = cncc; // expected-error {{no matching}}
-  ncc = cncc; // expected-error {{no viable overloaded}}
+  non_const_copy ncc3 = cncc1; // expected-error {{no matching}}
+  ncc = cncc1; // expected-error {{no viable overloaded}}
 };
 
 struct no_fields { };
@@ -196,7 +205,7 @@ struct except_spec_d_match : except_spec_a, except_spec_b {
 struct S { S(); };
 S::S() __attribute((noreturn)) = default;
 
-using size_t = decltype(sizeof(0));
+using size_t = __SIZE_TYPE__;
 void *operator new(size_t) = delete; // expected-error {{deleted definition must be first declaration}} expected-note {{implicit}}
 void operator delete(void *) noexcept = delete; // expected-error {{deleted definition must be first declaration}} expected-note {{implicit}}
 
@@ -216,4 +225,23 @@ namespace deleted_overrides_deleted {
   struct A { virtual void f() = delete; };
   template<typename T> struct B : A { virtual void f() = delete; };
   template struct B<int>;
+}
+
+namespace GH90605 {
+struct Element {
+    Element& operator=(const Element&) = delete; // #GH90605-Element-assign
+};
+
+struct S {
+    Element i; // #GH90605-i
+
+    S& operator=(const S&) = default;
+// expected-warning@-1 {{explicitly defaulted copy assignment operator is implicitly deleted}}
+//   expected-note@#GH90605-i {{copy assignment operator of 'S' is implicitly deleted because field 'i' has a deleted copy assignment operator}}
+//   expected-note@#GH90605-Element-assign {{'operator=' has been explicitly marked deleted here}}
+//   expected-note@-4 {{replace 'default' with 'delete'}}
+};
+
+static_assert(!__is_trivially_assignable(S&, const S&), "");
+static_assert(!__is_assignable(S&, const S&), "");
 }

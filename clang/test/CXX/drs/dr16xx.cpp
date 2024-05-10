@@ -192,36 +192,24 @@ namespace cwg1658 { // cwg1658: 5
     struct E : A { E(); virtual void foo() = 0; }; // #cwg1658-E1
     E::E() = default; // #cwg1658-E1-ctor
     // cxx98-error@-1 {{defaulted function definitions are a C++11 extension}}
-    // cxx98-error@-2 {{base class 'A' has private default constructor}}
-    //   cxx98-note@-3 {{in defaulted default constructor for 'cwg1658::DefCtor::E' first required here}}
-    //   cxx98-note@#cwg1658-A1 {{implicitly declared private here}}
-    // since-cxx11-error@#cwg1658-E1-ctor {{defaulting this default constructor would delete it after its first declaration}}
-    //   since-cxx11-note@#cwg1658-E1 {{default constructor of 'E' is implicitly deleted because base class 'A' has an inaccessible default constructor}}
+    // expected-error@#cwg1658-E1-ctor {{defaulting this default constructor would delete it after its first declaration}}
+    //   expected-note@#cwg1658-E1 {{default constructor of 'E' is implicitly deleted because base class 'A' has an inaccessible default constructor}}
     struct F : virtual A { F(); }; // #cwg1658-F1
     F::F() = default; // #cwg1658-F1-ctor
     // cxx98-error@-1 {{defaulted function definitions are a C++11 extension}}
-    // cxx98-error@-2 {{inherited virtual base class 'A' has private default constructor}}
-    //   cxx98-note@-3 {{in defaulted default constructor for 'cwg1658::DefCtor::F' first required here}}
-    //   cxx98-note@#cwg1658-A1 {{implicitly declared private here}}
-    // since-cxx11-error@#cwg1658-F1-ctor {{defaulting this default constructor would delete it after its first declaration}}
-    //   since-cxx11-note@#cwg1658-F1 {{default constructor of 'F' is implicitly deleted because base class 'A' has an inaccessible default constructor}}
+    // expected-error@#cwg1658-F1-ctor {{defaulting this default constructor would delete it after its first declaration}}
+    //   expected-note@#cwg1658-F1 {{default constructor of 'F' is implicitly deleted because base class 'A' has an inaccessible default constructor}}
 
     struct G : B { G(); virtual void foo() = 0; }; // #cwg1658-G1
     G::G() = default; // #cwg1658-G1-ctor
     // cxx98-error@-1 {{defaulted function definitions are a C++11 extension}}
-    // cxx98-error@#cwg1658-G1 {{base class 'B' has private destructor}}
-    //   cxx98-note@#cwg1658-G1-ctor {{in defaulted default constructor for 'cwg1658::DefCtor::G' first required here}}
-    //   cxx98-note@#cwg1658-B1 {{implicitly declared private here}}
-    // since-cxx11-error@#cwg1658-G1-ctor {{defaulting this default constructor would delete it after its first declaration}}
-    //   since-cxx11-note@#cwg1658-G1 {{default constructor of 'G' is implicitly deleted because base class 'B' has an inaccessible destructor}}
+    // expected-error@#cwg1658-G1-ctor {{defaulting this default constructor would delete it after its first declaration}}
+    //   expected-note@#cwg1658-G1 {{default constructor of 'G' is implicitly deleted because base class 'B' has an inaccessible destructor}}
     struct H : virtual B { H(); }; // #cwg1658-H1
     H::H() = default; // #cwg1658-H1-ctor
     // cxx98-error@-1 {{defaulted function definitions are a C++11 extension}}
-    // cxx98-error@#cwg1658-H1 {{base class 'B' has private destructor}}
-    //   cxx98-note@#cwg1658-H1-ctor {{in defaulted default constructor for 'cwg1658::DefCtor::H' first required here}}
-    //   cxx98-note@#cwg1658-B1 {{implicitly declared private here}}
-    // since-cxx11-error@#cwg1658-H1-ctor {{defaulting this default constructor would delete it after its first declaration}}
-    //   since-cxx11-note@#cwg1658-H1 {{default constructor of 'H' is implicitly deleted because base class 'B' has an inaccessible destructor}}
+    // expected-error@#cwg1658-H1-ctor {{defaulting this default constructor would delete it after its first declaration}}
+    //   expected-note@#cwg1658-H1 {{default constructor of 'H' is implicitly deleted because base class 'B' has an inaccessible destructor}}
   }
 
   namespace Dtor {
@@ -234,19 +222,13 @@ namespace cwg1658 { // cwg1658: 5
     struct G : B { ~G(); virtual void foo() = 0; }; // #cwg1658-G2
     G::~G() = default; // #cwg1658-G2-dtor
     // cxx98-error@-1 {{defaulted function definitions are a C++11 extension}}
-    // cxx98-error@#cwg1658-G2 {{base class 'B' has private destructor}}
-    //   cxx98-note@#cwg1658-G2-dtor {{in defaulted destructor for 'cwg1658::Dtor::G' first required here}}
-    //   cxx98-note@#cwg1658-B2 {{implicitly declared private here}}
-    // since-cxx11-error@#cwg1658-G2-dtor {{defaulting this destructor would delete it after its first declaration}}
-    //   since-cxx11-note@#cwg1658-G2 {{destructor of 'G' is implicitly deleted because base class 'B' has an inaccessible destructor}}
+    // expected-error@#cwg1658-G2-dtor {{defaulting this destructor would delete it after its first declaration}}
+    //   expected-note@#cwg1658-G2 {{destructor of 'G' is implicitly deleted because base class 'B' has an inaccessible destructor}}
     struct H : virtual B { ~H(); }; // #cwg1658-H2
     H::~H() = default; // #cwg1658-H2-dtor
     // cxx98-error@-1 {{defaulted function definitions are a C++11 extension}}
-    // cxx98-error@#cwg1658-H2 {{base class 'B' has private destructor}}
-    //   cxx98-note@#cwg1658-H2-dtor {{in defaulted destructor for 'cwg1658::Dtor::H' first required here}}
-    //   cxx98-note@#cwg1658-B2 {{implicitly declared private here}}
-    // since-cxx11-error@#cwg1658-H2-dtor {{defaulting this destructor would delete it after its first declaration}}
-    //   since-cxx11-note@#cwg1658-H2 {{destructor of 'H' is implicitly deleted because base class 'B' has an inaccessible destructor}}
+    // expected-error@#cwg1658-H2-dtor {{defaulting this destructor would delete it after its first declaration}}
+    //   expected-note@#cwg1658-H2 {{destructor of 'H' is implicitly deleted because base class 'B' has an inaccessible destructor}}
   }
 
   namespace MemInit {
@@ -291,36 +273,24 @@ namespace cwg1658 { // cwg1658: 5
     // cxx98-error@-1 {{rvalue references are a C++11 extension}}
     E::E(const E&) = default; // #cwg1658-E5-copy-ctor
     // cxx98-error@-1 {{defaulted function definitions are a C++11 extension}}
-    // cxx98-error@-2 {{base class 'A' has private copy constructor}}
-    //   cxx98-note@-3 {{in defaulted copy constructor for 'cwg1658::CopyCtor::E' first required here}}
-    //   cxx98-note@#cwg1658-A5 {{implicitly declared private here}}
-    // since-cxx11-error@#cwg1658-E5-copy-ctor {{defaulting this copy constructor would delete it after its first declaration}}
-    //   since-cxx11-note@#cwg1658-E5 {{copy constructor of 'E' is implicitly deleted because base class 'A' has an inaccessible copy constructor}}
+    // expected-error@#cwg1658-E5-copy-ctor {{defaulting this copy constructor would delete it after its first declaration}}
+    //   expected-note@#cwg1658-E5 {{copy constructor of 'E' is implicitly deleted because base class 'A' has an inaccessible copy constructor}}
     E::E(E&&) = default; // #cwg1658-E5-move-ctor
     // cxx98-error@-1 {{rvalue references are a C++11 extension}}
     // cxx98-error@-2 {{defaulted function definitions are a C++11 extension}}
-    // cxx98-error@-3 {{base class 'A' has private move constructor}}
-    //   cxx98-note@-4 {{in defaulted move constructor for 'cwg1658::CopyCtor::E' first required here}}
-    //   cxx98-note@#cwg1658-A5 {{implicitly declared private here}}
-    // since-cxx11-error@#cwg1658-E5-move-ctor {{defaulting this move constructor would delete it after its first declaration}}
-    //   since-cxx11-note@#cwg1658-E5 {{move constructor of 'E' is implicitly deleted because base class 'A' has an inaccessible move constructor}}
+    // expected-error@#cwg1658-E5-move-ctor {{defaulting this move constructor would delete it after its first declaration}}
+    //   expected-note@#cwg1658-E5 {{move constructor of 'E' is implicitly deleted because base class 'A' has an inaccessible move constructor}}
     struct F : virtual A { F(const F&); F(F&&); }; // #cwg1658-F5
     // cxx98-error@-1 {{rvalue references are a C++11 extension}}
     F::F(const F&) = default; // #cwg1658-F5-copy-ctor
     // cxx98-error@-1 {{defaulted function definitions are a C++11 extension}}
-    // cxx98-error@-2 {{inherited virtual base class 'A' has private copy constructor}}
-    //   cxx98-note@-3 {{in defaulted copy constructor for 'cwg1658::CopyCtor::F' first required here}}
-    //   cxx98-note@#cwg1658-A5 {{implicitly declared private here}}
-    // since-cxx11-error@#cwg1658-F5-copy-ctor {{defaulting this copy constructor would delete it after its first declaration}}
-    //   since-cxx11-note@#cwg1658-F5 {{copy constructor of 'F' is implicitly deleted because base class 'A' has an inaccessible copy constructor}}
+    // expected-error@#cwg1658-F5-copy-ctor {{defaulting this copy constructor would delete it after its first declaration}}
+    //   expected-note@#cwg1658-F5 {{copy constructor of 'F' is implicitly deleted because base class 'A' has an inaccessible copy constructor}}
     F::F(F&&) = default; // #cwg1658-F5-move-ctor
     // cxx98-error@-1 {{rvalue references are a C++11 extension}}
     // cxx98-error@-2 {{defaulted function definitions are a C++11 extension}}
-    // cxx98-error@-3 {{inherited virtual base class 'A' has private move constructor}}
-    //   cxx98-note@-4 {{in defaulted move constructor for 'cwg1658::CopyCtor::F' first required here}}
-    //   cxx98-note@#cwg1658-A5 {{implicitly declared private here}}
-    // since-cxx11-error@#cwg1658-F5-move-ctor {{defaulting this move constructor would delete it after its first declaration}}
-    //   since-cxx11-note@#cwg1658-F5 {{move constructor of 'F' is implicitly deleted because base class 'A' has an inaccessible move constructor}}
+    // expected-error@#cwg1658-F5-move-ctor {{defaulting this move constructor would delete it after its first declaration}}
+    //   expected-note@#cwg1658-F5 {{move constructor of 'F' is implicitly deleted because base class 'A' has an inaccessible move constructor}}
   }
 
   // assignment case is superseded by cwg2180

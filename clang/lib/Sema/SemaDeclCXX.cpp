@@ -9763,13 +9763,22 @@ bool Sema::ShouldDeleteSpecialMember(CXXMethodDecl *MD,
                                      CXXSpecialMemberKind CSM,
                                      InheritedConstructorInfo *ICI,
                                      bool Diagnose) {
+  assert(LangOpts.CPlusPlus &&
+         "Special member function = default outside of C++?");
   if (MD->isInvalidDecl())
     return false;
   CXXRecordDecl *RD = MD->getParent();
   assert(!RD->isDependentType() && "do deletion after instantiation");
-  if (!LangOpts.CPlusPlus || (!LangOpts.CPlusPlus11 && !RD->isLambda()) ||
-      RD->isInvalidDecl())
+  if (RD->isInvalidDecl())
     return false;
+  if (!LangOpts.CPlusPlus11) {
+    // Before C++11, implicitly-declared (defaulted) special member functions
+    // weren't defined as deleted.
+    // Allow lambda members and explicitly defaulted members to be defined
+    // as deleted before C++11 as an extension
+    if (!(RD->isLambda() || MD->isExplicitlyDefaulted()))
+      return false;
+  }
 
   // C++11 [expr.lambda.prim]p19:
   //   The closure type associated with a lambda-expression has a
