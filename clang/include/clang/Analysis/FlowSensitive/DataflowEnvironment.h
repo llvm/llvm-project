@@ -29,13 +29,13 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
-#include "llvm/ADT/PointerUnion.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cassert>
 #include <memory>
 #include <type_traits>
 #include <utility>
+#include <vector>
 
 namespace clang {
 namespace dataflow {
@@ -169,25 +169,28 @@ public:
   Environment &operator=(Environment &&Other) = default;
 
   /// Creates an environment that uses `DACtx` to store objects that encompass
-  /// the state of a program, with `FD` as the current analysis target.
-  Environment(DataflowAnalysisContext &DACtx, const FunctionDecl &FD)
-      : Environment(DACtx) {
-    TargetStack.push_back(&FD);
+  /// the state of a program, with `S` as the initial analysis target.
+  Environment(DataflowAnalysisContext &DACtx, Stmt &S) : Environment(DACtx) {
+    InitialTargetStmt = &S;
   }
 
   /// Creates an environment that uses `DACtx` to store objects that encompass
-  /// the state of a program, with `S` as the current analysis target.
-  Environment(DataflowAnalysisContext &DACtx, Stmt &S) : Environment(DACtx) {
-    TargetStack.push_back(&S);
+  /// the state of a program, with `FD` as the initial analysis target.
+  ///
+  /// Requirements:
+  ///
+  ///  The function must have a body, i.e.
+  ///  `FunctionDecl::doesThisDecalarationHaveABody()` must be true.
+  Environment(DataflowAnalysisContext &DACtx, const FunctionDecl &FD)
+      : Environment(DACtx, *FD.getBody()) {
+    InitialTargetFunc = &FD;
   }
 
   /// Assigns storage locations and values to all parameters, captures, global
-  /// variables, fields and functions referenced in the target currently
-  /// being analyzed.
+  /// variables, fields and functions referenced in the initial analysis target.
   ///
-  /// If the current analysis target is a non-static member function,
-  /// initializes the environment with a symbolic representation of the `this`
-  /// pointee.
+  /// If the target is a non-static member function, initializes the environment
+  /// with a symbolic representation of the `this` pointee.
   void initialize();
 
   /// Returns a new environment that is a copy of this one.
@@ -200,7 +203,7 @@ public:
   /// forked flow condition references the original).
   Environment fork() const;
 
-  /// Creates and returns an environment to use for an inline analysis  of the
+  /// Creates and returns an environment to use for an inline analysis of the
   /// callee. Uses the storage location from each argument in the `Call` as the
   /// storage location for the corresponding parameter in the callee.
   ///
@@ -653,20 +656,14 @@ public:
   /// (or the flow condition is overly constraining) or if the solver times out.
   bool allows(const Formula &) const;
 
-  /// Returns the current analysis target.
-  llvm::PointerUnion<const FunctionDecl *, Stmt *> getCurrentTarget() const {
-    return TargetStack.back();
-  }
-
   /// Returns the function currently being analyzed, or null if the code being
   /// analyzed isn't part of a function.
   const FunctionDecl *getCurrentFunc() const {
-    return getCurrentTarget().dyn_cast<const FunctionDecl *>();
+    return CallStack.empty() ? InitialTargetFunc : CallStack.back();
   }
 
-  /// Returns the size of the target stack. All but the first item in the stack
-  /// are expected to be function calls.
-  size_t targetStackSize() const { return TargetStack.size(); }
+  /// Returns the size of the call stack.
+  size_t callStackSize() const { return CallStack.size(); }
 
   /// Returns whether this `Environment` can be extended to analyze the given
   /// `Callee` (i.e. if `pushCall` can be used), with recursion disallowed and a
@@ -785,9 +782,17 @@ private:
   // shared between environments in the same call.
   // https://github.com/llvm/llvm-project/issues/59005
 
-  // The stack of statements or functions being analyzed. Only the first item in
-  // the stack is expected to ever be a `Stmt *`.
-  std::vector<llvm::PointerUnion<const FunctionDecl *, Stmt *>> TargetStack;
+  // The stack of functions called from the initial analysis target and
+  // recursively being analyzed.
+  std::vector<const FunctionDecl *> CallStack;
+
+  // If the initial analysis target is a function, this is the function
+  // declaration. Otherwise, this is null.
+  const FunctionDecl *InitialTargetFunc = nullptr;
+  // If the initial analysis target is a function, this is its body. If the
+  // initial analysis target was not provided, this is null. Otherwise, this is
+  // the initial analysis target.
+  Stmt *InitialTargetStmt = nullptr;
 
   // Maps from prvalues of record type to their result objects. Shared between
   // all environments for the same analysis target.

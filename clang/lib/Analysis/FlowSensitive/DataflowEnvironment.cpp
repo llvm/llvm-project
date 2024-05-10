@@ -520,33 +520,30 @@ private:
 } // namespace
 
 void Environment::initialize() {
-  llvm::PointerUnion<const FunctionDecl *, Stmt *> Target = getCurrentTarget();
-  if (Target.isNull())
+  if (InitialTargetStmt == nullptr)
     return;
 
-  if (Stmt *S = Target.dyn_cast<Stmt *>()) {
-    initFieldsGlobalsAndFuncs(S);
+  if (InitialTargetFunc == nullptr) {
+    initFieldsGlobalsAndFuncs(InitialTargetStmt);
     ResultObjectMap =
         std::make_shared<PrValueToResultObject>(buildResultObjectMap(
-            DACtx, S, getThisPointeeStorageLocation(), LocForRecordReturnVal));
+            DACtx, InitialTargetStmt, getThisPointeeStorageLocation(),
+            LocForRecordReturnVal));
     return;
   }
 
-  const auto *FuncDecl = Target.get<const FunctionDecl *>();
-  assert(FuncDecl->doesThisDeclarationHaveABody());
+  initFieldsGlobalsAndFuncs(InitialTargetFunc);
 
-  initFieldsGlobalsAndFuncs(FuncDecl);
-
-  for (const auto *ParamDecl : FuncDecl->parameters()) {
+  for (const auto *ParamDecl : InitialTargetFunc->parameters()) {
     assert(ParamDecl != nullptr);
     setStorageLocation(*ParamDecl, createObject(*ParamDecl, nullptr));
   }
 
-  if (FuncDecl->getReturnType()->isRecordType())
+  if (InitialTargetFunc->getReturnType()->isRecordType())
     LocForRecordReturnVal = &cast<RecordStorageLocation>(
-        createStorageLocation(FuncDecl->getReturnType()));
+        createStorageLocation(InitialTargetFunc->getReturnType()));
 
-  if (const auto *MethodDecl = dyn_cast<CXXMethodDecl>(FuncDecl)) {
+  if (const auto *MethodDecl = dyn_cast<CXXMethodDecl>(InitialTargetFunc)) {
     auto *Parent = MethodDecl->getParent();
     assert(Parent != nullptr);
 
@@ -558,7 +555,7 @@ void Environment::initialize() {
           setStorageLocation(*VarDecl, createObject(*VarDecl, nullptr));
         } else if (Capture.capturesThis()) {
           const auto *SurroundingMethodDecl =
-              cast<CXXMethodDecl>(FuncDecl->getNonClosureAncestor());
+              cast<CXXMethodDecl>(InitialTargetFunc->getNonClosureAncestor());
           QualType ThisPointeeType =
               SurroundingMethodDecl->getFunctionObjectParameterType();
           setThisPointeeStorageLocation(
@@ -580,9 +577,10 @@ void Environment::initialize() {
 
   // We do this below the handling of `CXXMethodDecl` above so that we can
   // be sure that the storage location for `this` has been set.
-  ResultObjectMap = std::make_shared<PrValueToResultObject>(
-      buildResultObjectMap(DACtx, FuncDecl, getThisPointeeStorageLocation(),
-                           LocForRecordReturnVal));
+  ResultObjectMap =
+      std::make_shared<PrValueToResultObject>(buildResultObjectMap(
+          DACtx, InitialTargetFunc, getThisPointeeStorageLocation(),
+          LocForRecordReturnVal));
 }
 
 Environment Environment::fork() const {
@@ -593,13 +591,7 @@ Environment Environment::fork() const {
 
 bool Environment::canDescend(unsigned MaxDepth,
                              const FunctionDecl *Callee) const {
-  return TargetStack.size() <= MaxDepth &&
-         !std::any_of(
-             TargetStack.begin(), TargetStack.end(),
-             [Callee](const llvm::PointerUnion<const FunctionDecl *, Stmt *>
-                          &Target) {
-               return Callee == Target.dyn_cast<const FunctionDecl *>();
-             });
+  return CallStack.size() <= MaxDepth && !llvm::is_contained(CallStack, Callee);
 }
 
 Environment Environment::pushCall(const CallExpr *Call) const {
@@ -644,7 +636,7 @@ void Environment::pushCallInternal(const FunctionDecl *FuncDecl,
   assert(FuncDecl->getDefinition() != nullptr);
   FuncDecl = FuncDecl->getDefinition();
 
-  TargetStack.push_back(FuncDecl);
+  CallStack.push_back(FuncDecl);
 
   initFieldsGlobalsAndFuncs(FuncDecl);
 
@@ -728,8 +720,10 @@ LatticeEffect Environment::widen(const Environment &PrevEnv,
   assert(ReturnLoc == PrevEnv.ReturnLoc);
   assert(LocForRecordReturnVal == PrevEnv.LocForRecordReturnVal);
   assert(ThisPointeeLoc == PrevEnv.ThisPointeeLoc);
-  assert(TargetStack == PrevEnv.TargetStack);
+  assert(CallStack == PrevEnv.CallStack);
   assert(ResultObjectMap == PrevEnv.ResultObjectMap);
+  assert(InitialTargetFunc == PrevEnv.InitialTargetFunc);
+  assert(InitialTargetStmt == PrevEnv.InitialTargetStmt);
 
   auto Effect = LatticeEffect::Unchanged;
 
@@ -763,22 +757,27 @@ Environment Environment::join(const Environment &EnvA, const Environment &EnvB,
   assert(EnvA.DACtx == EnvB.DACtx);
   assert(EnvA.LocForRecordReturnVal == EnvB.LocForRecordReturnVal);
   assert(EnvA.ThisPointeeLoc == EnvB.ThisPointeeLoc);
-  assert(EnvA.TargetStack == EnvB.TargetStack);
+  assert(EnvA.CallStack == EnvB.CallStack);
   assert(EnvA.ResultObjectMap == EnvB.ResultObjectMap);
+  assert(EnvA.InitialTargetFunc == EnvB.InitialTargetFunc);
+  assert(EnvA.InitialTargetStmt == EnvB.InitialTargetStmt);
 
   Environment JoinedEnv(*EnvA.DACtx);
 
-  JoinedEnv.TargetStack = EnvA.TargetStack;
+  JoinedEnv.CallStack = EnvA.CallStack;
   JoinedEnv.ResultObjectMap = EnvA.ResultObjectMap;
   JoinedEnv.LocForRecordReturnVal = EnvA.LocForRecordReturnVal;
   JoinedEnv.ThisPointeeLoc = EnvA.ThisPointeeLoc;
+  JoinedEnv.InitialTargetFunc = EnvA.InitialTargetFunc;
+  JoinedEnv.InitialTargetStmt = EnvA.InitialTargetStmt;
 
-  if (EnvA.TargetStack.empty() || !EnvA.getCurrentFunc()) {
+  auto *Func = EnvA.getCurrentFunc();
+  if (!Func) {
     JoinedEnv.ReturnVal = nullptr;
   } else {
     JoinedEnv.ReturnVal =
-        joinValues(EnvA.getCurrentFunc()->getReturnType(), EnvA.ReturnVal, EnvA,
-                   EnvB.ReturnVal, EnvB, JoinedEnv, Model);
+        joinValues(Func->getReturnType(), EnvA.ReturnVal, EnvA, EnvB.ReturnVal,
+                   EnvB, JoinedEnv, Model);
   }
 
   if (EnvA.ReturnLoc == EnvB.ReturnLoc)
