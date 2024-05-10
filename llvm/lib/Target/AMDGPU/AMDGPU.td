@@ -719,7 +719,7 @@ def FeatureDot8Insts : SubtargetFeature<"dot8-insts",
 def FeatureDot9Insts : SubtargetFeature<"dot9-insts",
   "HasDot9Insts",
   "true",
-  "Has v_dot2_f16_f16, v_dot2_bf16_bf16, v_dot2_f32_bf16 instructions"
+  "Has v_dot2_f16_f16, v_dot2_bf16_bf16 instructions"
 >;
 
 def FeatureDot10Insts : SubtargetFeature<"dot10-insts",
@@ -732,6 +732,12 @@ def FeatureDot11Insts : SubtargetFeature<"dot11-insts",
   "HasDot11Insts",
   "true",
   "Has v_dot4_f32_fp8_fp8, v_dot4_f32_fp8_bf8, v_dot4_f32_bf8_fp8, v_dot4_f32_bf8_bf8 instructions"
+>;
+
+def FeatureDot12Insts : SubtargetFeature<"dot12-insts",
+  "HasDot12Insts",
+  "true",
+  "Has v_dot2_f32_bf16 instructions"
 >;
 
 def FeatureMAIInsts : SubtargetFeature<"mai-insts",
@@ -1476,7 +1482,9 @@ def FeatureISAVersion9_5_Common : FeatureSet<
    FeatureFP8ConversionScaleInsts,
    FeatureBF8ConversionScaleInsts,
    FeatureFP4ConversionScaleInsts,
-   FeatureFP6BF6ConversionScaleInsts])>;
+   FeatureFP6BF6ConversionScaleInsts,
+   FeatureDot12Insts
+   ])>;
 
 def FeatureISAVersion9_4_0 : FeatureSet<
   !listconcat(FeatureISAVersion9_4_Common.Features,
@@ -1579,6 +1587,7 @@ def FeatureISAVersion11_Common : FeatureSet<
    FeatureDot8Insts,
    FeatureDot9Insts,
    FeatureDot10Insts,
+   FeatureDot12Insts,
    FeatureNSAEncoding,
    FeaturePartialNSAEncoding,
    FeatureWavefrontSize32,
@@ -1655,6 +1664,7 @@ def FeatureISAVersion12 : FeatureSet<
    FeatureDot9Insts,
    FeatureDot10Insts,
    FeatureDot11Insts,
+   FeatureDot12Insts,
    FeatureNSAEncoding,
    FeaturePartialNSAEncoding,
    FeatureWavefrontSize32,
@@ -2189,6 +2199,9 @@ def HasDot10Insts : Predicate<"Subtarget->hasDot10Insts()">,
 
 def HasDot11Insts : Predicate<"Subtarget->hasDot11Insts()">,
   AssemblerPredicate<(all_of FeatureDot11Insts)>;
+
+def HasDot12Insts : Predicate<"Subtarget->hasDot12Insts()">,
+  AssemblerPredicate<(all_of FeatureDot12Insts)>;
 
 def HasGetWaveIdInst : Predicate<"Subtarget->hasGetWaveIdInst()">,
   AssemblerPredicate<(all_of FeatureGetWaveIdInst)>;

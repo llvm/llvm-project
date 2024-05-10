@@ -405,12 +405,12 @@ def DOT2_BF16_Profile
   let HasSrc1Mods = 1;
 }
 
-let SubtargetPredicate = HasDot9Insts  in {
+let SubtargetPredicate = HasDot12Insts  in {
 
 defm V_DOT2_F32_BF16 : VOP3PInst<"v_dot2_f32_bf16", DOT2_BF16_Profile,
   int_amdgcn_fdot2_f32_bf16, 1>;
 
-} // End SubtargetPredicate = HasDot9Insts
+} // End SubtargetPredicate = HasDot12Insts
 
 } // End let IsDOT = 1
 
@@ -1934,6 +1934,7 @@ let SubtargetPredicate = HasGFX950Insts in {
 defm V_MFMA_LD_SCALE_B32 : VOP3P_Real_vi <0x2c>;
 defm V_MFMA_SCALE_F32_16X16X128_F8F6F4 : VOP3PX_Real_ScaledMFMA <0x2d>;
 defm V_MFMA_SCALE_F32_32X32X64_F8F6F4 : VOP3PX_Real_ScaledMFMA <0x2e>;
+defm V_DOT2_F32_BF16 : VOP3P_Real_vi<0x1a>;
 }
 
 defm V_MFMA_I32_32X32X16I8       : VOP3P_Real_MFMA_gfx940 <0x56, "v_mfma_i32_32x32x16_i8">;
