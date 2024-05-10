@@ -19,7 +19,7 @@ func.func private @consumer(memref<i32>)
 
 // CHECK-LABEL: func.func @multi_slot_alloca_only_second
 func.func @multi_slot_alloca_only_second() -> (i32, i32) {
-  // CHECK: %{{[:alnum:]+}} = test.multi_slot_alloca
+  // CHECK: %{{[[:alnum:]]+}} = test.multi_slot_alloca
   %1, %2 = test.multi_slot_alloca : () -> (memref<i32>, memref<i32>)
   func.call @consumer(%1) : (memref<i32>) -> ()
   %3 = memref.load %1[] : memref<i32>
