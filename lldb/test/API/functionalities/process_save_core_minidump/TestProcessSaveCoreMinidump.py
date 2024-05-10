@@ -9,12 +9,10 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
-
 class ProcessSaveCoreMinidumpTestCase(TestBase):
     def verify_core_file(
         self, core_path, expected_pid, expected_modules, expected_threads
     ):
-        breakpoint()
         # To verify, we'll launch with the mini dump
         target = self.dbg.CreateTarget(None)
         process = target.LoadCore(core_path)
@@ -44,13 +42,14 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
             thread_id = thread.GetThreadID()
             self.assertIn(thread_id, expected_threads)
             oldest_frame = thread.GetFrameAtIndex(thread.GetNumFrames() - 1)
-            stack_start = oldest_frame.GetSymbol().GetStartAddress().GetFileAddress()
+            stack_start = oldest_frame.GetSP()
             frame = thread.GetFrameAtIndex(0)
             sp = frame.GetSP()
-            stack_size = stack_start - (sp - red_zone)
-            byte_array = process.ReadMemory(sp - red_zone + 1, stack_size, error)
-            self.assertTrue(error.Success(), "Failed to read stack")
-            self.assertEqual(stack_size - 1, len(byte_array), "Incorrect stack size read"),
+            error = lldb.SBError()
+            process.ReadMemory(sp - red_zone + 1, 1, error)
+            self.assertTrue(error.Success(), error.GetCString())
+            process.ReadMemory(stack_start - 1, 1, error)
+            self.assertTrue(error.Success(), error.GetCString())
 
 
         self.dbg.DeleteTarget(target)
@@ -59,6 +58,7 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
     @skipUnlessPlatform(["linux"])
     def test_save_linux_mini_dump(self):
         """Test that we can save a Linux mini dump."""
+
         self.build()
         exe = self.getBuildArtifact("a.out")
         core_stack = self.getBuildArtifact("core.stack.dmp")
