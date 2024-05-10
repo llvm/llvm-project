@@ -110,8 +110,8 @@ defm V_PK_MAX_I16 : VOP3PInst<"v_pk_max_i16", VOP3P_Profile<VOP_V2I16_V2I16_V2I1
 defm V_PK_MAX_U16 : VOP3PInst<"v_pk_max_u16", VOP3P_Profile<VOP_V2I16_V2I16_V2I16>, umax>;
 
 let SubtargetPredicate = isGFX12Plus, ReadsModeReg = 0 in {
-defm V_PK_MAXIMUM_F16 : VOP3PInst<"v_pk_maximum_f16", VOP3P_Profile<VOP_V2F16_V2F16_V2F16>, fmaximum>;
-defm V_PK_MINIMUM_F16 : VOP3PInst<"v_pk_minimum_f16", VOP3P_Profile<VOP_V2F16_V2F16_V2F16>, fminimum>;
+defm V_PK_MAXIMUM_F16 : VOP3PInst<"v_pk_maximum_f16", VOP3P_Profile<VOP_V2F16_V2F16_V2F16, VOP3_PACKED>, fmaximum>;
+defm V_PK_MINIMUM_F16 : VOP3PInst<"v_pk_minimum_f16", VOP3P_Profile<VOP_V2F16_V2F16_V2F16, VOP3_PACKED>, fminimum>;
 } // End SubtargetPredicate = isGFX12Plus, ReadsModeReg = 0
 }
 
