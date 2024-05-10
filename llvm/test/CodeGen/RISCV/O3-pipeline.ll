@@ -69,6 +69,9 @@
 ; CHECK-NEXT:       Expand reduction intrinsics
 ; CHECK-NEXT:       Natural Loop Information
 ; CHECK-NEXT:       TLS Variable Hoist
+; CHECK-NEXT:       Scalar Evolution Analysis
+; CHECK-NEXT:       Loop Pass Manager
+; CHECK-NEXT:         EVL-based Induction Variables Simplify
 ; CHECK-NEXT:       Type Promotion
 ; CHECK-NEXT:       CodeGen Prepare
 ; CHECK-NEXT:       Dominator Tree Construction
