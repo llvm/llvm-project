@@ -2256,11 +2256,8 @@ public:
         Range = UO->getSubExpr()->getSourceRange();
         MsgParam = 1;
       }
-    } else if (const auto *CtorExpr = dyn_cast<CXXConstructExpr>(Operation)) {
-      S.Diag(CtorExpr->getLocation(),
-             diag::warn_unsafe_buffer_usage_in_container);
     } else {
-      if (isa<CallExpr>(Operation)) {
+      if (isa<CallExpr>(Operation) || isa<CXXConstructExpr>(Operation)) {
         // note_unsafe_buffer_operation doesn't have this mode yet.
         assert(!IsRelatedToDecl && "Not implemented yet!");
         MsgParam = 3;
@@ -2292,6 +2289,23 @@ public:
       if (SuggestSuggestions) {
         S.Diag(Loc, diag::note_safe_buffer_usage_suggestions_disabled);
       }
+    }
+  }
+
+  void handleUnsafeOperationInContainer(const Stmt *Operation,
+                                        bool IsRelatedToDecl,
+                                        ASTContext &Ctx) override {
+    SourceLocation Loc;
+    SourceRange Range;
+    unsigned MsgParam = 0;
+    if (const auto *CtorExpr = dyn_cast<CXXConstructExpr>(Operation)) {
+      Loc = CtorExpr->getLocation();
+    }
+    S.Diag(Loc, diag::warn_unsafe_buffer_usage_in_container);
+    if (IsRelatedToDecl) {
+      assert(!SuggestSuggestions &&
+             "Variables blamed for unsafe buffer usage without suggestions!");
+      S.Diag(Loc, diag::note_unsafe_buffer_operation) << MsgParam << Range;
     }
   }
 
