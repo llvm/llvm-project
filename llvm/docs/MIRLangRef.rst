@@ -553,7 +553,7 @@ corresponding internal ``llvm::RegState`` representation:
 
    * - ``implicit-def``
      - ``RegState::ImplicitDefine``
-     - `implicit` and `def`
+     - ``implicit`` and ``def``
 
    * - ``def``
      - ``RegState::Define``
