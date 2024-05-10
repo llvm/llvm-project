@@ -165,6 +165,11 @@ def use_support_substitutions(config):
     if config.cmake_sysroot:
         host_flags += ["--sysroot={}".format(config.cmake_sysroot)]
 
+    # Facebook T92898286
+    if config.llvm_test_bolt:
+        host_flags += ["--post-link-optimize"]
+    # End Facebook T92898286
+
     host_flags = " ".join(host_flags)
     config.substitutions.append(("%clang_host", "%clang " + host_flags))
     config.substitutions.append(("%clangxx_host", "%clangxx " + host_flags))
