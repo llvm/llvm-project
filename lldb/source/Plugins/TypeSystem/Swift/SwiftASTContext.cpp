@@ -281,18 +281,18 @@ typedef std::shared_ptr<SwiftEnumDescriptor> SwiftEnumDescriptorSP;
 typedef llvm::DenseMap<opaque_compiler_type_t, SwiftEnumDescriptorSP>
     EnumInfoCache;
 typedef std::shared_ptr<EnumInfoCache> EnumInfoCacheSP;
-typedef llvm::DenseMap<const swift::ASTContext *, EnumInfoCacheSP>
+typedef llvm::DenseMap<const SwiftASTContext *, EnumInfoCacheSP>
     ASTEnumInfoCacheMap;
 
-static EnumInfoCache *GetEnumInfoCache(const swift::ASTContext *a) {
+static EnumInfoCache *GetEnumInfoCache(const SwiftASTContext *swift_ast_ctx) {
   static ASTEnumInfoCacheMap g_cache;
   static std::mutex g_mutex;
   std::lock_guard<std::mutex> locker(g_mutex);
-  ASTEnumInfoCacheMap::iterator pos = g_cache.find(a);
+  ASTEnumInfoCacheMap::iterator pos = g_cache.find(swift_ast_ctx);
   if (pos == g_cache.end()) {
-    g_cache.insert(
-        std::make_pair(a, std::shared_ptr<EnumInfoCache>(new EnumInfoCache())));
-    return g_cache.find(a)->second.get();
+    g_cache.insert(std::make_pair(
+        swift_ast_ctx, std::shared_ptr<EnumInfoCache>(new EnumInfoCache())));
+    return g_cache.find(swift_ast_ctx)->second.get();
   }
   return pos->second.get();
 }
@@ -360,12 +360,12 @@ public:
 
   virtual ~SwiftEnumDescriptor() = default;
 
-  static SwiftEnumDescriptor *CreateDescriptor(swift::ASTContext *ast,
+  static SwiftEnumDescriptor *CreateDescriptor(SwiftASTContext *swift_ast_ctx,
                                                swift::CanType swift_can_type,
                                                swift::EnumDecl *enum_decl);
 
 protected:
-  SwiftEnumDescriptor(swift::ASTContext *ast, swift::CanType swift_can_type,
+  SwiftEnumDescriptor(swift::CanType swift_can_type,
                       swift::EnumDecl *enum_decl, SwiftEnumDescriptor::Kind k)
       : m_kind(k), m_type_name() {
     if (swift_can_type.getPointer()) {
@@ -384,10 +384,9 @@ private:
 
 class SwiftEmptyEnumDescriptor : public SwiftEnumDescriptor {
 public:
-  SwiftEmptyEnumDescriptor(swift::ASTContext *ast,
-                           swift::CanType swift_can_type,
+  SwiftEmptyEnumDescriptor(swift::CanType swift_can_type,
                            swift::EnumDecl *enum_decl)
-      : SwiftEnumDescriptor(ast, swift_can_type, enum_decl,
+      : SwiftEnumDescriptor(swift_can_type, enum_decl,
                             SwiftEnumDescriptor::Kind::Empty) {}
 
   ElementInfo *GetElementFromData(const lldb_private::DataExtractor &data,
@@ -448,18 +447,15 @@ class SwiftCStyleEnumDescriptor : public SwiftEnumDescriptor {
   llvm::SmallString<32> m_description = {"SwiftCStyleEnumDescriptor"};
 
 public:
-  SwiftCStyleEnumDescriptor(swift::ASTContext *ast,
+  SwiftCStyleEnumDescriptor(SwiftASTContext *swift_ast_ctx,
                             swift::CanType swift_can_type,
                             swift::EnumDecl *enum_decl)
-      : SwiftEnumDescriptor(ast, swift_can_type, enum_decl,
+      : SwiftEnumDescriptor(swift_can_type, enum_decl,
                             SwiftEnumDescriptor::Kind::CStyle),
         m_nopayload_elems_bitmask(), m_elements(), m_element_indexes() {
     LOG_PRINTF(GetLog(LLDBLog::Types), "doing C-style enum layout for %s",
                GetTypeName().AsCString());
 
-    SwiftASTContext *swift_ast_ctx = SwiftASTContext::GetSwiftASTContext(ast);
-    if (!swift_ast_ctx)
-      return;
     swift::irgen::IRGenModule &irgen_module = swift_ast_ctx->GetIRGenModule();
     const swift::irgen::EnumImplStrategy &enum_impl_strategy =
         swift::irgen::getEnumImplStrategy(irgen_module, swift_can_type);
@@ -590,15 +586,14 @@ class SwiftAllPayloadEnumDescriptor : public SwiftEnumDescriptor {
   llvm::SmallString<32> m_description = {"SwiftAllPayloadEnumDescriptor"};
 
 public:
-  SwiftAllPayloadEnumDescriptor(swift::ASTContext *ast,
+  SwiftAllPayloadEnumDescriptor(SwiftASTContext *swift_ast_ctx,
                                 swift::CanType swift_can_type,
                                 swift::EnumDecl *enum_decl)
-      : SwiftEnumDescriptor(ast, swift_can_type, enum_decl,
+      : SwiftEnumDescriptor(swift_can_type, enum_decl,
                             SwiftEnumDescriptor::Kind::AllPayload) {
     LOG_PRINTF(GetLog(LLDBLog::Types), "doing ADT-style enum layout for %s",
                GetTypeName().AsCString());
 
-    SwiftASTContext *swift_ast_ctx = SwiftASTContext::GetSwiftASTContext(ast);
     swift::irgen::IRGenModule &irgen_module = swift_ast_ctx->GetIRGenModule();
     const swift::irgen::EnumImplStrategy &enum_impl_strategy =
         swift::irgen::getEnumImplStrategy(irgen_module, swift_can_type);
@@ -733,13 +728,13 @@ private:
 
 class SwiftMixedEnumDescriptor : public SwiftEnumDescriptor {
 public:
-  SwiftMixedEnumDescriptor(swift::ASTContext *ast,
+  SwiftMixedEnumDescriptor(SwiftASTContext *swift_ast_ctx,
                            swift::CanType swift_can_type,
                            swift::EnumDecl *enum_decl)
-      : SwiftEnumDescriptor(ast, swift_can_type, enum_decl,
+      : SwiftEnumDescriptor(swift_can_type, enum_decl,
                             SwiftEnumDescriptor::Kind::Mixed),
-        m_non_payload_cases(ast, swift_can_type, enum_decl),
-        m_payload_cases(ast, swift_can_type, enum_decl) {}
+        m_non_payload_cases(swift_ast_ctx, swift_can_type, enum_decl),
+        m_payload_cases(swift_ast_ctx, swift_can_type, enum_decl) {}
 
   ElementInfo *GetElementFromData(const lldb_private::DataExtractor &data,
                                   bool no_payload) override {
@@ -778,10 +773,9 @@ class SwiftResilientEnumDescriptor : public SwiftEnumDescriptor {
   llvm::SmallString<32> m_description = {"SwiftResilientEnumDescriptor"};
 
 public:
-  SwiftResilientEnumDescriptor(swift::ASTContext *ast,
-                               swift::CanType swift_can_type,
+  SwiftResilientEnumDescriptor(swift::CanType swift_can_type,
                                swift::EnumDecl *enum_decl)
-      : SwiftEnumDescriptor(ast, swift_can_type, enum_decl,
+      : SwiftEnumDescriptor(swift_can_type, enum_decl,
                             SwiftEnumDescriptor::Kind::Resilient) {
     LOG_PRINTF(GetLog(LLDBLog::Types), "doing resilient enum layout for %s",
                GetTypeName().AsCString());
@@ -806,13 +800,12 @@ public:
 };
 
 SwiftEnumDescriptor *
-SwiftEnumDescriptor::CreateDescriptor(swift::ASTContext *ast,
+SwiftEnumDescriptor::CreateDescriptor(SwiftASTContext *swift_ast_ctx,
                                       swift::CanType swift_can_type,
                                       swift::EnumDecl *enum_decl) {
-  assert(ast);
+  assert(swift_ast_ctx);
   assert(enum_decl);
   assert(swift_can_type.getPointer());
-  SwiftASTContext *swift_ast_ctx = SwiftASTContext::GetSwiftASTContext(ast);
   assert(swift_ast_ctx);
   swift::irgen::IRGenModule &irgen_module = swift_ast_ctx->GetIRGenModule();
   const swift::irgen::EnumImplStrategy &enum_impl_strategy =
@@ -823,32 +816,35 @@ SwiftEnumDescriptor::CreateDescriptor(swift::ASTContext *ast,
       elements_with_no_payload = enum_impl_strategy.getElementsWithNoPayload();
   swift::SILType swift_sil_type = irgen_module.getLoweredType(swift_can_type);
   if (!irgen_module.getTypeInfo(swift_sil_type).isFixedSize())
-    return new SwiftResilientEnumDescriptor(ast, swift_can_type, enum_decl);
+    return new SwiftResilientEnumDescriptor(swift_can_type, enum_decl);
   if (elements_with_no_payload.size() == 0) {
     // Nothing with no payload.. empty or all payloads?
     if (elements_with_payload.size() == 0)
-      return new SwiftEmptyEnumDescriptor(ast, swift_can_type, enum_decl);
-    return new SwiftAllPayloadEnumDescriptor(ast, swift_can_type, enum_decl);
+      return new SwiftEmptyEnumDescriptor(swift_can_type, enum_decl);
+    return new SwiftAllPayloadEnumDescriptor(swift_ast_ctx, swift_can_type,
+                                             enum_decl);
   }
 
   // Something with no payload.. mixed or C-style?
   if (elements_with_payload.size() == 0)
-    return new SwiftCStyleEnumDescriptor(ast, swift_can_type, enum_decl);
-  return new SwiftMixedEnumDescriptor(ast, swift_can_type, enum_decl);
+    return new SwiftCStyleEnumDescriptor(swift_ast_ctx, swift_can_type,
+                                         enum_decl);
+  return new SwiftMixedEnumDescriptor(swift_ast_ctx, swift_can_type, enum_decl);
 }
 
 static SwiftEnumDescriptor *
-GetEnumInfoFromEnumDecl(swift::ASTContext *ast, swift::CanType swift_can_type,
+GetEnumInfoFromEnumDecl(SwiftASTContext *swift_ast_ctx,
+                        swift::CanType swift_can_type,
                         swift::EnumDecl *enum_decl) {
-  return SwiftEnumDescriptor::CreateDescriptor(ast, swift_can_type, enum_decl);
+  return SwiftEnumDescriptor::CreateDescriptor(swift_ast_ctx, swift_can_type,
+                                               enum_decl);
 }
 
 SwiftEnumDescriptor *
 SwiftASTContext::GetCachedEnumInfo(opaque_compiler_type_t type) {
   VALID_OR_RETURN_CHECK_TYPE(type, nullptr);
 
-  ThreadSafeASTContext ast_ctx = GetASTContext();
-  EnumInfoCache *enum_info_cache = GetEnumInfoCache(*ast_ctx);
+  EnumInfoCache *enum_info_cache = GetEnumInfoCache(this);
   EnumInfoCache::const_iterator pos = enum_info_cache->find(type);
   if (pos != enum_info_cache->end())
     return pos->second.get();
@@ -859,11 +855,11 @@ SwiftASTContext::GetCachedEnumInfo(opaque_compiler_type_t type) {
   SwiftEnumDescriptorSP enum_info_sp;
   swift::CanType swift_can_type(GetCanonicalSwiftType(type));
   if (auto *enum_type = swift_can_type->getAs<swift::EnumType>()) {
-    enum_info_sp.reset(GetEnumInfoFromEnumDecl(*ast_ctx, swift_can_type,
+    enum_info_sp.reset(GetEnumInfoFromEnumDecl(this, swift_can_type,
                                                enum_type->getDecl()));
   } else if (auto *bound_enum_type =
                  swift_can_type->getAs<swift::BoundGenericEnumType>()) {
-    enum_info_sp.reset(GetEnumInfoFromEnumDecl(*ast_ctx, swift_can_type,
+    enum_info_sp.reset(GetEnumInfoFromEnumDecl(this, swift_can_type,
                                                bound_enum_type->getDecl()));
   }
 
