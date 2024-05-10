@@ -2033,10 +2033,6 @@ MachineBasicBlock *SIInstrInfo::insertSimulatedTrap(MachineRegisterInfo &MRI,
                                                     MachineInstr &MI,
                                                     const DebugLoc &DL) const {
   MachineFunction *MF = MBB.getParent();
-  MachineBasicBlock *SplitBB = MBB.splitAt(MI, /*UpdateLiveIns=*/false);
-  MachineBasicBlock *HaltLoop = MF->CreateMachineBasicBlock();
-  MF->push_back(HaltLoop);
-
   constexpr unsigned DoorbellIDMask = 0x3ff;
   constexpr unsigned ECQueueWaveAbort = 0x400;
 
@@ -2066,27 +2062,32 @@ MachineBasicBlock *SIInstrInfo::insertSimulatedTrap(MachineRegisterInfo &MRI,
   BuildMI(MBB, MI, DL, get(AMDGPU::S_MOV_B32), AMDGPU::M0)
       .addUse(AMDGPU::TTMP2);
 
-  if (MBB.succ_empty()) {
-    BuildMI(MBB, MI, DL, get(AMDGPU::S_BRANCH)).addMBB(HaltLoop);
-  } else {
-    // HACK: There are some instructions following the trap. Since uses of
-    // virtual registers in SplitBB (or beyond) that were defined before the
-    // trap must be dominated by their definitions, we need SplitBB to be a
-    // successor (even though it's unreachable in practice). This needs to be
-    // represented by a dummy cmp_eq and cbranch to convince analyzeBranch that
-    // SplitBB should indeed be considered a successor.
-    BuildMI(MBB, MI, DL, get(AMDGPU::S_CMP_EQ_U32))
-        .addUse(SetWaveAbortBit)
-        .addUse(SetWaveAbortBit);
-    BuildMI(MBB, MI, DL, get(AMDGPU::S_CBRANCH_SCC1)).addMBB(HaltLoop);
-  }
+  MachineBasicBlock *HaltLoop = MF->CreateMachineBasicBlock();
+  MF->push_back(HaltLoop);
+  HaltLoop->addSuccessor(HaltLoop);
 
   BuildMI(*HaltLoop, HaltLoop->end(), DL, get(AMDGPU::S_SETHALT)).addImm(5);
   BuildMI(*HaltLoop, HaltLoop->end(), DL, get(AMDGPU::S_BRANCH))
       .addMBB(HaltLoop);
 
+  if (MBB.succ_empty() && std::next(MI.getIterator()) == MBB.end()) {
+    BuildMI(MBB, MI, DL, get(AMDGPU::S_BRANCH)).addMBB(HaltLoop);
+    MBB.addSuccessor(HaltLoop);
+    return &MBB;
+  }
+
+  // HACK: There are some instructions/successors following the trap. Since uses
+  // of virtual registers after the trap that were defined before the trap must
+  // be dominated by their definitions, we need the uses to be successors (even
+  // though they're unreachable in practice). This needs to be represented by a
+  // dummy cmp_eq and cbranch to convince analyzeBranch that SplitBB should
+  // indeed be considered a successor.
+  MachineBasicBlock *SplitBB = MBB.splitAt(MI, /*UpdateLiveIns=*/false);
+  BuildMI(MBB, MI, DL, get(AMDGPU::S_CMP_EQ_U32))
+      .addUse(SetWaveAbortBit)
+      .addUse(SetWaveAbortBit);
+  BuildMI(MBB, MI, DL, get(AMDGPU::S_CBRANCH_SCC1)).addMBB(HaltLoop);
   MBB.addSuccessor(HaltLoop);
-  HaltLoop->addSuccessor(HaltLoop);
 
   return SplitBB;
 }
