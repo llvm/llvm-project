@@ -1970,10 +1970,12 @@ static void genOMPDispatch(Fortran::lower::AbstractConverter &converter,
     genWsloopOp(converter, symTable, semaCtx, eval, loc, clauses, queue, item);
     break;
   case llvm::omp::Directive::OMPD_loop:
-  case llvm::omp::Directive::OMPD_masked:
     TODO(loc, "Unhandled loop directive (" +
                   llvm::omp::getOpenMPDirectiveName(dir) + ")");
     break;
+  case llvm::omp::Directive::OMPD_masked:
+    TODO(loc, "Unhandled directive " + 
+                  llvm::omp::getOpenMPDirectiveName(dir));
   case llvm::omp::Directive::OMPD_master:
     genMasterOp(converter, symTable, semaCtx, eval, loc, clauses, queue, item);
     break;
