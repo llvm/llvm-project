@@ -811,3 +811,6 @@
 // NDD: #define __NDD__ 1
 // PPX: #define __PPX__ 1
 // PUSH2POP2: #define __PUSH2POP2__ 1
+
+// RUN: %clang -target x86_64-unknown-unknown -march=x86-64 -mapx-inline-asm-use-gpr32 -x c -E -dM -o - %s | FileCheck --check-prefixes=USEGPR32 %s
+// USEGPR32: #define __APX_INLINE_ASM_USE_GPR32__ 1

@@ -450,6 +450,8 @@ bool X86TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasFullBFloat16 = true;
     } else if (Feature == "+egpr") {
       HasEGPR = true;
+    } else if (Feature == "+inline-asm-use-gpr32") {
+      HasInlineAsmUseGPR32 = true;
     } else if (Feature == "+push2pop2") {
       HasPush2Pop2 = true;
     } else if (Feature == "+ppx") {
@@ -974,6 +976,8 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
   // Condition here is aligned with the feature set of mapxf in Options.td
   if (HasEGPR && HasPush2Pop2 && HasPPX && HasNDD)
     Builder.defineMacro("__APX_F__");
+  if (HasInlineAsmUseGPR32)
+    Builder.defineMacro("__APX_INLINE_ASM_USE_GPR32__");
 
   // Each case falls through to the previous one here.
   switch (SSELevel) {
@@ -1493,6 +1497,15 @@ bool X86TargetInfo::validateAsmConstraint(
   case 'C': // SSE floating point constant.
   case 'G': // x87 floating point constant.
     return true;
+  case 'j':
+    Name++;
+    switch (*Name) {
+    default:
+      return false;
+    case 'R':
+      Info.setAllowsRegister();
+      return true;
+    }
   case '@':
     // CC condition changes.
     if (auto Len = matchAsmCCConstraint(Name)) {
@@ -1759,6 +1772,19 @@ std::string X86TargetInfo::convertConstraint(const char *&Constraint) const {
     case 't':
     case 'z':
     case '2':
+      // "^" hints llvm that this is a 2 letter constraint.
+      // "Constraint++" is used to promote the string iterator
+      // to the next constraint.
+      return std::string("^") + std::string(Constraint++, 2);
+    }
+  case 'j':
+    switch (Constraint[1]) {
+    default:
+      // Break from inner switch and fall through (copy single char),
+      // continue parsing after copying the current constraint into
+      // the return string.
+      break;
+    case 'R':
       // "^" hints llvm that this is a 2 letter constraint.
       // "Constraint++" is used to promote the string iterator
       // to the next constraint.
