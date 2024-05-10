@@ -8499,6 +8499,12 @@ public:
         const TreeEntry *VE = R.getTreeEntry(V);
         if (!CheckedExtracts.insert(V).second ||
             !R.areAllUsersVectorized(cast<Instruction>(V), &VectorizedVals) ||
+            any_of(EE->users(),
+                   [&](User *U) {
+                     return isa<GetElementPtrInst>(U) &&
+                            !R.areAllUsersVectorized(cast<Instruction>(U),
+                                                     &VectorizedVals);
+                   }) ||
             (VE && VE != E))
           continue;
         std::optional<unsigned> EEIdx = getExtractIndex(EE);
@@ -11397,6 +11403,8 @@ public:
           any_of(EI->users(), [&](User *U) {
             const TreeEntry *UTE = R.getTreeEntry(U);
             return !UTE || R.MultiNodeScalars.contains(U) ||
+                   (isa<GetElementPtrInst>(U) &&
+                    !R.areAllUsersVectorized(cast<Instruction>(U))) ||
                    count_if(R.VectorizableTree,
                             [&](const std::unique_ptr<TreeEntry> &TE) {
                               return any_of(TE->UserTreeIndices,
@@ -13329,8 +13337,11 @@ Value *BoUpSLP::vectorizeTree(
             // Leave the GEPs as is, they are free in most cases and better to
             // keep them as GEPs.
             auto *CloneGEP = GEP->clone();
-            CloneGEP->insertBefore(*Builder.GetInsertBlock(),
-                                   Builder.GetInsertPoint());
+            if (isa<Instruction>(Vec))
+              CloneGEP->insertBefore(*Builder.GetInsertBlock(),
+                                     Builder.GetInsertPoint());
+            else
+              CloneGEP->insertBefore(GEP);
             if (GEP->hasName())
               CloneGEP->takeName(GEP);
             Ex = CloneGEP;

@@ -100,13 +100,15 @@ Improvements to clang-tidy
 - Improved :program:`run-clang-tidy.py` script. Added argument `-source-filter`
   to filter source files from the compilation database, via a RegEx. In a
   similar fashion to what `-header-filter` does for header files.
+
 - Improved :program:`check_clang_tidy.py` script. Added argument `-export-fixes`
   to aid in clang-tidy and test development.
-- Fixed bug where big values for unsigned check options overflowed into negative values
-  when being printed with ``--dump-config``.
 
-- Fixed ``--verify-config`` option not properly parsing checks when using the 
-  literal operator in the ``.clang-tidy`` config.
+- Fixed bug where big values for unsigned check options overflowed into negative values
+  when being printed with `--dump-config`.
+
+- Fixed `--verify-config` option not properly parsing checks when using the
+  literal operator in the `.clang-tidy` config.
 
 New checks
 ^^^^^^^^^^
@@ -236,7 +238,7 @@ Changes in existing checks
 
 - Improved :doc:`google-explicit-constructor
   <clang-tidy/checks/google/explicit-constructor>` check to better handle
-  ``C++-20`` `explicit(bool)`.
+  C++20 `explicit(bool)`.
 
 - Improved :doc:`google-global-names-in-headers
   <clang-tidy/checks/google/global-names-in-headers>` check by replacing the local
@@ -248,6 +250,10 @@ Changes in existing checks
 - Improved :doc:`hicpp-ignored-remove-result <clang-tidy/checks/hicpp/ignored-remove-result>`
   check by ignoring other functions with same prefixes as the target specific
   functions.
+
+- Improved :doc:`linuxkernel-must-check-errs
+  <clang-tidy/checks/linuxkernel/must-check-errs>` check documentation to
+  consistently use the check's proper name.
 
 - Improved :doc:`llvm-header-guard
   <clang-tidy/checks/llvm/header-guard>` check by replacing the local
@@ -280,6 +286,10 @@ Changes in existing checks
   <clang-tidy/checks/modernize/loop-convert>` check by ensuring that fix-its
   don't remove parentheses used in ``sizeof`` calls when they have array index
   accesses as arguments.
+
+- Improved :doc:`modernize-use-nullptr
+  <clang-tidy/checks/modernize/use-nullptr>` check to include support for C23,
+  which also has introduced the ``nullptr`` keyword.
 
 - Improved :doc:`modernize-use-override
   <clang-tidy/checks/modernize/use-override>` check to also remove any trailing
@@ -336,12 +346,8 @@ Miscellaneous
 ^^^^^^^^^^^^^
 
 - Fixed incorrect formatting in :program:`clang-apply-replacements` when no
-  ``--format`` option is specified. Now :program:`clang-apply-replacements`
+  `--format` option is specified. Now :program:`clang-apply-replacements`
   applies formatting only with the option.
-
-- Fixed the :doc:`linuxkernel-must-check-errs
-  <clang-tidy/checks/linuxkernel/must-check-errs>` documentation to consistently
-  use the check's proper name.
 
 Improvements to include-fixer
 -----------------------------

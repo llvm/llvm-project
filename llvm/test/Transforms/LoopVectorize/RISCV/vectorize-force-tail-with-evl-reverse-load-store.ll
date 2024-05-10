@@ -46,9 +46,9 @@ define void @reverse_load_store(i64 %startval, ptr noalias %ptr, ptr noalias %pt
 ; IF-EVL-NEXT:    [[TMP16:%.*]] = sub i64 1, [[TMP14]]
 ; IF-EVL-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i32, ptr [[TMP12]], i64 [[TMP15]]
 ; IF-EVL-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i32, ptr [[TMP17]], i64 [[TMP16]]
-; IF-EVL-NEXT:    [[REVERSE:%.*]] = call <vscale x 4 x i1> @llvm.experimental.vector.reverse.nxv4i1(<vscale x 4 x i1> [[TMP10]])
+; IF-EVL-NEXT:    [[REVERSE:%.*]] = call <vscale x 4 x i1> @llvm.vector.reverse.nxv4i1(<vscale x 4 x i1> [[TMP10]])
 ; IF-EVL-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 4 x i32> @llvm.masked.load.nxv4i32.p0(ptr [[TMP18]], i32 4, <vscale x 4 x i1> [[REVERSE]], <vscale x 4 x i32> poison)
-; IF-EVL-NEXT:    [[REVERSE3:%.*]] = call <vscale x 4 x i32> @llvm.experimental.vector.reverse.nxv4i32(<vscale x 4 x i32> [[WIDE_MASKED_LOAD]])
+; IF-EVL-NEXT:    [[REVERSE3:%.*]] = call <vscale x 4 x i32> @llvm.vector.reverse.nxv4i32(<vscale x 4 x i32> [[WIDE_MASKED_LOAD]])
 ; IF-EVL-NEXT:    [[TMP19:%.*]] = getelementptr inbounds i32, ptr [[PTR2:%.*]], i64 [[TMP11]]
 ; IF-EVL-NEXT:    [[TMP20:%.*]] = call i64 @llvm.vscale.i64()
 ; IF-EVL-NEXT:    [[TMP21:%.*]] = mul i64 [[TMP20]], 4
@@ -56,8 +56,8 @@ define void @reverse_load_store(i64 %startval, ptr noalias %ptr, ptr noalias %pt
 ; IF-EVL-NEXT:    [[TMP23:%.*]] = sub i64 1, [[TMP21]]
 ; IF-EVL-NEXT:    [[TMP24:%.*]] = getelementptr inbounds i32, ptr [[TMP19]], i64 [[TMP22]]
 ; IF-EVL-NEXT:    [[TMP25:%.*]] = getelementptr inbounds i32, ptr [[TMP24]], i64 [[TMP23]]
-; IF-EVL-NEXT:    [[REVERSE4:%.*]] = call <vscale x 4 x i1> @llvm.experimental.vector.reverse.nxv4i1(<vscale x 4 x i1> [[TMP10]])
-; IF-EVL-NEXT:    [[REVERSE5:%.*]] = call <vscale x 4 x i32> @llvm.experimental.vector.reverse.nxv4i32(<vscale x 4 x i32> [[REVERSE3]])
+; IF-EVL-NEXT:    [[REVERSE4:%.*]] = call <vscale x 4 x i1> @llvm.vector.reverse.nxv4i1(<vscale x 4 x i1> [[TMP10]])
+; IF-EVL-NEXT:    [[REVERSE5:%.*]] = call <vscale x 4 x i32> @llvm.vector.reverse.nxv4i32(<vscale x 4 x i32> [[REVERSE3]])
 ; IF-EVL-NEXT:    call void @llvm.masked.store.nxv4i32.p0(<vscale x 4 x i32> [[REVERSE5]], ptr [[TMP25]], i32 4, <vscale x 4 x i1> [[REVERSE4]])
 ; IF-EVL-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP6]]
 ; IF-EVL-NEXT:    [[TMP26:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]

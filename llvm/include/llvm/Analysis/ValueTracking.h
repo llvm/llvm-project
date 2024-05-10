@@ -860,7 +860,8 @@ enum class OverflowResult {
 };
 
 OverflowResult computeOverflowForUnsignedMul(const Value *LHS, const Value *RHS,
-                                             const SimplifyQuery &SQ);
+                                             const SimplifyQuery &SQ,
+                                             bool IsNSW = false);
 OverflowResult computeOverflowForSignedMul(const Value *LHS, const Value *RHS,
                                            const SimplifyQuery &SQ);
 OverflowResult

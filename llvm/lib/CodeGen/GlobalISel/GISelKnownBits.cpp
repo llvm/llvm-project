@@ -694,6 +694,20 @@ unsigned GISelKnownBits::computeNumSignBits(Register R,
     const MachineMemOperand *MMO = *MI.memoperands_begin();
     return TyBits - MMO->getSizeInBits().getValue();
   }
+  case TargetOpcode::G_AND:
+  case TargetOpcode::G_OR:
+  case TargetOpcode::G_XOR: {
+    Register Src1 = MI.getOperand(1).getReg();
+    unsigned Src1NumSignBits =
+        computeNumSignBits(Src1, DemandedElts, Depth + 1);
+    if (Src1NumSignBits != 1) {
+      Register Src2 = MI.getOperand(2).getReg();
+      unsigned Src2NumSignBits =
+          computeNumSignBits(Src2, DemandedElts, Depth + 1);
+      FirstAnswer = std::min(Src1NumSignBits, Src2NumSignBits);
+    }
+    break;
+  }
   case TargetOpcode::G_TRUNC: {
     Register Src = MI.getOperand(1).getReg();
     LLT SrcTy = MRI.getType(Src);

@@ -478,6 +478,15 @@ def ext_decomp_decl_empty : ExtWarn<
   "ISO C++17 does not allow a decomposition group to be empty">,
   InGroup<DiagGroup<"empty-decomposition">>;
 
+// C++26 structured bindings
+def ext_decl_attrs_on_binding : ExtWarn<
+  "an attribute specifier sequence attached to a structured binding declaration "
+  "is a C++2c extension">, InGroup<CXX26>;
+def warn_cxx23_compat_decl_attrs_on_binding : Warning<
+  "an attribute specifier sequence attached to a structured binding declaration "
+  "is incompatible with C++ standards before C++2c">,
+  InGroup<CXXPre26Compat>, DefaultIgnore;
+
 /// Objective-C parser diagnostics
 def err_expected_minus_or_plus : Error<
   "method type specifier must start with '-' or '+'">;

@@ -3146,7 +3146,7 @@ public:
 
   /// Lower a deinterleave intrinsic to a target specific load intrinsic.
   /// Return true on success. Currently only supports
-  /// llvm.experimental.vector.deinterleave2
+  /// llvm.vector.deinterleave2
   ///
   /// \p DI is the deinterleave intrinsic.
   /// \p LI is the accompanying load instruction
@@ -3157,7 +3157,7 @@ public:
 
   /// Lower an interleave intrinsic to a target specific store intrinsic.
   /// Return true on success. Currently only supports
-  /// llvm.experimental.vector.interleave2
+  /// llvm.vector.interleave2
   ///
   /// \p II is the interleave intrinsic.
   /// \p SI is the accompanying store instruction
@@ -5237,6 +5237,9 @@ public:
 
   /// Expand fminnum/fmaxnum into fminnum_ieee/fmaxnum_ieee with quieted inputs.
   SDValue expandFMINNUM_FMAXNUM(SDNode *N, SelectionDAG &DAG) const;
+
+  /// Expand fminimum/fmaximum into multiple comparison with selects.
+  SDValue expandFMINIMUM_FMAXIMUM(SDNode *N, SelectionDAG &DAG) const;
 
   /// Expand FP_TO_[US]INT_SAT into FP_TO_[US]INT and selects or min/max.
   /// \param N Node to expand

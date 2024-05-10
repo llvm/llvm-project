@@ -45,7 +45,7 @@ void fallthrough(int n) {
 #endif
 }
 
-namespace cwg2450 { // cwg2450: 18 review P2308R1
+namespace cwg2450 { // cwg2450: 18
 #if __cplusplus >= 202302L
 struct S {int a;};
 template <S s>
@@ -59,7 +59,7 @@ f<{.a= 0}>();
 #endif
 }
 
-namespace cwg2459 { // cwg2459: 18 drafting P2308R1
+namespace cwg2459 { // cwg2459: 18
 #if __cplusplus >= 202302L
 struct A {
   constexpr A(float) {}

@@ -496,8 +496,8 @@ static fir::GlobalOp defineGlobal(Fortran::lower::AbstractConverter &converter,
   if (mlir::isa<fir::SequenceType>(symTy) &&
       !Fortran::semantics::IsAllocatableOrPointer(sym)) {
     mlir::Type eleTy = mlir::cast<fir::SequenceType>(symTy).getEleTy();
-    if (eleTy.isa<mlir::IntegerType, mlir::FloatType, fir::ComplexType,
-                  fir::LogicalType>()) {
+    if (mlir::isa<mlir::IntegerType, mlir::FloatType, fir::ComplexType,
+                  fir::LogicalType>(eleTy)) {
       const auto *details =
           sym.detailsIf<Fortran::semantics::ObjectEntityDetails>();
       if (details->init()) {

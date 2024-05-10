@@ -994,7 +994,7 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:       "kind": "FunctionDecl",
 // CHECK-NEXT:       "name": "operator delete",
 // CHECK-NEXT:       "type": {
-// CHECK-NEXT:        "qualType": "void (void *, unsigned long) noexcept"
+// CHECK-NEXT:        "qualType": "void (void *) noexcept"
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "inner": [
@@ -1369,7 +1369,7 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:       "kind": "FunctionDecl",
 // CHECK-NEXT:       "name": "operator delete",
 // CHECK-NEXT:       "type": {
-// CHECK-NEXT:        "qualType": "void (void *, unsigned long) noexcept"
+// CHECK-NEXT:        "qualType": "void (void *) noexcept"
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "inner": [
@@ -1722,6 +1722,7 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:   "end": {}
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "isImplicit": true,
+// CHECK-NEXT:  "isUsed": true,
 // CHECK-NEXT:  "name": "operator delete",
 // CHECK-NEXT:  "mangledName": "_ZdlPv",
 // CHECK-NEXT:  "type": {
@@ -1818,126 +1819,6 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "isImplicit": true,
 // CHECK-NEXT:  "isUsed": true,
-// CHECK-NEXT:  "name": "operator delete",
-// CHECK-NEXT:  "mangledName": "_ZdlPvm",
-// CHECK-NEXT:  "type": {
-// CHECK-NEXT:   "qualType": "void (void *, unsigned long) noexcept"
-// CHECK-NEXT:  },
-// CHECK-NEXT:  "inner": [
-// CHECK-NEXT:   {
-// CHECK-NEXT:    "id": "0x{{.*}}",
-// CHECK-NEXT:    "kind": "ParmVarDecl",
-// CHECK-NEXT:    "loc": {},
-// CHECK-NEXT:    "range": {
-// CHECK-NEXT:     "begin": {},
-// CHECK-NEXT:     "end": {}
-// CHECK-NEXT:    },
-// CHECK-NEXT:    "isImplicit": true,
-// CHECK-NEXT:    "type": {
-// CHECK-NEXT:     "qualType": "void *"
-// CHECK-NEXT:    }
-// CHECK-NEXT:   },
-// CHECK-NEXT:   {
-// CHECK-NEXT:    "id": "0x{{.*}}",
-// CHECK-NEXT:    "kind": "ParmVarDecl",
-// CHECK-NEXT:    "loc": {},
-// CHECK-NEXT:    "range": {
-// CHECK-NEXT:     "begin": {},
-// CHECK-NEXT:     "end": {}
-// CHECK-NEXT:    },
-// CHECK-NEXT:    "isImplicit": true,
-// CHECK-NEXT:    "type": {
-// CHECK-NEXT:     "qualType": "unsigned long"
-// CHECK-NEXT:    }
-// CHECK-NEXT:   },
-// CHECK-NEXT:   {
-// CHECK-NEXT:    "id": "0x{{.*}}",
-// CHECK-NEXT:    "kind": "VisibilityAttr",
-// CHECK-NEXT:    "range": {
-// CHECK-NEXT:     "begin": {},
-// CHECK-NEXT:     "end": {}
-// CHECK-NEXT:    },
-// CHECK-NEXT:    "implicit": true,
-// CHECK-NEXT:    "visibility": "default"
-// CHECK-NEXT:   }
-// CHECK-NEXT:  ]
-// CHECK-NEXT: }
-
-// CHECK-NOT: {{^}}Dumping
-// CHECK:  "kind": "FunctionDecl",
-// CHECK-NEXT:  "loc": {},
-// CHECK-NEXT:  "range": {
-// CHECK-NEXT:   "begin": {},
-// CHECK-NEXT:   "end": {}
-// CHECK-NEXT:  },
-// CHECK-NEXT:  "isImplicit": true,
-// CHECK-NEXT:  "name": "operator delete",
-// CHECK-NEXT:  "mangledName": "_ZdlPvmSt11align_val_t",
-// CHECK-NEXT:  "type": {
-// CHECK-NEXT:   "qualType": "void (void *, unsigned long, std::align_val_t) noexcept"
-// CHECK-NEXT:  },
-// CHECK-NEXT:  "inner": [
-// CHECK-NEXT:   {
-// CHECK-NEXT:    "id": "0x{{.*}}",
-// CHECK-NEXT:    "kind": "ParmVarDecl",
-// CHECK-NEXT:    "loc": {},
-// CHECK-NEXT:    "range": {
-// CHECK-NEXT:     "begin": {},
-// CHECK-NEXT:     "end": {}
-// CHECK-NEXT:    },
-// CHECK-NEXT:    "isImplicit": true,
-// CHECK-NEXT:    "type": {
-// CHECK-NEXT:     "qualType": "void *"
-// CHECK-NEXT:    }
-// CHECK-NEXT:   },
-// CHECK-NEXT:   {
-// CHECK-NEXT:    "id": "0x{{.*}}",
-// CHECK-NEXT:    "kind": "ParmVarDecl",
-// CHECK-NEXT:    "loc": {},
-// CHECK-NEXT:    "range": {
-// CHECK-NEXT:     "begin": {},
-// CHECK-NEXT:     "end": {}
-// CHECK-NEXT:    },
-// CHECK-NEXT:    "isImplicit": true,
-// CHECK-NEXT:    "type": {
-// CHECK-NEXT:     "qualType": "unsigned long"
-// CHECK-NEXT:    }
-// CHECK-NEXT:   },
-// CHECK-NEXT:   {
-// CHECK-NEXT:    "id": "0x{{.*}}",
-// CHECK-NEXT:    "kind": "ParmVarDecl",
-// CHECK-NEXT:    "loc": {},
-// CHECK-NEXT:    "range": {
-// CHECK-NEXT:     "begin": {},
-// CHECK-NEXT:     "end": {}
-// CHECK-NEXT:    },
-// CHECK-NEXT:    "isImplicit": true,
-// CHECK-NEXT:    "type": {
-// CHECK-NEXT:     "qualType": "std::align_val_t"
-// CHECK-NEXT:    }
-// CHECK-NEXT:   },
-// CHECK-NEXT:   {
-// CHECK-NEXT:    "id": "0x{{.*}}",
-// CHECK-NEXT:    "kind": "VisibilityAttr",
-// CHECK-NEXT:    "range": {
-// CHECK-NEXT:     "begin": {},
-// CHECK-NEXT:     "end": {}
-// CHECK-NEXT:    },
-// CHECK-NEXT:    "implicit": true,
-// CHECK-NEXT:    "visibility": "default"
-// CHECK-NEXT:   }
-// CHECK-NEXT:  ]
-// CHECK-NEXT: }
-
-// CHECK-NOT: {{^}}Dumping
-// CHECK:  "kind": "FunctionDecl",
-// CHECK-NEXT:  "loc": {},
-// CHECK-NEXT:  "range": {
-// CHECK-NEXT:   "begin": {},
-// CHECK-NEXT:   "end": {}
-// CHECK-NEXT:  },
-// CHECK-NEXT:  "isImplicit": true,
-// CHECK-NEXT:  "isUsed": true,
 // CHECK-NEXT:  "name": "operator delete[]",
 // CHECK-NEXT:  "mangledName": "_ZdaPv",
 // CHECK-NEXT:  "type": {
@@ -2024,125 +1905,6 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:  ]
 // CHECK-NEXT: }
 
-
-// CHECK-NOT: {{^}}Dumping
-// CHECK:  "kind": "FunctionDecl",
-// CHECK-NEXT:  "loc": {},
-// CHECK-NEXT:  "range": {
-// CHECK-NEXT:   "begin": {},
-// CHECK-NEXT:   "end": {}
-// CHECK-NEXT:  },
-// CHECK-NEXT:  "isImplicit": true,
-// CHECK-NEXT:  "name": "operator delete[]",
-// CHECK-NEXT:  "mangledName": "_ZdaPvm",
-// CHECK-NEXT:  "type": {
-// CHECK-NEXT:   "qualType": "void (void *, unsigned long) noexcept"
-// CHECK-NEXT:  },
-// CHECK-NEXT:  "inner": [
-// CHECK-NEXT:   {
-// CHECK-NEXT:    "id": "0x{{.*}}",
-// CHECK-NEXT:    "kind": "ParmVarDecl",
-// CHECK-NEXT:    "loc": {},
-// CHECK-NEXT:    "range": {
-// CHECK-NEXT:     "begin": {},
-// CHECK-NEXT:     "end": {}
-// CHECK-NEXT:    },
-// CHECK-NEXT:    "isImplicit": true,
-// CHECK-NEXT:    "type": {
-// CHECK-NEXT:     "qualType": "void *"
-// CHECK-NEXT:    }
-// CHECK-NEXT:   },
-// CHECK-NEXT:   {
-// CHECK-NEXT:    "id": "0x{{.*}}",
-// CHECK-NEXT:    "kind": "ParmVarDecl",
-// CHECK-NEXT:    "loc": {},
-// CHECK-NEXT:    "range": {
-// CHECK-NEXT:     "begin": {},
-// CHECK-NEXT:     "end": {}
-// CHECK-NEXT:    },
-// CHECK-NEXT:    "isImplicit": true,
-// CHECK-NEXT:    "type": {
-// CHECK-NEXT:     "qualType": "unsigned long"
-// CHECK-NEXT:    }
-// CHECK-NEXT:   },
-// CHECK-NEXT:   {
-// CHECK-NEXT:    "id": "0x{{.*}}",
-// CHECK-NEXT:    "kind": "VisibilityAttr",
-// CHECK-NEXT:    "range": {
-// CHECK-NEXT:     "begin": {},
-// CHECK-NEXT:     "end": {}
-// CHECK-NEXT:    },
-// CHECK-NEXT:    "implicit": true,
-// CHECK-NEXT:    "visibility": "default"
-// CHECK-NEXT:   }
-// CHECK-NEXT:  ]
-// CHECK-NEXT: }
-
-// CHECK-NOT: {{^}}Dumping
-// CHECK:  "kind": "FunctionDecl",
-// CHECK-NEXT:  "loc": {},
-// CHECK-NEXT:  "range": {
-// CHECK-NEXT:   "begin": {},
-// CHECK-NEXT:   "end": {}
-// CHECK-NEXT:  },
-// CHECK-NEXT:  "isImplicit": true,
-// CHECK-NEXT:  "name": "operator delete[]",
-// CHECK-NEXT:  "mangledName": "_ZdaPvmSt11align_val_t",
-// CHECK-NEXT:  "type": {
-// CHECK-NEXT:   "qualType": "void (void *, unsigned long, std::align_val_t) noexcept"
-// CHECK-NEXT:  },
-// CHECK-NEXT:  "inner": [
-// CHECK-NEXT:   {
-// CHECK-NEXT:    "id": "0x{{.*}}",
-// CHECK-NEXT:    "kind": "ParmVarDecl",
-// CHECK-NEXT:    "loc": {},
-// CHECK-NEXT:    "range": {
-// CHECK-NEXT:     "begin": {},
-// CHECK-NEXT:     "end": {}
-// CHECK-NEXT:    },
-// CHECK-NEXT:    "isImplicit": true,
-// CHECK-NEXT:    "type": {
-// CHECK-NEXT:     "qualType": "void *"
-// CHECK-NEXT:    }
-// CHECK-NEXT:   },
-// CHECK-NEXT:   {
-// CHECK-NEXT:    "id": "0x{{.*}}",
-// CHECK-NEXT:    "kind": "ParmVarDecl",
-// CHECK-NEXT:    "loc": {},
-// CHECK-NEXT:    "range": {
-// CHECK-NEXT:     "begin": {},
-// CHECK-NEXT:     "end": {}
-// CHECK-NEXT:    },
-// CHECK-NEXT:    "isImplicit": true,
-// CHECK-NEXT:    "type": {
-// CHECK-NEXT:     "qualType": "unsigned long"
-// CHECK-NEXT:    }
-// CHECK-NEXT:   },
-// CHECK-NEXT:   {
-// CHECK-NEXT:    "id": "0x{{.*}}",
-// CHECK-NEXT:    "kind": "ParmVarDecl",
-// CHECK-NEXT:    "loc": {},
-// CHECK-NEXT:    "range": {
-// CHECK-NEXT:     "begin": {},
-// CHECK-NEXT:     "end": {}
-// CHECK-NEXT:    },
-// CHECK-NEXT:    "isImplicit": true,
-// CHECK-NEXT:    "type": {
-// CHECK-NEXT:     "qualType": "std::align_val_t"
-// CHECK-NEXT:    }
-// CHECK-NEXT:   },
-// CHECK-NEXT:   {
-// CHECK-NEXT:    "id": "0x{{.*}}",
-// CHECK-NEXT:    "kind": "VisibilityAttr",
-// CHECK-NEXT:    "range": {
-// CHECK-NEXT:     "begin": {},
-// CHECK-NEXT:     "end": {}
-// CHECK-NEXT:    },
-// CHECK-NEXT:    "implicit": true,
-// CHECK-NEXT:    "visibility": "default"
-// CHECK-NEXT:   }
-// CHECK-NEXT:  ]
-// CHECK-NEXT: }
 
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "FunctionTemplateDecl",

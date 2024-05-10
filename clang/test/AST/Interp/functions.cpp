@@ -601,3 +601,13 @@ namespace FromIntegral {
                                            // both-warning {{variable length arrays}}
 #endif
 }
+
+namespace {
+  template <typename T> using id = T;
+  template <typename T>
+  constexpr void g() {
+    constexpr id<void (T)> f;
+  }
+
+  static_assert((g<int>(), true), "");
+}
