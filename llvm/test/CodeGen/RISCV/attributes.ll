@@ -129,8 +129,8 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+m %s -o - | FileCheck --check-prefixes=CHECK,RV64M %s
 ; RUN: llc -mtriple=riscv64 -mattr=+zmmul %s -o - | FileCheck --check-prefixes=CHECK,RV64ZMMUL %s
 ; RUN: llc -mtriple=riscv64 -mattr=+m,+zmmul %s -o - | FileCheck --check-prefixes=CHECK,RV64MZMMUL %s
-; RUN: llc -mtriple=riscv64 -mattr=+a,no-trailing-seq-cst-fence %s -o - | FileCheck --check-prefixes=CHECK,RV64A,A6C %s
-; RUN: llc -mtriple=riscv64 -mattr=+a %s -o - | FileCheck --check-prefixes=CHECK,RV64A,A6S %s
+; RUN: llc -mtriple=riscv64 -mattr=+a,no-trailing-seq-cst-fence,+abi-attr %s -o - | FileCheck --check-prefixes=CHECK,RV64A,A6C %s
+; RUN: llc -mtriple=riscv64 -mattr=+a,+abi-attr %s -o - | FileCheck --check-prefixes=CHECK,RV64A,A6S %s
 ; RUN: llc -mtriple=riscv64 -mattr=+f %s -o - | FileCheck --check-prefixes=CHECK,RV64F %s
 ; RUN: llc -mtriple=riscv64 -mattr=+d %s -o - | FileCheck --check-prefixes=CHECK,RV64D %s
 ; RUN: llc -mtriple=riscv64 -mattr=+c %s -o - | FileCheck --check-prefixes=CHECK,RV64C %s
