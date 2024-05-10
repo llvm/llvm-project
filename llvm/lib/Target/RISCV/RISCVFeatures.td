@@ -1221,6 +1221,9 @@ def FeatureTrailingSeqCstFence : SubtargetFeature<"seq-cst-trailing-fence",
                                           "true",
                                           "Enable trailing fence for seq-cst store.">;
 
+def FeatureAbiAttributes : SubtargetFeature<"abi-attr", "EnableAbiAttributes",
+                                            "true", "Enable emitting RISC-V ABI attributes">;
+
 def FeatureUnalignedScalarMem
    : SubtargetFeature<"unaligned-scalar-mem", "EnableUnalignedScalarMem",
                       "true", "Has reasonably performant unaligned scalar "
