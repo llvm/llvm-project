@@ -1470,6 +1470,13 @@ void CheckHelper::CheckSubprogram(
     messages_.Say(symbol.name(),
         "A function may not have ATTRIBUTES(GLOBAL) or ATTRIBUTES(GRID_GLOBAL)"_err_en_US);
   }
+  if (cudaAttrs &&
+      (*cudaAttrs == common::CUDASubprogramAttrs::Global ||
+          *cudaAttrs == common::CUDASubprogramAttrs::Grid_Global) &&
+      symbol.attrs().HasAny({Attr::RECURSIVE, Attr::PURE, Attr::ELEMENTAL})) {
+    messages_.Say(symbol.name(),
+        "A kernel subprogram may not be RECURSIVE, PURE, or ELEMENTAL"_err_en_US);
+  }
   if (cudaAttrs && *cudaAttrs != common::CUDASubprogramAttrs::Host) {
     // CUDA device subprogram checks
     if (ClassifyProcedure(symbol) == ProcedureDefinitionClass::Internal) {
