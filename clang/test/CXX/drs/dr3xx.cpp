@@ -34,7 +34,7 @@ namespace cwg301 { // cwg301: 3.5
     bool b = (void(*)(S, S))operator- < (void(*)(S, S))operator-;
     // cxx98-17-warning@-1 {{ordered comparison of function pointers ('void (*)(S, S)' and 'void (*)(S, S)')}}
     // cxx20-23-error@-2 {{expected '>'}}
-    //   cxx20-23-note@-3 {{to match this '<'}} 
+    //   cxx20-23-note@-3 {{to match this '<'}}
     bool c = (void(*)(S, S))operator+ < (void(*)(S, S))operator-;
     // expected-error@-1 {{expected '>'}}
     //   expected-note@-2 {{to match this '<'}}
@@ -642,7 +642,7 @@ namespace cwg339 { // cwg339: 2.8
   char xxx(int);
   char (&xxx(float))[2];
 
-  template<class T> A<sizeof(xxx((T)0))> f(T) {} // #cwg339-f 
+  template<class T> A<sizeof(xxx((T)0))> f(T) {} // #cwg339-f
 
   void test() {
     A<1> a = f(0);
@@ -828,7 +828,7 @@ namespace cwg352 { // cwg352: 2.8
     void g(A::E e) {
       foo(e, &arg);
       // expected-error@-1 {{no matching function for call to 'foo'}}
-      //   expected-note@#cwg352-foo {{candidate template ignored: couldn't infer template argument 'R'}} 
+      //   expected-note@#cwg352-foo {{candidate template ignored: couldn't infer template argument 'R'}}
 
       using A::foo;
       foo<int, int>(e, &arg); // ok, uses non-template
@@ -929,7 +929,7 @@ namespace cwg352 { // cwg352: 2.8
 
   namespace example5 {
     template<int I> class A {};
-    template<int I> void g(A<I+1>); // #cwg352-g 
+    template<int I> void g(A<I+1>); // #cwg352-g
     template<int I> void f(A<I>, A<I+1>);
     void h(A<1> a1, A<2> a2) {
       g(a1);
@@ -1256,7 +1256,7 @@ namespace cwg373 { // cwg373: 5
     }
   };
 
-  struct A { struct B {}; }; // #cwg373-A 
+  struct A { struct B {}; }; // #cwg373-A
   namespace X = A::B;
   // expected-error@-1 {{expected namespace name}}
   //   expected-note@#cwg373-A {{'A' declared here}}
@@ -1608,7 +1608,7 @@ namespace cwg395 { // cwg395: 3.0
     // expected-error@-2 {{conversion function cannot have any parameters}}
     // expected-error@-3 {{cannot specify any part of a return type in the declaration of a conversion function}}
     // expected-error@-4 {{conversion function cannot convert to a function type}}
-  
+
   };
 
   struct null1_t {
@@ -1721,9 +1721,9 @@ namespace cwg399 { // cwg399: 11
     B_ptr->B_alias::~B();
     B_ptr->B_alias::~B_alias();
     B_ptr->cwg399::~B();
-    // expected-error@-1 {{qualified member access refers to a member in namespace 'cwg399'}}
+    // expected-error@-1 {{no member named '~B' in namespace 'cwg399'}}
     B_ptr->cwg399::~B_alias();
-    // expected-error@-1 {{qualified member access refers to a member in namespace 'cwg399'}}
+    // expected-error@-1 {{no member named '~B' in namespace 'cwg399'}}
   }
 
   template<typename T, typename U>

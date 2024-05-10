@@ -156,16 +156,16 @@ may be
 No compression.
 .It Cm zlib
 The default compression level is 1 (fastest) as the debug info usually
-compresses well at that level. If you want to compress it more,
-you can specify
-.Fl O2
-to set the compression level to 6.
+compresses well at that level.
 .It Cm zstd
-The compression level is 5.
+Use the default compression level in zstd.
 .El
 .Pp
-.It Fl -compress-sections Ns = Ns Ar section-glob=[none|zlib|zstd]
+.It Fl -compress-sections Ns = Ns Ar section-glob={none,zlib,zstd}[:level]
 Compress output sections that match the glob and do not have the SHF_ALLOC flag.
+The compression level is
+.Cm level
+(if specified) or a default speed-focused level.
 This is like a generalized
 .Cm --compress-debug-sections.
 .It Fl -cref

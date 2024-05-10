@@ -572,8 +572,8 @@ bool testARMArch(StringRef Arch, StringRef DefaultCPU, StringRef SubArch,
                  unsigned ArchAttr) {
   ARM::ArchKind AK = ARM::parseArch(Arch);
   bool Result = (AK != ARM::ArchKind::INVALID);
-  Result &= ARM::getDefaultCPU(Arch).equals(DefaultCPU);
-  Result &= ARM::getSubArch(AK).equals(SubArch);
+  Result &= ARM::getDefaultCPU(Arch) == DefaultCPU;
+  Result &= ARM::getSubArch(AK) == SubArch;
   Result &= (ARM::getArchAttr(AK) == ArchAttr);
   return Result;
 }
@@ -641,8 +641,8 @@ TEST(TargetParserTest, testARMArch) {
                           ARMBuildAttrs::CPUArch::v9_A));
   EXPECT_TRUE(testARMArch("armv9.5-a", "generic", "v9.5a",
                           ARMBuildAttrs::CPUArch::v9_A));
-  EXPECT_TRUE(testARMArch("armv8-r", "cortex-r52", "v8r",
-                          ARMBuildAttrs::CPUArch::v8_R));
+  EXPECT_TRUE(
+      testARMArch("armv8-r", "generic", "v8r", ARMBuildAttrs::CPUArch::v8_R));
   EXPECT_TRUE(testARMArch("armv8-m.base", "generic", "v8m.base",
                           ARMBuildAttrs::CPUArch::v8_M_Base));
   EXPECT_TRUE(testARMArch("armv8-m.main", "generic", "v8m.main",
@@ -1390,7 +1390,20 @@ INSTANTIATE_TEST_SUITE_P(
                  AArch64::AEK_DOTPROD, AArch64::AEK_FP, AArch64::AEK_SIMD,
                  AArch64::AEK_FP16, AArch64::AEK_FP16FML, AArch64::AEK_RAS,
                  AArch64::AEK_RCPC, AArch64::AEK_LSE, AArch64::AEK_SB,
-                 AArch64::AEK_JSCVT, AArch64::AEK_FCMA, AArch64::AEK_PAUTH}),
+                 AArch64::AEK_JSCVT, AArch64::AEK_FCMA, AArch64::AEK_PAUTH,
+                 AArch64::AEK_FLAGM, AArch64::AEK_PERFMON,
+                 AArch64::AEK_PREDRES}),
+            "8-R"),
+        ARMCPUTestParams<AArch64::ExtensionBitset>(
+            "cortex-r82ae", "armv8-r", "crypto-neon-fp-armv8",
+            AArch64::ExtensionBitset(
+                {AArch64::AEK_CRC, AArch64::AEK_RDM, AArch64::AEK_SSBS,
+                 AArch64::AEK_DOTPROD, AArch64::AEK_FP, AArch64::AEK_SIMD,
+                 AArch64::AEK_FP16, AArch64::AEK_FP16FML, AArch64::AEK_RAS,
+                 AArch64::AEK_RCPC, AArch64::AEK_LSE, AArch64::AEK_SB,
+                 AArch64::AEK_JSCVT, AArch64::AEK_FCMA, AArch64::AEK_PAUTH,
+                 AArch64::AEK_FLAGM, AArch64::AEK_PERFMON,
+                 AArch64::AEK_PREDRES}),
             "8-R"),
         ARMCPUTestParams<AArch64::ExtensionBitset>(
             "cortex-x1", "armv8.2-a", "crypto-neon-fp-armv8",
@@ -1806,7 +1819,7 @@ INSTANTIATE_TEST_SUITE_P(
     ARMCPUTestParams<AArch64::ExtensionBitset>::PrintToStringParamName);
 
 // Note: number of CPUs includes aliases.
-static constexpr unsigned NumAArch64CPUArchs = 75;
+static constexpr unsigned NumAArch64CPUArchs = 76;
 
 TEST(TargetParserTest, testAArch64CPUArchList) {
   SmallVector<StringRef, NumAArch64CPUArchs> List;
@@ -1976,19 +1989,19 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
       AArch64::AEK_SME,          AArch64::AEK_SMEF64F64,
       AArch64::AEK_SMEI16I64,    AArch64::AEK_SME2,
       AArch64::AEK_HBC,          AArch64::AEK_MOPS,
-      AArch64::AEK_PERFMON,      AArch64::AEK_SVE2p1,
-      AArch64::AEK_SME2p1,       AArch64::AEK_B16B16,
+      AArch64::AEK_PERFMON,      AArch64::AEK_SVE2P1,
+      AArch64::AEK_SME2P1,       AArch64::AEK_B16B16,
       AArch64::AEK_SMEF16F16,    AArch64::AEK_CSSC,
       AArch64::AEK_RCPC3,        AArch64::AEK_THE,
       AArch64::AEK_D128,         AArch64::AEK_LSE128,
-      AArch64::AEK_SPECRES2,     AArch64::AEK_RASv2,
+      AArch64::AEK_SPECRES2,     AArch64::AEK_RASV2,
       AArch64::AEK_ITE,          AArch64::AEK_GCS,
       AArch64::AEK_FPMR,         AArch64::AEK_FP8,
       AArch64::AEK_FAMINMAX,     AArch64::AEK_FP8FMA,
       AArch64::AEK_SSVE_FP8FMA,  AArch64::AEK_FP8DOT2,
       AArch64::AEK_SSVE_FP8DOT2, AArch64::AEK_FP8DOT4,
       AArch64::AEK_SSVE_FP8DOT4, AArch64::AEK_LUT,
-      AArch64::AEK_SME_LUTv2,    AArch64::AEK_SMEF8F16,
+      AArch64::AEK_SME_LUTV2,    AArch64::AEK_SMEF8F16,
       AArch64::AEK_SMEF8F32,     AArch64::AEK_SMEFA64,
       AArch64::AEK_CPA,          AArch64::AEK_PAUTHLR,
       AArch64::AEK_TLBIW,        AArch64::AEK_JSCVT,

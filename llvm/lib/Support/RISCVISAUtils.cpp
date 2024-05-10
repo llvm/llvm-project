@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/RISCVISAUtils.h"
+#include "llvm/ADT/StringExtras.h"
 #include <cassert>
 
 using namespace llvm;
@@ -23,19 +24,21 @@ using namespace llvm;
 // -Multi-letter extensions starting with 's' in alphabetical order.
 // -(TODO) Multi-letter extensions starting with 'zxm' in alphabetical order.
 // -X extensions in alphabetical order.
+// -Unknown multi-letter extensions in alphabetical order.
 // These flags are used to indicate the category. The first 6 bits store the
 // single letter extension rank for single letter and multi-letter extensions
 // starting with 'z'.
 enum RankFlags {
   RF_Z_EXTENSION = 1 << 6,
-  RF_S_EXTENSION = 1 << 7,
-  RF_X_EXTENSION = 1 << 8,
+  RF_S_EXTENSION = 2 << 6,
+  RF_X_EXTENSION = 3 << 6,
+  RF_UNKNOWN_MULTILETTER_EXTENSION = 4 << 6,
 };
 
 // Get the rank for single-letter extension, lower value meaning higher
 // priority.
 static unsigned singleLetterExtensionRank(char Ext) {
-  assert(Ext >= 'a' && Ext <= 'z');
+  assert(isLower(Ext));
   switch (Ext) {
   case 'i':
     return 0;
@@ -67,8 +70,9 @@ static unsigned getExtensionRank(const std::string &ExtName) {
   case 'x':
     return RF_X_EXTENSION;
   default:
-    assert(ExtName.size() == 1);
-    return singleLetterExtensionRank(ExtName[0]);
+    if (ExtName.size() == 1)
+      return singleLetterExtensionRank(ExtName[0]);
+    return RF_UNKNOWN_MULTILETTER_EXTENSION;
   }
 }
 

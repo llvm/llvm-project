@@ -470,13 +470,17 @@ static void printClauseWithRegionArgs(OpAsmPrinter &p, Operation *op,
                                       ValueRange argsSubrange,
                                       StringRef clauseName, ValueRange operands,
                                       TypeRange types, ArrayAttr symbols) {
-  p << clauseName << "(";
+  if (!clauseName.empty())
+    p << clauseName << "(";
+
   llvm::interleaveComma(
       llvm::zip_equal(symbols, operands, argsSubrange, types), p, [&p](auto t) {
         auto [sym, op, arg, type] = t;
         p << sym << " " << op << " -> " << arg << " : " << type;
       });
-  p << ") ";
+
+  if (!clauseName.empty())
+    p << ") ";
 }
 
 static ParseResult parseParallelRegion(
@@ -1048,6 +1052,49 @@ static void printMapEntries(OpAsmPrinter &p, Operation *op,
   }
 }
 
+static ParseResult parsePrivateList(
+    OpAsmParser &parser,
+    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &privateOperands,
+    SmallVectorImpl<Type> &privateOperandTypes, ArrayAttr &privatizerSymbols) {
+  SmallVector<SymbolRefAttr> privateSymRefs;
+  SmallVector<OpAsmParser::Argument> regionPrivateArgs;
+
+  if (failed(parser.parseCommaSeparatedList([&]() {
+        if (parser.parseAttribute(privateSymRefs.emplace_back()) ||
+            parser.parseOperand(privateOperands.emplace_back()) ||
+            parser.parseArrow() ||
+            parser.parseArgument(regionPrivateArgs.emplace_back()) ||
+            parser.parseColonType(privateOperandTypes.emplace_back()))
+          return failure();
+        return success();
+      })))
+    return failure();
+
+  SmallVector<Attribute> privateSymAttrs(privateSymRefs.begin(),
+                                         privateSymRefs.end());
+  privatizerSymbols = ArrayAttr::get(parser.getContext(), privateSymAttrs);
+
+  return success();
+}
+
+static void printPrivateList(OpAsmPrinter &p, Operation *op,
+                             ValueRange privateVarOperands,
+                             TypeRange privateVarTypes,
+                             ArrayAttr privatizerSymbols) {
+  // TODO: Remove target-specific logic from this function.
+  auto targetOp = mlir::dyn_cast<mlir::omp::TargetOp>(op);
+  assert(targetOp);
+
+  auto &region = op->getRegion(0);
+  auto *argsBegin = region.front().getArguments().begin();
+  MutableArrayRef argsSubrange(argsBegin + targetOp.getMapOperands().size(),
+                               argsBegin + targetOp.getMapOperands().size() +
+                                   privateVarTypes.size());
+  printClauseWithRegionArgs(
+      p, op, argsSubrange, /*clauseName=*/llvm::StringRef{}, privateVarOperands,
+      privateVarTypes, privatizerSymbols);
+}
+
 static void printCaptureType(OpAsmPrinter &p, Operation *op,
                              VariableCaptureKindAttr mapCaptureType) {
   std::string typeCapStr;
@@ -1256,13 +1303,14 @@ void TargetOp::build(OpBuilder &builder, OperationState &state,
                      const TargetClauseOps &clauses) {
   MLIRContext *ctx = builder.getContext();
   // TODO Store clauses in op: allocateVars, allocatorVars, inReductionVars,
-  // inReductionDeclSymbols, privateVars, privatizers, reductionVars,
-  // reductionByRefAttr, reductionDeclSymbols.
+  // inReductionDeclSymbols, reductionVars, reductionByRefAttr,
+  // reductionDeclSymbols.
   TargetOp::build(
       builder, state, clauses.ifVar, clauses.deviceVar, clauses.threadLimitVar,
       makeArrayAttr(ctx, clauses.dependTypeAttrs), clauses.dependVars,
       clauses.nowaitAttr, clauses.isDevicePtrVars, clauses.hasDeviceAddrVars,
-      clauses.mapVars);
+      clauses.mapVars, clauses.privateVars,
+      makeArrayAttr(ctx, clauses.privatizers));
 }
 
 LogicalResult TargetOp::verify() {
@@ -2258,7 +2306,8 @@ void PrivateClauseOp::build(OpBuilder &odsBuilder, OperationState &odsState,
 LogicalResult PrivateClauseOp::verify() {
   Type symType = getType();
 
-  auto verifyTerminator = [&](Operation *terminator) -> LogicalResult {
+  auto verifyTerminator = [&](Operation *terminator,
+                              bool yieldsValue) -> LogicalResult {
     if (!terminator->getBlock()->getSuccessors().empty())
       return success();
 
@@ -2268,6 +2317,14 @@ LogicalResult PrivateClauseOp::verify() {
 
     YieldOp yieldOp = llvm::cast<YieldOp>(terminator);
     TypeRange yieldedTypes = yieldOp.getResults().getTypes();
+
+    if (!yieldsValue) {
+      if (yieldedTypes.empty())
+        return success();
+
+      return mlir::emitError(terminator->getLoc())
+             << "Did not expect any values to be yielded.";
+    }
 
     if (yieldedTypes.size() == 1 && yieldedTypes.front() == symType)
       return success();
@@ -2285,7 +2342,8 @@ LogicalResult PrivateClauseOp::verify() {
   };
 
   auto verifyRegion = [&](Region &region, unsigned expectedNumArgs,
-                          StringRef regionName) -> LogicalResult {
+                          StringRef regionName,
+                          bool yieldsValue) -> LogicalResult {
     assert(!region.empty());
 
     if (region.getNumArguments() != expectedNumArgs)
@@ -2299,14 +2357,15 @@ LogicalResult PrivateClauseOp::verify() {
       if (!block.mightHaveTerminator())
         continue;
 
-      if (failed(verifyTerminator(block.getTerminator())))
+      if (failed(verifyTerminator(block.getTerminator(), yieldsValue)))
         return failure();
     }
 
     return success();
   };
 
-  if (failed(verifyRegion(getAllocRegion(), /*expectedNumArgs=*/1, "alloc")))
+  if (failed(verifyRegion(getAllocRegion(), /*expectedNumArgs=*/1, "alloc",
+                          /*yieldsValue=*/true)))
     return failure();
 
   DataSharingClauseType dsType = getDataSharingType();
@@ -2319,7 +2378,13 @@ LogicalResult PrivateClauseOp::verify() {
         "`firstprivate` clauses require both `alloc` and `copy` regions.");
 
   if (dsType == DataSharingClauseType::FirstPrivate &&
-      failed(verifyRegion(getCopyRegion(), /*expectedNumArgs=*/2, "copy")))
+      failed(verifyRegion(getCopyRegion(), /*expectedNumArgs=*/2, "copy",
+                          /*yieldsValue=*/true)))
+    return failure();
+
+  if (!getDeallocRegion().empty() &&
+      failed(verifyRegion(getDeallocRegion(), /*expectedNumArgs=*/1, "dealloc",
+                          /*yieldsValue=*/false)))
     return failure();
 
   return success();

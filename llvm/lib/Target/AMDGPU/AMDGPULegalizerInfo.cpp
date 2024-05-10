@@ -2919,7 +2919,7 @@ bool AMDGPULegalizerInfo::legalizeGlobalValue(
 
   if (AS == AMDGPUAS::LOCAL_ADDRESS || AS == AMDGPUAS::REGION_ADDRESS) {
     if (!MFI->isModuleEntryFunction() &&
-        !GV->getName().equals("llvm.amdgcn.module.lds")) {
+        GV->getName() != "llvm.amdgcn.module.lds") {
       const Function &Fn = MF.getFunction();
       DiagnosticInfoUnsupported BadLDSDecl(
         Fn, "local memory global used by non-kernel function", MI.getDebugLoc(),
