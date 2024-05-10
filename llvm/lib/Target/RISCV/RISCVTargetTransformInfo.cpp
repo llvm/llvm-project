@@ -916,7 +916,8 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     // If zero_is_poison is false, then we will generate additional
     // cmp + select instructions to convert -1 to EVL.
     Type *BoolTy = Type::getInt1Ty(RetTy->getContext());
-    if (cast<ConstantInt>(ICA.getArgs()[1])->isZero())
+    if (ICA.getArgs().size() > 1 &&
+        cast<ConstantInt>(ICA.getArgs()[1])->isZero())
       Cost += getCmpSelInstrCost(Instruction::ICmp, BoolTy, RetTy,
                                  CmpInst::ICMP_SLT, CostKind) +
               getCmpSelInstrCost(Instruction::Select, RetTy, BoolTy,
