@@ -9,15 +9,18 @@
 #ifndef LLVM_LIBC_TEST_SRC_MATH_NEXTTOWARDTEST_H
 #define LLVM_LIBC_TEST_SRC_MATH_NEXTTOWARDTEST_H
 
-#include "include/llvm-libc-macros/math-macros.h"
+#include "hdr/fenv_macros.h"
+#include "hdr/math_macros.h"
 #include "src/__support/CPP/bit.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/FPUtil/BasicOperations.h"
 #include "src/__support/FPUtil/FPBits.h"
+#include "test/UnitTest/FEnvSafeTest.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
-#include <fenv.h>
 
+// TODO: Strengthen errno,exception checks and remove these assert macros
+// after new matchers/test fixtures are added
 #define ASSERT_FP_EQ_WITH_EXCEPTION(result, expected, expected_exception)      \
   ASSERT_FP_EQ(result, expected);                                              \
   ASSERT_FP_EXCEPTION(expected_exception);                                     \
@@ -30,7 +33,7 @@
   ASSERT_FP_EQ_WITH_EXCEPTION(result, expected, FE_INEXACT | FE_OVERFLOW)
 
 template <typename T>
-class NextTowardTestTemplate : public LIBC_NAMESPACE::testing::Test {
+class NextTowardTestTemplate : public LIBC_NAMESPACE::testing::FEnvSafeTest {
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<T>;
   using ToFPBits = LIBC_NAMESPACE::fputil::FPBits<long double>;
   using StorageType = typename FPBits::StorageType;

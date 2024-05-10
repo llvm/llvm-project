@@ -17,7 +17,6 @@
 
 /*  Constant                           Value
     __cpp_lib_bind_back                202202L [C++23]
-                                       202306L [C++26]
     __cpp_lib_bind_front               201907L [C++20]
                                        202306L [C++26]
     __cpp_lib_boyer_moore_searcher     201603L [C++17]
@@ -337,17 +336,11 @@
 
 #elif TEST_STD_VER == 23
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_bind_back
-#     error "__cpp_lib_bind_back should be defined in c++23"
-#   endif
-#   if __cpp_lib_bind_back != 202202L
-#     error "__cpp_lib_bind_back should have the value 202202L in c++23"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_bind_back
-#     error "__cpp_lib_bind_back should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_bind_back
+#   error "__cpp_lib_bind_back should be defined in c++23"
+# endif
+# if __cpp_lib_bind_back != 202202L
+#   error "__cpp_lib_bind_back should have the value 202202L in c++23"
 # endif
 
 # ifndef __cpp_lib_bind_front
@@ -447,17 +440,11 @@
 
 #elif TEST_STD_VER > 23
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_bind_back
-#     error "__cpp_lib_bind_back should be defined in c++26"
-#   endif
-#   if __cpp_lib_bind_back != 202306L
-#     error "__cpp_lib_bind_back should have the value 202306L in c++26"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_bind_back
-#     error "__cpp_lib_bind_back should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_bind_back
+#   error "__cpp_lib_bind_back should be defined in c++26"
+# endif
+# if __cpp_lib_bind_back != 202202L
+#   error "__cpp_lib_bind_back should have the value 202202L in c++26"
 # endif
 
 # ifndef __cpp_lib_bind_front
@@ -548,17 +535,11 @@
 #   error "__cpp_lib_ranges should have the value 202207L in c++26"
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_reference_wrapper
-#     error "__cpp_lib_reference_wrapper should be defined in c++26"
-#   endif
-#   if __cpp_lib_reference_wrapper != 202403L
-#     error "__cpp_lib_reference_wrapper should have the value 202403L in c++26"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_reference_wrapper
-#     error "__cpp_lib_reference_wrapper should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_reference_wrapper
+#   error "__cpp_lib_reference_wrapper should be defined in c++26"
+# endif
+# if __cpp_lib_reference_wrapper != 202403L
+#   error "__cpp_lib_reference_wrapper should have the value 202403L in c++26"
 # endif
 
 # ifndef __cpp_lib_result_of_sfinae

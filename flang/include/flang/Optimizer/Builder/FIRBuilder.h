@@ -164,8 +164,21 @@ public:
   mlir::Value createNullConstant(mlir::Location loc, mlir::Type ptrType = {});
 
   /// Create an integer constant of type \p type and value \p i.
+  /// Should not be used with negative values with integer types of more
+  /// than 64 bits.
   mlir::Value createIntegerConstant(mlir::Location loc, mlir::Type integerType,
                                     std::int64_t i);
+
+  /// Create an integer of \p integerType where all the bits have been set to
+  /// ones. Safe to use regardless of integerType bitwidth.
+  mlir::Value createAllOnesInteger(mlir::Location loc, mlir::Type integerType);
+
+  /// Create -1 constant of \p integerType. Safe to use regardless of
+  /// integerType bitwidth.
+  mlir::Value createMinusOneInteger(mlir::Location loc,
+                                    mlir::Type integerType) {
+    return createAllOnesInteger(loc, integerType);
+  }
 
   /// Create a real constant from an integer value.
   mlir::Value createRealConstant(mlir::Location loc, mlir::Type realType,
@@ -695,6 +708,13 @@ mlir::Value createNullBoxProc(fir::FirOpBuilder &builder, mlir::Location loc,
 
 /// Set internal linkage attribute on a function.
 void setInternalLinkage(mlir::func::FuncOp);
+
+llvm::SmallVector<mlir::Value>
+elideExtentsAlreadyInType(mlir::Type type, mlir::ValueRange shape);
+
+llvm::SmallVector<mlir::Value>
+elideLengthsAlreadyInType(mlir::Type type, mlir::ValueRange lenParams);
+
 } // namespace fir::factory
 
 #endif // FORTRAN_OPTIMIZER_BUILDER_FIRBUILDER_H

@@ -114,6 +114,13 @@ def ext: GICombineRule <
   (apply [{ applyEXT(*${root}, ${matchinfo}); }])
 >;
 
+def insertelt_nonconst: GICombineRule <
+  (defs root:$root, shuffle_matchdata:$matchinfo),
+  (match (wip_match_opcode G_INSERT_VECTOR_ELT):$root,
+         [{ return matchNonConstInsert(*${root}, MRI); }]),
+  (apply [{ applyNonConstInsert(*${root}, MRI, B); }])
+>;
+
 def shuf_to_ins_matchdata : GIDefMatchData<"std::tuple<Register, int, Register, int>">;
 def shuf_to_ins: GICombineRule <
   (defs root:$root, shuf_to_ins_matchdata:$matchinfo),
@@ -140,8 +147,7 @@ def form_duplane : GICombineRule <
 >;
 
 def shuffle_vector_lowering : GICombineGroup<[dup, rev, ext, zip, uzp, trn,
-                                              form_duplane,
-                                              shuf_to_ins]>;
+                                              form_duplane, shuf_to_ins]>;
 
 // Turn G_UNMERGE_VALUES -> G_EXTRACT_VECTOR_ELT's
 def vector_unmerge_lowering : GICombineRule <
@@ -269,7 +275,7 @@ def AArch64PostLegalizerLowering
                         lower_vector_fcmp, form_truncstore,
                         vector_sext_inreg_to_shift,
                         unmerge_ext_to_unmerge, lower_mull,
-                        vector_unmerge_lowering]> {
+                        vector_unmerge_lowering, insertelt_nonconst]> {
 }
 
 // Post-legalization combines which are primarily optimizations.

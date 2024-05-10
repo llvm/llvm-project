@@ -242,15 +242,6 @@ struct VPTransformState {
   ElementCount VF;
   unsigned UF;
 
-  /// If EVL (Explicit Vector Length) is not nullptr, then EVL must be a valid
-  /// value set during plan transformation, possibly a default value = whole
-  /// vector register length. EVL is created only if TTI prefers predicated
-  /// vectorization, thus if EVL is not nullptr it also implies preference for
-  /// predicated vectorization.
-  /// TODO: this is a temporarily solution, the EVL must be explicitly used by
-  /// the recipes and must be removed here.
-  VPValue *EVL = nullptr;
-
   /// Hold the indices to generate specific scalar instructions. Null indicates
   /// that all instances are to be generated, using either scalar or vector
   /// instructions.
@@ -850,6 +841,7 @@ public:
   static inline bool classof(const VPRecipeBase *R) {
     switch (R->getVPDefID()) {
     case VPRecipeBase::VPDerivedIVSC:
+    case VPRecipeBase::VPEVLBasedIVPHISC:
     case VPRecipeBase::VPExpandSCEVSC:
     case VPRecipeBase::VPInstructionSC:
     case VPRecipeBase::VPReductionSC:
@@ -875,7 +867,10 @@ public:
       return true;
     case VPRecipeBase::VPInterleaveSC:
     case VPRecipeBase::VPBranchOnMaskSC:
-    case VPRecipeBase::VPWidenMemoryInstructionSC:
+    case VPRecipeBase::VPWidenLoadEVLSC:
+    case VPRecipeBase::VPWidenLoadSC:
+    case VPRecipeBase::VPWidenStoreEVLSC:
+    case VPRecipeBase::VPWidenStoreSC:
       // TODO: Widened stores don't define a value, but widened loads do. Split
       // the recipes to be able to make widened loads VPSingleDefRecipes.
       return false;
@@ -887,6 +882,8 @@ public:
     auto *R = dyn_cast<VPRecipeBase>(U);
     return R && classof(R);
   }
+
+  virtual VPSingleDefRecipe *clone() override = 0;
 
   /// Returns the underlying instruction.
   Instruction *getUnderlyingInstr() {
@@ -1044,6 +1041,11 @@ public:
            R->getVPDefID() == VPRecipeBase::VPWidenCastSC ||
            R->getVPDefID() == VPRecipeBase::VPReplicateSC ||
            R->getVPDefID() == VPRecipeBase::VPVectorPointerSC;
+  }
+
+  static inline bool classof(const VPUser *U) {
+    auto *R = dyn_cast<VPRecipeBase>(U);
+    return R && classof(R);
   }
 
   /// Drop all poison-generating flags.
@@ -1248,7 +1250,7 @@ public:
 
   VP_CLASSOF_IMPL(VPDef::VPInstructionSC)
 
-  VPRecipeBase *clone() override {
+  VPInstruction *clone() override {
     SmallVector<VPValue *, 2> Operands(operands());
     auto *New = new VPInstruction(Opcode, Operands, getDebugLoc(), Name);
     New->transferFlags(*this);
@@ -1335,7 +1337,7 @@ public:
 
   ~VPWidenRecipe() override = default;
 
-  VPRecipeBase *clone() override {
+  VPWidenRecipe *clone() override {
     auto *R = new VPWidenRecipe(*getUnderlyingInstr(), operands());
     R->transferFlags(*this);
     return R;
@@ -1380,7 +1382,7 @@ public:
 
   ~VPWidenCastRecipe() override = default;
 
-  VPRecipeBase *clone() override {
+  VPWidenCastRecipe *clone() override {
     if (auto *UV = getUnderlyingValue())
       return new VPWidenCastRecipe(Opcode, getOperand(0), ResultTy,
                                    *cast<CastInst>(UV));
@@ -1420,7 +1422,7 @@ public:
 
   ~VPScalarCastRecipe() override = default;
 
-  VPRecipeBase *clone() override {
+  VPScalarCastRecipe *clone() override {
     return new VPScalarCastRecipe(Opcode, getOperand(0), ResultTy);
   }
 
@@ -1457,24 +1459,38 @@ class VPWidenCallRecipe : public VPSingleDefRecipe {
 
 public:
   template <typename IterT>
-  VPWidenCallRecipe(CallInst &I, iterator_range<IterT> CallArguments,
+  VPWidenCallRecipe(Value *UV, iterator_range<IterT> CallArguments,
                     Intrinsic::ID VectorIntrinsicID, DebugLoc DL = {},
                     Function *Variant = nullptr)
-      : VPSingleDefRecipe(VPDef::VPWidenCallSC, CallArguments, &I, DL),
-        VectorIntrinsicID(VectorIntrinsicID), Variant(Variant) {}
+      : VPSingleDefRecipe(VPDef::VPWidenCallSC, CallArguments, UV, DL),
+        VectorIntrinsicID(VectorIntrinsicID), Variant(Variant) {
+    assert(
+        isa<Function>(getOperand(getNumOperands() - 1)->getLiveInIRValue()) &&
+        "last operand must be the called function");
+  }
 
   ~VPWidenCallRecipe() override = default;
 
-  VPRecipeBase *clone() override {
-    return new VPWidenCallRecipe(*cast<CallInst>(getUnderlyingInstr()),
-                                 operands(), VectorIntrinsicID, getDebugLoc(),
-                                 Variant);
+  VPWidenCallRecipe *clone() override {
+    return new VPWidenCallRecipe(getUnderlyingValue(), operands(),
+                                 VectorIntrinsicID, getDebugLoc(), Variant);
   }
 
   VP_CLASSOF_IMPL(VPDef::VPWidenCallSC)
 
   /// Produce a widened version of the call instruction.
   void execute(VPTransformState &State) override;
+
+  Function *getCalledScalarFunction() const {
+    return cast<Function>(getOperand(getNumOperands() - 1)->getLiveInIRValue());
+  }
+
+  operand_range arg_operands() {
+    return make_range(op_begin(), op_begin() + getNumOperands() - 1);
+  }
+  const_operand_range arg_operands() const {
+    return make_range(op_begin(), op_begin() + getNumOperands() - 1);
+  }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
@@ -1492,7 +1508,7 @@ struct VPWidenSelectRecipe : public VPSingleDefRecipe {
 
   ~VPWidenSelectRecipe() override = default;
 
-  VPRecipeBase *clone() override {
+  VPWidenSelectRecipe *clone() override {
     return new VPWidenSelectRecipe(*cast<SelectInst>(getUnderlyingInstr()),
                                    operands());
   }
@@ -1540,7 +1556,7 @@ public:
 
   ~VPWidenGEPRecipe() override = default;
 
-  VPRecipeBase *clone() override {
+  VPWidenGEPRecipe *clone() override {
     return new VPWidenGEPRecipe(cast<GetElementPtrInst>(getUnderlyingInstr()),
                                 operands());
   }
@@ -1581,7 +1597,7 @@ public:
     return true;
   }
 
-  VPRecipeBase *clone() override {
+  VPVectorPointerRecipe *clone() override {
     return new VPVectorPointerRecipe(getOperand(0), IndexedTy, IsReverse,
                                      isInBounds(), getDebugLoc());
   }
@@ -1696,7 +1712,7 @@ public:
 
   ~VPWidenIntOrFpInductionRecipe() override = default;
 
-  VPRecipeBase *clone() override {
+  VPWidenIntOrFpInductionRecipe *clone() override {
     return new VPWidenIntOrFpInductionRecipe(IV, getStartValue(),
                                              getStepValue(), IndDesc, Trunc);
   }
@@ -1742,7 +1758,8 @@ public:
   const InductionDescriptor &getInductionDescriptor() const { return IndDesc; }
 
   /// Returns true if the induction is canonical, i.e. starting at 0 and
-  /// incremented by UF * VF (= the original IV is incremented by 1).
+  /// incremented by UF * VF (= the original IV is incremented by 1) and has the
+  /// same type as the canonical induction.
   bool isCanonical() const;
 
   /// Returns the scalar type of the induction.
@@ -1771,7 +1788,7 @@ public:
 
   ~VPWidenPointerInductionRecipe() override = default;
 
-  VPRecipeBase *clone() override {
+  VPWidenPointerInductionRecipe *clone() override {
     return new VPWidenPointerInductionRecipe(
         cast<PHINode>(getUnderlyingInstr()), getOperand(0), getOperand(1),
         IndDesc, IsScalarAfterVectorization);
@@ -1810,7 +1827,7 @@ public:
       addOperand(Start);
   }
 
-  VPRecipeBase *clone() override {
+  VPWidenPHIRecipe *clone() override {
     llvm_unreachable("cloning not implemented yet");
   }
 
@@ -1853,7 +1870,7 @@ struct VPFirstOrderRecurrencePHIRecipe : public VPHeaderPHIRecipe {
     return R->getVPDefID() == VPDef::VPFirstOrderRecurrencePHISC;
   }
 
-  VPRecipeBase *clone() override {
+  VPFirstOrderRecurrencePHIRecipe *clone() override {
     return new VPFirstOrderRecurrencePHIRecipe(
         cast<PHINode>(getUnderlyingInstr()), *getOperand(0));
   }
@@ -1893,7 +1910,7 @@ public:
 
   ~VPReductionPHIRecipe() override = default;
 
-  VPRecipeBase *clone() override {
+  VPReductionPHIRecipe *clone() override {
     auto *R =
         new VPReductionPHIRecipe(cast<PHINode>(getUnderlyingInstr()), RdxDesc,
                                  *getOperand(0), IsInLoop, IsOrdered);
@@ -1932,32 +1949,35 @@ public:
 class VPBlendRecipe : public VPSingleDefRecipe {
 public:
   /// The blend operation is a User of the incoming values and of their
-  /// respective masks, ordered [I0, M0, I1, M1, ...]. Note that a single value
-  /// might be incoming with a full mask for which there is no VPValue.
+  /// respective masks, ordered [I0, I1, M1, I2, M2, ...]. Note that the first
+  /// incoming value does not have a mask associated.
   VPBlendRecipe(PHINode *Phi, ArrayRef<VPValue *> Operands)
       : VPSingleDefRecipe(VPDef::VPBlendSC, Operands, Phi, Phi->getDebugLoc()) {
-    assert(Operands.size() > 0 &&
-           ((Operands.size() == 1) || (Operands.size() % 2 == 0)) &&
-           "Expected either a single incoming value or a positive even number "
-           "of operands");
+    assert((Operands.size() + 1) % 2 == 0 &&
+           "Expected an odd number of operands");
   }
 
-  VPRecipeBase *clone() override {
+  VPBlendRecipe *clone() override {
     SmallVector<VPValue *> Ops(operands());
     return new VPBlendRecipe(cast<PHINode>(getUnderlyingValue()), Ops);
   }
 
   VP_CLASSOF_IMPL(VPDef::VPBlendSC)
 
-  /// Return the number of incoming values, taking into account that a single
+  /// Return the number of incoming values, taking into account that the first
   /// incoming value has no mask.
   unsigned getNumIncomingValues() const { return (getNumOperands() + 1) / 2; }
 
   /// Return incoming value number \p Idx.
-  VPValue *getIncomingValue(unsigned Idx) const { return getOperand(Idx * 2); }
+  VPValue *getIncomingValue(unsigned Idx) const {
+    return Idx == 0 ? getOperand(0) : getOperand(Idx * 2 - 1);
+  }
 
   /// Return mask number \p Idx.
-  VPValue *getMask(unsigned Idx) const { return getOperand(Idx * 2 + 1); }
+  VPValue *getMask(unsigned Idx) const {
+    assert(Idx > 0 && "First index has no mask associated.");
+    return getOperand(Idx * 2);
+  }
 
   /// Generate the phi/select nodes.
   void execute(VPTransformState &State) override;
@@ -2016,7 +2036,7 @@ public:
   }
   ~VPInterleaveRecipe() override = default;
 
-  VPRecipeBase *clone() override {
+  VPInterleaveRecipe *clone() override {
     return new VPInterleaveRecipe(IG, getAddr(), getStoredValues(), getMask(),
                                   NeedsMaskForGaps);
   }
@@ -2075,22 +2095,24 @@ public:
 class VPReductionRecipe : public VPSingleDefRecipe {
   /// The recurrence decriptor for the reduction in question.
   const RecurrenceDescriptor &RdxDesc;
+  bool IsOrdered;
 
 public:
   VPReductionRecipe(const RecurrenceDescriptor &R, Instruction *I,
-                    VPValue *ChainOp, VPValue *VecOp, VPValue *CondOp)
+                    VPValue *ChainOp, VPValue *VecOp, VPValue *CondOp,
+                    bool IsOrdered)
       : VPSingleDefRecipe(VPDef::VPReductionSC,
                           ArrayRef<VPValue *>({ChainOp, VecOp}), I),
-        RdxDesc(R) {
+        RdxDesc(R), IsOrdered(IsOrdered) {
     if (CondOp)
       addOperand(CondOp);
   }
 
   ~VPReductionRecipe() override = default;
 
-  VPRecipeBase *clone() override {
+  VPReductionRecipe *clone() override {
     return new VPReductionRecipe(RdxDesc, getUnderlyingInstr(), getChainOp(),
-                                 getVecOp(), getCondOp());
+                                 getVecOp(), getCondOp(), IsOrdered);
   }
 
   VP_CLASSOF_IMPL(VPDef::VPReductionSC)
@@ -2137,7 +2159,7 @@ public:
 
   ~VPReplicateRecipe() override = default;
 
-  VPRecipeBase *clone() override {
+  VPReplicateRecipe *clone() override {
     auto *Copy =
         new VPReplicateRecipe(getUnderlyingInstr(), operands(), IsUniform,
                               isPredicated() ? getMask() : nullptr);
@@ -2199,7 +2221,7 @@ public:
       addOperand(BlockInMask);
   }
 
-  VPRecipeBase *clone() override {
+  VPBranchOnMaskRecipe *clone() override {
     return new VPBranchOnMaskRecipe(getOperand(0));
   }
 
@@ -2250,7 +2272,7 @@ public:
       : VPSingleDefRecipe(VPDef::VPPredInstPHISC, PredV) {}
   ~VPPredInstPHIRecipe() override = default;
 
-  VPRecipeBase *clone() override {
+  VPPredInstPHIRecipe *clone() override {
     return new VPPredInstPHIRecipe(getOperand(0));
   }
 
@@ -2273,68 +2295,66 @@ public:
   }
 };
 
-/// A Recipe for widening load/store operations.
-/// The recipe uses the following VPValues:
-/// - For load: Address, optional mask
-/// - For store: Address, stored value, optional mask
-/// TODO: We currently execute only per-part unless a specific instance is
-/// provided.
-class VPWidenMemoryInstructionRecipe : public VPRecipeBase {
+/// A common base class for widening memory operations. An optional mask can be
+/// provided as the last operand.
+class VPWidenMemoryRecipe : public VPRecipeBase {
+protected:
   Instruction &Ingredient;
 
-  // Whether the loaded-from / stored-to addresses are consecutive.
+  /// Whether the accessed addresses are consecutive.
   bool Consecutive;
 
-  // Whether the consecutive loaded/stored addresses are in reverse order.
+  /// Whether the consecutive accessed addresses are in reverse order.
   bool Reverse;
 
+  /// Whether the memory access is masked.
+  bool IsMasked = false;
+
   void setMask(VPValue *Mask) {
+    assert(!IsMasked && "cannot re-set mask");
     if (!Mask)
       return;
     addOperand(Mask);
+    IsMasked = true;
   }
 
-  bool isMasked() const {
-    return isStore() ? getNumOperands() == 3 : getNumOperands() == 2;
+  VPWidenMemoryRecipe(const char unsigned SC, Instruction &I,
+                      std::initializer_list<VPValue *> Operands,
+                      bool Consecutive, bool Reverse, DebugLoc DL)
+      : VPRecipeBase(SC, Operands, DL), Ingredient(I), Consecutive(Consecutive),
+        Reverse(Reverse) {
+    assert((Consecutive || !Reverse) && "Reverse implies consecutive");
   }
 
 public:
-  VPWidenMemoryInstructionRecipe(LoadInst &Load, VPValue *Addr, VPValue *Mask,
-                                 bool Consecutive, bool Reverse, DebugLoc DL)
-      : VPRecipeBase(VPDef::VPWidenMemoryInstructionSC, {Addr}, DL),
-        Ingredient(Load), Consecutive(Consecutive), Reverse(Reverse) {
-    assert((Consecutive || !Reverse) && "Reverse implies consecutive");
-    new VPValue(this, &Load);
-    setMask(Mask);
+  VPWidenMemoryRecipe *clone() override {
+    llvm_unreachable("cloning not supported");
   }
 
-  VPWidenMemoryInstructionRecipe(StoreInst &Store, VPValue *Addr,
-                                 VPValue *StoredValue, VPValue *Mask,
-                                 bool Consecutive, bool Reverse, DebugLoc DL)
-      : VPRecipeBase(VPDef::VPWidenMemoryInstructionSC, {Addr, StoredValue},
-                     DL),
-        Ingredient(Store), Consecutive(Consecutive), Reverse(Reverse) {
-    assert((Consecutive || !Reverse) && "Reverse implies consecutive");
-    setMask(Mask);
+  static inline bool classof(const VPRecipeBase *R) {
+    return R->getVPDefID() == VPRecipeBase::VPWidenLoadSC ||
+           R->getVPDefID() == VPRecipeBase::VPWidenStoreSC ||
+           R->getVPDefID() == VPRecipeBase::VPWidenLoadEVLSC ||
+           R->getVPDefID() == VPRecipeBase::VPWidenStoreEVLSC;
   }
 
-  VPRecipeBase *clone() override {
-    if (isStore())
-      return new VPWidenMemoryInstructionRecipe(
-          cast<StoreInst>(Ingredient), getAddr(), getStoredValue(), getMask(),
-          Consecutive, Reverse, getDebugLoc());
-
-    return new VPWidenMemoryInstructionRecipe(cast<LoadInst>(Ingredient),
-                                              getAddr(), getMask(), Consecutive,
-                                              Reverse, getDebugLoc());
+  static inline bool classof(const VPUser *U) {
+    auto *R = dyn_cast<VPRecipeBase>(U);
+    return R && classof(R);
   }
 
-  VP_CLASSOF_IMPL(VPDef::VPWidenMemoryInstructionSC)
+  /// Return whether the loaded-from / stored-to addresses are consecutive.
+  bool isConsecutive() const { return Consecutive; }
+
+  /// Return whether the consecutive loaded/stored addresses are in reverse
+  /// order.
+  bool isReverse() const { return Reverse; }
 
   /// Return the address accessed by this recipe.
-  VPValue *getAddr() const {
-    return getOperand(0); // Address is the 1st, mandatory operand.
-  }
+  VPValue *getAddr() const { return getOperand(0); }
+
+  /// Returns true if the recipe is masked.
+  bool isMasked() const { return IsMasked; }
 
   /// Return the mask used by this recipe. Note that a full mask is represented
   /// by a nullptr.
@@ -2343,23 +2363,34 @@ public:
     return isMasked() ? getOperand(getNumOperands() - 1) : nullptr;
   }
 
-  /// Returns true if this recipe is a store.
-  bool isStore() const { return isa<StoreInst>(Ingredient); }
-
-  /// Return the address accessed by this recipe.
-  VPValue *getStoredValue() const {
-    assert(isStore() && "Stored value only available for store instructions");
-    return getOperand(1); // Stored value is the 2nd, mandatory operand.
+  /// Generate the wide load/store.
+  void execute(VPTransformState &State) override {
+    llvm_unreachable("VPWidenMemoryRecipe should not be instantiated.");
   }
 
-  // Return whether the loaded-from / stored-to addresses are consecutive.
-  bool isConsecutive() const { return Consecutive; }
+  Instruction &getIngredient() const { return Ingredient; }
+};
 
-  // Return whether the consecutive loaded/stored addresses are in reverse
-  // order.
-  bool isReverse() const { return Reverse; }
+/// A recipe for widening load operations, using the address to load from and an
+/// optional mask.
+struct VPWidenLoadRecipe final : public VPWidenMemoryRecipe, public VPValue {
+  VPWidenLoadRecipe(LoadInst &Load, VPValue *Addr, VPValue *Mask,
+                    bool Consecutive, bool Reverse, DebugLoc DL)
+      : VPWidenMemoryRecipe(VPDef::VPWidenLoadSC, Load, {Addr}, Consecutive,
+                            Reverse, DL),
+        VPValue(this, &Load) {
+    setMask(Mask);
+  }
 
-  /// Generate the wide load/store.
+  VPWidenLoadRecipe *clone() override {
+    return new VPWidenLoadRecipe(cast<LoadInst>(Ingredient), getAddr(),
+                                 getMask(), Consecutive, Reverse,
+                                 getDebugLoc());
+  }
+
+  VP_CLASSOF_IMPL(VPDef::VPWidenLoadSC);
+
+  /// Generate a wide load or gather.
   void execute(VPTransformState &State) override;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -2372,15 +2403,130 @@ public:
   bool onlyFirstLaneUsed(const VPValue *Op) const override {
     assert(is_contained(operands(), Op) &&
            "Op must be an operand of the recipe");
+    // Widened, consecutive loads operations only demand the first lane of
+    // their address.
+    return Op == getAddr() && isConsecutive();
+  }
+};
 
+/// A recipe for widening load operations with vector-predication intrinsics,
+/// using the address to load from, the explicit vector length and an optional
+/// mask.
+struct VPWidenLoadEVLRecipe final : public VPWidenMemoryRecipe, public VPValue {
+  VPWidenLoadEVLRecipe(VPWidenLoadRecipe *L, VPValue *EVL, VPValue *Mask)
+      : VPWidenMemoryRecipe(VPDef::VPWidenLoadEVLSC, L->getIngredient(),
+                            {L->getAddr(), EVL}, L->isConsecutive(),
+                            L->isReverse(), L->getDebugLoc()),
+        VPValue(this, &getIngredient()) {
+    setMask(Mask);
+  }
+
+  VP_CLASSOF_IMPL(VPDef::VPWidenLoadEVLSC)
+
+  /// Return the EVL operand.
+  VPValue *getEVL() const { return getOperand(1); }
+
+  /// Generate the wide load or gather.
+  void execute(VPTransformState &State) override;
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Print the recipe.
+  void print(raw_ostream &O, const Twine &Indent,
+             VPSlotTracker &SlotTracker) const override;
+#endif
+
+  /// Returns true if the recipe only uses the first lane of operand \p Op.
+  bool onlyFirstLaneUsed(const VPValue *Op) const override {
+    assert(is_contained(operands(), Op) &&
+           "Op must be an operand of the recipe");
+    // Widened loads only demand the first lane of EVL and consecutive loads
+    // only demand the first lane of their address.
+    return Op == getEVL() || (Op == getAddr() && isConsecutive());
+  }
+};
+
+/// A recipe for widening store operations, using the stored value, the address
+/// to store to and an optional mask.
+struct VPWidenStoreRecipe final : public VPWidenMemoryRecipe {
+  VPWidenStoreRecipe(StoreInst &Store, VPValue *Addr, VPValue *StoredVal,
+                     VPValue *Mask, bool Consecutive, bool Reverse, DebugLoc DL)
+      : VPWidenMemoryRecipe(VPDef::VPWidenStoreSC, Store, {Addr, StoredVal},
+                            Consecutive, Reverse, DL) {
+    setMask(Mask);
+  }
+
+  VPWidenStoreRecipe *clone() override {
+    return new VPWidenStoreRecipe(cast<StoreInst>(Ingredient), getAddr(),
+                                  getStoredValue(), getMask(), Consecutive,
+                                  Reverse, getDebugLoc());
+  }
+
+  VP_CLASSOF_IMPL(VPDef::VPWidenStoreSC);
+
+  /// Return the value stored by this recipe.
+  VPValue *getStoredValue() const { return getOperand(1); }
+
+  /// Generate a wide store or scatter.
+  void execute(VPTransformState &State) override;
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Print the recipe.
+  void print(raw_ostream &O, const Twine &Indent,
+             VPSlotTracker &SlotTracker) const override;
+#endif
+
+  /// Returns true if the recipe only uses the first lane of operand \p Op.
+  bool onlyFirstLaneUsed(const VPValue *Op) const override {
+    assert(is_contained(operands(), Op) &&
+           "Op must be an operand of the recipe");
+    // Widened, consecutive stores only demand the first lane of their address,
+    // unless the same operand is also stored.
+    return Op == getAddr() && isConsecutive() && Op != getStoredValue();
+  }
+};
+
+/// A recipe for widening store operations with vector-predication intrinsics,
+/// using the value to store, the address to store to, the explicit vector
+/// length and an optional mask.
+struct VPWidenStoreEVLRecipe final : public VPWidenMemoryRecipe {
+  VPWidenStoreEVLRecipe(VPWidenStoreRecipe *S, VPValue *EVL, VPValue *Mask)
+      : VPWidenMemoryRecipe(VPDef::VPWidenStoreEVLSC, S->getIngredient(),
+                            {S->getAddr(), S->getStoredValue(), EVL},
+                            S->isConsecutive(), S->isReverse(),
+                            S->getDebugLoc()) {
+    setMask(Mask);
+  }
+
+  VP_CLASSOF_IMPL(VPDef::VPWidenStoreEVLSC)
+
+  /// Return the address accessed by this recipe.
+  VPValue *getStoredValue() const { return getOperand(1); }
+
+  /// Return the EVL operand.
+  VPValue *getEVL() const { return getOperand(2); }
+
+  /// Generate the wide store or scatter.
+  void execute(VPTransformState &State) override;
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Print the recipe.
+  void print(raw_ostream &O, const Twine &Indent,
+             VPSlotTracker &SlotTracker) const override;
+#endif
+
+  /// Returns true if the recipe only uses the first lane of operand \p Op.
+  bool onlyFirstLaneUsed(const VPValue *Op) const override {
+    assert(is_contained(operands(), Op) &&
+           "Op must be an operand of the recipe");
+    if (Op == getEVL()) {
+      assert(getStoredValue() != Op && "unexpected store of EVL");
+      return true;
+    }
     // Widened, consecutive memory operations only demand the first lane of
     // their address, unless the same operand is also stored. That latter can
     // happen with opaque pointers.
-    return Op == getAddr() && isConsecutive() &&
-           (!isStore() || Op != getStoredValue());
+    return Op == getAddr() && isConsecutive() && Op != getStoredValue();
   }
-
-  Instruction &getIngredient() const { return Ingredient; }
 };
 
 /// Recipe to expand a SCEV expression.
@@ -2394,7 +2540,9 @@ public:
 
   ~VPExpandSCEVRecipe() override = default;
 
-  VPRecipeBase *clone() override { return new VPExpandSCEVRecipe(Expr, SE); }
+  VPExpandSCEVRecipe *clone() override {
+    return new VPExpandSCEVRecipe(Expr, SE);
+  }
 
   VP_CLASSOF_IMPL(VPDef::VPExpandSCEVSC)
 
@@ -2421,7 +2569,7 @@ public:
 
   ~VPCanonicalIVPHIRecipe() override = default;
 
-  VPRecipeBase *clone() override {
+  VPCanonicalIVPHIRecipe *clone() override {
     auto *R = new VPCanonicalIVPHIRecipe(getOperand(0), getDebugLoc());
     R->addOperand(getBackedgeValue());
     return R;
@@ -2479,7 +2627,7 @@ public:
 
   ~VPActiveLaneMaskPHIRecipe() override = default;
 
-  VPRecipeBase *clone() override {
+  VPActiveLaneMaskPHIRecipe *clone() override {
     return new VPActiveLaneMaskPHIRecipe(getOperand(0), getDebugLoc());
   }
 
@@ -2546,7 +2694,7 @@ public:
 
   ~VPWidenCanonicalIVRecipe() override = default;
 
-  VPRecipeBase *clone() override {
+  VPWidenCanonicalIVRecipe *clone() override {
     return new VPWidenCanonicalIVRecipe(
         cast<VPCanonicalIVPHIRecipe>(getOperand(0)));
   }
@@ -2563,12 +2711,6 @@ public:
   void print(raw_ostream &O, const Twine &Indent,
              VPSlotTracker &SlotTracker) const override;
 #endif
-
-  /// Returns the scalar type of the induction.
-  const Type *getScalarType() const {
-    return cast<VPCanonicalIVPHIRecipe>(getOperand(0)->getDefiningRecipe())
-        ->getScalarType();
-  }
 };
 
 /// A recipe for converting the input value \p IV value to the corresponding
@@ -2597,7 +2739,7 @@ public:
 
   ~VPDerivedIVRecipe() override = default;
 
-  VPRecipeBase *clone() override {
+  VPDerivedIVRecipe *clone() override {
     return new VPDerivedIVRecipe(Kind, FPBinOp, getStartValue(), getOperand(1),
                                  getStepValue());
   }
@@ -2651,7 +2793,7 @@ public:
 
   ~VPScalarIVStepsRecipe() override = default;
 
-  VPRecipeBase *clone() override {
+  VPScalarIVStepsRecipe *clone() override {
     return new VPScalarIVStepsRecipe(
         getOperand(0), getOperand(1), InductionOpcode,
         hasFastMathFlags() ? getFastMathFlags() : FastMathFlags());
@@ -3084,6 +3226,9 @@ public:
     return Value2VPValue[V];
   }
 
+  /// Return the live-in VPValue for \p V, if there is one or nullptr otherwise.
+  VPValue *getLiveIn(Value *V) const { return Value2VPValue.lookup(V); }
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the live-ins of this VPlan to \p O.
   void printLiveIns(raw_ostream &O) const;
@@ -3147,8 +3292,8 @@ public:
 private:
   /// Add to the given dominator tree the header block and every new basic block
   /// that was created between it and the latch block, inclusive.
-  static void updateDominatorTree(DominatorTree *DT, BasicBlock *LoopLatchBB,
-                                  BasicBlock *LoopPreHeaderBB,
+  static void updateDominatorTree(DominatorTree *DT, BasicBlock *LoopHeaderBB,
+                                  BasicBlock *LoopLatchBB,
                                   BasicBlock *LoopExitBB);
 };
 

@@ -53,6 +53,7 @@ struct {
   void Visit(TypeLoc);
   void Visit(const Decl *D);
   void Visit(const CXXCtorInitializer *Init);
+  void Visit(const OpenACCClause *C);
   void Visit(const OMPClause *C);
   void Visit(const BlockDecl::Capture &C);
   void Visit(const GenericSelectionExpr::ConstAssociation &A);
@@ -236,6 +237,14 @@ public:
       getNodeDelegate().Visit(C);
       if (C.hasCopyExpr())
         Visit(C.getCopyExpr());
+    });
+  }
+
+  void Visit(const OpenACCClause *C) {
+    getNodeDelegate().AddChild([=] {
+      getNodeDelegate().Visit(C);
+      for (const auto *S : C->children())
+        Visit(S);
     });
   }
 
@@ -799,6 +808,11 @@ public:
       Visit(C);
   }
 
+  void VisitOpenACCConstructStmt(const OpenACCConstructStmt *Node) {
+    for (const auto *C : Node->clauses())
+      Visit(C);
+  }
+
   void VisitInitListExpr(const InitListExpr *ILE) {
     if (auto *Filler = ILE->getArrayFiller()) {
       Visit(Filler, "array_filler");
@@ -830,11 +844,23 @@ public:
     }
   }
 
+  void VisitUnresolvedLookupExpr(const UnresolvedLookupExpr *E) {
+    if (E->hasExplicitTemplateArgs())
+      for (auto Arg : E->template_arguments())
+        Visit(Arg.getArgument());
+  }
+
   void VisitRequiresExpr(const RequiresExpr *E) {
     for (auto *D : E->getLocalParameters())
       Visit(D);
     for (auto *R : E->getRequirements())
       Visit(R);
+  }
+
+  void VisitTypeTraitExpr(const TypeTraitExpr *E) {
+    // Argument types are not children of the TypeTraitExpr.
+    for (auto *A : E->getArgs())
+      Visit(A->getType());
   }
 
   void VisitLambdaExpr(const LambdaExpr *Node) {
@@ -917,6 +943,14 @@ public:
   void VisitPackTemplateArgument(const TemplateArgument &TA) {
     for (const auto &TArg : TA.pack_elements())
       Visit(TArg);
+  }
+
+  void VisitCXXDefaultArgExpr(const CXXDefaultArgExpr *Node) {
+    Visit(Node->getExpr());
+  }
+
+  void VisitCXXDefaultInitExpr(const CXXDefaultInitExpr *Node) {
+    Visit(Node->getExpr());
   }
 
   // Implements Visit methods for Attrs.

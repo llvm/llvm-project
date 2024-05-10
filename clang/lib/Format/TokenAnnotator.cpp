@@ -825,8 +825,7 @@ private:
             Parent->overwriteFixedType(TT_BinaryOperator);
         }
         // An arrow after an ObjC method expression is not a lambda arrow.
-        if (CurrentToken->getType() == TT_ObjCMethodExpr &&
-            CurrentToken->Next &&
+        if (CurrentToken->is(TT_ObjCMethodExpr) && CurrentToken->Next &&
             CurrentToken->Next->is(TT_TrailingReturnArrow)) {
           CurrentToken->Next->overwriteFixedType(TT_Unknown);
         }
@@ -1544,6 +1543,7 @@ private:
         return false;
       if (Line.MustBeDeclaration && Contexts.size() == 1 &&
           !Contexts.back().IsExpression && !Line.startsWith(TT_ObjCProperty) &&
+          !Line.startsWith(tok::l_paren) &&
           !Tok->isOneOf(TT_TypeDeclarationParen, TT_RequiresExpressionLParen)) {
         if (const auto *Previous = Tok->Previous;
             !Previous ||
@@ -1563,7 +1563,7 @@ private:
     case tok::l_brace:
       if (Style.Language == FormatStyle::LK_TextProto) {
         FormatToken *Previous = Tok->getPreviousNonComment();
-        if (Previous && Previous->getType() != TT_DictLiteral)
+        if (Previous && Previous->isNot(TT_DictLiteral))
           Previous->setType(TT_SelectorName);
       }
       Scopes.push_back(getScopeType(*Tok));
@@ -1583,7 +1583,7 @@ private:
              Tok->Previous->isOneOf(TT_SelectorName, TT_DictLiteral))) {
           Tok->setType(TT_DictLiteral);
           FormatToken *Previous = Tok->getPreviousNonComment();
-          if (Previous && Previous->getType() != TT_DictLiteral)
+          if (Previous && Previous->isNot(TT_DictLiteral))
             Previous->setType(TT_SelectorName);
         }
         if (Style.isTableGen())
@@ -2355,7 +2355,8 @@ private:
     // Line.MightBeFunctionDecl can only be true after the parentheses of a
     // function declaration have been found. In this case, 'Current' is a
     // trailing token of this declaration and thus cannot be a name.
-    if (Current.is(Keywords.kw_instanceof)) {
+    if ((Style.isJavaScript() || Style.Language == FormatStyle::LK_Java) &&
+        Current.is(Keywords.kw_instanceof)) {
       Current.setType(TT_BinaryOperator);
     } else if (isStartOfName(Current) &&
                (!Line.MightBeFunctionDecl || Current.NestingLevel != 0)) {
@@ -2726,8 +2727,10 @@ private:
       }
     }
 
-    if (Tok.Next->isOneOf(tok::question, tok::ampamp))
+    if (Tok.Next->is(tok::question) ||
+        (Tok.Next->is(tok::ampamp) && !Tok.Previous->isTypeName(IsCpp))) {
       return false;
+    }
 
     // `foreach((A a, B b) in someList)` should not be seen as a cast.
     if (Tok.Next->is(Keywords.kw_in) && Style.isCSharp())
@@ -2912,6 +2915,8 @@ private:
       return TT_UnaryOperator;
     if (PrevToken->is(TT_TypeName))
       return TT_PointerOrReference;
+    if (PrevToken->isOneOf(tok::kw_new, tok::kw_delete) && Tok.is(tok::ampamp))
+      return TT_BinaryOperator;
 
     const FormatToken *NextToken = Tok.getNextNonComment();
 
@@ -4754,8 +4759,7 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
     // Objective-C dictionary literal -> no space before closing brace.
     return false;
   }
-  if (Right.getType() == TT_TrailingAnnotation &&
-      Right.isOneOf(tok::amp, tok::ampamp) &&
+  if (Right.is(TT_TrailingAnnotation) && Right.isOneOf(tok::amp, tok::ampamp) &&
       Left.isOneOf(tok::kw_const, tok::kw_volatile) &&
       (!Right.Next || Right.Next->is(tok::semi))) {
     // Match const and volatile ref-qualifiers without any additional
@@ -4776,9 +4780,14 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
   if (Left.Finalized)
     return Right.hasWhitespaceBefore();
 
+  const bool IsVerilog = Style.isVerilog();
+  assert(!IsVerilog || !IsCpp);
+
   // Never ever merge two words.
-  if (Keywords.isWordLike(Right) && Keywords.isWordLike(Left))
+  if (Keywords.isWordLike(Right, IsVerilog) &&
+      Keywords.isWordLike(Left, IsVerilog)) {
     return true;
+  }
 
   // Leave a space between * and /* to avoid C4138 `comment end` found outside
   // of comment.
@@ -4830,10 +4839,8 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
         Right.is(TT_TemplateOpener)) {
       return true;
     }
-    if (Left.is(tok::identifier) && Right.is(tok::numeric_constant) &&
-        Right.TokenText[0] == '.') {
-      return false;
-    }
+    if (Left.Tok.getIdentifierInfo() && Right.is(tok::numeric_constant))
+      return Right.TokenText[0] != '.';
   } else if (Style.isProto()) {
     if (Right.is(tok::period) &&
         Left.isOneOf(Keywords.kw_optional, Keywords.kw_required,
@@ -5044,6 +5051,8 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
       return true; // "x! as string", "x! in y"
     }
   } else if (Style.Language == FormatStyle::LK_Java) {
+    if (Left.is(TT_CaseLabelArrow) || Right.is(TT_CaseLabelArrow))
+      return true;
     if (Left.is(tok::r_square) && Right.is(tok::l_brace))
       return true;
     // spaces inside square brackets.
@@ -5061,12 +5070,10 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
         Right.is(TT_TemplateOpener)) {
       return true;
     }
-  } else if (Style.isVerilog()) {
+  } else if (IsVerilog) {
     // An escaped identifier ends with whitespace.
-    if (Style.isVerilog() && Left.is(tok::identifier) &&
-        Left.TokenText[0] == '\\') {
+    if (Left.is(tok::identifier) && Left.TokenText[0] == '\\')
       return true;
-    }
     // Add space between things in a primitive's state table unless in a
     // transition like `(0?)`.
     if ((Left.is(TT_VerilogTableItem) &&
@@ -5262,21 +5269,11 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
     return true;
   }
   if (Left.is(TT_UnaryOperator)) {
-    if (Right.isNot(tok::l_paren)) {
-      // The alternative operators for ~ and ! are "compl" and "not".
-      // If they are used instead, we do not want to combine them with
-      // the token to the right, unless that is a left paren.
-      if (Left.is(tok::exclaim) && Left.TokenText == "not")
-        return true;
-      if (Left.is(tok::tilde) && Left.TokenText == "compl")
-        return true;
-      // Lambda captures allow for a lone &, so "&]" needs to be properly
-      // handled.
-      if (Left.is(tok::amp) && Right.is(tok::r_square))
-        return Style.SpacesInSquareBrackets;
-    }
-    return (Style.SpaceAfterLogicalNot && Left.is(tok::exclaim)) ||
-           Right.is(TT_BinaryOperator);
+    // Lambda captures allow for a lone &, so "&]" needs to be properly
+    // handled.
+    if (Left.is(tok::amp) && Right.is(tok::r_square))
+      return Style.SpacesInSquareBrackets;
+    return Style.SpaceAfterLogicalNot && Left.is(tok::exclaim);
   }
 
   // If the next token is a binary operator or a selector name, we have
@@ -5596,12 +5593,8 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
     return true;
   if (Left.IsUnterminatedLiteral)
     return true;
-  // FIXME: Breaking after newlines seems useful in general. Turn this into an
-  // option and recognize more cases like endl etc, and break independent of
-  // what comes after operator lessless.
-  if (Right.is(tok::lessless) && Right.Next &&
-      Right.Next->is(tok::string_literal) && Left.is(tok::string_literal) &&
-      Left.TokenText.ends_with("\\n\"")) {
+  if (Right.is(tok::lessless) && Right.Next && Left.is(tok::string_literal) &&
+      Right.Next->is(tok::string_literal)) {
     return true;
   }
   if (Right.is(TT_RequiresClause)) {

@@ -3306,6 +3306,16 @@ static const char *getVisibilityName(GlobalValue::VisibilityTypes Vis) {
   llvm_unreachable("invalid visibility");
 }
 
+static const char *getImportTypeName(GlobalValueSummary::ImportKind IK) {
+  switch (IK) {
+  case GlobalValueSummary::Definition:
+    return "definition";
+  case GlobalValueSummary::Declaration:
+    return "declaration";
+  }
+  llvm_unreachable("invalid import kind");
+}
+
 void AssemblyWriter::printFunctionSummary(const FunctionSummary *FS) {
   Out << ", insts: " << FS->instCount();
   if (FS->fflags().anyFlagSet())
@@ -3545,6 +3555,8 @@ void AssemblyWriter::printSummary(const GlobalValueSummary &Summary) {
   Out << ", live: " << GVFlags.Live;
   Out << ", dsoLocal: " << GVFlags.DSOLocal;
   Out << ", canAutoHide: " << GVFlags.CanAutoHide;
+  Out << ", importType: "
+      << getImportTypeName(GlobalValueSummary::ImportKind(GVFlags.ImportType));
   Out << ")";
 
   if (Summary.getSummaryKind() == GlobalValueSummary::AliasKind)

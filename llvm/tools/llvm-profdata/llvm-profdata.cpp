@@ -19,8 +19,8 @@
 #include "llvm/ProfileData/InstrProfReader.h"
 #include "llvm/ProfileData/InstrProfWriter.h"
 #include "llvm/ProfileData/MemProf.h"
+#include "llvm/ProfileData/MemProfReader.h"
 #include "llvm/ProfileData/ProfileCommon.h"
-#include "llvm/ProfileData/RawMemProfReader.h"
 #include "llvm/ProfileData/SampleProfReader.h"
 #include "llvm/ProfileData/SampleProfWriter.h"
 #include "llvm/Support/BalancedPartitioning.h"
@@ -305,7 +305,12 @@ cl::opt<memprof::IndexedVersion> MemProfVersionRequested(
     cl::desc("Specify the version of the memprof format to use"),
     cl::init(memprof::Version0),
     cl::values(clEnumValN(memprof::Version0, "0", "version 0"),
-               clEnumValN(memprof::Version1, "1", "version 1")));
+               clEnumValN(memprof::Version1, "1", "version 1"),
+               clEnumValN(memprof::Version2, "2", "version 2")));
+
+cl::opt<bool> MemProfFullSchema(
+    "memprof-full-schema", cl::Hidden, cl::sub(MergeSubcommand),
+    cl::desc("Use the full schema for serialization"), cl::init(false));
 
 // Options specific to overlap subcommand.
 cl::opt<std::string> BaseFilename(cl::Positional, cl::Required,
@@ -599,7 +604,7 @@ struct WriterContext {
                 SmallSet<instrprof_error, 4> &WriterErrorCodes,
                 uint64_t ReservoirSize = 0, uint64_t MaxTraceLength = 0)
       : Writer(IsSparse, ReservoirSize, MaxTraceLength, DoWritePrevVersion,
-               MemProfVersionRequested),
+               MemProfVersionRequested, MemProfFullSchema),
         ErrLock(ErrLock), WriterErrorCodes(WriterErrorCodes) {}
 };
 
@@ -677,10 +682,22 @@ static void loadInput(const WeightedFile &Input, SymbolRemapper *Remapper,
       if (!Succeeded)
         return;
     }
+
+    // Add the call stacks into the writer context.
+    const auto &CSIdToCallStacks = Reader->getCallStacks();
+    for (const auto &I : CSIdToCallStacks) {
+      bool Succeeded = WC->Writer.addMemProfCallStack(
+          /*Id=*/I.first, /*Frame=*/I.getSecond(), MemProfError);
+      // If we weren't able to add the call stacks then it doesn't make sense
+      // to try to add the records from this profile.
+      if (!Succeeded)
+        return;
+    }
+
     const auto &FunctionProfileData = Reader->getProfileData();
     // Add the memprof records into the writer context.
-    for (const auto &I : FunctionProfileData) {
-      WC->Writer.addMemProfRecord(/*Id=*/I.first, /*Record=*/I.second);
+    for (const auto &[GUID, Record] : FunctionProfileData) {
+      WC->Writer.addMemProfRecord(GUID, Record);
     }
     return;
   }

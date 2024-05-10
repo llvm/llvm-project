@@ -18,37 +18,37 @@ define void @foo(ptr noalias %a, ptr noalias %b, ptr noalias %c, i64 %N) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT: <x1> vector loop: {
 ; CHECK-NEXT:   vector.body:
-; CHECK-NEXT:     EMIT vp<%3> = CANONICAL-INDUCTION ir<0>, vp<%16>
+; CHECK-NEXT:     EMIT vp<%3> = CANONICAL-INDUCTION ir<0>, vp<%8>
 ; CHECK-NEXT:     WIDEN-INDUCTION %iv = phi 0, %iv.next, ir<1>
-; CHECK-NEXT:     EMIT vp<%5> = icmp ule ir<%iv>, vp<%2>
+; CHECK-NEXT:     EMIT vp<%4> = icmp ule ir<%iv>, vp<%2>
 ; CHECK-NEXT:   Successor(s): pred.store
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  <xVFxUF> pred.store: {
 ; CHECK-NEXT:    pred.store.entry:
-; CHECK-NEXT:      BRANCH-ON-MASK vp<%5>
+; CHECK-NEXT:      BRANCH-ON-MASK vp<%4>
 ; CHECK-NEXT:    Successor(s): pred.store.if, pred.store.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    pred.store.if:
-; CHECK-NEXT:      vp<%6> = SCALAR-STEPS vp<%3>, ir<1>
-; CHECK-NEXT:      REPLICATE ir<%arrayidx> = getelementptr inbounds ir<%b>, vp<%6>
+; CHECK-NEXT:      vp<%5> = SCALAR-STEPS vp<%3>, ir<1>
+; CHECK-NEXT:      REPLICATE ir<%arrayidx> = getelementptr inbounds ir<%b>, vp<%5>
 ; CHECK-NEXT:      REPLICATE ir<%0> = load ir<%arrayidx>
-; CHECK-NEXT:      REPLICATE ir<%arrayidx2> = getelementptr inbounds ir<%c>, vp<%6>
+; CHECK-NEXT:      REPLICATE ir<%arrayidx2> = getelementptr inbounds ir<%c>, vp<%5>
 ; CHECK-NEXT:      REPLICATE ir<%1> = load ir<%arrayidx2>
-; CHECK-NEXT:      REPLICATE ir<%arrayidx4> = getelementptr inbounds ir<%a>, vp<%6>
+; CHECK-NEXT:      REPLICATE ir<%arrayidx4> = getelementptr inbounds ir<%a>, vp<%5>
 ; CHECK-NEXT:      REPLICATE ir<%add> = add nsw ir<%1>, ir<%0>
 ; CHECK-NEXT:      REPLICATE store ir<%add>, ir<%arrayidx4>
 ; CHECK-NEXT:    Successor(s): pred.store.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    pred.store.continue:
-; CHECK-NEXT:      PHI-PREDICATED-INSTRUCTION vp<%14> = ir<%0>
-; CHECK-NEXT:      PHI-PREDICATED-INSTRUCTION vp<%15> = ir<%1>
+; CHECK-NEXT:      PHI-PREDICATED-INSTRUCTION vp<%6> = ir<%0>
+; CHECK-NEXT:      PHI-PREDICATED-INSTRUCTION vp<%7> = ir<%1>
 ; CHECK-NEXT:    No successors
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  Successor(s): for.body.2
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  for.body.2:
-; CHECK-NEXT:     EMIT vp<%16> = add vp<%3>, vp<%0>
-; CHECK-NEXT:     EMIT branch-on-count vp<%16>, vp<%1>
+; CHECK-NEXT:     EMIT vp<%8> = add vp<%3>, vp<%0>
+; CHECK-NEXT:     EMIT branch-on-count vp<%8>, vp<%1>
 ; CHECK-NEXT:   No successors
 ; CHECK-NEXT: }
 ;
@@ -83,17 +83,17 @@ define void @safe_dep(ptr %p) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT: <x1> vector loop: {
 ; CHECK-NEXT:   vector.body:
-; CHECK-NEXT:     EMIT vp<%2> = CANONICAL-INDUCTION ir<0>, vp<%10>
+; CHECK-NEXT:     EMIT vp<%2> = CANONICAL-INDUCTION ir<0>, vp<%6>
 ; CHECK-NEXT:     vp<%3> = SCALAR-STEPS vp<%2>, ir<1>
 ; CHECK-NEXT:     CLONE ir<%a1> = getelementptr ir<%p>, vp<%3>
-; CHECK-NEXT:     vp<%5> = vector-pointer ir<%a1>
-; CHECK-NEXT:     WIDEN ir<%v> = load vp<%5>
+; CHECK-NEXT:     vp<%4> = vector-pointer ir<%a1>
+; CHECK-NEXT:     WIDEN ir<%v> = load vp<%4>
 ; CHECK-NEXT:     CLONE ir<%offset> = add vp<%3>, ir<100>
 ; CHECK-NEXT:     CLONE ir<%a2> = getelementptr ir<%p>, ir<%offset>
-; CHECK-NEXT:     vp<%9> = vector-pointer ir<%a2>
-; CHECK-NEXT:     WIDEN store vp<%9>, ir<%v>
-; CHECK-NEXT:     EMIT vp<%10> = add nuw vp<%2>, vp<%0>
-; CHECK-NEXT:     EMIT branch-on-count vp<%10>, vp<%1>
+; CHECK-NEXT:     vp<%5> = vector-pointer ir<%a2>
+; CHECK-NEXT:     WIDEN store vp<%5>, ir<%v>
+; CHECK-NEXT:     EMIT vp<%6> = add nuw vp<%2>, vp<%0>
+; CHECK-NEXT:     EMIT branch-on-count vp<%6>, vp<%1>
 ; CHECK-NEXT:   No successors
 ; CHECK-NEXT: }
 ;

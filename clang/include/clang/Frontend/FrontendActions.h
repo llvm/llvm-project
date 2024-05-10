@@ -34,18 +34,12 @@ public:
 
 /// Preprocessor-based frontend action that also loads PCH files.
 class ReadPCHAndPreprocessAction : public FrontendAction {
-  llvm::unique_function<void(CompilerInstance &)> AdjustCI;
-
   void ExecuteAction() override;
 
   std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
                                                  StringRef InFile) override;
 
 public:
-  ReadPCHAndPreprocessAction(
-      llvm::unique_function<void(CompilerInstance &)> AdjustCI)
-      : AdjustCI(std::move(AdjustCI)) {}
-
   bool usesPreprocessorOnly() const override { return false; }
 };
 
@@ -327,15 +321,11 @@ protected:
 
 class GetDependenciesByModuleNameAction : public PreprocessOnlyAction {
   StringRef ModuleName;
-  llvm::unique_function<void(CompilerInstance &)> AdjustCI;
-
   void ExecuteAction() override;
 
 public:
-  GetDependenciesByModuleNameAction(
-      StringRef ModuleName,
-      llvm::unique_function<void(CompilerInstance &)> AdjustCI)
-      : ModuleName(ModuleName), AdjustCI(std::move(AdjustCI)) {}
+  GetDependenciesByModuleNameAction(StringRef ModuleName)
+      : ModuleName(ModuleName) {}
 };
 
 }  // end namespace clang

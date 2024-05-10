@@ -32,16 +32,11 @@
 
 #ifdef _LIBCPP_VERSION
 
-// In order to find this include the calling test needs to provide this path in
-// the search path. Typically this looks like:
-//   ADDITIONAL_COMPILE_FLAGS(stdlib=libc++): -I %{libcxx-dir}/src/include
-// where the number of `../` sequences depends on the subdirectory level of the
-// test.
-#  include "tzdb/leap_second_private.h" // Header in the dylib
+#  include <__utility/private_constructor_tag.h>
 
 inline constexpr std::chrono::leap_second
 test_leap_second_create(const std::chrono::sys_seconds& date, const std::chrono::seconds& value) {
-  return std::chrono::leap_second{std::chrono::leap_second::__constructor_tag{}, date, value};
+  return std::chrono::leap_second{std::__private_constructor_tag{}, date, value};
 }
 
 #else // _LIBCPP_VERSION

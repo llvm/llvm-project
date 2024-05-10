@@ -93,10 +93,16 @@ bool Preprocessor::EnterSourceFile(FileID FID, ConstSearchDirIterator CurDir,
   }
 
   Lexer *TheLexer = new Lexer(FID, *InputFile, *this, IsFirstIncludeOfFile);
-  if (DependencyDirectivesForFile && FID != PredefinesFileID)
-    if (OptionalFileEntryRef File = SourceMgr.getFileEntryRefForID(FID))
-      if (auto DepDirectives = DependencyDirectivesForFile(*File))
+  if (getPreprocessorOpts().DependencyDirectivesForFile &&
+      FID != PredefinesFileID) {
+    if (OptionalFileEntryRef File = SourceMgr.getFileEntryRefForID(FID)) {
+      if (std::optional<ArrayRef<dependency_directives_scan::Directive>>
+              DepDirectives =
+                  getPreprocessorOpts().DependencyDirectivesForFile(*File)) {
         TheLexer->DepDirectives = *DepDirectives;
+      }
+    }
+  }
 
   EnterSourceFileWithLexer(TheLexer, CurDir);
   return false;
@@ -362,8 +368,7 @@ bool Preprocessor::HandleEndOfFile(Token &Result, bool isEndOfMacro) {
       // Okay, this has a controlling macro, remember in HeaderFileInfo.
       if (OptionalFileEntryRef FE = CurPPLexer->getFileEntry()) {
         HeaderInfo.SetFileControllingMacro(*FE, ControllingMacro);
-        if (MacroInfo *MI =
-              getMacroInfo(const_cast<IdentifierInfo*>(ControllingMacro)))
+        if (MacroInfo *MI = getMacroInfo(ControllingMacro))
           MI->setUsedForHeaderGuard(true);
         if (const IdentifierInfo *DefinedMacro =
               CurPPLexer->MIOpt.GetDefinedMacro()) {
@@ -799,7 +804,7 @@ Module *Preprocessor::LeaveSubmodule(bool ForPragma) {
   llvm::SmallPtrSet<const IdentifierInfo*, 8> VisitedMacros;
   for (unsigned I = Info.OuterPendingModuleMacroNames;
        I != PendingModuleMacroNames.size(); ++I) {
-    auto *II = const_cast<IdentifierInfo*>(PendingModuleMacroNames[I]);
+    const auto *II = PendingModuleMacroNames[I];
     if (!VisitedMacros.insert(II).second)
       continue;
 
@@ -849,8 +854,8 @@ Module *Preprocessor::LeaveSubmodule(bool ForPragma) {
         // Don't bother creating a module macro if it would represent a #undef
         // that doesn't override anything.
         if (Def || !Macro.getOverriddenMacros().empty())
-          addModuleMacro(LeavingMod, II, Def,
-                         Macro.getOverriddenMacros(), IsNew);
+          addModuleMacro(LeavingMod, II, Def, Macro.getOverriddenMacros(),
+                         IsNew);
 
         if (!getLangOpts().ModulesLocalVisibility) {
           // This macro is exposed to the rest of this compilation as a

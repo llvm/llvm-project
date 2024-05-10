@@ -53,7 +53,7 @@ static_assert(
 static_assert(std::is_move_constructible_v<std::ranges::in_value_result<MoveOnly, int>>);
 static_assert(std::is_move_constructible_v<std::ranges::in_value_result<int, MoveOnly>>);
 
-// should not copy constructible with move-only type
+// should not be copy constructible with move-only type
 static_assert(!std::is_copy_constructible_v<std::ranges::in_value_result<MoveOnly, int>>);
 static_assert(!std::is_copy_constructible_v<std::ranges::in_value_result<int, MoveOnly>>);
 
@@ -71,6 +71,7 @@ struct ConvertibleFrom {
 };
 
 constexpr bool test() {
+  // Checks that conversion operations are correct.
   {
     std::ranges::in_value_result<int, double> res{10, 0.};
     assert(res.in == 10);
@@ -79,6 +80,8 @@ constexpr bool test() {
     assert(res2.in.content == 10);
     assert(res2.value.content == 0.);
   }
+
+  // Checks that conversions are possible when one of the types is move-only.
   {
     std::ranges::in_value_result<MoveOnly, int> res{MoveOnly{}, 2};
     assert(res.in.get() == 1);
@@ -88,6 +91,8 @@ constexpr bool test() {
     assert(res2.in.get() == 1);
     assert(res2.value == 2);
   }
+
+  // Checks that structured bindings get the correct values.
   {
     auto [in, value] = std::ranges::in_value_result<int, int>{1, 2};
     assert(in == 1);

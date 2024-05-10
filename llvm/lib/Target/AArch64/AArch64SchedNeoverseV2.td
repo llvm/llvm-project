@@ -15,7 +15,7 @@
 
 def NeoverseV2Model : SchedMachineModel {
   let IssueWidth            =  16; // Micro-ops dispatched at a time.
-  let MicroOpBufferSize     = 160; // Entries in micro-op re-order buffer. NOTE: Copied from N2.
+  let MicroOpBufferSize     = 320; // Entries in micro-op re-order buffer.
   let LoadLatency           =   4; // Optimistic load latency.
   let MispredictPenalty     =  10; // Extra cycles for mispredicted branch.  NOTE: Copied from N2.
   let LoopMicroOpBufferSize =  16; // NOTE: Copied from Cortex-A57.

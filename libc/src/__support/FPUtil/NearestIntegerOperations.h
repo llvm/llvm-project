@@ -13,7 +13,7 @@
 #include "FPBits.h"
 #include "rounding_mode.h"
 
-#include "include/llvm-libc-macros/math-macros.h"
+#include "hdr/math_macros.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/common.h"
 

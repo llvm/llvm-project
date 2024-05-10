@@ -306,6 +306,9 @@
 /* Whether tools show host and target info when invoked with --version */
 #define LLVM_VERSION_PRINTER_SHOW_HOST_TARGET_INFO 1
 
+/* Whether tools show optional build config flags when invoked with --version */
+#define LLVM_VERSION_PRINTER_SHOW_BUILD_CONFIG 1
+
 /* Define if libxml2 is supported on this platform. */
 /* #undef LLVM_ENABLE_LIBXML2 */
 

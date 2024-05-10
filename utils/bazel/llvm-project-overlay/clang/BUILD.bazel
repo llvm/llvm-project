@@ -736,14 +736,6 @@ gentbl(
             "-gen-clang-attr-impl",
             "include/clang/AST/AttrImpl.inc",
         ),
-        (
-            "-gen-clang-attr-can-print-left-list",
-            "include/clang/Basic/AttrLeftSideCanPrintList.inc",
-        ),
-        (
-            "-gen-clang-attr-must-print-left-list",
-            "include/clang/Basic/AttrLeftSideMustPrintList.inc",
-        ),
     ],
     tblgen = ":clang-tblgen",
     td_file = "include/clang/Basic/Attr.td",
@@ -1144,6 +1136,7 @@ cc_library(
         "//llvm:AllTargetsAsmParsers",
         "//llvm:AllTargetsCodeGens",
         "//llvm:Core",
+        "//llvm:Demangle",
         "//llvm:FrontendHLSL",
         "//llvm:FrontendOpenMP",
         "//llvm:MC",
@@ -1936,6 +1929,7 @@ cc_library(
         ":frontend",
         ":lex",
         ":sema",
+        ":serialization",
         ":type_nodes_gen",
         "//llvm:AllTargetsAsmParsers",
         "//llvm:Analysis",
@@ -2042,6 +2036,7 @@ cc_library(
     name = "install_api",
     srcs = glob([
         "lib/InstallAPI/*.cpp",
+        "lib/InstallAPI/*.h",
     ]),
     hdrs = glob([
         "include/clang/InstallAPI/*.h",

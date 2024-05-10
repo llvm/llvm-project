@@ -12,6 +12,7 @@ set(core_files
   stdarg.h
   __stdarg___gnuc_va_list.h
   __stdarg___va_copy.h
+  __stdarg_header_macro.h
   __stdarg_va_arg.h
   __stdarg_va_copy.h
   __stdarg_va_list.h
@@ -19,6 +20,7 @@ set(core_files
   stdbool.h
   stdckdint.h
   stddef.h
+  __stddef_header_macro.h
   __stddef_max_align_t.h
   __stddef_null.h
   __stddef_nullptr_t.h
@@ -335,6 +337,10 @@ set(llvm_libc_wrapper_files
   llvm_libc_wrappers/time.h
 )
 
+set(zos_wrapper_files
+  zos_wrappers/builtins.h
+)
+
 include(GetClangResourceDir)
 get_clang_resource_dir(output_dir PREFIX ${LLVM_LIBRARY_OUTPUT_INTDIR}/.. SUBDIR include)
 set(out_files)
@@ -370,7 +376,7 @@ endfunction(clang_generate_header)
 
 # Copy header files from the source directory to the build directory
 foreach( f ${files} ${cuda_wrapper_files} ${cuda_wrapper_bits_files}
-           ${ppc_wrapper_files} ${openmp_wrapper_files} ${hlsl_files}
+           ${ppc_wrapper_files} ${openmp_wrapper_files} ${zos_wrapper_files} ${hlsl_files}
            ${llvm_libc_wrapper_files})
   copy_header_to_output_dir(${CMAKE_CURRENT_SOURCE_DIR} ${f})
 endforeach( f )
@@ -437,14 +443,14 @@ foreach( f ${generated_files} )
 endforeach( f )
 
 function(add_header_target target_name file_list)
-  add_custom_target(${target_name} DEPENDS ${file_list})
+  add_library(${target_name} INTERFACE ${file_list})
   set_target_properties(${target_name} PROPERTIES
     FOLDER "Misc"
     RUNTIME_OUTPUT_DIRECTORY "${output_dir}")
 endfunction()
 
 # The catch-all clang-resource-headers target
-add_custom_target("clang-resource-headers" ALL DEPENDS ${out_files})
+add_library(clang-resource-headers INTERFACE ${out_files})
 set_target_properties("clang-resource-headers" PROPERTIES
   FOLDER "Misc"
   RUNTIME_OUTPUT_DIRECTORY "${output_dir}")
@@ -487,7 +493,7 @@ add_header_target("mips-resource-headers" "${mips_msa_files}")
 add_header_target("ppc-resource-headers" "${ppc_files};${ppc_wrapper_files}")
 add_header_target("ppc-htm-resource-headers" "${ppc_htm_files}")
 add_header_target("riscv-resource-headers" "${riscv_files};${riscv_generated_files}")
-add_header_target("systemz-resource-headers" "${systemz_files}")
+add_header_target("systemz-resource-headers" "${systemz_files};${zos_wrapper_files}")
 add_header_target("ve-resource-headers" "${ve_files}")
 add_header_target("webassembly-resource-headers" "${webassembly_files}")
 add_header_target("x86-resource-headers" "${x86_files}")
@@ -501,6 +507,10 @@ add_header_target("windows-resource-headers" ${windows_only_files})
 add_header_target("utility-resource-headers" ${utility_files})
 
 get_clang_resource_dir(header_install_dir SUBDIR include)
+target_include_directories(clang-resource-headers INTERFACE
+  $<BUILD_INTERFACE:${output_dir}>
+  $<INSTALL_INTERFACE:${header_install_dir}>)
+set_property(GLOBAL APPEND PROPERTY CLANG_EXPORTS clang-resource-headers)
 
 #############################################################
 # Install rules for the catch-all clang-resource-headers target
@@ -532,6 +542,11 @@ install(
 install(
   FILES ${openmp_wrapper_files}
   DESTINATION ${header_install_dir}/openmp_wrappers
+  COMPONENT clang-resource-headers)
+
+install(
+  FILES ${zos_wrapper_files}
+  DESTINATION ${header_install_dir}/zos_wrappers
   COMPONENT clang-resource-headers)
 
 #############################################################
@@ -635,6 +650,12 @@ install(
 install(
   FILES ${systemz_files}
   DESTINATION ${header_install_dir}
+  EXCLUDE_FROM_ALL
+  COMPONENT systemz-resource-headers)
+
+install(
+  FILES ${zos_wrapper_files}
+  DESTINATION  ${header_install_dir}/zos_wrappers
   EXCLUDE_FROM_ALL
   COMPONENT systemz-resource-headers)
 

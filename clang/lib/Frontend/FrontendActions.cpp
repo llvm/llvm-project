@@ -69,10 +69,7 @@ void InitOnlyAction::ExecuteAction() {
 
 // Basically PreprocessOnlyAction::ExecuteAction.
 void ReadPCHAndPreprocessAction::ExecuteAction() {
-  CompilerInstance &CI = getCompilerInstance();
-  AdjustCI(CI);
-
-  Preprocessor &PP = CI.getPreprocessor();
+  Preprocessor &PP = getCompilerInstance().getPreprocessor();
 
   // Ignore unknown pragmas.
   PP.IgnorePragmas();
@@ -275,14 +272,17 @@ bool GenerateModuleInterfaceAction::BeginSourceFileAction(
 std::unique_ptr<ASTConsumer>
 GenerateModuleInterfaceAction::CreateASTConsumer(CompilerInstance &CI,
                                                  StringRef InFile) {
-  CI.getHeaderSearchOpts().ModulesSkipDiagnosticOptions = true;
-  CI.getHeaderSearchOpts().ModulesSkipHeaderSearchPaths = true;
-  CI.getHeaderSearchOpts().ModulesSkipPragmaDiagnosticMappings = true;
+  std::vector<std::unique_ptr<ASTConsumer>> Consumers;
+  Consumers.push_back(std::make_unique<CXX20ModulesGenerator>(
+      CI.getPreprocessor(), CI.getModuleCache(),
+      CI.getFrontendOpts().OutputFile));
 
-  std::vector<std::unique_ptr<ASTConsumer>> Consumers =
-      CreateMultiplexConsumer(CI, InFile);
-  if (Consumers.empty())
-    return nullptr;
+  if (CI.getFrontendOpts().GenReducedBMI &&
+      !CI.getFrontendOpts().ModuleOutputPath.empty()) {
+    Consumers.push_back(std::make_unique<ReducedBMIGenerator>(
+        CI.getPreprocessor(), CI.getModuleCache(),
+        CI.getFrontendOpts().ModuleOutputPath));
+  }
 
   return std::make_unique<MultiplexConsumer>(std::move(Consumers));
 }
@@ -453,7 +453,7 @@ private:
       return "BuildingBuiltinDumpStructCall";
     case CodeSynthesisContext::BuildingDeductionGuides:
       return "BuildingDeductionGuides";
-    case Sema::CodeSynthesisContext::TypeAliasTemplateInstantiation:
+    case CodeSynthesisContext::TypeAliasTemplateInstantiation:
       return "TypeAliasTemplateInstantiation";
     }
     return "";
@@ -1193,8 +1193,6 @@ void PrintDependencyDirectivesSourceMinimizerAction::ExecuteAction() {
 
 void GetDependenciesByModuleNameAction::ExecuteAction() {
   CompilerInstance &CI = getCompilerInstance();
-  AdjustCI(CI);
-
   Preprocessor &PP = CI.getPreprocessor();
   SourceManager &SM = PP.getSourceManager();
   FileID MainFileID = SM.getMainFileID();

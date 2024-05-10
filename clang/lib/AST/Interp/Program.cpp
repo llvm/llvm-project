@@ -108,27 +108,23 @@ Pointer Program::getPtrGlobal(unsigned Idx) const {
 }
 
 std::optional<unsigned> Program::getGlobal(const ValueDecl *VD) {
-  auto It = GlobalIndices.find(VD);
-  if (It != GlobalIndices.end())
+  if (auto It = GlobalIndices.find(VD); It != GlobalIndices.end())
     return It->second;
 
   // Find any previous declarations which were already evaluated.
   std::optional<unsigned> Index;
-  for (const Decl *P = VD; P; P = P->getPreviousDecl()) {
-    auto It = GlobalIndices.find(P);
-    if (It != GlobalIndices.end()) {
+  for (const Decl *P = VD->getPreviousDecl(); P; P = P->getPreviousDecl()) {
+    if (auto It = GlobalIndices.find(P); It != GlobalIndices.end()) {
       Index = It->second;
       break;
     }
   }
 
   // Map the decl to the existing index.
-  if (Index) {
+  if (Index)
     GlobalIndices[VD] = *Index;
-    return std::nullopt;
-  }
 
-  return Index;
+  return std::nullopt;
 }
 
 std::optional<unsigned> Program::getOrCreateGlobal(const ValueDecl *VD,
@@ -173,12 +169,12 @@ std::optional<unsigned> Program::getOrCreateDummy(const ValueDecl *VD) {
 
 std::optional<unsigned> Program::createGlobal(const ValueDecl *VD,
                                               const Expr *Init) {
-  assert(!getGlobal(VD));
   bool IsStatic, IsExtern;
   if (const auto *Var = dyn_cast<VarDecl>(VD)) {
     IsStatic = Context::shouldBeGloballyIndexed(VD);
-    IsExtern = !Var->getAnyInitializer();
-  } else if (isa<UnnamedGlobalConstantDecl, MSGuidDecl>(VD)) {
+    IsExtern = Var->hasExternalStorage();
+  } else if (isa<UnnamedGlobalConstantDecl, MSGuidDecl,
+                 TemplateParamObjectDecl>(VD)) {
     IsStatic = true;
     IsExtern = false;
   } else {
@@ -312,6 +308,11 @@ Record *Program::getOrCreateRecord(const RecordDecl *RD) {
   // Reserve space for fields.
   Record::FieldList Fields;
   for (const FieldDecl *FD : RD->fields()) {
+    // Note that we DO create fields and descriptors
+    // for unnamed bitfields here, even though we later ignore
+    // them everywhere. That's because so the FieldDecl's
+    // getFieldIndex() matches.
+
     // Reserve space for the field's descriptor and the offset.
     BaseSize += align(sizeof(InlineDescriptor));
 
@@ -409,6 +410,13 @@ Descriptor *Program::createDescriptor(const DeclTy &D, const Type *Ty,
     PrimType ElemTy = *Ctx.classify(CT->getElementType());
     return allocateDescriptor(D, ElemTy, MDSize, 2, IsConst, IsTemporary,
                               IsMutable);
+  }
+
+  // Same with vector types.
+  if (const auto *VT = Ty->getAs<VectorType>()) {
+    PrimType ElemTy = *Ctx.classify(VT->getElementType());
+    return allocateDescriptor(D, ElemTy, MDSize, VT->getNumElements(), IsConst,
+                              IsTemporary, IsMutable);
   }
 
   return nullptr;

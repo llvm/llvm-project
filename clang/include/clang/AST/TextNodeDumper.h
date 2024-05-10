@@ -189,6 +189,8 @@ public:
 
   void Visit(const OMPClause *C);
 
+  void Visit(const OpenACCClause *C);
+
   void Visit(const BlockDecl::Capture &C);
 
   void Visit(const GenericSelectionExpr::ConstAssociation &A);

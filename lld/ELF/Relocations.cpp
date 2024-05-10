@@ -1419,11 +1419,16 @@ template <class ELFT, class RelTy> void RelocationScanner::scanOne(RelTy *&i) {
   uint32_t symIndex = rel.getSymbol(config->isMips64EL);
   Symbol &sym = sec->getFile<ELFT>()->getSymbol(symIndex);
   RelType type;
-  if (config->mipsN32Abi) {
-    type = getMipsN32RelType(i);
-  } else {
+  if constexpr (ELFT::Is64Bits) {
     type = rel.getType(config->isMips64EL);
     ++i;
+  } else {
+    if (config->mipsN32Abi) {
+      type = getMipsN32RelType(i);
+    } else {
+      type = rel.getType(config->isMips64EL);
+      ++i;
+    }
   }
   // Get an offset in an output section this relocation is applied to.
   uint64_t offset = getter.get(rel.r_offset);

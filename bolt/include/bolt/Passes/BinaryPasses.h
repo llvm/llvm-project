@@ -400,8 +400,7 @@ public:
 /// dyno stats categories.
 class PrintProgramStats : public BinaryFunctionPass {
 public:
-  explicit PrintProgramStats(const cl::opt<bool> &PrintPass)
-      : BinaryFunctionPass(PrintPass) {}
+  explicit PrintProgramStats() : BinaryFunctionPass(false) {}
 
   const char *getName() const override { return "print-stats"; }
   bool shouldPrint(const BinaryFunction &) const override { return false; }

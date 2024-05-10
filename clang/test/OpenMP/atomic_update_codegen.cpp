@@ -27,6 +27,7 @@ long double ldv, ldx;
 _Complex int civ, cix;
 _Complex float cfv, cfx;
 _Complex double cdv, cdx;
+char *cpx;
 
 typedef int int4 __attribute__((__vector_size__(16)));
 int4 int4x;
@@ -851,6 +852,16 @@ int main(void) {
 // CHECK: call{{.*}} @__kmpc_flush(
 #pragma omp atomic seq_cst
   rix = dv / rix;
+
+// CHECK: [[LD_CPX:%.+]] = load atomic ptr, ptr @cpx monotonic
+// CHECK: br label %[[CONT:.+]]
+// CHECK: [[CONT]]
+// CHECK: [[PHI:%.+]] = phi ptr
+// CHECK: [[RES:%.+]] = cmpxchg ptr @cpx,
+// CHECK: br i1 %{{.+}}, label %[[EXIT:.+]], label %[[CONT]]
+  #pragma omp atomic update
+  cpx += 1;
+
   return 0;
 }
 

@@ -1213,10 +1213,13 @@ void TypePrinter::printDecltypeBefore(const DecltypeType *T, raw_ostream &OS) {
 
 void TypePrinter::printPackIndexingBefore(const PackIndexingType *T,
                                           raw_ostream &OS) {
-  if (T->hasSelectedType())
+  if (T->hasSelectedType()) {
     OS << T->getSelectedType();
-  else
-    OS << T->getPattern() << "...[" << T->getIndexExpr() << "]";
+  } else {
+    OS << T->getPattern() << "...[";
+    T->getIndexExpr()->printPretty(OS, nullptr, Policy);
+    OS << "]";
+  }
   spaceBeforePlaceHolder(OS);
 }
 

@@ -2447,12 +2447,14 @@ example:
     memory access, I/O, or other synchronization.  The ``mustprogress``
     attribute is intended to model the requirements of the first section of
     [intro.progress] of the C++ Standard. As a consequence, a loop in a
-    function with the `mustprogress` attribute can be assumed to terminate if
+    function with the ``mustprogress`` attribute can be assumed to terminate if
     it does not interact with the environment in an observable way, and
-    terminating loops without side-effects can be removed. If a `mustprogress`
-    function does not satisfy this contract, the behavior is undefined.  This
-    attribute does not apply transitively to callees, but does apply to call
-    sites within the function. Note that `willreturn` implies `mustprogress`.
+    terminating loops without side-effects can be removed. If a ``mustprogress``
+    function does not satisfy this contract, the behavior is undefined. If a
+    ``mustprogress`` function calls a function not marked ``mustprogress``,
+    and that function never returns, the program is well-defined even if there
+    isn't any other observable progress.  Note that ``willreturn`` implies
+    ``mustprogress``.
 ``"warn-stack-size"="<threshold>"``
     This attribute sets a threshold to emit diagnostics once the frame size is
     known should the frame size exceed the specified value.  It takes one
@@ -9111,8 +9113,8 @@ instruction in most regards. The primary difference is that it
 establishes an association with additional labels to define where control
 flow goes after the call.
 
-The output values of a '``callbr``' instruction are available only to
-the '``fallthrough``' block, not to any '``indirect``' blocks(s).
+The output values of a '``callbr``' instruction are available both in the
+the '``fallthrough``' block, and any '``indirect``' blocks(s).
 
 The only use of this today is to implement the "goto" feature of gcc inline
 assembly where additional labels can be provided as locations for the inline
@@ -11112,11 +11114,12 @@ For most of these operations, the type of '<value>' must be an integer
 type whose bit width is a power of two greater than or equal to eight
 and less than or equal to a target-specific size limit. For xchg, this
 may also be a floating point or a pointer type with the same size constraints
-as integers.  For fadd/fsub/fmax/fmin, this must be a floating point type.  The
-type of the '``<pointer>``' operand must be a pointer to that type. If
-the ``atomicrmw`` is marked as ``volatile``, then the optimizer is not
-allowed to modify the number or order of execution of this
-``atomicrmw`` with other :ref:`volatile operations <volatile>`.
+as integers.  For fadd/fsub/fmax/fmin, this must be a floating-point
+or fixed vector of floating-point type.  The type of the '``<pointer>``'
+operand must be a pointer to that type. If the ``atomicrmw`` is marked
+as ``volatile``, then the optimizer is not allowed to modify the
+number or order of execution of this ``atomicrmw`` with other
+:ref:`volatile operations <volatile>`.
 
 Note: if the alignment is not greater or equal to the size of the `<value>`
 type, the atomic operation is likely to require a lock and have poor
@@ -11447,7 +11450,7 @@ and converts the remaining bits to ``ty2``. Since the source size must
 be larger than the destination size, ``trunc`` cannot be a *no-op cast*.
 It will always truncate bits.
 
-If the ``nuw`` keyword is present, and any of the truncated bits are zero,
+If the ``nuw`` keyword is present, and any of the truncated bits are non-zero,
 the result is a :ref:`poison value <poisonvalues>`. If the ``nsw`` keyword
 is present, and any of the truncated bits are not the same as the top bit
 of the truncation result, the result is a :ref:`poison value <poisonvalues>`.
@@ -11750,6 +11753,10 @@ Overview:
 The '``uitofp``' instruction regards ``value`` as an unsigned integer
 and converts that value to the ``ty2`` type.
 
+The ``nneg`` (non-negative) flag, if present, specifies that the
+operand is non-negative. This property may be used by optimization
+passes to later convert the ``uitofp`` into a ``sitofp``.
+
 Arguments:
 """"""""""
 
@@ -11767,6 +11774,9 @@ integer quantity and converts it to the corresponding floating-point
 value. If the value cannot be exactly represented, it is rounded using
 the default rounding mode.
 
+If the ``nneg`` flag is set, and the ``uitofp`` argument is negative,
+the result is a poison value.
+
 
 Example:
 """"""""
@@ -11775,6 +11785,9 @@ Example:
 
       %X = uitofp i32 257 to float         ; yields float:257.0
       %Y = uitofp i8 -1 to double          ; yields double:255.0
+
+      %a = uitofp nneg i32 256 to i32      ; yields float:256.0
+      %b = uitofp nneg i32 -256 to i32     ; yields i32 poison
 
 '``sitofp .. to``' Instruction
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -12506,7 +12519,7 @@ This instruction requires several arguments:
       ``llvm::GuaranteedTailCallOpt`` is ``true``, or the calling convention
       is ``tailcc``
    -  `Platform-specific constraints are
-      met. <CodeGenerator.html#tailcallopt>`_
+      met. <CodeGenerator.html#tail-call-optimization>`_
 
 #. The optional ``notail`` marker indicates that the optimizers should not add
    ``tail`` or ``musttail`` markers to the call. It is used to prevent tail
@@ -14098,6 +14111,25 @@ structures and the code to increment the appropriate value, in a
 format that can be written out by a compiler runtime and consumed via
 the ``llvm-profdata`` tool.
 
+.. FIXME: write complete doc on contextual instrumentation and link from here
+.. and from llvm.instrprof.callsite.
+
+The intrinsic is lowered differently for contextual profiling by the
+``-ctx-instr-lower`` pass. Here:
+
+* the entry basic block increment counter is lowered as a call to compiler-rt,
+  to either ``__llvm_ctx_profile_start_context`` or
+  ``__llvm_ctx_profile_get_context``. Either returns a pointer to a context object
+  which contains a buffer into which counter increments can happen. Note that the
+  pointer value returned by compiler-rt may have its LSB set - counter increments
+  happen offset from the address with the LSB cleared.
+
+* all the other lowerings of ``llvm.instrprof.increment[.step]`` happen within
+  that context.
+
+* the context is assumed to be a local value to the function, and no concurrency
+  concerns need to be handled by LLVM.
+
 '``llvm.instrprof.increment.step``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -14127,6 +14159,60 @@ The last argument specifies the value of the increment of the counter variable.
 Semantics:
 """"""""""
 See description of '``llvm.instrprof.increment``' intrinsic.
+
+'``llvm.instrprof.callsite``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      declare void @llvm.instrprof.callsite(ptr <name>, i64 <hash>,
+                                            i32 <num-counters>,
+                                            i32 <index>, ptr <callsite>)
+
+Overview:
+"""""""""
+
+The '``llvm.instrprof.callsite``' intrinsic should be emitted before a callsite
+that's not to a "fake" callee (like another intrinsic or asm). It is used by
+contextual profiling and has side-effects. Its lowering happens in IR, and
+target-specific backends should never encounter it.
+
+Arguments:
+""""""""""
+The first 4 arguments are similar to ``llvm.instrprof.increment``. The indexing
+is specific to callsites, meaning callsites are indexed from 0, independent from
+the indexes used by the other intrinsics (such as 
+``llvm.instrprof.increment[.step]``).
+
+The last argument is the called value of the callsite this intrinsic precedes.
+
+Semantics:
+""""""""""
+
+This is lowered by contextual profiling. In contextual profiling, functions get,
+from compiler-rt, a pointer to a context object. The context object consists of
+a buffer LLVM can use to perform counter increments (i.e. the lowering of
+``llvm.instrprof.increment[.step]``. The address range following the counter
+buffer, ``<num-counters>`` x ``sizeof(ptr)`` - sized, is expected to contain
+pointers to contexts of functions called from this function ("subcontexts").
+LLVM does not dereference into that memory region, just calculates GEPs. 
+
+The lowering of ``llvm.instrprof.callsite`` consists of:
+
+* write to ``__llvm_ctx_profile_expected_callee`` the ``<callsite>`` value;
+
+* write to ``__llvm_ctx_profile_callsite`` the address into this function's
+  context of the ``<index>`` position into the subcontexts region.
+
+
+``__llvm_ctx_profile_{expected_callee|callsite}`` are initialized by compiler-rt
+and are TLS. They are both vectors of pointers of size 2. The index into each is
+determined when the current function obtains the pointer to its context from
+compiler-rt. The pointer's LSB gives the index.
+
 
 '``llvm.instrprof.timestamp``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -15219,6 +15305,43 @@ Semantics:
 """"""""""
 
 Return the same value as a corresponding libm '``cos``' function but without
+trapping or setting ``errno``.
+
+When specified with the fast-math-flag 'afn', the result may be approximated
+using a less accurate calculation.
+
+'``llvm.tan.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+This is an overloaded intrinsic. You can use ``llvm.tan`` on any
+floating-point or vector of floating-point type. Not all targets support
+all types however.
+
+::
+
+      declare float     @llvm.tan.f32(float  %Val)
+      declare double    @llvm.tan.f64(double %Val)
+      declare x86_fp80  @llvm.tan.f80(x86_fp80  %Val)
+      declare fp128     @llvm.tan.f128(fp128 %Val)
+      declare ppc_fp128 @llvm.tan.ppcf128(ppc_fp128  %Val)
+
+Overview:
+"""""""""
+
+The '``llvm.tan.*``' intrinsics return the tangent of the operand.
+
+Arguments:
+""""""""""
+
+The argument and return value are floating-point numbers of the same type.
+
+Semantics:
+""""""""""
+
+Return the same value as a corresponding libm '``tan``' function but without
 trapping or setting ``errno``.
 
 When specified with the fast-math-flag 'afn', the result may be approximated
@@ -18759,7 +18882,7 @@ runtime, then the result vector is a :ref:`poison value <poisonvalues>`. The
 ``idx`` parameter must be a vector index constant type (for most targets this
 will be an integer pointer type).
 
-'``llvm.experimental.vector.reverse``' Intrinsic
+'``llvm.vector.reverse``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax:
@@ -18768,25 +18891,26 @@ This is an overloaded intrinsic.
 
 ::
 
-      declare <2 x i8> @llvm.experimental.vector.reverse.v2i8(<2 x i8> %a)
-      declare <vscale x 4 x i32> @llvm.experimental.vector.reverse.nxv4i32(<vscale x 4 x i32> %a)
+      declare <2 x i8> @llvm.vector.reverse.v2i8(<2 x i8> %a)
+      declare <vscale x 4 x i32> @llvm.vector.reverse.nxv4i32(<vscale x 4 x i32> %a)
 
 Overview:
 """""""""
 
-The '``llvm.experimental.vector.reverse.*``' intrinsics reverse a vector.
+The '``llvm.vector.reverse.*``' intrinsics reverse a vector.
 The intrinsic takes a single vector and returns a vector of matching type but
 with the original lane order reversed. These intrinsics work for both fixed
-and scalable vectors. While this intrinsic is marked as experimental the
-recommended way to express reverse operations for fixed-width vectors is still
-to use a shufflevector, as that may allow for more optimization opportunities.
+and scalable vectors. While this intrinsic supports all vector types
+the recommended way to express this operation for fixed-width vectors is
+still to use a shufflevector, as that may allow for more optimization
+opportunities.
 
 Arguments:
 """"""""""
 
 The argument to this intrinsic must be a vector.
 
-'``llvm.experimental.vector.deinterleave2``' Intrinsic
+'``llvm.vector.deinterleave2``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax:
@@ -18795,13 +18919,13 @@ This is an overloaded intrinsic.
 
 ::
 
-      declare {<2 x double>, <2 x double>} @llvm.experimental.vector.deinterleave2.v4f64(<4 x double> %vec1)
-      declare {<vscale x 4 x i32>, <vscale x 4 x i32>}  @llvm.experimental.vector.deinterleave2.nxv8i32(<vscale x 8 x i32> %vec1)
+      declare {<2 x double>, <2 x double>} @llvm.vector.deinterleave2.v4f64(<4 x double> %vec1)
+      declare {<vscale x 4 x i32>, <vscale x 4 x i32>}  @llvm.vector.deinterleave2.nxv8i32(<vscale x 8 x i32> %vec1)
 
 Overview:
 """""""""
 
-The '``llvm.experimental.vector.deinterleave2``' intrinsic constructs two
+The '``llvm.vector.deinterleave2``' intrinsic constructs two
 vectors by deinterleaving the even and odd lanes of the input vector.
 
 This intrinsic works for both fixed and scalable vectors. While this intrinsic
@@ -18813,7 +18937,7 @@ For example:
 
 .. code-block:: text
 
-  {<2 x i64>, <2 x i64>} llvm.experimental.vector.deinterleave2.v4i64(<4 x i64> <i64 0, i64 1, i64 2, i64 3>); ==> {<2 x i64> <i64 0, i64 2>, <2 x i64> <i64 1, i64 3>}
+  {<2 x i64>, <2 x i64>} llvm.vector.deinterleave2.v4i64(<4 x i64> <i64 0, i64 1, i64 2, i64 3>); ==> {<2 x i64> <i64 0, i64 2>, <2 x i64> <i64 1, i64 3>}
 
 Arguments:
 """"""""""
@@ -18821,7 +18945,7 @@ Arguments:
 The argument is a vector whose type corresponds to the logical concatenation of
 the two result types.
 
-'``llvm.experimental.vector.interleave2``' Intrinsic
+'``llvm.vector.interleave2``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax:
@@ -18830,13 +18954,13 @@ This is an overloaded intrinsic.
 
 ::
 
-      declare <4 x double> @llvm.experimental.vector.interleave2.v4f64(<2 x double> %vec1, <2 x double> %vec2)
-      declare <vscale x 8 x i32> @llvm.experimental.vector.interleave2.nxv8i32(<vscale x 4 x i32> %vec1, <vscale x 4 x i32> %vec2)
+      declare <4 x double> @llvm.vector.interleave2.v4f64(<2 x double> %vec1, <2 x double> %vec2)
+      declare <vscale x 8 x i32> @llvm.vector.interleave2.nxv8i32(<vscale x 4 x i32> %vec1, <vscale x 4 x i32> %vec2)
 
 Overview:
 """""""""
 
-The '``llvm.experimental.vector.interleave2``' intrinsic constructs a vector
+The '``llvm.vector.interleave2``' intrinsic constructs a vector
 by interleaving two input vectors.
 
 This intrinsic works for both fixed and scalable vectors. While this intrinsic
@@ -18848,7 +18972,7 @@ For example:
 
 .. code-block:: text
 
-   <4 x i64> llvm.experimental.vector.interleave2.v4i64(<2 x i64> <i64 0, i64 2>, <2 x i64> <i64 1, i64 3>); ==> <4 x i64> <i64 0, i64 1, i64 2, i64 3>
+   <4 x i64> llvm.vector.interleave2.v4i64(<2 x i64> <i64 0, i64 2>, <2 x i64> <i64 1, i64 3>); ==> <4 x i64> <i64 0, i64 1, i64 2, i64 3>
 
 Arguments:
 """"""""""
@@ -18894,7 +19018,7 @@ The '``llvm.experimental.cttz.elts``' intrinsic counts the trailing (least
 significant) zero elements in a vector. If ``src == 0`` the result is the
 number of elements in the input vector.
 
-'``llvm.experimental.vector.splice``' Intrinsic
+'``llvm.vector.splice``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax:
@@ -18903,13 +19027,13 @@ This is an overloaded intrinsic.
 
 ::
 
-      declare <2 x double> @llvm.experimental.vector.splice.v2f64(<2 x double> %vec1, <2 x double> %vec2, i32 %imm)
-      declare <vscale x 4 x i32> @llvm.experimental.vector.splice.nxv4i32(<vscale x 4 x i32> %vec1, <vscale x 4 x i32> %vec2, i32 %imm)
+      declare <2 x double> @llvm.vector.splice.v2f64(<2 x double> %vec1, <2 x double> %vec2, i32 %imm)
+      declare <vscale x 4 x i32> @llvm.vector.splice.nxv4i32(<vscale x 4 x i32> %vec1, <vscale x 4 x i32> %vec2, i32 %imm)
 
 Overview:
 """""""""
 
-The '``llvm.experimental.vector.splice.*``' intrinsics construct a vector by
+The '``llvm.vector.splice.*``' intrinsics construct a vector by
 concatenating elements from the first input vector with elements of the second
 input vector, returning a vector of the same type as the input vectors. The
 signed immediate, modulo the number of elements in the vector, is the index
@@ -18920,7 +19044,7 @@ immediate, it extracts ``-imm`` trailing elements from the first vector, and
 the remaining elements from ``%vec2``.
 
 These intrinsics work for both fixed and scalable vectors. While this intrinsic
-is marked as experimental, the recommended way to express this operation for
+supports all vector types the recommended way to express this operation for
 fixed-width vectors is still to use a shufflevector, as that may allow for more
 optimization opportunities.
 
@@ -18928,8 +19052,8 @@ For example:
 
 .. code-block:: text
 
- llvm.experimental.vector.splice(<A,B,C,D>, <E,F,G,H>, 1);  ==> <B, C, D, E> index
- llvm.experimental.vector.splice(<A,B,C,D>, <E,F,G,H>, -3); ==> <B, C, D, E> trailing elements
+ llvm.vector.splice(<A,B,C,D>, <E,F,G,H>, 1);  ==> <B, C, D, E> index
+ llvm.vector.splice(<A,B,C,D>, <E,F,G,H>, -3); ==> <B, C, D, E> trailing elements
 
 
 Arguments:
@@ -22152,7 +22276,7 @@ Overview:
 """""""""
 
 The '``llvm.experimental.vp.splice.*``' intrinsic is the vector length
-predicated version of the '``llvm.experimental.vector.splice.*``' intrinsic.
+predicated version of the '``llvm.vector.splice.*``' intrinsic.
 
 Arguments:
 """"""""""
@@ -22211,7 +22335,7 @@ Overview:
 """""""""
 
 The '``llvm.experimental.vp.reverse.*``' intrinsic is the vector length
-predicated version of the '``llvm.experimental.vector.reverse.*``' intrinsic.
+predicated version of the '``llvm.vector.reverse.*``' intrinsic.
 
 Arguments:
 """"""""""
@@ -23953,6 +24077,54 @@ Examples:
       %t = call <4 x i32> @llvm.cttz.v4i32(<4 x i32> %a, i1 false)
       %also.r = select <4 x i1> %mask, <4 x i32> %t, <4 x i32> poison
 
+
+.. _int_vp_cttz_elts:
+
+'``llvm.vp.cttz.elts.*``' Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+This is an overloaded intrinsic. You can use ```llvm.vp.cttz.elts``` on any
+vector of integer elements, both fixed width and scalable.
+
+::
+
+      declare i32  @llvm.vp.cttz.elts.i32.v16i32 (<16 x i32> <op>, i1 <is_zero_poison>, <16 x i1> <mask>, i32 <vector_length>)
+      declare i64  @llvm.vp.cttz.elts.i64.nxv4i32 (<vscale x 4 x i32> <op>, i1 <is_zero_poison>, <vscale x 4 x i1> <mask>, i32 <vector_length>)
+      declare i64  @llvm.vp.cttz.elts.i64.v256i1 (<256 x i1> <op>, i1 <is_zero_poison>, <256 x i1> <mask>, i32 <vector_length>)
+
+Overview:
+"""""""""
+
+This '```llvm.vp.cttz.elts```' intrinsic counts the number of trailing zero
+elements of a vector. This is basically the vector-predicated version of
+'```llvm.experimental.cttz.elts```'.
+
+Arguments:
+""""""""""
+
+The first argument is the vector to be counted. This argument must be a vector
+with integer element type. The return type must also be an integer type which is
+wide enough to hold the maximum number of elements of the source vector. The
+behavior of this intrinsic is undefined if the return type is not wide enough
+for the number of elements in the input vector.
+
+The second argument is a constant flag that indicates whether the intrinsic
+returns a valid result if the first argument is all zero.
+
+The third operand is the vector mask and has the same number of elements as the
+input vector type. The fourth operand is the explicit vector length of the
+operation.
+
+Semantics:
+""""""""""
+
+The '``llvm.vp.cttz.elts``' intrinsic counts the trailing (least
+significant / lowest-numbered) zero elements in the first operand on each
+enabled lane. If the first argument is all zero and the second argument is true,
+the result is poison. Otherwise, it returns the explicit vector length (i.e. the
+fourth operand).
 
 .. _int_vp_sadd_sat:
 
@@ -26642,6 +26814,8 @@ specified by C standard:
 Other values may be used to represent additional rounding modes, supported by a
 target. These values are target-specific.
 
+.. _int_set_rounding:
+
 '``llvm.set.rounding``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -28119,7 +28293,8 @@ Syntax:
 Arguments:
 """"""""""
 
-The first argument is a pointer, which refers to a thread local global.
+The `llvm.threadlocal.address` intrinsic requires a global value argument (a
+:ref:`global variable <globalvars>` or alias) that is thread local.
 
 Semantics:
 """"""""""
