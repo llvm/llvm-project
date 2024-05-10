@@ -104,11 +104,11 @@ std::string AsFortran(IgnoreTKRSet tkr) {
 bool AreCompatibleCUDADataAttrs(std::optional<CUDADataAttr> x,
     std::optional<CUDADataAttr> y, IgnoreTKRSet ignoreTKR,
     bool allowUnifiedMatchingRule, const LanguageFeatureControl *features) {
-  bool isGpuManaged = features
-      ? features->IsEnabled(common::LanguageFeature::GpuManaged)
+  bool isCudaManaged = features
+      ? features->IsEnabled(common::LanguageFeature::CudaManaged)
       : false;
-  bool isGpuUnified = features
-      ? features->IsEnabled(common::LanguageFeature::GpuUnified)
+  bool isCudaUnified = features
+      ? features->IsEnabled(common::LanguageFeature::CudaUnified)
       : false;
   if (!x && !y) {
     return true;
@@ -128,24 +128,24 @@ bool AreCompatibleCUDADataAttrs(std::optional<CUDADataAttr> x,
   } else if (allowUnifiedMatchingRule) {
     if (!x) { // Dummy argument has no attribute -> host
       if ((y && (*y == CUDADataAttr::Managed || *y == CUDADataAttr::Unified)) ||
-          (!y && (isGpuUnified || isGpuManaged))) {
+          (!y && (isCudaUnified || isCudaManaged))) {
         return true;
       }
     } else {
       if (*x == CUDADataAttr::Device) {
         if ((y &&
                 (*y == CUDADataAttr::Managed || *y == CUDADataAttr::Unified)) ||
-            (!y && (isGpuUnified || isGpuManaged))) {
+            (!y && (isCudaUnified || isCudaManaged))) {
           return true;
         }
       } else if (*x == CUDADataAttr::Managed) {
         if ((y && *y == CUDADataAttr::Unified) ||
-            (!y && (isGpuUnified || isGpuManaged))) {
+            (!y && (isCudaUnified || isCudaManaged))) {
           return true;
         }
       } else if (*x == CUDADataAttr::Unified) {
         if ((y && *y == CUDADataAttr::Managed) ||
-            (!y && (isGpuUnified || isGpuManaged))) {
+            (!y && (isCudaUnified || isCudaManaged))) {
           return true;
         }
       }

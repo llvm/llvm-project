@@ -500,9 +500,9 @@ int main(int argc, char **argv) {
   }
 
   if (enableGPUMode == "managed") {
-    options.features.Enable(Fortran::common::LanguageFeature::GpuManaged);
+    options.features.Enable(Fortran::common::LanguageFeature::CudaManaged);
   } else if (enableGPUMode == "unified") {
-    options.features.Enable(Fortran::common::LanguageFeature::GpuUnified);
+    options.features.Enable(Fortran::common::LanguageFeature::CudaUnified);
   }
 
   if (fixedForm) {

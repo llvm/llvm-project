@@ -2504,9 +2504,9 @@ static constexpr int cudaInfMatchingValue{std::numeric_limits<int>::max()};
 static int GetMatchingDistance(const common::LanguageFeatureControl &features,
     const characteristics::DummyArgument &dummy,
     const std::optional<ActualArgument> &actual) {
-  bool isGpuManaged = features.IsEnabled(common::LanguageFeature::GpuManaged);
-  bool isGpuUnified = features.IsEnabled(common::LanguageFeature::GpuUnified);
-  // assert((isGpuManaged != isGpuUnified) && "expect only one enabled.");
+  bool isCudaManaged{features.IsEnabled(common::LanguageFeature::CudaManaged)};
+  bool isCudaUnified{features.IsEnabled(common::LanguageFeature::CudaUnified)};
+  CHECK(!(isCudaUnified && isCudaManaged) && "expect only one enabled.");
 
   std::optional<common::CUDADataAttr> actualDataAttr, dummyDataAttr;
   if (actual) {
@@ -2534,7 +2534,7 @@ static int GetMatchingDistance(const common::LanguageFeatureControl &features,
 
   if (!dummyDataAttr) {
     if (!actualDataAttr) {
-      if (isGpuUnified || isGpuManaged) {
+      if (isCudaUnified || isCudaManaged) {
         return 3;
       }
       return 0;
@@ -2546,7 +2546,7 @@ static int GetMatchingDistance(const common::LanguageFeatureControl &features,
     }
   } else if (*dummyDataAttr == common::CUDADataAttr::Device) {
     if (!actualDataAttr) {
-      if (isGpuUnified || isGpuManaged) {
+      if (isCudaUnified || isCudaManaged) {
         return 2;
       }
       return cudaInfMatchingValue;
@@ -2558,13 +2558,7 @@ static int GetMatchingDistance(const common::LanguageFeatureControl &features,
     }
   } else if (*dummyDataAttr == common::CUDADataAttr::Managed) {
     if (!actualDataAttr) {
-      if (isGpuUnified) {
-        return 1;
-      }
-      if (isGpuManaged) {
-        return 0;
-      }
-      return cudaInfMatchingValue;
+      return isCudaUnified ? 1 : isCudaManaged ? 0 : cudaInfMatchingValue;
     }
     if (*actualDataAttr == common::CUDADataAttr::Device) {
       return cudaInfMatchingValue;
@@ -2575,13 +2569,7 @@ static int GetMatchingDistance(const common::LanguageFeatureControl &features,
     }
   } else if (*dummyDataAttr == common::CUDADataAttr::Unified) {
     if (!actualDataAttr) {
-      if (isGpuUnified) {
-        return 0;
-      }
-      if (isGpuManaged) {
-        return 1;
-      }
-      return cudaInfMatchingValue;
+      return isCudaUnified ? 0 : isCudaManaged ? 1 : cudaInfMatchingValue;
     }
     if (*actualDataAttr == common::CUDADataAttr::Device) {
       return cudaInfMatchingValue;
