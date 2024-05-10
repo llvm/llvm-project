@@ -890,7 +890,7 @@ void RISCVISAInfo::updateCombination() {
   do {
     MadeChange = false;
     for (StringRef CombineExt : CombineIntoExts) {
-      if (hasExtension(CombineExt))
+      if (Exts.count(CombineExt.str()))
         continue;
 
       // Look up the extension in the ImpliesExt table to find everything it
@@ -899,7 +899,7 @@ void RISCVISAInfo::updateCombination() {
                                     std::end(ImpliedExts), CombineExt);
       bool HasAllRequiredFeatures = std::all_of(
           Range.first, Range.second, [&](const ImpliedExtsEntry &Implied) {
-            return hasExtension(Implied.ImpliedExt);
+            return Exts.count(Implied.ImpliedExt);
           });
       if (HasAllRequiredFeatures) {
         auto Version = findDefaultVersion(CombineExt);
