@@ -967,6 +967,7 @@ static void encodeCrel(ArrayRef<ELFRelocationEntry> Relocs, raw_ostream &os) {
       os << char(B | 0x80);
       encodeULEB128(DeltaOffset >> 4, os);
     }
+    // Delta symidx/type/addend members (SLEB128).
     if (B & 1) {
       encodeSLEB128(static_cast<int32_t>(CurSymidx - Symidx), os);
       Symidx = CurSymidx;

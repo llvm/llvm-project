@@ -7,23 +7,22 @@ target triple = "aarch64"
 define <vscale x 4 x half> @complex_mul_v4f16(<vscale x 4 x half> %a, <vscale x 4 x half> %b) {
 ; CHECK-LABEL: complex_mul_v4f16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    uunpkhi z2.d, z0.s
-; CHECK-NEXT:    uunpklo z0.d, z0.s
-; CHECK-NEXT:    uunpkhi z3.d, z1.s
-; CHECK-NEXT:    uunpklo z1.d, z1.s
+; CHECK-NEXT:    uzp2 z2.s, z0.s, z0.s
+; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
 ; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    uzp2 z4.d, z0.d, z2.d
-; CHECK-NEXT:    uzp1 z0.d, z0.d, z2.d
-; CHECK-NEXT:    uzp2 z2.d, z1.d, z3.d
-; CHECK-NEXT:    uzp1 z1.d, z1.d, z3.d
-; CHECK-NEXT:    movprfx z5, z2
-; CHECK-NEXT:    fmul z5.h, p0/m, z5.h, z0.h
-; CHECK-NEXT:    fmul z2.h, p0/m, z2.h, z4.h
-; CHECK-NEXT:    movprfx z3, z5
-; CHECK-NEXT:    fmla z3.h, p0/m, z1.h, z4.h
-; CHECK-NEXT:    fnmsb z0.h, p0/m, z1.h, z2.h
-; CHECK-NEXT:    zip2 z1.d, z0.d, z3.d
-; CHECK-NEXT:    zip1 z0.d, z0.d, z3.d
+; CHECK-NEXT:    uzp2 z3.s, z1.s, z0.s
+; CHECK-NEXT:    uunpklo z0.d, z0.s
+; CHECK-NEXT:    uunpklo z2.d, z2.s
+; CHECK-NEXT:    uunpklo z3.d, z3.s
+; CHECK-NEXT:    uzp1 z1.s, z1.s, z0.s
+; CHECK-NEXT:    uunpklo z1.d, z1.s
+; CHECK-NEXT:    movprfx z4, z3
+; CHECK-NEXT:    fmul z4.h, p0/m, z4.h, z0.h
+; CHECK-NEXT:    fmul z3.h, p0/m, z3.h, z2.h
+; CHECK-NEXT:    fmad z2.h, p0/m, z1.h, z4.h
+; CHECK-NEXT:    fnmsb z0.h, p0/m, z1.h, z3.h
+; CHECK-NEXT:    zip2 z1.d, z0.d, z2.d
+; CHECK-NEXT:    zip1 z0.d, z0.d, z2.d
 ; CHECK-NEXT:    uzp1 z0.s, z0.s, z1.s
 ; CHECK-NEXT:    ret
 entry:

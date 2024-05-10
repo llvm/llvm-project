@@ -1982,10 +1982,14 @@ void llvm::updateProfileCallee(
   // During inlining ?
   if (VMap) {
     uint64_t CloneEntryCount = PriorEntryCount - NewEntryCount;
-    for (auto Entry : *VMap)
+    for (auto Entry : *VMap) {
       if (isa<CallInst>(Entry.first))
         if (auto *CI = dyn_cast_or_null<CallInst>(Entry.second))
           CI->updateProfWeight(CloneEntryCount, PriorEntryCount);
+      if (isa<InvokeInst>(Entry.first))
+        if (auto *II = dyn_cast_or_null<InvokeInst>(Entry.second))
+          II->updateProfWeight(CloneEntryCount, PriorEntryCount);
+    }
   }
 
   if (EntryDelta) {
@@ -1994,9 +1998,12 @@ void llvm::updateProfileCallee(
     for (BasicBlock &BB : *Callee)
       // No need to update the callsite if it is pruned during inlining.
       if (!VMap || VMap->count(&BB))
-        for (Instruction &I : BB)
+        for (Instruction &I : BB) {
           if (CallInst *CI = dyn_cast<CallInst>(&I))
             CI->updateProfWeight(NewEntryCount, PriorEntryCount);
+          if (InvokeInst *II = dyn_cast<InvokeInst>(&I))
+            II->updateProfWeight(NewEntryCount, PriorEntryCount);
+        }
   }
 }
 

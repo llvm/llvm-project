@@ -419,13 +419,14 @@ ELFFile<ELFT>::decodeCrel(ArrayRef<uint8_t> Content) const {
   typename ELFT::uint Offset = 0, Addend = 0;
   uint32_t Symidx = 0, Type = 0;
   for (size_t I = 0; I != Count; ++I) {
-    // For ELFCLASS64, decode a 65-bit integer where bit 0 indicates whether
-    // symidx/type are equal to the previous entry's. The remaining 64 bits
-    // encode the delta offset relative to the previous offset.
+    // The delta offset and flags member may be larger than uint64_t. Special
+    // case the first byte (2 or 3 flag bits; the rest are offset bits). Other
+    // ULEB128 bytes encode the remaining delta offset bits.
     const uint8_t B = Data.getU8(Cur);
     Offset += B >> FlagBits;
     if (B >= 0x80)
       Offset += (Data.getULEB128(Cur) << (7 - FlagBits)) - (0x80 >> FlagBits);
+    // Delta symidx/type/addend members (SLEB128).
     if (B & 1)
       Symidx += Data.getSLEB128(Cur);
     if (B & 2)

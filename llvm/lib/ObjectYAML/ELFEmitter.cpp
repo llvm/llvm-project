@@ -1301,9 +1301,9 @@ void ELFState<ELFT>::writeSectionContent(
     uint32_t CurSymidx =
         Rel.Symbol ? toSymbolIndex(*Rel.Symbol, Section.Name, IsDynamic) : 0;
     if (IsCrel) {
-      // For 64-bit uint, encode a 65-bit integer where bit 0 indicates whether
-      // symidx/type are equal to the previous entry's. The remaining 64 bits
-      // encode the delta offset.
+      // The delta offset and flags member may be larger than uint64_t. Special
+      // case the first byte (3 flag bits and 4 offset bits). Other ULEB128
+      // bytes encode the remaining delta offset bits.
       auto DeltaOffset =
           (static_cast<typename ELFT::uint>(Rel.Offset) - Offset) >> Shift;
       Offset = Rel.Offset;
@@ -1316,6 +1316,7 @@ void ELFState<ELFT>::writeSectionContent(
         CBA.write(B | 0x80);
         CBA.writeULEB128(DeltaOffset >> 4);
       }
+      // Delta symidx/type/addend members (SLEB128).
       if (B & 1) {
         CBA.writeSLEB128(
             std::make_signed_t<typename ELFT::uint>(CurSymidx - Symidx));
