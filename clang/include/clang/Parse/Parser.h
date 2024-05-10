@@ -3635,6 +3635,13 @@ private:
     // Wait constructs, we likely want to put that information in here as well.
   };
 
+  struct OpenACCWaitParseInfo {
+    bool Failed = false;
+    Expr *DevNumExpr = nullptr;
+    SourceLocation QueuesLoc;
+    SmallVector<Expr *> QueueIdExprs;
+  };
+
   /// Represents the 'error' state of parsing an OpenACC Clause, and stores
   /// whether we can continue parsing, or should give up on the directive.
   enum class OpenACCParseCanContinue { Cannot = 0, Can = 1 };
@@ -3677,7 +3684,8 @@ private:
   /// Parses the clause-list for an OpenACC directive.
   SmallVector<OpenACCClause *>
   ParseOpenACCClauseList(OpenACCDirectiveKind DirKind);
-  bool ParseOpenACCWaitArgument(SourceLocation Loc, bool IsDirective);
+  OpenACCWaitParseInfo ParseOpenACCWaitArgument(SourceLocation Loc,
+                                                bool IsDirective);
   /// Parses the clause of the 'bind' argument, which can be a string literal or
   /// an ID expression.
   ExprResult ParseOpenACCBindClauseArgument();

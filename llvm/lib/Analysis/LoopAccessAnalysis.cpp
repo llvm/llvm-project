@@ -2005,6 +2005,9 @@ getDependenceDistanceStrideAndSize(
     return MemoryDepChecker::Dependence::Unknown;
   }
 
+  if (!isa<SCEVConstant, SCEVCouldNotCompute>(Dist))
+    Dist = SE.applyLoopGuards(Dist, InnermostLoop);
+
   uint64_t TypeByteSize = DL.getTypeAllocSize(ATy);
   bool HasSameSize =
       DL.getTypeStoreSizeInBits(ATy) == DL.getTypeStoreSizeInBits(BTy);

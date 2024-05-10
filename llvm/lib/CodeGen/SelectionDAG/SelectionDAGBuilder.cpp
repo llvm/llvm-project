@@ -6700,22 +6700,24 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
   case Intrinsic::roundeven:
   case Intrinsic::canonicalize: {
     unsigned Opcode;
+    // clang-format off
     switch (Intrinsic) {
     default: llvm_unreachable("Impossible intrinsic");  // Can't reach here.
-    case Intrinsic::sqrt:      Opcode = ISD::FSQRT;      break;
-    case Intrinsic::fabs:      Opcode = ISD::FABS;       break;
-    case Intrinsic::sin:       Opcode = ISD::FSIN;       break;
-    case Intrinsic::cos:       Opcode = ISD::FCOS;       break;
-    case Intrinsic::exp10:     Opcode = ISD::FEXP10;     break;
-    case Intrinsic::floor:     Opcode = ISD::FFLOOR;     break;
-    case Intrinsic::ceil:      Opcode = ISD::FCEIL;      break;
-    case Intrinsic::trunc:     Opcode = ISD::FTRUNC;     break;
-    case Intrinsic::rint:      Opcode = ISD::FRINT;      break;
-    case Intrinsic::nearbyint: Opcode = ISD::FNEARBYINT; break;
-    case Intrinsic::round:     Opcode = ISD::FROUND;     break;
-    case Intrinsic::roundeven: Opcode = ISD::FROUNDEVEN; break;
+    case Intrinsic::sqrt:         Opcode = ISD::FSQRT;         break;
+    case Intrinsic::fabs:         Opcode = ISD::FABS;          break;
+    case Intrinsic::sin:          Opcode = ISD::FSIN;          break;
+    case Intrinsic::cos:          Opcode = ISD::FCOS;          break;
+    case Intrinsic::exp10:        Opcode = ISD::FEXP10;        break;
+    case Intrinsic::floor:        Opcode = ISD::FFLOOR;        break;
+    case Intrinsic::ceil:         Opcode = ISD::FCEIL;         break;
+    case Intrinsic::trunc:        Opcode = ISD::FTRUNC;        break;
+    case Intrinsic::rint:         Opcode = ISD::FRINT;         break;
+    case Intrinsic::nearbyint:    Opcode = ISD::FNEARBYINT;    break;
+    case Intrinsic::round:        Opcode = ISD::FROUND;        break;
+    case Intrinsic::roundeven:    Opcode = ISD::FROUNDEVEN;    break;
     case Intrinsic::canonicalize: Opcode = ISD::FCANONICALIZE; break;
     }
+    // clang-format on
 
     setValue(&I, DAG.getNode(Opcode, sdl,
                              getValue(I.getArgOperand(0)).getValueType(),
@@ -6727,6 +6729,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
   case Intrinsic::lrint:
   case Intrinsic::llrint: {
     unsigned Opcode;
+    // clang-format off
     switch (Intrinsic) {
     default: llvm_unreachable("Impossible intrinsic");  // Can't reach here.
     case Intrinsic::lround:  Opcode = ISD::LROUND;  break;
@@ -6734,6 +6737,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     case Intrinsic::lrint:   Opcode = ISD::LRINT;   break;
     case Intrinsic::llrint:  Opcode = ISD::LLRINT;  break;
     }
+    // clang-format on
 
     EVT RetVT = TLI.getValueType(DAG.getDataLayout(), I.getType());
     setValue(&I, DAG.getNode(Opcode, sdl, RetVT,
@@ -7861,20 +7865,15 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
       Op = DAG.getSetCC(DL, OpVT, Op, AllZero, ISD::SETNE);
     }
 
-    // Find the smallest "sensible" element type to use for the expansion.
-    ConstantRange CR(
-        APInt(64, OpVT.getVectorElementCount().getKnownMinValue()));
-    if (OpVT.isScalableVT())
-      CR = CR.umul_sat(getVScaleRange(I.getCaller(), 64));
-
     // If the zero-is-poison flag is set, we can assume the upper limit
     // of the result is VF-1.
-    if (!cast<ConstantSDNode>(getValue(I.getOperand(1)))->isZero())
-      CR = CR.subtract(APInt(64, 1));
-
-    unsigned EltWidth = I.getType()->getScalarSizeInBits();
-    EltWidth = std::min(EltWidth, (unsigned)CR.getActiveBits());
-    EltWidth = std::max(llvm::bit_ceil(EltWidth), (unsigned)8);
+    bool ZeroIsPoison =
+        !cast<ConstantSDNode>(getValue(I.getOperand(1)))->isZero();
+    ConstantRange VScaleRange(1, true); // Dummy value.
+    if (isa<ScalableVectorType>(I.getOperand(0)->getType()))
+      VScaleRange = getVScaleRange(I.getCaller(), 64);
+    unsigned EltWidth = TLI.getBitWidthForCttzElements(
+        I.getType(), OpVT.getVectorElementCount(), ZeroIsPoison, &VScaleRange);
 
     MVT NewEltTy = MVT::getIntegerVT(EltWidth);
 
