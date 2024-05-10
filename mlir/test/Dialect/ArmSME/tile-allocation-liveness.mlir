@@ -2,6 +2,8 @@
 // RUN: mlir-opt %s -convert-scf-to-cf -test-arm-sme-tile-allocation=dump-tile-live-ranges -mlir-disable-threading -split-input-file -verify-diagnostics 2>&1 >/dev/null | FileCheck %s --check-prefix=CHECK-LIVE-RANGE
 
 // This file tests some simple aspects of using liveness in the SME tile allocator.
+// Note: We use -convert-scf-to-cf first as the tile allocator expects CF, but
+// some of these tests are written in SCF (to make things easier to follow).
 
 //  CHECK-LIVE-RANGE-LABEL: @constant_with_multiple_users
 //        CHECK-LIVE-RANGE: ========== Coalesced Live Ranges:
@@ -194,6 +196,8 @@ func.func @constant_loop_init_with_multiple_users(%a: vector<[4]xf32>, %b: vecto
 //   CHECK-LIVE-RANGE-NEXT: EEEEE cf.br
 
 // Note in the live ranges (above) there is five tile values, but we only have four tiles.
+// There is no 'real' spill as we spill the `arm_sme.zero` but are then able to clone it
+// at each of its uses.
 
 // CHECK-LABEL: @run_out_of_tiles_but_avoid_spill
 func.func @run_out_of_tiles_but_avoid_spill(%a: vector<[4]xf32>, %b: vector<[4]xf32>, %c: vector<[4]xf32>, %d: vector<[4]xf32>) {
@@ -253,10 +257,11 @@ func.func @run_out_of_tiles_but_avoid_spill(%a: vector<[4]xf32>, %b: vector<[4]x
 //   CHECK-LIVE-RANGE-NEXT: EE     cf.br
 
 // Note in the live ranges (above) there is two constant live-ins (first two ranges),
-// which gives six overlapping live ranges. The allocator currently will spill the
-// first constant (which results in a real spill at it's use), however, this could
-// be avoided by using the knowledge that at the first "test.some_use" there's
-// actually only two live ranges (so we can fix this be duplicating the constant).
+// which gives six overlapping live ranges (at the point where %tile_d is defined).
+// The allocator currently will spill the first constant (which results in a real
+// spill at it's use), however, this could be avoided by using the knowledge that
+// at the first "test.some_use" there's actually only two live ranges (so we can
+// fix this be duplicating the constant).
 
 // CHECK-LABEL: @avoidable_spill
 func.func @avoidable_spill(%a: vector<[4]xf32>, %b: vector<[4]xf32>, %c: vector<[4]xf32>, %d: vector<[4]xf32>) {
