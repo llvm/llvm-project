@@ -5630,7 +5630,8 @@ static bool EvaluateBinaryTypeTrait(Sema &Self, TypeTrait BTT, const TypeSourceI
 static ExprResult CheckConvertibilityForTypeTraits(Sema &Self,
                                                    const TypeSourceInfo *Lhs,
                                                    const TypeSourceInfo *Rhs,
-                                                   SourceLocation KeyLoc) {
+                                                   SourceLocation KeyLoc,
+                                                   llvm::BumpPtrAllocator & OpaqueExprAllocator) {
 
   QualType LhsT = Lhs->getType();
   QualType RhsT = Rhs->getType();
@@ -5675,9 +5676,9 @@ static ExprResult CheckConvertibilityForTypeTraits(Sema &Self,
 
   // Build a fake source and destination for initialization.
   InitializedEntity To(InitializedEntity::InitializeTemporary(RhsT));
-  OpaqueValueExpr From(KeyLoc, LhsT.getNonLValueExprType(Self.Context),
+  Expr* From = new (OpaqueExprAllocator.Allocate<OpaqueValueExpr>())
+          OpaqueValueExpr(KeyLoc, LhsT.getNonLValueExprType(Self.Context),
                        Expr::getValueKindForType(LhsT));
-  Expr *FromPtr = &From;
   InitializationKind Kind =
       InitializationKind::CreateCopy(KeyLoc, SourceLocation());
 
@@ -5687,11 +5688,11 @@ static ExprResult CheckConvertibilityForTypeTraits(Sema &Self,
       Self, Sema::ExpressionEvaluationContext::Unevaluated);
   Sema::SFINAETrap SFINAE(Self, /*AccessCheckingSFINAE=*/true);
   Sema::ContextRAII TUContext(Self, Self.Context.getTranslationUnitDecl());
-  InitializationSequence Init(Self, To, Kind, FromPtr);
+  InitializationSequence Init(Self, To, Kind, From);
   if (Init.Failed())
     return ExprError();
 
-  ExprResult Result = Init.Perform(Self, To, Kind, FromPtr);
+  ExprResult Result = Init.Perform(Self, To, Kind, From);
   if (Result.isInvalid() || SFINAE.hasErrorOccurred())
     return ExprError();
 
@@ -5819,7 +5820,7 @@ static bool EvaluateBooleanTypeTrait(Sema &S, TypeTrait Kind,
           S.Context.getPointerType(T.getNonReferenceType()));
       TypeSourceInfo *UPtr = S.Context.CreateTypeSourceInfo(
           S.Context.getPointerType(U.getNonReferenceType()));
-      return !CheckConvertibilityForTypeTraits(S, UPtr, TPtr, RParenLoc)
+      return !CheckConvertibilityForTypeTraits(S, UPtr, TPtr, RParenLoc, OpaqueExprAllocator)
                   .isInvalid();
     }
 
@@ -6028,9 +6029,9 @@ static bool EvaluateBinaryTypeTrait(Sema &Self, TypeTrait BTT, const TypeSourceI
   case BTT_IsNothrowConvertible: {
     if (RhsT->isVoidType())
       return LhsT->isVoidType();
-
+    llvm::BumpPtrAllocator OpaqueExprAllocator;
     ExprResult Result =
-        CheckConvertibilityForTypeTraits(Self, Lhs, Rhs, KeyLoc);
+        CheckConvertibilityForTypeTraits(Self, Lhs, Rhs, KeyLoc, OpaqueExprAllocator);
     if (Result.isInvalid())
       return false;
 
