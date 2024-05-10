@@ -104,12 +104,12 @@ std::string AsFortran(IgnoreTKRSet tkr) {
 bool AreCompatibleCUDADataAttrs(std::optional<CUDADataAttr> x,
     std::optional<CUDADataAttr> y, IgnoreTKRSet ignoreTKR,
     bool allowUnifiedMatchingRule, const LanguageFeatureControl *features) {
-  bool isCudaManaged = features
-      ? features->IsEnabled(common::LanguageFeature::CudaManaged)
-      : false;
-  bool isCudaUnified = features
-      ? features->IsEnabled(common::LanguageFeature::CudaUnified)
-      : false;
+  bool isCudaManaged{features
+          ? features->IsEnabled(common::LanguageFeature::CudaManaged)
+          : false};
+  bool isCudaUnified{features
+          ? features->IsEnabled(common::LanguageFeature::CudaUnified)
+          : false};
   if (!x && !y) {
     return true;
   } else if (x && y && *x == *y) {
