@@ -1,11 +1,11 @@
 // RUN: %clang_cc1 -O0 -cl-std=CL2.0 -triple amdgcn-amd-amdhsa -target-cpu gfx906 -emit-llvm \
-// RUN:   -verify -S -o - %s
+// RUN:   -verify -o - %s
 // RUN: %clang_cc1 -O0 -cl-std=CL2.0 -triple amdgcn-amd-amdhsa -target-cpu gfx90a -emit-llvm \
-// RUN:   -verify -S -o - %s
+// RUN:   -verify -o - %s
 // RUN: %clang_cc1 -O0 -cl-std=CL2.0 -triple amdgcn-amd-amdhsa -target-cpu gfx940 -emit-llvm \
-// RUN:   -verify -S -o - %s
+// RUN:   -verify -o - %s
 // RUN: %clang_cc1 -O0 -cl-std=CL2.0 -triple amdgcn-amd-amdhsa -target-cpu gfx1200 -emit-llvm \
-// RUN:   -verify -S -o - %s
+// RUN:   -verify -o - %s
 
 
 // REQUIRES: amdgpu-registered-target
