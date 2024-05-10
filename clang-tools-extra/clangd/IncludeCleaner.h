@@ -55,7 +55,7 @@ struct IncludeCleanerFindings {
 
 IncludeCleanerFindings
 computeIncludeCleanerFindings(ParsedAST &AST,
-                              bool AnalyzeSystemHeaders = false);
+                              bool AnalyzeAngledIncludes = false);
 
 using HeaderFilter = llvm::ArrayRef<std::function<bool(llvm::StringRef)>>;
 std::vector<Diag>

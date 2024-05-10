@@ -81,8 +81,8 @@ Objective-C
 Miscellaneous
 ^^^^^^^^^^^^^
 
-- Added a boolean option `AnalyzeSystemHeaders` to `Includes` config section,
-  which allows to enable unused includes detection for all system headers.
+- Added a boolean option `AnalyzeAngledIncludes` to `Includes` config section,
+  which allows to enable unused includes detection for all angled ("system") headers.
   At this moment umbrella headers are not supported, so enabling this option
   may result in false-positives.
 

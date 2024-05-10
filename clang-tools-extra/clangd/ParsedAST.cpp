@@ -374,7 +374,7 @@ std::vector<Diag> getIncludeCleanerDiags(ParsedAST &AST, llvm::StringRef Code,
   if (SuppressMissing && SuppressUnused)
     return {};
   auto Findings = computeIncludeCleanerFindings(
-      AST, Cfg.Diagnostics.Includes.AnalyzeSystemHeaders);
+      AST, Cfg.Diagnostics.Includes.AnalyzeAngledIncludes);
   if (SuppressMissing)
     Findings.MissingIncludes.clear();
   if (SuppressUnused)

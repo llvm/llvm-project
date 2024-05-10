@@ -257,7 +257,7 @@ struct Fragment {
 
       /// If false (default), unused system headers will be ignored.
       /// Standard library headers are analyzed regardless of this option.
-      std::optional<Located<bool>> AnalyzeSystemHeaders;
+      std::optional<Located<bool>> AnalyzeAngledIncludes;
     };
     IncludesBlock Includes;
 

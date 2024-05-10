@@ -591,13 +591,13 @@ struct FragmentCompiler {
         Filters->push_back(std::move(CompiledRegex));
       }
     }
-    std::optional<bool> AnalyzeSystemHeaders;
-    if (F.AnalyzeSystemHeaders.has_value())
-      AnalyzeSystemHeaders = **F.AnalyzeSystemHeaders;
-    if (!Filters && !AnalyzeSystemHeaders.has_value())
+    std::optional<bool> AnalyzeAngledIncludes;
+    if (F.AnalyzeAngledIncludes.has_value())
+      AnalyzeAngledIncludes = **F.AnalyzeAngledIncludes;
+    if (!Filters && !AnalyzeAngledIncludes.has_value())
       return;
     Out.Apply.push_back([Filters = std::move(Filters),
-                         AnalyzeSystemHeaders](const Params &, Config &C) {
+                         AnalyzeAngledIncludes](const Params &, Config &C) {
       if (Filters) {
         auto Filter = [Filters](llvm::StringRef Path) {
           for (auto &Regex : *Filters)
@@ -607,8 +607,8 @@ struct FragmentCompiler {
         };
         C.Diagnostics.Includes.IgnoreHeader.emplace_back(std::move(Filter));
       }
-      if (AnalyzeSystemHeaders.has_value())
-        C.Diagnostics.Includes.AnalyzeSystemHeaders = *AnalyzeSystemHeaders;
+      if (AnalyzeAngledIncludes.has_value())
+        C.Diagnostics.Includes.AnalyzeAngledIncludes = *AnalyzeAngledIncludes;
     });
   }
 

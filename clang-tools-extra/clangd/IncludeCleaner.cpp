@@ -69,7 +69,7 @@ bool isIgnored(llvm::StringRef HeaderPath, HeaderFilter IgnoreHeaders) {
 
 bool mayConsiderUnused(const Inclusion &Inc, ParsedAST &AST,
                        const include_cleaner::PragmaIncludes *PI,
-                       bool AnalyzeSystemHeaders) {
+                       bool AnalyzeAngledIncludes) {
   assert(Inc.HeaderID);
   auto HID = static_cast<IncludeStructure::HeaderID>(*Inc.HeaderID);
   auto FE = AST.getSourceManager().getFileManager().getFileRef(
@@ -90,7 +90,7 @@ bool mayConsiderUnused(const Inclusion &Inc, ParsedAST &AST,
     if (tooling::stdlib::Header::named(Inc.Written)) {
       return true;
     }
-    if (!AnalyzeSystemHeaders) {
+    if (!AnalyzeAngledIncludes) {
       return false;
     }
   }
@@ -275,7 +275,7 @@ Fix fixAll(const Fix &RemoveAllUnused, const Fix &AddAllMissing) {
 std::vector<const Inclusion *>
 getUnused(ParsedAST &AST,
           const llvm::DenseSet<IncludeStructure::HeaderID> &ReferencedFiles,
-          bool AnalyzeSystemHeaders) {
+          bool AnalyzeAngledIncludes) {
   trace::Span Tracer("IncludeCleaner::getUnused");
   std::vector<const Inclusion *> Unused;
   for (const Inclusion &MFI : AST.getIncludeStructure().MainFileIncludes) {
@@ -285,7 +285,7 @@ getUnused(ParsedAST &AST,
     if (ReferencedFiles.contains(IncludeID))
       continue;
     if (!mayConsiderUnused(MFI, AST, &AST.getPragmaIncludes(),
-                           AnalyzeSystemHeaders)) {
+                           AnalyzeAngledIncludes)) {
       dlog("{0} was not used, but is not eligible to be diagnosed as unused",
            MFI.Written);
       continue;
@@ -358,7 +358,7 @@ include_cleaner::Includes convertIncludes(const ParsedAST &AST) {
 }
 
 IncludeCleanerFindings
-computeIncludeCleanerFindings(ParsedAST &AST, bool AnalyzeSystemHeaders) {
+computeIncludeCleanerFindings(ParsedAST &AST, bool AnalyzeAngledIncludes) {
   // Interaction is only polished for C/CPP.
   if (AST.getLangOpts().ObjC)
     return {};
@@ -444,7 +444,7 @@ computeIncludeCleanerFindings(ParsedAST &AST, bool AnalyzeSystemHeaders) {
   });
   MissingIncludes.erase(llvm::unique(MissingIncludes), MissingIncludes.end());
   std::vector<const Inclusion *> UnusedIncludes =
-      getUnused(AST, Used, AnalyzeSystemHeaders);
+      getUnused(AST, Used, AnalyzeAngledIncludes);
   return {std::move(UnusedIncludes), std::move(MissingIncludes)};
 }
 

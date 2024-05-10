@@ -278,18 +278,18 @@ Diagnostics:
               ElementsAre(val("foo"), val("bar")));
 }
 
-TEST(ParseYAML, IncludesAnalyzeSystemHeaders) {
+TEST(ParseYAML, IncludesAnalyzeAngledIncludes) {
   CapturedDiags Diags;
   Annotations YAML(R"yaml(
 Diagnostics:
   Includes:
-    AnalyzeSystemHeaders: true
+    AnalyzeAngledIncludes: true
   )yaml");
   auto Results =
       Fragment::parseYAML(YAML.code(), "config.yaml", Diags.callback());
   ASSERT_THAT(Diags.Diagnostics, IsEmpty());
   ASSERT_EQ(Results.size(), 1u);
-  EXPECT_THAT(Results[0].Diagnostics.Includes.AnalyzeSystemHeaders,
+  EXPECT_THAT(Results[0].Diagnostics.Includes.AnalyzeAngledIncludes,
               llvm::ValueIs(val(true)));
 }
 
