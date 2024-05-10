@@ -516,6 +516,24 @@ LinkerScript::computeInputSections(const InputSectionDescription *cmd,
       if (!sec->isLive() || seen.contains(i))
         continue;
 
+      // For --emit-relocs we have to ignore entries like
+      //   .rela.dyn : { *(.rela.data) }
+      // which are common because they are in the default bfd script.
+      // We do not ignore SHT_REL[A] linker-synthesized sections here because
+      // want to support scripts that do custom layout for them.
+      if (isa<InputSection>(sec) &&
+          cast<InputSection>(sec)->getRelocatedSection())
+        continue;
+
+      // Check the name early to improve performance in the common case.
+      if (!pat.sectionPat.match(sec->name))
+        continue;
+
+      if (!cmd->matchesFile(sec->file) || pat.excludesFile(sec->file) ||
+          (sec->flags & cmd->withFlags) != cmd->withFlags ||
+          (sec->flags & cmd->withoutFlags) != 0)
+        continue;
+
       if (sec->parent) {
         // Skip if not allowing multiple matches.
         if (!config->enableNonContiguousRegions)
@@ -535,29 +553,11 @@ LinkerScript::computeInputSections(const InputSectionDescription *cmd,
         // description within this output section.
         if (sec->parent == &outCmd)
           continue;
+
+        spills.insert(sec);
       }
 
-      // For --emit-relocs we have to ignore entries like
-      //   .rela.dyn : { *(.rela.data) }
-      // which are common because they are in the default bfd script.
-      // We do not ignore SHT_REL[A] linker-synthesized sections here because
-      // want to support scripts that do custom layout for them.
-      if (isa<InputSection>(sec) &&
-          cast<InputSection>(sec)->getRelocatedSection())
-        continue;
-
-      // Check the name early to improve performance in the common case.
-      if (!pat.sectionPat.match(sec->name))
-        continue;
-
-      if (!cmd->matchesFile(sec->file) || pat.excludesFile(sec->file) ||
-          (sec->flags & cmd->withFlags) != cmd->withFlags ||
-          (sec->flags & cmd->withoutFlags) != 0)
-        continue;
-
       ret.push_back(sec);
-      if (sec->parent)
-        spills.insert(sec);
       indexes.push_back(i);
       seen.insert(i);
     }
@@ -593,18 +593,16 @@ LinkerScript::computeInputSections(const InputSectionDescription *cmd,
       if (!spills.contains(sec))
         continue;
 
-      PotentialSpillSection *pss = make<PotentialSpillSection>(
-          sec, const_cast<InputSectionDescription *>(cmd));
-
       // Append the spill input section to the list for the input section,
       // creating it if necessary.
-      auto res =
+      PotentialSpillSection *pss = make<PotentialSpillSection>(
+          *sec, const_cast<InputSectionDescription &>(*cmd));
+      auto [it, inserted] =
           potentialSpillLists.try_emplace(sec, PotentialSpillList{pss, pss});
-      if (!res.second) {
-        PotentialSpillSection *&tail = res.first->second.tail;
+      if (!inserted) {
+        PotentialSpillSection *&tail = it->second.tail;
         tail = tail->next = pss;
       }
-
       sec = pss;
     }
   }
@@ -966,14 +964,6 @@ void LinkerScript::diagnoseMissingSGSectionAddress() const {
   OutputSection *sec = findByName(sectionCommands, ".gnu.sgstubs");
   if (sec && !sec->addrExpr && !config->sectionStartMap.count(".gnu.sgstubs"))
     error("no address assigned to the veneers output section " + sec->name);
-}
-
-void LinkerScript::copyPotentialSpillList(InputSectionBase *dst,
-                                          InputSectionBase *src) {
-  auto i = potentialSpillLists.find(src);
-  if (i == potentialSpillLists.end())
-    return;
-  potentialSpillLists.try_emplace(dst, i->second);
 }
 
 // This function searches for a memory region to place the given output
@@ -1457,7 +1447,7 @@ bool LinkerScript::spillSections() {
     if (!od)
       continue;
     OutputSection *osec = &od->osec;
-    if (!osec->size || !osec->memRegion)
+    if (!osec->memRegion)
       continue;
 
     // Input sections that have replaced a potential spill and should be removed
@@ -1477,30 +1467,25 @@ bool LinkerScript::spillSections() {
         if (isa<PotentialSpillSection>(isec))
           continue;
 
-        // Find the next spill location.
+        // Find the next potential spill location and remove it from the list.
         auto it = potentialSpillLists.find(isec);
         if (it == potentialSpillLists.end())
           continue;
-
-        spilled = true;
         PotentialSpillList &list = it->second;
-
         PotentialSpillSection *spill = list.head;
         if (!spill->next)
           potentialSpillLists.erase(isec);
         else
           list.head = spill->next;
 
-        spilledInputSections.insert(isec);
-
         // Replace the next spill location with the spilled section and adjust
-        // its properties to match the new location.
+        // its properties to match the new location. Note that the alignment of
+        // the spill section may have diverged from the original due to e.g. a
+        // SUBALIGN. Correct assignment requires the spill's alignment to be
+        // used, not the original.
+        spilledInputSections.insert(isec);
         *llvm::find(spill->isd->sections, spill) = isec;
         isec->parent = spill->parent;
-
-        // The alignment of the spill section may have diverged from the
-        // original due to e.g. a SUBALIGN. Correct assignment requires the
-        // spill's alignment to be used, not the original.
         isec->addralign = spill->addralign;
 
         // Record the (potential) reduction in the region's end position.
@@ -1517,10 +1502,12 @@ bool LinkerScript::spillSections() {
       }
 
       // Remove any spilled input sections to complete their move.
-      if (!spilledInputSections.empty())
+      if (!spilledInputSections.empty()) {
+        spilled = true;
         llvm::erase_if(isd->sections, [&](InputSection *isec) {
           return spilledInputSections.contains(isec);
         });
+      }
     }
   }
 

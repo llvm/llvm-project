@@ -40,7 +40,7 @@ ELF Improvements
   region would overflow. This reduces the toil of manually packing regions
   (typical for embedded). It also makes full LTO feasible in such cases, since
   IR merging currently prevents the linker script from referring to input
-  files.
+  files. (`#90007 <https://github.com/llvm/llvm-project/pull/90007>`_)
 
 Breaking changes
 ----------------

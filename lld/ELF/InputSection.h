@@ -48,7 +48,7 @@ template <class ELFT> struct RelsOrRelas {
 // sections.
 class SectionBase {
 public:
-  enum Kind { Regular, Synthetic, EHFrame, Merge, Output, Spill };
+  enum Kind { Regular, Synthetic, Spill, EHFrame, Merge, Output };
 
   Kind kind() const { return (Kind)sectionKind; }
 
@@ -438,7 +438,8 @@ public:
   // Next potential spill location for the same source input section.
   PotentialSpillSection *next = nullptr;
 
-  PotentialSpillSection(InputSectionBase *source, InputSectionDescription *cmd);
+  PotentialSpillSection(const InputSectionBase &source,
+                        InputSectionDescription &isd);
 
   static bool classof(const SectionBase *sec) {
     return sec->kind() == InputSectionBase::Spill;

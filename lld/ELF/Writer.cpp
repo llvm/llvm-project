@@ -1403,13 +1403,18 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
   AArch64Err843419Patcher a64p;
   ARMErr657417Patcher a32p;
   script->assignAddresses();
+
   // .ARM.exidx and SHF_LINK_ORDER do not require precise addresses, but they
   // do require the relative addresses of OutputSections because linker scripts
   // can assign Virtual Addresses to OutputSections that are not monotonically
-  // increasing.
-  for (Partition &part : partitions)
-    finalizeSynthetic(part.armExidx.get());
-  resolveShfLinkOrder();
+  // increasing. Anything here must be repeatable, since spilling may change
+  // section order.
+  const auto finalizeOrderDependentContent = [this] {
+    for (Partition &part : partitions)
+      finalizeSynthetic(part.armExidx.get());
+    resolveShfLinkOrder();
+  };
+  finalizeOrderDependentContent();
 
   // Converts call x@GDPLT to call __tls_get_addr
   if (config->emachine == EM_HEXAGON)
@@ -1467,11 +1472,8 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
         break;
       }
     } else if (spilled) {
-      // Spilling can change relative section order, so recompute anything that
-      // depends on it.
-      for (Partition &part : partitions)
-        finalizeSynthetic(part.armExidx.get());
-      resolveShfLinkOrder();
+      // Spilling can change relative section order.
+      finalizeOrderDependentContent();
     }
   }
   if (!config->relocatable)

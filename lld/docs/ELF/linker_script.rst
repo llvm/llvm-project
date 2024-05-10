@@ -206,5 +206,5 @@ later matches rather than causing the link to fail by overflowing a memory
 region. Unlike GNU ld, ``/DISCARD/`` only matches previously-unmatched sections
 (i.e., the flag does not affect it). Also, if a section fails to fit at any of
 its matches, the link fails instead of discarding the section. Accordingly, the
-GNU flag ``--enable-non-contiguous-regions-warnings`` has no effect, as it
+GNU flag ``--enable-non-contiguous-regions-warnings`` is not implemented, as it
 exists to warn about such occurrences.

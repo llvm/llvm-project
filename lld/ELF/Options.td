@@ -198,8 +198,6 @@ def enable_new_dtags: F<"enable-new-dtags">,
 
 def enable_non_contiguous_regions : FF<"enable-non-contiguous-regions">,
   HelpText<"Spill input sections to later matching output sections to avoid memory region overflow">;
-def enable_non_contiguous_regions_warnings : FF<"enable-non-contiguous-regions-warnings">,
-  HelpText<"No effect; included for GNU LD compatibility">;
 
 def end_group: F<"end-group">,
   HelpText<"Ignored for compatibility with GNU unless you pass --warn-backrefs">;

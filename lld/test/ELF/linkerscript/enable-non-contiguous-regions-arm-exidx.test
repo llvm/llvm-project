@@ -1,11 +1,11 @@
-## If a spilling reorders input sections, the .ARM.exidx table must be rebuilt
-## using the new order.
+## When spilling reorders input sections, the .ARM.exidx table is rebuilt using
+## the new order.
 
 # REQUIRES: arm
-# RUN: split-file %s %t
-# RUN: llvm-mc -filetype=obj -triple=armv7a-none-linux-gnueabi %t/test.s -o %t/test.o
-# RUN: ld.lld -T %t/test.ld %t/test.o -o %t/test --enable-non-contiguous-regions
-# RUN: llvm-readobj -x .ARM.exidx %t/test | FileCheck %s
+# RUN: rm -rf %t && split-file %s %t && cd %t
+# RUN: llvm-mc -filetype=obj -triple=armv7a-none-linux-gnueabi test.s -o test.o
+# RUN: ld.lld -T test.ld test.o -o test --enable-non-contiguous-regions
+# RUN: llvm-readobj -x .ARM.exidx test | FileCheck %s
 
 # CHECK:      20000000 08849780 1c000000 10849880
 # CHECK-NEXT: 1c000000 01000000

@@ -314,15 +314,6 @@ class LinkerScript final {
 
   uint64_t dot;
 
-  // List of potential spill locations (PotentialSpillSection) for an input
-  // section.
-  struct PotentialSpillList {
-    // Never nullptr.
-    PotentialSpillSection *head;
-    PotentialSpillSection *tail;
-  };
-  llvm::DenseMap<InputSectionBase *, PotentialSpillList> potentialSpillLists;
-
 public:
   OutputDesc *createOutputSection(StringRef name, StringRef location);
   OutputDesc *getOrCreateOutputSection(StringRef name);
@@ -414,6 +405,15 @@ public:
   //
   // then provideMap should contain the mapping: 'v' -> ['a', 'b', 'c']
   llvm::MapVector<StringRef, SmallVector<StringRef, 0>> provideMap;
+
+  // List of potential spill locations (PotentialSpillSection) for an input
+  // section.
+  struct PotentialSpillList {
+    // Never nullptr.
+    PotentialSpillSection *head;
+    PotentialSpillSection *tail;
+  };
+  llvm::DenseMap<InputSectionBase *, PotentialSpillList> potentialSpillLists;
 };
 
 LLVM_LIBRARY_VISIBILITY extern std::unique_ptr<LinkerScript> script;

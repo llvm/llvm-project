@@ -228,8 +228,11 @@ void OutputSection::finalizeInputSections(LinkerScript *script) {
         isd->sections.push_back(syn);
         // The merge synthetic section inherits the potential spill locations of
         // its first contained section.
-        if (script)
-          script->copyPotentialSpillList(syn, ms);
+        if (script) {
+          auto it = script->potentialSpillLists.find(ms);
+          if (it != script->potentialSpillLists.end())
+            script->potentialSpillLists.try_emplace(syn, it->second);
+        }
       }
       (*i)->addSection(ms);
     }
