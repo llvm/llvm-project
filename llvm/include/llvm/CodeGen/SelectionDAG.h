@@ -2115,9 +2115,9 @@ public:
   /// Test whether the given SDValue is known to contain non-zero value(s).
   bool isKnownNeverZero(SDValue Op, unsigned Depth = 0) const;
 
-  /// Test whether the given float value is known to not be negative. 0.0 is
-  /// considered non-negative, -0.0 is considered negative.
-  bool isKnownNonNegativeFP(SDValue Op) const;
+  /// Test whether the given float value is known to be positive. +0.0, +inf and
+  /// +nan are considered positive, -0.0, -inf and -nan are not.
+  bool cannotBeOrderedNegativeFP(SDValue Op) const;
 
   /// Test whether two SDValues are known to compare equal. This
   /// is true if they are the same value, or if one is negative zero and the

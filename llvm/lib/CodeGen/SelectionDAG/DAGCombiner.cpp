@@ -17384,7 +17384,7 @@ SDValue DAGCombiner::visitFREM(SDNode *N) {
       TLI.isOperationLegalOrCustom(ISD::FDIV, VT) &&
       TLI.isOperationLegalOrCustom(ISD::FTRUNC, VT) &&
       DAG.isKnownToBeAPowerOfTwoFP(N1) &&
-      (Flags.hasNoSignedZeros() || DAG.isKnownNonNegativeFP(N0))) {
+      (Flags.hasNoSignedZeros() || DAG.cannotBeOrderedNegativeFP(N0))) {
     SDValue Div = DAG.getNode(ISD::FDIV, DL, VT, N0, N1);
     SDValue Rnd = DAG.getNode(ISD::FTRUNC, DL, VT, Div);
     if (TLI.isFMAFasterThanFMulAndFAdd(DAG.getMachineFunction(), VT))
