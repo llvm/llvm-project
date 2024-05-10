@@ -6306,11 +6306,9 @@ void IntrinsicLibrary::genSystem(llvm::ArrayRef<fir::ExtendedValue> args) {
   // Create a dummmy cmdstat to prevent EXECUTE_COMMAND_LINE terminate itself
   // when cmdstat is assigned with a non-zero value but not present
   mlir::Value tempValue =
-      builder.createIntegerConstant(loc, builder.getI2Type(), 0);
+      builder.createIntegerConstant(loc, builder.getI16Type(), 0);
   mlir::Value temp = builder.createTemporary(loc, builder.getI16Type());
-  mlir::Value castVal =
-      builder.createConvert(loc, builder.getI16Type(), tempValue);
-  builder.create<fir::StoreOp>(loc, castVal, temp);
+  builder.create<fir::StoreOp>(loc, tempValue, temp);
   mlir::Value cmdstatBox = builder.createBox(loc, temp);
 
   mlir::Value cmdmsgBox =
