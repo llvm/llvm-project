@@ -37,13 +37,23 @@ define float @frem4_nsz(float %x) {
 ;
 ; CHECK-FP-LABEL: frem4_nsz:
 ; CHECK-FP:       @ %bb.0: @ %entry
-; CHECK-FP-NEXT:    mov.w r1, #1082130432
-; CHECK-FP-NEXT:    b fmodf
+; CHECK-FP-NEXT:    vmov.f32 s0, #4.000000e+00
+; CHECK-FP-NEXT:    vmov s2, r0
+; CHECK-FP-NEXT:    vdiv.f32 s4, s2, s0
+; CHECK-FP-NEXT:    vrintz.f32 s4, s4
+; CHECK-FP-NEXT:    vfms.f32 s2, s4, s0
+; CHECK-FP-NEXT:    vmov r0, s2
+; CHECK-FP-NEXT:    bx lr
 ;
 ; CHECK-M33-LABEL: frem4_nsz:
 ; CHECK-M33:       @ %bb.0: @ %entry
-; CHECK-M33-NEXT:    mov.w r1, #1082130432
-; CHECK-M33-NEXT:    b fmodf
+; CHECK-M33-NEXT:    vmov.f32 s0, #4.000000e+00
+; CHECK-M33-NEXT:    vmov s2, r0
+; CHECK-M33-NEXT:    vdiv.f32 s4, s2, s0
+; CHECK-M33-NEXT:    vrintz.f32 s4, s4
+; CHECK-M33-NEXT:    vmls.f32 s2, s4, s0
+; CHECK-M33-NEXT:    vmov r0, s2
+; CHECK-M33-NEXT:    bx lr
 entry:
   %fmod = frem nsz float %x, 4.0
   ret float %fmod
