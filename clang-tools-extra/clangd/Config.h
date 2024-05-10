@@ -110,9 +110,9 @@ struct Config {
     IncludesPolicy UnusedIncludes = IncludesPolicy::Strict;
     IncludesPolicy MissingIncludes = IncludesPolicy::None;
 
-    /// IncludeCleaner will not diagnose usages of these headers matched by
-    /// these regexes.
     struct {
+      /// IncludeCleaner will not diagnose usages of these headers matched by
+      /// these regexes.
       std::vector<std::function<bool(llvm::StringRef)>> IgnoreHeader;
       bool AnalyzeSystemHeaders = false;
     } Includes;
