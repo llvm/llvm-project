@@ -106,9 +106,15 @@ void ConceptReference::print(llvm::raw_ostream &OS,
   ConceptName.printName(OS, Policy);
   if (hasExplicitTemplateArgs()) {
     OS << "<";
+    bool First = true;
     // FIXME: Find corresponding parameter for argument
-    for (auto &ArgLoc : ArgsAsWritten->arguments())
+    for (auto &ArgLoc : ArgsAsWritten->arguments()) {
+      if (First)
+        First = false;
+      else
+        OS << ", ";
       ArgLoc.getArgument().print(Policy, OS, /*IncludeType*/ false);
+    }
     OS << ">";
   }
 }
