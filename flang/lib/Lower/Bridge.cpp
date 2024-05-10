@@ -4548,9 +4548,13 @@ private:
     // constructs, this can be done for either the end construct statement,
     // or for the construct itself, which will skip this code if the
     // end statement was visited first and generated a branch.
-    Fortran::lower::pft::Evaluation *successor =
-        eval.isConstruct() ? eval.getLastNestedEvaluation().lexicalSuccessor
-                           : eval.lexicalSuccessor;
+    Fortran::lower::pft::Evaluation *successor = [&]() {
+      if (eval.isConstruct() ||
+          (eval.isDirective() && eval.hasNestedEvaluations()))
+        return eval.getLastNestedEvaluation().lexicalSuccessor;
+      return eval.lexicalSuccessor;
+    }();
+
     if (successor && blockIsUnterminated()) {
       if (successor->isIntermediateConstructStmt() &&
           successor->parentConstruct->lowerAsUnstructured())
