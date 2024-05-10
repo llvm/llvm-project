@@ -4373,6 +4373,16 @@ bool SelectionDAG::isKnownToBeAPowerOfTwo(SDValue Val, unsigned Depth) const {
   return false;
 }
 
+bool SelectionDAG::isKnownToBeAPowerOfTwoFP(SDValue Val, unsigned Depth) const {
+  if (ConstantFPSDNode *C1 = isConstOrConstSplatFP(Val, true))
+    return C1->getValueAPF().getExactLog2Abs() >= 0;
+
+  if (Val.getOpcode() == ISD::UINT_TO_FP || Val.getOpcode() == ISD::SINT_TO_FP)
+    return isKnownToBeAPowerOfTwo(Val.getOperand(0), Depth + 1);
+
+  return false;
+}
+
 unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, unsigned Depth) const {
   EVT VT = Op.getValueType();
 
@@ -5553,6 +5563,13 @@ bool SelectionDAG::isKnownNeverZero(SDValue Op, unsigned Depth) const {
   }
 
   return computeKnownBits(Op, Depth).isNonZero();
+}
+
+bool SelectionDAG::cannotBeOrderedNegativeFP(SDValue Op) const {
+  if (ConstantFPSDNode *C1 = isConstOrConstSplatFP(Op, true))
+    return !C1->isNegative();
+
+  return Op.getOpcode() == ISD::FABS;
 }
 
 bool SelectionDAG::isEqualTo(SDValue A, SDValue B) const {
