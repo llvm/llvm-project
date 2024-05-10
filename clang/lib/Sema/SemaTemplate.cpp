@@ -2776,21 +2776,18 @@ NamedDecl *transformTemplateParameter(Sema &SemaRef, DeclContext *DC,
     return transformTemplateTypeParam(SemaRef, DC, TTP, Args, NewDepth,
                                       NewIndex);
   if (auto *TTP = dyn_cast<TemplateTemplateParmDecl>(TemplateParam))
-    return transformTemplateParam(SemaRef, DC, TTP, Args, NewIndex,
-                                  NewDepth);
+    return transformTemplateParam(SemaRef, DC, TTP, Args, NewIndex, NewDepth);
   if (auto *NTTP = dyn_cast<NonTypeTemplateParmDecl>(TemplateParam))
-    return transformTemplateParam(SemaRef, DC, NTTP, Args, NewIndex,
-                                  NewDepth);
+    return transformTemplateParam(SemaRef, DC, NTTP, Args, NewIndex, NewDepth);
   llvm_unreachable("Unhandled template parameter types");
 }
 
 // Transform the require-clause of F if any.
 // The return result is expected to be the require-clause for the synthesized
 // alias deduction guide.
-Expr *transformRequireClause(
-    Sema &SemaRef, FunctionTemplateDecl *F,
-    TypeAliasTemplateDecl *AliasTemplate,
-    ArrayRef<DeducedTemplateArgument> DeduceResults) {
+Expr *transformRequireClause(Sema &SemaRef, FunctionTemplateDecl *F,
+                             TypeAliasTemplateDecl *AliasTemplate,
+                             ArrayRef<DeducedTemplateArgument> DeduceResults) {
   Expr *RC = F->getTemplateParameters()->getRequiresClause();
   if (!RC)
     return nullptr;
@@ -2816,7 +2813,8 @@ Expr *transformRequireClause(
   // For 1), if the alias template is nested within a class template, we
   // calcualte the 'uninstantiated' depth by adding the substitution level back.
   unsigned AdjustDepth = 0;
-  if (auto *PrimaryTemplate = AliasTemplate->getInstantiatedFromMemberTemplate())
+  if (auto *PrimaryTemplate =
+          AliasTemplate->getInstantiatedFromMemberTemplate())
     AdjustDepth = PrimaryTemplate->getTemplateDepth();
 
   // We rebuild all template parameters with the uninstantiated depth, and
@@ -3040,7 +3038,8 @@ BuildDeductionGuideForTypeAlias(Sema &SemaRef,
     Args.addOuterTemplateArguments(TransformedDeducedAliasArgs);
     NamedDecl *NewParam = transformTemplateParameter(
         SemaRef, AliasTemplate->getDeclContext(), TP, Args,
-        /*NewIndex=*/FPrimeTemplateParams.size(), getTemplateParameterDepth(TP));
+        /*NewIndex=*/FPrimeTemplateParams.size(),
+        getTemplateParameterDepth(TP));
     FPrimeTemplateParams.push_back(NewParam);
 
     auto NewTemplateArgument = Context.getCanonicalTemplateArgument(
@@ -3113,8 +3112,8 @@ BuildDeductionGuideForTypeAlias(Sema &SemaRef,
           Sema::CodeSynthesisContext::BuildingDeductionGuides)) {
     auto *GG = cast<CXXDeductionGuideDecl>(FPrime);
 
-    Expr *RequiresClause = transformRequireClause(
-        SemaRef, F, AliasTemplate, DeduceResults);
+    Expr *RequiresClause =
+        transformRequireClause(SemaRef, F, AliasTemplate, DeduceResults);
 
     // FIXME: implement the is_deducible constraint per C++
     // [over.match.class.deduct]p3.3:
