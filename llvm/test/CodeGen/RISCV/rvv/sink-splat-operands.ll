@@ -5427,19 +5427,18 @@ for.cond.cleanup:                                 ; preds = %vector.body
 define void @sink_splat_select(ptr nocapture %a, i32 signext %x) {
 ; CHECK-LABEL: sink_splat_select:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    lui a2, 1
+; CHECK-NEXT:    add a2, a0, a2
+; CHECK-NEXT:    li a3, 42
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vmv.v.x v8, a1
-; CHECK-NEXT:    lui a1, 1
-; CHECK-NEXT:    add a1, a0, a1
-; CHECK-NEXT:    li a2, 42
 ; CHECK-NEXT:  .LBB117_1: # %vector.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vle32.v v9, (a0)
-; CHECK-NEXT:    vmseq.vx v0, v9, a2
-; CHECK-NEXT:    vmerge.vvm v9, v9, v8, v0
-; CHECK-NEXT:    vse32.v v9, (a0)
+; CHECK-NEXT:    vle32.v v8, (a0)
+; CHECK-NEXT:    vmseq.vx v0, v8, a3
+; CHECK-NEXT:    vmerge.vxm v8, v8, a1, v0
+; CHECK-NEXT:    vse32.v v8, (a0)
 ; CHECK-NEXT:    addi a0, a0, 16
-; CHECK-NEXT:    bne a0, a1, .LBB117_1
+; CHECK-NEXT:    bne a0, a2, .LBB117_1
 ; CHECK-NEXT:  # %bb.2: # %for.cond.cleanup
 ; CHECK-NEXT:    ret
 entry:

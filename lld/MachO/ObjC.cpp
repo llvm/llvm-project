@@ -1148,7 +1148,7 @@ void ObjcCategoryMerger::generateCatListForNonErasedCategories(
       assert(nonErasedCatBody && "Failed to relocate non-deleted category");
 
       // Allocate data for the new __objc_catlist slot
-      auto bodyData = newSectionData(target->wordSize);
+      llvm::ArrayRef<uint8_t> bodyData = newSectionData(target->wordSize);
 
       // We mark the __objc_catlist slot as belonging to the same file as the
       // category
@@ -1279,7 +1279,7 @@ void ObjcCategoryMerger::doCleanup() { generatedSectionData.clear(); }
 StringRef ObjcCategoryMerger::newStringData(const char *str) {
   uint32_t len = strlen(str);
   uint32_t bufSize = len + 1;
-  auto &data = newSectionData(bufSize);
+  SmallVector<uint8_t> &data = newSectionData(bufSize);
   char *strData = reinterpret_cast<char *>(data.data());
   // Copy the string chars and null-terminator
   memcpy(strData, str, bufSize);
