@@ -291,8 +291,10 @@ public:
       if (FindInRHS == RHS.end())
         return false;
 
-      if (!(KeyValue.getValue() == FindInRHS->getValue()))
-        return false;
+      if constexpr (!std::is_same_v<ValueTy, std::nullopt_t>) {
+        if (!(KeyValue.getValue() == FindInRHS->getValue()))
+          return false;
+      }
     }
 
     return true;
