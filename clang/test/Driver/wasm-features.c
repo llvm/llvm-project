@@ -77,6 +77,12 @@
 // RELAXED-SIMD: "-target-feature" "+relaxed-simd"
 // NO-RELAXED-SIMD: "-target-feature" "-relaxed-simd"
 
+// RUN: %clang --target=wasm32-unknown-unknown -### %s -mhalf-precision 2>&1 | FileCheck %s -check-prefix=HALF-PRECISION
+// RUN: %clang --target=wasm32-unknown-unknown -### %s -mno-half-precision 2>&1 | FileCheck %s -check-prefix=NO-HALF-PRECISION
+
+// HALF-PRECISION: "-target-feature" "+half-precision"
+// NO-HALF-PRECISION: "-target-feature" "-half-precision"
+
 // RUN: %clang --target=wasm32-unknown-unknown -### %s -mexception-handling 2>&1 | FileCheck %s -check-prefix=EXCEPTION-HANDLING
 // RUN: %clang --target=wasm32-unknown-unknown -### %s -mno-exception-handling 2>&1 | FileCheck %s -check-prefix=NO-EXCEPTION-HANDLING
 

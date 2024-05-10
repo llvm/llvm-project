@@ -10790,8 +10790,6 @@ QualType Sema::DeduceTemplateSpecializationFromInitializer(
   // FIXME: Perform "exact type" matching first, per CWG discussion?
   //        Or implement this via an implied 'T(T) -> T' deduction guide?
 
-  // FIXME: Do we need/want a std::initializer_list<T> special case?
-
   // Look up deduction guides, including those synthesized from constructors.
   //
   // C++1z [over.match.class.deduct]p1:

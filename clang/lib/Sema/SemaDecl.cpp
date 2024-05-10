@@ -1974,7 +1974,7 @@ static bool ShouldDiagnoseUnusedDecl(const LangOptions &LangOpts,
     // it is, by the bindings' expressions).
     bool IsAllPlaceholders = true;
     for (const auto *BD : DD->bindings()) {
-      if (BD->isReferenced())
+      if (BD->isReferenced() || BD->hasAttr<UnusedAttr>())
         return false;
       IsAllPlaceholders = IsAllPlaceholders && BD->isPlaceholderVar(LangOpts);
     }

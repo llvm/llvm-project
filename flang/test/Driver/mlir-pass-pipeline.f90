@@ -28,13 +28,15 @@ end program
 ! ALL-NEXT:   (S) 0 num-cse'd - Number of operations CSE'd
 ! ALL-NEXT:   (S) 0 num-dce'd - Number of operations DCE'd
 
-! ALL-NEXT: Pipeline Collection : ['fir.global', 'func.func', 'omp.declare_reduction']
+! ALL-NEXT: Pipeline Collection : ['fir.global', 'func.func', 'omp.declare_reduction', 'omp.private']
 ! ALL-NEXT: 'fir.global' Pipeline
 ! ALL-NEXT:   CharacterConversion
 ! ALL-NEXT: 'func.func' Pipeline
 ! ALL-NEXT:   ArrayValueCopy
 ! ALL-NEXT:   CharacterConversion
 ! ALL-NEXT: 'omp.declare_reduction' Pipeline
+! ALL-NEXT:   CharacterConversion
+! ALL-NEXT: 'omp.private' Pipeline
 ! ALL-NEXT:   CharacterConversion
 
 ! ALL-NEXT: Canonicalizer
@@ -57,13 +59,15 @@ end program
 ! O2-NEXT:    'func.func' Pipeline
 ! O2-NEXT:      PolymorphicOpConversion
 ! O2-NEXT:  AddAliasTags
-! ALL-NEXT: Pipeline Collection : ['fir.global', 'func.func', 'omp.declare_reduction']
+! ALL-NEXT: Pipeline Collection : ['fir.global', 'func.func', 'omp.declare_reduction', 'omp.private']
 ! ALL-NEXT:    'fir.global' Pipeline
 ! ALL-NEXT:      CFGConversion
 ! ALL-NEXT:    'func.func' Pipeline
 ! NOTO2-NEXT:      PolymorphicOpConversion
 ! ALL-NEXT:      CFGConversion
 ! ALL-NEXT:   'omp.declare_reduction' Pipeline
+! ALL-NEXT:      CFGConversion
+! ALL-NEXT:   'omp.private' Pipeline
 ! ALL-NEXT:      CFGConversion
 
 ! ALL-NEXT: SCFToControlFlow
@@ -74,12 +78,14 @@ end program
 ! ALL-NEXT:   (S) 0 num-dce'd - Number of operations DCE'd
 ! ALL-NEXT: BoxedProcedurePass
 
-! ALL-NEXT: Pipeline Collection : ['fir.global', 'func.func', 'omp.declare_reduction']
+! ALL-NEXT: Pipeline Collection : ['fir.global', 'func.func', 'omp.declare_reduction', 'omp.private']
 ! ALL-NEXT:   'fir.global' Pipeline
 ! ALL-NEXT:    AbstractResultOpt
 ! ALL-NEXT:  'func.func' Pipeline
 ! ALL-NEXT:    AbstractResultOpt
 ! ALL-NEXT:  'omp.declare_reduction' Pipeline
+! ALL-NEXT:    AbstractResultOpt
+! ALL-NEXT:  'omp.private' Pipeline
 ! ALL-NEXT:    AbstractResultOpt
 
 ! ALL-NEXT: CodeGenRewrite

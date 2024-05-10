@@ -258,6 +258,9 @@ namespace llvm {
       return Length >= Prefix.Length &&
              compareMemory(Data, Prefix.Data, Prefix.Length) == 0;
     }
+    [[nodiscard]] bool starts_with(char Prefix) const {
+      return !empty() && front() == Prefix;
+    }
 
     /// Check if this string starts with the given \p Prefix, ignoring case.
     [[nodiscard]] bool starts_with_insensitive(StringRef Prefix) const;
@@ -267,6 +270,9 @@ namespace llvm {
       return Length >= Suffix.Length &&
              compareMemory(end() - Suffix.Length, Suffix.Data, Suffix.Length) ==
                  0;
+    }
+    [[nodiscard]] bool ends_with(char Suffix) const {
+      return !empty() && back() == Suffix;
     }
 
     /// Check if this string ends with the given \p Suffix, ignoring case.
