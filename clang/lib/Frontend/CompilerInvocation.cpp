@@ -1494,6 +1494,8 @@ void CompilerInvocation::setDefaultPointerAuthOptions(
         PointerAuthSchema(Key::ASDA, false, Discrimination::None);
     Opts.CXXVirtualFunctionPointers = Opts.CXXVirtualVariadicFunctionPointers =
         PointerAuthSchema(Key::ASIA, true, Discrimination::Decl);
+    Opts.CXXMemberFunctionPointers =
+        PointerAuthSchema(Key::ASIA, false, Discrimination::Type);
   }
 }
 
