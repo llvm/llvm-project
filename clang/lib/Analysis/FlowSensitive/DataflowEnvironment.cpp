@@ -591,7 +591,7 @@ Environment Environment::fork() const {
 
 bool Environment::canDescend(unsigned MaxDepth,
                              const FunctionDecl *Callee) const {
-  return CallStack.size() <= MaxDepth && !llvm::is_contained(CallStack, Callee);
+  return CallStack.size() < MaxDepth && !llvm::is_contained(CallStack, Callee);
 }
 
 Environment Environment::pushCall(const CallExpr *Call) const {

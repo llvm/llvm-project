@@ -667,7 +667,8 @@ public:
 
   /// Returns whether this `Environment` can be extended to analyze the given
   /// `Callee` (i.e. if `pushCall` can be used), with recursion disallowed and a
-  /// given `MaxDepth`.
+  /// given `MaxDepth`. Note that the `MaxDepth` does not count any initial
+  /// target function, which was not called.
   bool canDescend(unsigned MaxDepth, const FunctionDecl *Callee) const;
 
   /// Returns the `DataflowAnalysisContext` used by the environment.
