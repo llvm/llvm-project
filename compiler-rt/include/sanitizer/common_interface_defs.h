@@ -193,6 +193,30 @@ void SANITIZER_CDECL __sanitizer_annotate_double_ended_contiguous_container(
     const void *old_container_beg, const void *old_container_end,
     const void *new_container_beg, const void *new_container_end);
 
+/// Moves annotation from one storage to another.
+/// At the end, new buffer is annotated in the same way as old buffer at
+/// the very beginning. Old buffer is fully unpoisoned.
+/// Main purpose of that function is use while moving trivially relocatable
+/// objects, which memory may be poisoned (therefore not trivially with ASan).
+///
+/// A contiguous container is a container that keeps all of its elements
+/// in a contiguous region of memory. The container owns the region of memory
+/// <c>[old_storage_beg, old_storage_end)</c> and
+/// <c>[new_storage_beg, new_storage_end)</c>;
+/// There is no requirement where objects are kept.
+/// Poisoned and non-poisoned memory areas can alternate,
+/// there are no shadow memory restrictions.
+///
+/// Argument requirements:
+/// New containert has to have the same size as the old container.
+/// \param old_storage_beg Beginning of the old container region.
+/// \param old_storage_end End of the old container region.
+/// \param new_storage_beg Beginning of the new container region.
+/// \param new_storage_end End of the new container region.
+void SANITIZER_CDECL __sanitizer_move_contiguous_container_annotations(
+    const void *old_storage_beg, const void *old_storage_end,
+    const void *new_storage_beg, const void *new_storage_end);
+
 /// Returns true if the contiguous container <c>[beg, end)</c> is properly
 /// poisoned.
 ///
