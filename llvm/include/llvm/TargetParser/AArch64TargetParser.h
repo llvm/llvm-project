@@ -676,6 +676,8 @@ inline constexpr Alias CpuAliases[] = {{"cobalt-100", "neoverse-n2"},
 
 inline constexpr Alias ExtAliases[] = {{"rdma", "rdm"}};
 
+const ExtensionInfo &getExtensionByID(ArchExtKind(ExtID));
+
 bool getExtensionFeatures(
     const AArch64::ExtensionBitset &Extensions,
     std::vector<StringRef> &Features);
