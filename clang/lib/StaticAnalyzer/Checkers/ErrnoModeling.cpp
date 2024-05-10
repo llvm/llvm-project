@@ -108,9 +108,9 @@ void ErrnoModeling::checkBeginFunction(CheckerContext &C) const {
     ErrnoR = State->getRegion(ErrnoDecl, C.getLocationContext());
     assert(ErrnoR && "Memory region should exist for the 'errno' variable.");
   } else {
-    // The 'errno' location is accessed via an internal getter function, so
-    // create a new symbolic memory region that can be used as the return value
-    // of that function.
+    // There is no 'errno' variable, so create a new symbolic memory region
+    // that can be used to model the return value of the "get the location of
+    // errno" internal functions.
     SValBuilder &SVB = C.getSValBuilder();
     MemRegionManager &RMgr = C.getStateManager().getRegionManager();
 
