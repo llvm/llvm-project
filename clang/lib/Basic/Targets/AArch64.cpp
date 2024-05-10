@@ -225,7 +225,7 @@ bool AArch64TargetInfo::validateBranchProtection(StringRef Spec, StringRef,
                                                  BranchProtectionInfo &BPI,
                                                  StringRef &Err) const {
   llvm::ARM::ParsedBranchProtection PBP;
-  if (!llvm::ARM::parseBranchProtection(Spec, PBP, Err))
+  if (!llvm::ARM::parseBranchProtection(Spec, PBP, Err, HasPAuthLR))
     return false;
 
   BPI.SignReturnAddr =
