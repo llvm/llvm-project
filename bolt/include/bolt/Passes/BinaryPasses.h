@@ -401,6 +401,7 @@ public:
 /// dyno stats categories.
 class PrintProgramStats : public BinaryFunctionPass {
   BoltAddressTranslation *BAT = nullptr;
+
 public:
   explicit PrintProgramStats(BoltAddressTranslation *BAT = nullptr)
       : BinaryFunctionPass(false), BAT(BAT) {}
