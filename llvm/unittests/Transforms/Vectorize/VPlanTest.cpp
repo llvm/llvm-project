@@ -1530,5 +1530,13 @@ TEST(VPDoubleValueDefTest, traverseUseLists) {
   EXPECT_EQ(&DoubleValueDef, I3.getOperand(0)->getDefiningRecipe());
 }
 
+TEST(VPRecipeTest, CastToVPSingleDefRecipe) {
+  VPValue Start;
+  VPEVLBasedIVPHIRecipe R(&Start, {});
+  VPRecipeBase *B = &R;
+  EXPECT_TRUE(isa<VPSingleDefRecipe>(B));
+  // TODO: check other VPSingleDefRecipes.
+}
+
 } // namespace
 } // namespace llvm

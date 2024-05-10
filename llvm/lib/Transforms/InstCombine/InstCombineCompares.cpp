@@ -3176,15 +3176,12 @@ Instruction *InstCombinerImpl::foldICmpSelectConstant(ICmpInst &Cmp,
                               C3GreaterThan)) {
     assert(C1LessThan && C2Equal && C3GreaterThan);
 
-    bool TrueWhenLessThan =
-        ConstantExpr::getCompare(Cmp.getPredicate(), C1LessThan, C)
-            ->isAllOnesValue();
-    bool TrueWhenEqual =
-        ConstantExpr::getCompare(Cmp.getPredicate(), C2Equal, C)
-            ->isAllOnesValue();
-    bool TrueWhenGreaterThan =
-        ConstantExpr::getCompare(Cmp.getPredicate(), C3GreaterThan, C)
-            ->isAllOnesValue();
+    bool TrueWhenLessThan = ICmpInst::compare(
+        C1LessThan->getValue(), C->getValue(), Cmp.getPredicate());
+    bool TrueWhenEqual = ICmpInst::compare(C2Equal->getValue(), C->getValue(),
+                                           Cmp.getPredicate());
+    bool TrueWhenGreaterThan = ICmpInst::compare(
+        C3GreaterThan->getValue(), C->getValue(), Cmp.getPredicate());
 
     // This generates the new instruction that will replace the original Cmp
     // Instruction. Instead of enumerating the various combinations when
