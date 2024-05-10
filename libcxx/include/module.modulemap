@@ -568,6 +568,7 @@ module std [system] {
 // must not be directly imported.
 module std_private_assert            [system] {
   header "__assert"
+  header "__assertion_handler"
   export *
 }
 module std_private_availability      [system] {

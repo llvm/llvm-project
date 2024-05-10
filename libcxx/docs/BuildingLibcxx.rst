@@ -417,7 +417,7 @@ libc++ Feature Options
 
 .. option:: LIBCXX_ASSERTION_HANDLER_FILE:PATH
 
-  **Default**:: ``"${CMAKE_CURRENT_SOURCE_DIR}/vendor/llvm/default_assertion_handler.in"``
+  **Default**:: ``"${CMAKE_CURRENT_SOURCE_DIR}/include/__assertion_handler"``
 
   Specify the path to a header that contains a custom implementation of the
   assertion handler that gets invoked when a hardening assertion fails. If
@@ -505,11 +505,12 @@ Under the hood, a hardening assertion will invoke the
 that contains a custom definition of this macro and specify the path to the
 header via the ``LIBCXX_ASSERTION_HANDLER_FILE`` CMake variable. If provided,
 this header will be included by the library and replace the default
-implementation. The header must not include any standard library headers
-(directly or transitively) because doing so will almost always create a circular
-dependency. The ``_LIBCPP_ASSERTION_HANDLER(message)`` macro takes a single
-parameter that contains an error message explaining the hardening failure and
-some details about the source location that triggered it.
+implementation. The header may only include `__config`, `__config_site`,
+and `__verbose_abort`, The custom header must not include any other standard
+library headers (directly or transitively) because doing so will almost always
+create a circular dependency. The ``_LIBCPP_ASSERTION_HANDLER(message)`` macro
+takes a single parameter that contains an error message explaining the hardening
+failure and some details about the source location that triggered it.
 
 When a hardening assertion fails, it means that the program is about to invoke
 library undefined behavior. For this reason, the custom assertion handler is
