@@ -961,7 +961,7 @@ private:
   // that, other than the root, path components should not contain slashes or
   // backslashes.
   bool pathComponentMatches(llvm::StringRef lhs, llvm::StringRef rhs) const {
-    if ((CaseSensitive ? lhs.equals(rhs) : lhs.equals_insensitive(rhs)))
+    if ((CaseSensitive ? lhs == rhs : lhs.equals_insensitive(rhs)))
       return true;
     return (lhs == "/" && rhs == "\\") || (lhs == "\\" && rhs == "/");
   }

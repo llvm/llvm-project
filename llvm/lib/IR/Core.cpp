@@ -14,6 +14,7 @@
 #include "llvm-c/Core.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -33,6 +34,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/ManagedStatic.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/raw_ostream.h"
@@ -176,6 +178,20 @@ LLVMAttributeRef LLVMCreateTypeAttribute(LLVMContextRef C, unsigned KindID,
 LLVMTypeRef LLVMGetTypeAttributeValue(LLVMAttributeRef A) {
   auto Attr = unwrap(A);
   return wrap(Attr.getValueAsType());
+}
+
+LLVMAttributeRef LLVMCreateConstantRangeAttribute(LLVMContextRef C,
+                                                  unsigned KindID,
+                                                  unsigned NumBits,
+                                                  const uint64_t LowerWords[],
+                                                  const uint64_t UpperWords[]) {
+  auto &Ctx = *unwrap(C);
+  auto AttrKind = (Attribute::AttrKind)KindID;
+  unsigned NumWords = divideCeil(NumBits, 64);
+  return wrap(Attribute::get(
+      Ctx, AttrKind,
+      ConstantRange(APInt(NumBits, ArrayRef(LowerWords, NumWords)),
+                    APInt(NumBits, ArrayRef(UpperWords, NumWords)))));
 }
 
 LLVMAttributeRef LLVMCreateStringAttribute(LLVMContextRef C,

@@ -7,8 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/IR/Attributes.h"
+#include "llvm-c/Core.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/AttributeMask.h"
+#include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/LLVMContext.h"
@@ -306,6 +308,36 @@ TEST(Attributes, RemoveParamAttributes) {
   EXPECT_EQ(AL.getNumAttrSets(), 4U);
   AL = AL.removeParamAttribute(C, 1, Attribute::NoUndef);
   EXPECT_EQ(AL.getNumAttrSets(), 0U);
+}
+
+TEST(Attributes, ConstantRangeAttributeCAPI) {
+  LLVMContext C;
+  {
+    const unsigned NumBits = 8;
+    const uint64_t LowerWords[] = {0};
+    const uint64_t UpperWords[] = {42};
+
+    ConstantRange Range(APInt(NumBits, ArrayRef(LowerWords)),
+                        APInt(NumBits, ArrayRef(UpperWords)));
+
+    Attribute RangeAttr = Attribute::get(C, Attribute::Range, Range);
+    auto OutAttr = unwrap(LLVMCreateConstantRangeAttribute(
+        wrap(&C), Attribute::Range, NumBits, LowerWords, UpperWords));
+    EXPECT_EQ(OutAttr, RangeAttr);
+  }
+  {
+    const unsigned NumBits = 128;
+    const uint64_t LowerWords[] = {1, 1};
+    const uint64_t UpperWords[] = {42, 42};
+
+    ConstantRange Range(APInt(NumBits, ArrayRef(LowerWords)),
+                        APInt(NumBits, ArrayRef(UpperWords)));
+
+    Attribute RangeAttr = Attribute::get(C, Attribute::Range, Range);
+    auto OutAttr = unwrap(LLVMCreateConstantRangeAttribute(
+        wrap(&C), Attribute::Range, NumBits, LowerWords, UpperWords));
+    EXPECT_EQ(OutAttr, RangeAttr);
+  }
 }
 
 } // end anonymous namespace

@@ -7511,6 +7511,9 @@ def err_nested_non_static_member_use : Error<
 def warn_cxx98_compat_non_static_member_use : Warning<
   "use of non-static data member %0 in an unevaluated context is "
   "incompatible with C++98">, InGroup<CXX98Compat>, DefaultIgnore;
+def err_form_ptr_to_member_from_parenthesized_expr : Error<
+  "cannot form pointer to member from a parenthesized expression; "
+  "did you mean to remove the parentheses?">;
 def err_invalid_incomplete_type_use : Error<
   "invalid use of incomplete type %0">;
 def err_builtin_func_cast_more_than_one_arg : Error<
@@ -12338,4 +12341,11 @@ def err_acc_subarray_out_of_range
 def err_acc_subarray_base_plus_length_out_of_range
     : Error<"OpenACC sub-array specified range [%0:%1] would be out of the "
             "range of the subscripted array size of %2">;
+def warn_acc_deprecated_alias_name
+    : Warning<"OpenACC clause name '%0' is a deprecated clause name and is "
+              "now an alias for '%1'">,
+      InGroup<DiagGroup<"openacc-deprecated-clause-alias">>;
+def err_acc_var_not_pointer_type
+    : Error<"expected pointer in '%0' clause, type is %1">;
+def note_acc_expected_pointer_var : Note<"expected variable of pointer type">;
 } // end of sema component.

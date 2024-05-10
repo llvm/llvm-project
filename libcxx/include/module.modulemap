@@ -1614,6 +1614,15 @@ module std_private_pstl_configuration              [system] {
 
 module std_private_queue_fwd [system] { header "__fwd/queue.h" }
 
+module std_private_ostream_basic_ostream [system] {
+  header "__ostream/basic_ostream.h"
+  export std_streambuf
+}
+module std_private_ostream_print         [system] {
+  header "__ostream/print.h"
+  export std_print
+}
+
 module std_private_random_bernoulli_distribution          [system] { header "__random/bernoulli_distribution.h" }
 module std_private_random_binomial_distribution           [system] { header "__random/binomial_distribution.h" }
 module std_private_random_cauchy_distribution             [system] { header "__random/cauchy_distribution.h" }

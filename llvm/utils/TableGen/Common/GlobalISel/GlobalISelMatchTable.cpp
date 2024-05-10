@@ -1565,13 +1565,14 @@ bool MemoryAddressSpacePredicateMatcher::isIdentical(
 
 void MemoryAddressSpacePredicateMatcher::emitPredicateOpcodes(
     MatchTable &Table, RuleMatcher &Rule) const {
+  assert(AddrSpaces.size() < 256);
   Table << MatchTable::Opcode("GIM_CheckMemoryAddressSpace")
         << MatchTable::Comment("MI") << MatchTable::ULEB128Value(InsnVarID)
         << MatchTable::Comment("MMO")
         << MatchTable::ULEB128Value(MMOIdx)
         // Encode number of address spaces to expect.
         << MatchTable::Comment("NumAddrSpace")
-        << MatchTable::ULEB128Value(AddrSpaces.size());
+        << MatchTable::IntValue(1, AddrSpaces.size());
   for (unsigned AS : AddrSpaces)
     Table << MatchTable::Comment("AddrSpace") << MatchTable::ULEB128Value(AS);
 
@@ -1590,10 +1591,13 @@ bool MemoryAlignmentPredicateMatcher::isIdentical(
 
 void MemoryAlignmentPredicateMatcher::emitPredicateOpcodes(
     MatchTable &Table, RuleMatcher &Rule) const {
+  // TODO: we could support more, just need to emit the right opcode or switch
+  // to log alignment.
+  assert(MinAlign < 256);
   Table << MatchTable::Opcode("GIM_CheckMemoryAlignment")
         << MatchTable::Comment("MI") << MatchTable::ULEB128Value(InsnVarID)
         << MatchTable::Comment("MMO") << MatchTable::ULEB128Value(MMOIdx)
-        << MatchTable::Comment("MinAlign") << MatchTable::ULEB128Value(MinAlign)
+        << MatchTable::Comment("MinAlign") << MatchTable::IntValue(1, MinAlign)
         << MatchTable::LineBreak;
 }
 

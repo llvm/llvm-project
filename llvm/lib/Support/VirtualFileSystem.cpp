@@ -157,7 +157,7 @@ void FileSystem::dump() const { print(dbgs(), PrintType::RecursiveContents); }
 
 #ifndef NDEBUG
 static bool isTraversalComponent(StringRef Component) {
-  return Component.equals("..") || Component.equals(".");
+  return Component == ".." || Component == ".";
 }
 
 static bool pathHasTraversal(StringRef Path) {

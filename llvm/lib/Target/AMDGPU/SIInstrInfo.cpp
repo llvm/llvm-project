@@ -4513,6 +4513,7 @@ bool SIInstrInfo::canShrink(const MachineInstr &MI,
   // Check output modifiers
   return !hasModifiersSet(MI, AMDGPU::OpName::omod) &&
          !hasModifiersSet(MI, AMDGPU::OpName::clamp) &&
+         !hasModifiersSet(MI, AMDGPU::OpName::byte_sel) &&
          // TODO: Can we avoid checking bound_ctrl/fi here?
          // They are only used by permlane*_swap special case.
          !hasModifiersSet(MI, AMDGPU::OpName::bound_ctrl) &&

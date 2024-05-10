@@ -1,9 +1,9 @@
 // REQUIRES: aarch64-registered-target
 
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +fp-armv8 -S -o /dev/null -target-abi aapcs      -verify=fp-hard %s
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature -fp-armv8 -S -o /dev/null -target-abi aapcs-soft -verify=nofp-soft %s
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature -fp-armv8 -S -o /dev/null -target-abi aapcs      -verify=nofp-hard %s
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature -fp-armv8 -S -o /dev/null -target-abi aapcs -O1  -verify=nofp-hard,nofp-hard-opt -emit-llvm %s
+// RUN: %clang_cc1 -triple aarch64 -target-feature +fp-armv8 -S -o /dev/null -target-abi aapcs -verify=fp-hard %s
+// RUN: %clang_cc1 -triple aarch64 -target-feature -fp-armv8 -S -o /dev/null -target-abi aapcs-soft -verify=nofp-soft %s
+// RUN: %clang_cc1 -triple aarch64 -target-feature -fp-armv8 -S -o /dev/null -target-abi aapcs -verify=nofp-hard %s
+// RUN: %clang_cc1 -triple aarch64 -target-feature -fp-armv8 -o /dev/null -target-abi aapcs -O1 -verify=nofp-hard,nofp-hard-opt -emit-llvm %s
 // No run line needed for soft-float ABI with an FPU because that is rejected by the driver
 
 // With the hard-float ABI and a target with an FPU, FP arguments are passed in

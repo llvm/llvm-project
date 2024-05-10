@@ -58,6 +58,7 @@ define i32 @global_load_2xi16_align2(ptr addrspace(1) %p) #0 {
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    global_load_b32 v0, v[0:1], off
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %gep.p = getelementptr i16, ptr addrspace(1) %p, i64 1
   %p.0 = load i16, ptr addrspace(1) %p, align 2
@@ -204,6 +205,7 @@ define i32 @global_load_2xi16_align1(ptr addrspace(1) %p) #0 {
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    global_load_b32 v0, v[0:1], off
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %gep.p = getelementptr i16, ptr addrspace(1) %p, i64 1
   %p.0 = load i16, ptr addrspace(1) %p, align 1
@@ -343,6 +345,7 @@ define i32 @global_load_2xi16_align4(ptr addrspace(1) %p) #0 {
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    global_load_b32 v0, v[0:1], off
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %gep.p = getelementptr i16, ptr addrspace(1) %p, i64 1
   %p.0 = load i16, ptr addrspace(1) %p, align 4

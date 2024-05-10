@@ -2994,6 +2994,7 @@ define <2 x float> @v_test_canonicalize_v2f32_flush(<2 x float> %arg) #1 {
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_dual_max_num_f32 v0, v0, v0 :: v_dual_max_num_f32 v1, v1, v1
+; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %canon = call <2 x float> @llvm.canonicalize.v2f32(<2 x float> %arg)
   ret <2 x float> %canon
@@ -3033,6 +3034,7 @@ define <3 x float> @v_test_canonicalize_v3f32_flush(<3 x float> %arg) #1 {
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_dual_max_num_f32 v0, v0, v0 :: v_dual_max_num_f32 v1, v1, v1
 ; GFX12-NEXT:    v_max_num_f32_e32 v2, v2, v2
+; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %canon = call <3 x float> @llvm.canonicalize.v3f32(<3 x float> %arg)
   ret <3 x float> %canon
@@ -3074,6 +3076,7 @@ define <4 x float> @v_test_canonicalize_v4f32_flush(<4 x float> %arg) #1 {
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_dual_max_num_f32 v0, v0, v0 :: v_dual_max_num_f32 v1, v1, v1
 ; GFX12-NEXT:    v_dual_max_num_f32 v2, v2, v2 :: v_dual_max_num_f32 v3, v3, v3
+; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %canon = call <4 x float> @llvm.canonicalize.v4f32(<4 x float> %arg)
   ret <4 x float> %canon
@@ -3127,6 +3130,7 @@ define <8 x float> @v_test_canonicalize_v8f32_flush(<8 x float> %arg) #1 {
 ; GFX12-NEXT:    v_dual_max_num_f32 v2, v2, v2 :: v_dual_max_num_f32 v3, v3, v3
 ; GFX12-NEXT:    v_dual_max_num_f32 v4, v4, v4 :: v_dual_max_num_f32 v5, v5, v5
 ; GFX12-NEXT:    v_dual_max_num_f32 v6, v6, v6 :: v_dual_max_num_f32 v7, v7, v7
+; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %canon = call <8 x float> @llvm.canonicalize.v8f32(<8 x float> %arg)
   ret <8 x float> %canon
@@ -3163,6 +3167,7 @@ define <2 x double> @v_test_canonicalize_v2f64(<2 x double> %arg) #1 {
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_max_num_f64_e32 v[0:1], v[0:1], v[0:1]
 ; GFX12-NEXT:    v_max_num_f64_e32 v[2:3], v[2:3], v[2:3]
+; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %canon = call <2 x double> @llvm.canonicalize.v2f64(<2 x double> %arg)
   ret <2 x double> %canon
@@ -3203,6 +3208,7 @@ define <3 x double> @v_test_canonicalize_v3f64(<3 x double> %arg) #1 {
 ; GFX12-NEXT:    v_max_num_f64_e32 v[0:1], v[0:1], v[0:1]
 ; GFX12-NEXT:    v_max_num_f64_e32 v[2:3], v[2:3], v[2:3]
 ; GFX12-NEXT:    v_max_num_f64_e32 v[4:5], v[4:5], v[4:5]
+; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %canon = call <3 x double> @llvm.canonicalize.v3f64(<3 x double> %arg)
   ret <3 x double> %canon
@@ -3247,6 +3253,7 @@ define <4 x double> @v_test_canonicalize_v4f64(<4 x double> %arg) #1 {
 ; GFX12-NEXT:    v_max_num_f64_e32 v[2:3], v[2:3], v[2:3]
 ; GFX12-NEXT:    v_max_num_f64_e32 v[4:5], v[4:5], v[4:5]
 ; GFX12-NEXT:    v_max_num_f64_e32 v[6:7], v[6:7], v[6:7]
+; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %canon = call <4 x double> @llvm.canonicalize.v4f64(<4 x double> %arg)
   ret <4 x double> %canon
