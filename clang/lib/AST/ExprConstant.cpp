@@ -14540,6 +14540,18 @@ static bool TryEvaluateBuiltinNaN(const ASTContext &Context,
 
   return true;
 }
+//  Checks that the value x is in the range (-1;-0.5], [0.5; 1)
+static bool isInFrexpResultRange(const llvm::APFloat &x) {
+  llvm::APFloat minusOne(x.getSemantics(), "-1.0");
+  llvm::APFloat minusHalf(x.getSemantics(), "-0.5");
+  llvm::APFloat half(x.getSemantics(), "0.5");
+  llvm::APFloat one(x.getSemantics(), "1.0");
+
+  return ((x.compare(minusOne) == llvm::APFloat::cmpGreaterThan &&
+           x.compare(minusHalf) != llvm::APFloat::cmpGreaterThan) ||
+          (x.compare(half) != llvm::APFloat::cmpLessThan &&
+           x.compare(one) == llvm::APFloat::cmpLessThan));
+}
 
 void FloatExprEvaluator::StoreExponent(LValue Pointer, int exp) {
   const APValue::LValueBase Base = Pointer.getLValueBase();
@@ -14572,9 +14584,9 @@ bool FloatExprEvaluator::VisitCallExpr(const CallExpr *E) {
     int FrexpExp;
     llvm::RoundingMode RM = getActiveRoundingMode(Info, E);
     Result = llvm::frexp(Result, FrexpExp, RM);
-    if (!Result.isZero() && !Result.isNaN() && !Result.isInfinity())
-      assert(llvm::APFloat::isInRange(Result) &&
-            "The value is not in the expected range for frexp.");
+    assert((Result.isZero() || Result.isNaN() || Result.isInfinity() ||
+            isInFrexpResultRange(Result)) &&
+           "The value is not in the expected range for frexp.");
     StoreExponent(Pointer, FrexpExp);
     return true;
   }

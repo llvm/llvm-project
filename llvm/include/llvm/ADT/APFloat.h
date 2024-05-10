@@ -951,19 +951,6 @@ public:
 
   bool needsCleanup() const { APFLOAT_DISPATCH_ON_SEMANTICS(needsCleanup()); }
 
-  //  Checks that the value x is in the range (-1;-0.5], [0.5; 1)
-  static bool isInRange(const llvm::APFloat &x) {
-    llvm::APFloat minusOne(x.getSemantics(), "-1.0");
-    llvm::APFloat minusHalf(x.getSemantics(), "-0.5");
-    llvm::APFloat half(x.getSemantics(), "0.5");
-    llvm::APFloat one(x.getSemantics(), "1.0");
-
-    return ((x.compare(minusOne) == llvm::APFloat::cmpGreaterThan &&
-             x.compare(minusHalf) != llvm::APFloat::cmpGreaterThan) ||
-            (x.compare(half) != llvm::APFloat::cmpLessThan &&
-             x.compare(one) == llvm::APFloat::cmpLessThan));
-  }
-
   /// Factory for Positive and Negative Zero.
   ///
   /// \param Negative True iff the number should be negative.
