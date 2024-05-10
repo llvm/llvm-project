@@ -232,3 +232,13 @@ llvm::MachO::parseAliasList(std::unique_ptr<llvm::MemoryBuffer> &Buffer) {
 
   return Aliases;
 }
+
+PathSeq llvm::MachO::getPathsForPlatform(const PathToPlatformSeq &Paths,
+                                         PlatformType Platform) {
+  PathSeq Result;
+  for (const auto &[Path, CurrP] : Paths) {
+    if (!CurrP.has_value() || CurrP.value() == Platform)
+      Result.push_back(Path);
+  }
+  return Result;
+}
