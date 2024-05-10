@@ -1470,10 +1470,10 @@ bool LinkerScript::spillSections() {
           continue;
         PotentialSpillList &list = it->second;
         PotentialSpillSection *spill = list.head;
-        if (!spill->next)
-          potentialSpillLists.erase(isec);
-        else
+        if (spill->next)
           list.head = spill->next;
+        else
+          potentialSpillLists.erase(isec);
 
         // Replace the next spill location with the spilled section and adjust
         // its properties to match the new location. Note that the alignment of

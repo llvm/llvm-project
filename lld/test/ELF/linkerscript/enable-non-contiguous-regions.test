@@ -15,7 +15,7 @@
 
 ## A spill off the end still fails the link.
 
-# RUN: not ld.lld -T spill-fail.ld spill.o -o spill-fail --enable-non-contiguous-regions 2>&1 |\
+# RUN: not ld.lld -T spill-fail.ld spill.o --enable-non-contiguous-regions 2>&1 |\
 # RUN:   FileCheck %s --check-prefix=SPILL-FAIL --implicit-check-not=error:
 
 # SPILL-FAIL: error: section '.last_chance' will not fit in region 'b': overflowed by 2 bytes
@@ -51,7 +51,7 @@
 
 ## An additional match in /DISCARD/ has no effect.
 
-# RUN: not ld.lld -T no-spill-into-discard.ld spill.o -o no-spill-into-discard --enable-non-contiguous-regions 2>&1 |\
+# RUN: not ld.lld -T no-spill-into-discard.ld spill.o --enable-non-contiguous-regions 2>&1 |\
 # RUN:   FileCheck %s --check-prefix=NO-SPILL-INTO-DISCARD --implicit-check-not=error:
 
 # NO-SPILL-INTO-DISCARD: error: section '.osec' will not fit in region 'a': overflowed by 1 bytes
@@ -78,14 +78,14 @@
 
 ## An error is reported for INSERT.
 
-# RUN: not ld.lld -T insert.ld spill.o -o insert --enable-non-contiguous-regions 2>&1 |\
+# RUN: not ld.lld -T insert.ld spill.o --enable-non-contiguous-regions 2>&1 |\
 # RUN:   FileCheck %s --check-prefix=INSERT
 
 # INSERT: error: INSERT cannot be used with --enable-non-contiguous-regions
 
 ## An error is reported for OVERWRITE_SECTIONS.
 
-# RUN: not ld.lld -T overwrite-sections.ld spill.o -o overwrite-sections --enable-non-contiguous-regions 2>&1 |\
+# RUN: not ld.lld -T overwrite-sections.ld spill.o --enable-non-contiguous-regions 2>&1 |\
 # RUN:   FileCheck %s --check-prefix=OVERWRITE_SECTIONS
 
 # OVERWRITE_SECTIONS: error: OVERWRITE_SECTIONS cannot be used with --enable-non-contiguous-regions
@@ -96,7 +96,7 @@
 # RUN: ld.lld -T link-order.ld link-order.o -o link-order --enable-non-contiguous-regions
 # RUN: llvm-readobj -x .order link-order | FileCheck %s --check-prefix=LINK-ORDER
 
-# LINK-ORDER: 0201
+# LINK-ORDER: 020301
 
 #--- spill.s
 .section .one_byte_section,"a",@progbits
@@ -237,23 +237,29 @@ OVERWRITE_SECTIONS {
 .section .b,"a",@progbits
 .fill 1
 
+.section .c,"a",@progbits
+.fill 1
+
 .section .link_order.a,"ao",@progbits,.a
 .byte 1
 
 .section .link_order.b,"ao",@progbits,.b
 .byte 2
 
+.section .link_order.c,"ao",@progbits,.c
+.byte 3
+
 #--- link-order.ld
 MEMORY {
-  order : ORIGIN = 0, LENGTH = 2
-  potential_a : ORIGIN = 2, LENGTH = 0
-  b : ORIGIN = 2, LENGTH = 1
-  actual_a : ORIGIN = 3, LENGTH = 1
+  order : ORIGIN = 0, LENGTH = 3
+  potential_a : ORIGIN = 3, LENGTH = 0
+  bc : ORIGIN = 3, LENGTH = 2
+  actual_a : ORIGIN = 5, LENGTH = 1
 }
 
 SECTIONS {
   .order :  { *(.link_order.*) } > order
   .potential_a : { *(.a) } >potential_a
-  .b : { *(.b) } >b
+  .bc : { *(.b) *(.c) } >bc
   .actual_a : { *(.a) } >actual_a
 }
