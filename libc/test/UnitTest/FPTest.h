@@ -90,23 +90,23 @@ struct FPTest : public ErrnoSafeTest, public FEnvSafeTest {
 // Ensures that fp excepts and errno are cleared before executing
 // `expr_or_statement` Checking (expected_fexn = 0) ensures that no exceptions
 // were set
-#define EXPECT_ERRNO_FP_EXCEPT(expected_errno, expected_fexn,                  \
-                               expr_or_statement)                              \
-  EXPECT_FP_EXCEPT((expected_fexn), EXPECT_ERRNO((expected_errno), {           \
-                     expr_or_statement;                                        \
-                     if (!(math_errhandling & MATH_ERRNO))                     \
-                       break;                                                  \
-                   }))
+#define EXPECT_ERRNO_FP_EXCEPTION(expected_errno, expected_fexn,               \
+                                  expr_or_statement)                           \
+  EXPECT_FP_EXCEPTION((expected_fexn), EXPECT_ERRNO((expected_errno), {        \
+                        expr_or_statement;                                     \
+                        if (!(math_errhandling & MATH_ERRNO))                  \
+                          break;                                               \
+                      }))
 
-#define EXPECT_NO_ERRNO_FP_EXCEPT(expr_or_statement)                           \
-  EXPECT_ERRNO_FP_EXCEPT(0, 0, expr_or_statement)
+#define EXPECT_NO_ERRNO_FP_EXCEPTION(expr_or_statement)                        \
+  EXPECT_ERRNO_FP_EXCEPTION(0, 0, expr_or_statement)
 
-#define EXPECT_ERRNO_FP_EXCEPT_ALL_ROUNDING(expected_errno, expected_fexn,     \
-                                            expr_or_statement)                 \
-  FOR_ALL_ROUNDING_(EXPECT_ERRNO_FP_EXCEPT((expected_errno), (expected_fexn),  \
-                                           expr_or_statement))
+#define EXPECT_ERRNO_FP_EXCEPTION_ALL_ROUNDING(expected_errno, expected_fexn,  \
+                                               expr_or_statement)              \
+  FOR_ALL_ROUNDING_(EXPECT_ERRNO_FP_EXCEPTION(                                 \
+      (expected_errno), (expected_fexn), expr_or_statement))
 
-#define EXPECT_NO_ERRNO_FP_EXCEPT_ALL_ROUNDING(expr_or_statement)              \
-  FOR_ALL_ROUNDING_(EXPECT_NO_ERRNO_FP_EXCEPT(expr_or_statement))
+#define EXPECT_NO_ERRNO_FP_EXCEPTION_ALL_ROUNDING(expr_or_statement)           \
+  FOR_ALL_ROUNDING_(EXPECT_NO_ERRNO_FP_EXCEPTION(expr_or_statement))
 
 #endif // LLVM_LIBC_TEST_UNITTEST_FPTEST_H

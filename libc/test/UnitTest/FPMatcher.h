@@ -105,7 +105,7 @@ template <TestCond C, typename T> FPMatcher<T, C> getMatcher(T expectedValue) {
     }                                                                          \
   } while (0)
 
-#define EXPECT_FP_EXCEPTION(expected)                                          \
+#define EXPECT_FP_EXCEPTION_HAPPENED(expected)                                 \
   do {                                                                         \
     if (math_errhandling & MATH_ERREXCEPT) {                                   \
       EXPECT_EQ(LIBC_NAMESPACE::fputil::test_except(FE_ALL_EXCEPT) &           \
@@ -114,7 +114,7 @@ template <TestCond C, typename T> FPMatcher<T, C> getMatcher(T expectedValue) {
     }                                                                          \
   } while (0)
 
-#define ASSERT_FP_EXCEPTION(expected)                                          \
+#define ASSERT_FP_EXCEPTION_HAPPENED(expected)                                 \
   do {                                                                         \
     if (math_errhandling & MATH_ERREXCEPT) {                                   \
       ASSERT_EQ(LIBC_NAMESPACE::fputil::test_except(FE_ALL_EXCEPT) &           \
@@ -127,14 +127,14 @@ template <TestCond C, typename T> FPMatcher<T, C> getMatcher(T expectedValue) {
   do {                                                                         \
     LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);                       \
     EXPECT_FP_EQ(expected_val, actual_val);                                    \
-    EXPECT_FP_EXCEPTION(expected_except);                                      \
+    EXPECT_FP_EXCEPTION_HAPPENED(expected_except);                             \
   } while (0)
 
 #define EXPECT_FP_IS_NAN_WITH_EXCEPTION(actual_val, expected_except)           \
   do {                                                                         \
     LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);                       \
     EXPECT_FP_IS_NAN(actual_val);                                              \
-    EXPECT_FP_EXCEPTION(expected_except);                                      \
+    EXPECT_FP_EXCEPTION_HAPPENED(expected_except);                             \
   } while (0)
 
 #define FOR_ROUNDING_(rounding_mode, expr_or_statement)                        \

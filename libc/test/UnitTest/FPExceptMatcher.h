@@ -118,10 +118,10 @@ public:
 
 // Matches on the FP exception flag `expected` being *equal* to FP exception
 // flag `actual`
-#define EXPECT_FP_EXCEPT_EQUAL(expected, actual)                               \
+#define EXPECT_FP_EXCEPTION_EQ(expected, actual)                               \
   EXPECT_THAT((actual), LIBC_NAMESPACE::testing::FPExceptMatcher((expected)))
 
-#define ASSERT_FP_EXCEPT_EQUAL(expected, actual)                               \
+#define ASSERT_FP_EXCEPT_EQ(expected, actual)                                  \
   ASSERT_THAT((actual), LIBC_NAMESPACE::testing::FPExceptMatcher((expected)))
 
 #define ASSERT_RAISES_FP_EXCEPT(func)                                          \
@@ -141,14 +141,14 @@ public:
 // ```
 // Ensures that fp excepts are cleared before executing `expr_or_statement`
 // Checking (expected = 0) should ensure that no exceptions were set
-#define EXPECT_FP_EXCEPT(expected, expr_or_statement)                          \
+#define EXPECT_FP_EXCEPTION(expected, expr_or_statement)                       \
   do {                                                                         \
     LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);                       \
     expr_or_statement;                                                         \
     int expected_ = (expected);                                                \
     int mask_ = expected_ ? expected_ : FE_ALL_EXCEPT;                         \
     if (math_errhandling & MATH_ERREXCEPT) {                                   \
-      EXPECT_FP_EXCEPT_EQUAL(expected_,                                        \
+      EXPECT_FP_EXCEPTION_EQ(expected_,                                        \
                              LIBC_NAMESPACE::fputil::test_except(mask_));      \
     }                                                                          \
   } while (0)

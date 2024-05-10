@@ -24,17 +24,17 @@ using LlvmLibcCosfTest = LIBC_NAMESPACE::testing::FPTest<float>;
 namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
 TEST_F(LlvmLibcCosfTest, SpecialNumbers) {
-  EXPECT_NO_ERRNO_FP_EXCEPT(EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::cosf(aNaN)));
+  EXPECT_NO_ERRNO_FP_EXCEPTION(EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::cosf(aNaN)));
 
-  EXPECT_NO_ERRNO_FP_EXCEPT(EXPECT_FP_EQ(1.0f, LIBC_NAMESPACE::cosf(0.0f)));
+  EXPECT_NO_ERRNO_FP_EXCEPTION(EXPECT_FP_EQ(1.0f, LIBC_NAMESPACE::cosf(0.0f)));
 
-  EXPECT_NO_ERRNO_FP_EXCEPT(EXPECT_FP_EQ(1.0f, LIBC_NAMESPACE::cosf(-0.0f)));
+  EXPECT_NO_ERRNO_FP_EXCEPTION(EXPECT_FP_EQ(1.0f, LIBC_NAMESPACE::cosf(-0.0f)));
 
-  EXPECT_ERRNO_FP_EXCEPT(EDOM, FE_INVALID,
-                         EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::cosf(inf)));
+  EXPECT_ERRNO_FP_EXCEPTION(EDOM, FE_INVALID,
+                            EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::cosf(inf)));
 
-  EXPECT_ERRNO_FP_EXCEPT(EDOM, FE_INVALID,
-                         EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::cosf(neg_inf)));
+  EXPECT_ERRNO_FP_EXCEPTION(EDOM, FE_INVALID,
+                            EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::cosf(neg_inf)));
 }
 
 TEST_F(LlvmLibcCosfTest, InFloatRange) {

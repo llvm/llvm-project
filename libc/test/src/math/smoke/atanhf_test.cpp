@@ -28,19 +28,19 @@ TEST_F(LlvmLibcAtanhfTest, SpecialNumbers) {
   EXPECT_FP_EQ_ALL_ROUNDING(aNaN, LIBC_NAMESPACE::atanhf(aNaN));
   // TODO: Uncomment these checks later, RoundingMode affects running
   // tests in this way https://github.com/llvm/llvm-project/issues/90653.
-  // EXPECT_FP_EXCEPTION(0);
+  // EXPECT_FP_EXCEPTION_HAPPENED(0);
   EXPECT_MATH_ERRNO(0);
 
   LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);
   EXPECT_FP_EQ_ALL_ROUNDING(0.0f, LIBC_NAMESPACE::atanhf(0.0f));
   // See above TODO
-  // EXPECT_FP_EXCEPTION(0);
+  // EXPECT_FP_EXCEPTION_HAPPENED(0);
   EXPECT_MATH_ERRNO(0);
 
   LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);
   EXPECT_FP_EQ_ALL_ROUNDING(-0.0f, LIBC_NAMESPACE::atanhf(-0.0f));
   // See above TODO
-  // EXPECT_FP_EXCEPTION(0);
+  // EXPECT_FP_EXCEPTION_HAPPENED(0);
   EXPECT_MATH_ERRNO(0);
 
   EXPECT_FP_EQ_WITH_EXCEPTION(inf, LIBC_NAMESPACE::atanhf(1.0f), FE_DIVBYZERO);

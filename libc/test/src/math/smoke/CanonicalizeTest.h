@@ -19,7 +19,7 @@
 
 #define TEST_SPECIAL(x, y, expected, expected_exception)                       \
   EXPECT_EQ(expected, f(&x, &y));                                              \
-  EXPECT_FP_EXCEPTION(expected_exception);                                     \
+  EXPECT_FP_EXCEPTION_HAPPENED(expected_exception);                            \
   LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT)
 
 #define TEST_REGULAR(x, y, expected) TEST_SPECIAL(x, y, expected, 0)

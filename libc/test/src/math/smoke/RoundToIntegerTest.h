@@ -50,7 +50,7 @@ private:
     // all math functions using RoundToInteger test:
     // https://github.com/llvm/llvm-project/pull/88816
     if (expectError) {
-      ASSERT_FP_EXCEPTION(FE_INVALID);
+      ASSERT_FP_EXCEPTION_HAPPENED(FE_INVALID);
       ASSERT_MATH_ERRNO(EDOM);
     }
   }

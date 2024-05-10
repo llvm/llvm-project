@@ -22,7 +22,7 @@
 // after new matchers/test fixtures are added
 #define ASSERT_FP_EQ_WITH_EXCEPTION(result, expected, expected_exception)      \
   ASSERT_FP_EQ(result, expected);                                              \
-  ASSERT_FP_EXCEPTION(expected_exception);                                     \
+  ASSERT_FP_EXCEPTION_HAPPENED(expected_exception);                            \
   LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT)
 
 #define ASSERT_FP_EQ_WITH_UNDERFLOW(result, expected)                          \
