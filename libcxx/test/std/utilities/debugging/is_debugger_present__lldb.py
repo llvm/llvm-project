@@ -74,9 +74,7 @@ def __lldb_init_module(debugger, internal_dict):
 
     target = debugger.GetSelectedTarget()
     test_bp = target.BreakpointCreateByName("StopForDebugger")
-    test_bp.SetScriptCallbackFunction(
-        "is_debugger_present__lldb.breakpoint_handler"
-    )
+    test_bp.SetScriptCallbackFunction("is_debugger_present__lldb.breakpoint_handler")
     test_bp.enabled = True
 
     debugger.HandleCommand("run")
