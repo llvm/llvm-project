@@ -91,8 +91,7 @@ constexpr void test(const CharT* x, const CharT* y, const CharT* expected) {
   }
   // string_view + const string&
   {
-    std::basic_string<CharT, TraitsT, AllocT> st_{x, allocator};
-    std::basic_string_view<CharT, TraitsT> sv{st_};
+    std::basic_string_view<CharT, TraitsT> sv{x};
     const std::basic_string<CharT, TraitsT, AllocT> st{y, allocator};
 
     std::same_as<std::basic_string<CharT, TraitsT, AllocT>> decltype(auto) result = sv + st;
