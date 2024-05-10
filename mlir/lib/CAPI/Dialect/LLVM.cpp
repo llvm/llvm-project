@@ -172,11 +172,15 @@ MlirAttribute
 mlirLLVMDIDerivedTypeAttrGet(MlirContext ctx, unsigned int tag,
                              MlirAttribute name, MlirAttribute baseType,
                              uint64_t sizeInBits, uint32_t alignInBits,
-                             uint64_t offsetInBits, MlirAttribute extraData) {
+                             uint64_t offsetInBits, unsigned dwarfAddressSpace,
+                             MlirAttribute extraData) {
+  std::optional<unsigned> addressSpace = std::nullopt;
+  if (dwarfAddressSpace != 0)
+    addressSpace = dwarfAddressSpace;
   return wrap(DIDerivedTypeAttr::get(
       unwrap(ctx), tag, cast<StringAttr>(unwrap(name)),
       cast<DITypeAttr>(unwrap(baseType)), sizeInBits, alignInBits, offsetInBits,
-      cast<DINodeAttr>(unwrap(extraData))));
+      addressSpace, cast<DINodeAttr>(unwrap(extraData))));
 }
 
 MlirAttribute
