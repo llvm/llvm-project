@@ -286,12 +286,24 @@ multiclass sme_outer_product_fp64<bit S, string mnemonic, SDPatternOperator op> 
   def : SME_ZA_Tile_TwoPred_TwoVec_Pat<NAME, op, timm32_0_7, nxv2i1, nxv2f64>;
 }
 
-multiclass sme2p1_fmop_tile_fp16<string mnemonic, bit bf, bit s, bits<2> op, ZPRRegOp zpr_ty>{
-  def NAME : sme_fp_outer_product_inst<s, {0,bf}, op, TileOp16, zpr_ty, mnemonic> {
+multiclass sme2p1_fmop_tile_f8f16<string mnemonic, bit bf, bit s, bits<2> op> {
+  def NAME : sme_fp_outer_product_inst<s, {0,bf}, op, TileOp16, ZPR8, mnemonic> {
     bits<1> ZAda;
     let Inst{2-1} = 0b00;
     let Inst{0}   = ZAda;
   }
+}
+
+multiclass sme2p1_fmop_tile_fp16<string mnemonic, bit bf, bit s, ValueType vt, SDPatternOperator intrinsic = null_frag> {
+  def NAME : sme_fp_outer_product_inst<s, {0,bf}, 0b11, TileOp16, ZPR16, mnemonic>, SMEPseudo2Instr<NAME, 1> {
+    bits<1> ZAda;
+    let Inst{2-1} = 0b00;
+    let Inst{0}   = ZAda;
+  }
+
+  def NAME # _PSEUDO : sme_outer_product_pseudo<ZPR16, SMEMatrixTileH>, SMEPseudo2Instr<NAME, 0>;
+
+  def : SME_ZA_Tile_TwoPred_TwoVec_Pat<NAME, intrinsic, timm32_0_1, nxv8i1, vt>;
 }
 
 class sme_int_outer_product_inst<bits<3> opc, bit sz, bit sme2,
