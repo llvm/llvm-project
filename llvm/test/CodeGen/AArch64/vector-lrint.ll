@@ -14,14 +14,14 @@
 ; CHECK-i32-GI-NEXT:  warning: Instruction selection used fallback path for lrint_v2f16
 ; CHECK-i32-GI-NEXT:  warning: Instruction selection used fallback path for lrint_v4f16
 ; CHECK-i32-GI-NEXT:  warning: Instruction selection used fallback path for lrint_v8f16
-; CHECK-i32-GI-NEXT:  warning: Instruction selection used fallback path for lrint_v16i64_v16f16
-; CHECK-i32-GI-NEXT:  warning: Instruction selection used fallback path for lrint_v32i64_v32f16
+; CHECK-i32-GI-NEXT:  warning: Instruction selection used fallback path for lrint_v16f16
+; CHECK-i32-GI-NEXT:  warning: Instruction selection used fallback path for lrint_v32f16
 ; CHECK-i32-GI-NEXT:  warning: Instruction selection used fallback path for lrint_v1f32
 ; CHECK-i32-GI-NEXT:  warning: Instruction selection used fallback path for lrint_v2f32
 ; CHECK-i32-GI-NEXT:  warning: Instruction selection used fallback path for lrint_v4f32
 ; CHECK-i32-GI-NEXT:  warning: Instruction selection used fallback path for lrint_v8f32
-; CHECK-i32-GI-NEXT:  warning: Instruction selection used fallback path for lrint_v16i64_v16f32
-; CHECK-i32-GI-NEXT:  warning: Instruction selection used fallback path for lrint_v32i64_v32f32
+; CHECK-i32-GI-NEXT:  warning: Instruction selection used fallback path for lrint_v16f32
+; CHECK-i32-GI-NEXT:  warning: Instruction selection used fallback path for lrint_v32f32
 ; CHECK-i32-GI-NEXT:  warning: Instruction selection used fallback path for lrint_v1f64
 ; CHECK-i32-GI-NEXT:  warning: Instruction selection used fallback path for lrint_v2f64
 ; CHECK-i32-GI-NEXT:  warning: Instruction selection used fallback path for lrint_v4f64
@@ -32,13 +32,13 @@
 ; CHECK-i64-GI:       warning: Instruction selection used fallback path for lrint_v2f16
 ; CHECK-i64-GI-NEXT:  warning: Instruction selection used fallback path for lrint_v4f16
 ; CHECK-i64-GI-NEXT:  warning: Instruction selection used fallback path for lrint_v8f16
-; CHECK-i64-GI-NEXT:  warning: Instruction selection used fallback path for lrint_v16i64_v16f16
-; CHECK-i64-GI-NEXT:  warning: Instruction selection used fallback path for lrint_v32i64_v32f16
+; CHECK-i64-GI-NEXT:  warning: Instruction selection used fallback path for lrint_v16f16
+; CHECK-i64-GI-NEXT:  warning: Instruction selection used fallback path for lrint_v32f16
 ; CHECK-i64-GI-NEXT:  warning: Instruction selection used fallback path for lrint_v2f32
 ; CHECK-i64-GI-NEXT:  warning: Instruction selection used fallback path for lrint_v4f32
 ; CHECK-i64-GI-NEXT:  warning: Instruction selection used fallback path for lrint_v8f32
-; CHECK-i64-GI-NEXT:  warning: Instruction selection used fallback path for lrint_v16i64_v16f32
-; CHECK-i64-GI-NEXT:  warning: Instruction selection used fallback path for lrint_v32i64_v32f32
+; CHECK-i64-GI-NEXT:  warning: Instruction selection used fallback path for lrint_v16f32
+; CHECK-i64-GI-NEXT:  warning: Instruction selection used fallback path for lrint_v32f32
 ; CHECK-i64-GI-NEXT:  warning: Instruction selection used fallback path for lrint_v2f64
 ; CHECK-i64-GI-NEXT:  warning: Instruction selection used fallback path for lrint_v4f64
 ; CHECK-i64-GI-NEXT:  warning: Instruction selection used fallback path for lrint_v8f64
@@ -244,8 +244,8 @@ define <8 x iXLen> @lrint_v8f16(<8 x half> %x) {
 }
 declare <8 x iXLen> @llvm.lrint.v8iXLen.v8f16(<8 x half>)
 
-define <16 x iXLen> @lrint_v16i64_v16f16(<16 x half> %x) {
-; CHECK-i32-LABEL: lrint_v16i64_v16f16:
+define <16 x iXLen> @lrint_v16f16(<16 x half> %x) {
+; CHECK-i32-LABEL: lrint_v16f16:
 ; CHECK-i32:       // %bb.0:
 ; CHECK-i32-NEXT:    ext v2.16b, v0.16b, v0.16b, #8
 ; CHECK-i32-NEXT:    ext v3.16b, v1.16b, v1.16b, #8
@@ -327,7 +327,7 @@ define <16 x iXLen> @lrint_v16i64_v16f16(<16 x half> %x) {
 ; CHECK-i32-NEXT:    mov v2.s[3], w10
 ; CHECK-i32-NEXT:    ret
 ;
-; CHECK-i64-LABEL: lrint_v16i64_v16f16:
+; CHECK-i64-LABEL: lrint_v16f16:
 ; CHECK-i64:       // %bb.0:
 ; CHECK-i64-NEXT:    ext v2.16b, v0.16b, v0.16b, #8
 ; CHECK-i64-NEXT:    ext v3.16b, v1.16b, v1.16b, #8
@@ -413,8 +413,8 @@ define <16 x iXLen> @lrint_v16i64_v16f16(<16 x half> %x) {
 }
 declare <16 x iXLen> @llvm.lrint.v16iXLen.v16f16(<16 x half>)
 
-define <32 x iXLen> @lrint_v32i64_v32f16(<32 x half> %x) {
-; CHECK-i32-LABEL: lrint_v32i64_v32f16:
+define <32 x iXLen> @lrint_v32f16(<32 x half> %x) {
+; CHECK-i32-LABEL: lrint_v32f16:
 ; CHECK-i32:       // %bb.0:
 ; CHECK-i32-NEXT:    ext v5.16b, v0.16b, v0.16b, #8
 ; CHECK-i32-NEXT:    ext v4.16b, v1.16b, v1.16b, #8
@@ -576,7 +576,7 @@ define <32 x iXLen> @lrint_v32i64_v32f16(<32 x half> %x) {
 ; CHECK-i32-NEXT:    mov v3.16b, v17.16b
 ; CHECK-i32-NEXT:    ret
 ;
-; CHECK-i64-LABEL: lrint_v32i64_v32f16:
+; CHECK-i64-LABEL: lrint_v32f16:
 ; CHECK-i64:       // %bb.0:
 ; CHECK-i64-NEXT:    ext v4.16b, v1.16b, v1.16b, #8
 ; CHECK-i64-NEXT:    ext v5.16b, v2.16b, v2.16b, #8
@@ -866,8 +866,8 @@ define <8 x iXLen> @lrint_v8f32(<8 x float> %x) {
 }
 declare <8 x iXLen> @llvm.lrint.v8iXLen.v8f32(<8 x float>)
 
-define <16 x iXLen> @lrint_v16i64_v16f32(<16 x float> %x) {
-; CHECK-i32-LABEL: lrint_v16i64_v16f32:
+define <16 x iXLen> @lrint_v16f32(<16 x float> %x) {
+; CHECK-i32-LABEL: lrint_v16f32:
 ; CHECK-i32:       // %bb.0:
 ; CHECK-i32-NEXT:    frintx v0.4s, v0.4s
 ; CHECK-i32-NEXT:    frintx v1.4s, v1.4s
@@ -879,7 +879,7 @@ define <16 x iXLen> @lrint_v16i64_v16f32(<16 x float> %x) {
 ; CHECK-i32-NEXT:    fcvtzs v3.4s, v3.4s
 ; CHECK-i32-NEXT:    ret
 ;
-; CHECK-i64-LABEL: lrint_v16i64_v16f32:
+; CHECK-i64-LABEL: lrint_v16f32:
 ; CHECK-i64:       // %bb.0:
 ; CHECK-i64-NEXT:    frintx v4.2s, v0.2s
 ; CHECK-i64-NEXT:    frintx v5.2s, v1.2s
@@ -939,8 +939,8 @@ define <16 x iXLen> @lrint_v16i64_v16f32(<16 x float> %x) {
 }
 declare <16 x iXLen> @llvm.lrint.v16iXLen.v16f32(<16 x float>)
 
-define <32 x iXLen> @lrint_v32i64_v32f32(<32 x float> %x) {
-; CHECK-i32-LABEL: lrint_v32i64_v32f32:
+define <32 x iXLen> @lrint_v32f32(<32 x float> %x) {
+; CHECK-i32-LABEL: lrint_v32f32:
 ; CHECK-i32:       // %bb.0:
 ; CHECK-i32-NEXT:    frintx v0.4s, v0.4s
 ; CHECK-i32-NEXT:    frintx v1.4s, v1.4s
@@ -960,7 +960,7 @@ define <32 x iXLen> @lrint_v32i64_v32f32(<32 x float> %x) {
 ; CHECK-i32-NEXT:    fcvtzs v7.4s, v7.4s
 ; CHECK-i32-NEXT:    ret
 ;
-; CHECK-i64-LABEL: lrint_v32i64_v32f32:
+; CHECK-i64-LABEL: lrint_v32f32:
 ; CHECK-i64:       // %bb.0:
 ; CHECK-i64-NEXT:    ext v17.16b, v3.16b, v3.16b, #8
 ; CHECK-i64-NEXT:    ext v18.16b, v4.16b, v4.16b, #8
