@@ -1,7 +1,7 @@
-struct A {
+public struct A {
   var field = 4
 
-  func foo() -> Int {
+  public func foo() -> Int {
     return field * field
   }
 }
