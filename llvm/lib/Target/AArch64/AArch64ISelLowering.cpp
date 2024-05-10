@@ -1856,11 +1856,8 @@ bool AArch64TargetLowering::shouldExpandCttzElements(EVT VT) const {
     return true;
 
   // We can only use the BRKB + CNTP sequence with legal predicate types.
-  if (VT != MVT::nxv16i1 && VT != MVT::nxv8i1 && VT != MVT::nxv4i1 &&
-      VT != MVT::nxv2i1)
-    return true;
-
-  return false;
+  return VT != MVT::nxv16i1 && VT != MVT::nxv8i1 && VT != MVT::nxv4i1 &&
+         VT != MVT::nxv2i1;
 }
 
 void AArch64TargetLowering::addTypeForFixedLengthSVE(MVT VT) {
