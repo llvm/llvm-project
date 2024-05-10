@@ -31363,10 +31363,13 @@ static SDValue LowerBITREVERSE(SDValue Op, const X86Subtarget &Subtarget,
     assert(
         (VT == MVT::i32 || VT == MVT::i64 || VT == MVT::i16 || VT == MVT::i8) &&
         "Only tested for i8/i16/i32/i64");
-    MVT VecVT = MVT::getVectorVT(VT, 128 / VT.getSizeInBits());
+    unsigned int VecLen = Subtarget.hasAVX2() ? 256 : 128;
+    MVT CharVecVT = Subtarget.hasAVX2() ? MVT::v32i8 : MVT::v16i8;
+
+    MVT VecVT = MVT::getVectorVT(VT, VecLen / VT.getSizeInBits());
     SDValue Res = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, VecVT, In);
-    Res = DAG.getNode(ISD::BITREVERSE, DL, MVT::v16i8,
-                      DAG.getBitcast(MVT::v16i8, Res));
+    Res = DAG.getNode(ISD::BITREVERSE, DL, CharVecVT,
+                      DAG.getBitcast(CharVecVT, Res));
     Res = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, VT,
                       DAG.getBitcast(VecVT, Res), DAG.getIntPtrConstant(0, DL));
     return (VT == MVT::i8) ? Res : DAG.getNode(ISD::BSWAP, DL, VT, Res);
