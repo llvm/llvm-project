@@ -225,7 +225,8 @@ protected:
     return this->emitFinishInitPop(I);
   }
 
-  bool visitInitList(ArrayRef<const Expr *> Inits, const Expr *E);
+  bool visitInitList(ArrayRef<const Expr *> Inits, const Expr *ArrayFiller,
+                     const Expr *E);
   bool visitArrayElemInit(unsigned ElemIndex, const Expr *Init);
 
   /// Creates a local primitive value.

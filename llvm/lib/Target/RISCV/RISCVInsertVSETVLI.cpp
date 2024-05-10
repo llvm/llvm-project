@@ -45,10 +45,6 @@ static cl::opt<bool> DisableInsertVSETVLPHIOpt(
     "riscv-disable-insert-vsetvl-phi-opt", cl::init(false), cl::Hidden,
     cl::desc("Disable looking through phis when inserting vsetvlis."));
 
-static cl::opt<bool> UseStrictAsserts(
-    "riscv-insert-vsetvl-strict-asserts", cl::init(true), cl::Hidden,
-    cl::desc("Enable strict assertion checking for the dataflow algorithm"));
-
 namespace {
 
 static unsigned getVLOpNum(const MachineInstr &MI) {
@@ -1432,32 +1428,14 @@ void RISCVInsertVSETVLI::emitVSETVLIs(MachineBasicBlock &MBB) {
     transferAfter(CurInfo, MI);
   }
 
-  // If we reach the end of the block and our current info doesn't match the
-  // expected info, insert a vsetvli to correct.
-  if (!UseStrictAsserts) {
-    const VSETVLIInfo &ExitInfo = BlockInfo[MBB.getNumber()].Exit;
-    if (CurInfo.isValid() && ExitInfo.isValid() && !ExitInfo.isUnknown() &&
-        CurInfo != ExitInfo) {
-      // Note there's an implicit assumption here that terminators never use
-      // or modify VL or VTYPE.  Also, fallthrough will return end().
-      auto InsertPt = MBB.getFirstInstrTerminator();
-      insertVSETVLI(MBB, InsertPt, MBB.findDebugLoc(InsertPt), ExitInfo,
-                    CurInfo);
-      CurInfo = ExitInfo;
-    }
+  const auto &Info = BlockInfo[MBB.getNumber()];
+  if (CurInfo != Info.Exit) {
+    LLVM_DEBUG(dbgs() << "in block " << printMBBReference(MBB) << "\n");
+    LLVM_DEBUG(dbgs() << "  begin        state: " << Info.Pred << "\n");
+    LLVM_DEBUG(dbgs() << "  expected end state: " << Info.Exit << "\n");
+    LLVM_DEBUG(dbgs() << "  actual   end state: " << CurInfo << "\n");
   }
-
-  if (UseStrictAsserts && CurInfo.isValid()) {
-    const auto &Info = BlockInfo[MBB.getNumber()];
-    if (CurInfo != Info.Exit) {
-      LLVM_DEBUG(dbgs() << "in block " << printMBBReference(MBB) << "\n");
-      LLVM_DEBUG(dbgs() << "  begin        state: " << Info.Pred << "\n");
-      LLVM_DEBUG(dbgs() << "  expected end state: " << Info.Exit << "\n");
-      LLVM_DEBUG(dbgs() << "  actual   end state: " << CurInfo << "\n");
-    }
-    assert(CurInfo == Info.Exit &&
-           "InsertVSETVLI dataflow invariant violated");
-  }
+  assert(CurInfo == Info.Exit && "InsertVSETVLI dataflow invariant violated");
 }
 
 /// Perform simple partial redundancy elimination of the VSETVLI instructions

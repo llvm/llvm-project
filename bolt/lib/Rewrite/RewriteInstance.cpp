@@ -840,6 +840,7 @@ void RewriteInstance::discoverFileObjects() {
       continue;
 
     if (cantFail(Symbol.getType()) == SymbolRef::ST_File) {
+      FileSymbols.emplace_back(Symbol);
       StringRef Name =
           cantFail(std::move(NameOrError), "cannot get symbol name for file");
       // Ignore Clang LTO artificial FILE symbol as it is not always generated,
@@ -1058,6 +1059,11 @@ void RewriteInstance::discoverFileObjects() {
       LLVM_DEBUG(if (opts::Verbosity > 1) {
         dbgs() << "BOLT-INFO: absolute sym " << UniqueName << "\n";
       });
+      registerName(SymbolSize);
+      continue;
+    }
+
+    if (SymName == getBOLTReservedStart() || SymName == getBOLTReservedEnd()) {
       registerName(SymbolSize);
       continue;
     }
@@ -1340,6 +1346,7 @@ void RewriteInstance::discoverFileObjects() {
   }
 
   registerFragments();
+  FileSymbols.clear();
 }
 
 Error RewriteInstance::discoverRtFiniAddress() {
@@ -1417,49 +1424,133 @@ void RewriteInstance::registerFragments() {
   if (!BC->HasSplitFunctions)
     return;
 
+  // Process fragments with ambiguous parents separately as they are typically a
+  // vanishing minority of cases and require expensive symbol table lookups.
+  std::vector<std::pair<StringRef, BinaryFunction *>> AmbiguousFragments;
   for (auto &BFI : BC->getBinaryFunctions()) {
     BinaryFunction &Function = BFI.second;
     if (!Function.isFragment())
       continue;
-    unsigned ParentsFound = 0;
     for (StringRef Name : Function.getNames()) {
-      StringRef BaseName, Suffix;
-      std::tie(BaseName, Suffix) = Name.split('/');
+      StringRef BaseName = NR.restore(Name);
+      const bool IsGlobal = BaseName == Name;
       const size_t ColdSuffixPos = BaseName.find(".cold");
       if (ColdSuffixPos == StringRef::npos)
         continue;
-      // For cold function with local (foo.cold/1) symbol, prefer a parent with
-      // local symbol as well (foo/1) over global symbol (foo).
-      std::string ParentName = BaseName.substr(0, ColdSuffixPos).str();
+      StringRef ParentName = BaseName.substr(0, ColdSuffixPos);
       const BinaryData *BD = BC->getBinaryDataByName(ParentName);
-      if (Suffix != "") {
-        ParentName.append(Twine("/", Suffix).str());
-        const BinaryData *BDLocal = BC->getBinaryDataByName(ParentName);
-        if (BDLocal || !BD)
-          BD = BDLocal;
-      }
-      if (!BD) {
-        if (opts::Verbosity >= 1)
-          BC->outs() << "BOLT-INFO: parent function not found for " << Name
-                     << "\n";
+      const uint64_t NumPossibleLocalParents =
+          NR.getUniquifiedNameCount(ParentName);
+      // The most common case: single local parent fragment.
+      if (!BD && NumPossibleLocalParents == 1) {
+        BD = BC->getBinaryDataByName(NR.getUniqueName(ParentName, 1));
+      } else if (BD && (!NumPossibleLocalParents || IsGlobal)) {
+        // Global parent and either no local candidates (second most common), or
+        // the fragment is global as well (uncommon).
+      } else {
+        // Any other case: need to disambiguate using FILE symbols.
+        AmbiguousFragments.emplace_back(ParentName, &Function);
         continue;
       }
-      const uint64_t Address = BD->getAddress();
-      BinaryFunction *BF = BC->getBinaryFunctionAtAddress(Address);
-      if (!BF) {
-        if (opts::Verbosity >= 1)
-          BC->outs() << formatv(
-              "BOLT-INFO: parent function not found at {0:x}\n", Address);
-        continue;
+      if (BD) {
+        BinaryFunction *BF = BC->getFunctionForSymbol(BD->getSymbol());
+        if (BF) {
+          BC->registerFragment(Function, *BF);
+          continue;
+        }
       }
-      BC->registerFragment(Function, *BF);
-      ++ParentsFound;
-    }
-    if (!ParentsFound) {
       BC->errs() << "BOLT-ERROR: parent function not found for " << Function
                  << '\n';
       exit(1);
     }
+  }
+
+  if (AmbiguousFragments.empty())
+    return;
+
+  if (!BC->hasSymbolsWithFileName()) {
+    BC->errs() << "BOLT-ERROR: input file has split functions but does not "
+                  "have FILE symbols. If the binary was stripped, preserve "
+                  "FILE symbols with --keep-file-symbols strip option";
+    exit(1);
+  }
+
+  // The first global symbol is identified by the symbol table sh_info value.
+  // Used as local symbol search stopping point.
+  auto *ELF64LEFile = cast<ELF64LEObjectFile>(InputFile);
+  const ELFFile<ELF64LE> &Obj = ELF64LEFile->getELFFile();
+  auto *SymTab = llvm::find_if(cantFail(Obj.sections()), [](const auto &Sec) {
+    return Sec.sh_type == ELF::SHT_SYMTAB;
+  });
+  assert(SymTab);
+  // Symtab sh_info contains the value one greater than the symbol table index
+  // of the last local symbol.
+  ELFSymbolRef LocalSymEnd = ELF64LEFile->toSymbolRef(SymTab, SymTab->sh_info);
+
+  for (auto &[ParentName, BF] : AmbiguousFragments) {
+    const uint64_t Address = BF->getAddress();
+
+    // Get fragment's own symbol
+    const auto SymIt = FileSymRefs.find(Address);
+    if (SymIt == FileSymRefs.end()) {
+      BC->errs()
+          << "BOLT-ERROR: symbol lookup failed for function at address 0x"
+          << Twine::utohexstr(Address) << '\n';
+      exit(1);
+    }
+
+    // Find containing FILE symbol
+    ELFSymbolRef Symbol = SymIt->second;
+    auto FSI = llvm::upper_bound(FileSymbols, Symbol);
+    if (FSI == FileSymbols.begin()) {
+      BC->errs() << "BOLT-ERROR: owning FILE symbol not found for symbol "
+                 << cantFail(Symbol.getName()) << '\n';
+      exit(1);
+    }
+
+    ELFSymbolRef StopSymbol = LocalSymEnd;
+    if (FSI != FileSymbols.end())
+      StopSymbol = *FSI;
+
+    uint64_t ParentAddress{0};
+
+    // BOLT split fragment symbols are emitted just before the main function
+    // symbol.
+    for (ELFSymbolRef NextSymbol = Symbol; NextSymbol < StopSymbol;
+         NextSymbol.moveNext()) {
+      StringRef Name = cantFail(NextSymbol.getName());
+      if (Name == ParentName) {
+        ParentAddress = cantFail(NextSymbol.getValue());
+        goto registerParent;
+      }
+      if (Name.starts_with(ParentName))
+        // With multi-way splitting, there are multiple fragments with different
+        // suffixes. Parent follows the last fragment.
+        continue;
+      break;
+    }
+
+    // Iterate over local file symbols and check symbol names to match parent.
+    for (ELFSymbolRef Symbol(FSI[-1]); Symbol < StopSymbol; Symbol.moveNext()) {
+      if (cantFail(Symbol.getName()) == ParentName) {
+        ParentAddress = cantFail(Symbol.getAddress());
+        break;
+      }
+    }
+
+registerParent:
+    // No local parent is found, use global parent function.
+    if (!ParentAddress)
+      if (BinaryData *ParentBD = BC->getBinaryDataByName(ParentName))
+        ParentAddress = ParentBD->getAddress();
+
+    if (BinaryFunction *ParentBF =
+            BC->getBinaryFunctionAtAddress(ParentAddress)) {
+      BC->registerFragment(*BF, *ParentBF);
+      continue;
+    }
+    BC->errs() << "BOLT-ERROR: parent function not found for " << *BF << '\n';
+    exit(1);
   }
 }
 
@@ -3526,6 +3617,26 @@ void RewriteInstance::updateMetadata() {
 void RewriteInstance::mapFileSections(BOLTLinker::SectionMapper MapSection) {
   BC->deregisterUnusedSections();
 
+  // Check if the input has a space reserved for BOLT.
+  BinaryData *StartBD = BC->getBinaryDataByName(getBOLTReservedStart());
+  BinaryData *EndBD = BC->getBinaryDataByName(getBOLTReservedEnd());
+  if (!StartBD != !EndBD) {
+    BC->errs() << "BOLT-ERROR: one of the symbols is missing from the binary: "
+               << getBOLTReservedStart() << ", " << getBOLTReservedEnd()
+               << '\n';
+    exit(1);
+  }
+
+  if (StartBD) {
+    PHDRTableOffset = 0;
+    PHDRTableAddress = 0;
+    NewTextSegmentAddress = 0;
+    NewTextSegmentOffset = 0;
+    NextAvailableAddress = StartBD->getAddress();
+    BC->outs()
+        << "BOLT-INFO: using reserved space for allocating new sections\n";
+  }
+
   // If no new .eh_frame was written, remove relocated original .eh_frame.
   BinarySection *RelocatedEHFrameSection =
       getSection(".relocated" + getEHFrameSectionName());
@@ -3545,6 +3656,18 @@ void RewriteInstance::mapFileSections(BOLTLinker::SectionMapper MapSection) {
 
   // Map the rest of the sections.
   mapAllocatableSections(MapSection);
+
+  if (StartBD) {
+    const uint64_t ReservedSpace = EndBD->getAddress() - StartBD->getAddress();
+    const uint64_t AllocatedSize = NextAvailableAddress - StartBD->getAddress();
+    if (ReservedSpace < AllocatedSize) {
+      BC->errs() << "BOLT-ERROR: reserved space (" << ReservedSpace << " byte"
+                 << (ReservedSpace == 1 ? "" : "s")
+                 << ") is smaller than required for new allocations ("
+                 << AllocatedSize << " bytes)\n";
+      exit(1);
+    }
+  }
 }
 
 std::vector<BinarySection *> RewriteInstance::getCodeSections() {
@@ -3786,7 +3909,7 @@ void RewriteInstance::mapCodeSections(BOLTLinker::SectionMapper MapSection) {
   // Add the new text section aggregating all existing code sections.
   // This is pseudo-section that serves a purpose of creating a corresponding
   // entry in section header table.
-  int64_t NewTextSectionSize =
+  const uint64_t NewTextSectionSize =
       NextAvailableAddress - NewTextSectionStartAddress;
   if (NewTextSectionSize) {
     const unsigned Flags = BinarySection::getFlags(/*IsReadOnly=*/true,
@@ -3869,7 +3992,7 @@ void RewriteInstance::mapAllocatableSections(
       if (PHDRTableAddress) {
         // Segment size includes the size of the PHDR area.
         NewTextSegmentSize = NextAvailableAddress - PHDRTableAddress;
-      } else {
+      } else if (NewTextSegmentAddress) {
         // Existing PHDR table would be updated.
         NewTextSegmentSize = NextAvailableAddress - NewTextSegmentAddress;
       }
@@ -3908,7 +4031,7 @@ void RewriteInstance::patchELFPHDRTable() {
     assert(!PHDRTableAddress && "unexpected address for program header table");
     PHDRTableOffset = Obj.getHeader().e_phoff;
     if (NewWritableSegmentSize) {
-      BC->errs() << "Unable to add writable segment with UseGnuStack option\n";
+      BC->errs() << "BOLT-ERROR: unable to add writable segment\n";
       exit(1);
     }
   }
@@ -3918,7 +4041,7 @@ void RewriteInstance::patchELFPHDRTable() {
   if (!NewWritableSegmentSize) {
     if (PHDRTableAddress)
       NewTextSegmentSize = NextAvailableAddress - PHDRTableAddress;
-    else
+    else if (NewTextSegmentAddress)
       NewTextSegmentSize = NextAvailableAddress - NewTextSegmentAddress;
   } else {
     NewWritableSegmentSize = NextAvailableAddress - NewWritableSegmentAddress;
@@ -3952,8 +4075,10 @@ void RewriteInstance::patchELFPHDRTable() {
   };
 
   auto writeNewSegmentPhdrs = [&]() {
-    ELF64LE::Phdr NewTextPhdr = createNewTextPhdr();
-    OS.write(reinterpret_cast<const char *>(&NewTextPhdr), sizeof(NewTextPhdr));
+    if (PHDRTableAddress || NewTextSegmentSize) {
+      ELF64LE::Phdr NewPhdr = createNewTextPhdr();
+      OS.write(reinterpret_cast<const char *>(&NewPhdr), sizeof(NewPhdr));
+    }
 
     if (NewWritableSegmentSize) {
       ELF64LEPhdrTy NewPhdr;
@@ -4051,9 +4176,8 @@ void RewriteInstance::rewriteNoteSections() {
   const ELFFile<ELF64LE> &Obj = ELF64LEFile->getELFFile();
   raw_fd_ostream &OS = Out->os();
 
-  uint64_t NextAvailableOffset = getFileOffsetForAddress(NextAvailableAddress);
-  assert(NextAvailableOffset >= FirstNonAllocatableOffset &&
-         "next available offset calculation failure");
+  uint64_t NextAvailableOffset = std::max(
+      getFileOffsetForAddress(NextAvailableAddress), FirstNonAllocatableOffset);
   OS.seek(NextAvailableOffset);
 
   // Copy over non-allocatable section contents and update file offsets.
@@ -4792,7 +4916,7 @@ void RewriteInstance::updateELFSymbolTable(
       ++NumHotDataSymsUpdated;
     }
 
-    if (*SymbolName == "_end")
+    if (*SymbolName == "_end" && NextAvailableAddress > Symbol.st_value)
       updateSymbolValue(*SymbolName, NextAvailableAddress);
 
     if (IsDynSym)
@@ -4906,13 +5030,6 @@ void RewriteInstance::patchELFSymTabs(ELFObjectFile<ELFT> *File) {
   std::vector<uint32_t> NewSectionIndex;
   getOutputSections(File, NewSectionIndex);
 
-  // Set pointer at the end of the output file, so we can pwrite old symbol
-  // tables if we need to.
-  uint64_t NextAvailableOffset = getFileOffsetForAddress(NextAvailableAddress);
-  assert(NextAvailableOffset >= FirstNonAllocatableOffset &&
-         "next available offset calculation failure");
-  Out->os().seek(NextAvailableOffset);
-
   // Update dynamic symbol table.
   const ELFShdrTy *DynSymSection = nullptr;
   for (const ELFShdrTy &Section : cantFail(Obj.sections())) {
@@ -4924,6 +5041,10 @@ void RewriteInstance::patchELFSymTabs(ELFObjectFile<ELFT> *File) {
   assert((DynSymSection || BC->IsStaticExecutable) &&
          "dynamic symbol table expected");
   if (DynSymSection) {
+    // Set pointer to the end of the section, so we can use pwrite to update
+    // the dynamic symbol table.
+    Out->os().seek(DynSymSection->sh_offset + DynSymSection->sh_size);
+
     updateELFSymbolTable(
         File,
         /*IsDynSym=*/true,
@@ -5477,10 +5598,10 @@ void RewriteInstance::rewriteFile() {
   auto Streamer = BC->createStreamer(OS);
   // Make sure output stream has enough reserved space, otherwise
   // pwrite() will fail.
-  uint64_t Offset = OS.seek(getFileOffsetForAddress(NextAvailableAddress));
-  (void)Offset;
-  assert(Offset == getFileOffsetForAddress(NextAvailableAddress) &&
-         "error resizing output file");
+  uint64_t Offset = std::max(getFileOffsetForAddress(NextAvailableAddress),
+                             FirstNonAllocatableOffset);
+  Offset = OS.seek(Offset);
+  assert((Offset != (uint64_t)-1) && "Error resizing output file");
 
   // Overwrite functions with fixed output address. This is mostly used by
   // non-relocation mode, with one exception: injected functions are covered
@@ -5712,7 +5833,7 @@ void RewriteInstance::writeEHFrameHeader() {
   std::vector<char> NewEHFrameHdr = CFIRdWrt->generateEHFrameHeader(
       RelocatedEHFrame, NewEHFrame, EHFrameHdrOutputAddress, FailedAddresses);
 
-  assert(Out->os().tell() == EHFrameHdrFileOffset && "offset mismatch");
+  Out->os().seek(EHFrameHdrFileOffset);
   Out->os().write(NewEHFrameHdr.data(), NewEHFrameHdr.size());
 
   const unsigned Flags = BinarySection::getFlags(/*IsReadOnly=*/true,
@@ -5731,6 +5852,15 @@ void RewriteInstance::writeEHFrameHeader() {
   EHFrameHdrSec.setOutputName(getEHFrameHdrSectionName());
 
   NextAvailableAddress += EHFrameHdrSec.getOutputSize();
+
+  if (const BinaryData *ReservedEnd =
+          BC->getBinaryDataByName(getBOLTReservedEnd())) {
+    if (NextAvailableAddress > ReservedEnd->getAddress()) {
+      BC->errs() << "BOLT-ERROR: unable to fit " << getEHFrameHdrSectionName()
+                 << " into reserved space\n";
+      exit(1);
+    }
+  }
 
   // Merge new .eh_frame with the relocated original so that gdb can locate all
   // FDEs.

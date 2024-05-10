@@ -656,12 +656,44 @@ DecodeStatus RISCVDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
                                                ArrayRef<uint8_t> Bytes,
                                                uint64_t Address,
                                                raw_ostream &CS) const {
-  // TODO: This will need modification when supporting instruction set
-  // extensions with instructions > 32-bits (up to 176 bits wide).
+  // It's a 16 bit instruction if bit 0 and 1 are not 0b11.
+  if ((Bytes[0] & 0b11) != 0b11)
+    return getInstruction16(MI, Size, Bytes, Address, CS);
 
-  // It's a 32 bit instruction if bit 0 and 1 are 1.
-  if ((Bytes[0] & 0x3) == 0x3)
+  // It's a 32 bit instruction if bit 1:0 are 0b11(checked above) and bits 4:2
+  // are not 0b111.
+  if ((Bytes[0] & 0b1'1100) != 0b1'1100)
     return getInstruction32(MI, Size, Bytes, Address, CS);
 
-  return getInstruction16(MI, Size, Bytes, Address, CS);
+  // 48-bit instructions are encoded as 0bxx011111.
+  if ((Bytes[0] & 0b11'1111) == 0b01'1111) {
+    Size = Bytes.size() >= 6 ? 6 : 0;
+    return MCDisassembler::Fail;
+  }
+
+  // 64-bit instructions are encoded as 0x0111111.
+  if ((Bytes[0] & 0b111'1111) == 0b011'1111) {
+    Size = Bytes.size() >= 8 ? 8 : 0;
+    return MCDisassembler::Fail;
+  }
+
+  // Remaining cases need to check a second byte.
+  if (Bytes.size() < 2) {
+    Size = 0;
+    return MCDisassembler::Fail;
+  }
+
+  // 80-bit through 176-bit instructions are encoded as 0bxnnnxxxx_x1111111.
+  // Where the number of bits is (80 + (nnn * 16)) for nnn != 0b111.
+  unsigned nnn = (Bytes[1] >> 4) & 0b111;
+  if (nnn != 0b111) {
+    Size = 10 + (nnn * 2);
+    if (Bytes.size() < Size)
+      Size = 0;
+    return MCDisassembler::Fail;
+  }
+
+  // Remaining encodings are reserved for > 176-bit instructions.
+  Size = 0;
+  return MCDisassembler::Fail;
 }

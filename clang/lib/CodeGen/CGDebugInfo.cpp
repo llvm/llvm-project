@@ -1373,6 +1373,8 @@ llvm::DIType *CGDebugInfo::CreateType(const TemplateSpecializationType *Ty,
   SourceLocation Loc = AliasDecl->getLocation();
 
   if (CGM.getCodeGenOpts().DebugTemplateAlias &&
+      // FIXME: This is a workaround for the issue
+      //        https://github.com/llvm/llvm-project/issues/89774
       // The TemplateSpecializationType doesn't contain any instantiation
       // information; dependent template arguments can't be resolved. For now,
       // fall back to DW_TAG_typedefs for template aliases that are
