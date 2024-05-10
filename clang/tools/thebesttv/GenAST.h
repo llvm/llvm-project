@@ -11,6 +11,9 @@ std::string getASTDumpFile(const std::string &file);
 std::unique_ptr<CompilationDatabase>
 getCompilationDatabaseWithASTEmit(fs::path buildPath);
 
+/**
+ * 调用 clang 生成 AST dump
+ */
 int generateASTDump(const CompileCommand &cmd);
 
 std::unique_ptr<ASTUnit> getASTOfFile(std::string file);
