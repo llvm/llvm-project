@@ -1,5 +1,5 @@
-## This reproduces a bug with BOLT setting incorrect discriminator for
-## secondary entry points in YAML profile.
+## Test YAMLProfileReader support for pass-through blocks in non-matching edges:
+## match the profile edge A -> C to the CFG with blocks A -> B -> C.
 
 # REQUIRES: system-linux
 # RUN: split-file %s %t

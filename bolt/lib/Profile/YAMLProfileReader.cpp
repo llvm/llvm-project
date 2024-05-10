@@ -220,8 +220,11 @@ bool YAMLProfileReader::parseFunctionProfile(
 
       BinaryBasicBlock *ToBB = Order[YamlSI.Index];
       if (!BB.getSuccessor(ToBB->getLabel())) {
-        // Allow for BOLT-removed passthrough blocks to align with DataReader
-        // behavior.
+        // Allow passthrough blocks. DataReader supports that as backwards
+        // compatibility feature, which affects BAT fdata parsing wrt
+        // BOLT-removed blocks. Introduce equivalent handling to align with BAT
+        // fdata reader. If the support is dropped in DataReader::recordBranch,
+        // remove this handling in sync.
         BinaryBasicBlock *FTSuccessor = BB.getConditionalSuccessor(false);
         if (FTSuccessor && FTSuccessor->succ_size() == 1 &&
             FTSuccessor->getSuccessor(ToBB->getLabel())) {
