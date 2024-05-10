@@ -82,6 +82,11 @@ struct DeviceExprChecker
           }
         }
       }
+      if (sym->owner().IsModule() &&
+          sym->owner().parent().IsIntrinsicModules() &&
+          DEREF(sym->owner().symbol()).name() == "__cuda_device_builtins") {
+        return {};
+      }
     } else if (x.GetSpecificIntrinsic()) {
       // TODO(CUDA): Check for unsupported intrinsics here
       return {};
