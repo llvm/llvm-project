@@ -13,6 +13,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/Operator.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCStreamer.h"
@@ -632,6 +633,19 @@ private:
 
   void serialiseGetElementPtrInst(GetElementPtrInst *I, FuncLowerCtxt &FLCtxt,
                                   unsigned BBIdx, unsigned &InstIdx) {
+    // We yet don't support:
+    //  - the `inrange` keyword.
+    //  - the vector variant.
+    //
+    // It appears that `inrange` can't appear in a GEP *instruction* (only a
+    // GEP expression, inline in another instruction), but we check for it
+    // anyway.
+    if ((cast<GEPOperator>(I)->getInRangeIndex() != nullopt) ||
+        (I->getPointerOperand()->getType()->isVectorTy())) {
+      serialiseUnimplementedInstruction(I, FLCtxt, BBIdx, InstIdx);
+      return;
+    }
+
     // opcode:
     serialiseOpcode(OpCodePtrAdd);
     // type_idx:
