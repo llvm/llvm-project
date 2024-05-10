@@ -35,5 +35,8 @@ void foo() {
 #pragma acc parallel vector_length((int)array[1])
   while(true);
 
+// CHECK: #pragma acc parallel private(i, array[1], array, array[1:2])
+#pragma acc parallel private(i, array[1], array, array[1:2])
+  while(true);
 }
 

@@ -417,9 +417,9 @@ DWARF:
   lldb::TypeSP type_sp =
       ast_parser.ParseTypeFromDWARF(sc, ptrauth_type, &new_type);
   CompilerType compiler_type = type_sp->GetForwardCompilerType();
-  ASSERT_EQ(compiler_type.GetPtrAuthKey(), 0);
+  ASSERT_EQ(compiler_type.GetPtrAuthKey(), 0U);
   ASSERT_EQ(compiler_type.GetPtrAuthAddressDiversity(), false);
-  ASSERT_EQ(compiler_type.GetPtrAuthDiscriminator(), 42);
+  ASSERT_EQ(compiler_type.GetPtrAuthDiscriminator(), 42U);
 }
 
 struct ExtractIntFromFormValueTest : public testing::Test {
