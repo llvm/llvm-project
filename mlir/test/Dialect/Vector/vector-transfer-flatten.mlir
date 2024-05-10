@@ -462,6 +462,80 @@ func.func @fold_unit_dims_entirely(%arg0 : vector<8xi32>,
 
 // -----
 
+func.func @fold_unit_dim_transpose(%arg0 : vector<1x4x1x2xf32>) -> vector<2x4x1x1xf32> {
+  %tr = vector.transpose %arg0, [3, 1, 2, 0]: vector<1x4x1x2xf32> to vector<2x4x1x1xf32>
+  return %tr : vector<2x4x1x1xf32>
+}
+// CHECK-LABEL:   func.func @fold_unit_dim_transpose(
+// CHECK-SAME:        %[[VAL_0:.*]]: vector<1x4x1x2xf32>) -> vector<2x4x1x1xf32> {
+// CHECK:             %[[VAL_1:.*]] = vector.shape_cast %[[VAL_0]] : vector<1x4x1x2xf32> to vector<4x2xf32>
+// CHECK:             %[[VAL_2:.*]] = vector.transpose %[[VAL_1]], [1, 0] : vector<4x2xf32> to vector<2x4xf32>
+// CHECK:             %[[VAL_3:.*]] = vector.shape_cast %[[VAL_2]] : vector<2x4xf32> to vector<2x4x1x1xf32>
+// CHECK:             return %[[VAL_3]] : vector<2x4x1x1xf32>
+
+// -----
+
+func.func @fold_unit_dim_transpose_identity(%arg0 : vector<1x4x1x2xf32>) -> vector<1x4x2x1xf32> {
+  %tr = vector.transpose %arg0, [2, 1, 3, 0]: vector<1x4x1x2xf32> to vector<1x4x2x1xf32>
+  return %tr : vector<1x4x2x1xf32>
+}
+// CHECK-LABEL:   func.func @fold_unit_dim_transpose_identity(
+// CHECK-SAME:        %[[VAL_0:.*]]: vector<1x4x1x2xf32>) -> vector<1x4x2x1xf32> {
+// CHECK:             %[[VAL_1:.*]] = vector.shape_cast %[[VAL_0]] : vector<1x4x1x2xf32> to vector<4x2xf32>
+// CHECK:             %[[VAL_2:.*]] = vector.shape_cast %[[VAL_1]] : vector<4x2xf32> to vector<1x4x2x1xf32>
+// CHECK:             return %[[VAL_2]] : vector<1x4x2x1xf32>
+// -----
+
+func.func @fold_unit_dim_transpose_to_1_dim(%arg0 : vector<1x4xf32>) -> vector<4x1xf32> {
+  %tr = vector.transpose %arg0, [1, 0]: vector<1x4xf32> to vector<4x1xf32>
+  return %tr : vector<4x1xf32>
+}
+
+// CHECK-LABEL:   func.func @fold_unit_dim_transpose_to_1_dim(
+// CHECK-SAME:        %[[VAL_0:.*]]: vector<1x4xf32>) -> vector<4x1xf32> {
+// CHECK:             %[[VAL_1:.*]] = vector.shape_cast %[[VAL_0]] : vector<1x4xf32> to vector<4xf32>
+// CHECK:             %[[VAL_2:.*]] = vector.shape_cast %[[VAL_1]] : vector<4xf32> to vector<4x1xf32>
+// CHECK:             return %[[VAL_2]] : vector<4x1xf32>
+
+// -----
+
+func.func @fold_unit_dim_transpose_all_one_dim(%arg0 : vector<1x1x1xf32>) -> vector<1x1x1xf32> {
+  %tr = vector.transpose %arg0, [1, 2, 0]: vector<1x1x1xf32> to vector<1x1x1xf32>
+  return %tr : vector<1x1x1xf32>
+}
+
+// CHECK-LABEL:   func.func @fold_unit_dim_transpose_all_one_dim(
+// CHECK-SAME:        %[[VAL_0:.*]]: vector<1x1x1xf32>) -> vector<1x1x1xf32> {
+// CHECK:             return %[[VAL_0]] : vector<1x1x1xf32>
+
+// -----
+
+func.func @drop_unit_dim_full_example(%inputLHS : vector<[1]xf128>, %inputRHS : vector<[1]xf128>, %acc : vector<[1]x[1]xf128>) -> vector<[1]x[1]xf128> {
+  %lhsCast = vector.shape_cast %inputLHS : vector<[1]xf128> to vector<[1]x1xf128>
+  %lhsBcast = vector.broadcast %lhsCast : vector<[1]x1xf128> to vector<[1]x[1]x1xf128>
+  %lhsT = vector.transpose %lhsBcast, [1, 0, 2] : vector<[1]x[1]x1xf128> to vector<[1]x[1]x1xf128>
+  %rhsCast = vector.shape_cast %inputRHS : vector<[1]xf128> to vector<1x[1]xf128>
+  %rhsBcast = vector.broadcast %rhsCast : vector<1x[1]xf128> to vector<[1]x1x[1]xf128>
+  %rhs = vector.transpose %rhsBcast, [0, 2, 1] : vector<[1]x1x[1]xf128> to vector<[1]x[1]x1xf128>
+  %mul = arith.mulf %lhsT, %rhs : vector<[1]x[1]x1xf128>
+  %dropDim = vector.shape_cast %mul : vector<[1]x[1]x1xf128> to vector<[1]x[1]xf128>
+  %addAcc = arith.addf %acc, %dropDim : vector<[1]x[1]xf128>
+  return %addAcc : vector<[1]x[1]xf128>
+}
+
+// CHECK-LABEL: func.func @drop_unit_dim_full_example(
+// CHECK-SAME:    %[[LHS:[a-zA-Z_]+[0-9]]]: vector<[1]xf128>,
+// CHECK-SAME:    %[[RHS:[a-zA-Z_]+[0-9]]]: vector<[1]xf128>,
+// CHECK-SAME:    %[[ACC:[a-zA-Z_]+[0-9]]]: vector<[1]x[1]xf128>) -> vector<[1]x[1]xf128> {
+// CHECK:         %[[LHSBCAST:.*]] = vector.broadcast %[[LHS]] : vector<[1]xf128> to vector<[1]x[1]xf128>
+// CHECK:         %[[TRA:.*]] = vector.transpose %[[LHSBCAST]], [1, 0] : vector<[1]x[1]xf128> to vector<[1]x[1]xf128>
+// CHECK:         %[[RHSBCAST:.*]] = vector.broadcast %[[RHS]] : vector<[1]xf128> to vector<[1]x[1]xf128>
+// CHECK:         %[[MUL:.*]] = arith.mulf %[[TRA]], %[[RHSBCAST]] : vector<[1]x[1]xf128>
+// CHECK:         %[[RES:.*]] = arith.addf %[[ACC]], %[[MUL]] : vector<[1]x[1]xf128>
+// CHECK:         return %[[RES]] : vector<[1]x[1]xf128>
+
+// -----
+
 func.func @regression_non_contiguous_dim_read(%subview : memref<1x3x3x2xf32, strided<[40, 10, 2, 1], offset: ?>>,
                                               %idx0 : index, %idx1 : index) -> vector<2x2xf32> {
   %c0 = arith.constant 0 : index
