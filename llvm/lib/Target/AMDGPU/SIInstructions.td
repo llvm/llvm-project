@@ -1913,6 +1913,7 @@ let SubtargetPredicate = UseRealTrue16Insts in
 def : ClampPat<V_MAX_F16_t16_e64, f16>;
 let SubtargetPredicate = UseFakeTrue16Insts in
 def : ClampPat<V_MAX_F16_fake16_e64, f16>;
+def : ClampPat<V_MAX_BF16_PSEUDO_e64, bf16>;
 
 let SubtargetPredicate = HasVOP3PInsts in {
 def : GCNPat <
@@ -1922,6 +1923,13 @@ def : GCNPat <
 >;
 }
 
+let SubtargetPredicate = HasBF16PackedInsts in {
+def : GCNPat <
+  (v2bf16 (AMDGPUclamp (VOP3PMods v2bf16:$src0, i32:$src0_modifiers))),
+  (V_PK_MAX_NUM_BF16 $src0_modifiers, $src0,
+                     $src0_modifiers, $src0, DSTCLAMP.ENABLE)
+>;
+} // End SubtargetPredicate = HasBF16PackedInsts
 
 /********** ================================ **********/
 /********** Floating point absolute/negative **********/
