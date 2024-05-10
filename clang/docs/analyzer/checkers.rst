@@ -1179,6 +1179,54 @@ security.insecureAPI.DeprecatedOrUnsafeBufferHandling (C)
    strncpy(buf, "a", 1); // warn
  }
 
+.. _security-putenv-with-auto:
+
+security.PutenvWithAuto
+"""""""""""""""""""""""
+Finds calls to the ``putenv`` function which pass a pointer to an automatic variable as the argument.
+Function ``putenv`` does not copy the passed string, only a pointer to the data is stored.
+Content of an automatic variable is likely to be overwritten after returning from the parent function.
+
+The problem can be solved by using a static variable or dynamically allocated
+memory. Even better is to avoid using ``putenv`` (it has other problems
+related to memory leaks) and use ``setenv`` instead.
+
+The check corresponds to CERT rule
+`POS34-C. Do not call putenv() with a pointer to an automatic variable as the argument
+<https://wiki.sei.cmu.edu/confluence/display/c/POS34-C.+Do+not+call+putenv%28%29+with+a+pointer+to+an+automatic+variable+as+the+argument>`_.
+
+.. code-block:: c
+
+  int f() {
+    char[] env = "NAME=value";
+    return putenv(env); // putenv function should not be called with auto variables
+  }
+
+Limitations:
+
+   - In specific cases one can pass automatic variables to ``putenv``,
+     but one needs to ensure that the given environment key stays
+     alive until it's removed or overwritten.
+     Since the analyzer cannot keep track if and when the string passed to ``putenv``
+     gets deallocated or overwritten, it needs to be slightly more aggressive
+     and warn for each case, leading in some cases to false-positive reports like this:
+
+     .. code-block:: c
+
+        void baz() {
+          char env[] = "NAME=value";
+          putenv(env); // false-positive warning: putenv function should not be called...
+          // More code...
+          // FIXME: It looks like that if one string was passed to putenv,
+          // it should not be deallocated at all, because when reading the
+          // environment variable a pointer into this string is returned.
+          // In this case, if another (or the same) thread reads variable "NAME"
+          // at this point and does not copy the returned string, the data may
+          // become invalid.
+          putenv((char *)"NAME=anothervalue");
+          // This putenv call overwrites the previous entry, thus that can no longer dangle.
+        } // 'env' array becomes dead only here.
+
 .. _unix-checkers:
 
 unix
@@ -2817,55 +2865,6 @@ alpha.security.cert
 ^^^^^^^^^^^^^^^^^^^
 
 SEI CERT checkers which tries to find errors based on their `C coding rules <https://wiki.sei.cmu.edu/confluence/display/c/2+Rules>`_.
-
-.. _alpha-security-cert-pos-checkers:
-
-alpha.security.cert.pos
-^^^^^^^^^^^^^^^^^^^^^^^
-
-SEI CERT checkers of `POSIX C coding rules <https://wiki.sei.cmu.edu/confluence/pages/viewpage.action?pageId=87152405>`_.
-
-.. _alpha-security-cert-pos-34c:
-
-alpha.security.cert.pos.34c
-"""""""""""""""""""""""""""
-Finds calls to the ``putenv`` function which pass a pointer to an automatic variable as the argument.
-
-.. code-block:: c
-
-  int func(const char *var) {
-    char env[1024];
-    int retval = snprintf(env, sizeof(env),"TEST=%s", var);
-    if (retval < 0 || (size_t)retval >= sizeof(env)) {
-        /* Handle error */
-    }
-
-    return putenv(env); // putenv function should not be called with auto variables
-  }
-
-Limitations:
-
-   - Technically, one can pass automatic variables to ``putenv``,
-     but one needs to ensure that the given environment key stays
-     alive until it's removed or overwritten.
-     Since the analyzer cannot keep track of which envvars get overwritten
-     and when, it needs to be slightly more aggressive and warn for such
-     cases too, leading in some cases to false-positive reports like this:
-
-     .. code-block:: c
-
-        void baz() {
-          char env[] = "NAME=value";
-          putenv(env); // false-positive warning: putenv function should not be called...
-          // More code...
-          putenv((char *)"NAME=anothervalue");
-          // This putenv call overwrites the previous entry, thus that can no longer dangle.
-        } // 'env' array becomes dead only here.
-
-alpha.security.cert.env
-^^^^^^^^^^^^^^^^^^^^^^^
-
-SEI CERT checkers of `Environment C coding rules <https://wiki.sei.cmu.edu/confluence/x/JdcxBQ>`_.
 
 alpha.security.taint
 ^^^^^^^^^^^^^^^^^^^^
