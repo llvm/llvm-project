@@ -64,6 +64,7 @@ protected:
                                         TM->getTargetFeatureString(), *TM);
 
     MF = std::make_unique<MachineFunction>(*F, *TM, *ST, 1, *MMI);
+    MF->initTargetMachineFunctionInfo(*ST);
     PI.reset(*MF.get());
   }
 };
@@ -76,6 +77,11 @@ TEST_F(SIProgramInfoMCExprsTest, TestDeathHSAKernelEmit) {
   auto &Func = MF->getFunction();
   Func.setCallingConv(CallingConv::AMDGPU_KERNEL);
   AMDGPU::HSAMD::MetadataStreamerMsgPackV4 MD;
-  EXPECT_DEATH(MD.emitKernel(*MF, PI),
-               "could not resolve expression when required.");
+
+  testing::internal::CaptureStderr();
+  MD.emitKernel(*MF, PI);
+  std::string err = testing::internal::GetCapturedStderr();
+  EXPECT_EQ(
+      err, "<unknown>:0: error: could not resolve expression when required.\n");
+  EXPECT_TRUE(Ctx.hadError());
 }
