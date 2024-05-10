@@ -701,6 +701,14 @@ HELPER_REGISTER_REDUCTION_VP(vp_reduce_fmax, VP_REDUCE_FMAX,
 HELPER_REGISTER_REDUCTION_VP(vp_reduce_fmin, VP_REDUCE_FMIN,
                              vector_reduce_fmin)
 
+// llvm.vp.reduce.fmaximum(start,x,mask,vlen)
+HELPER_REGISTER_REDUCTION_VP(vp_reduce_fmaximum, VP_REDUCE_FMAXIMUM,
+                             vector_reduce_fmaximum)
+
+// llvm.vp.reduce.fminimum(start,x,mask,vlen)
+HELPER_REGISTER_REDUCTION_VP(vp_reduce_fminimum, VP_REDUCE_FMINIMUM,
+                             vector_reduce_fminimum)
+
 #undef HELPER_REGISTER_REDUCTION_VP
 
 // Specialized helper macro for VP reductions as above but with two forms:

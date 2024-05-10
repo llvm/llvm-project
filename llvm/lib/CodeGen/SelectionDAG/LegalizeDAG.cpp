@@ -1222,6 +1222,8 @@ void SelectionDAGLegalize::LegalizeOp(SDNode *Node) {
   case ISD::VP_REDUCE_UMIN:
   case ISD::VP_REDUCE_FMAX:
   case ISD::VP_REDUCE_FMIN:
+  case ISD::VP_REDUCE_FMAXIMUM:
+  case ISD::VP_REDUCE_FMINIMUM:
   case ISD::VP_REDUCE_SEQ_FADD:
   case ISD::VP_REDUCE_SEQ_FMUL:
     Action = TLI.getOperationAction(
@@ -5015,6 +5017,8 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
       Node->getOpcode() == ISD::VP_REDUCE_FMUL ||
       Node->getOpcode() == ISD::VP_REDUCE_FMAX ||
       Node->getOpcode() == ISD::VP_REDUCE_FMIN ||
+      Node->getOpcode() == ISD::VP_REDUCE_FMAXIMUM ||
+      Node->getOpcode() == ISD::VP_REDUCE_FMINIMUM ||
       Node->getOpcode() == ISD::VP_REDUCE_SEQ_FADD)
     OVT = Node->getOperand(1).getSimpleValueType();
   if (Node->getOpcode() == ISD::BR_CC ||
@@ -5687,6 +5691,8 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
   case ISD::VP_REDUCE_FMUL:
   case ISD::VP_REDUCE_FMAX:
   case ISD::VP_REDUCE_FMIN:
+  case ISD::VP_REDUCE_FMAXIMUM:
+  case ISD::VP_REDUCE_FMINIMUM:
   case ISD::VP_REDUCE_SEQ_FADD:
     Results.push_back(PromoteReduction(Node));
     break;
