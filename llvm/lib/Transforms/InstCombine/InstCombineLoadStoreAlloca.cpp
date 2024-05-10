@@ -342,9 +342,13 @@ bool PointerReplacer::collectUsersRecursive(Instruction &I) {
       Worklist.insert(Inst);
     } else if (isEqualOrValidAddrSpaceCast(Inst, FromAS)) {
       Worklist.insert(Inst);
+      if (!collectUsersRecursive(*Inst))
+        return false;
     } else if (Inst->isLifetimeStartOrEnd()) {
       continue;
     } else {
+      // TODO: For arbitrary uses with address space mismatches, should we check
+      // if we can introduce a valid addrspacecast?
       LLVM_DEBUG(dbgs() << "Cannot handle pointer user: " << *U << '\n');
       return false;
     }
@@ -406,20 +410,18 @@ void PointerReplacer::replace(Instruction *I) {
     NewSI->takeName(SI);
     WorkMap[SI] = NewSI;
   } else if (auto *MemCpy = dyn_cast<MemTransferInst>(I)) {
-    auto *SrcV = getReplacement(MemCpy->getRawSource());
-    // The pointer may appear in the destination of a copy, but we don't want to
-    // replace it.
-    if (!SrcV) {
-      assert(getReplacement(MemCpy->getRawDest()) &&
-             "destination not in replace list");
-      return;
-    }
+    auto *DestV = MemCpy->getRawDest();
+    auto *SrcV = MemCpy->getRawSource();
+
+    if (auto *DestReplace = getReplacement(DestV))
+      DestV = DestReplace;
+    if (auto *SrcReplace = getReplacement(SrcV))
+      SrcV = SrcReplace;
 
     IC.Builder.SetInsertPoint(MemCpy);
     auto *NewI = IC.Builder.CreateMemTransferInst(
-        MemCpy->getIntrinsicID(), MemCpy->getRawDest(), MemCpy->getDestAlign(),
-        SrcV, MemCpy->getSourceAlign(), MemCpy->getLength(),
-        MemCpy->isVolatile());
+        MemCpy->getIntrinsicID(), DestV, MemCpy->getDestAlign(), SrcV,
+        MemCpy->getSourceAlign(), MemCpy->getLength(), MemCpy->isVolatile());
     AAMDNodes AAMD = MemCpy->getAAMetadata();
     if (AAMD)
       NewI->setAAMetadata(AAMD);
@@ -432,16 +434,17 @@ void PointerReplacer::replace(Instruction *I) {
     assert(isEqualOrValidAddrSpaceCast(
                ASC, V->getType()->getPointerAddressSpace()) &&
            "Invalid address space cast!");
-    auto *NewV = V;
+
     if (V->getType()->getPointerAddressSpace() !=
         ASC->getType()->getPointerAddressSpace()) {
       auto *NewI = new AddrSpaceCastInst(V, ASC->getType(), "");
       NewI->takeName(ASC);
       IC.InsertNewInstWith(NewI, ASC->getIterator());
-      NewV = NewI;
+      WorkMap[ASC] = NewI;
+    } else {
+      WorkMap[ASC] = V;
     }
-    IC.replaceInstUsesWith(*ASC, NewV);
-    IC.eraseInstFromFunction(*ASC);
+
   } else {
     llvm_unreachable("should never reach here");
   }

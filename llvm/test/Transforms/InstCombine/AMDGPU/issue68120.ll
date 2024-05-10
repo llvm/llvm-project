@@ -7,7 +7,8 @@
 define void @issue68120_invalid_addrspacecast_introduced_0(ptr addrspace(4) byref([56 x i8]) %arg) {
 ; CHECK-LABEL: define void @issue68120_invalid_addrspacecast_introduced_0(
 ; CHECK-SAME: ptr addrspace(4) byref([56 x i8]) [[ARG:%.*]]) {
-; CHECK-NEXT:    [[ADDRSPACECAST_0_TO_5:%.*]] = addrspacecast ptr addrspace(4) [[ARG]] to ptr addrspace(5)
+; CHECK-NEXT:    [[ADDRSPACECAST_0_TO_5:%.*]] = alloca [56 x i8], align 1, addrspace(5)
+; CHECK-NEXT:    call void @llvm.memcpy.p5.p4.i64(ptr addrspace(5) noundef align 1 dereferenceable(56) [[ADDRSPACECAST_0_TO_5]], ptr addrspace(4) noundef align 1 dereferenceable(56) [[ARG]], i64 56, i1 false)
 ; CHECK-NEXT:    call void @byval_func(ptr addrspace(5) [[ADDRSPACECAST_0_TO_5]])
 ; CHECK-NEXT:    ret void
 ;
@@ -25,7 +26,8 @@ define void @issue68120_invalid_addrspacecast_introduced_0(ptr addrspace(4) byre
 define void @issue68120_invalid_addrspacecast_introduced_1(ptr addrspace(4) byref([56 x i8]) %arg) {
 ; CHECK-LABEL: define void @issue68120_invalid_addrspacecast_introduced_1(
 ; CHECK-SAME: ptr addrspace(4) byref([56 x i8]) [[ARG:%.*]]) {
-; CHECK-NEXT:    [[ADDRSPACECAST_0_TO_5:%.*]] = addrspacecast ptr addrspace(4) [[ARG]] to ptr addrspace(5)
+; CHECK-NEXT:    [[ADDRSPACECAST_0_TO_5:%.*]] = alloca [56 x i8], align 1, addrspace(5)
+; CHECK-NEXT:    call void @llvm.memcpy.p5.p4.i64(ptr addrspace(5) noundef align 1 dereferenceable(56) [[ADDRSPACECAST_0_TO_5]], ptr addrspace(4) noundef align 1 dereferenceable(56) [[ARG]], i64 56, i1 false)
 ; CHECK-NEXT:    call void @byval_func(ptr addrspace(5) [[ADDRSPACECAST_0_TO_5]])
 ; CHECK-NEXT:    ret void
 ;
@@ -57,7 +59,8 @@ define void @issue68120_use_cast_to_as0(ptr addrspace(4) byref([56 x i8]) %arg) 
 define void @issue68120_uses_invalid_addrspacecast(ptr addrspace(4) byref([56 x i8]) %arg) {
 ; CHECK-LABEL: define void @issue68120_uses_invalid_addrspacecast(
 ; CHECK-SAME: ptr addrspace(4) byref([56 x i8]) [[ARG:%.*]]) {
-; CHECK-NEXT:    [[ADDRSPACECAST_0_TO_5:%.*]] = addrspacecast ptr addrspace(4) [[ARG]] to ptr addrspace(5)
+; CHECK-NEXT:    [[ADDRSPACECAST_0_TO_5:%.*]] = alloca [56 x i8], align 1, addrspace(5)
+; CHECK-NEXT:    call void @llvm.memcpy.p5.p4.i64(ptr addrspace(5) noundef align 1 dereferenceable(56) [[ADDRSPACECAST_0_TO_5]], ptr addrspace(4) noundef align 1 dereferenceable(56) [[ARG]], i64 56, i1 false)
 ; CHECK-NEXT:    call void @byval_func(ptr addrspace(5) [[ADDRSPACECAST_0_TO_5]])
 ; CHECK-NEXT:    ret void
 ;
