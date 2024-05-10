@@ -59,7 +59,7 @@ def get_checkers(checkers_td, checkers_rst):
             "clang-analyzer-" + checker_package_prefix + "." + checker_name
         )
         anchor_url = re.sub(
-            "\.", "-", checker_package_prefix + "." + checker_name
+            r"\.", "-", checker_package_prefix + "." + checker_name
         ).lower()
 
         if not hidden and "alpha" not in full_package_name.lower():
