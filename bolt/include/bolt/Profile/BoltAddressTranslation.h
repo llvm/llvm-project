@@ -221,14 +221,9 @@ public:
 
   /// Map function output address to its hash and basic blocks hash map.
   class FuncHashesTy {
-    class EntryTy {
+    struct EntryTy {
       size_t Hash;
       BBHashMapTy BBHashMap;
-
-    public:
-      size_t getBFHash() const { return Hash; }
-      const BBHashMapTy &getBBHashMap() const { return BBHashMap; }
-      EntryTy(size_t Hash) : Hash(Hash) {}
     };
 
     std::unordered_map<uint64_t, EntryTy> Map;
@@ -240,15 +235,15 @@ public:
 
   public:
     size_t getBFHash(uint64_t FuncOutputAddress) const {
-      return getEntry(FuncOutputAddress).getBFHash();
+      return getEntry(FuncOutputAddress).Hash;
     }
 
     const BBHashMapTy &getBBHashMap(uint64_t FuncOutputAddress) const {
-      return getEntry(FuncOutputAddress).getBBHashMap();
+      return getEntry(FuncOutputAddress).BBHashMap;
     }
 
     void addEntry(uint64_t FuncOutputAddress, size_t BFHash) {
-      Map.emplace(FuncOutputAddress, EntryTy(BFHash));
+      Map.emplace(FuncOutputAddress, EntryTy{BFHash, BBHashMapTy()});
     }
 
     size_t getNumFunctions() const { return Map.size(); };
@@ -256,7 +251,7 @@ public:
     size_t getNumBasicBlocks() const {
       size_t NumBasicBlocks{0};
       for (auto &I : Map)
-        NumBasicBlocks += I.second.getBBHashMap().getNumBasicBlocks();
+        NumBasicBlocks += I.second.BBHashMap.getNumBasicBlocks();
       return NumBasicBlocks;
     }
   };
