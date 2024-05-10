@@ -2019,6 +2019,7 @@ bool RISCVTargetLowering::canSplatOperand(unsigned Opcode, int Operand) const {
   case Instruction::SDiv:
   case Instruction::URem:
   case Instruction::SRem:
+  case Instruction::Select:
     return Operand == 1;
   default:
     return false;
