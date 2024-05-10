@@ -205,8 +205,10 @@ namespace {
     /// When an instruction is simplified, add all users of the instruction to
     /// the work lists because they might get more simplified now.
     void AddUsersToWorklist(SDNode *N) {
-      for (SDNode *Node : N->uses())
+      for (SDNode *Node : N->uses()) {
         AddToWorklist(Node);
+        AddUsersToWorklist(Node);
+      }
     }
 
     /// Convenient shorthand to add a node and all of its user to the worklist.
