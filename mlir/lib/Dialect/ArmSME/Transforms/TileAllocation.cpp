@@ -486,66 +486,76 @@ coalesceTileLiveRanges(DenseMap<Value, LiveRange> &initialLiveRanges) {
   return std::move(coalescedLiveRanges);
 }
 
+/// Choose a live range to spill (via some heuristics). This picks either an
+/// active live range from `activeRanges` or the new live range `newRange`.
+LiveRange *chooseSpillUsingHeuristics(ArrayRef<LiveRange *> activeRanges,
+                                      LiveRange *newRange) {
+  // Heuristic: Spill trivially copyable operations (usually free).
+  auto isTrivialSpill = [&](LiveRange *allocatedRange) {
+    return isTileTypeGreaterOrEqual(allocatedRange->getTileType(),
+                                    newRange->getTileType()) &&
+           allocatedRange->values.size() == 1 &&
+           isTriviallyCloneableTileOp(
+               allocatedRange->values[0]
+                   .getDefiningOp<ArmSMETileOpInterface>());
+  };
+  if (isTrivialSpill(newRange))
+    return newRange;
+  auto trivialSpill = llvm::find_if(activeRanges, isTrivialSpill);
+  if (trivialSpill != activeRanges.end())
+    return *trivialSpill;
+
+  // Heuristic: Spill the range that ends last (with a compatible tile type).
+  auto isSmallerTileTypeOrEndsEarlier = [](LiveRange *a, LiveRange *b) {
+    return !isTileTypeGreaterOrEqual(a->getTileType(), b->getTileType()) ||
+           a->end() < b->end();
+  };
+  LiveRange *lastActiveLiveRange = *std::max_element(
+      activeRanges.begin(), activeRanges.end(), isSmallerTileTypeOrEndsEarlier);
+  if (!isSmallerTileTypeOrEndsEarlier(lastActiveLiveRange, newRange))
+    return lastActiveLiveRange;
+  return newRange;
+}
+
 /// Greedily allocate tile IDs to live ranges. Spill using simple heuristics.
 /// Note: This does not attempt to fill holes in live/allocated ranges.
-void allocateTilesToLiveRanges(ArrayRef<LiveRange *> liveRanges) {
+void allocateTilesToLiveRanges(
+    ArrayRef<LiveRange *> liveRangesSortedByStartPoint) {
   TileAllocator tileAllocator;
-  SetVector<LiveRange *> allocatedRanges;
-
-  auto chooseSpillUsingHeuristics = [&](LiveRange *newRange) {
-    unsigned memoryTileId = tileAllocator.allocateInMemoryTileId();
-    auto spillActiveRange = [&](LiveRange *range) {
-      unsigned tileId = *range->tileId;
-      range->tileId = memoryTileId;
-      allocatedRanges.remove(range);
-      return tileId;
-    };
-
-    auto isTrivialSpill = [](LiveRange *allocatedRange) {
-      return allocatedRange->values.size() == 1 &&
-             isTriviallyCloneableTileOp(
-                 allocatedRange->values[0]
-                     .getDefiningOp<ArmSMETileOpInterface>());
-    };
-
-    // Heuristic: Spill trivially copyable operations (usually free).
-    if (isTrivialSpill(newRange))
-      return memoryTileId;
-    auto trivialSpill = llvm::find_if(allocatedRanges, isTrivialSpill);
-    if (trivialSpill != allocatedRanges.end())
-      return spillActiveRange(*trivialSpill);
-
-    // Heuristic: Spill the live range that ends last.
-    LiveRange *lastActiveLiveRange = *std::max_element(
-        allocatedRanges.begin(), allocatedRanges.end(),
-        [](LiveRange *a, LiveRange *b) { return a->end() < b->end(); });
-    if (lastActiveLiveRange->end() >= newRange->end())
-      return spillActiveRange(lastActiveLiveRange);
-
-    return memoryTileId;
-  };
-
-  for (LiveRange *newRange : liveRanges) {
-    // Release tiles from live ranges that have ended.
-    allocatedRanges.remove_if([&](LiveRange *allocatedRange) {
-      if (allocatedRange->end() <= newRange->start()) {
-        tileAllocator.releaseTileId(allocatedRange->getTileType(),
-                                    *allocatedRange->tileId);
+  SetVector<LiveRange *> activeRanges;
+  for (LiveRange *nextRange : liveRangesSortedByStartPoint) {
+    // Release tile IDs from live ranges that have ended.
+    activeRanges.remove_if([&](LiveRange *activeRange) {
+      if (activeRange->end() <= nextRange->start()) {
+        tileAllocator.releaseTileId(activeRange->getTileType(),
+                                    *activeRange->tileId);
         return true;
       }
       return false;
     });
 
-    // Allocate a tile ID to `newRange`.
-    auto tileId = tileAllocator.allocateTileId(newRange->getTileType());
-    if (succeeded(tileId))
-      newRange->tileId = *tileId;
-    else
-      newRange->tileId = chooseSpillUsingHeuristics(newRange);
+    // Allocate a tile ID to `nextRange`.
+    auto rangeTileType = nextRange->getTileType();
+    auto tileId = tileAllocator.allocateTileId(rangeTileType);
+    if (succeeded(tileId)) {
+      nextRange->tileId = *tileId;
+    } else {
+      LiveRange *rangeToSpill =
+          chooseSpillUsingHeuristics(activeRanges.getArrayRef(), nextRange);
+      if (rangeToSpill != nextRange) {
+        // Spill an active live range (so release its tile ID first).
+        tileAllocator.releaseTileId(rangeToSpill->getTileType(),
+                                    *rangeToSpill->tileId);
+        activeRanges.remove(rangeToSpill);
+        // This will always succeed after a spill (of an active live range).
+        nextRange->tileId = *tileAllocator.allocateTileId(rangeTileType);
+      }
+      rangeToSpill->tileId = tileAllocator.allocateInMemoryTileId();
+    }
 
-    // Insert the live range into the allocated ranges.
-    if (newRange->tileId < kInMemoryTileIdBase)
-      allocatedRanges.insert(newRange);
+    // Insert the live range into the active ranges.
+    if (nextRange->tileId < kInMemoryTileIdBase)
+      activeRanges.insert(nextRange);
   }
 }
 

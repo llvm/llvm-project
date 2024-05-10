@@ -164,4 +164,9 @@ OpOperand *getTileOpOperand(arm_sme::ArmSMETileOpInterface tileOp) {
   return tileOperand;
 }
 
+bool isTileTypeGreaterOrEqual(ArmSMETileType typeA, ArmSMETileType typeB) {
+  // Note: This is <= due to how tile types are numbered in ArmSMEOps.td.
+  return static_cast<unsigned>(typeA) <= static_cast<unsigned>(typeB);
+}
+
 } // namespace mlir::arm_sme

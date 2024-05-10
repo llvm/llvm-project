@@ -92,6 +92,9 @@ bool hasTileResult(arm_sme::ArmSMETileOpInterface tileOp);
 /// Returns the tile `OpOperand` for this `tileOp` (or null).
 OpOperand *getTileOpOperand(arm_sme::ArmSMETileOpInterface tileOp);
 
+/// Returns true `typeA` is >= (in terms of bytes) than `typeB`.
+bool isTileTypeGreaterOrEqual(ArmSMETileType typeA, ArmSMETileType typeB);
+
 } // namespace mlir::arm_sme
 
 #endif // MLIR_DIALECT_ARMSME_UTILS_UTILS_H_
