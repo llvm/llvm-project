@@ -217,15 +217,13 @@ void SampleProfileMatcher::matchNonCallsiteLocs(
   SmallVector<LineLocation> LastMatchedNonAnchors;
   for (const auto &IR : IRAnchors) {
     const auto &Loc = IR.first;
-    [[maybe_unused]] StringRef CalleeName = IR.second.stringRef();
     bool IsMatchedAnchor = false;
-
     // Match the anchor location in lexical order.
     auto R = MatchedAnchors.find(Loc);
     if (R != MatchedAnchors.end()) {
       const auto &Candidate = R->second;
       InsertMatching(Loc, Candidate);
-      LLVM_DEBUG(dbgs() << "Callsite with callee:" << CalleeName
+      LLVM_DEBUG(dbgs() << "Callsite with callee:" << IR.second.stringRef()
                         << " is matched from " << Loc << " to " << Candidate
                         << "\n");
       LocationDelta = Candidate.LineOffset - Loc.LineOffset;
@@ -405,8 +403,7 @@ void SampleProfileMatcher::recordCallsiteMatchStates(
   // IR callsites.
   for (const auto &I : ProfileAnchors) {
     const auto &Loc = I.first;
-    [[maybe_unused]] StringRef CalleeName = I.second.stringRef();
-    assert(!CalleeName.empty() && "Callees should not be empty");
+    assert(!I.second.stringRef().empty() && "Callees should not be empty");
     auto It = CallsiteMatchStates.find(Loc);
     if (It == CallsiteMatchStates.end())
       CallsiteMatchStates.emplace(Loc, MatchState::InitialMismatch);
