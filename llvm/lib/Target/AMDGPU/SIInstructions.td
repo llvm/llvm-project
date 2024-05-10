@@ -1908,20 +1908,22 @@ def : GCNPat <
   (S_XOR_B32 SReg_32:$src, (S_MOV_B32 (i32 0x80000000)))
 >;
 
+foreach fp16vt = [f16, bf16] in {
 def : GCNPat <
-  (UniformUnaryFrag<fneg> (f16 SReg_32:$src)),
+  (UniformUnaryFrag<fneg> (fp16vt SReg_32:$src)),
   (S_XOR_B32 SReg_32:$src, (S_MOV_B32 (i32 0x00008000)))
 >;
 
 def : GCNPat <
-  (UniformUnaryFrag<fabs> (f16 SReg_32:$src)),
+  (UniformUnaryFrag<fabs> (fp16vt SReg_32:$src)),
   (S_AND_B32 SReg_32:$src, (S_MOV_B32 (i32 0x00007fff)))
 >;
 
 def : GCNPat <
-  (UniformUnaryFrag<fneg> (fabs (f16 SReg_32:$src))),
+  (UniformUnaryFrag<fneg> (fabs (fp16vt SReg_32:$src))),
   (S_OR_B32 SReg_32:$src, (S_MOV_B32 (i32 0x00008000))) // Set sign bit
 >;
+} // End foreach fp16vt = ...
 
 def : GCNPat <
   (UniformUnaryFrag<fneg> (v2f16 SReg_32:$src)),
@@ -2030,20 +2032,22 @@ def : GCNPat <
   (V_XOR_B32_e64 (S_MOV_B32 (i32 0x80000000)), VGPR_32:$src)
 >;
 
+foreach fp16vt = [f16, bf16] in {
 def : GCNPat <
-  (fabs (f16 VGPR_32:$src)),
+  (fabs (fp16vt VGPR_32:$src)),
   (V_AND_B32_e64 (S_MOV_B32 (i32 0x00007fff)), VGPR_32:$src)
 >;
 
 def : GCNPat <
-  (fneg (f16 VGPR_32:$src)),
+  (fneg (fp16vt VGPR_32:$src)),
   (V_XOR_B32_e64 (S_MOV_B32 (i32 0x00008000)), VGPR_32:$src)
 >;
 
 def : GCNPat <
-  (fneg (fabs (f16 VGPR_32:$src))),
+  (fneg (fabs (fp16vt VGPR_32:$src))),
   (V_OR_B32_e64 (S_MOV_B32 (i32 0x00008000)), VGPR_32:$src) // Set sign bit
 >;
+} // End foreach fp16vt = ...
 
 def : GCNPat <
   (fneg (v2f16 VGPR_32:$src)),
