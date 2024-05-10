@@ -175,9 +175,19 @@ class CheckRunner:
             if not has_check_fix and not has_check_message and not has_check_note:
                 self.expect_no_diagnosis = True
 
-        assert self.expect_no_diagnosis != (
+        expect_diagnosis = (
             self.has_check_fixes or self.has_check_messages or self.has_check_notes
         )
+        if self.expect_no_diagnosis and expect_diagnosis:
+            sys.exit(
+                "%s, %s or %s not found in the input"
+                % (
+                    self.fixes.prefix,
+                    self.messages.prefix,
+                    self.notes.prefix,
+                )
+            )
+        assert expect_diagnosis or self.expect_no_diagnosis
 
     def prepare_test_inputs(self):
         # Remove the contents of the CHECK lines to avoid CHECKs matching on
@@ -227,7 +237,6 @@ class CheckRunner:
         return clang_tidy_output
 
     def check_no_diagnosis(self, clang_tidy_output):
-        print(clang_tidy_output)
         if clang_tidy_output != "":
             sys.exit("No diagnostics were expected, but found the ones above")
 
