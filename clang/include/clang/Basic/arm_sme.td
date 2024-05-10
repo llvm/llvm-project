@@ -708,3 +708,27 @@ let TargetGuard = "sme2" in {
   def SVLUTI2_LANE_ZT_X2 : Inst<"svluti2_lane_zt_{d}_x2", "2.di[i", "cUcsUsiUibhf", MergeNone, "aarch64_sme_luti2_lane_zt_x2", [IsStreaming, IsInZT0], [ImmCheck<0, ImmCheck0_0>, ImmCheck<2, ImmCheck0_7>]>;
   def SVLUTI4_LANE_ZT_X2 : Inst<"svluti4_lane_zt_{d}_x2", "2.di[i", "cUcsUsiUibhf", MergeNone, "aarch64_sme_luti4_lane_zt_x2", [IsStreaming, IsInZT0], [ImmCheck<0, ImmCheck0_0>, ImmCheck<2, ImmCheck0_3>]>;
 }
+
+////////////////////////////////////////////////////////////////////////////////
+// SME2p1 - FMOPA, FMOPS (non-widening)
+let TargetGuard = "sme2,b16b16" in {
+  def SVMOPA_BF16_NW : SInst<"svmopa_za16[_bf16]_m", "viPPdd", "b",
+                             MergeNone, "aarch64_sme_mopa",
+                             [IsStreaming, IsInOutZA],
+                             [ImmCheck<0, ImmCheck0_1>]>;
+  def SVMOPS_BF16_NW : SInst<"svmops_za16[_bf16]_m", "viPPdd", "b",
+                             MergeNone, "aarch64_sme_mops",
+                             [IsStreaming, IsInOutZA],
+                             [ImmCheck<0, ImmCheck0_1>]>;
+}
+
+let TargetGuard = "sme-f16f16" in {
+  def SVMOPA_F16_NW : SInst<"svmopa_za16[_f16]_m", "viPPdd", "h",
+                            MergeNone, "aarch64_sme_mopa",
+                            [IsStreaming, IsInOutZA],
+                            [ImmCheck<0, ImmCheck0_1>]>;
+  def SVMOPS_F16_NW : SInst<"svmops_za16[_f16]_m", "viPPdd", "h",
+                            MergeNone, "aarch64_sme_mops",
+                            [IsStreaming, IsInOutZA],
+                            [ImmCheck<0, ImmCheck0_1>]>;
+}
