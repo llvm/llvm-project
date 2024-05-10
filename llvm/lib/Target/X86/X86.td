@@ -739,6 +739,10 @@ def TuningFastMOVBE
     : SubtargetFeature<"fast-movbe", "HasFastMOVBE", "true",
     "Prefer a movbe over a single-use load + bswap / single-use bswap + store">;
 
+def TuningFastImm16
+    : SubtargetFeature<"fast-imm16", "HasFastImm16", "true",
+    "Prefer a i16 instruction with i16 immediate over extension to i32">;
+
 def TuningUseSLMArithCosts
     : SubtargetFeature<"use-slm-arith-costs", "UseSLMArithCosts", "true",
         "Use Silvermont specific arithmetic costs">;
@@ -1146,6 +1150,7 @@ def ProcessorFeatures {
                                        TuningSlowDivide32,
                                        TuningSlowDivide64,
                                        TuningSlowTwoMemOps,
+                                       TuningFastImm16,
                                        TuningLEAUsesAG,
                                        TuningPadShortFunctions,
                                        TuningInsertVZEROUPPER,
@@ -1166,6 +1171,7 @@ def ProcessorFeatures {
                                       TuningSlowPMULLD,
                                       TuningFast7ByteNOP,
                                       TuningFastMOVBE,
+                                      TuningFastImm16,
                                       TuningPOPCNTFalseDeps,
                                       TuningInsertVZEROUPPER,
                                       TuningNoDomainDelay];
@@ -1187,6 +1193,7 @@ def ProcessorFeatures {
                                       TuningSlowLEA,
                                       TuningSlowIncDec,
                                       TuningFastMOVBE,
+                                      TuningFastImm16,
                                       TuningPOPCNTFalseDeps,
                                       TuningInsertVZEROUPPER,
                                       TuningNoDomainDelay];
@@ -1201,6 +1208,7 @@ def ProcessorFeatures {
                                       TuningSlowLEA,
                                       TuningSlowIncDec,
                                       TuningFastMOVBE,
+                                      TuningFastImm16,
                                       TuningInsertVZEROUPPER,
                                       TuningNoDomainDelay];
   list<SubtargetFeature> GLPFeatures =
@@ -1321,6 +1329,7 @@ def ProcessorFeatures {
                                       TuningPreferMaskRegisters,
                                       TuningFastGather,
                                       TuningFastMOVBE,
+                                      TuningFastImm16,
                                       TuningSlowPMADDWD];
   // TODO Add AVX5124FMAPS/AVX5124VNNIW features
   list<SubtargetFeature> KNMFeatures =
@@ -1364,6 +1373,7 @@ def ProcessorFeatures {
                                          TuningFastScalarShiftMasks,
                                          TuningFastVectorShiftMasks,
                                          TuningSlowSHLD,
+                                         TuningFastImm16,
                                          TuningSBBDepBreaking,
                                          TuningInsertVZEROUPPER];
 
@@ -1384,6 +1394,7 @@ def ProcessorFeatures {
                                          TuningFastScalarShiftMasks,
                                          TuningFastVectorShiftMasks,
                                          TuningFastMOVBE,
+                                         TuningFastImm16,
                                          TuningSBBDepBreaking,
                                          TuningSlowSHLD];
   list<SubtargetFeature> BtVer2Features =
@@ -1488,6 +1499,7 @@ def ProcessorFeatures {
                                      TuningFastScalarShiftMasks,
                                      TuningFastVariablePerLaneShuffle,
                                      TuningFastMOVBE,
+                                     TuningFastImm16,
                                      TuningSlowSHLD,
                                      TuningSBBDepBreaking,
                                      TuningInsertVZEROUPPER,

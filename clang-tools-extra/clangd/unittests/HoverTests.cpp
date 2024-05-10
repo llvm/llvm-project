@@ -965,6 +965,19 @@ class Foo final {})cpp";
          // Bindings are in theory public members of an anonymous struct.
          HI.AccessSpecifier = "public";
        }},
+      {// Don't crash on invalid decl with invalid init expr.
+       R"cpp(
+          Unknown [[^abc]] = invalid;
+          // error-ok
+          )cpp",
+       [](HoverInfo &HI) {
+         HI.Name = "abc";
+         HI.Kind = index::SymbolKind::Variable;
+         HI.NamespaceScope = "";
+         HI.Definition = "int abc = <recovery - expr>()";
+         HI.Type = "int";
+         HI.AccessSpecifier = "public";
+       }},
       {// Extra info for function call.
        R"cpp(
           void fun(int arg_a, int &arg_b) {};

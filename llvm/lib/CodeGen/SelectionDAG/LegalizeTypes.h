@@ -786,6 +786,7 @@ private:
   SDValue ScalarizeVecRes_InregOp(SDNode *N);
   SDValue ScalarizeVecRes_VecInregOp(SDNode *N);
 
+  SDValue ScalarizeVecRes_ADDRSPACECAST(SDNode *N);
   SDValue ScalarizeVecRes_BITCAST(SDNode *N);
   SDValue ScalarizeVecRes_BUILD_VECTOR(SDNode *N);
   SDValue ScalarizeVecRes_EXTRACT_SUBVECTOR(SDNode *N);
@@ -853,6 +854,7 @@ private:
   void SplitVecRes_BinOp(SDNode *N, SDValue &Lo, SDValue &Hi);
   void SplitVecRes_TernaryOp(SDNode *N, SDValue &Lo, SDValue &Hi);
   void SplitVecRes_UnaryOp(SDNode *N, SDValue &Lo, SDValue &Hi);
+  void SplitVecRes_ADDRSPACECAST(SDNode *N, SDValue &Lo, SDValue &Hi);
   void SplitVecRes_FFREXP(SDNode *N, unsigned ResNo, SDValue &Lo, SDValue &Hi);
   void SplitVecRes_ExtendOp(SDNode *N, SDValue &Lo, SDValue &Hi);
   void SplitVecRes_InregOp(SDNode *N, SDValue &Lo, SDValue &Hi);
@@ -956,6 +958,7 @@ private:
   // Widen Vector Result Promotion.
   void WidenVectorResult(SDNode *N, unsigned ResNo);
   SDValue WidenVecRes_MERGE_VALUES(SDNode* N, unsigned ResNo);
+  SDValue WidenVecRes_ADDRSPACECAST(SDNode *N);
   SDValue WidenVecRes_AssertZext(SDNode* N);
   SDValue WidenVecRes_BITCAST(SDNode* N);
   SDValue WidenVecRes_BUILD_VECTOR(SDNode* N);
