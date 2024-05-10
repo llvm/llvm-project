@@ -998,7 +998,7 @@ TEST(StringRefTest, AllocatorCopy) {
   // allocator.
   StringRef StrEmpty = "";
   StringRef StrEmptyc = StrEmpty.copy(Alloc);
-  EXPECT_TRUE(StrEmpty.equals(StrEmptyc));
+  EXPECT_TRUE(StrEmpty == StrEmptyc);
   EXPECT_EQ(StrEmptyc.data(), nullptr);
   EXPECT_EQ(StrEmptyc.size(), 0u);
   EXPECT_EQ(Alloc.getTotalMemory(), 0u);
@@ -1007,9 +1007,9 @@ TEST(StringRefTest, AllocatorCopy) {
   StringRef Str2 = "bye";
   StringRef Str1c = Str1.copy(Alloc);
   StringRef Str2c = Str2.copy(Alloc);
-  EXPECT_TRUE(Str1.equals(Str1c));
+  EXPECT_TRUE(Str1 == Str1c);
   EXPECT_NE(Str1.data(), Str1c.data());
-  EXPECT_TRUE(Str2.equals(Str2c));
+  EXPECT_TRUE(Str2 == Str2c);
   EXPECT_NE(Str2.data(), Str2c.data());
 }
 
