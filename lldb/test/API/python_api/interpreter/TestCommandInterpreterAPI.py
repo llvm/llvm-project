@@ -106,7 +106,8 @@ class CommandInterpreterAPICase(TestBase):
         ci.HandleCommand("breakpoint set -f main.c -l %d" % self.line, res)
         ci.HandleCommand("r", res)
         ci.HandleCommand("p a", res)
-        total_number_of_commands = 5
+        ci.HandleCommand("statistics dump", res)
+        total_number_of_commands = 6
 
         # Retrieve the transcript and convert it into a Python object
         transcript = ci.GetTranscript()
@@ -120,9 +121,6 @@ class CommandInterpreterAPICase(TestBase):
 
         transcript = json.loads(stream.GetData())
 
-        print('TRANSCRIPT')
-        print(transcript)
-
         # The transcript will contain a bunch of commands that are from
         # a general setup code. See `def setUpCommands(cls)` in
         # `lldb/packages/Python/lldbsuite/test/lldbtest.py`.
@@ -132,45 +130,51 @@ class CommandInterpreterAPICase(TestBase):
         # trimming to the last parts.
         transcript = transcript[-total_number_of_commands:]
 
-        # Validate the transcript.
+        # The following validates individual commands in the transcript.
         #
-        # The following asserts rely on the exact output format of the
+        # Note: Some of the asserts rely on the exact output format of the
         # commands. Hopefully we are not changing them any time soon.
 
         # (lldb) version
         self.assertEqual(transcript[0]["command"], "version")
-        self.assertTrue("lldb version" in transcript[0]["output"][0])
-        self.assertEqual(transcript[0]["error"], [])
+        self.assertTrue("lldb version" in transcript[0]["output"])
+        self.assertEqual(transcript[0]["error"], "")
 
         # (lldb) an-unknown-command
         self.assertEqual(transcript[1],
             {
                 "command": "an-unknown-command",
-                "output": [],
-                "error": [
-                    "error: 'an-unknown-command' is not a valid command.",
-                ],
+                "output": "",
+                "error": "error: 'an-unknown-command' is not a valid command.\n",
             })
 
         # (lldb) breakpoint set -f main.c -l <line>
         self.assertEqual(transcript[2]["command"], "breakpoint set -f main.c -l %d" % self.line)
         # Breakpoint 1: where = a.out`main + 29 at main.c:5:3, address = 0x0000000100000f7d
-        self.assertTrue("Breakpoint 1: where = a.out`main " in transcript[2]["output"][0])
-        self.assertEqual(transcript[2]["error"], [])
+        self.assertTrue("Breakpoint 1: where = a.out`main " in transcript[2]["output"])
+        self.assertEqual(transcript[2]["error"], "")
 
         # (lldb) r
         self.assertEqual(transcript[3]["command"], "r")
         # Process 25494 launched: '<path>/TestCommandInterpreterAPI.test_structured_transcript/a.out' (x86_64)
-        self.assertTrue("Process" in transcript[3]["output"][0])
-        self.assertTrue("launched" in transcript[3]["output"][0])
-        self.assertEqual(transcript[3]["error"], [])
+        self.assertTrue("Process" in transcript[3]["output"])
+        self.assertTrue("launched" in transcript[3]["output"])
+        self.assertEqual(transcript[3]["error"], "")
 
         # (lldb) p a
         self.assertEqual(transcript[4],
             {
                 "command": "p a",
-                "output": [
-                    "(int) 123",
-                ],
-                "error": [],
+                "output": "(int) 123\n",
+                "error": "",
             })
+
+        # (lldb) statistics dump
+        statistics_dump = json.loads(transcript[5]["output"])
+        # Dump result should be valid JSON
+        self.assertTrue(statistics_dump is not json.JSONDecodeError)
+        # Dump result should contain expected fields
+        self.assertTrue("commands" in statistics_dump)
+        self.assertTrue("memory" in statistics_dump)
+        self.assertTrue("modules" in statistics_dump)
+        self.assertTrue("targets" in statistics_dump)

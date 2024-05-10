@@ -2052,14 +2052,10 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
   m_transcript_stream << result.GetOutputData();
   m_transcript_stream << result.GetErrorData();
 
-  // Add output and error to the transcript item after splitting lines. In the
-  // future, other aspects of the command (e.g. perf) can be added, too.
-  transcript_item->AddItem(
-      "output", StructuredData::Array::SplitString(result.GetOutputData(), '\n',
-                                                   -1, false));
-  transcript_item->AddItem(
-      "error", StructuredData::Array::SplitString(result.GetErrorData(), '\n',
-                                                  -1, false));
+  // Add output and error to the transcript item. In the future, other aspects
+  // of the command (e.g. perf) can be added, too.
+  transcript_item->AddStringItem("output", result.GetOutputData());
+  transcript_item->AddStringItem("error", result.GetErrorData());
 
   return result.Succeeded();
 }
