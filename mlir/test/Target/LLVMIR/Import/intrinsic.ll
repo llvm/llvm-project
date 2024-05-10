@@ -597,7 +597,7 @@ define void @ushl_sat_test(i32 %0, i32 %1, <8 x i32> %2, <8 x i32> %3) {
 }
 
 ; CHECK-LABEL: llvm.func @va_intrinsics_test
-define void @va_intrinsics_test(ptr %0, ptr %1) {
+define void @va_intrinsics_test(ptr %0, ptr %1, ...) {
 ; CHECK: llvm.intr.vastart %{{.*}}
   call void @llvm.va_start.p0(ptr %0)
 ; CHECK: llvm.intr.vacopy %{{.*}} to %{{.*}}

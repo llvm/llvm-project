@@ -14,7 +14,7 @@
 
 #include <version>
 // Enable the contents of the header only when libc++ was built with experimental features enabled.
-#if !defined(_LIBCPP_HAS_NO_INCOMPLETE_TZDB)
+#if !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_TZDB)
 
 #  include <__chrono/duration.h>
 #  include <__chrono/system_clock.h>
@@ -43,9 +43,9 @@ public:
   _LIBCPP_HIDE_FROM_ABI leap_second(const leap_second&)            = default;
   _LIBCPP_HIDE_FROM_ABI leap_second& operator=(const leap_second&) = default;
 
-  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr sys_seconds date() const noexcept { return __date_; }
+  _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI constexpr sys_seconds date() const noexcept { return __date_; }
 
-  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr seconds value() const noexcept { return __value_; }
+  _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI constexpr seconds value() const noexcept { return __value_; }
 
 private:
   sys_seconds __date_;
@@ -121,6 +121,6 @@ _LIBCPP_HIDE_FROM_ABI constexpr auto operator<=>(const leap_second& __x, const s
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // !defined(_LIBCPP_HAS_NO_INCOMPLETE_TZDB)
+#endif // !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_TZDB)
 
 #endif // _LIBCPP___CHRONO_LEAP_SECOND_H

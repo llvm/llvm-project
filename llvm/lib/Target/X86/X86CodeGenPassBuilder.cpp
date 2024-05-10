@@ -19,9 +19,10 @@ using namespace llvm;
 
 namespace {
 
-class X86CodeGenPassBuilder : public CodeGenPassBuilder<X86CodeGenPassBuilder> {
+class X86CodeGenPassBuilder
+    : public CodeGenPassBuilder<X86CodeGenPassBuilder, X86TargetMachine> {
 public:
-  explicit X86CodeGenPassBuilder(LLVMTargetMachine &TM,
+  explicit X86CodeGenPassBuilder(X86TargetMachine &TM,
                                  const CGPassBuilderOption &Opts,
                                  PassInstrumentationCallbacks *PIC)
       : CodeGenPassBuilder(TM, Opts, PIC) {}

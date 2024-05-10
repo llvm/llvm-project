@@ -54,6 +54,7 @@ FunctionPass *createFalkorMarkStridedAccessesPass();
 FunctionPass *createAArch64PointerAuthPass();
 FunctionPass *createAArch64BranchTargetsPass();
 FunctionPass *createAArch64MIPeepholeOptPass();
+FunctionPass *createAArch64PostCoalescerPass();
 
 FunctionPass *createAArch64CleanupLocalDynamicTLSPass();
 
@@ -93,6 +94,7 @@ void initializeAArch64LoopIdiomTransformLegacyPassPass(PassRegistry &);
 void initializeAArch64LowerHomogeneousPrologEpilogPass(PassRegistry &);
 void initializeAArch64MIPeepholeOptPass(PassRegistry &);
 void initializeAArch64O0PreLegalizerCombinerPass(PassRegistry &);
+void initializeAArch64PostCoalescerPass(PassRegistry &);
 void initializeAArch64PostLegalizerCombinerPass(PassRegistry &);
 void initializeAArch64PostLegalizerLoweringPass(PassRegistry &);
 void initializeAArch64PostSelectOptimizePass(PassRegistry &);

@@ -255,6 +255,88 @@ end: ; preds = %entry
   ret void
 }
 
+define i32 @PR88958_1(ptr %0, <2 x double> %1) {
+; SSE-LABEL: PR88958_1:
+; SSE:       # %bb.0:
+; SSE-NEXT:    xorl %eax, %eax
+; SSE-NEXT:    ptest (%rdi), %xmm0
+; SSE-NEXT:    sete %al
+; SSE-NEXT:    retq
+;
+; CHECK-LABEL: PR88958_1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    vtestpd (%rdi), %xmm0
+; CHECK-NEXT:    sete %al
+; CHECK-NEXT:    retq
+  %3 = load <2 x double>, ptr %0
+  %4 = tail call i32 @llvm.x86.avx.vtestz.pd(<2 x double> %3, <2 x double> %1)
+  ret i32 %4
+}
+
+define i32 @PR88958_2(ptr %0, <2 x double> %1) {
+; SSE-LABEL: PR88958_2:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movdqa (%rdi), %xmm1
+; SSE-NEXT:    xorl %eax, %eax
+; SSE-NEXT:    ptest %xmm0, %xmm1
+; SSE-NEXT:    setb %al
+; SSE-NEXT:    retq
+;
+; CHECK-LABEL: PR88958_2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vmovapd (%rdi), %xmm1
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    vtestpd %xmm0, %xmm1
+; CHECK-NEXT:    setb %al
+; CHECK-NEXT:    retq
+  %3 = load <2 x double>, ptr %0
+  %4 = tail call i32 @llvm.x86.avx.vtestc.pd(<2 x double> %3, <2 x double> %1)
+  ret i32 %4
+}
+
+define i32 @PR88958_3(ptr %0, <4 x double> %1) {
+; SSE-LABEL: PR88958_1:
+; SSE:       # %bb.0:
+; SSE-NEXT:    xorl %eax, %eax
+; SSE-NEXT:    ptest (%rdi), %xmm0
+; SSE-NEXT:    sete %al
+; SSE-NEXT:    retq
+;
+; CHECK-LABEL: PR88958_3:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    vtestpd (%rdi), %ymm0
+; CHECK-NEXT:    sete %al
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    retq
+  %3 = load <4 x double>, ptr %0
+  %4 = tail call i32 @llvm.x86.avx.vtestz.pd.256(<4 x double> %3, <4 x double> %1)
+  ret i32 %4
+}
+
+define i32 @PR88958_4(ptr %0, <4 x double> %1) {
+; SSE-LABEL: PR88958_2:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movdqa (%rdi), %xmm1
+; SSE-NEXT:    xorl %eax, %eax
+; SSE-NEXT:    ptest %xmm0, %xmm1
+; SSE-NEXT:    setb %al
+; SSE-NEXT:    retq
+;
+; CHECK-LABEL: PR88958_4:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vmovapd (%rdi), %ymm1
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    vtestpd %ymm0, %ymm1
+; CHECK-NEXT:    setb %al
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    retq
+  %3 = load <4 x double>, ptr %0
+  %4 = tail call i32 @llvm.x86.avx.vtestc.pd.256(<4 x double> %3, <4 x double> %1)
+  ret i32 %4
+}
+
 declare i32 @llvm.x86.avx.vtestz.pd(<2 x double>, <2 x double>) nounwind readnone
 declare i32 @llvm.x86.avx.vtestc.pd(<2 x double>, <2 x double>) nounwind readnone
 declare i32 @llvm.x86.avx.vtestnzc.pd(<2 x double>, <2 x double>) nounwind readnone

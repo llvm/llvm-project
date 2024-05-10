@@ -149,9 +149,9 @@ private:
   /// entries in function address translation map.
   APInt calculateBranchEntriesBitMask(MapTy &Map, size_t EqualElems);
 
-  /// Calculate the number of equal offsets (output = input) in the beginning
-  /// of the function.
-  size_t getNumEqualOffsets(const MapTy &Map) const;
+  /// Calculate the number of equal offsets (output = input - skew) in the
+  /// beginning of the function.
+  size_t getNumEqualOffsets(const MapTy &Map, uint32_t Skew) const;
 
   std::map<uint64_t, MapTy> Maps;
 

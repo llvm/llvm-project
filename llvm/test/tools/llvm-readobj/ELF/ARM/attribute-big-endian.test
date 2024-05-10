@@ -1,17 +1,23 @@
-## We only implement attribute section printing for little-endian encoding.
-
 # RUN: yaml2obj %s -o %t.o
-# RUN: llvm-readobj -A %t.o 2>&1 | FileCheck %s -DFILE=%t.o
+# RUN: llvm-readelf -A %t.o 2>&1 | FileCheck %s
 
-# CHECK: warning: '[[FILE]]': attribute printing not implemented for big-endian ARM objects
+# CHECK:      BuildAttributes {
+# CHECK-NEXT:   FormatVersion: 0x41
+# CHECK-NEXT:   Section 1 {
+# CHECK-NEXT:     SectionLength: 22
+# CHECK-NEXT:     Vendor: armabi
+# CHECK-NEXT:   }
+# CHECK-NEXT: }
 
 --- !ELF
 FileHeader:
   Class:   ELFCLASS32
-## Test big-endian encoding.
   Data:    ELFDATA2MSB
   Type:    ET_REL
   Machine: EM_ARM
 Sections:
   - Name: .ARM.attributes
     Type: SHT_ARM_ATTRIBUTES
+    ContentArray: [ 0x41, 0x00, 0x00, 0x00, 0x16, 0x61, 0x72, 0x6D, 0x61, 0x62,
+    0x69, 0x00, 0x01, 0x0b, 0x00, 0x00, 0x00, 0x04, 0x01, 0x06, 0x01, 0x08,
+    0x01 ]

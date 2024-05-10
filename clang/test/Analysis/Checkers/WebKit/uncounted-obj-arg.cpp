@@ -1,6 +1,7 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=alpha.webkit.UncountedCallArgsChecker -verify %s
 
 #include "mock-types.h"
+#include "mock-system-header.h"
 
 void WTFBreakpointTrap();
 void WTFCrashWithInfo(int, const char*, const char*, int);
@@ -137,9 +138,27 @@ public:
   Number(int v) : v(v) { }
   Number(double);
   Number operator+(const Number&);
+  Number& operator++() { ++v; return *this; }
+  Number operator++(int) { Number returnValue(v); ++v; return returnValue; }
   const int& value() const { return v; }
+  void someMethod();
+
 private:
   int v;
+};
+
+class ComplexNumber {
+public:
+  ComplexNumber() : real(0), complex(0) { }
+  ComplexNumber(const ComplexNumber&);
+  ComplexNumber& operator++() { real.someMethod(); return *this; }
+  ComplexNumber operator++(int);
+  ComplexNumber& operator<<(int);
+  ComplexNumber& operator+();
+
+private:
+  Number real;
+  Number complex;
 };
 
 class RefCounted {
@@ -147,6 +166,7 @@ public:
   void ref() const;
   void deref() const;
 
+  void method();
   void someFunction();
   int otherFunction();
 
@@ -201,6 +221,19 @@ public:
   unsigned trivial25() const { return __c11_atomic_load((volatile _Atomic(unsigned) *)&v, __ATOMIC_RELAXED); }
   bool trivial26() { bool hasValue = v; return !hasValue; }
   bool trivial27(int v) { bool value; value = v ? 1 : 0; return value; }
+  bool trivial28() { return true; }
+  bool trivial29() { return false; }
+  unsigned trivial30(unsigned v) { unsigned r = 0xff; r |= v; return r; }
+  int trivial31(int* v) { return v[0]; }
+  unsigned trivial32() { return sizeof(int); }
+  unsigned trivial33() { return ~0xff; }
+  template <unsigned v> unsigned trivial34() { return v; }
+  void trivial35() { v++; }
+  void trivial36() { ++(*number); }
+  void trivial37() { (*number)++; }
+  void trivial38() { v++; if (__builtin_expect(!!(number), 1)) (*number)++; }
+  int trivial39() { return -v; }
+  int trivial40() { return v << 2; }
 
   static RefCounted& singleton() {
     static RefCounted s_RefCounted;
@@ -273,8 +306,16 @@ public:
     return val;
   }
 
+  int nonTrivial13() { return ~otherFunction(); }
+  int nonTrivial14() { int r = 0xff; r |= otherFunction(); return r; }
+  void nonTrivial15() { ++complex; }
+  void nonTrivial16() { complex++; }
+  ComplexNumber nonTrivial17() { return complex << 2; }
+  ComplexNumber nonTrivial18() { return +complex; }
+
   unsigned v { 0 };
   Number* number { nullptr };
+  ComplexNumber complex;
   Enum enumValue { Enum::Value1 };
 };
 
@@ -322,6 +363,21 @@ public:
     getFieldTrivial().trivial25(); // no-warning
     getFieldTrivial().trivial26(); // no-warning
     getFieldTrivial().trivial27(5); // no-warning
+    getFieldTrivial().trivial28(); // no-warning
+    getFieldTrivial().trivial29(); // no-warning
+    getFieldTrivial().trivial30(7); // no-warning
+    int a[] = {1, 2};
+    getFieldTrivial().trivial31(a); // no-warning
+    getFieldTrivial().trivial32(); // no-warning
+    getFieldTrivial().trivial33(); // no-warning
+    getFieldTrivial().trivial34<7>(); // no-warning
+    getFieldTrivial().trivial35(); // no-warning
+    getFieldTrivial().trivial36(); // no-warning
+    getFieldTrivial().trivial37(); // no-warning
+    getFieldTrivial().trivial38(); // no-warning
+    getFieldTrivial().trivial39(); // no-warning
+    getFieldTrivial().trivial40(); // no-warning
+
     RefCounted::singleton().trivial18(); // no-warning
     RefCounted::singleton().someFunction(); // no-warning
 
@@ -351,6 +407,18 @@ public:
     // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
     getFieldTrivial().nonTrivial12();
     // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
+    getFieldTrivial().nonTrivial13();
+    // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
+    getFieldTrivial().nonTrivial14();
+    // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
+    getFieldTrivial().nonTrivial15();
+    // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
+    getFieldTrivial().nonTrivial16();
+    // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
+    getFieldTrivial().nonTrivial17();
+    // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
+    getFieldTrivial().nonTrivial18();
+    // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
   }
 };
 
@@ -375,4 +443,8 @@ void someFunction(const RefCounted&);
 
 void test2() {
     someFunction(*object());
+}
+
+void system_header() {
+  callMethod<RefCountable>(object);
 }

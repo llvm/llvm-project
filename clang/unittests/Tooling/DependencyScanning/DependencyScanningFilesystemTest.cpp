@@ -18,6 +18,7 @@ struct InstrumentingFilesystem
     : llvm::RTTIExtends<InstrumentingFilesystem, llvm::vfs::ProxyFileSystem> {
   unsigned NumStatusCalls = 0;
   unsigned NumGetRealPathCalls = 0;
+  unsigned NumExistsCalls = 0;
 
   using llvm::RTTIExtends<InstrumentingFilesystem,
                           llvm::vfs::ProxyFileSystem>::RTTIExtends;
@@ -31,6 +32,11 @@ struct InstrumentingFilesystem
                               llvm::SmallVectorImpl<char> &Output) override {
     ++NumGetRealPathCalls;
     return ProxyFileSystem::getRealPath(Path, Output);
+  }
+
+  bool exists(const llvm::Twine &Path) override {
+    ++NumExistsCalls;
+    return ProxyFileSystem::exists(Path);
   }
 };
 } // namespace
@@ -146,4 +152,25 @@ TEST(DependencyScanningFilesystem, RealPathAndStatusInvariants) {
 
     DepFS.status("/bar");
   }
+}
+
+TEST(DependencyScanningFilesystem, CacheStatOnExists) {
+  auto InMemoryFS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
+  auto InstrumentingFS =
+      llvm::makeIntrusiveRefCnt<InstrumentingFilesystem>(InMemoryFS);
+  InMemoryFS->setCurrentWorkingDirectory("/");
+  InMemoryFS->addFile("/foo", 0, llvm::MemoryBuffer::getMemBuffer(""));
+  InMemoryFS->addFile("/bar", 0, llvm::MemoryBuffer::getMemBuffer(""));
+  DependencyScanningFilesystemSharedCache SharedCache;
+  DependencyScanningWorkerFilesystem DepFS(SharedCache, InstrumentingFS);
+
+  DepFS.status("/foo");
+  DepFS.status("/foo");
+  DepFS.status("/bar");
+  EXPECT_EQ(InstrumentingFS->NumStatusCalls, 2u);
+
+  DepFS.exists("/foo");
+  DepFS.exists("/bar");
+  EXPECT_EQ(InstrumentingFS->NumStatusCalls, 2u);
+  EXPECT_EQ(InstrumentingFS->NumExistsCalls, 0u);
 }

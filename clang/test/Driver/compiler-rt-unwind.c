@@ -98,14 +98,14 @@
 // RUN:     --target=x86_64-w64-mingw32 -rtlib=compiler-rt --unwindlib=libunwind \
 // RUN:     -shared-libgcc \
 // RUN:   | FileCheck --check-prefix=MINGW-RTLIB-COMPILER-RT-SHARED-UNWINDLIB-COMPILER-RT %s
-// MINGW-RTLIB-COMPILER-RT-SHARED-UNWINDLIB-COMPILER-RT: "{{.*}}libclang_rt.builtins-x86_64.a"
+// MINGW-RTLIB-COMPILER-RT-SHARED-UNWINDLIB-COMPILER-RT: "{{.*}}libclang_rt.builtins.a"
 // MINGW-RTLIB-COMPILER-RT-SHARED-UNWINDLIB-COMPILER-RT-SAME: "-l:libunwind.dll.a"
 //
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=x86_64-w64-mingw32 -rtlib=compiler-rt --unwindlib=libunwind \
 // RUN:     -static-libgcc \
 // RUN:   | FileCheck --check-prefix=MINGW-RTLIB-COMPILER-RT-STATIC-UNWINDLIB-COMPILER-RT %s
-// MINGW-RTLIB-COMPILER-RT-STATIC-UNWINDLIB-COMPILER-RT: "{{.*}}libclang_rt.builtins-x86_64.a"
+// MINGW-RTLIB-COMPILER-RT-STATIC-UNWINDLIB-COMPILER-RT: "{{.*}}libclang_rt.builtins.a"
 // MINGW-RTLIB-COMPILER-RT-STATIC-UNWINDLIB-COMPILER-RT-SAME: "-l:libunwind.a"
 //
 // RUN: %clang -### %s 2>&1 \
@@ -114,5 +114,5 @@
 // RUN: %clangxx -### %s 2>&1 \
 // RUN:     --target=x86_64-w64-mingw32 -rtlib=compiler-rt --unwindlib=libunwind \
 // RUN:   | FileCheck --check-prefix=MINGW-RTLIB-COMPILER-RT-UNWINDLIB-COMPILER-RT %s
-// MINGW-RTLIB-COMPILER-RT-UNWINDLIB-COMPILER-RT: "{{.*}}libclang_rt.builtins-x86_64.a"
+// MINGW-RTLIB-COMPILER-RT-UNWINDLIB-COMPILER-RT: "{{.*}}libclang_rt.builtins.a"
 // MINGW-RTLIB-COMPILER-RT-UNWINDLIB-COMPILER-RT-SAME: "-lunwind"

@@ -64,6 +64,35 @@ getLinearizedMemRefOffsetAndSize(OpBuilder &builder, Location loc, int srcBits,
 // it means both the allocations and associated stores can be removed.
 void eraseDeadAllocAndStores(RewriterBase &rewriter, Operation *parentOp);
 
+/// Given a set of sizes, return the suffix product.
+///
+/// When applied to slicing, this is the calculation needed to derive the
+/// strides (i.e. the number of linear indices to skip along the (k-1) most
+/// minor dimensions to get the next k-slice).
+///
+/// This is the basis to linearize an n-D offset confined to `[0 ... sizes]`.
+///
+/// Assuming `sizes` is `[s0, .. sn]`, return the vector<Value>
+///   `[s1 * ... * sn, s2 * ... * sn, ..., sn, 1]`.
+///
+/// It is the caller's responsibility to provide valid OpFoldResult type values
+/// and construct valid IR in the end.
+///
+/// `sizes` elements are asserted to be non-negative.
+///
+/// Return an empty vector if `sizes` is empty.
+///
+/// The function emits an IR block which computes suffix product for provided
+/// sizes.
+SmallVector<OpFoldResult>
+computeSuffixProductIRBlock(Location loc, OpBuilder &builder,
+                            ArrayRef<OpFoldResult> sizes);
+inline SmallVector<OpFoldResult>
+computeStridesIRBlock(Location loc, OpBuilder &builder,
+                      ArrayRef<OpFoldResult> sizes) {
+  return computeSuffixProductIRBlock(loc, builder, sizes);
+}
+
 } // namespace memref
 } // namespace mlir
 

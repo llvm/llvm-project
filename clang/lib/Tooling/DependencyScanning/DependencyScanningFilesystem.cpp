@@ -300,6 +300,17 @@ DependencyScanningWorkerFilesystem::status(const Twine &Path) {
   return Result->getStatus();
 }
 
+bool DependencyScanningWorkerFilesystem::exists(const Twine &Path) {
+  // While some VFS overlay filesystems may implement more-efficient
+  // mechanisms for `exists` queries, `DependencyScanningWorkerFilesystem`
+  // typically wraps `RealFileSystem` which does not specialize `exists`,
+  // so it is not likely to benefit from such optimizations. Instead,
+  // it is more-valuable to have this query go through the
+  // cached-`status` code-path of the `DependencyScanningWorkerFilesystem`.
+  llvm::ErrorOr<llvm::vfs::Status> Status = status(Path);
+  return Status && Status->exists();
+}
+
 namespace {
 
 /// The VFS that is used by clang consumes the \c CachedFileSystemEntry using

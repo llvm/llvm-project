@@ -35,7 +35,8 @@ set(LLDB_TEST_ARCH
 # Users can override LLDB_TEST_USER_ARGS to specify arbitrary arguments to pass to the script
 set(LLDB_TEST_USER_ARGS
   ""
-  CACHE STRING "Specify additional arguments to pass to test runner. For example: '-C gcc -C clang -A i386 -A x86_64'")
+  CACHE STRING "Specify additional arguments to pass to test runner. Seperate \
+items with \";\". For example: '-C;gcc;-C;clang;-A;i386;-A;x86_64'")
 
 set(LLDB_TEST_COMMON_ARGS_VAR
   -u CXXFLAGS
