@@ -692,17 +692,18 @@ RecurrenceDescriptor::isFindLastIVPattern(PHINode *OrigPhi, Instruction *I,
                                           ScalarEvolution &SE) {
   // TODO: Match selects with multi-use cmp conditions.
   CmpInst::Predicate Pred;
-  if (!match(I, m_Select(m_OneUse(m_Cmp(Pred, m_Value(), m_Value())), m_Value(),
-                         m_Value())))
+  Value *TrueVal, *FalseVal;
+  if (!match(I, m_Select(m_OneUse(m_Cmp(Pred, m_Value(), m_Value())),
+                         m_Value(TrueVal), m_Value(FalseVal))))
     return InstDesc(false, I);
 
   auto *SI = cast<SelectInst>(I);
   Value *NonRdxPhi = nullptr;
 
-  if (OrigPhi == dyn_cast<PHINode>(SI->getTrueValue()))
-    NonRdxPhi = SI->getFalseValue();
-  else if (OrigPhi == dyn_cast<PHINode>(SI->getFalseValue()))
-    NonRdxPhi = SI->getTrueValue();
+  if (OrigPhi == dyn_cast<PHINode>(TrueVal))
+    NonRdxPhi = FalseVal;
+  else if (OrigPhi == dyn_cast<PHINode>(FalseVal))
+    NonRdxPhi = TrueVal;
   else
     return InstDesc(false, I);
 
