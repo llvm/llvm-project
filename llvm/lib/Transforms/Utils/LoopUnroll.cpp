@@ -1077,7 +1077,7 @@ MDNode *llvm::GetUnrollMetadata(MDNode *LoopID, StringRef Name) {
     if (!S)
       continue;
 
-    if (Name.equals(S->getString()))
+    if (Name == S->getString())
       return MD;
   }
   return nullptr;

@@ -1016,15 +1016,15 @@ define i16 @test_atomicrmw_dec_i16_flat_agent_align4(ptr %ptr, i16 %value) {
 
 define half @test_atomicrmw_xchg_f16_global_agent(ptr addrspace(1) %ptr, half %value) {
 ; CHECK-LABEL: @test_atomicrmw_xchg_f16_global_agent(
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast half [[VALUE:%.*]] to i16
 ; CHECK-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr addrspace(1) @llvm.ptrmask.p1.i64(ptr addrspace(1) [[PTR:%.*]], i64 -4)
-; CHECK-NEXT:    [[TMP2:%.*]] = ptrtoint ptr addrspace(1) [[PTR]] to i64
-; CHECK-NEXT:    [[PTRLSB:%.*]] = and i64 [[TMP2]], 3
-; CHECK-NEXT:    [[TMP3:%.*]] = shl i64 [[PTRLSB]], 3
-; CHECK-NEXT:    [[SHIFTAMT:%.*]] = trunc i64 [[TMP3]] to i32
+; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr addrspace(1) [[PTR]] to i64
+; CHECK-NEXT:    [[PTRLSB:%.*]] = and i64 [[TMP1]], 3
+; CHECK-NEXT:    [[TMP2:%.*]] = shl i64 [[PTRLSB]], 3
+; CHECK-NEXT:    [[SHIFTAMT:%.*]] = trunc i64 [[TMP2]] to i32
 ; CHECK-NEXT:    [[MASK:%.*]] = shl i32 65535, [[SHIFTAMT]]
 ; CHECK-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
-; CHECK-NEXT:    [[TMP4:%.*]] = zext i16 [[TMP1]] to i32
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast half [[VALUE:%.*]] to i16
+; CHECK-NEXT:    [[TMP4:%.*]] = zext i16 [[TMP3]] to i32
 ; CHECK-NEXT:    [[VALOPERAND_SHIFTED:%.*]] = shl i32 [[TMP4]], [[SHIFTAMT]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr addrspace(1) [[ALIGNEDADDR]], align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -1071,15 +1071,15 @@ define half @test_atomicrmw_xchg_f16_global_agent_align4(ptr addrspace(1) %ptr, 
 
 define half @test_atomicrmw_xchg_f16_flat_agent(ptr %ptr, half %value) {
 ; CHECK-LABEL: @test_atomicrmw_xchg_f16_flat_agent(
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast half [[VALUE:%.*]] to i16
 ; CHECK-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr @llvm.ptrmask.p0.i64(ptr [[PTR:%.*]], i64 -4)
-; CHECK-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[PTR]] to i64
-; CHECK-NEXT:    [[PTRLSB:%.*]] = and i64 [[TMP2]], 3
-; CHECK-NEXT:    [[TMP3:%.*]] = shl i64 [[PTRLSB]], 3
-; CHECK-NEXT:    [[SHIFTAMT:%.*]] = trunc i64 [[TMP3]] to i32
+; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[PTR]] to i64
+; CHECK-NEXT:    [[PTRLSB:%.*]] = and i64 [[TMP1]], 3
+; CHECK-NEXT:    [[TMP2:%.*]] = shl i64 [[PTRLSB]], 3
+; CHECK-NEXT:    [[SHIFTAMT:%.*]] = trunc i64 [[TMP2]] to i32
 ; CHECK-NEXT:    [[MASK:%.*]] = shl i32 65535, [[SHIFTAMT]]
 ; CHECK-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
-; CHECK-NEXT:    [[TMP4:%.*]] = zext i16 [[TMP1]] to i32
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast half [[VALUE:%.*]] to i16
+; CHECK-NEXT:    [[TMP4:%.*]] = zext i16 [[TMP3]] to i32
 ; CHECK-NEXT:    [[VALOPERAND_SHIFTED:%.*]] = shl i32 [[TMP4]], [[SHIFTAMT]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[ALIGNEDADDR]], align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -1126,15 +1126,15 @@ define half @test_atomicrmw_xchg_f16_flat_agent_align4(ptr %ptr, half %value) {
 
 define bfloat @test_atomicrmw_xchg_bf16_global_agent(ptr addrspace(1) %ptr, bfloat %value) {
 ; CHECK-LABEL: @test_atomicrmw_xchg_bf16_global_agent(
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast bfloat [[VALUE:%.*]] to i16
 ; CHECK-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr addrspace(1) @llvm.ptrmask.p1.i64(ptr addrspace(1) [[PTR:%.*]], i64 -4)
-; CHECK-NEXT:    [[TMP2:%.*]] = ptrtoint ptr addrspace(1) [[PTR]] to i64
-; CHECK-NEXT:    [[PTRLSB:%.*]] = and i64 [[TMP2]], 3
-; CHECK-NEXT:    [[TMP3:%.*]] = shl i64 [[PTRLSB]], 3
-; CHECK-NEXT:    [[SHIFTAMT:%.*]] = trunc i64 [[TMP3]] to i32
+; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr addrspace(1) [[PTR]] to i64
+; CHECK-NEXT:    [[PTRLSB:%.*]] = and i64 [[TMP1]], 3
+; CHECK-NEXT:    [[TMP2:%.*]] = shl i64 [[PTRLSB]], 3
+; CHECK-NEXT:    [[SHIFTAMT:%.*]] = trunc i64 [[TMP2]] to i32
 ; CHECK-NEXT:    [[MASK:%.*]] = shl i32 65535, [[SHIFTAMT]]
 ; CHECK-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
-; CHECK-NEXT:    [[TMP4:%.*]] = zext i16 [[TMP1]] to i32
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast bfloat [[VALUE:%.*]] to i16
+; CHECK-NEXT:    [[TMP4:%.*]] = zext i16 [[TMP3]] to i32
 ; CHECK-NEXT:    [[VALOPERAND_SHIFTED:%.*]] = shl i32 [[TMP4]], [[SHIFTAMT]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr addrspace(1) [[ALIGNEDADDR]], align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]

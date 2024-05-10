@@ -226,7 +226,7 @@ static void calculateShapeAndFillIndices(
   shape.push_back(largestIndicesSize);
 
   // DenseElementsAttr expects a rectangular shape for the data, so all
-  // index lists have to be of the same length, this emplaces -1 as filler
+  // index lists have to be of the same length, this emplaces -1 as filler.
   for (auto &v : memberPlacementData) {
     if (v.memberPlacementIndices.size() < largestIndicesSize) {
       auto *prevEnd = v.memberPlacementIndices.end();

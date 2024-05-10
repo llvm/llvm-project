@@ -555,9 +555,16 @@ bool ClauseProcessor::processCopyin() const {
   // synchronize threads and avoid data races on propagation master's thread
   // values of threadprivate variables to local instances of that variables of
   // all other implicit threads.
+
+  // All copies are inserted at either "insPt" (i.e. immediately before it),
+  // or at some earlier point (as determined by "copyHostAssociateVar").
+  // Unless the insertion point is given to "copyHostAssociateVar" explicitly,
+  // it will not restore the builder's insertion point. Since the copies may be
+  // inserted in any order (not following the execution order), make sure the
+  // barrier is inserted following all of them.
+  firOpBuilder.restoreInsertionPoint(insPt);
   if (hasCopyin)
     firOpBuilder.create<mlir::omp::BarrierOp>(converter.getCurrentLocation());
-  firOpBuilder.restoreInsertionPoint(insPt);
   return hasCopyin;
 }
 
@@ -650,12 +657,12 @@ createCopyFunc(mlir::Location loc, Fortran::lower::AbstractConverter &converter,
           builder.createIntegerConstant(loc, builder.getIndexType(), extent));
     shape = builder.create<fir::ShapeOp>(loc, extents);
   }
-  auto declDst = builder.create<hlfir::DeclareOp>(loc, funcOp.getArgument(0),
-                                                  copyFuncName + "_dst", shape,
-                                                  typeparams, attrs);
-  auto declSrc = builder.create<hlfir::DeclareOp>(loc, funcOp.getArgument(1),
-                                                  copyFuncName + "_src", shape,
-                                                  typeparams, attrs);
+  auto declDst = builder.create<hlfir::DeclareOp>(
+      loc, funcOp.getArgument(0), copyFuncName + "_dst", shape, typeparams,
+      /*dummy_scope=*/nullptr, attrs);
+  auto declSrc = builder.create<hlfir::DeclareOp>(
+      loc, funcOp.getArgument(1), copyFuncName + "_src", shape, typeparams,
+      /*dummy_scope=*/nullptr, attrs);
   converter.copyVar(loc, declDst.getBase(), declSrc.getBase());
   builder.create<mlir::func::ReturnOp>(loc);
   return funcOp;
