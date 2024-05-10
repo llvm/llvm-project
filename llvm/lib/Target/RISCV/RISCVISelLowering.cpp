@@ -9792,6 +9792,7 @@ SDValue RISCVTargetLowering::lowerVPREDUCE(SDValue Op,
                                            SelectionDAG &DAG) const {
   SDLoc DL(Op);
   unsigned Opc = Op.getOpcode();
+  SDValue Start = Op.getOperand(0);
   SDValue Vec = Op.getOperand(1);
   EVT VecEVT = Vec.getValueType();
   MVT XLenVT = Subtarget.getXLenVT();
@@ -9820,16 +9821,21 @@ SDValue RISCVTargetLowering::lowerVPREDUCE(SDValue Op,
 
   // Propagate NaNs.
   MVT PredVT = getMaskTypeFor(Vec.getSimpleValueType());
+  // Check if any of the elements in Vec is NaN.
   SDValue IsNaN = DAG.getNode(
       RISCVISD::SETCC_VL, DL, PredVT,
       {Vec, Vec, DAG.getCondCode(ISD::SETNE), DAG.getUNDEF(PredVT), Mask, VL});
   SDValue VCPop = DAG.getNode(RISCVISD::VCPOP_VL, DL, XLenVT, IsNaN, Mask, VL);
+  // Check if the start value is NaN.
+  SDValue StartIsNaN = DAG.getSetCC(DL, XLenVT, Start, Start, ISD::SETUO);
+  VCPop = DAG.getNode(ISD::OR, DL, XLenVT, VCPop, StartIsNaN);
   SDValue NoNaNs = DAG.getSetCC(DL, XLenVT, VCPop,
                                 DAG.getConstant(0, DL, XLenVT), ISD::SETEQ);
   MVT ResVT = Res.getSimpleValueType();
   return DAG.getSelect(
       DL, ResVT, NoNaNs, Res,
-      DAG.getConstantFP(DAG.EVTToAPFloatSemantics(ResVT), DL, ResVT));
+      DAG.getConstantFP(APFloat::getNaN(DAG.EVTToAPFloatSemantics(ResVT)), DL,
+                        ResVT));
 }
 
 SDValue RISCVTargetLowering::lowerINSERT_SUBVECTOR(SDValue Op,
