@@ -17,8 +17,8 @@ TEST(ArenaTest, ZeroInit) {
   memset(Buffer, 1, 1024);
   Arena *A = new (Buffer) Arena(10);
   for (auto I = 0U; I < A->size(); ++I)
-    EXPECT_EQ(A->pos()[I], 0);
-  EXPECT_EQ(A->size(), 10);
+    EXPECT_EQ(A->pos()[I], static_cast<char>(0));
+  EXPECT_EQ(A->size(), 10U);
 }
 
 TEST(ArenaTest, Basic) {
