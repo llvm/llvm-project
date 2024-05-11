@@ -47,11 +47,13 @@ jobs:
         uses: actions/attest-build-provenance@897ed5eab6ed058a474202017ada7f40bfa52940 # v1.0.0
         with:
           subject-path: "*.xz"
+      - run: |
+          mv ${{ steps.provenance.outputs.bundle-path }} .
       - name: Create Tarball Artifacts
         uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808 #v4.3.3
         with:
           path: |
             *.xz
-            ${{ steps.provenance.outputs.bundle-path }}
+            attestation.jsonl
 
 
