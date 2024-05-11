@@ -7,18 +7,18 @@ target triple = "aarch64"
 define <vscale x 4 x half> @complex_add_v4f16(<vscale x 4 x half> %a, <vscale x 4 x half> %b) {
 ; CHECK-LABEL: complex_add_v4f16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    uunpkhi z2.d, z0.s
-; CHECK-NEXT:    uunpklo z0.d, z0.s
-; CHECK-NEXT:    uunpkhi z3.d, z1.s
-; CHECK-NEXT:    uunpklo z1.d, z1.s
+; CHECK-NEXT:    uzp1 z2.s, z0.s, z0.s
+; CHECK-NEXT:    uzp2 z0.s, z0.s, z0.s
 ; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    uzp1 z4.d, z0.d, z2.d
-; CHECK-NEXT:    uzp2 z0.d, z0.d, z2.d
-; CHECK-NEXT:    uzp2 z2.d, z1.d, z3.d
-; CHECK-NEXT:    uzp1 z1.d, z1.d, z3.d
+; CHECK-NEXT:    uzp2 z3.s, z1.s, z0.s
+; CHECK-NEXT:    uzp1 z1.s, z1.s, z0.s
+; CHECK-NEXT:    uunpklo z2.d, z2.s
+; CHECK-NEXT:    uunpklo z0.d, z0.s
+; CHECK-NEXT:    uunpklo z3.d, z3.s
+; CHECK-NEXT:    uunpklo z1.d, z1.s
 ; CHECK-NEXT:    fsubr z0.h, p0/m, z0.h, z1.h
-; CHECK-NEXT:    movprfx z1, z2
-; CHECK-NEXT:    fadd z1.h, p0/m, z1.h, z4.h
+; CHECK-NEXT:    movprfx z1, z3
+; CHECK-NEXT:    fadd z1.h, p0/m, z1.h, z2.h
 ; CHECK-NEXT:    zip2 z2.d, z0.d, z1.d
 ; CHECK-NEXT:    zip1 z0.d, z0.d, z1.d
 ; CHECK-NEXT:    uzp1 z0.s, z0.s, z2.s

@@ -807,6 +807,12 @@ float load_f16_f32(__fp16 *addr) {
   // WEBASSEMBLY: call float @llvm.wasm.loadf16.f32(ptr %{{.*}})
 }
 
+void store_f16_f32(float val, __fp16 *addr) {
+  return __builtin_wasm_storef16_f32(val, addr);
+  // WEBASSEMBLY: tail call void @llvm.wasm.storef16.f32(float %val, ptr %{{.*}})
+  // WEBASSEMBLY-NEXT: ret
+}
+
 __externref_t externref_null() {
   return __builtin_wasm_ref_null_extern();
   // WEBASSEMBLY: tail call ptr addrspace(10) @llvm.wasm.ref.null.extern()
