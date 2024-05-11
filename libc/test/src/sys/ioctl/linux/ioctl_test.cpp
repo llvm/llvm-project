@@ -13,6 +13,8 @@
 #include "test/UnitTest/LibcTest.h"
 #include "test/UnitTest/Test.h"
 
+#include <fcntl.h>
+#include <sys/kd.h>
 #include <sys/syscall.h>
 #include <unistd.h>
 
