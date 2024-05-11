@@ -2339,7 +2339,7 @@ std::error_code DataAggregator::writeBATYAML(BinaryContext &BC,
         continue;
       BinaryFunction *BF = BC.getBinaryFunctionAtAddress(FuncAddress);
       assert(BF);
-      YamlBF.Name = FuncName.str();
+      YamlBF.Name = getLocationName(*BF);
       YamlBF.Id = BF->getFunctionNumber();
       YamlBF.Hash = BAT->getBFHash(FuncAddress);
       YamlBF.ExecCount = BF->getKnownExecutionCount();
