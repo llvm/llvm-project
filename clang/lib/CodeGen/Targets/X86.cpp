@@ -792,7 +792,7 @@ ABIArgInfo X86_32ABIInfo::classifyArgumentType(QualType Ty, CCState &State,
         return ABIArgInfo::getDirect();
       return ABIArgInfo::getExpand();
     }
-    return getIndirectResult(Ty, /*ByVal=*/false, State);
+    return getIndirectResult(Ty, IsVectorCall && Ty->isBuiltinType(), State);
   }
 
   if (isAggregateTypeForABI(Ty)) {
