@@ -246,8 +246,8 @@ void OffloadAction::doOnHostDependence(const OffloadActionWorkTy &Work) const {
 
 void OffloadAction::doOnEachDeviceDependence(
     const OffloadActionWorkTy &Work) const {
-  auto I = getInputs().begin();
-  auto E = getInputs().end();
+  auto *I = getInputs().begin();
+  auto *E = getInputs().end();
   if (I == E)
     return;
 
@@ -261,7 +261,7 @@ void OffloadAction::doOnEachDeviceDependence(
   if (HostTC)
     ++I;
 
-  auto TI = DevToolChains.begin();
+  auto *TI = DevToolChains.begin();
   for (; I != E; ++I, ++TI)
     Work(*I, *TI, (*I)->getOffloadingArch());
 }
