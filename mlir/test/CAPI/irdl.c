@@ -52,6 +52,7 @@ int main(void) {
 
   mlirOperationDump(mlirModuleGetOperation(usingModule));
 
+  mlirModuleDestroy(usingModule);
   mlirContextDestroy(ctx);
   return 0;
 }
