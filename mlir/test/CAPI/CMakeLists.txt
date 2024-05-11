@@ -38,6 +38,13 @@ _add_capi_test_executable(mlir-capi-ir-test
     MLIRCAPIRegisterEverything
 )
 
+_add_capi_test_executable(mlir-capi-irdl-test
+  irdl.c
+  LINK_LIBS PRIVATE
+    MLIRCAPIIR
+    MLIRCAPIIRDL
+)
+
 _add_capi_test_executable(mlir-capi-llvm-test
   llvm.c
   LINK_LIBS PRIVATE
