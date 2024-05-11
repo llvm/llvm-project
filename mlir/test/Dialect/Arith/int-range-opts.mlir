@@ -5,7 +5,7 @@
 //       CHECK:   return %[[C]]
 func.func @test() -> i1 {
   %cst1 = arith.constant -1 : index
-  %0 = test.with_bounds { umin = 0 : index, umax = 0x7fffffffffffffff : index, smin = 0 : index, smax = 0x7fffffffffffffff : index }
+  %0 = test.with_bounds { umin = 0 : index, umax = 0x7fffffffffffffff : index, smin = 0 : index, smax = 0x7fffffffffffffff : index } : index
   %1 = arith.cmpi eq, %0, %cst1 : index
   return %1: i1
 }
@@ -17,7 +17,7 @@ func.func @test() -> i1 {
 //       CHECK:   return %[[C]]
 func.func @test() -> i1 {
   %cst1 = arith.constant -1 : index
-  %0 = test.with_bounds { umin = 0 : index, umax = 0x7fffffffffffffff : index, smin = 0 : index, smax = 0x7fffffffffffffff : index }
+  %0 = test.with_bounds { umin = 0 : index, umax = 0x7fffffffffffffff : index, smin = 0 : index, smax = 0x7fffffffffffffff : index } : index
   %1 = arith.cmpi ne, %0, %cst1 : index
   return %1: i1
 }
@@ -30,7 +30,7 @@ func.func @test() -> i1 {
 //       CHECK:   return %[[C]]
 func.func @test() -> i1 {
   %cst = arith.constant 0 : index
-  %0 = test.with_bounds { umin = 0 : index, umax = 0x7fffffffffffffff : index, smin = 0 : index, smax = 0x7fffffffffffffff : index }
+  %0 = test.with_bounds { umin = 0 : index, umax = 0x7fffffffffffffff : index, smin = 0 : index, smax = 0x7fffffffffffffff : index } : index
   %1 = arith.cmpi sge, %0, %cst : index
   return %1: i1
 }
@@ -42,7 +42,7 @@ func.func @test() -> i1 {
 //       CHECK:   return %[[C]]
 func.func @test() -> i1 {
   %cst = arith.constant 0 : index
-  %0 = test.with_bounds { umin = 0 : index, umax = 0x7fffffffffffffff : index, smin = 0 : index, smax = 0x7fffffffffffffff : index }
+  %0 = test.with_bounds { umin = 0 : index, umax = 0x7fffffffffffffff : index, smin = 0 : index, smax = 0x7fffffffffffffff : index } : index
   %1 = arith.cmpi slt, %0, %cst : index
   return %1: i1
 }
@@ -55,7 +55,7 @@ func.func @test() -> i1 {
 //       CHECK:   return %[[C]]
 func.func @test() -> i1 {
   %cst1 = arith.constant -1 : index
-  %0 = test.with_bounds { umin = 0 : index, umax = 0x7fffffffffffffff : index, smin = 0 : index, smax = 0x7fffffffffffffff : index }
+  %0 = test.with_bounds { umin = 0 : index, umax = 0x7fffffffffffffff : index, smin = 0 : index, smax = 0x7fffffffffffffff : index } : index
   %1 = arith.cmpi sgt, %0, %cst1 : index
   return %1: i1
 }
@@ -67,7 +67,7 @@ func.func @test() -> i1 {
 //       CHECK:   return %[[C]]
 func.func @test() -> i1 {
   %cst1 = arith.constant -1 : index
-  %0 = test.with_bounds { umin = 0 : index, umax = 0x7fffffffffffffff : index, smin = 0 : index, smax = 0x7fffffffffffffff : index }
+  %0 = test.with_bounds { umin = 0 : index, umax = 0x7fffffffffffffff : index, smin = 0 : index, smax = 0x7fffffffffffffff : index } : index
   %1 = arith.cmpi sle, %0, %cst1 : index
   return %1: i1
 }
