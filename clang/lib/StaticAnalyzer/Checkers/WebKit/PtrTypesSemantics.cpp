@@ -350,7 +350,9 @@ public:
     const auto &Name = safeGetName(Callee);
 
     if (Name == "WTFCrashWithInfo" || Name == "WTFBreakpointTrap" ||
-        Name == "WTFReportAssertionFailure" ||
+        Name == "WTFReportAssertionFailure" || Name == "isMainThread" ||
+        Name == "isMainThreadOrGCThread" || Name == "isMainRunLoop" ||
+        Name == "isWebThread" || Name == "isUIThread" ||
         Name == "compilerFenceForCrash" || Name == "bitwise_cast" ||
         Name == "addressof" || Name.find("__builtin") == 0)
       return true;

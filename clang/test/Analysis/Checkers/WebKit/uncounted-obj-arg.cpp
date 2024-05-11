@@ -47,12 +47,6 @@ void isIntegralOrPointerType(T, Types... types)
 void WTFCrashWithInfoImpl(int line, const char* file, const char* function, int counter, unsigned long reason);
 void WTFCrashWithInfo(int line, const char* file, const char* function, int counter);
 
-template<typename ToType, typename FromType>
-ToType bitwise_cast(FromType from);
-
-template<typename T>
-T* addressof(T& arg);
-
 template<typename T>
 ALWAYS_INLINE unsigned long wtfCrashArg(T* arg) { return reinterpret_cast<unsigned long>(arg); }
 
@@ -64,6 +58,18 @@ void WTFCrashWithInfo(int line, const char* file, const char* function, int coun
 {
     WTFCrashWithInfoImpl(line, file, function, counter, wtfCrashArg(reason));
 }
+
+template<typename ToType, typename FromType>
+ToType bitwise_cast(FromType from);
+
+template<typename T>
+T* addressof(T& arg);
+
+bool isMainThread();
+bool isMainThreadOrGCThread();
+bool isMainRunLoop();
+bool isWebThread();
+bool isUIThread();
 
 enum class Flags : unsigned short {
   Flag1 = 1 << 0,
@@ -245,6 +251,11 @@ public:
   Number* trivial43() { return addressof(*number); }
   Number* trivial44() { return new Number(1); }
   ComplexNumber* trivial45() { return new ComplexNumber(); }
+  void trivial46() { ASSERT(isMainThread()); }
+  void trivial47() { ASSERT(isMainThreadOrGCThread()); }
+  void trivial48() { ASSERT(isMainRunLoop()); }
+  void trivial49() { ASSERT(isWebThread()); }
+  void trivial50() { ASSERT(isUIThread()); }
 
   static RefCounted& singleton() {
     static RefCounted s_RefCounted;
