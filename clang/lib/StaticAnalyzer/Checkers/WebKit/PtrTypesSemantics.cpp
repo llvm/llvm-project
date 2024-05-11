@@ -350,8 +350,11 @@ public:
     const auto &Name = safeGetName(Callee);
 
     if (Name == "WTFCrashWithInfo" || Name == "WTFBreakpointTrap" ||
-        Name == "WTFReportAssertionFailure" ||
-        Name == "compilerFenceForCrash" || Name.find("__builtin") == 0)
+        Name == "WTFReportAssertionFailure" || Name == "isMainThread" ||
+        Name == "isMainThreadOrGCThread" || Name == "isMainRunLoop" ||
+        Name == "isWebThread" || Name == "isUIThread" ||
+        Name == "compilerFenceForCrash" || Name == "bitwise_cast" ||
+        Name == "addressof" || Name.find("__builtin") == 0)
       return true;
 
     return TrivialFunctionAnalysis::isTrivialImpl(Callee, Cache);
@@ -427,6 +430,8 @@ public:
     // Recursively descend into the callee to confirm that it's trivial.
     return TrivialFunctionAnalysis::isTrivialImpl(CE->getConstructor(), Cache);
   }
+
+  bool VisitCXXNewExpr(const CXXNewExpr *NE) { return VisitChildren(NE); }
 
   bool VisitImplicitCastExpr(const ImplicitCastExpr *ICE) {
     return Visit(ICE->getSubExpr());
