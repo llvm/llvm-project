@@ -900,6 +900,16 @@ public:
     hostAssocTuple = val;
   }
 
+  mlir::Value dummyArgsScopeValue() const override final {
+    return dummyArgsScope;
+  }
+
+  bool isRegisteredDummySymbol(
+      Fortran::semantics::SymbolRef symRef) const override final {
+    auto *sym = &*symRef;
+    return registeredDummySymbols.contains(sym);
+  }
+
   void registerTypeInfo(mlir::Location loc,
                         Fortran::lower::SymbolRef typeInfoSym,
                         const Fortran::semantics::DerivedTypeSpec &typeSpec,
@@ -1145,10 +1155,11 @@ private:
   /// yet. The final mapping will be done using this pre-mapping in
   /// Fortran::lower::mapSymbolAttributes.
   bool mapBlockArgToDummyOrResult(const Fortran::semantics::SymbolRef sym,
-                                  mlir::Value val, bool forced = false) {
-    if (!forced && lookupSymbol(sym))
-      return false;
-    localSymbols.addSymbol(sym, val, forced);
+                                  mlir::Value val, bool isResult) {
+    localSymbols.addSymbol(sym, val);
+    if (!isResult)
+      registerDummySymbol(sym);
+
     return true;
   }
 
@@ -4537,9 +4548,13 @@ private:
     // constructs, this can be done for either the end construct statement,
     // or for the construct itself, which will skip this code if the
     // end statement was visited first and generated a branch.
-    Fortran::lower::pft::Evaluation *successor =
-        eval.isConstruct() ? eval.getLastNestedEvaluation().lexicalSuccessor
-                           : eval.lexicalSuccessor;
+    Fortran::lower::pft::Evaluation *successor = [&]() {
+      if (eval.isConstruct() ||
+          (eval.isDirective() && eval.hasNestedEvaluations()))
+        return eval.getLastNestedEvaluation().lexicalSuccessor;
+      return eval.lexicalSuccessor;
+    }();
+
     if (successor && blockIsUnterminated()) {
       if (successor->isIntermediateConstructStmt() &&
           successor->parentConstruct->lowerAsUnstructured())
@@ -4559,7 +4574,7 @@ private:
                             const Fortran::lower::CalleeInterface &callee) {
     assert(builder && "require a builder object at this point");
     using PassBy = Fortran::lower::CalleeInterface::PassEntityBy;
-    auto mapPassedEntity = [&](const auto arg) {
+    auto mapPassedEntity = [&](const auto arg, bool isResult = false) {
       if (arg.passBy == PassBy::AddressAndLength) {
         if (callee.characterize().IsBindC())
           return;
@@ -4569,10 +4584,11 @@ private:
         fir::factory::CharacterExprHelper charHelp{*builder, loc};
         mlir::Value box =
             charHelp.createEmboxChar(arg.firArgument, arg.firLength);
-        mapBlockArgToDummyOrResult(arg.entity->get(), box);
+        mapBlockArgToDummyOrResult(arg.entity->get(), box, isResult);
       } else {
         if (arg.entity.has_value()) {
-          mapBlockArgToDummyOrResult(arg.entity->get(), arg.firArgument);
+          mapBlockArgToDummyOrResult(arg.entity->get(), arg.firArgument,
+                                     isResult);
         } else {
           assert(funit.parentHasTupleHostAssoc() && "expect tuple argument");
         }
@@ -4581,15 +4597,19 @@ private:
     for (const Fortran::lower::CalleeInterface::PassedEntity &arg :
          callee.getPassedArguments())
       mapPassedEntity(arg);
+    if (lowerToHighLevelFIR() && !callee.getPassedArguments().empty()) {
+      mlir::Value scopeOp = builder->create<fir::DummyScopeOp>(toLocation());
+      setDummyArgsScope(scopeOp);
+    }
     if (std::optional<Fortran::lower::CalleeInterface::PassedEntity>
             passedResult = callee.getPassedResult()) {
-      mapPassedEntity(*passedResult);
+      mapPassedEntity(*passedResult, /*isResult=*/true);
       // FIXME: need to make sure things are OK here. addSymbol may not be OK
       if (funit.primaryResult &&
           passedResult->entity->get() != *funit.primaryResult)
         mapBlockArgToDummyOrResult(
-            *funit.primaryResult,
-            getSymbolAddress(passedResult->entity->get()));
+            *funit.primaryResult, getSymbolAddress(passedResult->entity->get()),
+            /*isResult=*/true);
     }
   }
 
@@ -4766,7 +4786,8 @@ private:
       Fortran::lower::StatementContext stmtCtx;
       if (std::optional<Fortran::lower::CalleeInterface::PassedEntity>
               passedResult = callee.getPassedResult()) {
-        mapBlockArgToDummyOrResult(altResult.getSymbol(), resultArg.getAddr());
+        mapBlockArgToDummyOrResult(altResult.getSymbol(), resultArg.getAddr(),
+                                   /*isResult=*/true);
         Fortran::lower::mapSymbolAttributes(*this, altResult, localSymbols,
                                             stmtCtx);
       } else {
@@ -4809,6 +4830,11 @@ private:
     // of pointers for passing to the internal procedures.
     if (!funit.getHostAssoc().empty())
       funit.getHostAssoc().hostProcedureBindings(*this, localSymbols);
+
+    // Unregister all dummy symbols, so that their cloning (e.g. for OpenMP
+    // privatization) does not create the cloned hlfir.declare operations
+    // with dummy_scope operands.
+    resetRegisteredDummySymbols();
 
     // Create most function blocks in advance.
     createEmptyBlocks(funit.evaluationList);
@@ -4929,6 +4955,8 @@ private:
     hostAssocTuple = mlir::Value{};
     localSymbols.clear();
     blockId = 0;
+    dummyArgsScope = mlir::Value{};
+    resetRegisteredDummySymbols();
   }
 
   /// Helper to generate GlobalOps when the builder is not positioned in any
@@ -4957,6 +4985,7 @@ private:
     delete builder;
     builder = nullptr;
     localSymbols.clear();
+    resetRegisteredDummySymbols();
   }
 
   /// Instantiate the data from a BLOCK DATA unit.
@@ -5374,6 +5403,23 @@ private:
                                         globalOmpRequiresSymbol);
   }
 
+  /// Record fir.dummy_scope operation for this function.
+  /// It will be used to set dummy_scope operand of the hlfir.declare
+  /// operations.
+  void setDummyArgsScope(mlir::Value val) {
+    assert(!dummyArgsScope && val);
+    dummyArgsScope = val;
+  }
+
+  /// Record the given symbol as a dummy argument of this function.
+  void registerDummySymbol(Fortran::semantics::SymbolRef symRef) {
+    auto *sym = &*symRef;
+    registeredDummySymbols.insert(sym);
+  }
+
+  /// Reset all registered dummy symbols.
+  void resetRegisteredDummySymbols() { registeredDummySymbols.clear(); }
+
   //===--------------------------------------------------------------------===//
 
   Fortran::lower::LoweringBridge &bridge;
@@ -5399,6 +5445,15 @@ private:
 
   /// Tuple of host associated variables
   mlir::Value hostAssocTuple;
+
+  /// Value of fir.dummy_scope operation for this function.
+  mlir::Value dummyArgsScope;
+
+  /// A set of dummy argument symbols for this function.
+  /// The set is only preserved during the instatiation
+  /// of variables for this function.
+  llvm::SmallPtrSet<const Fortran::semantics::Symbol *, 16>
+      registeredDummySymbols;
 
   /// A map of unique names for constant expressions.
   /// The names are used for representing the constant expressions

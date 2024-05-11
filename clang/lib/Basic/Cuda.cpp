@@ -14,7 +14,7 @@ struct CudaVersionMapEntry {
 };
 #define CUDA_ENTRY(major, minor)                                               \
   {                                                                            \
-#major "." #minor, CudaVersion::CUDA_##major##minor,                       \
+    #major "." #minor, CudaVersion::CUDA_##major##minor,                       \
         llvm::VersionTuple(major, minor)                                       \
   }
 
@@ -41,6 +41,7 @@ static const CudaVersionMapEntry CudaNameVersionMap[] = {
     CUDA_ENTRY(12, 1),
     CUDA_ENTRY(12, 2),
     CUDA_ENTRY(12, 3),
+    CUDA_ENTRY(12, 4),
     {"", CudaVersion::NEW, llvm::VersionTuple(std::numeric_limits<int>::max())},
     {"unknown", CudaVersion::UNKNOWN, {}} // End of list tombstone.
 };
@@ -241,7 +242,7 @@ CudaVersion MaxVersionForCudaArch(CudaArch A) {
   }
 }
 
-bool CudaFeatureEnabled(llvm::VersionTuple  Version, CudaFeature Feature) {
+bool CudaFeatureEnabled(llvm::VersionTuple Version, CudaFeature Feature) {
   return CudaFeatureEnabled(ToCudaVersion(Version), Feature);
 }
 
