@@ -88,6 +88,9 @@ jobs:
 
   release-sources:
     name: Package Release Sources
+    permissions:
+      id-token: write
+      attestations: write
     needs:
       - validate-tag
     uses: ./.github/workflows/release-sources.yml
