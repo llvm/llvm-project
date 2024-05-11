@@ -4548,9 +4548,9 @@ static bool IsBuiltInOrStandardCXX11Attribute(IdentifierInfo *AttrName,
   case ParsedAttr::AT_Unlikely:
     return true;
   case ParsedAttr::AT_WarnUnusedResult:
-    return !ScopeName && AttrName->getName().equals("nodiscard");
+    return !ScopeName && AttrName->getName() == "nodiscard";
   case ParsedAttr::AT_Unused:
-    return !ScopeName && AttrName->getName().equals("maybe_unused");
+    return !ScopeName && AttrName->getName() == "maybe_unused";
   default:
     return false;
   }

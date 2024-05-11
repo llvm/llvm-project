@@ -1969,7 +1969,7 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
       Diags.Report(diag::err_drv_invalid_value)
           << A->getAsString(Args) << A->getValue();
     else if (Val == llvm::FunctionReturnThunksKind::Extern &&
-             Args.getLastArgValue(OPT_mcmodel_EQ).equals("large"))
+             Args.getLastArgValue(OPT_mcmodel_EQ) == "large")
       Diags.Report(diag::err_drv_argument_not_allowed_with)
           << A->getAsString(Args)
           << Args.getLastArg(OPT_mcmodel_EQ)->getAsString(Args);

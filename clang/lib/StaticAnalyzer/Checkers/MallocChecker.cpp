@@ -1727,7 +1727,7 @@ static std::optional<bool> getFreeWhenDoneArg(const ObjCMethodCall &Call) {
 
   // FIXME: We should not rely on fully-constrained symbols being folded.
   for (unsigned i = 1; i < S.getNumArgs(); ++i)
-    if (S.getNameForSlot(i).equals("freeWhenDone"))
+    if (S.getNameForSlot(i) == "freeWhenDone")
       return !Call.getArgSVal(i).isZeroConstant();
 
   return std::nullopt;
@@ -3255,7 +3255,7 @@ bool MallocChecker::mayFreeAnyEscapedMemoryOrIsModeledExplicitly(
     if (FirstSlot.starts_with("addPointer") ||
         FirstSlot.starts_with("insertPointer") ||
         FirstSlot.starts_with("replacePointer") ||
-        FirstSlot.equals("valueWithPointer")) {
+        FirstSlot == "valueWithPointer") {
       return true;
     }
 

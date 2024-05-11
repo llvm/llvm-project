@@ -1422,7 +1422,7 @@ unsigned ContinuationIndenter::getNewLineColumn(const LineState &State) {
   // the next line.
   if (State.Line->InPragmaDirective) {
     FormatToken *PragmaType = State.Line->First->Next->Next;
-    if (PragmaType && PragmaType->TokenText.equals("omp"))
+    if (PragmaType && PragmaType->TokenText == "omp")
       return CurrentState.Indent + Style.ContinuationIndentWidth;
   }
 
