@@ -1332,8 +1332,9 @@ multiclass SM_Real_Loads_gfx11<bits<8> op, string ps> {
   def _IMM_gfx11 : SMEM_Real_Load_gfx11<op, ps#"_IMM", opName>;
   def _SGPR_gfx11 : SMEM_Real_Load_gfx11<op, ps#"_SGPR", opName>;
   def _SGPR_IMM_gfx11 : SMEM_Real_Load_gfx11<op, ps#"_SGPR_IMM", opName>;
-  def : MnemonicAlias<!cast<SM_Pseudo>(ps#"_IMM").Mnemonic, opName>,
-                      Requires<[isGFX11Plus]>;
+  def : AMDGPUMnemonicAlias<!cast<SM_Pseudo>(ps#"_IMM").Mnemonic, opName> {
+    let AssemblerPredicate = isGFX11Plus;
+  }
 }
 
 defm S_LOAD_B32  : SM_Real_Loads_gfx11<0x000, "S_LOAD_DWORD">;
