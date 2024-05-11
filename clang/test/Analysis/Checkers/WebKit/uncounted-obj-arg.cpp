@@ -408,6 +408,11 @@ public:
     getFieldTrivial().trivial43(); // no-warning
     getFieldTrivial().trivial44(); // no-warning
     getFieldTrivial().trivial45(); // no-warning
+    getFieldTrivial().trivial46(); // no-warning
+    getFieldTrivial().trivial47(); // no-warning
+    getFieldTrivial().trivial48(); // no-warning
+    getFieldTrivial().trivial49(); // no-warning
+    getFieldTrivial().trivial50(); // no-warning
 
     RefCounted::singleton().trivial18(); // no-warning
     RefCounted::singleton().someFunction(); // no-warning
