@@ -45,11 +45,13 @@ int main(void) {
       mlirModuleCreateParse(ctx, mlirStringRefCreateFromCString(irdlDialect));
 
   mlirLoadIRDLDialects(dialectDecl);
+  mlirModuleDestroy(dialectDecl);
 
   MlirModule usingModule = mlirModuleCreateParse(
       ctx, mlirStringRefCreateFromCString(newDialectUsage));
 
   mlirOperationDump(mlirModuleGetOperation(usingModule));
 
+  mlirContextDestroy(ctx);
   return 0;
 }
