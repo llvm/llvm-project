@@ -548,67 +548,6 @@ bool SSACCmpConv::canConvert(MachineBasicBlock *MBB) {
   return true;
 }
 
-static int getCondFlagsFromCondCode(X86::CondCode CC) {
-  // CCMP/CTEST has two conditional operands:
-  // - SCC: source conditonal code (same as CMOV)
-  // - DCF: destination conditional flags, which has 4 valid bits
-  //
-  // +----+----+----+----+
-  // | OF | SF | ZF | CF |
-  // +----+----+----+----+
-  //
-  // If SCC(source conditional code) evaluates to false, CCMP/CTEST will updates
-  // the conditional flags by as follows:
-  //
-  // OF = DCF.OF
-  // SF = DCF.SF
-  // ZF = DCF.ZF
-  // CF = DCF.CF
-  // PF = DCF.CF
-  // AF = 0 (Auxiliary Carry Flag)
-  //
-  // Otherwise, the CMP or TEST is executed and it updates the
-  // CSPAZO flags normally.
-  //
-  // NOTE:
-  // If SCC = P, then SCC evaluates to true regardless of the CSPAZO value.
-  // If SCC = NP, then SCC evaluates to false regardless of the CSPAZO value.
-  enum { CF = 1, ZF = 2, SF = 4, OF = 8, PF = CF };
-  int Flags = 0;
-  switch (CC) {
-  default:
-    llvm_unreachable("Illegal condition code!");
-  case X86::COND_NO:
-  case X86::COND_NE:
-  case X86::COND_GE:
-  case X86::COND_G:
-  case X86::COND_AE:
-  case X86::COND_A:
-  case X86::COND_NS:
-  case X86::COND_NP:
-    break;
-  case X86::COND_O:
-    Flags |= OF;
-    break;
-  case X86::COND_B:
-  case X86::COND_BE:
-    Flags |= CF;
-    break;
-  case X86::COND_E:
-  case X86::COND_LE:
-    Flags |= ZF;
-    break;
-  case X86::COND_S:
-  case X86::COND_L:
-    Flags |= SF;
-    break;
-  case X86::COND_P:
-    Flags |= PF;
-    break;
-  }
-  return Flags;
-}
-
 void SSACCmpConv::convert(SmallVectorImpl<MachineBasicBlock *> &RemovedBlocks) {
   LLVM_DEBUG(dbgs() << "Merging " << printMBBReference(*CmpBB) << " into "
                     << printMBBReference(*Head) << ":\n"
@@ -727,7 +666,7 @@ void SSACCmpConv::convert(SmallVectorImpl<MachineBasicBlock *> &RemovedBlocks) {
   BuildMI(*Head, CmpMI, CmpMI->getDebugLoc(), MCID)
       .add(Op0)
       .add(Op1)
-      .addImm(getCondFlagsFromCondCode(CmpBBTailCC))
+      .addImm(X86::getCondFlagsFromCondCode(CmpBBTailCC))
       .addImm(HeadCmpBBCC);
   CmpMI->eraseFromParent();
   Head->updateTerminator(CmpBB->getNextNode());
