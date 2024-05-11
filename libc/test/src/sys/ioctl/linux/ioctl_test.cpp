@@ -25,3 +25,9 @@ TEST(LlvmLibcIoctlTest, InvalidFileDescriptor) {
   int res = LIBC_NAMESPACE::ioctl(fd, request, NULL);
   EXPECT_THAT(res, Fails(EBADF, -1));
 }
+
+TEST(LlvmLibcIoctlTest, ValidFileDescriptor) {
+  int fd = open("/dev/tty1", O_RDWR);
+  int res = LIBC_NAMESPACE::i(fd, KDSETMODE, KD_GRAPHICS);
+  EXPECT_THAT(res, Succeeds());
+}

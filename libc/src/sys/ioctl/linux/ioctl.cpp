@@ -17,7 +17,7 @@
 namespace LIBC_NAMESPACE {
 
 // This function is currently linux only. It has to be refactored suitably if
-// madvise is to be supported on non-linux operating systems also.
+// ioctl is to be supported on non-linux operating systems also.
 LLVM_LIBC_FUNCTION(int, ioctl, (int fd, unsigned long request, ...)) {
   va_list ptr_to_memory;
   va_start(ptr_to_memory, request);
