@@ -429,9 +429,7 @@ public:
     return TrivialFunctionAnalysis::isTrivialImpl(CE->getConstructor(), Cache);
   }
 
-  bool VisitCXXNewExpr(const CXXNewExpr* NE) {
-    return VisitChildren(NE);
-  }
+  bool VisitCXXNewExpr(const CXXNewExpr* NE) { return VisitChildren(NE); }
 
   bool VisitImplicitCastExpr(const ImplicitCastExpr *ICE) {
     return Visit(ICE->getSubExpr());
