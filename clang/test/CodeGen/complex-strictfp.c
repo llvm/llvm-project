@@ -61,7 +61,9 @@ void test3b(void) {
 // CHECK-NEXT:    [[CF_IMAG:%.*]] = load float, ptr getelementptr inbounds ({ float, float }, ptr @cf, i32 0, i32 1), align 4
 // CHECK-NEXT:    [[CONV:%.*]] = call double @llvm.experimental.constrained.fpext.f64.f32(float [[CF_REAL]], metadata !"fpexcept.strict") #[[ATTR3]]
 // CHECK-NEXT:    [[CONV1:%.*]] = call double @llvm.experimental.constrained.fpext.f64.f32(float [[CF_IMAG]], metadata !"fpexcept.strict") #[[ATTR3]]
+// CHECK-NEXT:    call void @llvm.set.rounding(i32 1) #[[ATTR3]]
 // CHECK-NEXT:    [[CALL:%.*]] = call { double, double } @__divdc3(double noundef [[CONV]], double noundef [[CONV1]], double noundef [[G1_REAL]], double noundef [[G1_IMAG]]) #[[ATTR4:[0-9]+]]
+// CHECK-NEXT:    call void @llvm.set.rounding(i32 2) #[[ATTR3]]
 // CHECK-NEXT:    [[TMP0:%.*]] = extractvalue { double, double } [[CALL]], 0
 // CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { double, double } [[CALL]], 1
 // CHECK-NEXT:    [[CONV2:%.*]] = call float @llvm.experimental.constrained.fptrunc.f32.f64(double [[TMP0]], metadata !"round.upward", metadata !"fpexcept.strict") #[[ATTR3]]

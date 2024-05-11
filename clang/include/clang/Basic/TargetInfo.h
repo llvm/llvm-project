@@ -1232,6 +1232,14 @@ public:
     return true;
   }
 
+  /// Returns true, if an operations that depends on rounding mode can be
+  /// implemented without changing FP environment. In this case the rounding
+  /// mode is encoded in the bits of implementing instruction.
+  virtual bool hasStaticRounding() const {
+    // Most supported targets require setting hardware register to use
+    // particular rounding mode.
+    return false;
+  }
   /// Returns the target triple of the primary target.
   const llvm::Triple &getTriple() const {
     return Triple;

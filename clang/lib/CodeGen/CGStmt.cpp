@@ -499,11 +499,14 @@ struct FPControlModesCleanup final : EHScopeStack::Cleanup {
 };
 } // namespace
 
-void CodeGenFunction::emitSetFPControlModes(FPOptions NewFP) {
-  if (NewFP == CurFPFeatures)
+void CodeGenFunction::emitSetFPControlModes(FPOptions NewFP, FPOptions OldFP) {
+  if (NewFP == OldFP)
     return;
 
   // For now only rounding mode is handled.
+
+  if (Target.hasStaticRounding())
+    return;
 
   // If the new rounding mode is unknown in compile-time, it means that the
   // compound statement contains `#pragma STDC FENV_ACCESS ON`. In this case all
@@ -512,28 +515,31 @@ void CodeGenFunction::emitSetFPControlModes(FPOptions NewFP) {
   if (NewFP.isRoundingModeDynamic())
     return;
 
-  llvm::RoundingMode OldConstRM = CurFPFeatures.getConstRoundingMode();
+  llvm::RoundingMode OldConstRM = OldFP.getConstRoundingMode();
   llvm::RoundingMode NewConstRM = NewFP.getConstRoundingMode();
   if (OldConstRM == NewConstRM)
     return;
 
-  llvm::RoundingMode OldRM = CurFPFeatures.getRoundingMode();
+  llvm::RoundingMode OldRM = OldFP.getRoundingMode();
   if (OldRM == NewConstRM)
     return;
 
-  llvm::Value *PreviousRM = nullptr;
-  if (CurFPFeatures.isRoundingModeDynamic()) {
+  if (OldFP.isRoundingModeDynamic()) {
     llvm::Function *FGetRound = CGM.getIntrinsic(llvm::Intrinsic::get_rounding);
-    PreviousRM = Builder.CreateCall(FGetRound);
+    DynamicRoundingMode = Builder.CreateCall(FGetRound);
   } else {
-    PreviousRM = llvm::ConstantInt::get(Int32Ty, static_cast<uint64_t>(OldRM));
+    DynamicRoundingMode =
+        llvm::ConstantInt::get(Int32Ty, static_cast<uint64_t>(OldRM));
   }
 
   llvm::RoundingMode NewRM = NewFP.getRoundingMode();
-  Builder.CreateIntrinsic(
-      llvm::Intrinsic::set_rounding, {},
-      llvm::ConstantInt::get(Int32Ty, static_cast<uint64_t>(NewRM)));
-  EHStack.pushCleanup<FPControlModesCleanup>(NormalAndEHCleanup, PreviousRM);
+  StaticRoundingMode =
+      llvm::ConstantInt::get(Int32Ty, static_cast<uint64_t>(NewRM));
+  Builder.CreateIntrinsic(llvm::Intrinsic::set_rounding, {},
+                          StaticRoundingMode);
+  EHStack.pushCleanup<FPControlModesCleanup>(NormalAndEHCleanup,
+                                             DynamicRoundingMode);
+  CurrentRoundingIsStatic = true;
 }
 
 /// EmitCompoundStmt - Emit a compound statement {..} node.  If GetLast is true,
@@ -562,8 +568,8 @@ CodeGenFunction::EmitCompoundStmtWithoutScope(const CompoundStmt &S,
   // Optionally set up the new FP environment, if the compound statement
   // contains a pragma that modifies it.
   FPOptions NewFP = S.getNewFPOptions(CurFPFeatures);
-  emitSetFPControlModes(NewFP);
   CGFPOptionsRAII SavedFPFeatues(*this, NewFP);
+  emitSetFPControlModes(NewFP, SavedFPFeatues.getOldFPOptions());
 
   Address RetAlloca = Address::invalid();
 

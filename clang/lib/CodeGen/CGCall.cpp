@@ -30,6 +30,7 @@
 #include "clang/CodeGen/CGFunctionInfo.h"
 #include "clang/CodeGen/SwiftCallingConv.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Assumptions.h"
 #include "llvm/IR/AttributeMask.h"
@@ -5693,6 +5694,9 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
   AllocAlignAttrEmitter AllocAlignAttrEmitter(*this, TargetDecl, CallArgs);
   Attrs = AllocAlignAttrEmitter.TryEmitAsCallSiteAttribute(Attrs);
 
+  // Prepare execution environment.
+  setRoundingModeForCall(Callee);
+
   // Emit the actual call/invoke instruction.
   llvm::CallBase *CI;
   if (!InvokeDest) {
@@ -5846,6 +5850,9 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
   // lexical order, so deactivate it and run it manually here.
   CallArgs.freeArgumentMemory(*this);
 
+  // Restore execution environment.
+  restoreRoundingModeAfterCall();
+
   // Extract the return value.
   RValue Ret = [&] {
     switch (RetAI.getKind()) {
@@ -5978,6 +5985,64 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
                 RetTy);
 
   return Ret;
+}
+
+static bool endsWithRoundingModeSuffix(StringRef FuncName) {
+  size_t Underscore = FuncName.find_last_of("_");
+  if (Underscore == StringRef::npos || Underscore < 2)
+    return false;
+  StringRef Suffix = FuncName.substr(Underscore + 1);
+  static const StringRef RMSuffixes[] = {"rtz", "rte", "rtp", "rtn", "rhaz",
+                                         "rz",  "rn",  "ru",  "rd"};
+  for (auto RM : RMSuffixes) {
+    if (Suffix == RM)
+      return true;
+  }
+  return false;
+}
+
+bool CodeGenFunction::requiresDynamicRounding(const CGCallee &Callee) {
+  if (Callee.isOrdinary()) {
+    const Decl *CalleeDecl = Callee.getAbstractInfo().getCalleeDecl().getDecl();
+    if (const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(CalleeDecl)) {
+      IdentifierInfo *FuncNameII = FD->getDeclName().getAsIdentifierInfo();
+      if (FuncNameII) {
+        StringRef FuncName = FuncNameII->getName();
+        // If a reserved identifier ends with rounding mode suffix preceded by
+        // underscore, this function does not need the previous dynamic rounding
+        // mode to be set.
+        if (isReservedInAllContexts(
+                FuncNameII->isReserved(getContext().getLangOpts()))) {
+          if (endsWithRoundingModeSuffix(FuncName))
+            return false;
+        }
+      }
+    }
+  }
+  return true;
+}
+
+/// Sets dynamic rounding mode for the function called in the region where
+/// pragma FENV_ROUND is in effect.
+void CodeGenFunction::setRoundingModeForCall(const CGCallee &Callee) {
+  if (Target.hasStaticRounding() || Callee.isBuiltin() ||
+      !requiresDynamicRounding(Callee))
+    return;
+  if (!CurrentRoundingIsStatic || !DynamicRoundingMode)
+    return;
+  Builder.CreateCall(CGM.getIntrinsic(llvm::Intrinsic::set_rounding),
+                     DynamicRoundingMode);
+  CurrentRoundingIsStatic = false;
+}
+
+void CodeGenFunction::restoreRoundingModeAfterCall() {
+  if (Target.hasStaticRounding() || CurFPFeatures.isRoundingModeDynamic())
+    return;
+  if (CurrentRoundingIsStatic || !StaticRoundingMode)
+    return;
+  Builder.CreateCall(CGM.getIntrinsic(llvm::Intrinsic::set_rounding),
+                     StaticRoundingMode);
+  CurrentRoundingIsStatic = true;
 }
 
 CGCallee CGCallee::prepareConcreteCallee(CodeGenFunction &CGF) const {
