@@ -197,7 +197,7 @@ def executeShCmd(cmd, shenv, results, timeout=0):
     timeout
     """
     # Use the helper even when no timeout is required to make
-    # other code simpler (i.e. avoid bunch of ``!= None`` checks)
+    # other code simpler (i.e. avoid bunch of ``is not None`` checks)
     timeoutHelper = TimeoutHelper(timeout)
     if timeout > 0:
         timeoutHelper.startTimer()
