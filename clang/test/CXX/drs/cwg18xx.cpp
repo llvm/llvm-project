@@ -222,6 +222,53 @@ namespace cwg1815 { // cwg1815: no
 #endif
 }
 
+namespace cwg1820 { // cwg1820: 3.5
+typedef int A;
+typedef int cwg1820::A;
+// expected-warning@-1 {{extra qualification on member 'A'}}
+// expected-error@-2 {{typedef declarator cannot be qualified}}
+
+namespace B {
+typedef int cwg1820::A;
+// expected-error@-1 {{cannot define or redeclare 'A' here because namespace 'B' does not enclose namespace 'cwg1820'}}
+// expected-error@-2 {{typedef declarator cannot be qualified}}
+}
+
+class C1 {
+  typedef int cwg1820::A;
+  // expected-error@-1 {{non-friend class member 'A' cannot have a qualified name}}
+  // expected-error@-2 {{typedef declarator cannot be qualified}}
+};
+
+template <typename>
+class C2 {
+  typedef int cwg1820::A;
+  // expected-error@-1 {{non-friend class member 'A' cannot have a qualified name}}
+  // expected-error@-2 {{typedef declarator cannot be qualified}}
+};
+
+void d1() {
+  typedef int cwg1820::A;
+  // expected-error@-1 {{definition or redeclaration of 'A' not allowed inside a function}}
+  // expected-error@-2 {{typedef declarator cannot be qualified}}
+}
+
+template<typename>
+void d2() {
+  typedef int cwg1820::A;
+  // expected-error@-1 {{definition or redeclaration of 'A' not allowed inside a function}}
+  // expected-error@-2 {{typedef declarator cannot be qualified}}
+}
+
+#if __cplusplus >= 201103L
+auto e = [] {
+  typedef int cwg1820::A;
+  // expected-error@-1 {{definition or redeclaration of 'A' not allowed inside a function}}
+  // expected-error@-2 {{typedef declarator cannot be qualified}}
+};
+#endif
+} // namespace cwg1820
+
 namespace cwg1821 { // cwg1821: 2.9
 struct A {
   template <typename> struct B {
