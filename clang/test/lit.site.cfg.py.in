@@ -34,6 +34,7 @@ config.enable_backtrace = @ENABLE_BACKTRACES@
 config.enable_threads = @LLVM_ENABLE_THREADS@
 config.reverse_iteration = @LLVM_ENABLE_REVERSE_ITERATION@
 config.host_arch = "@HOST_ARCH@"
+config.perl_executable = "@PERL_EXECUTABLE@"
 config.python_executable = "@Python3_EXECUTABLE@"
 config.use_z3_solver = lit_config.params.get('USE_Z3_SOLVER', "@USE_Z3_SOLVER@")
 config.has_plugins = @CLANG_PLUGIN_SUPPORT@
