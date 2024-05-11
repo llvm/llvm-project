@@ -247,7 +247,8 @@ TYPE_CONTEXT_PARSER("module subprogram part"_en_US,
 //         separate-module-subprogram
 TYPE_PARSER(construct<ModuleSubprogram>(indirect(functionSubprogram)) ||
     construct<ModuleSubprogram>(indirect(subroutineSubprogram)) ||
-    construct<ModuleSubprogram>(indirect(Parser<SeparateModuleSubprogram>{})))
+    construct<ModuleSubprogram>(indirect(Parser<SeparateModuleSubprogram>{})) ||
+    construct<ModuleSubprogram>(indirect(compilerDirective)))
 
 // R1410 module-nature -> INTRINSIC | NON_INTRINSIC
 constexpr auto moduleNature{

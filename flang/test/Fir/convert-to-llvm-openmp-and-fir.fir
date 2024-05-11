@@ -937,11 +937,68 @@ func.func @omp_map_info_descriptor_type_conversion(%arg0 : !fir.ref<!fir.box<!fi
   %0 = fir.box_offset %arg0 base_addr : (!fir.ref<!fir.box<!fir.heap<i32>>>) -> !fir.llvm_ptr<!fir.ref<i32>>
   // CHECK: %[[MEMBER_MAP:.*]] = omp.map.info var_ptr(%[[GEP]] : !llvm.ptr, i32) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = ""}
   %1 = omp.map.info var_ptr(%0 : !fir.llvm_ptr<!fir.ref<i32>>, i32) map_clauses(tofrom) capture(ByRef) -> !fir.llvm_ptr<!fir.ref<i32>> {name = ""}
-  // CHECK: %[[DESC_MAP:.*]] = omp.map.info var_ptr(%[[ARG_0]] : !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>) map_clauses(always, delete) capture(ByRef) members(%[[MEMBER_MAP]] : !llvm.ptr) -> !llvm.ptr {name = ""}
-  %2 = omp.map.info var_ptr(%arg0 : !fir.ref<!fir.box<!fir.heap<i32>>>, !fir.box<!fir.heap<i32>>) map_clauses(always, delete) capture(ByRef) members(%1 : !fir.llvm_ptr<!fir.ref<i32>>) -> !fir.ref<!fir.box<!fir.heap<i32>>> {name = ""}
+  // CHECK: %[[DESC_MAP:.*]] = omp.map.info var_ptr(%[[ARG_0]] : !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>) map_clauses(always, delete) capture(ByRef) members(%[[MEMBER_MAP]] : [0] : !llvm.ptr) -> !llvm.ptr {name = ""}
+  %2 = omp.map.info var_ptr(%arg0 : !fir.ref<!fir.box<!fir.heap<i32>>>, !fir.box<!fir.heap<i32>>) map_clauses(always, delete) capture(ByRef) members(%1 : [0] : !fir.llvm_ptr<!fir.ref<i32>>) -> !fir.ref<!fir.box<!fir.heap<i32>>> {name = ""}
   // CHECK: omp.target_exit_data map_entries(%[[DESC_MAP]] : !llvm.ptr) 
   omp.target_exit_data   map_entries(%2 : !fir.ref<!fir.box<!fir.heap<i32>>>)
   return 
+}
+
+// -----
+
+// CHECK-LABEL:  llvm.func @omp_map_info_derived_type_explicit_member_conversion
+// CHECK-SAME:   %[[ARG_0:.*]]: !llvm.ptr)
+
+func.func @omp_map_info_derived_type_explicit_member_conversion(%arg0 : !fir.ref<!fir.type<_QFderived_type{real:f32,array:!fir.array<10xi32>,int:i32}>>) {
+  // CHECK: %[[GEP:.*]] = llvm.getelementptr %[[ARG_0]][0, 2] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<"_QFderived_type", (f32, array<10 x i32>, i32)>
+  %0 = fir.field_index int, !fir.type<_QFderived_type{real:f32,array:!fir.array<10xi32>,int:i32}>
+  %1 = fir.coordinate_of %arg0, %0 : (!fir.ref<!fir.type<_QFderived_type{real:f32,array:!fir.array<10xi32>,int:i32}>>, !fir.field) -> !fir.ref<i32>
+  // CHECK: %[[MAP_MEMBER_1:.*]] = omp.map.info var_ptr(%[[GEP]] : !llvm.ptr, i32) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = "dtype%int"}
+  %2 = omp.map.info var_ptr(%1 : !fir.ref<i32>, i32) map_clauses(tofrom) capture(ByRef) -> !fir.ref<i32> {name = "dtype%int"}
+  // CHECK: %[[GEP_2:.*]] = llvm.getelementptr %[[ARG_0]][0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<"_QFderived_type", (f32, array<10 x i32>, i32)>
+  %3 = fir.field_index real, !fir.type<_QFderived_type{real:f32,array:!fir.array<10xi32>,int:i32}>
+  %4 = fir.coordinate_of %arg0, %3 : (!fir.ref<!fir.type<_QFderived_type{real:f32,array:!fir.array<10xi32>,int:i32}>>, !fir.field) -> !fir.ref<f32>
+  // CHECK: %[[MAP_MEMBER_2:.*]] = omp.map.info var_ptr(%[[GEP_2]] : !llvm.ptr, f32) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = "dtype%real"}
+  %5 = omp.map.info var_ptr(%4 : !fir.ref<f32>, f32) map_clauses(tofrom) capture(ByRef) -> !fir.ref<f32> {name = "dtype%real"}    
+  // CHECK: %[[MAP_PARENT:.*]] = omp.map.info var_ptr(%[[ARG_0]] : !llvm.ptr, !llvm.struct<"_QFderived_type", (f32, array<10 x i32>, i32)>) map_clauses(tofrom) capture(ByRef) members(%[[MAP_MEMBER_1]], %[[MAP_MEMBER_2]] : [2], [0] : !llvm.ptr, !llvm.ptr) -> !llvm.ptr {name = "dtype", partial_map = true} 
+  %6 = omp.map.info var_ptr(%arg0 : !fir.ref<!fir.type<_QFderived_type{real:f32,array:!fir.array<10xi32>,int:i32}>>, !fir.type<_QFderived_type{real:f32,array:!fir.array<10xi32>,int:i32}>) map_clauses(tofrom) capture(ByRef) members(%2, %5 : [2], [0] : !fir.ref<i32>, !fir.ref<f32>) -> !fir.ref<!fir.type<_QFderived_type{real:f32,array:!fir.array<10xi32>,int:i32}>> {name = "dtype", partial_map = true}
+  // CHECK: omp.target map_entries(%[[MAP_MEMBER_1]] -> %[[ARG_1:.*]], %[[MAP_MEMBER_2]] -> %[[ARG_2:.*]], %[[MAP_PARENT]] -> %[[ARG_3:.*]] : !llvm.ptr, !llvm.ptr, !llvm.ptr) {
+  // CHECK: ^bb0(%[[ARG_1]]: !llvm.ptr, %[[ARG_2]]: !llvm.ptr, %[[ARG_3]]: !llvm.ptr):
+  omp.target map_entries(%2 -> %arg1, %5 -> %arg2, %6 -> %arg3 : !fir.ref<i32>, !fir.ref<f32>, !fir.ref<!fir.type<_QFderived_type{real:f32,array:!fir.array<10xi32>,int:i32}>>) {
+  ^bb0(%arg1: !fir.ref<f32>, %arg2: !fir.ref<i32>, %arg3: !fir.ref<!fir.type<_QFderived_type{real:f32,array:!fir.array<10xi32>,int:i32}>>):
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
+// CHECK-LABEL:  llvm.func @omp_map_info_nested_derived_type_explicit_member_conversion
+// CHECK-SAME:   %[[ARG_0:.*]]: !llvm.ptr)
+
+func.func @omp_map_info_nested_derived_type_explicit_member_conversion(%arg0 : !fir.ref<!fir.type<_QFTtop_layer{array_i:!fir.array<10xi32>,nested:!fir.type<_QFTbottom_layer{array_i2:!fir.array<10xf32>,i2:f64}>,k:i32}>>) {
+    // CHECK: %[[GEP:.*]] = llvm.getelementptr %[[ARG_0]][0, 1] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<"_QFTtop_layer", (array<10 x i32>, struct<"_QFTbottom_layer", (array<10 x f32>, f64)>, i32)>
+    %0 = fir.field_index nested, !fir.type<_QFTtop_layer{array_i:!fir.array<10xi32>,nested:!fir.type<_QFTbottom_layer{array_i2:!fir.array<10xf32>,i2:f64}>,k:i32}>
+    %1 = fir.coordinate_of %arg0, %0 : (!fir.ref<!fir.type<_QFTtop_layer{array_i:!fir.array<10xi32>,nested:!fir.type<_QFTbottom_layer{array_i2:!fir.array<10xf32>,i2:f64}>,k:i32}>>, !fir.field) -> !fir.ref<!fir.type<_QFTbottom_layer{array_i2:!fir.array<10xf32>,i2:f64}>>
+    // CHECK: %[[GEP_2:.*]] = llvm.getelementptr %[[GEP]][0, 1] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<"_QFTbottom_layer", (array<10 x f32>, f64)>
+    %2 = fir.field_index i2, !fir.type<_QFTbottom_layer{array_i2:!fir.array<10xf32>,i2:f64}>
+    %3 = fir.coordinate_of %1, %2 : (!fir.ref<!fir.type<_QFTbottom_layer{array_i2:!fir.array<10xf32>,i2:f64}>>, !fir.field) -> !fir.ref<f64>
+    // CHECK: %[[MAP_MEMBER_1:.*]] = omp.map.info var_ptr(%[[GEP_2]] : !llvm.ptr, f64) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr
+    %4 = omp.map.info var_ptr(%3 : !fir.ref<f64>, f64) map_clauses(tofrom) capture(ByRef) -> !fir.ref<f64>
+    // CHECK: %[[GEP_3:.*]] = llvm.getelementptr %[[ARG_0]][0, 2] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<"_QFTtop_layer", (array<10 x i32>, struct<"_QFTbottom_layer", (array<10 x f32>, f64)>, i32)>
+    %5 = fir.field_index k, !fir.type<_QFTtop_layer{array_i:!fir.array<10xi32>,nested:!fir.type<_QFTbottom_layer{array_i2:!fir.array<10xf32>,i2:f64}>,k:i32}>
+    %6 = fir.coordinate_of %arg0, %5 : (!fir.ref<!fir.type<_QFTtop_layer{array_i:!fir.array<10xi32>,nested:!fir.type<_QFTbottom_layer{array_i2:!fir.array<10xf32>,i2:f64}>,k:i32}>>, !fir.field) -> !fir.ref<i32>
+    // CHECK: %[[MAP_MEMBER_2:.*]] = omp.map.info var_ptr(%[[GEP_3]] : !llvm.ptr, i32) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr
+    %7 = omp.map.info var_ptr(%6 : !fir.ref<i32>, i32) map_clauses(tofrom) capture(ByRef) -> !fir.ref<i32>
+    // CHECK: %[[PARENT_MAP:.*]] = omp.map.info var_ptr(%[[ARG_0]] : !llvm.ptr, !llvm.struct<"_QFTtop_layer", (array<10 x i32>, struct<"_QFTbottom_layer", (array<10 x f32>, f64)>, i32)>) map_clauses(tofrom) capture(ByRef) members(%[[MAP_MEMBER_1]], %[[MAP_MEMBER_2]] : [1,1], [2,-1] : !llvm.ptr, !llvm.ptr) -> !llvm.ptr {partial_map = true}
+    %9 = omp.map.info var_ptr(%arg0 : !fir.ref<!fir.type<_QFTtop_layer{array_i:!fir.array<10xi32>,nested:!fir.type<_QFTbottom_layer{array_i2:!fir.array<10xf32>,i2:f64}>,k:i32}>>, !fir.type<_QFTtop_layer{array_i:!fir.array<10xi32>,nested:!fir.type<_QFTbottom_layer{array_i2:!fir.array<10xf32>,i2:f64}>,k:i32}>) map_clauses(tofrom) capture(ByRef) members(%4, %7 : [1,1], [2,-1] : !fir.ref<f64>, !fir.ref<i32>) -> !fir.ref<!fir.type<_QFTtop_layer{array_i:!fir.array<10xi32>,nested:!fir.type<_QFTbottom_layer{array_i2:!fir.array<10xf32>,i2:f64}>,k:i32}>> {partial_map = true}
+    // CHECK: omp.target map_entries(%[[MAP_MEMBER_1]] -> %{{.*}}, %[[MAP_MEMBER_2]] -> %{{.*}}, %[[PARENT_MAP]] -> %{{.*}} : !llvm.ptr, !llvm.ptr, !llvm.ptr) {
+    // CHECK: ^bb0(%{{.*}}: !llvm.ptr, %{{.*}}: !llvm.ptr, %{{.*}}: !llvm.ptr):
+    omp.target map_entries(%4 -> %arg1, %7 -> %arg2, %9 -> %arg3 : !fir.ref<f64>, !fir.ref<i32>, !fir.ref<!fir.type<_QFTtop_layer{array_i:!fir.array<10xi32>,nested:!fir.type<_QFTbottom_layer{array_i2:!fir.array<10xf32>,i2:f64}>,k:i32}>>) {
+     ^bb0(%arg1: !fir.ref<i32>, %arg2: !fir.ref<f64>, %arg3: !fir.ref<!fir.type<_QFTtop_layer{array_i:!fir.array<10xi32>,nested:!fir.type<_QFTbottom_layer{array_i2:!fir.array<10xf32>,i2:f64}>,k:i32}>>):
+      omp.terminator
+    }
+  return
 }
 
 // -----

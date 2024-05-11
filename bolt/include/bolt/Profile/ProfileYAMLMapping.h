@@ -80,9 +80,6 @@ struct SuccessorInfo {
   bool operator!=(const SuccessorInfo &Other) const {
     return !(*this == Other);
   }
-  bool operator<(const SuccessorInfo &Other) const {
-    return Index < Other.Index;
-  }
 };
 } // end namespace bolt
 
