@@ -482,11 +482,13 @@ class MachineBlockPlacement : public MachineFunctionPass {
       MachineBasicBlock *BB, MachineBasicBlock *&LPred,
       const MachineBasicBlock *LoopHeaderBB,
       BlockChain &Chain, BlockFilterSet *BlockFilter,
-      MachineFunction::iterator &PrevUnplacedBlockIt);
+      MachineFunction::iterator &PrevUnplacedBlockIt,
+      BlockFilterSet::iterator &PrevUnplacedBlockInFilterIt);
   bool maybeTailDuplicateBlock(
       MachineBasicBlock *BB, MachineBasicBlock *LPred,
       BlockChain &Chain, BlockFilterSet *BlockFilter,
       MachineFunction::iterator &PrevUnplacedBlockIt,
+      BlockFilterSet::iterator &PrevUnplacedBlockInFilterIt,
       bool &DuplicatedToLPred);
   bool hasBetterLayoutPredecessor(
       const MachineBasicBlock *BB, const MachineBasicBlock *Succ,
@@ -500,7 +502,10 @@ class MachineBlockPlacement : public MachineFunctionPass {
       const BlockChain &Chain, SmallVectorImpl<MachineBasicBlock *> &WorkList);
   MachineBasicBlock *getFirstUnplacedBlock(
       const BlockChain &PlacedChain,
-      MachineFunction::iterator &PrevUnplacedBlockIt,
+      MachineFunction::iterator &PrevUnplacedBlockIt);
+  MachineBasicBlock *getFirstUnplacedBlock(
+      const BlockChain &PlacedChain,
+      BlockFilterSet::iterator &PrevUnplacedBlockInFilterIt,
       const BlockFilterSet *BlockFilter);
 
   /// Add a basic block to the work list if it is appropriate.
@@ -1761,7 +1766,7 @@ MachineBasicBlock *MachineBlockPlacement::selectBestCandidateBlock(
   return BestBlock;
 }
 
-/// Retrieve the first unplaced basic block.
+/// Retrieve the first unplaced basic block in the entire function.
 ///
 /// This routine is called when we are unable to use the CFG to walk through
 /// all of the basic blocks and form a chain due to unnatural loops in the CFG.
@@ -1770,18 +1775,41 @@ MachineBasicBlock *MachineBlockPlacement::selectBestCandidateBlock(
 /// re-scanning the entire sequence on repeated calls to this routine.
 MachineBasicBlock *MachineBlockPlacement::getFirstUnplacedBlock(
     const BlockChain &PlacedChain,
-    MachineFunction::iterator &PrevUnplacedBlockIt,
-    const BlockFilterSet *BlockFilter) {
+    MachineFunction::iterator &PrevUnplacedBlockIt) {
+
   for (MachineFunction::iterator I = PrevUnplacedBlockIt, E = F->end(); I != E;
        ++I) {
-    if (BlockFilter && !BlockFilter->count(&*I))
-      continue;
     if (BlockToChain[&*I] != &PlacedChain) {
       PrevUnplacedBlockIt = I;
       // Now select the head of the chain to which the unplaced block belongs
       // as the block to place. This will force the entire chain to be placed,
       // and satisfies the requirements of merging chains.
       return *BlockToChain[&*I]->begin();
+    }
+  }
+  return nullptr;
+}
+
+/// Retrieve the first unplaced basic block among the blocks in BlockFilter.
+///
+/// This is similar to getFirstUnplacedBlock for the entire function, but since
+/// the size of BlockFilter is typically far less than the number of blocks in
+/// the entire function, iterating through the BlockFilter is more efficient.
+/// When processing the entire funciton, using the version without BlockFilter
+/// has a complexity of #(loops in function) * #(blocks in function), while this
+/// version has a complexity of sum(#(loops in block) foreach block in function)
+/// which is always smaller. For long function mostly sequential in structure,
+/// the complexity is amortized to 1 * #(blocks in function).
+MachineBasicBlock *MachineBlockPlacement::getFirstUnplacedBlock(
+    const BlockChain &PlacedChain,
+    BlockFilterSet::iterator &PrevUnplacedBlockInFilterIt,
+    const BlockFilterSet *BlockFilter) {
+  assert(BlockFilter);
+  for (;PrevUnplacedBlockInFilterIt != BlockFilter->end();
+       ++PrevUnplacedBlockInFilterIt) {
+    BlockChain *C = BlockToChain[*PrevUnplacedBlockInFilterIt];
+    if (C != &PlacedChain) {
+      return *C->begin();
     }
   }
   return nullptr;
@@ -1826,6 +1854,9 @@ void MachineBlockPlacement::buildChain(
   assert(HeadBB && "BB must not be null.\n");
   assert(BlockToChain[HeadBB] == &Chain && "BlockToChainMap mis-match.\n");
   MachineFunction::iterator PrevUnplacedBlockIt = F->begin();
+  BlockFilterSet::iterator PrevUnplacedBlockInFilterIt;
+  if (BlockFilter)
+    PrevUnplacedBlockInFilterIt = BlockFilter->begin();
 
   const MachineBasicBlock *LoopHeaderBB = HeadBB;
   markChainSuccessors(Chain, LoopHeaderBB, BlockFilter);
@@ -1855,7 +1886,11 @@ void MachineBlockPlacement::buildChain(
       BestSucc = selectBestCandidateBlock(Chain, EHPadWorkList);
 
     if (!BestSucc) {
-      BestSucc = getFirstUnplacedBlock(Chain, PrevUnplacedBlockIt, BlockFilter);
+      if (BlockFilter)
+        BestSucc = getFirstUnplacedBlock(Chain, PrevUnplacedBlockInFilterIt,
+                                         BlockFilter);
+      else
+        BestSucc = getFirstUnplacedBlock(Chain, PrevUnplacedBlockIt);
       if (!BestSucc)
         break;
 
@@ -1867,7 +1902,8 @@ void MachineBlockPlacement::buildChain(
     // Check for that now.
     if (allowTailDupPlacement() && BestSucc && ShouldTailDup) {
       repeatedlyTailDuplicateBlock(BestSucc, BB, LoopHeaderBB, Chain,
-                                       BlockFilter, PrevUnplacedBlockIt);
+                                   BlockFilter, PrevUnplacedBlockIt,
+                                   PrevUnplacedBlockInFilterIt);
       // If the chosen successor was duplicated into BB, don't bother laying
       // it out, just go round the loop again with BB as the chain end.
       if (!BB->isSuccessor(BestSucc))
@@ -3019,11 +3055,13 @@ bool MachineBlockPlacement::repeatedlyTailDuplicateBlock(
     MachineBasicBlock *BB, MachineBasicBlock *&LPred,
     const MachineBasicBlock *LoopHeaderBB,
     BlockChain &Chain, BlockFilterSet *BlockFilter,
-    MachineFunction::iterator &PrevUnplacedBlockIt) {
+    MachineFunction::iterator &PrevUnplacedBlockIt,
+    BlockFilterSet::iterator &PrevUnplacedBlockInFilterIt) {
   bool Removed, DuplicatedToLPred;
   bool DuplicatedToOriginalLPred;
   Removed = maybeTailDuplicateBlock(BB, LPred, Chain, BlockFilter,
                                     PrevUnplacedBlockIt,
+                                    PrevUnplacedBlockInFilterIt,
                                     DuplicatedToLPred);
   if (!Removed)
     return false;
@@ -3047,6 +3085,7 @@ bool MachineBlockPlacement::repeatedlyTailDuplicateBlock(
     DupPred = *std::prev(ChainEnd);
     Removed = maybeTailDuplicateBlock(DupBB, DupPred, Chain, BlockFilter,
                                       PrevUnplacedBlockIt,
+                                      PrevUnplacedBlockInFilterIt,
                                       DuplicatedToLPred);
   }
   // If BB was duplicated into LPred, it is now scheduled. But because it was
@@ -3077,6 +3116,7 @@ bool MachineBlockPlacement::maybeTailDuplicateBlock(
     MachineBasicBlock *BB, MachineBasicBlock *LPred,
     BlockChain &Chain, BlockFilterSet *BlockFilter,
     MachineFunction::iterator &PrevUnplacedBlockIt,
+    BlockFilterSet::iterator &PrevUnplacedBlockInFilterIt,
     bool &DuplicatedToLPred) {
   DuplicatedToLPred = false;
   if (!shouldTailDuplicate(BB))
@@ -3119,6 +3159,8 @@ bool MachineBlockPlacement::maybeTailDuplicateBlock(
         // Handle the filter set
         if (BlockFilter) {
           BlockFilter->remove(RemBB);
+          if (*PrevUnplacedBlockInFilterIt == RemBB)
+            PrevUnplacedBlockInFilterIt++;
         }
 
         // Remove the block from loop info.
