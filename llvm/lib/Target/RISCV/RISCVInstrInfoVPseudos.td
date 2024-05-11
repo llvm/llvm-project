@@ -355,24 +355,24 @@ defset list<VTypeInfo> AllVectors = {
                                  V_M8, f64, FPR64>;
     }
   }
-}
 
-defset list<VTypeInfo> AllBFloatVectors = {
-  defset list<VTypeInfo> NoGroupBFloatVectors = {
-    defset list<VTypeInfo> FractionalGroupBFloatVectors = {
-      def VBF16MF4: VTypeInfo<vbfloat16mf4_t, vbool64_t, 16, V_MF4, bf16, FPR16>;
-      def VBF16MF2: VTypeInfo<vbfloat16mf2_t, vbool32_t, 16, V_MF2, bf16, FPR16>;
+  defset list<VTypeInfo> AllBFloatVectors = {
+    defset list<VTypeInfo> NoGroupBFloatVectors = {
+      defset list<VTypeInfo> FractionalGroupBFloatVectors = {
+        def VBF16MF4: VTypeInfo<vbfloat16mf4_t, vbool64_t, 16, V_MF4, bf16, FPR16>;
+        def VBF16MF2: VTypeInfo<vbfloat16mf2_t, vbool32_t, 16, V_MF2, bf16, FPR16>;
+      }
+      def VBF16M1:  VTypeInfo<vbfloat16m1_t, vbool16_t, 16, V_M1, bf16, FPR16>;
     }
-    def VBF16M1:  VTypeInfo<vbfloat16m1_t, vbool16_t, 16, V_M1, bf16, FPR16>;
-  }
-
-  defset list<GroupVTypeInfo> GroupBFloatVectors = {
-    def VBF16M2: GroupVTypeInfo<vbfloat16m2_t, vbfloat16m1_t, vbool8_t, 16,
-                                V_M2, bf16, FPR16>;
-    def VBF16M4: GroupVTypeInfo<vbfloat16m4_t, vbfloat16m1_t, vbool4_t, 16,
-                                V_M4, bf16, FPR16>;
-    def VBF16M8: GroupVTypeInfo<vbfloat16m8_t, vbfloat16m1_t, vbool2_t, 16,
-                                V_M8, bf16, FPR16>;
+  
+    defset list<GroupVTypeInfo> GroupBFloatVectors = {
+      def VBF16M2: GroupVTypeInfo<vbfloat16m2_t, vbfloat16m1_t, vbool8_t, 16,
+                                  V_M2, bf16, FPR16>;
+      def VBF16M4: GroupVTypeInfo<vbfloat16m4_t, vbfloat16m1_t, vbool4_t, 16,
+                                  V_M4, bf16, FPR16>;
+      def VBF16M8: GroupVTypeInfo<vbfloat16m8_t, vbfloat16m1_t, vbool2_t, 16,
+                                  V_M8, bf16, FPR16>;
+    }
   }
 }
 
@@ -6232,7 +6232,7 @@ defm PseudoVSUX : VPseudoIStore<Ordered=false>;
 //===----------------------------------------------------------------------===//
 
 // vleff may update VL register
-let hasSideEffects = 1, Defs = [VL] in
+let Defs = [VL] in
 defm PseudoVL : VPseudoFFLoad;
 
 //===----------------------------------------------------------------------===//
@@ -6248,7 +6248,7 @@ defm PseudoVSOXSEG : VPseudoISegStore<Ordered=true>;
 defm PseudoVSUXSEG : VPseudoISegStore<Ordered=false>;
 
 // vlseg<nf>e<eew>ff.v may update VL register
-let hasSideEffects = 1, Defs = [VL] in {
+let Defs = [VL] in {
 defm PseudoVLSEG : VPseudoUSSegLoadFF;
 }
 
@@ -6450,7 +6450,7 @@ defm PseudoVMV_V : VPseudoUnaryVMV_V_X_I;
 //===----------------------------------------------------------------------===//
 // 12.1. Vector Single-Width Saturating Add and Subtract
 //===----------------------------------------------------------------------===//
-let Defs = [VXSAT], hasSideEffects = 1 in {
+let Defs = [VXSAT] in {
   defm PseudoVSADDU : VPseudoVSALU_VV_VX_VI<Commutable=1>;
   defm PseudoVSADD  : VPseudoVSALU_VV_VX_VI<Commutable=1>;
   defm PseudoVSSUBU : VPseudoVSALU_VV_VX;
@@ -6468,7 +6468,7 @@ defm PseudoVASUB  : VPseudoVAALU_VV_VX_RM;
 //===----------------------------------------------------------------------===//
 // 12.3. Vector Single-Width Fractional Multiply with Rounding and Saturation
 //===----------------------------------------------------------------------===//
-let Defs = [VXSAT], hasSideEffects = 1 in {
+let Defs = [VXSAT] in {
   defm PseudoVSMUL : VPseudoVSMUL_VV_VX_RM;
 }
 
@@ -6481,7 +6481,7 @@ defm PseudoVSSRA : VPseudoVSSHT_VV_VX_VI_RM<uimm5>;
 //===----------------------------------------------------------------------===//
 // 12.5. Vector Narrowing Fixed-Point Clip Instructions
 //===----------------------------------------------------------------------===//
-let Defs = [VXSAT], hasSideEffects = 1 in {
+let Defs = [VXSAT] in {
   defm PseudoVNCLIP  : VPseudoVNCLP_WV_WX_WI_RM;
   defm PseudoVNCLIPU : VPseudoVNCLP_WV_WX_WI_RM;
 }

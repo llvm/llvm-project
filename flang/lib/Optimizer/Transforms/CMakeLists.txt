@@ -17,11 +17,12 @@ add_flang_library(FIRTransforms
   AddDebugInfo.cpp
   PolymorphicOpConversion.cpp
   LoopVersioning.cpp
-  OMPDescriptorMapInfoGen.cpp
   OMPFunctionFiltering.cpp
+  OMPMapInfoFinalization.cpp
   OMPMarkDeclareTarget.cpp
   VScaleAttr.cpp
   FunctionAttr.cpp
+  DebugTypeGenerator.cpp
 
   DEPENDS
   FIRDialect

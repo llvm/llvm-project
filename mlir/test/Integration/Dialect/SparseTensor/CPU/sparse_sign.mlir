@@ -114,9 +114,9 @@ module {
     // CHECK-NEXT: nse = 12
     // CHECK-NEXT: dim = ( 32 )
     // CHECK-NEXT: lvl = ( 32 )
-    // CHECK-NEXT: pos[0] : ( 0, 12
-    // CHECK-NEXT: crd[0] : ( 0, 3, 5, 11, 13, 17, 18, 20, 21, 28, 29, 31
-    // CHECK-NEXT: values : ( -1, 1, -1, 1, 1, -1, nan, -nan, 1, -1, -0, 0
+    // CHECK-NEXT: pos[0] : ( 0, 12 )
+    // CHECK-NEXT: crd[0] : ( 0, 3, 5, 11, 13, 17, 18, 20, 21, 28, 29, 31 )
+    // CHECK-NEXT: values : ( -1, 1, -1, 1, 1, -1, nan, -nan, 1, -1, -0, 0 )
     // CHECK-NEXT: ----
     //
     sparse_tensor.print %0 : tensor<?xf64, #SparseVector>

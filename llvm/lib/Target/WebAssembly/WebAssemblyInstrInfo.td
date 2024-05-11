@@ -22,57 +22,25 @@ def HasAddr32 : Predicate<"!Subtarget->hasAddr64()">;
 
 def HasAddr64 : Predicate<"Subtarget->hasAddr64()">;
 
-def HasSIMD128 :
-    Predicate<"Subtarget->hasSIMD128()">,
-    AssemblerPredicate<(all_of FeatureSIMD128), "simd128">;
-
-def HasRelaxedSIMD :
-    Predicate<"Subtarget->hasRelaxedSIMD()">,
-    AssemblerPredicate<(all_of FeatureRelaxedSIMD), "relaxed-simd">;
-
-def HasHalfPrecision :
-    Predicate<"Subtarget->hasHalfPrecision()">,
-    AssemblerPredicate<(all_of FeatureHalfPrecision), "half-precision">;
-
 def HasAtomics :
     Predicate<"Subtarget->hasAtomics()">,
     AssemblerPredicate<(all_of FeatureAtomics), "atomics">;
-
-def HasMultivalue :
-    Predicate<"Subtarget->hasMultivalue()">,
-    AssemblerPredicate<(all_of FeatureMultivalue), "multivalue">;
-
-def HasNontrappingFPToInt :
-    Predicate<"Subtarget->hasNontrappingFPToInt()">,
-    AssemblerPredicate<(all_of FeatureNontrappingFPToInt), "nontrapping-fptoint">;
-
-def NotHasNontrappingFPToInt :
-    Predicate<"!Subtarget->hasNontrappingFPToInt()">,
-    AssemblerPredicate<(all_of (not FeatureNontrappingFPToInt)), "nontrapping-fptoint">;
-
-def HasSignExt :
-    Predicate<"Subtarget->hasSignExt()">,
-    AssemblerPredicate<(all_of FeatureSignExt), "sign-ext">;
-
-def HasTailCall :
-    Predicate<"Subtarget->hasTailCall()">,
-    AssemblerPredicate<(all_of FeatureTailCall), "tail-call">;
-
-def HasExceptionHandling :
-    Predicate<"Subtarget->hasExceptionHandling()">,
-    AssemblerPredicate<(all_of FeatureExceptionHandling), "exception-handling">;
 
 def HasBulkMemory :
     Predicate<"Subtarget->hasBulkMemory()">,
     AssemblerPredicate<(all_of FeatureBulkMemory), "bulk-memory">;
 
-def HasReferenceTypes :
-    Predicate<"Subtarget->hasReferenceTypes()">,
-    AssemblerPredicate<(all_of FeatureReferenceTypes), "reference-types">;
+def HasExceptionHandling :
+    Predicate<"Subtarget->hasExceptionHandling()">,
+    AssemblerPredicate<(all_of FeatureExceptionHandling), "exception-handling">;
 
 def HasExtendedConst :
     Predicate<"Subtarget->hasExtendedConst()">,
     AssemblerPredicate<(all_of FeatureExtendedConst), "extended-const">;
+
+def HasHalfPrecision :
+    Predicate<"Subtarget->hasHalfPrecision()">,
+    AssemblerPredicate<(all_of FeatureHalfPrecision), "half-precision">;
 
 def HasMultiMemory :
     Predicate<"Subtarget->hasMultiMemory()">,
@@ -81,6 +49,43 @@ def HasMultiMemory :
 def HasMemtag :
     Predicate<"Subtarget->hasMemtag()">,
     AssemblerPredicate<(all_of FeatureMemtag), "memtag">;
+def HasMultivalue :
+    Predicate<"Subtarget->hasMultivalue()">,
+    AssemblerPredicate<(all_of FeatureMultivalue), "multivalue">;
+
+def HasMutableGlobals:
+    Predicate<"Subtarget->hasMutableGlobals()">,
+    AssemblerPredicate<(all_of FeatureMutableGlobals), "mutable-globals">;
+
+def HasNontrappingFPToInt :
+    Predicate<"Subtarget->hasNontrappingFPToInt()">,
+    AssemblerPredicate<(all_of FeatureNontrappingFPToInt),
+                       "nontrapping-fptoint">;
+
+def NotHasNontrappingFPToInt :
+    Predicate<"!Subtarget->hasNontrappingFPToInt()">,
+    AssemblerPredicate<(all_of (not FeatureNontrappingFPToInt)),
+                       "nontrapping-fptoint">;
+
+def HasReferenceTypes :
+    Predicate<"Subtarget->hasReferenceTypes()">,
+    AssemblerPredicate<(all_of FeatureReferenceTypes), "reference-types">;
+
+def HasRelaxedSIMD :
+    Predicate<"Subtarget->hasRelaxedSIMD()">,
+    AssemblerPredicate<(all_of FeatureRelaxedSIMD), "relaxed-simd">;
+
+def HasSignExt :
+    Predicate<"Subtarget->hasSignExt()">,
+    AssemblerPredicate<(all_of FeatureSignExt), "sign-ext">;
+
+def HasSIMD128 :
+    Predicate<"Subtarget->hasSIMD128()">,
+    AssemblerPredicate<(all_of FeatureSIMD128), "simd128">;
+
+def HasTailCall :
+    Predicate<"Subtarget->hasTailCall()">,
+    AssemblerPredicate<(all_of FeatureTailCall), "tail-call">;
 
 //===----------------------------------------------------------------------===//
 // WebAssembly-specific DAG Node Types.

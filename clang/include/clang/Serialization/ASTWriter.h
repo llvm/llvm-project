@@ -76,6 +76,10 @@ class StoredDeclsList;
 class SwitchCase;
 class Token;
 
+namespace SrcMgr {
+class FileInfo;
+} // namespace SrcMgr
+
 /// Writes an AST file containing the contents of a translation unit.
 ///
 /// The ASTWriter class produces a bitstream containing the serialized
@@ -270,7 +274,7 @@ private:
 
   /// Offset of each type in the bitstream, indexed by
   /// the type's ID.
-  std::vector<serialization::UnderalignedInt64> TypeOffsets;
+  std::vector<serialization::UnalignedUInt64> TypeOffsets;
 
   /// The first ID number we can use for our own identifiers.
   serialization::IdentID FirstIdentID = serialization::NUM_PREDEF_IDENT_IDS;
@@ -352,6 +356,13 @@ private:
   /// Cache of indices of anonymous declarations within their lexical
   /// contexts.
   llvm::DenseMap<const Decl *, unsigned> AnonymousDeclarationNumbers;
+
+  /// The external top level module during the writing process. Used to
+  /// generate signature for the module file being written.
+  ///
+  /// Only meaningful for standard C++ named modules. See the comments in
+  /// createSignatureForNamedModule() for details.
+  llvm::DenseSet<Module *> TouchedTopLevelModules;
 
   /// An update to a Decl.
   class DeclUpdate {
@@ -490,6 +501,11 @@ private:
   /// during \c SourceManager serialization.
   void computeNonAffectingInputFiles();
 
+  /// Some affecting files can be included from files that are not affecting.
+  /// This function erases source locations pointing into such files.
+  SourceLocation getAffectingIncludeLoc(const SourceManager &SourceMgr,
+                                        const SrcMgr::FileInfo &File);
+
   /// Returns an adjusted \c FileID, accounting for any non-affecting input
   /// files.
   FileID getAdjustedFileID(FileID FID) const;
@@ -525,6 +541,7 @@ private:
 
   /// Calculate hash of the pcm content.
   std::pair<ASTFileSignature, ASTFileSignature> createSignature() const;
+  ASTFileSignature createSignatureForNamedModule() const;
 
   void WriteInputFiles(SourceManager &SourceMgr, HeaderSearchOptions &HSOpts);
   void WriteSourceManagerBlock(SourceManager &SourceMgr,
@@ -665,6 +682,10 @@ public:
   /// Emit a source location.
   void AddSourceLocation(SourceLocation Loc, RecordDataImpl &Record,
                          LocSeq *Seq = nullptr);
+
+  /// Return the raw encodings for source locations.
+  SourceLocationEncoding::RawLocEncoding
+  getRawSourceLocationEncoding(SourceLocation Loc, LocSeq *Seq = nullptr);
 
   /// Emit a source range.
   void AddSourceRange(SourceRange Range, RecordDataImpl &Record,
@@ -885,6 +906,8 @@ private:
 /// AST and semantic-analysis consumer that generates a
 /// precompiled header from the parsed source code.
 class PCHGenerator : public SemaConsumer {
+  void anchor() override;
+
   Preprocessor &PP;
   std::string OutputFile;
   std::string isysroot;
@@ -928,15 +951,32 @@ public:
   bool hasEmittedPCH() const { return Buffer->IsComplete; }
 };
 
-class ReducedBMIGenerator : public PCHGenerator {
+class CXX20ModulesGenerator : public PCHGenerator {
+  void anchor() override;
+
 protected:
   virtual Module *getEmittingModule(ASTContext &Ctx) override;
 
+  CXX20ModulesGenerator(Preprocessor &PP, InMemoryModuleCache &ModuleCache,
+                        StringRef OutputFile, bool GeneratingReducedBMI);
+
 public:
-  ReducedBMIGenerator(Preprocessor &PP, InMemoryModuleCache &ModuleCache,
-                      StringRef OutputFile);
+  CXX20ModulesGenerator(Preprocessor &PP, InMemoryModuleCache &ModuleCache,
+                        StringRef OutputFile)
+      : CXX20ModulesGenerator(PP, ModuleCache, OutputFile,
+                              /*GeneratingReducedBMI=*/false) {}
 
   void HandleTranslationUnit(ASTContext &Ctx) override;
+};
+
+class ReducedBMIGenerator : public CXX20ModulesGenerator {
+  void anchor() override;
+
+public:
+  ReducedBMIGenerator(Preprocessor &PP, InMemoryModuleCache &ModuleCache,
+                      StringRef OutputFile)
+      : CXX20ModulesGenerator(PP, ModuleCache, OutputFile,
+                              /*GeneratingReducedBMI=*/true) {}
 };
 
 /// If we can elide the definition of \param D in reduced BMI.

@@ -2801,6 +2801,19 @@ ScalarExprEmitter::EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
                                   llvm::AtomicOrdering::SequentiallyConsistent);
       return isPre ? Builder.CreateBinOp(op, old, amt) : old;
     }
+    // Special case for atomic increment/decrement on floats
+    if (type->isFloatingType()) {
+      llvm::AtomicRMWInst::BinOp aop =
+          isInc ? llvm::AtomicRMWInst::FAdd : llvm::AtomicRMWInst::FSub;
+      llvm::Instruction::BinaryOps op =
+          isInc ? llvm::Instruction::FAdd : llvm::Instruction::FSub;
+      llvm::Value *amt = llvm::ConstantFP::get(
+          VMContext, llvm::APFloat(static_cast<float>(1.0)));
+      llvm::Value *old =
+          Builder.CreateAtomicRMW(aop, LV.getAddress(CGF), amt,
+                                  llvm::AtomicOrdering::SequentiallyConsistent);
+      return isPre ? Builder.CreateBinOp(op, old, amt) : old;
+    }
     value = EmitLoadOfLValue(LV, E->getExprLoc());
     input = value;
     // For every other atomic operation, we need to emit a load-op-cmpxchg loop

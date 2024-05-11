@@ -346,7 +346,7 @@ void tools::addDirectoryList(const ArgList &Args, ArgStringList &CmdArgs,
     return; // Nothing to do.
 
   StringRef Name(ArgName);
-  if (Name.equals("-I") || Name.equals("-L") || Name.empty())
+  if (Name == "-I" || Name == "-L" || Name.empty())
     CombinedArg = true;
 
   StringRef Dirs(DirList);
@@ -737,7 +737,7 @@ bool tools::isTLSDESCEnabled(const ToolChain &TC,
   StringRef V = A->getValue();
   bool SupportedArgument = false, EnableTLSDESC = false;
   bool Unsupported = !Triple.isOSBinFormatELF();
-  if (Triple.isRISCV()) {
+  if (Triple.isLoongArch() || Triple.isRISCV()) {
     SupportedArgument = V == "desc" || V == "trad";
     EnableTLSDESC = V == "desc";
   } else if (Triple.isX86()) {

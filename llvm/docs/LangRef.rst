@@ -2447,12 +2447,14 @@ example:
     memory access, I/O, or other synchronization.  The ``mustprogress``
     attribute is intended to model the requirements of the first section of
     [intro.progress] of the C++ Standard. As a consequence, a loop in a
-    function with the `mustprogress` attribute can be assumed to terminate if
+    function with the ``mustprogress`` attribute can be assumed to terminate if
     it does not interact with the environment in an observable way, and
-    terminating loops without side-effects can be removed. If a `mustprogress`
-    function does not satisfy this contract, the behavior is undefined.  This
-    attribute does not apply transitively to callees, but does apply to call
-    sites within the function. Note that `willreturn` implies `mustprogress`.
+    terminating loops without side-effects can be removed. If a ``mustprogress``
+    function does not satisfy this contract, the behavior is undefined. If a
+    ``mustprogress`` function calls a function not marked ``mustprogress``,
+    and that function never returns, the program is well-defined even if there
+    isn't any other observable progress.  Note that ``willreturn`` implies
+    ``mustprogress``.
 ``"warn-stack-size"="<threshold>"``
     This attribute sets a threshold to emit diagnostics once the frame size is
     known should the frame size exceed the specified value.  It takes one
@@ -9111,8 +9113,8 @@ instruction in most regards. The primary difference is that it
 establishes an association with additional labels to define where control
 flow goes after the call.
 
-The output values of a '``callbr``' instruction are available only to
-the '``fallthrough``' block, not to any '``indirect``' blocks(s).
+The output values of a '``callbr``' instruction are available both in the
+the '``fallthrough``' block, and any '``indirect``' blocks(s).
 
 The only use of this today is to implement the "goto" feature of gcc inline
 assembly where additional labels can be provided as locations for the inline
@@ -14109,6 +14111,25 @@ structures and the code to increment the appropriate value, in a
 format that can be written out by a compiler runtime and consumed via
 the ``llvm-profdata`` tool.
 
+.. FIXME: write complete doc on contextual instrumentation and link from here
+.. and from llvm.instrprof.callsite.
+
+The intrinsic is lowered differently for contextual profiling by the
+``-ctx-instr-lower`` pass. Here:
+
+* the entry basic block increment counter is lowered as a call to compiler-rt,
+  to either ``__llvm_ctx_profile_start_context`` or
+  ``__llvm_ctx_profile_get_context``. Either returns a pointer to a context object
+  which contains a buffer into which counter increments can happen. Note that the
+  pointer value returned by compiler-rt may have its LSB set - counter increments
+  happen offset from the address with the LSB cleared.
+
+* all the other lowerings of ``llvm.instrprof.increment[.step]`` happen within
+  that context.
+
+* the context is assumed to be a local value to the function, and no concurrency
+  concerns need to be handled by LLVM.
+
 '``llvm.instrprof.increment.step``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -14154,10 +14175,10 @@ Syntax:
 Overview:
 """""""""
 
-.. FIXME: detail when it's emitted once the support is added
-
 The '``llvm.instrprof.callsite``' intrinsic should be emitted before a callsite
-that's not to a "fake" callee (like another intrinsic or asm).
+that's not to a "fake" callee (like another intrinsic or asm). It is used by
+contextual profiling and has side-effects. Its lowering happens in IR, and
+target-specific backends should never encounter it.
 
 Arguments:
 """"""""""
@@ -14170,9 +14191,28 @@ The last argument is the called value of the callsite this intrinsic precedes.
 
 Semantics:
 """"""""""
-.. FIXME: detail how when the lowering pass is added.
 
-This is lowered by contextual profiling.
+This is lowered by contextual profiling. In contextual profiling, functions get,
+from compiler-rt, a pointer to a context object. The context object consists of
+a buffer LLVM can use to perform counter increments (i.e. the lowering of
+``llvm.instrprof.increment[.step]``. The address range following the counter
+buffer, ``<num-counters>`` x ``sizeof(ptr)`` - sized, is expected to contain
+pointers to contexts of functions called from this function ("subcontexts").
+LLVM does not dereference into that memory region, just calculates GEPs. 
+
+The lowering of ``llvm.instrprof.callsite`` consists of:
+
+* write to ``__llvm_ctx_profile_expected_callee`` the ``<callsite>`` value;
+
+* write to ``__llvm_ctx_profile_callsite`` the address into this function's
+  context of the ``<index>`` position into the subcontexts region.
+
+
+``__llvm_ctx_profile_{expected_callee|callsite}`` are initialized by compiler-rt
+and are TLS. They are both vectors of pointers of size 2. The index into each is
+determined when the current function obtains the pointer to its context from
+compiler-rt. The pointer's LSB gives the index.
+
 
 '``llvm.instrprof.timestamp``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -15265,6 +15305,43 @@ Semantics:
 """"""""""
 
 Return the same value as a corresponding libm '``cos``' function but without
+trapping or setting ``errno``.
+
+When specified with the fast-math-flag 'afn', the result may be approximated
+using a less accurate calculation.
+
+'``llvm.tan.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+This is an overloaded intrinsic. You can use ``llvm.tan`` on any
+floating-point or vector of floating-point type. Not all targets support
+all types however.
+
+::
+
+      declare float     @llvm.tan.f32(float  %Val)
+      declare double    @llvm.tan.f64(double %Val)
+      declare x86_fp80  @llvm.tan.f80(x86_fp80  %Val)
+      declare fp128     @llvm.tan.f128(fp128 %Val)
+      declare ppc_fp128 @llvm.tan.ppcf128(ppc_fp128  %Val)
+
+Overview:
+"""""""""
+
+The '``llvm.tan.*``' intrinsics return the tangent of the operand.
+
+Arguments:
+""""""""""
+
+The argument and return value are floating-point numbers of the same type.
+
+Semantics:
+""""""""""
+
+Return the same value as a corresponding libm '``tan``' function but without
 trapping or setting ``errno``.
 
 When specified with the fast-math-flag 'afn', the result may be approximated
@@ -22105,6 +22182,146 @@ Examples:
       %also.r = call float @llvm.minnum.f32(float %reduction, float %start)
 
 
+.. _int_vp_reduce_fmaximum:
+
+'``llvm.vp.reduce.fmaximum.*``' Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+This is an overloaded intrinsic.
+
+::
+
+      declare float @llvm.vp.reduce.fmaximum.v4f32(float <start_value>, <4 x float> <val>, <4 x i1> <mask>, float <vector_length>)
+      declare double @llvm.vp.reduce.fmaximum.nxv8f64(double <start_value>, <vscale x 8 x double> <val>, <vscale x 8 x i1> <mask>, i32 <vector_length>)
+
+Overview:
+"""""""""
+
+Predicated floating-point ``MAX`` reduction of a vector and a scalar starting
+value, returning the result as a scalar.
+
+
+Arguments:
+""""""""""
+
+The first operand is the start value of the reduction, which must be a scalar
+floating-point type equal to the result type. The second operand is the vector
+on which the reduction is performed and must be a vector of floating-point
+values whose element type is the result/start type. The third operand is the
+vector mask and is a vector of boolean values with the same number of elements
+as the vector operand. The fourth operand is the explicit vector length of the
+operation.
+
+Semantics:
+""""""""""
+
+The '``llvm.vp.reduce.fmaximum``' intrinsic performs the floating-point ``MAX``
+reduction (:ref:`llvm.vector.reduce.fmaximum <int_vector_reduce_fmaximum>`) of
+the vector operand ``val`` on each enabled lane, taking the maximum of that and
+the scalar ``start_value``. Disabled lanes are treated as containing the
+neutral value (i.e. having no effect on the reduction operation). If the vector
+length is zero, the result is the start value.
+
+The neutral value is dependent on the :ref:`fast-math flags <fastmath>`. If no
+flags are set or only the ``nnan`` is set, the neutral value is ``-Infinity``.
+If ``ninf`` is set, then the neutral value is the smallest floating-point value
+for the result type.
+
+This instruction has the same comparison semantics as the
+:ref:`llvm.vector.reduce.fmaximum <int_vector_reduce_fmaximum>` intrinsic (and
+thus the '``llvm.maximum.*``' intrinsic). That is, the result will always be a
+number unless any of the elements in the vector or the starting value is
+``NaN``. Namely, this intrinsic propagates ``NaN``. Also, -0.0 is considered
+less than +0.0.
+
+To ignore the start value, the neutral value can be used.
+
+Examples:
+"""""""""
+
+.. code-block:: llvm
+
+      %r = call float @llvm.vp.reduce.fmaximum.v4f32(float %float, <4 x float> %a, <4 x i1> %mask, i32 %evl)
+      ; %r is equivalent to %also.r, where lanes greater than or equal to %evl
+      ; are treated as though %mask were false for those lanes.
+
+      %masked.a = select <4 x i1> %mask, <4 x float> %a, <4 x float> <float -infinity, float -infinity, float -infinity, float -infinity>
+      %reduction = call float @llvm.vector.reduce.fmaximum.v4f32(<4 x float> %masked.a)
+      %also.r = call float @llvm.maximum.f32(float %reduction, float %start)
+
+
+.. _int_vp_reduce_fminimum:
+
+'``llvm.vp.reduce.fminimum.*``' Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+This is an overloaded intrinsic.
+
+::
+
+      declare float @llvm.vp.reduce.fminimum.v4f32(float <start_value>, <4 x float> <val>, <4 x i1> <mask>, float <vector_length>)
+      declare double @llvm.vp.reduce.fminimum.nxv8f64(double <start_value>, <vscale x 8 x double> <val>, <vscale x 8 x i1> <mask>, i32 <vector_length>)
+
+Overview:
+"""""""""
+
+Predicated floating-point ``MIN`` reduction of a vector and a scalar starting
+value, returning the result as a scalar.
+
+
+Arguments:
+""""""""""
+
+The first operand is the start value of the reduction, which must be a scalar
+floating-point type equal to the result type. The second operand is the vector
+on which the reduction is performed and must be a vector of floating-point
+values whose element type is the result/start type. The third operand is the
+vector mask and is a vector of boolean values with the same number of elements
+as the vector operand. The fourth operand is the explicit vector length of the
+operation.
+
+Semantics:
+""""""""""
+
+The '``llvm.vp.reduce.fminimum``' intrinsic performs the floating-point ``MIN``
+reduction (:ref:`llvm.vector.reduce.fminimum <int_vector_reduce_fminimum>`) of
+the vector operand ``val`` on each enabled lane, taking the minimum of that and
+the scalar ``start_value``. Disabled lanes are treated as containing the neutral
+value (i.e. having no effect on the reduction operation). If the vector length
+is zero, the result is the start value.
+
+The neutral value is dependent on the :ref:`fast-math flags <fastmath>`. If no
+flags are set or only the ``nnan`` is set, the neutral value is ``+Infinity``.
+If ``ninf`` is set, then the neutral value is the largest floating-point value
+for the result type.
+
+This instruction has the same comparison semantics as the
+:ref:`llvm.vector.reduce.fminimum <int_vector_reduce_fminimum>` intrinsic (and
+thus the '``llvm.minimum.*``' intrinsic). That is, the result will always be a
+number unless any of the elements in the vector or the starting value is
+``NaN``. Namely, this intrinsic propagates ``NaN``. Also, -0.0 is considered
+less than +0.0.
+
+To ignore the start value, the neutral value can be used.
+
+Examples:
+"""""""""
+
+.. code-block:: llvm
+
+      %r = call float @llvm.vp.reduce.fminimum.v4f32(float %start, <4 x float> %a, <4 x i1> %mask, i32 %evl)
+      ; %r is equivalent to %also.r, where lanes greater than or equal to %evl
+      ; are treated as though %mask were false for those lanes.
+
+      %masked.a = select <4 x i1> %mask, <4 x float> %a, <4 x float> <float infinity, float infinity, float infinity, float infinity>
+      %reduction = call float @llvm.vector.reduce.fminimum.v4f32(<4 x float> %masked.a)
+      %also.r = call float @llvm.minimum.f32(float %reduction, float %start)
+
+
 .. _int_get_active_lane_mask:
 
 '``llvm.get.active.lane.mask.*``' Intrinsics
@@ -24000,6 +24217,54 @@ Examples:
       %t = call <4 x i32> @llvm.cttz.v4i32(<4 x i32> %a, i1 false)
       %also.r = select <4 x i1> %mask, <4 x i32> %t, <4 x i32> poison
 
+
+.. _int_vp_cttz_elts:
+
+'``llvm.vp.cttz.elts.*``' Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+This is an overloaded intrinsic. You can use ```llvm.vp.cttz.elts``` on any
+vector of integer elements, both fixed width and scalable.
+
+::
+
+      declare i32  @llvm.vp.cttz.elts.i32.v16i32 (<16 x i32> <op>, i1 <is_zero_poison>, <16 x i1> <mask>, i32 <vector_length>)
+      declare i64  @llvm.vp.cttz.elts.i64.nxv4i32 (<vscale x 4 x i32> <op>, i1 <is_zero_poison>, <vscale x 4 x i1> <mask>, i32 <vector_length>)
+      declare i64  @llvm.vp.cttz.elts.i64.v256i1 (<256 x i1> <op>, i1 <is_zero_poison>, <256 x i1> <mask>, i32 <vector_length>)
+
+Overview:
+"""""""""
+
+This '```llvm.vp.cttz.elts```' intrinsic counts the number of trailing zero
+elements of a vector. This is basically the vector-predicated version of
+'```llvm.experimental.cttz.elts```'.
+
+Arguments:
+""""""""""
+
+The first argument is the vector to be counted. This argument must be a vector
+with integer element type. The return type must also be an integer type which is
+wide enough to hold the maximum number of elements of the source vector. The
+behavior of this intrinsic is undefined if the return type is not wide enough
+for the number of elements in the input vector.
+
+The second argument is a constant flag that indicates whether the intrinsic
+returns a valid result if the first argument is all zero.
+
+The third operand is the vector mask and has the same number of elements as the
+input vector type. The fourth operand is the explicit vector length of the
+operation.
+
+Semantics:
+""""""""""
+
+The '``llvm.vp.cttz.elts``' intrinsic counts the trailing (least
+significant / lowest-numbered) zero elements in the first operand on each
+enabled lane. If the first argument is all zero and the second argument is true,
+the result is poison. Otherwise, it returns the explicit vector length (i.e. the
+fourth operand).
 
 .. _int_vp_sadd_sat:
 
@@ -26688,6 +26953,8 @@ specified by C standard:
 
 Other values may be used to represent additional rounding modes, supported by a
 target. These values are target-specific.
+
+.. _int_set_rounding:
 
 '``llvm.set.rounding``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

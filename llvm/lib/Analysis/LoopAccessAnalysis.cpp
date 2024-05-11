@@ -31,6 +31,7 @@
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/BasicBlock.h"
@@ -1805,20 +1806,20 @@ void MemoryDepChecker::mergeInStatus(VectorizationSafetyStatus S) {
 }
 
 /// Given a dependence-distance \p Dist between two
-/// memory accesses, that have the same stride whose absolute value is given
-/// in \p Stride, and that have the same type size \p TypeByteSize,
-/// in a loop whose takenCount is \p BackedgeTakenCount, check if it is
-/// possible to prove statically that the dependence distance is larger
-/// than the range that the accesses will travel through the execution of
-/// the loop. If so, return true; false otherwise. This is useful for
-/// example in loops such as the following (PR31098):
+/// memory accesses, that have strides in the same direction whose absolute
+/// value of the maximum stride is given in \p MaxStride, and that have the same
+/// type size \p TypeByteSize, in a loop whose takenCount is \p
+/// BackedgeTakenCount, check if it is possible to prove statically that the
+/// dependence distance is larger than the range that the accesses will travel
+/// through the execution of the loop. If so, return true; false otherwise. This
+/// is useful for example in loops such as the following (PR31098):
 ///     for (i = 0; i < D; ++i) {
 ///                = out[i];
 ///       out[i+D] =
 ///     }
 static bool isSafeDependenceDistance(const DataLayout &DL, ScalarEvolution &SE,
                                      const SCEV &BackedgeTakenCount,
-                                     const SCEV &Dist, uint64_t Stride,
+                                     const SCEV &Dist, uint64_t MaxStride,
                                      uint64_t TypeByteSize) {
 
   // If we can prove that
@@ -1838,7 +1839,7 @@ static bool isSafeDependenceDistance(const DataLayout &DL, ScalarEvolution &SE,
   // will be executed only if LoopCount >= VF, proving distance >= LoopCount
   // also guarantees that distance >= VF.
   //
-  const uint64_t ByteStride = Stride * TypeByteSize;
+  const uint64_t ByteStride = MaxStride * TypeByteSize;
   const SCEV *Step = SE.getConstant(BackedgeTakenCount.getType(), ByteStride);
   const SCEV *Product = SE.getMulExpr(&BackedgeTakenCount, Step);
 
@@ -2005,6 +2006,9 @@ getDependenceDistanceStrideAndSize(
     return MemoryDepChecker::Dependence::Unknown;
   }
 
+  if (!isa<SCEVConstant, SCEVCouldNotCompute>(Dist))
+    Dist = SE.applyLoopGuards(Dist, InnermostLoop);
+
   uint64_t TypeByteSize = DL.getTypeAllocSize(ATy);
   bool HasSameSize =
       DL.getTypeStoreSizeInBits(ATy) == DL.getTypeStoreSizeInBits(BTy);
@@ -2046,14 +2050,15 @@ MemoryDepChecker::Dependence::DepType MemoryDepChecker::isDependent(
 
   ScalarEvolution &SE = *PSE.getSE();
   auto &DL = InnermostLoop->getHeader()->getModule()->getDataLayout();
+  uint64_t MaxStride = std::max(StrideA, StrideB);
 
-  // If the distance between the acecsses is larger than their absolute stride
-  // multiplied by the backedge taken count, the accesses are independet, i.e.
-  // they are far enough appart that accesses won't access the same location
-  // across all loop ierations.
-  if (HasSameSize && CommonStride &&
+  // If the distance between the acecsses is larger than their maximum absolute
+  // stride multiplied by the backedge taken count, the accesses are independet,
+  // i.e. they are far enough appart that accesses won't access the same
+  // location across all loop ierations.
+  if (HasSameSize &&
       isSafeDependenceDistance(DL, SE, *(PSE.getBackedgeTakenCount()), *Dist,
-                               *CommonStride, TypeByteSize))
+                               MaxStride, TypeByteSize))
     return Dependence::NoDep;
 
   const SCEVConstant *C = dyn_cast<SCEVConstant>(Dist);
@@ -2118,17 +2123,24 @@ MemoryDepChecker::Dependence::DepType MemoryDepChecker::isDependent(
     return Dependence::Forward;
   }
 
-  if (!C) {
-    // TODO: FoundNonConstantDistanceDependence is used as a necessary condition
-    // to consider retrying with runtime checks. Historically, we did not set it
-    // when strides were different but there is no inherent reason to.
+  int64_t MinDistance = SE.getSignedRangeMin(Dist).getSExtValue();
+  // Below we only handle strictly positive distances.
+  if (MinDistance <= 0) {
     FoundNonConstantDistanceDependence |= CommonStride.has_value();
-    LLVM_DEBUG(dbgs() << "LAA: Dependence because of non-constant distance\n");
     return Dependence::Unknown;
   }
 
-  if (!SE.isKnownPositive(Dist))
-    return Dependence::Unknown;
+  if (!isa<SCEVConstant>(Dist)) {
+    // Previously this case would be treated as Unknown, possibly setting
+    // FoundNonConstantDistanceDependence to force re-trying with runtime
+    // checks. Until the TODO below is addressed, set it here to preserve
+    // original behavior w.r.t. re-trying with runtime checks.
+    // TODO: FoundNonConstantDistanceDependence is used as a necessary
+    // condition to consider retrying with runtime checks. Historically, we
+    // did not set it when strides were different but there is no inherent
+    // reason to.
+    FoundNonConstantDistanceDependence |= CommonStride.has_value();
+  }
 
   if (!HasSameSize) {
     LLVM_DEBUG(dbgs() << "LAA: ReadWrite-Write positive dependency with "
@@ -2136,13 +2148,8 @@ MemoryDepChecker::Dependence::DepType MemoryDepChecker::isDependent(
     return Dependence::Unknown;
   }
 
-  // The logic below currently only supports StrideA ==  StrideB, i.e. there's a
-  // common stride.
   if (!CommonStride)
     return Dependence::Unknown;
-
-  const APInt &Val = C->getAPInt();
-  int64_t Distance = Val.getSExtValue();
 
   // Bail out early if passed-in parameters make vectorization not feasible.
   unsigned ForcedFactor = (VectorizerParams::VectorizationFactor ?
@@ -2168,8 +2175,8 @@ MemoryDepChecker::Dependence::DepType MemoryDepChecker::isDependent(
   //     | A[0] |      | A[2] |      | A[4] |      | A[6] |      |
   //                              | B[0] |      | B[2] |      | B[4] |
   //
-  // Distance needs for vectorizing iterations except the last iteration:
-  // 4 * 2 * (MinNumIter - 1). Distance needs for the last iteration: 4.
+  // MinDistance needs for vectorizing iterations except the last iteration:
+  // 4 * 2 * (MinNumIter - 1). MinDistance needs for the last iteration: 4.
   // So the minimum distance needed is: 4 * 2 * (MinNumIter - 1) + 4.
   //
   // If MinNumIter is 2, it is vectorizable as the minimum distance needed is
@@ -2178,11 +2185,22 @@ MemoryDepChecker::Dependence::DepType MemoryDepChecker::isDependent(
   // If MinNumIter is 4 (Say if a user forces the vectorization factor to be 4),
   // the minimum distance needed is 28, which is greater than distance. It is
   // not safe to do vectorization.
+
+  // We know that Dist is positive, but it may not be constant. Use the signed
+  // minimum for computations below, as this ensures we compute the closest
+  // possible dependence distance.
   uint64_t MinDistanceNeeded =
-      TypeByteSize * (*CommonStride) * (MinNumIter - 1) + TypeByteSize;
-  if (MinDistanceNeeded > static_cast<uint64_t>(Distance)) {
-    LLVM_DEBUG(dbgs() << "LAA: Failure because of positive distance "
-                      << Distance << '\n');
+      TypeByteSize * *CommonStride * (MinNumIter - 1) + TypeByteSize;
+  if (MinDistanceNeeded > static_cast<uint64_t>(MinDistance)) {
+    if (!isa<SCEVConstant>(Dist)) {
+      // For non-constant distances, we checked the lower bound of the
+      // dependence distance and the distance may be larger at runtime (and safe
+      // for vectorization). Classify it as Unknown, so we re-try with runtime
+      // checks.
+      return Dependence::Unknown;
+    }
+    LLVM_DEBUG(dbgs() << "LAA: Failure because of positive minimum distance "
+                      << MinDistance << '\n');
     return Dependence::Backward;
   }
 
@@ -2211,12 +2229,13 @@ MemoryDepChecker::Dependence::DepType MemoryDepChecker::isDependent(
   // is 8, which is less than 2 and forbidden vectorization, But actually
   // both A and B could be vectorized by 2 iterations.
   MinDepDistBytes =
-      std::min(static_cast<uint64_t>(Distance), MinDepDistBytes);
+      std::min(static_cast<uint64_t>(MinDistance), MinDepDistBytes);
 
   bool IsTrueDataDependence = (!AIsWrite && BIsWrite);
   uint64_t MinDepDistBytesOld = MinDepDistBytes;
   if (IsTrueDataDependence && EnableForwardingConflictDetection &&
-      couldPreventStoreLoadForward(Distance, TypeByteSize)) {
+      isa<SCEVConstant>(Dist) &&
+      couldPreventStoreLoadForward(MinDistance, TypeByteSize)) {
     // Sanity check that we didn't update MinDepDistBytes when calling
     // couldPreventStoreLoadForward
     assert(MinDepDistBytes == MinDepDistBytesOld &&
@@ -2228,10 +2247,18 @@ MemoryDepChecker::Dependence::DepType MemoryDepChecker::isDependent(
 
   // An update to MinDepDistBytes requires an update to MaxSafeVectorWidthInBits
   // since there is a backwards dependency.
-  uint64_t MaxVF = MinDepDistBytes / (TypeByteSize * (*CommonStride));
-  LLVM_DEBUG(dbgs() << "LAA: Positive distance " << Val.getSExtValue()
+  uint64_t MaxVF = MinDepDistBytes / (TypeByteSize * *CommonStride);
+  LLVM_DEBUG(dbgs() << "LAA: Positive min distance " << MinDistance
                     << " with max VF = " << MaxVF << '\n');
+
   uint64_t MaxVFInBits = MaxVF * TypeByteSize * 8;
+  if (!isa<SCEVConstant>(Dist) && MaxVFInBits < MaxTargetVectorWidthInBits) {
+    // For non-constant distances, we checked the lower bound of the dependence
+    // distance and the distance may be larger at runtime (and safe for
+    // vectorization). Classify it as Unknown, so we re-try with runtime checks.
+    return Dependence::Unknown;
+  }
+
   MaxSafeVectorWidthInBits = std::min(MaxSafeVectorWidthInBits, MaxVFInBits);
   return Dependence::BackwardVectorizable;
 }
@@ -2536,7 +2563,7 @@ void LoopAccessInfo::analyzeLoop(AAResults *AA, LoopInfo *LI,
     if (isInvariant(Ptr)) {
       // Record store instructions to loop invariant addresses
       StoresToInvariantAddresses.push_back(ST);
-      HasDependenceInvolvingLoopInvariantAddress |=
+      HasStoreStoreDependenceInvolvingLoopInvariantAddress |=
           !UniformStores.insert(Ptr).second;
     }
 
@@ -2592,7 +2619,7 @@ void LoopAccessInfo::analyzeLoop(AAResults *AA, LoopInfo *LI,
     if (UniformStores.count(Ptr)) {
       LLVM_DEBUG(dbgs() << "LAA: Found an unsafe dependency between a uniform "
                            "load and uniform store to the same address!\n");
-      HasDependenceInvolvingLoopInvariantAddress = true;
+      HasLoadStoreDependenceInvolvingLoopInvariantAddress = true;
     }
 
     MemoryLocation Loc = MemoryLocation::get(LD);
@@ -2725,7 +2752,7 @@ void LoopAccessInfo::emitUnsafeDependenceRemark() {
             "to attempt to isolate the offending operations into a separate "
             "loop";
   OptimizationRemarkAnalysis &R =
-      recordAnalysis("UnsafeDep", Dep.getDestination(*this)) << Info;
+      recordAnalysis("UnsafeDep", Dep.getDestination(getDepChecker())) << Info;
 
   switch (Dep.Type) {
   case MemoryDepChecker::Dependence::NoDep:
@@ -2751,7 +2778,7 @@ void LoopAccessInfo::emitUnsafeDependenceRemark() {
     break;
   }
 
-  if (Instruction *I = Dep.getSource(*this)) {
+  if (Instruction *I = Dep.getSource(getDepChecker())) {
     DebugLoc SourceLoc = I->getDebugLoc();
     if (auto *DD = dyn_cast_or_null<Instruction>(getPointerOperand(I)))
       SourceLoc = DD->getDebugLoc();
@@ -3014,11 +3041,28 @@ void LoopAccessInfo::collectStridedAccess(Value *MemAccess) {
 }
 
 LoopAccessInfo::LoopAccessInfo(Loop *L, ScalarEvolution *SE,
+                               const TargetTransformInfo *TTI,
                                const TargetLibraryInfo *TLI, AAResults *AA,
                                DominatorTree *DT, LoopInfo *LI)
     : PSE(std::make_unique<PredicatedScalarEvolution>(*SE, *L)),
-      PtrRtChecking(nullptr),
-      DepChecker(std::make_unique<MemoryDepChecker>(*PSE, L)), TheLoop(L) {
+      PtrRtChecking(nullptr), TheLoop(L) {
+  unsigned MaxTargetVectorWidthInBits = std::numeric_limits<unsigned>::max();
+  if (TTI) {
+    TypeSize FixedWidth =
+        TTI->getRegisterBitWidth(TargetTransformInfo::RGK_FixedWidthVector);
+    if (FixedWidth.isNonZero()) {
+      // Scale the vector width by 2 as rough estimate to also consider
+      // interleaving.
+      MaxTargetVectorWidthInBits = FixedWidth.getFixedValue() * 2;
+    }
+
+    TypeSize ScalableWidth =
+        TTI->getRegisterBitWidth(TargetTransformInfo::RGK_ScalableVector);
+    if (ScalableWidth.isNonZero())
+      MaxTargetVectorWidthInBits = std::numeric_limits<unsigned>::max();
+  }
+  DepChecker =
+      std::make_unique<MemoryDepChecker>(*PSE, L, MaxTargetVectorWidthInBits);
   PtrRtChecking = std::make_unique<RuntimePointerChecking>(*DepChecker, SE);
   if (canAnalyzeLoop()) {
     analyzeLoop(AA, LI, TLI, DT);
@@ -3056,9 +3100,13 @@ void LoopAccessInfo::print(raw_ostream &OS, unsigned Depth) const {
   PtrRtChecking->print(OS, Depth);
   OS << "\n";
 
-  OS.indent(Depth) << "Non vectorizable stores to invariant address were "
-                   << (HasDependenceInvolvingLoopInvariantAddress ? "" : "not ")
-                   << "found in loop.\n";
+  OS.indent(Depth)
+      << "Non vectorizable stores to invariant address were "
+      << (HasStoreStoreDependenceInvolvingLoopInvariantAddress ||
+                  HasLoadStoreDependenceInvolvingLoopInvariantAddress
+              ? ""
+              : "not ")
+      << "found in loop.\n";
 
   OS.indent(Depth) << "SCEV assumptions:\n";
   PSE->getPredicate().print(OS, Depth);
@@ -3074,7 +3122,7 @@ const LoopAccessInfo &LoopAccessInfoManager::getInfo(Loop &L) {
 
   if (I.second)
     I.first->second =
-        std::make_unique<LoopAccessInfo>(&L, &SE, TLI, &AA, &DT, &LI);
+        std::make_unique<LoopAccessInfo>(&L, &SE, TTI, TLI, &AA, &DT, &LI);
 
   return *I.first->second;
 }
@@ -3103,8 +3151,9 @@ LoopAccessInfoManager LoopAccessAnalysis::run(Function &F,
   auto &AA = FAM.getResult<AAManager>(F);
   auto &DT = FAM.getResult<DominatorTreeAnalysis>(F);
   auto &LI = FAM.getResult<LoopAnalysis>(F);
+  auto &TTI = FAM.getResult<TargetIRAnalysis>(F);
   auto &TLI = FAM.getResult<TargetLibraryAnalysis>(F);
-  return LoopAccessInfoManager(SE, AA, DT, LI, &TLI);
+  return LoopAccessInfoManager(SE, AA, DT, LI, &TTI, &TLI);
 }
 
 AnalysisKey LoopAccessAnalysis::Key;

@@ -1614,6 +1614,15 @@ module std_private_pstl_configuration              [system] {
 
 module std_private_queue_fwd [system] { header "__fwd/queue.h" }
 
+module std_private_ostream_basic_ostream [system] {
+  header "__ostream/basic_ostream.h"
+  export std_streambuf
+}
+module std_private_ostream_print         [system] {
+  header "__ostream/print.h"
+  export std_print
+}
+
 module std_private_random_bernoulli_distribution          [system] { header "__random/bernoulli_distribution.h" }
 module std_private_random_binomial_distribution           [system] { header "__random/binomial_distribution.h" }
 module std_private_random_cauchy_distribution             [system] { header "__random/cauchy_distribution.h" }
@@ -1851,11 +1860,6 @@ module std_private_type_traits_add_volatile                              [system
 module std_private_type_traits_aligned_storage                           [system] { header "__type_traits/aligned_storage.h" }
 module std_private_type_traits_aligned_union                             [system] { header "__type_traits/aligned_union.h" }
 module std_private_type_traits_alignment_of                              [system] { header "__type_traits/alignment_of.h" }
-module std_private_type_traits_apply_cv                                  [system] {
-  header "__type_traits/apply_cv.h"
-  export std_private_type_traits_is_const
-  export std_private_type_traits_is_volatile
-}
 module std_private_type_traits_can_extract_key                           [system] { header "__type_traits/can_extract_key.h" }
 module std_private_type_traits_common_reference                          [system] {
   header "__type_traits/common_reference.h"
