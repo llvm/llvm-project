@@ -1,11 +1,13 @@
 ; RUN: rm -rf %t
 ; RUN: split-file %s %t
 ; RUN: sed -e "s|DSTROOT|%/t|g" %t/inputs.json.in > %t/inputs.json
+; RUN: mkdir -p %t/modules.cache
 
 ; RUN: clang-installapi \
 ; RUN: -target arm64-apple-macos12 -install_name @rpath/libfoo.dylib \
 ; RUN: -current_version 1 -compatibility_version 1 \
 ; RUN: -Xproject -fmodules -I%t/usr/include \
+; RUN: -Xproject -fmodules-cache-path=%t/modules.cache \
 ; RUN: -F %S/Inputs/Foundation/ \
 ; RUN: -exclude-public-header %t/usr/include/public.h \
 ; RUN: -extra-project-header %t/project.h -I%t -dynamiclib \
@@ -17,6 +19,7 @@
 ; RUN: -target arm64-apple-macos12 -install_name @rpath/libfoo.dylib \
 ; RUN: -current_version 1 -compatibility_version 1 \
 ; RUN: -Xproject -fmodules -I%t/usr/include \
+; RUN: -Xproject -fmodules-cache-path=%t/modules.cache \
 ; RUN: -extra-project-header %t/project.h \
 ; RUN: -F %S/Inputs/Foundation/ \
 ; RUN: %t/inputs.json \

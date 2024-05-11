@@ -299,8 +299,11 @@ bool Options::processXprojectOption(InputArgList &Args, arg_iterator Curr) {
     return false;
   }
 
-  ProjectLevelArgs.push_back(NextA->getSpelling().str());
-  llvm::copy(NextA->getValues(), std::back_inserter(ProjectLevelArgs));
+  std::string ArgString = NextA->getSpelling().str();
+  for (const StringRef Val : NextA->getValues())
+    ArgString += Val.str();
+
+  ProjectLevelArgs.push_back(ArgString);
   A->claim();
   NextA->claim();
 
