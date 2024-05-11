@@ -941,18 +941,6 @@ func.func @tripleSubAdd1(%arg0: index) -> index {
   return %add2 : index
 }
 
-// CHECK-LABEL: @tripleSubAdd1Ovf
-//       CHECK:   %[[cres:.+]] = arith.constant -25 : index
-//       CHECK:   %[[add:.+]] = arith.addi %arg0, %[[cres]] overflow<nsw, nuw> : index
-//       CHECK:   return %[[add]]
-func.func @tripleSubAdd1Ovf(%arg0: index) -> index {
-  %c17 = arith.constant 17 : index
-  %c42 = arith.constant 42 : index
-  %add1 = arith.addi %c17, %arg0 overflow<nsw, nuw> : index
-  %add2 = arith.subi %add1, %c42 overflow<nsw, nuw> : index
-  return %add2 : index
-}
-
 // CHECK-LABEL: @subSub0
 //       CHECK:   %[[c0:.+]] = arith.constant 0 : index
 //       CHECK:   %[[add:.+]] = arith.subi %[[c0]], %arg1 : index
@@ -1149,17 +1137,6 @@ func.func @addiMuliToSubiRhsI32(%arg0: i32, %arg1: i32) -> i32 {
   return %add : i32
 }
 
-// CHECK-LABEL: @addiMuliToSubiRhsI32Ovf
-//  CHECK-SAME:   (%[[ARG0:.+]]: i32, %[[ARG1:.+]]: i32)
-//       CHECK:   %[[SUB:.+]] = arith.subi %[[ARG0]], %[[ARG1]] overflow<nsw, nuw> : i32
-//       CHECK:   return %[[SUB]]
-func.func @addiMuliToSubiRhsI32Ovf(%arg0: i32, %arg1: i32) -> i32 {
-  %c-1 = arith.constant -1 : i32
-  %neg = arith.muli %arg1, %c-1 overflow<nsw, nuw> : i32
-  %add = arith.addi %arg0, %neg overflow<nsw, nuw> : i32
-  return %add : i32
-}
-
 // CHECK-LABEL: @addiMuliToSubiRhsIndex
 //  CHECK-SAME:   (%[[ARG0:.+]]: index, %[[ARG1:.+]]: index)
 //       CHECK:   %[[SUB:.+]] = arith.subi %[[ARG0]], %[[ARG1]] : index
@@ -1190,17 +1167,6 @@ func.func @addiMuliToSubiLhsI32(%arg0: i32, %arg1: i32) -> i32 {
   %c-1 = arith.constant -1 : i32
   %neg = arith.muli %arg1, %c-1 : i32
   %add = arith.addi %neg, %arg0 : i32
-  return %add : i32
-}
-
-// CHECK-LABEL: @addiMuliToSubiLhsI32Ovf
-//  CHECK-SAME:   (%[[ARG0:.+]]: i32, %[[ARG1:.+]]: i32)
-//       CHECK:   %[[SUB:.+]] = arith.subi %[[ARG0]], %[[ARG1]] overflow<nsw, nuw> : i32
-//       CHECK:   return %[[SUB]]
-func.func @addiMuliToSubiLhsI32Ovf(%arg0: i32, %arg1: i32) -> i32 {
-  %c-1 = arith.constant -1 : i32
-  %neg = arith.muli %arg1, %c-1 overflow<nsw, nuw> : i32
-  %add = arith.addi %neg, %arg0 overflow<nsw, nuw> : i32
   return %add : i32
 }
 
