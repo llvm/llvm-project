@@ -840,9 +840,6 @@ Error GenericDeviceTy::deinit(GenericPluginTy &Plugin) {
     if (!ProfOrErr)
       return ProfOrErr.takeError();
 
-    // Dump out profdata
-    ProfOrErr->dump();
-
     // Write data to profiling file
     if (auto Err = ProfOrErr->write()) {
       consumeError(std::move(Err));
