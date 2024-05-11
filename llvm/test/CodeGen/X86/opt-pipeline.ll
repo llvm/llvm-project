@@ -101,6 +101,8 @@
 ; CHECK-NEXT:       MachineDominator Tree Construction
 ; CHECK-NEXT:       Machine Natural Loop Construction
 ; CHECK-NEXT:       Machine Trace Metrics
+; CHECK-NEXT:       Lazy Machine Block Frequency Analysis
+; CHECK-NEXT:       Machine Optimization Remark Emitter
 ; CHECK-NEXT:       X86 Conditional Compares
 ; CHECK-NEXT:       Early If-Conversion
 ; CHECK-NEXT:       Lazy Machine Block Frequency Analysis
