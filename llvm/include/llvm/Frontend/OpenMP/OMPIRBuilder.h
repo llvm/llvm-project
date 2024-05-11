@@ -2110,6 +2110,11 @@ public:
                                   int32_t UB);
   ///}
 
+  /// Replaces constant values with instruction equivelants where possible
+  /// inside of a function.
+  static void replaceConstantValueUsesInFuncWithInstr(llvm::Value *Input,
+                                                      Function *Func);
+
 private:
   // Sets the function attributes expected for the outlined function
   void setOutlinedTargetRegionFunctionAttributes(Function *OutlinedFn);
