@@ -47,6 +47,12 @@ void isIntegralOrPointerType(T, Types... types)
 void WTFCrashWithInfoImpl(int line, const char* file, const char* function, int counter, unsigned long reason);
 void WTFCrashWithInfo(int line, const char* file, const char* function, int counter);
 
+template<typename ToType, typename FromType>
+ToType bitwise_cast(FromType from);
+
+template<typename T>
+T* addressof(T& arg);
+
 template<typename T>
 ALWAYS_INLINE unsigned long wtfCrashArg(T* arg) { return reinterpret_cast<unsigned long>(arg); }
 
@@ -234,6 +240,11 @@ public:
   void trivial38() { v++; if (__builtin_expect(!!(number), 1)) (*number)++; }
   int trivial39() { return -v; }
   int trivial40() { return v << 2; }
+  unsigned trivial41() { v = ++s_v; return v; }
+  unsigned trivial42() { return bitwise_cast<unsigned long>(nullptr); }
+  Number* trivial43() { return addressof(*number); }
+  Number* trivial44() { return new Number(1); }
+  ComplexNumber* trivial45() { return new ComplexNumber(); }
 
   static RefCounted& singleton() {
     static RefCounted s_RefCounted;
@@ -312,12 +323,16 @@ public:
   void nonTrivial16() { complex++; }
   ComplexNumber nonTrivial17() { return complex << 2; }
   ComplexNumber nonTrivial18() { return +complex; }
+  ComplexNumber* nonTrivial19() { return new ComplexNumber(complex); }
 
+  static unsigned s_v;
   unsigned v { 0 };
   Number* number { nullptr };
   ComplexNumber complex;
   Enum enumValue { Enum::Value1 };
 };
+
+unsigned RefCounted::s_v = 0;
 
 RefCounted* refCountedObj();
 
@@ -377,6 +392,11 @@ public:
     getFieldTrivial().trivial38(); // no-warning
     getFieldTrivial().trivial39(); // no-warning
     getFieldTrivial().trivial40(); // no-warning
+    getFieldTrivial().trivial41(); // no-warning
+    getFieldTrivial().trivial42(); // no-warning
+    getFieldTrivial().trivial43(); // no-warning
+    getFieldTrivial().trivial44(); // no-warning
+    getFieldTrivial().trivial45(); // no-warning
 
     RefCounted::singleton().trivial18(); // no-warning
     RefCounted::singleton().someFunction(); // no-warning
@@ -418,6 +438,8 @@ public:
     getFieldTrivial().nonTrivial17();
     // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
     getFieldTrivial().nonTrivial18();
+    // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
+    getFieldTrivial().nonTrivial19();
     // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
   }
 };
