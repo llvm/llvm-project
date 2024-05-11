@@ -76,6 +76,10 @@ void AddDebugInfoPass::handleDeclareOp(fir::cg::XDeclareOp declOp,
   if (result.first != fir::NameUniquer::NameKind::VARIABLE)
     return;
 
+  // Only accept local variables.
+  if (result.second.procs.empty())
+    return;
+
   // FIXME: There may be cases where an argument is processed a bit before
   // DeclareOp is generated. In that case, DeclareOp may point to an
   // intermediate op and not to BlockArgument. We need to find those cases and
