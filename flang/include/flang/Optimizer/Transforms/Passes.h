@@ -47,6 +47,8 @@ namespace fir {
 #define GEN_PASS_DECL_POLYMORPHICOPCONVERSION
 #define GEN_PASS_DECL_OPENACCDATAOPERANDCONVERSION
 #define GEN_PASS_DECL_ADDDEBUGINFO
+#define GEN_PASS_DECL_STACKARRAYS
+#define GEN_PASS_DECL_LOOPVERSIONING
 #include "flang/Optimizer/Transforms/Passes.h.inc"
 
 std::unique_ptr<mlir::Pass> createAffineDemotionPass();
@@ -57,22 +59,16 @@ std::unique_ptr<mlir::Pass>
 createExternalNameConversionPass(bool appendUnderscore);
 std::unique_ptr<mlir::Pass> createMemDataFlowOptPass();
 std::unique_ptr<mlir::Pass> createPromoteToAffinePass();
-std::unique_ptr<mlir::Pass> createMemoryAllocationPass();
-std::unique_ptr<mlir::Pass> createStackArraysPass();
 std::unique_ptr<mlir::Pass> createAliasTagsPass();
 std::unique_ptr<mlir::Pass>
 createAddDebugInfoPass(fir::AddDebugInfoOptions options = {});
-std::unique_ptr<mlir::Pass> createLoopVersioningPass();
 
-std::unique_ptr<mlir::Pass>
-createMemoryAllocationPass(bool dynOnHeap, std::size_t maxStackSize);
 std::unique_ptr<mlir::Pass> createAnnotateConstantOperandsPass();
 std::unique_ptr<mlir::Pass> createAlgebraicSimplificationPass();
 std::unique_ptr<mlir::Pass>
 createAlgebraicSimplificationPass(const mlir::GreedyRewriteConfig &config);
-std::unique_ptr<mlir::Pass> createPolymorphicOpConversionPass();
 
-std::unique_ptr<mlir::Pass> createOMPDescriptorMapInfoGenPass();
+std::unique_ptr<mlir::Pass> createOMPMapInfoFinalizationPass();
 std::unique_ptr<mlir::Pass> createOMPFunctionFilteringPass();
 std::unique_ptr<mlir::OperationPass<mlir::ModuleOp>>
 createOMPMarkDeclareTargetPass();

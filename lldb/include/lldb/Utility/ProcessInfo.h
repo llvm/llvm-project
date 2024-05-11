@@ -234,7 +234,7 @@ public:
 
   bool CumulativeSystemTimeIsValid() const {
     return m_cumulative_system_time.tv_sec > 0 ||
-           m_cumulative_system_time.tv_sec > 0;
+           m_cumulative_system_time.tv_usec > 0;
   }
 
   void Dump(Stream &s, UserIDResolver &resolver) const;

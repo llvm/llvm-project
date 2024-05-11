@@ -15,6 +15,7 @@
 #include "llvm/ADT/StringSet.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
+#include <cstdint>
 
 using namespace llvm;
 
@@ -32,6 +33,16 @@ static void EmitARMTargetDef(RecordKeeper &RK, raw_ostream &OS) {
     }
     return Set;
   };
+
+  // Sort the extensions alphabetically, so they don't appear in tablegen order.
+  std::vector<Record *> SortedExtensions =
+      RK.getAllDerivedDefinitions("Extension");
+  auto Alphabetical = [](Record *A, Record *B) -> bool {
+    const auto MarchA = A->getValueAsString("MArchName");
+    const auto MarchB = B->getValueAsString("MArchName");
+    return MarchA.compare(MarchB) < 0; // A lexographically less than B
+  };
+  std::sort(SortedExtensions.begin(), SortedExtensions.end(), Alphabetical);
 
   // The ARMProcFamilyEnum values are initialised by SubtargetFeature defs
   // which set the ARMProcFamily field. We can generate the enum from these defs
@@ -56,6 +67,47 @@ static void EmitARMTargetDef(RecordKeeper &RK, raw_ostream &OS) {
   for (const StringRef &Arch : ARMArchVals.keys())
     OS << "ARM_ARCHITECTURE(" << Arch << ")\n";
   OS << "\n#undef ARM_ARCHITECTURE\n\n";
+
+  // Emit the ArchExtKind enum
+  OS << "#ifdef EMIT_ARCHEXTKIND_ENUM\n"
+     << "enum ArchExtKind : unsigned {\n"
+     << "  AEK_NONE = 1,\n";
+  for (const Record *Rec : SortedExtensions) {
+    auto AEK = Rec->getValueAsString("ArchExtKindSpelling").upper();
+    if (AEK != "AEK_NONE")
+      OS << "  " << AEK << ",\n";
+  }
+  OS << "  AEK_NUM_EXTENSIONS\n"
+     << "};\n"
+     << "#undef EMIT_ARCHEXTKIND_ENUM\n"
+     << "#endif // EMIT_ARCHEXTKIND_ENUM\n";
+
+  // Emit information for each defined Extension; used to build ArmExtKind.
+  OS << "#ifdef EMIT_EXTENSIONS\n"
+     << "inline constexpr ExtensionInfo Extensions[] = {\n";
+  for (const Record *Rec : SortedExtensions) {
+    auto AEK = Rec->getValueAsString("ArchExtKindSpelling").upper();
+    OS << "  ";
+    OS << "{\"" << Rec->getValueAsString("MArchName") << "\"";
+    OS << ", AArch64::" << AEK;
+    if (AEK == "AEK_NONE") {
+      // HACK: don't emit posfeat/negfeat strings for FMVOnlyExtensions.
+      OS << ", {}, {}";
+    } else {
+      OS << ", \"+" << Rec->getValueAsString("Name") << "\""; // posfeature
+      OS << ", \"-" << Rec->getValueAsString("Name") << "\""; // negfeature
+    }
+    OS << ", " << Rec->getValueAsString("FMVBit");
+    OS << ", \"" << Rec->getValueAsString("FMVDependencies") << "\"";
+    OS << ", " << (uint64_t)Rec->getValueAsInt("FMVPriority");
+    OS << "},\n";
+  };
+  OS << "  {\"none\", AArch64::AEK_NONE, {}, {}, FEAT_INIT, \"\", "
+        "ExtensionInfo::MaxFMVPriority},\n";
+  OS << "};\n"
+     << "#undef EMIT_EXTENSIONS\n"
+     << "#endif // EMIT_EXTENSIONS\n"
+     << "\n";
 }
 
 static TableGen::Emitter::Opt

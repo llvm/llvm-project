@@ -37,7 +37,8 @@ void SampleProfileMatcher::findIRAnchors(const Function &F,
       DIL = DIL->getInlinedAt();
     } while (DIL->getInlinedAt());
 
-    LineLocation Callsite = FunctionSamples::getCallSiteIdentifier(DIL);
+    LineLocation Callsite = FunctionSamples::getCallSiteIdentifier(
+        DIL, FunctionSamples::ProfileIsFS);
     StringRef CalleeName = PrevDIL->getSubprogramLinkageName();
     return std::make_pair(Callsite, FunctionId(CalleeName));
   };
@@ -83,7 +84,8 @@ void SampleProfileMatcher::findIRAnchors(const Function &F,
         if (DIL->getInlinedAt()) {
           IRAnchors.emplace(FindTopLevelInlinedCallsite(DIL));
         } else {
-          LineLocation Callsite = FunctionSamples::getCallSiteIdentifier(DIL);
+          LineLocation Callsite = FunctionSamples::getCallSiteIdentifier(
+              DIL, FunctionSamples::ProfileIsFS);
           StringRef CalleeName = GetCanonicalCalleeName(dyn_cast<CallBase>(&I));
           IRAnchors.emplace(Callsite, FunctionId(CalleeName));
         }

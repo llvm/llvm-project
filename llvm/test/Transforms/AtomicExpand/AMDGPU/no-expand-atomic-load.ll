@@ -6,8 +6,7 @@
 define float @load_atomic_f32_global_system(ptr addrspace(1) %ptr) {
 ; CHECK-LABEL: define float @load_atomic_f32_global_system(
 ; CHECK-SAME: ptr addrspace(1) [[PTR:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = load atomic i32, ptr addrspace(1) [[PTR]] seq_cst, align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i32 [[TMP1]] to float
+; CHECK-NEXT:    [[TMP2:%.*]] = load atomic float, ptr addrspace(1) [[PTR]] seq_cst, align 4, !some.unknown.md [[META0:![0-9]+]]
 ; CHECK-NEXT:    ret float [[TMP2]]
 ;
   %ld = load atomic float, ptr addrspace(1) %ptr seq_cst, align 4, !some.unknown.md !0
@@ -17,8 +16,7 @@ define float @load_atomic_f32_global_system(ptr addrspace(1) %ptr) {
 define float @load_atomic_f32_global_agent(ptr addrspace(1) %ptr) {
 ; CHECK-LABEL: define float @load_atomic_f32_global_agent(
 ; CHECK-SAME: ptr addrspace(1) [[PTR:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = load atomic i32, ptr addrspace(1) [[PTR]] syncscope("agent") seq_cst, align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i32 [[TMP1]] to float
+; CHECK-NEXT:    [[TMP2:%.*]] = load atomic float, ptr addrspace(1) [[PTR]] syncscope("agent") seq_cst, align 4, !some.unknown.md [[META0]]
 ; CHECK-NEXT:    ret float [[TMP2]]
 ;
   %ld = load atomic float, ptr addrspace(1) %ptr syncscope("agent") seq_cst, align 4, !some.unknown.md !0
@@ -28,8 +26,7 @@ define float @load_atomic_f32_global_agent(ptr addrspace(1) %ptr) {
 define float @load_atomic_f32_local(ptr addrspace(3) %ptr) {
 ; CHECK-LABEL: define float @load_atomic_f32_local(
 ; CHECK-SAME: ptr addrspace(3) [[PTR:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = load atomic i32, ptr addrspace(3) [[PTR]] seq_cst, align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i32 [[TMP1]] to float
+; CHECK-NEXT:    [[TMP2:%.*]] = load atomic float, ptr addrspace(3) [[PTR]] seq_cst, align 4, !some.unknown.md [[META0]]
 ; CHECK-NEXT:    ret float [[TMP2]]
 ;
   %ld = load atomic float, ptr addrspace(3) %ptr seq_cst, align 4, !some.unknown.md !0
@@ -39,8 +36,7 @@ define float @load_atomic_f32_local(ptr addrspace(3) %ptr) {
 define float @load_atomic_f32_flat_system(ptr %ptr) {
 ; CHECK-LABEL: define float @load_atomic_f32_flat_system(
 ; CHECK-SAME: ptr [[PTR:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = load atomic i32, ptr [[PTR]] seq_cst, align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i32 [[TMP1]] to float
+; CHECK-NEXT:    [[TMP2:%.*]] = load atomic float, ptr [[PTR]] seq_cst, align 4, !some.unknown.md [[META0]]
 ; CHECK-NEXT:    ret float [[TMP2]]
 ;
   %ld = load atomic float, ptr %ptr seq_cst, align 4, !some.unknown.md !0
@@ -50,8 +46,7 @@ define float @load_atomic_f32_flat_system(ptr %ptr) {
 define float @load_atomic_f32_flat_agent(ptr %ptr) {
 ; CHECK-LABEL: define float @load_atomic_f32_flat_agent(
 ; CHECK-SAME: ptr [[PTR:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = load atomic i32, ptr [[PTR]] syncscope("agent") seq_cst, align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i32 [[TMP1]] to float
+; CHECK-NEXT:    [[TMP2:%.*]] = load atomic float, ptr [[PTR]] syncscope("agent") seq_cst, align 4, !some.unknown.md [[META0]]
 ; CHECK-NEXT:    ret float [[TMP2]]
 ;
   %ld = load atomic float, ptr %ptr syncscope("agent") seq_cst, align 4, !some.unknown.md !0
@@ -61,8 +56,7 @@ define float @load_atomic_f32_flat_agent(ptr %ptr) {
 define half @load_atomic_f16_global_system(ptr addrspace(1) %ptr) {
 ; CHECK-LABEL: define half @load_atomic_f16_global_system(
 ; CHECK-SAME: ptr addrspace(1) [[PTR:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = load atomic i16, ptr addrspace(1) [[PTR]] seq_cst, align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i16 [[TMP1]] to half
+; CHECK-NEXT:    [[TMP2:%.*]] = load atomic half, ptr addrspace(1) [[PTR]] seq_cst, align 4, !some.unknown.md [[META0]]
 ; CHECK-NEXT:    ret half [[TMP2]]
 ;
   %ld = load atomic half, ptr addrspace(1) %ptr seq_cst, align 4, !some.unknown.md !0
@@ -72,8 +66,7 @@ define half @load_atomic_f16_global_system(ptr addrspace(1) %ptr) {
 define half @load_atomic_f16_global_agent(ptr addrspace(1) %ptr) {
 ; CHECK-LABEL: define half @load_atomic_f16_global_agent(
 ; CHECK-SAME: ptr addrspace(1) [[PTR:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = load atomic i16, ptr addrspace(1) [[PTR]] syncscope("agent") seq_cst, align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i16 [[TMP1]] to half
+; CHECK-NEXT:    [[TMP2:%.*]] = load atomic half, ptr addrspace(1) [[PTR]] syncscope("agent") seq_cst, align 4, !some.unknown.md [[META0]]
 ; CHECK-NEXT:    ret half [[TMP2]]
 ;
   %ld = load atomic half, ptr addrspace(1) %ptr syncscope("agent") seq_cst, align 4, !some.unknown.md !0
@@ -83,8 +76,7 @@ define half @load_atomic_f16_global_agent(ptr addrspace(1) %ptr) {
 define half @load_atomic_f16_local(ptr addrspace(3) %ptr) {
 ; CHECK-LABEL: define half @load_atomic_f16_local(
 ; CHECK-SAME: ptr addrspace(3) [[PTR:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = load atomic i16, ptr addrspace(3) [[PTR]] seq_cst, align 2
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i16 [[TMP1]] to half
+; CHECK-NEXT:    [[TMP2:%.*]] = load atomic half, ptr addrspace(3) [[PTR]] seq_cst, align 2, !some.unknown.md [[META0]]
 ; CHECK-NEXT:    ret half [[TMP2]]
 ;
   %ld = load atomic half, ptr addrspace(3) %ptr seq_cst, align 2, !some.unknown.md !0
@@ -94,8 +86,7 @@ define half @load_atomic_f16_local(ptr addrspace(3) %ptr) {
 define bfloat @load_atomic_bf16_global_system(ptr addrspace(1) %ptr) {
 ; CHECK-LABEL: define bfloat @load_atomic_bf16_global_system(
 ; CHECK-SAME: ptr addrspace(1) [[PTR:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = load atomic i16, ptr addrspace(1) [[PTR]] seq_cst, align 2
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i16 [[TMP1]] to bfloat
+; CHECK-NEXT:    [[TMP2:%.*]] = load atomic bfloat, ptr addrspace(1) [[PTR]] seq_cst, align 2, !some.unknown.md [[META0]]
 ; CHECK-NEXT:    ret bfloat [[TMP2]]
 ;
   %ld = load atomic bfloat, ptr addrspace(1) %ptr seq_cst, align 2, !some.unknown.md !0
@@ -105,8 +96,7 @@ define bfloat @load_atomic_bf16_global_system(ptr addrspace(1) %ptr) {
 define bfloat @load_atomic_bf16_global_agent(ptr addrspace(1) %ptr) {
 ; CHECK-LABEL: define bfloat @load_atomic_bf16_global_agent(
 ; CHECK-SAME: ptr addrspace(1) [[PTR:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = load atomic i16, ptr addrspace(1) [[PTR]] syncscope("agent") seq_cst, align 2
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i16 [[TMP1]] to bfloat
+; CHECK-NEXT:    [[TMP2:%.*]] = load atomic bfloat, ptr addrspace(1) [[PTR]] syncscope("agent") seq_cst, align 2, !some.unknown.md [[META0]]
 ; CHECK-NEXT:    ret bfloat [[TMP2]]
 ;
   %ld = load atomic bfloat, ptr addrspace(1) %ptr syncscope("agent") seq_cst, align 2, !some.unknown.md !0
@@ -116,8 +106,7 @@ define bfloat @load_atomic_bf16_global_agent(ptr addrspace(1) %ptr) {
 define bfloat @load_atomic_bf16_local(ptr addrspace(3) %ptr) {
 ; CHECK-LABEL: define bfloat @load_atomic_bf16_local(
 ; CHECK-SAME: ptr addrspace(3) [[PTR:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = load atomic i16, ptr addrspace(3) [[PTR]] seq_cst, align 2
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i16 [[TMP1]] to bfloat
+; CHECK-NEXT:    [[TMP2:%.*]] = load atomic bfloat, ptr addrspace(3) [[PTR]] seq_cst, align 2, !some.unknown.md [[META0]]
 ; CHECK-NEXT:    ret bfloat [[TMP2]]
 ;
   %ld = load atomic bfloat, ptr addrspace(3) %ptr seq_cst, align 2, !some.unknown.md !0
@@ -127,8 +116,7 @@ define bfloat @load_atomic_bf16_local(ptr addrspace(3) %ptr) {
 define bfloat @load_atomic_bf16_flat(ptr %ptr) {
 ; CHECK-LABEL: define bfloat @load_atomic_bf16_flat(
 ; CHECK-SAME: ptr [[PTR:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = load atomic i16, ptr [[PTR]] seq_cst, align 2
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i16 [[TMP1]] to bfloat
+; CHECK-NEXT:    [[TMP2:%.*]] = load atomic bfloat, ptr [[PTR]] seq_cst, align 2, !some.unknown.md [[META0]]
 ; CHECK-NEXT:    ret bfloat [[TMP2]]
 ;
   %ld = load atomic bfloat, ptr %ptr seq_cst, align 2, !some.unknown.md !0
@@ -138,8 +126,7 @@ define bfloat @load_atomic_bf16_flat(ptr %ptr) {
 define double @load_atomic_f64_global_system(ptr addrspace(1) %ptr) {
 ; CHECK-LABEL: define double @load_atomic_f64_global_system(
 ; CHECK-SAME: ptr addrspace(1) [[PTR:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = load atomic i64, ptr addrspace(1) [[PTR]] seq_cst, align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i64 [[TMP1]] to double
+; CHECK-NEXT:    [[TMP2:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] seq_cst, align 8, !some.unknown.md [[META0]]
 ; CHECK-NEXT:    ret double [[TMP2]]
 ;
   %ld = load atomic double, ptr addrspace(1) %ptr seq_cst, align 8, !some.unknown.md !0
@@ -149,8 +136,7 @@ define double @load_atomic_f64_global_system(ptr addrspace(1) %ptr) {
 define double @load_atomic_f64_global_agent(ptr addrspace(1) %ptr) {
 ; CHECK-LABEL: define double @load_atomic_f64_global_agent(
 ; CHECK-SAME: ptr addrspace(1) [[PTR:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = load atomic i64, ptr addrspace(1) [[PTR]] syncscope("agent") seq_cst, align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i64 [[TMP1]] to double
+; CHECK-NEXT:    [[TMP2:%.*]] = load atomic double, ptr addrspace(1) [[PTR]] syncscope("agent") seq_cst, align 8, !some.unknown.md [[META0]]
 ; CHECK-NEXT:    ret double [[TMP2]]
 ;
   %ld = load atomic double, ptr addrspace(1) %ptr syncscope("agent") seq_cst, align 8, !some.unknown.md !0
@@ -160,8 +146,7 @@ define double @load_atomic_f64_global_agent(ptr addrspace(1) %ptr) {
 define double @load_atomic_f64_local(ptr addrspace(3) %ptr) {
 ; CHECK-LABEL: define double @load_atomic_f64_local(
 ; CHECK-SAME: ptr addrspace(3) [[PTR:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = load atomic i64, ptr addrspace(3) [[PTR]] seq_cst, align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i64 [[TMP1]] to double
+; CHECK-NEXT:    [[TMP2:%.*]] = load atomic double, ptr addrspace(3) [[PTR]] seq_cst, align 8, !some.unknown.md [[META0]]
 ; CHECK-NEXT:    ret double [[TMP2]]
 ;
   %ld = load atomic double, ptr addrspace(3) %ptr seq_cst, align 8, !some.unknown.md !0
@@ -171,8 +156,7 @@ define double @load_atomic_f64_local(ptr addrspace(3) %ptr) {
 define double @load_atomic_f64_flat_system(ptr %ptr) {
 ; CHECK-LABEL: define double @load_atomic_f64_flat_system(
 ; CHECK-SAME: ptr [[PTR:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = load atomic i64, ptr [[PTR]] seq_cst, align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i64 [[TMP1]] to double
+; CHECK-NEXT:    [[TMP2:%.*]] = load atomic double, ptr [[PTR]] seq_cst, align 8, !some.unknown.md [[META0]]
 ; CHECK-NEXT:    ret double [[TMP2]]
 ;
   %ld = load atomic double, ptr %ptr seq_cst, align 8, !some.unknown.md !0
@@ -182,8 +166,7 @@ define double @load_atomic_f64_flat_system(ptr %ptr) {
 define double @load_atomic_f64_flat_agent(ptr %ptr) {
 ; CHECK-LABEL: define double @load_atomic_f64_flat_agent(
 ; CHECK-SAME: ptr [[PTR:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = load atomic i64, ptr [[PTR]] syncscope("agent") seq_cst, align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i64 [[TMP1]] to double
+; CHECK-NEXT:    [[TMP2:%.*]] = load atomic double, ptr [[PTR]] syncscope("agent") seq_cst, align 8, !some.unknown.md [[META0]]
 ; CHECK-NEXT:    ret double [[TMP2]]
 ;
   %ld = load atomic double, ptr %ptr syncscope("agent") seq_cst, align 8, !some.unknown.md !0
@@ -193,3 +176,6 @@ define double @load_atomic_f64_flat_agent(ptr %ptr) {
 !0 = !{}
 
 
+;.
+; CHECK: [[META0]] = !{}
+;.

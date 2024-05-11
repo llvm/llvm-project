@@ -43,16 +43,6 @@ static void printExtensionTable(raw_ostream &OS,
   OS << "};\n\n";
 }
 
-// Get the extension name from the Record name. This gives the canonical
-// capitalization.
-static StringRef getExtensionNameFromRecordName(const Record *R) {
-  StringRef Name = R->getName();
-  if (!Name.consume_front("FeatureStdExt"))
-    Name.consume_front("FeatureVendor");
-
-  return Name;
-}
-
 static void emitRISCVExtensions(RecordKeeper &Records, raw_ostream &OS) {
   OS << "#ifdef GET_SUPPORTED_EXTENSIONS\n";
   OS << "#undef GET_SUPPORTED_EXTENSIONS\n\n";
@@ -71,33 +61,21 @@ static void emitRISCVExtensions(RecordKeeper &Records, raw_ostream &OS) {
   OS << "#ifdef GET_IMPLIED_EXTENSIONS\n";
   OS << "#undef GET_IMPLIED_EXTENSIONS\n\n";
 
-  for (Record *Ext : Extensions) {
-    auto ImpliesList = Ext->getValueAsListOfDefs("Implies");
-    if (ImpliesList.empty())
-      continue;
-
-    OS << "static const char *ImpliedExts"
-       << getExtensionNameFromRecordName(Ext) << "[] = {";
-
-    ListSeparator LS(", ");
-    for (auto *ImpliedExt : ImpliesList) {
-      if (!ImpliedExt->isSubClassOf("RISCVExtension"))
-        continue;
-
-      OS << LS << '"' << getExtensionName(ImpliedExt) << '"';
-    }
-
-    OS << "};\n";
-  }
-
   OS << "\nstatic constexpr ImpliedExtsEntry ImpliedExts[] = {\n";
   for (Record *Ext : Extensions) {
     auto ImpliesList = Ext->getValueAsListOfDefs("Implies");
     if (ImpliesList.empty())
       continue;
 
-    OS << "    { {\"" << getExtensionName(Ext) << "\"}, {ImpliedExts"
-       << getExtensionNameFromRecordName(Ext) << "} },\n";
+    StringRef Name = getExtensionName(Ext);
+
+    for (auto *ImpliedExt : ImpliesList) {
+      if (!ImpliedExt->isSubClassOf("RISCVExtension"))
+        continue;
+
+      OS << "    { {\"" << Name << "\"}, \"" << getExtensionName(ImpliedExt)
+         << "\"},\n";
+    }
   }
 
   OS << "};\n\n";
@@ -111,15 +89,13 @@ static void emitRISCVExtensions(RecordKeeper &Records, raw_ostream &OS) {
 //
 // This is almost the same as RISCVFeatures::parseFeatureBits, except that we
 // get feature name from feature records instead of feature bits.
-static void printMArch(raw_ostream &OS, const Record &Rec) {
-  std::map<std::string, RISCVISAUtils::ExtensionVersion,
-           RISCVISAUtils::ExtensionComparator>
-      Extensions;
+static void printMArch(raw_ostream &OS, const std::vector<Record *> &Features) {
+  RISCVISAUtils::OrderedExtensionMap Extensions;
   unsigned XLen = 0;
 
   // Convert features to FeatureVector.
-  for (auto *Feature : Rec.getValueAsListOfDefs("Features")) {
-    StringRef FeatureName = Feature->getValueAsString("Name");
+  for (auto *Feature : Features) {
+    StringRef FeatureName = getExtensionName(Feature);
     if (Feature->isSubClassOf("RISCVExtension")) {
       unsigned Major = Feature->getValueAsInt("MajorVersion");
       unsigned Minor = Feature->getValueAsInt("MinorVersion");
@@ -142,6 +118,26 @@ static void printMArch(raw_ostream &OS, const Record &Rec) {
     OS << LS << Ext.first << Ext.second.Major << 'p' << Ext.second.Minor;
 }
 
+static void emitRISCVProfiles(RecordKeeper &Records, raw_ostream &OS) {
+  OS << "#ifdef GET_SUPPORTED_PROFILES\n";
+  OS << "#undef GET_SUPPORTED_PROFILES\n\n";
+
+  OS << "static constexpr RISCVProfile SupportedProfiles[] = {\n";
+
+  auto Profiles = Records.getAllDerivedDefinitions("RISCVProfile");
+  llvm::sort(Profiles, LessRecordFieldName());
+
+  for (const Record *Rec : Profiles) {
+    OS.indent(4) << "{\"" << Rec->getValueAsString("Name") << "\",\"";
+    printMArch(OS, Rec->getValueAsListOfDefs("Implies"));
+    OS << "\"},\n";
+  }
+
+  OS << "};\n\n";
+
+  OS << "#endif // GET_SUPPORTED_PROFILES\n\n";
+}
+
 static void emitRISCVProcs(RecordKeeper &RK, raw_ostream &OS) {
   OS << "#ifndef PROC\n"
      << "#define PROC(ENUM, NAME, DEFAULT_MARCH, FAST_UNALIGNED_ACCESS)\n"
@@ -149,15 +145,15 @@ static void emitRISCVProcs(RecordKeeper &RK, raw_ostream &OS) {
 
   // Iterate on all definition records.
   for (const Record *Rec : RK.getAllDerivedDefinitions("RISCVProcessorModel")) {
-    bool FastScalarUnalignedAccess =
-        any_of(Rec->getValueAsListOfDefs("Features"), [&](auto &Feature) {
-          return Feature->getValueAsString("Name") == "unaligned-scalar-mem";
-        });
+    const std::vector<Record *> &Features =
+        Rec->getValueAsListOfDefs("Features");
+    bool FastScalarUnalignedAccess = any_of(Features, [&](auto &Feature) {
+      return Feature->getValueAsString("Name") == "unaligned-scalar-mem";
+    });
 
-    bool FastVectorUnalignedAccess =
-        any_of(Rec->getValueAsListOfDefs("Features"), [&](auto &Feature) {
-          return Feature->getValueAsString("Name") == "unaligned-vector-mem";
-        });
+    bool FastVectorUnalignedAccess = any_of(Features, [&](auto &Feature) {
+      return Feature->getValueAsString("Name") == "unaligned-vector-mem";
+    });
 
     bool FastUnalignedAccess =
         FastScalarUnalignedAccess && FastVectorUnalignedAccess;
@@ -169,7 +165,7 @@ static void emitRISCVProcs(RecordKeeper &RK, raw_ostream &OS) {
 
     // Compute MArch from features if we don't specify it.
     if (MArch.empty())
-      printMArch(OS, *Rec);
+      printMArch(OS, Features);
     else
       OS << MArch;
     OS << "\"}, " << FastUnalignedAccess << ")\n";
@@ -191,6 +187,7 @@ static void emitRISCVProcs(RecordKeeper &RK, raw_ostream &OS) {
 
 static void EmitRISCVTargetDef(RecordKeeper &RK, raw_ostream &OS) {
   emitRISCVExtensions(RK, OS);
+  emitRISCVProfiles(RK, OS);
   emitRISCVProcs(RK, OS);
 }
 

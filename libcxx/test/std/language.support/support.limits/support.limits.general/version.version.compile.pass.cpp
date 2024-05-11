@@ -73,6 +73,7 @@
     __cpp_lib_constexpr_utility                             201811L [C++20]
     __cpp_lib_constexpr_vector                              201907L [C++20]
     __cpp_lib_constrained_equality                          202403L [C++26]
+    __cpp_lib_containers_ranges                             202202L [C++23]
     __cpp_lib_copyable_function                             202306L [C++26]
     __cpp_lib_coroutine                                     201902L [C++20]
     __cpp_lib_debugging                                     202311L [C++26]
@@ -453,6 +454,10 @@
 
 # ifdef __cpp_lib_constrained_equality
 #   error "__cpp_lib_constrained_equality should not be defined before c++26"
+# endif
+
+# ifdef __cpp_lib_containers_ranges
+#   error "__cpp_lib_containers_ranges should not be defined before c++23"
 # endif
 
 # ifdef __cpp_lib_copyable_function
@@ -1281,6 +1286,10 @@
 
 # ifdef __cpp_lib_constrained_equality
 #   error "__cpp_lib_constrained_equality should not be defined before c++26"
+# endif
+
+# ifdef __cpp_lib_containers_ranges
+#   error "__cpp_lib_containers_ranges should not be defined before c++23"
 # endif
 
 # ifdef __cpp_lib_copyable_function
@@ -2211,6 +2220,10 @@
 
 # ifdef __cpp_lib_constrained_equality
 #   error "__cpp_lib_constrained_equality should not be defined before c++26"
+# endif
+
+# ifdef __cpp_lib_containers_ranges
+#   error "__cpp_lib_containers_ranges should not be defined before c++23"
 # endif
 
 # ifdef __cpp_lib_copyable_function
@@ -3420,6 +3433,10 @@
 
 # ifdef __cpp_lib_constrained_equality
 #   error "__cpp_lib_constrained_equality should not be defined before c++26"
+# endif
+
+# ifdef __cpp_lib_containers_ranges
+#   error "__cpp_lib_containers_ranges should not be defined before c++23"
 # endif
 
 # ifdef __cpp_lib_copyable_function
@@ -4839,6 +4856,13 @@
 
 # ifdef __cpp_lib_constrained_equality
 #   error "__cpp_lib_constrained_equality should not be defined before c++26"
+# endif
+
+# ifndef __cpp_lib_containers_ranges
+#   error "__cpp_lib_containers_ranges should be defined in c++23"
+# endif
+# if __cpp_lib_containers_ranges != 202202L
+#   error "__cpp_lib_containers_ranges should have the value 202202L in c++23"
 # endif
 
 # ifdef __cpp_lib_copyable_function
@@ -6482,6 +6506,13 @@
 #   endif
 # endif
 
+# ifndef __cpp_lib_containers_ranges
+#   error "__cpp_lib_containers_ranges should be defined in c++26"
+# endif
+# if __cpp_lib_containers_ranges != 202202L
+#   error "__cpp_lib_containers_ranges should have the value 202202L in c++26"
+# endif
+
 # if !defined(_LIBCPP_VERSION)
 #   ifndef __cpp_lib_copyable_function
 #     error "__cpp_lib_copyable_function should be defined in c++26"
@@ -7433,17 +7464,11 @@
 #   endif
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_reference_wrapper
-#     error "__cpp_lib_reference_wrapper should be defined in c++26"
-#   endif
-#   if __cpp_lib_reference_wrapper != 202403L
-#     error "__cpp_lib_reference_wrapper should have the value 202403L in c++26"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_reference_wrapper
-#     error "__cpp_lib_reference_wrapper should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_reference_wrapper
+#   error "__cpp_lib_reference_wrapper should be defined in c++26"
+# endif
+# if __cpp_lib_reference_wrapper != 202403L
+#   error "__cpp_lib_reference_wrapper should have the value 202403L in c++26"
 # endif
 
 # ifndef __cpp_lib_remove_cvref

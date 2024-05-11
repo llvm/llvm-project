@@ -461,9 +461,10 @@ public:
 
   OverflowResult computeOverflowForUnsignedMul(const Value *LHS,
                                                const Value *RHS,
-                                               const Instruction *CxtI) const {
-    return llvm::computeOverflowForUnsignedMul(LHS, RHS,
-                                               SQ.getWithInstruction(CxtI));
+                                               const Instruction *CxtI,
+                                               bool IsNSW = false) const {
+    return llvm::computeOverflowForUnsignedMul(
+        LHS, RHS, SQ.getWithInstruction(CxtI), IsNSW);
   }
 
   OverflowResult computeOverflowForSignedMul(const Value *LHS, const Value *RHS,
