@@ -1,5 +1,5 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core -verify -std=c99 -Dbool=_Bool -Wno-bool-conversion %s
-// RUN: %clang_analyze_cc1 -analyzer-checker=core -verify -x c++ -Wno-bool-conversion %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,unix.Malloc -verify -std=c99 -Dbool=_Bool -Wno-bool-conversion %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,unix.Malloc -verify -x c++ -Wno-bool-conversion %s
 
 typedef __INTPTR_TYPE__ intptr_t;
 char const *p;

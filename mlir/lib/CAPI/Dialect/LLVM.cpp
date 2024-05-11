@@ -27,6 +27,14 @@ MlirType mlirLLVMPointerTypeGet(MlirContext ctx, unsigned addressSpace) {
   return wrap(LLVMPointerType::get(unwrap(ctx), addressSpace));
 }
 
+bool mlirTypeIsALLVMPointerType(MlirType type) {
+  return isa<LLVM::LLVMPointerType>(unwrap(type));
+}
+
+unsigned mlirLLVMPointerTypeGetAddressSpace(MlirType pointerType) {
+  return cast<LLVM::LLVMPointerType>(unwrap(pointerType)).getAddressSpace();
+}
+
 MlirType mlirLLVMVoidTypeGet(MlirContext ctx) {
   return wrap(LLVMVoidType::get(unwrap(ctx)));
 }
@@ -135,7 +143,7 @@ MlirAttribute mlirLLVMDIExpressionAttrGet(MlirContext ctx, intptr_t nOperations,
       unwrap(ctx),
       llvm::map_to_vector(
           unwrapList(nOperations, operations, attrStorage),
-          [](Attribute a) { return a.cast<DIExpressionElemAttr>(); })));
+          [](Attribute a) { return cast<DIExpressionElemAttr>(a); })));
 }
 
 MlirAttribute mlirLLVMDINullTypeAttrGet(MlirContext ctx) {
@@ -165,7 +173,7 @@ MlirAttribute mlirLLVMDICompositeTypeAttrGet(
       cast<DIScopeAttr>(unwrap(scope)), cast<DITypeAttr>(unwrap(baseType)),
       DIFlags(flags), sizeInBits, alignInBits,
       llvm::map_to_vector(unwrapList(nElements, elements, elementsStorage),
-                          [](Attribute a) { return a.cast<DINodeAttr>(); })));
+                          [](Attribute a) { return cast<DINodeAttr>(a); })));
 }
 
 MlirAttribute
@@ -259,7 +267,7 @@ MlirAttribute mlirLLVMDISubroutineTypeAttrGet(MlirContext ctx,
   return wrap(DISubroutineTypeAttr::get(
       unwrap(ctx), callingConvention,
       llvm::map_to_vector(unwrapList(nTypes, types, attrStorage),
-                          [](Attribute a) { return a.cast<DITypeAttr>(); })));
+                          [](Attribute a) { return cast<DITypeAttr>(a); })));
 }
 
 MlirAttribute mlirLLVMDISubprogramAttrGet(

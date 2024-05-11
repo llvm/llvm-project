@@ -1420,7 +1420,7 @@ EmitSpecialNode(SDNode *Node, bool IsClone, bool IsCloned,
     for (unsigned Reg : ECRegs) {
       if (MIB->readsRegister(Reg, TRI)) {
         MachineOperand *MO =
-            MIB->findRegisterDefOperand(Reg, false, false, TRI);
+            MIB->findRegisterDefOperand(Reg, TRI, false, false);
         assert(MO && "No def operand for clobbered register?");
         MO->setIsEarlyClobber(false);
       }

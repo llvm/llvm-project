@@ -29,7 +29,7 @@ using namespace mlir;
 //===----------------------------------------------------------------------===//
 
 static bool isDummyArgument(mlir::Value v) {
-  auto blockArg{v.dyn_cast<mlir::BlockArgument>()};
+  auto blockArg{mlir::dyn_cast<mlir::BlockArgument>(v)};
   if (!blockArg)
     return false;
 
@@ -68,7 +68,7 @@ bool AliasAnalysis::Source::isPointerReference(mlir::Type ty) {
   if (!eleTy)
     return false;
 
-  return fir::isPointerType(eleTy) || eleTy.isa<fir::PointerType>();
+  return fir::isPointerType(eleTy) || mlir::isa<fir::PointerType>(eleTy);
 }
 
 bool AliasAnalysis::Source::isTargetOrPointer() const {
@@ -81,7 +81,7 @@ bool AliasAnalysis::Source::isRecordWithPointerComponent() const {
   if (!eleTy)
     return false;
   // TO DO: Look for pointer components
-  return eleTy.isa<fir::RecordType>();
+  return mlir::isa<fir::RecordType>(eleTy);
 }
 
 AliasResult AliasAnalysis::alias(Value lhs, Value rhs) {

@@ -87,3 +87,8 @@ template struct S<int>;
 
 // CHECK: using Small2 {{\[}}[gnu::mode(byte)]] = int;
 using Small2 [[gnu::mode(byte)]] = int;
+
+class FinalNonTemplate final {};
+// CHECK: class FinalNonTemplate final {
+template <typename T> class FinalTemplate final {};
+// CHECK: template <typename T> class FinalTemplate final {

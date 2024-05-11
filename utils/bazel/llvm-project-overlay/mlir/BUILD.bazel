@@ -5,6 +5,7 @@
 # Description:
 #   The MLIR "Multi-Level Intermediate Representation" Compiler Infrastructure
 
+load("@bazel_skylib//rules:common_settings.bzl", "bool_flag")
 load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
 load(
     ":build_defs.bzl",
@@ -27,6 +28,18 @@ exports_files([
     "run_lit.sh",
     "utils/textmate/mlir.json",
 ])
+
+bool_flag(
+    name = "enable_cuda",
+    build_setting_default = False,
+)
+
+config_setting(
+    name = "enable_cuda_config",
+    flag_values = {
+        ":enable_cuda": "True",
+    },
+)
 
 expand_template(
     name = "mlir_config_h_gen",
@@ -577,6 +590,7 @@ mlir_c_api_cc_library(
     ],
     includes = ["include"],
     deps = [
+        ":IR",
         ":NVGPUDialect",
     ],
 )
@@ -634,6 +648,7 @@ mlir_c_api_cc_library(
         ":GPUDialect",
         ":GPUTransforms",
         ":Pass",
+        "//llvm:Support",
     ],
 )
 
@@ -3051,6 +3066,7 @@ cc_library(
         ":ArithDialect",
         ":BufferizationInterfaces",
         ":BytecodeOpInterface",
+        ":ComplexDialect",
         ":DialectUtils",
         ":IR",
         ":InferTypeOpInterface",
@@ -3638,14 +3654,6 @@ gentbl_cc_library(
             "include/mlir/Dialect/XeGPU/IR/XeGPUTypes.cpp.inc",
         ),
         (
-            ["-gen-enum-decls"],
-            "include/mlir/Dialect/XeGPU/IR/XeGPUEnums.h.inc",
-        ),
-        (
-            ["-gen-enum-defs"],
-            "include/mlir/Dialect/XeGPU/IR/XeGPUEnums.cpp.inc",
-        ),
-        (
             [
                 "-gen-attrdef-decls",
                 "-attrdefs-dialect=xegpu",
@@ -3662,7 +3670,44 @@ gentbl_cc_library(
     ],
     tblgen = ":mlir-tblgen",
     td_file = "include/mlir/Dialect/XeGPU/IR/XeGPU.td",
-    deps = [":XeGPUTdFiles"],
+    deps = [
+        ":ArithOpsTdFiles",
+        ":XeGPUTdFiles",
+    ],
+)
+
+td_library(
+    name = "XeGPUAttrTdFiles",
+    srcs = [
+        "include/mlir/Dialect/XeGPU/IR/XeGPUAttrs.td",
+        "include/mlir/Dialect/XeGPU/IR/XeGPUDialect.td",
+    ],
+    includes = ["include"],
+    deps = [
+        ":BuiltinDialectTdFiles",
+        ":OpBaseTdFiles",
+        ":ShapedOpInterfacesTdFiles",
+        ":ViewLikeInterfaceTdFiles",
+    ],
+)
+
+# Separated from the XeGPUIncGen target because the enum declaration causes
+# duplicate declarations with the Arith enums.
+gentbl_cc_library(
+    name = "XeGPUEnumsIncGen",
+    tbl_outs = [
+        (
+            ["-gen-enum-decls"],
+            "include/mlir/Dialect/XeGPU/IR/XeGPUEnums.h.inc",
+        ),
+        (
+            ["-gen-enum-defs"],
+            "include/mlir/Dialect/XeGPU/IR/XeGPUEnums.cpp.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/XeGPU/IR/XeGPUAttrs.td",
+    deps = [":XeGPUAttrTdFiles"],
 )
 
 cc_library(
@@ -3674,13 +3719,54 @@ cc_library(
     hdrs = ["include/mlir/Dialect/XeGPU/IR/XeGPU.h"],
     includes = ["include"],
     deps = [
+        ":ArithDialect",
         ":BytecodeOpInterface",
         ":DialectUtils",
         ":IR",
         ":ShapedOpInterfaces",
         ":SideEffectInterfaces",
         ":ViewLikeInterface",
+        ":XeGPUEnumsIncGen",
         ":XeGPUIncGen",
+        "//llvm:Support",
+    ],
+)
+
+gentbl_cc_library(
+    name = "XeGPUPassIncGen",
+    tbl_outs = [
+        (
+            [
+                "-gen-pass-decls",
+                "-name=XeGPU",
+            ],
+            "include/mlir/Dialect/XeGPU/Transforms/Passes.h.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/XeGPU/Transforms/Passes.td",
+    deps = [":PassBaseTdFiles"],
+)
+
+cc_library(
+    name = "XeGPUTransforms",
+    srcs = glob([
+        "lib/Dialect/XeGPU/Transforms/*.cpp",
+    ]),
+    hdrs = glob([
+        "include/mlir/Dialect/XeGPU/Transforms/*.h",
+    ]),
+    includes = ["include"],
+    deps = [
+        ":AffineUtils",
+        ":IR",
+        ":MemRefDialect",
+        ":Pass",
+        ":SideEffectInterfaces",
+        ":Support",
+        ":TransformUtils",
+        ":XeGPUDialect",
+        ":XeGPUPassIncGen",
         "//llvm:Support",
     ],
 )
@@ -4762,6 +4848,7 @@ cc_library(
         ":SparseTensorTransformOps",
         ":TensorTransformOps",
         ":TransformDebugExtension",
+        ":TransformIRDLExtension",
         ":TransformLoopExtension",
         ":TransformPDLExtension",
         ":UBToLLVM",
@@ -6612,6 +6699,7 @@ cc_library(
     ]),
     includes = ["include"],
     deps = [
+        ":ArithDialect",
         ":IR",
         ":InferTypeOpInterface",
         ":PolynomialAttributesIncGen",
@@ -9227,6 +9315,7 @@ cc_library(
         ":X86VectorDialect",
         ":X86VectorTransforms",
         ":XeGPUDialect",
+        ":XeGPUTransforms",
         ":config",
     ],
 )
@@ -9682,6 +9771,15 @@ cc_binary(
         "//llvm:TableGen",
         "//llvm:TargetParser",
         "//llvm:config",
+    ],
+)
+
+cc_binary(
+    name = "mlir-src-sharder",
+    srcs = ["tools/mlir-src-sharder/mlir-src-sharder.cpp"],
+    deps = [
+        ":Support",
+        "//llvm:Support",
     ],
 )
 
@@ -11009,6 +11107,7 @@ cc_library(
         ":FuncTransforms",
         ":GPUDialect",
         ":IR",
+        ":IndexDialect",
         ":LinalgDialect",
         ":LinalgPassIncGen",
         ":LinalgStructuredOpsIncGen",
@@ -11020,6 +11119,7 @@ cc_library(
         ":MeshShardingInterface",
         ":MeshTransforms",
         ":Pass",
+        ":RuntimeVerifiableOpInterface",
         ":SCFDialect",
         ":SCFTransforms",
         ":SCFUtils",
@@ -11631,6 +11731,8 @@ cc_library(
         ":DialectUtils",
         ":FuncDialect",
         ":IR",
+        ":IndexDialect",
+        ":InferTypeOpInterface",
         ":LinalgDialect",
         ":MathDialect",
         ":Pass",
@@ -11968,6 +12070,45 @@ cc_library(
         ":TransformDialect",
         ":TransformDialectInterfaces",
         ":TransformPDLExtensionOpsIncGen",
+        "//llvm:Support",
+    ],
+)
+
+gentbl_cc_library(
+    name = "TransformIRDLExtensionOpsIncGen",
+    tbl_outs = [
+        (
+            [
+                "-gen-op-decls",
+            ],
+            "include/mlir/Dialect/Transform/IRDLExtension/IRDLExtensionOps.h.inc",
+        ),
+        (
+            [
+                "-gen-op-defs",
+            ],
+            "include/mlir/Dialect/Transform/IRDLExtension/IRDLExtensionOps.cpp.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/Transform/IRDLExtension/IRDLExtensionOps.td",
+    deps = [":TransformPDLExtensionTdFiles"],
+)
+
+cc_library(
+    name = "TransformIRDLExtension",
+    srcs = glob(["lib/Dialect/Transform/IRDLExtension/*.cpp"]),
+    hdrs = glob(["include/mlir/Dialect/Transform/IRDLExtension/*.h"]),
+    deps = [
+        ":IR",
+        ":IRDLDialect",
+        ":IRDLInterfacesIncGen",
+        ":Rewrite",
+        ":SideEffectInterfaces",
+        ":Support",
+        ":TransformDialect",
+        ":TransformDialectInterfaces",
+        ":TransformIRDLExtensionOpsIncGen",
         "//llvm:Support",
     ],
 )
@@ -12535,6 +12676,7 @@ cc_library(
     deps = [
         ":ArithDialect",
         ":ComplexDialect",
+        ":DialectUtils",
         ":IR",
         "//llvm:Support",
     ],
@@ -12803,6 +12945,7 @@ cc_library(
         ":ArithUtils",
         ":MemRefDialect",
         ":VectorDialect",
+        "//llvm:Support",
     ],
 )
 

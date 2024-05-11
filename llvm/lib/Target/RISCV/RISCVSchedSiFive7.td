@@ -962,6 +962,54 @@ let Latency = 3 in
 
 def : InstRW<[WriteIALU], (instrs COPY)>;
 
+// VCIX
+//
+// In principle we don't know the latency of any VCIX instructions. But instead
+// of taking the default of 1, which can lead to issues [1], we assume that they
+// have a fairly high latency.
+//
+// [1] https://github.com/llvm/llvm-project/issues/83391
+foreach mx = SchedMxList in {
+  defvar Cycles = SiFive7GetCyclesDefault<mx>.c;
+  defvar IsWorstCase = SiFive7IsWorstCaseMX<mx, SchedMxList>.c;
+  let Latency = !mul(Cycles, 10),
+      AcquireAtCycles = [0, 1],
+      ReleaseAtCycles = [1, !add(1, Cycles)] in {
+    defm "" : LMULWriteResMX<"WriteVC_V_I",   [SiFive7VCQ, SiFive7VA], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVC_V_X",   [SiFive7VCQ, SiFive7VA], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVC_V_IV",  [SiFive7VCQ, SiFive7VA], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVC_V_VV",  [SiFive7VCQ, SiFive7VA], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVC_V_XV",  [SiFive7VCQ, SiFive7VA], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVC_V_IVV", [SiFive7VCQ, SiFive7VA], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVC_V_IVW", [SiFive7VCQ, SiFive7VA], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVC_V_VVV", [SiFive7VCQ, SiFive7VA], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVC_V_VVW", [SiFive7VCQ, SiFive7VA], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVC_V_XVV", [SiFive7VCQ, SiFive7VA], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVC_V_XVW", [SiFive7VCQ, SiFive7VA], mx, IsWorstCase>;
+    foreach f = ["FPR16", "FPR32", "FPR64"] in {
+      defm "" : LMULWriteResMX<"WriteVC_V_" # f # "V",  [SiFive7VCQ, SiFive7VA], mx, IsWorstCase>;
+      defm "" : LMULWriteResMX<"WriteVC_V_" # f # "VV", [SiFive7VCQ, SiFive7VA], mx, IsWorstCase>;
+      defm "" : LMULWriteResMX<"WriteVC_V_" # f # "VW", [SiFive7VCQ, SiFive7VA], mx, IsWorstCase>;
+    }
+    defm "" : LMULWriteResMX<"WriteVC_I",   [SiFive7VCQ, SiFive7VA], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVC_X",   [SiFive7VCQ, SiFive7VA], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVC_IV",  [SiFive7VCQ, SiFive7VA], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVC_VV",  [SiFive7VCQ, SiFive7VA], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVC_XV",  [SiFive7VCQ, SiFive7VA], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVC_IVV", [SiFive7VCQ, SiFive7VA], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVC_IVW", [SiFive7VCQ, SiFive7VA], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVC_VVV", [SiFive7VCQ, SiFive7VA], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVC_VVW", [SiFive7VCQ, SiFive7VA], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVC_XVV", [SiFive7VCQ, SiFive7VA], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVC_XVW", [SiFive7VCQ, SiFive7VA], mx, IsWorstCase>;
+    foreach f = ["FPR16", "FPR32", "FPR64"] in {
+      defm "" : LMULWriteResMX<"WriteVC_" # f # "V",  [SiFive7VCQ, SiFive7VA], mx, IsWorstCase>;
+      defm "" : LMULWriteResMX<"WriteVC_" # f # "VV", [SiFive7VCQ, SiFive7VA], mx, IsWorstCase>;
+      defm "" : LMULWriteResMX<"WriteVC_" # f # "VW", [SiFive7VCQ, SiFive7VA], mx, IsWorstCase>;
+    }
+  }
+}
+
 //===----------------------------------------------------------------------===//
 
 // Bypass and advance
@@ -1250,4 +1298,5 @@ defm : UnsupportedSchedZbc;
 defm : UnsupportedSchedZbkb;
 defm : UnsupportedSchedZbkx;
 defm : UnsupportedSchedZfa;
+defm : UnsupportedSchedZvk;
 }

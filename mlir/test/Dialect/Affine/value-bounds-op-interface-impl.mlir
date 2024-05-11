@@ -131,3 +131,27 @@ func.func @compare_affine_min(%a: index, %b: index) {
   "test.compare"(%0, %a) {cmp = "LE"} : (index, index) -> ()
   return
 }
+
+// -----
+
+func.func @compare_const_map() {
+  %c5 = arith.constant 5 : index
+  // expected-remark @below{{true}}
+  "test.compare"(%c5) {cmp = "GT", rhs_map = affine_map<() -> (4)>}
+      : (index) -> ()
+  // expected-remark @below{{true}}
+  "test.compare"(%c5) {cmp = "LT", lhs_map = affine_map<() -> (4)>}
+      : (index) -> ()
+  return
+}
+
+// -----
+
+func.func @compare_maps(%a: index, %b: index) {
+  // expected-remark @below{{true}}
+  "test.compare"(%a, %b, %b, %a)
+      {cmp = "GT", lhs_map = affine_map<(d0, d1) -> (1 + d0 + d1)>,
+       rhs_map = affine_map<(d0, d1) -> (d0 + d1)>}
+      : (index, index, index, index) -> ()
+  return
+}

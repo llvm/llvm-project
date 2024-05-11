@@ -84,7 +84,7 @@ public:
     virtual ComparisonResult compare(QualType Type, const Value &Val1,
                                      const Environment &Env1, const Value &Val2,
                                      const Environment &Env2) {
-      // FIXME: Consider adding QualType to RecordValue and removing the Type
+      // FIXME: Consider adding `QualType` to `Value` and removing the `Type`
       // argument here.
       return ComparisonResult::Unknown;
     }
@@ -243,6 +243,21 @@ public:
   static Environment join(const Environment &EnvA, const Environment &EnvB,
                           Environment::ValueModel &Model,
                           ExprJoinBehavior ExprBehavior);
+
+  /// Returns a value that approximates both `Val1` and `Val2`, or null if no
+  /// such value can be produced.
+  ///
+  /// `Env1` and `Env2` can be used to query child values and path condition
+  /// implications of `Val1` and `Val2` respectively. The joined value will be
+  /// produced in `JoinedEnv`.
+  ///
+  /// Requirements:
+  ///
+  ///  `Val1` and `Val2` must model values of type `Type`.
+  static Value *joinValues(QualType Ty, Value *Val1, const Environment &Env1,
+                           Value *Val2, const Environment &Env2,
+                           Environment &JoinedEnv,
+                           Environment::ValueModel &Model);
 
   /// Widens the environment point-wise, using `PrevEnv` as needed to inform the
   /// approximation.
@@ -407,20 +422,15 @@ public:
   /// storage locations and values for indirections until it finds a
   /// non-pointer/non-reference type.
   ///
-  /// If `Type` is a class, struct, or union type, creates values for all
-  /// modeled fields (including synthetic fields) and calls `setValue()` to
-  /// associate the `RecordValue` with its storage location
-  /// (`RecordValue::getLoc()`).
-  ///
   /// If `Type` is one of the following types, this function will always return
   /// a non-null pointer:
   /// - `bool`
   /// - Any integer type
-  /// - Any class, struct, or union type
   ///
   /// Requirements:
   ///
-  ///  `Type` must not be null.
+  ///  - `Type` must not be null.
+  ///  - `Type` must not be a reference type or record type.
   Value *createValue(QualType Type);
 
   /// Creates an object (i.e. a storage location with an associated value) of
@@ -452,6 +462,7 @@ public:
   /// Initializes the fields (including synthetic fields) of `Loc` with values,
   /// unless values of the field type are not supported or we hit one of the
   /// limits at which we stop producing values.
+  /// If a field already has a value, that value is preserved.
   /// If `Type` is provided, initializes only those fields that are modeled for
   /// `Type`; this is intended for use in cases where `Loc` is a derived type
   /// and we only want to initialize the fields of a base type.
@@ -461,6 +472,10 @@ public:
   }
 
   /// Assigns `Val` as the value of `Loc` in the environment.
+  ///
+  /// Requirements:
+  ///
+  ///  `Loc` must not be a `RecordStorageLocation`.
   void setValue(const StorageLocation &Loc, Value &Val);
 
   /// Clears any association between `Loc` and a value in the environment.
@@ -470,20 +485,24 @@ public:
   ///
   /// Requirements:
   ///
-  ///  - `E` must be a prvalue
-  ///  - If `Val` is a `RecordValue`, its `RecordStorageLocation` must be
-  ///    `getResultObjectLocation(E)`. An exception to this is if `E` is an
-  ///    expression that originally creates a `RecordValue` (such as a
-  ///    `CXXConstructExpr` or `CallExpr`), as these establish the location of
-  ///    the result object in the first place.
+  ///  - `E` must be a prvalue.
+  ///  - `E` must not have record type.
   void setValue(const Expr &E, Value &Val);
 
   /// Returns the value assigned to `Loc` in the environment or null if `Loc`
   /// isn't assigned a value in the environment.
+  ///
+  /// Requirements:
+  ///
+  ///  `Loc` must not be a `RecordStorageLocation`.
   Value *getValue(const StorageLocation &Loc) const;
 
   /// Equivalent to `getValue(getStorageLocation(D))` if `D` is assigned a
   /// storage location in the environment, otherwise returns null.
+  ///
+  /// Requirements:
+  ///
+  ///  `D` must not have record type.
   Value *getValue(const ValueDecl &D) const;
 
   /// Equivalent to `getValue(getStorageLocation(E, SP))` if `E` is assigned a
@@ -774,48 +793,6 @@ RecordStorageLocation *getImplicitObjectLocation(const CXXMemberCallExpr &MCE,
 /// member expression was written using `->`.
 RecordStorageLocation *getBaseObjectLocation(const MemberExpr &ME,
                                              const Environment &Env);
-
-/// Returns the fields of a `RecordDecl` that are initialized by an
-/// `InitListExpr`, in the order in which they appear in
-/// `InitListExpr::inits()`.
-/// `Init->getType()` must be a record type.
-std::vector<const FieldDecl *>
-getFieldsForInitListExpr(const InitListExpr *InitList);
-
-/// Helper class for initialization of a record with an `InitListExpr`.
-/// `InitListExpr::inits()` contains the initializers for both the base classes
-/// and the fields of the record; this helper class separates these out into two
-/// different lists. In addition, it deals with special cases associated with
-/// unions.
-class RecordInitListHelper {
-public:
-  // `InitList` must have record type.
-  RecordInitListHelper(const InitListExpr *InitList);
-
-  // Base classes with their associated initializer expressions.
-  ArrayRef<std::pair<const CXXBaseSpecifier *, Expr *>> base_inits() const {
-    return BaseInits;
-  }
-
-  // Fields with their associated initializer expressions.
-  ArrayRef<std::pair<const FieldDecl *, Expr *>> field_inits() const {
-    return FieldInits;
-  }
-
-private:
-  SmallVector<std::pair<const CXXBaseSpecifier *, Expr *>> BaseInits;
-  SmallVector<std::pair<const FieldDecl *, Expr *>> FieldInits;
-
-  // We potentially synthesize an `ImplicitValueInitExpr` for unions. It's a
-  // member variable because we store a pointer to it in `FieldInits`.
-  std::optional<ImplicitValueInitExpr> ImplicitValueInitForUnion;
-};
-
-/// Associates a new `RecordValue` with `Loc` and returns the new value.
-RecordValue &refreshRecordValue(RecordStorageLocation &Loc, Environment &Env);
-
-/// Associates a new `RecordValue` with `Expr` and returns the new value.
-RecordValue &refreshRecordValue(const Expr &Expr, Environment &Env);
 
 } // namespace dataflow
 } // namespace clang

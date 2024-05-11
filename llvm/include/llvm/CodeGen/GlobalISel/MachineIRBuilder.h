@@ -53,6 +53,8 @@ struct MachineIRBuilderState {
   DebugLoc DL;
   /// PC sections metadata to be set to any instruction we create.
   MDNode *PCSections = nullptr;
+  /// MMRA Metadata to be set on any instruction we create.
+  MDNode *MMRA = nullptr;
 
   /// \name Fields describing the insertion point.
   /// @{
@@ -354,6 +356,7 @@ public:
     setMBB(*MI.getParent());
     State.II = MI.getIterator();
     setPCSections(MI.getPCSections());
+    setMMRAMetadata(MI.getMMRAMetadata());
   }
   /// @}
 
@@ -386,6 +389,12 @@ public:
 
   /// Get the current instruction's PC sections metadata.
   MDNode *getPCSections() { return State.PCSections; }
+
+  /// Set the PC sections metadata to \p MD for all the next build instructions.
+  void setMMRAMetadata(MDNode *MMRA) { State.MMRA = MMRA; }
+
+  /// Get the current instruction's MMRA metadata.
+  MDNode *getMMRAMetadata() { return State.MMRA; }
 
   /// Build and insert <empty> = \p Opcode <empty>.
   /// The insertion point is the one set by the last call of either
@@ -737,7 +746,8 @@ public:
   /// \pre \p Op must be smaller than \p Res
   ///
   /// \return The newly created instruction.
-  MachineInstrBuilder buildZExt(const DstOp &Res, const SrcOp &Op);
+  MachineInstrBuilder buildZExt(const DstOp &Res, const SrcOp &Op,
+                                std::optional<unsigned> Flags = std::nullopt);
 
   /// Build and insert \p Res = G_SEXT \p Op, \p Res = G_TRUNC \p Op, or
   /// \p Res = COPY \p Op depending on the differing sizes of \p Res and \p Op.
@@ -1222,7 +1232,8 @@ public:
   /// \pre \p Res must be smaller than \p Op
   ///
   /// \return The newly created instruction.
-  MachineInstrBuilder buildTrunc(const DstOp &Res, const SrcOp &Op);
+  MachineInstrBuilder buildTrunc(const DstOp &Res, const SrcOp &Op,
+                                 std::optional<unsigned> Flags = std::nullopt);
 
   /// Build and insert a \p Res = G_ICMP \p Pred, \p Op0, \p Op1
   ///

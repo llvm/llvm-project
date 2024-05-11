@@ -34,7 +34,7 @@ class TestCase(TestBase):
         # other unrelated progress events.
         broadcaster = self.dbg.GetBroadcaster()
         listener = lldbutil.start_listening_from(
-            broadcaster, lldb.eBroadcastBitProgress
+            broadcaster, lldb.SBDebugger.eBroadcastBitProgress
         )
 
         # Trigger module builds.

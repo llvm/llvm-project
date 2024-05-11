@@ -245,8 +245,7 @@ llvm_canonicalize_cmake_booleans(
   LLDB_HAS_LIBCXX
   LLDB_TOOL_LLDB_SERVER_BUILD
   LLDB_USE_SYSTEM_DEBUGSERVER
-  LLDB_IS_64_BITS
-  LLDB_TEST_USE_VENDOR_PACKAGES)
+  LLDB_IS_64_BITS)
 
 # Configure the individual test suites.
 add_subdirectory(API)

@@ -460,6 +460,7 @@ def SparsificationAndBufferization : Pass<"sparsification-and-bufferization", "M
     "memref::MemRefDialect",
     "scf::SCFDialect",
     "sparse_tensor::SparseTensorDialect",
+    "vector::VectorDialect"
   ];
 }
 

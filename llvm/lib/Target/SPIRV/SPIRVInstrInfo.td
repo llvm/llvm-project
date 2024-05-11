@@ -19,10 +19,12 @@ let isCodeGenOnly=1 in {
   def DECL_TYPE: Pseudo<(outs ANYID:$dst_id), (ins ANYID:$src_id, TYPE:$src_ty)>;
   def GET_ID: Pseudo<(outs ID:$dst_id), (ins ANYID:$src)>;
   def GET_fID: Pseudo<(outs fID:$dst_id), (ins ANYID:$src)>;
-  def GET_pID: Pseudo<(outs pID:$dst_id), (ins ANYID:$src)>;
+  def GET_pID32: Pseudo<(outs pID32:$dst_id), (ins ANYID:$src)>;
+  def GET_pID64: Pseudo<(outs pID64:$dst_id), (ins ANYID:$src)>;
   def GET_vID: Pseudo<(outs vID:$dst_id), (ins ANYID:$src)>;
   def GET_vfID: Pseudo<(outs vfID:$dst_id), (ins ANYID:$src)>;
-  def GET_vpID: Pseudo<(outs vpID:$dst_id), (ins ANYID:$src)>;
+  def GET_vpID32: Pseudo<(outs vpID32:$dst_id), (ins ANYID:$src)>;
+  def GET_vpID64: Pseudo<(outs vpID64:$dst_id), (ins ANYID:$src)>;
 }
 
 def SPVTypeBin : SDTypeProfile<1, 2, []>;
@@ -66,8 +68,10 @@ multiclass TernOpTypedGen<string name, bits<16> opCode, SDNode node, bit genP = 
     def SIVCond: TernOpTyped<name, opCode, vID, ID, node>;
   }
   if genP then {
-    def SPSCond: TernOpTyped<name, opCode, ID, pID, node>;
-    def SPVCond: TernOpTyped<name, opCode, vID, pID, node>;
+    def SPSCond32: TernOpTyped<name, opCode, ID, pID32, node>;
+    def SPVCond32: TernOpTyped<name, opCode, vID, pID32, node>;
+    def SPSCond64: TernOpTyped<name, opCode, ID, pID64, node>;
+    def SPVCond64: TernOpTyped<name, opCode, vID, pID64, node>;
   }
   if genV then {
     if genF then {
@@ -79,8 +83,10 @@ multiclass TernOpTypedGen<string name, bits<16> opCode, SDNode node, bit genP = 
       def VIVCond: TernOpTyped<name, opCode, vID, vID, node>;
     }
     if genP then {
-      def VPSCond: TernOpTyped<name, opCode, ID, vpID, node>;
-      def VPVCond: TernOpTyped<name, opCode, vID, vpID, node>;
+      def VPSCond32: TernOpTyped<name, opCode, ID, vpID32, node>;
+      def VPVCond32: TernOpTyped<name, opCode, vID, vpID32, node>;
+      def VPSCond64: TernOpTyped<name, opCode, ID, vpID64, node>;
+      def VPVCond64: TernOpTyped<name, opCode, vID, vpID64, node>;
     }
   }
 }
