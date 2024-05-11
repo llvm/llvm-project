@@ -1168,6 +1168,10 @@ void AArch64AsmPrinter::emitFunctionEntryLabel() {
     // For ARM64EC targets, a function definition's name is mangled differently
     // from the normal symbol, emit required aliases here.
     auto emitFunctionAlias = [&](MCSymbol *Src, MCSymbol *Dst) {
+      OutStreamer->beginCOFFSymbolDef(Src);
+      OutStreamer->emitCOFFSymbolType(COFF::IMAGE_SYM_DTYPE_FUNCTION
+                                      << COFF::SCT_COMPLEX_TYPE_SHIFT);
+      OutStreamer->endCOFFSymbolDef();
       OutStreamer->emitSymbolAttribute(Src, MCSA_WeakAntiDep);
       OutStreamer->emitAssignment(
           Src, MCSymbolRefExpr::create(Dst, MCSymbolRefExpr::VK_WEAKREF,
