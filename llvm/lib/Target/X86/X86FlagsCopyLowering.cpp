@@ -124,6 +124,10 @@ private:
                     MachineBasicBlock::iterator TestPos,
                     const DebugLoc &TestLoc, MachineInstr &SetCCI,
                     MachineOperand &FlagUse, CondRegArray &CondRegs);
+  void rewriteCCMP(MachineBasicBlock &TestMBB,
+                   MachineBasicBlock::iterator TestPos, const DebugLoc &TestLoc,
+                   MachineInstr &CMovI, MachineOperand &FlagUse,
+                   CondRegArray &CondRegs);
 };
 
 } // end anonymous namespace
@@ -613,6 +617,9 @@ bool X86FlagsCopyLoweringPass::runOnMachineFunction(MachineFunction &MF) {
           rewriteFCMov(*TestMBB, TestPos, TestLoc, MI, *FlagUse, CondRegs);
         } else if (X86::getCondFromSETCC(MI) != X86::COND_INVALID) {
           rewriteSetCC(*TestMBB, TestPos, TestLoc, MI, *FlagUse, CondRegs);
+        } else if (X86::getCondFromCCMP(MI) != X86::COND_INVALID) {
+          rewriteCCMP(*TestMBB, TestPos, TestLoc, MI, *FlagUse, CondRegs);
+          FlagsKilled = true;
         } else if (MI.getOpcode() == TargetOpcode::COPY) {
           rewriteCopy(MI, *FlagUse, CopyDefI);
         } else {
@@ -969,4 +976,30 @@ void X86FlagsCopyLoweringPass::rewriteSetCC(MachineBasicBlock &TestMBB,
   MIB.setMemRefs(SetCCI.memoperands());
 
   SetCCI.eraseFromParent();
+}
+
+void X86FlagsCopyLoweringPass::rewriteCCMP(MachineBasicBlock &TestMBB,
+                                           MachineBasicBlock::iterator TestPos,
+                                           const DebugLoc &TestLoc,
+                                           MachineInstr &CCMPI,
+                                           MachineOperand &FlagUse,
+                                           CondRegArray &CondRegs) {
+  // First get the register containing this specific condition.
+  X86::CondCode Cond = X86::getCondFromCCMP(CCMPI);
+  unsigned CondReg;
+  bool Inverted;
+  std::tie(CondReg, Inverted) =
+      getCondOrInverseInReg(TestMBB, TestPos, TestLoc, Cond, CondRegs);
+
+  MachineBasicBlock &MBB = *CCMPI.getParent();
+
+  // Insert a direct test of the saved register.
+  insertTest(MBB, CCMPI.getIterator(), CCMPI.getDebugLoc(), CondReg);
+
+  // Rewrite the CCMP/CTEST to use the !ZF flag from the test, and then kill its
+  // use of the flags afterward.
+  CCMPI.getOperand(CCMPI.getDesc().getNumOperands() - 1)
+      .setImm(Inverted ? X86::COND_E : X86::COND_NE);
+  FlagUse.setIsKill(true);
+  LLVM_DEBUG(dbgs() << "    fixed ccmp/ctest: "; CCMPI.dump());
 }
