@@ -253,9 +253,9 @@ class CFStringSynthProvider:
             elif (
                 self.inline
                 and self.explicit
-                and self.unicode == False
-                and self.special == False
-                and self.mutable == False
+                and self.unicode is False
+                and self.special is False
+                and self.mutable is False
             ):
                 return self.handle_inline_explicit()
             elif self.unicode:

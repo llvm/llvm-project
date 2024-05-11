@@ -2446,7 +2446,7 @@ FileCheck output:
                 log_lines.append(pattern_line)
 
                 # Convert to bool because match objects
-                # are True-ish but != True itself
+                # are True-ish but is not True itself
                 matched = bool(matched)
                 if matched != matching:
                     break
