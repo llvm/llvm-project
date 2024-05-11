@@ -2482,8 +2482,8 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     Value *A, *B;
     CmpInst::Predicate Pred;
     const APFloat *TC, *FC;
-    if (!match(Sign, m_Select((m_And(m_FCmp(Pred, m_Value(A), m_PosZeroFP()),
-                                     m_Value(B))),
+    if (!match(Sign, m_Select(m_And(m_FCmp(Pred, m_Value(A), m_PosZeroFP()),
+                                    m_Value(B)),
                               m_APFloat(TC), m_APFloat(FC))))
       return nullptr;
 
