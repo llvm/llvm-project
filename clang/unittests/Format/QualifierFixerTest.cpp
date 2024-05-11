@@ -27,15 +27,11 @@ namespace {
   EXPECT_EQ(VALUE, Style.FIELD) << "Unexpected value after parsing!"
 
 class QualifierFixerTest : public FormatTestBase {
-public:
-  QualifierFixerTest() : LangOpts(getFormattingLangOpts()) {}
-
 protected:
   TokenList annotate(llvm::StringRef Code,
                      const FormatStyle &Style = getLLVMStyle()) {
     return TestLexer(Allocator, Buffers, Style).annotate(Code);
   }
-  LangOptions LangOpts;
   llvm::SpecificBumpPtrAllocator<FormatToken> Allocator;
   std::vector<std::unique_ptr<llvm::MemoryBuffer>> Buffers;
 };
@@ -1058,6 +1054,8 @@ TEST_F(QualifierFixerTest, IsQualifierType) {
   ConfiguredTokens.push_back(tok::kw_restrict);
   ConfiguredTokens.push_back(tok::kw_constexpr);
   ConfiguredTokens.push_back(tok::kw_friend);
+
+  LangOptions LangOpts{getFormattingLangOpts()};
 
   auto Tokens = annotate(
       "const static inline auto restrict int double long constexpr friend");
