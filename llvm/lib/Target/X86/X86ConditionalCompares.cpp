@@ -21,12 +21,14 @@
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
+#include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/MachineTraceMetrics.h"
 #include "llvm/CodeGen/Passes.h"
@@ -129,6 +131,7 @@ class SSACCmpConv {
   const TargetRegisterInfo *TRI;
   MachineRegisterInfo *MRI;
   const MachineBranchProbabilityInfo *MBPI;
+  MachineOptimizationRemarkEmitter *ORE;
 
 public:
   /// The first block containing a conditional branch, dominating everything
@@ -177,9 +180,11 @@ private:
 public:
   /// runOnMachineFunction - Initialize per-function data structures.
   void runOnMachineFunction(MachineFunction &MF,
-                            const MachineBranchProbabilityInfo *MBPI) {
+                            const MachineBranchProbabilityInfo *MBPI,
+                            MachineOptimizationRemarkEmitter *ORE) {
     this->MF = &MF;
     this->MBPI = MBPI;
+    this->ORE = ORE;
     TII = MF.getSubtarget().getInstrInfo();
     TRI = MF.getSubtarget().getRegisterInfo();
     MRI = &MF.getRegInfo();
@@ -663,11 +668,17 @@ void SSACCmpConv::convert(SmallVectorImpl<MachineBasicBlock *> &RemovedBlocks) {
   unsigned NumDefs = CmpMI->getDesc().getNumDefs();
   MachineOperand Op0 = CmpMI->getOperand(NumDefs);
   MachineOperand Op1 = CmpMI->getOperand(NumDefs + 1);
-  BuildMI(*Head, CmpMI, CmpMI->getDebugLoc(), MCID)
+  DebugLoc DL = CmpMI->getDebugLoc();
+  BuildMI(*Head, CmpMI, DL, MCID)
       .add(Op0)
       .add(Op1)
       .addImm(X86::getCondFlagsFromCondCode(CmpBBTailCC))
       .addImm(HeadCmpBBCC);
+  ORE->emit([&]() {
+    MachineOptimizationRemark R(DEBUG_TYPE, "ConvertedCMP", DL, CmpBB);
+    R << "convert CMP into conditional CMP";
+    return R;
+  });
   CmpMI->eraseFromParent();
   Head->updateTerminator(CmpBB->getNextNode());
 
@@ -691,6 +702,7 @@ class X86ConditionalCompares : public MachineFunctionPass {
   MachineDominatorTree *DomTree = nullptr;
   MachineLoopInfo *Loops = nullptr;
   MachineTraceMetrics *Traces = nullptr;
+  MachineOptimizationRemarkEmitter *ORE = nullptr;
   SSACCmpConv CmpConv;
 
 public:
@@ -802,9 +814,10 @@ bool X86ConditionalCompares::runOnMachineFunction(MachineFunction &MF) {
   Loops = getAnalysisIfAvailable<MachineLoopInfo>();
   MBPI = &getAnalysis<MachineBranchProbabilityInfo>();
   Traces = &getAnalysis<MachineTraceMetrics>();
+  ORE = &getAnalysis<MachineOptimizationRemarkEmitterPass>().getORE();
 
   bool Changed = false;
-  CmpConv.runOnMachineFunction(MF, MBPI);
+  CmpConv.runOnMachineFunction(MF, MBPI, ORE);
 
   // Visit blocks in dominator tree pre-order. The pre-order enables multiple
   // cmp-conversions from the same head block.
@@ -814,6 +827,17 @@ bool X86ConditionalCompares::runOnMachineFunction(MachineFunction &MF) {
   for (auto *I : depth_first(DomTree))
     if (tryConvert(I->getBlock()))
       Changed = true;
+
+  if (NumConverted) {
+    ORE->emit([&]() {
+      MachineOptimizationRemarkAnalysis R(DEBUG_TYPE, "NumOfCCMP",
+                                          MF.getFunction().getSubprogram(),
+                                          &MF.front());
+      R << "generate " << ore::NV("NumConverted", NumConverted)
+        << "CCMP in function to eliminate JCC";
+      return R;
+    });
+  }
 
   return Changed;
 }
