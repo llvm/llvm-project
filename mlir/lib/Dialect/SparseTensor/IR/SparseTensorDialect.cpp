@@ -104,7 +104,7 @@ void StorageLayout::foreachField(
         callback) const {
   const auto lvlTypes = enc.getLvlTypes();
   const Level lvlRank = enc.getLvlRank();
-  SmallVector<COOSegment> cooSegs = SparseTensorType(enc).getCOOSegments();
+  SmallVector<COOSegment> cooSegs = enc.getCOOSegments();
   FieldIndex fieldIdx = kDataFieldStartingIdx;
 
   ArrayRef cooSegsRef = cooSegs;
@@ -211,7 +211,7 @@ StorageLayout::getFieldIndexAndStride(SparseTensorFieldKind kind,
   unsigned stride = 1;
   if (kind == SparseTensorFieldKind::CrdMemRef) {
     assert(lvl.has_value());
-    const Level cooStart = SparseTensorType(enc).getAoSCOOStart();
+    const Level cooStart = enc.getAoSCOOStart();
     const Level lvlRank = enc.getLvlRank();
     if (lvl.value() >= cooStart && lvl.value() < lvlRank) {
       lvl = cooStart;
@@ -912,46 +912,53 @@ LogicalResult SparseTensorEncodingAttr::verifyEncoding(
     return emitError()
            << "dimension-rank mismatch between encoding and tensor shape: "
            << getDimRank() << " != " << dimRank;
+  if (auto expVal = getExplicitVal()) {
+    Type attrType = llvm::dyn_cast<TypedAttr>(expVal).getType();
+    if (attrType != elementType) {
+      return emitError() << "explicit value type mismatch between encoding and "
+                         << "tensor element type: " << attrType
+                         << " != " << elementType;
+    }
+  }
+  if (auto impVal = getImplicitVal()) {
+    Type attrType = llvm::dyn_cast<TypedAttr>(impVal).getType();
+    if (attrType != elementType) {
+      return emitError() << "implicit value type mismatch between encoding and "
+                         << "tensor element type: " << attrType
+                         << " != " << elementType;
+    }
+    // Currently, we only support zero as the implicit value.
+    auto impFVal = llvm::dyn_cast<FloatAttr>(impVal);
+    auto impIntVal = llvm::dyn_cast<IntegerAttr>(impVal);
+    auto impComplexVal = llvm::dyn_cast<complex::NumberAttr>(impVal);
+    if ((impFVal && impFVal.getValue().isNonZero()) ||
+        (impIntVal && !impIntVal.getValue().isZero()) ||
+        (impComplexVal && (impComplexVal.getImag().isNonZero() ||
+                           impComplexVal.getReal().isNonZero()))) {
+      return emitError() << "implicit value must be zero";
+    }
+  }
   return success();
 }
 
-//===----------------------------------------------------------------------===//
-// SparseTensorType Methods.
-//===----------------------------------------------------------------------===//
-
-bool mlir::sparse_tensor::SparseTensorType::isCOOType(Level startLvl,
-                                                      bool isUnique) const {
-  if (!hasEncoding())
-    return false;
-  if (!isCompressedLvl(startLvl) && !isLooseCompressedLvl(startLvl))
-    return false;
-  for (Level l = startLvl + 1; l < lvlRank; ++l)
-    if (!isSingletonLvl(l))
-      return false;
-  // If isUnique is true, then make sure that the last level is unique,
-  // that is, when lvlRank == 1, the only compressed level is unique,
-  // and when lvlRank > 1, the last singleton is unique.
-  return !isUnique || isUniqueLvl(lvlRank - 1);
-}
-
-Level mlir::sparse_tensor::SparseTensorType::getAoSCOOStart() const {
+Level mlir::sparse_tensor::SparseTensorEncodingAttr::getAoSCOOStart() const {
   SmallVector<COOSegment> coo = getCOOSegments();
   assert(coo.size() == 1 || coo.empty());
   if (!coo.empty() && coo.front().isAoS()) {
     return coo.front().lvlRange.first;
   }
-  return lvlRank;
+  return getLvlRank();
 }
 
 SmallVector<COOSegment>
-mlir::sparse_tensor::SparseTensorType::getCOOSegments() const {
+mlir::sparse_tensor::SparseTensorEncodingAttr::getCOOSegments() const {
   SmallVector<COOSegment> ret;
-  if (!hasEncoding() || lvlRank <= 1)
+  if (getLvlRank() <= 1)
     return ret;
 
   ArrayRef<LevelType> lts = getLvlTypes();
   Level l = 0;
-  while (l < lvlRank) {
+  while (l < getLvlRank()) {
     auto lt = lts[l];
     if (lt.isa<LevelFormat::Compressed, LevelFormat::LooseCompressed>()) {
       auto cur = lts.begin() + l;
@@ -973,6 +980,25 @@ mlir::sparse_tensor::SparseTensorType::getCOOSegments() const {
     }
   }
   return ret;
+}
+
+//===----------------------------------------------------------------------===//
+// SparseTensorType Methods.
+//===----------------------------------------------------------------------===//
+
+bool mlir::sparse_tensor::SparseTensorType::isCOOType(Level startLvl,
+                                                      bool isUnique) const {
+  if (!hasEncoding())
+    return false;
+  if (!isCompressedLvl(startLvl) && !isLooseCompressedLvl(startLvl))
+    return false;
+  for (Level l = startLvl + 1; l < lvlRank; ++l)
+    if (!isSingletonLvl(l))
+      return false;
+  // If isUnique is true, then make sure that the last level is unique,
+  // that is, when lvlRank == 1, the only compressed level is unique,
+  // and when lvlRank > 1, the last singleton is unique.
+  return !isUnique || isUniqueLvl(lvlRank - 1);
 }
 
 RankedTensorType

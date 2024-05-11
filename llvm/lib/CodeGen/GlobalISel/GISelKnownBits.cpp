@@ -64,8 +64,11 @@ KnownBits GISelKnownBits::getKnownBits(MachineInstr &MI) {
 
 KnownBits GISelKnownBits::getKnownBits(Register R) {
   const LLT Ty = MRI.getType(R);
+  // Since the number of lanes in a scalable vector is unknown at compile time,
+  // we track one bit which is implicitly broadcast to all lanes.  This means
+  // that all lanes in a scalable vector are considered demanded.
   APInt DemandedElts =
-      Ty.isVector() ? APInt::getAllOnes(Ty.getNumElements()) : APInt(1, 1);
+      Ty.isFixedVector() ? APInt::getAllOnes(Ty.getNumElements()) : APInt(1, 1);
   return getKnownBits(R, DemandedElts);
 }
 

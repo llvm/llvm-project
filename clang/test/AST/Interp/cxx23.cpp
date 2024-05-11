@@ -1,3 +1,4 @@
+// UNSUPPORTED:  target={{.*}}-zos{{.*}}
 // RUN: %clang_cc1 -std=c++20 -fsyntax-only -fcxx-exceptions -verify=ref20,all,all20 %s
 // RUN: %clang_cc1 -std=c++23 -fsyntax-only -fcxx-exceptions -verify=ref23,all %s
 // RUN: %clang_cc1 -std=c++20 -fsyntax-only -fcxx-exceptions -verify=expected20,all,all20 %s -fexperimental-new-constant-interpreter

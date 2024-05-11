@@ -454,24 +454,14 @@ bool CallBase::paramHasAttr(unsigned ArgNo, Attribute::AttrKind Kind) const {
 }
 
 bool CallBase::hasFnAttrOnCalledFunction(Attribute::AttrKind Kind) const {
-  Value *V = getCalledOperand();
-  if (auto *CE = dyn_cast<ConstantExpr>(V))
-    if (CE->getOpcode() == BitCast)
-      V = CE->getOperand(0);
-
-  if (auto *F = dyn_cast<Function>(V))
+  if (auto *F = dyn_cast<Function>(getCalledOperand()))
     return F->getAttributes().hasFnAttr(Kind);
 
   return false;
 }
 
 bool CallBase::hasFnAttrOnCalledFunction(StringRef Kind) const {
-  Value *V = getCalledOperand();
-  if (auto *CE = dyn_cast<ConstantExpr>(V))
-    if (CE->getOpcode() == BitCast)
-      V = CE->getOperand(0);
-
-  if (auto *F = dyn_cast<Function>(V))
+  if (auto *F = dyn_cast<Function>(getCalledOperand()))
     return F->getAttributes().hasFnAttr(Kind);
 
   return false;
@@ -485,12 +475,7 @@ Attribute CallBase::getFnAttrOnCalledFunction(AK Kind) const {
     assert(Kind != Attribute::Memory && "Use getMemoryEffects() instead");
   }
 
-  Value *V = getCalledOperand();
-  if (auto *CE = dyn_cast<ConstantExpr>(V))
-    if (CE->getOpcode() == BitCast)
-      V = CE->getOperand(0);
-
-  if (auto *F = dyn_cast<Function>(V))
+  if (auto *F = dyn_cast<Function>(getCalledOperand()))
     return F->getAttributes().getFnAttr(Kind);
 
   return Attribute();
@@ -499,6 +484,22 @@ Attribute CallBase::getFnAttrOnCalledFunction(AK Kind) const {
 template Attribute
 CallBase::getFnAttrOnCalledFunction(Attribute::AttrKind Kind) const;
 template Attribute CallBase::getFnAttrOnCalledFunction(StringRef Kind) const;
+
+template <typename AK>
+Attribute CallBase::getParamAttrOnCalledFunction(unsigned ArgNo,
+                                                 AK Kind) const {
+  Value *V = getCalledOperand();
+
+  if (auto *F = dyn_cast<Function>(V))
+    return F->getAttributes().getParamAttr(ArgNo, Kind);
+
+  return Attribute();
+}
+template Attribute
+CallBase::getParamAttrOnCalledFunction(unsigned ArgNo,
+                                       Attribute::AttrKind Kind) const;
+template Attribute CallBase::getParamAttrOnCalledFunction(unsigned ArgNo,
+                                                          StringRef Kind) const;
 
 void CallBase::getOperandBundlesAsDefs(
     SmallVectorImpl<OperandBundleDef> &Defs) const {

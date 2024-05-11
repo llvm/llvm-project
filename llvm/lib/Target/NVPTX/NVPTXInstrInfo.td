@@ -2497,10 +2497,6 @@ defm FSetNE : FSET_FORMAT<setne, CmpNE, CmpNE_FTZ>;
 defm FSetNUM : FSET_FORMAT<seto, CmpNUM, CmpNUM_FTZ>;
 defm FSetNAN : FSET_FORMAT<setuo, CmpNAN, CmpNAN_FTZ>;
 
-// FIXME: What is this doing here?  Can it be deleted?
-// def ld_param         : SDNode<"NVPTXISD::LOAD_PARAM", SDTLoad,
-//                         [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
-
 def SDTDeclareParamProfile :
   SDTypeProfile<0, 3, [SDTCisInt<0>, SDTCisInt<1>, SDTCisInt<2>]>;
 def SDTDeclareScalarParamProfile :
