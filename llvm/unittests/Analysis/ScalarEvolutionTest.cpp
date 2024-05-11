@@ -63,10 +63,10 @@ static std::optional<APInt> computeConstantDifference(ScalarEvolution &SE,
   return SE.computeConstantDifference(LHS, RHS);
 }
 
-  static bool matchURem(ScalarEvolution &SE, const SCEV *Expr, const SCEV *&LHS,
-                        const SCEV *&RHS) {
-    return SE.matchURem(Expr, LHS, RHS);
-  }
+static bool matchURem(ScalarEvolution &SE, const SCEV *Expr, SCEVUse &LHS,
+                      SCEVUse &RHS) {
+  return SE.matchURem(Expr, LHS, RHS);
+}
 
   static bool isImpliedCond(
       ScalarEvolution &SE, ICmpInst::Predicate Pred, const SCEV *LHS,
@@ -1522,8 +1522,8 @@ TEST_F(ScalarEvolutionsTest, MatchURem) {
   runWithSE(*M, "test", [&](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
     for (auto *N : {"rem1", "rem2", "rem3", "rem5"}) {
       auto *URemI = getInstructionByName(F, N);
-      auto *S = SE.getSCEV(URemI);
-      const SCEV *LHS, *RHS;
+      const SCEV *S = SE.getSCEV(URemI);
+      SCEVUse LHS, RHS;
       EXPECT_TRUE(matchURem(SE, S, LHS, RHS));
       EXPECT_EQ(LHS, SE.getSCEV(URemI->getOperand(0)));
       EXPECT_EQ(RHS, SE.getSCEV(URemI->getOperand(1)));
@@ -1535,8 +1535,8 @@ TEST_F(ScalarEvolutionsTest, MatchURem) {
     // match results are extended to the size of the input expression.
     auto *Ext = getInstructionByName(F, "ext");
     auto *URem1 = getInstructionByName(F, "rem4");
-    auto *S = SE.getSCEV(Ext);
-    const SCEV *LHS, *RHS;
+    const SCEV *S = SE.getSCEV(Ext);
+    SCEVUse LHS, RHS;
     EXPECT_TRUE(matchURem(SE, S, LHS, RHS));
     EXPECT_NE(LHS, SE.getSCEV(URem1->getOperand(0)));
     // RHS and URem1->getOperand(1) have different widths, so compare the
@@ -1662,11 +1662,11 @@ TEST_F(ScalarEvolutionsTest, ForgetValueWithOverflowInst) {
     auto *ExtractValue = getInstructionByName(F, "extractvalue");
     auto *IV = getInstructionByName(F, "iv");
 
-    auto *ExtractValueScev = SE.getSCEV(ExtractValue);
+    auto ExtractValueScev = SE.getSCEV(ExtractValue);
     EXPECT_NE(ExtractValueScev, nullptr);
 
     SE.forgetValue(IV);
-    auto *ExtractValueScevForgotten = SE.getExistingSCEV(ExtractValue);
+    auto ExtractValueScevForgotten = SE.getExistingSCEV(ExtractValue);
     EXPECT_EQ(ExtractValueScevForgotten, nullptr);
   });
 }
