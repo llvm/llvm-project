@@ -27,11 +27,15 @@ namespace {
   EXPECT_EQ(VALUE, Style.FIELD) << "Unexpected value after parsing!"
 
 class QualifierFixerTest : public FormatTestBase {
+public:
+  QualifierFixerTest() : LangOpts(getFormattingLangOpts()) {}
+
 protected:
   TokenList annotate(llvm::StringRef Code,
                      const FormatStyle &Style = getLLVMStyle()) {
     return TestLexer(Allocator, Buffers, Style).annotate(Code);
   }
+  LangOptions LangOpts;
   llvm::SpecificBumpPtrAllocator<FormatToken> Allocator;
   std::vector<std::unique_ptr<llvm::MemoryBuffer>> Buffers;
 };
@@ -1060,65 +1064,75 @@ TEST_F(QualifierFixerTest, IsQualifierType) {
   ASSERT_EQ(Tokens.size(), 11u) << Tokens;
 
   EXPECT_TRUE(LeftRightQualifierAlignmentFixer::isConfiguredQualifierOrType(
-      Tokens[0], ConfiguredTokens));
+      Tokens[0], ConfiguredTokens, LangOpts));
   EXPECT_TRUE(LeftRightQualifierAlignmentFixer::isConfiguredQualifierOrType(
-      Tokens[1], ConfiguredTokens));
+      Tokens[1], ConfiguredTokens, LangOpts));
   EXPECT_TRUE(LeftRightQualifierAlignmentFixer::isConfiguredQualifierOrType(
-      Tokens[2], ConfiguredTokens));
+      Tokens[2], ConfiguredTokens, LangOpts));
   EXPECT_TRUE(LeftRightQualifierAlignmentFixer::isConfiguredQualifierOrType(
-      Tokens[3], ConfiguredTokens));
+      Tokens[3], ConfiguredTokens, LangOpts));
   EXPECT_TRUE(LeftRightQualifierAlignmentFixer::isConfiguredQualifierOrType(
-      Tokens[4], ConfiguredTokens));
+      Tokens[4], ConfiguredTokens, LangOpts));
   EXPECT_TRUE(LeftRightQualifierAlignmentFixer::isConfiguredQualifierOrType(
-      Tokens[5], ConfiguredTokens));
+      Tokens[5], ConfiguredTokens, LangOpts));
   EXPECT_TRUE(LeftRightQualifierAlignmentFixer::isConfiguredQualifierOrType(
-      Tokens[6], ConfiguredTokens));
+      Tokens[6], ConfiguredTokens, LangOpts));
   EXPECT_TRUE(LeftRightQualifierAlignmentFixer::isConfiguredQualifierOrType(
-      Tokens[7], ConfiguredTokens));
+      Tokens[7], ConfiguredTokens, LangOpts));
   EXPECT_TRUE(LeftRightQualifierAlignmentFixer::isConfiguredQualifierOrType(
-      Tokens[8], ConfiguredTokens));
+      Tokens[8], ConfiguredTokens, LangOpts));
   EXPECT_TRUE(LeftRightQualifierAlignmentFixer::isConfiguredQualifierOrType(
-      Tokens[9], ConfiguredTokens));
+      Tokens[9], ConfiguredTokens, LangOpts));
 
-  EXPECT_TRUE(LeftRightQualifierAlignmentFixer::isQualifierOrType(Tokens[0]));
-  EXPECT_TRUE(LeftRightQualifierAlignmentFixer::isQualifierOrType(Tokens[1]));
-  EXPECT_TRUE(LeftRightQualifierAlignmentFixer::isQualifierOrType(Tokens[2]));
-  EXPECT_TRUE(LeftRightQualifierAlignmentFixer::isQualifierOrType(Tokens[3]));
-  EXPECT_TRUE(LeftRightQualifierAlignmentFixer::isQualifierOrType(Tokens[4]));
-  EXPECT_TRUE(LeftRightQualifierAlignmentFixer::isQualifierOrType(Tokens[5]));
-  EXPECT_TRUE(LeftRightQualifierAlignmentFixer::isQualifierOrType(Tokens[6]));
-  EXPECT_TRUE(LeftRightQualifierAlignmentFixer::isQualifierOrType(Tokens[7]));
-  EXPECT_TRUE(LeftRightQualifierAlignmentFixer::isQualifierOrType(Tokens[8]));
-  EXPECT_TRUE(LeftRightQualifierAlignmentFixer::isQualifierOrType(Tokens[9]));
+  EXPECT_TRUE(
+      LeftRightQualifierAlignmentFixer::isQualifierOrType(Tokens[0], LangOpts));
+  EXPECT_TRUE(
+      LeftRightQualifierAlignmentFixer::isQualifierOrType(Tokens[1], LangOpts));
+  EXPECT_TRUE(
+      LeftRightQualifierAlignmentFixer::isQualifierOrType(Tokens[2], LangOpts));
+  EXPECT_TRUE(
+      LeftRightQualifierAlignmentFixer::isQualifierOrType(Tokens[3], LangOpts));
+  EXPECT_TRUE(
+      LeftRightQualifierAlignmentFixer::isQualifierOrType(Tokens[4], LangOpts));
+  EXPECT_TRUE(
+      LeftRightQualifierAlignmentFixer::isQualifierOrType(Tokens[5], LangOpts));
+  EXPECT_TRUE(
+      LeftRightQualifierAlignmentFixer::isQualifierOrType(Tokens[6], LangOpts));
+  EXPECT_TRUE(
+      LeftRightQualifierAlignmentFixer::isQualifierOrType(Tokens[7], LangOpts));
+  EXPECT_TRUE(
+      LeftRightQualifierAlignmentFixer::isQualifierOrType(Tokens[8], LangOpts));
+  EXPECT_TRUE(
+      LeftRightQualifierAlignmentFixer::isQualifierOrType(Tokens[9], LangOpts));
 
   auto NotTokens = annotate("for while do Foo Bar ");
   ASSERT_EQ(NotTokens.size(), 6u) << Tokens;
 
   EXPECT_FALSE(LeftRightQualifierAlignmentFixer::isConfiguredQualifierOrType(
-      NotTokens[0], ConfiguredTokens));
+      NotTokens[0], ConfiguredTokens, LangOpts));
   EXPECT_FALSE(LeftRightQualifierAlignmentFixer::isConfiguredQualifierOrType(
-      NotTokens[1], ConfiguredTokens));
+      NotTokens[1], ConfiguredTokens, LangOpts));
   EXPECT_FALSE(LeftRightQualifierAlignmentFixer::isConfiguredQualifierOrType(
-      NotTokens[2], ConfiguredTokens));
+      NotTokens[2], ConfiguredTokens, LangOpts));
   EXPECT_FALSE(LeftRightQualifierAlignmentFixer::isConfiguredQualifierOrType(
-      NotTokens[3], ConfiguredTokens));
+      NotTokens[3], ConfiguredTokens, LangOpts));
   EXPECT_FALSE(LeftRightQualifierAlignmentFixer::isConfiguredQualifierOrType(
-      NotTokens[4], ConfiguredTokens));
+      NotTokens[4], ConfiguredTokens, LangOpts));
   EXPECT_FALSE(LeftRightQualifierAlignmentFixer::isConfiguredQualifierOrType(
-      NotTokens[5], ConfiguredTokens));
+      NotTokens[5], ConfiguredTokens, LangOpts));
 
-  EXPECT_FALSE(
-      LeftRightQualifierAlignmentFixer::isQualifierOrType(NotTokens[0]));
-  EXPECT_FALSE(
-      LeftRightQualifierAlignmentFixer::isQualifierOrType(NotTokens[1]));
-  EXPECT_FALSE(
-      LeftRightQualifierAlignmentFixer::isQualifierOrType(NotTokens[2]));
-  EXPECT_FALSE(
-      LeftRightQualifierAlignmentFixer::isQualifierOrType(NotTokens[3]));
-  EXPECT_FALSE(
-      LeftRightQualifierAlignmentFixer::isQualifierOrType(NotTokens[4]));
-  EXPECT_FALSE(
-      LeftRightQualifierAlignmentFixer::isQualifierOrType(NotTokens[5]));
+  EXPECT_FALSE(LeftRightQualifierAlignmentFixer::isQualifierOrType(NotTokens[0],
+                                                                   LangOpts));
+  EXPECT_FALSE(LeftRightQualifierAlignmentFixer::isQualifierOrType(NotTokens[1],
+                                                                   LangOpts));
+  EXPECT_FALSE(LeftRightQualifierAlignmentFixer::isQualifierOrType(NotTokens[2],
+                                                                   LangOpts));
+  EXPECT_FALSE(LeftRightQualifierAlignmentFixer::isQualifierOrType(NotTokens[3],
+                                                                   LangOpts));
+  EXPECT_FALSE(LeftRightQualifierAlignmentFixer::isQualifierOrType(NotTokens[4],
+                                                                   LangOpts));
+  EXPECT_FALSE(LeftRightQualifierAlignmentFixer::isQualifierOrType(NotTokens[5],
+                                                                   LangOpts));
 }
 
 TEST_F(QualifierFixerTest, IsMacro) {
