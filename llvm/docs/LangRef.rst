@@ -22182,6 +22182,146 @@ Examples:
       %also.r = call float @llvm.minnum.f32(float %reduction, float %start)
 
 
+.. _int_vp_reduce_fmaximum:
+
+'``llvm.vp.reduce.fmaximum.*``' Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+This is an overloaded intrinsic.
+
+::
+
+      declare float @llvm.vp.reduce.fmaximum.v4f32(float <start_value>, <4 x float> <val>, <4 x i1> <mask>, float <vector_length>)
+      declare double @llvm.vp.reduce.fmaximum.nxv8f64(double <start_value>, <vscale x 8 x double> <val>, <vscale x 8 x i1> <mask>, i32 <vector_length>)
+
+Overview:
+"""""""""
+
+Predicated floating-point ``MAX`` reduction of a vector and a scalar starting
+value, returning the result as a scalar.
+
+
+Arguments:
+""""""""""
+
+The first operand is the start value of the reduction, which must be a scalar
+floating-point type equal to the result type. The second operand is the vector
+on which the reduction is performed and must be a vector of floating-point
+values whose element type is the result/start type. The third operand is the
+vector mask and is a vector of boolean values with the same number of elements
+as the vector operand. The fourth operand is the explicit vector length of the
+operation.
+
+Semantics:
+""""""""""
+
+The '``llvm.vp.reduce.fmaximum``' intrinsic performs the floating-point ``MAX``
+reduction (:ref:`llvm.vector.reduce.fmaximum <int_vector_reduce_fmaximum>`) of
+the vector operand ``val`` on each enabled lane, taking the maximum of that and
+the scalar ``start_value``. Disabled lanes are treated as containing the
+neutral value (i.e. having no effect on the reduction operation). If the vector
+length is zero, the result is the start value.
+
+The neutral value is dependent on the :ref:`fast-math flags <fastmath>`. If no
+flags are set or only the ``nnan`` is set, the neutral value is ``-Infinity``.
+If ``ninf`` is set, then the neutral value is the smallest floating-point value
+for the result type.
+
+This instruction has the same comparison semantics as the
+:ref:`llvm.vector.reduce.fmaximum <int_vector_reduce_fmaximum>` intrinsic (and
+thus the '``llvm.maximum.*``' intrinsic). That is, the result will always be a
+number unless any of the elements in the vector or the starting value is
+``NaN``. Namely, this intrinsic propagates ``NaN``. Also, -0.0 is considered
+less than +0.0.
+
+To ignore the start value, the neutral value can be used.
+
+Examples:
+"""""""""
+
+.. code-block:: llvm
+
+      %r = call float @llvm.vp.reduce.fmaximum.v4f32(float %float, <4 x float> %a, <4 x i1> %mask, i32 %evl)
+      ; %r is equivalent to %also.r, where lanes greater than or equal to %evl
+      ; are treated as though %mask were false for those lanes.
+
+      %masked.a = select <4 x i1> %mask, <4 x float> %a, <4 x float> <float -infinity, float -infinity, float -infinity, float -infinity>
+      %reduction = call float @llvm.vector.reduce.fmaximum.v4f32(<4 x float> %masked.a)
+      %also.r = call float @llvm.maximum.f32(float %reduction, float %start)
+
+
+.. _int_vp_reduce_fminimum:
+
+'``llvm.vp.reduce.fminimum.*``' Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+This is an overloaded intrinsic.
+
+::
+
+      declare float @llvm.vp.reduce.fminimum.v4f32(float <start_value>, <4 x float> <val>, <4 x i1> <mask>, float <vector_length>)
+      declare double @llvm.vp.reduce.fminimum.nxv8f64(double <start_value>, <vscale x 8 x double> <val>, <vscale x 8 x i1> <mask>, i32 <vector_length>)
+
+Overview:
+"""""""""
+
+Predicated floating-point ``MIN`` reduction of a vector and a scalar starting
+value, returning the result as a scalar.
+
+
+Arguments:
+""""""""""
+
+The first operand is the start value of the reduction, which must be a scalar
+floating-point type equal to the result type. The second operand is the vector
+on which the reduction is performed and must be a vector of floating-point
+values whose element type is the result/start type. The third operand is the
+vector mask and is a vector of boolean values with the same number of elements
+as the vector operand. The fourth operand is the explicit vector length of the
+operation.
+
+Semantics:
+""""""""""
+
+The '``llvm.vp.reduce.fminimum``' intrinsic performs the floating-point ``MIN``
+reduction (:ref:`llvm.vector.reduce.fminimum <int_vector_reduce_fminimum>`) of
+the vector operand ``val`` on each enabled lane, taking the minimum of that and
+the scalar ``start_value``. Disabled lanes are treated as containing the neutral
+value (i.e. having no effect on the reduction operation). If the vector length
+is zero, the result is the start value.
+
+The neutral value is dependent on the :ref:`fast-math flags <fastmath>`. If no
+flags are set or only the ``nnan`` is set, the neutral value is ``+Infinity``.
+If ``ninf`` is set, then the neutral value is the largest floating-point value
+for the result type.
+
+This instruction has the same comparison semantics as the
+:ref:`llvm.vector.reduce.fminimum <int_vector_reduce_fminimum>` intrinsic (and
+thus the '``llvm.minimum.*``' intrinsic). That is, the result will always be a
+number unless any of the elements in the vector or the starting value is
+``NaN``. Namely, this intrinsic propagates ``NaN``. Also, -0.0 is considered
+less than +0.0.
+
+To ignore the start value, the neutral value can be used.
+
+Examples:
+"""""""""
+
+.. code-block:: llvm
+
+      %r = call float @llvm.vp.reduce.fminimum.v4f32(float %start, <4 x float> %a, <4 x i1> %mask, i32 %evl)
+      ; %r is equivalent to %also.r, where lanes greater than or equal to %evl
+      ; are treated as though %mask were false for those lanes.
+
+      %masked.a = select <4 x i1> %mask, <4 x float> %a, <4 x float> <float infinity, float infinity, float infinity, float infinity>
+      %reduction = call float @llvm.vector.reduce.fminimum.v4f32(<4 x float> %masked.a)
+      %also.r = call float @llvm.minimum.f32(float %reduction, float %start)
+
+
 .. _int_get_active_lane_mask:
 
 '``llvm.get.active.lane.mask.*``' Intrinsics
