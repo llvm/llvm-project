@@ -45,7 +45,7 @@ def print_wait_impl(debugger, args, result, dict):
 def check_for_synchro(debugger, args, result, dict):
     if debugger.GetAsync():
         print("I am running async", file=result)
-    if debugger.GetAsync() == False:
+    if not debugger.GetAsync():
         print("I am running sync", file=result)
 
 
