@@ -2257,6 +2257,10 @@ void StmtProfiler::VisitSubstNonTypeTemplateParmExpr(
     const SubstNonTypeTemplateParmExpr *E) {
   // Profile exactly as the replacement expression.
   Visit(E->getReplacement());
+  if (auto *NTTP = dyn_cast<NonTypeTemplateParmDecl>(E->getParameter());
+      NTTP && NTTP->getPlaceholderTypeConstraint()) {
+    Visit(NTTP->getPlaceholderTypeConstraint());
+  }
 }
 
 void StmtProfiler::VisitFunctionParmPackExpr(const FunctionParmPackExpr *S) {

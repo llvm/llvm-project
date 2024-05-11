@@ -79,14 +79,14 @@ template<C     T, int I> struct Y2<T*, I, I+1+1> {}; // expected-note {{partial 
 template<C T, C auto I, int W, A S, template<typename, auto, int, A, typename...> class U, typename... Z>
 struct Y3 { Y3()=delete; };
 template<C T, D auto I, int W, A S, template<typename, auto, int, A, typename...> class U, typename... Z>
-struct Y3<T, I, W, S, U, Z...> { Y3()=delete; };
+struct Y3<T, I, W, S, U, Z...> { Y3()=delete; }; // expected-note {{partial specialization matches [with T = int, I = 1, W = 1, S = A{}, U = S, Z = <int>]}}
 template<C T, E auto I, int W, A S, template<typename, auto, int, A, typename...> class U, typename... Z>
-struct Y3<T, I, W, S, U, Z...> {};
+struct Y3<T, I, W, S, U, Z...> {}; // expected-note {{partial specialization matches [with T = int, I = 1, W = 1, S = A{}, U = S, Z = <int>]}}
 
 void f() {
   Y1<int, 2> a;
   Y2<char*, 1, 3> b; // expected-error {{ambiguous partial specializations}}
-  Y3<int, 1, 1, A{}, S, int> c;
+  Y3<int, 1, 1, A{}, S, int> c; // expected-error {{ambiguous partial specializations of 'Y3<int, 1, 1, A{}, S, int>'}}
 }
 
 // Per [temp.func.order]p6.2.2, specifically "if the function parameters that
