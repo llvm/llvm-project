@@ -309,10 +309,10 @@ public:
   bool VisitDefaultStmt(const DefaultStmt *DS) { return VisitChildren(DS); }
 
   // break, continue, goto, and label statements are always trivial.
-  bool VisitBreakStmt(const BreakStmt*) { return true; }
-  bool VisitContinueStmt(const ContinueStmt*) { return true; }
-  bool VisitGotoStmt(const GotoStmt*) { return true; }
-  bool VisitLabelStmt(const LabelStmt*) { return true; }
+  bool VisitBreakStmt(const BreakStmt *) { return true; }
+  bool VisitContinueStmt(const ContinueStmt *) { return true; }
+  bool VisitGotoStmt(const GotoStmt *) { return true; }
+  bool VisitLabelStmt(const LabelStmt *) { return true; }
 
   bool VisitUnaryOperator(const UnaryOperator *UO) {
     // Unary operators are trivial if its operand is trivial except co_await.
@@ -355,8 +355,8 @@ public:
       return false;
     const auto &Name = safeGetName(Callee);
 
-    if (Callee->isInStdNamespace() && (Name == "addressof" ||
-        Name == "forward" || Name == "move"))
+    if (Callee->isInStdNamespace() &&
+        (Name == "addressof" || Name == "forward" || Name == "move"))
       return true;
 
     if (Name == "WTFCrashWithInfo" || Name == "WTFBreakpointTrap" ||
@@ -456,7 +456,7 @@ public:
     return Visit(VMT->getSubExpr());
   }
 
-  bool VisitCXXBindTemporaryExpr(const CXXBindTemporaryExpr* BTE) {
+  bool VisitCXXBindTemporaryExpr(const CXXBindTemporaryExpr *BTE) {
     return Visit(BTE->getSubExpr());
   }
 
