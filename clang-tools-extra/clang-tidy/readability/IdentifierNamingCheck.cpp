@@ -1071,7 +1071,7 @@ bool IdentifierNamingCheck::isParamInMainLikeFunction(
   if (!IsIntType(FDecl->parameters()[0]->getType()))
     return false;
   MainType Type = IsCharPtrPtr(FDecl->parameters()[1]->getType());
-  if (Type == None)
+  if (Type is None)
     return false;
   if (FDecl->getNumParams() == 3 &&
       IsCharPtrPtr(FDecl->parameters()[2]->getType()) != Type)
