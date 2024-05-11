@@ -632,6 +632,7 @@ constexpr FeatureBitset ImpliedFeaturesPush2Pop2 = {};
 constexpr FeatureBitset ImpliedFeaturesPPX = {};
 constexpr FeatureBitset ImpliedFeaturesNDD = {};
 constexpr FeatureBitset ImpliedFeaturesCCMP = {};
+constexpr FeatureBitset ImpliedFeaturesNF = {};
 constexpr FeatureBitset ImpliedFeaturesCF = {};
 
 constexpr FeatureInfo FeatureInfos[X86::CPU_FEATURE_MAX] = {

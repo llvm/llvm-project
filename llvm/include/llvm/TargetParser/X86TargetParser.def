@@ -253,6 +253,7 @@ X86_FEATURE_COMPAT(USERMSR,         "usermsr",                0)
 X86_FEATURE_COMPAT(AVX10_1,         "avx10.1-256",            0)
 X86_FEATURE_COMPAT(AVX10_1_512,     "avx10.1-512",            0)
 X86_FEATURE       (EVEX512,         "evex512")
+X86_FEATURE       (NF,              "nf")
 X86_FEATURE       (CF,              "cf")
 // These features aren't really CPU features, but the frontend can set them.
 X86_FEATURE       (RETPOLINE_EXTERNAL_THUNK,    "retpoline-external-thunk")
