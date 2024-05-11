@@ -494,7 +494,8 @@ bool IndexedReference::isConsecutive(const Loop &L, const SCEV *&Stride,
                          SE.getNoopOrSignExtend(ElemSize, WiderType));
   const SCEV *CacheLineSize = SE.getConstant(Stride->getType(), CLS);
 
-  Stride = SE.isKnownNegative(Stride) ? SE.getNegativeSCEV(Stride) : Stride;
+  Stride = SE.isKnownNegative(Stride) ? SE.getNegativeSCEV(Stride).getPointer()
+                                      : Stride;
   return SE.isKnownPredicate(ICmpInst::ICMP_ULT, Stride, CacheLineSize);
 }
 

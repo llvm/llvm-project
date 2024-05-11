@@ -1250,10 +1250,12 @@ bool DependenceInfo::strongSIVtest(const SCEV *Coeff, const SCEV *SrcConst,
   if (const SCEV *UpperBound = collectUpperBound(CurLoop, Delta->getType())) {
     LLVM_DEBUG(dbgs() << "\t    UpperBound = " << *UpperBound);
     LLVM_DEBUG(dbgs() << ", " << *UpperBound->getType() << "\n");
-    const SCEV *AbsDelta =
-      SE->isKnownNonNegative(Delta) ? Delta : SE->getNegativeSCEV(Delta);
-    const SCEV *AbsCoeff =
-      SE->isKnownNonNegative(Coeff) ? Coeff : SE->getNegativeSCEV(Coeff);
+    const SCEV *AbsDelta = SE->isKnownNonNegative(Delta)
+                               ? Delta
+                               : SE->getNegativeSCEV(Delta).getPointer();
+    const SCEV *AbsCoeff = SE->isKnownNonNegative(Coeff)
+                               ? Coeff
+                               : SE->getNegativeSCEV(Coeff).getPointer();
     const SCEV *Product = SE->getMulExpr(UpperBound, AbsCoeff);
     if (isKnownPredicate(CmpInst::ICMP_SGT, AbsDelta, Product)) {
       // Distance greater than trip count - no dependence
@@ -1791,8 +1793,9 @@ bool DependenceInfo::weakZeroSrcSIVtest(const SCEV *DstCoeff,
   const SCEV *AbsCoeff =
     SE->isKnownNegative(ConstCoeff) ?
     SE->getNegativeSCEV(ConstCoeff) : ConstCoeff;
-  const SCEV *NewDelta =
-    SE->isKnownNegative(ConstCoeff) ? SE->getNegativeSCEV(Delta) : Delta;
+  const SCEV *NewDelta = SE->isKnownNegative(ConstCoeff)
+                             ? SE->getNegativeSCEV(Delta).getPointer()
+                             : Delta;
 
   // check that Delta/SrcCoeff < iteration count
   // really check NewDelta < count*AbsCoeff
@@ -1900,8 +1903,9 @@ bool DependenceInfo::weakZeroDstSIVtest(const SCEV *SrcCoeff,
   const SCEV *AbsCoeff =
     SE->isKnownNegative(ConstCoeff) ?
     SE->getNegativeSCEV(ConstCoeff) : ConstCoeff;
-  const SCEV *NewDelta =
-    SE->isKnownNegative(ConstCoeff) ? SE->getNegativeSCEV(Delta) : Delta;
+  const SCEV *NewDelta = SE->isKnownNegative(ConstCoeff)
+                             ? SE->getNegativeSCEV(Delta).getPointer()
+                             : Delta;
 
   // check that Delta/SrcCoeff < iteration count
   // really check NewDelta < count*AbsCoeff
