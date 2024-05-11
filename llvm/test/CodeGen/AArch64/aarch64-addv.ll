@@ -101,12 +101,12 @@ define i32 @oversized_ADDV_256(ptr noalias nocapture readonly %arg1, ptr noalias
 ; GISEL-NEXT:    ushll v2.8h, v2.8b, #0
 ; GISEL-NEXT:    usubl v3.4s, v1.4h, v2.4h
 ; GISEL-NEXT:    usubl2 v1.4s, v1.8h, v2.8h
-; GISEL-NEXT:    neg v2.4s, v3.4s
-; GISEL-NEXT:    neg v4.4s, v1.4s
-; GISEL-NEXT:    cmgt v5.4s, v0.4s, v3.4s
+; GISEL-NEXT:    cmgt v2.4s, v0.4s, v3.4s
 ; GISEL-NEXT:    cmgt v0.4s, v0.4s, v1.4s
-; GISEL-NEXT:    bif v2.16b, v3.16b, v5.16b
-; GISEL-NEXT:    bsl v0.16b, v4.16b, v1.16b
+; GISEL-NEXT:    neg v4.4s, v3.4s
+; GISEL-NEXT:    neg v5.4s, v1.4s
+; GISEL-NEXT:    bsl v2.16b, v4.16b, v3.16b
+; GISEL-NEXT:    bsl v0.16b, v5.16b, v1.16b
 ; GISEL-NEXT:    add v0.4s, v2.4s, v0.4s
 ; GISEL-NEXT:    addv s0, v0.4s
 ; GISEL-NEXT:    fmov w0, s0

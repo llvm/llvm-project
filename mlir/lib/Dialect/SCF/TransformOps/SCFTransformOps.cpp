@@ -69,16 +69,12 @@ transform::ForallToForOp::apply(transform::TransformRewriter &rewriter,
     return diag;
   }
 
-  rewriter.setInsertionPoint(target);
-
   if (!target.getOutputs().empty()) {
     return emitSilenceableError()
            << "unsupported shared outputs (didn't bufferize?)";
   }
 
   SmallVector<OpFoldResult> lbs = target.getMixedLowerBound();
-  SmallVector<OpFoldResult> ubs = target.getMixedUpperBound();
-  SmallVector<OpFoldResult> steps = target.getMixedStep();
 
   if (getNumResults() != lbs.size()) {
     DiagnosedSilenceableFailure diag =
@@ -89,28 +85,15 @@ transform::ForallToForOp::apply(transform::TransformRewriter &rewriter,
     return diag;
   }
 
-  auto loc = target.getLoc();
-  SmallVector<Value> ivs;
-  for (auto &&[lb, ub, step] : llvm::zip(lbs, ubs, steps)) {
-    Value lbValue = getValueOrCreateConstantIndexOp(rewriter, loc, lb);
-    Value ubValue = getValueOrCreateConstantIndexOp(rewriter, loc, ub);
-    Value stepValue = getValueOrCreateConstantIndexOp(rewriter, loc, step);
-    auto loop = rewriter.create<scf::ForOp>(
-        loc, lbValue, ubValue, stepValue, ValueRange(),
-        [](OpBuilder &, Location, Value, ValueRange) {});
-    ivs.push_back(loop.getInductionVar());
-    rewriter.setInsertionPointToStart(loop.getBody());
-    rewriter.create<scf::YieldOp>(loc);
-    rewriter.setInsertionPointToStart(loop.getBody());
+  SmallVector<Operation *> opResults;
+  if (failed(scf::forallToForLoop(rewriter, target, &opResults))) {
+    DiagnosedSilenceableFailure diag = emitSilenceableError()
+                                       << "failed to convert forall into for";
+    return diag;
   }
-  rewriter.eraseOp(target.getBody()->getTerminator());
-  rewriter.inlineBlockBefore(target.getBody(), &*rewriter.getInsertionPoint(),
-                             ivs);
-  rewriter.eraseOp(target);
 
-  for (auto &&[i, iv] : llvm::enumerate(ivs)) {
-    results.set(cast<OpResult>(getTransformed()[i]),
-                {iv.getParentBlock()->getParentOp()});
+  for (auto &&[i, res] : llvm::enumerate(opResults)) {
+    results.set(cast<OpResult>(getTransformed()[i]), {res});
   }
   return DiagnosedSilenceableFailure::success();
 }

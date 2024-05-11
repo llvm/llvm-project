@@ -484,7 +484,7 @@ accumulateLocs(MachOObjectFile &Obj,
     auto Sym = parseSymbol(Name);
 
     if (!File.empty() && Line != 0)
-      LocMap.insert({Sym.Name.str(), RecordLoc(File, Line)});
+      LocMap.insert({Sym.Name, RecordLoc(File, Line)});
   }
 
   return LocMap;

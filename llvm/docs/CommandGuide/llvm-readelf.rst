@@ -152,10 +152,6 @@ OPTIONS
 
  Display the program headers.
 
-.. option:: --raw-relr
-
- Do not decode relocations in RELR relocation sections when displaying them.
-
 .. option:: --relocations, --relocs, -r
 
  Display the relocation entries in the file.

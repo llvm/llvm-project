@@ -23,10 +23,10 @@ namespace omp {
 
 /// Check for unsupported map operand types.
 static void checkMapType(mlir::Location location, mlir::Type type) {
-  if (auto refType = type.dyn_cast<fir::ReferenceType>())
+  if (auto refType = mlir::dyn_cast<fir::ReferenceType>(type))
     type = refType.getElementType();
-  if (auto boxType = type.dyn_cast_or_null<fir::BoxType>())
-    if (!boxType.getElementType().isa<fir::PointerType>())
+  if (auto boxType = mlir::dyn_cast_or_null<fir::BoxType>(type))
+    if (!mlir::isa<fir::PointerType>(boxType.getElementType()))
       TODO(location, "OMPD_target_data MapOperand BoxType");
 }
 
@@ -555,9 +555,16 @@ bool ClauseProcessor::processCopyin() const {
   // synchronize threads and avoid data races on propagation master's thread
   // values of threadprivate variables to local instances of that variables of
   // all other implicit threads.
+
+  // All copies are inserted at either "insPt" (i.e. immediately before it),
+  // or at some earlier point (as determined by "copyHostAssociateVar").
+  // Unless the insertion point is given to "copyHostAssociateVar" explicitly,
+  // it will not restore the builder's insertion point. Since the copies may be
+  // inserted in any order (not following the execution order), make sure the
+  // barrier is inserted following all of them.
+  firOpBuilder.restoreInsertionPoint(insPt);
   if (hasCopyin)
     firOpBuilder.create<mlir::omp::BarrierOp>(converter.getCurrentLocation());
-  firOpBuilder.restoreInsertionPoint(insPt);
   return hasCopyin;
 }
 
@@ -650,12 +657,12 @@ createCopyFunc(mlir::Location loc, Fortran::lower::AbstractConverter &converter,
           builder.createIntegerConstant(loc, builder.getIndexType(), extent));
     shape = builder.create<fir::ShapeOp>(loc, extents);
   }
-  auto declDst = builder.create<hlfir::DeclareOp>(loc, funcOp.getArgument(0),
-                                                  copyFuncName + "_dst", shape,
-                                                  typeparams, attrs);
-  auto declSrc = builder.create<hlfir::DeclareOp>(loc, funcOp.getArgument(1),
-                                                  copyFuncName + "_src", shape,
-                                                  typeparams, attrs);
+  auto declDst = builder.create<hlfir::DeclareOp>(
+      loc, funcOp.getArgument(0), copyFuncName + "_dst", shape, typeparams,
+      /*dummy_scope=*/nullptr, attrs);
+  auto declSrc = builder.create<hlfir::DeclareOp>(
+      loc, funcOp.getArgument(1), copyFuncName + "_src", shape, typeparams,
+      /*dummy_scope=*/nullptr, attrs);
   converter.copyVar(loc, declDst.getBase(), declSrc.getBase());
   builder.create<mlir::func::ReturnOp>(loc);
   return funcOp;
@@ -807,38 +814,24 @@ bool ClauseProcessor::processLink(
       });
 }
 
-mlir::omp::MapInfoOp
-createMapInfoOp(fir::FirOpBuilder &builder, mlir::Location loc,
-                mlir::Value baseAddr, mlir::Value varPtrPtr, std::string name,
-                llvm::ArrayRef<mlir::Value> bounds,
-                llvm::ArrayRef<mlir::Value> members, uint64_t mapType,
-                mlir::omp::VariableCaptureKind mapCaptureType, mlir::Type retTy,
-                bool isVal) {
-  if (auto boxTy = baseAddr.getType().dyn_cast<fir::BaseBoxType>()) {
-    baseAddr = builder.create<fir::BoxAddrOp>(loc, baseAddr);
-    retTy = baseAddr.getType();
-  }
-
-  mlir::TypeAttr varType = mlir::TypeAttr::get(
-      llvm::cast<mlir::omp::PointerLikeType>(retTy).getElementType());
-
-  mlir::omp::MapInfoOp op = builder.create<mlir::omp::MapInfoOp>(
-      loc, retTy, baseAddr, varType, varPtrPtr, members, bounds,
-      builder.getIntegerAttr(builder.getIntegerType(64, false), mapType),
-      builder.getAttr<mlir::omp::VariableCaptureKindAttr>(mapCaptureType),
-      builder.getStringAttr(name));
-
-  return op;
-}
-
 bool ClauseProcessor::processMap(
-    mlir::Location currentLocation, const llvm::omp::Directive &directive,
-    Fortran::lower::StatementContext &stmtCtx, mlir::omp::MapClauseOps &result,
+    mlir::Location currentLocation, Fortran::lower::StatementContext &stmtCtx,
+    mlir::omp::MapClauseOps &result,
     llvm::SmallVectorImpl<const Fortran::semantics::Symbol *> *mapSyms,
     llvm::SmallVectorImpl<mlir::Location> *mapSymLocs,
     llvm::SmallVectorImpl<mlir::Type> *mapSymTypes) const {
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
-  return findRepeatableClause<omp::clause::Map>(
+  // We always require tracking of symbols, even if the caller does not,
+  // so we create an optionally used local set of symbols when the mapSyms
+  // argument is not present.
+  llvm::SmallVector<const Fortran::semantics::Symbol *> localMapSyms;
+  llvm::SmallVectorImpl<const Fortran::semantics::Symbol *> *ptrMapSyms =
+      mapSyms ? mapSyms : &localMapSyms;
+  std::map<const Fortran::semantics::Symbol *,
+           llvm::SmallVector<OmpMapMemberIndicesData>>
+      parentMemberIndices;
+
+  bool clauseFound = findRepeatableClause<omp::clause::Map>(
       [&](const omp::clause::Map &clause,
           const Fortran::parser::CharBlock &source) {
         using Map = omp::clause::Map;
@@ -903,24 +896,33 @@ bool ClauseProcessor::processMap(
           // Explicit map captures are captured ByRef by default,
           // optimisation passes may alter this to ByCopy or other capture
           // types to optimise
-          mlir::Value mapOp = createMapInfoOp(
-              firOpBuilder, clauseLocation, symAddr, mlir::Value{},
-              asFortran.str(), bounds, {},
+          mlir::omp::MapInfoOp mapOp = createMapInfoOp(
+              firOpBuilder, clauseLocation, symAddr,
+              /*varPtrPtr=*/mlir::Value{}, asFortran.str(), bounds,
+              /*members=*/{}, /*membersIndex=*/mlir::DenseIntElementsAttr{},
               static_cast<
                   std::underlying_type_t<llvm::omp::OpenMPOffloadMappingFlags>>(
                   mapTypeBits),
               mlir::omp::VariableCaptureKind::ByRef, symAddr.getType());
 
-          result.mapVars.push_back(mapOp);
-
-          if (mapSyms)
-            mapSyms->push_back(object.id());
-          if (mapSymLocs)
-            mapSymLocs->push_back(symAddr.getLoc());
-          if (mapSymTypes)
-            mapSymTypes->push_back(symAddr.getType());
+          if (object.id()->owner().IsDerivedType()) {
+            addChildIndexAndMapToParent(object, parentMemberIndices, mapOp,
+                                        semaCtx);
+          } else {
+            result.mapVars.push_back(mapOp);
+            ptrMapSyms->push_back(object.id());
+            if (mapSymTypes)
+              mapSymTypes->push_back(symAddr.getType());
+            if (mapSymLocs)
+              mapSymLocs->push_back(symAddr.getLoc());
+          }
         }
       });
+
+  insertChildMapInfoIntoParent(converter, parentMemberIndices, result.mapVars,
+                               *ptrMapSyms, mapSymTypes, mapSymLocs);
+
+  return clauseFound;
 }
 
 bool ClauseProcessor::processReduction(

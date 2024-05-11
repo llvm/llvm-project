@@ -35,6 +35,7 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
     CachedTypes[OtherV] = ResTy;
     return ResTy;
   }
+  case Instruction::Or:
   case Instruction::ICmp:
   case VPInstruction::FirstOrderRecurrenceSplice: {
     Type *ResTy = inferScalarType(R->getOperand(0));
@@ -42,6 +43,12 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
     assert(inferScalarType(OtherV) == ResTy &&
            "different types inferred for different operands");
     CachedTypes[OtherV] = ResTy;
+    return ResTy;
+  }
+  case VPInstruction::Not: {
+    Type *ResTy = inferScalarType(R->getOperand(0));
+    assert(IntegerType::get(Ctx, 1) == ResTy &&
+           "unexpected scalar type inferred for operand");
     return ResTy;
   }
   case VPInstruction::PtrAdd:
@@ -108,9 +115,9 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPWidenCallRecipe *R) {
   return CI.getType();
 }
 
-Type *VPTypeAnalysis::inferScalarTypeForRecipe(
-    const VPWidenMemoryInstructionRecipe *R) {
-  assert(!R->isStore() && "Store recipes should not define any values");
+Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPWidenMemoryRecipe *R) {
+  assert((isa<VPWidenLoadRecipe>(R) || isa<VPWidenLoadEVLRecipe>(R)) &&
+         "Store recipes should not define any values");
   return cast<LoadInst>(&R->getIngredient())->getType();
 }
 
@@ -231,8 +238,7 @@ Type *VPTypeAnalysis::inferScalarType(const VPValue *V) {
             return inferScalarType(R->getOperand(0));
           })
           .Case<VPBlendRecipe, VPInstruction, VPWidenRecipe, VPReplicateRecipe,
-                VPWidenCallRecipe, VPWidenMemoryInstructionRecipe,
-                VPWidenSelectRecipe>(
+                VPWidenCallRecipe, VPWidenMemoryRecipe, VPWidenSelectRecipe>(
               [this](const auto *R) { return inferScalarTypeForRecipe(R); })
           .Case<VPInterleaveRecipe>([V](const VPInterleaveRecipe *R) {
             // TODO: Use info from interleave group.

@@ -189,12 +189,123 @@ bool Options::processDriverOptions(InputArgList &Args) {
 
 bool Options::processInstallAPIXOptions(InputArgList &Args) {
   for (arg_iterator It = Args.begin(), End = Args.end(); It != End; ++It) {
-    if ((*It)->getOption().matches(OPT_Xarch__)) {
+    Arg *A = *It;
+    if (A->getOption().matches(OPT_Xarch__)) {
       if (!processXarchOption(Args, It))
         return false;
+      continue;
+    } else if (A->getOption().matches(OPT_Xplatform__)) {
+      if (!processXplatformOption(Args, It))
+        return false;
+      continue;
+    } else if (A->getOption().matches(OPT_Xproject)) {
+      if (!processXprojectOption(Args, It))
+        return false;
+      continue;
+    } else if (!A->getOption().matches(OPT_X__))
+      continue;
+
+    // Handle any user defined labels.
+    const StringRef Label = A->getValue(0);
+
+    // Ban "public" and "private" labels.
+    if ((Label.lower() == "public") || (Label.lower() == "private")) {
+      Diags->Report(diag::err_invalid_label) << Label;
+      return false;
     }
+
+    auto NextIt = std::next(It);
+    if (NextIt == End) {
+      Diags->Report(clang::diag::err_drv_missing_argument)
+          << A->getAsString(Args) << 1;
+      return false;
+    }
+    Arg *NextA = *NextIt;
+    switch ((ID)NextA->getOption().getID()) {
+    case OPT_D:
+    case OPT_U:
+      break;
+    default:
+      Diags->Report(clang::diag::err_drv_argument_not_allowed_with)
+          << A->getAsString(Args) << NextA->getAsString(Args);
+      return false;
+    }
+    const StringRef ASpelling = NextA->getSpelling();
+    const auto &AValues = NextA->getValues();
+    if (AValues.empty())
+      FEOpts.UniqueArgs[Label].emplace_back(ASpelling.str());
+    else
+      for (const StringRef Val : AValues)
+        FEOpts.UniqueArgs[Label].emplace_back((ASpelling + Val).str());
+
+    A->claim();
+    NextA->claim();
   }
-  // TODO: Add support for the all of the X* options installapi supports.
+
+  return true;
+}
+
+bool Options::processXplatformOption(InputArgList &Args, arg_iterator Curr) {
+  Arg *A = *Curr;
+
+  PlatformType Platform = getPlatformFromName(A->getValue(0));
+  if (Platform == PLATFORM_UNKNOWN) {
+    Diags->Report(diag::err_unsupported_os)
+        << getPlatformName(Platform) << A->getAsString(Args);
+    return false;
+  }
+  auto NextIt = std::next(Curr);
+  if (NextIt == Args.end()) {
+    Diags->Report(diag::err_drv_missing_argument) << A->getAsString(Args) << 1;
+    return false;
+  }
+
+  Arg *NextA = *NextIt;
+  switch ((ID)NextA->getOption().getID()) {
+  case OPT_iframework:
+    FEOpts.SystemFwkPaths.emplace_back(NextA->getValue(), Platform);
+    break;
+  default:
+    Diags->Report(diag::err_drv_invalid_argument_to_option)
+        << A->getAsString(Args) << NextA->getAsString(Args);
+    return false;
+  }
+
+  A->claim();
+  NextA->claim();
+
+  return true;
+}
+
+bool Options::processXprojectOption(InputArgList &Args, arg_iterator Curr) {
+  Arg *A = *Curr;
+  auto NextIt = std::next(Curr);
+  if (NextIt == Args.end()) {
+    Diags->Report(diag::err_drv_missing_argument) << A->getAsString(Args) << 1;
+    return false;
+  }
+
+  Arg *NextA = *NextIt;
+  switch ((ID)NextA->getOption().getID()) {
+  case OPT_fobjc_arc:
+  case OPT_fmodules:
+  case OPT_fmodules_cache_path:
+  case OPT_include_:
+  case OPT_fvisibility_EQ:
+    break;
+  default:
+    Diags->Report(diag::err_drv_argument_not_allowed_with)
+        << A->getAsString(Args) << NextA->getAsString(Args);
+    return false;
+  }
+
+  std::string ArgString = NextA->getSpelling().str();
+  for (const StringRef Val : NextA->getValues())
+    ArgString += Val.str();
+
+  ProjectLevelArgs.push_back(ArgString);
+  A->claim();
+  NextA->claim();
 
   return true;
 }
@@ -260,6 +371,11 @@ bool Options::processLinkerOptions(InputArgList &Args) {
     LinkerOpts.ParentUmbrella = Arg->getValue();
 
   LinkerOpts.IsDylib = Args.hasArg(drv::OPT_dynamiclib);
+
+  for (auto *Arg : Args.filtered(drv::OPT_alias_list)) {
+    LinkerOpts.AliasLists.emplace_back(Arg->getValue());
+    Arg->claim();
+  }
 
   LinkerOpts.AppExtensionSafe = Args.hasFlag(
       drv::OPT_fapplication_extension, drv::OPT_fno_application_extension,
@@ -328,10 +444,10 @@ bool Options::processFrontendOptions(InputArgList &Args) {
     }
   }
 
-  // Capture system frameworks.
-  // TODO: Support passing framework paths per platform.
+  // Capture system frameworks for all platforms.
   for (const Arg *A : Args.filtered(drv::OPT_iframework))
-    FEOpts.SystemFwkPaths.emplace_back(A->getValue());
+    FEOpts.SystemFwkPaths.emplace_back(A->getValue(),
+                                       std::optional<PlatformType>{});
 
   // Capture framework paths.
   PathSeq FrameworkPaths;
@@ -354,7 +470,8 @@ bool Options::processFrontendOptions(InputArgList &Args) {
   for (const StringRef FwkPath : DefaultFrameworkPaths) {
     SmallString<PATH_MAX> Path(FEOpts.ISysroot);
     sys::path::append(Path, FwkPath);
-    FEOpts.SystemFwkPaths.emplace_back(Path.str());
+    FEOpts.SystemFwkPaths.emplace_back(Path.str(),
+                                       std::optional<PlatformType>{});
   }
 
   return true;
@@ -372,7 +489,7 @@ bool Options::addFilePaths(InputArgList &Args, PathSeq &Headers,
       }
       // Sort headers to ensure deterministic behavior.
       sort(*InputHeadersOrErr);
-      for (std::string &H : *InputHeadersOrErr)
+      for (StringRef H : *InputHeadersOrErr)
         Headers.emplace_back(std::move(H));
     } else
       Headers.emplace_back(Path);
@@ -505,7 +622,11 @@ Options::processAndFilterOutInstallAPIOptions(ArrayRef<const char *> Args) {
   for (const Arg *A : ParsedArgs) {
     if (A->isClaimed())
       continue;
-    llvm::copy(A->getValues(), std::back_inserter(ClangDriverArgs));
+    // Forward along unclaimed but overlapping arguments to the clang driver.
+    if (A->getOption().getID() > (unsigned)OPT_UNKNOWN) {
+      ClangDriverArgs.push_back(A->getSpelling().data());
+    } else
+      llvm::copy(A->getValues(), std::back_inserter(ClangDriverArgs));
   }
   return ClangDriverArgs;
 }
@@ -589,9 +710,7 @@ getInterfaceFile(const StringRef Filename) {
   std::unique_ptr<InterfaceFile> IF;
   switch (identify_magic(Buffer->getBuffer())) {
   case file_magic::macho_dynamically_linked_shared_lib:
-    LLVM_FALLTHROUGH;
   case file_magic::macho_dynamically_linked_shared_lib_stub:
-    LLVM_FALLTHROUGH;
   case file_magic::macho_universal_binary:
     return DylibReader::get(Buffer->getMemBufferRef());
     break;
@@ -619,12 +738,30 @@ std::pair<LibAttrs, ReexportedInterfaces> Options::getReexportedLibraries() {
     return true;
   };
 
+  PlatformSet Platforms;
+  llvm::for_each(DriverOpts.Targets,
+                 [&](const auto &T) { Platforms.insert(T.first.Platform); });
   // Populate search paths by looking at user paths before system ones.
   PathSeq FwkSearchPaths(FEOpts.FwkPaths.begin(), FEOpts.FwkPaths.end());
-  // FIXME: System framework paths need to reset if installapi is invoked with
-  // different platforms.
-  FwkSearchPaths.insert(FwkSearchPaths.end(), FEOpts.SystemFwkPaths.begin(),
-                        FEOpts.SystemFwkPaths.end());
+  for (const PlatformType P : Platforms) {
+    PathSeq PlatformSearchPaths = getPathsForPlatform(FEOpts.SystemFwkPaths, P);
+    FwkSearchPaths.insert(FwkSearchPaths.end(), PlatformSearchPaths.begin(),
+                          PlatformSearchPaths.end());
+    for (const StringMapEntry<ArchitectureSet> &Lib :
+         LinkerOpts.ReexportedFrameworks) {
+      std::string Name = (Lib.getKey() + ".framework/" + Lib.getKey()).str();
+      std::string Path = findLibrary(Name, *FM, FwkSearchPaths, {}, {});
+      if (Path.empty()) {
+        Diags->Report(diag::err_cannot_find_reexport) << false << Lib.getKey();
+        return {};
+      }
+      if (DriverOpts.TraceLibraryLocation)
+        errs() << Path << "\n";
+
+      AccumulateReexports(Path, Lib.getValue());
+    }
+    FwkSearchPaths.resize(FwkSearchPaths.size() - PlatformSearchPaths.size());
+  }
 
   for (const StringMapEntry<ArchitectureSet> &Lib :
        LinkerOpts.ReexportedLibraries) {
@@ -643,20 +780,6 @@ std::pair<LibAttrs, ReexportedInterfaces> Options::getReexportedLibraries() {
   for (const StringMapEntry<ArchitectureSet> &Lib :
        LinkerOpts.ReexportedLibraryPaths)
     AccumulateReexports(Lib.getKey(), Lib.getValue());
-
-  for (const StringMapEntry<ArchitectureSet> &Lib :
-       LinkerOpts.ReexportedFrameworks) {
-    std::string Name = (Lib.getKey() + ".framework/" + Lib.getKey()).str();
-    std::string Path = findLibrary(Name, *FM, FwkSearchPaths, {}, {});
-    if (Path.empty()) {
-      Diags->Report(diag::err_cannot_find_reexport) << false << Lib.getKey();
-      return {};
-    }
-    if (DriverOpts.TraceLibraryLocation)
-      errs() << Path << "\n";
-
-    AccumulateReexports(Path, Lib.getValue());
-  }
 
   return {std::move(Reexports), std::move(ReexportIFs)};
 }
@@ -684,21 +807,39 @@ InstallAPIContext Options::createContext() {
     return Ctx;
   Ctx.Reexports = Reexports;
 
+  // Collect symbols from alias lists.
+  AliasMap Aliases;
+  for (const StringRef ListPath : LinkerOpts.AliasLists) {
+    auto Buffer = FM->getBufferForFile(ListPath);
+    if (auto Err = Buffer.getError()) {
+      Diags->Report(diag::err_cannot_open_file) << ListPath << Err.message();
+      return Ctx;
+    }
+    Expected<AliasMap> Result = parseAliasList(Buffer.get());
+    if (!Result) {
+      Diags->Report(diag::err_cannot_read_input_list)
+          << /*IsFileList=*/false << ListPath << toString(Result.takeError());
+      return Ctx;
+    }
+    Aliases.insert(Result.get().begin(), Result.get().end());
+  }
+
   // Attempt to find umbrella headers by capturing framework name.
   StringRef FrameworkName;
   if (!LinkerOpts.IsDylib)
     FrameworkName = getFrameworkNameFromInstallName(LinkerOpts.InstallName);
 
   // Process inputs.
-  for (const std::string &ListPath : DriverOpts.FileLists) {
+  for (const StringRef ListPath : DriverOpts.FileLists) {
     auto Buffer = FM->getBufferForFile(ListPath);
     if (auto Err = Buffer.getError()) {
       Diags->Report(diag::err_cannot_open_file) << ListPath << Err.message();
       return Ctx;
     }
     if (auto Err = FileListReader::loadHeaders(std::move(Buffer.get()),
-                                               Ctx.InputHeaders)) {
-      Diags->Report(diag::err_cannot_open_file) << ListPath << std::move(Err);
+                                               Ctx.InputHeaders, FM)) {
+      Diags->Report(diag::err_cannot_read_input_list)
+          << /*IsFileList=*/true << ListPath << std::move(Err);
       return Ctx;
     }
   }
@@ -849,10 +990,30 @@ InstallAPIContext Options::createContext() {
   }
 
   Ctx.Verifier = std::make_unique<DylibVerifier>(
-      std::move(*Slices), std::move(ReexportedIFs), Diags,
+      std::move(*Slices), std::move(ReexportedIFs), std::move(Aliases), Diags,
       DriverOpts.VerifyMode, DriverOpts.Zippered, DriverOpts.Demangle,
       DriverOpts.DSYMPath);
   return Ctx;
+}
+
+void Options::addConditionalCC1Args(std::vector<std::string> &ArgStrings,
+                                    const llvm::Triple &Targ,
+                                    const HeaderType Type) {
+  // Unique to architecture (Xarch) options hold no arguments to pass along for
+  // frontend.
+
+  // Add specific to platform arguments.
+  PathSeq PlatformSearchPaths =
+      getPathsForPlatform(FEOpts.SystemFwkPaths, mapToPlatformType(Targ));
+  llvm::for_each(PlatformSearchPaths, [&ArgStrings](const StringRef Path) {
+    ArgStrings.push_back("-iframework");
+    ArgStrings.push_back(Path.str());
+  });
+
+  // Add specific to header type arguments.
+  if (Type == HeaderType::Project)
+    for (const StringRef A : ProjectLevelArgs)
+      ArgStrings.emplace_back(A);
 }
 
 } // namespace installapi

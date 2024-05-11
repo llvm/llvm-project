@@ -72,7 +72,7 @@ void ForwardingReferenceOverloadCheck::registerMatchers(MatchFinder *Finder) {
 
   DeclarationMatcher FindOverload =
       cxxConstructorDecl(
-          hasParameter(0, ForwardingRefParm),
+          hasParameter(0, ForwardingRefParm), unless(isDeleted()),
           unless(hasAnyParameter(
               // No warning: enable_if as constructor parameter.
               parmVarDecl(hasType(isEnableIf())))),
