@@ -1,11 +1,14 @@
-// RUN: %libomptarget-compile-generic -fprofile-instr-generate \
-// RUN:     -Xclang "-fprofile-instrument=clang"
-// RUN: %libomptarget-run-generic 2>&1 | %fcheck-generic \
-// RUN:     --check-prefix="CLANG-PGO"
-// RUN: %libomptarget-compile-generic -fprofile-generate \
-// RUN:     -Xclang "-fprofile-instrument=llvm"
-// RUN: %libomptarget-run-generic 2>&1 | %fcheck-generic \
+// RUN: %libomptarget-compile-generic -fprofile-instr-generate-gpu
+// RUN: env LLVM_PROFILE_FILE=llvm.profraw %libomptarget-run-generic 2>&1
+// RUN: llvm-profdata show --all-functions --counts \
+// RUN:     %target_triple.llvm.profraw | %fcheck-generic \
 // RUN:     --check-prefix="LLVM-PGO"
+
+// RUN: %libomptarget-compile-generic -fprofile-generate-gpu
+// RUN: env LLVM_PROFILE_FILE=clang.profraw %libomptarget-run-generic 2>&1
+// RUN: llvm-profdata show --all-functions --counts \
+// RUN:     %target_triple.clang.profraw | %fcheck-generic \
+// RUN:     --check-prefix="CLANG-PGO"
 
 // UNSUPPORTED: x86_64-pc-linux-gnu
 // UNSUPPORTED: x86_64-pc-linux-gnu-LTO
@@ -31,43 +34,38 @@ int main() {
   }
 }
 
-// CLANG-PGO: ======== Counters =========
-// CLANG-PGO-NEXT: 0 11 20 10 20
-// CLANG-PGO-NEXT: ========== Data ===========
-// CLANG-PGO-NEXT: { {{[0-9]*}} {{[0-9]*}}
-// CLANG-PGO-SAME: {{0x[0-9a-fA-F]*}} {{0x[0-9a-fA-F]*}}
-// CLANG-PGO-SAME: {{0x[0-9a-fA-F]*}} {{0x[0-9a-fA-F]*}}
-// CLANG-PGO-SAME: {{[0-9]*}} {{[0-9]*}} {{[0-9]*}} }
-// CLANG-PGO-NEXT: { {{[0-9]*}} {{[0-9]*}}
-// CLANG-PGO-SAME: {{0x[0-9a-fA-F]*}} {{0x[0-9a-fA-F]*}}
-// CLANG-PGO-SAME: {{0x[0-9a-fA-F]*}} {{0x[0-9a-fA-F]*}}
-// CLANG-PGO-SAME: {{[0-9]*}} {{[0-9]*}} {{[0-9]*}} }
-// CLANG-PGO-NEXT: { {{[0-9]*}} {{[0-9]*}}
-// CLANG-PGO-SAME: {{0x[0-9a-fA-F]*}} {{0x[0-9a-fA-F]*}}
-// CLANG-PGO-SAME: {{0x[0-9a-fA-F]*}} {{0x[0-9a-fA-F]*}}
-// CLANG-PGO-SAME: {{[0-9]*}} {{[0-9]*}} {{[0-9]*}} }
-// CLANG-PGO-NEXT: ======== Functions ========
-// CLANG-PGO-NEXT: pgo1.c:
-// CLANG-PGO-SAME: __omp_offloading_{{[_0-9a-zA-Z]*}}_main_{{[_0-9a-zA-Z]*}}
-// CLANG-PGO-NEXT: test1
-// CLANG-PGO-NEXT: test2
+// LLVM-PGO-LABEL: __omp_offloading_{{[_0-9a-zA-Z]*}}_main_{{[_0-9a-zA-Z]*}}:
+// LLVM-PGO: Hash: {{0[xX][0-9a-fA-F]+}}
+// LLVM-PGO: Counters: 4
+// LLVM-PGO: Function count: 20
+// LLVM-PGO: Block counts: [10, 20, 10]
 
-// LLVM-PGO: ======== Counters =========
-// LLVM-PGO-NEXT: 20 10 20 10 1 1
-// LLVM-PGO-NEXT: ========== Data ===========
-// LLVM-PGO-NEXT: { {{[0-9]*}} {{[0-9]*}}
-// LLVM-PGO-SAME: {{0x[0-9a-fA-F]*}} {{0x[0-9a-fA-F]*}}
-// LLVM-PGO-SAME: {{0x[0-9a-fA-F]*}} {{0x[0-9a-fA-F]*}}
-// LLVM-PGO-SAME: {{[0-9]*}} {{[0-9]*}} {{[0-9]*}} }
-// LLVM-PGO-NEXT: { {{[0-9]*}} {{[0-9]*}}
-// LLVM-PGO-SAME: {{0x[0-9a-fA-F]*}} {{0x[0-9a-fA-F]*}}
-// LLVM-PGO-SAME: {{0x[0-9a-fA-F]*}} {{0x[0-9a-fA-F]*}}
-// LLVM-PGO-SAME: {{[0-9]*}} {{[0-9]*}} {{[0-9]*}} }
-// LLVM-PGO-NEXT: { {{[0-9]*}} {{[0-9]*}}
-// LLVM-PGO-SAME: {{0x[0-9a-fA-F]*}} {{0x[0-9a-fA-F]*}}
-// LLVM-PGO-SAME: {{0x[0-9a-fA-F]*}} {{0x[0-9a-fA-F]*}}
-// LLVM-PGO-SAME: {{[0-9]*}} {{[0-9]*}} {{[0-9]*}} }
-// LLVM-PGO-NEXT: ======== Functions ========
-// LLVM-PGO-NEXT: __omp_offloading_{{[_0-9a-zA-Z]*}}_main_{{[_0-9a-zA-Z]*}}
-// LLVM-PGO-NEXT: test1
-// LLVM-PGO-NEXT: test2
+// LLVM-PGO-LABEL: test1:
+// LLVM-PGO: Hash: {{0[xX][0-9a-fA-F]+}}
+// LLVM-PGO: Counters: 1
+// LLVM-PGO: Function count: 1
+// LLVM-PGO: Block counts: []
+
+// LLVM-PGO-LABEL: test2:
+// LLVM-PGO: Hash: {{0[xX][0-9a-fA-F]+}}
+// LLVM-PGO: Counters: 1
+// LLVM-PGO: Function count: 1
+// LLVM-PGO: Block counts: []
+
+// CLANG-PGO-LABEL: __omp_offloading_{{[_0-9a-zA-Z]*}}_main_{{[_0-9a-zA-Z]*}}:
+// CLANG-PGO: Hash: {{0[xX][0-9a-fA-F]+}}
+// CLANG-PGO: Counters: 3
+// CLANG-PGO: Function count: 0
+// CLANG-PGO: Block counts: [11, 20]
+
+// CLANG-PGO-LABEL: test1:
+// CLANG-PGO: Hash: {{0[xX][0-9a-fA-F]+}}
+// CLANG-PGO: Counters: 1
+// CLANG-PGO: Function count: 10
+// CLANG-PGO: Block counts: []
+
+// CLANG-PGO-LABEL: test2:
+// CLANG-PGO: Hash: {{0[xX][0-9a-fA-F]+}}
+// CLANG-PGO: Counters: 1
+// CLANG-PGO: Function count: 20
+// CLANG-PGO: Block counts: []
