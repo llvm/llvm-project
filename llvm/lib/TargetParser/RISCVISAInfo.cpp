@@ -98,6 +98,10 @@ void llvm::riscvExtensionsHelp(StringMap<StringRef> DescMap) {
     PrintExtension(E.first, Version, DescMap["experimental-" + E.first]);
   }
 
+  outs() << "\nSupported Profiles\n";
+  for (const auto &P : SupportedProfiles)
+    outs().indent(4) << P.Name << "\n";
+
   outs() << "\nUse -march to specify the target's extension.\n"
             "For example, clang -march=rv32i_v1p0\n";
 }
@@ -155,9 +159,9 @@ findDefaultVersion(StringRef ExtName) {
   return std::nullopt;
 }
 
-void RISCVISAInfo::addExtension(StringRef ExtName,
+bool RISCVISAInfo::addExtension(StringRef ExtName,
                                 RISCVISAUtils::ExtensionVersion Version) {
-  Exts[ExtName.str()] = Version;
+  return Exts.emplace(ExtName, Version).second;
 }
 
 static StringRef getExtensionTypeDesc(StringRef Ext) {
@@ -425,9 +429,11 @@ RISCVISAInfo::parseFeatures(unsigned XLen,
 
 llvm::Expected<std::unique_ptr<RISCVISAInfo>>
 RISCVISAInfo::parseNormalizedArchString(StringRef Arch) {
-  if (llvm::any_of(Arch, isupper))
+  // RISC-V ISA strings must be [a-z0-9_]
+  if (!llvm::all_of(
+          Arch, [](char C) { return isDigit(C) || isLower(C) || C == '_'; }))
     return createStringError(errc::invalid_argument,
-                             "string must be lowercase");
+                             "string may only contain [a-z0-9_]");
 
   // Must start with a valid base ISA name.
   unsigned XLen = 0;
@@ -470,12 +476,25 @@ RISCVISAInfo::parseNormalizedArchString(StringRef Arch) {
       return createStringError(errc::invalid_argument,
                                "extension lacks version in expected format");
 
+    if (VersionStart == 0)
+      return createStringError(errc::invalid_argument,
+                               "missing extension name");
+
     StringRef ExtName = Prefix.slice(0, VersionStart);
     StringRef MajorVersionStr = Prefix.slice(VersionStart, StringRef::npos);
     if (MajorVersionStr.getAsInteger(10, MajorVersion))
       return createStringError(errc::invalid_argument,
                                "failed to parse major version number");
-    ISAInfo->addExtension(ExtName, {MajorVersion, MinorVersion});
+
+    if ((ExtName[0] == 'z' || ExtName[0] == 's' || ExtName[0] == 'x') &&
+        (ExtName.size() == 1 || isDigit(ExtName[1])))
+      return createStringError(errc::invalid_argument,
+                               "'" + Twine(ExtName[0]) +
+                                   "' must be followed by a letter");
+
+    if (!ISAInfo->addExtension(ExtName, {MajorVersion, MinorVersion}))
+      return createStringError(errc::invalid_argument,
+                               "duplicate extension '" + ExtName + "'");
   }
   ISAInfo->updateImpliedLengths();
   return std::move(ISAInfo);
@@ -584,10 +603,11 @@ llvm::Expected<std::unique_ptr<RISCVISAInfo>>
 RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
                               bool ExperimentalExtensionVersionCheck,
                               bool IgnoreUnknown) {
-  // RISC-V ISA strings must be lowercase.
-  if (llvm::any_of(Arch, isupper))
+  // RISC-V ISA strings must be [a-z0-9_]
+  if (!llvm::all_of(
+          Arch, [](char C) { return isDigit(C) || isLower(C) || C == '_'; }))
     return createStringError(errc::invalid_argument,
-                             "string must be lowercase");
+                             "string may only contain [a-z0-9_]");
 
   // ISA string must begin with rv32, rv64, or a profile.
   unsigned XLen = 0;

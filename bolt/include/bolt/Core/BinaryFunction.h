@@ -930,8 +930,7 @@ public:
     return const_cast<BinaryFunction *>(this)->getInstructionAtOffset(Offset);
   }
 
-  const std::optional<MCInst>
-  disassembleInstructionAtOffset(uint64_t Offset) const;
+  std::optional<MCInst> disassembleInstructionAtOffset(uint64_t Offset) const;
 
   /// Return offset for the first instruction. If there is data at the
   /// beginning of a function then offset of the first instruction could

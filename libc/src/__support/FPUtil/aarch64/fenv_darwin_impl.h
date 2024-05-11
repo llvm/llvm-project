@@ -63,39 +63,39 @@ struct FEnv {
   // located in a different place from FE_FLUSHTOZERO status bit relative to
   // the other exceptions.
   LIBC_INLINE static uint32_t exception_value_from_status(int status) {
-    return (status & FE_INVALID ? EX_INVALID : 0) |
-           (status & FE_DIVBYZERO ? EX_DIVBYZERO : 0) |
-           (status & FE_OVERFLOW ? EX_OVERFLOW : 0) |
-           (status & FE_UNDERFLOW ? EX_UNDERFLOW : 0) |
-           (status & FE_INEXACT ? EX_INEXACT : 0) |
-           (status & FE_FLUSHTOZERO ? EX_FLUSHTOZERO : 0);
+    return ((status & FE_INVALID) ? EX_INVALID : 0) |
+           ((status & FE_DIVBYZERO) ? EX_DIVBYZERO : 0) |
+           ((status & FE_OVERFLOW) ? EX_OVERFLOW : 0) |
+           ((status & FE_UNDERFLOW) ? EX_UNDERFLOW : 0) |
+           ((status & FE_INEXACT) ? EX_INEXACT : 0) |
+           ((status & FE_FLUSHTOZERO) ? EX_FLUSHTOZERO : 0);
   }
 
   LIBC_INLINE static uint32_t exception_value_from_control(int control) {
-    return (control & __fpcr_trap_invalid ? EX_INVALID : 0) |
-           (control & __fpcr_trap_divbyzero ? EX_DIVBYZERO : 0) |
-           (control & __fpcr_trap_overflow ? EX_OVERFLOW : 0) |
-           (control & __fpcr_trap_underflow ? EX_UNDERFLOW : 0) |
-           (control & __fpcr_trap_inexact ? EX_INEXACT : 0) |
-           (control & __fpcr_flush_to_zero ? EX_FLUSHTOZERO : 0);
+    return ((control & __fpcr_trap_invalid) ? EX_INVALID : 0) |
+           ((control & __fpcr_trap_divbyzero) ? EX_DIVBYZERO : 0) |
+           ((control & __fpcr_trap_overflow) ? EX_OVERFLOW : 0) |
+           ((control & __fpcr_trap_underflow) ? EX_UNDERFLOW : 0) |
+           ((control & __fpcr_trap_inexact) ? EX_INEXACT : 0) |
+           ((control & __fpcr_flush_to_zero) ? EX_FLUSHTOZERO : 0);
   }
 
   LIBC_INLINE static int exception_value_to_status(uint32_t excepts) {
-    return (excepts & EX_INVALID ? FE_INVALID : 0) |
-           (excepts & EX_DIVBYZERO ? FE_DIVBYZERO : 0) |
-           (excepts & EX_OVERFLOW ? FE_OVERFLOW : 0) |
-           (excepts & EX_UNDERFLOW ? FE_UNDERFLOW : 0) |
-           (excepts & EX_INEXACT ? FE_INEXACT : 0) |
-           (excepts & EX_FLUSHTOZERO ? FE_FLUSHTOZERO : 0);
+    return ((excepts & EX_INVALID) ? FE_INVALID : 0) |
+           ((excepts & EX_DIVBYZERO) ? FE_DIVBYZERO : 0) |
+           ((excepts & EX_OVERFLOW) ? FE_OVERFLOW : 0) |
+           ((excepts & EX_UNDERFLOW) ? FE_UNDERFLOW : 0) |
+           ((excepts & EX_INEXACT) ? FE_INEXACT : 0) |
+           ((excepts & EX_FLUSHTOZERO) ? FE_FLUSHTOZERO : 0);
   }
 
   LIBC_INLINE static int exception_value_to_control(uint32_t excepts) {
-    return (excepts & EX_INVALID ? __fpcr_trap_invalid : 0) |
-           (excepts & EX_DIVBYZERO ? __fpcr_trap_divbyzero : 0) |
-           (excepts & EX_OVERFLOW ? __fpcr_trap_overflow : 0) |
-           (excepts & EX_UNDERFLOW ? __fpcr_trap_underflow : 0) |
-           (excepts & EX_INEXACT ? __fpcr_trap_inexact : 0) |
-           (excepts & EX_FLUSHTOZERO ? __fpcr_flush_to_zero : 0);
+    return ((excepts & EX_INVALID) ? __fpcr_trap_invalid : 0) |
+           ((excepts & EX_DIVBYZERO) ? __fpcr_trap_divbyzero : 0) |
+           ((excepts & EX_OVERFLOW) ? __fpcr_trap_overflow : 0) |
+           ((excepts & EX_UNDERFLOW) ? __fpcr_trap_underflow : 0) |
+           ((excepts & EX_INEXACT) ? __fpcr_trap_inexact : 0) |
+           ((excepts & EX_FLUSHTOZERO) ? __fpcr_flush_to_zero : 0);
   }
 
   LIBC_INLINE static uint32_t get_control_word() { return __arm_rsr("fpcr"); }

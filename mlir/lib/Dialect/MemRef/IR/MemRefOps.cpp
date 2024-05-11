@@ -2079,6 +2079,13 @@ void ExpandShapeOp::getAsmResultNames(
   setNameFn(getResult(), "expand_shape");
 }
 
+LogicalResult ExpandShapeOp::reifyResultShapes(
+    OpBuilder &builder, ReifiedRankedShapedTypeDims &reifiedResultShapes) {
+  reifiedResultShapes = {
+      getMixedValues(getStaticOutputShape(), getOutputShape(), builder)};
+  return success();
+}
+
 /// Helper function for verifying the shape of ExpandShapeOp and ResultShapeOp
 /// result and operand. Layout maps are verified separately.
 ///
@@ -2345,6 +2352,16 @@ LogicalResult ExpandShapeOp::verify() {
            << llvm::count(getStaticOutputShape(), ShapedType::kDynamic)
            << " dynamic dims while output_shape has " << getOutputShape().size()
            << " values";
+
+  // Verify if provided output shapes are in agreement with output type.
+  DenseI64ArrayAttr staticOutputShapes = getStaticOutputShapeAttr();
+  ArrayRef<int64_t> resShape = getResult().getType().getShape();
+  unsigned staticShapeNum = 0;
+
+  for (auto [pos, shape] : llvm::enumerate(resShape))
+    if (!ShapedType::isDynamic(shape) &&
+        shape != staticOutputShapes[staticShapeNum++])
+      emitOpError("invalid output shape provided at pos ") << pos;
 
   return success();
 }

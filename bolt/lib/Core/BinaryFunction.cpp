@@ -1167,17 +1167,17 @@ void BinaryFunction::handleAArch64IndirectCall(MCInst &Instruction,
   }
 }
 
-const std::optional<MCInst>
+std::optional<MCInst>
 BinaryFunction::disassembleInstructionAtOffset(uint64_t Offset) const {
-  assert(CurrentState == State::Empty);
-  assert(Offset < MaxSize && "invalid offset");
+  assert(CurrentState == State::Empty && "Function should not be disassembled");
+  assert(Offset < MaxSize && "Invalid offset");
   ErrorOr<ArrayRef<unsigned char>> FunctionData = getData();
-  assert(FunctionData && "cannot get function as data");
+  assert(FunctionData && "Cannot get function as data");
   MCInst Instr;
   uint64_t InstrSize = 0;
   const uint64_t InstrAddress = getAddress() + Offset;
   if (BC.DisAsm->getInstruction(Instr, InstrSize, FunctionData->slice(Offset),
-                                 InstrAddress, nulls()))
+                                InstrAddress, nulls()))
     return Instr;
   return std::nullopt;
 }
