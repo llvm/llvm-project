@@ -8086,7 +8086,7 @@ Instruction *InstCombinerImpl::visitFCmpInst(FCmpInst &I) {
       case FCmpInst::FCMP_OEQ:
       case FCmpInst::FCMP_OGE:
       case FCmpInst::FCMP_OLE:
-        // fsub x, y --> isnnan(x, y) && isninf(x, y)
+        // Skip optimization: fsub x, y guaranteed isInf(x, y).
         if (!LHSI->hasNoNaNs() && !LHSI->hasNoInfs() &&
             !isKnownNeverInfinity(LHSI->getOperand(1), /*Depth=*/0,
                                   getSimplifyQuery().getWithInstruction(&I)) &&
