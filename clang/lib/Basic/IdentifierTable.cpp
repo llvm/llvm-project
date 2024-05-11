@@ -324,7 +324,7 @@ void IdentifierTable::AddKeywords(const LangOptions &LangOpts) {
 
   // Add the 'import' and 'module' contextual keyword.
   get("import").setModulesImport(true);
-  get("module").setModulesDecl(true);
+  get("module").setModulesDeclaration(true);
 }
 
 /// Checks if the specified token kind represents a keyword in the

@@ -525,10 +525,10 @@ public:
   }
 
   /// Determine whether this is the contextual keyword \c module.
-  bool isModulesDecl() const { return IsModulesDecl; }
+  bool isModulesDeclaration() const { return IsModulesDecl; }
 
   /// Set whether this identifier is the contextual keyword \c module.
-  void setModulesDecl(bool I) {
+  void setModulesDeclaration(bool I) {
     IsModulesDecl = I;
     if (I)
       NeedsHandleIdentifier = true;
@@ -758,7 +758,7 @@ public:
       II->setModulesImport(true);
 
     if (Name.equals("module"))
-      II->setModulesDecl(true);
+      II->setModulesDeclaration(true);
 
     return *II;
   }

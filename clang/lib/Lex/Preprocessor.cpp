@@ -863,12 +863,12 @@ bool Preprocessor::HandleIdentifier(Token &Identifier) {
     CurLexerCallback = CLK_LexAfterModuleImport;
   }
 
-  if ((II.isModulesDecl() || Identifier.is(tok::kw_module)) && !InMacroArgs &&
-      !DisableMacroExpansion &&
+  if ((II.isModulesDeclaration() || Identifier.is(tok::kw_module)) &&
+      !InMacroArgs && !DisableMacroExpansion &&
       (getLangOpts().Modules || getLangOpts().DebuggerSupport) &&
       CurLexerCallback != CLK_CachingLexer) {
-    ModuleDeclExpectsIdentifier = true;
-    ModuleDeclLexingPartitionName = false;
+    ModuleDeclarationExpectsIdentifier = true;
+    ModuleDeclarationLexingPartitionName = false;
     CurLexerCallback = CLK_LexAfterModuleDecl;
   }
   return true;
@@ -951,8 +951,8 @@ void Preprocessor::Lex(Token &Result) {
         } else if (Result.getIdentifierInfo() == getIdentifierInfo("module")) {
           TrackGMFState.handleModule(StdCXXImportSeqState.afterTopLevelSeq());
           ModuleDeclState.handleModule();
-          ModuleDeclExpectsIdentifier = true;
-          ModuleDeclLexingPartitionName = false;
+          ModuleDeclarationExpectsIdentifier = true;
+          ModuleDeclarationLexingPartitionName = false;
           CurLexerCallback = CLK_LexAfterModuleDecl;
           break;
         }
@@ -1376,7 +1376,7 @@ bool Preprocessor::LexAfterModuleDecl(Token &Result) {
 
   // If we don't expect an identifier but got an identifier, it's not a part of
   // module name.
-  if (!ModuleDeclExpectsIdentifier && Result.is(tok::identifier)) {
+  if (!ModuleDeclarationExpectsIdentifier && Result.is(tok::identifier)) {
     EnterTokens(Result, /*DisableMacroExpansion=*/false);
     return false;
   }
@@ -1387,33 +1387,36 @@ bool Preprocessor::LexAfterModuleDecl(Token &Result) {
   //
   // indicates a module directive. We already saw the 'module'
   // contextual keyword, so now we're looking for the identifiers.
-  if (ModuleDeclExpectsIdentifier && Result.is(tok::identifier)) {
+  if (ModuleDeclarationExpectsIdentifier && Result.is(tok::identifier)) {
     auto *MI = getMacroInfo(Result.getIdentifierInfo());
     if (MI && MI->isObjectLike()) {
       Diag(Result, diag::err_module_decl_cannot_be_macros)
-          << Result.getLocation() << ModuleDeclLexingPartitionName
+          << Result.getLocation() << ModuleDeclarationLexingPartitionName
           << Result.getIdentifierInfo();
     }
-    ModuleDeclExpectsIdentifier = false;
+    ModuleDeclarationExpectsIdentifier = false;
     CurLexerCallback = CLK_LexAfterModuleDecl;
     return true;
   }
 
   // If we're expecting a '.', a ':' or a ';', and we got a '.', then wait until
   // we see the next identifier.
-  if (!ModuleDeclExpectsIdentifier && Result.isOneOf(tok::period, tok::colon)) {
-    ModuleDeclExpectsIdentifier = true;
-    ModuleDeclLexingPartitionName = Result.is(tok::colon);
+  if (!ModuleDeclarationExpectsIdentifier &&
+      Result.isOneOf(tok::period, tok::colon)) {
+    ModuleDeclarationExpectsIdentifier = true;
+    ModuleDeclarationLexingPartitionName = Result.is(tok::colon);
     CurLexerCallback = CLK_LexAfterModuleDecl;
     return true;
   }
 
   // [cpp.module]/p2: where the pp-tokens (if any) shall not begin with a (
   // preprocessing token [...]
-  if (!ModuleDeclExpectsIdentifier && Result.is(tok::l_paren)) {
-    ModuleDeclExpectsIdentifier = false;
+  if (!ModuleDeclarationExpectsIdentifier && Result.is(tok::l_paren)) {
+    ModuleDeclarationExpectsIdentifier = false;
     Diag(Result, diag::err_unxepected_paren_in_module_decl)
-        << ModuleDeclLexingPartitionName;
+        << ModuleDeclarationLexingPartitionName;
+
+    // Skip until see one of module name separator '.', ':' or ';'.
     Token Tok;
     // We already have a '('.
     unsigned NumParens = 1;

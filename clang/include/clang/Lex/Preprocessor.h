@@ -611,10 +611,10 @@ private:
 
   /// Whether the module declaration expects an identifier next. Otherwise,
   /// it expects a '.' or ';'.
-  bool ModuleDeclExpectsIdentifier = false;
+  bool ModuleDeclarationExpectsIdentifier = false;
 
   /// Whether lexing the name of module partition declaration.
-  bool ModuleDeclLexingPartitionName = false;
+  bool ModuleDeclarationLexingPartitionName = false;
 
   /// The identifier and source location of the currently-active
   /// \#pragma clang arc_cf_code_audited begin.
