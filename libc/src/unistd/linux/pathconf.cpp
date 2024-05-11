@@ -18,10 +18,62 @@
 
 namespace LIBC_NAMESPACE {
 
+static long filesizebits(const struct statfs &s) {
+  switch (s.f_type) {
+  case JFFS2_SUPER_MAGIC:
+  case MSDOS_SUPER_MAGIC:
+  case NCP_SUPER_MAGIC:
+    return 32;
+  }
+  return 64;
+}
+
+static long link_max(const struct statfs &s) {
+  switch (s.f_type) {
+  case EXT2_SUPER_MAGIC:
+    return 32000;
+  case MINIX_SUPER_MAGIC:
+    return 250;
+  case MINIX2_SUPER_MAGIC:
+    return 65530;
+  case REISERFS_SUPER_MAGIC:
+    return 0xffff - 1000;
+  case UFS_MAGIC:
+    return 32000;
+  }
+  return LINK_MAX;
+}
+
+static long _2_symlinks(const struct statfs &s) {
+  switch (s.f_type) {
+  case ADFS_SUPER_MAGIC:
+  case BFS_MAGIC:
+  case CRAMFS_MAGIC:
+  case EFS_SUPER_MAGIC:
+  case MSDOS_SUPER_MAGIC:
+  case QNX4_SUPER_MAGIC:
+    return 0;
+  }
+  return 1;
+}
+
 static long pathconfig(const struct statfs &s, int name) {
   switch (name) {
   case _PC_LINK_MAX:
-    return s.f_type;
+    return link_max(s);
+
+  case _PC_FILESIZEBITS:
+    return filesizebits(s);
+
+  case _PC_2_SYMLINKS:
+    return _2_symlinks(s);
+
+  case _PC_REC_MIN_XFER_SIZE:
+    return s.f_bsize;
+
+  case _PC_ALLOC_SIZE_MIN:
+  case _PC_REC_XFER_ALIGN:
+    return s.f_frsize;
 
   case _PC_MAX_CANON:
     return _POSIX_MAX_CANON;
@@ -46,14 +98,19 @@ static long pathconfig(const struct statfs &s, int name) {
 
   case _PC_VDISABLE:
     return _POSIX_VDISABLE;
+
+  case _PC_ASYNC_IO:
+  case _PC_PRIO_IO:
+  case _PC_REC_INCR_XFER_SIZE:
+  case _PC_REC_MAX_XFER_SIZE:
+  case _PC_SYMLINK_MAX:
+  case _PC_SYNC_IO:
+  default:
+    return -1;
   }
 }
 
 LLVM_LIBC_FUNCTION(long, pathconf, (char *path, int name)) {
-  // struct statfs sb;
-  // if (fstatfs(PathFD(path), &sb) == -1) {
-  //   return -1;
-  // }
   cpp::optional<LinuxStatFs> result = linux_statfs(const char *path);
   if (!result.has_value()) {
     return -1;
