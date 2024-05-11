@@ -143,11 +143,9 @@ struct FuncBranchData {
   uint64_t getNumExecutedBranches() const;
 
   /// Aggregation helpers
-  template <typename KeyT>
-  using IndexTy = DenseMap<uint64_t, DenseMap<KeyT, size_t>>;
-  IndexTy<uint64_t> IntraIndex;
-  IndexTy<Location> InterIndex;
-  IndexTy<Location> EntryIndex;
+  DenseMap<uint64_t, DenseMap<uint64_t, size_t>> IntraIndex;
+  DenseMap<uint64_t, DenseMap<Location, size_t>> InterIndex;
+  DenseMap<uint64_t, DenseMap<Location, size_t>> EntryIndex;
 
   void bumpBranchCount(uint64_t OffsetFrom, uint64_t OffsetTo, uint64_t Count,
                        uint64_t Mispreds);

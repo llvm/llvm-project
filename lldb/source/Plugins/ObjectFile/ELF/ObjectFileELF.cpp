@@ -2356,13 +2356,30 @@ unsigned ObjectFileELF::ParseSymbols(Symtab *symtab, user_id_t start_id,
     bool symbol_size_valid =
         symbol.st_size != 0 || symbol.getType() != STT_FUNC;
 
+    bool is_trampoline = false;
+    if (arch.IsValid() && (arch.GetMachine() == llvm::Triple::aarch64)) {
+      // On AArch64, trampolines are registered as code.
+      // If we detect a trampoline (which starts with __AArch64ADRPThunk_ or
+      // __AArch64AbsLongThunk_) we register the symbol as a trampoline. This
+      // way we will be able to detect the trampoline when we step in a function
+      // and step through the trampoline.
+      if (symbol_type == eSymbolTypeCode) {
+        llvm::StringRef trampoline_name = mangled.GetName().GetStringRef();
+        if (trampoline_name.starts_with("__AArch64ADRPThunk_") ||
+            trampoline_name.starts_with("__AArch64AbsLongThunk_")) {
+          symbol_type = eSymbolTypeTrampoline;
+          is_trampoline = true;
+        }
+      }
+    }
+
     Symbol dc_symbol(
         i + start_id, // ID is the original symbol table index.
         mangled,
         symbol_type,                    // Type of this symbol
         is_global,                      // Is this globally visible?
         false,                          // Is this symbol debug info?
-        false,                          // Is this symbol a trampoline?
+        is_trampoline,                  // Is this symbol a trampoline?
         false,                          // Is this symbol artificial?
         AddressRange(symbol_section_sp, // Section in which this symbol is
                                         // defined or null.

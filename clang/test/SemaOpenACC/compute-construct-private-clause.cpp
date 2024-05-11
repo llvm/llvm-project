@@ -112,8 +112,7 @@ void TemplUses(T t, T (&arrayT)[I], V TemplComp) {
   while(true);
 #pragma acc parallel private(Pointer[:t])
   while(true);
-  // TODO OpenACC: When fixing sub-arrays, this should be permitted}}
-  // expected-error@+1{{expected expression}}
+  // expected-error@+1{{OpenACC sub-array length is unspecified and cannot be inferred because the subscripted value is not an array}}
 #pragma acc parallel private(Pointer[1:])
   while(true);
 }

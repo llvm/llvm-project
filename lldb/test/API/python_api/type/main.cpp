@@ -28,6 +28,7 @@ public:
     union U {
     } u;
     static constexpr long static_constexpr_field = 47;
+    static constexpr bool static_constexpr_bool_field = true;
     static int static_mutable_field;
     Task(int i, Task *n):
         id(i),
@@ -48,6 +49,9 @@ struct Pointer {};
 enum EnumType {};
 enum class ScopedEnumType {};
 enum class EnumUChar : unsigned char {};
+
+struct alignas(128) OverAlignedStruct {};
+OverAlignedStruct over_aligned_struct;
 
 int main (int argc, char const *argv[])
 {

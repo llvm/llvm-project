@@ -518,6 +518,16 @@ to re-analyze expressions and modify scope or symbols. You can check
 [Semantics.md](Semantics.md) for more details on how `ParseTree` is edited
 e.g. during the semantic checks.
 
+## FIR Optimizer Pass Pipeline Extension Points
+
+The default FIR optimizer pass pipeline `createDefaultFIROptimizerPassPipeline`
+in `flang/include/flang/Tools/CLOptions.inc` contains extension point callback
+invocations `invokeFIROptEarlyEPCallbacks`, `invokeFIRInlinerCallback`, and
+`invokeFIROptLastEPCallbacks` for Flang drivers to be able to insert additonal
+passes at different points of the default pass pipeline. An example use of these
+extension point callbacks is shown in `registerDefaultInlinerPass` to invoke the
+default inliner pass in `flang-new`.
+
 ## LLVM Pass Plugins
 
 Pass plugins are dynamic shared objects that consist of one or more LLVM IR
