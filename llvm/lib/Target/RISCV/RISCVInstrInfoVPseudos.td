@@ -355,24 +355,24 @@ defset list<VTypeInfo> AllVectors = {
                                  V_M8, f64, FPR64>;
     }
   }
-}
 
-defset list<VTypeInfo> AllBFloatVectors = {
-  defset list<VTypeInfo> NoGroupBFloatVectors = {
-    defset list<VTypeInfo> FractionalGroupBFloatVectors = {
-      def VBF16MF4: VTypeInfo<vbfloat16mf4_t, vbool64_t, 16, V_MF4, bf16, FPR16>;
-      def VBF16MF2: VTypeInfo<vbfloat16mf2_t, vbool32_t, 16, V_MF2, bf16, FPR16>;
+  defset list<VTypeInfo> AllBFloatVectors = {
+    defset list<VTypeInfo> NoGroupBFloatVectors = {
+      defset list<VTypeInfo> FractionalGroupBFloatVectors = {
+        def VBF16MF4: VTypeInfo<vbfloat16mf4_t, vbool64_t, 16, V_MF4, bf16, FPR16>;
+        def VBF16MF2: VTypeInfo<vbfloat16mf2_t, vbool32_t, 16, V_MF2, bf16, FPR16>;
+      }
+      def VBF16M1:  VTypeInfo<vbfloat16m1_t, vbool16_t, 16, V_M1, bf16, FPR16>;
     }
-    def VBF16M1:  VTypeInfo<vbfloat16m1_t, vbool16_t, 16, V_M1, bf16, FPR16>;
-  }
-
-  defset list<GroupVTypeInfo> GroupBFloatVectors = {
-    def VBF16M2: GroupVTypeInfo<vbfloat16m2_t, vbfloat16m1_t, vbool8_t, 16,
-                                V_M2, bf16, FPR16>;
-    def VBF16M4: GroupVTypeInfo<vbfloat16m4_t, vbfloat16m1_t, vbool4_t, 16,
-                                V_M4, bf16, FPR16>;
-    def VBF16M8: GroupVTypeInfo<vbfloat16m8_t, vbfloat16m1_t, vbool2_t, 16,
-                                V_M8, bf16, FPR16>;
+  
+    defset list<GroupVTypeInfo> GroupBFloatVectors = {
+      def VBF16M2: GroupVTypeInfo<vbfloat16m2_t, vbfloat16m1_t, vbool8_t, 16,
+                                  V_M2, bf16, FPR16>;
+      def VBF16M4: GroupVTypeInfo<vbfloat16m4_t, vbfloat16m1_t, vbool4_t, 16,
+                                  V_M4, bf16, FPR16>;
+      def VBF16M8: GroupVTypeInfo<vbfloat16m8_t, vbfloat16m1_t, vbool2_t, 16,
+                                  V_M8, bf16, FPR16>;
+    }
   }
 }
 

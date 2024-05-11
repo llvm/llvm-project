@@ -150,7 +150,7 @@
 // CHECK-FEB-IGNORE: "-fno-rounding-math"
 // CHECK-FEB-IGNORE: "-ffp-exception-behavior=ignore"
 
-// RUN: %clang -### -nostdinc -ffast-math -ffp-model=fast -c %s 2>&1 \
+// RUN: %clang -### -nostdinc -Werror -ffast-math -ffp-model=fast -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-FASTMATH-FPM-FAST %s
 // CHECK-FASTMATH-FPM-FAST: "-cc1"
 // CHECK-FASTMATH-FPM-FAST: "-menable-no-infs"
@@ -165,7 +165,7 @@
 // CHECK-FASTMATH-FPM-FAST: "-ffast-math"
 // CHECK-FASTMATH-FPM-FAST: "-ffinite-math-only"
 
-// RUN: %clang -### -nostdinc -ffast-math -ffp-model=precise -c %s 2>&1 \
+// RUN: %clang -### -nostdinc -Werror -ffast-math -ffp-model=precise -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-FASTMATH-FPM-PRECISE %s
 // CHECK-FASTMATH-FPM-PRECISE:     "-cc1"
 // CHECK-FASTMATH-FPM-PRECISE-NOT: "-menable-no-infs"
@@ -180,7 +180,7 @@
 // CHECK-FASTMATH-FPM-PRECISE-NOT: "-ffast-math"
 // CHECK-FASTMATH-FPM-PRECISE-NOT: "-ffinite-math-only"
 
-// RUN: %clang -### -nostdinc -ffast-math -ffp-model=strict -c %s 2>&1 \
+// RUN: %clang -### -nostdinc -Werror -ffast-math -ffp-model=strict -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-FASTMATH-FPM-STRICT %s
 // CHECK-FASTMATH-FPM-STRICT:     "-cc1"
 // CHECK-FASTMATH-FPM-STRICT-NOT: "-menable-no-infs"

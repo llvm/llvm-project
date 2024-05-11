@@ -1200,6 +1200,31 @@ ASTFileSignature ASTWriter::createSignatureForNamedModule() const {
   for (auto [ExportImported, _] : WritingModule->Exports)
     Hasher.update(ExportImported->Signature);
 
+  // We combine all the used modules to make sure the signature is precise.
+  // Consider the case like:
+  //
+  // // a.cppm
+  // export module a;
+  // export inline int a() { ... }
+  //
+  // // b.cppm
+  // export module b;
+  // import a;
+  // export inline int b() { return a(); }
+  //
+  // Since both `a()` and `b()` are inline, we need to make sure the BMI of
+  // `b.pcm` will change after the implementation of `a()` changes. We can't
+  // get that naturally since we won't record the body of `a()` during the
+  // writing process. We can't reuse ODRHash here since ODRHash won't calculate
+  // the called function recursively. So ODRHash will be problematic if `a()`
+  // calls other inline functions.
+  //
+  // Probably we can solve this by a new hash mechanism. But the safety and
+  // efficiency may a problem too. Here we just combine the hash value of the
+  // used modules conservatively.
+  for (Module *M : TouchedTopLevelModules)
+    Hasher.update(M->Signature);
+
   return ASTFileSignature::create(Hasher.result());
 }
 
@@ -2729,8 +2754,10 @@ void ASTWriter::WritePreprocessorDetail(PreprocessingRecord &PPRec,
 
     uint64_t Offset = Stream.GetCurrentBitNo() - MacroOffsetsBase;
     assert((Offset >> 32) == 0 && "Preprocessed entity offset too large");
-    PreprocessedEntityOffsets.push_back(
-        PPEntityOffset(getAdjustedRange((*E)->getSourceRange()), Offset));
+    SourceRange R = getAdjustedRange((*E)->getSourceRange());
+    PreprocessedEntityOffsets.emplace_back(
+        getRawSourceLocationEncoding(R.getBegin()),
+        getRawSourceLocationEncoding(R.getEnd()), Offset);
 
     if (auto *MD = dyn_cast<MacroDefinitionRecord>(*E)) {
       // Record this macro definition's ID.
@@ -2797,7 +2824,9 @@ void ASTWriter::WritePreprocessorDetail(PreprocessingRecord &PPRec,
     std::vector<PPSkippedRange> SerializedSkippedRanges;
     SerializedSkippedRanges.reserve(SkippedRanges.size());
     for (auto const& Range : SkippedRanges)
-      SerializedSkippedRanges.emplace_back(Range);
+      SerializedSkippedRanges.emplace_back(
+          getRawSourceLocationEncoding(Range.getBegin()),
+          getRawSourceLocationEncoding(Range.getEnd()));
 
     using namespace llvm;
     auto Abbrev = std::make_shared<BitCodeAbbrev>();
@@ -2963,8 +2992,8 @@ void ASTWriter::WriteSubmodules(Module *WritingModule) {
       ParentID = SubmoduleIDs[Mod->Parent];
     }
 
-    uint64_t DefinitionLoc =
-        SourceLocationEncoding::encode(getAdjustedLocation(Mod->DefinitionLoc));
+    SourceLocationEncoding::RawLocEncoding DefinitionLoc =
+        getRawSourceLocationEncoding(getAdjustedLocation(Mod->DefinitionLoc));
 
     // Emit the definition of the block.
     {
@@ -2988,8 +3017,8 @@ void ASTWriter::WriteSubmodules(Module *WritingModule) {
 
     // Emit the requirements.
     for (const auto &R : Mod->Requirements) {
-      RecordData::value_type Record[] = {SUBMODULE_REQUIRES, R.second};
-      Stream.EmitRecordWithBlob(RequiresAbbrev, Record, R.first);
+      RecordData::value_type Record[] = {SUBMODULE_REQUIRES, R.RequiredState};
+      Stream.EmitRecordWithBlob(RequiresAbbrev, Record, R.FeatureName);
     }
 
     // Emit the umbrella header, if there is one.
@@ -3247,7 +3276,7 @@ void ASTWriter::WriteType(QualType T) {
     TypeOffsets.emplace_back(Offset);
   else if (TypeOffsets.size() < Index) {
     TypeOffsets.resize(Index + 1);
-    TypeOffsets[Index].setBitOffset(Offset);
+    TypeOffsets[Index].set(Offset);
   } else {
     llvm_unreachable("Types emitted in wrong order");
   }
@@ -5380,7 +5409,6 @@ ASTFileSignature ASTWriter::WriteASTCore(Sema &SemaRef, StringRef isysroot,
 
         // These values should be unique within a chain, since they will be read
         // as keys into ContinuousRangeMaps.
-        writeBaseIDOrNone(M.SLocEntryBaseOffset, M.LocalNumSLocEntries);
         writeBaseIDOrNone(M.BaseIdentifierID, M.LocalNumIdentifiers);
         writeBaseIDOrNone(M.BaseMacroID, M.LocalNumMacros);
         writeBaseIDOrNone(M.BasePreprocessedEntityID,
@@ -5873,10 +5901,34 @@ void ASTWriter::AddFileID(FileID FID, RecordDataImpl &Record) {
   Record.push_back(getAdjustedFileID(FID).getOpaqueValue());
 }
 
+SourceLocationEncoding::RawLocEncoding
+ASTWriter::getRawSourceLocationEncoding(SourceLocation Loc, LocSeq *Seq) {
+  unsigned BaseOffset = 0;
+  unsigned ModuleFileIndex = 0;
+
+  // See SourceLocationEncoding.h for the encoding details.
+  if (Context->getSourceManager().isLoadedSourceLocation(Loc) &&
+      Loc.isValid()) {
+    assert(getChain());
+    auto SLocMapI = getChain()->GlobalSLocOffsetMap.find(
+        SourceManager::MaxLoadedOffset - Loc.getOffset() - 1);
+    assert(SLocMapI != getChain()->GlobalSLocOffsetMap.end() &&
+           "Corrupted global sloc offset map");
+    ModuleFile *F = SLocMapI->second;
+    BaseOffset = F->SLocEntryBaseOffset - 2;
+    // 0 means the location is not loaded. So we need to add 1 to the index to
+    // make it clear.
+    ModuleFileIndex = F->Index + 1;
+    assert(&getChain()->getModuleManager()[F->Index] == F);
+  }
+
+  return SourceLocationEncoding::encode(Loc, BaseOffset, ModuleFileIndex, Seq);
+}
+
 void ASTWriter::AddSourceLocation(SourceLocation Loc, RecordDataImpl &Record,
                                   SourceLocationSequence *Seq) {
   Loc = getAdjustedLocation(Loc);
-  Record.push_back(SourceLocationEncoding::encode(Loc, Seq));
+  Record.push_back(getRawSourceLocationEncoding(Loc, Seq));
 }
 
 void ASTWriter::AddSourceRange(SourceRange Range, RecordDataImpl &Record,
@@ -6085,8 +6137,12 @@ LocalDeclID ASTWriter::GetDeclRef(const Decl *D) {
 
   // If D comes from an AST file, its declaration ID is already known and
   // fixed.
-  if (D->isFromASTFile())
+  if (D->isFromASTFile()) {
+    if (isWritingStdCXXNamedModules() && D->getOwningModule())
+      TouchedTopLevelModules.insert(D->getOwningModule()->getTopLevelModule());
+
     return LocalDeclID(D->getGlobalID());
+  }
 
   assert(!(reinterpret_cast<uintptr_t>(D) & 0x01) && "Invalid decl pointer");
   LocalDeclID &ID = DeclIDs[D];
@@ -7735,6 +7791,12 @@ void ASTRecordWriter::writeOpenACCVarList(const OpenACCClauseWithVarList *C) {
     AddStmt(E);
 }
 
+void ASTRecordWriter::writeOpenACCIntExprList(ArrayRef<Expr *> Exprs) {
+  writeUInt32(Exprs.size());
+  for (Expr *E : Exprs)
+    AddStmt(E);
+}
+
 void ASTRecordWriter::writeOpenACCClause(const OpenACCClause *C) {
   writeEnum(C->getClauseKind());
   writeSourceLocation(C->getBeginLoc());
@@ -7754,7 +7816,7 @@ void ASTRecordWriter::writeOpenACCClause(const OpenACCClause *C) {
     return;
   }
   case OpenACCClauseKind::Self: {
-    const auto *SC = cast<OpenACCIfClause>(C);
+    const auto *SC = cast<OpenACCSelfClause>(C);
     writeSourceLocation(SC->getLParenLoc());
     writeBool(SC->hasConditionExpr());
     if (SC->hasConditionExpr())
@@ -7793,6 +7855,85 @@ void ASTRecordWriter::writeOpenACCClause(const OpenACCClause *C) {
     writeOpenACCVarList(FPC);
     return;
   }
+  case OpenACCClauseKind::Attach: {
+    const auto *AC = cast<OpenACCAttachClause>(C);
+    writeSourceLocation(AC->getLParenLoc());
+    writeOpenACCVarList(AC);
+    return;
+  }
+  case OpenACCClauseKind::DevicePtr: {
+    const auto *DPC = cast<OpenACCDevicePtrClause>(C);
+    writeSourceLocation(DPC->getLParenLoc());
+    writeOpenACCVarList(DPC);
+    return;
+  }
+  case OpenACCClauseKind::NoCreate: {
+    const auto *NCC = cast<OpenACCNoCreateClause>(C);
+    writeSourceLocation(NCC->getLParenLoc());
+    writeOpenACCVarList(NCC);
+    return;
+  }
+  case OpenACCClauseKind::Present: {
+    const auto *PC = cast<OpenACCPresentClause>(C);
+    writeSourceLocation(PC->getLParenLoc());
+    writeOpenACCVarList(PC);
+    return;
+  }
+  case OpenACCClauseKind::Copy:
+  case OpenACCClauseKind::PCopy:
+  case OpenACCClauseKind::PresentOrCopy: {
+    const auto *CC = cast<OpenACCCopyClause>(C);
+    writeSourceLocation(CC->getLParenLoc());
+    writeOpenACCVarList(CC);
+    return;
+  }
+  case OpenACCClauseKind::CopyIn:
+  case OpenACCClauseKind::PCopyIn:
+  case OpenACCClauseKind::PresentOrCopyIn: {
+    const auto *CIC = cast<OpenACCCopyInClause>(C);
+    writeSourceLocation(CIC->getLParenLoc());
+    writeBool(CIC->isReadOnly());
+    writeOpenACCVarList(CIC);
+    return;
+  }
+  case OpenACCClauseKind::CopyOut:
+  case OpenACCClauseKind::PCopyOut:
+  case OpenACCClauseKind::PresentOrCopyOut: {
+    const auto *COC = cast<OpenACCCopyOutClause>(C);
+    writeSourceLocation(COC->getLParenLoc());
+    writeBool(COC->isZero());
+    writeOpenACCVarList(COC);
+    return;
+  }
+  case OpenACCClauseKind::Create:
+  case OpenACCClauseKind::PCreate:
+  case OpenACCClauseKind::PresentOrCreate: {
+    const auto *CC = cast<OpenACCCreateClause>(C);
+    writeSourceLocation(CC->getLParenLoc());
+    writeBool(CC->isZero());
+    writeOpenACCVarList(CC);
+    return;
+  }
+  case OpenACCClauseKind::Async: {
+    const auto *AC = cast<OpenACCAsyncClause>(C);
+    writeSourceLocation(AC->getLParenLoc());
+    writeBool(AC->hasIntExpr());
+    if (AC->hasIntExpr())
+      AddStmt(const_cast<Expr *>(AC->getIntExpr()));
+    return;
+  }
+  case OpenACCClauseKind::Wait: {
+    const auto *WC = cast<OpenACCWaitClause>(C);
+    writeSourceLocation(WC->getLParenLoc());
+    writeBool(WC->getDevNumExpr());
+    if (const Expr *DNE = WC->getDevNumExpr())
+      AddStmt(const_cast<Expr *>(DNE));
+    writeSourceLocation(WC->getQueuesLoc());
+
+    writeOpenACCIntExprList(WC->getQueueIdExprs());
+    return;
+  }
+
   case OpenACCClauseKind::Finalize:
   case OpenACCClauseKind::IfPresent:
   case OpenACCClauseKind::Seq:
@@ -7801,21 +7942,13 @@ void ASTRecordWriter::writeOpenACCClause(const OpenACCClause *C) {
   case OpenACCClauseKind::Worker:
   case OpenACCClauseKind::Vector:
   case OpenACCClauseKind::NoHost:
-  case OpenACCClauseKind::Copy:
   case OpenACCClauseKind::UseDevice:
-  case OpenACCClauseKind::Attach:
   case OpenACCClauseKind::Delete:
   case OpenACCClauseKind::Detach:
   case OpenACCClauseKind::Device:
-  case OpenACCClauseKind::DevicePtr:
   case OpenACCClauseKind::DeviceResident:
   case OpenACCClauseKind::Host:
   case OpenACCClauseKind::Link:
-  case OpenACCClauseKind::NoCreate:
-  case OpenACCClauseKind::Present:
-  case OpenACCClauseKind::CopyOut:
-  case OpenACCClauseKind::CopyIn:
-  case OpenACCClauseKind::Create:
   case OpenACCClauseKind::Reduction:
   case OpenACCClauseKind::Collapse:
   case OpenACCClauseKind::Bind:
@@ -7823,10 +7956,8 @@ void ASTRecordWriter::writeOpenACCClause(const OpenACCClause *C) {
   case OpenACCClauseKind::DefaultAsync:
   case OpenACCClauseKind::DeviceType:
   case OpenACCClauseKind::DType:
-  case OpenACCClauseKind::Async:
   case OpenACCClauseKind::Tile:
   case OpenACCClauseKind::Gang:
-  case OpenACCClauseKind::Wait:
   case OpenACCClauseKind::Invalid:
     llvm_unreachable("Clause serialization not yet implemented");
   }

@@ -1025,6 +1025,7 @@ let IntrProperties = [IntrNoMem, IntrSpeculatable, IntrWillReturn] in {
   def int_powi : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>, llvm_anyint_ty]>;
   def int_sin  : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
   def int_cos  : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
+  def int_tan  : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
   def int_pow  : DefaultAttrsIntrinsic<[llvm_anyfloat_ty],
                            [LLVMMatchType<0>, LLVMMatchType<0>]>;
   def int_log  : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
@@ -2242,6 +2243,16 @@ let IntrProperties = [IntrNoMem, IntrNoSync, IntrWillReturn] in {
                                llvm_anyvector_ty,
                                LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
                                llvm_i32_ty]>;
+  def int_vp_reduce_fmaximum : DefaultAttrsIntrinsic<[LLVMVectorElementType<0>],
+                                 [ LLVMVectorElementType<0>,
+                                   llvm_anyvector_ty,
+                                   LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                                   llvm_i32_ty]>;
+  def int_vp_reduce_fminimum : DefaultAttrsIntrinsic<[LLVMVectorElementType<0>],
+                                 [ LLVMVectorElementType<0>,
+                                   llvm_anyvector_ty,
+                                   LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                                   llvm_i32_ty]>;
 }
 
 let IntrProperties = [IntrNoMem, IntrNoSync, IntrWillReturn, ImmArg<ArgIndex<1>>] in {

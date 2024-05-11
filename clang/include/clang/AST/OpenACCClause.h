@@ -26,14 +26,17 @@ class OpenACCClause {
 protected:
   OpenACCClause(OpenACCClauseKind K, SourceLocation BeginLoc,
                 SourceLocation EndLoc)
-      : Kind(K), Location(BeginLoc, EndLoc) {}
+      : Kind(K), Location(BeginLoc, EndLoc) {
+    assert(!BeginLoc.isInvalid() && !EndLoc.isInvalid() &&
+           "Begin and end location must be valid for OpenACCClause");
+      }
 
 public:
   OpenACCClauseKind getClauseKind() const { return Kind; }
   SourceLocation getBeginLoc() const { return Location.getBegin(); }
   SourceLocation getEndLoc() const { return Location.getEnd(); }
 
-  static bool classof(const OpenACCClause *) { return true; }
+  static bool classof(const OpenACCClause *) { return false; }
 
   using child_iterator = StmtIterator;
   using const_child_iterator = ConstStmtIterator;
@@ -60,6 +63,8 @@ protected:
       : OpenACCClause(K, BeginLoc, EndLoc), LParenLoc(LParenLoc) {}
 
 public:
+  static bool classof(const OpenACCClause *C);
+
   SourceLocation getLParenLoc() const { return LParenLoc; }
 
   child_range children() {
@@ -89,6 +94,9 @@ protected:
   }
 
 public:
+  static bool classof(const OpenACCClause *C) {
+    return C->getClauseKind() == OpenACCClauseKind::Default;
+  }
   OpenACCDefaultClauseKind getDefaultClauseKind() const {
     return DefaultClauseKind;
   }
@@ -113,6 +121,8 @@ protected:
         ConditionExpr(ConditionExpr) {}
 
 public:
+  static bool classof(const OpenACCClause *C);
+
   bool hasConditionExpr() const { return ConditionExpr; }
   const Expr *getConditionExpr() const { return ConditionExpr; }
   Expr *getConditionExpr() { return ConditionExpr; }
@@ -140,6 +150,9 @@ protected:
                   Expr *ConditionExpr, SourceLocation EndLoc);
 
 public:
+  static bool classof(const OpenACCClause *C) {
+    return C->getClauseKind() == OpenACCClauseKind::If;
+  }
   static OpenACCIfClause *Create(const ASTContext &C, SourceLocation BeginLoc,
                                  SourceLocation LParenLoc, Expr *ConditionExpr,
                                  SourceLocation EndLoc);
@@ -151,6 +164,9 @@ class OpenACCSelfClause : public OpenACCClauseWithCondition {
                     Expr *ConditionExpr, SourceLocation EndLoc);
 
 public:
+  static bool classof(const OpenACCClause *C) {
+    return C->getClauseKind() == OpenACCClauseKind::Self;
+  }
   static OpenACCSelfClause *Create(const ASTContext &C, SourceLocation BeginLoc,
                                    SourceLocation LParenLoc,
                                    Expr *ConditionExpr, SourceLocation EndLoc);
@@ -177,6 +193,7 @@ protected:
   llvm::ArrayRef<Expr *> getExprs() const { return Exprs; }
 
 public:
+  static bool classof(const OpenACCClause *C);
   child_range children() {
     return child_range(reinterpret_cast<Stmt **>(Exprs.begin()),
                        reinterpret_cast<Stmt **>(Exprs.end()));
@@ -186,6 +203,49 @@ public:
     child_range Children =
         const_cast<OpenACCClauseWithExprs *>(this)->children();
     return const_child_range(Children.begin(), Children.end());
+  }
+};
+
+// Represents the 'devnum' and expressions lists for the 'wait' clause.
+class OpenACCWaitClause final
+    : public OpenACCClauseWithExprs,
+      public llvm::TrailingObjects<OpenACCWaitClause, Expr *> {
+  SourceLocation QueuesLoc;
+  OpenACCWaitClause(SourceLocation BeginLoc, SourceLocation LParenLoc,
+                    Expr *DevNumExpr, SourceLocation QueuesLoc,
+                    ArrayRef<Expr *> QueueIdExprs, SourceLocation EndLoc)
+      : OpenACCClauseWithExprs(OpenACCClauseKind::Wait, BeginLoc, LParenLoc,
+                               EndLoc),
+        QueuesLoc(QueuesLoc) {
+    // The first element of the trailing storage is always the devnum expr,
+    // whether it is used or not.
+    std::uninitialized_copy(&DevNumExpr, &DevNumExpr + 1,
+                            getTrailingObjects<Expr *>());
+    std::uninitialized_copy(QueueIdExprs.begin(), QueueIdExprs.end(),
+                            getTrailingObjects<Expr *>() + 1);
+    setExprs(
+        MutableArrayRef(getTrailingObjects<Expr *>(), QueueIdExprs.size() + 1));
+  }
+
+public:
+  static bool classof(const OpenACCClause *C) {
+    return C->getClauseKind() == OpenACCClauseKind::Wait;
+  }
+  static OpenACCWaitClause *Create(const ASTContext &C, SourceLocation BeginLoc,
+                                   SourceLocation LParenLoc, Expr *DevNumExpr,
+                                   SourceLocation QueuesLoc,
+                                   ArrayRef<Expr *> QueueIdExprs,
+                                   SourceLocation EndLoc);
+
+  bool hasQueuesTag() const { return !QueuesLoc.isInvalid(); }
+  SourceLocation getQueuesLoc() const { return QueuesLoc; }
+  bool hasDevNumExpr() const { return getExprs()[0]; }
+  Expr *getDevNumExpr() const { return getExprs()[0]; }
+  llvm::ArrayRef<Expr *> getQueueIdExprs() {
+    return OpenACCClauseWithExprs::getExprs().drop_front();
+  }
+  llvm::ArrayRef<Expr *> getQueueIdExprs() const {
+    return OpenACCClauseWithExprs::getExprs().drop_front();
   }
 };
 
@@ -203,6 +263,9 @@ class OpenACCNumGangsClause final
   }
 
 public:
+  static bool classof(const OpenACCClause *C) {
+    return C->getClauseKind() == OpenACCClauseKind::NumGangs;
+  }
   static OpenACCNumGangsClause *
   Create(const ASTContext &C, SourceLocation BeginLoc, SourceLocation LParenLoc,
          ArrayRef<Expr *> IntExprs, SourceLocation EndLoc);
@@ -227,10 +290,12 @@ protected:
                                  SourceLocation EndLoc)
       : OpenACCClauseWithExprs(K, BeginLoc, LParenLoc, EndLoc),
         IntExpr(IntExpr) {
-    setExprs(MutableArrayRef<Expr *>{&this->IntExpr, 1});
+    if (IntExpr)
+      setExprs(MutableArrayRef<Expr *>{&this->IntExpr, 1});
   }
 
 public:
+  static bool classof(const OpenACCClause *C);
   bool hasIntExpr() const { return !getExprs().empty(); }
   const Expr *getIntExpr() const {
     return hasIntExpr() ? getExprs()[0] : nullptr;
@@ -244,6 +309,9 @@ class OpenACCNumWorkersClause : public OpenACCClauseWithSingleIntExpr {
                           Expr *IntExpr, SourceLocation EndLoc);
 
 public:
+  static bool classof(const OpenACCClause *C) {
+    return C->getClauseKind() == OpenACCClauseKind::NumWorkers;
+  }
   static OpenACCNumWorkersClause *Create(const ASTContext &C,
                                          SourceLocation BeginLoc,
                                          SourceLocation LParenLoc,
@@ -255,9 +323,26 @@ class OpenACCVectorLengthClause : public OpenACCClauseWithSingleIntExpr {
                             Expr *IntExpr, SourceLocation EndLoc);
 
 public:
+  static bool classof(const OpenACCClause *C) {
+    return C->getClauseKind() == OpenACCClauseKind::VectorLength;
+  }
   static OpenACCVectorLengthClause *
   Create(const ASTContext &C, SourceLocation BeginLoc, SourceLocation LParenLoc,
          Expr *IntExpr, SourceLocation EndLoc);
+};
+
+class OpenACCAsyncClause : public OpenACCClauseWithSingleIntExpr {
+  OpenACCAsyncClause(SourceLocation BeginLoc, SourceLocation LParenLoc,
+                     Expr *IntExpr, SourceLocation EndLoc);
+
+public:
+  static bool classof(const OpenACCClause *C) {
+    return C->getClauseKind() == OpenACCClauseKind::Async;
+  }
+  static OpenACCAsyncClause *Create(const ASTContext &C,
+                                    SourceLocation BeginLoc,
+                                    SourceLocation LParenLoc, Expr *IntExpr,
+                                    SourceLocation EndLoc);
 };
 
 /// Represents a clause with one or more 'var' objects, represented as an expr,
@@ -271,6 +356,7 @@ protected:
       : OpenACCClauseWithExprs(K, BeginLoc, LParenLoc, EndLoc) {}
 
 public:
+  static bool classof(const OpenACCClause *C);
   ArrayRef<Expr *> getVarList() { return getExprs(); }
   ArrayRef<Expr *> getVarList() const { return getExprs(); }
 };
@@ -289,6 +375,9 @@ class OpenACCPrivateClause final
   }
 
 public:
+  static bool classof(const OpenACCClause *C) {
+    return C->getClauseKind() == OpenACCClauseKind::Private;
+  }
   static OpenACCPrivateClause *
   Create(const ASTContext &C, SourceLocation BeginLoc, SourceLocation LParenLoc,
          ArrayRef<Expr *> VarList, SourceLocation EndLoc);
@@ -308,8 +397,224 @@ class OpenACCFirstPrivateClause final
   }
 
 public:
+  static bool classof(const OpenACCClause *C) {
+    return C->getClauseKind() == OpenACCClauseKind::FirstPrivate;
+  }
   static OpenACCFirstPrivateClause *
   Create(const ASTContext &C, SourceLocation BeginLoc, SourceLocation LParenLoc,
+         ArrayRef<Expr *> VarList, SourceLocation EndLoc);
+};
+
+class OpenACCDevicePtrClause final
+    : public OpenACCClauseWithVarList,
+      public llvm::TrailingObjects<OpenACCDevicePtrClause, Expr *> {
+
+  OpenACCDevicePtrClause(SourceLocation BeginLoc, SourceLocation LParenLoc,
+                         ArrayRef<Expr *> VarList, SourceLocation EndLoc)
+      : OpenACCClauseWithVarList(OpenACCClauseKind::DevicePtr, BeginLoc,
+                                 LParenLoc, EndLoc) {
+    std::uninitialized_copy(VarList.begin(), VarList.end(),
+                            getTrailingObjects<Expr *>());
+    setExprs(MutableArrayRef(getTrailingObjects<Expr *>(), VarList.size()));
+  }
+
+public:
+  static bool classof(const OpenACCClause *C) {
+    return C->getClauseKind() == OpenACCClauseKind::DevicePtr;
+  }
+  static OpenACCDevicePtrClause *
+  Create(const ASTContext &C, SourceLocation BeginLoc, SourceLocation LParenLoc,
+         ArrayRef<Expr *> VarList, SourceLocation EndLoc);
+};
+
+class OpenACCAttachClause final
+    : public OpenACCClauseWithVarList,
+      public llvm::TrailingObjects<OpenACCAttachClause, Expr *> {
+
+  OpenACCAttachClause(SourceLocation BeginLoc, SourceLocation LParenLoc,
+                      ArrayRef<Expr *> VarList, SourceLocation EndLoc)
+      : OpenACCClauseWithVarList(OpenACCClauseKind::Attach, BeginLoc, LParenLoc,
+                                 EndLoc) {
+    std::uninitialized_copy(VarList.begin(), VarList.end(),
+                            getTrailingObjects<Expr *>());
+    setExprs(MutableArrayRef(getTrailingObjects<Expr *>(), VarList.size()));
+  }
+
+public:
+  static bool classof(const OpenACCClause *C) {
+    return C->getClauseKind() == OpenACCClauseKind::Attach;
+  }
+  static OpenACCAttachClause *
+  Create(const ASTContext &C, SourceLocation BeginLoc, SourceLocation LParenLoc,
+         ArrayRef<Expr *> VarList, SourceLocation EndLoc);
+};
+
+class OpenACCNoCreateClause final
+    : public OpenACCClauseWithVarList,
+      public llvm::TrailingObjects<OpenACCNoCreateClause, Expr *> {
+
+  OpenACCNoCreateClause(SourceLocation BeginLoc, SourceLocation LParenLoc,
+                        ArrayRef<Expr *> VarList, SourceLocation EndLoc)
+      : OpenACCClauseWithVarList(OpenACCClauseKind::NoCreate, BeginLoc,
+                                 LParenLoc, EndLoc) {
+    std::uninitialized_copy(VarList.begin(), VarList.end(),
+                            getTrailingObjects<Expr *>());
+    setExprs(MutableArrayRef(getTrailingObjects<Expr *>(), VarList.size()));
+  }
+
+public:
+  static bool classof(const OpenACCClause *C) {
+    return C->getClauseKind() == OpenACCClauseKind::NoCreate;
+  }
+  static OpenACCNoCreateClause *
+  Create(const ASTContext &C, SourceLocation BeginLoc, SourceLocation LParenLoc,
+         ArrayRef<Expr *> VarList, SourceLocation EndLoc);
+};
+
+class OpenACCPresentClause final
+    : public OpenACCClauseWithVarList,
+      public llvm::TrailingObjects<OpenACCPresentClause, Expr *> {
+
+  OpenACCPresentClause(SourceLocation BeginLoc, SourceLocation LParenLoc,
+                       ArrayRef<Expr *> VarList, SourceLocation EndLoc)
+      : OpenACCClauseWithVarList(OpenACCClauseKind::Present, BeginLoc,
+                                 LParenLoc, EndLoc) {
+    std::uninitialized_copy(VarList.begin(), VarList.end(),
+                            getTrailingObjects<Expr *>());
+    setExprs(MutableArrayRef(getTrailingObjects<Expr *>(), VarList.size()));
+  }
+
+public:
+  static bool classof(const OpenACCClause *C) {
+    return C->getClauseKind() == OpenACCClauseKind::Present;
+  }
+  static OpenACCPresentClause *
+  Create(const ASTContext &C, SourceLocation BeginLoc, SourceLocation LParenLoc,
+         ArrayRef<Expr *> VarList, SourceLocation EndLoc);
+};
+
+class OpenACCCopyClause final
+    : public OpenACCClauseWithVarList,
+      public llvm::TrailingObjects<OpenACCCopyClause, Expr *> {
+
+  OpenACCCopyClause(OpenACCClauseKind Spelling, SourceLocation BeginLoc,
+                    SourceLocation LParenLoc, ArrayRef<Expr *> VarList,
+                    SourceLocation EndLoc)
+      : OpenACCClauseWithVarList(Spelling, BeginLoc, LParenLoc, EndLoc) {
+    assert((Spelling == OpenACCClauseKind::Copy ||
+            Spelling == OpenACCClauseKind::PCopy ||
+            Spelling == OpenACCClauseKind::PresentOrCopy) &&
+           "Invalid clause kind for copy-clause");
+    std::uninitialized_copy(VarList.begin(), VarList.end(),
+                            getTrailingObjects<Expr *>());
+    setExprs(MutableArrayRef(getTrailingObjects<Expr *>(), VarList.size()));
+  }
+
+public:
+  static bool classof(const OpenACCClause *C) {
+    return C->getClauseKind() == OpenACCClauseKind::Copy ||
+           C->getClauseKind() == OpenACCClauseKind::PCopy ||
+           C->getClauseKind() == OpenACCClauseKind::PresentOrCopy;
+  }
+  static OpenACCCopyClause *
+  Create(const ASTContext &C, OpenACCClauseKind Spelling,
+         SourceLocation BeginLoc, SourceLocation LParenLoc,
+         ArrayRef<Expr *> VarList, SourceLocation EndLoc);
+};
+
+class OpenACCCopyInClause final
+    : public OpenACCClauseWithVarList,
+      public llvm::TrailingObjects<OpenACCCopyInClause, Expr *> {
+  bool IsReadOnly;
+
+  OpenACCCopyInClause(OpenACCClauseKind Spelling, SourceLocation BeginLoc,
+                      SourceLocation LParenLoc, bool IsReadOnly,
+                      ArrayRef<Expr *> VarList, SourceLocation EndLoc)
+      : OpenACCClauseWithVarList(Spelling, BeginLoc, LParenLoc, EndLoc),
+        IsReadOnly(IsReadOnly) {
+    assert((Spelling == OpenACCClauseKind::CopyIn ||
+            Spelling == OpenACCClauseKind::PCopyIn ||
+            Spelling == OpenACCClauseKind::PresentOrCopyIn) &&
+           "Invalid clause kind for copyin-clause");
+    std::uninitialized_copy(VarList.begin(), VarList.end(),
+                            getTrailingObjects<Expr *>());
+    setExprs(MutableArrayRef(getTrailingObjects<Expr *>(), VarList.size()));
+  }
+
+public:
+  static bool classof(const OpenACCClause *C) {
+    return C->getClauseKind() == OpenACCClauseKind::CopyIn ||
+           C->getClauseKind() == OpenACCClauseKind::PCopyIn ||
+           C->getClauseKind() == OpenACCClauseKind::PresentOrCopyIn;
+  }
+  bool isReadOnly() const { return IsReadOnly; }
+  static OpenACCCopyInClause *
+  Create(const ASTContext &C, OpenACCClauseKind Spelling,
+         SourceLocation BeginLoc, SourceLocation LParenLoc, bool IsReadOnly,
+         ArrayRef<Expr *> VarList, SourceLocation EndLoc);
+};
+
+class OpenACCCopyOutClause final
+    : public OpenACCClauseWithVarList,
+      public llvm::TrailingObjects<OpenACCCopyOutClause, Expr *> {
+  bool IsZero;
+
+  OpenACCCopyOutClause(OpenACCClauseKind Spelling, SourceLocation BeginLoc,
+                       SourceLocation LParenLoc, bool IsZero,
+                       ArrayRef<Expr *> VarList, SourceLocation EndLoc)
+      : OpenACCClauseWithVarList(Spelling, BeginLoc, LParenLoc, EndLoc),
+        IsZero(IsZero) {
+    assert((Spelling == OpenACCClauseKind::CopyOut ||
+            Spelling == OpenACCClauseKind::PCopyOut ||
+            Spelling == OpenACCClauseKind::PresentOrCopyOut) &&
+           "Invalid clause kind for copyout-clause");
+    std::uninitialized_copy(VarList.begin(), VarList.end(),
+                            getTrailingObjects<Expr *>());
+    setExprs(MutableArrayRef(getTrailingObjects<Expr *>(), VarList.size()));
+  }
+
+public:
+  static bool classof(const OpenACCClause *C) {
+    return C->getClauseKind() == OpenACCClauseKind::CopyOut ||
+           C->getClauseKind() == OpenACCClauseKind::PCopyOut ||
+           C->getClauseKind() == OpenACCClauseKind::PresentOrCopyOut;
+  }
+  bool isZero() const { return IsZero; }
+  static OpenACCCopyOutClause *
+  Create(const ASTContext &C, OpenACCClauseKind Spelling,
+         SourceLocation BeginLoc, SourceLocation LParenLoc, bool IsZero,
+         ArrayRef<Expr *> VarList, SourceLocation EndLoc);
+};
+
+class OpenACCCreateClause final
+    : public OpenACCClauseWithVarList,
+      public llvm::TrailingObjects<OpenACCCreateClause, Expr *> {
+  bool IsZero;
+
+  OpenACCCreateClause(OpenACCClauseKind Spelling, SourceLocation BeginLoc,
+                      SourceLocation LParenLoc, bool IsZero,
+                      ArrayRef<Expr *> VarList, SourceLocation EndLoc)
+      : OpenACCClauseWithVarList(Spelling, BeginLoc, LParenLoc, EndLoc),
+        IsZero(IsZero) {
+    assert((Spelling == OpenACCClauseKind::Create ||
+            Spelling == OpenACCClauseKind::PCreate ||
+            Spelling == OpenACCClauseKind::PresentOrCreate) &&
+           "Invalid clause kind for create-clause");
+    std::uninitialized_copy(VarList.begin(), VarList.end(),
+                            getTrailingObjects<Expr *>());
+    setExprs(MutableArrayRef(getTrailingObjects<Expr *>(), VarList.size()));
+  }
+
+public:
+  static bool classof(const OpenACCClause *C) {
+    return C->getClauseKind() == OpenACCClauseKind::Create ||
+           C->getClauseKind() == OpenACCClauseKind::PCreate ||
+           C->getClauseKind() == OpenACCClauseKind::PresentOrCreate;
+  }
+  bool isZero() const { return IsZero; }
+  static OpenACCCreateClause *
+  Create(const ASTContext &C, OpenACCClauseKind Spelling,
+         SourceLocation BeginLoc, SourceLocation LParenLoc, bool IsZero,
          ArrayRef<Expr *> VarList, SourceLocation EndLoc);
 };
 
@@ -329,6 +634,10 @@ public:
     switch (C->getClauseKind()) {
 #define VISIT_CLAUSE(CLAUSE_NAME)                                              \
   case OpenACCClauseKind::CLAUSE_NAME:                                         \
+    Visit##CLAUSE_NAME##Clause(*cast<OpenACC##CLAUSE_NAME##Clause>(C));        \
+    return;
+#define CLAUSE_ALIAS(ALIAS_NAME, CLAUSE_NAME)                                  \
+  case OpenACCClauseKind::ALIAS_NAME:                                          \
     Visit##CLAUSE_NAME##Clause(*cast<OpenACC##CLAUSE_NAME##Clause>(C));        \
     return;
 #include "clang/Basic/OpenACCClauses.def"

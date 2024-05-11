@@ -93,6 +93,10 @@ protected:
   }
 
 public:
+  static bool classof(const Stmt *T) {
+    return false;
+  }
+
   child_range children() {
     if (getAssociatedStmt())
       return child_range(&AssociatedStmt, &AssociatedStmt + 1);

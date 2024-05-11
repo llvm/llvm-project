@@ -114,13 +114,13 @@ llvm.func @func_with_debug(%arg: i64) {
   // CHECK: call void @func_no_debug(), !dbg ![[MY_SOURCE_LOC]]
   llvm.call @func_no_debug() : () -> () loc(callsite("nodebug.cc":3:4 at fused<#sp0>["mysource.cc":5:6]))
 
-  // CHECK: call void @func_no_debug(), !dbg ![[MY_SOURCE_LOC]]
-  llvm.call @func_no_debug() : () -> () loc(callsite(callsite(fused<#callee>["nodebug.cc":3:4] at "foo.mlir":2:4) at fused<#sp0>["mysource.cc":5:6]))
-
   // CHECK: call void @func_no_debug(), !dbg ![[FUSED_LOC:[0-9]+]]
   llvm.call @func_no_debug() : () -> () loc(fused[callsite(fused<#callee>["mysource.cc":5:6] at "mysource.cc":1:1), "mysource.cc":1:1])
 
-  // CHECK: add i64 %[[ARG]], %[[ARG]], !dbg ![[FUSEDWITH_LOC:[0-9]+]]
+  // CHECK: call void @func_no_debug(), !dbg ![[FUSEDWITH_LOC:[0-9]+]]
+  llvm.call @func_no_debug() : () -> () loc(callsite(callsite(fused<#callee>["foo.mlir":2:4] at "foo.mlir":1:1) at fused<#sp0>["foo.mlir":28:5]))
+
+  // CHECK: add i64 %[[ARG]], %[[ARG]], !dbg ![[FUSEDWITH_LOC]]
   %sum = llvm.add %arg, %arg : i64 loc(callsite(fused<#callee>["foo.mlir":2:4] at fused<#sp0>["foo.mlir":28:5]))
 
   llvm.return

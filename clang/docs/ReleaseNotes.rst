@@ -76,6 +76,9 @@ ABI Changes in This Version
   returning a class in a register. This affects some uses of std::pair.
   (#GH86384).
 
+- Fixed Microsoft calling convention when returning classes that have a deleted
+  copy assignment operator. Such a class should be returned indirectly.
+
 AST Dumping Potentially Breaking Changes
 ----------------------------------------
 
@@ -178,6 +181,9 @@ C++23 Feature Support
 - Implemented `P1774R8: Portable assumptions <https://wg21.link/P1774R8>`_.
 
 - Implemented `P2448R2: Relaxing some constexpr restrictions <https://wg21.link/P2448R2>`_.
+
+- Added a ``__reference_converts_from_temporary`` builtin, completing the necessary compiler support for
+  `P2255R2: Type trait to determine if a reference binds to a temporary <https://wg21.link/P2255R2>`_.
 
 C++2c Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
@@ -303,6 +309,11 @@ New Compiler Flags
 - ``-fexperimental-late-parse-attributes`` enables an experimental feature to
   allow late parsing certain attributes in specific contexts where they would
   not normally be late parsed.
+
+- ``-fseparate-named-sections`` uses separate unique sections for global
+  symbols in named special sections (i.e. symbols annotated with
+  ``__attribute__((section(...)))``. This enables linker GC to collect unused
+  symbols without having to use a per-symbol section.
 
 Deprecated Compiler Flags
 -------------------------
@@ -682,6 +693,21 @@ Bug Fixes to C++ Support
   whose type is `decltype(auto)`. Fixes (#GH68885).
 - Clang now correctly treats the noexcept-specifier of a friend function to be a complete-class context.
 - Fix an assertion failure when parsing an invalid members of an anonymous class. (#GH85447)
+- Fixed a misuse of ``UnresolvedLookupExpr`` for ill-formed templated expressions. Fixes (#GH48673), (#GH63243)
+  and (#GH88832).
+- Clang now defers all substitution into the exception specification of a function template specialization
+  until the noexcept-specifier is instantiated.
+- Fix a crash when an implicitly declared ``operator==`` function with a trailing requires-clause has its
+  constraints compared to that of another declaration.
+- Fix a bug where explicit specializations of member functions/function templates would have substitution
+  performed incorrectly when checking constraints. Fixes (#GH90349).
+- Clang now allows constrained member functions to be explicitly specialized for an implicit instantiation
+  of a class template.
+- Fix a C++23 bug in implementation of P2564R3 which evaluates immediate invocations in place
+  within initializers for variables that are usable in constant expressions or are constant
+  initialized, rather than evaluating them as a part of the larger manifestly constant evaluated
+  expression.
+- Fix a bug in access control checking due to dealyed checking of friend declaration. Fixes (#GH12361).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -781,6 +807,7 @@ CUDA/HIP Language Changes
 
 CUDA Support
 ^^^^^^^^^^^^
+- Clang now supports CUDA SDK up to 12.4
 
 AIX Support
 ^^^^^^^^^^^
@@ -833,6 +860,9 @@ clang-format
   ``BreakTemplateDeclarations``.
 - ``AlwaysBreakAfterReturnType`` is deprecated and renamed to
   ``BreakAfterReturnType``.
+- Handles Java ``switch`` expressions.
+- Adds ``AllowShortCaseExpressionOnASingleLine`` option.
+- Adds ``AlignCaseArrows`` suboption to ``AlignConsecutiveShortCaseStatements``.
 
 libclang
 --------

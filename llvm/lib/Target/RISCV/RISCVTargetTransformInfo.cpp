@@ -599,12 +599,8 @@ InstructionCost RISCVTTIImpl::getInterleavedMemoryOpCost(
     unsigned Opcode, Type *VecTy, unsigned Factor, ArrayRef<unsigned> Indices,
     Align Alignment, unsigned AddressSpace, TTI::TargetCostKind CostKind,
     bool UseMaskForCond, bool UseMaskForGaps) {
-  if (isa<ScalableVectorType>(VecTy))
+  if (isa<ScalableVectorType>(VecTy) && Factor != 2)
     return InstructionCost::getInvalid();
-  auto *FVTy = cast<FixedVectorType>(VecTy);
-  InstructionCost MemCost =
-      getMemoryOpCost(Opcode, VecTy, Alignment, AddressSpace, CostKind);
-  unsigned VF = FVTy->getNumElements() / Factor;
 
   // The interleaved memory access pass will lower interleaved memory ops (i.e
   // a load and store followed by a specific shuffle) to vlseg/vsseg
@@ -612,23 +608,34 @@ InstructionCost RISCVTTIImpl::getInterleavedMemoryOpCost(
   // memory op
   if (!UseMaskForCond && !UseMaskForGaps &&
       Factor <= TLI->getMaxSupportedInterleaveFactor()) {
-    std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(FVTy);
+    auto *VTy = cast<VectorType>(VecTy);
+    std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(VTy);
     // Need to make sure type has't been scalarized
-    if (LT.second.isFixedLengthVector()) {
-      auto *LegalFVTy = FixedVectorType::get(FVTy->getElementType(),
-                                             LT.second.getVectorNumElements());
+    if (LT.second.isVector()) {
+      auto *LegalVTy = VectorType::get(VTy->getElementType(),
+                                       LT.second.getVectorElementCount());
       // FIXME: We use the memory op cost of the *legalized* type here, becuase
       // it's getMemoryOpCost returns a really expensive cost for types like
       // <6 x i8>, which show up when doing interleaves of Factor=3 etc.
       // Should the memory op cost of these be cheaper?
-      if (TLI->isLegalInterleavedAccessType(LegalFVTy, Factor, Alignment,
+      if (TLI->isLegalInterleavedAccessType(LegalVTy, Factor, Alignment,
                                             AddressSpace, DL)) {
         InstructionCost LegalMemCost = getMemoryOpCost(
-            Opcode, LegalFVTy, Alignment, AddressSpace, CostKind);
+            Opcode, LegalVTy, Alignment, AddressSpace, CostKind);
         return LT.first + LegalMemCost;
       }
     }
   }
+
+  // TODO: Return the cost of interleaved accesses for scalable vector when
+  // unable to convert to segment accesses instructions.
+  if (isa<ScalableVectorType>(VecTy))
+    return InstructionCost::getInvalid();
+
+  auto *FVTy = cast<FixedVectorType>(VecTy);
+  InstructionCost MemCost =
+      getMemoryOpCost(Opcode, VecTy, Alignment, AddressSpace, CostKind);
+  unsigned VF = FVTy->getNumElements() / Factor;
 
   // An interleaved load will look like this for Factor=3:
   // %wide.vec = load <12 x i32>, ptr %3, align 4
