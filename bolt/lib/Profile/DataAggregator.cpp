@@ -2403,6 +2403,17 @@ std::error_code DataAggregator::writeBATYAML(BinaryContext &BC,
           return A.Offset < B.Offset;
         });
       }
+      // Set entry counts, similar to DataReader::readProfile.
+      for (const llvm::bolt::BranchInfo &BI : Branches.EntryData) {
+        if (!BlockMap.isInputBlock(BI.To.Offset)) {
+          if (opts::Verbosity >= 1)
+            errs() << "BOLT-WARNING: Unexpected EntryData in " << FuncName
+                   << " at 0x" << Twine::utohexstr(BI.To.Offset) << '\n';
+          continue;
+        }
+        const unsigned BlockIndex = BlockMap.getBBIndex(BI.To.Offset);
+        YamlBF.Blocks[BlockIndex].ExecCount += BI.Branches;
+      }
       // Drop blocks without a hash, won't be useful for stale matching.
       llvm::erase_if(YamlBF.Blocks,
                      [](const yaml::bolt::BinaryBasicBlockProfile &YamlBB) {
