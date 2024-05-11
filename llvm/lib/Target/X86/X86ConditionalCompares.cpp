@@ -745,6 +745,7 @@ void X86ConditionalCompares::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addPreserved<MachineLoopInfo>();
   AU.addRequired<MachineTraceMetrics>();
   AU.addPreserved<MachineTraceMetrics>();
+  AU.addRequired<MachineOptimizationRemarkEmitterPass>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
@@ -834,7 +835,8 @@ bool X86ConditionalCompares::runOnMachineFunction(MachineFunction &MF) {
                                           MF.getFunction().getSubprogram(),
                                           &MF.front());
       R << "generate " << ore::NV("NumConverted", NumConverted)
-        << "CCMP in function to eliminate JCC";
+        << " CCMP to eliminate JCC in function "
+        << ore::NV("Function", MF.getName());
       return R;
     });
   }
