@@ -1662,8 +1662,11 @@ The following type trait primitives are supported by Clang. Those traits marked
   ``T`` from ``U`` is ill-formed.
   Deprecated, use ``__reference_constructs_from_temporary``.
 * ``__reference_constructs_from_temporary(T, U)`` (C++)
-  Returns true if a reference ``T`` can be constructed from a temporary of type
+  Returns true if a reference ``T`` can be direct-initialized from a temporary of type
   a non-cv-qualified ``U``.
+* ``__reference_converts_from_temporary(T, U)`` (C++)
+    Returns true if a reference ``T`` can be copy-initialized from a temporary of type
+    a non-cv-qualified ``U``.
 * ``__underlying_type`` (C++, GNU, Microsoft)
 
 In addition, the following expression traits are supported:

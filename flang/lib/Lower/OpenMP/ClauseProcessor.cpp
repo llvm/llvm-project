@@ -814,30 +814,6 @@ bool ClauseProcessor::processLink(
       });
 }
 
-mlir::omp::MapInfoOp
-createMapInfoOp(fir::FirOpBuilder &builder, mlir::Location loc,
-                mlir::Value baseAddr, mlir::Value varPtrPtr, std::string name,
-                llvm::ArrayRef<mlir::Value> bounds,
-                llvm::ArrayRef<mlir::Value> members, uint64_t mapType,
-                mlir::omp::VariableCaptureKind mapCaptureType, mlir::Type retTy,
-                bool isVal) {
-  if (auto boxTy = mlir::dyn_cast<fir::BaseBoxType>(baseAddr.getType())) {
-    baseAddr = builder.create<fir::BoxAddrOp>(loc, baseAddr);
-    retTy = baseAddr.getType();
-  }
-
-  mlir::TypeAttr varType = mlir::TypeAttr::get(
-      llvm::cast<mlir::omp::PointerLikeType>(retTy).getElementType());
-
-  mlir::omp::MapInfoOp op = builder.create<mlir::omp::MapInfoOp>(
-      loc, retTy, baseAddr, varType, varPtrPtr, members, bounds,
-      builder.getIntegerAttr(builder.getIntegerType(64, false), mapType),
-      builder.getAttr<mlir::omp::VariableCaptureKindAttr>(mapCaptureType),
-      builder.getStringAttr(name));
-
-  return op;
-}
-
 bool ClauseProcessor::processMap(
     mlir::Location currentLocation, Fortran::lower::StatementContext &stmtCtx,
     mlir::omp::MapClauseOps &result,
@@ -845,7 +821,17 @@ bool ClauseProcessor::processMap(
     llvm::SmallVectorImpl<mlir::Location> *mapSymLocs,
     llvm::SmallVectorImpl<mlir::Type> *mapSymTypes) const {
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
-  return findRepeatableClause<omp::clause::Map>(
+  // We always require tracking of symbols, even if the caller does not,
+  // so we create an optionally used local set of symbols when the mapSyms
+  // argument is not present.
+  llvm::SmallVector<const Fortran::semantics::Symbol *> localMapSyms;
+  llvm::SmallVectorImpl<const Fortran::semantics::Symbol *> *ptrMapSyms =
+      mapSyms ? mapSyms : &localMapSyms;
+  std::map<const Fortran::semantics::Symbol *,
+           llvm::SmallVector<OmpMapMemberIndicesData>>
+      parentMemberIndices;
+
+  bool clauseFound = findRepeatableClause<omp::clause::Map>(
       [&](const omp::clause::Map &clause,
           const Fortran::parser::CharBlock &source) {
         using Map = omp::clause::Map;
@@ -910,24 +896,33 @@ bool ClauseProcessor::processMap(
           // Explicit map captures are captured ByRef by default,
           // optimisation passes may alter this to ByCopy or other capture
           // types to optimise
-          mlir::Value mapOp = createMapInfoOp(
-              firOpBuilder, clauseLocation, symAddr, mlir::Value{},
-              asFortran.str(), bounds, {},
+          mlir::omp::MapInfoOp mapOp = createMapInfoOp(
+              firOpBuilder, clauseLocation, symAddr,
+              /*varPtrPtr=*/mlir::Value{}, asFortran.str(), bounds,
+              /*members=*/{}, /*membersIndex=*/mlir::DenseIntElementsAttr{},
               static_cast<
                   std::underlying_type_t<llvm::omp::OpenMPOffloadMappingFlags>>(
                   mapTypeBits),
               mlir::omp::VariableCaptureKind::ByRef, symAddr.getType());
 
-          result.mapVars.push_back(mapOp);
-
-          if (mapSyms)
-            mapSyms->push_back(object.id());
-          if (mapSymLocs)
-            mapSymLocs->push_back(symAddr.getLoc());
-          if (mapSymTypes)
-            mapSymTypes->push_back(symAddr.getType());
+          if (object.id()->owner().IsDerivedType()) {
+            addChildIndexAndMapToParent(object, parentMemberIndices, mapOp,
+                                        semaCtx);
+          } else {
+            result.mapVars.push_back(mapOp);
+            ptrMapSyms->push_back(object.id());
+            if (mapSymTypes)
+              mapSymTypes->push_back(symAddr.getType());
+            if (mapSymLocs)
+              mapSymLocs->push_back(symAddr.getLoc());
+          }
         }
       });
+
+  insertChildMapInfoIntoParent(converter, parentMemberIndices, result.mapVars,
+                               *ptrMapSyms, mapSymTypes, mapSymLocs);
+
+  return clauseFound;
 }
 
 bool ClauseProcessor::processReduction(

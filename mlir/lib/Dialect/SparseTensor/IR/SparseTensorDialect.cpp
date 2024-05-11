@@ -788,24 +788,29 @@ LogicalResult SparseTensorEncodingAttr::verify(
     return emitError() << "unexpected position bitwidth: " << posWidth;
   if (!acceptBitWidth(crdWidth))
     return emitError() << "unexpected coordinate bitwidth: " << crdWidth;
-  if (auto it = std::find_if(lvlTypes.begin(), lvlTypes.end(), isSingletonLT);
-      it != std::end(lvlTypes)) {
+
+  // Verify every COO segment.
+  auto *it = std::find_if(lvlTypes.begin(), lvlTypes.end(), isSingletonLT);
+  while (it != lvlTypes.end()) {
     if (it == lvlTypes.begin() ||
-        (!isCompressedLT(*(it - 1)) && !isLooseCompressedLT(*(it - 1))))
+        !(it - 1)->isa<LevelFormat::Compressed, LevelFormat::LooseCompressed>())
       return emitError() << "expected compressed or loose_compressed level "
                             "before singleton level";
-    if (!std::all_of(it, lvlTypes.end(),
+
+    auto *curCOOEnd = std::find_if_not(it, lvlTypes.end(), isSingletonLT);
+    if (!std::all_of(it, curCOOEnd,
                      [](LevelType i) { return isSingletonLT(i); }))
       return emitError() << "expected all singleton lvlTypes "
                             "following a singleton level";
     // We can potentially support mixed SoA/AoS singleton levels.
-    if (!std::all_of(it, lvlTypes.end(), [it](LevelType i) {
+    if (!std::all_of(it, curCOOEnd, [it](LevelType i) {
           return it->isa<LevelPropNonDefault::SoA>() ==
                  i.isa<LevelPropNonDefault::SoA>();
         })) {
       return emitError() << "expected all singleton lvlTypes stored in the "
                             "same memory layout (SoA vs AoS).";
     }
+    it = std::find_if(curCOOEnd, lvlTypes.end(), isSingletonLT);
   }
 
   auto lastBatch = std::find_if(lvlTypes.rbegin(), lvlTypes.rend(), isBatchLT);

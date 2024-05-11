@@ -17,6 +17,33 @@
 
 using namespace clang;
 
+bool OpenACCClauseWithParams::classof(const OpenACCClause *C) {
+  return OpenACCClauseWithCondition::classof(C) ||
+         OpenACCClauseWithExprs::classof(C);
+}
+bool OpenACCClauseWithExprs::classof(const OpenACCClause *C) {
+  return OpenACCWaitClause::classof(C) || OpenACCNumGangsClause::classof(C) ||
+         OpenACCClauseWithSingleIntExpr::classof(C) ||
+         OpenACCClauseWithVarList::classof(C);
+}
+bool OpenACCClauseWithVarList::classof(const OpenACCClause *C) {
+  return OpenACCPrivateClause::classof(C) ||
+         OpenACCFirstPrivateClause::classof(C) ||
+         OpenACCDevicePtrClause::classof(C) ||
+         OpenACCDevicePtrClause::classof(C) ||
+         OpenACCAttachClause::classof(C) || OpenACCNoCreateClause::classof(C) ||
+         OpenACCPresentClause::classof(C) || OpenACCCopyClause::classof(C) ||
+         OpenACCCopyInClause::classof(C) || OpenACCCopyOutClause::classof(C) ||
+         OpenACCCreateClause::classof(C);
+}
+bool OpenACCClauseWithCondition::classof(const OpenACCClause *C) {
+  return OpenACCIfClause::classof(C) || OpenACCSelfClause::classof(C);
+}
+bool OpenACCClauseWithSingleIntExpr::classof(const OpenACCClause *C) {
+  return OpenACCNumWorkersClause::classof(C) ||
+         OpenACCVectorLengthClause::classof(C) ||
+         OpenACCAsyncClause::classof(C);
+}
 OpenACCDefaultClause *OpenACCDefaultClause::Create(const ASTContext &C,
                                                    OpenACCDefaultClauseKind K,
                                                    SourceLocation BeginLoc,
