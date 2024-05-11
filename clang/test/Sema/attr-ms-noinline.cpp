@@ -2,6 +2,12 @@
 
 int bar();
 
+// expected-note@+1{{conflicting attribute is here}}
+[[gnu::always_inline]] void always_inline_fn(void) { }
+// expected-note@+1{{conflicting attribute is here}}
+[[gnu::flatten]] void flatten_fn(void) { }
+[[gnu::noinline]] void noinline_fn(void) { }
+
 void foo() {
   [[msvc::noinline]] bar();
   [[msvc::noinline(0)]] bar(); // expected-error {{'noinline' attribute takes no arguments}}
