@@ -54,7 +54,7 @@ def run_test(test, line, name, gmp_test_so, imath_test_so, *args):
   if childpid == 0:
     eq = test(line, name, gmp_test_so, imath_test_so, *args)
     if fork:
-      sys.exit(eq != True)
+      sys.exit(not eq)
     else:
       return eq
   else:
