@@ -125,7 +125,6 @@ STATISTIC(NumConverted, "Number of ccmp instructions created");
 namespace {
 class SSACCmpConv {
   MachineFunction *MF;
-  const X86Subtarget *STI;
   const TargetInstrInfo *TII;
   const TargetRegisterInfo *TRI;
   MachineRegisterInfo *MRI;
@@ -181,7 +180,6 @@ public:
                             const MachineBranchProbabilityInfo *MBPI) {
     this->MF = &MF;
     this->MBPI = MBPI;
-    STI = &MF.getSubtarget<X86Subtarget>();
     TII = MF.getSubtarget().getInstrInfo();
     TRI = MF.getSubtarget().getRegisterInfo();
     MRI = &MF.getRegInfo();
@@ -200,14 +198,12 @@ public:
 // Check that all PHIs in Tail are selecting the same value from Head and CmpBB.
 // This means that no if-conversion is required when merging CmpBB into Head.
 bool SSACCmpConv::trivialTailPHIs() {
-  for (auto &I : *Tail) {
-    if (!I.isPHI())
-      break;
+  for (auto &I : Tail->phis()) {
     unsigned HeadReg = 0, CmpBBReg = 0;
     // PHI operands come in (VReg, MBB) pairs.
-    for (unsigned oi = 1, oe = I.getNumOperands(); oi != oe; oi += 2) {
-      MachineBasicBlock *MBB = I.getOperand(oi + 1).getMBB();
-      Register Reg = I.getOperand(oi).getReg();
+    for (unsigned Idx = 1, End = I.getNumOperands(); Idx != End; Idx += 2) {
+      MachineBasicBlock *MBB = I.getOperand(Idx + 1).getMBB();
+      Register Reg = I.getOperand(Idx).getReg();
       if (MBB == Head) {
         assert((!HeadReg || HeadReg == Reg) && "Inconsistent PHI operands");
         HeadReg = Reg;
@@ -226,9 +222,7 @@ bool SSACCmpConv::trivialTailPHIs() {
 // Assuming that trivialTailPHIs() is true, update the Tail PHIs by simply
 // removing the CmpBB operands. The Head operands will be identical.
 void SSACCmpConv::updateTailPHIs() {
-  for (auto &I : *Tail) {
-    if (!I.isPHI())
-      break;
+  for (auto &I : Tail->phis()) {
     // I is a PHI. It can have multiple entries for CmpBB.
     for (unsigned Idx = I.getNumOperands(); Idx > 2; Idx -= 2) {
       // PHI operands are (Reg, MBB) at (Idx-2, Idx-1).
@@ -285,7 +279,7 @@ MachineInstr *SSACCmpConv::findConvertibleCompare(MachineBasicBlock *MBB) {
     case X86::SUB64ri32_ND: {
       if (!isDeadDef(I->getOperand(0).getReg()))
         return nullptr;
-      return STI->hasCCMP() ? &*I : nullptr;
+      return &*I;
     }
     case X86::CMP8rr:
     case X86::CMP16rr:
@@ -303,7 +297,7 @@ MachineInstr *SSACCmpConv::findConvertibleCompare(MachineBasicBlock *MBB) {
     case X86::TEST16ri:
     case X86::TEST32ri:
     case X86::TEST64ri32:
-      return STI->hasCCMP() ? &*I : nullptr;
+      return &*I;
     default:
       break;
     }
