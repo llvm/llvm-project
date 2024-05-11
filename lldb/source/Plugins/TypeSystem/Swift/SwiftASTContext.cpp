@@ -55,6 +55,7 @@
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TargetOptions.h"
 #include "clang/Driver/Driver.h"
+#include "clang/Frontend/CompilerInstance.h"
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
@@ -1678,6 +1679,11 @@ void SwiftASTContext::AddExtraClangArgs(const std::vector<std::string> &ExtraArg
   AddExtraClangArgs(ExtraArgs, importer_options.ExtraArgs);
   if (HasNonexistentExplicitModule(importer_options.ExtraArgs))
     RemoveExplicitModules(importer_options.ExtraArgs);
+
+  m_has_explicit_modules =
+      llvm::any_of(importer_options.ExtraArgs, [](const std::string &arg) {
+        return StringRef(arg).starts_with("-fmodule-file=");
+      });
 }
 
 void SwiftASTContext::AddUserClangArgs(TargetProperties &props) {
@@ -8899,13 +8905,11 @@ bool SwiftASTContextForExpressions::GetImplicitImports(
         &modules,
     Status &error) {
   LLDB_SCOPED_TIMER();
-  if (!GetCompileUnitImports(sc, process_sp, modules, error)) {
+  if (!GetCompileUnitImports(sc, process_sp, modules, error))
     return false;
-  }
 
   // Get the hand-loaded modules from the SwiftPersistentExpressionState.
   for (auto &module_pair : m_hand_loaded_modules) {
-
     auto &attributed_import = module_pair.second;
 
     // If the ImportedModule in the SwiftPersistentExpressionState has a
@@ -9068,6 +9072,7 @@ bool SwiftASTContext::GetCompileUnitImportsImpl(
         *modules,
     Status &error) {
   LLDB_SCOPED_TIMER();
+
   CompileUnit *compile_unit = sc.comp_unit;
   if (compile_unit && compile_unit->GetModule())
     // Check the cache if this compile unit's imports were previously
@@ -9101,6 +9106,44 @@ bool SwiftASTContext::GetCompileUnitImportsImpl(
   if (cu_imports.size() == 0)
     return true;
 
+  LOG_PRINTF(GetLog(LLDBLog::Types), "Importing dependencies of current CU");
+  
+  // Turn off implicit clang modules while importing CU dependencies.
+  // ModuleFileSharedCore::getTransitiveLoadingBehavior() has a
+  // best-effort mode that is enabled when debugger support is turned
+  // on that will try to import implementation-only imports of Swift
+  // modules, but won't treat import failures as errors. When explicit
+  // modules are on, this has the unwanted side-effect of potentially
+  // triggering an implicit Clang module build if one of the internal
+  // dependencies of a library was not used to build the target. To
+  // avoid these costly and potentially dangerous imports we turn off
+  // implicit modules while importing the CU imports only. If a user
+  // manually evaluates an expression that contains an import
+  // statement that can still trigger an implict import.  Implicit
+  // imports can be dangerous if an implicit module depends on a
+  // module that also exists as an explicit input: In this case, a
+  // subsequent explicit import of said dependency will error because
+  // Clang now knows about two versions of the same module.
+  clang::LangOptions *clang_lang_opts = nullptr;
+  auto reset = llvm::make_scope_exit([&] {
+    if (clang_lang_opts) {
+      LOG_PRINTF(GetLog(LLDBLog::Types), "Turning on implicit Clang modules");
+      clang_lang_opts->ImplicitModules = true;
+    }
+  });
+  if (auto *clang_importer = GetClangImporter()) {
+    if (m_has_explicit_modules) {
+      auto &clang_instance = const_cast<clang::CompilerInstance &>(
+          clang_importer->getClangInstance());
+      clang_lang_opts = &clang_instance.getLangOpts();
+      // AddExtraArgs is supposed to always turn implicit modules on.
+      assert(clang_lang_opts->ImplicitModules &&
+             "ClangImporter implicit module support is off");
+      LOG_PRINTF(GetLog(LLDBLog::Types), "Turning off implicit Clang modules");
+      clang_lang_opts->ImplicitModules = false;
+    }
+  }
+  
   std::string category = "Importing Swift module dependencies for ";
   category += compile_unit->GetPrimaryFile().GetFilename();
   Progress progress(category, "", cu_imports.size());
