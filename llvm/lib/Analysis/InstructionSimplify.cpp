@@ -5410,10 +5410,22 @@ static Value *simplifyShuffleVectorInst(Value *Op0, Value *Op1,
   if (Op0Const && Op1Const)
     return ConstantExpr::getShuffleVector(Op0Const, Op1Const, Mask);
 
+  // A shuffle of a splat is always the splat itself. Legal if the shuffle's
+  // value type is same as the input vectors' type.
+  if (auto *OpShuf = dyn_cast<ShuffleVectorInst>(Op0))
+    if (Q.isUndefValue(Op1) && RetTy == InVecTy &&
+        all_equal(OpShuf->getShuffleMask()))
+      return Op0;
+
+  // All remaining transformation depend on the value of the mask, which is
+  // not known at compile time for scalable vectors.
+  if (Scalable)
+    return nullptr;
+
   // Canonicalization: if only one input vector is constant, it shall be the
   // second one. This transformation depends on the value of the mask which
   // is not known at compile time for scalable vectors
-  if (!Scalable && Op0Const && !Op1Const) {
+  if (Op0Const && !Op1Const) {
     std::swap(Op0, Op1);
     ShuffleVectorInst::commuteShuffleMask(Indices,
                                           InVecEltCount.getKnownMinValue());
@@ -5427,8 +5439,8 @@ static Value *simplifyShuffleVectorInst(Value *Op0, Value *Op1,
   // known at compile time for scalable vectors
   Constant *C;
   ConstantInt *IndexC;
-  if (!Scalable && match(Op0, m_InsertElt(m_Value(), m_Constant(C),
-                                          m_ConstantInt(IndexC)))) {
+  if (match(Op0,
+            m_InsertElt(m_Value(), m_Constant(C), m_ConstantInt(IndexC)))) {
     // Match a splat shuffle mask of the insert index allowing undef elements.
     int InsertIndex = IndexC->getZExtValue();
     if (all_of(Indices, [InsertIndex](int MaskElt) {
@@ -5444,18 +5456,6 @@ static Value *simplifyShuffleVectorInst(Value *Op0, Value *Op1,
       return ConstantVector::get(VecC);
     }
   }
-
-  // A shuffle of a splat is always the splat itself. Legal if the shuffle's
-  // value type is same as the input vectors' type.
-  if (auto *OpShuf = dyn_cast<ShuffleVectorInst>(Op0))
-    if (Q.isUndefValue(Op1) && RetTy == InVecTy &&
-        all_equal(OpShuf->getShuffleMask()))
-      return Op0;
-
-  // All remaining transformation depend on the value of the mask, which is
-  // not known at compile time for scalable vectors.
-  if (Scalable)
-    return nullptr;
 
   // Don't fold a shuffle with undef mask elements. This may get folded in a
   // better way using demanded bits or other analysis.
