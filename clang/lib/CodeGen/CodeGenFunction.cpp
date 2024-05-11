@@ -2765,10 +2765,9 @@ llvm::Value *CodeGenFunction::FormAArch64ResolverCondition(
     // only for features that are not enabled in the target. The exception is
     // for features whose extension instructions are executed as NOP on targets
     // without extension support.
-    if (!getContext().getTargetInfo().hasFeature(Feature) ||
-        Feature.equals("bti") || Feature.equals("memtag") ||
-        Feature.equals("memtag2") || Feature.equals("memtag3") ||
-        Feature.equals("dgh"))
+    if (!getContext().getTargetInfo().hasFeature(Feature) || Feature == "bti" ||
+        Feature == "memtag" || Feature == "memtag2" || Feature == "memtag3" ||
+        Feature == "dgh")
       CondFeatures.push_back(Feature);
   }
   if (!CondFeatures.empty()) {
