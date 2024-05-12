@@ -1153,6 +1153,7 @@ private:
   bool parseDirectiveArch();
   bool parseDirectiveNops(SMLoc L);
   bool parseDirectiveEven(SMLoc L);
+  bool parseDirectiveAvoidEndAlign(SMLoc L);
   bool ParseDirectiveCode(StringRef IDVal, SMLoc L);
 
   /// CodeView FPO data directives.
@@ -2296,7 +2297,7 @@ bool X86AsmParser::ParseRoundingModeOp(SMLoc Start, OperandVector &Operands) {
     Operands.push_back(X86Operand::CreateImm(RndModeOp, Start, End));
     return false;
   }
-  if(Tok.getIdentifier().equals("sae")){
+  if (Tok.getIdentifier() == "sae") {
     Parser.Lex();  // Eat the sae
     if (!getLexer().is(AsmToken::RCurly))
       return Error(Tok.getLoc(), "Expected } at this point");
@@ -2567,7 +2568,7 @@ bool X86AsmParser::ParseIntelMemoryOperandSize(unsigned &Size) {
     .Default(0);
   if (Size) {
     const AsmToken &Tok = Lex(); // Eat operand size (e.g., byte, word).
-    if (!(Tok.getString().equals("PTR") || Tok.getString().equals("ptr")))
+    if (!(Tok.getString() == "PTR" || Tok.getString() == "ptr"))
       return Error(Tok.getLoc(), "Expected 'PTR' or 'ptr' token!");
     Lex(); // Eat ptr.
   }
@@ -3802,7 +3803,7 @@ bool X86AsmParser::validateInstruction(MCInst &Inst, const OperandVector &Ops) {
     //    VFMULCPHZrr   Dest, Src1, Src2
     //    VFMULCPHZrrk  Dest, Dest, Mask, Src1, Src2
     //    VFMULCPHZrrkz Dest, Mask, Src1, Src2
-    for (unsigned i = TSFlags & X86II::EVEX_K ? 2 : 1;
+    for (unsigned i = ((TSFlags & X86II::EVEX_K) ? 2 : 1);
          i < Inst.getNumOperands(); i++)
       if (Inst.getOperand(i).isReg() && Dest == Inst.getOperand(i).getReg())
         return Warning(Ops[0]->getStartLoc(), "Destination register should be "
@@ -4601,6 +4602,8 @@ bool X86AsmParser::ParseDirective(AsmToken DirectiveID) {
     return false;
   } else if (IDVal == ".nops")
     return parseDirectiveNops(DirectiveID.getLoc());
+  else if (IDVal == ".avoid_end_align")
+    return parseDirectiveAvoidEndAlign(DirectiveID.getLoc());
   else if (IDVal == ".even")
     return parseDirectiveEven(DirectiveID.getLoc());
   else if (IDVal == ".cv_fpo_proc")
@@ -4692,6 +4695,27 @@ bool X86AsmParser::parseDirectiveEven(SMLoc L) {
     getStreamer().emitCodeAlignment(Align(2), &getSTI(), 0);
   else
     getStreamer().emitValueToAlignment(Align(2), 0, 1, 0);
+  return false;
+}
+
+/// Directive for NeverAlign fragment testing, not for general usage!
+/// parseDirectiveAvoidEndAlign
+///  ::= .avoid_end_align alignment
+bool X86AsmParser::parseDirectiveAvoidEndAlign(SMLoc L) {
+  int64_t Alignment = 0;
+  SMLoc AlignmentLoc;
+  AlignmentLoc = getTok().getLoc();
+  if (getParser().checkForValidSection() ||
+      getParser().parseAbsoluteExpression(Alignment))
+    return true;
+
+  if (getParser().parseEOL("unexpected token in directive"))
+    return true;
+
+  if (Alignment <= 0)
+    return Error(AlignmentLoc, "expected a positive alignment");
+
+  getParser().getStreamer().emitNeverAlignCodeAtEnd(Alignment, getSTI());
   return false;
 }
 

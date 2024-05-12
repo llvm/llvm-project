@@ -52,6 +52,19 @@ class TypeAndTypeListTestCase(TestBase):
         self.DebugSBValue(value)
         self.assertEqual(value.GetValueAsSigned(), 47)
 
+        static_constexpr_bool_field = task_type.GetStaticFieldWithName(
+            "static_constexpr_bool_field"
+        )
+        self.assertTrue(static_constexpr_bool_field)
+        self.assertEqual(
+            static_constexpr_bool_field.GetName(), "static_constexpr_bool_field"
+        )
+        self.assertEqual(static_constexpr_bool_field.GetType().GetName(), "const bool")
+
+        value = static_constexpr_bool_field.GetConstantValue(self.target())
+        self.DebugSBValue(value)
+        self.assertEqual(value.GetValueAsUnsigned(), 1)
+
         static_mutable_field = task_type.GetStaticFieldWithName("static_mutable_field")
         self.assertTrue(static_mutable_field)
         self.assertEqual(static_mutable_field.GetName(), "static_mutable_field")
@@ -259,3 +272,24 @@ class TypeAndTypeListTestCase(TestBase):
             self.assertTrue(int_enum_uchar)
             self.DebugSBType(int_enum_uchar)
             self.assertEqual(int_enum_uchar.GetName(), "unsigned char")
+
+    def test_GetByteAlign(self):
+        """Exercise SBType::GetByteAlign"""
+        self.build()
+        spec = lldb.SBModuleSpec()
+        spec.SetFileSpec(lldb.SBFileSpec(self.getBuildArtifact()))
+        module = lldb.SBModule(spec)
+        self.assertTrue(module)
+
+        # Invalid types should not crash.
+        self.assertEqual(lldb.SBType().GetByteAlign(), 0)
+
+        # Try a type with natural alignment.
+        void_ptr = module.GetBasicType(lldb.eBasicTypeVoid).GetPointerType()
+        self.assertTrue(void_ptr)
+        # Not exactly guaranteed by the spec, but should be true everywhere we
+        # care about.
+        self.assertEqual(void_ptr.GetByteSize(), void_ptr.GetByteAlign())
+
+        # And an over-aligned type.
+        self.assertEqual(module.FindFirstType("OverAlignedStruct").GetByteAlign(), 128)

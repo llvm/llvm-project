@@ -4316,17 +4316,20 @@ bool Parser::parseMapTypeModifiers(SemaOpenMP::OpenMPVarListDataTy &Data) {
 }
 
 /// Checks if the token is a valid map-type.
-/// FIXME: It will return an OpenMPMapModifierKind if that's what it parses.
+/// If it is not MapType kind, OMPC_MAP_unknown is returned.
 static OpenMPMapClauseKind isMapType(Parser &P) {
   Token Tok = P.getCurToken();
   // The map-type token can be either an identifier or the C++ delete keyword.
   if (!Tok.isOneOf(tok::identifier, tok::kw_delete))
     return OMPC_MAP_unknown;
   Preprocessor &PP = P.getPreprocessor();
-  OpenMPMapClauseKind MapType =
-      static_cast<OpenMPMapClauseKind>(getOpenMPSimpleClauseType(
-          OMPC_map, PP.getSpelling(Tok), P.getLangOpts()));
-  return MapType;
+  unsigned MapType =
+      getOpenMPSimpleClauseType(OMPC_map, PP.getSpelling(Tok), P.getLangOpts());
+  if (MapType == OMPC_MAP_to || MapType == OMPC_MAP_from ||
+      MapType == OMPC_MAP_tofrom || MapType == OMPC_MAP_alloc ||
+      MapType == OMPC_MAP_delete || MapType == OMPC_MAP_release)
+    return static_cast<OpenMPMapClauseKind>(MapType);
+  return OMPC_MAP_unknown;
 }
 
 /// Parse map-type in map clause.

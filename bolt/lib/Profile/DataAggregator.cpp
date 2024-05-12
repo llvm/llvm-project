@@ -778,13 +778,13 @@ bool DataAggregator::doBranch(uint64_t From, uint64_t To, uint64_t Count,
     if (BinaryFunction *Func = getBinaryFunctionContainingAddress(Addr)) {
       Addr -= Func->getAddress();
       if (IsFrom) {
-        if (Func->hasInstructions()) {
-          if (MCInst *Inst = Func->getInstructionAtOffset(Addr))
-            IsReturn = BC->MIB->isReturn(*Inst);
-        } else if (std::optional<MCInst> Inst =
-                Func->disassembleInstructionAtOffset(Addr)) {
-          IsReturn = BC->MIB->isReturn(*Inst);
-        }
+        auto checkReturn = [&](auto MaybeInst) {
+          IsReturn = MaybeInst && BC->MIB->isReturn(*MaybeInst);
+        };
+        if (Func->hasInstructions())
+          checkReturn(Func->getInstructionAtOffset(Addr));
+        else
+          checkReturn(Func->disassembleInstructionAtOffset(Addr));
       }
 
       if (BAT)
@@ -2339,7 +2339,7 @@ std::error_code DataAggregator::writeBATYAML(BinaryContext &BC,
         continue;
       BinaryFunction *BF = BC.getBinaryFunctionAtAddress(FuncAddress);
       assert(BF);
-      YamlBF.Name = FuncName.str();
+      YamlBF.Name = getLocationName(*BF);
       YamlBF.Id = BF->getFunctionNumber();
       YamlBF.Hash = BAT->getBFHash(FuncAddress);
       YamlBF.ExecCount = BF->getKnownExecutionCount();
@@ -2402,6 +2402,17 @@ std::error_code DataAggregator::writeBATYAML(BinaryContext &BC,
                                         yaml::bolt::CallSiteInfo &B) {
           return A.Offset < B.Offset;
         });
+      }
+      // Set entry counts, similar to DataReader::readProfile.
+      for (const llvm::bolt::BranchInfo &BI : Branches.EntryData) {
+        if (!BlockMap.isInputBlock(BI.To.Offset)) {
+          if (opts::Verbosity >= 1)
+            errs() << "BOLT-WARNING: Unexpected EntryData in " << FuncName
+                   << " at 0x" << Twine::utohexstr(BI.To.Offset) << '\n';
+          continue;
+        }
+        const unsigned BlockIndex = BlockMap.getBBIndex(BI.To.Offset);
+        YamlBF.Blocks[BlockIndex].ExecCount += BI.Branches;
       }
       // Drop blocks without a hash, won't be useful for stale matching.
       llvm::erase_if(YamlBF.Blocks,

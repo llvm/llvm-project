@@ -17,6 +17,11 @@
 
 #include <fenv.h>
 
+// If this is not provided by the system, define it for use internally.
+#ifndef __FE_DENORM
+#define __FE_DENORM (1 << 6)
+#endif
+
 #endif // LLVM_LIBC_FULL_BUILD
 
 #endif // LLVM_LIBC_HDR_FENV_MACROS_H

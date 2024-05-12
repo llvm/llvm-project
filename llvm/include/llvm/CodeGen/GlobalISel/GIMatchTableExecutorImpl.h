@@ -100,10 +100,7 @@ bool GIMatchTableExecutor::executeMatchTable(
   };
 
   const auto readULEB = [&]() {
-    unsigned N = 0;
-    uint64_t Val = decodeULEB128(MatchTable + CurrentIdx, &N);
-    CurrentIdx += N;
-    return Val;
+    return fastDecodeULEB128(MatchTable, CurrentIdx);
   };
 
   // Convenience function to return a signed value. This avoids
@@ -476,7 +473,7 @@ bool GIMatchTableExecutor::executeMatchTable(
     }
     case GIM_CheckAtomicOrdering: {
       uint64_t InsnID = readULEB();
-      auto Ordering = (AtomicOrdering)readULEB();
+      auto Ordering = (AtomicOrdering)MatchTable[CurrentIdx++];
       DEBUG_WITH_TYPE(TgtExecutor::getName(),
                       dbgs() << CurrentIdx << ": GIM_CheckAtomicOrdering(MIs["
                              << InsnID << "], " << (uint64_t)Ordering << ")\n");
@@ -493,7 +490,7 @@ bool GIMatchTableExecutor::executeMatchTable(
     }
     case GIM_CheckAtomicOrderingOrStrongerThan: {
       uint64_t InsnID = readULEB();
-      auto Ordering = (AtomicOrdering)readULEB();
+      auto Ordering = (AtomicOrdering)MatchTable[CurrentIdx++];
       DEBUG_WITH_TYPE(TgtExecutor::getName(),
                       dbgs() << CurrentIdx
                              << ": GIM_CheckAtomicOrderingOrStrongerThan(MIs["
@@ -511,7 +508,7 @@ bool GIMatchTableExecutor::executeMatchTable(
     }
     case GIM_CheckAtomicOrderingWeakerThan: {
       uint64_t InsnID = readULEB();
-      auto Ordering = (AtomicOrdering)readULEB();
+      auto Ordering = (AtomicOrdering)MatchTable[CurrentIdx++];
       DEBUG_WITH_TYPE(TgtExecutor::getName(),
                       dbgs() << CurrentIdx
                              << ": GIM_CheckAtomicOrderingWeakerThan(MIs["
@@ -531,7 +528,7 @@ bool GIMatchTableExecutor::executeMatchTable(
       uint64_t InsnID = readULEB();
       uint64_t MMOIdx = readULEB();
       // This accepts a list of possible address spaces.
-      const uint64_t NumAddrSpace = readULEB();
+      const uint64_t NumAddrSpace = MatchTable[CurrentIdx++];
 
       if (State.MIs[InsnID]->getNumMemOperands() <= MMOIdx) {
         if (handleReject() == RejectAndGiveUp)
@@ -568,7 +565,7 @@ bool GIMatchTableExecutor::executeMatchTable(
     case GIM_CheckMemoryAlignment: {
       uint64_t InsnID = readULEB();
       uint64_t MMOIdx = readULEB();
-      uint64_t MinAlign = readULEB();
+      uint64_t MinAlign = MatchTable[CurrentIdx++];
 
       assert(State.MIs[InsnID] != nullptr && "Used insn before defined");
 
