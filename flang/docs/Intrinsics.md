@@ -924,7 +924,7 @@ used in constant expressions have currently no folding support at all.
 
 On some systems, the underlying timings are represented using types with sufficiently small limits that overflows (wrap around) are possible, such as 32-bit types. Therefore, the values returned by this intrinsic might be, or become, negative, or numerically less than previous values, during a single run of the compiled program.
 
-This intrinsic is provided in subroutine forms only.
+This intrinsic is provided in both subroutine and function forms; however, only one form can be used in any given program unit.
 
 *VALUES* and *TIME* are `INTENT(OUT)` and provide the following:
 
@@ -938,9 +938,10 @@ This intrinsic is provided in subroutine forms only.
 #### Usage and Info
 
 - **Standard:** GNU extension
-- **Class:** Subroutine
+- **Class:** Subroutine, function
 - **Syntax:** `CALL ETIME(VALUES, TIME)`
 - **Arguments:**
+- **Return value** Elapsed time in seconds since the start of program execution.
 
 | Argument   | Description                                                           |
 |------------|-----------------------------------------------------------------------|
