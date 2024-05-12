@@ -185,7 +185,12 @@ template <typename T>
 bool ClauseProcessor::processMotionClauses(
     Fortran::lower::StatementContext &stmtCtx,
     mlir::omp::MapClauseOps &result) {
-  return findRepeatableClause<T>(
+  std::map<const Fortran::semantics::Symbol *,
+           llvm::SmallVector<OmpMapMemberIndicesData>>
+      parentMemberIndices;
+  llvm::SmallVector<const Fortran::semantics::Symbol *> mapSymbols;
+
+  bool clauseFound = findRepeatableClause<T>(
       [&](const T &clause, const Fortran::parser::CharBlock &source) {
         mlir::Location clauseLocation = converter.genLocation(source);
         fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
@@ -203,6 +208,7 @@ bool ClauseProcessor::processMotionClauses(
         for (const omp::Object &object : objects) {
           llvm::SmallVector<mlir::Value> bounds;
           std::stringstream asFortran;
+
           Fortran::lower::AddrAndBoundsInfo info =
               Fortran::lower::gatherDataOperandAddrAndBounds<
                   mlir::omp::MapBoundsOp, mlir::omp::MapBoundsType>(
@@ -218,17 +224,29 @@ bool ClauseProcessor::processMotionClauses(
           // Explicit map captures are captured ByRef by default,
           // optimisation passes may alter this to ByCopy or other capture
           // types to optimise
-          mlir::Value mapOp = createMapInfoOp(
-              firOpBuilder, clauseLocation, symAddr, mlir::Value{},
-              asFortran.str(), bounds, {},
+          mlir::omp::MapInfoOp mapOp = createMapInfoOp(
+              firOpBuilder, clauseLocation, symAddr,
+              /*varPtrPtr=*/mlir::Value{}, asFortran.str(), bounds,
+              /*members=*/{}, /*membersIndex=*/mlir::DenseIntElementsAttr{},
               static_cast<
                   std::underlying_type_t<llvm::omp::OpenMPOffloadMappingFlags>>(
                   mapTypeBits),
               mlir::omp::VariableCaptureKind::ByRef, symAddr.getType());
 
-          result.mapVars.push_back(mapOp);
+          if (object.id()->owner().IsDerivedType()) {
+            addChildIndexAndMapToParent(object, parentMemberIndices, mapOp,
+                                        semaCtx);
+          } else {
+            result.mapVars.push_back(mapOp);
+            mapSymbols.push_back(object.id());
+          }
         }
       });
+
+  insertChildMapInfoIntoParent(converter, parentMemberIndices, result.mapVars,
+                               mapSymbols,
+                               /*mapSymTypes=*/nullptr, /*mapSymLocs=*/nullptr);
+  return clauseFound;
 }
 
 template <typename... Ts>

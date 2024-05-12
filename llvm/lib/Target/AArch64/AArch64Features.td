@@ -71,7 +71,6 @@ class FMVOnlyExtension<string FMVBit, string Name, string Deps, int Priority>
 }
 
 def : FMVOnlyExtension<"FEAT_DGH", "dgh", "", 260>;
-def : FMVOnlyExtension<"FEAT_DIT", "dit", "+dit", 180>;
 def : FMVOnlyExtension<"FEAT_DPB", "dpb", "+ccpp", 190>;
 def : FMVOnlyExtension<"FEAT_DPB2", "dpb2", "+ccpp,+ccdp", 200>;
 def : FMVOnlyExtension<"FEAT_EBF16", "ebf16", "+bf16", 290>;
@@ -90,7 +89,6 @@ def : FMVOnlyExtension<"FEAT_SVE_BF16", "sve-bf16", "+sve,+bf16,+fullfp16,+fp-ar
 def : FMVOnlyExtension<"FEAT_SVE_EBF16", "sve-ebf16", "+sve,+bf16,+fullfp16,+fp-armv8,+neon", 330>;
 def : FMVOnlyExtension<"FEAT_SVE_I8MM", "sve-i8mm", "+sve,+i8mm,+fullfp16,+fp-armv8,+neon", 340>;
 def : FMVOnlyExtension<"FEAT_SVE_PMULL128", "sve2-pmull128", "+sve2,+sve,+sve2-aes,+fullfp16,+fp-armv8,+neon", 390>;
-def : FMVOnlyExtension<"FEAT_WFXT", "wfxt", "+wfxt", 550>;
 
 
 // Each SubtargetFeature which corresponds to an Arm Architecture feature should
@@ -456,9 +454,10 @@ def FeatureMPAM : SubtargetFeature<
     "mpam", "HasMPAM", "true",
     "Enable v8.4-A Memory system Partitioning and Monitoring extension (FEAT_MPAM)">;
 
-def FeatureDIT : SubtargetFeature<
-    "dit", "HasDIT", "true",
-    "Enable v8.4-A Data Independent Timing instructions (FEAT_DIT)">;
+def FeatureDIT : Extension<
+    "dit", "DIT",
+    "Enable v8.4-A Data Independent Timing instructions (FEAT_DIT)", [],
+    "FEAT_DIT", "+dit", 180>;
 
 def FeatureTRACEV8_4 : SubtargetFeature<
     "tracev8.4", "HasTRACEV8_4", "true",
@@ -596,9 +595,9 @@ def FeatureMatMulFP64 : Extension<"f64mm", "MatMulFP64",
 def FeatureXS : SubtargetFeature<"xs", "HasXS",
     "true", "Enable Armv8.7-A limited-TLB-maintenance instruction (FEAT_XS)">;
 
-// FIXME link with FMVExtension?
-def FeatureWFxT : SubtargetFeature<"wfxt", "HasWFxT",
-    "true", "Enable Armv8.7-A WFET and WFIT instruction (FEAT_WFxT)">;
+def FeatureWFxT : Extension<"wfxt", "WFxT",
+    "Enable Armv8.7-A WFET and WFIT instruction (FEAT_WFxT)", [],
+    "FEAT_WFXT", "+wfxt", 550>;
 
 def FeatureHCX : SubtargetFeature<
     "hcx", "HasHCX", "true", "Enable Armv8.7-A HCRX_EL2 system register (FEAT_HCX)">;

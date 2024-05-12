@@ -2492,9 +2492,6 @@ struct ConvertConstructorToDeductionGuideTransform {
       Args.addOuterRetainedLevel();
     }
 
-    if (NestedPattern)
-      Args.addOuterRetainedLevels(NestedPattern->getTemplateDepth());
-
     FunctionProtoTypeLoc FPTL = CD->getTypeSourceInfo()->getTypeLoc()
                                    .getAsAdjusted<FunctionProtoTypeLoc>();
     assert(FPTL && "no prototype for constructor declaration");
@@ -2584,11 +2581,27 @@ private:
 
     //    -- The types of the function parameters are those of the constructor.
     for (auto *OldParam : TL.getParams()) {
-      ParmVarDecl *NewParam =
-          transformFunctionTypeParam(OldParam, Args, MaterializedTypedefs);
-      if (NestedPattern && NewParam)
+      ParmVarDecl *NewParam = OldParam;
+      // Given
+      //   template <class T> struct C {
+      //     template <class U> struct D {
+      //       template <class V> D(U, V);
+      //     };
+      //   };
+      // First, transform all the references to template parameters that are
+      // defined outside of the surrounding class template. That is T in the
+      // above example.
+      if (NestedPattern) {
         NewParam = transformFunctionTypeParam(NewParam, OuterInstantiationArgs,
                                               MaterializedTypedefs);
+        if (!NewParam)
+          return QualType();
+      }
+      // Then, transform all the references to template parameters that are
+      // defined at the class template and the constructor. In this example,
+      // they're U and V, respectively.
+      NewParam =
+          transformFunctionTypeParam(NewParam, Args, MaterializedTypedefs);
       if (!NewParam)
         return QualType();
       ParamTypes.push_back(NewParam->getType());
@@ -2666,7 +2679,7 @@ private:
       // placeholder to indicate there is a default argument.
       QualType ParamTy = NewDI->getType();
       NewDefArg = new (SemaRef.Context)
-          OpaqueValueExpr(OldParam->getDefaultArg()->getBeginLoc(),
+          OpaqueValueExpr(OldParam->getDefaultArgRange().getBegin(),
                           ParamTy.getNonLValueExprType(SemaRef.Context),
                           ParamTy->isLValueReferenceType()   ? VK_LValue
                           : ParamTy->isRValueReferenceType() ? VK_XValue
@@ -4255,8 +4268,8 @@ checkBuiltinTemplateIdType(Sema &SemaRef, BuiltinTemplateDecl *BTD,
 /// Determine whether this alias template is "enable_if_t".
 /// libc++ >=14 uses "__enable_if_t" in C++11 mode.
 static bool isEnableIfAliasTemplate(TypeAliasTemplateDecl *AliasTemplate) {
-  return AliasTemplate->getName().equals("enable_if_t") ||
-         AliasTemplate->getName().equals("__enable_if_t");
+  return AliasTemplate->getName() == "enable_if_t" ||
+         AliasTemplate->getName() == "__enable_if_t";
 }
 
 /// Collect all of the separable terms in the given condition, which
