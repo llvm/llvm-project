@@ -673,6 +673,8 @@ void LinkerScript::processSectionCommands() {
 }
 
 void LinkerScript::processSymbolAssignments() {
+  if (errorCount())
+    return;
   // Dot outside an output section still represents a relative address, whose
   // sh_shndx should not be SHN_UNDEF or SHN_ABS. Create a dummy aether section
   // that fills the void outside a section. It has an index of one, which is

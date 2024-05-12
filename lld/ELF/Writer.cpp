@@ -1402,7 +1402,11 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
   ThunkCreator tc;
   AArch64Err843419Patcher a64p;
   ARMErr657417Patcher a32p;
+  unsigned errors = errorHandler().errorCount;
   script->assignAddresses();
+  // Exit out early if the first assignAddresses produced errors.
+  if (errors != errorHandler().errorCount)
+    return;
   // .ARM.exidx and SHF_LINK_ORDER do not require precise addresses, but they
   // do require the relative addresses of OutputSections because linker scripts
   // can assign Virtual Addresses to OutputSections that are not monotonically

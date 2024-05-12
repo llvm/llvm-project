@@ -48,7 +48,7 @@
 # CHAIN_WITH_CYCLE: 000 A newsym
 
 # RUN: not ld.lld -T chain2.t a.o 2>&1 | FileCheck %s --check-prefix=ERR --implicit-check-not=error:
-# ERR-COUNT-3: error: chain2.t:1: symbol not found: undef
+# ERR-COUNT-2: error: chain2.t:1: symbol not found: undef
 
 ## _start in a lazy object file references PROVIDE symbols. We extract _start
 ## earlier to avoid spurious "symbol not found" errors.
