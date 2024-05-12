@@ -30,6 +30,6 @@ TEST(LlvmLibcIoctlTest, InvalidFileDescriptor) {
 
 TEST(LlvmLibcIoctlTest, ValidFileDescriptor) {
   int fd = open("/dev/tty1", O_RDWR);
-  int res = LIBC_NAMESPACE::i(fd, KDSETMODE, KD_GRAPHICS);
+  int res = LIBC_NAMESPACE::ioctl(fd, KDSETMODE, KD_GRAPHICS);
   EXPECT_THAT(res, Succeeds());
 }
