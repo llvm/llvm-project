@@ -12,12 +12,7 @@ define void @ctest8rr_zf(i8 %a, i8 %b) {
 ; NDD-LABEL: ctest8rr_zf:
 ; NDD:       # %bb.0: # %bb
 ; NDD-NEXT:    testb %dil, %dil # encoding: [0x40,0x84,0xff]
-; NDD-NEXT:    je .LBB0_1 # encoding: [0x74,A]
-; NDD-NEXT:    # fixup A - offset: 1, value: .LBB0_1-1, kind: FK_PCRel_1
-; NDD-NEXT:  # %bb.2: # %bb3
-; NDD-NEXT:    retq # encoding: [0xc3]
-; NDD-NEXT:  .LBB0_1: # %bb1
-; NDD-NEXT:    andb %sil, %dil, %al # encoding: [0x62,0xf4,0x7c,0x18,0x20,0xf7]
+; NDD-NEXT:    ctesteb {dfv=zf} %sil, %dil # encoding: [0x62,0xf4,0x14,0x04,0x84,0xf7]
 ; NDD-NEXT:    retq # encoding: [0xc3]
 bb:
   %cond1 = icmp eq i8 %a, 0
@@ -46,11 +41,7 @@ define void @ctest16rr_sf(i16 %a, i16 %b) {
 ; NDD-LABEL: ctest16rr_sf:
 ; NDD:       # %bb.0: # %bb
 ; NDD-NEXT:    testw %di, %di # encoding: [0x66,0x85,0xff]
-; NDD-NEXT:    jne .LBB1_2 # encoding: [0x75,A]
-; NDD-NEXT:    # fixup A - offset: 1, value: .LBB1_2-1, kind: FK_PCRel_1
-; NDD-NEXT:  # %bb.1: # %bb1
-; NDD-NEXT:    andw %si, %di, %ax # encoding: [0x62,0xf4,0x7d,0x18,0x21,0xf7]
-; NDD-NEXT:  .LBB1_2: # %bb3
+; NDD-NEXT:    ctestew {dfv=sf} %si, %di # encoding: [0x62,0xf4,0x25,0x04,0x85,0xf7]
 ; NDD-NEXT:    retq # encoding: [0xc3]
 bb:
   %cond1 = icmp ule i16 %a, 0
@@ -81,11 +72,7 @@ define void @ctest32rr_zf(i32 %a, i32 %b) {
 ; NDD:       # %bb.0: # %bb
 ; NDD-NEXT:    movb $1, %al # encoding: [0xb0,0x01]
 ; NDD-NEXT:    testb %al, %al # encoding: [0x84,0xc0]
-; NDD-NEXT:    jne .LBB2_2 # encoding: [0x75,A]
-; NDD-NEXT:    # fixup A - offset: 1, value: .LBB2_2-1, kind: FK_PCRel_1
-; NDD-NEXT:  # %bb.1: # %bb1
-; NDD-NEXT:    andl %esi, %edi, %eax # encoding: [0x62,0xf4,0x7c,0x18,0x21,0xf7]
-; NDD-NEXT:  .LBB2_2: # %bb3
+; NDD-NEXT:    ctestel {dfv=zf} %esi, %edi # encoding: [0x62,0xf4,0x14,0x04,0x85,0xf7]
 ; NDD-NEXT:    retq # encoding: [0xc3]
 bb:
   %cond1 = icmp ult i32 %a, 0
@@ -114,12 +101,7 @@ define void @ctest64rr_sf(i64 %a, i64 %b) {
 ; NDD-LABEL: ctest64rr_sf:
 ; NDD:       # %bb.0: # %bb
 ; NDD-NEXT:    testq %rdi, %rdi # encoding: [0x48,0x85,0xff]
-; NDD-NEXT:    js .LBB3_1 # encoding: [0x78,A]
-; NDD-NEXT:    # fixup A - offset: 1, value: .LBB3_1-1, kind: FK_PCRel_1
-; NDD-NEXT:  # %bb.2: # %bb3
-; NDD-NEXT:    retq # encoding: [0xc3]
-; NDD-NEXT:  .LBB3_1: # %bb1
-; NDD-NEXT:    andq %rsi, %rdi, %rax # encoding: [0x62,0xf4,0xfc,0x18,0x21,0xf7]
+; NDD-NEXT:    ctestsq {dfv=sf} %rsi, %rdi # encoding: [0x62,0xf4,0xa4,0x08,0x85,0xf7]
 ; NDD-NEXT:    retq # encoding: [0xc3]
 bb:
   %cond1 = icmp slt i64 %a, 0
@@ -270,12 +252,7 @@ define void @ctest8mr_zf(i8 %a, ptr %ptr) {
 ; NDD-LABEL: ctest8mr_zf:
 ; NDD:       # %bb.0: # %bb
 ; NDD-NEXT:    testb %dil, %dil # encoding: [0x40,0x84,0xff]
-; NDD-NEXT:    je .LBB8_1 # encoding: [0x74,A]
-; NDD-NEXT:    # fixup A - offset: 1, value: .LBB8_1-1, kind: FK_PCRel_1
-; NDD-NEXT:  # %bb.2: # %bb3
-; NDD-NEXT:    retq # encoding: [0xc3]
-; NDD-NEXT:  .LBB8_1: # %bb1
-; NDD-NEXT:    andb (%rsi), %dil, %al # encoding: [0x62,0xf4,0x7c,0x18,0x22,0x3e]
+; NDD-NEXT:    ctesteb {dfv=zf} %dil, (%rsi) # encoding: [0x62,0xf4,0x14,0x04,0x84,0x3e]
 ; NDD-NEXT:    retq # encoding: [0xc3]
 bb:
   %b = load i8, ptr %ptr
@@ -305,12 +282,7 @@ define void @ctest16mr_sf(i16 %a, ptr %ptr) {
 ; NDD-LABEL: ctest16mr_sf:
 ; NDD:       # %bb.0: # %bb
 ; NDD-NEXT:    testw %di, %di # encoding: [0x66,0x85,0xff]
-; NDD-NEXT:    je .LBB9_1 # encoding: [0x74,A]
-; NDD-NEXT:    # fixup A - offset: 1, value: .LBB9_1-1, kind: FK_PCRel_1
-; NDD-NEXT:  # %bb.2: # %bb3
-; NDD-NEXT:    retq # encoding: [0xc3]
-; NDD-NEXT:  .LBB9_1: # %bb1
-; NDD-NEXT:    andw (%rsi), %di, %ax # encoding: [0x62,0xf4,0x7d,0x18,0x23,0x3e]
+; NDD-NEXT:    ctestew {dfv=sf} %di, (%rsi) # encoding: [0x62,0xf4,0x25,0x04,0x85,0x3e]
 ; NDD-NEXT:    retq # encoding: [0xc3]
 bb:
   %b = load i16, ptr %ptr
@@ -340,12 +312,7 @@ define void @ctest32mr_zf(i32 %a, ptr %ptr) {
 ; NDD-LABEL: ctest32mr_zf:
 ; NDD:       # %bb.0: # %bb
 ; NDD-NEXT:    testl %edi, %edi # encoding: [0x85,0xff]
-; NDD-NEXT:    je .LBB10_1 # encoding: [0x74,A]
-; NDD-NEXT:    # fixup A - offset: 1, value: .LBB10_1-1, kind: FK_PCRel_1
-; NDD-NEXT:  # %bb.2: # %bb3
-; NDD-NEXT:    retq # encoding: [0xc3]
-; NDD-NEXT:  .LBB10_1: # %bb1
-; NDD-NEXT:    andl (%rsi), %edi, %eax # encoding: [0x62,0xf4,0x7c,0x18,0x23,0x3e]
+; NDD-NEXT:    ctestel {dfv=zf} %edi, (%rsi) # encoding: [0x62,0xf4,0x14,0x04,0x85,0x3e]
 ; NDD-NEXT:    retq # encoding: [0xc3]
 bb:
   %b = load i32, ptr %ptr
@@ -375,11 +342,7 @@ define void @ctest64mr_sf(i64 %a, ptr %ptr) {
 ; NDD-LABEL: ctest64mr_sf:
 ; NDD:       # %bb.0: # %bb
 ; NDD-NEXT:    testq %rdi, %rdi # encoding: [0x48,0x85,0xff]
-; NDD-NEXT:    js .LBB11_2 # encoding: [0x78,A]
-; NDD-NEXT:    # fixup A - offset: 1, value: .LBB11_2-1, kind: FK_PCRel_1
-; NDD-NEXT:  # %bb.1: # %bb1
-; NDD-NEXT:    andq (%rsi), %rdi, %rax # encoding: [0x62,0xf4,0xfc,0x18,0x23,0x3e]
-; NDD-NEXT:  .LBB11_2: # %bb3
+; NDD-NEXT:    ctestnsq {dfv=sf} %rdi, (%rsi) # encoding: [0x62,0xf4,0xa4,0x09,0x85,0x3e]
 ; NDD-NEXT:    retq # encoding: [0xc3]
 bb:
   %b = load i64, ptr %ptr
