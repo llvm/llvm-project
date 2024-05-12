@@ -535,7 +535,7 @@ bool TrivialFunctionAnalysis::isTrivialImpl(
   const Stmt *Body = D->getBody();
   if (!Body) {
     Cache[D] = false;
-    return false;    
+    return false;
   }
 
   bool Result = V.Visit(Body);
