@@ -1560,7 +1560,9 @@ void X86DAGToDAGISel::PostprocessISelDAG() {
       SDValue And = N->getOperand(0);
       unsigned N0Opc = And.getMachineOpcode();
       if ((N0Opc == X86::AND8rr || N0Opc == X86::AND16rr ||
-           N0Opc == X86::AND32rr || N0Opc == X86::AND64rr) &&
+           N0Opc == X86::AND32rr || N0Opc == X86::AND64rr ||
+           N0Opc == X86::AND8rr_ND || N0Opc == X86::AND16rr_ND ||
+           N0Opc == X86::AND32rr_ND || N0Opc == X86::AND64rr_ND) &&
           !And->hasAnyUseOfValue(1)) {
         MachineSDNode *Test = CurDAG->getMachineNode(Opc, SDLoc(N),
                                                      MVT::i32,
@@ -1571,15 +1573,25 @@ void X86DAGToDAGISel::PostprocessISelDAG() {
         continue;
       }
       if ((N0Opc == X86::AND8rm || N0Opc == X86::AND16rm ||
-           N0Opc == X86::AND32rm || N0Opc == X86::AND64rm) &&
+           N0Opc == X86::AND32rm || N0Opc == X86::AND64rm ||
+           N0Opc == X86::AND8rm_ND || N0Opc == X86::AND16rm_ND ||
+           N0Opc == X86::AND32rm_ND || N0Opc == X86::AND64rm_ND) &&
           !And->hasAnyUseOfValue(1)) {
         unsigned NewOpc;
+#define CASE_ND(OP)                                                            \
+  case X86::OP:                                                                \
+  case X86::OP##_ND:
+#define FROM_TO(A, B)                                                          \
+  CASE_ND(A) NewOpc = X86::B;                                                  \
+  break;
         switch (N0Opc) {
-        case X86::AND8rm:  NewOpc = X86::TEST8mr; break;
-        case X86::AND16rm: NewOpc = X86::TEST16mr; break;
-        case X86::AND32rm: NewOpc = X86::TEST32mr; break;
-        case X86::AND64rm: NewOpc = X86::TEST64mr; break;
+          FROM_TO(AND8rm, TEST8mr);
+          FROM_TO(AND16rm, TEST16mr);
+          FROM_TO(AND32rm, TEST32mr);
+          FROM_TO(AND64rm, TEST64mr);
         }
+#undef FROM_TO
+#undef CASE_ND
 
         // Need to swap the memory and register operand.
         SDValue Ops[] = { And.getOperand(1),
