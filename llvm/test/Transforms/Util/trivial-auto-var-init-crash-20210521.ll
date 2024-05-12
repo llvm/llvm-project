@@ -14,7 +14,7 @@ define void @spam() local_unnamed_addr #1 !dbg !3 {
 bb:
   call void @llvm.dbg.value(metadata ptr null, metadata !21, metadata !DIExpression()) #3, !dbg !28
 
-; CHECK: remark: :1:0: Call to memset inserted by -ftrivial-auto-var-init. Memory operation size: 0 bytes.
+; CHECK: remark: {{.*}}:1:0: Call to memset inserted by -ftrivial-auto-var-init. Memory operation size: 0 bytes.
   tail call void @llvm.memset.p0.i64(ptr null, i8 0, i64 0, i1 false), !annotation !33, !dbg !28
   ret void
 }

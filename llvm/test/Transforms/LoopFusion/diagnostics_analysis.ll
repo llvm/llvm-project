@@ -3,8 +3,8 @@
 
 @B = common global [1024 x i32] zeroinitializer, align 16
 
-; CHECK: remark: diagnostics_analysis.c:6:3: [test]: Loop is not a candidate for fusion: Loop contains a volatile access
-; CHECK: remark: diagnostics_analysis.c:10:3: [test]: Loop is not a candidate for fusion: Loop has unknown trip count
+; CHECK: remark: {{.*}}diagnostics_analysis.c:6:3: [test]: Loop is not a candidate for fusion: Loop contains a volatile access
+; CHECK: remark: {{.*}}diagnostics_analysis.c:10:3: [test]: Loop is not a candidate for fusion: Loop has unknown trip count
 define void @test(ptr %A, i32 %n) !dbg !15 {
 entry:
   %A.addr = alloca ptr, align 8
