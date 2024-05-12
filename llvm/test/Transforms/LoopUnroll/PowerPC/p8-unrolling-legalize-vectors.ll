@@ -48,7 +48,7 @@ define ptr @f(ptr returned %s, i32 zeroext %x, i32 signext %k) local_unnamed_add
 ; CHECK-NEXT:    store <16 x i8> [[TMP12]], ptr [[TMP13]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT_1]] = add i64 [[INDEX]], 32
 ; CHECK-NEXT:    [[VEC_IND_NEXT13_1]] = add <16 x i32> [[VEC_IND12]], <i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32>
-; CHECK-NEXT:    [[NITER_NEXT_1]] = add i64 [[NITER]], 2
+; CHECK-NEXT:    [[NITER_NEXT_1]] = add nuw i64 [[NITER]], 2
 ; CHECK-NEXT:    [[NITER_NCMP_1:%.*]] = icmp eq i64 [[NITER_NEXT_1]], [[UNROLL_ITER]]
 ; CHECK-NEXT:    br i1 [[NITER_NCMP_1]], label [[MIDDLE_BLOCK_UNR_LCSSA_LOOPEXIT:%.*]], label [[VECTOR_BODY]]
 ; CHECK:       middle.block.unr-lcssa.loopexit:

@@ -69,7 +69,7 @@ define i32 @test(ptr nocapture %a, i64 %n) {
 ; ENABLED-NEXT:    [[TMP10:%.*]] = load i32, ptr [[ARRAYIDX_7]], align 4
 ; ENABLED-NEXT:    [[ADD_7]] = add nsw i32 [[TMP10]], [[ADD_6]]
 ; ENABLED-NEXT:    [[INDVARS_IV_NEXT_7]] = add i64 [[INDVARS_IV]], 8
-; ENABLED-NEXT:    [[NITER_NEXT_7]] = add i64 [[NITER]], 8
+; ENABLED-NEXT:    [[NITER_NEXT_7]] = add nuw i64 [[NITER]], 8
 ; ENABLED-NEXT:    [[NITER_NCMP_7:%.*]] = icmp eq i64 [[NITER_NEXT_7]], [[UNROLL_ITER]]
 ; ENABLED-NEXT:    br i1 [[NITER_NCMP_7]], label [[FOR_END_UNR_LCSSA_LOOPEXIT:%.*]], label [[HEADER]]
 ; ENABLED:       for.end.unr-lcssa.loopexit:

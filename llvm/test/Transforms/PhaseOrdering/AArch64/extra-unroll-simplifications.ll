@@ -33,7 +33,7 @@ define void @partial_unroll_forced(i32 %N, ptr %src, ptr noalias %dst) {
 ; CHECK-NEXT:    [[ADD_1:%.*]] = fadd <8 x half> [[L_1]], [[L_1]]
 ; CHECK-NEXT:    store <8 x half> [[ADD_1]], ptr [[DST_IDX_1]], align 16
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT_1]] = add nuw nsw i64 [[INDVARS_IV]], 2
-; CHECK-NEXT:    [[NITER_NEXT_1]] = add i64 [[NITER]], 2
+; CHECK-NEXT:    [[NITER_NEXT_1]] = add nuw i64 [[NITER]], 2
 ; CHECK-NEXT:    [[NITER_NCMP_1:%.*]] = icmp eq i64 [[NITER_NEXT_1]], [[UNROLL_ITER]]
 ; CHECK-NEXT:    br i1 [[NITER_NCMP_1]], label [[EXIT_LOOPEXIT_UNR_LCSSA]], label [[LOOP_LATCH]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       exit.loopexit.unr-lcssa:

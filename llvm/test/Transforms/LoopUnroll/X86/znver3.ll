@@ -993,7 +993,7 @@ define i32 @test2(ptr %ary, i64 %n) "target-cpu"="znver3" {
 ; CHECK-NEXT:    [[DUMMY50_7:%.*]] = mul i32 [[DUMMY49_7]], [[DUMMY49_7]]
 ; CHECK-NEXT:    [[SUM_NEXT_7]] = add nsw i32 [[DUMMY50_7]], [[SUM_NEXT_6]]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT_7]] = add nuw nsw i64 [[INDVARS_IV]], 8
-; CHECK-NEXT:    [[NITER_NEXT_7]] = add i64 [[NITER]], 8
+; CHECK-NEXT:    [[NITER_NEXT_7]] = add nuw i64 [[NITER]], 8
 ; CHECK-NEXT:    [[NITER_NCMP_7:%.*]] = icmp eq i64 [[NITER_NEXT_7]], [[UNROLL_ITER]]
 ; CHECK-NEXT:    br i1 [[NITER_NCMP_7]], label [[FOR_COND_CLEANUP_UNR_LCSSA_LOOPEXIT:%.*]], label [[FOR_BODY]]
 ; CHECK:       for.cond.cleanup.unr-lcssa.loopexit:

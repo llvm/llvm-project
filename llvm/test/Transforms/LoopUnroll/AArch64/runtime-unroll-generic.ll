@@ -67,7 +67,7 @@ define void @runtime_unroll_generic(i32 %arg_0, ptr %arg_1, ptr %arg_2, ptr %arg
 ; CHECK-A55-NEXT:    [[ADD21_3:%.*]] = add nsw i32 [[MUL16_3]], [[TMP12]]
 ; CHECK-A55-NEXT:    store i32 [[ADD21_3]], ptr [[ARRAYIDX20_3]], align 4
 ; CHECK-A55-NEXT:    [[INDVARS_IV_NEXT_3]] = add nuw nsw i64 [[INDVARS_IV]], 4
-; CHECK-A55-NEXT:    [[NITER_NEXT_3]] = add i64 [[NITER]], 4
+; CHECK-A55-NEXT:    [[NITER_NEXT_3]] = add nuw i64 [[NITER]], 4
 ; CHECK-A55-NEXT:    [[NITER_NCMP_3:%.*]] = icmp eq i64 [[NITER_NEXT_3]], [[UNROLL_ITER]]
 ; CHECK-A55-NEXT:    br i1 [[NITER_NCMP_3]], label [[FOR_END_LOOPEXIT_UNR_LCSSA]], label [[FOR_BODY6]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK-A55:       for.end.loopexit.unr-lcssa:

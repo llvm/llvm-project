@@ -940,7 +940,7 @@ bool llvm::UnrollRuntimeLoopRemainder(
     B2.SetInsertPoint(LatchBR);
     auto *Zero = ConstantInt::get(NewIdx->getType(), 0);
     auto *One = ConstantInt::get(NewIdx->getType(), 1);
-    Value *IdxNext = B2.CreateAdd(NewIdx, One, NewIdx->getName() + ".next");
+    Value *IdxNext = B2.CreateNUWAdd(NewIdx, One, NewIdx->getName() + ".next");
     auto Pred = LatchBR->getSuccessor(0) == Header ? ICmpInst::ICMP_NE : ICmpInst::ICMP_EQ;
     Value *IdxCmp = B2.CreateICmp(Pred, IdxNext, TestVal, NewIdx->getName() + ".ncmp");
     NewIdx->addIncoming(Zero, NewPreHeader);
