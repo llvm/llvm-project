@@ -168,14 +168,14 @@ define <2 x i8> @and1_shl1_is_cmp_eq_0_vec(<2 x i8> %x) {
   ret <2 x i8> %and
 }
 
-define <2 x i8> @and1_shl1_is_cmp_eq_0_vec_undef(<2 x i8> %x) {
-; CHECK-LABEL: @and1_shl1_is_cmp_eq_0_vec_undef(
+define <2 x i8> @and1_shl1_is_cmp_eq_0_vec_poison(<2 x i8> %x) {
+; CHECK-LABEL: @and1_shl1_is_cmp_eq_0_vec_poison(
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <2 x i8> [[X:%.*]], zeroinitializer
 ; CHECK-NEXT:    [[AND:%.*]] = zext <2 x i1> [[TMP1]] to <2 x i8>
 ; CHECK-NEXT:    ret <2 x i8> [[AND]]
 ;
-  %sh = shl <2 x i8> <i8 1, i8 undef>, %x
-  %and = and <2 x i8> %sh, <i8 1, i8 undef>
+  %sh = shl <2 x i8> <i8 1, i8 poison>, %x
+  %and = and <2 x i8> %sh, <i8 1, i8 poison>
   ret <2 x i8> %and
 }
 
@@ -215,14 +215,13 @@ define <2 x i8> @and1_lshr1_is_cmp_eq_0_vec(<2 x i8> %x) {
   ret <2 x i8> %and
 }
 
-define <2 x i8> @and1_lshr1_is_cmp_eq_0_vec_undef(<2 x i8> %x) {
-; CHECK-LABEL: @and1_lshr1_is_cmp_eq_0_vec_undef(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <2 x i8> [[X:%.*]], zeroinitializer
-; CHECK-NEXT:    [[AND:%.*]] = zext <2 x i1> [[TMP1]] to <2 x i8>
+define <2 x i8> @and1_lshr1_is_cmp_eq_0_vec_poison(<2 x i8> %x) {
+; CHECK-LABEL: @and1_lshr1_is_cmp_eq_0_vec_poison(
+; CHECK-NEXT:    [[AND:%.*]] = lshr <2 x i8> <i8 1, i8 poison>, [[X:%.*]]
 ; CHECK-NEXT:    ret <2 x i8> [[AND]]
 ;
-  %sh = lshr <2 x i8> <i8 1, i8 undef>, %x
-  %and = and <2 x i8> %sh, <i8 1, i8 undef>
+  %sh = lshr <2 x i8> <i8 1, i8 poison>, %x
+  %and = and <2 x i8> %sh, <i8 1, i8 poison>
   ret <2 x i8> %and
 }
 

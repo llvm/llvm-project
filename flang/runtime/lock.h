@@ -25,9 +25,7 @@
 #if USE_PTHREADS
 #include <pthread.h>
 #elif defined(_WIN32)
-// Do not define macros for "min" and "max"
-#define NOMINMAX
-#include <windows.h>
+#include "flang/Common/windows-include.h"
 #else
 #include <mutex>
 #endif
@@ -42,10 +40,10 @@ public:
   // The users of Lock class may use it under
   // USE_PTHREADS and otherwise, so it has to provide
   // all the interfaces.
-  void Take() {}
-  bool Try() { return true; }
-  void Drop() {}
-  bool TakeIfNoDeadlock() { return true; }
+  RT_API_ATTRS void Take() {}
+  RT_API_ATTRS bool Try() { return true; }
+  RT_API_ATTRS void Drop() {}
+  RT_API_ATTRS bool TakeIfNoDeadlock() { return true; }
 #elif USE_PTHREADS
   Lock() { pthread_mutex_init(&mutex_, nullptr); }
   ~Lock() { pthread_mutex_destroy(&mutex_); }
@@ -105,8 +103,10 @@ private:
 
 class CriticalSection {
 public:
-  explicit CriticalSection(Lock &lock) : lock_{lock} { lock_.Take(); }
-  ~CriticalSection() { lock_.Drop(); }
+  explicit RT_API_ATTRS CriticalSection(Lock &lock) : lock_{lock} {
+    lock_.Take();
+  }
+  RT_API_ATTRS ~CriticalSection() { lock_.Drop(); }
 
 private:
   Lock &lock_;

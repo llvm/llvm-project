@@ -823,6 +823,12 @@ void TargetLoweringBase::initActions() {
   std::fill(std::begin(TargetDAGCombineArray),
             std::end(TargetDAGCombineArray), 0);
 
+  // Let extending atomic loads be unsupported by default.
+  for (MVT ValVT : MVT::all_valuetypes())
+    for (MVT MemVT : MVT::all_valuetypes())
+      setAtomicLoadExtAction({ISD::SEXTLOAD, ISD::ZEXTLOAD}, ValVT, MemVT,
+                             Expand);
+
   // We're somewhat special casing MVT::i2 and MVT::i4. Ideally we want to
   // remove this and targets should individually set these types if not legal.
   for (ISD::NodeType NT : enum_seq(ISD::DELETED_NODE, ISD::BUILTIN_OP_END,
@@ -1040,6 +1046,24 @@ bool TargetLoweringBase::canOpTrap(unsigned Op, EVT VT) const {
 bool TargetLoweringBase::isFreeAddrSpaceCast(unsigned SrcAS,
                                              unsigned DestAS) const {
   return TM.isNoopAddrSpaceCast(SrcAS, DestAS);
+}
+
+unsigned TargetLoweringBase::getBitWidthForCttzElements(
+    Type *RetTy, ElementCount EC, bool ZeroIsPoison,
+    const ConstantRange *VScaleRange) const {
+  // Find the smallest "sensible" element type to use for the expansion.
+  ConstantRange CR(APInt(64, EC.getKnownMinValue()));
+  if (EC.isScalable())
+    CR = CR.umul_sat(*VScaleRange);
+
+  if (ZeroIsPoison)
+    CR = CR.subtract(APInt(64, 1));
+
+  unsigned EltWidth = RetTy->getScalarSizeInBits();
+  EltWidth = std::min(EltWidth, (unsigned)CR.getActiveBits());
+  EltWidth = std::max(llvm::bit_ceil(EltWidth), (unsigned)8);
+
+  return EltWidth;
 }
 
 void TargetLoweringBase::setJumpIsExpensive(bool isExpensive) {
@@ -1803,8 +1827,16 @@ void llvm::GetReturnInfo(CallingConv::ID CC, Type *ReturnType,
     else if (attr.hasRetAttr(Attribute::ZExt))
       Flags.setZExt();
 
-    for (unsigned i = 0; i < NumParts; ++i)
-      Outs.push_back(ISD::OutputArg(Flags, PartVT, VT, /*isfixed=*/true, 0, 0));
+    for (unsigned i = 0; i < NumParts; ++i) {
+      ISD::ArgFlagsTy OutFlags = Flags;
+      if (NumParts > 1 && i == 0)
+        OutFlags.setSplit();
+      else if (i == NumParts - 1 && i != 0)
+        OutFlags.setSplitEnd();
+
+      Outs.push_back(
+          ISD::OutputArg(OutFlags, PartVT, VT, /*isfixed=*/true, 0, 0));
+    }
   }
 }
 
@@ -2073,7 +2105,8 @@ void TargetLoweringBase::insertSSPDeclarations(Module &M) const {
     // FreeBSD has "__stack_chk_guard" defined externally on libc.so
     if (M.getDirectAccessExternalData() &&
         !TM.getTargetTriple().isWindowsGNUEnvironment() &&
-        !TM.getTargetTriple().isOSFreeBSD() &&
+        !(TM.getTargetTriple().isPPC64() &&
+          TM.getTargetTriple().isOSFreeBSD()) &&
         (!TM.getTargetTriple().isOSDarwin() ||
          TM.getRelocationModel() == Reloc::Static))
       GV->setDSOLocal(true);
@@ -2234,7 +2267,7 @@ static int getOpEnabled(bool IsSqrt, EVT VT, StringRef Override) {
     if (IsDisabled)
       RecipType = RecipType.substr(1);
 
-    if (RecipType.equals(VTName) || RecipType.equals(VTNameNoSize))
+    if (RecipType == VTName || RecipType == VTNameNoSize)
       return IsDisabled ? TargetLoweringBase::ReciprocalEstimate::Disabled
                         : TargetLoweringBase::ReciprocalEstimate::Enabled;
   }
@@ -2284,7 +2317,7 @@ static int getOpRefinementSteps(bool IsSqrt, EVT VT, StringRef Override) {
       continue;
 
     RecipType = RecipType.substr(0, RefPos);
-    if (RecipType.equals(VTName) || RecipType.equals(VTNameNoSize))
+    if (RecipType == VTName || RecipType == VTNameNoSize)
       return RefSteps;
   }
 

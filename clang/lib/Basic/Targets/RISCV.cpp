@@ -353,7 +353,8 @@ bool RISCVTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
   if (ISAInfo->hasExtension("zfh") || ISAInfo->hasExtension("zhinx"))
     HasLegalHalfType = true;
 
-  FastUnalignedAccess = llvm::is_contained(Features, "+fast-unaligned-access");
+  FastUnalignedAccess = llvm::is_contained(Features, "+unaligned-scalar-mem") &&
+                        llvm::is_contained(Features, "+unaligned-vector-mem");
 
   if (llvm::is_contained(Features, "+experimental"))
     HasExperimental = true;
@@ -466,4 +467,15 @@ ParsedTargetAttr RISCVTargetInfo::parseTargetAttr(StringRef Features) const {
     }
   }
   return Ret;
+}
+
+TargetInfo::CallingConvCheckResult
+RISCVTargetInfo::checkCallingConvention(CallingConv CC) const {
+  switch (CC) {
+  default:
+    return CCCR_Warning;
+  case CC_C:
+  case CC_RISCVVectorCall:
+    return CCCR_OK;
+  }
 }

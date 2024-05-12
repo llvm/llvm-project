@@ -1482,8 +1482,8 @@ void kmp_handle_upper_triangle_matrix(
                                     original_bounds_nest[0].ub0_u64);
   kmp_uint64 outer_lb0 = kmp_fix_iv(original_bounds_nest[0].loop_iv_type,
                                     original_bounds_nest[0].lb0_u64);
-  kmp_uint64 inner_ub0 = kmp_fix_iv(original_bounds_nest[1].loop_iv_type,
-                                    original_bounds_nest[1].ub0_u64);
+  [[maybe_unused]] kmp_uint64 inner_ub0 = kmp_fix_iv(
+      original_bounds_nest[1].loop_iv_type, original_bounds_nest[1].ub0_u64);
   // calculate the chunk's lower and upper bounds
   // the total number of iterations in the loop is the sum of the arithmetic
   // progression from the outer lower to outer upper bound (inclusive since the
@@ -1517,16 +1517,11 @@ void kmp_handle_upper_triangle_matrix(
   kmp_uint64 iter_with_current = iter_before_current + iter_current;
   // calculate the outer loop lower bound (lbo) which is the max outer iv value
   // that gives the number of iterations that is equal or just below the total
-  // number of iterations executed by the previous threads, for less_than
-  // (1-based) inner loops (inner_ub0 == -1) it will be i.e.
-  // lbo*(lbo-1)/2<=iter_before_current => lbo^2-lbo-2*iter_before_current<=0
-  // for less_than_equal (0-based) inner loops (inner_ub == 0) it will be:
-  // i.e. lbo*(lbo+1)/2<=iter_before_current =>
-  // lbo^2+lbo-2*iter_before_current<=0 both cases can be handled similarily
-  // using a parameter to control the equatio sign
+  // number of iterations executed by the previous threads:
+  // lbo*(lbo+1)/2<=iter_before_current =>
+  // lbo^2+lbo-2*iter_before_current<=0
   kmp_uint64 lower_bound_outer =
       (kmp_uint64)(sqrt_newton_approx(1 + 8 * iter_before_current) + 1) / 2 - 1;
-  ;
   // calculate the inner loop lower bound which is the remaining number of
   // iterations required to hit the total number of iterations executed by the
   // previous threads giving the starting point of this thread

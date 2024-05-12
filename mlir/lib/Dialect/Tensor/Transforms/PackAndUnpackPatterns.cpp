@@ -11,7 +11,6 @@
 #include "mlir/Dialect/Tensor/Transforms/Transforms.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/IR/PatternMatch.h"
-#include "llvm/Support/Debug.h"
 
 namespace mlir {
 namespace tensor {
@@ -53,12 +52,16 @@ static LogicalResult isPackOn1D(RewriterBase &rewriter, Operation *op,
 struct SimplifyPackToExpandShape : public OpRewritePattern<PackOp> {
   using OpRewritePattern<PackOp>::OpRewritePattern;
 
-  Value insertExpand(RewriterBase &rewriter, Location loc, Value operand,
-                     Type newOperandType, ArrayAttr reassociation) const {
+  FailureOr<Value>
+  insertExpand(RewriterBase &rewriter, Location loc, Value operand,
+               Type newOperandType,
+               ArrayRef<ReassociationIndices> reassociation) const {
     if (operand.getType() == newOperandType)
       return operand;
-    return rewriter.create<tensor::ExpandShapeOp>(loc, newOperandType, operand,
-                                                  reassociation);
+    return rewriter
+        .create<tensor::ExpandShapeOp>(loc, newOperandType, operand,
+                                       reassociation)
+        .getResult();
   }
 
   /// Returns success() if it is only packing on the innermost dimension.
@@ -97,10 +100,14 @@ struct SimplifyPackToExpandShape : public OpRewritePattern<PackOp> {
         getReassociationIndicesForReshape(sourceType, destType);
     if (!reassociation)
       return failure();
-    Value expanded = insertExpand(
-        rewriter, packOp.getLoc(), packOp.getSource(), destType,
-        getReassociationIndicesAttribute(rewriter, *reassociation));
-    rewriter.replaceOp(packOp, expanded);
+    FailureOr<Value> expanded =
+        insertExpand(rewriter, packOp.getLoc(), packOp.getSource(), destType,
+                     *reassociation);
+    if (failed(expanded)) {
+      return rewriter.notifyMatchFailure(
+          packOp, "unable to expand source of tensor.pack");
+    }
+    rewriter.replaceOp(packOp, *expanded);
     return success();
   }
 };
@@ -224,6 +231,33 @@ struct FoldUnpackWithExtractSliceOp : public OpRewritePattern<ExtractSliceOp> {
   }
 };
 
+// Applies 'permutation' on 'inVec' and stores the result in resVec.
+// 'inVec' may be empty, in that case it's one-to-one mapping with permutation.
+// `rank` sets the boundary for permutation i.e., the permutation dim can't be
+// greater than the rank specified. If it's so then return false.
+// For e.g., permutation {1, 0, 3, 2} with rank 2 is allowed since the values in
+// permutation[:rank] doesn't exceed rank, whereas, permutation {1, 3, 0, 2} is
+// not allowed since `3` exceeds the value of the rank in the given range.
+static bool checkAndPermute(ArrayRef<int64_t> permutation,
+                            ArrayRef<int64_t> inVec,
+                            SmallVectorImpl<int64_t> &resVec, int64_t rank) {
+
+  for (unsigned int i = 0; i < rank; ++i) {
+    int64_t remappedPosition = permutation[i];
+
+    if (!inVec.empty()) {
+      if (remappedPosition >= rank) {
+        return false;
+      }
+      remappedPosition = inVec[remappedPosition];
+    }
+
+    resVec.push_back(remappedPosition);
+  }
+
+  return true;
+}
+
 /// Fold 'pack' -> 'transpose' into 'pack' since 'pack' already has transpose
 /// semantics.
 struct FoldProducerPackWithConsumerLinalgTransposeOp
@@ -246,24 +280,12 @@ struct FoldProducerPackWithConsumerLinalgTransposeOp
     SmallVector<OpFoldResult> newMixedInnerTilesVec;
     int64_t srcRank = packOp.getSourceRank();
 
-    // Process transpose operation for non-tiled outer dimensions
-    for (unsigned int i = 0; i < srcRank; ++i) {
-      int64_t remappedPosition = transposePerm[i];
-
-      // If tensor.pack has outer_dims_perm attribute, then consider it during
-      // index remapping.
-      if (!outerDimsPerm.empty()) {
-        if (transposePerm[i] >= srcRank) {
-          return rewriter.notifyMatchFailure(
-              transposeOp,
-              "Cannot fold in tensor.pack if a tile dimension was transposed "
-              "with a non-tile dimension in linalg.transpose.");
-        }
-        remappedPosition = outerDimsPerm[remappedPosition];
-      }
-
-      newOuterDimsPermVec.push_back(remappedPosition);
-    }
+    if (!checkAndPermute(transposePerm, outerDimsPerm, newOuterDimsPermVec,
+                         srcRank))
+      return rewriter.notifyMatchFailure(
+          transposeOp,
+          "Cannot fold in tensor.pack if a tile dimension was transposed "
+          "with a non-tile dimension in linalg.transpose.");
 
     // Process transpose operation for tiled inner dimensions
     for (unsigned int i = srcRank; i < transposePerm.size(); ++i) {
@@ -323,12 +345,100 @@ struct FoldConsumerPackWithProducerLinalgTransposeOp
     return success();
   }
 };
+
+/// Fold 'unpack' -> 'transpose' into 'unpack' since 'unpack' already has
+/// transpose semantics.
+struct FoldProducerUnPackWithConsumerLinalgTransposeOp
+    : public OpRewritePattern<linalg::TransposeOp> {
+  using OpRewritePattern<linalg::TransposeOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(linalg::TransposeOp transposeOp,
+                                PatternRewriter &rewriter) const override {
+    auto unPackOp = transposeOp.getOperand(0).getDefiningOp<UnPackOp>();
+
+    if (!unPackOp)
+      return failure();
+
+    auto transposePermutation = transposeOp.getPermutation();
+    auto outerDimsPerm = unPackOp.getOuterDimsPerm();
+    auto innerDimsPos = unPackOp.getInnerDimsPos();
+    SmallVector<int64_t> newInnerDimsPosVec;
+    SmallVector<int64_t> newOuterDimsPermVec =
+        llvm::to_vector(transposePermutation);
+
+    if (!outerDimsPerm.empty())
+      applyPermutationToVector(newOuterDimsPermVec, outerDimsPerm);
+
+    // Can't use applyPermutationToVector for newInnerDimsPosVec since input and
+    // permutation rank won't necessarily be equal in all cases.
+    for (auto dim : innerDimsPos)
+      newInnerDimsPosVec.push_back(transposePermutation[dim]);
+
+    // Reuse the destination of the transpose op.
+    rewriter.replaceOpWithNewOp<UnPackOp>(
+        transposeOp, unPackOp.getSource(), transposeOp.getDpsInits()[0],
+        newInnerDimsPosVec, unPackOp.getMixedTiles(), newOuterDimsPermVec);
+
+    return success();
+  }
+};
+
+/// Fold 'transpose' -> 'unpack' into 'unpack' since 'unpack' already has
+/// transpose semantics.
+struct FoldConsumerUnPackWithProducerLinalgTransposeOp
+    : public OpRewritePattern<UnPackOp> {
+  using OpRewritePattern<UnPackOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(UnPackOp unPackOp,
+                                PatternRewriter &rewriter) const override {
+    auto transposeOp =
+        unPackOp.getSource().getDefiningOp<linalg::TransposeOp>();
+
+    if (!transposeOp)
+      return failure();
+
+    auto transposePermutation = transposeOp.getPermutation();
+    auto outerDimsPerm = unPackOp.getOuterDimsPerm();
+    auto innerDimsPos = unPackOp.getInnerDimsPos();
+    int64_t destRank = unPackOp.getSourceRank() - innerDimsPos.size();
+    auto mixedInnerTilesVec = unPackOp.getMixedTiles();
+    SmallVector<int64_t> newOuterDimsPermVec;
+    SmallVector<int64_t> newInnerDimsPosVec;
+    SmallVector<OpFoldResult> newMixedInnerTilesVec;
+
+    if (!checkAndPermute(transposePermutation, outerDimsPerm,
+                         newOuterDimsPermVec, destRank))
+      return rewriter.notifyMatchFailure(
+          unPackOp,
+          "Cannot fold in tensor.unpack if a tile dimension was transposed "
+          "with a non-tile dimension in linalg.transpose.");
+
+    // Process transpose operation for tiled inner dimensions
+    for (unsigned int i = destRank; i < transposePermutation.size(); ++i) {
+      int64_t remappedPosition = transposePermutation[i] - destRank;
+      newMixedInnerTilesVec.push_back(mixedInnerTilesVec[remappedPosition]);
+      newInnerDimsPosVec.push_back(innerDimsPos[remappedPosition]);
+    }
+
+    Value output = unPackOp.createDestinationTensor(
+        rewriter, unPackOp.getLoc(), transposeOp.getOperand(0),
+        newMixedInnerTilesVec, newInnerDimsPosVec, newOuterDimsPermVec);
+
+    rewriter.replaceOpWithNewOp<UnPackOp>(
+        unPackOp, transposeOp.getOperand(0), output, newInnerDimsPosVec,
+        newMixedInnerTilesVec, newOuterDimsPermVec);
+
+    return success();
+  }
+};
 } // namespace
 
 void populateFoldIntoPackAndUnpackPatterns(RewritePatternSet &patterns) {
   patterns.insert<FoldUnpackWithExtractSliceOp, FoldPadWithPackOp,
                   FoldProducerPackWithConsumerLinalgTransposeOp,
-                  FoldConsumerPackWithProducerLinalgTransposeOp>(
+                  FoldConsumerPackWithProducerLinalgTransposeOp,
+                  FoldConsumerUnPackWithProducerLinalgTransposeOp,
+                  FoldProducerUnPackWithConsumerLinalgTransposeOp>(
       patterns.getContext());
 }
 

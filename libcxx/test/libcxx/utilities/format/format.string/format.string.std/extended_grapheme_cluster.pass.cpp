@@ -53,6 +53,21 @@ static_assert(count_entries(cluster::__property::__LVT) == 10773);
 static_assert(count_entries(cluster::__property::__ZWJ) == 1);
 static_assert(count_entries(cluster::__property::__Extended_Pictographic) == 3537);
 
+namespace inCB = std::__indic_conjunct_break;
+constexpr int count_entries(inCB::__property property) {
+  return std::transform_reduce(
+      std::begin(inCB::__entries), std::end(inCB::__entries), 0, std::plus{}, [property](auto entry) {
+        if (static_cast<inCB::__property>(entry & 0b11) != property)
+          return 0;
+
+        return 1 + static_cast<int>((entry >> 2) & 0b1'1111'1111);
+      });
+}
+
+static_assert(count_entries(inCB::__property::__Linker) == 6);
+static_assert(count_entries(inCB::__property::__Consonant) == 240);
+static_assert(count_entries(inCB::__property::__Extend) == 884);
+
 } // namespace
 
 template <class Data>

@@ -159,6 +159,22 @@ ArrayType::ArrayType(TypeClass tc, QualType et, QualType can,
   ArrayTypeBits.SizeModifier = llvm::to_underlying(sm);
 }
 
+ConstantArrayType *
+ConstantArrayType::Create(const ASTContext &Ctx, QualType ET, QualType Can,
+                          const llvm::APInt &Sz, const Expr *SzExpr,
+                          ArraySizeModifier SzMod, unsigned Qual) {
+  bool NeedsExternalSize = SzExpr != nullptr || Sz.ugt(0x0FFFFFFFFFFFFFFF) ||
+                           Sz.getBitWidth() > 0xFF;
+  if (!NeedsExternalSize)
+    return new (Ctx, alignof(ConstantArrayType)) ConstantArrayType(
+        ET, Can, Sz.getBitWidth(), Sz.getZExtValue(), SzMod, Qual);
+
+  auto *SzPtr = new (Ctx, alignof(ConstantArrayType::ExternalSize))
+      ConstantArrayType::ExternalSize(Sz, SzExpr);
+  return new (Ctx, alignof(ConstantArrayType))
+      ConstantArrayType(ET, Can, SzPtr, SzMod, Qual);
+}
+
 unsigned ConstantArrayType::getNumAddressingBits(const ASTContext &Context,
                                                  QualType ElementType,
                                                const llvm::APInt &NumElements) {
@@ -213,11 +229,10 @@ unsigned ConstantArrayType::getMaxSizeBits(const ASTContext &Context) {
 
 void ConstantArrayType::Profile(llvm::FoldingSetNodeID &ID,
                                 const ASTContext &Context, QualType ET,
-                                const llvm::APInt &ArraySize,
-                                const Expr *SizeExpr, ArraySizeModifier SizeMod,
-                                unsigned TypeQuals) {
+                                uint64_t ArraySize, const Expr *SizeExpr,
+                                ArraySizeModifier SizeMod, unsigned TypeQuals) {
   ID.AddPointer(ET.getAsOpaquePtr());
-  ID.AddInteger(ArraySize.getZExtValue());
+  ID.AddInteger(ArraySize);
   ID.AddInteger(llvm::to_underlying(SizeMod));
   ID.AddInteger(TypeQuals);
   ID.AddBoolean(SizeExpr != nullptr);
@@ -241,7 +256,8 @@ void DependentSizedArrayType::Profile(llvm::FoldingSetNodeID &ID,
   ID.AddPointer(ET.getAsOpaquePtr());
   ID.AddInteger(llvm::to_underlying(SizeMod));
   ID.AddInteger(TypeQuals);
-  E->Profile(ID, Context, true);
+  if (E)
+    E->Profile(ID, Context, true);
 }
 
 DependentVectorType::DependentVectorType(QualType ElementType,
@@ -452,12 +468,8 @@ QualType QualType::getSingleStepDesugaredTypeImpl(QualType type,
 // Check that no type class has a non-trival destructor. Types are
 // allocated with the BumpPtrAllocator from ASTContext and therefore
 // their destructor is not executed.
-//
-// FIXME: ConstantArrayType is not trivially destructible because of its
-// APInt member. It should be replaced in favor of ASTContext allocation.
 #define TYPE(CLASS, BASE)                                                      \
-  static_assert(std::is_trivially_destructible<CLASS##Type>::value ||          \
-                    std::is_same<CLASS##Type, ConstantArrayType>::value,       \
+  static_assert(std::is_trivially_destructible<CLASS##Type>::value,            \
                 #CLASS "Type should be trivially destructible!");
 #include "clang/AST/TypeNodes.inc"
 
@@ -1184,6 +1196,14 @@ public:
       return QualType(T, 0);
 
     return Ctx.getDecayedType(originalType);
+  }
+
+  QualType VisitArrayParameterType(const ArrayParameterType *T) {
+    QualType ArrTy = VisitConstantArrayType(T);
+    if (ArrTy.isNull())
+      return {};
+
+    return Ctx.getArrayParameterType(ArrTy);
   }
 
   SUGARED_TYPE_CLASS(TypeOfExpr)
@@ -2491,6 +2511,18 @@ bool Type::isSveVLSBuiltinType() const {
   return false;
 }
 
+QualType Type::getSizelessVectorEltType(const ASTContext &Ctx) const {
+  assert(isSizelessVectorType() && "Must be sizeless vector type");
+  // Currently supports SVE and RVV
+  if (isSVESizelessBuiltinType())
+    return getSveEltType(Ctx);
+
+  if (isRVVSizelessBuiltinType())
+    return getRVVEltType(Ctx);
+
+  llvm_unreachable("Unhandled type");
+}
+
 QualType Type::getSveEltType(const ASTContext &Ctx) const {
   assert(isSveVLSBuiltinType() && "unsupported type!");
 
@@ -3362,6 +3394,8 @@ StringRef BuiltinType::getName(const PrintingPolicy &Policy) const {
     return "<overloaded function type>";
   case BoundMember:
     return "<bound member function type>";
+  case UnresolvedTemplate:
+    return "<unresolved template type>";
   case PseudoObject:
     return "<pseudo-object type>";
   case Dependent:
@@ -3394,8 +3428,8 @@ StringRef BuiltinType::getName(const PrintingPolicy &Policy) const {
     return "reserve_id_t";
   case IncompleteMatrixIdx:
     return "<incomplete matrix index type>";
-  case OMPArraySection:
-    return "<OpenMP array section type>";
+  case ArraySection:
+    return "<array section type>";
   case OMPArrayShaping:
     return "<OpenMP array shaping type>";
   case OMPIterator:
@@ -3473,6 +3507,9 @@ StringRef FunctionType::getNameForCallConv(CallingConv CC) {
   case CC_PreserveAll: return "preserve_all";
   case CC_M68kRTD: return "m68k_rtd";
   case CC_PreserveNone: return "preserve_none";
+    // clang-format off
+  case CC_RISCVVectorCall: return "riscv_vector_cc";
+    // clang-format on
   }
 
   llvm_unreachable("Invalid calling convention.");
@@ -4063,6 +4100,7 @@ bool AttributedType::isCallingConv() const {
   case attr::PreserveAll:
   case attr::M68kRTD:
   case attr::PreserveNone:
+  case attr::RISCVVectorCC:
     return true;
   }
   llvm_unreachable("invalid attr kind");
@@ -4439,6 +4477,7 @@ static CachedProperties computeCachedProperties(const Type *T) {
   case Type::ConstantArray:
   case Type::IncompleteArray:
   case Type::VariableArray:
+  case Type::ArrayParameter:
     return Cache::get(cast<ArrayType>(T)->getElementType());
   case Type::Vector:
   case Type::ExtVector:
@@ -4527,6 +4566,7 @@ LinkageInfo LinkageComputer::computeTypeLinkageInfo(const Type *T) {
   case Type::ConstantArray:
   case Type::IncompleteArray:
   case Type::VariableArray:
+  case Type::ArrayParameter:
     return computeTypeLinkageInfo(cast<ArrayType>(T)->getElementType());
   case Type::Vector:
   case Type::ExtVector:
@@ -4627,16 +4667,15 @@ bool Type::canHaveNullability(bool ResultIfUnknown) const {
   case Type::Auto:
     return ResultIfUnknown;
 
-  // Dependent template specializations can instantiate to pointer
-  // types unless they're known to be specializations of a class
-  // template.
+  // Dependent template specializations could instantiate to pointer types.
   case Type::TemplateSpecialization:
-    if (TemplateDecl *templateDecl
-          = cast<TemplateSpecializationType>(type.getTypePtr())
-              ->getTemplateName().getAsTemplateDecl()) {
-      if (isa<ClassTemplateDecl>(templateDecl))
-        return false;
-    }
+    // If it's a known class template, we can already check if it's nullable.
+    if (TemplateDecl *templateDecl =
+            cast<TemplateSpecializationType>(type.getTypePtr())
+                ->getTemplateName()
+                .getAsTemplateDecl())
+      if (auto *CTD = dyn_cast<ClassTemplateDecl>(templateDecl))
+        return CTD->getTemplatedDecl()->hasAttr<TypeNullableAttr>();
     return ResultIfUnknown;
 
   case Type::Builtin:
@@ -4649,6 +4688,7 @@ bool Type::canHaveNullability(bool ResultIfUnknown) const {
 #include "clang/AST/BuiltinTypes.def"
       return false;
 
+    case BuiltinType::UnresolvedTemplate:
     // Dependent types that could instantiate to a pointer type.
     case BuiltinType::Dependent:
     case BuiltinType::Overload:
@@ -4686,12 +4726,23 @@ bool Type::canHaveNullability(bool ResultIfUnknown) const {
     case BuiltinType::BuiltinFn:
     case BuiltinType::NullPtr:
     case BuiltinType::IncompleteMatrixIdx:
-    case BuiltinType::OMPArraySection:
+    case BuiltinType::ArraySection:
     case BuiltinType::OMPArrayShaping:
     case BuiltinType::OMPIterator:
       return false;
     }
     llvm_unreachable("unknown builtin type");
+
+  case Type::Record: {
+    const RecordDecl *RD = cast<RecordType>(type)->getDecl();
+    // For template specializations, look only at primary template attributes.
+    // This is a consistent regardless of whether the instantiation is known.
+    if (const auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(RD))
+      return CTSD->getSpecializedTemplate()
+          ->getTemplatedDecl()
+          ->hasAttr<TypeNullableAttr>();
+    return RD->hasAttr<TypeNullableAttr>();
+  }
 
   // Non-pointer types.
   case Type::Complex:
@@ -4710,7 +4761,6 @@ bool Type::canHaveNullability(bool ResultIfUnknown) const {
   case Type::DependentAddressSpace:
   case Type::FunctionProto:
   case Type::FunctionNoProto:
-  case Type::Record:
   case Type::DeducedTemplateSpecialization:
   case Type::Enum:
   case Type::InjectedClassName:
@@ -4721,6 +4771,7 @@ bool Type::canHaveNullability(bool ResultIfUnknown) const {
   case Type::Pipe:
   case Type::BitInt:
   case Type::DependentBitInt:
+  case Type::ArrayParameter:
     return false;
   }
   llvm_unreachable("bad type kind!");

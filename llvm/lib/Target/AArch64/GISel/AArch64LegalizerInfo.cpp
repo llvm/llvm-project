@@ -93,18 +93,12 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .legalFor(PackedVectorAllTypeList)
       .widenScalarToNextPow2(0)
       .clampScalar(0, s8, s64)
-      .fewerElementsIf(
-          [=](const LegalityQuery &Query) {
-            return Query.Types[0].isVector() &&
-                   (Query.Types[0].getElementType() != s64 ||
-                    Query.Types[0].getNumElements() != 2);
-          },
-          [=](const LegalityQuery &Query) {
-            LLT EltTy = Query.Types[0].getElementType();
-            if (EltTy == s64)
-              return std::make_pair(0, LLT::fixed_vector(2, 64));
-            return std::make_pair(0, EltTy);
-          });
+      .moreElementsToNextPow2(0)
+      .widenVectorEltsToVectorMinSize(0, 64)
+      .clampNumElements(0, v8s8, v16s8)
+      .clampNumElements(0, v4s16, v8s16)
+      .clampNumElements(0, v2s32, v4s32)
+      .clampNumElements(0, v2s64, v2s64);
 
   getActionDefinitionsBuilder(G_PHI)
       .legalFor({p0, s16, s32, s64})
@@ -183,7 +177,9 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
 
   getActionDefinitionsBuilder(G_PTR_ADD)
       .legalFor({{p0, s64}, {v2p0, v2s64}})
-      .clampScalar(1, s64, s64);
+      .clampScalar(1, s64, s64)
+      .clampNumElements(0, v2p0, v2p0)
+      .clampNumElements(1, v2s64, v2s64);
 
   getActionDefinitionsBuilder(G_PTRMASK).legalFor({{p0, s64}});
 
@@ -262,24 +258,10 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .minScalar(0, s32)
       .scalarize(0);
 
-  getActionDefinitionsBuilder(G_INTRINSIC_LRINT)
-      // If we don't have full FP16 support, then scalarize the elements of
-      // vectors containing fp16 types.
-      .fewerElementsIf(
-          [=, &ST](const LegalityQuery &Query) {
-            const auto &Ty = Query.Types[0];
-            return Ty.isVector() && Ty.getElementType() == s16 &&
-                   !ST.hasFullFP16();
-          },
-          [=](const LegalityQuery &Query) { return std::make_pair(0, s16); })
-      // If we don't have full FP16 support, then widen s16 to s32 if we
-      // encounter it.
-      .widenScalarIf(
-          [=, &ST](const LegalityQuery &Query) {
-            return Query.Types[0] == s16 && !ST.hasFullFP16();
-          },
-          [=](const LegalityQuery &Query) { return std::make_pair(0, s32); })
-      .legalFor({s16, s32, s64, v2s32, v4s32, v2s64, v2s16, v4s16, v8s16});
+  getActionDefinitionsBuilder({G_INTRINSIC_LRINT, G_INTRINSIC_LLRINT})
+      .legalFor({{s64, MinFPScalar}, {s64, s32}, {s64, s64}})
+      .libcallFor({{s64, s128}})
+      .minScalarOrElt(1, MinFPScalar);
 
   getActionDefinitionsBuilder(
       {G_FCOS, G_FSIN, G_FPOW, G_FLOG, G_FLOG2, G_FLOG10,
@@ -611,7 +593,9 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
                Query.Types[0].isVector() &&
                (Query.Types[1].getScalarSizeInBits() == 8 ||
                 Query.Types[1].getScalarSizeInBits() == 16);
-      });
+      })
+      .clampMinNumElements(1, s8, 8)
+      .clampMinNumElements(1, s16, 4);
 
   getActionDefinitionsBuilder(G_TRUNC)
       .legalFor({{v2s32, v2s64}, {v4s16, v4s32}, {v8s8, v8s16}})
@@ -630,7 +614,6 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       })
       .clampMinNumElements(0, s8, 8)
       .clampMinNumElements(0, s16, 4)
-      .clampMinNumElements(0, s32, 2)
       .alwaysLegal();
 
   getActionDefinitionsBuilder(G_SEXT_INREG)
@@ -759,6 +742,9 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .legalForCartesianProduct({s32, v2s16, v4s8})
       .legalForCartesianProduct({s64, v8s8, v4s16, v2s32})
       .legalForCartesianProduct({s128, v16s8, v8s16, v4s32, v2s64, v2p0})
+      .lowerIf([=](const LegalityQuery &Query) {
+        return Query.Types[0].isVector() != Query.Types[1].isVector();
+      })
       .moreElementsToNextPow2(0)
       .clampNumElements(0, v8s8, v16s8)
       .clampNumElements(0, v4s16, v8s16)
@@ -885,9 +871,15 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .clampMaxNumElements(1, p0, 2);
 
   getActionDefinitionsBuilder(G_INSERT_VECTOR_ELT)
-      .legalIf(typeInSet(0, {v16s8, v8s8, v8s16, v4s16, v4s32, v2s32, v2s64}))
+      .legalIf(
+          typeInSet(0, {v16s8, v8s8, v8s16, v4s16, v4s32, v2s32, v2s64, v2p0}))
       .moreElementsToNextPow2(0)
-      .widenVectorEltsToVectorMinSize(0, 64);
+      .widenVectorEltsToVectorMinSize(0, 64)
+      .clampNumElements(0, v8s8, v16s8)
+      .clampNumElements(0, v4s16, v8s16)
+      .clampNumElements(0, v2s32, v4s32)
+      .clampMaxNumElements(0, s64, 2)
+      .clampMaxNumElements(0, p0, 2);
 
   getActionDefinitionsBuilder(G_BUILD_VECTOR)
       .legalFor({{v8s8, s8},
@@ -1140,9 +1132,6 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .scalarize(1)
       .lower();
 
-  getActionDefinitionsBuilder({G_UADDSAT, G_USUBSAT})
-      .lowerIf([=](const LegalityQuery &Q) { return Q.Types[0].isScalar(); });
-
   getActionDefinitionsBuilder({G_FSHL, G_FSHR})
       .customFor({{s32, s32}, {s32, s64}, {s64, s64}})
       .lower();
@@ -1190,8 +1179,14 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .minScalarEltSameAsIf(always, 1, 0)
       .maxScalarEltSameAsIf(always, 1, 0);
 
-  // TODO: Vector types.
-  getActionDefinitionsBuilder({G_SADDSAT, G_SSUBSAT}).lowerIf(isScalar(0));
+  getActionDefinitionsBuilder({G_UADDSAT, G_SADDSAT, G_USUBSAT, G_SSUBSAT})
+      .legalFor({v2s64, v2s32, v4s32, v4s16, v8s16, v8s8, v16s8})
+      .clampNumElements(0, v8s8, v16s8)
+      .clampNumElements(0, v4s16, v8s16)
+      .clampNumElements(0, v2s32, v4s32)
+      .clampMaxNumElements(0, s64, 2)
+      .moreElementsToNextPow2(0)
+      .lower();
 
   // TODO: Libcall support for s128.
   // TODO: s16 should be legal with full FP16 support.
@@ -1577,7 +1572,7 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
     MI.eraseFromParent();
     return true;
   }
-  case Intrinsic::experimental_vector_reverse:
+  case Intrinsic::vector_reverse:
     // TODO: Add support for vector_reverse
     return false;
   }

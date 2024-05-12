@@ -254,7 +254,7 @@ namespace dxil {
 
 CallInst *DXILOpBuilder::createDXILOpCall(dxil::OpCode OpCode, Type *ReturnTy,
                                           Type *OverloadTy,
-                                          llvm::iterator_range<Use *> Args) {
+                                          SmallVector<Value *> Args) {
   const OpCodeProperty *Prop = getOpCodeProperty(OpCode);
 
   OverloadKind Kind = getOverloadKind(OverloadTy);
@@ -272,10 +272,8 @@ CallInst *DXILOpBuilder::createDXILOpCall(dxil::OpCode OpCode, Type *ReturnTy,
     FunctionType *DXILOpFT = getDXILOpFunctionType(Prop, ReturnTy, OverloadTy);
     DXILFn = M.getOrInsertFunction(DXILFnName, DXILOpFT);
   }
-  SmallVector<Value *> FullArgs;
-  FullArgs.emplace_back(B.getInt32((int32_t)OpCode));
-  FullArgs.append(Args.begin(), Args.end());
-  return B.CreateCall(DXILFn, FullArgs);
+
+  return B.CreateCall(DXILFn, Args);
 }
 
 Type *DXILOpBuilder::getOverloadTy(dxil::OpCode OpCode, FunctionType *FT) {

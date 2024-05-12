@@ -697,9 +697,9 @@ define <2 x i1> @test_signed_v2f32_v2i1(<2 x float> %f) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    movi v1.2d, #0000000000000000
 ; CHECK-NEXT:    fcvtzs v0.2s, v0.2s
+; CHECK-NEXT:    movi v2.2d, #0xffffffffffffffff
 ; CHECK-NEXT:    smin v0.2s, v0.2s, v1.2s
-; CHECK-NEXT:    movi v1.2d, #0xffffffffffffffff
-; CHECK-NEXT:    smax v0.2s, v0.2s, v1.2s
+; CHECK-NEXT:    smax v0.2s, v0.2s, v2.2s
 ; CHECK-NEXT:    ret
     %x = call <2 x i1> @llvm.fptosi.sat.v2f32.v2i1(<2 x float> %f)
     ret <2 x i1> %x
@@ -1620,9 +1620,9 @@ define <4 x i1> @test_signed_v4f16_v4i1(<4 x half> %f) {
 ; CHECK-FP16:       // %bb.0:
 ; CHECK-FP16-NEXT:    movi v1.2d, #0000000000000000
 ; CHECK-FP16-NEXT:    fcvtzs v0.4h, v0.4h
+; CHECK-FP16-NEXT:    movi v2.2d, #0xffffffffffffffff
 ; CHECK-FP16-NEXT:    smin v0.4h, v0.4h, v1.4h
-; CHECK-FP16-NEXT:    movi v1.2d, #0xffffffffffffffff
-; CHECK-FP16-NEXT:    smax v0.4h, v0.4h, v1.4h
+; CHECK-FP16-NEXT:    smax v0.4h, v0.4h, v2.4h
 ; CHECK-FP16-NEXT:    ret
     %x = call <4 x i1> @llvm.fptosi.sat.v4f16.v4i1(<4 x half> %f)
     ret <4 x i1> %x
@@ -1668,9 +1668,9 @@ define <4 x i13> @test_signed_v4f16_v4i13(<4 x half> %f) {
 ; CHECK-FP16:       // %bb.0:
 ; CHECK-FP16-NEXT:    fcvtzs v0.4h, v0.4h
 ; CHECK-FP16-NEXT:    mvni v1.4h, #240, lsl #8
+; CHECK-FP16-NEXT:    movi v2.4h, #240, lsl #8
 ; CHECK-FP16-NEXT:    smin v0.4h, v0.4h, v1.4h
-; CHECK-FP16-NEXT:    movi v1.4h, #240, lsl #8
-; CHECK-FP16-NEXT:    smax v0.4h, v0.4h, v1.4h
+; CHECK-FP16-NEXT:    smax v0.4h, v0.4h, v2.4h
 ; CHECK-FP16-NEXT:    ret
     %x = call <4 x i13> @llvm.fptosi.sat.v4f16.v4i13(<4 x half> %f)
     ret <4 x i13> %x
@@ -2103,9 +2103,9 @@ define <8 x i1> @test_signed_v8f16_v8i1(<8 x half> %f) {
 ; CHECK-FP16:       // %bb.0:
 ; CHECK-FP16-NEXT:    movi v1.2d, #0000000000000000
 ; CHECK-FP16-NEXT:    fcvtzs v0.8h, v0.8h
+; CHECK-FP16-NEXT:    movi v2.2d, #0xffffffffffffffff
 ; CHECK-FP16-NEXT:    smin v0.8h, v0.8h, v1.8h
-; CHECK-FP16-NEXT:    movi v1.2d, #0xffffffffffffffff
-; CHECK-FP16-NEXT:    smax v0.8h, v0.8h, v1.8h
+; CHECK-FP16-NEXT:    smax v0.8h, v0.8h, v2.8h
 ; CHECK-FP16-NEXT:    xtn v0.8b, v0.8h
 ; CHECK-FP16-NEXT:    ret
     %x = call <8 x i1> @llvm.fptosi.sat.v8f16.v8i1(<8 x half> %f)
@@ -2254,9 +2254,9 @@ define <8 x i13> @test_signed_v8f16_v8i13(<8 x half> %f) {
 ; CHECK-FP16:       // %bb.0:
 ; CHECK-FP16-NEXT:    fcvtzs v0.8h, v0.8h
 ; CHECK-FP16-NEXT:    mvni v1.8h, #240, lsl #8
+; CHECK-FP16-NEXT:    movi v2.8h, #240, lsl #8
 ; CHECK-FP16-NEXT:    smin v0.8h, v0.8h, v1.8h
-; CHECK-FP16-NEXT:    movi v1.8h, #240, lsl #8
-; CHECK-FP16-NEXT:    smax v0.8h, v0.8h, v1.8h
+; CHECK-FP16-NEXT:    smax v0.8h, v0.8h, v2.8h
 ; CHECK-FP16-NEXT:    ret
     %x = call <8 x i13> @llvm.fptosi.sat.v8f16.v8i13(<8 x half> %f)
     ret <8 x i13> %x

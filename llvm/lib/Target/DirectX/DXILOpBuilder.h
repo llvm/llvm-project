@@ -13,7 +13,7 @@
 #define LLVM_LIB_TARGET_DIRECTX_DXILOPBUILDER_H
 
 #include "DXILConstants.h"
-#include "llvm/ADT/iterator_range.h"
+#include "llvm/ADT/SmallVector.h"
 
 namespace llvm {
 class Module;
@@ -35,8 +35,7 @@ public:
   /// \param OverloadTy Overload type of the DXIL Op call constructed
   /// \return DXIL Op call constructed
   CallInst *createDXILOpCall(dxil::OpCode OpCode, Type *ReturnTy,
-                             Type *OverloadTy,
-                             llvm::iterator_range<Use *> Args);
+                             Type *OverloadTy, SmallVector<Value *> Args);
   Type *getOverloadTy(dxil::OpCode OpCode, FunctionType *FT);
   static const char *getOpCodeName(dxil::OpCode DXILOp);
 

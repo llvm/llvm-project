@@ -699,7 +699,7 @@ Value *GuardWideningImpl::freezeAndPush(Value *Orig,
         Worklist.push_back(U.get());
   }
   for (Instruction *I : DropPoisonFlags)
-    I->dropPoisonGeneratingFlagsAndMetadata();
+    I->dropPoisonGeneratingAnnotations();
 
   Value *Result = Orig;
   for (Value *V : NeedFreeze) {

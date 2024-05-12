@@ -21,15 +21,16 @@
 #ifndef FORTRAN_COMMON_VISIT_H_
 #define FORTRAN_COMMON_VISIT_H_
 
+#include "variant.h"
+#include "flang/Common/api-attrs.h"
 #include <type_traits>
-#include <variant>
 
 namespace Fortran::common {
 namespace log2visit {
 
 template <std::size_t LOW, std::size_t HIGH, typename RESULT, typename VISITOR,
     typename... VARIANT>
-inline RESULT Log2VisitHelper(
+inline RT_API_ATTRS RESULT Log2VisitHelper(
     VISITOR &&visitor, std::size_t which, VARIANT &&...u) {
   if constexpr (LOW + 7 >= HIGH) {
     switch (which - LOW) {
@@ -39,11 +40,17 @@ inline RESULT Log2VisitHelper(
       return visitor(std::get<(LOW + N)>(std::forward<VARIANT>(u))...); \
     }
       VISIT_CASE_N(1)
+      [[fallthrough]];
       VISIT_CASE_N(2)
+      [[fallthrough]];
       VISIT_CASE_N(3)
+      [[fallthrough]];
       VISIT_CASE_N(4)
+      [[fallthrough]];
       VISIT_CASE_N(5)
+      [[fallthrough]];
       VISIT_CASE_N(6)
+      [[fallthrough]];
       VISIT_CASE_N(7)
 #undef VISIT_CASE_N
     }
@@ -61,7 +68,7 @@ inline RESULT Log2VisitHelper(
 }
 
 template <typename VISITOR, typename... VARIANT>
-inline auto visit(VISITOR &&visitor, VARIANT &&...u)
+inline RT_API_ATTRS auto visit(VISITOR &&visitor, VARIANT &&...u)
     -> decltype(visitor(std::get<0>(std::forward<VARIANT>(u))...)) {
   using Result = decltype(visitor(std::get<0>(std::forward<VARIANT>(u))...));
   if constexpr (sizeof...(u) == 1) {
@@ -81,7 +88,7 @@ inline auto visit(VISITOR &&visitor, VARIANT &&...u)
 // Some versions of clang have bugs that cause compilation to hang
 // on these templates.  MSVC and older GCC versions may work but are
 // not well tested.  So enable only for GCC 9 and better.
-#if __GNUC__ < 9
+#if __GNUC__ < 9 && !defined(__clang__)
 #define FLANG_USE_STD_VISIT
 #endif
 

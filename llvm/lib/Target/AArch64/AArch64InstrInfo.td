@@ -10,9 +10,14 @@
 //
 //===----------------------------------------------------------------------===//
 
+
 //===----------------------------------------------------------------------===//
 // ARM Instruction Predicate Definitions.
 //
+
+class AssemblerPredicateWithAll<dag cond, string name="">
+    : AssemblerPredicate<(any_of FeatureAll, cond), name>;
+
 def HasV8_0a         : Predicate<"Subtarget->hasV8_0aOps()">,
                                  AssemblerPredicate<(all_of HasV8_0aOps), "armv8.0a">;
 def HasV8_1a         : Predicate<"Subtarget->hasV8_1aOps()">,
@@ -225,6 +230,12 @@ def HasSVE2p1_or_HasSME2
 def HasSVE2p1_or_HasSME2p1
     : Predicate<"Subtarget->hasSVE2p1() || Subtarget->hasSME2p1()">,
                  AssemblerPredicateWithAll<(any_of FeatureSME2p1, FeatureSVE2p1), "sme2p1 or sve2p1">;
+
+def HasSMEF16F16orSMEF8F16
+    : Predicate<"Subtarget->hasSMEF16F16() || Subtarget->hasSMEF8F16()">,
+                AssemblerPredicateWithAll<(any_of FeatureSMEF16F16, FeatureSMEF8F16),
+                "sme-f16f16 or sme-f8f16">;
+
 // A subset of NEON instructions are legal in Streaming SVE execution mode,
 // they should be enabled if either has been specified.
 def HasNEONorSME
@@ -309,6 +320,8 @@ def UseNegativeImmediates
                                              "NegativeImmediates">;
 
 def UseScalarIncVL : Predicate<"Subtarget->useScalarIncVL()">;
+
+def NoUseScalarIncVL : Predicate<"!Subtarget->useScalarIncVL()">;
 
 def UseSVEFPLD1R : Predicate<"!Subtarget->noSVEFPLD1R()">;
 
@@ -1815,6 +1828,20 @@ let Uses = [ X20 ], Defs = [ X16, X17, LR, NZCV ] in {
 def HWASAN_CHECK_MEMACCESS_SHORTGRANULES : Pseudo<
   (outs), (ins GPR64noip:$ptr, i32imm:$accessinfo),
   [(int_hwasan_check_memaccess_shortgranules X20, GPR64noip:$ptr, (i32 timm:$accessinfo))]>,
+  Sched<[]>;
+}
+
+let Defs = [ X16, X17, LR, NZCV ] in {
+def HWASAN_CHECK_MEMACCESS_FIXEDSHADOW : Pseudo<
+  (outs), (ins GPR64noip:$ptr, i32imm:$accessinfo, i64imm:$fixed_shadow),
+  [(int_hwasan_check_memaccess_fixedshadow GPR64noip:$ptr, (i32 timm:$accessinfo), (i64 timm:$fixed_shadow))]>,
+  Sched<[]>;
+}
+
+let Defs = [ X16, X17, LR, NZCV ] in {
+def HWASAN_CHECK_MEMACCESS_SHORTGRANULES_FIXEDSHADOW : Pseudo<
+  (outs), (ins GPR64noip:$ptr, i32imm:$accessinfo, i64imm:$fixed_shadow),
+  [(int_hwasan_check_memaccess_shortgranules_fixedshadow GPR64noip:$ptr, (i32 timm:$accessinfo), (i64 timm:$fixed_shadow))]>,
   Sched<[]>;
 }
 
@@ -4954,18 +4981,8 @@ defm UABDL   : SIMDLongThreeVectorBHSabdl<1, 0b0111, "uabdl",
 def : Pat<(abs (v8i16 (sub (zext (v8i8 V64:$opA)),
                            (zext (v8i8 V64:$opB))))),
           (UABDLv8i8_v8i16 V64:$opA, V64:$opB)>;
-def : Pat<(xor (v8i16 (AArch64vashr v8i16:$src, (i32 15))),
-               (v8i16 (add (sub (zext (v8i8 V64:$opA)),
-                                (zext (v8i8 V64:$opB))),
-                           (AArch64vashr v8i16:$src, (i32 15))))),
-          (UABDLv8i8_v8i16 V64:$opA, V64:$opB)>;
 def : Pat<(abs (v8i16 (sub (zext (extract_high_v16i8 (v16i8 V128:$opA))),
                            (zext (extract_high_v16i8 (v16i8 V128:$opB)))))),
-          (UABDLv16i8_v8i16 V128:$opA, V128:$opB)>;
-def : Pat<(xor (v8i16 (AArch64vashr v8i16:$src, (i32 15))),
-               (v8i16 (add (sub (zext (extract_high_v16i8 (v16i8 V128:$opA))),
-                                (zext (extract_high_v16i8 (v16i8 V128:$opB)))),
-                           (AArch64vashr v8i16:$src, (i32 15))))),
           (UABDLv16i8_v8i16 V128:$opA, V128:$opB)>;
 def : Pat<(abs (v4i32 (sub (zext (v4i16 V64:$opA)),
                            (zext (v4i16 V64:$opB))))),
@@ -6601,6 +6618,15 @@ def : Pat<(v8i8 (vector_insert (v8i8 V64:$Rn), (i32 GPR32:$Rm), (i64 VectorIndex
                        VectorIndexB:$imm, GPR32:$Rm),
             dsub)>;
 
+def : Pat<(v8i8 (vector_insert (v8i8 V64:$Rn), (i8 FPR8:$Rm), (i64 VectorIndexB:$imm))),
+          (EXTRACT_SUBREG
+            (INSvi8lane (v16i8 (INSERT_SUBREG (v16i8 (IMPLICIT_DEF)), V64:$Rn, dsub)),
+                       VectorIndexB:$imm, (v16i8 (INSERT_SUBREG (v16i8 (IMPLICIT_DEF)), FPR8:$Rm, bsub)), (i64 0)),
+            dsub)>;
+def : Pat<(v16i8 (vector_insert (v16i8 V128:$Rn), (i8 FPR8:$Rm), (i64 VectorIndexB:$imm))),
+          (INSvi8lane V128:$Rn, VectorIndexB:$imm,
+             (v16i8 (INSERT_SUBREG (v16i8 (IMPLICIT_DEF)), FPR8:$Rm, bsub)), (i64 0))>;
+
 // Copy an element at a constant index in one vector into a constant indexed
 // element of another.
 // FIXME refactor to a shared class/dev parameterized on vector type, vector
@@ -6633,26 +6659,26 @@ def : Pat<(v2i64 (int_aarch64_neon_vcopy_lane
 multiclass Neon_INS_elt_pattern<ValueType VT128, ValueType VT64,
                                 ValueType VTScal, Instruction INS> {
   def : Pat<(VT128 (vector_insert V128:$src,
-                        (VTScal (vector_extract (VT128 V128:$Rn), imm:$Immn)),
-                        imm:$Immd)),
+                        (VTScal (vector_extract (VT128 V128:$Rn), (i64 imm:$Immn))),
+                        (i64 imm:$Immd))),
             (INS V128:$src, imm:$Immd, V128:$Rn, imm:$Immn)>;
 
   def : Pat<(VT128 (vector_insert V128:$src,
-                        (VTScal (vector_extract (VT64 V64:$Rn), imm:$Immn)),
-                        imm:$Immd)),
+                        (VTScal (vector_extract (VT64 V64:$Rn), (i64 imm:$Immn))),
+                        (i64 imm:$Immd))),
             (INS V128:$src, imm:$Immd,
                  (SUBREG_TO_REG (i64 0), V64:$Rn, dsub), imm:$Immn)>;
 
   def : Pat<(VT64 (vector_insert V64:$src,
-                        (VTScal (vector_extract (VT128 V128:$Rn), imm:$Immn)),
-                        imm:$Immd)),
+                        (VTScal (vector_extract (VT128 V128:$Rn), (i64 imm:$Immn))),
+                        (i64 imm:$Immd))),
             (EXTRACT_SUBREG (INS (SUBREG_TO_REG (i64 0), V64:$src, dsub),
                                  imm:$Immd, V128:$Rn, imm:$Immn),
                             dsub)>;
 
   def : Pat<(VT64 (vector_insert V64:$src,
-                        (VTScal (vector_extract (VT64 V64:$Rn), imm:$Immn)),
-                        imm:$Immd)),
+                        (VTScal (vector_extract (VT64 V64:$Rn), (i64 imm:$Immn))),
+                        (i64 imm:$Immd))),
             (EXTRACT_SUBREG
                 (INS (SUBREG_TO_REG (i64 0), V64:$src, dsub), imm:$Immd,
                      (SUBREG_TO_REG (i64 0), V64:$Rn, dsub), imm:$Immn),
@@ -6671,14 +6697,14 @@ defm : Neon_INS_elt_pattern<v2i64, v1i64, i64, INSvi64lane>;
 
 // Insert from bitcast
 // vector_insert(bitcast(f32 src), n, lane) -> INSvi32lane(src, lane, INSERT_SUBREG(-, n), 0)
-def : Pat<(v4i32 (vector_insert v4i32:$src, (i32 (bitconvert (f32 FPR32:$Sn))), imm:$Immd)),
+def : Pat<(v4i32 (vector_insert v4i32:$src, (i32 (bitconvert (f32 FPR32:$Sn))), (i64 imm:$Immd))),
           (INSvi32lane V128:$src, imm:$Immd, (INSERT_SUBREG (IMPLICIT_DEF), FPR32:$Sn, ssub), 0)>;
-def : Pat<(v2i32 (vector_insert v2i32:$src, (i32 (bitconvert (f32 FPR32:$Sn))), imm:$Immd)),
+def : Pat<(v2i32 (vector_insert v2i32:$src, (i32 (bitconvert (f32 FPR32:$Sn))), (i64 imm:$Immd))),
           (EXTRACT_SUBREG
             (INSvi32lane (v4i32 (INSERT_SUBREG (v4i32 (IMPLICIT_DEF)), V64:$src, dsub)),
                          imm:$Immd, (INSERT_SUBREG (IMPLICIT_DEF), FPR32:$Sn, ssub), 0),
             dsub)>;
-def : Pat<(v2i64 (vector_insert v2i64:$src, (i64 (bitconvert (f64 FPR64:$Sn))), imm:$Immd)),
+def : Pat<(v2i64 (vector_insert v2i64:$src, (i64 (bitconvert (f64 FPR64:$Sn))), (i64 imm:$Immd))),
           (INSvi64lane V128:$src, imm:$Immd, (INSERT_SUBREG (IMPLICIT_DEF), FPR64:$Sn, dsub), 0)>;
 
 // bitcast of an extract
@@ -8100,7 +8126,7 @@ def : Pat<(v8bf16 (AArch64dup (bf16 (load GPR64sp:$Rn)))),
 class Ld1Lane128Pat<SDPatternOperator scalar_load, Operand VecIndex,
                     ValueType VTy, ValueType STy, Instruction LD1>
   : Pat<(vector_insert (VTy VecListOne128:$Rd),
-           (STy (scalar_load GPR64sp:$Rn)), VecIndex:$idx),
+           (STy (scalar_load GPR64sp:$Rn)), (i64 VecIndex:$idx)),
         (LD1 VecListOne128:$Rd, VecIndex:$idx, GPR64sp:$Rn)>;
 
 def : Ld1Lane128Pat<extloadi8,  VectorIndexB, v16i8, i32, LD1i8>;
@@ -8123,14 +8149,14 @@ class Ld1Lane128IdxOpPat<SDPatternOperator scalar_load, Operand
                          VecIndex, ValueType VTy, ValueType STy,
                          Instruction LD1, SDNodeXForm IdxOp>
   : Pat<(vector_insert (VTy VecListOne128:$Rd),
-                       (STy (scalar_load GPR64sp:$Rn)), VecIndex:$idx),
+                       (STy (scalar_load GPR64sp:$Rn)), (i64 VecIndex:$idx)),
         (LD1 VecListOne128:$Rd, (IdxOp VecIndex:$idx), GPR64sp:$Rn)>;
 
 class Ld1Lane64IdxOpPat<SDPatternOperator scalar_load, Operand VecIndex,
                         ValueType VTy, ValueType STy, Instruction LD1,
                         SDNodeXForm IdxOp>
   : Pat<(vector_insert (VTy VecListOne64:$Rd),
-                       (STy (scalar_load GPR64sp:$Rn)), VecIndex:$idx),
+                       (STy (scalar_load GPR64sp:$Rn)), (i64 VecIndex:$idx)),
         (EXTRACT_SUBREG
             (LD1 (SUBREG_TO_REG (i32 0), VecListOne64:$Rd, dsub),
                 (IdxOp VecIndex:$idx), GPR64sp:$Rn),
@@ -8170,7 +8196,7 @@ let Predicates = [IsNeonAvailable] in {
 class Ld1Lane64Pat<SDPatternOperator scalar_load, Operand VecIndex,
                    ValueType VTy, ValueType STy, Instruction LD1>
   : Pat<(vector_insert (VTy VecListOne64:$Rd),
-           (STy (scalar_load GPR64sp:$Rn)), VecIndex:$idx),
+           (STy (scalar_load GPR64sp:$Rn)), (i64 VecIndex:$idx)),
         (EXTRACT_SUBREG
             (LD1 (SUBREG_TO_REG (i32 0), VecListOne64:$Rd, dsub),
                           VecIndex:$idx, GPR64sp:$Rn),
@@ -9477,7 +9503,7 @@ let Predicates = [HasMOPS], Defs = [NZCV], Size = 12, mayStore = 1 in {
   let mayLoad = 0 in {
     def MOPSMemorySetPseudo  : Pseudo<(outs GPR64common:$Rd_wb, GPR64:$Rn_wb),
                                       (ins GPR64common:$Rd, GPR64:$Rn, GPR64:$Rm),
-                                      [], "$Rd = $Rd_wb,$Rn = $Rn_wb">, Sched<[]>;
+                                      [], "$Rd = $Rd_wb,$Rn = $Rn_wb,@earlyclobber $Rn_wb">, Sched<[]>;
   }
 }
 let Predicates = [HasMOPS, HasMTE], Defs = [NZCV], Size = 12, mayLoad = 0, mayStore = 1 in {

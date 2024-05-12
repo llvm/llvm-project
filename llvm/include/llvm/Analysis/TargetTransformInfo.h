@@ -190,7 +190,10 @@ enum class TailFoldingStyle {
   /// Use predicate to control both data and control flow, but modify
   /// the trip count so that a runtime overflow check can be avoided
   /// and such that the scalar epilogue loop can always be removed.
-  DataAndControlFlowWithoutRuntimeCheck
+  DataAndControlFlowWithoutRuntimeCheck,
+  /// Use predicated EVL instructions for tail-folding.
+  /// Indicates that VP intrinsics should be used.
+  DataWithEVL,
 };
 
 struct TailFoldingInfo {
@@ -831,7 +834,7 @@ public:
   /// If the AM is not supported, it returns a negative value.
   /// TODO: Handle pre/postinc as well.
   InstructionCost getScalingFactorCost(Type *Ty, GlobalValue *BaseGV,
-                                       int64_t BaseOffset, bool HasBaseReg,
+                                       StackOffset BaseOffset, bool HasBaseReg,
                                        int64_t Scale,
                                        unsigned AddrSpace = 0) const;
 
@@ -1264,7 +1267,7 @@ public:
       TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,
       TTI::OperandValueInfo Opd1Info = {TTI::OK_AnyValue, TTI::OP_None},
       TTI::OperandValueInfo Opd2Info = {TTI::OK_AnyValue, TTI::OP_None},
-      ArrayRef<const Value *> Args = ArrayRef<const Value *>(),
+      ArrayRef<const Value *> Args = std::nullopt,
       const Instruction *CxtI = nullptr,
       const TargetLibraryInfo *TLibInfo = nullptr) const;
 
@@ -1288,12 +1291,11 @@ public:
   /// passed through \p Args, which helps improve the cost estimation in some
   /// cases, like in broadcast loads.
   /// NOTE: For subvector extractions Tp represents the source type.
-  InstructionCost
-  getShuffleCost(ShuffleKind Kind, VectorType *Tp,
-                 ArrayRef<int> Mask = std::nullopt,
-                 TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,
-                 int Index = 0, VectorType *SubTp = nullptr,
-                 ArrayRef<const Value *> Args = std::nullopt) const;
+  InstructionCost getShuffleCost(
+      ShuffleKind Kind, VectorType *Tp, ArrayRef<int> Mask = std::nullopt,
+      TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput, int Index = 0,
+      VectorType *SubTp = nullptr, ArrayRef<const Value *> Args = std::nullopt,
+      const Instruction *CxtI = nullptr) const;
 
   /// Represents a hint about the context in which a cast is used.
   ///
@@ -1889,7 +1891,7 @@ public:
   virtual bool hasVolatileVariant(Instruction *I, unsigned AddrSpace) = 0;
   virtual bool prefersVectorizedAddressing() = 0;
   virtual InstructionCost getScalingFactorCost(Type *Ty, GlobalValue *BaseGV,
-                                               int64_t BaseOffset,
+                                               StackOffset BaseOffset,
                                                bool HasBaseReg, int64_t Scale,
                                                unsigned AddrSpace) = 0;
   virtual bool LSRWithInstrQueries() = 0;
@@ -2005,11 +2007,10 @@ public:
       const SmallBitVector &OpcodeMask,
       TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput) const = 0;
 
-  virtual InstructionCost getShuffleCost(ShuffleKind Kind, VectorType *Tp,
-                                         ArrayRef<int> Mask,
-                                         TTI::TargetCostKind CostKind,
-                                         int Index, VectorType *SubTp,
-                                         ArrayRef<const Value *> Args) = 0;
+  virtual InstructionCost
+  getShuffleCost(ShuffleKind Kind, VectorType *Tp, ArrayRef<int> Mask,
+                 TTI::TargetCostKind CostKind, int Index, VectorType *SubTp,
+                 ArrayRef<const Value *> Args, const Instruction *CxtI) = 0;
   virtual InstructionCost getCastInstrCost(unsigned Opcode, Type *Dst,
                                            Type *Src, CastContextHint CCH,
                                            TTI::TargetCostKind CostKind,
@@ -2402,7 +2403,7 @@ public:
     return Impl.prefersVectorizedAddressing();
   }
   InstructionCost getScalingFactorCost(Type *Ty, GlobalValue *BaseGV,
-                                       int64_t BaseOffset, bool HasBaseReg,
+                                       StackOffset BaseOffset, bool HasBaseReg,
                                        int64_t Scale,
                                        unsigned AddrSpace) override {
     return Impl.getScalingFactorCost(Ty, BaseGV, BaseOffset, HasBaseReg, Scale,
@@ -2644,8 +2645,10 @@ public:
                                  ArrayRef<int> Mask,
                                  TTI::TargetCostKind CostKind, int Index,
                                  VectorType *SubTp,
-                                 ArrayRef<const Value *> Args) override {
-    return Impl.getShuffleCost(Kind, Tp, Mask, CostKind, Index, SubTp, Args);
+                                 ArrayRef<const Value *> Args,
+                                 const Instruction *CxtI) override {
+    return Impl.getShuffleCost(Kind, Tp, Mask, CostKind, Index, SubTp, Args,
+                               CxtI);
   }
   InstructionCost getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
                                    CastContextHint CCH,

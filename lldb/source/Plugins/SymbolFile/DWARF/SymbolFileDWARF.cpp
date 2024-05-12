@@ -693,6 +693,7 @@ llvm::DWARFDebugAbbrev *SymbolFileDWARF::DebugAbbrev() {
   if (debug_abbrev_data.GetByteSize() == 0)
     return nullptr;
 
+  ElapsedTime elapsed(m_parse_time);
   auto abbr =
       std::make_unique<llvm::DWARFDebugAbbrev>(debug_abbrev_data.GetAsLLVM());
   llvm::Error error = abbr->parse();
@@ -1554,8 +1555,10 @@ Type *SymbolFileDWARF::ResolveTypeUID(const DWARFDIE &die,
     Log *log = GetLog(DWARFLog::DebugInfo);
     if (log)
       GetObjectFile()->GetModule()->LogMessage(
-          log, "SymbolFileDWARF::ResolveTypeUID (die = {0:x16}) {1} '{2}'",
-          die.GetOffset(), die.GetTagAsCString(), die.GetName());
+          log,
+          "SymbolFileDWARF::ResolveTypeUID (die = {0:x16}) {1} ({2}) '{3}'",
+          die.GetOffset(), DW_TAG_value_to_name(die.Tag()), die.Tag(),
+          die.GetName());
 
     // We might be coming in in the middle of a type tree (a class within a
     // class, an enum within a class), so parse any needed parent DIEs before
@@ -1571,11 +1574,10 @@ Type *SymbolFileDWARF::ResolveTypeUID(const DWARFDIE &die,
           if (log)
             GetObjectFile()->GetModule()->LogMessage(
                 log,
-                "SymbolFileDWARF::ResolveTypeUID (die = {0:x16}) "
-                "{1} '{2}' "
-                "resolve parent forward type for {3:x16})",
-                die.GetOffset(), die.GetTagAsCString(), die.GetName(),
-                decl_ctx_die.GetOffset());
+                "SymbolFileDWARF::ResolveTypeUID (die = {0:x16}) {1} ({2}) "
+                "'{3}' resolve parent forward type for {4:x16})",
+                die.GetOffset(), DW_TAG_value_to_name(die.Tag()), die.Tag(),
+                die.GetName(), decl_ctx_die.GetOffset());
         } break;
 
         default:
@@ -1630,27 +1632,33 @@ bool SymbolFileDWARF::CompleteType(CompilerType &compiler_type) {
     return true;
   }
 
-  DWARFDIE dwarf_die = GetDIE(die_it->getSecond());
-  if (dwarf_die) {
-    // Once we start resolving this type, remove it from the forward
-    // declaration map in case anyone child members or other types require this
-    // type to get resolved. The type will get resolved when all of the calls
-    // to SymbolFileDWARF::ResolveClangOpaqueTypeDefinition are done.
+  // Once we start resolving this type, remove it from the forward
+  // declaration map in case anyone's child members or other types require this
+  // type to get resolved.
+  DWARFDIE dwarf_die = GetDIE(die_it->second);
+  GetForwardDeclCompilerTypeToDIE().erase(die_it);
+  Type *type = nullptr;
+  if (DWARFASTParser *dwarf_ast = GetDWARFParser(*dwarf_die.GetCU()))
+    type = dwarf_ast->FindDefinitionTypeForDIE(dwarf_die);
+  if (!type)
+    return false;
+
+  die_it = GetForwardDeclCompilerTypeToDIE().find(
+      compiler_type_no_qualifiers.GetOpaqueQualType());
+  if (die_it != GetForwardDeclCompilerTypeToDIE().end()) {
+    dwarf_die = GetDIE(die_it->getSecond());
     GetForwardDeclCompilerTypeToDIE().erase(die_it);
-
-    Type *type = GetDIEToType().lookup(dwarf_die.GetDIE());
-
-    Log *log = GetLog(DWARFLog::DebugInfo | DWARFLog::TypeCompletion);
-    if (log)
-      GetObjectFile()->GetModule()->LogMessageVerboseBacktrace(
-          log, "{0:x8}: {1} '{2}' resolving forward declaration...",
-          dwarf_die.GetID(), dwarf_die.GetTagAsCString(),
-          type->GetName().AsCString());
-    assert(compiler_type);
-    if (DWARFASTParser *dwarf_ast = GetDWARFParser(*dwarf_die.GetCU()))
-      return dwarf_ast->CompleteTypeFromDWARF(dwarf_die, type, compiler_type);
   }
-  return false;
+
+  if (Log *log = GetLog(DWARFLog::DebugInfo | DWARFLog::TypeCompletion))
+    GetObjectFile()->GetModule()->LogMessageVerboseBacktrace(
+        log, "{0:x8}: {1} ({2}) '{3}' resolving forward declaration...",
+        dwarf_die.GetID(), DW_TAG_value_to_name(dwarf_die.Tag()),
+        dwarf_die.Tag(), type->GetName().AsCString());
+  assert(compiler_type);
+  if (DWARFASTParser *dwarf_ast = GetDWARFParser(*dwarf_die.GetCU()))
+    return dwarf_ast->CompleteTypeFromDWARF(dwarf_die, type, compiler_type);
+  return true;
 }
 
 Type *SymbolFileDWARF::ResolveType(const DWARFDIE &die,
@@ -1664,8 +1672,9 @@ Type *SymbolFileDWARF::ResolveType(const DWARFDIE &die,
         return type;
 
       GetObjectFile()->GetModule()->ReportError(
-          "Parsing a die that is being parsed die: {0:x16}: {1} {2}",
-          die.GetOffset(), die.GetTagAsCString(), die.GetName());
+          "Parsing a die that is being parsed die: {0:x16}: {1} ({2}) {3}",
+          die.GetOffset(), DW_TAG_value_to_name(die.Tag()), die.Tag(),
+          die.GetName());
 
     } else
       return type;
@@ -3133,9 +3142,9 @@ SymbolFileDWARF::FindDefinitionTypeForDWARFDeclContext(const DWARFDIE &die) {
     if (log) {
       GetObjectFile()->GetModule()->LogMessage(
           log,
-          "SymbolFileDWARF::FindDefinitionTypeForDWARFDeclContext(tag={0}, "
-          "name='{1}')",
-          DW_TAG_value_to_name(tag), die.GetName());
+          "SymbolFileDWARF::FindDefinitionTypeForDWARFDeclContext(tag={0} "
+          "({1}), name='{2}')",
+          DW_TAG_value_to_name(tag), tag, die.GetName());
     }
 
     // Get the type system that we are looking to find a type for. We will
@@ -3183,10 +3192,10 @@ SymbolFileDWARF::FindDefinitionTypeForDWARFDeclContext(const DWARFDIE &die) {
           GetObjectFile()->GetModule()->LogMessage(
               log,
               "SymbolFileDWARF::"
-              "FindDefinitionTypeForDWARFDeclContext(tag={0}, "
-              "name='{1}') ignoring die={2:x16} ({3})",
-              DW_TAG_value_to_name(tag), die.GetName(), type_die.GetOffset(),
-              type_die.GetName());
+              "FindDefinitionTypeForDWARFDeclContext(tag={0} ({1}), "
+              "name='{2}') ignoring die={3:x16} ({4})",
+              DW_TAG_value_to_name(tag), tag, die.GetName(),
+              type_die.GetOffset(), type_die.GetName());
         }
         return true;
       }
@@ -3196,9 +3205,9 @@ SymbolFileDWARF::FindDefinitionTypeForDWARFDeclContext(const DWARFDIE &die) {
         GetObjectFile()->GetModule()->LogMessage(
             log,
             "SymbolFileDWARF::"
-            "FindDefinitionTypeForDWARFDeclContext(tag={0}, "
-            "name='{1}') trying die={2:x16} ({3})",
-            DW_TAG_value_to_name(tag), die.GetName(), type_die.GetOffset(),
+            "FindDefinitionTypeForDWARFDeclContext(tag={0} ({1}), name='{2}') "
+            "trying die={3:x16} ({4})",
+            DW_TAG_value_to_name(tag), tag, die.GetName(), type_die.GetOffset(),
             type_dwarf_decl_ctx.GetQualifiedName());
       }
 
@@ -3419,8 +3428,8 @@ static DWARFExpressionList GetExprListFromAtLocation(DWARFFormValue form_value,
   if (DWARFFormValue::IsBlockForm(form_value.Form())) {
     const DWARFDataExtractor &data = die.GetData();
 
-    uint32_t block_offset = form_value.BlockData() - data.GetDataStart();
-    uint32_t block_length = form_value.Unsigned();
+    uint64_t block_offset = form_value.BlockData() - data.GetDataStart();
+    uint64_t block_length = form_value.Unsigned();
     return DWARFExpressionList(
         module, DataExtractor(data, block_offset, block_length), die.GetCU());
   }
@@ -3449,9 +3458,9 @@ GetExprListFromAtConstValue(DWARFFormValue form_value, ModuleSP module,
   const DWARFDataExtractor &debug_info_data = die.GetData();
   if (DWARFFormValue::IsBlockForm(form_value.Form())) {
     // Retrieve the value as a block expression.
-    uint32_t block_offset =
+    uint64_t block_offset =
         form_value.BlockData() - debug_info_data.GetDataStart();
-    uint32_t block_length = form_value.Unsigned();
+    uint64_t block_length = form_value.Unsigned();
     return DWARFExpressionList(
         module, DataExtractor(debug_info_data, block_offset, block_length),
         die.GetCU());
@@ -3649,8 +3658,8 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
         StreamString strm;
         location->DumpLocation(&strm, eDescriptionLevelFull, nullptr);
         GetObjectFile()->GetModule()->ReportError(
-            "{0:x16}: {1} has an invalid location: {2}", die.GetOffset(),
-            die.GetTagAsCString(), strm.GetData());
+            "{0:x16}: {1} ({2}) has an invalid location: {3}", die.GetOffset(),
+            DW_TAG_value_to_name(die.Tag()), die.Tag(), strm.GetData());
       }
       if (location_DW_OP_addr != LLDB_INVALID_ADDRESS)
         is_static_lifetime = true;
@@ -3838,10 +3847,11 @@ void SymbolFileDWARF::ParseAndAppendGlobalVariable(
       variable_list_sp = sc.comp_unit->GetVariableList(false);
     } else {
       GetObjectFile()->GetModule()->ReportError(
-          "parent {0:x8} {1} with no valid compile unit in "
-          "symbol context for {2:x8} {3}.\n",
-          sc_parent_die.GetID(), sc_parent_die.GetTagAsCString(), die.GetID(),
-          die.GetTagAsCString());
+          "parent {0:x8} {1} ({2}) with no valid compile unit in "
+          "symbol context for {3:x8} {4} ({5}).\n",
+          sc_parent_die.GetID(), DW_TAG_value_to_name(sc_parent_die.Tag()),
+          sc_parent_die.Tag(), die.GetID(), DW_TAG_value_to_name(die.Tag()),
+          die.Tag());
       return;
     }
     break;
@@ -3849,8 +3859,8 @@ void SymbolFileDWARF::ParseAndAppendGlobalVariable(
   default:
     GetObjectFile()->GetModule()->ReportError(
         "didn't find appropriate parent DIE for variable list for {0:x8} "
-        "{1}.\n",
-        die.GetID(), die.GetTagAsCString());
+        "{1} ({2}).\n",
+        die.GetID(), DW_TAG_value_to_name(die.Tag()), die.Tag());
     return;
   }
 
@@ -4060,8 +4070,8 @@ CollectCallSiteParameters(ModuleSP module, DWARFDIE call_site_die) {
       if (!DWARFFormValue::IsBlockForm(form_value.Form()))
         return {};
       auto data = child.GetData();
-      uint32_t block_offset = form_value.BlockData() - data.GetDataStart();
-      uint32_t block_length = form_value.Unsigned();
+      uint64_t block_offset = form_value.BlockData() - data.GetDataStart();
+      uint64_t block_length = form_value.Unsigned();
       return DWARFExpressionList(
           module, DataExtractor(data, block_offset, block_length),
           child.GetCU());
@@ -4166,8 +4176,8 @@ SymbolFileDWARF::CollectCallEdges(ModuleSP module, DWARFDIE function_die) {
         }
 
         auto data = child.GetData();
-        uint32_t block_offset = form_value.BlockData() - data.GetDataStart();
-        uint32_t block_length = form_value.Unsigned();
+        uint64_t block_offset = form_value.BlockData() - data.GetDataStart();
+        uint64_t block_length = form_value.Unsigned();
         call_target = DWARFExpressionList(
             module, DataExtractor(data, block_offset, block_length),
             child.GetCU());

@@ -210,6 +210,7 @@ template <class... Types>
 #include <__config>
 #include <__functional/invoke.h>
 #include <__fwd/array.h>
+#include <__fwd/pair.h>
 #include <__fwd/tuple.h>
 #include <__memory/allocator_arg_t.h>
 #include <__memory/uses_allocator.h>
@@ -221,7 +222,6 @@ template <class... Types>
 #include <__tuple/tuple_like_ext.h>
 #include <__tuple/tuple_size.h>
 #include <__tuple/tuple_types.h>
-#include <__type_traits/apply_cv.h>
 #include <__type_traits/common_reference.h>
 #include <__type_traits/common_type.h>
 #include <__type_traits/conditional.h>
@@ -250,7 +250,6 @@ template <class... Types>
 #include <__utility/forward.h>
 #include <__utility/integer_sequence.h>
 #include <__utility/move.h>
-#include <__utility/pair.h>
 #include <__utility/piecewise_construct.h>
 #include <__utility/swap.h>
 #include <cstddef>
@@ -304,7 +303,7 @@ class __tuple_leaf {
 #  endif
   }
 
-  _LIBCPP_CONSTEXPR_SINCE_CXX14 __tuple_leaf& operator=(const __tuple_leaf&);
+  _LIBCPP_CONSTEXPR_SINCE_CXX14 __tuple_leaf& operator=(const __tuple_leaf&) = delete;
 
 public:
   _LIBCPP_HIDE_FROM_ABI constexpr __tuple_leaf() _NOEXCEPT_(is_nothrow_default_constructible<_Hp>::value) : __value_() {
@@ -380,7 +379,7 @@ public:
 
 template <size_t _Ip, class _Hp>
 class __tuple_leaf<_Ip, _Hp, true> : private _Hp {
-  _LIBCPP_CONSTEXPR_SINCE_CXX14 __tuple_leaf& operator=(const __tuple_leaf&);
+  _LIBCPP_CONSTEXPR_SINCE_CXX14 __tuple_leaf& operator=(const __tuple_leaf&) = delete;
 
 public:
   _LIBCPP_HIDE_FROM_ABI constexpr __tuple_leaf() _NOEXCEPT_(is_nothrow_default_constructible<_Hp>::value) {}
@@ -1286,14 +1285,14 @@ struct __tuple_cat_return_ref_imp;
 template <class... _Types, size_t... _I0, class _Tuple0>
 struct __tuple_cat_return_ref_imp<tuple<_Types...>, __tuple_indices<_I0...>, _Tuple0> {
   typedef _LIBCPP_NODEBUG __libcpp_remove_reference_t<_Tuple0> _T0;
-  typedef tuple<_Types..., __apply_cv_t<_Tuple0, typename tuple_element<_I0, _T0>::type>&&...> type;
+  typedef tuple<_Types..., __copy_cvref_t<_Tuple0, typename tuple_element<_I0, _T0>::type>&&...> type;
 };
 
 template <class... _Types, size_t... _I0, class _Tuple0, class _Tuple1, class... _Tuples>
 struct __tuple_cat_return_ref_imp<tuple<_Types...>, __tuple_indices<_I0...>, _Tuple0, _Tuple1, _Tuples...>
     : public __tuple_cat_return_ref_imp<
           tuple<_Types...,
-                __apply_cv_t<_Tuple0, typename tuple_element<_I0, __libcpp_remove_reference_t<_Tuple0>>::type>&&...>,
+                __copy_cvref_t<_Tuple0, typename tuple_element<_I0, __libcpp_remove_reference_t<_Tuple0>>::type>&&...>,
           typename __make_tuple_indices<tuple_size<__libcpp_remove_reference_t<_Tuple1> >::value>::type,
           _Tuple1,
           _Tuples...> {};
@@ -1327,7 +1326,7 @@ struct __tuple_cat<tuple<_Types...>, __tuple_indices<_I0...>, __tuple_indices<_J
     (void)__t; // avoid unused parameter warning on GCC when _I0 is empty
     typedef _LIBCPP_NODEBUG __libcpp_remove_reference_t<_Tuple0> _T0;
     typedef _LIBCPP_NODEBUG __libcpp_remove_reference_t<_Tuple1> _T1;
-    return __tuple_cat<tuple<_Types..., __apply_cv_t<_Tuple0, typename tuple_element<_J0, _T0>::type>&&...>,
+    return __tuple_cat<tuple<_Types..., __copy_cvref_t<_Tuple0, typename tuple_element<_J0, _T0>::type>&&...>,
                        typename __make_tuple_indices<sizeof...(_Types) + tuple_size<_T0>::value>::type,
                        typename __make_tuple_indices<tuple_size<_T1>::value>::type>()(
         std::forward_as_tuple(
@@ -1347,17 +1346,6 @@ tuple_cat(_Tuple0&& __t0, _Tuples&&... __tpls) {
 
 template <class... _Tp, class _Alloc>
 struct _LIBCPP_TEMPLATE_VIS uses_allocator<tuple<_Tp...>, _Alloc> : true_type {};
-
-template <class _T1, class _T2>
-template <class... _Args1, class... _Args2, size_t... _I1, size_t... _I2>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 pair<_T1, _T2>::pair(
-    piecewise_construct_t,
-    tuple<_Args1...>& __first_args,
-    tuple<_Args2...>& __second_args,
-    __tuple_indices<_I1...>,
-    __tuple_indices<_I2...>)
-    : first(std::forward<_Args1>(std::get<_I1>(__first_args))...),
-      second(std::forward<_Args2>(std::get<_I2>(__second_args))...) {}
 
 #  if _LIBCPP_STD_VER >= 17
 #    define _LIBCPP_NOEXCEPT_RETURN(...)                                                                               \
@@ -1386,22 +1374,22 @@ inline _LIBCPP_HIDE_FROM_ABI constexpr _Tp __make_from_tuple_impl(_Tuple&& __t, 
 }
 #else
 template <class _Tp, class _Tuple, size_t... _Idx>
-inline _LIBCPP_HIDE_FROM_ABI constexpr _Tp __make_from_tuple_impl(_Tuple&& __t, __tuple_indices<_Idx...>, 
+inline _LIBCPP_HIDE_FROM_ABI constexpr _Tp __make_from_tuple_impl(_Tuple&& __t, __tuple_indices<_Idx...>,
     enable_if_t<is_constructible_v<_Tp, decltype(std::get<_Idx>(std::forward<_Tuple>(__t)))...>> * = nullptr)
     _LIBCPP_NOEXCEPT_RETURN(_Tp(std::get<_Idx>(std::forward<_Tuple>(__t))...))
 #endif // _LIBCPP_STD_VER >= 20
 
-template <class _Tp, class _Tuple, 
+template <class _Tp, class _Tuple,
           class _Seq = typename __make_tuple_indices<tuple_size_v<remove_reference_t<_Tuple>>>::type, class = void>
 inline constexpr bool __can_make_from_tuple = false;
 
 template <class _Tp, class _Tuple, size_t... _Idx>
-inline constexpr bool __can_make_from_tuple<_Tp, _Tuple, __tuple_indices<_Idx...>, 
+inline constexpr bool __can_make_from_tuple<_Tp, _Tuple, __tuple_indices<_Idx...>,
     enable_if_t<is_constructible_v<_Tp, decltype(std::get<_Idx>(std::declval<_Tuple>()))...>>> = true;
 
-// Based on LWG3528(https://wg21.link/LWG3528) and http://eel.is/c++draft/description#structure.requirements-9, 
-// the standard allows to impose requirements, we constraint std::make_from_tuple to make std::make_from_tuple 
-// SFINAE friendly and also avoid worse diagnostic messages. We still keep the constraints of std::__make_from_tuple_impl 
+// Based on LWG3528(https://wg21.link/LWG3528) and http://eel.is/c++draft/description#structure.requirements-9,
+// the standard allows to impose requirements, we constraint std::make_from_tuple to make std::make_from_tuple
+// SFINAE friendly and also avoid worse diagnostic messages. We still keep the constraints of std::__make_from_tuple_impl
 // so that std::__make_from_tuple_impl will have the same advantages when used alone.
 #if _LIBCPP_STD_VER >= 20
 template <class _Tp, class _Tuple>

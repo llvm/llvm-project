@@ -24,6 +24,7 @@ namespace {
 
 using namespace clang;
 using namespace dataflow;
+using ::clang::dataflow::test::findValueDecl;
 using ::clang::dataflow::test::getFieldValue;
 using ::testing::Contains;
 using ::testing::IsNull;
@@ -149,13 +150,18 @@ TEST_F(EnvironmentTest, CreateValueRecursiveType) {
   EXPECT_THAT(PV, NotNull());
 }
 
-TEST_F(EnvironmentTest, JoinRecords) {
+TEST_F(EnvironmentTest, DifferentReferenceLocInJoin) {
+  // This tests the case where the storage location for a reference-type
+  // variable is different for two states being joined. We used to believe this
+  // could not happen and therefore had an assertion disallowing this; this test
+  // exists to demonstrate that we can handle this condition without a failing
+  // assertion. See also the discussion here:
+  // https://discourse.llvm.org/t/70086/6
+
   using namespace ast_matchers;
 
   std::string Code = R"cc(
-    struct S {};
-    // Need to use the type somewhere so that the `QualType` gets created;
-    S s;
+    void f(int &ref) {}
   )cc";
 
   auto Unit =
@@ -164,39 +170,26 @@ TEST_F(EnvironmentTest, JoinRecords) {
 
   ASSERT_EQ(Context.getDiagnostics().getClient()->getNumErrors(), 0U);
 
-  auto Results =
-      match(qualType(hasDeclaration(recordDecl(hasName("S")))).bind("SType"),
-            Context);
-  const QualType *TyPtr = selectFirst<QualType>("SType", Results);
-  ASSERT_THAT(TyPtr, NotNull());
-  QualType Ty = *TyPtr;
-  ASSERT_FALSE(Ty.isNull());
+  const ValueDecl *Ref = findValueDecl(Context, "ref");
 
-  auto *ConstructExpr = CXXConstructExpr::CreateEmpty(Context, 0);
-  ConstructExpr->setType(Ty);
-  ConstructExpr->setValueKind(VK_PRValue);
+  Environment Env1(DAContext);
+  StorageLocation &Loc1 = Env1.createStorageLocation(Context.IntTy);
+  Env1.setStorageLocation(*Ref, Loc1);
 
-  // Two different `RecordValue`s with the same location are joined into a
-  // third `RecordValue` with that same location.
-  {
-    Environment Env1(DAContext);
-    auto &Val1 = *cast<RecordValue>(Env1.createValue(Ty));
-    RecordStorageLocation &Loc = Val1.getLoc();
-    Env1.setValue(Loc, Val1);
+  Environment Env2(DAContext);
+  StorageLocation &Loc2 = Env2.createStorageLocation(Context.IntTy);
+  Env2.setStorageLocation(*Ref, Loc2);
 
-    Environment Env2(DAContext);
-    auto &Val2 = Env2.create<RecordValue>(Loc);
-    Env2.setValue(Loc, Val2);
-    Env2.setValue(Loc, Val2);
+  EXPECT_NE(&Loc1, &Loc2);
 
-    Environment::ValueModel Model;
-    Environment EnvJoined =
-        Environment::join(Env1, Env2, Model, Environment::DiscardExprState);
-    auto *JoinedVal = cast<RecordValue>(EnvJoined.getValue(Loc));
-    EXPECT_NE(JoinedVal, &Val1);
-    EXPECT_NE(JoinedVal, &Val2);
-    EXPECT_EQ(&JoinedVal->getLoc(), &Loc);
-  }
+  Environment::ValueModel Model;
+  Environment EnvJoined =
+      Environment::join(Env1, Env2, Model, Environment::DiscardExprState);
+
+  // Joining environments with different storage locations for the same
+  // declaration results in the declaration being removed from the joined
+  // environment.
+  EXPECT_EQ(EnvJoined.getStorageLocation(*Ref), nullptr);
 }
 
 TEST_F(EnvironmentTest, InitGlobalVarsFun) {
@@ -408,37 +401,6 @@ TEST_F(EnvironmentTest,
   Env.initialize();
   EXPECT_THAT(DAContext.getModeledFields(QualType(Struct->getTypeForDecl(), 0)),
               Contains(Member));
-}
-
-TEST_F(EnvironmentTest, RefreshRecordValue) {
-  using namespace ast_matchers;
-
-  std::string Code = R"cc(
-     struct S {};
-     void target () {
-       S s;
-       s;
-     }
-  )cc";
-
-  auto Unit =
-      tooling::buildASTFromCodeWithArgs(Code, {"-fsyntax-only", "-std=c++11"});
-  auto &Context = Unit->getASTContext();
-
-  ASSERT_EQ(Context.getDiagnostics().getClient()->getNumErrors(), 0U);
-
-  auto Results = match(functionDecl(hasName("target")).bind("target"), Context);
-  const auto *Target = selectFirst<FunctionDecl>("target", Results);
-  ASSERT_THAT(Target, NotNull());
-
-  Results = match(declRefExpr(to(varDecl(hasName("s")))).bind("s"), Context);
-  const auto *DRE = selectFirst<DeclRefExpr>("s", Results);
-  ASSERT_THAT(DRE, NotNull());
-
-  Environment Env(DAContext, *Target);
-  EXPECT_THAT(Env.getStorageLocation(*DRE), IsNull());
-  refreshRecordValue(*DRE, Env);
-  EXPECT_THAT(Env.getStorageLocation(*DRE), NotNull());
 }
 
 } // namespace
