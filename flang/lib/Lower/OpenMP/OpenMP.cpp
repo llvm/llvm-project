@@ -985,9 +985,9 @@ genBodyOfTargetOp(Fortran::lower::AbstractConverter &converter,
   firOpBuilder.setInsertionPointAfter(undefMarker.getDefiningOp());
   //llvm::errs() << ">>>> genBodyOfTargetDataOp\n";
   if (genNested) {
-    symTable.pushScope();
+    //symTable.pushScope();
     genNestedEvaluations(converter, eval);
-    symTable.popScope();
+    //symTable.popScope();
   }
 }
 
@@ -2408,11 +2408,11 @@ static void genOMP(Fortran::lower::AbstractConverter &converter,
         // Maybe rename the argument if it represents something else or
         // initialize it properly.
       //llvm::errs() << ">>>> 2 genParallelOp:\n";
-      symTable.pushScope();
+      //symTable.pushScope();
       genParallelOp(converter, symTable, semaCtx, eval, genNested,
                     currentLocation, clauses,
                     /*outerCombined=*/true);
-      symTable.popScope();
+      //symTable.popScope();
       break;
       case llvm::omp::Directive::OMPD_simd:
         // 2.9.3.1 SIMD construct.
