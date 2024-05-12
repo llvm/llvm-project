@@ -733,7 +733,6 @@ set(files
   __type_traits/aligned_storage.h
   __type_traits/aligned_union.h
   __type_traits/alignment_of.h
-  __type_traits/apply_cv.h
   __type_traits/can_extract_key.h
   __type_traits/common_reference.h
   __type_traits/common_type.h

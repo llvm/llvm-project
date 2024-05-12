@@ -1742,20 +1742,18 @@ ParseResult PrefetchOp::parse(OpAsmParser &parser, OperationState &result) {
       parser.resolveOperands(indexInfo, indexTy, result.operands))
     return failure();
 
-  if (!readOrWrite.equals("read") && !readOrWrite.equals("write"))
+  if (readOrWrite != "read" && readOrWrite != "write")
     return parser.emitError(parser.getNameLoc(),
                             "rw specifier has to be 'read' or 'write'");
-  result.addAttribute(
-      PrefetchOp::getIsWriteAttrStrName(),
-      parser.getBuilder().getBoolAttr(readOrWrite.equals("write")));
+  result.addAttribute(PrefetchOp::getIsWriteAttrStrName(),
+                      parser.getBuilder().getBoolAttr(readOrWrite == "write"));
 
-  if (!cacheType.equals("data") && !cacheType.equals("instr"))
+  if (cacheType != "data" && cacheType != "instr")
     return parser.emitError(parser.getNameLoc(),
                             "cache type has to be 'data' or 'instr'");
 
-  result.addAttribute(
-      PrefetchOp::getIsDataCacheAttrStrName(),
-      parser.getBuilder().getBoolAttr(cacheType.equals("data")));
+  result.addAttribute(PrefetchOp::getIsDataCacheAttrStrName(),
+                      parser.getBuilder().getBoolAttr(cacheType == "data"));
 
   return success();
 }
@@ -2356,12 +2354,11 @@ LogicalResult ExpandShapeOp::verify() {
   // Verify if provided output shapes are in agreement with output type.
   DenseI64ArrayAttr staticOutputShapes = getStaticOutputShapeAttr();
   ArrayRef<int64_t> resShape = getResult().getType().getShape();
-  unsigned staticShapeNum = 0;
-
-  for (auto [pos, shape] : llvm::enumerate(resShape))
-    if (!ShapedType::isDynamic(shape) &&
-        shape != staticOutputShapes[staticShapeNum++])
-      emitOpError("invalid output shape provided at pos ") << pos;
+  for (auto [pos, shape] : llvm::enumerate(resShape)) {
+    if (!ShapedType::isDynamic(shape) && shape != staticOutputShapes[pos]) {
+      return emitOpError("invalid output shape provided at pos ") << pos;
+    }
+  }
 
   return success();
 }

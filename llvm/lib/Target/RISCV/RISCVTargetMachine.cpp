@@ -541,9 +541,9 @@ void RISCVPassConfig::addPreRegAlloc() {
   addPass(createRISCVPreRAExpandPseudoPass());
   if (TM->getOptLevel() != CodeGenOptLevel::None)
     addPass(createRISCVMergeBaseOffsetOptPass());
-  addPass(createRISCVInsertVSETVLIPass());
   addPass(createRISCVInsertReadWriteCSRPass());
   addPass(createRISCVInsertWriteVXRMPass());
+  addPass(createRISCVInsertVSETVLIPass());
 }
 
 void RISCVPassConfig::addFastRegAlloc() {
