@@ -370,16 +370,9 @@ private:
                               ? Checker.getSymbolLocalAddr(Symbol)
                               : Checker.getSymbolRemoteAddr(Symbol);
 
-    uint64_t PCOffset = 0;
+    // ARM mode adds an offset of 4 bytes to PC
     auto TT = Checker.getTripleForSymbol(Checker.getTargetFlag(Symbol));
-    switch (TT.getArch()) {
-    case Triple::ArchType::arm:
-      // ARM mode adds an offset of 4 bytes to PC
-      PCOffset = 4;
-      break;
-    default:
-      PCOffset = 0;
-    }
+    uint64_t PCOffset = TT.getArch() == Triple::ArchType::arm ? 4 : 0;
 
     uint64_t NextPC = SymbolAddr + InstSize + PCOffset;
 
