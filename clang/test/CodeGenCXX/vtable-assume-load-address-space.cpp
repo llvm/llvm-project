@@ -1,5 +1,4 @@
-// RUN: %clang_cc1 %s -triple=amdgcn-amd-amdhsa -std=c++11 -emit-llvm -o %t.ll -O1 -disable-llvm-passes -fms-extensions -fstrict-vtable-pointers
-// FIXME: Assume load should not require -fstrict-vtable-pointers
+// RUN: %clang_cc1 %s -triple=amdgcn-amd-amdhsa -std=c++11 -emit-llvm -o %t.ll -O1 -disable-llvm-passes -fms-extensions
 
 // RUN: FileCheck --check-prefix=CHECK1 --input-file=%t.ll %s
 // RUN: FileCheck --check-prefix=CHECK2 --input-file=%t.ll %s
