@@ -347,6 +347,8 @@ void AMDGPU::fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
     Features["fp8-conversion-insts"] = true;
     Features["atomic-ds-pk-add-16-insts"] = true;
     Features["mai-insts"] = true;
+    Features["wavefrontsize32"] = true;
+    Features["wavefrontsize64"] = true;
   } else if (T.isAMDGCN()) {
     switch (parseArchAMDGCN(GPU)) {
     case GK_GFX1201:
