@@ -1964,11 +1964,8 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
     case Stmt::CXXDefaultArgExprClass:
     case Stmt::CXXDefaultInitExprClass: {
       Bldr.takeNodes(Pred);
-      ExplodedNodeSet PreVisit;
-      getCheckerManager().runCheckersForPreStmt(PreVisit, Pred, S, *this);
-
-      ExplodedNodeSet Tmp;
-      StmtNodeBuilder Bldr2(PreVisit, Tmp, *currBldrCtx);
+      ExplodedNodeSet CheckedSet;
+      getCheckerManager().runCheckersForPreStmt(CheckedSet, Pred, S, *this);
 
       const Expr *ArgE;
       if (const auto *DefE = dyn_cast<CXXDefaultArgExpr>(S))
@@ -1978,25 +1975,15 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
       else
         llvm_unreachable("unknown constant wrapper kind");
 
-      bool IsTemporary = false;
-      if (const auto *MTE = dyn_cast<MaterializeTemporaryExpr>(ArgE)) {
-        ArgE = MTE->getSubExpr();
-        IsTemporary = true;
-      }
+      ExplodedNodeSet Tmp;
+      StmtNodeBuilder Bldr2(CheckedSet, Tmp, *currBldrCtx);
 
-      std::optional<SVal> ConstantVal = svalBuilder.getConstantVal(ArgE);
-      if (!ConstantVal)
-        ConstantVal = UnknownVal();
-
-      const LocationContext *LCtx = Pred->getLocationContext();
-      for (const auto I : PreVisit) {
-        ProgramStateRef State = I->getState();
-        State = State->BindExpr(S, LCtx, *ConstantVal);
-        if (IsTemporary)
-          State = createTemporaryRegionIfNeeded(State, LCtx,
-                                                cast<Expr>(S),
-                                                cast<Expr>(S));
-        Bldr2.generateNode(S, I, State);
+      for (auto *I : CheckedSet) {
+        ProgramStateRef state = (*I).getState();
+        const LocationContext *LCtx = (*I).getLocationContext();
+        SVal Val = state->getSVal(ArgE, LCtx);
+        state = state->BindExpr(S, LCtx, Val);
+        Bldr2.generateNode(S, I, state);
       }
 
       getCheckerManager().runCheckersForPostStmt(Dst, Tmp, S, *this);
