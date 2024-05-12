@@ -357,10 +357,19 @@ Changes in existing checks
   support calls to overloaded operators as base expression and provide fixes to
   expressions with side-effects.
 
+- Improved :doc:`readability-simplify-boolean-expr
+  <clang-tidy/checks/readability/simplify-boolean-expr>` check to avoid to emit
+  warning for macro when IgnoreMacro option is enabled.
+
 - Improved :doc:`readability-static-definition-in-anonymous-namespace
   <clang-tidy/checks/readability/static-definition-in-anonymous-namespace>`
   check by resolving fix-it overlaps in template code by disregarding implicit
   instances.
+
+- Improved :doc:`readability-string-compare
+  <clang-tidy/checks/readability/string-compare>` check to also detect
+  usages of ``std::string_view::compare``. Added a `StringLikeClasses` option
+  to detect usages of ``compare`` method in custom string-like classes.
 
 Removed checks
 ^^^^^^^^^^^^^^

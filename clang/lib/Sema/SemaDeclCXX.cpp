@@ -12234,8 +12234,8 @@ static bool TryNamespaceTypoCorrection(Sema &S, LookupResult &R, Scope *Sc,
       DiagnoseInvisibleNamespace(Corrected, S);
     } else if (DeclContext *DC = S.computeDeclContext(SS, false)) {
       std::string CorrectedStr(Corrected.getAsString(S.getLangOpts()));
-      bool DroppedSpecifier = Corrected.WillReplaceSpecifier() &&
-                              Ident->getName().equals(CorrectedStr);
+      bool DroppedSpecifier =
+          Corrected.WillReplaceSpecifier() && Ident->getName() == CorrectedStr;
       S.diagnoseTypo(Corrected,
                      S.PDiag(diag::err_using_directive_member_suggest)
                        << Ident << DC << DroppedSpecifier << SS.getRange(),
