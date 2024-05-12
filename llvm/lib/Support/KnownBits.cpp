@@ -776,42 +776,94 @@ KnownBits KnownBits::usub_sat(const KnownBits &LHS, const KnownBits &RHS) {
 
 KnownBits KnownBits::avgFloorS(const KnownBits &LHS, const KnownBits &RHS) {
   // (C1 & C2) + (C1 ^ C2).ashr(1)
-  KnownBits andResult = LHS & RHS;
-  KnownBits xorResult = LHS ^ RHS;
-  xorResult.Zero.ashrInPlace(1);
-  xorResult.One.ashrInPlace(1);
-  return computeForAddSub(/*Add*/ true, /* NSW */ true, /* NUW */ false,
-                          andResult, xorResult);
+  // KnownBits andResult = LHS & RHS;
+  // KnownBits xorResult = LHS ^ RHS;
+  // xorResult.Zero.ashrInPlace(1);
+  // xorResult.One.ashrInPlace(1);
+  // return computeForAddSub(/*Add*/ true, /* NSW */ true, /* NUW */ false,
+  //                         andResult, xorResult);
+  KnownBits Known = LHS;
+  KnownBits Known2 = RHS;
+  bool IsCeil = false;
+  bool IsSigned = true;
+  // Known = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
+  // Known2 = computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
+  unsigned BitWidth = Known.getBitWidth();
+  Known = IsSigned ? Known.sext(BitWidth + 1) : Known.zext(BitWidth + 1);
+  Known2 = IsSigned ? Known2.sext(BitWidth + 1) : Known2.zext(BitWidth + 1);
+  KnownBits Carry = KnownBits::makeConstant(APInt(1, IsCeil ? 1 : 0));
+  Known = KnownBits::computeForAddCarry(Known, Known2, Carry);
+  Known = Known.extractBits(BitWidth, 1);
+  return Known;
 }
 
 KnownBits KnownBits::avgFloorU(const KnownBits &LHS, const KnownBits &RHS) {
-  // (C1 & C2) + (C1 ^ C2).lshr(1)
-  KnownBits andResult = LHS & RHS;
-  KnownBits xorResult = LHS ^ RHS;
-  xorResult.Zero.lshrInPlace(1);
-  xorResult.One.lshrInPlace(1);
-  return computeForAddSub(/*Add*/ true, /* NSW */ false, /* NUW */ true,
-                          andResult, xorResult);
+  // // (C1 & C2) + (C1 ^ C2).lshr(1)
+  // KnownBits andResult = LHS & RHS;
+  // KnownBits xorResult = LHS ^ RHS;
+  // xorResult.Zero.lshrInPlace(1);
+  // xorResult.One.lshrInPlace(1);
+  // return computeForAddSub(/*Add*/ true, /* NSW */ false, /* NUW */ true,
+  //                         andResult, xorResult);
+  KnownBits Known = LHS;
+  KnownBits Known2 = RHS;
+  bool IsCeil = false;
+  bool IsSigned = false;
+  // Known = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
+  // Known2 = computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
+  unsigned BitWidth = Known.getBitWidth();
+  Known = IsSigned ? Known.sext(BitWidth + 1) : Known.zext(BitWidth + 1);
+  Known2 = IsSigned ? Known2.sext(BitWidth + 1) : Known2.zext(BitWidth + 1);
+  KnownBits Carry = KnownBits::makeConstant(APInt(1, IsCeil ? 1 : 0));
+  Known = KnownBits::computeForAddCarry(Known, Known2, Carry);
+  Known = Known.extractBits(BitWidth, 1);
+  return Known;
 }
 
 KnownBits KnownBits::avgCeilS(const KnownBits &LHS, const KnownBits &RHS) {
-  // (C1 | C2) - (C1 ^ C2).ashr(1)
-  KnownBits orResult = LHS | RHS;
-  KnownBits xorResult = LHS ^ RHS;
-  xorResult.Zero.ashrInPlace(1);
-  xorResult.One.ashrInPlace(1);
-  return computeForAddSub(/*Add*/ false, /* NSW */ true, /* NUW */ false,
-                          orResult, xorResult);
+  // // (C1 | C2) - (C1 ^ C2).ashr(1)
+  // KnownBits orResult = LHS | RHS;
+  // KnownBits xorResult = LHS ^ RHS;
+  // xorResult.Zero.ashrInPlace(1);
+  // xorResult.One.ashrInPlace(1);
+  // return computeForAddSub(/*Add*/ false, /* NSW */ true, /* NUW */ false,
+  //                         orResult, xorResult);
+  KnownBits Known = LHS;
+  KnownBits Known2 = RHS;
+  bool IsCeil = true;
+  bool IsSigned = true;
+  // Known = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
+  // Known2 = computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
+  unsigned BitWidth = Known.getBitWidth();
+  Known = IsSigned ? Known.sext(BitWidth + 1) : Known.zext(BitWidth + 1);
+  Known2 = IsSigned ? Known2.sext(BitWidth + 1) : Known2.zext(BitWidth + 1);
+  KnownBits Carry = KnownBits::makeConstant(APInt(1, IsCeil ? 1 : 0));
+  Known = KnownBits::computeForAddCarry(Known, Known2, Carry);
+  Known = Known.extractBits(BitWidth, 1);
+  return Known;
 }
 
 KnownBits KnownBits::avgCeilU(const KnownBits &LHS, const KnownBits &RHS) {
-  // (C1 | C2) - (C1 ^ C2).lshr(1)
-  KnownBits orResult = LHS | RHS;
-  KnownBits xorResult = LHS ^ RHS;
-  xorResult.Zero.lshrInPlace(1);
-  xorResult.One.lshrInPlace(1);
-  return computeForAddSub(/*Add*/ false, /* NSW */ false, /* NUW */ true,
-                          orResult, xorResult);
+  // // (C1 | C2) - (C1 ^ C2).lshr(1)
+  // KnownBits orResult = LHS | RHS;
+  // KnownBits xorResult = LHS ^ RHS;
+  // xorResult.Zero.lshrInPlace(1);
+  // xorResult.One.lshrInPlace(1);
+  // return computeForAddSub(/*Add*/ false, /* NSW */ false, /* NUW */ true,
+  //                         orResult, xorResult);
+  KnownBits Known = LHS;
+  KnownBits Known2 = RHS;
+  bool IsCeil = true;
+  bool IsSigned = false;
+  // Known = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
+  // Known2 = computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
+  unsigned BitWidth = Known.getBitWidth();
+  Known = IsSigned ? Known.sext(BitWidth + 1) : Known.zext(BitWidth + 1);
+  Known2 = IsSigned ? Known2.sext(BitWidth + 1) : Known2.zext(BitWidth + 1);
+  KnownBits Carry = KnownBits::makeConstant(APInt(1, IsCeil ? 1 : 0));
+  Known = KnownBits::computeForAddCarry(Known, Known2, Carry);
+  Known = Known.extractBits(BitWidth, 1);
+  return Known;
 }
 
 KnownBits KnownBits::mul(const KnownBits &LHS, const KnownBits &RHS,
