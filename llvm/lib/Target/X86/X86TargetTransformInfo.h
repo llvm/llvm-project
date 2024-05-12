@@ -295,9 +295,6 @@ public:
 
 private:
   bool supportsGather() const;
-  InstructionCost getGSScalarCost(unsigned Opcode, TTI::TargetCostKind CostKind,
-                                  Type *DataTy, bool VariableMask,
-                                  Align Alignment, unsigned AddressSpace);
   InstructionCost getGSVectorCost(unsigned Opcode, TTI::TargetCostKind CostKind,
                                   Type *DataTy, const Value *Ptr,
                                   Align Alignment, unsigned AddressSpace);
