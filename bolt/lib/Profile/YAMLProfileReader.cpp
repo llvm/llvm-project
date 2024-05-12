@@ -218,29 +218,17 @@ bool YAMLProfileReader::parseFunctionProfile(
         continue;
       }
 
-      BinaryBasicBlock *ToBB = Order[YamlSI.Index];
-      if (!BB.getSuccessor(ToBB->getLabel())) {
-        // Allow for BOLT-removed passthrough blocks to align with DataReader
-        // behavior.
-        BinaryBasicBlock *FTSuccessor = BB.getConditionalSuccessor(false);
-        if (FTSuccessor && FTSuccessor->succ_size() == 1 &&
-            FTSuccessor->getSuccessor(ToBB->getLabel())) {
-          BinaryBasicBlock::BinaryBranchInfo &FTBI =
-              FTSuccessor->getBranchInfo(*ToBB);
-          FTBI.Count += YamlSI.Count;
-          FTBI.MispredictedCount += YamlSI.Mispreds;
-          ToBB = FTSuccessor;
-        } else {
-          if (opts::Verbosity >= 1)
-            errs() << "BOLT-WARNING: no successor for block " << BB.getName()
-                   << " that matches index " << YamlSI.Index << " or block "
-                   << ToBB->getName() << '\n';
-          ++MismatchedEdges;
-          continue;
-        }
+      BinaryBasicBlock &SuccessorBB = *Order[YamlSI.Index];
+      if (!BB.getSuccessor(SuccessorBB.getLabel())) {
+        if (opts::Verbosity >= 1)
+          errs() << "BOLT-WARNING: no successor for block " << BB.getName()
+                 << " that matches index " << YamlSI.Index << " or block "
+                 << SuccessorBB.getName() << '\n';
+        ++MismatchedEdges;
+        continue;
       }
 
-      BinaryBasicBlock::BinaryBranchInfo &BI = BB.getBranchInfo(*ToBB);
+      BinaryBasicBlock::BinaryBranchInfo &BI = BB.getBranchInfo(SuccessorBB);
       BI.Count += YamlSI.Count;
       BI.MispredictedCount += YamlSI.Mispreds;
     }
