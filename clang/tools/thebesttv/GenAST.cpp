@@ -232,7 +232,7 @@ class ASTPool {
 std::shared_ptr<ASTFromFile> getASTOfFile(std::string file) {
     static std::unique_ptr<ASTPool> pool = nullptr;
     if (!pool) {
-        pool = std::make_unique<ASTPool>(24);
+        pool = std::make_unique<ASTPool>(Global.ASTPoolSize);
     }
     return pool->getASTOfFile(file);
 }

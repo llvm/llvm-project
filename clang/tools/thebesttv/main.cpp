@@ -581,23 +581,15 @@ void generateFromInput(const ordered_json &input, fs::path outputDir) {
 int main(int argc, const char **argv) {
     spdlog::set_level(spdlog::level::debug);
 
-    args::ArgumentParser argParser(
-        "Path generation tool\n"
-        "Must provide exactly one option from AST & ICFG generation.\n"
-        "Example:\n"
-        "  ./tool -j0 npe/input.json\n"
-        "  ./tool -s npe/input.json\n");
+    args::ArgumentParser argParser("Path generation tool\n"
+                                   "Example:\n"
+                                   "  ./tool npe/input.json\n");
 
     args::HelpFlag help(argParser, "help", "Display help menu", {'h', "help"});
 
-    args::Group argICFGGroup(
-        argParser, "AST & ICFG generation:", args::Group::Validators::Xor);
-    args::Flag argSequential(argICFGGroup, "sequential",
-                             "Sequential generation", {'s', "sequential"});
-    args::ValueFlag<int> argParallel(
-        argICFGGroup, "N",
-        "Parallel generation: N means number of threads to use (0 means all)",
-        {'j'});
+    args::ValueFlag<int> argPoolSize(
+        argParser, "N",
+        "AST Pool size (max number of ASTs in memory), default 10", {'p'});
 
     args::Positional<std::string> argIR(argParser, "IR", "Path to input.json",
                                         {args::Options::Required});
@@ -617,15 +609,17 @@ int main(int argc, const char **argv) {
         return 1;
     }
 
-    if (argSequential) {
-        logger.info("AST & ICFG generation method: sequential");
-    } else if (argParallel) {
-        logger.info("AST & ICFG generation method: parallel with {} threads",
-                    args::get(argParallel));
-    } else {
-        requireTrue(
-            false,
-            "Must provide exactly one option from AST & ICFG generation");
+    logger.info("AST & ICFG generation method: sequential");
+
+    {
+        int ASTPoolSize = 10;
+        if (argPoolSize) {
+            ASTPoolSize = args::get(argPoolSize);
+            requireTrue(ASTPoolSize >= 1,
+                        "AST pool size must be greater than 0");
+        }
+        logger.info("AST pool size: {}", ASTPoolSize);
+        Global.ASTPoolSize = ASTPoolSize;
     }
 
     setClangPath(argv[0]);
@@ -655,11 +649,7 @@ int main(int argc, const char **argv) {
             std::set<std::string>(allFiles.begin(), allFiles.end());
     }
 
-    if (argSequential) {
-        generateICFG(*Global.cb);
-    } else if (argParallel) {
-        generateICFGParallel(*Global.cb);
-    }
+    generateICFG(*Global.cb);
 
     {
         // 更新 Global.npeSuspectedSources

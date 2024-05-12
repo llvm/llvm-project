@@ -209,6 +209,8 @@ struct GlobalStat {
         npeSuspectedSourcesItMap;
     // 判断函数是否包含 return NULL 语句
     std::map<int, bool> functionReturnsNull; // fid -> whether func returns null
+
+    int ASTPoolSize;
 };
 
 SourceLocation getEndOfMacroExpansion(SourceLocation loc, ASTContext &Context);
