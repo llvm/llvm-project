@@ -22,6 +22,7 @@ licenses(["notice"])
 exports_files([
     "LICENSE.TXT",
     "cmake/modules/llvm-driver-template.cpp.in",
+    "include/llvm/BinaryFormat/Dwarf.def",
     "include/llvm/CodeGen/SDNodeProperties.td",
     "include/llvm/CodeGen/ValueTypes.td",
     "include/llvm/Frontend/Directive/DirectiveBase.td",
@@ -635,6 +636,7 @@ cc_binary(
 cc_binary(
     name = "llvm-min-tblgen",
     srcs = [
+        "utils/TableGen/ARMTargetDefEmitter.cpp",
         "utils/TableGen/Attributes.cpp",
         "utils/TableGen/Basic/CodeGenIntrinsics.cpp",
         "utils/TableGen/Basic/CodeGenIntrinsics.h",
@@ -1232,6 +1234,30 @@ cc_library(
 )
 
 gentbl(
+    name = "ARMTargetParserDefGen",
+    tbl_outs = [("-gen-arm-target-def", "include/llvm/TargetParser/ARMTargetParserDef.inc")],
+    tblgen = ":llvm-min-tblgen",
+    td_file = "lib/Target/ARM/ARM.td",
+    td_srcs = [
+        ":common_target_td_sources",
+    ] + glob([
+        "lib/Target/ARM/**/*.td",
+    ]),
+)
+
+gentbl(
+    name = "AArch64TargetParserDefGen",
+    tbl_outs = [("-gen-arm-target-def", "include/llvm/TargetParser/AArch64TargetParserDef.inc")],
+    tblgen = ":llvm-min-tblgen",
+    td_file = "lib/Target/AArch64/AArch64.td",
+    td_srcs = [
+        ":common_target_td_sources",
+    ] + glob([
+        "lib/Target/AArch64/**/*.td",
+    ]),
+)
+
+gentbl(
     name = "RISCVTargetParserDefGen",
     tbl_outs = [("-gen-riscv-target-def", "include/llvm/TargetParser/RISCVTargetParserDef.inc")],
     tblgen = ":llvm-min-tblgen",
@@ -1261,6 +1287,8 @@ cc_library(
     copts = llvm_copts,
     includes = ["include"],
     textual_hdrs = [
+        "include/llvm/TargetParser/ARMTargetParserDef.inc",
+        "include/llvm/TargetParser/AArch64TargetParserDef.inc",
         "include/llvm/TargetParser/RISCVTargetParserDef.inc",
     ] + glob([
         "include/llvm/TargetParser/*.def",
@@ -2393,6 +2421,7 @@ gentbl(
         strip_include_prefix = "lib/Target/" + target["name"],
         deps = [
             ":BinaryFormat",
+            ":CodeGen",
             ":CodeGenTypes",
             ":Core",
             ":DebugInfoCodeView",
@@ -3084,12 +3113,26 @@ cc_library(
 )
 
 cc_library(
-    name = "llvm-mca-headers",
+    name = "MCAApplication",
+    srcs = glob([
+        "tools/llvm-mca/Views/*.cpp",
+    ]) + [
+        mca_source
+        for mca_source in glob(["tools/llvm-mca/*.cpp"])
+        if mca_source != "tools/llvm-mca/llvm-mca.cpp"
+    ],
     hdrs = glob([
         "tools/llvm-mca/*.h",
         "tools/llvm-mca/Views/*.h",
     ]),
     strip_include_prefix = "tools/llvm-mca",
+    deps = [
+        ":MC",
+        ":MCA",
+        ":MCParser",
+        ":Support",
+        ":TargetParser",
+    ],
 )
 
 cc_library(
@@ -4007,12 +4050,9 @@ cc_binary(
 
 cc_binary(
     name = "llvm-mca",
-    srcs = glob([
-        "tools/llvm-mca/*.cpp",
-        "tools/llvm-mca/*.h",
-        "tools/llvm-mca/Views/*.cpp",
-        "tools/llvm-mca/Views/*.h",
-    ]),
+    srcs = [
+        "tools/llvm-mca/llvm-mca.cpp",
+    ],
     copts = llvm_copts,
     stamp = 0,
     deps = [
@@ -4022,10 +4062,10 @@ cc_binary(
         ":AllTargetsMCAs",
         ":MC",
         ":MCA",
+        ":MCAApplication",
         ":MCParser",
         ":Support",
         ":TargetParser",
-        ":llvm-mca-headers",
     ],
 )
 

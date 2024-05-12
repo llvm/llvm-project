@@ -826,6 +826,19 @@ LogicalResult CompareOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// TestOpInPlaceSelfFold
+//===----------------------------------------------------------------------===//
+
+OpFoldResult TestOpInPlaceSelfFold::fold(FoldAdaptor adaptor) {
+  if (!getFolded()) {
+    // The folder adds the "folded" if not present.
+    setFolded(true);
+    return getResult();
+  }
+  return {};
+}
+
+//===----------------------------------------------------------------------===//
 // TestOpFoldWithFoldAdaptor
 //===----------------------------------------------------------------------===//
 

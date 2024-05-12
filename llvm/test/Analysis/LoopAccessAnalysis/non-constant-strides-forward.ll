@@ -8,10 +8,9 @@ declare void @llvm.assume(i1)
 define void @different_non_constant_strides_known_forward(ptr %A) {
 ; CHECK-LABEL: 'different_non_constant_strides_known_forward'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
-; CHECK-NEXT:  Unknown data dependence.
+; CHECK-NEXT:      Memory dependences are safe
 ; CHECK-NEXT:      Dependences:
-; CHECK-NEXT:        Unknown:
+; CHECK-NEXT:        Forward:
 ; CHECK-NEXT:            %l = load i32, ptr %gep.mul.2, align 4 ->
 ; CHECK-NEXT:            store i32 %add, ptr %gep, align 4
 ; CHECK-EMPTY:
@@ -45,10 +44,9 @@ exit:
 define void @different_non_constant_strides_known_forward_min_distance_3(ptr %A) {
 ; CHECK-LABEL: 'different_non_constant_strides_known_forward_min_distance_3'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
-; CHECK-NEXT:  Unknown data dependence.
+; CHECK-NEXT:      Memory dependences are safe
 ; CHECK-NEXT:      Dependences:
-; CHECK-NEXT:        Unknown:
+; CHECK-NEXT:        Forward:
 ; CHECK-NEXT:            %l = load i32, ptr %gep.mul.2, align 4 ->
 ; CHECK-NEXT:            store i32 %add, ptr %gep, align 4
 ; CHECK-EMPTY:

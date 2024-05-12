@@ -1014,6 +1014,75 @@ def EmitC_VariableOp : EmitC_Op<"variable", []> {
   let hasVerifier = 1;
 }
 
+def EmitC_GlobalOp : EmitC_Op<"global", [Symbol]> {
+  let summary = "A global variable";
+  let description = [{
+    The `emitc.global` operation declares or defines a named global variable.
+    The backing memory for the variable is allocated statically and is
+    described by the type of the variable.
+    Optionally, an `initial_value` can be provided.
+    Internal linkage can be specified using the `static_specifier` unit attribute
+    and external linkage can be specified using the `extern_specifier` unit attribute.
+    Note that the default linkage without those two keywords depends on whether
+    the target is C or C++ and whether the global variable is `const`.
+    The global variable can also be marked constant using the `const_specifier`
+    unit attribute. Writing to such constant global variables is
+    undefined.
+
+    The global variable can be accessed by using the `emitc.get_global` to
+    retrieve the value for the global variable.
+
+    Example:
+
+    ```mlir
+    // Global variable with an initial value.
+    emitc.global @x : emitc.array<2xf32> = dense<0.0, 2.0>
+    // External global variable
+    emitc.global extern @x : emitc.array<2xf32>
+    // Constant global variable with internal linkage
+    emitc.global static const @x : i32 = 0
+    ```
+  }];
+
+  let arguments = (ins SymbolNameAttr:$sym_name,
+                       TypeAttr:$type,
+                       OptionalAttr<EmitC_OpaqueOrTypedAttr>:$initial_value,
+                       UnitAttr:$extern_specifier,
+                       UnitAttr:$static_specifier,
+                       UnitAttr:$const_specifier);
+
+  let assemblyFormat = [{
+       (`extern` $extern_specifier^)?
+       (`static` $static_specifier^)?
+       (`const` $const_specifier^)?
+       $sym_name
+       `:` custom<EmitCGlobalOpTypeAndInitialValue>($type, $initial_value)
+       attr-dict
+  }];
+
+  let hasVerifier = 1;
+}
+
+def EmitC_GetGlobalOp : EmitC_Op<"get_global",
+    [Pure, DeclareOpInterfaceMethods<SymbolUserOpInterface>]> {
+  let summary = "Obtain access to a global variable";
+  let description = [{
+     The `emitc.get_global` operation retrieves the lvalue of a
+     named global variable. If the global variable is marked constant, assigning
+     to that lvalue is undefined.
+
+     Example:
+
+     ```mlir
+     %x = emitc.get_global @foo : !emitc.array<2xf32>
+     ```
+  }];
+
+  let arguments = (ins FlatSymbolRefAttr:$name);
+  let results = (outs EmitCType:$result);
+  let assemblyFormat = "$name `:` type($result) attr-dict";
+}
+
 def EmitC_VerbatimOp : EmitC_Op<"verbatim"> {
   let summary = "Verbatim operation";
   let description = [{

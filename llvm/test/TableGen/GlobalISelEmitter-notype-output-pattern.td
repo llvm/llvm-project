@@ -6,11 +6,11 @@ include "GlobalISelEmitterCommon.td"
 // CHECK:      constexpr static uint8_t MatchTable0[] = {
 // CHECK-NEXT:   GIM_Try,
 // CHECK-NEXT:     GIM_CheckOpcode{{.*}}GIMT_Encode2(TargetOpcode::G_ANYEXT),
-// CHECK-NEXT:     GIM_CheckType{{.*}}/*Type*/GILLT_s32,
-// CHECK-NEXT:     GIM_CheckType{{.*}}/*Type*/GILLT_s8,
-// CHECK-NEXT:     GIM_CheckRegBankForClass{{.*}}/*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
+// CHECK-NEXT:     GIM_RootCheckType{{.*}}/*Type*/GILLT_s32,
+// CHECK-NEXT:     GIM_RootCheckType{{.*}}/*Type*/GILLT_s8,
+// CHECK-NEXT:     GIM_RootCheckRegBankForClass{{.*}}/*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
 // CHECK-NEXT:     // (anyext:{{.*}}=>{{.*}}(SELECT_I4:
-// CHECK:          GIR_Done,
+// CHECK:          GIR_EraseRootFromParent_Done,
 // CHECK-NEXT:   // Label 0:
 // CHECK-NEXT:   GIM_Reject,
 // CHECK-NEXT:   };

@@ -35,6 +35,7 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
     CachedTypes[OtherV] = ResTy;
     return ResTy;
   }
+  case Instruction::Or:
   case Instruction::ICmp:
   case VPInstruction::FirstOrderRecurrenceSplice: {
     Type *ResTy = inferScalarType(R->getOperand(0));
@@ -42,6 +43,12 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
     assert(inferScalarType(OtherV) == ResTy &&
            "different types inferred for different operands");
     CachedTypes[OtherV] = ResTy;
+    return ResTy;
+  }
+  case VPInstruction::Not: {
+    Type *ResTy = inferScalarType(R->getOperand(0));
+    assert(IntegerType::get(Ctx, 1) == ResTy &&
+           "unexpected scalar type inferred for operand");
     return ResTy;
   }
   case VPInstruction::PtrAdd:

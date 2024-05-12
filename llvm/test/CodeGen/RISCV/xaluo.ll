@@ -1759,9 +1759,9 @@ define zeroext i1 @umulo2.i32(i32 signext %v1, ptr %res) {
 ;
 ; RV64ZBA-LABEL: umulo2.i32:
 ; RV64ZBA:       # %bb.0: # %entry
-; RV64ZBA-NEXT:    zext.w a0, a0
-; RV64ZBA-NEXT:    sh1add a2, a0, a0
-; RV64ZBA-NEXT:    sh2add a2, a2, a0
+; RV64ZBA-NEXT:    zext.w a2, a0
+; RV64ZBA-NEXT:    sh1add.uw a0, a0, a2
+; RV64ZBA-NEXT:    sh2add a2, a0, a2
 ; RV64ZBA-NEXT:    srli a0, a2, 32
 ; RV64ZBA-NEXT:    snez a0, a0
 ; RV64ZBA-NEXT:    sw a2, 0(a1)

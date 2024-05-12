@@ -14,6 +14,7 @@
 #include "bolt/Profile/DataAggregator.h"
 #include "bolt/Core/BinaryContext.h"
 #include "bolt/Core/BinaryFunction.h"
+#include "bolt/Passes/BinaryPasses.h"
 #include "bolt/Profile/BoltAddressTranslation.h"
 #include "bolt/Profile/Heatmap.h"
 #include "bolt/Profile/YAMLProfileWriter.h"
@@ -611,6 +612,7 @@ Error DataAggregator::readProfile(BinaryContext &BC) {
         if (std::error_code EC = writeBATYAML(BC, opts::SaveProfile))
           report_error("cannot create output data file", EC);
     }
+    BC.logBOLTErrorsAndQuitOnFatal(PrintProgramStats().runOnFunctions(BC));
   }
 
   return Error::success();
@@ -771,9 +773,19 @@ bool DataAggregator::doInterBranch(BinaryFunction *FromFunc,
 
 bool DataAggregator::doBranch(uint64_t From, uint64_t To, uint64_t Count,
                               uint64_t Mispreds) {
+  bool IsReturn = false;
   auto handleAddress = [&](uint64_t &Addr, bool IsFrom) -> BinaryFunction * {
     if (BinaryFunction *Func = getBinaryFunctionContainingAddress(Addr)) {
       Addr -= Func->getAddress();
+      if (IsFrom) {
+        auto checkReturn = [&](auto MaybeInst) {
+          IsReturn = MaybeInst && BC->MIB->isReturn(*MaybeInst);
+        };
+        if (Func->hasInstructions())
+          checkReturn(Func->getInstructionAtOffset(Addr));
+        else
+          checkReturn(Func->disassembleInstructionAtOffset(Addr));
+      }
 
       if (BAT)
         Addr = BAT->translate(Func->getAddress(), Addr, IsFrom);
@@ -790,6 +802,9 @@ bool DataAggregator::doBranch(uint64_t From, uint64_t To, uint64_t Count,
   };
 
   BinaryFunction *FromFunc = handleAddress(From, /*IsFrom=*/true);
+  // Ignore returns.
+  if (IsReturn)
+    return true;
   BinaryFunction *ToFunc = handleAddress(To, /*IsFrom=*/false);
   if (!FromFunc && !ToFunc)
     return false;
@@ -859,14 +874,17 @@ bool DataAggregator::doTrace(const LBREntry &First, const LBREntry &Second,
   return true;
 }
 
-bool DataAggregator::recordTrace(
-    BinaryFunction &BF, const LBREntry &FirstLBR, const LBREntry &SecondLBR,
-    uint64_t Count,
-    SmallVector<std::pair<uint64_t, uint64_t>, 16> &Branches) const {
+std::optional<SmallVector<std::pair<uint64_t, uint64_t>, 16>>
+DataAggregator::getFallthroughsInTrace(BinaryFunction &BF,
+                                       const LBREntry &FirstLBR,
+                                       const LBREntry &SecondLBR,
+                                       uint64_t Count) const {
+  SmallVector<std::pair<uint64_t, uint64_t>, 16> Branches;
+
   BinaryContext &BC = BF.getBinaryContext();
 
   if (!BF.isSimple())
-    return false;
+    return std::nullopt;
 
   assert(BF.hasCFG() && "can only record traces in CFG state");
 
@@ -875,13 +893,13 @@ bool DataAggregator::recordTrace(
   const uint64_t To = SecondLBR.From - BF.getAddress();
 
   if (From > To)
-    return false;
+    return std::nullopt;
 
   const BinaryBasicBlock *FromBB = BF.getBasicBlockContainingOffset(From);
   const BinaryBasicBlock *ToBB = BF.getBasicBlockContainingOffset(To);
 
   if (!FromBB || !ToBB)
-    return false;
+    return std::nullopt;
 
   // Adjust FromBB if the first LBR is a return from the last instruction in
   // the previous block (that instruction should be a call).
@@ -905,7 +923,7 @@ bool DataAggregator::recordTrace(
   // within the same basic block, e.g. when two call instructions are in the
   // same block. In this case we skip the processing.
   if (FromBB == ToBB)
-    return true;
+    return Branches;
 
   // Process blocks in the original layout order.
   BinaryBasicBlock *BB = BF.getLayout().getBlock(FromBB->getIndex());
@@ -919,7 +937,7 @@ bool DataAggregator::recordTrace(
       LLVM_DEBUG(dbgs() << "no fall-through for the trace:\n"
                         << "  " << FirstLBR << '\n'
                         << "  " << SecondLBR << '\n');
-      return false;
+      return std::nullopt;
     }
 
     const MCInst *Instr = BB->getLastNonPseudoInstr();
@@ -943,20 +961,7 @@ bool DataAggregator::recordTrace(
     BI.Count += Count;
   }
 
-  return true;
-}
-
-std::optional<SmallVector<std::pair<uint64_t, uint64_t>, 16>>
-DataAggregator::getFallthroughsInTrace(BinaryFunction &BF,
-                                       const LBREntry &FirstLBR,
-                                       const LBREntry &SecondLBR,
-                                       uint64_t Count) const {
-  SmallVector<std::pair<uint64_t, uint64_t>, 16> Res;
-
-  if (!recordTrace(BF, FirstLBR, SecondLBR, Count, Res))
-    return std::nullopt;
-
-  return Res;
+  return Branches;
 }
 
 bool DataAggregator::recordEntry(BinaryFunction &BF, uint64_t To, bool Mispred,
@@ -2334,7 +2339,7 @@ std::error_code DataAggregator::writeBATYAML(BinaryContext &BC,
         continue;
       BinaryFunction *BF = BC.getBinaryFunctionAtAddress(FuncAddress);
       assert(BF);
-      YamlBF.Name = FuncName.str();
+      YamlBF.Name = getLocationName(*BF);
       YamlBF.Id = BF->getFunctionNumber();
       YamlBF.Hash = BAT->getBFHash(FuncAddress);
       YamlBF.ExecCount = BF->getKnownExecutionCount();
@@ -2397,6 +2402,17 @@ std::error_code DataAggregator::writeBATYAML(BinaryContext &BC,
                                         yaml::bolt::CallSiteInfo &B) {
           return A.Offset < B.Offset;
         });
+      }
+      // Set entry counts, similar to DataReader::readProfile.
+      for (const llvm::bolt::BranchInfo &BI : Branches.EntryData) {
+        if (!BlockMap.isInputBlock(BI.To.Offset)) {
+          if (opts::Verbosity >= 1)
+            errs() << "BOLT-WARNING: Unexpected EntryData in " << FuncName
+                   << " at 0x" << Twine::utohexstr(BI.To.Offset) << '\n';
+          continue;
+        }
+        const unsigned BlockIndex = BlockMap.getBBIndex(BI.To.Offset);
+        YamlBF.Blocks[BlockIndex].ExecCount += BI.Branches;
       }
       // Drop blocks without a hash, won't be useful for stale matching.
       llvm::erase_if(YamlBF.Blocks,

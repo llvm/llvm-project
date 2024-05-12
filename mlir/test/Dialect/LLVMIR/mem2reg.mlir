@@ -856,28 +856,6 @@ llvm.func @stores_with_different_types(%arg0: i64, %arg1: f64, %cond: i1) -> f64
 
 // -----
 
-// Verifies that stores with smaller bitsize inputs are not replaced. A trivial
-// implementation will be incorrect due to endianness considerations.
-
-// CHECK-LABEL: @stores_with_different_type_sizes
-llvm.func @stores_with_different_type_sizes(%arg0: i64, %arg1: f32, %cond: i1) -> f64 {
-  %0 = llvm.mlir.constant(1 : i32) : i32
-  // CHECK: llvm.alloca
-  %1 = llvm.alloca %0 x i64 {alignment = 4 : i64} : (i32) -> !llvm.ptr
-  llvm.cond_br %cond, ^bb1, ^bb2
-^bb1:
-  llvm.store %arg0, %1 {alignment = 4 : i64} : i64, !llvm.ptr
-  llvm.br ^bb3
-^bb2:
-  llvm.store %arg1, %1 {alignment = 4 : i64} : f32, !llvm.ptr
-  llvm.br ^bb3
-^bb3:
-  %2 = llvm.load %1 {alignment = 4 : i64} : !llvm.ptr -> f64
-  llvm.return %2 : f64
-}
-
-// -----
-
 // CHECK-LABEL: @load_smaller_int
 llvm.func @load_smaller_int() -> i16 {
   %0 = llvm.mlir.constant(1 : i32) : i32
@@ -1046,4 +1024,136 @@ llvm.func @scalable_llvm_vector() -> i16 {
   %1 = llvm.alloca %0 x !llvm.vec<? x 4 x ppc_fp128> : (i32) -> !llvm.ptr
   %2 = llvm.load %1 : !llvm.ptr -> i16
   llvm.return %2 : i16
+}
+
+// -----
+
+// CHECK-LABEL: @smaller_store_forwarding
+// CHECK-SAME: %[[ARG:.+]]: i16
+llvm.func @smaller_store_forwarding(%arg : i16) {
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  // CHECK-NOT: llvm.alloca
+  // CHECK: %[[UNDEF:.+]] = llvm.mlir.undef : i32
+  %1 = llvm.alloca %0 x i32 : (i32) -> !llvm.ptr
+
+  // CHECK: %[[ZEXT:.+]] = llvm.zext %[[ARG]] : i16 to i32
+  // CHECK: %[[MASK:.+]] = llvm.mlir.constant(-65536 : i32) : i32
+  // CHECK: %[[MASKED:.+]] = llvm.and %[[UNDEF]], %[[MASK]]
+  // CHECK: %[[NEW_DEF:.+]] = llvm.or %[[MASKED]], %[[ZEXT]]
+  llvm.store %arg, %1 : i16, !llvm.ptr
+  llvm.return
+}
+
+// -----
+
+module attributes { dlti.dl_spec = #dlti.dl_spec<
+  #dlti.dl_entry<"dlti.endianness", "big">
+>} {
+  // CHECK-LABEL: @smaller_store_forwarding_big_endian
+  // CHECK-SAME: %[[ARG:.+]]: i16
+  llvm.func @smaller_store_forwarding_big_endian(%arg : i16) {
+    %0 = llvm.mlir.constant(1 : i32) : i32
+    // CHECK-NOT: llvm.alloca
+    // CHECK: %[[UNDEF:.+]] = llvm.mlir.undef : i32
+    %1 = llvm.alloca %0 x i32 : (i32) -> !llvm.ptr
+
+    // CHECK: %[[ZEXT:.+]] = llvm.zext %[[ARG]] : i16 to i32
+    // CHECK: %[[SHIFT_WIDTH:.+]] = llvm.mlir.constant(16 : i32) : i32
+    // CHECK: %[[SHIFTED:.+]] = llvm.shl %[[ZEXT]], %[[SHIFT_WIDTH]]
+    // CHECK: %[[MASK:.+]] = llvm.mlir.constant(65535 : i32) : i32
+    // CHECK: %[[MASKED:.+]] = llvm.and %[[UNDEF]], %[[MASK]]
+    // CHECK: %[[NEW_DEF:.+]] = llvm.or %[[MASKED]], %[[SHIFTED]]
+    llvm.store %arg, %1 : i16, !llvm.ptr
+    llvm.return
+  }
+}
+
+// -----
+
+// CHECK-LABEL: @smaller_store_forwarding_type_mix
+// CHECK-SAME: %[[ARG:.+]]: vector<1xi8>
+llvm.func @smaller_store_forwarding_type_mix(%arg : vector<1xi8>) {
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  // CHECK-NOT: llvm.alloca
+  // CHECK: %[[UNDEF:.+]] = llvm.mlir.undef : f32
+  %1 = llvm.alloca %0 x f32 : (i32) -> !llvm.ptr
+
+  // CHECK: %[[CASTED_DEF:.+]] = llvm.bitcast %[[UNDEF]] : f32 to i32
+  // CHECK: %[[CASTED_ARG:.+]] = llvm.bitcast %[[ARG]] : vector<1xi8> to i8
+  // CHECK: %[[ZEXT:.+]] = llvm.zext %[[CASTED_ARG]] : i8 to i32
+  // CHECK: %[[MASK:.+]] = llvm.mlir.constant(-256 : i32) : i32
+  // CHECK: %[[MASKED:.+]] = llvm.and %[[CASTED_DEF]], %[[MASK]]
+  // CHECK: %[[NEW_DEF:.+]] = llvm.or %[[MASKED]], %[[ZEXT]]
+  // CHECK: %[[CASTED_NEW_DEF:.+]] = llvm.bitcast %[[NEW_DEF]] : i32 to f32
+  llvm.store %arg, %1 : vector<1xi8>, !llvm.ptr
+  llvm.return
+}
+
+// -----
+
+module attributes { dlti.dl_spec = #dlti.dl_spec<
+  #dlti.dl_entry<"dlti.endianness", "big">
+>} {
+  // CHECK-LABEL: @smaller_store_forwarding_type_mix
+  // CHECK-SAME: %[[ARG:.+]]: vector<1xi8>
+  llvm.func @smaller_store_forwarding_type_mix(%arg : vector<1xi8>) {
+    %0 = llvm.mlir.constant(1 : i32) : i32
+    // CHECK-NOT: llvm.alloca
+    // CHECK: %[[UNDEF:.+]] = llvm.mlir.undef : f32
+    %1 = llvm.alloca %0 x f32 : (i32) -> !llvm.ptr
+
+    // CHECK: %[[CASTED_DEF:.+]] = llvm.bitcast %[[UNDEF]] : f32 to i32
+    // CHECK: %[[CASTED_ARG:.+]] = llvm.bitcast %[[ARG]] : vector<1xi8> to i8
+    // CHECK: %[[ZEXT:.+]] = llvm.zext %[[CASTED_ARG]] : i8 to i32
+    // CHECK: %[[SHIFT_WIDTH:.+]] = llvm.mlir.constant(24 : i32) : i32
+    // CHECK: %[[SHIFTED:.+]] = llvm.shl %[[ZEXT]], %[[SHIFT_WIDTH]]
+    // CHECK: %[[MASK:.+]] = llvm.mlir.constant(16777215 : i32) : i32
+    // CHECK: %[[MASKED:.+]] = llvm.and %[[CASTED_DEF]], %[[MASK]]
+    // CHECK: %[[NEW_DEF:.+]] = llvm.or %[[MASKED]], %[[SHIFTED]]
+    // CHECK: %[[CASTED_NEW_DEF:.+]] = llvm.bitcast %[[NEW_DEF]] : i32 to f32
+    llvm.store %arg, %1 : vector<1xi8>, !llvm.ptr
+    llvm.return
+  }
+}
+
+// -----
+
+// CHECK-LABEL: @stores_with_different_types_branches
+// CHECK-SAME: %[[ARG0:.+]]: i64
+// CHECK-SAME: %[[ARG1:.+]]: f32
+llvm.func @stores_with_different_types_branches(%arg0: i64, %arg1: f32, %cond: i1) -> f64 {
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  // CHECK-NOT: llvm.alloca
+  // CHECK: %[[UNDEF:.+]] = llvm.mlir.undef : i64
+  %1 = llvm.alloca %0 x i64 {alignment = 4 : i64} : (i32) -> !llvm.ptr
+  llvm.cond_br %cond, ^bb1, ^bb2
+^bb1:
+  llvm.store %arg0, %1 {alignment = 4 : i64} : i64, !llvm.ptr
+  // CHECK: llvm.br ^[[BB3:.+]](%[[ARG0]] : i64)
+  llvm.br ^bb3
+^bb2:
+  llvm.store %arg1, %1 {alignment = 4 : i64} : f32, !llvm.ptr
+  // CHECK: %[[CAST:.+]] = llvm.bitcast %[[ARG1]] : f32 to i32
+  // CHECK: %[[ZEXT:.+]] = llvm.zext %[[CAST]] : i32 to i64
+  // CHECK: %[[MASK:.+]] = llvm.mlir.constant(-4294967296 : i64) : i64
+  // CHECK: %[[MASKED:.+]] = llvm.and %[[UNDEF]], %[[MASK]]
+  // CHECK: %[[NEW_DEF:.+]] = llvm.or %[[MASKED]], %[[ZEXT]]
+  // CHECK: llvm.br ^[[BB3]](%[[NEW_DEF]] : i64)
+  llvm.br ^bb3
+^bb3:
+  %2 = llvm.load %1 {alignment = 4 : i64} : !llvm.ptr -> f64
+  llvm.return %2 : f64
+}
+
+// -----
+
+// Verifiy that mem2reg does not touch stores with undefined semantics.
+
+// CHECK-LABEL: @store_out_of_bounds
+llvm.func @store_out_of_bounds(%arg : i64) {
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  // CHECK: llvm.alloca
+  %1 = llvm.alloca %0 x i32 : (i32) -> !llvm.ptr
+  llvm.store %arg, %1 : i64, !llvm.ptr
+  llvm.return
 }

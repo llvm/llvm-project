@@ -43,7 +43,7 @@ def : Pat<
 // Check a non-intrinsic instruction with an immediate parameter.
 
 // GISEL: GIM_CheckOpcode, /*MI*/0, GIMT_Encode2(MyTarget::G_TGT_CAT),
-// GISEL: GIM_CheckType, /*MI*/0, /*Op*/1, /*Type*/GILLT_s32,
+// GISEL: GIM_RootCheckType, /*Op*/1, /*Type*/GILLT_s32,
 // GISEL-NEXT: // MIs[0] Operand 2
 // GISEL-NEXT: GIM_CheckLiteralInt, /*MI*/0, /*Op*/2, GIMT_Encode8(0),
 def : Pat<
@@ -52,7 +52,7 @@ def : Pat<
 >;
 
 // GISEL: GIM_CheckOpcode, /*MI*/0, GIMT_Encode2(MyTarget::G_TGT_CAT),
-// GISEL: GIM_CheckType, /*MI*/0, /*Op*/1, /*Type*/GILLT_s32,
+// GISEL: GIM_RootCheckType, /*Op*/1, /*Type*/GILLT_s32,
 // GISEL-NEXT: // MIs[0] Operand 2
 // GISEL-NEXT: GIM_CheckLiteralInt, /*MI*/0, /*Op*/2, GIMT_Encode8(93),
 def : Pat<

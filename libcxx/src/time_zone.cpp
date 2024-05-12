@@ -567,11 +567,22 @@ __first_rule(seconds __stdoff, const vector<__tz::__rule>& __rules) {
         false};
   }
 
-  __named_rule_until __continuation_end{__continuation};
-  if (__time >= __continuation_end.__until() && !__continuation_end.__needs_adjustment())
-    // note std::unexpected<sys_seconds>(__end); is ambiguous with std::unexpected() in <exception>,
-    return __sys_info_result{std::unexpect, __continuation_end.__until()};
+  if (__rule->__save.__time != 0s) {
+    // another fix for America/Punta_Arenas when not at the start of the
+    // sys_info object.
+    seconds __save = __rule->__save.__time;
+    if (__continuation_begin >= __rule_begin - __save && __time < __next.first) {
+      return __sys_info{
+          sys_info{__continuation_begin,
+                   __next.first,
+                   __continuation.__stdoff + __save,
+                   chrono::duration_cast<minutes>(__save),
+                   chrono::__format(__continuation, __rule->__letters, __save)},
+          false};
+    }
+  }
 
+  __named_rule_until __continuation_end{__continuation};
   while (__next.second != __rules.end()) {
 #ifdef PRINT
     std::print(

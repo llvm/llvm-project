@@ -8,6 +8,7 @@
 
 #include "SubprocessMemory.h"
 #include "Error.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FormatVariadic.h"
 #include <cerrno>
@@ -56,6 +57,8 @@ Error SubprocessMemory::initializeSubprocessMemory(pid_t ProcessID) {
     return make_error<Failure>(
         "Failed to create shared memory object for auxiliary memory: " +
         Twine(strerror(errno)));
+  auto AuxiliaryMemoryFDClose =
+      make_scope_exit([AuxiliaryMemoryFD]() { close(AuxiliaryMemoryFD); });
   if (ftruncate(AuxiliaryMemoryFD, AuxiliaryMemorySize) != 0) {
     return make_error<Failure>("Truncating the auxiliary memory failed: " +
                                Twine(strerror(errno)));
@@ -78,6 +81,8 @@ Error SubprocessMemory::addMemoryDefinition(
       return make_error<Failure>(
           "Failed to create shared memory object for memory definition: " +
           Twine(strerror(errno)));
+    auto SharedMemoryFDClose =
+        make_scope_exit([SharedMemoryFD]() { close(SharedMemoryFD); });
     if (ftruncate(SharedMemoryFD, MemVal.SizeBytes) != 0) {
       return make_error<Failure>("Truncating a memory definiton failed: " +
                                  Twine(strerror(errno)));
@@ -138,7 +143,7 @@ Expected<int> SubprocessMemory::setupAuxiliaryMemoryInSubprocess(
 }
 
 SubprocessMemory::~SubprocessMemory() {
-  for (std::string SharedMemoryName : SharedMemoryNames) {
+  for (const std::string &SharedMemoryName : SharedMemoryNames) {
     if (shm_unlink(SharedMemoryName.c_str()) != 0) {
       errs() << "Failed to unlink shared memory section: " << strerror(errno)
              << "\n";

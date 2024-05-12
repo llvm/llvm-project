@@ -56,6 +56,10 @@ void registerFromLLVMIRTranslation() {
         if (llvm::verifyModule(*llvmModule, &llvm::errs()))
           return nullptr;
 
+        // Debug records are not currently supported in the LLVM IR translator.
+        if (llvmModule->IsNewDbgInfoFormat)
+          llvmModule->convertFromNewDbgValues();
+
         return translateLLVMIRToModule(std::move(llvmModule), context,
                                        emitExpensiveWarnings,
                                        dropDICompositeTypeElements);

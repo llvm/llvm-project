@@ -25,6 +25,7 @@ static_library("modernize") {
     "MakeSharedCheck.cpp",
     "MakeSmartPtrCheck.cpp",
     "MakeUniqueCheck.cpp",
+    "MinMaxUseInitializerListCheck.cpp",
     "ModernizeTidyModule.cpp",
     "PassByValueCheck.cpp",
     "RawStringLiteralCheck.cpp",

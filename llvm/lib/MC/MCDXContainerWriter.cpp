@@ -117,9 +117,11 @@ uint64_t DXContainerObjectWriter::writeObject(MCAssembler &Asm,
 
       const Triple &TT = Asm.getContext().getTargetTriple();
       VersionTuple Version = TT.getOSVersion();
-      Header.MajorVersion = static_cast<uint8_t>(Version.getMajor());
-      if (Version.getMinor())
-        Header.MinorVersion = static_cast<uint8_t>(*Version.getMinor());
+      uint8_t MajorVersion = static_cast<uint8_t>(Version.getMajor());
+      uint8_t MinorVersion =
+          static_cast<uint8_t>(Version.getMinor().value_or(0));
+      Header.Version =
+          dxbc::ProgramHeader::getVersion(MajorVersion, MinorVersion);
       if (TT.hasEnvironment())
         Header.ShaderKind =
             static_cast<uint16_t>(TT.getEnvironment() - Triple::Pixel);
