@@ -29,7 +29,8 @@ TEST(LlvmLibcIoctlTest, InvalidFileDescriptor) {
 }
 
 TEST(LlvmLibcIoctlTest, ValidFileDescriptor) {
-  int fd = open("/dev/tty1", O_RDWR);
-  int res = LIBC_NAMESPACE::ioctl(fd, KDSETMODE, KD_GRAPHICS);
+  int fd = open("/dev/null", O_RDWR);
+  int data;
+  int res = LIBC_NAMESPACE::ioctl(fd, FIONREAD, &data);
   EXPECT_THAT(res, Succeeds());
 }
