@@ -13,8 +13,6 @@
 #ifndef LLVM_OPENMP_LIBOMPTARGET_PLUGINS_ELF_UTILS_H
 #define LLVM_OPENMP_LIBOMPTARGET_PLUGINS_ELF_UTILS_H
 
-#include "Shared/PluginAPI.h"
-
 #include "llvm/Object/ELF.h"
 #include "llvm/Object/ELFObjectFile.h"
 
