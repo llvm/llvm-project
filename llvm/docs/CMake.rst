@@ -991,12 +991,10 @@ and uses them to build a simple application ``simple-tool``.
   # Now build our tools
   add_executable(simple-tool tool.cpp)
 
-  # Find the libraries that correspond to the LLVM components
-  # that we wish to use
-  llvm_map_components_to_libnames(llvm_libs support core irreader)
+  # Link against the libraries that correspond to the 
+  # LLVM components that we wish to use.
+  llvm_config(simple-tool USE_SHARED support core irreader)
 
-  # Link against LLVM libraries
-  target_link_libraries(simple-tool ${llvm_libs})
 
 The ``find_package(...)`` directive when used in CONFIG mode (as in the above
 example) will look for the ``LLVMConfig.cmake`` file in various locations (see
@@ -1055,13 +1053,15 @@ include
   The path to the directory containing the LLVM tools (e.g. ``llvm-as``).
 
 Notice that in the above example we link ``simple-tool`` against several LLVM
-libraries. The list of libraries is determined by using the
-``llvm_map_components_to_libnames()`` CMake function. For a list of available
-components look at the output of running ``llvm-config --components``.
+libraries. The list of libraries is determined inside the ``llvm_config()`` 
+CMake macro. For a list of available components look at the output of 
+running ``llvm-config --components``.
 
-Note that for LLVM < 3.5 ``llvm_map_components_to_libraries()`` was
-used instead of ``llvm_map_components_to_libnames()``. This is now deprecated
-and will be removed in a future version of LLVM.
+The ``llvm_config()`` macro behave similarly to ``llvm-config --libs`` when 
+``USE_SHARED`` is provided. When using with LLVM built with 
+``LLVM_LINK_LLVM_DYLIB = on`` and ``LLVM_DYLIB_COMPONENTS = all`` , 
+the components list can be omitted.
+
 
 .. _cmake-out-of-source-pass:
 
