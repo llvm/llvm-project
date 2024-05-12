@@ -374,11 +374,11 @@ void DataSharingProcessor::collectSymbols(
       flag == Fortran::semantics::Symbol::Flag::OmpPreDetermined;
 
   //llvm::errs() << ">>>> collecting symbols: implicit? " << collectImplicit
-               //<< ", pre-determined? " << collectPreDetermined << "\n";
+  //             << ", pre-determined? " << collectPreDetermined << "\n";
   //llvm::errs() << ">>>> all symbols:\n";
-  for (auto *sym : allSymbols) {
-    //llvm::errs() << "    " << *sym << "\n";
-  }
+  //for (auto *sym : allSymbols) {
+  //  llvm::errs() << "    " << *sym << "\n";
+  //}
 
   auto isPrivatizable = [](const Fortran::semantics::Symbol &sym) -> bool {
     return !Fortran::semantics::IsProcedure(sym) &&
@@ -388,27 +388,32 @@ void DataSharingProcessor::collectSymbols(
   };
 
   auto shouldCollectSymbol = [&](const Fortran::semantics::Symbol *sym) {
-    //llvm::errs() << ">>>> shouldCollectSymbol: " << *sym << "\n";
+    //llvm::errs() << ">>>> shouldCollectSymbol: " << *sym << ", implicit? "
+    //             << sym->test(Fortran::semantics::Symbol::Flag::OmpImplicit)
+    //             << ", pre-determined? "
+    //             << sym->test(
+    //                    Fortran::semantics::Symbol::Flag::OmpPreDetermined)
+    //             << "\n";
     if (collectImplicit &&
-        sym->test(Fortran::semantics::Symbol::Flag::Implicit) &&
+        sym->test(Fortran::semantics::Symbol::Flag::OmpImplicit) &&
         !sym->test(Fortran::semantics::Symbol::Flag::OmpPreDetermined)) {
-        //llvm::errs() << ">>>> true 1\n";
+      //llvm::errs() << ">>>> true 1\n";
       return true;
     }
 
     if (collectPreDetermined &&
         sym->test(Fortran::semantics::Symbol::Flag::OmpPreDetermined)) {
-        //llvm::errs() << ">>>> true 2\n";
+      //llvm::errs() << ">>>> true 2\n";
       return true;
     }
 
     if (!sym->test(Fortran::semantics::Symbol::Flag::OmpImplicit) &&
         !sym->test(Fortran::semantics::Symbol::Flag::OmpPreDetermined)) {
-        //llvm::errs() << ">>>> true 3\n";
+      //llvm::errs() << ">>>> true 3\n";
       return true;
     }
 
-        //llvm::errs() << ">>>> false\n";
+    //llvm::errs() << ">>>> false\n";
     return false;
   };
 

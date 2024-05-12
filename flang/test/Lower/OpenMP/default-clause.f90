@@ -354,10 +354,13 @@ end subroutine
 
 !CHECK-LABEL: func @_QPnested_default_clause_test5
 !CHECK: omp.parallel {
-!CHECK: %[[LOOP_VAR_ALLOCA:.*]] = fir.alloca i32 {adapt.valuebyref, pinned}
-!CHECK: %[[LOOP_VAR_DECLARE:.*]]:2 = hlfir.declare %[[LOOP_VAR_ALLOCA]] {{.*}}
+
 !CHECK: %[[X_ALLOCA:.*]] = fir.alloca i32 {bindc_name = "x", pinned, uniq_name = "_QFnested_default_clause_test5Ex"}
 !CHECK: %[[X_DECLARE:.*]]:2 = hlfir.declare %[[X_ALLOCA]] {{.*}}
+
+!CHECK: %[[LOOP_VAR_ALLOCA:.*]] = fir.alloca i32 {bindc_name = "i"
+!CHECK: %[[LOOP_VAR_DECLARE:.*]]:2 = hlfir.declare %[[LOOP_VAR_ALLOCA]] {{.*}}
+
 !CHECK: %[[CONST_LB:.*]] = arith.constant 1 : i32
 !CHECK: %[[CONST_UB:.*]] = arith.constant 50 : i32
 !CHECK: %[[CONST_STEP:.*]] = arith.constant 1 : i32
@@ -383,14 +386,18 @@ end subroutine
 
 !CHECK-LABEL: func @_QPnested_default_clause_test6
 !CHECK: omp.parallel {
-!CHECK: %[[LOOP_VAR:.*]] = fir.alloca i32 {adapt.valuebyref, pinned}
-!CHECK: %[[LOOP_VAR_DECLARE:.*]]:2 = hlfir.declare %[[LOOP_VAR]] {{.*}}
 !CHECK: %[[X_VAR:.*]] = fir.alloca i32 {bindc_name = "x", pinned, uniq_name = "_QFnested_default_clause_test6Ex"}
 !CHECK: %[[X_VAR_DECLARE:.*]]:2 = hlfir.declare %[[X_VAR]] {{.*}}
+
 !CHECK: %[[Y_VAR:.*]] = fir.alloca i32 {bindc_name = "y", pinned, uniq_name = "_QFnested_default_clause_test6Ey"}
 !CHECK: %[[Y_VAR_DECLARE:.*]]:2 = hlfir.declare %[[Y_VAR]] {{.*}}
+
 !CHECK: %[[Z_VAR:.*]] = fir.alloca i32 {bindc_name = "z", pinned, uniq_name = "_QFnested_default_clause_test6Ez"}
 !CHECK: %[[Z_VAR_DECLARE:.*]]:2 = hlfir.declare %[[Z_VAR]] {{.*}}
+
+!CHECK: %[[LOOP_VAR:.*]] = fir.alloca i32 {bindc_name = "i"
+!CHECK: %[[LOOP_VAR_DECLARE:.*]]:2 = hlfir.declare %[[LOOP_VAR]] {{.*}}
+
 !CHECK: %[[CONST_LB:.*]] = arith.constant 1 : i32
 !CHECK: %[[CONST_UB:.*]] = arith.constant 10 : i32
 !CHECK: %[[CONST_STEP:.*]] = arith.constant 1 : i32

@@ -204,17 +204,23 @@ static mlir::Operation *
 createAndSetPrivatizedLoopVar(Fortran::lower::AbstractConverter &converter,
                               mlir::Location loc, mlir::Value indexVal,
                               const Fortran::semantics::Symbol *sym) {
+
+  //llvm::errs() << ">>>> createAndSetPrivatizedLoopVar\n";
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
   mlir::OpBuilder::InsertPoint insPt = firOpBuilder.saveInsertionPoint();
   firOpBuilder.setInsertionPointToStart(firOpBuilder.getAllocaBlock());
 
   mlir::Type tempTy = converter.genType(*sym);
-  mlir::Value temp = firOpBuilder.create<fir::AllocaOp>(
-      loc, tempTy, /*pinned=*/true, /*lengthParams=*/mlir::ValueRange{},
-      /*shapeParams*/ mlir::ValueRange{},
-      llvm::ArrayRef<mlir::NamedAttribute>{
-          fir::getAdaptToByRefAttr(firOpBuilder)});
-  converter.bindSymbol(*sym, temp);
+
+  if (!converter.isPresentShallowLookup(*sym)) {
+    mlir::Value temp = firOpBuilder.create<fir::AllocaOp>(
+        loc, tempTy, /*pinned=*/true, /*lengthParams=*/mlir::ValueRange{},
+        /*shapeParams*/ mlir::ValueRange{},
+        llvm::ArrayRef<mlir::NamedAttribute>{
+            fir::getAdaptToByRefAttr(firOpBuilder)});
+    converter.bindSymbol(*sym, temp);
+  }
+
   firOpBuilder.restoreInsertionPoint(insPt);
   mlir::Value cvtVal = firOpBuilder.createConvert(loc, tempTy, indexVal);
   mlir::Operation *storeOp = firOpBuilder.create<fir::StoreOp>(
@@ -1523,6 +1529,7 @@ genSimdOp(Fortran::lower::AbstractConverter &converter,
   auto *nestedEval = getCollapsedLoopEval(eval, getCollapseValue(clauses));
 
   auto ivCallback = [&](mlir::Operation *op) {
+      //llvm::errs() << ">>>> 1 genLoopVars\n";
     genLoopVars(op, converter, loc, iv);
     return iv;
   };
@@ -1844,6 +1851,7 @@ genWsloopOp(Fortran::lower::AbstractConverter &converter,
   auto *nestedEval = getCollapsedLoopEval(eval, getCollapseValue(clauses));
 
   auto ivCallback = [&](mlir::Operation *op) {
+      //llvm::errs() << ">>>> 2 genLoopVars\n";
     genLoopVars(op, converter, loc, iv, reductionSyms,
                 wsloopEntryBlock->getArguments());
     return iv;
@@ -2362,26 +2370,33 @@ static void genOMP(Fortran::lower::AbstractConverter &converter,
       switch (leafDir) {
       case llvm::omp::Directive::OMPD_distribute_parallel_do:
         // 2.9.4.3 DISTRIBUTE PARALLEL Worksharing-Loop construct.
+      //llvm::errs() << ">>>> 2 genCompositeDistributeParallelDo:\n";
         genCompositeDistributeParallelDo(converter, symTable, semaCtx, eval,
                                          clauses, currentLocation);
         break;
       case llvm::omp::Directive::OMPD_distribute_parallel_do_simd:
         // 2.9.4.4 DISTRIBUTE PARALLEL Worksharing-Loop SIMD construct.
+      //llvm::errs() << ">>>> 2 genCompositeDistributeParallelDoSimd:\n";
         genCompositeDistributeParallelDoSimd(converter, symTable, semaCtx, eval,
                                              clauses, currentLocation);
         break;
       case llvm::omp::Directive::OMPD_distribute_simd:
         // 2.9.4.2 DISTRIBUTE SIMD construct.
+      //llvm::errs() << ">>>> 2 genCompositeDistributeSimd:\n";
         genCompositeDistributeSimd(converter, symTable, semaCtx, eval, clauses,
                                    currentLocation);
         break;
       case llvm::omp::Directive::OMPD_do_simd:
         // 2.9.3.2 Worksharing-Loop SIMD construct.
+      symTable.pushScope();
+      //llvm::errs() << ">>>> 2 genCompositeDoSimd:\n";
         genCompositeDoSimd(converter, symTable, semaCtx, eval, clauses,
                            currentLocation);
+      symTable.popScope();
         break;
       case llvm::omp::Directive::OMPD_taskloop_simd:
         // 2.10.3 TASKLOOP SIMD construct.
+      //llvm::errs() << ">>>> 2 genCompositeTaskloopSimd:\n";
         genCompositeTaskloopSimd(converter, symTable, semaCtx, eval, clauses,
                                  currentLocation);
         break;
@@ -2393,6 +2408,7 @@ static void genOMP(Fortran::lower::AbstractConverter &converter,
       switch (leafDir) {
       case llvm::omp::Directive::OMPD_distribute:
         // 2.9.4.1 DISTRIBUTE construct.
+        //llvm::errs() << ">>>> 2 genDistributeOp\n";
         genDistributeOp(converter, symTable, semaCtx, eval, genNested,
                         currentLocation, clauses);
         break;
@@ -2419,7 +2435,10 @@ static void genOMP(Fortran::lower::AbstractConverter &converter,
       break;
       case llvm::omp::Directive::OMPD_simd:
         // 2.9.3.1 SIMD construct.
+        //llvm::errs() << ">>>> 2 genSimdOp\n";
+        symTable.pushScope();
         genSimdOp(converter, symTable, semaCtx, eval, currentLocation, clauses);
+        symTable.popScope();
         break;
       case llvm::omp::Directive::OMPD_target:
         // 2.12.5 TARGET construct.
@@ -2429,6 +2448,7 @@ static void genOMP(Fortran::lower::AbstractConverter &converter,
         break;
       case llvm::omp::Directive::OMPD_taskloop:
         // 2.10.2 TASKLOOP construct.
+      //llvm::errs() << ">>>> 2 genTaskloopOp:\n";
         genTaskloopOp(converter, symTable, semaCtx, eval, currentLocation,
                       clauses);
         break;
@@ -2438,6 +2458,7 @@ static void genOMP(Fortran::lower::AbstractConverter &converter,
         // combined construct in this constext (e.g. target teams distribute).
         // Maybe rename the argument if it represents something else or
         // initialize it properly.
+      //llvm::errs() << ">>>> 2 genTeamsOp:\n";
         genTeamsOp(converter, symTable, semaCtx, eval, genNested,
                    currentLocation, clauses, /*outerCombined=*/true);
         break;
