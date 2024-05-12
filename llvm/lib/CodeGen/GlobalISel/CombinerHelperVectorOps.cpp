@@ -453,3 +453,162 @@ bool CombinerHelper::matchInsertVectorElementOOB(MachineInstr &MI,
 
   return false;
 }
+
+bool CombinerHelper::isConstantAtOffset(Register Src, const APInt &Index,
+                                        unsigned Depth) {
+  assert(MRI.getType(Src).isVector() && "expected a vector as input");
+  if (Depth == 2)
+    return false;
+
+  // We use the look through variant for higher hit rate and to increase the
+  // likelyhood of constant folding. The actual value is ignored. We only test
+  // *whether* there is a constant.
+
+  MachineInstr *SrcMI = getDefIgnoringCopies(Src, MRI);
+
+  // If Src is def'd by build vector, then we check the constness at the offset.
+  if (auto *Build = dyn_cast<GBuildVector>(SrcMI))
+    return getAnyConstantVRegValWithLookThrough(
+               Build->getSourceReg(Index.getZExtValue()), MRI)
+        .has_value();
+
+  // For concat and shuffle vectors, we could recurse.
+  // FIXME concat vectors
+  // FIXME shuffle vectors
+  // FIXME unary ops
+  // FIXME insert vector element
+  // FIXME subvector
+
+  return false;
+}
+
+bool CombinerHelper::isCheapToScalarize(Register Src,
+                                        const std::optional<APInt> &Index,
+                                        unsigned Depth) {
+  assert(MRI.getType(Src).isVector() && "expected a vector as input");
+
+  if (Depth >= 2)
+    return false;
+
+  MachineInstr *SrcMI = getDefIgnoringCopies(Src, MRI);
+
+  // If Src is def'd by a binary operator,
+  // then scalarizing the op is cheap when one of its operands is cheap to
+  // scalarize.
+  if (auto *BinOp = dyn_cast<GBinOp>(SrcMI))
+    if (MRI.hasOneNonDBGUse(BinOp->getReg(0)))
+      if (isCheapToScalarize(BinOp->getLHSReg(), Index, Depth + 1) ||
+          isCheapToScalarize(BinOp->getRHSReg(), Index, Depth + 1))
+        return true;
+
+  // If Src is def'd by a compare,
+  // then scalarizing the cmp is cheap when one of its operands is cheap to
+  // scalarize.
+  if (auto *Cmp = dyn_cast<GAnyCmp>(SrcMI))
+    if (MRI.hasOneNonDBGUse(Cmp->getReg(0)))
+      if (isCheapToScalarize(Cmp->getLHSReg(), Index, Depth + 1) ||
+          isCheapToScalarize(Cmp->getRHSReg(), Index, Depth + 1))
+        return true;
+
+  // FIXME: unary operator
+  // FIXME: casts
+  // FIXME: loads
+  // FIXME: subvector
+
+  if (Index)
+    // If Index is constant, then Src is cheap to scalarize when it is constant
+    // at offset Index.
+    return isConstantAtOffset(Src, *Index, Depth);
+
+  return false;
+}
+
+bool CombinerHelper::matchExtractVectorElementWithICmp(const MachineOperand &MO,
+                                                       BuildFnTy &MatchInfo) {
+  GExtractVectorElement *Extract =
+      cast<GExtractVectorElement>(MRI.getVRegDef(MO.getReg()));
+
+  Register Vector = Extract->getVectorReg();
+
+  GICmp *Cmp = cast<GICmp>(MRI.getVRegDef(Vector));
+
+  std::optional<ValueAndVReg> MaybeIndex =
+      getIConstantVRegValWithLookThrough(Extract->getIndexReg(), MRI);
+  std::optional<APInt> IndexC = std::nullopt;
+
+  if (MaybeIndex)
+    IndexC = MaybeIndex->Value;
+
+  if (!isCheapToScalarize(Vector, IndexC))
+    return false;
+
+  if (!MRI.hasOneNonDBGUse(Cmp->getReg(0)))
+    return false;
+
+  Register Dst = Extract->getReg(0);
+  LLT DstTy = MRI.getType(Dst);
+  LLT IdxTy = MRI.getType(Extract->getIndexReg());
+  LLT VectorTy = MRI.getType(Cmp->getLHSReg());
+  LLT ExtractDstTy = VectorTy.getScalarType();
+
+  if (!isLegalOrBeforeLegalizer(
+          {TargetOpcode::G_ICMP, {DstTy, ExtractDstTy}}) ||
+      !isLegalOrBeforeLegalizer({TargetOpcode::G_EXTRACT_VECTOR_ELT,
+                                 {ExtractDstTy, VectorTy, IdxTy}}))
+    return false;
+
+  MatchInfo = [=](MachineIRBuilder &B) {
+    auto LHS = B.buildExtractVectorElement(ExtractDstTy, Cmp->getLHSReg(),
+                                           Extract->getIndexReg());
+    auto RHS = B.buildExtractVectorElement(ExtractDstTy, Cmp->getRHSReg(),
+                                           Extract->getIndexReg());
+    B.buildICmp(Cmp->getCond(), Dst, LHS, RHS);
+  };
+
+  return true;
+}
+
+bool CombinerHelper::matchExtractVectorElementWithFCmp(const MachineOperand &MO,
+                                                       BuildFnTy &MatchInfo) {
+  GExtractVectorElement *Extract =
+      cast<GExtractVectorElement>(MRI.getVRegDef(MO.getReg()));
+
+  Register Vector = Extract->getVectorReg();
+
+  GFCmp *Cmp = cast<GFCmp>(MRI.getVRegDef(Vector));
+
+  std::optional<ValueAndVReg> MaybeIndex =
+      getIConstantVRegValWithLookThrough(Extract->getIndexReg(), MRI);
+  std::optional<APInt> IndexC = std::nullopt;
+
+  if (MaybeIndex)
+    IndexC = MaybeIndex->Value;
+
+  if (!isCheapToScalarize(Vector, IndexC))
+    return false;
+
+  if (!MRI.hasOneNonDBGUse(Cmp->getReg(0)))
+    return false;
+
+  Register Dst = Extract->getReg(0);
+  LLT DstTy = MRI.getType(Dst);
+  LLT IdxTy = MRI.getType(Extract->getIndexReg());
+  LLT VectorTy = MRI.getType(Cmp->getLHSReg());
+  LLT ExtractDstTy = VectorTy.getScalarType();
+
+  if (!isLegalOrBeforeLegalizer(
+          {TargetOpcode::G_FCMP, {DstTy, ExtractDstTy}}) ||
+      !isLegalOrBeforeLegalizer({TargetOpcode::G_EXTRACT_VECTOR_ELT,
+                                 {ExtractDstTy, VectorTy, IdxTy}}))
+    return false;
+
+  MatchInfo = [=](MachineIRBuilder &B) {
+    auto LHS = B.buildExtractVectorElement(ExtractDstTy, Cmp->getLHSReg(),
+                                           Extract->getIndexReg());
+    auto RHS = B.buildExtractVectorElement(ExtractDstTy, Cmp->getRHSReg(),
+                                           Extract->getIndexReg());
+    B.buildFCmp(Cmp->getCond(), Dst, LHS, RHS, Cmp->getFlags());
+  };
+
+  return true;
+}

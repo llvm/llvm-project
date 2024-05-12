@@ -1,3 +1,4 @@
+
 //===-- llvm/CodeGen/GlobalISel/CombinerHelper.h --------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -866,6 +867,16 @@ public:
   /// Combine insert vector element OOB.
   bool matchInsertVectorElementOOB(MachineInstr &MI, BuildFnTy &MatchInfo);
 
+  /// Combine extract vector element with a compare on the vector
+  /// register.
+  bool matchExtractVectorElementWithICmp(const MachineOperand &MO,
+                                         BuildFnTy &MatchInfo);
+
+  /// Combine extract vector element with a compare on the vector
+  /// register.
+  bool matchExtractVectorElementWithFCmp(const MachineOperand &MO,
+                                         BuildFnTy &MatchInfo);
+
 private:
   /// Checks for legality of an indexed variant of \p LdSt.
   bool isIndexedLoadStoreLegal(GLoadStore &LdSt) const;
@@ -981,6 +992,18 @@ private:
 
   // Simplify (cmp cc0 x, y) (&& or ||) (cmp cc1 x, y) -> cmp cc2 x, y.
   bool tryFoldLogicOfFCmps(GLogicalBinOp *Logic, BuildFnTy &MatchInfo);
+
+  /// Return true if the register \p Src is cheaper to scalarize than it is to
+  /// leave as a vector operation. If the extract index \p Index is a constant
+  /// integer then some operations may be cheap to scalarize. The depth \p Depth
+  /// prevents arbitrary recursion.
+  bool isCheapToScalarize(Register Src, const std::optional<APInt> &Index,
+                          unsigned Depth = 0);
+
+  /// Return true if \p Src is def'd by a operation of type vector that is
+  /// constant at offset \p Index. \p Depth limits arbitrary recursion into look
+  /// through vector operations.
+  bool isConstantAtOffset(Register Src, const APInt &Index, unsigned Depth = 0);
 };
 } // namespace llvm
 

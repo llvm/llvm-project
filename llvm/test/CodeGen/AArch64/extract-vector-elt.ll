@@ -1100,4 +1100,132 @@ ret:
   ret i32 %3
 }
 
+define i32 @extract_v4float_fcmp_const_no_zext(<4 x float> %a, <4 x float> %b, i32 %c) {
+; CHECK-SD-LABEL: extract_v4float_fcmp_const_no_zext:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    fcmeq v0.4s, v0.4s, v0.4s
+; CHECK-SD-NEXT:    mvn v0.16b, v0.16b
+; CHECK-SD-NEXT:    xtn v0.4h, v0.4s
+; CHECK-SD-NEXT:    umov w8, v0.h[1]
+; CHECK-SD-NEXT:    and w0, w8, #0x1
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: extract_v4float_fcmp_const_no_zext:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    mov s0, v0.s[1]
+; CHECK-GI-NEXT:    fmov s1, #1.00000000
+; CHECK-GI-NEXT:    fcmp s0, s1
+; CHECK-GI-NEXT:    cset w0, vs
+; CHECK-GI-NEXT:    ret
+entry:
+  %vector = fcmp uno <4 x float> %a, <float 1.0, float 1.0, float 1.0, float 1.0>
+  %d = extractelement <4 x i1> %vector, i32 1
+  %z = zext i1 %d to i32
+  ret i32 %z
+}
 
+define i32 @extract_v4i32_icmp_const_no_zext(<4 x i32> %a, <4 x i32> %b, i32 %c) {
+; CHECK-SD-LABEL: extract_v4i32_icmp_const_no_zext:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    adrp x8, .LCPI43_0
+; CHECK-SD-NEXT:    ldr q1, [x8, :lo12:.LCPI43_0]
+; CHECK-SD-NEXT:    cmge v0.4s, v1.4s, v0.4s
+; CHECK-SD-NEXT:    xtn v0.4h, v0.4s
+; CHECK-SD-NEXT:    umov w8, v0.h[1]
+; CHECK-SD-NEXT:    and w0, w8, #0x1
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: extract_v4i32_icmp_const_no_zext:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    mov s0, v0.s[1]
+; CHECK-GI-NEXT:    fmov w8, s0
+; CHECK-GI-NEXT:    cmp w8, #8
+; CHECK-GI-NEXT:    cset w0, le
+; CHECK-GI-NEXT:    ret
+entry:
+  %vector = icmp sle <4 x i32> %a, <i32 7, i32 8, i32 7, i32 9>
+  %d = extractelement <4 x i1> %vector, i32 1
+  %z = zext i1 %d to i32
+  ret i32 %z
+}
+
+define i32 @extract_v4float_fcmp_const_no_zext_fail(<4 x float> %a, <4 x float> %b, i32 %c) {
+; CHECK-SD-LABEL: extract_v4float_fcmp_const_no_zext_fail:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    sub sp, sp, #16
+; CHECK-SD-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-SD-NEXT:    fcmeq v0.4s, v0.4s, v0.4s
+; CHECK-SD-NEXT:    add x8, sp, #8
+; CHECK-SD-NEXT:    // kill: def $w0 killed $w0 def $x0
+; CHECK-SD-NEXT:    bfi x8, x0, #1, #2
+; CHECK-SD-NEXT:    mvn v0.16b, v0.16b
+; CHECK-SD-NEXT:    xtn v0.4h, v0.4s
+; CHECK-SD-NEXT:    str d0, [sp, #8]
+; CHECK-SD-NEXT:    ldrh w8, [x8]
+; CHECK-SD-NEXT:    and w0, w8, #0x1
+; CHECK-SD-NEXT:    add sp, sp, #16
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: extract_v4float_fcmp_const_no_zext_fail:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    sub sp, sp, #16
+; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-GI-NEXT:    fmov v1.4s, #1.00000000
+; CHECK-GI-NEXT:    mov w8, w0
+; CHECK-GI-NEXT:    mov x9, sp
+; CHECK-GI-NEXT:    and x8, x8, #0x3
+; CHECK-GI-NEXT:    fcmge v2.4s, v0.4s, v1.4s
+; CHECK-GI-NEXT:    fcmgt v0.4s, v1.4s, v0.4s
+; CHECK-GI-NEXT:    orr v0.16b, v0.16b, v2.16b
+; CHECK-GI-NEXT:    mvn v0.16b, v0.16b
+; CHECK-GI-NEXT:    str q0, [sp]
+; CHECK-GI-NEXT:    ldr w8, [x9, x8, lsl #2]
+; CHECK-GI-NEXT:    and w0, w8, #0x1
+; CHECK-GI-NEXT:    add sp, sp, #16
+; CHECK-GI-NEXT:    ret
+entry:
+  %vector = fcmp uno <4 x float> %a, <float 1.0, float 1.0, float 1.0, float 1.0>
+  %d = extractelement <4 x i1> %vector, i32 %c
+  %z = zext i1 %d to i32
+  ret i32 %z
+}
+
+define i32 @extract_v4i32_icmp_const_no_zext_fail(<4 x i32> %a, <4 x i32> %b, i32 %c) {
+; CHECK-SD-LABEL: extract_v4i32_icmp_const_no_zext_fail:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    sub sp, sp, #16
+; CHECK-SD-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-SD-NEXT:    adrp x8, .LCPI45_0
+; CHECK-SD-NEXT:    // kill: def $w0 killed $w0 def $x0
+; CHECK-SD-NEXT:    ldr q1, [x8, :lo12:.LCPI45_0]
+; CHECK-SD-NEXT:    add x8, sp, #8
+; CHECK-SD-NEXT:    bfi x8, x0, #1, #2
+; CHECK-SD-NEXT:    cmge v0.4s, v1.4s, v0.4s
+; CHECK-SD-NEXT:    xtn v0.4h, v0.4s
+; CHECK-SD-NEXT:    str d0, [sp, #8]
+; CHECK-SD-NEXT:    ldrh w8, [x8]
+; CHECK-SD-NEXT:    and w0, w8, #0x1
+; CHECK-SD-NEXT:    add sp, sp, #16
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: extract_v4i32_icmp_const_no_zext_fail:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    sub sp, sp, #16
+; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-GI-NEXT:    adrp x8, .LCPI45_0
+; CHECK-GI-NEXT:    mov x9, sp
+; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI45_0]
+; CHECK-GI-NEXT:    mov w8, w0
+; CHECK-GI-NEXT:    and x8, x8, #0x3
+; CHECK-GI-NEXT:    cmge v0.4s, v1.4s, v0.4s
+; CHECK-GI-NEXT:    str q0, [sp]
+; CHECK-GI-NEXT:    ldr w8, [x9, x8, lsl #2]
+; CHECK-GI-NEXT:    and w0, w8, #0x1
+; CHECK-GI-NEXT:    add sp, sp, #16
+; CHECK-GI-NEXT:    ret
+entry:
+  %vector = icmp sle <4 x i32> %a, <i32 7, i32 8, i32 7, i32 9>
+  %d = extractelement <4 x i1> %vector, i32 %c
+  %z = zext i1 %d to i32
+  ret i32 %z
+}
