@@ -3,6 +3,27 @@
 #include "CompilationDatabase.h"
 #include "utils.h"
 
+/**
+ * 从 AST Dump 读取的 AST，可能为空。
+ * 析构时会删除对应的 AST dump 文件。
+ */
+class ASTFromFile {
+  private:
+    std::string ASTDumpFile;
+    std::shared_ptr<ASTUnit> AST;
+
+  public:
+    ASTFromFile(const std::string &file);
+
+    ~ASTFromFile() {
+        // 删除对应的 AST dump 文件
+        llvm::sys::fs::remove(ASTDumpFile);
+    }
+
+    // 可能为空
+    std::shared_ptr<ASTUnit> getAST() { return AST; }
+};
+
 std::string getASTDumpFile(const std::string &file);
 
 /**
@@ -16,4 +37,4 @@ getCompilationDatabaseWithASTEmit(fs::path buildPath);
  */
 int generateASTDump(const CompileCommand &cmd);
 
-std::unique_ptr<ASTUnit> getASTOfFile(std::string file);
+std::shared_ptr<ASTFromFile> getASTOfFile(std::string file);

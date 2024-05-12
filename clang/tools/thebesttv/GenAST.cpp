@@ -173,7 +173,7 @@ std::unique_ptr<ASTUnit> loadFromASTDump(std::string AstDumpPath) {
         Diags, FileSystemOptions(), HSOpts);
 }
 
-std::unique_ptr<ASTUnit> getASTOfFile(std::string file) {
+std::unique_ptr<ASTUnit> createASTOfFile(std::string file) {
     std::string AstDumpPath = getASTDumpFile(file);
     if (!fileExists(AstDumpPath)) {
         // logger.warn("AST dump not found, generating from: {}", file);
@@ -206,4 +206,12 @@ std::unique_ptr<ASTUnit> getASTOfFile(std::string file) {
         // logger.info("AST dump generated successfully");
     }
     return loadFromASTDump(AstDumpPath);
+}
+
+ASTFromFile::ASTFromFile(const std::string &file)
+    : ASTDumpFile(getASTDumpFile(file)),
+      AST(std::shared_ptr(createASTOfFile(file))) {}
+
+std::shared_ptr<ASTFromFile> getASTOfFile(std::string file) {
+    return std::make_shared<ASTFromFile>(file);
 }

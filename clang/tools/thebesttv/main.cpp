@@ -195,7 +195,8 @@ VarLocResult locateVariable(const FunctionLocator &locator, const Location &loc,
         return VarLocResult();
     }
 
-    auto AST = getASTOfFile(loc.file);
+    auto ASTFromFile = getASTOfFile(loc.file);
+    auto AST = ASTFromFile->getAST();
     if (!AST)
         return VarLocResult();
     ASTContext &Context = AST->getASTContext();
@@ -214,7 +215,6 @@ VarLocResult locateVariable(const FunctionLocator &locator, const Location &loc,
     logger.warn("  {}:{}:{}", loc.file, loc.line, loc.column);
     auto result = locateVariable(functionsInFile, loc.file, loc.line,
                                  loc.column, isStmt, false);
-    llvm::sys::fs::remove(getASTDumpFile(loc.file));
     return result;
 }
 
@@ -230,7 +230,8 @@ void dumpICFGNode(int u, ordered_json &jPath) {
     // 中一个文件可能对应多条编译命令，所以这里可能有多个AST
     // TODO: 想办法记录 function 用的是哪一条命令，然后只用这一条生成的
 
-    auto AST = getASTOfFile(loc.file);
+    auto ASTFromFile = getASTOfFile(loc.file);
+    auto AST = ASTFromFile->getAST();
     requireTrue(AST != nullptr);
 
     fif functionsInFile;
@@ -306,7 +307,6 @@ void dumpICFGNode(int u, ordered_json &jPath) {
     }
 
 dumpICFGNodeExit:
-    llvm::sys::fs::remove(getASTDumpFile(loc.file));
 }
 
 /**

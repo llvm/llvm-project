@@ -255,14 +255,14 @@ GenICFGAction::CreateASTConsumer(clang::CompilerInstance &Compiler,
 
 std::mutex icfgMtx;
 bool updateICFGWithASTDump(const std::string &file) {
-    auto AST = getASTOfFile(file);
+    auto ASTFromFile = getASTOfFile(file);
+    auto AST = ASTFromFile->getAST();
     if (AST) {
         icfgMtx.lock();
         auto &Context = AST->getASTContext();
         GenICFGVisitor visitor(&Context, file);
         visitor.TraverseDecl(Context.getTranslationUnitDecl());
         icfgMtx.unlock();
-        llvm::sys::fs::remove(getASTDumpFile(file));
         return true;
     }
     return false;
