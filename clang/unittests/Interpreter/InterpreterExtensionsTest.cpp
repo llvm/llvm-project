@@ -66,10 +66,9 @@ struct LLVMInitRAII {
   ~LLVMInitRAII() { llvm::llvm_shutdown(); }
 } LLVMInit;
 
-class TestCreateResetExecutor : public Interpreter {
+class TestInterpreter : public Interpreter {
 public:
-  TestCreateResetExecutor(std::unique_ptr<CompilerInstance> CI,
-                          llvm::Error &Err)
+  TestInterpreter(std::unique_ptr<CompilerInstance> CI, llvm::Error &Err)
       : Interpreter(std::move(CI), Err) {}
 
   llvm::Error testCreateJITBuilderError() {
@@ -83,6 +82,7 @@ public:
   }
 
   void resetExecutor() { Interpreter::ResetExecutor(); }
+  void markUserCodeStart() { Interpreter::markUserCodeStart(); }
 
 private:
   llvm::Expected<std::unique_ptr<llvm::orc::LLJITBuilder>>
@@ -95,6 +95,20 @@ private:
   std::unique_ptr<llvm::orc::LLJITBuilder> JB;
 };
 
+TEST(InterpreterExtensionsTest, MarkUserCodeStart) {
+  clang::IncrementalCompilerBuilder CB;
+  llvm::Error ErrOut = llvm::Error::success();
+  TestInterpreter Interp(cantFail(CB.CreateCpp()), ErrOut);
+  cantFail(std::move(ErrOut));
+  llvm::Error Parse = Interp.Parse("int builtin = 42;").takeError();
+  EXPECT_THAT_ERROR(std::move(Parse), llvm::Succeeded());
+  // Hide above PTU from Undo
+  Interp.markUserCodeStart();
+  llvm::Error Undo = Interp.Undo(1);
+  EXPECT_THAT_ERROR(std::move(Undo), llvm::FailedWithMessage(
+                                         "Operation failed. Too many undos"));
+}
+
 #ifdef CLANG_INTERPRETER_PLATFORM_CANNOT_CREATE_LLJIT
 TEST(InterpreterExtensionsTest, DISABLED_ExecutorCreateReset) {
 #else
@@ -106,7 +120,7 @@ TEST(InterpreterExtensionsTest, ExecutorCreateReset) {
 
   clang::IncrementalCompilerBuilder CB;
   llvm::Error ErrOut = llvm::Error::success();
-  TestCreateResetExecutor Interp(cantFail(CB.CreateCpp()), ErrOut);
+  TestInterpreter Interp(cantFail(CB.CreateCpp()), ErrOut);
   cantFail(std::move(ErrOut));
   EXPECT_THAT_ERROR(Interp.testCreateJITBuilderError(),
                     llvm::FailedWithMessage("TestError"));

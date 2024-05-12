@@ -44,7 +44,7 @@ class IncrementalParser;
 /// Create a pre-configured \c CompilerInstance for incremental processing.
 class IncrementalCompilerBuilder {
 public:
-  IncrementalCompilerBuilder() {}
+  IncrementalCompilerBuilder() = default;
 
   void SetCompilerArgs(const std::vector<const char *> &Args) {
     UserArgs = Args;
@@ -122,6 +122,10 @@ protected:
   // JIT engine. In particular, it doesn't run cleanup or destructors.
   void ResetExecutor();
 
+  // Adding code for built-in functionality during initialization is very
+  // common. Call this function afterwards to hide it from Undo.
+  void markUserCodeStart();
+
   // Lazily construct the RuntimeInterfaceBuilder. The provided instance will be
   // used for the entire lifetime of the interpreter. The default implementation
   // targets the in-process __clang_Interpreter runtime. Override this to use a
@@ -184,7 +188,6 @@ public:
 
 private:
   size_t getEffectivePTUSize() const;
-  void markUserCodeStart();
 
   llvm::DenseMap<CXXRecordDecl *, llvm::orc::ExecutorAddr> Dtors;
 
