@@ -8,6 +8,7 @@
 
 #ifndef LLVM_LIBC_SRC___SUPPORT_TIME_LINUX_CLOCK_GETTIME_H
 #define LLVM_LIBC_SRC___SUPPORT_TIME_LINUX_CLOCK_GETTIME_H
+
 #include "hdr/types/clockid_t.h"
 #include "hdr/types/struct_timespec.h"
 #include "src/__support/OSUtil/syscall.h"

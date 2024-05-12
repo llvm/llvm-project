@@ -8,11 +8,13 @@
 
 #ifndef LLVM_LIBC_SRC___SUPPORT_TIME_LINUX_TIMEOUT_H
 #define LLVM_LIBC_SRC___SUPPORT_TIME_LINUX_TIMEOUT_H
+
 #include "hdr/time_macros.h"
 #include "hdr/types/struct_timespec.h"
 #include "src/__support/CPP/expected.h"
 #include "src/__support/time/linux/clock_conversion.h"
 #include "src/__support/time/units.h"
+
 namespace LIBC_NAMESPACE {
 namespace internal {
 // We use AbsTimeout to remind ourselves that the timeout is an absolute time.

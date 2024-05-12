@@ -8,7 +8,6 @@
 
 #include "src/__support/CPP/expected.h"
 #include "src/__support/time/linux/timeout.h"
-
 #include "test/UnitTest/Test.h"
 
 namespace LIBC_NAMESPACE {
