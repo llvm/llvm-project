@@ -5769,7 +5769,6 @@ int X86TTIImpl::getScatterOverhead() const {
 }
 
 // Return an average cost of Gather / Scatter instruction, maybe improved later.
-// FIXME: Add TargetCostKind support.
 InstructionCost X86TTIImpl::getGSVectorCost(unsigned Opcode,
                                             TTI::TargetCostKind CostKind,
                                             Type *SrcVTy, const Value *Ptr,
