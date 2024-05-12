@@ -11950,6 +11950,8 @@ bool ScalarEvolution::splitBinaryAdd(SCEVUse Expr, SCEVUse &L, SCEVUse &R,
   L = AE->getOperand(0);
   R = AE->getOperand(1);
   Flags = AE->getNoWrapFlags();
+  Flags = setFlags(AE->getNoWrapFlags(),
+                   static_cast<SCEV::NoWrapFlags>(Expr.getInt()));
   return true;
 }
 

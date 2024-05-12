@@ -22,21 +22,10 @@ define ptr @test_ptr_range_end_computed_before_and_after_loop(ptr %A) {
 ;
 ; LAA-LABEL: 'test_ptr_range_end_computed_before_and_after_loop'
 ; LAA-NEXT:    loop:
-; LAA-NEXT:      Memory dependences are safe with run-time checks
+; LAA-NEXT:      Report: cannot check memory dependencies at runtime
 ; LAA-NEXT:      Dependences:
 ; LAA-NEXT:      Run-time memory checks:
-; LAA-NEXT:      Check 0:
-; LAA-NEXT:        Comparing group ([[GRP1:0x[0-9a-f]+]]):
-; LAA-NEXT:          %gep.A.400 = getelementptr inbounds i32, ptr %A.1, i64 %iv
-; LAA-NEXT:        Against group ([[GRP2:0x[0-9a-f]+]]):
-; LAA-NEXT:          %gep.A = getelementptr inbounds i8, ptr %A, i64 %iv
 ; LAA-NEXT:      Grouped accesses:
-; LAA-NEXT:        Group [[GRP1]]:
-; LAA-NEXT:          (Low: (1 + %A) High: (405 + %A))
-; LAA-NEXT:            Member: {(1 + %A),+,4}<nw><%loop>
-; LAA-NEXT:        Group [[GRP2]]:
-; LAA-NEXT:          (Low: %A High: (101 + %A))
-; LAA-NEXT:            Member: {%A,+,1}<nuw><%loop>
 ; LAA-EMPTY:
 ; LAA-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; LAA-NEXT:      SCEV assumptions:
@@ -80,21 +69,10 @@ define void @test_ptr_range_end_computed_before_loop(ptr %A) {
 ;
 ; LAA-LABEL: 'test_ptr_range_end_computed_before_loop'
 ; LAA-NEXT:    loop:
-; LAA-NEXT:      Memory dependences are safe with run-time checks
+; LAA-NEXT:      Report: cannot check memory dependencies at runtime
 ; LAA-NEXT:      Dependences:
 ; LAA-NEXT:      Run-time memory checks:
-; LAA-NEXT:      Check 0:
-; LAA-NEXT:        Comparing group ([[GRP3:0x[0-9a-f]+]]):
-; LAA-NEXT:          %gep.A.400 = getelementptr inbounds i32, ptr %A.1, i64 %iv
-; LAA-NEXT:        Against group ([[GRP4:0x[0-9a-f]+]]):
-; LAA-NEXT:          %gep.A = getelementptr inbounds i8, ptr %A, i64 %iv
 ; LAA-NEXT:      Grouped accesses:
-; LAA-NEXT:        Group [[GRP3]]:
-; LAA-NEXT:          (Low: (1 + %A) High: (405 + %A))
-; LAA-NEXT:            Member: {(1 + %A),+,4}<nw><%loop>
-; LAA-NEXT:        Group [[GRP4]]:
-; LAA-NEXT:          (Low: %A High: (101 + %A))
-; LAA-NEXT:            Member: {%A,+,1}<nuw><%loop>
 ; LAA-EMPTY:
 ; LAA-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; LAA-NEXT:      SCEV assumptions:
@@ -135,21 +113,10 @@ define ptr @test_ptr_range_end_computed_after_loop(ptr %A) {
 ;
 ; LAA-LABEL: 'test_ptr_range_end_computed_after_loop'
 ; LAA-NEXT:    loop:
-; LAA-NEXT:      Memory dependences are safe with run-time checks
+; LAA-NEXT:      Report: cannot check memory dependencies at runtime
 ; LAA-NEXT:      Dependences:
 ; LAA-NEXT:      Run-time memory checks:
-; LAA-NEXT:      Check 0:
-; LAA-NEXT:        Comparing group ([[GRP5:0x[0-9a-f]+]]):
-; LAA-NEXT:          %gep.A.400 = getelementptr inbounds i32, ptr %A.1, i64 %iv
-; LAA-NEXT:        Against group ([[GRP6:0x[0-9a-f]+]]):
-; LAA-NEXT:          %gep.A = getelementptr inbounds i8, ptr %A, i64 %iv
 ; LAA-NEXT:      Grouped accesses:
-; LAA-NEXT:        Group [[GRP5]]:
-; LAA-NEXT:          (Low: (1 + %A)<nuw> High: (405 + %A))
-; LAA-NEXT:            Member: {(1 + %A)<nuw>,+,4}<nuw><%loop>
-; LAA-NEXT:        Group [[GRP6]]:
-; LAA-NEXT:          (Low: %A High: (101 + %A))
-; LAA-NEXT:            Member: {%A,+,1}<nuw><%loop>
 ; LAA-EMPTY:
 ; LAA-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; LAA-NEXT:      SCEV assumptions:
