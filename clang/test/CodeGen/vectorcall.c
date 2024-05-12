@@ -155,5 +155,5 @@ void __vectorcall vectorcall_indirect_fp(
 // X86-SAME: <4 x float> inreg noundef %xmm5,
 // X86-SAME: ptr inreg noundef %0,
 // X86-SAME: i32 inreg noundef %edx,
-// X86-SAME: ptr noundef byval(double) align 4 %1)
+// X86-SAME: double noundef %mem)
 #endif
