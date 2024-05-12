@@ -14,7 +14,7 @@
 #include "test/UnitTest/Test.h"
 
 #include <fcntl.h>
-#include <sys/kd.h>
+#include <sys/ioctl.h>
 #include <sys/syscall.h>
 #include <unistd.h>
 
