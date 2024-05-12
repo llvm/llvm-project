@@ -4,6 +4,7 @@
 
 # Run canonicalization, convert IR to LLVM and convert to format suitable to
 # verification against Alive2 https://alive2.llvm.org/ce/.
+# Example: `python verify_canon.py canonicalize.mlir func1 func2 func3`
 
 import subprocess
 import tempfile
