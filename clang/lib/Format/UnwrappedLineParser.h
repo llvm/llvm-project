@@ -316,6 +316,7 @@ private:
 
   const FormatStyle &Style;
   bool IsCpp;
+  LangOptions LangOpts;
   const AdditionalKeywords &Keywords;
 
   llvm::Regex CommentPragmasRegex;
