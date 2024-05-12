@@ -1,6 +1,7 @@
 #include <regex>
 
 #include "GenAST.h"
+#include "LRUCache.h"
 
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Tooling/ArgumentsAdjusters.h"
@@ -212,6 +213,26 @@ ASTFromFile::ASTFromFile(const std::string &file)
     : ASTDumpFile(getASTDumpFile(file)),
       AST(std::shared_ptr(createASTOfFile(file))) {}
 
+class ASTPool {
+  private:
+    LRUCache<std::string, std::shared_ptr<ASTFromFile>> cache;
+
+  public:
+    ASTPool(int size) : cache(size) {}
+
+    std::shared_ptr<ASTFromFile> getASTOfFile(std::string file) {
+        if (cache.exist(file))
+            return cache.get(file);
+        auto AST = std::make_shared<ASTFromFile>(file);
+        cache.put(file, AST);
+        return AST;
+    }
+};
+
 std::shared_ptr<ASTFromFile> getASTOfFile(std::string file) {
-    return std::make_shared<ASTFromFile>(file);
+    static std::unique_ptr<ASTPool> pool = nullptr;
+    if (!pool) {
+        pool = std::make_unique<ASTPool>(24);
+    }
+    return pool->getASTOfFile(file);
 }
