@@ -51,9 +51,7 @@ class SettingsCommandTestCase(TestBase):
         outfile = self.getBuildArtifact(filename)
 
         if lldb.remote_platform:
-            outfile_arg = lldbutil.append_to_process_working_directory(
-                self, filename
-            )
+            outfile_arg = lldbutil.append_to_process_working_directory(self, filename)
         else:
             outfile_arg = outfile
 
