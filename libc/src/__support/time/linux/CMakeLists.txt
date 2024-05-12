@@ -1,9 +1,7 @@
-add_object_library(
+add_header_library(
   clock_gettime
   HDRS
     clock_gettime.h
-  SRCS
-    clock_gettime.cpp
   DEPENDS
     libc.include.sys_syscall
     libc.hdr.types.struct_timespec
@@ -11,4 +9,25 @@ add_object_library(
     libc.src.__support.common
     libc.src.__support.error_or
     libc.src.__support.OSUtil.osutil
+)
+
+add_header_library(
+  clock_conversion
+  HDRS
+    clock_conversion.h
+  DEPENDS
+    .clock_gettime
+    libc.src.__support.time.units
+)
+
+add_header_library(
+  timeout
+  HDRS
+    timeout.h
+  DEPENDS
+    .clock_gettime
+    .clock_conversion
+    libc.hdr.types.struct_timespec
+    libc.hdr.time_macros
+    libc.src.__support.CPP.expected
 )
