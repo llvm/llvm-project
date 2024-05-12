@@ -113,7 +113,7 @@ static bool containsDeclInScope(const Stmt *Node) {
 }
 
 static void removeElseAndBrackets(DiagnosticBuilder &Diag, ASTContext &Context,
-                           const Stmt *Else, SourceLocation ElseLoc) {
+                                  const Stmt *Else, SourceLocation ElseLoc) {
   auto Remap = [&](SourceLocation Loc) {
     return Context.getSourceManager().getExpansionLoc(Loc);
   };
@@ -172,7 +172,7 @@ void ElseAfterReturnCheck::registerMatchers(MatchFinder *Finder) {
       breakStmt().bind(InterruptingStr), cxxThrowExpr().bind(InterruptingStr)));
   Finder->addMatcher(
       compoundStmt(
-          forEach(ifStmt(unless(isConstexpr()),
+          forEach(ifStmt(unless(isConstexpr()), unless(isConsteval()),
                          hasThen(stmt(
                              anyOf(InterruptsControlFlow,
                                    compoundStmt(has(InterruptsControlFlow))))),
@@ -314,10 +314,6 @@ void ElseAfterReturnCheck::check(const MatchFinder::MatchResult &Result) {
       // Warn, but don't attempt an autofix.
       diag(ElseLoc, WarningMessage) << ControlFlowInterruptor;
     }
-    return;
-  }
-
-  if (If->isConsteval()) {
     return;
   }
 
