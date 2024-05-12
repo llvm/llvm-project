@@ -231,6 +231,8 @@ public:
   void method();
   void someFunction();
   int otherFunction();
+  unsigned recursiveFunction(int n) { return !n ? 1 : recursiveFunction(n - 1);  }
+  unsigned recursiveComplexFunction(int n) { return !n ? otherFunction() : recursiveComplexFunction(n - 1);  }
 
   int trivial1() { return 123; }
   float trivial2() { return 0.3; }
@@ -497,6 +499,10 @@ public:
 
     RefCounted::singleton().trivial18(); // no-warning
     RefCounted::singleton().someFunction(); // no-warning
+
+    getFieldTrivial().recursiveFunction(7); // no-warning
+    getFieldTrivial().recursiveComplexFunction(9);
+    // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
 
     getFieldTrivial().someFunction();
     // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}

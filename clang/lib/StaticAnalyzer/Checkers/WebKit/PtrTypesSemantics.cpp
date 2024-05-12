@@ -517,11 +517,9 @@ private:
 
 bool TrivialFunctionAnalysis::isTrivialImpl(
     const Decl *D, TrivialFunctionAnalysis::CacheTy &Cache) {
-  // If the function isn't in the cache, conservatively assume that
-  // it's not trivial until analysis completes. This makes every recursive
-  // function non-trivial. This also guarantees that each function
-  // will be scanned at most once.
-  auto [It, IsNew] = Cache.insert(std::make_pair(D, false));
+  // Treat every recursive function as trivial until otherwise proven.
+  // This guarantees each function is evaluated at most once.
+  auto [It, IsNew] = Cache.insert(std::make_pair(D, true));
   if (!IsNew)
     return It->second;
 
@@ -535,12 +533,14 @@ bool TrivialFunctionAnalysis::isTrivialImpl(
   }
 
   const Stmt *Body = D->getBody();
-  if (!Body)
-    return false;
+  if (!Body) {
+    Cache[D] = false;
+    return false;    
+  }
 
   bool Result = V.Visit(Body);
-  if (Result)
-    Cache[D] = true;
+  if (!Result)
+    Cache[D] = false;
 
   return Result;
 }
