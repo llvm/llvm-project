@@ -667,7 +667,7 @@ public:
 
   /// Return a SCEV expression for the full generality of the specified
   /// expression.
-  SCEVUse getSCEV(Value *V);
+  SCEVUse getSCEV(Value *V, bool UseCtx = false);
 
   /// Return an existing SCEV for V if there is one, otherwise return nullptr.
   SCEVUse getExistingSCEV(Value *V);
@@ -749,9 +749,11 @@ public:
   /// \p GEP The GEP. The indices contained in the GEP itself are ignored,
   /// instead we use IndexExprs.
   /// \p IndexExprs The expressions for the indices.
-  SCEVUse getGEPExpr(GEPOperator *GEP, ArrayRef<const SCEV *> IndexExprs);
+  SCEVUse getGEPExpr(GEPOperator *GEP, ArrayRef<const SCEV *> IndexExprs,
+                     bool UseCtx = false);
   SCEVUse getGEPExpr(GEPOperator *GEP,
-                     const SmallVectorImpl<SCEVUse> &IndexExprs);
+                     const SmallVectorImpl<SCEVUse> &IndexExprs,
+                     bool UseCtx = false);
   SCEVUse getAbsExpr(SCEVUse Op, bool IsNSW);
   SCEVUse getMinMaxExpr(SCEVTypes Kind, ArrayRef<const SCEV *> Operands);
   SCEVUse getMinMaxExpr(SCEVTypes Kind, SmallVectorImpl<SCEVUse> &Operands);
@@ -1866,11 +1868,11 @@ private:
 
   /// We know that there is no SCEV for the specified value.  Analyze the
   /// expression recursively.
-  SCEVUse createSCEV(Value *V);
+  SCEVUse createSCEV(Value *V, bool UseCtx = false);
 
   /// We know that there is no SCEV for the specified value. Create a new SCEV
   /// for \p V iteratively.
-  SCEVUse createSCEVIter(Value *V);
+  SCEVUse createSCEVIter(Value *V, bool UseCtx = false);
   /// Collect operands of \p V for which SCEV expressions should be constructed
   /// first. Returns a SCEV directly if it can be constructed trivially for \p
   /// V.
@@ -1909,7 +1911,7 @@ private:
                                    Value *FalseVal);
 
   /// Provide the special handling we need to analyze GEP SCEVs.
-  SCEVUse createNodeForGEP(GEPOperator *GEP);
+  SCEVUse createNodeForGEP(GEPOperator *GEP, bool UseCtx = false);
 
   /// Implementation code for getSCEVAtScope; called at most once for each
   /// SCEV+Loop pair.

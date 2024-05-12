@@ -42,7 +42,7 @@ define void @f(ptr %A, i32 %N) {
 ; CHECK-NEXT:    %tmp19 = select i1 %tmp14, i64 0, i64 %tmp17
 ; CHECK-NEXT:    --> (-3 + (3 smax {0,+,1}<nuw><nsw><%bb1>))<nsw> U: [0,2147483645) S: [0,2147483645) Exits: (-3 + (3 smax (zext i32 (0 smax %N) to i64)))<nsw> LoopDispositions: { %bb1: Computable }
 ; CHECK-NEXT:    %tmp21 = getelementptr inbounds i32, ptr %A, i64 %tmp19
-; CHECK-NEXT:    --> (-12 + (4 * (3 smax {0,+,1}<nuw><nsw><%bb1>))<nuw><nsw> + %A) U: full-set S: full-set Exits: (-12 + (4 * (3 smax (zext i32 (0 smax %N) to i64)))<nuw><nsw> + %A) LoopDispositions: { %bb1: Computable }
+; CHECK-NEXT:    --> (-12 + (4 * (3 smax {0,+,1}<nuw><nsw><%bb1>))<nuw><nsw> + %A)(u nuw) U: full-set S: full-set Exits: (-12 + (4 * (3 smax (zext i32 (0 smax %N) to i64)))<nuw><nsw> + %A) LoopDispositions: { %bb1: Computable }
 ; CHECK-NEXT:    %tmp23 = add nuw nsw i32 %i.0, 1
 ; CHECK-NEXT:    --> {1,+,1}<nuw><%bb1> U: [1,-2147483647) S: [1,-2147483647) Exits: (1 + (0 smax %N))<nuw> LoopDispositions: { %bb1: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @f
