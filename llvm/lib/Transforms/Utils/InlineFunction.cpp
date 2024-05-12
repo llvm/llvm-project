@@ -1344,6 +1344,79 @@ static bool MayContainThrowingOrExitingCallAfterCB(CallBase *Begin,
       ++BeginIt, End->getIterator(), InlinerAttributeWindow + 1);
 }
 
+// Add attributes from CB params and Fn attributes that can always be propagated
+// to the corresponding argument / inner callbases.
+static void AddParamAndFnBasicAttributes(const CallBase &CB,
+                                         ValueToValueMapTy &VMap) {
+  auto *CalledFunction = CB.getCalledFunction();
+  auto &Context = CalledFunction->getContext();
+
+  // Collect valid attributes for all params.
+  SmallVector<AttrBuilder> ValidParamAttrs;
+  bool HasAttrToPropagate = false;
+
+  for (unsigned I = 0, E = CB.arg_size(); I < E; ++I) {
+    ValidParamAttrs.emplace_back(AttrBuilder{CB.getContext()});
+    // Access attributes can be propagated to any param with the same underlying
+    // object as the argument.
+    if (CB.paramHasAttr(I, Attribute::ReadNone))
+      ValidParamAttrs.back().addAttribute(Attribute::ReadNone);
+    if (CB.paramHasAttr(I, Attribute::ReadOnly))
+      ValidParamAttrs.back().addAttribute(Attribute::ReadOnly);
+    if (CB.paramHasAttr(I, Attribute::WriteOnly))
+      ValidParamAttrs.back().addAttribute(Attribute::WriteOnly);
+    HasAttrToPropagate |= ValidParamAttrs.back().hasAttributes();
+  }
+
+  // Won't be able to propagate anything.
+  if (!HasAttrToPropagate)
+    return;
+
+  for (BasicBlock &BB : *CalledFunction) {
+    for (Instruction &Ins : BB) {
+      const auto *InnerCB = dyn_cast<CallBase>(&Ins);
+      if (!InnerCB)
+        continue;
+      auto *NewInnerCB = dyn_cast_or_null<CallBase>(VMap.lookup(InnerCB));
+      if (!NewInnerCB)
+        continue;
+      AttributeList AL = NewInnerCB->getAttributes();
+      for (unsigned I = 0, E = InnerCB->arg_size(); I < E; ++I) {
+        // Check if the underlying value for the parameter is an argument.
+        const Value *UnderlyingV =
+            getUnderlyingObject(InnerCB->getArgOperand(I));
+        const Argument *Arg = dyn_cast<Argument>(UnderlyingV);
+        if (!Arg)
+          continue;
+
+        unsigned ArgNo = Arg->getArgNo();
+        // If so, propagate its access attributes.
+        AL = AL.addParamAttributes(Context, I, ValidParamAttrs[ArgNo]);
+        // We can have conflicting attributes from the inner callsite and
+        // to-be-inlined callsite. In that case, choose the most
+        // restrictive.
+
+        // readonly + writeonly means we can never deref so make readnone.
+        if (AL.hasParamAttr(I, Attribute::ReadOnly) &&
+            AL.hasParamAttr(I, Attribute::WriteOnly))
+          AL = AL.addParamAttribute(Context, I, Attribute::ReadNone);
+
+        // If have readnone, need to clear readonly/writeonly
+        if (AL.hasParamAttr(I, Attribute::ReadNone)) {
+          AL = AL.removeParamAttribute(Context, I, Attribute::ReadOnly);
+          AL = AL.removeParamAttribute(Context, I, Attribute::WriteOnly);
+        }
+
+        // Writable cannot exist in conjunction w/ readonly/readnone
+        if (AL.hasParamAttr(I, Attribute::ReadOnly) ||
+            AL.hasParamAttr(I, Attribute::ReadNone))
+          AL = AL.removeParamAttribute(Context, I, Attribute::Writable);
+      }
+      NewInnerCB->setAttributes(AL);
+    }
+  }
+}
+
 // Only allow these white listed attributes to be propagated back to the
 // callee. This is because other attributes may only be valid on the call
 // itself, i.e. attributes such as signext and zeroext.
@@ -2362,6 +2435,10 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
     // Clone return attributes on the callsite into the calls within the inlined
     // function which feed into its return value.
     AddReturnAttributes(CB, VMap);
+
+    // Clone attributes on the params of the callsite to calls within the
+    // inlined function which use the same param.
+    AddParamAndFnBasicAttributes(CB, VMap);
 
     propagateMemProfMetadata(CalledFunc, CB,
                              InlinedFunctionInfo.ContainsMemProfMetadata, VMap);

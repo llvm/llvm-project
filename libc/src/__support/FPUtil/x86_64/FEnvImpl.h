@@ -72,25 +72,25 @@ static constexpr uint16_t MXCSR_EXCEPTION_CONTOL_BIT_POISTION = 7;
 LIBC_INLINE uint16_t get_status_value_for_except(int excepts) {
   // We will make use of the fact that exception control bits are single
   // bit flags in the control registers.
-  return (excepts & FE_INVALID ? ExceptionFlags::INVALID_F : 0) |
+  return ((excepts & FE_INVALID) ? ExceptionFlags::INVALID_F : 0) |
 #ifdef __FE_DENORM
-         (excepts & __FE_DENORM ? ExceptionFlags::DENORMAL_F : 0) |
+         ((excepts & __FE_DENORM) ? ExceptionFlags::DENORMAL_F : 0) |
 #endif // __FE_DENORM
-         (excepts & FE_DIVBYZERO ? ExceptionFlags::DIV_BY_ZERO_F : 0) |
-         (excepts & FE_OVERFLOW ? ExceptionFlags::OVERFLOW_F : 0) |
-         (excepts & FE_UNDERFLOW ? ExceptionFlags::UNDERFLOW_F : 0) |
-         (excepts & FE_INEXACT ? ExceptionFlags::INEXACT_F : 0);
+         ((excepts & FE_DIVBYZERO) ? ExceptionFlags::DIV_BY_ZERO_F : 0) |
+         ((excepts & FE_OVERFLOW) ? ExceptionFlags::OVERFLOW_F : 0) |
+         ((excepts & FE_UNDERFLOW) ? ExceptionFlags::UNDERFLOW_F : 0) |
+         ((excepts & FE_INEXACT) ? ExceptionFlags::INEXACT_F : 0);
 }
 
 LIBC_INLINE int exception_status_to_macro(uint16_t status) {
-  return (status & ExceptionFlags::INVALID_F ? FE_INVALID : 0) |
+  return ((status & ExceptionFlags::INVALID_F) ? FE_INVALID : 0) |
 #ifdef __FE_DENORM
-         (status & ExceptionFlags::DENORMAL_F ? __FE_DENORM : 0) |
+         ((status & ExceptionFlags::DENORMAL_F) ? __FE_DENORM : 0) |
 #endif // __FE_DENORM
-         (status & ExceptionFlags::DIV_BY_ZERO_F ? FE_DIVBYZERO : 0) |
-         (status & ExceptionFlags::OVERFLOW_F ? FE_OVERFLOW : 0) |
-         (status & ExceptionFlags::UNDERFLOW_F ? FE_UNDERFLOW : 0) |
-         (status & ExceptionFlags::INEXACT_F ? FE_INEXACT : 0);
+         ((status & ExceptionFlags::DIV_BY_ZERO_F) ? FE_DIVBYZERO : 0) |
+         ((status & ExceptionFlags::OVERFLOW_F) ? FE_OVERFLOW : 0) |
+         ((status & ExceptionFlags::UNDERFLOW_F) ? FE_UNDERFLOW : 0) |
+         ((status & ExceptionFlags::INEXACT_F) ? FE_INEXACT : 0);
 }
 
 struct X87StateDescriptor {
