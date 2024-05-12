@@ -734,7 +734,7 @@ bool Inliner::Impl::shouldInline(
 
   // Don't allow inlining this following cases to prevent inlining recursively.
   // 1. target has at least an edge back to itself in original call graph.
-  // 2. target has call instructions call itself after pervious inlining.
+  // 2. target has call instructions call itself after previous inlining.
   // 3. target is an ancestor of the call.
   if (isSelfRecursiveFunction(resolvedCall.targetNode) ||
       recursiveCallRegions.contains(callableRegion) ||
