@@ -28,6 +28,7 @@ namespace mlir {
 namespace linalg {
 class IteratorTypeAttr;
 class LinalgOp;
+class DepthwiseConvolutionOpInterface;
 
 namespace detail {
 /// Implementation of the method that check if given operands
@@ -117,6 +118,40 @@ bool isaCopyOpInterface(LinalgOp linalgOp);
 
 namespace detail {
 
+// Common implementations for DepthwiseConvolutionOpInterface
+namespace depthwise_convolution_impl {
+// Returns strides as a vector.
+SmallVector<int64_t, 2> getStrides(DepthwiseConvolutionOpInterface op);
+// Returns dilations as a vector.
+SmallVector<int64_t, 2> getDilations(DepthwiseConvolutionOpInterface op);
+// Returns common indexing maps for all `DepthwiseConvolutionOpInterface`.
+// Common indexing maps are for the `input`, `filter`, and `init` operands.
+// For example if `channelPos = 1`, and `s` represents all spatial dims, then
+//   `input`: `(n, s, c, m, ks) -> (n, c, s * stride + ks * dilation)`
+//   `filter`: `(n, s, c, m, ks) -> (n, c, m, ks)`
+//   `init`: `(n, s, c, m, ks) -> (n, c, m, s)`
+// If other operands are required for an op implementing this interface,
+// then the indexing maps for them can be added to the result of this function.
+ArrayAttr createCommonIndexingMaps(MLIRContext *ctx, int64_t numSpatial,
+                                   int64_t channelPos,
+                                   const SmallVectorImpl<int64_t> &strides,
+                                   const SmallVectorImpl<int64_t> &dilations);
+ArrayAttr getIteratorTypes(DepthwiseConvolutionOpInterface op);
+// Region builder basic depthwise convolution
+void regionBuilder(ImplicitLocOpBuilder &b, Block &block,
+                   ArrayRef<NamedAttribute> attrs);
+// Region builder quantized depthwise convolution
+void quantizedRegionBuilder(ImplicitLocOpBuilder &b, Block &block,
+                            ArrayRef<NamedAttribute> attrs);
+void getEffects(
+    Operation *op,
+    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+        &effects);
+ParseResult parse(OpAsmParser &parser, OperationState &result,
+                  bool isQuantized = false);
+void print(LinalgOp op, OpAsmPrinter &p);
+} // namespace depthwise_convolution_impl
+
 /// Returns true if the block contains a contraction of the following form:
 ///
 ///   %0 = <elemwise>(permutation-of(cu(block-argument-0),
@@ -172,6 +207,9 @@ LogicalResult verifyContractionInterface(Operation *op);
 
 /// Verify that `op` conforms to the ConvolutionOpInterface.
 LogicalResult verifyConvolutionInterface(Operation *op);
+
+/// Verify that `op` conforms to the DepthwiseConvolutionOpInterface.
+LogicalResult verifyDepthwiseConvolutionInterface(Operation *op);
 
 /// Verify that `op` conforms to the FillOpInterface.
 LogicalResult verifyFillInterface(Operation *op);

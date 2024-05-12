@@ -1710,6 +1710,137 @@ LogicalResult ReduceOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// DepthwiseConvNDOp
+//===----------------------------------------------------------------------===//
+
+// There must be a way to avoid defining the following 3 functions
+ParseResult mlir::linalg::detail::depthwise_convolution_impl::parse(
+    OpAsmParser &parser, OperationState &result, bool isQuantized) {
+  if (isQuantized)
+    return parseNamedStructuredOp(
+        parser, result, 5,
+        mlir::linalg::detail::depthwise_convolution_impl::
+            quantizedRegionBuilder);
+  return parseNamedStructuredOp(
+      parser, result, 3,
+      mlir::linalg::detail::depthwise_convolution_impl::regionBuilder);
+}
+
+void mlir::linalg::detail::depthwise_convolution_impl::print(LinalgOp op,
+                                                             OpAsmPrinter &p) {
+  printNamedStructuredOp(p, op.getOperation(), op.getDpsInputs(),
+                         op.getDpsInits());
+}
+
+// Build {mul, add} region for convolution
+void mlir::linalg::detail::depthwise_convolution_impl::regionBuilder(
+    ImplicitLocOpBuilder &b, Block &block, ArrayRef<NamedAttribute> attrs) {
+  assert(block.getNumArguments() == 3 &&
+         "DepthwiseConv1DOp regionBuilder expects 3 (>=0) args");
+  RegionBuilderHelper helper(block.getArgument(0).getContext(), block);
+  SmallVector<Value> yields;
+
+  Value value1 =
+      helper.buildTypeFn(TypeFn::cast_signed, block.getArgument(2).getType(),
+                         block.getArgument(0));
+  Value value2 =
+      helper.buildTypeFn(TypeFn::cast_signed, block.getArgument(2).getType(),
+                         block.getArgument(1));
+  Value value3 = helper.buildBinaryFn(BinaryFn::mul, value1, value2);
+  Value value4 =
+      helper.buildBinaryFn(BinaryFn::add, block.getArgument(2), value3);
+  yields.push_back(value4);
+  helper.yieldOutputs(yields);
+}
+
+void mlir::linalg::detail::depthwise_convolution_impl::quantizedRegionBuilder(
+    ImplicitLocOpBuilder &b, Block &block, ArrayRef<NamedAttribute> attrs) {
+  assert(block.getNumArguments() == 5 &&
+         "DepthwiseConvNDQOp regionBuilder expects 5 args");
+  RegionBuilderHelper helper(block.getArgument(0).getContext(), block);
+  Value value1 =
+      helper.buildTypeFn(TypeFn::cast_signed, block.getArgument(4).getType(),
+                         block.getArgument(0));
+  Value value2 =
+      helper.buildTypeFn(TypeFn::cast_signed, block.getArgument(4).getType(),
+                         block.getArgument(2));
+  Value value3 = helper.buildBinaryFn(BinaryFn::sub, value1, value2);
+  Value value4 =
+      helper.buildTypeFn(TypeFn::cast_signed, block.getArgument(4).getType(),
+                         block.getArgument(1));
+  Value value5 =
+      helper.buildTypeFn(TypeFn::cast_signed, block.getArgument(4).getType(),
+                         block.getArgument(3));
+  Value value6 = helper.buildBinaryFn(BinaryFn::sub, value4, value5);
+  Value value7 = helper.buildBinaryFn(BinaryFn::mul, value3, value6);
+  Value value8 =
+      helper.buildBinaryFn(BinaryFn::add, block.getArgument(4), value7);
+  helper.yieldOutputs({value8});
+}
+
+void mlir::linalg::detail::depthwise_convolution_impl::getEffects(
+    Operation *op,
+    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+        &effects) {
+  if (!isa<DepthwiseConvolutionOpInterface>(op))
+    return;
+  if (LinalgOp linalgOp = dyn_cast<LinalgOp>(op)) {
+    if (linalgOp.hasPureTensorSemantics())
+      return;
+    getGenericEffectsImpl(effects, linalgOp.getOperation()->getResults(),
+                          linalgOp.getDpsInputs(), linalgOp.getDpsInits());
+  }
+}
+
+ArrayAttr DepthwiseConvNDOp::getIndexingMaps() {
+  ArrayAttr cached = (*this)->getAttrOfType<ArrayAttr>(
+      LinalgDialect::kMemoizedIndexingMapsAttrName);
+  if (cached)
+    return cached;
+
+  cached = detail::depthwise_convolution_impl::createCommonIndexingMaps(
+      getContext(), getNumSpatialDims(), getChannelPosition(),
+      getStridesVector(), getDilationsVector());
+
+  (*this)->setAttr(LinalgDialect::kMemoizedIndexingMapsAttrName, cached);
+  return cached;
+}
+
+void DepthwiseConvNDOp::getEffects(
+    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+        &effects) {
+  return detail::depthwise_convolution_impl::getEffects(*this, effects);
+}
+
+ArrayAttr DepthwiseConvNDQOp::getIndexingMaps() {
+  ArrayAttr cached = (*this)->getAttrOfType<ArrayAttr>(
+      LinalgDialect::kMemoizedIndexingMapsAttrName);
+  if (cached)
+    return cached;
+
+  MLIRContext *ctx = getContext();
+  auto numSpatial = getNumSpatialDims();
+  SmallVector<Attribute> maps(
+      detail::depthwise_convolution_impl::createCommonIndexingMaps(
+          ctx, numSpatial, getChannelPosition(), getStridesVector(),
+          getDilationsVector())
+          .getValue());
+  // Add scalar maps for `zero_points` operands
+  SmallVector<Attribute> scalarMaps(
+      2, AffineMapAttr::get(AffineMap::get(3 + 2 * numSpatial, 0, {}, ctx)));
+  maps.insert(maps.end() - 1, scalarMaps.begin(), scalarMaps.end());
+  cached = Builder(ctx).getArrayAttr(maps);
+  (*this)->setAttr(LinalgDialect::kMemoizedIndexingMapsAttrName, cached);
+  return cached;
+}
+
+void DepthwiseConvNDQOp::getEffects(
+    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+        &effects) {
+  return detail::depthwise_convolution_impl::getEffects(*this, effects);
+}
+
+//===----------------------------------------------------------------------===//
 // TransposeOp
 //===----------------------------------------------------------------------===//
 

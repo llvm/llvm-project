@@ -178,6 +178,63 @@ def LinalgConvolutionOpInterface : OpInterface<"ConvolutionOpInterface"> {
   ];
 }
 
+def LinalgDepthwiseConvolutionOpInterface : OpInterface<"DepthwiseConvolutionOpInterface", [
+  LinalgConvolutionOpInterface]> {
+  let description = [{"
+    A depthwise convolution is defined in general terms":
+    1. It is a convolution as defined by `ConvolutionOpInterface`.
+    2. Operands have the following properties:
+       i) `image` has a batch, channel, and spatial dims
+       ii) `kernel` has channel, multipier, and spatial dims
+       iii) `init` has a batch, channel, multiplier, and spatial dims
+    3. The channel and multiplier dimensions are consecutive and always in `CM` order.
+    4. There is a notion of channel position.
+    5. `input_rank == kernel_rank == output_rank + 1` (including batch dim in input and output).
+    6. Number of spatial dimensions is always `input_rank - 2`.
+    7. Optional `strides` and `dilations` attrs.
+  }];
+  let cppNamespace = "::mlir::linalg";
+  let verify = [{ return detail::verifyDepthwiseConvolutionInterface($_op); }];
+  let methods = [
+    InterfaceMethod<[{
+      Returns the channel position.
+    }],
+    "int64_t", "getChannelPosition", (ins)
+    >,
+    InterfaceMethod<[{
+      Returns iterator types for any spatial dimension.
+    }],
+    "::mlir::ArrayAttr", "getIteratorTypes",(ins),
+      /*methodBody=*/[{}],
+      /*defaultImplementation=*/[{
+        return detail::depthwise_convolution_impl::getIteratorTypes($_op);
+    }]>,
+    InterfaceMethod<[{
+      Returns strides.
+    }],
+    "::llvm::SmallVector<int64_t, 2>", "getStridesVector", (ins),
+      /*methodBody=*/[{}],
+      /*defaultImplementation=*/[{
+        return detail::depthwise_convolution_impl::getStrides($_op);
+    }]>,
+    InterfaceMethod<[{
+      Returns dilations.
+    }],
+    "::llvm::SmallVector<int64_t, 2>", "getDilationsVector", (ins),
+      /*methodBody=*/[{}],
+      /*defaultImplementation=*/[{
+        return detail::depthwise_convolution_impl::getDilations($_op);
+    }]>
+  ];
+
+  let extraSharedClassDeclaration = [{
+    // Returns number of spatial dimensions. Should always be `input_rank - 2` for batched input/output.
+    int64_t getNumSpatialDims() {
+      return ::llvm::cast<ShapedType>(this->getOperation()->getOperand(0).getType()).getRank() - 2;
+    }
+  }];
+}
+
 def LinalgFillOpInterface : OpInterface<"FillOpInterface"> {
   let description = [{
     A fill operation is defined in general terms:
