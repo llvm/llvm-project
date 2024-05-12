@@ -1227,6 +1227,10 @@ Status Platform::PutFile(const FileSpec &source, const FileSpec &destination,
   if (permissions == 0)
     permissions = lldb::eFilePermissionsFileDefault;
 
+#if defined(_WIN32)
+  permissions |= lldb::eFilePermissionsUserExecute;
+#endif
+
   lldb::user_id_t dest_file = OpenFile(
       destination, File::eOpenOptionCanCreate | File::eOpenOptionWriteOnly |
                        File::eOpenOptionTruncate | File::eOpenOptionCloseOnExec,
