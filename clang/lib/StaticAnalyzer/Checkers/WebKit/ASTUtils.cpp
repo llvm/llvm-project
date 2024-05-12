@@ -30,7 +30,7 @@ bool tryToFindPtrOrigin(
     }
     if (auto *tempExpr = dyn_cast<CXXTemporaryObjectExpr>(E)) {
       if (auto *C = tempExpr->getConstructor()) {
-        if (auto* Class = C->getParent(); Class && isRefCounted(Class))
+        if (auto *Class = C->getParent(); Class && isRefCounted(Class))
           return callback(E, true);
         break;
       }
