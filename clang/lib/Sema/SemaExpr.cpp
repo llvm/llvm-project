@@ -7095,8 +7095,12 @@ ExprResult Sema::BuildResolvedCallExpr(Expr *Fn, NamedDecl *NDecl,
   }
 
   // Bail out early if calling a builtin with custom type checking.
-  if (BuiltinID && Context.BuiltinInfo.hasCustomTypechecking(BuiltinID))
-    return CheckBuiltinFunctionCall(FDecl, BuiltinID, TheCall);
+  if (BuiltinID && Context.BuiltinInfo.hasCustomTypechecking(BuiltinID)) {
+    ExprResult E = CheckBuiltinFunctionCall(FDecl, BuiltinID, TheCall);
+    if (!E.isInvalid() && Context.BuiltinInfo.isImmediate(BuiltinID))
+      E = CheckForImmediateInvocation(E, FDecl);
+    return E;
+  }
 
   if (getLangOpts().CUDA) {
     if (Config) {

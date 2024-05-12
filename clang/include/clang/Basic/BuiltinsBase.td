@@ -70,6 +70,8 @@ class VScanfFormat<int I> : IndexedAttribute<"S", I>;
 
 // Builtin can be constant evaluated
 def Constexpr : Attribute<"E">;
+// Builtin is immediate and must be constant evaluated. Implies Constexpr.
+def Consteval : Attribute<"EG">;
 
 // Builtin kinds
 // =============

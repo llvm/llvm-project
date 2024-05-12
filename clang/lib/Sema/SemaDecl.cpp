@@ -2409,10 +2409,17 @@ FunctionDecl *Sema::CreateBuiltin(IdentifierInfo *II, QualType Type,
     Parent = CLinkageDecl;
   }
 
-  FunctionDecl *New = FunctionDecl::Create(Context, Parent, Loc, Loc, II, Type,
-                                           /*TInfo=*/nullptr, SC_Extern,
-                                           getCurFPFeatures().isFPConstrained(),
-                                           false, Type->isFunctionProtoType());
+  ConstexprSpecKind ConstexprKind = ConstexprSpecKind::Unspecified;
+  if (getLangOpts().CPlusPlus && Context.BuiltinInfo.isConstantEvaluated(ID)) {
+    ConstexprKind = ConstexprSpecKind::Constexpr;
+    if (Context.BuiltinInfo.isImmediate(ID))
+      ConstexprKind = ConstexprSpecKind::Consteval;
+  }
+
+  FunctionDecl *New = FunctionDecl::Create(
+      Context, Parent, Loc, Loc, II, Type, /*TInfo=*/nullptr, SC_Extern,
+      getCurFPFeatures().isFPConstrained(), /*isInlineSpecified=*/false,
+      Type->isFunctionProtoType(), ConstexprKind);
   New->setImplicit();
   New->addAttr(BuiltinAttr::CreateImplicit(Context, ID));
 

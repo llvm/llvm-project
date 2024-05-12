@@ -676,11 +676,19 @@ bool Sema::MergeCXXFunctionDecl(FunctionDecl *New, FunctionDecl *Old,
   // template has a constexpr specifier then all its declarations shall
   // contain the constexpr specifier.
   if (New->getConstexprKind() != Old->getConstexprKind()) {
-    Diag(New->getLocation(), diag::err_constexpr_redecl_mismatch)
-        << New << static_cast<int>(New->getConstexprKind())
-        << static_cast<int>(Old->getConstexprKind());
-    Diag(Old->getLocation(), diag::note_previous_declaration);
-    Invalid = true;
+    if (Old->getBuiltinID() &&
+        Old->getConstexprKind() == ConstexprSpecKind::Constexpr &&
+        New->getConstexprKind() == ConstexprSpecKind::Unspecified) {
+      // Except allow redeclaring a builtin as non-constexpr to match C
+      // redeclarations which will not be constexpr
+      New->setConstexprKind(ConstexprSpecKind::Constexpr);
+    } else {
+      Diag(New->getLocation(), diag::err_constexpr_redecl_mismatch)
+          << New << static_cast<int>(New->getConstexprKind())
+          << static_cast<int>(Old->getConstexprKind());
+      Diag(Old->getLocation(), diag::note_previous_declaration);
+      Invalid = true;
+    }
   } else if (!Old->getMostRecentDecl()->isInlined() && New->isInlined() &&
              Old->isDefined(Def) &&
              // If a friend function is inlined but does not have 'inline'
