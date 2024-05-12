@@ -29,7 +29,6 @@ TEST(LlvmLibcSupportLinuxTimeoutTest, OverflowNano) {
   ASSERT_EQ(result.error(), AbsTimeout::Error::Invalid);
 }
 TEST(LlvmLibcSupportLinuxTimeoutTest, UnderflowNano) {
-  using namespace time_units;
   timespec ts = {0, -1};
   cpp::expected<AbsTimeout, AbsTimeout::Error> result =
       AbsTimeout::from_timespec(ts, false);
@@ -37,7 +36,6 @@ TEST(LlvmLibcSupportLinuxTimeoutTest, UnderflowNano) {
   ASSERT_EQ(result.error(), AbsTimeout::Error::Invalid);
 }
 TEST(LlvmLibcSupportLinuxTimeoutTest, NoChangeIfClockIsMonotonic) {
-  using namespace time_units;
   timespec ts = {10000, 0};
   cpp::expected<AbsTimeout, AbsTimeout::Error> result =
       AbsTimeout::from_timespec(ts, false);
@@ -48,7 +46,6 @@ TEST(LlvmLibcSupportLinuxTimeoutTest, NoChangeIfClockIsMonotonic) {
   ASSERT_EQ(result->get_timespec().tv_nsec, static_cast<time_t>(0));
 }
 TEST(LlvmLibcSupportLinuxTimeoutTest, ValidAfterConversion) {
-  using namespace time_units;
   timespec ts;
   internal::clock_gettime(CLOCK_REALTIME, &ts);
   cpp::expected<AbsTimeout, AbsTimeout::Error> result =
