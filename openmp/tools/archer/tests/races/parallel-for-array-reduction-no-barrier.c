@@ -14,24 +14,30 @@
 // Number of threads is empirical: We need enough (>4) threads so that
 // the reduction is really performed hierarchically in the barrier!
 
-// RUN: env OMP_NUM_THREADS=3 %libarcher-compile-and-run| FileCheck %s
-// RUN: env OMP_NUM_THREADS=7 %libarcher-compile-and-run| FileCheck %s
+// RUN: env OMP_NUM_THREADS=3 %libarcher-compile-and-run-race | FileCheck %s
+// RUN: env OMP_NUM_THREADS=7 %libarcher-compile-and-run-race | FileCheck %s
 
 // REQUIRES: tsan
 #include <omp.h>
 #include <stdio.h>
 
 int main(int argc, char *argv[]) {
-  int var = 0;
+  int var[10] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
 
-#pragma omp parallel reduction(+ : var)
-  { var = 1; }
-
+#pragma omp parallel
+  {
+#pragma omp masked
+    var[5] = 23;
+#pragma omp for reduction(+ : var)
+    for (int i = 0; i < 1000; i++) {
+      var[i % 10]++;
+    }
+  }
   fprintf(stderr, "DONE\n");
-  int error = (var != omp_get_max_threads());
+  int error = (var[5] != 123);
   return error;
 }
 
-// CHECK-NOT: ThreadSanitizer: data race
-// CHECK-NOT: ThreadSanitizer: reported
+// CHECK: ThreadSanitizer: data race
 // CHECK: DONE
+// CHECK: ThreadSanitizer: reported

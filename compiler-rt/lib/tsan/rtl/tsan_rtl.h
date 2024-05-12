@@ -182,6 +182,7 @@ struct ThreadState {
   // for better performance.
   int ignore_reads_and_writes;
   int suppress_reports;
+  int all_atomic;
   // Go does not support ignores.
 #if !SANITIZER_GO
   IgnoreSet mop_ignore_set;
@@ -550,6 +551,8 @@ void MemoryRangeImitateWrite(ThreadState *thr, uptr pc, uptr addr, uptr size);
 void MemoryRangeImitateWriteOrResetRange(ThreadState *thr, uptr pc, uptr addr,
                                          uptr size);
 
+void ThreadAtomicBegin(ThreadState *thr, uptr pc);
+void ThreadAtomicEnd(ThreadState *thr);
 void ThreadIgnoreBegin(ThreadState *thr, uptr pc);
 void ThreadIgnoreEnd(ThreadState *thr);
 void ThreadIgnoreSyncBegin(ThreadState *thr, uptr pc);

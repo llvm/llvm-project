@@ -4822,13 +4822,16 @@ llvm::Function *CGOpenMPRuntime::emitReductionFunction(
   Args.push_back(&RHSArg);
   const auto &CGFI =
       CGM.getTypes().arrangeBuiltinFunctionDeclaration(C.VoidTy, Args);
+  CodeGenFunction CGF(CGM);
   std::string Name = getReductionFuncName(ReducerName);
   auto *Fn = llvm::Function::Create(CGM.getTypes().GetFunctionType(CGFI),
                                     llvm::GlobalValue::InternalLinkage, Name,
                                     &CGM.getModule());
+  if (CGF.SanOpts.has(SanitizerKind::Thread)) {
+    return Fn;
+  }
   CGM.SetInternalFunctionAttributes(GlobalDecl(), Fn, CGFI);
   Fn->setDoesNotRecurse();
-  CodeGenFunction CGF(CGM);
   CGF.StartFunction(GlobalDecl(), C.VoidTy, Fn, CGFI, Args, Loc, Loc);
 
   // Dst = (void*[n])(LHSArg);
@@ -5020,6 +5023,11 @@ void CGOpenMPRuntime::emitReduction(CodeGenFunction &CGF, SourceLocation Loc,
   llvm::Function *ReductionFn = emitReductionFunction(
       CGF.CurFn->getName(), Loc, CGF.ConvertTypeForMem(ReductionArrayTy),
       Privates, LHSExprs, RHSExprs, ReductionOps);
+  llvm::Value *ReductionFnP = ReductionFn;
+  if (CGF.SanOpts.has(SanitizerKind::Thread)) {
+    ReductionFnP = llvm::ConstantPointerNull::get(
+        llvm::PointerType::get(ReductionFn->getFunctionType(), 0));
+  }
 
   // 3. Create static kmp_critical_name lock = { 0 };
   std::string Name = getName({"reduction"});
@@ -5038,8 +5046,8 @@ void CGOpenMPRuntime::emitReduction(CodeGenFunction &CGF, SourceLocation Loc,
       CGF.Builder.getInt32(RHSExprs.size()), // i32 <n>
       ReductionArrayTySize,                  // size_type sizeof(RedList)
       RL,                                    // void *RedList
-      ReductionFn, // void (*) (void *, void *) <reduce_func>
-      Lock         // kmp_critical_name *&<lock>
+      ReductionFnP, // void (*) (void *, void *) <reduce_func>
+      Lock          // kmp_critical_name *&<lock>
   };
   llvm::Value *Res = CGF.EmitRuntimeCall(
       OMPBuilder.getOrCreateRuntimeFunction(

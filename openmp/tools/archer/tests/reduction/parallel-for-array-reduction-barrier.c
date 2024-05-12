@@ -22,13 +22,22 @@
 #include <stdio.h>
 
 int main(int argc, char *argv[]) {
-  int var = 0;
+  int var[10] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
 
-#pragma omp parallel reduction(+ : var)
-  { var = 1; }
-
+#pragma omp parallel
+  {
+#pragma omp masked
+    var[5] = 23;
+#pragma omp barrier
+#pragma omp for reduction(+ : var)
+    for (int i = 0; i < 1000; i++) {
+      var[i % 10]++;
+    }
+#pragma omp masked
+    var[4] += 42;
+  }
   fprintf(stderr, "DONE\n");
-  int error = (var != omp_get_max_threads());
+  int error = (var[5] != 23 + 100) || (var[4] != 4 + 100 + 42);
   return error;
 }
 
