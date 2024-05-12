@@ -14,6 +14,15 @@ subroutine bad_args_error(values)
   call etime(values)
 end subroutine bad_args_error
 
+subroutine bad_apply_form(values)
+  REAL(KIND=4), DIMENSION(2) :: values
+  REAL(KIND=4) :: time
+  !Declaration of 'etime'
+  call etime(values, time)
+  !ERROR: Cannot call subroutine 'etime' like a function
+  time = etime(values)
+end subroutine bad_apply_form
+
 subroutine good_kind_equal(values, time)
   REAL(KIND=4), DIMENSION(2) :: values
   REAL(KIND=4) :: time
