@@ -137,6 +137,7 @@ bool VPRecipeBase::mayHaveSideEffects() const {
     case VPInstruction::Not:
     case VPInstruction::CalculateTripCountMinusVF:
     case VPInstruction::CanonicalIVIncrementForPart:
+    case VPInstruction::LogicalAnd:
     case VPInstruction::PtrAdd:
       return false;
     default:
@@ -557,6 +558,12 @@ Value *VPInstruction::generatePerPart(VPTransformState &State, unsigned Part) {
 
     return ReducedPartRdx;
   }
+  case VPInstruction::LogicalAnd: {
+    Value *A = State.get(getOperand(0), Part);
+    Value *B = State.get(getOperand(1), Part);
+    return Builder.CreateSelect(A, B, ConstantInt::getFalse(A->getType()),
+                                Name);
+  }
   case VPInstruction::PtrAdd: {
     assert(vputils::onlyFirstLaneUsed(this) &&
            "can only generate first lane for PtrAdd");
@@ -688,6 +695,9 @@ void VPInstruction::print(raw_ostream &O, const Twine &Indent,
     break;
   case VPInstruction::ComputeReductionResult:
     O << "compute-reduction-result";
+    break;
+  case VPInstruction::LogicalAnd:
+    O << "logical-and";
     break;
   case VPInstruction::PtrAdd:
     O << "ptradd";

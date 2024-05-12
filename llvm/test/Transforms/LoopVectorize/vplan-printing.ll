@@ -432,7 +432,7 @@ define void @debug_loc_vpinstruction(ptr nocapture %asd, ptr nocapture %bsd) !db
 ; CHECK-NEXT:    WIDEN ir<%cmp1> = icmp slt ir<%lsd>, ir<100>
 ; CHECK-NEXT:    EMIT vp<[[NOT1:%.+]]> = not ir<%cmp1>, !dbg /tmp/s.c:5:3
 ; CHECK-NEXT:    WIDEN ir<%cmp2> = icmp sge ir<%lsd>, ir<200>
-; CHECK-NEXT:    EMIT vp<[[SEL1:%.+]]> = select vp<[[NOT1]]>, ir<%cmp2>, ir<false>, !dbg /tmp/s.c:5:21
+; CHECK-NEXT:    EMIT vp<[[SEL1:%.+]]> = logical-and vp<[[NOT1]]>, ir<%cmp2>, !dbg /tmp/s.c:5:21
 ; CHECK-NEXT:    EMIT vp<[[OR1:%.+]]> = or vp<[[SEL1]]>, ir<%cmp1>
 ; CHECK-NEXT:  Successor(s): pred.sdiv
 ; CHECK-EMPTY:
