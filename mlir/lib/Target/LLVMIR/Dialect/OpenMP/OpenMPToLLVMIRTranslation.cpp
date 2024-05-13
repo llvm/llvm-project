@@ -2175,10 +2175,10 @@ getFirstOrLastMappedMemberPtr(mlir::omp::MapInfoOp mapInfo, bool first) {
             return !first;
         }
 
-        // iterated the entire list and couldn't make a decision, all elements
-        // were likely the same, return true for now similar to reaching the end
-        // of both and finding invalid indices.
-        return true;
+        // Iterated the entire list and couldn't make a decision, all elements
+        // were likely the same. Return false, since the sort comparator should
+        // return false for equal elements.
+        return false;
       });
 
     return llvm::cast<mlir::omp::MapInfoOp>(
