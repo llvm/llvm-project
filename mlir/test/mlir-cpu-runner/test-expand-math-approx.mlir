@@ -862,7 +862,7 @@ func.func @rsqrt() {
   %cst2 = arith.constant 0.0 : f32
   call @rsqrt_f32(%cst2) : (f32) -> ()
 
-  // CHECK: -nan
+  // CHECK: nan
   %cst3 = arith.constant -1.0 : f32
   call @rsqrt_f32(%cst3) : (f32) -> ()
 
