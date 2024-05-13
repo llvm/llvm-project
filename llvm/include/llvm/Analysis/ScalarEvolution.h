@@ -77,6 +77,8 @@ public:
   const SCEV *operator->() const { return getPointer(); }
   const SCEV *operator->() { return getPointer(); }
 
+  void *getRawPointer() { return getOpaqueValue(); }
+
   /// Print out the internal representation of this scalar to the specified
   /// stream.  This should really only be used for debugging purposes.
   void print(raw_ostream &OS) const;
