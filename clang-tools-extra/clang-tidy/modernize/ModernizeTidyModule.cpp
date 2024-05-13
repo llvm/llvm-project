@@ -47,6 +47,7 @@
 #include "UseTrailingReturnTypeCheck.h"
 #include "UseTransparentFunctorsCheck.h"
 #include "UseUncaughtExceptionsCheck.h"
+#include "UseUniformInitializerCheck.h"
 #include "UseUsingCheck.h"
 
 using namespace clang::ast_matchers;
@@ -117,6 +118,8 @@ public:
         "modernize-use-transparent-functors");
     CheckFactories.registerCheck<UseUncaughtExceptionsCheck>(
         "modernize-use-uncaught-exceptions");
+    CheckFactories.registerCheck<UseUniformInitializerCheck>(
+        "modernize-use-uniform-initializer");
     CheckFactories.registerCheck<UseUsingCheck>("modernize-use-using");
   }
 };

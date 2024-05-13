@@ -305,6 +305,7 @@ Clang-Tidy Checks
    :doc:`modernize-use-trailing-return-type <modernize/use-trailing-return-type>`, "Yes"
    :doc:`modernize-use-transparent-functors <modernize/use-transparent-functors>`, "Yes"
    :doc:`modernize-use-uncaught-exceptions <modernize/use-uncaught-exceptions>`, "Yes"
+   :doc:`modernize-use-uniform-initializer <modernize/use-uniform-initializer>`, "Yes"
    :doc:`modernize-use-using <modernize/use-using>`, "Yes"
    :doc:`mpi-buffer-deref <mpi/buffer-deref>`, "Yes"
    :doc:`mpi-type-mismatch <mpi/type-mismatch>`, "Yes"
