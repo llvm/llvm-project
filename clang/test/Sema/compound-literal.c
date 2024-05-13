@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify -fblocks -pedantic -Wno-comment %s
+// RUN: %clang_cc1 -fsyntax-only -verify -fblocks -pedantic %s
 // REQUIRES: LP64
 
 struct foo { int a, b; };
@@ -47,8 +47,8 @@ int (^block)(int) = ^(int i) {
 // So check that VLA type compound literals are rejected (see https://github.com/llvm/llvm-project/issues/89835).
 void vla(int n) {
   int size = 5;
-  (void)(int[size]){}; // expected-warning {{use of an empty initializer is a C23 extension}} \
-                       expected-error {{compound literal cannot be of variable-length array type}}
+  (void)(int[size]){}; // expected-warning {{use of an empty initializer is a C23 extension}}
+                       // expected-error@-1 {{compound literal cannot be of variable-length array type}}
   (void)(int[size]){1}; // expected-error {{compound literal cannot be of variable-length array type}}
   (void)(int[size]){1,2,3}; // expected-error {{compound literal cannot be of variable-length array type}}
   (void)(int[size]){1,2,3,4,5}; // expected-error {{compound literal cannot be of variable-length array type}}
