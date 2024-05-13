@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/TargetParser/AArch64TargetParser.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
@@ -74,13 +75,6 @@ StringRef AArch64::resolveCPUAlias(StringRef Name) {
   return Name;
 }
 
-StringRef AArch64::resolveExtAlias(StringRef Name) {
-  for (const auto &A : ExtAliases)
-    if (A.AltName == Name)
-      return A.Name;
-  return Name;
-}
-
 StringRef AArch64::getArchExtFeature(StringRef ArchExt) {
   bool IsNegated = ArchExt.starts_with("no");
   StringRef ArchExtBase = IsNegated ? ArchExt.drop_front(2) : ArchExt;
@@ -120,13 +114,11 @@ const AArch64::ArchInfo *AArch64::parseArch(StringRef Arch) {
   return {};
 }
 
-std::optional<AArch64::ExtensionInfo> AArch64::parseArchExtension(StringRef ArchExt) {
-  // Resolve aliases first.
-  ArchExt = resolveExtAlias(ArchExt);
-
-  // Then find the Extension name.
+std::optional<AArch64::ExtensionInfo>
+AArch64::parseArchExtension(StringRef ArchExt) {
+  assert(!ArchExt.empty());
   for (const auto &A : Extensions) {
-    if (ArchExt == A.Name)
+    if (ArchExt == A.Name || ArchExt == A.Alias)
       return A;
   }
   return {};

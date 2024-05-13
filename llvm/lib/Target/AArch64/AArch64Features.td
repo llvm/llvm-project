@@ -39,6 +39,10 @@ class Extension<
     // not doing so.
     string MArchName = TargetFeatureName;
 
+    // An alias that can be used on the command line, if the extension has one.
+    // Used for correcting historical names while remaining backwards compatible.
+    string MArchAlias = "";
+
     // Function MultiVersioning (FMV) properties
 
     // A C++ expression giving the number of the bit in the FMV ABI.
@@ -163,6 +167,7 @@ def FeatureOutlineAtomics : SubtargetFeature<"outline-atomics", "OutlineAtomics"
 def FeatureFMV : SubtargetFeature<"fmv", "HasFMV", "true",
   "Enable Function Multi Versioning support.">;
 
+let MArchAlias = "rdma" in
 def FeatureRDM : Extension<"rdm", "RDM",
   "Enable ARMv8.1 Rounding Double Multiply Add/Subtract instructions (FEAT_RDM)",
   [FeatureNEON],
