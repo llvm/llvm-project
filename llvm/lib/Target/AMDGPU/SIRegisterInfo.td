@@ -605,6 +605,7 @@ class RegisterTypes<list<ValueType> reg_types> {
 
 def Reg16Types : RegisterTypes<[i16, f16, bf16]>;
 def Reg32Types : RegisterTypes<[i32, f32, v2i16, v2f16, v2bf16, p2, p3, p5, p6]>;
+def Reg64Types : RegisterTypes<[i64, f64, v2i32, v2f32, p0]>;
 
 let HasVGPR = 1 in {
 // VOP3 and VINTERP can access 1024 lo and 1024 hi registers.

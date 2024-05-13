@@ -792,6 +792,8 @@ ABIArgInfo X86_32ABIInfo::classifyArgumentType(QualType Ty, CCState &State,
         return ABIArgInfo::getDirect();
       return ABIArgInfo::getExpand();
     }
+    if (IsVectorCall && Ty->isBuiltinType())
+      return ABIArgInfo::getDirect();
     return getIndirectResult(Ty, /*ByVal=*/false, State);
   }
 

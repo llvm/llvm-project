@@ -1095,12 +1095,12 @@ bool DAGCombiner::reassociationCanBreakAddressingModePattern(unsigned Opc,
         N1.getOperand(0).getOpcode() == ISD::VSCALE &&
         isa<ConstantSDNode>(N1.getOperand(1)))) &&
       N1.getValueType().getFixedSizeInBits() <= 64) {
-    int64_t ScalableOffset =
-        N1.getOpcode() == ISD::VSCALE
-            ? N1.getConstantOperandVal(0)
-            : (N1.getOperand(0).getConstantOperandVal(0) *
-               (N1.getOpcode() == ISD::SHL ? (1 << N1.getConstantOperandVal(1))
-                                           : N1.getConstantOperandVal(1)));
+    int64_t ScalableOffset = N1.getOpcode() == ISD::VSCALE
+                                 ? N1.getConstantOperandVal(0)
+                                 : (N1.getOperand(0).getConstantOperandVal(0) *
+                                    (N1.getOpcode() == ISD::SHL
+                                         ? (1LL << N1.getConstantOperandVal(1))
+                                         : N1.getConstantOperandVal(1)));
     if (Opc == ISD::SUB)
       ScalableOffset = -ScalableOffset;
     if (all_of(N->uses(), [&](SDNode *Node) {
@@ -22226,7 +22226,7 @@ SDValue DAGCombiner::scalarizeExtractedVectorLoad(SDNode *EVE, EVT InVecVT,
 /// Transform a vector binary operation into a scalar binary operation by moving
 /// the math/logic after an extract element of a vector.
 static SDValue scalarizeExtractedBinop(SDNode *ExtElt, SelectionDAG &DAG,
-                                       bool LegalOperations) {
+                                       const SDLoc &DL, bool LegalOperations) {
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   SDValue Vec = ExtElt->getOperand(0);
   SDValue Index = ExtElt->getOperand(1);
@@ -22251,7 +22251,6 @@ static SDValue scalarizeExtractedBinop(SDNode *ExtElt, SelectionDAG &DAG,
       ISD::isConstantSplatVector(Op1.getNode(), SplatVal)) {
     // extractelt (binop X, C), IndexC --> binop (extractelt X, IndexC), C'
     // extractelt (binop C, X), IndexC --> binop C', (extractelt X, IndexC)
-    SDLoc DL(ExtElt);
     EVT VT = ExtElt->getValueType(0);
     SDValue Ext0 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, VT, Op0, Index);
     SDValue Ext1 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, VT, Op1, Index);
@@ -22490,7 +22489,7 @@ SDValue DAGCombiner::visitEXTRACT_VECTOR_ELT(SDNode *N) {
     }
   }
 
-  if (SDValue BO = scalarizeExtractedBinop(N, DAG, LegalOperations))
+  if (SDValue BO = scalarizeExtractedBinop(N, DAG, DL, LegalOperations))
     return BO;
 
   if (VecVT.isScalableVector())
