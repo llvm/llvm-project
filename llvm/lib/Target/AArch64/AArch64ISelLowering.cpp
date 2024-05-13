@@ -27376,7 +27376,7 @@ SDValue AArch64TargetLowering::LowerVECTOR_HISTOGRAM(SDValue Op,
   SDValue IntID = HG->getIntID();
 
   // The Intrinsic ID determines the type of update operation.
-  ConstantSDNode *CID = cast<ConstantSDNode>(IntID.getNode());
+  [[maybe_unused]] ConstantSDNode *CID = cast<ConstantSDNode>(IntID.getNode());
   // Right now, we only support 'add' as an update.
   assert(CID->getZExtValue() == Intrinsic::experimental_vector_histogram_add &&
          "Unexpected histogram update operation");
