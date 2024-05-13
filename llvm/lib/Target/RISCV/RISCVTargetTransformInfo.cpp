@@ -1619,29 +1619,58 @@ InstructionCost RISCVTTIImpl::getArithmeticInstrCost(
   if (Op2Info.isConstant())
     ConstantMatCost += getConstantMatCost(1, Op2Info);
 
+  unsigned Op;
   switch (TLI->InstructionOpcodeToISD(Opcode)) {
   case ISD::ADD:
   case ISD::SUB:
-  case ISD::AND:
-  case ISD::OR:
-  case ISD::XOR:
+    Op = RISCV::VADD_VV;
+    break;
   case ISD::SHL:
   case ISD::SRL:
   case ISD::SRA:
+    Op = RISCV::VSLL_VV;
+    break;
+  case ISD::AND:
+  case ISD::OR:
+  case ISD::XOR:
+    Op = (Ty->getScalarSizeInBits() == 1) ? RISCV::VMAND_MM : RISCV::VAND_VV;
+    break;
   case ISD::MUL:
   case ISD::MULHS:
   case ISD::MULHU:
+    Op = RISCV::VMUL_VV;
+    break;
+  case ISD::SDIV:
+  case ISD::UDIV:
+    Op = RISCV::VDIV_VV;
+    break;
+  case ISD::SREM:
+  case ISD::UREM:
+    Op = RISCV::VREM_VV;
+    break;
   case ISD::FADD:
   case ISD::FSUB:
+    // TODO: Address FP16 with VFHMIN
+    Op = RISCV::VFADD_VV;
   case ISD::FMUL:
-  case ISD::FNEG: {
-    return ConstantMatCost + TLI->getLMULCost(LT.second) * LT.first * 1;
-  }
+    // TODO: Address FP16 with VFHMIN
+    Op = RISCV::VFMUL_VV;
+    break;
+  case ISD::FDIV:
+    Op = RISCV::VFDIV_VV;
+    break;
+  case ISD::FNEG:
+    Op = RISCV::VFSGNJN_VV;
+    break;
   default:
-    return ConstantMatCost +
-           BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info, Op2Info,
-                                         Args, CxtI);
+    // Assuming all other instructions have the same cost until a need arises to
+    // differentiate them.
+    return ConstantMatCost + BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind,
+                                                           Op1Info, Op2Info,
+                                                           Args, CxtI);
   }
+  return ConstantMatCost +
+         LT.first * getRISCVInstructionCost(Op, LT.second, CostKind);
 }
 
 // TODO: Deduplicate from TargetTransformInfoImplCRTPBase.
