@@ -3746,7 +3746,7 @@ public:
   using key_type = const IdentifierInfo *;
   using key_type_ref = key_type;
 
-  using data_type = IdentID;
+  using data_type = IdentifierID;
   using data_type_ref = data_type;
 
   using hash_value_type = unsigned;
@@ -3775,7 +3775,7 @@ public:
   }
 
   std::pair<unsigned, unsigned>
-  EmitKeyDataLength(raw_ostream &Out, const IdentifierInfo *II, IdentID ID) {
+  EmitKeyDataLength(raw_ostream &Out, const IdentifierInfo *II, IdentifierID ID) {
     // Record the location of the identifier data. This is used when generating
     // the mapping from persistent IDs to strings.
     Writer.SetIdentifierOffset(II, Out.tell());
@@ -3807,7 +3807,7 @@ public:
     Out.write(II->getNameStart(), KeyLen);
   }
 
-  void EmitData(raw_ostream &Out, const IdentifierInfo *II, IdentID ID,
+  void EmitData(raw_ostream &Out, const IdentifierInfo *II, IdentifierID ID,
                 unsigned) {
     using namespace llvm::support;
 
@@ -3891,7 +3891,7 @@ void ASTWriter::WriteIdentifierTable(Preprocessor &PP,
     IdentifierOffsets.resize(NextIdentID - FirstIdentID);
     for (auto IdentIDPair : IdentifierIDs) {
       const IdentifierInfo *II = IdentIDPair.first;
-      IdentID ID = IdentIDPair.second;
+      IdentifierID ID = IdentIDPair.second;
       assert(II && "NULL identifier in identifier table");
 
       // Write out identifiers if either the ID is local or the identifier has
@@ -4779,7 +4779,7 @@ void ASTWriter::AddVersionTuple(const VersionTuple &Version,
 /// Note that the identifier II occurs at the given offset
 /// within the identifier table.
 void ASTWriter::SetIdentifierOffset(const IdentifierInfo *II, uint32_t Offset) {
-  IdentID ID = IdentifierIDs[II];
+  IdentifierID ID = IdentifierIDs[II];
   // Only store offsets new to this AST file. Other identifier names are looked
   // up earlier in the chain and thus don't need an offset.
   if (ID >= FirstIdentID)
@@ -5945,11 +5945,11 @@ void ASTWriter::AddIdentifierRef(const IdentifierInfo *II, RecordDataImpl &Recor
   Record.push_back(getIdentifierRef(II));
 }
 
-IdentID ASTWriter::getIdentifierRef(const IdentifierInfo *II) {
+IdentifierID ASTWriter::getIdentifierRef(const IdentifierInfo *II) {
   if (!II)
     return 0;
 
-  IdentID &ID = IdentifierIDs[II];
+  IdentifierID &ID = IdentifierIDs[II];
   if (ID == 0)
     ID = NextIdentID++;
   return ID;
@@ -6610,9 +6610,9 @@ void ASTWriter::ReaderInitialized(ASTReader *Reader) {
   NextSubmoduleID = FirstSubmoduleID;
 }
 
-void ASTWriter::IdentifierRead(IdentID ID, IdentifierInfo *II) {
+void ASTWriter::IdentifierRead(IdentifierID ID, IdentifierInfo *II) {
   // Always keep the highest ID. See \p TypeRead() for more information.
-  IdentID &StoredID = IdentifierIDs[II];
+  IdentifierID &StoredID = IdentifierIDs[II];
   if (ID > StoredID)
     StoredID = ID;
 }
@@ -7791,6 +7791,12 @@ void ASTRecordWriter::writeOpenACCVarList(const OpenACCClauseWithVarList *C) {
     AddStmt(E);
 }
 
+void ASTRecordWriter::writeOpenACCIntExprList(ArrayRef<Expr *> Exprs) {
+  writeUInt32(Exprs.size());
+  for (Expr *E : Exprs)
+    AddStmt(E);
+}
+
 void ASTRecordWriter::writeOpenACCClause(const OpenACCClause *C) {
   writeEnum(C->getClauseKind());
   writeSourceLocation(C->getBeginLoc());
@@ -7810,7 +7816,7 @@ void ASTRecordWriter::writeOpenACCClause(const OpenACCClause *C) {
     return;
   }
   case OpenACCClauseKind::Self: {
-    const auto *SC = cast<OpenACCIfClause>(C);
+    const auto *SC = cast<OpenACCSelfClause>(C);
     writeSourceLocation(SC->getLParenLoc());
     writeBool(SC->hasConditionExpr());
     if (SC->hasConditionExpr())
@@ -7916,6 +7922,17 @@ void ASTRecordWriter::writeOpenACCClause(const OpenACCClause *C) {
       AddStmt(const_cast<Expr *>(AC->getIntExpr()));
     return;
   }
+  case OpenACCClauseKind::Wait: {
+    const auto *WC = cast<OpenACCWaitClause>(C);
+    writeSourceLocation(WC->getLParenLoc());
+    writeBool(WC->getDevNumExpr());
+    if (const Expr *DNE = WC->getDevNumExpr())
+      AddStmt(const_cast<Expr *>(DNE));
+    writeSourceLocation(WC->getQueuesLoc());
+
+    writeOpenACCIntExprList(WC->getQueueIdExprs());
+    return;
+  }
 
   case OpenACCClauseKind::Finalize:
   case OpenACCClauseKind::IfPresent:
@@ -7941,7 +7958,6 @@ void ASTRecordWriter::writeOpenACCClause(const OpenACCClause *C) {
   case OpenACCClauseKind::DType:
   case OpenACCClauseKind::Tile:
   case OpenACCClauseKind::Gang:
-  case OpenACCClauseKind::Wait:
   case OpenACCClauseKind::Invalid:
     llvm_unreachable("Clause serialization not yet implemented");
   }

@@ -429,7 +429,7 @@ public:
     return ClangExecutable.c_str();
   }
 
-  /// Get the path to where the clang executable was installed.
+    /// Get the path to where the clang executable was installed.
   const char *getInstalledDir() const {
     return Dir.c_str();
   }

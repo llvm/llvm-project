@@ -16,8 +16,8 @@
  * not enough for allocating new sections.
  */
 
-// RUN: %clang %s -o %t.exe -Wl,--no-eh-frame-hdr -Wl,-q -DTINY
-// RUN: not llvm-bolt %t.exe -o %t.bolt.exe 2>&1 | \
+// RUN: %clang %s -o %t.tiny.exe -Wl,--no-eh-frame-hdr -Wl,-q -DTINY
+// RUN: not llvm-bolt %t.tiny.exe -o %t.tiny.bolt.exe 2>&1 | \
 // RUN:   FileCheck %s --check-prefix=CHECK-TINY
 
 // CHECK-TINY: BOLT-ERROR: reserved space (1 byte) is smaller than required

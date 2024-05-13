@@ -49,6 +49,7 @@ function(add_target_library target_name lib_name)
   if(OMPT_TARGET_DEFAULT AND LIBOMPTARGET_OMPT_SUPPORT)
     target_include_directories(${target_name} PUBLIC ${common_dir}/OMPT)
   endif()
+
   target_link_libraries(${target_name} PRIVATE
                         PluginCommon ${llvm_libs} ${OPENMP_PTHREAD_LIB})
 
