@@ -746,15 +746,21 @@ unsigned CodeGenSchedModels::getSchedRWIdx(const Record *Def,
   return I == RWVec.end() ? 0 : std::distance(RWVec.begin(), I);
 }
 
-bool CodeGenSchedModels::hasReadOfWrite(Record *WriteDef) const {
-  for (auto &ProcModel : ProcModels) {
-    const RecVec &RADefs = ProcModel.ReadAdvanceDefs;
-    for (auto &RADef : RADefs) {
-      RecVec ValidWrites = RADef->getValueAsListOfDefs("ValidWrites");
-      if (is_contained(ValidWrites, WriteDef))
-        return true;
-    }
+bool CodeGenSchedModels::hasReadOfWrite(
+    Record *WriteDef, const CodeGenProcModel &ProcModel) const {
+  const RecVec &RADefs = ProcModel.ReadAdvanceDefs;
+  for (auto &RADef : RADefs) {
+    RecVec ValidWrites = RADef->getValueAsListOfDefs("ValidWrites");
+    if (is_contained(ValidWrites, WriteDef))
+      return true;
   }
+  return false;
+}
+
+bool CodeGenSchedModels::hasReadOfWrite(Record *WriteDef) const {
+  for (auto &ProcModel : ProcModels)
+    if (hasReadOfWrite(WriteDef, ProcModel))
+      return true;
   return false;
 }
 
