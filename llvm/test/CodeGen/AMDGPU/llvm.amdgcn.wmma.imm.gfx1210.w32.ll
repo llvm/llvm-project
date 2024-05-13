@@ -1067,11 +1067,11 @@ define amdgpu_ps void @test_wmma_bf16_16x16x32_bf16_non_splat(<16 x bfloat> %A, 
 ; GISEL-NEXT:    v_dual_lshlrev_b32 v22, 16, v24 :: v_dual_bitop2_b32 v10, v18, v10 bitop3:0x54
 ; GISEL-NEXT:    v_dual_lshlrev_b32 v18, 16, v25 :: v_dual_bitop2_b32 v11, v19, v11 bitop3:0x54
 ; GISEL-NEXT:    v_and_b32_e32 v15, 0xffff, v15
-; GISEL-NEXT:    s_mov_b32 s0, 0x3f803f80
 ; GISEL-NEXT:    v_and_b32_e32 v14, 0xffff, v14
+; GISEL-NEXT:    s_mov_b32 s0, 0x3f803f80
+; GISEL-NEXT:    s_mov_b32 s1, 1.0
 ; GISEL-NEXT:    s_mov_b32 s2, s0
 ; GISEL-NEXT:    s_mov_b32 s3, s0
-; GISEL-NEXT:    s_mov_b32 s1, 1.0
 ; GISEL-NEXT:    v_or_b32_e32 v12, v20, v12
 ; GISEL-NEXT:    v_or_b32_e32 v13, v21, v13
 ; GISEL-NEXT:    v_dual_mov_b64 v[20:21], s[2:3] :: v_dual_bitop2_b32 v15, v18, v15 bitop3:0x54
