@@ -4268,8 +4268,8 @@ checkBuiltinTemplateIdType(Sema &SemaRef, BuiltinTemplateDecl *BTD,
 /// Determine whether this alias template is "enable_if_t".
 /// libc++ >=14 uses "__enable_if_t" in C++11 mode.
 static bool isEnableIfAliasTemplate(TypeAliasTemplateDecl *AliasTemplate) {
-  return AliasTemplate->getName().equals("enable_if_t") ||
-         AliasTemplate->getName().equals("__enable_if_t");
+  return AliasTemplate->getName() == "enable_if_t" ||
+         AliasTemplate->getName() == "__enable_if_t";
 }
 
 /// Collect all of the separable terms in the given condition, which

@@ -1509,7 +1509,7 @@ public:
     if (Presumed.isInvalid())
       return false;
     StringRef Filename(Presumed.getFilename());
-    return Filename.equals("<built-in>");
+    return Filename == "<built-in>";
   }
 
   /// Returns whether \p Loc is located in a <command line> file.
@@ -1518,7 +1518,7 @@ public:
     if (Presumed.isInvalid())
       return false;
     StringRef Filename(Presumed.getFilename());
-    return Filename.equals("<command line>");
+    return Filename == "<command line>";
   }
 
   /// Returns whether \p Loc is located in a <scratch space> file.
@@ -1527,7 +1527,7 @@ public:
     if (Presumed.isInvalid())
       return false;
     StringRef Filename(Presumed.getFilename());
-    return Filename.equals("<scratch space>");
+    return Filename == "<scratch space>";
   }
 
   /// Returns if a SourceLocation is in a system header.
