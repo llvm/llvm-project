@@ -10,10 +10,8 @@
 #define LLVM_LIBC_SRC___SUPPORT_TIME_LINUX_TIMEOUT_H
 
 #include "hdr/time_macros.h"
-#include "hdr/types/struct_timespec.h"
-#include "src/__support/CPP/expected.h"
 #include "src/__support/time/linux/clock_conversion.h"
-#include "src/__support/time/units.h"
+#include "src/__support/time/linux/timeout_basic.h"
 
 namespace LIBC_NAMESPACE {
 namespace internal {
@@ -26,36 +24,12 @@ namespace internal {
 // clocks reportedly lead to undesired behaviors. Therefore, we also provide a
 // method to convert the timespec to a monotonic clock relative to the time of
 // function call.
-class AbsTimeout {
-  timespec timeout;
-  bool realtime_flag;
-  LIBC_INLINE constexpr explicit AbsTimeout(timespec ts, bool realtime)
-      : timeout(ts), realtime_flag(realtime) {}
-
-public:
-  enum class Error { Invalid, BeforeEpoch };
-  LIBC_INLINE timespec get_timespec() const { return timeout; }
-  LIBC_INLINE bool is_realtime() const { return realtime_flag; }
-  LIBC_INLINE static constexpr cpp::expected<AbsTimeout, Error>
-  from_timespec(timespec ts, bool realtime) {
-    using namespace time_units;
-    if (ts.tv_nsec < 0 || ts.tv_nsec >= 1_s_ns)
-      return cpp::unexpected<Error>(Error::Invalid);
-
-    // POSIX allows tv_sec to be negative. We interpret this as an expired
-    // timeout.
-    if (ts.tv_sec < 0)
-      return cpp::unexpected<Error>(Error::BeforeEpoch);
-
-    return AbsTimeout{ts, realtime};
+LIBC_INLINE void AbsTimeout::ensure_monotonic() {
+  if (realtime_flag) {
+    timeout = convert_clock(timeout, CLOCK_REALTIME, CLOCK_MONOTONIC);
+    realtime_flag = false;
   }
-  LIBC_INLINE void ensure_monotonic() {
-    if (realtime_flag) {
-      timeout = convert_clock(timeout, CLOCK_REALTIME, CLOCK_MONOTONIC);
-      realtime_flag = false;
-    }
-  }
-};
+}
 } // namespace internal
 } // namespace LIBC_NAMESPACE
 
