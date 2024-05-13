@@ -38,7 +38,6 @@ func.func @permutation_with_mask_xfer_write_fixed_width(%mem : memref<?x?xf32>, 
 // CHECK:             %[[TRANSPOSE_1:.*]] =  vector.transpose %[[BCAST_2]], [1, 2, 0] : vector<1x4x[8]xi1> to vector<4x[8]x1xi1>
 // CHECK:             %[[TRANSPOSE_2:.*]] =  vector.transpose %[[BCAST_1]], [1, 2, 0] : vector<1x4x[8]xi16> to vector<4x[8]x1xi16>
 // CHECK:             vector.transfer_write %[[TRANSPOSE_2]], %[[ARG_1]]{{.*}}, %[[TRANSPOSE_1]] {in_bounds = [true, true, true]} : vector<4x[8]x1xi16>, memref<1x4x?x1xi16>
-// CHECK:             return
 func.func @permutation_with_mask_xfer_write_scalable(%arg0: vector<4x[8]xi16>, %mem: memref<1x4x?x1xi16>, %mask:  vector<4x[8]xi1>){
      %c0 = arith.constant 0 : index
       vector.transfer_write %arg0, %mem[%c0, %c0, %c0, %c0], %mask {in_bounds = [true, true], permutation_map = affine_map<(d0, d1, d2, d3) -> (d1, d2)>
@@ -67,7 +66,6 @@ func.func @permutation_with_mask_xfer_write_scalable(%arg0: vector<4x[8]xi16>, %
 // CHECK:           %[[BCAST:.*]] = vector.broadcast %[[T_READ]] : vector<2x4xf32> to vector<8x2x4xf32>
 // CHECK:           %[[TRANSPOSE:.*]] = vector.transpose %[[BCAST]], [0, 2, 1] : vector<8x2x4xf32> to vector<8x4x2xf32>
 // CHECK:           return %[[TRANSPOSE]] : vector<8x4x2xf32>
-// CHECK:         }
 func.func @permutation_with_mask_xfer_read_fixed_width(%mem: memref<?x?xf32>, %dim_1: index, %dim_2: index) -> (vector<8x4x2xf32>) {
 
   %c0 = arith.constant 0 : index
@@ -91,7 +89,6 @@ func.func @permutation_with_mask_xfer_read_fixed_width(%mem: memref<?x?xf32>, %d
 // CHECK:           %[[BCAST:.*]] = vector.broadcast %[[T_READ]] : vector<2x[4]xf32> to vector<8x2x[4]xf32>
 // CHECK:           %[[TRANSPOSE:.*]] = vector.transpose %[[BCAST]], [0, 2, 1] : vector<8x2x[4]xf32> to vector<8x[4]x2xf32>
 // CHECK:           return %[[TRANSPOSE]] : vector<8x[4]x2xf32>
-// CHECK:         }
 func.func @permutation_with_mask_xfer_read_scalable(%mem: memref<?x?xf32>, %dim_1: index, %dim_2: index) -> (vector<8x[4]x2xf32>) {
 
   %c0 = arith.constant 0 : index
