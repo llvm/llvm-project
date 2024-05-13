@@ -18,8 +18,6 @@ add_entrypoint_object(
   COMPILE_OPTIONS
     ${full_build_flag}
   DEPENDS
-    libc.include.errno
-    libc.include.llvm-libc-macros.error_number_macros
-    libc.include.llvm-libc-macros.generic_error_number_macros
+    libc.hdr.errno_macros
     libc.src.__support.common
 )

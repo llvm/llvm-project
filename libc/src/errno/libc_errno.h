@@ -12,8 +12,7 @@
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/properties/architectures.h"
 
-#include <include/llvm-libc-macros/error-number-macros.h>
-#include <include/llvm-libc-macros/generic-error-number-macros.h>
+#include "hdr/errno_macros.h"
 
 // This header is to be consumed by internal implementations, in which all of
 // them should refer to `libc_errno` instead of using `errno` directly from
