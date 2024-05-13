@@ -166,12 +166,6 @@ public:
     if (LogDir.empty())
       return;
 
-    if (!sys::fs::is_directory(LogDir)) {
-      report_fatal_error("invalid AMDGPU split module log directory: '" +
-                             Twine(LogDir) + "' is not a directory",
-                         /*CrashDiag=*/false);
-    }
-
     // If a log directory is specified, create a new file with a unique name in
     // that directory.
     int Fd;
@@ -261,7 +255,7 @@ calculateFunctionCosts(SplitModuleLogger &SML, const AMDGPUTargetMachine &TM,
   }
 
   CostType FnCost = (ModuleCost - KernelCost);
-  SML << "=> Total Module Cost: " << ModuleCost << "\n"
+  SML << "=> Total Module Cost: " << ModuleCost << '\n'
       << "  => KernelCost: " << KernelCost << " ("
       << format("%0.2f", (float(KernelCost) / ModuleCost) * 100) << "%)\n"
       << "  => FnsCost: " << FnCost << " ("
@@ -492,7 +486,7 @@ doPartitioning(SplitModuleLogger &SML, Module &M, unsigned NumParts,
           SML << " (" << unsigned(((float(NewCost) / Cost) - 1) * 100)
               << "% increase)";
         }
-        SML << "\n";
+        SML << '\n';
 
         Cost = NewCost;
       }
@@ -535,9 +529,9 @@ doPartitioning(SplitModuleLogger &SML, Module &M, unsigned NumParts,
       for (const auto &[PID, Fns] : enumerate(Partitions)) {
         float Overlap = calculateOverlap(CurKernel.Dependencies, Fns);
         SML << "  => " << format("%0.2f", Overlap * 100) << "% overlap with P"
-            << PID << "\n";
+            << PID << '\n';
         if (Overlap > LargeKernelOverlapForMerge) {
-          SML << "  selecting P" << PID << "\n";
+          SML << "  selecting P" << PID << '\n';
           AssignToPartition(PID, CurKernel);
           Assigned = true;
         }
@@ -635,7 +629,7 @@ void llvm::splitAMDGPUModule(
   if (!NoExternalizeGlobals) {
     for (auto &GV : M.globals()) {
       if (GV.hasLocalLinkage())
-        SML << "[externalize] GV " << GV.getName() << "\n";
+        SML << "[externalize] GV " << GV.getName() << '\n';
       externalize(GV);
     }
   }
@@ -667,7 +661,7 @@ void llvm::splitAMDGPUModule(
           << " indirect:" << KWD.HasIndirectCall
           << " external:" << KWD.HasExternalCall << ")\n";
       for (const auto *Dep : KWD.Dependencies)
-        SML << "  [Dep] " << getName(*Dep) << "\n";
+        SML << "  [Dep] " << getName(*Dep) << '\n';
     }
   }
 
