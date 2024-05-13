@@ -711,11 +711,11 @@ bool ClangASTImporter::importRecordLayoutFromOrigin(
     for (RecordDecl::field_iterator fi = record->field_begin(),
                                     fe = record->field_end();
          fi != fe; ++fi) {
-      LLDB_LOG(log,
-               "LRT     (FieldDecl*){0:x}, Name = '{1}', Type = '{2}', Offset = "
-               "{3} bits",
-               *fi, fi->getName(), fi->getType().getAsString(),
-               field_offsets[*fi]);
+      LLDB_LOG(
+          log,
+          "LRT     (FieldDecl*){0:x}, Name = '{1}', Type = '{2}', Offset = "
+          "{3} bits",
+          *fi, fi->getName(), fi->getType().getAsString(), field_offsets[*fi]);
     }
     DeclFromParser<const CXXRecordDecl> parser_cxx_record =
         DynCast<const CXXRecordDecl>(parser_record);
@@ -1164,9 +1164,10 @@ void ClangASTImporter::ASTImporterDelegate::ImportDefinitionTo(
           from_named_decl->printName(name_stream);
           name_stream.flush();
         }
-        LLDB_LOG(log_ast, "==== [ClangASTImporter][TUDecl: {0:x}] Imported "
-                          "({1}Decl*){2:x}, named {3} (from "
-                          "(Decl*){4:x})",
+        LLDB_LOG(log_ast,
+                 "==== [ClangASTImporter][TUDecl: {0:x}] Imported "
+                 "({1}Decl*){2:x}, named {3} (from "
+                 "(Decl*){4:x})",
                  static_cast<void *>(to->getTranslationUnitDecl()),
                  from->getDeclKindName(), static_cast<void *>(to), name_string,
                  static_cast<void *>(from));
@@ -1294,10 +1295,11 @@ void ClangASTImporter::ASTImporterDelegate::Imported(clang::Decl *from,
       from_named_decl->printName(name_stream);
       name_stream.flush();
 
-      LLDB_LOG(log,
-               "    [ClangASTImporter] Imported ({0}Decl*){1:x}, named {2} (from "
-               "(Decl*){3:x}), metadata {4}",
-               from->getDeclKindName(), to, name_string, from, user_id);
+      LLDB_LOG(
+          log,
+          "    [ClangASTImporter] Imported ({0}Decl*){1:x}, named {2} (from "
+          "(Decl*){3:x}), metadata {4}",
+          from->getDeclKindName(), to, name_string, from, user_id);
     } else {
       LLDB_LOG(log,
                "    [ClangASTImporter] Imported ({0}Decl*){1:x} (from "
