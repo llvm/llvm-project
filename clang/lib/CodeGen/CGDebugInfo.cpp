@@ -5707,7 +5707,7 @@ void CGDebugInfo::EmitPseudoVariable(CGBuilderTy &Builder,
   unsigned Line = Builder.getCurrentDebugLocation().getLine();
   unsigned Column = Builder.getCurrentDebugLocation().getCol();
   llvm::DILocalVariable *D = DBuilder.createAutoVariable(
-      LexicalBlockStack.back(), "", Unit, Line, Type, false,
+      LexicalBlockStack.back(), "", nullptr, 0, Type, false,
       llvm::DINode::FlagArtificial);
   llvm::DILocation *DIL =
       llvm::DILocation::get(CGM.getLLVMContext(), Line, Column,

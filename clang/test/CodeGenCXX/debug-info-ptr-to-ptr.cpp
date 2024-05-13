@@ -107,14 +107,14 @@ int func6(B &b) {
 // CHECK-DAG: [[META_BR:![0-9]+]] = !DIDerivedType(tag: DW_TAG_reference_type, baseType: [[META_B]],
 
 // CHECK-DAG: [[DBG1]] = !DILocation(line: 34, column: 13,
-// CHECK-DAG: [[META1]] = !DILocalVariable(scope: {{.*}}, file: {{.*}}, line: 34, type: [[META_AP]], flags: DIFlagArtificial)
+// CHECK-DAG: [[META1]] = !DILocalVariable(scope: {{.*}}, type: [[META_AP]], flags: DIFlagArtificial)
 // CHECK-DAG: [[META2]] = !DILocalVariable(name: "b", arg: 1, scope: {{.*}}, file: {{.*}}, line: 46, type: [[META_VP]])
-// CHECK-DAG: [[META3]] = !DILocalVariable(scope: {{.*}}, file: {{.*}}, line: 47, type: [[META_BP]], flags: DIFlagArtificial)
+// CHECK-DAG: [[META3]] = !DILocalVariable(scope: {{.*}}, type: [[META_BP]], flags: DIFlagArtificial)
 // CHECK-DAG: [[META4]] = !DILocalVariable(name: "b", arg: 1, scope: {{.*}}, file: {{.*}}, line: 55, type: [[META_BP]])
 // CHECK-DAG: [[META5]] = !DILocalVariable(name: "local1", scope: {{.*}}, file: {{.*}}, line: 56, type: [[META_AP]])
-// CHECK-DAG: [[META6]] = !DILocalVariable(scope: {{.*}}, file: {{.*}}, line: 76, type: [[META_AP]], flags: DIFlagArtificial)
+// CHECK-DAG: [[META6]] = !DILocalVariable(scope: {{.*}}, type: [[META_AP]], flags: DIFlagArtificial)
 // CHECK-DAG: [[META7]] = !DILocalVariable(name: "arr", arg: 1, scope: {{.*}}, file: {{.*}}, line: 88, type: [[META_VP]])
 // CHECK-DAG: [[META8]] = !DILocalVariable(name: "n", arg: 2, scope: {{.*}}, file: {{.*}}, line: 88, type: [[META_I32]])
-// CHECK-DAG: [[META9]] = !DILocalVariable(scope: {{.*}}, file: {{.*}}, line: 89, type: [[META_AP]], flags: DIFlagArtificial)
+// CHECK-DAG: [[META9]] = !DILocalVariable(scope: {{.*}}, type: [[META_AP]], flags: DIFlagArtificial)
 // CHECK-DAG: [[META10]] = !DILocalVariable(name: "b", arg: 1, scope: {{.*}}, file: {{.*}}, line: 95, type: [[META_BR]])
-// CHECK-DAG: [[META11]] = !DILocalVariable(scope: {{.*}}, file: {{.*}}, line: 96, type: [[META_AP]], flags: DIFlagArtificial)
+// CHECK-DAG: [[META11]] = !DILocalVariable(scope: {{.*}}, type: [[META_AP]], flags: DIFlagArtificial)
