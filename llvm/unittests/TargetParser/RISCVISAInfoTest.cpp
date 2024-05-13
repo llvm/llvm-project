@@ -38,11 +38,16 @@ TEST(ParseNormalizedArchString, RejectsInvalidBaseISA) {
 }
 
 TEST(ParseNormalizedArchString, RejectsMalformedInputs) {
-  for (StringRef Input :
-       {"rv64i2p0_", "rv32i2p0__a2p0", "rv64e2p", "rv32i", "rv64ip1"}) {
+  for (StringRef Input : {"rv64e2p", "rv32i", "rv64ip1"}) {
     EXPECT_EQ(
         toString(RISCVISAInfo::parseNormalizedArchString(Input).takeError()),
         "extension lacks version in expected format");
+  }
+
+  for (StringRef Input : {"rv64i2p0_", "rv32i2p0__a2p0"}) {
+    EXPECT_EQ(
+        toString(RISCVISAInfo::parseNormalizedArchString(Input).takeError()),
+        "extension name missing after separator '_'");
   }
 }
 

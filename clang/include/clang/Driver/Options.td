@@ -4180,6 +4180,14 @@ defm strict_return : BoolFOption<"strict-return",
 
 let Flags = [TargetSpecific] in {
 defm ptrauth_intrinsics : OptInCC1FFlag<"ptrauth-intrinsics", "Enable pointer authentication intrinsics">;
+defm ptrauth_calls : OptInCC1FFlag<"ptrauth-calls", "Enable signing and authentication of all indirect calls">;
+defm ptrauth_returns : OptInCC1FFlag<"ptrauth-returns", "Enable signing and authentication of return addresses">;
+defm ptrauth_auth_traps : OptInCC1FFlag<"ptrauth-auth-traps", "Enable traps on authentication failures">;
+defm ptrauth_vtable_pointer_address_discrimination :
+  OptInCC1FFlag<"ptrauth-vtable-pointer-address-discrimination", "Enable address discrimination of vtable pointers">;
+defm ptrauth_vtable_pointer_type_discrimination :
+  OptInCC1FFlag<"ptrauth-vtable-pointer-type-discrimination", "Enable type discrimination of vtable pointers">;
+defm ptrauth_init_fini : OptInCC1FFlag<"ptrauth-init-fini", "Enable signing of function pointers in init/fini arrays">;
 }
 
 def fenable_matrix : Flag<["-"], "fenable-matrix">, Group<f_Group>,
@@ -6265,9 +6273,9 @@ def mno_gather : Flag<["-"], "mno-gather">, Group<m_Group>,
 def mno_scatter : Flag<["-"], "mno-scatter">, Group<m_Group>,
                   HelpText<"Disable generation of scatter instructions in auto-vectorization(x86 only)">;
 def mapx_features_EQ : CommaJoined<["-"], "mapx-features=">, Group<m_x86_Features_Group>,
-    HelpText<"Enable features of APX">, Values<"egpr,push2pop2,ppx,ndd,ccmp,cf">;
+    HelpText<"Enable features of APX">, Values<"egpr,push2pop2,ppx,ndd,ccmp,nf,cf">;
 def mno_apx_features_EQ : CommaJoined<["-"], "mno-apx-features=">, Group<m_x86_Features_Group>,
-    HelpText<"Disable features of APX">, Values<"egpr,push2pop2,ppx,ndd,ccmp,cf">;
+    HelpText<"Disable features of APX">, Values<"egpr,push2pop2,ppx,ndd,ccmp,nf,cf">;
 // Features egpr, push2pop2, ppx and ndd are validated with llvm-test-suite && cpu2017 on Intel SDE.
 // For stability, we turn on these features only for -mapxf. After a feature pass the validation,
 // we will add it to -mapxf.
