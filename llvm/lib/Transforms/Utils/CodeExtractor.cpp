@@ -1678,8 +1678,9 @@ static void fixupDebugInfoPostExtraction(Function &OldFunc, Function &NewFunc,
     DVR->getMarker()->MarkedInstr->dropOneDbgRecord(DVR);
   DIB.finalizeSubprogram(NewSP);
 
-  // Fix up the scope information attached to the line locations in the new
-  // function.
+  // Fix up the scope information attached to the line locations and the
+  // debug assignment metadata in the new function.
+  DenseMap<DIAssignID *, DIAssignID *> AssignmentIDMap;
   for (Instruction &I : instructions(NewFunc)) {
     if (const DebugLoc &DL = I.getDebugLoc())
       I.setDebugLoc(
@@ -1695,6 +1696,7 @@ static void fixupDebugInfoPostExtraction(Function &OldFunc, Function &NewFunc,
       return MD;
     };
     updateLoopMetadataDebugLocations(I, updateLoopInfoLoc);
+    at::remapAssignID(AssignmentIDMap, I);
   }
   if (!TheCall.getDebugLoc())
     TheCall.setDebugLoc(DILocation::get(Ctx, 0, 0, OldSP));
