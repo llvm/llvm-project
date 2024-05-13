@@ -9,7 +9,7 @@ from lldbsuite.test import lldbutil
 
 class BSDArchivesTestCase(TestBase):
     @expectedFailureAll(
-        oslist=["windows"],
+        hostoslist=["windows"],
         bugnumber="llvm.org/pr24527.  Makefile.rules doesn't know how to build static libs on Windows",
     )
     def test(self):
