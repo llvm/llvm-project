@@ -182,8 +182,8 @@ class DebuggerAPITestCase(TestBase):
 
         # Should call both `foo()` and `bar()`. Order is undermined because
         # of the `unordered_map` in the implementation.
-        self.assertTrue(('foo', original_dbg_id) in called)
-        self.assertTrue(('bar', original_dbg_id) in called)
+        self.assertIn(('foo', original_dbg_id), called)
+        self.assertIn(('bar', original_dbg_id), called)
 
     def test_RemoveDestroyCallback(self):
         original_dbg_id = self.dbg.GetID()

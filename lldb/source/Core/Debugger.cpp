@@ -755,11 +755,11 @@ void Debugger::HandleDestroyCallback() {
   // In the removal case, because the order of the container is random, it's
   // wise to not depend on the order and instead implement logic inside the
   // callbacks to decide if their work should be skipped.
-  while (m_destroy_callback_and_baton.size()) {
+  while (!m_destroy_callback_and_baton.empty()) {
     auto iter = m_destroy_callback_and_baton.begin();
-    const lldb::destroy_callback_token_t &token = iter->first;
-    const lldb_private::DebuggerDestroyCallback &callback = iter->second.first;
-    void *const &baton = iter->second.second;
+    const lldb::destroy_callback_token_t token = iter->first;
+    const lldb_private::DebuggerDestroyCallback callback = iter->second.first;
+    void *const baton = iter->second.second;
     callback(user_id, baton);
     // Using `token` to erase, because elements may have been added/removed, and
     // that will cause error "invalid iterator access!" if `iter` is used
