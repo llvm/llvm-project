@@ -600,10 +600,9 @@ define float @fmul_pow_select(i32 %cnt, i1 %c) nounwind {
 ; VI-LABEL: fmul_pow_select:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_and_b32_e32 v1, 1, v1
-; VI-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v1
-; VI-NEXT:    v_cndmask_b32_e64 v1, 2, 1, vcc
-; VI-NEXT:    v_lshlrev_b32_e32 v0, v0, v1
+; VI-NEXT:    s_and_b64 s[4:5], s[4:5], exec
+; VI-NEXT:    s_cselect_b32 s4, 1, 2
+; VI-NEXT:    v_lshlrev_b32_e64 v0, v0, s4
 ; VI-NEXT:    v_cvt_f32_u32_e32 v0, v0
 ; VI-NEXT:    v_mul_f32_e32 v0, 0x41100000, v0
 ; VI-NEXT:    s_setpc_b64 s[30:31]
@@ -611,10 +610,9 @@ define float @fmul_pow_select(i32 %cnt, i1 %c) nounwind {
 ; GFX10-LABEL: fmul_pow_select:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    v_and_b32_e32 v1, 1, v1
-; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v1
-; GFX10-NEXT:    v_cndmask_b32_e64 v1, 2, 1, vcc_lo
-; GFX10-NEXT:    v_lshlrev_b32_e32 v0, v0, v1
+; GFX10-NEXT:    s_and_b32 s4, s4, exec_lo
+; GFX10-NEXT:    s_cselect_b32 s4, 1, 2
+; GFX10-NEXT:    v_lshlrev_b32_e64 v0, v0, s4
 ; GFX10-NEXT:    v_cvt_f32_u32_e32 v0, v0
 ; GFX10-NEXT:    v_mul_f32_e32 v0, 0x41100000, v0
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
@@ -622,13 +620,12 @@ define float @fmul_pow_select(i32 %cnt, i1 %c) nounwind {
 ; GFX11-LABEL: fmul_pow_select:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_and_b32_e32 v1, 1, v1
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
-; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v1
-; GFX11-NEXT:    v_cndmask_b32_e64 v1, 2, 1, vcc_lo
-; GFX11-NEXT:    v_lshlrev_b32_e32 v0, v0, v1
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-NEXT:    s_and_b32 s0, s0, exec_lo
+; GFX11-NEXT:    s_cselect_b32 s0, 1, 2
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-NEXT:    v_lshlrev_b32_e64 v0, v0, s0
 ; GFX11-NEXT:    v_cvt_f32_u32_e32 v0, v0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_mul_f32_e32 v0, 0x41100000, v0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %shl2 = shl nuw i32 2, %cnt

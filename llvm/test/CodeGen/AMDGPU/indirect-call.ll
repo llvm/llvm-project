@@ -646,12 +646,12 @@ define void @test_indirect_call_vgpr_ptr_in_branch(ptr %fptr, i1 %cond) {
 ; GCN-LABEL: test_indirect_call_vgpr_ptr_in_branch:
 ; GCN:       ; %bb.0: ; %bb0
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    s_mov_b32 s16, s33
+; GCN-NEXT:    s_mov_b32 s18, s33
 ; GCN-NEXT:    s_mov_b32 s33, s32
-; GCN-NEXT:    s_or_saveexec_b64 s[18:19], -1
+; GCN-NEXT:    s_or_saveexec_b64 s[20:21], -1
 ; GCN-NEXT:    buffer_store_dword v40, off, s[0:3], s33 ; 4-byte Folded Spill
-; GCN-NEXT:    s_mov_b64 exec, s[18:19]
-; GCN-NEXT:    v_writelane_b32 v40, s16, 20
+; GCN-NEXT:    s_mov_b64 exec, s[20:21]
+; GCN-NEXT:    v_writelane_b32 v40, s18, 20
 ; GCN-NEXT:    s_addk_i32 s32, 0x400
 ; GCN-NEXT:    v_writelane_b32 v40, s30, 0
 ; GCN-NEXT:    v_writelane_b32 v40, s31, 1
@@ -681,9 +681,7 @@ define void @test_indirect_call_vgpr_ptr_in_branch(ptr %fptr, i1 %cond) {
 ; GCN-NEXT:    s_mov_b64 s[36:37], s[8:9]
 ; GCN-NEXT:    s_mov_b64 s[38:39], s[6:7]
 ; GCN-NEXT:    s_mov_b64 s[40:41], s[4:5]
-; GCN-NEXT:    v_and_b32_e32 v2, 1, v2
-; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v2
-; GCN-NEXT:    s_and_saveexec_b64 s[46:47], vcc
+; GCN-NEXT:    s_and_saveexec_b64 s[46:47], s[16:17]
 ; GCN-NEXT:    s_cbranch_execz .LBB5_4
 ; GCN-NEXT:  ; %bb.1: ; %bb1
 ; GCN-NEXT:    s_mov_b64 s[48:49], exec
@@ -741,12 +739,12 @@ define void @test_indirect_call_vgpr_ptr_in_branch(ptr %fptr, i1 %cond) {
 ; GISEL-LABEL: test_indirect_call_vgpr_ptr_in_branch:
 ; GISEL:       ; %bb.0: ; %bb0
 ; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-NEXT:    s_mov_b32 s16, s33
+; GISEL-NEXT:    s_mov_b32 s18, s33
 ; GISEL-NEXT:    s_mov_b32 s33, s32
-; GISEL-NEXT:    s_or_saveexec_b64 s[18:19], -1
+; GISEL-NEXT:    s_or_saveexec_b64 s[20:21], -1
 ; GISEL-NEXT:    buffer_store_dword v40, off, s[0:3], s33 ; 4-byte Folded Spill
-; GISEL-NEXT:    s_mov_b64 exec, s[18:19]
-; GISEL-NEXT:    v_writelane_b32 v40, s16, 20
+; GISEL-NEXT:    s_mov_b64 exec, s[20:21]
+; GISEL-NEXT:    v_writelane_b32 v40, s18, 20
 ; GISEL-NEXT:    s_addk_i32 s32, 0x400
 ; GISEL-NEXT:    v_writelane_b32 v40, s30, 0
 ; GISEL-NEXT:    v_writelane_b32 v40, s31, 1
@@ -776,9 +774,7 @@ define void @test_indirect_call_vgpr_ptr_in_branch(ptr %fptr, i1 %cond) {
 ; GISEL-NEXT:    s_mov_b64 s[36:37], s[8:9]
 ; GISEL-NEXT:    s_mov_b64 s[38:39], s[6:7]
 ; GISEL-NEXT:    s_mov_b64 s[40:41], s[4:5]
-; GISEL-NEXT:    v_and_b32_e32 v2, 1, v2
-; GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v2
-; GISEL-NEXT:    s_and_saveexec_b64 s[46:47], vcc
+; GISEL-NEXT:    s_and_saveexec_b64 s[46:47], s[16:17]
 ; GISEL-NEXT:    s_cbranch_execz .LBB5_4
 ; GISEL-NEXT:  ; %bb.1: ; %bb1
 ; GISEL-NEXT:    s_mov_b64 s[48:49], exec

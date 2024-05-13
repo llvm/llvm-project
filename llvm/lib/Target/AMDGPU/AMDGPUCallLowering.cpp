@@ -65,6 +65,7 @@ struct AMDGPUOutgoingValueHandler : public CallLowering::OutgoingValueHandler {
                         const CCValAssign &VA) override {
     if (VA.getLocVT() == MVT::i1) {
       MIRBuilder.buildCopy(PhysReg, ValVReg);
+      MIB.addUse(PhysReg, RegState::Implicit);
       return;
     }
 
@@ -316,6 +317,31 @@ bool AMDGPUCallLowering::canLowerReturn(MachineFunction &MF,
   return checkReturn(CCInfo, Outs, TLI.CCAssignFnForReturn(CallConv, IsVarArg));
 }
 
+/// Special handling for i1 return val: based on determineAndHandleAssignments()
+bool AMDGPUCallLowering::determineAndHandleAssignmentsForI1Return(
+    ValueHandler &Handler, ValueAssigner &Assigner,
+    SmallVectorImpl<ArgInfo> &Args, MachineIRBuilder &MIRBuilder,
+    CallingConv::ID CallConv, bool IsVarArg) const {
+
+  MachineFunction &MF = MIRBuilder.getMF();
+  const Function &F = MF.getFunction();
+
+  SmallVector<CCValAssign, 16> ArgLocs;
+
+  CCState CCInfo(CallConv, IsVarArg, MF, ArgLocs, F.getContext());
+
+  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
+  if (!ST.enableFlatScratch()) {
+    SIMachineFunctionInfo *FuncInfo = MF.getInfo<SIMachineFunctionInfo>();
+    CCInfo.AllocateReg(FuncInfo->getScratchRSrcReg());
+  }
+
+  if (!determineAssignments(Assigner, Args, CCInfo))
+    return false;
+
+  return handleAssignments(Handler, Args, CCInfo, ArgLocs, MIRBuilder);
+}
+
 /// Lower the return value for the already existing \p Ret. This assumes that
 /// \p B's insertion point is correct.
 bool AMDGPUCallLowering::lowerReturnVal(MachineIRBuilder &B,
@@ -378,8 +404,13 @@ bool AMDGPUCallLowering::lowerReturnVal(MachineIRBuilder &B,
 
   OutgoingValueAssigner Assigner(AssignFn);
   AMDGPUOutgoingValueHandler RetHandler(B, *MRI, Ret);
-  return determineAndHandleAssignments(RetHandler, Assigner, SplitRetInfos, B,
-                                       CC, F.isVarArg());
+
+  if (SplitEVTs.size() == 1 && SplitEVTs[0] == MVT::i1)
+    return determineAndHandleAssignmentsForI1Return(
+        RetHandler, Assigner, SplitRetInfos, B, CC, F.isVarArg());
+  else
+    return determineAndHandleAssignments(RetHandler, Assigner, SplitRetInfos, B,
+                                         CC, F.isVarArg());
 }
 
 bool AMDGPUCallLowering::lowerReturn(MachineIRBuilder &B, const Value *Val,
@@ -1493,6 +1524,11 @@ bool AMDGPUCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
       return false;
   }
 
+  if (!ST.enableFlatScratch()) {
+    SIMachineFunctionInfo *FuncInfo = MF.getInfo<SIMachineFunctionInfo>();
+    CCInfo.AllocateReg(FuncInfo->getScratchRSrcReg());
+  }
+
   // Do the actual argument marshalling.
   SmallVector<Register, 8> PhysRegs;
 
@@ -1539,9 +1575,16 @@ bool AMDGPUCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
                                                       Info.IsVarArg);
     IncomingValueAssigner Assigner(RetAssignFn);
     CallReturnHandler Handler(MIRBuilder, MRI, MIB);
-    if (!determineAndHandleAssignments(Handler, Assigner, InArgs, MIRBuilder,
-                                       Info.CallConv, Info.IsVarArg))
-      return false;
+    if (Info.OrigRet.Ty->isIntegerTy(1)) {
+      if (!determineAndHandleAssignmentsForI1Return(Handler, Assigner, InArgs,
+                                                    MIRBuilder, Info.CallConv,
+                                                    Info.IsVarArg))
+        return false;
+    } else {
+      if (!determineAndHandleAssignments(Handler, Assigner, InArgs, MIRBuilder,
+                                         Info.CallConv, Info.IsVarArg))
+        return false;
+    }
   }
 
   uint64_t CalleePopBytes = NumBytes;

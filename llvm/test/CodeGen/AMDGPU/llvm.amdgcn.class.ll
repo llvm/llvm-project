@@ -509,8 +509,7 @@ define amdgpu_kernel void @test_class_undef_f32(ptr addrspace(1) %out, float %a,
 
 ; SI-LABEL: {{^}}test_fold_and_ord:
 ; SI: s_waitcnt
-; SI-NEXT: v_cmp_class_f32_e64 [[COND:s\[[0-9]+:[0-9]+\]]], v0, 32{{$}}
-; SI-NEXT: v_cndmask_b32_e64 v0, 0, 1, [[COND]]
+; SI-NEXT: v_cmp_class_f32_e64 s[4:5], v0, 3
 ; SI-NEXT: s_setpc_b64
 define i1 @test_fold_and_ord(float %a) {
   %class = call i1 @llvm.amdgcn.class.f32(float %a, i32 35) #1
@@ -521,8 +520,7 @@ define i1 @test_fold_and_ord(float %a) {
 
 ; SI-LABEL: {{^}}test_fold_and_unord:
 ; SI: s_waitcnt
-; SI-NEXT: v_cmp_class_f32_e64 [[COND:s\[[0-9]+:[0-9]+\]]], v0, 3{{$}}
-; SI-NEXT: v_cndmask_b32_e64 v0, 0, 1, [[COND]]
+; SI-NEXT: v_cmp_class_f32_e64 s[4:5], v0, 3
 ; SI-NEXT: s_setpc_b64
 define i1 @test_fold_and_unord(float %a) {
   %class = call i1 @llvm.amdgcn.class.f32(float %a, i32 35) #1

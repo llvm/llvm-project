@@ -17,7 +17,7 @@ define i1 @i1_func_void() {
 ; GFX9-NEXT:    global_load_ubyte v0, v0, s[4:5]
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_and_b32_e32 v0, 1, v0
-; GFX9-NEXT:    v_cmp_eq_u32_e64 s[0:1], 1, v0
+; GFX9-NEXT:    v_cmp_eq_u32_e64 s[4:5], 1, v0
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: i1_func_void:
@@ -57,7 +57,7 @@ define void @test_call_i1_func_void() {
 ; GFX9-NEXT:    v_writelane_b32 v2, s31, 1
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    s_swappc_b64 s[30:31], s[4:5]
-; GFX9-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
+; GFX9-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[4:5]
 ; GFX9-NEXT:    global_store_byte v[0:1], v0, off
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_readlane_b32 s31, v2, 1
@@ -118,7 +118,7 @@ define zeroext i1 @zeroext_i1_func_void() {
 ; GFX9-NEXT:    global_load_ubyte v0, v0, s[4:5]
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_and_b32_e32 v0, 1, v0
-; GFX9-NEXT:    v_cmp_eq_u32_e64 s[0:1], 1, v0
+; GFX9-NEXT:    v_cmp_eq_u32_e64 s[4:5], 1, v0
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: zeroext_i1_func_void:
@@ -158,7 +158,7 @@ define void @test_call_zeroext_i1_func_void() {
 ; GFX9-NEXT:    v_writelane_b32 v2, s31, 1
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    s_swappc_b64 s[30:31], s[4:5]
-; GFX9-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
+; GFX9-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[4:5]
 ; GFX9-NEXT:    global_store_byte v[0:1], v0, off
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_readlane_b32 s31, v2, 1
@@ -219,7 +219,7 @@ define signext i1 @signext_i1_func_void() {
 ; GFX9-NEXT:    global_load_ubyte v0, v0, s[4:5]
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_and_b32_e32 v0, 1, v0
-; GFX9-NEXT:    v_cmp_eq_u32_e64 s[0:1], 1, v0
+; GFX9-NEXT:    v_cmp_eq_u32_e64 s[4:5], 1, v0
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: signext_i1_func_void:
@@ -259,7 +259,7 @@ define void @test_call_signext_i1_func_void() {
 ; GFX9-NEXT:    v_writelane_b32 v2, s31, 1
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    s_swappc_b64 s[30:31], s[4:5]
-; GFX9-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
+; GFX9-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[4:5]
 ; GFX9-NEXT:    global_store_byte v[0:1], v0, off
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_readlane_b32 s31, v2, 1
@@ -419,8 +419,8 @@ define [2 x i1] @a2i1_func_void() {
 ; GFX9-NEXT:    v_and_b32_e32 v0, 1, v1
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_and_b32_e32 v1, 1, v2
-; GFX9-NEXT:    v_cmp_eq_u32_e64 s[2:3], 1, v1
-; GFX9-NEXT:    v_cmp_eq_u32_e64 s[0:1], 1, v0
+; GFX9-NEXT:    v_cmp_eq_u32_e64 s[6:7], 1, v1
+; GFX9-NEXT:    v_cmp_eq_u32_e64 s[4:5], 1, v0
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: a2i1_func_void:
@@ -451,7 +451,7 @@ define void @test_call_a2i1_func_void() {
 ; GFX9-LABEL: test_call_a2i1_func_void:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    s_mov_b32 s6, s33
+; GFX9-NEXT:    s_mov_b32 s8, s33
 ; GFX9-NEXT:    s_mov_b32 s33, s32
 ; GFX9-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX9-NEXT:    buffer_store_dword v3, off, s[0:3], s33 ; 4-byte Folded Spill
@@ -465,10 +465,10 @@ define void @test_call_a2i1_func_void() {
 ; GFX9-NEXT:    v_writelane_b32 v3, s31, 1
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    s_swappc_b64 s[30:31], s[4:5]
-; GFX9-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[2:3]
+; GFX9-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[6:7]
 ; GFX9-NEXT:    global_store_byte v[0:1], v0, off
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
+; GFX9-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[4:5]
 ; GFX9-NEXT:    global_store_byte v[0:1], v0, off
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_readlane_b32 s31, v3, 1
@@ -477,7 +477,7 @@ define void @test_call_a2i1_func_void() {
 ; GFX9-NEXT:    buffer_load_dword v3, off, s[0:3], s33 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_mov_b64 exec, s[4:5]
 ; GFX9-NEXT:    s_addk_i32 s32, 0xfc00
-; GFX9-NEXT:    s_mov_b32 s33, s6
+; GFX9-NEXT:    s_mov_b32 s33, s8
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;

@@ -8,13 +8,9 @@ define void @machinesink_loop_variable_out_of_divergent_loop(i32 %arg, i1 %cmp49
 ; CHECK-LABEL: machinesink_loop_variable_out_of_divergent_loop:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    v_and_b32_e32 v1, 1, v1
-; CHECK-NEXT:    v_and_b32_e32 v3, 1, v3
-; CHECK-NEXT:    s_mov_b32 s5, 0
-; CHECK-NEXT:    v_cmp_eq_u32_e64 s4, 1, v1
-; CHECK-NEXT:    v_mov_b32_e32 v1, 0
-; CHECK-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v3
+; CHECK-NEXT:    v_mov_b32_e32 v2, 0
 ; CHECK-NEXT:    s_xor_b32 s6, s4, -1
+; CHECK-NEXT:    s_mov_b32 s4, 0
 ; CHECK-NEXT:    s_inst_prefetch 0x1
 ; CHECK-NEXT:    s_branch .LBB0_3
 ; CHECK-NEXT:    .p2align 6
@@ -25,12 +21,12 @@ define void @machinesink_loop_variable_out_of_divergent_loop(i32 %arg, i1 %cmp49
 ; CHECK-NEXT:  .LBB0_2: ; %Flow1
 ; CHECK-NEXT:    ; in Loop: Header=BB0_3 Depth=1
 ; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s7
-; CHECK-NEXT:    v_cmp_ne_u32_e64 s4, 0, v3
+; CHECK-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v3
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; j lastloop entry
 ; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    s_or_b32 s5, s4, s5
-; CHECK-NEXT:    s_andn2_b32 exec_lo, exec_lo, s5
+; CHECK-NEXT:    s_or_b32 s4, vcc_lo, s4
+; CHECK-NEXT:    s_andn2_b32 exec_lo, exec_lo, s4
 ; CHECK-NEXT:    s_cbranch_execz .LBB0_8
 ; CHECK-NEXT:  .LBB0_3: ; %for.body33
 ; CHECK-NEXT:    ; =>This Loop Header: Depth=1
@@ -44,35 +40,34 @@ define void @machinesink_loop_variable_out_of_divergent_loop(i32 %arg, i1 %cmp49
 ; CHECK-NEXT:    s_mov_b32 s8, 0
 ; CHECK-NEXT:    s_mov_b32 s9, 0
 ; CHECK-NEXT:    s_branch .LBB0_6
-; CHECK-NEXT:    .p2align 6
 ; CHECK-NEXT:  .LBB0_5: ; %if.end118
 ; CHECK-NEXT:    ; in Loop: Header=BB0_6 Depth=2
-; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s4
+; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s10
 ; CHECK-NEXT:    s_add_i32 s9, s9, 4
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; backedge
 ; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    v_add_nc_u32_e32 v4, s9, v2
-; CHECK-NEXT:    v_cmp_ge_u32_e64 s4, v4, v0
-; CHECK-NEXT:    s_or_b32 s8, s4, s8
+; CHECK-NEXT:    v_add_nc_u32_e32 v4, s9, v1
+; CHECK-NEXT:    v_cmp_ge_u32_e32 vcc_lo, v4, v0
+; CHECK-NEXT:    s_or_b32 s8, vcc_lo, s8
 ; CHECK-NEXT:    s_andn2_b32 exec_lo, exec_lo, s8
 ; CHECK-NEXT:    s_cbranch_execz .LBB0_1
 ; CHECK-NEXT:  .LBB0_6: ; %for.body51
 ; CHECK-NEXT:    ; Parent Loop BB0_3 Depth=1
 ; CHECK-NEXT:    ; => This Inner Loop Header: Depth=2
 ; CHECK-NEXT:    v_mov_b32_e32 v3, 1
-; CHECK-NEXT:    s_and_saveexec_b32 s4, vcc_lo
+; CHECK-NEXT:    s_and_saveexec_b32 s10, s5
 ; CHECK-NEXT:    s_cbranch_execz .LBB0_5
 ; CHECK-NEXT:  ; %bb.7: ; %if.then112
 ; CHECK-NEXT:    ; in Loop: Header=BB0_6 Depth=2
-; CHECK-NEXT:    s_add_i32 s10, s9, 4
+; CHECK-NEXT:    s_add_i32 s11, s9, 4
 ; CHECK-NEXT:    v_mov_b32_e32 v3, 0
-; CHECK-NEXT:    v_mov_b32_e32 v4, s10
-; CHECK-NEXT:    ds_write_b32 v1, v4
+; CHECK-NEXT:    v_mov_b32_e32 v4, s11
+; CHECK-NEXT:    ds_write_b32 v2, v4
 ; CHECK-NEXT:    s_branch .LBB0_5
 ; CHECK-NEXT:  .LBB0_8: ; %for.body159.preheader
 ; CHECK-NEXT:    s_inst_prefetch 0x2
-; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s5
+; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s4
 ; CHECK-NEXT:    s_mov_b32 vcc_lo, exec_lo
 ; CHECK-NEXT:  .LBB0_9: ; %for.body159
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1

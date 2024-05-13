@@ -666,18 +666,14 @@ define float @fold_f32_select_user_fsub_into_fneg_modifier_ieee(i1 %cond, float 
 ; SDAG-LABEL: fold_f32_select_user_fsub_into_fneg_modifier_ieee:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-NEXT:    v_and_b32_e32 v0, 1, v0
-; SDAG-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
-; SDAG-NEXT:    v_cndmask_b32_e64 v0, v2, -v1, vcc
+; SDAG-NEXT:    v_cndmask_b32_e64 v0, v1, -v0, s[4:5]
 ; SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-LABEL: fold_f32_select_user_fsub_into_fneg_modifier_ieee:
 ; GISEL:       ; %bb.0:
 ; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-NEXT:    v_and_b32_e32 v0, 1, v0
-; GISEL-NEXT:    v_max_f32_e64 v1, -v1, -v1
-; GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
-; GISEL-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc
+; GISEL-NEXT:    v_max_f32_e64 v0, -v0, -v0
+; GISEL-NEXT:    v_cndmask_b32_e64 v0, v1, v0, s[4:5]
 ; GISEL-NEXT:    s_setpc_b64 s[30:31]
   %sub = fsub float -0.0, %v0
   %mul = select i1 %cond, float %sub, float %v1
@@ -688,19 +684,15 @@ define float @no_fold_f32_select_user_fsub_into_fneg_modifier_daz(i1 %cond, floa
 ; SDAG-LABEL: no_fold_f32_select_user_fsub_into_fneg_modifier_daz:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-NEXT:    v_and_b32_e32 v0, 1, v0
-; SDAG-NEXT:    v_sub_f32_e32 v1, 0x80000000, v1
-; SDAG-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
-; SDAG-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc
+; SDAG-NEXT:    v_sub_f32_e32 v0, 0x80000000, v0
+; SDAG-NEXT:    v_cndmask_b32_e64 v0, v1, v0, s[4:5]
 ; SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-LABEL: no_fold_f32_select_user_fsub_into_fneg_modifier_daz:
 ; GISEL:       ; %bb.0:
 ; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-NEXT:    v_and_b32_e32 v0, 1, v0
-; GISEL-NEXT:    v_max_f32_e64 v1, -v1, -v1
-; GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
-; GISEL-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc
+; GISEL-NEXT:    v_max_f32_e64 v0, -v0, -v0
+; GISEL-NEXT:    v_cndmask_b32_e64 v0, v1, v0, s[4:5]
 ; GISEL-NEXT:    s_setpc_b64 s[30:31]
   %sub = fsub float -0.0, %v0
   %mul = select i1 %cond, float %sub, float %v1
@@ -711,19 +703,15 @@ define float @no_fold_f32_select_user_fsub_into_fneg_modifier_dynamic(i1 %cond, 
 ; SDAG-LABEL: no_fold_f32_select_user_fsub_into_fneg_modifier_dynamic:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-NEXT:    v_and_b32_e32 v0, 1, v0
-; SDAG-NEXT:    v_sub_f32_e32 v1, 0x80000000, v1
-; SDAG-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
-; SDAG-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc
+; SDAG-NEXT:    v_sub_f32_e32 v0, 0x80000000, v0
+; SDAG-NEXT:    v_cndmask_b32_e64 v0, v1, v0, s[4:5]
 ; SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-LABEL: no_fold_f32_select_user_fsub_into_fneg_modifier_dynamic:
 ; GISEL:       ; %bb.0:
 ; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-NEXT:    v_and_b32_e32 v0, 1, v0
-; GISEL-NEXT:    v_max_f32_e64 v1, -v1, -v1
-; GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
-; GISEL-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc
+; GISEL-NEXT:    v_max_f32_e64 v0, -v0, -v0
+; GISEL-NEXT:    v_cndmask_b32_e64 v0, v1, v0, s[4:5]
 ; GISEL-NEXT:    s_setpc_b64 s[30:31]
   %sub = fsub float -0.0, %v0
   %mul = select i1 %cond, float %sub, float %v1
@@ -734,19 +722,15 @@ define half @fold_f16_select_user_fsub_into_fneg_modifier_ieee(i1 %cond, half %v
 ; SDAG-LABEL: fold_f16_select_user_fsub_into_fneg_modifier_ieee:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-NEXT:    v_and_b32_e32 v0, 1, v0
-; SDAG-NEXT:    v_xor_b32_e32 v1, 0x8000, v1
-; SDAG-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
-; SDAG-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc
+; SDAG-NEXT:    v_xor_b32_e32 v0, 0x8000, v0
+; SDAG-NEXT:    v_cndmask_b32_e64 v0, v1, v0, s[4:5]
 ; SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-LABEL: fold_f16_select_user_fsub_into_fneg_modifier_ieee:
 ; GISEL:       ; %bb.0:
 ; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-NEXT:    v_and_b32_e32 v0, 1, v0
-; GISEL-NEXT:    v_max_f16_e64 v1, -v1, -v1
-; GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
-; GISEL-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc
+; GISEL-NEXT:    v_max_f16_e64 v0, -v0, -v0
+; GISEL-NEXT:    v_cndmask_b32_e64 v0, v1, v0, s[4:5]
 ; GISEL-NEXT:    s_setpc_b64 s[30:31]
   %sub = fsub half -0.0, %v0
   %mul = select i1 %cond, half %sub, half %v1
@@ -757,19 +741,15 @@ define half @no_fold_f16_select_user_fsub_into_fneg_modifier_daz(i1 %cond, half 
 ; SDAG-LABEL: no_fold_f16_select_user_fsub_into_fneg_modifier_daz:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-NEXT:    v_and_b32_e32 v0, 1, v0
-; SDAG-NEXT:    v_sub_f16_e32 v1, 0x8000, v1
-; SDAG-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
-; SDAG-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc
+; SDAG-NEXT:    v_sub_f16_e32 v0, 0x8000, v0
+; SDAG-NEXT:    v_cndmask_b32_e64 v0, v1, v0, s[4:5]
 ; SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-LABEL: no_fold_f16_select_user_fsub_into_fneg_modifier_daz:
 ; GISEL:       ; %bb.0:
 ; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-NEXT:    v_and_b32_e32 v0, 1, v0
-; GISEL-NEXT:    v_max_f16_e64 v1, -v1, -v1
-; GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
-; GISEL-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc
+; GISEL-NEXT:    v_max_f16_e64 v0, -v0, -v0
+; GISEL-NEXT:    v_cndmask_b32_e64 v0, v1, v0, s[4:5]
 ; GISEL-NEXT:    s_setpc_b64 s[30:31]
   %sub = fsub half -0.0, %v0
   %mul = select i1 %cond, half %sub, half %v1
@@ -780,19 +760,15 @@ define half @no_fold_f16_select_user_fsub_into_fneg_modifier_dynamic(i1 %cond, h
 ; SDAG-LABEL: no_fold_f16_select_user_fsub_into_fneg_modifier_dynamic:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-NEXT:    v_and_b32_e32 v0, 1, v0
-; SDAG-NEXT:    v_sub_f16_e32 v1, 0x8000, v1
-; SDAG-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
-; SDAG-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc
+; SDAG-NEXT:    v_sub_f16_e32 v0, 0x8000, v0
+; SDAG-NEXT:    v_cndmask_b32_e64 v0, v1, v0, s[4:5]
 ; SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-LABEL: no_fold_f16_select_user_fsub_into_fneg_modifier_dynamic:
 ; GISEL:       ; %bb.0:
 ; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-NEXT:    v_and_b32_e32 v0, 1, v0
-; GISEL-NEXT:    v_max_f16_e64 v1, -v1, -v1
-; GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
-; GISEL-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc
+; GISEL-NEXT:    v_max_f16_e64 v0, -v0, -v0
+; GISEL-NEXT:    v_cndmask_b32_e64 v0, v1, v0, s[4:5]
 ; GISEL-NEXT:    s_setpc_b64 s[30:31]
   %sub = fsub half -0.0, %v0
   %mul = select i1 %cond, half %sub, half %v1
@@ -803,21 +779,17 @@ define double @fold_f64_select_user_fsub_into_fneg_modifier_ieee(i1 %cond, doubl
 ; SDAG-LABEL: fold_f64_select_user_fsub_into_fneg_modifier_ieee:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-NEXT:    v_and_b32_e32 v0, 1, v0
-; SDAG-NEXT:    v_xor_b32_e32 v2, 0x80000000, v2
-; SDAG-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
-; SDAG-NEXT:    v_cndmask_b32_e32 v0, v3, v1, vcc
-; SDAG-NEXT:    v_cndmask_b32_e32 v1, v4, v2, vcc
+; SDAG-NEXT:    v_xor_b32_e32 v1, 0x80000000, v1
+; SDAG-NEXT:    v_cndmask_b32_e64 v0, v2, v0, s[4:5]
+; SDAG-NEXT:    v_cndmask_b32_e64 v1, v3, v1, s[4:5]
 ; SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-LABEL: fold_f64_select_user_fsub_into_fneg_modifier_ieee:
 ; GISEL:       ; %bb.0:
 ; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-NEXT:    v_max_f64 v[1:2], -v[1:2], -v[1:2]
-; GISEL-NEXT:    v_and_b32_e32 v0, 1, v0
-; GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
-; GISEL-NEXT:    v_cndmask_b32_e32 v0, v3, v1, vcc
-; GISEL-NEXT:    v_cndmask_b32_e32 v1, v4, v2, vcc
+; GISEL-NEXT:    v_max_f64 v[0:1], -v[0:1], -v[0:1]
+; GISEL-NEXT:    v_cndmask_b32_e64 v0, v2, v0, s[4:5]
+; GISEL-NEXT:    v_cndmask_b32_e64 v1, v3, v1, s[4:5]
 ; GISEL-NEXT:    s_setpc_b64 s[30:31]
   %sub = fsub double -0.0, %v0
   %mul = select i1 %cond, double %sub, double %v1
@@ -828,21 +800,17 @@ define double @no_fold_f64_select_user_fsub_into_fneg_modifier_daz(i1 %cond, dou
 ; SDAG-LABEL: no_fold_f64_select_user_fsub_into_fneg_modifier_daz:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-NEXT:    v_and_b32_e32 v0, 1, v0
-; SDAG-NEXT:    v_xor_b32_e32 v2, 0x80000000, v2
-; SDAG-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
-; SDAG-NEXT:    v_cndmask_b32_e32 v0, v3, v1, vcc
-; SDAG-NEXT:    v_cndmask_b32_e32 v1, v4, v2, vcc
+; SDAG-NEXT:    v_xor_b32_e32 v1, 0x80000000, v1
+; SDAG-NEXT:    v_cndmask_b32_e64 v0, v2, v0, s[4:5]
+; SDAG-NEXT:    v_cndmask_b32_e64 v1, v3, v1, s[4:5]
 ; SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-LABEL: no_fold_f64_select_user_fsub_into_fneg_modifier_daz:
 ; GISEL:       ; %bb.0:
 ; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-NEXT:    v_max_f64 v[1:2], -v[1:2], -v[1:2]
-; GISEL-NEXT:    v_and_b32_e32 v0, 1, v0
-; GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
-; GISEL-NEXT:    v_cndmask_b32_e32 v0, v3, v1, vcc
-; GISEL-NEXT:    v_cndmask_b32_e32 v1, v4, v2, vcc
+; GISEL-NEXT:    v_max_f64 v[0:1], -v[0:1], -v[0:1]
+; GISEL-NEXT:    v_cndmask_b32_e64 v0, v2, v0, s[4:5]
+; GISEL-NEXT:    v_cndmask_b32_e64 v1, v3, v1, s[4:5]
 ; GISEL-NEXT:    s_setpc_b64 s[30:31]
   %sub = fsub double -0.0, %v0
   %mul = select i1 %cond, double %sub, double %v1
@@ -853,21 +821,17 @@ define double @no_fold_f64_select_user_fsub_into_fneg_modifier_dynamic(i1 %cond,
 ; SDAG-LABEL: no_fold_f64_select_user_fsub_into_fneg_modifier_dynamic:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-NEXT:    v_and_b32_e32 v0, 1, v0
-; SDAG-NEXT:    v_xor_b32_e32 v2, 0x80000000, v2
-; SDAG-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
-; SDAG-NEXT:    v_cndmask_b32_e32 v0, v3, v1, vcc
-; SDAG-NEXT:    v_cndmask_b32_e32 v1, v4, v2, vcc
+; SDAG-NEXT:    v_xor_b32_e32 v1, 0x80000000, v1
+; SDAG-NEXT:    v_cndmask_b32_e64 v0, v2, v0, s[4:5]
+; SDAG-NEXT:    v_cndmask_b32_e64 v1, v3, v1, s[4:5]
 ; SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-LABEL: no_fold_f64_select_user_fsub_into_fneg_modifier_dynamic:
 ; GISEL:       ; %bb.0:
 ; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-NEXT:    v_max_f64 v[1:2], -v[1:2], -v[1:2]
-; GISEL-NEXT:    v_and_b32_e32 v0, 1, v0
-; GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
-; GISEL-NEXT:    v_cndmask_b32_e32 v0, v3, v1, vcc
-; GISEL-NEXT:    v_cndmask_b32_e32 v1, v4, v2, vcc
+; GISEL-NEXT:    v_max_f64 v[0:1], -v[0:1], -v[0:1]
+; GISEL-NEXT:    v_cndmask_b32_e64 v0, v2, v0, s[4:5]
+; GISEL-NEXT:    v_cndmask_b32_e64 v1, v3, v1, s[4:5]
 ; GISEL-NEXT:    s_setpc_b64 s[30:31]
   %sub = fsub double -0.0, %v0
   %mul = select i1 %cond, double %sub, double %v1
@@ -878,19 +842,15 @@ define <2 x half> @fold_v2f16_select_user_fsub_into_fneg_modifier_ieee(i1 %cond,
 ; SDAG-LABEL: fold_v2f16_select_user_fsub_into_fneg_modifier_ieee:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-NEXT:    v_and_b32_e32 v0, 1, v0
-; SDAG-NEXT:    v_xor_b32_e32 v1, 0x80008000, v1
-; SDAG-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
-; SDAG-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc
+; SDAG-NEXT:    v_xor_b32_e32 v0, 0x80008000, v0
+; SDAG-NEXT:    v_cndmask_b32_e64 v0, v1, v0, s[4:5]
 ; SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-LABEL: fold_v2f16_select_user_fsub_into_fneg_modifier_ieee:
 ; GISEL:       ; %bb.0:
 ; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-NEXT:    v_and_b32_e32 v0, 1, v0
-; GISEL-NEXT:    v_pk_max_f16 v1, v1, v1 neg_lo:[1,1] neg_hi:[1,1]
-; GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
-; GISEL-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc
+; GISEL-NEXT:    v_pk_max_f16 v0, v0, v0 neg_lo:[1,1] neg_hi:[1,1]
+; GISEL-NEXT:    v_cndmask_b32_e64 v0, v1, v0, s[4:5]
 ; GISEL-NEXT:    s_setpc_b64 s[30:31]
   %sub = fsub <2 x half> <half -0.0, half -0.0>, %v0
   %mul = select i1 %cond, <2 x half> %sub, <2 x half> %v1
@@ -901,19 +861,15 @@ define <2 x half> @no_fold_v2f16_select_user_fsub_into_fneg_modifier_daz(i1 %con
 ; SDAG-LABEL: no_fold_v2f16_select_user_fsub_into_fneg_modifier_daz:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-NEXT:    v_and_b32_e32 v0, 1, v0
-; SDAG-NEXT:    v_xor_b32_e32 v1, 0x80008000, v1
-; SDAG-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
-; SDAG-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc
+; SDAG-NEXT:    v_xor_b32_e32 v0, 0x80008000, v0
+; SDAG-NEXT:    v_cndmask_b32_e64 v0, v1, v0, s[4:5]
 ; SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-LABEL: no_fold_v2f16_select_user_fsub_into_fneg_modifier_daz:
 ; GISEL:       ; %bb.0:
 ; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-NEXT:    v_and_b32_e32 v0, 1, v0
-; GISEL-NEXT:    v_pk_max_f16 v1, v1, v1 neg_lo:[1,1] neg_hi:[1,1]
-; GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
-; GISEL-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc
+; GISEL-NEXT:    v_pk_max_f16 v0, v0, v0 neg_lo:[1,1] neg_hi:[1,1]
+; GISEL-NEXT:    v_cndmask_b32_e64 v0, v1, v0, s[4:5]
 ; GISEL-NEXT:    s_setpc_b64 s[30:31]
   %sub = fsub <2 x half> <half -0.0, half -0.0>, %v0
   %mul = select i1 %cond, <2 x half> %sub, <2 x half> %v1
@@ -924,19 +880,15 @@ define <2 x half> @no_fold_v2f16_select_user_fsub_into_fneg_modifier_dynamic(i1 
 ; SDAG-LABEL: no_fold_v2f16_select_user_fsub_into_fneg_modifier_dynamic:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-NEXT:    v_and_b32_e32 v0, 1, v0
-; SDAG-NEXT:    v_xor_b32_e32 v1, 0x80008000, v1
-; SDAG-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
-; SDAG-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc
+; SDAG-NEXT:    v_xor_b32_e32 v0, 0x80008000, v0
+; SDAG-NEXT:    v_cndmask_b32_e64 v0, v1, v0, s[4:5]
 ; SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-LABEL: no_fold_v2f16_select_user_fsub_into_fneg_modifier_dynamic:
 ; GISEL:       ; %bb.0:
 ; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-NEXT:    v_and_b32_e32 v0, 1, v0
-; GISEL-NEXT:    v_pk_max_f16 v1, v1, v1 neg_lo:[1,1] neg_hi:[1,1]
-; GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
-; GISEL-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc
+; GISEL-NEXT:    v_pk_max_f16 v0, v0, v0 neg_lo:[1,1] neg_hi:[1,1]
+; GISEL-NEXT:    v_cndmask_b32_e64 v0, v1, v0, s[4:5]
 ; GISEL-NEXT:    s_setpc_b64 s[30:31]
   %sub = fsub <2 x half> <half -0.0, half -0.0>, %v0
   %mul = select i1 %cond, <2 x half> %sub, <2 x half> %v1
@@ -984,7 +936,6 @@ define i1 @no_fold_f32_fsub_into_fneg_modifier_class_issnan_ieee(float %v0) #0 {
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-NEXT:    v_cmp_class_f32_e64 s[4:5], -v0, 1
-; SDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[4:5]
 ; SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-LABEL: no_fold_f32_fsub_into_fneg_modifier_class_issnan_ieee:
@@ -992,7 +943,6 @@ define i1 @no_fold_f32_fsub_into_fneg_modifier_class_issnan_ieee(float %v0) #0 {
 ; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-NEXT:    v_max_f32_e64 v0, -v0, -v0
 ; GISEL-NEXT:    v_cmp_class_f32_e64 s[4:5], v0, 1
-; GISEL-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[4:5]
 ; GISEL-NEXT:    s_setpc_b64 s[30:31]
   %sub = fsub float -0.0, %v0
   %class = call i1 @llvm.is.fpclass.f32(float %sub, i32 1)
@@ -1005,7 +955,6 @@ define i1 @no_fold_f32_fsub_into_fneg_modifier_class_issnan_daz(float %v0) #1 {
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-NEXT:    v_sub_f32_e32 v0, 0x80000000, v0
 ; SDAG-NEXT:    v_cmp_class_f32_e64 s[4:5], v0, 1
-; SDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[4:5]
 ; SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-LABEL: no_fold_f32_fsub_into_fneg_modifier_class_issnan_daz:
@@ -1013,7 +962,6 @@ define i1 @no_fold_f32_fsub_into_fneg_modifier_class_issnan_daz(float %v0) #1 {
 ; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-NEXT:    v_max_f32_e64 v0, -v0, -v0
 ; GISEL-NEXT:    v_cmp_class_f32_e64 s[4:5], v0, 1
-; GISEL-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[4:5]
 ; GISEL-NEXT:    s_setpc_b64 s[30:31]
   %sub = fsub float -0.0, %v0
   %class = call i1 @llvm.is.fpclass.f32(float %sub, i32 1)
@@ -1026,7 +974,6 @@ define i1 @no_fold_f32_fsub_into_fneg_modifier_class_issnan_dynamic(float %v0) #
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-NEXT:    v_sub_f32_e32 v0, 0x80000000, v0
 ; SDAG-NEXT:    v_cmp_class_f32_e64 s[4:5], v0, 1
-; SDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[4:5]
 ; SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-LABEL: no_fold_f32_fsub_into_fneg_modifier_class_issnan_dynamic:
@@ -1034,7 +981,6 @@ define i1 @no_fold_f32_fsub_into_fneg_modifier_class_issnan_dynamic(float %v0) #
 ; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-NEXT:    v_max_f32_e64 v0, -v0, -v0
 ; GISEL-NEXT:    v_cmp_class_f32_e64 s[4:5], v0, 1
-; GISEL-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[4:5]
 ; GISEL-NEXT:    s_setpc_b64 s[30:31]
   %sub = fsub float -0.0, %v0
   %class = call i1 @llvm.is.fpclass.f32(float %sub, i32 1)
@@ -1047,7 +993,6 @@ define i1 @no_fold_f32_fsub_into_fneg_modifier_class_isdenormal_ieee(float %v0) 
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-NEXT:    v_mov_b32_e32 v1, 0x90
 ; SDAG-NEXT:    v_cmp_class_f32_e64 s[4:5], -v0, v1
-; SDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[4:5]
 ; SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-LABEL: no_fold_f32_fsub_into_fneg_modifier_class_isdenormal_ieee:
@@ -1055,8 +1000,7 @@ define i1 @no_fold_f32_fsub_into_fneg_modifier_class_isdenormal_ieee(float %v0) 
 ; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-NEXT:    v_max_f32_e64 v0, -v0, -v0
 ; GISEL-NEXT:    v_mov_b32_e32 v1, 0x90
-; GISEL-NEXT:    v_cmp_class_f32_e32 vcc, v0, v1
-; GISEL-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
+; GISEL-NEXT:    v_cmp_class_f32_e64 s[4:5], v0, v1
 ; GISEL-NEXT:    s_setpc_b64 s[30:31]
   %sub = fsub float -0.0, %v0
   %class = call i1 @llvm.is.fpclass.f32(float %sub, i32 144)
@@ -1069,8 +1013,7 @@ define i1 @no_fold_f32_fsub_into_fneg_modifier_class_isdenormal_daz(float %v0) #
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-NEXT:    v_sub_f32_e32 v0, 0x80000000, v0
 ; SDAG-NEXT:    v_mov_b32_e32 v1, 0x90
-; SDAG-NEXT:    v_cmp_class_f32_e32 vcc, v0, v1
-; SDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
+; SDAG-NEXT:    v_cmp_class_f32_e64 s[4:5], v0, v1
 ; SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-LABEL: no_fold_f32_fsub_into_fneg_modifier_class_isdenormal_daz:
@@ -1078,8 +1021,7 @@ define i1 @no_fold_f32_fsub_into_fneg_modifier_class_isdenormal_daz(float %v0) #
 ; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-NEXT:    v_max_f32_e64 v0, -v0, -v0
 ; GISEL-NEXT:    v_mov_b32_e32 v1, 0x90
-; GISEL-NEXT:    v_cmp_class_f32_e32 vcc, v0, v1
-; GISEL-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
+; GISEL-NEXT:    v_cmp_class_f32_e64 s[4:5], v0, v1
 ; GISEL-NEXT:    s_setpc_b64 s[30:31]
   %sub = fsub float -0.0, %v0
   %class = call i1 @llvm.is.fpclass.f32(float %sub, i32 144)
@@ -1092,8 +1034,7 @@ define i1 @no_fold_f32_fsub_into_fneg_modifier_class_isdenormal_dynamic(float %v
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-NEXT:    v_sub_f32_e32 v0, 0x80000000, v0
 ; SDAG-NEXT:    v_mov_b32_e32 v1, 0x90
-; SDAG-NEXT:    v_cmp_class_f32_e32 vcc, v0, v1
-; SDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
+; SDAG-NEXT:    v_cmp_class_f32_e64 s[4:5], v0, v1
 ; SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-LABEL: no_fold_f32_fsub_into_fneg_modifier_class_isdenormal_dynamic:
@@ -1101,8 +1042,7 @@ define i1 @no_fold_f32_fsub_into_fneg_modifier_class_isdenormal_dynamic(float %v
 ; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-NEXT:    v_max_f32_e64 v0, -v0, -v0
 ; GISEL-NEXT:    v_mov_b32_e32 v1, 0x90
-; GISEL-NEXT:    v_cmp_class_f32_e32 vcc, v0, v1
-; GISEL-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
+; GISEL-NEXT:    v_cmp_class_f32_e64 s[4:5], v0, v1
 ; GISEL-NEXT:    s_setpc_b64 s[30:31]
   %sub = fsub float -0.0, %v0
   %class = call i1 @llvm.is.fpclass.f32(float %sub, i32 144)
@@ -1114,15 +1054,13 @@ define i1 @no_fold_f32_fsub_into_fneg_modifier_class_var_ieee(float %v0, i32 %te
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-NEXT:    v_cmp_class_f32_e64 s[4:5], -v0, v1
-; SDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[4:5]
 ; SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-LABEL: no_fold_f32_fsub_into_fneg_modifier_class_var_ieee:
 ; GISEL:       ; %bb.0:
 ; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-NEXT:    v_max_f32_e64 v0, -v0, -v0
-; GISEL-NEXT:    v_cmp_class_f32_e32 vcc, v0, v1
-; GISEL-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
+; GISEL-NEXT:    v_cmp_class_f32_e64 s[4:5], v0, v1
 ; GISEL-NEXT:    s_setpc_b64 s[30:31]
   %sub = fsub float -0.0, %v0
   %class = call i1 @llvm.amdgcn.class.f32(float %sub, i32 %testmask)
@@ -1134,16 +1072,14 @@ define i1 @no_fold_f32_fsub_into_fneg_modifier_class_var_daz(float %v0, i32 %tes
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-NEXT:    v_sub_f32_e32 v0, 0x80000000, v0
-; SDAG-NEXT:    v_cmp_class_f32_e32 vcc, v0, v1
-; SDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
+; SDAG-NEXT:    v_cmp_class_f32_e64 s[4:5], v0, v1
 ; SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-LABEL: no_fold_f32_fsub_into_fneg_modifier_class_var_daz:
 ; GISEL:       ; %bb.0:
 ; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-NEXT:    v_max_f32_e64 v0, -v0, -v0
-; GISEL-NEXT:    v_cmp_class_f32_e32 vcc, v0, v1
-; GISEL-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
+; GISEL-NEXT:    v_cmp_class_f32_e64 s[4:5], v0, v1
 ; GISEL-NEXT:    s_setpc_b64 s[30:31]
   %sub = fsub float -0.0, %v0
   %class = call i1 @llvm.amdgcn.class.f32(float %sub, i32 %testmask)
@@ -1155,16 +1091,14 @@ define i1 @no_fold_f32_fsub_into_fneg_modifier_class_var_dynamic(float %v0, i32 
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-NEXT:    v_sub_f32_e32 v0, 0x80000000, v0
-; SDAG-NEXT:    v_cmp_class_f32_e32 vcc, v0, v1
-; SDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
+; SDAG-NEXT:    v_cmp_class_f32_e64 s[4:5], v0, v1
 ; SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-LABEL: no_fold_f32_fsub_into_fneg_modifier_class_var_dynamic:
 ; GISEL:       ; %bb.0:
 ; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-NEXT:    v_max_f32_e64 v0, -v0, -v0
-; GISEL-NEXT:    v_cmp_class_f32_e32 vcc, v0, v1
-; GISEL-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
+; GISEL-NEXT:    v_cmp_class_f32_e64 s[4:5], v0, v1
 ; GISEL-NEXT:    s_setpc_b64 s[30:31]
   %sub = fsub float -0.0, %v0
   %class = call i1 @llvm.amdgcn.class.f32(float %sub, i32 %testmask)
@@ -1176,15 +1110,13 @@ define i1 @no_fold_f64_fsub_into_fneg_modifier_class_var_daz(double %v0, i32 %te
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-NEXT:    v_cmp_class_f64_e64 s[4:5], -v[0:1], v2
-; SDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[4:5]
 ; SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-LABEL: no_fold_f64_fsub_into_fneg_modifier_class_var_daz:
 ; GISEL:       ; %bb.0:
 ; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-NEXT:    v_max_f64 v[0:1], -v[0:1], -v[0:1]
-; GISEL-NEXT:    v_cmp_class_f64_e32 vcc, v[0:1], v2
-; GISEL-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
+; GISEL-NEXT:    v_cmp_class_f64_e64 s[4:5], v[0:1], v2
 ; GISEL-NEXT:    s_setpc_b64 s[30:31]
   %sub = fsub double -0.0, %v0
   %class = call i1 @llvm.amdgcn.class.f64(double %sub, i32 %testmask)
@@ -1196,16 +1128,14 @@ define i1 @no_fold_f16_fsub_into_fneg_modifier_class_var_daz(half %v0, i32 %test
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-NEXT:    v_sub_f16_e32 v0, 0x8000, v0
-; SDAG-NEXT:    v_cmp_class_f16_e32 vcc, v0, v1
-; SDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
+; SDAG-NEXT:    v_cmp_class_f16_e64 s[4:5], v0, v1
 ; SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-LABEL: no_fold_f16_fsub_into_fneg_modifier_class_var_daz:
 ; GISEL:       ; %bb.0:
 ; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-NEXT:    v_max_f16_e64 v0, -v0, -v0
-; GISEL-NEXT:    v_cmp_class_f16_e32 vcc, v0, v1
-; GISEL-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
+; GISEL-NEXT:    v_cmp_class_f16_e64 s[4:5], v0, v1
 ; GISEL-NEXT:    s_setpc_b64 s[30:31]
   %sub = fsub half -0.0, %v0
   %class = call i1 @llvm.amdgcn.class.f16(half %sub, i32 %testmask)
@@ -1218,7 +1148,6 @@ define i1 @no_fold_f64_fsub_into_fneg_modifier_class_daz(double %v0) #1 {
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-NEXT:    v_mov_b32_e32 v2, 0x90
 ; SDAG-NEXT:    v_cmp_class_f64_e64 s[4:5], -v[0:1], v2
-; SDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[4:5]
 ; SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-LABEL: no_fold_f64_fsub_into_fneg_modifier_class_daz:
@@ -1226,8 +1155,7 @@ define i1 @no_fold_f64_fsub_into_fneg_modifier_class_daz(double %v0) #1 {
 ; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-NEXT:    v_max_f64 v[0:1], -v[0:1], -v[0:1]
 ; GISEL-NEXT:    v_mov_b32_e32 v2, 0x90
-; GISEL-NEXT:    v_cmp_class_f64_e32 vcc, v[0:1], v2
-; GISEL-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
+; GISEL-NEXT:    v_cmp_class_f64_e64 s[4:5], v[0:1], v2
 ; GISEL-NEXT:    s_setpc_b64 s[30:31]
   %sub = fsub double -0.0, %v0
   %class = call i1 @llvm.is.fpclass.f64(double %sub, i32 144)
@@ -1240,8 +1168,7 @@ define i1 @no_fold_f16_fsub_into_fneg_modifier_class_daz(half %v0) #1 {
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-NEXT:    v_sub_f16_e32 v0, 0x8000, v0
 ; SDAG-NEXT:    v_mov_b32_e32 v1, 0x90
-; SDAG-NEXT:    v_cmp_class_f16_e32 vcc, v0, v1
-; SDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
+; SDAG-NEXT:    v_cmp_class_f16_e64 s[4:5], v0, v1
 ; SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-LABEL: no_fold_f16_fsub_into_fneg_modifier_class_daz:
@@ -1249,8 +1176,7 @@ define i1 @no_fold_f16_fsub_into_fneg_modifier_class_daz(half %v0) #1 {
 ; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-NEXT:    v_max_f16_e64 v0, -v0, -v0
 ; GISEL-NEXT:    v_mov_b32_e32 v1, 0x90
-; GISEL-NEXT:    v_cmp_class_f16_e32 vcc, v0, v1
-; GISEL-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
+; GISEL-NEXT:    v_cmp_class_f16_e64 s[4:5], v0, v1
 ; GISEL-NEXT:    s_setpc_b64 s[30:31]
   %sub = fsub half -0.0, %v0
   %class = call i1 @llvm.is.fpclass.f16(half %sub, i32 144)

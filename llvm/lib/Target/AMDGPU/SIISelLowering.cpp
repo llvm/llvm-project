@@ -3149,6 +3149,9 @@ SITargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
   CCState CCInfo(CallConv, isVarArg, DAG.getMachineFunction(), RVLocs,
                  *DAG.getContext());
 
+  if (!Subtarget->enableFlatScratch())
+    CCInfo.AllocateReg(Info->getScratchRSrcReg());
+
   // Analyze outgoing return values.
   CCInfo.AnalyzeReturn(Outs, CCAssignFnForReturn(CallConv, isVarArg));
 
@@ -3228,6 +3231,13 @@ SDValue SITargetLowering::LowerCallResult(
   SmallVector<CCValAssign, 16> RVLocs;
   CCState CCInfo(CallConv, IsVarArg, DAG.getMachineFunction(), RVLocs,
                  *DAG.getContext());
+
+  if (!Subtarget->enableFlatScratch()) {
+    SIMachineFunctionInfo *FuncInfo =
+        DAG.getMachineFunction().getInfo<SIMachineFunctionInfo>();
+    CCInfo.AllocateReg(FuncInfo->getScratchRSrcReg());
+  }
+
   CCInfo.AnalyzeCallResult(Ins, RetCC);
 
   // Copy all of the result registers out of their specified physreg.

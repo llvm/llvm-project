@@ -54,10 +54,8 @@ define void @lsr_order_mul24_1(i32 %arg, i32 %arg1, i32 %arg2, ptr addrspace(3) 
 ; GFX9-LABEL: lsr_order_mul24_1:
 ; GFX9:       ; %bb.0: ; %bb
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_and_b32_e32 v5, 1, v18
-; GFX9-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v5
-; GFX9-NEXT:    v_cmp_lt_u32_e64 s[4:5], v0, v1
-; GFX9-NEXT:    s_and_saveexec_b64 s[8:9], s[4:5]
+; GFX9-NEXT:    v_cmp_lt_u32_e32 vcc, v0, v1
+; GFX9-NEXT:    s_and_saveexec_b64 s[8:9], vcc
 ; GFX9-NEXT:    s_cbranch_execz .LBB1_3
 ; GFX9-NEXT:  ; %bb.1: ; %bb19
 ; GFX9-NEXT:    v_cvt_f32_u32_e32 v7, v6
@@ -83,11 +81,11 @@ define void @lsr_order_mul24_1(i32 %arg, i32 %arg1, i32 %arg2, ptr addrspace(3) 
 ; GFX9-NEXT:    v_sub_u32_e32 v3, v18, v19
 ; GFX9-NEXT:    v_sub_u32_e32 v12, v12, v19
 ; GFX9-NEXT:    v_mad_u64_u32 v[18:19], s[6:7], v20, v15, v[3:4]
-; GFX9-NEXT:    v_cmp_lt_u32_e64 s[4:5], v20, v13
+; GFX9-NEXT:    v_cmp_lt_u32_e32 vcc, v20, v13
 ; GFX9-NEXT:    v_cmp_lt_u32_e64 s[6:7], v12, v14
-; GFX9-NEXT:    s_and_b64 s[4:5], s[4:5], s[6:7]
-; GFX9-NEXT:    s_and_b64 s[4:5], s[4:5], vcc
-; GFX9-NEXT:    v_cndmask_b32_e64 v3, 0, v18, s[4:5]
+; GFX9-NEXT:    s_and_b64 s[6:7], vcc, s[6:7]
+; GFX9-NEXT:    s_and_b64 vcc, s[6:7], s[4:5]
+; GFX9-NEXT:    v_cndmask_b32_e32 v3, 0, v18, vcc
 ; GFX9-NEXT:    v_lshlrev_b64 v[18:19], 2, v[3:4]
 ; GFX9-NEXT:    v_add_co_u32_e64 v18, s[6:7], v10, v18
 ; GFX9-NEXT:    v_addc_co_u32_e64 v19, s[6:7], v11, v19, s[6:7]
@@ -95,7 +93,7 @@ define void @lsr_order_mul24_1(i32 %arg, i32 %arg1, i32 %arg2, ptr addrspace(3) 
 ; GFX9-NEXT:    v_cmp_ge_u32_e64 s[6:7], v0, v1
 ; GFX9-NEXT:    s_or_b64 s[10:11], s[6:7], s[10:11]
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_cndmask_b32_e64 v3, 0, v3, s[4:5]
+; GFX9-NEXT:    v_cndmask_b32_e32 v3, 0, v3, vcc
 ; GFX9-NEXT:    ds_write_b32 v6, v3
 ; GFX9-NEXT:    v_add_u32_e32 v6, v6, v8
 ; GFX9-NEXT:    s_andn2_b64 exec, exec, s[10:11]

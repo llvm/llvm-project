@@ -13,7 +13,7 @@ define i1 @i1_func_void() #0 {
 ; GFX789-NEXT:    buffer_load_ubyte v0, off, s[4:7], 0
 ; GFX789-NEXT:    s_waitcnt vmcnt(0)
 ; GFX789-NEXT:    v_and_b32_e32 v0, 1, v0
-; GFX789-NEXT:    v_cmp_eq_u32_e64 s[0:1], 1, v0
+; GFX789-NEXT:    v_cmp_eq_u32_e64 s[4:5], 1, v0
 ; GFX789-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: i1_func_void:
@@ -41,7 +41,7 @@ define zeroext i1 @i1_zeroext_func_void() #0 {
 ; GFX789-NEXT:    buffer_load_ubyte v0, off, s[4:7], 0
 ; GFX789-NEXT:    s_waitcnt vmcnt(0)
 ; GFX789-NEXT:    v_and_b32_e32 v0, 1, v0
-; GFX789-NEXT:    v_cmp_eq_u32_e64 s[0:1], 1, v0
+; GFX789-NEXT:    v_cmp_eq_u32_e64 s[4:5], 1, v0
 ; GFX789-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: i1_zeroext_func_void:
@@ -68,7 +68,7 @@ define signext i1 @i1_signext_func_void() #0 {
 ; GFX789-NEXT:    buffer_load_ubyte v0, off, s[4:7], 0
 ; GFX789-NEXT:    s_waitcnt vmcnt(0)
 ; GFX789-NEXT:    v_and_b32_e32 v0, 1, v0
-; GFX789-NEXT:    v_cmp_eq_u32_e64 s[0:1], 1, v0
+; GFX789-NEXT:    v_cmp_eq_u32_e64 s[4:5], 1, v0
 ; GFX789-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: i1_signext_func_void:

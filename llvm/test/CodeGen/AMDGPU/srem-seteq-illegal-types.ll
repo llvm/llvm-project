@@ -6,12 +6,11 @@ define i1 @test_srem_odd(i29 %X) nounwind {
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    s_mov_b32 s4, 0x1f5a814b
-; CHECK-NEXT:    s_mov_b32 s5, 0x52bf5b
 ; CHECK-NEXT:    v_mul_lo_u32 v0, v0, s4
 ; CHECK-NEXT:    v_add_i32_e32 v0, vcc, 0x295fad, v0
 ; CHECK-NEXT:    v_and_b32_e32 v0, 0x1fffffff, v0
-; CHECK-NEXT:    v_cmp_gt_u32_e32 vcc, s5, v0
-; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
+; CHECK-NEXT:    s_mov_b32 s4, 0x52bf5b
+; CHECK-NEXT:    v_cmp_gt_u32_e64 s[4:5], s4, v0
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %srem = srem i29 %X, 99
   %cmp = icmp eq i29 %srem, 0
@@ -31,8 +30,7 @@ define i1 @test_srem_even(i4 %X) nounwind {
 ; CHECK-NEXT:    v_mul_u32_u24_e32 v1, 6, v1
 ; CHECK-NEXT:    v_sub_i32_e32 v0, vcc, v0, v1
 ; CHECK-NEXT:    v_and_b32_e32 v0, 15, v0
-; CHECK-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
-; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
+; CHECK-NEXT:    v_cmp_eq_u32_e64 s[4:5], 1, v0
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %srem = srem i4 %X, 6
   %cmp = icmp eq i4 %srem, 1
@@ -49,8 +47,7 @@ define i1 @test_srem_pow2_setne(i6 %X) nounwind {
 ; CHECK-NEXT:    v_and_b32_e32 v1, 60, v1
 ; CHECK-NEXT:    v_sub_i32_e32 v0, vcc, v0, v1
 ; CHECK-NEXT:    v_and_b32_e32 v0, 63, v0
-; CHECK-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
-; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
+; CHECK-NEXT:    v_cmp_ne_u32_e64 s[4:5], 0, v0
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %srem = srem i6 %X, 4
   %cmp = icmp ne i6 %srem, 0

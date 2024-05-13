@@ -8,7 +8,7 @@ define i1 @i1_func_void() #0 {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s1) = G_LOAD [[DEF]](p1) :: (load (s1) from `ptr addrspace(1) undef`, addrspace 1)
-  ; CHECK-NEXT:   $sgpr0_sgpr1 = COPY [[LOAD]](s1)
+  ; CHECK-NEXT:   $sgpr4_sgpr5 = COPY [[LOAD]](s1)
   ; CHECK-NEXT:   SI_RETURN
   %val = load i1, ptr addrspace(1) undef
   ret i1 %val
@@ -19,7 +19,7 @@ define zeroext i1 @i1_zeroext_func_void() #0 {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s1) = G_LOAD [[DEF]](p1) :: (load (s1) from `ptr addrspace(1) undef`, addrspace 1)
-  ; CHECK-NEXT:   $sgpr0_sgpr1 = COPY [[LOAD]](s1)
+  ; CHECK-NEXT:   $sgpr4_sgpr5 = COPY [[LOAD]](s1)
   ; CHECK-NEXT:   SI_RETURN
   %val = load i1, ptr addrspace(1) undef
   ret i1 %val
@@ -30,7 +30,7 @@ define signext i1 @i1_signext_func_void() #0 {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s1) = G_LOAD [[DEF]](p1) :: (load (s1) from `ptr addrspace(1) undef`, addrspace 1)
-  ; CHECK-NEXT:   $sgpr0_sgpr1 = COPY [[LOAD]](s1)
+  ; CHECK-NEXT:   $sgpr4_sgpr5 = COPY [[LOAD]](s1)
   ; CHECK-NEXT:   SI_RETURN
   %val = load i1, ptr addrspace(1) undef
   ret i1 %val

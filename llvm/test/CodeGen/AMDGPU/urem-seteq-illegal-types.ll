@@ -6,11 +6,10 @@ define i1 @test_urem_odd(i13 %X) nounwind {
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_and_b32_e32 v0, 0x1fff, v0
-; CHECK-NEXT:    s_movk_i32 s4, 0x667
 ; CHECK-NEXT:    v_mul_u32_u24_e32 v0, 0xccd, v0
 ; CHECK-NEXT:    v_and_b32_e32 v0, 0x1fff, v0
-; CHECK-NEXT:    v_cmp_gt_u32_e32 vcc, s4, v0
-; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
+; CHECK-NEXT:    s_movk_i32 s4, 0x667
+; CHECK-NEXT:    v_cmp_gt_u32_e64 s[4:5], s4, v0
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %urem = urem i13 %X, 5
   %cmp = icmp eq i13 %urem, 0
@@ -22,14 +21,13 @@ define i1 @test_urem_even(i27 %X) nounwind {
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    s_mov_b32 s4, 0x6db6db7
-; CHECK-NEXT:    s_mov_b32 s5, 0x924925
 ; CHECK-NEXT:    v_mul_lo_u32 v0, v0, s4
 ; CHECK-NEXT:    v_lshlrev_b32_e32 v1, 26, v0
 ; CHECK-NEXT:    v_bfe_u32 v0, v0, 1, 26
 ; CHECK-NEXT:    v_or_b32_e32 v0, v0, v1
 ; CHECK-NEXT:    v_and_b32_e32 v0, 0x7ffffff, v0
-; CHECK-NEXT:    v_cmp_gt_u32_e32 vcc, s5, v0
-; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
+; CHECK-NEXT:    s_mov_b32 s4, 0x924925
+; CHECK-NEXT:    v_cmp_gt_u32_e64 s[4:5], s4, v0
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %urem = urem i27 %X, 14
   %cmp = icmp eq i27 %urem, 0
@@ -43,8 +41,7 @@ define i1 @test_urem_odd_setne(i4 %X) nounwind {
 ; CHECK-NEXT:    v_and_b32_e32 v0, 15, v0
 ; CHECK-NEXT:    v_mul_u32_u24_e32 v0, 13, v0
 ; CHECK-NEXT:    v_and_b32_e32 v0, 15, v0
-; CHECK-NEXT:    v_cmp_lt_u32_e32 vcc, 3, v0
-; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
+; CHECK-NEXT:    v_cmp_lt_u32_e64 s[4:5], 3, v0
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %urem = urem i4 %X, 5
   %cmp = icmp ne i4 %urem, 0
@@ -58,8 +55,7 @@ define i1 @test_urem_negative_odd(i9 %X) nounwind {
 ; CHECK-NEXT:    v_and_b32_e32 v0, 0x1ff, v0
 ; CHECK-NEXT:    v_mul_u32_u24_e32 v0, 0x133, v0
 ; CHECK-NEXT:    v_and_b32_e32 v0, 0x1ff, v0
-; CHECK-NEXT:    v_cmp_lt_u32_e32 vcc, 1, v0
-; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
+; CHECK-NEXT:    v_cmp_lt_u32_e64 s[4:5], 1, v0
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %urem = urem i9 %X, -5
   %cmp = icmp ne i9 %urem, 0

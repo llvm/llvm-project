@@ -3741,6 +3741,12 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     if (!DstBank)
       DstBank = SrcBank;
 
+    // For i1 return value, the dst reg is an SReg but we need to set the reg
+    // bank to VCCRegBank.
+    if (!MI.getOperand(0).getReg().isVirtual() &&
+        SrcBank == &AMDGPU::VCCRegBank)
+      DstBank = SrcBank;
+
     unsigned Size = getSizeInBits(MI.getOperand(0).getReg(), MRI, *TRI);
     if (MI.getOpcode() != AMDGPU::G_FREEZE &&
         cannotCopy(*DstBank, *SrcBank, TypeSize::getFixed(Size)))
