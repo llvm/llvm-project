@@ -1358,7 +1358,7 @@ IdentifierNamingCheck::getFailureInfo(
   std::replace(KindName.begin(), KindName.end(), '_', ' ');
 
   std::string Fixup = fixupWithStyle(Type, Name, Style, HNOption, ND);
-  if (StringRef(Fixup).equals(Name)) {
+  if (StringRef(Fixup) == Name) {
     if (!IgnoreFailedSplit) {
       LLVM_DEBUG(Location.print(llvm::dbgs(), SM);
                  llvm::dbgs()

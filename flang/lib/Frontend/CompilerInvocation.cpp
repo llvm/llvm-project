@@ -883,7 +883,7 @@ static bool parseDialectArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
 
   // -x cuda
   auto language = args.getLastArgValue(clang::driver::options::OPT_x);
-  if (language.equals("cuda")) {
+  if (language == "cuda") {
     res.getFrontendOpts().features.Enable(
         Fortran::common::LanguageFeature::CUDA);
   }
@@ -986,7 +986,7 @@ static bool parseDialectArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
   if (args.hasArg(clang::driver::options::OPT_std_EQ)) {
     auto standard = args.getLastArgValue(clang::driver::options::OPT_std_EQ);
     // We only allow f2018 as the given standard
-    if (standard.equals("f2018")) {
+    if (standard == "f2018") {
       res.setEnableConformanceChecks();
     } else {
       const unsigned diagID =

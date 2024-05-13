@@ -577,7 +577,7 @@ static bool isRelroSection(const OutputSection *sec) {
   // for accessing .got as well, .got and .toc need to be close enough in the
   // virtual address space. Usually, .toc comes just after .got. Since we place
   // .got into RELRO, .toc needs to be placed into RELRO too.
-  if (sec->name.equals(".toc"))
+  if (sec->name == ".toc")
     return true;
 
   // .got.plt contains pointers to external function symbols. They are
