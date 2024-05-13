@@ -325,30 +325,30 @@ define amdgpu_kernel void @trap_with_use_after(ptr addrspace(1) %arg0, ptr addrs
 ; HSA-TRAP-GFX1100:       ; %bb.0:
 ; HSA-TRAP-GFX1100-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
 ; HSA-TRAP-GFX1100-NEXT:    v_mov_b32_e32 v0, 0
-; HSA-TRAP-GFX1100-NEXT:    s_mov_b32 ttmp2, m0
 ; HSA-TRAP-GFX1100-NEXT:    s_waitcnt lgkmcnt(0)
 ; HSA-TRAP-GFX1100-NEXT:    global_load_b32 v1, v0, s[0:1] glc dlc
 ; HSA-TRAP-GFX1100-NEXT:    s_waitcnt vmcnt(0)
-; HSA-TRAP-GFX1100-NEXT:    s_trap 2
-; HSA-TRAP-GFX1100-NEXT:    s_sendmsg_rtn_b32 s0, sendmsg(MSG_RTN_GET_DOORBELL)
-; HSA-TRAP-GFX1100-NEXT:    s_waitcnt lgkmcnt(0)
-; HSA-TRAP-GFX1100-NEXT:    s_and_b32 s0, s0, 0x3ff
-; HSA-TRAP-GFX1100-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
-; HSA-TRAP-GFX1100-NEXT:    s_bitset1_b32 s0, 10
-; HSA-TRAP-GFX1100-NEXT:    s_cmp_eq_u32 s0, s0
-; HSA-TRAP-GFX1100-NEXT:    s_mov_b32 m0, s0
-; HSA-TRAP-GFX1100-NEXT:    s_sendmsg sendmsg(MSG_INTERRUPT)
-; HSA-TRAP-GFX1100-NEXT:    s_mov_b32 m0, ttmp2
-; HSA-TRAP-GFX1100-NEXT:    s_cbranch_scc1 .LBB2_2
+; HSA-TRAP-GFX1100-NEXT:    s_cbranch_execnz .LBB2_2
 ; HSA-TRAP-GFX1100-NEXT:  ; %bb.1:
 ; HSA-TRAP-GFX1100-NEXT:    global_store_b32 v0, v1, s[2:3] dlc
 ; HSA-TRAP-GFX1100-NEXT:    s_waitcnt_vscnt null, 0x0
 ; HSA-TRAP-GFX1100-NEXT:    s_nop 0
 ; HSA-TRAP-GFX1100-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; HSA-TRAP-GFX1100-NEXT:    s_endpgm
-; HSA-TRAP-GFX1100-NEXT:  .LBB2_2: ; =>This Inner Loop Header: Depth=1
+; HSA-TRAP-GFX1100-NEXT:  .LBB2_2:
+; HSA-TRAP-GFX1100-NEXT:    s_trap 2
+; HSA-TRAP-GFX1100-NEXT:    s_sendmsg_rtn_b32 s0, sendmsg(MSG_RTN_GET_DOORBELL)
+; HSA-TRAP-GFX1100-NEXT:    s_mov_b32 ttmp2, m0
+; HSA-TRAP-GFX1100-NEXT:    s_waitcnt lgkmcnt(0)
+; HSA-TRAP-GFX1100-NEXT:    s_and_b32 s0, s0, 0x3ff
+; HSA-TRAP-GFX1100-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; HSA-TRAP-GFX1100-NEXT:    s_bitset1_b32 s0, 10
+; HSA-TRAP-GFX1100-NEXT:    s_mov_b32 m0, s0
+; HSA-TRAP-GFX1100-NEXT:    s_sendmsg sendmsg(MSG_INTERRUPT)
+; HSA-TRAP-GFX1100-NEXT:    s_mov_b32 m0, ttmp2
+; HSA-TRAP-GFX1100-NEXT:  .LBB2_3: ; =>This Inner Loop Header: Depth=1
 ; HSA-TRAP-GFX1100-NEXT:    s_sethalt 5
-; HSA-TRAP-GFX1100-NEXT:    s_branch .LBB2_2
+; HSA-TRAP-GFX1100-NEXT:    s_branch .LBB2_3
 ;
 ; HSA-TRAP-GFX1100-O0-LABEL: trap_with_use_after:
 ; HSA-TRAP-GFX1100-O0:       ; %bb.0:
@@ -366,17 +366,7 @@ define amdgpu_kernel void @trap_with_use_after(ptr addrspace(1) %arg0, ptr addrs
 ; HSA-TRAP-GFX1100-O0-NEXT:    global_load_b32 v0, v0, s[0:1] glc dlc
 ; HSA-TRAP-GFX1100-O0-NEXT:    s_waitcnt vmcnt(0)
 ; HSA-TRAP-GFX1100-O0-NEXT:    scratch_store_b32 off, v0, off ; 4-byte Folded Spill
-; HSA-TRAP-GFX1100-O0-NEXT:    s_trap 2
-; HSA-TRAP-GFX1100-O0-NEXT:    s_sendmsg_rtn_b32 s0, sendmsg(MSG_RTN_GET_DOORBELL)
-; HSA-TRAP-GFX1100-O0-NEXT:    s_mov_b32 ttmp2, m0
-; HSA-TRAP-GFX1100-O0-NEXT:    s_waitcnt lgkmcnt(0)
-; HSA-TRAP-GFX1100-O0-NEXT:    s_and_b32 s0, s0, 0x3ff
-; HSA-TRAP-GFX1100-O0-NEXT:    s_or_b32 s0, s0, 0x400
-; HSA-TRAP-GFX1100-O0-NEXT:    s_mov_b32 m0, s0
-; HSA-TRAP-GFX1100-O0-NEXT:    s_sendmsg sendmsg(MSG_INTERRUPT)
-; HSA-TRAP-GFX1100-O0-NEXT:    s_mov_b32 m0, ttmp2
-; HSA-TRAP-GFX1100-O0-NEXT:    s_cmp_eq_u32 s0, s0
-; HSA-TRAP-GFX1100-O0-NEXT:    s_cbranch_scc1 .LBB2_2
+; HSA-TRAP-GFX1100-O0-NEXT:    s_cbranch_execnz .LBB2_2
 ; HSA-TRAP-GFX1100-O0-NEXT:  ; %bb.1:
 ; HSA-TRAP-GFX1100-O0-NEXT:    s_or_saveexec_b32 s6, -1
 ; HSA-TRAP-GFX1100-O0-NEXT:    scratch_load_b32 v0, off, off offset:4 ; 4-byte Folded Reload
@@ -391,9 +381,19 @@ define amdgpu_kernel void @trap_with_use_after(ptr addrspace(1) %arg0, ptr addrs
 ; HSA-TRAP-GFX1100-O0-NEXT:    s_waitcnt_vscnt null, 0x0
 ; HSA-TRAP-GFX1100-O0-NEXT:    ; kill: killed $vgpr0
 ; HSA-TRAP-GFX1100-O0-NEXT:    s_endpgm
-; HSA-TRAP-GFX1100-O0-NEXT:  .LBB2_2: ; =>This Inner Loop Header: Depth=1
+; HSA-TRAP-GFX1100-O0-NEXT:  .LBB2_2:
+; HSA-TRAP-GFX1100-O0-NEXT:    s_trap 2
+; HSA-TRAP-GFX1100-O0-NEXT:    s_sendmsg_rtn_b32 s0, sendmsg(MSG_RTN_GET_DOORBELL)
+; HSA-TRAP-GFX1100-O0-NEXT:    s_mov_b32 ttmp2, m0
+; HSA-TRAP-GFX1100-O0-NEXT:    s_waitcnt lgkmcnt(0)
+; HSA-TRAP-GFX1100-O0-NEXT:    s_and_b32 s0, s0, 0x3ff
+; HSA-TRAP-GFX1100-O0-NEXT:    s_or_b32 s0, s0, 0x400
+; HSA-TRAP-GFX1100-O0-NEXT:    s_mov_b32 m0, s0
+; HSA-TRAP-GFX1100-O0-NEXT:    s_sendmsg sendmsg(MSG_INTERRUPT)
+; HSA-TRAP-GFX1100-O0-NEXT:    s_mov_b32 m0, ttmp2
+; HSA-TRAP-GFX1100-O0-NEXT:  .LBB2_3: ; =>This Inner Loop Header: Depth=1
 ; HSA-TRAP-GFX1100-O0-NEXT:    s_sethalt 5
-; HSA-TRAP-GFX1100-O0-NEXT:    s_branch .LBB2_2
+; HSA-TRAP-GFX1100-O0-NEXT:    s_branch .LBB2_3
   %tmp = load volatile i32, ptr addrspace(1) %arg0
   call void @llvm.trap()
   store volatile i32 %tmp, ptr addrspace(1) %arg1
