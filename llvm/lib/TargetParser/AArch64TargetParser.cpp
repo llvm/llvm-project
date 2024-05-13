@@ -115,7 +115,6 @@ const AArch64::ArchInfo *AArch64::parseArch(StringRef Arch) {
 
 std::optional<AArch64::ExtensionInfo>
 AArch64::parseArchExtension(StringRef ArchExt) {
-  assert(!ArchExt.empty());
   for (const auto &A : Extensions) {
     if (ArchExt == A.Name || ArchExt == A.Alias)
       return A;
