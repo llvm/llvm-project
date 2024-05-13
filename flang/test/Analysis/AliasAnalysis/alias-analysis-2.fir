@@ -143,7 +143,7 @@ func.func @_QFPtest2(%arg0: !fir.ref<f32> {fir.bindc_name = "v1", fir.target}, %
 // alias with the wrapped scalar _QFEvar2. We meant box_addr of _QMpointersEp 
 // CHECK-DAG: p#0 <-> box.addr#0: NoAlias
 
-// Now handling more gracefully the difference between !fir.ref<!fir.box<>> and !fir.box<> 
+// Handling gracefully the difference between !fir.ref<!fir.box<>> and !fir.box<> 
 // CHECK-DAG: box.addr#0 <-> func.region0#0: NoAlias
 
 // var2, although it is a target, cannot alias with p

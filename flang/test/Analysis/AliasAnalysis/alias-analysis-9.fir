@@ -17,14 +17,20 @@
 // end module
 
 // CHECK-LABEL: Testing : "_QMmPfoo"
-// TODO: x and y do not alias
+// TODO: x and y are non pointer, non target argument and therefore do not alias.
 // CHECK-DAG: x#0 <-> y#0: MayAlias
+
+// TODO: y is not a pointer object and therefore does not alias with the x%next component. 
 // CHECK-DAG: y#0 <-> xnext1#0: MayAlias
 // CHECK-DAG: y#0 <-> xnext2#0: MayAlias
 
-// These however do alias
+// Pointer components may alias with pointer objects, 
+// as well as other pointer components
 // CHECK-DAG: x#0 <-> xnext1#0: MayAlias
 // CHECK-DAG: x#0 <-> xnext2#0: MayAlias
+
+// TODO: xnext1#0 <-> xnext2#0 are the same and therefore MustAlias but 
+//       we are currently not comparing operands involved in offset computations
 // CHECK-DAG: xnext1#0 <-> xnext2#0: MayAlias
 
 func.func @_QMmPfoo(%arg0: !fir.ref<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>> {fir.bindc_name = "x"}, %arg1: !fir.ref<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>> {fir.bindc_name = "y"}) {

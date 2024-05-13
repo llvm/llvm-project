@@ -54,9 +54,22 @@ struct AliasAnalysis {
   // the use-def chain, to arrive at the same origin, even though the starting
   // points were known to not alias.
   //
-  // Example:
   // clang-format off
-  //    fir.global @_QMtopEa : !fir.box<!fir.ptr<!fir.array<?xf32>>> 
+  // Example:
+  //  ------------------- test.f90 --------------------
+  //  module top
+  //    real, pointer :: a(:)
+  //  end module
+  //  
+  //  subroutine test()
+  //    use top
+  //    a(1) = 1
+  //  -------------------------------------------------
+  // 
+  //  flang-new -fc1 -emit-fir test.f90 -o test.fir
+  //
+  //  ------------------- test.fir --------------------
+  //  fir.global @_QMtopEa : !fir.box<!fir.ptr<!fir.array<?xf32>>> 
   //  
   //  func.func @_QPtest() {
   //    %c1 = arith.constant 1 : index
@@ -69,10 +82,11 @@ struct AliasAnalysis {
   //    fir.store %cst to %5 : !fir.ref<f32>
   //    return
   //  }
+  //  -------------------------------------------------
   //
   // With high level operations, such as fir.array_coor, it is possible to
-  // reach into the data wrapped by the box (the descriptor) therefore when
-  // asking about the memory source of the %5, we are really asking about the
+  // reach into the data wrapped by the box (the descriptor). Therefore when
+  // asking about the memory source of %5, we are really asking about the
   // source of the data of box %2.
   //
   // When asking about the source of %0 which is the address of the box, we
@@ -88,7 +102,7 @@ struct AliasAnalysis {
   // So in the above example, !fir.ref<f32> and !fir.box<!fir.ptr<!fir.array<?xf32>>> is data, 
   // while !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>> is not data.
 
-  // This generally applies to function arguments. In the example below, %arg0
+  // This also applies to function arguments. In the example below, %arg0
   // is data, %arg1 is not data but a load of %arg1 is.
   // 
   // func.func @_QFPtest2(%arg0: !fir.ref<f32>, %arg1: !fir.ref<!fir.box<!fir.ptr<f32>>> )  {

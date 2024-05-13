@@ -173,9 +173,8 @@ AliasResult AliasAnalysis::alias(Value lhs, Value rhs) {
     return AliasResult::MayAlias;
   }
 
-  // Box for POINTER component inside an object of a derived type
-  // may alias box of a POINTER object, as well as boxes for POINTER
-  // components inside two objects of derived types may alias.
+  // POINTER components may alias with POINTER objects,
+  // as well as other POINTER components
   if ((src1->isRecordWithPointerComponent() && src2->isTargetOrPointer()) ||
       (src2->isRecordWithPointerComponent() && src1->isTargetOrPointer()) ||
       (src1->isRecordWithPointerComponent() &&
@@ -290,7 +289,7 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v) {
         .Case<fir::LoadOp>([&](auto op) {
           // If the load is from a leaf source, return the leaf. Do not track
           // through indirections otherwise.
-          // TODO: At support to fir.alloca and fir.allocmem
+          // TODO: Add support to fir.alloca and fir.allocmem
           auto def = getOriginalDef(op.getMemref());
           if (isDummyArgument(def) ||
               def.template getDefiningOp<fir::AddrOfOp>()) {
