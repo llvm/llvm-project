@@ -515,11 +515,12 @@ struct CombineTransferReadOpTranspose final
 // TODO: Change the GPU dialect to abstract the layout at the this level and
 // only care about it during lowering to NVVM.
 static const char *inferFragType(Operation *op) {
-  // We can have arith.ext ops before reaching contract ops. See through them.
+  // We can have arith.ext ops before reaching contract ops. See through them
+  // and other kinds of elementwise ops.
   if (op->hasOneUse()) {
-    Operation *extOp = *op->user_begin();
-    if (isa<arith::ExtFOp, arith::ExtUIOp, arith::ExtSIOp>(extOp))
-      return inferFragType(extOp);
+    Operation *userOp = *op->user_begin();
+    if (userOp->hasTrait<OpTrait::Elementwise>())
+      return inferFragType(userOp);
   }
 
   for (Operation *users : op->getUsers()) {
