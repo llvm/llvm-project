@@ -72,6 +72,9 @@ defm LOAD16_U_I64 : WebAssemblyLoad<I64, "i64.load16_u", 0x33, []>;
 defm LOAD32_S_I64 : WebAssemblyLoad<I64, "i64.load32_s", 0x34, []>;
 defm LOAD32_U_I64 : WebAssemblyLoad<I64, "i64.load32_u", 0x35, []>;
 
+// Half Precision
+defm LOAD_F16_F32 : WebAssemblyLoad<F32, "f32.load_f16", 0xfc30, [HasHalfPrecision]>;
+
 // Pattern matching
 
 multiclass LoadPat<ValueType ty, SDPatternOperator kind, string Name> {
@@ -110,6 +113,8 @@ defm : LoadPat<i32, extloadi16, "LOAD16_U_I32">;
 defm : LoadPat<i64, extloadi8, "LOAD8_U_I64">;
 defm : LoadPat<i64, extloadi16, "LOAD16_U_I64">;
 defm : LoadPat<i64, extloadi32, "LOAD32_U_I64">;
+
+defm : LoadPat<f32, int_wasm_loadf16_f32, "LOAD_F16_F32">;
 
 // Defines atomic and non-atomic stores, regular and truncating
 multiclass WebAssemblyStore<WebAssemblyRegClass rc, string Name, int Opcode,

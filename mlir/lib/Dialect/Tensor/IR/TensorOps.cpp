@@ -1676,10 +1676,12 @@ void ExpandShapeOp::build(OpBuilder &builder, OperationState &result,
   auto tensorResultTy = cast<RankedTensorType>(resultType);
   FailureOr<SmallVector<OpFoldResult>> outputShape = inferOutputShape(
       builder, result.location, tensorResultTy, reassociation, inputShape);
-  // Failure of this assertion usually indicates presence of multiple
-  // dynamic dimensions in the same reassociation group.
-  assert(succeeded(outputShape) && "unable to infer output shape");
-  build(builder, result, tensorResultTy, src, reassociation, *outputShape);
+  SmallVector<OpFoldResult> outputShapeOrEmpty;
+  if (succeeded(outputShape)) {
+    outputShapeOrEmpty = *outputShape;
+  }
+  build(builder, result, tensorResultTy, src, reassociation,
+        outputShapeOrEmpty);
 }
 
 SmallVector<AffineMap, 4> CollapseShapeOp::getReassociationMaps() {

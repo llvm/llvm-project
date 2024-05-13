@@ -1,6 +1,6 @@
 // REQUIRES: amdgpu-registered-target
 
-// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx1210 -verify -S -emit-llvm -o - %s
+// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx1210 -verify -emit-llvm -o - %s
 
 typedef double v8d   __attribute__((ext_vector_type(8)));
 typedef double v4d   __attribute__((ext_vector_type(4)));

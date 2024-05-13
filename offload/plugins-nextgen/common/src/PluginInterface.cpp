@@ -1348,13 +1348,27 @@ Error GenericDeviceTy::dataDelete(void *TgtPtr, TargetAllocTy Kind) {
     return Plugin::success();
 
   int Res;
-  if (MemoryManager)
-    Res = MemoryManager->free(TgtPtr);
-  else
+  switch (Kind) {
+  case TARGET_ALLOC_DEFAULT:
+  case TARGET_ALLOC_DEVICE_NON_BLOCKING:
+  case TARGET_ALLOC_DEVICE:
+    if (MemoryManager) {
+      Res = MemoryManager->free(TgtPtr);
+      if (Res)
+        return Plugin::error(
+            "Failure to deallocate device pointer %p via memory manager",
+            TgtPtr);
+      break;
+    }
+    [[fallthrough]];
+  case TARGET_ALLOC_HOST:
+  case TARGET_ALLOC_SHARED:
     Res = free(TgtPtr, Kind);
-
-  if (Res)
-    return Plugin::error("Failure to deallocate device pointer %p", TgtPtr);
+    if (Res)
+      return Plugin::error(
+          "Failure to deallocate device pointer %p via device deallocator",
+          TgtPtr);
+  }
 
   // Unregister deallocated pinned memory buffer if the type is host memory.
   if (Kind == TARGET_ALLOC_HOST)

@@ -11419,8 +11419,12 @@ Value *BoUpSLP::gather(ArrayRef<Value *> VL, Value *Root, Type *ScalarTy) {
     if (Scalar->getType() != Ty) {
       assert(Scalar->getType()->isIntegerTy() && Ty->isIntegerTy() &&
              "Expected integer types only.");
+      Value *V = Scalar;
+      if (auto *CI = dyn_cast<CastInst>(Scalar);
+          isa_and_nonnull<SExtInst, ZExtInst>(CI))
+        V = CI->getOperand(0);
       Scalar = Builder.CreateIntCast(
-          Scalar, Ty, !isKnownNonNegative(Scalar, SimplifyQuery(*DL)));
+          V, Ty, !isKnownNonNegative(Scalar, SimplifyQuery(*DL)));
     }
 
     Vec = Builder.CreateInsertElement(Vec, Scalar, Builder.getInt32(Pos));
@@ -15487,8 +15491,7 @@ void BoUpSLP::computeMinimumValueSizes() {
       TreeEntry *TE = VectorizableTree[Idx].get();
       if (MinBWs.contains(TE))
         continue;
-      bool IsSigned = TE->getOpcode() == Instruction::SExt ||
-                      any_of(TE->Scalars, [&](Value *R) {
+      bool IsSigned = any_of(TE->Scalars, [&](Value *R) {
                         return !isKnownNonNegative(R, SimplifyQuery(*DL));
                       });
       MinBWs.try_emplace(TE, MaxBitWidth, IsSigned);
