@@ -914,7 +914,7 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
     }
     if (!common::AreCompatibleCUDADataAttrs(dummyDataAttr, actualDataAttr,
             dummy.ignoreTKR,
-            /*allowUnifiedMatchingRule=*/true)) {
+            /*allowUnifiedMatchingRule=*/true, &context.languageFeatures())) {
       auto toStr{[](std::optional<common::CUDADataAttr> x) {
         return x ? "ATTRIBUTES("s +
                 parser::ToUpperCaseLetters(common::EnumToString(*x)) + ")"s
