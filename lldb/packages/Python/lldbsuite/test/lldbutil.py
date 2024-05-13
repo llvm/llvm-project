@@ -1654,7 +1654,7 @@ def skip_if_library_missing(test, target, library):
     )
 
 
-def target_install(test, filename=None, path=None):
+def install_to_target(test, filename=None, path=None):
     test.assertTrue(filename or path, "filename or path must be specified.")
     if filename is None:
         filename = os.path.basename(path)
