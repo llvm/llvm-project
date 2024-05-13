@@ -376,6 +376,9 @@ ExprDependence clang::computeDependence(PackExpansionExpr *E) {
 
 ExprDependence clang::computeDependence(PackIndexingExpr *E) {
   ExprDependence D = E->getIndexExpr()->getDependence();
+  if (D & ExprDependence::Value)
+    D |= ExprDependence::TypeInstantiation;
+
   ArrayRef<Expr *> Exprs = E->getExpressions();
   if (Exprs.empty())
     D |= (E->getPackIdExpression()->getDependence() |

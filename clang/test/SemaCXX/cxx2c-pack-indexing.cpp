@@ -194,3 +194,17 @@ void h() {
   // expected-note-re@-2 {{function template specialization '{{.*}}' requested here}}
 }
 }
+
+namespace GH91885 {
+
+void test(auto...args){
+    [&]<int idx>(){
+        using R = decltype( args...[idx] ) ;
+    }.template operator()<0>();
+}
+
+void f( ) {
+    test(1);
+}
+
+}
