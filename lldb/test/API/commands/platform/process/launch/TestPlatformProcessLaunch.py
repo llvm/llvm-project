@@ -2,7 +2,6 @@
 Test platform process launch.
 """
 
-import lldb
 from textwrap import dedent
 from lldbsuite.test import lldbutil
 from lldbsuite.test.lldbtest import TestBase
