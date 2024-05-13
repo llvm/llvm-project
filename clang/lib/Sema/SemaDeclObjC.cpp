@@ -5354,7 +5354,7 @@ public:
     }
     return true;
   }
-  };
+};
 } // end anonymous namespace
 
 void SemaObjC::DiagnoseUnusedBackingIvarInAccessor(
