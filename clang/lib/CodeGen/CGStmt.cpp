@@ -1504,9 +1504,17 @@ void CodeGenFunction::EmitReturnStmt(const ReturnStmt &S) {
     Builder.CreateStore(Result.getScalarVal(), ReturnValue);
   } else {
     switch (getEvaluationKind(RV->getType())) {
-    case TEK_Scalar:
-      Builder.CreateStore(EmitScalarExpr(RV), ReturnValue);
-      break;
+    case TEK_Scalar: {
+      llvm::Value *Ret = EmitScalarExpr(RV);
+      // EmitStoreOfScalar could be used here, but it extends bool which for
+      // some targets is returned as i1 zeroext.
+      if (RV->getType()->isBitIntType()) {
+        QualType Ty = RV->getType();
+        if (!CGM.getTypes().LLVMTypeLayoutMatchesAST(Ty, Ret->getType()))
+          Ret = EmitToMemory(Ret, Ty);
+      }
+      Builder.CreateStore(Ret, ReturnValue);
+    } break;
     case TEK_Complex:
       EmitComplexExprIntoLValue(RV, MakeAddrLValue(ReturnValue, RV->getType()),
                                 /*isInit*/ true);

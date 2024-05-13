@@ -1989,13 +1989,8 @@ llvm::Value *CodeGenFunction::EmitLoadOfScalar(Address Addr, bool Volatile,
     return EmitAtomicLoad(AtomicLValue, Loc).getScalarVal();
   }
 
-  if (const auto *BIT = Ty->getAs<BitIntType>()) {
-    if (BIT->getNumBits() > 128) {
-      // Long _BitInt has array of bytes as in-memory type.
-      llvm::Type *NewTy = ConvertType(Ty);
-      Addr = Addr.withElementType(NewTy);
-    }
-  }
+  Addr = Addr.withElementType(
+      CGM.getTypes().convertTypeForLoadStore(Ty, Addr.getElementType()));
 
   llvm::LoadInst *Load = Builder.CreateLoad(Addr, Volatile);
   if (isNontemporal) {
@@ -2020,26 +2015,27 @@ llvm::Value *CodeGenFunction::EmitLoadOfScalar(Address Addr, bool Volatile,
 }
 
 llvm::Value *CodeGenFunction::EmitToMemory(llvm::Value *Value, QualType Ty) {
-  // Bool has a different representation in memory than in registers.
-  if (hasBooleanRepresentation(Ty)) {
-    // This should really always be an i1, but sometimes it's already
-    // an i8, and it's awkward to track those cases down.
-    if (Value->getType()->isIntegerTy(1))
-      return Builder.CreateZExt(Value, ConvertTypeForMem(Ty), "frombool");
-    assert(Value->getType()->isIntegerTy(getContext().getTypeSize(Ty)) &&
-           "wrong value rep of bool");
+  if (hasBooleanRepresentation(Ty) ||
+      (Ty->isBitIntType() && Value->getType()->isIntegerTy())) {
+    llvm::Type *StoreTy = convertTypeForLoadStore(Ty, Value->getType());
+    bool Signed = Ty->isSignedIntegerOrEnumerationType();
+    return Builder.CreateIntCast(Value, StoreTy, Signed, "storedv");
+  }
+
+  if (Ty->isExtVectorBoolType()) {
+    llvm::Type *StoreTy = convertTypeForLoadStore(Ty, Value->getType());
+    // Expand to the memory bit width.
+    unsigned MemNumElems = StoreTy->getPrimitiveSizeInBits();
+    // <N x i1> --> <P x i1>.
+    Value = emitBoolVecConversion(Value, MemNumElems, "insertvec");
+    // <P x i1> --> iP.
+    Value = Builder.CreateBitCast(Value, StoreTy);
   }
 
   return Value;
 }
 
 llvm::Value *CodeGenFunction::EmitFromMemory(llvm::Value *Value, QualType Ty) {
-  // Bool has a different representation in memory than in registers.
-  if (hasBooleanRepresentation(Ty)) {
-    assert(Value->getType()->isIntegerTy(getContext().getTypeSize(Ty)) &&
-           "wrong value rep of bool");
-    return Builder.CreateTrunc(Value, Builder.getInt1Ty(), "tobool");
-  }
   if (Ty->isExtVectorBoolType()) {
     const auto *RawIntTy = Value->getType();
     // Bitcast iP --> <P x i1>.
@@ -2050,6 +2046,12 @@ llvm::Value *CodeGenFunction::EmitFromMemory(llvm::Value *Value, QualType Ty) {
     llvm::Type *ValTy = ConvertType(Ty);
     unsigned ValNumElems = cast<llvm::FixedVectorType>(ValTy)->getNumElements();
     return emitBoolVecConversion(V, ValNumElems, "extractvec");
+  }
+
+  if (hasBooleanRepresentation(Ty) || Ty->isBitIntType()) {
+    llvm::Type *ResTy = ConvertType(Ty);
+    bool Signed = Ty->isSignedIntegerOrEnumerationType();
+    return Builder.CreateIntCast(Value, ResTy, Signed, "loadedv");
   }
 
   return Value;
@@ -2104,17 +2106,10 @@ void CodeGenFunction::EmitStoreOfScalar(llvm::Value *Value, Address Addr,
   llvm::Type *SrcTy = Value->getType();
   if (const auto *ClangVecTy = Ty->getAs<VectorType>()) {
     auto *VecTy = dyn_cast<llvm::FixedVectorType>(SrcTy);
-    if (VecTy && ClangVecTy->isExtVectorBoolType()) {
-      auto *MemIntTy = cast<llvm::IntegerType>(Addr.getElementType());
-      // Expand to the memory bit width.
-      unsigned MemNumElems = MemIntTy->getPrimitiveSizeInBits();
-      // <N x i1> --> <P x i1>.
-      Value = emitBoolVecConversion(Value, MemNumElems, "insertvec");
-      // <P x i1> --> iP.
-      Value = Builder.CreateBitCast(Value, MemIntTy);
-    } else if (!CGM.getCodeGenOpts().PreserveVec3Type) {
+    if (!CGM.getCodeGenOpts().PreserveVec3Type) {
       // Handle vec3 special.
-      if (VecTy && cast<llvm::FixedVectorType>(VecTy)->getNumElements() == 3) {
+      if (!Ty->isExtVectorBoolType() && VecTy &&
+          cast<llvm::FixedVectorType>(VecTy)->getNumElements() == 3) {
         // Our source is a vec3, do a shuffle vector to make it a vec4.
         Value = Builder.CreateShuffleVector(Value, ArrayRef<int>{0, 1, 2, -1},
                                             "extractVec");
@@ -2473,7 +2468,8 @@ void CodeGenFunction::EmitStoreThroughLValue(RValue Src, LValue Dst,
 void CodeGenFunction::EmitStoreThroughBitfieldLValue(RValue Src, LValue Dst,
                                                      llvm::Value **Result) {
   const CGBitFieldInfo &Info = Dst.getBitFieldInfo();
-  llvm::Type *ResLTy = ConvertTypeForMem(Dst.getType());
+  llvm::Type *ResLTy = CGM.getTypes().convertTypeForLoadStore(
+      Dst.getType(), ConvertType(Dst.getType()));
   Address Ptr = Dst.getBitFieldAddress();
 
   // Get the source value, truncated to the width of the bit-field.
@@ -2541,7 +2537,6 @@ void CodeGenFunction::EmitStoreThroughBitfieldLValue(RValue Src, LValue Dst,
         ResultVal = Builder.CreateAShr(ResultVal, HighBits, "bf.result.ashr");
       }
     }
-
     ResultVal = Builder.CreateIntCast(ResultVal, ResLTy, Info.IsSigned,
                                       "bf.result.cast");
     *Result = EmitFromMemory(ResultVal, Dst.getType());

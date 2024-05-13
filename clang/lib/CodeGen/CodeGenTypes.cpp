@@ -107,6 +107,12 @@ llvm::Type *CodeGenTypes::ConvertTypeForMem(QualType T, bool ForBitField) {
     return llvm::IntegerType::get(FixedVT->getContext(), BytePadded);
   }
 
+  if (T->isBitIntType()) {
+    if (!LLVMTypeLayoutMatchesAST(T, R))
+      return llvm::ArrayType::get(CGM.Int8Ty,
+                                  Context.getTypeSizeInChars(T).getQuantity());
+  }
+
   // If this is a bool type, or a bit-precise integer type in a bitfield
   // representation, map this integer to the target-specified size.
   if ((ForBitField && T->isBitIntType()) ||
@@ -114,14 +120,40 @@ llvm::Type *CodeGenTypes::ConvertTypeForMem(QualType T, bool ForBitField) {
     return llvm::IntegerType::get(getLLVMContext(),
                                   (unsigned)Context.getTypeSize(T));
 
-  if (const auto *BIT = T->getAs<BitIntType>()) {
-    if (BIT->getNumBits() > 128)
-      R = llvm::ArrayType::get(CGM.Int8Ty,
-                               (unsigned)Context.getTypeSize(T) / 8);
-  }
 
   // Else, don't map it.
   return R;
+}
+
+bool CodeGenTypes::LLVMTypeLayoutMatchesAST(QualType ASTTy,
+                                            llvm::Type *LLVMTy) {
+  CharUnits ASTSize = Context.getTypeSizeInChars(ASTTy);
+  CharUnits LLVMSize =
+      CharUnits::fromQuantity(getDataLayout().getTypeAllocSize(LLVMTy));
+  return ASTSize == LLVMSize;
+}
+
+llvm::Type *CodeGenTypes::convertTypeForLoadStore(QualType T,
+                                                  llvm::Type *LLVMTy) {
+  if (!LLVMTy)
+    LLVMTy = ConvertType(T);
+
+  if (!T->isBitIntType() && LLVMTy->isIntegerTy(1))
+    return llvm::IntegerType::get(getLLVMContext(),
+                                  (unsigned)Context.getTypeSize(T));
+
+  if (T->isBitIntType()) {
+    llvm::Type *R = ConvertType(T);
+    if (!LLVMTypeLayoutMatchesAST(T, R))
+      return llvm::Type::getIntNTy(
+          getLLVMContext(), Context.getTypeSizeInChars(T).getQuantity() * 8);
+  }
+
+  if (T->isExtVectorBoolType()) {
+    return ConvertTypeForMem(T);
+  }
+
+  return LLVMTy;
 }
 
 /// isRecordLayoutComplete - Return true if the specified type is already

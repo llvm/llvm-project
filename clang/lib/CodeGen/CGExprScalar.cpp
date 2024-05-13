@@ -436,9 +436,9 @@ public:
 
     if (Value *Result = ConstantEmitter(CGF).tryEmitConstantExpr(E)) {
       if (E->isGLValue())
-        return CGF.Builder.CreateLoad(Address(
-            Result, CGF.ConvertTypeForMem(E->getType()),
-            CGF.getContext().getTypeAlignInChars(E->getType())));
+        return CGF.Builder.CreateLoad(
+            Address(Result, CGF.convertTypeForLoadStore(E->getType()),
+                    CGF.getContext().getTypeAlignInChars(E->getType())));
       return Result;
     }
     return Visit(E->getSubExpr());
@@ -5348,25 +5348,8 @@ Value *ScalarExprEmitter::VisitVAArgExpr(VAArgExpr *VE) {
     return llvm::UndefValue::get(ArgTy);
   }
 
-  if (const auto *BIT = Ty->getAs<BitIntType>()) {
-    if (BIT->getNumBits() > 128) {
-      // Long _BitInt has array of bytes as in-memory type.
-      ArgPtr = ArgPtr.withElementType(ArgTy);
-    }
-  }
-
-  // FIXME Volatility.
-  llvm::Value *Val = Builder.CreateLoad(ArgPtr);
-
-  // If EmitVAArg promoted the type, we must truncate it.
-  if (ArgTy != Val->getType()) {
-    if (ArgTy->isPointerTy() && !Val->getType()->isPointerTy())
-      Val = Builder.CreateIntToPtr(Val, ArgTy);
-    else
-      Val = Builder.CreateTrunc(Val, ArgTy);
-  }
-
-  return Val;
+  return CGF.EmitLoadOfScalar(ArgPtr, Ty.isVolatileQualified(), Ty,
+                              VE->getExprLoc());
 }
 
 Value *ScalarExprEmitter::VisitBlockExpr(const BlockExpr *block) {
