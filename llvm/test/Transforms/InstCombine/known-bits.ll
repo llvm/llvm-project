@@ -1475,7 +1475,9 @@ define i80 @test_zero_only_non_ieee(x86_fp80 nofpclass(nan sub norm inf) %x) {
 
 define i32 @test_inf_nan_only(float nofpclass(sub norm zero) %x) {
 ; CHECK-LABEL: @test_inf_nan_only(
-; CHECK-NEXT:    ret i32 2130706432
+; CHECK-NEXT:    [[Y:%.*]] = bitcast float [[X:%.*]] to i32
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[Y]], 2130706432
+; CHECK-NEXT:    ret i32 [[AND]]
 ;
   %y = bitcast float %x to i32
   %and = and i32 %y, 2130706432
@@ -1519,7 +1521,9 @@ define i1 @test_simplify_icmp(i32 %x) {
 
 define i32 @test_snan_quiet_bit1(float nofpclass(sub norm inf qnan) %x) {
 ; CHECK-LABEL: @test_snan_quiet_bit1(
-; CHECK-NEXT:    ret i32 0
+; CHECK-NEXT:    [[BITS:%.*]] = bitcast float [[X:%.*]] to i32
+; CHECK-NEXT:    [[MASKED:%.*]] = and i32 [[BITS]], 4194304
+; CHECK-NEXT:    ret i32 [[MASKED]]
 ;
   %bits = bitcast float %x to i32
   %masked = and i32 %bits, 4194304
@@ -1550,7 +1554,9 @@ define i32 @test_qnan_quiet_bit1(float nofpclass(sub norm inf snan) %x) {
 
 define i32 @test_qnan_quiet_bit2(float nofpclass(sub norm inf snan) %x) {
 ; CHECK-LABEL: @test_qnan_quiet_bit2(
-; CHECK-NEXT:    ret i32 0
+; CHECK-NEXT:    [[BITS:%.*]] = bitcast float [[X:%.*]] to i32
+; CHECK-NEXT:    [[MASKED:%.*]] = and i32 [[BITS]], 2097152
+; CHECK-NEXT:    ret i32 [[MASKED]]
 ;
   %bits = bitcast float %x to i32
   %masked = and i32 %bits, 2097152
@@ -1612,7 +1618,9 @@ if.else:
 
 define i32 @test_snan_only(float nofpclass(qnan sub norm zero inf) %x) {
 ; CHECK-LABEL: @test_snan_only(
-; CHECK-NEXT:    ret i32 0
+; CHECK-NEXT:    [[Y:%.*]] = bitcast float [[X:%.*]] to i32
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[Y]], 4194304
+; CHECK-NEXT:    ret i32 [[AND]]
 ;
   %y = bitcast float %x to i32
   %and = and i32 %y, 4194304
@@ -1621,7 +1629,9 @@ define i32 @test_snan_only(float nofpclass(qnan sub norm zero inf) %x) {
 
 define i32 @test_qnan_only(float nofpclass(snan sub norm zero inf) %x) {
 ; CHECK-LABEL: @test_qnan_only(
-; CHECK-NEXT:    ret i32 4194304
+; CHECK-NEXT:    [[Y:%.*]] = bitcast float [[X:%.*]] to i32
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[Y]], 4194304
+; CHECK-NEXT:    ret i32 [[AND]]
 ;
   %y = bitcast float %x to i32
   %and = and i32 %y, 4194304

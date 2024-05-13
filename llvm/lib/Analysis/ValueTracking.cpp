@@ -1119,27 +1119,9 @@ static void computeKnownBitsFromOperator(const Operator *I,
       KnownFPClass Result = computeKnownFPClass(V, fcAllFlags, Depth + 1, Q);
       FPClassTest FPClasses = Result.KnownFPClasses;
 
-      if (Result.isKnownNever(fcNormal | fcSubnormal)) {
+      if (Result.isKnownNever(fcNormal | fcSubnormal | fcNan)) {
         Known.Zero.setAllBits();
         Known.One.setAllBits();
-
-        if (FPClasses & fcSNan) {
-          APInt Payload = APInt::getAllOnes(FPType->getScalarSizeInBits());
-          Known = Known.intersectWith(KnownBits::makeConstant(
-              APFloat::getSNaN(FPType->getFltSemantics()).bitcastToAPInt()));
-          Known = Known.intersectWith(KnownBits::makeConstant(
-              APFloat::getSNaN(FPType->getFltSemantics(), &Payload)
-                  .bitcastToAPInt()));
-        }
-
-        if (FPClasses & fcQNan) {
-          APInt Payload = APInt::getAllOnes(FPType->getScalarSizeInBits());
-          Known = Known.intersectWith(KnownBits::makeConstant(
-              APFloat::getQNaN(FPType->getFltSemantics()).bitcastToAPInt()));
-          Known = Known.intersectWith(KnownBits::makeConstant(
-              APFloat::getQNaN(FPType->getFltSemantics(), &Payload)
-                  .bitcastToAPInt()));
-        }
 
         if (FPClasses & fcInf)
           Known = Known.intersectWith(KnownBits::makeConstant(
