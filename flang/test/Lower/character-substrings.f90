@@ -231,7 +231,7 @@ end subroutine array_substring_assignment
 ! CHECK:         %[[c0:.*]] = arith.constant 0 : index
 ! CHECK:         %[[sub:.*]] = arith.subi %[[VAL_1]], %[[VAL_4]] : index
 ! CHECK:         %[[add:.*]] = arith.addi %[[sub]], %[[VAL_4]] : index
-! CHECK:         %[[div:.*]] = arith.divsi %4, %[[VAL_4]] : index
+! CHECK:         %[[div:.*]] = arith.divsi %{{[0-9]+}}, %[[VAL_4]] : index
 ! CHECK:         %[[cmp:.*]] = arith.cmpi sgt, %[[div]], %[[c0]] : index
 ! CHECK:         %[[select:.*]] = arith.select %[[cmp]], %[[div]], %[[c0]] : index
 ! CHECK:         %[[VAL_6:.*]] = fir.array_load %[[VAL_0]](%[[VAL_3]]) {{\[}}%[[VAL_5]]] : (!fir.ref<!fir.array<8x!fir.type<_QFarray_substring_assignment2Tt{ch:!fir.char<1,7>}>>>, !fir.shape<1>, !fir.slice<1>) -> !fir.array<8x!fir.char<1,7>>
@@ -323,7 +323,7 @@ end subroutine array_substring_assignment2
 ! CHECK:         %[[c0:.*]] = arith.constant 0 : index
 ! CHECK:         %[[sub:.*]] = arith.subi %[[VAL_2]], %[[VAL_6]] : index
 ! CHECK:         %[[add:.*]] = arith.addi %[[sub]], %[[VAL_6]] : index
-! CHECK:         %[[div:.*]] = arith.divsi %4, %[[VAL_6]] : index
+! CHECK:         %[[div:.*]] = arith.divsi %[[add]], %[[VAL_6]] : index
 ! CHECK:         %[[cmp:.*]] = arith.cmpi sgt, %[[div]], %[[c0]] : index
 ! CHECK:         %[[select:.*]] = arith.select %[[cmp]], %[[div]], %[[c0]] : index
 ! CHECK:         %[[VAL_8:.*]] = fir.array_load %[[VAL_0]](%[[VAL_5]]) {{\[}}%[[VAL_7]]] : (!fir.ref<!fir.array<8x!fir.type<_QFarray_substring_assignment3Tt{ch:!fir.char<1,7>}>>>, !fir.shape<1>, !fir.slice<1>) -> !fir.array<8x!fir.char<1,7>>

@@ -401,9 +401,12 @@ inline Value constantLevelTypeEncoding(OpBuilder &builder, Location loc,
 
 // Generates a constant from a validated value carrying attribute.
 inline Value genValFromAttr(OpBuilder &builder, Location loc, Attribute attr) {
-  if (auto arrayAttr = dyn_cast<ArrayAttr>(attr)) {
-    Type tp = cast<TypedAttr>(arrayAttr[0]).getType();
-    return builder.create<complex::ConstantOp>(loc, tp, arrayAttr);
+  if (auto complexAttr = dyn_cast<complex::NumberAttr>(attr)) {
+    Type tp = cast<ComplexType>(complexAttr.getType()).getElementType();
+    return builder.create<complex::ConstantOp>(
+        loc, complexAttr.getType(),
+        builder.getArrayAttr({FloatAttr::get(tp, complexAttr.getReal()),
+                              FloatAttr::get(tp, complexAttr.getImag())}));
   }
   return builder.create<arith::ConstantOp>(loc, cast<TypedAttr>(attr));
 }
