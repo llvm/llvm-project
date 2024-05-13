@@ -2155,17 +2155,14 @@ getFirstOrLastMappedMemberPtr(mlir::omp::MapInfoOp mapInfo, bool first) {
           int aIndex = indexValues[a * shape[1] + i];
           int bIndex = indexValues[b * shape[1] + i];
 
+          if (aIndex == bIndex)
+            continue;
+
           if (aIndex != -1 && bIndex == -1)
             return false;
 
           if (aIndex == -1 && bIndex != -1)
             return true;
-
-          if (aIndex == -1)
-            return first;
-
-          if (bIndex == -1)
-            return !first;
 
           // A is earlier in the record type layout than B
           if (aIndex < bIndex)
@@ -2175,10 +2172,10 @@ getFirstOrLastMappedMemberPtr(mlir::omp::MapInfoOp mapInfo, bool first) {
             return !first;
         }
 
-        // iterated the entire list and couldn't make a decision, all elements
-        // were likely the same, return true for now similar to reaching the end
-        // of both and finding invalid indices.
-        return true;
+        // Iterated the entire list and couldn't make a decision, all elements
+        // were likely the same. Return false, since the sort comparator should
+        // return false for equal elements.
+        return false;
       });
 
     return llvm::cast<mlir::omp::MapInfoOp>(
