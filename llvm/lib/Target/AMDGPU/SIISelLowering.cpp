@@ -233,9 +233,6 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     // sources.
     setOperationAction(ISD::FP_TO_SINT, MVT::i32, Custom);
     setOperationAction(ISD::FP_TO_UINT, MVT::i32, Custom);
-
-    setOperationAction(ISD::BUILD_VECTOR, MVT::v2bf16, Promote);
-    AddPromotedToType(ISD::BUILD_VECTOR, MVT::v2bf16, MVT::v2i16);
   }
 
   setTruncStoreAction(MVT::v2i32, MVT::v2i16, Expand);
@@ -744,9 +741,8 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     setOperationAction({ISD::ANY_EXTEND, ISD::ZERO_EXTEND, ISD::SIGN_EXTEND},
                        MVT::v8i32, Expand);
 
-    if (!Subtarget->hasVOP3PInsts())
-      setOperationAction(ISD::BUILD_VECTOR,
-                         {MVT::v2i16, MVT::v2f16, MVT::v2bf16}, Custom);
+    setOperationAction(ISD::BUILD_VECTOR, {MVT::v2i16, MVT::v2f16, MVT::v2bf16},
+                       Subtarget->hasVOP3PInsts() ? Legal : Custom);
 
     setOperationAction(ISD::FNEG, MVT::v2f16, Legal);
     // This isn't really legal, but this avoids the legalizer unrolling it (and
