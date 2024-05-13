@@ -497,35 +497,34 @@ void DWARFUnit::extractDIEsIfNeeded(bool CUDieOnly) {
 
 Error DWARFUnit::tryExtractDIEsIfNeeded(bool CUDieOnly) {
   {
-    llvm::sys::ScopedReader Lock(m_cu_die_array_mutex);
+    llvm::sys::ScopedReader Lock(CUDieArrayMutex);
     if ((CUDieOnly && !DieArray.empty()) || DieArray.size() > 1)
       return Error::success(); // Already parsed.
   }
   bool HasCUDie = false;
   {
-    llvm::sys::ScopedWriter Lock(m_cu_die_array_mutex);
+    llvm::sys::ScopedWriter Lock(CUDieArrayMutex);
     if ((CUDieOnly && !DieArray.empty()) || DieArray.size() > 1)
       return Error::success(); // Already parsed.
     HasCUDie = !DieArray.empty();
     extractDIEsToVector(!HasCUDie, !CUDieOnly, DieArray);
   }
   {
-    llvm::sys::ScopedReader Lock(m_all_die_array_mutex);
+    llvm::sys::ScopedReader Lock(AllDieArrayMutex);
     if (DieArray.empty())
       return Error::success();
 
-    // If CU DIE was just parsed, copy several attribute values from it.
     if (HasCUDie)
       return Error::success();
   }
-  llvm::sys::ScopedWriter Lock(m_all_die_array_mutex);
+  llvm::sys::ScopedWriter Lock(AllDieArrayMutex);
   if (DieArray.empty())
     return Error::success();
 
-  // If CU DIE was just parsed, copy several attribute values from it.
   if (HasCUDie)
     return Error::success();
 
+  // If CU DIE was just parsed, copy several attribute values from it.
   DWARFDie UnitDie(this, &DieArray[0]);
   if (std::optional<uint64_t> DWOId =
           toUnsigned(UnitDie.find(DW_AT_GNU_dwo_id)))
@@ -674,8 +673,8 @@ void DWARFUnit::clearDIEs(bool KeepCUDie) {
   // It depends on the implementation whether the request is fulfilled.
   // Create a new vector with a small capacity and assign it to the DieArray to
   // have previous contents freed.
-  llvm::sys::ScopedWriter CULock(m_cu_die_array_mutex);
-  llvm::sys::ScopedWriter AllLock(m_all_die_array_mutex);
+  llvm::sys::ScopedWriter CULock(CUDieArrayMutex);
+  llvm::sys::ScopedWriter AllLock(AllDieArrayMutex);
   DieArray = (KeepCUDie && !DieArray.empty())
                  ? std::vector<DWARFDebugInfoEntry>({DieArray[0]})
                  : std::vector<DWARFDebugInfoEntry>();

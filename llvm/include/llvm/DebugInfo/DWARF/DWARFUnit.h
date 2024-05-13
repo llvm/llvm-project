@@ -258,8 +258,8 @@ class DWARFUnit {
 
   std::shared_ptr<DWARFUnit> DWO;
 
-  mutable llvm::sys::RWMutex m_cu_die_array_mutex;
-  mutable llvm::sys::RWMutex m_all_die_array_mutex;
+  mutable llvm::sys::RWMutex CUDieArrayMutex;
+  mutable llvm::sys::RWMutex AllDieArrayMutex;
 
 protected:
   friend dwarf_linker::parallel::CompileUnit;
