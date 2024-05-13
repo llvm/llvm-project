@@ -25,12 +25,6 @@ class DebugInfodDWPTests(TestBase):
     # No need to try every flavor of debug inf.
     NO_DEBUG_INFO_TESTCASE = True
 
-    # def setUp(self):
-    #     TestBase.setUp(self)
-    #     # Don't run these tests if we don't have Debuginfod support
-    #     if "Debuginfod" not in configuration.enabled_plugins:
-    #         self.skipTest("The Debuginfod SymbolLocator plugin is not enabled")
-
     def test_normal_stripped(self):
         """
         Validate behavior with a stripped binary, no symbols or symbol locator.
@@ -187,8 +181,10 @@ class DebugInfodDWPTests(TestBase):
     def getUUID(self, filename):
         try:
             spec = lldb.SBModuleSpec()
-            spec.SetFileSpec(self.getBuildArtifact(filename))
-            uuid = lldb.SBModule(spec).GetUUIDString().replace("-", "").lower()
-            return uuid if len(uuid) > 8 else None # Shouldn't have CRC's in this field
+            spec.SetFileSpec(lldb.SBFileSpec(self.getBuildArtifact(filename)))
+            module = lldb.SBModule(spec)
+            uuid = module.GetUUIDString().replace("-", "").lower()
+            # Don't want lldb's fake 32 bit CRC's for this one
+            return uuid if len(uuid) > 8 else None
         except:
             return None
