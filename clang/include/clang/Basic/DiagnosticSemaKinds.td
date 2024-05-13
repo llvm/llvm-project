@@ -10035,12 +10035,6 @@ def warn_new_dangling_initializer_list : Warning<
   "the allocated initializer list}0 "
   "will be destroyed at the end of the full-expression">,
   InGroup<DanglingInitializerList>;
-def warn_unsupported_lifetime_extension : Warning<
-  "lifetime extension of "
-  "%select{temporary|backing array of initializer list}0 created "
-  "by aggregate initialization using a default member initializer "
-  "is not yet supported; lifetime of %select{temporary|backing array}0 "
-  "will end at the end of the full-expression">, InGroup<Dangling>;
 
 // For non-floating point, expressions of the form x == x or x != x
 // should result in a warning, since these always evaluate to a constant.

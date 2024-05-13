@@ -5,6 +5,17 @@ RUN: llvm-bolt %t.exe -o %t.out --pa -p %p/Inputs/blarge_new.preagg.txt \
 RUN:   --reorder-blocks=ext-tsp --split-functions --split-strategy=cdsplit \
 RUN:   --reorder-functions=cdsort --enable-bat --dyno-stats --skip-funcs=main \
 RUN:   2>&1 | FileCheck --check-prefix WRITE-BAT-CHECK %s
+# Check that branch with entry in BAT is accounted for.
+RUN: perf2bolt %t.out --pa -p %p/Inputs/blarge_new_bat_branchentry.preagg.txt \
+RUN:   -w %t.yaml -o %t.fdata
+RUN: llvm-bolt %t.exe -data %t.fdata -w %t.yaml-fdata -o %t.null
+RUN: FileCheck --input-file %t.yaml --check-prefix BRANCHENTRY-YAML-CHECK %s
+RUN: FileCheck --input-file %t.yaml-fdata --check-prefix BRANCHENTRY-YAML-CHECK %s
+BRANCHENTRY-YAML-CHECK:    - name: SolveCubic
+BRANCHENTRY-YAML-CHECK:      bid: 0
+BRANCHENTRY-YAML-CHECK:      hash: 0x700F19D24600000
+BRANCHENTRY-YAML-CHECK-NEXT: succ: [ { bid: 7, cnt: 1 }
+# Large profile test
 RUN: perf2bolt %t.out --pa -p %p/Inputs/blarge_new_bat.preagg.txt -w %t.yaml -o %t.fdata \
 RUN:   2>&1 | FileCheck --check-prefix READ-BAT-CHECK %s
 RUN: FileCheck --input-file %t.yaml --check-prefix YAML-BAT-CHECK %s
