@@ -712,16 +712,17 @@ enabled sub-projects. Nearly all of these variable names begin with
 
   This flag needs to be used along with the static CRT, ie. if building the
   Release target, add -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded.
-  Note that rpmalloc is also supported natively in-tree, for example:
-
-  .. code-block:: console
-
-    $ D:\llvm-project> cmake ... -DLLVM_ENABLE_RPMALLOC=ON
+  Note that rpmalloc is also supported natively in-tree, see option below.
 
 **LLVM_ENABLE_RPMALLOC**:BOOL
   Similar to LLVM_INTEGRATED_CRT_ALLOC, embeds the in-tree rpmalloc into the
   host toolchain as a C runtime allocator. Requires linking with the static CRT,
-  if building the Release target, with: -DLLVM_USE_CRT_RELEASE=MT.
+  for example when building the Release target:
+
+  .. code-block:: console
+
+    $ D:\llvm-project> cmake ... -DLLVM_ENABLE_RPMALLOC=ON ^
+                                 -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded
 
 **LLVM_LINK_LLVM_DYLIB**:BOOL
   If enabled, tools will be linked with the libLLVM shared library. Defaults
