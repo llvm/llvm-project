@@ -11419,8 +11419,16 @@ Value *BoUpSLP::gather(ArrayRef<Value *> VL, Value *Root, Type *ScalarTy) {
     if (Scalar->getType() != Ty) {
       assert(Scalar->getType()->isIntegerTy() && Ty->isIntegerTy() &&
              "Expected integer types only.");
+      Value *V = Scalar;
+      if (auto *CI = dyn_cast<CastInst>(Scalar);
+          isa_and_nonnull<SExtInst, ZExtInst>(CI)) {
+        Value *Op = CI->getOperand(0);
+        if (auto *IOp = dyn_cast<Instruction>(Op);
+            !IOp || !(isDeleted(IOp) || getTreeEntry(IOp)))
+          V = Op;
+      }
       Scalar = Builder.CreateIntCast(
-          Scalar, Ty, !isKnownNonNegative(Scalar, SimplifyQuery(*DL)));
+          V, Ty, !isKnownNonNegative(Scalar, SimplifyQuery(*DL)));
     }
 
     Vec = Builder.CreateInsertElement(Vec, Scalar, Builder.getInt32(Pos));

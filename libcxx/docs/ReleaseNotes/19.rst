@@ -46,11 +46,13 @@ Implemented Papers
 - P2869R4 - Remove Deprecated ``shared_ptr`` Atomic Access APIs from C++26
 - P2872R3 - Remove ``wstring_convert`` From C++26
 - P3142R0 - Printing Blank Lines with ``println`` (as DR against C++23)
+- P2944R3 - Comparisons for ``reference_wrapper`` (comparison operators for ``reference_wrapper`` only)
 - P2302R4 - ``std::ranges::contains``
 - P1659R3 - ``std::ranges::starts_with`` and ``std::ranges::ends_with``
 - P3029R1 - Better ``mdspan``'s CTAD
 - P2387R3 - Pipe support for user-defined range adaptors
 - P2713R1 - Escaping improvements in ``std::format``
+- P2231R1 - Missing ``constexpr`` in ``std::optional`` and ``std::variant``
 
 Improvements and New Features
 -----------------------------

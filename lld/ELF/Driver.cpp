@@ -151,7 +151,7 @@ bool link(ArrayRef<const char *> args, llvm::raw_ostream &stdoutOS,
                                  "--error-limit=0 to see all errors)";
 
   config = ConfigWrapper();
-  script = std::make_unique<LinkerScript>();
+  script = ScriptWrapper();
 
   symAux.emplace_back();
 

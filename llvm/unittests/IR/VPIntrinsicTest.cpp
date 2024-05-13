@@ -27,7 +27,8 @@ namespace {
 static const char *ReductionIntOpcodes[] = {
     "add", "mul", "and", "or", "xor", "smin", "smax", "umin", "umax"};
 
-static const char *ReductionFPOpcodes[] = {"fadd", "fmul", "fmin", "fmax"};
+static const char *ReductionFPOpcodes[] = {"fadd", "fmul",     "fmin",
+                                           "fmax", "fminimum", "fmaximum"};
 
 class VPIntrinsicTest : public testing::Test {
 protected:
