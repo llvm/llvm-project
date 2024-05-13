@@ -1608,7 +1608,9 @@ multiclass VOP2_Real_NO_VOP3_with_name<GFXGen Gen, bits<6> op, string opName,
               VOP2_Real_dpp_with_name<Gen, op, opName, asmName>,
               VOP2_Real_dpp8_with_name<Gen, op, opName, asmName>;
   defvar ps = !cast<VOP2_Pseudo>(opName#"_e32");
-  def Gen.Suffix#"_alias" : MnemonicAlias<ps.Mnemonic, asmName>, Requires<[Gen.AssemblerPredicate]>;
+  def Gen.Suffix#"_alias" : AMDGPUMnemonicAlias<ps.Mnemonic, asmName> {
+    let AssemblerPredicate = Gen.AssemblerPredicate;
+  }
 }
 
 multiclass VOP2_Real_FULL_with_name<GFXGen Gen, bits<6> op, string opName,
@@ -1628,7 +1630,9 @@ multiclass VOP2_Real_NO_DPP_with_name<GFXGen Gen, bits<6> op, string opName,
   defm NAME : VOP2_Real_e32_with_name<Gen, op, opName, asmName>,
               VOP2_Real_e64_with_name<Gen, op, opName, asmName>;
   defvar ps = !cast<VOP2_Pseudo>(opName#"_e32");
-  def Gen.Suffix#"_alias" : MnemonicAlias<ps.Mnemonic, asmName>, Requires<[Gen.AssemblerPredicate]>;
+  def Gen.Suffix#"_alias" : AMDGPUMnemonicAlias<ps.Mnemonic, asmName> {
+    let AssemblerPredicate = Gen.AssemblerPredicate;
+  }
 }
 
 multiclass VOP2_Real_with_DPP16_with_alias<GFXGen Gen, bits<6> op, string alias> {
@@ -1636,7 +1640,9 @@ multiclass VOP2_Real_with_DPP16_with_alias<GFXGen Gen, bits<6> op, string alias>
               VOP2_Real_dpp<Gen, op>,
               VOP2_Real_e64<Gen, op>,
               VOP3_Real_dpp_Base<Gen, {0, 1, 0, 0, op{5-0}}>;
-  def Gen.Suffix#"_alias" : MnemonicAlias<alias, NAME>, Requires<[Gen.AssemblerPredicate]>;
+  def Gen.Suffix#"_alias" : AMDGPUMnemonicAlias<alias, NAME> {
+    let AssemblerPredicate = Gen.AssemblerPredicate;
+  }
 }
 
 //===----------------------------------------------------------------------===//
@@ -1666,7 +1672,9 @@ multiclass VOP2_Real_FULL_t16_with_name_gfx12_gfx13<
     bits<6> gfx12Op, bits<6> op, string opName, string asmName, string alias> {
   defm NAME : VOP2_Real_FULL_with_name<GFX12Gen, gfx12Op, opName, asmName>;
   defm NAME : VOP2_Real_FULL_with_name<GFX13Gen, op, opName, asmName>;
-  def _gfx12plus_2nd_alias : MnemonicAlias<alias, asmName>, Requires<[isGFX12Plus]>;
+  def _gfx12_2nd_alias : AMDGPUMnemonicAlias<alias, asmName> {
+    let AssemblerPredicate = isGFX12Plus;
+  }
 }
 
 multiclass VOP2_Real_with_DPP16_with_alias_gfx12_gfx13<bits<6> op, string alias> :
@@ -1732,7 +1740,9 @@ multiclass VOP2_Real_NO_VOP3_with_name_gfx11<bits<6> op, string opName,
               VOP2_Real_dpp_with_name<GFX11Gen, op, opName, asmName>,
               VOP2_Real_dpp8_with_name<GFX11Gen, op, opName, asmName>;
   defvar ps = !cast<VOP2_Pseudo>(opName#"_e32");
-  def _gfx11_alias : MnemonicAlias<ps.Mnemonic, asmName>, Requires<[isGFX11Only]>;
+  def _gfx11_alias : AMDGPUMnemonicAlias<ps.Mnemonic, asmName> {
+    let AssemblerPredicate = isGFX11Only;
+  }
 }
 
 multiclass VOP2_Real_NO_DPP_with_name_gfx11<bits<6> op, string opName,
