@@ -123,12 +123,12 @@ static bool saveMLIRTempFile(const CompilerInvocation &ci,
 bool PrescanAction::beginSourceFileAction() { return runPrescan(); }
 
 bool PrescanAndParseAction::beginSourceFileAction() {
-  return runPrescan() && runParse();
+  return runPrescan() && runParse(/*emitMessages=*/true);
 }
 
 bool PrescanAndSemaAction::beginSourceFileAction() {
-  return runPrescan() && runParse() && runSemanticChecks() &&
-         generateRtTypeTables();
+  return runPrescan() && runParse(/*emitMessages=*/false) &&
+         runSemanticChecks() && generateRtTypeTables();
 }
 
 bool PrescanAndSemaDebugAction::beginSourceFileAction() {
@@ -137,8 +137,8 @@ bool PrescanAndSemaDebugAction::beginSourceFileAction() {
   // from exiting early (i.e. in the presence of semantic errors). We should
   // never do this in actions intended for end-users or otherwise regular
   // compiler workflows!
-  return runPrescan() && runParse() && (runSemanticChecks() || true) &&
-         (generateRtTypeTables() || true);
+  return runPrescan() && runParse(/*emitMessages=*/false) &&
+         (runSemanticChecks() || true) && (generateRtTypeTables() || true);
 }
 
 static void addDependentLibs(mlir::ModuleOp &mlirModule, CompilerInstance &ci) {
@@ -275,8 +275,8 @@ bool CodeGenAction::beginSourceFileAction() {
     ci.getDiagnostics().Report(diagID);
     return false;
   }
-  bool res = runPrescan() && runParse() && runSemanticChecks() &&
-             generateRtTypeTables();
+  bool res = runPrescan() && runParse(/*emitMessages=*/false) &&
+             runSemanticChecks() && generateRtTypeTables();
   if (!res)
     return res;
 
@@ -802,6 +802,7 @@ void CodeGenAction::generateLLVMIR() {
   pm.enableVerifier(/*verifyPasses=*/true);
 
   MLIRToLLVMPassPipelineConfig config(level, opts, mathOpts);
+  fir::registerDefaultInlinerPass(config);
 
   if (auto vsr = getVScaleRange(ci)) {
     config.VScaleMin = vsr->first;

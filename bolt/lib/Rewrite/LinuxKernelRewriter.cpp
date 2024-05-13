@@ -248,6 +248,9 @@ class LinuxKernelRewriter final : public MetadataRewriter {
   /// Update ORC data in the binary.
   Error rewriteORCTables();
 
+  /// Validate written ORC tables after binary emission.
+  Error validateORCTables();
+
   /// Static call table handling.
   Error readStaticCalls();
   Error rewriteStaticCalls();
@@ -356,6 +359,9 @@ public:
     updateLKMarkers();
 
     if (Error E = updateStaticKeysJumpTablePostEmit())
+      return E;
+
+    if (Error E = validateORCTables())
       return E;
 
     return Error::success();
@@ -777,11 +783,9 @@ Error LinuxKernelRewriter::rewriteORCTables() {
   };
 
   // Emit new ORC entries for the emitted function.
-  auto emitORC = [&](const BinaryFunction &BF) -> Error {
-    assert(!BF.isSplit() && "Split functions not supported by ORC writer yet.");
-
+  auto emitORC = [&](const FunctionFragment &FF) -> Error {
     ORCState CurrentState = NullORC;
-    for (BinaryBasicBlock *BB : BF.getLayout().blocks()) {
+    for (BinaryBasicBlock *BB : FF) {
       for (MCInst &Inst : *BB) {
         ErrorOr<ORCState> ErrorOrState =
             BC.MIB->tryGetAnnotationAs<ORCState>(Inst, "ORC");
@@ -802,7 +806,36 @@ Error LinuxKernelRewriter::rewriteORCTables() {
     return Error::success();
   };
 
+  // Emit ORC entries for cold fragments. We assume that these fragments are
+  // emitted contiguously in memory using reserved space in the kernel. This
+  // assumption is validated in post-emit pass validateORCTables() where we
+  // check that ORC entries are sorted by their addresses.
+  auto emitColdORC = [&]() -> Error {
+    for (BinaryFunction &BF :
+         llvm::make_second_range(BC.getBinaryFunctions())) {
+      if (!BC.shouldEmit(BF))
+        continue;
+      for (FunctionFragment &FF : BF.getLayout().getSplitFragments())
+        if (Error E = emitORC(FF))
+          return E;
+    }
+
+    return Error::success();
+  };
+
+  bool ShouldEmitCold = !BC.BOLTReserved.empty();
   for (ORCListEntry &Entry : ORCEntries) {
+    if (ShouldEmitCold && Entry.IP > BC.BOLTReserved.start()) {
+      if (Error E = emitColdORC())
+        return E;
+
+      // Emit terminator entry at the end of the reserved region.
+      if (Error E = emitORCEntry(BC.BOLTReserved.end(), NullORC))
+        return E;
+
+      ShouldEmitCold = false;
+    }
+
     // Emit original entries for functions that we haven't modified.
     if (!Entry.BF || !BC.shouldEmit(*Entry.BF)) {
       // Emit terminator only if it marks the start of a function.
@@ -816,7 +849,7 @@ Error LinuxKernelRewriter::rewriteORCTables() {
     // Emit all ORC entries for a function referenced by an entry and skip over
     // the rest of entries for this function by resetting its ORC attribute.
     if (Entry.BF->hasORC()) {
-      if (Error E = emitORC(*Entry.BF))
+      if (Error E = emitORC(Entry.BF->getLayout().getMainFragment()))
         return E;
       Entry.BF->setHasORC(false);
     }
@@ -825,13 +858,38 @@ Error LinuxKernelRewriter::rewriteORCTables() {
   LLVM_DEBUG(dbgs() << "BOLT-DEBUG: emitted " << NumEmitted
                     << " ORC entries\n");
 
-  // Replicate terminator entry at the end of sections to match the original
-  // table sizes.
-  const BinaryFunction &LastBF = BC.getBinaryFunctions().rbegin()->second;
-  const uint64_t LastIP = LastBF.getAddress() + LastBF.getMaxSize();
+  // Populate ORC tables with a terminator entry with max address to match the
+  // original table sizes.
+  const uint64_t LastIP = std::numeric_limits<uint64_t>::max();
   while (UnwindWriter.bytesRemaining()) {
     if (Error E = emitORCEntry(LastIP, NullORC, nullptr, /*Force*/ true))
       return E;
+  }
+
+  return Error::success();
+}
+
+Error LinuxKernelRewriter::validateORCTables() {
+  if (!ORCUnwindIPSection)
+    return Error::success();
+
+  const uint64_t IPSectionAddress = ORCUnwindIPSection->getAddress();
+  DataExtractor IPDE = DataExtractor(ORCUnwindIPSection->getOutputContents(),
+                                     BC.AsmInfo->isLittleEndian(),
+                                     BC.AsmInfo->getCodePointerSize());
+  DataExtractor::Cursor IPCursor(0);
+  uint64_t PrevIP = 0;
+  for (uint32_t Index = 0; Index < NumORCEntries; ++Index) {
+    const uint64_t IP =
+        IPSectionAddress + IPCursor.tell() + (int32_t)IPDE.getU32(IPCursor);
+    if (!IPCursor)
+      return createStringError(errc::executable_format_error,
+                               "out of bounds while reading ORC IP table: %s",
+                               toString(IPCursor.takeError()).c_str());
+
+    assert(IP >= PrevIP && "Unsorted ORC table detected");
+    (void)PrevIP;
+    PrevIP = IP;
   }
 
   return Error::success();
@@ -1663,6 +1721,9 @@ Error LinuxKernelRewriter::readStaticKeysJumpTable() {
     BC.MIB->addAnnotation(*Inst, "InitValue", Info.InitValue);
     if (!BC.MIB->getSize(*Inst))
       BC.MIB->setSize(*Inst, Size);
+
+    if (!BC.MIB->getOffset(*Inst))
+      BC.MIB->setOffset(*Inst, JumpAddress - BF->getAddress());
 
     if (opts::LongJumpLabels)
       BC.MIB->setSize(*Inst, 5);

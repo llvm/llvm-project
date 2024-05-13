@@ -1338,6 +1338,9 @@ void CStringChecker::evalCopyCommon(CheckerContext &C, const CallEvent &Call,
 
   // If the size can be nonzero, we have to check the other arguments.
   if (stateNonZeroSize) {
+    // TODO: If Size is tainted and we cannot prove that it is smaller or equal
+    // to the size of the destination buffer, then emit a warning
+    // that an attacker may provoke a buffer overflow error.
     state = stateNonZeroSize;
 
     // Ensure the destination is not null. If it is NULL there will be a

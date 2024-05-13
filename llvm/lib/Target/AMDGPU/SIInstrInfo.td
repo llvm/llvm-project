@@ -1042,6 +1042,9 @@ def SDWAVopcDst : BoolRC {
 class NamedIntOperand<ValueType Type, string Prefix, bit Optional = 1,
                       string name = NAME>
     : CustomOperand<Type, Optional, name> {
+  let PredicateMethod =
+    "getPredicate([](const AMDGPUOperand &Op) -> bool { "#
+    "return Op.isImmTy(AMDGPUOperand::"#ImmTy#"); })";
   string Validator = "[](int64_t V) { return true; }";
   string ConvertMethod = "[](int64_t &V) { return "#Validator#"(V); }";
   let ParserMethod =
@@ -1192,7 +1195,9 @@ def MatrixBFMT : CustomOperand<i32, 1, "MatrixBFMT">;
 def MatrixAScale : CustomOperand<i32, 1, "MatrixAScale">;
 def MatrixBScale : CustomOperand<i32, 1, "MatrixBScale">;
 
-def ScaleSel : NamedIntOperand<i8, "scale_sel">;
+def ScaleSel : NamedIntOperand<i8, "scale_sel"> {
+  let Validator = "isUInt<3>";
+}
 def AuxData : NamedIntOperand<i32, "aux_data">;
 
 class KImmFPOperand<ValueType vt> : ImmOperand<vt> {
@@ -2760,6 +2765,9 @@ def VOP_V2F16_F32_F32 : VOPProfile <[v2f16, f32, f32, untyped]>;
 def VOP_F32_F16_F16_F16 : VOPProfile <[f32, f16, f16, f16]>;
 def VOP_F32_BF16_BF16_BF16 : VOPProfile <[f32, bf16, bf16, bf16]>;
 def VOP_V2BF16_F32_F32 : VOPProfile <[v2bf16, f32, f32, untyped]>;
+def VOP_V32F32_V6I32_F32 : VOPProfile <[v32f32, v6i32, f32, untyped]>;
+def VOP_V32F16_V6I32_F32 : VOPProfile <[v32f16, v6i32, f32, untyped]>;
+def VOP_V32BF16_V6I32_F32 : VOPProfile <[v32bf16, v6i32, f32, untyped]>;
 def VOP_V2BF16_F32_F32_I32 : VOPProfile <[v2bf16, f32, f32, i32]>;
 def VOP_V2F16_F32_F32_I32 : VOPProfile <[v2f16, f32, f32, i32]>;
 def VOP_I32_F16_I32 : VOPProfile <[i32, f16, i32, untyped]>;

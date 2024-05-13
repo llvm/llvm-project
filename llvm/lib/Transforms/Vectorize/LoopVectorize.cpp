@@ -6876,11 +6876,15 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I, ElementCount VF,
     // In cases of scalarized and predicated instructions, there will be VF
     // predicated blocks in the vectorized loop. Each branch around these
     // blocks requires also an extract of its vector compare i1 element.
+    // Note that the conditional branch from the loop latch will be replaced by
+    // a single branch controlling the loop, so there is no extra overhead from
+    // scalarization.
     bool ScalarPredicatedBB = false;
     BranchInst *BI = cast<BranchInst>(I);
     if (VF.isVector() && BI->isConditional() &&
         (PredicatedBBsAfterVectorization[VF].count(BI->getSuccessor(0)) ||
-         PredicatedBBsAfterVectorization[VF].count(BI->getSuccessor(1))))
+         PredicatedBBsAfterVectorization[VF].count(BI->getSuccessor(1))) &&
+        BI->getParent() != TheLoop->getLoopLatch())
       ScalarPredicatedBB = true;
 
     if (ScalarPredicatedBB) {
@@ -8268,6 +8272,7 @@ VPWidenCallRecipe *VPRecipeBuilder::tryToWidenCall(CallInst *CI,
     return nullptr;
 
   SmallVector<VPValue *, 4> Ops(Operands.take_front(CI->arg_size()));
+  Ops.push_back(Operands.back());
 
   // Is it beneficial to perform intrinsic call compared to lib call?
   bool ShouldUseVectorIntrinsic =
@@ -8278,7 +8283,7 @@ VPWidenCallRecipe *VPRecipeBuilder::tryToWidenCall(CallInst *CI,
                 },
                 Range);
   if (ShouldUseVectorIntrinsic)
-    return new VPWidenCallRecipe(*CI, make_range(Ops.begin(), Ops.end()), ID,
+    return new VPWidenCallRecipe(CI, make_range(Ops.begin(), Ops.end()), ID,
                                  CI->getDebugLoc());
 
   Function *Variant = nullptr;
@@ -8331,7 +8336,7 @@ VPWidenCallRecipe *VPRecipeBuilder::tryToWidenCall(CallInst *CI,
       Ops.insert(Ops.begin() + *MaskPos, Mask);
     }
 
-    return new VPWidenCallRecipe(*CI, make_range(Ops.begin(), Ops.end()),
+    return new VPWidenCallRecipe(CI, make_range(Ops.begin(), Ops.end()),
                                  Intrinsic::not_intrinsic, CI->getDebugLoc(),
                                  Variant);
   }

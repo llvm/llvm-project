@@ -24,7 +24,7 @@ def err_no_matching_target : Error<"no matching target found for target variant 
 def err_unsupported_vendor : Error<"vendor '%0' is not supported: '%1'">;
 def err_unsupported_environment : Error<"environment '%0' is not supported: '%1'">;
 def err_unsupported_os : Error<"os '%0' is not supported: '%1'">;
-def err_cannot_read_alias_list : Error<"could not read alias list '%0': %1">;
+def err_cannot_read_input_list : Error<"could not read %select{alias list|filelist}0 '%1': %2">;
 } // end of command line category.
 
 let CategoryName = "Verification" in {

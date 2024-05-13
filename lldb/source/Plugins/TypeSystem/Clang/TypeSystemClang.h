@@ -67,11 +67,13 @@ public:
 
 /// The implementation of lldb::Type's m_payload field for TypeSystemClang.
 class TypePayloadClang {
-  /// The Layout is as follows:
+  /// The payload is used for typedefs and ptrauth types.
+  /// For typedefs, the Layout is as follows:
   /// \verbatim
   /// bit 0..30 ... Owning Module ID.
   /// bit 31 ...... IsCompleteObjCClass.
   /// \endverbatim
+  /// For ptrauth types, we store the PointerAuthQualifier as an opaque value.
   Type::Payload m_payload = 0;
 
 public:
@@ -653,6 +655,10 @@ public:
   bool IsFloatingPointType(lldb::opaque_compiler_type_t type, uint32_t &count,
                            bool &is_complex) override;
 
+  unsigned GetPtrAuthKey(lldb::opaque_compiler_type_t type) override;
+  unsigned GetPtrAuthDiscriminator(lldb::opaque_compiler_type_t type) override;
+  bool GetPtrAuthAddressDiversity(lldb::opaque_compiler_type_t type) override;
+
   bool IsFunctionType(lldb::opaque_compiler_type_t type) override;
 
   uint32_t IsHomogeneousAggregate(lldb::opaque_compiler_type_t type,
@@ -792,6 +798,9 @@ public:
   CompilerType GetAtomicType(lldb::opaque_compiler_type_t type) override;
 
   CompilerType AddConstModifier(lldb::opaque_compiler_type_t type) override;
+
+  CompilerType AddPtrAuthModifier(lldb::opaque_compiler_type_t type,
+                                  uint32_t payload) override;
 
   CompilerType AddVolatileModifier(lldb::opaque_compiler_type_t type) override;
 
@@ -1280,12 +1289,12 @@ public:
   /// \see lldb_private::TypeSystem::Dump
   void Dump(llvm::raw_ostream &output) override;
 
-  UserExpression *
-  GetUserExpression(llvm::StringRef expr, llvm::StringRef prefix,
-                    lldb::LanguageType language,
-                    Expression::ResultType desired_type,
-                    const EvaluateExpressionOptions &options,
-                    ValueObject *ctx_obj) override;
+  UserExpression *GetUserExpression(llvm::StringRef expr,
+                                    llvm::StringRef prefix,
+                                    SourceLanguage language,
+                                    Expression::ResultType desired_type,
+                                    const EvaluateExpressionOptions &options,
+                                    ValueObject *ctx_obj) override;
 
   FunctionCaller *GetFunctionCaller(const CompilerType &return_type,
                                     const Address &function_address,

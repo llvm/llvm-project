@@ -3066,6 +3066,7 @@ cc_library(
         ":ArithDialect",
         ":BufferizationInterfaces",
         ":BytecodeOpInterface",
+        ":ComplexDialect",
         ":DialectUtils",
         ":IR",
         ":InferTypeOpInterface",
@@ -12635,6 +12636,7 @@ cc_library(
     deps = [
         ":ArithDialect",
         ":ComplexDialect",
+        ":DialectUtils",
         ":IR",
         "//llvm:Support",
     ],

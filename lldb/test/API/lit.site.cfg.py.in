@@ -8,7 +8,7 @@ config.llvm_include_dir = lit_config.substitute("@LLVM_INCLUDE_DIR@")
 config.llvm_shlib_dir = lit_config.substitute("@SHLIBDIR@")
 config.llvm_build_mode = lit_config.substitute("@LLVM_BUILD_MODE@")
 config.lit_tools_dir = "@LLVM_LIT_TOOLS_DIR@"
-config.lldb_obj_root = "@LLDB_BINARY_DIR@"
+config.lldb_obj_root = lit_config.substitute("@LLDB_BINARY_DIR@")
 config.lldb_src_root = "@LLDB_SOURCE_DIR@"
 config.lldb_libs_dir = lit_config.substitute("@LLDB_LIBS_DIR@")
 config.lldb_framework_dir = lit_config.substitute("@LLDB_FRAMEWORK_DIR@")
@@ -43,6 +43,10 @@ config.clang_module_cache = os.path.join("@LLDB_TEST_MODULE_CACHE_CLANG@", "lldb
 lldb_build_intel_pt = '@LLDB_BUILD_INTEL_PT@'
 if lldb_build_intel_pt == '1':
     config.enabled_plugins.append('intel-pt')
+
+llvm_enable_curl = '@LLVM_ENABLE_CURL@'
+if llvm_enable_curl == '1':
+    config.enabled_plugins.append('Debuginfod')
 
 # Additional dotest arguments can be passed to lit by providing a
 # semicolon-separates list: --param dotest-args="arg;arg".

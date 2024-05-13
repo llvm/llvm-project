@@ -74,7 +74,7 @@ Changes to the AArch64 Backend
 ------------------------------
 
 * Added support for Cortex-A78AE, Cortex-A520AE, Cortex-A720AE,
-  Neoverse-N3, Neoverse-V3 and Neoverse-V3AE CPUs.
+  Cortex-R82AE, Neoverse-N3, Neoverse-V3 and Neoverse-V3AE CPUs.
 
 Changes to the AMDGPU Backend
 -----------------------------
@@ -128,6 +128,7 @@ Changes to the RISC-V Backend
 * Added the CSR names from the Resumable Non-Maskable Interrupts (Smrnmi) extension.
 * llvm-objdump now prints disassembled opcode bytes in groups of 2 or 4 bytes to
   match GNU objdump. The bytes within the groups are in big endian order.
+* Added smstateen extension to -march. CSR names for smstateen were already supported.
 
 Changes to the WebAssembly Backend
 ----------------------------------

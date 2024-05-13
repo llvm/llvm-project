@@ -252,19 +252,20 @@ static cl::opt<unsigned> PrecentMismatchForStalenessError(
 
 static cl::opt<bool> CallsitePrioritizedInline(
     "sample-profile-prioritized-inline", cl::Hidden,
-
     cl::desc("Use call site prioritized inlining for sample profile loader."
              "Currently only CSSPGO is supported."));
 
 static cl::opt<bool> UsePreInlinerDecision(
     "sample-profile-use-preinliner", cl::Hidden,
-
     cl::desc("Use the preinliner decisions stored in profile context."));
 
 static cl::opt<bool> AllowRecursiveInline(
     "sample-profile-recursive-inline", cl::Hidden,
-
     cl::desc("Allow sample loader inliner to inline recursive calls."));
+
+static cl::opt<bool> RemoveProbeAfterProfileAnnotation(
+    "sample-profile-remove-probe", cl::Hidden, cl::init(false),
+    cl::desc("Remove pseudo-probe after sample profile annotation."));
 
 static cl::opt<std::string> ProfileInlineReplayFile(
     "sample-profile-inline-replay", cl::init(""), cl::value_desc("filename"),
@@ -518,6 +519,7 @@ protected:
   void generateMDProfMetadata(Function &F);
   bool rejectHighStalenessProfile(Module &M, ProfileSummaryInfo *PSI,
                                   const SampleProfileMap &Profiles);
+  void removePseudoProbeInsts(Module &M);
 
   /// Map from function name to Function *. Used to find the function from
   /// the function name. If the function name contains suffix, additional
@@ -2127,6 +2129,20 @@ bool SampleProfileLoader::rejectHighStalenessProfile(
   return false;
 }
 
+void SampleProfileLoader::removePseudoProbeInsts(Module &M) {
+  for (auto &F : M) {
+    std::vector<Instruction *> InstsToDel;
+    for (auto &BB : F) {
+      for (auto &I : BB) {
+        if (isa<PseudoProbeInst>(&I))
+          InstsToDel.push_back(&I);
+      }
+    }
+    for (auto *I : InstsToDel)
+      I->eraseFromParent();
+  }
+}
+
 bool SampleProfileLoader::runOnModule(Module &M, ModuleAnalysisManager *AM,
                                       ProfileSummaryInfo *_PSI,
                                       LazyCallGraph &CG) {
@@ -2195,6 +2211,9 @@ bool SampleProfileLoader::runOnModule(Module &M, ModuleAnalysisManager *AM,
     for (const std::pair<Function *, NotInlinedProfileInfo> &pair :
          notInlinedCallInfo)
       updateProfileCallee(pair.first, pair.second.entryCount);
+
+  if (RemoveProbeAfterProfileAnnotation && FunctionSamples::ProfileIsProbeBased)
+    removePseudoProbeInsts(M);
 
   return retval;
 }

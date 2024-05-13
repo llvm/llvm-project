@@ -823,9 +823,9 @@ inline bool CmpHelperEQ<Pointer>(InterpState &S, CodePtr OpPC, CompareFn Fn) {
     // element in the same array are NOT equal. They have the same Base value,
     // but a different Offset. This is a pretty rare case, so we fix this here
     // by comparing pointers to the first elements.
-    if (!LHS.isZero() && !LHS.isDummy() && LHS.isArrayRoot())
+    if (!LHS.isZero() && LHS.isArrayRoot())
       VL = LHS.atIndex(0).getByteOffset();
-    if (!RHS.isZero() && !RHS.isDummy() && RHS.isArrayRoot())
+    if (!RHS.isZero() && RHS.isArrayRoot())
       VR = RHS.atIndex(0).getByteOffset();
 
     S.Stk.push<BoolT>(BoolT::from(Fn(Compare(VL, VR))));
@@ -1241,14 +1241,16 @@ inline bool GetPtrField(InterpState &S, CodePtr OpPC, uint32_t Off) {
       !CheckNull(S, OpPC, Ptr, CSK_Field))
     return false;
 
-  if (CheckDummy(S, OpPC, Ptr)) {
-    if (!CheckExtern(S, OpPC, Ptr))
-      return false;
-    if (!CheckRange(S, OpPC, Ptr, CSK_Field))
-      return false;
-    if (!CheckSubobject(S, OpPC, Ptr, CSK_Field))
-      return false;
-  }
+  if (!CheckExtern(S, OpPC, Ptr))
+    return false;
+  if (!CheckRange(S, OpPC, Ptr, CSK_Field))
+    return false;
+  if (!CheckSubobject(S, OpPC, Ptr, CSK_Field))
+    return false;
+
+  if (Ptr.isBlockPointer() && Off > Ptr.block()->getSize())
+    return false;
+
   S.Stk.push<Pointer>(Ptr.atField(Off));
   return true;
 }
@@ -1935,9 +1937,14 @@ template <PrimType NameL, PrimType NameR>
 inline bool Shr(InterpState &S, CodePtr OpPC) {
   using LT = typename PrimConv<NameL>::T;
   using RT = typename PrimConv<NameR>::T;
-  const auto &RHS = S.Stk.pop<RT>();
+  auto RHS = S.Stk.pop<RT>();
   const auto &LHS = S.Stk.pop<LT>();
   const unsigned Bits = LHS.bitWidth();
+
+  // OpenCL 6.3j: shift values are effectively % word size of LHS.
+  if (S.getLangOpts().OpenCL)
+    RT::bitAnd(RHS, RT::from(LHS.bitWidth() - 1, RHS.bitWidth()),
+               RHS.bitWidth(), &RHS);
 
   if (!CheckShift(S, OpPC, LHS, RHS, Bits))
     return false;
@@ -1960,9 +1967,14 @@ template <PrimType NameL, PrimType NameR>
 inline bool Shl(InterpState &S, CodePtr OpPC) {
   using LT = typename PrimConv<NameL>::T;
   using RT = typename PrimConv<NameR>::T;
-  const auto &RHS = S.Stk.pop<RT>();
+  auto RHS = S.Stk.pop<RT>();
   const auto &LHS = S.Stk.pop<LT>();
   const unsigned Bits = LHS.bitWidth();
+
+  // OpenCL 6.3j: shift values are effectively % word size of LHS.
+  if (S.getLangOpts().OpenCL)
+    RT::bitAnd(RHS, RT::from(LHS.bitWidth() - 1, RHS.bitWidth()),
+               RHS.bitWidth(), &RHS);
 
   if (!CheckShift(S, OpPC, LHS, RHS, Bits))
     return false;
@@ -2024,11 +2036,6 @@ inline bool ArrayElemPtr(InterpState &S, CodePtr OpPC) {
   if (!Ptr.isZero()) {
     if (!CheckArray(S, OpPC, Ptr))
       return false;
-
-    if (Ptr.isDummy()) {
-      S.Stk.push<Pointer>(Ptr);
-      return true;
-    }
   }
 
   if (!OffsetHelper<T, ArithOp::Add>(S, OpPC, Offset, Ptr))
@@ -2045,11 +2052,6 @@ inline bool ArrayElemPtrPop(InterpState &S, CodePtr OpPC) {
   if (!Ptr.isZero()) {
     if (!CheckArray(S, OpPC, Ptr))
       return false;
-
-    if (Ptr.isDummy()) {
-      S.Stk.push<Pointer>(Ptr);
-      return true;
-    }
   }
 
   if (!OffsetHelper<T, ArithOp::Add>(S, OpPC, Offset, Ptr))
@@ -2080,17 +2082,35 @@ inline bool ArrayElemPop(InterpState &S, CodePtr OpPC, uint32_t Index) {
   return true;
 }
 
+template <PrimType Name, class T = typename PrimConv<Name>::T>
+inline bool CopyArray(InterpState &S, CodePtr OpPC, uint32_t SrcIndex, uint32_t DestIndex, uint32_t Size) {
+  const auto &SrcPtr = S.Stk.pop<Pointer>();
+  const auto &DestPtr = S.Stk.peek<Pointer>();
+
+  for (uint32_t I = 0; I != Size; ++I) {
+    const Pointer &SP = SrcPtr.atIndex(SrcIndex + I);
+
+    if (!CheckLoad(S, OpPC, SP))
+      return false;
+
+    const Pointer &DP = DestPtr.atIndex(DestIndex + I);
+    DP.deref<T>() = SP.deref<T>();
+    DP.initialize();
+  }
+  return true;
+}
+
 /// Just takes a pointer and checks if it's an incomplete
 /// array type.
 inline bool ArrayDecay(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
 
-  if (Ptr.isZero() || Ptr.isDummy()) {
+  if (Ptr.isZero()) {
     S.Stk.push<Pointer>(Ptr);
     return true;
   }
 
-  if (!Ptr.isUnknownSizeArray()) {
+  if (!Ptr.isUnknownSizeArray() || Ptr.isDummy()) {
     S.Stk.push<Pointer>(Ptr.atIndex(0));
     return true;
   }

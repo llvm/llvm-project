@@ -148,7 +148,7 @@ define amdgpu_kernel void @global_nontemporal_load_0(
 ; GFX12-WGP:       ; %bb.0: ; %entry
 ; GFX12-WGP-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
 ; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
-; GFX12-WGP-NEXT:    s_load_b32 s0, s[0:1], 0x0
+; GFX12-WGP-NEXT:    s_load_b32 s0, s[0:1], 0x0 th:TH_LOAD_NT
 ; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-WGP-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s0
 ; GFX12-WGP-NEXT:    global_store_b32 v0, v1, s[2:3]
@@ -160,7 +160,7 @@ define amdgpu_kernel void @global_nontemporal_load_0(
 ; GFX12-CU:       ; %bb.0: ; %entry
 ; GFX12-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
 ; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
-; GFX12-CU-NEXT:    s_load_b32 s0, s[0:1], 0x0
+; GFX12-CU-NEXT:    s_load_b32 s0, s[0:1], 0x0 th:TH_LOAD_NT
 ; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-CU-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s0
 ; GFX12-CU-NEXT:    global_store_b32 v0, v1, s[2:3]
