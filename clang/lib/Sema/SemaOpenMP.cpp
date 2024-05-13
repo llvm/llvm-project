@@ -15209,9 +15209,17 @@ StmtResult SemaOpenMP::ActOnOpenMPTileDirective(ArrayRef<OMPClause *> Clauses,
       return AssertSuccess(CopyTransformer.TransformExpr(DimTileSizeExpr));
 
     // When the tile size is not a constant but a variable, it is possible to
-    // pass non-positive numbers. To preserve the invariant that every loop
-    // iteration is executed at least once and not cause an infinite loop, apply
-    // a minimum tile size of one.
+    // pass non-positive numbers. For instance:
+    // \code{c}
+    //   int a = 0;
+    //   #pragma omp tile sizes(a)
+    //   for (int i = 0; i < 42; ++i)
+    //     body(i);
+    // \endcode
+    // Although there is no meaningful interpretation of the tile size, the body
+    // should still be executed 42 times to avoid surprises. To preserve the
+    // invariant that every loop iteration is executed exactly once and not
+    // cause an infinite loop, apply a minimum tile size of one.
     // Build expr:
     // \code{c}
     //   (TS <= 0) ? 1 : TS
