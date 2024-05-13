@@ -1398,6 +1398,13 @@ public:
     *this &= Keep;
   }
 
+  /// Set top hiBits bits to 0.
+  void clearHighBits(unsigned hiBits) {
+    assert(hiBits <= BitWidth && "More bits than bitwidth");
+    APInt Keep = getLowBitsSet(BitWidth, BitWidth - hiBits);
+    *this &= Keep;
+  }
+
   /// Set the sign bit to 0.
   void clearSignBit() { clearBit(BitWidth - 1); }
 
