@@ -390,13 +390,13 @@ static void updateBranchWeights(BranchInst &PreHeaderBI, BranchInst &LoopBI,
       SuccsSwapped ? LoopBackWeight : ExitWeight1,
       SuccsSwapped ? ExitWeight1 : LoopBackWeight,
   };
-  setBranchWeights(LoopBI, LoopBIWeights, /*IsExpected=*/false);
+  setBranchWeights(LoopBI, LoopBIWeights);
   if (HasConditionalPreHeader) {
     const uint32_t PreHeaderBIWeights[] = {
         SuccsSwapped ? EnterWeight : ExitWeight0,
         SuccsSwapped ? ExitWeight0 : EnterWeight,
     };
-    setBranchWeights(PreHeaderBI, PreHeaderBIWeights, /*IsExpected=*/false);
+    setBranchWeights(PreHeaderBI, PreHeaderBIWeights);
   }
 }
 
@@ -639,9 +639,8 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
             !NextDbgInsts.empty()) {
           auto DbgValueRange =
               LoopEntryBranch->cloneDebugInfoFrom(Inst, NextDbgInsts.begin());
-          RemapDbgVariableRecordRange(M, DbgValueRange, ValueMap,
-                                      RF_NoModuleLevelChanges |
-                                          RF_IgnoreMissingLocals);
+          RemapDbgRecordRange(M, DbgValueRange, ValueMap,
+                              RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
           // Erase anything we've seen before.
           for (DbgVariableRecord &DVR :
                make_early_inc_range(filterDbgVars(DbgValueRange)))
@@ -666,9 +665,8 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
       if (LoopEntryBranch->getParent()->IsNewDbgInfoFormat &&
           !NextDbgInsts.empty()) {
         auto Range = C->cloneDebugInfoFrom(Inst, NextDbgInsts.begin());
-        RemapDbgVariableRecordRange(M, Range, ValueMap,
-                                    RF_NoModuleLevelChanges |
-                                        RF_IgnoreMissingLocals);
+        RemapDbgRecordRange(M, Range, ValueMap,
+                            RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
         NextDbgInsts = DbgMarker::getEmptyDbgRecordRange();
         // Erase anything we've seen before.
         for (DbgVariableRecord &DVR :

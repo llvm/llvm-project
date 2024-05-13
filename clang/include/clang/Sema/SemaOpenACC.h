@@ -50,10 +50,18 @@ public:
 
     struct VarListDetails {
       SmallVector<Expr *> VarList;
+      bool IsReadOnly;
+      bool IsZero;
+    };
+
+    struct WaitDetails {
+      Expr *DevNumExpr;
+      SourceLocation QueuesLoc;
+      SmallVector<Expr *> QueueIdExprs;
     };
 
     std::variant<std::monostate, DefaultDetails, ConditionDetails,
-                 IntExprDetails, VarListDetails>
+                 IntExprDetails, VarListDetails, WaitDetails>
         Details = std::monostate{};
 
   public:
@@ -99,16 +107,55 @@ public:
     unsigned getNumIntExprs() const {
       assert((ClauseKind == OpenACCClauseKind::NumGangs ||
               ClauseKind == OpenACCClauseKind::NumWorkers ||
+              ClauseKind == OpenACCClauseKind::Async ||
               ClauseKind == OpenACCClauseKind::VectorLength) &&
              "Parsed clause kind does not have a int exprs");
+
+      // 'async' and 'wait' have an optional IntExpr, so be tolerant of that.
+      if ((ClauseKind == OpenACCClauseKind::Async ||
+           ClauseKind == OpenACCClauseKind::Wait) &&
+          std::holds_alternative<std::monostate>(Details))
+        return 0;
       return std::get<IntExprDetails>(Details).IntExprs.size();
+    }
+
+    SourceLocation getQueuesLoc() const {
+      assert(ClauseKind == OpenACCClauseKind::Wait &&
+             "Parsed clause kind does not have a queues location");
+
+      if (std::holds_alternative<std::monostate>(Details))
+        return SourceLocation{};
+
+      return std::get<WaitDetails>(Details).QueuesLoc;
+    }
+
+    Expr *getDevNumExpr() const {
+      assert(ClauseKind == OpenACCClauseKind::Wait &&
+             "Parsed clause kind does not have a device number expr");
+
+      if (std::holds_alternative<std::monostate>(Details))
+        return nullptr;
+
+      return std::get<WaitDetails>(Details).DevNumExpr;
+    }
+
+    ArrayRef<Expr *> getQueueIdExprs() const {
+      assert(ClauseKind == OpenACCClauseKind::Wait &&
+             "Parsed clause kind does not have a queue id expr list");
+
+      if (std::holds_alternative<std::monostate>(Details))
+        return ArrayRef<Expr *>{std::nullopt};
+
+      return std::get<WaitDetails>(Details).QueueIdExprs;
     }
 
     ArrayRef<Expr *> getIntExprs() {
       assert((ClauseKind == OpenACCClauseKind::NumGangs ||
               ClauseKind == OpenACCClauseKind::NumWorkers ||
+              ClauseKind == OpenACCClauseKind::Async ||
               ClauseKind == OpenACCClauseKind::VectorLength) &&
              "Parsed clause kind does not have a int exprs");
+
       return std::get<IntExprDetails>(Details).IntExprs;
     }
 
@@ -117,13 +164,49 @@ public:
     }
 
     ArrayRef<Expr *> getVarList() {
-      assert(ClauseKind == OpenACCClauseKind::Private &&
+      assert((ClauseKind == OpenACCClauseKind::Private ||
+              ClauseKind == OpenACCClauseKind::NoCreate ||
+              ClauseKind == OpenACCClauseKind::Present ||
+              ClauseKind == OpenACCClauseKind::Copy ||
+              ClauseKind == OpenACCClauseKind::PCopy ||
+              ClauseKind == OpenACCClauseKind::PresentOrCopy ||
+              ClauseKind == OpenACCClauseKind::CopyIn ||
+              ClauseKind == OpenACCClauseKind::PCopyIn ||
+              ClauseKind == OpenACCClauseKind::PresentOrCopyIn ||
+              ClauseKind == OpenACCClauseKind::CopyOut ||
+              ClauseKind == OpenACCClauseKind::PCopyOut ||
+              ClauseKind == OpenACCClauseKind::PresentOrCopyOut ||
+              ClauseKind == OpenACCClauseKind::Create ||
+              ClauseKind == OpenACCClauseKind::PCreate ||
+              ClauseKind == OpenACCClauseKind::PresentOrCreate ||
+              ClauseKind == OpenACCClauseKind::Attach ||
+              ClauseKind == OpenACCClauseKind::DevicePtr ||
+              ClauseKind == OpenACCClauseKind::FirstPrivate) &&
              "Parsed clause kind does not have a var-list");
       return std::get<VarListDetails>(Details).VarList;
     }
 
     ArrayRef<Expr *> getVarList() const {
       return const_cast<OpenACCParsedClause *>(this)->getVarList();
+    }
+
+    bool isReadOnly() const {
+      assert((ClauseKind == OpenACCClauseKind::CopyIn ||
+              ClauseKind == OpenACCClauseKind::PCopyIn ||
+              ClauseKind == OpenACCClauseKind::PresentOrCopyIn) &&
+             "Only copyin accepts 'readonly:' tag");
+      return std::get<VarListDetails>(Details).IsReadOnly;
+    }
+
+    bool isZero() const {
+      assert((ClauseKind == OpenACCClauseKind::CopyOut ||
+              ClauseKind == OpenACCClauseKind::PCopyOut ||
+              ClauseKind == OpenACCClauseKind::PresentOrCopyOut ||
+              ClauseKind == OpenACCClauseKind::Create ||
+              ClauseKind == OpenACCClauseKind::PCreate ||
+              ClauseKind == OpenACCClauseKind::PresentOrCreate) &&
+             "Only copyout/create accepts 'zero' tag");
+      return std::get<VarListDetails>(Details).IsZero;
     }
 
     void setLParenLoc(SourceLocation EndLoc) { LParenLoc = EndLoc; }
@@ -152,6 +235,7 @@ public:
     void setIntExprDetails(ArrayRef<Expr *> IntExprs) {
       assert((ClauseKind == OpenACCClauseKind::NumGangs ||
               ClauseKind == OpenACCClauseKind::NumWorkers ||
+              ClauseKind == OpenACCClauseKind::Async ||
               ClauseKind == OpenACCClauseKind::VectorLength) &&
              "Parsed clause kind does not have a int exprs");
       Details = IntExprDetails{{IntExprs.begin(), IntExprs.end()}};
@@ -159,21 +243,88 @@ public:
     void setIntExprDetails(llvm::SmallVector<Expr *> &&IntExprs) {
       assert((ClauseKind == OpenACCClauseKind::NumGangs ||
               ClauseKind == OpenACCClauseKind::NumWorkers ||
+              ClauseKind == OpenACCClauseKind::Async ||
               ClauseKind == OpenACCClauseKind::VectorLength) &&
              "Parsed clause kind does not have a int exprs");
       Details = IntExprDetails{std::move(IntExprs)};
     }
 
-    void setVarListDetails(ArrayRef<Expr *> VarList) {
-      assert(ClauseKind == OpenACCClauseKind::Private &&
+    void setVarListDetails(ArrayRef<Expr *> VarList, bool IsReadOnly,
+                           bool IsZero) {
+      assert((ClauseKind == OpenACCClauseKind::Private ||
+              ClauseKind == OpenACCClauseKind::NoCreate ||
+              ClauseKind == OpenACCClauseKind::Present ||
+              ClauseKind == OpenACCClauseKind::Copy ||
+              ClauseKind == OpenACCClauseKind::PCopy ||
+              ClauseKind == OpenACCClauseKind::PresentOrCopy ||
+              ClauseKind == OpenACCClauseKind::CopyIn ||
+              ClauseKind == OpenACCClauseKind::PCopyIn ||
+              ClauseKind == OpenACCClauseKind::PresentOrCopyIn ||
+              ClauseKind == OpenACCClauseKind::CopyOut ||
+              ClauseKind == OpenACCClauseKind::PCopyOut ||
+              ClauseKind == OpenACCClauseKind::PresentOrCopyOut ||
+              ClauseKind == OpenACCClauseKind::Create ||
+              ClauseKind == OpenACCClauseKind::PCreate ||
+              ClauseKind == OpenACCClauseKind::PresentOrCreate ||
+              ClauseKind == OpenACCClauseKind::Attach ||
+              ClauseKind == OpenACCClauseKind::DevicePtr ||
+              ClauseKind == OpenACCClauseKind::FirstPrivate) &&
              "Parsed clause kind does not have a var-list");
-      Details = VarListDetails{{VarList.begin(), VarList.end()}};
+      assert((!IsReadOnly || ClauseKind == OpenACCClauseKind::CopyIn ||
+              ClauseKind == OpenACCClauseKind::PCopyIn ||
+              ClauseKind == OpenACCClauseKind::PresentOrCopyIn) &&
+             "readonly: tag only valid on copyin");
+      assert((!IsZero || ClauseKind == OpenACCClauseKind::CopyOut ||
+              ClauseKind == OpenACCClauseKind::PCopyOut ||
+              ClauseKind == OpenACCClauseKind::PresentOrCopyOut ||
+              ClauseKind == OpenACCClauseKind::Create ||
+              ClauseKind == OpenACCClauseKind::PCreate ||
+              ClauseKind == OpenACCClauseKind::PresentOrCreate) &&
+             "zero: tag only valid on copyout/create");
+      Details =
+          VarListDetails{{VarList.begin(), VarList.end()}, IsReadOnly, IsZero};
     }
 
-    void setVarListDetails(llvm::SmallVector<Expr *> &&VarList) {
-      assert(ClauseKind == OpenACCClauseKind::Private &&
+    void setVarListDetails(llvm::SmallVector<Expr *> &&VarList, bool IsReadOnly,
+                           bool IsZero) {
+      assert((ClauseKind == OpenACCClauseKind::Private ||
+              ClauseKind == OpenACCClauseKind::NoCreate ||
+              ClauseKind == OpenACCClauseKind::Present ||
+              ClauseKind == OpenACCClauseKind::Copy ||
+              ClauseKind == OpenACCClauseKind::PCopy ||
+              ClauseKind == OpenACCClauseKind::PresentOrCopy ||
+              ClauseKind == OpenACCClauseKind::CopyIn ||
+              ClauseKind == OpenACCClauseKind::PCopyIn ||
+              ClauseKind == OpenACCClauseKind::PresentOrCopyIn ||
+              ClauseKind == OpenACCClauseKind::CopyOut ||
+              ClauseKind == OpenACCClauseKind::PCopyOut ||
+              ClauseKind == OpenACCClauseKind::PresentOrCopyOut ||
+              ClauseKind == OpenACCClauseKind::Create ||
+              ClauseKind == OpenACCClauseKind::PCreate ||
+              ClauseKind == OpenACCClauseKind::PresentOrCreate ||
+              ClauseKind == OpenACCClauseKind::Attach ||
+              ClauseKind == OpenACCClauseKind::DevicePtr ||
+              ClauseKind == OpenACCClauseKind::FirstPrivate) &&
              "Parsed clause kind does not have a var-list");
-      Details = VarListDetails{std::move(VarList)};
+      assert((!IsReadOnly || ClauseKind == OpenACCClauseKind::CopyIn ||
+              ClauseKind == OpenACCClauseKind::PCopyIn ||
+              ClauseKind == OpenACCClauseKind::PresentOrCopyIn) &&
+             "readonly: tag only valid on copyin");
+      assert((!IsZero || ClauseKind == OpenACCClauseKind::CopyOut ||
+              ClauseKind == OpenACCClauseKind::PCopyOut ||
+              ClauseKind == OpenACCClauseKind::PresentOrCopyOut ||
+              ClauseKind == OpenACCClauseKind::Create ||
+              ClauseKind == OpenACCClauseKind::PCreate ||
+              ClauseKind == OpenACCClauseKind::PresentOrCreate) &&
+             "zero: tag only valid on copyout/create");
+      Details = VarListDetails{std::move(VarList), IsReadOnly, IsZero};
+    }
+
+    void setWaitDetails(Expr *DevNum, SourceLocation QueuesLoc,
+                        llvm::SmallVector<Expr *> &&IntExprs) {
+      assert(ClauseKind == OpenACCClauseKind::Wait &&
+             "Parsed clause kind does not have a wait-details");
+      Details = WaitDetails{DevNum, QueuesLoc, std::move(IntExprs)};
     }
   };
 
@@ -223,6 +374,10 @@ public:
   /// Called when encountering a 'var' for OpenACC, ensures it is actually a
   /// declaration reference to a variable of the correct type.
   ExprResult ActOnVar(Expr *VarExpr);
+
+  /// Called to check the 'var' type is a variable of pointer type, necessary
+  /// for 'deviceptr' and 'attach' clauses. Returns true on success.
+  bool CheckVarIsPointerType(OpenACCClauseKind ClauseKind, Expr *VarExpr);
 
   /// Checks and creates an Array Section used in an OpenACC construct/clause.
   ExprResult ActOnArraySectionExpr(Expr *Base, SourceLocation LBLoc,

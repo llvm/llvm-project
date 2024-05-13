@@ -274,13 +274,13 @@ private:
 
   /// Offset of each type in the bitstream, indexed by
   /// the type's ID.
-  std::vector<serialization::UnderalignedInt64> TypeOffsets;
+  std::vector<serialization::UnalignedUInt64> TypeOffsets;
 
   /// The first ID number we can use for our own identifiers.
-  serialization::IdentID FirstIdentID = serialization::NUM_PREDEF_IDENT_IDS;
+  serialization::IdentifierID FirstIdentID = serialization::NUM_PREDEF_IDENT_IDS;
 
   /// The identifier ID that will be assigned to the next new identifier.
-  serialization::IdentID NextIdentID = FirstIdentID;
+  serialization::IdentifierID NextIdentID = FirstIdentID;
 
   /// Map that provides the ID numbers of each identifier in
   /// the output stream.
@@ -288,7 +288,7 @@ private:
   /// The ID numbers for identifiers are consecutive (in order of
   /// discovery), starting at 1. An ID of zero refers to a NULL
   /// IdentifierInfo.
-  llvm::MapVector<const IdentifierInfo *, serialization::IdentID> IdentifierIDs;
+  llvm::MapVector<const IdentifierInfo *, serialization::IdentifierID> IdentifierIDs;
 
   /// The first ID number we can use for our own macros.
   serialization::MacroID FirstMacroID = serialization::NUM_PREDEF_MACRO_IDS;
@@ -356,6 +356,13 @@ private:
   /// Cache of indices of anonymous declarations within their lexical
   /// contexts.
   llvm::DenseMap<const Decl *, unsigned> AnonymousDeclarationNumbers;
+
+  /// The external top level module during the writing process. Used to
+  /// generate signature for the module file being written.
+  ///
+  /// Only meaningful for standard C++ named modules. See the comments in
+  /// createSignatureForNamedModule() for details.
+  llvm::DenseSet<Module *> TouchedTopLevelModules;
 
   /// An update to a Decl.
   class DeclUpdate {
@@ -676,6 +683,10 @@ public:
   void AddSourceLocation(SourceLocation Loc, RecordDataImpl &Record,
                          LocSeq *Seq = nullptr);
 
+  /// Return the raw encodings for source locations.
+  SourceLocationEncoding::RawLocEncoding
+  getRawSourceLocationEncoding(SourceLocation Loc, LocSeq *Seq = nullptr);
+
   /// Emit a source range.
   void AddSourceRange(SourceRange Range, RecordDataImpl &Record,
                       LocSeq *Seq = nullptr);
@@ -687,7 +698,7 @@ public:
   serialization::SelectorID getSelectorRef(Selector Sel);
 
   /// Get the unique number used to refer to the given identifier.
-  serialization::IdentID getIdentifierRef(const IdentifierInfo *II);
+  serialization::IdentifierID getIdentifierRef(const IdentifierInfo *II);
 
   /// Get the unique number used to refer to the given macro.
   serialization::MacroID getMacroRef(MacroInfo *MI, const IdentifierInfo *Name);
@@ -844,7 +855,7 @@ public:
 private:
   // ASTDeserializationListener implementation
   void ReaderInitialized(ASTReader *Reader) override;
-  void IdentifierRead(serialization::IdentID ID, IdentifierInfo *II) override;
+  void IdentifierRead(serialization::IdentifierID ID, IdentifierInfo *II) override;
   void MacroRead(serialization::MacroID ID, MacroInfo *MI) override;
   void TypeRead(serialization::TypeIdx Idx, QualType T) override;
   void SelectorRead(serialization::SelectorID ID, Selector Sel) override;

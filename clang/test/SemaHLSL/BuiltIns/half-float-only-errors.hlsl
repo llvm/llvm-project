@@ -9,6 +9,7 @@
 // RUN: %clang_cc1 -finclude-default-header -triple dxil-pc-shadermodel6.6-library %s -fnative-half-type -emit-llvm-only -disable-llvm-passes -verify -DTEST_FUNC=__builtin_elementwise_sin
 // RUN: %clang_cc1 -finclude-default-header -triple dxil-pc-shadermodel6.6-library %s -fnative-half-type -emit-llvm-only -disable-llvm-passes -verify -DTEST_FUNC=__builtin_elementwise_sqrt
 // RUN: %clang_cc1 -finclude-default-header -triple dxil-pc-shadermodel6.6-library %s -fnative-half-type -emit-llvm-only -disable-llvm-passes -verify -DTEST_FUNC=__builtin_elementwise_roundeven
+// RUN: %clang_cc1 -finclude-default-header -triple dxil-pc-shadermodel6.6-library %s -fnative-half-type -emit-llvm-only -disable-llvm-passes -verify -DTEST_FUNC=__builtin_elementwise_tan
 // RUN: %clang_cc1 -finclude-default-header -triple dxil-pc-shadermodel6.6-library %s -fnative-half-type -emit-llvm-only -disable-llvm-passes -verify -DTEST_FUNC=__builtin_elementwise_trunc
 
 double2 test_double_builtin(double2 p0) {

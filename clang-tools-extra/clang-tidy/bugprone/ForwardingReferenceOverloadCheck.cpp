@@ -25,8 +25,8 @@ AST_MATCHER(QualType, isEnableIf) {
     const NamedDecl *TypeDecl =
         Spec->getTemplateName().getAsTemplateDecl()->getTemplatedDecl();
     return TypeDecl->isInStdNamespace() &&
-           (TypeDecl->getName().equals("enable_if") ||
-            TypeDecl->getName().equals("enable_if_t"));
+           (TypeDecl->getName() == "enable_if" ||
+            TypeDecl->getName() == "enable_if_t");
   };
   const Type *BaseType = Node.getTypePtr();
   // Case: pointer or reference to enable_if.

@@ -293,7 +293,7 @@ declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
 ; CHECK: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
 ; CHECK: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
 ; CHECK: [[LOOP3]] = distinct !{[[LOOP3]], [[META2]], [[META1]]}
-; CHECK: [[PROF4]] = !{!"branch_weights", !"expected", i32 2000, i32 1}
+; CHECK: [[PROF4]] = !{!"branch_weights", i32 2000, i32 1}
 ; CHECK: [[LOOP5]] = distinct !{[[LOOP5]], [[META1]], [[META2]]}
 ; CHECK: [[LOOP6]] = distinct !{[[LOOP6]], [[META2]], [[META1]]}
 ;.

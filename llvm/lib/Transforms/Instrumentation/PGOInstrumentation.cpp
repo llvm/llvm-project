@@ -1474,8 +1474,7 @@ void PGOUseFunc::populateCoverage(IndexedInstrProfReader *PGOReader) {
     for (auto *Succ : successors(&BB))
       Weights.push_back((Coverage[Succ] || !Coverage[&BB]) ? 1 : 0);
     if (Weights.size() >= 2)
-      llvm::setBranchWeights(*BB.getTerminator(), Weights,
-                             /*IsExpected=*/false);
+      llvm::setBranchWeights(*BB.getTerminator(), Weights);
   }
 
   unsigned NumCorruptCoverage = 0;
@@ -2126,7 +2125,7 @@ static bool annotateAllFunctions(
       HotFunctions.push_back(&F);
     if (PGOViewCounts != PGOVCT_None &&
         (ViewBlockFreqFuncName.empty() ||
-         F.getName().equals(ViewBlockFreqFuncName))) {
+         F.getName() == ViewBlockFreqFuncName)) {
       LoopInfo LI{DominatorTree(F)};
       std::unique_ptr<BranchProbabilityInfo> NewBPI =
           std::make_unique<BranchProbabilityInfo>(F, LI);
@@ -2141,7 +2140,7 @@ static bool annotateAllFunctions(
     }
     if (PGOViewRawCounts != PGOVCT_None &&
         (ViewBlockFreqFuncName.empty() ||
-         F.getName().equals(ViewBlockFreqFuncName))) {
+         F.getName() == ViewBlockFreqFuncName)) {
       if (PGOViewRawCounts == PGOVCT_Graph)
         if (ViewBlockFreqFuncName.empty())
           WriteGraph(&Func, Twine("PGORawCounts_") + Func.getFunc().getName());
@@ -2261,7 +2260,7 @@ void llvm::setProfMetadata(Module *M, Instruction *TI,
 
   misexpect::checkExpectAnnotations(*TI, Weights, /*IsFrontend=*/false);
 
-  setBranchWeights(*TI, Weights, /*IsExpected=*/false);
+  setBranchWeights(*TI, Weights);
   if (EmitBranchProbability) {
     std::string BrCondStr = getBranchCondString(TI);
     if (BrCondStr.empty())

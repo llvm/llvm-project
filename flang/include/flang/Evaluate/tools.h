@@ -152,9 +152,11 @@ std::optional<Expr<SomeType>> AsGenericExpr(const Symbol &);
 // Propagate std::optional from input to output.
 template <typename A>
 std::optional<Expr<SomeType>> AsGenericExpr(std::optional<A> &&x) {
-  if (!x)
+  if (x) {
+    return AsGenericExpr(std::move(*x));
+  } else {
     return std::nullopt;
-  return AsGenericExpr(std::move(*x));
+  }
 }
 
 template <typename A>

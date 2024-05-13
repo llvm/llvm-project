@@ -102,7 +102,7 @@ static bool handleSwitchExpect(SwitchInst &SI) {
   misexpect::checkExpectAnnotations(SI, Weights, /*IsFrontend=*/true);
 
   SI.setCondition(ArgValue);
-  setBranchWeights(SI, Weights, /*IsExpected=*/true);
+  setBranchWeights(SI, Weights);
   return true;
 }
 
@@ -262,13 +262,11 @@ static void handlePhiDef(CallInst *Expect) {
     if (IsOpndComingFromSuccessor(BI->getSuccessor(1)))
       BI->setMetadata(LLVMContext::MD_prof,
                       MDB.createBranchWeights(LikelyBranchWeightVal,
-                                              UnlikelyBranchWeightVal,
-                                              /*IsExpected=*/true));
+                                              UnlikelyBranchWeightVal));
     else if (IsOpndComingFromSuccessor(BI->getSuccessor(0)))
       BI->setMetadata(LLVMContext::MD_prof,
                       MDB.createBranchWeights(UnlikelyBranchWeightVal,
-                                              LikelyBranchWeightVal,
-                                              /*IsExpected=*/true));
+                                              LikelyBranchWeightVal));
   }
 }
 
@@ -333,12 +331,12 @@ template <class BrSelInst> static bool handleBrSelExpect(BrSelInst &BSI) {
   SmallVector<uint32_t, 4> ExpectedWeights;
   if ((ExpectedValue->getZExtValue() == ValueComparedTo) ==
       (Predicate == CmpInst::ICMP_EQ)) {
-    Node = MDB.createBranchWeights(
-        LikelyBranchWeightVal, UnlikelyBranchWeightVal, /*IsExpected=*/true);
+    Node =
+        MDB.createBranchWeights(LikelyBranchWeightVal, UnlikelyBranchWeightVal);
     ExpectedWeights = {LikelyBranchWeightVal, UnlikelyBranchWeightVal};
   } else {
-    Node = MDB.createBranchWeights(UnlikelyBranchWeightVal,
-                                   LikelyBranchWeightVal, /*IsExpected=*/true);
+    Node =
+        MDB.createBranchWeights(UnlikelyBranchWeightVal, LikelyBranchWeightVal);
     ExpectedWeights = {UnlikelyBranchWeightVal, LikelyBranchWeightVal};
   }
 

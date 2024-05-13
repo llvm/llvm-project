@@ -55,6 +55,7 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/YAMLParser.h"
+#include "llvm/TargetParser/AArch64TargetParser.h"
 #include "llvm/TargetParser/ARMTargetParserCommon.h"
 #include "llvm/TargetParser/Host.h"
 #include "llvm/TargetParser/LoongArchTargetParser.h"
@@ -1511,7 +1512,24 @@ static void CollectARMPACBTIOptions(const ToolChain &TC, const ArgList &Args,
   } else {
     StringRef DiagMsg;
     llvm::ARM::ParsedBranchProtection PBP;
-    if (!llvm::ARM::parseBranchProtection(A->getValue(), PBP, DiagMsg))
+    bool EnablePAuthLR = false;
+
+    // To know if we need to enable PAuth-LR As part of the standard branch
+    // protection option, it needs to be determined if the feature has been
+    // activated in the `march` argument. This information is stored within the
+    // CmdArgs variable and can be found using a search.
+    if (isAArch64) {
+      auto isPAuthLR = [](const char *member) {
+        llvm::AArch64::ExtensionInfo pauthlr_extension =
+            llvm::AArch64::getExtensionByID(llvm::AArch64::AEK_PAUTHLR);
+        return (pauthlr_extension.Feature.compare(member) == 0);
+      };
+
+      if (std::any_of(CmdArgs.begin(), CmdArgs.end(), isPAuthLR))
+        EnablePAuthLR = true;
+    }
+    if (!llvm::ARM::parseBranchProtection(A->getValue(), PBP, DiagMsg,
+                                          EnablePAuthLR))
       D.Diag(diag::err_drv_unsupported_option_argument)
           << A->getSpelling() << DiagMsg;
     if (!isAArch64 && PBP.Key == "b_key")
@@ -1526,7 +1544,7 @@ static void CollectARMPACBTIOptions(const ToolChain &TC, const ArgList &Args,
 
   CmdArgs.push_back(
       Args.MakeArgString(Twine("-msign-return-address=") + Scope));
-  if (!Scope.equals("none"))
+  if (Scope != "none")
     CmdArgs.push_back(
         Args.MakeArgString(Twine("-msign-return-address-key=") + Key));
   if (BranchProtectionPAuthLR)
@@ -1719,10 +1737,9 @@ void Clang::AddAArch64TargetArgs(const ArgList &Args,
   if (Arg *A = Args.getLastArg(options::OPT_msve_vector_bits_EQ)) {
     StringRef Val = A->getValue();
     const Driver &D = getToolChain().getDriver();
-    if (Val.equals("128") || Val.equals("256") || Val.equals("512") ||
-        Val.equals("1024") || Val.equals("2048") || Val.equals("128+") ||
-        Val.equals("256+") || Val.equals("512+") || Val.equals("1024+") ||
-        Val.equals("2048+")) {
+    if (Val == "128" || Val == "256" || Val == "512" || Val == "1024" ||
+        Val == "2048" || Val == "128+" || Val == "256+" || Val == "512+" ||
+        Val == "1024+" || Val == "2048+") {
       unsigned Bits = 0;
       if (!Val.consume_back("+")) {
         bool Invalid = Val.getAsInteger(10, Bits); (void)Invalid;
@@ -1736,7 +1753,7 @@ void Clang::AddAArch64TargetArgs(const ArgList &Args,
       CmdArgs.push_back(
           Args.MakeArgString("-mvscale-min=" + llvm::Twine(Bits / 128)));
     // Silently drop requests for vector-length agnostic code as it's implied.
-    } else if (!Val.equals("scalable"))
+    } else if (Val != "scalable")
       // Handle the unsupported values passed to msve-vector-bits.
       D.Diag(diag::err_drv_unsupported_option_argument)
           << A->getSpelling() << Val;
@@ -1756,6 +1773,20 @@ void Clang::AddAArch64TargetArgs(const ArgList &Args,
 
   Args.addOptInFlag(CmdArgs, options::OPT_fptrauth_intrinsics,
                     options::OPT_fno_ptrauth_intrinsics);
+  Args.addOptInFlag(CmdArgs, options::OPT_fptrauth_calls,
+                    options::OPT_fno_ptrauth_calls);
+  Args.addOptInFlag(CmdArgs, options::OPT_fptrauth_returns,
+                    options::OPT_fno_ptrauth_returns);
+  Args.addOptInFlag(CmdArgs, options::OPT_fptrauth_auth_traps,
+                    options::OPT_fno_ptrauth_auth_traps);
+  Args.addOptInFlag(
+      CmdArgs, options::OPT_fptrauth_vtable_pointer_address_discrimination,
+      options::OPT_fno_ptrauth_vtable_pointer_address_discrimination);
+  Args.addOptInFlag(
+      CmdArgs, options::OPT_fptrauth_vtable_pointer_type_discrimination,
+      options::OPT_fno_ptrauth_vtable_pointer_type_discrimination);
+  Args.addOptInFlag(CmdArgs, options::OPT_fptrauth_init_fini,
+                    options::OPT_fno_ptrauth_init_fini);
 }
 
 void Clang::AddLoongArchTargetArgs(const ArgList &Args,
@@ -2084,7 +2115,7 @@ void Clang::AddRISCVTargetArgs(const ArgList &Args,
     // If the value is "zvl", use MinVLen from march. Otherwise, try to parse
     // as integer as long as we have a MinVLen.
     unsigned Bits = 0;
-    if (Val.equals("zvl") && MinVLen >= llvm::RISCV::RVVBitsPerBlock) {
+    if (Val == "zvl" && MinVLen >= llvm::RISCV::RVVBitsPerBlock) {
       Bits = MinVLen;
     } else if (!Val.getAsInteger(10, Bits)) {
       // Only accept power of 2 values beteen RVVBitsPerBlock and 65536 that
@@ -2101,7 +2132,7 @@ void Clang::AddRISCVTargetArgs(const ArgList &Args,
           Args.MakeArgString("-mvscale-max=" + llvm::Twine(VScaleMin)));
       CmdArgs.push_back(
           Args.MakeArgString("-mvscale-min=" + llvm::Twine(VScaleMin)));
-    } else if (!Val.equals("scalable")) {
+    } else if (Val != "scalable") {
       // Handle the unsupported values passed to mrvv-vector-bits.
       D.Diag(diag::err_drv_unsupported_option_argument)
           << A->getSpelling() << Val;
@@ -2736,7 +2767,6 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
   bool TrappingMathPresent = false; // Is trapping-math in args, and not
                                     // overriden by ffp-exception-behavior?
   bool RoundingFPMath = false;
-  bool RoundingMathPresent = false; // Is rounding-math in args?
   // -ffp-model values: strict, fast, precise
   StringRef FPModel = "";
   // -ffp-exception-behavior options: strict, maytrap, ignore
@@ -2799,11 +2829,10 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
   }
 
   for (const Arg *A : Args) {
-    auto optID = A->getOption().getID();
-    bool PreciseFPModel = false;
-    switch (optID) {
-    default:
-      break;
+    switch (A->getOption().getID()) {
+    // If this isn't an FP option skip the claim below
+    default: continue;
+
     case options::OPT_fcx_limited_range:
       if (GccRangeComplexOption.empty()) {
         if (Range != LangOptions::ComplexRangeKind::CX_Basic)
@@ -2853,13 +2882,13 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
     case options::OPT_fcomplex_arithmetic_EQ: {
       LangOptions::ComplexRangeKind RangeVal;
       StringRef Val = A->getValue();
-      if (Val.equals("full"))
+      if (Val == "full")
         RangeVal = LangOptions::ComplexRangeKind::CX_Full;
-      else if (Val.equals("improved"))
+      else if (Val == "improved")
         RangeVal = LangOptions::ComplexRangeKind::CX_Improved;
-      else if (Val.equals("promoted"))
+      else if (Val == "promoted")
         RangeVal = LangOptions::ComplexRangeKind::CX_Promoted;
-      else if (Val.equals("basic"))
+      else if (Val == "basic")
         RangeVal = LangOptions::ComplexRangeKind::CX_Basic;
       else {
         D.Diag(diag::err_drv_unsupported_option_argument)
@@ -2895,50 +2924,38 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
       AssociativeMath = false;
       ReciprocalMath = false;
       SignedZeros = true;
-      // -fno_fast_math restores default denormal and fpcontract handling
       FPContract = "on";
 
       StringRef Val = A->getValue();
-      if (OFastEnabled && !Val.equals("fast")) {
-          // Only -ffp-model=fast is compatible with OFast, ignore.
+      if (OFastEnabled && Val != "fast") {
+        // Only -ffp-model=fast is compatible with OFast, ignore.
         D.Diag(clang::diag::warn_drv_overriding_option)
             << Args.MakeArgString("-ffp-model=" + Val) << "-Ofast";
         break;
       }
       StrictFPModel = false;
-      PreciseFPModel = true;
-      // ffp-model= is a Driver option, it is entirely rewritten into more
-      // granular options before being passed into cc1.
-      // Use the gcc option in the switch below.
-      if (!FPModel.empty() && !FPModel.equals(Val))
+      if (!FPModel.empty() && FPModel != Val)
         D.Diag(clang::diag::warn_drv_overriding_option)
             << Args.MakeArgString("-ffp-model=" + FPModel)
             << Args.MakeArgString("-ffp-model=" + Val);
-      if (Val.equals("fast")) {
+      if (Val == "fast") {
         FPModel = Val;
         applyFastMath();
-      } else if (Val.equals("precise")) {
-        optID = options::OPT_ffp_contract;
+      } else if (Val == "precise") {
         FPModel = Val;
         FPContract = "on";
-        PreciseFPModel = true;
-      } else if (Val.equals("strict")) {
+      } else if (Val == "strict") {
         StrictFPModel = true;
-        optID = options::OPT_frounding_math;
         FPExceptionBehavior = "strict";
         FPModel = Val;
         FPContract = "off";
         TrappingMath = true;
+        RoundingFPMath = true;
       } else
         D.Diag(diag::err_drv_unsupported_option_argument)
             << A->getSpelling() << Val;
       break;
     }
-    }
-
-    switch (optID) {
-    // If this isn't an FP option skip the claim below
-    default: continue;
 
     // Options controlling individual features
     case options::OPT_fhonor_infinities:    HonorINFs = true;         break;
@@ -2957,7 +2974,7 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
     case options::OPT_fno_signed_zeros:     SignedZeros = false;      break;
     case options::OPT_ftrapping_math:
       if (!TrappingMathPresent && !FPExceptionBehavior.empty() &&
-          !FPExceptionBehavior.equals("strict"))
+          FPExceptionBehavior != "strict")
         // Warn that previous value of option is overridden.
         D.Diag(clang::diag::warn_drv_overriding_option)
             << Args.MakeArgString("-ffp-exception-behavior=" +
@@ -2969,7 +2986,7 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
       break;
     case options::OPT_fno_trapping_math:
       if (!TrappingMathPresent && !FPExceptionBehavior.empty() &&
-          !FPExceptionBehavior.equals("ignore"))
+          FPExceptionBehavior != "ignore")
         // Warn that previous value of option is overridden.
         D.Diag(clang::diag::warn_drv_overriding_option)
             << Args.MakeArgString("-ffp-exception-behavior=" +
@@ -2982,12 +2999,10 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
 
     case options::OPT_frounding_math:
       RoundingFPMath = true;
-      RoundingMathPresent = true;
       break;
 
     case options::OPT_fno_rounding_math:
       RoundingFPMath = false;
-      RoundingMathPresent = false;
       break;
 
     case options::OPT_fdenormal_fp_math_EQ:
@@ -3010,13 +3025,8 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
     // Validate and pass through -ffp-contract option.
     case options::OPT_ffp_contract: {
       StringRef Val = A->getValue();
-      if (PreciseFPModel) {
-        // -ffp-model=precise enables ffp-contract=on.
-        // -ffp-model=precise sets PreciseFPModel to on and Val to
-        // "precise". FPContract is set.
-        ;
-      } else if (Val.equals("fast") || Val.equals("on") || Val.equals("off") ||
-                 Val.equals("fast-honor-pragmas")) {
+      if (Val == "fast" || Val == "on" || Val == "off" ||
+          Val == "fast-honor-pragmas") {
         FPContract = Val;
         LastSeenFfpContractOption = Val;
       } else
@@ -3025,27 +3035,20 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
       break;
     }
 
-    // Validate and pass through -ffp-model option.
-    case options::OPT_ffp_model_EQ:
-      // This should only occur in the error case
-      // since the optID has been replaced by a more granular
-      // floating point option.
-      break;
-
     // Validate and pass through -ffp-exception-behavior option.
     case options::OPT_ffp_exception_behavior_EQ: {
       StringRef Val = A->getValue();
       if (!TrappingMathPresent && !FPExceptionBehavior.empty() &&
-          !FPExceptionBehavior.equals(Val))
+          FPExceptionBehavior != Val)
         // Warn that previous value of option is overridden.
         D.Diag(clang::diag::warn_drv_overriding_option)
             << Args.MakeArgString("-ffp-exception-behavior=" +
                                   FPExceptionBehavior)
             << Args.MakeArgString("-ffp-exception-behavior=" + Val);
       TrappingMath = TrappingMathPresent = false;
-      if (Val.equals("ignore") || Val.equals("maytrap"))
+      if (Val == "ignore" || Val == "maytrap")
         FPExceptionBehavior = Val;
-      else if (Val.equals("strict")) {
+      else if (Val == "strict") {
         FPExceptionBehavior = Val;
         TrappingMath = TrappingMathPresent = true;
       } else
@@ -3057,8 +3060,7 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
     // Validate and pass through -ffp-eval-method option.
     case options::OPT_ffp_eval_method_EQ: {
       StringRef Val = A->getValue();
-      if (Val.equals("double") || Val.equals("extended") ||
-          Val.equals("source"))
+      if (Val == "double" || Val == "extended" || Val == "source")
         FPEvalMethod = Val;
       else
         D.Diag(diag::err_drv_unsupported_option_argument)
@@ -3070,18 +3072,18 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
       StringRef Val = A->getValue();
       const llvm::Triple::ArchType Arch = TC.getArch();
       if (Arch == llvm::Triple::x86 || Arch == llvm::Triple::x86_64) {
-        if (Val.equals("standard") || Val.equals("fast"))
+        if (Val == "standard" || Val == "fast")
           Float16ExcessPrecision = Val;
         // To make it GCC compatible, allow the value of "16" which
         // means disable excess precision, the same meaning than clang's
         // equivalent value "none".
-        else if (Val.equals("16"))
+        else if (Val == "16")
           Float16ExcessPrecision = "none";
         else
           D.Diag(diag::err_drv_unsupported_option_argument)
               << A->getSpelling() << Val;
       } else {
-        if (!(Val.equals("standard") || Val.equals("fast")))
+        if (!(Val == "standard" || Val == "fast"))
           D.Diag(diag::err_drv_unsupported_option_argument)
               << A->getSpelling() << Val;
       }
@@ -3152,12 +3154,18 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
       }
       break;
     }
+    // The StrictFPModel local variable is needed to report warnings
+    // in the way we intend. If -ffp-model=strict has been used, we
+    // want to report a warning for the next option encountered that
+    // takes us out of the settings described by fp-model=strict, but
+    // we don't want to continue issuing warnings for other conflicting
+    // options after that.
     if (StrictFPModel) {
       // If -ffp-model=strict has been specified on command line but
       // subsequent options conflict then emit warning diagnostic.
       if (HonorINFs && HonorNaNs && !AssociativeMath && !ReciprocalMath &&
           SignedZeros && TrappingMath && RoundingFPMath && !ApproxFunc &&
-          FPContract.equals("off"))
+          FPContract == "off")
         // OK: Current Arg doesn't conflict with -ffp-model=strict
         ;
       else {
@@ -3203,7 +3211,7 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
 
   if (TrappingMath) {
     // FP Exception Behavior is also set to strict
-    assert(FPExceptionBehavior.equals("strict"));
+    assert(FPExceptionBehavior == "strict");
   }
 
   // The default is IEEE.
@@ -3225,11 +3233,10 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
   if (!FPContract.empty())
     CmdArgs.push_back(Args.MakeArgString("-ffp-contract=" + FPContract));
 
-  if (!RoundingFPMath)
-    CmdArgs.push_back(Args.MakeArgString("-fno-rounding-math"));
-
-  if (RoundingFPMath && RoundingMathPresent)
+  if (RoundingFPMath)
     CmdArgs.push_back(Args.MakeArgString("-frounding-math"));
+  else
+    CmdArgs.push_back(Args.MakeArgString("-fno-rounding-math"));
 
   if (!FPExceptionBehavior.empty())
     CmdArgs.push_back(Args.MakeArgString("-ffp-exception-behavior=" +
@@ -3253,8 +3260,8 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
   if (!HonorINFs && !HonorNaNs && !MathErrno && AssociativeMath && ApproxFunc &&
       ReciprocalMath && !SignedZeros && !TrappingMath && !RoundingFPMath) {
     CmdArgs.push_back("-ffast-math");
-    if (FPModel.equals("fast")) {
-      if (FPContract.equals("fast"))
+    if (FPModel == "fast") {
+      if (FPContract == "fast")
         // All set, do nothing.
         ;
       else if (FPContract.empty())
@@ -6139,6 +6146,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   Args.addOptOutFlag(CmdArgs, options::OPT_funique_section_names,
                      options::OPT_fno_unique_section_names);
+  Args.addOptInFlag(CmdArgs, options::OPT_fseparate_named_sections,
+                    options::OPT_fno_separate_named_sections);
   Args.addOptInFlag(CmdArgs, options::OPT_funique_internal_linkage_names,
                     options::OPT_fno_unique_internal_linkage_names);
   Args.addOptInFlag(CmdArgs, options::OPT_funique_basic_block_section_names,
@@ -6513,7 +6522,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if (const Arg *A =
           Args.getLastArg(options::OPT_fvisibility_global_new_delete_hidden)) {
     D.Diag(diag::warn_drv_deprecated_arg)
-        << A->getAsString(Args)
+        << A->getAsString(Args) << /*hasReplacement=*/true
         << "-fvisibility-global-new-delete=force-hidden";
   }
 
@@ -7240,11 +7249,15 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   Args.addOptOutFlag(CmdArgs, options::OPT_fassume_unique_vtables,
                      options::OPT_fno_assume_unique_vtables);
 
-  // -frelaxed-template-template-args is off by default, as it is a severe
-  // breaking change until a corresponding change to template partial ordering
-  // is provided.
-  Args.addOptInFlag(CmdArgs, options::OPT_frelaxed_template_template_args,
-                    options::OPT_fno_relaxed_template_template_args);
+  // -fno-relaxed-template-template-args is deprecated.
+  if (Arg *A = Args.getLastArg(options::OPT_frelaxed_template_template_args,
+                               options::OPT_fno_relaxed_template_template_args);
+      A &&
+      A->getOption().matches(options::OPT_fno_relaxed_template_template_args))
+    D.Diag(diag::warn_drv_deprecated_arg)
+        << A->getAsString(Args) << /*hasReplacement=*/false;
+  else
+    CmdArgs.push_back("-fno-relaxed-template-template-args");
 
   // -fsized-deallocation is off by default, as it is an ABI-breaking change for
   // most platforms.
@@ -8101,7 +8114,7 @@ static EHFlags parseClangCLEHFlags(const Driver &D, const ArgList &Args,
 
   std::vector<std::string> EHArgs =
       Args.getAllArgValues(options::OPT__SLASH_EH);
-  for (auto EHVal : EHArgs) {
+  for (const auto &EHVal : EHArgs) {
     for (size_t I = 0, E = EHVal.size(); I != E; ++I) {
       switch (EHVal[I]) {
       case 'a':
