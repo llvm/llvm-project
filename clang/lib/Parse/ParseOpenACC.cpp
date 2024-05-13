@@ -711,14 +711,15 @@ bool Parser::ParseOpenACCIntExprList(OpenACCDirectiveKind DK,
 /// device_type( device-type-list )
 ///
 /// The device_type clause may be abbreviated to dtype.
-bool Parser::ParseOpenACCDeviceTypeList() {
+bool Parser::ParseOpenACCDeviceTypeList(
+    llvm::SmallVector<std::pair<IdentifierInfo *, SourceLocation>> &Archs) {
 
   if (expectIdentifierOrKeyword(*this)) {
     SkipUntil(tok::r_paren, tok::annot_pragma_openacc_end,
               Parser::StopBeforeMatch);
-    return false;
+    return true;
   }
-  ConsumeToken();
+  Archs.emplace_back(getCurToken().getIdentifierInfo(), ConsumeToken());
 
   while (!getCurToken().isOneOf(tok::r_paren, tok::annot_pragma_openacc_end)) {
     ExpectAndConsume(tok::comma);
@@ -726,9 +727,9 @@ bool Parser::ParseOpenACCDeviceTypeList() {
     if (expectIdentifierOrKeyword(*this)) {
       SkipUntil(tok::r_paren, tok::annot_pragma_openacc_end,
                 Parser::StopBeforeMatch);
-      return false;
+      return true;
     }
-    ConsumeToken();
+    Archs.emplace_back(getCurToken().getIdentifierInfo(), ConsumeToken());
   }
   return false;
 }
@@ -1021,16 +1022,20 @@ Parser::OpenACCClauseParseResult Parser::ParseOpenACCClauseParams(
       break;
     }
     case OpenACCClauseKind::DType:
-    case OpenACCClauseKind::DeviceType:
+    case OpenACCClauseKind::DeviceType: {
+      llvm::SmallVector<std::pair<IdentifierInfo *, SourceLocation>> Archs;
       if (getCurToken().is(tok::star)) {
         // FIXME: We want to mark that this is an 'everything else' type of
         // device_type in Sema.
-        ConsumeToken();
-      } else if (ParseOpenACCDeviceTypeList()) {
+        ParsedClause.setDeviceTypeDetails({{nullptr, ConsumeToken()}});
+      } else if (!ParseOpenACCDeviceTypeList(Archs)) {
+        ParsedClause.setDeviceTypeDetails(std::move(Archs));
+      } else {
         Parens.skipToEnd();
         return OpenACCCanContinue();
       }
       break;
+    }
     case OpenACCClauseKind::Tile:
       if (ParseOpenACCSizeExprList()) {
         Parens.skipToEnd();
