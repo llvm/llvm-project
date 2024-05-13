@@ -1,26 +1,22 @@
 # RUN: yaml2obj %s | od -v -An -tx1 | FileCheck --ignore-case %s
 
-## Verify that GOFF Header is correct.
+## Verify that the GOFF Header and end record are written with the default
+## values. No other record is written.
+
 # CHECK:      03 f0 00 00 00 00 00 00 00 00 00 00 00 00 00 00
 # CHECK-NEXT: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
 # CHECK-NEXT: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
-# CHECK-NEXT: 00 00 01 00 03 00 00 00 00 00 00 00 00 00 00 00
+# CHECK-NEXT: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
 # CHECK-NEXT: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
 
-## Verify GOFF Module end.
-# CHECK-NEXT: 03 40 00 00 00 00 00 00 00 00 00 02 00 00 00 00
+# CHECK-NEXT: 03 40 00 00 00 00 00 00 00 00 00 00 00 00 00 00
 # CHECK-NEXT: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
 # CHECK-NEXT: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
 # CHECK-NEXT: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
 # CHECK-NEXT: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+
+# CHECK-EMPTY:
 
 --- !GOFF
-FileHeader:
-  TargetEnvironment: 0
-  TargetOperatingSystem: 0
-  CCSID: 0
-  CharacterSetName: ""
-  LanguageProductIdentifier: ""
-  ArchitectureLevel: 1
-  InternalCCSID: 0
-  TargetSoftwareEnvironment: 0 
+- ModuleHeader:
+- End:

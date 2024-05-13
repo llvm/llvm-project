@@ -1,0 +1,70 @@
+# RUN: sed -e "s/@FILL@/$(printf '%47s')/g" < %s | yaml2obj | \
+# RUN:   od -v -An -tx1 | FileCheck --ignore-case --check-prefix CHECK1 %s
+# RUN: sed -e "s/@FILL@/$(printf '%48s')/g" < %s | yaml2obj | \
+# RUN:   od -v -An -tx1 | FileCheck --ignore-case --check-prefix CHECK2 %s
+# RUN: sed -e "s/@FILL@/$(printf '%125s')/g" < %s | yaml2obj | \
+# RUN:   od -v -An -tx1 | FileCheck --ignore-case --check-prefix CHECK3 %s
+# RUN: sed -e "s/@FILL@/$(printf '%160s')/g" < %s | yaml2obj | \
+# RUN:   od -v -An -tx1 | FileCheck --ignore-case --check-prefix CHECK4 %s
+
+
+## Verify that the entry name is written correctly over multiple records.
+## The continued/continuation flags are in the lower nibble of the 2nd byte
+## of a record.
+
+## Last byte is a fill byte.
+# CHECK1:      03 40 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+# CHECK1-NEXT: 00 00 00 00 00 00 00 00 00 00 c6 96 96 c2 81 99
+# CHECK1-NEXT: 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40
+# CHECK1-NEXT: 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40
+# CHECK1-NEXT: 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40 00
+# CHECK1-EMPTY:
+
+## 1 record fully used.
+## Flags = 0 => no continuation, not continued.
+# CHECK2:      03 40 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+# CHECK2-NEXT: 00 00 00 00 00 00 00 00 00 00 c6 96 96 c2 81 99
+# CHECK2-NEXT: 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40
+# CHECK2-NEXT: 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40
+# CHECK2-NEXT: 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40
+# CHECK2-EMPTY:
+
+## 2 records fully used.
+## Flags = 1 => no continuation, but continued.
+# CHECK3:      03 41 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+# CHECK3-NEXT: 00 00 00 00 00 00 00 00 00 00 c6 96 96 c2 81 99
+# CHECK3-NEXT: 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40
+# CHECK3-NEXT: 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40
+# CHECK3-NEXT: 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40
+## Flags = 2 => continuation, not continued.
+# CHECK3-NEXT: 03 42 00 40 40 40 40 40 40 40 40 40 40 40 40 40
+# CHECK3-NEXT: 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40
+# CHECK3-NEXT: 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40
+# CHECK3-NEXT: 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40
+# CHECK3-NEXT: 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40
+# CHECK3-EMPTY:
+
+## 3rd record used half.
+## Flags = 1 => no continuation, but continued.
+# CHECK4:      03 41 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+# CHECK4-NEXT: 00 00 00 00 00 00 00 00 00 00 c6 96 96 c2 81 99
+# CHECK4-NEXT: 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40
+# CHECK4-NEXT: 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40
+# CHECK4-NEXT: 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40
+## Flags = 3 => continuation, and continued.
+# CHECK4-NEXT: 03 43 00 40 40 40 40 40 40 40 40 40 40 40 40 40
+# CHECK4-NEXT: 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40
+# CHECK4-NEXT: 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40
+# CHECK4-NEXT: 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40
+# CHECK4-NEXT: 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40
+## Flags = 2 => continuation, not continued.
+# CHECK4-NEXT: 03 42 00 40 40 40 40 40 40 40 40 40 40 40 40 40
+# CHECK4-NEXT: 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40 40
+# CHECK4-NEXT: 40 40 40 40 40 40 00 00 00 00 00 00 00 00 00 00
+# CHECK4-NEXT: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+# CHECK4-NEXT: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+# CHECK4-EMPTY:
+
+--- !GOFF
+- End:
+    EntryName: "FooBar@FILL@"

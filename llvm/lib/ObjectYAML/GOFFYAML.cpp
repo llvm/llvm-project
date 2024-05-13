@@ -12,34 +12,92 @@
 
 #include "llvm/ObjectYAML/GOFFYAML.h"
 #include "llvm/BinaryFormat/GOFF.h"
-#include <string.h>
 
 namespace llvm {
-namespace GOFFYAML {
-
-Object::Object() {}
-
-} // namespace GOFFYAML
 
 namespace yaml {
 
-void MappingTraits<GOFFYAML::FileHeader>::mapping(
-    IO &IO, GOFFYAML::FileHeader &FileHdr) {
-  IO.mapOptional("TargetEnvironment", FileHdr.TargetEnvironment, 0);
-  IO.mapOptional("TargetOperatingSystem", FileHdr.TargetOperatingSystem, 0);
-  IO.mapOptional("CCSID", FileHdr.CCSID, 0);
-  IO.mapOptional("CharacterSetName", FileHdr.CharacterSetName, "");
-  IO.mapOptional("LanguageProductIdentifier", FileHdr.LanguageProductIdentifier,
-                 "");
-  IO.mapOptional("ArchitectureLevel", FileHdr.ArchitectureLevel, 1);
-  IO.mapOptional("InternalCCSID", FileHdr.InternalCCSID);
-  IO.mapOptional("TargetSoftwareEnvironment",
-                 FileHdr.TargetSoftwareEnvironment);
+void ScalarEnumerationTraits<GOFFYAML::GOFF_AMODE>::enumeration(
+    IO &IO, GOFFYAML::GOFF_AMODE &Value) {
+#define ECase(X) IO.enumCase(Value, #X, GOFF::ESD_##X)
+  ECase(AMODE_None);
+  ECase(AMODE_24);
+  ECase(AMODE_31);
+  ECase(AMODE_ANY);
+  ECase(AMODE_64);
+  ECase(AMODE_MIN);
+#undef ECase
+  IO.enumFallback<Hex8>(Value);
+}
+
+void ScalarEnumerationTraits<GOFFYAML::GOFF_ENDFLAGS>::enumeration(
+    IO &IO, GOFFYAML::GOFF_ENDFLAGS &Value) {
+#define ECase(X) IO.enumCase(Value, #X, unsigned(GOFF::END_##X) << 6)
+  ECase(EPR_None);
+  ECase(EPR_EsdidOffset);
+  ECase(EPR_ExternalName);
+  ECase(EPR_Reserved);
+#undef ECase
+  IO.enumFallback<Hex8>(Value);
+}
+
+void MappingTraits<GOFFYAML::ModuleHeader>::mapping(
+    IO &IO, GOFFYAML::ModuleHeader &ModHdr) {
+  IO.mapOptional("ArchitectureLevel", ModHdr.ArchitectureLevel, 0);
+  IO.mapOptional("PropertiesLength", ModHdr.PropertiesLength, 0);
+  IO.mapOptional("Properties", ModHdr.Properties);
+}
+
+void MappingTraits<GOFFYAML::EndOfModule>::mapping(IO &IO,
+                                                   GOFFYAML::EndOfModule &End) {
+  IO.mapOptional("Flags", End.Flags, 0);
+  IO.mapOptional("AMODE", End.AMODE, 0);
+  IO.mapOptional("RecordCount", End.RecordCount, 0);
+  IO.mapOptional("ESDID", End.ESDID, 0);
+  IO.mapOptional("Offset", End.Offset, 0);
+  IO.mapOptional("NameLength", End.NameLength, 0);
+  IO.mapOptional("EntryName", End.EntryName);
+}
+
+void CustomMappingTraits<GOFFYAML::RecordPtr>::inputOne(
+    IO &IO, StringRef Key, GOFFYAML::RecordPtr &Elem) {
+  if (Key == "ModuleHeader") {
+    GOFFYAML::ModuleHeader ModHdr;
+    IO.mapRequired("ModuleHeader", ModHdr);
+    Elem = std::make_unique<GOFFYAML::ModuleHeader>(std::move(ModHdr));
+  } else if (Key == "End") {
+    GOFFYAML::EndOfModule End;
+    IO.mapRequired("End", End);
+    Elem = std::make_unique<GOFFYAML::EndOfModule>(std::move(End));
+  } else if (Key == "RelocationDirectory" || Key == "Symbol" || Key == "Text" ||
+             Key == "Length")
+    IO.setError(Twine("Not yet implemented ").concat(Key));
+  else
+    IO.setError(Twine("Unknown record type name ").concat(Key));
+}
+
+void CustomMappingTraits<GOFFYAML::RecordPtr>::output(
+    IO &IO, GOFFYAML::RecordPtr &Elem) {
+  switch (Elem->getKind()) {
+  case GOFFYAML::RecordBase::RBK_ModuleHeader:
+    IO.mapRequired("ModuleHeader",
+                   *static_cast<GOFFYAML::ModuleHeader *>(Elem.get()));
+    break;
+  case GOFFYAML::RecordBase::RBK_EndOfModule:
+    IO.mapRequired("End", *static_cast<GOFFYAML::EndOfModule *>(Elem.get()));
+    break;
+  case GOFFYAML::RecordBase::RBK_RelocationDirectory:
+  case GOFFYAML::RecordBase::RBK_Symbol:
+  case GOFFYAML::RecordBase::RBK_Text:
+  case GOFFYAML::RecordBase::RBK_DeferredLength:
+    llvm_unreachable(("Not yet implemented"));
+  }
 }
 
 void MappingTraits<GOFFYAML::Object>::mapping(IO &IO, GOFFYAML::Object &Obj) {
   IO.mapTag("!GOFF", true);
-  IO.mapRequired("FileHeader", Obj.Header);
+  EmptyContext Context;
+  yamlize(IO, Obj.Records, false, Context);
 }
 
 } // namespace yaml

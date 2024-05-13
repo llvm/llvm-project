@@ -1,0 +1,18 @@
+# RUN: yaml2obj %s | od -v -An -tx1 | FileCheck --ignore-case %s
+
+## Verify that the GOFF header record is correct, with all fields having a
+## value. No other record is written.
+
+# CHECK:      03 f0 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+# CHECK-NEXT: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+# CHECK-NEXT: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+# CHECK-NEXT: 00 00 00 01 00 03 00 00 00 00 00 00 03 33 ff 00
+# CHECK-NEXT: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+
+# CHECK-EMPTY:
+
+--- !GOFF
+- ModuleHeader:
+    ArchitectureLevel: 1
+    PropertiesLength: 3
+    Properties: 0333ff
