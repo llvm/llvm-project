@@ -18,7 +18,6 @@
 #include "llvm/ADT/Bitset.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/StringSet.h"
 #include "llvm/Support/VersionTuple.h"
 #include <array>
 #include <vector>
@@ -115,7 +114,6 @@ using ExtensionBitset = Bitset<AEK_NUM_EXTENSIONS>;
 // SubtargetFeature which may represent either an actual extension or some
 // internal LLVM property.
 struct ExtensionInfo {
-public:
   StringRef Name;                 // Human readable name, e.g. "profile".
   std::optional<StringRef> Alias; // An alias for this extension, if one exists.
   ArchExtKind ID;                 // Corresponding to the ArchExtKind, this
