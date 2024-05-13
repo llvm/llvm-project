@@ -45,6 +45,7 @@
 #include "clang/Sema/SemaConsumer.h"
 #include "clang/Sema/SemaHLSL.h"
 #include "clang/Sema/SemaInternal.h"
+#include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaOpenACC.h"
 #include "clang/Sema/SemaOpenMP.h"
 #include "clang/Sema/SemaSYCL.h"
@@ -203,6 +204,7 @@ Sema::Sema(Preprocessor &pp, ASTContext &ctxt, ASTConsumer &consumer,
       CurScope(nullptr), Ident_super(nullptr),
       CUDAPtr(std::make_unique<SemaCUDA>(*this)),
       HLSLPtr(std::make_unique<SemaHLSL>(*this)),
+      ObjCPtr(std::make_unique<SemaObjC>(*this)),
       OpenACCPtr(std::make_unique<SemaOpenACC>(*this)),
       OpenMPPtr(std::make_unique<SemaOpenMP>(*this)),
       SYCLPtr(std::make_unique<SemaSYCL>(*this)),
@@ -224,20 +226,16 @@ Sema::Sema(Preprocessor &pp, ASTContext &ctxt, ASTConsumer &consumer,
       AccessCheckingSFINAE(false), CurrentInstantiationScope(nullptr),
       InNonInstantiationSFINAEContext(false), NonInstantiationEntries(0),
       ArgumentPackSubstitutionIndex(-1), SatisfactionCache(Context),
-      NSNumberDecl(nullptr), NSValueDecl(nullptr), NSStringDecl(nullptr),
-      StringWithUTF8StringMethod(nullptr),
-      ValueWithBytesObjCTypeMethod(nullptr), NSArrayDecl(nullptr),
-      ArrayWithObjectsMethod(nullptr), NSDictionaryDecl(nullptr),
-      DictionaryWithObjectsMethod(nullptr), CodeCompleter(CodeCompleter) {
+      CodeCompleter(CodeCompleter) {
   assert(pp.TUKind == TUKind);
   TUScope = nullptr;
 
   LoadedExternalKnownNamespaces = false;
   for (unsigned I = 0; I != NSAPI::NumNSNumberLiteralMethods; ++I)
-    NSNumberLiteralMethods[I] = nullptr;
+    ObjC().NSNumberLiteralMethods[I] = nullptr;
 
   if (getLangOpts().ObjC)
-    NSAPIObj.reset(new NSAPI(Context));
+    ObjC().NSAPIObj.reset(new NSAPI(Context));
 
   if (getLangOpts().CPlusPlus)
     FieldCollector.reset(new CXXFieldCollector());
@@ -1129,7 +1127,7 @@ void Sema::ActOnEndOfTranslationUnit() {
   // Complete translation units and modules define vtables and perform implicit
   // instantiations. PCH files do not.
   if (TUKind != TU_Prefix) {
-    DiagnoseUseOfUnimplementedSelectors();
+    ObjC().DiagnoseUseOfUnimplementedSelectors();
 
     ActOnEndOfTranslationUnitFragment(
         !ModuleScopes.empty() && ModuleScopes.back().Module->Kind ==

@@ -18,6 +18,7 @@
 #include "clang/Lex/CodeCompletionHandler.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/Sema.h"
+#include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaOpenMP.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Frontend/OpenMP/OMPContext.h"
@@ -445,8 +446,8 @@ class Parser : public CodeCompletionHandler {
   /// True if we are within an Objective-C container while parsing C-like decls.
   ///
   /// This is necessary because Sema thinks we have left the container
-  /// to parse the C-like decls, meaning Actions.getObjCDeclContext() will
-  /// be NULL.
+  /// to parse the C-like decls, meaning Actions.ObjC().getObjCDeclContext()
+  /// will be NULL.
   bool ParsingInObjCContainer;
 
   /// Whether to skip parsing of function bodies.
@@ -497,7 +498,7 @@ public:
   }
 
   ObjCContainerDecl *getObjCDeclContext() const {
-    return Actions.getObjCDeclContext();
+    return Actions.ObjC().getObjCDeclContext();
   }
 
   // Type forwarding.  All of these are statically 'void*', but they may all be
@@ -1083,11 +1084,11 @@ private:
       : P(p), DC(p.getObjCDeclContext()),
         WithinObjCContainer(P.ParsingInObjCContainer, DC != nullptr) {
       if (DC)
-        P.Actions.ActOnObjCTemporaryExitContainerContext(DC);
+        P.Actions.ObjC().ActOnObjCTemporaryExitContainerContext(DC);
     }
     ~ObjCDeclContextSwitch() {
       if (DC)
-        P.Actions.ActOnObjCReenterContainerContext(DC);
+        P.Actions.ObjC().ActOnObjCReenterContainerContext(DC);
     }
   };
 

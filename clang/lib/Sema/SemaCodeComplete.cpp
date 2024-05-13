@@ -42,6 +42,7 @@
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/Sema.h"
 #include "clang/Sema/SemaInternal.h"
+#include "clang/Sema/SemaObjC.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallBitVector.h"
@@ -5862,7 +5863,8 @@ void Sema::CodeCompleteObjCClassPropertyRefExpr(Scope *S,
                                                 SourceLocation ClassNameLoc,
                                                 bool IsBaseExprStatement) {
   const IdentifierInfo *ClassNamePtr = &ClassName;
-  ObjCInterfaceDecl *IFace = getObjCInterfaceDecl(ClassNamePtr, ClassNameLoc);
+  ObjCInterfaceDecl *IFace =
+      ObjC().getObjCInterfaceDecl(ClassNamePtr, ClassNameLoc);
   if (!IFace)
     return;
   CodeCompletionContext CCContext(
@@ -8176,15 +8178,16 @@ AddClassMessageCompletions(Sema &SemaRef, Scope *S, ParsedType Receiver,
                     N = SemaRef.getExternalSource()->GetNumExternalSelectors();
            I != N; ++I) {
         Selector Sel = SemaRef.getExternalSource()->GetExternalSelector(I);
-        if (Sel.isNull() || SemaRef.MethodPool.count(Sel))
+        if (Sel.isNull() || SemaRef.ObjC().MethodPool.count(Sel))
           continue;
 
-        SemaRef.ReadMethodPool(Sel);
+        SemaRef.ObjC().ReadMethodPool(Sel);
       }
     }
 
-    for (Sema::GlobalMethodPool::iterator M = SemaRef.MethodPool.begin(),
-                                          MEnd = SemaRef.MethodPool.end();
+    for (SemaObjC::GlobalMethodPool::iterator
+             M = SemaRef.ObjC().MethodPool.begin(),
+             MEnd = SemaRef.ObjC().MethodPool.end();
          M != MEnd; ++M) {
       for (ObjCMethodList *MethList = &M->second.second;
            MethList && MethList->getMethod(); MethList = MethList->getNext()) {
@@ -8346,15 +8349,15 @@ void Sema::CodeCompleteObjCInstanceMessage(
       for (uint32_t I = 0, N = ExternalSource->GetNumExternalSelectors();
            I != N; ++I) {
         Selector Sel = ExternalSource->GetExternalSelector(I);
-        if (Sel.isNull() || MethodPool.count(Sel))
+        if (Sel.isNull() || ObjC().MethodPool.count(Sel))
           continue;
 
-        ReadMethodPool(Sel);
+        ObjC().ReadMethodPool(Sel);
       }
     }
 
-    for (GlobalMethodPool::iterator M = MethodPool.begin(),
-                                    MEnd = MethodPool.end();
+    for (SemaObjC::GlobalMethodPool::iterator M = ObjC().MethodPool.begin(),
+                                              MEnd = ObjC().MethodPool.end();
          M != MEnd; ++M) {
       for (ObjCMethodList *MethList = &M->second.first;
            MethList && MethList->getMethod(); MethList = MethList->getNext()) {
@@ -8417,10 +8420,10 @@ void Sema::CodeCompleteObjCSelector(
     for (uint32_t I = 0, N = ExternalSource->GetNumExternalSelectors(); I != N;
          ++I) {
       Selector Sel = ExternalSource->GetExternalSelector(I);
-      if (Sel.isNull() || MethodPool.count(Sel))
+      if (Sel.isNull() || ObjC().MethodPool.count(Sel))
         continue;
 
-      ReadMethodPool(Sel);
+      ObjC().ReadMethodPool(Sel);
     }
   }
 
@@ -8428,8 +8431,8 @@ void Sema::CodeCompleteObjCSelector(
                         CodeCompleter->getCodeCompletionTUInfo(),
                         CodeCompletionContext::CCC_SelectorName);
   Results.EnterNewScope();
-  for (GlobalMethodPool::iterator M = MethodPool.begin(),
-                                  MEnd = MethodPool.end();
+  for (SemaObjC::GlobalMethodPool::iterator M = ObjC().MethodPool.begin(),
+                                            MEnd = ObjC().MethodPool.end();
        M != MEnd; ++M) {
 
     Selector Sel = M->first;
@@ -8497,7 +8500,8 @@ void Sema::CodeCompleteObjCProtocolReferences(
     // already seen.
     // FIXME: This doesn't work when caching code-completion results.
     for (const IdentifierLocPair &Pair : Protocols)
-      if (ObjCProtocolDecl *Protocol = LookupProtocol(Pair.first, Pair.second))
+      if (ObjCProtocolDecl *Protocol =
+              ObjC().LookupProtocol(Pair.first, Pair.second))
         Results.Ignore(Protocol);
 
     // Add all protocols.
@@ -9755,10 +9759,10 @@ void Sema::CodeCompleteObjCMethodDeclSelector(
     for (uint32_t I = 0, N = ExternalSource->GetNumExternalSelectors(); I != N;
          ++I) {
       Selector Sel = ExternalSource->GetExternalSelector(I);
-      if (Sel.isNull() || MethodPool.count(Sel))
+      if (Sel.isNull() || ObjC().MethodPool.count(Sel))
         continue;
 
-      ReadMethodPool(Sel);
+      ObjC().ReadMethodPool(Sel);
     }
   }
 
@@ -9772,8 +9776,8 @@ void Sema::CodeCompleteObjCMethodDeclSelector(
     Results.setPreferredType(GetTypeFromParser(ReturnTy).getNonReferenceType());
 
   Results.EnterNewScope();
-  for (GlobalMethodPool::iterator M = MethodPool.begin(),
-                                  MEnd = MethodPool.end();
+  for (SemaObjC::GlobalMethodPool::iterator M = ObjC().MethodPool.begin(),
+                                            MEnd = ObjC().MethodPool.end();
        M != MEnd; ++M) {
     for (ObjCMethodList *MethList = IsInstanceMethod ? &M->second.first
                                                      : &M->second.second;

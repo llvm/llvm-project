@@ -28,6 +28,7 @@
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaDiagnostic.h"
+#include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaOpenMP.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallString.h"
@@ -3945,7 +3946,7 @@ void Parser::ParseDeclarationSpecifiers(
 
       if (DSContext == DeclSpecContext::DSC_objc_method_result &&
           isObjCInstancetype()) {
-        ParsedType TypeRep = Actions.ActOnObjCInstanceType(Loc);
+        ParsedType TypeRep = Actions.ObjC().ActOnObjCInstanceType(Loc);
         assert(TypeRep);
         isInvalid = DS.SetTypeSpecType(DeclSpec::TST_typename, Loc, PrevSpec,
                                        DiagID, TypeRep, Policy);
@@ -5002,8 +5003,8 @@ void Parser::ParseStructUnionBody(SourceLocation RecordLoc,
         continue;
       }
       SmallVector<Decl *, 16> Fields;
-      Actions.ActOnDefs(getCurScope(), TagDecl, Tok.getLocation(),
-                        Tok.getIdentifierInfo(), Fields);
+      Actions.ObjC().ActOnDefs(getCurScope(), TagDecl, Tok.getLocation(),
+                               Tok.getIdentifierInfo(), Fields);
       ConsumeToken();
       ExpectAndConsume(tok::r_paren);
     }

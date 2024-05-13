@@ -44,6 +44,7 @@
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaInternal.h"
+#include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaOpenMP.h"
 #include "clang/Sema/Template.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -17054,7 +17055,7 @@ VarDecl *Sema::BuildExceptionDeclaration(Scope *S, TypeSourceInfo *TInfo,
   ExDecl->setExceptionVariable(true);
 
   // In ARC, infer 'retaining' for variables of retainable type.
-  if (getLangOpts().ObjCAutoRefCount && inferObjCARCLifetime(ExDecl))
+  if (getLangOpts().ObjCAutoRefCount && ObjC().inferObjCARCLifetime(ExDecl))
     Invalid = true;
 
   if (!Invalid && !ExDeclType->isDependentType()) {
@@ -18850,61 +18851,6 @@ void Sema::MarkVirtualMembersReferenced(SourceLocation Loc,
     if (Base->getNumVBases() == 0)
       continue;
     MarkVirtualMembersReferenced(Loc, Base);
-  }
-}
-
-/// SetIvarInitializers - This routine builds initialization ASTs for the
-/// Objective-C implementation whose ivars need be initialized.
-void Sema::SetIvarInitializers(ObjCImplementationDecl *ObjCImplementation) {
-  if (!getLangOpts().CPlusPlus)
-    return;
-  if (ObjCInterfaceDecl *OID = ObjCImplementation->getClassInterface()) {
-    SmallVector<ObjCIvarDecl*, 8> ivars;
-    CollectIvarsToConstructOrDestruct(OID, ivars);
-    if (ivars.empty())
-      return;
-    SmallVector<CXXCtorInitializer*, 32> AllToInit;
-    for (unsigned i = 0; i < ivars.size(); i++) {
-      FieldDecl *Field = ivars[i];
-      if (Field->isInvalidDecl())
-        continue;
-
-      CXXCtorInitializer *Member;
-      InitializedEntity InitEntity = InitializedEntity::InitializeMember(Field);
-      InitializationKind InitKind =
-        InitializationKind::CreateDefault(ObjCImplementation->getLocation());
-
-      InitializationSequence InitSeq(*this, InitEntity, InitKind, std::nullopt);
-      ExprResult MemberInit =
-          InitSeq.Perform(*this, InitEntity, InitKind, std::nullopt);
-      MemberInit = MaybeCreateExprWithCleanups(MemberInit);
-      // Note, MemberInit could actually come back empty if no initialization
-      // is required (e.g., because it would call a trivial default constructor)
-      if (!MemberInit.get() || MemberInit.isInvalid())
-        continue;
-
-      Member =
-        new (Context) CXXCtorInitializer(Context, Field, SourceLocation(),
-                                         SourceLocation(),
-                                         MemberInit.getAs<Expr>(),
-                                         SourceLocation());
-      AllToInit.push_back(Member);
-
-      // Be sure that the destructor is accessible and is marked as referenced.
-      if (const RecordType *RecordTy =
-              Context.getBaseElementType(Field->getType())
-                  ->getAs<RecordType>()) {
-        CXXRecordDecl *RD = cast<CXXRecordDecl>(RecordTy->getDecl());
-        if (CXXDestructorDecl *Destructor = LookupDestructor(RD)) {
-          MarkFunctionReferenced(Field->getLocation(), Destructor);
-          CheckDestructorAccess(Field->getLocation(), Destructor,
-                            PDiag(diag::err_access_dtor_ivar)
-                              << Context.getBaseElementType(Field->getType()));
-        }
-      }
-    }
-    ObjCImplementation->setIvarInitializers(Context,
-                                            AllToInit.data(), AllToInit.size());
   }
 }
 

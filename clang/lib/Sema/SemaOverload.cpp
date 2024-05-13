@@ -33,6 +33,7 @@
 #include "clang/Sema/Overload.h"
 #include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaInternal.h"
+#include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/Template.h"
 #include "clang/Sema/TemplateDeduction.h"
 #include "llvm/ADT/DenseSet.h"
@@ -1086,7 +1087,7 @@ namespace {
       assert(E->hasPlaceholderType(BuiltinType::ARCUnbridgedCast));
       Entry entry = { &E, E };
       Entries.push_back(entry);
-      E = S.stripARCUnbridgedCast(E);
+      E = S.ObjC().stripARCUnbridgedCast(E);
     }
 
     void restore() {
@@ -1778,8 +1779,8 @@ ExprResult Sema::PerformImplicitConversion(Expr *From, QualType ToType,
     = getLangOpts().ObjCAutoRefCount &&
       (Action == AA_Passing || Action == AA_Sending);
   if (getLangOpts().ObjC)
-    CheckObjCBridgeRelatedConversions(From->getBeginLoc(), ToType,
-                                      From->getType(), From);
+    ObjC().CheckObjCBridgeRelatedConversions(From->getBeginLoc(), ToType,
+                                             From->getType(), From);
   ImplicitConversionSequence ICS = ::TryImplicitConversion(
       *this, From, ToType,
       /*SuppressUserConversions=*/false,
@@ -2272,7 +2273,7 @@ static bool IsStandardConversion(Sema &S, Expr* From, QualType ToType,
   } else if (S.IsBlockPointerConversion(FromType, ToType, FromType)) {
     SCS.Second = ICK_Block_Pointer_Conversion;
   } else if (AllowObjCWritebackConversion &&
-             S.isObjCWritebackConversion(FromType, ToType, FromType)) {
+             S.ObjC().isObjCWritebackConversion(FromType, ToType, FromType)) {
     SCS.Second = ICK_Writeback_Conversion;
   } else if (S.IsPointerConversion(From, FromType, ToType, InOverloadResolution,
                                    FromType, IncompatibleObjC)) {
@@ -3058,73 +3059,6 @@ bool Sema::isObjCPointerConversion(QualType FromType, QualType ToType,
   }
 
   return false;
-}
-
-/// Determine whether this is an Objective-C writeback conversion,
-/// used for parameter passing when performing automatic reference counting.
-///
-/// \param FromType The type we're converting form.
-///
-/// \param ToType The type we're converting to.
-///
-/// \param ConvertedType The type that will be produced after applying
-/// this conversion.
-bool Sema::isObjCWritebackConversion(QualType FromType, QualType ToType,
-                                     QualType &ConvertedType) {
-  if (!getLangOpts().ObjCAutoRefCount ||
-      Context.hasSameUnqualifiedType(FromType, ToType))
-    return false;
-
-  // Parameter must be a pointer to __autoreleasing (with no other qualifiers).
-  QualType ToPointee;
-  if (const PointerType *ToPointer = ToType->getAs<PointerType>())
-    ToPointee = ToPointer->getPointeeType();
-  else
-    return false;
-
-  Qualifiers ToQuals = ToPointee.getQualifiers();
-  if (!ToPointee->isObjCLifetimeType() ||
-      ToQuals.getObjCLifetime() != Qualifiers::OCL_Autoreleasing ||
-      !ToQuals.withoutObjCLifetime().empty())
-    return false;
-
-  // Argument must be a pointer to __strong to __weak.
-  QualType FromPointee;
-  if (const PointerType *FromPointer = FromType->getAs<PointerType>())
-    FromPointee = FromPointer->getPointeeType();
-  else
-    return false;
-
-  Qualifiers FromQuals = FromPointee.getQualifiers();
-  if (!FromPointee->isObjCLifetimeType() ||
-      (FromQuals.getObjCLifetime() != Qualifiers::OCL_Strong &&
-       FromQuals.getObjCLifetime() != Qualifiers::OCL_Weak))
-    return false;
-
-  // Make sure that we have compatible qualifiers.
-  FromQuals.setObjCLifetime(Qualifiers::OCL_Autoreleasing);
-  if (!ToQuals.compatiblyIncludes(FromQuals))
-    return false;
-
-  // Remove qualifiers from the pointee type we're converting from; they
-  // aren't used in the compatibility check belong, and we'll be adding back
-  // qualifiers (with __autoreleasing) if the compatibility check succeeds.
-  FromPointee = FromPointee.getUnqualifiedType();
-
-  // The unqualified form of the pointee types must be compatible.
-  ToPointee = ToPointee.getUnqualifiedType();
-  bool IncompatibleObjC;
-  if (Context.typesAreCompatible(FromPointee, ToPointee))
-    FromPointee = ToPointee;
-  else if (!isObjCPointerConversion(FromPointee, ToPointee, FromPointee,
-                                    IncompatibleObjC))
-    return false;
-
-  /// Construct the type we're converting to, which is a pointer to
-  /// __autoreleasing pointee.
-  FromPointee = Context.getQualifiedType(FromPointee, FromQuals);
-  ConvertedType = Context.getPointerType(FromPointee);
-  return true;
 }
 
 bool Sema::IsBlockPointerConversion(QualType FromType, QualType ToType,
@@ -7241,7 +7175,7 @@ Sema::SelectBestMethod(Selector Sel, MultiExprArg Args, bool IsInstance,
       // a consumed argument.
       if (argExpr->hasPlaceholderType(BuiltinType::ARCUnbridgedCast) &&
           !param->hasAttr<CFConsumedAttr>())
-        argExpr = stripARCUnbridgedCast(argExpr);
+        argExpr = ObjC().stripARCUnbridgedCast(argExpr);
 
       // If the parameter is __unknown_anytype, move on to the next method.
       if (param->getType() == Context.UnknownAnyTy) {

@@ -48,6 +48,7 @@
 #include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaHLSL.h"
 #include "clang/Sema/SemaInternal.h"
+#include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaOpenMP.h"
 #include "clang/Sema/Template.h"
 #include "llvm/ADT/STLForwardCompat.h"
@@ -915,7 +916,7 @@ Sema::NameClassification Sema::ClassifyName(Scope *S, CXXScopeSpec &SS,
   // FIXME: This lookup really, really needs to be folded in to the normal
   // unqualified lookup mechanism.
   if (SS.isEmpty() && CurMethod && !isResultTypeOrTemplate(Result, NextToken)) {
-    DeclResult Ivar = LookupIvarInObjCMethod(Result, S, Name);
+    DeclResult Ivar = ObjC().LookupIvarInObjCMethod(Result, S, Name);
     if (Ivar.isInvalid())
       return NameClassification::Error();
     if (Ivar.isUsable())
@@ -1033,7 +1034,7 @@ Corrected:
         // FIXME: This is a gross hack.
         if (ObjCIvarDecl *Ivar = Result.getAsSingle<ObjCIvarDecl>()) {
           DeclResult R =
-              LookupIvarInObjCMethod(Result, S, Ivar->getIdentifier());
+              ObjC().LookupIvarInObjCMethod(Result, S, Ivar->getIdentifier());
           if (R.isInvalid())
             return NameClassification::Error();
           if (R.isUsable())
@@ -1271,7 +1272,7 @@ ExprResult Sema::ActOnNameClassifiedAsNonType(Scope *S, const CXXScopeSpec &SS,
                                               const Token &NextToken) {
   if (getCurMethodDecl() && SS.isEmpty())
     if (auto *Ivar = dyn_cast<ObjCIvarDecl>(Found->getUnderlyingDecl()))
-      return BuildIvarRefExpr(S, NameLoc, Ivar);
+      return ObjC().BuildIvarRefExpr(S, NameLoc, Ivar);
 
   // Reconstruct the lookup result.
   LookupResult Result(*this, Found->getDeclName(), NameLoc, LookupOrdinaryName);
@@ -2308,45 +2309,6 @@ void Sema::ActOnPopScope(SourceLocation Loc, Scope *S) {
     if (D.PreviousDeclLoc)
       Diag(*D.PreviousDeclLoc, diag::note_previous_declaration);
   }
-}
-
-/// Look for an Objective-C class in the translation unit.
-///
-/// \param Id The name of the Objective-C class we're looking for. If
-/// typo-correction fixes this name, the Id will be updated
-/// to the fixed name.
-///
-/// \param IdLoc The location of the name in the translation unit.
-///
-/// \param DoTypoCorrection If true, this routine will attempt typo correction
-/// if there is no class with the given name.
-///
-/// \returns The declaration of the named Objective-C class, or NULL if the
-/// class could not be found.
-ObjCInterfaceDecl *Sema::getObjCInterfaceDecl(const IdentifierInfo *&Id,
-                                              SourceLocation IdLoc,
-                                              bool DoTypoCorrection) {
-  // The third "scope" argument is 0 since we aren't enabling lazy built-in
-  // creation from this context.
-  NamedDecl *IDecl = LookupSingleName(TUScope, Id, IdLoc, LookupOrdinaryName);
-
-  if (!IDecl && DoTypoCorrection) {
-    // Perform typo correction at the given location, but only if we
-    // find an Objective-C class name.
-    DeclFilterCCC<ObjCInterfaceDecl> CCC{};
-    if (TypoCorrection C =
-            CorrectTypo(DeclarationNameInfo(Id, IdLoc), LookupOrdinaryName,
-                        TUScope, nullptr, CCC, CTK_ErrorRecovery)) {
-      diagnoseTypo(C, PDiag(diag::err_undef_interface_suggest) << Id);
-      IDecl = C.getCorrectionDeclAs<ObjCInterfaceDecl>();
-      Id = IDecl->getIdentifier();
-    }
-  }
-  ObjCInterfaceDecl *Def = dyn_cast_or_null<ObjCInterfaceDecl>(IDecl);
-  // This routine must always return a class definition, if any.
-  if (Def && Def->getDefinition())
-      Def = Def->getDefinition();
-  return Def;
 }
 
 /// getNonFieldDeclScope - Retrieves the innermost scope, starting
@@ -4415,7 +4377,7 @@ void Sema::mergeObjCMethodDecls(ObjCMethodDecl *newMethod,
        ni != ne && oi != oe; ++ni, ++oi)
     mergeParamDeclAttributes(*ni, *oi, *this);
 
-  CheckObjCMethodOverride(newMethod, oldMethod);
+  ObjC().CheckObjCMethodOverride(newMethod, oldMethod);
 }
 
 static void diagnoseVarDeclTypeMismatch(Sema &S, VarDecl *New, VarDecl* Old) {
@@ -6982,50 +6944,6 @@ static void SetNestedNameSpecifier(Sema &S, DeclaratorDecl *DD, Declarator &D) {
   DD->setQualifierInfo(SS.getWithLocInContext(S.Context));
 }
 
-bool Sema::inferObjCARCLifetime(ValueDecl *decl) {
-  QualType type = decl->getType();
-  Qualifiers::ObjCLifetime lifetime = type.getObjCLifetime();
-  if (lifetime == Qualifiers::OCL_Autoreleasing) {
-    // Various kinds of declaration aren't allowed to be __autoreleasing.
-    unsigned kind = -1U;
-    if (VarDecl *var = dyn_cast<VarDecl>(decl)) {
-      if (var->hasAttr<BlocksAttr>())
-        kind = 0; // __block
-      else if (!var->hasLocalStorage())
-        kind = 1; // global
-    } else if (isa<ObjCIvarDecl>(decl)) {
-      kind = 3; // ivar
-    } else if (isa<FieldDecl>(decl)) {
-      kind = 2; // field
-    }
-
-    if (kind != -1U) {
-      Diag(decl->getLocation(), diag::err_arc_autoreleasing_var)
-        << kind;
-    }
-  } else if (lifetime == Qualifiers::OCL_None) {
-    // Try to infer lifetime.
-    if (!type->isObjCLifetimeType())
-      return false;
-
-    lifetime = type->getObjCARCImplicitLifetime();
-    type = Context.getLifetimeQualifiedType(type, lifetime);
-    decl->setType(type);
-  }
-
-  if (VarDecl *var = dyn_cast<VarDecl>(decl)) {
-    // Thread-local variables cannot have lifetime.
-    if (lifetime && lifetime != Qualifiers::OCL_ExplicitNone &&
-        var->getTLSKind()) {
-      Diag(var->getLocation(), diag::err_arc_thread_ownership)
-        << var->getType();
-      return true;
-    }
-  }
-
-  return false;
-}
-
 void Sema::deduceOpenCLAddressSpace(ValueDecl *Decl) {
   if (Decl->getType().hasAddressSpace())
     return;
@@ -8064,7 +7982,7 @@ NamedDecl *Sema::ActOnVariableDeclarator(
 
   // In auto-retain/release, infer strong retension for variables of
   // retainable type.
-  if (getLangOpts().ObjCAutoRefCount && inferObjCARCLifetime(NewVD))
+  if (getLangOpts().ObjCAutoRefCount && ObjC().inferObjCARCLifetime(NewVD))
     NewVD->setInvalidDecl();
 
   // Handle GNU asm-label extension (encoded as an attribute).
@@ -10878,7 +10796,7 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
 
   // If there's a #pragma clang arc_cf_code_audited in scope, consider
   // marking the function.
-  AddCFAuditedAttribute(NewFD);
+  ObjC().AddCFAuditedAttribute(NewFD);
 
   // If this is a function definition, check if we have to apply any
   // attributes (i.e. optnone and no_builtin) due to a pragma.
@@ -13208,7 +13126,7 @@ bool Sema::DeduceVariableDeclarationType(VarDecl *VDecl, bool DirectInit,
   assert(VDecl->isLinkageValid());
 
   // In ARC, infer lifetime.
-  if (getLangOpts().ObjCAutoRefCount && inferObjCARCLifetime(VDecl))
+  if (getLangOpts().ObjCAutoRefCount && ObjC().inferObjCARCLifetime(VDecl))
     VDecl->setInvalidDecl();
 
   if (getLangOpts().OpenCL)
@@ -13783,7 +13701,7 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
     checkUnsafeAssigns(VDecl->getLocation(), VDecl->getType(), Init);
 
     if (VDecl->hasAttr<BlocksAttr>())
-      checkRetainCycles(VDecl, Init);
+      ObjC().checkRetainCycles(VDecl, Init);
 
     // It is safe to assign a weak reference into a strong variable.
     // Although this code can still have problems:
@@ -15337,37 +15255,6 @@ void Sema::DiagnoseSizeOfParametersAndReturnValue(
   }
 }
 
-QualType Sema::AdjustParameterTypeForObjCAutoRefCount(QualType T,
-                                                      SourceLocation NameLoc,
-                                                      TypeSourceInfo *TSInfo) {
-  // In ARC, infer a lifetime qualifier for appropriate parameter types.
-  if (!getLangOpts().ObjCAutoRefCount ||
-      T.getObjCLifetime() != Qualifiers::OCL_None || !T->isObjCLifetimeType())
-    return T;
-
-  Qualifiers::ObjCLifetime Lifetime;
-
-  // Special cases for arrays:
-  //   - if it's const, use __unsafe_unretained
-  //   - otherwise, it's an error
-  if (T->isArrayType()) {
-    if (!T.isConstQualified()) {
-      if (DelayedDiagnostics.shouldDelayDiagnostics())
-        DelayedDiagnostics.add(sema::DelayedDiagnostic::makeForbiddenType(
-            NameLoc, diag::err_arc_array_param_no_ownership, T, false));
-      else
-        Diag(NameLoc, diag::err_arc_array_param_no_ownership)
-            << TSInfo->getTypeLoc().getSourceRange();
-    }
-    Lifetime = Qualifiers::OCL_ExplicitNone;
-  } else {
-    Lifetime = T->getObjCARCImplicitLifetime();
-  }
-  T = Context.getLifetimeQualifiedType(T, Lifetime);
-
-  return T;
-}
-
 ParmVarDecl *Sema::CheckParameter(DeclContext *DC, SourceLocation StartLoc,
                                   SourceLocation NameLoc,
                                   const IdentifierInfo *Name, QualType T,
@@ -16401,7 +16288,7 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body,
           if (!SuperD)
             return false;
           return SuperD->getIdentifier() ==
-                 NSAPIObj->getNSClassId(NSAPI::ClassId_NSObject);
+                 ObjC().NSAPIObj->getNSClassId(NSAPI::ClassId_NSObject);
         };
         // Don't issue this warning for unavailable inits or direct subclasses
         // of NSObject.
@@ -18348,12 +18235,6 @@ bool Sema::ActOnDuplicateDefinition(Decl *Prev, SkipBodyInfo &SkipBody) {
   return true;
 }
 
-void Sema::ActOnObjCContainerStartDefinition(ObjCContainerDecl *IDecl) {
-  assert(IDecl->getLexicalParent() == CurContext &&
-      "The next DeclContext should be lexically contained in the current one.");
-  CurContext = IDecl;
-}
-
 void Sema::ActOnStartCXXMemberDeclarations(Scope *S, Decl *TagD,
                                            SourceLocation FinalLoc,
                                            bool IsFinalSpelledSealed,
@@ -18453,22 +18334,6 @@ void Sema::ActOnTagFinishDefinition(Scope *S, Decl *TagD,
                      [](const FieldDecl *FD) { return FD->isBitField(); }))
       Diag(BraceRange.getBegin(), diag::warn_pragma_align_not_xl_compatible);
   }
-}
-
-void Sema::ActOnObjCContainerFinishDefinition() {
-  // Exit this scope of this interface definition.
-  PopDeclContext();
-}
-
-void Sema::ActOnObjCTemporaryExitContainerContext(ObjCContainerDecl *ObjCCtx) {
-  assert(ObjCCtx == CurContext && "Mismatch of container contexts");
-  OriginalLexicalContext = ObjCCtx;
-  ActOnObjCContainerFinishDefinition();
-}
-
-void Sema::ActOnObjCReenterContainerContext(ObjCContainerDecl *ObjCCtx) {
-  ActOnObjCContainerStartDefinition(ObjCCtx);
-  OriginalLexicalContext = nullptr;
 }
 
 void Sema::ActOnTagDefinitionError(Scope *S, Decl *TagD) {
@@ -18870,7 +18735,7 @@ FieldDecl *Sema::CheckFieldDecl(DeclarationName Name, QualType T,
 
   // In auto-retain/release, infer strong retension for fields of
   // retainable type.
-  if (getLangOpts().ObjCAutoRefCount && inferObjCARCLifetime(NewFD))
+  if (getLangOpts().ObjCAutoRefCount && ObjC().inferObjCARCLifetime(NewFD))
     NewFD->setInvalidDecl();
 
   if (T.isObjCGCWeak())
@@ -18946,132 +18811,6 @@ bool Sema::CheckNontrivialField(FieldDecl *FD) {
   }
 
   return false;
-}
-
-/// TranslateIvarVisibility - Translate visibility from a token ID to an
-///  AST enum value.
-static ObjCIvarDecl::AccessControl
-TranslateIvarVisibility(tok::ObjCKeywordKind ivarVisibility) {
-  switch (ivarVisibility) {
-  default: llvm_unreachable("Unknown visitibility kind");
-  case tok::objc_private: return ObjCIvarDecl::Private;
-  case tok::objc_public: return ObjCIvarDecl::Public;
-  case tok::objc_protected: return ObjCIvarDecl::Protected;
-  case tok::objc_package: return ObjCIvarDecl::Package;
-  }
-}
-
-/// ActOnIvar - Each ivar field of an objective-c class is passed into this
-/// in order to create an IvarDecl object for it.
-Decl *Sema::ActOnIvar(Scope *S, SourceLocation DeclStart, Declarator &D,
-                      Expr *BitWidth, tok::ObjCKeywordKind Visibility) {
-
-  const IdentifierInfo *II = D.getIdentifier();
-  SourceLocation Loc = DeclStart;
-  if (II) Loc = D.getIdentifierLoc();
-
-  // FIXME: Unnamed fields can be handled in various different ways, for
-  // example, unnamed unions inject all members into the struct namespace!
-
-  TypeSourceInfo *TInfo = GetTypeForDeclarator(D);
-  QualType T = TInfo->getType();
-
-  if (BitWidth) {
-    // 6.7.2.1p3, 6.7.2.1p4
-    BitWidth = VerifyBitField(Loc, II, T, /*IsMsStruct*/false, BitWidth).get();
-    if (!BitWidth)
-      D.setInvalidType();
-  } else {
-    // Not a bitfield.
-
-    // validate II.
-
-  }
-  if (T->isReferenceType()) {
-    Diag(Loc, diag::err_ivar_reference_type);
-    D.setInvalidType();
-  }
-  // C99 6.7.2.1p8: A member of a structure or union may have any type other
-  // than a variably modified type.
-  else if (T->isVariablyModifiedType()) {
-    if (!tryToFixVariablyModifiedVarType(
-            TInfo, T, Loc, diag::err_typecheck_ivar_variable_size))
-      D.setInvalidType();
-  }
-
-  // Get the visibility (access control) for this ivar.
-  ObjCIvarDecl::AccessControl ac =
-    Visibility != tok::objc_not_keyword ? TranslateIvarVisibility(Visibility)
-                                        : ObjCIvarDecl::None;
-  // Must set ivar's DeclContext to its enclosing interface.
-  ObjCContainerDecl *EnclosingDecl = cast<ObjCContainerDecl>(CurContext);
-  if (!EnclosingDecl || EnclosingDecl->isInvalidDecl())
-    return nullptr;
-  ObjCContainerDecl *EnclosingContext;
-  if (ObjCImplementationDecl *IMPDecl =
-      dyn_cast<ObjCImplementationDecl>(EnclosingDecl)) {
-    if (LangOpts.ObjCRuntime.isFragile()) {
-    // Case of ivar declared in an implementation. Context is that of its class.
-      EnclosingContext = IMPDecl->getClassInterface();
-      assert(EnclosingContext && "Implementation has no class interface!");
-    }
-    else
-      EnclosingContext = EnclosingDecl;
-  } else {
-    if (ObjCCategoryDecl *CDecl =
-        dyn_cast<ObjCCategoryDecl>(EnclosingDecl)) {
-      if (LangOpts.ObjCRuntime.isFragile() || !CDecl->IsClassExtension()) {
-        Diag(Loc, diag::err_misplaced_ivar) << CDecl->IsClassExtension();
-        return nullptr;
-      }
-    }
-    EnclosingContext = EnclosingDecl;
-  }
-
-  // Construct the decl.
-  ObjCIvarDecl *NewID = ObjCIvarDecl::Create(
-      Context, EnclosingContext, DeclStart, Loc, II, T, TInfo, ac, BitWidth);
-
-  if (T->containsErrors())
-    NewID->setInvalidDecl();
-
-  if (II) {
-    NamedDecl *PrevDecl =
-        LookupSingleName(S, II, Loc, LookupMemberName,
-                         RedeclarationKind::ForVisibleRedeclaration);
-    if (PrevDecl && isDeclInScope(PrevDecl, EnclosingContext, S)
-        && !isa<TagDecl>(PrevDecl)) {
-      Diag(Loc, diag::err_duplicate_member) << II;
-      Diag(PrevDecl->getLocation(), diag::note_previous_declaration);
-      NewID->setInvalidDecl();
-    }
-  }
-
-  // Process attributes attached to the ivar.
-  ProcessDeclAttributes(S, NewID, D);
-
-  if (D.isInvalidType())
-    NewID->setInvalidDecl();
-
-  // In ARC, infer 'retaining' for ivars of retainable type.
-  if (getLangOpts().ObjCAutoRefCount && inferObjCARCLifetime(NewID))
-    NewID->setInvalidDecl();
-
-  if (D.getDeclSpec().isModulePrivateSpecified())
-    NewID->setModulePrivate();
-
-  if (II) {
-    // FIXME: When interfaces are DeclContexts, we'll need to add
-    // these to the interface.
-    S->AddDecl(NewID);
-    IdResolver.AddDecl(NewID);
-  }
-
-  if (LangOpts.ObjCRuntime.isNonFragile() &&
-      !NewID->isInvalidDecl() && isa<ObjCInterfaceDecl>(EnclosingDecl))
-    Diag(Loc, diag::warn_ivars_in_interface);
-
-  return NewID;
 }
 
 /// ActOnLastBitfield - This routine handles synthesized bitfields rules for
@@ -19777,7 +19516,7 @@ void Sema::ActOnFields(Scope *S, SourceLocation RecLoc, Decl *EnclosingDecl,
       // Must enforce the rule that ivars in the base classes may not be
       // duplicates.
       if (ID->getSuperClass())
-        DiagnoseDuplicateIvars(ID, ID->getSuperClass());
+        ObjC().DiagnoseDuplicateIvars(ID, ID->getSuperClass());
     } else if (ObjCImplementationDecl *IMPDecl =
                   dyn_cast<ObjCImplementationDecl>(EnclosingDecl)) {
       assert(IMPDecl && "ActOnFields - missing ObjCImplementationDecl");
@@ -19785,7 +19524,8 @@ void Sema::ActOnFields(Scope *S, SourceLocation RecLoc, Decl *EnclosingDecl,
         // Ivar declared in @implementation never belongs to the implementation.
         // Only it is in implementation's lexical context.
         ClsFields[I]->setLexicalDeclContext(IMPDecl);
-      CheckImplementationIvars(IMPDecl, ClsFields, RecFields.size(), RBrac);
+      ObjC().CheckImplementationIvars(IMPDecl, ClsFields, RecFields.size(),
+                                      RBrac);
       IMPDecl->setIvarLBraceLoc(LBrac);
       IMPDecl->setIvarRBraceLoc(RBrac);
     } else if (ObjCCategoryDecl *CDecl =
@@ -20657,10 +20397,6 @@ void Sema::ActOnPragmaWeakAlias(IdentifierInfo* Name,
   } else {
     (void)WeakUndeclaredIdentifiers[AliasName].insert(W);
   }
-}
-
-ObjCContainerDecl *Sema::getObjCDeclContext() const {
-  return (dyn_cast_or_null<ObjCContainerDecl>(CurContext));
 }
 
 Sema::FunctionEmissionStatus Sema::getEmissionStatus(const FunctionDecl *FD,
