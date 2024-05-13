@@ -21171,8 +21171,8 @@ SDValue X86TargetLowering::LowerFP_TO_INT(SDValue Op, SelectionDAG &DAG) const {
       LC = RTLIB::getFPTOUINT(SrcVT, VT);
 
     MakeLibCallOptions CallOptions;
-    std::pair<SDValue, SDValue> Tmp = makeLibCall(DAG, LC, VT, Src, CallOptions,
-                                                  SDLoc(Op), Chain);
+    std::pair<SDValue, SDValue> Tmp =
+        makeLibCall(DAG, LC, VT, Src, CallOptions, dl, Chain);
 
     if (IsStrict)
       return DAG.getMergeValues({ Tmp.first, Tmp.second }, dl);
