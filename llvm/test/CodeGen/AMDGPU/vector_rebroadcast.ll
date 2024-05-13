@@ -32,7 +32,7 @@ define <2 x i8> @shuffle_v2i8_rebroadcast(ptr addrspace(1) %arg0) {
 ; GFX11-NEXT:  s_setpc_b64 s[30:31]
 entry:
   %val0 = load <2 x i8>, ptr addrspace(1) %arg0
-  %val1 = shufflevector <2 x i8> %val0, <2 x i8> undef, <2 x i32> <i32 1, i32 1>
+  %val1 = shufflevector <2 x i8> %val0, <2 x i8> poison, <2 x i32> <i32 1, i32 1>
   ret <2 x i8> %val1
 }
 
@@ -72,7 +72,7 @@ define <4 x i8> @shuffle_v4i8_rebroadcast(ptr addrspace(1) %arg0) {
 ; GFX11-NEXT:  s_setpc_b64 s[30:31]
 entry:
   %val0 = load <4 x i8>, ptr addrspace(1) %arg0
-  %val1 = shufflevector <4 x i8> %val0, <4 x i8> undef, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
+  %val1 = shufflevector <4 x i8> %val0, <4 x i8> poison, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
   ret <4 x i8> %val1
 }
 
@@ -124,7 +124,7 @@ define <8 x i8> @shuffle_v8i8_rebroadcast(ptr addrspace(1) %arg0) {
 ; GFX11-NEXT:  s_setpc_b64 s[30:31]
 entry:
   %val0 = load <8 x i8>, ptr addrspace(1) %arg0
-  %val1 = shufflevector <8 x i8> %val0, <8 x i8> undef, <8 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+  %val1 = shufflevector <8 x i8> %val0, <8 x i8> poison, <8 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
   ret <8 x i8> %val1
 }
 
@@ -200,7 +200,7 @@ define <16 x i8> @shuffle_v16i8_rebroadcast(ptr addrspace(1) %arg0) {
 ; GFX11-NEXT:  s_setpc_b64 s[30:31]
 entry:
   %val0 = load <16 x i8>, ptr addrspace(1) %arg0
-  %val1 = shufflevector <16 x i8> %val0, <16 x i8> undef, <16 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+  %val1 = shufflevector <16 x i8> %val0, <16 x i8> poison, <16 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
   ret <16 x i8> %val1
 }
 
@@ -324,7 +324,7 @@ define <32 x i8> @shuffle_v32i8_rebroadcast(ptr addrspace(1) %arg0) {
 ; GFX11-NEXT:  s_setpc_b64 s[30:31]
 entry:
   %val0 = load <32 x i8>, ptr addrspace(1) %arg0
-  %val1 = shufflevector <32 x i8> %val0, <32 x i8> undef, <32 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+  %val1 = shufflevector <32 x i8> %val0, <32 x i8> poison, <32 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
   ret <32 x i8> %val1
 }
 
@@ -355,7 +355,7 @@ define <2 x i16> @shuffle_v2i16_rebroadcast(ptr addrspace(1) %arg0) {
 ; GFX11-NEXT:  s_setpc_b64 s[30:31]
 entry:
   %val0 = load <2 x i16>, ptr addrspace(1) %arg0
-  %val1 = shufflevector <2 x i16> %val0, <2 x i16> undef, <2 x i32> <i32 1, i32 1>
+  %val1 = shufflevector <2 x i16> %val0, <2 x i16> poison, <2 x i32> <i32 1, i32 1>
   ret <2 x i16> %val1
 }
 
@@ -390,7 +390,7 @@ define <4 x i16> @shuffle_v4i16_rebroadcast(ptr addrspace(1) %arg0) {
 ; GFX11-NEXT:  s_setpc_b64 s[30:31]
 entry:
   %val0 = load <4 x i16>, ptr addrspace(1) %arg0
-  %val1 = shufflevector <4 x i16> %val0, <4 x i16> undef, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
+  %val1 = shufflevector <4 x i16> %val0, <4 x i16> poison, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
   ret <4 x i16> %val1
 }
 
@@ -431,7 +431,7 @@ define <8 x i16> @shuffle_v8i16_rebroadcast(ptr addrspace(1) %arg0) {
 ; GFX11-NEXT:  s_setpc_b64 s[30:31]
 entry:
   %val0 = load <8 x i16>, ptr addrspace(1) %arg0
-  %val1 = shufflevector <8 x i16> %val0, <8 x i16> undef, <8 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+  %val1 = shufflevector <8 x i16> %val0, <8 x i16> poison, <8 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
   ret <8 x i16> %val1
 }
 
@@ -484,7 +484,7 @@ define <16 x i16> @shuffle_v16i16_rebroadcast(ptr addrspace(1) %arg0) {
 ; GFX11-NEXT:  s_setpc_b64 s[30:31]
 entry:
   %val0 = load <16 x i16>, ptr addrspace(1) %arg0
-  %val1 = shufflevector <16 x i16> %val0, <16 x i16> undef, <16 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+  %val1 = shufflevector <16 x i16> %val0, <16 x i16> poison, <16 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
   ret <16 x i16> %val1
 }
 
@@ -561,7 +561,7 @@ define <32 x i16> @shuffle_v32i16_rebroadcast(ptr addrspace(1) %arg0) {
 ; GFX11-NEXT:  s_setpc_b64 s[30:31]
 entry:
   %val0 = load <32 x i16>, ptr addrspace(1) %arg0
-  %val1 = shufflevector <32 x i16> %val0, <32 x i16> undef, <32 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+  %val1 = shufflevector <32 x i16> %val0, <32 x i16> poison, <32 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
   ret <32 x i16> %val1
 }
 
@@ -591,7 +591,7 @@ define <2 x i32> @shuffle_v2i32_rebroadcast(ptr addrspace(1) %arg0) {
 ; GFX11-NEXT:  s_setpc_b64 s[30:31]
 entry:
   %val0 = load <2 x i32>, ptr addrspace(1) %arg0
-  %val1 = shufflevector <2 x i32> %val0, <2 x i32> undef, <2 x i32> <i32 1, i32 1>
+  %val1 = shufflevector <2 x i32> %val0, <2 x i32> poison, <2 x i32> <i32 1, i32 1>
   ret <2 x i32> %val1
 }
 
@@ -627,7 +627,7 @@ define <4 x i32> @shuffle_v4i32_rebroadcast(ptr addrspace(1) %arg0) {
 ; GFX11-NEXT:  s_setpc_b64 s[30:31]
 entry:
   %val0 = load <4 x i32>, ptr addrspace(1) %arg0
-  %val1 = shufflevector <4 x i32> %val0, <4 x i32> undef, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
+  %val1 = shufflevector <4 x i32> %val0, <4 x i32> poison, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
   ret <4 x i32> %val1
 }
 
@@ -675,7 +675,7 @@ define <8 x i32> @shuffle_v8i32_rebroadcast(ptr addrspace(1) %arg0) {
 ; GFX11-NEXT:  s_setpc_b64 s[30:31]
 entry:
   %val0 = load <8 x i32>, ptr addrspace(1) %arg0
-  %val1 = shufflevector <8 x i32> %val0, <8 x i32> undef, <8 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+  %val1 = shufflevector <8 x i32> %val0, <8 x i32> poison, <8 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
   ret <8 x i32> %val1
 }
 
@@ -747,7 +747,7 @@ define <16 x i32> @shuffle_v16i32_rebroadcast(ptr addrspace(1) %arg0) {
 ; GFX11-NEXT:  s_setpc_b64 s[30:31]
 entry:
   %val0 = load <16 x i32>, ptr addrspace(1) %arg0
-  %val1 = shufflevector <16 x i32> %val0, <16 x i32> undef, <16 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+  %val1 = shufflevector <16 x i32> %val0, <16 x i32> poison, <16 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
   ret <16 x i32> %val1
 }
 
@@ -867,7 +867,7 @@ define <32 x i32> @shuffle_v32i32_rebroadcast(ptr addrspace(1) %arg0) {
 ; GFX11-NEXT:  s_setpc_b64 s[30:31]
 entry:
   %val0 = load <32 x i32>, ptr addrspace(1) %arg0
-  %val1 = shufflevector <32 x i32> %val0, <32 x i32> undef, <32 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+  %val1 = shufflevector <32 x i32> %val0, <32 x i32> poison, <32 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
   ret <32 x i32> %val1
 }
 
@@ -898,7 +898,7 @@ define <2 x bfloat> @shuffle_v2bf16_rebroadcast(ptr addrspace(1) %arg0) {
 ; GFX11-NEXT:  s_setpc_b64 s[30:31]
 entry:
   %val0 = load <2 x bfloat>, ptr addrspace(1) %arg0
-  %val1 = shufflevector <2 x bfloat> %val0, <2 x bfloat> undef, <2 x i32> <i32 1, i32 1>
+  %val1 = shufflevector <2 x bfloat> %val0, <2 x bfloat> poison, <2 x i32> <i32 1, i32 1>
   ret <2 x bfloat> %val1
 }
 
@@ -932,7 +932,7 @@ define <3 x bfloat> @shuffle_v3bf16_rebroadcast(ptr addrspace(1) %arg0) {
 ; GFX11-NEXT:  s_setpc_b64 s[30:31]
 entry:
   %val0 = load <3 x bfloat>, ptr addrspace(1) %arg0
-  %val1 = shufflevector <3 x bfloat> %val0, <3 x bfloat> undef, <3 x i32> <i32 1, i32 1, i32 1>
+  %val1 = shufflevector <3 x bfloat> %val0, <3 x bfloat> poison, <3 x i32> <i32 1, i32 1, i32 1>
   ret <3 x bfloat> %val1
 }
 
@@ -967,7 +967,7 @@ define <4 x bfloat> @shuffle_v4bf16_rebroadcast(ptr addrspace(1) %arg0) {
 ; GFX11-NEXT:  s_setpc_b64 s[30:31]
 entry:
   %val0 = load <4 x bfloat>, ptr addrspace(1) %arg0
-  %val1 = shufflevector <4 x bfloat> %val0, <4 x bfloat> undef, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
+  %val1 = shufflevector <4 x bfloat> %val0, <4 x bfloat> poison, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
   ret <4 x bfloat> %val1
 }
 
@@ -1005,7 +1005,7 @@ define <6 x bfloat> @shuffle_v6bf16_rebroadcast(ptr addrspace(1) %arg0) {
 ; GFX11-NEXT:  s_setpc_b64 s[30:31]
 entry:
   %val0 = load <6 x bfloat>, ptr addrspace(1) %arg0
-  %val1 = shufflevector <6 x bfloat> %val0, <6 x bfloat> undef, <6 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+  %val1 = shufflevector <6 x bfloat> %val0, <6 x bfloat> poison, <6 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
   ret <6 x bfloat> %val1
 }
 
@@ -1046,7 +1046,7 @@ define <8 x bfloat> @shuffle_v8bf16_rebroadcast(ptr addrspace(1) %arg0) {
 ; GFX11-NEXT:  s_setpc_b64 s[30:31]
 entry:
   %val0 = load <8 x bfloat>, ptr addrspace(1) %arg0
-  %val1 = shufflevector <8 x bfloat> %val0, <8 x bfloat> undef, <8 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+  %val1 = shufflevector <8 x bfloat> %val0, <8 x bfloat> poison, <8 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
   ret <8 x bfloat> %val1
 }
 
@@ -1099,7 +1099,7 @@ define <16 x bfloat> @shuffle_v16bf16_rebroadcast(ptr addrspace(1) %arg0) {
 ; GFX11-NEXT:  s_setpc_b64 s[30:31]
 entry:
   %val0 = load <16 x bfloat>, ptr addrspace(1) %arg0
-  %val1 = shufflevector <16 x bfloat> %val0, <16 x bfloat> undef, <16 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+  %val1 = shufflevector <16 x bfloat> %val0, <16 x bfloat> poison, <16 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
   ret <16 x bfloat> %val1
 }
 
@@ -1176,7 +1176,7 @@ define <32 x bfloat> @shuffle_v32bf16_rebroadcast(ptr addrspace(1) %arg0) {
 ; GFX11-NEXT:  s_setpc_b64 s[30:31]
 entry:
   %val0 = load <32 x bfloat>, ptr addrspace(1) %arg0
-  %val1 = shufflevector <32 x bfloat> %val0, <32 x bfloat> undef, <32 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+  %val1 = shufflevector <32 x bfloat> %val0, <32 x bfloat> poison, <32 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
   ret <32 x bfloat> %val1
 }
 
@@ -1207,7 +1207,7 @@ define <2 x half> @shuffle_v2f16_rebroadcast(ptr addrspace(1) %arg0) {
 ; GFX11-NEXT:  s_setpc_b64 s[30:31]
 entry:
   %val0 = load <2 x half>, ptr addrspace(1) %arg0
-  %val1 = shufflevector <2 x half> %val0, <2 x half> undef, <2 x i32> <i32 1, i32 1>
+  %val1 = shufflevector <2 x half> %val0, <2 x half> poison, <2 x i32> <i32 1, i32 1>
   ret <2 x half> %val1
 }
 
@@ -1241,7 +1241,7 @@ define <3 x half> @shuffle_v3f16_rebroadcast(ptr addrspace(1) %arg0) {
 ; GFX11-NEXT:  s_setpc_b64 s[30:31]
 entry:
   %val0 = load <3 x half>, ptr addrspace(1) %arg0
-  %val1 = shufflevector <3 x half> %val0, <3 x half> undef, <3 x i32> <i32 1, i32 1, i32 1>
+  %val1 = shufflevector <3 x half> %val0, <3 x half> poison, <3 x i32> <i32 1, i32 1, i32 1>
   ret <3 x half> %val1
 }
 
@@ -1276,7 +1276,7 @@ define <4 x half> @shuffle_v4f16_rebroadcast(ptr addrspace(1) %arg0) {
 ; GFX11-NEXT:  s_setpc_b64 s[30:31]
 entry:
   %val0 = load <4 x half>, ptr addrspace(1) %arg0
-  %val1 = shufflevector <4 x half> %val0, <4 x half> undef, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
+  %val1 = shufflevector <4 x half> %val0, <4 x half> poison, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
   ret <4 x half> %val1
 }
 
@@ -1314,7 +1314,7 @@ define <6 x half> @shuffle_v6f16_rebroadcast(ptr addrspace(1) %arg0) {
 ; GFX11-NEXT:  s_setpc_b64 s[30:31]
 entry:
   %val0 = load <6 x half>, ptr addrspace(1) %arg0
-  %val1 = shufflevector <6 x half> %val0, <6 x half> undef, <6 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+  %val1 = shufflevector <6 x half> %val0, <6 x half> poison, <6 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
   ret <6 x half> %val1
 }
 
@@ -1355,7 +1355,7 @@ define <8 x half> @shuffle_v8f16_rebroadcast(ptr addrspace(1) %arg0) {
 ; GFX11-NEXT:  s_setpc_b64 s[30:31]
 entry:
   %val0 = load <8 x half>, ptr addrspace(1) %arg0
-  %val1 = shufflevector <8 x half> %val0, <8 x half> undef, <8 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+  %val1 = shufflevector <8 x half> %val0, <8 x half> poison, <8 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
   ret <8 x half> %val1
 }
 
@@ -1408,7 +1408,7 @@ define <16 x half> @shuffle_v16f16_rebroadcast(ptr addrspace(1) %arg0) {
 ; GFX11-NEXT:  s_setpc_b64 s[30:31]
 entry:
   %val0 = load <16 x half>, ptr addrspace(1) %arg0
-  %val1 = shufflevector <16 x half> %val0, <16 x half> undef, <16 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+  %val1 = shufflevector <16 x half> %val0, <16 x half> poison, <16 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
   ret <16 x half> %val1
 }
 
@@ -1485,7 +1485,7 @@ define <32 x half> @shuffle_v32f16_rebroadcast(ptr addrspace(1) %arg0) {
 ; GFX11-NEXT:  s_setpc_b64 s[30:31]
 entry:
   %val0 = load <32 x half>, ptr addrspace(1) %arg0
-  %val1 = shufflevector <32 x half> %val0, <32 x half> undef, <32 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+  %val1 = shufflevector <32 x half> %val0, <32 x half> poison, <32 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
   ret <32 x half> %val1
 }
 
@@ -1515,7 +1515,7 @@ define <2 x float> @shuffle_v2f32_rebroadcast(ptr addrspace(1) %arg0) {
 ; GFX11-NEXT:  s_setpc_b64 s[30:31]
 entry:
   %val0 = load <2 x float>, ptr addrspace(1) %arg0
-  %val1 = shufflevector <2 x float> %val0, <2 x float> undef, <2 x i32> <i32 1, i32 1>
+  %val1 = shufflevector <2 x float> %val0, <2 x float> poison, <2 x i32> <i32 1, i32 1>
   ret <2 x float> %val1
 }
 
@@ -1548,7 +1548,7 @@ define <3 x float> @shuffle_v3f32_rebroadcast(ptr addrspace(1) %arg0) {
 ; GFX11-NEXT:  s_setpc_b64 s[30:31]
 entry:
   %val0 = load <3 x float>, ptr addrspace(1) %arg0
-  %val1 = shufflevector <3 x float> %val0, <3 x float> undef, <3 x i32> <i32 1, i32 1, i32 1>
+  %val1 = shufflevector <3 x float> %val0, <3 x float> poison, <3 x i32> <i32 1, i32 1, i32 1>
   ret <3 x float> %val1
 }
 
@@ -1584,7 +1584,7 @@ define <4 x float> @shuffle_v4f32_rebroadcast(ptr addrspace(1) %arg0) {
 ; GFX11-NEXT:  s_setpc_b64 s[30:31]
 entry:
   %val0 = load <4 x float>, ptr addrspace(1) %arg0
-  %val1 = shufflevector <4 x float> %val0, <4 x float> undef, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
+  %val1 = shufflevector <4 x float> %val0, <4 x float> poison, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
   ret <4 x float> %val1
 }
 
@@ -1626,7 +1626,7 @@ define <6 x float> @shuffle_v6f32_rebroadcast(ptr addrspace(1) %arg0) {
 ; GFX11-NEXT:  s_setpc_b64 s[30:31]
 entry:
   %val0 = load <6 x float>, ptr addrspace(1) %arg0
-  %val1 = shufflevector <6 x float> %val0, <6 x float> undef, <6 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+  %val1 = shufflevector <6 x float> %val0, <6 x float> poison, <6 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
   ret <6 x float> %val1
 }
 
@@ -1674,7 +1674,7 @@ define <8 x float> @shuffle_v8f32_rebroadcast(ptr addrspace(1) %arg0) {
 ; GFX11-NEXT:  s_setpc_b64 s[30:31]
 entry:
   %val0 = load <8 x float>, ptr addrspace(1) %arg0
-  %val1 = shufflevector <8 x float> %val0, <8 x float> undef, <8 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+  %val1 = shufflevector <8 x float> %val0, <8 x float> poison, <8 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
   ret <8 x float> %val1
 }
 
@@ -1746,7 +1746,7 @@ define <16 x float> @shuffle_v16f32_rebroadcast(ptr addrspace(1) %arg0) {
 ; GFX11-NEXT:  s_setpc_b64 s[30:31]
 entry:
   %val0 = load <16 x float>, ptr addrspace(1) %arg0
-  %val1 = shufflevector <16 x float> %val0, <16 x float> undef, <16 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+  %val1 = shufflevector <16 x float> %val0, <16 x float> poison, <16 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
   ret <16 x float> %val1
 }
 
@@ -1866,6 +1866,6 @@ define <32 x float> @shuffle_v32f32_rebroadcast(ptr addrspace(1) %arg0) {
 ; GFX11-NEXT:  s_setpc_b64 s[30:31]
 entry:
   %val0 = load <32 x float>, ptr addrspace(1) %arg0
-  %val1 = shufflevector <32 x float> %val0, <32 x float> undef, <32 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+  %val1 = shufflevector <32 x float> %val0, <32 x float> poison, <32 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
   ret <32 x float> %val1
 }
