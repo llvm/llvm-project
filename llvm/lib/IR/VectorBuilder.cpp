@@ -92,6 +92,10 @@ Value *VectorBuilder::createSimpleTargetReduction(RecurKind Kind, Type *ValTy,
       return Intrinsic::vp_reduce_fmax;
     case RecurKind::FMin:
       return Intrinsic::vp_reduce_fmin;
+    case RecurKind::FMaximum:
+      return Intrinsic::vp_reduce_fmaximum;
+    case RecurKind::FMinimum:
+      return Intrinsic::vp_reduce_fminimum;
     default:
       return Intrinsic::not_intrinsic;
     }

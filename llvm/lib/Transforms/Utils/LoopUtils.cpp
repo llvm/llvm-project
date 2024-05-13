@@ -1195,8 +1195,6 @@ Value *llvm::createSimpleTargetReduction(IRBuilderBase &Builder, Value *Src,
 Value *llvm::createSimpleTargetReduction(VectorBuilder &VBuilder, Value *Src,
                                          const RecurrenceDescriptor &Desc) {
   RecurKind Kind = Desc.getRecurrenceKind();
-  assert(Kind != RecurKind::FMinimum && Kind != RecurKind::FMaximum &&
-         "FMaximum/FMinimum reduction VP intrinsic is not supported.");
   auto *SrcTy = cast<VectorType>(Src->getType());
   Type *SrcEltTy = SrcTy->getElementType();
   Value *Iden =
