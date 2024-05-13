@@ -35,7 +35,7 @@ class MonomialBase {
 public:
   MonomialBase(const CoefficientType &coeff, const APInt &expo)
       : coefficient(coeff), exponent(expo) {}
-  virtual ~MonomialBase() = 0;
+  virtual ~MonomialBase() = default;
 
   const CoefficientType &getCoefficient() const { return coefficient; }
   CoefficientType &getMutableCoefficient() { return coefficient; }
