@@ -88,9 +88,8 @@ define void @load_with_offset2() {
 ; RV32I-NEXT:    addi sp, sp, -2048
 ; RV32I-NEXT:    addi sp, sp, -464
 ; RV32I-NEXT:    .cfi_def_cfa_offset 2512
-; RV32I-NEXT:    addi a0, sp, 1412
-; RV32I-NEXT:    lbu a1, 0(a0)
-; RV32I-NEXT:    sb a1, 0(a0)
+; RV32I-NEXT:    lbu a0, 1412(sp)
+; RV32I-NEXT:    sb a0, 1412(sp)
 ; RV32I-NEXT:    addi sp, sp, 2032
 ; RV32I-NEXT:    addi sp, sp, 480
 ; RV32I-NEXT:    ret
@@ -100,9 +99,8 @@ define void @load_with_offset2() {
 ; RV64I-NEXT:    addi sp, sp, -2048
 ; RV64I-NEXT:    addi sp, sp, -464
 ; RV64I-NEXT:    .cfi_def_cfa_offset 2512
-; RV64I-NEXT:    addi a0, sp, 1412
-; RV64I-NEXT:    lbu a1, 0(a0)
-; RV64I-NEXT:    sb a1, 0(a0)
+; RV64I-NEXT:    lbu a0, 1412(sp)
+; RV64I-NEXT:    sb a0, 1412(sp)
 ; RV64I-NEXT:    addi sp, sp, 2032
 ; RV64I-NEXT:    addi sp, sp, 480
 ; RV64I-NEXT:    ret
