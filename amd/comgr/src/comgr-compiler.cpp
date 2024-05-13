@@ -948,6 +948,8 @@ AMDGPUCompiler::processFiles(amd_comgr_data_kind_t OutputKind,
     if (auto Status = amd_comgr_create_data(OutputKind, &OutputT)) {
       return Status;
     }
+
+    // OutputT can be released after addition to the data_set
     ScopedDataObjectReleaser SDOR(OutputT);
 
     DataObject *Output = DataObject::convert(OutputT);
@@ -1365,6 +1367,9 @@ amd_comgr_status_t AMDGPUCompiler::unbundle() {
                                               &ResultT))
         return Status;
 
+      // ResultT can be released after addition to the data_set
+      ScopedDataObjectReleaser SDOR(ResultT);
+
       DataObject *Result = DataObject::convert(ResultT);
       if (auto Status = inputFromFile(Result, StringRef(output_file_path)))
         return Status;
@@ -1520,6 +1525,9 @@ amd_comgr_status_t AMDGPUCompiler::linkBitcodeToBitcode() {
       if (auto Status = amd_comgr_create_data(AMD_COMGR_DATA_KIND_BC, &ResultT))
         return Status;
 
+      // ResultT can be released after addition to the data_set
+      ScopedDataObjectReleaser SDOR(ResultT);
+
       DataObject *Result = DataObject::convert(ResultT);
       if (auto Status = inputFromFile(Result, StringRef(output_file_path)))
         return Status;
@@ -1539,8 +1547,6 @@ amd_comgr_status_t AMDGPUCompiler::linkBitcodeToBitcode() {
         return AMD_COMGR_STATUS_ERROR;
       if (L.linkInModule(std::move(Mod), ApplicableFlags))
         return AMD_COMGR_STATUS_ERROR;
-
-      Result->release();
     }
     // Unbundle bitcode archive
     else if (Input->DataKind == AMD_COMGR_DATA_KIND_AR_BUNDLE) {
@@ -1619,6 +1625,9 @@ amd_comgr_status_t AMDGPUCompiler::linkBitcodeToBitcode() {
       amd_comgr_data_t ResultT;
       if (auto Status = amd_comgr_create_data(AMD_COMGR_DATA_KIND_AR, &ResultT))
         return Status;
+
+      // ResultT can be released after addition to the data_set
+      ScopedDataObjectReleaser SDOR(ResultT);
 
       DataObject *Result = DataObject::convert(ResultT);
       if (auto Status = inputFromFile(Result, StringRef(output_file_path)))
@@ -1699,6 +1708,8 @@ amd_comgr_status_t AMDGPUCompiler::linkBitcodeToBitcode() {
   if (auto Status = amd_comgr_create_data(AMD_COMGR_DATA_KIND_BC, &OutputT)) {
     return Status;
   }
+
+  // OutputT can be released after addition to the data_set
   ScopedDataObjectReleaser SDOR(OutputT);
 
   DataObject *Output = DataObject::convert(OutputT);
@@ -1795,6 +1806,8 @@ amd_comgr_status_t AMDGPUCompiler::linkToRelocatable() {
           amd_comgr_create_data(AMD_COMGR_DATA_KIND_RELOCATABLE, &OutputT)) {
     return Status;
   }
+
+  // OutputT can be released after addition to the data_set
   ScopedDataObjectReleaser SDOR(OutputT);
 
   DataObject *Output = DataObject::convert(OutputT);
@@ -1849,6 +1862,7 @@ amd_comgr_status_t AMDGPUCompiler::linkToExecutable() {
           amd_comgr_create_data(AMD_COMGR_DATA_KIND_EXECUTABLE, &OutputT)) {
     return Status;
   }
+  // OutputT can be released after addition to the data_set
   ScopedDataObjectReleaser SDOR(OutputT);
 
   DataObject *Output = DataObject::convert(OutputT);
