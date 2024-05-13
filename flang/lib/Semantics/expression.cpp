@@ -1805,10 +1805,13 @@ void ArrayConstructorContext::Add(const parser::AcImpliedDo &impliedDo) {
   const auto &bounds{std::get<parser::AcImpliedDoControl::Bounds>(control.t)};
   exprAnalyzer_.Analyze(bounds.name);
   parser::CharBlock name{bounds.name.thing.thing.source};
-  const Symbol *symbol{bounds.name.thing.thing.symbol};
   int kind{ImpliedDoIntType::kind};
-  if (const auto dynamicType{DynamicType::From(symbol)}) {
-    kind = dynamicType->kind();
+  if (const Symbol * symbol{bounds.name.thing.thing.symbol}) {
+    if (auto dynamicType{DynamicType::From(symbol)}) {
+      if (dynamicType->category() == TypeCategory::Integer) {
+        kind = dynamicType->kind();
+      }
+    }
   }
   std::optional<Expr<ImpliedDoIntType>> lower{
       GetSpecificIntExpr<ImpliedDoIntType::kind>(bounds.lower)};
@@ -2498,8 +2501,13 @@ static constexpr int cudaInfMatchingValue{std::numeric_limits<int>::max()};
 
 // Compute the matching distance as described in section 3.2.3 of the CUDA
 // Fortran references.
-static int GetMatchingDistance(const characteristics::DummyArgument &dummy,
+static int GetMatchingDistance(const common::LanguageFeatureControl &features,
+    const characteristics::DummyArgument &dummy,
     const std::optional<ActualArgument> &actual) {
+  bool isCudaManaged{features.IsEnabled(common::LanguageFeature::CudaManaged)};
+  bool isCudaUnified{features.IsEnabled(common::LanguageFeature::CudaUnified)};
+  CHECK(!(isCudaUnified && isCudaManaged) && "expect only one enabled.");
+
   std::optional<common::CUDADataAttr> actualDataAttr, dummyDataAttr;
   if (actual) {
     if (auto *expr{actual->UnwrapExpr()}) {
@@ -2526,6 +2534,9 @@ static int GetMatchingDistance(const characteristics::DummyArgument &dummy,
 
   if (!dummyDataAttr) {
     if (!actualDataAttr) {
+      if (isCudaUnified || isCudaManaged) {
+        return 3;
+      }
       return 0;
     } else if (*actualDataAttr == common::CUDADataAttr::Device) {
       return cudaInfMatchingValue;
@@ -2535,6 +2546,9 @@ static int GetMatchingDistance(const characteristics::DummyArgument &dummy,
     }
   } else if (*dummyDataAttr == common::CUDADataAttr::Device) {
     if (!actualDataAttr) {
+      if (isCudaUnified || isCudaManaged) {
+        return 2;
+      }
       return cudaInfMatchingValue;
     } else if (*actualDataAttr == common::CUDADataAttr::Device) {
       return 0;
@@ -2543,7 +2557,10 @@ static int GetMatchingDistance(const characteristics::DummyArgument &dummy,
       return 2;
     }
   } else if (*dummyDataAttr == common::CUDADataAttr::Managed) {
-    if (!actualDataAttr || *actualDataAttr == common::CUDADataAttr::Device) {
+    if (!actualDataAttr) {
+      return isCudaUnified ? 1 : isCudaManaged ? 0 : cudaInfMatchingValue;
+    }
+    if (*actualDataAttr == common::CUDADataAttr::Device) {
       return cudaInfMatchingValue;
     } else if (*actualDataAttr == common::CUDADataAttr::Managed) {
       return 0;
@@ -2551,7 +2568,10 @@ static int GetMatchingDistance(const characteristics::DummyArgument &dummy,
       return 1;
     }
   } else if (*dummyDataAttr == common::CUDADataAttr::Unified) {
-    if (!actualDataAttr || *actualDataAttr == common::CUDADataAttr::Device) {
+    if (!actualDataAttr) {
+      return isCudaUnified ? 0 : isCudaManaged ? 1 : cudaInfMatchingValue;
+    }
+    if (*actualDataAttr == common::CUDADataAttr::Device) {
       return cudaInfMatchingValue;
     } else if (*actualDataAttr == common::CUDADataAttr::Managed) {
       return 1;
@@ -2563,6 +2583,7 @@ static int GetMatchingDistance(const characteristics::DummyArgument &dummy,
 }
 
 static int ComputeCudaMatchingDistance(
+    const common::LanguageFeatureControl &features,
     const characteristics::Procedure &procedure,
     const ActualArguments &actuals) {
   const auto &dummies{procedure.dummyArguments};
@@ -2571,7 +2592,7 @@ static int ComputeCudaMatchingDistance(
   for (std::size_t i{0}; i < dummies.size(); ++i) {
     const characteristics::DummyArgument &dummy{dummies[i]};
     const std::optional<ActualArgument> &actual{actuals[i]};
-    int d{GetMatchingDistance(dummy, actual)};
+    int d{GetMatchingDistance(features, dummy, actual)};
     if (d == cudaInfMatchingValue)
       return d;
     distance += d;
@@ -2663,7 +2684,9 @@ std::pair<const Symbol *, bool> ExpressionAnalyzer::ResolveGeneric(
             CheckCompatibleArguments(*procedure, localActuals)) {
           if ((procedure->IsElemental() && elemental) ||
               (!procedure->IsElemental() && nonElemental)) {
-            int d{ComputeCudaMatchingDistance(*procedure, localActuals)};
+            int d{ComputeCudaMatchingDistance(
+                context_.languageFeatures(), *procedure, localActuals)};
+            llvm::errs() << "matching distance: " << d << "\n";
             if (d != crtMatchingDistance) {
               if (d > crtMatchingDistance) {
                 continue;
@@ -2685,8 +2708,8 @@ std::pair<const Symbol *, bool> ExpressionAnalyzer::ResolveGeneric(
           } else {
             elemental = &specific;
           }
-          crtMatchingDistance =
-              ComputeCudaMatchingDistance(*procedure, localActuals);
+          crtMatchingDistance = ComputeCudaMatchingDistance(
+              context_.languageFeatures(), *procedure, localActuals);
         }
       }
     }
@@ -4307,7 +4330,9 @@ MaybeExpr ArgumentAnalyzer::TryDefinedOp(
     if (Symbol *symbol{scope.FindSymbol(oprName)}) {
       anyPossibilities = true;
       parser::Name name{symbol->name(), symbol};
-      result = context_.AnalyzeDefinedOp(name, GetActuals());
+      if (!fatalErrors_) {
+        result = context_.AnalyzeDefinedOp(name, GetActuals());
+      }
       if (result) {
         inaccessible = CheckAccessibleSymbol(scope, *symbol);
         if (inaccessible) {

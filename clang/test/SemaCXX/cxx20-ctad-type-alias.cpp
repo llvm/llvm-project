@@ -321,3 +321,71 @@ AG ag(1.0);
 // choosen.
 static_assert(__is_same(decltype(ag.t1), int));
 } // namespace test23
+
+// GH90177
+// verify that the transformed require-clause of the alias deduction gudie has
+// the right depth info.
+namespace test24 {
+class Forward;
+class Key {};
+
+template <typename D>
+constexpr bool C = sizeof(D);
+
+// Case1: the alias template and the underlying deduction guide are in the same
+// scope.
+template <typename T>
+struct Case1 {
+  template <typename U>
+  struct Foo {
+    Foo(U);
+  };
+
+  template <typename V>
+  requires (C<V>)
+  Foo(V) -> Foo<V>;
+
+  template <typename Y>
+  using Alias = Foo<Y>;
+};
+// The require-clause should be evaluated on the type Key.
+Case1<Forward>::Alias t2 = Key();
+
+
+// Case2: the alias template and underlying deduction guide are in different
+// scope.
+template <typename T>
+struct Foo {
+  Foo(T);
+};
+template <typename U>
+requires (C<U>)
+Foo(U) -> Foo<U>;
+
+template <typename T>
+struct Case2 {
+  template <typename Y>
+  using Alias = Foo<Y>;
+};
+// The require-caluse should be evaluated on the type Key.
+Case2<Forward>::Alias t1 = Key();
+
+// Case3: crashes on the constexpr evaluator due to the mixed-up depth in
+// require-expr.
+template <class T1>
+struct A1 {
+  template<class T2>
+  struct A2 {
+    template <class T3>
+    struct Foo {
+      Foo(T3);
+    };
+    template <class T3>
+    requires C<T3>
+    Foo(T3) -> Foo<T3>;
+  };
+};
+template <typename U>
+using AFoo = A1<int>::A2<int>::Foo<U>;
+AFoo case3(1);
+} // namespace test24

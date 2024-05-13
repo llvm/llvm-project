@@ -2851,6 +2851,14 @@ void OpenACCClauseEnqueue::VisitAsyncClause(const OpenACCAsyncClause &C) {
   if (C.hasIntExpr())
     Visitor.AddStmt(C.getIntExpr());
 }
+void OpenACCClauseEnqueue::VisitWaitClause(const OpenACCWaitClause &C) {
+  if (const Expr *DevNumExpr = C.getDevNumExpr())
+    Visitor.AddStmt(DevNumExpr);
+  for (Expr *QE : C.getQueueIdExprs())
+    Visitor.AddStmt(QE);
+}
+void OpenACCClauseEnqueue::VisitDeviceTypeClause(
+    const OpenACCDeviceTypeClause &C) {}
 } // namespace
 
 void EnqueueVisitor::EnqueueChildren(const OpenACCClause *C) {

@@ -7964,6 +7964,11 @@ TreeTransform<Derived>::TransformIfStmt(IfStmt *S) {
   // Transform the "then" branch.
   StmtResult Then;
   if (!ConstexprConditionValue || *ConstexprConditionValue) {
+    EnterExpressionEvaluationContext Ctx(
+        getSema(), Sema::ExpressionEvaluationContext::ImmediateFunctionContext,
+        nullptr, Sema::ExpressionEvaluationContextRecord::EK_Other,
+        S->isNonNegatedConsteval());
+
     Then = getDerived().TransformStmt(S->getThen());
     if (Then.isInvalid())
       return StmtError();
@@ -7978,6 +7983,11 @@ TreeTransform<Derived>::TransformIfStmt(IfStmt *S) {
   // Transform the "else" branch.
   StmtResult Else;
   if (!ConstexprConditionValue || !*ConstexprConditionValue) {
+    EnterExpressionEvaluationContext Ctx(
+        getSema(), Sema::ExpressionEvaluationContext::ImmediateFunctionContext,
+        nullptr, Sema::ExpressionEvaluationContextRecord::EK_Other,
+        S->isNegatedConsteval());
+
     Else = getDerived().TransformStmt(S->getElse());
     if (Else.isInvalid())
       return StmtError();
@@ -11424,6 +11434,61 @@ void OpenACCClauseTransform<Derived>::VisitAsyncClause(
       ParsedClause.getNumIntExprs() != 0 ? ParsedClause.getIntExprs()[0]
                                          : nullptr,
       ParsedClause.getEndLoc());
+}
+template <typename Derived>
+void OpenACCClauseTransform<Derived>::VisitWaitClause(
+    const OpenACCWaitClause &C) {
+  if (!C.getLParenLoc().isInvalid()) {
+    Expr *DevNumExpr = nullptr;
+    llvm::SmallVector<Expr *> InstantiatedQueueIdExprs;
+
+    // Instantiate devnum expr if it exists.
+    if (C.getDevNumExpr()) {
+      ExprResult Res = Self.TransformExpr(C.getDevNumExpr());
+      if (!Res.isUsable())
+        return;
+      Res = Self.getSema().OpenACC().ActOnIntExpr(OpenACCDirectiveKind::Invalid,
+                                                  C.getClauseKind(),
+                                                  C.getBeginLoc(), Res.get());
+      if (!Res.isUsable())
+        return;
+
+      DevNumExpr = Res.get();
+    }
+
+    // Instantiate queue ids.
+    for (Expr *CurQueueIdExpr : C.getQueueIdExprs()) {
+      ExprResult Res = Self.TransformExpr(CurQueueIdExpr);
+      if (!Res.isUsable())
+        return;
+      Res = Self.getSema().OpenACC().ActOnIntExpr(OpenACCDirectiveKind::Invalid,
+                                                  C.getClauseKind(),
+                                                  C.getBeginLoc(), Res.get());
+      if (!Res.isUsable())
+        return;
+
+      InstantiatedQueueIdExprs.push_back(Res.get());
+    }
+
+    ParsedClause.setWaitDetails(DevNumExpr, C.getQueuesLoc(),
+                                std::move(InstantiatedQueueIdExprs));
+  }
+
+  NewClause = OpenACCWaitClause::Create(
+      Self.getSema().getASTContext(), ParsedClause.getBeginLoc(),
+      ParsedClause.getLParenLoc(), ParsedClause.getDevNumExpr(),
+      ParsedClause.getQueuesLoc(), ParsedClause.getQueueIdExprs(),
+      ParsedClause.getEndLoc());
+}
+
+template <typename Derived>
+void OpenACCClauseTransform<Derived>::VisitDeviceTypeClause(
+    const OpenACCDeviceTypeClause &C) {
+  // Nothing to transform here, just create a new version of 'C'.
+  NewClause = OpenACCDeviceTypeClause::Create(
+      Self.getSema().getASTContext(), C.getClauseKind(),
+      ParsedClause.getBeginLoc(), ParsedClause.getLParenLoc(),
+      C.getArchitectures(), ParsedClause.getEndLoc());
 }
 } // namespace
 template <typename Derived>
