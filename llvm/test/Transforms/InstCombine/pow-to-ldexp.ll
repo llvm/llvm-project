@@ -7,7 +7,7 @@
 define float @pow_sitofp_f32_const_base_2(i32 %x) {
 ; LDEXP-LABEL: define float @pow_sitofp_f32_const_base_2(
 ; LDEXP-SAME: i32 [[X:%.*]]) {
-; LDEXP-NEXT:    [[LDEXPF:%.*]] = tail call float @ldexpf(float 1.000000e+00, i32 [[X]])
+; LDEXP-NEXT:    [[LDEXPF:%.*]] = tail call float @llvm.ldexp.f32.i32(float 1.000000e+00, i32 [[X]])
 ; LDEXP-NEXT:    ret float [[LDEXPF]]
 ;
 ; NOLDEXP-LABEL: define float @pow_sitofp_f32_const_base_2(
@@ -24,7 +24,7 @@ define float @pow_sitofp_f32_const_base_2(i32 %x) {
 define float @pow_sitofp_f32_const_base_2__flags(i32 %x) {
 ; LDEXP-LABEL: define float @pow_sitofp_f32_const_base_2__flags(
 ; LDEXP-SAME: i32 [[X:%.*]]) {
-; LDEXP-NEXT:    [[LDEXPF:%.*]] = tail call nnan nsz float @ldexpf(float 1.000000e+00, i32 [[X]])
+; LDEXP-NEXT:    [[LDEXPF:%.*]] = tail call nnan nsz float @llvm.ldexp.f32.i32(float 1.000000e+00, i32 [[X]])
 ; LDEXP-NEXT:    ret float [[LDEXPF]]
 ;
 ; NOLDEXP-LABEL: define float @pow_sitofp_f32_const_base_2__flags(
@@ -117,7 +117,7 @@ define float @pow_sitofp_f32_const_base_16(i32 %x) {
 define double @pow_sitofp_f64_const_base_2(i32 %x) {
 ; LDEXP-LABEL: define double @pow_sitofp_f64_const_base_2(
 ; LDEXP-SAME: i32 [[X:%.*]]) {
-; LDEXP-NEXT:    [[LDEXP:%.*]] = tail call double @ldexp(double 1.000000e+00, i32 [[X]])
+; LDEXP-NEXT:    [[LDEXP:%.*]] = tail call double @llvm.ldexp.f64.i32(double 1.000000e+00, i32 [[X]])
 ; LDEXP-NEXT:    ret double [[LDEXP]]
 ;
 ; NOLDEXP-LABEL: define double @pow_sitofp_f64_const_base_2(
@@ -364,7 +364,7 @@ define <2 x double> @pow_sitofp_v2f64_const_base_8(<2 x i32> %x) {
 define fp128 @pow_sitofp_fp128_const_base_2(i32 %x) {
 ; LDEXP-LABEL: define fp128 @pow_sitofp_fp128_const_base_2(
 ; LDEXP-SAME: i32 [[X:%.*]]) {
-; LDEXP-NEXT:    [[LDEXPL:%.*]] = tail call fp128 @ldexpl(fp128 0xL00000000000000003FFF000000000000, i32 [[X]])
+; LDEXP-NEXT:    [[LDEXPL:%.*]] = tail call fp128 @llvm.ldexp.f128.i32(fp128 0xL00000000000000003FFF000000000000, i32 [[X]])
 ; LDEXP-NEXT:    ret fp128 [[LDEXPL]]
 ;
 ; NOLDEXP-LABEL: define fp128 @pow_sitofp_fp128_const_base_2(
@@ -443,7 +443,7 @@ define float @libcall_powf_sitofp_f32_const_base_2__flags(i32 %x) {
 define float @readnone_libcall_powf_sitofp_f32_const_base_2(i32 %x) {
 ; LDEXP-LABEL: define float @readnone_libcall_powf_sitofp_f32_const_base_2(
 ; LDEXP-SAME: i32 [[X:%.*]]) {
-; LDEXP-NEXT:    [[LDEXPF:%.*]] = tail call float @ldexpf(float 1.000000e+00, i32 [[X]])
+; LDEXP-NEXT:    [[LDEXPF:%.*]] = tail call float @llvm.ldexp.f32.i32(float 1.000000e+00, i32 [[X]])
 ; LDEXP-NEXT:    ret float [[LDEXPF]]
 ;
 ; NOLDEXP-LABEL: define float @readnone_libcall_powf_sitofp_f32_const_base_2(
@@ -460,7 +460,7 @@ define float @readnone_libcall_powf_sitofp_f32_const_base_2(i32 %x) {
 define double @readnone_libcall_pow_sitofp_f32_const_base_2(i32 %x) {
 ; LDEXP-LABEL: define double @readnone_libcall_pow_sitofp_f32_const_base_2(
 ; LDEXP-SAME: i32 [[X:%.*]]) {
-; LDEXP-NEXT:    [[LDEXP:%.*]] = tail call double @ldexp(double 1.000000e+00, i32 [[X]])
+; LDEXP-NEXT:    [[LDEXP:%.*]] = tail call double @llvm.ldexp.f64.i32(double 1.000000e+00, i32 [[X]])
 ; LDEXP-NEXT:    ret double [[LDEXP]]
 ;
 ; NOLDEXP-LABEL: define double @readnone_libcall_pow_sitofp_f32_const_base_2(
@@ -477,7 +477,7 @@ define double @readnone_libcall_pow_sitofp_f32_const_base_2(i32 %x) {
 define fp128 @readnone_libcall_powl_sitofp_fp128_const_base_2(i32 %x) {
 ; LDEXP-LABEL: define fp128 @readnone_libcall_powl_sitofp_fp128_const_base_2(
 ; LDEXP-SAME: i32 [[X:%.*]]) {
-; LDEXP-NEXT:    [[LDEXPL:%.*]] = tail call fp128 @ldexpl(fp128 0xL00000000000000003FFF000000000000, i32 [[X]])
+; LDEXP-NEXT:    [[LDEXPL:%.*]] = tail call fp128 @llvm.ldexp.f128.i32(fp128 0xL00000000000000003FFF000000000000, i32 [[X]])
 ; LDEXP-NEXT:    ret fp128 [[LDEXPL]]
 ;
 ; NOLDEXP-LABEL: define fp128 @readnone_libcall_powl_sitofp_fp128_const_base_2(
