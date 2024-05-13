@@ -1986,6 +1986,10 @@ static void genOMPDispatch(Fortran::lower::AbstractConverter &converter,
     genParallelOp(converter, symTable, semaCtx, eval, loc, clauses, queue, item,
                   /*outerCombined=*/false);
     break;
+  case llvm::omp::Directive::OMPD_section:
+    genSectionOp(converter, symTable, semaCtx, eval, loc, /*clauses=*/{}, queue,
+                 item);
+    break;
   case llvm::omp::Directive::OMPD_sections:
     genSectionsOp(converter, symTable, semaCtx, eval, loc, clauses, queue,
                   item);
@@ -2449,8 +2453,7 @@ genOMP(Fortran::lower::AbstractConverter &converter,
   ConstructQueue queue{buildConstructQueue(
       converter.getFirOpBuilder().getModule(), semaCtx, eval,
       sectionConstruct.source, llvm::omp::Directive::OMPD_section, {})};
-  genSectionOp(converter, symTable, semaCtx, eval, loc,
-               /*clauses=*/{}, queue, queue.begin());
+  genOMPDispatch(converter, symTable, semaCtx, eval, loc, queue, queue.begin());
 }
 
 static void
