@@ -8399,12 +8399,16 @@ bool AMDGPUAsmParser::parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc) {
     AGVK VK = StringSwitch<AGVK>(TokenId)
                   .Case("max", AGVK::AGVK_Max)
                   .Case("or", AGVK::AGVK_Or)
+                  .Case("extrasgprs", AGVK::AGVK_ExtraSGPRs)
+                  .Case("totalnumvgprs", AGVK::AGVK_TotalNumVGPRs)
+                  .Case("alignto", AGVK::AGVK_AlignTo)
+                  .Case("occupancy", AGVK::AGVK_Occupancy)
                   .Default(AGVK::AGVK_None);
 
     if (VK != AGVK::AGVK_None && peekToken().is(AsmToken::LParen)) {
       SmallVector<const MCExpr *, 4> Exprs;
       uint64_t CommaCount = 0;
-      lex(); // Eat 'max'/'or'
+      lex(); // Eat Arg ('or', 'max', 'occupancy', etc.)
       lex(); // Eat '('
       while (true) {
         if (trySkipToken(AsmToken::RParen)) {
