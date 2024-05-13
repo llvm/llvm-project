@@ -197,7 +197,7 @@ TEST_F(QueryParserTest, Comment) {
 TEST_F(QueryParserTest, Complete) {
   std::vector<llvm::LineEditor::Completion> Comps =
       QueryParser::complete("", 0, QS);
-  ASSERT_EQ(8u, Comps.size());
+  ASSERT_EQ(9u, Comps.size());
   EXPECT_EQ("help ", Comps[0].TypedText);
   EXPECT_EQ("help", Comps[0].DisplayText);
   EXPECT_EQ("let ", Comps[1].TypedText);
@@ -214,6 +214,8 @@ TEST_F(QueryParserTest, Complete) {
   EXPECT_EQ("disable", Comps[6].DisplayText);
   EXPECT_EQ("unlet ", Comps[7].TypedText);
   EXPECT_EQ("unlet", Comps[7].DisplayText);
+  EXPECT_EQ("file ", Comps[8].TypedText);
+  EXPECT_EQ("file", Comps[8].DisplayText);
 
   Comps = QueryParser::complete("set o", 5, QS);
   ASSERT_EQ(1u, Comps.size());

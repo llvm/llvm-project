@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Query.h"
+#include "QueryParser.h"
 #include "QuerySession.h"
 #include "clang/AST/ASTDumper.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
@@ -280,6 +281,27 @@ bool LetQuery::run(llvm::raw_ostream &OS, QuerySession &QS) const {
 const QueryKind SetQueryKind<bool>::value;
 const QueryKind SetQueryKind<OutputKind>::value;
 #endif
+
+bool FileQuery::run(llvm::raw_ostream &OS, QuerySession &QS) const {
+  auto Buffer = llvm::MemoryBuffer::getFile(StringRef{File}.trim());
+  if (!Buffer) {
+    if (Prefix.has_value())
+      llvm::errs() << *Prefix << ": ";
+    llvm::errs() << "cannot open " << File << ": "
+                 << Buffer.getError().message() << "\n";
+    return false;
+  }
+
+  StringRef FileContentRef(Buffer.get()->getBuffer());
+
+  while (!FileContentRef.empty()) {
+    QueryRef Q = QueryParser::parse(FileContentRef, QS);
+    if (!Q->run(llvm::outs(), QS))
+      return false;
+    FileContentRef = Q->RemainingContent;
+  }
+  return true;
+}
 
 } // namespace query
 } // namespace clang
