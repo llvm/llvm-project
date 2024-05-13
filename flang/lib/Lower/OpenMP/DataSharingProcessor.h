@@ -62,7 +62,7 @@ private:
       Fortran::lower::pft::Evaluation &eval,
       Fortran::semantics::Symbol::Flag flag,
       llvm::SetVector<const Fortran::semantics::Symbol *>
-          &symbolsInNestedRegions, int level=0);
+          &symbolsInNestedRegions);
   void collectOmpObjectListSymbol(
       const omp::ObjectList &objects,
       llvm::SetVector<const Fortran::semantics::Symbol *> &symbolSet);
