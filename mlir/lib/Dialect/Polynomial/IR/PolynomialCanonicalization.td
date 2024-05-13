@@ -14,13 +14,18 @@ include "mlir/Dialect/Arith/IR/ArithOps.td"
 include "mlir/IR/OpBase.td"
 include "mlir/IR/PatternBase.td"
 
-// TODO: get the proper scalar type from the operand polynomial ring attribute
+// Get a -1 integer attribute of the same type as the polynomial SSA value's
+// ring coefficient type.
+def getMinusOne
+  : NativeCodeCall<
+      "$_builder.getIntegerAttr("
+        "cast<PolynomialType>($0.getType()).getRing().getCoefficientType(), -1)">;
+
 def SubAsAdd : Pat<
   (Polynomial_SubOp $f, $g),
   (Polynomial_AddOp $f,
     (Polynomial_MulScalarOp $g,
-      (Arith_ConstantOp
-        ConstantAttr<I32Attr, "-1">)))>;
+      (Arith_ConstantOp (getMinusOne $g))))>;
 
 def INTTAfterNTT : Pat<
   (Polynomial_INTTOp (Polynomial_NTTOp $poly)),

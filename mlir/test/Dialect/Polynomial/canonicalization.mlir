@@ -32,19 +32,14 @@ func.func @test_canonicalize_ntt_after_intt(%t0 : !tensor_ty) -> !tensor_ty {
 
 #cycl_2048 = #polynomial.int_polynomial<1 + x**1024>
 #ring = #polynomial.ring<coefficientType=i32, coefficientModulus=256:i32, polynomialModulus=#cycl_2048>
-#one_plus_x_squared = #polynomial.int_polynomial<1 + x**2>
-#one_minus_x_squared = #polynomial.int_polynomial<1 + -1x**2>
 !sub_ty = !polynomial.polynomial<ring=#ring>
 
-// CHECK-LABEL: test_canonicalize_sub_power_of_two_cmod
-func.func @test_canonicalize_sub_power_of_two_cmod() -> !sub_ty {
-  %poly0 = polynomial.constant {value=#one_plus_x_squared} : !sub_ty
-  %poly1 = polynomial.constant {value=#one_minus_x_squared} : !sub_ty
+// CHECK-LABEL: test_canonicalize_sub
+// CHECK-SAME: (%[[p0:.*]]: [[T:.*]], %[[p1:.*]]: [[T]]) -> [[T]] {
+func.func @test_canonicalize_sub(%poly0 : !sub_ty, %poly1 : !sub_ty) -> !sub_ty {
   %0 = polynomial.sub %poly0, %poly1  : !sub_ty
   // CHECK: %[[minus_one:.+]] = arith.constant -1 : i32
-  // CHECK: %[[p1:.+]] = polynomial.constant
-  // CHECK: %[[p2:.+]] = polynomial.constant
-  // CHECK: %[[p2neg:.+]] = polynomial.mul_scalar %[[p2]], %[[minus_one]]
-  // CHECK: [[ADD:%.+]] = polynomial.add %[[p1]], %[[p2neg]]
+  // CHECK: %[[p1neg:.+]] = polynomial.mul_scalar %[[p1]], %[[minus_one]]
+  // CHECK: [[ADD:%.+]] = polynomial.add %[[p0]], %[[p1neg]]
   return %0 : !sub_ty
 }
