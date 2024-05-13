@@ -211,10 +211,7 @@ private:
 class TokenAnnotator {
 public:
   TokenAnnotator(const FormatStyle &Style, const AdditionalKeywords &Keywords)
-      : Style(Style), IsCpp(Style.isCpp()),
-        LangOpts(getFormattingLangOpts(Style)), Keywords(Keywords) {
-    assert(IsCpp == LangOpts.CXXOperatorNames);
-  }
+      : Style(Style), IsCpp(Style.isCpp()), Keywords(Keywords) {}
 
   /// Adapts the indent levels of comment lines to the indent of the
   /// subsequent line.
@@ -263,7 +260,6 @@ private:
   const FormatStyle &Style;
 
   bool IsCpp;
-  LangOptions LangOpts;
 
   const AdditionalKeywords &Keywords;
 
