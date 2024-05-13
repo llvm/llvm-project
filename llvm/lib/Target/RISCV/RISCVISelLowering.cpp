@@ -21052,6 +21052,12 @@ Value *RISCVTargetLowering::getIRStackGuard(IRBuilderBase &IRB) const {
   if (Subtarget.isTargetFuchsia())
     return useTpOffset(IRB, -0x10);
 
+  // Android provides a fixed TLS slot for the stack cookie. See the definition
+  // of TLS_SLOT_STACK_GUARD in
+  // https://android.googlesource.com/platform/bionic/+/main/libc/platform/bionic/tls_defines.h
+  if (Subtarget.isTargetAndroid())
+    return useTpOffset(IRB, -0x18);
+
   return TargetLowering::getIRStackGuard(IRB);
 }
 
