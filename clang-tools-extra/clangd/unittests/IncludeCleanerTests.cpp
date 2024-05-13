@@ -137,6 +137,26 @@ TEST(IncludeCleaner, GetUnusedHeaders) {
                            Pointee(writtenInclusion("\"dir/unused.h\""))));
 }
 
+TEST(IncludeCleaner, IgnoredAngledHeaders) {
+  // Currently the default behavior is to ignore unused angled includes
+  auto TU = TestTU::withCode(R"cpp(
+    #include <system_header.h>
+    #include <system_unused.h>
+    #include <non_system_angled_unused.h>
+    SystemClass x;
+  )cpp");
+  TU.AdditionalFiles["system/system_header.h"] = guard("class SystemClass {};");
+  TU.AdditionalFiles["system/system_unused.h"] = guard("");
+  TU.AdditionalFiles["dir/non_system_angled_unused.h"] = guard("");
+  TU.ExtraArgs = {
+      "-isystem" + testPath("system"),
+      "-I" + testPath("dir"),
+  };
+  auto AST = TU.build();
+  IncludeCleanerFindings Findings = computeIncludeCleanerFindings(AST);
+  EXPECT_THAT(Findings.UnusedIncludes, IsEmpty());
+}
+
 TEST(IncludeCleaner, UnusedAngledHeaders) {
   auto TU = TestTU::withCode(R"cpp(
     #include <system_header.h>
