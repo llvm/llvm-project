@@ -164,11 +164,6 @@ void transform::ApplyLowerInterleavePatternsOp::populatePatterns(
   vector::populateVectorInterleaveLoweringPatterns(patterns);
 }
 
-void transform::ApplyInterleaveToShufflePatternsOp::populatePatterns(
-    RewritePatternSet &patterns) {
-  vector::populateVectorInterleaveToShufflePatterns(patterns);
-}
-
 void transform::ApplyRewriteNarrowTypePatternsOp::populatePatterns(
     RewritePatternSet &patterns) {
   populateVectorNarrowTypeRewritePatterns(patterns);
