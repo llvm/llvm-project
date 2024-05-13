@@ -619,10 +619,10 @@ InstructionCost RISCVTTIImpl::getInterleavedMemoryOpCost(
       if (VTy->getElementCount().isKnownMultipleOf(Factor) &&
           TLI->isLegalInterleavedAccessType(SubVecTy, Factor, Alignment,
                                             AddressSpace, DL)) {
-        // FIXME: We use the memory op cost of the *legalized* type here,u
+        // FIXME: We use the memory op cost of the *legalized* type here,
         // because it's getMemoryOpCost returns a really expensive cost for
         // types like <6 x i8>, which show up when doing interleaves of
-        // Factor=3i etc. Should the memory op cost of these be cheaper?
+        // Factor=3 etc. Should the memory op cost of these be cheaper?
         auto *LegalVTy = VectorType::get(VTy->getElementType(),
                                          LT.second.getVectorElementCount());
         InstructionCost LegalMemCost = getMemoryOpCost(
