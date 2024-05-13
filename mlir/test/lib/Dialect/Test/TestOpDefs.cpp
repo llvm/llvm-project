@@ -1245,8 +1245,7 @@ TestMultiSlotAlloca::getDestructurableSlots() {
   SmallVector<DestructurableMemorySlot> slots;
   for (Value result : getResults()) {
     auto memrefType = cast<MemRefType>(result.getType());
-    auto destructurable =
-        llvm::dyn_cast<DestructurableTypeInterface>(memrefType);
+    auto destructurable = dyn_cast<DestructurableTypeInterface>(memrefType);
     if (!destructurable)
       continue;
 
