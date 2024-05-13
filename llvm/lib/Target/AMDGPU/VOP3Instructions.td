@@ -1060,6 +1060,8 @@ let SubtargetPredicate = HasFP8ConversionScaleInsts, mayRaiseFPException = 0 in 
   defm V_CVT_SCALEF32_PK_F32_FP8 : VOP3Inst<"v_cvt_scalef32_pk_f32_fp8", VOP3_CVT_SCALE_PK_F16BF16F32_FP4FP8BF8_Profile<v2f32>>;
   defm V_CVT_SCALEF32_PK_FP8_F16 : VOP3Inst<"v_cvt_scalef32_pk_fp8_f16", VOP3_CVT_SCALE_PK_FP8BF8_F16BF16_Profile>;
   defm V_CVT_SCALEF32_PK_FP8_BF16 : VOP3Inst<"v_cvt_scalef32_pk_fp8_bf16", VOP3_CVT_SCALE_PK_FP8BF8_F16BF16_Profile>;
+  defm V_CVT_SCALEF32_PK_F16_FP8    : VOP3Inst<"v_cvt_scalef32_pk_f16_fp8",  VOP3_CVT_SCALE_PK_F16BF16F32_FP4FP8BF8_Profile<v2f16>>;
+  defm V_CVT_SCALEF32_PK_BF16_FP8   : VOP3Inst<"v_cvt_scalef32_pk_bf16_fp8", VOP3_CVT_SCALE_PK_F16BF16F32_FP4FP8BF8_Profile<v2f16>>;
 }
 
 let SubtargetPredicate = HasBF8ConversionScaleInsts, mayRaiseFPException = 0 in {
@@ -1069,6 +1071,8 @@ let SubtargetPredicate = HasBF8ConversionScaleInsts, mayRaiseFPException = 0 in 
   defm V_CVT_SCALEF32_PK_F32_BF8 : VOP3Inst<"v_cvt_scalef32_pk_f32_bf8", VOP3_CVT_SCALE_PK_F16BF16F32_FP4FP8BF8_Profile<v2f32>>;
   defm V_CVT_SCALEF32_PK_BF8_F16 : VOP3Inst<"v_cvt_scalef32_pk_bf8_f16", VOP3_CVT_SCALE_PK_FP8BF8_F16BF16_Profile>;
   defm V_CVT_SCALEF32_PK_BF8_BF16 : VOP3Inst<"v_cvt_scalef32_pk_bf8_bf16", VOP3_CVT_SCALE_PK_FP8BF8_F16BF16_Profile>;
+  defm V_CVT_SCALEF32_PK_F16_BF8    : VOP3Inst<"v_cvt_scalef32_pk_f16_bf8",  VOP3_CVT_SCALE_PK_F16BF16F32_FP4FP8BF8_Profile<v2bf16>>;
+  defm V_CVT_SCALEF32_PK_BF16_BF8   : VOP3Inst<"v_cvt_scalef32_pk_bf16_bf8", VOP3_CVT_SCALE_PK_F16BF16F32_FP4FP8BF8_Profile<v2bf16>>;
 }
 
 let SubtargetPredicate = HasFP4ConversionScaleInsts, mayRaiseFPException = 0 in {
@@ -2230,6 +2234,8 @@ defm V_CVT_SCALEF32_PK_FP8_F32 : VOP3OpSel_Real_gfx9 <0x235>;
 defm V_CVT_SCALEF32_PK_F32_FP8 : VOP3OpSel_Real_gfx9 <0x239>;
 defm V_CVT_SCALEF32_PK_FP8_F16 : VOP3OpSel_Real_gfx9 <0x240>;
 defm V_CVT_SCALEF32_PK_FP8_BF16: VOP3OpSel_Real_gfx9 <0x244>;
+defm V_CVT_SCALEF32_PK_F16_FP8  : VOP3OpSel_Real_gfx9<0x248>;
+defm V_CVT_SCALEF32_PK_BF16_FP8 : VOP3OpSel_Real_gfx9<0x269>;
 }
 let OtherPredicates = [HasBF8ConversionScaleInsts] in {
 defm V_CVT_SCALEF32_F16_BF8 : VOP3OpSel_Real_gfx9 <0x24b>;
@@ -2238,6 +2244,8 @@ defm V_CVT_SCALEF32_PK_BF8_F32 : VOP3OpSel_Real_gfx9 <0x236>;
 defm V_CVT_SCALEF32_PK_F32_BF8 : VOP3OpSel_Real_gfx9 <0x23a>;
 defm V_CVT_SCALEF32_PK_BF8_F16 : VOP3OpSel_Real_gfx9 <0x241>;
 defm V_CVT_SCALEF32_PK_BF8_BF16: VOP3OpSel_Real_gfx9 <0x245>;
+defm V_CVT_SCALEF32_PK_F16_BF8  : VOP3OpSel_Real_gfx9<0x249>;
+defm V_CVT_SCALEF32_PK_BF16_BF8 : VOP3OpSel_Real_gfx9<0x26a>;
 }
 let OtherPredicates = [HasFP4ConversionScaleInsts] in {
 defm V_CVT_SCALEF32_PK_F32_FP4 : VOP3OpSel_Real_gfx9 <0x23f>;
