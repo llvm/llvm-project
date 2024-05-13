@@ -607,7 +607,6 @@ bool RISCVRegisterInfo::needsFrameBaseReg(MachineInstr *MI,
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   const RISCVFrameLowering *TFI = getFrameLowering(MF);
   const MachineRegisterInfo &MRI = MF.getRegInfo();
-  Offset += getFrameIndexInstrOffset(MI, FIOperandNum);
 
   if (TFI->hasFP(MF) && !shouldRealignStack(MF)) {
     // Estimate the stack size used to store callee saved registers(
