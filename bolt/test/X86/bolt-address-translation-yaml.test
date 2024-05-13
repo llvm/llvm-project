@@ -15,6 +15,17 @@ BRANCHENTRY-YAML-CHECK:    - name: SolveCubic
 BRANCHENTRY-YAML-CHECK:      bid: 0
 BRANCHENTRY-YAML-CHECK:      hash: 0x700F19D24600000
 BRANCHENTRY-YAML-CHECK-NEXT: succ: [ { bid: 7, cnt: 1 }
+# Check that the order is correct between BAT YAML and FDATA->YAML.
+RUN: perf2bolt %t.out --pa -p %p/Inputs/blarge_new_bat_order.preagg.txt \
+RUN:   -w %t.yaml -o %t.fdata
+RUN: llvm-bolt %t.exe -data %t.fdata -w %t.yaml-fdata -o %t.null
+RUN: FileCheck --input-file %t.yaml --check-prefix ORDER-YAML-CHECK %s
+RUN: FileCheck --input-file %t.yaml-fdata --check-prefix ORDER-YAML-CHECK %s
+ORDER-YAML-CHECK:    - name: SolveCubic
+ORDER-YAML-CHECK:      bid: 3
+ORDER-YAML-CHECK:      hash: 0xDDA1DC5F69F900AC
+ORDER-YAML-CHECK-NEXT: calls: [ { off: 0x26, fid: [[#]], cnt: 20 } ]
+ORDER-YAML-CHECK-NEXT: succ: [ { bid: 5, cnt: 7 }
 # Large profile test
 RUN: perf2bolt %t.out --pa -p %p/Inputs/blarge_new_bat.preagg.txt -w %t.yaml -o %t.fdata \
 RUN:   2>&1 | FileCheck --check-prefix READ-BAT-CHECK %s
