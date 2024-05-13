@@ -1,5 +1,6 @@
 # rpmalloc - General Purpose Memory Allocator
 This library provides a cross platform lock free thread caching 16-byte aligned memory allocator implemented in C.
+This is a fork of rpmalloc 1.4.5.
 
 Platforms currently supported:
 
