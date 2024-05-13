@@ -296,11 +296,13 @@ public:
 
     if (!Result) {
       // D and its mutually recursive callers are all non-trivial.
-      for (auto& It : RecursiveFn)
+      for (auto &It : RecursiveFn)
         It.second = false;
     }
-    assert(RecursiveFn[D] == Result);
-    RecursiveFn.erase(D);
+    RecursiveIt = RecursiveFn.find(D);
+    assert(RecursiveIt != RecursiveFn.end());
+    Result = RecursiveIt->second;
+    RecursiveFn.erase(RecursiveIt);
     Cache[D] = Result;
 
     return Result;
