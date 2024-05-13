@@ -1029,10 +1029,15 @@ LogicalResult ModuleTranslation::convertGlobals() {
           debugTranslation->translateGlobalVariableExpression(op.getDbgExpr());
       llvm::DIGlobalVariable *diGlobalVar = diGlobalExpr->getVariable();
       var->addDebugInfo(diGlobalExpr);
-      // For fortran, the scope hierarchy can be
+
+      // There is no `globals` field in DICompileUnitAttr which can be directly
+      // assigned to DICompileUnit. We have to build the list by looking at the
+      // dbgExpr of all the GlobalOps. The scope of the variable is used to get
+      // the DICompileUnit in which to add it. But for the languages that
+      // support modules, the scope hierarchy can be
       // variable -> module -> compile unit
-      // If a variable scope points to Module then we get its parent scope so
-      // that globals get added to the compile unit.
+      // If a variable scope points to the module then we use the scope of the
+      // module to get the compile unit.
       llvm::DIScope *scope = diGlobalVar->getScope();
       if (llvm::DIModule *mod = dyn_cast_if_present<llvm::DIModule>(scope))
         scope = mod->getScope();
