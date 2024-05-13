@@ -15,7 +15,7 @@ set(RADSAN_UNITTEST_CFLAGS
   -O2)
 
 set(RADSAN_INST_TEST_SOURCES
-    radsan_test.cpp
+    radsan_test_functional.cpp
     radsan_test_interceptors.cpp
     radsan_test_main.cpp)
 

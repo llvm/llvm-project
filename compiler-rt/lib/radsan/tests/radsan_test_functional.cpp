@@ -6,6 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 //
+// Introduces basic functional tests for the realtime sanitizer.
+// Not meant to be exhaustive, testing all interceptors, please see
+// test_radsan_interceptors.cpp for those tests.
+//
 //===----------------------------------------------------------------------===//
 
 #include "gtest/gtest.h"
