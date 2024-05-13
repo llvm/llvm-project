@@ -6102,7 +6102,7 @@ static SDValue lowerLaneOp(const SITargetLowering &TLI, SDNode *N,
                    : DAG.getNode(AMDGPUISD::READFIRSTLANE, SL, VT, {Src0}));
   };
 
-  SDValue Src1, Src2, Src0Valid, Src2Valid;
+  SDValue Src1, Src2;
   if (IntrinsicID == Intrinsic::amdgcn_readlane ||
       IntrinsicID == Intrinsic::amdgcn_writelane) {
     Src1 = N->getOperand(2);
@@ -6114,33 +6114,33 @@ static SDValue lowerLaneOp(const SITargetLowering &TLI, SDNode *N,
     if (VT == MVT::i32)
       // Already legal
       return SDValue();
-    Src0Valid = DAG.getBitcast(IntVT, Src0);
+    Src0 = DAG.getBitcast(IntVT, Src0);
     if (Src2.getNode())
-      Src2Valid = DAG.getBitcast(IntVT, Src2);
-    SDValue LaneOp = createLaneOp(Src0Valid, Src1, Src2Valid, MVT::i32);
+      Src2 = DAG.getBitcast(IntVT, Src2);
+    SDValue LaneOp = createLaneOp(Src0, Src1, Src2, MVT::i32);
     return DAG.getBitcast(VT, LaneOp);
   }
 
   if (ValSize < 32) {
     SDValue InitBitCast = DAG.getBitcast(IntVT, Src0);
-    Src0Valid = DAG.getAnyExtOrTrunc(InitBitCast, SL, MVT::i32);
+    Src0 = DAG.getAnyExtOrTrunc(InitBitCast, SL, MVT::i32);
     if (Src2.getNode()) {
       SDValue Src2Cast = DAG.getBitcast(IntVT, Src2);
-      Src2Valid = DAG.getAnyExtOrTrunc(Src2Cast, SL, MVT::i32);
+      Src2 = DAG.getAnyExtOrTrunc(Src2Cast, SL, MVT::i32);
     }
-    SDValue LaneOp = createLaneOp(Src0Valid, Src1, Src2Valid, MVT::i32);
+    SDValue LaneOp = createLaneOp(Src0, Src1, Src2, MVT::i32);
     SDValue Trunc = DAG.getAnyExtOrTrunc(LaneOp, SL, IntVT);
     return DAG.getBitcast(VT, Trunc);
   }
 
   if ((ValSize % 32) == 0) {
     MVT VecVT = MVT::getVectorVT(MVT::i32, ValSize / 32);
-    Src0Valid = DAG.getBitcast(VecVT, Src0);
+    Src0 = DAG.getBitcast(VecVT, Src0);
 
     if (Src2.getNode())
-      Src2Valid = DAG.getBitcast(VecVT, Src2);
+      Src2 = DAG.getBitcast(VecVT, Src2);
 
-    SDValue LaneOp = createLaneOp(Src0Valid, Src1, Src2Valid, VecVT);
+    SDValue LaneOp = createLaneOp(Src0, Src1, Src2, VecVT);
     SDValue UnrolledLaneOp = DAG.UnrollVectorOp(LaneOp.getNode());
     return DAG.getBitcast(VT, UnrolledLaneOp);
   }
