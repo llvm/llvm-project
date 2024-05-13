@@ -50,12 +50,7 @@ if __name__ == "__main__":
     orig_ir = Path(file).read_bytes()
     orig_ir = filter_funcs(orig_ir, funcs)
 
-    to_llvm_args = [
-        "--convert-arith-to-llvm",
-        "--convert-func-to-llvm",
-        "--convert-ub-to-llvm",
-        "--convert-vector-to-llvm",
-    ]
+    to_llvm_args = ["--convert-to-llvm"]
     orig_args = ["mlir-opt"] + to_llvm_args
     canon_args = ["mlir-opt", "-canonicalize"] + to_llvm_args
     translate_args = ["mlir-translate", "-mlir-to-llvmir"]
