@@ -117,9 +117,11 @@ void BoltAddressTranslation::write(const BinaryContext &BC, raw_ostream &OS) {
       std::unordered_set<uint32_t> MappedInputOffsets;
       for (const BinaryBasicBlock &BB : Function)
         MappedInputOffsets.emplace(BB.getInputOffset());
+      // Duplicate index to distinguish the entries.
+      size_t Index = 0;
       for (const auto &[InputOffset, _] : BBHashMap)
         if (!llvm::is_contained(MappedInputOffsets, InputOffset))
-          Map[EndOffset] = InputOffset << 1;
+          Map[EndOffset + Index++] = InputOffset << 1;
     }
     Maps.emplace(Function.getOutputAddress(), std::move(Map));
     ReverseMap.emplace(OutputAddress, InputAddress);
