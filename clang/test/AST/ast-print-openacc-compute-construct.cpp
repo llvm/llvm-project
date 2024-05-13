@@ -75,5 +75,37 @@ void foo() {
   // CHECK: #pragma acc kernels deviceptr(iPtr, arrayPtr[0])
 #pragma acc kernels deviceptr(iPtr, arrayPtr[0])
   while(true);
+
+  // CHECK: #pragma acc kernels async(*iPtr)
+#pragma acc kernels async(*iPtr)
+  while(true);
+
+  // CHECK: #pragma acc kernels async
+#pragma acc kernels async
+  while(true);
+
+// CHECK: #pragma acc parallel wait
+#pragma acc parallel wait
+  while(true);
+
+// CHECK: #pragma acc parallel wait()
+#pragma acc parallel wait()
+  while(true);
+
+// CHECK: #pragma acc parallel wait(*iPtr, i)
+#pragma acc parallel wait(*iPtr, i)
+  while(true);
+
+// CHECK: #pragma acc parallel wait(queues: *iPtr, i)
+#pragma acc parallel wait(queues:*iPtr, i)
+  while(true);
+
+// CHECK: #pragma acc parallel wait(devnum: i : *iPtr, i)
+#pragma acc parallel wait(devnum:i:*iPtr, i)
+  while(true);
+
+// CHECK: #pragma acc parallel wait(devnum: i : queues: *iPtr, i)
+#pragma acc parallel wait(devnum:i:queues:*iPtr, i)
+  while(true);
 }
 

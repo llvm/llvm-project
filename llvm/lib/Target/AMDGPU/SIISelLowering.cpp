@@ -225,10 +225,9 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::SELECT, MVT::bf16, Promote);
     AddPromotedToType(ISD::SELECT, MVT::bf16, MVT::i16);
 
-    // TODO: Could make these legal
-    setOperationAction(ISD::FABS, MVT::bf16, Expand);
-    setOperationAction(ISD::FNEG, MVT::bf16, Expand);
-    setOperationAction(ISD::FCOPYSIGN, MVT::bf16, Expand);
+    setOperationAction(ISD::FABS, MVT::bf16, Legal);
+    setOperationAction(ISD::FNEG, MVT::bf16, Legal);
+    setOperationAction(ISD::FCOPYSIGN, MVT::bf16, Legal);
 
     // We only need to custom lower because we can't specify an action for bf16
     // sources.
@@ -854,9 +853,13 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   if (Subtarget->hasPrefetch())
     setOperationAction(ISD::PREFETCH, MVT::Other, Custom);
 
-  if (Subtarget->hasIEEEMinMax())
+  if (Subtarget->hasIEEEMinMax()) {
     setOperationAction({ISD::FMAXIMUM, ISD::FMINIMUM},
                        {MVT::f16, MVT::f32, MVT::f64, MVT::v2f16}, Legal);
+    setOperationAction({ISD::FMINIMUM, ISD::FMAXIMUM},
+                       {MVT::v4f16, MVT::v8f16, MVT::v16f16, MVT::v32f16},
+                       Custom);
+  }
 
   setOperationAction(ISD::INTRINSIC_WO_CHAIN,
                      {MVT::Other, MVT::f32, MVT::v4f32, MVT::i16, MVT::f16,
@@ -5821,6 +5824,8 @@ SDValue SITargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::FMUL:
   case ISD::FMINNUM_IEEE:
   case ISD::FMAXNUM_IEEE:
+  case ISD::FMINIMUM:
+  case ISD::FMAXIMUM:
   case ISD::UADDSAT:
   case ISD::USUBSAT:
   case ISD::SADDSAT:

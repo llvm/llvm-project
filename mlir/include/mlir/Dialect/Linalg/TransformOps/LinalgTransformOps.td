@@ -783,10 +783,9 @@ def PackOp : Op<Transform_Dialect, "structured.pack", [
   let assemblyFormat = [{
     $target
     `packed_sizes` `=` custom<DynamicIndexList>($packed_sizes,
-                                                $static_packed_sizes,
-                                                type($packed_sizes))
+                                                $static_packed_sizes)
     attr-dict
-    `:` functional-type($target, results)
+    `:` functional-type(operands, results)
   }];
 
   let builders = [
@@ -890,14 +889,13 @@ def PackGreedilyOp : Op<Transform_Dialect, "structured.pack_greedily", [
     $target
     oilist(
       `matmul_packed_sizes` `=` custom<DynamicIndexList>($matmul_packed_sizes,
-                                                         $static_matmul_packed_sizes,
-                                                         type($matmul_packed_sizes))
+                                                         $static_matmul_packed_sizes)
       (`matmul_padded_sizes_next_multiple_of` `=`
         $matmul_padded_sizes_next_multiple_of^)?
       `matmul_inner_dims_order` `=` $matmul_inner_dims_order
     )
     attr-dict
-    `:` functional-type($target, results)
+    `:` functional-type(operands, results)
   }];
   let hasVerifier = 1;
 
@@ -1899,7 +1897,17 @@ def TileUsingForOp : Op<Transform_Dialect, "structured.tile_using_for",
                       $scalableSizes)>,
   ];
 
-  let hasCustomAssemblyFormat = 1;
+  let assemblyFormat = [{
+    $target
+      `tile_sizes` custom<DynamicIndexList>(
+        $dynamic_sizes,
+        $static_sizes,
+        $scalable_sizes)
+      (`interchange` `=` $interchange^)?
+    attr-dict
+    `:` functional-type(operands, results)
+  }];
+
   let hasVerifier = 1;
 
   let extraClassDeclaration = [{
@@ -2017,17 +2025,13 @@ def TileUsingForallOp :
   let assemblyFormat = [{
     $target oilist(
         `num_threads` custom<PackedOrDynamicIndexList>($packed_num_threads,
-                                                       type($packed_num_threads),
                                                        $num_threads,
-                                                       type($num_threads),
                                                        $static_num_threads) |
          `tile_sizes` custom<PackedOrDynamicIndexList>($packed_tile_sizes,
-                                                       type($packed_tile_sizes),
                                                        $tile_sizes,
-                                                       type($tile_sizes),
                                                        $static_tile_sizes))
     (`(` `mapping` `=` $mapping^ `)`)? attr-dict
-    `:` functional-type($target, results)
+    `:` functional-type(operands, results)
   }];
   let hasVerifier = 1;
 
@@ -2162,7 +2166,18 @@ def VectorizeOp : Op<Transform_Dialect, "structured.vectorize",
 
   let results = (outs);
 
-  let hasCustomAssemblyFormat = 1;
+  // We use oilist here to elide the optional `vector_sizes` when empty list
+  // is passed.
+  let assemblyFormat = [{
+    $target oilist(
+      `vector_sizes` custom<DynamicIndexList>(
+        $vector_sizes,
+        $static_vector_sizes,
+        $scalable_sizes))
+    attr-dict
+    `:` type($target)(`,`type($vector_sizes)^)? 
+  }];
+
   let hasVerifier = 1;
 
   let extraClassDeclaration = [{

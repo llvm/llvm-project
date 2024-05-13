@@ -11401,6 +11401,75 @@ void OpenACCClauseTransform<Derived>::VisitVectorLengthClause(
       ParsedClause.getLParenLoc(), ParsedClause.getIntExprs()[0],
       ParsedClause.getEndLoc());
 }
+
+template <typename Derived>
+void OpenACCClauseTransform<Derived>::VisitAsyncClause(
+    const OpenACCAsyncClause &C) {
+  if (C.hasIntExpr()) {
+    ExprResult Res = Self.TransformExpr(const_cast<Expr *>(C.getIntExpr()));
+    if (!Res.isUsable())
+      return;
+
+    Res = Self.getSema().OpenACC().ActOnIntExpr(OpenACCDirectiveKind::Invalid,
+                                                C.getClauseKind(),
+                                                C.getBeginLoc(), Res.get());
+    if (!Res.isUsable())
+      return;
+    ParsedClause.setIntExprDetails(Res.get());
+  }
+
+  NewClause = OpenACCAsyncClause::Create(
+      Self.getSema().getASTContext(), ParsedClause.getBeginLoc(),
+      ParsedClause.getLParenLoc(),
+      ParsedClause.getNumIntExprs() != 0 ? ParsedClause.getIntExprs()[0]
+                                         : nullptr,
+      ParsedClause.getEndLoc());
+}
+template <typename Derived>
+void OpenACCClauseTransform<Derived>::VisitWaitClause(
+    const OpenACCWaitClause &C) {
+  if (!C.getLParenLoc().isInvalid()) {
+    Expr *DevNumExpr = nullptr;
+    llvm::SmallVector<Expr *> InstantiatedQueueIdExprs;
+
+    // Instantiate devnum expr if it exists.
+    if (C.getDevNumExpr()) {
+      ExprResult Res = Self.TransformExpr(C.getDevNumExpr());
+      if (!Res.isUsable())
+        return;
+      Res = Self.getSema().OpenACC().ActOnIntExpr(OpenACCDirectiveKind::Invalid,
+                                                  C.getClauseKind(),
+                                                  C.getBeginLoc(), Res.get());
+      if (!Res.isUsable())
+        return;
+
+      DevNumExpr = Res.get();
+    }
+
+    // Instantiate queue ids.
+    for (Expr *CurQueueIdExpr : C.getQueueIdExprs()) {
+      ExprResult Res = Self.TransformExpr(CurQueueIdExpr);
+      if (!Res.isUsable())
+        return;
+      Res = Self.getSema().OpenACC().ActOnIntExpr(OpenACCDirectiveKind::Invalid,
+                                                  C.getClauseKind(),
+                                                  C.getBeginLoc(), Res.get());
+      if (!Res.isUsable())
+        return;
+
+      InstantiatedQueueIdExprs.push_back(Res.get());
+    }
+
+    ParsedClause.setWaitDetails(DevNumExpr, C.getQueuesLoc(),
+                                std::move(InstantiatedQueueIdExprs));
+  }
+
+  NewClause = OpenACCWaitClause::Create(
+      Self.getSema().getASTContext(), ParsedClause.getBeginLoc(),
+      ParsedClause.getLParenLoc(), ParsedClause.getDevNumExpr(),
+      ParsedClause.getQueuesLoc(), ParsedClause.getQueueIdExprs(),
+      ParsedClause.getEndLoc());
+}
 } // namespace
 template <typename Derived>
 OpenACCClause *TreeTransform<Derived>::TransformOpenACCClause(
