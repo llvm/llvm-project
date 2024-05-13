@@ -2861,7 +2861,8 @@ bool ByteCodeExprGen<Emitter>::visitExpr(const Expr *E) {
     return this->emitRetValue(E) && RootScope.destroyLocals();
   }
 
-  return RootScope.destroyLocals();
+  RootScope.destroyLocals();
+  return false;
 }
 
 /// Toplevel visitDecl().
