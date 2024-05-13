@@ -203,7 +203,7 @@ void test(auto...args){
     }.template operator()<0>();
 }
 
-template<int...args>
+template<int... args>
 void test2(){
   [&]<int idx>(){
     using R = decltype( args...[idx] ) ;
