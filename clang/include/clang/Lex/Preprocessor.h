@@ -2883,11 +2883,15 @@ private:
   /// otherwise.
   SourceLocation CurrentSafeBufferOptOutStart; // It is used to report the start location of an never-closed region.
 
-  // An ordered sequence of "-Wunsafe-buffer-usage" opt-out regions in one
-  // translation unit. Each region is represented by a pair of start and end
-  // locations.  A region is "open" if its' start and end locations are
+  using SafeBufferOptOutMapTy =
+      SmallVector<std::pair<SourceLocation, SourceLocation>, 16>;
+  // An ordered sequence of "-Wunsafe-buffer-usage" opt-out regions in this
+  // translation unit. Each region is represented by a pair of start and
+  // end locations.  A region is "open" if its' start and end locations are
   // identical.
-  SmallVector<std::pair<SourceLocation, SourceLocation>, 8> SafeBufferOptOutMap;
+  SafeBufferOptOutMapTy SafeBufferOptOutMap;
+  // `SafeBufferOptOutMap`s of loaded files:
+  llvm::DenseMap<FileID, SafeBufferOptOutMapTy> LoadedSafeBufferOptOutMap;
 
 public:
   /// \return true iff the given `Loc` is in a "-Wunsafe-buffer-usage" opt-out
@@ -2917,6 +2921,16 @@ public:
   /// \return true iff this PP is currently in a "-Wunsafe-buffer-usage"
   ///          opt-out region
   bool isPPInSafeBufferOptOutRegion(SourceLocation &StartLoc);
+
+  /// \return a sequence of SourceLocations representing ordered opt-out regions
+  /// specified by
+  /// `\#pragma clang unsafe_buffer_usage begin/end`s of this translation unit.
+  SmallVector<SourceLocation, 64> serializeSafeBufferOptOutMap() const;
+
+  /// \param SrcLocSeqs a sequence of SourceLocations deserialized from a
+  /// record of code `PP_UNSAFE_BUFFER_USAGE`.
+  void setDeserializedSafeBufferOptOutMap(
+      const SmallVectorImpl<SourceLocation> &SrcLocSeqs);
 
 private:
   /// Helper functions to forward lexing to the actual lexer. They all share the

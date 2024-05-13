@@ -1,0 +1,10 @@
+module safe_buffers_test_base {
+  header "base.h"
+}
+
+module safe_buffers_test_optout {
+  explicit module test_sub1 {  header "test_sub1.h" }
+  explicit module test_sub2 {  textual header "test_sub2.h" }
+  use safe_buffers_test_base
+}
+

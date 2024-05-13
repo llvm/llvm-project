@@ -58,6 +58,7 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Capacity.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -1483,26 +1484,41 @@ void Preprocessor::emitFinalMacroWarning(const Token &Identifier,
 }
 
 bool Preprocessor::isSafeBufferOptOut(const SourceManager &SourceMgr,
-                                           const SourceLocation &Loc) const {
-  // Try to find a region in `SafeBufferOptOutMap` where `Loc` is in:
-  auto FirstRegionEndingAfterLoc = llvm::partition_point(
-      SafeBufferOptOutMap,
-      [&SourceMgr,
-       &Loc](const std::pair<SourceLocation, SourceLocation> &Region) {
-        return SourceMgr.isBeforeInTranslationUnit(Region.second, Loc);
-      });
+                                      const SourceLocation &Loc) const {
+  // The lambda that tests if a `Loc` is in an opt-out region given one opt-out
+  // region map:
+  auto TestInMap = [&SourceMgr](const SafeBufferOptOutMapTy &Map,
+                                const SourceLocation &Loc) -> bool {
+    // Try to find a region in `SafeBufferOptOutMap` where `Loc` is in:
+    auto FirstRegionEndingAfterLoc = llvm::partition_point(
+        Map, [&SourceMgr,
+              &Loc](const std::pair<SourceLocation, SourceLocation> &Region) {
+          return SourceMgr.isBeforeInTranslationUnit(Region.second, Loc);
+        });
 
-  if (FirstRegionEndingAfterLoc != SafeBufferOptOutMap.end()) {
-    // To test if the start location of the found region precedes `Loc`:
-    return SourceMgr.isBeforeInTranslationUnit(FirstRegionEndingAfterLoc->first,
-                                               Loc);
-  }
-  // If we do not find a region whose end location passes `Loc`, we want to
-  // check if the current region is still open:
-  if (!SafeBufferOptOutMap.empty() &&
-      SafeBufferOptOutMap.back().first == SafeBufferOptOutMap.back().second)
-    return SourceMgr.isBeforeInTranslationUnit(SafeBufferOptOutMap.back().first,
-                                               Loc);
+    if (FirstRegionEndingAfterLoc != Map.end()) {
+      // To test if the start location of the found region precedes `Loc`:
+      return SourceMgr.isBeforeInTranslationUnit(
+          FirstRegionEndingAfterLoc->first, Loc);
+    }
+    // If we do not find a region whose end location passes `Loc`, we want to
+    // check if the current region is still open:
+    if (!Map.empty() && Map.back().first == Map.back().second)
+      return SourceMgr.isBeforeInTranslationUnit(Map.back().first, Loc);
+    return false;
+  };
+
+  if (SourceMgr.isLocalSourceLocation(Loc))
+    return TestInMap(SafeBufferOptOutMap, Loc);
+
+  // Expand macros (if any) until it gets to a file location:
+  SourceLocation FLoc = SourceMgr.getFileLoc(Loc);
+  FileID FlocFID = SourceMgr.getDecomposedLoc(FLoc).first;
+  auto LoadedMap = LoadedSafeBufferOptOutMap.find(FlocFID);
+
+  if (LoadedMap != LoadedSafeBufferOptOutMap.end())
+    return TestInMap(LoadedMap->getSecond(), Loc);
+  // FIXME: think out if this is unreachable?
   return false;
 }
 
@@ -1549,6 +1565,58 @@ bool Preprocessor::isPPInSafeBufferOptOutRegion() {
 bool Preprocessor::isPPInSafeBufferOptOutRegion(SourceLocation &StartLoc) {
   StartLoc = CurrentSafeBufferOptOutStart;
   return InSafeBufferOptOutRegion;
+}
+
+SmallVector<SourceLocation, 64>
+Preprocessor::serializeSafeBufferOptOutMap() const {
+  assert(!InSafeBufferOptOutRegion &&
+         "Attempt to serialize safe buffer opt-out regions before file being "
+         "completely preprocessed");
+
+  SmallVector<SourceLocation, 64> SrcSeq;
+
+  for (const auto &[begin, end] : SafeBufferOptOutMap) {
+    SrcSeq.push_back(begin);
+    SrcSeq.push_back(end);
+  }
+  // Only `SafeBufferOptOutMap` gets serialized. No need to serialize
+  // `LoadedSafeBufferOptOutMap` because if this TU loads a pch/module, every
+  // pch/module in the pch-chain/module-DAG will be loaded one by one in order.
+  // It means that for each loading pch/module m, it just needs to load m's own
+  // `SafeBufferOptOutMap`.
+  return SrcSeq;
+}
+
+void Preprocessor::setDeserializedSafeBufferOptOutMap(
+    const SmallVectorImpl<SourceLocation> &SourceLocations) {
+  auto It = SourceLocations.begin();
+
+  assert(SourceLocations.size() % 2 == 0 &&
+         "ill-formed SourceLocation sequence");
+  while (It != SourceLocations.end()) {
+    SourceLocation begin = *It++;
+    SourceLocation end = *It++;
+    SourceLocation FileLoc = SourceMgr.getFileLoc(begin);
+    FileID FID = SourceMgr.getDecomposedLoc(FileLoc).first;
+
+    if (FID.isInvalid()) {
+      // I suppose this should not happen:
+      assert(false && "Attempted to read a safe buffer opt-out region whose "
+                      "begin location is associated to an invalid File ID.");
+      break;
+    }
+    assert(!SourceMgr.isLocalFileID(FID) && "Expected a pch/module file");
+    // Here we assume that
+    // `SourceMgr.getFileLoc(begin) == SourceMgr.getFileLoc(end)`.
+    // Though it may not hold in very rare and strange cases, i.e., a pair of
+    // opt-out pragams written in different files but are always used in a way
+    // that they match in a TU (otherwise PP will complaint).
+    // FIXME: PP should complaint about cross file safe buffer opt-out pragmas.
+    assert(FID == SourceMgr.getDecomposedLoc(SourceMgr.getFileLoc(end)).first &&
+           "Maybe a safe buffer opt-out region starts and ends at different "
+           "files.");
+    LoadedSafeBufferOptOutMap[FID].emplace_back(begin, end);
+  }
 }
 
 ModuleLoader::~ModuleLoader() = default;
