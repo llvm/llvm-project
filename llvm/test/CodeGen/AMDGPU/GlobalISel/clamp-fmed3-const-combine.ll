@@ -17,6 +17,7 @@ define float @test_fmed3_f32_known_nnan_ieee_true(float %a) #0 {
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_mul_f32_e64 v0, v0, 2.0 clamp
+; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %fmul = fmul float %a, 2.0
   %fmed = call nnan float @llvm.amdgcn.fmed3.f32(float %fmul, float 0.0, float 1.0)
@@ -38,6 +39,7 @@ define half @test_fmed3_f16_known_nnan_ieee_false(half %a) #1 {
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_mul_f16_e64 v0, v0, 2.0 clamp
+; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %fmul = fmul half %a, 2.0
   %fmed = call nnan half @llvm.amdgcn.fmed3.f16(half %fmul, half 0.0, half 1.0)
@@ -63,6 +65,7 @@ define float @test_fmed3_non_SNaN_input_ieee_true_dx10clamp_true(float %a) #2 {
 ; GFX12-NEXT:    v_max_num_f32_e32 v0, v0, v0
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_min_num_f32_e64 v0, 0x41200000, v0 clamp
+; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %fmin = call float @llvm.minnum.f32(float %a, float 10.0)
   %fmed = call float @llvm.amdgcn.fmed3.f32(float %fmin, float 0.0, float 1.0)
@@ -85,6 +88,7 @@ define float @test_fmed3_maybe_SNaN_input_zero_third_operand_ieee_true_dx10clamp
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_mul_f32_e64 v0, v0, 2.0 clamp
+; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %fmul = fmul float %a, 2.0
   %fmed = call float @llvm.amdgcn.fmed3.f32(float %fmul, float 1.0, float 0.0)
@@ -108,6 +112,7 @@ define float @test_fmed3_global_nnan(float %a) #3 {
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_mul_f32_e64 v0, v0, 2.0 clamp
+; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %fmul = fmul float %a, 2.0
   %fmed = call float @llvm.amdgcn.fmed3.f32(float %fmul, float 0.0, float 1.0)
@@ -135,6 +140,7 @@ define float @test_fmed3_f32_maybe_NaN_ieee_false(float %a) #1 {
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_mul_f32_e64 v0, v0, 2.0 clamp
+; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %fmul = fmul float %a, 2.0
   %fmed = call float @llvm.amdgcn.fmed3.f32(float %fmul, float 1.0, float 0.0)
@@ -161,6 +167,7 @@ define float @test_fmed3_non_SNaN_input_ieee_true_dx10clamp_false(float %a) #4 {
 ; GFX12-NEXT:    v_max_num_f32_e32 v0, v0, v0
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_min_num_f32_e64 v0, 0x41200000, v0 clamp
+; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %fmin = call float @llvm.minnum.f32(float %a, float 10.0)
   %fmed = call float @llvm.amdgcn.fmed3.f32(float %fmin, float 0.0, float 1.0)
@@ -183,6 +190,7 @@ define float @test_fmed3_maybe_SNaN_input_ieee_true_dx10clamp_true(float %a) #2 
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_mul_f32_e64 v0, v0, 2.0 clamp
+; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %fmul = fmul float %a, 2.0
   %fmed = call float @llvm.amdgcn.fmed3.f32(float %fmul, float 0.0, float 1.0)

@@ -265,6 +265,10 @@ public:
   GCNSubtarget &initializeSubtargetDependencies(const Triple &TT,
                                                    StringRef GPU, StringRef FS);
 
+  /// Diagnose inconsistent subtarget features before attempting to codegen
+  /// function \p F.
+  void checkSubtargetFeatures(const Function &F) const;
+
   const SIInstrInfo *getInstrInfo() const override {
     return &InstrInfo;
   }
@@ -1241,6 +1245,8 @@ public:
   bool requiresCodeObjectV6() const { return RequiresCOV6; }
 
   bool hasVALUMaskWriteHazard() const { return getGeneration() == GFX11; }
+
+  bool hasVALUReadSGPRHazard() const { return getGeneration() == GFX12; }
 
   bool hasForceVALUThrottle() const { return HasForceVALUThrottle; }
 

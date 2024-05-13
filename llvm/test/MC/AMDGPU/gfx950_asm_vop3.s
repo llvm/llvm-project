@@ -74,3 +74,75 @@ v_bitop3_b16 v5, v1, v2, s3 bitop3:161
 // GFX940-ERR: error: instruction not supported on this GPU
 // GFX950: v_bitop3_b16 v5, v1, v2, s3 bitop3:0xa1 ; encoding: [0x05,0x04,0x33,0xd2,0x01,0x05,0x0e,0x30]
 // GFX12-ERR: error: instruction not supported on this GPU
+
+v_ashr_pk_i8_i32 v2, s4, v7, v8
+// GFX906-ERR: error: instruction not supported on this GPU
+// GFX940-ERR: error: instruction not supported on this GPU
+// GFX950: v_ashr_pk_i8_i32 v2, s4, v7, v8         ; encoding: [0x02,0x00,0x65,0xd2,0x04,0x0e,0x22,0x04]
+// GFX12-ERR: error: instruction not supported on this GPU
+
+v_ashr_pk_i8_i32 v2, v4, 0, 1
+// GFX906-ERR: error: instruction not supported on this GPU
+// GFX940-ERR: error: instruction not supported on this GPU
+// GFX950: v_ashr_pk_i8_i32 v2, v4, 0, 1           ; encoding: [0x02,0x00,0x65,0xd2,0x04,0x01,0x05,0x02]
+// GFX12-ERR: error: instruction not supported on this GPU
+
+v_ashr_pk_i8_i32 v2, v4, 3, s2
+// GFX906-ERR: error: instruction not supported on this GPU
+// GFX940-ERR: error: instruction not supported on this GPU
+// GFX950: v_ashr_pk_i8_i32 v2, v4, 3, s2          ; encoding: [0x02,0x00,0x65,0xd2,0x04,0x07,0x09,0x00]
+// GFX12-ERR: error: instruction not supported on this GPU
+
+v_ashr_pk_i8_i32 v2, s4, 4, v2
+// GFX906-ERR: error: instruction not supported on this GPU
+// GFX940-ERR: error: instruction not supported on this GPU
+// GFX950: v_ashr_pk_i8_i32 v2, s4, 4, v2          ; encoding: [0x02,0x00,0x65,0xd2,0x04,0x08,0x09,0x04]
+// GFX12-ERR: error: instruction not supported on this GPU
+
+v_ashr_pk_i8_i32 v2, v4, v7, 0.5
+// GFX906-ERR: error: instruction not supported on this GPU
+// GFX940-ERR: error: instruction not supported on this GPU
+// GFX950: v_ashr_pk_i8_i32 v2, v4, v7, 0.5        ; encoding: [0x02,0x00,0x65,0xd2,0x04,0x0f,0xc2,0x03]
+// GFX12-ERR: error: instruction not supported on this GPU
+
+v_ashr_pk_i8_i32 v1, v2, v3, v4 op_sel:[0,0,0,1]
+// GFX906-ERR: error: instruction not supported on this GPU
+// GFX940-ERR: error: instruction not supported on this GPU
+// GFX950: v_ashr_pk_i8_i32 v1, v2, v3, v4 op_sel:[0,0,0,1] ; encoding: [0x01,0x40,0x65,0xd2,0x02,0x07,0x12,0x04]
+// GFX12-ERR: error: instruction not supported on this GPU
+
+v_ashr_pk_u8_i32 v2, s4, v7, v8
+// GFX906-ERR: error: instruction not supported on this GPU
+// GFX940-ERR: error: instruction not supported on this GPU
+// GFX950: v_ashr_pk_u8_i32 v2, s4, v7, v8         ; encoding: [0x02,0x00,0x66,0xd2,0x04,0x0e,0x22,0x04]
+// GFX12-ERR: error: instruction not supported on this GPU
+
+v_ashr_pk_u8_i32 v2, v4, 0, 1
+// GFX906-ERR: error: instruction not supported on this GPU
+// GFX940-ERR: error: instruction not supported on this GPU
+// GFX950: v_ashr_pk_u8_i32 v2, v4, 0, 1           ; encoding: [0x02,0x00,0x66,0xd2,0x04,0x01,0x05,0x02]
+// GFX12-ERR: error: instruction not supported on this GPU
+
+v_ashr_pk_u8_i32 v2, v4, 3, s2
+// GFX906-ERR: error: instruction not supported on this GPU
+// GFX940-ERR: error: instruction not supported on this GPU
+// GFX950: v_ashr_pk_u8_i32 v2, v4, 3, s2          ; encoding: [0x02,0x00,0x66,0xd2,0x04,0x07,0x09,0x00]
+// GFX12-ERR: error: instruction not supported on this GPU
+
+v_ashr_pk_u8_i32 v2, s4, 4, v2
+// GFX906-ERR: error: instruction not supported on this GPU
+// GFX940-ERR: error: instruction not supported on this GPU
+// GFX950: v_ashr_pk_u8_i32 v2, s4, 4, v2          ; encoding: [0x02,0x00,0x66,0xd2,0x04,0x08,0x09,0x04]
+// GFX12-ERR: error: instruction not supported on this GPU
+
+v_ashr_pk_u8_i32 v2, v4, v7, -2.0
+// GFX906-ERR: error: instruction not supported on this GPU
+// GFX940-ERR: error: instruction not supported on this GPU
+// GFX950: v_ashr_pk_u8_i32 v2, v4, v7, -2.0       ; encoding: [0x02,0x00,0x66,0xd2,0x04,0x0f,0xd6,0x03]
+// GFX12-ERR: error: instruction not supported on this GPU
+
+v_ashr_pk_u8_i32 v1, v2, v3, v4 op_sel:[0,0,0,1]
+// GFX906-ERR: error: instruction not supported on this GPU
+// GFX940-ERR: error: instruction not supported on this GPU
+// GFX950: v_ashr_pk_u8_i32 v1, v2, v3, v4 op_sel:[0,0,0,1] ; encoding: [0x01,0x40,0x66,0xd2,0x02,0x07,0x12,0x04]
+// GFX12-ERR: error: instruction not supported on this GPU

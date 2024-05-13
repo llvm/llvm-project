@@ -875,10 +875,14 @@ class VOP3_DPPe_Common_Base<bits<10> op, VOPProfile P> : Enc96 {
   let Inst{9}     = !if(P.HasSrc1Mods, src1_modifiers{1}, 0);
   let Inst{10}    = !if(P.HasSrc2Mods, src2_modifiers{1}, 0);
   // OPSEL must be set such that the low result only uses low inputs, and the high result only uses high inputs.
-  let Inst{11} = !if(P.HasOpSel,!if(P.HasSrc0Mods, src0_modifiers{2}, 0),!if(P.IsFP8SrcByteSel, byte_sel{1}, ?));
-  let Inst{12} = !if(P.HasOpSel,!if(P.HasSrc1Mods, src1_modifiers{2}, 0),!if(P.IsFP8SrcByteSel, byte_sel{0}, ?));
-  let Inst{13} = !if(P.HasOpSel,!if(P.HasSrc2Mods, src2_modifiers{2}, 0),!if(P.IsFP8DstByteSel, byte_sel{0}, ?));
-  let Inst{14} = !if(P.HasOpSel,!if(P.HasSrc0Mods, src0_modifiers{3}, 0),!if(P.IsFP8DstByteSel, byte_sel{1}, ?));
+  let Inst{11} = !if(P.HasOpSel, !if(P.HasSrc0Mods, src0_modifiers{2}, 0),
+                                 !if(P.IsFP8SrcByteSel, byte_sel{1}, ?));
+  let Inst{12} = !if(P.HasOpSel, !if(P.HasSrc1Mods, src1_modifiers{2}, 0),
+                                 !if(P.IsFP8SrcByteSel, byte_sel{0}, ?));
+  let Inst{13} = !if(P.HasOpSel, !if(P.HasSrc2Mods, src2_modifiers{2}, 0),
+                                 !if(P.IsFP8DstByteSel, byte_sel{0}, ?));
+  let Inst{14} = !if(P.HasOpSel, !if(P.HasSrc0Mods, src0_modifiers{3}, 0),
+                                 !if(P.IsFP8DstByteSel, byte_sel{1}, ?));
   let Inst{15}    = !if(P.HasClamp, clamp, 0);
   let Inst{25-16} = op;
   let Inst{31-26} = 0x35;
@@ -1628,8 +1632,11 @@ multiclass VOP3_Real_with_name<GFXGen Gen, bits<10> op, string opName,
         VOP3e_gfx11_gfx12<op, ps.Pfl>;
     }
   }
-  if !ne(ps.Mnemonic, asmName) then
-    def Gen.Suffix#"_VOP3_alias" : MnemonicAlias<ps.Mnemonic, asmName>, Requires<[Gen.AssemblerPredicate]>, LetDummies;
+  if !ne(ps.Mnemonic, asmName) then {
+    def Gen.Suffix#"_VOP3_alias" : LetDummies, AMDGPUMnemonicAlias<ps.Mnemonic, asmName> {
+      let AssemblerPredicate = Gen.AssemblerPredicate;
+    }
+  }
 }
 
 multiclass VOP3_Real_with_name_gfx12_gfx13<
@@ -1880,7 +1887,9 @@ multiclass VOP3be_Real_with_name_gfx12_NO_DPP_gfx13<
                                 opName, asmName>;
   defm NAME : VOP3be_Real<GFX13Gen, op, opName, asmName,
                           !or(isSingle, ps.Pfl.IsSingle)>;
-  def : MnemonicAlias<ps.Mnemonic, asmName>, Requires<[isGFX12Plus]>;
+  def : AMDGPUMnemonicAlias<ps.Mnemonic, asmName> {
+    let AssemblerPredicate = isGFX12Plus;
+  }
 }
 
 multiclass VOP3_Realtriple_with_name_gfx12_gfx13<

@@ -11,7 +11,7 @@ define amdgpu_kernel void @test_workgroup_max_flat_id(ptr addrspace(1) %out) #1 
 ; CHECK-UNKNOWN:       ; %bb.0:
 ; CHECK-UNKNOWN-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
 ; CHECK-UNKNOWN-NEXT:    s_bfe_u32 s2, ttmp6, 0x40018
-; CHECK-UNKNOWN-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; CHECK-UNKNOWN-NEXT:    s_wait_alu 0xfffe
 ; CHECK-UNKNOWN-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
 ; CHECK-UNKNOWN-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-UNKNOWN-NEXT:    global_store_b32 v0, v1, s[0:1]
@@ -90,7 +90,7 @@ define amdgpu_kernel void @test_workgroup_max_flat_id(ptr addrspace(1) %out) #1 
 ; CHECK-MESA3D-NEXT:  ; %bb.0:
 ; CHECK-MESA3D-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
 ; CHECK-MESA3D-NEXT:    s_bfe_u32 s2, ttmp6, 0x40018
-; CHECK-MESA3D-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; CHECK-MESA3D-NEXT:    s_wait_alu 0xfffe
 ; CHECK-MESA3D-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
 ; CHECK-MESA3D-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-MESA3D-NEXT:    global_store_b32 v0, v1, s[0:1]
@@ -101,7 +101,7 @@ define amdgpu_kernel void @test_workgroup_max_flat_id(ptr addrspace(1) %out) #1 
 ; CHECK-G-UNKNOWN:       ; %bb.0:
 ; CHECK-G-UNKNOWN-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
 ; CHECK-G-UNKNOWN-NEXT:    s_bfe_u32 s2, ttmp6, 0x40018
-; CHECK-G-UNKNOWN-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; CHECK-G-UNKNOWN-NEXT:    s_wait_alu 0xfffe
 ; CHECK-G-UNKNOWN-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v0, s2
 ; CHECK-G-UNKNOWN-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-G-UNKNOWN-NEXT:    global_store_b32 v1, v0, s[0:1]
@@ -180,7 +180,7 @@ define amdgpu_kernel void @test_workgroup_max_flat_id(ptr addrspace(1) %out) #1 
 ; CHECK-G-MESA3D-NEXT:  ; %bb.0:
 ; CHECK-G-MESA3D-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
 ; CHECK-G-MESA3D-NEXT:    s_bfe_u32 s2, ttmp6, 0x40018
-; CHECK-G-MESA3D-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; CHECK-G-MESA3D-NEXT:    s_wait_alu 0xfffe
 ; CHECK-G-MESA3D-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v0, s2
 ; CHECK-G-MESA3D-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-G-MESA3D-NEXT:    global_store_b32 v1, v0, s[0:1]

@@ -401,16 +401,16 @@ def FeatureFP6BF6ConversionScaleInsts : SubtargetFeature<"fp6bf6-cvt-scale-insts
   "Has fp6 and bf6 conversion scale instructions"
 >;
 
-def FeatureAshrPkInsts : SubtargetFeature<"ashr-pk-insts",
-  "HasAshrPkInsts",
-  "true",
-  "Has Arithmetic Shift Pack instructions"
->;
-
 def FeatureF16BF16ToFP6BF6ConversionScaleInsts : SubtargetFeature<"f16bf16-to-fp6bf6-cvt-scale-insts",
   "HasF16BF16ToFP6BF6ConversionScaleInsts",
   "true",
   "Has f16bf16 to fp6bf6 conversion scale instructions"
+>;
+
+def FeatureAshrPkInsts : SubtargetFeature<"ashr-pk-insts",
+  "HasAshrPkInsts",
+  "true",
+  "Has Arithmetic Shift Pack instructions"
 >;
 
 def FeatureGFX950Insts : SubtargetFeature<"gfx950-insts",
@@ -2266,7 +2266,8 @@ def Has16BitInsts : Predicate<"Subtarget->has16BitInsts()">,
 
 def HasTrue16BitInsts : Predicate<"Subtarget->hasTrue16BitInsts()">,
   AssemblerPredicate<(all_of FeatureTrue16BitInsts)>;
-def NotHasTrue16BitInsts : True16PredicateClass<"!Subtarget->hasTrue16BitInsts()">;
+def NotHasTrue16BitInsts : True16PredicateClass<"!Subtarget->hasTrue16BitInsts()">,
+  AssemblerPredicate<(all_of (not FeatureTrue16BitInsts))>;
 
 // Control use of True16 instructions. The real True16 instructions are
 // True16 instructions as they are defined in the ISA. Fake True16
@@ -2275,7 +2276,10 @@ def NotHasTrue16BitInsts : True16PredicateClass<"!Subtarget->hasTrue16BitInsts()
 def UseRealTrue16Insts : True16PredicateClass<"Subtarget->useRealTrue16Insts()">,
   AssemblerPredicate<(all_of FeatureTrue16BitInsts, FeatureRealTrue16Insts)>;
 def UseFakeTrue16Insts : True16PredicateClass<"Subtarget->hasTrue16BitInsts() && "
-                                              "!Subtarget->useRealTrue16Insts()">;
+                                              "!Subtarget->useRealTrue16Insts()">,
+  AssemblerPredicate<(all_of FeatureTrue16BitInsts)>;
+  // FIXME When we default to RealTrue16 instead of Fake, change the line as follows.
+  // AssemblerPredicate<(all_of FeatureTrue16BitInsts, (not FeatureRealTrue16Insts))>;
 
 def HasBF16TransInsts : Predicate<"Subtarget->hasBF16TransInsts()">,
   AssemblerPredicate<(all_of FeatureBF16TransInsts)>;

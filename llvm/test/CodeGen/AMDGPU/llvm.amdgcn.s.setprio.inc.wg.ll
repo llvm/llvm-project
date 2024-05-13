@@ -18,6 +18,7 @@ define void @test_llvm.amdgcn.s.setprio.inc.wg() #0 {
 ; GCN-NEXT:    s_setprio_inc_wg 0 ; encoding: [0x00,0x00,0xbe,0xbf]
 ; GCN-NEXT:    s_setprio_inc_wg 1 ; encoding: [0x01,0x00,0xbe,0xbf]
 ; GCN-NEXT:    s_setprio_inc_wg -1 ; encoding: [0xff,0xff,0xbe,0xbf]
+; GCN-NEXT:    s_wait_alu 0xfffe ; encoding: [0xfe,0xff,0x88,0xbf]
 ; GCN-NEXT:    s_setpc_b64 s[30:31] ; encoding: [0x1e,0x48,0x80,0xbe]
   call void @llvm.amdgcn.s.setprio.inc.wg(i16 0)
   call void @llvm.amdgcn.s.setprio.inc.wg(i16 1)

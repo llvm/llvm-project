@@ -939,8 +939,10 @@ genBodyOfTargetOp(Fortran::lower::AbstractConverter &converter,
         std::stringstream name;
         firOpBuilder.setInsertionPoint(targetOp);
         mlir::Value mapOp = createMapInfoOp(
-            firOpBuilder, copyVal.getLoc(), copyVal, mlir::Value{}, name.str(),
-            bounds, llvm::SmallVector<mlir::Value>{},
+            firOpBuilder, copyVal.getLoc(), copyVal,
+            /*varPtrPtr=*/mlir::Value{}, name.str(), bounds,
+            /*members=*/llvm::SmallVector<mlir::Value>{},
+            /*membersIndex=*/mlir::DenseIntElementsAttr{},
             static_cast<
                 std::underlying_type_t<llvm::omp::OpenMPOffloadMappingFlags>>(
                 llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_IMPLICIT),
@@ -1439,13 +1441,18 @@ genParallelOp(Fortran::lower::AbstractConverter &converter,
         reductionSyms;
     allSymbols.append(privateSyms);
     for (auto [arg, prv] : llvm::zip_equal(allSymbols, region.getArguments())) {
-      converter.bindSymbol(*arg, prv);
+      fir::ExtendedValue hostExV = converter.getSymbolExtendedValue(*arg);
+      converter.bindSymbol(*arg, hlfir::translateToExtendedValue(
+                                     loc, firOpBuilder, hlfir::Entity{prv},
+                                     /*contiguousHint=*/
+                                     Fortran::evaluate::IsSimplyContiguous(
+                                         *arg, converter.getFoldingContext()))
+                                     .first);
     }
 
     return allSymbols;
   };
 
-  // TODO Merge with the reduction CB.
   genInfo.setGenRegionEntryCb(genRegionEntryCB).setDataSharingProcessor(&dsp);
   return genOpWithBody<mlir::omp::ParallelOp>(genInfo, clauseOps);
 }
@@ -1455,14 +1462,11 @@ genSectionOp(Fortran::lower::AbstractConverter &converter,
              Fortran::lower::SymMap &symTable,
              Fortran::semantics::SemanticsContext &semaCtx,
              Fortran::lower::pft::Evaluation &eval, bool genNested,
-             mlir::Location loc, const List<Clause> &clauses) {
-  // Currently only private/firstprivate clause is handled, and
-  // all privatization is done within `omp.section` operations.
+             mlir::Location loc) {
   return genOpWithBody<mlir::omp::SectionOp>(
       OpWithBodyGenInfo(converter, symTable, semaCtx, loc, eval,
                         llvm::omp::Directive::OMPD_section)
-          .setGenNested(genNested)
-          .setClauses(&clauses));
+          .setGenNested(genNested));
 }
 
 static mlir::omp::SectionsOp
@@ -1635,8 +1639,9 @@ genTargetOp(Fortran::lower::AbstractConverter &converter,
         }
 
         mlir::Value mapOp = createMapInfoOp(
-            firOpBuilder, baseOp.getLoc(), baseOp, mlir::Value{}, name.str(),
-            bounds, {},
+            firOpBuilder, baseOp.getLoc(), baseOp, /*varPtrPtr=*/mlir::Value{},
+            name.str(), bounds, /*members=*/{},
+            /*membersIndex=*/mlir::DenseIntElementsAttr{},
             static_cast<
                 std::underlying_type_t<llvm::omp::OpenMPOffloadMappingFlags>>(
                 mapFlag),
@@ -2473,22 +2478,60 @@ genOMP(Fortran::lower::AbstractConverter &converter,
                   /*outerCombined=*/true);
   }
 
+  // Insert privatizations before SECTIONS
+  symTable.pushScope();
+  DataSharingProcessor dsp(converter, semaCtx, clauses, eval);
+  dsp.processStep1();
+
   // SECTIONS construct.
-  genSectionsOp(converter, symTable, semaCtx, eval, currentLocation, clauseOps);
+  mlir::omp::SectionsOp sectionsOp = genSectionsOp(
+      converter, symTable, semaCtx, eval, currentLocation, clauseOps);
 
   // Generate nested SECTION operations recursively.
   const auto &sectionBlocks =
       std::get<Fortran::parser::OmpSectionBlocks>(sectionsConstruct.t);
   auto &firOpBuilder = converter.getFirOpBuilder();
   auto ip = firOpBuilder.saveInsertionPoint();
+  mlir::omp::SectionOp lastSectionOp;
   for (const auto &[nblock, neval] :
        llvm::zip(sectionBlocks.v, eval.getNestedEvaluations())) {
     symTable.pushScope();
-    genSectionOp(converter, symTable, semaCtx, neval, /*genNested=*/true,
-                 currentLocation, clauses);
+    lastSectionOp = genSectionOp(converter, symTable, semaCtx, neval,
+                                 /*genNested=*/true, currentLocation);
     symTable.popScope();
     firOpBuilder.restoreInsertionPoint(ip);
   }
+
+  // For `omp.sections`, lastprivatized variables occur in
+  // lexically final `omp.section` operation.
+  bool hasLastPrivate = false;
+  if (lastSectionOp) {
+    for (const Clause &clause : clauses) {
+      if (const auto *lastPrivate =
+              std::get_if<clause::Lastprivate>(&clause.u)) {
+        hasLastPrivate = true;
+        firOpBuilder.setInsertionPoint(
+            lastSectionOp.getRegion().back().getTerminator());
+        mlir::OpBuilder::InsertPoint lastPrivIP =
+            converter.getFirOpBuilder().saveInsertionPoint();
+        const auto &objList = std::get<1>(lastPrivate->t);
+        for (const Object &obj : objList) {
+          Fortran::semantics::Symbol *sym = obj.id();
+          converter.copyHostAssociateVar(*sym, &lastPrivIP);
+        }
+      }
+    }
+  }
+
+  // Perform DataSharingProcessor's step2 out of SECTIONS
+  firOpBuilder.setInsertionPointAfter(sectionsOp.getOperation());
+  dsp.processStep2(sectionsOp, false);
+  // Emit implicit barrier to synchronize threads and avoid data
+  // races on post-update of lastprivate variables when `nowait`
+  // clause is present.
+  if (clauseOps.nowaitAttr && hasLastPrivate)
+    firOpBuilder.create<mlir::omp::BarrierOp>(converter.getCurrentLocation());
+  symTable.popScope();
 }
 
 static void genOMP(Fortran::lower::AbstractConverter &converter,

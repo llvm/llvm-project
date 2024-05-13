@@ -1297,13 +1297,14 @@ class Base_DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<bits<8> op, DS_Pseudo ps, i
 
 multiclass DS_Real_gfx12<bits<8> op, string name = !tolower(NAME), bit needAlias = true> {
   defvar ps = !cast<DS_Pseudo>(NAME);
-  let AssemblerPredicate = isGFX12Only, DecoderNamespace = "GFX12" in
-    def _gfx12 :
-      Base_DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<op, ps,
-                                                     SIEncodingFamily.GFX12,
-                                                     name, /*hasGDS=*/false>;
-  if !and(needAlias, !ne(ps.Mnemonic, name)) then
-    def : MnemonicAlias<ps.Mnemonic, name>, Requires<[isGFX12Only]>;
+  let AssemblerPredicate = isGFX12Only in {
+    let DecoderNamespace = "GFX12" in
+      def _gfx12 :
+        Base_DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<op, ps, SIEncodingFamily.GFX12,
+                                                       name, /*hasGDS=*/false>;
+    if !and(needAlias, !ne(ps.Mnemonic, name)) then
+      def : AMDGPUMnemonicAlias<ps.Mnemonic, name>;
+  } // End AssemblerPredicate
 }
 
 multiclass DS_Real_gfx13<bits<8> op, string name = !tolower(NAME)> {
@@ -1354,10 +1355,12 @@ defm DS_ATOMIC_ASYNC_BARRIER_ARRIVE_B64 : DS_Real_gfx12<0x056>;
 defm DS_ATOMIC_BARRIER_ARRIVE_RTN_B64   : DS_Real_gfx12<0x075>;
 
 // New aliases added in GFX12 without renaming the instructions.
-def : MnemonicAlias<"ds_subrev_u32", "ds_rsub_u32">, Requires<[isGFX12Plus]>;
-def : MnemonicAlias<"ds_subrev_rtn_u32", "ds_rsub_rtn_u32">, Requires<[isGFX12Plus]>;
-def : MnemonicAlias<"ds_subrev_u64", "ds_rsub_u64">, Requires<[isGFX12Plus]>;
-def : MnemonicAlias<"ds_subrev_rtn_u64", "ds_rsub_rtn_u64">, Requires<[isGFX12Plus]>;
+let AssemblerPredicate = isGFX12Plus in {
+  def : AMDGPUMnemonicAlias<"ds_subrev_u32", "ds_rsub_u32">;
+  def : AMDGPUMnemonicAlias<"ds_subrev_rtn_u32", "ds_rsub_rtn_u32">;
+  def : AMDGPUMnemonicAlias<"ds_subrev_u64", "ds_rsub_u64">;
+  def : AMDGPUMnemonicAlias<"ds_subrev_rtn_u64", "ds_rsub_rtn_u64">;
+}
 
 // Aliases that have existed since these instructions were introduced.
 def : MnemonicAlias<"ds_load_tr_b64", "ds_load_tr8_b64">, Requires<[isGFX12_10Plus]>;
@@ -1369,13 +1372,14 @@ def : MnemonicAlias<"ds_load_tr_b128", "ds_load_tr16_b128">, Requires<[isGFX12_1
 
 multiclass DS_Real_gfx11<bits<8> op, string name = !tolower(NAME)> {
   defvar ps = !cast<DS_Pseudo>(NAME);
-  let AssemblerPredicate = isGFX11Only, DecoderNamespace = "GFX11" in
-    def _gfx11 :
-      Base_DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<op, !cast<DS_Pseudo>(NAME),
-                                                     SIEncodingFamily.GFX11,
-                                                     name>;
-  if !ne(ps.Mnemonic, name) then
-    def : MnemonicAlias<ps.Mnemonic, name>, Requires<[isGFX11Only]>;
+  let AssemblerPredicate = isGFX11Only in {
+    let DecoderNamespace = "GFX11" in
+      def _gfx11 :
+        Base_DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<op, ps, SIEncodingFamily.GFX11,
+                                                       name>;
+    if !ne(ps.Mnemonic, name) then
+      def : AMDGPUMnemonicAlias<ps.Mnemonic, name>;
+  } // End AssemblerPredicate
 }
 
 multiclass DS_Real_gfx11_gfx12<bits<8> op, string name = !tolower(NAME)>

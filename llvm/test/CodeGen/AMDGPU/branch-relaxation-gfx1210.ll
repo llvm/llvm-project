@@ -110,7 +110,7 @@ define amdgpu_kernel void @uniform_conditional_min_long_forward_vcnd_branch(ptr 
 ; GCN-NEXT:    s_wait_kmcnt 0x0
 ; GCN-NEXT:    s_cmp_eq_f32 s2, 0
 ; GCN-NEXT:    s_cselect_b32 s3, -1, 0
-; GCN-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GCN-NEXT:    s_wait_alu 0xfffe
 ; GCN-NEXT:    s_and_b32 vcc_lo, exec_lo, s3
 ; GCN-NEXT:    s_cbranch_vccz .LBB2_1
 ; GCN-NEXT:  ; %bb.3: ; %bb0
@@ -175,6 +175,7 @@ define amdgpu_kernel void @min_long_forward_vbranch(ptr addrspace(1) %arg) #0 {
 ; GCN-NEXT:    s_sleep 0
 ; GCN-NEXT:    s_sleep 0
 ; GCN-NEXT:  .LBB3_2: ; %bb3
+; GCN-NEXT:    s_wait_alu 0xfffe
 ; GCN-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GCN-NEXT:    global_store_b32 v[0:1], v2, off scope:SCOPE_SYS
 ; GCN-NEXT:    s_wait_storecnt 0x0
@@ -207,12 +208,13 @@ define amdgpu_kernel void @long_backward_sbranch(ptr addrspace(1) %arg) #0 {
 ; GCN-NEXT:    s_mov_b32 s0, 0
 ; GCN-NEXT:  .LBB4_1: ; %bb2
 ; GCN-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GCN-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GCN-NEXT:    s_wait_alu 0xfffe
 ; GCN-NEXT:    s_add_co_i32 s0, s0, 1
 ; GCN-NEXT:    ;;#ASMSTART
 ; GCN-NEXT:    v_nop_e64
 ; GCN-NEXT:    v_nop_e64
 ; GCN-NEXT:    ;;#ASMEND
+; GCN-NEXT:    s_wait_alu 0xfffe
 ; GCN-NEXT:    s_cmp_lt_i32 s0, 10
 ; GCN-NEXT:    s_cbranch_scc0 .LBB4_2
 ; GCN-NEXT:  ; %bb.3: ; %bb2
@@ -253,6 +255,7 @@ define amdgpu_kernel void @uniform_unconditional_min_long_forward_branch(ptr add
 ; GCN-NEXT:    s_add_pc_i64 .LBB5_4-.Lpost_addpc6
 ; GCN-NEXT:  .Lpost_addpc6:
 ; GCN-NEXT:  .LBB5_1: ; %Flow
+; GCN-NEXT:    s_wait_alu 0xfffe
 ; GCN-NEXT:    s_and_not1_b32 vcc_lo, exec_lo, s2
 ; GCN-NEXT:    s_cbranch_vccnz .LBB5_3
 ; GCN-NEXT:  .LBB5_2: ; %bb2
@@ -345,7 +348,7 @@ define amdgpu_kernel void @expand_requires_expand(i32 %cond0) #0 {
 ; GCN-NEXT:    s_wait_kmcnt 0x0
 ; GCN-NEXT:    s_cmp_lt_i32 s0, 0
 ; GCN-NEXT:    s_cselect_b32 s0, -1, 0
-; GCN-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GCN-NEXT:    s_wait_alu 0xfffe
 ; GCN-NEXT:    s_and_b32 vcc_lo, exec_lo, s0
 ; GCN-NEXT:    s_cbranch_vccnz .LBB7_2
 ; GCN-NEXT:  ; %bb.1: ; %bb1
@@ -354,7 +357,7 @@ define amdgpu_kernel void @expand_requires_expand(i32 %cond0) #0 {
 ; GCN-NEXT:    s_cmp_lg_u32 s0, 3
 ; GCN-NEXT:    s_cselect_b32 s0, -1, 0
 ; GCN-NEXT:  .LBB7_2: ; %Flow
-; GCN-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GCN-NEXT:    s_wait_alu 0xfffe
 ; GCN-NEXT:    s_and_not1_b32 vcc_lo, exec_lo, s0
 ; GCN-NEXT:    s_cbranch_vccz .LBB7_3
 ; GCN-NEXT:  ; %bb.5: ; %Flow
@@ -425,6 +428,7 @@ define amdgpu_kernel void @uniform_inside_divergent(ptr addrspace(1) %out, i32 %
 ; GCN-NEXT:    v_mov_b32_e32 v1, 1
 ; GCN-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GCN-NEXT:  .LBB8_3: ; %endif
+; GCN-NEXT:    s_wait_alu 0xfffe
 ; GCN-NEXT:    s_or_b32 exec_lo, exec_lo, s3
 ; GCN-NEXT:    s_sleep 5
 ; GCN-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
@@ -460,6 +464,7 @@ define amdgpu_kernel void @analyze_mask_branch() #0 {
 ; GCN-NEXT:    v_mov_b32_e64 v0, 0
 ; GCN-NEXT:    ;;#ASMEND
 ; GCN-NEXT:    v_cmpx_nlt_f32_e32 0, v0
+; GCN-NEXT:    s_wait_alu 0xfffe
 ; GCN-NEXT:    s_xor_b32 s0, exec_lo, s0
 ; GCN-NEXT:    s_cbranch_execz .LBB9_2
 ; GCN-NEXT:  ; %bb.1: ; %ret
@@ -467,6 +472,7 @@ define amdgpu_kernel void @analyze_mask_branch() #0 {
 ; GCN-NEXT:    global_store_b32 v[0:1], v0, off scope:SCOPE_SYS
 ; GCN-NEXT:    s_wait_storecnt 0x0
 ; GCN-NEXT:  .LBB9_2: ; %Flow1
+; GCN-NEXT:    s_wait_alu 0xfffe
 ; GCN-NEXT:    s_and_not1_saveexec_b32 s0, s0
 ; GCN-NEXT:    s_cbranch_execnz .LBB9_3
 ; GCN-NEXT:  ; %bb.6: ; %Flow1
@@ -536,12 +542,14 @@ define amdgpu_kernel void @long_branch_hang(ptr addrspace(1) nocapture %arg, i32
 ; GCN-NEXT:    s_add_pc_i64 .LBB10_4-.Lpost_addpc14
 ; GCN-NEXT:  .Lpost_addpc14:
 ; GCN-NEXT:  .LBB10_1: ; %Flow
+; GCN-NEXT:    s_wait_alu 0xfffe
 ; GCN-NEXT:    s_and_not1_b32 vcc_lo, exec_lo, s4
 ; GCN-NEXT:    s_cbranch_vccnz .LBB10_2
 ; GCN-NEXT:  ; %bb.12: ; %Flow
 ; GCN-NEXT:    s_add_pc_i64 .LBB10_5-.Lpost_addpc15
 ; GCN-NEXT:  .Lpost_addpc15:
 ; GCN-NEXT:  .LBB10_2: ; %Flow5
+; GCN-NEXT:    s_wait_alu 0xfffe
 ; GCN-NEXT:    s_and_not1_b32 vcc_lo, exec_lo, s3
 ; GCN-NEXT:    s_cbranch_vccz .LBB10_3
 ; GCN-NEXT:  ; %bb.14: ; %Flow5
@@ -552,10 +560,11 @@ define amdgpu_kernel void @long_branch_hang(ptr addrspace(1) nocapture %arg, i32
 ; GCN-NEXT:    s_cselect_b32 s3, -1, 0
 ; GCN-NEXT:    s_cmp_lt_i32 s6, s7
 ; GCN-NEXT:    s_cselect_b32 s4, -1, 0
-; GCN-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; GCN-NEXT:    s_wait_alu 0xfffe
 ; GCN-NEXT:    s_or_b32 s3, s4, s3
+; GCN-NEXT:    s_wait_alu 0xfffe
 ; GCN-NEXT:    s_and_b32 s2, s2, s3
-; GCN-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GCN-NEXT:    s_wait_alu 0xfffe
 ; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s2
 ; GCN-NEXT:  ; %bb.8: ; %bb14
 ; GCN-NEXT:    s_add_pc_i64 .LBB10_7-.Lpost_addpc13
@@ -566,6 +575,7 @@ define amdgpu_kernel void @long_branch_hang(ptr addrspace(1) nocapture %arg, i32
 ; GCN-NEXT:    v_nop_e64
 ; GCN-NEXT:    ;;#ASMEND
 ; GCN-NEXT:    s_sleep 0
+; GCN-NEXT:    s_wait_alu 0xfffe
 ; GCN-NEXT:    s_mov_b32 s3, s8
 ; GCN-NEXT:    s_sleep 0
 ; GCN-NEXT:    s_cbranch_execz .LBB10_5
@@ -577,8 +587,9 @@ define amdgpu_kernel void @long_branch_hang(ptr addrspace(1) nocapture %arg, i32
 ; GCN-NEXT:    s_cselect_b32 s3, -1, 0
 ; GCN-NEXT:    s_cmp_ge_i32 s6, s7
 ; GCN-NEXT:    s_cselect_b32 s4, -1, 0
-; GCN-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; GCN-NEXT:    s_wait_alu 0xfffe
 ; GCN-NEXT:    s_and_b32 s3, s4, s3
+; GCN-NEXT:    s_wait_alu 0xfffe
 ; GCN-NEXT:    s_and_not1_b32 vcc_lo, exec_lo, s3
 ; GCN-NEXT:    s_cbranch_vccnz .LBB10_6
 ; GCN-NEXT:  ; %bb.18: ; %bb9
@@ -593,7 +604,7 @@ define amdgpu_kernel void @long_branch_hang(ptr addrspace(1) nocapture %arg, i32
 ; GCN-NEXT:    v_mov_b32_e32 v1, 0
 ; GCN-NEXT:    s_wait_kmcnt 0x0
 ; GCN-NEXT:    s_lshl_b64 s[2:3], s[2:3], 2
-; GCN-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GCN-NEXT:    s_wait_alu 0xfffe
 ; GCN-NEXT:    s_add_nc_u64 s[0:1], s[0:1], s[2:3]
 ; GCN-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GCN-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)

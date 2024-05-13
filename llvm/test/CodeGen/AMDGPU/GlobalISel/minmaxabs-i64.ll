@@ -18,6 +18,7 @@ define i64 @test_umin_i64(i64 %a, i64 %b) {
 ; CHECK-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-NEXT:    v_min_u64 v[0:1], v[0:1], v[2:3]
+; CHECK-NEXT:    s_wait_alu 0xfffe
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %r = call i64 @llvm.umin.i64(i64 %a, i64 %b)
   ret i64 %r
@@ -29,6 +30,7 @@ define i64 @test_umax_i64(i64 %a, i64 %b) {
 ; CHECK-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-NEXT:    v_max_u64 v[0:1], v[0:1], v[2:3]
+; CHECK-NEXT:    s_wait_alu 0xfffe
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %r = call i64 @llvm.umax.i64(i64 %a, i64 %b)
   ret i64 %r
@@ -40,6 +42,7 @@ define i64 @test_smin_i64(i64 %a, i64 %b) {
 ; CHECK-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-NEXT:    v_min_i64 v[0:1], v[0:1], v[2:3]
+; CHECK-NEXT:    s_wait_alu 0xfffe
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %r = call i64 @llvm.smin.i64(i64 %a, i64 %b)
   ret i64 %r
@@ -51,6 +54,7 @@ define i64 @test_smax_i64(i64 %a, i64 %b) {
 ; CHECK-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-NEXT:    v_max_i64 v[0:1], v[0:1], v[2:3]
+; CHECK-NEXT:    s_wait_alu 0xfffe
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %r = call i64 @llvm.smax.i64(i64 %a, i64 %b)
   ret i64 %r
@@ -65,6 +69,7 @@ define <4 x i64> @test_umin_v4i64(<4 x i64> %a, <4 x i64> %b) {
 ; CHECK-NEXT:    v_min_u64 v[2:3], v[2:3], v[10:11]
 ; CHECK-NEXT:    v_min_u64 v[4:5], v[4:5], v[12:13]
 ; CHECK-NEXT:    v_min_u64 v[6:7], v[6:7], v[14:15]
+; CHECK-NEXT:    s_wait_alu 0xfffe
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %r = call <4 x i64> @llvm.umin.v4i64(<4 x i64> %a, <4 x i64> %b)
   ret <4 x i64> %r
@@ -79,6 +84,7 @@ define <4 x i64> @test_umax_v4i64(<4 x i64> %a, <4 x i64> %b) {
 ; CHECK-NEXT:    v_max_u64 v[2:3], v[2:3], v[10:11]
 ; CHECK-NEXT:    v_max_u64 v[4:5], v[4:5], v[12:13]
 ; CHECK-NEXT:    v_max_u64 v[6:7], v[6:7], v[14:15]
+; CHECK-NEXT:    s_wait_alu 0xfffe
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %r = call <4 x i64> @llvm.umax.v4i64(<4 x i64> %a, <4 x i64> %b)
   ret <4 x i64> %r
@@ -93,6 +99,7 @@ define <4 x i64> @test_smin_v4i64(<4 x i64> %a, <4 x i64> %b) {
 ; CHECK-NEXT:    v_min_i64 v[2:3], v[2:3], v[10:11]
 ; CHECK-NEXT:    v_min_i64 v[4:5], v[4:5], v[12:13]
 ; CHECK-NEXT:    v_min_i64 v[6:7], v[6:7], v[14:15]
+; CHECK-NEXT:    s_wait_alu 0xfffe
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %r = call <4 x i64> @llvm.smin.v4i64(<4 x i64> %a, <4 x i64> %b)
   ret <4 x i64> %r
@@ -107,6 +114,7 @@ define <4 x i64> @test_smax_v4i64(<4 x i64> %a, <4 x i64> %b) {
 ; CHECK-NEXT:    v_max_i64 v[2:3], v[2:3], v[10:11]
 ; CHECK-NEXT:    v_max_i64 v[4:5], v[4:5], v[12:13]
 ; CHECK-NEXT:    v_max_i64 v[6:7], v[6:7], v[14:15]
+; CHECK-NEXT:    s_wait_alu 0xfffe
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %r = call <4 x i64> @llvm.smax.v4i64(<4 x i64> %a, <4 x i64> %b)
   ret <4 x i64> %r
@@ -124,6 +132,7 @@ define i64 @test_abs_i64(i64 %a) {
 ; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; CHECK-NEXT:    v_xor_b32_e32 v0, v0, v2
 ; CHECK-NEXT:    v_xor_b32_e32 v1, v1, v2
+; CHECK-NEXT:    s_wait_alu 0xfffe
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %r = call i64 @llvm.abs.i64(i64 %a, i1 0)
   ret i64 %r

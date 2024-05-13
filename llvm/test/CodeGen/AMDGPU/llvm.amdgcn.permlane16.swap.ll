@@ -25,6 +25,7 @@ define i32 @v_permlane16_swap_b32_vv(i32 %old, i32 %src0) {
 ; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-NEXT:    v_permlane16_swap_b32_e32 v0, v1
+; GFX1210-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-NEXT:    s_setpc_b64 s[30:31]
   %v = call i32 @llvm.amdgcn.permlane16.swap(i32 %old, i32 %src0, i1 false, i1 false)
   ret i32 %v
@@ -46,6 +47,7 @@ define i32 @v_permlane16_swap_b32_vi(i32 %old) {
 ; GFX1210-NEXT:    v_mov_b32_e32 v1, 1
 ; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1210-NEXT:    v_permlane16_swap_b32_e32 v0, v1
+; GFX1210-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-NEXT:    s_setpc_b64 s[30:31]
   %v = call i32 @llvm.amdgcn.permlane16.swap(i32 %old, i32 1, i1 false, i1 false)
   ret i32 %v
@@ -67,6 +69,7 @@ define i32 @v_permlane16_swap_b32_vl(i32 %old) {
 ; GFX1210-NEXT:    v_mov_b32_e32 v1, 0xc1d1
 ; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1210-NEXT:    v_permlane16_swap_b32_e32 v0, v1
+; GFX1210-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-NEXT:    s_setpc_b64 s[30:31]
   %v = call i32 @llvm.amdgcn.permlane16.swap(i32 %old, i32 49617, i1 false, i1 false)
   ret i32 %v
@@ -90,6 +93,7 @@ define i32 @v_permlane16_swap_b32_iv(i32 %src0) {
 ; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1210-NEXT:    v_permlane16_swap_b32_e32 v1, v0
 ; GFX1210-NEXT:    v_mov_b32_e32 v0, v1
+; GFX1210-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-NEXT:    s_setpc_b64 s[30:31]
   %v = call i32 @llvm.amdgcn.permlane16.swap(i32 1, i32 %src0, i1 false, i1 false)
   ret i32 %v
@@ -112,6 +116,7 @@ define i32 @v_permlane16_swap_b32_ss(i32 inreg %old, i32 inreg %src0) {
 ; GFX1210-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1210-NEXT:    v_permlane16_swap_b32_e32 v0, v1
+; GFX1210-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-NEXT:    s_setpc_b64 s[30:31]
   %v = call i32 @llvm.amdgcn.permlane16.swap(i32 %old, i32 %src0, i1 false, i1 false)
   ret i32 %v
@@ -135,6 +140,7 @@ define i32 @v_permlane16_swap_b32_sv(i32 inreg %old, i32 %src0) {
 ; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1210-NEXT:    v_permlane16_swap_b32_e32 v1, v0
 ; GFX1210-NEXT:    v_mov_b32_e32 v0, v1
+; GFX1210-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-NEXT:    s_setpc_b64 s[30:31]
   %v = call i32 @llvm.amdgcn.permlane16.swap(i32 %old, i32 %src0, i1 false, i1 false)
   ret i32 %v
@@ -156,6 +162,7 @@ define i32 @v_permlane16_swap_b32_vs(i32 %old, i32 inreg %src0) {
 ; GFX1210-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX1210-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1210-NEXT:    v_permlane16_swap_b32_e32 v0, v1
+; GFX1210-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-NEXT:    s_setpc_b64 s[30:31]
   %v = call i32 @llvm.amdgcn.permlane16.swap(i32 %old, i32 %src0, i1 false, i1 false)
   ret i32 %v
@@ -173,6 +180,7 @@ define i32 @v_permlane16_swap_b32_vv_fi(i32 %old, i32 %src0) {
 ; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-NEXT:    v_permlane16_swap_b32_e64 v0, v1 fi:1
+; GFX1210-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-NEXT:    s_setpc_b64 s[30:31]
   %v = call i32 @llvm.amdgcn.permlane16.swap(i32 %old, i32 %src0, i1 true, i1 false)
   ret i32 %v
@@ -190,6 +198,7 @@ define i32 @v_permlane16_swap_b32_vv_bc(i32 %old, i32 %src0) {
 ; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-NEXT:    v_permlane16_swap_b32_e64 v0, v1 bound_ctrl:1
+; GFX1210-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-NEXT:    s_setpc_b64 s[30:31]
   %v = call i32 @llvm.amdgcn.permlane16.swap(i32 %old, i32 %src0, i1 false, i1 true)
   ret i32 %v
@@ -207,6 +216,7 @@ define i32 @v_permlane16_swap_b32_vv_fi_bc(i32 %old, i32 %src0) {
 ; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-NEXT:    v_permlane16_swap_b32_e64 v0, v1 bound_ctrl:1 fi:1
+; GFX1210-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-NEXT:    s_setpc_b64 s[30:31]
   %v = call i32 @llvm.amdgcn.permlane16.swap(i32 %old, i32 %src0, i1 true, i1 true)
   ret i32 %v

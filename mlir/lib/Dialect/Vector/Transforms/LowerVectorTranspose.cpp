@@ -352,6 +352,7 @@ public:
       return success();
     }
 
+    // TODO: Add support for scalable vectors
     if (inputType.isScalable())
       return failure();
 

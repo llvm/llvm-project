@@ -63,12 +63,10 @@ class ScopifyEnum : public Tweak {
   llvm::Error scopifyEnumValue(const EnumConstantDecl &CD, StringRef EnumName,
                                bool StripPrefix);
   llvm::Expected<StringRef> getContentForFile(StringRef FilePath);
-  unsigned getOffsetFromPosition(const Position &Pos, StringRef Content) const;
   llvm::Error addReplacementForReference(const ReferencesResult::Reference &Ref,
                                          const MakeReplacement &GetReplacement);
   llvm::Error addReplacement(StringRef FilePath, StringRef Content,
                              const tooling::Replacement &Replacement);
-  Position getPosition(const Decl &D) const;
 
   const EnumDecl *D = nullptr;
   const Selection *S = nullptr;
@@ -107,7 +105,8 @@ Expected<Tweak::Effect> ScopifyEnum::apply(const Selection &Inputs) {
 
 llvm::Error ScopifyEnum::addClassKeywordToDeclarations() {
   for (const auto &Ref :
-       findReferences(*S->AST, getPosition(*D), 0, S->Index, false)
+       findReferences(*S->AST, sourceLocToPosition(*SM, D->getBeginLoc()), 0,
+                      S->Index, false)
            .References) {
     if (!(Ref.Attributes & ReferencesResult::Declaration))
       continue;
@@ -142,7 +141,8 @@ llvm::Error ScopifyEnum::scopifyEnumValue(const EnumConstantDecl &CD,
                                           StringRef EnumName,
                                           bool StripPrefix) {
   for (const auto &Ref :
-       findReferences(*S->AST, getPosition(CD), 0, S->Index, false)
+       findReferences(*S->AST, sourceLocToPosition(*SM, CD.getBeginLoc()), 0,
+                      S->Index, false)
            .References) {
     if (Ref.Attributes & ReferencesResult::Declaration) {
       if (StripPrefix) {
@@ -214,27 +214,19 @@ llvm::Expected<StringRef> ScopifyEnum::getContentForFile(StringRef FilePath) {
   return Content;
 }
 
-unsigned int ScopifyEnum::getOffsetFromPosition(const Position &Pos,
-                                                StringRef Content) const {
-  unsigned int Offset = 0;
-
-  for (std::size_t LinesRemaining = Pos.line;
-       Offset < Content.size() && LinesRemaining;) {
-    if (Content[Offset++] == '\n')
-      --LinesRemaining;
-  }
-  return Offset + Pos.character;
-}
-
 llvm::Error
 ScopifyEnum::addReplacementForReference(const ReferencesResult::Reference &Ref,
                                         const MakeReplacement &GetReplacement) {
   StringRef FilePath = Ref.Loc.uri.file();
-  auto Content = getContentForFile(FilePath);
+  llvm::Expected<StringRef> Content = getContentForFile(FilePath);
   if (!Content)
     return Content.takeError();
-  unsigned Offset = getOffsetFromPosition(Ref.Loc.range.start, *Content);
-  tooling::Replacement Replacement = GetReplacement(FilePath, *Content, Offset);
+  llvm::Expected<size_t> Offset =
+      positionToOffset(*Content, Ref.Loc.range.start);
+  if (!Offset)
+    return Offset.takeError();
+  tooling::Replacement Replacement =
+      GetReplacement(FilePath, *Content, *Offset);
   if (Replacement.isApplicable())
     return addReplacement(FilePath, *Content, Replacement);
   return llvm::Error::success();
@@ -248,14 +240,6 @@ ScopifyEnum::addReplacement(StringRef FilePath, StringRef Content,
   if (auto Err = TheEdit.Replacements.add(Replacement))
     return Err;
   return llvm::Error::success();
-}
-
-Position ScopifyEnum::getPosition(const Decl &D) const {
-  const SourceLocation Loc = D.getLocation();
-  Position Pos;
-  Pos.line = SM->getSpellingLineNumber(Loc) - 1;
-  Pos.character = SM->getSpellingColumnNumber(Loc) - 1;
-  return Pos;
 }
 
 } // namespace
