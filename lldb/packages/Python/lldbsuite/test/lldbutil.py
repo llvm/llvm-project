@@ -1654,10 +1654,14 @@ def skip_if_library_missing(test, target, library):
     )
 
 
-def target_install(test, filename):
-    path = test.getBuildArtifact(filename)
+def target_install(test, filename=None, path=None):
+    test.assertTrue(filename or path, "filename or path must be specified.")
+    if filename is None:
+        filename = os.path.basename(path)
+    if path is None:
+        path = test.getBuildArtifact(filename)
     if lldb.remote_platform:
-        remote_path = lldbutil.append_to_process_working_directory(test, filename)
+        remote_path = append_to_process_working_directory(test, filename)
         err = lldb.remote_platform.Install(
             lldb.SBFileSpec(path, True), lldb.SBFileSpec(remote_path, False)
         )
