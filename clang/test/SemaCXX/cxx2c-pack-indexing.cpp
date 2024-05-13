@@ -203,8 +203,17 @@ void test(auto...args){
     }.template operator()<0>();
 }
 
-void f( ) {
-    test(1);
+template<int...args>
+void test2(){
+  [&]<int idx>(){
+    using R = decltype( args...[idx] ) ;
+  }.template operator()<0>();
 }
+
+void f( ) {
+  test(1);
+  test2<1>();
+}
+
 
 }
