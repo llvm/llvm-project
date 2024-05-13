@@ -339,7 +339,7 @@ Changes in existing checks
 
 - Improved :doc:`readability-else-after-return
   <clang-tidy/checks/readability/else-after-return>` check to ignore
-  `consteval if` condition, where need to retain the else statement.
+  `if consteval` statements, for which the `else` branch must not be removed.
 
 - Improved :doc:`readability-identifier-naming
   <clang-tidy/checks/readability/identifier-naming>` check in `GetConfigPerFile`
