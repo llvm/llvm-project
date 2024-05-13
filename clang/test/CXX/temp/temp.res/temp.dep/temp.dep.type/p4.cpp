@@ -551,4 +551,11 @@ namespace N4 {
 
   template void D<B>::instantiated(D); // expected-note {{in instantiation of}}
 
+  template<typename T>
+  struct Typo {
+    void not_instantiated(Typo a) {
+      a->Not_instantiated;
+      a->typo;
+    }
+  };
 } // namespace N4

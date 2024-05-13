@@ -995,8 +995,6 @@ Sema::BuildMemberReferenceExpr(Expr *BaseExpr, QualType BaseExprType,
   // arrow operator was used with a dependent non-pointer object expression,
   // build a CXXDependentScopeMemberExpr.
   if (R.wasNotFoundInCurrentInstantiation() ||
-      (IsArrow && !BaseExprType->isPointerType() &&
-       BaseExprType->isDependentType()) ||
       (R.getLookupName().getCXXOverloadedOperator() == OO_Equal &&
        (SS.isSet() ? SS.getScopeRep()->isDependent()
                    : BaseExprType->isDependentType())))
@@ -1322,7 +1320,11 @@ static ExprResult LookupMemberExpr(Sema &S, LookupResult &R,
     else if (const ObjCObjectPointerType *Ptr =
                  BaseType->getAs<ObjCObjectPointerType>())
       BaseType = Ptr->getPointeeType();
-    else if (!BaseType->isDependentType()) {
+    else if (BaseType->isFunctionType())
+      goto fail;
+    else if (BaseType->isDependentType())
+      BaseType = S.Context.DependentTy;
+    else {
       if (BaseType->isRecordType()) {
         // Recover from arrow accesses to records, e.g.:
         //   struct MyRecord foo;
@@ -1337,8 +1339,6 @@ static ExprResult LookupMemberExpr(Sema &S, LookupResult &R,
               << FixItHint::CreateReplacement(OpLoc, ".");
         }
         IsArrow = false;
-      } else if (BaseType->isFunctionType()) {
-        goto fail;
       } else {
         S.Diag(MemberLoc, diag::err_typecheck_member_reference_arrow)
             << BaseType << BaseExpr.get()->getSourceRange();
