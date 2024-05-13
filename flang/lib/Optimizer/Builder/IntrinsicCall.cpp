@@ -1607,7 +1607,7 @@ static bool isIntrinsicModuleProcedure(llvm::StringRef name) {
 static bool isCoarrayIntrinsic(llvm::StringRef name) {
   return name.starts_with("atomic_") || name.starts_with("co_") ||
          name.contains("image") || name.ends_with("cobound") ||
-         name.equals("team_number");
+         name == "team_number";
 }
 
 /// Return the generic name of an intrinsic module procedure specific name.

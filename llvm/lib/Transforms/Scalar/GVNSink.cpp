@@ -267,13 +267,13 @@ public:
     };
     assert(llvm::is_sorted(Blocks, ComesBefore));
     int C = 0;
-    llvm::for_each(Values, [&C, this](const Value *V) {
+    for (const Value *V : Values) {
       if (!isa<UndefValue>(V)) {
-        const Instruction *I = cast<Instruction>(V);
-        assert(I->getParent() == this->Blocks[C]);
+        assert(cast<Instruction>(V)->getParent() == Blocks[C]);
+        (void)C;
       }
       C++;
-    });
+    }
   }
   /// Create a PHI from an array of incoming values and incoming blocks.
   ModelledPHI(SmallVectorImpl<Instruction *> &V,

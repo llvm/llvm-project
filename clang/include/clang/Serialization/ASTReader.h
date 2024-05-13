@@ -667,7 +667,7 @@ private:
   std::vector<IdentifierInfo *> IdentifiersLoaded;
 
   using GlobalIdentifierMapType =
-      ContinuousRangeMap<serialization::IdentID, ModuleFile *, 4>;
+      ContinuousRangeMap<serialization::IdentifierID, ModuleFile *, 4>;
 
   /// Mapping from global identifier IDs to the module in which the
   /// identifier resides along with the offset that should be added to the
