@@ -3107,34 +3107,14 @@ bool Parser::ParseOpenMPSimpleVarList(
 }
 
 OMPClause *Parser::ParseOpenMPSizesClause() {
-  SourceLocation ClauseNameLoc = ConsumeToken();
+  SourceLocation ClauseNameLoc, OpenLoc, CloseLoc;
   SmallVector<Expr *, 4> ValExprs;
-
-  BalancedDelimiterTracker T(*this, tok::l_paren, tok::annot_pragma_openmp_end);
-  if (T.consumeOpen()) {
-    Diag(Tok, diag::err_expected) << tok::l_paren;
+  if (ParseOpenMPExprListClause(OMPC_sizes, ClauseNameLoc, OpenLoc, CloseLoc,
+                                ValExprs))
     return nullptr;
-  }
 
-  while (true) {
-    ExprResult Val = ParseConstantExpression();
-    if (!Val.isUsable()) {
-      T.skipToEnd();
-      return nullptr;
-    }
-
-    ValExprs.push_back(Val.get());
-
-    if (Tok.is(tok::r_paren) || Tok.is(tok::annot_pragma_openmp_end))
-      break;
-
-    ExpectAndConsume(tok::comma);
-  }
-
-  T.consumeClose();
-
-  return Actions.OpenMP().ActOnOpenMPSizesClause(
-      ValExprs, ClauseNameLoc, T.getOpenLocation(), T.getCloseLocation());
+  return Actions.OpenMP().ActOnOpenMPSizesClause(ValExprs, ClauseNameLoc,
+                                                 OpenLoc, CloseLoc);
 }
 
 OMPClause *Parser::ParseOpenMPUsesAllocatorClause(OpenMPDirectiveKind DKind) {
@@ -4990,4 +4970,39 @@ OMPClause *Parser::ParseOpenMPVarListClause(OpenMPDirectiveKind DKind,
     return nullptr;
   OMPVarListLocTy Locs(Loc, LOpen, Data.RLoc);
   return Actions.OpenMP().ActOnOpenMPVarListClause(Kind, Vars, Locs, Data);
+}
+
+bool Parser::ParseOpenMPExprListClause(OpenMPClauseKind Kind,
+                                       SourceLocation &ClauseNameLoc,
+                                       SourceLocation &OpenLoc,
+                                       SourceLocation &CloseLoc,
+                                       SmallVectorImpl<Expr *> &Exprs,
+                                       bool ReqIntConst) {
+  assert(getOpenMPClauseName(Kind) == PP.getSpelling(Tok) &&
+         "Expected parsing to start at clause name");
+  ClauseNameLoc = ConsumeToken();
+
+  // Parse inside of '(' and ')'.
+  BalancedDelimiterTracker T(*this, tok::l_paren, tok::annot_pragma_openmp_end);
+  if (T.consumeOpen()) {
+    Diag(Tok, diag::err_expected) << tok::l_paren;
+    return true;
+  }
+
+  // Parse the list with interleaved commas.
+  do {
+    ExprResult Val =
+        ReqIntConst ? ParseConstantExpression() : ParseAssignmentExpression();
+    if (!Val.isUsable()) {
+      // Encountered something other than an expression; abort to ')'.
+      T.skipToEnd();
+      return true;
+    }
+    Exprs.push_back(Val.get());
+  } while (TryConsumeToken(tok::comma));
+
+  bool Result = T.consumeClose();
+  OpenLoc = T.getOpenLocation();
+  CloseLoc = T.getCloseLocation();
+  return Result;
 }
