@@ -740,7 +740,7 @@ static bool parseDeclareSimdClauses(
       BS = Out;
       BSRange = SourceRange(Tok.getLocation(), Tok.getEndLoc());
       P.ConsumeToken();
-    } else if (ClauseName.equals("simdlen")) {
+    } else if (ClauseName == "simdlen") {
       if (SimdLen.isUsable()) {
         P.Diag(Tok, diag::err_omp_more_one_clause)
             << getOpenMPDirectiveName(OMPD_declare_simd) << ClauseName << 0;
@@ -1106,7 +1106,7 @@ static ExprResult parseContextScore(Parser &P) {
   llvm::SmallString<16> Buffer;
   StringRef SelectorName =
       P.getPreprocessor().getSpelling(P.getCurToken(), Buffer);
-  if (!SelectorName.equals("score"))
+  if (SelectorName != "score")
     return ScoreExpr;
   (void)P.ConsumeToken();
   SourceLocation RLoc;
