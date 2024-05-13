@@ -548,16 +548,14 @@ lldb::TypeSystemSP TypeSystemClang::CreateInstance(lldb::LanguageType language,
     }
   }
 
-  lldb::TypeSystemSP instance;
-
   if (module) {
     std::string ast_name =
         "ASTContext for '" + module->GetFileSpec().GetPath() + "'";
-    instance = std::make_shared<TypeSystemClang>(ast_name, triple);
+    return std::make_shared<TypeSystemClang>(ast_name, triple);
   } else if (target && target->IsValid())
-    instance = std::make_shared<ScratchTypeSystemClang>(*target, triple);
+    return std::make_shared<ScratchTypeSystemClang>(*target, triple);
 
-  return instance;
+  return lldb::TypeSystemSP();
 }
 
 LanguageSet TypeSystemClang::GetSupportedLanguagesForTypes() {
