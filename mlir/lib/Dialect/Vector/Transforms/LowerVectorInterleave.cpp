@@ -96,7 +96,7 @@ private:
 class InterleaveToShuffle : public OpRewritePattern<vector::InterleaveOp> {
 public:
   InterleaveToShuffle(MLIRContext *context, PatternBenefit benefit = 1)
-      : OpRewritePattern(context, benefit){};
+      : OpRewritePattern(context, benefit) {};
 
   LogicalResult matchAndRewrite(vector::InterleaveOp op,
                                 PatternRewriter &rewriter) const override {
