@@ -1888,7 +1888,7 @@ multiclass VOP3be_Real_with_name_gfx12_NO_DPP_gfx13<
   defm NAME : VOP3be_Real<GFX13Gen, op, opName, asmName,
                           !or(isSingle, ps.Pfl.IsSingle)>;
   def : AMDGPUMnemonicAlias<ps.Mnemonic, asmName> {
-    let AssemblerPredicate = GFX12Gen.AssemblerPredicate;
+    let AssemblerPredicate = isGFX12Plus;
   }
 }
 
