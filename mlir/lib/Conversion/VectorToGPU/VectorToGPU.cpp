@@ -441,7 +441,7 @@ struct PrepareContractToGPUMMA
   }
 };
 
-// Fold transpose op into the transfer read op. Nvgpu mma.sync op only supports
+// Fold transpose op into the transfer read op. NVGPU mma.sync op only supports
 // row-, column-, and row-major layout for matrixA, matrixB, and matrixC,
 // respectively. We can fold the transpose operation when loading the data from
 // Shared Memory to registers.

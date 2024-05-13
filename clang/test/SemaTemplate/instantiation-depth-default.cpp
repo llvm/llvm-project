@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify -ftemplate-backtrace-limit=2 %s
+// RUN: %clang_cc1 -fsyntax-only -verify -ftemplate-backtrace-limit=2 %if {{ubsan}} %{ -Wno-stack-exhausted %} %s
 //
 // FIXME: Disable this test when Clang was built with ASan, because ASan
 // increases our per-frame stack usage enough that this test no longer fits
