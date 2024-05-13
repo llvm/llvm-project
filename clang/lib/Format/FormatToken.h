@@ -684,12 +684,8 @@ public:
            isAttribute();
   }
 
-  /// Determine whether the token is a simple-type-specifier.
-  [[nodiscard]] bool isSimpleTypeSpecifier() const;
-
-  [[nodiscard]] bool isTypeName(bool IsCpp) const;
-
-  [[nodiscard]] bool isTypeOrIdentifier(bool IsCpp) const;
+  [[nodiscard]] bool isTypeName(const LangOptions &LangOpts) const;
+  [[nodiscard]] bool isTypeOrIdentifier(const LangOptions &LangOpts) const;
 
   bool isObjCAccessSpecifier() const {
     return is(tok::at) && Next &&
