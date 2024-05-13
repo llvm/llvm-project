@@ -110,6 +110,10 @@ def POSIX : StandardSpec<"POSIX"> {
   PtrType PThreadCondAttrTPtr = PtrType<PThreadCondAttrTType>;
   ConstType ConstRestrictedPThreadCondAttrTPtr = ConstType<RestrictedPtrType<PThreadCondAttrTType>>;
 
+  NamedType PThreadRWLockAttrTType = NamedType<"pthread_rwlockattr_t">;
+  PtrType PThreadRWLockAttrTPtr = PtrType<PThreadRWLockAttrTType>;
+  ConstType ConstPThreadRWLockAttrTPtr = ConstType<PThreadRWLockAttrTPtr>;
+
   NamedType PThreadMutexAttrTType = NamedType<"pthread_mutexattr_t">;
   PtrType PThreadMutexAttrTPtr = PtrType<PThreadMutexAttrTType>;
   RestrictedPtrType RestrictedPThreadMutexAttrTPtr = RestrictedPtrType<PThreadMutexAttrTType>;
@@ -225,6 +229,11 @@ def POSIX : StandardSpec<"POSIX"> {
           "creat",
           RetValSpec<IntType>,
           [ArgSpec<ConstCharPtr>, ArgSpec<ModeTType>]
+      >,
+      FunctionSpec<
+          "fcntl",
+          RetValSpec<IntType>,
+          [ArgSpec<IntType>, ArgSpec<IntType>, ArgSpec<VarArgType>]
       >,
       FunctionSpec<
           "open",
@@ -993,6 +1002,7 @@ def POSIX : StandardSpec<"POSIX"> {
         PThreadMutexTType,
         PThreadOnceCallback,
         PThreadOnceT,
+        PThreadRWLockAttrTType,
         PThreadStartT,
         PThreadTSSDtorT,
         PThreadTType,
@@ -1218,6 +1228,26 @@ def POSIX : StandardSpec<"POSIX"> {
           "pthread_once",
           RetValSpec<IntType>,
           [ArgSpec<PThreadOnceTPtr>, ArgSpec<PThreadOnceCallback>]
+      >,
+      FunctionSpec<
+          "pthread_rwlockattr_destroy",
+          RetValSpec<IntType>,
+          [ArgSpec<PThreadRWLockAttrTPtr>]
+      >,
+      FunctionSpec<
+          "pthread_rwlockattr_getpshared",
+          RetValSpec<IntType>,
+          [ArgSpec<ConstPThreadRWLockAttrTPtr>, ArgSpec<IntPtr>]
+      >,
+      FunctionSpec<
+          "pthread_rwlockattr_init",
+          RetValSpec<IntType>,
+          [ArgSpec<PThreadRWLockAttrTPtr>]
+      >,
+      FunctionSpec<
+          "pthread_rwlockattr_setpshared",
+          RetValSpec<IntType>,
+          [ArgSpec<PThreadRWLockAttrTPtr>, ArgSpec<IntType>]
       >,
     ]
   >;
@@ -1575,6 +1605,7 @@ def POSIX : StandardSpec<"POSIX"> {
       PThreadMutexAttrTType,
       PThreadMutexTType,
       PThreadOnceT,
+      PThreadRWLockAttrTType,
       PThreadTType,
       PidT,
       SSizeTType,

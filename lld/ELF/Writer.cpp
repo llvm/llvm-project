@@ -577,7 +577,7 @@ static bool isRelroSection(const OutputSection *sec) {
   // for accessing .got as well, .got and .toc need to be close enough in the
   // virtual address space. Usually, .toc comes just after .got. Since we place
   // .got into RELRO, .toc needs to be placed into RELRO too.
-  if (sec->name.equals(".toc"))
+  if (sec->name == ".toc")
     return true;
 
   // .got.plt contains pointers to external function symbols. They are
@@ -1957,6 +1957,7 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
     // finalizeAddressDependentContent may have added local symbols to the
     // static symbol table.
     finalizeSynthetic(in.symTab.get());
+    finalizeSynthetic(in.debugNames.get());
     finalizeSynthetic(in.ppc64LongBranchTarget.get());
     finalizeSynthetic(in.armCmseSGSection.get());
   }

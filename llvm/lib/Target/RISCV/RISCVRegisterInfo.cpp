@@ -65,10 +65,10 @@ RISCVRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
     if (Subtarget.hasStdExtD())
       return CSR_XLEN_F64_Interrupt_SaveList;
     if (Subtarget.hasStdExtF())
-      return Subtarget.isRVE() ? CSR_XLEN_F32_Interrupt_RVE_SaveList
-                               : CSR_XLEN_F32_Interrupt_SaveList;
-    return Subtarget.isRVE() ? CSR_Interrupt_RVE_SaveList
-                             : CSR_Interrupt_SaveList;
+      return Subtarget.hasStdExtE() ? CSR_XLEN_F32_Interrupt_RVE_SaveList
+                                    : CSR_XLEN_F32_Interrupt_SaveList;
+    return Subtarget.hasStdExtE() ? CSR_Interrupt_RVE_SaveList
+                                  : CSR_Interrupt_SaveList;
   }
 
   bool HasVectorCSR =
@@ -126,7 +126,7 @@ BitVector RISCVRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   markSuperRegs(Reserved, RISCV::DUMMY_REG_PAIR_WITH_X0);
 
   // There are only 16 GPRs for RVE.
-  if (Subtarget.isRVE())
+  if (Subtarget.hasStdExtE())
     for (MCPhysReg Reg = RISCV::X16; Reg <= RISCV::X31; Reg++)
       markSuperRegs(Reserved, Reg);
 
@@ -145,7 +145,7 @@ BitVector RISCVRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   markSuperRegs(Reserved, RISCV::VCIX_STATE);
 
   if (MF.getFunction().getCallingConv() == CallingConv::GRAAL) {
-    if (Subtarget.isRVE())
+    if (Subtarget.hasStdExtE())
       report_fatal_error("Graal reserved registers do not exist in RVE");
     markSuperRegs(Reserved, RISCV::X23);
     markSuperRegs(Reserved, RISCV::X27);

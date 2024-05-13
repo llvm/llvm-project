@@ -770,6 +770,12 @@ Instruction *InstCombinerImpl::visitTrunc(TruncInst &Trunc) {
         return new ICmpInst(ICmpInst::Predicate::ICMP_EQ, X, Zero);
       }
     }
+
+    if (Trunc.hasNoUnsignedWrap() || Trunc.hasNoSignedWrap()) {
+      Value *X, *Y;
+      if (match(Src, m_Xor(m_Value(X), m_Value(Y))))
+        return new ICmpInst(ICmpInst::ICMP_NE, X, Y);
+    }
   }
 
   Value *A, *B;
@@ -1481,7 +1487,7 @@ Instruction *InstCombinerImpl::visitSExt(SExtInst &Sext) {
     Value *Y;
     if (Src->hasOneUse() &&
         match(X, m_LShr(m_Value(Y),
-                        m_SpecificIntAllowUndef(XBitSize - SrcBitSize)))) {
+                        m_SpecificIntAllowPoison(XBitSize - SrcBitSize)))) {
       Value *Ashr = Builder.CreateAShr(Y, XBitSize - SrcBitSize);
       return CastInst::CreateIntegerCast(Ashr, DestTy, /* isSigned */ true);
     }
@@ -2050,9 +2056,9 @@ Instruction *InstCombinerImpl::visitPtrToInt(PtrToIntInst &CI) {
     // the GEP otherwise.
     if (GEP->hasOneUse() &&
         isa<ConstantPointerNull>(GEP->getPointerOperand())) {
-      return replaceInstUsesWith(CI,
-                                 Builder.CreateIntCast(EmitGEPOffset(GEP), Ty,
-                                                       /*isSigned=*/false));
+      return replaceInstUsesWith(
+          CI, Builder.CreateIntCast(EmitGEPOffset(cast<GEPOperator>(GEP)), Ty,
+                                    /*isSigned=*/false));
     }
   }
 

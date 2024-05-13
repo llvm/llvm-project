@@ -84,7 +84,7 @@ public:
   ArrayRef<TargetInfo::AddlRegName> getGCCAddlRegNames() const override;
 
   bool isSPRegName(StringRef RegName) const override {
-    return RegName.equals("r15");
+    return RegName == "r15";
   }
 
   bool validateAsmConstraint(const char *&Name,
@@ -219,6 +219,10 @@ public:
 
   int getEHDataRegisterNumber(unsigned RegNo) const override {
     return RegNo < 4 ? 6 + RegNo : -1;
+  }
+
+  std::pair<unsigned, unsigned> hardwareInterferenceSizes() const override {
+    return std::make_pair(256, 256);
   }
 };
 } // namespace targets

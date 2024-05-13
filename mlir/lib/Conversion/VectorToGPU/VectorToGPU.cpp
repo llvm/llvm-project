@@ -441,7 +441,7 @@ struct PrepareContractToGPUMMA
   }
 };
 
-// Fold transpose op into the transfer read op. Nvgpu mma.sync op only supports
+// Fold transpose op into the transfer read op. NVGPU mma.sync op only supports
 // row-, column-, and row-major layout for matrixA, matrixB, and matrixC,
 // respectively. We can fold the transpose operation when loading the data from
 // Shared Memory to registers.
@@ -1204,10 +1204,10 @@ convertElementwiseOp(RewriterBase &rewriter, Operation *op,
       return rewriter.notifyMatchFailure(op, "no mapping");
     matrixOperands.push_back(it->second);
   }
-  auto resultType = matrixOperands[0].getType().cast<gpu::MMAMatrixType>();
+  auto resultType = cast<gpu::MMAMatrixType>(matrixOperands[0].getType());
   if (opType == gpu::MMAElementwiseOp::EXTF) {
     // The floating point extension case has a different result type.
-    auto vectorType = op->getResultTypes()[0].cast<VectorType>();
+    auto vectorType = cast<VectorType>(op->getResultTypes()[0]);
     resultType = gpu::MMAMatrixType::get(resultType.getShape(),
                                          vectorType.getElementType(),
                                          resultType.getOperand());

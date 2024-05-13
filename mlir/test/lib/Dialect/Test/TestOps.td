@@ -28,6 +28,7 @@ include "mlir/Interfaces/DestinationStyleOpInterface.td"
 include "mlir/Interfaces/InferIntRangeInterface.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/LoopLikeInterface.td"
+include "mlir/Interfaces/MemorySlotInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
 
@@ -1347,6 +1348,12 @@ def TestOpInPlaceFoldAnchor : TEST_Op<"op_in_place_fold_anchor"> {
 
 def TestOpInPlaceFold : TEST_Op<"op_in_place_fold"> {
   let arguments = (ins I32:$op, OptionalAttr<I32Attr>:$attr);
+  let results = (outs I32);
+  let hasFolder = 1;
+}
+
+def TestOpInPlaceSelfFold : TEST_Op<"op_in_place_self_fold"> {
+  let arguments = (ins UnitAttr:$folded);
   let results = (outs I32);
   let hasFolder = 1;
 }
@@ -3159,6 +3166,16 @@ def TestOpOptionallyImplementingInterface
     : TEST_Op<"op_optionally_implementing_interface",
         [TestOptionallyImplementedOpInterface]> {
   let arguments = (ins BoolAttr:$implementsInterface);
+}
+
+//===----------------------------------------------------------------------===//
+// Test Mem2Reg
+//===----------------------------------------------------------------------===//
+
+def TestMultiSlotAlloca : TEST_Op<"multi_slot_alloca",
+    [DeclareOpInterfaceMethods<PromotableAllocationOpInterface>]> {
+  let results = (outs Variadic<MemRefOf<[I32]>>:$results);
+  let assemblyFormat = "attr-dict `:` functional-type(operands, results)";
 }
 
 #endif // TEST_OPS

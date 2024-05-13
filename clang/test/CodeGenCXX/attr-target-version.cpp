@@ -3,7 +3,7 @@
 
 int __attribute__((target_version("sme-f64f64+bf16"))) foo(int) { return 1; }
 int __attribute__((target_version("default"))) foo(int) { return 2; }
-int __attribute__((target_version("sm4+bf16"))) foo(void) { return 3; }
+int __attribute__((target_version("sm4+ebf16"))) foo(void) { return 3; }
 int __attribute__((target_version("default"))) foo(void) { return 4; }
 
 struct MyClass {
@@ -89,7 +89,7 @@ int bar() {
 // CHECK-NEXT:    ret i32 2
 //
 //
-// CHECK-LABEL: @_Z3foov._Mbf16Msm4(
+// CHECK-LABEL: @_Z3foov._Mebf16Msm4(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret i32 3
 //
@@ -246,8 +246,8 @@ int bar() {
 // CHECK-NEXT:  resolver_entry:
 // CHECK-NEXT:    call void @__init_cpu_features_resolver()
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 1099520016384
-// CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 1099520016384
+// CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 36028797153181696
+// CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 36028797153181696
 // CHECK-NEXT:    [[TMP3:%.*]] = and i1 true, [[TMP2]]
 // CHECK-NEXT:    br i1 [[TMP3]], label [[RESOLVER_RETURN:%.*]], label [[RESOLVER_ELSE:%.*]]
 // CHECK:       resolver_return:
@@ -260,12 +260,12 @@ int bar() {
 // CHECK-NEXT:  resolver_entry:
 // CHECK-NEXT:    call void @__init_cpu_features_resolver()
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 8388640
-// CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 8388640
+// CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 268435488
+// CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 268435488
 // CHECK-NEXT:    [[TMP3:%.*]] = and i1 true, [[TMP2]]
 // CHECK-NEXT:    br i1 [[TMP3]], label [[RESOLVER_RETURN:%.*]], label [[RESOLVER_ELSE:%.*]]
 // CHECK:       resolver_return:
-// CHECK-NEXT:    ret ptr @_Z3foov._Mbf16Msm4
+// CHECK-NEXT:    ret ptr @_Z3foov._Mebf16Msm4
 // CHECK:       resolver_else:
 // CHECK-NEXT:    ret ptr @_Z3foov.default
 //
@@ -274,8 +274,8 @@ int bar() {
 // CHECK-NEXT:  resolver_entry:
 // CHECK-NEXT:    call void @__init_cpu_features_resolver()
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 33554432
-// CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 33554432
+// CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 1073741824
+// CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 1073741824
 // CHECK-NEXT:    [[TMP3:%.*]] = and i1 true, [[TMP2]]
 // CHECK-NEXT:    br i1 [[TMP3]], label [[RESOLVER_RETURN:%.*]], label [[RESOLVER_ELSE:%.*]]
 // CHECK:       resolver_return:
@@ -288,8 +288,8 @@ int bar() {
 // CHECK-NEXT:  resolver_entry:
 // CHECK-NEXT:    call void @__init_cpu_features_resolver()
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 16384
-// CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 16384
+// CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 65536
+// CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 65536
 // CHECK-NEXT:    [[TMP3:%.*]] = and i1 true, [[TMP2]]
 // CHECK-NEXT:    br i1 [[TMP3]], label [[RESOLVER_RETURN:%.*]], label [[RESOLVER_ELSE:%.*]]
 // CHECK:       resolver_return:

@@ -735,8 +735,8 @@ void Sema::DiagnoseUnknownTypeName(IdentifierInfo *&II,
                          << II, CanRecover);
       } else if (DeclContext *DC = computeDeclContext(*SS, false)) {
         std::string CorrectedStr(Corrected.getAsString(getLangOpts()));
-        bool DroppedSpecifier = Corrected.WillReplaceSpecifier() &&
-                                II->getName().equals(CorrectedStr);
+        bool DroppedSpecifier =
+            Corrected.WillReplaceSpecifier() && II->getName() == CorrectedStr;
         diagnoseTypo(Corrected,
                      PDiag(IsTemplateName
                                ? diag::err_no_member_template_suggest
@@ -832,7 +832,7 @@ static bool isTagTypeWithMissingTag(Sema &SemaRef, LookupResult &Result,
                                     IdentifierInfo *&Name,
                                     SourceLocation NameLoc) {
   LookupResult R(SemaRef, Name, NameLoc, Sema::LookupTagName);
-  SemaRef.LookupParsedName(R, S, &SS);
+  SemaRef.LookupParsedName(R, S, &SS, /*ObjectType=*/QualType());
   if (TagDecl *Tag = R.getAsSingle<TagDecl>()) {
     StringRef FixItTagName;
     switch (Tag->getTagKind()) {
@@ -869,7 +869,7 @@ static bool isTagTypeWithMissingTag(Sema &SemaRef, LookupResult &Result,
 
     // Replace lookup results with just the tag decl.
     Result.clear(Sema::LookupTagName);
-    SemaRef.LookupParsedName(Result, S, &SS);
+    SemaRef.LookupParsedName(Result, S, &SS, /*ObjectType=*/QualType());
     return true;
   }
 
@@ -896,7 +896,8 @@ Sema::NameClassification Sema::ClassifyName(Scope *S, CXXScopeSpec &SS,
   }
 
   LookupResult Result(*this, Name, NameLoc, LookupOrdinaryName);
-  LookupParsedName(Result, S, &SS, !CurMethod);
+  LookupParsedName(Result, S, &SS, /*ObjectType=*/QualType(),
+                   /*AllowBuiltinCreation=*/!CurMethod);
 
   if (SS.isInvalid())
     return NameClassification::Error();
@@ -1006,7 +1007,7 @@ Corrected:
         } else {// FIXME: is this even reachable? Test it.
           std::string CorrectedStr(Corrected.getAsString(getLangOpts()));
           bool DroppedSpecifier = Corrected.WillReplaceSpecifier() &&
-                                  Name->getName().equals(CorrectedStr);
+                                  Name->getName() == CorrectedStr;
           diagnoseTypo(Corrected, PDiag(QualifiedDiag)
                                     << Name << computeDeclContext(SS, false)
                                     << DroppedSpecifier << SS.getRange());
@@ -1240,8 +1241,8 @@ Corrected:
   Result.suppressDiagnostics();
   return NameClassification::OverloadSet(UnresolvedLookupExpr::Create(
       Context, Result.getNamingClass(), SS.getWithLocInContext(Context),
-      Result.getLookupNameInfo(), ADL, Result.isOverloadedResult(),
-      Result.begin(), Result.end()));
+      Result.getLookupNameInfo(), ADL, Result.begin(), Result.end(),
+      /*KnownDependent=*/false));
 }
 
 ExprResult
@@ -1974,7 +1975,7 @@ static bool ShouldDiagnoseUnusedDecl(const LangOptions &LangOpts,
     // it is, by the bindings' expressions).
     bool IsAllPlaceholders = true;
     for (const auto *BD : DD->bindings()) {
-      if (BD->isReferenced())
+      if (BD->isReferenced() || BD->hasAttr<UnusedAttr>())
         return false;
       IsAllPlaceholders = IsAllPlaceholders && BD->isPlaceholderVar(LangOpts);
     }
@@ -5789,6 +5790,9 @@ Decl *Sema::BuildAnonymousStructOrUnion(Scope *S, DeclSpec &DS,
     Anon = VarDecl::Create(Context, Owner, DS.getBeginLoc(),
                            Record->getLocation(), /*IdentifierInfo=*/nullptr,
                            Context.getTypeDeclType(Record), TInfo, SC);
+    if (Invalid)
+      Anon->setInvalidDecl();
+
     ProcessDeclAttributes(S, Anon, Dc);
 
     // Default-initialize the implicit variable. This initialization will be
@@ -12408,12 +12412,26 @@ bool Sema::CheckFunctionDeclaration(Scope *S, FunctionDecl *NewFD,
   }
 
   // Check if the function definition uses any AArch64 SME features without
-  // having the '+sme' feature enabled.
+  // having the '+sme' feature enabled and warn user if sme locally streaming
+  // function returns or uses arguments with VL-based types.
   if (DeclIsDefn) {
     const auto *Attr = NewFD->getAttr<ArmNewAttr>();
     bool UsesSM = NewFD->hasAttr<ArmLocallyStreamingAttr>();
     bool UsesZA = Attr && Attr->isNewZA();
     bool UsesZT0 = Attr && Attr->isNewZT0();
+
+    if (NewFD->hasAttr<ArmLocallyStreamingAttr>()) {
+      if (NewFD->getReturnType()->isSizelessVectorType())
+        Diag(NewFD->getLocation(),
+             diag::warn_sme_locally_streaming_has_vl_args_returns)
+            << /*IsArg=*/false;
+      if (llvm::any_of(NewFD->parameters(), [](ParmVarDecl *P) {
+            return P->getOriginalType()->isSizelessVectorType();
+          }))
+        Diag(NewFD->getLocation(),
+             diag::warn_sme_locally_streaming_has_vl_args_returns)
+            << /*IsArg=*/true;
+    }
     if (const auto *FPT = NewFD->getType()->getAs<FunctionProtoType>()) {
       FunctionProtoType::ExtProtoInfo EPI = FPT->getExtProtoInfo();
       UsesSM |=
@@ -13488,16 +13506,18 @@ void Sema::checkNonTrivialCUnion(QualType QT, SourceLocation Loc,
 void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
   // If there is no declaration, there was an error parsing it.  Just ignore
   // the initializer.
-  if (!RealDecl || RealDecl->isInvalidDecl()) {
+  if (!RealDecl) {
     CorrectDelayedTyposInExpr(Init, dyn_cast_or_null<VarDecl>(RealDecl));
     return;
   }
 
-  if (CXXMethodDecl *Method = dyn_cast<CXXMethodDecl>(RealDecl)) {
-    // Pure-specifiers are handled in ActOnPureSpecifier.
-    Diag(Method->getLocation(), diag::err_member_function_initialization)
-      << Method->getDeclName() << Init->getSourceRange();
-    Method->setInvalidDecl();
+  if (auto *Method = dyn_cast<CXXMethodDecl>(RealDecl)) {
+    if (!Method->isInvalidDecl()) {
+      // Pure-specifiers are handled in ActOnPureSpecifier.
+      Diag(Method->getLocation(), diag::err_member_function_initialization)
+          << Method->getDeclName() << Init->getSourceRange();
+      Method->setInvalidDecl();
+    }
     return;
   }
 
@@ -13506,6 +13526,18 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
     assert(!isa<FieldDecl>(RealDecl) && "field init shouldn't get here");
     Diag(RealDecl->getLocation(), diag::err_illegal_initializer);
     RealDecl->setInvalidDecl();
+    return;
+  }
+
+  if (VDecl->isInvalidDecl()) {
+    ExprResult Res = CorrectDelayedTyposInExpr(Init, VDecl);
+    SmallVector<Expr *> SubExprs;
+    if (Res.isUsable())
+      SubExprs.push_back(Res.get());
+    ExprResult Recovery =
+        CreateRecoveryExpr(Init->getBeginLoc(), Init->getEndLoc(), SubExprs);
+    if (Expr *E = Recovery.get())
+      VDecl->setInit(E);
     return;
   }
 
@@ -15889,6 +15921,11 @@ Decl *Sema::ActOnStartOfFunctionDef(Scope *FnBodyScope, Decl *D,
     FD->setInvalidDecl();
     return D;
   }
+
+  // Some function attributes (like OptimizeNoneAttr) need actions before
+  // parsing body started.
+  applyFunctionAttributesBeforeParsingBody(D);
+
   // We want to attach documentation to original Decl (which might be
   // a function template).
   ActOnDocumentableDecl(D);
@@ -15898,6 +15935,20 @@ Decl *Sema::ActOnStartOfFunctionDef(Scope *FnBodyScope, Decl *D,
     Diag(FD->getLocation(), diag::warn_function_def_in_objc_container);
 
   return D;
+}
+
+void Sema::applyFunctionAttributesBeforeParsingBody(Decl *FD) {
+  if (!FD || FD->isInvalidDecl())
+    return;
+  if (auto *TD = dyn_cast<FunctionTemplateDecl>(FD))
+    FD = TD->getTemplatedDecl();
+  if (FD && FD->hasAttr<OptimizeNoneAttr>()) {
+    FPOptionsOverride FPO;
+    FPO.setDisallowOptimizations();
+    CurFPFeatures.applyChanges(FPO);
+    FpPragmaStack.CurrentValue =
+        CurFPFeatures.getChangesFrom(FPOptions(LangOpts));
+  }
 }
 
 /// Given the set of return statements within a function body,
@@ -16025,7 +16076,7 @@ static void diagnoseImplicitlyRetainedSelf(Sema &S) {
 
 static bool methodHasName(const FunctionDecl *FD, StringRef Name) {
   return isa<CXXMethodDecl>(FD) && FD->param_empty() &&
-         FD->getDeclName().isIdentifier() && FD->getName().equals(Name);
+         FD->getDeclName().isIdentifier() && FD->getName() == Name;
 }
 
 bool Sema::CanBeGetReturnObject(const FunctionDecl *FD) {

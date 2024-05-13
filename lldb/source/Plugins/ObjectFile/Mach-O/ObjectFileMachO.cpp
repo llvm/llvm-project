@@ -5140,8 +5140,17 @@ uint32_t ObjectFileMachO::GetDependentModules(FileSpecList &files) {
       case LC_LOADFVMLIB:
       case LC_LOAD_UPWARD_DYLIB: {
         uint32_t name_offset = cmd_offset + m_data.GetU32(&offset);
+        bool is_delayed_init = false;
+        uint32_t use_command_marker = m_data.GetU32(&offset);
+        if (use_command_marker == 0x1a741800 /* DYLIB_USE_MARKER */) {
+          offset += 4; /* uint32_t current_version */
+          offset += 4; /* uint32_t compat_version */
+          uint32_t flags = m_data.GetU32(&offset);
+          if (flags & 0x08 /* DYLIB_USE_DELAYED_INIT */)
+            is_delayed_init = true;
+        }
         const char *path = m_data.PeekCStr(name_offset);
-        if (path) {
+        if (path && !is_delayed_init) {
           if (load_cmd.cmd == LC_RPATH)
             rpath_paths.push_back(path);
           else {

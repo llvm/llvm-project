@@ -792,6 +792,8 @@ ABIArgInfo X86_32ABIInfo::classifyArgumentType(QualType Ty, CCState &State,
         return ABIArgInfo::getDirect();
       return ABIArgInfo::getExpand();
     }
+    if (IsVectorCall && Ty->isBuiltinType())
+      return ABIArgInfo::getDirect();
     return getIndirectResult(Ty, /*ByVal=*/false, State);
   }
 
@@ -1482,8 +1484,8 @@ public:
 
   void checkFunctionCallABI(CodeGenModule &CGM, SourceLocation CallLoc,
                             const FunctionDecl *Caller,
-                            const FunctionDecl *Callee,
-                            const CallArgList &Args) const override;
+                            const FunctionDecl *Callee, const CallArgList &Args,
+                            QualType ReturnType) const override;
 };
 } // namespace
 
@@ -1558,9 +1560,15 @@ static bool checkAVXParam(DiagnosticsEngine &Diag, ASTContext &Ctx,
   return false;
 }
 
-void X86_64TargetCodeGenInfo::checkFunctionCallABI(
-    CodeGenModule &CGM, SourceLocation CallLoc, const FunctionDecl *Caller,
-    const FunctionDecl *Callee, const CallArgList &Args) const {
+void X86_64TargetCodeGenInfo::checkFunctionCallABI(CodeGenModule &CGM,
+                                                   SourceLocation CallLoc,
+                                                   const FunctionDecl *Caller,
+                                                   const FunctionDecl *Callee,
+                                                   const CallArgList &Args,
+                                                   QualType ReturnType) const {
+  if (!Callee)
+    return;
+
   llvm::StringMap<bool> CallerMap;
   llvm::StringMap<bool> CalleeMap;
   unsigned ArgIndex = 0;

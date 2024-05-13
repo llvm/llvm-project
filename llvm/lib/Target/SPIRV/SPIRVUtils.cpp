@@ -369,7 +369,7 @@ bool isEntryPoint(const Function &F) {
   return false;
 }
 
-Type *parseBasicTypeName(StringRef TypeName, LLVMContext &Ctx) {
+Type *parseBasicTypeName(StringRef &TypeName, LLVMContext &Ctx) {
   TypeName.consume_front("atomic_");
   if (TypeName.consume_front("void"))
     return Type::getVoidTy(Ctx);

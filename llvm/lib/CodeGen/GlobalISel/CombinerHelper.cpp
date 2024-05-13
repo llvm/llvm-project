@@ -303,6 +303,83 @@ void CombinerHelper::applyCombineConcatVectors(MachineInstr &MI,
   replaceRegWith(MRI, DstReg, NewDstReg);
 }
 
+bool CombinerHelper::matchCombineShuffleConcat(MachineInstr &MI,
+                                               SmallVector<Register> &Ops) {
+  ArrayRef<int> Mask = MI.getOperand(3).getShuffleMask();
+  auto ConcatMI1 =
+      dyn_cast<GConcatVectors>(MRI.getVRegDef(MI.getOperand(1).getReg()));
+  auto ConcatMI2 =
+      dyn_cast<GConcatVectors>(MRI.getVRegDef(MI.getOperand(2).getReg()));
+  if (!ConcatMI1 || !ConcatMI2)
+    return false;
+
+  // Check that the sources of the Concat instructions have the same type
+  if (MRI.getType(ConcatMI1->getSourceReg(0)) !=
+      MRI.getType(ConcatMI2->getSourceReg(0)))
+    return false;
+
+  LLT ConcatSrcTy = MRI.getType(ConcatMI1->getReg(1));
+  LLT ShuffleSrcTy1 = MRI.getType(MI.getOperand(1).getReg());
+  unsigned ConcatSrcNumElt = ConcatSrcTy.getNumElements();
+  for (unsigned i = 0; i < Mask.size(); i += ConcatSrcNumElt) {
+    // Check if the index takes a whole source register from G_CONCAT_VECTORS
+    // Assumes that all Sources of G_CONCAT_VECTORS are the same type
+    if (Mask[i] == -1) {
+      for (unsigned j = 1; j < ConcatSrcNumElt; j++) {
+        if (i + j >= Mask.size())
+          return false;
+        if (Mask[i + j] != -1)
+          return false;
+      }
+      if (!isLegalOrBeforeLegalizer(
+              {TargetOpcode::G_IMPLICIT_DEF, {ConcatSrcTy}}))
+        return false;
+      Ops.push_back(0);
+    } else if (Mask[i] % ConcatSrcNumElt == 0) {
+      for (unsigned j = 1; j < ConcatSrcNumElt; j++) {
+        if (i + j >= Mask.size())
+          return false;
+        if (Mask[i + j] != Mask[i] + static_cast<int>(j))
+          return false;
+      }
+      // Retrieve the source register from its respective G_CONCAT_VECTORS
+      // instruction
+      if (Mask[i] < ShuffleSrcTy1.getNumElements()) {
+        Ops.push_back(ConcatMI1->getSourceReg(Mask[i] / ConcatSrcNumElt));
+      } else {
+        Ops.push_back(ConcatMI2->getSourceReg(Mask[i] / ConcatSrcNumElt -
+                                              ConcatMI1->getNumSources()));
+      }
+    } else {
+      return false;
+    }
+  }
+
+  if (!isLegalOrBeforeLegalizer(
+          {TargetOpcode::G_CONCAT_VECTORS,
+           {MRI.getType(MI.getOperand(0).getReg()), ConcatSrcTy}}))
+    return false;
+
+  return !Ops.empty();
+}
+
+void CombinerHelper::applyCombineShuffleConcat(MachineInstr &MI,
+                                               SmallVector<Register> &Ops) {
+  LLT SrcTy = MRI.getType(Ops[0]);
+  Register UndefReg = 0;
+
+  for (unsigned i = 0; i < Ops.size(); i++) {
+    if (Ops[i] == 0) {
+      if (UndefReg == 0)
+        UndefReg = Builder.buildUndef(SrcTy).getReg(0);
+      Ops[i] = UndefReg;
+    }
+  }
+
+  Builder.buildConcatVectors(MI.getOperand(0).getReg(), Ops);
+  MI.eraseFromParent();
+}
+
 bool CombinerHelper::tryCombineShuffleVector(MachineInstr &MI) {
   SmallVector<Register, 4> Ops;
   if (matchCombineShuffleVector(MI, Ops)) {
@@ -2723,8 +2800,8 @@ bool CombinerHelper::matchEqualDefs(const MachineOperand &MOP1,
     // %5:_(s8), %6:_(s8), %7:_(s8), %8:_(s8) = G_UNMERGE_VALUES %4:_(<4 x s8>)
     // I1 and I2 are different instructions but produce same values,
     // %1 and %6 are same, %1 and %7 are not the same value.
-    return I1->findRegisterDefOperandIdx(InstAndDef1->Reg) ==
-           I2->findRegisterDefOperandIdx(InstAndDef2->Reg);
+    return I1->findRegisterDefOperandIdx(InstAndDef1->Reg, /*TRI=*/nullptr) ==
+           I2->findRegisterDefOperandIdx(InstAndDef2->Reg, /*TRI=*/nullptr);
   }
   return false;
 }
@@ -4060,14 +4137,6 @@ void CombinerHelper::applyBuildFn(
   MI.eraseFromParent();
 }
 
-void CombinerHelper::applyBuildFnMO(const MachineOperand &MO,
-                                    BuildFnTy &MatchInfo) {
-  MachineInstr *Root = getDefIgnoringCopies(MO.getReg(), MRI);
-  Builder.setInstrAndDebugLoc(*Root);
-  MatchInfo(Builder);
-  Root->eraseFromParent();
-}
-
 void CombinerHelper::applyBuildFnNoErase(
     MachineInstr &MI, std::function<void(MachineIRBuilder &)> &MatchInfo) {
   MatchInfo(Builder);
@@ -4992,6 +5061,9 @@ MachineInstr *CombinerHelper::buildUDivUsingMul(MachineInstr &MI) {
   const unsigned EltBits = ScalarTy.getScalarSizeInBits();
   LLT ShiftAmtTy = getTargetLowering().getPreferredShiftAmountTy(Ty);
   LLT ScalarShiftAmtTy = ShiftAmtTy.getScalarType();
+
+  unsigned KnownLeadingZeros =
+      KB ? KB->getKnownBits(LHS).countMinLeadingZeros() : 0;
   auto &MIB = Builder;
 
   bool UseNPQ = false;
@@ -5009,8 +5081,12 @@ MachineInstr *CombinerHelper::buildUDivUsingMul(MachineInstr &MI) {
     // at the end.
     // TODO: Use undef values for divisor of 1.
     if (!Divisor.isOne()) {
+
+      // UnsignedDivisionByConstantInfo doesn't work correctly if leading zeros
+      // in the dividend exceeds the leading zeros for the divisor.
       UnsignedDivisionByConstantInfo magics =
-          UnsignedDivisionByConstantInfo::get(Divisor);
+          UnsignedDivisionByConstantInfo::get(
+              Divisor, std::min(KnownLeadingZeros, Divisor.countl_zero()));
 
       Magic = std::move(magics.Magic);
 
@@ -5120,12 +5196,8 @@ bool CombinerHelper::matchUDivByConst(MachineInstr &MI) {
       return false;
   }
 
-  auto CheckEltValue = [&](const Constant *C) {
-    if (auto *CI = dyn_cast_or_null<ConstantInt>(C))
-      return !CI->isZero();
-    return false;
-  };
-  return matchUnaryPredicate(MRI, RHS, CheckEltValue);
+  return matchUnaryPredicate(
+      MRI, RHS, [](const Constant *C) { return C && !C->isNullValue(); });
 }
 
 void CombinerHelper::applyUDivByConst(MachineInstr &MI) {
@@ -5155,7 +5227,7 @@ bool CombinerHelper::matchSDivByConst(MachineInstr &MI) {
   // If the sdiv has an 'exact' flag we can use a simpler lowering.
   if (MI.getFlag(MachineInstr::MIFlag::IsExact)) {
     return matchUnaryPredicate(
-        MRI, RHS, [](const Constant *C) { return C && !C->isZeroValue(); });
+        MRI, RHS, [](const Constant *C) { return C && !C->isNullValue(); });
   }
 
   // Don't support the general case for now.
@@ -7168,6 +7240,81 @@ bool CombinerHelper::matchAddOverflow(MachineInstr &MI, BuildFnTy &MatchInfo) {
     };
     return true;
   }
+  }
+
+  return false;
+}
+
+void CombinerHelper::applyBuildFnMO(const MachineOperand &MO,
+                                    BuildFnTy &MatchInfo) {
+  MachineInstr *Root = getDefIgnoringCopies(MO.getReg(), MRI);
+  MatchInfo(Builder);
+  Root->eraseFromParent();
+}
+
+bool CombinerHelper::matchSextOfTrunc(const MachineOperand &MO,
+                                      BuildFnTy &MatchInfo) {
+  GSext *Sext = cast<GSext>(getDefIgnoringCopies(MO.getReg(), MRI));
+  GTrunc *Trunc = cast<GTrunc>(getDefIgnoringCopies(Sext->getSrcReg(), MRI));
+
+  Register Dst = Sext->getReg(0);
+  Register Src = Trunc->getSrcReg();
+
+  LLT DstTy = MRI.getType(Dst);
+  LLT SrcTy = MRI.getType(Src);
+
+  if (DstTy == SrcTy) {
+    MatchInfo = [=](MachineIRBuilder &B) { B.buildCopy(Dst, Src); };
+    return true;
+  }
+
+  if (DstTy.getScalarSizeInBits() < SrcTy.getScalarSizeInBits() &&
+      isLegalOrBeforeLegalizer({TargetOpcode::G_TRUNC, {DstTy, SrcTy}})) {
+    MatchInfo = [=](MachineIRBuilder &B) {
+      B.buildTrunc(Dst, Src, MachineInstr::MIFlag::NoSWrap);
+    };
+    return true;
+  }
+
+  if (DstTy.getScalarSizeInBits() > SrcTy.getScalarSizeInBits() &&
+      isLegalOrBeforeLegalizer({TargetOpcode::G_SEXT, {DstTy, SrcTy}})) {
+    MatchInfo = [=](MachineIRBuilder &B) { B.buildSExt(Dst, Src); };
+    return true;
+  }
+
+  return false;
+}
+
+bool CombinerHelper::matchZextOfTrunc(const MachineOperand &MO,
+                                      BuildFnTy &MatchInfo) {
+  GZext *Zext = cast<GZext>(getDefIgnoringCopies(MO.getReg(), MRI));
+  GTrunc *Trunc = cast<GTrunc>(getDefIgnoringCopies(Zext->getSrcReg(), MRI));
+
+  Register Dst = Zext->getReg(0);
+  Register Src = Trunc->getSrcReg();
+
+  LLT DstTy = MRI.getType(Dst);
+  LLT SrcTy = MRI.getType(Src);
+
+  if (DstTy == SrcTy) {
+    MatchInfo = [=](MachineIRBuilder &B) { B.buildCopy(Dst, Src); };
+    return true;
+  }
+
+  if (DstTy.getScalarSizeInBits() < SrcTy.getScalarSizeInBits() &&
+      isLegalOrBeforeLegalizer({TargetOpcode::G_TRUNC, {DstTy, SrcTy}})) {
+    MatchInfo = [=](MachineIRBuilder &B) {
+      B.buildTrunc(Dst, Src, MachineInstr::MIFlag::NoUWrap);
+    };
+    return true;
+  }
+
+  if (DstTy.getScalarSizeInBits() > SrcTy.getScalarSizeInBits() &&
+      isLegalOrBeforeLegalizer({TargetOpcode::G_ZEXT, {DstTy, SrcTy}})) {
+    MatchInfo = [=](MachineIRBuilder &B) {
+      B.buildZExt(Dst, Src, MachineInstr::MIFlag::NonNeg);
+    };
+    return true;
   }
 
   return false;

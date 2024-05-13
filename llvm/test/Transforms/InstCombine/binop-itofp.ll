@@ -1063,14 +1063,14 @@ define float @negzero_check_on_constant_for_si_fmul(i1 %c, i1 %.b, ptr %g_2345) 
   ret float %mul3.i.i
 }
 
-define <2 x float> @nonzero_check_on_constant_for_si_fmul_vec_w_undef(i1 %c, i1 %.b, ptr %g_2345) {
-; CHECK-LABEL: @nonzero_check_on_constant_for_si_fmul_vec_w_undef(
+define <2 x float> @nonzero_check_on_constant_for_si_fmul_vec_w_poison(i1 %c, i1 %.b, ptr %g_2345) {
+; CHECK-LABEL: @nonzero_check_on_constant_for_si_fmul_vec_w_poison(
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[C:%.*]], i32 65529, i32 53264
 ; CHECK-NEXT:    [[CONV_I_S:%.*]] = trunc nuw i32 [[SEL]] to i16
 ; CHECK-NEXT:    [[CONV_I_V:%.*]] = insertelement <2 x i16> poison, i16 [[CONV_I_S]], i64 0
 ; CHECK-NEXT:    [[CONV_I:%.*]] = shufflevector <2 x i16> [[CONV_I_V]], <2 x i16> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[CONV1_I:%.*]] = sitofp <2 x i16> [[CONV_I]] to <2 x float>
-; CHECK-NEXT:    [[MUL3_I_I:%.*]] = call <2 x float> @llvm.copysign.v2f32(<2 x float> zeroinitializer, <2 x float> [[CONV1_I]])
+; CHECK-NEXT:    [[MUL3_I_I:%.*]] = call <2 x float> @llvm.copysign.v2f32(<2 x float> <float poison, float 0.000000e+00>, <2 x float> [[CONV1_I]])
 ; CHECK-NEXT:    store i32 [[SEL]], ptr [[G_2345:%.*]], align 4
 ; CHECK-NEXT:    ret <2 x float> [[MUL3_I_I]]
 ;
@@ -1079,19 +1079,18 @@ define <2 x float> @nonzero_check_on_constant_for_si_fmul_vec_w_undef(i1 %c, i1 
   %conv.i.v = insertelement <2 x i16> poison, i16 %conv.i.s, i64 0
   %conv.i = insertelement <2 x i16> %conv.i.v, i16 %conv.i.s, i64 1
   %conv1.i = sitofp <2 x i16> %conv.i to <2 x float>
-  %mul3.i.i = fmul <2 x float> %conv1.i, <float undef, float 0.000000e+00>
+  %mul3.i.i = fmul <2 x float> %conv1.i, <float poison, float 0.000000e+00>
   store i32 %sel, ptr %g_2345, align 4
   ret <2 x float> %mul3.i.i
 }
 
-define <2 x float> @nonzero_check_on_constant_for_si_fmul_nz_vec_w_undef(i1 %c, i1 %.b, ptr %g_2345) {
-; CHECK-LABEL: @nonzero_check_on_constant_for_si_fmul_nz_vec_w_undef(
+define <2 x float> @nonzero_check_on_constant_for_si_fmul_nz_vec_w_poison(i1 %c, i1 %.b, ptr %g_2345) {
+; CHECK-LABEL: @nonzero_check_on_constant_for_si_fmul_nz_vec_w_poison(
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[C:%.*]], i32 65529, i32 53264
 ; CHECK-NEXT:    [[CONV_I_S:%.*]] = trunc nuw i32 [[SEL]] to i16
 ; CHECK-NEXT:    [[CONV_I_V:%.*]] = insertelement <2 x i16> poison, i16 [[CONV_I_S]], i64 0
 ; CHECK-NEXT:    [[CONV_I:%.*]] = shufflevector <2 x i16> [[CONV_I_V]], <2 x i16> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[CONV1_I:%.*]] = sitofp <2 x i16> [[CONV_I]] to <2 x float>
-; CHECK-NEXT:    [[MUL3_I_I:%.*]] = fmul <2 x float> [[CONV1_I]], <float undef, float 1.000000e+00>
+; CHECK-NEXT:    [[MUL3_I_I:%.*]] = sitofp <2 x i16> [[CONV_I]] to <2 x float>
 ; CHECK-NEXT:    store i32 [[SEL]], ptr [[G_2345:%.*]], align 4
 ; CHECK-NEXT:    ret <2 x float> [[MUL3_I_I]]
 ;
@@ -1100,20 +1099,20 @@ define <2 x float> @nonzero_check_on_constant_for_si_fmul_nz_vec_w_undef(i1 %c, 
   %conv.i.v = insertelement <2 x i16> poison, i16 %conv.i.s, i64 0
   %conv.i = insertelement <2 x i16> %conv.i.v, i16 %conv.i.s, i64 1
   %conv1.i = sitofp <2 x i16> %conv.i to <2 x float>
-  %mul3.i.i = fmul <2 x float> %conv1.i, <float undef, float 1.000000e+00>
+  %mul3.i.i = fmul <2 x float> %conv1.i, <float poison, float 1.000000e+00>
   store i32 %sel, ptr %g_2345, align 4
   ret <2 x float> %mul3.i.i
 }
 
-define <2 x float> @nonzero_check_on_constant_for_si_fmul_negz_vec_w_undef(i1 %c, i1 %.b, ptr %g_2345) {
-; CHECK-LABEL: @nonzero_check_on_constant_for_si_fmul_negz_vec_w_undef(
+define <2 x float> @nonzero_check_on_constant_for_si_fmul_negz_vec_w_poison(i1 %c, i1 %.b, ptr %g_2345) {
+; CHECK-LABEL: @nonzero_check_on_constant_for_si_fmul_negz_vec_w_poison(
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[C:%.*]], i32 65529, i32 53264
 ; CHECK-NEXT:    [[CONV_I_S:%.*]] = trunc nuw i32 [[SEL]] to i16
 ; CHECK-NEXT:    [[CONV_I_V:%.*]] = insertelement <2 x i16> poison, i16 [[CONV_I_S]], i64 0
 ; CHECK-NEXT:    [[CONV_I:%.*]] = shufflevector <2 x i16> [[CONV_I_V]], <2 x i16> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[CONV1_I:%.*]] = sitofp <2 x i16> [[CONV_I]] to <2 x float>
 ; CHECK-NEXT:    [[TMP1:%.*]] = fneg <2 x float> [[CONV1_I]]
-; CHECK-NEXT:    [[MUL3_I_I:%.*]] = call <2 x float> @llvm.copysign.v2f32(<2 x float> zeroinitializer, <2 x float> [[TMP1]])
+; CHECK-NEXT:    [[MUL3_I_I:%.*]] = call <2 x float> @llvm.copysign.v2f32(<2 x float> <float poison, float -0.000000e+00>, <2 x float> [[TMP1]])
 ; CHECK-NEXT:    store i32 [[SEL]], ptr [[G_2345:%.*]], align 4
 ; CHECK-NEXT:    ret <2 x float> [[MUL3_I_I]]
 ;
@@ -1122,7 +1121,7 @@ define <2 x float> @nonzero_check_on_constant_for_si_fmul_negz_vec_w_undef(i1 %c
   %conv.i.v = insertelement <2 x i16> poison, i16 %conv.i.s, i64 0
   %conv.i = insertelement <2 x i16> %conv.i.v, i16 %conv.i.s, i64 1
   %conv1.i = sitofp <2 x i16> %conv.i to <2 x float>
-  %mul3.i.i = fmul <2 x float> %conv1.i, <float undef, float -0.000000e+00>
+  %mul3.i.i = fmul <2 x float> %conv1.i, <float poison, float -0.000000e+00>
   store i32 %sel, ptr %g_2345, align 4
   ret <2 x float> %mul3.i.i
 }

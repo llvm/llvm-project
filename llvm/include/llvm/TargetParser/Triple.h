@@ -165,6 +165,18 @@ public:
     SPIRVSubArch_v14,
     SPIRVSubArch_v15,
     SPIRVSubArch_v16,
+
+    // DXIL sub-arch corresponds to its version.
+    DXILSubArch_v1_0,
+    DXILSubArch_v1_1,
+    DXILSubArch_v1_2,
+    DXILSubArch_v1_3,
+    DXILSubArch_v1_4,
+    DXILSubArch_v1_5,
+    DXILSubArch_v1_6,
+    DXILSubArch_v1_7,
+    DXILSubArch_v1_8,
+    LatestDXILSubArch = DXILSubArch_v1_8,
   };
   enum VendorType {
     UnknownVendor,
@@ -416,6 +428,10 @@ public:
   /// Parse the Vulkan version number from the OSVersion and SPIR-V version
   /// (SubArch).  This should only be called with Vulkan SPIR-V triples.
   VersionTuple getVulkanVersion() const;
+
+  /// Parse the DXIL version number from the DXIL version
+  /// (SubArch).  This should only be called with DXIL triples.
+  VersionTuple getDXILVersion() const;
 
   /// @}
   /// @name Direct Component Access
