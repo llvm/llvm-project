@@ -3504,7 +3504,7 @@ Differences between ``*17`` and ``*23`` modes:
 - ``nullptr`` and ``nullptr_t`` are supported, only in ``*23`` mode.
 - ``ATOMIC_VAR_INIT`` is removed from ``*23`` mode.
 - ``bool``, ``true``, ``false``, ``alignas``, ``alignof``, ``static_assert``,
-  and ``thread_local` are now first-class keywords, only in ``*23`` mode.
+  and ``thread_local`` are now first-class keywords, only in ``*23`` mode.
 - ``typeof`` and ``typeof_unqual`` are supported, only ``*23`` mode.
 - Bit-precise integers (``_BitInt(N)``) are supported by default in ``*23``
   mode, and as an extension in ``*17`` and earlier modes.

@@ -754,7 +754,6 @@ llvm::json::Value CreateStackFrame(lldb::SBFrame &frame) {
   } else {
     object.try_emplace("line", 0);
     object.try_emplace("column", 0);
-    object.try_emplace("presentationHint", "subtle");
   }
 
   const auto pc = frame.GetPC();
@@ -987,8 +986,14 @@ VariableDescription::VariableDescription(lldb::SBValue v, bool format_hex,
   display_type_name =
       !raw_display_type_name.empty() ? raw_display_type_name : NO_TYPENAME;
 
-  if (format_hex)
-    v.SetFormat(lldb::eFormatHex);
+  // Only format hex/default if there is no existing special format.
+  if (v.GetFormat() == lldb::eFormatDefault ||
+      v.GetFormat() == lldb::eFormatHex) {
+    if (format_hex)
+      v.SetFormat(lldb::eFormatHex);
+    else
+      v.SetFormat(lldb::eFormatDefault);
+  }
 
   llvm::raw_string_ostream os_display_value(display_value);
 

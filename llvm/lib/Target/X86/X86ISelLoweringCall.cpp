@@ -2021,6 +2021,22 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   if (CallConv == CallingConv::X86_INTR)
     report_fatal_error("X86 interrupts may not be called directly");
 
+  // Analyze operands of the call, assigning locations to each operand.
+  SmallVector<CCValAssign, 16> ArgLocs;
+  CCState CCInfo(CallConv, isVarArg, MF, ArgLocs, *DAG.getContext());
+
+  // Allocate shadow area for Win64.
+  if (IsWin64)
+    CCInfo.AllocateStack(32, Align(8));
+
+  CCInfo.AnalyzeArguments(Outs, CC_X86);
+
+  // In vectorcall calling convention a second pass is required for the HVA
+  // types.
+  if (CallingConv::X86_VectorCall == CallConv) {
+    CCInfo.AnalyzeArgumentsSecondPass(Outs, CC_X86);
+  }
+
   bool IsMustTail = CLI.CB && CLI.CB->isMustTailCall();
   if (Subtarget.isPICStyleGOT() && !IsGuaranteeTCO && !IsMustTail) {
     // If we are using a GOT, disable tail calls to external symbols with
@@ -2036,9 +2052,8 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
   if (isTailCall && !IsMustTail) {
     // Check if it's really possible to do a tail call.
-    isTailCall = IsEligibleForTailCallOptimization(
-        Callee, CallConv, IsCalleePopSRet, isVarArg, CLI.RetTy, Outs, OutVals,
-        Ins, DAG);
+    isTailCall = IsEligibleForTailCallOptimization(CLI, CCInfo, ArgLocs,
+                                                   IsCalleePopSRet);
 
     // Sibcalls are automatically detected tailcalls which do not require
     // ABI changes.
@@ -2055,22 +2070,6 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
   assert(!(isVarArg && canGuaranteeTCO(CallConv)) &&
          "Var args not supported with calling convention fastcc, ghc or hipe");
-
-  // Analyze operands of the call, assigning locations to each operand.
-  SmallVector<CCValAssign, 16> ArgLocs;
-  CCState CCInfo(CallConv, isVarArg, MF, ArgLocs, *DAG.getContext());
-
-  // Allocate shadow area for Win64.
-  if (IsWin64)
-    CCInfo.AllocateStack(32, Align(8));
-
-  CCInfo.AnalyzeArguments(Outs, CC_X86);
-
-  // In vectorcall calling convention a second pass is required for the HVA
-  // types.
-  if (CallingConv::X86_VectorCall == CallConv) {
-    CCInfo.AnalyzeArgumentsSecondPass(Outs, CC_X86);
-  }
 
   // Get a count of how many bytes are to be pushed on the stack.
   unsigned NumBytes = CCInfo.getAlignedCallFrameSize();
@@ -2723,11 +2722,20 @@ bool MatchingStackOffset(SDValue Arg, unsigned Offset, ISD::ArgFlagsTy Flags,
 
 /// Check whether the call is eligible for tail call optimization. Targets
 /// that want to do tail call optimization should implement this function.
+/// Note that the x86 backend does not check musttail calls for eligibility! The
+/// rest of x86 tail call lowering must be prepared to forward arguments of any
+/// type.
 bool X86TargetLowering::IsEligibleForTailCallOptimization(
-    SDValue Callee, CallingConv::ID CalleeCC, bool IsCalleePopSRet,
-    bool isVarArg, Type *RetTy, const SmallVectorImpl<ISD::OutputArg> &Outs,
-    const SmallVectorImpl<SDValue> &OutVals,
-    const SmallVectorImpl<ISD::InputArg> &Ins, SelectionDAG &DAG) const {
+    TargetLowering::CallLoweringInfo &CLI, CCState &CCInfo,
+    SmallVectorImpl<CCValAssign> &ArgLocs, bool IsCalleePopSRet) const {
+  SelectionDAG &DAG = CLI.DAG;
+  const SmallVectorImpl<ISD::OutputArg> &Outs = CLI.Outs;
+  const SmallVectorImpl<SDValue> &OutVals = CLI.OutVals;
+  const SmallVectorImpl<ISD::InputArg> &Ins = CLI.Ins;
+  SDValue Callee = CLI.Callee;
+  CallingConv::ID CalleeCC = CLI.CallConv;
+  bool isVarArg = CLI.IsVarArg;
+
   if (!mayTailCallThisCC(CalleeCC))
     return false;
 
@@ -2738,7 +2746,7 @@ bool X86TargetLowering::IsEligibleForTailCallOptimization(
   // If the function return type is x86_fp80 and the callee return type is not,
   // then the FP_EXTEND of the call result is not a nop. It's not safe to
   // perform a tailcall optimization here.
-  if (CallerF.getReturnType()->isX86_FP80Ty() && !RetTy->isX86_FP80Ty())
+  if (CallerF.getReturnType()->isX86_FP80Ty() && !CLI.RetTy->isX86_FP80Ty())
     return false;
 
   CallingConv::ID CallerCC = CallerF.getCallingConv();
@@ -2791,9 +2799,6 @@ bool X86TargetLowering::IsEligibleForTailCallOptimization(
     if (IsCalleeWin64 || IsCallerWin64)
       return false;
 
-    SmallVector<CCValAssign, 16> ArgLocs;
-    CCState CCInfo(CalleeCC, isVarArg, MF, ArgLocs, C);
-    CCInfo.AnalyzeCallOperands(Outs, CC_X86);
     for (const auto &VA : ArgLocs)
       if (!VA.isRegLoc())
         return false;
@@ -2811,8 +2816,8 @@ bool X86TargetLowering::IsEligibleForTailCallOptimization(
   }
   if (Unused) {
     SmallVector<CCValAssign, 16> RVLocs;
-    CCState CCInfo(CalleeCC, false, MF, RVLocs, C);
-    CCInfo.AnalyzeCallResult(Ins, RetCC_X86);
+    CCState RVCCInfo(CalleeCC, false, MF, RVLocs, C);
+    RVCCInfo.AnalyzeCallResult(Ins, RetCC_X86);
     for (const auto &VA : RVLocs) {
       if (VA.getLocReg() == X86::FP0 || VA.getLocReg() == X86::FP1)
         return false;
@@ -2832,24 +2837,12 @@ bool X86TargetLowering::IsEligibleForTailCallOptimization(
       return false;
   }
 
-  unsigned StackArgsSize = 0;
+  unsigned StackArgsSize = CCInfo.getStackSize();
 
   // If the callee takes no arguments then go on to check the results of the
   // call.
   if (!Outs.empty()) {
-    // Check if stack adjustment is needed. For now, do not do this if any
-    // argument is passed on the stack.
-    SmallVector<CCValAssign, 16> ArgLocs;
-    CCState CCInfo(CalleeCC, isVarArg, MF, ArgLocs, C);
-
-    // Allocate shadow area for Win64
-    if (IsCalleeWin64)
-      CCInfo.AllocateStack(32, Align(8));
-
-    CCInfo.AnalyzeCallOperands(Outs, CC_X86);
-    StackArgsSize = CCInfo.getStackSize();
-
-    if (CCInfo.getStackSize()) {
+    if (StackArgsSize > 0) {
       // Check if the arguments are already laid out in the right way as
       // the caller's fixed stack objects.
       MachineFrameInfo &MFI = MF.getFrameInfo();

@@ -11192,8 +11192,8 @@ define amdgpu_kernel void @global_atomic_fadd_double_uni_address_div_value_defau
   ret void
 }
 
-define amdgpu_kernel void @global_atomic_fadd_uni_address_uni_value_system_scope__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access(ptr addrspace(1) %ptr) {
-; GFX7LESS-LABEL: global_atomic_fadd_uni_address_uni_value_system_scope__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access:
+define amdgpu_kernel void @global_atomic_fadd_uni_address_uni_value_system_scope__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(ptr addrspace(1) %ptr) {
+; GFX7LESS-LABEL: global_atomic_fadd_uni_address_uni_value_system_scope__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory:
 ; GFX7LESS:       ; %bb.0:
 ; GFX7LESS-NEXT:    s_mov_b64 s[4:5], exec
 ; GFX7LESS-NEXT:    v_mbcnt_lo_u32_b32_e64 v0, s4, 0
@@ -11229,7 +11229,7 @@ define amdgpu_kernel void @global_atomic_fadd_uni_address_uni_value_system_scope
 ; GFX7LESS-NEXT:  .LBB18_3:
 ; GFX7LESS-NEXT:    s_endpgm
 ;
-; GFX9-LABEL: global_atomic_fadd_uni_address_uni_value_system_scope__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access:
+; GFX9-LABEL: global_atomic_fadd_uni_address_uni_value_system_scope__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_mov_b64 s[4:5], exec
 ; GFX9-NEXT:    v_mbcnt_lo_u32_b32 v0, s4, 0
@@ -11261,7 +11261,7 @@ define amdgpu_kernel void @global_atomic_fadd_uni_address_uni_value_system_scope
 ; GFX9-NEXT:  .LBB18_3:
 ; GFX9-NEXT:    s_endpgm
 ;
-; GFX1064-LABEL: global_atomic_fadd_uni_address_uni_value_system_scope__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access:
+; GFX1064-LABEL: global_atomic_fadd_uni_address_uni_value_system_scope__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory:
 ; GFX1064:       ; %bb.0:
 ; GFX1064-NEXT:    s_mov_b64 s[4:5], exec
 ; GFX1064-NEXT:    v_mbcnt_lo_u32_b32 v0, s4, 0
@@ -11293,7 +11293,7 @@ define amdgpu_kernel void @global_atomic_fadd_uni_address_uni_value_system_scope
 ; GFX1064-NEXT:  .LBB18_3:
 ; GFX1064-NEXT:    s_endpgm
 ;
-; GFX1032-LABEL: global_atomic_fadd_uni_address_uni_value_system_scope__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access:
+; GFX1032-LABEL: global_atomic_fadd_uni_address_uni_value_system_scope__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory:
 ; GFX1032:       ; %bb.0:
 ; GFX1032-NEXT:    s_mov_b32 s5, exec_lo
 ; GFX1032-NEXT:    s_mov_b32 s4, 0
@@ -11324,7 +11324,7 @@ define amdgpu_kernel void @global_atomic_fadd_uni_address_uni_value_system_scope
 ; GFX1032-NEXT:  .LBB18_3:
 ; GFX1032-NEXT:    s_endpgm
 ;
-; GFX1164-LABEL: global_atomic_fadd_uni_address_uni_value_system_scope__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access:
+; GFX1164-LABEL: global_atomic_fadd_uni_address_uni_value_system_scope__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory:
 ; GFX1164:       ; %bb.0:
 ; GFX1164-NEXT:    s_mov_b64 s[4:5], exec
 ; GFX1164-NEXT:    s_mov_b64 s[0:1], exec
@@ -11360,7 +11360,7 @@ define amdgpu_kernel void @global_atomic_fadd_uni_address_uni_value_system_scope
 ; GFX1164-NEXT:  .LBB18_3:
 ; GFX1164-NEXT:    s_endpgm
 ;
-; GFX1132-LABEL: global_atomic_fadd_uni_address_uni_value_system_scope__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access:
+; GFX1132-LABEL: global_atomic_fadd_uni_address_uni_value_system_scope__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory:
 ; GFX1132:       ; %bb.0:
 ; GFX1132-NEXT:    s_mov_b32 s5, exec_lo
 ; GFX1132-NEXT:    s_mov_b32 s4, 0
@@ -11394,7 +11394,7 @@ define amdgpu_kernel void @global_atomic_fadd_uni_address_uni_value_system_scope
 ; GFX1132-NEXT:  .LBB18_3:
 ; GFX1132-NEXT:    s_endpgm
 ;
-; GFX9-DPP-LABEL: global_atomic_fadd_uni_address_uni_value_system_scope__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access:
+; GFX9-DPP-LABEL: global_atomic_fadd_uni_address_uni_value_system_scope__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory:
 ; GFX9-DPP:       ; %bb.0:
 ; GFX9-DPP-NEXT:    s_mov_b64 s[4:5], exec
 ; GFX9-DPP-NEXT:    v_mbcnt_lo_u32_b32 v0, s4, 0
@@ -11426,7 +11426,7 @@ define amdgpu_kernel void @global_atomic_fadd_uni_address_uni_value_system_scope
 ; GFX9-DPP-NEXT:  .LBB18_3:
 ; GFX9-DPP-NEXT:    s_endpgm
 ;
-; GFX1064-DPP-LABEL: global_atomic_fadd_uni_address_uni_value_system_scope__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access:
+; GFX1064-DPP-LABEL: global_atomic_fadd_uni_address_uni_value_system_scope__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory:
 ; GFX1064-DPP:       ; %bb.0:
 ; GFX1064-DPP-NEXT:    s_mov_b64 s[4:5], exec
 ; GFX1064-DPP-NEXT:    v_mbcnt_lo_u32_b32 v0, s4, 0
@@ -11458,7 +11458,7 @@ define amdgpu_kernel void @global_atomic_fadd_uni_address_uni_value_system_scope
 ; GFX1064-DPP-NEXT:  .LBB18_3:
 ; GFX1064-DPP-NEXT:    s_endpgm
 ;
-; GFX1032-DPP-LABEL: global_atomic_fadd_uni_address_uni_value_system_scope__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access:
+; GFX1032-DPP-LABEL: global_atomic_fadd_uni_address_uni_value_system_scope__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory:
 ; GFX1032-DPP:       ; %bb.0:
 ; GFX1032-DPP-NEXT:    s_mov_b32 s5, exec_lo
 ; GFX1032-DPP-NEXT:    s_mov_b32 s4, 0
@@ -11489,7 +11489,7 @@ define amdgpu_kernel void @global_atomic_fadd_uni_address_uni_value_system_scope
 ; GFX1032-DPP-NEXT:  .LBB18_3:
 ; GFX1032-DPP-NEXT:    s_endpgm
 ;
-; GFX1164-DPP-LABEL: global_atomic_fadd_uni_address_uni_value_system_scope__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access:
+; GFX1164-DPP-LABEL: global_atomic_fadd_uni_address_uni_value_system_scope__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory:
 ; GFX1164-DPP:       ; %bb.0:
 ; GFX1164-DPP-NEXT:    s_mov_b64 s[4:5], exec
 ; GFX1164-DPP-NEXT:    s_mov_b64 s[0:1], exec
@@ -11525,7 +11525,7 @@ define amdgpu_kernel void @global_atomic_fadd_uni_address_uni_value_system_scope
 ; GFX1164-DPP-NEXT:  .LBB18_3:
 ; GFX1164-DPP-NEXT:    s_endpgm
 ;
-; GFX1132-DPP-LABEL: global_atomic_fadd_uni_address_uni_value_system_scope__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access:
+; GFX1132-DPP-LABEL: global_atomic_fadd_uni_address_uni_value_system_scope__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory:
 ; GFX1132-DPP:       ; %bb.0:
 ; GFX1132-DPP-NEXT:    s_mov_b32 s5, exec_lo
 ; GFX1132-DPP-NEXT:    s_mov_b32 s4, 0
@@ -11558,12 +11558,12 @@ define amdgpu_kernel void @global_atomic_fadd_uni_address_uni_value_system_scope
 ; GFX1132-DPP-NEXT:    s_cbranch_execnz .LBB18_2
 ; GFX1132-DPP-NEXT:  .LBB18_3:
 ; GFX1132-DPP-NEXT:    s_endpgm
-  %result = atomicrmw fadd ptr addrspace(1) %ptr, float 4.0  monotonic, align 4, !amdgpu.no.fine.grained.memory !1, !amdgpu.no.remote.memory.access !1, !amdgpu.ignore.denormal.mode !1
+  %result = atomicrmw fadd ptr addrspace(1) %ptr, float 4.0  monotonic, align 4, !amdgpu.no.fine.grained.memory !1, !amdgpu.no.remote.memory !1, !amdgpu.ignore.denormal.mode !1
   ret void
 }
 
-define amdgpu_kernel void @global_atomic_fadd_uni_address_uni_value_system_scope__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access(ptr addrspace(1) %ptr) {
-; GFX7LESS-LABEL: global_atomic_fadd_uni_address_uni_value_system_scope__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access:
+define amdgpu_kernel void @global_atomic_fadd_uni_address_uni_value_system_scope__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(ptr addrspace(1) %ptr) {
+; GFX7LESS-LABEL: global_atomic_fadd_uni_address_uni_value_system_scope__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory:
 ; GFX7LESS:       ; %bb.0:
 ; GFX7LESS-NEXT:    s_mov_b64 s[4:5], exec
 ; GFX7LESS-NEXT:    v_mbcnt_lo_u32_b32_e64 v0, s4, 0
@@ -11599,7 +11599,7 @@ define amdgpu_kernel void @global_atomic_fadd_uni_address_uni_value_system_scope
 ; GFX7LESS-NEXT:  .LBB19_3:
 ; GFX7LESS-NEXT:    s_endpgm
 ;
-; GFX9-LABEL: global_atomic_fadd_uni_address_uni_value_system_scope__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access:
+; GFX9-LABEL: global_atomic_fadd_uni_address_uni_value_system_scope__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_mov_b64 s[4:5], exec
 ; GFX9-NEXT:    v_mbcnt_lo_u32_b32 v0, s4, 0
@@ -11631,7 +11631,7 @@ define amdgpu_kernel void @global_atomic_fadd_uni_address_uni_value_system_scope
 ; GFX9-NEXT:  .LBB19_3:
 ; GFX9-NEXT:    s_endpgm
 ;
-; GFX1064-LABEL: global_atomic_fadd_uni_address_uni_value_system_scope__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access:
+; GFX1064-LABEL: global_atomic_fadd_uni_address_uni_value_system_scope__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory:
 ; GFX1064:       ; %bb.0:
 ; GFX1064-NEXT:    s_mov_b64 s[4:5], exec
 ; GFX1064-NEXT:    v_mbcnt_lo_u32_b32 v0, s4, 0
@@ -11663,7 +11663,7 @@ define amdgpu_kernel void @global_atomic_fadd_uni_address_uni_value_system_scope
 ; GFX1064-NEXT:  .LBB19_3:
 ; GFX1064-NEXT:    s_endpgm
 ;
-; GFX1032-LABEL: global_atomic_fadd_uni_address_uni_value_system_scope__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access:
+; GFX1032-LABEL: global_atomic_fadd_uni_address_uni_value_system_scope__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory:
 ; GFX1032:       ; %bb.0:
 ; GFX1032-NEXT:    s_mov_b32 s5, exec_lo
 ; GFX1032-NEXT:    s_mov_b32 s4, 0
@@ -11694,7 +11694,7 @@ define amdgpu_kernel void @global_atomic_fadd_uni_address_uni_value_system_scope
 ; GFX1032-NEXT:  .LBB19_3:
 ; GFX1032-NEXT:    s_endpgm
 ;
-; GFX1164-LABEL: global_atomic_fadd_uni_address_uni_value_system_scope__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access:
+; GFX1164-LABEL: global_atomic_fadd_uni_address_uni_value_system_scope__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory:
 ; GFX1164:       ; %bb.0:
 ; GFX1164-NEXT:    s_mov_b64 s[4:5], exec
 ; GFX1164-NEXT:    s_mov_b64 s[0:1], exec
@@ -11730,7 +11730,7 @@ define amdgpu_kernel void @global_atomic_fadd_uni_address_uni_value_system_scope
 ; GFX1164-NEXT:  .LBB19_3:
 ; GFX1164-NEXT:    s_endpgm
 ;
-; GFX1132-LABEL: global_atomic_fadd_uni_address_uni_value_system_scope__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access:
+; GFX1132-LABEL: global_atomic_fadd_uni_address_uni_value_system_scope__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory:
 ; GFX1132:       ; %bb.0:
 ; GFX1132-NEXT:    s_mov_b32 s5, exec_lo
 ; GFX1132-NEXT:    s_mov_b32 s4, 0
@@ -11764,7 +11764,7 @@ define amdgpu_kernel void @global_atomic_fadd_uni_address_uni_value_system_scope
 ; GFX1132-NEXT:  .LBB19_3:
 ; GFX1132-NEXT:    s_endpgm
 ;
-; GFX9-DPP-LABEL: global_atomic_fadd_uni_address_uni_value_system_scope__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access:
+; GFX9-DPP-LABEL: global_atomic_fadd_uni_address_uni_value_system_scope__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory:
 ; GFX9-DPP:       ; %bb.0:
 ; GFX9-DPP-NEXT:    s_mov_b64 s[4:5], exec
 ; GFX9-DPP-NEXT:    v_mbcnt_lo_u32_b32 v0, s4, 0
@@ -11796,7 +11796,7 @@ define amdgpu_kernel void @global_atomic_fadd_uni_address_uni_value_system_scope
 ; GFX9-DPP-NEXT:  .LBB19_3:
 ; GFX9-DPP-NEXT:    s_endpgm
 ;
-; GFX1064-DPP-LABEL: global_atomic_fadd_uni_address_uni_value_system_scope__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access:
+; GFX1064-DPP-LABEL: global_atomic_fadd_uni_address_uni_value_system_scope__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory:
 ; GFX1064-DPP:       ; %bb.0:
 ; GFX1064-DPP-NEXT:    s_mov_b64 s[4:5], exec
 ; GFX1064-DPP-NEXT:    v_mbcnt_lo_u32_b32 v0, s4, 0
@@ -11828,7 +11828,7 @@ define amdgpu_kernel void @global_atomic_fadd_uni_address_uni_value_system_scope
 ; GFX1064-DPP-NEXT:  .LBB19_3:
 ; GFX1064-DPP-NEXT:    s_endpgm
 ;
-; GFX1032-DPP-LABEL: global_atomic_fadd_uni_address_uni_value_system_scope__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access:
+; GFX1032-DPP-LABEL: global_atomic_fadd_uni_address_uni_value_system_scope__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory:
 ; GFX1032-DPP:       ; %bb.0:
 ; GFX1032-DPP-NEXT:    s_mov_b32 s5, exec_lo
 ; GFX1032-DPP-NEXT:    s_mov_b32 s4, 0
@@ -11859,7 +11859,7 @@ define amdgpu_kernel void @global_atomic_fadd_uni_address_uni_value_system_scope
 ; GFX1032-DPP-NEXT:  .LBB19_3:
 ; GFX1032-DPP-NEXT:    s_endpgm
 ;
-; GFX1164-DPP-LABEL: global_atomic_fadd_uni_address_uni_value_system_scope__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access:
+; GFX1164-DPP-LABEL: global_atomic_fadd_uni_address_uni_value_system_scope__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory:
 ; GFX1164-DPP:       ; %bb.0:
 ; GFX1164-DPP-NEXT:    s_mov_b64 s[4:5], exec
 ; GFX1164-DPP-NEXT:    s_mov_b64 s[0:1], exec
@@ -11895,7 +11895,7 @@ define amdgpu_kernel void @global_atomic_fadd_uni_address_uni_value_system_scope
 ; GFX1164-DPP-NEXT:  .LBB19_3:
 ; GFX1164-DPP-NEXT:    s_endpgm
 ;
-; GFX1132-DPP-LABEL: global_atomic_fadd_uni_address_uni_value_system_scope__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access:
+; GFX1132-DPP-LABEL: global_atomic_fadd_uni_address_uni_value_system_scope__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory:
 ; GFX1132-DPP:       ; %bb.0:
 ; GFX1132-DPP-NEXT:    s_mov_b32 s5, exec_lo
 ; GFX1132-DPP-NEXT:    s_mov_b32 s4, 0
@@ -11928,7 +11928,7 @@ define amdgpu_kernel void @global_atomic_fadd_uni_address_uni_value_system_scope
 ; GFX1132-DPP-NEXT:    s_cbranch_execnz .LBB19_2
 ; GFX1132-DPP-NEXT:  .LBB19_3:
 ; GFX1132-DPP-NEXT:    s_endpgm
-  %result = atomicrmw fadd ptr addrspace(1) %ptr, float 4.0  monotonic, align 4, !amdgpu.no.fine.grained.memory !1, !amdgpu.no.remote.memory.access !1
+  %result = atomicrmw fadd ptr addrspace(1) %ptr, float 4.0  monotonic, align 4, !amdgpu.no.fine.grained.memory !1, !amdgpu.no.remote.memory !1
   ret void
 }
 

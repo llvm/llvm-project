@@ -397,6 +397,7 @@ mlir_c_api_cc_library(
     name = "CAPIIR",
     srcs = [
         "lib/CAPI/Dialect/Func.cpp",
+        "lib/CAPI/Dialect/IRDL.cpp",
         "lib/CAPI/IR/AffineExpr.cpp",
         "lib/CAPI/IR/AffineMap.cpp",
         "lib/CAPI/IR/BuiltinAttributes.cpp",
@@ -415,6 +416,7 @@ mlir_c_api_cc_library(
         "include/mlir-c/BuiltinTypes.h",
         "include/mlir-c/Diagnostics.h",
         "include/mlir-c/Dialect/Func.h",
+        "include/mlir-c/Dialect/IRDL.h",
         "include/mlir-c/ExecutionEngine.h",
         "include/mlir-c/IR.h",
         "include/mlir-c/IntegerSet.h",
@@ -446,6 +448,7 @@ mlir_c_api_cc_library(
         ":AsmParser",
         ":ConversionPassIncGen",
         ":FuncDialect",
+        ":IRDLDialect",
         ":InferTypeOpInterface",
         ":Parser",
     ],
@@ -12945,6 +12948,7 @@ cc_library(
         ":ArithUtils",
         ":MemRefDialect",
         ":VectorDialect",
+        "//llvm:Support",
     ],
 )
 

@@ -1,11 +1,11 @@
-// RUN: %clang_cc1 %s -triple powerpc-ibm-aix-xcoff -S -mtocdata=a4,a5,a8,a9,b,c,d,e,v -emit-llvm -o - 2>&1 \
+// RUN: %clang_cc1 %s -triple powerpc-ibm-aix-xcoff -mtocdata=a4,a5,a8,a9,b,c,d,e,v -emit-llvm -o - 2>&1 \
 // RUN:          | FileCheck %s -check-prefixes=CHECK32 --match-full-lines
-// RUN: %clang_cc1  %s -triple powerpc-ibm-aix-xcoff -S -mtocdata -emit-llvm -o - 2>&1 \
+// RUN: %clang_cc1 %s -triple powerpc-ibm-aix-xcoff -mtocdata -emit-llvm -o - 2>&1 \
 // RUN:          | FileCheck %s -check-prefixes=CHECK32 --match-full-lines
 
-// RUN: %clang_cc1  %s -triple powerpc64-ibm-aix-xcoff -S -mtocdata=a4,a5,a8,a9,b,c,d,e,v -emit-llvm -o - 2>&1 \
+// RUN: %clang_cc1 %s -triple powerpc64-ibm-aix-xcoff -mtocdata=a4,a5,a8,a9,b,c,d,e,v -emit-llvm -o - 2>&1 \
 // RUN:          | FileCheck %s -check-prefixes=CHECK64 --match-full-lines
-// RUN: %clang_cc1  %s -triple powerpc64-ibm-aix-xcoff -S -mtocdata -emit-llvm -o - 2>&1 \
+// RUN: %clang_cc1 %s -triple powerpc64-ibm-aix-xcoff -mtocdata -emit-llvm -o - 2>&1 \
 // RUN:          | FileCheck %s -check-prefixes=CHECK64 --match-full-lines
 
 struct size4_struct {

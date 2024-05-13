@@ -3,8 +3,8 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global < %t.bc | FileCheck --check-prefixes=ALL,MESA,UNPACKED %s
 ; RUN: llc -mtriple=amdgcn-unknown-mesa3d -mcpu=hawaii < %t.bc | FileCheck -check-prefixes=ALL,MESA3D,UNPACKED %s
 ; RUN: llc -mtriple=amdgcn-unknown-mesa3d -mcpu=tonga -mattr=-flat-for-global < %t.bc | FileCheck -check-prefixes=ALL,MESA3D,UNPACKED %s
-; RUN: llc -mtriple=amdgcn -mtriple=amdgcn-unknown-amdhsa -mcpu=gfx90a < %t.bc | FileCheck -check-prefixes=ALL,PACKED-TID %s
-; RUN: llc -mtriple=amdgcn -mtriple=amdgcn-unknown-amdhsa -mcpu=gfx1100 -amdgpu-enable-vopd=0 < %t.bc | FileCheck -check-prefixes=ALL,PACKED-TID %s
+; RUN: llc -mtriple=amdgcn-unknown-amdhsa -mcpu=gfx90a < %t.bc | FileCheck -check-prefixes=ALL,PACKED-TID %s
+; RUN: llc -mtriple=amdgcn-unknown-amdhsa -mcpu=gfx1100 -amdgpu-enable-vopd=0 < %t.bc | FileCheck -check-prefixes=ALL,PACKED-TID %s
 
 declare i32 @llvm.amdgcn.workitem.id.x() #0
 declare i32 @llvm.amdgcn.workitem.id.y() #0

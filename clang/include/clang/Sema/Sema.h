@@ -9216,6 +9216,12 @@ public:
   /// receive true if the cause for the error is the associated constraints of
   /// the template not being satisfied by the template arguments.
   ///
+  /// \param PartialOrderingTTP If true, assume these template arguments are
+  /// the injected template arguments for a template template parameter.
+  /// This will relax the requirement that all its possible uses are valid:
+  /// TTP checking is loose, and assumes that invalid uses will be diagnosed
+  /// during instantiation.
+  ///
   /// \returns true if an error occurred, false otherwise.
   bool CheckTemplateArgumentList(
       TemplateDecl *Template, SourceLocation TemplateLoc,
@@ -9223,7 +9229,7 @@ public:
       SmallVectorImpl<TemplateArgument> &SugaredConverted,
       SmallVectorImpl<TemplateArgument> &CanonicalConverted,
       bool UpdateArgsWithConversions = true,
-      bool *ConstraintsNotSatisfied = nullptr);
+      bool *ConstraintsNotSatisfied = nullptr, bool PartialOrderingTTP = false);
 
   bool CheckTemplateTypeArgument(
       TemplateTypeParmDecl *Param, TemplateArgumentLoc &Arg,
@@ -9739,6 +9745,9 @@ public:
                      const PartialDiagnostic &CandidateDiag,
                      bool Complain = true, QualType TargetType = QualType());
 
+  FunctionDecl *getMoreConstrainedFunction(FunctionDecl *FD1,
+                                           FunctionDecl *FD2);
+
   ///@}
 
   //
@@ -10199,7 +10208,9 @@ public:
         S.ExprEvalContexts.back().InImmediateFunctionContext =
             FD->isImmediateFunction() ||
             S.ExprEvalContexts[S.ExprEvalContexts.size() - 2]
-                .isConstantEvaluated();
+                .isConstantEvaluated() ||
+            S.ExprEvalContexts[S.ExprEvalContexts.size() - 2]
+                .isImmediateFunctionContext();
         S.ExprEvalContexts.back().InImmediateEscalatingFunctionContext =
             S.getLangOpts().CPlusPlus20 && FD->isImmediateEscalating();
       } else
