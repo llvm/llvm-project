@@ -573,5 +573,7 @@ def : ProcNoItin<"kryo",                                [ARMv8a, ProcKryo,
                                                          FeatureCRC]>;
 
 def : ProcessorModel<"cortex-r52", CortexR52Model,      [ARMv8r, ProcR52,
+                                                         FeatureFPARMv8,
+                                                         FeatureNEON,
                                                          FeatureUseMISched,
                                                          FeatureFPAO]>;

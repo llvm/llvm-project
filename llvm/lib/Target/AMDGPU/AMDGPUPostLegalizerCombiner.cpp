@@ -72,8 +72,8 @@ public:
   // TODO: Make sure fmin_legacy/fmax_legacy don't canonicalize
   bool matchFMinFMaxLegacy(MachineInstr &MI, MachineInstr &FCmp,
                            FMinFMaxLegacyInfo &Info) const;
-  void applySelectFCmpToFMinToFMaxLegacy(MachineInstr &MI,
-                                         const FMinFMaxLegacyInfo &Info) const;
+  void applySelectFCmpToFMinFMaxLegacy(MachineInstr &MI,
+                                       const FMinFMaxLegacyInfo &Info) const;
 
   bool matchUCharToFloat(MachineInstr &MI) const;
   void applyUCharToFloat(MachineInstr &MI) const;
@@ -186,7 +186,7 @@ bool AMDGPUPostLegalizerCombinerImpl::matchFMinFMaxLegacy(
   return Info.Pred != CmpInst::getSwappedPredicate(Info.Pred);
 }
 
-void AMDGPUPostLegalizerCombinerImpl::applySelectFCmpToFMinToFMaxLegacy(
+void AMDGPUPostLegalizerCombinerImpl::applySelectFCmpToFMinFMaxLegacy(
     MachineInstr &MI, const FMinFMaxLegacyInfo &Info) const {
   unsigned Opc = (Info.Pred & CmpInst::FCMP_OGT) ? AMDGPU::G_AMDGPU_FMAX_LEGACY
                                                  : AMDGPU::G_AMDGPU_FMIN_LEGACY;
