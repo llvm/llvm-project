@@ -57,6 +57,13 @@ enum class ShaderStage {
   Invalid,
 };
 
+enum class PointerAuthenticationMode : unsigned {
+  None,
+  Strip,
+  SignAndStrip,
+  SignAndAuth
+};
+
 /// Bitfields of LangOptions, split out from LangOptions in order to ensure that
 /// this large collection of bitfields is a trivial class type.
 class LangOptionsBase {
@@ -961,10 +968,7 @@ public:
       setAllowFPContractAcrossStatement();
   }
 
-  void setDisallowOptimizations() {
-    setFPPreciseEnabled(true);
-    setDisallowFPContract();
-  }
+  void setDisallowOptimizations() { setFPPreciseEnabled(true); }
 
   storage_type getAsOpaqueInt() const {
     return (static_cast<storage_type>(Options.getAsOpaqueInt())

@@ -314,6 +314,16 @@ void SPIRVTargetLowering::finalizeLowering(MachineFunction &MF) const {
                                       SPIRV::OpTypeBool))
           MI.setDesc(STI.getInstrInfo()->get(SPIRV::OpLogicalNotEqual));
         break;
+      case SPIRV::OpConstantI: {
+        SPIRVType *Type = GR.getSPIRVTypeForVReg(MI.getOperand(1).getReg());
+        if (Type->getOpcode() != SPIRV::OpTypeInt && MI.getOperand(2).isImm() &&
+            MI.getOperand(2).getImm() == 0) {
+          // Validate the null constant of a target extension type
+          MI.setDesc(STI.getInstrInfo()->get(SPIRV::OpConstantNull));
+          for (unsigned i = MI.getNumOperands() - 1; i > 1; --i)
+            MI.removeOperand(i);
+        }
+      } break;
       }
     }
   }

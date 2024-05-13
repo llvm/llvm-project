@@ -788,61 +788,31 @@ define <4 x i32> @or_tree_with_mismatching_shifts_vec_i32(<4 x i32> %a, <4 x i32
   ret <4 x i32> %r
 }
 
-; FIXME: Reproducer for a DAGCombiner::combineShiftOfShiftedLogic
-; bug. DAGCombiner need to check that the sum of the shift amounts fits in i8,
-; which is the legal type used to described X86 shift amounts. Verify that we
-; do not try to create a shift with 130+160 as shift amount, and verify that
-; the stored value do not depend on %a1.
+; Reproducer for a DAGCombiner::combineShiftOfShiftedLogic bug. DAGCombiner
+; need to check that the sum of the shift amounts fits in i8, which is the
+; legal type used to described X86 shift amounts. Verify that we do not try to
+; create a shift with 130+160 as shift amount, and verify that the stored
+; value do not depend on %a1.
 define void @combineShiftOfShiftedLogic(i128 %a1, i32 %a2, ptr %p) {
 ; X86-LABEL: combineShiftOfShiftedLogic:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %ebx
-; X86-NEXT:    .cfi_def_cfa_offset 8
-; X86-NEXT:    pushl %edi
-; X86-NEXT:    .cfi_def_cfa_offset 12
-; X86-NEXT:    pushl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 16
-; X86-NEXT:    .cfi_offset %esi, -16
-; X86-NEXT:    .cfi_offset %edi, -12
-; X86-NEXT:    .cfi_offset %ebx, -8
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X86-NEXT:    movl %edi, %esi
-; X86-NEXT:    shldl $2, %ebx, %edi
-; X86-NEXT:    shldl $2, %edx, %ebx
-; X86-NEXT:    shrl $30, %esi
-; X86-NEXT:    orl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    shldl $2, %ecx, %edx
-; X86-NEXT:    shll $2, %ecx
-; X86-NEXT:    movl %edi, 16(%eax)
-; X86-NEXT:    movl %ebx, 12(%eax)
-; X86-NEXT:    movl %edx, 8(%eax)
-; X86-NEXT:    movl %ecx, 4(%eax)
-; X86-NEXT:    movl %esi, 20(%eax)
-; X86-NEXT:    movl $0, (%eax)
-; X86-NEXT:    popl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 12
-; X86-NEXT:    popl %edi
-; X86-NEXT:    .cfi_def_cfa_offset 8
-; X86-NEXT:    popl %ebx
-; X86-NEXT:    .cfi_def_cfa_offset 4
+; X86-NEXT:    movl %eax, 20(%ecx)
+; X86-NEXT:    movl $0, 16(%ecx)
+; X86-NEXT:    movl $0, 12(%ecx)
+; X86-NEXT:    movl $0, 8(%ecx)
+; X86-NEXT:    movl $0, 4(%ecx)
+; X86-NEXT:    movl $0, (%ecx)
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: combineShiftOfShiftedLogic:
 ; X64:       # %bb.0:
 ; X64-NEXT:    # kill: def $edx killed $edx def $rdx
 ; X64-NEXT:    shlq $32, %rdx
-; X64-NEXT:    movq %rsi, %rax
-; X64-NEXT:    shrq $30, %rax
-; X64-NEXT:    orq %rdx, %rax
-; X64-NEXT:    shldq $34, %rdi, %rsi
-; X64-NEXT:    shlq $34, %rdi
-; X64-NEXT:    movq %rsi, 8(%rcx)
-; X64-NEXT:    movq %rdi, (%rcx)
-; X64-NEXT:    movq %rax, 16(%rcx)
+; X64-NEXT:    movq %rdx, 16(%rcx)
+; X64-NEXT:    movq $0, 8(%rcx)
+; X64-NEXT:    movq $0, (%rcx)
 ; X64-NEXT:    retq
   %zext1 = zext i128 %a1 to i192
   %zext2 = zext i32 %a2 to i192

@@ -98,7 +98,7 @@ end
 
 ! CHECK: %[[TEMP:.*]] = fir.allocmem !fir.array<10xi32> {bindc_name = ".tmp", uniq_name = ""}
 ! CHECK: %[[DECL_TEMP:.*]]:2 = hlfir.declare %[[TEMP]](%{{.*}}) {uniq_name = ".tmp"} : (!fir.heap<!fir.array<10xi32>>, !fir.shape<1>) -> (!fir.heap<!fir.array<10xi32>>, !fir.heap<!fir.array<10xi32>>)
-! CHECK: %[[ADEV_TEMP:.*]]:2 = hlfir.declare %21#0 {cuda_attr = #fir.cuda<device>, uniq_name = "_QFsub2Eadev"} : (!fir.heap<!fir.array<10xi32>>) -> (!fir.heap<!fir.array<10xi32>>, !fir.heap<!fir.array<10xi32>>)
+! CHECK: %[[ADEV_TEMP:.*]]:2 = hlfir.declare %[[DECL_TEMP]]#1(%{{.*}}) {cuda_attr = #fir.cuda<device>, uniq_name = "_QFsub2Eadev"} : (!fir.heap<!fir.array<10xi32>>, !fir.shape<1>) -> (!fir.heap<!fir.array<10xi32>>, !fir.heap<!fir.array<10xi32>>)
 ! CHECK: fir.cuda_data_transfer %[[ADEV]]#1 to %[[DECL_TEMP]]#0 {transfer_kind = #fir.cuda_transfer<device_host>} : !fir.ref<!fir.array<10xi32>>, !fir.heap<!fir.array<10xi32>>
 ! CHECK: %[[ELEMENTAL:.*]] = hlfir.elemental %{{.*}} unordered : (!fir.shape<1>) -> !hlfir.expr<10xi32>
 ! CHECK: hlfir.assign %[[ELEMENTAL]] to %[[BHOST]]#0 : !hlfir.expr<10xi32>, !fir.ref<!fir.array<10xi32>>
@@ -119,3 +119,43 @@ end
 ! CHECK: %[[T:.*]]:2 = hlfir.declare %7 {cuda_attr = #fir.cuda<device>, uniq_name = "_QFsub3Et"} : (!fir.ref<!fir.type<_QMmod1Tt1{i:i32}>>) -> (!fir.ref<!fir.type<_QMmod1Tt1{i:i32}>>, !fir.ref<!fir.type<_QMmod1Tt1{i:i32}>>)
 ! CHECK: %[[TMP_DECL:.*]]:2 = hlfir.declare %0 {uniq_name = ".tmp"} : (!fir.ref<!fir.type<_QMmod1Tt1{i:i32}>>) -> (!fir.ref<!fir.type<_QMmod1Tt1{i:i32}>>, !fir.ref<!fir.type<_QMmod1Tt1{i:i32}>>)
 ! CHECK: fir.cuda_data_transfer %[[T]]#1 to %[[TMP_DECL]]#0 {transfer_kind = #fir.cuda_transfer<device_host>} : !fir.ref<!fir.type<_QMmod1Tt1{i:i32}>>, !fir.ref<!fir.type<_QMmod1Tt1{i:i32}>>
+
+
+! Check that fir.cuda_data_transfer are not generated within cuf kernel
+subroutine sub4()
+  integer, parameter :: n = 10
+  real, device :: adev(n)
+  real :: ahost(n)
+  real :: b
+  integer :: i
+
+  adev = ahost
+  !$cuf kernel do <<<*,*>>>
+  do i = 1, n
+    adev(i) = adev(i) + b
+  enddo
+end subroutine
+
+! CHECK-LABEL: func.func @_QPsub4()
+! CHECK: fir.cuda_data_transfer
+! CHECK: fir.cuda_kernel<<<*, *>>>
+! CHECK-NOT: fir.cuda_data_transfer
+! CHECK: hlfir.assign
+
+attributes(global) subroutine sub5(a)
+  integer, device :: a
+  integer :: i
+  a = i
+end subroutine
+
+! CHECK-LABEL: func.func @_QPsub5
+! CHECK-NOT: fir.cuda_data_transfer
+
+attributes(host,device) subroutine sub6(a)
+  integer, device :: a
+  integer :: i
+  a = i
+end subroutine
+
+! CHECK-LABEL: func.func @_QPsub6
+! CHECK: fir.cuda_data_transfer

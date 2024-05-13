@@ -60,7 +60,9 @@ tablegen("AMDGPUGenMCPseudoLowering") {
 tablegen("AMDGPUGenRegisterBank") {
   visibility = [
     ":LLVMAMDGPUCodeGen",
+    "MCTargetDesc",
     "Utils",
+    "//llvm/unittests/MC/AMDGPU:AMDGPUMCTests",
     "//llvm/unittests/Target/AMDGPU:AMDGPUTests",
   ]
   args = [ "-gen-register-bank" ]

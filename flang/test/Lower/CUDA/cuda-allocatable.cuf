@@ -17,6 +17,15 @@ end subroutine
 
 ! CHECK: %{{.*}} = fir.cuda_deallocate %[[BOX_DECL]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {cuda_attr = #fir.cuda<device>} -> i32
 
+! CHECK: %[[BOX_LOAD:.*]] = fir.load %[[BOX_DECL]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+! CHECK: %[[ADDR:.*]] = fir.box_addr %[[BOX_LOAD]] : (!fir.box<!fir.heap<!fir.array<?xf32>>>) -> !fir.heap<!fir.array<?xf32>>
+! CHECK: %[[ADDR_I64:.*]] = fir.convert %[[ADDR]] : (!fir.heap<!fir.array<?xf32>>) -> i64
+! CHECK: %[[C0:.*]] = arith.constant 0 : i64
+! CHECK: %[[NE_C0:.*]] = arith.cmpi ne, %[[ADDR_I64]], %[[C0]] : i64
+! CHECK: fir.if %[[NE_C0]] {
+! CHECK:   %{{.*}} = fir.cuda_deallocate %[[BOX_DECL]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {cuda_attr = #fir.cuda<device>} -> i32
+! CHECK: }
+
 subroutine sub2()
   real, allocatable, managed :: a(:)
   integer :: istat
@@ -37,6 +46,10 @@ end subroutine
 ! CHECK: %[[STAT:.*]] = fir.cuda_deallocate %[[BOX_DECL]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {cuda_attr = #fir.cuda<managed>, hasStat} -> i32
 ! CHECK: fir.store %[[STAT]] to %[[ISTAT_DECL]]#1 : !fir.ref<i32>
 
+! CHECK: fir.if %{{.*}} {
+! CHECK:   %{{.*}} = fir.cuda_deallocate %[[BOX_DECL]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {cuda_attr = #fir.cuda<managed>} -> i32
+! CHECK: }
+
 subroutine sub3()
   integer, allocatable, pinned :: a(:,:)
   logical :: plog
@@ -50,6 +63,9 @@ end subroutine
 ! CHECK: %[[PLOG_DECL:.*]]:2 = hlfir.declare %5 {uniq_name = "_QFsub3Eplog"} : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
 ! CHECK-2: fir.call @_FortranAAllocatableSetBounds
 ! CHECK: %{{.*}} = fir.cuda_allocate %[[BOX_DECL]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xi32>>>> pinned(%[[PLOG_DECL]]#1 : !fir.ref<!fir.logical<4>>) {cuda_attr = #fir.cuda<pinned>} -> i32
+! CHECK: fir.if %{{.*}} {
+! CHECK:   %{{.*}} = fir.cuda_deallocate %[[BOX_DECL]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xi32>>>> {cuda_attr = #fir.cuda<pinned>} -> i32
+! CHECK: }
 
 subroutine sub4()
   real, allocatable, device :: a(:)
@@ -65,6 +81,9 @@ end subroutine
 ! CHECK: fir.call @_FortranAAllocatableSetBounds
 ! CHECK: %[[STREAM:.*]] = fir.load %[[ISTREAM_DECL]]#0 : !fir.ref<i32>
 ! CHECK: %{{.*}} = fir.cuda_allocate %[[BOX_DECL]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> stream(%[[STREAM]] : i32) {cuda_attr = #fir.cuda<device>} -> i32
+! CHECK: fir.if %{{.*}} {
+! CHECK:   %{{.*}} = fir.cuda_deallocate %[[BOX_DECL]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {cuda_attr = #fir.cuda<device>} -> i32
+! CHECK: }
 
 subroutine sub5()
   real, allocatable, device :: a(:)
@@ -80,6 +99,11 @@ end subroutine
 ! CHECK: %[[LOAD_B:.*]] = fir.load %[[BOX_B_DECL]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
 ! CHECK: fir.call @_FortranAAllocatableSetBounds
 ! CHECK: %{{.*}} = fir.cuda_allocate %[[BOX_A_DECL]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> source(%[[LOAD_B]] : !fir.box<!fir.heap<!fir.array<?xf32>>>) {cuda_attr = #fir.cuda<device>} -> i32
+! CHECK: fir.if
+! CHECK: fir.freemem
+! CHECK: fir.if %{{.*}} {
+! CHECK:   %{{.*}} = fir.cuda_deallocate %[[BOX_A_DECL]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {cuda_attr = #fir.cuda<device>} -> i32
+! CHECK: }
 
 subroutine sub6()
   real, allocatable, device :: a(:)
@@ -95,6 +119,9 @@ end subroutine
 ! CHECK: %[[LOAD_B:.*]] = fir.load %[[BOX_B_DECL]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
 ! CHECK: fir.call @_FortranAAllocatableApplyMold
 ! CHECK: %{{.*}} = fir.cuda_allocate %[[BOX_A_DECL]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {cuda_attr = #fir.cuda<device>} -> i32
+! CHECK: fir.if %{{.*}} {
+! CHECK:   %{{.*}} = fir.cuda_deallocate %[[BOX_A_DECL]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {cuda_attr = #fir.cuda<device>} -> i32
+! CHECK: }
 
 subroutine sub7()
   real, allocatable, device :: a(:)
@@ -120,3 +147,6 @@ end subroutine
 ! CHECK: %[[ERR_BOX:.*]] = fir.embox %[[ERR_DECL]]#1 : (!fir.ref<!fir.char<1,50>>) -> !fir.box<!fir.char<1,50>>
 ! CHECK: %[[STAT:.*]] = fir.cuda_deallocate %[[BOX_DECL]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> errmsg(%15 : !fir.box<!fir.char<1,50>>) {cuda_attr = #fir.cuda<device>, hasStat} -> i32
 ! CHECK: fir.store %[[STAT]] to %[[ISTAT_DECL]]#1 : !fir.ref<i32>
+! CHECK: fir.if %{{.*}} {
+! CHECK:   %{{.*}} = fir.cuda_deallocate %[[BOX_DECL]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {cuda_attr = #fir.cuda<device>} -> i32
+! CHECK: }

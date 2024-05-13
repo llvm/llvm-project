@@ -345,11 +345,8 @@ define <2 x i64> @test6_sat(<2 x float> %f) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fmov v1.2s, #16.00000000
 ; CHECK-NEXT:    fmul v0.2s, v0.2s, v1.2s
-; CHECK-NEXT:    mov s1, v0.s[1]
-; CHECK-NEXT:    fcvtzs x8, s0
-; CHECK-NEXT:    fcvtzs x9, s1
-; CHECK-NEXT:    fmov d0, x8
-; CHECK-NEXT:    mov v0.d[1], x9
+; CHECK-NEXT:    fcvtl v0.2d, v0.2s
+; CHECK-NEXT:    fcvtzs v0.2d, v0.2d
 ; CHECK-NEXT:    ret
   %mul.i = fmul <2 x float> %f, <float 16.000000e+00, float 16.000000e+00>
   %vcvt.i = call <2 x i64> @llvm.fptosi.sat.v2i64.v2f32(<2 x float> %mul.i)

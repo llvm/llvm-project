@@ -9,10 +9,10 @@
 #include <__type_traits/datasizeof.h>
 #include <cstdint>
 
-static_assert(std::__libcpp_datasizeof<std::int8_t>::value == 1, "");
-static_assert(std::__libcpp_datasizeof<std::int16_t>::value == 2, "");
-static_assert(std::__libcpp_datasizeof<std::int32_t>::value == 4, "");
-static_assert(std::__libcpp_datasizeof<std::int64_t>::value == 8, "");
+static_assert(std::__datasizeof_v<std::int8_t> == 1, "");
+static_assert(std::__datasizeof_v<std::int16_t> == 2, "");
+static_assert(std::__datasizeof_v<std::int32_t> == 4, "");
+static_assert(std::__datasizeof_v<std::int64_t> == 8, "");
 
 struct OneBytePadding {
   OneBytePadding() {}
@@ -22,9 +22,9 @@ struct OneBytePadding {
 };
 
 #if defined(_WIN32) && !defined(__MINGW32__)
-static_assert(std::__libcpp_datasizeof<OneBytePadding>::value == 4, "");
+static_assert(std::__datasizeof_v<OneBytePadding> == 4, "");
 #else
-static_assert(std::__libcpp_datasizeof<OneBytePadding>::value == 3, "");
+static_assert(std::__datasizeof_v<OneBytePadding> == 3, "");
 #endif
 
 struct InBetweenPadding {
@@ -35,4 +35,4 @@ struct InBetweenPadding {
   std::int16_t c;
 };
 
-static_assert(std::__libcpp_datasizeof<InBetweenPadding>::value == 8, "");
+static_assert(std::__datasizeof_v<InBetweenPadding> == 8, "");

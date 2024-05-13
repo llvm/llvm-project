@@ -70,21 +70,11 @@ define void @add_v32i8(ptr %a, ptr %b) {
 define void @add_v2i16(ptr %a, ptr %b, ptr %c) {
 ; CHECK-LABEL: add_v2i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    ldrh w8, [x0, #2]
 ; CHECK-NEXT:    ptrue p0.s, vl2
-; CHECK-NEXT:    str w8, [sp, #4]
-; CHECK-NEXT:    ldrh w8, [x0]
-; CHECK-NEXT:    str w8, [sp]
-; CHECK-NEXT:    ldrh w8, [x1, #2]
-; CHECK-NEXT:    str w8, [sp, #12]
-; CHECK-NEXT:    ldrh w8, [x1]
-; CHECK-NEXT:    str w8, [sp, #8]
-; CHECK-NEXT:    ldp d0, d1, [sp]
+; CHECK-NEXT:    ld1h { z0.s }, p0/z, [x0]
+; CHECK-NEXT:    ld1h { z1.s }, p0/z, [x1]
 ; CHECK-NEXT:    add z0.s, z0.s, z1.s
 ; CHECK-NEXT:    st1h { z0.s }, p0, [x0]
-; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    ret
   %op1 = load <2 x i16>, ptr %a
   %op2 = load <2 x i16>, ptr %b

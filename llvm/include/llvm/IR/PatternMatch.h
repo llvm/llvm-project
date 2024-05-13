@@ -350,10 +350,12 @@ template <int64_t Val> inline constantint_match<Val> m_ConstantInt() {
 
 /// This helper class is used to match constant scalars, vector splats,
 /// and fixed width vectors that satisfy a specified predicate.
-/// For fixed width vector constants, poison elements are ignored.
-template <typename Predicate, typename ConstantVal>
+/// For fixed width vector constants, poison elements are ignored if AllowPoison
+/// is true.
+template <typename Predicate, typename ConstantVal, bool AllowPoison>
 struct cstval_pred_ty : public Predicate {
-  template <typename ITy> bool match(ITy *V) {
+  const Constant **Res = nullptr;
+  template <typename ITy> bool match_impl(ITy *V) {
     if (const auto *CV = dyn_cast<ConstantVal>(V))
       return this->isValue(CV->getValue());
     if (const auto *VTy = dyn_cast<VectorType>(V->getType())) {
@@ -374,7 +376,7 @@ struct cstval_pred_ty : public Predicate {
           Constant *Elt = C->getAggregateElement(i);
           if (!Elt)
             return false;
-          if (isa<PoisonValue>(Elt))
+          if (AllowPoison && isa<PoisonValue>(Elt))
             continue;
           auto *CV = dyn_cast<ConstantVal>(Elt);
           if (!CV || !this->isValue(CV->getValue()))
@@ -386,15 +388,25 @@ struct cstval_pred_ty : public Predicate {
     }
     return false;
   }
+
+  template <typename ITy> bool match(ITy *V) {
+    if (this->match_impl(V)) {
+      if (Res)
+        *Res = cast<Constant>(V);
+      return true;
+    }
+    return false;
+  }
 };
 
 /// specialization of cstval_pred_ty for ConstantInt
-template <typename Predicate>
-using cst_pred_ty = cstval_pred_ty<Predicate, ConstantInt>;
+template <typename Predicate, bool AllowPoison = true>
+using cst_pred_ty = cstval_pred_ty<Predicate, ConstantInt, AllowPoison>;
 
 /// specialization of cstval_pred_ty for ConstantFP
 template <typename Predicate>
-using cstfp_pred_ty = cstval_pred_ty<Predicate, ConstantFP>;
+using cstfp_pred_ty = cstval_pred_ty<Predicate, ConstantFP,
+                                     /*AllowPoison=*/true>;
 
 /// This helper class is used to match scalar and vector constants that
 /// satisfy a specified predicate, and bind them to an APInt.
@@ -458,6 +470,35 @@ template <typename Predicate> struct apf_pred_ty : public Predicate {
 //
 ///////////////////////////////////////////////////////////////////////////////
 
+template <typename APTy> struct custom_checkfn {
+  function_ref<bool(const APTy &)> CheckFn;
+  bool isValue(const APTy &C) { return CheckFn(C); }
+};
+
+/// Match an integer or vector where CheckFn(ele) for each element is true.
+/// For vectors, poison elements are assumed to match.
+inline cst_pred_ty<custom_checkfn<APInt>>
+m_CheckedInt(function_ref<bool(const APInt &)> CheckFn) {
+  return cst_pred_ty<custom_checkfn<APInt>>{{CheckFn}};
+}
+
+inline cst_pred_ty<custom_checkfn<APInt>>
+m_CheckedInt(const Constant *&V, function_ref<bool(const APInt &)> CheckFn) {
+  return cst_pred_ty<custom_checkfn<APInt>>{{CheckFn}, &V};
+}
+
+/// Match a float or vector where CheckFn(ele) for each element is true.
+/// For vectors, poison elements are assumed to match.
+inline cstfp_pred_ty<custom_checkfn<APFloat>>
+m_CheckedFp(function_ref<bool(const APFloat &)> CheckFn) {
+  return cstfp_pred_ty<custom_checkfn<APFloat>>{{CheckFn}};
+}
+
+inline cstfp_pred_ty<custom_checkfn<APFloat>>
+m_CheckedFp(const Constant *&V, function_ref<bool(const APFloat &)> CheckFn) {
+  return cstfp_pred_ty<custom_checkfn<APFloat>>{{CheckFn}, &V};
+}
+
 struct is_any_apint {
   bool isValue(const APInt &C) { return true; }
 };
@@ -482,6 +523,10 @@ struct is_all_ones {
 /// For vectors, this includes constants with undefined elements.
 inline cst_pred_ty<is_all_ones> m_AllOnes() {
   return cst_pred_ty<is_all_ones>();
+}
+
+inline cst_pred_ty<is_all_ones, false> m_AllOnesForbidPoison() {
+  return cst_pred_ty<is_all_ones, false>();
 }
 
 struct is_maxsignedvalue {
@@ -1833,6 +1878,19 @@ template <typename Op_t> struct NNegZExt_match {
   }
 };
 
+template <typename Op_t, unsigned WrapFlags = 0> struct NoWrapTrunc_match {
+  Op_t Op;
+
+  NoWrapTrunc_match(const Op_t &OpMatch) : Op(OpMatch) {}
+
+  template <typename OpTy> bool match(OpTy *V) {
+    if (auto *I = dyn_cast<TruncInst>(V))
+      return (I->getNoWrapKind() & WrapFlags) == WrapFlags &&
+             Op.match(I->getOperand(0));
+    return false;
+  }
+};
+
 /// Matches BitCast.
 template <typename OpTy>
 inline CastOperator_match<OpTy, Instruction::BitCast>
@@ -1892,6 +1950,20 @@ m_IntToPtr(const OpTy &Op) {
 template <typename OpTy>
 inline CastOperator_match<OpTy, Instruction::Trunc> m_Trunc(const OpTy &Op) {
   return CastOperator_match<OpTy, Instruction::Trunc>(Op);
+}
+
+/// Matches trunc nuw.
+template <typename OpTy>
+inline NoWrapTrunc_match<OpTy, TruncInst::NoUnsignedWrap>
+m_NUWTrunc(const OpTy &Op) {
+  return NoWrapTrunc_match<OpTy, TruncInst::NoUnsignedWrap>(Op);
+}
+
+/// Matches trunc nsw.
+template <typename OpTy>
+inline NoWrapTrunc_match<OpTy, TruncInst::NoSignedWrap>
+m_NSWTrunc(const OpTy &Op) {
+  return NoWrapTrunc_match<OpTy, TruncInst::NoSignedWrap>(Op);
 }
 
 template <typename OpTy>
@@ -2507,7 +2579,7 @@ inline typename m_Intrinsic_Ty<Opnd0, Opnd1>::Ty m_CopySign(const Opnd0 &Op0,
 
 template <typename Opnd0>
 inline typename m_Intrinsic_Ty<Opnd0>::Ty m_VecReverse(const Opnd0 &Op0) {
-  return m_Intrinsic<Intrinsic::experimental_vector_reverse>(Op0);
+  return m_Intrinsic<Intrinsic::vector_reverse>(Op0);
 }
 
 //===----------------------------------------------------------------------===//
@@ -2594,6 +2666,13 @@ template <typename ValTy>
 inline BinaryOp_match<cst_pred_ty<is_all_ones>, ValTy, Instruction::Xor, true>
 m_Not(const ValTy &V) {
   return m_c_Xor(m_AllOnes(), V);
+}
+
+template <typename ValTy>
+inline BinaryOp_match<cst_pred_ty<is_all_ones, false>, ValTy, Instruction::Xor,
+                      true>
+m_NotForbidPoison(const ValTy &V) {
+  return m_c_Xor(m_AllOnesForbidPoison(), V);
 }
 
 /// Matches an SMin with LHS and RHS in either order.

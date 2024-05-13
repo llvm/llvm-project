@@ -479,13 +479,13 @@ bool MipsExpandPseudo::expandAtomicBinOpSubword(
     BuildMI(loopMBB, DL, TII->get(Mips::SRAV), StoreVal)
         .addReg(OldVal)
         .addReg(ShiftAmnt);
-    if (STI->hasMips32r2() && !IsUnsigned) {
-      BuildMI(loopMBB, DL, TII->get(SEOp), StoreVal).addReg(StoreVal);
-    } else if (STI->hasMips32r2() && IsUnsigned) {
+    if (IsUnsigned) {
       const unsigned OpMask = SEOp == Mips::SEH ? 0xffff : 0xff;
       BuildMI(loopMBB, DL, TII->get(Mips::ANDi), StoreVal)
           .addReg(StoreVal)
           .addImm(OpMask);
+    } else if (STI->hasMips32r2()) {
+      BuildMI(loopMBB, DL, TII->get(SEOp), StoreVal).addReg(StoreVal);
     } else {
       const unsigned ShiftImm = SEOp == Mips::SEH ? 16 : 24;
       const unsigned SROp = IsUnsigned ? Mips::SRL : Mips::SRA;

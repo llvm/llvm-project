@@ -1,5 +1,4 @@
-// RUN: not llvm-mc -triple=aarch64 -show-encoding -mattr=+sme2p1,+sme-f16f16 2>&1 < %s | FileCheck %s
-
+// RUN: not llvm-mc -triple=aarch64 -show-encoding -mattr=+sme-f16f16 2>&1 < %s | FileCheck %s
 // --------------------------------------------------------------------------//
 // Out of range index offset
 

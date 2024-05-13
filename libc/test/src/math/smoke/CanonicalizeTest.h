@@ -11,6 +11,7 @@
 
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/integer_literals.h"
+#include "test/UnitTest/FEnvSafeTest.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 
@@ -26,7 +27,7 @@
 using LIBC_NAMESPACE::operator""_u128;
 
 template <typename T>
-class CanonicalizeTest : public LIBC_NAMESPACE::testing::Test {
+class CanonicalizeTest : public LIBC_NAMESPACE::testing::FEnvSafeTest {
 
   DECLARE_SPECIAL_CONSTANTS(T)
 

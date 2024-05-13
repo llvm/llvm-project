@@ -48,7 +48,6 @@ cmake -S "${MONOREPO_ROOT}"/llvm -B "${BUILD_DIR}" \
       -D LLVM_LIT_ARGS="-v --xunit-xml-output ${BUILD_DIR}/test-results.xml --timeout=1200 --time-tests" \
       -D LLVM_ENABLE_LLD=ON \
       -D CMAKE_CXX_FLAGS=-gmlt \
-      -D BOLT_CLANG_EXE=/usr/bin/clang \
       -D LLVM_CCACHE_BUILD=ON \
       -D MLIR_ENABLE_BINDINGS_PYTHON=ON
 
