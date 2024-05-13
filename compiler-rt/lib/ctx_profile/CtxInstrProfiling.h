@@ -15,6 +15,9 @@
 
 using namespace llvm::ctx_profile;
 
+// Forward-declare for the one unittest checking Arena construction zeroes out
+// its allocatable space.
+class ArenaTest_ZeroInit_Test;
 namespace __ctx_profile {
 
 static constexpr size_t ExpectedAlignment = 8;
@@ -51,7 +54,8 @@ public:
   const char *pos() const { return start() + Pos; }
 
 private:
-  explicit Arena(uint32_t Size) : Size(Size) {}
+  friend class ::ArenaTest_ZeroInit_Test;
+  explicit Arena(uint32_t Size);
   ~Arena() = delete;
 
   char *start() { return reinterpret_cast<char *>(&this[1]); }
