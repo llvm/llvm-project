@@ -162,7 +162,7 @@ public:
   llvm::StringRef getDisplayName() const { return m_display_name; }
 
   /// Returns the clang::ASTContext instance managed by this TypeSystemClang.
-  clang::ASTContext &getASTContext();
+  clang::ASTContext &getASTContext() const;
 
   clang::MangleContext *getMangleContext();
 
@@ -1165,6 +1165,12 @@ private:
 
   bool IsTypeImpl(lldb::opaque_compiler_type_t type,
                   llvm::function_ref<bool(clang::QualType)> predicate) const;
+
+  /// Emits information about this TypeSystem into the expression log.
+  ///
+  /// Helper method that is used in \ref TypeSystemClang::TypeSystemClang
+  /// on creation of a new instance.
+  void LogCreation() const;
 
   // Classes that inherit from TypeSystemClang can see and modify these
   std::string m_target_triple;
