@@ -1055,7 +1055,7 @@ TEST_F(QualifierFixerTest, IsQualifierType) {
   ConfiguredTokens.push_back(tok::kw_constexpr);
   ConfiguredTokens.push_back(tok::kw_friend);
 
-  LangOptions LangOpts{getFormattingLangOpts()};
+  static const LangOptions LangOpts{getFormattingLangOpts()};
 
   auto Tokens = annotate(
       "const static inline auto restrict int double long constexpr friend");
