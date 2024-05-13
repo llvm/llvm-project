@@ -560,12 +560,22 @@ namespace LocalVLA {
      // both-note@-4 {{function parameter 'size' with unknown value}}
 #endif
   }
+
+  void f (unsigned int m) {
+    int e[2][m];
+#if __cplusplus >= 202002L
+     // both-note@-3 {{declared here}}
+     // both-warning@-3 2{{variable length array}}
+     // both-note@-4 {{function parameter 'm' with unknown value}}
+#endif
+    e[0][0] = 0;
+  }
 }
 
-char melchizedek[2200000000];
+char melchizedek[2];
 typedef decltype(melchizedek[1] - melchizedek[0]) ptrdiff_t;
-constexpr ptrdiff_t d1 = &melchizedek[0x7fffffff] - &melchizedek[0]; // ok
-constexpr ptrdiff_t d3 = &melchizedek[0] - &melchizedek[0x80000000u]; // ok
+constexpr ptrdiff_t d1 = &melchizedek[1] - &melchizedek[0]; // ok
+constexpr ptrdiff_t d3 = &melchizedek[0] - &melchizedek[1]; // ok
 
 /// GH#88018
 const int SZA[] = {};

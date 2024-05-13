@@ -63,9 +63,8 @@ Pointer::~Pointer() {
 }
 
 void Pointer::operator=(const Pointer &P) {
-
   if (!this->isIntegralPointer() || !P.isBlockPointer())
-    assert(P.StorageKind == StorageKind);
+    assert(P.StorageKind == StorageKind || (this->isZero() && P.isZero()));
 
   bool WasBlockPointer = isBlockPointer();
   StorageKind = P.StorageKind;
@@ -92,7 +91,7 @@ void Pointer::operator=(const Pointer &P) {
 
 void Pointer::operator=(Pointer &&P) {
   if (!this->isIntegralPointer() || !P.isBlockPointer())
-    assert(P.StorageKind == StorageKind);
+    assert(P.StorageKind == StorageKind || (this->isZero() && P.isZero()));
 
   bool WasBlockPointer = isBlockPointer();
   StorageKind = P.StorageKind;
