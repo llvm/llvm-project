@@ -11480,16 +11480,6 @@ void OpenACCClauseTransform<Derived>::VisitWaitClause(
       ParsedClause.getQueuesLoc(), ParsedClause.getQueueIdExprs(),
       ParsedClause.getEndLoc());
 }
-
-template <typename Derived>
-void OpenACCClauseTransform<Derived>::VisitDeviceTypeClause(
-    const OpenACCDeviceTypeClause &C) {
-  // Nothing to transform here, just create a new version of 'C'.
-  NewClause = OpenACCDeviceTypeClause::Create(
-      Self.getSema().getASTContext(), C.getClauseKind(),
-      ParsedClause.getBeginLoc(), ParsedClause.getLParenLoc(),
-      C.getArchitectures(), ParsedClause.getEndLoc());
-}
 } // namespace
 template <typename Derived>
 OpenACCClause *TreeTransform<Derived>::TransformOpenACCClause(
