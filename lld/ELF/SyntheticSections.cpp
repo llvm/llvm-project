@@ -4074,13 +4074,6 @@ static bool isDuplicateArmExidxSec(InputSection *prev, InputSection *cur) {
 // InputSection with the highest address and any InputSections that have
 // mergeable .ARM.exidx table entries are removed from it.
 void ARMExidxSyntheticSection::finalizeContents() {
-  // Ensure that any fixed-point iterations after the first see the original set
-  // of sections.
-  if (!originalExecutableSections.empty())
-    executableSections = originalExecutableSections;
-  else if (config->enableNonContiguousRegions)
-    originalExecutableSections = executableSections;
-
   // The executableSections and exidxSections that we use to derive the final
   // contents of this SyntheticSection are populated before
   // processSectionCommands() and ICF. A /DISCARD/ entry in SECTIONS command or
