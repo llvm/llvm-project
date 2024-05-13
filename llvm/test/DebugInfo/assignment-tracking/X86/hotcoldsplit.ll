@@ -1,4 +1,3 @@
-
 ; RUN: opt %s -passes=hotcoldsplit -S | FileCheck %s
 
 ;; Check the extracted DIAssignID gets remapped.
