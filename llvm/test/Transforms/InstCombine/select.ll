@@ -4551,9 +4551,8 @@ define i32 @sequence_select_with_same_cond_true(i1 %c1, i1 %c2){
 
 define double @sequence_select_with_same_cond_double(double %a, i1 %c1, i1 %c2, double %r1, double %r2){
 ; CHECK-LABEL: @sequence_select_with_same_cond_double(
-; CHECK-NEXT:    [[S1:%.*]] = select i1 [[C1:%.*]], double 1.000000e+00, double 0.000000e+00
-; CHECK-NEXT:    [[S2:%.*]] = select i1 [[C2:%.*]], double [[S1]], double 2.000000e+00
-; CHECK-NEXT:    [[S3:%.*]] = select i1 [[C1]], double [[S2]], double 3.000000e+00
+; CHECK-NEXT:    [[S2:%.*]] = select i1 [[C2:%.*]], double 1.000000e+00, double 2.000000e+00
+; CHECK-NEXT:    [[S3:%.*]] = select i1 [[C1:%.*]], double [[S2]], double 3.000000e+00
 ; CHECK-NEXT:    ret double [[S3]]
 ;
   %s1 = select i1 %c1, double 1.0, double 0.0
@@ -4565,9 +4564,8 @@ define double @sequence_select_with_same_cond_double(double %a, i1 %c1, i1 %c2, 
 ; Confirm the FMF flag is propagated
 define float @sequence_select_with_same_cond_float_and_fmf_flag1(i1 %c1, i1 %c2){
 ; CHECK-LABEL: @sequence_select_with_same_cond_float_and_fmf_flag1(
-; CHECK-NEXT:    [[S1:%.*]] = select i1 [[C1:%.*]], float 2.300000e+01, float 4.500000e+01
-; CHECK-NEXT:    [[S2:%.*]] = select fast i1 [[C2:%.*]], float 6.660000e+02, float [[S1]]
-; CHECK-NEXT:    [[S3:%.*]] = select fast i1 [[C1]], float 7.890000e+02, float [[S2]]
+; CHECK-NEXT:    [[S2:%.*]] = select fast i1 [[C2:%.*]], float 6.660000e+02, float 4.500000e+01
+; CHECK-NEXT:    [[S3:%.*]] = select fast i1 [[C1:%.*]], float 7.890000e+02, float [[S2]]
 ; CHECK-NEXT:    ret float [[S3]]
 ;
   %s1 = select i1 %c1, float 23.0, float 45.0
@@ -4578,9 +4576,8 @@ define float @sequence_select_with_same_cond_float_and_fmf_flag1(i1 %c1, i1 %c2)
 
 define float @sequence_select_with_same_cond_float_and_fmf_flag2(i1 %c1, i1 %c2){
 ; CHECK-LABEL: @sequence_select_with_same_cond_float_and_fmf_flag2(
-; CHECK-NEXT:    [[S1:%.*]] = select fast i1 [[C1:%.*]], float 2.300000e+01, float 4.500000e+01
-; CHECK-NEXT:    [[S2:%.*]] = select i1 [[C2:%.*]], float 6.660000e+02, float [[S1]]
-; CHECK-NEXT:    [[S3:%.*]] = select fast i1 [[C1]], float 7.890000e+02, float [[S2]]
+; CHECK-NEXT:    [[S2:%.*]] = select i1 [[C2:%.*]], float 6.660000e+02, float 4.500000e+01
+; CHECK-NEXT:    [[S3:%.*]] = select fast i1 [[C1:%.*]], float 7.890000e+02, float [[S2]]
 ; CHECK-NEXT:    ret float [[S3]]
 ;
   %s1 = select fast i1 %c1, float 23.0, float 45.0

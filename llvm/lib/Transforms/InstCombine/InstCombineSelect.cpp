@@ -517,11 +517,11 @@ static bool simplifySeqSelectWithSameCond(SelectInst &SI,
     Type *SelType = SINext->getType();
     Value *ValOp = SINext->getOperand(OpIndex);
     Value *CondNext;
-    // Only support the type of select is an integer type as float type need
-    // address FMF flag.
+    // Don't need propagate FMF flag because we update the operand of SINext
+    // directly.
+    // It is not profitable to build a new select for SINext with multi-arms.
     while (match(ValOp, m_Select(m_Value(CondNext), m_Value(), m_Value()))) {
-      if (CondNext == CondVal && SelType->isIntOrIntVectorTy() &&
-          SINext->hasOneUse()) {
+      if (CondNext == CondVal && SINext->hasOneUse()) {
         IC.replaceOperand(*SINext, OpIndex,
                           cast<SelectInst>(ValOp)->getOperand(OpIndex));
         return true;
