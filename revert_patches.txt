@@ -50,3 +50,5 @@ Reverts: breaks oclConformance
   SWDEV-460097
   merges: revert : 41466a177a95 [SelectionDAG] Correct the implementation of m_AllOnes. (#90776)
 
+Revert "[utils] Add script to generate elaborated IR and assembly tests (#89026)"
+breaks 4 rhel lit tests
