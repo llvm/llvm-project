@@ -182,6 +182,9 @@ C++23 Feature Support
 
 - Implemented `P2448R2: Relaxing some constexpr restrictions <https://wg21.link/P2448R2>`_.
 
+- Added a ``__reference_converts_from_temporary`` builtin, completing the necessary compiler support for
+  `P2255R2: Type trait to determine if a reference binds to a temporary <https://wg21.link/P2255R2>`_.
+
 C++2c Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
@@ -699,6 +702,11 @@ Bug Fixes to C++ Support
   performed incorrectly when checking constraints. Fixes (#GH90349).
 - Clang now allows constrained member functions to be explicitly specialized for an implicit instantiation
   of a class template.
+- Fix a C++23 bug in implementation of P2564R3 which evaluates immediate invocations in place
+  within initializers for variables that are usable in constant expressions or are constant
+  initialized, rather than evaluating them as a part of the larger manifestly constant evaluated
+  expression.
+- Fix a bug in access control checking due to dealyed checking of friend declaration. Fixes (#GH12361).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -798,6 +806,7 @@ CUDA/HIP Language Changes
 
 CUDA Support
 ^^^^^^^^^^^^
+- Clang now supports CUDA SDK up to 12.4
 
 AIX Support
 ^^^^^^^^^^^

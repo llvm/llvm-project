@@ -397,12 +397,14 @@ define i32 @shl_add_lshr(i32 %x, i32 %c, i32 %y) {
 
 define i32 @shl_add_lshr_comm(i32 %x, i32 %c, i32 %y) {
 ; CHECK-LABEL: @shl_add_lshr_comm(
-; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[Y:%.*]], [[C:%.*]]
+; CHECK-NEXT:    [[Y2:%.*]] = mul i32 [[Y:%.*]], [[Y]]
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[Y2]], [[C:%.*]]
 ; CHECK-NEXT:    [[LSHR:%.*]] = add nuw i32 [[TMP1]], [[X:%.*]]
 ; CHECK-NEXT:    ret i32 [[LSHR]]
 ;
   %shl = shl nuw i32 %x, %c
-  %add = add nuw i32 %y, %shl
+  %y2 = mul i32 %y, %y ; thwart complexity-based canonicalization
+  %add = add nuw i32 %y2, %shl
   %lshr = lshr i32 %add, %c
   ret i32 %lshr
 }
