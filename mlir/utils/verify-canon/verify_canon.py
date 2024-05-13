@@ -8,7 +8,7 @@
 # - Filters out the provided test functions.
 # - Runs the canonicalization pass on the remaining functions.
 # - Lowers both the original and the canonicalized functions to LLVM IR.
-# - Prints the canonicalized and the original function side-by-side in a format
+# - Prints the canonicalized and the original functions side-by-side in a format
 #   that can be copied into Alive2 for verification.
 # Example: `python verify_canon.py canonicalize.mlir -f func1 func2 func3`
 
