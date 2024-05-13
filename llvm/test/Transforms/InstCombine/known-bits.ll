@@ -1504,6 +1504,8 @@ define i32 @test_inf_zero_only(float nofpclass(nan norm sub) %x) {
   ret i32 %and
 }
 
+
+
 define i1 @test_simplify_icmp(i32 %x) {
 ; CHECK-LABEL: @test_simplify_icmp(
 ; CHECK-NEXT:    ret i1 false
@@ -1513,6 +1515,46 @@ define i1 @test_simplify_icmp(i32 %x) {
   %mask = and i64 %cast2, -140737488355328
   %cmp = icmp eq i64 %mask, -1970324836974592
   ret i1 %cmp
+}
+
+define i32 @test_snan_quiet_bit1(float nofpclass(sub norm inf qnan) %x) {
+; CHECK-LABEL: @test_snan_quiet_bit1(
+; CHECK-NEXT:    ret i32 0
+;
+  %bits = bitcast float %x to i32
+  %masked = and i32 %bits, 4194304
+  ret i32 %masked
+}
+
+define i32 @test_snan_quiet_bit2(float nofpclass(sub norm inf qnan) %x) {
+; CHECK-LABEL: @test_snan_quiet_bit2(
+; CHECK-NEXT:    [[BITS:%.*]] = bitcast float [[X:%.*]] to i32
+; CHECK-NEXT:    [[MASKED:%.*]] = and i32 [[BITS]], 2097152
+; CHECK-NEXT:    ret i32 [[MASKED]]
+;
+  %bits = bitcast float %x to i32
+  %masked = and i32 %bits, 2097152
+  ret i32 %masked
+}
+
+define i32 @test_qnan_quiet_bit1(float nofpclass(sub norm inf snan) %x) {
+; CHECK-LABEL: @test_qnan_quiet_bit1(
+; CHECK-NEXT:    [[BITS:%.*]] = bitcast float [[X:%.*]] to i32
+; CHECK-NEXT:    [[MASKED:%.*]] = and i32 [[BITS]], 4194304
+; CHECK-NEXT:    ret i32 [[MASKED]]
+;
+  %bits = bitcast float %x to i32
+  %masked = and i32 %bits, 4194304
+  ret i32 %masked
+}
+
+define i32 @test_qnan_quiet_bit2(float nofpclass(sub norm inf snan) %x) {
+; CHECK-LABEL: @test_qnan_quiet_bit2(
+; CHECK-NEXT:    ret i32 0
+;
+  %bits = bitcast float %x to i32
+  %masked = and i32 %bits, 2097152
+  ret i32 %masked
 }
 
 define i16 @test_simplify_mask(i32 %ui, float %x) {
