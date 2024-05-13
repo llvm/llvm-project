@@ -22,11 +22,11 @@ class DebugInfodTests(TestBase):
     # No need to try every flavor of debug inf.
     NO_DEBUG_INFO_TESTCASE = True
 
-    def setUp(self):
-        TestBase.setUp(self)
-        # Don't run these tests if we don't have Debuginfod support
-        if "Debuginfod" not in configuration.enabled_plugins:
-            self.skipTest("The Debuginfod SymbolLocator plugin is not enabled")
+    # def setUp(self):
+    #     TestBase.setUp(self)
+    #     # Don't run these tests if we don't have Debuginfod support
+    #     if "Debuginfod" not in configuration.enabled_plugins:
+    #         self.skipTest("The Debuginfod SymbolLocator plugin is not enabled")
 
     def test_normal_no_symbols(self):
         """
@@ -44,6 +44,7 @@ class DebugInfodTests(TestBase):
         test_root = self.config_test(["a.out", "a.out.debug"])
         self.try_breakpoint(True)
 
+    @skipIfCurlSupportMissing
     def test_debuginfod_symbols(self):
         """
         Test behavior with the full binary available from Debuginfod as
@@ -52,6 +53,7 @@ class DebugInfodTests(TestBase):
         test_root = self.config_test(["a.out"], "a.out.unstripped")
         self.try_breakpoint(True)
 
+    @skipIfCurlSupportMissing
     def test_debuginfod_executable(self):
         """
         Test behavior with the full binary available from Debuginfod as
@@ -60,6 +62,7 @@ class DebugInfodTests(TestBase):
         test_root = self.config_test(["a.out"], None, "a.out.unstripped")
         self.try_breakpoint(True)
 
+    @skipIfCurlSupportMissing
     def test_debuginfod_okd_symbols(self):
         """
         Test behavior with the 'only-keep-debug' symbols available from Debuginfod.
@@ -174,10 +177,9 @@ class DebugInfodTests(TestBase):
 
     def getUUID(self, filename):
         try:
-            target = self.dbg.CreateTarget(self.getBuildArtifact(filename))
-            module = target.GetModuleAtIndex(0)
-            uuid = module.GetUUIDString().replace("-", "").lower()
-            self.dbg.DeleteTarget(target)
-            return uuid if len(uuid) == 40 else None
+            spec = lldb.SBModuleSpec()
+            spec.SetFileSpec(self.getBuildArtifact(filename))
+            uuid = lldb.SBModule(spec).GetUUIDString().replace("-", "").lower()
+            return uuid if len(uuid) > 8 else None # Shouldn't have CRC's in this field
         except:
             return None
