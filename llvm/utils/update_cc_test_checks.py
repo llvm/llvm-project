@@ -26,6 +26,7 @@ import sys
 import tempfile
 
 from UpdateTestChecks import common
+from lit.ShUtil import ShParser, Pipeline, Command
 
 SUBST = {
     "%clang": [],
@@ -34,29 +35,22 @@ SUBST = {
 }
 
 
-def get_line2func_list(args, clang_args):
+def get_line2func_list(clang_cmd: Command):
     ret = collections.defaultdict(list)
     # Use clang's JSON AST dump to get the mangled name
-    json_dump_args = [args.clang] + clang_args + ["-fsyntax-only", "-o", "-"]
+    json_dump_args = clang_cmd.args + ["-fsyntax-only", "-o", "/dev/null"]
     if "-cc1" not in json_dump_args:
         # For tests that invoke %clang instead if %clang_cc1 we have to use
         # -Xclang -ast-dump=json instead:
         json_dump_args.append("-Xclang")
     json_dump_args.append("-ast-dump=json")
     common.debug("Running", " ".join(json_dump_args))
-
-    popen = subprocess.Popen(
-        json_dump_args,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        universal_newlines=True,
+    # Ignore the output redirections, only keep the input file ones.
+    new_redirects = [x for x in clang_cmd.redirects if x[0][0] == "<"]
+    results = common.execute_pipeline(
+        Pipeline([Command(json_dump_args, new_redirects)])
     )
-    stdout, stderr = popen.communicate()
-    if popen.returncode != 0:
-        sys.stderr.write("Failed to run " + " ".join(json_dump_args) + "\n")
-        sys.stderr.write(stderr)
-        sys.stderr.write(stdout)
-        sys.exit(2)
+    stdout = results[0].stdout
 
     # Parse the clang JSON and add all children of type FunctionDecl.
     # TODO: Should we add checks for global variables being emitted?
@@ -249,26 +243,14 @@ def config():
     return args, parser
 
 
-def get_function_body(builder, args, filename, clang_args, extra_commands, prefixes):
+def get_function_body(
+    builder, args, filename, clang_pipeline: "list[Command]", prefixes
+):
     # TODO Clean up duplication of asm/common build_function_body_dictionary
     # Invoke external tool and extract function bodies.
-    raw_tool_output = common.invoke_tool(args.clang, clang_args, filename)
-    for extra_command in extra_commands:
-        extra_args = shlex.split(extra_command)
-        with tempfile.NamedTemporaryFile() as f:
-            f.write(raw_tool_output.encode())
-            f.flush()
-            if extra_args[0] == "opt":
-                if args.opt is None:
-                    print(
-                        filename,
-                        "needs to run opt. " "Please specify --llvm-bin or --opt",
-                        file=sys.stderr,
-                    )
-                    sys.exit(1)
-                extra_args[0] = args.opt
-            raw_tool_output = common.invoke_tool(extra_args[0], extra_args[1:], f.name)
-    if "-emit-llvm" in clang_args:
+    results = common.execute_pipeline(Pipeline(clang_pipeline))
+    raw_tool_output = results[-1].stdout.replace("\r\n", "\n")
+    if "-emit-llvm" in clang_pipeline[0].args:
         builder.process_run_line(
             common.OPT_FUNCTION_RE, common.scrub_body, raw_tool_output, prefixes, False
         )
@@ -280,18 +262,6 @@ def get_function_body(builder, args, filename, clang_args, extra_commands, prefi
             file=sys.stderr,
         )
         sys.exit(1)
-
-
-def exec_run_line(exe):
-    popen = subprocess.Popen(
-        exe, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True
-    )
-    stdout, stderr = popen.communicate()
-    if popen.returncode != 0:
-        sys.stderr.write("Failed to run " + " ".join(exe) + "\n")
-        sys.stderr.write(stderr)
-        sys.stderr.write(stdout)
-        sys.exit(3)
 
 
 def main():
@@ -309,52 +279,79 @@ def main():
         run_list = []
         line2func_list = collections.defaultdict(list)
 
-        subs = {
-            "%s": ti.path,
-            "%t": tempfile.NamedTemporaryFile().name,
-            "%S": os.path.dirname(ti.path),
-        }
+        subs = [
+            ("%s", ti.path),
+            ("%t", tempfile.NamedTemporaryFile().name),
+            ("%S", os.path.dirname(ti.path)),
+        ]
 
         for l in ti.run_lines:
-            commands = [cmd.strip() for cmd in l.split("|")]
-
+            pipeline = ShParser(l, win32Escapes=False, pipefail=False).parse()
+            if not isinstance(pipeline, Pipeline):
+                # Could be a sequence separated by &&/||/; but we don't handle that yet.
+                print(
+                    "WARNING: RUN: line is too complex for this script: ",
+                    pipeline,
+                    file=sys.stderr,
+                )
+                continue
             triple_in_cmd = None
-            m = common.TRIPLE_ARG_RE.search(commands[0])
+            clang_cmd: Command = pipeline.commands[0]
+            m = common.TRIPLE_ARG_RE.search(" ".join(clang_cmd.args))
             if m:
                 triple_in_cmd = m.groups()[0]
 
+            # Do lit-like substitutions on the command and redirects.
+            for cmd in pipeline.commands:
+                if cmd.args[0] == "opt":
+                    if ti.args.opt is None:
+                        sys.exit(
+                            ti.path + " needs to run opt. "
+                            "Please specify --llvm-bin or --opt"
+                        )
+                    cmd.args[0] = ti.args.opt
+                cmd.args = [common.applySubstitutions(i, subs) for i in cmd.args]
+                for i, redirect in enumerate(cmd.redirects):
+                    cmd.redirects[i] = redirect[0], common.applySubstitutions(
+                        redirect[1], subs
+                    )
+
             # Parse executable args.
-            exec_args = shlex.split(commands[0])
             # Execute non-clang runline.
-            if exec_args[0] not in SUBST:
-                # Do lit-like substitutions.
-                for s in subs:
-                    exec_args = [
-                        i.replace(s, subs[s]) if s in i else i for i in exec_args
-                    ]
-                run_list.append((None, exec_args, None, None))
+            if clang_cmd.args[0] not in SUBST:
+                # Ignore FileCheck-only 'RUN: lines'
+                if pipeline.commands[0].args[0] == "FileCheck":
+                    print(
+                        "NOTE: Skipping FileCheck-only RUN line: ",
+                        pipeline,
+                        file=sys.stderr,
+                    )
+                    continue
+                run_list.append((None, pipeline, None))
                 continue
             # This is a clang runline, apply %clang substitution rule, do lit-like substitutions,
             # and append args.clang_args
-            clang_args = exec_args
-            clang_args[0:1] = SUBST[clang_args[0]]
-            for s in subs:
-                clang_args = [
-                    i.replace(s, subs[s]) if s in i else i for i in clang_args
-                ]
-            clang_args += ti.args.clang_args
+            clang_cmd.args[0:1] = SUBST[clang_cmd.args[0]]
+            print(clang_cmd)
+            clang_cmd.args.insert(0, ti.args.clang)
+            clang_cmd.args += ti.args.clang_args
+            # Remove all -verify arguments since they could cause the IR generation to fail
+            clang_cmd.args = [x for x in clang_cmd.args if not x.startswith("-verify")]
 
             # Extract -check-prefix in FileCheck args
-            filecheck_cmd = commands[-1]
+            filecheck_cmd = " ".join(pipeline.commands[-1].args)
             common.verify_filecheck_prefixes(filecheck_cmd)
             if not filecheck_cmd.startswith("FileCheck "):
                 # Execute non-filechecked clang runline.
-                exe = [ti.args.clang] + clang_args
-                run_list.append((None, exe, None, None))
+                print(
+                    "WARNING: Executing but ignoring non-filechecked RUN line: " + l,
+                    file=sys.stderr,
+                )
+                run_list.append((None, pipeline, None))
                 continue
 
             check_prefixes = common.get_check_prefixes(filecheck_cmd)
-            run_list.append((check_prefixes, clang_args, commands[1:-1], triple_in_cmd))
+            run_list.append((check_prefixes, pipeline, triple_in_cmd))
 
         # Execute clang, generate LLVM IR, and extract functions.
 
@@ -364,27 +361,27 @@ def main():
             run_list=filecheck_run_list, flags=ti.args, scrubber_args=[], path=ti.path
         )
 
-        for prefixes, args, extra_commands, triple_in_cmd in run_list:
+        for prefixes, pipeline, triple_in_cmd in run_list:
+            assert isinstance(pipeline, Pipeline)
             # Execute non-filechecked runline.
             if not prefixes:
                 print(
-                    "NOTE: Executing non-FileChecked RUN line: " + " ".join(args),
+                    "NOTE: Executing non-FileChecked RUN line: ",
+                    pipeline,
                     file=sys.stderr,
                 )
-                exec_run_line(args)
+                common.execute_pipeline(pipeline)
                 continue
 
-            clang_args = args
-            common.debug("Extracted clang cmd: clang {}".format(clang_args))
+            clang_cmd = pipeline.commands[0:-1]
+            common.debug("Extracted clang cmd: clang {}".format(clang_cmd))
             common.debug("Extracted FileCheck prefixes: {}".format(prefixes))
 
-            get_function_body(
-                builder, ti.args, ti.path, clang_args, extra_commands, prefixes
-            )
+            get_function_body(builder, ti.args, ti.path, clang_cmd, prefixes)
 
             # Invoke clang -Xclang -ast-dump=json to get mapping from start lines to
             # mangled names. Forward all clang args for now.
-            for k, v in get_line2func_list(ti.args, clang_args).items():
+            for k, v in get_line2func_list(pipeline.commands[0]).items():
                 line2func_list[k].extend(v)
 
         func_dict = builder.finish_and_get_func_dict()
@@ -415,7 +412,7 @@ def main():
 
             # Now generate all the checks.
             def check_generator(my_output_lines, prefixes, func):
-                if "-emit-llvm" in clang_args:
+                if "-emit-llvm" in pipeline.commands[0].args:
                     return common.add_ir_checks(
                         my_output_lines,
                         "//",

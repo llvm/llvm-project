@@ -62,7 +62,7 @@ class GlobItem:
 
 
 class Pipeline:
-    def __init__(self, commands, negate=False, pipe_err=False):
+    def __init__(self, commands: "list[Command]", negate=False, pipe_err=False):
         self.commands = commands
         self.negate = negate
         self.pipe_err = pipe_err

@@ -1,0 +1,7 @@
+## Check that update_cc_test_checks can parse RUN lines with shell redirection
+## This currently fails with errors such as:
+## error: error reading '<': No such file or directory
+## error: error reading '2>/dev/null': No such file or directory
+# RUN: cp -f %S/Inputs/shell-redirection.c %t.c && %update_cc_test_checks %t.c
+# RUN: diff -u %t.c %S/Inputs/shell-redirection.c.expected
+

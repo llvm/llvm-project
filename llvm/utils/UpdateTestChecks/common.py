@@ -14,6 +14,11 @@ import shlex
 
 from typing import List, Mapping, Set
 
+sys.path.append(os.path.join(os.path.dirname(__file__), "../lit"))
+from lit.TestRunner import ShellEnvironment, executeShCmd, ShellCommandResult
+from lit.ShUtil import Pipeline
+
+
 ##### Common utilities for update_*test_checks.py
 
 
@@ -539,6 +544,19 @@ def invoke_tool(exe, cmd_args, ir, preprocess_cmd=None, verbose=False):
             stdout = stdout.decode()
     # Fix line endings to unix CR style.
     return stdout.replace("\r\n", "\n")
+
+
+def execute_pipeline(commands: Pipeline) -> "list[ShellCommandResult]":
+    shenv = ShellEnvironment(os.getcwd(), os.environ)
+    results: "list[ShellCommandResult]" = []
+    exitcode, _ = executeShCmd(commands, shenv, results)
+    if exitcode != 0:
+        sys.stderr.write("Failed to run " + str(commands) + "\n")
+        for result in results:
+            sys.stderr.write(result.stderr)
+            sys.stderr.write(result.stdout)
+        sys.exit(3)
+    return results
 
 
 ##### LLVM IR parser
