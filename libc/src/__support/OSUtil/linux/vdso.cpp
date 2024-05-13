@@ -31,6 +31,7 @@ unsigned long getauxval(unsigned long id);
 
 namespace vdso {
 
+namespace {
 // See https://refspecs.linuxfoundation.org/LSB_1.3.0/gLSB/gLSB/symverdefs.html
 struct Verdaux {
   ElfW(Word) vda_name; /* Version or dependency names */
@@ -82,6 +83,7 @@ using VDSOArray =
     cpp::array<void *, static_cast<size_t>(VDSOSym::VDSOSymCount)>;
 
 static VDSOArray symbol_table;
+} // namespace
 
 void *get_symbol(VDSOSym sym) {
   // if sym is invalid, return nullptr
