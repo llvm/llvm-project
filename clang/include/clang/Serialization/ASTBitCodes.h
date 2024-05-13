@@ -61,6 +61,9 @@ const unsigned VERSION_MINOR = 1;
 /// and start at 1. 0 is reserved for NULL.
 using IdentifierID = uint32_t;
 
+/// The number of predefined identifier IDs.
+const unsigned int NUM_PREDEF_IDENT_IDS = 1;
+
 /// An ID number that refers to a declaration in an AST file. See the comments
 /// in DeclIDBase for details.
 using DeclID = DeclIDBase::DeclID;
@@ -122,12 +125,6 @@ struct UnsafeQualTypeDenseMapInfo {
     return (unsigned(v) >> 4) ^ (unsigned(v) >> 9);
   }
 };
-
-/// An ID number that refers to an identifier in an AST file.
-using IdentID = uint32_t;
-
-/// The number of predefined identifier IDs.
-const unsigned int NUM_PREDEF_IDENT_IDS = 1;
 
 /// An ID number that refers to a macro in an AST file.
 using MacroID = uint32_t;

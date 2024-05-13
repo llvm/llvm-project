@@ -73,7 +73,7 @@ public:
     if (Previous)
       Previous->ReaderInitialized(Reader);
   }
-  void IdentifierRead(serialization::IdentID ID,
+  void IdentifierRead(serialization::IdentifierID ID,
                       IdentifierInfo *II) override {
     if (Previous)
       Previous->IdentifierRead(ID, II);
