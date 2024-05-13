@@ -1959,6 +1959,9 @@ static void genOMPDispatch(Fortran::lower::AbstractConverter &converter,
   const List<Clause> &clauses = item->clauses;
 
   switch (llvm::omp::Directive dir = item->id) {
+  case llvm::omp::Directive::OMPD_barrier:
+    genBarrierOp(converter, symTable, semaCtx, eval, loc, queue, item);
+    break;
   case llvm::omp::Directive::OMPD_distribute:
     genDistributeOp(converter, symTable, semaCtx, eval, loc, clauses, queue,
                     item);
@@ -2025,6 +2028,13 @@ static void genOMPDispatch(Fortran::lower::AbstractConverter &converter,
     genTaskloopOp(converter, symTable, semaCtx, eval, loc, clauses, queue,
                   item);
     break;
+  case llvm::omp::Directive::OMPD_taskwait:
+    genTaskwaitOp(converter, symTable, semaCtx, eval, loc, clauses,
+                  queue, item);
+    break;
+  case llvm::omp::Directive::OMPD_taskyield:
+    genTaskyieldOp(converter, symTable, semaCtx, eval, loc, queue, item);
+    break;
   case llvm::omp::Directive::OMPD_teams:
     genTeamsOp(converter, symTable, semaCtx, eval, loc, clauses, queue, item);
     break;
@@ -2035,6 +2045,7 @@ static void genOMPDispatch(Fortran::lower::AbstractConverter &converter,
     // that use this construct, add a single construct for now.
     genSingleOp(converter, symTable, semaCtx, eval, loc, clauses, queue, item);
     break;
+
   // Composite constructs
   case llvm::omp::Directive::OMPD_distribute_parallel_do:
     genCompositeDistributeParallelDo(converter, symTable, semaCtx, eval, loc,
@@ -2174,46 +2185,8 @@ static void genOMP(Fortran::lower::AbstractConverter &converter,
   ConstructQueue queue{
       buildConstructQueue(converter.getFirOpBuilder().getModule(), semaCtx,
                           eval, directive.source, directive.v, clauses)};
-
-  switch (directive.v) {
-  default:
-    break;
-  case llvm::omp::Directive::OMPD_barrier:
-    genBarrierOp(converter, symTable, semaCtx, eval, currentLocation, queue,
+  genOMPDispatch(converter, symTable, semaCtx, eval, currentLocation, queue,
                  queue.begin());
-    break;
-  case llvm::omp::Directive::OMPD_taskwait:
-    genTaskwaitOp(converter, symTable, semaCtx, eval, currentLocation, clauses,
-                  queue, queue.begin());
-    break;
-  case llvm::omp::Directive::OMPD_taskyield:
-    genTaskyieldOp(converter, symTable, semaCtx, eval, currentLocation, queue,
-                   queue.begin());
-    break;
-  case llvm::omp::Directive::OMPD_target_data:
-    genTargetDataOp(converter, symTable, semaCtx, eval, currentLocation,
-                    clauses, queue, queue.begin());
-    break;
-  case llvm::omp::Directive::OMPD_target_enter_data:
-    genTargetEnterExitUpdateDataOp<mlir::omp::TargetEnterDataOp>(
-        converter, symTable, semaCtx, currentLocation, clauses, queue,
-        queue.begin());
-    break;
-  case llvm::omp::Directive::OMPD_target_exit_data:
-    genTargetEnterExitUpdateDataOp<mlir::omp::TargetExitDataOp>(
-        converter, symTable, semaCtx, currentLocation, clauses, queue,
-        queue.begin());
-    break;
-  case llvm::omp::Directive::OMPD_target_update:
-    genTargetEnterExitUpdateDataOp<mlir::omp::TargetUpdateOp>(
-        converter, symTable, semaCtx, currentLocation, clauses, queue,
-        queue.begin());
-    break;
-  case llvm::omp::Directive::OMPD_ordered:
-    genOrderedOp(converter, symTable, semaCtx, eval, currentLocation, clauses,
-                 queue, queue.begin());
-    break;
-  }
 }
 
 static void
