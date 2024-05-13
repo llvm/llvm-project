@@ -776,8 +776,6 @@ bool DataReader::recordBranch(BinaryFunction &BF, uint64_t From, uint64_t To,
       return true;
 
     // Allow passthrough blocks.
-    // If this backwards compatibility is dropped, remove equivalent handling
-    // in YAMLProfileReader::parseFunctionProfile.
     BinaryBasicBlock *FTSuccessor = FromBB->getConditionalSuccessor(false);
     if (FTSuccessor && FTSuccessor->succ_size() == 1 &&
         FTSuccessor->getSuccessor(ToBB->getLabel())) {
