@@ -52,6 +52,17 @@ void addDisableOptimizations(llvm::Module &M) {
   StringRef Key = "dx.disable_optimizations";
   M.addModuleFlag(llvm::Module::ModFlagBehavior::Override, Key, 1);
 }
+
+static uint64_t calculateLegacyCbufferAlign(const DataLayout &DL,
+                                            llvm::Type *T) {
+  if (T->isAggregateType())
+    return 16;
+  else if (const auto *VT = dyn_cast<FixedVectorType>(T))
+    return DL.getTypeAllocSize(VT->getElementType());
+  else
+    return DL.getTypeAllocSize(T);
+}
+
 // cbuffer will be translated into global variable in special address space.
 // If translate into C,
 // cbuffer A {
@@ -76,14 +87,71 @@ void layoutBuffer(CGHLSLRuntime::Buffer &Buf, const DataLayout &DL) {
   if (Buf.Constants.empty())
     return;
 
-  std::vector<llvm::Type *> EltTys;
+  // Sort Buffer.Constants based on offset.
+  std::stable_sort(Buf.Constants.begin(), Buf.Constants.end(),
+                   [](const CGHLSLRuntime::Buffer::Constant &LHS,
+                      const CGHLSLRuntime::Buffer::Constant &RHS) {
+                     return LHS.Offset < RHS.Offset;
+                   });
+
+  unsigned BufferSize = 0;
+  // Collect offset for allocated constants first.
   for (auto &Const : Buf.Constants) {
-    GlobalVariable *GV = Const.first;
-    Const.second = EltTys.size();
+    unsigned Offset = Const.Offset;
+    if (Offset == UINT_MAX)
+      continue;
+    unsigned Size = Const.Size;
+    // No need to align, the packoffset is already aligned.
+    BufferSize = Offset + Size;
+  }
+
+  constexpr unsigned CBufferAlign = 16;
+  constexpr unsigned CBufferAlignMask = CBufferAlign - 1;
+  // Allocate Offset for constant not allocated yet.
+  for (auto &Const : Buf.Constants) {
+    unsigned Offset = Const.Offset;
+    if (Offset != UINT_MAX)
+      continue;
+
+    GlobalVariable *GV = Const.GV;
+    llvm::Type *Ty = GV->getValueType();
+    unsigned Align = calculateLegacyCbufferAlign(DL, Ty);
+    unsigned Size = Const.Size;
+    if (Align < CBufferAlign) {
+      // Cross 16-byte boundary.
+      unsigned Base = CBufferAlignMask & Size;
+      if ((Base + Size) > CBufferAlign)
+        Align = CBufferAlign;
+    }
+    Offset = llvm::alignTo(BufferSize, Align);
+    BufferSize = Offset + Size;
+    Const.Offset = Offset;
+  }
+
+  // Build struct type for cbuffer.
+  LLVMContext &Ctx = Buf.Constants[0].GV->getContext();
+  std::vector<llvm::Type *> EltTys;
+  unsigned CurOffset = 0;
+  auto *I8Ty = llvm::Type::getInt8Ty(Ctx);
+
+  for (auto &Const : Buf.Constants) {
+    // Byte offset.
+    unsigned ConstOffset = Const.Offset;
+    // Add padding if needed.
+    if (CurOffset < ConstOffset)
+      EltTys.emplace_back(
+          llvm::ArrayType::get(I8Ty, (ConstOffset - CurOffset)));
+    assert(CurOffset <= ConstOffset && "constant overlap");
+    GlobalVariable *GV = Const.GV;
+    // Change the offset to field index of the layout struct.
+    Const.ElementIndex = EltTys.size();
     llvm::Type *Ty = GV->getValueType();
     EltTys.emplace_back(Ty);
+    unsigned Size = Const.Size;
+    // No need to align, the ConstOffset is already aligned.
+    CurOffset = ConstOffset + Size;
   }
-  Buf.LayoutStruct = llvm::StructType::get(EltTys[0]->getContext(), EltTys);
+  Buf.LayoutStruct = llvm::StructType::get(Ctx, EltTys);
 }
 
 GlobalVariable *replaceBuffer(CGHLSLRuntime::Buffer &Buf) {
@@ -97,11 +165,13 @@ GlobalVariable *replaceBuffer(CGHLSLRuntime::Buffer &Buf) {
   IRBuilder<> B(CBGV->getContext());
   Value *ZeroIdx = B.getInt32(0);
   // Replace Const use with CB use.
-  for (auto &[GV, Offset] : Buf.Constants) {
-    Value *GEP =
-        B.CreateGEP(Buf.LayoutStruct, CBGV, {ZeroIdx, B.getInt32(Offset)});
+  for (auto &Constant : Buf.Constants) {
+    GlobalVariable *GV = Constant.GV;
+    Value *GEP = B.CreateGEP(Buf.LayoutStruct, CBGV,
+                             {ZeroIdx, B.getInt32(Constant.ElementIndex)});
 
-    assert(Buf.LayoutStruct->getElementType(Offset) == GV->getValueType() &&
+    assert(Buf.LayoutStruct->getElementType(Constant.ElementIndex) ==
+               GV->getValueType() &&
            "constant type mismatch");
 
     // Replace.
@@ -134,13 +204,18 @@ void CGHLSLRuntime::addConstant(VarDecl *D, Buffer &CB) {
         codegenoptions::DebugInfoKind::LimitedDebugInfo)
       DI->EmitGlobalVariable(cast<GlobalVariable>(GV), D);
 
-  // FIXME: support packoffset.
-  // See https://github.com/llvm/llvm-project/issues/57914.
-  uint32_t Offset = 0;
-  bool HasUserOffset = false;
-
-  unsigned LowerBound = HasUserOffset ? Offset : UINT_MAX;
-  CB.Constants.emplace_back(std::make_pair(GV, LowerBound));
+  unsigned LowerBound = UINT_MAX;
+  bool HasUserOffset = D->hasAttr<HLSLPackOffsetAttr>();
+  if (HasUserOffset) {
+    auto *Attr = D->getAttr<HLSLPackOffsetAttr>();
+    // Make the offset in bytes.
+    LowerBound = Attr->getOffset() * 4;
+  }
+  // Byte size.
+  unsigned Size = HLSLBufferDecl::calculateLegacyCbufferSize(CGM.getContext(),
+                                                             D->getType()) >>
+                  3;
+  CB.Constants.emplace_back(Buffer::Constant{GV, LowerBound, Size, 0});
 }
 
 void CGHLSLRuntime::addBufferDecls(const DeclContext *DC, Buffer &CB) {

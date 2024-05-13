@@ -5671,6 +5671,54 @@ HLSLBufferDecl *HLSLBufferDecl::CreateDeserialized(ASTContext &C,
                                     SourceLocation(), SourceLocation());
 }
 
+static uint64_t calculateLegacyCbufferAlign(const ASTContext &Context,
+                                            QualType T) {
+  if (T->isAggregateType())
+    return 128;
+  else if (const VectorType *VT = T->getAs<VectorType>())
+    return Context.getTypeSize(VT->getElementType());
+  else
+    return Context.getTypeSize(T);
+}
+
+unsigned HLSLBufferDecl::calculateLegacyCbufferSize(const ASTContext &Context,
+                                                    QualType T) {
+  unsigned Size = 0;
+  constexpr unsigned CBufferAlign = 128;
+  constexpr unsigned CBufferAlignMask = CBufferAlign - 1;
+  if (const RecordType *RT = T->getAs<RecordType>()) {
+    const RecordDecl *RD = RT->getDecl();
+    for (const FieldDecl *Field : RD->fields()) {
+      QualType Ty = Field->getType().getCanonicalType();
+      unsigned FieldSize = calculateLegacyCbufferSize(Context, Ty);
+      unsigned FieldAlign = calculateLegacyCbufferAlign(Context, Ty);
+      if (FieldAlign < CBufferAlign) {
+        // Cross 16-byte boundary.
+        unsigned Base = CBufferAlignMask & Size;
+        if ((Base + FieldSize) > CBufferAlign)
+          FieldAlign = CBufferAlign;
+      }
+      Size = llvm::alignTo(Size, FieldAlign);
+      Size += FieldSize;
+    }
+  } else if (const ConstantArrayType *AT = Context.getAsConstantArrayType(T)) {
+    if (unsigned ElementCount = AT->getSize().getZExtValue()) {
+      unsigned ElementSize =
+          calculateLegacyCbufferSize(Context, AT->getElementType());
+      unsigned AlignedElementSize = llvm::alignTo(ElementSize, CBufferAlign);
+      Size = AlignedElementSize * (ElementCount - 1) + ElementSize;
+    }
+  } else if (const VectorType *VT = T->getAs<VectorType>()) {
+    unsigned ElementCount = VT->getNumElements();
+    unsigned ElementSize =
+        calculateLegacyCbufferSize(Context, VT->getElementType());
+    Size = ElementSize * ElementCount;
+  } else {
+    Size = Context.getTypeSize(T);
+  }
+  return Size;
+}
+
 //===----------------------------------------------------------------------===//
 // ImportDecl Implementation
 //===----------------------------------------------------------------------===//

@@ -4959,6 +4959,11 @@ public:
                                 SourceLocation LBrace);
   static HLSLBufferDecl *CreateDeserialized(ASTContext &C, GlobalDeclID ID);
 
+  // Calculate the size of a legacy cbuffer type based on
+  // https://learn.microsoft.com/en-us/windows/win32/direct3dhlsl/dx-graphics-hlsl-packing-rules
+  static unsigned calculateLegacyCbufferSize(const ASTContext &Context,
+                                             QualType T);
+
   SourceRange getSourceRange() const override LLVM_READONLY {
     return SourceRange(getLocStart(), RBraceLoc);
   }
