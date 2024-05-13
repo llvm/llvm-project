@@ -173,6 +173,7 @@ class LLVM_LIBRARY_VISIBILITY X86TargetInfo : public TargetInfo {
   bool HasPPX = false;
   bool HasNDD = false;
   bool HasCCMP = false;
+  bool HasNF = false;
   bool HasCF = false;
 
 protected:
