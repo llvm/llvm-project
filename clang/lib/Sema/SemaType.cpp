@@ -9806,7 +9806,7 @@ QualType Sema::BuildCountAttributedArrayType(QualType WrappedTy,
 /// that expression, according to the rules in C++11
 /// [dcl.type.simple]p4 and C++11 [expr.lambda.prim]p18.
 QualType Sema::getDecltypeForExpr(Expr *E) {
-  if (E->isTypeDependent())
+  if (E->isInstantiationDependent())
     return Context.DependentTy;
 
   Expr *IDExpr = E;
