@@ -2510,6 +2510,14 @@ public:
   CallableVisitor(llvm::function_ref<void(const Decl *)> Callback)
       : Callback(Callback) {}
 
+  bool VisitFieldDecl(FieldDecl *Node) {
+    if (cast<DeclContext>(Node->getParent())->isDependentContext())
+      return true; // Not to analyze dependent decl
+    if (Node->hasInClassInitializer())
+      Callback(Node);
+    return true;
+  }
+
   bool VisitFunctionDecl(FunctionDecl *Node) {
     if (cast<DeclContext>(Node)->isDependentContext())
       return true; // Not to analyze dependent decl

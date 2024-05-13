@@ -1973,8 +1973,8 @@ public:
 
 /// Scan the function and return a list of gadgets found with provided kits.
 static std::tuple<FixableGadgetList, WarningGadgetList, DeclUseTracker>
-findGadgets(const Decl *D, const UnsafeBufferUsageHandler &Handler,
-            bool EmitSuggestions) {
+findGadgets(const Stmt *S, ASTContext &Ctx,
+            const UnsafeBufferUsageHandler &Handler, bool EmitSuggestions) {
 
   struct GadgetFinderCallback : MatchFinder::MatchCallback {
     FixableGadgetList FixableGadgets;
@@ -2068,7 +2068,7 @@ findGadgets(const Decl *D, const UnsafeBufferUsageHandler &Handler,
     // clang-format on
   }
 
-  M.match(*D->getBody(), D->getASTContext());
+  M.match(*S, Ctx);
   return {std::move(CB.FixableGadgets), std::move(CB.WarningGadgets),
           std::move(CB.Tracker)};
 }
@@ -3614,39 +3614,9 @@ public:
   }
 };
 
-void clang::checkUnsafeBufferUsage(const Decl *D,
-                                   UnsafeBufferUsageHandler &Handler,
-                                   bool EmitSuggestions) {
-#ifndef NDEBUG
-  Handler.clearDebugNotes();
-#endif
-
-  assert(D && D->getBody());
-  // We do not want to visit a Lambda expression defined inside a method
-  // independently. Instead, it should be visited along with the outer method.
-  // FIXME: do we want to do the same thing for `BlockDecl`s?
-  if (const auto *fd = dyn_cast<CXXMethodDecl>(D)) {
-    if (fd->getParent()->isLambda() && fd->getParent()->isLocalClass())
-      return;
-  }
-
-  // Do not emit fixit suggestions for functions declared in an
-  // extern "C" block.
-  if (const auto *FD = dyn_cast<FunctionDecl>(D)) {
-    for (FunctionDecl *FReDecl : FD->redecls()) {
-      if (FReDecl->isExternC()) {
-        EmitSuggestions = false;
-        break;
-      }
-    }
-  }
-
-  WarningGadgetSets UnsafeOps;
-  FixableGadgetSets FixablesForAllVars;
-
-  auto [FixableGadgets, WarningGadgets, Tracker] =
-      findGadgets(D, Handler, EmitSuggestions);
-
+void applyGadgets(const Decl *D, FixableGadgetList FixableGadgets,
+                  WarningGadgetList WarningGadgets, DeclUseTracker Tracker,
+                  UnsafeBufferUsageHandler &Handler, bool EmitSuggestions) {
   if (!EmitSuggestions) {
     // Our job is very easy without suggestions. Just warn about
     // every problematic operation and consider it done. No need to deal
@@ -3690,8 +3660,10 @@ void clang::checkUnsafeBufferUsage(const Decl *D,
   if (WarningGadgets.empty())
     return;
 
-  UnsafeOps = groupWarningGadgetsByVar(std::move(WarningGadgets));
-  FixablesForAllVars = groupFixablesByVar(std::move(FixableGadgets));
+  WarningGadgetSets UnsafeOps =
+      groupWarningGadgetsByVar(std::move(WarningGadgets));
+  FixableGadgetSets FixablesForAllVars =
+      groupFixablesByVar(std::move(FixableGadgets));
 
   std::map<const VarDecl *, FixItList> FixItsForVariableGroup;
 
@@ -3910,5 +3882,65 @@ void clang::checkUnsafeBufferUsage(const Decl *D,
       G->handleUnsafeOperation(Handler, /*IsRelatedToDecl=*/true,
                                D->getASTContext());
     }
+  }
+}
+
+void clang::checkUnsafeBufferUsage(const Decl *D,
+                                   UnsafeBufferUsageHandler &Handler,
+                                   bool EmitSuggestions) {
+#ifndef NDEBUG
+  Handler.clearDebugNotes();
+#endif
+
+  assert(D);
+
+  SmallVector<Stmt *> Stmts;
+
+  // We do not want to visit a Lambda expression defined inside a method
+  // independently. Instead, it should be visited along with the outer method.
+  // FIXME: do we want to do the same thing for `BlockDecl`s?
+  if (const auto *fd = dyn_cast<CXXMethodDecl>(D)) {
+    if (fd->getParent()->isLambda() && fd->getParent()->isLocalClass())
+      return;
+  }
+
+  // Do not emit fixit suggestions for functions declared in an
+  // extern "C" block.
+  if (const auto *FD = dyn_cast<FunctionDecl>(D)) {
+    for (FunctionDecl *FReDecl : FD->redecls()) {
+      if (FReDecl->isExternC()) {
+        EmitSuggestions = false;
+        break;
+      }
+    }
+
+    Stmts.push_back(FD->getBody());
+
+    if (const auto *ID = dyn_cast<CXXConstructorDecl>(D)) {
+      for (const CXXCtorInitializer *CI : ID->inits()) {
+        Stmts.push_back(CI->getInit());
+      }
+    }
+  }
+
+  if (const auto *FD = dyn_cast<FieldDecl>(D)) {
+    // Visit in-class initializers for fields.
+    if (!FD->hasInClassInitializer())
+      return;
+
+    Stmts.push_back(FD->getInClassInitializer());
+  }
+
+  if (isa<BlockDecl>(D) || isa<ObjCMethodDecl>(D)) {
+    Stmts.push_back(D->getBody());
+  }
+
+  assert(!Stmts.empty());
+
+  for (Stmt *S : Stmts) {
+    auto [FixableGadgets, WarningGadgets, Tracker] =
+        findGadgets(S, D->getASTContext(), Handler, EmitSuggestions);
+    applyGadgets(D, std::move(FixableGadgets), std::move(WarningGadgets),
+                 std::move(Tracker), Handler, EmitSuggestions);
   }
 }

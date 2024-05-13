@@ -111,6 +111,42 @@ int testFoldExpression(Vs&&... v) {
     return (... + v);  // expected-warning{{function introduces unsafe buffer manipulation}}
 }
 
+struct HoldsUnsafeMembers {
+    HoldsUnsafeMembers()
+        : FromCtor(3),  // expected-warning{{function introduces unsafe buffer manipulation}}
+          FromCtor2{3}  // expected-warning{{function introduces unsafe buffer manipulation}}
+    {}
+
+    [[clang::unsafe_buffer_usage]]
+    HoldsUnsafeMembers(int i)
+        : FromCtor(i),  // expected-warning{{function introduces unsafe buffer manipulation}}
+          FromCtor2{i}  // expected-warning{{function introduces unsafe buffer manipulation}}
+    {}
+
+    HoldsUnsafeMembers(float f)
+        : HoldsUnsafeMembers(0) {}  // expected-warning{{function introduces unsafe buffer manipulation}}
+
+    UnsafeMembers FromCtor;
+    UnsafeMembers FromCtor2;
+    UnsafeMembers FromField{3};  // expected-warning{{function introduces unsafe buffer manipulation}}
+};
+
+struct SubclassUnsafeMembers : public UnsafeMembers {
+    SubclassUnsafeMembers()
+        : UnsafeMembers(3)  // expected-warning{{function introduces unsafe buffer manipulation}}
+    {}
+
+    [[clang::unsafe_buffer_usage]]
+    SubclassUnsafeMembers(int i)
+        : UnsafeMembers(i)  // expected-warning{{function introduces unsafe buffer manipulation}}
+    {}
+};
+
+struct AggregateUnsafeMembers {
+    UnsafeMembers f1;
+    UnsafeMembers f2{3};  // expected-warning{{function introduces unsafe buffer manipulation}}
+};
+
 // https://github.com/llvm/llvm-project/issues/80482
 void testClassMembers() {
     UnsafeMembers(3);  // expected-warning{{function introduces unsafe buffer manipulation}}
@@ -122,4 +158,35 @@ void testClassMembers() {
     UnsafeMembers()();  // expected-warning{{function introduces unsafe buffer manipulation}}
 
     testFoldExpression(UnsafeMembers(), UnsafeMembers());
+
+    HoldsUnsafeMembers();
+    HoldsUnsafeMembers(3);  // expected-warning{{function introduces unsafe buffer manipulation}}
+
+    SubclassUnsafeMembers();
+    SubclassUnsafeMembers(3);  // expected-warning{{function introduces unsafe buffer manipulation}}
+
+    (void)AggregateUnsafeMembers{
+        .f1 = UnsafeMembers(3),  // expected-warning{{function introduces unsafe buffer manipulation}}
+    };
+
+    (void)AggregateUnsafeMembers(3);  // expected-warning{{function introduces unsafe buffer manipulation}}
+
+    // FIXME: This should generate a warning but InitListExpr construction is
+    // treated as calling an implicit constructor, while ParentListInitExpr (the
+    // one above) is not. So `MatchDescendantVisitor::shouldVisitImplicitCode()`
+    // must return true for this to generate a warning. However that moves the
+    // SourceLocation of warnings from field initializers that construct through
+    // InitListExpr, preventing us from matching warnings against them.
+    (void)AggregateUnsafeMembers{3};
 }
+
+struct NotCalledHoldsUnsafeMembers {
+    NotCalledHoldsUnsafeMembers()
+        : FromCtor(3),  // expected-warning{{function introduces unsafe buffer manipulation}}
+          FromCtor2{3}  // expected-warning{{function introduces unsafe buffer manipulation}}
+    {}
+
+    UnsafeMembers FromCtor;
+    UnsafeMembers FromCtor2;
+    UnsafeMembers FromField{3};  // expected-warning{{function introduces unsafe buffer manipulation}}
+};
