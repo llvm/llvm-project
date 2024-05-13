@@ -4,35 +4,35 @@
 // ERROR-COUNT-8: error:
 // ERROR-NOT: error:
 
-// CHECK: lkgsw %ax
+// CHECK: lkgs %ax
 // CHECK: encoding: [0xf2,0x0f,0x00,0xf0]
-          lkgsw %ax
+          lkgs %ax
 
-// CHECK: lkgsw %r12w
+// CHECK: lkgs %r12w
 // CHECK: encoding: [0xf2,0x41,0x0f,0x00,0xf4]
-          lkgsw %r12w
+          lkgs %r12w
 
-// CHECK: lkgsw  268435456(%rbp,%r14,8)
+// CHECK: lkgs  268435456(%rbp,%r14,8)
 // CHECK: encoding: [0xf2,0x42,0x0f,0x00,0xb4,0xf5,0x00,0x00,0x00,0x10]
-          lkgsw  268435456(%rbp,%r14,8)
+          lkgs  268435456(%rbp,%r14,8)
 
-// CHECK: lkgsw  291(%r8,%rax,4)
+// CHECK: lkgs  291(%r8,%rax,4)
 // CHECK: encoding: [0xf2,0x41,0x0f,0x00,0xb4,0x80,0x23,0x01,0x00,0x00]
-          lkgsw  291(%r8,%rax,4)
+          lkgs  291(%r8,%rax,4)
 
-// CHECK: lkgsw  (%rip)
+// CHECK: lkgs  (%rip)
 // CHECK: encoding: [0xf2,0x0f,0x00,0x35,0x00,0x00,0x00,0x00]
-          lkgsw  (%rip)
+          lkgs  (%rip)
 
-// CHECK: lkgsw  -64(,%rbp,2)
+// CHECK: lkgs  -64(,%rbp,2)
 // CHECK: encoding: [0xf2,0x0f,0x00,0x34,0x6d,0xc0,0xff,0xff,0xff]
-          lkgsw  -64(,%rbp,2)
+          lkgs  -64(,%rbp,2)
 
-// CHECK: lkgsw  254(%rcx)
+// CHECK: lkgs  254(%rcx)
 // CHECK: encoding: [0xf2,0x0f,0x00,0xb1,0xfe,0x00,0x00,0x00]
-          lkgsw  254(%rcx)
+          lkgs  254(%rcx)
 
-// CHECK: lkgsw  -256(%rdx)
+// CHECK: lkgs  -256(%rdx)
 // CHECK: encoding: [0xf2,0x0f,0x00,0xb2,0x00,0xff,0xff,0xff]
-          lkgsw  -256(%rdx)
+          lkgs  -256(%rdx)
 

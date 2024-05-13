@@ -223,9 +223,9 @@ def SWAPGS : I<0x01, MRM_F8, (outs), (ins), "swapgs", []>, TB;
 // LKGS instructions
 let hasSideEffects = 1 in {
   let mayLoad = 1 in
-  def LKGS16m : I<0x00, MRM6m, (outs), (ins i16mem:$src), "lkgs{w}\t$src",
+  def LKGS16m : I<0x00, MRM6m, (outs), (ins i16mem:$src), "lkgs\t$src",
                   []>, TB, XD, Requires<[In64BitMode]>;
-  def LKGS16r : I<0x00, MRM6r, (outs), (ins GR16:$src), "lkgs{w}\t$src",
+  def LKGS16r : I<0x00, MRM6r, (outs), (ins GR16:$src), "lkgs\t$src",
                   []>, TB, XD, Requires<[In64BitMode]>;
 } // hasSideEffects
 
