@@ -1506,6 +1506,18 @@ bool LoopVectorizationLegality::canVectorize(bool UseVPlanNativePath) {
       return false;
   }
 
+  for (auto [BinOp, _] : LAI->getHistogramCounts()) {
+    if (!TTI->getHistogramCost(BinOp->getType()).isValid()) {
+      LLVM_DEBUG(dbgs() << "Invalid TTI Histogram Cost for type: "
+                        << *BinOp->getType() << "\n");
+      return false;
+    }
+    // We would normally let blockCanBePredicated add the operation to MaskedOp,
+    // but it's called before LAA information is available.
+    if (blockNeedsPredication(BinOp->getParent()))
+      MaskedOp.insert(BinOp);
+  }
+
   LLVM_DEBUG(dbgs() << "LV: We can vectorize this loop"
                     << (LAI->getRuntimePointerChecking()->Need
                             ? " (with a runtime bound check)"
@@ -1587,6 +1599,14 @@ bool LoopVectorizationLegality::prepareToFoldTailByMasking() {
       LLVM_DEBUG(dbgs() << "LV: Cannot fold tail by masking as requested.\n");
       return false;
     }
+
+    // FIXME: Would be nice to put this in blockCanBePredicated, but LAA isn't
+    //        always valid when it's called.
+    // If we're tail folding, then make sure we use the mask with any histogram
+    // operations in the loop.
+    for (Instruction &I : *BB)
+      if (getHistogramIndexValue(&I))
+        TmpMaskedOp.insert(&I);
   }
 
   LLVM_DEBUG(dbgs() << "LV: can fold tail by masking.\n");

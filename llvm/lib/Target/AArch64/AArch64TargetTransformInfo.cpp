@@ -58,6 +58,11 @@ static cl::opt<unsigned> InlineCallPenaltyChangeSM(
 static cl::opt<bool> EnableOrLikeSelectOpt("enable-aarch64-or-like-select",
                                            cl::init(true), cl::Hidden);
 
+// A complete guess as to a reasonable cost.
+static cl::opt<unsigned>
+    BaseHistCntCost("aarch64-base-histcnt-cost", cl::init(8), cl::Hidden,
+                    cl::desc("The cost of a histcnt instruction"));
+
 namespace {
 class TailFoldingOption {
   // These bitfields will only ever be set to something non-zero in operator=,
@@ -503,6 +508,31 @@ AArch64TTIImpl::getPopcntSupport(unsigned TyWidth) {
 static bool isUnpackedVectorVT(EVT VecVT) {
   return VecVT.isScalableVector() &&
          VecVT.getSizeInBits().getKnownMinValue() < AArch64::SVEBitsPerBlock;
+}
+
+InstructionCost AArch64TTIImpl::getHistogramCost(Type *Ty) const {
+  if (!ST->hasSVE2orSME())
+    return InstructionCost::getInvalid();
+
+  Type *EltTy = Ty->getScalarType();
+
+  // Only allow (<=64b) integers or pointers for now...
+  if ((!EltTy->isIntegerTy() && !EltTy->isPointerTy()) ||
+      EltTy->getScalarSizeInBits() > 64)
+    return InstructionCost::getInvalid();
+
+  // FIXME: Hacky check for legal vector types. We can promote smaller types
+  //        but we cannot legalize vectors via splitting for histcnt.
+  // FIXME: We should be able to generate histcnt for fixed-length vectors
+  //        using ptrue with a specific VL.
+  if (VectorType *VTy = dyn_cast<VectorType>(Ty))
+    if ((VTy->getElementCount().getKnownMinValue() != 2 &&
+         VTy->getElementCount().getKnownMinValue() != 4) ||
+        VTy->getPrimitiveSizeInBits().getKnownMinValue() > 128 ||
+        !VTy->isScalableTy())
+      return InstructionCost::getInvalid();
+
+  return InstructionCost(BaseHistCntCost);
 }
 
 InstructionCost

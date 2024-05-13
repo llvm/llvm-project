@@ -21,6 +21,7 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
@@ -801,6 +802,38 @@ void VPWidenCallRecipe::print(raw_ostream &O, const Twine &Indent,
       O << ": " << Variant->getName();
     O << ")";
   }
+}
+#endif
+
+void VPHistogramRecipe::execute(VPTransformState &State) {
+  assert(State.UF == 1 && "Cannot interleave histograms");
+  IRBuilderBase &Builder = State.Builder;
+  Value *BucketData = State.get(getOperand(0), 0);
+  Value *IncAmt = State.get(getOperand(1), 0);
+  Value *Indices = State.get(getOperand(2), 0);
+  Value *Mask = State.get(getOperand(3), 0);
+
+  Value *HistCnt = Builder.CreateIntrinsic(
+      Intrinsic::experimental_vector_histogram_count, {Indices->getType()},
+      {Indices, Mask}, nullptr, "histogram");
+  Value *IncVal = Builder.CreateMul(HistCnt, IncAmt);
+  Value *Add = Builder.CreateAdd(BucketData, IncVal);
+  State.set(this, Add, 0);
+}
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+void VPHistogramRecipe::print(raw_ostream &O, const Twine &Indent,
+                              VPSlotTracker &SlotTracker) const {
+  O << Indent << "WIDEN-HGRAM ";
+  printAsOperand(O, SlotTracker);
+  O << " = add ";
+  getOperand(0)->printAsOperand(O, SlotTracker);
+  O << ", histogram(";
+  getOperand(2)->printAsOperand(O, SlotTracker);
+  O << ") * ";
+  getOperand(1)->printAsOperand(O, SlotTracker);
+  O << ", mask: ";
+  getOperand(3)->printAsOperand(O, SlotTracker);
 }
 
 void VPWidenSelectRecipe::print(raw_ostream &O, const Twine &Indent,

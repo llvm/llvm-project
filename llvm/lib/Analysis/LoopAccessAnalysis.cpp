@@ -21,6 +21,7 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/AliasSetTracker.h"
 #include "llvm/Analysis/LoopAnalysisManager.h"
@@ -69,6 +70,8 @@ using namespace llvm;
 using namespace llvm::PatternMatch;
 
 #define DEBUG_TYPE "loop-accesses"
+
+STATISTIC(HistogramsDetected, "Number of Histograms detected");
 
 static cl::opt<unsigned, true>
 VectorizationFactor("force-vector-width", cl::Hidden,
@@ -730,6 +733,23 @@ public:
   getUnderlyingObjects() {
     return UnderlyingObjects;
   }
+
+  /// Find Histogram counts that match high-level code in loops:
+  /// \code
+  /// buckets[indices[i]]+=step;
+  /// \endcode
+  ///
+  /// It matches a pattern starting from \p HSt, which Stores to the 'buckets'
+  /// array the computed histogram. It uses a BinOp to sum all counts, storing
+  /// them using a loop-variant index Load from the 'indices' input array.
+  ///
+  /// On successful matches it updates the STATISTIC 'HistogramsDetected',
+  /// regardless of hardware support. When there is support, it additionally
+  /// stores the BinOp/Load pairs in \p HistogramCounts, as well the pointers
+  /// used to update histogram in \p HistogramPtrs.
+  void findHistograms(StoreInst *HSt,
+                      DenseMap<Instruction *, Instruction *> &HistogramCounts,
+                      SmallPtrSetImpl<Value *> &HistogramPtrs);
 
 private:
   typedef MapVector<MemAccessInfo, SmallSetVector<Type *, 1>> PtrAccessMap;
@@ -1948,7 +1968,8 @@ getDependenceDistanceStrideAndSize(
     const AccessAnalysis::MemAccessInfo &B, Instruction *BInst,
     const DenseMap<Value *, const SCEV *> &Strides,
     const DenseMap<Value *, SmallVector<const Value *, 16>> &UnderlyingObjects,
-    PredicatedScalarEvolution &PSE, const Loop *InnermostLoop) {
+    PredicatedScalarEvolution &PSE, const Loop *InnermostLoop,
+    const SmallPtrSetImpl<Value *> &HistogramPtrs) {
   auto &DL = InnermostLoop->getHeader()->getModule()->getDataLayout();
   auto &SE = *PSE.getSE();
   auto [APtr, AIsWrite] = A;
@@ -1965,6 +1986,15 @@ getDependenceDistanceStrideAndSize(
   if (APtr->getType()->getPointerAddressSpace() !=
       BPtr->getType()->getPointerAddressSpace())
     return MemoryDepChecker::Dependence::Unknown;
+
+  // Ignore Histogram count updates as they are handled by the Intrinsic. This
+  // happens when the same pointer is first used to read from and then is used
+  // to write to.
+  if (!AIsWrite && BIsWrite && APtr == BPtr && HistogramPtrs.contains(APtr)) {
+    LLVM_DEBUG(dbgs() << "LAA: Histogram: Update is safely ignored. Pointer: "
+                      << *APtr);
+    return MemoryDepChecker::Dependence::NoDep;
+  }
 
   int64_t StrideAPtr =
       getPtrStride(PSE, ATy, APtr, InnermostLoop, Strides, true).value_or(0);
@@ -2022,15 +2052,15 @@ getDependenceDistanceStrideAndSize(
 MemoryDepChecker::Dependence::DepType MemoryDepChecker::isDependent(
     const MemAccessInfo &A, unsigned AIdx, const MemAccessInfo &B,
     unsigned BIdx, const DenseMap<Value *, const SCEV *> &Strides,
-    const DenseMap<Value *, SmallVector<const Value *, 16>>
-        &UnderlyingObjects) {
+    const DenseMap<Value *, SmallVector<const Value *, 16>> &UnderlyingObjects,
+    const SmallPtrSetImpl<Value *> &HistogramPtrs) {
   assert(AIdx < BIdx && "Must pass arguments in program order");
 
   // Get the dependence distance, stride, type size and what access writes for
   // the dependence between A and B.
   auto Res = getDependenceDistanceStrideAndSize(
       A, InstMap[AIdx], B, InstMap[BIdx], Strides, UnderlyingObjects, PSE,
-      InnermostLoop);
+      InnermostLoop, HistogramPtrs);
   if (std::holds_alternative<Dependence::DepType>(Res))
     return std::get<Dependence::DepType>(Res);
 
@@ -2266,8 +2296,8 @@ MemoryDepChecker::Dependence::DepType MemoryDepChecker::isDependent(
 bool MemoryDepChecker::areDepsSafe(
     DepCandidates &AccessSets, MemAccessInfoList &CheckDeps,
     const DenseMap<Value *, const SCEV *> &Strides,
-    const DenseMap<Value *, SmallVector<const Value *, 16>>
-        &UnderlyingObjects) {
+    const DenseMap<Value *, SmallVector<const Value *, 16>> &UnderlyingObjects,
+    const SmallPtrSetImpl<Value *> &HistogramPtrs) {
 
   MinDepDistBytes = -1;
   SmallPtrSet<MemAccessInfo, 8> Visited;
@@ -2312,7 +2342,7 @@ bool MemoryDepChecker::areDepsSafe(
 
             Dependence::DepType Type =
                 isDependent(*A.first, A.second, *B.first, B.second, Strides,
-                            UnderlyingObjects);
+                            UnderlyingObjects, HistogramPtrs);
             mergeInStatus(Dependence::isSafeForVectorization(Type));
 
             // Gather dependences unless we accumulated MaxDependences
@@ -2648,6 +2678,9 @@ void LoopAccessInfo::analyzeLoop(AAResults *AA, LoopInfo *LI,
   // check.
   Accesses.buildDependenceSets();
 
+  for (StoreInst *ST : Stores)
+    Accesses.findHistograms(ST, HistogramCounts, HistogramPtrs);
+
   // Find pointers with computable bounds. We are going to use this information
   // to place a runtime bound check.
   Value *UncomputablePtr = nullptr;
@@ -2672,7 +2705,7 @@ void LoopAccessInfo::analyzeLoop(AAResults *AA, LoopInfo *LI,
     LLVM_DEBUG(dbgs() << "LAA: Checking memory dependencies\n");
     CanVecMem = DepChecker->areDepsSafe(
         DependentAccesses, Accesses.getDependenciesToCheck(), SymbolicStrides,
-        Accesses.getUnderlyingObjects());
+        Accesses.getUnderlyingObjects(), HistogramPtrs);
 
     if (!CanVecMem && DepChecker->shouldRetryWithRuntimeCheck()) {
       LLVM_DEBUG(dbgs() << "LAA: Retrying with memory checks\n");
@@ -3125,6 +3158,89 @@ const LoopAccessInfo &LoopAccessInfoManager::getInfo(Loop &L) {
         std::make_unique<LoopAccessInfo>(&L, &SE, TTI, TLI, &AA, &DT, &LI);
 
   return *I.first->second;
+}
+
+void AccessAnalysis::findHistograms(
+    StoreInst *HSt, DenseMap<Instruction *, Instruction *> &HistogramCounts,
+    SmallPtrSetImpl<Value *> &HistogramPtrs) {
+  LLVM_DEBUG(dbgs() << "LAA: Attempting to match histogram from " << *HSt
+                    << "\n");
+  // Store value must come from a Binary Operation.
+  Instruction *HPtrInstr = nullptr;
+  BinaryOperator *HBinOp = nullptr;
+  if (!match(HSt, m_Store(m_BinOp(HBinOp), m_Instruction(HPtrInstr)))) {
+    LLVM_DEBUG(dbgs() << "\tNo BinOp\n");
+    return;
+  }
+
+  // BinOp must be an Add or a Sub operating modifying the bucket value by a
+  // loop invariant amount.
+  // FIXME: We assume the loop invariant term is on the RHS.
+  //        Fine for an immediate/constant, but maybe not a generic value?
+  Value *HIncVal = nullptr;
+  if (!match(HBinOp, m_Add(m_Load(m_Specific(HPtrInstr)), m_Value(HIncVal))) &&
+      !match(HBinOp, m_Sub(m_Load(m_Specific(HPtrInstr)), m_Value(HIncVal)))) {
+    LLVM_DEBUG(dbgs() << "\tNo matching load\n");
+    return;
+  }
+
+  // The address to store is calculated through a GEP Instruction.
+  // FIXME: Support GEPs with more operands.
+  GetElementPtrInst *HPtr = dyn_cast<GetElementPtrInst>(HPtrInstr);
+  if (!HPtr || HPtr->getNumOperands() > 2) {
+    LLVM_DEBUG(dbgs() << "\tToo many GEP operands\n");
+    return;
+  }
+
+  // Check that the index is calculated by loading from another array. Ignore
+  // any extensions.
+  // FIXME: Support indices from other sources that a linear load from memory?
+  Value *HIdx = HPtr->getOperand(1);
+  Instruction *IdxInst = nullptr;
+  // FIXME: Can this fail? Maybe if IdxInst isn't an instruction. Just need to
+  //        look through extensions, find another way?
+  if (!match(HIdx, m_ZExtOrSExtOrSelf(m_Instruction(IdxInst))))
+    return;
+
+  // Currently restricting this to linear addressing when loading indices.
+  LoadInst *VLoad = dyn_cast<LoadInst>(IdxInst);
+  Value *VPtrVal;
+  if (!VLoad || !match(VLoad, m_Load(m_Value(VPtrVal)))) {
+    LLVM_DEBUG(dbgs() << "\tBad Index Load\n");
+    return;
+  }
+
+  if (!isa<SCEVAddRecExpr>(PSE.getSCEV(VPtrVal))) {
+    LLVM_DEBUG(dbgs() << "\tCannot determine index load stride\n");
+    return;
+  }
+
+  // FIXME: support smaller types of input arrays. Integers can be promoted
+  //        for codegen.
+  Type *VLoadTy = VLoad->getType();
+  if (!VLoadTy->isIntegerTy() || (VLoadTy->getScalarSizeInBits() != 32 &&
+                                  VLoadTy->getScalarSizeInBits() != 64)) {
+    LLVM_DEBUG(dbgs() << "\tUnsupported bucket type: " << *VLoadTy << "\n");
+    return;
+  }
+
+  // A histogram pointer may only alias to itself, and must only have two uses,
+  // the load and the store.
+  for (AliasSet &AS : AST)
+    if (AS.isMustAlias() || AS.isMayAlias())
+      if ((is_contained(AS.getPointers(), HPtr) && AS.size() > 1) ||
+          HPtr->getNumUses() != 2) {
+        LLVM_DEBUG(dbgs() << "\tAliasing problem\n");
+        return;
+      }
+
+  LLVM_DEBUG(dbgs() << "LAA: Found Histogram Operation: " << *HBinOp << "\n");
+  HistogramsDetected++;
+
+  // Store pairs of BinOp (Add/Sub) that modify the count and the index load.
+  HistogramCounts.insert(std::make_pair(HBinOp, VLoad));
+  // Store pointers used to write those counts in the computed histogram.
+  HistogramPtrs.insert(HPtr);
 }
 
 bool LoopAccessInfoManager::invalidate(

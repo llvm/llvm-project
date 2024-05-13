@@ -982,6 +982,9 @@ public:
   /// Return hardware support for population count.
   PopcntSupportKind getPopcntSupport(unsigned IntTyWidthInBit) const;
 
+  /// Returns the cost of generating a vector histogram.
+  InstructionCost getHistogramCost(Type *Ty) const;
+
   /// Return true if the hardware has a fast square-root instruction.
   bool haveFastSqrt(Type *Ty) const;
 
@@ -1930,6 +1933,7 @@ public:
                                               unsigned *Fast) = 0;
   virtual PopcntSupportKind getPopcntSupport(unsigned IntTyWidthInBit) = 0;
   virtual bool haveFastSqrt(Type *Ty) = 0;
+  virtual InstructionCost getHistogramCost(Type *Ty) = 0;
   virtual bool isExpensiveToSpeculativelyExecute(const Instruction *I) = 0;
   virtual bool isFCmpOrdCheaperThanFCmpZero(Type *Ty) = 0;
   virtual InstructionCost getFPOpCost(Type *Ty) = 0;
@@ -2489,6 +2493,10 @@ public:
     return Impl.getPopcntSupport(IntTyWidthInBit);
   }
   bool haveFastSqrt(Type *Ty) override { return Impl.haveFastSqrt(Ty); }
+
+  InstructionCost getHistogramCost(Type *Ty) override {
+    return Impl.getHistogramCost(Ty);
+  }
 
   bool isExpensiveToSpeculativelyExecute(const Instruction* I) override {
     return Impl.isExpensiveToSpeculativelyExecute(I);

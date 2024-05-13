@@ -200,7 +200,8 @@ public:
   bool areDepsSafe(DepCandidates &AccessSets, MemAccessInfoList &CheckDeps,
                    const DenseMap<Value *, const SCEV *> &Strides,
                    const DenseMap<Value *, SmallVector<const Value *, 16>>
-                       &UnderlyingObjects);
+                       &UnderlyingObjects,
+                   const SmallPtrSetImpl<Value *> &HistogramPtrs);
 
   /// No memory dependence was encountered that would inhibit
   /// vectorization.
@@ -338,7 +339,8 @@ private:
   isDependent(const MemAccessInfo &A, unsigned AIdx, const MemAccessInfo &B,
               unsigned BIdx, const DenseMap<Value *, const SCEV *> &Strides,
               const DenseMap<Value *, SmallVector<const Value *, 16>>
-                  &UnderlyingObjects);
+                  &UnderlyingObjects,
+              const SmallPtrSetImpl<Value *> &HistogramPtrs);
 
   /// Check whether the data dependence could prevent store-load
   /// forwarding.
@@ -621,6 +623,19 @@ public:
   unsigned getNumStores() const { return NumStores; }
   unsigned getNumLoads() const { return NumLoads;}
 
+  const DenseMap<Instruction *, Instruction *> &getHistogramCounts() const {
+    return HistogramCounts;
+  }
+
+  /// Given a Histogram count BinOp \p I, returns the Index Value for the input
+  /// array to compute histogram for.
+  std::optional<Instruction *> getHistogramIndexValue(Instruction *I) const {
+    auto It = HistogramCounts.find(I);
+    if (It == HistogramCounts.end())
+      return std::nullopt;
+    return It->second;
+  }
+
   /// The diagnostics report generated for the analysis.  E.g. why we
   /// couldn't analyze the loop.
   const OptimizationRemarkAnalysis *getReport() const { return Report.get(); }
@@ -733,6 +748,14 @@ private:
   /// If an access has a symbolic strides, this maps the pointer value to
   /// the stride symbol.
   DenseMap<Value *, const SCEV *> SymbolicStrides;
+
+  /// Holds all the Histogram counts BinOp/Index pairs that we found in the
+  /// loop, where BinOp is an Add/Sub that does the histogram counting, and
+  /// Index is the index of the bucket to compute a histogram for.
+  DenseMap<Instruction *, Instruction *> HistogramCounts;
+
+  /// Storing Histogram Pointers
+  SmallPtrSet<Value *, 2> HistogramPtrs;
 };
 
 /// Return the SCEV corresponding to a pointer with the symbolic stride

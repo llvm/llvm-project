@@ -1499,6 +1499,68 @@ public:
 #endif
 };
 
+class VPHistogramRecipe : public VPSingleDefRecipe {
+  unsigned Opcode;
+
+public:
+  template <typename IterT>
+  VPHistogramRecipe(Instruction &I, iterator_range<IterT> Operands,
+                    DebugLoc DL = {})
+      : VPSingleDefRecipe(VPDef::VPWidenSC, Operands, &I, DL),
+        Opcode(I.getOpcode()) {}
+
+  ~VPHistogramRecipe() override = default;
+
+  VPHistogramRecipe *clone() override {
+    return new VPHistogramRecipe(*getUnderlyingInstr(), operands(),
+                                 getDebugLoc());
+  }
+
+  VP_CLASSOF_IMPL(VPDef::VPWidenSC);
+
+  // Produce a histogram operation with widened ingredients
+  void execute(VPTransformState &State) override;
+
+  unsigned getOpcode() const { return Opcode; }
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Print the recipe
+  void print(raw_ostream &O, const Twine &Indent,
+             VPSlotTracker &SlotTracker) const override;
+#endif
+};
+
+/*
+unsigned Opcode;
+
+public:
+    template <typename IterT>
+    VPWidenRecipe(Instruction &I, iterator_range<IterT> Operands)
+    : VPRecipeWithIRFlags(VPDef::VPWidenSC, Operands, I),
+      Opcode(I.getOpcode()) {}
+
+~VPWidenRecipe() override = default;
+
+VPWidenRecipe *clone() override {
+  auto *R = new VPWidenRecipe(*getUnderlyingInstr(), operands());
+  R->transferFlags(*this);
+  return R;
+}
+
+VP_CLASSOF_IMPL(VPDef::VPWidenSC)
+
+/// Produce widened copies of all Ingredients.
+void execute(VPTransformState &State) override;
+
+unsigned getOpcode() const { return Opcode; }
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+/// Print the recipe.
+void print(raw_ostream &O, const Twine &Indent,
+           VPSlotTracker &SlotTracker) const override;
+#endif
+ */
+
 /// A recipe for widening select instructions.
 struct VPWidenSelectRecipe : public VPSingleDefRecipe {
   template <typename IterT>

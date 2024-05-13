@@ -5317,6 +5317,11 @@ LoopVectorizationCostModel::selectInterleaveCount(ElementCount VF,
   if (!Legal->isSafeForAnyVectorWidth())
     return 1;
 
+  if (!Legal->getLAI()->getHistogramCounts().empty()) {
+    LLVM_DEBUG(dbgs() << "LV: Not interleaving histogram counts.\n");
+    return 1;
+  }
+
   auto BestKnownTC = getSmallBestKnownTC(*PSE.getSE(), TheLoop);
   const bool HasReductions = !Legal->getReductionVars().empty();
 
@@ -6938,8 +6943,13 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I, ElementCount VF,
     // We've proven all lanes safe to speculate, fall through.
     [[fallthrough]];
   case Instruction::Add:
-  case Instruction::FAdd:
   case Instruction::Sub:
+    // FIXME: multiply cost too, if needed.
+    if (Legal->getHistogramIndexValue(I))
+      return TTI.getHistogramCost(VectorTy) +
+             TTI.getArithmeticInstrCost(I->getOpcode(), VectorTy);
+    [[fallthrough]];
+  case Instruction::FAdd:
   case Instruction::FSub:
   case Instruction::Mul:
   case Instruction::FMul:
@@ -8409,6 +8419,35 @@ VPWidenRecipe *VPRecipeBuilder::tryToWiden(Instruction *I,
   };
 }
 
+VPHistogramRecipe *
+VPRecipeBuilder::buildHistogramCount(Instruction *I, Value *LoadedValue,
+                                     ArrayRef<VPValue *> Operands,
+                                     VPBasicBlock *VPBB) {
+  assert(LoadedValue != nullptr && "LoadedValues must not be null");
+  assert((I->getOpcode() == Instruction::Add ||
+          I->getOpcode() == Instruction::Sub) &&
+         "Instruction must be an Add or a Sub");
+
+  SmallVector<VPValue *, 4> HistCntOps(Operands.begin(), Operands.end());
+  VPValue *Indices = getVPValueOrAddLiveIn(LoadedValue, Plan);
+  HistCntOps.push_back(Indices);
+
+  // In case of predicated execution (due to tail-folding, or conditional
+  // execution, or both), pass the relevant mask. When there is no such mask,
+  // generate an all-true mask.
+  VPValue *Mask = nullptr;
+  if (Legal->isMaskRequired(I))
+    Mask = getBlockInMask(I->getParent());
+  else
+    Mask = Plan.getOrAddLiveIn(
+        ConstantInt::getTrue(IntegerType::getInt1Ty(I->getContext())));
+
+  HistCntOps.push_back(Mask);
+
+  return new VPHistogramRecipe(
+      *I, make_range(HistCntOps.begin(), HistCntOps.end()), I->getDebugLoc());
+}
+
 void VPRecipeBuilder::fixHeaderPhis() {
   BasicBlock *OrigLatch = OrigLoop->getLoopLatch();
   for (VPHeaderPHIRecipe *R : PhisToFix) {
@@ -8544,6 +8583,10 @@ VPRecipeBuilder::tryToCreateWidenRecipe(Instruction *Instr,
   if (auto *CI = dyn_cast<CastInst>(Instr)) {
     return new VPWidenCastRecipe(CI->getOpcode(), Operands[0], CI->getType(),
                                  *CI);
+  }
+
+  if (auto InputLoadInst = Legal->getHistogramIndexValue(Instr)) {
+    return buildHistogramCount(Instr, *InputLoadInst, Operands, VPBB);
   }
 
   return tryToWiden(Instr, Operands, VPBB);
