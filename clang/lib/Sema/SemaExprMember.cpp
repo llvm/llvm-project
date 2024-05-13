@@ -1324,26 +1324,24 @@ static ExprResult LookupMemberExpr(Sema &S, LookupResult &R,
       goto fail;
     else if (BaseType->isDependentType())
       BaseType = S.Context.DependentTy;
-    else {
-      if (BaseType->isRecordType()) {
-        // Recover from arrow accesses to records, e.g.:
-        //   struct MyRecord foo;
-        //   foo->bar
-        // This is actually well-formed in C++ if MyRecord has an
-        // overloaded operator->, but that should have been dealt with
-        // by now--or a diagnostic message already issued if a problem
-        // was encountered while looking for the overloaded operator->.
-        if (!S.getLangOpts().CPlusPlus) {
-          S.Diag(OpLoc, diag::err_typecheck_member_reference_suggestion)
-              << BaseType << int(IsArrow) << BaseExpr.get()->getSourceRange()
-              << FixItHint::CreateReplacement(OpLoc, ".");
-        }
-        IsArrow = false;
-      } else {
-        S.Diag(MemberLoc, diag::err_typecheck_member_reference_arrow)
-            << BaseType << BaseExpr.get()->getSourceRange();
-        return ExprError();
+    else if (BaseType->isRecordType()) {
+      // Recover from arrow accesses to records, e.g.:
+      //   struct MyRecord foo;
+      //   foo->bar
+      // This is actually well-formed in C++ if MyRecord has an
+      // overloaded operator->, but that should have been dealt with
+      // by now--or a diagnostic message already issued if a problem
+      // was encountered while looking for the overloaded operator->.
+      if (!S.getLangOpts().CPlusPlus) {
+        S.Diag(OpLoc, diag::err_typecheck_member_reference_suggestion)
+            << BaseType << int(IsArrow) << BaseExpr.get()->getSourceRange()
+            << FixItHint::CreateReplacement(OpLoc, ".");
       }
+      IsArrow = false;
+    } else {
+      S.Diag(MemberLoc, diag::err_typecheck_member_reference_arrow)
+          << BaseType << BaseExpr.get()->getSourceRange();
+      return ExprError();
     }
   }
 
@@ -1363,7 +1361,7 @@ static ExprResult LookupMemberExpr(Sema &S, LookupResult &R,
   }
 
   // Handle field access to simple records.
-  if (BaseType->getAsRecordDecl() || BaseType->isDependentType()) {
+  if (BaseType->getAsRecordDecl()) {
     TypoExpr *TE = nullptr;
     if (LookupMemberExprInRecord(S, R, BaseExpr.get(), BaseType, OpLoc, IsArrow,
                                  SS, HasTemplateArgs, TemplateKWLoc, TE))
@@ -1374,6 +1372,9 @@ static ExprResult LookupMemberExpr(Sema &S, LookupResult &R,
     // failed, the lookup result will have been cleared--that combined with the
     // valid-but-null ExprResult will trigger the appropriate diagnostics.
     return ExprResult(TE);
+  } else if (BaseType->isDependentType()) {
+    R.setNotFoundInCurrentInstantiation();
+    return ExprEmpty();
   }
 
   // Handle ivar access to Objective-C objects.
