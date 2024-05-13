@@ -841,14 +841,12 @@ static bool CheckIfWatchpointsSupported(Target *target, Status &error) {
   if (!num_supported_hardware_watchpoints)
     return true;
 
-  // If num_supported_hardware_watchpoints is zero, set an 
-  //error message and return false.
-
-  error.SetErrorStringWithFormat(
-      "Target supports (%u) hardware watchpoint slots.\n",
-      *num_supported_hardware_watchpoints);
-  return false;
-  
+  if (*num_supported_hardware_watchpoints == 0) {
+    error.SetErrorStringWithFormat(
+        "Target supports (%u) hardware watchpoint slots.\n",
+        *num_supported_hardware_watchpoints);
+    return false;
+  }
   return true;
 }
 
