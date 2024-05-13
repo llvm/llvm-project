@@ -180,8 +180,8 @@ func.func @arith_int_to_float_cast_ops(%arg0: i8, %arg1: i64) {
 
 // -----
 
-func.func @trunci(%arg0: i32) -> i8 {
-  // CHECK-LABEL: trunci
+func.func @arith_trunci(%arg0: i32) -> i8 {
+  // CHECK-LABEL: arith_trunci
   // CHECK-SAME: (%[[Arg0:[^ ]*]]: i32)
   // CHECK: %[[CastUI:.*]] = emitc.cast %[[Arg0]] : i32 to ui32
   // CHECK: %[[Trunc:.*]] = emitc.cast %[[CastUI]] : ui32 to ui8
@@ -193,11 +193,10 @@ func.func @trunci(%arg0: i32) -> i8 {
 
 // -----
 
-func.func @extsi(%arg0: i32) {
-  // CHECK-LABEL: extsi
+func.func @arith_extsi(%arg0: i32) {
+  // CHECK-LABEL: arith_extsi
   // CHECK-SAME: ([[Arg0:[^ ]*]]: i32)
   // CHECK: emitc.cast [[Arg0]] : i32 to i64
-
   %extd = arith.extsi %arg0 : i32 to i64
 
   return
@@ -205,13 +204,12 @@ func.func @extsi(%arg0: i32) {
 
 // -----
 
-func.func @extui(%arg0: i32) {
-  // CHECK-LABEL: extui
+func.func @arith_extui(%arg0: i32) {
+  // CHECK-LABEL: arith_extui
   // CHECK-SAME: (%[[Arg0:[^ ]*]]: i32)
   // CHECK: %[[Conv0:.*]] = emitc.cast %[[Arg0]] : i32 to ui32
   // CHECK: %[[Conv1:.*]] = emitc.cast %[[Conv0]] : ui32 to ui64
   // CHECK: emitc.cast %[[Conv1]] : ui64 to i64
-
   %extd = arith.extui %arg0 : i32 to i64
 
   return
