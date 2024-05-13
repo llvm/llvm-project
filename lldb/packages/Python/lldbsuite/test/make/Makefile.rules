@@ -616,6 +616,7 @@ ifeq "$(USESWIFTDRIVER)" "1"
 	ifeq "$(OS)" "Darwin"
 		SWIFTFLAGS += -sdk "$(SWIFTSDKROOT)"
 	endif
+	SWIFTFLAGS += -tools-directory "$(shell dirname $(CC))"
 endif
 
 #----------------------------------------------------------------------
