@@ -1,3 +1,14 @@
+
+
+
+
+######
+# TODO: Full lit tests coming in a future review when we introduce the codegen
+######
+
+
+
+
 set(RADSAN_LIT_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 
 set(RADSAN_TESTSUITES)
