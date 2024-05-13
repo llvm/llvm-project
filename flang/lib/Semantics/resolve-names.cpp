@@ -3810,8 +3810,8 @@ bool SubprogramVisitor::Pre(const parser::PrefixSpec::Attributes &attrs) {
         const Scope &cudaDeviceScope{context().GetCUDADeviceScope()};
         for (auto sym : cudaDeviceScope.GetSymbols()) {
           if (!currScope().FindSymbol(sym->name())) {
-            auto &localSymbol{MakeSymbol(sym->name())};
-            localSymbol.set_details(UseDetails{sym->name(), *sym});
+            auto &localSymbol{MakeSymbol(
+                sym->name(), Attrs{}, UseDetails{sym->name(), *sym})};
             localSymbol.flags() = sym->flags();
           }
         }
