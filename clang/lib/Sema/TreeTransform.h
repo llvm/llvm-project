@@ -7964,6 +7964,15 @@ TreeTransform<Derived>::TransformIfStmt(IfStmt *S) {
   // Transform the "then" branch.
   StmtResult Then;
   if (!ConstexprConditionValue || *ConstexprConditionValue) {
+    Sema::ExpressionEvaluationContext Context =
+        S->isNonNegatedConsteval()
+            ? Sema::ExpressionEvaluationContext::ImmediateFunctionContext
+            : Sema::ExpressionEvaluationContext::PotentiallyEvaluated;
+
+    EnterExpressionEvaluationContext Ctx(
+        getSema(), Context, nullptr,
+        Sema::ExpressionEvaluationContextRecord::EK_Other);
+
     Then = getDerived().TransformStmt(S->getThen());
     if (Then.isInvalid())
       return StmtError();
@@ -7978,6 +7987,15 @@ TreeTransform<Derived>::TransformIfStmt(IfStmt *S) {
   // Transform the "else" branch.
   StmtResult Else;
   if (!ConstexprConditionValue || !*ConstexprConditionValue) {
+    Sema::ExpressionEvaluationContext Context =
+        S->isNegatedConsteval()
+            ? Sema::ExpressionEvaluationContext::ImmediateFunctionContext
+            : Sema::ExpressionEvaluationContext::PotentiallyEvaluated;
+
+    EnterExpressionEvaluationContext Ctx(
+        getSema(), Context, nullptr,
+        Sema::ExpressionEvaluationContextRecord::EK_Other);
+
     Else = getDerived().TransformStmt(S->getElse());
     if (Else.isInvalid())
       return StmtError();
