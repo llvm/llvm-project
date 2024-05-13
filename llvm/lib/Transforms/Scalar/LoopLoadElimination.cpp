@@ -450,7 +450,7 @@ public:
                      PH->getTerminator()->getIterator());
     // We don't give any debug location to Initial, because it is inserted
     // into the loop's preheader. A debug location inside the loop will cause
-    // a misleading stepping when debugging. The test preserving-debugloc-store
+    // a misleading stepping when debugging. The test update-debugloc-store
     // -forwarded.ll checks this.
 
     PHINode *PHI = PHINode::Create(Initial->getType(), 2, "store_forwarded");
