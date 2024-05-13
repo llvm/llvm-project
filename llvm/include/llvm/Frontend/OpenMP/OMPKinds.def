@@ -436,7 +436,6 @@ __OMP_RTL(__tgt_target_kernel, false, Int32, IdentPtr, Int64, Int32, Int32,
           VoidPtr, KernelArgsPtr)
 __OMP_RTL(__tgt_target_kernel_nowait, false, Int32, IdentPtr, Int64, Int32,
           Int32, VoidPtr, KernelArgsPtr, Int32, VoidPtr, Int32, VoidPtr)
-__OMP_RTL(__tgt_register_requires, false, Void, Int64)
 __OMP_RTL(__tgt_target_data_begin_mapper, false, Void, IdentPtr, Int64, Int32, VoidPtrPtr,
           VoidPtrPtr, Int64Ptr, Int64Ptr, VoidPtrPtr, VoidPtrPtr)
 __OMP_RTL(__tgt_target_data_begin_nowait_mapper, false, Void, IdentPtr, Int64, Int32,
@@ -1025,8 +1024,6 @@ __OMP_RTL_ATTRS(__tgt_target_kernel_nowait, ForkAttrs, SExt,
                 ParamAttrs(AttributeSet(), AttributeSet(), SExt, SExt,
                            AttributeSet(), AttributeSet(), SExt, AttributeSet(),
                            SExt))
-__OMP_RTL_ATTRS(__tgt_register_requires, ForkAttrs, AttributeSet(),
-                ParamAttrs())
 __OMP_RTL_ATTRS(__tgt_target_data_begin_mapper, ForkAttrs, AttributeSet(),
                 ParamAttrs(AttributeSet(), AttributeSet(), SExt))
 __OMP_RTL_ATTRS(__tgt_target_data_begin_nowait_mapper, ForkAttrs, AttributeSet(),

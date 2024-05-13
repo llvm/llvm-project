@@ -252,6 +252,13 @@ bool llvm::haveNoCommonBitsSet(const WithCache<const Value *> &LHSCache,
                                         RHSCache.getKnownBits(SQ));
 }
 
+bool llvm::isOnlyUsedInZeroComparison(const Instruction *I) {
+  return !I->user_empty() && all_of(I->users(), [](const User *U) {
+    ICmpInst::Predicate P;
+    return match(U, m_ICmp(P, m_Value(), m_Zero()));
+  });
+}
+
 bool llvm::isOnlyUsedInZeroEqualityComparison(const Instruction *I) {
   return !I->user_empty() && all_of(I->users(), [](const User *U) {
     ICmpInst::Predicate P;
@@ -2166,6 +2173,11 @@ bool isKnownToBeAPowerOfTwo(const Value *V, bool OrZero, unsigned Depth,
         if (OrZero || RHSBits.One.getBoolValue() || LHSBits.One.getBoolValue())
           return true;
     }
+
+    // LShr(UINT_MAX, Y) + 1 is a power of two (if add is nuw) or zero.
+    if (OrZero || Q.IIQ.hasNoUnsignedWrap(VOBO))
+      if (match(I, m_Add(m_LShr(m_AllOnes(), m_Value()), m_One())))
+        return true;
     return false;
   }
   case Instruction::Select:
@@ -6686,9 +6698,15 @@ llvm::computeConstantRangeIncludingKnownBits(const WithCache<const Value *> &V,
 
 OverflowResult llvm::computeOverflowForUnsignedMul(const Value *LHS,
                                                    const Value *RHS,
-                                                   const SimplifyQuery &SQ) {
+                                                   const SimplifyQuery &SQ,
+                                                   bool IsNSW) {
   KnownBits LHSKnown = computeKnownBits(LHS, /*Depth=*/0, SQ);
   KnownBits RHSKnown = computeKnownBits(RHS, /*Depth=*/0, SQ);
+
+  // mul nsw of two non-negative numbers is also nuw.
+  if (IsNSW && LHSKnown.isNonNegative() && RHSKnown.isNonNegative())
+    return OverflowResult::NeverOverflows;
+
   ConstantRange LHSRange = ConstantRange::fromKnownBits(LHSKnown, false);
   ConstantRange RHSRange = ConstantRange::fromKnownBits(RHSKnown, false);
   return mapOverflowResult(LHSRange.unsignedMulMayOverflow(RHSRange));
@@ -7283,31 +7301,35 @@ static bool isGuaranteedNotToBeUndefOrPoison(
   // BB1:
   //   CtxI ; V cannot be undef or poison here
   auto *Dominator = DNode->getIDom();
-  while (Dominator) {
-    auto *TI = Dominator->getBlock()->getTerminator();
+  // This check is purely for compile time reasons: we can skip the IDom walk
+  // if what we are checking for includes undef and the value is not an integer.
+  if (!includesUndef(Kind) || V->getType()->isIntegerTy())
+    while (Dominator) {
+      auto *TI = Dominator->getBlock()->getTerminator();
 
-    Value *Cond = nullptr;
-    if (auto BI = dyn_cast_or_null<BranchInst>(TI)) {
-      if (BI->isConditional())
-        Cond = BI->getCondition();
-    } else if (auto SI = dyn_cast_or_null<SwitchInst>(TI)) {
-      Cond = SI->getCondition();
-    }
-
-    if (Cond) {
-      if (Cond == V)
-        return true;
-      else if (!includesUndef(Kind) && isa<Operator>(Cond)) {
-        // For poison, we can analyze further
-        auto *Opr = cast<Operator>(Cond);
-        if (any_of(Opr->operands(),
-                   [V](const Use &U) { return V == U && propagatesPoison(U); }))
-          return true;
+      Value *Cond = nullptr;
+      if (auto BI = dyn_cast_or_null<BranchInst>(TI)) {
+        if (BI->isConditional())
+          Cond = BI->getCondition();
+      } else if (auto SI = dyn_cast_or_null<SwitchInst>(TI)) {
+        Cond = SI->getCondition();
       }
-    }
 
-    Dominator = Dominator->getIDom();
-  }
+      if (Cond) {
+        if (Cond == V)
+          return true;
+        else if (!includesUndef(Kind) && isa<Operator>(Cond)) {
+          // For poison, we can analyze further
+          auto *Opr = cast<Operator>(Cond);
+          if (any_of(Opr->operands(), [V](const Use &U) {
+                return V == U && propagatesPoison(U);
+              }))
+            return true;
+        }
+      }
+
+      Dominator = Dominator->getIDom();
+    }
 
   if (getKnowledgeValidInContext(V, {Attribute::NoUndef}, CtxI, DT, AC))
     return true;

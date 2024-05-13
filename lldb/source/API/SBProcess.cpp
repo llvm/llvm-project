@@ -928,6 +928,14 @@ size_t SBProcess::WriteMemory(addr_t addr, const void *src, size_t src_len,
   return bytes_written;
 }
 
+void SBProcess::GetStatus(SBStream &status) {
+  LLDB_INSTRUMENT_VA(this, status);
+
+  ProcessSP process_sp(GetSP());
+  if (process_sp)
+    process_sp->GetStatus(status.ref());
+}
+
 bool SBProcess::GetDescription(SBStream &description) {
   LLDB_INSTRUMENT_VA(this, description);
 

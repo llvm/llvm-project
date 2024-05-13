@@ -69,17 +69,21 @@ TEST_F(HostTest, GetProcessInfo) {
   EXPECT_EQ(HostInfo::GetArchitecture(HostInfo::eArchKindDefault),
             Info.GetArchitecture());
   // Test timings
-  /*
-   * This is flaky in the buildbots on all archs
+  // In some sense this is a pretty trivial test. What it is trying to
+  // accomplish is just to validate that these values are never decreasing
+  // which would be unambiguously wrong. We can not reliably show them
+  // to be always increasing because the microsecond granularity means that,
+  // with hardware variations the number of loop iterations need to always
+  // be increasing for faster and faster machines.
   ASSERT_TRUE(Host::GetProcessInfo(getpid(), Info));
   ProcessInstanceInfo::timespec user_time = Info.GetUserTime();
   static volatile unsigned u = 0;
   for (unsigned i = 0; i < 10'000'000; i++) {
-    u = i;
+    u += i;
   }
+  ASSERT_TRUE(u > 0);
   ASSERT_TRUE(Host::GetProcessInfo(getpid(), Info));
   ProcessInstanceInfo::timespec next_user_time = Info.GetUserTime();
-  ASSERT_TRUE(user_time.tv_sec < next_user_time.tv_sec ||
-              user_time.tv_usec < next_user_time.tv_usec);
-  */
+  ASSERT_TRUE(user_time.tv_sec <= next_user_time.tv_sec ||
+              user_time.tv_usec <= next_user_time.tv_usec);
 }

@@ -345,6 +345,24 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
                                   Op1Info.getNoProps(), Op2Info.getNoProps());
   }
 
+  static const CostKindTblEntry GFNIUniformConstCostTable[] = {
+    { ISD::SHL,  MVT::v16i8,  { 1, 6, 1, 2 } }, // gf2p8affineqb
+    { ISD::SRL,  MVT::v16i8,  { 1, 6, 1, 2 } }, // gf2p8affineqb
+    { ISD::SRA,  MVT::v16i8,  { 1, 6, 1, 2 } }, // gf2p8affineqb
+    { ISD::SHL,  MVT::v32i8,  { 1, 6, 1, 2 } }, // gf2p8affineqb
+    { ISD::SRL,  MVT::v32i8,  { 1, 6, 1, 2 } }, // gf2p8affineqb
+    { ISD::SRA,  MVT::v32i8,  { 1, 6, 1, 2 } }, // gf2p8affineqb
+    { ISD::SHL,  MVT::v64i8,  { 1, 6, 1, 2 } }, // gf2p8affineqb
+    { ISD::SRL,  MVT::v64i8,  { 1, 6, 1, 2 } }, // gf2p8affineqb
+    { ISD::SRA,  MVT::v64i8,  { 1, 6, 1, 2 } }, // gf2p8affineqb
+  };
+
+  if (Op2Info.isUniform() && Op2Info.isConstant() && ST->hasGFNI())
+    if (const auto *Entry =
+            CostTableLookup(GFNIUniformConstCostTable, ISD, LT.second))
+      if (auto KindCost = Entry->Cost[CostKind])
+        return LT.first * *KindCost;
+
   static const CostKindTblEntry AVX512BWUniformConstCostTable[] = {
     { ISD::SHL,  MVT::v16i8,  { 1, 7, 2, 3 } }, // psllw + pand.
     { ISD::SRL,  MVT::v16i8,  { 1, 7, 2, 3 } }, // psrlw + pand.
@@ -2121,10 +2139,11 @@ InstructionCost X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
   assert(ISD && "Invalid opcode");
 
   // TODO: Allow non-throughput costs that aren't binary.
-  auto AdjustCost = [&CostKind](InstructionCost Cost) -> InstructionCost {
+  auto AdjustCost = [&CostKind](InstructionCost Cost,
+                                InstructionCost N = 1) -> InstructionCost {
     if (CostKind != TTI::TCK_RecipThroughput)
-      return Cost == 0 ? 0 : 1;
-    return Cost;
+      return Cost == 0 ? 0 : N;
+    return Cost * N;
   };
 
   // The cost tables include both specific, custom (non-legal) src/dst type
@@ -3004,53 +3023,53 @@ InstructionCost X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
     if (ST->hasBWI())
       if (const auto *Entry = ConvertCostTableLookup(
               AVX512BWConversionTbl, ISD, LTDest.second, LTSrc.second))
-        return AdjustCost(std::max(LTSrc.first, LTDest.first) * Entry->Cost);
+        return AdjustCost(Entry->Cost, std::max(LTSrc.first, LTDest.first));
 
     if (ST->hasDQI())
       if (const auto *Entry = ConvertCostTableLookup(
               AVX512DQConversionTbl, ISD, LTDest.second, LTSrc.second))
-        return AdjustCost(std::max(LTSrc.first, LTDest.first) * Entry->Cost);
+        return AdjustCost(Entry->Cost, std::max(LTSrc.first, LTDest.first));
 
     if (ST->hasAVX512())
       if (const auto *Entry = ConvertCostTableLookup(
               AVX512FConversionTbl, ISD, LTDest.second, LTSrc.second))
-        return AdjustCost(std::max(LTSrc.first, LTDest.first) * Entry->Cost);
+        return AdjustCost(Entry->Cost, std::max(LTSrc.first, LTDest.first));
   }
 
   if (ST->hasBWI())
     if (const auto *Entry = ConvertCostTableLookup(AVX512BWVLConversionTbl, ISD,
                                                    LTDest.second, LTSrc.second))
-      return AdjustCost(std::max(LTSrc.first, LTDest.first) * Entry->Cost);
+      return AdjustCost(Entry->Cost, std::max(LTSrc.first, LTDest.first));
 
   if (ST->hasDQI())
     if (const auto *Entry = ConvertCostTableLookup(AVX512DQVLConversionTbl, ISD,
                                                    LTDest.second, LTSrc.second))
-      return AdjustCost(std::max(LTSrc.first, LTDest.first) * Entry->Cost);
+      return AdjustCost(Entry->Cost, std::max(LTSrc.first, LTDest.first));
 
   if (ST->hasAVX512())
     if (const auto *Entry = ConvertCostTableLookup(AVX512VLConversionTbl, ISD,
                                                    LTDest.second, LTSrc.second))
-      return AdjustCost(std::max(LTSrc.first, LTDest.first) * Entry->Cost);
+      return AdjustCost(Entry->Cost, std::max(LTSrc.first, LTDest.first));
 
   if (ST->hasAVX2())
     if (const auto *Entry = ConvertCostTableLookup(AVX2ConversionTbl, ISD,
                                                    LTDest.second, LTSrc.second))
-      return AdjustCost(std::max(LTSrc.first, LTDest.first) * Entry->Cost);
+      return AdjustCost(Entry->Cost, std::max(LTSrc.first, LTDest.first));
 
   if (ST->hasAVX())
     if (const auto *Entry = ConvertCostTableLookup(AVXConversionTbl, ISD,
                                                    LTDest.second, LTSrc.second))
-      return AdjustCost(std::max(LTSrc.first, LTDest.first) * Entry->Cost);
+      return AdjustCost(Entry->Cost, std::max(LTSrc.first, LTDest.first));
 
   if (ST->hasSSE41())
     if (const auto *Entry = ConvertCostTableLookup(SSE41ConversionTbl, ISD,
                                                    LTDest.second, LTSrc.second))
-      return AdjustCost(std::max(LTSrc.first, LTDest.first) * Entry->Cost);
+      return AdjustCost(Entry->Cost, std::max(LTSrc.first, LTDest.first));
 
   if (ST->hasSSE2())
     if (const auto *Entry = ConvertCostTableLookup(SSE2ConversionTbl, ISD,
                                                    LTDest.second, LTSrc.second))
-      return AdjustCost(std::max(LTSrc.first, LTDest.first) * Entry->Cost);
+      return AdjustCost(Entry->Cost, std::max(LTSrc.first, LTDest.first));
 
   // Fallback, for i8/i16 sitofp/uitofp cases we need to extend to i32 for
   // sitofp.
@@ -3868,6 +3887,9 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     { ISD::BITREVERSE, MVT::v2i64,   {  1,  8,  2,  4 } }, // gf2p8affineqb
     { ISD::BITREVERSE, MVT::v4i64,   {  1,  9,  2,  4 } }, // gf2p8affineqb
     { ISD::BITREVERSE, MVT::v8i64,   {  1,  9,  2,  4 } }, // gf2p8affineqb
+    { X86ISD::VROTLI,  MVT::v16i8,   {  1,  6,  1,  2 } }, // gf2p8affineqb
+    { X86ISD::VROTLI,  MVT::v32i8,   {  1,  6,  1,  2 } }, // gf2p8affineqb
+    { X86ISD::VROTLI,  MVT::v64i8,   {  1,  6,  1,  2 } }, // gf2p8affineqb
   };
   static const CostKindTblEntry GLMCostTbl[] = {
     { ISD::FSQRT,      MVT::f32,     { 19, 20, 1, 1 } }, // sqrtss
@@ -4150,6 +4172,16 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
             PatternMatch::match(Args[2], PatternMatch::m_APIntAllowPoison(Amt)))
           ISD = X86ISD::VROTLI;
       }
+    }
+    break;
+  case Intrinsic::lrint:
+  case Intrinsic::llrint:
+    // X86 can use the CVTP2SI instructions to lower lrint/llrint calls, which
+    // have the same costs as the CVTTP2SI (fptosi) instructions
+    if (!ICA.isTypeBasedOnly()) {
+      const SmallVectorImpl<Type *> &ArgTys = ICA.getArgTypes();
+      return getCastInstrCost(Instruction::FPToSI, RetTy, ArgTys[0],
+                              TTI::CastContextHint::None, CostKind);
     }
     break;
   case Intrinsic::maxnum:
@@ -5737,7 +5769,6 @@ int X86TTIImpl::getScatterOverhead() const {
 }
 
 // Return an average cost of Gather / Scatter instruction, maybe improved later.
-// FIXME: Add TargetCostKind support.
 InstructionCost X86TTIImpl::getGSVectorCost(unsigned Opcode,
                                             TTI::TargetCostKind CostKind,
                                             Type *SrcVTy, const Value *Ptr,
@@ -5796,63 +5827,17 @@ InstructionCost X86TTIImpl::getGSVectorCost(unsigned Opcode,
                                          Alignment, AddressSpace);
   }
 
+  // If we didn't split, this will be a single gather/scatter instruction.
+  if (CostKind == TTI::TCK_CodeSize)
+    return 1;
+
   // The gather / scatter cost is given by Intel architects. It is a rough
   // number since we are looking at one instruction in a time.
-  const int GSOverhead = (Opcode == Instruction::Load)
-                             ? getGatherOverhead()
-                             : getScatterOverhead();
+  const int GSOverhead = (Opcode == Instruction::Load) ? getGatherOverhead()
+                                                       : getScatterOverhead();
   return GSOverhead + VF * getMemoryOpCost(Opcode, SrcVTy->getScalarType(),
                                            MaybeAlign(Alignment), AddressSpace,
-                                           TTI::TCK_RecipThroughput);
-}
-
-/// Return the cost of full scalarization of gather / scatter operation.
-///
-/// Opcode - Load or Store instruction.
-/// SrcVTy - The type of the data vector that should be gathered or scattered.
-/// VariableMask - The mask is non-constant at compile time.
-/// Alignment - Alignment for one element.
-/// AddressSpace - pointer[s] address space.
-/// TODO: Remove this and use getCommonMaskedMemoryOpCost directly.
-InstructionCost X86TTIImpl::getGSScalarCost(unsigned Opcode,
-                                            TTI::TargetCostKind CostKind,
-                                            Type *SrcVTy, bool VariableMask,
-                                            Align Alignment,
-                                            unsigned AddressSpace) {
-  Type *ScalarTy = SrcVTy->getScalarType();
-  unsigned VF = cast<FixedVectorType>(SrcVTy)->getNumElements();
-  APInt DemandedElts = APInt::getAllOnes(VF);
-
-  InstructionCost MaskUnpackCost = 0;
-  if (VariableMask) {
-    auto *MaskTy =
-        FixedVectorType::get(Type::getInt1Ty(SrcVTy->getContext()), VF);
-    MaskUnpackCost = getScalarizationOverhead(
-        MaskTy, DemandedElts, /*Insert=*/false, /*Extract=*/true, CostKind);
-    InstructionCost ScalarCompareCost = getCmpSelInstrCost(
-        Instruction::ICmp, Type::getInt1Ty(SrcVTy->getContext()), nullptr,
-        CmpInst::BAD_ICMP_PREDICATE, CostKind);
-    InstructionCost BranchCost = getCFInstrCost(Instruction::Br, CostKind);
-    MaskUnpackCost += VF * (BranchCost + ScalarCompareCost);
-  }
-
-  InstructionCost AddressUnpackCost = getScalarizationOverhead(
-      FixedVectorType::get(PointerType::getUnqual(ScalarTy->getContext()), VF),
-      DemandedElts, /*Insert=*/false, /*Extract=*/true, CostKind);
-
-  // The cost of the scalar loads/stores.
-  InstructionCost MemoryOpCost =
-      VF * getMemoryOpCost(Opcode, ScalarTy, MaybeAlign(Alignment),
-                           AddressSpace, CostKind);
-
-  // The cost of forming the vector from loaded scalars/
-  // scalarizing the vector to perform scalar stores.
-  InstructionCost InsertExtractCost = getScalarizationOverhead(
-      cast<FixedVectorType>(SrcVTy), DemandedElts,
-      /*Insert=*/Opcode == Instruction::Load,
-      /*Extract=*/Opcode == Instruction::Store, CostKind);
-
-  return AddressUnpackCost + MemoryOpCost + MaskUnpackCost + InsertExtractCost;
+                                           CostKind);
 }
 
 /// Calculate the cost of Gather / Scatter operation
@@ -5860,19 +5845,16 @@ InstructionCost X86TTIImpl::getGatherScatterOpCost(
     unsigned Opcode, Type *SrcVTy, const Value *Ptr, bool VariableMask,
     Align Alignment, TTI::TargetCostKind CostKind,
     const Instruction *I = nullptr) {
-  if (CostKind != TTI::TCK_RecipThroughput) {
-    if ((Opcode == Instruction::Load &&
-         isLegalMaskedGather(SrcVTy, Align(Alignment)) &&
-         !forceScalarizeMaskedGather(cast<VectorType>(SrcVTy),
-                                     Align(Alignment))) ||
-        (Opcode == Instruction::Store &&
-         isLegalMaskedScatter(SrcVTy, Align(Alignment)) &&
-         !forceScalarizeMaskedScatter(cast<VectorType>(SrcVTy),
-                                      Align(Alignment))))
-      return 1;
+  if (((Opcode == Instruction::Load &&
+        (!isLegalMaskedGather(SrcVTy, Align(Alignment)) ||
+         forceScalarizeMaskedGather(cast<VectorType>(SrcVTy),
+                                    Align(Alignment)))) ||
+       (Opcode == Instruction::Store &&
+        (!isLegalMaskedScatter(SrcVTy, Align(Alignment)) ||
+         forceScalarizeMaskedScatter(cast<VectorType>(SrcVTy),
+                                     Align(Alignment))))))
     return BaseT::getGatherScatterOpCost(Opcode, SrcVTy, Ptr, VariableMask,
                                          Alignment, CostKind, I);
-  }
 
   assert(SrcVTy->isVectorTy() && "Unexpected data type for Gather/Scatter");
   PointerType *PtrTy = dyn_cast<PointerType>(Ptr->getType());
@@ -5881,18 +5863,6 @@ InstructionCost X86TTIImpl::getGatherScatterOpCost(
         cast<VectorType>(Ptr->getType())->getElementType());
   assert(PtrTy && "Unexpected type for Ptr argument");
   unsigned AddressSpace = PtrTy->getAddressSpace();
-
-  if ((Opcode == Instruction::Load &&
-       (!isLegalMaskedGather(SrcVTy, Align(Alignment)) ||
-        forceScalarizeMaskedGather(cast<VectorType>(SrcVTy),
-                                   Align(Alignment)))) ||
-      (Opcode == Instruction::Store &&
-       (!isLegalMaskedScatter(SrcVTy, Align(Alignment)) ||
-        forceScalarizeMaskedScatter(cast<VectorType>(SrcVTy),
-                                    Align(Alignment)))))
-    return getGSScalarCost(Opcode, CostKind, SrcVTy, VariableMask, Alignment,
-                           AddressSpace);
-
   return getGSVectorCost(Opcode, CostKind, SrcVTy, Ptr, Alignment,
                          AddressSpace);
 }
@@ -6708,7 +6678,7 @@ InstructionCost X86TTIImpl::getInterleavedMemoryOpCost(
 }
 
 InstructionCost X86TTIImpl::getScalingFactorCost(Type *Ty, GlobalValue *BaseGV,
-                                                 int64_t BaseOffset,
+                                                 StackOffset BaseOffset,
                                                  bool HasBaseReg, int64_t Scale,
                                                  unsigned AddrSpace) const {
   // Scaling factors are not free at all.
@@ -6731,9 +6701,10 @@ InstructionCost X86TTIImpl::getScalingFactorCost(Type *Ty, GlobalValue *BaseGV,
   // vmovaps %ymm1, (%r8) can use port 2, 3, or 7.
   TargetLoweringBase::AddrMode AM;
   AM.BaseGV = BaseGV;
-  AM.BaseOffs = BaseOffset;
+  AM.BaseOffs = BaseOffset.getFixed();
   AM.HasBaseReg = HasBaseReg;
   AM.Scale = Scale;
+  AM.ScalableOffset = BaseOffset.getScalable();
   if (getTLI()->isLegalAddressingMode(DL, AM, Ty, AddrSpace))
     // Scale represents reg2 * scale, thus account for 1
     // as soon as we use a second register.

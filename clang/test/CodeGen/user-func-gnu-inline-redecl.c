@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64 -S -emit-llvm -O1 -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64 -emit-llvm -O1 -o - %s | FileCheck %s
 //
 // Verifies that the gnu_inline version is ignored in favor of the redecl
 

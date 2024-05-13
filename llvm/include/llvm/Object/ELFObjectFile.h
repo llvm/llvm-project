@@ -199,6 +199,14 @@ public:
   }
 };
 
+inline bool operator<(const ELFSymbolRef &A, const ELFSymbolRef &B) {
+  const DataRefImpl &DRIA = A.getRawDataRefImpl();
+  const DataRefImpl &DRIB = B.getRawDataRefImpl();
+  if (DRIA.d.a == DRIB.d.a)
+    return DRIA.d.b < DRIB.d.b;
+  return DRIA.d.a < DRIB.d.a;
+}
+
 class elf_symbol_iterator : public symbol_iterator {
 public:
   elf_symbol_iterator(const basic_symbol_iterator &B)

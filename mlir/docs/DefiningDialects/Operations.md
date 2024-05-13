@@ -640,10 +640,11 @@ The available directives are as follows:
 
 *   `attr-dict`
 
-    -   Represents the attribute dictionary of the operation. Any inherent 
-    -   attributes that are not used elsewhere in the format are printed as
-    -   part of the attribute dictionary unless a `prop-dict` is present.
-    -   Discardable attributes are always part of the `attr-dict`.  
+    -   Represents the attribute dictionary of the operation.
+    -   Any inherent attributes that are not used elsewhere in the format are
+        printed as part of the attribute dictionary unless a `prop-dict` is
+        present.
+    -   Discardable attributes are always part of the `attr-dict`.
 
 *   `attr-dict-with-keyword`
 
@@ -654,23 +655,23 @@ The available directives are as follows:
 
     -   Represents the properties of the operation converted to a dictionary.
     -   Any property or inherent attribute that are not used elsewhere in the
-    -   format are parsed and printed as part of this dictionary.
+        format are parsed and printed as part of this dictionary.
     -   If present, the `attr-dict` will not contain any inherent attributes.
 
-*   `custom` < UserDirective > ( Params )
+*   `custom < UserDirective > ( Params )`
 
     -   Represents a custom directive implemented by the user in C++.
     -   See the [Custom Directives](#custom-directives) section below for more
         details.
 
-*   `functional-type` ( inputs , outputs )
+*   `functional-type ( inputs , outputs )`
 
     -   Formats the `inputs` and `outputs` arguments as a
         [function type](../Dialects/Builtin.md/#functiontype).
     -   The constraints on `inputs` and `outputs` are the same as the `input` of
         the `type` directive.
 
-*   `oilist` ( \`keyword\` elements | \`otherKeyword\` elements ...)
+*   ``oilist ( `keyword` elements | `otherKeyword` elements ...)``
 
     -   Represents an optional order-independent list of clauses. Each clause
         has a keyword and corresponding assembly format.
@@ -682,7 +683,7 @@ The available directives are as follows:
 
     -   Represents all of the operands of an operation.
 
-*   `ref` ( input )
+*   `ref ( input )`
 
     -   Represents a reference to the a variable or directive, that must have
         already been resolved, that may be used as a parameter to a `custom`
@@ -703,13 +704,13 @@ The available directives are as follows:
 
     -   Represents all of the successors of an operation.
 
-*   `type` ( input )
+*   `type ( input )`
 
     -   Represents the type of the given input.
     -   `input` must be either an operand or result [variable](#variables), the
         `operands` directive, or the `results` directive.
 
-*   `qualified` ( type_or_attribute )
+*   `qualified ( type_or_attribute )`
 
     -   Wraps a `type` directive or an attribute parameter.
     -   Used to force printing the type or attribute prefixed with its dialect
@@ -1112,6 +1113,100 @@ void process(AddOp op, ArrayRef<Value> newOperands) {
   zip(Adaptor<AddOp>(newOperands));
   /*...*/
 }
+```
+
+#### Sharded Operation Definitions
+
+Large dialects with many operations may struggle with C++ compile time of
+generated op definitions, due to large compilation units. `mlir-tblgen`
+provides the ability to shard op definitions by splitting them up evenly
+by passing `-op-shard-count` to `-gen-op-defs` and `-gen-op-decls`. The tool
+will generate a single include file for the definitions broken up by
+`GET_OP_DEFS_${N}` where `${N}` is the shard number. A shard can be compiled in
+a single compilation unit by adding a file like this to your dialect library:
+
+```c++
+#include "mlir/IR/Operation.h"
+// Add any other required includes.
+
+// Utilities shared by generated op definitions: custom directive parsers,
+// printers, etc.
+#include "OpUtils.h"
+
+#define GET_OP_DEFS_0
+#include "MyDialectOps.cpp.inc"
+```
+
+Note: this requires restructing shared utility functions within the dialect
+library so they can be shared by multiple compilation units. I.e. instead of
+defining `static` methods in the same source file, you should declare them in a
+shared header and define them in their own source file.
+
+The op registration hooks are also sharded, because the template instantiation
+can take a very long time to compile. Operations should be registered in your
+dialect like:
+
+```c++
+void MyDialect::initialize() {
+  registerMyDialectOperations(this);
+}
+```
+
+CMake and Bazel functions are included to make sharding dialects easier.
+Assuming you have organized your operation utility functions into their own
+header, define a file that looks like the one above, but without the `#define`:
+
+```c++
+// MyDialectOps.cpp
+#include "mlir/IR/Operation.h"
+
+#include "OpUtils.h"
+
+#include "MyDialectOps.cpp.inc"
+```
+
+In CMake, remove the manual `mlir_tablegen` invocations and replace them with:
+
+```cmake
+set(LLVM_TARGET_DEFINITIONS MyDialectOps.td)
+add_sharded_ops(MyDialectOps 8) # shard the op definitions by 8
+
+add_mlir_library(MyDialect
+  MyDialect.cpp
+  MyDialectOpDefs.cpp
+  ${SHARDED_SRCS}
+
+  DEPENDS
+  MLIRTestOpsShardGen
+)
+```
+
+This will automatically duplicate the `MyDialectOps.cpp` source file and add the
+`#define` up the number of shards indicated.
+
+It is recommended that any out-of-line op member functions (like verifiers) be
+defined in a separate source file. In this example, it is called
+`MyDialectOpDefs.cpp`.
+
+In Bazel, remove the `-gen-op-defs` and `-gen-op-decls` invocations, and add
+
+```bazel
+gentbl_sharded_ops(
+    name = "MyDialectOpSrcs",
+    hdr_out = "MyDialectOps.h.inc",
+    shard_count = 8,
+    sharder = "//mlir:mlir-src-sharder",
+    src_file = "MyDialectOps.cpp",
+    src_out = "MyDialectOps.cpp.inc",
+    tblgen = "//mlir:mlir-tblgen",
+    td_file = "MyDialectOps.td",
+    deps = [":MyDialectOpsTdFiles"],
+)
+
+cc_library(
+    name = "MyDialect",
+    srcs = glob(["MyDialect/*.cpp"]) + [":MyDialectOpSrcs"]
+)
 ```
 
 ## Constraints
@@ -1606,11 +1701,11 @@ To allow more convenient syntax, helper classes exist for TableGen classes
 which are commonly used as anonymous definitions. These currently include:
 
 * `DeprecatedOpBuilder`: Can be used in place of `OpBuilder` with the same
-  arguments except taking the reason as first argument, e.g. 
+  arguments except taking the reason as first argument, e.g.
   `DeprecatedOpBuilder<"use 'build' with foo instead", (ins "int":$bar)>`
 
-Note: Support for the `CppDeprecated` mechanism has to be implemented by 
-every code generator separately. 
+Note: Support for the `CppDeprecated` mechanism has to be implemented by
+every code generator separately.
 
 ### Requirements and existing mechanisms analysis
 

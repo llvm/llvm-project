@@ -5,9 +5,13 @@
 define <8 x i16> @concat_add(<4 x i16> %a, <4 x i16> %b, <4 x i16> %c, <4 x i16> %d) {
 ; CHECK-LABEL: concat_add:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    add v2.4h, v2.4h, v3.4h
-; CHECK-NEXT:    add v0.4h, v0.4h, v1.4h
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    // kill: def $d3 killed $d3 def $q3
+; CHECK-NEXT:    // kill: def $d2 killed $d2 def $q2
+; CHECK-NEXT:    mov v1.d[1], v3.d[0]
 ; CHECK-NEXT:    mov v0.d[1], v2.d[0]
+; CHECK-NEXT:    add v0.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    ret
   %x = add <4 x i16> %a, %b
   %y = add <4 x i16> %c, %d
@@ -33,13 +37,9 @@ define <8 x i16> @concat_addtunc(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c, <4 x 
 define <8 x i16> @concat_addtunc2(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c, <4 x i32> %d) {
 ; CHECK-LABEL: concat_addtunc2:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    xtn v1.4h, v1.4s
-; CHECK-NEXT:    xtn v0.4h, v0.4s
-; CHECK-NEXT:    xtn v2.4h, v2.4s
-; CHECK-NEXT:    xtn v3.4h, v3.4s
-; CHECK-NEXT:    add v0.4h, v0.4h, v1.4h
-; CHECK-NEXT:    add v1.4h, v2.4h, v3.4h
-; CHECK-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-NEXT:    uzp1 v1.8h, v1.8h, v3.8h
+; CHECK-NEXT:    uzp1 v0.8h, v0.8h, v2.8h
+; CHECK-NEXT:    add v0.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    ret
   %at = trunc <4 x i32> %a to <4 x i16>
   %bt = trunc <4 x i32> %b to <4 x i16>
@@ -54,9 +54,13 @@ define <8 x i16> @concat_addtunc2(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c, <4 x
 define <8 x i16> @concat_sub(<4 x i16> %a, <4 x i16> %b, <4 x i16> %c, <4 x i16> %d) {
 ; CHECK-LABEL: concat_sub:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub v2.4h, v2.4h, v3.4h
-; CHECK-NEXT:    sub v0.4h, v0.4h, v1.4h
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    // kill: def $d3 killed $d3 def $q3
+; CHECK-NEXT:    // kill: def $d2 killed $d2 def $q2
+; CHECK-NEXT:    mov v1.d[1], v3.d[0]
 ; CHECK-NEXT:    mov v0.d[1], v2.d[0]
+; CHECK-NEXT:    sub v0.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    ret
   %x = sub <4 x i16> %a, %b
   %y = sub <4 x i16> %c, %d
@@ -67,9 +71,13 @@ define <8 x i16> @concat_sub(<4 x i16> %a, <4 x i16> %b, <4 x i16> %c, <4 x i16>
 define <8 x i16> @concat_mul(<4 x i16> %a, <4 x i16> %b, <4 x i16> %c, <4 x i16> %d) {
 ; CHECK-LABEL: concat_mul:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mul v2.4h, v2.4h, v3.4h
-; CHECK-NEXT:    mul v0.4h, v0.4h, v1.4h
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    // kill: def $d3 killed $d3 def $q3
+; CHECK-NEXT:    // kill: def $d2 killed $d2 def $q2
+; CHECK-NEXT:    mov v1.d[1], v3.d[0]
 ; CHECK-NEXT:    mov v0.d[1], v2.d[0]
+; CHECK-NEXT:    mul v0.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    ret
   %x = mul <4 x i16> %a, %b
   %y = mul <4 x i16> %c, %d
@@ -80,9 +88,13 @@ define <8 x i16> @concat_mul(<4 x i16> %a, <4 x i16> %b, <4 x i16> %c, <4 x i16>
 define <8 x i16> @concat_xor(<4 x i16> %a, <4 x i16> %b, <4 x i16> %c, <4 x i16> %d) {
 ; CHECK-LABEL: concat_xor:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    eor v2.8b, v2.8b, v3.8b
-; CHECK-NEXT:    eor v0.8b, v0.8b, v1.8b
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    // kill: def $d3 killed $d3 def $q3
+; CHECK-NEXT:    // kill: def $d2 killed $d2 def $q2
+; CHECK-NEXT:    mov v1.d[1], v3.d[0]
 ; CHECK-NEXT:    mov v0.d[1], v2.d[0]
+; CHECK-NEXT:    eor v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
   %x = xor <4 x i16> %a, %b
   %y = xor <4 x i16> %c, %d
@@ -93,9 +105,13 @@ define <8 x i16> @concat_xor(<4 x i16> %a, <4 x i16> %b, <4 x i16> %c, <4 x i16>
 define <8 x half> @concat_fadd(<4 x half> %a, <4 x half> %b, <4 x half> %c, <4 x half> %d) {
 ; CHECK-LABEL: concat_fadd:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fadd v2.4h, v2.4h, v3.4h
-; CHECK-NEXT:    fadd v0.4h, v0.4h, v1.4h
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    // kill: def $d3 killed $d3 def $q3
+; CHECK-NEXT:    // kill: def $d2 killed $d2 def $q2
+; CHECK-NEXT:    mov v1.d[1], v3.d[0]
 ; CHECK-NEXT:    mov v0.d[1], v2.d[0]
+; CHECK-NEXT:    fadd v0.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    ret
   %x = fadd <4 x half> %a, %b
   %y = fadd <4 x half> %c, %d
@@ -106,9 +122,13 @@ define <8 x half> @concat_fadd(<4 x half> %a, <4 x half> %b, <4 x half> %c, <4 x
 define <8 x half> @concat_fmul(<4 x half> %a, <4 x half> %b, <4 x half> %c, <4 x half> %d) {
 ; CHECK-LABEL: concat_fmul:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmul v2.4h, v2.4h, v3.4h
-; CHECK-NEXT:    fmul v0.4h, v0.4h, v1.4h
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    // kill: def $d3 killed $d3 def $q3
+; CHECK-NEXT:    // kill: def $d2 killed $d2 def $q2
+; CHECK-NEXT:    mov v1.d[1], v3.d[0]
 ; CHECK-NEXT:    mov v0.d[1], v2.d[0]
+; CHECK-NEXT:    fmul v0.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    ret
   %x = fmul <4 x half> %a, %b
   %y = fmul <4 x half> %c, %d
@@ -119,9 +139,13 @@ define <8 x half> @concat_fmul(<4 x half> %a, <4 x half> %b, <4 x half> %c, <4 x
 define <8 x half> @concat_min(<4 x half> %a, <4 x half> %b, <4 x half> %c, <4 x half> %d) {
 ; CHECK-LABEL: concat_min:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fminnm v2.4h, v2.4h, v3.4h
-; CHECK-NEXT:    fminnm v0.4h, v0.4h, v1.4h
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    // kill: def $d3 killed $d3 def $q3
+; CHECK-NEXT:    // kill: def $d2 killed $d2 def $q2
+; CHECK-NEXT:    mov v1.d[1], v3.d[0]
 ; CHECK-NEXT:    mov v0.d[1], v2.d[0]
+; CHECK-NEXT:    fminnm v0.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    ret
   %x = call <4 x half> @llvm.minnum.v4f16(<4 x half> %a, <4 x half> %b)
   %y = call <4 x half> @llvm.minnum.v4f16(<4 x half> %c, <4 x half> %d)
@@ -146,21 +170,16 @@ define <16 x i8> @signOf_neon(ptr nocapture noundef readonly %a, ptr nocapture n
 ; CHECK-LABEL: signOf_neon:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ldp q1, q2, [x0]
-; CHECK-NEXT:    movi v0.8b, #1
+; CHECK-NEXT:    movi v0.16b, #1
 ; CHECK-NEXT:    ldp q3, q4, [x1]
 ; CHECK-NEXT:    cmhi v5.8h, v1.8h, v3.8h
 ; CHECK-NEXT:    cmhi v6.8h, v2.8h, v4.8h
 ; CHECK-NEXT:    cmhi v1.8h, v3.8h, v1.8h
 ; CHECK-NEXT:    cmhi v2.8h, v4.8h, v2.8h
-; CHECK-NEXT:    xtn v3.8b, v5.8h
-; CHECK-NEXT:    xtn v4.8b, v6.8h
-; CHECK-NEXT:    xtn v1.8b, v1.8h
-; CHECK-NEXT:    xtn v2.8b, v2.8h
-; CHECK-NEXT:    and v3.8b, v3.8b, v0.8b
-; CHECK-NEXT:    and v4.8b, v4.8b, v0.8b
-; CHECK-NEXT:    orr v0.8b, v3.8b, v1.8b
-; CHECK-NEXT:    orr v1.8b, v4.8b, v2.8b
-; CHECK-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-NEXT:    uzp1 v3.16b, v5.16b, v6.16b
+; CHECK-NEXT:    uzp1 v1.16b, v1.16b, v2.16b
+; CHECK-NEXT:    and v0.16b, v3.16b, v0.16b
+; CHECK-NEXT:    orr v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
 entry:
   %0 = load <8 x i16>, ptr %a, align 2

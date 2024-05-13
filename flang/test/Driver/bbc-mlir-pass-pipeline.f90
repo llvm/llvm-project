@@ -17,8 +17,15 @@ end program
 ! CHECK-NEXT:   (S) 0 num-cse'd - Number of operations CSE'd
 ! CHECK-NEXT:   (S) 0 num-dce'd - Number of operations DCE'd
 
+! CHECK-NEXT: Pipeline Collection : ['fir.global', 'func.func', 'omp.declare_reduction', 'omp.private']
+! CHECK-NEXT: 'fir.global' Pipeline
+! CHECK-NEXT:   CharacterConversion
 ! CHECK-NEXT: 'func.func' Pipeline
 ! CHECK-NEXT:   ArrayValueCopy
+! CHECK-NEXT:   CharacterConversion
+! CHECK-NEXT: 'omp.declare_reduction' Pipeline
+! CHECK-NEXT:   CharacterConversion
+! CHECK-NEXT: 'omp.private' Pipeline
 ! CHECK-NEXT:   CharacterConversion
 
 ! CHECK-NEXT: Canonicalizer
@@ -38,13 +45,16 @@ end program
 ! CHECK-NEXT:   (S) 0 num-cse'd - Number of operations CSE'd
 ! CHECK-NEXT:   (S) 0 num-dce'd - Number of operations DCE'd
 
-! CHECK-NEXT: Pipeline Collection : ['fir.global', 'func.func', 'omp.declare_reduction']
+! CHECK-NEXT: PolymorphicOpConversion
+
+! CHECK-NEXT: Pipeline Collection : ['fir.global', 'func.func', 'omp.declare_reduction', 'omp.private']
 ! CHECK-NEXT: 'fir.global' Pipeline
 ! CHECK-NEXT:   CFGConversion
 ! CHECK-NEXT: 'func.func' Pipeline
-! CHECK-NEXT:   PolymorphicOpConversion
 ! CHECK-NEXT:   CFGConversion
 ! CHECK-NEXT: 'omp.declare_reduction' Pipeline
+! CHECK-NEXT:   CFGConversion
+! CHECK-NEXT: 'omp.private' Pipeline
 ! CHECK-NEXT:   CFGConversion
 
 ! CHECK-NEXT: SCFToControlFlow

@@ -18,6 +18,7 @@
 #include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/IR/AttributeMask.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfo.h"
@@ -277,8 +278,8 @@ void llvm::CloneFunctionInto(Function *NewFunc, const Function *OldFunc,
     // attached debug-info records.
     for (Instruction &II : *BB) {
       RemapInstruction(&II, VMap, RemapFlag, TypeMapper, Materializer);
-      RemapDbgVariableRecordRange(II.getModule(), II.getDbgRecordRange(), VMap,
-                                  RemapFlag, TypeMapper, Materializer);
+      RemapDbgRecordRange(II.getModule(), II.getDbgRecordRange(), VMap,
+                          RemapFlag, TypeMapper, Materializer);
     }
 
   // Only update !llvm.dbg.cu for DifferentModule (not CloneModule). In the
@@ -385,18 +386,6 @@ public:
 };
 } // namespace
 
-static bool hasRoundingModeOperand(Intrinsic::ID CIID) {
-  switch (CIID) {
-#define INSTRUCTION(NAME, NARG, ROUND_MODE, INTRINSIC)                         \
-  case Intrinsic::INTRINSIC:                                                   \
-    return ROUND_MODE == 1;
-#define FUNCTION INSTRUCTION
-#include "llvm/IR/ConstrainedOps.def"
-  default:
-    llvm_unreachable("Unexpected constrained intrinsic id");
-  }
-}
-
 Instruction *
 PruningFunctionCloner::cloneInstruction(BasicBlock::const_iterator II) {
   const Instruction &OldInst = *II;
@@ -454,7 +443,7 @@ PruningFunctionCloner::cloneInstruction(BasicBlock::const_iterator II) {
       // The last arguments of a constrained intrinsic are metadata that
       // represent rounding mode (absents in some intrinsics) and exception
       // behavior. The inlined function uses default settings.
-      if (hasRoundingModeOperand(CIID))
+      if (Intrinsic::hasConstrainedFPRoundingModeOperand(CIID))
         Args.push_back(
             MetadataAsValue::get(Ctx, MDString::get(Ctx, "round.tonearest")));
       Args.push_back(
@@ -819,6 +808,14 @@ void llvm::CloneAndPruneIntoFromInst(Function *NewFunc, const Function *OldFunc,
     }
   }
 
+  // Drop all incompatible return attributes that cannot be applied to NewFunc
+  // during cloning, so as to allow instruction simplification to reason on the
+  // old state of the function. The original attributes are restored later.
+  AttributeMask IncompatibleAttrs =
+      AttributeFuncs::typeIncompatible(OldFunc->getReturnType());
+  AttributeList Attrs = NewFunc->getAttributes();
+  NewFunc->removeRetAttrs(IncompatibleAttrs);
+
   // As phi-nodes have been now remapped, allow incremental simplification of
   // newly-cloned instructions.
   const DataLayout &DL = NewFunc->getParent()->getDataLayout();
@@ -849,6 +846,9 @@ void llvm::CloneAndPruneIntoFromInst(Function *NewFunc, const Function *OldFunc,
     }
   }
 
+  // Restore attributes.
+  NewFunc->setAttributes(Attrs);
+
   // Remap debug intrinsic operands now that all values have been mapped.
   // Doing this now (late) preserves use-before-defs in debug intrinsics. If
   // we didn't do this, ValueAsMetadata(use-before-def) operands would be
@@ -867,10 +867,10 @@ void llvm::CloneAndPruneIntoFromInst(Function *NewFunc, const Function *OldFunc,
   Function::iterator Begin = cast<BasicBlock>(VMap[StartingBB])->getIterator();
   for (BasicBlock &BB : make_range(Begin, NewFunc->end())) {
     for (Instruction &I : BB) {
-      RemapDbgVariableRecordRange(I.getModule(), I.getDbgRecordRange(), VMap,
-                                  ModuleLevelChanges ? RF_None
-                                                     : RF_NoModuleLevelChanges,
-                                  TypeMapper, Materializer);
+      RemapDbgRecordRange(I.getModule(), I.getDbgRecordRange(), VMap,
+                          ModuleLevelChanges ? RF_None
+                                             : RF_NoModuleLevelChanges,
+                          TypeMapper, Materializer);
     }
   }
 
@@ -969,9 +969,8 @@ void llvm::remapInstructionsInBlocks(ArrayRef<BasicBlock *> Blocks,
   // Rewrite the code to refer to itself.
   for (auto *BB : Blocks) {
     for (auto &Inst : *BB) {
-      RemapDbgVariableRecordRange(
-          Inst.getModule(), Inst.getDbgRecordRange(), VMap,
-          RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
+      RemapDbgRecordRange(Inst.getModule(), Inst.getDbgRecordRange(), VMap,
+                          RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
       RemapInstruction(&Inst, VMap,
                        RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
     }
@@ -1109,6 +1108,9 @@ BasicBlock *llvm::DuplicateInstructionsInSplitBetween(
         if (I != ValueMapping.end())
           New->setOperand(i, I->second);
       }
+
+    // Remap debug variable operands.
+    remapDebugVariable(ValueMapping, New);
   }
 
   return NewBB;

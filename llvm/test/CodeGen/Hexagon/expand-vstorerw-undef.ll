@@ -69,6 +69,7 @@ b18:                                              ; preds = %b16, %b7
   br label %b22
 
 b21:                                              ; preds = %b22
+  store volatile <64 x i32> %v20, ptr null
   tail call void @sammy() #3
   br label %b7
 

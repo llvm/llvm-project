@@ -157,7 +157,7 @@ public:
                                    SourceLocation CommentLoc,
                                    PragmaMSCommentKind CommentKind,
                                    StringRef Arg);
-  static PragmaCommentDecl *CreateDeserialized(ASTContext &C, DeclID ID,
+  static PragmaCommentDecl *CreateDeserialized(ASTContext &C, GlobalDeclID ID,
                                                unsigned ArgSize);
 
   PragmaMSCommentKind getCommentKind() const { return CommentKind; }
@@ -192,7 +192,7 @@ public:
                                           SourceLocation Loc, StringRef Name,
                                           StringRef Value);
   static PragmaDetectMismatchDecl *
-  CreateDeserialized(ASTContext &C, DeclID ID, unsigned NameValueSize);
+  CreateDeserialized(ASTContext &C, GlobalDeclID ID, unsigned NameValueSize);
 
   StringRef getName() const { return getTrailingObjects<char>(); }
   StringRef getValue() const { return getTrailingObjects<char>() + ValueStart; }
@@ -518,7 +518,7 @@ public:
   static LabelDecl *Create(ASTContext &C, DeclContext *DC,
                            SourceLocation IdentL, IdentifierInfo *II,
                            SourceLocation GnuLabelL);
-  static LabelDecl *CreateDeserialized(ASTContext &C, DeclID ID);
+  static LabelDecl *CreateDeserialized(ASTContext &C, GlobalDeclID ID);
 
   LabelStmt *getStmt() const { return TheStmt; }
   void setStmt(LabelStmt *T) { TheStmt = T; }
@@ -581,7 +581,7 @@ public:
                                IdentifierInfo *Id, NamespaceDecl *PrevDecl,
                                bool Nested);
 
-  static NamespaceDecl *CreateDeserialized(ASTContext &C, DeclID ID);
+  static NamespaceDecl *CreateDeserialized(ASTContext &C, GlobalDeclID ID);
 
   using redecl_range = redeclarable_base::redecl_range;
   using redecl_iterator = redeclarable_base::redecl_iterator;
@@ -1146,7 +1146,7 @@ public:
                          const IdentifierInfo *Id, QualType T,
                          TypeSourceInfo *TInfo, StorageClass S);
 
-  static VarDecl *CreateDeserialized(ASTContext &C, DeclID ID);
+  static VarDecl *CreateDeserialized(ASTContext &C, GlobalDeclID ID);
 
   SourceRange getSourceRange() const override LLVM_READONLY;
 
@@ -1728,7 +1728,7 @@ public:
   static ImplicitParamDecl *Create(ASTContext &C, QualType T,
                                    ImplicitParamKind ParamKind);
 
-  static ImplicitParamDecl *CreateDeserialized(ASTContext &C, DeclID ID);
+  static ImplicitParamDecl *CreateDeserialized(ASTContext &C, GlobalDeclID ID);
 
   ImplicitParamDecl(ASTContext &C, DeclContext *DC, SourceLocation IdLoc,
                     const IdentifierInfo *Id, QualType Type,
@@ -1782,7 +1782,7 @@ public:
                              TypeSourceInfo *TInfo, StorageClass S,
                              Expr *DefArg);
 
-  static ParmVarDecl *CreateDeserialized(ASTContext &C, DeclID ID);
+  static ParmVarDecl *CreateDeserialized(ASTContext &C, GlobalDeclID ID);
 
   SourceRange getSourceRange() const override LLVM_READONLY;
 
@@ -2178,7 +2178,7 @@ public:
          bool hasWrittenPrototype, ConstexprSpecKind ConstexprKind,
          Expr *TrailingRequiresClause);
 
-  static FunctionDecl *CreateDeserialized(ASTContext &C, DeclID ID);
+  static FunctionDecl *CreateDeserialized(ASTContext &C, GlobalDeclID ID);
 
   DeclarationNameInfo getNameInfo() const {
     return DeclarationNameInfo(getDeclName(), getLocation(), DNLoc);
@@ -3136,7 +3136,7 @@ public:
                            TypeSourceInfo *TInfo, Expr *BW, bool Mutable,
                            InClassInitStyle InitStyle);
 
-  static FieldDecl *CreateDeserialized(ASTContext &C, DeclID ID);
+  static FieldDecl *CreateDeserialized(ASTContext &C, GlobalDeclID ID);
 
   /// Returns the index of this field within its record,
   /// as appropriate for passing to ASTRecordLayout::getFieldOffset.
@@ -3311,7 +3311,7 @@ public:
                                   SourceLocation L, IdentifierInfo *Id,
                                   QualType T, Expr *E,
                                   const llvm::APSInt &V);
-  static EnumConstantDecl *CreateDeserialized(ASTContext &C, DeclID ID);
+  static EnumConstantDecl *CreateDeserialized(ASTContext &C, GlobalDeclID ID);
 
   const Expr *getInitExpr() const { return (const Expr*) Init; }
   Expr *getInitExpr() { return (Expr*) Init; }
@@ -3357,7 +3357,7 @@ public:
                                    QualType T,
                                    llvm::MutableArrayRef<NamedDecl *> CH);
 
-  static IndirectFieldDecl *CreateDeserialized(ASTContext &C, DeclID ID);
+  static IndirectFieldDecl *CreateDeserialized(ASTContext &C, GlobalDeclID ID);
 
   using chain_iterator = ArrayRef<NamedDecl *>::const_iterator;
 
@@ -3542,7 +3542,7 @@ public:
   static TypedefDecl *Create(ASTContext &C, DeclContext *DC,
                              SourceLocation StartLoc, SourceLocation IdLoc,
                              const IdentifierInfo *Id, TypeSourceInfo *TInfo);
-  static TypedefDecl *CreateDeserialized(ASTContext &C, DeclID ID);
+  static TypedefDecl *CreateDeserialized(ASTContext &C, GlobalDeclID ID);
 
   SourceRange getSourceRange() const override LLVM_READONLY;
 
@@ -3567,7 +3567,7 @@ public:
   static TypeAliasDecl *Create(ASTContext &C, DeclContext *DC,
                                SourceLocation StartLoc, SourceLocation IdLoc,
                                const IdentifierInfo *Id, TypeSourceInfo *TInfo);
-  static TypeAliasDecl *CreateDeserialized(ASTContext &C, DeclID ID);
+  static TypeAliasDecl *CreateDeserialized(ASTContext &C, GlobalDeclID ID);
 
   SourceRange getSourceRange() const override LLVM_READONLY;
 
@@ -3977,7 +3977,7 @@ public:
                           IdentifierInfo *Id, EnumDecl *PrevDecl,
                           bool IsScoped, bool IsScopedUsingClassTag,
                           bool IsFixed);
-  static EnumDecl *CreateDeserialized(ASTContext &C, DeclID ID);
+  static EnumDecl *CreateDeserialized(ASTContext &C, GlobalDeclID ID);
 
   /// Overrides to provide correct range when there's an enum-base specifier
   /// with forward declarations.
@@ -4182,7 +4182,7 @@ public:
   static RecordDecl *Create(const ASTContext &C, TagKind TK, DeclContext *DC,
                             SourceLocation StartLoc, SourceLocation IdLoc,
                             IdentifierInfo *Id, RecordDecl* PrevDecl = nullptr);
-  static RecordDecl *CreateDeserialized(const ASTContext &C, DeclID ID);
+  static RecordDecl *CreateDeserialized(const ASTContext &C, GlobalDeclID ID);
 
   RecordDecl *getPreviousDecl() {
     return cast_or_null<RecordDecl>(
@@ -4433,7 +4433,7 @@ public:
                                   StringLiteral *Str, SourceLocation AsmLoc,
                                   SourceLocation RParenLoc);
 
-  static FileScopeAsmDecl *CreateDeserialized(ASTContext &C, DeclID ID);
+  static FileScopeAsmDecl *CreateDeserialized(ASTContext &C, GlobalDeclID ID);
 
   SourceLocation getAsmLoc() const { return getLocation(); }
   SourceLocation getRParenLoc() const { return RParenLoc; }
@@ -4469,7 +4469,7 @@ class TopLevelStmtDecl : public Decl, public DeclContext {
 
 public:
   static TopLevelStmtDecl *Create(ASTContext &C, Stmt *Statement);
-  static TopLevelStmtDecl *CreateDeserialized(ASTContext &C, DeclID ID);
+  static TopLevelStmtDecl *CreateDeserialized(ASTContext &C, GlobalDeclID ID);
 
   SourceRange getSourceRange() const override LLVM_READONLY;
   Stmt *getStmt() { return Statement; }
@@ -4563,7 +4563,7 @@ protected:
 
 public:
   static BlockDecl *Create(ASTContext &C, DeclContext *DC, SourceLocation L);
-  static BlockDecl *CreateDeserialized(ASTContext &C, DeclID ID);
+  static BlockDecl *CreateDeserialized(ASTContext &C, GlobalDeclID ID);
 
   SourceLocation getCaretLocation() const { return getLocation(); }
 
@@ -4717,7 +4717,7 @@ public:
 
   static CapturedDecl *Create(ASTContext &C, DeclContext *DC,
                               unsigned NumParams);
-  static CapturedDecl *CreateDeserialized(ASTContext &C, DeclID ID,
+  static CapturedDecl *CreateDeserialized(ASTContext &C, GlobalDeclID ID,
                                           unsigned NumParams);
 
   Stmt *getBody() const override;
@@ -4851,7 +4851,7 @@ public:
                                     SourceLocation EndLoc);
 
   /// Create a new, deserialized module import declaration.
-  static ImportDecl *CreateDeserialized(ASTContext &C, DeclID ID,
+  static ImportDecl *CreateDeserialized(ASTContext &C, GlobalDeclID ID,
                                         unsigned NumLocations);
 
   /// Retrieve the module that was imported by the import declaration.
@@ -4892,7 +4892,7 @@ private:
 public:
   static ExportDecl *Create(ASTContext &C, DeclContext *DC,
                             SourceLocation ExportLoc);
-  static ExportDecl *CreateDeserialized(ASTContext &C, DeclID ID);
+  static ExportDecl *CreateDeserialized(ASTContext &C, GlobalDeclID ID);
 
   SourceLocation getExportLoc() const { return getLocation(); }
   SourceLocation getRBraceLoc() const { return RBraceLoc; }
@@ -4931,7 +4931,7 @@ class EmptyDecl : public Decl {
 public:
   static EmptyDecl *Create(ASTContext &C, DeclContext *DC,
                            SourceLocation L);
-  static EmptyDecl *CreateDeserialized(ASTContext &C, DeclID ID);
+  static EmptyDecl *CreateDeserialized(ASTContext &C, GlobalDeclID ID);
 
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
   static bool classofKind(Kind K) { return K == Empty; }
@@ -4957,7 +4957,7 @@ public:
                                 bool CBuffer, SourceLocation KwLoc,
                                 IdentifierInfo *ID, SourceLocation IDLoc,
                                 SourceLocation LBrace);
-  static HLSLBufferDecl *CreateDeserialized(ASTContext &C, DeclID ID);
+  static HLSLBufferDecl *CreateDeserialized(ASTContext &C, GlobalDeclID ID);
 
   SourceRange getSourceRange() const override LLVM_READONLY {
     return SourceRange(getLocStart(), RBraceLoc);
@@ -5048,6 +5048,11 @@ inline bool IsEnumDeclScoped(EnumDecl *ED) {
 static constexpr StringRef getOpenMPVariantManglingSeparatorStr() {
   return "$ompvariant";
 }
+
+/// Returns whether the given FunctionDecl has an __arm[_locally]_streaming
+/// attribute.
+bool IsArmStreamingFunction(const FunctionDecl *FD,
+                            bool IncludeLocallyStreaming);
 
 } // namespace clang
 

@@ -51,9 +51,6 @@ public:
     return (exponent.ult(other.exponent));
   }
 
-  // Prints polynomial to 'os'.
-  void print(raw_ostream &os) const;
-
   friend ::llvm::hash_code hash_value(const Monomial &arg);
 
 public:
@@ -101,6 +98,8 @@ public:
   std::string toIdentifier() const;
 
   unsigned getDegree() const;
+
+  ArrayRef<Monomial> getTerms() const { return terms; }
 
   friend ::llvm::hash_code hash_value(const Polynomial &arg);
 

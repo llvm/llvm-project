@@ -426,6 +426,7 @@ static bool ExecuteAssemblerImpl(AssemblerInvocation &Opts,
   assert(MRI && "Unable to create target register info!");
 
   MCTargetOptions MCOptions;
+  MCOptions.MCRelaxAll = Opts.RelaxAll;
   MCOptions.EmitDwarfUnwind = Opts.EmitDwarfUnwind;
   MCOptions.EmitCompactUnwindNonCanonical = Opts.EmitCompactUnwindNonCanonical;
   MCOptions.X86RelaxRelocations = Opts.RelaxELFRelocations;

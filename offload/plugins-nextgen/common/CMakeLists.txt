@@ -62,9 +62,8 @@ target_link_options(PluginCommon PUBLIC ${offload_link_flags})
 target_include_directories(PluginCommon PUBLIC 
   ${CMAKE_CURRENT_SOURCE_DIR}/include
   ${LIBOMPTARGET_LLVM_INCLUDE_DIRS}
+  ${LIBOMPTARGET_BINARY_INCLUDE_DIR}
   ${LIBOMPTARGET_INCLUDE_DIR}
 )
 
-set_target_properties(PluginCommon PROPERTIES
-  POSITION_INDEPENDENT_CODE ON
-  CXX_VISIBILITY_PRESET protected)
+set_target_properties(PluginCommon PROPERTIES POSITION_INDEPENDENT_CODE ON)

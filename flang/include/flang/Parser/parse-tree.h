@@ -455,7 +455,8 @@ struct SpecificationPart {
 struct InternalSubprogram {
   UNION_CLASS_BOILERPLATE(InternalSubprogram);
   std::variant<common::Indirection<FunctionSubprogram>,
-      common::Indirection<SubroutineSubprogram>>
+      common::Indirection<SubroutineSubprogram>,
+      common::Indirection<CompilerDirective>>
       u;
 };
 
@@ -2904,7 +2905,8 @@ struct ModuleSubprogram {
   UNION_CLASS_BOILERPLATE(ModuleSubprogram);
   std::variant<common::Indirection<FunctionSubprogram>,
       common::Indirection<SubroutineSubprogram>,
-      common::Indirection<SeparateModuleSubprogram>>
+      common::Indirection<SeparateModuleSubprogram>,
+      common::Indirection<CompilerDirective>>
       u;
 };
 

@@ -85,11 +85,15 @@ private:
   // The MemProf version we should write.
   memprof::IndexedVersion MemProfVersionRequested;
 
+  // Whether to serialize the full schema.
+  bool MemProfFullSchema;
+
 public:
   InstrProfWriter(
       bool Sparse = false, uint64_t TemporalProfTraceReservoirSize = 0,
       uint64_t MaxTemporalProfTraceLength = 0, bool WritePrevVersion = false,
-      memprof::IndexedVersion MemProfVersionRequested = memprof::Version0);
+      memprof::IndexedVersion MemProfVersionRequested = memprof::Version0,
+      bool MemProfFullSchema = false);
   ~InstrProfWriter();
 
   StringMap<ProfilingData> &getProfileData() { return FunctionData; }
@@ -203,6 +207,7 @@ public:
   void setMemProfVersionRequested(memprof::IndexedVersion Version) {
     MemProfVersionRequested = Version;
   }
+  void setMemProfFullSchema(bool Full) { MemProfFullSchema = Full; }
   // Compute the overlap b/w this object and Other. Program level result is
   // stored in Overlap and function level result is stored in FuncLevelOverlap.
   void overlapRecord(NamedInstrProfRecord &&Other, OverlapStats &Overlap,

@@ -236,8 +236,8 @@ declare void @has_sret(ptr sret([100 x i8])) nounwind;
 
 %TSRet = type { i64, i64 }
 declare void @has_aligned_sret(ptr align 32 sret(%TSRet)) nounwind;
-; CHECK-LABEL:    .def    $iexit_thunk$cdecl$m16a32$v;
-; CHECK:          .section        .wowthk$aa,"xr",discard,$iexit_thunk$cdecl$m16a32$v
+; CHECK-LABEL:    .def    $iexit_thunk$cdecl$m16$v;
+; CHECK:          .section        .wowthk$aa,"xr",discard,$iexit_thunk$cdecl$m16$v
 ; CHECK:          // %bb.0:
 ; CHECK-NEXT:     sub     sp, sp, #48
 ; CHECK-NEXT:     .seh_stackalloc 48
@@ -271,8 +271,8 @@ declare void @has_aligned_sret(ptr align 32 sret(%TSRet)) nounwind;
 ; CHECK:          adrp    x11, has_aligned_sret
 ; CHECK:          add     x11, x11, :lo12:has_aligned_sret
 ; CHECK:          ldr     x9, [x9, :lo12:__os_arm64x_check_icall]
-; CHECK:          adrp    x10, ($iexit_thunk$cdecl$m16a32$v)
-; CHECK:          add     x10, x10, :lo12:($iexit_thunk$cdecl$m16a32$v)
+; CHECK:          adrp    x10, ($iexit_thunk$cdecl$m16$v)
+; CHECK:          add     x10, x10, :lo12:($iexit_thunk$cdecl$m16$v)
 ; CHECK:          blr     x9
 ; CHECK:          .seh_startepilogue
 ; CHECK:          ldr     x30, [sp], #16                  // 8-byte Folded Reload
@@ -492,7 +492,7 @@ declare %T2 @simple_struct(%T1, %T2, %T3, %T4) nounwind;
 ; CHECK-NEXT:     .symidx has_sret
 ; CHECK-NEXT:     .word   0
 ; CHECK-NEXT:     .symidx has_aligned_sret
-; CHECK-NEXT:     .symidx $iexit_thunk$cdecl$m16a32$v
+; CHECK-NEXT:     .symidx $iexit_thunk$cdecl$m16$v
 ; CHECK-NEXT:     .word   4
 ; CHECK-NEXT:     .symidx "#has_aligned_sret$exit_thunk"
 ; CHECK-NEXT:     .symidx has_aligned_sret

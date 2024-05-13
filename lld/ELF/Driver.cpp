@@ -151,7 +151,7 @@ bool link(ArrayRef<const char *> args, llvm::raw_ostream &stdoutOS,
                                  "--error-limit=0 to see all errors)";
 
   config = ConfigWrapper();
-  script = std::make_unique<LinkerScript>();
+  script = ScriptWrapper();
 
   symAux.emplace_back();
 
@@ -1533,9 +1533,17 @@ static void readConfigs(opt::InputArgList &args) {
             ": parse error, not 'section-glob=[none|zlib|zstd]'");
       continue;
     }
-    auto type = getCompressionType(fields[1], arg->getSpelling());
+    auto [typeStr, levelStr] = fields[1].split(':');
+    auto type = getCompressionType(typeStr, arg->getSpelling());
+    unsigned level = 0;
+    if (fields[1].size() != typeStr.size() &&
+        !llvm::to_integer(levelStr, level)) {
+      error(arg->getSpelling() +
+            ": expected a non-negative integer compression level, but got '" +
+            levelStr + "'");
+    }
     if (Expected<GlobPattern> pat = GlobPattern::create(fields[0])) {
-      config->compressSections.emplace_back(std::move(*pat), type);
+      config->compressSections.emplace_back(std::move(*pat), type, level);
     } else {
       error(arg->getSpelling() + ": " + toString(pat.takeError()));
       continue;

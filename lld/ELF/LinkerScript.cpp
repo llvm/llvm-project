@@ -44,7 +44,7 @@ using namespace llvm::support::endian;
 using namespace lld;
 using namespace lld::elf;
 
-std::unique_ptr<LinkerScript> elf::script;
+ScriptWrapper elf::script;
 
 static bool isSectionPrefix(StringRef prefix, StringRef name) {
   return name.consume_front(prefix) && (name.empty() || name[0] == '.');
@@ -801,7 +801,7 @@ static OutputDesc *addInputSec(StringMap<TinyPtrVector<OutputSection *>> &map,
       auto *firstIsec = cast<InputSectionBase>(
           cast<InputSectionDescription>(sec->commands[0])->sectionBases[0]);
       OutputSection *firstIsecOut =
-          firstIsec->flags & SHF_LINK_ORDER
+          (firstIsec->flags & SHF_LINK_ORDER)
               ? firstIsec->getLinkOrderDep()->getOutputSection()
               : nullptr;
       if (firstIsecOut != isec->getLinkOrderDep()->getOutputSection())
