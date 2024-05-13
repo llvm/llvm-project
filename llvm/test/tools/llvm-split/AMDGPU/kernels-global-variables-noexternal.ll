@@ -22,8 +22,8 @@
 ; CHECK2: define amdgpu_kernel void @B
 ; CHECK2-NOT: define
 
-@foo = private constant ptr undef
-@bar = internal constant ptr undef
+@foo = private constant ptr poison
+@bar = internal constant ptr poison
 
 define amdgpu_kernel void @A() {
   store i32 42, ptr @foo

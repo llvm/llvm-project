@@ -7,8 +7,8 @@
 ; The GVs should be copied in each partition as needed.
 
 ; CHECK0-NOT: define
-; CHECK0: @foo = hidden constant ptr undef
-; CHECK0: @bar = hidden constant ptr undef
+; CHECK0: @foo = hidden constant ptr poison
+; CHECK0: @bar = hidden constant ptr poison
 ; CHECK0: define amdgpu_kernel void @C
 ; CHECK0-NOT: define
 
@@ -24,8 +24,8 @@
 ; CHECK2: define amdgpu_kernel void @B
 ; CHECK2-NOT: define
 
-@foo = private constant ptr undef
-@bar = internal constant ptr undef
+@foo = private constant ptr poison
+@bar = internal constant ptr poison
 
 define amdgpu_kernel void @A() {
   store i32 42, ptr @foo

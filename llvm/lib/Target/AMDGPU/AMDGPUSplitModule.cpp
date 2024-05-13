@@ -100,6 +100,10 @@ static cl::opt<bool>
 using CostType = InstructionCost::CostType;
 using PartitionID = unsigned;
 
+static bool isEntryPoint(const Function *F) {
+  return AMDGPU::isEntryFunctionCC(F->getCallingConv());
+}
+
 static std::string getName(const Value &V) {
   static std::optional<bool> HideNames;
   if (!HideNames) {
@@ -176,9 +180,8 @@ public:
     sys::path::append(PathTemplate, LogDir, "Module-%%-%%-%%-%%-%%-%%-%%.txt");
     if (auto Err =
             sys::fs::createUniqueFile(PathTemplate.str(), Fd, RealPath)) {
-      std::string Msg =
-          "Failed to create log file at '" + LogDir + "': " + Err.message();
-      report_fatal_error(StringRef(Msg),
+      report_fatal_error("Failed to create log file at '" + Twine(LogDir) +
+                             "': " + Err.message(),
                          /*CrashDiag=*/false);
     }
 
@@ -232,7 +235,7 @@ calculateFunctionCosts(SplitModuleLogger &SML, const AMDGPUTargetMachine &TM,
       continue;
 
     CostType FnCost = 0;
-    auto TTI = TM.getTargetTransformInfo(Fn);
+    TargetTransformInfo TTI = TM.getTargetTransformInfo(Fn);
 
     for (auto &BB : Fn) {
       for (auto &I : BB) {
@@ -253,7 +256,7 @@ calculateFunctionCosts(SplitModuleLogger &SML, const AMDGPUTargetMachine &TM,
     assert((ModuleCost + FnCost) >= ModuleCost && "Overflow!");
     ModuleCost += FnCost;
 
-    if (AMDGPU::isKernelCC(&Fn))
+    if (isEntryPoint(&Fn))
       KernelCost += FnCost;
   }
 
@@ -279,7 +282,7 @@ calculateFunctionCosts(SplitModuleLogger &SML, const AMDGPUTargetMachine &TM,
 static void addAllIndirectCallDependencies(const Module &M,
                                            DenseSet<const Function *> &Fns) {
   for (const auto &Fn : M) {
-    if (!Fn.isDeclaration() && !AMDGPU::isEntryFunctionCC(Fn.getCallingConv()))
+    if (!Fn.isDeclaration() && !isEntryPoint(&Fn))
       Fns.insert(&Fn);
   }
 }
@@ -335,7 +338,7 @@ static void addAllDependencies(SplitModuleLogger &SML, const CallGraph &CG,
         return;
       }
 
-      assert(!AMDGPU::isKernelCC(Callee));
+      assert(!isEntryPoint(Callee));
       if (Callee->isDeclaration())
         continue;
 
@@ -386,7 +389,7 @@ static float calculateOverlap(const DenseSet<const Function *> &A,
                               const DenseSet<const Function *> &B) {
   DenseSet<const Function *> Total;
   for (const auto *F : A) {
-    if (!AMDGPU::isKernelCC(F))
+    if (!isEntryPoint(F))
       Total.insert(F);
   }
 
@@ -395,7 +398,7 @@ static float calculateOverlap(const DenseSet<const Function *> &A,
 
   unsigned NumCommon = 0;
   for (const auto *F : B) {
-    if (AMDGPU::isKernelCC(F))
+    if (isEntryPoint(F))
       continue;
 
     auto [It, Inserted] = Total.insert(F);
@@ -554,13 +557,13 @@ doPartitioning(SplitModuleLogger &SML, Module &M, unsigned NumParts,
   // P0.
   DenseSet<const Function *> AllFunctions;
   for (const auto &[Idx, Part] : enumerate(Partitions)) {
-    [[maybe_unused]] CostType Cost = 0;
+    CostType Cost = 0;
     for (auto *Fn : Part) {
       // external linkage functions should exclusively be in the first partition
       // at this stage. In theory, we should only ever see external linkage
       // functions here if they're kernels, or if they've been added due to a
       // kernel using indirect calls somewhere in its CallGraph.
-      assert(Idx == 0 || (!Fn->hasExternalLinkage() || AMDGPU::isKernelCC(Fn)));
+      assert(Idx == 0 || (!Fn->hasExternalLinkage() || isEntryPoint(Fn)));
       Cost += FnCosts.at(Fn);
     }
     SML << "P" << Idx << " has a total cost of " << Cost << " ("
@@ -646,7 +649,7 @@ void llvm::splitAMDGPUModule(
   // of the kernel so the biggest kernels are seen first.
   SmallVector<KernelWithDependencies> WorkList;
   for (auto &Fn : M) {
-    if (AMDGPU::isKernelCC(&Fn) && !Fn.isDeclaration())
+    if (isEntryPoint(&Fn) && !Fn.isDeclaration())
       WorkList.emplace_back(SML, CG, FnCosts, &Fn);
   }
   sort(WorkList, [&](auto &A, auto &B) {
@@ -695,7 +698,7 @@ void llvm::splitAMDGPUModule(
 // Check we don't import an external linkage function in any
 // partition other than P0.
 #ifndef NDEBUG
-            if (Fn->hasExternalLinkage() && !AMDGPU::isKernelCC(Fn)) {
+            if (Fn->hasExternalLinkage() && !isEntryPoint(Fn)) {
               assert((I == 0) == FnsInPart.contains(Fn));
             }
 #endif
@@ -708,8 +711,6 @@ void llvm::splitAMDGPUModule(
           // Everything else goes in the first partition.
           return I == 0;
         }));
-    if (I != 0)
-      MPart->setModuleInlineAsm("");
 
     // Clean-up conservatively imported GVs without any users.
     for (auto &GV : make_early_inc_range(MPart->globals())) {
@@ -721,7 +722,7 @@ void llvm::splitAMDGPUModule(
     for (auto &Cur : *MPart) {
       if (!Cur.isDeclaration()) {
         ++NumAllFns;
-        if (AMDGPU::isKernelCC(&Cur))
+        if (isEntryPoint(&Cur))
           ++NumKernels;
       }
     }

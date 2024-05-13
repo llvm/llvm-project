@@ -50,7 +50,7 @@
 ; NOLARGEKERNELS-CHECK2: define amdgpu_kernel void @A
 
 define internal void @large2() {
-  store i32 42, ptr undef
+  store volatile i32 42, ptr null
   call void @large2()
   ret void
 }
