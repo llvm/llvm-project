@@ -72,11 +72,6 @@ endforeach()
 target_compile_options(omptarget PUBLIC ${offload_compile_flags})
 target_link_options(omptarget PUBLIC ${offload_link_flags})
 
-list(TRANSFORM LIBOMPTARGET_PLUGINS_TO_LOAD PREPEND "\"libomptarget.rtl.")
-list(TRANSFORM LIBOMPTARGET_PLUGINS_TO_LOAD APPEND "\"")
-list(JOIN LIBOMPTARGET_PLUGINS_TO_LOAD "," ENABLED_OFFLOAD_PLUGINS)
-target_compile_definitions(omptarget PRIVATE ENABLED_OFFLOAD_PLUGINS=${ENABLED_OFFLOAD_PLUGINS})
-
 # libomptarget.so needs to be aware of where the plugins live as they
 # are now separated in the build directory.
 set_target_properties(omptarget PROPERTIES
