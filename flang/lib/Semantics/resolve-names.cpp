@@ -3797,6 +3797,19 @@ bool SubprogramVisitor::Pre(const parser::PrefixSpec::Attributes &attrs) {
         subp->set_cudaSubprogramAttrs(attr);
       }
     }
+    if (auto attrs{subp->cudaSubprogramAttrs()}) {
+      if (*attrs == common::CUDASubprogramAttrs::Global ||
+          *attrs == common::CUDASubprogramAttrs::Device) {
+        // Implicitly USE the cudadevice module by copying its symbols in the
+        // current scope.
+        const Scope &scope{context().GetCUDADeviceScope()};
+        for (auto sym : scope.GetSymbols()) {
+          if (!currScope().FindSymbol(sym->name())) {
+            currScope().CopySymbol(sym);
+          }
+        }
+      }
+    }
   }
   return false;
 }
