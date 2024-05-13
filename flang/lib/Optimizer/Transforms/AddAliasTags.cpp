@@ -105,8 +105,21 @@ static std::string getFuncArgName(mlir::Value arg) {
          "arg is a function argument");
   mlir::FunctionOpInterface func = mlir::dyn_cast<mlir::FunctionOpInterface>(
       blockArg.getOwner()->getParentOp());
-  mlir::StringAttr attr = func.getArgAttrOfType<mlir::StringAttr>(
-      blockArg.getArgNumber(), "fir.bindc_name");
+  mlir::StringAttr attr;
+  if (func) {
+    attr = func.getArgAttrOfType<mlir::StringAttr>(blockArg.getArgNumber(),
+                                                   "fir.bindc_name");
+  } else {
+    if (auto targetOp = mlir::dyn_cast<mlir::omp::TargetOp>(
+            blockArg.getOwner()->getParentOp())) {
+      if (auto mapOp = mlir::dyn_cast<mlir::omp::MapInfoOp>(
+              targetOp.getMapOperands()[blockArg.getArgNumber()]
+                  .getDefiningOp())) {
+        attr = mapOp.getNameAttr();
+      }
+    }
+  }
+
   if (!attr)
     return "";
   return attr.str();
