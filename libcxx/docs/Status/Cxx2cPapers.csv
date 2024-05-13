@@ -59,7 +59,7 @@
 "`P2248R8 <https://wg21.link/P2248R8>`__","LWG","Enabling list-initialization for algorithms","Tokyo March 2024","","",""
 "`P2810R4 <https://wg21.link/P2810R4>`__","LWG","``is_debugger_present`` ``is_replaceable``","Tokyo March 2024","","",""
 "`P1068R11 <https://wg21.link/P1068R11>`__","LWG","Vector API for random number generation","Tokyo March 2024","","",""
-"`P2944R3 <https://wg21.link/P2944R3>`__","LWG","Comparisons for ``reference_wrapper``","Tokyo March 2024","","",""
+"`P2944R3 <https://wg21.link/P2944R3>`__","LWG","Comparisons for ``reference_wrapper``","Tokyo March 2024","|Partial| [#note-P2944R3]_","19.0",""
 "`P2642R6 <https://wg21.link/P2642R6>`__","LWG","Padded ``mdspan`` layouts","Tokyo March 2024","","",""
 "`P3029R1 <https://wg21.link/P3029R1>`__","LWG","Better ``mdspan``'s CTAD","Tokyo March 2024","|Complete|","19.0",""
 "","","","","","",""
