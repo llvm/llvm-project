@@ -101,18 +101,19 @@ static long fpathconfig(const struct fstatfs &s, int name) {
   case _PC_REC_MAX_XFER_SIZE:
   case _PC_SYMLINK_MAX:
   case _PC_SYNC_IO:
+    return -1;
+
   default:
+    errno = EINVAL;
     return -1;
   }
 }
 
 LLVM_LIBC_FUNCTION(long, fpathconf, (int fd, int name)) {
   struct fstatfs sb;
-  cpp::optional<LinuxStatFs> result = linux_fstatfs(fd);
-  if (!result.has_value()) {
-    return -1;
-  }
-  return fpathconfig(sb, name);
+  if (cpp::optional<LinuxStatFs> result = linux_fstatfs(fd))
+    return fpathconfig(sb, name);
+  return -1;
 }
 
 } // namespace LIBC_NAMESPACE

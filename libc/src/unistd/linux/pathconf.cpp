@@ -105,17 +105,19 @@ static long pathconfig(const struct statfs &s, int name) {
   case _PC_REC_MAX_XFER_SIZE:
   case _PC_SYMLINK_MAX:
   case _PC_SYNC_IO:
+    return -1;
+
   default:
+    errno = EINVAL;
     return -1;
   }
 }
 
 LLVM_LIBC_FUNCTION(long, pathconf, (char *path, int name)) {
-  cpp::optional<LinuxStatFs> result = linux_statfs(const char *path);
-  if (!result.has_value()) {
-    return -1;
+  if (cpp::optional<LinuxStatFs> result = linux_statfs(const char *path);) {
+    return pathconfig(result.value(), name);
   }
-  return pathconfig(result.value(), name);
+  return -1;
 }
 
 } // namespace LIBC_NAMESPACE
