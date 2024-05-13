@@ -93,7 +93,7 @@ Assertion categories
 ====================
 
 Inside the library, individual assertions are grouped into different
-_categories_. Each hardening mode enables a different set of assertion
+*categories*. Each hardening mode enables a different set of assertion
 categories; categories provide an additional layer of abstraction that makes it
 easier to reason about the high-level semantics of a hardening mode.
 
@@ -170,7 +170,7 @@ Mapping between the hardening modes and the assertion categories
     :header-rows: 1
     :widths: auto
 
-    * -
+    * - Category name
       - ``fast``
       - ``extensive``
       - ``debug``
@@ -238,6 +238,7 @@ immediately traps the program. This is the safest approach that also minimizes
 the code size penalty as the failure handler maps to a single instruction. The
 downside is that the failure provides no additional details other than the stack
 trace (which might also be affected by optimizations).
+
 TODO(hardening): describe ``__builtin_verbose_trap`` once we can use it.
 
 In the ``debug`` mode, an assertion failure terminates the program in an
@@ -293,8 +294,7 @@ Vendors can use the following ABI options to enable additional hardening checks:
 
   Supported containers:
   - ``span``;
-  - ``string_view``;
-  - ``array``.
+  - ``string_view``.
 
 ABI tags
 --------
@@ -310,13 +310,14 @@ a binary and determine whether it was built with hardening enabled.
   informational purposes only.
 
 The first character of an ABI tag encodes the hardening mode:
+
 - ``f`` -- [f]ast mode;
 - ``s`` -- extensive ("[s]afe") mode;
 - ``d`` -- [d]ebug mode;
 - ``n`` -- [n]one mode.
 
-Hardened containers
-===================
+Hardened containers status
+==========================
 
 .. list-table::
     :header-rows: 1
@@ -344,7 +345,7 @@ Hardened containers
       - ✅
       - ❌
     * - ``forward_list``
-      - ✅
+      - ❌
       - ❌
     * - ``deque``
       - ✅
@@ -372,5 +373,3 @@ Further reading
 
 - ``_Hardening RFC <https://discourse.llvm.org/t/rfc-hardening-in-libc/73925>``:
   contains some of the design rationale.
-
-:ref:`hardening mode <using-hardening-modes>`
