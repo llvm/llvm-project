@@ -5,6 +5,7 @@
 load("@bazel_skylib//lib:selects.bzl", "selects")
 load("@bazel_skylib//rules:common_settings.bzl", "bool_flag")
 load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
+load("@build_bazel_apple_support//rules:apple_genrule.bzl", "apple_genrule")
 load("//:vars.bzl", "LLVM_VERSION_MAJOR", "LLVM_VERSION_MINOR", "LLVM_VERSION_PATCH", "LLVM_VERSION_SUFFIX", "PACKAGE_VERSION")
 load("//lldb/source/Plugins:plugin_config.bzl", "DEFAULT_PLUGINS", "DEFAULT_SCRIPT_PLUGINS", "OBJCPP_COPTS")
 load("//mlir:tblgen.bzl", "gentbl_cc_library", "td_library")
@@ -183,18 +184,17 @@ cc_binary(
     ],
 )
 
-gentbl_cc_library(
+py_binary(
+    name = "generate-sbapi-dwarf-enum",
+    srcs = ["scripts/generate-sbapi-dwarf-enum.py"],
+)
+
+genrule(
     name = "lldb-sbapi-dwarf-enums",
-    strip_include_prefix = "include",
-    tbl_outs = [
-        (
-            ["-gen-lldb-sbapi-dwarf-enum"],
-            "include/lldb/API/SBLanguages.h",
-        ),
-    ],
-    tblgen = ":lldb-tblgen",
-    td_file = "//llvm:include/llvm/BinaryFormat/Dwarf.def",
-    deps = [],
+    srcs = ["//llvm:include/llvm/BinaryFormat/Dwarf.def"],
+    outs = ["include/lldb/API/SBLanguages.h"],
+    cmd = "$(location :generate-sbapi-dwarf-enum) $(location //llvm:include/llvm/BinaryFormat/Dwarf.def) --output $@",
+    tools = [":generate-sbapi-dwarf-enum"],
 )
 
 cc_library(
@@ -203,10 +203,9 @@ cc_library(
         "source/API/**/*.cpp",
         "source/API/**/*.h",
     ]),
-    hdrs = glob(["include/lldb/API/**/*.h"]),
+    hdrs = glob(["include/lldb/API/**/*.h"]) + [":lldb-sbapi-dwarf-enums"],
     strip_include_prefix = "include",
     deps = [
-        ":lldb-sbapi-dwarf-enums",
         ":Breakpoint",
         ":Commands",
         ":Core",
@@ -284,10 +283,9 @@ cc_library(
 cc_library(
     name = "Expression",
     srcs = glob(["source/Expression/**/*.cpp"]),
-    hdrs = glob(["include/lldb/Expression/**/*.h"]),
+    hdrs = glob(["include/lldb/Expression/**/*.h"]) + [":lldb-sbapi-dwarf-enums"],
     strip_include_prefix = "include",
     deps = [
-        ":lldb-sbapi-dwarf-enums",
         ":Core",
         ":Headers",
         ":Host",
@@ -361,12 +359,9 @@ cc_library(
 
 cc_library(
     name = "ExpressionHeaders",
-    hdrs = glob(["include/lldb/Expression/**/*.h"]),
+    hdrs = glob(["include/lldb/Expression/**/*.h"]) + [":lldb-sbapi-dwarf-enums"],
     strip_include_prefix = "include",
-    deps = [
-        ":lldb-sbapi-dwarf-enums",
-        "//llvm:ExecutionEngine"
-    ],
+    deps = ["//llvm:ExecutionEngine"],
 )
 
 cc_library(
@@ -500,8 +495,12 @@ objc_library(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [
+        ":Headers",
         ":HostMacOSXHeaders",
         ":HostMacOSXPrivateHeaders",
+        ":Utility",
+        "//llvm:Support",
+        "//llvm:TargetParser",
     ],
 )
 
@@ -567,7 +566,10 @@ cc_library(
         "//llvm:TargetParser",
         "//llvm:config",
     ] + select({
-        "@platforms//os:macos": [":HostMacOSXObjCXX"],
+        "@platforms//os:macos": [
+            ":HostMacOSXObjCXX",
+            ":HostMacOSXPrivateHeaders",
+        ],
         "//conditions:default": [],
     }),
 )
@@ -727,37 +729,64 @@ cc_library(
     ],
 )
 
-cc_library(
-    name = "liblldb.static",
+genrule(
+    name = "gen_exports_file_linux",
+    srcs = ["//lldb:source/API/liblldb-private.exports"],
+    outs = ["exports_linux.txt"],
+    cmd = """
+cat > $(OUTS) <<EOF
+{
+  global:
+    $$(sed 's/$$/;/g' $(SRCS))
+};
+EOF
+""",
+)
+
+genrule(
+    name = "gen_exports_file_macos",
+    srcs = ["//lldb:source/API/liblldb-private.exports"],
+    outs = ["exports_macos.txt"],
+    cmd = "sed 's/^/_/g' $(SRCS) > $(OUTS)",
+)
+
+# Create a shared library using linkshared=True for liblldb. This uses
+# cc_binary instead of cc_shared_library since the latter expects you to
+# re-export all transitive dependencies vs them being relinked into other
+# binaries.
+cc_binary(
+    name = "lldb{}".format(PACKAGE_VERSION),
+    additional_linker_inputs = select({
+        "@platforms//os:linux": [
+            ":gen_exports_file_linux",
+        ],
+        "@platforms//os:macos": [
+            ":gen_exports_file_macos",
+        ],
+        "//conditions:default": [],
+    }),
+    linkopts = select({
+        "@platforms//os:linux": [
+            "-Wl,--export-dynamic-symbol-list=$(location :gen_exports_file_linux)",
+        ],
+        "@platforms//os:macos": [
+            "-Wl,-exported_symbols_list,$(location :gen_exports_file_macos)",
+        ],
+        "//conditions:default": [],
+    }),
+    linkshared = True,
     deps = [
         ":API",
         ":Interpreter",
     ],
 )
 
-cc_shared_library(
-    name = "liblldb",
-    # TODO: Remove once fixed https://github.com/bazelbuild/bazel/issues/21893
-    additional_linker_inputs = select({
-        "@platforms//os:macos": [
-            ":HostMacOSXObjCXX",
-            "//lldb/source/Plugins:PluginPlatformMacOSXObjCXX",
-        ],
-        "//conditions:default": [],
-    }),
-    shared_lib_name = select({
-        "@platforms//os:macos": "liblldb{}.dylib".format(PACKAGE_VERSION),
-        "@platforms//os:linux": "liblldb{}.so".format(PACKAGE_VERSION),
-    }),
-    # TODO: Remove once fixed https://github.com/bazelbuild/bazel/issues/21893
-    user_link_flags = select({
-        "@platforms//os:macos": [
-            "$(location :HostMacOSXObjCXX)",
-            "$(location //lldb/source/Plugins:PluginPlatformMacOSXObjCXX)",
-        ],
-        "//conditions:default": [],
-    }),
-    deps = [":liblldb.static"],
+# cc_binary targets using linkshared=True to build a shared library cannot be
+# imported directly and instead need to be referenced indirectly through
+# cc_import
+cc_import(
+    name = "liblldb.wrapper",
+    shared_library = "lldb{}".format(PACKAGE_VERSION),
 )
 
 gentbl_cc_library(
@@ -772,28 +801,24 @@ gentbl_cc_library(
     deps = ["//llvm:OptParserTdFiles"],
 )
 
+alias(
+    name = "gdb-server",
+    actual = select({
+        "@platforms//os:macos": ":debugserver",
+        "//conditions:default": ":lldb-server",
+    }),
+)
+
 cc_binary(
     name = "lldb",
     srcs = glob([
         "tools/driver/*.cpp",
         "tools/driver/*.h",
     ]),
-    data = [
-        ":lldb-argdumper",
-    ] + select({
-        "@platforms//os:macos": [
-            ":debugserver",
-            ":lldb-server",
-        ],
-        "@platforms//os:linux": [
-            ":lldb-server",
-        ],
-        "//conditions:default": [],
-    }),
     deps = [
         ":APIHeaders",
         ":Host",
-        ":liblldb.static",
+        ":liblldb.wrapper",
         ":lldb_options_inc_gen",
         "//llvm:Option",
         "//llvm:Support",
@@ -868,7 +893,7 @@ expand_template(
 )
 
 cc_binary(
-    name = "debugserver",
+    name = "debugserver_unsigned",
     srcs = [
         "tools/debugserver/source/debugserver.cpp",
         ":debugserver_version_gen",
@@ -879,7 +904,26 @@ cc_binary(
         "@platforms//os:macos": [],
         "//conditions:default": ["@platforms//:incompatible"],
     }),
-    deps = [":DebugServerCommon"],
+    deps = [
+        ":DebugServerCommon",
+        ":DebugServerCommonHeaders",
+        ":DebugServerCommonMacOSXHeaders",
+    ],
+)
+
+apple_genrule(
+    name = "debugserver_signed",
+    srcs = [":debugserver_unsigned"],
+    outs = ["debugserver"],
+    cmd = "cp $(SRCS) $(OUTS) && xcrun codesign -f -s - --entitlements $(location tools/debugserver/resources/debugserver-macosx-entitlements.plist) $(OUTS)",
+    tags = ["nobuildkite"],
+    target_compatible_with = select({
+        "@platforms//os:macos": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    tools = [
+        "tools/debugserver/resources/debugserver-macosx-entitlements.plist",
+    ],
 )
 
 cc_binary(

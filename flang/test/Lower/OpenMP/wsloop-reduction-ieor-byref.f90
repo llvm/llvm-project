@@ -22,7 +22,7 @@
 !CHECK-SAME: %[[Y_BOX:.*]]: !fir.box<!fir.array<?xi32>>
 !CHECK: %[[X_REF:.*]] = fir.alloca i32 {bindc_name = "x", uniq_name = "_QFreduction_ieorEx"}
 !CHECK: %[[X_DECL:.*]]:2 = hlfir.declare %[[X_REF]] {uniq_name = "_QFreduction_ieorEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-!CHECK: %[[Y_DECL:.*]]:2 = hlfir.declare %[[Y_BOX]] {uniq_name = "_QFreduction_ieorEy"} : (!fir.box<!fir.array<?xi32>>) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
+!CHECK: %[[Y_DECL:.*]]:2 = hlfir.declare %[[Y_BOX]] dummy_scope %{{[0-9]+}} {uniq_name = "_QFreduction_ieorEy"} : (!fir.box<!fir.array<?xi32>>, !fir.dscope) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
 
 
 !CHECK: omp.parallel

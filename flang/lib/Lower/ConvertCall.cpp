@@ -1184,12 +1184,15 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
   // actual argument shape information. A descriptor with the dummy shape
   // information will be created later when all actual arguments are ready.
   mlir::Type dummyTypeWithActualRank = dummyType;
-  if (auto baseBoxDummy = mlir::dyn_cast<fir::BaseBoxType>(dummyType))
+  if (auto baseBoxDummy = mlir::dyn_cast<fir::BaseBoxType>(dummyType)) {
     if (baseBoxDummy.isAssumedRank() ||
         arg.testTKR(Fortran::common::IgnoreTKR::Rank) ||
-        arg.isSequenceAssociatedDescriptor())
-      dummyTypeWithActualRank =
-          baseBoxDummy.getBoxTypeWithNewShape(actual.getType());
+        arg.isSequenceAssociatedDescriptor()) {
+      mlir::Type actualTy =
+          hlfir::getFortranElementOrSequenceType(actual.getType());
+      dummyTypeWithActualRank = baseBoxDummy.getBoxTypeWithNewShape(actualTy);
+    }
+  }
   // Preserve the actual type in the argument preparation in case IgnoreTKR(t)
   // is set (descriptors must be created with the actual type in this case, and
   // copy-in/copy-out should be driven by the contiguity with regard to the

@@ -1,5 +1,5 @@
-// RUN: %clang_cc1             -triple aarch64 -target-feature +tme -S -emit-llvm %s -o - | FileCheck %s
-// RUN: %clang_cc1 -DUSE_ACLE  -triple aarch64 -target-feature +tme -S -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1             -triple aarch64 -target-feature +tme -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -DUSE_ACLE  -triple aarch64 -target-feature +tme -emit-llvm %s -o - | FileCheck %s
 
 #define A -1
 constexpr int f() { return 65536; }

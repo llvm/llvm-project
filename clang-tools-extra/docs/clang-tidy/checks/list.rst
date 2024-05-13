@@ -120,7 +120,7 @@ Clang-Tidy Checks
    :doc:`bugprone-posix-return <bugprone/posix-return>`, "Yes"
    :doc:`bugprone-redundant-branch-condition <bugprone/redundant-branch-condition>`, "Yes"
    :doc:`bugprone-reserved-identifier <bugprone/reserved-identifier>`, "Yes"
-   :doc:`bugprone-return-const-ref-from-parameter <bugprone/return-const-ref-from-parameter>`
+   :doc:`bugprone-return-const-ref-from-parameter <bugprone/return-const-ref-from-parameter>`,
    :doc:`bugprone-shared-ptr-array-mismatch <bugprone/shared-ptr-array-mismatch>`, "Yes"
    :doc:`bugprone-signal-handler <bugprone/signal-handler>`,
    :doc:`bugprone-signed-char-misuse <bugprone/signed-char-misuse>`,
@@ -395,8 +395,10 @@ Clang-Tidy Checks
    :doc:`readability-use-std-min-max <readability/use-std-min-max>`, "Yes"
    :doc:`zircon-temporary-objects <zircon/temporary-objects>`,
 
+Check aliases
+-------------
 
-.. csv-table:: Aliases..
+.. csv-table::
    :header: "Name", "Redirect", "Offers fixes"
 
    :doc:`bugprone-narrowing-conversions <bugprone/narrowing-conversions>`, :doc:`cppcoreguidelines-narrowing-conversions <cppcoreguidelines/narrowing-conversions>`,
@@ -413,6 +415,7 @@ Clang-Tidy Checks
    :doc:`cert-exp42-c <cert/exp42-c>`, :doc:`bugprone-suspicious-memory-comparison <bugprone/suspicious-memory-comparison>`,
    :doc:`cert-fio38-c <cert/fio38-c>`, :doc:`misc-non-copyable-objects <misc/non-copyable-objects>`,
    :doc:`cert-flp37-c <cert/flp37-c>`, :doc:`bugprone-suspicious-memory-comparison <bugprone/suspicious-memory-comparison>`,
+   :doc:`cert-int09-c <cert/int09-c>`, :doc:`readability-enum-initial-value <readability/enum-initial-value>`, "Yes"
    :doc:`cert-msc24-c <cert/msc24-c>`, :doc:`bugprone-unsafe-functions <bugprone/unsafe-functions>`,
    :doc:`cert-msc30-c <cert/msc30-c>`, :doc:`cert-msc50-cpp <cert/msc50-cpp>`,
    :doc:`cert-msc32-c <cert/msc32-c>`, :doc:`cert-msc51-cpp <cert/msc51-cpp>`,

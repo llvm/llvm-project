@@ -4048,27 +4048,10 @@ void SubprogramVisitor::CreateEntry(
       attrs = extant->attrs();
     }
   }
-  bool badResultName{false};
   std::optional<SourceName> distinctResultName;
   if (suffix && suffix->resultName &&
       suffix->resultName->source != entryName.source) {
     distinctResultName = suffix->resultName->source;
-    const parser::Name &resultName{*suffix->resultName};
-    if (resultName.source == subprogram.name()) { // C1574
-      Say2(resultName.source,
-          "RESULT(%s) may not have the same name as the function"_err_en_US,
-          subprogram, "Containing function"_en_US);
-      badResultName = true;
-    } else if (const Symbol * extant{FindSymbol(outer, resultName)}) { // C1574
-      if (const auto *details{extant->detailsIf<SubprogramDetails>()}) {
-        if (details->entryScope() == &currScope()) {
-          Say2(resultName.source,
-              "RESULT(%s) may not have the same name as an ENTRY in the function"_err_en_US,
-              extant->name(), "Conflicting ENTRY"_en_US);
-          badResultName = true;
-        }
-      }
-    }
   }
   if (outer.IsModule() && !attrs.test(Attr::PRIVATE)) {
     attrs.set(Attr::PUBLIC);
@@ -4104,17 +4087,24 @@ void SubprogramVisitor::CreateEntry(
     EntityDetails resultDetails;
     resultDetails.set_funcResult(true);
     if (distinctResultName) {
-      if (!badResultName) {
-        // RESULT(x) can be the same explicitly-named RESULT(x) as
-        // the enclosing function or another ENTRY.
-        if (auto iter{currScope().find(suffix->resultName->source)};
-            iter != currScope().end()) {
-          result = &*iter->second;
-        }
-        if (!result) {
-          result = &MakeSymbol(
-              *distinctResultName, Attrs{}, std::move(resultDetails));
-        }
+      // An explicit RESULT() can also be an explicit RESULT()
+      // of the function or another ENTRY.
+      if (auto iter{currScope().find(suffix->resultName->source)};
+          iter != currScope().end()) {
+        result = &*iter->second;
+      }
+      if (!result) {
+        result =
+            &MakeSymbol(*distinctResultName, Attrs{}, std::move(resultDetails));
+      } else if (!result->has<EntityDetails>()) {
+        Say(*distinctResultName,
+            "ENTRY cannot have RESULT(%s) that is not a variable"_err_en_US,
+            *distinctResultName)
+            .Attach(result->name(), "Existing declaration of '%s'"_en_US,
+                result->name());
+        result = nullptr;
+      }
+      if (result) {
         Resolve(*suffix->resultName, *result);
       }
     } else {
@@ -4124,8 +4114,7 @@ void SubprogramVisitor::CreateEntry(
       entryDetails.set_result(*result);
     }
   }
-  if (subpFlag == Symbol::Flag::Subroutine ||
-      (distinctResultName && !badResultName)) {
+  if (subpFlag == Symbol::Flag::Subroutine || distinctResultName) {
     Symbol &assoc{MakeSymbol(entryName.source)};
     assoc.set_details(HostAssocDetails{*entrySymbol});
     assoc.set(Symbol::Flag::Subroutine);
@@ -5550,8 +5539,7 @@ void DeclarationVisitor::Post(const parser::TypeParamDefStmt &x) {
       SetType(name, *type);
       if (auto &init{
               std::get<std::optional<parser::ScalarIntConstantExpr>>(decl.t)}) {
-        if (auto maybeExpr{EvaluateNonPointerInitializer(
-                *symbol, *init, init->thing.thing.thing.value().source)}) {
+        if (auto maybeExpr{AnalyzeExpr(context(), *init)}) {
           if (auto *intExpr{std::get_if<SomeIntExpr>(&maybeExpr->u)}) {
             symbol->get<TypeParamDetails>().set_init(std::move(*intExpr));
           }
@@ -6556,6 +6544,7 @@ Symbol *DeclarationVisitor::DeclareStatementEntity(
       return nullptr;
     }
     name.symbol = nullptr;
+    // F'2023 19.4 p5 ambiguous rule about outer declarations
     declTypeSpec = prev->GetType();
   }
   Symbol &symbol{DeclareEntity<ObjectEntityDetails>(name, {})};
@@ -6574,9 +6563,7 @@ Symbol *DeclarationVisitor::DeclareStatementEntity(
   } else {
     ApplyImplicitRules(symbol);
   }
-  Symbol *result{Resolve(name, &symbol)};
-  AnalyzeExpr(context(), doVar); // enforce INTEGER type
-  return result;
+  return Resolve(name, &symbol);
 }
 
 // Set the type of an entity or report an error.

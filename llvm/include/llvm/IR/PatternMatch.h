@@ -354,7 +354,8 @@ template <int64_t Val> inline constantint_match<Val> m_ConstantInt() {
 /// is true.
 template <typename Predicate, typename ConstantVal, bool AllowPoison>
 struct cstval_pred_ty : public Predicate {
-  template <typename ITy> bool match(ITy *V) {
+  const Constant **Res = nullptr;
+  template <typename ITy> bool match_impl(ITy *V) {
     if (const auto *CV = dyn_cast<ConstantVal>(V))
       return this->isValue(CV->getValue());
     if (const auto *VTy = dyn_cast<VectorType>(V->getType())) {
@@ -384,6 +385,15 @@ struct cstval_pred_ty : public Predicate {
         }
         return HasNonPoisonElements;
       }
+    }
+    return false;
+  }
+
+  template <typename ITy> bool match(ITy *V) {
+    if (this->match_impl(V)) {
+      if (Res)
+        *Res = cast<Constant>(V);
+      return true;
     }
     return false;
   }
@@ -459,6 +469,35 @@ template <typename Predicate> struct apf_pred_ty : public Predicate {
 // undef values.
 //
 ///////////////////////////////////////////////////////////////////////////////
+
+template <typename APTy> struct custom_checkfn {
+  function_ref<bool(const APTy &)> CheckFn;
+  bool isValue(const APTy &C) { return CheckFn(C); }
+};
+
+/// Match an integer or vector where CheckFn(ele) for each element is true.
+/// For vectors, poison elements are assumed to match.
+inline cst_pred_ty<custom_checkfn<APInt>>
+m_CheckedInt(function_ref<bool(const APInt &)> CheckFn) {
+  return cst_pred_ty<custom_checkfn<APInt>>{{CheckFn}};
+}
+
+inline cst_pred_ty<custom_checkfn<APInt>>
+m_CheckedInt(const Constant *&V, function_ref<bool(const APInt &)> CheckFn) {
+  return cst_pred_ty<custom_checkfn<APInt>>{{CheckFn}, &V};
+}
+
+/// Match a float or vector where CheckFn(ele) for each element is true.
+/// For vectors, poison elements are assumed to match.
+inline cstfp_pred_ty<custom_checkfn<APFloat>>
+m_CheckedFp(function_ref<bool(const APFloat &)> CheckFn) {
+  return cstfp_pred_ty<custom_checkfn<APFloat>>{{CheckFn}};
+}
+
+inline cstfp_pred_ty<custom_checkfn<APFloat>>
+m_CheckedFp(const Constant *&V, function_ref<bool(const APFloat &)> CheckFn) {
+  return cstfp_pred_ty<custom_checkfn<APFloat>>{{CheckFn}, &V};
+}
 
 struct is_any_apint {
   bool isValue(const APInt &C) { return true; }
@@ -1839,6 +1878,19 @@ template <typename Op_t> struct NNegZExt_match {
   }
 };
 
+template <typename Op_t, unsigned WrapFlags = 0> struct NoWrapTrunc_match {
+  Op_t Op;
+
+  NoWrapTrunc_match(const Op_t &OpMatch) : Op(OpMatch) {}
+
+  template <typename OpTy> bool match(OpTy *V) {
+    if (auto *I = dyn_cast<TruncInst>(V))
+      return (I->getNoWrapKind() & WrapFlags) == WrapFlags &&
+             Op.match(I->getOperand(0));
+    return false;
+  }
+};
+
 /// Matches BitCast.
 template <typename OpTy>
 inline CastOperator_match<OpTy, Instruction::BitCast>
@@ -1898,6 +1950,20 @@ m_IntToPtr(const OpTy &Op) {
 template <typename OpTy>
 inline CastOperator_match<OpTy, Instruction::Trunc> m_Trunc(const OpTy &Op) {
   return CastOperator_match<OpTy, Instruction::Trunc>(Op);
+}
+
+/// Matches trunc nuw.
+template <typename OpTy>
+inline NoWrapTrunc_match<OpTy, TruncInst::NoUnsignedWrap>
+m_NUWTrunc(const OpTy &Op) {
+  return NoWrapTrunc_match<OpTy, TruncInst::NoUnsignedWrap>(Op);
+}
+
+/// Matches trunc nsw.
+template <typename OpTy>
+inline NoWrapTrunc_match<OpTy, TruncInst::NoSignedWrap>
+m_NSWTrunc(const OpTy &Op) {
+  return NoWrapTrunc_match<OpTy, TruncInst::NoSignedWrap>(Op);
 }
 
 template <typename OpTy>
