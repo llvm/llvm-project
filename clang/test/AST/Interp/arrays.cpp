@@ -560,6 +560,11 @@ namespace LocalVLA {
      // both-note@-4 {{function parameter 'size' with unknown value}}
 #endif
   }
+
+  void f (unsigned int m) {
+    int e[2][m];
+    e[0][0] = 0;
+  }
 }
 
 char melchizedek[2];
