@@ -670,6 +670,11 @@ ExprResult Sema::ActOnCXXAssumeAttr(Stmt *St, const ParsedAttr &A,
   }
 
   auto *Assumption = A.getArgAsExpr(0);
+
+  if (DiagnoseUnexpandedParameterPack(Assumption)) {
+    return ExprError();
+  }
+
   if (Assumption->getDependence() == ExprDependence::None) {
     ExprResult Res = BuildCXXAssumeExpr(Assumption, A.getAttrName(), Range);
     if (Res.isInvalid())
