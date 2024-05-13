@@ -2,14 +2,21 @@
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
-# Run canonicalization, convert IR to LLVM and convert to format suitable to
-# verification against Alive2 https://alive2.llvm.org/ce/.
-# Example: `python verify_canon.py canonicalize.mlir func1 func2 func3`
+# This script is a helper to verify canonicalization patterns using Alive2
+# https://alive2.llvm.org/ce/.
+# It performs the following steps:
+# - Filters out the provided test functions.
+# - Runs the canonicalization pass on the remaining functions.
+# - Lowers both the original and the canonicalized functions to LLVM IR.
+# - Prints the canonicalized and the original function side-by-side in a format
+#   that can be copied into Alive2 for verification.
+# Example: `python verify_canon.py canonicalize.mlir -f func1 func2 func3`
 
 import subprocess
 import tempfile
 import sys
 from pathlib import Path
+from argparse import ArgumentParser
 
 
 def filter_funcs(ir, funcs):
@@ -39,13 +46,13 @@ def merge_ir(chunks):
 
 
 if __name__ == "__main__":
-    argv = sys.argv
-    if len(argv) < 2:
-        print(f"usage: {argv[0]} canonicalize.mlir [func1] [func2] ...")
-        exit(0)
+    parser = ArgumentParser()
+    parser.add_argument("file")
+    parser.add_argument("-f", "--func-names", nargs="+", default=[])
+    args = parser.parse_args()
 
-    file = argv[1]
-    funcs = argv[2:]
+    file = args.file
+    funcs = args.func_names
 
     orig_ir = Path(file).read_bytes()
     orig_ir = filter_funcs(orig_ir, funcs)
