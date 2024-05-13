@@ -14,6 +14,7 @@
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/MemRef/Utils/MemRefUtils.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
@@ -88,46 +89,6 @@ bool TransferOptimization::isReachable(Operation *start, Operation *dest) {
   return false;
 }
 
-/// Walk up the source chain until an operation that changes/defines the view of
-/// memory is found (i.e. skip operations that alias the entire view).
-Value skipFullyAliasingOperations(Value source) {
-  while (auto op = source.getDefiningOp()) {
-    if (auto subViewOp = dyn_cast<memref::SubViewOp>(op);
-        subViewOp && subViewOp.hasZeroOffset() && subViewOp.hasUnitStride()) {
-      // A `memref.subview` with an all zero offset, and all unit strides, still
-      // points to the same memory.
-      source = subViewOp.getSource();
-    } else if (auto castOp = dyn_cast<memref::CastOp>(op)) {
-      // A `memref.cast` still points to the same memory.
-      source = castOp.getSource();
-    } else {
-      return source;
-    }
-  }
-  return source;
-}
-
-/// Checks if two (memref) values are the same or are statically known to alias
-/// the same region of memory.
-bool isSameViewOrTrivialAlias(Value a, Value b) {
-  return skipFullyAliasingOperations(a) == skipFullyAliasingOperations(b);
-}
-
-/// Walk up the source chain until something an op other than a `memref.subview`
-/// or `memref.cast` is found.
-Value skipSubViewsAndCasts(Value source) {
-  while (auto op = source.getDefiningOp()) {
-    if (auto subView = dyn_cast<memref::SubViewOp>(op)) {
-      source = subView.getSource();
-    } else if (auto cast = dyn_cast<memref::CastOp>(op)) {
-      source = cast.getSource();
-    } else {
-      return source;
-    }
-  }
-  return source;
-}
-
 /// For transfer_write to overwrite fully another transfer_write must:
 /// 1. Access the same memref with the same indices and vector type.
 /// 2. Post-dominate the other transfer_write operation.
@@ -144,7 +105,8 @@ void TransferOptimization::deadStoreOp(vector::TransferWriteOp write) {
                     << "\n");
   llvm::SmallVector<Operation *, 8> blockingAccesses;
   Operation *firstOverwriteCandidate = nullptr;
-  Value source = skipSubViewsAndCasts(write.getSource());
+  Value source =
+      memref::skipSubViewsAndCasts(cast<MemrefValue>(write.getSource()));
   llvm::SmallVector<Operation *, 32> users(source.getUsers().begin(),
                                            source.getUsers().end());
   llvm::SmallDenseSet<Operation *, 32> processed;
@@ -163,7 +125,9 @@ void TransferOptimization::deadStoreOp(vector::TransferWriteOp write) {
       continue;
     if (auto nextWrite = dyn_cast<vector::TransferWriteOp>(user)) {
       // Check candidate that can override the store.
-      if (isSameViewOrTrivialAlias(nextWrite.getSource(), write.getSource()) &&
+      if (memref::isSameViewOrTrivialAlias(
+              cast<MemrefValue>(nextWrite.getSource()),
+              cast<MemrefValue>(write.getSource())) &&
           checkSameValueWAW(nextWrite, write) &&
           postDominators.postDominates(nextWrite, write)) {
         if (firstOverwriteCandidate == nullptr ||
@@ -228,7 +192,8 @@ void TransferOptimization::storeToLoadForwarding(vector::TransferReadOp read) {
                     << "\n");
   SmallVector<Operation *, 8> blockingWrites;
   vector::TransferWriteOp lastwrite = nullptr;
-  Value source = skipSubViewsAndCasts(read.getSource());
+  Value source =
+      memref::skipSubViewsAndCasts(cast<MemrefValue>(read.getSource()));
   llvm::SmallVector<Operation *, 32> users(source.getUsers().begin(),
                                            source.getUsers().end());
   llvm::SmallDenseSet<Operation *, 32> processed;
@@ -251,7 +216,9 @@ void TransferOptimization::storeToLoadForwarding(vector::TransferReadOp read) {
               cast<VectorTransferOpInterface>(read.getOperation()),
               /*testDynamicValueUsingBounds=*/true))
         continue;
-      if (isSameViewOrTrivialAlias(read.getSource(), write.getSource()) &&
+      if (memref::isSameViewOrTrivialAlias(
+              cast<MemrefValue>(read.getSource()),
+              cast<MemrefValue>(write.getSource())) &&
           dominators.dominates(write, read) && checkSameValueRAW(write, read)) {
         if (lastwrite == nullptr || dominators.dominates(lastwrite, write))
           lastwrite = write;
