@@ -109,7 +109,7 @@ class PolynomialBase {
 public:
   PolynomialBase() = delete;
 
-  explicit PolynomialBase(ArrayRef<Monomial> terms) : terms(terms){};
+  explicit PolynomialBase(ArrayRef<Monomial> terms) : terms(terms) {};
 
   explicit operator bool() const { return !terms.empty(); }
   bool operator==(const PolynomialBase &other) const {
