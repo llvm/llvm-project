@@ -1978,6 +1978,7 @@ static void genOMPDispatch(Fortran::lower::AbstractConverter &converter,
     genMasterOp(converter, symTable, semaCtx, eval, loc, clauses, queue, item);
     break;
   case llvm::omp::Directive::OMPD_ordered:
+    // Block-associated "ordered" construct.
     genOrderedRegionOp(converter, symTable, semaCtx, eval, loc, clauses, queue,
                        item);
     break;
@@ -2187,8 +2188,15 @@ static void genOMP(Fortran::lower::AbstractConverter &converter,
   ConstructQueue queue{
       buildConstructQueue(converter.getFirOpBuilder().getModule(), semaCtx,
                           eval, directive.source, directive.v, clauses)};
-  genOMPDispatch(converter, symTable, semaCtx, eval, currentLocation, queue,
-                 queue.begin());
+  if (directive.v == llvm::omp::Directive::OMPD_ordered) {
+    // Standalone "ordered" directive.
+    genOrderedOp(converter, symTable, semaCtx, eval, currentLocation, clauses,
+                 queue, queue.begin());
+  } else {
+    // Dispatch handles the "block-associated" variant of "ordered".
+    genOMPDispatch(converter, symTable, semaCtx, eval, currentLocation, queue,
+                   queue.begin());
+  }
 }
 
 static void
