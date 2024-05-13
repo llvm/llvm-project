@@ -1856,6 +1856,13 @@ def int_experimental_vp_strided_load  : DefaultAttrsIntrinsic<[llvm_anyvector_ty
                                llvm_i32_ty],
                              [ NoCapture<ArgIndex<0>>, IntrNoSync, IntrReadMem, IntrWillReturn, IntrArgMemOnly ]>;
 
+// Experimental histogram
+def int_experimental_vector_histogram_add : DefaultAttrsIntrinsic<[],
+                             [ llvm_anyvector_ty, // Vector of pointers
+                               llvm_anyint_ty,    // Increment
+                               LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>], // Mask
+                             [ IntrArgMemOnly ]>;
+
 // Operators
 let IntrProperties = [IntrNoMem, IntrNoSync, IntrWillReturn] in {
   // Integer arithmetic

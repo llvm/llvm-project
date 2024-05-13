@@ -513,6 +513,11 @@ bool TargetTransformInfo::isLegalStridedLoadStore(Type *DataType,
   return TTIImpl->isLegalStridedLoadStore(DataType, Alignment);
 }
 
+bool TargetTransformInfo::isLegalMaskedVectorHistogram(Type *AddrType,
+                                                       Type *DataType) const {
+  return TTIImpl->isLegalMaskedVectorHistogram(AddrType, DataType);
+}
+
 bool TargetTransformInfo::enableOrderedReductions() const {
   return TTIImpl->enableOrderedReductions();
 }
