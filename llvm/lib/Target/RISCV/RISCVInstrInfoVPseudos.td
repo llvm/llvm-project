@@ -382,7 +382,20 @@ class GetIntVTypeInfo<VTypeInfo vti> {
   // Equivalent integer vector type. Eg.
   //   VI8M1 → VI8M1 (identity)
   //   VF64M4 → VI64M4
-  VTypeInfo Vti = !cast<VTypeInfo>(!subst("VF", "VI", !cast<string>(vti)));
+  VTypeInfo Vti = !cast<VTypeInfo>(!subst("VBF", "VI",
+                                          !subst("VF", "VI",
+                                                 !cast<string>(vti))));
+}
+
+// This functor is used to obtain the fp vector type that has the same SEW and
+// multiplier as the input parameter type.
+class GetFpVTypeInfo<VTypeInfo vti> {
+  // Equivalent integer vector type. Eg.
+  //   VF16M1 → VF16M1 (identity)
+  //   VBF16M1 → VF16M1
+  VTypeInfo Vti = !cast<VTypeInfo>(!subst("VBF", "VF",
+                                          !subst("VI", "VF",
+                                                 !cast<string>(vti))));
 }
 
 class MTypeInfo<ValueType Mas, LMULInfo M, string Bx> {
