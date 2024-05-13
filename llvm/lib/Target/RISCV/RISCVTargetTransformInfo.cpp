@@ -1652,6 +1652,7 @@ InstructionCost RISCVTTIImpl::getArithmeticInstrCost(
   case ISD::FSUB:
     // TODO: Address FP16 with VFHMIN
     Op = RISCV::VFADD_VV;
+    break;
   case ISD::FMUL:
     // TODO: Address FP16 with VFHMIN
     Op = RISCV::VFMUL_VV;
