@@ -339,6 +339,10 @@ Changes in existing checks
   <clang-tidy/checks/readability/duplicate-include>` check by excluding include
   directives that form the filename using macro.
 
+- Improved :doc:`readability-else-after-return
+  <clang-tidy/checks/readability/else-after-return>` check to ignore
+  `if consteval` statements, for which the `else` branch must not be removed.
+
 - Improved :doc:`readability-identifier-naming
   <clang-tidy/checks/readability/identifier-naming>` check in `GetConfigPerFile`
   mode by resolving symbolic links to header files. Fixed handling of Hungarian
