@@ -277,9 +277,9 @@ public:
       return CacheIt->second;
 
     // Treat a recursive function call to be trivial until proven otherwise.
-    auto [RecursiveIt, IsNew] = RecursiveFn.insert(D);
+    auto [RecursiveIt, IsNew] = RecursiveFn.insert(std::make_pair(D, true));
     if (!IsNew)
-      return true;
+      return RecursiveIt->second;
 
     bool Result = [&]() {
       if (auto *CtorDecl = dyn_cast<CXXConstructorDecl>(D)) {
@@ -294,13 +294,14 @@ public:
       return Visit(Body);
     }();
 
-    Cache[D] = Result;
-
-    if (!Result) // D and its mutually recursive callers are non-trivial.
-      RecursiveFn.clear();
-    else // Check if any of mutually recursive functions were non-trivial.
-      Result = RecursiveFn.contains(D);
+    if (!Result) {
+      // D and its mutually recursive callers are all non-trivial.
+      for (auto& It : RecursiveFn)
+        It.second = false;
+    }
+    assert(RecursiveFn[D] == Result);
     RecursiveFn.erase(D);
+    Cache[D] = Result;
 
     return Result;
   }
@@ -547,7 +548,7 @@ public:
 
 private:
   CacheTy &Cache;
-  llvm::DenseSet<llvm::PointerUnion<const Decl *>> RecursiveFn;
+  CacheTy RecursiveFn;
 };
 
 bool TrivialFunctionAnalysis::isTrivialImpl(
