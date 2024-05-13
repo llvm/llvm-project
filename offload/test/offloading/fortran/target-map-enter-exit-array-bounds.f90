@@ -19,6 +19,7 @@ program main
     end do
 
     !$omp target enter data map(to: array(3:6))
+
     ! Shouldn't overwrite data already locked in
     ! on target via enter, which will then be 
     ! overwritten by our exit
@@ -36,6 +37,7 @@ program main
   !$omp end target 
 
   !$omp target exit data map(from: array(3:6))
+
   print *, array
 end program
 
