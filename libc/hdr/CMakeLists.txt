@@ -33,6 +33,16 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
+  errno_macros
+  HDRS
+    errno_macros.h
+  FULL_BUILD_DEPENDS
+    libc.include.errno
+    libc.include.llvm-libc-macros.error_number_macros
+    libc.include.llvm-libc-macros.generic_error_number_macros
+)
+
+add_proxy_header_library(
   fcntl_macros
   HDRS
     fcntl_macros.h
