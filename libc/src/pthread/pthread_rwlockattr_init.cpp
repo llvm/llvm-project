@@ -17,7 +17,6 @@ namespace LIBC_NAMESPACE {
 LLVM_LIBC_FUNCTION(int, pthread_rwlockattr_init,
                    (pthread_rwlockattr_t * attr)) {
   attr->pshared = PTHREAD_PROCESS_PRIVATE;
-  attr->pref = PTHREAD_RWLOCK_PREFER_READER_NP;
   return 0;
 }
 
