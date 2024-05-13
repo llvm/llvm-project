@@ -1007,12 +1007,15 @@ static void instrumentOneFunc(
         ToProfile = Builder.CreatePtrToInt(Cand.V, Builder.getInt64Ty());
       assert(ToProfile && "value profiling Value is of unexpected type");
 
+      auto *NormalizedPtr = ConstantExpr::getPointerBitCastOrAddrSpaceCast(
+          Name, PointerType::get(M->getContext(), 0));
+
       SmallVector<OperandBundleDef, 1> OpBundles;
       populateEHOperandBundle(Cand, BlockColors, OpBundles);
       Builder.CreateCall(
           Intrinsic::getDeclaration(M, Intrinsic::instrprof_value_profile),
-          {FuncInfo.FuncNameVar, Builder.getInt64(FuncInfo.FunctionHash),
-           ToProfile, Builder.getInt32(Kind), Builder.getInt32(SiteIndex++)},
+          {NormalizedPtr, Builder.getInt64(FuncInfo.FunctionHash), ToProfile,
+           Builder.getInt32(Kind), Builder.getInt32(SiteIndex++)},
           OpBundles);
     }
   } // IPVK_First <= Kind <= IPVK_Last
@@ -1685,10 +1688,12 @@ void SelectInstVisitor::instrumentOneSelectInst(SelectInst &SI) {
   IRBuilder<> Builder(&SI);
   Type *Int64Ty = Builder.getInt64Ty();
   auto *Step = Builder.CreateZExt(SI.getCondition(), Int64Ty);
+  auto *NormalizedPtr = ConstantExpr::getPointerBitCastOrAddrSpaceCast(
+      FuncNameVar, PointerType::get(M->getContext(), 0));
   Builder.CreateCall(
       Intrinsic::getDeclaration(M, Intrinsic::instrprof_increment_step),
-      {FuncNameVar, Builder.getInt64(FuncHash), Builder.getInt32(TotalNumCtrs),
-       Builder.getInt32(*CurCtrIdx), Step});
+      {NormalizedPtr, Builder.getInt64(FuncHash),
+       Builder.getInt32(TotalNumCtrs), Builder.getInt32(*CurCtrIdx), Step});
   ++(*CurCtrIdx);
 }
 
