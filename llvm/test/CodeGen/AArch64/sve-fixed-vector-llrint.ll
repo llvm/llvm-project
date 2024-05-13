@@ -295,11 +295,8 @@ define <2 x i64> @llrint_v2i64_v2f32(<2 x float> %x) {
 ; CHECK-LABEL: llrint_v2i64_v2f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    frintx v0.2s, v0.2s
-; CHECK-NEXT:    mov s1, v0.s[1]
-; CHECK-NEXT:    fcvtzs x8, s0
-; CHECK-NEXT:    fcvtzs x9, s1
-; CHECK-NEXT:    fmov d0, x8
-; CHECK-NEXT:    mov v0.d[1], x9
+; CHECK-NEXT:    fcvtl v0.2d, v0.2s
+; CHECK-NEXT:    fcvtzs v0.2d, v0.2d
 ; CHECK-NEXT:    ret
   %a = call <2 x i64> @llvm.llrint.v2i64.v2f32(<2 x float> %x)
   ret <2 x i64> %a
