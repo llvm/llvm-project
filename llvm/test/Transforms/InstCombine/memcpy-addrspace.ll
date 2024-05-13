@@ -6,7 +6,7 @@
 define void @test_load(ptr addrspace(1) %out, i64 %x) {
 ; CHECK-LABEL: @test_load(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr [8 x i32], ptr addrspace(2) @test.data, i64 0, i64 [[X:%.*]]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [8 x i32], ptr addrspace(2) @test.data, i64 0, i64 [[X:%.*]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspace(2) [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i32, ptr addrspace(1) [[OUT:%.*]], i64 [[X]]
 ; CHECK-NEXT:    store i32 [[TMP0]], ptr addrspace(1) [[ARRAYIDX1]], align 4
@@ -25,7 +25,7 @@ entry:
 define void @test_load_bitcast_chain(ptr addrspace(1) %out, i64 %x) {
 ; CHECK-LABEL: @test_load_bitcast_chain(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr i32, ptr addrspace(2) @test.data, i64 [[X:%.*]]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr addrspace(2) @test.data, i64 [[X:%.*]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspace(2) [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i32, ptr addrspace(1) [[OUT:%.*]], i64 [[X]]
 ; CHECK-NEXT:    store i32 [[TMP0]], ptr addrspace(1) [[ARRAYIDX1]], align 4

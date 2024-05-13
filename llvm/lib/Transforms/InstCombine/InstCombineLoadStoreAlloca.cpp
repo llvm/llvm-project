@@ -388,6 +388,7 @@ void PointerReplacer::replace(Instruction *I) {
         GetElementPtrInst::Create(GEP->getSourceElementType(), V, Indices);
     IC.InsertNewInstWith(NewI, GEP->getIterator());
     NewI->takeName(GEP);
+    NewI->setIsInBounds(GEP->isInBounds());
     WorkMap[GEP] = NewI;
   } else if (auto *BC = dyn_cast<BitCastInst>(I)) {
     auto *V = getReplacement(BC->getOperand(0));
