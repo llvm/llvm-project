@@ -79,6 +79,10 @@ ABI Changes in This Version
 - Fixed Microsoft calling convention when returning classes that have a deleted
   copy assignment operator. Such a class should be returned indirectly.
 
+- Fixed Microsoft layout of pointer-to-members of classes when the layout is needed
+  directly or indirectly by the base classes of a class. These should use the most
+  general unspecified inheritance layout. Also affects -fcomplete-member-pointers.
+
 AST Dumping Potentially Breaking Changes
 ----------------------------------------
 

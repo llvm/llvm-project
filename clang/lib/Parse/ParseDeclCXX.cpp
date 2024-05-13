@@ -2334,6 +2334,28 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
   }
 }
 
+namespace {
+struct ParsingBaseSpecifiersGuard {
+  CXXRecordDecl *RD = nullptr;
+  ParsingBaseSpecifiersGuard(Sema &S, Decl *D) {
+    if (D) {
+      S.AdjustDeclIfTemplate(D);
+      RD = cast<CXXRecordDecl>(D);
+      assert(!RD->isParsingBaseSpecifiers() &&
+             "Recursively parsing base specifiers of the same class?");
+      RD->setIsParsingBaseSpecifiers(true);
+    }
+  }
+  ~ParsingBaseSpecifiersGuard() {
+    if (RD) {
+      assert(RD->isParsingBaseSpecifiers() &&
+             "Stopped parsing base specifiers before exiting ParseBaseClause?");
+      RD->setIsParsingBaseSpecifiers(false);
+    }
+  }
+};
+} // namespace
+
 /// ParseBaseClause - Parse the base-clause of a C++ class [C++ class.derived].
 ///
 ///       base-clause : [C++ class.derived]
@@ -2344,6 +2366,8 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
 void Parser::ParseBaseClause(Decl *ClassDecl) {
   assert(Tok.is(tok::colon) && "Not a base clause");
   ConsumeToken();
+
+  ParsingBaseSpecifiersGuard Guard(Actions, ClassDecl);
 
   // Build up an array of parsed base specifiers.
   SmallVector<CXXBaseSpecifier *, 8> BaseInfo;
