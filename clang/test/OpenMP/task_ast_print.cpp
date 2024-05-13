@@ -5,6 +5,7 @@
 // RUN: %clang_cc1 -verify -Wno-vla -fopenmp-simd -ast-print %s | FileCheck %s
 // RUN: %clang_cc1 -fopenmp-simd -x c++ -std=c++11 -emit-pch -o %t %s
 // RUN: %clang_cc1 -fopenmp-simd -std=c++11 -include-pch %t -verify -Wno-vla %s -ast-print | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -fopenmp -ast-dump  %s | FileCheck %s --check-prefix=DUMP
 // expected-no-diagnostics
 
 #ifndef HEADER
@@ -207,5 +208,38 @@ int main(int argc, char **argv) {
 
 extern template int S<int>::TS;
 extern template long S<long>::TS;
+
+int
+implicit_firstprivate() {
+
+#pragma omp parallel num_threads(1)
+  {
+    int i = 0;
+    // DUMP : OMPTaskDirective
+    // DUMP-NEXT : OMPFirstprivateClause
+    // DUMP-NEXT : DeclRefExpr {{.+}} 'i' {{.+}} refers_to_enclosing_variable_or_capture
+    #pragma omp task
+    {
+	int j = sizeof(i);
+	j = i;
+    }
+  }
+}
+
+int
+no_implicit_firstprivate() {
+
+#pragma omp parallel num_threads(1)
+  {
+    int i = 0;
+    // DUMP : OMPTaskDirective
+    // DUMP-NEXT : CapturedStmt
+    // DUMP : DeclRefExpr {{.+}} 'i' {{.+}} non_odr_use_unevaluated refers_to_enclosing_variable_or_capture
+    #pragma omp task
+    {
+	int j = sizeof(i);
+    }
+  }
+}
 
 #endif
