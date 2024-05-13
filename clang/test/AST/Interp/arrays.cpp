@@ -563,6 +563,11 @@ namespace LocalVLA {
 
   void f (unsigned int m) {
     int e[2][m];
+#if __cplusplus >= 202002L
+     // both-note@-3 {{declared here}}
+     // both-warning@-3 2{{variable length array}}
+     // both-note@-4 {{function parameter 'm' with unknown value}}
+#endif
     e[0][0] = 0;
   }
 }
