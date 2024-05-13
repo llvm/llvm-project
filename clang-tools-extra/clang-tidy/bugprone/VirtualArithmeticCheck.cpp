@@ -37,10 +37,13 @@ void VirtualArithmeticCheck::registerMatchers(MatchFinder *Finder) {
 
 void VirtualArithmeticCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *PointerExpr = Result.Nodes.getNodeAs<Expr>("pointer");
+  const CXXRecordDecl *PointeeType =
+      PointerExpr->getType()->getPointeeType()->getAsCXXRecordDecl();
 
   diag(PointerExpr->getBeginLoc(),
-       "pointer arithmetic on class that declares a virtual function, "
-       "undefined behavior if the pointee is a different class");
+       "pointer arithmetic on class '%0' that declares a virtual function, "
+       "undefined behavior if the pointee is a different class")
+      << PointeeType->getName();
 }
 
 } // namespace clang::tidy::bugprone
