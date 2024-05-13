@@ -306,6 +306,10 @@ Changes in existing checks
   don't remove parentheses used in ``sizeof`` calls when they have array index
   accesses as arguments.
 
+- Improved :doc:`modernize-use-constraints
+  <clang-tidy/checks/modernize/use-constraints>` check by fixing a crash that
+  occurred in some scenarios and excluded system headers from analysis.
+
 - Improved :doc:`modernize-use-nullptr
   <clang-tidy/checks/modernize/use-nullptr>` check to include support for C23,
   which also has introduced the ``nullptr`` keyword.
