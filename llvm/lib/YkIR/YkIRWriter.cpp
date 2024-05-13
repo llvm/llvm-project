@@ -636,12 +636,14 @@ private:
     // We yet don't support:
     //  - the `inrange` keyword.
     //  - the vector variant.
+    //  - exotic (non-zero) address spaces.
     //
     // It appears that `inrange` can't appear in a GEP *instruction* (only a
     // GEP expression, inline in another instruction), but we check for it
     // anyway.
     if ((cast<GEPOperator>(I)->getInRangeIndex() != nullopt) ||
-        (I->getPointerOperand()->getType()->isVectorTy())) {
+        (I->getPointerOperand()->getType()->isVectorTy()) ||
+        (I->getPointerAddressSpace() != 0)) {
       serialiseUnimplementedInstruction(I, FLCtxt, BBIdx, InstIdx);
       return;
     }
@@ -654,32 +656,82 @@ private:
     serialiseOperand(I, FLCtxt, I->getPointerOperand());
 
     // GetElementPtrInst::collectOffset() reduces the GEP to:
-    //  - a static offset and
-    //  - zero or more dynamic offsets of the form `elem_count * elem_size`,
-    //    where `elem_count` is not known statically.
+    //  - a static byte offset and
+    //  - zero or more dynamic byte offsets of the form `elem_count *
+    //    elem_size`, where `elem_count` is not known statically.
     //
-    // We lower this information directly into a Yk PtrAdd instruction.
+    // We encode this information into our Yk AOT `PtrAdd` instruction, but
+    // there are some semantics of LLVM's GEP that we have to be very careful to
+    // preserve. At the time of writing, these are the things that it's
+    // important to know:
     //
+    //  1. LLVM integer types are neither signed nor unsigned. They are a bit
+    //     pattern that can be interpreted (by LLVM instructions) as a signed
+    //     or unsigned integer.
+    //
+    //  2. a dynamic index cannot be applied to a struct, because struct fields
+    //     can have different types and you wouldn't be able to statically
+    //     determine the type of the field being selected.
+    //
+    //  3. When indexing a struct, the index is interpreted as unsigned
+    //     (because a negative field index makes no sense).
+    //
+    //  4. When indexing anything but a struct, the index is interpreted as
+    //     signed, to allow (e.g.) negative array indices, or negative
+    //     offsetting pointers.
+    //
+    //  5. Index operands to `getelementptr` can have arbitrary bit-width
+    //     (although struct indexing must use i32). Index types with a different
+    //     bit-width than the "pointer indexing type" for the address space in
+    //     question must be extended or truncated (and if it's a signed index,
+    //     then that's a sign extend!). To get the indexing type, you use
+    //     `DataLayout:getIndexSizeInBits()`.
+    //
+    //  6. We can ignore the `inbounds` keyword on GEPs. When an `inbounds` GEP
+    //     is out of bounds, a poison value is generated. Since a poison value
+    //     represents (deferred) undefined behaviour (UB), we are free to
+    //     compute any value we want, including the out of bounds offset.
+    //
+    // To simplify things a bit, we assume (as is that case for "regular"
+    // hardware/software platforms) that the LLVM pointer indexing type is the
+    // same size as a pointer. Just in case, let's assert it though:
+    unsigned IdxBitWidth = DL.getIndexSizeInBits(I->getPointerAddressSpace());
+    assert(sizeof(void *) * 8 == IdxBitWidth);
+    //// And since we are going to use `get{S,Z}ExtValue()`, which return
+    //// `uint64_t` and `int64_t`, we should also check:
+    static_assert(sizeof(size_t) <= sizeof(uint64_t));
+
+    APInt ConstOff(IdxBitWidth, 0);
+    MapVector<Value *, APInt> DynOffs;
     // Note: the width of the collected constant offset must be the same as the
     // index type bit-width.
-    unsigned BitWidth = DL.getIndexSizeInBits(I->getPointerAddressSpace());
-    APInt ConstOff(BitWidth, 0);
-    MapVector<Value *, APInt> DynOffs;
-    bool CollectRes = I->collectOffset(DL, BitWidth, DynOffs, ConstOff);
+    bool CollectRes = I->collectOffset(DL, IdxBitWidth, DynOffs, ConstOff);
     assert(CollectRes);
 
     // const_off:
-    OutStreamer.emitSizeT(ConstOff.getZExtValue());
+    //
+    // This is always signed and we can statically sign-extend now.
+    //
+    // FIXME: We can't deal with static offsets that don't fit in a ssize_t.
+    assert(ConstOff.sle(APInt(sizeof(size_t) * 8, SSIZE_MAX)));
+    OutStreamer.emitSizeT(ConstOff.getSExtValue());
     // num_dyn_offs:
     size_t NumDyn = DynOffs.size();
     OutStreamer.emitSizeT(NumDyn);
     // dyn_elem_counts:
+    //
+    // These are interpreted as signed.
     for (auto &KV : DynOffs) {
       serialiseOperand(I, FLCtxt, std::get<0>(KV));
     }
     // dyn_elem_sizes:
+    //
+    // These are unsigned and we can statically zero-extend now.
     for (auto &KV : DynOffs) {
-      OutStreamer.emitSizeT(std::get<1>(KV).getZExtValue());
+      APInt DS = std::get<1>(KV);
+      // FIXME: We can't deal with element sizes that don't fit in a size_t.
+      assert(DS.ule(APInt(sizeof(size_t) * 8, SIZE_MAX)));
+      OutStreamer.emitSizeT(DS.getZExtValue());
     }
 
     FLCtxt.updateVLMap(I, InstIdx);
@@ -1062,6 +1114,11 @@ public:
     // header:
     OutStreamer.emitInt32(Magic);
     OutStreamer.emitInt32(Version);
+
+    // ptr_off_bitsize:
+    unsigned IdxBitWidth = DL.getIndexSizeInBits(0);
+    assert(IdxBitWidth <= 0xff);
+    OutStreamer.emitInt8(IdxBitWidth);
 
     // num_funcs:
     OutStreamer.emitSizeT(M.size());
