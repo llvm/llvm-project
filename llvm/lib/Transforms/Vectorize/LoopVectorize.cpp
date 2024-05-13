@@ -1508,17 +1508,6 @@ public:
                                             ForceTailFoldingStyle.getValue());
     if (ForceTailFoldingStyle != TailFoldingStyle::DataWithEVL)
       return;
-
-    // Block folding with EVL since vector-predication intrinsics have not
-    // support FMinimum and FMaximum reduction.
-    // FIXME: remove this check once llvm.vp.reduce.fminimum/fmaximum are
-    // supported
-    bool ContainsFMinimumOrFMaximumReduction =
-        any_of(Legal->getReductionVars(), [&](auto &Reduction) {
-          const RecurrenceDescriptor &RdxDesc = Reduction.second;
-          RecurKind Kind = RdxDesc.getRecurrenceKind();
-          return Kind == RecurKind::FMinimum || Kind == RecurKind::FMaximum;
-        });
     // Override forced styles if needed.
     // FIXME: use actual opcode/data type for analysis here.
     // FIXME: Investigate opportunity for fixed vector factor.
@@ -1527,8 +1516,7 @@ public:
         TTI.hasActiveVectorLength(0, nullptr, Align()) &&
         !EnableVPlanNativePath &&
         // FIXME: implement support for max safe dependency distance.
-        Legal->isSafeForAnyVectorWidth() &&
-        !ContainsFMinimumOrFMaximumReduction;
+        Legal->isSafeForAnyVectorWidth();
     if (!EVLIsLegal) {
       // If for some reason EVL mode is unsupported, fallback to
       // DataWithoutLaneMask to try to vectorize the loop with folded tail
