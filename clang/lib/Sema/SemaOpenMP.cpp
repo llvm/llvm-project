@@ -4854,6 +4854,19 @@ StmtResult SemaOpenMP::ActOnOpenMPRegionEnd(StmtResult S,
 
   SmallVector<OpenMPDirectiveKind, 4> CaptureRegions;
   getOpenMPCaptureRegions(CaptureRegions, DSAStack->getCurrentDirective());
+  llvm::errs() << __FUNCTION__ << ": Loc0:\n";
+  for (OpenMPDirectiveKind c : CaptureRegions) {
+    switch(c) {
+    case OMPD_task:
+      llvm::errs() << "OMPD_task\n";
+      break;
+    case OMPD_target:
+      llvm::errs() << "OMPD_target\n";
+      break;
+    default:
+      llvm::errs() << "default\n";
+    }
+  }
   OMPOrderedClause *OC = nullptr;
   OMPScheduleClause *SC = nullptr;
   SmallVector<const OMPLinearClause *, 4> LCs;
@@ -5005,7 +5018,11 @@ StmtResult SemaOpenMP::ActOnOpenMPRegionEnd(StmtResult S,
     }
     if (++CompletedRegions == CaptureRegions.size())
       DSAStack->setBodyComplete();
+    llvm::errs() << __FUNCTION__ << ": Loc1:\n";
+    SR.get()->dump();
     SR = SemaRef.ActOnCapturedRegionEnd(SR.get());
+    llvm::errs() << __FUNCTION__ << ": Loc2:\n";
+    SR.get()->dump();
   }
   return SR;
 }
@@ -6337,7 +6354,16 @@ StmtResult SemaOpenMP::ActOnOpenMPExecutableDirective(
   OpenMPBindClauseKind BindKind = OMPC_BIND_unknown;
   llvm::SmallVector<OMPClause *> ClausesWithoutBind;
   bool UseClausesWithoutBind = false;
-
+  if (Kind == Directive::OMPD_target) {
+    if (AStmt) {
+      llvm::errs() << __FUNCTION__ << "***********************\n";
+      AStmt->dump();
+      llvm::errs() << __FUNCTION__ <<  "***PRETTY***\n";
+      AStmt->dumpPretty(getASTContext());
+    } else {
+      llvm::errs() << "__FUNCTION__" << ": AStmt is nullptr\n";
+    }
+  }
   if (const OMPBindClause *BC =
           OMPExecutableDirective::getSingleClause<OMPBindClause>(Clauses))
     BindKind = BC->getBindKind();

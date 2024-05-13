@@ -5043,7 +5043,11 @@ createImplicitFirstprivateForType(ASTContext &C, OMPTaskDataTy &Data,
   Data.FirstprivateInits.emplace_back(InitRef);
   return OrigVD;
 }
-
+void CodeGenFunction::NewEmitOMPTargetTaskBasedDirective(
+    const OMPExecutableDirective &S, const RegionCodeGenTy &BodyGen,
+    OMPTargetDataInfo &InputInfo) {
+  EmitOMPTargetTaskBasedDirective(S, BodyGen, InputInfo);
+}
 void CodeGenFunction::EmitOMPTargetTaskBasedDirective(
     const OMPExecutableDirective &S, const RegionCodeGenTy &BodyGen,
     OMPTargetDataInfo &InputInfo) {

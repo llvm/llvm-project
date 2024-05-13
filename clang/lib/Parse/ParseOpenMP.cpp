@@ -2972,11 +2972,19 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
       // FIXME: We create a bogus CompoundStmt scope to hold the contents of
       // the captured region. Code elsewhere assumes that any FunctionScopeInfo
       // should have at least one compound statement scope within it.
+      if (AssociatedStmt.get()) {
+        llvm::errs() << __FUNCTION__ << "Loc-1:\n";
+        AssociatedStmt.get()->dump();
+      }
       ParsingOpenMPDirectiveRAII NormalScope(*this, /*Value=*/false);
       {
         Sema::CompoundScopeRAII Scope(Actions);
         AssociatedStmt = ParseStatement();
-
+        Stmt * pdb_print = AssociatedStmt.get();
+        if (pdb_print) {
+          llvm::errs() << __FUNCTION__ << "Loc0:\n";
+          pdb_print->dump();
+        }
         if (AssociatedStmt.isUsable() && isOpenMPLoopDirective(DKind) &&
             getLangOpts().OpenMPIRBuilder)
           AssociatedStmt =
@@ -2984,6 +2992,8 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
       }
       AssociatedStmt =
           Actions.OpenMP().ActOnOpenMPRegionEnd(AssociatedStmt, Clauses);
+      llvm::errs() << __FUNCTION__ << "Loc1:\n";
+      AssociatedStmt.get()->dump();
     } else if (DKind == OMPD_target_update || DKind == OMPD_target_enter_data ||
                DKind == OMPD_target_exit_data) {
       Actions.OpenMP().ActOnOpenMPRegionStart(DKind, getCurScope());

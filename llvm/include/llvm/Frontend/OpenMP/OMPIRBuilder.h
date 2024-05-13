@@ -1518,7 +1518,12 @@ public:
   std::forward_list<CanonicalLoopInfo> LoopInfos;
 
   /// Add a new region that will be outlined later.
-  void addOutlineInfo(OutlineInfo &&OI) { OutlineInfos.emplace_back(OI); }
+  void addOutlineInfo(OutlineInfo &&OI) {
+    llvm::errs() << "Adding outline info\n";
+    llvm::errs() << "OI.EntryBB = ";
+    OI.EntryBB->dump();
+    OutlineInfos.emplace_back(OI);
+  }
 
   /// An ordered map of auto-generated variables to their unique names.
   /// It stores variables with the following names: 1) ".gomp_critical_user_" +
