@@ -554,7 +554,6 @@ lldb::TypeSystemSP TypeSystemClang::CreateInstance(lldb::LanguageType language,
     return std::make_shared<TypeSystemClang>(ast_name, triple);
   } else if (target && target->IsValid())
     return std::make_shared<ScratchTypeSystemClang>(*target, triple);
-
   return lldb::TypeSystemSP();
 }
 
