@@ -264,6 +264,18 @@ calculateFunctionCosts(SplitModuleLogger &SML, const AMDGPUTargetMachine &TM,
   return ModuleCost;
 }
 
+static bool canBeIndirectlyCalled(const Function &F) {
+  if (F.isDeclaration() || isEntryPoint(&F))
+    return false;
+  return !F.hasLocalLinkage() ||
+         F.hasAddressTaken(/*PutOffender=*/nullptr,
+                           /*IgnoreCallbackUses=*/false,
+                           /*IgnoreAssumeLikeCalls=*/true,
+                           /*IgnoreLLVMUsed=*/true,
+                           /*IgnoreARCAttachedCall=*/false,
+                           /*IgnoreCastedDirectCall=*/true);
+}
+
 /// When a kernel or any of its callees performs an indirect call, this function
 /// takes over \ref addAllDependencies and adds all potentially callable
 /// functions to \p Fns so they can be counted as dependencies of the kernel.
@@ -276,7 +288,7 @@ calculateFunctionCosts(SplitModuleLogger &SML, const AMDGPUTargetMachine &TM,
 static void addAllIndirectCallDependencies(const Module &M,
                                            DenseSet<const Function *> &Fns) {
   for (const auto &Fn : M) {
-    if (!Fn.isDeclaration() && !isEntryPoint(&Fn))
+    if (canBeIndirectlyCalled(Fn))
       Fns.insert(&Fn);
   }
 }
@@ -292,8 +304,6 @@ static void addAllIndirectCallDependencies(const Module &M,
 /// point, either in \p Fn or in one of the function it calls. When that
 /// happens, we fall back to adding all callable functions inside \p Fn's module
 /// to \p Fns.
-/// \param HadExternalCall[out] Set to true if a call to an external function
-/// was seen at some point, either in \p Fn or in one of the function it calls
 static void addAllDependencies(SplitModuleLogger &SML, const CallGraph &CG,
                                const Function &Fn,
                                DenseSet<const Function *> &Fns,
@@ -332,12 +342,8 @@ static void addAllDependencies(SplitModuleLogger &SML, const CallGraph &CG,
         return;
       }
 
-      assert(!isEntryPoint(Callee));
       if (Callee->isDeclaration())
         continue;
-
-      if (Callee->hasExternalLinkage())
-        HadExternalCall = true;
 
       auto [It, Inserted] = Fns.insert(Callee);
       if (Inserted)
@@ -353,19 +359,21 @@ struct KernelWithDependencies {
                          const Function *Fn)
       : Fn(Fn) {
     addAllDependencies(SML, CG, *Fn, Dependencies, HasIndirectCall,
-                       HasExternalCall);
+                       HasExternallyVisibleDependecy);
     TotalCost = FnCosts.at(Fn);
-    for (const auto *Dep : Dependencies)
+    for (const auto *Dep : Dependencies) {
       TotalCost += FnCosts.at(Dep);
+      HasExternallyVisibleDependecy |= Dep->hasExternalLinkage();
+    }
   }
 
   const Function *Fn = nullptr;
   DenseSet<const Function *> Dependencies;
   /// Whether \p Fn or any of its \ref Dependencies contains an indirect call.
   bool HasIndirectCall = false;
-  /// Whether \p Fn or any of its \ref Dependencies contains a call to a
-  /// function with external linkage.
-  bool HasExternalCall = false;
+  /// Whether any of \p Fn's dependencies are externally visible function
+  /// definitions.
+  bool HasExternallyVisibleDependecy = false;
 
   CostType TotalCost = 0;
 
@@ -506,13 +514,13 @@ doPartitioning(SplitModuleLogger &SML, Module &M, unsigned NumParts,
       continue;
     }
 
-    // When a kernel calls external functions, we have to keep it in the first
-    // partition as well. This is because we cannot duplicate external functions
-    // into multiple modules. To avoid duplicating accidentally, we
+    // When a kernel has an externally visible dependency, we have to keep it in
+    // the first partition as well. This is because we cannot duplicate external
+    // functions into multiple modules. To avoid duplicating accidentally, we
     // conservatively put every external function in P0.
-    if (CurKernel.HasExternalCall) {
-      SML << "Kernel with external call(s): " << getName(*CurKernel.Fn)
-          << " defaulting to P0\n";
+    if (CurKernel.HasExternallyVisibleDependecy) {
+      SML << "Kernel with externally visible dependency "
+          << getName(*CurKernel.Fn) << " defaulting to P0\n";
       AssignToPartition(0, CurKernel);
       continue;
     }
@@ -659,7 +667,7 @@ void llvm::splitAMDGPUModule(
     for (const auto &KWD : WorkList) {
       SML << "[Kernel] " << getName(*KWD.Fn) << " (totalCost:" << KWD.TotalCost
           << " indirect:" << KWD.HasIndirectCall
-          << " external:" << KWD.HasExternalCall << ")\n";
+          << " hasExternalDep:" << KWD.HasExternallyVisibleDependecy << ")\n";
       for (const auto *Dep : KWD.Dependencies)
         SML << "  [Dep] " << getName(*Dep) << '\n';
     }
