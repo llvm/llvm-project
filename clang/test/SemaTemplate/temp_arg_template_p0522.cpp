@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -fsyntax-only -verify -std=c++1z %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++20 %s
 
-// expected-note@temp_arg_template_cxx1z.cpp:* 1+{{}}
+// expected-note@temp_arg_template_p0522.cpp:* 1+{{}}
 
 template<template<int> typename> struct Ti;
 template<template<int...> typename> struct TPi;
@@ -118,3 +118,11 @@ namespace Auto {
   TInt<SubstFailure> isf; // FIXME: this should be ill-formed
   TIntPtr<SubstFailure> ipsf;
 }
+
+namespace GH62529 {
+  // Note: the constraint here is just for bypassing a fast-path.
+  template<class T1> requires(true) using A = int;
+  template<template<class ...T2s> class TT1, class T3> struct B {};
+  template<class T4> B<A, T4> f();
+  auto t = f<int>();
+} // namespace GH62529

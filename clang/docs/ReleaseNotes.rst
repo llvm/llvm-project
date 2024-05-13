@@ -708,6 +708,8 @@ Bug Fixes to C++ Support
   expression.
 - Fix a bug in access control checking due to dealyed checking of friend declaration. Fixes (#GH12361).
 - Correctly treat the compound statement of an ``if consteval`` as an immediate context. Fixes (#GH91509).
+- When partial ordering alias templates against template template parameters,
+  allow pack expansions when the alias has a fixed-size parameter list. Fixes (#GH62529).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
