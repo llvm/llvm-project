@@ -15207,8 +15207,7 @@ StmtResult SemaOpenMP::ActOnOpenMPTileDirective(ArrayRef<OMPClause *> Clauses,
     // Commonly used variables. One of the constraints of an AST is that every
     // node object must appear at most once, hence we define lamdas that create
     // a new AST node at every use.
-    auto MakeDimTileSize = [&SemaRef = this->SemaRef, &CopyTransformer, I,
-                            SizesClause]() -> Expr * {
+    auto MakeDimTileSize = [&CopyTransformer, I, SizesClause]() -> Expr * {
       Expr *DimTileSize = SizesClause->getSizesRefs()[I];
       return AssertSuccess(CopyTransformer.TransformExpr(DimTileSize));
     };
@@ -15298,8 +15297,7 @@ StmtResult SemaOpenMP::ActOnOpenMPTileDirective(ArrayRef<OMPClause *> Clauses,
     QualType CntTy = OrigCntVar->getType();
 
     // Commonly used variables.
-    auto MakeDimTileSize = [&SemaRef = this->SemaRef, &CopyTransformer, I,
-                            SizesClause]() -> Expr * {
+    auto MakeDimTileSize = [&CopyTransformer, I, SizesClause]() -> Expr * {
       Expr *DimTileSize = SizesClause->getSizesRefs()[I];
       return AssertSuccess(CopyTransformer.TransformExpr(DimTileSize));
     };
