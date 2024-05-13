@@ -470,8 +470,10 @@ ISD::NodeType ISD::getVecReduceBaseOpcode(unsigned VecReduceOpcode) {
   case ISD::VP_REDUCE_FMIN:
     return ISD::FMINNUM;
   case ISD::VECREDUCE_FMAXIMUM:
+  case ISD::VP_REDUCE_FMAXIMUM:
     return ISD::FMAXIMUM;
   case ISD::VECREDUCE_FMINIMUM:
+  case ISD::VP_REDUCE_FMINIMUM:
     return ISD::FMINIMUM;
   }
 }
@@ -9623,6 +9625,44 @@ SDValue SelectionDAG::getMaskedScatter(SDVTList VTs, EVT MemVT, const SDLoc &dl,
   assert(isa<ConstantSDNode>(N->getScale()) &&
          N->getScale()->getAsAPIntVal().isPowerOf2() &&
          "Scale should be a constant power of 2");
+
+  CSEMap.InsertNode(N, IP);
+  InsertNode(N);
+  SDValue V(N, 0);
+  NewSDValueDbgMsg(V, "Creating new node: ", this);
+  return V;
+}
+
+SDValue SelectionDAG::getMaskedHistogram(SDVTList VTs, EVT MemVT,
+                                         const SDLoc &dl, ArrayRef<SDValue> Ops,
+                                         MachineMemOperand *MMO,
+                                         ISD::MemIndexType IndexType) {
+  assert(Ops.size() == 7 && "Incompatible number of operands");
+
+  FoldingSetNodeID ID;
+  AddNodeIDNode(ID, ISD::EXPERIMENTAL_VECTOR_HISTOGRAM, VTs, Ops);
+  ID.AddInteger(MemVT.getRawBits());
+  ID.AddInteger(getSyntheticNodeSubclassData<MaskedHistogramSDNode>(
+      dl.getIROrder(), VTs, MemVT, MMO, IndexType));
+  ID.AddInteger(MMO->getPointerInfo().getAddrSpace());
+  ID.AddInteger(MMO->getFlags());
+  void *IP = nullptr;
+  if (SDNode *E = FindNodeOrInsertPos(ID, dl, IP)) {
+    cast<MaskedGatherSDNode>(E)->refineAlignment(MMO);
+    return SDValue(E, 0);
+  }
+
+  auto *N = newSDNode<MaskedHistogramSDNode>(dl.getIROrder(), dl.getDebugLoc(),
+                                             VTs, MemVT, MMO, IndexType);
+  createOperands(N, Ops);
+
+  assert(N->getMask().getValueType().getVectorElementCount() ==
+             N->getIndex().getValueType().getVectorElementCount() &&
+         "Vector width mismatch between mask and data");
+  assert(isa<ConstantSDNode>(N->getScale()) &&
+         N->getScale()->getAsAPIntVal().isPowerOf2() &&
+         "Scale should be a constant power of 2");
+  assert(N->getInc().getValueType().isInteger() && "Non integer update value");
 
   CSEMap.InsertNode(N, IP);
   InsertNode(N);

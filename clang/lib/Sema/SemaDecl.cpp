@@ -736,8 +736,8 @@ void Sema::DiagnoseUnknownTypeName(IdentifierInfo *&II,
                          << II, CanRecover);
       } else if (DeclContext *DC = computeDeclContext(*SS, false)) {
         std::string CorrectedStr(Corrected.getAsString(getLangOpts()));
-        bool DroppedSpecifier = Corrected.WillReplaceSpecifier() &&
-                                II->getName().equals(CorrectedStr);
+        bool DroppedSpecifier =
+            Corrected.WillReplaceSpecifier() && II->getName() == CorrectedStr;
         diagnoseTypo(Corrected,
                      PDiag(IsTemplateName
                                ? diag::err_no_member_template_suggest
@@ -1008,7 +1008,7 @@ Corrected:
         } else {// FIXME: is this even reachable? Test it.
           std::string CorrectedStr(Corrected.getAsString(getLangOpts()));
           bool DroppedSpecifier = Corrected.WillReplaceSpecifier() &&
-                                  Name->getName().equals(CorrectedStr);
+                                  Name->getName() == CorrectedStr;
           diagnoseTypo(Corrected, PDiag(QualifiedDiag)
                                     << Name << computeDeclContext(SS, false)
                                     << DroppedSpecifier << SS.getRange());
@@ -15963,7 +15963,7 @@ static void diagnoseImplicitlyRetainedSelf(Sema &S) {
 
 static bool methodHasName(const FunctionDecl *FD, StringRef Name) {
   return isa<CXXMethodDecl>(FD) && FD->param_empty() &&
-         FD->getDeclName().isIdentifier() && FD->getName().equals(Name);
+         FD->getDeclName().isIdentifier() && FD->getName() == Name;
 }
 
 bool Sema::CanBeGetReturnObject(const FunctionDecl *FD) {
