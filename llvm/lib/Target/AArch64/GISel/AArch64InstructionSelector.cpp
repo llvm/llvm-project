@@ -2862,8 +2862,8 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
         Order != AtomicOrdering::Unordered &&
         Order != AtomicOrdering::Monotonic) {
       assert(!isa<GZExtLoad>(LdSt));
-      if (MemSizeInBytes > 64)
-        return false;
+      assert(MemSizeInBytes <= 8 &&
+             "128-bit atomics should already be custom-legalized");
 
       if (isa<GLoad>(LdSt)) {
         static constexpr unsigned LDAPROpcodes[] = {
