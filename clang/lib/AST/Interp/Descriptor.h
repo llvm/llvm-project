@@ -128,7 +128,7 @@ public:
   /// Flag indicating if the block is an array.
   const bool IsArray = false;
   /// Flag indicating if this is a dummy descriptor.
-  bool IsDummy = false;
+  const bool IsDummy = false;
 
   /// Storage management methods.
   const BlockCtorFn CtorFn = nullptr;
@@ -162,8 +162,8 @@ public:
   /// Allocates a dummy descriptor.
   Descriptor(const DeclTy &D);
 
-  /// Make this descriptor a dummy descriptor.
-  void makeDummy() { IsDummy = true; }
+  /// Allocates a dummy array descriptor.
+  Descriptor(const DeclTy &D, UnknownSize);
 
   QualType getType() const;
   QualType getElemQualType() const;

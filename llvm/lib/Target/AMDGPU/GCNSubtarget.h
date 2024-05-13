@@ -1240,6 +1240,8 @@ public:
 
   bool hasVALUMaskWriteHazard() const { return getGeneration() == GFX11; }
 
+  bool hasVALUReadSGPRHazard() const { return getGeneration() == GFX12; }
+
   bool hasForceVALUThrottle() const { return HasForceVALUThrottle; }
 
   bool hasMLMathInsts() const { return HasMLMathInsts; }

@@ -16,13 +16,14 @@ define amdgpu_kernel void @copy_flat(ptr nocapture %d, ptr nocapture readonly %s
 ; GCNES0-NEXT:    s_add_nc_u64 s[2:3], s[2:3], 0xb0
 ; GCNES0-NEXT:  .LBB0_2: ; %for.body
 ; GCNES0-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GCNES0-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GCNES0-NEXT:    s_wait_alu 0xfffe
 ; GCNES0-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v1, s3
 ; GCNES0-NEXT:    s_prefetch_data s[2:3], 0x0, null, 0
 ; GCNES0-NEXT:    v_dual_mov_b32 v5, s1 :: v_dual_mov_b32 v4, s0
 ; GCNES0-NEXT:    s_add_co_i32 s4, s4, -1
 ; GCNES0-NEXT:    flat_load_b128 v[0:3], v[0:1] offset:-176
 ; GCNES0-NEXT:    s_add_nc_u64 s[2:3], s[2:3], 16
+; GCNES0-NEXT:    s_wait_alu 0xfffe
 ; GCNES0-NEXT:    s_cmp_lg_u32 s4, 0
 ; GCNES0-NEXT:    s_add_nc_u64 s[0:1], s[0:1], 16
 ; GCNES0-NEXT:    s_wait_loadcnt_dscnt 0x0
@@ -45,6 +46,7 @@ define amdgpu_kernel void @copy_flat(ptr nocapture %d, ptr nocapture readonly %s
 ; GCNES2-NEXT:  .LBB0_2: ; %for.body
 ; GCNES2-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GCNES2-NEXT:    s_wait_alu 0xffe3
+; GCNES2-NEXT:    s_wait_alu 0xfffe
 ; GCNES2-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v1, s3
 ; GCNES2-NEXT:    s_prefetch_data s[2:3], 0x0, null, 0
 ; GCNES2-NEXT:    v_dual_mov_b32 v5, s1 :: v_dual_mov_b32 v4, s0
@@ -52,6 +54,7 @@ define amdgpu_kernel void @copy_flat(ptr nocapture %d, ptr nocapture readonly %s
 ; GCNES2-NEXT:    s_wait_alu 0x1fff
 ; GCNES2-NEXT:    flat_load_b128 v[0:3], v[0:1] offset:-176
 ; GCNES2-NEXT:    s_add_nc_u64 s[2:3], s[2:3], 16
+; GCNES2-NEXT:    s_wait_alu 0xfffe
 ; GCNES2-NEXT:    s_cmp_lg_u32 s4, 0
 ; GCNES2-NEXT:    s_add_nc_u64 s[0:1], s[0:1], 16
 ; GCNES2-NEXT:    s_wait_loadcnt_dscnt 0x0
@@ -73,12 +76,13 @@ define amdgpu_kernel void @copy_flat(ptr nocapture %d, ptr nocapture readonly %s
 ; GFX1210-NEXT:    s_add_nc_u64 s[2:3], s[2:3], 0xb0
 ; GFX1210-NEXT:  .LBB0_2: ; %for.body
 ; GFX1210-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX1210-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1210-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-NEXT:    v_mov_b64_e32 v[0:1], s[2:3]
 ; GFX1210-NEXT:    s_prefetch_data s[2:3], 0x0, null, 0
 ; GFX1210-NEXT:    v_mov_b64_e32 v[4:5], s[0:1]
 ; GFX1210-NEXT:    s_add_co_i32 s4, s4, -1
 ; GFX1210-NEXT:    s_add_nc_u64 s[2:3], s[2:3], 16
+; GFX1210-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-NEXT:    s_cmp_lg_u32 s4, 0
 ; GFX1210-NEXT:    flat_load_b128 v[0:3], v[0:1] offset:-176
 ; GFX1210-NEXT:    s_add_nc_u64 s[0:1], s[0:1], 16
@@ -122,8 +126,10 @@ define amdgpu_kernel void @copy_global(ptr addrspace(1) nocapture %d, ptr addrsp
 ; GCNES0-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GCNES0-NEXT:    global_load_b128 v[1:4], v0, s[2:3] offset:-176
 ; GCNES0-NEXT:    s_prefetch_data s[2:3], 0x0, null, 0
+; GCNES0-NEXT:    s_wait_alu 0xfffe
 ; GCNES0-NEXT:    s_add_co_i32 s4, s4, -1
 ; GCNES0-NEXT:    s_add_nc_u64 s[2:3], s[2:3], 16
+; GCNES0-NEXT:    s_wait_alu 0xfffe
 ; GCNES0-NEXT:    s_cmp_lg_u32 s4, 0
 ; GCNES0-NEXT:    s_wait_loadcnt 0x0
 ; GCNES0-NEXT:    global_store_b128 v0, v[1:4], s[0:1]
@@ -151,8 +157,10 @@ define amdgpu_kernel void @copy_global(ptr addrspace(1) nocapture %d, ptr addrsp
 ; GCNES2-NEXT:    s_wait_alu 0xfe3
 ; GCNES2-NEXT:    global_load_b128 v[1:4], v0, s[2:3] offset:-176
 ; GCNES2-NEXT:    s_prefetch_data s[2:3], 0x0, null, 0
+; GCNES2-NEXT:    s_wait_alu 0xfffe
 ; GCNES2-NEXT:    s_add_co_i32 s4, s4, -1
 ; GCNES2-NEXT:    s_add_nc_u64 s[2:3], s[2:3], 16
+; GCNES2-NEXT:    s_wait_alu 0xfffe
 ; GCNES2-NEXT:    s_cmp_lg_u32 s4, 0
 ; GCNES2-NEXT:    s_wait_loadcnt 0x0
 ; GCNES2-NEXT:    global_store_b128 v0, v[1:4], s[0:1]
@@ -178,8 +186,10 @@ define amdgpu_kernel void @copy_global(ptr addrspace(1) nocapture %d, ptr addrsp
 ; GFX1210-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX1210-NEXT:    global_load_b128 v[2:5], v0, s[2:3] offset:-176
 ; GFX1210-NEXT:    s_prefetch_data s[2:3], 0x0, null, 0
+; GFX1210-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-NEXT:    s_add_co_i32 s4, s4, -1
 ; GFX1210-NEXT:    s_add_nc_u64 s[2:3], s[2:3], 16
+; GFX1210-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-NEXT:    s_cmp_lg_u32 s4, 0
 ; GFX1210-NEXT:    s_wait_loadcnt 0x0
 ; GFX1210-NEXT:    global_store_b128 v0, v[2:5], s[0:1]
@@ -222,8 +232,10 @@ define amdgpu_kernel void @copy_constant(ptr addrspace(1) nocapture %d, ptr addr
 ; GCNES0-NEXT:    s_wait_kmcnt 0x0
 ; GCNES0-NEXT:    s_load_b128 s[8:11], s[2:3], 0x0
 ; GCNES0-NEXT:    s_prefetch_data s[2:3], 0xb0, null, 0
+; GCNES0-NEXT:    s_wait_alu 0xfffe
 ; GCNES0-NEXT:    s_add_co_i32 s4, s4, -1
 ; GCNES0-NEXT:    s_add_nc_u64 s[2:3], s[2:3], 16
+; GCNES0-NEXT:    s_wait_alu 0xfffe
 ; GCNES0-NEXT:    s_cmp_lg_u32 s4, 0
 ; GCNES0-NEXT:    s_wait_kmcnt 0x0
 ; GCNES0-NEXT:    v_dual_mov_b32 v1, s8 :: v_dual_mov_b32 v2, s9
@@ -251,8 +263,10 @@ define amdgpu_kernel void @copy_constant(ptr addrspace(1) nocapture %d, ptr addr
 ; GCNES2-NEXT:    s_wait_kmcnt 0x0
 ; GCNES2-NEXT:    s_load_b128 s[8:11], s[2:3], 0x0
 ; GCNES2-NEXT:    s_prefetch_data s[2:3], 0xb0, null, 0
+; GCNES2-NEXT:    s_wait_alu 0xfffe
 ; GCNES2-NEXT:    s_add_co_i32 s4, s4, -1
 ; GCNES2-NEXT:    s_add_nc_u64 s[2:3], s[2:3], 16
+; GCNES2-NEXT:    s_wait_alu 0xfffe
 ; GCNES2-NEXT:    s_cmp_lg_u32 s4, 0
 ; GCNES2-NEXT:    s_wait_kmcnt 0x0
 ; GCNES2-NEXT:    s_wait_alu 0xffe3
@@ -281,8 +295,10 @@ define amdgpu_kernel void @copy_constant(ptr addrspace(1) nocapture %d, ptr addr
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-NEXT:    s_load_b128 s[8:11], s[2:3], 0x0
 ; GFX1210-NEXT:    s_prefetch_data s[2:3], 0xb0, null, 0
+; GFX1210-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-NEXT:    s_add_co_i32 s4, s4, -1
 ; GFX1210-NEXT:    s_add_nc_u64 s[2:3], s[2:3], 16
+; GFX1210-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-NEXT:    s_cmp_lg_u32 s4, 0
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-NEXT:    v_mov_b64_e32 v[2:3], s[8:9]
@@ -321,6 +337,7 @@ define amdgpu_kernel void @copy_local(ptr addrspace(3) nocapture %d, ptr addrspa
 ; GCNES0-NEXT:    s_cbranch_scc1 .LBB3_2
 ; GCNES0-NEXT:  .LBB3_1: ; %for.body
 ; GCNES0-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GCNES0-NEXT:    s_wait_alu 0xfffe
 ; GCNES0-NEXT:    v_mov_b32_e32 v2, s1
 ; GCNES0-NEXT:    v_mov_b32_e32 v4, s0
 ; GCNES0-NEXT:    s_add_co_i32 s2, s2, -1
@@ -328,6 +345,7 @@ define amdgpu_kernel void @copy_local(ptr addrspace(3) nocapture %d, ptr addrspa
 ; GCNES0-NEXT:    s_add_co_i32 s1, s1, 16
 ; GCNES0-NEXT:    ds_load_2addr_b32 v[0:1], v2 offset0:2 offset1:3
 ; GCNES0-NEXT:    ds_load_2addr_b32 v[2:3], v2 offset1:1
+; GCNES0-NEXT:    s_wait_alu 0xfffe
 ; GCNES0-NEXT:    s_cmp_lg_u32 s2, 0
 ; GCNES0-NEXT:    s_wait_dscnt 0x1
 ; GCNES0-NEXT:    ds_store_2addr_b32 v4, v0, v1 offset0:2 offset1:3
@@ -347,6 +365,7 @@ define amdgpu_kernel void @copy_local(ptr addrspace(3) nocapture %d, ptr addrspa
 ; GCNES2-NEXT:  .LBB3_1: ; %for.body
 ; GCNES2-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GCNES2-NEXT:    s_wait_alu 0xffe3
+; GCNES2-NEXT:    s_wait_alu 0xfffe
 ; GCNES2-NEXT:    v_mov_b32_e32 v2, s1
 ; GCNES2-NEXT:    v_mov_b32_e32 v4, s0
 ; GCNES2-NEXT:    s_add_co_i32 s2, s2, -1
@@ -356,6 +375,7 @@ define amdgpu_kernel void @copy_local(ptr addrspace(3) nocapture %d, ptr addrspa
 ; GCNES2-NEXT:    ds_load_2addr_b32 v[0:1], v2 offset0:2 offset1:3
 ; GCNES2-NEXT:    s_wait_alu 0xffe3
 ; GCNES2-NEXT:    ds_load_2addr_b32 v[2:3], v2 offset1:1
+; GCNES2-NEXT:    s_wait_alu 0xfffe
 ; GCNES2-NEXT:    s_cmp_lg_u32 s2, 0
 ; GCNES2-NEXT:    s_wait_dscnt 0x1
 ; GCNES2-NEXT:    s_wait_alu 0xfff
@@ -374,12 +394,14 @@ define amdgpu_kernel void @copy_local(ptr addrspace(3) nocapture %d, ptr addrspa
 ; GFX1210-NEXT:    s_cbranch_scc1 .LBB3_2
 ; GFX1210-NEXT:  .LBB3_1: ; %for.body
 ; GFX1210-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX1210-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-NEXT:    v_dual_mov_b32 v2, s1 :: v_dual_mov_b32 v4, s0
 ; GFX1210-NEXT:    s_add_co_i32 s2, s2, -1
 ; GFX1210-NEXT:    s_add_co_i32 s0, s0, 16
 ; GFX1210-NEXT:    s_add_co_i32 s1, s1, 16
 ; GFX1210-NEXT:    ds_load_2addr_b32 v[0:1], v2 offset0:2 offset1:3
 ; GFX1210-NEXT:    ds_load_2addr_b32 v[2:3], v2 offset1:1
+; GFX1210-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-NEXT:    s_cmp_lg_u32 s2, 0
 ; GFX1210-NEXT:    s_wait_dscnt 0x1
 ; GFX1210-NEXT:    ds_store_2addr_b32 v4, v0, v1 offset0:2 offset1:3
@@ -431,8 +453,9 @@ define amdgpu_kernel void @copy_flat_divergent(ptr nocapture %d, ptr nocapture r
 ; GCNES0-NEXT:    flat_load_b128 v[4:7], v[2:3] offset:-176
 ; GCNES0-NEXT:    v_add_co_u32 v2, vcc_lo, v2, 16
 ; GCNES0-NEXT:    v_add_co_ci_u32_e32 v3, vcc_lo, 0, v3, vcc_lo
+; GCNES0-NEXT:    s_wait_alu 0xfffe
 ; GCNES0-NEXT:    s_add_co_i32 s2, s2, -1
-; GCNES0-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GCNES0-NEXT:    s_wait_alu 0xfffe
 ; GCNES0-NEXT:    s_cmp_lg_u32 s2, 0
 ; GCNES0-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GCNES0-NEXT:    flat_store_b128 v[0:1], v[4:7]
@@ -468,8 +491,9 @@ define amdgpu_kernel void @copy_flat_divergent(ptr nocapture %d, ptr nocapture r
 ; GCNES2-NEXT:    s_wait_alu 0xffe3
 ; GCNES2-NEXT:    v_add_co_u32 v2, vcc_lo, v2, 16
 ; GCNES2-NEXT:    v_add_co_ci_u32_e32 v3, vcc_lo, 0, v3, vcc_lo
+; GCNES2-NEXT:    s_wait_alu 0xfffe
 ; GCNES2-NEXT:    s_add_co_i32 s2, s2, -1
-; GCNES2-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GCNES2-NEXT:    s_wait_alu 0xfffe
 ; GCNES2-NEXT:    s_cmp_lg_u32 s2, 0
 ; GCNES2-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GCNES2-NEXT:    flat_store_b128 v[0:1], v[4:7]
@@ -499,8 +523,9 @@ define amdgpu_kernel void @copy_flat_divergent(ptr nocapture %d, ptr nocapture r
 ; GFX1210-NEXT:    flat_load_b128 v[4:7], v[2:3] offset:-176
 ; GFX1210-NEXT:    flat_prefetch_b8 v[2:3]
 ; GFX1210-NEXT:    v_add_nc_u64_e32 v[2:3], 16, v[2:3]
+; GFX1210-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-NEXT:    s_add_co_i32 s2, s2, -1
-; GFX1210-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1210-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-NEXT:    s_cmp_lg_u32 s2, 0
 ; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-NEXT:    flat_store_b128 v[0:1], v[4:7]
@@ -554,8 +579,9 @@ define amdgpu_kernel void @copy_global_divergent(ptr addrspace(1) nocapture %d, 
 ; GCNES0-NEXT:    global_load_b128 v[4:7], v[2:3], off offset:-176
 ; GCNES0-NEXT:    v_add_co_u32 v2, vcc_lo, v2, 16
 ; GCNES0-NEXT:    v_add_co_ci_u32_e32 v3, vcc_lo, 0, v3, vcc_lo
+; GCNES0-NEXT:    s_wait_alu 0xfffe
 ; GCNES0-NEXT:    s_add_co_i32 s2, s2, -1
-; GCNES0-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GCNES0-NEXT:    s_wait_alu 0xfffe
 ; GCNES0-NEXT:    s_cmp_lg_u32 s2, 0
 ; GCNES0-NEXT:    s_wait_loadcnt 0x0
 ; GCNES0-NEXT:    global_store_b128 v[0:1], v[4:7], off
@@ -593,8 +619,9 @@ define amdgpu_kernel void @copy_global_divergent(ptr addrspace(1) nocapture %d, 
 ; GCNES2-NEXT:    s_wait_alu 0xffe3
 ; GCNES2-NEXT:    v_add_co_u32 v2, vcc_lo, v2, 16
 ; GCNES2-NEXT:    v_add_co_ci_u32_e32 v3, vcc_lo, 0, v3, vcc_lo
+; GCNES2-NEXT:    s_wait_alu 0xfffe
 ; GCNES2-NEXT:    s_add_co_i32 s2, s2, -1
-; GCNES2-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GCNES2-NEXT:    s_wait_alu 0xfffe
 ; GCNES2-NEXT:    s_cmp_lg_u32 s2, 0
 ; GCNES2-NEXT:    s_wait_loadcnt 0x0
 ; GCNES2-NEXT:    global_store_b128 v[0:1], v[4:7], off
@@ -626,8 +653,9 @@ define amdgpu_kernel void @copy_global_divergent(ptr addrspace(1) nocapture %d, 
 ; GFX1210-NEXT:    global_load_b128 v[4:7], v[2:3], off offset:-176
 ; GFX1210-NEXT:    global_prefetch_b8 v[2:3], off
 ; GFX1210-NEXT:    v_add_nc_u64_e32 v[2:3], 16, v[2:3]
+; GFX1210-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-NEXT:    s_add_co_i32 s2, s2, -1
-; GFX1210-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1210-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-NEXT:    s_cmp_lg_u32 s2, 0
 ; GFX1210-NEXT:    s_wait_loadcnt 0x0
 ; GFX1210-NEXT:    global_store_b128 v[0:1], v[4:7], off

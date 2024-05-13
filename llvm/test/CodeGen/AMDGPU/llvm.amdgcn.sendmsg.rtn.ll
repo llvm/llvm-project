@@ -32,6 +32,7 @@ define amdgpu_kernel void @test_get_doorbell(ptr addrspace(1) %out) {
 ; GFX1210-SDAG-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
 ; GFX1210-SDAG-NEXT:    s_sendmsg_rtn_b32 s2, sendmsg(MSG_RTN_GET_DOORBELL)
 ; GFX1210-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-SDAG-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-SDAG-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
 ; GFX1210-SDAG-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX1210-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
@@ -42,6 +43,7 @@ define amdgpu_kernel void @test_get_doorbell(ptr addrspace(1) %out) {
 ; GFX1210-GISEL-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
 ; GFX1210-GISEL-NEXT:    s_sendmsg_rtn_b32 s2, sendmsg(MSG_RTN_GET_DOORBELL)
 ; GFX1210-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-GISEL-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-GISEL-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v0, s2
 ; GFX1210-GISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX1210-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
@@ -79,6 +81,7 @@ define amdgpu_kernel void @test_get_ddid(ptr addrspace(1) %out) {
 ; GFX1210-SDAG-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
 ; GFX1210-SDAG-NEXT:    s_sendmsg_rtn_b32 s2, sendmsg(MSG_RTN_GET_DDID)
 ; GFX1210-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-SDAG-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-SDAG-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
 ; GFX1210-SDAG-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX1210-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
@@ -89,6 +92,7 @@ define amdgpu_kernel void @test_get_ddid(ptr addrspace(1) %out) {
 ; GFX1210-GISEL-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
 ; GFX1210-GISEL-NEXT:    s_sendmsg_rtn_b32 s2, sendmsg(MSG_RTN_GET_DDID)
 ; GFX1210-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-GISEL-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-GISEL-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v0, s2
 ; GFX1210-GISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX1210-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
@@ -116,6 +120,7 @@ define amdgpu_kernel void @test_get_tma(ptr addrspace(1) %out) {
 ; GFX1210-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
 ; GFX1210-NEXT:    s_sendmsg_rtn_b64 s[2:3], sendmsg(MSG_RTN_GET_TMA)
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-NEXT:    v_dual_mov_b64 v[0:1], s[2:3] :: v_dual_mov_b32 v2, 0
 ; GFX1210-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
 ; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
@@ -143,6 +148,7 @@ define amdgpu_kernel void @test_get_realtime(ptr addrspace(1) %out) {
 ; GFX1210-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
 ; GFX1210-NEXT:    s_sendmsg_rtn_b64 s[2:3], sendmsg(MSG_RTN_GET_REALTIME)
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-NEXT:    v_dual_mov_b64 v[0:1], s[2:3] :: v_dual_mov_b32 v2, 0
 ; GFX1210-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
 ; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
@@ -180,6 +186,7 @@ define amdgpu_kernel void @test_savewave(ptr addrspace(1) %out) {
 ; GFX1210-SDAG-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
 ; GFX1210-SDAG-NEXT:    s_sendmsg_rtn_b32 s2, sendmsg(MSG_RTN_SAVE_WAVE)
 ; GFX1210-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-SDAG-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-SDAG-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
 ; GFX1210-SDAG-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX1210-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
@@ -190,6 +197,7 @@ define amdgpu_kernel void @test_savewave(ptr addrspace(1) %out) {
 ; GFX1210-GISEL-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
 ; GFX1210-GISEL-NEXT:    s_sendmsg_rtn_b32 s2, sendmsg(MSG_RTN_SAVE_WAVE)
 ; GFX1210-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-GISEL-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-GISEL-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v0, s2
 ; GFX1210-GISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX1210-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
@@ -217,6 +225,7 @@ define amdgpu_kernel void @test_get_tba(ptr addrspace(1) %out) {
 ; GFX1210-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
 ; GFX1210-NEXT:    s_sendmsg_rtn_b64 s[2:3], sendmsg(MSG_RTN_GET_TBA)
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-NEXT:    v_dual_mov_b64 v[0:1], s[2:3] :: v_dual_mov_b32 v2, 0
 ; GFX1210-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
 ; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
@@ -254,6 +263,7 @@ define amdgpu_kernel void @test_get_0_i32(ptr addrspace(1) %out) {
 ; GFX1210-SDAG-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
 ; GFX1210-SDAG-NEXT:    s_sendmsg_rtn_b32 s2, sendmsg(0, 0, 0)
 ; GFX1210-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-SDAG-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-SDAG-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
 ; GFX1210-SDAG-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX1210-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
@@ -264,6 +274,7 @@ define amdgpu_kernel void @test_get_0_i32(ptr addrspace(1) %out) {
 ; GFX1210-GISEL-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
 ; GFX1210-GISEL-NEXT:    s_sendmsg_rtn_b32 s2, sendmsg(0, 0, 0)
 ; GFX1210-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-GISEL-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-GISEL-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v0, s2
 ; GFX1210-GISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX1210-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
@@ -291,6 +302,7 @@ define amdgpu_kernel void @test_get_99999_i64(ptr addrspace(1) %out) {
 ; GFX1210-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
 ; GFX1210-NEXT:    s_sendmsg_rtn_b64 s[2:3], 99999
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-NEXT:    v_dual_mov_b64 v[0:1], s[2:3] :: v_dual_mov_b32 v2, 0
 ; GFX1210-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
 ; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
@@ -318,6 +330,7 @@ define amdgpu_kernel void @test_get_136_i64(ptr addrspace(1) %out) {
 ; GFX1210-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
 ; GFX1210-NEXT:    s_sendmsg_rtn_b64 s[2:3], sendmsg(MSG_RTN_GET_CLUSTER_BARRIER_STATE)
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    s_wait_alu 0xfffe
 ; GFX1210-NEXT:    v_dual_mov_b64 v[0:1], s[2:3] :: v_dual_mov_b32 v2, 0
 ; GFX1210-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
 ; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)

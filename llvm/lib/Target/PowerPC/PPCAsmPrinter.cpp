@@ -2896,7 +2896,7 @@ void PPCAIXAsmPrinter::emitPGORefs(Module &M) {
   bool HasNonZeroLengthPrfCntsSection = false;
   const DataLayout &DL = M.getDataLayout();
   for (GlobalVariable &GV : M.globals())
-    if (GV.hasSection() && GV.getSection().equals("__llvm_prf_cnts") &&
+    if (GV.hasSection() && GV.getSection() == "__llvm_prf_cnts" &&
         DL.getTypeAllocSize(GV.getValueType()) > 0) {
       HasNonZeroLengthPrfCntsSection = true;
       break;
