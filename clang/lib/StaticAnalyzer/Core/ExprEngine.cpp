@@ -2008,8 +2008,8 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
           ProgramStateRef State = I->getState();
           State = State->BindExpr(S, LCtx, *ConstantVal);
           if (IsTemporary)
-          State = createTemporaryRegionIfNeeded(State, LCtx, cast<Expr>(S),
-                                                cast<Expr>(S));
+            State = createTemporaryRegionIfNeeded(State, LCtx, cast<Expr>(S),
+                                                  cast<Expr>(S));
 
           Bldr2.generateNode(S, I, State);
         }
