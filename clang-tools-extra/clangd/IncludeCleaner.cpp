@@ -87,12 +87,10 @@ bool mayConsiderUnused(const Inclusion &Inc, ParsedAST &AST,
   // Until we have good support for umbrella headers, don't warn about them
   // (unless analysis is explicitly enabled).
   if (Inc.Written.front() == '<') {
-    if (tooling::stdlib::Header::named(Inc.Written)) {
+    if (tooling::stdlib::Header::named(Inc.Written))
       return true;
-    }
-    if (!AnalyzeAngledIncludes) {
+    if (!AnalyzeAngledIncludes)
       return false;
-    }
   }
   if (PI) {
     // Check if main file is the public interface for a private header. If so we

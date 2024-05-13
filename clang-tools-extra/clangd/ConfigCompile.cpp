@@ -591,6 +591,9 @@ struct FragmentCompiler {
         Filters->push_back(std::move(CompiledRegex));
       }
     }
+    // Optional to override the resulting AnalyzeAngledIncludes
+    // only if it's explicitly set in the current fragment.
+    // Otherwise it's inherited from parent fragment.
     std::optional<bool> AnalyzeAngledIncludes;
     if (F.AnalyzeAngledIncludes.has_value())
       AnalyzeAngledIncludes = **F.AnalyzeAngledIncludes;
