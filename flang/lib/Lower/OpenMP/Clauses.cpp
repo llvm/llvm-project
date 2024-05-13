@@ -1227,27 +1227,4 @@ List<Clause> makeClauses(const parser::OmpClauseList &clauses,
     return makeClause(s, semaCtx);
   });
 }
-
-bool transferLocations(const List<Clause> &from, List<Clause> &to) {
-  bool allDone = true;
-
-  for (Clause &clause : to) {
-    if (!clause.source.empty())
-      continue;
-    auto found =
-        llvm::find_if(from, [&](const Clause &c) { return c.id == clause.id; });
-    // This is not completely accurate, but should be good enough for now.
-    // It can be improved in the future if necessary, but in cases of
-    // synthesized clauses getting accurate location may be impossible.
-    if (found != from.end()) {
-      clause.source = found->source;
-    } else {
-      // Found a clause that won't have "source".
-      allDone = false;
-    }
-  }
-
-  return allDone;
-}
-
 } // namespace Fortran::lower::omp

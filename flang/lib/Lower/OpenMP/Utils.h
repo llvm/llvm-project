@@ -93,6 +93,7 @@ void gatherFuncAndVarSyms(
     llvm::SmallVectorImpl<DeclareTargetCapturePair> &symbolAndClause);
 
 int64_t getCollapseValue(const List<Clause> &clauses);
+uint32_t getOpenMPVersion(mlir::ModuleOp mod);
 
 Fortran::semantics::Symbol *
 getOmpObjectSymbol(const Fortran::parser::OmpObject &ompObject);
