@@ -75,5 +75,13 @@ void foo() {
   // CHECK: #pragma acc kernels deviceptr(iPtr, arrayPtr[0])
 #pragma acc kernels deviceptr(iPtr, arrayPtr[0])
   while(true);
+
+  // CHECK: #pragma acc kernels async(*iPtr)
+#pragma acc kernels async(*iPtr)
+  while(true);
+
+  // CHECK: #pragma acc kernels async
+#pragma acc kernels async
+  while(true);
 }
 
