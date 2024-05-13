@@ -1916,8 +1916,7 @@ static void genCompositeDoSimd(Fortran::lower::AbstractConverter &converter,
   // When support for vectorization is enabled, then we need to add handling of
   // if clause. Currently if clause can be skipped because we always assume
   // SIMD length = 1.
-  genWsloopOp(converter, symTable, semaCtx, eval, loc, item->clauses, queue,
-              item);
+  genWsloopOp(converter, symTable, semaCtx, eval, loc, queue, item);
 }
 
 static void
@@ -1969,8 +1968,7 @@ static void genOMPDispatch(Fortran::lower::AbstractConverter &converter,
                   /*outerCombined=*/false);
     break;
   case llvm::omp::Directive::OMPD_section:
-    genSectionOp(converter, symTable, semaCtx, eval, loc, /*clauses=*/{}, queue,
-                 item);
+    genSectionOp(converter, symTable, semaCtx, eval, loc, queue, item);
     break;
   case llvm::omp::Directive::OMPD_sections:
     genSectionsOp(converter, symTable, semaCtx, eval, loc, queue, item);
@@ -2170,8 +2168,8 @@ static void genOMP(Fortran::lower::AbstractConverter &converter,
                           eval, directive.source, directive.v, clauses)};
   if (directive.v == llvm::omp::Directive::OMPD_ordered) {
     // Standalone "ordered" directive.
-    genOrderedOp(converter, symTable, semaCtx, eval, currentLocation, clauses,
-                 queue, queue.begin());
+    genOrderedOp(converter, symTable, semaCtx, eval, currentLocation, queue,
+                 queue.begin());
   } else {
     // Dispatch handles the "block-associated" variant of "ordered".
     genOMPDispatch(converter, symTable, semaCtx, eval, currentLocation, queue,
@@ -2203,7 +2201,7 @@ genOMP(Fortran::lower::AbstractConverter &converter,
       converter.getFirOpBuilder().getModule(), semaCtx, eval, verbatim.source,
       llvm::omp::Directive::OMPD_flush, clauses)};
   genFlushOp(converter, symTable, semaCtx, eval, currentLocation, objects,
-             clauses, queue, queue.begin());
+             queue, queue.begin());
 }
 
 static void
@@ -2375,8 +2373,8 @@ genOMP(Fortran::lower::AbstractConverter &converter,
 
   const auto &name = std::get<std::optional<Fortran::parser::Name>>(cd.t);
   mlir::Location currentLocation = converter.getCurrentLocation();
-  genCriticalOp(converter, symTable, semaCtx, eval, currentLocation, clauses,
-                queue, queue.begin(), name);
+  genCriticalOp(converter, symTable, semaCtx, eval, currentLocation, queue,
+                queue.begin(), name);
 }
 
 static void
