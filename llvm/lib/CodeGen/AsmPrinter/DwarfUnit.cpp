@@ -1650,7 +1650,8 @@ DIE &DwarfUnit::constructMemberDIE(DIE &Buffer, const DIDerivedType *DT) {
         addUInt(MemberDie, dwarf::DW_AT_byte_size, std::nullopt, FieldSize / 8);
       addUInt(MemberDie, dwarf::DW_AT_bit_size, std::nullopt, Size);
 
-      assert(DT->getOffsetInBits() <= std::numeric_limits<int64_t>::max());
+      assert(DT->getOffsetInBits() <=
+             (uint64_t)std::numeric_limits<int64_t>::max());
       int64_t Offset = DT->getOffsetInBits();
       // We can't use DT->getAlignInBits() here: AlignInBits for member type
       // is non-zero if and only if alignment was forced (e.g. _Alignas()),
