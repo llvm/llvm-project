@@ -2250,6 +2250,15 @@ public:
   /// \param BodyGenCB Callback that will generate the region code.
   /// \param ArgAccessorFuncCB Callback that will generate accessors
   /// instructions for passed in target arguments where neccessary
+
+  InsertPointTy newCreateTarget(
+      const LocationDescription &Loc, OpenMPIRBuilder::InsertPointTy AllocaIP,
+      OpenMPIRBuilder::InsertPointTy CodeGenIP,
+      TargetRegionEntryInfo &EntryInfo, int32_t NumTeams, int32_t NumThreads,
+      SmallVectorImpl<Value *> &Inputs, GenMapInfoCallbackTy GenMapInfoCB,
+      TargetBodyGenCallbackTy BodyGenCB,
+      TargetGenArgAccessorsCallbackTy ArgAccessorFuncCB,
+      SmallVector<DependData> Dependencies = {});
   InsertPointTy createTarget(const LocationDescription &Loc,
                              OpenMPIRBuilder::InsertPointTy AllocaIP,
                              OpenMPIRBuilder::InsertPointTy CodeGenIP,

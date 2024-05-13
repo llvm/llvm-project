@@ -4856,7 +4856,7 @@ StmtResult SemaOpenMP::ActOnOpenMPRegionEnd(StmtResult S,
   getOpenMPCaptureRegions(CaptureRegions, DSAStack->getCurrentDirective());
   llvm::errs() << __FUNCTION__ << ": Loc0:\n";
   for (OpenMPDirectiveKind c : CaptureRegions) {
-    switch(c) {
+    switch (c) {
     case OMPD_task:
       llvm::errs() << "OMPD_task\n";
       break;
@@ -6358,10 +6358,11 @@ StmtResult SemaOpenMP::ActOnOpenMPExecutableDirective(
     if (AStmt) {
       llvm::errs() << __FUNCTION__ << "***********************\n";
       AStmt->dump();
-      llvm::errs() << __FUNCTION__ <<  "***PRETTY***\n";
+      llvm::errs() << __FUNCTION__ << "***PRETTY***\n";
       AStmt->dumpPretty(getASTContext());
     } else {
-      llvm::errs() << "__FUNCTION__" << ": AStmt is nullptr\n";
+      llvm::errs() << "__FUNCTION__"
+                   << ": AStmt is nullptr\n";
     }
   }
   if (const OMPBindClause *BC =

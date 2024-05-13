@@ -73,6 +73,11 @@ static cl::opt<double> UnrollThresholdFactor(
              "simplifications still taking place"),
     cl::init(1.5));
 
+static cl::opt<bool>
+    NewOMPIRBuilderTargetCodegen("new-ompirbuilder-target-codegen", cl::Hidden,
+                                 cl::desc("Use target-task based codegen."),
+                                 cl::init(false));
+
 #ifndef NDEBUG
 /// Return whether IP1 and IP2 are ambiguous, i.e. that inserting instructions
 /// at position IP1 may change the meaning of IP2 or vice-versa. This is because
@@ -5230,12 +5235,13 @@ static void emitTargetOutlinedFunction(
                                       OutlinedFn, OutlinedFnID);
 }
 
-static void emitTargetCall(OpenMPIRBuilder &OMPBuilder, IRBuilderBase &Builder,
-                           OpenMPIRBuilder::InsertPointTy AllocaIP,
-                           Function *OutlinedFn, Constant *OutlinedFnID,
-                           int32_t NumTeams, int32_t NumThreads,
-                           SmallVectorImpl<Value *> &Args,
-                           OpenMPIRBuilder::GenMapInfoCallbackTy GenMapInfoCB) {
+static void emitTargetCall(
+    OpenMPIRBuilder &OMPBuilder, IRBuilderBase &Builder,
+    OpenMPIRBuilder::InsertPointTy AllocaIP, Function *OutlinedFn,
+    Constant *OutlinedFnID, int32_t NumTeams, int32_t NumThreads,
+    SmallVectorImpl<Value *> &Args,
+    OpenMPIRBuilder::GenMapInfoCallbackTy GenMapInfoCB,
+    SmallVector<llvm::OpenMPIRBuilder::DependData> dependencies = {}) {
 
   OpenMPIRBuilder::TargetDataInfo Info(
       /*RequiresDevicePointerInfo=*/false,
@@ -5276,12 +5282,49 @@ static void emitTargetCall(OpenMPIRBuilder &OMPBuilder, IRBuilderBase &Builder,
   OpenMPIRBuilder::TargetKernelArgs KArgs(NumTargetItems, RTArgs, NumIterations,
                                           NumTeamsVal, NumThreadsVal,
                                           DynCGGroupMem, HasNoWait);
-
+  // PDB: here you'll have to break the logic down to do the following
+  // if (!requiresoutertask) {
+  //    Builder.restoreIP(OMPBuilder.emitKernelLaunch(
+  //       Builder, OutlinedFn, OutlinedFnID, EmitTargetCallFallbackCB, KArgs,
+  //       DeviceID, RTLoc, AllocaIP));
+  // else {
+  //     create task
+  //     make task call emitkernellaunch.
+  //     make task call
+  // }
+  //
   Builder.restoreIP(OMPBuilder.emitKernelLaunch(
       Builder, OutlinedFn, OutlinedFnID, EmitTargetCallFallbackCB, KArgs,
       DeviceID, RTLoc, AllocaIP));
 }
+OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::newCreateTarget(
+    const LocationDescription &Loc, InsertPointTy AllocaIP,
+    InsertPointTy CodeGenIP, TargetRegionEntryInfo &EntryInfo, int32_t NumTeams,
+    int32_t NumThreads, SmallVectorImpl<Value *> &Args,
+    GenMapInfoCallbackTy GenMapInfoCB,
+    OpenMPIRBuilder::TargetBodyGenCallbackTy CBFunc,
+    OpenMPIRBuilder::TargetGenArgAccessorsCallbackTy ArgAccessorFuncCB,
+    SmallVector<DependData> Dependencies) {
+  if (!NewOMPIRBuilderTargetCodegen) {
+    llvm::errs() << "Old OpenMPIRBuilder target codegen\n";
+    return createTarget(Loc, AllocaIP, CodeGenIP, EntryInfo, NumTeams,
+                        NumThreads, Args, GenMapInfoCB, CBFunc,
+                        ArgAccessorFuncCB);
+  }
+  llvm::errs() << "New OpenMPIRBuilder target codegen\n";
+  if (!updateToLocation(Loc))
+    return InsertPointTy();
 
+  Builder.restoreIP(CodeGenIP);
+  Function *OutlinedFn;
+  Constant *OutlinedFnID;
+  emitTargetOutlinedFunction(*this, Builder, EntryInfo, OutlinedFn,
+                             OutlinedFnID, Args, CBFunc, ArgAccessorFuncCB);
+  if (!Config.isTargetDevice())
+    emitTargetCall(*this, Builder, AllocaIP, OutlinedFn, OutlinedFnID, NumTeams,
+                   NumThreads, Args, GenMapInfoCB, Dependencies);
+  return Builder.saveIP();
+}
 OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createTarget(
     const LocationDescription &Loc, InsertPointTy AllocaIP,
     InsertPointTy CodeGenIP, TargetRegionEntryInfo &EntryInfo, int32_t NumTeams,

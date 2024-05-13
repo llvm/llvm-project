@@ -2980,7 +2980,7 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
       {
         Sema::CompoundScopeRAII Scope(Actions);
         AssociatedStmt = ParseStatement();
-        Stmt * pdb_print = AssociatedStmt.get();
+        Stmt *pdb_print = AssociatedStmt.get();
         if (pdb_print) {
           llvm::errs() << __FUNCTION__ << "Loc0:\n";
           pdb_print->dump();
