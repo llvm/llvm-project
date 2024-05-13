@@ -556,8 +556,10 @@ public:
 
 private:
   // Visitors to walk an AST and construct the CFG.
-  CFGBlock *VisitCXXDefaultArgExpr(CXXDefaultArgExpr *Default, AddStmtChoice asc);
-  CFGBlock *VisitCXXDefaultInitExpr(CXXDefaultInitExpr *Default, AddStmtChoice asc);
+  CFGBlock *VisitCXXDefaultArgExpr(CXXDefaultArgExpr *Default,
+                                   AddStmtChoice asc);
+  CFGBlock *VisitCXXDefaultInitExpr(CXXDefaultInitExpr *Default,
+                                    AddStmtChoice asc);
   CFGBlock *VisitInitListExpr(InitListExpr *ILE, AddStmtChoice asc);
   CFGBlock *VisitAddrLabelExpr(AddrLabelExpr *A, AddStmtChoice asc);
   CFGBlock *VisitAttributedStmt(AttributedStmt *A, AddStmtChoice asc);
@@ -2438,6 +2440,11 @@ CFGBlock *CFGBuilder::VisitCXXDefaultArgExpr(CXXDefaultArgExpr *Arg,
     }
     return VisitStmt(Arg->getExpr(), asc);
   }
+
+  // We can't add the default argument if it's not rewritten because the
+  // expression inside a CXXDefaultArgExpr is owned by the called function's
+  // declaration, not by the caller, we could end up with the same expression
+  // appearing multiple times.
   return VisitStmt(Arg, asc);
 }
 
@@ -2450,6 +2457,11 @@ CFGBlock *CFGBuilder::VisitCXXDefaultInitExpr(CXXDefaultInitExpr *Init,
     }
     return VisitStmt(Init->getExpr(), asc);
   }
+
+  // We can't add the default initializer if it's not rewritten because multiple
+  // CXXDefaultInitExprs for the same sub-expression to be used in the same
+  // function (through aggregate initialization). we could end up with the same
+  // expression appearing multiple times.
   return VisitStmt(Init, asc);
 }
 

@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -std=c++14 -verify  %s \
+// RUN: %clang_analyze_cc1 -std=c++14 -verify=expected,pedantic  %s \
 // RUN:   -analyzer-checker=core \
 // RUN:   -analyzer-checker=optin.cplusplus.UninitializedObject \
 // RUN:   -analyzer-config optin.cplusplus.UninitializedObject:Pedantic=true -DPEDANTIC \
@@ -1114,17 +1114,16 @@ void fCXX11MemberInitTest1() {
   CXX11MemberInitTest1();
 }
 
+#ifdef PEDANTIC
 struct CXX11MemberInitTest2 {
   struct RecordType {
-    // TODO: we'd expect the note: {{uninitialized field 'this->rec.a'}}
-    int a; // no-note
-    // TODO: we'd expect the note: {{uninitialized field 'this->rec.b'}}
-    int b; // no-note
+    int a; // expected-note {{uninitialized field 'this->a'}}
+    int b; // expected-note {{uninitialized field 'this->b'}}
 
     RecordType(int) {}
   };
 
-  RecordType rec = RecordType(int());
+  RecordType rec = RecordType(int()); // expected-warning {{2 uninitialized fields at the end of the constructor call}}
   int dontGetFilteredByNonPedanticMode = 0;
 
   CXX11MemberInitTest2() {}
@@ -1134,6 +1133,8 @@ void fCXX11MemberInitTest2() {
   // TODO: we'd expect the warning: {{2 uninitializeds field}}
   CXX11MemberInitTest2(); // no-warning
 }
+
+#endif // PEDANTIC
 
 //===----------------------------------------------------------------------===//
 // "Esoteric" primitive type tests.

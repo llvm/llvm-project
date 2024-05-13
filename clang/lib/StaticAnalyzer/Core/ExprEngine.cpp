@@ -1967,23 +1967,52 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
       ExplodedNodeSet CheckedSet;
       getCheckerManager().runCheckersForPreStmt(CheckedSet, Pred, S, *this);
 
-      const Expr *ArgE;
-      if (const auto *DefE = dyn_cast<CXXDefaultArgExpr>(S))
-        ArgE = DefE->getExpr();
-      else if (const auto *DefE = dyn_cast<CXXDefaultInitExpr>(S))
-        ArgE = DefE->getExpr();
-      else
-        llvm_unreachable("unknown constant wrapper kind");
-
       ExplodedNodeSet Tmp;
       StmtNodeBuilder Bldr2(CheckedSet, Tmp, *currBldrCtx);
 
-      for (auto *I : CheckedSet) {
-        ProgramStateRef state = (*I).getState();
-        const LocationContext *LCtx = (*I).getLocationContext();
-        SVal Val = state->getSVal(ArgE, LCtx);
-        state = state->BindExpr(S, LCtx, Val);
-        Bldr2.generateNode(S, I, state);
+      bool HasRewrittenInit = false;
+      const Expr *ArgE = nullptr;
+      if (const auto *DefE = dyn_cast<CXXDefaultArgExpr>(S)) {
+        ArgE = DefE->getExpr();
+        HasRewrittenInit = DefE->hasRewrittenInit();
+      } else if (const auto *DefE = dyn_cast<CXXDefaultInitExpr>(S)) {
+        ArgE = DefE->getExpr();
+        HasRewrittenInit = DefE->hasRewrittenInit();
+      } else
+        llvm_unreachable("unknown constant wrapper kind");
+
+      if (HasRewrittenInit) {
+        for (auto *I : CheckedSet) {
+          ProgramStateRef state = (*I).getState();
+          const LocationContext *LCtx = (*I).getLocationContext();
+          SVal Val = state->getSVal(ArgE, LCtx);
+          state = state->BindExpr(S, LCtx, Val);
+          Bldr2.generateNode(S, I, state);
+        }
+      } else {
+        // If it's not rewritten, the contents of these expressions are not
+        // actually part of the current function, so we fall back to constant
+        // evaluation.
+        bool IsTemporary = false;
+        if (const auto *MTE = dyn_cast<MaterializeTemporaryExpr>(ArgE)) {
+          ArgE = MTE->getSubExpr();
+          IsTemporary = true;
+        }
+
+        std::optional<SVal> ConstantVal = svalBuilder.getConstantVal(ArgE);
+        if (!ConstantVal)
+          ConstantVal = UnknownVal();
+
+        const LocationContext *LCtx = Pred->getLocationContext();
+        for (auto *I : CheckedSet) {
+          ProgramStateRef State = I->getState();
+          State = State->BindExpr(S, LCtx, *ConstantVal);
+          if (IsTemporary)
+          State = createTemporaryRegionIfNeeded(State, LCtx, cast<Expr>(S),
+                                                cast<Expr>(S));
+
+          Bldr2.generateNode(S, I, State);
+        }
       }
 
       getCheckerManager().runCheckersForPostStmt(Dst, Tmp, S, *this);
