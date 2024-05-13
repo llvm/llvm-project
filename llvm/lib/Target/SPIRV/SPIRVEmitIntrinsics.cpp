@@ -97,7 +97,6 @@ class SPIRVEmitIntrinsics
       Args.push_back(Imm);
     return B.CreateIntrinsic(IntrID, {Types}, Args);
   }
-
   void buildAssignPtr(IRBuilder<> &B, Type *ElemTy, Value *Arg);
 
   void replaceMemInstrUses(Instruction *Old, Instruction *New, IRBuilder<> &B);
@@ -111,6 +110,7 @@ class SPIRVEmitIntrinsics
                                         unsigned OperandToReplace,
                                         IRBuilder<> &B);
   void insertPtrCastOrAssignTypeInstr(Instruction *I, IRBuilder<> &B);
+  void insertSpirvDecorations(Instruction *I, IRBuilder<> &B);
   void processGlobalValue(GlobalVariable &GV, IRBuilder<> &B);
   void processParamTypes(Function *F, IRBuilder<> &B);
   void processParamTypesByFunHeader(Function *F, IRBuilder<> &B);
@@ -1116,6 +1116,15 @@ void SPIRVEmitIntrinsics::insertAssignTypeIntrs(Instruction *I,
   }
 }
 
+void SPIRVEmitIntrinsics::insertSpirvDecorations(Instruction *I,
+                                                 IRBuilder<> &B) {
+  if (MDNode *MD = I->getMetadata("spirv.Decorations")) {
+    B.SetInsertPoint(I->getNextNode());
+    B.CreateIntrinsic(Intrinsic::spv_assign_decoration, {I->getType()},
+                      {I, MetadataAsValue::get(I->getContext(), MD)});
+  }
+}
+
 void SPIRVEmitIntrinsics::processInstrAfterVisit(Instruction *I,
                                                  IRBuilder<> &B) {
   auto *II = dyn_cast<IntrinsicInst>(I);
@@ -1287,6 +1296,7 @@ bool SPIRVEmitIntrinsics::runOnFunction(Function &Func) {
     insertAssignPtrTypeIntrs(I, B);
     insertAssignTypeIntrs(I, B);
     insertPtrCastOrAssignTypeInstr(I, B);
+    insertSpirvDecorations(I, B);
   }
 
   for (auto &I : instructions(Func))

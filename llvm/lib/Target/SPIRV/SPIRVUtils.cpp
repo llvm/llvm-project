@@ -134,7 +134,7 @@ void buildOpDecorate(Register Reg, MachineInstr &I, const SPIRVInstrInfo &TII,
 }
 
 void buildOpSpirvDecorations(Register Reg, MachineIRBuilder &MIRBuilder,
-                             MDNode *GVarMD) {
+                             const MDNode *GVarMD) {
   for (unsigned I = 0, E = GVarMD->getNumOperands(); I != E; ++I) {
     auto *OpMD = dyn_cast<MDNode>(GVarMD->getOperand(I));
     if (!OpMD)
