@@ -1,4 +1,8 @@
 // RUN: llvm-mc -triple x86_64 --show-encoding %s | FileCheck %s
+// RUN: not llvm-mc -triple i386 -show-encoding %s 2>&1 | FileCheck %s --check-prefix=ERROR
+
+// ERROR-COUNT-8: error:
+// ERROR-NOT: error:
 
 // CHECK: lkgsw %ax
 // CHECK: encoding: [0xf2,0x0f,0x00,0xf0]
