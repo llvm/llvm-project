@@ -11,33 +11,35 @@
 #include "src/__support/time/linux/monotonicity.h"
 #include "test/UnitTest/Test.h"
 
-namespace LIBC_NAMESPACE {
-namespace internal {
+template <class T, class E>
+using expected = LIBC_NAMESPACE::cpp::expected<T, E>;
+using AbsTimeout = LIBC_NAMESPACE::internal::AbsTimeout;
+
 TEST(LlvmLibcSupportLinuxTimeoutTest, NegativeSecond) {
   timespec ts = {-1, 0};
-  cpp::expected<AbsTimeout, AbsTimeout::Error> result =
+  expected<AbsTimeout, AbsTimeout::Error> result =
       AbsTimeout::from_timespec(ts, false);
   ASSERT_FALSE(result.has_value());
   ASSERT_EQ(result.error(), AbsTimeout::Error::BeforeEpoch);
 }
 TEST(LlvmLibcSupportLinuxTimeoutTest, OverflowNano) {
-  using namespace time_units;
+  using namespace LIBC_NAMESPACE::time_units;
   timespec ts = {0, 2_s_ns};
-  cpp::expected<AbsTimeout, AbsTimeout::Error> result =
+  expected<AbsTimeout, AbsTimeout::Error> result =
       AbsTimeout::from_timespec(ts, false);
   ASSERT_FALSE(result.has_value());
   ASSERT_EQ(result.error(), AbsTimeout::Error::Invalid);
 }
 TEST(LlvmLibcSupportLinuxTimeoutTest, UnderflowNano) {
   timespec ts = {0, -1};
-  cpp::expected<AbsTimeout, AbsTimeout::Error> result =
+  expected<AbsTimeout, AbsTimeout::Error> result =
       AbsTimeout::from_timespec(ts, false);
   ASSERT_FALSE(result.has_value());
   ASSERT_EQ(result.error(), AbsTimeout::Error::Invalid);
 }
 TEST(LlvmLibcSupportLinuxTimeoutTest, NoChangeIfClockIsMonotonic) {
   timespec ts = {10000, 0};
-  cpp::expected<AbsTimeout, AbsTimeout::Error> result =
+  expected<AbsTimeout, AbsTimeout::Error> result =
       AbsTimeout::from_timespec(ts, false);
   ASSERT_TRUE(result.has_value());
   ensure_monotonicity(*result);
@@ -47,8 +49,8 @@ TEST(LlvmLibcSupportLinuxTimeoutTest, NoChangeIfClockIsMonotonic) {
 }
 TEST(LlvmLibcSupportLinuxTimeoutTest, ValidAfterConversion) {
   timespec ts;
-  internal::clock_gettime(CLOCK_REALTIME, &ts);
-  cpp::expected<AbsTimeout, AbsTimeout::Error> result =
+  LIBC_NAMESPACE::internal::clock_gettime(CLOCK_REALTIME, &ts);
+  expected<AbsTimeout, AbsTimeout::Error> result =
       AbsTimeout::from_timespec(ts, true);
   ASSERT_TRUE(result.has_value());
   ensure_monotonicity(*result);
@@ -56,5 +58,3 @@ TEST(LlvmLibcSupportLinuxTimeoutTest, ValidAfterConversion) {
   ASSERT_TRUE(
       AbsTimeout::from_timespec(result->get_timespec(), false).has_value());
 }
-} // namespace internal
-} // namespace LIBC_NAMESPACE
