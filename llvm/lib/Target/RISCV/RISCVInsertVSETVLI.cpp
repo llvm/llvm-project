@@ -47,11 +47,15 @@ static cl::opt<bool> DisableInsertVSETVLPHIOpt(
 
 namespace {
 
+/// Given a virtual register \p Reg, return the corresponding VNInfo for it.
+/// This should never return nullptr.
 static VNInfo *getVNInfoFromReg(Register Reg, const MachineInstr &MI,
                                 const LiveIntervals *LIS) {
+  assert(Reg.isVirtual());
   auto &LI = LIS->getInterval(Reg);
   SlotIndex SI = LIS->getSlotIndexes()->getInstructionIndex(MI);
   VNInfo *VNI = LI.getVNInfoBefore(SI);
+  assert(VNI);
   return VNI;
 }
 
@@ -434,7 +438,8 @@ DemandedFields getDemanded(const MachineInstr &MI, const RISCVSubtarget *ST) {
 /// values of the VL and VTYPE registers after insertion.
 class VSETVLIInfo {
   struct AVLDef {
-    const VNInfo *AVLVNInfo;
+    // Every AVLDef should have a VNInfo.
+    const VNInfo *VNInfo;
     Register DefReg;
   };
   union {
@@ -475,7 +480,7 @@ public:
 
   void setAVLRegDef(const VNInfo *VNInfo, Register AVLReg) {
     assert(VNInfo && AVLReg.isVirtual());
-    AVLRegDef.AVLVNInfo = VNInfo;
+    AVLRegDef.VNInfo = VNInfo;
     AVLRegDef.DefReg = AVLReg;
     State = AVLIsReg;
   }
@@ -503,7 +508,16 @@ public:
   }
   const VNInfo *getAVLVNInfo() const {
     assert(hasAVLReg());
-    return AVLRegDef.AVLVNInfo;
+    return AVLRegDef.VNInfo;
+  }
+  // Most AVLIsReg infos will have a single defining MachineInstr, unless it was
+  // a PHI node. In that case getAVLVNInfo()->def will point to the block
+  // boundary slot.
+  const MachineInstr *getAVLDefMI(const LiveIntervals *LIS) const {
+    assert(hasAVLReg());
+    auto *MI = LIS->getInstructionFromIndex(getAVLVNInfo()->def);
+    assert(!(getAVLVNInfo()->isPHIDef() && MI));
+    return MI;
   }
 
   void setAVL(VSETVLIInfo Info) {
@@ -531,7 +545,7 @@ public:
     if (hasAVLImm())
       return getAVLImm() > 0;
     if (hasAVLReg()) {
-      if (auto *DefMI = LIS->getInstructionFromIndex(getAVLVNInfo()->def))
+      if (auto *DefMI = getAVLDefMI(LIS))
         return isNonZeroLoadImmediate(*DefMI);
     }
     if (hasAVLVLMAX())
@@ -975,9 +989,8 @@ static VSETVLIInfo computeInfoForInstr(const MachineInstr &MI, uint64_t TSFlags,
   // register AVLs to avoid extending live ranges without being sure we can
   // kill the original source reg entirely.
   if (InstrInfo.hasAVLReg()) {
-    const MachineInstr *DefMI =
-        LIS->getInstructionFromIndex(InstrInfo.getAVLVNInfo()->def);
-    if (DefMI && isVectorConfigInstr(*DefMI)) {
+    if (const MachineInstr *DefMI = InstrInfo.getAVLDefMI(LIS);
+        DefMI && isVectorConfigInstr(*DefMI)) {
       VSETVLIInfo DefInstrInfo = getInfoForVSETVLI(*DefMI, LIS);
       if (DefInstrInfo.hasSameVLMAX(InstrInfo) &&
           (DefInstrInfo.hasAVLImm() || DefInstrInfo.hasAVLVLMAX()))
@@ -1017,9 +1030,8 @@ void RISCVInsertVSETVLI::insertVSETVLI(MachineBasicBlock &MBB,
     // it has the same VLMAX we want and the last VL/VTYPE we observed is the
     // same, we can use the X0, X0 form.
     if (Info.hasSameVLMAX(PrevInfo) && Info.hasAVLReg()) {
-      const MachineInstr *DefMI =
-          LIS->getInstructionFromIndex(Info.getAVLVNInfo()->def);
-      if (DefMI && isVectorConfigInstr(*DefMI)) {
+      if (const MachineInstr *DefMI = Info.getAVLDefMI(LIS);
+          DefMI && isVectorConfigInstr(*DefMI)) {
         VSETVLIInfo DefInfo = getInfoForVSETVLI(*DefMI, LIS);
         if (DefInfo.hasSameAVL(PrevInfo) && DefInfo.hasSameVLMAX(PrevInfo)) {
           auto MI = BuildMI(MBB, InsertPt, DL, TII->get(RISCV::PseudoVSETVLIX0))
@@ -1083,6 +1095,9 @@ void RISCVInsertVSETVLI::insertVSETVLI(MachineBasicBlock &MBB,
                 .addReg(AVLReg)
                 .addImm(Info.encodeVTYPE());
   LIS->InsertMachineInstrInMaps(*MI);
+  // Normally the AVL's live range will already extend past the inserted vsetvli
+  // because the pseudos below will already use the AVL. But this isn't always
+  // the case, e.g. PseudoVMV_X_S doesn't have an AVL operand.
   LIS->getInterval(AVLReg).extendInBlock(
       LIS->getMBBStartIdx(&MBB), LIS->getInstructionIndex(*MI).getRegSlot());
 }
@@ -1146,9 +1161,8 @@ bool RISCVInsertVSETVLI::needVSETVLI(const MachineInstr &MI,
   // and the last VL/VTYPE we observed is the same, we don't need a
   // VSETVLI here.
   if (Require.hasAVLReg() && CurInfo.hasCompatibleVTYPE(Used, Require)) {
-    const MachineInstr *DefMI =
-        LIS->getInstructionFromIndex(Require.getAVLVNInfo()->def);
-    if (DefMI && isVectorConfigInstr(*DefMI)) {
+    if (const MachineInstr *DefMI = Require.getAVLDefMI(LIS);
+        DefMI && isVectorConfigInstr(*DefMI)) {
       VSETVLIInfo DefInfo = getInfoForVSETVLI(*DefMI, LIS);
       if (DefInfo.hasSameAVL(CurInfo) && DefInfo.hasSameVLMAX(CurInfo))
         return false;
