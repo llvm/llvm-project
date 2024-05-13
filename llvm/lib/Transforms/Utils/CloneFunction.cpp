@@ -386,18 +386,6 @@ public:
 };
 } // namespace
 
-static bool hasRoundingModeOperand(Intrinsic::ID CIID) {
-  switch (CIID) {
-#define INSTRUCTION(NAME, NARG, ROUND_MODE, INTRINSIC)                         \
-  case Intrinsic::INTRINSIC:                                                   \
-    return ROUND_MODE == 1;
-#define FUNCTION INSTRUCTION
-#include "llvm/IR/ConstrainedOps.def"
-  default:
-    llvm_unreachable("Unexpected constrained intrinsic id");
-  }
-}
-
 Instruction *
 PruningFunctionCloner::cloneInstruction(BasicBlock::const_iterator II) {
   const Instruction &OldInst = *II;
@@ -455,7 +443,7 @@ PruningFunctionCloner::cloneInstruction(BasicBlock::const_iterator II) {
       // The last arguments of a constrained intrinsic are metadata that
       // represent rounding mode (absents in some intrinsics) and exception
       // behavior. The inlined function uses default settings.
-      if (hasRoundingModeOperand(CIID))
+      if (Intrinsic::hasConstrainedFPRoundingModeOperand(CIID))
         Args.push_back(
             MetadataAsValue::get(Ctx, MDString::get(Ctx, "round.tonearest")));
       Args.push_back(
