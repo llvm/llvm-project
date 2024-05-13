@@ -141,3 +141,39 @@ func.func @arith_cmpi_predicates(%arg0: i32, %arg1: i32) {
   
   return
 }
+
+// -----
+
+func.func @arith_float_to_int_cast_ops(%arg0: f32, %arg1: f64) {
+  // CHECK: emitc.cast %arg0 : f32 to i32
+  %0 = arith.fptosi %arg0 : f32 to i32
+
+  // CHECK: emitc.cast %arg1 : f64 to i32
+  %1 = arith.fptosi %arg1 : f64 to i32
+
+  // CHECK: emitc.cast %arg0 : f32 to i16
+  %2 = arith.fptosi %arg0 : f32 to i16
+
+  // CHECK: emitc.cast %arg1 : f64 to i16
+  %3 = arith.fptosi %arg1 : f64 to i16
+
+  // CHECK: %[[CAST0:.*]] = emitc.cast %arg0 : f32 to ui32
+  // CHECK: emitc.cast %[[CAST0]] : ui32 to i32
+  %4 = arith.fptoui %arg0 : f32 to i32
+
+  return
+}
+
+func.func @arith_int_to_float_cast_ops(%arg0: i8, %arg1: i64) {
+  // CHECK: emitc.cast %arg0 : i8 to f32
+  %0 = arith.sitofp %arg0 : i8 to f32
+
+  // CHECK: emitc.cast %arg1 : i64 to f32
+  %1 = arith.sitofp %arg1 : i64 to f32
+
+  // CHECK: %[[CAST_UNS:.*]] = emitc.cast %arg0 : i8 to ui8
+  // CHECK: emitc.cast %[[CAST_UNS]] : ui8 to f32
+  %2 = arith.uitofp %arg0 : i8 to f32
+
+  return
+}

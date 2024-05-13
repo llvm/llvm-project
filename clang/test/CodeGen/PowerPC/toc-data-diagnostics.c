@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 %s -triple=powerpc-ibm-aix-xcoff -S -mtocdata=h,g,f,e,d,c,b,a,globalOneWithAlias,globalTwoWithAlias,ll,t3 -verify -emit-llvm -o - | FileCheck %s -check-prefix=CHECK --match-full-lines
-// RUN: %clang_cc1 %s -triple=powerpc-ibm-aix-xcoff -S -mtocdata -verify=none -emit-llvm -o - | FileCheck %s -check-prefix=CHECK --match-full-lines
+// RUN: %clang_cc1 %s -triple=powerpc-ibm-aix-xcoff -mtocdata=h,g,f,e,d,c,b,a,globalOneWithAlias,globalTwoWithAlias,ll,t3 -verify -emit-llvm -o - | FileCheck %s -check-prefix=CHECK --match-full-lines
+// RUN: %clang_cc1 %s -triple=powerpc-ibm-aix-xcoff -mtocdata -verify=none -emit-llvm -o - | FileCheck %s -check-prefix=CHECK --match-full-lines
 
 // none-no-diagnostics
 

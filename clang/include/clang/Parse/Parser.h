@@ -3553,6 +3553,23 @@ private:
   OMPClause *ParseOpenMPVarListClause(OpenMPDirectiveKind DKind,
                                       OpenMPClauseKind Kind, bool ParseOnly);
 
+  /// Parses a clause consisting of a list of expressions.
+  ///
+  /// \param Kind          The clause to parse.
+  /// \param ClauseNameLoc [out] The location of the clause name.
+  /// \param OpenLoc       [out] The location of '('.
+  /// \param CloseLoc      [out] The location of ')'.
+  /// \param Exprs         [out] The parsed expressions.
+  /// \param ReqIntConst   If true, each expression must be an integer constant.
+  ///
+  /// \return Whether the clause was parsed successfully.
+  bool ParseOpenMPExprListClause(OpenMPClauseKind Kind,
+                                 SourceLocation &ClauseNameLoc,
+                                 SourceLocation &OpenLoc,
+                                 SourceLocation &CloseLoc,
+                                 SmallVectorImpl<Expr *> &Exprs,
+                                 bool ReqIntConst = false);
+
   /// Parses and creates OpenMP 5.0 iterators expression:
   /// <iterators> = 'iterator' '(' { [ <iterator-type> ] identifier =
   /// <range-specification> }+ ')'
@@ -3632,6 +3649,13 @@ private:
     // Wait constructs, we likely want to put that information in here as well.
   };
 
+  struct OpenACCWaitParseInfo {
+    bool Failed = false;
+    Expr *DevNumExpr = nullptr;
+    SourceLocation QueuesLoc;
+    SmallVector<Expr *> QueueIdExprs;
+  };
+
   /// Represents the 'error' state of parsing an OpenACC Clause, and stores
   /// whether we can continue parsing, or should give up on the directive.
   enum class OpenACCParseCanContinue { Cannot = 0, Can = 1 };
@@ -3674,7 +3698,8 @@ private:
   /// Parses the clause-list for an OpenACC directive.
   SmallVector<OpenACCClause *>
   ParseOpenACCClauseList(OpenACCDirectiveKind DirKind);
-  bool ParseOpenACCWaitArgument(SourceLocation Loc, bool IsDirective);
+  OpenACCWaitParseInfo ParseOpenACCWaitArgument(SourceLocation Loc,
+                                                bool IsDirective);
   /// Parses the clause of the 'bind' argument, which can be a string literal or
   /// an ID expression.
   ExprResult ParseOpenACCBindClauseArgument();
@@ -3698,7 +3723,9 @@ private:
   bool ParseOpenACCDeviceTypeList();
   /// Parses the 'async-argument', which is an integral value with two
   /// 'special' values that are likely negative (but come from Macros).
-  ExprResult ParseOpenACCAsyncArgument();
+  OpenACCIntExprParseResult ParseOpenACCAsyncArgument(OpenACCDirectiveKind DK,
+                                                      OpenACCClauseKind CK,
+                                                      SourceLocation Loc);
   /// Parses the 'size-expr', which is an integral value, or an asterisk.
   bool ParseOpenACCSizeExpr();
   /// Parses a comma delimited list of 'size-expr's.
