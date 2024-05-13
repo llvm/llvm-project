@@ -228,18 +228,18 @@ define float @test_simplify8(i8 zeroext %x) {
 define double @test_simplify9(i8 zeroext %x) {
 ; LDEXP32-LABEL: @test_simplify9(
 ; LDEXP32-NEXT:    [[TMP1:%.*]] = zext i8 [[X:%.*]] to i32
-; LDEXP32-NEXT:    [[LDEXP:%.*]] = call double @ldexp(double 1.000000e+00, i32 [[TMP1]])
-; LDEXP32-NEXT:    ret double [[LDEXP]]
+; LDEXP32-NEXT:    [[RET:%.*]] = call double @llvm.ldexp.f64.i32(double 1.000000e+00, i32 [[TMP1]])
+; LDEXP32-NEXT:    ret double [[RET]]
 ;
 ; LDEXP16-LABEL: @test_simplify9(
 ; LDEXP16-NEXT:    [[TMP1:%.*]] = zext i8 [[X:%.*]] to i16
-; LDEXP16-NEXT:    [[LDEXP:%.*]] = call double @ldexp(double 1.000000e+00, i16 [[TMP1]])
-; LDEXP16-NEXT:    ret double [[LDEXP]]
+; LDEXP16-NEXT:    [[RET:%.*]] = call double @llvm.ldexp.f64.i16(double 1.000000e+00, i16 [[TMP1]])
+; LDEXP16-NEXT:    ret double [[RET]]
 ;
 ; NOLDEXPF-LABEL: @test_simplify9(
 ; NOLDEXPF-NEXT:    [[TMP1:%.*]] = zext i8 [[X:%.*]] to i32
-; NOLDEXPF-NEXT:    [[LDEXP:%.*]] = call double @ldexp(double 1.000000e+00, i32 [[TMP1]])
-; NOLDEXPF-NEXT:    ret double [[LDEXP]]
+; NOLDEXPF-NEXT:    [[RET:%.*]] = call double @llvm.ldexp.f64.i32(double 1.000000e+00, i32 [[TMP1]])
+; NOLDEXPF-NEXT:    ret double [[RET]]
 ;
 ; NOLDEXP-LABEL: @test_simplify9(
 ; NOLDEXP-NEXT:    [[CONV:%.*]] = uitofp i8 [[X:%.*]] to double
@@ -254,13 +254,13 @@ define double @test_simplify9(i8 zeroext %x) {
 define float @test_simplify10(i8 zeroext %x) {
 ; LDEXP32-LABEL: @test_simplify10(
 ; LDEXP32-NEXT:    [[TMP1:%.*]] = zext i8 [[X:%.*]] to i32
-; LDEXP32-NEXT:    [[LDEXPF:%.*]] = call float @ldexpf(float 1.000000e+00, i32 [[TMP1]])
-; LDEXP32-NEXT:    ret float [[LDEXPF]]
+; LDEXP32-NEXT:    [[RET:%.*]] = call float @llvm.ldexp.f32.i32(float 1.000000e+00, i32 [[TMP1]])
+; LDEXP32-NEXT:    ret float [[RET]]
 ;
 ; LDEXP16-LABEL: @test_simplify10(
 ; LDEXP16-NEXT:    [[TMP1:%.*]] = zext i8 [[X:%.*]] to i16
-; LDEXP16-NEXT:    [[LDEXPF:%.*]] = call float @ldexpf(float 1.000000e+00, i16 [[TMP1]])
-; LDEXP16-NEXT:    ret float [[LDEXPF]]
+; LDEXP16-NEXT:    [[RET:%.*]] = call float @llvm.ldexp.f32.i16(float 1.000000e+00, i16 [[TMP1]])
+; LDEXP16-NEXT:    ret float [[RET]]
 ;
 ; NOLDEXPF-LABEL: @test_simplify10(
 ; NOLDEXPF-NEXT:    [[CONV:%.*]] = uitofp i8 [[X:%.*]] to float
@@ -280,13 +280,13 @@ define float @test_simplify10(i8 zeroext %x) {
 define float @sitofp_scalar_intrinsic_with_FMF(i8 %x) {
 ; LDEXP32-LABEL: @sitofp_scalar_intrinsic_with_FMF(
 ; LDEXP32-NEXT:    [[TMP1:%.*]] = sext i8 [[X:%.*]] to i32
-; LDEXP32-NEXT:    [[LDEXPF:%.*]] = tail call nnan float @ldexpf(float 1.000000e+00, i32 [[TMP1]])
-; LDEXP32-NEXT:    ret float [[LDEXPF]]
+; LDEXP32-NEXT:    [[R:%.*]] = tail call nnan float @llvm.ldexp.f32.i32(float 1.000000e+00, i32 [[TMP1]])
+; LDEXP32-NEXT:    ret float [[R]]
 ;
 ; LDEXP16-LABEL: @sitofp_scalar_intrinsic_with_FMF(
 ; LDEXP16-NEXT:    [[TMP1:%.*]] = sext i8 [[X:%.*]] to i16
-; LDEXP16-NEXT:    [[LDEXPF:%.*]] = tail call nnan float @ldexpf(float 1.000000e+00, i16 [[TMP1]])
-; LDEXP16-NEXT:    ret float [[LDEXPF]]
+; LDEXP16-NEXT:    [[R:%.*]] = tail call nnan float @llvm.ldexp.f32.i16(float 1.000000e+00, i16 [[TMP1]])
+; LDEXP16-NEXT:    ret float [[R]]
 ;
 ; NOLDEXPF-LABEL: @sitofp_scalar_intrinsic_with_FMF(
 ; NOLDEXPF-NEXT:    [[S:%.*]] = sitofp i8 [[X:%.*]] to float
