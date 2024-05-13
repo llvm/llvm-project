@@ -143,7 +143,7 @@ void registerTestTransformDialectEraseSchedulePass();
 void registerTestWrittenToPass();
 void registerTestVectorLowerings();
 void registerTestVectorReductionToSPIRVDotProd();
-void registerTestNvgpuLowerings();
+void registerTestNVGPULowerings();
 #if MLIR_ENABLE_PDL_IN_PATTERNMATCH
 void registerTestDialectConversionPasses();
 void registerTestPDLByteCodePass();
@@ -270,7 +270,7 @@ void registerTestPasses() {
   mlir::test::registerTestTransformDialectEraseSchedulePass();
   mlir::test::registerTestVectorLowerings();
   mlir::test::registerTestVectorReductionToSPIRVDotProd();
-  mlir::test::registerTestNvgpuLowerings();
+  mlir::test::registerTestNVGPULowerings();
   mlir::test::registerTestWrittenToPass();
 #if MLIR_ENABLE_PDL_IN_PATTERNMATCH
   mlir::test::registerTestDialectConversionPasses();

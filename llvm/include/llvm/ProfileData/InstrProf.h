@@ -17,6 +17,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitmaskEnum.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/IntervalMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -470,6 +471,12 @@ private:
   // A map from MD5 keys to function define. We only populate this map
   // when build the Symtab from a Module.
   std::vector<std::pair<uint64_t, Function *>> MD5FuncMap;
+  // A map from MD5 to the global variable. This map is only populated when
+  // building the symtab from a module. Use separate container instances for
+  // `MD5FuncMap` and `MD5VTableMap`.
+  // TODO: Unify the container type and the lambda function 'mapName' inside
+  // add{Func,VTable}WithName.
+  DenseMap<uint64_t, GlobalVariable *> MD5VTableMap;
   // A map from function runtime address to function name MD5 hash.
   // This map is only populated and used by raw instr profile reader.
   AddrHashMap AddrToMD5Map;
@@ -488,11 +495,17 @@ private:
 
   // Add the function into the symbol table, by creating the following
   // map entries:
-  // name-set = {PGOFuncName} + {getCanonicalName(PGOFuncName)} if the canonical
-  // name is different from pgo name
+  // name-set = {PGOFuncName} union {getCanonicalName(PGOFuncName)}
   // - In MD5NameMap: <MD5Hash(name), name> for name in name-set
   // - In MD5FuncMap: <MD5Hash(name), &F> for name in name-set
   Error addFuncWithName(Function &F, StringRef PGOFuncName);
+
+  // Add the vtable into the symbol table, by creating the following
+  // map entries:
+  // name-set = {PGOName} union {getCanonicalName(PGOName)}
+  // - In MD5NameMap:  <MD5Hash(name), name> for name in name-set
+  // - In MD5VTableMap: <MD5Hash(name), name> for name in name-set
+  Error addVTableWithName(GlobalVariable &V, StringRef PGOVTableName);
 
   // If the symtab is created by a series of calls to \c addFuncName, \c
   // finalizeSymtab needs to be called before looking up function names.
@@ -555,6 +568,7 @@ public:
   Error create(const FuncNameIterRange &FuncIterRange,
                const VTableNameIterRange &VTableIterRange);
 
+  // Map the MD5 of the symbol name to the name.
   Error addSymbolName(StringRef SymbolName) {
     if (SymbolName.empty())
       return make_error<InstrProfError>(instrprof_error::malformed,
@@ -629,6 +643,10 @@ public:
 
   /// Return function from the name's md5 hash. Return nullptr if not found.
   inline Function *getFunction(uint64_t FuncMD5Hash);
+
+  /// Return the global variable corresponding to md5 hash. Return nullptr if
+  /// not found.
+  inline GlobalVariable *getGlobalVariable(uint64_t MD5Hash);
 
   /// Return the name section data.
   inline StringRef getNameData() const { return Data; }
@@ -706,6 +724,12 @@ Function* InstrProfSymtab::getFunction(uint64_t FuncMD5Hash) {
                                      uint64_t RHS) { return LHS.first < RHS; });
   if (Result != MD5FuncMap.end() && Result->first == FuncMD5Hash)
     return Result->second;
+  return nullptr;
+}
+
+GlobalVariable *InstrProfSymtab::getGlobalVariable(uint64_t MD5Hash) {
+  if (auto Iter = MD5VTableMap.find(MD5Hash); Iter != MD5VTableMap.end())
+    return Iter->second;
   return nullptr;
 }
 
