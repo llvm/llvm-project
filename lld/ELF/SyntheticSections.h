@@ -1255,10 +1255,6 @@ private:
   // either find the .ARM.exidx section or know that we need to generate one.
   SmallVector<InputSection *, 0> executableSections;
 
-  // Value of executableSecitons before finalizeContents(), so that it can be
-  // run repeateadly during fixed point iteration.
-  SmallVector<InputSection *, 0> originalExecutableSections;
-
   // The executable InputSection with the highest address to use for the
   // sentinel. We store separately from ExecutableSections as merging of
   // duplicate entries may mean this InputSection is removed from

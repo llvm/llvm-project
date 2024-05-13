@@ -38,12 +38,6 @@ ELF Improvements
 * ``--debug-names`` is added to create a merged ``.debug_names`` index
   from input ``.debug_names`` sections. Type units are not handled yet.
   (`#86508 <https://github.com/llvm/llvm-project/pull/86508>`_)
-* ``--enable-non-contiguous-regions`` option allows automatically packing input
-  sections into memory regions by automatically spilling to later matches if a
-  region would overflow. This reduces the toil of manually packing regions
-  (typical for embedded). It also makes full LTO feasible in such cases, since
-  IR merging currently prevents the linker script from referring to input
-  files. (`#90007 <https://github.com/llvm/llvm-project/pull/90007>`_)
 
 Breaking changes
 ----------------
