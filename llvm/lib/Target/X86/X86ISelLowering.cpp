@@ -20113,7 +20113,7 @@ SDValue X86TargetLowering::FP_TO_INTHelper(SDValue Op, SelectionDAG &DAG,
                                          DAG.getVTList(MVT::Other),
                                          Ops, DstTy, MMO);
 
-  SDValue Res = DAG.getLoad(Op.getValueType(), SDLoc(Op), FIST, StackSlot, MPI);
+  SDValue Res = DAG.getLoad(Op.getValueType(), DL, FIST, StackSlot, MPI);
   Chain = Res.getValue(1);
 
   // If we need an unsigned fixup, XOR the result with adjust.
