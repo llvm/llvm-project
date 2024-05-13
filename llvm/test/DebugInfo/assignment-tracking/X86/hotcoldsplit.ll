@@ -4,7 +4,7 @@
 
 ; CHECK-LABEL: define void @_foo()
 ; CHECK: common.ret:
-; CHECK-NEXT: #dbg_assign(i64 0, ![[#]], !DIExpression(DW_OP_LLVM_fragment, 0, 64), ![[ID1:[0-9]+]], ptr null, !DIExpression(), ![[#]])
+; CHECK-NEXT: dbg.assign(metadata i64 0, metadata ![[#]], metadata !DIExpression(DW_OP_LLVM_fragment, 0, 64), metadata ![[ID1:[0-9]+]], {{.*}}, metadata !DIExpression())
 
 ; CHECK-LABEL: define internal void @_foo.cold.1()
 ; CHECK: store i64 0, ptr null, align 8, !DIAssignID ![[ID2:[0-9]+]]
@@ -20,7 +20,7 @@ entry:
   br i1 false, label %if.then7, label %common.ret
 
 common.ret:                                       ; preds = %entry
-    #dbg_assign(i64 0, !7, !DIExpression(DW_OP_LLVM_fragment, 0, 64), !12, ptr null, !DIExpression(), !13)
+  call void @llvm.dbg.assign(metadata i64 0, metadata !7, metadata !DIExpression(DW_OP_LLVM_fragment, 0, 64), metadata !12, metadata ptr null, metadata !DIExpression()), !dbg !13
   ret void
 
 if.then7:                                         ; preds = %entry
