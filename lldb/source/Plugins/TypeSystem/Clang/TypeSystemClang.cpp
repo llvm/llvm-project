@@ -501,6 +501,8 @@ TypeSystemClang::TypeSystemClang(llvm::StringRef name,
   // The caller didn't pass an ASTContext so create a new one for this
   // TypeSystemClang.
   CreateASTContext();
+
+  LogCreation();
 }
 
 TypeSystemClang::TypeSystemClang(llvm::StringRef name,
@@ -510,6 +512,8 @@ TypeSystemClang::TypeSystemClang(llvm::StringRef name,
 
   m_ast_up.reset(&existing_ctxt);
   GetASTMap().Insert(&existing_ctxt, this);
+
+  LogCreation();
 }
 
 // Destructor
@@ -544,13 +548,16 @@ lldb::TypeSystemSP TypeSystemClang::CreateInstance(lldb::LanguageType language,
     }
   }
 
+  lldb::TypeSystemSP instance;
+
   if (module) {
     std::string ast_name =
         "ASTContext for '" + module->GetFileSpec().GetPath() + "'";
-    return std::make_shared<TypeSystemClang>(ast_name, triple);
+    instance = std::make_shared<TypeSystemClang>(ast_name, triple);
   } else if (target && target->IsValid())
-    return std::make_shared<ScratchTypeSystemClang>(*target, triple);
-  return lldb::TypeSystemSP();
+    instance = std::make_shared<ScratchTypeSystemClang>(*target, triple);
+
+  return instance;
 }
 
 LanguageSet TypeSystemClang::GetSupportedLanguagesForTypes() {
@@ -630,7 +637,7 @@ void TypeSystemClang::SetExternalSource(
   ast.setExternalSource(ast_source_up);
 }
 
-ASTContext &TypeSystemClang::getASTContext() {
+ASTContext &TypeSystemClang::getASTContext() const {
   assert(m_ast_up);
   return *m_ast_up;
 }
@@ -9749,4 +9756,10 @@ bool TypeSystemClang::SetDeclIsForcefullyCompleted(const clang::TagDecl *td) {
   m_has_forcefully_completed_types = true;
   metadata->SetIsForcefullyCompleted();
   return true;
+}
+
+void TypeSystemClang::LogCreation() const {
+  if (auto *log = GetLog(LLDBLog::Expressions))
+    LLDB_LOG(log, "Created new TypeSystem for (ASTContext*){0:x} '{1}'",
+             &getASTContext(), getDisplayName());
 }
