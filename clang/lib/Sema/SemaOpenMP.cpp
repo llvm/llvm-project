@@ -17505,7 +17505,7 @@ OMPClause *SemaOpenMP::ActOnOpenMPSizesClause(ArrayRef<Expr *> SizeExprs,
     //       Pass the invalid expression as-is, template instantiation may
     //       replace unexpected types/values with valid ones. The directives
     //       with this clause must not try to use these expressions in dependent
-    //       contexts.
+    //       contexts, but delay analysis until full instantiation.
     if (!SizeExpr->isInstantiationDependent() && !IsValid)
       SizeExpr = nullptr;
   }
