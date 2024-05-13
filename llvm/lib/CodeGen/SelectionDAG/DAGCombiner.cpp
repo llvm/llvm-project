@@ -17365,16 +17365,34 @@ SDValue DAGCombiner::visitFREM(SDNode *N) {
   EVT VT = N->getValueType(0);
   SDNodeFlags Flags = N->getFlags();
   SelectionDAG::FlagInserter FlagsInserter(DAG, N);
+  SDLoc DL(N);
 
   if (SDValue R = DAG.simplifyFPBinop(N->getOpcode(), N0, N1, Flags))
     return R;
 
   // fold (frem c1, c2) -> fmod(c1,c2)
-  if (SDValue C = DAG.FoldConstantArithmetic(ISD::FREM, SDLoc(N), VT, {N0, N1}))
+  if (SDValue C = DAG.FoldConstantArithmetic(ISD::FREM, DL, VT, {N0, N1}))
     return C;
 
   if (SDValue NewSel = foldBinOpIntoSelect(N))
     return NewSel;
+
+  // Lower frem N0, N1 => x - trunc(N0 / N1) * N1, providing N1 is an integer
+  // power of 2.
+  if (!TLI.isOperationLegal(ISD::FREM, VT) &&
+      TLI.isOperationLegalOrCustom(ISD::FMUL, VT) &&
+      TLI.isOperationLegalOrCustom(ISD::FDIV, VT) &&
+      TLI.isOperationLegalOrCustom(ISD::FTRUNC, VT) &&
+      DAG.isKnownToBeAPowerOfTwoFP(N1) &&
+      (Flags.hasNoSignedZeros() || DAG.cannotBeOrderedNegativeFP(N0))) {
+    SDValue Div = DAG.getNode(ISD::FDIV, DL, VT, N0, N1);
+    SDValue Rnd = DAG.getNode(ISD::FTRUNC, DL, VT, Div);
+    if (TLI.isFMAFasterThanFMulAndFAdd(DAG.getMachineFunction(), VT))
+      return DAG.getNode(ISD::FMA, DL, VT, DAG.getNode(ISD::FNEG, DL, VT, Rnd),
+                         N1, N0);
+    SDValue Mul = DAG.getNode(ISD::FMUL, DL, VT, Rnd, N1);
+    return DAG.getNode(ISD::FSUB, DL, VT, N0, Mul);
+  }
 
   return SDValue();
 }
