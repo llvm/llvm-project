@@ -108,6 +108,19 @@ void BoltAddressTranslation::write(const BinaryContext &BC, raw_ostream &OS) {
     for (const BinaryBasicBlock *const BB :
          Function.getLayout().getMainFragment())
       writeEntriesForBB(Map, *BB, InputAddress, OutputAddress);
+    // Add entries for deleted blocks. They are still required for correct BB
+    // mapping of branches modified by SCTC. By convention, they would have the
+    // end of the function as output address.
+    const BBHashMapTy &BBHashMap = getBBHashMap(InputAddress);
+    if (BBHashMap.size() != Function.size()) {
+      const uint64_t EndOffset = Function.getOutputSize();
+      std::unordered_set<uint32_t> MappedInputOffsets;
+      for (const BinaryBasicBlock &BB : Function)
+        MappedInputOffsets.emplace(BB.getInputOffset());
+      for (const auto &[InputOffset, _] : BBHashMap)
+        if (!llvm::is_contained(MappedInputOffsets, InputOffset))
+          Map[EndOffset] = InputOffset << 1;
+    }
     Maps.emplace(Function.getOutputAddress(), std::move(Map));
     ReverseMap.emplace(OutputAddress, InputAddress);
 
