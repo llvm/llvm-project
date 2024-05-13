@@ -25,7 +25,7 @@ entry:
 }
 
 !0 = !{!1, !2}
-!1 = !{i32 22}
-!2 = !{i32 41, !"v", i32 0}
+!1 = !{i32 22}                     ; 22 is Constant decoration
+!2 = !{i32 41, !"v", i32 0}        ; 41 is LinkageAttributes decoration with 2 extra operands
 !3 = !{!4}
-!4 = !{i32 5635, !"SemanticValue"}
+!4 = !{i32 5635, !"SemanticValue"} ; 5635 is UserSemantic decoration

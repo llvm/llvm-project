@@ -97,6 +97,7 @@ class SPIRVEmitIntrinsics
       Args.push_back(Imm);
     return B.CreateIntrinsic(IntrID, {Types}, Args);
   }
+
   void buildAssignPtr(IRBuilder<> &B, Type *ElemTy, Value *Arg);
 
   void replaceMemInstrUses(Instruction *Old, Instruction *New, IRBuilder<> &B);
