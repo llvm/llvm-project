@@ -28,6 +28,23 @@ static pthread_key_t Key;
 static pthread_once_t KeyOnce = PTHREAD_ONCE_INIT;
 void internalFree(void *Ptr) { __sanitizer::InternalFree(Ptr); }
 
+using radsan::Context;
+
+Context &GetContextForThisThreadImpl() {
+  auto MakeTlsKey = []() {
+    CHECK_EQ(pthread_key_create(&detail::Key, detail::internalFree), 0);
+  };
+
+  pthread_once(&detail::KeyOnce, MakeTlsKey);
+  Context *CurrentThreadContext = static_cast<Context *>(pthread_getspecific(detail::Key));
+  if (CurrentThreadContext == nullptr) {
+    CurrentThreadContext = static_cast<Context *>(InternalAlloc(sizeof(Context)));
+    new(CurrentThreadContext) Context();
+    pthread_setspecific(detail::Key, CurrentThreadContext);
+  }
+
+  return *CurrentThreadContext;
+}
 } // namespace detail
 
 namespace radsan {
@@ -64,19 +81,7 @@ void Context::PrintDiagnostics(const char *InterceptedFunctionName) {
 }
 
 Context &GetContextForThisThread() {
-  auto MakeTlsKey = []() {
-    CHECK_EQ(pthread_key_create(&detail::Key, detail::internalFree), 0);
-  };
-
-  pthread_once(&detail::KeyOnce, MakeTlsKey);
-  Context *CurrentThreadContext = static_cast<Context *>(pthread_getspecific(detail::Key));
-  if (CurrentThreadContext == nullptr) {
-    CurrentThreadContext = static_cast<Context *>(InternalAlloc(sizeof(Context)));
-    new(CurrentThreadContext) Context();
-    pthread_setspecific(detail::Key, CurrentThreadContext);
-  }
-
-  return *CurrentThreadContext;
+  return detail::GetContextForThisThreadImpl();
 }
 
 } // namespace radsan
