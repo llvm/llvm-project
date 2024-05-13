@@ -76,6 +76,11 @@ Changes to the AArch64 Backend
 * Added support for Cortex-A78AE, Cortex-A520AE, Cortex-A720AE,
   Cortex-R82AE, Neoverse-N3, Neoverse-V3 and Neoverse-V3AE CPUs.
 
+* ``-mbranch-protection=standard`` now enables FEAT_PAuth_LR by
+  default when the feature is enabled. The new behaviour results 
+  in ``standard`` being equal to ``bti+pac-ret+pc`` when ``+pauth-lr``
+  is passed as part of ``-mcpu=`` options.
+
 Changes to the AMDGPU Backend
 -----------------------------
 
@@ -167,6 +172,13 @@ Changes to the C API
   ``LLVMAtomicRMWBinOp`` enum for AtomicRMW instructions.
 
 * Added ``LLVMCreateConstantRangeAttribute`` function for creating ConstantRange Attributes.
+
+* Added the following functions for creating and accessing data for CallBr instructions:
+
+  * ``LLVMBuildCallBr``
+  * ``LLVMGetCallBrDefaultDest``
+  * ``LLVMGetCallBrNumIndirectDests``
+  * ``LLVMGetCallBrIndirectDest``
 
 Changes to the CodeGen infrastructure
 -------------------------------------

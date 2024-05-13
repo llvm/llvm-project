@@ -10035,12 +10035,6 @@ def warn_new_dangling_initializer_list : Warning<
   "the allocated initializer list}0 "
   "will be destroyed at the end of the full-expression">,
   InGroup<DanglingInitializerList>;
-def warn_unsupported_lifetime_extension : Warning<
-  "lifetime extension of "
-  "%select{temporary|backing array of initializer list}0 created "
-  "by aggregate initialization using a default member initializer "
-  "is not yet supported; lifetime of %select{temporary|backing array}0 "
-  "will end at the end of the full-expression">, InGroup<Dangling>;
 
 // For non-floating point, expressions of the form x == x or x != x
 // should result in a warning, since these always evaluate to a constant.
@@ -12184,6 +12178,11 @@ def err_hlsl_init_priority_unsupported : Error<
 def err_hlsl_unsupported_register_type : Error<"invalid resource class specifier '%0' used; expected 'b', 's', 't', or 'u'">;
 def err_hlsl_unsupported_register_number : Error<"register number should be an integer">;
 def err_hlsl_expected_space : Error<"invalid space specifier '%0' used; expected 'space' followed by an integer, like space1">;
+def warn_hlsl_packoffset_mix : Warning<"cannot mix packoffset elements with nonpackoffset elements in a cbuffer">,
+    InGroup<HLSLMixPackOffset>;
+def err_hlsl_packoffset_overlap : Error<"packoffset overlap between %0, %1">;
+def err_hlsl_packoffset_cross_reg_boundary : Error<"packoffset cannot cross register boundary">;
+def err_hlsl_packoffset_alignment_mismatch : Error<"packoffset at 'y' not match alignment %0 required by %1">;
 def err_hlsl_pointers_unsupported : Error<
   "%select{pointers|references}0 are unsupported in HLSL">;
 

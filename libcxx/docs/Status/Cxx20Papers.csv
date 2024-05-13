@@ -192,7 +192,7 @@
 "`P2106R0 <https://wg21.link/P2106R0>`__","LWG","Alternative wording for GB315 and GB316","Prague","|Complete|","15.0","|ranges|"
 "`P2116R0 <https://wg21.link/P2116R0>`__","LWG","Remove tuple-like protocol support from fixed-extent span","Prague","|Complete|","11.0"
 "","","","","","",""
-"`P2231R1 <https://wg21.link/P2231R1>`__","LWG","Missing constexpr in std::optional and std::variant","June 2021","|Partial| [#note-P2231]_","13.0"
+"`P2231R1 <https://wg21.link/P2231R1>`__","LWG","Missing constexpr in std::optional and std::variant","June 2021","|Complete|","19.0"
 "`P2325R3 <https://wg21.link/P2325R3>`__","LWG","Views should not be required to be default constructible","June 2021","|Complete|","16.0","|ranges|"
 "`P2210R2 <https://wg21.link/P2210R2>`__","LWG","Superior String Splitting","June 2021","|Complete|","16.0","|ranges|"
 "`P2216R3 <https://wg21.link/P2216R3>`__","LWG","std::format improvements","June 2021","|Complete|","15.0"

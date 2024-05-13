@@ -5769,7 +5769,6 @@ int X86TTIImpl::getScatterOverhead() const {
 }
 
 // Return an average cost of Gather / Scatter instruction, maybe improved later.
-// FIXME: Add TargetCostKind support.
 InstructionCost X86TTIImpl::getGSVectorCost(unsigned Opcode,
                                             TTI::TargetCostKind CostKind,
                                             Type *SrcVTy, const Value *Ptr,
@@ -5828,63 +5827,17 @@ InstructionCost X86TTIImpl::getGSVectorCost(unsigned Opcode,
                                          Alignment, AddressSpace);
   }
 
+  // If we didn't split, this will be a single gather/scatter instruction.
+  if (CostKind == TTI::TCK_CodeSize)
+    return 1;
+
   // The gather / scatter cost is given by Intel architects. It is a rough
   // number since we are looking at one instruction in a time.
-  const int GSOverhead = (Opcode == Instruction::Load)
-                             ? getGatherOverhead()
-                             : getScatterOverhead();
+  const int GSOverhead = (Opcode == Instruction::Load) ? getGatherOverhead()
+                                                       : getScatterOverhead();
   return GSOverhead + VF * getMemoryOpCost(Opcode, SrcVTy->getScalarType(),
                                            MaybeAlign(Alignment), AddressSpace,
-                                           TTI::TCK_RecipThroughput);
-}
-
-/// Return the cost of full scalarization of gather / scatter operation.
-///
-/// Opcode - Load or Store instruction.
-/// SrcVTy - The type of the data vector that should be gathered or scattered.
-/// VariableMask - The mask is non-constant at compile time.
-/// Alignment - Alignment for one element.
-/// AddressSpace - pointer[s] address space.
-/// TODO: Remove this and use getCommonMaskedMemoryOpCost directly.
-InstructionCost X86TTIImpl::getGSScalarCost(unsigned Opcode,
-                                            TTI::TargetCostKind CostKind,
-                                            Type *SrcVTy, bool VariableMask,
-                                            Align Alignment,
-                                            unsigned AddressSpace) {
-  Type *ScalarTy = SrcVTy->getScalarType();
-  unsigned VF = cast<FixedVectorType>(SrcVTy)->getNumElements();
-  APInt DemandedElts = APInt::getAllOnes(VF);
-
-  InstructionCost MaskUnpackCost = 0;
-  if (VariableMask) {
-    auto *MaskTy =
-        FixedVectorType::get(Type::getInt1Ty(SrcVTy->getContext()), VF);
-    MaskUnpackCost = getScalarizationOverhead(
-        MaskTy, DemandedElts, /*Insert=*/false, /*Extract=*/true, CostKind);
-    InstructionCost ScalarCompareCost = getCmpSelInstrCost(
-        Instruction::ICmp, Type::getInt1Ty(SrcVTy->getContext()), nullptr,
-        CmpInst::BAD_ICMP_PREDICATE, CostKind);
-    InstructionCost BranchCost = getCFInstrCost(Instruction::Br, CostKind);
-    MaskUnpackCost += VF * (BranchCost + ScalarCompareCost);
-  }
-
-  InstructionCost AddressUnpackCost = getScalarizationOverhead(
-      FixedVectorType::get(PointerType::getUnqual(ScalarTy->getContext()), VF),
-      DemandedElts, /*Insert=*/false, /*Extract=*/true, CostKind);
-
-  // The cost of the scalar loads/stores.
-  InstructionCost MemoryOpCost =
-      VF * getMemoryOpCost(Opcode, ScalarTy, MaybeAlign(Alignment),
-                           AddressSpace, CostKind);
-
-  // The cost of forming the vector from loaded scalars/
-  // scalarizing the vector to perform scalar stores.
-  InstructionCost InsertExtractCost = getScalarizationOverhead(
-      cast<FixedVectorType>(SrcVTy), DemandedElts,
-      /*Insert=*/Opcode == Instruction::Load,
-      /*Extract=*/Opcode == Instruction::Store, CostKind);
-
-  return AddressUnpackCost + MemoryOpCost + MaskUnpackCost + InsertExtractCost;
+                                           CostKind);
 }
 
 /// Calculate the cost of Gather / Scatter operation
@@ -5892,19 +5845,16 @@ InstructionCost X86TTIImpl::getGatherScatterOpCost(
     unsigned Opcode, Type *SrcVTy, const Value *Ptr, bool VariableMask,
     Align Alignment, TTI::TargetCostKind CostKind,
     const Instruction *I = nullptr) {
-  if (CostKind != TTI::TCK_RecipThroughput) {
-    if ((Opcode == Instruction::Load &&
-         isLegalMaskedGather(SrcVTy, Align(Alignment)) &&
-         !forceScalarizeMaskedGather(cast<VectorType>(SrcVTy),
-                                     Align(Alignment))) ||
-        (Opcode == Instruction::Store &&
-         isLegalMaskedScatter(SrcVTy, Align(Alignment)) &&
-         !forceScalarizeMaskedScatter(cast<VectorType>(SrcVTy),
-                                      Align(Alignment))))
-      return 1;
+  if (((Opcode == Instruction::Load &&
+        (!isLegalMaskedGather(SrcVTy, Align(Alignment)) ||
+         forceScalarizeMaskedGather(cast<VectorType>(SrcVTy),
+                                    Align(Alignment)))) ||
+       (Opcode == Instruction::Store &&
+        (!isLegalMaskedScatter(SrcVTy, Align(Alignment)) ||
+         forceScalarizeMaskedScatter(cast<VectorType>(SrcVTy),
+                                     Align(Alignment))))))
     return BaseT::getGatherScatterOpCost(Opcode, SrcVTy, Ptr, VariableMask,
                                          Alignment, CostKind, I);
-  }
 
   assert(SrcVTy->isVectorTy() && "Unexpected data type for Gather/Scatter");
   PointerType *PtrTy = dyn_cast<PointerType>(Ptr->getType());
@@ -5913,18 +5863,6 @@ InstructionCost X86TTIImpl::getGatherScatterOpCost(
         cast<VectorType>(Ptr->getType())->getElementType());
   assert(PtrTy && "Unexpected type for Ptr argument");
   unsigned AddressSpace = PtrTy->getAddressSpace();
-
-  if ((Opcode == Instruction::Load &&
-       (!isLegalMaskedGather(SrcVTy, Align(Alignment)) ||
-        forceScalarizeMaskedGather(cast<VectorType>(SrcVTy),
-                                   Align(Alignment)))) ||
-      (Opcode == Instruction::Store &&
-       (!isLegalMaskedScatter(SrcVTy, Align(Alignment)) ||
-        forceScalarizeMaskedScatter(cast<VectorType>(SrcVTy),
-                                    Align(Alignment)))))
-    return getGSScalarCost(Opcode, CostKind, SrcVTy, VariableMask, Alignment,
-                           AddressSpace);
-
   return getGSVectorCost(Opcode, CostKind, SrcVTy, Ptr, Alignment,
                          AddressSpace);
 }
@@ -6740,7 +6678,7 @@ InstructionCost X86TTIImpl::getInterleavedMemoryOpCost(
 }
 
 InstructionCost X86TTIImpl::getScalingFactorCost(Type *Ty, GlobalValue *BaseGV,
-                                                 int64_t BaseOffset,
+                                                 StackOffset BaseOffset,
                                                  bool HasBaseReg, int64_t Scale,
                                                  unsigned AddrSpace) const {
   // Scaling factors are not free at all.
@@ -6763,9 +6701,10 @@ InstructionCost X86TTIImpl::getScalingFactorCost(Type *Ty, GlobalValue *BaseGV,
   // vmovaps %ymm1, (%r8) can use port 2, 3, or 7.
   TargetLoweringBase::AddrMode AM;
   AM.BaseGV = BaseGV;
-  AM.BaseOffs = BaseOffset;
+  AM.BaseOffs = BaseOffset.getFixed();
   AM.HasBaseReg = HasBaseReg;
   AM.Scale = Scale;
+  AM.ScalableOffset = BaseOffset.getScalable();
   if (getTLI()->isLegalAddressingMode(DL, AM, Ty, AddrSpace))
     // Scale represents reg2 * scale, thus account for 1
     // as soon as we use a second register.

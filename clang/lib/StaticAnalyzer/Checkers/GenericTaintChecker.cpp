@@ -1065,15 +1065,14 @@ void GenericTaintChecker::taintUnsafeSocketProtocol(const CallEvent &Call,
   const IdentifierInfo *ID = Call.getCalleeIdentifier();
   if (!ID)
     return;
-  if (!ID->getName().equals("socket"))
+  if (ID->getName() != "socket")
     return;
 
   SourceLocation DomLoc = Call.getArgExpr(0)->getExprLoc();
   StringRef DomName = C.getMacroNameOrSpelling(DomLoc);
   // Allow internal communication protocols.
-  bool SafeProtocol = DomName.equals("AF_SYSTEM") ||
-                      DomName.equals("AF_LOCAL") || DomName.equals("AF_UNIX") ||
-                      DomName.equals("AF_RESERVED_36");
+  bool SafeProtocol = DomName == "AF_SYSTEM" || DomName == "AF_LOCAL" ||
+                      DomName == "AF_UNIX" || DomName == "AF_RESERVED_36";
   if (SafeProtocol)
     return;
 
