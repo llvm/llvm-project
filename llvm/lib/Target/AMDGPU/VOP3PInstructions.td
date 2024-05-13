@@ -1035,8 +1035,8 @@ let isCommutable = 1, isReMaterializable = 1 in {
   }
 } // End isCommutable = 1, isReMaterializable = 1
 
-def : MnemonicAlias<"v_accvgpr_read",  "v_accvgpr_read_b32">;
-def : MnemonicAlias<"v_accvgpr_write", "v_accvgpr_write_b32">;
+def : AMDGPUMnemonicAlias<"v_accvgpr_read",  "v_accvgpr_read_b32">;
+def : AMDGPUMnemonicAlias<"v_accvgpr_write", "v_accvgpr_write_b32">;
 
 class VOPProfileWMMA<VOPProfile P, string Suffix, RegisterOperand _Src01RC64, bit _HasClamp, bit _HasOpSel> : VOP3P_Profile<P> {
   let DstRC = !if(!eq(Suffix, "_w32"), VDst_256, VDst_128);
@@ -2014,8 +2014,11 @@ multiclass VOP3P_Real_with_name<GFXGen Gen, bits<7> op,
   let AsmString = asmName # ps.AsmOperands in
     def Gen.Suffix :
       VOP3P_Real_Gen<!cast<VOP3P_Pseudo>(backing_ps_name), Gen, asmName>,
-      VOP3Pe_gfx11_gfx12<op, !cast<VOP3P_Pseudo>(backing_ps_name).Pfl>,
-      MnemonicAlias<ps.Mnemonic, asmName>, Requires<[Gen.AssemblerPredicate]>;
+      VOP3Pe_gfx11_gfx12<op, !cast<VOP3P_Pseudo>(backing_ps_name).Pfl>;
+
+  def : AMDGPUMnemonicAlias<ps.Mnemonic, asmName> {
+    let AssemblerPredicate = Gen.AssemblerPredicate;
+  }
 }
 
 multiclass VOP3P_Real_dpp<GFXGen Gen, bits<7> op, string backing_ps_name = NAME,
@@ -2247,7 +2250,9 @@ multiclass VOP3P_Real_SMFMAC<bits<7> op, string alias> {
     let AssemblerPredicate = isGFX940Plus;
     let DecoderNamespace = "GFX8";
   }
-  def : MnemonicAlias<alias, !cast<VOP3_Pseudo>(NAME#"_e64").Mnemonic>;
+  def : AMDGPUMnemonicAlias<alias, !cast<VOP3_Pseudo>(NAME#"_e64").Mnemonic> {
+    let AssemblerPredicate = isGFX940Plus;
+  }
 }
 
 let SubtargetPredicate = isGFX8GFX9 in {

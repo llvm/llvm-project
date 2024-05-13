@@ -1631,8 +1631,11 @@ multiclass VOP3_Real_with_name<GFXGen Gen, bits<10> op, string opName,
         VOP3e_gfx11_gfx12<op, ps.Pfl>;
     }
   }
-  if !ne(ps.Mnemonic, asmName) then
-    def Gen.Suffix#"_VOP3_alias" : MnemonicAlias<ps.Mnemonic, asmName>, Requires<[Gen.AssemblerPredicate]>, LetDummies;
+  if !ne(ps.Mnemonic, asmName) then {
+    def Gen.Suffix#"_VOP3_alias" : LetDummies, AMDGPUMnemonicAlias<ps.Mnemonic, asmName> {
+      let AssemblerPredicate = Gen.AssemblerPredicate;
+    }
+  }
 }
 
 // for READLANE/WRITELANE
@@ -1845,7 +1848,9 @@ multiclass VOP3be_Real_with_name_gfx12<bits<10> op, string opName,
   defvar ps = !cast<VOP3_Pseudo>(opName#"_e64");
   defm NAME : VOP3be_Realtriple<GFX12Gen, op, !or(isSingle, ps.Pfl.IsSingle),
                                 opName, asmName>;
-  def : MnemonicAlias<ps.Mnemonic, asmName>, Requires<[isGFX12Only]>;
+  def : AMDGPUMnemonicAlias<ps.Mnemonic, asmName> {
+    let AssemblerPredicate = GFX12Gen.AssemblerPredicate;
+  }
 }
 
 multiclass VOP3_Realtriple_with_name_gfx12<bits<10> op, string opName,
