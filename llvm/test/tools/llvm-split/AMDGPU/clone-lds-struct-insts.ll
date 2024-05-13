@@ -1,9 +1,9 @@
 ; RUN: opt -passes=amdgpu-clone-module-lds %s -S | FileCheck %s
 
 ; RUN: opt -passes=amdgpu-clone-module-lds %s -S -o %t
-; RUN: llvm-split -o %u %t -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a
-; RUN: llvm-dis -o - %u0 | FileCheck --check-prefix=MOD0 %s
-; RUN: llvm-dis -o - %u1 | FileCheck --check-prefix=MOD1 %s
+; RUN: llvm-split -o %t %t -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a
+; RUN: llvm-dis -o - %t0 | FileCheck --check-prefix=MOD0 %s
+; RUN: llvm-dis -o - %t1 | FileCheck --check-prefix=MOD1 %s
 
 target triple = "amdgcn-amd-amdhsa"
 

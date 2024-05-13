@@ -1,9 +1,9 @@
 ; RUN: opt -passes=amdgpu-clone-module-lds %s -S | FileCheck %s
 
 ; RUN: opt -passes=amdgpu-clone-module-lds %s -S -o %t
-; RUN: llvm-split -o %u %t -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a
-; RUN: llvm-dis -o - %u0 | FileCheck --check-prefix=MOD0 %s
-; RUN: llvm-dis -o - %u1 | FileCheck --check-prefix=MOD1 %s
+; RUN: llvm-split -o %t %t -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a
+; RUN: llvm-dis -o - %t0 | FileCheck --check-prefix=MOD0 %s
+; RUN: llvm-dis -o - %t1 | FileCheck --check-prefix=MOD1 %s
 
 target triple = "amdgcn-amd-amdhsa"
 
@@ -109,11 +109,9 @@ entry:
 ; CHECK-NEXT:   store i32 %v, ptr %p, align 4
 ; CHECK-NEXT:   ret i32 %v
 
-; MOD0: ModuleID = '%u0'
 ; MOD0: {{.*}} addrspace(3) global [64 x i32] undef, align 16
 ; MOD0: define i32 @X(ptr %x)
 
-; MOD1: ModuleID = '%u1'
 ; MOD1: {{.*}} addrspace(3) global [64 x i32] poison, align 16
 ; MOD1: define protected amdgpu_kernel void @kernel1(i32 %n)
 ; MOD1: define protected amdgpu_kernel void @kernel2(i32 %n)
