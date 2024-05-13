@@ -2155,7 +2155,8 @@ getFirstOrLastMappedMemberPtr(mlir::omp::MapInfoOp mapInfo, bool first) {
           int aIndex = indexValues[a * shape[1] + i];
           int bIndex = indexValues[b * shape[1] + i];
 
-          if (aIndex == bIndex) continue;
+          if (aIndex == bIndex)
+            continue;
 
           if (aIndex != -1 && bIndex == -1)
             return false;
