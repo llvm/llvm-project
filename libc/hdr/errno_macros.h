@@ -12,6 +12,8 @@
 #ifdef LIBC_FULL_BUILD
 
 #ifdef __linux__
+#include <linux/errno.h>
+
 #include "llvm-libc-macros/error-number-macros.h"
 #else // __linux__
 #include "llvm-libc-macros/generic-error-number-macros.h"
