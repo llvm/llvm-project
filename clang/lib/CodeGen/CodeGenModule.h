@@ -1589,6 +1589,8 @@ public:
   // Return whether structured convergence intrinsics should be generated for
   // this target.
   bool shouldEmitConvergenceTokens() const {
+    // TODO: this should probably become unconditional once the controlled
+    // convergence becomes the norm.
     return getTriple().isSPIRVLogical();
   }
 
