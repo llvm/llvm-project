@@ -7933,19 +7933,6 @@ void ASTRecordWriter::writeOpenACCClause(const OpenACCClause *C) {
     writeOpenACCIntExprList(WC->getQueueIdExprs());
     return;
   }
-  case OpenACCClauseKind::DeviceType:
-  case OpenACCClauseKind::DType: {
-    const auto *DTC = cast<OpenACCDeviceTypeClause>(C);
-    writeSourceLocation(DTC->getLParenLoc());
-    writeUInt32(DTC->getArchitectures().size());
-    for (const DeviceTypeArgument &Arg : DTC->getArchitectures()) {
-      writeBool(Arg.first);
-      if (Arg.first)
-        AddIdentifierRef(Arg.first);
-      writeSourceLocation(Arg.second);
-    }
-    return;
-  }
 
   case OpenACCClauseKind::Finalize:
   case OpenACCClauseKind::IfPresent:
@@ -7967,6 +7954,8 @@ void ASTRecordWriter::writeOpenACCClause(const OpenACCClause *C) {
   case OpenACCClauseKind::Bind:
   case OpenACCClauseKind::DeviceNum:
   case OpenACCClauseKind::DefaultAsync:
+  case OpenACCClauseKind::DeviceType:
+  case OpenACCClauseKind::DType:
   case OpenACCClauseKind::Tile:
   case OpenACCClauseKind::Gang:
   case OpenACCClauseKind::Invalid:

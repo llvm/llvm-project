@@ -26,9 +26,6 @@ class OpenACCClause;
 
 class SemaOpenACC : public SemaBase {
 public:
-  // Redeclaration of the version in OpenACCClause.h.
-  using DeviceTypeArgument = std::pair<IdentifierInfo *, SourceLocation>;
-
   /// A type to represent all the data for an OpenACC Clause that has been
   /// parsed, but not yet created/semantically analyzed. This is effectively a
   /// discriminated union on the 'Clause Kind', with all of the individual
@@ -63,12 +60,8 @@ public:
       SmallVector<Expr *> QueueIdExprs;
     };
 
-    struct DeviceTypeDetails {
-      SmallVector<DeviceTypeArgument> Archs;
-    };
-
     std::variant<std::monostate, DefaultDetails, ConditionDetails,
-                 IntExprDetails, VarListDetails, WaitDetails, DeviceTypeDetails>
+                 IntExprDetails, VarListDetails, WaitDetails>
         Details = std::monostate{};
 
   public:
@@ -216,13 +209,6 @@ public:
       return std::get<VarListDetails>(Details).IsZero;
     }
 
-    ArrayRef<DeviceTypeArgument> getDeviceTypeArchitectures() const {
-      assert((ClauseKind == OpenACCClauseKind::DeviceType ||
-              ClauseKind == OpenACCClauseKind::DType) &&
-             "Only 'device_type'/'dtype' has a device-type-arg list");
-      return std::get<DeviceTypeDetails>(Details).Archs;
-    }
-
     void setLParenLoc(SourceLocation EndLoc) { LParenLoc = EndLoc; }
     void setEndLoc(SourceLocation EndLoc) { ClauseRange.setEnd(EndLoc); }
 
@@ -339,13 +325,6 @@ public:
       assert(ClauseKind == OpenACCClauseKind::Wait &&
              "Parsed clause kind does not have a wait-details");
       Details = WaitDetails{DevNum, QueuesLoc, std::move(IntExprs)};
-    }
-
-    void setDeviceTypeDetails(llvm::SmallVector<DeviceTypeArgument> &&Archs) {
-      assert((ClauseKind == OpenACCClauseKind::DeviceType ||
-              ClauseKind == OpenACCClauseKind::DType) &&
-             "Only 'device_type'/'dtype' has a device-type-arg list");
-      Details = DeviceTypeDetails{std::move(Archs)};
     }
   };
 

@@ -255,33 +255,6 @@ bool checkAlreadyHasClauseOfKind(
   return false;
 }
 
-/// Implement check from OpenACC3.3: section 2.5.4:
-/// Only the async, wait, num_gangs, num_workers, and vector_length clauses may
-/// follow a device_type clause.
-bool checkValidAfterDeviceType(
-    SemaOpenACC &S, const OpenACCDeviceTypeClause &DeviceTypeClause,
-    const SemaOpenACC::OpenACCParsedClause &NewClause) {
-  // This is only a requirement on compute constructs so far, so this is fine
-  // otherwise.
-  if (!isOpenACCComputeDirectiveKind(NewClause.getDirectiveKind()))
-    return false;
-  switch (NewClause.getClauseKind()) {
-  case OpenACCClauseKind::Async:
-  case OpenACCClauseKind::Wait:
-  case OpenACCClauseKind::NumGangs:
-  case OpenACCClauseKind::NumWorkers:
-  case OpenACCClauseKind::VectorLength:
-  case OpenACCClauseKind::DType:
-  case OpenACCClauseKind::DeviceType:
-    return false;
-  default:
-    S.Diag(NewClause.getBeginLoc(), diag::err_acc_clause_after_device_type)
-        << NewClause.getClauseKind() << DeviceTypeClause.getClauseKind();
-    S.Diag(DeviceTypeClause.getBeginLoc(), diag::note_acc_previous_clause_here);
-    return true;
-  }
-}
-
 } // namespace
 
 SemaOpenACC::SemaOpenACC(Sema &S) : SemaBase(S) {}
@@ -298,17 +271,6 @@ SemaOpenACC::ActOnClause(ArrayRef<const OpenACCClause *> ExistingClauses,
     Diag(Clause.getBeginLoc(), diag::err_acc_clause_appertainment)
         << Clause.getDirectiveKind() << Clause.getClauseKind();
     return nullptr;
-  }
-
-  if (const auto *DevTypeClause =
-          llvm::find_if(ExistingClauses,
-                        [&](const OpenACCClause *C) {
-                          return isa<OpenACCDeviceTypeClause>(C);
-                        });
-      DevTypeClause != ExistingClauses.end()) {
-    if (checkValidAfterDeviceType(
-            *this, *cast<OpenACCDeviceTypeClause>(*DevTypeClause), Clause))
-      return nullptr;
   }
 
   switch (Clause.getClauseKind()) {
@@ -687,23 +649,6 @@ SemaOpenACC::ActOnClause(ArrayRef<const OpenACCClause *> ExistingClauses,
     return OpenACCWaitClause::Create(
         getASTContext(), Clause.getBeginLoc(), Clause.getLParenLoc(),
         Clause.getDevNumExpr(), Clause.getQueuesLoc(), Clause.getQueueIdExprs(),
-        Clause.getEndLoc());
-  }
-  case OpenACCClauseKind::DType:
-  case OpenACCClauseKind::DeviceType: {
-    // Restrictions only properly implemented on 'compute' constructs, and
-    // 'compute' constructs are the only construct that can do anything with
-    // this yet, so skip/treat as unimplemented in this case.
-    if (!isOpenACCComputeDirectiveKind(Clause.getDirectiveKind()))
-      break;
-
-    // TODO OpenACC: Once we get enough of the CodeGen implemented that we have
-    // a source for the list of valid architectures, we need to warn on unknown
-    // identifiers here.
-
-    return OpenACCDeviceTypeClause::Create(
-        getASTContext(), Clause.getClauseKind(), Clause.getBeginLoc(),
-        Clause.getLParenLoc(), Clause.getDeviceTypeArchitectures(),
         Clause.getEndLoc());
   }
   default:
