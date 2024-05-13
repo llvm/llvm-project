@@ -1309,7 +1309,7 @@ void ClangASTSource::FindObjCPropertyAndIvarDecls(NameSearchContext &context) {
       break;
 
     LLDB_LOG(log,
-             "CAS::FOPD[{0:}] trying runtime "
+             "CAS::FOPD[{0:x}] trying runtime "
              "(ObjCInterfaceDecl*){0:x}/(ASTContext*){1:x}...",
              interface_decl_from_runtime.decl,
              &interface_decl_from_runtime->getASTContext());
