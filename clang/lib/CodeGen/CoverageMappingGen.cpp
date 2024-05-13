@@ -191,10 +191,7 @@ public:
   bool isBranch() const { return FalseCount.has_value(); }
 
   bool isMCDCDecision() const {
-    const auto *DecisionParams =
-        std::get_if<mcdc::DecisionParameters>(&MCDCParams);
-    assert(!DecisionParams || DecisionParams->NumConditions > 0);
-    return DecisionParams;
+    return std::holds_alternative<mcdc::DecisionParameters>(MCDCParams);
   }
 
   const auto &getMCDCDecisionParams() const {

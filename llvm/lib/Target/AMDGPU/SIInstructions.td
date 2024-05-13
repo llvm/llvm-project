@@ -1908,20 +1908,22 @@ def : GCNPat <
   (S_XOR_B32 SReg_32:$src, (S_MOV_B32 (i32 0x80000000)))
 >;
 
+foreach fp16vt = [f16, bf16] in {
 def : GCNPat <
-  (UniformUnaryFrag<fneg> (f16 SReg_32:$src)),
+  (UniformUnaryFrag<fneg> (fp16vt SReg_32:$src)),
   (S_XOR_B32 SReg_32:$src, (S_MOV_B32 (i32 0x00008000)))
 >;
 
 def : GCNPat <
-  (UniformUnaryFrag<fabs> (f16 SReg_32:$src)),
+  (UniformUnaryFrag<fabs> (fp16vt SReg_32:$src)),
   (S_AND_B32 SReg_32:$src, (S_MOV_B32 (i32 0x00007fff)))
 >;
 
 def : GCNPat <
-  (UniformUnaryFrag<fneg> (fabs (f16 SReg_32:$src))),
+  (UniformUnaryFrag<fneg> (fabs (fp16vt SReg_32:$src))),
   (S_OR_B32 SReg_32:$src, (S_MOV_B32 (i32 0x00008000))) // Set sign bit
 >;
+} // End foreach fp16vt = ...
 
 def : GCNPat <
   (UniformUnaryFrag<fneg> (v2f16 SReg_32:$src)),
@@ -2030,20 +2032,22 @@ def : GCNPat <
   (V_XOR_B32_e64 (S_MOV_B32 (i32 0x80000000)), VGPR_32:$src)
 >;
 
+foreach fp16vt = [f16, bf16] in {
 def : GCNPat <
-  (fabs (f16 VGPR_32:$src)),
+  (fabs (fp16vt VGPR_32:$src)),
   (V_AND_B32_e64 (S_MOV_B32 (i32 0x00007fff)), VGPR_32:$src)
 >;
 
 def : GCNPat <
-  (fneg (f16 VGPR_32:$src)),
+  (fneg (fp16vt VGPR_32:$src)),
   (V_XOR_B32_e64 (S_MOV_B32 (i32 0x00008000)), VGPR_32:$src)
 >;
 
 def : GCNPat <
-  (fneg (fabs (f16 VGPR_32:$src))),
+  (fneg (fabs (fp16vt VGPR_32:$src))),
   (V_OR_B32_e64 (S_MOV_B32 (i32 0x00008000)), VGPR_32:$src) // Set sign bit
 >;
+} // End foreach fp16vt = ...
 
 def : GCNPat <
   (fneg (v2f16 VGPR_32:$src)),
@@ -3162,49 +3166,33 @@ def : GCNPat <
   (v2f16 (V_AND_B32_e64 (i32 (V_MOV_B32_e32 (i32 0xffff))), VGPR_32:$src1))
 >;
 
+foreach vecTy = [v2i16, v2f16] in {
+
+defvar Ty = vecTy.ElementType;
+
 def : GCNPat <
-  (v2i16 (UniformBinFrag<build_vector> (i16 SReg_32:$src0), (i16 undef))),
+  (vecTy (UniformBinFrag<build_vector> (Ty SReg_32:$src0), (Ty undef))),
   (COPY_TO_REGCLASS SReg_32:$src0, SReg_32)
 >;
 
 def : GCNPat <
-  (v2i16 (DivergentBinFrag<build_vector> (i16 VGPR_32:$src0), (i16 undef))),
+  (vecTy (DivergentBinFrag<build_vector> (Ty VGPR_32:$src0), (Ty undef))),
   (COPY_TO_REGCLASS VGPR_32:$src0, VGPR_32)
 >;
 
 def : GCNPat <
-  (v2f16 (build_vector f16:$src0, (f16 undef))),
-  (COPY $src0)
->;
-
-def : GCNPat <
-  (v2i16 (UniformBinFrag<build_vector> (i16 undef), (i16 SReg_32:$src1))),
+  (vecTy (UniformBinFrag<build_vector> (Ty undef), (Ty SReg_32:$src1))),
   (S_LSHL_B32 SReg_32:$src1, (i32 16))
 >;
 
 def : GCNPat <
-  (v2i16 (DivergentBinFrag<build_vector> (i16 undef), (i16 VGPR_32:$src1))),
-  (v2i16 (V_LSHLREV_B32_e64 (i32 16), VGPR_32:$src1))
+  (vecTy (DivergentBinFrag<build_vector> (Ty undef), (Ty VGPR_32:$src1))),
+  (vecTy (V_LSHLREV_B32_e64 (i32 16), VGPR_32:$src1))
 >;
-
-
-def : GCNPat <
-  (v2f16 (UniformBinFrag<build_vector> (f16 undef), (f16 SReg_32:$src1))),
-  (S_LSHL_B32 SReg_32:$src1, (i32 16))
->;
-
-def : GCNPat <
-  (v2f16 (DivergentBinFrag<build_vector> (f16 undef), (f16 VGPR_32:$src1))),
-  (v2f16 (V_LSHLREV_B32_e64 (i32 16), VGPR_32:$src1))
->;
+} // End foreach Ty = ...
 }
 
 let SubtargetPredicate = HasVOP3PInsts in {
-def : GCNPat <
-  (v2i16 (UniformBinFrag<build_vector> (i16 SReg_32:$src0), (i16 SReg_32:$src1))),
-  (S_PACK_LL_B32_B16 SReg_32:$src0, SReg_32:$src1)
->;
-
 def : GCNPat <
   (v2i16 (DivergentBinFrag<build_vector> (i16 VGPR_32:$src0), (i16 VGPR_32:$src1))),
   (v2i16 (V_LSHL_OR_B32_e64 $src1, (i32 16), (i32 (V_AND_B32_e64 (i32 (V_MOV_B32_e32 (i32 0xffff))), $src0))))
@@ -3223,17 +3211,16 @@ def : GCNPat <
   (S_PACK_HH_B32_B16 SReg_32:$src0, SReg_32:$src1)
 >;
 
+
+foreach vecTy = [v2i16, v2f16] in {
+
+defvar Ty = vecTy.ElementType;
+defvar immzeroTy = !if(!eq(Ty, i16), immzero, fpimmzero);
+
 def : GCNPat <
-  (v2f16 (UniformBinFrag<build_vector> (f16 SReg_32:$src0), (f16 SReg_32:$src1))),
+  (vecTy (UniformBinFrag<build_vector> (Ty SReg_32:$src0), (Ty SReg_32:$src1))),
   (S_PACK_LL_B32_B16 SReg_32:$src0, SReg_32:$src1)
 >;
-
-
-
-foreach Ty = [i16, f16] in {
-
-defvar vecTy = !if(!eq(Ty, i16), v2i16, v2f16);
-defvar immzeroTy = !if(!eq(Ty, i16), immzero, fpimmzero);
 
 // Take the lower 16 bits from each VGPR_32 and concat them
 def : GCNPat <
@@ -3338,13 +3325,15 @@ def : GCNPat <
                         (as_i1timm $bound_ctrl))
 >;
 
+foreach vt = Reg64Types.types in {
 def : GCNPat <
-  (i64 (int_amdgcn_update_dpp i64:$old, i64:$src, timm:$dpp_ctrl, timm:$row_mask,
+  (vt (int_amdgcn_update_dpp vt:$old, vt:$src, timm:$dpp_ctrl, timm:$row_mask,
                               timm:$bank_mask, timm:$bound_ctrl)),
   (V_MOV_B64_DPP_PSEUDO VReg_64_Align2:$old, VReg_64_Align2:$src, (as_i32timm $dpp_ctrl),
                         (as_i32timm $row_mask), (as_i32timm $bank_mask),
                         (as_i1timm $bound_ctrl))
 >;
+}
 
 //===----------------------------------------------------------------------===//
 // Fract Patterns

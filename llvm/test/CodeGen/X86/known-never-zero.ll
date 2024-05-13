@@ -1612,7 +1612,7 @@ define i32 @sext_known_nonzero(i16 %xx) {
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl $256, %eax # imm = 0x100
 ; X86-NEXT:    shll %cl, %eax
-; X86-NEXT:    cwtl
+; X86-NEXT:    movzwl %ax, %eax
 ; X86-NEXT:    rep bsfl %eax, %eax
 ; X86-NEXT:    retl
 ;
@@ -1622,7 +1622,7 @@ define i32 @sext_known_nonzero(i16 %xx) {
 ; X64-NEXT:    movl $256, %eax # imm = 0x100
 ; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; X64-NEXT:    shll %cl, %eax
-; X64-NEXT:    cwtl
+; X64-NEXT:    movzwl %ax, %eax
 ; X64-NEXT:    rep bsfl %eax, %eax
 ; X64-NEXT:    retq
   %x = shl nuw nsw i16 256, %xx
