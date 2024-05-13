@@ -907,11 +907,8 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     EVT ArgType = TLI->getValueType(DL, ArgTy, true);
     if (getTLI()->shouldExpandCttzElements(ArgType))
       break;
-    auto LT = getTypeLegalizationCost(RetTy);
-    InstructionCost Cost =
-        getRISCVInstructionCost(
-            RISCV::VFIRST_M, getTypeLegalizationCost(ArgTy).second, CostKind) +
-        (LT.first - 1);
+    InstructionCost Cost = getRISCVInstructionCost(
+        RISCV::VFIRST_M, getTypeLegalizationCost(ArgTy).second, CostKind);
 
     // If zero_is_poison is false, then we will generate additional
     // cmp + select instructions to convert -1 to EVL.
