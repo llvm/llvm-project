@@ -515,6 +515,13 @@ struct CombineTransferReadOpTranspose final
 // TODO: Change the GPU dialect to abstract the layout at the this level and
 // only care about it during lowering to NVVM.
 static const char *inferFragType(Operation *op) {
+  // We can have arith.ext ops before reaching contract ops. See through them.
+  if (op->hasOneUse()) {
+    Operation *extOp = *op->user_begin();
+    if (isa<arith::ExtFOp, arith::ExtUIOp, arith::ExtSIOp>(extOp))
+      return inferFragType(extOp);
+  }
+
   for (Operation *users : op->getUsers()) {
     auto contract = dyn_cast<vector::ContractionOp>(users);
     if (!contract)
@@ -560,13 +567,12 @@ convertTransferReadOp(RewriterBase &rewriter, vector::TransferReadOp op,
   if (op->hasOneUse()) {
     auto *user = *op->user_begin();
     // Infer the signedness of the mma type from the integer extend.
-    bool isSignedExtend = isa<arith::ExtSIOp>(user);
-    if (isSignedExtend || isa<arith::ExtUIOp>(user)) {
+    if (isa<arith::ExtSIOp, arith::ExtUIOp>(user)) {
       elType = IntegerType::get(
           op.getContext(), cast<IntegerType>(elType).getWidth(),
-          isSignedExtend ? IntegerType::Signed : IntegerType::Unsigned);
+          isa<arith::ExtSIOp>(user) ? IntegerType::Signed
+                                    : IntegerType::Unsigned);
       mappingResult = user->getResult(0);
-      fragType = inferFragType(user);
     }
   }
   gpu::MMAMatrixType type =
