@@ -2786,8 +2786,7 @@ bool TargetLowering::SimplifyDemandedBits(
     auto GetDemandedBitsLHSMask = [&](APInt Demanded,
                                       const KnownBits &KnownRHS) {
       if (Op.getOpcode() == ISD::MUL)
-        Demanded &= APInt::getLowBitsSet(
-            BitWidth, BitWidth - KnownRHS.countMinTrailingZeros());
+        Demanded.clearHighBits(KnownRHS.countMinTrailingZeros());
       return Demanded;
     };
     if (SimplifyDemandedBits(Op1, LoMask, DemandedElts, KnownOp1, TLO,
