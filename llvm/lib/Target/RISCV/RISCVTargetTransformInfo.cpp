@@ -14,9 +14,11 @@
 #include "llvm/CodeGen/CostTable.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/PatternMatch.h"
 #include <cmath>
 #include <optional>
 using namespace llvm;
+using namespace llvm::PatternMatch;
 
 #define DEBUG_TYPE "riscvtti"
 
@@ -1448,11 +1450,15 @@ InstructionCost RISCVTTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
   // generate a conditional branch + mv. The cost of scalar (icmp + select) will
   // be (0 + select instr cost).
   if (ST->hasConditionalMoveFusion() && I && isa<ICmpInst>(I) &&
-      !ValTy->isVectorTy() && I->hasOneUser() &&
-      isa<SelectInst>(I->user_back()) &&
-      !I->user_back()->getType()->isVectorTy() &&
-      I->user_back()->getOperand(0) == I)
-    return 0;
+      ValTy->isIntegerTy() && !I->user_empty()) {
+    if (all_of(I->users(), [&](const User *U) {
+          return match(U, m_Select(m_Specific(I), m_Value(), m_Value())) &&
+                 U->getType()->isIntegerTy() &&
+                 !isa<ConstantData>(U->getOperand(1)) &&
+                 !isa<ConstantData>(U->getOperand(2));
+        }))
+      return 0;
+  }
 
   // TODO: Add cost for scalar type.
 
