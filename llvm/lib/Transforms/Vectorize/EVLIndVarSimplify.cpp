@@ -83,16 +83,17 @@ static std::optional<uint32_t> getVFFromIndVar(const SCEV *Step,
 
   // If not, see if the vscale_range of the parent function is a fixed value,
   // which makes the step value to be replaced by a constant.
-  if (isa<SCEVConstant>(Step) && F.hasFnAttribute(Attribute::VScaleRange)) {
-    APInt V = cast<SCEVConstant>(Step)->getAPInt().abs();
-    ConstantRange CR = llvm::getVScaleRange(&F, 64);
-    if (const APInt *Fixed = CR.getSingleElement()) {
-      V = V.zextOrTrunc(Fixed->getBitWidth());
-      uint64_t VF = V.udiv(*Fixed).getLimitedValue();
-      if (VF && llvm::isUInt<32>(VF))
-        return static_cast<uint32_t>(VF);
+  if (F.hasFnAttribute(Attribute::VScaleRange))
+    if (auto *ConstStep = dyn_cast<SCEVConstant>(Step)) {
+      APInt V = ConstStep->getAPInt().abs();
+      ConstantRange CR = llvm::getVScaleRange(&F, 64);
+      if (const APInt *Fixed = CR.getSingleElement()) {
+        V = V.zextOrTrunc(Fixed->getBitWidth());
+        uint64_t VF = V.udiv(*Fixed).getLimitedValue();
+        if (VF && llvm::isUInt<32>(VF))
+          return static_cast<uint32_t>(VF);
+      }
     }
-  }
 
   return std::nullopt;
 }
