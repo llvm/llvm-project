@@ -1195,6 +1195,8 @@ Value *llvm::createSimpleTargetReduction(IRBuilderBase &Builder, Value *Src,
 Value *llvm::createSimpleTargetReduction(VectorBuilder &VBuilder, Value *Src,
                                          const RecurrenceDescriptor &Desc) {
   RecurKind Kind = Desc.getRecurrenceKind();
+  assert(!RecurrenceDescriptor::isAnyOfRecurrenceKind(Kind) &&
+         "AnyOf reduction is not supported.");
   auto *SrcTy = cast<VectorType>(Src->getType());
   Type *SrcEltTy = SrcTy->getElementType();
   Value *Iden =
