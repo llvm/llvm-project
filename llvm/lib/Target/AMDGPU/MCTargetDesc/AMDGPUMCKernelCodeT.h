@@ -49,7 +49,7 @@ struct AMDGPUMCKernelCodeT {
   const MCExpr *&getMCExprForIndex(int Index);
 
   bool ParseKernelCodeT(StringRef ID, MCAsmParser &MCParser, raw_ostream &Err);
-  void EmitKernelCodeT(raw_ostream &OS, const char *tab, MCContext &Ctx);
+  void EmitKernelCodeT(raw_ostream &OS, MCContext &Ctx);
   void EmitKernelCodeT(MCStreamer &OS, MCContext &Ctx);
 };
 

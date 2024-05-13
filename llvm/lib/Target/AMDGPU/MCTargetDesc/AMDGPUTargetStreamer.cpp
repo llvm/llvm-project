@@ -15,7 +15,6 @@
 #include "AMDGPUMCKernelDescriptor.h"
 #include "AMDGPUPTNote.h"
 #include "Utils/AMDGPUBaseInfo.h"
-#include "Utils/AMDKernelCodeTUtils.h"
 #include "llvm/BinaryFormat/AMDGPUMetadataVerifier.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCAssembler.h"
@@ -242,7 +241,7 @@ void AMDGPUTargetAsmStreamer::EmitDirectiveAMDHSACodeObjectVersion(
 
 void AMDGPUTargetAsmStreamer::EmitAMDKernelCodeT(AMDGPUMCKernelCodeT &Header) {
   OS << "\t.amd_kernel_code_t\n";
-  Header.EmitKernelCodeT(OS, "\t\t", getContext());
+  Header.EmitKernelCodeT(OS, getContext());
   OS << "\t.end_amd_kernel_code_t\n";
 }
 

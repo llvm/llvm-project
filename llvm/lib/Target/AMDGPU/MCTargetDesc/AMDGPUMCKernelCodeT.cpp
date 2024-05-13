@@ -142,8 +142,8 @@ GEN_HAS_MEMBER(wavefront_size)
 GEN_HAS_MEMBER(call_convention)
 GEN_HAS_MEMBER(runtime_loader_kernel_symbol)
 
-static ArrayRef<StringRef> get_amd_kernel_code_t_FldNames() {
-  static StringRef const Table[] = {
+static ArrayRef<StringLiteral> get_amd_kernel_code_t_FldNames() {
+  static constexpr StringLiteral const Table[] = {
       "", // not found placeholder
 #define RECORD(name, altName, print, parse) #name
 #include "Utils/AMDKernelCodeTInfo.h"
@@ -152,8 +152,8 @@ static ArrayRef<StringRef> get_amd_kernel_code_t_FldNames() {
   return ArrayRef(Table);
 }
 
-static ArrayRef<StringRef> get_amd_kernel_code_t_FldAltNames() {
-  static StringRef const Table[] = {
+static ArrayRef<StringLiteral> get_amd_kernel_code_t_FldAltNames() {
+  static constexpr StringLiteral const Table[] = {
       "", // not found placeholder
 #define RECORD(name, altName, print, parse) #altName
 #include "Utils/AMDKernelCodeTInfo.h"
@@ -181,8 +181,8 @@ getMCExprIndexTable(AMDGPUMCKernelCodeT &C) {
   return ArrayRef(Table);
 }
 
-static StringMap<int> createIndexMap(const ArrayRef<StringRef> &names,
-                                     const ArrayRef<StringRef> &altNames) {
+static StringMap<int> createIndexMap(ArrayRef<StringLiteral> names,
+                                     ArrayRef<StringLiteral> altNames) {
   StringMap<int> map;
   assert(names.size() == altNames.size());
   for (unsigned i = 0; i < names.size(); ++i) {
@@ -450,11 +450,10 @@ bool AMDGPUMCKernelCodeT::ParseKernelCodeT(StringRef ID, MCAsmParser &MCParser,
   return Parser ? Parser(*this, MCParser, Err) : false;
 }
 
-void AMDGPUMCKernelCodeT::EmitKernelCodeT(raw_ostream &OS, const char *tab,
-                                          MCContext &Ctx) {
+void AMDGPUMCKernelCodeT::EmitKernelCodeT(raw_ostream &OS, MCContext &Ctx) {
   const int Size = hasMCExprVersionTable().size();
   for (int i = 0; i < Size; ++i) {
-    OS << tab;
+    OS << "\t\t";
     if (hasMCExprVersionTable()[i]) {
       OS << get_amd_kernel_code_t_FldNames()[i + 1] << " = ";
       int64_t Val;

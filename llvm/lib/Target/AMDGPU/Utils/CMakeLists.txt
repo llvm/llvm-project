@@ -3,7 +3,6 @@ add_llvm_component_library(LLVMAMDGPUUtils
   AMDGPUBaseInfo.cpp
   AMDGPUMemoryUtils.cpp
   AMDGPUPALMetadata.cpp
-  AMDKernelCodeTUtils.cpp
 
   LINK_COMPONENTS
   Analysis
