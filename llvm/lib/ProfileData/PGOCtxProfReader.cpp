@@ -92,28 +92,27 @@ PGOCtxProfileReader::readContext(bool ExpectIndex) {
     EXPECT_OR_RET(ReadRecord,
                   Cursor.readRecord(bitc::UNABBREV_RECORD, RecordValues));
     switch (*ReadRecord) {
-    case PGOCtxProfileRecords::Guid: {
+    case PGOCtxProfileRecords::Guid:
       if (RecordValues.size() != 1)
         return wrongValue("The GUID record should have exactly one value");
       Guid = RecordValues[0];
       break;
-    }
     case PGOCtxProfileRecords::Counters:
       Counters = std::move(RecordValues);
       if (Counters->empty())
         return wrongValue("Empty counters. At least the entry counter (one "
                           "value) was expected");
       break;
-    case PGOCtxProfileRecords::CalleeIndex: {
+    case PGOCtxProfileRecords::CalleeIndex:
       if (!ExpectIndex)
         return wrongValue("The root context should not have a callee index");
       if (RecordValues.size() != 1)
         return wrongValue("The callee index should have exactly one value");
       CallsiteIndex = RecordValues[0];
       break;
-    }
     default:
-      // OK if we see records we do not understand.
+      // OK if we see records we do not understand, like records (profiles)
+      // introduced later.
       break;
     }
   }
