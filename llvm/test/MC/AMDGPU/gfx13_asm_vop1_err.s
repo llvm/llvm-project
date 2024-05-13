@@ -1,5 +1,15 @@
 // RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1300 -show-encoding %s 2>&1 | FileCheck --check-prefix=GFX13-ERR --implicit-check-not=error: --strict-whitespace %s
 
+v_consume_power 64
+// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: the operand must be in range [0..63]
+// GFX13-ERR-NEXT:{{^}}v_consume_power 64
+// GFX13-ERR-NEXT:{{^}}                ^
+
+v_consume_power v0
+// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: immediate operand expected
+// GFX13-ERR-NEXT:{{^}}v_consume_power v0
+// GFX13-ERR-NEXT:{{^}}                ^
+
 v_mov_b64 v[4:5], v[2:3] dpp8:[7,6,5,4,3,2,1,0]
 // GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
 // GFX13-ERR-NEXT:{{^}}v_mov_b64 v[4:5], v[2:3] dpp8:[7,6,5,4,3,2,1,0]

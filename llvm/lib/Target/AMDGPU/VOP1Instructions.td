@@ -861,6 +861,13 @@ let SubtargetPredicate = HasPermlane32Swap in
 defm : PermlaneSwapPat<int_amdgcn_permlane32_swap,
                        "V_PERMLANE32_SWAP_B32">;
 
+def V_CONSUME_POWER_Profile : VOPProfile <[untyped, i32, untyped, untyped]> {
+  let Src0RC32 = VCSrc_b32;
+}
+
+let SubtargetPredicate = HasConsumePowerInst in
+def V_CONSUME_POWER : VOP1_Pseudo<"v_consume_power", V_CONSUME_POWER_Profile, [], 1>;
+
 //===----------------------------------------------------------------------===//
 // Target-specific instruction encodings.
 //===----------------------------------------------------------------------===//
@@ -1171,6 +1178,7 @@ defm V_CVT_F32_F16_t16       : VOP1_Real_FULL_t16_gfx11_gfx12_gfx13<0x00b, "v_cv
 
 defm V_TANH_F32              : VOP1_Real_FULL_gfx1210_gfx13<0x01e>;
 defm V_TANH_F16_fake16       : VOP1_Real_FULL_t16_gfx1210_gfx13<0x01f>;
+defm V_CONSUME_POWER         : VOP1Only_Real<GFX13Gen, 0x045>;
 defm V_PERMLANE16_SWAP_B32   : VOP1_Real_OpSelIsDPP_gfx1210_gfx13<0x049>;
 defm V_TANH_BF16_fake16      : VOP1_Real_FULL_t16_gfx1210_gfx13<0x04a>;
 defm V_PRNG_B32              : VOP1_Real_FULL_gfx1210_gfx13<0x04b>;
