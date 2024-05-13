@@ -2190,9 +2190,9 @@ def int_amdgcn_readlane :
 // undefined.
 def int_amdgcn_writelane :
   Intrinsic<[llvm_any_ty], [
-    LLVMMatchType<0>,    // uniform value to write: returned by the selected lane
+    LLVMMatchType<0>,   // uniform value to write: returned by the selected lane
     llvm_i32_ty,        // uniform lane select
-    LLVMMatchType<0>     // returned by all lanes other than the selected one
+    LLVMMatchType<0>    // returned by all lanes other than the selected one
   ],
   [IntrNoMem, IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree]
 >;
