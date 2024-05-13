@@ -929,7 +929,7 @@ void MaskedArrayExpr::generateNoneElementalPart(fir::FirOpBuilder &builder,
         (void)builder.clone(op, mapper);
   } else {
     // For actual masked expressions, Fortran requires elemental expressions,
-    // even the scalar ones that are no encoded with hlfir.elemental, to be
+    // even the scalar ones that are not encoded with hlfir.elemental, to be
     // evaluated only when the mask is true. Blindly hoisting all scalar SSA
     // tree could be wrong if the scalar computation has side effects and
     // would never have been evaluated (e.g. division by zero) if the mask
