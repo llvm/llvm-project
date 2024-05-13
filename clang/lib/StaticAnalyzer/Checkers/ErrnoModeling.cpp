@@ -111,6 +111,7 @@ void ErrnoModeling::checkBeginFunction(CheckerContext &C) const {
     // There is no 'errno' variable, so create a new symbolic memory region
     // that can be used to model the return value of the "get the location of
     // errno" internal functions.
+    // NOTE: this `SVal` is created even if errno is not defined or used.
     SValBuilder &SVB = C.getSValBuilder();
     MemRegionManager &RMgr = C.getStateManager().getRegionManager();
 
