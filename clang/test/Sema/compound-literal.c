@@ -29,7 +29,7 @@ int main(int argc, char **argv) {
 struct Incomplete; // expected-note{{forward declaration of 'struct Incomplete'}}
 struct Incomplete* I1 = &(struct Incomplete){1, 2, 3}; // expected-error {{variable has incomplete type}}
 void IncompleteFunc(unsigned x) {
-  struct Incomplete* I2 = (struct foo[x]){1, 2, 3}; // expected-error {{compound literal has variable-length array type}}
+  struct Incomplete* I2 = (struct foo[x]){1, 2, 3}; // expected-error {{compound literal cannot be of variable-length array type}}
   (void){1,2,3}; // expected-error {{variable has incomplete type}}
   (void(void)) { 0 }; // expected-error{{illegal initializer type 'void (void)'}}
 }
@@ -48,8 +48,8 @@ int (^block)(int) = ^(int i) {
 void vla(int n) {
   int size = 5;
   (void)(int[size]){}; // expected-warning {{use of an empty initializer is a C23 extension}} \
-                       expected-error {{compound literal has variable-length array type}}
-  (void)(int[size]){1}; // expected-error {{compound literal has variable-length array type}}
-  (void)(int[size]){1,2,3}; // expected-error {{compound literal has variable-length array type}}
-  (void)(int[size]){1,2,3,4,5}; // expected-error {{compound literal has variable-length array type}}
+                       expected-error {{compound literal cannot be of variable-length array type}}
+  (void)(int[size]){1}; // expected-error {{compound literal cannot be of variable-length array type}}
+  (void)(int[size]){1,2,3}; // expected-error {{compound literal cannot be of variable-length array type}}
+  (void)(int[size]){1,2,3,4,5}; // expected-error {{compound literal cannot be of variable-length array type}}
 }

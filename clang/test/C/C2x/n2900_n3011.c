@@ -32,8 +32,8 @@ void test(void) {
   // type.
   int *compound_literal_vla = (int[i]){}; // compat-warning {{use of an empty initializer is incompatible with C standards before C23}} \
                                              pedantic-warning {{use of an empty initializer is a C23 extension}}\
-                                             compat-error {{compound literal has variable-length array type}} \
-                                             pedantic-error {{compound literal has variable-length array type}}\
+                                             compat-error {{compound literal cannot be of variable-length array type}} \
+                                             pedantic-error {{compound literal cannot be of variable-length array type}}\
 
 
   struct T {
