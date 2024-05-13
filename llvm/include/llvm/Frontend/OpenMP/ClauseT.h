@@ -178,6 +178,12 @@ template <typename T> using ListT = llvm::SmallVector<T, 0>;
 // provide their own specialization that conforms to the above requirements.
 template <typename IdType, typename ExprType> struct ObjectT;
 
+// By default, object equality is only determined by its identity.
+template <typename I, typename E>
+bool operator==(const ObjectT<I, E> &o1, const ObjectT<I, E> &o2) {
+  return o1.id() == o2.id();
+}
+
 template <typename I, typename E> using ObjectListT = ListT<ObjectT<I, E>>;
 
 using DirectiveName = llvm::omp::Directive;
@@ -264,6 +270,32 @@ struct ReductionIdentifierT {
 
 template <typename T, typename I, typename E> //
 using IteratorT = ListT<IteratorSpecifierT<T, I, E>>;
+
+template <typename T>
+std::enable_if_t<T::EmptyTrait::value, bool> operator==(const T &a,
+                                                        const T &b) {
+  return true;
+}
+template <typename T>
+std::enable_if_t<T::IncompleteTrait::value, bool> operator==(const T &a,
+                                                             const T &b) {
+  return true;
+}
+template <typename T>
+std::enable_if_t<T::WrapperTrait::value, bool> operator==(const T &a,
+                                                          const T &b) {
+  return a.v == b.v;
+}
+template <typename T>
+std::enable_if_t<T::TupleTrait::value, bool> operator==(const T &a,
+                                                        const T &b) {
+  return a.t == b.t;
+}
+template <typename T>
+std::enable_if_t<T::UnionTrait::value, bool> operator==(const T &a,
+                                                        const T &b) {
+  return a.u == b.u;
+}
 } // namespace type
 
 template <typename T> using ListT = type::ListT<T>;
@@ -285,6 +317,8 @@ ListT<ResultTy> makeList(ContainerTy &&container, FunctionTy &&func) {
 }
 
 namespace clause {
+using type::operator==;
+
 // V5.2: [8.3.1] `assumption` clauses
 template <typename T, typename I, typename E> //
 struct AbsentT {
@@ -726,7 +760,7 @@ struct LinearT {
   ENUM(LinearModifier, Ref, Val, Uval);
 
   using TupleTrait = std::true_type;
-  // Step == nullptr means 1.
+  // Step == nullopt means 1.
   std::tuple<OPT(StepSimpleModifier), OPT(StepComplexModifier),
              OPT(LinearModifier), List>
       t;
@@ -1142,9 +1176,11 @@ struct UsesAllocatorsT {
   using MemSpace = E;
   using TraitsArray = ObjectT<I, E>;
   using Allocator = E;
-  using AllocatorSpec =
-      std::tuple<OPT(MemSpace), OPT(TraitsArray), Allocator>; // Not a spec name
-  using Allocators = ListT<AllocatorSpec>;                    // Not a spec name
+  struct AllocatorSpec { // Not a spec name
+    using TupleTrait = std::true_type;
+    std::tuple<OPT(MemSpace), OPT(TraitsArray), Allocator> t;
+  };
+  using Allocators = ListT<AllocatorSpec>; // Not a spec name
   using WrapperTrait = std::true_type;
   Allocators v;
 };
@@ -1232,8 +1268,9 @@ using UnionOfAllClausesT = typename type::Union< //
     UnionClausesT<T, I, E>,                      //
     WrapperClausesT<T, I, E>                     //
     >::type;
-
 } // namespace clause
+
+using type::operator==;
 
 // The variant wrapper that encapsulates all possible specific clauses.
 // The `Extras` arguments are additional types representing local extensions
@@ -1258,6 +1295,11 @@ struct ClauseT {
   llvm::omp::Clause id; // The numeric id of the clause
   using UnionTrait = std::true_type;
   VariantTy u;
+};
+
+template <typename ClauseType> struct DirectiveWithClauses {
+  llvm::omp::Directive id = llvm::omp::Directive::OMPD_unknown;
+  tomp::type::ListT<ClauseType> clauses;
 };
 
 } // namespace tomp
